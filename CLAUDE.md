@@ -171,9 +171,13 @@ Invocar con `/nombre` desde Claude Code:
 ## Estructura del proyecto
 ```
 grupo-analisis-mercado/
-├── CLAUDE.md              ← este archivo
-├── COMANDOS.md            ← referencia histórica de comandos manuales
+├── README.md              ← introducción y referencia rápida
+├── CLAUDE.md              ← este archivo (instrucciones para Claude Code)
 ├── docs/
+│   ├── architecture.md    ← flujo del sistema, MCPs, aprobación, señales
+│   ├── commands-reference.md ← referencia detallada de los 18 comandos
+│   ├── setup-guide.md     ← instalación paso a paso + troubleshooting
+│   ├── activos-y-drivers.md  ← 20 activos con drivers y datos macro
 │   ├── ideas/             ← specs de features (ciclo Pulse)
 │   └── design/            ← diseños técnicos (ciclo Pulse)
 ├── .claude/
@@ -190,17 +194,18 @@ grupo-analisis-mercado/
 │   ├── activos.json       ← 20 activos: forex + índices + 12 acciones
 │   ├── drivers.json · drivers_indices_sectores.json
 │   ├── agenda_semanal.json · plantilla_señal.json
-├── scripts/               ← scripts de ejecución
-│   ├── mt5_integration.py ← MT5: precios, niveles, gráficos (20 tickers)
-│   ├── orquestador.py · market_data.py
-│   ├── formatter_whatsapp.py · señal_manager.py
+├── scripts/               ← scripts auxiliares Python
+│   ├── señal_manager.py   ← gestión historial señales (límite 3/semana)
+│   ├── formatter_whatsapp.py · market_data.py
+│   └── mt5_integration.py ← integración MT5 legacy (reemplazado por MCP)
 ├── templates/             ← templates de mensajes WhatsApp
 │   ├── apertura_mercado.txt · resumen_semanal.txt · cierre_semanal.txt
 │   ├── encuesta_tendencia.txt · encuesta_precio.txt
 │   ├── concepto_semana.txt · señal_operativa.txt
 ├── data/                  ← datos persistentes
 │   ├── historial_señales.json
-│   └── charts/            ← PNGs generados desde MT5
-└── mcp/                   ← configuración MCP
-    └── mcp_config.json    ← WhatsApp + TrendRadar + Firecrawl
+│   └── charts/            ← PNGs generados (gitignored)
+└── mcp/
+    ├── mcp_config.example.json ← template sin credenciales (en git)
+    └── mcp_config.json         ← config real con API keys (gitignored)
 ```
