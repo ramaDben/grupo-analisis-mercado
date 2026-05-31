@@ -1,5 +1,6 @@
 {
   "_nota": "Tickers confirmados en broker Grupo Inteligencia SpA. Índices usan sufijo .spot, acciones usan prefijo #",
+  "_nota_digits": "Campo 'digits' = decimales del precio según contrato MT5 del broker. Verificar con symbol_info('TICKER').digits en MT5 si hay dudas.",
 
   "forex_commodities": [
     {
@@ -7,6 +8,7 @@
       "ticker_mt5": "USDCLP",
       "nombre": "Dólar / Peso Chileno",
       "categoria": "forex",
+      "digits": 2,
       "drivers": ["cobre", "Dollar Index", "tasas BCCh vs Fed", "flujos de capital"],
       "temporalidades": ["4H", "1H", "15M"],
       "horario_mercado": "09:00-16:00 CLT",
@@ -17,6 +19,7 @@
       "ticker_mt5": "XAUUSD",
       "nombre": "Oro",
       "categoria": "commodity",
+      "digits": 2,
       "drivers": ["Dollar Index", "tasas reales", "decisiones Fed", "coberturas bancos centrales", "geopolítica"],
       "temporalidades": ["4H", "1H", "15M"],
       "horario_mercado": "24h (principal: sesión NY)",
@@ -27,6 +30,7 @@
       "ticker_mt5": "WTI.spot",
       "nombre": "Petróleo WTI",
       "categoria": "commodity",
+      "digits": 2,
       "drivers": ["inventarios EIA", "decisiones OPEP+", "demanda China", "geopolítica"],
       "temporalidades": ["4H", "1H"],
       "horario_mercado": "24h (principal: sesión NY)",
@@ -41,6 +45,7 @@
       "nombre": "Nasdaq 100",
       "categoria": "indice",
       "sector_dominante": "tecnológico",
+      "digits": 2,
       "drivers": ["tasas Fed", "earnings tecnológicos", "rendimientos Treasury", "sentimiento AI/chips"],
       "temporalidades": ["4H", "1H"],
       "horario_mercado": "09:30-16:00 ET (10:30-17:00 CLT)",
@@ -53,6 +58,7 @@
       "nombre": "S&P 500",
       "categoria": "indice",
       "sector_dominante": "amplio (500 empresas)",
+      "digits": 2,
       "drivers": ["tasas Fed", "earnings agregados", "datos macro EE.UU.", "rendimientos Treasury"],
       "temporalidades": ["4H", "1H"],
       "horario_mercado": "09:30-16:00 ET (10:30-17:00 CLT)",
@@ -65,6 +71,7 @@
       "nombre": "Dow Jones Industrial",
       "categoria": "indice",
       "sector_dominante": "industrial y bancario",
+      "digits": 2,
       "drivers": ["datos macro EE.UU.", "earnings industriales", "tasas Fed", "ciclo económico"],
       "temporalidades": ["4H", "1H"],
       "horario_mercado": "09:30-16:00 ET (10:30-17:00 CLT)",
@@ -78,38 +85,38 @@
       "indice_relacionado": "US100",
       "drivers_sector": ["tasas Fed", "earnings trimestrales", "ciclo de innovación AI/chips", "rendimientos Treasury", "regulación tech"],
       "componentes": [
-        {"ticker_mt5": "#AAPL", "nombre": "Apple Inc.", "drivers": ["ventas iPhone", "servicios", "earnings", "demanda China"]},
-        {"ticker_mt5": "#MSFT", "nombre": "Microsoft Corp.", "drivers": ["Azure/cloud", "AI (Copilot)", "earnings", "licencias enterprise"]},
-        {"ticker_mt5": "#NVDA", "nombre": "NVIDIA Corp.", "drivers": ["demanda chips AI", "data centers", "earnings", "regulación exportación China"]},
-        {"ticker_mt5": "#AMZN", "nombre": "Amazon.com Inc.", "drivers": ["AWS/cloud", "retail/consumo", "earnings", "márgenes"]}
+        {"ticker_mt5": "#AAPL", "nombre": "Apple Inc.", "digits": 2, "drivers": ["ventas iPhone", "servicios", "earnings", "demanda China"]},
+        {"ticker_mt5": "#MSFT", "nombre": "Microsoft Corp.", "digits": 2, "drivers": ["Azure/cloud", "AI (Copilot)", "earnings", "licencias enterprise"]},
+        {"ticker_mt5": "#NVDA", "nombre": "NVIDIA Corp.", "digits": 2, "drivers": ["demanda chips AI", "data centers", "earnings", "regulación exportación China"]},
+        {"ticker_mt5": "#AMZN", "nombre": "Amazon.com Inc.", "digits": 2, "drivers": ["AWS/cloud", "retail/consumo", "earnings", "márgenes"]}
       ]
     },
     "bancario": {
       "indice_relacionado": "US30",
       "drivers_sector": ["tasas Fed", "curva de rendimientos", "margen de interés neto", "regulación financiera", "crédito al consumo", "trading revenue"],
       "componentes": [
-        {"ticker_mt5": "#JPM", "nombre": "JPMorgan Chase", "drivers": ["margen interés", "banca inversión", "earnings", "provisiones crédito"]},
-        {"ticker_mt5": "#BAC", "nombre": "Bank of America", "drivers": ["margen interés", "crédito consumo", "earnings", "exposición tasas"]},
-        {"ticker_mt5": "#GS", "nombre": "Goldman Sachs", "drivers": ["trading revenue", "banca inversión", "earnings", "actividad M&A"]},
-        {"ticker_mt5": "#MS", "nombre": "Morgan Stanley", "drivers": ["wealth management", "trading", "earnings", "mercados de capital"]}
+        {"ticker_mt5": "#JPM", "nombre": "JPMorgan Chase", "digits": 2, "drivers": ["margen interés", "banca inversión", "earnings", "provisiones crédito"]},
+        {"ticker_mt5": "#BAC", "nombre": "Bank of America", "digits": 2, "drivers": ["margen interés", "crédito consumo", "earnings", "exposición tasas"]},
+        {"ticker_mt5": "#GS", "nombre": "Goldman Sachs", "digits": 2, "drivers": ["trading revenue", "banca inversión", "earnings", "actividad M&A"]},
+        {"ticker_mt5": "#MS", "nombre": "Morgan Stanley", "digits": 2, "drivers": ["wealth management", "trading", "earnings", "mercados de capital"]}
       ]
     },
     "industrial": {
       "indice_relacionado": "US30",
       "drivers_sector": ["PMI manufactura", "gasto en infraestructura", "demanda global", "comercio internacional", "precios de materias primas", "ciclo económico"],
       "componentes": [
-        {"ticker_mt5": "#BA", "nombre": "Boeing Co.", "drivers": ["pedidos aviones", "producción 737/787", "earnings", "defensa"]},
-        {"ticker_mt5": "#CAT", "nombre": "Caterpillar Inc.", "drivers": ["demanda construcción", "minería", "earnings", "demanda China"]},
-        {"ticker_mt5": "#GE", "nombre": "GE Aerospace", "drivers": ["motores aviación", "servicios", "earnings", "demanda aerolíneas"]},
-        {"ticker_mt5": "#DE", "nombre": "Deere & Co.", "drivers": ["demanda agrícola", "precios commodities agrícolas", "earnings", "maquinaria"]}
+        {"ticker_mt5": "#BA", "nombre": "Boeing Co.", "digits": 2, "drivers": ["pedidos aviones", "producción 737/787", "earnings", "defensa"]},
+        {"ticker_mt5": "#CAT", "nombre": "Caterpillar Inc.", "digits": 2, "drivers": ["demanda construcción", "minería", "earnings", "demanda China"]},
+        {"ticker_mt5": "#GE", "nombre": "GE Aerospace", "digits": 2, "drivers": ["motores aviación", "servicios", "earnings", "demanda aerolíneas"]},
+        {"ticker_mt5": "#DE", "nombre": "Deere & Co.", "digits": 2, "drivers": ["demanda agrícola", "precios commodities agrícolas", "earnings", "maquinaria"]}
       ]
     }
   },
 
   "activos_complementarios": {
-    "COBRE": {"ticker_mt5": "COPPER", "relevancia": "Driver principal del USD/CLP. Chile es el mayor productor mundial."},
-    "DXY": {"ticker_mt5": "USDIDX", "relevancia": "Dollar Index. Fortaleza del dólar. Afecta a todos los activos."},
-    "GER40": {"ticker_mt5": "GER40.spot", "relevancia": "DAX 40 alemán. Referencia para sentimiento europeo (opcional)."}
+    "COBRE": {"ticker_mt5": "COPPER", "digits": 3, "relevancia": "Driver principal del USD/CLP. Chile es el mayor productor mundial."},
+    "DXY": {"ticker_mt5": "USDIDX", "digits": 3, "relevancia": "Dollar Index. Fortaleza del dólar. Afecta a todos los activos."},
+    "GER40": {"ticker_mt5": "GER40.spot", "digits": 2, "relevancia": "DAX 40 alemán. Referencia para sentimiento europeo (opcional)."}
   },
 
   "config_señales": {
