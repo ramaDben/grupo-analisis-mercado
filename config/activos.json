@@ -30,7 +30,7 @@
       "ticker_mt5": "WTI.spot",
       "nombre": "Petróleo WTI",
       "categoria": "commodity",
-      "digits": 2,
+      "digits": 3,
       "drivers": ["inventarios EIA", "decisiones OPEP+", "demanda China", "geopolítica"],
       "temporalidades": ["4H", "1H"],
       "horario_mercado": "24h (principal: sesión NY)",
