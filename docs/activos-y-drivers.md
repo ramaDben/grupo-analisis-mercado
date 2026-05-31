@@ -17,7 +17,7 @@ El par más relevante para los clientes chilenos. Mide cuántos pesos vale un d�
 - **Tasas BCCh vs Fed**: diferencial de tasas entre el Banco Central de Chile y la Reserva Federal. Si la Fed sube tasas más que el BCCh, el capital fluye hacia EE.UU. y el peso se debilita.
 - **Flujos de capital**: exportaciones/importaciones, inversión extranjera directa, venta de cobre en mercado internacional.
 
-**Temporalidades usadas**: 4H (intradía/swing), 1H (intradía corto), 15M (scalper)
+**Temporalidades usadas**: 4H — swing, 1H — intradía, 15M — scalper
 
 **Indicador destacado**: ATR — mide la volatilidad diaria en puntos, útil para dimensionar el SL.
 
@@ -35,22 +35,22 @@ Activo refugio por excelencia. Sube en contextos de incertidumbre y baja cuando 
 - **Coberturas de bancos centrales**: compras masivas de reservas en oro por parte de bancos centrales emergentes (China, India, Russia) sostienen el precio a largo plazo.
 - **Geopolítica**: conflictos, elecciones, tensiones globales elevan la demanda de refugio.
 
-**Temporalidades usadas**: 4H, 1H, 15M
+**Temporalidades usadas**: 4H — swing, 1H — intradía, 15M — scalper
 
 ---
 
 ### WTI — Petróleo West Texas Intermediate
-**Ticker MT5**: `WTI.spot` | **Horario**: 24h (sesión principal: NY)
+**Ticker MT5**: `WTI.spot` | **Horario**: 24h (sesión principal: NY) — todas las referencias horarias en hora Chile (CLT/CLST)
 
 Referencia mundial del precio del petróleo crudo ligero de EE.UU.
 
 **Qué lo mueve**:
-- **Inventarios EIA**: la Energy Information Administration publica datos de inventarios cada miércoles a las 10:30 CLT. Inventarios que suben más de lo esperado presionan el precio a la baja; inventarios que bajan lo impulsan.
+- **Inventarios EIA**: la Energy Information Administration publica datos de inventarios cada miércoles — consultar calendario oficial en hora Chile (CLT/CLST) — fuente: calendario económico oficial de Investing.com. Inventarios que suben más de lo esperado presionan el precio a la baja; inventarios que bajan lo impulsan.
 - **Decisiones OPEP+**: recortes de producción suben el precio; aumentos de cuota lo presionan.
 - **Demanda China**: China es el mayor importador de petróleo. PMI manufacturero chino débil → menor demanda → precio cae.
 - **Geopolítica**: tensiones en Medio Oriente o sanciones a productores afectan la oferta y elevan el precio.
 
-**Temporalidades usadas**: 4H, 1H
+**Temporalidades usadas**: 4H — swing, 1H — intradía
 
 ---
 
@@ -69,7 +69,7 @@ Referencia mundial del precio del petróleo crudo ligero de EE.UU.
 
 **Componentes clave**: #AAPL · #MSFT · #NVDA · #AMZN
 
-**Temporalidades usadas**: 4H, 1H
+**Temporalidades usadas**: 4H — swing, 1H — intradía
 
 ---
 
@@ -86,7 +86,7 @@ Referencia mundial del precio del petróleo crudo ligero de EE.UU.
 
 **Componentes clave**: #AAPL · #MSFT · #NVDA · #JPM · #BAC
 
-**Temporalidades usadas**: 4H, 1H
+**Temporalidades usadas**: 4H — swing, 1H — intradía
 
 ---
 
@@ -103,7 +103,7 @@ Referencia mundial del precio del petróleo crudo ligero de EE.UU.
 
 **Componentes clave**: #BA · #CAT · #GS · #JPM
 
-**Temporalidades usadas**: 4H, 1H
+**Temporalidades usadas**: 4H — swing, 1H — intradía
 
 ---
 
