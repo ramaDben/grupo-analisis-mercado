@@ -1,0 +1,106 @@
+{
+  "schema": {
+    "ticker": {
+      "tipo": "string",
+      "obligatorio": true,
+      "ejemplo": "#CRM",
+      "descripcion": "Ticker del activo con # al inicio"
+    },
+    "nombre_activo": {
+      "tipo": "string",
+      "obligatorio": true,
+      "ejemplo": "Salesforce Inc.",
+      "descripcion": "Nombre completo del activo"
+    },
+    "tipo": {
+      "tipo": "enum",
+      "valores": ["BUY", "SELL"],
+      "obligatorio": true,
+      "descripcion": "Dirección de la operación"
+    },
+    "entrada": {
+      "tipo": "number",
+      "obligatorio": true,
+      "ejemplo": 180.00,
+      "descripcion": "Precio de entrada en USD"
+    },
+    "take_profit": {
+      "tipo": "number",
+      "obligatorio": true,
+      "ejemplo": 200.00,
+      "descripcion": "Precio objetivo (ganancia) en USD"
+    },
+    "stop_loss": {
+      "tipo": "number",
+      "obligatorio": true,
+      "ejemplo": 168.00,
+      "descripcion": "Precio de protección (pérdida máxima) en USD"
+    },
+    "tp_clp": {
+      "tipo": "number",
+      "obligatorio": true,
+      "ejemplo": 130000,
+      "descripcion": "Ganancia potencial traducida a pesos chilenos (CLP)"
+    },
+    "sl_clp": {
+      "tipo": "number",
+      "obligatorio": true,
+      "ejemplo": -83000,
+      "descripcion": "Pérdida potencial traducida a pesos chilenos (CLP, valor negativo)"
+    },
+    "volumen": {
+      "tipo": "number",
+      "obligatorio": true,
+      "ejemplo": 0.15,
+      "descripcion": "Volumen de la operación"
+    },
+    "acciones": {
+      "tipo": "number",
+      "obligatorio": true,
+      "ejemplo": 7.5,
+      "descripcion": "Número de acciones"
+    },
+    "temporalidad": {
+      "tipo": "enum",
+      "valores": ["15M", "1H", "4H", "1D"],
+      "obligatorio": true,
+      "descripcion": "Temporalidad del análisis"
+    },
+    "tipo_operativa": {
+      "tipo": "enum",
+      "valores": ["scalper", "intradia", "swing"],
+      "obligatorio": true,
+      "descripcion": "Tipo de operativa según la temporalidad"
+    },
+    "bullets_analisis": {
+      "tipo": "array",
+      "max_items": 3,
+      "obligatorio": true,
+      "ejemplo": [
+        "Con soporte en los $170, los proveedores de liquidez imponen el precio objetivo en los $195-$200.",
+        "Salesforce es una de las principales pioneras en softwares de CRM.",
+        "Los resultados del 26/05 preveen un crecimiento en BPA y en Ingresos esperados."
+      ],
+      "descripcion": "Máximo 3 bullets de análisis claro y breve (técnico + fundamental)"
+    }
+  },
+  "formulas_conversion_clp": {
+    "tp_clp": "(take_profit - entrada) × acciones × tipo_cambio_usdclp",
+    "sl_clp": "(stop_loss - entrada) × acciones × tipo_cambio_usdclp",
+    "ejemplo": {
+      "entrada": 180,
+      "take_profit": 200,
+      "stop_loss": 168,
+      "acciones": 7.5,
+      "tipo_cambio": 950,
+      "calculo_tp": "(200-180) × 7.5 × 950 = +$142.500 CLP",
+      "calculo_sl": "(168-180) × 7.5 × 950 = -$85.500 CLP"
+    }
+  },
+  "reglas": {
+    "max_señales_semana": 3,
+    "verificar_historial": "data/historial_señales.json",
+    "plantilla_visual": "Canva (link compartido con el equipo)",
+    "obligatorio_clp": "SIEMPRE traducir TP y SL a CLP — el cliente debe ver cuánto gana y pierde sin calcular"
+  }
+}

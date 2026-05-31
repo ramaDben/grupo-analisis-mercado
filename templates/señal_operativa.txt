@@ -1,0 +1,17 @@
+🎯 *SEÑAL OPERATIVA*
+━━━━━━━━━━━━━━━━━━━
+
+*{{ticker}} · {{nombre_activo}}*
+Estrategia: *{{tipo}}*
+
+Entrada: ${{entrada}}
+Volumen: {{volumen}} · Acciones: {{acciones}}
+
+✅ Take Profit: ${{take_profit}} → *{{tp_clp_fmt}} CLP*
+❌ Stop Loss: ${{stop_loss}} → *{{sl_clp_fmt}} CLP*
+
+📊 *Análisis:*
+{{bullets_texto}}
+
+_Temporalidad: {{temporalidad}} — Operativa {{tipo_operativa}}_
+_Señal {{n_señal}} de 3 esta semana_

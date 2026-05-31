@@ -1,0 +1,11 @@
+⚠️ *ALERTA DE MERCADO*
+━━━━━━━━━━━━━━━━━━━
+
+*{{titulo}}* — 🕐 {{hora_chile}}
+
+{{explicacion}}
+
+*¿Cómo afecta?*
+{{impacto_activos}}
+
+_Seguimos monitoreando_ 👀

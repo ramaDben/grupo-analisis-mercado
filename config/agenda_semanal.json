@@ -1,0 +1,79 @@
+{
+  "max_señales_semana": 3,
+  "agenda": {
+    "lunes": {
+      "contenido": [
+        "resumen_semanal",
+        "concepto_semana",
+        "apertura_mercado"
+      ],
+      "encuesta": {
+        "tipo": "tendencia_am",
+        "descripcion": "¿Cuál creen que será la tendencia hoy del [activo]?"
+      },
+      "señales": "segun_oportunidad",
+      "notas": "Día más cargado de contenido. El resumen semanal se envía primero, luego el concepto, luego la apertura normal."
+    },
+    "martes": {
+      "contenido": [
+        "apertura_mercado"
+      ],
+      "encuesta": {
+        "tipo": "precio_apertura",
+        "descripcion": "¿A qué precio creen que abrirá [activo] mañana?"
+      },
+      "señales": "segun_oportunidad",
+      "notas": "Operativa estándar."
+    },
+    "miercoles": {
+      "contenido": [
+        "apertura_mercado"
+      ],
+      "encuesta": {
+        "tipo": "tendencia_am",
+        "descripcion": "¿Cuál creen que será la tendencia hoy del [activo]?"
+      },
+      "señales": "segun_oportunidad",
+      "notas": "Miércoles suele salir inventarios EIA — relevante para WTI."
+    },
+    "jueves": {
+      "contenido": [
+        "apertura_mercado"
+      ],
+      "encuesta": {
+        "tipo": "tendencia_am",
+        "descripcion": "¿Cuál creen que será la tendencia hoy del [activo]?"
+      },
+      "señales": "segun_oportunidad",
+      "notas": "Operativa estándar."
+    },
+    "viernes": {
+      "contenido": [
+        "apertura_mercado",
+        "cierre_semanal"
+      ],
+      "encuesta": {
+        "tipo": "precio_apertura_lunes",
+        "descripcion": "¿A qué precio creen que abrirá [activo] el lunes?"
+      },
+      "señales": "segun_oportunidad",
+      "notas": "Cierre semanal se envía por la tarde. La encuesta de precio es por la apertura del LUNES. Primer viernes del mes suele ser NFP."
+    }
+  },
+  "rotacion_activos": {
+    "descripcion": "Cubrir 2-3 activos por día, rotando para que todos se cubran durante la semana",
+    "ejemplo": {
+      "lunes": ["USD/CLP", "XAU/USD"],
+      "martes": ["WTI", "US100"],
+      "miercoles": ["USD/CLP", "WTI"],
+      "jueves": ["XAU/USD", "US100"],
+      "viernes": ["USD/CLP", "XAU/USD", "WTI"]
+    }
+  },
+  "horarios_sugeridos": {
+    "apertura_mercado": "08:30-09:00 CLT",
+    "encuesta": "09:00-09:30 CLT (después de la apertura)",
+    "alerta_intradia": "según evento",
+    "cierre_semanal_viernes": "16:00-17:00 CLT"
+  }
+}

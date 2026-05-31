@@ -1,0 +1,13 @@
+📚 *CONCEPTO DE LA SEMANA: {{nombre}}*
+━━━━━━━━━━━━━━━━━━━
+
+*¿Qué es?*
+{{definicion}}
+
+*¿Para qué sirve?*
+{{utilidad}}
+
+*Ejemplo real:*
+{{ejemplo}}
+
+_Esta semana vamos a ir viendo cómo se aplica este concepto en el mercado_ 📖

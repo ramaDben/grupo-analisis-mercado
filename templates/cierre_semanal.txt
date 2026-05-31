@@ -1,0 +1,16 @@
+📊 *CIERRE SEMANAL* — {{semana}}
+━━━━━━━━━━━━━━━━━━━
+
+*¿Qué pasó esta semana?*
+{{resumen_semana}}
+
+*Datos que sorprendieron*
+{{datos_sorpresa}}
+
+*¿Cómo reaccionaron los activos?*
+{{reaccion_activos}}
+
+*¿Qué esperar la próxima semana?*
+{{expectativas_proxima}}
+
+_Buen fin de semana_ 👋

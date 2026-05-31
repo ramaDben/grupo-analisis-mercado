@@ -1,0 +1,78 @@
+Genera un chart/gráfico desde MT5 para adjuntar al grupo de WhatsApp.
+
+## PASO 1 — Preguntar activo
+
+Pregunta al director qué activo quiere graficar. Acepta cualquier formato:
+- Forex/commodity: USD/CLP, Oro, XAUUSD, WTI, etc.
+- Índices: US100, US500, US30, Nasdaq, S&P, Dow
+- Acciones: AAPL, #AAPL, Apple, JPM, BA, etc.
+
+Normaliza al ticker_mt5 consultando config/activos.json.
+Si no reconoces el activo, muestra la lista de activos disponibles:
+```
+Forex: USD/CLP · Oro · WTI
+Índices: US100 · US500 · US30
+Acciones tech: #AAPL · #MSFT · #NVDA · #AMZN
+Acciones bancarias: #JPM · #BAC · #GS · #MS
+Acciones industriales: #BA · #CAT · #GE · #DE
+```
+
+## PASO 2 — Preguntar indicador
+
+Pregunta qué indicador incluir (regla: UN solo indicador por gráfico):
+
+```
+¿Qué indicador quieres en el chart?
+
+1. SMA 50 + SMA 200 (medias móviles — excepción: pueden ir juntas)
+2. RSI (sobrecompra/sobreventa)
+3. MACD (cruces y momentum)
+4. ATR (volatilidad — especialmente útil en USD/CLP)
+5. Bollinger Bands
+6. Limpio (solo velas y niveles de soporte/resistencia)
+7. Otro — especifica cuál
+```
+
+## PASO 3 — Preguntar temporalidad
+
+```
+¿Qué temporalidad?
+
+1. 15M — scalper / muy rápida
+2. 1H — intradía corto
+3. 4H — intradía / swing corto (recomendado para apertura)
+4. 1D — swing / lectura general
+```
+
+## PASO 4 — Generar el chart desde MT5
+
+Escribe el archivo `data/mt5_command.json`:
+```json
+{
+  "action": "screenshot",
+  "symbol": "[ticker_mt5]",
+  "timeframe": "[15M|1H|4H|1D]",
+  "indicators": ["[indicador elegido]"],
+  "timestamp": "[datetime actual ISO]"
+}
+```
+
+Luego:
+1. El EA MT5 (GI_ChartExporter) monitorea `data/mt5_command.json`, cambia el símbolo y temporalidad, carga el indicador, espera render, captura screenshot 1920×1080 y guarda el PNG en `data/charts/`.
+2. Lee `data/mt5_response.json` para confirmar que el EA generó el archivo.
+3. Muestra la ruta del PNG generado al director.
+
+**Si el EA no responde en 10 segundos**: genera el chart con `scripts/mt5_integration.py` usando `generar_grafico(ticker, temporalidad, indicadores=[...])`. Avisa al director que MT5 debe estar abierto con el EA activo.
+
+## PASO 5 — Mostrar preview y preguntar envío
+
+Muestra la ruta del PNG y pregunta:
+"¿Enviar este chart al grupo de WhatsApp (sin texto adicional)? ¿O usarlo para adjuntar a otro mensaje?"
+
+Si envío standalone: llama MCP WhatsApp con la imagen.
+Si MCP no disponible: muestra la ruta para adjuntar manualmente.
+
+## NOTAS
+- El chart queda guardado en `data/charts/` y puede reutilizarse en otros comandos del día.
+- Siempre incluir soportes y resistencias calculados automáticamente con `identificar_niveles()`.
+- Un indicador por gráfico (SMA 50+200 es la única excepción permitida).

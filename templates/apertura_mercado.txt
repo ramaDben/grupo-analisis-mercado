@@ -1,0 +1,19 @@
+📊 *APERTURA DE MERCADO* — {{fecha}}
+━━━━━━━━━━━━━━━━━━━
+
+{{seccion_niveles}}
+
+🔎 *¿Qué lo está moviendo?*
+{{drivers}}
+
+━━━━━━━━━━━━━━━━━━━
+
+📰 *DATO DEL DÍA*
+*{{nombre_dato}}* — 🕐 {{hora_chile}}
+
+• Qué es: {{explicacion_dato}}
+• Se espera: {{consenso}}
+• Si sale mejor: {{reaccion_positiva}}
+• Si sale peor: {{reaccion_negativa}}
+
+_Fuente: Calendario Investing.com_

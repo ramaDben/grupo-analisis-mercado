@@ -1,0 +1,103 @@
+{
+  "USD/CLP": {
+    "drivers": {
+      "cobre": {
+        "descripcion_cliente": "Chile es el mayor productor de cobre del mundo. Cuando el cobre sube, entran más dólares a Chile y el peso se fortalece (USD/CLP baja). Cuando el cobre baja, pasa lo contrario.",
+        "correlacion": "inversa",
+        "importancia": "alta",
+        "donde_seguirlo": "Ticker HG=F en Yahoo Finance"
+      },
+      "dollar_index": {
+        "descripcion_cliente": "El Dollar Index (DXY) mide qué tan fuerte está el dólar frente a otras monedas. Si el DXY sube, el dólar se fortalece contra todo, incluido el peso chileno.",
+        "correlacion": "directa",
+        "importancia": "alta",
+        "donde_seguirlo": "Ticker DX-Y.NYB"
+      },
+      "tasas_bcch_vs_fed": {
+        "descripcion_cliente": "Si las tasas en Chile (BCCh) son más altas que en EE.UU. (Fed), es más atractivo invertir en pesos chilenos y el dólar baja. Si la Fed sube tasas o el BCCh las baja, el dólar tiende a subir.",
+        "correlacion": "diferencial",
+        "importancia": "alta",
+        "donde_seguirlo": "Comunicados BCCh y Fed"
+      },
+      "flujos_capital": {
+        "descripcion_cliente": "Cuando inversionistas extranjeros compran activos chilenos, traen dólares y el peso se fortalece. Cuando sacan dinero de Chile, el dólar sube.",
+        "correlacion": "variable",
+        "importancia": "media",
+        "donde_seguirlo": "Reportes del Banco Central de Chile"
+      }
+    }
+  },
+  "XAU/USD": {
+    "drivers": {
+      "dollar_index": {
+        "descripcion_cliente": "El oro se cotiza en dólares. Si el dólar se fortalece, el oro se vuelve más caro para otros países y tiende a bajar. Si el dólar se debilita, el oro sube.",
+        "correlacion": "inversa",
+        "importancia": "alta"
+      },
+      "tasas_reales": {
+        "descripcion_cliente": "Las tasas reales son las tasas de interés menos la inflación. Cuando son bajas o negativas, el oro es más atractivo porque no 'pierdes' nada por tenerlo en vez de un bono.",
+        "correlacion": "inversa",
+        "importancia": "alta"
+      },
+      "decisiones_fed": {
+        "descripcion_cliente": "Cada vez que la Fed sube o baja tasas, el oro reacciona. Tasas más altas = oro baja. Tasas más bajas o expectativas de recorte = oro sube.",
+        "correlacion": "inversa con tasas",
+        "importancia": "muy alta"
+      },
+      "coberturas_bancos_centrales": {
+        "descripcion_cliente": "Los bancos centrales del mundo compran oro como reserva. Cuando compran mucho (como China o India), el precio sube.",
+        "correlacion": "directa",
+        "importancia": "media"
+      },
+      "geopolitica": {
+        "descripcion_cliente": "El oro es un refugio seguro. Cuando hay guerras, tensiones o incertidumbre global, los inversionistas compran oro y el precio sube.",
+        "correlacion": "directa con incertidumbre",
+        "importancia": "alta"
+      }
+    }
+  },
+  "WTI": {
+    "drivers": {
+      "inventarios_eia": {
+        "descripcion_cliente": "Cada miércoles se publican los inventarios de petróleo en EE.UU. Si hay menos petróleo almacenado del esperado, el precio sube (más demanda). Si hay más, baja.",
+        "correlacion": "inversa con inventarios",
+        "importancia": "alta",
+        "dia_publicacion": "miércoles"
+      },
+      "decisiones_opep_plus": {
+        "descripcion_cliente": "La OPEP+ es el grupo de países productores de petróleo. Cuando deciden producir menos, el precio sube. Cuando producen más, baja.",
+        "correlacion": "inversa con producción",
+        "importancia": "muy alta"
+      },
+      "demanda_china": {
+        "descripcion_cliente": "China es el mayor importador de petróleo del mundo. Si la economía china crece, compra más petróleo y el precio sube. Si se frena, el precio baja.",
+        "correlacion": "directa",
+        "importancia": "alta"
+      },
+      "geopolitica": {
+        "descripcion_cliente": "Tensiones en Medio Oriente o entre grandes productores pueden interrumpir el suministro de petróleo y hacer subir el precio rápidamente.",
+        "correlacion": "directa con tensiones",
+        "importancia": "alta"
+      }
+    }
+  },
+  "US100": {
+    "drivers": {
+      "tasas_fed": {
+        "descripcion_cliente": "Las acciones tecnológicas son sensibles a las tasas de interés. Tasas altas encarecen el financiamiento y reducen las valoraciones. Tasas bajas o expectativas de recorte impulsan al Nasdaq.",
+        "correlacion": "inversa con tasas",
+        "importancia": "muy alta"
+      },
+      "earnings_tech": {
+        "descripcion_cliente": "Los resultados trimestrales de Apple, Microsoft, Google, Meta, Nvidia, etc. mueven fuertemente al Nasdaq. Si los resultados superan expectativas, el índice sube.",
+        "correlacion": "directa",
+        "importancia": "alta"
+      },
+      "rendimientos_treasury": {
+        "descripcion_cliente": "Cuando los bonos del Tesoro pagan más interés, los inversionistas prefieren la seguridad de los bonos sobre las acciones de riesgo. Rendimientos altos = presión bajista para tech.",
+        "correlacion": "inversa",
+        "importancia": "alta"
+      }
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "mcpServers": {
+    "whatsapp": {
+      "estado": "PENDIENTE — requiere Evolution API en Docker conectado a WhatsApp/Baileys",
+      "command": "npx",
+      "args": ["-y", "@evolution-api/mcp-server"],
+      "env": {
+        "WHATSAPP_API_URL": "http://localhost:8080",
+        "WHATSAPP_API_KEY": "TU_API_KEY_AQUI",
+        "WHATSAPP_GROUP_ID": "ID_GRUPO_AQUI"
+      },
+      "nota": "Requiere Evolution API corriendo en Docker. Ver: https://doc.evolution-api.com/"
+    },
+    "trendradar": {
+      "estado": "NO ACTIVO — reemplazado por mcp__reporte-flash__get_market_news",
+      "command": "npx",
+      "args": ["-y", "@sansan0/trendradar-mcp"]
+    },
+    "firecrawl": {
+      "estado": "NO ACTIVO — reemplazado por mcp__reporte-flash__get_economic_calendar",
+      "command": "npx",
+      "args": ["-y", "@mendableai/firecrawl-mcp"],
+      "env": {
+        "FIRECRAWL_API_KEY": "TU_API_KEY_AQUI"
+      }
+    }
+  },
+  "instrucciones_setup": {
+    "whatsapp": {
+      "paso_1": "Levanta Evolution API: docker run -d --name evolution-api -p 8080:8080 atendai/evolution-api",
+      "paso_2": "Conecta tu WhatsApp escaneando el QR en http://localhost:8080",
+      "paso_3": "Obtén el WHATSAPP_API_KEY y el WHATSAPP_GROUP_ID desde la interfaz",
+      "paso_4": "Copia este archivo como mcp_config.json y reemplaza los valores",
+      "documentacion": "https://doc.evolution-api.com/"
+    }
+  }
+}

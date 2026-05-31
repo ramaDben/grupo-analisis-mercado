@@ -1,0 +1,84 @@
+{
+  "_nota": "Drivers de índices y sectores accionarios, explicados en lenguaje cliente (regla 30 segundos)",
+
+  "indices": {
+    "US100": {
+      "nombre": "Nasdaq 100",
+      "explicacion_cliente": "El índice de las 100 empresas tecnológicas más grandes de EE.UU. (Apple, Microsoft, Nvidia, Amazon, etc.). Es el más sensible a las tasas de interés porque las tech valen por sus ganancias futuras.",
+      "drivers": {
+        "tasas_fed": "Tasas altas castigan a las tech (sus ganancias futuras valen menos hoy). Tasas bajas las impulsan.",
+        "earnings_tech": "Los resultados de Apple, Microsoft, Nvidia mueven el índice completo. Una sorpresa de Nvidia puede arrastrar a todo el Nasdaq.",
+        "rendimientos_treasury": "Cuando el bono a 10 años paga más, el dinero sale de tech hacia bonos seguros.",
+        "sentimiento_ai": "El entusiasmo o miedo sobre inteligencia artificial mueve fuertemente a Nvidia, Microsoft y todo el sector."
+      }
+    },
+    "US500": {
+      "nombre": "S&P 500",
+      "explicacion_cliente": "El índice de las 500 empresas más grandes de EE.UU. Es el termómetro más amplio del mercado americano: si sube, la economía va bien; si baja, hay preocupación.",
+      "drivers": {
+        "tasas_fed": "Afecta a todas las empresas, especialmente las endeudadas.",
+        "earnings_agregados": "La temporada de resultados (4 veces al año) marca la dirección del índice.",
+        "datos_macro": "IPC, empleo, PIB — la salud de la economía completa se refleja aquí.",
+        "rendimientos_treasury": "Compite con las acciones por el dinero de los inversores."
+      }
+    },
+    "US30": {
+      "nombre": "Dow Jones Industrial",
+      "explicacion_cliente": "El índice de 30 grandes empresas tradicionales de EE.UU. (bancos, industriales, consumo). Es más 'viejo mundo' que el Nasdaq: menos tech, más economía real.",
+      "drivers": {
+        "datos_macro": "Como representa la economía tradicional, reacciona fuerte a PMI, empleo e infraestructura.",
+        "earnings_industriales": "Boeing, Caterpillar, bancos — sus resultados mueven el índice.",
+        "tasas_fed": "Los bancos del Dow se benefician de tasas más altas (mayor margen de interés).",
+        "ciclo_economico": "Sube cuando la economía se expande, baja cuando hay miedo a recesión."
+      }
+    }
+  },
+
+  "sectores": {
+    "tecnologico": {
+      "explicacion_cliente": "Las empresas de tecnología (software, chips, internet). Crecen rápido pero son sensibles a las tasas de interés.",
+      "drivers": {
+        "tasas_fed": "El driver #1. Tasas bajas = tech sube. Tasas altas = tech sufre.",
+        "earnings_trimestrales": "4 veces al año reportan. Una sorpresa mueve la acción 5-10% en un día.",
+        "ciclo_ai_chips": "El boom de la inteligencia artificial está impulsando a Nvidia, Microsoft y todo el sector de semiconductores.",
+        "rendimientos_treasury": "Cuando los bonos pagan más, el dinero sale de tech.",
+        "regulacion": "Investigaciones antimonopolio o regulación pueden golpear a Google, Meta, Amazon."
+      },
+      "cuando_analizar": "Cuando hay earnings de una tech grande, decisión de tasas Fed, o noticia de AI/chips relevante."
+    },
+    "bancario": {
+      "explicacion_cliente": "Los grandes bancos de EE.UU. Ganan dinero prestando y con la diferencia de tasas. Se benefician cuando las tasas suben.",
+      "drivers": {
+        "tasas_fed": "Tasas más altas = mayor margen de interés = más ganancias para los bancos.",
+        "curva_rendimientos": "Los bancos ganan pidiendo prestado barato (corto plazo) y prestando caro (largo plazo). La forma de la curva importa.",
+        "margen_interes_neto": "La diferencia entre lo que pagan por depósitos y cobran por préstamos.",
+        "regulacion_financiera": "Requisitos de capital y stress tests afectan cuánto pueden prestar y repartir.",
+        "credito_consumo": "Si la gente paga sus deudas o no (morosidad) afecta las provisiones.",
+        "trading_revenue": "Goldman y Morgan Stanley ganan mucho con trading; depende de la volatilidad del mercado."
+      },
+      "cuando_analizar": "Cuando hay earnings bancarios (inician la temporada de resultados), decisión de tasas, o datos de crédito/morosidad."
+    },
+    "industrial": {
+      "explicacion_cliente": "Empresas que fabrican cosas físicas: aviones, maquinaria, equipos. Su salud refleja el estado real de la economía global.",
+      "drivers": {
+        "pmi_manufactura": "El PMI manufacturero anticipa la demanda de estas empresas. PMI > 50 = expansión = bueno para industriales.",
+        "gasto_infraestructura": "Planes de infraestructura de gobiernos impulsan a Caterpillar, Deere.",
+        "demanda_global": "Especialmente China — si China crece, compra más maquinaria y aviones.",
+        "comercio_internacional": "Aranceles y tensiones comerciales afectan sus exportaciones.",
+        "precios_commodities": "Acero, cobre y energía son sus costos; suben o bajan sus márgenes.",
+        "ciclo_economico": "Son cíclicas: vuelan en expansión, sufren en recesión."
+      },
+      "cuando_analizar": "Cuando sale PMI manufactura, earnings industriales, datos de China, o noticias de comercio/aranceles."
+    }
+  },
+
+  "relacion_indice_sector": {
+    "explicacion_cliente": "Las acciones individuales mueven a los índices, y viceversa. Entender esto enriquece el análisis:",
+    "ejemplos": [
+      "Si Nvidia reporta earnings espectaculares → US100 sube (Nvidia pesa mucho en el Nasdaq)",
+      "Si JPMorgan y los bancos suben por tasas altas → US30 se beneficia",
+      "Si Boeing tiene problemas de producción → arrastra al US30 a la baja",
+      "Si el sector tech completo sufre por tasas → US100 cae más que US30 (que tiene menos tech)"
+    ]
+  }
+}
