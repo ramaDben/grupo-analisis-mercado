@@ -80,6 +80,20 @@ Un aviso = un indicador. NUNCA mezclar múltiples señales técnicas al mismo ti
 - Horas siempre en hora Chile (CLT/CLST)
 - Estructura formal, consistente y repetible cada día
 
+## Formato de precios — regla de decimales MT5
+**OBLIGATORIO**: al mostrar cualquier precio (entrada, TP, SL, soporte, resistencia, precio actual), respetar exactamente los decimales del campo `digits` definido en `config/activos.json` para ese activo.
+
+| Activo | Digits | Ejemplo correcto | Ejemplo incorrecto |
+|--------|--------|------------------|--------------------|
+| USDCLP | 2 | $889.60 | $889.6 / $890 |
+| XAUUSD | 2 | $4,539.72 | $4.539 / $4,540 |
+| WTI.spot | 3 | $90.181 | $90.18 / $90.2 |
+| US100.spot | 2 | 30,350.01 | 30.350 / 30,350 |
+| Acciones | 2 | $192.50 | $192.5 / $193 |
+| COPPER | 3 | $4.623 | $4.62 |
+
+Nunca truncar ceros al final (89.60, no 89.6). Nunca redondear a enteros salvo que digits = 0.
+
 ## Eventos de alto impacto (decisiones de tasas)
 Cuando hay decisión de tasas (Fed, BCCh, BCE):
 1. Anticipar la reunión con varios días de antelación
