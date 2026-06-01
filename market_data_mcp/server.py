@@ -13,6 +13,12 @@ from pathlib import Path
 # Directorio de este proyecto (grupo-analisis-mercado/)
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 
+# Bootstrap: cuando se corre como script, Python pone el dir del script en
+# sys.path[0], no su padre — market_data_mcp necesita el padre para importar.
+_pkg_parent = str(PROJECT_DIR)
+if _pkg_parent not in sys.path:
+    sys.path.insert(0, _pkg_parent)
+
 # Directorio donde vive mt5_client.py y el .env con credenciales
 _REPORTE_FLASH_DIR = Path(r"C:\Users\bbrav\Reporte Flash Claude\report_generator")
 
