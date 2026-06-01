@@ -39,10 +39,11 @@ Basado en el plan del día y la hora actual (hora Chile), sugiere qué correspon
 
 ### 6. Estado de los MCPs
 Informa el estado de cada MCP relevante:
-- ✅ **reporte-flash**: activo — análisis técnico MT5 + calendario macro + noticias
+- ✅ **market-data**: activo — get_asset_levels (MT5), get_economic_events (Finnhub), get_market_context (Finnhub noticias filtradas)
+- ⏳ **reporte-flash**: en transición — se mantiene hasta validar market-data completamente
 - ⏳ **WhatsApp (Evolution API)**: pendiente — requiere Docker conectado a WhatsApp/Baileys
-- ❌ **TrendRadar**: no activo — reemplazado por reporte-flash
-- ❌ **Firecrawl**: no activo — reemplazado por reporte-flash
+- ❌ **TrendRadar**: no activo — reemplazado por market-data
+- ❌ **Firecrawl**: no activo — reemplazado por market-data
 
 ### 7. Sugerencias del sistema
 

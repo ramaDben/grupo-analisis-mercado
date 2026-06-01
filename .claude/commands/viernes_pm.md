@@ -10,9 +10,9 @@ Hoy es viernes por la tarde. El mercado de EE.UU. cerró. Es momento del resumen
 ## PIEZA ÚNICA — Cierre semanal
 
 Recopila qué pasó esta semana con nuestros activos:
-- **Preferencia**: Llama `mcp__reporte-flash__get_market_news` con `{"category": "general", "min_hours_old": 120}` para obtener el resumen de eventos y movimientos de la semana en forex/commodities e índices.
-- **Complemento**: Llama `mcp__reporte-flash__analyze_ticker` para cada activo principal y obtén la variación semanal.
-- **Fallback** (si MCP no responde): Usa web search buscando "resumen semanal mercados [semana actual]" + variaciones individuales de cada activo.
+- Llama `mcp__market-data__get_market_context` con `{"within_hours": 120, "category": "general"}` para obtener el resumen de eventos de la semana.
+- Llama `mcp__market-data__get_asset_levels` para cada activo principal y obtén la variación semanal (comparar price con apertura semanal).
+- Si cualquier resultado contiene `"error"`: mostrar al director "⚠️ [message]" — si es NO_NEWS_FOUND/NO_EVENTS_FOUND continuar con lo disponible; si es MT5_UNAVAILABLE o FINNHUB_UNAVAILABLE DETENER.
 
 Estructura el mensaje así:
 

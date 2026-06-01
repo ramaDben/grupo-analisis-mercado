@@ -2,7 +2,7 @@ Genera la operativa diaria del miércoles pieza por pieza para aprobación.
 
 ## SETUP
 1. Determina los activos del día leyendo `config/agenda_semanal.json` y `config/activos.json` según el día de la semana.
-2. Los datos técnicos se obtienen via `mcp__reporte-flash__analyze_ticker` en cada pieza.
+2. Los datos técnicos se obtienen via `mcp__market-data__get_asset_levels` en cada pieza.
 3. **NOTA MIÉRCOLES**: Si hoy hay publicación de inventarios EIA de petróleo, priorizarlo en la pieza de dato macro.
 
 ---
@@ -10,9 +10,9 @@ Genera la operativa diaria del miércoles pieza por pieza para aprobación.
 ## PIEZA 1 — Apertura de mercado
 
 Para cada activo del día:
-- Llama `mcp__reporte-flash__analyze_ticker` con `{"ticker": "[TICKER_MT5]", "timeframe": "H4"}`
-- Extrae: precio actual, soportes, resistencias, sesgo, RSI, ATR del resultado
-- Fallback: web search para precio actual + análisis manual con drivers de `config/drivers.json`
+- Llama `mcp__market-data__get_asset_levels` con `{"ticker": "[TICKER_MT5]", "timeframe": "H4"}`
+- Extrae: price, s1, s2, r1, r2, rsi_14, atr_14, trend del resultado
+- Si el resultado contiene `"error"`: mostrar al director "⚠️ [message] — Verificar que MT5 esté abierto." y DETENER el comando.
 
 Genera un mensaje por activo:
 
@@ -51,8 +51,8 @@ _Niveles en 4H — operativa intradía/swing corto_
 
 Verifica si hoy es miércoles con publicación de inventarios EIA de petróleo (normalmente cada miércoles ~10:30 CLT durante sesión NY).
 
-**Preferencia**: Llama `mcp__reporte-flash__get_economic_calendar` con `{"days_ahead": 0, "min_impact": "medium"}` para el calendario de hoy (Chile, EE.UU., Zona Euro, China; impacto medio y alto).
-**Fallback**: Usa web search buscando "calendario económico hoy [fecha] investing.com".
+Llama `mcp__market-data__get_economic_events` con `{"days_ahead": 0, "min_impact": "medium"}` para el calendario de hoy (Chile, EE.UU., Zona Euro, China; impacto medio y alto).
+Si el resultado contiene `"error"`: mostrar al director "⚠️ [message]" — si es NO_EVENTS_FOUND continuar (sin eventos hoy); si es FINNHUB_UNAVAILABLE DETENER.
 
 Lista numerada con los datos del día. Si hay EIA marcarlo con ⛽ al inicio.
 

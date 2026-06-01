@@ -3,8 +3,8 @@ Lista todos los datos económicos del día y genera el mensaje WhatsApp del que 
 ## PASO 1 — Obtener el calendario de hoy
 
 Obtén el calendario económico de HOY:
-- **Preferencia**: Llama `mcp__reporte-flash__get_economic_calendar` con `{"days_ahead": 0, "min_impact": "medium"}` para obtener los datos del día (Chile, EE.UU., Zona Euro, China; impacto medio y alto).
-- **Fallback** (si MCP no responde): Usa web search buscando "calendario económico hoy [fecha actual] investing.com".
+- Llama `mcp__market-data__get_economic_events` con `{"days_ahead": 0, "min_impact": "medium"}` para obtener los datos del día (Chile, EE.UU., Zona Euro, China; impacto medio y alto).
+- Si el resultado contiene `"error"`: mostrar "⚠️ [message]" — si es NO_EVENTS_FOUND informar que no hay datos macro hoy y DETENER; si es FINNHUB_UNAVAILABLE DETENER.
 
 ## PASO 2 — Presentar lista al director
 

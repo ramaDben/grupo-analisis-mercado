@@ -10,8 +10,8 @@ Lee `config/activos.json` sección `acciones` y extrae las 12 acciones:
 ## PASO 2 — Obtener calendario de earnings
 
 Busca qué empresas del catálogo reportan esta semana:
-- **Preferencia**: Llama `mcp__reporte-flash__get_economic_calendar` con `{"days_ahead": 7, "min_impact": "medium"}` y filtra los resultados por las 12 acciones del catálogo. Complementa con `mcp__reporte-flash__get_market_news` con `{"category": "earnings"}` para confirmar fechas.
-- **Fallback** (si MCP no responde): Usa web search buscando "earnings calendar week [fecha]" y "[empresa] earnings date [semana actual]" para cada una.
+- Llama `mcp__market-data__get_economic_events` con `{"days_ahead": 7, "min_impact": "medium"}` y filtra los resultados por las 12 acciones del catálogo. Complementa con `mcp__market-data__get_market_context` con `{"within_hours": 120, "category": "general"}` para confirmar fechas.
+- Si el resultado contiene `"error"` de tipo FINNHUB_UNAVAILABLE: mostrar al director "⚠️ [message]" y DETENER. Si es NO_EVENTS_FOUND: informar que no hay earnings confirmados esta semana.
 
 Por empresa que reporta esta semana, obtén:
 - Día y hora Chile (BMO = antes de apertura, AMC = después del cierre)

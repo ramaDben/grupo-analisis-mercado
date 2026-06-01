@@ -5,15 +5,15 @@ Hoy es lunes. Ejecuta cada pieza en orden, mostrándola al director para aprobac
 
 ## SETUP
 1. Determina los activos del día leyendo `config/agenda_semanal.json` y `config/activos.json` según el día de la semana.
-2. Los datos técnicos se obtienen via `mcp__reporte-flash__analyze_ticker` en la Pieza 4.
+2. Los datos técnicos se obtienen via `mcp__market-data__get_asset_levels` en la Pieza 4.
 
 ---
 
 ## PIEZA 1 — Resumen semanal del calendario económico
 
 Obtén el calendario económico de toda esta semana:
-- **Preferencia**: Llama `mcp__reporte-flash__get_economic_calendar` con `{"days_ahead": 7, "min_impact": "high"}` para obtener los datos de alto impacto de la semana (Chile, EE.UU., Zona Euro, China).
-- **Fallback** (si MCP no responde): Usa web search buscando "investing.com calendario económico semana [fecha actual]" y extrae los datos clave.
+- Llama `mcp__market-data__get_economic_events` con `{"days_ahead": 7, "min_impact": "high"}` para obtener los datos de alto impacto de la semana (Chile, EE.UU., Zona Euro, China).
+- Si el resultado contiene `"error"`: mostrar al director "⚠️ [message]" y DETENER el comando.
 
 Lista cada dato con:
 - Día y hora en hora Chile (CLT/CLST)
@@ -45,8 +45,7 @@ Si MCP WhatsApp no disponible: muestra el texto listo para copiar y avisa.
 ## PIEZA 2 — Earnings de la semana
 
 Ejecuta la lógica de /earnings:
-- **Preferencia**: Usa Firecrawl para extraer el calendario de earnings de esta semana desde calendarios financieros (Earnings Whispers, MarketWatch, Yahoo Finance).
-- **Fallback**: Usa web search buscando earnings de las 12 acciones: #AAPL, #MSFT, #NVDA, #AMZN, #JPM, #BAC, #GS, #MS, #BA, #CAT, #GE, #DE.
+- Llama `mcp__market-data__get_market_context` con `{"within_hours": 120, "category": "general"}` y filtra por las 12 acciones del catálogo. Complementa con WebSearch si NO_NEWS_FOUND.
 
 Por empresa que reporta esta semana, incluye:
 - Día y hora Chile (BMO=antes de apertura, AMC=después del cierre)
@@ -114,9 +113,9 @@ Cómo lo usamos:
 ## PIEZA 4 — Apertura de mercado
 
 Para los activos asignados hoy según el plan:
-- Llama `mcp__reporte-flash__analyze_ticker` con `{"ticker": "[TICKER_MT5]", "timeframe": "H4"}` por cada activo
-- Extrae: precio actual, soportes, resistencias, sesgo, RSI, ATR del resultado
-- Fallback: web search para precio actual + análisis manual con drivers de `config/drivers.json`
+- Llama `mcp__market-data__get_asset_levels` con `{"ticker": "[TICKER_MT5]", "timeframe": "H4"}` por cada activo
+- Extrae: price, s1, s2, r1, r2, rsi_14, atr_14, trend del resultado
+- Si el resultado contiene `"error"`: mostrar al director "⚠️ [message] — Verificar que MT5 esté abierto." y DETENER el comando.
 
 Genera un mensaje de apertura por activo:
 

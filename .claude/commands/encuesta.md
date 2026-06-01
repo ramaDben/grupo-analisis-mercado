@@ -45,7 +45,7 @@ Ejemplos:
 
 ## PASO 2 — Busca contexto previo (solo para tendencia y precio)
 
-Busca con `mcp__reporte-flash__get_market_news` o web search qué está pasando HOY con el activo:
+Busca con `mcp__market-data__get_market_context` (o como fallback opcional: web search) qué está pasando HOY con el activo:
 - Precio actual / variación del día
 - Evento o dato relevante de hoy
 - Sesgo técnico si hay nivel clave cercano

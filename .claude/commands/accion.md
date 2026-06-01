@@ -29,15 +29,15 @@ Lee `config/drivers_indices_sectores.json` para obtener:
 
 ## PASO 3 — Análisis técnico
 
-Llama `mcp__reporte-flash__analyze_ticker` con `{"ticker": "#TICKER", "timeframe": "H4"}`:
-- Extrae: precio actual, soportes (S1, S2), resistencias (R1, R2), sesgo, RSI, ATR
-- Si el MCP no responde: usar web search para precio actual + análisis manual con los drivers de `config/activos.json`
+Llama `mcp__market-data__get_asset_levels` con `{"ticker": "#TICKER", "timeframe": "H4"}`:
+- Extrae: price, s1, s2, r1, r2, rsi_14, atr_14, trend del resultado
+- Si el resultado contiene `"error"`: mostrar al director "⚠️ [message] — Verificar que MT5 esté abierto." y DETENER el comando.
 
 ## PASO 4 — Contexto fundamental
 
 Busca información actual de la empresa:
-- **Preferencia**: Llama `mcp__reporte-flash__get_market_news` con `{"category": "earnings", "min_hours_old": 48}` y filtra por el ticker. Complementa con `{"category": "general"}` para noticias de sector.
-- **Fallback**: Usa web search buscando "[empresa] earnings [año] noticias hoy".
+- Llama `mcp__market-data__get_market_context` con `{"within_hours": 48, "category": "general"}` y filtra por el ticker y sector. Para earnings específicos, complementa con `{"category": "merger"}`.
+- Si el resultado contiene `"error"` de tipo FINNHUB_UNAVAILABLE: mostrar al director "⚠️ [message]" y DETENER. Si es NO_NEWS_FOUND: continuar con análisis técnico disponible.
 
 Obtén:
 - ¿Hay earnings próximos? (en los próximos 7 días) → si sí, DESTACAR como evento clave
