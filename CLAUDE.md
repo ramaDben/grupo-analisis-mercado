@@ -72,13 +72,52 @@ Un aviso = un indicador. NUNCA mezclar múltiples señales técnicas al mismo ti
 - **MACD** → avisar cruces relevantes
 - **Medias móviles** → avisar cruces de medias (ej: cruce de la 50 con la 200)
 
-## Formato de mensajes WhatsApp
-- Emojis con moderación: 📊 📈 📉 🔴 🟢 ⚠️ 🕐 🎯 📚 📅
+## Formato visual de mensajes WhatsApp
+
+### Principio rector: el reporte como mapa rápido
+Primero conclusión, después detalle técnico. Las primeras 3-4 líneas deben entregar lo esencial — muchos clientes no abren el "leer más" de WhatsApp (~200 caracteres visibles).
+
+### 6 reglas de formato (OBLIGATORIAS en todos los mensajes)
+
+**1. Resumen al inicio**
+Abrir cada mensaje de análisis/niveles con 3 líneas antes de cualquier detalle técnico:
+```text
+🎯 Activo: [nombre]
+📌 Nivel a vigilar: [precio]
+⚡ Qué esperar: [1 línea de acción]
+```
+
+**2. Sistema de emojis de color para escenarios**
+Usar siempre estos códigos visuales — consistentes en todos los mensajes:
+- 🟢 Escenario alcista
+- 🔴 Escenario bajista
+- 🟡 Zona de espera / confirmación
+- 🎯 Objetivo (TP o nivel clave)
+- ⚠️ Riesgo o advertencia
+
+**3. Separadores entre secciones**
+`━━━━━━━━━━━━━━━━━━━` entre cada bloque de contenido — obligatorio.
+
+**4. Negritas solo en jerarquía**
+Usar *negrita* ÚNICAMENTE en: título de sección, niveles clave y conclusión. Nunca en el cuerpo del análisis.
+
+**5. Optimización "above the fold"**
+Las primeras 3-4 líneas contienen la conclusión práctica. El detalle técnico va después, para quien quiera profundizar.
+
+**6. Cierre con lectura práctica**
+Cerrar cada mensaje de niveles/análisis con este bloque:
+```text
+🟢 Sobre [resistencia] → fuerza compradora
+🟡 Entre [soporte] y [resistencia] → esperar confirmación
+🔴 Bajo [soporte] → presión vendedora
+```
+
+### Formato base (aplica a todos los mensajes)
 - Formato WhatsApp: *negrita*, _cursiva_
 - Bullets: •
-- Separadores: ━━━━━━━━━━━━━━━━━━━
 - Horas siempre en hora Chile (CLT/CLST)
 - Estructura formal, consistente y repetible cada día
+- Emojis con moderación: 📊 📈 📉 ⚠️ 🕐 📚 📅 (más 🟢🔴🟡🎯 del sistema de escenarios)
 
 ## Formato de precios — regla de decimales MT5
 **OBLIGATORIO**: al mostrar cualquier precio (entrada, TP, SL, soporte, resistencia, precio actual), respetar exactamente los decimales del campo `digits` definido en `config/activos.json` para ese activo.

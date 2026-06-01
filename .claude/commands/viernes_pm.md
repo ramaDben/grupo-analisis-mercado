@@ -19,6 +19,9 @@ Estructura el mensaje así:
 ```
 📊 *CIERRE SEMANAL — [FECHA]*
 ━━━━━━━━━━━━━━━━━━━
+🎯 Esta semana: [1 frase clave que resume lo más importante]
+━━━━━━━━━━━━━━━━━━━
+
 🗓️ *Qué pasó esta semana*
 [Resumen en 3-4 líneas del contexto macro general: qué datos salieron, qué sorprendió, qué fue el tema central]
 
@@ -46,6 +49,10 @@ Estructura el mensaje así:
 ━━━━━━━━━━━━━━━━━━━
 🔮 *Qué esperar la próxima semana*
 [2-3 líneas: eventos clave del calendario, decisiones pendientes, niveles a vigilar]
+
+🟢 Escenario positivo: [qué activaría rally la próxima semana]
+🟡 Escenario base: [qué se espera si no hay sorpresas]
+🔴 Escenario de riesgo: [qué podría presionar a la baja]
 
 _Que tengan buen fin de semana 📈_
 ━━━━━━━━━━━━━━━━━━━

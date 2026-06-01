@@ -51,6 +51,11 @@ Si es repetición: avisar al director "Ya se generó alerta sobre este evento ha
 
 [Si aplica: conexión con escenario macro]
 _[Ej: "Esto refuerza/complica el escenario de recorte de tasas de la Fed"]_
+
+━━━━━━━━━━━━━━━━━━━
+🟢 Escenario alcista: [qué tendría que pasar]
+🟡 Escenario base: [qué se espera si no hay más sorpresas]
+🔴 Escenario bajista: [qué activaría más caída/alza adversa]
 ━━━━━━━━━━━━━━━━━━━
 ```
 

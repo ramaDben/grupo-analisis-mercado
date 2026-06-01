@@ -16,6 +16,11 @@ Para cada activo del día:
 Genera un mensaje por activo:
 
 ```
+🎯 Activo: [NOMBRE ACTIVO]
+📌 Nivel a vigilar: [R1 o S1 según sesgo]
+⚡ Qué esperar: [1 línea de acción concreta]
+━━━━━━━━━━━━━━━━━━━
+
 📊 *APERTURA DE MERCADO — JUEVES [FECHA]*
 ━━━━━━━━━━━━━━━━━━━
 📈 *[NOMBRE ACTIVO]* — Niveles en 4H
@@ -25,10 +30,14 @@ _Operativa intradía / swing corto_
 • Resistencia 1: [R1]
 • Soporte 1: [S1]
 • Zona de interés: [S1] – [R1]
-• Sesgo: [alcista/bajista/lateral]
 
 🔎 ¿Qué lo mueve hoy?
 [Drivers del activo en 2-3 líneas simples, consulta config/drivers.json]
+
+━━━━━━━━━━━━━━━━━━━
+🟢 Sobre [R1] → fuerza compradora
+🟡 Entre [S1] y [R1] → esperar confirmación
+🔴 Bajo [S1] → presión vendedora
 ━━━━━━━━━━━━━━━━━━━
 _Niveles en 4H — operativa intradía/swing corto_
 ```
