@@ -72,6 +72,26 @@ Muestra la ruta del PNG y pregunta:
 Si envío standalone: llama MCP WhatsApp con la imagen.
 Si MCP no disponible: muestra la ruta para adjuntar manualmente.
 
+## PASO 6 — Encadenar encuesta post-evento (reactivo)
+
+Cuando el chart se envía como actualización de niveles técnicos, ofrecer la encuesta de tendencia/causa-efecto sobre ese activo.
+
+1. Escribir/actualizar `data/ultimo_evento.json` con la actualización de niveles:
+```json
+{
+  "tipo": "niveles",
+  "activo": "[ticker_mt5 graficado]",
+  "evento": "Actualización de niveles [temporalidad] — [activo]",
+  "dato_real": null,
+  "dato_esperado": null,
+  "timestamp": "[datetime actual ISO]"
+}
+```
+2. Preguntar al director:
+   > "📊 Niveles de *[activo]* enviados. ¿Lanzo la encuesta post-evento para que el grupo razone hacia dónde puede ir desde estos niveles? (s/n)"
+3. Si responde que sí → ejecutar el flujo de `/encuesta post_evento [activo] "Actualización de niveles [temporalidad]"`. Para niveles, las 3 opciones causa-efecto se construyen sobre el sesgo técnico y las zonas de soporte/resistencia del análisis, no sobre un dato_real/esperado.
+4. Si responde que no → terminar sin generar encuesta.
+
 ## NOTAS
 - El chart queda guardado en `data/charts/` y puede reutilizarse en otros comandos del día.
 - Siempre incluir soportes y resistencias calculados automáticamente con `identificar_niveles()`.

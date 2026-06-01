@@ -72,6 +72,28 @@ Pregunta al director: "¿Apruebas? ¿Adjuntar chart de MT5? ¿Enviar al grupo Wh
 Si aprueba: llama MCP WhatsApp (mcp__whatsapp__send_message).
 Si MCP no disponible: muestra el texto listo para copiar.
 
+## PASO 5 — Encadenar encuesta post-evento (reactivo)
+
+Después de que el director apruebe y envíe el dato, registrar el evento y ofrecer la encuesta pedagógica.
+
+1. Escribir/actualizar `data/ultimo_evento.json` con el dato recién enviado:
+```json
+{
+  "tipo": "noticia_macro",
+  "activo": "[ticker del activo más impactado, ej: USDCLP]",
+  "evento": "[nombre del indicador, ej: IPC USA mayo]",
+  "dato_real": "[valor actual si ya salió, o null en modo anticipación]",
+  "dato_esperado": "[consenso]",
+  "timestamp": "[datetime actual ISO]"
+}
+```
+2. Preguntar al director:
+   > "📊 Acabas de enviar *[evento]*. ¿Lanzo la encuesta post-evento para que el grupo razone qué debería pasar con *[activo]*? (s/n)"
+3. Si responde que sí → ejecutar el flujo de `/encuesta post_evento [activo] "[descripción del evento]"` (PASO 3 tipo `post_evento` de `encuesta.md`): genera las 3 opciones causa-efecto y guarda en `data/historial_encuestas.json`.
+4. Si responde que no → terminar sin generar encuesta.
+
+**Solo aplica en modo resultado o cuando el dato ya tiene dirección clara.** En modo anticipación pura (dato aún no sale), ofrecerla igual pero aclarando que es para que el grupo anticipe el escenario.
+
 ## REGLAS
 - Sin límite de veces al día (cada dato relevante merece su propio mensaje).
 - Hora siempre en hora Chile (CLT/CLST).

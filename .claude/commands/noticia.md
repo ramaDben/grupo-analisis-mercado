@@ -89,6 +89,26 @@ Pregunta: "¿Apruebas? ¿Adjuntar chart de MT5? ¿Enviar al grupo WhatsApp?"
 Si aprueba: llama MCP WhatsApp.
 Si no disponible: muestra texto listo para copiar.
 
+## PASO 5 — Encadenar encuesta post-evento (reactivo)
+
+Después de aprobar y enviar la noticia, registrar el evento y ofrecer la encuesta pedagógica.
+
+1. Escribir/actualizar `data/ultimo_evento.json` con la noticia recién enviada:
+```json
+{
+  "tipo": "noticia",
+  "activo": "[ticker del activo más impactado por la noticia]",
+  "evento": "[título corto de la noticia]",
+  "dato_real": null,
+  "dato_esperado": null,
+  "timestamp": "[datetime actual ISO]"
+}
+```
+2. Preguntar al director:
+   > "📊 Acabas de enviar *[noticia]*. ¿Lanzo la encuesta post-evento para que el grupo razone qué debería pasar con *[activo]*? (s/n)"
+3. Si responde que sí → ejecutar el flujo de `/encuesta post_evento [activo] "[título de la noticia]"`: genera las 3 opciones causa-efecto y guarda en `data/historial_encuestas.json`.
+4. Si responde que no → terminar sin generar encuesta.
+
 ## REGLAS
 - Sin límite de veces al día.
 - No repetir la misma noticia en el mismo día.

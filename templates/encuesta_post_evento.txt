@@ -1,0 +1,12 @@
+📊 *ENCUESTA POST-DATO*
+
+📰 {{evento}}: {{dato_real}} (esperado: {{dato_esperado}})
+
+¿Qué debería pasar con el *{{activo}}*?
+Piensen antes de votar 👇
+
+{{opcion_a}}
+{{opcion_b}}
+{{opcion_c}}
+
+_Mañana revelamos la respuesta correcta_ 💡

@@ -1,11 +1,8 @@
 📊 *ENCUESTA DEL DÍA*
 
-Después de ver los niveles y la noticia de hoy...
-
-*¿Cuál creen que será la tendencia hoy del {{activo}}?*
+¿Cuál creen que será la tendencia del *{{activo}}* hoy?
+_Lean el análisis de arriba antes de votar_ ☝️
 
 📈 Alcista
 📉 Bajista
 ➡️ Lateral
-
-_Lean la información de arriba antes de votar_ ☝️
