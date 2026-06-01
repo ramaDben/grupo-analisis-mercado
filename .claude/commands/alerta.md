@@ -43,19 +43,19 @@ Si es repetición: avisar al director "Ya se generó alerta sobre este evento ha
 [2 líneas MÁXIMO. Claro y directo. Qué ocurrió y dónde.]
 
 *¿Cómo afecta nuestros activos?*
-🇨🇱 USD/CLP: [reacción esperada o vista, 1 línea]
-🥇 Oro: [reacción, 1 línea]
-⛽ WTI: [reacción, 1 línea si aplica]
-📱 US100: [reacción, 1 línea si aplica]
+🇨🇱 USD/CLP: *Alcista/Bajista* — [1 línea explicando por qué] (impacto estimado: ~Xh)
+🥇 Oro: *Alcista/Bajista* — [1 línea] (impacto estimado: ~Xh)
+⛽ WTI: *Alcista/Bajista* — [1 línea si aplica] (impacto estimado: ~Xh)
+📱 US100: *Alcista/Bajista* — [1 línea si aplica] (impacto estimado: ~Xh)
 [Incluir solo los activos realmente impactados]
 
 [Si aplica: conexión con escenario macro]
 _[Ej: "Esto refuerza/complica el escenario de recorte de tasas de la Fed"]_
 
 ━━━━━━━━━━━━━━━━━━━
-🟢 Escenario alcista: [qué tendría que pasar]
-🟡 Escenario base: [qué se espera si no hay más sorpresas]
-🔴 Escenario bajista: [qué activaría más caída/alza adversa]
+🟢 *Alcista* (intra-day): [qué tendría que pasar]
+🟡 *Esperar* (base): [qué se espera si no hay más sorpresas]
+🔴 *Bajista* (intra-day): [qué activaría más caída/alza adversa]
 ━━━━━━━━━━━━━━━━━━━
 ```
 
@@ -96,3 +96,5 @@ Después de enviar la alerta, registrar el evento y ofrecer la encuesta pedagóg
 - Solo incluir activos realmente impactados.
 - Tono: mentor confiable informando, no alarmista.
 - Si hay chart relevante (ej: WTI tras decisión OPEP), ofrecer adjuntarlo.
+- **Dirección explícita**: SIEMPRE usar `*Alcista* 🟢` o `*Bajista* 🔴` por activo — nunca "puede subir/bajar" ni "podría moverse".
+- **Temporalidad obligatoria**: incluir `(impacto estimado: ~Xh)` por cada activo y horizonte `(intra-day)` en los escenarios. Si no se puede determinar: `*Esperar confirmación* 🟡`.
