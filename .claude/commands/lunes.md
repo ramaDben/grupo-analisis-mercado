@@ -159,15 +159,13 @@ Elige el activo principal del día. Genera 2 bloques consecutivos:
 **Bloque B — Encuesta**:
 ```
 📊 *ENCUESTA DEL DÍA*
-━━━━━━━━━━━━━━━━━━━
+
 ¿Cuál creen que será la tendencia del *[activo]* hoy?
+Voten y veamos si acertamos 👇
 
 📈 Alcista
 📉 Bajista
 ➡️ Lateral
-
-Voten y veamos si acertamos 👇
-━━━━━━━━━━━━━━━━━━━
 ```
 
 **→ Muestra al director ambos bloques. Pregunta: ¿Apruebas? ¿Enviar al grupo?**

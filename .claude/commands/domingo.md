@@ -171,16 +171,14 @@ Genera 2 bloques: contexto previo + encuesta.
 **Bloque B — Encuesta**:
 ```
 📊 *ENCUESTA DE LA SEMANA*
-━━━━━━━━━━━━━━━━━━━
+
 ¿Cuál creen que será el activo con mayor movimiento esta semana?
+Voten 👇 — el viernes vemos quién acertó
 
 🇨🇱 USD/CLP
 🥇 Oro
 ⛽ WTI (Petróleo)
 📱 US100 (Nasdaq)
-
-Voten 👇 — el viernes vemos quién acertó
-━━━━━━━━━━━━━━━━━━━
 ```
 
 **→ Muestra al director ambos bloques. Pregunta: ¿Apruebas? ¿Enviar al grupo?**

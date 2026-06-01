@@ -1,6 +1,19 @@
 {
   "max_señales_semana": 3,
   "agenda": {
+    "domingo": {
+      "contenido": [
+        "noticias_finde",
+        "preview_semana",
+        "sesgo_lunes"
+      ],
+      "encuesta": {
+        "tipo": "encuesta_semanal",
+        "descripcion": "¿Cuál creen que será el activo con mayor movimiento esta semana?"
+      },
+      "señales": "no_aplica",
+      "notas": "Encuesta semanal con 4 activos. Mercados cerrados — no usar MT5."
+    },
     "lunes": {
       "contenido": [
         "resumen_semanal",

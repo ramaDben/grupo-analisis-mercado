@@ -63,6 +63,28 @@ _[Ej: "Esto refuerza/complica el escenario de recorte de tasas de la Fed"]_
 Si aprueba: llama MCP WhatsApp con prioridad urgente.
 Si MCP no disponible: muestra texto listo para copiar.
 
+## PASO 6 — Encadenar encuesta post-evento (reactivo)
+
+Después de enviar la alerta, registrar el evento y ofrecer la encuesta pedagógica. La alerta es el detonante natural de una encuesta de causa-efecto: el grupo acaba de recibir un evento caliente.
+
+1. Escribir/actualizar `data/ultimo_evento.json` con el evento de la alerta:
+```json
+{
+  "tipo": "alerta",
+  "activo": "[ticker del activo principal impactado]",
+  "evento": "[qué pasó, en 1 frase corta]",
+  "dato_real": "[valor si aplica, ej: dato sorpresivo; si no, null]",
+  "dato_esperado": "[consenso si aplica, si no null]",
+  "timestamp": "[datetime actual ISO]"
+}
+```
+2. Preguntar al director:
+   > "📊 La alerta ya salió. ¿Lanzo la encuesta post-evento para que el grupo razone qué debería pasar con *[activo]*? (s/n)"
+3. Si responde que sí → ejecutar el flujo de `/encuesta post_evento [activo] "[qué pasó]"`: genera las 3 opciones causa-efecto y guarda en `data/historial_encuestas.json`.
+4. Si responde que no → terminar sin generar encuesta.
+
+**No encadenar automáticamente sin preguntar:** tras una alerta urgente el director puede preferir esperar a que el mercado reaccione antes de abrir la encuesta.
+
 ## REGLAS
 - No repetir la misma alerta en 1 hora.
 - Máximo 2 líneas para "qué pasó".
