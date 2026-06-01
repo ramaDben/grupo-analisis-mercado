@@ -17,8 +17,8 @@ Para los 3 activos del día (rotar: USD/CLP, Oro, WTI, US100, US500, US30):
 Genera un mensaje por activo:
 
 ```
-🎯 Hoy vigila: [R1 o S1 según sesgo]
-📌 Sesgo: [🟢 alcista / 🔴 bajista / 🟡 lateral]
+🎯 Activo: [NOMBRE ACTIVO]
+📌 Nivel a vigilar: [R1 o S1 según sesgo]
 ⚡ Qué esperar: [1 línea de acción concreta]
 ━━━━━━━━━━━━━━━━━━━
 

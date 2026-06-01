@@ -1,5 +1,5 @@
-🎯 *Hoy vigila: {{nivel_clave}}*
-📌 Sesgo: {{sesgo_emoji}} {{sesgo}}
+🎯 Activo: {{activo}}
+📌 Nivel a vigilar: {{nivel_clave}}
 ⚡ Qué esperar: {{accion_esperada}}
 ━━━━━━━━━━━━━━━━━━━
 
@@ -7,6 +7,7 @@
 ━━━━━━━━━━━━━━━━━━━
 
 {{seccion_niveles}}
+Sesgo: {{sesgo_emoji}} {{sesgo}}
 
 🔎 *¿Qué lo está moviendo?*
 {{drivers}}

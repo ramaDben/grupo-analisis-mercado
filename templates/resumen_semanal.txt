@@ -1,6 +1,8 @@
 📅 *RESUMEN SEMANAL* — {{semana}}
 ━━━━━━━━━━━━━━━━━━━
-🎯 Esta semana: {{resumen_3_lineas}}
+🎯 Activo clave: {{resumen_activo}}
+📌 Dato a seguir: {{resumen_nivel}}
+⚡ Qué esperar esta semana: {{resumen_expectativa}}
 ━━━━━━━━━━━━━━━━━━━
 
 Estos son los datos más importantes de esta semana:

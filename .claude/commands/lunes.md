@@ -121,8 +121,8 @@ Para los activos asignados hoy según el plan:
 Genera un mensaje de apertura por activo:
 
 ```
-🎯 Hoy vigila: [R1 o S1 según sesgo]
-📌 Sesgo: [🟢 alcista / 🔴 bajista / 🟡 lateral]
+🎯 Activo: [NOMBRE ACTIVO]
+📌 Nivel a vigilar: [R1 o S1 según sesgo]
 ⚡ Qué esperar: [1 línea de acción concreta]
 ━━━━━━━━━━━━━━━━━━━
 

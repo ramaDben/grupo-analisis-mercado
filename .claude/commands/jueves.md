@@ -16,8 +16,8 @@ Para cada activo del día:
 Genera un mensaje por activo:
 
 ```
-🎯 Hoy vigila: [R1 o S1 según sesgo]
-📌 Sesgo: [🟢 alcista / 🔴 bajista / 🟡 lateral]
+🎯 Activo: [NOMBRE ACTIVO]
+📌 Nivel a vigilar: [R1 o S1 según sesgo]
 ⚡ Qué esperar: [1 línea de acción concreta]
 ━━━━━━━━━━━━━━━━━━━
 

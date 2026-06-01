@@ -81,7 +81,7 @@ Primero conclusión, después detalle técnico. Las primeras 3-4 líneas deben e
 
 **1. Resumen al inicio**
 Abrir cada mensaje de análisis/niveles con 3 líneas antes de cualquier detalle técnico:
-```
+```text
 🎯 Activo: [nombre]
 📌 Nivel a vigilar: [precio]
 ⚡ Qué esperar: [1 línea de acción]
@@ -106,7 +106,7 @@ Las primeras 3-4 líneas contienen la conclusión práctica. El detalle técnico
 
 **6. Cierre con lectura práctica**
 Cerrar cada mensaje de niveles/análisis con este bloque:
-```
+```text
 🟢 Sobre [resistencia] → fuerza compradora
 🟡 Entre [soporte] y [resistencia] → esperar confirmación
 🔴 Bajo [soporte] → presión vendedora

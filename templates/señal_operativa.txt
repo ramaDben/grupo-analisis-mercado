@@ -3,8 +3,8 @@
 *{{ticker}} · {{nombre_activo}}* — {{tipo}}
 
 ⚡ Entrada: ${{entrada}}
-✅ TP: ${{take_profit}} → *+{{tp_clp_fmt}} CLP*
-❌ SL: ${{stop_loss}} → *-{{sl_clp_fmt}} CLP*
+📈 TP: ${{take_profit}} → *+{{tp_clp_fmt}} CLP*
+🔴 SL: ${{stop_loss}} → *-{{sl_clp_fmt}} CLP*
 ━━━━━━━━━━━━━━━━━━━
 
 Volumen: {{volumen}} · Acciones: {{acciones}}
@@ -13,7 +13,7 @@ Volumen: {{volumen}} · Acciones: {{acciones}}
 {{bullets_texto}}
 
 ━━━━━━━━━━━━━━━━━━━
-🟢 Si llega al TP → ganancia {{tp_clp_fmt}} CLP
+📈 Si llega al TP → ganancia {{tp_clp_fmt}} CLP
 🔴 Si activa el SL → pérdida {{sl_clp_fmt}} CLP
 ━━━━━━━━━━━━━━━━━━━
 

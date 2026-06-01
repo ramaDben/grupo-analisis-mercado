@@ -1,6 +1,8 @@
 📊 *CIERRE SEMANAL* — {{semana}}
 ━━━━━━━━━━━━━━━━━━━
-🎯 Esta semana en resumen: {{frase_clave}}
+🎯 Esta semana: {{frase_clave}}
+📌 Nivel a vigilar la próxima semana: {{nivel_a_observar}}
+⚡ Qué esperar: {{expectativa}}
 ━━━━━━━━━━━━━━━━━━━
 
 *¿Qué pasó esta semana?*
