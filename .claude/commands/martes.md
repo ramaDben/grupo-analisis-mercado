@@ -35,9 +35,9 @@ _Operativa intradía / swing corto_
 [Drivers del activo en 2-3 líneas simples, consulta config/drivers.json]
 
 ━━━━━━━━━━━━━━━━━━━
-🟢 Sobre [R1] → fuerza compradora
-🟡 Entre [S1] y [R1] → esperar confirmación
-🔴 Bajo [S1] → presión vendedora
+🟢 *Alcista* — Precio sobre [R1] → tendencia compradora (intra-day)
+🟡 *Esperar* — Entre [S1] y [R1] → sin confirmación de dirección
+🔴 *Bajista* — Precio bajo [S1] → tendencia vendedora (intra-day)
 ━━━━━━━━━━━━━━━━━━━
 _Niveles en 4H — operativa intradía/swing corto_
 ```
@@ -76,9 +76,9 @@ Cuando el director elige, genera el mensaje WhatsApp:
 • Consenso: [valor esperado]
 
 🎯 Escenarios:
-• Si sale mejor → [reacción probable en activos]
-• Si sale peor → [reacción probable en activos]
-• En línea → [reacción probable]
+• Si sale mejor → [ACTIVO] *Alcista* 🟢 (impacto inmediato, ~1-2h) | tendencia del día: [sesgo intra-day]
+• Si sale peor  → [ACTIVO] *Bajista* 🔴 (impacto inmediato, ~1-2h) | tendencia del día: [sesgo intra-day]
+• En línea      → [ACTIVO] *Esperar confirmación* 🟡 → observar nivel [S1/R1] para definir sesgo
 
 👀 Activos a observar: [lista]
 ━━━━━━━━━━━━━━━━━━━
@@ -129,3 +129,5 @@ Genera 2 bloques consecutivos:
 - Hora siempre en hora Chile (CLT/CLST).
 - Un indicador por aviso (nunca mezclar en el mismo mensaje).
 - Si WhatsApp MCP no está disponible: mostrar texto listo para copiar.
+- **Dirección explícita**: SIEMPRE usar `*Alcista* 🟢` o `*Bajista* 🔴` en escenarios — nunca "puede subir", "podría bajar", "fuerza compradora" ni "presión vendedora".
+- **Temporalidad obligatoria**: cada reacción a dato macro lleva `(impacto inmediato, ~1-2h)` o `(tendencia del día, intra-day)`. Si no hay certeza de dirección: `*Esperar confirmación* 🟡`.

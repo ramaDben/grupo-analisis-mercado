@@ -13,9 +13,9 @@ Sesgo: {{sesgo_emoji}} {{sesgo}}
 {{drivers}}
 
 ━━━━━━━━━━━━━━━━━━━
-🟢 Sobre {{resistencia}} → fuerza compradora
-🟡 Entre {{soporte}} y {{resistencia}} → esperar confirmación
-🔴 Bajo {{soporte}} → presión vendedora
+🟢 *Alcista* — Precio sobre {{resistencia}} → tendencia compradora (intra-day)
+🟡 *Esperar* — Entre {{soporte}} y {{resistencia}} → sin confirmación de dirección
+🔴 *Bajista* — Precio bajo {{soporte}} → tendencia vendedora (intra-day)
 ━━━━━━━━━━━━━━━━━━━
 
 📰 *DATO DEL DÍA*

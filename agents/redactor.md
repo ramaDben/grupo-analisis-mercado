@@ -43,11 +43,15 @@ _Operativa {{tipo}}: {{descripcion_operativa}}_
 • Resistencia: {{nivel}} — {{contexto}}
 • Zona de interés: {{desde}} - {{hasta}}
 • Soporte: {{nivel}} — {{contexto}}
-• Sesgo: {{sesgo}}
+• Sesgo: {{sesgo_emoji}} *{{Alcista/Bajista/Lateral}}*
 
 🔎 *¿Qué lo está moviendo?*
 {{drivers en 2-3 líneas}}
 
+━━━━━━━━━━━━━━━━━━━
+🟢 *Alcista* — Precio sobre {{resistencia}} → tendencia compradora (intra-day)
+🟡 *Esperar* — Entre {{soporte}} y {{resistencia}} → sin confirmación de dirección
+🔴 *Bajista* — Precio bajo {{soporte}} → tendencia vendedora (intra-day)
 ━━━━━━━━━━━━━━━━━━━
 
 📰 *DATO DEL DÍA*
@@ -55,7 +59,8 @@ _Operativa {{tipo}}: {{descripcion_operativa}}_
 
 • Qué es: {{explicacion_simple}}
 • Se espera: {{consenso}}
-• Si sale {{mejor/peor}}: {{reaccion_activo}}
+• Si sale mejor → {{activo}} *Alcista* 🟢 (impacto inmediato, ~1-2h)
+• Si sale peor  → {{activo}} *Bajista* 🔴 (impacto inmediato, ~1-2h)
 
 _Fuente: Calendario Investing.com_
 ```
@@ -129,7 +134,7 @@ _Lean la información de arriba antes de votar_ ☝️
 
 *¿A qué precio creen que abrirá el {{activo}} {{mañana/el lunes}}?*
 
-_Recuerden que {{dato o evento}} podría mover el precio_
+_{{dato o evento}} apunta a sesgo *{{Alcista/Bajista}}* en {{activo}} hoy_
 
 Escriban su estimación en el chat 👇
 ```
@@ -184,7 +189,7 @@ _Señal {{n}} de 3 esta semana_
 {{explicación simple de qué pasó y por qué importa}}
 
 *¿Cómo afecta?*
-• {{activo}}: {{posible reacción}}
+• {{activo}}: *{{Alcista/Bajista}}* — {{explicación 1 línea}} ({{impacto inmediato, ~1-2h / tendencia del día, intra-day}})
 
 _Seguimos monitoreando_ 👀
 ```

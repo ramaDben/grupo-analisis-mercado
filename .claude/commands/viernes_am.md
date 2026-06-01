@@ -36,9 +36,9 @@ _Operativa intradía / swing corto_
 [Drivers en 2-3 líneas simples]
 
 ━━━━━━━━━━━━━━━━━━━
-🟢 Sobre [R1] → fuerza compradora
-🟡 Entre [S1] y [R1] → esperar confirmación
-🔴 Bajo [S1] → presión vendedora
+🟢 *Alcista* — Precio sobre [R1] → tendencia compradora (intra-day)
+🟡 *Esperar* — Entre [S1] y [R1] → sin confirmación de dirección
+🔴 *Bajista* — Precio bajo [S1] → tendencia vendedora (intra-day)
 ━━━━━━━━━━━━━━━━━━━
 _Niveles en 4H — operativa intradía/swing corto_
 ```
@@ -61,8 +61,9 @@ Non-Farm Payrolls — el dato de empleo más importante de EE.UU.
 
 ¿Por qué importa?
 El NFP mide cuántos trabajos se crearon en EE.UU. el mes pasado.
-Si sale fuerte → la Fed puede no bajar tasas → DXY sube → Oro puede bajar, USD/CLP puede subir.
-Si sale débil → la Fed podría recortar → DXY cae → Oro puede subir.
+• Sale fuerte → DXY *Alcista* 🟢 · Oro *Bajista* 🔴 · USD/CLP *Alcista* 🟢 (impacto inmediato, ~1-2h)
+• Sale débil  → DXY *Bajista* 🔴 · Oro *Alcista* 🟢 (impacto inmediato, ~1-2h)
+• Tendencia del día (intra-day): confirmar con niveles técnicos 4H tras la primera reacción
 
 📊 Anterior: [X]K | Consenso: [Y]K
 ━━━━━━━━━━━━━━━━━━━
@@ -81,7 +82,10 @@ Genera el mensaje WhatsApp estándar para el dato elegido:
 ¿Qué es? [1-2 líneas]
 🕐 Sale hoy a las [Hora CLT]
 📊 Anterior: [X] | Esperado: [Y]
-🎯 Escenarios: [mejor/peor/en línea]
+🎯 Escenarios:
+• Si sale mejor → [ACTIVO] *Alcista* 🟢 (impacto inmediato, ~1-2h) | tendencia del día: [sesgo intra-day]
+• Si sale peor  → [ACTIVO] *Bajista* 🔴 (impacto inmediato, ~1-2h) | tendencia del día: [sesgo intra-day]
+• En línea      → [ACTIVO] *Esperar confirmación* 🟡 → observar nivel [S1/R1] para definir sesgo
 👀 Activos a observar: [lista]
 ━━━━━━━━━━━━━━━━━━━
 ```
@@ -126,3 +130,5 @@ Genera 2 bloques:
 - Un indicador por aviso.
 - Los viernes 3 activos (no 2).
 - Si WhatsApp MCP no está disponible: mostrar texto listo para copiar.
+- **Dirección explícita**: SIEMPRE usar `*Alcista* 🟢` o `*Bajista* 🔴` en escenarios — nunca "puede subir", "podría bajar", "fuerza compradora" ni "presión vendedora".
+- **Temporalidad obligatoria**: cada reacción a dato macro lleva `(impacto inmediato, ~1-2h)` o `(tendencia del día, intra-day)`. Si no hay certeza de dirección: `*Esperar confirmación* 🟡`.
