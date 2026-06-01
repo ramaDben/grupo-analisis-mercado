@@ -17,6 +17,11 @@ Para los 3 activos del día (rotar: USD/CLP, Oro, WTI, US100, US500, US30):
 Genera un mensaje por activo:
 
 ```
+🎯 Hoy vigila: [R1 o S1 según sesgo]
+📌 Sesgo: [🟢 alcista / 🔴 bajista / 🟡 lateral]
+⚡ Qué esperar: [1 línea de acción concreta]
+━━━━━━━━━━━━━━━━━━━
+
 📊 *APERTURA DE MERCADO — VIERNES [FECHA]*
 ━━━━━━━━━━━━━━━━━━━
 📈 *[NOMBRE ACTIVO]* — Niveles en 4H
@@ -26,10 +31,14 @@ _Operativa intradía / swing corto_
 • Resistencia 1: [R1]
 • Soporte 1: [S1]
 • Zona de interés: [S1] – [R1]
-• Sesgo: [alcista/bajista/lateral]
 
 🔎 ¿Qué lo mueve hoy?
 [Drivers en 2-3 líneas simples]
+
+━━━━━━━━━━━━━━━━━━━
+🟢 Sobre [R1] → fuerza compradora
+🟡 Entre [S1] y [R1] → esperar confirmación
+🔴 Bajo [S1] → presión vendedora
 ━━━━━━━━━━━━━━━━━━━
 _Niveles en 4H — operativa intradía/swing corto_
 ```

@@ -121,6 +121,11 @@ Para los activos asignados hoy según el plan:
 Genera un mensaje de apertura por activo:
 
 ```
+🎯 Hoy vigila: [R1 o S1 según sesgo]
+📌 Sesgo: [🟢 alcista / 🔴 bajista / 🟡 lateral]
+⚡ Qué esperar: [1 línea de acción concreta]
+━━━━━━━━━━━━━━━━━━━
+
 📊 *APERTURA DE MERCADO — [DÍA] [FECHA]*
 ━━━━━━━━━━━━━━━━━━━
 📈 *[NOMBRE ACTIVO]* — Niveles en 4H
@@ -130,10 +135,14 @@ _Operativa intradía / swing corto_
 • Resistencia: [R1]
 • Soporte: [S1]
 • Zona de interés: [S1] – [R1]
-• Sesgo: [alcista/bajista/lateral]
 
 🔎 ¿Qué lo mueve hoy?
 [Drivers del activo en 2-3 líneas simples]
+
+━━━━━━━━━━━━━━━━━━━
+🟢 Sobre [R1] → fuerza compradora
+🟡 Entre [S1] y [R1] → esperar confirmación
+🔴 Bajo [S1] → presión vendedora
 ━━━━━━━━━━━━━━━━━━━
 _Niveles en 4H — operativa intradía/swing corto_
 ```

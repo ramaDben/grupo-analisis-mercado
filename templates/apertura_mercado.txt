@@ -1,3 +1,8 @@
+🎯 *Hoy vigila: {{nivel_clave}}*
+📌 Sesgo: {{sesgo_emoji}} {{sesgo}}
+⚡ Qué esperar: {{accion_esperada}}
+━━━━━━━━━━━━━━━━━━━
+
 📊 *APERTURA DE MERCADO* — {{fecha}}
 ━━━━━━━━━━━━━━━━━━━
 
@@ -6,6 +11,10 @@
 🔎 *¿Qué lo está moviendo?*
 {{drivers}}
 
+━━━━━━━━━━━━━━━━━━━
+🟢 Sobre {{resistencia}} → fuerza compradora
+🟡 Entre {{soporte}} y {{resistencia}} → esperar confirmación
+🔴 Bajo {{soporte}} → presión vendedora
 ━━━━━━━━━━━━━━━━━━━
 
 📰 *DATO DEL DÍA*

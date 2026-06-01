@@ -1,11 +1,13 @@
 📅 *RESUMEN SEMANAL* — {{semana}}
 ━━━━━━━━━━━━━━━━━━━
+🎯 Esta semana: {{resumen_3_lineas}}
+━━━━━━━━━━━━━━━━━━━
 
 Estos son los datos más importantes de esta semana:
 
 {{datos_semana}}
 
-🔴 *Días de alta volatilidad*: {{dias_rojos}}
+⚠️ *Días de alta volatilidad*: {{dias_rojos}}
 
 ━━━━━━━━━━━━━━━━━━━
 

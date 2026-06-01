@@ -1,5 +1,7 @@
 📊 *CIERRE SEMANAL* — {{semana}}
 ━━━━━━━━━━━━━━━━━━━
+🎯 Esta semana en resumen: {{frase_clave}}
+━━━━━━━━━━━━━━━━━━━
 
 *¿Qué pasó esta semana?*
 {{resumen_semana}}
@@ -12,5 +14,11 @@
 
 *¿Qué esperar la próxima semana?*
 {{expectativas_proxima}}
+
+━━━━━━━━━━━━━━━━━━━
+🟢 {{escenario_alcista_proxima}}
+🟡 {{escenario_neutral_proxima}}
+🔴 {{escenario_bajista_proxima}}
+━━━━━━━━━━━━━━━━━━━
 
 _Buen fin de semana_ 👋
