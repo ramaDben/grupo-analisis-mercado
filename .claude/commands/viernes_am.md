@@ -2,7 +2,7 @@ Genera la operativa de la mañana del viernes pieza por pieza para aprobación.
 
 ## SETUP
 1. Determina los activos del día leyendo `config/agenda_semanal.json` y `config/activos.json` según el día de la semana.
-2. Los datos técnicos se obtienen via `mcp__reporte-flash__analyze_ticker` en cada pieza.
+2. Los datos técnicos se obtienen via `mcp__market-data__get_asset_levels` en cada pieza.
 3. **NOTA VIERNES**: Los viernes cubrir 3 activos (en vez de 2). El primer viernes del mes publicación de NFP (Non-Farm Payrolls) — si es hoy, destacarlo especialmente.
 
 ---
@@ -10,9 +10,9 @@ Genera la operativa de la mañana del viernes pieza por pieza para aprobación.
 ## PIEZA 1 — Apertura de mercado (3 activos el viernes)
 
 Para los 3 activos del día (rotar: USD/CLP, Oro, WTI, US100, US500, US30):
-- Llama `mcp__reporte-flash__analyze_ticker` con `{"ticker": "[TICKER_MT5]", "timeframe": "H4"}` para cada uno
-- Extrae: precio actual, soportes, resistencias, sesgo, RSI, ATR del resultado
-- Fallback: web search para precio actual + análisis manual con drivers de `config/drivers.json`
+- Llama `mcp__market-data__get_asset_levels` con `{"ticker": "[TICKER_MT5]", "timeframe": "H4"}` para cada uno
+- Extrae: price, s1, s2, r1, r2, rsi_14, atr_14, trend del resultado
+- Si el resultado contiene `"error"`: mostrar al director "⚠️ [message] — Verificar que MT5 esté abierto." y DETENER el comando.
 
 Genera un mensaje por activo:
 
@@ -70,8 +70,8 @@ El NFP mide cuántos trabajos se crearon en EE.UU. el mes pasado.
 ```
 
 **Independientemente**, obtén el calendario completo de hoy:
-- **Preferencia**: Llama `mcp__reporte-flash__get_economic_calendar` con `{"days_ahead": 0, "min_impact": "medium"}` (Chile, EE.UU., Zona Euro, China; impacto medio y alto).
-- **Fallback**: Web search "calendario económico hoy [fecha] investing.com".
+- Llama `mcp__market-data__get_economic_events` con `{"days_ahead": 0, "min_impact": "medium"}` (Chile, EE.UU., Zona Euro, China; impacto medio y alto).
+- Si el resultado contiene `"error"`: mostrar al director "⚠️ [message]" — si es NO_EVENTS_FOUND continuar; si es FINNHUB_UNAVAILABLE DETENER.
 
 Lista numerada. Director elige cuál(es) desarrollar.
 

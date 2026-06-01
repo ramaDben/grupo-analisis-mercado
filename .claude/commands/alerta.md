@@ -3,8 +3,8 @@ Busca automáticamente qué está moviendo el mercado AHORA y genera una alerta 
 ## PASO 1 — Detectar eventos en tiempo real
 
 Busca eventos de las últimas 2 horas que impacten nuestros activos:
-- **Preferencia**: Llama `mcp__reporte-flash__get_market_news` con `{"category": "general", "min_hours_old": 2}` para detectar breaking news en tiempo real (Fed, datos sorpresivos, geopolítica, earnings).
-- **Fallback** (si MCP no responde): Usa web search buscando "breaking news mercados [hora actual]" y "noticias economía [fecha]".
+- Llama `mcp__market-data__get_market_context` con `{"within_hours": 2, "category": "general"}` para detectar breaking news en tiempo real (Fed, datos sorpresivos, geopolítica, earnings).
+- Si el resultado contiene `"error"`: mostrar al director "⚠️ [message] — No es posible continuar sin datos reales." y DETENER el comando.
 
 **Filtros de prioridad** (en orden):
 1. 🏛️ Bancos centrales: Fed, BCCh, BCE — cualquier discurso, declaración, decisión

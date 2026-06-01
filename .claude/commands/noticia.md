@@ -3,8 +3,8 @@ Busca noticias relevantes del mercado y genera el mensaje WhatsApp de la que eli
 ## PASO 1 — Buscar noticias relevantes
 
 Busca noticias que impacten nuestros activos:
-- **Preferencia**: Llama `mcp__reporte-flash__get_market_news` con `{"category": "general", "min_hours_old": 4}` para obtener noticias recientes de forex, commodities e índices.
-- **Fallback** (si MCP no responde): Usa web search buscando "[fecha actual] noticias USD/CLP Oro WTI US100 US500 mercados".
+- Llama `mcp__market-data__get_market_context` con `{"within_hours": 4, "category": "general"}` para obtener noticias recientes de forex, commodities e índices.
+- Si el resultado contiene `"error"`: mostrar al director "⚠️ [message]" — si es NO_NEWS_FOUND informar y DETENER; si es FINNHUB_UNAVAILABLE DETENER.
 
 **Activos a cubrir**:
 - Forex/commodities: USD/CLP, Oro (XAU/USD), WTI (Petróleo)
