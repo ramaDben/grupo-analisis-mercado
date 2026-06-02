@@ -12,12 +12,12 @@
       "nota": "Requiere Evolution API corriendo en Docker. Ver: https://doc.evolution-api.com/"
     },
     "trendradar": {
-      "estado": "NO ACTIVO — reemplazado por mcp__reporte-flash__get_market_news",
+      "estado": "NO ACTIVO — noticias ahora vía WebSearch (investing.com + fuentes oficiales)",
       "command": "npx",
       "args": ["-y", "@sansan0/trendradar-mcp"]
     },
     "firecrawl": {
-      "estado": "NO ACTIVO — reemplazado por mcp__reporte-flash__get_economic_calendar",
+      "estado": "NO ACTIVO — calendario ahora vía WebSearch (investing.com + fuentes oficiales)",
       "command": "npx",
       "args": ["-y", "@mendableai/firecrawl-mcp"],
       "env": {

@@ -15,7 +15,7 @@ Todo el contenido pasa por aprobación explícita del director antes de enviarse
 ## Requisitos
 
 - **Claude Code** (CLI o Desktop) con suscripción activa
-- **MCP reporte-flash** instalado y configurado (análisis técnico MT5 + calendario macro)
+- **MCP market-data** instalado y configurado (análisis técnico MT5: `get_asset_levels`)
 - **Python 3.10+** para scripts auxiliares (senal_manager, formatter)
 - **Evolution API en Docker** para envío directo WhatsApp (opcional, pendiente)
 - **gh CLI** para gestión de issues/PRs (opcional)
