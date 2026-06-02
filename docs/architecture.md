@@ -20,15 +20,14 @@ El sistema conecta a Claude Code (agente IA) con el flujo de trabajo diario del 
        ▼                           ▼
 ┌─────────────┐           ┌────────────────────┐
 │ MCP          │           │ Archivos locales    │
-│ reporte-flash│           │ config/activos.json │
+│ market-data  │           │ config/activos.json │
 │ (activo)     │           │ config/agenda...    │
 │              │           │ data/historial...   │
-│ • analyze_   │           └────────────────────┘
-│   ticker     │
-│ • get_eco-   │
-│   nomic_cal  │
-│ • get_market │
-│   _news      │
+│ • get_asset_ │           └────────────────────┘
+│   levels     │
+│              │  + WebSearch (calendario
+│              │    y noticias, investing.com)
+│              │
 └─────────────┘
        │
        ▼
@@ -53,22 +52,20 @@ Los comandos de Claude Code usan herramientas externas via MCP. El estado actual
 
 | MCP | Estado | Herramientas clave |
 |-----|--------|--------------------|
-| **reporte-flash** | ✅ Activo | `analyze_ticker`, `get_economic_calendar`, `get_market_news` |
+| **market-data** | ✅ Activo | `get_asset_levels` (análisis técnico MT5) |
+| **WebSearch (investing.com + fuentes oficiales)** | ✅ Activo | Calendario económico y noticias |
 | **WhatsApp (Evolution API)** | ⏳ Pendiente Docker | `send_message` al grupo |
-| **TrendRadar** | ❌ Reemplazado | Reemplazado por `get_market_news` |
-| **Firecrawl** | ❌ Reemplazado | Reemplazado por `get_economic_calendar` |
+| **TrendRadar / Firecrawl / Finnhub** | ❌ No activos | Reemplazados por market-data (MT5) + WebSearch |
 
-### MCP reporte-flash — herramientas
+### MCP market-data — herramientas
 
 | Herramienta | Parámetros principales | Retorna |
 |-------------|----------------------|---------|
-| `analyze_ticker` | `ticker`, `timeframe` | Precio, S/R, sesgo, RSI, ATR |
-| `get_economic_calendar` | `days_ahead`, `min_impact` | Datos macro: hora CLT, consenso, anterior |
-| `get_market_news` | `category`, `min_hours_old` | Noticias filtradas por categoría y frescura |
-| `scan_sector` | `sector` | Análisis de sector completo |
-| `render_full_report` | `ticker`, opciones | Reporte HTML + WhatsApp + ZIP |
+| `get_asset_levels` | `ticker`, `timeframe` | Precio, soportes/resistencias, sesgo, RSI, ATR |
+| `get_economic_events` | — | **Deprecada** → `{"error": "DEPRECATED"}` (usar WebSearch) |
+| `get_market_context` | — | **Deprecada** → `{"error": "DEPRECATED"}` (usar WebSearch) |
 
-> **Actualización (calendario y noticias vía WebSearch)**: el calendario económico y las noticias relevantes ya **no** se obtienen desde un MCP. Se obtienen con la herramienta `WebSearch` sobre **investing.com + fuentes oficiales** (Fed, BCCh, OPEP+, EIA, BLS) directamente en los comandos `/dato_macro` y `/noticia` (y los comandos de día). Las tools `get_economic_events` / `get_market_context` del MCP `market-data` quedaron **deprecadas** (devuelven `{"error": "DEPRECATED"}`). Motivo: Finnhub producía errores de temporalidad y atingencia. Solo el análisis técnico MT5 (`get_asset_levels`) sigue en el MCP. Ver `docs/design/websearch-calendario-noticias.design.md`.
+> **Calendario y noticias vía WebSearch**: el calendario económico y las noticias relevantes ya **no** se obtienen desde un MCP. Se obtienen con la herramienta `WebSearch` sobre **investing.com + fuentes oficiales** (Fed, BCCh, OPEP+, EIA, BLS) directamente en los comandos `/dato_macro` y `/noticia` (y los comandos de día). Las tools `get_economic_events` / `get_market_context` del MCP `market-data` quedaron **deprecadas** (devuelven `{"error": "DEPRECATED"}`). Motivo: Finnhub producía errores de temporalidad y atingencia. Solo el análisis técnico MT5 (`get_asset_levels`) sigue activo en el MCP. Ver `docs/design/websearch-calendario-noticias.design.md`.
 
 ## Flujo de aprobación semi-automático
 

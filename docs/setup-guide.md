@@ -28,18 +28,20 @@ cd grupo-analisis-mercado
 pip install MetaTrader5 pandas requests
 ```
 
-> `MetaTrader5` solo es necesario si se usa el script `scripts/mt5_integration.py` (integración legacy). Los comandos actuales usan el MCP `reporte-flash` en su lugar.
+> `MetaTrader5` solo es necesario si se usa el script `scripts/mt5_integration.py` (integración legacy). Los comandos actuales usan el MCP `market-data` (`get_asset_levels`) en su lugar.
 
-### 3. Configurar el MCP reporte-flash
+### 3. Configurar el MCP market-data
 
-El MCP `reporte-flash` es el motor del sistema. Provee análisis técnico desde MT5, calendario macro y noticias de mercado.
+El MCP `market-data` (`market_data_mcp/`) es la capa de datos técnicos del sistema. Provee análisis técnico desde MT5 con la tool `get_asset_levels` (precio, soportes/resistencias, sesgo, RSI, ATR).
+
+> El calendario económico y las noticias **no** pasan por el MCP: se obtienen con `WebSearch` sobre investing.com + fuentes oficiales (Fed, BCCh, OPEP+, EIA, BLS). Las tools `get_economic_events` / `get_market_context` quedaron **deprecadas** (devuelven `{"error": "DEPRECATED"}`).
 
 Verificar que esté instalado con:
 ```bash
 claude mcp list
 ```
 
-Si no aparece `reporte-flash`, contactar al equipo técnico para obtener el server y las instrucciones de instalación.
+Si no aparece `market-data`, revisar el registro del server `market_data_mcp/server.py` en la configuración de MCPs (`.claude.json` del usuario).
 
 ### 4. Configurar MCPs opcionales (WhatsApp)
 
@@ -83,6 +85,21 @@ Probar el dashboard del sistema:
 
 Debería mostrar: señales de la semana, activos del día, estado de MCPs.
 
+### 7. Ejecutar los tests del MCP market-data (opcional)
+
+La lógica técnica del MCP (`get_asset_levels`) y los contratos de error tienen
+cobertura de tests que corre sin MT5 ni `fastmcp` instalados (el stack pesado se
+sustituye por un stub en `market_data_mcp/tests/conftest.py`):
+
+```bash
+pip install pytest pandas
+python -m pytest market_data_mcp/tests -v
+```
+
+Cubren: matemática técnica (RSI, clustering, soportes/resistencias), el contrato
+`{"error": CÓDIGO, "message": ...}` de `get_asset_levels`, el contrato
+`DEPRECATED` de calendario/noticias y el smoke test de import del server.
+
 ---
 
 ## Configuración de Evolution API (WhatsApp — pendiente)
@@ -112,7 +129,7 @@ Ver documentación oficial: https://doc.evolution-api.com/
 
 No hay variables de entorno que configurar directamente. Las API keys van en `mcp/mcp_config.json` (gitignored).
 
-Si se usa el MCP `reporte-flash` con autenticación adicional, las credenciales se configuran en el cliente MCP (`.claude.json` del usuario), no en este repositorio.
+Si el MCP `market-data` requiere autenticación adicional, las credenciales se configuran en el cliente MCP (`.claude.json` del usuario), no en este repositorio.
 
 ---
 
@@ -147,7 +164,7 @@ PNGs generados desde MT5. Se regeneran bajo demanda con `/chart`.
 
 ## Troubleshooting
 
-**MCP reporte-flash no responde**
+**MCP market-data no responde**
 - Verificar con `claude mcp list` que aparezca como conectado
 - Reiniciar la sesión de Claude Code
 - Si el servidor cachea módulos Python, editarlo y reiniciarlo

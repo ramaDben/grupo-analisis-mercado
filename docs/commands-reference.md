@@ -153,7 +153,7 @@ Dashboard del sistema. Muestra:
 - Señales de la semana (cuántas usadas de 3)
 - Plan del día según `config/agenda_semanal.json`
 - Activos del día
-- Estado de MCPs (reporte-flash ✅, WhatsApp ⏳)
+- Estado de MCPs (market-data ✅, WhatsApp ⏳)
 - Mensajes guardados hoy en `data/mensajes/`
 
 ---
