@@ -208,7 +208,7 @@ Invocar con `/nombre` desde Claude Code:
 ### Capa 2 — Comandos de tarea (ad hoc)
 | Comando | Cuándo usarlo |
 |---------|---------------|
-| `/encuesta [tipo] [activo]` | Encuesta de tendencia o precio para cualquier activo |
+| `/encuesta [tipo] [activo]` | Encuesta de sentimiento puro (sin precios ni educación). 3 tipos: `posicion`, `tendencia`, `movimiento`. Lo educativo migró fuera de `/encuesta`. |
 | `/rencuesta` | Desarrolla didácticamente el tema de una encuesta y construye la malla de conceptos. `/rencuesta` (última encuesta), `/rencuesta [tema]`, `/rencuesta mapa` (vista de repaso). |
 | `/apertura` | Niveles técnicos interactivos: pregunta activo, temporalidad e indicador (RSI/ATR) por activo. Lo invocan los comandos de día en su PIEZA de apertura. |
 | `/dato_macro` | Calendario del día → director elige dato a desarrollar |

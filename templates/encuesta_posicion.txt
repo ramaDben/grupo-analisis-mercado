@@ -1,0 +1,8 @@
+📊 *ENCUESTA DEL DÍA*
+
+¿Qué estás operando hoy en *{{activo}}*?
+{{guino}}
+
+🟢 Compré
+🔴 Vendí
+⚪ No operé / mirando

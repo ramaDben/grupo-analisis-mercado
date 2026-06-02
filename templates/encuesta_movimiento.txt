@@ -1,0 +1,6 @@
+📊 *{{titulo}}*
+
+¿Qué activo creen que tendrá más movimiento {{periodo}}?
+Voten 👇
+
+{{opciones}}
