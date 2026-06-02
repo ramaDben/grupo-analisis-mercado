@@ -50,8 +50,8 @@ Si aprueba envío: llama MCP WhatsApp. Si no disponible: muestra texto listo par
 ## PIEZA 2 — Dato macro del día
 
 Ejecuta la lógica de /dato_macro:
-- Llama `mcp__market-data__get_economic_events` con `{"days_ahead": 0, "min_impact": "medium"}` para obtener el calendario de hoy (Chile, EE.UU., Zona Euro, China; impacto medio y alto).
-- Si el resultado contiene `"error"`: mostrar al director "⚠️ [message]" — si es NO_EVENTS_FOUND continuar (domingo/feriado); si es FINNHUB_UNAVAILABLE DETENER.
+- Obtén el calendario de hoy con `WebSearch` sobre investing.com (Chile, EE.UU., Zona Euro, China; impacto medio y alto), como en el PASO 1 de `/dato_macro`. Convierte las horas a Chile (CLT/CLST).
+- Si no hay eventos de impacto medio/alto hoy → continuar (domingo/feriado es esperado).
 
 Lista numerada con los datos del día:
 ```

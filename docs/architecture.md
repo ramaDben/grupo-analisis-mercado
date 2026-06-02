@@ -68,6 +68,8 @@ Los comandos de Claude Code usan herramientas externas via MCP. El estado actual
 | `scan_sector` | `sector` | Análisis de sector completo |
 | `render_full_report` | `ticker`, opciones | Reporte HTML + WhatsApp + ZIP |
 
+> **Actualización (calendario y noticias vía WebSearch)**: el calendario económico y las noticias relevantes ya **no** se obtienen desde un MCP. Se obtienen con la herramienta `WebSearch` sobre **investing.com + fuentes oficiales** (Fed, BCCh, OPEP+, EIA, BLS) directamente en los comandos `/dato_macro` y `/noticia` (y los comandos de día). Las tools `get_economic_events` / `get_market_context` del MCP `market-data` quedaron **deprecadas** (devuelven `{"error": "DEPRECATED"}`). Motivo: Finnhub producía errores de temporalidad y atingencia. Solo el análisis técnico MT5 (`get_asset_levels`) sigue en el MCP. Ver `docs/design/websearch-calendario-noticias.design.md`.
+
 ## Flujo de aprobación semi-automático
 
 Este flujo aplica a **todos** los comandos sin excepción:

@@ -53,7 +53,20 @@ def register(mcp: FastMCP) -> None:
         Returns:
             {"news": [...], "filtered_by": {...}, "source": "finnhub", "generated_at": "..."}
             O {"error": "CÓDIGO", "message": "..."} si no hay datos disponibles.
+
+        DEPRECADO: las noticias ahora se obtienen vía WebSearch (investing.com +
+        fuentes oficiales) directamente en el comando /noticia.
         """
+        return {
+            "error": "DEPRECATED",
+            "message": (
+                "get_market_context está deprecado. Las noticias ahora se obtienen "
+                "con WebSearch (investing.com + fuentes oficiales) en el comando /noticia. "
+                "Ver docs/design/websearch-calendario-noticias.design.md."
+            ),
+        }
+
+        # --- Código Finnhub legacy (inalcanzable; se elimina tras validación) ---
         try:
             from mt5_client import get_news, FINNHUB_API_KEY
         except ImportError:

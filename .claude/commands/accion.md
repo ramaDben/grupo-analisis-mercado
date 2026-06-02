@@ -36,8 +36,8 @@ Llama `mcp__market-data__get_asset_levels` con `{"ticker": "#TICKER", "timeframe
 ## PASO 4 — Contexto fundamental
 
 Busca información actual de la empresa:
-- Llama `mcp__market-data__get_market_context` con `{"within_hours": 48, "category": "general"}` y filtra por el ticker y sector. Para earnings específicos, complementa con `{"category": "merger"}`.
-- Si el resultado contiene `"error"` de tipo FINNHUB_UNAVAILABLE: mostrar al director "⚠️ [message]" y DETENER. Si es NO_NEWS_FOUND: continuar con análisis técnico disponible.
+- Con `WebSearch` busca información actual de la empresa (últimas ~48 h) filtrando por el ticker y sector (investing.com + fuentes oficiales de la empresa). Para earnings, busca la fecha de reporte y estimaciones.
+- Si no hay noticias relevantes: continuar con análisis técnico disponible.
 
 Obtén:
 - ¿Hay earnings próximos? (en los próximos 7 días) → si sí, DESTACAR como evento clave

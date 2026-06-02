@@ -1,10 +1,14 @@
 Busca noticias relevantes del mercado y genera el mensaje WhatsApp de la que elija el director.
 
-## PASO 1 — Buscar noticias relevantes
+## PASO 1 — Buscar noticias relevantes (WebSearch + fuentes oficiales)
 
-Busca noticias que impacten nuestros activos:
-- Llama `mcp__market-data__get_market_context` con `{"within_hours": 4, "category": "general"}` para obtener noticias recientes de forex, commodities e índices.
-- Si el resultado contiene `"error"`: mostrar al director "⚠️ [message]" — si es NO_NEWS_FOUND informar y DETENER; si es FINNHUB_UNAVAILABLE DETENER.
+Busca con la herramienta `WebSearch` noticias recientes que impacten nuestros activos (ya no se usa el MCP):
+
+- Fuentes: **investing.com + fuentes oficiales** (Fed, BCCh, OPEP/OPEP+, EIA, BLS) para máxima atingencia y frescura.
+- **Frescura**: prioriza noticias de las últimas ~4–24 h; descarta lo antiguo (revisa la fecha de cada resultado).
+- Lanza una búsqueda por cada nivel de prioridad hasta reunir 3-5 noticias relevantes.
+
+**Contrato sin-resultados**: si no hay noticias relevantes recientes para el catálogo → informa al director "📰 Sin noticias relevantes recientes" y DETÉN. En fin de semana o mercados cerrados es comportamiento esperado.
 
 **Activos a cubrir**:
 - Forex/commodities: USD/CLP, Oro (XAU/USD), WTI (Petróleo)

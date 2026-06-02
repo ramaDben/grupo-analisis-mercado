@@ -10,8 +10,8 @@ Nota de hora: los mercados asiáticos abren el domingo ~22:00 CLT (lunes en Toki
 ## PIEZA 1 — Noticias del fin de semana
 
 Busca eventos relevantes ocurridos entre el sábado y hoy domingo que puedan mover nuestros activos al inicio de semana:
-- Llama `mcp__market-data__get_market_context` con `{"within_hours": 48, "category": "general"}`.
-- Si el resultado contiene `"error"` de tipo FINNHUB_UNAVAILABLE: mostrar "⚠️ [message]" y DETENER. Si es NO_NEWS_FOUND: usar el mensaje "mercados tranquilos" (ver más abajo).
+- Con `WebSearch` busca noticias del fin de semana (últimas ~48 h) sobre investing.com + fuentes oficiales (Fed, BCCh, OPEP+, EIA), como en el PASO 1 de `/noticia`.
+- Si no hay noticias relevantes del fin de semana: usar el mensaje "mercados tranquilos" (ver más abajo).
 
 Filtrar por prioridad:
 1. 🏛️ Bancos centrales (declaraciones, discursos)
@@ -57,8 +57,8 @@ Al aprobar: guardar como `data/mensajes/YYYY-MM-DD_HH-MM_domingo_noticias.txt`.
 ## PIEZA 2 — Preview de la semana
 
 Obtén el calendario económico de la semana que viene:
-- Llama `mcp__market-data__get_economic_events` con `{"days_ahead": 7, "min_impact": "high"}`.
-- Si el resultado contiene `"error"`: mostrar "⚠️ [message]" y DETENER.
+- Con `WebSearch` sobre investing.com obtén el calendario de **alto impacto** de la semana que viene (próximos 7 días). Convierte las horas a Chile (CLT/CLST).
+- Si no encuentras eventos de alto impacto → informar y DETENER.
 
 Filtra los 4-6 datos más importantes. Marca con 🔴 los de máximo impacto (NFP, IPC EE.UU., decisiones de tasas). Incluir siempre la hora en CLT.
 
@@ -131,7 +131,7 @@ Al aprobar: guardar como `data/mensajes/YYYY-MM-DD_HH-MM_domingo_sesgo_lunes.txt
 
 Solo incluir si el director ejecuta el comando después de las 21:30 CLT (mercados de Tokio ya abrieron).
 
-Busca la dirección inicial de los mercados asiáticos via WebSearch: "apertura nikkei hang seng hoy lunes [fecha]" o `mcp__market-data__get_market_context` con `{"within_hours": 4, "category": "general"}`.
+Busca la dirección inicial de los mercados asiáticos vía `WebSearch`: "apertura nikkei hang seng hoy lunes [fecha]".
 
 Formato WhatsApp:
 ```

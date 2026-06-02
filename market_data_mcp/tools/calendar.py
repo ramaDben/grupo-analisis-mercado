@@ -25,7 +25,20 @@ def register(mcp: FastMCP) -> None:
         Returns:
             {"events": [...], "filtered_by": {...}, "source": "finnhub", "generated_at": "..."}
             O {"error": "CÓDIGO", "message": "..."} si no hay datos disponibles.
+
+        DEPRECADO: el calendario económico ahora se obtiene vía WebSearch
+        (investing.com + fuentes oficiales) directamente en el comando /dato_macro.
         """
+        return {
+            "error": "DEPRECATED",
+            "message": (
+                "get_economic_events está deprecado. El calendario económico ahora "
+                "se obtiene con WebSearch sobre investing.com en el comando /dato_macro. "
+                "Ver docs/design/websearch-calendario-noticias.design.md."
+            ),
+        }
+
+        # --- Código Finnhub legacy (inalcanzable; se elimina tras validación) ---
         try:
             from mt5_client import get_upcoming_events, FINNHUB_API_KEY
         except ImportError:

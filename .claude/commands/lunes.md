@@ -12,8 +12,8 @@ Hoy es lunes. Ejecuta cada pieza en orden, mostrándola al director para aprobac
 ## PIEZA 1 — Resumen semanal del calendario económico
 
 Obtén el calendario económico de toda esta semana:
-- Llama `mcp__market-data__get_economic_events` con `{"days_ahead": 7, "min_impact": "high"}` para obtener los datos de alto impacto de la semana (Chile, EE.UU., Zona Euro, China).
-- Si el resultado contiene `"error"`: mostrar al director "⚠️ [message]" y DETENER el comando.
+- Obtén con `WebSearch` sobre investing.com los datos de **alto impacto** de la semana (próximos 7 días; Chile, EE.UU., Zona Euro, China). Convierte las horas a Chile (CLT/CLST).
+- Si no encuentras eventos de alto impacto para la semana → informar al director y DETENER el comando.
 
 Lista cada dato con:
 - Día y hora en hora Chile (CLT/CLST)
@@ -45,7 +45,7 @@ Si MCP WhatsApp no disponible: muestra el texto listo para copiar y avisa.
 ## PIEZA 2 — Earnings de la semana
 
 Ejecuta la lógica de /earnings:
-- Llama `mcp__market-data__get_market_context` con `{"within_hours": 120, "category": "general"}` y filtra por las 12 acciones del catálogo. Complementa con WebSearch si NO_NEWS_FOUND.
+- Con `WebSearch` busca el calendario de earnings de las 12 acciones del catálogo para esta semana (investing.com + fuentes oficiales de cada empresa). Confirma fechas/horas.
 
 Por empresa que reporta esta semana, incluye:
 - Día y hora Chile (BMO=antes de apertura, AMC=después del cierre)

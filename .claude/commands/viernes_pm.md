@@ -10,9 +10,9 @@ Hoy es viernes por la tarde. El mercado de EE.UU. cerró. Es momento del resumen
 ## PIEZA ÚNICA — Cierre semanal
 
 Recopila qué pasó esta semana con nuestros activos:
-- Llama `mcp__market-data__get_market_context` con `{"within_hours": 120, "category": "general"}` para obtener el resumen de eventos de la semana.
+- Con `WebSearch` obtén el resumen de eventos de la semana (últimos ~5 días) sobre investing.com + fuentes oficiales.
 - Llama `mcp__market-data__get_asset_levels` para cada activo principal y obtén la variación semanal (comparar price con apertura semanal).
-- Si cualquier resultado contiene `"error"`: mostrar al director "⚠️ [message]" — si es NO_NEWS_FOUND/NO_EVENTS_FOUND continuar con lo disponible; si es MT5_UNAVAILABLE o FINNHUB_UNAVAILABLE DETENER.
+- Si `get_asset_levels` retorna `"error"` MT5_UNAVAILABLE: mostrar "⚠️ [message]" y DETENER. Si no hay eventos de la semana: continuar con lo disponible.
 
 Estructura el mensaje así:
 

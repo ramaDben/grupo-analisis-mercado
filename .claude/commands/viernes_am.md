@@ -70,8 +70,8 @@ El NFP mide cuántos trabajos se crearon en EE.UU. el mes pasado.
 ```
 
 **Independientemente**, obtén el calendario completo de hoy:
-- Llama `mcp__market-data__get_economic_events` con `{"days_ahead": 0, "min_impact": "medium"}` (Chile, EE.UU., Zona Euro, China; impacto medio y alto).
-- Si el resultado contiene `"error"`: mostrar al director "⚠️ [message]" — si es NO_EVENTS_FOUND continuar; si es FINNHUB_UNAVAILABLE DETENER.
+- Obtén el calendario de hoy con `WebSearch` sobre investing.com (Chile, EE.UU., Zona Euro, China; impacto medio y alto), como en el PASO 1 de `/dato_macro`. Convierte las horas a Chile (CLT/CLST).
+- Si no hay eventos de impacto medio/alto hoy → continuar.
 
 Lista numerada. Director elige cuál(es) desarrollar.
 
