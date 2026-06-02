@@ -1,30 +1,14 @@
 {
   "conceptos": {
-    "stop-loss": {
-      "nombre": "Stop loss",
-      "nota": "conceptos/stop-loss.md",
-      "estado": "explicado",
-      "encuestas": ["2026-06-02_educativa_USDCLP_stoploss"],
-      "aristas": {
-        "se-apoya-en": ["confluencia"],
-        "usa": ["atr", "riesgo"]
-      }
-    },
-    "confluencia": {
-      "nombre": "Confluencia",
-      "nota": null,
-      "estado": "pendiente",
-      "encuestas": [],
-      "aristas": {
-        "abre": ["puntos-interes"]
-      }
-    },
-    "puntos-interes": {
-      "nombre": "Puntos de interés",
-      "nota": null,
-      "estado": "pendiente",
-      "encuestas": [],
-      "aristas": {}
-    }
+    "leer-un-grafico": { "nombre": "Leer un gráfico", "tipo": "tecnico", "nivel": 1, "glosario": "Qué muestra un gráfico: precio, tiempo y velas.", "nota": null, "estado": "pendiente", "anclas": [], "encuestas": [], "aristas": { "prerequisito-de": ["velas", "temporalidades", "tendencia"] } },
+    "velas": { "nombre": "Velas japonesas", "tipo": "tecnico", "nivel": 1, "glosario": "Cada vela resume el precio de un periodo: cuerpo y mechas.", "nota": null, "estado": "pendiente", "anclas": [], "encuestas": [], "aristas": {} },
+    "temporalidades": { "nombre": "Temporalidades", "tipo": "tecnico", "nivel": 1, "glosario": "15M/1H/4H/1D: cada una implica una operativa distinta.", "nota": null, "estado": "pendiente", "anclas": [], "encuestas": [], "aristas": {} },
+    "tendencia": { "nombre": "Tendencia", "tipo": "tecnico", "nivel": 1, "glosario": "Hacia dónde va el precio: alcista, bajista o lateral.", "nota": null, "estado": "pendiente", "anclas": [], "encuestas": [], "aristas": { "prerequisito-de": ["soporte-resistencia", "volatilidad-atr"] } },
+    "soporte-resistencia": { "nombre": "Soporte y resistencia", "tipo": "tecnico", "nivel": 1, "glosario": "Niveles donde el precio suele reaccionar.", "nota": null, "estado": "pendiente", "anclas": [], "encuestas": [], "aristas": { "prerequisito-de": ["puntos-interes"] } },
+    "puntos-interes": { "nombre": "Puntos de interés", "tipo": "tecnico", "nivel": 1, "glosario": "Zonas clave a vigilar en el gráfico.", "nota": null, "estado": "pendiente", "anclas": [], "encuestas": [], "aristas": { "prerequisito-de": ["confluencia"] } },
+    "confluencia": { "nombre": "Confluencia", "tipo": "tecnico", "nivel": 1, "glosario": "Varios factores apuntando al mismo nivel.", "nota": null, "estado": "pendiente", "anclas": [], "encuestas": [], "aristas": { "prerequisito-de": ["stop-loss"] } },
+    "volatilidad-atr": { "nombre": "Volatilidad (ATR)", "tipo": "tecnico", "nivel": 1, "glosario": "Cuánto se mueve normalmente el activo; clave en USD/CLP.", "nota": null, "estado": "pendiente", "anclas": ["atr"], "encuestas": [], "aristas": {} },
+    "riesgo": { "nombre": "Riesgo", "tipo": "tecnico", "nivel": 1, "glosario": "Cuánto estás dispuesto a perder en una operación.", "nota": null, "estado": "pendiente", "anclas": ["riesgo"], "encuestas": [], "aristas": { "prerequisito-de": ["stop-loss"] } },
+    "stop-loss": { "nombre": "Stop loss", "tipo": "tecnico", "nivel": 1, "glosario": "Tu freno de emergencia: cierra la operación si el precio va en contra.", "nota": "conceptos/stop-loss.md", "estado": "explicado", "anclas": ["atr", "riesgo"], "encuestas": ["2026-06-02_educativa_USDCLP_stoploss"], "aristas": { "se-apoya-en": ["confluencia"], "usa": ["atr", "riesgo"], "relacionado": ["puntos-interes"] } }
   }
 }
