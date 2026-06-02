@@ -16,9 +16,15 @@ NO es "revelar la respuesta correcta". Es **enseñar el concepto** en voz de cli
 **Si `$ARGUMENTS` es `mapa`** → ir directo al PASO 5.
 
 **Si `$ARGUMENTS` está vacío**:
-1. Leer `data/historial_encuestas.json`, tomar la encuesta con `fecha` más reciente.
-2. Identificar el/los concepto(s) que trató (de `pregunta`/`opciones`/`trigger`). Normalizar a `id` kebab-case (ej. "stop loss" → `stop-loss`).
-3. Si trató varios conceptos, listarlos al director y pedir que elija el central.
+1. Leer `data/historial_encuestas.json`. **Ignorar los tipos de sentimiento**
+   (`posicion`, `tendencia`, `movimiento`, estado `registrada`): no tienen concepto
+   educativo que desarrollar. Considerar solo encuestas educativas (las que tienen
+   `respuesta_correcta` o trigger educativo, ej. `post_evento`/`educativa`).
+2. Tomar la encuesta **educativa** con `fecha` más reciente.
+3. Si no hay ninguna encuesta educativa → avisar: "No hay tema educativo pendiente. Usa
+   `/rencuesta [tema]` para desarrollar un concepto puntual." y detener.
+4. Identificar el/los concepto(s) que trató (de `pregunta`/`opciones`/`trigger`). Normalizar a `id` kebab-case (ej. "stop loss" → `stop-loss`).
+5. Si trató varios conceptos, listarlos al director y pedir que elija el central.
 
 **Si `$ARGUMENTS` es un tema** → normalizar a `id` kebab-case (sin tildes, espacios → guiones: "puntos de interés" → `puntos-interes`).
 
