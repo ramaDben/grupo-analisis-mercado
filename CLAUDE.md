@@ -190,7 +190,7 @@ Todo contenido pasa por este flujo antes de enviarse:
 
 **Nota**: Evolution API (Docker) está instalada y lista en `mcp/docker-compose.yml`. Cuando se resuelva la conexión WhatsApp/Baileys, el envío pasará a ser automático sin cambios adicionales.
 
-## Slash Commands disponibles (20)
+## Slash Commands disponibles (21)
 
 Invocar con `/nombre` desde Claude Code:
 
@@ -210,6 +210,7 @@ Invocar con `/nombre` desde Claude Code:
 |---------|---------------|
 | `/encuesta [tipo] [activo]` | Encuesta de sentimiento puro (sin precios ni educación). 3 tipos: `posicion`, `tendencia`, `movimiento`. Lo educativo migró fuera de `/encuesta`. |
 | `/rencuesta` | Desarrolla didácticamente el tema de una encuesta y construye la malla de conceptos. `/rencuesta` (última encuesta), `/rencuesta [tema]`, `/rencuesta mapa` (vista de repaso). |
+| `/curriculo` | Planifica el currículo educativo evolutivo (niveles + prerrequisitos), despacha conceptos en orden reutilizando `/rencuesta`/`/concepto` y mide el avance (4 métricas). Modos: `/curriculo`, `despachar`, `ruta`, `progreso`, `agregar`. |
 | `/apertura` | Niveles técnicos interactivos: pregunta activo, temporalidad e indicador (RSI/ATR) por activo. Lo invocan los comandos de día en su PIEZA de apertura. |
 | `/dato_macro` | Calendario del día → director elige dato a desarrollar |
 | `/noticia` | Busca 3-5 noticias relevantes → director elige |
@@ -239,11 +240,12 @@ grupo-analisis-mercado/
 │   ├── ideas/             ← specs de features (ciclo Pulse)
 │   └── design/            ← diseños técnicos (ciclo Pulse)
 ├── .claude/
-│   └── commands/          ← 18 slash commands (invocar con /nombre)
+│   └── commands/          ← 21 slash commands (invocar con /nombre)
 │       ├── domingo.md
 │       ├── lunes.md · martes.md · miercoles.md · jueves.md
 │       ├── viernes_am.md · viernes_pm.md
-│       ├── encuesta.md · dato_macro.md · noticia.md · chart.md
+│       ├── encuesta.md · rencuesta.md · curriculo.md
+│       ├── apertura.md · dato_macro.md · noticia.md · chart.md
 │       ├── señal.md · alerta.md · concepto.md · pregunta.md · estado.md
 │       ├── accion.md · earnings.md
 ├── agents/                ← prompts de sub-agents
@@ -260,10 +262,12 @@ grupo-analisis-mercado/
 │   ├── apertura_mercado.txt · resumen_semanal.txt · cierre_semanal.txt
 │   ├── encuesta_tendencia.txt · encuesta_precio.txt
 │   ├── concepto_semana.txt · señal_operativa.txt
+│   ├── ruta_curriculo.txt · dashboard_metricas.txt
 ├── conceptos/             ← notas canónicas de conceptos educativos (malla /rencuesta)
 │   ├── README.md · stop-loss.md
 ├── data/                  ← datos persistentes
 │   ├── historial_señales.json · mapa_conceptos.json
+│   ├── curriculo.json · entregas_educativas.json · metricas_educativas.json
 │   └── charts/            ← PNGs generados (gitignored)
 └── mcp/
     ├── mcp_config.example.json ← template sin credenciales (en git)

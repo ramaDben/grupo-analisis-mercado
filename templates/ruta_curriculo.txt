@@ -1,0 +1,8 @@
+🗺️ *RUTA EDUCATIVA — {NOMBRE_RUTA}*
+━━━━━━━━━━━━━━━━━━━
+{DESCRIPCION_RUTA}
+━━━━━━━━━━━━━━━━━━━
+{ARBOL_RUTA}
+━━━━━━━━━━━━━━━━━━━
+✅ visto · 🆕 nuevo · ⏳ planificado
+📌 Próximo: {PROXIMO_CONCEPTO}
