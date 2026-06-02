@@ -52,15 +52,38 @@ Si el director elige una opción "Próximamente" (MACD/SMA/Bollinger), responde:
 
 ---
 
-## PASO 4 — Niveles e indicadores por activo
+## PASO 4 — Precio, niveles e indicadores por activo
 
-### 4A — Niveles (ingreso manual del director)
+### 4A — Precio actual (fetch automático MT5)
 
-Para CADA activo, solicitar:
+Para CADA activo, llamar **una sola vez**:
+
+```
+mcp__market-data__get_asset_levels({"ticker": "[TICKER_MT5]", "timeframe": "[M15|H1|H4|D1]"})
+```
+
+Guardar el resultado completo (se reutiliza en 4C). Extraer el campo `price` y mostrarlo:
+
+```
+💰 Precio actual obtenido desde MT5: [precio formateado según digits]
+   ¿Correcto? (Intro para confirmar · escribe un valor para corregir)
+```
+
+El director puede confirmar con Enter o escribir un valor distinto. Formatear siempre según `digits` de `config/activos.json`.
+
+Si el resultado contiene `"error"`:
+```
+⚠️ No se pudo obtener el precio desde MT5. Ingresa el precio actual manualmente:
+Precio actual:
+```
+En ese caso pedir el valor manualmente (mismas reglas de parsing que 4B). Guardar `resultado = null` para que 4C sepa que tampoco hay indicador disponible.
+
+### 4B — Niveles S/R (ingreso manual del director)
+
+Para CADA activo, solicitar solo los niveles de soporte y resistencia:
 
 ```
 📥 Ingresa los niveles para [NOMBRE ACTIVO] ([TEMPORALIDAD]):
-  Precio actual:
   Resistencia 1 (R1):
   Resistencia 2 (R2):   ← opcional, escribe "–" para omitir
   Soporte 1 (S1):
@@ -73,24 +96,19 @@ Reglas de parsing:
 - Si R2 o S2 se dejan en blanco o contienen `"–"` / `"-"`: omitir esas líneas del mensaje final.
 - Si un valor obligatorio no es numérico: mostrar `⚠️ Valor inválido. Ingresa solo el número.` y volver a pedir ese campo.
 
-### 4B — Indicadores (fetch automático MT5)
+### 4C — Indicador (reutiliza resultado de 4A)
 
-Solo si el director eligió **RSI** o **ATR** en el PASO 3, llamar:
+Solo si el director eligió **RSI** o **ATR** en el PASO 3:
 
-```
-mcp__market-data__get_asset_levels({"ticker": "[TICKER_MT5]", "timeframe": "[M15|H1|H4|D1]"})
-```
+- Si el resultado de 4A fue exitoso: extraer `rsi_14` (RSI) o `atr_14` (ATR) de ese mismo resultado. **No hacer un segundo call al MCP.**
+- Si el resultado de 4A fue `null` (error de MT5): mostrar:
+  ```
+  ⚠️ No se pudo obtener [RSI/ATR] desde MT5. ¿Qué deseas hacer?
+  1. Ingresar el valor manualmente
+  2. Continuar sin indicador (mensaje "Limpio")
+  ```
 
-Usar **únicamente** el campo `rsi_14` (si RSI) o `atr_14` (si ATR). Ignorar el resto de la respuesta.
-
-Si el resultado contiene `"error"`:
-```
-⚠️ No se pudo obtener [RSI/ATR] desde MT5. ¿Qué deseas hacer?
-1. Ingresar el valor manualmente
-2. Continuar sin indicador (mensaje "Limpio")
-```
-
-Si el director eligió **Limpio** en PASO 3: omitir el fetch por completo.
+Si el director eligió **Limpio** en PASO 3: omitir por completo.
 
 ---
 
