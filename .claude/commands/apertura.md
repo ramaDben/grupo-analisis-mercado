@@ -2,7 +2,7 @@ Genera la Apertura de Mercado de forma interactiva: pregunta activo, temporalida
 
 ## SETUP
 1. Lee `config/agenda_semanal.json` y `config/activos.json`.
-2. Los datos técnicos se obtienen vía `mcp__market-data__get_asset_levels`.
+2. Los niveles (precio, S1, S2, R1, R2) los ingresa el director manualmente. Los indicadores (RSI/ATR) se obtienen vía `mcp__market-data__get_asset_levels` solo si aplica.
 
 ---
 
@@ -52,12 +52,45 @@ Si el director elige una opción "Próximamente" (MACD/SMA/Bollinger), responde:
 
 ---
 
-## PASO 4 — Datos técnicos por activo
+## PASO 4 — Niveles e indicadores por activo
 
-Para cada activo, llama `mcp__market-data__get_asset_levels` con `{"ticker": "[TICKER_MT5]", "timeframe": "[M15|H1|H4|D1]"}` (el timeframe mapeado en el PASO 2).
+### 4A — Niveles (ingreso manual del director)
 
-- Extrae: `price, s1, s2, r1, r2, rsi_14, atr_14, trend`.
-- Si el resultado contiene `"error"`: muestra `⚠️ [message] — Verificar que MT5 esté abierto.` y **omite ese activo** (continúa con el resto; NO abortes toda la apertura).
+Para CADA activo, solicitar:
+
+```
+📥 Ingresa los niveles para [NOMBRE ACTIVO] ([TEMPORALIDAD]):
+  Precio actual:
+  Resistencia 1 (R1):
+  Resistencia 2 (R2):   ← opcional, escribe "–" para omitir
+  Soporte 1 (S1):
+  Soporte 2 (S2):       ← opcional, escribe "–" para omitir
+```
+
+Reglas de parsing:
+- Aceptar valores con o sin `$`, coma de miles o espacios (ej: `$889.60`, `4,539.72`, `889.60`).
+- Formatear según el campo `digits` del activo en `config/activos.json`. Nunca truncar ceros.
+- Si R2 o S2 se dejan en blanco o contienen `"–"` / `"-"`: omitir esas líneas del mensaje final.
+- Si un valor obligatorio no es numérico: mostrar `⚠️ Valor inválido. Ingresa solo el número.` y volver a pedir ese campo.
+
+### 4B — Indicadores (fetch automático MT5)
+
+Solo si el director eligió **RSI** o **ATR** en el PASO 3, llamar:
+
+```
+mcp__market-data__get_asset_levels({"ticker": "[TICKER_MT5]", "timeframe": "[M15|H1|H4|D1]"})
+```
+
+Usar **únicamente** el campo `rsi_14` (si RSI) o `atr_14` (si ATR). Ignorar el resto de la respuesta.
+
+Si el resultado contiene `"error"`:
+```
+⚠️ No se pudo obtener [RSI/ATR] desde MT5. ¿Qué deseas hacer?
+1. Ingresar el valor manualmente
+2. Continuar sin indicador (mensaje "Limpio")
+```
+
+Si el director eligió **Limpio** en PASO 3: omitir el fetch por completo.
 
 ---
 
