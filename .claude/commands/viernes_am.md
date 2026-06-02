@@ -2,17 +2,13 @@ Genera la operativa de la mañana del viernes pieza por pieza para aprobación.
 
 ## SETUP
 1. Determina los activos del día leyendo `config/agenda_semanal.json` y `config/activos.json` según el día de la semana.
-2. Los datos técnicos se obtienen via `mcp__market-data__get_asset_levels` en cada pieza.
-3. **NOTA VIERNES**: Los viernes cubrir 3 activos (en vez de 2). El primer viernes del mes publicación de NFP (Non-Farm Payrolls) — si es hoy, destacarlo especialmente.
+2. **NOTA VIERNES**: Los viernes cubrir 3 activos (en vez de 2). El primer viernes del mes publicación de NFP (Non-Farm Payrolls) — si es hoy, destacarlo especialmente.
 
 ---
 
 ## PIEZA 1 — Apertura de mercado (3 activos el viernes)
 
-Ejecuta la lógica de `/apertura` (ver `.claude/commands/apertura.md`):
-- Activos sugeridos hoy según `config/agenda_semanal.json` (**3 activos** el viernes). El director confirma/cambia/agrega (rotación + override).
-- Por CADA activo: pregunta temporalidad (PASO 2) e indicador RSI/ATR/Limpio (PASO 3), llama `get_asset_levels` con el timeframe mapeado (PASO 4) y renderiza el mensaje con la etiqueta de marco temporal neutral (PASO 5).
-- Si `get_asset_levels` devuelve `"error"`: muestra `⚠️ [message] — Verificar que MT5 esté abierto.` y omite ese activo (no abortes la apertura).
+Ejecuta `/apertura` (ver `.claude/commands/apertura.md`). Nota: hoy son **3 activos** (en vez de 2).
 
 **→ Por cada activo: ¿Apruebas? ¿Adjuntar chart? ¿Enviar al grupo?**
 
