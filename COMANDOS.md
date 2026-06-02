@@ -2,22 +2,23 @@
 
 Estos son los comandos que pegas directamente en Claude Code (`claude`) desde la carpeta del proyecto. Claude Code lee automáticamente el CLAUDE.md y toda la configuración.
 
+> **Interfaz principal: los slash commands.** El día a día se opera con `/lunes`, `/martes`, `/apertura`, `/señal`, etc. (ver tabla completa en `CLAUDE.md`). Los bloques de prompt de abajo son la alternativa manual/legacy y **no dependen** de ejecutar `python scripts/...`: los scripts quedan como utilidades opcionales que puedes correr a mano, nunca como paso obligatorio de la operativa.
+
 ---
 
 ## 🚀 Operativa completa del día (automática)
 
 ```
 Ejecuta la operativa completa de hoy. Pasos:
-1. Lee config/agenda_semanal.json y determina qué corresponde hoy
-2. Ejecuta scripts/orquestador.py para obtener el plan del día
-3. Usa web search para obtener el calendario económico de hoy en Investing.com (filtrar Chile, EE.UU., Zona Euro, 3 estrellas)
-4. Usa web search para obtener precios actuales de los activos del día
-5. Genera niveles técnicos (soportes, resistencias, sesgo) en 4H y 1H
-6. Identifica los drivers que mueven cada activo hoy
-7. Selecciona la noticia más relevante del calendario y explícala simple
-8. Genera la encuesta del día según la agenda
-9. Formatea TODO para WhatsApp usando los templates de templates/
-10. Muéstrame cada mensaje para que yo lo apruebe antes de enviarlo
+1. Lee config/agenda_semanal.json y determina qué corresponde hoy (rotación de activos, encuesta del día)
+2. Usa web search para obtener el calendario económico de hoy en Investing.com (filtrar Chile, EE.UU., Zona Euro, 3 estrellas)
+3. Usa web search para obtener precios actuales de los activos del día
+4. Genera niveles técnicos (soportes, resistencias, sesgo) en 4H y 1H
+5. Identifica los drivers que mueven cada activo hoy
+6. Selecciona la noticia más relevante del calendario y explícala simple
+7. Genera la encuesta del día según la agenda
+8. Formatea TODO para WhatsApp usando los templates de templates/
+9. Muéstrame cada mensaje para que yo lo apruebe antes de enviarlo
 
 Recuerda: lenguaje simple, el cliente debe entender en 30 segundos.
 ```
