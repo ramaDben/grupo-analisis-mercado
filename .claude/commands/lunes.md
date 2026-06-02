@@ -112,41 +112,12 @@ Cómo lo usamos:
 
 ## PIEZA 4 — Apertura de mercado
 
-Para los activos asignados hoy según el plan:
-- Llama `mcp__market-data__get_asset_levels` con `{"ticker": "[TICKER_MT5]", "timeframe": "H4"}` por cada activo
-- Extrae: price, s1, s2, r1, r2, rsi_14, atr_14, trend del resultado
-- Si el resultado contiene `"error"`: mostrar al director "⚠️ [message] — Verificar que MT5 esté abierto." y DETENER el comando.
+Ejecuta la lógica de `/apertura` (ver `.claude/commands/apertura.md`):
+- Activos asignados hoy según el plan / `config/agenda_semanal.json`. El director confirma/cambia/agrega (rotación + override).
+- Por CADA activo: pregunta temporalidad (PASO 2) e indicador RSI/ATR/Limpio (PASO 3), llama `get_asset_levels` con el timeframe mapeado (PASO 4) y renderiza el mensaje con la etiqueta de marco temporal neutral (PASO 5).
+- Si `get_asset_levels` devuelve `"error"`: muestra `⚠️ [message] — Verificar que MT5 esté abierto.` y omite ese activo (no abortes la apertura).
 
-Genera un mensaje de apertura por activo:
-
-```
-🎯 Activo: [NOMBRE ACTIVO]
-📌 Nivel a vigilar: [R1 o S1 según sesgo]
-⚡ Qué esperar: [1 línea de acción concreta]
-━━━━━━━━━━━━━━━━━━━
-
-📊 *APERTURA DE MERCADO — [DÍA] [FECHA]*
-━━━━━━━━━━━━━━━━━━━
-📈 *[NOMBRE ACTIVO]* — Niveles en 4H
-_Operativa intradía / swing corto_
-
-💰 Precio actual: [precio]
-• Resistencia: [R1]
-• Soporte: [S1]
-• Zona de interés: [S1] – [R1]
-
-🔎 ¿Qué lo mueve hoy?
-[Drivers del activo en 2-3 líneas simples]
-
-━━━━━━━━━━━━━━━━━━━
-🟢 Sobre [R1] → fuerza compradora
-🟡 Entre [S1] y [R1] → esperar confirmación
-🔴 Bajo [S1] → presión vendedora
-━━━━━━━━━━━━━━━━━━━
-_Niveles en 4H — operativa intradía/swing corto_
-```
-
-**→ Muestra al director. Pregunta: ¿Apruebas? ¿Adjuntar chart de MT5? ¿Enviar al grupo?**
+**→ Por cada activo: ¿Apruebas? ¿Adjuntar chart de MT5? ¿Enviar al grupo?**
 
 ---
 
