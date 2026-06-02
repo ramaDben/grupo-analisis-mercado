@@ -189,7 +189,7 @@ Después de generar, guardar en `data/historial_encuestas.json`:
 }
 ```
 
-Para revelar la respuesta al día siguiente, usar: `/encuesta revelar [id_encuesta]` — genera un mensaje explicando cuál fue la respuesta correcta y por qué.
+Para desarrollar el concepto y revelar al día siguiente, usar: `/rencuesta` (sin argumento toma la última encuesta) — desarrolla el tema de forma didáctica y lo agrega a la malla de conceptos. Ver `docs/design/rencuesta-motor-educativo.design.md`.
 
 ---
 
