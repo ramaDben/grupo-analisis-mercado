@@ -100,11 +100,14 @@ Paquetes completos para cada día de la semana. Generan varias piezas en orden, 
 Para situaciones puntuales que no corresponden a la operativa estándar del día.
 
 ### `/encuesta [tipo] [activo]`
-Genera una encuesta de tendencia o precio para el activo especificado. Siempre incluye un bloque de contexto previo para que el cliente vote con información, no en intuición.
+Genera una encuesta de **sentimiento puro** para el grupo. Sin precios, sin números y sin contenido educativo. Tres tipos:
+- `posicion [activo?]` — qué está operando el grupo (🟢 Compré / 🔴 Vendí / ⚪ No operé). Sin activo, un poll por cada activo del día.
+- `tendencia [activo?]` — qué tendencia proyectan (📈 Alcista / 📉 Bajista / ➡️ Lateral).
+- `movimiento [semana?]` — qué activo tendrá más movimiento (hoy, o `semana` para la dominical).
 
-**Tipos**: `tendencia` (alcista/bajista/lateral) · `precio` (comenta tu precio)
+El tipo es obligatorio (sin tipo, el comando pregunta). Los activos salen de `data/plan_hoy.json`. La contextualización la da el mensaje previo de la mañana, no la encuesta. Lo educativo (revelado, lección) vive en `/rencuesta` y futuros comandos.
 
-**Ejemplo**: `/encuesta tendencia XAUUSD`
+**Ejemplo**: `/encuesta posicion USDCLP`
 
 ---
 
