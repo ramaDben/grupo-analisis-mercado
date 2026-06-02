@@ -12,7 +12,7 @@ Lee directamente `config/agenda_semanal.json` y calcula el día de la semana (ho
 - Contenido planificado según la agenda del día
 
 ### 2. Señales de la semana
-Lee `data/historial_señales.json`:
+Lee `data/historial_senales.json`:
 - Señales enviadas esta semana ISO: **N / 3**
 - Por cada señal abierta:
   - Ticker + nombre + BUY/SELL

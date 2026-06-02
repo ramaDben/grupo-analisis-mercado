@@ -16,7 +16,7 @@ Todo el contenido pasa por aprobación explícita del director antes de enviarse
 
 - **Claude Code** (CLI o Desktop) con suscripción activa
 - **MCP reporte-flash** instalado y configurado (análisis técnico MT5 + calendario macro)
-- **Python 3.10+** para scripts auxiliares (señal_manager, formatter)
+- **Python 3.10+** para scripts auxiliares (senal_manager, formatter)
 - **Evolution API en Docker** para envío directo WhatsApp (opcional, pendiente)
 - **gh CLI** para gestión de issues/PRs (opcional)
 
@@ -83,12 +83,12 @@ grupo-analisis-mercado/
 │   ├── drivers_indices_sectores.json
 │   └── plantilla_señal.json     ← campos obligatorios de una señal
 ├── scripts/
-│   ├── señal_manager.py         ← gestión historial señales (límite 3/semana)
+│   ├── senal_manager.py         ← gestión historial señales (límite 3/semana)
 │   ├── formatter_whatsapp.py    ← formato texto → WhatsApp
 │   └── mt5_integration.py       ← integración MetaTrader5 (legacy)
 ├── templates/                   ← plantillas de mensajes WhatsApp
 ├── data/
-│   └── historial_señales.json   ← registro de señales enviadas
+│   └── historial_senales.json   ← registro de señales enviadas
 ├── docs/                        ← documentación del sistema
 │   ├── architecture.md
 │   ├── commands-reference.md

@@ -53,7 +53,7 @@ Para la conversión a CLP:
 - Fórmula: ganancia_clp = (tp - entrada) × acciones × tipo_cambio
 - Fórmula: pérdida_clp = (entrada - sl) × acciones × tipo_cambio
 
-**IMPORTANTE**: verificar en data/historial_señales.json que no se excedan 3 señales por semana.
+**IMPORTANTE**: verificar en data/historial_senales.json que no se excedan 3 señales por semana.
 
 ### 4. Indicadores técnicos
 Cuando se use un indicador, explicar UNO SOLO por aviso:

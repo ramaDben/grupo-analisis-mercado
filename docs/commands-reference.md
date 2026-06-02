@@ -127,7 +127,7 @@ Genera un screenshot de MT5 para el activo y temporalidad elegidos. Opciones de 
 ---
 
 ### `/señal`
-Genera una señal operativa. **Antes de generar**, verifica en `data/historial_señales.json` cuántas señales se han enviado esta semana. Si ya hay 3, informa al director y no genera una nueva.
+Genera una señal operativa. **Antes de generar**, verifica en `data/historial_senales.json` cuántas señales se han enviado esta semana. Si ya hay 3, informa al director y no genera una nueva.
 
 Campos obligatorios: ticker, nombre activo, BUY/SELL, entrada, TP, SL (en puntos y en CLP), volumen, tipo (swing/scalper), hasta 3 bullets de análisis.
 

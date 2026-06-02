@@ -17,9 +17,17 @@ data/mensajes/
 data/plan_hoy.json
 data/datos_entregables.json
 data/ultimo_analisis.json
+data/ultimo_evento.json
+data/mt5_command.json
 
 # MCP config real (tiene API keys — usar mcp_config.example.json como referencia)
 mcp/mcp_config.json
+
+# Código ajeno: flash_mcp pertenece a otro proyecto (Reporte Flash), ver issue #25
+flash_mcp/
+
+# Reglas locales de otro asistente (Antigravity) — no forman parte del repo
+.antigravitycli/
 
 # IDEs y OS
 .vscode/

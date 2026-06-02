@@ -2,7 +2,7 @@ Genera una señal operativa para el grupo. Máximo 3 señales por semana (hard l
 
 ## PASO 1 — Verificar límite semanal
 
-Lee `data/historial_señales.json` y cuenta las señales con estado "abierta" o "cerrada" de esta semana ISO actual.
+Lee `data/historial_senales.json` y cuenta las señales con estado "abierta" o "cerrada" de esta semana ISO actual.
 
 Si ya hay 3 señales esta semana:
 ```
@@ -116,7 +116,7 @@ Muestra la señal al director. Pregunta:
 Si aprueba TODO:
 - Llama MCP WhatsApp (con imagen si hay chart).
 - Si MCP no disponible: muestra texto + ruta imagen.
-- **Registra en `data/historial_señales.json`**:
+- **Registra en `data/historial_senales.json`**:
 ```json
 {
   "id": "[timestamp]",

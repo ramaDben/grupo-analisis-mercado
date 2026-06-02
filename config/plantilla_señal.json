@@ -99,7 +99,7 @@
   },
   "reglas": {
     "max_señales_semana": 3,
-    "verificar_historial": "data/historial_señales.json",
+    "verificar_historial": "data/historial_senales.json",
     "plantilla_visual": "Canva (link compartido con el equipo)",
     "obligatorio_clp": "SIEMPRE traducir TP y SL a CLP — el cliente debe ver cuánto gana y pierde sin calcular"
   }
