@@ -51,8 +51,8 @@ _Niveles en 4H — operativa intradía/swing corto_
 
 Verifica si hoy es miércoles con publicación de inventarios EIA de petróleo (normalmente cada miércoles ~10:30 CLT durante sesión NY).
 
-Llama `mcp__market-data__get_economic_events` con `{"days_ahead": 0, "min_impact": "medium"}` para el calendario de hoy (Chile, EE.UU., Zona Euro, China; impacto medio y alto).
-Si el resultado contiene `"error"`: mostrar al director "⚠️ [message]" — si es NO_EVENTS_FOUND continuar (sin eventos hoy); si es FINNHUB_UNAVAILABLE DETENER.
+Obtén el calendario de hoy con `WebSearch` sobre investing.com (Chile, EE.UU., Zona Euro, China; impacto medio y alto), como en el PASO 1 de `/dato_macro`. Convierte las horas a Chile (CLT/CLST).
+Si no hay eventos de impacto medio/alto hoy → continuar (sin eventos hoy es esperado).
 
 Lista numerada con los datos del día. Si hay EIA marcarlo con ⛽ al inicio.
 

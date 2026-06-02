@@ -160,10 +160,12 @@ Mejorar indicadores de satisfacción del cliente, retención, NPS y reducir chur
 
 | MCP | Estado | Propósito | Usado en |
 |-----|--------|-----------|----------|
-| **reporte-flash** | ✅ Activo | Análisis técnico MT5 + calendario macro + noticias | TODOS los comandos de datos |
+| **market-data** | ✅ Activo | Análisis técnico MT5 (`get_asset_levels`). Calendario y noticias **ya no** dependen del MCP | Comandos de niveles técnicos |
+| **WebSearch (investing.com + fuentes oficiales)** | ✅ Activo | Calendario económico y noticias relevantes | `/dato_macro`, `/noticia` y comandos de día |
 | **WhatsApp (Evolution API)** | ⏳ Pendiente conexión Docker | Envío directo al grupo | Flujo manual por ahora |
-| **TrendRadar** | ❌ Reemplazado por reporte-flash | — | — |
-| **Firecrawl** | ❌ Reemplazado por reporte-flash | — | — |
+| **TrendRadar / Firecrawl / Finnhub** | ❌ No activos | Reemplazados por market-data (MT5) + WebSearch | — |
+
+**Nota**: las tools `get_economic_events` y `get_market_context` del MCP `market-data` están **deprecadas** (devuelven `{"error": "DEPRECATED"}`). El calendario económico y las noticias se obtienen ahora con `WebSearch` sobre investing.com + fuentes oficiales (Fed, BCCh, OPEP+, EIA, BLS), directamente en los comandos. Ver `docs/design/websearch-calendario-noticias.design.md`.
 
 **Flujo actual**: los comandos generan contenido → muestran para copiar → guardan en `data/mensajes/`. Cuando Evolution API esté conectada a WhatsApp/Baileys, el envío pasará a ser automático.
 

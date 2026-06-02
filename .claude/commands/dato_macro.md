@@ -1,10 +1,17 @@
 Lista todos los datos económicos del día y genera el mensaje WhatsApp del que elija el director.
 
-## PASO 1 — Obtener el calendario de hoy
+## PASO 1 — Obtener el calendario de hoy (WebSearch sobre investing.com)
 
-Obtén el calendario económico de HOY:
-- Llama `mcp__market-data__get_economic_events` con `{"days_ahead": 0, "min_impact": "medium"}` para obtener los datos del día (Chile, EE.UU., Zona Euro, China; impacto medio y alto).
-- Si el resultado contiene `"error"`: mostrar "⚠️ [message]" — si es NO_EVENTS_FOUND informar que no hay datos macro hoy y DETENER; si es FINNHUB_UNAVAILABLE DETENER.
+Obtén el calendario económico de HOY con la herramienta `WebSearch` (ya no se usa el MCP):
+
+1. Lanza una búsqueda con `WebSearch`, query base:
+   `investing.com calendario económico hoy [FECHA] Chile Estados Unidos "Zona Euro" China impacto alto`
+   - Países objetivo: **Chile (CL), EE.UU. (US), Zona Euro (EU), China (CN)**.
+   - Impacto: **medio y alto** (★★ / ★★★).
+2. Si necesitas confirmar horas exactas, usa `WebFetch` sobre `https://es.investing.com/economic-calendar/`. Si la página no renderiza la tabla (es JS-pesada), apóyate en los resultados de `WebSearch` y en **fuentes oficiales** para datos de alto impacto (BCCh, Fed, Eurostat, BLS).
+3. **Conversión de hora**: identifica la zona horaria de origen de cada dato y conviértela a **hora Chile (CLT/CLST)**. En eventos de alto impacto (Fed, BCCh, NFP) verifica la hora contra la fuente oficial.
+
+**Contrato sin-resultados**: si la búsqueda no devuelve eventos de impacto medio/alto para hoy → muestra "📅 Sin datos macro de impacto medio/alto hoy" y DETÉN. En fin de semana o feriado es comportamiento esperado.
 
 ## PASO 2 — Presentar lista al director
 

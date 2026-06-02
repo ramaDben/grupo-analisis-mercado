@@ -3,8 +3,8 @@ Sugiere un concepto educativo para el grupo basado en lo que pasó esta semana.
 ## PASO 1 — Analizar qué pasó esta semana
 
 Recopila contexto de la semana para elegir un concepto relevante:
-- Llama `mcp__market-data__get_market_context` con `{"within_hours": 120, "category": "general"}` para obtener un resumen de eventos macro e indicadores técnicos que se activaron esta semana.
-- Si el resultado contiene `"error"` de tipo FINNHUB_UNAVAILABLE: mostrar "⚠️ [message]" y DETENER. Si es NO_NEWS_FOUND: continuar con análisis basado en config/drivers.json.
+- Con `WebSearch` obtén un resumen de los eventos macro de esta semana (últimos ~5 días) sobre investing.com + fuentes oficiales.
+- Si no hay resultados relevantes: continuar con análisis basado en config/drivers.json.
 
 Analiza:
 - ¿Qué indicadores técnicos se activaron? (RSI en sobrecompra, MACD cruce, SMA crossover)
