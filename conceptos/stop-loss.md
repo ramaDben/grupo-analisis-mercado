@@ -20,6 +20,6 @@ vela. Si el ATR de 1H es 2.5 pesos, poner el stop a 2.5 pesos de la entrada
 respeta el "ruido" normal del activo: no te saca por un movimiento corriente,
 pero te protege si la idea falla de verdad.
 
-Regla simple para el cliente nuevo: **antes de entrar, ya tenés que saber
-dónde está tu stop**. Si no sabés dónde ponerlo, todavía no es momento de
+Regla simple para el cliente nuevo: **antes de entrar, ya tienes que saber
+dónde está tu stop**. Si no sabes dónde ponerlo, todavía no es momento de
 operar.

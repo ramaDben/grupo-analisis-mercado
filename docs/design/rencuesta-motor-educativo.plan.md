@@ -156,8 +156,8 @@ vela. Si el ATR de 1H es 2.5 pesos, poner el stop a 2.5 pesos de la entrada
 respeta el "ruido" normal del activo: no te saca por un movimiento corriente,
 pero te protege si la idea falla de verdad.
 
-Regla simple para el cliente nuevo: **antes de entrar, ya tenés que saber
-dónde está tu stop**. Si no sabés dónde ponerlo, todavía no es momento de
+Regla simple para el cliente nuevo: **antes de entrar, ya tienes que saber
+dónde está tu stop**. Si no sabes dónde ponerlo, todavía no es momento de
 operar.
 ```
 
@@ -283,7 +283,7 @@ Leer `data/mapa_conceptos.json`:
 
 Redactar el contenido didáctico:
 1. **Anclado al repo**: usar los indicadores del `CLAUDE.md` (ATR, RSI, MACD, medias) y los drivers de `docs/activos-y-drivers.md`. Ej.: "stop loss" se explica con el ATR que el grupo usa en USD/CLP, no en abstracto.
-2. **Voz novata**: un cliente nuevo lo entiende en < 30 s. Nada de jerga sin explicar.
+2. **Voz novata**: un cliente nuevo lo entiende en < 30 s. Nada de jerga sin explicar. **Español chileno neutro** (tuteo: "tú tienes", "tú sabes") — nunca voseo argentino ("tenés", "sabés").
 3. Si ya existe `conceptos/<id>.md`, partir de él y profundizar.
 4. `WebSearch` SOLO si hace falta un ejemplo con un dato real reciente (estos conceptos son atemporales — normalmente no se necesita).
 
@@ -324,6 +324,7 @@ Si el grafo está vacío → avisar que aún no hay conceptos en la malla.
 
 ## REGLAS
 - Voz novata SIEMPRE (regla de oro: < 30 s para un cliente nuevo).
+- Español chileno neutro (tuteo). Nunca voseo argentino ("tenés", "sabés").
 - Respetar la regla de decimales MT5 si se menciona algún precio.
 - Las 6 reglas de formato del `CLAUDE.md` aplican a ambos entregables.
 - Nunca enviar nada sin aprobación explícita del director.
