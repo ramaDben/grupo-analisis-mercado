@@ -1,0 +1,10 @@
+🎯 *CONCEPTO — {NOMBRE_CONCEPTO}*
+━━━━━━━━━━━━━━━━━━━
+📌 En 1 línea: {RESUMEN_UNA_LINEA}
+━━━━━━━━━━━━━━━━━━━
+📚 *Qué es*: {QUE_ES}
+🧩 *Cómo se decide bien*: {COMO_APLICA}
+🎯 *Para aplicarlo*: {ACCION_CONCRETA}
+━━━━━━━━━━━━━━━━━━━
+🔗 *Esto conecta con*: {VECINOS}
+💬 La próxima encuesta profundiza en uno de estos 👇
