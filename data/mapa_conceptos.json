@@ -1,0 +1,30 @@
+{
+  "conceptos": {
+    "stop-loss": {
+      "nombre": "Stop loss",
+      "nota": "conceptos/stop-loss.md",
+      "estado": "explicado",
+      "encuestas": ["2026-06-02_educativa_USDCLP_stoploss"],
+      "aristas": {
+        "se-apoya-en": ["confluencia"],
+        "usa": ["atr", "riesgo"]
+      }
+    },
+    "confluencia": {
+      "nombre": "Confluencia",
+      "nota": null,
+      "estado": "pendiente",
+      "encuestas": [],
+      "aristas": {
+        "abre": ["puntos-interes"]
+      }
+    },
+    "puntos-interes": {
+      "nombre": "Puntos de interés",
+      "nota": null,
+      "estado": "pendiente",
+      "encuestas": [],
+      "aristas": {}
+    }
+  }
+}

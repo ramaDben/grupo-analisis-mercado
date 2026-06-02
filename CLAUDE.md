@@ -190,7 +190,7 @@ Todo contenido pasa por este flujo antes de enviarse:
 
 **Nota**: Evolution API (Docker) está instalada y lista en `mcp/docker-compose.yml`. Cuando se resuelva la conexión WhatsApp/Baileys, el envío pasará a ser automático sin cambios adicionales.
 
-## Slash Commands disponibles (19)
+## Slash Commands disponibles (20)
 
 Invocar con `/nombre` desde Claude Code:
 
@@ -209,6 +209,7 @@ Invocar con `/nombre` desde Claude Code:
 | Comando | Cuándo usarlo |
 |---------|---------------|
 | `/encuesta [tipo] [activo]` | Encuesta de tendencia o precio para cualquier activo |
+| `/rencuesta` | Desarrolla didácticamente el tema de una encuesta y construye la malla de conceptos. `/rencuesta` (última encuesta), `/rencuesta [tema]`, `/rencuesta mapa` (vista de repaso). |
 | `/apertura` | Niveles técnicos interactivos: pregunta activo, temporalidad e indicador (RSI/ATR) por activo. Lo invocan los comandos de día en su PIEZA de apertura. |
 | `/dato_macro` | Calendario del día → director elige dato a desarrollar |
 | `/noticia` | Busca 3-5 noticias relevantes → director elige |
@@ -259,8 +260,10 @@ grupo-analisis-mercado/
 │   ├── apertura_mercado.txt · resumen_semanal.txt · cierre_semanal.txt
 │   ├── encuesta_tendencia.txt · encuesta_precio.txt
 │   ├── concepto_semana.txt · señal_operativa.txt
+├── conceptos/             ← notas canónicas de conceptos educativos (malla /rencuesta)
+│   ├── README.md · stop-loss.md
 ├── data/                  ← datos persistentes
-│   ├── historial_señales.json
+│   ├── historial_señales.json · mapa_conceptos.json
 │   └── charts/            ← PNGs generados (gitignored)
 └── mcp/
     ├── mcp_config.example.json ← template sin credenciales (en git)
