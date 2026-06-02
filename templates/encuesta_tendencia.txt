@@ -1,7 +1,7 @@
 📊 *ENCUESTA DEL DÍA*
 
-¿Cuál creen que será la tendencia del *{{activo}}* hoy?
-_Lean el análisis de arriba antes de votar_ ☝️
+¿Qué tendencia proyectan hoy para *{{activo}}*?
+{{guino}}
 
 📈 Alcista
 📉 Bajista
