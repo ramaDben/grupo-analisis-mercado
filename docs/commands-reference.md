@@ -201,7 +201,7 @@ Director copia texto y lo pega en el grupo WhatsApp
 | `alerta` | Alerta urgente de mercado |
 | `apertura` | Análisis de apertura de mercado |
 | `concepto` | Concepto educativo de la semana |
-| `encuesta` | Encuesta de tendencia o precio |
+| `encuesta` | Encuesta de sentimiento (posicion/tendencia/movimiento) |
 | `señal` | Señal operativa (BUY/SELL) |
 | `noticia` | Noticia seleccionada del día |
 | `dato_macro` | Explicación de dato económico |
