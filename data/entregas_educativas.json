@@ -1,0 +1,14 @@
+{
+  "entregas": [
+    {
+      "id": "2026-06-02_stop-loss_whatsapp",
+      "concepto": "stop-loss",
+      "ruta": "novatos",
+      "canal": "whatsapp",
+      "fecha": "2026-06-02",
+      "mensaje": null,
+      "encuesta": "2026-06-02_educativa_USDCLP_stoploss",
+      "comando_origen": "rencuesta"
+    }
+  ]
+}
