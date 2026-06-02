@@ -20,7 +20,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: pip
 
       - name: Install test dependencies
         # La suite corre sin MT5 ni fastmcp: el stack pesado se sustituye por un
