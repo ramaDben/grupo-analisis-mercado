@@ -1,215 +1,135 @@
-Genera una encuesta para el grupo de WhatsApp.
+Genera una encuesta de sentimiento para el grupo de WhatsApp.
 
 ## Argumentos
-$ARGUMENTS — formato esperado: `[tipo] [activo?] [descripcion_evento?]`
+$ARGUMENTS — formato esperado: `[tipo] [activo? | scope?]`
 
-Tipos disponibles:
-- `tendencia [activo]` — encuesta de tendencia del día (alcista / bajista / lateral)
-- `precio [activo]` — encuesta de precio de apertura
-- `semanal` — encuesta de la semana con los 4 activos principales
-- `post_evento [activo] [descripcion_evento]` — encuesta pedagógica tras noticia macro, reporte flash o niveles técnicos
+Tipos disponibles (sentimiento puro — sin precios, sin contenido educativo):
+- `posicion [activo?]` — qué está operando el grupo (compré / vendí / no operé)
+- `tendencia [activo?]` — qué tendencia proyectan para el día (alcista / bajista / lateral)
+- `movimiento [semana?]` — qué activo tendrá más movimiento (hoy, o "semana" para la encuesta dominical)
 
 Ejemplos:
-- `tendencia USDCLP`
-- `precio Oro`
-- `semanal`
-- `post_evento USDCLP "IPC USA mayo 3.2% vs esperado 3.0%"`
+- `posicion` (un poll por cada activo del día)
+- `posicion USDCLP`
+- `tendencia Oro`
+- `movimiento`
+- `movimiento semana`
+
+> Si NO se entrega tipo, no asumir nada: preguntar al director cuál de los 3 quiere.
 
 ---
 
-## REGLA GLOBAL DE FORMATO (todos los tipos)
+## REGLAS DURAS (todos los tipos)
 
-> El bloque de pregunta/contexto va SIEMPRE PRIMERO.
-> El call-to-action ("Voten 👇...") va inmediatamente después de la pregunta.
-> Las opciones de votación van SIEMPRE AL FINAL.
->
-> Límites WA poll nativo: pregunta ≤ 255 caracteres — cada opción ≤ 100 caracteres (incluyendo emoji).
-
----
-
-## PASO 1 — Parsea los argumentos
-
-**Tipo**: uno de `tendencia`, `precio`, `semanal`, `post_evento`.
-
-**Activo** (para tendencia, precio, post_evento): normalizar con nombre legible:
-- USDCLP / USD/CLP → "USD/CLP (Dólar)"
-- XAUUSD / Oro / XAU/USD → "Oro (XAU/USD)"
-- WTI → "WTI (Petróleo)"
-- US100 → "Nasdaq 100 (US100)"
-- US500 → "S&P 500 (US500)"
-- US30 → "Dow Jones (US30)"
-- #AAPL / AAPL → "Apple (#AAPL)"
-- [resto de acciones análogo]
+> 1. **CERO precios y cero números.** Ningún poll menciona precios, niveles, datos macro
+>    numéricos ni porcentajes. Si vas a escribir un número, detente.
+> 2. **CERO contenido educativo.** No explicar conceptos, no causa-efecto, no "respuesta
+>    correcta". Eso vive en la futura área educativa con comandos propios.
+> 3. **Una invocación = una sola pieza del tipo pedido.** Nunca arrastrar otros tipos.
+> 4. La contextualización la da el mensaje previo de la mañana (`/dato_macro` + `/noticia`),
+>    NO la encuesta. El poll solo hace un guiño cualitativo opcional, sin números.
+> 5. Límites WhatsApp: pregunta ≤ 255 caracteres — cada opción ≤ 100 caracteres (emoji incluido) — 2 a 12 opciones.
 
 ---
 
-## PASO 2 — Busca contexto previo (solo para tendencia y precio)
+## PASO 1 — Parsear argumentos
 
-Busca con `WebSearch` (investing.com + fuentes oficiales) qué está pasando HOY con el activo:
-- Precio actual / variación del día
-- Evento o dato relevante de hoy
-- Sesgo técnico si hay nivel clave cercano
+**Tipo**: uno de `posicion`, `tendencia`, `movimiento`.
+- Si `$ARGUMENTS` viene **sin tipo** → preguntar al director: "¿Qué encuesta generas: posicion, tendencia o movimiento?". No continuar hasta tener tipo.
 
-Esto es OBLIGATORIO: el cliente debe votar con información, no por intuición.
-
-Para `semanal` y `post_evento` el contexto viene dado por el evento o la semana — no hace falta búsqueda adicional.
-
----
-
-## PASO 3 — Genera los bloques según tipo
-
-### Tipo: `tendencia`
-
-**Bloque A — Contexto previo**:
-```
-🎯 *CONTEXTO — [NOMBRE ACTIVO]*
-━━━━━━━━━━━━━━━━━━━
-[2-3 líneas: precio actual, movimiento del día, dato o evento relevante, sesgo]
-━━━━━━━━━━━━━━━━━━━
-```
-
-**Bloque B — Encuesta**:
-```
-📊 *ENCUESTA DEL DÍA*
-
-¿Cuál creen que será la tendencia del *[nombre activo]* hoy?
-_Lean el análisis de arriba antes de votar_ ☝️
-
-📈 Alcista
-📉 Bajista
-➡️ Lateral
-```
+**Segundo argumento**:
+- Para `posicion` / `tendencia`: es el **activo** (opcional). Normalizar a nombre legible:
+  - USDCLP / USD/CLP → "USD/CLP (Dólar)"
+  - XAUUSD / Oro / XAU/USD → "Oro (XAU/USD)"
+  - WTI → "WTI (Petróleo)"
+  - US100 → "Nasdaq 100 (US100)"
+  - US500 → "S&P 500 (US500)" · US30 → "Dow Jones (US30)"
+  - #AAPL / AAPL → "Apple (#AAPL)" · (resto de acciones análogo)
+- Para `movimiento`: el segundo argumento solo puede ser `semana` (scope semanal). Cualquier otra cosa → scope diario.
 
 ---
 
-### Tipo: `precio`
+## PASO 2 — Resolver los activos (desde `data/plan_hoy.json`)
 
-**Bloque A — Contexto previo** (igual que tendencia):
-```
-🎯 *CONTEXTO — [NOMBRE ACTIVO]*
-━━━━━━━━━━━━━━━━━━━
-[2-3 líneas con precio actual, movimiento del día, dato relevante]
-━━━━━━━━━━━━━━━━━━━
-```
+Leer `data/plan_hoy.json`.
 
-**Bloque B — Encuesta**:
-```
-📊 *ENCUESTA DEL DÍA*
+**Validar frescura**: comparar `plan_hoy.fecha` con la fecha de hoy.
+- Si **no coincide** o el archivo **no existe** → avisar al director: "El plan del día (`plan_hoy.json`) está desfasado (fecha: [fecha], hoy: [hoy]). ¿Qué activos uso?" y pedir los activos manualmente. No generar polls con activos viejos.
+- Si coincide → usar `activos_hoy`.
 
-¿A qué precio crees que abrirá *[nombre activo]* mañana?
-Escribe tu estimación abajo 👇
-
-(Precio actual: [precio])
-```
+**Resolución por tipo**:
+- `posicion` / `tendencia`:
+  - **Con activo** → generar **un solo** poll de ese activo.
+  - **Sin activo** → generar **un poll por cada** activo de `activos_hoy` (solo de ese tipo).
+- `movimiento`:
+  - Scope **diario** → opciones = los activos de `activos_hoy`.
+    - Si `activos_hoy` tiene **menos de 2** → no se puede crear poll WhatsApp; avisar y pedir activos manualmente.
+    - Si tiene **más de 12** (improbable) → tomar 12 priorizando por catalizadores del día.
+  - Scope **semana** → opciones fijas: 🇨🇱 USD/CLP · 🥇 Oro · ⛽ WTI (Petróleo) · 📱 US100 (Nasdaq).
 
 ---
 
-### Tipo: `semanal`
+## PASO 3 — Contexto cualitativo opcional (sin números)
 
-No requiere búsqueda de contexto. Usar directamente la plantilla `templates/encuesta_semanal.txt`:
+Leer `data/ultimo_evento.json`.
 
-**Bloque A — Contexto** (elige el activo con más catalizadores esta semana):
-```
-🎯 *ACTIVO A SEGUIR ESTA SEMANA*
-━━━━━━━━━━━━━━━━━━━
-[2-3 líneas sobre el activo más relevante: catalizadores especiales de esta semana]
-━━━━━━━━━━━━━━━━━━━
-```
+**Validar frescura**: usar solo si su `timestamp` es de hoy. Si está desfasado o ausente → omitir priorización y guiño (poll seco).
 
-**Bloque B — Encuesta semanal**:
-```
-📊 *ENCUESTA DE LA SEMANA*
+Si hay evento fresco:
+- **Priorizar orden**: en `posicion`/`tendencia` sin activo, y en `movimiento`, poner primero el activo que coincide con `ultimo_evento.activo`.
+- **Guiño**: rellenar `{{guino}}` con UNA frase fija (elegir según `ultimo_evento.tipo`):
+  - `Con el dato de hoy ☝️, ¿cuál es tu jugada?`
+  - `Tras la noticia de hoy ☝️, ¿qué proyectas?`
 
-¿Cuál creen que será el activo con mayor movimiento esta semana?
-Voten 👇 — el viernes vemos quién acertó
-
-🇨🇱 USD/CLP
-🥇 Oro
-⛽ WTI (Petróleo)
-📱 US100 (Nasdaq)
-```
+**Prohibido**: volcar `dato_real`, `dato_esperado`, precios o cualquier número al poll. Prohibido inventar frases nuevas que insinúen dirección de mercado. Si no hay evento fresco, omitir la línea `{{guino}}` por completo.
 
 ---
 
-### Tipo: `post_evento`
+## PASO 4 — Generar el/los poll(s)
 
-Usar la plantilla `templates/encuesta_post_evento.txt`.
+Usar la plantilla del tipo:
+- `posicion` → `templates/encuesta_posicion.txt` (rellenar `{{activo}}`, `{{guino}}`).
+- `tendencia` → `templates/encuesta_tendencia.txt` (rellenar `{{activo}}`, `{{guino}}`).
+- `movimiento` → `templates/encuesta_movimiento.txt` (rellenar `{{titulo}}`, `{{periodo}}`, `{{opciones}}`).
 
-El argumento `[descripcion_evento]` describe el dato/noticia que acaba de salir. Si no se especifica, leer `data/ultimo_evento.json` para el evento más reciente (lo escriben automáticamente `/dato_macro`, `/noticia`, `/chart` y `/alerta` al enviar). Nunca usar `data/ultimo_analisis.json` aquí — ese archivo guarda análisis técnico (precio, niveles, indicadores), no eventos.
+Si se generan **varios polls** (`posicion`/`tendencia` sin activo): mostrarlos todos, separados por `━━━━━━━━━━━━━━━━━━━`.
 
-Generar 3 opciones pedagógicas de causa-efecto en shorthand. Cada opción incluye:
-- Letra + dirección del activo
-- Flecha (→) con la razón en 1 línea simple
+Verificar antes de mostrar: ningún número de precio, cada opción ≤ 100 chars, pregunta ≤ 255 chars.
 
-Ejemplo para IPC USA alto + USD/CLP:
-- `A) Sube → IPC alto = Fed no baja tasas = USD se fortalece`
-- `B) Baja → impacto ya estaba descontado en el precio`
-- `C) Lateral → el mercado espera más datos antes de reaccionar`
+---
 
-**Bloque A — Contexto del evento**:
-```
-📰 *[NOMBRE EVENTO]*
-━━━━━━━━━━━━━━━━━━━
-[Dato real vs esperado — 1 línea]
-[Qué significa para el activo — 1 línea simple]
-━━━━━━━━━━━━━━━━━━━
-```
+## PASO 5 — Aprobación y guardado
 
-**Bloque B — Encuesta post-evento**:
-```
-📊 *ENCUESTA POST-DATO*
+Presentar el/los poll(s) al director. Preguntar: "¿Apruebas? ¿Enviar al grupo WhatsApp?"
 
-📰 [evento]: [dato_real] (esperado: [dato_esperado])
+Al aprobar:
+- Guardar en **un único** archivo `data/mensajes/YYYY-MM-DD_HH-MM_encuesta.txt` (si son varios polls, separados por `━━━━━━━━━━━━━━━━━━━`).
+- Registrar en `data/historial_encuestas.json` **un objeto por poll** (cada activo es su propia encuesta nativa de WhatsApp), con este esquema:
 
-¿Qué debería pasar con el *[activo]*?
-Piensen antes de votar 👇
-
-A) [dirección] → [razón shorthand]
-B) [dirección] → [razón shorthand]
-C) [dirección] → [razón shorthand]
-
-_Mañana revelamos la respuesta correcta_ 💡
-```
-
-Después de generar, guardar en `data/historial_encuestas.json`:
 ```json
 {
-  "id": "[YYYY-MM-DD]_post_evento_[TICKER]",
+  "id": "[YYYY-MM-DD]_[tipo]_[TICKER]",
   "fecha": "[YYYY-MM-DD]",
-  "tipo": "post_evento",
-  "trigger": {
-    "tipo": "noticia_macro",
-    "evento": "[nombre evento]",
-    "dato": "[dato real vs esperado]"
-  },
-  "activo": "[ticker]",
+  "tipo": "[posicion|tendencia|movimiento]",
+  "activo": "[TICKER]",
   "pregunta": "[texto de la pregunta]",
-  "opciones": ["A) ...", "B) ...", "C) ..."],
-  "estado": "pendiente_revelacion"
+  "opciones": ["...", "...", "..."],
+  "contexto_ref": "[nombre del evento que contextualizó, SIN números, o null]",
+  "estado": "registrada"
 }
 ```
 
-Para desarrollar el concepto y revelar al día siguiente, usar: `/rencuesta` (sin argumento toma la última encuesta) — desarrolla el tema de forma didáctica y lo agrega a la malla de conceptos. Ver `docs/design/rencuesta-motor-educativo.design.md`.
+Para `movimiento`, usar `"activos": ["...", "..."]` en vez de `"activo"`.
 
----
-
-## PASO 4 — Muestra al director para aprobación
-
-Presenta ambos bloques (contexto + encuesta) al director.
-
-Pregunta: "¿Apruebas ambos bloques? ¿Adjuntar chart de MT5? ¿Enviar al grupo WhatsApp?"
-
-Si aprueba:
-- Guardar en `data/mensajes/YYYY-MM-DD_HH-MM_encuesta.txt`
-- Si MCP WhatsApp disponible: enviar automáticamente.
-- Si no disponible: mostrar texto listo para copiar.
+> Nunca `respuesta_correcta` ni `pendiente_revelacion` en estos tipos. Estado siempre `registrada`.
+- Si el MCP de WhatsApp está disponible: enviar. Si no: mostrar texto listo para copiar.
 
 ---
 
 ## REGLAS
-- Sin límite de veces al día (excepto `semanal`: una por semana).
-- Siempre el bloque de contexto ANTES del bloque de encuesta.
-- Dentro del bloque de encuesta: pregunta+CTA primero, opciones al final.
-- Lenguaje simple: el cliente entiende en 30 segundos.
+- Tipo obligatorio: sin tipo, preguntar.
+- Sin precios, sin números, sin educación. Nunca.
+- `posicion`/`tendencia` sin activo recorren `activos_hoy`; con activo, uno solo.
+- `movimiento` = una sola pieza.
+- `plan_hoy.json` o `ultimo_evento.json` desfasados → manejar como se indica (pedir manual / poll seco).
 - Hora en hora Chile si mencionas algún horario.
-- Cada opción ≤ 100 caracteres con emoji incluido.
