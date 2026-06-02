@@ -4,8 +4,8 @@
 
 | Requisito | Versión mínima | Para qué se usa |
 |-----------|---------------|-----------------|
-| Claude Code | última | Invocar los 18 slash commands |
-| Python | 3.10+ | Scripts auxiliares (señal_manager, formatter) |
+| Claude Code | última | Invocar los 21 slash commands |
+| Python | 3.10+ | Scripts auxiliares (senal_manager, formatter) |
 | git | cualquiera | Control de versiones |
 | gh CLI | cualquiera | Crear issues/PRs (opcional) |
 | Docker Desktop | cualquiera | Evolution API para WhatsApp (futuro) |
@@ -58,14 +58,14 @@ Editar `mcp/mcp_config.json` con las credenciales reales:
 
 Confirmar que existen estos archivos:
 ```
-data/historial_señales.json    ← debe existir (puede estar vacío: [])
+data/historial_senales.json    ← debe existir (puede estar vacío: [])
 config/activos.json            ← catálogo de activos
 config/agenda_semanal.json     ← estructura diaria L-V
 ```
 
-Si `data/historial_señales.json` no existe, crearlo con:
+Si `data/historial_senales.json` no existe, crearlo con:
 ```bash
-echo "[]" > data/historial_señales.json
+echo "[]" > data/historial_senales.json
 ```
 
 ### 6. Primera ejecución
@@ -118,7 +118,7 @@ Si se usa el MCP `reporte-flash` con autenticación adicional, las credenciales 
 
 ## Estructura de datos persistentes
 
-### `data/historial_señales.json`
+### `data/historial_senales.json`
 Registro de todas las señales enviadas. Consultado antes de cada `/señal` para verificar el límite de 3/semana. Formato:
 
 ```json
@@ -153,7 +153,7 @@ PNGs generados desde MT5. Se regeneran bajo demanda con `/chart`.
 - Si el servidor cachea módulos Python, editarlo y reiniciarlo
 
 **`/señal` dice que se superó el límite**
-- Revisar `data/historial_señales.json` y verificar las fechas de la semana actual
+- Revisar `data/historial_senales.json` y verificar las fechas de la semana actual
 - Si hay registros con fecha antigua que bloquean incorrectamente, limpiar solo los de semanas pasadas
 
 **Archivos con `ñ` se corrompen en git**

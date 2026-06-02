@@ -86,7 +86,7 @@ Formatea todo para WhatsApp. Muéstrame para aprobación. El cierre semanal lo e
 Analiza [ACTIVO] y evalúa si hay oportunidad para una señal operativa.
 
 Antes de generar la señal:
-1. Verifica en data/historial_señales.json cuántas señales van esta semana (máximo 3)
+1. Verifica en data/historial_senales.json cuántas señales van esta semana (máximo 3)
 2. Si ya se enviaron 3, avísame y no generes señal
 
 Si hay oportunidad clara, genera la señal con:
@@ -101,7 +101,7 @@ Si hay oportunidad clara, genera la señal con:
 
 Usa el template de templates/señal_operativa.txt. El cliente debe ver cuánto gana y cuánto pierde en pesos chilenos sin calcular nada.
 
-Muéstrame para aprobación. Si la apruebo, registra en data/historial_señales.json.
+Muéstrame para aprobación. Si la apruebo, registra en data/historial_senales.json.
 ```
 
 > **Nota**: reemplaza `[ACTIVO]` por el ticker (ej: USD/CLP, Oro, WTI, US100, #CRM, etc.)
@@ -191,7 +191,7 @@ Cada concepto en máximo 2 líneas. Formato WhatsApp limpio para mensaje fijado.
 
 ### Ver estado de señales de la semana
 ```
-Ejecuta python scripts/señal_manager.py y muéstrame el resumen de señales de esta semana.
+Ejecuta python scripts/senal_manager.py y muéstrame el resumen de señales de esta semana.
 ```
 
 ### Ver plan del día

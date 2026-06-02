@@ -106,7 +106,7 @@ def formatear_señal(datos_señal: dict) -> str:
         datos_señal["sl_clp_fmt"] = f"-${sl_clp:,.0f}".replace(",", ".")
 
     # Número de señal esta semana
-    from scripts.señal_manager import señales_enviadas_semana
+    from scripts.senal_manager import señales_enviadas_semana
     datos_señal["n_señal"] = señales_enviadas_semana() + 1
 
     return reemplazar_variables(template, datos_señal)

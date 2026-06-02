@@ -71,7 +71,7 @@ def obtener_fecha_formateada() -> str:
 
 def señales_enviadas_semana() -> int:
     """Cuenta cuántas señales se han enviado esta semana."""
-    historial_path = DATA_DIR / "historial_señales.json"
+    historial_path = DATA_DIR / "historial_senales.json"
     if not historial_path.exists():
         guardar_json(historial_path, [])
         return 0

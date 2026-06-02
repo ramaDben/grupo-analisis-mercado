@@ -1,7 +1,7 @@
 # SPEC — Refactorización del proyecto grupo-analisis-mercado
 
-## Estado actual (fase: explore)
-Fecha: 2026-05-31
+## Estado actual (fase: cerrada — ver cierre al final)
+Fecha de apertura: 2026-05-31 · Cierre: 2026-06-02 · Continúa en issue #25
 
 ## Problema
 El proyecto acumula deuda técnica y estructural que dificulta la operativa diaria. Los slash commands referencian scripts Python, MCPs y archivos que no están conectados o están duplicados. Hay deriva entre la documentación y la implementación real.
@@ -62,3 +62,20 @@ Existe `.claude/commands/domingo.md` pero no está en el CLAUDE.md ni en la tabl
 - `config/activos.json` — alinear con cobertura real
 - `mcp/mcp_config.json` — marcar MCPs inactivos con comentario
 - Eliminar: `ampliacion-mercado/`, docs duplicados
+
+---
+
+## Cierre (2026-06-02)
+
+Esta idea se cierra. El trabajo restante se gestiona en **issue #25** (Nivel 1/2/3 de higiene).
+
+**Criterios cumplidos:**
+- ✅ Los slash commands ya no dependen de `python scripts/...` (verificado: 0 referencias en `.claude/commands/`).
+- ✅ Sin carpetas duplicadas: `ampliacion-mercado/` ya no existe.
+- ✅ `/domingo` documentado en `CLAUDE.md`.
+- ✅ `COMANDOS.md` alineado (banner + se quitó `orquestador.py` como paso obligatorio).
+- ✅ Conteo de comandos unificado a 21 en `CLAUDE.md` y `docs/setup-guide.md`.
+
+**Decisiones revisadas vs. el plan original:**
+- ❌ El punto 4 ("integrar MCP reporte-flash") quedó **obsoleto**: `reporte-flash`/`flash_mcp/` es código de **otro proyecto** y se sacó del repo (issue #25). El MCP canónico es `market_data_mcp/` ("market-data").
+- ⚠️ Encoding `ñ` en nombres de archivo: pendiente y acotado. Los nombres user-facing (`/señal`, `templates/señal_operativa.txt`, `config/plantilla_señal.json`) **conservan `ñ` por diseño**; solo se evalúa renombrar infraestructura (`scripts/señal_manager.py`, `data/historial_señales.json`) en issue #25.

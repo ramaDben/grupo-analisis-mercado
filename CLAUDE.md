@@ -53,7 +53,7 @@ Ejemplo obligatorio: "Niveles en 15M — operativa scalper, movimientos rápidos
 | Viernes | Niveles + noticia + drivers + cierre semanal | Precio apertura lunes | Según oportunidad |
 
 ## Señales operativas
-- **Máximo 3 por semana** (hard limit, verificar en data/historial_señales.json)
+- **Máximo 3 por semana** (hard limit, verificar en data/historial_senales.json)
 - Tipo: swing (varios días) o scalper (intradía cortas)
 - Campos obligatorios: ticker, nombre activo, BUY/SELL, entrada, volumen, acciones, TP, SL
 - **TP y SL traducidos a pesos chilenos (CLP)** — el cliente debe ver cuánto gana y cuánto pierde sin calcular nada
@@ -234,7 +234,7 @@ grupo-analisis-mercado/
 ├── CLAUDE.md              ← este archivo (instrucciones para Claude Code)
 ├── docs/
 │   ├── architecture.md    ← flujo del sistema, MCPs, aprobación, señales
-│   ├── commands-reference.md ← referencia detallada de los 18 comandos
+│   ├── commands-reference.md ← referencia detallada de los 21 comandos
 │   ├── setup-guide.md     ← instalación paso a paso + troubleshooting
 │   ├── activos-y-drivers.md  ← 20 activos con drivers y datos macro
 │   ├── ideas/             ← specs de features (ciclo Pulse)
@@ -255,7 +255,7 @@ grupo-analisis-mercado/
 │   ├── drivers.json · drivers_indices_sectores.json
 │   ├── agenda_semanal.json · plantilla_señal.json
 ├── scripts/               ← scripts auxiliares Python
-│   ├── señal_manager.py   ← gestión historial señales (límite 3/semana)
+│   ├── senal_manager.py   ← gestión historial señales (límite 3/semana)
 │   ├── formatter_whatsapp.py · market_data.py
 │   └── mt5_integration.py ← integración MT5 legacy (reemplazado por MCP)
 ├── templates/             ← templates de mensajes WhatsApp
@@ -266,7 +266,7 @@ grupo-analisis-mercado/
 ├── conceptos/             ← notas canónicas de conceptos educativos (malla /rencuesta)
 │   ├── README.md · stop-loss.md
 ├── data/                  ← datos persistentes
-│   ├── historial_señales.json · mapa_conceptos.json
+│   ├── historial_senales.json · mapa_conceptos.json
 │   ├── curriculo.json · entregas_educativas.json · metricas_educativas.json
 │   └── charts/            ← PNGs generados (gitignored)
 └── mcp/

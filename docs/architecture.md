@@ -85,7 +85,7 @@ Este flujo aplica a **todos** los comandos sin excepción:
 
 ## Gestión de señales operativas
 
-Las señales tienen un límite duro de **3 por semana**. El archivo `data/historial_señales.json` registra todas las señales y es consultado por `scripts/señal_manager.py` antes de generar una nueva.
+Las señales tienen un límite duro de **3 por semana**. El archivo `data/historial_senales.json` registra todas las señales y es consultado por `scripts/senal_manager.py` antes de generar una nueva.
 
 Campos obligatorios de una señal:
 - ticker, nombre activo, dirección (BUY/SELL)
