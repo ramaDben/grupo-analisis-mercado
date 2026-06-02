@@ -20,6 +20,7 @@ Regla de oro: si un cliente nuevo (sin experiencia) no entiende el mensaje en me
 - Enviar niveles en temporalidades 4H, 1H o 15M
 - Cubrir 2 o 3 activos por día (rotar entre USD/CLP, Oro, WTI, US100)
 - Indicar: soportes, resistencias, zona de interés y posible sesgo
+- La temporalidad y el indicador se eligen por activo vía `/apertura` (nunca se asume 4H fijo). Los niveles se presentan como **lectura/marco temporal**, no como señal de operativa.
 
 ### 2. Noticia relevante del calendario económico
 - 1 noticia o dato del día que impacte directamente a alguno de los activos
@@ -189,7 +190,7 @@ Todo contenido pasa por este flujo antes de enviarse:
 
 **Nota**: Evolution API (Docker) está instalada y lista en `mcp/docker-compose.yml`. Cuando se resuelva la conexión WhatsApp/Baileys, el envío pasará a ser automático sin cambios adicionales.
 
-## Slash Commands disponibles (18)
+## Slash Commands disponibles (19)
 
 Invocar con `/nombre` desde Claude Code:
 
@@ -208,6 +209,7 @@ Invocar con `/nombre` desde Claude Code:
 | Comando | Cuándo usarlo |
 |---------|---------------|
 | `/encuesta [tipo] [activo]` | Encuesta de tendencia o precio para cualquier activo |
+| `/apertura` | Niveles técnicos interactivos: pregunta activo, temporalidad e indicador (RSI/ATR) por activo. Lo invocan los comandos de día en su PIEZA de apertura. |
 | `/dato_macro` | Calendario del día → director elige dato a desarrollar |
 | `/noticia` | Busca 3-5 noticias relevantes → director elige |
 | `/chart` | Genera screenshot de MT5 con indicador y temporalidad a elección |

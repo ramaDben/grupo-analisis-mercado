@@ -8,42 +8,12 @@ Genera la operativa diaria del jueves pieza por pieza para aprobación.
 
 ## PIEZA 1 — Apertura de mercado
 
-Para cada activo del día:
-- Llama `mcp__market-data__get_asset_levels` con `{"ticker": "[TICKER_MT5]", "timeframe": "H4"}`
-- Extrae: price, s1, s2, r1, r2, rsi_14, atr_14, trend del resultado
-- Si el resultado contiene `"error"`: mostrar al director "⚠️ [message] — Verificar que MT5 esté abierto." y DETENER el comando.
+Ejecuta la lógica de `/apertura` (ver `.claude/commands/apertura.md`):
+- Activos sugeridos hoy según `config/agenda_semanal.json` (2 activos el jueves). El director confirma/cambia/agrega (rotación + override).
+- Por CADA activo: pregunta temporalidad (PASO 2) e indicador RSI/ATR/Limpio (PASO 3), llama `get_asset_levels` con el timeframe mapeado (PASO 4) y renderiza el mensaje con la etiqueta de marco temporal neutral (PASO 5).
+- Si `get_asset_levels` devuelve `"error"`: muestra `⚠️ [message] — Verificar que MT5 esté abierto.` y omite ese activo (no abortes la apertura).
 
-Genera un mensaje por activo:
-
-```
-🎯 Activo: [NOMBRE ACTIVO]
-📌 Nivel a vigilar: [R1 o S1 según sesgo]
-⚡ Qué esperar: [1 línea de acción concreta]
-━━━━━━━━━━━━━━━━━━━
-
-📊 *APERTURA DE MERCADO — JUEVES [FECHA]*
-━━━━━━━━━━━━━━━━━━━
-📈 *[NOMBRE ACTIVO]* — Niveles en 4H
-_Operativa intradía / swing corto_
-
-💰 Precio actual: [precio]
-• Resistencia 1: [R1]
-• Soporte 1: [S1]
-• Zona de interés: [S1] – [R1]
-
-🔎 ¿Qué lo mueve hoy?
-[Drivers del activo en 2-3 líneas simples, consulta config/drivers.json]
-
-━━━━━━━━━━━━━━━━━━━
-🟢 *Alcista* — Precio sobre [R1] → tendencia compradora (intra-day)
-🟡 *Esperar* — Entre [S1] y [R1] → sin confirmación de dirección
-🔴 *Bajista* — Precio bajo [S1] → tendencia vendedora (intra-day)
-━━━━━━━━━━━━━━━━━━━
-_Niveles en 4H — operativa intradía/swing corto_
-```
-
-**→ Muestra al director. Pregunta: ¿Apruebas? ¿Adjuntar chart de MT5? ¿Enviar al grupo WhatsApp?**
-Si aprueba: llama MCP WhatsApp. Si no disponible: muestra texto listo para copiar + ruta imagen.
+**→ Por cada activo: ¿Apruebas? ¿Adjuntar chart de MT5? ¿Enviar al grupo?**
 
 ---
 

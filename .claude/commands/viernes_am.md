@@ -9,39 +9,10 @@ Genera la operativa de la mañana del viernes pieza por pieza para aprobación.
 
 ## PIEZA 1 — Apertura de mercado (3 activos el viernes)
 
-Para los 3 activos del día (rotar: USD/CLP, Oro, WTI, US100, US500, US30):
-- Llama `mcp__market-data__get_asset_levels` con `{"ticker": "[TICKER_MT5]", "timeframe": "H4"}` para cada uno
-- Extrae: price, s1, s2, r1, r2, rsi_14, atr_14, trend del resultado
-- Si el resultado contiene `"error"`: mostrar al director "⚠️ [message] — Verificar que MT5 esté abierto." y DETENER el comando.
-
-Genera un mensaje por activo:
-
-```
-🎯 Activo: [NOMBRE ACTIVO]
-📌 Nivel a vigilar: [R1 o S1 según sesgo]
-⚡ Qué esperar: [1 línea de acción concreta]
-━━━━━━━━━━━━━━━━━━━
-
-📊 *APERTURA DE MERCADO — VIERNES [FECHA]*
-━━━━━━━━━━━━━━━━━━━
-📈 *[NOMBRE ACTIVO]* — Niveles en 4H
-_Operativa intradía / swing corto_
-
-💰 Precio actual: [precio]
-• Resistencia 1: [R1]
-• Soporte 1: [S1]
-• Zona de interés: [S1] – [R1]
-
-🔎 ¿Qué lo mueve hoy?
-[Drivers en 2-3 líneas simples]
-
-━━━━━━━━━━━━━━━━━━━
-🟢 *Alcista* — Precio sobre [R1] → tendencia compradora (intra-day)
-🟡 *Esperar* — Entre [S1] y [R1] → sin confirmación de dirección
-🔴 *Bajista* — Precio bajo [S1] → tendencia vendedora (intra-day)
-━━━━━━━━━━━━━━━━━━━
-_Niveles en 4H — operativa intradía/swing corto_
-```
+Ejecuta la lógica de `/apertura` (ver `.claude/commands/apertura.md`):
+- Activos sugeridos hoy según `config/agenda_semanal.json` (**3 activos** el viernes). El director confirma/cambia/agrega (rotación + override).
+- Por CADA activo: pregunta temporalidad (PASO 2) e indicador RSI/ATR/Limpio (PASO 3), llama `get_asset_levels` con el timeframe mapeado (PASO 4) y renderiza el mensaje con la etiqueta de marco temporal neutral (PASO 5).
+- Si `get_asset_levels` devuelve `"error"`: muestra `⚠️ [message] — Verificar que MT5 esté abierto.` y omite ese activo (no abortes la apertura).
 
 **→ Por cada activo: ¿Apruebas? ¿Adjuntar chart? ¿Enviar al grupo?**
 
