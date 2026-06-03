@@ -133,3 +133,24 @@ def test_camino_feliz_con_mt5_mockeado(collector, monkeypatch):
 
     # Serie con deriva alcista → precio por encima de la EMA100 → ALCISTA
     assert res["trend"] == "ALCISTA"
+
+
+def test_mt5_no_instalado_retorna_error_no_lanza(collector, monkeypatch):
+    """Regresión (#30/#31): mt5_client importa MetaTrader5 de forma perezosa
+    dentro de get_rates. Si el paquete no está instalado (caso de CI), el
+    ModuleNotFoundError surge en la llamada, no en el import de levels.py.
+    get_asset_levels debe convertirlo en MT5_UNAVAILABLE, nunca propagarlo.
+
+    Este test reproduce el entorno de CI incluso en máquinas con MT5 instalado."""
+    from market_data_mcp import mt5_client
+
+    def _sin_mt5(*args, **kwargs):
+        raise ModuleNotFoundError("No module named 'MetaTrader5'")
+
+    monkeypatch.setattr(mt5_client, "get_rates", _sin_mt5)
+
+    levels.register(collector)
+    res = collector.tools["get_asset_levels"](ticker="XAUUSD", timeframe="H4")
+
+    assert res["error"] == "MT5_UNAVAILABLE"
+    assert isinstance(res["message"], str) and res["message"]

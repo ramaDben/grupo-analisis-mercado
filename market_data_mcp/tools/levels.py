@@ -157,6 +157,14 @@ def register(mcp: FastMCP) -> None:
 
         try:
             df = get_rates(ticker, timeframe.upper(), n_bars=300)
+        except ImportError:
+            # mt5_client importa MetaTrader5 de forma perezosa dentro de get_rates;
+            # si el paquete no está instalado (p.ej. en CI), surge aquí y no en el
+            # import de arriba. Lo convertimos al contrato de error en vez de lanzar.
+            return {
+                "error": "MT5_UNAVAILABLE",
+                "message": "MetaTrader5 no está instalado en este entorno. El MCP requiere MT5 en la máquina del director.",
+            }
         except RuntimeError as exc:
             msg = str(exc).lower()
             if "initialize" in msg or "not initialized" in msg or "login" in msg:
