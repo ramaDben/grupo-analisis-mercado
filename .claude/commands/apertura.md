@@ -139,14 +139,16 @@ Plantilla del mensaje:
 ⚡ Qué esperar: [1 línea de acción concreta]
 ━━━━━━━━━━━━━━━━━━━
 
-📊 *APERTURA DE MERCADO — [FECHA]*
+📊 *APERTURA DE MERCADO — [D de mes de YYYY]*
 ━━━━━━━━━━━━━━━━━━━
 📈 *[NOMBRE ACTIVO]* — Niveles en [TEMPORALIDAD]
 {{lectura_temporalidad}}
 
 💰 Precio actual: [precio]
-• Techo 1: [T1]
-• Suelo 1: [Su1]
+• Techo más próximo: [T1]
+• Techo siguiente: [T2]          ← solo si el director ingresó T2; si no, omitir esta línea
+• Suelo más próximo: [Su1]
+• Suelo siguiente: [Su2]         ← solo si el director ingresó Su2; si no, omitir esta línea
 • Zona de interés: [Su1] – [T1]
 {{lectura_indicador}}
 
@@ -160,6 +162,14 @@ Plantilla del mensaje:
 ━━━━━━━━━━━━━━━━━━━
 {{lectura_temporalidad}}
 ```
+
+**Reglas de render (OBLIGATORIAS — esta plantilla es la única salida válida):**
+- **Fecha** `[D de mes de YYYY]`: hora Chile, formato `2 de junio de 2026`. NUNCA con día de la semana (`martes 2 de junio`), NUNCA abreviada, NUNCA sustituida por el nombre del activo.
+- **Terminología de niveles**: siempre `Techo más próximo` / `Suelo más próximo`; los segundos niveles son `Techo siguiente` / `Suelo siguiente`.
+- **Orden de niveles**: primero todos los techos (más próximo → siguiente), luego todos los suelos (más próximo → siguiente), luego `Zona de interés`. La zona usa siempre los "más próximos": `[Suelo más próximo] – [Techo más próximo]`.
+- **T2/Su2 opcionales**: si el director NO ingresó T2 (o Su2) en PASO 4B, se **omite por completo** esa línea (sin dejar línea en blanco).
+- **Precio**: siempre `💰 Precio actual: [precio]`.
+- **Indicador**: siempre `📐 RSI/ATR [TF]:` (ver `{{lectura_indicador}}` arriba). Omitir si "Limpio".
 
 **Decimales**: respeta el campo `digits` de `config/activos.json` por activo (regla MT5 de CLAUDE.md). Nunca truncar ceros.
 
@@ -175,3 +185,18 @@ Al aprobar: guarda en `data/mensajes/YYYY-MM-DD_HH-MM_niveles.txt` (usar Write) 
 - **NO es una señal**: nunca uses "operativa recomendada", "entrada", "TP/SL" en la apertura. La etiqueta temporal es marco de lectura educativo.
 - **Dirección explícita** en escenarios: usa `*Alcista* 🟢` / `*Bajista* 🔴`, nunca "fuerza compradora" ni "presión vendedora".
 - Si WhatsApp MCP no disponible: mostrar texto listo para copiar.
+
+## PROHIBIDO (cierra el drift de formato — issue #35)
+
+El mensaje de niveles tiene **una sola** forma válida (la plantilla del PASO 5). NUNCA generes estas variantes:
+
+- ❌ `Resistencia 1/2` · `Soporte 1/2` → usa `Techo/Suelo más próximo` y `siguiente`.
+- ❌ `Techo objetivo` · `Techo inmediato` · `Suelo fuerte` → usa `más próximo` / `siguiente`.
+- ❌ `📊 *Precio actual*` · `📌 Precio actual` como rótulo de precio → usa `💰 Precio actual`.
+- ❌ `⚠️ *RSI 1H*: ...` · `• RSI: ...` inline → usa `📐 RSI [TF]:` (línea `{{lectura_indicador}}`).
+- ❌ Día de la semana en la fecha (`martes 2 de junio`) → usa `2 de junio de 2026`.
+- ❌ Línea extra `Sesgo: ...` o `🟢 *Sesgo del día*` → el sesgo va implícito en el bloque de escenarios `🟢/🟡/🔴`.
+- ❌ Bloque de escenarios con orden invertido o emoji duplicado (`🟢 Sobre X → *Alcista* 🟢 → siguiente objetivo`) → orden canónico: `🟢 *Alcista* — Precio sobre X → tendencia compradora (intra-day)`.
+- ❌ `🔎 *¿Qué lo está moviendo?*` (en negrita / otra redacción) → usa `🔎 ¿Qué lo mueve hoy?` sin negrita.
+
+Cualquier comando de día que invoque la pieza de apertura **delega 100%** en esta plantilla; no redefine formato propio de niveles.
