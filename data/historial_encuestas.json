@@ -1,3 +1,55 @@
 {
-  "encuestas": []
+  "encuestas": [
+    {
+      "id": "2026-06-01_post_evento_USDCLP",
+      "fecha": "2026-06-01",
+      "tipo": "post_evento",
+      "trigger": {
+        "tipo": "noticia_macro",
+        "evento": "ISM Manufacturing EE.UU. mayo 2026",
+        "dato": "54.0% vs esperado 53.0% (anterior 52.7%)"
+      },
+      "activo": "USDCLP",
+      "pregunta": "¿Qué debería pasar con el USD/CLP (Dólar)?",
+      "opciones": [
+        "A) 📈 Sube → dato fuerte = economía sana = Fed no baja tasas = USD se fortalece",
+        "B) 📉 Baja → ya estaba descontado, el mercado no reacciona más",
+        "C) ➡️ Lateral → el mercado espera el JOLTs del martes antes de moverse"
+      ],
+      "estado": "pendiente_revelacion"
+    },
+    {
+      "id": "2026-06-02_educativa_USDCLP_stoploss",
+      "fecha": "2026-06-02",
+      "tipo": "educativa",
+      "trigger": {
+        "tipo": "nivel_tecnico",
+        "evento": "USD/CLP en suelo 1H $886.66 tras JOLTS",
+        "dato": "ATR 1H: 2.5 pesos"
+      },
+      "activo": "USDCLP",
+      "pregunta": "Compraste USD/CLP en $886.66. ¿Dónde pones el stop loss?",
+      "opciones": [
+        "A) $884.16 → ATR 1H: 2.5 pesos bajo la entrada (volatilidad actual del activo)",
+        "B) $880.00 → 6 pesos bajo la entrada, margen amplio por si acaso",
+        "C) Sin stop loss → el JOLTS respalda la compra, el dólar sube"
+      ],
+      "respuesta_correcta": "A",
+      "estado": "pendiente_revelacion"
+    },
+    {
+      "id": "2026-06-02_tendencia_WTI",
+      "fecha": "2026-06-02",
+      "tipo": "tendencia",
+      "activo": "WTI",
+      "pregunta": "¿Qué tendencia proyectan hoy para WTI (Petróleo)?",
+      "opciones": [
+        "📈 Alcista",
+        "📉 Bajista",
+        "➡️ Lateral"
+      ],
+      "contexto_ref": null,
+      "estado": "registrada"
+    }
+  ]
 }
