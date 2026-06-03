@@ -16,7 +16,7 @@ Ejecuta `/apertura` (ver `.claude/commands/apertura.md`).
 ## PIEZA 2 — Dato macro del día
 
 Ejecuta la lógica de /dato_macro:
-- Obtén el calendario de hoy con `WebSearch` sobre investing.com (Chile, EE.UU., Zona Euro, China; impacto medio y alto), como en el PASO 1 de `/dato_macro`. Convierte las horas a Chile (CLT/CLST).
+- Obtén el calendario de hoy con `WebSearch` sobre investing.com (Chile, EE.UU., Zona Euro, China; impacto medio y alto), como en el PASO 1 de `/dato_macro`. Convierte cada hora a Chile con el helper determinista `scripts\hora_chile.ps1` (según la zona de origen del dato; nunca offsets fijos) — ver PASO 1B de `/dato_macro`.
 - Si no hay eventos de impacto medio/alto hoy → continuar (domingo/feriado es esperado).
 
 Lista numerada con los datos del día:

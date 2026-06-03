@@ -18,7 +18,15 @@ Obtén el calendario de HOY con `WebSearch` (ya no se usa el MCP):
    - Países objetivo: **Chile (CL), EE.UU. (US), Zona Euro (EU), China (CN)**.
    - Impacto: **medio y alto** (★★ / ★★★).
 2. Si necesitas confirmar horas exactas, usa `WebFetch` sobre `https://es.investing.com/economic-calendar/`. Si la página no renderiza la tabla (es JS-pesada), apóyate en los resultados de `WebSearch` y en **fuentes oficiales** para datos de alto impacto (BCCh, Fed, Eurostat, BLS).
-3. **Conversión de hora**: identifica la zona horaria de origen de cada dato y conviértela a **hora Chile (CLT/CLST)**. En eventos de alto impacto (Fed, BCCh, NFP) verifica la hora contra la fuente oficial.
+3. **Conversión de hora (DETERMINISTA, OBLIGATORIO)**: nunca conviertas "a mano" ni asumas offsets fijos (`UTC-5`, `GMT-3`) — esa asunción causa desfases de ±1h (ver issue #38). Por cada evento:
+   - Toma la hora **oficial en la zona de su organismo emisor** (no la hora "ya convertida" que muestre investing.com: su zona es ambigua y variable).
+   - Mapea el país a su zona de Windows: **EE.UU.** (BLS/ISM/ADP/EIA/Fed) → `Eastern Standard Time` · **Zona Euro** (Eurostat/BCE) → `W. Europe Standard Time` · **China** (NBS/Caixin) → `China Standard Time` · **Chile** (BCCh/INE) → `Pacific SA Standard Time` · **Reino Unido** (BoE) → `GMT Standard Time`.
+   - Convierte con el helper (devuelve hora + etiqueta CLT/CLST ya correcta):
+     ```powershell
+     scripts\hora_chile.ps1 -Hora "08:15" -ZonaOrigen "Eastern Standard Time" -Fecha "[FECHA]"
+     # -> "08:15 CLT"
+     ```
+   - En eventos de alto impacto (Fed, BCCh, NFP) verifica además la hora oficial contra la fuente del organismo.
 
 **Contrato sin-resultados**: si la búsqueda no devuelve eventos de impacto medio/alto para hoy → muestra "📅 Sin datos macro de impacto medio/alto hoy" y DETÉN. En fin de semana o feriado es comportamiento esperado.
 

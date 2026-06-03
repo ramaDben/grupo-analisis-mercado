@@ -11,7 +11,7 @@ Hoy es lunes. Ejecuta cada pieza en orden, mostrándola al director para aprobac
 ## PIEZA 1 — Resumen semanal del calendario económico
 
 Obtén el calendario económico de toda esta semana:
-- Obtén con `WebSearch` sobre investing.com los datos de **alto impacto** de la semana (próximos 7 días; Chile, EE.UU., Zona Euro, China). Convierte las horas a Chile (CLT/CLST).
+- Obtén con `WebSearch` sobre investing.com los datos de **alto impacto** de la semana (próximos 7 días; Chile, EE.UU., Zona Euro, China). Convierte cada hora a Chile con el helper determinista `scripts\hora_chile.ps1` (según la zona de origen del dato; nunca offsets fijos) — ver PASO 1B de `/dato_macro`.
 - Si no encuentras eventos de alto impacto para la semana → informar al director y DETENER el comando.
 
 Lista cada dato con:
