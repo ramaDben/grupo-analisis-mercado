@@ -75,6 +75,8 @@ Por cada dato que elija el director, genera:
 
 👀 Activos a observar: [lista de activos impactados]
 ━━━━━━━━━━━━━━━━━━━
+📅 Calendario completo: https://es.investing.com/economic-calendar/
+💬 ¿Quieres profundizar este tema? Escríbele a tu analista designado.
 ```
 
 **Modo resultado** (dato ya publicó, tiene valor "actual"):
@@ -91,6 +93,8 @@ Esperado: [valor consenso] | Anterior: [valor previo]
 
 [Si aplica: conexión con camino a decisión de tasas — ej: "Este dato confirma/complica el escenario de recorte de la Fed"]
 ━━━━━━━━━━━━━━━━━━━
+📅 Calendario completo: https://es.investing.com/economic-calendar/
+💬 ¿Quieres profundizar este tema? Escríbele a tu analista designado.
 ```
 
 ## PASO 4 — Aprobación y envío
@@ -127,3 +131,4 @@ Después de que el director apruebe y envíe el dato, registrar el evento y ofre
 - Hora siempre en hora Chile (CLT/CLST).
 - Lenguaje simple: el cliente debe entender qué mide el indicador en 10 segundos.
 - Cuando aplique, conectar el dato con la narrativa de tasas de interés.
+- **Bloque de cierre obligatorio**: todo mensaje de `/dato_macro` (ambos modos) cierra, después del último separador, con el link al calendario completo (`https://es.investing.com/economic-calendar/`) y el CTA genérico al analista designado. El link y el CTA van siempre juntos como pie del mensaje.
