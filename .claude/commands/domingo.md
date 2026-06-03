@@ -57,7 +57,7 @@ Al aprobar: guardar como `data/mensajes/YYYY-MM-DD_HH-MM_domingo_noticias.txt`.
 ## PIEZA 2 — Preview de la semana
 
 Obtén el calendario económico de la semana que viene:
-- Con `WebSearch` sobre investing.com obtén el calendario de **alto impacto** de la semana que viene (próximos 7 días). Convierte las horas a Chile (CLT/CLST).
+- Con `WebSearch` sobre investing.com obtén el calendario de **alto impacto** de la semana que viene (próximos 7 días). Convierte cada hora a Chile con el helper determinista `scripts\hora_chile.ps1` (según la zona de origen del dato; nunca offsets fijos) — ver PASO 1B de `/dato_macro`.
 - Si no encuentras eventos de alto impacto → informar y DETENER.
 
 Filtra los 4-6 datos más importantes. Marca con 🔴 los de máximo impacto (NFP, IPC EE.UU., decisiones de tasas). Incluir siempre la hora en CLT.
