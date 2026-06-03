@@ -1,4 +1,4 @@
-📊 *ENCUESTA DEL DÍA*
+🗣️ *TU VOZ CUENTA*
 
 ¿Qué tendencia proyectan hoy para *{{activo}}*?
 {{guino}}
