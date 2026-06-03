@@ -1,3 +1,17 @@
+### ⚠️ DEPRECADO (issue #35) — NO USAR
+
+Este template quedó **obsoleto**. El formato de los mensajes de niveles vive ahora
+exclusivamente en el PASO 5 de `.claude/commands/apertura.md` (fuente de verdad única).
+Este `.txt` divergía del estándar (fecha fuera de la negrita, faltaba la línea
+`📈 *[Activo]* — Niveles en [TF]`, línea extra `Sesgo:`, `🔎 *¿Qué lo está moviendo?*`
+en negrita, faltaba el `{{lectura_temporalidad}}` de cierre y adosaba un bloque
+`DATO DEL DÍA` que es otra pieza).
+
+Ningún comando lo consume. Se conserva solo como referencia histórica.
+Para generar niveles usa siempre `/apertura`.
+
+--- (contenido histórico, no usar) ---
+
 🎯 Activo: {{activo}}
 📌 Nivel a vigilar: {{nivel_clave}}
 ⚡ Qué esperar: {{accion_esperada}}
