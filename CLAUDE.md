@@ -41,6 +41,18 @@ Cada análisis indica explícitamente su temporalidad y tipo de operativa:
 
 Ejemplo obligatorio: "Niveles en 15M — operativa scalper, movimientos rápidos dentro del día"
 
+## Fecha y hora actual — regla canónica (OBLIGATORIO)
+**Nunca** uses `WebSearch` para obtener la fecha o la hora actual: devuelve snippets de búsqueda (cacheados, imprecisos o ausentes), no un reloj, y produce errores al fechar mensajes o marcar eventos pasados/futuros.
+
+**Método único y determinista** — obtén la hora de Chile (CLT/CLST, ajuste de horario de verano automático) con el reloj del sistema:
+```powershell
+$tz = [System.TimeZoneInfo]::FindSystemTimeZoneById('Pacific SA Standard Time')
+$now = [System.TimeZoneInfo]::ConvertTime([DateTime]::UtcNow, [System.TimeZoneInfo]::Utc, $tz)
+$now.ToString('yyyy-MM-dd HH:mm')   # ej: 2026-06-03 12:30
+```
+- Úsalo siempre que necesites: marcar eventos `✅ YA SALIÓ` / `🕐 PRÓXIMO`, decidir piezas dependientes de la hora, o nombrar archivos `data/mensajes/YYYY-MM-DD_HH-MM_[tipo].txt`.
+- El resultado debe ser consistente con el `currentDate` del contexto. La *hora* de los datos económicos (origen extranjero) sí se busca/convierte con `WebSearch`/fuente oficial; la *hora actual* siempre sale de este reloj.
+
 ## Agenda semanal
 
 | Día | Contenido principal | Encuesta | Señales |

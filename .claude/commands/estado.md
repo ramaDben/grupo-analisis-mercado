@@ -5,7 +5,7 @@ Muestra el dashboard completo del sistema. NO envía nada a WhatsApp.
 Compila y muestra toda la información de estado del sistema en un solo informe.
 
 ### 1. Plan del día
-Lee directamente `config/agenda_semanal.json` y calcula el día de la semana (hora Chile). Muestra:
+Obtén la fecha/hora actual de Chile con el reloj del sistema (regla canónica de CLAUDE.md, NUNCA con `WebSearch`), lee `config/agenda_semanal.json` y calcula el día de la semana a partir de esa fecha. Muestra:
 - Día de la semana y fecha actual (hora Chile)
 - Activos asignados para hoy según la rotación de `config/activos.json`
 - Tipo de encuesta del día (tendencia o precio según la agenda)
