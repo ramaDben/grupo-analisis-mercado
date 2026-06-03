@@ -142,7 +142,7 @@ def register(mcp: FastMCP) -> None:
         digits = _VALID_TICKERS[ticker]
 
         try:
-            from mt5_client import get_rates, ema, atr, TIMEFRAME_MAP
+            from market_data_mcp.mt5_client import get_rates, ema, atr, TIMEFRAME_MAP
         except ImportError:
             return {
                 "error": "MT5_UNAVAILABLE",
