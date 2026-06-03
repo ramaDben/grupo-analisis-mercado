@@ -46,7 +46,9 @@ def connect() -> None:
     if mt5.terminal_info() is not None:
         return  # Ya conectado
 
-    login    = int(os.environ.get("MT5_LOGIN", 0))
+    # `... or 0` cubre tanto la clave ausente como la cadena vacía (p.ej. cuando
+    # se copia .env.example sin rellenar): int("") lanzaría ValueError.
+    login    = int(os.environ.get("MT5_LOGIN") or 0)
     password = os.environ.get("MT5_PASSWORD", "")
     server   = os.environ.get("MT5_SERVER", "")
     path     = os.environ.get("MT5_PATH", "")
