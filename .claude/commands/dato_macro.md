@@ -3,7 +3,12 @@ Lista todos los datos económicos del día y genera el mensaje WhatsApp del que 
 ## PASO 1 — Obtener la hora actual de Chile y el calendario de hoy
 
 **1A — Hora actual Chile (OBLIGATORIO, hacer PRIMERO)**:
-Lanza `WebSearch "hora actual Chile CLT"` para obtener el timestamp actual en Chile. Guarda el resultado como `hora_actual_chile` (ej: `09:47`). Lo necesitas para marcar eventos pasados/futuros en PASO 2.
+Obtén el timestamp actual de Chile con el **reloj del sistema** (regla canónica de CLAUDE.md, NUNCA con `WebSearch`):
+```powershell
+$tz = [System.TimeZoneInfo]::FindSystemTimeZoneById('Pacific SA Standard Time')
+([System.TimeZoneInfo]::ConvertTime([DateTime]::UtcNow, [System.TimeZoneInfo]::Utc, $tz)).ToString('yyyy-MM-dd HH:mm')
+```
+Guarda la hora como `hora_actual_chile` (ej: `09:47`) y la fecha como `[FECHA]`. Lo necesitas para marcar eventos pasados/futuros en PASO 2. Maneja CLT/CLST automáticamente.
 
 **1B — Calendario económico**:
 Obtén el calendario de HOY con `WebSearch` (ya no se usa el MCP):

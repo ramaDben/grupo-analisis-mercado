@@ -3,7 +3,7 @@ Genera el paquete del domingo pieza por pieza para aprobación.
 ## Contexto
 Hoy es domingo. Los mercados bursátiles están cerrados; el foco es preparar al grupo para la semana. Ejecuta cada pieza en orden, mostrándola al director para aprobación antes de continuar.
 
-Nota de hora: los mercados asiáticos abren el domingo ~22:00 CLT (lunes en Tokio). Si el director ejecuta este comando antes de las 21:00 CLT, omitir PIEZA 4. Si es después de las 21:30 CLT, incluirla.
+Nota de hora: los mercados asiáticos abren el domingo ~22:00 CLT (lunes en Tokio). Obtén la hora actual de Chile con el reloj del sistema (regla canónica de CLAUDE.md, NUNCA con `WebSearch`). Si el director ejecuta este comando antes de las 21:00 CLT, omitir PIEZA 4. Si es después de las 21:30 CLT, incluirla.
 
 ---
 
