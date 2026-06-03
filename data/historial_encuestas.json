@@ -51,5 +51,34 @@
       "contexto_ref": null,
       "estado": "registrada"
     }
+    ,
+    {
+      "id": "2026-06-03_tendencia_USDCLP",
+      "fecha": "2026-06-03",
+      "tipo": "tendencia",
+      "activo": "USDCLP",
+      "pregunta": "¿Qué tendencia proyectan hoy para *USD/CLP (Dólar)*?",
+      "opciones": [
+        "📈 Alcista",
+        "📉 Bajista",
+        "➡️ Lateral"
+      ],
+      "contexto_ref": null,
+      "estado": "registrada"
+    },
+    {
+      "id": "2026-06-03_tendencia_WTI",
+      "fecha": "2026-06-03",
+      "tipo": "tendencia",
+      "activo": "WTI",
+      "pregunta": "¿Qué tendencia proyectan hoy para *WTI (Petróleo)*?",
+      "opciones": [
+        "📈 Alcista",
+        "📉 Bajista",
+        "➡️ Lateral"
+      ],
+      "contexto_ref": "Inventarios de Petróleo EIA semana 3 junio 2026",
+      "estado": "registrada"
+    }
   ]
 }
