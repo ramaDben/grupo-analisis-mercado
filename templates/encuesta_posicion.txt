@@ -1,4 +1,4 @@
-📊 *ENCUESTA DEL DÍA*
+🗣️ *TU VOZ CUENTA*
 
 ¿Qué estás operando hoy en *{{activo}}*?
 {{guino}}
