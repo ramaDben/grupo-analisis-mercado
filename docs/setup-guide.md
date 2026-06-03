@@ -36,6 +36,22 @@ El MCP `market-data` (`market_data_mcp/`) es la capa de datos técnicos del sist
 
 > El calendario económico y las noticias **no** pasan por el MCP: se obtienen con `WebSearch` sobre investing.com + fuentes oficiales (Fed, BCCh, OPEP+, EIA, BLS). Las tools `get_economic_events` / `get_market_context` quedaron **deprecadas** (devuelven `{"error": "DEPRECATED"}`).
 
+El cliente MT5 (`market_data_mcp/mt5_client.py`) está **vendorizado dentro del repo** — el MCP es autocontenido y no depende de ninguna carpeta externa (ver issue #30).
+
+**Credenciales MT5** — copiar la plantilla y rellenar:
+```bash
+cp market_data_mcp/.env.example market_data_mcp/.env
+```
+
+| Variable | Para qué sirve | ¿Obligatoria? |
+|----------|----------------|---------------|
+| `MT5_LOGIN` | Número de cuenta del broker | No, si MT5 ya está logueado en el terminal |
+| `MT5_PASSWORD` | Contraseña de la cuenta | No, idem |
+| `MT5_SERVER` | Servidor del broker | No, idem |
+| `MT5_PATH` | Ruta a `terminal64.exe` | No, si MT5 ya corre |
+
+> `market_data_mcp/.env` está en `.gitignore` (patrón `.env`) — nunca se commitea. Si MT5 ya está abierto y logueado en el terminal, el MCP funciona sin rellenar ninguna variable.
+
 Verificar que esté instalado con:
 ```bash
 claude mcp list

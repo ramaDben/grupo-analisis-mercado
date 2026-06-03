@@ -85,3 +85,72 @@ def test_ticker_valido_nunca_devuelve_none_ni_lanza(collector):
         assert res["ticker"] == "XAUUSD"
         for k in ("price", "s1", "s2", "r1", "r2", "rsi_14", "atr_14", "trend", "timestamp"):
             assert k in res
+
+
+# --- Camino feliz con mt5_client vendorizado mockeado (issue #30) ---
+
+def _df_ohlc(n: int = 300) -> pd.DataFrame:
+    """OHLC sintético con tendencia alcista clara y velas suficientes (>=100)."""
+    x = np.linspace(0, 8 * np.pi, n)
+    base = 100 + 0.05 * np.arange(n) + 3 * np.sin(x)  # deriva alcista + oscilación
+    return pd.DataFrame({
+        "time":  pd.date_range("2026-01-01", periods=n, freq="h"),
+        "open":  base,
+        "high":  base + 0.5,
+        "low":   base - 0.5,
+        "close": base,
+    })
+
+
+def test_camino_feliz_con_mt5_mockeado(collector, monkeypatch):
+    """Con mt5_client vendorizado podemos mockear get_rates y validar el cálculo
+    real de precio, S/R, RSI, ATR y tendencia — sin MT5 ni el terminal abierto.
+
+    Antes de #30 este camino era inalcanzable en CI: mt5_client vivía fuera del
+    repo y la tool caía siempre en MT5_UNAVAILABLE."""
+    from market_data_mcp import mt5_client
+
+    df = _df_ohlc()
+    monkeypatch.setattr(mt5_client, "get_rates", lambda ticker, tf, n_bars=300: df)
+
+    levels.register(collector)
+    res = collector.tools["get_asset_levels"](ticker="XAUUSD", timeframe="H4")
+
+    # No es un error: es payload técnico completo
+    assert "error" not in res, res
+    assert res["ticker"] == "XAUUSD"
+    assert res["timeframe"] == "H4"
+
+    # Contrato S/R: R1/R2 por encima del precio, S1/S2 por debajo
+    assert res["r1"] > res["price"] > res["s1"]
+    assert res["r2"] >= res["r1"]
+    assert res["s2"] <= res["s1"]
+
+    # RSI siempre en rango; ATR positivo; tendencia válida
+    assert 0.0 <= res["rsi_14"] <= 100.0
+    assert res["atr_14"] > 0
+    assert res["trend"] in {"ALCISTA", "BAJISTA", "LATERAL"}
+
+    # Serie con deriva alcista → precio por encima de la EMA100 → ALCISTA
+    assert res["trend"] == "ALCISTA"
+
+
+def test_mt5_no_instalado_retorna_error_no_lanza(collector, monkeypatch):
+    """Regresión (#30/#31): mt5_client importa MetaTrader5 de forma perezosa
+    dentro de get_rates. Si el paquete no está instalado (caso de CI), el
+    ModuleNotFoundError surge en la llamada, no en el import de levels.py.
+    get_asset_levels debe convertirlo en MT5_UNAVAILABLE, nunca propagarlo.
+
+    Este test reproduce el entorno de CI incluso en máquinas con MT5 instalado."""
+    from market_data_mcp import mt5_client
+
+    def _sin_mt5(*args, **kwargs):
+        raise ModuleNotFoundError("No module named 'MetaTrader5'")
+
+    monkeypatch.setattr(mt5_client, "get_rates", _sin_mt5)
+
+    levels.register(collector)
+    res = collector.tools["get_asset_levels"](ticker="XAUUSD", timeframe="H4")
+
+    assert res["error"] == "MT5_UNAVAILABLE"
+    assert isinstance(res["message"], str) and res["message"]

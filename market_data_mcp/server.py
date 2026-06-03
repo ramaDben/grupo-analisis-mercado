@@ -19,31 +19,32 @@ _pkg_parent = str(PROJECT_DIR)
 if _pkg_parent not in sys.path:
     sys.path.insert(0, _pkg_parent)
 
-# Directorio donde vive mt5_client.py y el .env con credenciales
-_REPORTE_FLASH_DIR = Path(r"C:\Users\bbrav\Reporte Flash Claude\report_generator")
+# .env propio del repo (gitignored) con las credenciales MT5.
+# Reemplaza la dependencia de la ruta de un proyecto ajeno (issue #30).
+_ENV_PATH = Path(__file__).resolve().parent / ".env"
 
 from fastmcp import FastMCP  # noqa: E402
 
 
+def _load_env(env_path: Path) -> None:
+    """Carga variables del .env propio al entorno (sin pisar las ya definidas)."""
+    if not env_path.exists():
+        return
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip())
+
+
 @asynccontextmanager
 async def lifespan(server: FastMCP):
-    # Cargar credenciales desde el .env de reporte-flash
-    env_path = _REPORTE_FLASH_DIR / ".env"
-    if env_path.exists():
-        for line in env_path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, v = line.split("=", 1)
-                os.environ.setdefault(k.strip(), v.strip())
-
-    # Inyectar src/ de reporte-flash para que mt5_client sea importable
-    src_path = str(_REPORTE_FLASH_DIR / "src")
-    if src_path not in sys.path:
-        sys.path.insert(0, src_path)
+    # Cargar credenciales desde el .env propio del repo
+    _load_env(_ENV_PATH)
 
     mt5_ready = False
     try:
-        from mt5_client import connect
+        from market_data_mcp.mt5_client import connect
         connect()
         mt5_ready = True
     except Exception as exc:
@@ -53,7 +54,7 @@ async def lifespan(server: FastMCP):
 
     if mt5_ready:
         try:
-            from mt5_client import disconnect
+            from market_data_mcp.mt5_client import disconnect
             disconnect()
         except Exception:
             pass
