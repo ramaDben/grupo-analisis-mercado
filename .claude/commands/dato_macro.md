@@ -1,8 +1,12 @@
 Lista todos los datos económicos del día y genera el mensaje WhatsApp del que elija el director.
 
-## PASO 1 — Obtener el calendario de hoy (WebSearch sobre investing.com)
+## PASO 1 — Obtener la hora actual de Chile y el calendario de hoy
 
-Obtén el calendario económico de HOY con la herramienta `WebSearch` (ya no se usa el MCP):
+**1A — Hora actual Chile (OBLIGATORIO, hacer PRIMERO)**:
+Lanza `WebSearch "hora actual Chile CLT"` para obtener el timestamp actual en Chile. Guarda el resultado como `hora_actual_chile` (ej: `09:47`). Lo necesitas para marcar eventos pasados/futuros en PASO 2.
+
+**1B — Calendario económico**:
+Obtén el calendario de HOY con `WebSearch` (ya no se usa el MCP):
 
 1. Lanza una búsqueda con `WebSearch`, query base:
    `investing.com calendario económico hoy [FECHA] Chile Estados Unidos "Zona Euro" China impacto alto`
@@ -15,20 +19,24 @@ Obtén el calendario económico de HOY con la herramienta `WebSearch` (ya no se 
 
 ## PASO 2 — Presentar lista al director
 
-Muestra una lista numerada con los datos del día, ordenados por hora Chile:
+Muestra una lista numerada con los datos del día, ordenados por hora Chile. Para cada evento, compara su hora contra `hora_actual_chile` obtenida en PASO 1A:
+- Si la hora del evento **ya pasó** → agregar `✅ YA SALIÓ`
+- Si la hora del evento **aún no llegó** → agregar `🕐 PRÓXIMO`
 
 ```
 📅 Datos económicos de hoy — [FECHA]
 
-1. 🔴 [Hora CLT] — [Indicador] ([País], ★★★) | Prev: X | Esp: Y
-2. 🟡 [Hora CLT] — [Indicador] ([País], ★★) | Prev: X | Esp: Y
-3. 🟡 [Hora CLT] — [Indicador] ([País], ★★) | Prev: X | Esp: Y
+1. 🔴 [Hora CLT] — [Indicador] ([País], ★★★) | Prev: X | Esp: Y  ✅ YA SALIÓ
+2. 🟡 [Hora CLT] — [Indicador] ([País], ★★) | Prev: X | Esp: Y  🕐 PRÓXIMO
+3. 🟡 [Hora CLT] — [Indicador] ([País], ★★) | Prev: X | Esp: Y  🕐 PRÓXIMO
 ...
 
 ¿Cuál(es) quieres desarrollar? (escribe el número o "1,3" para varios)
 ```
 
 Iconos por importancia: 🔴 = 3 estrellas (alto impacto) | 🟡 = 2 estrellas (moderado)
+
+**Selección de modo automático**: cuando el director elija un evento marcado `✅ YA SALIÓ`, usar directamente el **Modo resultado** en PASO 3 (sin preguntar). Si elige uno `🕐 PRÓXIMO`, usar **Modo anticipación**.
 
 ## PASO 3 — Generar mensaje WhatsApp por dato elegido
 

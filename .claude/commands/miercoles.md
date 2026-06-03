@@ -18,10 +18,7 @@ Ejecuta `/apertura` (ver `.claude/commands/apertura.md`).
 
 Verifica si hoy es miércoles con publicación de inventarios EIA de petróleo (normalmente cada miércoles ~10:30 CLT durante sesión NY).
 
-Obtén el calendario de hoy con `WebSearch` sobre investing.com (Chile, EE.UU., Zona Euro, China; impacto medio y alto), como en el PASO 1 de `/dato_macro`. Convierte las horas a Chile (CLT/CLST).
-Si no hay eventos de impacto medio/alto hoy → continuar (sin eventos hoy es esperado).
-
-Lista numerada con los datos del día. Si hay EIA marcarlo con ⛽ al inicio.
+Ejecuta `/dato_macro` completo (ver `.claude/commands/dato_macro.md`), incluyendo el PASO 1A de hora actual Chile para que los eventos aparezcan con `✅ YA SALIÓ` / `🕐 PRÓXIMO`. Si hay EIA en el listado, marcarlo con ⛽ al inicio.
 
 Cuando el director elige el dato a desarrollar, genera:
 ```
@@ -39,7 +36,7 @@ Cuando el director elige el dato a desarrollar, genera:
 🎯 Escenarios:
 • Si sale mejor → [ACTIVO] *Alcista* 🟢 (impacto inmediato, ~1-2h) | tendencia del día: [sesgo intra-day]
 • Si sale peor  → [ACTIVO] *Bajista* 🔴 (impacto inmediato, ~1-2h) | tendencia del día: [sesgo intra-day]
-• En línea      → [ACTIVO] *Esperar confirmación* 🟡 → observar nivel [S1/R1] para definir sesgo
+• En línea      → [ACTIVO] *Esperar confirmación* 🟡 → observar nivel [suelo/techo] para definir sesgo
 
 👀 Activos a observar: [lista]
 ━━━━━━━━━━━━━━━━━━━

@@ -55,9 +55,9 @@ Sector: [tecnológico/bancario/industrial]
 
 💰 *Precio actual*: $[precio]
 📈 Niveles en 4H — operativa [intradía/swing]
-• Resistencia: $[R1]
-• Soporte: $[S1]
-• Zona de interés: $[S1] – $[R1]
+• Techo: $[T1]
+• Suelo: $[Su1]
+• Zona de interés: $[Su1] – $[T1]
 • Sesgo: [alcista/bajista/lateral]
 
 🔎 *¿Qué la está moviendo?*

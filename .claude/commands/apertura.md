@@ -2,7 +2,7 @@ Genera la Apertura de Mercado de forma interactiva: pregunta activo, temporalida
 
 ## SETUP
 1. Lee `config/agenda_semanal.json` y `config/activos.json`.
-2. Los niveles (precio, S1, S2, R1, R2) los ingresa el director manualmente. Los indicadores (RSI/ATR) se obtienen vía `mcp__market-data__get_asset_levels` solo si aplica.
+2. Los niveles (precio, T1, T2, Su1, Su2) los ingresa el director manualmente. Los indicadores (RSI/ATR) se obtienen vía `mcp__market-data__get_asset_levels` solo si aplica.
 
 ---
 
@@ -78,22 +78,26 @@ Precio actual:
 ```
 En ese caso pedir el valor manualmente (mismas reglas de parsing que 4B). Guardar `resultado = null` para que 4C sepa que tampoco hay indicador disponible.
 
-### 4B — Niveles S/R (ingreso manual del director)
+⚠️ **IMPORTANTE — qué usar del resultado del MCP**: solo se extraen `price` (precio actual) y los campos de indicador (`rsi_14`, `atr_14`). Cualquier campo de soporte o resistencia que devuelva el MCP se **ignora completamente**. Los niveles del mensaje los ingresa siempre el director en PASO 4B.
 
-Para CADA activo, solicitar solo los niveles de soporte y resistencia:
+### 4B — Techos y suelos (ingreso manual del director — OBLIGATORIO)
+
+**OBLIGATORIO**: preguntar siempre al director, sin excepción, aunque el MCP haya devuelto campos de soporte/resistencia. Los niveles del mensaje son los que ingresa el director aquí.
+
+Para CADA activo, solicitar los niveles:
 
 ```
 📥 Ingresa los niveles para [NOMBRE ACTIVO] ([TEMPORALIDAD]):
-  Resistencia 1 (R1):
-  Resistencia 2 (R2):   ← opcional, escribe "–" para omitir
-  Soporte 1 (S1):
-  Soporte 2 (S2):       ← opcional, escribe "–" para omitir
+  Techo 1 (T1):
+  Techo 2 (T2):   ← opcional, escribe "–" para omitir
+  Suelo 1 (Su1):
+  Suelo 2 (Su2):  ← opcional, escribe "–" para omitir
 ```
 
 Reglas de parsing:
 - Aceptar valores con o sin `$`, coma de miles o espacios (ej: `$889.60`, `4,539.72`, `889.60`).
 - Formatear según el campo `digits` del activo en `config/activos.json`. Nunca truncar ceros.
-- Si R2 o S2 se dejan en blanco o contienen `"–"` / `"-"`: omitir esas líneas del mensaje final.
+- Si T2 o Su2 se dejan en blanco o contienen `"–"` / `"-"`: omitir esas líneas del mensaje final.
 - Si un valor obligatorio no es numérico: mostrar `⚠️ Valor inválido. Ingresa solo el número.` y volver a pedir ese campo.
 
 ### 4C — Indicador (reutiliza resultado de 4A)
@@ -131,7 +135,7 @@ Plantilla del mensaje:
 
 ```
 🎯 Activo: [NOMBRE ACTIVO]
-📌 Nivel a vigilar: [R1 o S1 según sesgo]
+📌 Nivel a vigilar: [T1 o Su1 según sesgo]
 ⚡ Qué esperar: [1 línea de acción concreta]
 ━━━━━━━━━━━━━━━━━━━
 
@@ -141,18 +145,18 @@ Plantilla del mensaje:
 {{lectura_temporalidad}}
 
 💰 Precio actual: [precio]
-• Resistencia 1: [R1]
-• Soporte 1: [S1]
-• Zona de interés: [S1] – [R1]
+• Techo 1: [T1]
+• Suelo 1: [Su1]
+• Zona de interés: [Su1] – [T1]
 {{lectura_indicador}}
 
 🔎 ¿Qué lo mueve hoy?
 [Drivers del activo en 2-3 líneas simples, consulta config/drivers.json]
 
 ━━━━━━━━━━━━━━━━━━━
-🟢 *Alcista* — Precio sobre [R1] → tendencia compradora (intra-day)
-🟡 *Esperar* — Entre [S1] y [R1] → sin confirmación de dirección
-🔴 *Bajista* — Precio bajo [S1] → tendencia vendedora (intra-day)
+🟢 *Alcista* — Precio sobre [T1] → tendencia compradora (intra-day)
+🟡 *Esperar* — Entre [Su1] y [T1] → sin confirmación de dirección
+🔴 *Bajista* — Precio bajo [Su1] → tendencia vendedora (intra-day)
 ━━━━━━━━━━━━━━━━━━━
 {{lectura_temporalidad}}
 ```

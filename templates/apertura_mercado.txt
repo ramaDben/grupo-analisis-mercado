@@ -15,9 +15,9 @@ Sesgo: {{sesgo_emoji}} {{sesgo}}
 {{drivers}}
 
 ━━━━━━━━━━━━━━━━━━━
-🟢 *Alcista* — Precio sobre {{resistencia}} → tendencia compradora (intra-day)
-🟡 *Esperar* — Entre {{soporte}} y {{resistencia}} → sin confirmación de dirección
-🔴 *Bajista* — Precio bajo {{soporte}} → tendencia vendedora (intra-day)
+🟢 *Alcista* — Precio sobre {{techo}} → tendencia compradora (intra-day)
+🟡 *Esperar* — Entre {{suelo}} y {{techo}} → sin confirmación de dirección
+🔴 *Bajista* — Precio bajo {{suelo}} → tendencia vendedora (intra-day)
 ━━━━━━━━━━━━━━━━━━━
 
 📰 *DATO DEL DÍA*
