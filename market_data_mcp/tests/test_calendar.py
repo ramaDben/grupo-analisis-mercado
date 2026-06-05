@@ -104,3 +104,24 @@ def test_min_impact_invalido_retorna_error(collector, monkeypatch):
     res = collector.tools["obtener_calendario_macro"](min_impact="extremo")
     assert res["error"] == "INVALID_IMPACT"
     assert isinstance(res["message"], str) and res["message"]
+
+
+def test_archivo_ausente_retorna_no_calendar_file(collector, monkeypatch):
+    def _raise(path=None):
+        raise FileNotFoundError("No existe el calendario MT5 en X")
+    monkeypatch.setattr(mt5_client, "leer_calendario_json", _raise)
+    calendar.register(collector)
+    res = collector.tools["obtener_calendario_macro"]()
+    assert res["error"] == "NO_CALENDAR_FILE"
+    assert isinstance(res["message"], str) and res["message"]
+
+
+def test_sin_eventos_es_caso_legitimo_no_error(collector, monkeypatch):
+    monkeypatch.setattr(mt5_client, "leer_calendario_json",
+                        lambda path=None: _payload(eventos=[]))
+    monkeypatch.setattr(calendar, "_cargar_glosario", lambda: {})
+    calendar.register(collector)
+    res = collector.tools["obtener_calendario_macro"]()
+    assert "error" not in res
+    assert res["eventos"] == []
+    assert "info" in res
