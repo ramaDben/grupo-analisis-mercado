@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oportunidades del Día — {{fecha}}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+  :root {
+    --bg:#0d1b2a; --card-bg:#0f2744; --gold:#f0a500; --green:#00c853;
+    --text:#e8f4fd; --muted:#7a9bbb; --border:rgba(255,255,255,0.08);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); padding:24px 16px 40px; }
+  .header { text-align:center; margin-bottom:24px; }
+  .brand { font-size:11px; letter-spacing:3px; color:var(--muted); text-transform:uppercase; margin-bottom:6px; }
+  .title { font-size:22px; font-weight:800; color:var(--gold); }
+  .subtitle { font-size:12px; color:var(--muted); margin-top:4px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; max-width:980px; margin:0 auto; }
+  .asset-card { background:var(--card-bg); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+  .asset-header { padding:20px 22px 14px; border-bottom:1px solid var(--border); }
+  .asset-name { font-size:28px; font-weight:900; color:var(--gold); }
+  .zona-label { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin-top:8px; }
+  .zona-value { font-size:18px; font-weight:700; color:var(--green); margin-top:2px; }
+  .precio-row { font-size:12px; color:var(--muted); margin-top:6px; }
+  .asset-body { padding:16px 22px; }
+  .body-label { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+  .argumento { font-size:13px; color:var(--text); line-height:1.6; margin-bottom:14px; }
+  .clientes-tag { display:inline-block; background:rgba(240,165,0,.1); border:1px solid rgba(240,165,0,.25); color:var(--gold); font-size:11px; font-weight:600; padding:5px 12px; border-radius:20px; }
+  .footer { text-align:center; font-size:11px; color:var(--muted); margin-top:24px; }
+
+  @media print {
+    :root { --bg:#fff; --card-bg:#f8f9fa; --gold:#1565c0; --green:#1b7e44; --text:#111; --muted:#555; --border:#ddd; }
+    body { background:#fff; }
+    .asset-card { border:1px solid #ddd; break-inside:avoid; }
+    .zona-value { color:#1b7e44; }
+    .clientes-tag { background:#e8f0fe; border-color:#c5cae9; color:#1565c0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="brand">GrupoInteligencia.com · {{area_nombre}}</div>
+  <div class="title">Oportunidades del Día</div>
+  <div class="subtitle">{{fecha}} · Uso interno ejecutivo</div>
+</div>
+
+<div class="grid">
+  {{cards_activos}}
+</div>
+
+<div class="footer">
+  {{ejecutivo_firma}} · <span style="opacity:.6">{{disclaimer}}</span>
+</div>
+
+</body>
+</html>
