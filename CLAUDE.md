@@ -59,6 +59,8 @@ $now.ToString('yyyy-MM-dd HH:mm')   # ej: 2026-06-03 12:30
 - Úsalo siempre que necesites: marcar eventos `✅ YA SALIÓ` / `🕐 PRÓXIMO`, decidir piezas dependientes de la hora, o nombrar archivos `data/mensajes/YYYY-MM-DD_HH-MM_[tipo].txt`.
 - El resultado debe ser consistente con el `currentDate` del contexto. La *hora actual* siempre sale de este reloj.
 
+**Calendario macro nativo MT5 (fuente primaria)**: la hora del evento ya viene en el reloj del servidor MT5 (broker actual = hora Chile) — se muestra **tal cual, sin conversión**. Esto hace el sistema multi-broker/multi-país (la hora sigue al terminal). El helper `scripts\hora_chile.ps1` y la conversión por zona del organismo emisor **solo** aplican al fallback WebSearch (cuando la tool nativa devuelve `{error:...}`).
+
 **Hora de los datos económicos (origen extranjero) — también determinista (OBLIGATORIO)**: la *hora del evento* se obtiene de la fuente, pero la conversión a Chile **nunca** se hace "a mano" ni con offsets fijos (`UTC-5`, `GMT-3`) — esa asunción causa desfases de ±1h (issue #38). Toma la hora **oficial en la zona del organismo emisor** y conviértela con el helper `scripts\hora_chile.ps1`, que aplica el horario de verano de ambas puntas y devuelve la etiqueta CLT/CLST correcta:
 ```powershell
 scripts\hora_chile.ps1 -Hora "08:15" -ZonaOrigen "Eastern Standard Time" -Fecha "2026-06-03"   # -> "08:15 CLT"
@@ -185,12 +187,12 @@ Mejorar indicadores de satisfacción del cliente, retención, NPS y reducir chur
 
 | MCP | Estado | Propósito | Usado en |
 |-----|--------|-----------|----------|
-| **market-data** | ✅ Activo | Análisis técnico MT5 (`get_asset_levels`). Calendario y noticias **ya no** dependen del MCP | Comandos de niveles técnicos |
+| **market-data** | ✅ Activo | Análisis técnico MT5 (`get_asset_levels`) + calendario macro nativo MT5 (`obtener_calendario_macro`). Noticias siguen por WebSearch. | Comandos de niveles técnicos |
 | **WebSearch (investing.com + fuentes oficiales)** | ✅ Activo | Calendario económico y noticias relevantes | `/dato_macro`, `/noticia` y comandos de día |
 | **WhatsApp (Evolution API)** | ⏳ Pendiente conexión Docker | Envío directo al grupo | Flujo manual por ahora |
 | **TrendRadar / Firecrawl / Finnhub** | ❌ No activos | Reemplazados por market-data (MT5) + WebSearch | — |
 
-**Nota**: las tools `get_economic_events` y `get_market_context` del MCP `market-data` están **deprecadas** (devuelven `{"error": "DEPRECATED"}`). El calendario económico y las noticias se obtienen ahora con `WebSearch` sobre investing.com + fuentes oficiales (Fed, BCCh, OPEP+, EIA, BLS), directamente en los comandos. Ver `docs/design/websearch-calendario-noticias.design.md`.
+**Nota**: `get_market_context` sigue deprecada (noticias vía WebSearch). El calendario económico pasó de WebSearch a la tool nativa `obtener_calendario_macro` (MT5), con WebSearch investing.com como fallback. Ver `docs/superpowers/specs/2026-06-05-calendario-macro-nativo-mt5-design.md`.
 
 **Flujo actual**: los comandos generan contenido → muestran para copiar → guardan en `data/mensajes/`. Cuando Evolution API esté conectada a WhatsApp/Baileys, el envío pasará a ser automático.
 
