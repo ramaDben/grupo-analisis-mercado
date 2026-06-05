@@ -9,7 +9,6 @@ Obtén la fecha y hora de Chile:
 $tz = [System.TimeZoneInfo]::FindSystemTimeZoneById('Pacific SA Standard Time')
 $now = [System.TimeZoneInfo]::ConvertTime([DateTime]::UtcNow, [System.TimeZoneInfo]::Utc, $tz)
 $fecha     = $now.ToString('yyyy-MM-dd')
-$hora_slug = $now.ToString('HH-mm')
 $fecha_es  = $now.ToString('d') + ' de ' + (Get-Culture).DateTimeFormat.GetMonthName($now.Month) + ' de ' + $now.Year
 ```
 
@@ -150,9 +149,32 @@ Con los datos obtenidos (precio, soportes, resistencias), genera el encuadre com
 
 Si el MCP devuelve error para un activo: omitir ese activo del HTML y anotarlo en el TXT como "⚠️ Sin datos para [activo] hoy".
 
-Lee el template `templates/ejecutivo/apertura.html`. Construye el bloque `{{cards_activos}}` concatenando una card por activo.
+Lee el template `templates/ejecutivo/apertura.html`. Construye el bloque `{{cards_activos}}` concatenando una card por activo, usando esta estructura exacta (clases reales de `apertura.html`):
 
-Ruta de guardado: `data/mensajes/ejecutivos/$fecha/apertura/`
+```html
+<div class="asset-card">
+  <div class="asset-header">
+    <div class="asset-name">{{activo_nombre}}</div>
+    <div class="zona-label">Zona de entrada interesante</div>
+    <div class="zona-value">{{zona_entrada}}</div>
+    <div class="precio-row">Precio actual: {{precio_actual}}</div>
+  </div>
+  <div class="asset-body">
+    <div class="body-label">Argumento comercial</div>
+    <div class="argumento">{{argumento_comercial}}</div>
+    <div class="body-label">Clientes a contactar</div>
+    <div class="clientes-tag">{{clientes_objetivo}}</div>
+  </div>
+</div>
+```
+
+Se concatena una de estas cards por cada activo, reemplazando las sub-variables, y el resultado va en `{{cards_activos}}`.
+
+Ruta de guardado:
+```powershell
+$dir = "data/mensajes/ejecutivos/$fecha/apertura"
+New-Item -ItemType Directory -Force -Path $dir | Out-Null
+```
 
 El `whatsapp.txt` contiene un argumento por activo, en formato:
 ```
@@ -184,9 +206,35 @@ Para cada evento del calendario, determina:
 - `{{tipo_cliente}}` → perfil del cliente al que tiene sentido llamar ese día (ej: "Clientes conservadores", "Clientes con dólares")
 - Impacto: clase CSS `impact-high` para alto (★★★), `impact-med` para medio (★★)
 
-Construye `{{filas_semana}}` con una fila HTML por evento (ver estructura en Task 5).
+Construye `{{filas_semana}}` con una fila HTML por evento, usando esta estructura exacta (clases reales de `semana.html`). Para la celda de impacto, usa `impact-high` si el impacto es alto (★★★) o `impact-med` si es medio (★★):
 
-Ruta de guardado: `data/mensajes/ejecutivos/$fecha/semana/`
+```html
+<tr>
+  <td class="dia-cell">{{dia}}<br><span style="font-weight:400;color:var(--muted);font-size:12px;">{{hora_clst}}</span></td>
+  <td>{{evento_nombre}}<br><span style="color:var(--muted);font-size:12px;">{{evento_pais}} · {{evento_periodo}}</span></td>
+  <td class="impact-high">{{impacto_emoji}} {{impacto_label}}</td>
+  <td><span class="producto-tag">{{producto_relevante}}</span></td>
+  <td style="color:var(--muted)">{{tipo_cliente}}</td>
+</tr>
+```
+
+Se concatena una fila por evento y el resultado va en `{{filas_semana}}`.
+
+Antes de renderizar, calcula el rango de la semana (lunes a viernes de la semana actual):
+```powershell
+$inicio = $now.Date.AddDays(-([int]$now.DayOfWeek - 1))   # lunes
+$fin    = $inicio.AddDays(4)                                # viernes
+$fecha_inicio = $inicio.ToString('d') + ' de ' + (Get-Culture).DateTimeFormat.GetMonthName($inicio.Month)
+$fecha_fin    = $fin.ToString('d') + ' de ' + (Get-Culture).DateTimeFormat.GetMonthName($fin.Month) + ' de ' + $fin.Year
+```
+
+Reemplaza en el template: `{{fecha_inicio}}` → `$fecha_inicio`, `{{fecha_fin}}` → `$fecha_fin`, `{{area_nombre}}` → nombre del área, `{{ejecutivo_firma}}` → valor de `firma`, `{{disclaimer}}` → valor de `disclaimer`.
+
+Ruta de guardado:
+```powershell
+$dir = "data/mensajes/ejecutivos/$fecha/semana"
+New-Item -ItemType Directory -Force -Path $dir | Out-Null
+```
 
 El `whatsapp.txt`:
 ```
@@ -201,7 +249,7 @@ El `whatsapp.txt`:
 
 ## FLUJO E — Mirror ejecutivo (`/ejecutivo mirror`)
 
-Lee el directorio `data/mensajes/` y busca la última pieza guardada del día de hoy (la más reciente por timestamp en el nombre de archivo).
+Lee el directorio `data/mensajes/` buscando piezas del CLIENTE (excluye la subcarpeta `data/mensajes/ejecutivos/` para no espejar una pieza de ejecutivo previa). Busca la última pieza guardada del día de hoy (la más reciente por timestamp en el nombre de archivo).
 
 Si no hay piezas del día de hoy: mostrar
 ```
@@ -218,7 +266,11 @@ Genera las 3 secciones:
 
 Lee el template `templates/ejecutivo/mirror.html`. Reemplaza todas las `{{variables}}`.
 
-Ruta de guardado: `data/mensajes/ejecutivos/$fecha/mirror/`
+Ruta de guardado:
+```powershell
+$dir = "data/mensajes/ejecutivos/$fecha/mirror"
+New-Item -ItemType Directory -Force -Path $dir | Out-Null
+```
 
 El `whatsapp.txt`:
 ```
