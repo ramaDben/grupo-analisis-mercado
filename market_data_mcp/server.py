@@ -64,8 +64,9 @@ mcp = FastMCP(
     name="market-data",
     instructions=(
         "Capa de datos confiable para Grupo de Análisis de Mercado. "
-        "3 tools: get_asset_levels (técnico MT5), get_economic_events (Finnhub calendario), "
-        "get_market_context (Finnhub noticias). "
+        "Tools: get_asset_levels (técnico MT5), obtener_calendario_macro (calendario "
+        "macro nativo MT5, fuente primaria; WebSearch investing.com es fallback). "
+        "Hora en reloj del servidor MT5, sin conversiones. "
         "Contrato de error: si el dato no está disponible retorna {'error': 'CÓDIGO', 'message': '...'} "
         "— nunca array vacío, nunca None silencioso."
     ),
