@@ -4,7 +4,7 @@
   "areas": {
     "trading": {
       "nombre": "Área de Trading",
-      "email_firma": "Grupo Inteligencia · Asesoría Financiera",
+      "firma": "Grupo Inteligencia · Asesoría Financiera",
       "activos_foco": ["USDCLP", "XAUUSD", "WTI.spot", "US100.spot"],
       "disclaimer": "Este material es de uso interno del ejecutivo. No constituye asesoría de inversión. Grupo Inteligencia SpA está registrada en la CMF."
     }
