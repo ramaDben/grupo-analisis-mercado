@@ -94,3 +94,13 @@ def test_calendario_viejo_retorna_stale(collector, monkeypatch):
     res = collector.tools["obtener_calendario_macro"]()
     assert res["error"] == "STALE_CALENDAR"
     assert isinstance(res["message"], str) and res["message"]
+
+
+def test_min_impact_invalido_retorna_error(collector, monkeypatch):
+    monkeypatch.setattr(mt5_client, "leer_calendario_json",
+                        lambda path=None: _payload(eventos=_eventos_hoy()))
+    monkeypatch.setattr(calendar, "_cargar_glosario", lambda: {})
+    calendar.register(collector)
+    res = collector.tools["obtener_calendario_macro"](min_impact="extremo")
+    assert res["error"] == "INVALID_IMPACT"
+    assert isinstance(res["message"], str) and res["message"]

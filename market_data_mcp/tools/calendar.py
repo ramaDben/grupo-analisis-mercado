@@ -15,9 +15,10 @@ from fastmcp import FastMCP
 
 from market_data_mcp import mt5_client
 
-# Ranking de impacto. min_impact (inglés, compat con la firma anterior) → umbral.
-_IMPACTO_RANK = {"bajo": 0, "medio": 1, "alto": 2}
-_MIN_IMPACT_MAP = {"low": 0, "medium": 1, "high": 2}
+# Ranking de impacto del campo `impacto` del evento (español, viene de MT5).
+_IMPACTO_RANK_ES = {"bajo": 0, "medio": 1, "alto": 2}
+# Ranking del argumento público `min_impact` de la tool (inglés, API externa).
+_IMPACTO_RANK_EN = {"low": 0, "medium": 1, "high": 2}
 
 # Frescura: el JSON se considera viejo si supera estas horas (issue #53).
 _STALE_HORAS = 3
@@ -54,6 +55,12 @@ def register(mcp: FastMCP) -> None:
             {"eventos":[...], "generated_at":..., "source":"mt5_native", ...}
             o {"error": CÓDIGO, "message": "..."} si el calendario no está disponible.
         """
+        if min_impact not in _IMPACTO_RANK_EN:
+            return {
+                "error": "INVALID_IMPACT",
+                "message": f"min_impact '{min_impact}' inválido. Opciones: {list(_IMPACTO_RANK_EN)}",
+            }
+
         try:
             data = mt5_client.leer_calendario_json()
         except FileNotFoundError as exc:
@@ -76,13 +83,13 @@ def register(mcp: FastMCP) -> None:
             }
 
         # --- Filtrado ---
-        umbral = _MIN_IMPACT_MAP.get(min_impact, 1)
+        umbral = _IMPACTO_RANK_EN[min_impact]
         hoy = datetime.now().date()
         glosario = _cargar_glosario()
 
         eventos: list[dict[str, Any]] = []
         for ev in data.get("eventos", []):
-            if _IMPACTO_RANK.get(ev.get("impacto", "bajo"), 0) < umbral:
+            if _IMPACTO_RANK_ES.get(ev.get("impacto", "bajo"), 0) < umbral:
                 continue
             if solo_hoy:
                 try:
