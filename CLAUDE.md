@@ -219,13 +219,13 @@ scripts\ruta_mensaje.ps1 -Fecha "2026-06-04" -Activo "USDCLP" -Tipo "dato_macro"
 ```
 El helper crea las carpetas y devuelve la ruta lista para `Write`. Si la pieza no tiene un activo protagonista (concepto, pregunta, cierre semanal, encuesta de la semana, earnings, paquete dominical), omitir `-Activo` y el helper la guarda en `_general/`. La hora `HH-mm` sale del reloj de Chile (regla canónica). Usar luego la herramienta Write sobre la ruta devuelta.
 
-**Tipos de archivo** (carpeta `<tipo>`): niveles, dato_macro, noticia, alerta, encuesta, señal, concepto, pregunta, cierre, earnings. La salida de `/apertura` usa tipo `niveles`.
+**Tipos de archivo** (carpeta `<tipo>`): niveles, dato_macro, noticia, alerta, encuesta, señal, concepto, pregunta, respuesta, cierre, earnings. La salida de `/apertura` usa tipo `niveles`.
 
 **Nunca se envía nada al grupo sin aprobación explícita del director.**
 
 **Nota**: Evolution API (Docker) está instalada y lista en `mcp/docker-compose.yml`. Cuando se resuelva la conexión WhatsApp/Baileys, el envío pasará a ser automático sin cambios adicionales.
 
-## Slash Commands disponibles (21)
+## Slash Commands disponibles (22)
 
 Invocar con `/nombre` desde Claude Code:
 
@@ -254,6 +254,7 @@ Invocar con `/nombre` desde Claude Code:
 | `/alerta` | Detecta qué mueve el mercado ahora y genera alerta urgente |
 | `/concepto` | Concepto educativo conectado a lo que pasó esta semana |
 | `/pregunta` | Pregunta abierta para fomentar razonamiento del grupo |
+| `/respuesta` | Responde una pregunta/comentario de cliente de forma complaciente y didáctica → guarda tipo `respuesta` |
 | `/estado` | Dashboard del sistema (señales, charts, plan del día, MCPs) |
 
 ### Capa 3 — Acciones individuales
@@ -269,19 +270,19 @@ grupo-analisis-mercado/
 ├── CLAUDE.md              ← este archivo (instrucciones para Claude Code)
 ├── docs/
 │   ├── architecture.md    ← flujo del sistema, MCPs, aprobación, señales
-│   ├── commands-reference.md ← referencia detallada de los 21 comandos
+│   ├── commands-reference.md ← referencia detallada de los 22 comandos
 │   ├── setup-guide.md     ← instalación paso a paso + troubleshooting
 │   ├── activos-y-drivers.md  ← 20 activos con drivers y datos macro
 │   ├── ideas/             ← specs de features (ciclo Pulse)
 │   └── design/            ← diseños técnicos (ciclo Pulse)
 ├── .claude/
-│   └── commands/          ← 21 slash commands (invocar con /nombre)
+│   └── commands/          ← 22 slash commands (invocar con /nombre)
 │       ├── domingo.md
 │       ├── lunes.md · martes.md · miercoles.md · jueves.md
 │       ├── viernes_am.md · viernes_pm.md
 │       ├── encuesta.md · rencuesta.md · curriculo.md
 │       ├── apertura.md · dato_macro.md · noticia.md · chart.md
-│       ├── señal.md · alerta.md · concepto.md · pregunta.md · estado.md
+│       ├── señal.md · alerta.md · concepto.md · pregunta.md · respuesta.md · estado.md
 │       ├── accion.md · earnings.md
 ├── agents/                ← prompts de sub-agents
 │   ├── recolector.md · analista.md · redactor.md
