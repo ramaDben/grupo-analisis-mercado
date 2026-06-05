@@ -227,7 +227,7 @@ El helper crea las carpetas y devuelve la ruta lista para `Write`. Si la pieza n
 
 **Nota**: Evolution API (Docker) está instalada y lista en `mcp/docker-compose.yml`. Cuando se resuelva la conexión WhatsApp/Baileys, el envío pasará a ser automático sin cambios adicionales.
 
-## Slash Commands disponibles (22)
+## Slash Commands disponibles (23)
 
 Invocar con `/nombre` desde Claude Code:
 
@@ -249,6 +249,7 @@ Invocar con `/nombre` desde Claude Code:
 | `/rencuesta` | Desarrolla didácticamente el tema de una encuesta y construye la malla de conceptos. `/rencuesta` (última encuesta), `/rencuesta [tema]`, `/rencuesta mapa` (vista de repaso). |
 | `/curriculo` | Planifica el currículo educativo evolutivo (niveles + prerrequisitos), despacha conceptos en orden reutilizando `/rencuesta`/`/concepto` y mide el avance (4 métricas). Modos: `/curriculo`, `despachar`, `ruta`, `progreso`, `agregar`. |
 | `/apertura` | Niveles técnicos interactivos: pregunta activo, temporalidad e indicador (RSI/ATR) por activo. Lo invocan los comandos de día en su PIEZA de apertura. |
+| `/actualizacion` | Evolución del precio y reacción frente a niveles de la apertura |
 | `/dato_macro` | Calendario del día → director elige dato a desarrollar |
 | `/noticia` | Busca 3-5 noticias relevantes → director elige |
 | `/chart` | Genera screenshot de MT5 con indicador y temporalidad a elección |
@@ -283,7 +284,7 @@ grupo-analisis-mercado/
 │       ├── lunes.md · martes.md · miercoles.md · jueves.md
 │       ├── viernes_am.md · viernes_pm.md
 │       ├── encuesta.md · rencuesta.md · curriculo.md
-│       ├── apertura.md · dato_macro.md · noticia.md · chart.md
+│       ├── apertura.md · actualizacion.md · dato_macro.md · noticia.md · chart.md
 │       ├── señal.md · alerta.md · concepto.md · pregunta.md · respuesta.md · estado.md
 │       ├── accion.md · earnings.md
 ├── agents/                ← prompts de sub-agents
