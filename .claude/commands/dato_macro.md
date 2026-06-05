@@ -10,23 +10,16 @@ $tz = [System.TimeZoneInfo]::FindSystemTimeZoneById('Pacific SA Standard Time')
 ```
 Guarda la hora como `hora_actual_chile` (ej: `09:47`) y la fecha como `[FECHA]`. Lo necesitas para marcar eventos pasados/futuros en PASO 2. Maneja CLT/CLST automáticamente.
 
-**1B — Calendario económico**:
-Obtén el calendario de HOY con `WebSearch` (ya no se usa el MCP):
+**1B — Calendario económico (MT5 nativo primero, WebSearch fallback)**:
 
-1. Lanza una búsqueda con `WebSearch`, query base:
-   `investing.com calendario económico hoy [FECHA] Chile Estados Unidos "Zona Euro" China impacto alto`
-   - Países objetivo: **Chile (CL), EE.UU. (US), Zona Euro (EU), China (CN)**.
-   - Impacto: **medio y alto** (★★ / ★★★).
-2. **Lectura del calendario (OBLIGATORIO, issue #46)**: usa `WebFetch` sobre `https://es.investing.com/economic-calendar/` como fuente principal para tener el panorama completo del día (no solo snippets). Si la página no renderiza la tabla (es JS-pesada), recién ahí cae al fallback: resultados de `WebSearch` + **fuentes oficiales** para datos de alto impacto (BCCh, Fed, Eurostat, BLS). El objetivo es no dejar fuera ningún dato de impacto medio/alto.
-3. **Conversión de hora (DETERMINISTA, OBLIGATORIO)**: nunca conviertas "a mano" ni asumas offsets fijos (`UTC-5`, `GMT-3`) — esa asunción causa desfases de ±1h (ver issue #38). Por cada evento:
-   - Toma la hora **oficial en la zona de su organismo emisor** (no la hora "ya convertida" que muestre investing.com: su zona es ambigua y variable).
-   - Mapea el país a su zona de Windows: **EE.UU.** (BLS/ISM/ADP/EIA/Fed) → `Eastern Standard Time` · **Zona Euro** (Eurostat/BCE) → `W. Europe Standard Time` · **China** (NBS/Caixin) → `China Standard Time` · **Chile** (BCCh/INE) → `Pacific SA Standard Time` · **Reino Unido** (BoE) → `GMT Standard Time`.
-   - Convierte con el helper (devuelve hora + etiqueta CLT/CLST ya correcta):
-     ```powershell
-     scripts\hora_chile.ps1 -Hora "08:15" -ZonaOrigen "Eastern Standard Time" -Fecha "[FECHA]"
-     # -> "08:15 CLT"
-     ```
-   - En eventos de alto impacto (Fed, BCCh, NFP) verifica además la hora oficial contra la fuente del organismo.
+1. **Fuente primaria — MT5 nativo**: invoca la tool MCP `obtener_calendario_macro(min_impact="medium")`.
+   - Si devuelve `{"eventos": [...]}`: usa esos eventos. La hora ya viene en **hora del servidor MT5** (broker actual = hora Chile) — **no conviertas nada**.
+   - Cada evento trae `nombre` (ya en español), `pais`, `divisa`, `impacto`, `hora_servidor`, `periodo`, `previo`, `forecast`, `actual`. Si trae `diccionario`, úsalo para el bloque Diccionario rápido; si trae `glosario_pendiente: true`, explica la sigla al vuelo y añádela a `data/glosario_siglas.json` por su `event_id`.
+   - Si devuelve `{"eventos": []}` con `info`: es fin de semana/feriado → muestra "📅 Sin datos macro de impacto medio/alto hoy" y DETÉN.
+
+2. **Fallback — WebSearch**: solo si la tool devuelve `{"error": ...}` (NO_CALENDAR_FILE / STALE_CALENDAR / BAD_CALENDAR_JSON / INVALID_IMPACT), avisa al director ("⚠️ calendario nativo MT5 no disponible, uso WebSearch") y usa el flujo WebSearch sobre investing.com:
+   - Query: `investing.com calendario económico hoy [FECHA] Chile Estados Unidos "Zona Euro" China impacto alto`.
+   - En este fallback (origen extranjero) sí conviertes la hora con `scripts\hora_chile.ps1` desde la zona del organismo emisor.
 
 **Contrato sin-resultados**: si la búsqueda no devuelve eventos de impacto medio/alto para hoy → muestra "📅 Sin datos macro de impacto medio/alto hoy" y DETÉN. En fin de semana o feriado es comportamiento esperado.
 
@@ -140,7 +133,7 @@ Después de que el director apruebe y envíe el dato, registrar el evento y ofre
 
 ## REGLAS
 - Sin límite de veces al día (cada dato relevante merece su propio mensaje).
-- Hora siempre en hora Chile (CLT/CLST).
+- Hora: en fuente MT5 nativa, la hora es la del servidor MT5 (broker actual = hora Chile, se muestra tal cual). En fallback WebSearch, convertir a hora Chile con `scripts\hora_chile.ps1`.
 - Lenguaje simple: el cliente debe entender qué mide el indicador en 10 segundos.
 - **Indicadores en español** con la sigla original entre paréntesis una sola vez (issue #46). Minimizar términos en otro idioma en el cuerpo.
 - **Diccionario rápido obligatorio**: ninguna abreviatura puede quedar sin su explicación en español ese día. Fuente canónica: `data/glosario_siglas.json` (alimentarla con siglas nuevas).

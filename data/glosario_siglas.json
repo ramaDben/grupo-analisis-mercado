@@ -1,7 +1,20 @@
 {
   "_meta": {
     "descripcion": "Glosario canónico de siglas/abreviaturas macro en español (issue #46). Fuente única para el bloque inline '🔤 Diccionario rápido' de /dato_macro y /noticia. Si aparece una sigla nueva en un mensaje, explicarla al vuelo y AÑADIRLA aquí para reutilizar. Voz novata (regla de oro 30s).",
-    "formato": "SIGLA -> { nombre_es, explicacion, ancla? }"
+    "llave_event_id": "Entradas por event_id de MT5 (string numérico). Si obtener_calendario_macro devuelve glosario_pendiente:true, añadir aquí por event_id.",
+    "llave_sigla": "Entradas por sigla (string). Usadas en fallback WebSearch y para lookup rápido.",
+    "voz": "cliente nuevo sin experiencia; máximo 1-2 líneas por explicación",
+    "formato": "event_id -> { sigla, nombre_es, explicacion } | SIGLA -> { nombre_es, explicacion }"
+  },
+  "840030016": {
+    "sigla": "NFP",
+    "nombre_es": "Nóminas no agrícolas",
+    "explicacion": "Cuántos empleos nuevos creó EE.UU. el mes pasado (sin contar el campo). Si salen muchos, la economía está fuerte y el dólar suele subir."
+  },
+  "840030023": {
+    "sigla": "IPC",
+    "nombre_es": "Índice de precios al consumidor",
+    "explicacion": "Mide cuánto subieron los precios. Si sube más de lo esperado, la inflación aprieta y suele empujar las tasas y al dólar al alza."
   },
   "PMI": { "nombre_es": "Índice de gerentes de compra", "explicacion": "Encuesta a empresas sobre cómo ven su negocio; sobre 50 = la economía crece, bajo 50 = se enfría." },
   "ISM": { "nombre_es": "Índice del Instituto de Gestión de Suministros", "explicacion": "Encuesta de actividad de empresas en EE.UU. (manufactura o servicios); sobre 50 = expansión, bajo 50 = contracción." },
