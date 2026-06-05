@@ -2,6 +2,8 @@ Busca noticias relevantes del mercado y genera el mensaje WhatsApp de la que eli
 
 ## PASO 1 — Buscar noticias relevantes (WebSearch + fuentes oficiales)
 
+**Fuente de calendario**: si la noticia requiere un dato del calendario, consulta primero `obtener_calendario_macro` (MT5 nativo, hora del servidor sin conversión). Solo si devuelve `{"error": ...}`, cae a WebSearch investing.com.
+
 Busca con la herramienta `WebSearch` noticias recientes que impacten nuestros activos (ya no se usa el MCP):
 
 - Fuentes: **investing.com + fuentes oficiales** (Fed, BCCh, OPEP/OPEP+, EIA, BLS) para máxima atingencia y frescura.
