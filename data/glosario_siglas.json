@@ -1,0 +1,17 @@
+{
+  "_meta": {
+    "descripcion": "Diccionario rápido novato. Explica siglas de datos macro en lenguaje cliente. Issue #46.",
+    "llave": "event_id de MT5 (string). Si aparece un event_id sin entrada, añadirlo aquí.",
+    "voz": "cliente nuevo sin experiencia; máximo 1-2 líneas por explicación"
+  },
+  "840030016": {
+    "sigla": "NFP",
+    "nombre_es": "Nóminas no agrícolas",
+    "explicacion": "Cuántos empleos nuevos creó EE.UU. el mes pasado (sin contar el campo). Si salen muchos, la economía está fuerte y el dólar suele subir."
+  },
+  "840030023": {
+    "sigla": "IPC",
+    "nombre_es": "Índice de precios al consumidor",
+    "explicacion": "Mide cuánto subieron los precios. Si sube más de lo esperado, la inflación aprieta y suele empujar las tasas y al dólar al alza."
+  }
+}
