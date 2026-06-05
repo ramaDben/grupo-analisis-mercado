@@ -25,6 +25,13 @@ string JsonEscape(string s)
    return(s);
 }
 
+//--- normaliza separadores de fecha de MT5 (".") al guion ISO que parsea Python
+string FechaIso(string s)
+{
+   StringReplace(s, ".", "-");
+   return(s);
+}
+
 void ExportarCalendario()
 {
    datetime ahora = TimeTradeServer();
@@ -47,8 +54,8 @@ void ExportarCalendario()
       string nombre  = JsonEscape(ev.name);          // ya localizado al idioma del terminal
       string paisStr = JsonEscape(pais.name);
       string divisa  = JsonEscape(pais.currency);
-      string periodo = JsonEscape(TimeToString(values[i].period, TIME_DATE));
-      string hora    = TimeToString(values[i].time, TIME_DATE|TIME_MINUTES);
+      string periodo = JsonEscape(FechaIso(TimeToString(values[i].period, TIME_DATE)));
+      string hora    = FechaIso(TimeToString(values[i].time, TIME_DATE|TIME_MINUTES));
 
       string previo   = values[i].HasPreviousValue() ? DoubleToString(values[i].GetPreviousValue(), 2) : "";
       string forecast = values[i].HasForecastValue() ? DoubleToString(values[i].GetForecastValue(), 2) : "";
@@ -63,7 +70,7 @@ void ExportarCalendario()
          previo, forecast, (actual == "null" ? "null" : "\"" + actual + "\""));
    }
 
-   string generado = TimeToString(ahora, TIME_DATE|TIME_MINUTES);
+   string generado = FechaIso(TimeToString(ahora, TIME_DATE|TIME_MINUTES));
    string json = StringFormat(
       "{\n  \"generated_at\": \"%s\",\n"
       "  \"server_tz_note\": \"hora servidor MT5 (broker actual = hora Chile)\",\n"
