@@ -9,7 +9,7 @@ Obtén la fecha y hora de Chile:
 $tz = [System.TimeZoneInfo]::FindSystemTimeZoneById('Pacific SA Standard Time')
 $now = [System.TimeZoneInfo]::ConvertTime([DateTime]::UtcNow, [System.TimeZoneInfo]::Utc, $tz)
 $fecha     = $now.ToString('yyyy-MM-dd')
-$fecha_es  = $now.ToString('d') + ' de ' + (Get-Culture).DateTimeFormat.GetMonthName($now.Month) + ' de ' + $now.Year
+$fecha_es  = $now.Day.ToString() + ' de ' + (Get-Culture).DateTimeFormat.GetMonthName($now.Month) + ' de ' + $now.Year
 ```
 
 Parsea `$ARGUMENTS`:
@@ -224,8 +224,8 @@ Antes de renderizar, calcula el rango de la semana (lunes a viernes de la semana
 ```powershell
 $inicio = $now.Date.AddDays(-([int]$now.DayOfWeek - 1))   # lunes
 $fin    = $inicio.AddDays(4)                                # viernes
-$fecha_inicio = $inicio.ToString('d') + ' de ' + (Get-Culture).DateTimeFormat.GetMonthName($inicio.Month)
-$fecha_fin    = $fin.ToString('d') + ' de ' + (Get-Culture).DateTimeFormat.GetMonthName($fin.Month) + ' de ' + $fin.Year
+$fecha_inicio = $inicio.Day.ToString() + ' de ' + (Get-Culture).DateTimeFormat.GetMonthName($inicio.Month)
+$fecha_fin    = $fin.Day.ToString() + ' de ' + (Get-Culture).DateTimeFormat.GetMonthName($fin.Month) + ' de ' + $fin.Year
 ```
 
 Reemplaza en el template: `{{fecha_inicio}}` → `$fecha_inicio`, `{{fecha_fin}}` → `$fecha_fin`, `{{area_nombre}}` → nombre del área, `{{ejecutivo_firma}}` → valor de `firma`, `{{disclaimer}}` → valor de `disclaimer`.
