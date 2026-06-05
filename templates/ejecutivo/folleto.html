@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{producto_nombre}} — Folleto</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+  :root {
+    --bg:#0d1b2a; --card-bg:#0f2744; --gold:#f0a500; --green:#00c853;
+    --blue-accent:#1565c0; --text:#e8f4fd; --muted:#7a9bbb;
+    --border:rgba(255,255,255,0.08);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); padding:24px 16px 40px; display:flex; flex-direction:column; align-items:center; }
+  .brand-bar { font-size:11px; letter-spacing:3px; color:var(--muted); text-transform:uppercase; margin-bottom:20px; }
+  .card { background:var(--card-bg); border:1px solid var(--border); border-radius:20px; width:100%; max-width:680px; overflow:hidden; box-shadow:0 24px 80px rgba(0,0,0,.5); }
+  .card-header { padding:28px 32px 20px; border-bottom:1px solid var(--border); }
+  .product-type { font-size:10px; background:rgba(240,165,0,.15); color:var(--gold); padding:4px 12px; border-radius:20px; font-weight:700; letter-spacing:1px; display:inline-block; margin-bottom:12px; }
+  .product-name { font-size:36px; font-weight:900; color:var(--gold); line-height:1.1; }
+  .product-desc { font-size:14px; color:var(--muted); margin-top:10px; line-height:1.6; }
+  .card-section { padding:24px 32px; border-bottom:1px solid var(--border); }
+  .section-label { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:14px; }
+  .benefits { list-style:none; display:flex; flex-direction:column; gap:10px; }
+  .benefits li { font-size:14px; color:var(--text); padding-left:20px; position:relative; line-height:1.55; }
+  .benefits li::before { content:'•'; position:absolute; left:0; color:var(--gold); font-size:18px; top:-2px; }
+  .para-quien { font-size:14px; color:var(--text); line-height:1.7; }
+  .card-footer { padding:16px 32px; display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,.2); }
+  .footer-brand { font-size:11px; color:var(--muted); font-style:italic; }
+  .footer-date { font-size:11px; color:var(--muted); }
+  .disclaimer { font-size:10px; color:var(--muted); padding:14px 32px; text-align:center; max-width:680px; line-height:1.5; }
+
+  @media print {
+    :root { --bg:#fff; --card-bg:#f8f9fa; --gold:#1565c0; --text:#111; --muted:#555; --border:#ddd; }
+    body { background:#fff; align-items:flex-start; padding:8px; }
+    .card { box-shadow:none; border:1px solid #ddd; max-width:100%; }
+    .product-type { background:#e8f0fe; color:#1565c0; border:1px solid #c5cae9; }
+    .brand-bar { color:#555; }
+  }
+</style>
+</head>
+<body>
+
+<div class="brand-bar">GrupoInteligencia.com · Asesoría Financiera</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="product-type">{{producto_tipo}}</div>
+    <div class="product-name">{{producto_nombre}}</div>
+    <div class="product-desc">{{producto_descripcion}}</div>
+  </div>
+
+  <div class="card-section">
+    <div class="section-label">¿Por qué es interesante?</div>
+    <ul class="benefits">
+      {{producto_beneficios}}
+    </ul>
+  </div>
+
+  <div class="card-section">
+    <div class="section-label">¿Para quién es?</div>
+    <div class="para-quien">{{producto_para_quien}}</div>
+  </div>
+
+  <div class="card-footer">
+    <span class="footer-brand">{{ejecutivo_firma}}</span>
+    <span class="footer-date">{{fecha}}</span>
+  </div>
+</div>
+
+<div class="disclaimer">{{disclaimer}}</div>
+
+</body>
+</html>
