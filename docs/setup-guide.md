@@ -52,6 +52,13 @@ cp market_data_mcp/.env.example market_data_mcp/.env
 
 > `market_data_mcp/.env` está en `.gitignore` (patrón `.env`) — nunca se commitea. Si MT5 ya está abierto y logueado en el terminal, el MCP funciona sin rellenar ninguna variable.
 
+**Para Antigravity CLI:**
+Agrega el MCP al entorno global usando el siguiente comando (ajustando la ruta a tu proyecto):
+```bash
+antigravity --add-mcp '{"name":"market-data","command":"python","args":["C:\Ruta\Absoluta\grupo-analisis-mercado\market_data_mcp\server.py"]}'
+```
+
+**Para Claude Code:**
 Verificar que esté instalado con:
 ```bash
 claude mcp list
