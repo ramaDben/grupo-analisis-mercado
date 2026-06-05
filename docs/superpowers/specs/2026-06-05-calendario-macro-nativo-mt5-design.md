@@ -61,8 +61,10 @@ market_data_mcp · obtener_calendario_macro()
         "event_id": 840030016,
         "nombre": "Nóminas no agrícolas",
         "pais": "Estados Unidos",
+        "divisa": "USD",
         "impacto": "alto",
         "hora_servidor": "2026-06-05 09:30",
+        "periodo": "Mayo 2026",
         "previo": "175K",
         "forecast": "190K",
         "actual": null
