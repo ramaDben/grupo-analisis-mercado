@@ -1,0 +1,12 @@
+{
+  "_nota": "Áreas de ejecutivos. MVP activo: solo 'trading'. Agregar más áreas aquí.",
+  "area_activa": "trading",
+  "areas": {
+    "trading": {
+      "nombre": "Área de Trading",
+      "email_firma": "Grupo Inteligencia · Asesoría Financiera",
+      "activos_foco": ["USDCLP", "XAUUSD", "WTI.spot", "US100.spot"],
+      "disclaimer": "Este material es de uso interno del ejecutivo. No constituye asesoría de inversión. Grupo Inteligencia SpA está registrada en la CMF."
+    }
+  }
+}
