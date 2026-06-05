@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kit de Primer Contacto — {{area_nombre}}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+  :root {
+    --bg: #0d1b2a; --card-bg: #0f2744; --gold: #f0a500;
+    --green: #00c853; --text: #e8f4fd; --muted: #7a9bbb;
+    --border: rgba(255,255,255,0.08);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); padding:24px 16px 40px; }
+  .header { text-align:center; margin-bottom:24px; }
+  .brand { font-size:11px; letter-spacing:3px; color:var(--muted); text-transform:uppercase; margin-bottom:6px; }
+  .title { font-size:22px; font-weight:800; color:var(--gold); }
+  .subtitle { font-size:12px; color:var(--muted); margin-top:4px; }
+  .card { background:var(--card-bg); border:1px solid var(--border); border-radius:16px; padding:28px; max-width:680px; margin:0 auto 20px; }
+  .card-label { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:12px; }
+  .card-title { font-size:16px; font-weight:800; color:var(--gold); margin-bottom:16px; }
+  .card-body { font-size:14px; line-height:1.7; color:var(--text); }
+  .card-body p { margin-bottom:10px; }
+  .tag { display:inline-block; background:rgba(240,165,0,.15); color:var(--gold); font-size:10px; font-weight:700; padding:3px 10px; border-radius:20px; letter-spacing:1px; margin-bottom:16px; }
+  .footer { text-align:center; font-size:11px; color:var(--muted); margin-top:24px; max-width:680px; margin-left:auto; margin-right:auto; }
+
+  @media print {
+    :root { --bg:#fff; --card-bg:#f8f9fa; --gold:#1565c0; --text:#111; --muted:#555; --border:#ddd; }
+    body { background:#fff; color:#111; padding:12px; }
+    .card { border:1px solid #ddd; box-shadow:none; }
+    .brand, .subtitle { color:#555; }
+    .tag { background:#e8f0fe; color:#1565c0; border:1px solid #c5cae9; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="brand">GrupoInteligencia.com · Asesoría Financiera</div>
+  <div class="title">Kit de Primer Contacto</div>
+  <div class="subtitle">{{area_nombre}} · {{fecha}}</div>
+</div>
+
+<!-- SECCIÓN 1: PRESENTACIÓN -->
+<div class="card">
+  <div class="tag">PRESENTACIÓN</div>
+  <div class="card-title">¿Quiénes somos?</div>
+  <div class="card-body">
+    {{seccion_presentacion}}
+  </div>
+</div>
+
+<!-- SECCIÓN 2: SCRIPT NO CONTESTA -->
+<div class="card">
+  <div class="tag">SCRIPT · NO CONTESTA</div>
+  <div class="card-title">Mensaje para dejar si no contesta</div>
+  <div class="card-body">
+    {{script_no_contesta}}
+  </div>
+</div>
+
+<!-- SECCIÓN 3: SCRIPT SÍ CONTESTA -->
+<div class="card">
+  <div class="tag">SCRIPT · SÍ CONTESTA</div>
+  <div class="card-title">Guía de conversación cuando contesta</div>
+  <div class="card-body">
+    {{script_si_contesta}}
+  </div>
+</div>
+
+<div class="footer">
+  {{ejecutivo_firma}}<br>
+  <span style="font-size:10px;opacity:.7">{{disclaimer}}</span>
+</div>
+
+</body>
+</html>
