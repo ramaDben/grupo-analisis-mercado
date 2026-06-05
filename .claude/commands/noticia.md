@@ -54,6 +54,10 @@ Lista las opciones ETIQUETADAS por activo y sector:
 
 ## PASO 3 — Generar mensaje WhatsApp
 
+**Regla de traducción (OBLIGATORIO, issue #46)**: todo indicador o dato macro mencionado se nombra en **español**, con la sigla original entre paréntesis una sola vez (ej. "nóminas no agrícolas (NFP)"). Minimiza los términos en otro idioma en el cuerpo.
+
+**Bloque "🔤 Diccionario rápido" (OBLIGATORIO cuando aparezcan siglas)**: si la noticia contiene siglas/abreviaturas macro (NFP, PMI, PCE, IPC, ISM…), agrega antes del último separador una línea explicativa por sigla en voz novata, tomada de `data/glosario_siglas.json`. Si la sigla no está en el glosario, explícala al vuelo y **añádela al JSON** para reutilizarla.
+
 Para el activo/noticia elegido:
 
 **Para acciones individuales** (ej: #NVDA):
@@ -72,6 +76,9 @@ Para el activo/noticia elegido:
 🔗 Conexión con el índice:
 [Cómo afecta #TICKER al US100/US30 y al sector]
 ━━━━━━━━━━━━━━━━━━━
+🔤 Diccionario rápido (solo si hay siglas)
+• [Sigla]: [explicación de 1 línea en español, voz novata]
+━━━━━━━━━━━━━━━━━━━
 ```
 
 **Para forex/commodity/índice**:
@@ -85,6 +92,9 @@ Para el activo/noticia elegido:
 [Cómo impacta según sus drivers]
 
 [Si hay niveles técnicos relevantes, mencionarlos brevemente]
+━━━━━━━━━━━━━━━━━━━
+🔤 Diccionario rápido (solo si hay siglas)
+• [Sigla]: [explicación de 1 línea en español, voz novata]
 ━━━━━━━━━━━━━━━━━━━
 ```
 
@@ -119,5 +129,6 @@ Después de aprobar y enviar la noticia, registrar el evento y ofrecer la encues
 - Sin límite de veces al día.
 - No repetir la misma noticia en el mismo día.
 - Lenguaje simple: explicar qué hace la empresa si el cliente no lo sabe.
+- **Indicadores en español** con la sigla entre paréntesis una sola vez; ninguna abreviatura macro queda sin explicación (Diccionario rápido). Fuente: `data/glosario_siglas.json` (issue #46).
 - Siempre conectar acciones con su índice.
 - Hora siempre en hora Chile si mencionas horarios.

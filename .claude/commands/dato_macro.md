@@ -46,6 +46,10 @@ Iconos por importancia: 🔴 = 3 estrellas (alto impacto) | 🟡 = 2 estrellas (
 
 ## PASO 3 — Generar mensaje WhatsApp por dato elegido
 
+**Regla de traducción (OBLIGATORIO, issue #46)**: todo indicador se nombra en **español**, con la sigla original entre paréntesis **una sola vez** (ej. "Índice de gerentes de compra manufacturero (PMI manufacturero)"). En el resto del cuerpo se usa el nombre en español; minimiza al máximo los términos en otro idioma.
+
+**Bloque "🔤 Diccionario rápido" (OBLIGATORIO)**: por cada sigla/abreviatura que aparezca en el mensaje (ISM, NFP, JOLTS, PMI, PCE, IPC, ADP…), agrega al final una línea explicativa en voz novata tomada de `data/glosario_siglas.json`. Si la sigla **no está** en el glosario, explícala al vuelo (1-2 líneas) y **añádela a `data/glosario_siglas.json`** para reutilizarla en adelante. Ninguna abreviatura puede quedar sin explicación ese día.
+
 Por cada dato que elija el director, genera:
 
 **Modo anticipación** (dato aún no ha salido):
@@ -68,6 +72,10 @@ Por cada dato que elija el director, genera:
 
 👀 Activos a observar: [lista de activos impactados]
 ━━━━━━━━━━━━━━━━━━━
+🔤 Diccionario rápido
+• [Sigla]: [explicación de 1 línea en español, voz novata]
+[una línea por cada sigla que aparezca en el mensaje]
+━━━━━━━━━━━━━━━━━━━
 📅 Calendario completo: https://es.investing.com/economic-calendar/
 💬 ¿Quieres profundizar este tema? Escríbele a tu analista designado.
 ```
@@ -85,6 +93,10 @@ Esperado: [valor consenso] | Anterior: [valor previo]
 [1-2 líneas simples de lo que se vio]
 
 [Si aplica: conexión con camino a decisión de tasas — ej: "Este dato confirma/complica el escenario de recorte de la Fed"]
+━━━━━━━━━━━━━━━━━━━
+🔤 Diccionario rápido
+• [Sigla]: [explicación de 1 línea en español, voz novata]
+[una línea por cada sigla que aparezca en el mensaje]
 ━━━━━━━━━━━━━━━━━━━
 📅 Calendario completo: https://es.investing.com/economic-calendar/
 💬 ¿Quieres profundizar este tema? Escríbele a tu analista designado.
@@ -123,5 +135,7 @@ Después de que el director apruebe y envíe el dato, registrar el evento y ofre
 - Sin límite de veces al día (cada dato relevante merece su propio mensaje).
 - Hora: en fuente MT5 nativa, la hora es la del servidor MT5 (broker actual = hora Chile, se muestra tal cual). En fallback WebSearch, convertir a hora Chile con `scripts\hora_chile.ps1`.
 - Lenguaje simple: el cliente debe entender qué mide el indicador en 10 segundos.
+- **Indicadores en español** con la sigla original entre paréntesis una sola vez (issue #46). Minimizar términos en otro idioma en el cuerpo.
+- **Diccionario rápido obligatorio**: ninguna abreviatura puede quedar sin su explicación en español ese día. Fuente canónica: `data/glosario_siglas.json` (alimentarla con siglas nuevas).
 - Cuando aplique, conectar el dato con la narrativa de tasas de interés.
 - **Bloque de cierre obligatorio**: todo mensaje de `/dato_macro` (ambos modos) cierra, después del último separador, con el link al calendario completo (`https://es.investing.com/economic-calendar/`) y el CTA genérico al analista designado. El link y el CTA van siempre juntos como pie del mensaje.
