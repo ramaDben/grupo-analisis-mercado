@@ -32,7 +32,7 @@ Leer $ARGUMENTS y ramificar a uno de los modos de abajo.
 1. Leer `data/curriculo.json` + `data/mapa_conceptos.json`.
 2. Construir un árbol/lista ASCII por nivel siguiendo la secuencia. Marca: ✅ `entregado`, ⏳ `planificado`, 🆕 si se entregó en la última corrida.
 3. Renderizar dentro de `templates/ruta_curriculo.txt` (`{NOMBRE_RUTA}`, `{DESCRIPCION_RUTA}`, `{ARBOL_RUTA}`, `{PROXIMO_CONCEPTO}`).
-4. Mostrar al director: "¿Apruebas enviar esta ruta?". Al aprobar, guardar en `data/mensajes/YYYY-MM-DD_HH-MM_concepto.txt`.
+4. Mostrar al director: "¿Apruebas enviar esta ruta?". Al aprobar, guardar con la ruta de `scripts\ruta_mensaje.ps1 -Fecha [FECHA] -Tipo concepto -Hora [HH-MM]` (transversal → `_general`).
 
 ## MODO progreso
 1. **Cobertura (automática)**: contar nodos `explicado` vs total y por `nivel` en `data/mapa_conceptos.json`.

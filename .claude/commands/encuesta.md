@@ -103,7 +103,7 @@ Verificar antes de mostrar: ningún número de precio, cada opción ≤ 100 char
 Presentar el/los poll(s) al director. Preguntar: "¿Apruebas? ¿Enviar al grupo WhatsApp?"
 
 Al aprobar:
-- Guardar en **un único** archivo `data/mensajes/YYYY-MM-DD_HH-MM_encuesta.txt` (si son varios polls, separados por `━━━━━━━━━━━━━━━━━━━`).
+- Guardar en **un único** archivo cuya ruta da `scripts\ruta_mensaje.ps1 -Fecha [FECHA] -Activo [TICKER_MT5 o omitir si es transversal] -Tipo encuesta -Hora [HH-MM]` (si son varios polls, separados por `━━━━━━━━━━━━━━━━━━━`).
 - Registrar en `data/historial_encuestas.json` **un objeto por poll** (cada activo es su propia encuesta nativa de WhatsApp), con este esquema:
 
 ```json

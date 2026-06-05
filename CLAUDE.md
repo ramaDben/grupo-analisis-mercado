@@ -200,9 +200,14 @@ Todo contenido pasa por este flujo antes de enviarse:
 5. **Al aprobar**: guardar automáticamente en `data/mensajes/YYYY-MM-DD_HH-MM_[tipo].txt` y mostrar el texto listo para copiar.
 6. El director copia y pega el texto en el grupo de WhatsApp.
 
-**Regla de guardado**: después de cada aprobación, SIEMPRE guardar el mensaje final en `data/mensajes/` con el formato de nombre `YYYY-MM-DD_HH-MM_[tipo].txt` (ej: `2026-05-31_14-30_alerta.txt`). Usar la herramienta Write para crearlo directamente.
+**Regla de guardado**: después de cada aprobación, SIEMPRE guardar el mensaje final en `data/mensajes/` con la estructura **día → activo → tipo** (issue #45). Construir la ruta con el helper determinista `scripts\ruta_mensaje.ps1` (NUNCA armarla a mano):
+```powershell
+scripts\ruta_mensaje.ps1 -Fecha "2026-06-04" -Activo "USDCLP" -Tipo "dato_macro" -Hora "09-01"
+# -> data/mensajes/2026-06-04/usdclp/dato_macro/09-01_dato_macro.txt
+```
+El helper crea las carpetas y devuelve la ruta lista para `Write`. Si la pieza no tiene un activo protagonista (concepto, pregunta, cierre semanal, encuesta de la semana, earnings, paquete dominical), omitir `-Activo` y el helper la guarda en `_general/`. La hora `HH-mm` sale del reloj de Chile (regla canónica). Usar luego la herramienta Write sobre la ruta devuelta.
 
-**Tipos de archivo**: alerta, apertura, concepto, encuesta, señal, noticia, dato_macro, cierre, pregunta, niveles.
+**Tipos de archivo** (carpeta `<tipo>`): niveles, dato_macro, noticia, alerta, encuesta, señal, concepto, pregunta, cierre, earnings. La salida de `/apertura` usa tipo `niveles`.
 
 **Nunca se envía nada al grupo sin aprobación explícita del director.**
 

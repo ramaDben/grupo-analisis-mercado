@@ -65,7 +65,7 @@ Mostrar:
 **Al aprobar**:
 - Escribir/actualizar `conceptos/<id>.md` (frontmatter `id, nombre, estado, encuestas, ancla` + contenido con enlaces `[[vecino]]`).
 - Actualizar `data/mapa_conceptos.json`: crear/actualizar el nodo (`estado: "explicado"`, `nota`, `aristas`) y crear los nodos vecinos nuevos en `estado: "pendiente"`.
-- Guardar el mensaje en `data/mensajes/YYYY-MM-DD_HH-MM_encuesta.txt`.
+- Guardar el mensaje con la ruta de `scripts\ruta_mensaje.ps1 -Fecha [FECHA] -Tipo encuesta -Hora [HH-MM]` (transversal → `_general`).
 - Si el tema vino de una encuesta, en `data/historial_encuestas.json` poner esa encuesta `estado: "revelada"` y enlazarla (`conceptos/<id>.md` ya la lista en `encuestas`).
 
 ---
@@ -76,7 +76,7 @@ Mostrar:
 2. Construir un árbol ASCII partiendo de los nodos raíz (los que ningún otro nodo apunta) y descendiendo por las aristas. Etiquetar la flecha con el tipo de arista (ej. `se apoya en →`, `que usa →`).
 3. Marcar cada nodo: `✅` si `explicado`, `⏳` si `pendiente`, `🆕` si se creó/explicó en la última corrida.
 4. Renderizar dentro de `templates/mapa_conceptos.txt` (`{ARBOL_ASCII}`).
-5. Mostrar al director: *"¿Apruebas enviar este mapa de repaso?"*. Al aprobar, guardar en `data/mensajes/YYYY-MM-DD_HH-MM_encuesta.txt`.
+5. Mostrar al director: *"¿Apruebas enviar este mapa de repaso?"*. Al aprobar, guardar con la ruta de `scripts\ruta_mensaje.ps1 -Fecha [FECHA] -Tipo encuesta -Hora [HH-MM]` (transversal → `_general`).
 
 Si el grafo está vacío → avisar que aún no hay conceptos en la malla.
 
