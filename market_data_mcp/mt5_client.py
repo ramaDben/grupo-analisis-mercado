@@ -140,4 +140,8 @@ def leer_calendario_json(path: "Path | None" = None) -> dict:
     path = Path(path)
     if not path.exists():
         raise FileNotFoundError(f"No existe el calendario MT5 en {path}")
-    return json.loads(path.read_text(encoding="utf-8"))
+    try:
+        content = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        content = path.read_text(encoding="cp1252")
+    return json.loads(content)
