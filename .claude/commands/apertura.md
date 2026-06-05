@@ -25,10 +25,10 @@ Para CADA activo seleccionado, pregunta:
 
 ```
 ¿Qué temporalidad para [ACTIVO]?
-1. 15M — scalper / muy rápida
-2. 1H  — intradía corto
-3. 4H  — intradía / swing corto
-4. 1D  — lectura general
+1. 15M — scalper (minutos a 1-2 h)
+2. 1H  — intradía (dentro de la jornada)
+3. 4H  — swing de jornada (1-3 días)
+4. 1D  — posicional (días a semanas)
 ```
 
 Mapeo a timeframe MT5: 15M→`M15`, 1H→`H1`, 4H→`H4`, 1D→`D1`.
@@ -122,10 +122,17 @@ Genera un mensaje por activo. La etiqueta de marco temporal es **neutral** (lect
 
 | Temporalidad | Línea `{{lectura_temporalidad}}` |
 |---|---|
-| 15M | `_Lectura en 15M — marco scalper (movimientos rápidos del día)_` |
-| 1H  | `_Lectura en 1H — marco intradía corto_` |
-| 4H  | `_Lectura en 4H — marco intradía / swing corto_` |
-| 1D  | `_Lectura en 1D — lectura general del activo_` |
+| 15M | `_Lectura en 15M — marco scalper (minutos a 1-2 h)_` |
+| 1H  | `_Lectura en 1H — marco intradía (dentro de la jornada)_` |
+| 4H  | `_Lectura en 4H — marco swing de jornada (1-3 días)_` |
+| 1D  | `_Lectura en 1D — marco posicional (días a semanas)_` |
+
+Línea `{{por_que_temporalidad}}` (justifica la TF elegida según la volatilidad del activo — OBLIGATORIA):
+- Se arma combinando el campo `nota_volatilidad` del activo (en `config/activos.json`) con la TF que eligió el director.
+- Formato: `💡 Por qué [TEMPORALIDAD] aquí: [explicación cliente derivada de nota_volatilidad].`
+- Lenguaje novato (regla de 30 s), español chileno neutro, una sola línea. Ejemplos:
+  - USD/CLP en 1H → `💡 Por qué 1H aquí: el dólar se mueve poco dentro del día, así la lectura sale más limpia y con menos ruido.`
+  - WTI en 15M → `💡 Por qué 15M aquí: el petróleo se mueve fuerte y rápido, en este marco verás señales veloces pero con más ruido.`
 
 Línea de indicador `{{lectura_indicador}}` (omitir si "Limpio"):
 - RSI → `📐 RSI [TF]: [rsi_14] — [sobrecompra >70 / sobreventa <30 / neutro]`
@@ -143,6 +150,7 @@ Plantilla del mensaje:
 ━━━━━━━━━━━━━━━━━━━
 📈 *[NOMBRE ACTIVO]* — Niveles en [TEMPORALIDAD]
 {{lectura_temporalidad}}
+{{por_que_temporalidad}}
 
 💰 Precio actual: [precio]
 • Techo más próximo: [T1]
@@ -170,6 +178,7 @@ Plantilla del mensaje:
 - **T2/Su2 opcionales**: si el director NO ingresó T2 (o Su2) en PASO 4B, se **omite por completo** esa línea (sin dejar línea en blanco).
 - **Precio**: siempre `💰 Precio actual: [precio]`.
 - **Indicador**: siempre `📐 RSI/ATR [TF]:` (ver `{{lectura_indicador}}` arriba). Omitir si "Limpio".
+- **Justificación de temporalidad**: siempre la línea `💡 Por qué [TF] aquí:` (ver `{{por_que_temporalidad}}` arriba), derivada de `nota_volatilidad` del activo. Nunca omitir ni usar la palabra "corto" sin cuantificar.
 
 **Decimales**: respeta el campo `digits` de `config/activos.json` por activo (regla MT5 de CLAUDE.md). Nunca truncar ceros.
 
