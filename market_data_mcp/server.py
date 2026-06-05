@@ -1,6 +1,6 @@
 """market-data MCP — Capa de datos confiable para Grupo de Análisis de Mercado.
 
-3 tools con contratos de error explícitos. Nunca retorna arrays vacíos ni None silencioso.
+Tools con contratos de error explícitos. Nunca retorna arrays vacíos ni None silencioso.
 Si el dato no está disponible, retorna {"error": "CÓDIGO", "message": "..."}.
 """
 from __future__ import annotations
