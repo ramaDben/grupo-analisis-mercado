@@ -16,17 +16,19 @@ Regla de oro: si un cliente nuevo (sin experiencia) no entiende el mensaje en me
 
 ## Estructura diaria obligatoria (lunes a viernes)
 
-### 1. Niveles técnicos del día
-- Enviar niveles en temporalidades 4H, 1H o 15M
-- Cubrir 2 o 3 activos por día (rotar entre USD/CLP, Oro, WTI, US100)
-- Indicar: soportes, resistencias, zona de interés y posible sesgo
-- La temporalidad y el indicador se eligen por activo vía `/apertura` (nunca se asume 4H fijo). Los niveles se presentan como **lectura/marco temporal**, no como señal de operativa.
+> **Orden canónico (issue #43)**: el dato/noticia del calendario va PRIMERO, para enviar el fundamental del día al cliente mientras se cargan los niveles en MT5 (los niveles requieren input manual y tardan más). Los comandos de día (`/martes`, `/miercoles`, `/jueves`, `/viernes_am`) generan el dato macro como PIEZA 1 y la apertura/niveles como PIEZA 2.
 
-### 2. Noticia relevante del calendario económico
+### 1. Noticia relevante del calendario económico
 - 1 noticia o dato del día que impacte directamente a alguno de los activos
 - Explicar simple: qué es, a qué hora sale, qué se espera y cómo podría reaccionar el activo
 - Fuente oficial: calendario de Investing.com
 - Hora siempre en hora Chile (CLT/CLST)
+
+### 2. Niveles técnicos del día
+- Enviar niveles en temporalidades 4H, 1H o 15M
+- Cubrir 2 o 3 activos por día (rotar entre USD/CLP, Oro, WTI, US100)
+- Indicar: soportes, resistencias, zona de interés y posible sesgo
+- La temporalidad y el indicador se eligen por activo vía `/apertura` (nunca se asume 4H fijo). Los niveles se presentan como **lectura/marco temporal**, no como señal de operativa.
 
 ### 3. Drivers del activo
 - Explicación corta de los drivers que están moviendo al activo

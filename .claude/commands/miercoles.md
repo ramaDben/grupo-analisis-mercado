@@ -4,17 +4,11 @@ Genera la operativa diaria del miércoles pieza por pieza para aprobación.
 1. Determina los activos del día leyendo `config/agenda_semanal.json` y `config/activos.json` según el día de la semana.
 2. **NOTA MIÉRCOLES**: Si hoy hay publicación de inventarios EIA de petróleo, priorizarlo en la pieza de dato macro.
 
----
-
-## PIEZA 1 — Apertura de mercado
-
-Ejecuta `/apertura` (ver `.claude/commands/apertura.md`).
-
-**→ Por cada activo: ¿Apruebas? ¿Adjuntar chart de MT5? ¿Enviar al grupo?**
+> **Orden del flujo**: el dato macro se genera y envía PRIMERO, para que el cliente reciba el fundamental del día mientras se cargan los niveles en MT5 (los niveles requieren input manual y tardan más).
 
 ---
 
-## PIEZA 2 — Dato macro del día (con prioridad EIA si corresponde)
+## PIEZA 1 — Dato macro del día (con prioridad EIA si corresponde)
 
 Verifica si hoy es miércoles con publicación de inventarios EIA de petróleo (normalmente cada miércoles ~10:30 CLT durante sesión NY).
 
@@ -60,6 +54,14 @@ Si los inventarios EIA están en el calendario, generar también este mensaje es
 ```
 
 **→ Muestra al director. Pregunta: ¿Apruebas? ¿Adjuntar chart (ej: WTI si es EIA)? ¿Enviar al grupo?**
+
+---
+
+## PIEZA 2 — Apertura de mercado
+
+Ejecuta `/apertura` (ver `.claude/commands/apertura.md`).
+
+**→ Por cada activo: ¿Apruebas? ¿Adjuntar chart de MT5? ¿Enviar al grupo?**
 
 ---
 

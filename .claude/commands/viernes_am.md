@@ -4,17 +4,11 @@ Genera la operativa de la mañana del viernes pieza por pieza para aprobación.
 1. Determina los activos del día leyendo `config/agenda_semanal.json` y `config/activos.json` según el día de la semana.
 2. **NOTA VIERNES**: Los viernes cubrir 3 activos (en vez de 2). El primer viernes del mes publicación de NFP (Non-Farm Payrolls) — si es hoy, destacarlo especialmente.
 
----
-
-## PIEZA 1 — Apertura de mercado (3 activos el viernes)
-
-Ejecuta `/apertura` (ver `.claude/commands/apertura.md`). Nota: hoy son **3 activos** (en vez de 2).
-
-**→ Por cada activo: ¿Apruebas? ¿Adjuntar chart? ¿Enviar al grupo?**
+> **Orden del flujo**: el dato macro se genera y envía PRIMERO, para que el cliente reciba el fundamental del día mientras se cargan los niveles en MT5 (los niveles requieren input manual y tardan más).
 
 ---
 
-## PIEZA 2 — Dato macro del día
+## PIEZA 1 — Dato macro del día
 
 Verifica si hoy es el **primer viernes del mes** (= NFP day).
 
@@ -58,6 +52,14 @@ Genera el mensaje WhatsApp estándar para el dato elegido:
 ```
 
 **→ ¿Apruebas? ¿Adjuntar chart? ¿Enviar al grupo?**
+
+---
+
+## PIEZA 2 — Apertura de mercado (3 activos el viernes)
+
+Ejecuta `/apertura` (ver `.claude/commands/apertura.md`). Nota: hoy son **3 activos** (en vez de 2).
+
+**→ Por cada activo: ¿Apruebas? ¿Adjuntar chart? ¿Enviar al grupo?**
 
 ---
 

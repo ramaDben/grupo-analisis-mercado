@@ -3,17 +3,11 @@ Genera la operativa diaria del jueves pieza por pieza para aprobación.
 ## SETUP
 1. Determina los activos del día leyendo `config/agenda_semanal.json` y `config/activos.json` según el día de la semana.
 
----
-
-## PIEZA 1 — Apertura de mercado
-
-Ejecuta `/apertura` (ver `.claude/commands/apertura.md`).
-
-**→ Por cada activo: ¿Apruebas? ¿Adjuntar chart de MT5? ¿Enviar al grupo?**
+> **Orden del flujo**: el dato macro se genera y envía PRIMERO, para que el cliente reciba el fundamental del día mientras se cargan los niveles en MT5 (los niveles requieren input manual y tardan más).
 
 ---
 
-## PIEZA 2 — Dato macro del día
+## PIEZA 1 — Dato macro del día
 
 Obtén el calendario económico de hoy:
 - Obtén el calendario de hoy con `WebSearch` sobre investing.com (Chile, EE.UU., Zona Euro, China; impacto medio y alto), como en el PASO 1 de `/dato_macro`. Convierte cada hora a Chile con el helper determinista `scripts\hora_chile.ps1` (según la zona de origen del dato; nunca offsets fijos) — ver PASO 1B de `/dato_macro`.
@@ -53,6 +47,14 @@ Si el dato ya tiene valor "actual" (ya salió), modo resultado:
 ```
 
 **→ Muestra al director. Pregunta: ¿Apruebas? ¿Adjuntar chart? ¿Enviar al grupo?**
+
+---
+
+## PIEZA 2 — Apertura de mercado
+
+Ejecuta `/apertura` (ver `.claude/commands/apertura.md`).
+
+**→ Por cada activo: ¿Apruebas? ¿Adjuntar chart de MT5? ¿Enviar al grupo?**
 
 ---
 

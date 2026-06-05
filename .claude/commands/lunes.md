@@ -3,6 +3,8 @@ Genera el paquete completo del lunes pieza por pieza para aprobación.
 ## Contexto
 Hoy es lunes. Ejecuta cada pieza en orden, mostrándola al director para aprobación antes de continuar con la siguiente.
 
+> **Orden del flujo**: este paquete ya respeta el principio "fundamental primero" — el calendario semanal (PIEZA 1), earnings y concepto van antes que la apertura/niveles (PIEZA 4), de modo que el cliente recibe el contexto fundamental mientras se cargan los niveles en MT5.
+
 ## SETUP
 1. Determina los activos del día leyendo `config/agenda_semanal.json` y `config/activos.json` según el día de la semana.
 
