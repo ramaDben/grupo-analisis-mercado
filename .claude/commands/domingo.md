@@ -50,7 +50,7 @@ No hubo eventos de alto impacto.
 ```
 
 **→ Muestra al director. Pregunta: ¿Apruebas? ¿Enviar al grupo?**
-Al aprobar: guardar como `data/mensajes/YYYY-MM-DD_HH-MM_domingo_noticias.txt`.
+Al aprobar: guardar con la ruta de `scripts\ruta_mensaje.ps1 -Fecha [FECHA] -Tipo noticia -Hora [HH-MM]` (transversal → `_general`).
 
 ---
 
@@ -85,7 +85,7 @@ _Horarios en hora Chile (CLT)_
 ```
 
 **→ Muestra al director. Pregunta: ¿Apruebas? ¿Enviar al grupo?**
-Al aprobar: guardar como `data/mensajes/YYYY-MM-DD_HH-MM_domingo_preview_semana.txt`.
+Al aprobar: guardar con la ruta de `scripts\ruta_mensaje.ps1 -Fecha [FECHA] -Tipo noticia -Hora [HH-MM]` (transversal → `_general`).
 
 ---
 
@@ -123,7 +123,7 @@ Formato WhatsApp:
 ```
 
 **→ Muestra al director. Pregunta: ¿Apruebas? ¿Enviar al grupo?**
-Al aprobar: guardar como `data/mensajes/YYYY-MM-DD_HH-MM_domingo_sesgo_lunes.txt`.
+Al aprobar: guardar con la ruta de `scripts\ruta_mensaje.ps1 -Fecha [FECHA] -Tipo noticia -Hora [HH-MM]` (transversal → `_general`).
 
 ---
 
@@ -152,7 +152,7 @@ Formato WhatsApp:
 ```
 
 **→ Muestra al director. Pregunta: ¿Apruebas? ¿Enviar al grupo?**
-Al aprobar: guardar como `data/mensajes/YYYY-MM-DD_HH-MM_domingo_apertura_asiatica.txt`.
+Al aprobar: guardar con la ruta de `scripts\ruta_mensaje.ps1 -Fecha [FECHA] -Tipo niveles -Hora [HH-MM]` (transversal → `_general`).
 
 ---
 
@@ -182,7 +182,7 @@ Voten 👇 — el viernes vemos quién acertó
 ```
 
 **→ Muestra al director ambos bloques. Pregunta: ¿Apruebas? ¿Enviar al grupo?**
-Al aprobar: guardar como `data/mensajes/YYYY-MM-DD_HH-MM_domingo_encuesta_semana.txt`.
+Al aprobar: guardar con la ruta de `scripts\ruta_mensaje.ps1 -Fecha [FECHA] -Tipo encuesta -Hora [HH-MM]` (transversal → `_general`).
 
 ---
 
@@ -192,5 +192,5 @@ Al aprobar: guardar como `data/mensajes/YYYY-MM-DD_HH-MM_domingo_encuesta_semana
 - NO usar MT5 (mercados cerrados el domingo).
 - NO generar niveles técnicos (sin mercado abierto no hay niveles válidos).
 - La PIEZA 4 (apertura asiática) es opcional — incluirla solo después de las 21:30 CLT.
-- Al aprobar cada pieza: guardar en `data/mensajes/` antes de continuar con la siguiente.
+- Al aprobar cada pieza: guardar en `data/mensajes/` (ruta vía `scripts\ruta_mensaje.ps1`, transversal → `_general`) antes de continuar con la siguiente.
 - Si WhatsApp MCP disponible: enviar automáticamente tras aprobación. Si no: mostrar texto listo para copiar.

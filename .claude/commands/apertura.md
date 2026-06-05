@@ -174,7 +174,7 @@ Plantilla del mensaje:
 **Decimales**: respeta el campo `digits` de `config/activos.json` por activo (regla MT5 de CLAUDE.md). Nunca truncar ceros.
 
 **→ Por cada activo: ¿Apruebas? ¿Adjuntar chart de MT5? ¿Enviar al grupo?**
-Al aprobar: guarda en `data/mensajes/YYYY-MM-DD_HH-MM_niveles.txt` (usar Write) y muestra el texto listo para copiar. Si WhatsApp MCP no disponible: solo texto + ruta de imagen.
+Al aprobar: construye la ruta con `scripts\ruta_mensaje.ps1 -Fecha [FECHA] -Activo [TICKER_MT5] -Tipo niveles -Hora [HH-MM]` y guarda ahí con Write. Muestra el texto listo para copiar. Si WhatsApp MCP no disponible: solo texto + ruta de imagen.
 
 ---
 
