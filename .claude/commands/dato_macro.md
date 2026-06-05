@@ -17,7 +17,7 @@ Obtén el calendario de HOY con `WebSearch` (ya no se usa el MCP):
    `investing.com calendario económico hoy [FECHA] Chile Estados Unidos "Zona Euro" China impacto alto`
    - Países objetivo: **Chile (CL), EE.UU. (US), Zona Euro (EU), China (CN)**.
    - Impacto: **medio y alto** (★★ / ★★★).
-2. Si necesitas confirmar horas exactas, usa `WebFetch` sobre `https://es.investing.com/economic-calendar/`. Si la página no renderiza la tabla (es JS-pesada), apóyate en los resultados de `WebSearch` y en **fuentes oficiales** para datos de alto impacto (BCCh, Fed, Eurostat, BLS).
+2. **Lectura del calendario (OBLIGATORIO, issue #46)**: usa `WebFetch` sobre `https://es.investing.com/economic-calendar/` como fuente principal para tener el panorama completo del día (no solo snippets). Si la página no renderiza la tabla (es JS-pesada), recién ahí cae al fallback: resultados de `WebSearch` + **fuentes oficiales** para datos de alto impacto (BCCh, Fed, Eurostat, BLS). El objetivo es no dejar fuera ningún dato de impacto medio/alto.
 3. **Conversión de hora (DETERMINISTA, OBLIGATORIO)**: nunca conviertas "a mano" ni asumas offsets fijos (`UTC-5`, `GMT-3`) — esa asunción causa desfases de ±1h (ver issue #38). Por cada evento:
    - Toma la hora **oficial en la zona de su organismo emisor** (no la hora "ya convertida" que muestre investing.com: su zona es ambigua y variable).
    - Mapea el país a su zona de Windows: **EE.UU.** (BLS/ISM/ADP/EIA/Fed) → `Eastern Standard Time` · **Zona Euro** (Eurostat/BCE) → `W. Europe Standard Time` · **China** (NBS/Caixin) → `China Standard Time` · **Chile** (BCCh/INE) → `Pacific SA Standard Time` · **Reino Unido** (BoE) → `GMT Standard Time`.
@@ -53,6 +53,10 @@ Iconos por importancia: 🔴 = 3 estrellas (alto impacto) | 🟡 = 2 estrellas (
 
 ## PASO 3 — Generar mensaje WhatsApp por dato elegido
 
+**Regla de traducción (OBLIGATORIO, issue #46)**: todo indicador se nombra en **español**, con la sigla original entre paréntesis **una sola vez** (ej. "Índice de gerentes de compra manufacturero (PMI manufacturero)"). En el resto del cuerpo se usa el nombre en español; minimiza al máximo los términos en otro idioma.
+
+**Bloque "🔤 Diccionario rápido" (OBLIGATORIO)**: por cada sigla/abreviatura que aparezca en el mensaje (ISM, NFP, JOLTS, PMI, PCE, IPC, ADP…), agrega al final una línea explicativa en voz novata tomada de `data/glosario_siglas.json`. Si la sigla **no está** en el glosario, explícala al vuelo (1-2 líneas) y **añádela a `data/glosario_siglas.json`** para reutilizarla en adelante. Ninguna abreviatura puede quedar sin explicación ese día.
+
 Por cada dato que elija el director, genera:
 
 **Modo anticipación** (dato aún no ha salido):
@@ -75,6 +79,10 @@ Por cada dato que elija el director, genera:
 
 👀 Activos a observar: [lista de activos impactados]
 ━━━━━━━━━━━━━━━━━━━
+🔤 Diccionario rápido
+• [Sigla]: [explicación de 1 línea en español, voz novata]
+[una línea por cada sigla que aparezca en el mensaje]
+━━━━━━━━━━━━━━━━━━━
 📅 Calendario completo: https://es.investing.com/economic-calendar/
 💬 ¿Quieres profundizar este tema? Escríbele a tu analista designado.
 ```
@@ -92,6 +100,10 @@ Esperado: [valor consenso] | Anterior: [valor previo]
 [1-2 líneas simples de lo que se vio]
 
 [Si aplica: conexión con camino a decisión de tasas — ej: "Este dato confirma/complica el escenario de recorte de la Fed"]
+━━━━━━━━━━━━━━━━━━━
+🔤 Diccionario rápido
+• [Sigla]: [explicación de 1 línea en español, voz novata]
+[una línea por cada sigla que aparezca en el mensaje]
 ━━━━━━━━━━━━━━━━━━━
 📅 Calendario completo: https://es.investing.com/economic-calendar/
 💬 ¿Quieres profundizar este tema? Escríbele a tu analista designado.
@@ -130,5 +142,7 @@ Después de que el director apruebe y envíe el dato, registrar el evento y ofre
 - Sin límite de veces al día (cada dato relevante merece su propio mensaje).
 - Hora siempre en hora Chile (CLT/CLST).
 - Lenguaje simple: el cliente debe entender qué mide el indicador en 10 segundos.
+- **Indicadores en español** con la sigla original entre paréntesis una sola vez (issue #46). Minimizar términos en otro idioma en el cuerpo.
+- **Diccionario rápido obligatorio**: ninguna abreviatura puede quedar sin su explicación en español ese día. Fuente canónica: `data/glosario_siglas.json` (alimentarla con siglas nuevas).
 - Cuando aplique, conectar el dato con la narrativa de tasas de interés.
 - **Bloque de cierre obligatorio**: todo mensaje de `/dato_macro` (ambos modos) cierra, después del último separador, con el link al calendario completo (`https://es.investing.com/economic-calendar/`) y el CTA genérico al analista designado. El link y el CTA van siempre juntos como pie del mensaje.

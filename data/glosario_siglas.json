@@ -1,0 +1,26 @@
+{
+  "_meta": {
+    "descripcion": "Glosario canónico de siglas/abreviaturas macro en español (issue #46). Fuente única para el bloque inline '🔤 Diccionario rápido' de /dato_macro y /noticia. Si aparece una sigla nueva en un mensaje, explicarla al vuelo y AÑADIRLA aquí para reutilizar. Voz novata (regla de oro 30s).",
+    "formato": "SIGLA -> { nombre_es, explicacion, ancla? }"
+  },
+  "PMI": { "nombre_es": "Índice de gerentes de compra", "explicacion": "Encuesta a empresas sobre cómo ven su negocio; sobre 50 = la economía crece, bajo 50 = se enfría." },
+  "ISM": { "nombre_es": "Índice del Instituto de Gestión de Suministros", "explicacion": "Encuesta de actividad de empresas en EE.UU. (manufactura o servicios); sobre 50 = expansión, bajo 50 = contracción." },
+  "NFP": { "nombre_es": "Nóminas no agrícolas", "explicacion": "Cuántos empleos creó EE.UU. el mes pasado (sin contar el campo); dato clave para la Fed y el dólar." },
+  "JOLTS": { "nombre_es": "Encuesta de vacantes y rotación laboral", "explicacion": "Mide cuántos puestos de trabajo están sin cubrir en EE.UU.; muestra si el empleo está fuerte o se enfría." },
+  "ADP": { "nombre_es": "Empleo privado ADP", "explicacion": "Adelanto del empleo en EE.UU. (solo sector privado), suele salir antes que las nóminas oficiales." },
+  "PCE": { "nombre_es": "Gasto en consumo personal", "explicacion": "La medida de inflación que más mira la Fed para decidir las tasas de interés." },
+  "IPC": { "nombre_es": "Índice de precios al consumidor", "explicacion": "Cuánto subieron los precios que paga la gente; la inflación más conocida." },
+  "CPI": { "nombre_es": "Índice de precios al consumidor (IPC)", "explicacion": "Igual que el IPC: cuánto subieron los precios al consumidor (sigla en inglés)." },
+  "IPP": { "nombre_es": "Índice de precios al productor", "explicacion": "Cuánto suben los precios de fábrica antes de llegar al consumidor; anticipa la inflación." },
+  "PPI": { "nombre_es": "Índice de precios al productor (IPP)", "explicacion": "Precios mayoristas/de fábrica; adelanta hacia dónde va la inflación al consumidor." },
+  "PIB": { "nombre_es": "Producto interno bruto", "explicacion": "Todo lo que produce un país; mide si la economía crece o se contrae." },
+  "GDP": { "nombre_es": "Producto interno bruto (PIB)", "explicacion": "Lo mismo que el PIB: el tamaño total de la economía (sigla en inglés)." },
+  "EIA": { "nombre_es": "Administración de Información Energética (EE.UU.)", "explicacion": "Publica los inventarios de petróleo de EE.UU.; mueve fuerte el precio del WTI." },
+  "FOMC": { "nombre_es": "Comité de mercado abierto de la Fed", "explicacion": "El grupo de la Fed que decide las tasas de interés en EE.UU." },
+  "BCCh": { "nombre_es": "Banco Central de Chile", "explicacion": "Fija la tasa de interés en Chile; influye directo en el dólar (USD/CLP)." },
+  "BCE": { "nombre_es": "Banco Central Europeo", "explicacion": "Decide las tasas de interés de la zona euro." },
+  "PCE subyacente": { "nombre_es": "Gasto en consumo personal subyacente", "explicacion": "El PCE sin alimentos ni energía; la Fed lo prefiere porque es más estable." },
+  "IPC subyacente": { "nombre_es": "IPC subyacente", "explicacion": "La inflación sin alimentos ni energía; muestra la tendencia de fondo de los precios." },
+  "PMI Caixin": { "nombre_es": "PMI Caixin (China)", "explicacion": "Encuesta de actividad de empresas chinas (más pymes); sobre 50 = crece. Importa para el cobre y el WTI." },
+  "Jobless Claims": { "nombre_es": "Peticiones de subsidio por desempleo", "explicacion": "Cuántas personas pidieron seguro de cesantía en EE.UU. esta semana; termómetro rápido del empleo." }
+}
