@@ -219,7 +219,7 @@ El helper crea las carpetas y devuelve la ruta lista para `Write`. Si la pieza n
 
 **Nota**: Evolution API (Docker) está instalada y lista en `mcp/docker-compose.yml`. Cuando se resuelva la conexión WhatsApp/Baileys, el envío pasará a ser automático sin cambios adicionales.
 
-## Slash Commands disponibles (21)
+## Slash Commands disponibles (22)
 
 Invocar con `/nombre` desde Claude Code:
 
@@ -256,6 +256,17 @@ Invocar con `/nombre` desde Claude Code:
 | `/accion [TICKER]` | Análisis completo de una de las 12 acciones del catálogo |
 | `/earnings` | Calendario de earnings de las 12 acciones para la semana |
 
+### Capa 4 — Habilitación comercial (ejecutivos, issue #62)
+Piezas orientadas al **ejecutivo comercial** (no al cliente). Cada ejecución genera 2 artefactos en `data/mensajes/ejecutivos/<fecha>/<tipo>/`: `preview.html` (abrir en Chrome → Ctrl+P → PDF para distribuir) y `whatsapp.txt`. Templates corporativos en `templates/ejecutivo/` con `@media print`. Área activa en `config/ejecutivos.json` (MVP: `trading`).
+
+| Comando | Cuándo usarlo |
+|---------|---------------|
+| `/ejecutivo kit` | Kit de primer contacto: presentación + scripts de contactabilidad (sí/no contesta) |
+| `/ejecutivo folleto [producto]` | Folleto de un producto (fallback manual mientras `config/productos.json` esté vacío) |
+| `/ejecutivo apertura` | Niveles del día reencuadrados como oportunidades de inversión (vía market-data) |
+| `/ejecutivo semana` | Calendario macro semanal como oportunidades de conversación (dato → producto → cliente) |
+| `/ejecutivo mirror` | Versión ejecutivo de la última pieza enviada al cliente (qué recibió / cómo usarlo / qué hacer) |
+
 ## Estructura del proyecto
 ```
 grupo-analisis-mercado/
@@ -269,20 +280,22 @@ grupo-analisis-mercado/
 │   ├── ideas/             ← specs de features (ciclo Pulse)
 │   └── design/            ← diseños técnicos (ciclo Pulse)
 ├── .claude/
-│   └── commands/          ← 21 slash commands (invocar con /nombre)
+│   └── commands/          ← 22 slash commands (invocar con /nombre)
 │       ├── domingo.md
 │       ├── lunes.md · martes.md · miercoles.md · jueves.md
 │       ├── viernes_am.md · viernes_pm.md
 │       ├── encuesta.md · rencuesta.md · curriculo.md
 │       ├── apertura.md · dato_macro.md · noticia.md · chart.md
 │       ├── señal.md · alerta.md · concepto.md · pregunta.md · estado.md
-│       ├── accion.md · earnings.md
+│       ├── accion.md · earnings.md · ejecutivo.md
 ├── agents/                ← prompts de sub-agents
 │   ├── recolector.md · analista.md · redactor.md
 ├── config/                ← configuración del sistema
 │   ├── activos.json       ← 20 activos: forex + índices + 12 acciones
 │   ├── drivers.json · drivers_indices_sectores.json
 │   ├── agenda_semanal.json · plantilla_señal.json
+│   ├── ejecutivos.json    ← áreas de ejecutivos (MVP: trading) — issue #62
+│   └── productos.json     ← catálogo banca inversiones (placeholder, issue futuro)
 ├── scripts/               ← scripts auxiliares Python
 │   ├── senal_manager.py   ← gestión historial señales (límite 3/semana)
 │   ├── formatter_whatsapp.py · market_data.py
@@ -292,12 +305,14 @@ grupo-analisis-mercado/
 │   ├── encuesta_tendencia.txt · encuesta_precio.txt
 │   ├── concepto_semana.txt · señal_operativa.txt
 │   ├── ruta_curriculo.txt · dashboard_metricas.txt
+│   └── ejecutivo/         ← templates HTML ejecutivo (kit, folleto, apertura, semana, mirror) — issue #62
 ├── conceptos/             ← notas canónicas de conceptos educativos (malla /rencuesta)
 │   ├── README.md · stop-loss.md
 ├── data/                  ← datos persistentes
 │   ├── historial_senales.json · mapa_conceptos.json
 │   ├── curriculo.json · entregas_educativas.json · metricas_educativas.json
-│   └── charts/            ← PNGs generados (gitignored)
+│   ├── charts/            ← PNGs generados (gitignored)
+│   └── mensajes/ejecutivos/ ← piezas ejecutivo aprobadas (preview.html + whatsapp.txt) — issue #62
 └── mcp/
     ├── mcp_config.example.json ← template sin credenciales (en git)
     └── mcp_config.json         ← config real con API keys (gitignored)
