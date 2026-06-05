@@ -144,6 +144,12 @@ Cerrar cada mensaje de niveles/análisis con este bloque:
 - Estructura formal, consistente y repetible cada día
 - Emojis con moderación: 📊 📈 📉 ⚠️ 🕐 📚 📅 (más 🟢🔴🟡🎯 del sistema de escenarios)
 
+## Datos macro en español + Diccionario rápido (OBLIGATORIO — issue #46)
+- **Indicadores en español**: todo dato macro se nombra en español, con la sigla original entre paréntesis **una sola vez** (ej. "Índice de gerentes de compra manufacturero (PMI manufacturero)"). Minimizar términos en otro idioma en el cuerpo del mensaje.
+- **Bloque "🔤 Diccionario rápido"**: obligatorio en `/dato_macro` (ambos modos) y en `/noticia` cuando aparezcan siglas. Por cada abreviatura del mensaje (ISM, NFP, JOLTS, PMI, PCE, IPC, ADP…), una línea explicativa en voz novata. **Ninguna abreviatura puede quedar sin explicación en español ese día.**
+- **Fuente canónica**: `data/glosario_siglas.json` (`SIGLA → {nombre_es, explicacion}`). Si aparece una sigla nueva, explicarla al vuelo y **añadirla al JSON** para reutilizarla.
+- En `/dato_macro`, la lectura del calendario de investing.com (`WebFetch`) es **obligatoria** como fuente principal del panorama del día; WebSearch + fuentes oficiales son fallback solo si la tabla no renderiza.
+
 ## Formato de precios — regla de decimales MT5
 **OBLIGATORIO**: al mostrar cualquier precio (entrada, TP, SL, soporte, resistencia, precio actual), respetar exactamente los decimales del campo `digits` definido en `config/activos.json` para ese activo.
 
@@ -295,7 +301,7 @@ grupo-analisis-mercado/
 ├── conceptos/             ← notas canónicas de conceptos educativos (malla /rencuesta)
 │   ├── README.md · stop-loss.md
 ├── data/                  ← datos persistentes
-│   ├── historial_senales.json · mapa_conceptos.json
+│   ├── historial_senales.json · mapa_conceptos.json · glosario_siglas.json
 │   ├── curriculo.json · entregas_educativas.json · metricas_educativas.json
 │   └── charts/            ← PNGs generados (gitignored)
 └── mcp/
