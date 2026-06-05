@@ -33,13 +33,17 @@ Regla de oro: si un cliente nuevo (sin experiencia) no entiende el mensaje en me
 - Si hay información relevante durante el día (declaraciones, datos sorpresivos, eventos geopolíticos), informar de inmediato
 
 ## Reglas de temporalidad
-Cada análisis indica explícitamente su temporalidad y tipo de operativa:
-- **15M** → scalper / muy rápida — operaciones cortas dentro del día, alta rotación
-- **1H** → intradía corto — movimientos del día, confirmar entradas finas
-- **4H** → intradía / swing corto — tendencia del día y operativas de varias horas
-- **1D** → intraday / swing — lectura general del activo y operaciones de días
+Cada análisis indica explícitamente su temporalidad con un rango cuantificado (prohibido usar "corto" sin número — issue #44):
+- **15M** → scalper (minutos a 1-2 h) — alta rotación, movimientos rápidos del día
+- **1H** → intradía (dentro de la jornada) — movimientos del día, confirmar entradas finas
+- **4H** → swing de jornada (1-3 días) — tendencia del día y operativas de varias horas
+- **1D** → posicional (días a semanas) — lectura general del activo
 
-Ejemplo obligatorio: "Niveles en 15M — operativa scalper, movimientos rápidos dentro del día"
+Estas 4 etiquetas son la fuente única y deben ser idénticas en `.claude/commands/apertura.md` (PASO 2 y PASO 5).
+
+**Justificar la temporalidad por la volatilidad del activo (OBLIGATORIO)**: cada activo tiene un nivel de `volatilidad` y una `nota_volatilidad` en `config/activos.json`. El mensaje de niveles incluye la línea `{{por_que_temporalidad}}` (`💡 Por qué [TF] aquí: …`) que explica al cliente, en lenguaje novato, por qué la temporalidad elegida encaja con la volatilidad de ese activo (ej.: USD/CLP es de baja volatilidad → 1H/4H dan lectura más limpia; WTI/Oro son de alta volatilidad → 15M tiene más ruido).
+
+Ejemplo obligatorio: "Niveles en 15M — marco scalper (minutos a 1-2 h)"
 
 ## Fecha y hora actual — regla canónica (OBLIGATORIO)
 **Nunca** uses `WebSearch` para obtener la fecha o la hora actual: devuelve snippets de búsqueda (cacheados, imprecisos o ausentes), no un reloj, y produce errores al fechar mensajes o marcar eventos pasados/futuros.
