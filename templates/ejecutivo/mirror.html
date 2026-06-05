@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Habilitación Ejecutivo — {{fecha}}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+  :root {
+    --bg:#0d1b2a; --card-bg:#0f2744; --gold:#f0a500; --green:#00c853;
+    --blue-accent:#1565c0; --text:#e8f4fd; --muted:#7a9bbb;
+    --border:rgba(255,255,255,0.08);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); padding:24px 16px 40px; }
+  .header { text-align:center; margin-bottom:24px; }
+  .brand { font-size:11px; letter-spacing:3px; color:var(--muted); text-transform:uppercase; margin-bottom:6px; }
+  .title { font-size:22px; font-weight:800; color:var(--gold); }
+  .subtitle { font-size:12px; color:var(--muted); margin-top:4px; }
+  .section { background:var(--card-bg); border:1px solid var(--border); border-radius:16px; padding:24px 28px; max-width:720px; margin:0 auto 16px; }
+  .section-num { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+  .section-title { font-size:16px; font-weight:800; color:var(--gold); margin-bottom:14px; }
+  .section-body { font-size:14px; line-height:1.7; color:var(--text); }
+  .section-body p { margin-bottom:10px; }
+  .section-body ul { padding-left:18px; }
+  .section-body li { margin-bottom:8px; }
+  .pieza-badge { display:inline-block; background:rgba(21,101,192,.15); border:1px solid rgba(21,101,192,.3); color:#7ca9ff; font-size:11px; font-weight:600; padding:4px 12px; border-radius:20px; margin-bottom:14px; }
+  .footer { text-align:center; font-size:11px; color:var(--muted); margin-top:20px; max-width:720px; margin-left:auto; margin-right:auto; }
+
+  @media print {
+    :root { --bg:#fff; --card-bg:#f8f9fa; --gold:#1565c0; --text:#111; --muted:#555; --border:#ddd; }
+    body { background:#fff; }
+    .section { border:1px solid #ddd; break-inside:avoid; }
+    .pieza-badge { background:#e8f0fe; border-color:#c5cae9; color:#1565c0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="brand">GrupoInteligencia.com · {{area_nombre}}</div>
+  <div class="title">Habilitación Ejecutivo</div>
+  <div class="subtitle">{{fecha}} · Basado en pieza enviada al cliente</div>
+</div>
+
+<!-- SECCIÓN 1: QUÉ VIO EL CLIENTE -->
+<div class="section">
+  <div class="section-num">1 de 3</div>
+  <div class="pieza-badge">Pieza cliente: {{tipo_pieza_cliente}}</div>
+  <div class="section-title">¿Qué recibió el cliente hoy?</div>
+  <div class="section-body">
+    {{resumen_cliente}}
+  </div>
+</div>
+
+<!-- SECCIÓN 2: CÓMO USARLO -->
+<div class="section">
+  <div class="section-num">2 de 3</div>
+  <div class="section-title">¿Cómo usar esta información con tu cliente?</div>
+  <div class="section-body">
+    {{como_usarlo}}
+  </div>
+</div>
+
+<!-- SECCIÓN 3: QUÉ HACER -->
+<div class="section">
+  <div class="section-num">3 de 3</div>
+  <div class="section-title">¿Qué hacer ahora?</div>
+  <div class="section-body">
+    {{que_hacer}}
+  </div>
+</div>
+
+<div class="footer">
+  {{ejecutivo_firma}} · <span style="opacity:.6">{{disclaimer}}</span>
+</div>
+
+</body>
+</html>
