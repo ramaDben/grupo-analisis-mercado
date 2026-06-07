@@ -283,10 +283,9 @@ grupo-analisis-mercado/
 │   ├── activos.json       ← 20 activos: forex + índices + 12 acciones
 │   ├── drivers.json · drivers_indices_sectores.json
 │   ├── agenda_semanal.json · plantilla_señal.json
-├── scripts/               ← scripts auxiliares Python
+├── scripts/               ← scripts auxiliares
 │   ├── senal_manager.py   ← gestión historial señales (límite 3/semana)
-│   ├── formatter_whatsapp.py · market_data.py
-│   └── mt5_integration.py ← integración MT5 legacy (reemplazado por MCP)
+│   └── hora_chile.ps1 · ruta_mensaje.ps1  ← helpers deterministas (hora Chile, ruta de guardado)
 ├── templates/             ← templates de mensajes WhatsApp
 │   ├── apertura_mercado.txt · resumen_semanal.txt · cierre_semanal.txt
 │   ├── encuesta_tendencia.txt · encuesta_precio.txt

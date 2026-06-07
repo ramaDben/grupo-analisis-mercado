@@ -62,7 +62,7 @@ Luego:
 2. Lee `data/mt5_response.json` para confirmar que el EA generó el archivo.
 3. Muestra la ruta del PNG generado al director.
 
-**Si el EA no responde en 10 segundos**: genera el chart con `scripts/mt5_integration.py` usando `generar_grafico(ticker, temporalidad, indicadores=[...])`. Avisa al director que MT5 debe estar abierto con el EA activo.
+**Si el EA no responde en 10 segundos**: avisa al director que MT5 debe estar abierto con el EA activo y reintenta. _No hay fallback automático de generación de charts (ver #87 — pipeline de charts propio)._
 
 ## PASO 5 — Mostrar preview y preguntar envío
 

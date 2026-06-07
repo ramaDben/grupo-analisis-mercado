@@ -22,7 +22,7 @@ Decisiones del director (brainstorming):
 
 ## Hallazgos clave
 
-- `get_asset_levels(ticker, timeframe)` devuelve: `price, s1, s2, r1, r2, rsi_14, atr_14, trend, timestamp`. Los **únicos indicadores** disponibles son **RSI(14)** y **ATR(14)**; `trend` se deriva de EMA100. MACD/SMA/Bollinger NO vienen del MCP (solo por la vía chart de `scripts/mt5_integration.py`).
+- `get_asset_levels(ticker, timeframe)` devuelve: `price, s1, s2, r1, r2, rsi_14, atr_14, trend, timestamp`. Los **únicos indicadores** disponibles son **RSI(14)** y **ATR(14)**; `trend` se deriva de EMA100. MACD/SMA/Bollinger NO vienen del MCP.
 - El contrato de error del MCP ya existe: `{"error": "CÓDIGO", "message": "..."}` (TICKER_NOT_FOUND, MT5_UNAVAILABLE, INVALID_TIMEFRAME, INSUFFICIENT_DATA).
 - `/chart` ya tiene el patrón interactivo de selección (activo → indicador → temporalidad) que `/apertura` debe replicar para los niveles en texto.
 - Puntos de integración (PIEZA "Apertura de mercado" con `timeframe: "H4"` + `swing corto` hardcodeados):
