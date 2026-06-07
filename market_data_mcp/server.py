@@ -64,8 +64,9 @@ mcp = FastMCP(
     name="market-data",
     instructions=(
         "Capa de datos confiable para Grupo de Análisis de Mercado. "
-        "3 tools: get_asset_levels (técnico MT5), get_economic_events (Finnhub calendario), "
-        "get_market_context (Finnhub noticias). "
+        "1 tool: get_asset_levels (análisis técnico MT5). "
+        "Calendario económico y noticias se obtienen vía WebSearch (investing.com + "
+        "fuentes oficiales) en los comandos, no por este MCP. "
         "Contrato de error: si el dato no está disponible retorna {'error': 'CÓDIGO', 'message': '...'} "
         "— nunca array vacío, nunca None silencioso."
     ),
@@ -74,11 +75,9 @@ mcp = FastMCP(
     mask_error_details=False,
 )
 
-from market_data_mcp.tools import levels, calendar, context  # noqa: E402
+from market_data_mcp.tools import levels  # noqa: E402
 
 levels.register(mcp)
-calendar.register(mcp)
-context.register(mcp)
 
 
 if __name__ == "__main__":

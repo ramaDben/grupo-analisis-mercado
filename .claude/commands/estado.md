@@ -39,7 +39,7 @@ Basado en el plan del día y la hora actual (hora Chile), sugiere qué correspon
 
 ### 6. Estado de los MCPs
 Informa el estado de cada MCP relevante:
-- ✅ **market-data**: activo — get_asset_levels (MT5). `get_economic_events` y `get_market_context` están **deprecados** (devuelven DEPRECATED): calendario y noticias ahora vía WebSearch (investing.com + fuentes oficiales) en /dato_macro y /noticia.
+- ✅ **market-data**: activo — expone solo `get_asset_levels` (técnico MT5). El calendario y las noticias se obtienen vía WebSearch (investing.com + fuentes oficiales) en /dato_macro y /noticia, no por este MCP.
 - ⏳ **WhatsApp (Evolution API)**: pendiente — requiere Docker conectado a WhatsApp/Baileys
 - ❌ **TrendRadar / Firecrawl / Finnhub**: no activos — reemplazados por market-data (MT5) + WebSearch
 

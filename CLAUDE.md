@@ -190,7 +190,7 @@ Mejorar indicadores de satisfacción del cliente, retención, NPS y reducir chur
 | **WhatsApp (Evolution API)** | ⏳ Pendiente conexión Docker | Envío directo al grupo | Flujo manual por ahora |
 | **TrendRadar / Firecrawl / Finnhub** | ❌ No activos | Reemplazados por market-data (MT5) + WebSearch | — |
 
-**Nota**: las tools `get_economic_events` y `get_market_context` del MCP `market-data` están **deprecadas** (devuelven `{"error": "DEPRECATED"}`). El calendario económico y las noticias se obtienen ahora con `WebSearch` sobre investing.com + fuentes oficiales (Fed, BCCh, OPEP+, EIA, BLS), directamente en los comandos. Ver `docs/design/websearch-calendario-noticias.design.md`.
+**Nota**: las tools `get_economic_events` y `get_market_context` del MCP `market-data` **fueron eliminadas** (issue #78); el MCP expone solo `get_asset_levels`. El calendario económico y las noticias se obtienen con `WebSearch` sobre investing.com + fuentes oficiales (Fed, BCCh, OPEP+, EIA, BLS), directamente en los comandos. Ver `docs/design/websearch-calendario-noticias.design.md`.
 
 **Flujo actual**: los comandos generan contenido → muestran para copiar → guardan en `data/mensajes/`. Cuando Evolution API esté conectada a WhatsApp/Baileys, el envío pasará a ser automático.
 
