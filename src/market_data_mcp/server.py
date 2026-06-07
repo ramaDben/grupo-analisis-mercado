@@ -1,6 +1,6 @@
 """market-data MCP — Capa de datos confiable para Grupo de Análisis de Mercado.
 
-3 tools con contratos de error explícitos. Nunca retorna arrays vacíos ni None silencioso.
+Tools con contratos de error explícitos. Nunca retorna arrays vacíos ni None silencioso.
 Si el dato no está disponible, retorna {"error": "CÓDIGO", "message": "..."}.
 """
 from __future__ import annotations
@@ -64,9 +64,9 @@ mcp = FastMCP(
     name="market-data",
     instructions=(
         "Capa de datos confiable para Grupo de Análisis de Mercado. "
-        "1 tool: get_asset_levels (análisis técnico MT5). "
-        "Calendario económico y noticias se obtienen vía WebSearch (investing.com + "
-        "fuentes oficiales) en los comandos, no por este MCP. "
+        "Tools: get_asset_levels (técnico MT5), obtener_calendario_macro (calendario "
+        "macro nativo MT5, fuente primaria; WebSearch investing.com es fallback). "
+        "Hora en reloj del servidor MT5, sin conversiones. Noticias vía WebSearch. "
         "Contrato de error: si el dato no está disponible retorna {'error': 'CÓDIGO', 'message': '...'} "
         "— nunca array vacío, nunca None silencioso."
     ),
@@ -75,9 +75,10 @@ mcp = FastMCP(
     mask_error_details=False,
 )
 
-from market_data_mcp.tools import levels  # noqa: E402
+from market_data_mcp.tools import levels, calendar  # noqa: E402
 
 levels.register(mcp)
+calendar.register(mcp)
 
 
 if __name__ == "__main__":

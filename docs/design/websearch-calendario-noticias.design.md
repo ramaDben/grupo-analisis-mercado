@@ -1,5 +1,7 @@
 # DISEÑO TÉCNICO — WebSearch (investing.com) para calendario económico y noticias
 
+> **Actualización (issue #53, 2026-06-05):** para el **calendario** económico, WebSearch pasó de fuente primaria a **fallback**. La fuente primaria es ahora la tool nativa `obtener_calendario_macro` (MT5). Las **noticias** siguen 100% por WebSearch como describe este documento. Ver `docs/superpowers/specs/2026-06-05-calendario-macro-nativo-mt5-design.md`.
+
 ## Contexto
 Basado en el issue de Discovery [#10](https://github.com/bbenja11/grupo-analisis-mercado/issues/10).
 Decisión del director: **Opción A** — sacar calendario y noticias del MCP `market-data` y resolverlos en el agente (Claude) con `WebSearch` + `WebFetch`.

@@ -12,7 +12,9 @@ lo que permite mockear `get_rates` y probar el camino feliz de la tool sin MT5.
 """
 from __future__ import annotations
 
+import json
 import os
+from pathlib import Path
 
 import pandas as pd
 
@@ -115,3 +117,31 @@ def atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
         (low - prev_close).abs(),
     ], axis=1).max(axis=1)
     return tr.ewm(span=period, adjust=False).mean()
+
+
+def leer_calendario_json(path: "Path | None" = None) -> dict:
+    """Lee y parsea el calendario macro exportado por el Service MQL5.
+
+    El archivo lo escribe CalendarExporter.mq5 en Common/Files de MT5. Si `path`
+    es None, se resuelve desde la variable de entorno MT5_COMMON_FILES (directorio
+    Common/Files del terminal) + 'calendario_macro.json'.
+
+    Lanza FileNotFoundError si el archivo no existe y json.JSONDecodeError si el
+    contenido no es JSON válido. La validación de frescura y el contrato de error
+    viven en la tool (tools/calendar.py), no aquí.
+    """
+    if path is None:
+        common = os.environ.get("MT5_COMMON_FILES", "")
+        if not common:
+            raise FileNotFoundError(
+                "MT5_COMMON_FILES no configurado: no se puede localizar calendario_macro.json"
+            )
+        path = Path(common) / "calendario_macro.json"
+    path = Path(path)
+    if not path.exists():
+        raise FileNotFoundError(f"No existe el calendario MT5 en {path}")
+    try:
+        content = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        content = path.read_text(encoding="cp1252")
+    return json.loads(content)
