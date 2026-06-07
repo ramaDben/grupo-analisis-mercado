@@ -9,7 +9,7 @@ import pandas as pd
 from fastmcp import FastMCP
 
 # Catálogo de tickers válidos (cargado una vez al importar)
-_CATALOG_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "activos.json"
+_CATALOG_PATH = Path(__file__).resolve().parent.parent.parent.parent / "config" / "activos.json"
 
 
 def _load_valid_tickers() -> dict[str, int]:
@@ -198,7 +198,7 @@ def register(mcp: FastMCP) -> None:
         rsi14_val = _rsi(close, 14)
         levels = _get_support_resistance(df, current, atr14_val, digits)
 
-        from datetime import datetime
+        from datetime import datetime, timezone
         return {
             "ticker":    ticker,
             "timeframe": timeframe.upper(),
@@ -210,5 +210,5 @@ def register(mcp: FastMCP) -> None:
             "rsi_14":    round(rsi14_val, 1),
             "atr_14":    round(atr14_val, digits),
             "trend":     trend,
-            "timestamp": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
+            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         }

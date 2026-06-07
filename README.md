@@ -16,7 +16,7 @@ Todo el contenido pasa por aprobación explícita del director antes de enviarse
 
 - **Claude Code** (CLI o Desktop) con suscripción activa
 - **MCP market-data** instalado y configurado (análisis técnico MT5: `get_asset_levels`)
-- **Python 3.10+** para scripts auxiliares (senal_manager, formatter)
+- **Python 3.10+** para el script auxiliar `senal_manager` (límite de señales)
 - **Evolution API en Docker** para envío directo WhatsApp (opcional, pendiente)
 - **gh CLI** para gestión de issues/PRs (opcional)
 
@@ -30,26 +30,32 @@ cd grupo-analisis-mercado
 cp mcp/mcp_config.example.json mcp/mcp_config.json
 # Editar mcp_config.json con tus API keys
 
-# Instalar dependencias Python
-pip install MetaTrader5 pandas requests
+# Dependencias del MCP market-data (máquina del director, con MT5 abierto)
+pip install fastmcp pandas MetaTrader5
+
+# (Opcional) Toolchain de desarrollo y gate de calidad
+uv sync   # ruff · ty · pytest, definidos en pyproject.toml
 ```
 
 Ver [docs/setup-guide.md](docs/setup-guide.md) para instrucciones detalladas.
 
-## 18 Slash Commands
+## 21 Slash Commands
 
 Invocar desde Claude Code con `/nombre`:
 
 | Comando | Propósito |
 |---------|-----------|
-| `/domingo` | Noticias fin de semana + preview semana + sesgo lunes |
-| `/lunes` | Resumen semanal + earnings + concepto + apertura + encuesta |
-| `/martes` | Apertura + dato macro + encuesta precio |
-| `/miercoles` | Apertura + dato macro + encuesta tendencia (prioridad EIA) |
-| `/jueves` | Apertura + dato macro + alerta Jobless Claims |
-| `/viernes_am` | 3 activos + NFP si aplica + encuesta precio del lunes |
-| `/viernes_pm` | Cierre semanal |
-| `/encuesta` | Encuesta de tendencia o precio para cualquier activo |
+| `/domingo` | Paquete dominical: noticias fin de semana + preview + sesgo lunes + encuesta semana |
+| `/lunes` | Paquete del lunes: resumen semanal + earnings + concepto + apertura + encuesta |
+| `/martes` | Operativa martes: apertura + dato macro + encuesta precio |
+| `/miercoles` | Operativa miércoles + prioridad EIA de petróleo |
+| `/jueves` | Operativa jueves + alerta Jobless Claims |
+| `/viernes_am` | AM viernes: 3 activos + NFP si aplica + encuesta precio del lunes |
+| `/viernes_pm` | Cierre semanal por la tarde |
+| `/apertura` | Niveles técnicos interactivos (activo + temporalidad + indicador por activo) |
+| `/encuesta [tipo] [activo]` | Encuesta de sentimiento puro (3 tipos: posicion, tendencia, movimiento) |
+| `/rencuesta` | Desarrolla el tema de una encuesta y construye la malla de conceptos |
+| `/curriculo` | Planifica el currículo educativo y despacha conceptos en orden |
 | `/dato_macro` | Calendario del día → director elige dato a desarrollar |
 | `/noticia` | 3-5 noticias relevantes → director elige |
 | `/chart` | Screenshot MT5 con indicador y temporalidad a elección |
@@ -57,7 +63,7 @@ Invocar desde Claude Code con `/nombre`:
 | `/alerta` | Detecta qué mueve el mercado y genera alerta urgente |
 | `/concepto` | Concepto educativo conectado a lo que pasó esta semana |
 | `/pregunta` | Pregunta abierta para fomentar razonamiento del grupo |
-| `/estado` | Dashboard del sistema (señales, plan del día, MCPs) |
+| `/estado` | Dashboard del sistema (señales, charts, plan del día, MCPs) |
 | `/accion [TICKER]` | Análisis completo de una de las 12 acciones |
 | `/earnings` | Calendario de earnings de las 12 acciones para la semana |
 
@@ -69,31 +75,40 @@ Invocar desde Claude Code con `/nombre`:
 
 **Acciones** (12): #AAPL · #MSFT · #NVDA · #AMZN · #JPM · #BAC · #GS · #MS · #BA · #CAT · #GE · #DE
 
+## MCP integrado: market-data
+
+El MCP `market-data` (`src/market_data_mcp/`) es la capa de datos técnicos: expone **una** tool, `get_asset_levels` (precio, soportes/resistencias S1/S2/R1/R2, RSI14, ATR14 y sesgo desde MT5). El calendario económico y las noticias **no** vienen del MCP — se obtienen vía WebSearch (investing.com + fuentes oficiales) directamente en los comandos.
+
 ## Estructura del proyecto
 
 ```
 grupo-analisis-mercado/
 ├── README.md
 ├── CLAUDE.md                    ← instrucciones para Claude Code
-├── .claude/commands/            ← 18 slash commands (.md)
+├── pyproject.toml               ← toolchain uv (ruff · ty · pytest) del gate de calidad
+├── .claude/commands/            ← 21 slash commands (.md)
+├── src/
+│   └── market_data_mcp/         ← MCP market-data (get_asset_levels: análisis técnico MT5)
+├── tests/                       ← tests del MCP (pytest)
+├── agents/                      ← prompts de sub-agents (recolector · analista · redactor)
 ├── config/
 │   ├── activos.json             ← 20 activos con tickers MT5 y drivers
 │   ├── agenda_semanal.json      ← estructura L-V: contenido, encuesta, horarios
-│   ├── drivers.json             ← drivers fundamentales por activo
-│   ├── drivers_indices_sectores.json
+│   ├── drivers.json · drivers_indices_sectores.json
 │   └── plantilla_señal.json     ← campos obligatorios de una señal
 ├── scripts/
 │   ├── senal_manager.py         ← gestión historial señales (límite 3/semana)
-│   ├── formatter_whatsapp.py    ← formato texto → WhatsApp
-│   └── mt5_integration.py       ← integración MetaTrader5 (legacy)
+│   └── hora_chile.ps1 · ruta_mensaje.ps1  ← helpers deterministas (hora, ruta de guardado)
 ├── templates/                   ← plantillas de mensajes WhatsApp
+├── conceptos/                   ← notas canónicas de conceptos educativos (malla /rencuesta)
 ├── data/
-│   └── historial_senales.json   ← registro de señales enviadas
+│   ├── historial_senales.json   ← registro de señales enviadas
+│   ├── curriculo.json · mapa_conceptos.json · entregas_educativas.json · metricas_educativas.json
+│   └── charts/                  ← PNGs generados (gitignored)
 ├── docs/                        ← documentación del sistema
-│   ├── architecture.md
-│   ├── commands-reference.md
-│   ├── setup-guide.md
-│   └── activos-y-drivers.md
+│   ├── architecture.md · commands-reference.md
+│   ├── setup-guide.md · activos-y-drivers.md
+│   └── ideas/ · design/         ← specs y diseños (ciclo Pulse)
 └── mcp/
     ├── mcp_config.example.json  ← template sin credenciales (en git)
     └── mcp_config.json          ← config real con API keys (gitignored)

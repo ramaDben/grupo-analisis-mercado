@@ -23,8 +23,8 @@ _IMPACTO_RANK_EN = {"low": 0, "medium": 1, "high": 2}
 # Frescura: el JSON se considera viejo si supera estas horas (issue #53).
 _STALE_HORAS = 3
 
-# data/glosario_siglas.json — tools/calendar.py → parent.parent.parent = raíz repo.
-_GLOSARIO_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "glosario_siglas.json"
+# data/glosario_siglas.json — src/market_data_mcp/tools/calendar.py → 4 niveles arriba = raíz repo.
+_GLOSARIO_PATH = Path(__file__).resolve().parent.parent.parent.parent / "data" / "glosario_siglas.json"
 
 
 def _cargar_glosario() -> dict[str, Any]:

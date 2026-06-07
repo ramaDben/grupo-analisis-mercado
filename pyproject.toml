@@ -1,0 +1,49 @@
+[project]
+name = "grupo-analisis-mercado"
+version = "0.1.3"
+description = "Sistema automatizado del Grupo de Análisis de Mercado (MCP market-data + slash commands)."
+requires-python = ">=3.11"
+dependencies = [
+    "fastmcp",
+    "pandas",
+]
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "ty",
+    "pytest",
+    "numpy",  # solo usado en los tests (tests/)
+]
+
+# Proyecto "virtual": no se construye/instala como paquete. market_data_mcp se
+# importa vía el sys.path que arman server.py y tests/conftest.py (apuntando a src/).
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+# scripts/ es legacy en resolución (issue #79/D2).
+extend-exclude = ["scripts", ".pulse"]
+
+[tool.ty.src]
+include = ["src"]
+
+[tool.ty.rules]
+# Las deps de terceros no se instalan en el env efímero del gate.
+unresolved-import = "ignore"
+
+[tool.vulture]
+min_confidence = 80
+
+[tool.deptry]
+known_first_party = ["market_data_mcp"]
+
+[tool.deptry.per_rule_ignores]
+# MetaTrader5 se importa de forma perezosa y solo existe en la máquina del director.
+DEP001 = ["MetaTrader5"]
+# Herramientas de dev (no se importan; son CLI del gate).
+DEP002 = ["ruff", "ty", "pytest", "numpy"]

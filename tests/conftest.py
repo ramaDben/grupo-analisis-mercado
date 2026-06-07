@@ -20,10 +20,10 @@ from pathlib import Path
 
 import pytest
 
-# Raíz del proyecto (…/grupo-analisis-mercado) para importar el paquete.
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-if str(_PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PROJECT_ROOT))
+# Raíz src/ del proyecto para importar el paquete market_data_mcp.
+_SRC_ROOT = Path(__file__).resolve().parent.parent / "src"
+if str(_SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(_SRC_ROOT))
 
 
 # Stub mínimo de fastmcp solo si no está disponible en el entorno.
@@ -45,7 +45,7 @@ except ModuleNotFoundError:
         def run(self, *args, **kwargs):  # no se ejecuta en tests
             raise RuntimeError("FastMCP.run() no debe invocarse en tests")
 
-    _stub.FastMCP = FastMCP
+    _stub.FastMCP = FastMCP  # ty: ignore[unresolved-attribute]  (stub dinámico de fastmcp)
     sys.modules["fastmcp"] = _stub
 
 

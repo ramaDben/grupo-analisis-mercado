@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from market_data_mcp import mt5_client
+from market_data_mcp.tools import calendar
 
 
 def _ts(delta_min: int = 0) -> str:
@@ -34,9 +35,6 @@ def test_leer_calendario_json_parsea_archivo(tmp_path: Path):
 def test_leer_calendario_json_archivo_ausente_lanza(tmp_path: Path):
     with pytest.raises(FileNotFoundError):
         mt5_client.leer_calendario_json(tmp_path / "no_existe.json")
-
-
-from market_data_mcp.tools import calendar
 
 
 _GLOSARIO = {

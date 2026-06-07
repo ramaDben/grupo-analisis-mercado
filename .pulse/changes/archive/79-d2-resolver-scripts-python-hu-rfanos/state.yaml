@@ -1,0 +1,69 @@
+{
+  "artifacts": {
+    "design": {
+      "kind": "design",
+      "path": "design.md",
+      "state": "ready"
+    },
+    "idea": {
+      "kind": "idea",
+      "path": "idea.md",
+      "state": "ready"
+    },
+    "proposal": {
+      "kind": "proposal",
+      "path": "proposal.md",
+      "state": "ready"
+    },
+    "spec": {
+      "kind": "spec",
+      "path": "spec.md",
+      "state": "ready"
+    },
+    "tasks": {
+      "kind": "tasks",
+      "path": "tasks.md",
+      "state": "ready"
+    }
+  },
+  "bump_level": null,
+  "closed_at": "2026-06-07T15:29:25.348589Z",
+  "created_at": "2026-06-07T14:55:31.468118Z",
+  "current_phase": "close",
+  "design_approved_at": "2026-06-07T15:15:57.224857Z",
+  "design_approved_by": "director",
+  "domain": "higiene-repo",
+  "gate_predicates": [
+    {
+      "kind": "change_field_required",
+      "target_phase": "apply",
+      "value": "design_approved_at"
+    },
+    {
+      "kind": "artifact_required",
+      "target_phase": "apply",
+      "value": "design.md"
+    },
+    {
+      "kind": "artifact_required",
+      "target_phase": "apply",
+      "value": "tasks.md"
+    }
+  ],
+  "issue": {
+    "labels": [
+      "type:chore"
+    ],
+    "number": 79,
+    "title": "[D2] Resolver scripts Python hu\u00e9rfanos",
+    "url": "https://github.com/bbenja11/grupo-analisis-mercado/issues/79"
+  },
+  "slug": {
+    "issue_number": 79,
+    "title_slug": "d2-resolver-scripts-python-hu-rfanos"
+  },
+  "tests_passed_at": "2026-06-07T15:28:34.964367Z",
+  "updated_at": "2026-06-07T15:29:25.348589Z",
+  "version_bumped_from": "0.1.0",
+  "version_bumped_to": "0.1.1"
+}

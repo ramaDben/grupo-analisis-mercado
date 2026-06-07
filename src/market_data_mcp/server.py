@@ -10,7 +10,7 @@ import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-# Directorio de este proyecto (grupo-analisis-mercado/)
+# Directorio src/ (parent del paquete market_data_mcp), para el bootstrap de sys.path.
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 
 # Bootstrap: cuando se corre como script, Python pone el dir del script en
@@ -56,7 +56,7 @@ async def lifespan(server: FastMCP):
         try:
             from market_data_mcp.mt5_client import disconnect
             disconnect()
-        except Exception:
+        except Exception:  # nosec B110 — shutdown best-effort: si MT5 ya cayó, no hay nada que limpiar
             pass
 
 
@@ -66,7 +66,7 @@ mcp = FastMCP(
         "Capa de datos confiable para Grupo de Análisis de Mercado. "
         "Tools: get_asset_levels (técnico MT5), obtener_calendario_macro (calendario "
         "macro nativo MT5, fuente primaria; WebSearch investing.com es fallback). "
-        "Hora en reloj del servidor MT5, sin conversiones. "
+        "Hora en reloj del servidor MT5, sin conversiones. Noticias vía WebSearch. "
         "Contrato de error: si el dato no está disponible retorna {'error': 'CÓDIGO', 'message': '...'} "
         "— nunca array vacío, nunca None silencioso."
     ),
@@ -75,11 +75,10 @@ mcp = FastMCP(
     mask_error_details=False,
 )
 
-from market_data_mcp.tools import levels, calendar, context  # noqa: E402
+from market_data_mcp.tools import levels, calendar  # noqa: E402
 
 levels.register(mcp)
 calendar.register(mcp)
-context.register(mcp)
 
 
 if __name__ == "__main__":

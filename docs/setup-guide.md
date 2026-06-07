@@ -5,11 +5,11 @@
 | Requisito | Versión mínima | Para qué se usa |
 |-----------|---------------|-----------------|
 | Claude Code | última | Invocar los 21 slash commands |
-| Python | 3.10+ | Scripts auxiliares (senal_manager, formatter) |
+| Python | 3.10+ | Script auxiliar senal_manager (límite de señales) |
 | git | cualquiera | Control de versiones |
 | gh CLI | cualquiera | Crear issues/PRs (opcional) |
 | Docker Desktop | cualquiera | Evolution API para WhatsApp (futuro) |
-| MetaTrader 5 | cualquiera | Si se usa el script legacy `mt5_integration.py` |
+| MetaTrader 5 | cualquiera | Requerido por el MCP market-data (`get_asset_levels`) |
 
 ---
 
@@ -28,7 +28,7 @@ cd grupo-analisis-mercado
 pip install MetaTrader5 pandas requests
 ```
 
-> `MetaTrader5` solo es necesario si se usa el script `scripts/mt5_integration.py` (integración legacy). Los comandos actuales usan el MCP `market-data` (`get_asset_levels`) en su lugar.
+> `MetaTrader5` lo requiere el MCP `market-data` (`get_asset_levels`), que corre en la máquina del director con MT5 abierto. Los comandos obtienen los niveles técnicos a través de ese MCP.
 
 ### 3. Configurar el MCP market-data
 
