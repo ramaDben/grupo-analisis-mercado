@@ -20,6 +20,13 @@ data/datos_entregables.json
 data/ultimo_analisis.json
 data/ultimo_evento.json
 data/mt5_command.json
+data/mt5_response.json
+
+# Pulse — estado de runtime efímero (changes/, specs/ y heuristics/ SÍ se versionan)
+.pulse/state.sqlite
+.pulse/state.sqlite-shm
+.pulse/state.sqlite-wal
+.pulse/audit.jsonl
 
 # MCP config real (tiene API keys — usar mcp_config.example.json como referencia)
 mcp/mcp_config.json
