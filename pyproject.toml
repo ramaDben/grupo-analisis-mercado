@@ -1,0 +1,38 @@
+[project]
+name = "grupo-analisis-mercado"
+version = "0.1.0"
+description = "Sistema automatizado del Grupo de Análisis de Mercado (MCP market-data + slash commands)."
+requires-python = ">=3.11"
+dependencies = [
+    "fastmcp",
+    "pandas",
+    "numpy",
+]
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "ty",
+    "pytest",
+]
+
+# Proyecto "virtual": no se construye/instala como paquete. market_data_mcp se
+# importa vía el sys.path que arma market_data_mcp/tests/conftest.py.
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["market_data_mcp/tests"]
+
+[tool.ruff]
+target-version = "py311"
+# scripts/ es legacy en resolución (issue #79/D2); se incorpora tras D2.
+extend-exclude = ["scripts", ".pulse"]
+
+[tool.ty.src]
+include = ["market_data_mcp"]
+
+[tool.ty.rules]
+# Las deps de terceros no se instalan en el env efímero del gate; los imports
+# sin resolver no son bugs de tipo reales.
+unresolved-import = "ignore"

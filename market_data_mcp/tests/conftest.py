@@ -45,7 +45,7 @@ except ModuleNotFoundError:
         def run(self, *args, **kwargs):  # no se ejecuta en tests
             raise RuntimeError("FastMCP.run() no debe invocarse en tests")
 
-    _stub.FastMCP = FastMCP
+    _stub.FastMCP = FastMCP  # ty: ignore[unresolved-attribute]  (stub dinámico de fastmcp)
     sys.modules["fastmcp"] = _stub
 
 
