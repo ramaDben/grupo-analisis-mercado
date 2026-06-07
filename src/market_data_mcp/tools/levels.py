@@ -9,7 +9,7 @@ import pandas as pd
 from fastmcp import FastMCP
 
 # Catálogo de tickers válidos (cargado una vez al importar)
-_CATALOG_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "activos.json"
+_CATALOG_PATH = Path(__file__).resolve().parent.parent.parent.parent / "config" / "activos.json"
 
 
 def _load_valid_tickers() -> dict[str, int]:

@@ -10,7 +10,7 @@ import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-# Directorio de este proyecto (grupo-analisis-mercado/)
+# Directorio src/ (parent del paquete market_data_mcp), para el bootstrap de sys.path.
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 
 # Bootstrap: cuando se corre como script, Python pone el dir del script en
@@ -56,7 +56,7 @@ async def lifespan(server: FastMCP):
         try:
             from market_data_mcp.mt5_client import disconnect
             disconnect()
-        except Exception:
+        except Exception:  # nosec B110 — shutdown best-effort: si MT5 ya cayó, no hay nada que limpiar
             pass
 
 
