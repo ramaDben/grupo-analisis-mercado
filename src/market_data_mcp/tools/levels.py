@@ -142,7 +142,7 @@ def register(mcp: FastMCP) -> None:
         digits = _VALID_TICKERS[ticker]
 
         try:
-            from market_data_mcp.mt5_client import get_rates, ema, atr, TIMEFRAME_MAP
+            from market_data_mcp.mt5_client import get_rates, ema, atr, macd, bollinger, TIMEFRAME_MAP
         except ImportError:
             return {
                 "error": "MT5_UNAVAILABLE",
@@ -177,15 +177,18 @@ def register(mcp: FastMCP) -> None:
                 "message": f"Error al obtener datos de {ticker} {timeframe}: {exc}",
             }
 
-        if len(df) < 100:
+        if len(df) < 150:
             return {
                 "error": "INSUFFICIENT_DATA",
-                "message": f"Solo {len(df)} velas disponibles para {ticker} {timeframe}. Mínimo requerido: 100.",
+                "message": f"Solo {len(df)} velas disponibles para {ticker} {timeframe}. Mínimo requerido: 150.",
             }
 
         close = df["close"]
         ema100_val = float(ema(close, 100).iloc[-1])
-        atr14_val = float(atr(df, 14).iloc[-1])
+        ema50_val  = float(ema(close, 50).iloc[-1])
+        atr14_val  = float(atr(df, 14).iloc[-1])
+        macd_l, macd_s, macd_h = macd(close)
+        bb_u, bb_m, bb_l = bollinger(close)
         current = float(close.iloc[-1])
 
         if current > ema100_val:
@@ -200,15 +203,23 @@ def register(mcp: FastMCP) -> None:
 
         from datetime import datetime, timezone
         return {
-            "ticker":    ticker,
-            "timeframe": timeframe.upper(),
-            "price":     round(current, digits),
-            "s2":        levels["s2"],
-            "s1":        levels["s1"],
-            "r1":        levels["r1"],
-            "r2":        levels["r2"],
-            "rsi_14":    round(rsi14_val, 1),
-            "atr_14":    round(atr14_val, digits),
-            "trend":     trend,
-            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+            "ticker":       ticker,
+            "timeframe":    timeframe.upper(),
+            "price":        round(current, digits),
+            "s2":           levels["s2"],
+            "s1":           levels["s1"],
+            "r1":           levels["r1"],
+            "r2":           levels["r2"],
+            "rsi_14":       round(rsi14_val, 1),
+            "atr_14":       round(atr14_val, digits),
+            "ema_50":       round(ema50_val, digits),
+            "ema_100":      round(ema100_val, digits),
+            "macd_line":    round(macd_l, 4),
+            "macd_signal":  round(macd_s, 4),
+            "macd_hist":    round(macd_h, 4),
+            "bb_upper":     round(bb_u, digits),
+            "bb_mid":       round(bb_m, digits),
+            "bb_lower":     round(bb_l, digits),
+            "trend":        trend,
+            "timestamp":    datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         }
