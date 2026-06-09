@@ -83,7 +83,12 @@ def test_ticker_valido_nunca_devuelve_none_ni_lanza(collector):
     else:
         # Camino feliz (solo si MT5 está conectado en el entorno)
         assert res["ticker"] == "XAUUSD"
-        for k in ("price", "s1", "s2", "r1", "r2", "rsi_14", "atr_14", "trend", "timestamp"):
+        for k in (
+            "price", "s1", "s2", "r1", "r2", "rsi_14", "atr_14", "trend", "timestamp",
+            "ema_50", "ema_100",
+            "macd_line", "macd_signal", "macd_hist",
+            "bb_upper", "bb_mid", "bb_lower",
+        ):
             assert k in res
 
 
@@ -133,6 +138,74 @@ def test_camino_feliz_con_mt5_mockeado(collector, monkeypatch):
 
     # Serie con deriva alcista → precio por encima de la EMA100 → ALCISTA
     assert res["trend"] == "ALCISTA"
+
+    # Campos nuevos siempre presentes y con tipos correctos
+    for k in ("ema_50", "ema_100", "bb_upper", "bb_mid", "bb_lower"):
+        assert k in res, f"falta campo {k}"
+        assert isinstance(res[k], float), f"{k} debe ser float"
+        assert res[k] > 0, f"{k} debe ser positivo"
+
+    for k in ("macd_line", "macd_signal", "macd_hist"):
+        assert k in res, f"falta campo {k}"
+        assert isinstance(res[k], float), f"{k} debe ser float"
+
+    # EMA 50 >= EMA 100 en serie con deriva alcista fuerte
+    assert res["ema_50"] >= res["ema_100"], "EMA rápida >= EMA lenta en tendencia alcista"
+
+    # Bollinger: upper > mid > lower
+    assert res["bb_upper"] > res["bb_mid"] > res["bb_lower"]
+
+
+# --- macd() y bollinger() (mt5_client) ---
+
+def test_macd_serie_creciente_hist_positivo():
+    """Con serie creciente la línea MACD > señal → histograma positivo."""
+    from market_data_mcp import mt5_client
+    serie = pd.Series(range(1, 101), dtype="float64")
+    macd_l, macd_s, macd_h = mt5_client.macd(serie)
+    assert isinstance(macd_l, float)
+    assert isinstance(macd_s, float)
+    assert isinstance(macd_h, float)
+    assert macd_h > 0, "serie creciente → histograma positivo"
+
+
+def test_macd_serie_decreciente_hist_negativo():
+    from market_data_mcp import mt5_client
+    serie = pd.Series(range(100, 0, -1), dtype="float64")
+    _, _, macd_h = mt5_client.macd(serie)
+    assert macd_h < 0, "serie decreciente → histograma negativo"
+
+
+def test_bollinger_upper_mayor_que_lower():
+    from market_data_mcp import mt5_client
+    rng = np.random.default_rng(7)
+    serie = pd.Series(100 + rng.standard_normal(60).cumsum())
+    bb_u, bb_m, bb_l = mt5_client.bollinger(serie)
+    assert isinstance(bb_u, float) and isinstance(bb_m, float) and isinstance(bb_l, float)
+    assert bb_u > bb_m > bb_l, "upper > mid > lower siempre"
+
+
+def test_bollinger_banda_media_es_sma():
+    """La banda media debe coincidir con la SMA de los últimos `period` valores."""
+    from market_data_mcp import mt5_client
+    serie = pd.Series(range(1, 41), dtype="float64")  # 40 valores, period=20
+    _, bb_m, _ = mt5_client.bollinger(serie, period=20)
+    sma_manual = float(serie.iloc[-20:].mean())
+    assert abs(bb_m - sma_manual) < 1e-9
+
+
+def test_insuficientes_datos_umbral_150(collector, monkeypatch):
+    """El umbral mínimo de barras es 150 (suficiente para MACD + Bollinger)."""
+    from market_data_mcp import mt5_client
+
+    df_corto = _df_ohlc(n=149)  # 1 bar por debajo del umbral
+    monkeypatch.setattr(mt5_client, "get_rates", lambda ticker, tf, n_bars=300: df_corto)
+
+    levels.register(collector)
+    res = collector.tools["get_asset_levels"](ticker="XAUUSD", timeframe="H4")
+
+    assert res["error"] == "INSUFFICIENT_DATA"
+    assert "150" in res["message"]
 
 
 def test_mt5_no_instalado_retorna_error_no_lanza(collector, monkeypatch):
