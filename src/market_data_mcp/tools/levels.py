@@ -127,7 +127,9 @@ def register(mcp: FastMCP) -> None:
             timeframe: Marco temporal MT5 (M1, M5, M15, M30, H1, H4, H12, D1, W1, MN1).
 
         Returns:
-            Dict con: ticker, timeframe, price, s1, s2, r1, r2, rsi_14, atr_14, trend, timestamp.
+            Dict con: ticker, timeframe, price, s1, s2, r1, r2, rsi_14, atr_14,
+            ema_50, ema_100, macd_line, macd_signal, macd_hist,
+            bb_upper, bb_mid, bb_lower, trend, timestamp.
             O {"error": "CÓDIGO", "message": "..."} si el dato no está disponible.
         """
         if ticker not in _VALID_TICKERS:
