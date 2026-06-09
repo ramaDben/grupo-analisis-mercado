@@ -2,7 +2,7 @@ Genera la Apertura de Mercado de forma interactiva: pregunta activo, temporalida
 
 ## SETUP
 1. Lee `config/agenda_semanal.json` y `config/activos.json`.
-2. Los niveles (precio, T1, T2, Su1, Su2) los ingresa el director manualmente. Los indicadores (RSI/ATR) se obtienen vía `mcp__market-data__get_asset_levels` solo si aplica.
+2. Los niveles (precio, T1, T2, Su1, Su2) los ingresa el director manualmente. Los indicadores (RSI/ATR/EMA/MACD/Bollinger) se obtienen vía `mcp__market-data__get_asset_levels` solo si aplica.
 
 ---
 
@@ -41,14 +41,13 @@ Para CADA activo, pregunta:
 
 ```
 ¿Qué indicador en la lectura de [ACTIVO]?
-1. RSI    — sobrecompra/sobreventa
-2. ATR    — volatilidad (útil en USD/CLP)
-3. Limpio — solo niveles, sin indicador
-— Próximamente (requiere ampliar el MCP): MACD · SMA 50+200 · Bollinger
+1. RSI        — sobrecompra/sobreventa
+2. ATR        — volatilidad del marco
+3. EMA 50/100 — tendencia por medias móviles
+4. MACD       — momentum y cruces
+5. Bollinger  — volatilidad y bandas de precio
+6. Limpio     — solo niveles, sin indicador
 ```
-
-Si el director elige una opción "Próximamente" (MACD/SMA/Bollinger), responde:
-`Ese indicador aún no está en el MCP. Por ahora elige RSI, ATR o Limpio.` y vuelve a preguntar. No falles.
 
 ---
 
@@ -102,9 +101,15 @@ Reglas de parsing:
 
 ### 4C — Indicador (reutiliza resultado de 4A)
 
-Solo si el director eligió **RSI** o **ATR** en el PASO 3:
+Solo si el director eligió **RSI**, **ATR**, **EMA 50/100**, **MACD** o **Bollinger** en el PASO 3:
 
-- Si el resultado de 4A fue exitoso: extraer `rsi_14` (RSI) o `atr_14` (ATR) de ese mismo resultado. **No hacer un segundo call al MCP.**
+- Si el resultado de 4A fue exitoso: extraer del resultado según el indicador elegido:
+  - RSI → `rsi_14`
+  - ATR → `atr_14`
+  - EMA 50/100 → `ema_50`, `ema_100`
+  - MACD → `macd_line`, `macd_signal`, `macd_hist`
+  - Bollinger → `bb_upper`, `bb_mid`, `bb_lower`
+  **No hacer un segundo call al MCP.**
 - Si el resultado de 4A fue `null` (error de MT5): mostrar:
   ```
   ⚠️ No se pudo obtener [RSI/ATR] desde MT5. ¿Qué deseas hacer?
@@ -135,8 +140,24 @@ Línea `{{por_que_temporalidad}}` (justifica la TF elegida según la volatilidad
   - WTI en 15M → `💡 Por qué 15M aquí: el petróleo se mueve fuerte y rápido, en este marco verás señales veloces pero con más ruido.`
 
 Línea de indicador `{{lectura_indicador}}` (omitir si "Limpio"):
-- RSI → `📐 RSI [TF]: [rsi_14] — [sobrecompra >70 / sobreventa <30 / neutro]`
-- ATR → `📐 ATR [TF]: [atr_14] — volatilidad de referencia del marco`
+| Indicador | Línea generada |
+|---|---|
+| RSI | `📐 RSI [TF]: [rsi_14] — [sobrecompra >70 / sobreventa <30 / neutro]` |
+| ATR | `📐 ATR [TF]: [atr_14] — volatilidad de referencia del marco` |
+| EMA 50/100 | Ver reglas abajo |
+| MACD | Ver reglas abajo |
+| Bollinger | `📐 Bollinger [TF]: banda alta [bb_upper] \| media [bb_mid] \| baja [bb_lower] — precio [tocando banda alta / baja / en el centro]` |
+| Limpio | *(omitir línea completa)* |
+
+**Reglas EMA 50/100:**
+- Precio > ema_50 Y precio > ema_100 → `📐 EMA 50 [TF]: [val] | EMA 100 [TF]: [val] — precio sobre ambas → *Alcista* 🟢`
+- Precio < ema_50 Y precio < ema_100 → `📐 EMA 50 [TF]: [val] | EMA 100 [TF]: [val] — precio bajo ambas → *Bajista* 🔴`
+- Precio entre ema_50 y ema_100 → `📐 EMA 50 [TF]: [val] | EMA 100 [TF]: [val] — precio entre ambas → *Esperar confirmación* 🟡`
+
+**Reglas MACD:**
+- macd_hist > 0 → `📐 MACD [TF]: línea [val] | señal [val] | hist [val] — momentum *Alcista* 🟢`
+- macd_hist < 0 → `📐 MACD [TF]: línea [val] | señal [val] | hist [val] — momentum *Bajista* 🔴`
+- abs(macd_hist) < 0.0001 × precio → `📐 MACD [TF]: línea [val] | señal [val] | hist [val] — *Sin señal clara* 🟡`
 
 Plantilla del mensaje:
 
@@ -177,7 +198,7 @@ Plantilla del mensaje:
 - **Orden de niveles**: primero todos los techos (más próximo → siguiente), luego todos los suelos (más próximo → siguiente), luego `Zona de interés`. La zona usa siempre los "más próximos": `[Suelo más próximo] – [Techo más próximo]`.
 - **T2/Su2 opcionales**: si el director NO ingresó T2 (o Su2) en PASO 4B, se **omite por completo** esa línea (sin dejar línea en blanco).
 - **Precio**: siempre `💰 Precio actual: [precio]`.
-- **Indicador**: siempre `📐 RSI/ATR [TF]:` (ver `{{lectura_indicador}}` arriba). Omitir si "Limpio".
+- **Indicador**: siempre `📐 [INDICADOR] [TF]:` según la tabla `{{lectura_indicador}}` arriba. Omitir si "Limpio".
 - **Justificación de temporalidad**: siempre la línea `💡 Por qué [TF] aquí:` (ver `{{por_que_temporalidad}}` arriba), derivada de `nota_volatilidad` del activo. Nunca omitir ni usar la palabra "corto" sin cuantificar.
 
 **Decimales**: respeta el campo `digits` de `config/activos.json` por activo (regla MT5 de CLAUDE.md). Nunca truncar ceros.
@@ -202,7 +223,7 @@ El mensaje de niveles tiene **una sola** forma válida (la plantilla del PASO 5)
 - ❌ `Resistencia 1/2` · `Soporte 1/2` → usa `Techo/Suelo más próximo` y `siguiente`.
 - ❌ `Techo objetivo` · `Techo inmediato` · `Suelo fuerte` → usa `más próximo` / `siguiente`.
 - ❌ `📊 *Precio actual*` · `📌 Precio actual` como rótulo de precio → usa `💰 Precio actual`.
-- ❌ `⚠️ *RSI 1H*: ...` · `• RSI: ...` inline → usa `📐 RSI [TF]:` (línea `{{lectura_indicador}}`).
+- ❌ `⚠️ *RSI 1H*: ...` · `• RSI: ...` inline → usa `📐 RSI/ATR/EMA/MACD/Bollinger [TF]:` (línea `{{lectura_indicador}}`).
 - ❌ Día de la semana en la fecha (`martes 2 de junio`) → usa `2 de junio de 2026`.
 - ❌ Línea extra `Sesgo: ...` o `🟢 *Sesgo del día*` → el sesgo va implícito en el bloque de escenarios `🟢/🟡/🔴`.
 - ❌ Bloque de escenarios con orden invertido o emoji duplicado (`🟢 Sobre X → *Alcista* 🟢 → siguiente objetivo`) → orden canónico: `🟢 *Alcista* — Precio sobre X → tendencia compradora (intra-day)`.
