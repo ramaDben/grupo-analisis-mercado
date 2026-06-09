@@ -135,6 +135,44 @@ def test_camino_feliz_con_mt5_mockeado(collector, monkeypatch):
     assert res["trend"] == "ALCISTA"
 
 
+# --- macd() y bollinger() (mt5_client) ---
+
+def test_macd_serie_creciente_hist_positivo():
+    """Con serie creciente la línea MACD > señal → histograma positivo."""
+    from market_data_mcp import mt5_client
+    serie = pd.Series(range(1, 101), dtype="float64")
+    macd_l, macd_s, macd_h = mt5_client.macd(serie)
+    assert isinstance(macd_l, float)
+    assert isinstance(macd_s, float)
+    assert isinstance(macd_h, float)
+    assert macd_h > 0, "serie creciente → histograma positivo"
+
+
+def test_macd_serie_decreciente_hist_negativo():
+    from market_data_mcp import mt5_client
+    serie = pd.Series(range(100, 0, -1), dtype="float64")
+    _, _, macd_h = mt5_client.macd(serie)
+    assert macd_h < 0, "serie decreciente → histograma negativo"
+
+
+def test_bollinger_upper_mayor_que_lower():
+    from market_data_mcp import mt5_client
+    rng = np.random.default_rng(7)
+    serie = pd.Series(100 + rng.standard_normal(60).cumsum())
+    bb_u, bb_m, bb_l = mt5_client.bollinger(serie)
+    assert isinstance(bb_u, float) and isinstance(bb_m, float) and isinstance(bb_l, float)
+    assert bb_u > bb_m > bb_l, "upper > mid > lower siempre"
+
+
+def test_bollinger_banda_media_es_sma():
+    """La banda media debe coincidir con la SMA de los últimos `period` valores."""
+    from market_data_mcp import mt5_client
+    serie = pd.Series(range(1, 41), dtype="float64")  # 40 valores, period=20
+    _, bb_m, _ = mt5_client.bollinger(serie, period=20)
+    sma_manual = float(serie.iloc[-20:].mean())
+    assert abs(bb_m - sma_manual) < 1e-9
+
+
 def test_mt5_no_instalado_retorna_error_no_lanza(collector, monkeypatch):
     """Regresión (#30/#31): mt5_client importa MetaTrader5 de forma perezosa
     dentro de get_rates. Si el paquete no está instalado (caso de CI), el

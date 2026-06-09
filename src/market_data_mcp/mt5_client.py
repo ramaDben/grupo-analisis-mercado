@@ -119,6 +119,32 @@ def atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
     return tr.ewm(span=period, adjust=False).mean()
 
 
+def macd(
+    series: pd.Series,
+    fast: int = 12,
+    slow: int = 26,
+    signal: int = 9,
+) -> tuple[float, float, float]:
+    """MACD estándar (12, 26, 9). Retorna (macd_line, signal_line, histogram) del último bar."""
+    macd_line = ema(series, fast) - ema(series, slow)
+    signal_line = ema(macd_line, signal)
+    histogram = macd_line - signal_line
+    return float(macd_line.iloc[-1]), float(signal_line.iloc[-1]), float(histogram.iloc[-1])
+
+
+def bollinger(
+    series: pd.Series,
+    period: int = 20,
+    std: int = 2,
+) -> tuple[float, float, float]:
+    """Bandas de Bollinger (20, 2). Retorna (upper, mid, lower) del último bar."""
+    mid = series.rolling(period).mean()
+    sigma = series.rolling(period).std()
+    upper = mid + std * sigma
+    lower = mid - std * sigma
+    return float(upper.iloc[-1]), float(mid.iloc[-1]), float(lower.iloc[-1])
+
+
 def leer_calendario_json(path: "Path | None" = None) -> dict:
     """Lee y parsea el calendario macro exportado por el Service MQL5.
 
