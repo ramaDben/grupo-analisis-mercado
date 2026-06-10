@@ -4,8 +4,6 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-import pytest
-
 from market_data_mcp.tools import calendar
 
 _SANTIAGO = ZoneInfo("America/Santiago")
