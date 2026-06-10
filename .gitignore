@@ -50,3 +50,4 @@ Thumbs.db
 
 # Claude Code settings locales
 .claude/settings.local.json
+data/cache/
