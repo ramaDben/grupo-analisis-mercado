@@ -65,8 +65,9 @@ mcp = FastMCP(
     instructions=(
         "Capa de datos confiable para Grupo de Análisis de Mercado. "
         "Tools: get_asset_levels (técnico MT5), obtener_calendario_macro (calendario "
-        "macro nativo MT5, fuente primaria; WebSearch investing.com es fallback). "
-        "Hora en reloj del servidor MT5, sin conversiones. Noticias vía WebSearch. "
+        "macro vía triple feed Fair Economy — ForexFactory + MetalsMine + Energy EXCH; "
+        "WebSearch investing.com es fallback si los 3 feeds fallan). "
+        "Hora en America/Santiago. Noticias vía WebSearch. "
         "Contrato de error: si el dato no está disponible retorna {'error': 'CÓDIGO', 'message': '...'} "
         "— nunca array vacío, nunca None silencioso."
     ),
