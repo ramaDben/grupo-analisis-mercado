@@ -1,7 +1,7 @@
-"""Tests del calendario macro vía triple feed Fair Economy (ff + mm + ee)."""
+"""Tests del calendario macro vía Investing.com (getCalendarFilteredData)."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from market_data_mcp.tools import calendar
@@ -11,19 +11,42 @@ _SANTIAGO = ZoneInfo("America/Santiago")
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
-def _ev(title="CPI m/m", impact="High", dias_offset=0) -> dict:
-    """Evento Fair Economy con fecha en Santiago (hoy + dias_offset) al mediodía."""
-    now = datetime.now(tz=_SANTIAGO).replace(
-        hour=12, minute=0, second=0, microsecond=0
-    ) + timedelta(days=dias_offset)
-    return {
-        "title": title,
-        "country": "USD",
-        "date": now.isoformat(),
-        "impact": impact,
-        "forecast": "0.3%",
-        "previous": "0.4%",
-    }
+def _fila(
+    row_id=550758,
+    nombre="Core CPI (MoM) (May)",
+    pais="Chile",
+    divisa="CLP",
+    volatilidad="High Volatility Expected",
+    actual="0.4%",
+    titulo_actual="",
+    forecast="0.3%",
+    previo="0.2%",
+    dias_offset=0,
+) -> str:
+    """Fila HTML como la retorna getCalendarFilteredData (timeZone=55 → UTC)."""
+    dt_utc = (
+        datetime.now(tz=_SANTIAGO).replace(hour=12, minute=0, second=0, microsecond=0)
+        + timedelta(days=dias_offset)
+    ).astimezone(timezone.utc)
+    dt = dt_utc.strftime("%Y/%m/%d %H:%M:%S")
+    return (
+        f'<tr id="eventRowId_{row_id}" class="js-event-item " event_attr_ID="1218" '
+        f'data-event-datetime="{dt}">'
+        f'<td class="first left time js-time" >08:00</td>'
+        f'<td class="left flagCur noWrap"><span title="{pais}" class="ceFlags" '
+        f'data-img_key="x">&nbsp;</span> {divisa}</td>'
+        f'<td class="left textNum sentiment noWrap" title="{volatilidad}" '
+        f'data-img_key="bull3"><i></i></td>'
+        f'<td class="left event" title="Click to view more info"><a href="/x" '
+        f'target="_blank">      {nombre}</a></td>'
+        f'<td class="bold act blackFont event-{row_id}-actual" title="{titulo_actual}" '
+        f'id="eventActual_{row_id}">{actual or "&nbsp;"}</td>'
+        f'<td class="fore event-{row_id}-forecast" '
+        f'id="eventForecast_{row_id}">{forecast or "&nbsp;"}</td>'
+        f'<td class="prev blackFont event-{row_id}-previous" '
+        f'id="eventPrevious_{row_id}"><span title="">{previo or "&nbsp;"}</span></td>'
+        f'</tr>'
+    )
 
 
 _GLOSARIO_TEST = {
@@ -38,24 +61,73 @@ _GLOSARIO_TEST = {
 }
 
 
-# ── unit: _iso_to_santiago ────────────────────────────────────────────────────
+# ── unit: _utc_a_santiago ─────────────────────────────────────────────────────
 
-def test_iso_to_santiago_convierte_utc_correctamente():
-    # 2026-06-10T18:30:00+00:00 UTC = 14:30 Santiago (UTC-4, invierno junio)
-    result = calendar._iso_to_santiago("2026-06-10T18:30:00+00:00")
-    assert result == "2026-06-10 14:30"
+def test_utc_a_santiago_convierte_correctamente():
+    # 2026-06-10 12:30 UTC = 08:30 Santiago (UTC-4, invierno junio)
+    assert calendar._utc_a_santiago("2026/06/10 12:30:00") == "2026-06-10 08:30"
 
 
-def test_iso_to_santiago_preserva_hora_ya_en_santiago():
-    # Fecha ya con offset -04:00 (Santiago invierno)
-    result = calendar._iso_to_santiago("2026-06-10T14:30:00-04:00")
-    assert result == "2026-06-10 14:30"
+# ── unit: _parsear_filas ──────────────────────────────────────────────────────
+
+def test_parsear_fila_completa():
+    evs = calendar._parsear_filas(_fila())
+    assert len(evs) == 1
+    ev = evs[0]
+    assert ev["nombre"] == "Core CPI (MoM) (May)"
+    assert ev["pais"] == "Chile"
+    assert ev["divisa"] == "CLP"
+    assert ev["impacto"] == "alto"
+    assert ev["actual"] == "0.4%"
+    assert ev["forecast"] == "0.3%"
+    assert ev["previo"] == "0.2%"
+    assert ev["fuente"] == "investing"
+
+
+def test_parsear_actual_vacio_sin_resultado():
+    evs = calendar._parsear_filas(_fila(actual=""))
+    assert evs[0]["actual"] == ""
+    assert "resultado" not in evs[0]
+
+
+def test_resultado_mejor_que_esperado():
+    evs = calendar._parsear_filas(_fila(titulo_actual="Better Than Expected"))
+    assert evs[0]["resultado"] == "mejor"
+
+
+def test_resultado_peor_que_esperado():
+    evs = calendar._parsear_filas(_fila(titulo_actual="Worse Than Expected"))
+    assert evs[0]["resultado"] == "peor"
+
+
+def test_resultado_en_linea_con_forecast():
+    evs = calendar._parsear_filas(_fila(titulo_actual=""))
+    assert evs[0]["resultado"] == "en_linea"
+
+
+def test_resultado_omitido_sin_forecast():
+    evs = calendar._parsear_filas(_fila(forecast=""))
+    assert "resultado" not in evs[0]
+
+
+def test_volatilidad_a_impacto():
+    evs = calendar._parsear_filas(
+        _fila(row_id=1, volatilidad="Low Volatility Expected")
+        + _fila(row_id=2, volatilidad="Moderate Volatility Expected")
+        + _fila(row_id=3, volatilidad="High Volatility Expected")
+    )
+    assert [e["impacto"] for e in evs] == ["bajo", "medio", "alto"]
+
+
+def test_fila_sin_evento_se_ignora():
+    html = '<tr id="eventRowId_99" class="js-event-item" data-event-datetime="2026/06/10 12:00:00"><td>festivo</td></tr>'
+    assert calendar._parsear_filas(html) == []
 
 
 # ── unit: _enganchar_glosario ─────────────────────────────────────────────────
 
 def test_enganchar_por_sigla_literal():
-    entry = calendar._enganchar_glosario("Core CPI m/m", _GLOSARIO_TEST)
+    entry = calendar._enganchar_glosario("Core CPI (MoM) (May)", _GLOSARIO_TEST)
     assert entry is not None
     assert entry["nombre_es"] == "IPC"
 
@@ -67,119 +139,91 @@ def test_enganchar_por_titulos_ff():
 
 
 def test_enganchar_sin_match_retorna_none():
-    entry = calendar._enganchar_glosario("Baker Hughes Oil Rig Count", _GLOSARIO_TEST)
-    assert entry is None
+    assert calendar._enganchar_glosario("Baker Hughes Oil Rig Count", _GLOSARIO_TEST) is None
 
 
 def test_enganchar_ignora_meta_y_event_id_numericos():
-    # _meta y "840030016" no deben producir match
-    entry = calendar._enganchar_glosario("840030016 meta descripcion", _GLOSARIO_TEST)
-    assert entry is None
+    assert calendar._enganchar_glosario("840030016 meta descripcion", _GLOSARIO_TEST) is None
 
 
-# ── unit: _fetch_feed ─────────────────────────────────────────────────────────
+# ── unit: _fetch_calendario ───────────────────────────────────────────────────
 
-def test_fetch_feed_retorna_lista_vacia_en_error(monkeypatch):
+def test_fetch_retorna_vacio_en_error(monkeypatch, tmp_path):
     import urllib.request as urllib_req
+
+    monkeypatch.setattr(calendar, "_CACHE_DIR", tmp_path)
 
     def _raise(*args, **kwargs):
         raise Exception("connection refused")
 
     monkeypatch.setattr(urllib_req, "urlopen", _raise)
-    assert calendar._fetch_feed("ff") == []
+    assert calendar._fetch_calendario("thisWeek") == ""
+
+
+def test_fetch_usa_cache_vencida_como_respaldo(monkeypatch, tmp_path):
+    import urllib.request as urllib_req
+
+    monkeypatch.setattr(calendar, "_CACHE_DIR", tmp_path)
+    cache = tmp_path / "investing_calendar_thisWeek.html"
+    cache.write_text("<tr>cached</tr>", encoding="utf-8")
+    monkeypatch.setattr(calendar, "_cache_valid", lambda p: False)
+
+    def _raise(*args, **kwargs):
+        raise Exception("timeout")
+
+    monkeypatch.setattr(urllib_req, "urlopen", _raise)
+    assert calendar._fetch_calendario("thisWeek") == "<tr>cached</tr>"
 
 
 # ── integration: obtener_calendario_macro ─────────────────────────────────────
 
-def test_camino_feliz_merge_tres_feeds(collector, monkeypatch):
-    feeds = {
-        "ff": [_ev("CPI m/m", "High")],
-        "mm": [_ev("LME Copper Inventories", "Medium")],
-        "ee": [_ev("Crude Oil Inventories", "High")],
-    }
-    monkeypatch.setattr(calendar, "_fetch_feed", lambda slug: feeds.get(slug, []))
+def test_camino_feliz(collector, monkeypatch):
+    monkeypatch.setattr(calendar, "_fetch_calendario", lambda tab: _fila())
     monkeypatch.setattr(calendar, "_cargar_glosario", lambda: _GLOSARIO_TEST)
 
     calendar.register(collector)
     res = collector.tools["obtener_calendario_macro"](min_impact="medium")
 
     assert "error" not in res, res
-    assert res["source"] == "faireconomy"
-    nombres = [e["nombre"] for e in res["eventos"]]
-    assert "CPI m/m" in nombres
-    assert "LME Copper Inventories" in nombres
-    assert "Crude Oil Inventories" in nombres
-
-
-def test_deduplicacion_evento_en_dos_feeds(collector, monkeypatch):
-    ev_opec = _ev("OPEC Meetings", "Medium")
-    feeds = {
-        "ff": [ev_opec],
-        "mm": [],
-        "ee": [ev_opec],  # mismo evento en ff y ee
-    }
-    monkeypatch.setattr(calendar, "_fetch_feed", lambda slug: feeds.get(slug, []))
-    monkeypatch.setattr(calendar, "_cargar_glosario", lambda: {})
-
-    calendar.register(collector)
-    res = collector.tools["obtener_calendario_macro"](min_impact="low")
-
-    assert "error" not in res
-    assert sum(1 for e in res["eventos"] if e["nombre"] == "OPEC Meetings") == 1
-
-
-def test_schema_normalizado_campos_correctos(collector, monkeypatch):
-    monkeypatch.setattr(calendar, "_fetch_feed",
-                        lambda slug: [_ev("CPI m/m", "High")] if slug == "ff" else [])
-    monkeypatch.setattr(calendar, "_cargar_glosario", lambda: _GLOSARIO_TEST)
-
-    calendar.register(collector)
-    res = collector.tools["obtener_calendario_macro"](min_impact="medium")
-
+    assert res["source"] == "investing"
     ev = res["eventos"][0]
-    assert "nombre" in ev
-    assert "divisa" in ev
-    assert "impacto" in ev
-    assert "hora_servidor" in ev
-    assert "forecast" in ev
-    assert "previo" in ev
-    assert "fuente" in ev
-    assert ev["impacto"] == "alto"  # High → alto
-    assert ev["fuente"] == "ff"
-
-
-def test_glosario_enganchado_por_sigla(collector, monkeypatch):
-    monkeypatch.setattr(calendar, "_fetch_feed",
-                        lambda slug: [_ev("CPI m/m", "High")] if slug == "ff" else [])
-    monkeypatch.setattr(calendar, "_cargar_glosario", lambda: _GLOSARIO_TEST)
-
-    calendar.register(collector)
-    res = collector.tools["obtener_calendario_macro"](min_impact="medium")
-
-    ev = res["eventos"][0]
-    assert "diccionario" in ev
+    assert ev["nombre"] == "Core CPI (MoM) (May)"
+    assert ev["actual"] == "0.4%"
     assert ev["diccionario"]["nombre_es"] == "IPC"
 
 
-def test_glosario_pendiente_si_no_hay_match(collector, monkeypatch):
-    monkeypatch.setattr(calendar, "_fetch_feed",
-                        lambda slug: [_ev("Baker Hughes Oil Rig Count", "Medium")] if slug == "ee" else [])
+def test_schema_normalizado_campos_correctos(collector, monkeypatch):
+    monkeypatch.setattr(calendar, "_fetch_calendario", lambda tab: _fila())
     monkeypatch.setattr(calendar, "_cargar_glosario", lambda: _GLOSARIO_TEST)
 
     calendar.register(collector)
-    res = collector.tools["obtener_calendario_macro"](min_impact="low")
+    ev = collector.tools["obtener_calendario_macro"](min_impact="medium")["eventos"][0]
 
-    ev = res["eventos"][0]
+    for campo in ("nombre", "divisa", "pais", "impacto", "hora_servidor",
+                  "forecast", "previo", "actual", "fuente"):
+        assert campo in ev, campo
+    assert ev["fuente"] == "investing"
+
+
+def test_glosario_pendiente_si_no_hay_match(collector, monkeypatch):
+    monkeypatch.setattr(
+        calendar, "_fetch_calendario",
+        lambda tab: _fila(nombre="Baker Hughes Oil Rig Count"),
+    )
+    monkeypatch.setattr(calendar, "_cargar_glosario", lambda: _GLOSARIO_TEST)
+
+    calendar.register(collector)
+    ev = collector.tools["obtener_calendario_macro"](min_impact="medium")["eventos"][0]
     assert ev.get("glosario_pendiente") is True
     assert "diccionario" not in ev
 
 
 def test_filtro_min_impact_excluye_bajo(collector, monkeypatch):
-    feeds = {
-        "ff": [_ev("CPI m/m", "High"), _ev("Minor Release", "Low")],
-        "mm": [], "ee": [],
-    }
-    monkeypatch.setattr(calendar, "_fetch_feed", lambda slug: feeds.get(slug, []))
+    html = (
+        _fila(row_id=1, nombre="CPI (MoM)", volatilidad="High Volatility Expected")
+        + _fila(row_id=2, nombre="Minor Release", volatilidad="Low Volatility Expected")
+    )
+    monkeypatch.setattr(calendar, "_fetch_calendario", lambda tab: html)
     monkeypatch.setattr(calendar, "_cargar_glosario", lambda: {})
 
     calendar.register(collector)
@@ -190,37 +234,23 @@ def test_filtro_min_impact_excluye_bajo(collector, monkeypatch):
 
 
 def test_solo_hoy_filtra_otros_dias(collector, monkeypatch):
-    feeds = {
-        "ff": [_ev("CPI m/m", "High", dias_offset=0),
-               _ev("PPI m/m", "High", dias_offset=2)],  # pasado mañana
-        "mm": [], "ee": [],
-    }
-    monkeypatch.setattr(calendar, "_fetch_feed", lambda slug: feeds.get(slug, []))
+    html = (
+        _fila(row_id=1, nombre="CPI (MoM)", dias_offset=0)
+        + _fila(row_id=2, nombre="PPI (MoM)", dias_offset=2)
+    )
+    monkeypatch.setattr(calendar, "_fetch_calendario", lambda tab: html)
     monkeypatch.setattr(calendar, "_cargar_glosario", lambda: {})
 
     calendar.register(collector)
     res = collector.tools["obtener_calendario_macro"](solo_hoy=True, min_impact="medium")
 
     nombres = [e["nombre"] for e in res["eventos"]]
-    assert "CPI m/m" in nombres
-    assert "PPI m/m" not in nombres
-
-
-def test_falla_parcial_incluye_feeds_fallidos(collector, monkeypatch):
-    feeds = {"ff": [_ev("CPI m/m", "High")], "mm": [], "ee": []}
-    monkeypatch.setattr(calendar, "_fetch_feed", lambda slug: feeds.get(slug, []))
-    monkeypatch.setattr(calendar, "_cargar_glosario", lambda: {})
-
-    calendar.register(collector)
-    res = collector.tools["obtener_calendario_macro"](min_impact="medium")
-
-    assert "error" not in res
-    assert "feeds_fallidos" in res
-    assert set(res["feeds_fallidos"]) == {"mm", "ee"}
+    assert "CPI (MoM)" in nombres
+    assert "PPI (MoM)" not in nombres
 
 
 def test_falla_total_retorna_no_calendar_feeds(collector, monkeypatch):
-    monkeypatch.setattr(calendar, "_fetch_feed", lambda slug: [])
+    monkeypatch.setattr(calendar, "_fetch_calendario", lambda tab: "")
 
     calendar.register(collector)
     res = collector.tools["obtener_calendario_macro"]()
@@ -230,9 +260,10 @@ def test_falla_total_retorna_no_calendar_feeds(collector, monkeypatch):
 
 
 def test_sin_eventos_es_caso_legitimo(collector, monkeypatch):
-    # Feeds responden pero todos son de bajo impacto → filtro deja vacío
-    feeds = {"ff": [_ev("Minor Data", "Low")], "mm": [], "ee": []}
-    monkeypatch.setattr(calendar, "_fetch_feed", lambda slug: feeds.get(slug, []))
+    monkeypatch.setattr(
+        calendar, "_fetch_calendario",
+        lambda tab: _fila(volatilidad="Low Volatility Expected"),
+    )
     monkeypatch.setattr(calendar, "_cargar_glosario", lambda: {})
 
     calendar.register(collector)
@@ -244,7 +275,7 @@ def test_sin_eventos_es_caso_legitimo(collector, monkeypatch):
 
 
 def test_min_impact_invalido_retorna_error(collector, monkeypatch):
-    monkeypatch.setattr(calendar, "_fetch_feed", lambda slug: [])
+    monkeypatch.setattr(calendar, "_fetch_calendario", lambda tab: "")
 
     calendar.register(collector)
     res = collector.tools["obtener_calendario_macro"](min_impact="extremo")

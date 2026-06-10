@@ -59,7 +59,7 @@ $now.ToString('yyyy-MM-dd HH:mm')   # ej: 2026-06-03 12:30
 - Úsalo siempre que necesites: marcar eventos `✅ YA SALIÓ` / `🕐 PRÓXIMO`, decidir piezas dependientes de la hora, o nombrar archivos `data/mensajes/YYYY-MM-DD_HH-MM_[tipo].txt`.
 - El resultado debe ser consistente con el `currentDate` del contexto. La *hora actual* siempre sale de este reloj.
 
-**Calendario macro Fair Economy (fuente primaria)**: la hora del evento viene en ISO 8601 con offset y se convierte automáticamente a `America/Santiago` dentro de `obtener_calendario_macro`. El resultado ya está en hora Chile — no se necesita conversión adicional.
+**Calendario económico Investing.com (fuente primaria)**: la hora del evento se pide en UTC (timeZone=55) y se convierte automáticamente a `America/Santiago` dentro de `obtener_calendario_macro`. El resultado ya está en hora Chile — no se necesita conversión adicional.
 
 **Hora de los datos económicos (origen extranjero) — también determinista (OBLIGATORIO)**: la *hora del evento* se obtiene de la fuente, pero la conversión a Chile **nunca** se hace "a mano" ni con offsets fijos (`UTC-5`, `GMT-3`) — esa asunción causa desfases de ±1h (issue #38). Toma la hora **oficial en la zona del organismo emisor** y conviértela con el helper `scripts\hora_chile.ps1`, que aplica el horario de verano de ambas puntas y devuelve la etiqueta CLT/CLST correcta:
 ```powershell
@@ -193,12 +193,12 @@ Mejorar indicadores de satisfacción del cliente, retención, NPS y reducir chur
 
 | MCP | Estado | Propósito | Usado en |
 |-----|--------|-----------|----------|
-| **market-data** | ✅ Activo | Análisis técnico MT5 (`get_asset_levels`) + calendario macro triple feed Fair Economy (`obtener_calendario_macro`): ForexFactory (ff) + MetalsMine (mm) + Energy EXCH (ee). WebSearch investing.com es fallback si los 3 feeds fallan. Noticias vía WebSearch. | Comandos de niveles técnicos |
+| **market-data** | ✅ Activo | Análisis técnico MT5 (`get_asset_levels`) + calendario económico Investing.com (`obtener_calendario_macro`): Chile + EE.UU. + China + Zona Euro, con resultado real (`actual`) y clasificación `mejor`/`peor`/`en_linea` vs consenso. WebSearch es fallback si la fuente falla. Noticias vía WebSearch. | Comandos de niveles técnicos |
 | **WebSearch (investing.com + fuentes oficiales)** | ✅ Activo | Calendario económico y noticias relevantes | `/dato_macro`, `/noticia` y comandos de día |
 | **WhatsApp (Evolution API)** | ⏳ Pendiente conexión Docker | Envío directo al grupo | Flujo manual por ahora |
 | **TrendRadar / Firecrawl / Finnhub** | ❌ No activos | Reemplazados por market-data (MT5) + WebSearch | — |
 
-**Nota**: el MCP `market-data` expone **dos** tools: `get_asset_levels` (análisis técnico MT5) y `obtener_calendario_macro` (calendario macro triple feed Fair Economy — ff+mm+ee; WebSearch investing.com es fallback si los 3 feeds fallan). La antigua `get_economic_events` fue reemplazada por la tool nativa (#53); `get_market_context` (noticias Finnhub) quedó deprecada y se purgó del registro — las **noticias** se obtienen vía `WebSearch` (investing.com + fuentes oficiales: Fed, BCCh, OPEP+, EIA, BLS). Ver `docs/superpowers/specs/2026-06-05-calendario-macro-nativo-mt5-design.md`.
+**Nota**: el MCP `market-data` expone **dos** tools: `get_asset_levels` (análisis técnico MT5) y `obtener_calendario_macro` (calendario económico Investing.com — Chile/EE.UU./China/Zona Euro con campo `actual` y `resultado`, issue #91; WebSearch es fallback si la fuente falla). La antigua `get_economic_events` fue reemplazada por la tool nativa (#53); `get_market_context` (noticias Finnhub) quedó deprecada y se purgó del registro — las **noticias** se obtienen vía `WebSearch` (investing.com + fuentes oficiales: Fed, BCCh, OPEP+, EIA, BLS). Ver `docs/superpowers/specs/2026-06-05-calendario-macro-nativo-mt5-design.md`.
 
 **Flujo actual**: los comandos generan contenido → muestran para copiar → guardan en `data/mensajes/`. Cuando Evolution API esté conectada a WhatsApp/Baileys, el envío pasará a ser automático.
 
