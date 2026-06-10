@@ -80,19 +80,33 @@ Por cada dato que elija el director, genera:
 💬 ¿Quieres profundizar este tema? Escríbele a tu analista designado.
 ```
 
-**Modo resultado** (dato ya publicó, tiene valor "actual"):
+**Modo resultado** (dato ya publicó, tiene valor "actual" — plantilla issue #93):
 ```
-📊 *[INDICADOR] — Resultado*
+📊 *DATO [INDICADOR] ([Periodo]) — [Hora CLT]*
 ━━━━━━━━━━━━━━━━━━━
-Salió: *[valor actual]*
-Esperado: [valor consenso] | Anterior: [valor previo]
+El [indicador] salió *[EN LÍNEA / MEJOR / PEOR]* de lo esperado:
 
-[Sorpresa positiva/negativa/en línea con lo esperado]
+• [Sub-lectura 1]: [actual] (esperado [forecast]) ✅
+• [Sub-lectura 2]: [actual] (esperado [forecast]) 🔥 ¡SORPRESA [AL ALZA / A LA BAJA]!
+[una línea por cada sub-lectura publicada del indicador (ej. IPC mensual / anual / subyacente). Si el indicador tiene una sola lectura, una única línea: actual (esperado X | anterior Y)]
+━━━━━━━━━━━━━━━━━━━
+🧠 ¿Qué significa esto?
 
-¿Cómo reaccionó el mercado?
-[1-2 líneas simples de lo que se vio]
+[2-4 líneas en voz novata. Si salió en línea: explicar que el mercado YA lo tenía descontado — los precios ya reflejaban esta noticia antes de publicarse — y cuál sería la lectura natural del dato. Si salió mejor/peor: explicar la sorpresa y su dirección.]
 
-[Si aplica: conexión con camino a decisión de tasas — ej: "Este dato confirma/complica el escenario de recorte de la Fed"]
+⚠️ PERO ojo con el detalle importante:
+
+[Bloque OPCIONAL — solo si una sub-lectura se desvió del consenso mientras el dato general salió en línea. Explicar qué mide esa sub-lectura en simple (ej. "la inflación de fondo, sin alimentos ni energía"), la desviación (actual vs esperado) y por qué cambia la lectura. Si no hay sorpresa parcial, omitir el bloque completo.]
+━━━━━━━━━━━━━━━━━━━
+💡 Impacto esperado por activo:
+
+• [Activo 1]: *[SUBE ⬆️ / BAJA ⬇️]* — [porqué en 1 línea, voz novata]
+• [Activo 2]: *[SUBE ⬆️ / BAJA ⬇️]* — [porqué en 1 línea]
+[3-4 activos relevantes; cuando aplique, incluir la conexión con el camino a la decisión de tasas en el "porqué"]
+
+📌 *Resumen simple*: [1-2 líneas de conclusión práctica que amarran el dato general + la sorpresa parcial si la hubo]
+
+Como siempre, gestionen su riesgo. La primera reacción del mercado puede ser volátil. 🚨
 ━━━━━━━━━━━━━━━━━━━
 🔤 Diccionario rápido
 • [Sigla]: [explicación de 1 línea en español, voz novata]
@@ -101,6 +115,11 @@ Esperado: [valor consenso] | Anterior: [valor previo]
 📅 Calendario completo: https://es.investing.com/economic-calendar/
 💬 ¿Quieres profundizar este tema? Escríbele a tu analista designado.
 ```
+
+**Reglas del modo resultado**:
+- **Above the fold**: el encabezado + veredicto (EN LÍNEA/MEJOR/PEOR) + primera sub-lectura deben caber en las primeras 3-4 líneas (~200 caracteres visibles en WhatsApp).
+- **Sub-lecturas**: en Investing.com las lecturas mensual/anual/subyacente del mismo indicador vienen como filas separadas del calendario — agruparlas todas bajo un solo mensaje, una línea por sub-lectura.
+- **Plantilla anterior**: la versión previa del modo resultado (más breve: salió/esperado/anterior + reacción) quedó respaldada en el issue #93 y en el historial git, por si se decide volver a ella.
 
 ## PASO 4 — Aprobación y envío
 
