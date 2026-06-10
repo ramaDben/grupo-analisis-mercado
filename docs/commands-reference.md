@@ -114,6 +114,8 @@ El tipo es obligatorio (sin tipo, el comando pregunta). Los activos salen de `da
 ### `/dato_macro`
 Trae el calendario económico del día y lista los datos disponibles. El director elige cuál desarrollar. El comando genera el mensaje explicativo para ese dato (qué es, a qué hora sale, qué se espera, cómo podría reaccionar el activo).
 
+Dos modos automáticos según el estado del evento: **anticipación** (aún no sale: qué es, qué se espera, escenarios) y **resultado** (ya publicó, issue #93: desglose de sub-lecturas con ✅/🔥, bloque "🧠 ¿Qué significa esto?" con lectura de "ya descontado", "⚠️ PERO ojo" si hay sorpresa parcial, impacto esperado por activo con dirección ⬆️/⬇️ y resumen simple).
+
 ---
 
 ### `/noticia`
