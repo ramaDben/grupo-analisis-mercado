@@ -139,6 +139,22 @@ Cerrar cada mensaje de niveles/análisis con este bloque:
 🔴 Bajo [soporte] → presión vendedora
 ```
 
+### Registro y tono — profesional, técnico y objetivo (OBLIGATORIO)
+Los análisis transmiten seriedad y credibilidad. **Prohibido** el lenguaje extremo, emocional o demasiado coloquial (dramatizar el movimiento, atribuir "sensaciones" al mercado, vaticinar catástrofes). Se describe el mercado con terminología financiera objetiva y comprensible para el cliente.
+
+| ❌ Evitar (extremo/emocional/coloquial) | ✅ Usar (técnico/objetivo) |
+|---|---|
+| "el oro se va a derrumbar" | "sesgo bajista" / "expectativas de corrección" |
+| "el mercado tiene una sensación pésima" | "presión vendedora" / "debilidad en el precio" |
+| "esto se va a disparar / explotar" | "sesgo alcista" / "impulso comprador" |
+| "está volando / por las nubes" | "alta volatilidad" / "momentum alcista" |
+| "pánico" / "euforia" / "terror" | "aversión al riesgo" / "apetito por riesgo" |
+
+Reglas:
+- Describir, no dramatizar: hablar de **sesgo, presión, volatilidad, debilidad/fortaleza, corrección**, no de emociones ni de finales catastróficos.
+- Objetividad: los escenarios son condicionales (`🟢 sobre X → …`, `🔴 bajo Y → …`), nunca certezas ("se va a derrumbar").
+- Esto **no** habilita jerga sin explicar: si aparece un término técnico o una sigla, sigue siendo obligatorio explicarlo en voz novata (ver [estilo mensajes WhatsApp] y "Datos macro en español + Diccionario rápido"). Profesional ≠ inaccesible.
+
 ### Formato base (aplica a todos los mensajes)
 - Formato WhatsApp: *negrita*, _cursiva_
 - Bullets: •
