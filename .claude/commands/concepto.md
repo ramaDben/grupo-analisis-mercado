@@ -2,9 +2,9 @@ Sugiere un concepto educativo para el grupo basado en lo que pasó esta semana.
 
 ## PASO 1 — Analizar qué pasó esta semana
 
-Recopila contexto de la semana para elegir un concepto relevante:
-- Con `WebSearch` obtén un resumen de los eventos macro de esta semana (últimos ~5 días) sobre investing.com + fuentes oficiales.
-- Si no hay resultados relevantes: continuar con análisis basado en config/drivers.json.
+Recopila contexto de la semana para elegir un concepto relevante. **Por defecto, el concepto se ancla en los datos macro de la semana** (es el foco prioritario); lo técnico queda como alternativa cuando no hubo macro relevante.
+- Con `WebSearch` obtén un resumen de los **datos macro** de esta semana (últimos ~5 días) sobre investing.com + fuentes oficiales: qué se publicó, qué sorprendió y cómo movió a los activos.
+- Si no hubo macro relevante esta semana: recién entonces elegir un concepto técnico, con análisis basado en config/drivers.json.
 
 Analiza:
 - ¿Qué indicadores técnicos se activaron? (RSI en sobrecompra, MACD cruce, SMA crossover)
@@ -35,6 +35,8 @@ Presenta 3 conceptos con su "por qué" conectado a algo real de la semana:
 ```
 
 Tipos disponibles: macro / técnico / conceptual
+
+**Orden de prioridad de las sugerencias**: presentar primero la(s) opción(es) **macro** ancladas en los datos de la semana; las técnicas van después como alternativa.
 
 ## PASO 3 — Generar el mensaje educativo
 
@@ -76,4 +78,5 @@ Si MCP no disponible: muestra texto listo para copiar.
 - 1 concepto por semana (normalmente el lunes, pero puede usarse cuando sea relevante).
 - Lenguaje cliente: que se entienda sin conocimientos previos.
 - SIEMPRE conectar con algo real de la semana — no explicar en abstracto.
+- **Foco por defecto en los datos macro de la semana**; lo técnico es alternativa solo si no hubo macro relevante.
 - Un aviso = un concepto (nunca mezclar RSI + MACD en el mismo mensaje).
