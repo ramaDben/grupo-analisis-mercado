@@ -53,6 +53,11 @@ Ordena por fecha (primero los más cercanos). Destacar con ⭐ las de mayor peso
 [Repetir por cada empresa]
 
 ━━━━━━━━━━━━━━━━━━━
+⭐ *Las 2 más atractivas de la semana*
+1. *#[TICKER]* — [por qué es atractiva: catalizador / foco del trimestre / peso en el índice, 1 línea direccional]
+2. *#[TICKER]* — [por qué es atractiva, 1 línea direccional]
+_Estas 2 son las candidatas a entrar en la rotación diaria de activos esta semana._
+━━━━━━━━━━━━━━━━━━━
 ⚠️ _Los earnings pueden generar movimientos bruscos. Precaución con posiciones abiertas._
 ```
 
@@ -73,4 +78,5 @@ Si MCP no disponible: muestra texto listo para copiar.
 - Si una empresa reporta BMO: mencionarlo porque afecta la apertura del mercado.
 - Siempre conectar el earning con su índice (US100 o US30).
 - Destacar las de mayor peso (Nvidia, Apple, Microsoft, JPMorgan) con ⭐.
+- **Siempre** señalar las **2 acciones más atractivas de la semana** con un "por qué" direccional; son la fuente interina de la rotación de acciones (ver "Activos cubiertos" en CLAUDE.md). Si no reporta ninguna del catálogo, elegir las 2 con mejor setup técnico/fundamental aunque no tengan earnings esta semana.
 - También usado automáticamente por /lunes (Pieza 2).
