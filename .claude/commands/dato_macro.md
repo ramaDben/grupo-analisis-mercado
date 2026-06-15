@@ -23,6 +23,17 @@ Guarda la hora como `hora_actual_chile` (ej: `09:47`) y la fecha como `[FECHA]`.
 
 **Contrato sin-resultados**: si la búsqueda no devuelve eventos de impacto medio/alto para hoy → muestra "📅 Sin datos macro de impacto medio/alto hoy" y DETÉN. En fin de semana o feriado es comportamiento esperado.
 
+## PASO 1C — Filtrado por país (OBLIGATORIO, antes de presentar la lista)
+
+Aplica estos filtros al set de eventos obtenido. El filtro aplica **tanto a la lista del PASO 2 como al desarrollo del PASO 3**:
+
+- **Zona Euro**: conservar **solo la decisión de tasas del BCE**. Descartar el resto de datos de la Zona Euro (IPC euro, PMI euro, etc.).
+- **Estados Unidos**: conservar **solo eventos de 3 estrellas (★★★, alto impacto)**. Descartar los de 2★. Cada evento de EE.UU. se enmarca en la narrativa de la **decisión de tasas de la Fed** (¿el dato empuja las tasas al alza o a la baja?) y se traduce a impacto en **índices bursátiles** (US100 / US30 suben o bajan).
+- **Chile**: conservar **solo la balanza comercial**. Descartar exportaciones de cobre, producción manufacturera y ventas minoristas.
+- **Otros países** (ej. China): sin cambios respecto al filtro de impacto medio/alto ya aplicado.
+
+Si tras el filtrado no queda ningún evento → muestra "📅 Sin datos macro relevantes para hoy (según filtros de cobertura)" y DETÉN.
+
 ## PASO 2 — Presentar lista al director
 
 Muestra una lista numerada con los datos del día, ordenados por hora Chile. Para cada evento, compara su hora contra `hora_actual_chile` obtenida en PASO 1A:
@@ -71,6 +82,7 @@ Por cada dato que elija el director, genera:
 • ➡️ En línea con lo esperado → [reacción, 1 línea]
 
 👀 Activos a observar: [lista de activos impactados]
+⏱️ Temporalidad del impacto: [scalper (minutos a 1-2 h) / intradía (la jornada) / swing de jornada (1-3 días) / posicional (días a semanas)]
 ━━━━━━━━━━━━━━━━━━━
 🔤 Diccionario rápido
 • [Sigla]: [explicación de 1 línea en español, voz novata]
@@ -88,7 +100,7 @@ El [indicador] salió *[EN LÍNEA / MEJOR / PEOR]* de lo esperado:
 
 • [Sub-lectura 1]: [actual] (esperado [forecast]) ✅
 • [Sub-lectura 2]: [actual] (esperado [forecast]) 🔥 ¡SORPRESA [AL ALZA / A LA BAJA]!
-[una línea por cada sub-lectura publicada del indicador (ej. IPC mensual / anual / subyacente). Si el indicador tiene una sola lectura, una única línea: actual (esperado X | anterior Y)]
+[En datos de alto impacto: mostrar SOLO las sub-lecturas anual y mensual, y normal y subyacente según corresponda al indicador. NO incluir otras sub-lecturas. Si el indicador tiene una sola lectura, una única línea: actual (esperado X | anterior Y)]
 ━━━━━━━━━━━━━━━━━━━
 🧠 ¿Qué significa esto?
 
@@ -103,6 +115,8 @@ El [indicador] salió *[EN LÍNEA / MEJOR / PEOR]* de lo esperado:
 • [Activo 1]: *[SUBE ⬆️ / BAJA ⬇️]* — [porqué en 1 línea, voz novata]
 • [Activo 2]: *[SUBE ⬆️ / BAJA ⬇️]* — [porqué en 1 línea]
 [3-4 activos relevantes; cuando aplique, incluir la conexión con el camino a la decisión de tasas en el "porqué"]
+
+⏱️ Temporalidad del impacto: [scalper (minutos a 1-2 h) / intradía (la jornada) / swing de jornada (1-3 días) / posicional (días a semanas)]
 
 📌 *Resumen simple*: [1-2 líneas de conclusión práctica que amarran el dato general + la sorpresa parcial si la hubo]
 
@@ -157,4 +171,7 @@ Después de que el director apruebe y envíe el dato, registrar el evento y ofre
 - **Indicadores en español** con la sigla original entre paréntesis una sola vez (issue #46). Minimizar términos en otro idioma en el cuerpo.
 - **Diccionario rápido obligatorio**: ninguna abreviatura puede quedar sin su explicación en español ese día. Fuente canónica: `data/glosario_siglas.json` (alimentarla con siglas nuevas).
 - Cuando aplique, conectar el dato con la narrativa de tasas de interés.
+- **Filtro de cobertura por país (PASO 1C)**: Zona Euro = solo decisión de tasas BCE; EE.UU. = solo 3★ enmarcados en la narrativa de tasas Fed e impacto en índices bursátiles (US100/US30); Chile = solo balanza comercial.
+- **Temporalidad del impacto obligatoria**: todo mensaje indica si el efecto es scalper / intradía / swing de jornada / posicional (alineado con las 4 etiquetas canónicas de temporalidad de CLAUDE.md).
+- **Alto impacto**: en modo resultado, las sub-lecturas se limitan a anual + mensual y normal + subyacente según corresponda; las demás no se incluyen.
 - **Bloque de cierre obligatorio**: todo mensaje de `/dato_macro` (ambos modos) cierra, después del último separador, con el link al calendario completo (`https://es.investing.com/economic-calendar/`) y el CTA genérico al analista designado. El link y el CTA van siempre juntos como pie del mensaje.

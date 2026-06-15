@@ -1,8 +1,8 @@
-Genera la Apertura de Mercado de forma interactiva: pregunta activo, temporalidad e indicador por activo. Sin enfoque de señal.
+Genera la Apertura de Mercado de forma interactiva: pregunta activo, temporalidad e indicador por activo. Toma postura direccional (sesgo del equipo) y presenta niveles accionables, pero NO es una señal formal (sin entrada/TP/SL).
 
 ## SETUP
 1. Lee `config/agenda_semanal.json` y `config/activos.json`.
-2. Los niveles (precio, T1, T2, Su1, Su2) los ingresa el director manualmente. Los indicadores (RSI/ATR/EMA/MACD/Bollinger) se obtienen vía `mcp__market-data__get_asset_levels` solo si aplica.
+2. Los niveles (precio, R1, R2, S1, S2) los ingresa el director manualmente. Los indicadores (RSI/ATR/EMA/MACD/Bollinger) se obtienen vía `mcp__market-data__get_asset_levels` solo si aplica.
 
 ---
 
@@ -79,7 +79,7 @@ En ese caso pedir el valor manualmente (mismas reglas de parsing que 4B). Guarda
 
 ⚠️ **IMPORTANTE — qué usar del resultado del MCP**: solo se extraen `price` (precio actual) y los campos de indicador (`rsi_14`, `atr_14`). Cualquier campo de soporte o resistencia que devuelva el MCP se **ignora completamente**. Los niveles del mensaje los ingresa siempre el director en PASO 4B.
 
-### 4B — Techos y suelos (ingreso manual del director — OBLIGATORIO)
+### 4B — Soportes y resistencias (ingreso manual del director — OBLIGATORIO)
 
 **OBLIGATORIO**: preguntar siempre al director, sin excepción, aunque el MCP haya devuelto campos de soporte/resistencia. Los niveles del mensaje son los que ingresa el director aquí.
 
@@ -87,16 +87,16 @@ Para CADA activo, solicitar los niveles:
 
 ```
 📥 Ingresa los niveles para [NOMBRE ACTIVO] ([TEMPORALIDAD]):
-  Techo 1 (T1):
-  Techo 2 (T2):   ← opcional, escribe "–" para omitir
-  Suelo 1 (Su1):
-  Suelo 2 (Su2):  ← opcional, escribe "–" para omitir
+  Resistencia 1 (R1):
+  Resistencia 2 (R2):   ← opcional, escribe "–" para omitir
+  Soporte 1 (S1):
+  Soporte 2 (S2):  ← opcional, escribe "–" para omitir
 ```
 
 Reglas de parsing:
 - Aceptar valores con o sin `$`, coma de miles o espacios (ej: `$889.60`, `4,539.72`, `889.60`).
 - Formatear según el campo `digits` del activo en `config/activos.json`. Nunca truncar ceros.
-- Si T2 o Su2 se dejan en blanco o contienen `"–"` / `"-"`: omitir esas líneas del mensaje final.
+- Si R2 o S2 se dejan en blanco o contienen `"–"` / `"-"`: omitir esas líneas del mensaje final.
 - Si un valor obligatorio no es numérico: mostrar `⚠️ Valor inválido. Ingresa solo el número.` y volver a pedir ese campo.
 
 ### 4C — Indicador (reutiliza resultado de 4A)
@@ -123,7 +123,7 @@ Si el director eligió **Limpio** en PASO 3: omitir por completo.
 
 ## PASO 5 — Render del mensaje (por activo)
 
-Genera un mensaje por activo. La etiqueta de marco temporal es **neutral** (lectura educativa, no operativa recomendada):
+Genera un mensaje por activo. La etiqueta de marco temporal indica el horizonte de la lectura; el mensaje toma postura direccional vía el `🧭 Sesgo del equipo` (sesgo de mayor probabilidad), sin llegar a ser señal formal:
 
 | Temporalidad | Línea `{{lectura_temporalidad}}` |
 |---|---|
@@ -159,12 +159,18 @@ Línea de indicador `{{lectura_indicador}}` (omitir si "Limpio"):
 - macd_hist < 0 → `📐 MACD [TF]: línea [val] | señal [val] | hist [val] — momentum *Bajista* 🔴`
 - abs(macd_hist) < 0.0001 × precio → `📐 MACD [TF]: línea [val] | señal [val] | hist [val] — *Sin señal clara* 🟡`
 
+Línea/bloque `{{canal_tendencia}}` (OPCIONAL — solo si el activo está operando dentro de un canal claro):
+- Si hay canal vigente, añadir una línea: `📈 Canal [alcista/bajista/lateral] [TF]: techo del canal [valor] · piso del canal [valor]` (formatear con `digits`).
+- Si NO hay canal claro, omitir la línea por completo (no dejar línea en blanco).
+- El canal refuerza la dirección: canal alcista → favorece sesgo comprador; canal bajista → favorece sesgo vendedor.
+
 Plantilla del mensaje:
 
 ```
 🎯 Activo: [NOMBRE ACTIVO]
-📌 Nivel a vigilar: [T1 o Su1 según sesgo]
-⚡ Qué esperar: [1 línea de acción concreta]
+📌 Nivel a vigilar: [R1 o S1 según sesgo]
+🧭 Sesgo del equipo: *[Alcista / Bajista / Lateral]*
+⚡ Qué esperar: [1 línea de acción concreta y direccional]
 ━━━━━━━━━━━━━━━━━━━
 
 📊 *APERTURA DE MERCADO — [D de mes de YYYY]*
@@ -174,29 +180,32 @@ Plantilla del mensaje:
 {{por_que_temporalidad}}
 
 💰 Precio actual: [precio]
-• Techo más próximo: [T1]
-• Techo siguiente: [T2]          ← solo si el director ingresó T2; si no, omitir esta línea
-• Suelo más próximo: [Su1]
-• Suelo siguiente: [Su2]         ← solo si el director ingresó Su2; si no, omitir esta línea
-• Zona de interés: [Su1] – [T1]
+• Resistencia más próxima: [R1]
+• Resistencia siguiente: [R2]          ← solo si el director ingresó R2; si no, omitir esta línea
+• Soporte más próximo: [S1]
+• Soporte siguiente: [S2]         ← solo si el director ingresó S2; si no, omitir esta línea
+• Zona de interés: [S1] – [R1]
+{{canal_tendencia}}
 {{lectura_indicador}}
 
 🔎 ¿Qué lo mueve hoy?
 [Drivers del activo en 2-3 líneas simples, consulta config/drivers.json]
 
 ━━━━━━━━━━━━━━━━━━━
-🟢 *Alcista* — Precio sobre [T1] → tendencia compradora (intra-day)
-🟡 *Esperar* — Entre [Su1] y [T1] → sin confirmación de dirección
-🔴 *Bajista* — Precio bajo [Su1] → tendencia vendedora (intra-day)
+🟢 *Alcista* — Precio sobre [R1] → se activa sesgo comprador (intra-day)
+🟡 *Esperar* — Entre [S1] y [R1] → sin confirmación de dirección
+🔴 *Bajista* — Precio bajo [S1] → se activa sesgo vendedor (intra-day)
+
+🧭 *Sesgo del equipo*: *[Alcista / Bajista / Lateral]* — [1 línea: por qué es el escenario de mayor probabilidad hoy]
 ━━━━━━━━━━━━━━━━━━━
 {{lectura_temporalidad}}
 ```
 
 **Reglas de render (OBLIGATORIAS — esta plantilla es la única salida válida):**
 - **Fecha** `[D de mes de YYYY]`: hora Chile, formato `2 de junio de 2026`. NUNCA con día de la semana (`martes 2 de junio`), NUNCA abreviada, NUNCA sustituida por el nombre del activo.
-- **Terminología de niveles**: siempre `Techo más próximo` / `Suelo más próximo`; los segundos niveles son `Techo siguiente` / `Suelo siguiente`.
-- **Orden de niveles**: primero todos los techos (más próximo → siguiente), luego todos los suelos (más próximo → siguiente), luego `Zona de interés`. La zona usa siempre los "más próximos": `[Suelo más próximo] – [Techo más próximo]`.
-- **T2/Su2 opcionales**: si el director NO ingresó T2 (o Su2) en PASO 4B, se **omite por completo** esa línea (sin dejar línea en blanco).
+- **Terminología de niveles**: siempre `Resistencia más próxima` / `Soporte más próximo`; los segundos niveles son `Resistencia siguiente` / `Soporte siguiente`.
+- **Orden de niveles**: primero todas las resistencias (más próxima → siguiente), luego todos los soportes (más próximo → siguiente), luego `Zona de interés`. La zona usa siempre los "más próximos": `[Soporte más próximo] – [Resistencia más próxima]`.
+- **R2/S2 opcionales**: si el director NO ingresó R2 (o S2) en PASO 4B, se **omite por completo** esa línea (sin dejar línea en blanco).
 - **Precio**: siempre `💰 Precio actual: [precio]`.
 - **Indicador**: siempre `📐 [INDICADOR] [TF]:` según la tabla `{{lectura_indicador}}` arriba. Omitir si "Limpio".
 - **Justificación de temporalidad**: siempre la línea `💡 Por qué [TF] aquí:` (ver `{{por_que_temporalidad}}` arriba), derivada de `nota_volatilidad` del activo. Nunca omitir ni usar la palabra "corto" sin cuantificar.
@@ -212,21 +221,22 @@ Al aprobar: construye la ruta con `scripts\ruta_mensaje.ps1 -Fecha [FECHA] -Acti
 - Lenguaje cliente: simple, que se entienda en 30 segundos.
 - Hora siempre en hora Chile (CLT/CLST).
 - Un indicador por aviso (nunca mezclar en el mismo mensaje).
-- **NO es una señal**: nunca uses "operativa recomendada", "entrada", "TP/SL" en la apertura. La etiqueta temporal es marco de lectura educativo.
-- **Dirección explícita** en escenarios: usa `*Alcista* 🟢` / `*Bajista* 🔴`, nunca "fuerza compradora" ni "presión vendedora".
+- **Sesgo operativo implícito, NO señal formal**: la apertura SÍ toma postura direccional (línea `🧭 Sesgo del equipo`) y presenta los niveles como zonas accionables ("sobre [R1] se activa sesgo comprador"). Pero NUNCA incluye `entrada`, `TP`, `SL` ni montos en pesos (CLP) — eso es territorio exclusivo de `/señal` — y **NO cuenta para el límite de 3 señales/semana**.
+- **Dirección explícita** en escenarios y en el sesgo del equipo: usa `*Alcista* 🟢` / `*Bajista* 🔴` / `*Lateral* 🟡`. Nombra siempre el escenario de mayor probabilidad como sesgo del equipo.
 - Si WhatsApp MCP no disponible: mostrar texto listo para copiar.
 
 ## PROHIBIDO (cierra el drift de formato — issue #35)
 
 El mensaje de niveles tiene **una sola** forma válida (la plantilla del PASO 5). NUNCA generes estas variantes:
 
-- ❌ `Resistencia 1/2` · `Soporte 1/2` → usa `Techo/Suelo más próximo` y `siguiente`.
-- ❌ `Techo objetivo` · `Techo inmediato` · `Suelo fuerte` → usa `más próximo` / `siguiente`.
+- ❌ `Techo 1/2` · `Suelo 1/2` · `Techo/Suelo más próximo` → usa `Resistencia/Soporte más próxima/o` y `siguiente`.
+- ❌ `Resistencia objetivo` · `Resistencia inmediata` · `Soporte fuerte` → usa `más próxima/o` / `siguiente`.
 - ❌ `📊 *Precio actual*` · `📌 Precio actual` como rótulo de precio → usa `💰 Precio actual`.
 - ❌ `⚠️ *RSI 1H*: ...` · `• RSI: ...` inline → usa `📐 RSI/ATR/EMA/MACD/Bollinger [TF]:` (línea `{{lectura_indicador}}`).
 - ❌ Día de la semana en la fecha (`martes 2 de junio`) → usa `2 de junio de 2026`.
-- ❌ Línea extra `Sesgo: ...` o `🟢 *Sesgo del día*` → el sesgo va implícito en el bloque de escenarios `🟢/🟡/🔴`.
-- ❌ Bloque de escenarios con orden invertido o emoji duplicado (`🟢 Sobre X → *Alcista* 🟢 → siguiente objetivo`) → orden canónico: `🟢 *Alcista* — Precio sobre X → tendencia compradora (intra-day)`.
+- ❌ Omitir la línea `🧭 Sesgo del equipo` → es OBLIGATORIA: el mensaje siempre nombra el escenario de mayor probabilidad (Alcista/Bajista/Lateral).
+- ❌ Incluir `entrada`, `TP`, `SL` o montos en pesos en la apertura → eso es `/señal`. La apertura solo da sesgo + niveles accionables.
+- ❌ Bloque de escenarios con orden invertido o emoji duplicado (`🟢 Sobre X → *Alcista* 🟢 → siguiente objetivo`) → orden canónico: `🟢 *Alcista* — Precio sobre X → se activa sesgo comprador (intra-day)`.
 - ❌ `🔎 *¿Qué lo está moviendo?*` (en negrita / otra redacción) → usa `🔎 ¿Qué lo mueve hoy?` sin negrita.
 
 Cualquier comando de día que invoque la pieza de apertura **delega 100%** en esta plantilla; no redefine formato propio de niveles.

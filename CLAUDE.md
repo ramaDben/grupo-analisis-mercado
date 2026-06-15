@@ -4,15 +4,18 @@
 Este proyecto automatiza la operativa semanal del Grupo de Análisis de Mercado para envío vía WhatsApp. El usuario es el director de trading. Los sub-agents actúan como analistas de mercado y recolectores de información.
 
 ## Principio fundamental
-100% orientado al CLIENTE FINAL. Si un cliente nuevo sin experiencia no entiende el mensaje en menos de 30 segundos, hay que reescribirlo más simple. El contenido nunca se redacta para traders profesionales — se redacta para clientes que están aprendiendo.
+Análisis técnico simple y directo, con dirección clara, que genere interés y apetito por operar — sin caer en lo coloquial ni en lo catastrófico. El mensaje lo reciben tanto traders expertos como clientes novatos: debe ser comprensible para quien recién aprende y, a la vez, accionable para quien ya opera. Se enfatiza la tendencia y se nombra hacia dónde se dirige el activo, despertando el interés del cliente por operar el mercado.
 
-Regla de oro: si un cliente nuevo (sin experiencia) no entiende el mensaje en menos de 30 segundos, hay que reescribirlo más simple.
+**Regla de oro**: el cliente debe entender siempre hacia dónde se dirige el activo, para saber qué operar. Un análisis que no deja clara la dirección (alcista / bajista / lateral) está incompleto.
+
+Criterio de claridad (subordinado a la regla de oro): si un cliente nuevo sin experiencia no entiende el mensaje en menos de 30 segundos, hay que reescribirlo más simple — pero "más simple" nunca significa "sin dirección".
 
 ## Activos cubiertos (rotación diaria, 2-3 por día)
 - **USD/CLP**: drivers → cobre, Dollar Index, tasas BCCh vs Fed, flujos
 - **Oro (XAU/USD)**: drivers → Dollar Index, tasas reales, decisiones Fed, coberturas bancos centrales, geopolítica
 - **WTI (Petróleo)**: drivers → inventarios EIA, decisiones OPEP+, demanda China, geopolítica
 - **US100 (Nasdaq 100)**: drivers → tasas Fed, earnings tech, rendimientos Treasury
+- **Acciones (rotación por análisis previo)**: además de los 4 activos base, la rotación diaria puede incluir 1-2 acciones del catálogo elegidas por análisis previo. Fuente interina: las 2 acciones destacadas por `/earnings` esa semana. Mecanismo definitivo (market screener que recorra las acciones disponibles en MT5 y elija las 2 mejores): **pendiente, issue aparte**.
 
 ## Estructura diaria obligatoria (lunes a viernes)
 
@@ -139,8 +142,8 @@ Cerrar cada mensaje de niveles/análisis con este bloque:
 🔴 Bajo [soporte] → presión vendedora
 ```
 
-### Registro y tono — profesional, técnico y objetivo (OBLIGATORIO)
-Los análisis transmiten seriedad y credibilidad. **Prohibido** el lenguaje extremo, emocional o demasiado coloquial (dramatizar el movimiento, atribuir "sensaciones" al mercado, vaticinar catástrofes). Se describe el mercado con terminología financiera objetiva y comprensible para el cliente.
+### Registro y tono — profesional, técnico y con gancho operativo (OBLIGATORIO)
+Los análisis transmiten seriedad y credibilidad y, a la vez, generan interés y apetito por operar. **Se permite y se busca** enfatizar la tendencia, tomar postura direccional clara y redactar con tono persuasivo que invite a operar. Lo que sigue **prohibido** es el lenguaje extremo, catastrófico o demasiado coloquial (dramatizar el movimiento, atribuir "sensaciones" al mercado, vaticinar catástrofes, jerga de barrio). En una frase: **énfasis direccional sí, dramatización no**. Se describe el mercado con terminología financiera objetiva, comprensible para el cliente y con gancho.
 
 | ❌ Evitar (extremo/emocional/coloquial) | ✅ Usar (técnico/objetivo) |
 |---|---|
@@ -151,8 +154,9 @@ Los análisis transmiten seriedad y credibilidad. **Prohibido** el lenguaje extr
 | "pánico" / "euforia" / "terror" | "aversión al riesgo" / "apetito por riesgo" |
 
 Reglas:
-- Describir, no dramatizar: hablar de **sesgo, presión, volatilidad, debilidad/fortaleza, corrección**, no de emociones ni de finales catastróficos.
-- Objetividad: los escenarios son condicionales (`🟢 sobre X → …`, `🔴 bajo Y → …`), nunca certezas ("se va a derrumbar").
+- Enfatizar con dirección, sin dramatizar: hablar con fuerza de **sesgo, tendencia, momentum, presión, volatilidad, debilidad/fortaleza, corrección** y nombrar hacia dónde se dirige el activo, pero sin emociones atribuidas al mercado ni finales catastróficos.
+- Tomar postura: cada análisis nombra el escenario más probable (sesgo). Los escenarios siguen siendo condicionales (`🟢 sobre X → …`, `🔴 bajo Y → …`), nunca certezas absolutas ("se va a derrumbar"), pero sí señalan claramente la dirección de mayor probabilidad.
+- Profesional con gancho **≠** neutral sin dirección: un mensaje "objetivo" que no toma postura direccional está incompleto (ver Regla de oro del Principio fundamental).
 - Esto **no** habilita jerga sin explicar: si aparece un término técnico o una sigla, sigue siendo obligatorio explicarlo en voz novata (ver [estilo mensajes WhatsApp] y "Datos macro en español + Diccionario rápido"). Profesional ≠ inaccesible.
 
 ### Formato base (aplica a todos los mensajes)
