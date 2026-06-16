@@ -1,16 +1,16 @@
-Muestra el calendario de earnings de las 12 acciones del catálogo para la semana actual.
+Muestra el calendario de earnings de las 13 acciones del catálogo para la semana actual.
 
-## PASO 1 — Leer las 12 acciones del catálogo
+## PASO 1 — Leer las 13 acciones del catálogo
 
-Lee `config/activos.json` sección `acciones` y extrae las 12 acciones:
-- Tecnológico (US100): #AAPL, #MSFT, #NVDA, #AMZN
+Lee `config/activos.json` sección `acciones` y extrae las 13 acciones:
+- Tecnológico (US100): #AAPL, #MSFT, #NVDA, #AMZN, #AMD
 - Bancario (US30): #JPM, #BAC, #GS, #MS
 - Industrial (US30): #BA, #CAT, #GE, #DE
 
 ## PASO 2 — Obtener calendario de earnings
 
 Busca qué empresas del catálogo reportan esta semana:
-- Con `WebSearch` busca el calendario de earnings de las 12 acciones del catálogo para esta semana (investing.com + fuentes oficiales de cada empresa). Confirma día/hora y estimaciones de EPS.
+- Con `WebSearch` busca el calendario de earnings de las 13 acciones del catálogo para esta semana (investing.com + fuentes oficiales de cada empresa). Confirma día/hora y estimaciones de EPS.
 - Si no encuentras earnings de empresas del catálogo: informar que no hay earnings confirmados esta semana.
 
 Por empresa que reporta esta semana, obtén:
@@ -25,7 +25,7 @@ Por empresa que reporta esta semana, obtén:
 ```
 📊 *EARNINGS DE LA SEMANA*
 ━━━━━━━━━━━━━━━━━━━
-Esta semana no reporta ninguna de nuestras 12 acciones.
+Esta semana no reporta ninguna de nuestras 13 acciones.
 
 📅 Próximo earning relevante:
 [Empresa más cercana] — [fecha aproximada]
@@ -69,7 +69,7 @@ Si aprueba: llama MCP WhatsApp.
 Si MCP no disponible: muestra texto listo para copiar.
 
 ## REGLAS
-- Cubrir SOLO las 12 acciones del catálogo (no añadir otras).
+- Cubrir SOLO las 13 acciones del catálogo (no añadir otras).
 - Si una empresa reporta BMO: mencionarlo porque afecta la apertura del mercado.
 - Siempre conectar el earning con su índice (US100 o US30).
 - Destacar las de mayor peso (Nvidia, Apple, Microsoft, JPMorgan) con ⭐.

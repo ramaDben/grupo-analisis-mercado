@@ -64,8 +64,8 @@ Invocar desde Claude Code con `/nombre`:
 | `/concepto` | Concepto educativo conectado a lo que pasó esta semana |
 | `/pregunta` | Pregunta abierta para fomentar razonamiento del grupo |
 | `/estado` | Dashboard del sistema (señales, charts, plan del día, MCPs) |
-| `/accion [TICKER]` | Análisis completo de una de las 12 acciones |
-| `/earnings` | Calendario de earnings de las 12 acciones para la semana |
+| `/accion [TICKER]` | Análisis completo de una de las 13 acciones |
+| `/earnings` | Calendario de earnings de las 13 acciones para la semana |
 
 ## Activos cubiertos
 

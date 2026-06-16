@@ -107,7 +107,7 @@ Referencia mundial del precio del petróleo crudo ligero de EE.UU.
 
 ---
 
-## Acciones individuales (12)
+## Acciones individuales (13)
 
 ### Sector Tecnológico (índice relacionado: US100)
 
@@ -117,6 +117,7 @@ Referencia mundial del precio del petróleo crudo ligero de EE.UU.
 | `#MSFT` | Microsoft Corp. | Azure/cloud, IA (Copilot), licencias enterprise, earnings |
 | `#NVDA` | NVIDIA Corp. | Demanda chips de IA, data centers, regulación de exportación a China, earnings |
 | `#AMZN` | Amazon.com | AWS/cloud, retail, márgenes operativos, earnings |
+| `#AMD` | Advanced Micro Devices | Demanda chips de IA/GPU, data centers, competencia con NVIDIA, demanda PC/servidores, earnings |
 
 **Driver de sector**: tasas Fed, ciclo de innovación AI/chips, regulación tech, rendimientos Treasury.
 
