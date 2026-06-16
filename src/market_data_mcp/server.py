@@ -64,7 +64,10 @@ mcp = FastMCP(
     name="market-data",
     instructions=(
         "Capa de datos confiable para Grupo de Análisis de Mercado. "
-        "Tools: get_asset_levels (técnico MT5), obtener_calendario_macro (calendario "
+        "Tools: get_asset_levels (técnico MT5 auto), get_chart_objects (niveles "
+        "dibujados a mano por el director en MT5: soportes/resistencias, trendlines, "
+        "canales, rectángulos + screenshot, vía Service ChartObjectsExporter), "
+        "obtener_calendario_macro (calendario "
         "económico Investing.com — Chile + EE.UU. + China + Zona Euro, con resultado "
         "real `actual` y clasificación mejor/peor/en_linea; WebSearch es fallback si la fuente falla). "
         "Hora en America/Santiago. Noticias vía WebSearch. "
@@ -76,10 +79,11 @@ mcp = FastMCP(
     mask_error_details=False,
 )
 
-from market_data_mcp.tools import levels, calendar  # noqa: E402
+from market_data_mcp.tools import levels, calendar, chart_objects  # noqa: E402
 
 levels.register(mcp)
 calendar.register(mcp)
+chart_objects.register(mcp)
 
 
 if __name__ == "__main__":
