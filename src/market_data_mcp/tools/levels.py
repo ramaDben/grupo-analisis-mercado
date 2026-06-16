@@ -1,45 +1,15 @@
 """Tool get_asset_levels — análisis técnico completo con RSI, S1/S2/R1/R2 y error explícito."""
 from __future__ import annotations
 
-import json
-from pathlib import Path
 from typing import Any
 
 import pandas as pd
 from fastmcp import FastMCP
 
-# Catálogo de tickers válidos (cargado una vez al importar)
-_CATALOG_PATH = Path(__file__).resolve().parent.parent.parent.parent / "config" / "activos.json"
-
-
-def _load_valid_tickers() -> dict[str, int]:
-    """Retorna {ticker_mt5: digits} de todos los activos del catálogo."""
-    with open(_CATALOG_PATH, encoding="utf-8") as f:
-        data = json.load(f)
-
-    tickers: dict[str, int] = {}
-
-    for asset in data.get("forex_commodities", []):
-        t = asset["ticker_mt5"]
-        tickers[t] = asset["digits"]
-
-    for asset in data.get("indices", []):
-        t = asset["ticker_mt5"]
-        tickers[t] = asset["digits"]
-
-    for sector in data.get("acciones", {}).values():
-        for comp in sector.get("componentes", []):
-            t = comp["ticker_mt5"]
-            tickers[t] = comp["digits"]
-
-    for comp in data.get("activos_complementarios", {}).values():
-        t = comp["ticker_mt5"]
-        tickers[t] = comp["digits"]
-
-    return tickers
-
-
-_VALID_TICKERS = _load_valid_tickers()
+# Catálogo de tickers válidos — fuente única compartida (market_data_mcp/catalog.py).
+# Se reexportan los nombres locales para no romper consumidores ni tests existentes.
+from market_data_mcp.catalog import VALID_TICKERS as _VALID_TICKERS
+from market_data_mcp.catalog import load_valid_tickers as _load_valid_tickers
 
 
 def _rsi(series: pd.Series, period: int = 14) -> float:
