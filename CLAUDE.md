@@ -285,8 +285,8 @@ Invocar con `/nombre` desde Claude Code:
 ### Capa 3 — Acciones individuales
 | Comando | Cuándo usarlo |
 |---------|---------------|
-| `/accion [TICKER]` | Análisis completo de una de las 12 acciones del catálogo |
-| `/earnings` | Calendario de earnings de las 12 acciones para la semana |
+| `/accion [TICKER]` | Análisis completo de una de las 13 acciones del catálogo |
+| `/earnings` | Calendario de earnings de las 13 acciones para la semana |
 
 ## Estructura del proyecto
 ```
@@ -312,7 +312,7 @@ grupo-analisis-mercado/
 ├── agents/                ← prompts de sub-agents
 │   ├── recolector.md · analista.md · redactor.md
 ├── config/                ← configuración del sistema
-│   ├── activos.json       ← 20 activos: forex + índices + 12 acciones
+│   ├── activos.json       ← 21 activos: forex + índices + 13 acciones
 │   ├── drivers.json · drivers_indices_sectores.json
 │   ├── agenda_semanal.json · plantilla_señal.json
 ├── scripts/               ← scripts auxiliares

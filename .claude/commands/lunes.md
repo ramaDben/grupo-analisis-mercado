@@ -46,7 +46,7 @@ Si MCP WhatsApp no disponible: muestra el texto listo para copiar y avisa.
 ## PIEZA 2 — Earnings de la semana
 
 Ejecuta la lógica de /earnings:
-- Con `WebSearch` busca el calendario de earnings de las 12 acciones del catálogo para esta semana (investing.com + fuentes oficiales de cada empresa). Confirma fechas/horas.
+- Con `WebSearch` busca el calendario de earnings de las 13 acciones del catálogo para esta semana (investing.com + fuentes oficiales de cada empresa). Confirma fechas/horas.
 
 Por empresa que reporta esta semana, incluye:
 - Día y hora Chile (BMO=antes de apertura, AMC=después del cierre)

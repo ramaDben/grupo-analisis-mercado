@@ -163,18 +163,18 @@ Dashboard del sistema. Muestra:
 ## Capa 3 — Acciones individuales
 
 ### `/accion [TICKER]`
-Análisis completo de una de las 12 acciones del catálogo. Incluye:
+Análisis completo de una de las 13 acciones del catálogo. Incluye:
 - Análisis técnico (4H via `analyze_ticker`)
 - Drivers específicos de la empresa
 - Noticias recientes de earnings o eventos corporativos
 - Conexión con su índice (US100, US30)
 
-**Tickers válidos**: `#AAPL` · `#MSFT` · `#NVDA` · `#AMZN` · `#JPM` · `#BAC` · `#GS` · `#MS` · `#BA` · `#CAT` · `#GE` · `#DE`
+**Tickers válidos**: `#AAPL` · `#MSFT` · `#NVDA` · `#AMZN` · `#AMD` · `#JPM` · `#BAC` · `#GS` · `#MS` · `#BA` · `#CAT` · `#GE` · `#DE`
 
 ---
 
 ### `/earnings`
-Calendario de earnings de las 12 acciones para la semana actual. Para cada empresa que reporta incluye: día, hora Chile (BMO/AMC), EPS esperado, ingresos esperados, foco del mercado y conexión con su índice.
+Calendario de earnings de las 13 acciones para la semana actual. Para cada empresa que reporta incluye: día, hora Chile (BMO/AMC), EPS esperado, ingresos esperados, foco del mercado y conexión con su índice.
 
 ---
 
