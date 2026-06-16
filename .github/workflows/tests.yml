@@ -23,8 +23,8 @@ jobs:
 
       - name: Install test dependencies
         # La suite corre sin MT5 ni fastmcp: el stack pesado se sustituye por un
-        # stub del framework en market_data_mcp/tests/conftest.py.
+        # stub del framework en tests/conftest.py.
         run: python -m pip install --upgrade pip pytest pandas
 
       - name: Run market-data MCP tests
-        run: python -m pytest market_data_mcp/tests -v
+        run: python -m pytest tests -v
