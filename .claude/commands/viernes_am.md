@@ -8,6 +8,14 @@ Genera la operativa de la mañana del viernes pieza por pieza para aprobación.
 
 ---
 
+## MODO EJECUTIVO
+Si el argumento del comando es `ejecutivo` (ej. `/viernes_am ejecutivo`), activa MODO EJECUTIVO:
+por CADA pieza de este paquete, además del mensaje de cliente, genera el guion de venta privado
+siguiendo `.claude/commands/_modo_ejecutivo.md` (doble salida, aprobación y guardado `guion_<tipo>`).
+Sin ese argumento, ignora esta sección y genera solo el contenido de cliente, como hasta ahora.
+
+---
+
 ## PIEZA 1 — Dato macro del día
 
 Verifica si hoy es el **primer viernes del mes** (= NFP day).
