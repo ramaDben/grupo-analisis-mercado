@@ -170,7 +170,21 @@ Reglas:
 - **Indicadores en español**: todo dato macro se nombra en español, con la sigla original entre paréntesis **una sola vez** (ej. "Índice de gerentes de compra manufacturero (PMI manufacturero)"). Minimizar términos en otro idioma en el cuerpo del mensaje.
 - **Bloque "🔤 Diccionario rápido"**: obligatorio en `/dato_macro` (ambos modos) y en `/noticia` cuando aparezcan siglas. Por cada abreviatura del mensaje (ISM, NFP, JOLTS, PMI, PCE, IPC, ADP…), una línea explicativa en voz novata. **Ninguna abreviatura puede quedar sin explicación en español ese día.**
 - **Fuente canónica**: `data/glosario_siglas.json` (`SIGLA → {nombre_es, explicacion}`). Si aparece una sigla nueva, explicarla al vuelo y **añadirla al JSON** para reutilizarla.
-- En `/dato_macro`, la lectura del calendario de investing.com (`WebFetch`) es **obligatoria** como fuente principal del panorama del día; WebSearch + fuentes oficiales son fallback solo si la tabla no renderiza.
+- En `/dato_macro`, la fuente principal del panorama del día es la tool MCP `obtener_calendario_macro` (calendario Investing.com — Chile/EE.UU./China/Zona Euro, con resultado real `actual` y clasificación mejor/peor/en_linea); WebSearch sobre investing.com + fuentes oficiales son fallback solo si la tool devuelve `{"error": ...}`.
+
+### Dos modos de `/dato_macro` y plantilla del Modo resultado (issue #93)
+`/dato_macro` genera el mensaje en uno de **dos modos**, elegidos automáticamente según la hora del evento vs. la hora actual de Chile:
+- **Modo anticipación** (dato `🕐 PRÓXIMO`, aún no sale): qué es + hora CLT + anterior/consenso + 3 escenarios (mejor/peor/en línea) + activos a observar + temporalidad del impacto.
+- **Modo resultado** (dato `✅ YA SALIÓ`, ya tiene valor `actual` — plantilla issue #93): es la estructura canónica cuando el dato ya publicó. Reglas:
+  - **Veredicto above-the-fold**: encabezado + veredicto *EN LÍNEA / MEJOR / PEOR* + primera sub-lectura caben en las primeras 3-4 líneas (~200 caracteres visibles en WhatsApp).
+  - **Sub-lecturas**: una línea por sub-lectura (`actual` vs `esperado`), marcando la sorpresa con 🔥. En datos de **alto impacto** limitar a anual + mensual y normal + subyacente según el indicador; nunca volcar todas las filas.
+  - **Bloque "⚠️ PERO ojo con el detalle importante"** (OPCIONAL): solo cuando una sub-lectura se desvía del consenso mientras el dato general salió en línea — explica qué mide esa sub-lectura en voz novata y por qué cambia la lectura. Si no hay sorpresa parcial, se omite entero.
+  - **🧠 ¿Qué significa esto?**: 2-4 líneas en voz novata. Si salió en línea, explicar que el mercado ya lo tenía descontado.
+  - **💡 Impacto esperado por activo**: 3-4 activos con *SUBE ⬆️ / BAJA ⬇️* y el porqué en 1 línea, conectando con el camino a la decisión de tasas cuando aplique.
+  - **⏱️ Temporalidad del impacto** (OBLIGATORIA, ambos modos): scalper / intradía / swing de jornada / posicional (mismas 4 etiquetas canónicas de temporalidad).
+  - **📌 Resumen simple** de cierre que amarra el dato general + la sorpresa parcial si la hubo.
+- **Cierre obligatorio (ambos modos)**: tras el último separador, link al calendario completo (`https://es.investing.com/economic-calendar/`) + CTA genérico al analista designado, siempre juntos como pie.
+- Tras aprobar y enviar, `/dato_macro` registra `data/ultimo_evento.json` y ofrece encadenar la **encuesta post-evento** pedagógica.
 
 ## Formato de precios — regla de decimales MT5
 **OBLIGATORIO**: al mostrar cualquier precio (entrada, TP, SL, soporte, resistencia, precio actual), respetar exactamente los decimales del campo `digits` definido en `config/activos.json` para ese activo.
@@ -213,12 +227,17 @@ Mejorar indicadores de satisfacción del cliente, retención, NPS y reducir chur
 
 | MCP | Estado | Propósito | Usado en |
 |-----|--------|-----------|----------|
-| **market-data** | ✅ Activo | Análisis técnico MT5 (`get_asset_levels`) + calendario económico Investing.com (`obtener_calendario_macro`): Chile + EE.UU. + China + Zona Euro, con resultado real (`actual`) y clasificación `mejor`/`peor`/`en_linea` vs consenso. WebSearch es fallback si la fuente falla. Noticias vía WebSearch. | Comandos de niveles técnicos |
+| **market-data** | ✅ Activo | Análisis técnico MT5 (`get_asset_levels`) + niveles dibujados a mano por el director en MT5 (`get_chart_objects`: soportes/resistencias, trendlines, canales, rectángulos + screenshot) + calendario económico Investing.com (`obtener_calendario_macro`): Chile + EE.UU. + China + Zona Euro, con resultado real (`actual`) y clasificación `mejor`/`peor`/`en_linea` vs consenso. WebSearch es fallback si la fuente falla. Noticias vía WebSearch. | Comandos de niveles técnicos |
 | **WebSearch (investing.com + fuentes oficiales)** | ✅ Activo | Calendario económico y noticias relevantes | `/dato_macro`, `/noticia` y comandos de día |
 | **WhatsApp (Evolution API)** | ⏳ Pendiente conexión Docker | Envío directo al grupo | Flujo manual por ahora |
 | **TrendRadar / Firecrawl / Finnhub** | ❌ No activos | Reemplazados por market-data (MT5) + WebSearch | — |
 
-**Nota**: el MCP `market-data` expone **dos** tools: `get_asset_levels` (análisis técnico MT5) y `obtener_calendario_macro` (calendario económico Investing.com — Chile/EE.UU./China/Zona Euro con campo `actual` y `resultado`, issue #91; WebSearch es fallback si la fuente falla). La antigua `get_economic_events` fue reemplazada por la tool nativa (#53); `get_market_context` (noticias Finnhub) quedó deprecada y se purgó del registro — las **noticias** se obtienen vía `WebSearch` (investing.com + fuentes oficiales: Fed, BCCh, OPEP+, EIA, BLS). Ver `docs/superpowers/specs/2026-06-05-calendario-macro-nativo-mt5-design.md`.
+**Nota**: el MCP `market-data` expone **tres** tools:
+- `get_asset_levels` — análisis técnico MT5 automático (soportes/resistencias, indicadores).
+- `get_chart_objects` — niveles dibujados a mano por el director en MT5 (soportes/resistencias, trendlines, canales, rectángulos) más screenshot, vía el Service `ChartObjectsExporter` (sub-proyecto A, #98). Permite leer el marcado manual del director en lugar de inferirlo automáticamente.
+- `obtener_calendario_macro` — calendario económico Investing.com (Chile/EE.UU./China/Zona Euro con campo `actual` y `resultado`, issue #91; WebSearch es fallback si la fuente falla).
+
+Contrato de error común: si el dato no está disponible retorna `{'error': 'CÓDIGO', 'message': '...'}` — nunca array vacío ni `None` silencioso. La antigua `get_economic_events` fue reemplazada por la tool nativa (#53); `get_market_context` (noticias Finnhub) quedó deprecada y se purgó del registro — las **noticias** se obtienen vía `WebSearch` (investing.com + fuentes oficiales: Fed, BCCh, OPEP+, EIA, BLS). Ver `docs/superpowers/specs/2026-06-05-calendario-macro-nativo-mt5-design.md`.
 
 **Flujo actual**: los comandos generan contenido → muestran para copiar → guardan en `data/mensajes/`. Cuando Evolution API esté conectada a WhatsApp/Baileys, el envío pasará a ser automático.
 
