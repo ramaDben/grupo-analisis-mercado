@@ -41,6 +41,15 @@ Al aprobar:
 3. Usa la herramienta `Write` sobre la ruta devuelta con el texto final aprobado.
 4. Muestra el texto listo para copiar. **Nunca se envía nada al grupo sin aprobación explícita del director.**
 
+## Modo ejecutivo (flag `ejecutivo`)
+
+Si `ejecutivo` aparece en los argumentos, además de la respuesta de cliente genera el **guion de venta interno** siguiendo `.claude/shared/modo_ejecutivo.md` (formato, banner `🔒 INTERNO · NO ENVIAR AL CLIENTE`, flujo de aprobación y guardrails). El guion orienta al ejecutivo sobre cómo capitalizar esta interacción 1:1 (reforzar el vínculo, invitar a operar/subir de plan). Para esta pieza:
+- **Tipo de guion**: `guion_respuesta`.
+- **`-Activo`**: omitir (pieza conversacional transversal → `_general`).
+- Mismo `-Hora` que el mensaje de cliente.
+
+Muestra ambas salidas rotuladas `📤 MENSAJE CLIENTE` y `🔒 GUION EJECUTIVO`; al aprobar, guarda el guion con `scripts\ruta_mensaje.ps1`.
+
 ## REGLAS
 
 - Sin límite de veces al día.

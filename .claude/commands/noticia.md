@@ -125,6 +125,15 @@ Después de aprobar y enviar la noticia, registrar el evento y ofrecer la encues
 3. Si responde que sí → ejecutar el flujo de `/encuesta post_evento [activo] "[título de la noticia]"`: genera las 3 opciones causa-efecto y guarda en `data/historial_encuestas.json`.
 4. Si responde que no → terminar sin generar encuesta.
 
+## Modo ejecutivo (flag `ejecutivo`)
+
+Si `ejecutivo` aparece en los argumentos, además del mensaje de cliente genera el **guion de venta interno** siguiendo `.claude/shared/modo_ejecutivo.md` (formato, banner `🔒 INTERNO · NO ENVIAR AL CLIENTE`, flujo de aprobación y guardrails). Para esta pieza:
+- **Tipo de guion**: `guion_noticia`.
+- **`-Activo`**: el ticker del activo más impactado por la noticia.
+- Mismo `-Hora` que el mensaje de cliente.
+
+Muestra ambas salidas rotuladas `📤 MENSAJE CLIENTE` y `🔒 GUION EJECUTIVO`; al aprobar, guarda el guion con `scripts\ruta_mensaje.ps1`.
+
 ## REGLAS
 - Sin límite de veces al día.
 - No repetir la misma noticia en el mismo día.

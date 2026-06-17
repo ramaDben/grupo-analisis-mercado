@@ -217,6 +217,15 @@ Al aprobar: construye la ruta con `scripts\ruta_mensaje.ps1 -Fecha [FECHA] -Acti
 
 ---
 
+## Modo ejecutivo (flag `ejecutivo`)
+
+Si `ejecutivo` aparece en los argumentos, además del mensaje de cliente de CADA activo genera su **guion de venta interno** siguiendo `.claude/shared/modo_ejecutivo.md` (formato, banner `🔒 INTERNO · NO ENVIAR AL CLIENTE`, flujo de aprobación y guardrails). Por cada activo:
+- **Tipo de guion**: `guion_niveles`.
+- **`-Activo`**: el `ticker_mt5` de ese activo.
+- Mismo `-Hora` que el mensaje de cliente.
+
+Muestra ambas salidas rotuladas `📤 MENSAJE CLIENTE` y `🔒 GUION EJECUTIVO`; al aprobar, guarda el guion con `scripts\ruta_mensaje.ps1`.
+
 ## REGLAS GENERALES
 - Lenguaje cliente: simple, que se entienda en 30 segundos.
 - Hora siempre en hora Chile (CLT/CLST).

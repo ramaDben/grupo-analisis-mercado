@@ -126,6 +126,15 @@ Para `movimiento`, usar `"activos": ["...", "..."]` en vez de `"activo"`.
 
 ---
 
+## Modo ejecutivo (flag `ejecutivo`)
+
+Si `ejecutivo` aparece en `$ARGUMENTS`, además de cada poll de cliente genera su **guion de venta interno** siguiendo `.claude/shared/modo_ejecutivo.md` (formato, banner `🔒 INTERNO · NO ENVIAR AL CLIENTE`, flujo de aprobación y guardrails). El guion engancha a los ejecutivos a empujar la participación del grupo (votar como excusa de contacto). Por cada poll:
+- **Tipo de guion**: `guion_encuesta`.
+- **`-Activo`**: el ticker del poll (en `movimiento`/scope semanal transversal, omitir → `_general`). Un guion por poll.
+- Mismo `-Hora` que el poll.
+
+Muestra ambas salidas rotuladas `📤 MENSAJE CLIENTE` y `🔒 GUION EJECUTIVO`; al aprobar, guarda el guion con `scripts\ruta_mensaje.ps1`.
+
 ## REGLAS
 - Tipo obligatorio: sin tipo, preguntar.
 - Sin precios, sin números, sin educación. Nunca.

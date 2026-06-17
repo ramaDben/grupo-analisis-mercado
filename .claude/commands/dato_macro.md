@@ -164,6 +164,15 @@ Después de que el director apruebe y envíe el dato, registrar el evento y ofre
 
 **Solo aplica en modo resultado o cuando el dato ya tiene dirección clara.** En modo anticipación pura (dato aún no sale), ofrecerla igual pero aclarando que es para que el grupo anticipe el escenario.
 
+## Modo ejecutivo (flag `ejecutivo`)
+
+Si `ejecutivo` aparece en los argumentos, además del mensaje de cliente genera el **guion de venta interno** siguiendo `.claude/shared/modo_ejecutivo.md` (formato, banner `🔒 INTERNO · NO ENVIAR AL CLIENTE`, flujo de aprobación y guardrails). Para esta pieza:
+- **Tipo de guion**: `guion_dato_macro`.
+- **`-Activo`**: el ticker del activo más impactado por el dato.
+- Mismo `-Hora` que el mensaje de cliente.
+
+Muestra ambas salidas rotuladas `📤 MENSAJE CLIENTE` y `🔒 GUION EJECUTIVO`; al aprobar, guarda el guion con `scripts\ruta_mensaje.ps1`.
+
 ## REGLAS
 - Sin límite de veces al día (cada dato relevante merece su propio mensaje).
 - Hora: en fuente MT5 nativa, la hora es la del servidor MT5 (broker actual = hora Chile, se muestra tal cual). En fallback WebSearch, convertir a hora Chile con `scripts\hora_chile.ps1`.

@@ -73,6 +73,15 @@ Pregunta al director:
 Si aprueba: llama MCP WhatsApp.
 Si MCP no disponible: muestra texto listo para copiar.
 
+## Modo ejecutivo (flag `ejecutivo`)
+
+Si `ejecutivo` aparece en los argumentos, además del mensaje de cliente genera el **guion de venta interno** siguiendo `.claude/shared/modo_ejecutivo.md` (formato, banner `🔒 INTERNO · NO ENVIAR AL CLIENTE`, flujo de aprobación y guardrails). Para esta pieza:
+- **Tipo de guion**: `guion_earnings`.
+- **`-Activo`**: omitir (pieza transversal del catálogo → `_general`).
+- Mismo `-Hora` que el mensaje de cliente.
+
+Muestra ambas salidas rotuladas `📤 MENSAJE CLIENTE` y `🔒 GUION EJECUTIVO`; al aprobar, guarda el guion con `scripts\ruta_mensaje.ps1`.
+
 ## REGLAS
 - Cubrir SOLO las 13 acciones del catálogo (no añadir otras).
 - Si una empresa reporta BMO: mencionarlo porque afecta la apertura del mercado.
