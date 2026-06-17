@@ -41,7 +41,7 @@ def _chart_usdclp(current=889.60):
         "timeframe": "H4",
         "digits": 2,
         "current_price": current,
-        "screenshot": "usdclp_H4_2026-06-16_12-30.png",
+        "screenshot": "usdclp_H4.png",
         "hlines": [
             {"name": "R", "price": 895.00},
             {"name": "S", "price": 884.00},
@@ -120,7 +120,7 @@ def test_pasa_trendlines_canales_rectangulos_y_screenshot(collector, monkeypatch
     assert res["trendlines"][0]["pendiente"] == "alcista"
     assert res["channels"][0]["banda_superior"] == 900.0
     assert res["rectangles"][0]["max"] == 892.0
-    assert res["screenshot"].endswith("usdclp_H4_2026-06-16_12-30.png")
+    assert res["screenshot"].endswith("usdclp_H4.png")
 
 
 def test_sin_screenshot_devuelve_none(collector, monkeypatch, tmp_path):
@@ -131,3 +131,37 @@ def test_sin_screenshot_devuelve_none(collector, monkeypatch, tmp_path):
     tool = _get_tool(collector)
     res = tool("USDCLP", "H4")
     assert res["screenshot"] is None
+
+
+def test_screenshot_se_copia_a_data_charts(collector, monkeypatch, tmp_path):
+    """El PNG vigente en Common/Files se copia a data/charts y se devuelve esa ruta."""
+    common = tmp_path / "common"
+    charts = tmp_path / "charts"
+    common.mkdir()
+    _escribir_json(common, [_chart_usdclp()])
+    (common / "usdclp_H4.png").write_bytes(b"fake-png")  # el Service ya lo escribió
+    monkeypatch.setenv("MT5_COMMON_FILES", str(common))
+    monkeypatch.setenv("MT5_CHARTS_DIR", str(charts))
+
+    tool = _get_tool(collector)
+    res = tool("USDCLP", "H4")
+
+    destino = charts / "usdclp_H4.png"
+    assert res["screenshot"] == str(destino)
+    assert destino.exists()  # se recibió en data/charts
+
+
+def test_screenshot_inexistente_no_copia(collector, monkeypatch, tmp_path):
+    """Si el PNG aún no está en Common/Files, devuelve esa ruta sin copiar nada."""
+    common = tmp_path / "common"
+    charts = tmp_path / "charts"
+    common.mkdir()
+    _escribir_json(common, [_chart_usdclp()])  # JSON sí, PNG no
+    monkeypatch.setenv("MT5_COMMON_FILES", str(common))
+    monkeypatch.setenv("MT5_CHARTS_DIR", str(charts))
+
+    tool = _get_tool(collector)
+    res = tool("USDCLP", "H4")
+
+    assert res["screenshot"] == str(common / "usdclp_H4.png")
+    assert not charts.exists()

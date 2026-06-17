@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -27,10 +28,41 @@ _OBJECTS_FILE = "chart_objects.json"
 # servidor MT5, que en el broker actual coincide con hora Chile.
 _STALE_SECONDS = 3600
 
+# Destino de los screenshots: el repo `data/charts/` (gitignored, convención #81).
+# El Service MQL5 está sandboxed y solo puede escribir en Common/Files; esta tool
+# copia el PNG vigente desde ahí a data/charts para "recibirlo" en el repo. Ruta
+# derivada del repo (src/market_data_mcp/tools/chart_objects.py -> raíz), sobre-
+# escribible con la env var MT5_CHARTS_DIR.
+_REPO_CHARTS_DIR = Path(__file__).resolve().parents[3] / "data" / "charts"
+
 
 def _common_files_dir() -> str | None:
     """Directorio Common/Files de MT5 desde la env var. None si no está seteada."""
     return os.environ.get("MT5_COMMON_FILES") or None
+
+
+def _charts_output_dir() -> Path:
+    """Directorio donde se reciben los screenshots (data/charts del repo por defecto)."""
+    return Path(os.environ["MT5_CHARTS_DIR"]) if os.environ.get("MT5_CHARTS_DIR") else _REPO_CHARTS_DIR
+
+
+def _recibir_screenshot(common_dir: str, nombre: str) -> str | None:
+    """Copia el PNG desde Common/Files a data/charts y devuelve la ruta destino.
+
+    Si el PNG aún no existe en Common/Files (el Service no lo escribió este ciclo)
+    o la copia falla, cae a la ruta en Common/Files para no perder la referencia.
+    """
+    origen = Path(common_dir) / nombre
+    if not origen.exists():
+        return str(origen)
+    destino_dir = _charts_output_dir()
+    try:
+        destino_dir.mkdir(parents=True, exist_ok=True)
+        destino = destino_dir / nombre
+        shutil.copy2(origen, destino)
+        return str(destino)
+    except OSError:
+        return str(origen)
 
 
 def _parse_generado(generated_at: str) -> datetime | None:
@@ -143,7 +175,7 @@ def register(mcp: FastMCP) -> None:
         soportes, resistencias = _clasificar_hlines(chart.get("hlines", []), current, digits)
 
         screenshot_name = chart.get("screenshot") or ""
-        screenshot = str(Path(common_dir) / screenshot_name) if screenshot_name else None
+        screenshot = _recibir_screenshot(common_dir, screenshot_name) if screenshot_name else None
 
         return {
             "ticker": ticker,

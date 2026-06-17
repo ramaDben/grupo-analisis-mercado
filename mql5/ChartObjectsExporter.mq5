@@ -28,16 +28,6 @@ string FechaIso(string s)
    return(s);
 }
 
-//--- "YYYY.MM.DD HH:MM" -> "YYYY-MM-DD_HH-MM" para nombres de archivo
-string FechaArchivo(datetime t)
-{
-   string s = TimeToString(t, TIME_DATE|TIME_MINUTES);
-   StringReplace(s, ".", "-");
-   StringReplace(s, " ", "_");
-   StringReplace(s, ":", "-");
-   return(s);
-}
-
 //--- slug del proyecto: lowercase(symbol) sin .spot / # / /  (convencion charts #81)
 string SlugSimbolo(string symbol)
 {
@@ -158,8 +148,11 @@ string SerializarChart(long chart_id)
       }
    }
 
-   // screenshot: ChartScreenShot escribe en MQL5/Files; luego lo copiamos a Common/Files
-   string png = SlugSimbolo(symbol) + "_" + tf + "_" + FechaArchivo(ahora) + ".png";
+   // screenshot: ChartScreenShot escribe en MQL5/Files; luego lo copiamos a Common/Files.
+   // Nombre estable (sin timestamp): un PNG por grafico+TF que se sobreescribe cada
+   // ciclo. Asi los niveles refrescan a 60 s pero las imagenes NO se acumulan (issue
+   // del Service: el nombre con fecha generaba un PNG nuevo por minuto).
+   string png = SlugSimbolo(symbol) + "_" + tf + ".png";
    if(ChartScreenShot(chart_id, png, AnchoPNG, AltoPNG, ALIGN_RIGHT))
       CopiarACommon(png);
    else
