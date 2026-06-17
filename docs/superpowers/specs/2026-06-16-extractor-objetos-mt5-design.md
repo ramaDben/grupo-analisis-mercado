@@ -32,6 +32,12 @@ Solo A está en alcance aquí.
 - **Screenshot**: el Service genera el PNG con `ChartScreenShot`. Como esa función solo escribe en
   `MQL5/Files` (sandbox local), el Service **copia** el PNG (binario) a `Common/Files`, de modo que
   una sola variable de config (`MT5_COMMON_FILES`) localiza tanto el JSON como los PNG.
+  El PNG usa **nombre estable sin timestamp** (`<slug>_<TF>.png`): un solo archivo por gráfico+TF
+  que se sobreescribe cada ciclo, igual que el `chart_objects.json` único — así los niveles refrescan
+  a 60 s pero las imágenes no se acumulan (el nombre con fecha previo generaba un PNG nuevo por minuto).
+- **Recepción en el repo**: como MQL5 está sandboxed y no puede escribir fuera de `Common/Files`, el
+  lado Python (`get_chart_objects`) **copia** el PNG vigente a `data/charts/` (gitignored, convención
+  #81) bajo demanda y devuelve esa ruta. Destino derivado del repo, sobreescribible con `MT5_CHARTS_DIR`.
 - **Fuente intercambiable**: el lado Python ubica el archivo por `MT5_COMMON_FILES`, dejando la
   fuente MT5 swappable a futuro (VPS propio vs MT5 del broker).
 - **Transporte**: archivo JSON único `chart_objects.json` en `Common/Files` (sin baja latencia,
