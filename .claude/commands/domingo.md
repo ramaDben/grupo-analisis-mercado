@@ -7,6 +7,14 @@ Nota de hora: los mercados asiáticos abren el domingo ~22:00 CLT (lunes en Toki
 
 ---
 
+## MODO EJECUTIVO
+Si el argumento del comando es `ejecutivo` (ej. `/domingo ejecutivo`), activa MODO EJECUTIVO:
+por CADA pieza de este paquete, además del mensaje de cliente, genera el guion de venta privado
+siguiendo `.claude/shared/modo_ejecutivo.md` (doble salida, aprobación y guardado `guion_<tipo>`).
+Sin ese argumento, ignora esta sección y genera solo el contenido de cliente, como hasta ahora.
+
+---
+
 ## PIEZA 1 — Noticias del fin de semana
 
 Busca eventos relevantes ocurridos entre el sábado y hoy domingo que puedan mover nuestros activos al inicio de semana:

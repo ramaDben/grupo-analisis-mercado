@@ -243,6 +243,8 @@ El helper crea las carpetas y devuelve la ruta lista para `Write`. Si la pieza n
 
 **Tipos de archivo** (carpeta `<tipo>`): niveles, dato_macro, noticia, alerta, encuesta, señal, concepto, pregunta, respuesta, cierre, earnings. La salida de `/apertura` usa tipo `niveles`.
 
+**Modo ejecutivo (flag `ejecutivo`)**: los 7 comandos de día aceptan el argumento `ejecutivo` (ej. `/lunes ejecutivo`). Por cada pieza generan, además del mensaje de cliente (idéntico, con todas las reglas de oro), un **guion de venta privado** para el grupo interno de ejecutivos (gancho + a quién, qué decir, manejo de objeciones, llamado a la acción), marcado `🔒 INTERNO · NO ENVIAR AL CLIENTE`. El guion se guarda con `ruta_mensaje.ps1` bajo el tipo `guion_<tipo>` (ej. `guion_niveles`), mismo activo y hora que el mensaje de cliente. Contrato único en `.claude/shared/modo_ejecutivo.md`.
+
 **Convención de nombres de chart (issue #81)**: los PNG de `data/charts/` siguen el patrón único `<activo_slug>_<TF>_<YYYY-MM-DD_HH-MM>.png`, con el mismo `<activo_slug>` de `ruta_mensaje.ps1` (#45) — `lowercase(ticker_mt5)` sin `.spot`/`#`/`/` — y `<TF>` en mayúscula MT5 (`M15`/`H1`/`H4`/`D1`). Ej: `usdclp_H4_2026-06-07_11-45.png`. Los `data/charts/*.png` están gitignored.
 
 **Nunca se envía nada al grupo sin aprobación explícita del director.**
