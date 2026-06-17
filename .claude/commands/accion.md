@@ -88,6 +88,15 @@ Muestra el mensaje al director. Pregunta:
 Si aprueba: llama MCP WhatsApp (con imagen si hay chart).
 Si MCP no disponible: muestra texto listo para copiar + ruta imagen.
 
+## Modo ejecutivo (flag `ejecutivo`)
+
+Si `ejecutivo` aparece en los argumentos, además del mensaje de cliente genera el **guion de venta interno** siguiendo `.claude/shared/modo_ejecutivo.md` (formato, banner `🔒 INTERNO · NO ENVIAR AL CLIENTE`, flujo de aprobación y guardrails). Para esta pieza:
+- **Tipo de guion**: `guion_accion`.
+- **`-Activo`**: el ticker de la acción.
+- Mismo `-Hora` que el mensaje de cliente.
+
+El mensaje de cliente conserva su flujo actual (hoy no se persiste en `data/mensajes/`); **solo el guion** se guarda con `scripts\ruta_mensaje.ps1`. Muestra ambas salidas rotuladas `📤 MENSAJE CLIENTE` y `🔒 GUION EJECUTIVO`.
+
 ## REGLAS
 - Lenguaje cliente: explicar qué hace la empresa si el cliente no lo sabe (1 línea).
 - SIEMPRE conectar con el índice relacionado.

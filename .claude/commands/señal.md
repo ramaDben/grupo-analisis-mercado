@@ -133,6 +133,15 @@ Si aprueba TODO:
 }
 ```
 
+## Modo ejecutivo (flag `ejecutivo`)
+
+Si `ejecutivo` aparece en los argumentos, además del mensaje de cliente genera el **guion de venta interno** siguiendo `.claude/shared/modo_ejecutivo.md` (formato, banner `🔒 INTERNO · NO ENVIAR AL CLIENTE`, flujo de aprobación y guardrails). Para esta pieza:
+- **Tipo de guion**: `guion_señal`.
+- **`-Activo`**: el ticker de la señal.
+- Mismo `-Hora` que el mensaje de cliente.
+
+El mensaje de cliente conserva su flujo actual (registro en `data/historial_senales.json`; no se guarda en `data/mensajes/`); **solo el guion** se persiste con `scripts\ruta_mensaje.ps1`. Muestra ambas salidas rotuladas `📤 MENSAJE CLIENTE` y `🔒 GUION EJECUTIVO`.
+
 ## REGLAS
 - STOP inmediato si ya hay 3 señales la semana.
 - TP y SL SIEMPRE en CLP para el cliente.

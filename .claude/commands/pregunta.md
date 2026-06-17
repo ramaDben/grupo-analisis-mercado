@@ -68,6 +68,15 @@ Muestra la pregunta al director. Pregunta: "¿Apruebas? ¿Enviar al grupo? ¿Gua
 Si aprueba: llama MCP WhatsApp con el bloque de pregunta.
 Si MCP no disponible: muestra texto listo para copiar.
 
+## Modo ejecutivo (flag `ejecutivo`)
+
+Si `ejecutivo` aparece en los argumentos, además del mensaje de cliente genera el **guion de venta interno** siguiendo `.claude/shared/modo_ejecutivo.md` (formato, banner `🔒 INTERNO · NO ENVIAR AL CLIENTE`, flujo de aprobación y guardrails). Para esta pieza:
+- **Tipo de guion**: `guion_pregunta`.
+- **`-Activo`**: omitir (pieza transversal → `_general`).
+- Mismo `-Hora` que el mensaje de cliente.
+
+Muestra ambas salidas rotuladas `📤 MENSAJE CLIENTE` y `🔒 GUION EJECUTIVO`; al aprobar, guarda el guion con `scripts\ruta_mensaje.ps1`.
+
 ## REGLAS
 - 1-2 veces por semana máximo (no abusar).
 - Enviar durante horario activo del mercado (no a última hora).

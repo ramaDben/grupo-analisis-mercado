@@ -1,15 +1,32 @@
-# Modo ejecutivo — contrato compartido de los comandos de día
+# Modo ejecutivo — contrato compartido
 
-> Este archivo NO es un comando invocable. Es el contrato único que siguen los
-> 7 comandos de día (`/domingo`, `/lunes`, `/martes`, `/miercoles`, `/jueves`,
-> `/viernes_am`, `/viernes_pm`) cuando se invocan con el argumento `ejecutivo`
-> (ej. `/lunes ejecutivo`). Define cómo se genera, muestra y guarda el guion de
-> venta privado que acompaña a cada pieza. Si cambia el formato del guion, se
-> cambia AQUÍ y se propaga a todos los días.
+> Este archivo NO es un comando invocable. Es el contrato único que siguen TODOS
+> los comandos que producen un mensaje de cliente reenviable, cuando se invocan
+> con el argumento `ejecutivo` (ej. `/lunes ejecutivo`, `/noticia ejecutivo`).
+> Define cómo se genera, muestra y guarda el guion de venta privado que acompaña
+> a cada pieza. Si cambia el formato del guion, se cambia AQUÍ y se propaga a
+> todos los comandos.
+
+## Comandos que aceptan el flag `ejecutivo`
+- **7 comandos de día**: `/domingo`, `/lunes`, `/martes`, `/miercoles`,
+  `/jueves`, `/viernes_am`, `/viernes_pm`. Generan DOS salidas por CADA pieza del
+  paquete.
+- **Comandos de tarea (Capa 2)**: `/encuesta`, `/rencuesta`, `/apertura`,
+  `/actualizacion`, `/dato_macro`, `/noticia`, `/señal`, `/alerta`, `/concepto`,
+  `/pregunta`, `/respuesta`. Generan un guion por cada mensaje de cliente que
+  muestren (normalmente uno; `/encuesta` sin activo genera un guion por poll).
+- **Comandos de acción (Capa 3)**: `/accion`, `/earnings`.
+
+**No elegibles** (no producen un mensaje de cliente reenviable): `/estado`
+(dashboard interno, no envía nada a WhatsApp), `/chart` (genera un PNG, no texto;
+cuando se adjunta a otra pieza, esa pieza ya lleva su guion) y `/curriculo`
+(orquestador: su contenido de cliente sale por los delegados `/rencuesta` o
+`/concepto`, que ya generan su propio guion en modo ejecutivo). Si se invocan con
+`ejecutivo`, ignoran el flag.
 
 ## Qué activa el modo
-El comando de día detecta `ejecutivo` en sus argumentos. Si está presente, por
-CADA pieza del paquete genera DOS salidas; si no está, ignora este contrato y
+El comando detecta `ejecutivo` en sus argumentos. Si está presente, por CADA
+pieza/mensaje de cliente genera DOS salidas; si no está, ignora este contrato y
 produce solo el contenido de cliente, como siempre.
 
 ## Las dos salidas por pieza
@@ -64,9 +81,16 @@ produce solo el contenido de cliente, como siempre.
    scripts\ruta_mensaje.ps1 -Fecha "2026-06-16" -Activo "USDCLP" -Tipo "niveles" -Hora "09-15"
    scripts\ruta_mensaje.ps1 -Fecha "2026-06-16" -Activo "USDCLP" -Tipo "guion_niveles" -Hora "09-15"
    ```
-   Piezas sin activo protagonista (concepto, encuesta de la semana, earnings,
-   paquete dominical) omiten `-Activo` → el helper guarda en `_general/` y
-   `_general/guion_<tipo>/`.
+   Piezas sin activo protagonista (concepto, pregunta, respuesta, encuesta de la
+   semana, earnings, paquete dominical) omiten `-Activo` → el helper guarda en
+   `_general/` y `_general/guion_<tipo>/`.
+
+   **Comandos que hoy NO guardan el mensaje de cliente en `data/mensajes/`**
+   (`/señal` → registra en `data/historial_senales.json`; `/accion` → no
+   persiste): en modo ejecutivo el mensaje de cliente conserva su flujo actual
+   (no se fuerza un guardado nuevo) y SOLO el guion se guarda con
+   `ruta_mensaje.ps1` bajo `guion_<tipo>` (`guion_señal`, `guion_accion`), con el
+   `-Activo` (ticker) y la `-Hora` de esa pieza.
 
    Como el envío WhatsApp aún es manual, "enviar" = mostrar el texto listo para
    copiar. El guion se muestra SIEMPRE separado del mensaje de cliente.

@@ -90,6 +90,15 @@ Después de enviar la alerta, registrar el evento y ofrecer la encuesta pedagóg
 
 **No encadenar automáticamente sin preguntar:** tras una alerta urgente el director puede preferir esperar a que el mercado reaccione antes de abrir la encuesta.
 
+## Modo ejecutivo (flag `ejecutivo`)
+
+Si `ejecutivo` aparece en los argumentos, además del mensaje de cliente genera el **guion de venta interno** siguiendo `.claude/shared/modo_ejecutivo.md` (formato, banner `🔒 INTERNO · NO ENVIAR AL CLIENTE`, flujo de aprobación y guardrails). Para esta pieza:
+- **Tipo de guion**: `guion_alerta`.
+- **`-Activo`**: el ticker del activo principal impactado.
+- Mismo `-Hora` que el mensaje de cliente.
+
+Muestra ambas salidas rotuladas `📤 MENSAJE CLIENTE` y `🔒 GUION EJECUTIVO`; al aprobar, guarda el guion con `scripts\ruta_mensaje.ps1`.
+
 ## REGLAS
 - No repetir la misma alerta en 1 hora.
 - Máximo 2 líneas para "qué pasó".

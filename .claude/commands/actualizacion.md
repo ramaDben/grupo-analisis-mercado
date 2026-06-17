@@ -84,3 +84,14 @@ Plantilla oficial:
 
 **→ ¿Apruebas? ¿Adjuntar chart de MT5? ¿Enviar al grupo?**
 Al aprobar: construye la ruta con `scripts\ruta_mensaje.ps1 -Fecha [FECHA] -Activo [TICKER_MT5] -Tipo actualizacion -Hora [HH-MM]` y guarda el mensaje usando Write. Muestra el texto listo para copiar.
+
+---
+
+## Modo ejecutivo (flag `ejecutivo`)
+
+Si `ejecutivo` aparece en los argumentos, además del mensaje de cliente genera el **guion de venta interno** siguiendo `.claude/shared/modo_ejecutivo.md` (formato, banner `🔒 INTERNO · NO ENVIAR AL CLIENTE`, flujo de aprobación y guardrails). Para esta pieza:
+- **Tipo de guion**: `guion_actualizacion`.
+- **`-Activo`**: el `ticker_mt5` del activo actualizado.
+- Mismo `-Hora` que el mensaje de cliente.
+
+Muestra ambas salidas rotuladas `📤 MENSAJE CLIENTE` y `🔒 GUION EJECUTIVO`; al aprobar, guarda el guion con `scripts\ruta_mensaje.ps1`.

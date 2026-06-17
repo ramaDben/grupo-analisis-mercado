@@ -82,6 +82,15 @@ Si el grafo está vacío → avisar que aún no hay conceptos en la malla.
 
 ---
 
+## Modo ejecutivo (flag `ejecutivo`)
+
+Si `ejecutivo` aparece en `$ARGUMENTS`, además del mensaje educativo de cliente genera el **guion de venta interno** siguiendo `.claude/shared/modo_ejecutivo.md` (formato, banner `🔒 INTERNO · NO ENVIAR AL CLIENTE`, flujo de aprobación y guardrails). Aplica al desarrollo de un concepto (PASO 4) y a la vista de mapa (PASO 5). Para esta pieza:
+- **Tipo de guion**: `guion_encuesta` (el mensaje de cliente se guarda como tipo `encuesta`, transversal → `_general`).
+- **`-Activo`**: omitir → `_general`.
+- Mismo `-Hora` que el mensaje de cliente.
+
+Muestra ambas salidas rotuladas `📤 MENSAJE CLIENTE` y `🔒 GUION EJECUTIVO`; al aprobar, guarda el guion con `scripts\ruta_mensaje.ps1`.
+
 ## REGLAS
 - Voz novata SIEMPRE (regla de oro: < 30 s para un cliente nuevo).
 - Español chileno neutro (tuteo). Nunca voseo argentino ("tenés", "sabés").

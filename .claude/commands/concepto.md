@@ -74,6 +74,15 @@ Si pide chart: ejecuta el flujo de /chart con el indicador del concepto.
 Si aprueba envío: llama MCP WhatsApp.
 Si MCP no disponible: muestra texto listo para copiar.
 
+## Modo ejecutivo (flag `ejecutivo`)
+
+Si `ejecutivo` aparece en los argumentos, además del mensaje de cliente genera el **guion de venta interno** siguiendo `.claude/shared/modo_ejecutivo.md` (formato, banner `🔒 INTERNO · NO ENVIAR AL CLIENTE`, flujo de aprobación y guardrails). Para esta pieza:
+- **Tipo de guion**: `guion_concepto`.
+- **`-Activo`**: omitir (pieza educativa transversal → `_general`).
+- Mismo `-Hora` que el mensaje de cliente.
+
+Muestra ambas salidas rotuladas `📤 MENSAJE CLIENTE` y `🔒 GUION EJECUTIVO`; al aprobar, guarda el guion con `scripts\ruta_mensaje.ps1`.
+
 ## REGLAS
 - 1 concepto por semana (normalmente el lunes, pero puede usarse cuando sea relevante).
 - Lenguaje cliente: que se entienda sin conocimientos previos.
