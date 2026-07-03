@@ -92,7 +92,7 @@ def _fetch_calendario(tab: str) -> str:
     if _cache_valid(cached):
         try:
             return cached.read_text(encoding="utf-8")
-        except Exception:
+        except Exception:  # nosec B110 — caché ilegible: se sigue al fetch remoto
             pass
 
     params = [("country[]", str(pid)) for pid in _PAISES.values()]
@@ -113,7 +113,7 @@ def _fetch_calendario(tab: str) -> str:
                 "Referer": _REFERER,
             },
         )
-        with urllib.request.urlopen(req, timeout=15) as resp:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=15) as resp:  # noqa: S310  # nosec B310 — URL https fija de Investing.com
             payload = json.loads(resp.read().decode("utf-8"))
         html = payload.get("data", "")
         if html:
@@ -124,7 +124,7 @@ def _fetch_calendario(tab: str) -> str:
         if cached.exists():
             try:
                 return cached.read_text(encoding="utf-8")
-            except Exception:
+            except Exception:  # nosec B110 — sin caché legible se retorna "" (contrato de error aguas arriba)
                 pass
         return ""
 

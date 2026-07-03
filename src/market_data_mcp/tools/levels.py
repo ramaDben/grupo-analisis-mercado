@@ -7,9 +7,7 @@ import pandas as pd
 from fastmcp import FastMCP
 
 # Catálogo de tickers válidos — fuente única compartida (market_data_mcp/catalog.py).
-# Se reexportan los nombres locales para no romper consumidores ni tests existentes.
 from market_data_mcp.catalog import VALID_TICKERS as _VALID_TICKERS
-from market_data_mcp.catalog import load_valid_tickers as _load_valid_tickers
 
 
 def _rsi(series: pd.Series, period: int = 14) -> float:

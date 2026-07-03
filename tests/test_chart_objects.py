@@ -5,8 +5,6 @@ import json
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-import pytest
-
 from market_data_mcp.tools import chart_objects
 
 _SANTIAGO = ZoneInfo("America/Santiago")
