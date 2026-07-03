@@ -99,6 +99,49 @@ def get_rates(ticker: str, timeframe: str, n_bars: int = 200) -> pd.DataFrame:
     return df
 
 
+def get_symbol_info(ticker: str):
+    """Envuelve `MetaTrader5.symbol_info(ticker)` — specs estáticas del contrato.
+
+    Import perezoso de `MetaTrader5` (mismo patrón que `get_rates`), para que
+    este módulo sea importable y mockeable en tests sin el terminal instalado.
+
+    Retorna el objeto `SymbolInfo` de MT5 (namedtuple-like, con `trade_mode`,
+    `digits`, `volume_min`, `volume_step`, `trade_contract_size`, `time`, ...)
+    o `None` si el símbolo no existe o no hay datos disponibles.
+    """
+    import MetaTrader5 as mt5
+
+    return mt5.symbol_info(ticker)
+
+
+def get_session(ticker: str, day_of_week: int, index: int, tipo: str):
+    """Envuelve `symbol_info_session_quote`/`symbol_info_session_trade` de MT5.
+
+    Import perezoso de `MetaTrader5` (mismo patrón que `get_rates`).
+
+    Args:
+        ticker: símbolo MT5.
+        day_of_week: convención MT5 (0=domingo, 1=lunes, ..., 6=sábado).
+        index: índice de la ventana de sesión dentro del día (0, 1, 2, ...),
+            para símbolos con más de una ventana (ej. pre-market/regular).
+        tipo: `"quote"` o `"trade"`.
+
+    Retorna una tupla `(apertura, cierre)` de `datetime.time` en hora del
+    servidor del broker, o `None` si no hay sesión configurada para ese
+    índice/día.
+    """
+    import MetaTrader5 as mt5
+
+    if tipo == "quote":
+        funcion = mt5.symbol_info_session_quote
+    elif tipo == "trade":
+        funcion = mt5.symbol_info_session_trade
+    else:
+        raise ValueError(f"tipo de sesión '{tipo}' inválido. Opciones: 'quote', 'trade'.")
+
+    return funcion(ticker, day_of_week, index)
+
+
 def ema(series: pd.Series, period: int) -> pd.Series:
     """Media móvil exponencial."""
     return series.ewm(span=period, adjust=False).mean()

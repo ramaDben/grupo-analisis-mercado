@@ -69,7 +69,12 @@ mcp = FastMCP(
         "canales, rectángulos + screenshot, vía Service ChartObjectsExporter), "
         "obtener_calendario_macro (calendario "
         "económico Investing.com — Chile + EE.UU. + China + Zona Euro, con resultado "
-        "real `actual` y clasificación mejor/peor/en_linea; WebSearch es fallback si la fuente falla). "
+        "real `actual` y clasificación mejor/peor/en_linea; WebSearch es fallback si la fuente falla), "
+        "get_symbol_spec (especificaciones de contrato de un símbolo — trade_mode, "
+        "digits, volumen mínimo/paso, tamaño de contrato — y sesiones de trading "
+        "semanales en hora Chile; con `fecha` responde de forma determinista si el "
+        "activo opera ese día, cruzando patrón semanal MT5 + calendario de feriados "
+        "NYSE versionado + trade_mode en vivo). "
         "Hora en America/Santiago. Noticias vía WebSearch. "
         "Contrato de error: si el dato no está disponible retorna {'error': 'CÓDIGO', 'message': '...'} "
         "— nunca array vacío, nunca None silencioso."
@@ -79,11 +84,12 @@ mcp = FastMCP(
     mask_error_details=False,
 )
 
-from market_data_mcp.tools import levels, calendar, chart_objects  # noqa: E402
+from market_data_mcp.tools import levels, calendar, chart_objects, symbol_spec  # noqa: E402
 
 levels.register(mcp)
 calendar.register(mcp)
 chart_objects.register(mcp)
+symbol_spec.register(mcp)
 
 
 if __name__ == "__main__":
