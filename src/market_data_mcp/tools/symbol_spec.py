@@ -114,8 +114,10 @@ def _offset_servidor_minutos(info: Any) -> int:
 
     Compara la hora del servidor (`info.time`, epoch de la última cotización,
     en hora "de pared" del broker) contra la hora real UTC en el momento de
-    la consulta, redondeado a una grilla de 15 minutos para absorber jitter
-    de latencia (RNF2 — sin offsets fijos hardcodeados, se deriva en runtime).
+    la consulta, redondeado únicamente a resolución de minuto entero (RNF2 —
+    sin offsets fijos hardcodeados, se deriva en runtime). Se expone **crudo**
+    (sin ajustar a una grilla de 15/30/60 minutos) para preservar trazabilidad
+    del clock drift real del servidor del broker — design.md §6.1.
     """
     server_epoch = getattr(info, "time", None)
     if not server_epoch:
@@ -123,7 +125,7 @@ def _offset_servidor_minutos(info: Any) -> int:
     server_naive = datetime.fromtimestamp(server_epoch, tz=timezone.utc).replace(tzinfo=None)
     ahora_utc = datetime.now(timezone.utc).replace(tzinfo=None)
     delta_minutos = (server_naive - ahora_utc).total_seconds() / 60
-    return round(delta_minutos / 15) * 15
+    return round(delta_minutos)
 
 
 def _server_datetime(info: Any) -> datetime:

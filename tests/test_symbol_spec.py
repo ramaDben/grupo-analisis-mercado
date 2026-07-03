@@ -282,6 +282,19 @@ def test_hora_str_convierte_con_offset():
     assert resultado == "10:30"
 
 
+def test_offset_servidor_minutos_expone_drift_crudo_no_multiplo_de_15():
+    """RNF2 / design.md §6.1: `server_utc_offset_minutes` se expone crudo, a
+    resolución de minuto entero, sin redondear a una grilla de 15 minutos.
+
+    Un drift real de 187 minutos (no múltiplo de 15) debe exponerse como 187,
+    nunca como 180 — de lo contrario se pierde trazabilidad del clock drift
+    real del servidor del broker.
+    """
+    ahora_epoch = datetime.now(timezone.utc).timestamp()
+    info = SimpleNamespace(time=ahora_epoch + 187 * 60)
+    assert symbol_spec._offset_servidor_minutos(info) == 187
+
+
 def test_docstring_menciona_limitacion_feriados():
     doc = symbol_spec._DOCSTRING_LIMITACION
     for ticker in ("USDCLP", "XAUUSD", "WTI.spot"):
