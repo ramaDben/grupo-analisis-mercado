@@ -19,10 +19,12 @@
 
 **No elegibles** (no producen un mensaje de cliente reenviable): `/estado`
 (dashboard interno, no envía nada a WhatsApp), `/chart` (genera un PNG, no texto;
-cuando se adjunta a otra pieza, esa pieza ya lleva su guion) y `/curriculo`
+cuando se adjunta a otra pieza, esa pieza ya lleva su guion), `/curriculo`
 (orquestador: su contenido de cliente sale por los delegados `/rencuesta` o
-`/concepto`, que ya generan su propio guion en modo ejecutivo). Si se invocan con
-`ejecutivo`, ignoran el flag.
+`/concepto`, que ya generan su propio guion en modo ejecutivo) y `/ventas` (su
+contenido primario ya es 100% interno para el equipo de ventas — ES el HUB
+INTERNO por sí mismo, no un mensaje de cliente que necesite un guion
+complementario). Si se invocan con `ejecutivo`, ignoran el flag.
 
 ## Qué activa el modo
 El comando detecta `ejecutivo` en sus argumentos. Si está presente, por CADA
