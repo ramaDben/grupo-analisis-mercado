@@ -27,9 +27,9 @@
     }
   },
   "bump_level": null,
-  "closed_at": null,
+  "closed_at": "2026-07-13T21:37:39.304426Z",
   "created_at": "2026-07-13T17:07:18.392260Z",
-  "current_phase": "review",
+  "current_phase": "close",
   "design_approved_at": "2026-07-13T21:00:47.338841Z",
   "design_approved_by": "director",
   "domain": "comandos",
@@ -81,7 +81,7 @@
     "title_slug": "discovery-comando-ventas-oportunidad-del-d-a-para-equipo-comerci"
   },
   "tests_passed_at": "2026-07-13T21:06:17.316006Z",
-  "updated_at": "2026-07-13T21:06:17.316006Z",
-  "version_bumped_from": null,
-  "version_bumped_to": null
+  "updated_at": "2026-07-13T21:37:39.304426Z",
+  "version_bumped_from": "0.1.4",
+  "version_bumped_to": "0.1.5"
 }
