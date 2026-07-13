@@ -1,0 +1,13 @@
+{
+  "name": "grupo-analisis-mercado",
+  "owner": {
+    "name": "bbenja11"
+  },
+  "plugins": [
+    {
+      "name": "pulse",
+      "source": "./.claude/plugins/pulse",
+      "description": "Plugin SDD de Pulse adaptado a grupo-analisis-mercado: skills /pulse:explore … /pulse:close, agentes por fase y hooks de validación/auditoría. Workspace: este repo; ledger sqlite en volumen Docker pulse-gam-ledger."
+    }
+  ]
+}
