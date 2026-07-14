@@ -50,8 +50,8 @@ known_first_party = ["market_data_mcp"]
 
 [tool.deptry.per_rule_ignores]
 # MetaTrader5 se importa de forma perezosa y solo existe en la máquina del director.
-# playwright (#109) es dependencia opcional (extra "stories"); import perezoso
-# en scripts/story_render.py, mismo patrón.
-DEP001 = ["MetaTrader5", "playwright"]
+DEP001 = ["MetaTrader5"]
 # Herramientas de dev (no se importan; son CLI del gate).
-DEP002 = ["ruff", "ty", "pytest", "numpy"]
+# playwright (#109): extra opcional "stories", se usa en scripts/story_render.py
+# (fuera del scan `deptry src/`), por eso figura como no usada en el codebase.
+DEP002 = ["ruff", "ty", "pytest", "numpy", "playwright"]
