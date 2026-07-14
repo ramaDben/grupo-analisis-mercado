@@ -11,6 +11,7 @@ build/
 venv/
 .venv/
 .pytest_cache/
+.ruff_cache/
 
 # Datos generados (grandes binarios o efímeros)
 data/charts/*.png
@@ -57,3 +58,6 @@ data/cache/
 
 # Brainstorming visual companion (superpowers)
 .superpowers/
+
+# Config local de runner de agentes externo (Antigravity u otro CLI MCP)
+.agents/
