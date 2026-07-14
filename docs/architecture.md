@@ -25,8 +25,15 @@ El sistema conecta a Claude Code (agente IA) con el flujo de trabajo diario del 
 │              │           │ data/historial...   │
 │ • get_asset_ │           └────────────────────┘
 │   levels     │
-│              │  + WebSearch (calendario
-│              │    y noticias, investing.com)
+│ • get_chart_ │
+│   objects    │
+│ • obtener_   │
+│   calendario │
+│   _macro     │
+│ • get_symbol_│
+│   spec       │
+│              │  + WebSearch (fallback calendario,
+│              │    noticias, investing.com)
 │              │
 └─────────────┘
        │
@@ -52,20 +59,20 @@ Los comandos de Claude Code usan herramientas externas via MCP. El estado actual
 
 | MCP | Estado | Herramientas clave |
 |-----|--------|--------------------|
-| **market-data** | ✅ Activo | `get_asset_levels` (análisis técnico MT5) |
-| **WebSearch (investing.com + fuentes oficiales)** | ✅ Activo | Calendario económico y noticias |
+| **market-data** | ✅ Activo | `get_asset_levels`, `get_chart_objects`, `obtener_calendario_macro`, `get_symbol_spec` |
+| **WebSearch (investing.com + fuentes oficiales)** | ✅ Activo (fallback) | Noticias siempre; calendario solo si `obtener_calendario_macro` falla |
 | **WhatsApp (Evolution API)** | ⏳ Pendiente Docker | `send_message` al grupo |
-| **TrendRadar / Firecrawl / Finnhub** | ❌ No activos | Reemplazados por market-data (MT5) + WebSearch |
 
 ### MCP market-data — herramientas
 
 | Herramienta | Parámetros principales | Retorna |
 |-------------|----------------------|---------|
 | `get_asset_levels` | `ticker`, `timeframe` | Precio, soportes/resistencias, sesgo, RSI, ATR |
-| `get_economic_events` | — | **Deprecada** → `{"error": "DEPRECATED"}` (usar WebSearch) |
-| `get_market_context` | — | **Deprecada** → `{"error": "DEPRECATED"}` (usar WebSearch) |
+| `get_chart_objects` | `ticker`, `timeframe` | Niveles dibujados a mano por el director en MT5 (soportes/resistencias, trendlines, canales) + screenshot |
+| `obtener_calendario_macro` | `rango` | Calendario económico Investing.com (Chile/EE.UU./China/Zona Euro) con resultado real y clasificación mejor/peor/en_línea |
+| `get_symbol_spec` | `ticker`, `fecha` (opcional) | Especificaciones de contrato (digits, volumen, tamaño) y sesiones de trading; con `fecha` responde si el activo opera ese día |
 
-> **Calendario y noticias vía WebSearch**: el calendario económico y las noticias relevantes ya **no** se obtienen desde un MCP. Se obtienen con la herramienta `WebSearch` sobre **investing.com + fuentes oficiales** (Fed, BCCh, OPEP+, EIA, BLS) directamente en los comandos `/dato_macro` y `/noticia` (y los comandos de día). Las tools `get_economic_events` / `get_market_context` del MCP `market-data` quedaron **deprecadas** (devuelven `{"error": "DEPRECATED"}`). Motivo: Finnhub producía errores de temporalidad y atingencia. Solo el análisis técnico MT5 (`get_asset_levels`) sigue activo en el MCP. Ver `docs/design/websearch-calendario-noticias.design.md`.
+> **Noticias vía WebSearch**: las noticias relevantes se obtienen con `WebSearch` sobre **investing.com + fuentes oficiales** (Fed, BCCh, OPEP+, EIA, BLS) en los comandos `/noticia` y los comandos de día. El calendario económico usa `obtener_calendario_macro` como fuente primaria; `WebSearch` es fallback solo si esa tool devuelve `{"error": ...}`. Las tools legacy `get_economic_events` / `get_market_context` (Finnhub/TrendRadar) fueron eliminadas del MCP — ver `docs/archive/` para el historial de esa migración.
 
 ## Flujo de aprobación semi-automático
 
@@ -82,7 +89,7 @@ Este flujo aplica a **todos** los comandos sin excepción:
 
 ## Gestión de señales operativas
 
-Las señales tienen un límite duro de **3 por semana**. El archivo `data/historial_senales.json` registra todas las señales y es consultado por `scripts/senal_manager.py` antes de generar una nueva.
+Las señales tienen un límite duro de **3 por semana**. El comando `.claude/commands/señal.md` lee `data/historial_senales.json` directamente (cuenta las señales "abierta"/"cerrada" de la semana ISO actual) antes de generar una nueva.
 
 Campos obligatorios de una señal:
 - ticker, nombre activo, dirección (BUY/SELL)

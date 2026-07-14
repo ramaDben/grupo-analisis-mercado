@@ -4,12 +4,13 @@
 
 | Requisito | Versión mínima | Para qué se usa |
 |-----------|---------------|-----------------|
-| Claude Code | última | Invocar los 21 slash commands |
-| Python | 3.10+ | Script auxiliar senal_manager (límite de señales) |
+| Claude Code | última | Invocar los 25 slash commands |
+| Python | 3.10+ | MCP `market-data` (`src/market_data_mcp/`) |
 | git | cualquiera | Control de versiones |
 | gh CLI | cualquiera | Crear issues/PRs (opcional) |
 | Docker Desktop | cualquiera | Evolution API para WhatsApp (futuro) |
-| MetaTrader 5 | cualquiera | Requerido por el MCP market-data (`get_asset_levels`) |
+| MetaTrader 5 | cualquiera | Requerido por el MCP market-data (`get_asset_levels`, `get_chart_objects`, `get_symbol_spec`) |
+| Playwright (opcional) | cualquiera | Extra `stories` — render de Stories GI (`/story`), instalar con `uv sync --extra stories && python -m playwright install chromium` |
 
 ---
 
@@ -32,15 +33,13 @@ pip install MetaTrader5 pandas requests
 
 ### 3. Configurar el MCP market-data
 
-El MCP `market-data` (`market_data_mcp/`) es la capa de datos técnicos del sistema. Provee análisis técnico desde MT5 con la tool `get_asset_levels` (precio, soportes/resistencias, sesgo, RSI, ATR).
+El MCP `market-data` (`src/market_data_mcp/`) es la capa de datos técnicos del sistema. Expone 4 tools: `get_asset_levels` (precio, soportes/resistencias, sesgo, RSI, ATR), `get_chart_objects` (niveles dibujados a mano por el director en MT5 + screenshot), `obtener_calendario_macro` (calendario económico Investing.com — Chile/EE.UU./China/Zona Euro) y `get_symbol_spec` (especificaciones de contrato y sesiones de trading). Las noticias se obtienen con `WebSearch` sobre investing.com + fuentes oficiales (Fed, BCCh, OPEP+, EIA, BLS); `WebSearch` también actúa de fallback si `obtener_calendario_macro` falla.
 
-> El calendario económico y las noticias **no** pasan por el MCP: se obtienen con `WebSearch` sobre investing.com + fuentes oficiales (Fed, BCCh, OPEP+, EIA, BLS). Las tools `get_economic_events` / `get_market_context` quedaron **deprecadas** (devuelven `{"error": "DEPRECATED"}`).
-
-El cliente MT5 (`market_data_mcp/mt5_client.py`) está **vendorizado dentro del repo** — el MCP es autocontenido y no depende de ninguna carpeta externa (ver issue #30).
+El cliente MT5 (`src/market_data_mcp/mt5_client.py`) está **vendorizado dentro del repo** — el MCP es autocontenido y no depende de ninguna carpeta externa (ver issue #30).
 
 **Credenciales MT5** — copiar la plantilla y rellenar:
 ```bash
-cp market_data_mcp/.env.example market_data_mcp/.env
+cp src/market_data_mcp/.env.example src/market_data_mcp/.env
 ```
 
 | Variable | Para qué sirve | ¿Obligatoria? |

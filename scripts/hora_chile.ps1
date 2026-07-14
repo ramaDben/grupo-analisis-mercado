@@ -5,7 +5,7 @@
 
 .DESCRIPTION
     Resuelve de forma DETERMINISTA el desfase de ±1h documentado en el issue #38
-    (ver docs/design/conversion-hora-eventos.design.md). Usa TimeZoneInfo, que
+    (ver docs/archive/conversion-hora-eventos.design.md). Usa TimeZoneInfo, que
     aplica el horario de verano de ambas puntas automáticamente. NUNCA usar
     offsets fijos (UTC-5, GMT-3): esa asunción es la causa raíz del bug.
 
@@ -43,7 +43,7 @@ $ErrorActionPreference = 'Stop'
 try {
     $tzOrigen = [System.TimeZoneInfo]::FindSystemTimeZoneById($ZonaOrigen)
 } catch {
-    throw "Zona de origen desconocida: '$ZonaOrigen'. Usa un ID de Windows valido (ej: 'Eastern Standard Time'). Ver docs/design/conversion-hora-eventos.design.md."
+    throw "Zona de origen desconocida: '$ZonaOrigen'. Usa un ID de Windows valido (ej: 'Eastern Standard Time'). Ver docs/archive/conversion-hora-eventos.design.md."
 }
 $tzChile = [System.TimeZoneInfo]::FindSystemTimeZoneById('Pacific SA Standard Time')
 
