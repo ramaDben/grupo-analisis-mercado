@@ -27,9 +27,9 @@
     }
   },
   "bump_level": null,
-  "closed_at": null,
+  "closed_at": "2026-07-14T12:22:57.098410Z",
   "created_at": "2026-07-13T21:55:19.462468Z",
-  "current_phase": "review",
+  "current_phase": "close",
   "design_approved_at": "2026-07-13T23:37:06.776254Z",
   "design_approved_by": "bbenja11",
   "domain": "stories-gi",
@@ -80,8 +80,8 @@
     "issue_number": 109,
     "title_slug": "discovery-conectar-motor-gam-con-plantillas-visuales-stories-gi"
   },
-  "tests_passed_at": null,
-  "updated_at": "2026-07-13T23:37:06.776254Z",
-  "version_bumped_from": null,
-  "version_bumped_to": null
+  "tests_passed_at": "2026-07-14T12:22:54.307732Z",
+  "updated_at": "2026-07-14T12:22:57.098410Z",
+  "version_bumped_from": "0.1.5",
+  "version_bumped_to": "0.1.6"
 }
