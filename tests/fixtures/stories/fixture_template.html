@@ -1,0 +1,34 @@
+<!--
+Fixture mínimo de motor (contrato D1 de design.md, #109). NO es un snapshot de marca:
+aísla el motor `story_render.py` del snapshot real `templates/stories/alerta.html`, para
+que los tests de mapeo (AC2/AC9) no dependan del layout visual definitivo.
+-->
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="utf-8"><title>fixture</title></head>
+<body class="sesgo-{{sesgo_slug}}">
+  <p class="chip">{{chip_categoria}}</p>
+  <p class="fecha">{{fecha_hora}}</p>
+  <h1>{{titular}}</h1>
+  <p class="parrafo">{{parrafo}}</p>
+  <p class="rotulo-activo">{{rotulo_activo}}</p>
+  <p class="tag-riesgo">{{tag_riesgo}}</p>
+  <p class="precio">{{precio_actual}}</p>
+  <!-- IF:variacion -->
+  <p class="variacion">{{variacion_flecha}} {{variacion_pct}}%</p>
+  <!-- ENDIF:variacion -->
+  <p class="soporte">{{soporte}}</p>
+  <p class="resistencia">{{resistencia}}</p>
+  <!-- IF:vol -->
+  <p class="vol">{{vol_pct}}</p>
+  <!-- ENDIF:vol -->
+  <p class="rotulo-grafico">{{rotulo_grafico}}</p>
+  <!-- IF:chart_img -->
+  <img id="img-alerta" src="{{chart_src}}" alt="chart">
+  <!-- ENDIF:chart_img -->
+  <!-- IF:chart_svg -->
+  <svg id="svg-alerta" viewBox="0 0 100 100"><rect width="100" height="100"/></svg>
+  <!-- ENDIF:chart_svg -->
+  <p class="fuente">{{fuente}}</p>
+</body>
+</html>

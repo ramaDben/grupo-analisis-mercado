@@ -243,6 +243,28 @@ Contrato de error común: si el dato no está disponible retorna `{'error': 'CÓ
 
 **Setup WhatsApp**: requiere Evolution API en Docker (`docker run -d --name evolution-api -p 8080:8080 atendai/evolution-api`). Ver instrucciones en `mcp/mcp_config.json`.
 
+## Stories GI
+
+Piloto (issue #109): comando `/story alerta` genera Stories de marca (imagen 1080×1920,
+plantilla "03 Alerta de Mercado") combinando niveles reales del motor (`get_asset_levels`) con
+una narrativa de alerta (mismo criterio editorial de `/alerta`). Único renderer:
+`scripts/story_render.py` (payload JSON → HTML → PNG con Playwright headless); único snapshot de
+marca: `templates/stories/alerta.html`. Las demás plantillas del canvas (Market Update, Indicador
+Macro, Trading Idea, Calendario, Carrusel "Oportunidades de la semana") llegan con los issues
+#111-#115 — ver `docs/design/stories-gi/plantillas-stories-gi.md` para el mapeo campo-por-campo.
+
+**Regla "solo lectura" (OBLIGATORIA)**: el proyecto Claude Design compartido (dueño: Rodrigo, GI)
+— `https://claude.ai/design/p/05b3bfe8-d8ad-4f83-b7b0-e8de4d77a3cf` — es **solo lectura**: este
+repo nunca sube datos, lógica ni configuración propia (config, drivers, mensajes reales) hacia
+allá. El render final se produce y se aprueba siempre dentro de este repo, a partir de un
+snapshot HTML local sincronizado a mano (sin polling) cuando GI actualice plantillas o manual de
+marca.
+
+**Guardado**: `data/stories/<Fecha>/<activo_slug>/<plantilla>/<Hora>_<plantilla>.png` vía
+`scripts\ruta_story.ps1` (hermano de `ruta_mensaje.ps1`, no lo modifica). Los `data/stories/*.png`
+están gitignored. `playwright` es dependencia **opcional** (`[project.optional-dependencies]
+stories`): instalar con `uv sync --extra stories && python -m playwright install chromium`.
+
 ## Flujo de aprobación → WhatsApp (modo semi-automático activo)
 
 Todo contenido pasa por este flujo antes de enviarse:
@@ -270,7 +292,7 @@ El helper crea las carpetas y devuelve la ruta lista para `Write`. Si la pieza n
 
 **Nota**: Evolution API (Docker) está instalada y lista en `mcp/docker-compose.yml`. Cuando se resuelva la conexión WhatsApp/Baileys, el envío pasará a ser automático sin cambios adicionales.
 
-## Slash Commands disponibles (24)
+## Slash Commands disponibles (25)
 
 Invocar con `/nombre` desde Claude Code:
 
@@ -296,6 +318,7 @@ Invocar con `/nombre` desde Claude Code:
 | `/dato_macro` | Calendario del día → director elige dato a desarrollar |
 | `/noticia` | Busca 3-5 noticias relevantes → director elige |
 | `/chart` | Genera screenshot de MT5 con indicador y temporalidad a elección |
+| `/story [tipo]` | Genera una Story de marca GI (imagen 1080×1920). Único `[tipo]` soportado hoy: `alerta` (niveles del motor + narrativa de `/alerta`); demás plantillas en #111-#115. Ver sección "Stories GI". |
 | `/señal` | Señal operativa (verifica límite 3/semana automáticamente) |
 | `/alerta` | Detecta qué mueve el mercado ahora y genera alerta urgente |
 | `/concepto` | Concepto educativo conectado a lo que pasó esta semana |
