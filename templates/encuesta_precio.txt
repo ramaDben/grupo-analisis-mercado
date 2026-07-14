@@ -1,9 +1,0 @@
-📊 *ENCUESTA DEL DÍA*
-
-Considerando las noticias y datos que vimos hoy...
-
-*¿A qué precio creen que abrirá el {{activo}} {{cuando}}?*
-
-_Recuerden revisar el análisis y los drivers del día para hacer su estimación_
-
-Escriban su número en el chat 👇

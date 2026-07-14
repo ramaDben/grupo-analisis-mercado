@@ -236,8 +236,9 @@ Mejorar indicadores de satisfacción del cliente, retención, NPS y reducir chur
 - `get_asset_levels` — análisis técnico MT5 automático (soportes/resistencias, indicadores).
 - `get_chart_objects` — niveles dibujados a mano por el director en MT5 (soportes/resistencias, trendlines, canales, rectángulos) más screenshot, vía el Service `ChartObjectsExporter` (sub-proyecto A, #98). Permite leer el marcado manual del director en lugar de inferirlo automáticamente.
 - `obtener_calendario_macro` — calendario económico Investing.com (Chile/EE.UU./China/Zona Euro con campo `actual` y `resultado`, issue #91; WebSearch es fallback si la fuente falla).
+- `get_symbol_spec` — especificaciones de contrato de un símbolo (trade_mode, digits, volumen mínimo/paso, tamaño de contrato) y sesiones de trading semanales en hora Chile; con `fecha` responde de forma determinista si el activo opera ese día (issue #104).
 
-Contrato de error común: si el dato no está disponible retorna `{'error': 'CÓDIGO', 'message': '...'}` — nunca array vacío ni `None` silencioso. La antigua `get_economic_events` fue reemplazada por la tool nativa (#53); `get_market_context` (noticias Finnhub) quedó deprecada y se purgó del registro — las **noticias** se obtienen vía `WebSearch` (investing.com + fuentes oficiales: Fed, BCCh, OPEP+, EIA, BLS). Ver `docs/superpowers/specs/2026-06-05-calendario-macro-nativo-mt5-design.md`.
+Contrato de error común: si el dato no está disponible retorna `{'error': 'CÓDIGO', 'message': '...'}` — nunca array vacío ni `None` silencioso. La antigua `get_economic_events` fue reemplazada por la tool nativa (#53); `get_market_context` (noticias Finnhub) quedó deprecada y se purgó del registro — las **noticias** se obtienen vía `WebSearch` (investing.com + fuentes oficiales: Fed, BCCh, OPEP+, EIA, BLS). Ver `docs/archive/superpowers/specs/2026-06-05-calendario-macro-nativo-mt5-design.md`.
 
 **Flujo actual**: los comandos generan contenido → muestran para copiar → guardan en `data/mensajes/`. Cuando Evolution API esté conectada a WhatsApp/Baileys, el envío pasará a ser automático.
 
@@ -340,40 +341,44 @@ grupo-analisis-mercado/
 ├── CLAUDE.md              ← este archivo (instrucciones para Claude Code)
 ├── docs/
 │   ├── architecture.md    ← flujo del sistema, MCPs, aprobación, señales
-│   ├── commands-reference.md ← referencia detallada de los 22 comandos
+│   ├── commands-reference.md ← referencia detallada de los comandos
 │   ├── setup-guide.md     ← instalación paso a paso + troubleshooting
 │   ├── activos-y-drivers.md  ← 20 activos con drivers y datos macro
-│   ├── ideas/             ← specs de features (ciclo Pulse)
-│   └── design/            ← diseños técnicos (ciclo Pulse)
+│   ├── design/            ← diseños técnicos vigentes (ciclo Pulse) — incluye stories-gi/ y motor-como-cerebro-hub-gi
+│   └── archive/           ← docs históricos de features ya implementadas (design/plan/superpowers)
 ├── .claude/
-│   └── commands/          ← 22 slash commands (invocar con /nombre)
-│       ├── domingo.md
-│       ├── lunes.md · martes.md · miercoles.md · jueves.md
-│       ├── viernes_am.md · viernes_pm.md
-│       ├── encuesta.md · rencuesta.md · curriculo.md
-│       ├── apertura.md · actualizacion.md · dato_macro.md · noticia.md · chart.md
-│       ├── señal.md · alerta.md · concepto.md · pregunta.md · respuesta.md · estado.md
-│       ├── accion.md · earnings.md
+│   ├── commands/          ← 25 slash commands (invocar con /nombre)
+│   │   ├── domingo.md
+│   │   ├── lunes.md · martes.md · miercoles.md · jueves.md
+│   │   ├── viernes_am.md · viernes_pm.md
+│   │   ├── encuesta.md · rencuesta.md · curriculo.md
+│   │   ├── apertura.md · actualizacion.md · dato_macro.md · noticia.md · chart.md · story.md
+│   │   ├── señal.md · alerta.md · concepto.md · pregunta.md · respuesta.md · ventas.md · estado.md
+│   │   └── accion.md · earnings.md
+│   └── shared/modo_ejecutivo.md  ← contrato del flag `ejecutivo` (guion_ejecutivo.txt)
 ├── agents/                ← prompts de sub-agents
 │   ├── recolector.md · analista.md · redactor.md
 ├── config/                ← configuración del sistema
 │   ├── activos.json       ← 21 activos: forex + índices + 13 acciones
 │   ├── drivers.json · drivers_indices_sectores.json
-│   ├── agenda_semanal.json · plantilla_señal.json
+│   ├── agenda_semanal.json · feriados_bolsa.json
 ├── scripts/               ← scripts auxiliares
-│   ├── senal_manager.py   ← gestión historial señales (límite 3/semana)
-│   └── hora_chile.ps1 · ruta_mensaje.ps1  ← helpers deterministas (hora Chile, ruta de guardado)
+│   ├── story_render.py    ← renderer de Stories GI (payload JSON → HTML → PNG con Playwright)
+│   └── hora_chile.ps1 · ruta_mensaje.ps1 · ruta_story.ps1  ← helpers deterministas (hora Chile, ruta de guardado)
 ├── templates/             ← templates de mensajes WhatsApp
-│   ├── apertura_mercado.txt · resumen_semanal.txt · cierre_semanal.txt
-│   ├── encuesta_tendencia.txt · encuesta_precio.txt
-│   ├── concepto_semana.txt · señal_operativa.txt
-│   ├── ruta_curriculo.txt · dashboard_metricas.txt
+│   ├── encuesta_tendencia.txt · encuesta_posicion.txt · encuesta_movimiento.txt
+│   ├── concepto_didactico.txt · guion_ejecutivo.txt
+│   ├── ruta_curriculo.txt · dashboard_metricas.txt · mapa_conceptos.txt
+│   ├── ventas_email.txt · ventas_whatsapp.txt
+│   └── stories/           ← snapshot de marca GI (alerta.html + fonts/)
 ├── conceptos/             ← notas canónicas de conceptos educativos (malla /rencuesta)
 │   ├── README.md · stop-loss.md
 ├── data/                  ← datos persistentes
-│   ├── historial_senales.json · mapa_conceptos.json · glosario_siglas.json
+│   ├── historial_senales.json · historial_encuestas.json · historial_ventas.json
+│   ├── mapa_conceptos.json · glosario_siglas.json
 │   ├── curriculo.json · entregas_educativas.json · metricas_educativas.json
-│   └── charts/            ← PNGs generados (gitignored)
+│   └── charts/ · mensajes/ · stories/  ← generados (gitignored)
+├── mql5/                  ← Service MQL5 (ChartObjectsExporter) + archive/ (CalendarExporter, deprecado)
 └── mcp/
     ├── mcp_config.example.json ← template sin credenciales (en git)
     └── mcp_config.json         ← config real con API keys (gitignored)

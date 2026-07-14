@@ -16,7 +16,7 @@ Todo el contenido pasa por aprobación explícita del director antes de enviarse
 
 - **Claude Code** (CLI o Desktop) con suscripción activa
 - **MCP market-data** instalado y configurado (análisis técnico MT5: `get_asset_levels`)
-- **Python 3.10+** para el script auxiliar `senal_manager` (límite de señales)
+- **Python 3.10+** para el MCP `market-data` (`src/market_data_mcp/`) y `scripts/story_render.py`
 - **Evolution API en Docker** para envío directo WhatsApp (opcional, pendiente)
 - **gh CLI** para gestión de issues/PRs (opcional)
 
@@ -86,29 +86,31 @@ grupo-analisis-mercado/
 ├── README.md
 ├── CLAUDE.md                    ← instrucciones para Claude Code
 ├── pyproject.toml               ← toolchain uv (ruff · ty · pytest) del gate de calidad
-├── .claude/commands/            ← 21 slash commands (.md)
+├── .claude/commands/            ← 25 slash commands (.md)
 ├── src/
-│   └── market_data_mcp/         ← MCP market-data (get_asset_levels: análisis técnico MT5)
+│   └── market_data_mcp/         ← MCP market-data (get_asset_levels, get_chart_objects, obtener_calendario_macro, get_symbol_spec)
 ├── tests/                       ← tests del MCP (pytest)
 ├── agents/                      ← prompts de sub-agents (recolector · analista · redactor)
 ├── config/
 │   ├── activos.json             ← 20 activos con tickers MT5 y drivers
 │   ├── agenda_semanal.json      ← estructura L-V: contenido, encuesta, horarios
 │   ├── drivers.json · drivers_indices_sectores.json
-│   └── plantilla_señal.json     ← campos obligatorios de una señal
+│   └── feriados_bolsa.json      ← calendario de feriados NYSE (usado por get_symbol_spec)
 ├── scripts/
-│   ├── senal_manager.py         ← gestión historial señales (límite 3/semana)
-│   └── hora_chile.ps1 · ruta_mensaje.ps1  ← helpers deterministas (hora, ruta de guardado)
-├── templates/                   ← plantillas de mensajes WhatsApp
+│   ├── story_render.py          ← renderer de Stories GI (payload JSON → HTML → PNG)
+│   └── hora_chile.ps1 · ruta_mensaje.ps1 · ruta_story.ps1  ← helpers deterministas (hora, ruta de guardado)
+├── templates/                   ← plantillas de mensajes WhatsApp + stories/ (snapshot de marca GI)
 ├── conceptos/                   ← notas canónicas de conceptos educativos (malla /rencuesta)
 ├── data/
-│   ├── historial_senales.json   ← registro de señales enviadas
+│   ├── historial_senales.json · historial_encuestas.json · historial_ventas.json
 │   ├── curriculo.json · mapa_conceptos.json · entregas_educativas.json · metricas_educativas.json
-│   └── charts/                  ← PNGs generados (gitignored)
+│   └── charts/ · mensajes/ · stories/   ← generados (gitignored)
+├── mql5/                        ← Service MQL5 (ChartObjectsExporter) + archive/
 ├── docs/                        ← documentación del sistema
 │   ├── architecture.md · commands-reference.md
 │   ├── setup-guide.md · activos-y-drivers.md
-│   └── ideas/ · design/         ← specs y diseños (ciclo Pulse)
+│   ├── design/                  ← diseños vigentes (ciclo Pulse)
+│   └── archive/                 ← docs históricos de features ya implementadas
 └── mcp/
     ├── mcp_config.example.json  ← template sin credenciales (en git)
     └── mcp_config.json          ← config real con API keys (gitignored)
