@@ -103,7 +103,8 @@ Cada plantilla nueva = 1 snapshot HTML 16:9 en `templates/stories/` + su contrat
 - **Testing**: `build_context`/`build_html`/`resolver_loops` puros, testeables sin Chromium (patrón actual). Un test de mapeo por plantilla + un test del render (con `skipif` sin Chromium).
 - **Fuente única de render**: `scripts/story_render.py` sigue siendo el único renderer; las 12 plantillas reutilizan el mismo motor.
 
-## Preguntas abiertas para el plan de implementación
+## Decisiones de implementación
 
-- ¿Los datos de cada tipo se recolectan 100% en el prompt de `/story` (como hoy con Alerta), o conviene un helper de payload por tipo? (probablemente prompt, para mantener la lógica de negocio fuera del renderer).
-- Orden fino dentro de cada fase y si alguna plantilla merece su propio Change en el ciclo Pulse.
+- **Recolección de datos en el prompt de `/story`** (no un helper Python). El renderer (`story_render.py`) sigue siendo un motor "tonto" (`payload → HTML → PNG`) sin lógica de negocio. Cada tipo recolecta sus datos **delegando explícitamente** en la lógica del comando fuente correspondiente (ej. "recolectá los niveles como `/apertura` PASO 4", "armá el dato como `/dato_macro` modo resultado"), en vez de reescribirla — igual que hoy `/story alerta` reusa `/alerta` y `/chart`. Motivo: gran parte del contenido es editorial/generativo (titulares, narrativa, cita, comentario) — lo produce el modelo con criterio, no un helper determinista; y los datos numéricos ya los recolectan los comandos existentes.
+- **Granularidad en el ciclo Pulse**: la **Fase A** (motor generalizado + `<!-- FOR -->` + viewport 16:9 + migración de Alerta) es **un Change propio** — es el cambio arquitectónico del que dependen las otras 11 plantillas y merece un PR aislado y bien revisado. Cada **plantilla restante = su propio Change pequeño** (1 snapshot + 1 contrato + recolección + tests); no se agrupan varias por Change (PRs más chicos y revisables, sin bloqueos cruzados).
+- **Orden**: complejidad creciente (Fase B simples → C con listas → D con gráfico), para no combinar `FOR` + gráfico temprano. El orden fino dentro de cada grupo se ajusta sobre la marcha.
