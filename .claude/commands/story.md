@@ -3,27 +3,30 @@ Genera una Story de marca GI (imagen 1920×1080, formato horizontal 16:9) combin
 ## Argumentos
 $ARGUMENTS — formato esperado: `[tipo] [ejecutivo?]`
 
-- `[tipo]`: **único soportado en este Change: `alerta`**. Las demás plantillas del canvas
+- `[tipo]`: **soportados en este Change: `alerta`, `quote`**. Las demás plantillas del canvas
   (Market Update, Indicador Macro, Trading Idea, Calendario, Carrusel) llegan con los issues
   #111-#115 — todavía no existen como `[tipo]` de este comando.
 - `[ejecutivo]` (opcional): `/story` **no soporta el flag ejecutivo** (ver PASO 0).
 
 `/story alerta` genera **un solo activo por corrida** (exactamente 1 Story para 1 activo). Para
-varios activos, se ejecuta el comando una vez por activo.
+varios activos, se ejecuta el comando una vez por activo. `/story quote` es 100% editorial (sin
+activo protagonista) — ver bloque de recolección propio más abajo.
 
 ---
 
 ## PASO 0 — Validar `[tipo]` y el flag `ejecutivo`
 
-1. Si `$ARGUMENTS` viene vacío o `[tipo]` no es `alerta` (CB-1):
+1. Si `$ARGUMENTS` viene vacío o `[tipo]` no es `alerta` ni `quote` (CB-1):
    ```
-   📖 Tipos de Story disponibles hoy: alerta
+   📖 Tipos de Story disponibles hoy: alerta, quote
    (Las demás plantillas del canvas — Market Update, Indicador Macro, Trading Idea,
    Calendario, Carrusel — llegan con los issues #111-#115.)
 
-   ¿Generamos la Story de tipo "alerta"?
+   ¿Generamos la Story de tipo "alerta" o "quote"?
    ```
-   No continuar hasta que el director confirme `alerta`. Nunca asumir un tipo por defecto.
+   No continuar hasta que el director confirme `alerta` o `quote`. Nunca asumir un tipo por
+   defecto. Si el tipo confirmado es `quote`, saltar directamente al bloque "Ruta `quote`" (los
+   PASO 1-5 de abajo son exclusivos de `alerta`).
 
 2. Si el argumento `ejecutivo` está presente (CB-6/R7):
    ```
@@ -31,6 +34,73 @@ varios activos, se ejecuta el comando una vez por activo.
    no un mensaje de cliente reenviable). Continúo generando la Story normal.
    ```
    Avisar y **continuar** con el flujo normal (no detener, no generar guion).
+
+---
+
+## Ruta `quote` — recolección editorial (sin datos de mercado)
+
+`quote` es una pieza 100% editorial (cita + autor + cargo): **no** llama a
+`get_asset_levels` ni a ningún comando fuente de datos de mercado (`/apertura`,
+`/dato_macro`, etc.). Reemplaza los PASO 1-4 de `alerta`; el preview/render final
+reusa el mismo patrón de PASO 6-7 adaptado a `quote` (ver abajo).
+
+1. **Cita**: pregunta al director si quiere dictarla él mismo o que el modelo redacte
+   una propuesta editorial (ej. resumiendo una idea de mercado de la semana, mismo
+   criterio que `/concepto`) para que la apruebe/ajuste:
+   ```
+   ¿Dictas tú la cita o prefieres que redacte una propuesta?
+   ```
+   - **Límite editorial**: `cita ≤ 220 caracteres` — guía de redacción de este comando
+     (el motor de render no valida longitud, no trunca ni aborta). Si la cita excede el
+     límite, ajusta la redacción antes del preview.
+   - Recolecta la cita **sin comillas propias** — las comillas decorativas las pone el
+     snapshot (`templates/stories/quote.html`), nunca el texto del payload.
+
+2. **Autor y cargo**: pregunta ambos campos:
+   ```
+   ¿Nombre del autor de la cita?
+   ¿Cargo/rol del autor? (Intro para omitir)
+   ```
+   Construye el payload con `autor_sub` **siempre presente** — si el director no da
+   cargo, `"autor_sub": ""` (nunca omitir la clave).
+
+3. **Payload `story_quote`**:
+   ```json
+   {
+     "plantilla": "quote",
+     "cita": "[cita ≤220 car., sin comillas propias]",
+     "autor": "[nombre del autor]",
+     "autor_sub": "[cargo o \"\"]"
+   }
+   ```
+
+4. **Preview y aprobación** (mismo criterio que PASO 6, ANTES de renderizar o guardar
+   nada):
+   ```
+   📖 *PREVIEW — Story Quote*
+   ━━━━━━━━━━━━━━━━━━━
+   Cita: [cita]
+   Autor: [autor] — [autor_sub o "(sin cargo)"]
+   ━━━━━━━━━━━━━━━━━━━
+   ¿Apruebas esta Story? ¿Generar y guardar el PNG final?
+   ```
+   Si el director **no** aprueba: no renderizar ni guardar nada en `data/stories/`.
+   Terminar el comando ahí.
+
+5. **Render y guardado** (solo tras aprobar, mismo patrón que PASO 7):
+   ```powershell
+   scripts\ruta_story.ps1 -Fecha "[YYYY-MM-DD]" -Activo "_general" -Plantilla "quote" -Hora "[HH-mm]"
+   ```
+   (`quote` es editorial sin activo protagonista → se guarda bajo `_general`.) La
+   `[Hora]` sale del reloj de Chile (regla canónica).
+   ```bash
+   uv run python scripts/story_render.py \
+     --template templates/stories/quote.html \
+     --out "[ruta devuelta por ruta_story.ps1]" <<'STORY_PAYLOAD'
+   { ...payload story_quote del paso 3... }
+   STORY_PAYLOAD
+   ```
+   Mismo manejo de éxito/error que PASO 7.3-7.4.
 
 ---
 
@@ -218,8 +288,8 @@ Chart embebido: [sí/no]
 ## NOTAS
 
 - Este comando **nunca** sube datos propios (config, drivers, mensajes reales) al proyecto
-  Claude Design compartido — solo lee el snapshot local `templates/stories/alerta.html`
-  (regla "solo lectura", ver `CLAUDE.md`).
+  Claude Design compartido — solo lee los snapshots locales `templates/stories/alerta.html` y
+  `templates/stories/quote.html` (regla "solo lectura", ver `CLAUDE.md`).
 - No hay envío automático a WhatsApp: el flujo termina en "PNG aprobado, listo para adjuntar".
 - `scripts/story_render.py` es el único punto de render del repo para Stories — las plantillas
   futuras (#111-#115) reutilizan el mismo script, solo agregan su propio snapshot HTML y su
