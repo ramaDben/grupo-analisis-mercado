@@ -1,6 +1,6 @@
 [project]
 name = "grupo-analisis-mercado"
-version = "0.1.6"
+version = "0.2.0"
 description = "Sistema automatizado del Grupo de Análisis de Mercado (MCP market-data + slash commands)."
 requires-python = ">=3.11"
 dependencies = [

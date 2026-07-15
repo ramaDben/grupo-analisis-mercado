@@ -1,11 +1,12 @@
-"""Tests del motor de render de Stories GI (`scripts/story_render.py`, issue #109).
+"""Tests del motor de render de Stories GI (`scripts/story_render.py`, issues #109/#119).
 
-Cubre el mapeo puro payload -> HTML (AC2, AC9) sin depender de Playwright, y un test
-de integración de render real (AC3) que se salta (`skipif`) si Chromium no está
-instalado en la máquina de ejecución. El módulo vive en `scripts/` (fuera del paquete
-`market_data_mcp`), así que se inserta `scripts/` en `sys.path` directamente en este
-archivo -- no se toca `conftest.py` (contrato de design.md D2/§5).
+Cubre el mapeo puro payload -> HTML (`build_context`/`resolver_loops`/`build_html`, AC2-AC9)
+sin depender de Playwright, y un test de integración de render real (AC1) que se salta
+(`skipif`) si Chromium no está instalado en la máquina de ejecución. El módulo vive en
+`scripts/` (fuera del paquete `market_data_mcp`), así que se inserta `scripts/` en `sys.path`
+directamente en este archivo -- no se toca `conftest.py` (contrato de design.md D2/§5).
 """
+
 from __future__ import annotations
 
 import copy
@@ -25,6 +26,9 @@ FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures" / "stories"
 FIXTURE_TEMPLATE = FIXTURES_DIR / "fixture_template.html"
 FIXTURE_CHART = FIXTURES_DIR / "fixture_chart.png"
 ALERTA_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "alerta.html"
+
+# Fixture inline de `resolver_loops` (R4/AC4-AC6): recibe `html: str`, sin archivo.
+FIXTURE_FOR_HTML = "<!-- FOR:filas -->{{nombre}}<!-- ENDFOR:filas -->"
 
 # Payload de ejemplo de spec.md §"Contrato de datos", con `variacion`/`vol_pct`
 # omitidos y `chart_png: None` (ejerce CB-4 y el fence `chart_svg`).
@@ -72,7 +76,7 @@ def _chromium_disponible() -> bool:
 
 
 # ---------------------------------------------------------------------------
-# AC2-motor: contrato mínimo aislado del snapshot de marca
+# AC3 (heredado) / contrato mínimo aislado del snapshot de marca
 # ---------------------------------------------------------------------------
 
 
@@ -88,8 +92,8 @@ def test_build_html_contract():
     assert "RIESGO ALTO" in html
 
     # Sin variación/vol/chart_png -> fences ausentes eliminados por completo.
-    assert "class=\"variacion\"" not in html
-    assert "class=\"vol\"" not in html
+    assert 'class="variacion"' not in html
+    assert 'class="vol"' not in html
     assert "img-alerta" not in html
 
     # Fence complementario: sin chart_png -> se conserva el SVG decorativo.
@@ -102,14 +106,114 @@ def test_build_html_contract():
 
 def test_build_html_token_huerfano_lanza_error(tmp_path):
     plantilla = tmp_path / "con_huerfano.html"
-    plantilla.write_text("<p>{{titular}}</p><p>{{token_inventado}}</p>", encoding="utf-8")
+    plantilla.write_text(
+        "<p>{{titular}}</p><p>{{token_inventado}}</p>", encoding="utf-8"
+    )
 
     with pytest.raises(story_render.StoryRenderError):
         story_render.build_html(PAYLOAD_EJEMPLO, plantilla)
 
 
 # ---------------------------------------------------------------------------
-# AC2 real: snapshot de marca `templates/stories/alerta.html`
+# AC2/AC7: tokens escalares dinámicos + catálogo de helpers en build_context
+# ---------------------------------------------------------------------------
+
+
+def test_build_context_escalar_extra_no_op():
+    payload = {**PAYLOAD_EJEMPLO, "nota_interna": "solo para QA"}
+
+    html = story_render.build_html(payload, FIXTURE_TEMPLATE)
+
+    assert "nota_interna" not in html
+    assert "solo para QA" not in html
+
+
+def test_build_context_impacto_badge():
+    payload = {**PAYLOAD_EJEMPLO, "impacto": "alto"}
+
+    contexto = story_render.build_context(payload)
+
+    assert contexto["impacto_badge"] == "ALTO"
+
+
+# ---------------------------------------------------------------------------
+# AC4-AC6: resolver_loops (array vacío / 1 elemento / N elementos)
+# ---------------------------------------------------------------------------
+
+
+def test_resolver_loops_vacio():
+    resultado = story_render.resolver_loops(FIXTURE_FOR_HTML, {"filas": []})
+
+    assert resultado == ""
+    assert "{{nombre}}" not in resultado
+    assert "FOR:filas" not in resultado
+    assert "ENDFOR:filas" not in resultado
+
+
+def test_resolver_loops_uno():
+    resultado = story_render.resolver_loops(
+        FIXTURE_FOR_HTML, {"filas": [{"nombre": "USD/CLP"}]}
+    )
+
+    assert resultado.count("USD/CLP") == 1
+    assert "{{nombre}}" not in resultado
+    assert "FOR:filas" not in resultado
+    assert "ENDFOR:filas" not in resultado
+
+
+def test_resolver_loops_n():
+    payload = {
+        "filas": [
+            {"nombre": "USD/CLP"},
+            {"nombre": "Oro"},
+            {"nombre": "WTI"},
+        ]
+    }
+
+    resultado = story_render.resolver_loops(FIXTURE_FOR_HTML, payload)
+
+    assert resultado.count("USD/CLP") == 1
+    assert resultado.count("Oro") == 1
+    assert resultado.count("WTI") == 1
+    assert resultado.index("USD/CLP") < resultado.index("Oro") < resultado.index("WTI")
+    assert "FOR:filas" not in resultado
+    assert "ENDFOR:filas" not in resultado
+    assert "{{nombre}}" not in resultado
+
+
+# ---------------------------------------------------------------------------
+# AC8: orden canónico loops -> fences -> tokens -> guardia (fence por elemento)
+# ---------------------------------------------------------------------------
+
+
+def test_orden_canonico_loops_fences(tmp_path):
+    plantilla = tmp_path / "loops_con_fence.html"
+    plantilla.write_text(
+        "<!-- FOR:filas -->"
+        "<p>{{nombre}}<!-- IF:activo --> (activo)<!-- ENDIF:activo --></p>"
+        "<!-- ENDFOR:filas -->",
+        encoding="utf-8",
+    )
+    payload = {
+        "filas": [
+            {"nombre": "USD/CLP", "activo": True},
+            {"nombre": "Oro", "activo": False},
+        ]
+    }
+
+    html = story_render.build_html(payload, plantilla)
+
+    # Cada fila se evalúa con sus propios datos -- no una sola vez sobre el payload.
+    assert "USD/CLP (activo)" in html
+    assert "Oro (activo)" not in html
+    assert "<p>Oro</p>" in html
+    assert "FOR:filas" not in html
+    assert "IF:activo" not in html
+    assert "{{" not in html
+
+
+# ---------------------------------------------------------------------------
+# AC9: snapshot de marca `templates/stories/alerta.html`
 # ---------------------------------------------------------------------------
 
 
@@ -135,11 +239,6 @@ def test_alerta_no_placeholders():
     assert "<svg" in html
 
 
-# ---------------------------------------------------------------------------
-# AC9: chart embebido
-# ---------------------------------------------------------------------------
-
-
 def test_alerta_chart_embebido():
     payload = copy.deepcopy(PAYLOAD_EJEMPLO)
     payload["chart_png"] = str(FIXTURE_CHART)
@@ -160,12 +259,14 @@ def test_alerta_chart_png_inexistente_lanza_error():
 
 
 # ---------------------------------------------------------------------------
-# AC3: dimensiones exactas del render (requiere Chromium; se salta si no está)
+# AC1: dimensiones exactas del render (requiere Chromium; se salta si no está)
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skipif(not _chromium_disponible(), reason="Chromium de Playwright no instalado")
-def test_render_dimensiones_1080x1920(tmp_path):
+@pytest.mark.skipif(
+    not _chromium_disponible(), reason="Chromium de Playwright no instalado"
+)
+def test_render_dimensiones_1920x1080(tmp_path):
     salida = tmp_path / "story_test.png"
 
     resultado = story_render.render_story(PAYLOAD_EJEMPLO, ALERTA_TEMPLATE, salida)
@@ -173,4 +274,4 @@ def test_render_dimensiones_1080x1920(tmp_path):
     assert resultado == salida
     assert salida.exists()
     assert salida.stat().st_size > 5 * 1024
-    assert _png_size(salida) == (1080, 1920)
+    assert _png_size(salida) == (1920, 1080)
