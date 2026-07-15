@@ -26,6 +26,7 @@ FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures" / "stories"
 FIXTURE_TEMPLATE = FIXTURES_DIR / "fixture_template.html"
 FIXTURE_CHART = FIXTURES_DIR / "fixture_chart.png"
 ALERTA_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "alerta.html"
+QUOTE_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "quote.html"
 
 # Fixture inline de `resolver_loops` (R4/AC4-AC6): recibe `html: str`, sin archivo.
 FIXTURE_FOR_HTML = "<!-- FOR:filas -->{{nombre}}<!-- ENDFOR:filas -->"
@@ -52,6 +53,15 @@ PAYLOAD_EJEMPLO: dict = {
     "chart_png": None,
     "fuente": "COMEX",
     "sesgo": "Bajista",
+}
+
+# Payload de ejemplo de `quote` (spec.md/design.md #121 §"Contrato de payload
+# story_quote"): tokens 100% escalares, sin fences ni loops.
+PAYLOAD_QUOTE: dict = {
+    "plantilla": "quote",
+    "cita": "El mercado premia la paciencia más que la predicción.",
+    "autor": "Nombre Analista",
+    "autor_sub": "Head of Trading, Grupo Inteligencia",
 }
 
 
@@ -270,6 +280,44 @@ def test_render_dimensiones_1920x1080(tmp_path):
     salida = tmp_path / "story_test.png"
 
     resultado = story_render.render_story(PAYLOAD_EJEMPLO, ALERTA_TEMPLATE, salida)
+
+    assert resultado == salida
+    assert salida.exists()
+    assert salida.stat().st_size > 5 * 1024
+    assert _png_size(salida) == (1920, 1080)
+
+
+# ---------------------------------------------------------------------------
+# AC3/AC4/AC5 (#121): snapshot de marca `templates/stories/quote.html`
+# ---------------------------------------------------------------------------
+
+
+def test_quote_no_placeholders():
+    html = story_render.build_html(PAYLOAD_QUOTE, QUOTE_TEMPLATE)
+
+    assert PAYLOAD_QUOTE["cita"] in html
+    assert PAYLOAD_QUOTE["autor"] in html
+    assert PAYLOAD_QUOTE["autor_sub"] in html
+    assert "{{" not in html
+    assert "}}" not in html
+
+
+def test_quote_autor_sub_vacio():
+    payload = {**PAYLOAD_QUOTE, "autor_sub": ""}
+
+    html = story_render.build_html(payload, QUOTE_TEMPLATE)
+
+    assert "{{" not in html
+    assert "}}" not in html
+
+
+@pytest.mark.skipif(
+    not _chromium_disponible(), reason="Chromium de Playwright no instalado"
+)
+def test_quote_render_dimensiones(tmp_path):
+    salida = tmp_path / "story_quote_test.png"
+
+    resultado = story_render.render_story(PAYLOAD_QUOTE, QUOTE_TEMPLATE, salida)
 
     assert resultado == salida
     assert salida.exists()
