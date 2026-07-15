@@ -29,7 +29,7 @@ claro `#E8F5F0`), acentos `#00DC82` (alcista/positivo), `#E84040` (bajista/riesg
 
 ## Piezas del canvas (verificadas)
 
-El archivo expone **6 plantillas** de Story (1080×1920) más un **carrusel de 4 slides** que es
+El archivo expone **6 plantillas** de Story (1920×1080) más un **carrusel de 4 slides** que es
 una pieza independiente (NO pertenece a "06 Calendario", como se asumió en la primera versión de
 este doc):
 

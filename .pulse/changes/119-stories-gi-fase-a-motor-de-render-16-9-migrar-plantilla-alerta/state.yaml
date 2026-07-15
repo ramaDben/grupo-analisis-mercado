@@ -1,0 +1,89 @@
+{
+  "artifacts": {
+    "design": {
+      "kind": "design",
+      "path": "design.md",
+      "state": "ready"
+    },
+    "idea": {
+      "kind": "idea",
+      "path": "idea.md",
+      "state": "ready"
+    },
+    "proposal": {
+      "kind": "proposal",
+      "path": "proposal.md",
+      "state": "ready"
+    },
+    "spec": {
+      "kind": "spec",
+      "path": "spec.md",
+      "state": "ready"
+    },
+    "tasks": {
+      "kind": "tasks",
+      "path": "tasks.md",
+      "state": "ready"
+    }
+  },
+  "bump_level": null,
+  "closed_at": null,
+  "created_at": "2026-07-15T02:24:10.283194Z",
+  "current_phase": "apply",
+  "design_approved_at": "2026-07-15T03:54:01.703040Z",
+  "design_approved_by": "bbenja11",
+  "domain": "stories-gi",
+  "gate_predicates": [
+    {
+      "kind": "artifact_required",
+      "target_phase": "propose",
+      "value": "idea.md"
+    },
+    {
+      "kind": "artifact_required",
+      "target_phase": "specify",
+      "value": "proposal.md"
+    },
+    {
+      "kind": "artifact_required",
+      "target_phase": "design",
+      "value": "spec.md"
+    },
+    {
+      "kind": "artifact_required",
+      "target_phase": "break-to-tasks",
+      "value": "design.md"
+    },
+    {
+      "kind": "change_field_required",
+      "target_phase": "apply",
+      "value": "design_approved_at"
+    },
+    {
+      "kind": "artifact_required",
+      "target_phase": "apply",
+      "value": "design.md"
+    },
+    {
+      "kind": "artifact_required",
+      "target_phase": "apply",
+      "value": "tasks.md"
+    }
+  ],
+  "issue": {
+    "labels": [
+      "type:feature"
+    ],
+    "number": 119,
+    "title": "Stories GI \u00b7 Fase A: motor de render 16:9 + migrar plantilla Alerta",
+    "url": "https://github.com/bbenja11/grupo-analisis-mercado/issues/119"
+  },
+  "slug": {
+    "issue_number": 119,
+    "title_slug": "stories-gi-fase-a-motor-de-render-16-9-migrar-plantilla-alerta"
+  },
+  "tests_passed_at": "2026-07-15T04:08:29.920818Z",
+  "updated_at": "2026-07-15T04:08:29.920818Z",
+  "version_bumped_from": null,
+  "version_bumped_to": null
+}

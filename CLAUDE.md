@@ -246,7 +246,7 @@ Contrato de error común: si el dato no está disponible retorna `{'error': 'CÓ
 
 ## Stories GI
 
-Piloto (issue #109): comando `/story alerta` genera Stories de marca (imagen 1080×1920,
+Piloto (issue #109): comando `/story alerta` genera Stories de marca (imagen 1920×1080,
 plantilla "03 Alerta de Mercado") combinando niveles reales del motor (`get_asset_levels`) con
 una narrativa de alerta (mismo criterio editorial de `/alerta`). Único renderer:
 `scripts/story_render.py` (payload JSON → HTML → PNG con Playwright headless); único snapshot de
@@ -319,7 +319,7 @@ Invocar con `/nombre` desde Claude Code:
 | `/dato_macro` | Calendario del día → director elige dato a desarrollar |
 | `/noticia` | Busca 3-5 noticias relevantes → director elige |
 | `/chart` | Genera screenshot de MT5 con indicador y temporalidad a elección |
-| `/story [tipo]` | Genera una Story de marca GI (imagen 1080×1920). Único `[tipo]` soportado hoy: `alerta` (niveles del motor + narrativa de `/alerta`); demás plantillas en #111-#115. Ver sección "Stories GI". |
+| `/story [tipo]` | Genera una Story de marca GI (imagen 1920×1080). Único `[tipo]` soportado hoy: `alerta` (niveles del motor + narrativa de `/alerta`); demás plantillas en #111-#115. Ver sección "Stories GI". |
 | `/señal` | Señal operativa (verifica límite 3/semana automáticamente) |
 | `/alerta` | Detecta qué mueve el mercado ahora y genera alerta urgente |
 | `/concepto` | Concepto educativo conectado a lo que pasó esta semana |

@@ -1,4 +1,4 @@
-Genera una Story de marca GI (imagen 1080×1920, formato Instagram/WhatsApp Status) combinando niveles reales del motor con una narrativa de alerta. Único renderer del repo para Stories — ver `scripts/story_render.py` y la regla "solo lectura" del canvas en `CLAUDE.md` sección "Stories GI".
+Genera una Story de marca GI (imagen 1920×1080, formato horizontal 16:9) combinando niveles reales del motor con una narrativa de alerta. Único renderer del repo para Stories — ver `scripts/story_render.py` y la regla "solo lectura" del canvas en `CLAUDE.md` sección "Stories GI".
 
 ## Argumentos
 $ARGUMENTS — formato esperado: `[tipo] [ejecutivo?]`
