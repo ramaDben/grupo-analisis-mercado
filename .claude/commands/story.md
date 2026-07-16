@@ -3,8 +3,8 @@ Genera una Story de marca GI (imagen 1920×1080, formato horizontal 16:9) combin
 ## Argumentos
 $ARGUMENTS — formato esperado: `[tipo] [ejecutivo?]`
 
-- `[tipo]`: **soportados en este Change: `alerta`, `quote`, `breaking`, `encuesta`**. Las demás
-  plantillas del canvas (Market Update, Indicador Macro, Trading Idea, Calendario, Carrusel)
+- `[tipo]`: **soportados en este Change: `alerta`, `quote`, `breaking`, `encuesta`, `edu`**. Las
+  demás plantillas del canvas (Market Update, Indicador Macro, Trading Idea, Calendario, Carrusel)
   llegan con los issues #111-#115 — todavía no existen como `[tipo]` de este comando.
 - `[ejecutivo]` (opcional): `/story` **no soporta el flag ejecutivo** (ver PASO 0).
 
@@ -15,25 +15,28 @@ activo protagonista) — ver bloque de recolección propio más abajo. `/story b
 de mercado ni búsqueda propia de evento — ver bloque "Ruta `breaking`" más abajo. `/story encuesta`
 también es 100% editorial (sentimiento binario: kicker + pregunta + dos opciones + nota de
 cierre), sin datos de mercado ni búsqueda propia de evento — ver bloque "Ruta `encuesta`" más
-abajo.
+abajo. `/story edu` también es 100% editorial (concepto educativo: kicker + título + definición +
+ejemplo comparativo + lista de bullets de aplicación), sin datos de mercado ni búsqueda propia de
+evento — ver bloque "Ruta `edu`" más abajo.
 
 ---
 
 ## PASO 0 — Validar `[tipo]` y el flag `ejecutivo`
 
-1. Si `$ARGUMENTS` viene vacío o `[tipo]` no es `alerta`, `quote`, `breaking` ni `encuesta`
+1. Si `$ARGUMENTS` viene vacío o `[tipo]` no es `alerta`, `quote`, `breaking`, `encuesta` ni `edu`
    (CB-1):
    ```
-   📖 Tipos de Story disponibles hoy: alerta, quote, breaking, encuesta
+   📖 Tipos de Story disponibles hoy: alerta, quote, breaking, encuesta, edu
    (Las demás plantillas del canvas — Market Update, Indicador Macro, Trading Idea,
    Calendario, Carrusel — llegan con los issues #111-#115.)
 
-   ¿Generamos la Story de tipo "alerta", "quote", "breaking" o "encuesta"?
+   ¿Generamos la Story de tipo "alerta", "quote", "breaking", "encuesta" o "edu"?
    ```
-   No continuar hasta que el director confirme `alerta`, `quote`, `breaking` o `encuesta`. Nunca
-   asumir un tipo por defecto. Si el tipo confirmado es `quote`, saltar directamente al bloque
-   "Ruta `quote`"; si es `breaking`, saltar al bloque "Ruta `breaking`"; si es `encuesta`, saltar
-   al bloque "Ruta `encuesta`" (los PASO 1-5 de abajo son exclusivos de `alerta`).
+   No continuar hasta que el director confirme `alerta`, `quote`, `breaking`, `encuesta` o `edu`.
+   Nunca asumir un tipo por defecto. Si el tipo confirmado es `quote`, saltar directamente al
+   bloque "Ruta `quote`"; si es `breaking`, saltar al bloque "Ruta `breaking`"; si es `encuesta`,
+   saltar al bloque "Ruta `encuesta`"; si es `edu`, saltar al bloque "Ruta `edu`" (los PASO 1-5 de
+   abajo son exclusivos de `alerta`).
 
 2. Si el argumento `ejecutivo` está presente (CB-6/R7):
    ```
@@ -283,6 +286,96 @@ abajo).
      --template templates/stories/encuesta.html \
      --out "[ruta devuelta por ruta_story.ps1]" <<'STORY_PAYLOAD'
    { ...payload story_encuesta del paso 5... }
+   STORY_PAYLOAD
+   ```
+   Mismo manejo de éxito/error que PASO 7.3-7.4.
+
+---
+
+## Ruta `edu` — recolección editorial (sin datos de mercado)
+
+`edu` es una pieza 100% editorial de concepto educativo (kicker + título del concepto +
+definición + ejemplo comparativo + lista de bullets de aplicación): **no llama a
+`get_asset_levels`** ni a ninguna otra tool de mercado (`obtener_calendario_macro`,
+`get_chart_objects`, `get_symbol_spec`), y **no ejecuta su propia búsqueda de evento** (no invoca
+WebSearch) — es contenido **educativo, sin datos de mercado**, mismo criterio editorial que
+`/concepto` y `/rencuesta` (definición + ejemplo real + puntos de aplicación en voz novata).
+Reemplaza los PASO 1-4 de `alerta`; el preview/render final reusa el mismo patrón de PASO 6-7
+adaptado a `edu` (ver abajo).
+
+1. **Recolección editorial**: pregunta el concepto con el criterio de `/concepto`/`/rencuesta`:
+   ```
+   ¿Nombre del concepto? (ej. "Cruce de medias móviles")
+   ¿Definición en una o dos líneas (voz novata)?
+   Ejemplo comparativo — ¿valor A? ¿operador/relación? ¿valor B? (ej. "Media 50" / "cruza sobre" / "Media 200")
+   ¿Bullets de aplicación? (uno por línea; 2 a 4 recomendados)
+   ¿Kicker/tema del chip? (ej. "CONCEPTO DE LA SEMANA" — Intro para omitir)
+   ```
+
+2. **Atajo opcional**: si el director ya corrió `/concepto` o `/rencuesta` en la misma sesión,
+   ofrece reutilizar ese concepto/definición/ejemplo ya redactados como base editorial — no
+   bloquea ni exige corrida previa; si prefiere redactar de cero, lo hace directamente.
+
+3. **Límites editoriales** (guía de redacción de este comando — el motor de render **no** valida
+   longitud, no trunca ni aborta): `kicker ≤ 30 caracteres`, `titulo_concepto ≤ 45 caracteres`,
+   `definicion ≤ 160 caracteres`, `valor_a`/`operador`/`valor_b ≤ 24 caracteres` cada uno, cada
+   `bullet ≤ 70 caracteres` (2 a 4 bullets recomendados). Si algún campo excede el límite, ajusta
+   la redacción antes del preview.
+
+4. **Payload `story_edu`**: construye `kicker` **siempre presente** — si el director no lo da, `""`
+   (nunca omitir la clave). `titulo_concepto`, `definicion` y los tres campos del ejemplo siempre
+   no vacíos. El ejemplo se recolecta como objeto editorial pero se **aplana** a las tres claves
+   escalares `valor_a`/`operador`/`valor_b` en el payload al motor (el motor solo resuelve claves
+   escalares top-level, no `ejemplo.valor_a`). `bullets` es un **array de objetos** `[{"texto": "…"}]`
+   (una entrada por bullet dictado); si el director no dicta ninguno, `bullets: []` (la lista
+   colapsa limpio en el render).
+   ```json
+   {
+     "plantilla": "edu",
+     "kicker": "[kicker ≤30 car. o \"\"]",
+     "titulo_concepto": "[nombre ≤45 car.]",
+     "definicion": "[definición ≤160 car.]",
+     "valor_a": "[valor A ≤24 car.]",
+     "operador": "[operador ≤24 car.]",
+     "valor_b": "[valor B ≤24 car.]",
+     "bullets": [
+       { "texto": "[bullet ≤70 car.]" }
+     ]
+   }
+   ```
+
+5. **Guardado bajo `_general`**: `edu` es una pieza educativa sin activo protagonista único → se
+   guarda siempre bajo `-Activo "_general"` (mismo criterio que `quote`), no se pregunta por
+   activo.
+
+6. **Preview y aprobación** (mismo criterio que PASO 6, ANTES de renderizar o guardar nada):
+   ```
+   📖 *PREVIEW — Story Edu*
+   ━━━━━━━━━━━━━━━━━━━
+   Kicker: [kicker o "(sin kicker)"]
+   Concepto: [titulo_concepto]
+   Definición: [definicion]
+   Ejemplo: [valor_a] [operador] [valor_b]
+   En la práctica:
+     • [bullet 1]
+     • [bullet 2]
+     • [...]
+   ━━━━━━━━━━━━━━━━━━━
+   ¿Apruebas esta Story? ¿Generar y guardar el PNG final?
+   ```
+   Si el director **no** aprueba: no renderizar ni guardar nada en `data/stories/`. Terminar el
+   comando ahí.
+
+7. **Render y guardado** (solo tras aprobar, mismo patrón que PASO 7):
+   ```powershell
+   scripts\ruta_story.ps1 -Fecha "[YYYY-MM-DD]" -Activo "_general" -Plantilla "edu" -Hora "[HH-mm]"
+   ```
+   La `[Hora]` sale del reloj de Chile (regla canónica).
+   ```bash
+   uv run python scripts/story_render.py \
+     --template templates/stories/edu.html \
+     --out "[ruta devuelta por ruta_story.ps1]" <<'STORY_PAYLOAD'
+   { ...payload story_edu del paso 4... }
    STORY_PAYLOAD
    ```
    Mismo manejo de éxito/error que PASO 7.3-7.4.
