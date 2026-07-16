@@ -1,0 +1,217 @@
+<!--
+Snapshot de marca "Breaking" (Stories GI · Fase B, issue #123). Pieza editorial de
+noticia urgente — kicker + titular + cifra clave + contexto + reacción, sin gráfico
+ni dato en vivo del motor. Reutiliza verbatim el andamiaje de marca (fuentes/paleta/
+footer) de `templates/stories/alerta.html:14-58,398-409` y los acentos rojos del chip
+`.chip-categoria`/tarjeta `.tarjeta-precio` de Alerta (con layout distinto). Tercer
+consumidor del motor sin fences IF/FOR ni loops (tras `quote`): los cinco tokens de
+este archivo ({{kicker_tema}}, {{titular}}, {{valor}}, {{contexto}},
+{{parrafo_reaccion}}) son escalares incondicionales; el único campo opcional
+(`kicker_tema`) se resuelve por CSS `:empty`, no por el motor.
+NO cambiar nombres de tokens sin actualizar scripts/story_render.py y
+tests/test_story_render.py.
+-->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Breaking — Story GI</title>
+<style>
+  @font-face {
+    font-family: "Syne";
+    src: url("fonts/syne-800.woff2") format("woff2");
+    font-weight: 800;
+    font-style: normal;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "DM Sans";
+    src: url("fonts/dm-sans-400.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "DM Sans";
+    src: url("fonts/dm-sans-700.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "Space Grotesk";
+    src: url("fonts/space-grotesk-600.woff2") format("woff2");
+    font-weight: 600;
+    font-style: normal;
+    font-display: block;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 1920px;
+    height: 1080px;
+    background: #0D0D1A;
+    background-image:
+      radial-gradient(90% 120% at 0% 20%, #2A1220 0%, #0D0D1A 55%),
+      linear-gradient(180deg, #0D0D1A 0%, #120A12 60%, #0D0D1A 100%);
+    color: #F5F3F7;
+    font-family: "DM Sans", sans-serif;
+    overflow: hidden;
+  }
+
+  /* ---- Contenedor raíz: columna (cuerpo | footer) ---- */
+  .story {
+    width: 1920px;
+    height: 1080px;
+    padding: 56px 72px 40px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---- Cuerpo: una sola columna editorial, centrada verticalmente ---- */
+  .breaking-cuerpo {
+    flex: 1;
+    min-height: 0;
+    max-width: 1400px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  /* ---- Kicker (chip acento rojo, estilo .chip-categoria de Alerta) ---- */
+  .breaking-kicker {
+    align-self: flex-start;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 20px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 10px 22px;
+    border-radius: 999px;
+    background: rgba(232, 64, 64, 0.14);
+    border: 1px solid rgba(232, 64, 64, 0.5);
+    color: #F5A3A3;
+  }
+
+  .breaking-kicker:empty {
+    display: none;
+  }
+
+  /* ---- Titular ---- */
+  .breaking-titular {
+    font-family: "Syne", sans-serif;
+    font-weight: 800;
+    font-size: 64px;
+    line-height: 1.15;
+    margin: 24px 0 0;
+    color: #FFFFFF;
+  }
+
+  /* ---- Tarjeta "cifra clave" (borde rojo, estilo .tarjeta-precio de Alerta) ---- */
+  .breaking-cifra {
+    margin-top: 32px;
+    display: flex;
+    align-items: baseline;
+    gap: 22px;
+    border: 2px solid #E84040;
+    border-radius: 22px;
+    background: rgba(232, 64, 64, 0.08);
+    padding: 26px 34px;
+    width: fit-content;
+  }
+
+  .breaking-cifra-rotulo {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #A9A5B4;
+  }
+
+  .breaking-cifra-valor {
+    font-family: "Syne", sans-serif;
+    font-weight: 800;
+    font-size: 64px;
+    color: #FFFFFF;
+  }
+
+  /* ---- Contexto y reacción ---- */
+  .breaking-contexto {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 700;
+    font-size: 24px;
+    line-height: 1.4;
+    color: #F5F3F7;
+    margin: 28px 0 0;
+  }
+
+  .breaking-reaccion {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 21px;
+    line-height: 1.45;
+    color: #C9C5D4;
+    margin: 16px 0 0;
+  }
+
+  /* ---- Footer ---- */
+  .footer {
+    margin-top: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .footer-marca {
+    display: flex;
+    justify-content: space-between;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 20px;
+    color: #F5F3F7;
+  }
+
+  .footer-disclaimer {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 13px;
+    color: #6E6A7A;
+    line-height: 1.35;
+  }
+</style>
+</head>
+<body class="breaking">
+  <div class="story">
+
+    <div class="breaking-cuerpo">
+      <span class="breaking-kicker">{{kicker_tema}}</span>
+      <h1 class="breaking-titular">{{titular}}</h1>
+
+      <div class="breaking-cifra">
+        <span class="breaking-cifra-rotulo">CIFRA CLAVE</span>
+        <span class="breaking-cifra-valor">{{valor}}</span>
+      </div>
+
+      <p class="breaking-contexto">{{contexto}}</p>
+      <p class="breaking-reaccion">{{parrafo_reaccion}}</p>
+    </div>
+
+    <div class="footer">
+      <div class="footer-marca">
+        <span>@grupointeligencia</span>
+        <span>grupointeligencia.com</span>
+      </div>
+      <p class="footer-disclaimer">
+        Los CFD son instrumentos complejos y presentan un riesgo elevado de perder dinero
+        rápidamente debido al apalancamiento. Este contenido es educativo/informativo, no
+        constituye asesoría financiera.
+      </p>
+    </div>
+
+  </div>
+</body>
+</html>

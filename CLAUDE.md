@@ -247,14 +247,16 @@ Contrato de error común: si el dato no está disponible retorna `{'error': 'CÓ
 ## Stories GI
 
 Piloto (issue #109): comando `/story [tipo]` genera Stories de marca (imagen 1920×1080).
-`[tipo]` soportados hoy: `alerta`, `quote` (Fase B, issue #121). `alerta` (plantilla "03 Alerta
-de Mercado") combina niveles reales del motor (`get_asset_levels`) con una narrativa de alerta
-(mismo criterio editorial de `/alerta`); `quote` es una pieza 100% editorial (cita + autor +
-cargo, sin dato del motor). Único renderer: `scripts/story_render.py` (payload JSON → HTML → PNG
-con Playwright headless); snapshots de marca: `templates/stories/alerta.html` y
-`templates/stories/quote.html`. Las demás plantillas del canvas (Market Update, Indicador Macro,
-Trading Idea, Calendario, Carrusel "Oportunidades de la semana") llegan con los issues #111-#115
-— ver `docs/design/stories-gi/plantillas-stories-gi.md` para el mapeo campo-por-campo.
+`[tipo]` soportados hoy: `alerta`, `quote`, `breaking` (Fase B, issues #121/#123). `alerta`
+(plantilla "03 Alerta de Mercado") combina niveles reales del motor (`get_asset_levels`) con una
+narrativa de alerta (mismo criterio editorial de `/alerta`); `quote` es una pieza 100% editorial
+(cita + autor + cargo, sin dato del motor); `breaking` es una pieza editorial de noticia urgente
+(kicker + titular + cifra clave + contexto + reacción, sin dato del motor ni búsqueda propia de
+evento). Único renderer: `scripts/story_render.py` (payload JSON → HTML → PNG con Playwright
+headless); snapshots de marca: `templates/stories/alerta.html`, `templates/stories/quote.html` y
+`templates/stories/breaking.html`. Las demás plantillas del canvas (Market Update, Indicador
+Macro, Trading Idea, Calendario, Carrusel "Oportunidades de la semana") llegan con los issues
+#111-#115 — ver `docs/design/stories-gi/plantillas-stories-gi.md` para el mapeo campo-por-campo.
 
 **Regla "solo lectura" (OBLIGATORIA)**: el proyecto Claude Design compartido (dueño: Rodrigo, GI)
 — `https://claude.ai/design/p/05b3bfe8-d8ad-4f83-b7b0-e8de4d77a3cf` — es **solo lectura**: este
