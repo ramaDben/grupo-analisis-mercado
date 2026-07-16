@@ -22,3 +22,11 @@
 **Contexto:** Cierre del Change #121 (dominio stories-gi); bump N/A→N/A.
 **Observacion:** design_approved_at=2026-07-15T21:39:01.050052+00:00; tests_passed_at=2026-07-15T21:49:28.853012+00:00; artefactos: /work/.pulse/changes/121-stories-gi-fase-b-plantilla-quote-16-9/idea.md, /work/.pulse/changes/121-stories-gi-fase-b-plantilla-quote-16-9/proposal.md, /work/.pulse/changes/121-stories-gi-fase-b-plantilla-quote-16-9/design.md, /work/.pulse/changes/121-stories-gi-fase-b-plantilla-quote-16-9/tasks.md.
 **Recomendacion:** Revisar los artefactos enlazados antes de abrir el próximo Change de stories-gi.
+### Heurística: cierre Change #123 stories-gi [#123 · stories-gi · 2026-07-16]
+
+**Tipo:** captura
+**Fase de origen:** close
+**Change slug:** 123-stories-gi-fase-b-plantilla-breaking-16-9
+**Contexto:** Cierre del Change #123 (dominio stories-gi); bump N/A→N/A.
+**Observacion:** design_approved_at=2026-07-16T00:39:22.139561+00:00; tests_passed_at=2026-07-16T00:51:37.951039+00:00; artefactos: /work/.pulse/changes/123-stories-gi-fase-b-plantilla-breaking-16-9/idea.md, /work/.pulse/changes/123-stories-gi-fase-b-plantilla-breaking-16-9/proposal.md, /work/.pulse/changes/123-stories-gi-fase-b-plantilla-breaking-16-9/design.md, /work/.pulse/changes/123-stories-gi-fase-b-plantilla-breaking-16-9/tasks.md.
+**Recomendacion:** Revisar los artefactos enlazados antes de abrir el próximo Change de stories-gi.
