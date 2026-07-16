@@ -3,33 +3,37 @@ Genera una Story de marca GI (imagen 1920×1080, formato horizontal 16:9) combin
 ## Argumentos
 $ARGUMENTS — formato esperado: `[tipo] [ejecutivo?]`
 
-- `[tipo]`: **soportados en este Change: `alerta`, `quote`, `breaking`**. Las demás plantillas
-  del canvas (Market Update, Indicador Macro, Trading Idea, Calendario, Carrusel) llegan con los
-  issues #111-#115 — todavía no existen como `[tipo]` de este comando.
+- `[tipo]`: **soportados en este Change: `alerta`, `quote`, `breaking`, `encuesta`**. Las demás
+  plantillas del canvas (Market Update, Indicador Macro, Trading Idea, Calendario, Carrusel)
+  llegan con los issues #111-#115 — todavía no existen como `[tipo]` de este comando.
 - `[ejecutivo]` (opcional): `/story` **no soporta el flag ejecutivo** (ver PASO 0).
 
 `/story alerta` genera **un solo activo por corrida** (exactamente 1 Story para 1 activo). Para
 varios activos, se ejecuta el comando una vez por activo. `/story quote` es 100% editorial (sin
 activo protagonista) — ver bloque de recolección propio más abajo. `/story breaking` también es
 100% editorial (noticia urgente: kicker + titular + cifra clave + contexto + reacción), sin datos
-de mercado ni búsqueda propia de evento — ver bloque "Ruta `breaking`" más abajo.
+de mercado ni búsqueda propia de evento — ver bloque "Ruta `breaking`" más abajo. `/story encuesta`
+también es 100% editorial (sentimiento binario: kicker + pregunta + dos opciones + nota de
+cierre), sin datos de mercado ni búsqueda propia de evento — ver bloque "Ruta `encuesta`" más
+abajo.
 
 ---
 
 ## PASO 0 — Validar `[tipo]` y el flag `ejecutivo`
 
-1. Si `$ARGUMENTS` viene vacío o `[tipo]` no es `alerta`, `quote` ni `breaking` (CB-1):
+1. Si `$ARGUMENTS` viene vacío o `[tipo]` no es `alerta`, `quote`, `breaking` ni `encuesta`
+   (CB-1):
    ```
-   📖 Tipos de Story disponibles hoy: alerta, quote, breaking
+   📖 Tipos de Story disponibles hoy: alerta, quote, breaking, encuesta
    (Las demás plantillas del canvas — Market Update, Indicador Macro, Trading Idea,
    Calendario, Carrusel — llegan con los issues #111-#115.)
 
-   ¿Generamos la Story de tipo "alerta", "quote" o "breaking"?
+   ¿Generamos la Story de tipo "alerta", "quote", "breaking" o "encuesta"?
    ```
-   No continuar hasta que el director confirme `alerta`, `quote` o `breaking`. Nunca asumir un
-   tipo por defecto. Si el tipo confirmado es `quote`, saltar directamente al bloque "Ruta
-   `quote`"; si es `breaking`, saltar al bloque "Ruta `breaking`" (los PASO 1-5 de abajo son
-   exclusivos de `alerta`).
+   No continuar hasta que el director confirme `alerta`, `quote`, `breaking` o `encuesta`. Nunca
+   asumir un tipo por defecto. Si el tipo confirmado es `quote`, saltar directamente al bloque
+   "Ruta `quote`"; si es `breaking`, saltar al bloque "Ruta `breaking`"; si es `encuesta`, saltar
+   al bloque "Ruta `encuesta`" (los PASO 1-5 de abajo son exclusivos de `alerta`).
 
 2. Si el argumento `ejecutivo` está presente (CB-6/R7):
    ```
@@ -190,6 +194,95 @@ abajo).
      --template templates/stories/breaking.html \
      --out "[ruta devuelta por ruta_story.ps1]" <<'STORY_PAYLOAD'
    { ...payload story_breaking del paso 3... }
+   STORY_PAYLOAD
+   ```
+   Mismo manejo de éxito/error que PASO 7.3-7.4.
+
+---
+
+## Ruta `encuesta` — recolección editorial (sin datos de mercado)
+
+`encuesta` es una pieza 100% editorial de sentimiento binario (kicker + pregunta + dos opciones
++ nota de cierre): **no llama a `get_asset_levels`** ni a ninguna otra tool de mercado
+(`obtener_calendario_macro`, `get_chart_objects`, `get_symbol_spec`), y **no ejecuta su propia
+búsqueda de evento** (no invoca WebSearch) — es **sentimiento puro, sin precios ni datos de
+mercado**, mismo contrato que `/encuesta` (sin precios ni educación). Reemplaza los PASO 1-4 de
+`alerta`; el preview/render final reusa el mismo patrón de PASO 6-7 adaptado a `encuesta` (ver
+abajo).
+
+1. **Recolección editorial**: pregunta la pregunta binaria y sus dos opciones con el mismo
+   criterio de sentimiento puro de `/encuesta`:
+   ```
+   ¿Cuál es la pregunta de la encuesta? (ej. "¿Cuál creen que será la tendencia hoy del Oro?")
+   ¿Opción A?
+   ¿Opción B?
+   ¿Kicker/tema del chip? (ej. "ENCUESTA DEL DÍA" — Intro para omitir)
+   ¿Nota de cierre? (ej. "Vota en la encuesta fijada del grupo" — Intro para omitir)
+   ```
+
+2. **Atajo opcional**: si el director ya corrió `/encuesta [tipo] [activo]` en la misma sesión,
+   ofrece reutilizar esa pregunta/opciones ya redactadas como base editorial — no bloquea ni
+   exige corrida previa; si prefiere redactar de cero, lo hace directamente.
+
+3. **Layout binario único**: la Story usa siempre el mismo layout `opcion_a`/`opcion_b` sin
+   distinguir entre los 3 tipos de `/encuesta` (`posicion`/`tendencia`/`movimiento`) — el tipo de
+   origen se refleja en la **redacción** de la pregunta/opciones, no en el layout.
+
+4. **Límites editoriales** (guía de redacción de este comando — el motor de render **no** valida
+   longitud, no trunca ni aborta): `kicker ≤ 30 caracteres`, `pregunta ≤ 90 caracteres`,
+   `opcion_a ≤ 25 caracteres`, `opcion_b ≤ 25 caracteres`, `nota_cierre ≤ 80 caracteres`. Si algún
+   campo excede el límite, ajusta la redacción antes del preview.
+
+5. **Payload `story_encuesta`**: construye `kicker` y `nota_cierre` **siempre presentes** — si el
+   director no da alguno, `""` (nunca omitir la clave). Los otros tres campos
+   (`pregunta`/`opcion_a`/`opcion_b`) siempre no vacíos; si el director no puede dar alguno, el
+   comando insiste, nunca cadena vacía en esos tres.
+   ```json
+   {
+     "plantilla": "encuesta",
+     "kicker": "[kicker ≤30 car. o \"\"]",
+     "pregunta": "[pregunta ≤90 car.]",
+     "opcion_a": "[opción A ≤25 car.]",
+     "opcion_b": "[opción B ≤25 car.]",
+     "nota_cierre": "[nota ≤80 car. o \"\"]"
+   }
+   ```
+
+6. **Guardado con o sin `-Activo`**: pregunta si la pregunta nombra un activo protagonista claro
+   (decisión editorial del director, no regla automática nueva ni del motor ni de
+   `ruta_story.ps1`):
+   ```
+   ¿La pregunta tiene un activo protagonista claro? (ticker, o "no" si es general/ambigua)
+   ```
+   - **Sí** (ej. "…tendencia hoy del Oro" → Oro) → usa `-Activo [TICKER_MT5]` (normalizado
+     contra `config/activos.json`, mismo criterio que `/chart` PASO 1).
+   - **No / ambiguo / múltiples activos** (ej. "¿Suben o bajan los mercados esta semana?") → usa
+     `-Activo "_general"` (igual que `quote`/`breaking`).
+
+7. **Preview y aprobación** (mismo criterio que PASO 6, ANTES de renderizar o guardar nada):
+   ```
+   📖 *PREVIEW — Story Encuesta*
+   ━━━━━━━━━━━━━━━━━━━
+   Kicker: [kicker o "(sin kicker)"]
+   Pregunta: [pregunta]
+   Opción A: [opcion_a]   |   Opción B: [opcion_b]
+   Nota: [nota_cierre o "(sin nota)"]
+   ━━━━━━━━━━━━━━━━━━━
+   ¿Apruebas esta Story? ¿Generar y guardar el PNG final?
+   ```
+   Si el director **no** aprueba: no renderizar ni guardar nada en `data/stories/`. Terminar el
+   comando ahí.
+
+8. **Render y guardado** (solo tras aprobar, mismo patrón que PASO 7):
+   ```powershell
+   scripts\ruta_story.ps1 -Fecha "[YYYY-MM-DD]" -Activo "[TICKER_MT5 o _general]" -Plantilla "encuesta" -Hora "[HH-mm]"
+   ```
+   La `[Hora]` sale del reloj de Chile (regla canónica).
+   ```bash
+   uv run python scripts/story_render.py \
+     --template templates/stories/encuesta.html \
+     --out "[ruta devuelta por ruta_story.ps1]" <<'STORY_PAYLOAD'
+   { ...payload story_encuesta del paso 5... }
    STORY_PAYLOAD
    ```
    Mismo manejo de éxito/error que PASO 7.3-7.4.
