@@ -38,3 +38,11 @@
 **Contexto:** Cierre del Change #125 (dominio stories-gi); bump N/A→N/A.
 **Observacion:** design_approved_at=2026-07-16T02:08:55.654082+00:00; tests_passed_at=2026-07-16T02:23:18.889442+00:00; artefactos: /work/.pulse/changes/125-stories-gi-fase-b-plantilla-encuesta-16-9/idea.md, /work/.pulse/changes/125-stories-gi-fase-b-plantilla-encuesta-16-9/proposal.md, /work/.pulse/changes/125-stories-gi-fase-b-plantilla-encuesta-16-9/design.md, /work/.pulse/changes/125-stories-gi-fase-b-plantilla-encuesta-16-9/tasks.md.
 **Recomendacion:** Revisar los artefactos enlazados antes de abrir el próximo Change de stories-gi.
+### Heurística: cierre Change #127 stories-gi [#127 · stories-gi · 2026-07-16]
+
+**Tipo:** captura
+**Fase de origen:** close
+**Change slug:** 127-stories-gi-fase-b-plantilla-edu-concepto-educativo-16-9
+**Contexto:** Cierre del Change #127 (dominio stories-gi); bump N/A→N/A.
+**Observacion:** design_approved_at=2026-07-16T19:24:33.401376+00:00; tests_passed_at=2026-07-16T21:29:09.395461+00:00; artefactos: /work/.pulse/changes/127-stories-gi-fase-b-plantilla-edu-concepto-educativo-16-9/idea.md, /work/.pulse/changes/127-stories-gi-fase-b-plantilla-edu-concepto-educativo-16-9/proposal.md, /work/.pulse/changes/127-stories-gi-fase-b-plantilla-edu-concepto-educativo-16-9/design.md, /work/.pulse/changes/127-stories-gi-fase-b-plantilla-edu-concepto-educativo-16-9/tasks.md.
+**Recomendacion:** Revisar los artefactos enlazados antes de abrir el próximo Change de stories-gi.

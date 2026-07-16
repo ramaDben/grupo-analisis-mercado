@@ -27,9 +27,9 @@
     }
   },
   "bump_level": null,
-  "closed_at": null,
+  "closed_at": "2026-07-16T22:13:34.487612Z",
   "created_at": "2026-07-16T04:51:45.166032Z",
-  "current_phase": "apply",
+  "current_phase": "close",
   "design_approved_at": "2026-07-16T19:24:33.401376Z",
   "design_approved_by": "bbenja11",
   "domain": "stories-gi",
@@ -83,7 +83,7 @@
     "title_slug": "stories-gi-fase-b-plantilla-edu-concepto-educativo-16-9"
   },
   "tests_passed_at": "2026-07-16T21:29:09.395461Z",
-  "updated_at": "2026-07-16T21:29:09.395461Z",
-  "version_bumped_from": null,
-  "version_bumped_to": null
+  "updated_at": "2026-07-16T22:13:34.487612Z",
+  "version_bumped_from": "0.5.0",
+  "version_bumped_to": "0.6.0"
 }
