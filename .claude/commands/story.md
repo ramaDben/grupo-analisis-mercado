@@ -3,30 +3,33 @@ Genera una Story de marca GI (imagen 1920×1080, formato horizontal 16:9) combin
 ## Argumentos
 $ARGUMENTS — formato esperado: `[tipo] [ejecutivo?]`
 
-- `[tipo]`: **soportados en este Change: `alerta`, `quote`**. Las demás plantillas del canvas
-  (Market Update, Indicador Macro, Trading Idea, Calendario, Carrusel) llegan con los issues
-  #111-#115 — todavía no existen como `[tipo]` de este comando.
+- `[tipo]`: **soportados en este Change: `alerta`, `quote`, `breaking`**. Las demás plantillas
+  del canvas (Market Update, Indicador Macro, Trading Idea, Calendario, Carrusel) llegan con los
+  issues #111-#115 — todavía no existen como `[tipo]` de este comando.
 - `[ejecutivo]` (opcional): `/story` **no soporta el flag ejecutivo** (ver PASO 0).
 
 `/story alerta` genera **un solo activo por corrida** (exactamente 1 Story para 1 activo). Para
 varios activos, se ejecuta el comando una vez por activo. `/story quote` es 100% editorial (sin
-activo protagonista) — ver bloque de recolección propio más abajo.
+activo protagonista) — ver bloque de recolección propio más abajo. `/story breaking` también es
+100% editorial (noticia urgente: kicker + titular + cifra clave + contexto + reacción), sin datos
+de mercado ni búsqueda propia de evento — ver bloque "Ruta `breaking`" más abajo.
 
 ---
 
 ## PASO 0 — Validar `[tipo]` y el flag `ejecutivo`
 
-1. Si `$ARGUMENTS` viene vacío o `[tipo]` no es `alerta` ni `quote` (CB-1):
+1. Si `$ARGUMENTS` viene vacío o `[tipo]` no es `alerta`, `quote` ni `breaking` (CB-1):
    ```
-   📖 Tipos de Story disponibles hoy: alerta, quote
+   📖 Tipos de Story disponibles hoy: alerta, quote, breaking
    (Las demás plantillas del canvas — Market Update, Indicador Macro, Trading Idea,
    Calendario, Carrusel — llegan con los issues #111-#115.)
 
-   ¿Generamos la Story de tipo "alerta" o "quote"?
+   ¿Generamos la Story de tipo "alerta", "quote" o "breaking"?
    ```
-   No continuar hasta que el director confirme `alerta` o `quote`. Nunca asumir un tipo por
-   defecto. Si el tipo confirmado es `quote`, saltar directamente al bloque "Ruta `quote`" (los
-   PASO 1-5 de abajo son exclusivos de `alerta`).
+   No continuar hasta que el director confirme `alerta`, `quote` o `breaking`. Nunca asumir un
+   tipo por defecto. Si el tipo confirmado es `quote`, saltar directamente al bloque "Ruta
+   `quote`"; si es `breaking`, saltar al bloque "Ruta `breaking`" (los PASO 1-5 de abajo son
+   exclusivos de `alerta`).
 
 2. Si el argumento `ejecutivo` está presente (CB-6/R7):
    ```
@@ -98,6 +101,95 @@ reusa el mismo patrón de PASO 6-7 adaptado a `quote` (ver abajo).
      --template templates/stories/quote.html \
      --out "[ruta devuelta por ruta_story.ps1]" <<'STORY_PAYLOAD'
    { ...payload story_quote del paso 3... }
+   STORY_PAYLOAD
+   ```
+   Mismo manejo de éxito/error que PASO 7.3-7.4.
+
+---
+
+## Ruta `breaking` — recolección editorial (sin datos de mercado)
+
+`breaking` es una pieza editorial de noticia urgente (kicker + titular + cifra clave + contexto
++ reacción): **no** llama a `get_asset_levels` ni a ningún comando/tool de datos de mercado, y
+**no ejecuta su propia búsqueda de evento** — no reusa el WebSearch de `/alerta` PASO 1 ni su
+mecanismo de detección de noticias; no busca por cuenta propia. Reemplaza los PASO 1-4 de
+`alerta`; el preview/render final reusa el mismo patrón de PASO 6-7 adaptado a `breaking` (ver
+abajo).
+
+1. **Fuente editorial**: pregunta si el director ya corrió `/noticia` o `/alerta` en la misma
+   sesión (o si ya tiene el evento/cifra redactado):
+   ```
+   ¿Ya corriste /noticia o /alerta con este evento, o tienes el titular y la cifra listos?
+   Si no, dime directamente: tema, titular, cifra clave, contexto y reacción del mercado.
+   ```
+   No bloquea ni exige una corrida previa de `/noticia`/`/alerta` — es un atajo opcional; si el
+   director no corrió nada antes, pide que dicte los cinco campos directamente.
+
+2. **Campos y límites editoriales** (guía de redacción de este comando — el motor de render
+   **no** valida longitud, no trunca ni aborta):
+   ```
+   ¿Tema/categoría del kicker? (≤ 30 caracteres — Intro para omitir)
+   ¿Titular? (≤ 70 caracteres)
+   ¿Cifra clave? (con su unidad, ej. "5,50%", "US$ 2.318")
+   ¿Contexto? (≤ 100 caracteres — línea secundaria de apoyo)
+   ¿Párrafo de reacción del mercado? (≤ 280 caracteres)
+   ```
+   Si algún campo excede el límite, ajusta la redacción antes del preview.
+
+   **Dirección explícita (regla de oro)**: el titular/contexto/reacción deben dejar clara la
+   lectura direccional del evento (qué activo/mercado se afecta y hacia dónde), con registro
+   profesional del repo (énfasis sin dramatización, ver "Registro y tono" de `CLAUDE.md`).
+
+3. **Payload `story_breaking`**: construye `kicker_tema` **siempre presente** — si el director no
+   da tema/categoría claro, `"kicker_tema": ""` (nunca omitir la clave). Los otros cuatro campos
+   siempre no vacíos. `valor` se recolecta ya formateado con su unidad si aplica — no es un
+   precio del motor, no lleva `digits` de `config/activos.json`.
+   ```json
+   {
+     "plantilla": "breaking",
+     "kicker_tema": "[tema ≤30 car. o \"\"]",
+     "titular": "[titular ≤70 car.]",
+     "valor": "[cifra clave con unidad]",
+     "contexto": "[contexto ≤100 car.]",
+     "parrafo_reaccion": "[párrafo ≤280 car.]"
+   }
+   ```
+
+4. **Guardado con o sin `-Activo`**: pregunta si la noticia tiene un activo protagonista claro
+   (decisión editorial del director, no regla automática nueva ni del motor ni de
+   `ruta_story.ps1`):
+   ```
+   ¿Esta noticia tiene un activo protagonista claro? (ticker o "no" si es ambigua/general)
+   ```
+   - **Sí** → usa `-Activo [TICKER_MT5]` (normalizado contra `config/activos.json`, mismo
+     criterio que `/chart` PASO 1).
+   - **No / ambiguo / múltiples activos** → usa `-Activo "_general"` (igual que `quote`).
+
+5. **Preview y aprobación** (mismo criterio que PASO 6, ANTES de renderizar o guardar nada):
+   ```
+   📖 *PREVIEW — Story Breaking*
+   ━━━━━━━━━━━━━━━━━━━
+   Kicker: [kicker_tema o "(sin kicker)"]
+   Titular: [titular]
+   Cifra clave: [valor]
+   Contexto: [contexto]
+   Reacción: [parrafo_reaccion]
+   ━━━━━━━━━━━━━━━━━━━
+   ¿Apruebas esta Story? ¿Generar y guardar el PNG final?
+   ```
+   Si el director **no** aprueba: no renderizar ni guardar nada en `data/stories/`. Terminar el
+   comando ahí.
+
+6. **Render y guardado** (solo tras aprobar, mismo patrón que PASO 7):
+   ```powershell
+   scripts\ruta_story.ps1 -Fecha "[YYYY-MM-DD]" -Activo "[TICKER_MT5 o _general]" -Plantilla "breaking" -Hora "[HH-mm]"
+   ```
+   La `[Hora]` sale del reloj de Chile (regla canónica).
+   ```bash
+   uv run python scripts/story_render.py \
+     --template templates/stories/breaking.html \
+     --out "[ruta devuelta por ruta_story.ps1]" <<'STORY_PAYLOAD'
+   { ...payload story_breaking del paso 3... }
    STORY_PAYLOAD
    ```
    Mismo manejo de éxito/error que PASO 7.3-7.4.

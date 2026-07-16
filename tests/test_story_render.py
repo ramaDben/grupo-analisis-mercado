@@ -27,6 +27,7 @@ FIXTURE_TEMPLATE = FIXTURES_DIR / "fixture_template.html"
 FIXTURE_CHART = FIXTURES_DIR / "fixture_chart.png"
 ALERTA_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "alerta.html"
 QUOTE_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "quote.html"
+BREAKING_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "breaking.html"
 
 # Fixture inline de `resolver_loops` (R4/AC4-AC6): recibe `html: str`, sin archivo.
 FIXTURE_FOR_HTML = "<!-- FOR:filas -->{{nombre}}<!-- ENDFOR:filas -->"
@@ -62,6 +63,21 @@ PAYLOAD_QUOTE: dict = {
     "cita": "El mercado premia la paciencia más que la predicción.",
     "autor": "Nombre Analista",
     "autor_sub": "Head of Trading, Grupo Inteligencia",
+}
+
+# Payload de ejemplo de `breaking` (spec.md/design.md #123 §"Contrato de payload
+# story_breaking"): tokens 100% escalares, sin fences ni loops. `kicker_tema` es el
+# único campo opcional (resuelto por CSS `:empty`, no por el motor).
+PAYLOAD_BREAKING: dict = {
+    "plantilla": "breaking",
+    "kicker_tema": "BANCOS CENTRALES",
+    "titular": "La Fed sorprende con una pausa más larga de lo esperado",
+    "valor": "5,50%",
+    "contexto": "Tasa de referencia sin cambios por tercera reunión consecutiva",
+    "parrafo_reaccion": (
+        "El mercado ajusta expectativas hacia un primer recorte más tardío, "
+        "presionando al dólar al alza y a los activos de riesgo a la baja en la sesión."
+    ),
 }
 
 
@@ -318,6 +334,46 @@ def test_quote_render_dimensiones(tmp_path):
     salida = tmp_path / "story_quote_test.png"
 
     resultado = story_render.render_story(PAYLOAD_QUOTE, QUOTE_TEMPLATE, salida)
+
+    assert resultado == salida
+    assert salida.exists()
+    assert salida.stat().st_size > 5 * 1024
+    assert _png_size(salida) == (1920, 1080)
+
+
+# ---------------------------------------------------------------------------
+# AC3/AC4/AC5 (#123): snapshot de marca `templates/stories/breaking.html`
+# ---------------------------------------------------------------------------
+
+
+def test_breaking_no_placeholders():
+    html = story_render.build_html(PAYLOAD_BREAKING, BREAKING_TEMPLATE)
+
+    assert PAYLOAD_BREAKING["kicker_tema"] in html
+    assert PAYLOAD_BREAKING["titular"] in html
+    assert PAYLOAD_BREAKING["valor"] in html
+    assert PAYLOAD_BREAKING["contexto"] in html
+    assert PAYLOAD_BREAKING["parrafo_reaccion"] in html
+    assert "{{" not in html
+    assert "}}" not in html
+
+
+def test_breaking_kicker_vacio():
+    payload = {**PAYLOAD_BREAKING, "kicker_tema": ""}
+
+    html = story_render.build_html(payload, BREAKING_TEMPLATE)
+
+    assert "{{" not in html
+    assert "}}" not in html
+
+
+@pytest.mark.skipif(
+    not _chromium_disponible(), reason="Chromium de Playwright no instalado"
+)
+def test_breaking_render_dimensiones(tmp_path):
+    salida = tmp_path / "story_breaking_test.png"
+
+    resultado = story_render.render_story(PAYLOAD_BREAKING, BREAKING_TEMPLATE, salida)
 
     assert resultado == salida
     assert salida.exists()
