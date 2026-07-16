@@ -3,9 +3,10 @@ Genera una Story de marca GI (imagen 1920×1080, formato horizontal 16:9) combin
 ## Argumentos
 $ARGUMENTS — formato esperado: `[tipo] [ejecutivo?]`
 
-- `[tipo]`: **soportados en este Change: `alerta`, `quote`, `breaking`, `encuesta`, `edu`**. Las
-  demás plantillas del canvas (Market Update, Indicador Macro, Trading Idea, Calendario, Carrusel)
-  llegan con los issues #111-#115 — todavía no existen como `[tipo]` de este comando.
+- `[tipo]`: **soportados en este Change: `alerta`, `quote`, `breaking`, `encuesta`, `edu`,
+  `flash`**. Las demás plantillas del canvas (Market Update, Indicador Macro, Trading Idea,
+  Calendario, Semanal, Carrusel) llegan con los issues #111-#115 — todavía no existen como `[tipo]`
+  de este comando.
 - `[ejecutivo]` (opcional): `/story` **no soporta el flag ejecutivo** (ver PASO 0).
 
 `/story alerta` genera **un solo activo por corrida** (exactamente 1 Story para 1 activo). Para
@@ -17,26 +18,29 @@ también es 100% editorial (sentimiento binario: kicker + pregunta + dos opcione
 cierre), sin datos de mercado ni búsqueda propia de evento — ver bloque "Ruta `encuesta`" más
 abajo. `/story edu` también es 100% editorial (concepto educativo: kicker + título + definición +
 ejemplo comparativo + lista de bullets de aplicación), sin datos de mercado ni búsqueda propia de
-evento — ver bloque "Ruta `edu`" más abajo.
+evento — ver bloque "Ruta `edu`" más abajo. `/story flash` **sí** consume datos reales del motor
+(cierre multi-activo: tabla de N activos con último valor y variación del día), recolectados vía
+`get_asset_levels` × N activos con fallback manual, pero **sin gráfico embebido** (eso es Fase D) y
+sin búsqueda editorial de evento — ver bloque "Ruta `flash`" más abajo.
 
 ---
 
 ## PASO 0 — Validar `[tipo]` y el flag `ejecutivo`
 
-1. Si `$ARGUMENTS` viene vacío o `[tipo]` no es `alerta`, `quote`, `breaking`, `encuesta` ni `edu`
-   (CB-1):
+1. Si `$ARGUMENTS` viene vacío o `[tipo]` no es `alerta`, `quote`, `breaking`, `encuesta`, `edu`
+   ni `flash` (CB-1):
    ```
-   📖 Tipos de Story disponibles hoy: alerta, quote, breaking, encuesta, edu
+   📖 Tipos de Story disponibles hoy: alerta, quote, breaking, encuesta, edu, flash
    (Las demás plantillas del canvas — Market Update, Indicador Macro, Trading Idea,
-   Calendario, Carrusel — llegan con los issues #111-#115.)
+   Calendario, Semanal, Carrusel — llegan con los issues #111-#115.)
 
-   ¿Generamos la Story de tipo "alerta", "quote", "breaking", "encuesta" o "edu"?
+   ¿Generamos la Story de tipo "alerta", "quote", "breaking", "encuesta", "edu" o "flash"?
    ```
-   No continuar hasta que el director confirme `alerta`, `quote`, `breaking`, `encuesta` o `edu`.
-   Nunca asumir un tipo por defecto. Si el tipo confirmado es `quote`, saltar directamente al
-   bloque "Ruta `quote`"; si es `breaking`, saltar al bloque "Ruta `breaking`"; si es `encuesta`,
-   saltar al bloque "Ruta `encuesta`"; si es `edu`, saltar al bloque "Ruta `edu`" (los PASO 1-5 de
-   abajo son exclusivos de `alerta`).
+   No continuar hasta que el director confirme `alerta`, `quote`, `breaking`, `encuesta`, `edu` o
+   `flash`. Nunca asumir un tipo por defecto. Si el tipo confirmado es `quote`, saltar directamente
+   al bloque "Ruta `quote`"; si es `breaking`, saltar al bloque "Ruta `breaking`"; si es `encuesta`,
+   saltar al bloque "Ruta `encuesta`"; si es `edu`, saltar al bloque "Ruta `edu`"; si es `flash`,
+   saltar al bloque "Ruta `flash`" (los PASO 1-5 de abajo son exclusivos de `alerta`).
 
 2. Si el argumento `ejecutivo` está presente (CB-6/R7):
    ```
@@ -376,6 +380,102 @@ adaptado a `edu` (ver abajo).
      --template templates/stories/edu.html \
      --out "[ruta devuelta por ruta_story.ps1]" <<'STORY_PAYLOAD'
    { ...payload story_edu del paso 4... }
+   STORY_PAYLOAD
+   ```
+   Mismo manejo de éxito/error que PASO 7.3-7.4.
+
+---
+
+## Ruta `flash` — cierre multi-activo (datos del motor, sin gráfico)
+
+`flash` es una pieza de **cierre multi-activo**: una tabla de N activos (2 a 6 recomendados) con su
+último valor y su variación del día. **Sí** consume datos reales del motor
+(`mcp__market-data__get_asset_levels` por activo, con fallback manual), pero **no** lleva gráfico
+embebido (eso es Fase D) y **no** ejecuta búsqueda editorial de evento (no invoca WebSearch) — la
+narrativa la da la propia tabla, con dirección explícita por fila (regla de oro). Reemplaza los
+PASO 1-4 de `alerta`; el preview/render final reusa el mismo patrón de PASO 6-7 adaptado a `flash`
+(ver abajo).
+
+1. **Recolección del encabezado**: pregunta el título del cierre, la lista de activos y
+   opcionalmente el kicker:
+   ```
+   ¿Título del cierre? (ej. "Así cerró el mercado hoy")
+   ¿Qué activos incluimos? (2 a 6 — tickers o nombres; o "rotación de hoy")
+   ¿Kicker/tema del chip? (ej. "CIERRE DE MERCADO" — Intro para omitir)
+   ```
+   Normaliza cada activo contra `config/activos.json` (mismo criterio que `/chart` PASO 1).
+
+2. **Datos por activo (motor, con fallback manual)**: para **cada activo**, llama una vez
+   ```
+   mcp__market-data__get_asset_levels({"ticker": "[TICKER_MT5]", "timeframe": "H1"})
+   ```
+   y extrae el último precio (`valor`) y la variación del día. Si el resultado contiene `"error"`
+   (mismo patrón `apertura.md` PASO 4A), pide manualmente el último valor y la variación del día de
+   ese activo (no aborta toda la tabla, solo esa fila). Por cada activo arma:
+   - `valor`: precio formateado según los `digits` de `config/activos.json` (regla MT5 — coma
+     decimal y punto de miles, nunca truncar ceros).
+   - `variacion`: pct del día con signo y `%` (ej. `+0,42%`, `-1,86%`, `0,00%`).
+   - `direccion`: `alcista` si la variación es > 0, `bajista` si < 0, `lateral` si ≈ 0. **No** se
+     escribe como texto: el snapshot la usa como clase CSS (`flash-var--<direccion>`) para el color
+     y la flecha ▲/▼/→.
+   - `tipo`: clase del activo en voz simple (ej. "Divisa", "Metal", "Energía", "Índice", "Acción").
+
+3. **Sin búsqueda editorial de evento**: `flash` no invoca WebSearch ni reusa la detección de
+   noticias de `/alerta` — es un tablero de cierre, no una alerta noticiosa.
+
+4. **Límites editoriales** (guía de redacción de este comando — el motor de render **no** valida
+   longitud, no trunca ni aborta): `kicker ≤ 30 caracteres`, `titulo ≤ 45 caracteres`,
+   `fecha ≤ 40 caracteres`; por fila `nombre ≤ 16`, `tipo ≤ 14`, `valor ≤ 14`, `variacion ≤ 10`
+   caracteres; 2 a 6 filas recomendadas. Si algún campo excede el límite, ajusta la redacción antes
+   del preview.
+
+5. **Payload `story_flash`**: construye `kicker` **siempre presente** — si el director no lo da,
+   `"kicker": ""` (nunca omitir la clave). `titulo` y `fecha` siempre no vacíos; `fecha` sale del
+   reloj de Chile (regla canónica, nunca `WebSearch` para la hora). `filas` es un **array de
+   objetos** de claves escalares (una entrada por activo); si el director no da ningún activo, el
+   comando insiste (una tabla vacía no aporta).
+   ```json
+   {
+     "plantilla": "flash",
+     "kicker": "[kicker ≤30 car. o \"\"]",
+     "titulo": "[título ≤45 car.]",
+     "fecha": "[D MES YYYY · HH:MM]",
+     "filas": [
+       { "nombre": "USD/CLP", "tipo": "Divisa", "valor": "889,60", "variacion": "+0,42%", "direccion": "alcista" }
+     ]
+   }
+   ```
+
+6. **Guardado bajo `_general`**: `flash` es una pieza multi-activo sin activo protagonista único →
+   se guarda siempre bajo `-Activo "_general"` (mismo criterio que `quote`/`edu`), no se pregunta
+   por activo.
+
+7. **Preview y aprobación** (mismo criterio que PASO 6, ANTES de renderizar o guardar nada):
+   ```
+   📖 *PREVIEW — Story Flash (cierre multi-activo)*
+   ━━━━━━━━━━━━━━━━━━━
+   Kicker: [kicker o "(sin kicker)"]
+   Título: [titulo]
+   Fecha: [fecha]
+   Activos:
+     • [nombre] · [tipo] · [valor] · [variacion] ([direccion])
+     • [...]
+   ━━━━━━━━━━━━━━━━━━━
+   ¿Apruebas esta Story? ¿Generar y guardar el PNG final?
+   ```
+   Si el director **no** aprueba: no renderizar ni guardar nada en `data/stories/`. Terminar el
+   comando ahí.
+
+8. **Render y guardado** (solo tras aprobar, mismo patrón que PASO 7):
+   ```powershell
+   scripts\ruta_story.ps1 -Fecha "[YYYY-MM-DD]" -Activo "_general" -Plantilla "flash" -Hora "[HH-mm]"
+   ```
+   La `[Hora]` sale del reloj de Chile (regla canónica).
+   ```bash
+   uv run python scripts/story_render.py \
+     --template templates/stories/flash.html \
+     --out "[ruta devuelta por ruta_story.ps1]" <<'STORY_PAYLOAD'
+   { ...payload story_flash del paso 5... }
    STORY_PAYLOAD
    ```
    Mismo manejo de éxito/error que PASO 7.3-7.4.

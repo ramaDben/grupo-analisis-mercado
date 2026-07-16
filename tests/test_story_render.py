@@ -30,6 +30,7 @@ QUOTE_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "quote.html"
 BREAKING_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "breaking.html"
 ENCUESTA_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "encuesta.html"
 EDU_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "edu.html"
+FLASH_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "flash.html"
 
 # Fixture inline de `resolver_loops` (R4/AC4-AC6): recibe `html: str`, sin archivo.
 FIXTURE_FOR_HTML = "<!-- FOR:filas -->{{nombre}}<!-- ENDFOR:filas -->"
@@ -115,6 +116,44 @@ PAYLOAD_EDU: dict = {
         {"texto": "Cruce al alza (media rápida sobre lenta) da sesgo comprador"},
         {"texto": "Cruce a la baja da sesgo vendedor"},
         {"texto": "Confirma con el precio, no operes solo por el cruce"},
+    ],
+}
+
+
+# Payload de ejemplo de `flash` (spec.md/design.md #129 §"Contrato de payload story_flash").
+# Segundo consumidor real del mecanismo FOR: `filas` es un array de objetos de claves ESCALARES
+# (`nombre`/`tipo`/`valor`/`variacion`/`direccion`). `variacion` ya viene APLANADA a un escalar
+# (pct formateado) y `direccion` es un slug aparte que el snapshot usa como clase CSS
+# (`flash-var--<direccion>`) — el motor solo resuelve claves escalares por objeto dentro del FOR,
+# no deriva flecha/color (eso lo hace el CSS). `kicker` es el único campo opcional (resuelto por
+# CSS `:empty`, no por el motor).
+PAYLOAD_FLASH: dict = {
+    "plantilla": "flash",
+    "kicker": "CIERRE DE MERCADO",
+    "titulo": "Así cerró el mercado hoy",
+    "fecha": "16 JUL 2026 · 17:30",
+    "filas": [
+        {
+            "nombre": "USD/CLP",
+            "tipo": "Divisa",
+            "valor": "889,60",
+            "variacion": "+0,42%",
+            "direccion": "alcista",
+        },
+        {
+            "nombre": "Oro",
+            "tipo": "Metal",
+            "valor": "2.318,40",
+            "variacion": "-1,86%",
+            "direccion": "bajista",
+        },
+        {
+            "nombre": "WTI",
+            "tipo": "Energía",
+            "valor": "78,320",
+            "variacion": "0,00%",
+            "direccion": "lateral",
+        },
     ],
 }
 
@@ -539,6 +578,101 @@ def test_edu_render_dimensiones(tmp_path):
     salida = tmp_path / "story_edu_test.png"
 
     resultado = story_render.render_story(PAYLOAD_EDU, EDU_TEMPLATE, salida)
+
+    assert resultado == salida
+    assert salida.exists()
+    assert salida.stat().st_size > 5 * 1024
+    assert _png_size(salida) == (1920, 1080)
+
+
+# ---------------------------------------------------------------------------
+# AC3/AC4/AC5/AC6 (#129): snapshot templates/stories/flash.html — PRIMERA
+# plantilla de Fase C (listas). Segundo consumidor real del mecanismo FOR
+# (filas[]), esta vez iterando varios tokens escalares por fila.
+# ---------------------------------------------------------------------------
+
+
+def test_flash_no_placeholders():
+    html = story_render.build_html(PAYLOAD_FLASH, FLASH_TEMPLATE)
+
+    assert PAYLOAD_FLASH["kicker"] in html
+    assert PAYLOAD_FLASH["titulo"] in html
+    assert PAYLOAD_FLASH["fecha"] in html
+    for fila in PAYLOAD_FLASH["filas"]:
+        assert fila["nombre"] in html
+        assert fila["tipo"] in html
+        assert fila["valor"] in html
+        assert fila["variacion"] in html
+        # `direccion` no aparece como texto visible, sino como clase CSS de la celda.
+        assert f"flash-var--{fila['direccion']}" in html
+    assert "{{" not in html
+    assert "}}" not in html
+
+
+def test_flash_kicker_vacio():
+    payload = {**PAYLOAD_FLASH, "kicker": ""}
+
+    html = story_render.build_html(payload, FLASH_TEMPLATE)
+
+    assert "{{" not in html
+    assert "}}" not in html
+
+
+def test_flash_filas_vacio():
+    payload = {**PAYLOAD_FLASH, "filas": []}
+
+    html = story_render.build_html(payload, FLASH_TEMPLATE)
+
+    assert "FOR:filas" not in html
+    assert "ENDFOR:filas" not in html
+    assert "{{nombre}}" not in html
+    assert "{{variacion}}" not in html
+    assert "{{" not in html
+    assert "}}" not in html
+    # El encabezado de la tabla (fuera del FOR) persiste con la lista vacía.
+    assert "Activo" in html
+
+
+def test_flash_filas_uno():
+    payload = {
+        **PAYLOAD_FLASH,
+        "filas": [
+            {
+                "nombre": "USD/CLP",
+                "tipo": "Divisa",
+                "valor": "889,60",
+                "variacion": "+0,42%",
+                "direccion": "alcista",
+            }
+        ],
+    }
+
+    html = story_render.build_html(payload, FLASH_TEMPLATE)
+
+    assert html.count("USD/CLP") == 1
+    assert "FOR:filas" not in html
+    assert "{{nombre}}" not in html
+
+
+def test_flash_filas_n():
+    html = story_render.build_html(PAYLOAD_FLASH, FLASH_TEMPLATE)
+
+    nombres = [fila["nombre"] for fila in PAYLOAD_FLASH["filas"]]
+    for nombre in nombres:
+        assert html.count(nombre) == 1
+    assert html.index(nombres[0]) < html.index(nombres[1]) < html.index(nombres[2])
+    assert "FOR:filas" not in html
+    assert "ENDFOR:filas" not in html
+    assert "{{nombre}}" not in html
+
+
+@pytest.mark.skipif(
+    not _chromium_disponible(), reason="Chromium de Playwright no instalado"
+)
+def test_flash_render_dimensiones(tmp_path):
+    salida = tmp_path / "story_flash_test.png"
+
+    resultado = story_render.render_story(PAYLOAD_FLASH, FLASH_TEMPLATE, salida)
 
     assert resultado == salida
     assert salida.exists()
