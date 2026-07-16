@@ -1,0 +1,89 @@
+{
+  "artifacts": {
+    "design": {
+      "kind": "design",
+      "path": "design.md",
+      "state": "ready"
+    },
+    "idea": {
+      "kind": "idea",
+      "path": "idea.md",
+      "state": "ready"
+    },
+    "proposal": {
+      "kind": "proposal",
+      "path": "proposal.md",
+      "state": "ready"
+    },
+    "spec": {
+      "kind": "spec",
+      "path": "spec.md",
+      "state": "ready"
+    },
+    "tasks": {
+      "kind": "tasks",
+      "path": "tasks.md",
+      "state": "ready"
+    }
+  },
+  "bump_level": null,
+  "closed_at": null,
+  "created_at": "2026-07-16T04:51:45.166032Z",
+  "current_phase": "apply",
+  "design_approved_at": "2026-07-16T19:24:33.401376Z",
+  "design_approved_by": "bbenja11",
+  "domain": "stories-gi",
+  "gate_predicates": [
+    {
+      "kind": "artifact_required",
+      "target_phase": "propose",
+      "value": "idea.md"
+    },
+    {
+      "kind": "artifact_required",
+      "target_phase": "specify",
+      "value": "proposal.md"
+    },
+    {
+      "kind": "artifact_required",
+      "target_phase": "design",
+      "value": "spec.md"
+    },
+    {
+      "kind": "artifact_required",
+      "target_phase": "break-to-tasks",
+      "value": "design.md"
+    },
+    {
+      "kind": "change_field_required",
+      "target_phase": "apply",
+      "value": "design_approved_at"
+    },
+    {
+      "kind": "artifact_required",
+      "target_phase": "apply",
+      "value": "design.md"
+    },
+    {
+      "kind": "artifact_required",
+      "target_phase": "apply",
+      "value": "tasks.md"
+    }
+  ],
+  "issue": {
+    "labels": [
+      "type:feature"
+    ],
+    "number": 127,
+    "title": "Stories GI \u00b7 Fase B: plantilla edu (concepto educativo) 16:9",
+    "url": "https://github.com/bbenja11/grupo-analisis-mercado/issues/127"
+  },
+  "slug": {
+    "issue_number": 127,
+    "title_slug": "stories-gi-fase-b-plantilla-edu-concepto-educativo-16-9"
+  },
+  "tests_passed_at": "2026-07-16T21:29:09.395461Z",
+  "updated_at": "2026-07-16T21:29:09.395461Z",
+  "version_bumped_from": null,
+  "version_bumped_to": null
+}

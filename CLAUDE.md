@@ -247,17 +247,20 @@ Contrato de error común: si el dato no está disponible retorna `{'error': 'CÓ
 ## Stories GI
 
 Piloto (issue #109): comando `/story [tipo]` genera Stories de marca (imagen 1920×1080).
-`[tipo]` soportados hoy: `alerta`, `quote`, `breaking`, `encuesta` (Fase B, issues
-#121/#123/#125). `alerta` (plantilla "03 Alerta de Mercado") combina niveles reales del motor
+`[tipo]` soportados hoy: `alerta`, `quote`, `breaking`, `encuesta`, `edu` (Fase B, issues
+#121/#123/#125/#127). `alerta` (plantilla "03 Alerta de Mercado") combina niveles reales del motor
 (`get_asset_levels`) con una narrativa de alerta (mismo criterio editorial de `/alerta`); `quote`
 es una pieza 100% editorial (cita + autor + cargo, sin dato del motor); `breaking` es una pieza
 editorial de noticia urgente (kicker + titular + cifra clave + contexto + reacción, sin dato del
 motor ni búsqueda propia de evento); `encuesta` es una pieza editorial de sentimiento binario
 (kicker + pregunta + dos opciones "A vs B" + nota de cierre, sin dato del motor ni búsqueda
-propia de evento, mismo criterio que `/encuesta`). Único renderer: `scripts/story_render.py`
+propia de evento, mismo criterio que `/encuesta`); `edu` es una pieza editorial de concepto
+educativo (kicker + título + definición + ejemplo comparativo + lista de bullets de aplicación
+vía loop `<!-- FOR:bullets -->`, sin dato del motor ni búsqueda propia de evento, mismo criterio
+que `/concepto` y `/rencuesta`). Único renderer: `scripts/story_render.py`
 (payload JSON → HTML → PNG con Playwright headless); snapshots de marca:
-`templates/stories/alerta.html`, `templates/stories/quote.html`, `templates/stories/breaking.html`
-y `templates/stories/encuesta.html`. Las demás plantillas del canvas (Market Update, Indicador
+`templates/stories/alerta.html`, `templates/stories/quote.html`, `templates/stories/breaking.html`,
+`templates/stories/encuesta.html` y `templates/stories/edu.html`. Las demás plantillas del canvas (Market Update, Indicador
 Macro, Trading Idea, Calendario, Carrusel "Oportunidades de la semana") llegan con los issues
 #111-#115 — ver `docs/design/stories-gi/plantillas-stories-gi.md` para el mapeo campo-por-campo.
 
@@ -326,7 +329,7 @@ Invocar con `/nombre` desde Claude Code:
 | `/dato_macro` | Calendario del día → director elige dato a desarrollar |
 | `/noticia` | Busca 3-5 noticias relevantes → director elige |
 | `/chart` | Genera screenshot de MT5 con indicador y temporalidad a elección |
-| `/story [tipo]` | Genera una Story de marca GI (imagen 1920×1080). `[tipo]` soportados hoy: `alerta`, `quote`, `breaking`, `encuesta`; demás plantillas en #111-#115. Ver sección "Stories GI". |
+| `/story [tipo]` | Genera una Story de marca GI (imagen 1920×1080). `[tipo]` soportados hoy: `alerta`, `quote`, `breaking`, `encuesta`, `edu`; demás plantillas en #111-#115. Ver sección "Stories GI". |
 | `/señal` | Señal operativa (verifica límite 3/semana automáticamente) |
 | `/alerta` | Detecta qué mueve el mercado ahora y genera alerta urgente |
 | `/concepto` | Concepto educativo conectado a lo que pasó esta semana |

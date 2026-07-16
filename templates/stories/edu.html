@@ -1,0 +1,259 @@
+<!--
+Snapshot de marca "Edu" (Stories GI · Fase B, issue #127). Pieza 100% editorial educativa —
+kicker + título de concepto + definición + ejemplo comparativo + lista de bullets de aplicación,
+sin gráfico ni dato en vivo del motor. Reutiliza verbatim el andamiaje de marca (fuentes/footer)
+de `templates/stories/encuesta.html:13-71,174-232`, con dos diferencias: paleta con acento VERDE
+educativo (#00DC82) y el bloque de repetición de `bullets` (mecanismo loop del motor). PRIMER
+snapshot real que usa ese mecanismo. Campo opcional `kicker` por CSS :empty (no motor). NO cambiar
+nombres de tokens sin actualizar scripts/story_render.py y tests/test_story_render.py.
+-->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Edu — Story GI</title>
+<style>
+  @font-face {
+    font-family: "Syne";
+    src: url("fonts/syne-800.woff2") format("woff2");
+    font-weight: 800;
+    font-style: normal;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "DM Sans";
+    src: url("fonts/dm-sans-400.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "DM Sans";
+    src: url("fonts/dm-sans-700.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "Space Grotesk";
+    src: url("fonts/space-grotesk-600.woff2") format("woff2");
+    font-weight: 600;
+    font-style: normal;
+    font-display: block;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 1920px;
+    height: 1080px;
+    background: #0D0D1A;
+    background-image:
+      radial-gradient(90% 120% at 0% 20%, #123A2A 0%, #0D0D1A 55%),
+      linear-gradient(180deg, #0D0D1A 0%, #0D0D1A 60%, #123A2A 100%);
+    color: #F5F3F7;
+    font-family: "DM Sans", sans-serif;
+    overflow: hidden;
+  }
+
+  /* ---- Contenedor raíz: columna (cuerpo | footer) ---- */
+  .story {
+    width: 1920px;
+    height: 1080px;
+    padding: 56px 72px 40px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---- Cuerpo: una sola columna editorial, centrada ---- */
+  .edu-cuerpo {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  /* ---- Kicker (chip acento verde) ---- */
+  .edu-kicker {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 20px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 10px 22px;
+    border-radius: 999px;
+    background: rgba(0, 220, 130, 0.14);
+    border: 1px solid rgba(0, 220, 130, 0.5);
+    color: #00DC82;
+  }
+
+  .edu-kicker:empty {
+    display: none;
+  }
+
+  /* ---- Título del concepto ---- */
+  .edu-titulo {
+    font-family: "Syne", sans-serif;
+    font-weight: 800;
+    font-size: 54px;
+    line-height: 1.15;
+    color: #FFFFFF;
+    margin: 26px 0 0;
+    max-width: 1500px;
+  }
+
+  /* ---- Definición ---- */
+  .edu-definicion {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 26px;
+    line-height: 1.45;
+    color: #C9C5D4;
+    margin: 22px 0 0;
+    max-width: 1300px;
+  }
+
+  /* ---- Ejemplo comparativo (valor_a  operador  valor_b) ---- */
+  .edu-ejemplo {
+    margin-top: 40px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 26px;
+  }
+
+  .edu-ejemplo-valor {
+    font-family: "Syne", sans-serif;
+    font-weight: 800;
+    font-size: 38px;
+    color: #FFFFFF;
+    border: 2px solid #00DC82;
+    background: rgba(0, 220, 130, 0.08);
+    border-radius: 18px;
+    padding: 20px 30px;
+  }
+
+  .edu-ejemplo-op {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 24px;
+    color: #53C1AB;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  /* ---- Bullets "en la práctica" (contenedor y rótulo FUERA del FOR) ---- */
+  .edu-como {
+    margin-top: 44px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .edu-como-rotulo {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #A9A5B4;
+  }
+
+  .edu-bullets {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 1400px;
+  }
+
+  .edu-bullet {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 23px;
+    line-height: 1.4;
+    color: #F5F3F7;
+    padding-left: 30px;
+    position: relative;
+    text-align: left;
+  }
+
+  .edu-bullet::before {
+    content: "\25B8";
+    position: absolute;
+    left: 0;
+    color: #00DC82;
+  }
+
+  /* ---- Footer ---- */
+  .footer {
+    margin-top: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .footer-marca {
+    display: flex;
+    justify-content: space-between;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 20px;
+    color: #F5F3F7;
+  }
+
+  .footer-disclaimer {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 13px;
+    color: #6E6A7A;
+    line-height: 1.35;
+  }
+</style>
+</head>
+<body class="edu">
+  <div class="story">
+
+    <div class="edu-cuerpo">
+      <span class="edu-kicker">{{kicker}}</span>
+      <h1 class="edu-titulo">{{titulo_concepto}}</h1>
+      <p class="edu-definicion">{{definicion}}</p>
+
+      <div class="edu-ejemplo">
+        <span class="edu-ejemplo-valor">{{valor_a}}</span>
+        <span class="edu-ejemplo-op">{{operador}}</span>
+        <span class="edu-ejemplo-valor">{{valor_b}}</span>
+      </div>
+
+      <div class="edu-como">
+        <span class="edu-como-rotulo">EN LA PRÁCTICA</span>
+        <ul class="edu-bullets">
+          <!-- FOR:bullets --><li class="edu-bullet">{{texto}}</li><!-- ENDFOR:bullets -->
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="footer-marca">
+        <span>@grupointeligencia</span>
+        <span>grupointeligencia.com</span>
+      </div>
+      <p class="footer-disclaimer">
+        Los CFD son instrumentos complejos y presentan un riesgo elevado de perder dinero
+        rápidamente debido al apalancamiento. Este contenido es educativo/informativo, no
+        constituye asesoría financiera.
+      </p>
+    </div>
+
+  </div>
+</body>
+</html>

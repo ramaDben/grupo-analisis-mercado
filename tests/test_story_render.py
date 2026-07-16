@@ -29,6 +29,7 @@ ALERTA_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "alerta.html"
 QUOTE_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "quote.html"
 BREAKING_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "breaking.html"
 ENCUESTA_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "encuesta.html"
+EDU_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "edu.html"
 
 # Fixture inline de `resolver_loops` (R4/AC4-AC6): recibe `html: str`, sin archivo.
 FIXTURE_FOR_HTML = "<!-- FOR:filas -->{{nombre}}<!-- ENDFOR:filas -->"
@@ -92,6 +93,29 @@ PAYLOAD_ENCUESTA: dict = {
     "opcion_a": "Alcista",
     "opcion_b": "Bajista",
     "nota_cierre": "Vota en la encuesta fijada del grupo",
+}
+
+
+# Payload de ejemplo de `edu` (spec.md/design.md #127 §"Contrato de payload story_edu").
+# Primer consumidor real del mecanismo FOR: `bullets` es un array de objetos `{"texto": ...}`.
+# `ejemplo` ya viene APLANADO a `valor_a`/`operador`/`valor_b` escalares (el motor solo resuelve
+# claves escalares top-level, no `ejemplo.valor_a`). `kicker` es el único campo opcional
+# (resuelto por CSS `:empty`, no por el motor).
+PAYLOAD_EDU: dict = {
+    "plantilla": "edu",
+    "kicker": "CONCEPTO DE LA SEMANA",
+    "titulo_concepto": "Cruce de medias móviles",
+    "definicion": (
+        "Cuando una media rápida cruza a una lenta, señala un posible cambio de tendencia."
+    ),
+    "valor_a": "Media 50",
+    "operador": "cruza sobre",
+    "valor_b": "Media 200",
+    "bullets": [
+        {"texto": "Cruce al alza (media rápida sobre lenta) da sesgo comprador"},
+        {"texto": "Cruce a la baja da sesgo vendedor"},
+        {"texto": "Confirma con el precio, no operes solo por el cruce"},
+    ],
 }
 
 
@@ -437,6 +461,84 @@ def test_encuesta_render_dimensiones(tmp_path):
     salida = tmp_path / "story_encuesta_test.png"
 
     resultado = story_render.render_story(PAYLOAD_ENCUESTA, ENCUESTA_TEMPLATE, salida)
+
+    assert resultado == salida
+    assert salida.exists()
+    assert salida.stat().st_size > 5 * 1024
+    assert _png_size(salida) == (1920, 1080)
+
+
+# ---------------------------------------------------------------------------
+# AC3/AC4/AC5/AC6 (#127): snapshot templates/stories/edu.html — PRIMER
+# consumidor real del mecanismo FOR (bullets[]).
+# ---------------------------------------------------------------------------
+
+
+def test_edu_no_placeholders():
+    html = story_render.build_html(PAYLOAD_EDU, EDU_TEMPLATE)
+
+    assert PAYLOAD_EDU["kicker"] in html
+    assert PAYLOAD_EDU["titulo_concepto"] in html
+    assert PAYLOAD_EDU["definicion"] in html
+    assert PAYLOAD_EDU["valor_a"] in html
+    assert PAYLOAD_EDU["operador"] in html
+    assert PAYLOAD_EDU["valor_b"] in html
+    for bullet in PAYLOAD_EDU["bullets"]:
+        assert bullet["texto"] in html
+    assert "{{" not in html
+    assert "}}" not in html
+
+
+def test_edu_kicker_vacio():
+    payload = {**PAYLOAD_EDU, "kicker": ""}
+
+    html = story_render.build_html(payload, EDU_TEMPLATE)
+
+    assert "{{" not in html
+    assert "}}" not in html
+
+
+def test_edu_bullets_vacio():
+    payload = {**PAYLOAD_EDU, "bullets": []}
+
+    html = story_render.build_html(payload, EDU_TEMPLATE)
+
+    assert "FOR:bullets" not in html
+    assert "ENDFOR:bullets" not in html
+    assert "{{texto}}" not in html
+    assert "{{" not in html
+    assert "}}" not in html
+
+
+def test_edu_bullets_uno():
+    payload = {**PAYLOAD_EDU, "bullets": [{"texto": "Un único punto de aplicación"}]}
+
+    html = story_render.build_html(payload, EDU_TEMPLATE)
+
+    assert html.count("Un único punto de aplicación") == 1
+    assert "FOR:bullets" not in html
+    assert "{{texto}}" not in html
+
+
+def test_edu_bullets_n():
+    html = story_render.build_html(PAYLOAD_EDU, EDU_TEMPLATE)
+
+    textos = [bullet["texto"] for bullet in PAYLOAD_EDU["bullets"]]
+    for texto in textos:
+        assert html.count(texto) == 1
+    assert html.index(textos[0]) < html.index(textos[1]) < html.index(textos[2])
+    assert "FOR:bullets" not in html
+    assert "ENDFOR:bullets" not in html
+    assert "{{texto}}" not in html
+
+
+@pytest.mark.skipif(
+    not _chromium_disponible(), reason="Chromium de Playwright no instalado"
+)
+def test_edu_render_dimensiones(tmp_path):
+    salida = tmp_path / "story_edu_test.png"
+
+    resultado = story_render.render_story(PAYLOAD_EDU, EDU_TEMPLATE, salida)
 
     assert resultado == salida
     assert salida.exists()
