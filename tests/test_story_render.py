@@ -28,6 +28,7 @@ FIXTURE_CHART = FIXTURES_DIR / "fixture_chart.png"
 ALERTA_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "alerta.html"
 QUOTE_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "quote.html"
 BREAKING_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "breaking.html"
+ENCUESTA_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "encuesta.html"
 
 # Fixture inline de `resolver_loops` (R4/AC4-AC6): recibe `html: str`, sin archivo.
 FIXTURE_FOR_HTML = "<!-- FOR:filas -->{{nombre}}<!-- ENDFOR:filas -->"
@@ -78,6 +79,19 @@ PAYLOAD_BREAKING: dict = {
         "El mercado ajusta expectativas hacia un primer recorte más tardío, "
         "presionando al dólar al alza y a los activos de riesgo a la baja en la sesión."
     ),
+}
+
+# Payload de ejemplo de `encuesta` (spec.md/design.md #125 §"Contrato de payload
+# story_encuesta"): tokens 100% escalares, sin fences ni loops. `kicker` y
+# `nota_cierre` son los dos campos opcionales (resueltos por CSS `:empty`, no por
+# el motor).
+PAYLOAD_ENCUESTA: dict = {
+    "plantilla": "encuesta",
+    "kicker": "ENCUESTA DEL DÍA",
+    "pregunta": "¿Cuál creen que será la tendencia hoy del Oro?",
+    "opcion_a": "Alcista",
+    "opcion_b": "Bajista",
+    "nota_cierre": "Vota en la encuesta fijada del grupo",
 }
 
 
@@ -374,6 +388,55 @@ def test_breaking_render_dimensiones(tmp_path):
     salida = tmp_path / "story_breaking_test.png"
 
     resultado = story_render.render_story(PAYLOAD_BREAKING, BREAKING_TEMPLATE, salida)
+
+    assert resultado == salida
+    assert salida.exists()
+    assert salida.stat().st_size > 5 * 1024
+    assert _png_size(salida) == (1920, 1080)
+
+
+# ---------------------------------------------------------------------------
+# AC3/AC4/AC5/AC6 (#125): snapshot templates/stories/encuesta.html
+# ---------------------------------------------------------------------------
+
+
+def test_encuesta_no_placeholders():
+    html = story_render.build_html(PAYLOAD_ENCUESTA, ENCUESTA_TEMPLATE)
+
+    assert PAYLOAD_ENCUESTA["kicker"] in html
+    assert PAYLOAD_ENCUESTA["pregunta"] in html
+    assert PAYLOAD_ENCUESTA["opcion_a"] in html
+    assert PAYLOAD_ENCUESTA["opcion_b"] in html
+    assert PAYLOAD_ENCUESTA["nota_cierre"] in html
+    assert "{{" not in html
+    assert "}}" not in html
+
+
+def test_encuesta_kicker_vacio():
+    payload = {**PAYLOAD_ENCUESTA, "kicker": ""}
+
+    html = story_render.build_html(payload, ENCUESTA_TEMPLATE)
+
+    assert "{{" not in html
+    assert "}}" not in html
+
+
+def test_encuesta_nota_vacio():
+    payload = {**PAYLOAD_ENCUESTA, "nota_cierre": ""}
+
+    html = story_render.build_html(payload, ENCUESTA_TEMPLATE)
+
+    assert "{{" not in html
+    assert "}}" not in html
+
+
+@pytest.mark.skipif(
+    not _chromium_disponible(), reason="Chromium de Playwright no instalado"
+)
+def test_encuesta_render_dimensiones(tmp_path):
+    salida = tmp_path / "story_encuesta_test.png"
+
+    resultado = story_render.render_story(PAYLOAD_ENCUESTA, ENCUESTA_TEMPLATE, salida)
 
     assert resultado == salida
     assert salida.exists()
