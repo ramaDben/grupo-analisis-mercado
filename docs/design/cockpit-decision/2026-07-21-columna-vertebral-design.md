@@ -92,7 +92,7 @@ Cada factor lleva su **ficha de procedencia**: todo es auditable, nada se afirma
 }
 ```
 
-- **Convicción (1–5): juicio razonado, no aritmética ciega.** Es un nivel cualitativo *derivado* del grado de convergencia y justificado en texto — **no** un promedio de pesos (eso sería falsa precisión, contraria al rigor que se busca). *(Decisión a validar en review — ver §9.)*
+- **Convicción (1–5): juicio razonado, no aritmética ciega.** Es un nivel cualitativo *derivado* del grado de convergencia y justificado en texto — **no** un promedio de pesos (falsa precisión). Va **siempre acompañada del recuento de evidencia visible** (cuántos factores a favor/en contra y con qué peso) para que la base sea auditable sin fingir una fórmula — ver el ejemplo en §6.
 - Los **precios respetan `digits` de `config/activos.json`** (USDCLP = 2 → `$945.00`). Regla ya vigente en el repo.
 
 ---
@@ -133,7 +133,7 @@ data/tesis/<activo_slug>/
 
 ## 6. El informe de decisión (output central del cockpit)
 
-Es lo que el director ve al consultar. Estructura canónica (above-the-fold primero, como el resto del repo):
+Es lo que el director ve al consultar. Se genera con **`/tesis [activo]`**. Estructura canónica (above-the-fold primero, como el resto del repo):
 
 ```text
 🎯 [ACTIVO] — Informe de decisión           (2026-07-21 09:40 CLT)
@@ -146,7 +146,9 @@ FACTORES QUE CONVERGEN
   Técnico (horizonte: táctico)
     [🟢🔴🟡] [nombre]  [peso]  → [derivación]        (fuente · fecha)
 ────────────────────────────────────────────
-SÍNTESIS → convicción [N/5], justificada por la convergencia
+SÍNTESIS → convicción [N/5]
+  Base: [n 🔴 (pesos)] · [n 🟢 (pesos)] · [n 🟡]   ← recuento visible, sin fórmula
+  Por qué [N] y no [N±1]: [qué factor de peso contradice o refuerza]
 ⚠️ Conflicto a vigilar: [qué invalidaría la tesis]
 📌 Catalizador próximo: [evento · hora CLT]
 ────────────────────────────────────────────
@@ -162,7 +164,7 @@ Desde este informe, opcionalmente, se deriva el mensaje de WhatsApp (export secu
 Primera tarea del issue de columna vertebral (la de mayor ahorro recurrente de tokens):
 
 - Los **25 slash commands de cliente** no se borran: pasan a **modo secundario**. Se mantienen funcionales para el export a WhatsApp, pero dejan de ser el eje del proyecto.
-- El **`CLAUDE.md`** se reescribe: hoy es ~90% manual de modo-cliente y se carga entero **cada sesión**. Se adelgaza a un núcleo enfocado en el cockpit de decisión + la política de fuentes, moviendo el detalle de modo-cliente a un doc secundario (`docs/` o `CLAUDE.cliente.md`) que solo se lee cuando se usa ese modo. Meta: contexto por sesión mucho más liviano sin perder capacidad.
+- El **`CLAUDE.md`** se reescribe: hoy es ~90% manual de modo-cliente y se carga entero **cada sesión**. Se adelgaza a un núcleo enfocado en el cockpit de decisión + la política de fuentes, moviendo el detalle de modo-cliente a **`CLAUDE.cliente.md`** (un solo archivo en la raíz), que **no** se auto-carga y solo se lee cuando se usa ese modo. Meta: contexto por sesión mucho más liviano sin perder capacidad.
 - **No se toca el motor** (MCP `market-data`, helpers deterministas, `config/activos.json`): se conservan intactos.
 
 ---
@@ -196,11 +198,11 @@ Cada pieza es un Change independiente con su ciclo `explore → specify → desi
 
 ---
 
-## 9. Decisiones abiertas a validar (review gate)
+## 9. Decisiones tomadas (validadas 2026-07-21)
 
-1. **Convicción como juicio razonado (1–5) vs. score aritmético.** Propuesto: juicio razonado justificado por la convergencia, **sin** promedio de pesos (evitar falsa precisión). ¿De acuerdo?
-2. **Nombre del comando de entrada** al cockpit (ej. `/tesis [activo]`, `/decision [activo]`). Pendiente de definir en el issue.
-3. **Ubicación del manual de modo-cliente** tras adelgazar el `CLAUDE.md` (`CLAUDE.cliente.md` vs `docs/cliente/`).
+1. **Convicción = juicio razonado (1–5), no score aritmético.** Nivel cualitativo justificado por la convergencia, acompañado **siempre** del recuento de evidencia visible (§3.3, §6). Se descarta el promedio de pesos por falsa precisión.
+2. **Comando de entrada = `/tesis [activo]`** (alineado con el objeto central del modelo; "premisa" queda como sinónimo).
+3. **Manual de modo-cliente = `CLAUDE.cliente.md`** (un solo archivo en la raíz, no auto-cargado).
 
 ---
 
