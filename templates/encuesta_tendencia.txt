@@ -1,6 +1,6 @@
-🗣️ *TU VOZ CUENTA*
+🗣️ *¿QUÉ VES TÚ?*
 
-¿Qué tendencia proyectan hoy para *{{activo}}*?
+¿Qué tendencia proyectas hoy para *{{activo}}*?
 {{guino}}
 
 📈 Alcista
