@@ -28,7 +28,7 @@ Todo el contenido pasa por aprobación explícita del director antes de enviarse
 ## Instalación rápida
 
 ```bash
-git clone https://github.com/bbenja11/grupo-analisis-mercado
+git clone https://github.com/ramaDben/grupo-analisis-mercado
 cd grupo-analisis-mercado
 
 # Copiar config de MCPs y completar con tus credenciales

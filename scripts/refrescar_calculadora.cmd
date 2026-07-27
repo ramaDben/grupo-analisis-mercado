@@ -56,5 +56,5 @@ if errorlevel 1 (
     exit /b 2
 )
 
-echo RESULTADO: publicado en https://bbenja11.github.io/gi-calculadora-lotaje/ >> "%LOG%"
+echo RESULTADO: publicado en https://ramadben.github.io/gi-calculadora-lotaje/ >> "%LOG%"
 exit /b 0
