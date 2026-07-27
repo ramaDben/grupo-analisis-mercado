@@ -17,6 +17,19 @@
       "rotacion_diaria": true
     },
     {
+      "ticker": "USD/JPY",
+      "ticker_mt5": "USDJPY",
+      "nombre": "Dólar / Yen Japonés",
+      "categoria": "forex",
+      "digits": 3,
+      "volatilidad": "media",
+      "nota_volatilidad": "se mueve por decisiones de tasas más que por el minuto a minuto, así que 4H y 1D muestran la tendencia de varios días; en 15M aparece ruido sin dirección clara",
+      "drivers": ["diferencial de tasas Fed vs BoJ", "decisiones BoJ", "rendimientos Treasury", "intervención Ministerio de Finanzas de Japón", "precios de energía"],
+      "temporalidades": ["1D", "4H", "1H"],
+      "horario_mercado": "24h (principal: sesión Tokio y sesión NY)",
+      "rotacion_diaria": false
+    },
+    {
       "ticker": "XAU/USD",
       "ticker_mt5": "XAUUSD",
       "nombre": "Oro",

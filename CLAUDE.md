@@ -15,6 +15,7 @@ Criterio de claridad (subordinado a la regla de oro): si un cliente nuevo sin ex
 - **Oro (XAU/USD)**: drivers → Dollar Index, tasas reales, decisiones Fed, coberturas bancos centrales, geopolítica
 - **WTI (Petróleo)**: drivers → inventarios EIA, decisiones OPEP+, demanda China, geopolítica
 - **US100 (Nasdaq 100)**: drivers → tasas Fed, earnings tech, rendimientos Treasury
+- **USD/JPY (Dólar / Yen japonés)**: cobertura por pedido externo, **fuera de la rotación diaria** de 2-3 activos (se cubre cuando el director lo pide). drivers → diferencial de tasas Fed vs BoJ, decisiones del BoJ, rendimientos Treasury, intervención del Ministerio de Finanzas de Japón, precios de energía, aversión al riesgo
 - **Acciones (rotación por análisis previo)**: además de los 4 activos base, la rotación diaria puede incluir 1-2 acciones del catálogo elegidas por análisis previo. Fuente interina: las 2 acciones destacadas por `/earnings` esa semana. Mecanismo definitivo (market screener que recorra las acciones disponibles en MT5 y elija las 2 mejores): **pendiente, issue aparte**.
 
 ## Estructura diaria obligatoria (lunes a viernes)
@@ -192,6 +193,7 @@ Reglas:
 | Activo | Digits | Ejemplo correcto | Ejemplo incorrecto |
 |--------|--------|------------------|--------------------|
 | USDCLP | 2 | $889.60 | $889.6 / $890 |
+| USDJPY | 3 | 163.731 | 163.73 / 163.7 |
 | XAUUSD | 2 | $4,539.72 | $4.539 / $4,540 |
 | WTI.spot | 3 | $90.181 | $90.18 / $90.2 |
 | US100.spot | 2 | 30,350.01 | 30.350 / 30,350 |
@@ -264,12 +266,15 @@ que `/concepto` y `/rencuesta`). Único renderer: `scripts/story_render.py`
 Macro, Trading Idea, Calendario, Carrusel "Oportunidades de la semana") llegan con los issues
 #111-#115 — ver `docs/design/stories-gi/plantillas-stories-gi.md` para el mapeo campo-por-campo.
 
-**Regla "solo lectura" (OBLIGATORIA)**: el proyecto Claude Design compartido (dueño: Rodrigo, GI)
-— `https://claude.ai/design/p/05b3bfe8-d8ad-4f83-b7b0-e8de4d77a3cf` — es **solo lectura**: este
-repo nunca sube datos, lógica ni configuración propia (config, drivers, mensajes reales) hacia
-allá. El render final se produce y se aprueba siempre dentro de este repo, a partir de un
-snapshot HTML local sincronizado a mano (sin polling) cuando GI actualice plantillas o manual de
-marca.
+**Escritura en el proyecto Claude Design de GI (regla actualizada 2026-07-27)**: el proyecto
+Claude Design compartido (dueño: Rodrigo, GI) —
+`https://claude.ai/design/p/05b3bfe8-d8ad-4f83-b7b0-e8de4d77a3cf` — es de **lectura y escritura**
+vía la tool `DesignSync`. La antigua regla "solo lectura" quedó **revocada por decisión del
+director**. Se mantienen dos condiciones: (1) el render final se produce y se aprueba **siempre
+dentro de este repo** (`scripts/story_render.py` sobre los snapshots de `templates/stories/`), y
+(2) **nada se sube sin aprobación explícita del director** — la subida pasa por `finalize_plan`,
+que le muestra el listado exacto de rutas antes de escribir. Convención del canvas para las
+subidas: piezas como `Story <fecha> <activo>.dc.html` en la raíz y renders en `exports/*.png`.
 
 **Guardado**: `data/stories/<Fecha>/<activo_slug>/<plantilla>/<Hora>_<plantilla>.png` vía
 `scripts\ruta_story.ps1` (hermano de `ruta_mensaje.ps1`, no lo modifica). Los `data/stories/*.png`
@@ -369,7 +374,7 @@ grupo-analisis-mercado/
 ├── agents/                ← prompts de sub-agents
 │   ├── recolector.md · analista.md · redactor.md
 ├── config/                ← configuración del sistema
-│   ├── activos.json       ← 21 activos: forex + índices + 13 acciones
+│   ├── activos.json       ← 22 activos: forex + índices + 13 acciones
 │   ├── drivers.json · drivers_indices_sectores.json
 │   ├── agenda_semanal.json · feriados_bolsa.json
 ├── scripts/               ← scripts auxiliares

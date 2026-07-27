@@ -29,7 +29,10 @@
   "PIB": { "nombre_es": "Producto interno bruto", "explicacion": "Todo lo que produce un país; mide si la economía crece o se contrae." },
   "GDP": { "nombre_es": "Producto interno bruto (PIB)", "explicacion": "Lo mismo que el PIB: el tamaño total de la economía (sigla en inglés)." },
   "EIA": { "nombre_es": "Administración de Información Energética (EE.UU.)", "explicacion": "Publica los inventarios de petróleo de EE.UU.; mueve fuerte el precio del WTI." },
+  "WTI": { "nombre_es": "Petróleo West Texas Intermediate", "explicacion": "El petróleo de referencia de EE.UU.; es el precio del crudo que seguimos a diario en el grupo." },
+  "OPEP": { "nombre_es": "Organización de Países Exportadores de Petróleo", "explicacion": "Grupo de países productores (con sus aliados = OPEP+) que coordina cuánto crudo bombear; sus decisiones mueven el precio del petróleo." },
   "FOMC": { "nombre_es": "Comité de mercado abierto de la Fed", "explicacion": "El grupo de la Fed que decide las tasas de interés en EE.UU." },
+  "Fed": { "nombre_es": "Reserva Federal (banco central de EE.UU.)", "explicacion": "El banco central de EE.UU.; fija las tasas de interés del dólar y sus decisiones mueven a todos los mercados." },
   "BCCh": { "nombre_es": "Banco Central de Chile", "explicacion": "Fija la tasa de interés en Chile; influye directo en el dólar (USD/CLP)." },
   "BCE": { "nombre_es": "Banco Central Europeo", "explicacion": "Decide las tasas de interés de la zona euro." },
   "PCE subyacente": { "nombre_es": "Gasto en consumo personal subyacente", "explicacion": "El PCE sin alimentos ni energía; la Fed lo prefiere porque es más estable." },
@@ -40,5 +43,7 @@
   "TPM": { "nombre_es": "Tasa de Política Monetaria", "explicacion": "La tasa de interés que fija el Banco Central de Chile (BCCh); cuando baja, el crédito se abarata y el peso puede debilitarse frente al dólar." },
   "RPM": { "nombre_es": "Reunión de Política Monetaria", "explicacion": "La reunión del Banco Central de Chile donde se decide si la tasa de interés (TPM) sube, baja o se mantiene. Ocurre varias veces al año y mueve el USD/CLP." },
   "IMACEC": { "nombre_es": "Índice Mensual de Actividad Económica", "explicacion": "Termómetro mensual de la economía chilena publicado por el Banco Central; si es negativo, la economía se contrajo ese mes." },
-  "INE": { "nombre_es": "Instituto Nacional de Estadísticas (Chile)", "explicacion": "El organismo oficial que mide la inflación (IPC) y el empleo en Chile." }
+  "INE": { "nombre_es": "Instituto Nacional de Estadísticas (Chile)", "explicacion": "El organismo oficial que mide la inflación (IPC) y el empleo en Chile." },
+  "Bienes durables": { "nombre_es": "Pedidos de bienes durables", "explicacion": "Productos que duran varios años (maquinaria, autos, aviones, electrodomésticos); sus pedidos muestran si las empresas están invirtiendo o frenando.", "titulos_ff": ["Durable Goods Orders", "Core Durable Goods Orders"] },
+  "US100": { "nombre_es": "Índice Nasdaq 100", "explicacion": "El índice de las 100 mayores empresas tecnológicas de EE.UU.; sube cuando las tasas de interés bajan." }
 }
