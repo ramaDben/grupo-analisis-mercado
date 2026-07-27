@@ -27,6 +27,46 @@
       }
     }
   },
+  "USD/JPY": {
+    "drivers": {
+      "diferencial_tasas_fed_boj": {
+        "descripcion_cliente": "Estados Unidos paga mucho más interés por su moneda que Japón (3.75% contra 1.00%). Mientras esa diferencia sea grande, el dinero se va al dólar y el USD/JPY sube. Si la Fed recorta o el Banco de Japón sube su tasa, la diferencia se achica y el par baja.",
+        "correlacion": "directa con el diferencial",
+        "importancia": "muy alta",
+        "donde_seguirlo": "Comunicados de la Fed y del Banco de Japón"
+      },
+      "decisiones_boj": {
+        "descripcion_cliente": "El Banco de Japón (BoJ) mantiene las tasas más bajas del mundo desarrollado. Cada vez que sube su tasa o insinúa que lo hará, el yen se fortalece y el USD/JPY baja.",
+        "correlacion": "inversa",
+        "importancia": "alta",
+        "donde_seguirlo": "Reuniones del BoJ y conferencias de su gobernador"
+      },
+      "rendimientos_treasury": {
+        "descripcion_cliente": "Cuando los bonos del Tesoro de EE.UU. pagan más interés, atraen dinero desde Japón: se venden yenes para comprar dólares y el par sube.",
+        "correlacion": "directa",
+        "importancia": "alta",
+        "donde_seguirlo": "Rendimiento del bono estadounidense a 10 años"
+      },
+      "intervencion_mof_japon": {
+        "descripcion_cliente": "Cuando el yen se debilita demasiado, el Ministerio de Finanzas de Japón sale a comprar yenes para frenarlo. Esas intervenciones hacen caer el USD/JPY de golpe, y son el principal riesgo cuando el par está en máximos.",
+        "correlacion": "inversa",
+        "importancia": "alta",
+        "donde_seguirlo": "Declaraciones del Ministerio de Finanzas de Japón"
+      },
+      "precios_energia": {
+        "descripcion_cliente": "Japón importa casi toda su energía y la paga en dólares. Si la energía sube o su suministro se vuelve incierto, Japón necesita más dólares, el yen se debilita y el par sube.",
+        "correlacion": "directa",
+        "importancia": "media",
+        "donde_seguirlo": "Precio del petróleo y del gas natural licuado"
+      },
+      "aversion_al_riesgo": {
+        "descripcion_cliente": "El yen es una moneda refugio: en momentos de miedo global los inversionistas lo compran para protegerse, y el USD/JPY baja.",
+        "correlacion": "inversa con la incertidumbre",
+        "importancia": "media",
+        "donde_seguirlo": "Índices bursátiles globales y titulares geopolíticos"
+      }
+    }
+  },
   "XAU/USD": {
     "drivers": {
       "dollar_index": {
