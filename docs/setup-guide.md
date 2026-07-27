@@ -19,7 +19,7 @@
 ### 1. Clonar el repositorio
 
 ```bash
-git clone https://github.com/bbenja11/grupo-analisis-mercado
+git clone https://github.com/ramaDben/grupo-analisis-mercado
 cd grupo-analisis-mercado
 ```
 
