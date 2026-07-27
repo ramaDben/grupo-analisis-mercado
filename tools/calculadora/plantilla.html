@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<!-- Generado por scripts/generar_calculadora.py · Grupo Inteligencia -->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Calculadora de lotaje de Grupo Inteligencia: cuánto vale en pesos cada movimiento del precio y cuántos lotes operar según el riesgo.">
+<meta name="color-scheme" content="dark">
+<title>Calculadora de lotaje · Grupo Inteligencia</title>
+<style>
+  @font-face { font-family: "Syne"; src: url(__F_SYNE__) format("woff2"); font-weight: 800; font-display: block; }
+  @font-face { font-family: "DM Sans"; src: url(__F_DM400__) format("woff2"); font-weight: 400; font-display: swap; }
+  @font-face { font-family: "DM Sans"; src: url(__F_DM700__) format("woff2"); font-weight: 700; font-display: swap; }
+  @font-face { font-family: "Space Grotesk"; src: url(__F_SG600__) format("woff2"); font-weight: 600; font-display: swap; }
+
+  :root {
+    color-scheme: dark;
+    --ink: #0D0D1A;
+    --ink-deep: #123A2A;
+    --verde: #00DC82;
+    --verde-soft: #53C1AB;
+    --txt: #F5F3F7;
+    --txt-2: #C9C5D4;
+    --txt-3: #A9A5B4;
+    --txt-4: #6E6A7A;
+    --alerta: #FF5C7A;
+    --aviso: #FFB454;
+    --linea: rgba(193, 229, 228, 0.16);
+    --linea-tenue: rgba(193, 229, 228, 0.07);
+    --panel: rgba(245, 243, 247, 0.05);
+    --campo: rgba(13, 13, 26, 0.72);
+    --display: "Syne", system-ui, sans-serif;
+    --body: "DM Sans", system-ui, sans-serif;
+    --dato: "Space Grotesk", ui-monospace, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { background: var(--ink); }
+
+  body {
+    margin: 0;
+    padding: clamp(22px, 3.4vw, 40px) clamp(18px, 3vw, 34px) 44px;
+    background: var(--ink);
+    background-image:
+      radial-gradient(85% 80% at 0% 0%, var(--ink-deep) 0%, var(--ink) 58%),
+      linear-gradient(180deg, var(--ink) 0%, var(--ink) 68%, var(--ink-deep) 100%);
+    background-attachment: fixed;
+    color: var(--txt);
+    font-family: var(--body);
+    line-height: 1.5;
+    min-height: 100vh;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .hoja { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 26px; }
+
+  /* ---------- Cabecera ---------- */
+  header { display: flex; flex-direction: column; gap: 14px; }
+
+  .kicker {
+    align-self: start;
+    font-family: var(--dato); font-weight: 600; font-size: 12.5px;
+    letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--verde);
+    padding: 8px 17px; border-radius: 999px;
+    background: rgba(0, 220, 130, 0.13);
+    border: 1px solid rgba(0, 220, 130, 0.45);
+  }
+
+  h1 {
+    font-family: var(--display); font-weight: 800;
+    font-size: clamp(31px, 5vw, 50px); line-height: 1.05;
+    text-wrap: balance; margin: 0;
+  }
+
+  .entrada { color: var(--txt-2); font-size: 17px; max-width: 62ch; margin: 0; }
+
+  .contexto { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 4px; }
+
+  .contexto div {
+    font-family: var(--dato); font-weight: 600; font-size: 13.5px;
+    font-variant-numeric: tabular-nums;
+    color: var(--txt-3);
+    padding: 8px 15px; border-radius: 11px;
+    background: var(--panel); border: 1px solid var(--linea);
+  }
+  .contexto b { color: var(--txt); }
+
+  /* Aviso de datos vencidos: lo enciende el script comparando el sello con el reloj
+     del visitante. Ámbar, separado del verde de marca: es color semántico, no acento. */
+  .vencido {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 13px 17px; border-radius: 13px;
+    border: 1px solid rgba(255, 180, 84, 0.5);
+    background: rgba(255, 180, 84, 0.09);
+    font-size: 15px; color: var(--txt);
+  }
+  .vencido[hidden] { display: none; }
+  .vencido b { font-family: var(--dato); font-weight: 600; color: var(--aviso); white-space: nowrap; }
+
+  /* ---------- Paneles ---------- */
+  .paneles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 20px; }
+
+  section {
+    background: var(--panel); border: 1px solid var(--linea);
+    border-radius: 20px; padding: clamp(20px, 2.4vw, 28px);
+    display: flex; flex-direction: column; gap: 18px;
+  }
+
+  h2 { font-family: var(--display); font-weight: 800; font-size: 21px; margin: 0; }
+  .proposito { color: var(--txt-3); font-size: 14.5px; margin: -12px 0 0; }
+
+  .controles { display: flex; flex-direction: column; gap: 14px; }
+  .par { display: flex; gap: 13px; flex-wrap: wrap; }
+  .par > label { flex: 1 1 150px; }
+
+  label { display: flex; flex-direction: column; gap: 6px; }
+
+  .rotulo {
+    font-family: var(--dato); font-weight: 600; font-size: 11.5px;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--txt-3);
+  }
+
+  select, input {
+    width: 100%; padding: 12px 13px; border-radius: 12px;
+    background: var(--campo); color: var(--txt);
+    border: 1px solid var(--linea);
+    font-family: var(--dato); font-weight: 600; font-size: 18px;
+    font-variant-numeric: tabular-nums;
+    transition: border-color 120ms ease;
+  }
+  select:hover, input:hover { border-color: rgba(0, 220, 130, 0.45); }
+  select:focus-visible, input:focus-visible {
+    outline: 2px solid var(--verde); outline-offset: 1px; border-color: transparent;
+  }
+  @media (prefers-reduced-motion: reduce) { select, input { transition: none; } }
+
+  /* ---------- Resultados ---------- */
+  .salida { display: flex; flex-direction: column; border-top: 1px solid var(--linea); }
+
+  .renglon {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 16px;
+    padding: 11px 0; border-bottom: 1px solid var(--linea-tenue);
+  }
+  .renglon:last-child { border-bottom: none; }
+  /* La regla de autor gana al display:none que el navegador da a [hidden]: hay que repetirlo. */
+  .renglon[hidden] { display: none; }
+
+  .renglon .que { font-size: 15px; color: var(--txt-2); }
+  .renglon .que em {
+    display: block; font-style: normal; font-size: 12.5px; color: var(--txt-4);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .renglon .cuanto {
+    font-family: var(--dato); font-weight: 600; font-size: 22px;
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+
+  .renglon.clave { padding: 15px 0; }
+  .renglon.clave .cuanto { font-family: var(--display); font-weight: 800; font-size: clamp(26px, 5.6vw, 33px); color: var(--verde); }
+  .renglon.aviso .cuanto { font-family: var(--body); font-weight: 700; font-size: 15px; color: var(--alerta); white-space: normal; text-align: right; }
+
+  .apunte {
+    padding: 13px 16px; border-radius: 12px;
+    border: 1px solid rgba(0, 220, 130, 0.3); background: rgba(0, 220, 130, 0.06);
+    font-size: 14px; color: var(--txt-2); margin: 0;
+  }
+  .apunte b { color: var(--verde); font-variant-numeric: tabular-nums; }
+
+  /* ---------- Glosario ---------- */
+  .glosario {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+    gap: 16px; padding-top: 4px; margin: 0;
+  }
+  .glosario div { border-left: 2px solid rgba(0, 220, 130, 0.5); padding-left: 13px; }
+  .glosario dt {
+    font-family: var(--dato); font-weight: 600; font-size: 12.5px;
+    letter-spacing: 0.07em; text-transform: uppercase; color: var(--verde-soft); margin-bottom: 3px;
+  }
+  .glosario dd { margin: 0; font-size: 14.5px; color: var(--txt-2); }
+
+  /* ---------- Pie ---------- */
+  footer { border-top: 1px solid var(--linea); padding-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .firma {
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+    font-family: var(--dato); font-weight: 600; font-size: 15.5px;
+  }
+  .firma a { color: var(--txt); text-decoration: none; }
+  .firma a:hover, .firma a:focus-visible { color: var(--verde); }
+  .legal { color: var(--txt-4); font-size: 12.5px; margin: 0; max-width: 95ch; }
+</style>
+</head>
+<body>
+
+<div class="hoja">
+
+  <header>
+    <span class="kicker">Grupo Inteligencia</span>
+    <h1>Calculadora de lotaje</h1>
+    <p class="entrada">
+      Cuánto vale en pesos cada movimiento del precio, y cuántos lotes operar según lo que estés
+      dispuesto a arriesgar. Las cifras usan el tamaño de contrato y la moneda real de cada
+      instrumento, así que no hay que ajustar nada a mano.
+    </p>
+    <div class="contexto">
+      <div>Moneda <b>CLP</b></div>
+      <div>Apalancamiento <b>1:100</b></div>
+      <div>USD/CLP <b>__USDCLP__</b></div>
+      <div>Datos al <b>__SELLO__</b></div>
+    </div>
+    <p class="vencido" id="vencido" hidden><b id="vencido-edad">—</b><span id="vencido-texto"></span></p>
+  </header>
+
+  <div class="paneles">
+
+    <section>
+      <h2>Cuánto vale el movimiento</h2>
+      <p class="proposito">Eliges el activo y el volumen, y ves lo que gana o pierde la posición en cada tramo de precio.</p>
+
+      <div class="controles">
+        <label>
+          <span class="rotulo">Activo</span>
+          <select id="a-activo"></select>
+        </label>
+        <div class="par">
+          <label>
+            <span class="rotulo">Volumen en lotes</span>
+            <input id="a-vol" type="number" value="1" min="0.01" step="0.01" inputmode="decimal">
+          </label>
+          <label>
+            <span class="rotulo">Movimiento del precio</span>
+            <input id="a-mov" type="number" value="1" step="0.01" inputmode="decimal">
+          </label>
+        </div>
+      </div>
+
+      <div class="salida">
+        <div class="renglon"><span class="que">Precio actual</span><span class="cuanto" id="a-precio">—</span></div>
+        <div class="renglon"><span class="que">1 punto<em id="a-e-punto">—</em></span><span class="cuanto" id="a-punto">—</span></div>
+        <div class="renglon"><span class="que">10 puntos<em id="a-e-diez">—</em></span><span class="cuanto" id="a-diez">—</span></div>
+        <div class="renglon clave"><span class="que">El movimiento que pusiste<em id="a-e-mov">—</em></span><span class="cuanto" id="a-mov-clp">—</span></div>
+        <div class="renglon"><span class="que">Lo que se mueve en un día normal<em id="a-e-atr">—</em></span><span class="cuanto" id="a-atr">—</span></div>
+        <div class="renglon"><span class="que">Margen que inmoviliza</span><span class="cuanto" id="a-margen">—</span></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Cuántos lotes operar</h2>
+      <p class="proposito">Al revés: defines cuánto aceptas perder y a qué distancia pones el stop, y sale el volumen.</p>
+
+      <div class="controles">
+        <label>
+          <span class="rotulo">Activo</span>
+          <select id="b-activo"></select>
+        </label>
+        <div class="par">
+          <label>
+            <span class="rotulo">Riesgo máximo en pesos</span>
+            <input id="b-riesgo" type="number" value="500000" min="1000" step="10000" inputmode="numeric">
+          </label>
+          <label>
+            <span class="rotulo">Distancia del stop</span>
+            <input id="b-stop" type="number" value="1" step="0.01" inputmode="decimal">
+          </label>
+        </div>
+      </div>
+
+      <div class="salida">
+        <div class="renglon clave"><span class="que">Volumen que corresponde<em>ajustado al mínimo que acepta el broker</em></span><span class="cuanto" id="b-lotes">—</span></div>
+        <div class="renglon"><span class="que">Pérdida si toca el stop</span><span class="cuanto" id="b-perdida">—</span></div>
+        <div class="renglon"><span class="que">Ganancia si recorre el doble a favor<em>objetivo 2 a 1</em></span><span class="cuanto" id="b-ganancia">—</span></div>
+        <div class="renglon"><span class="que">Margen que inmoviliza</span><span class="cuanto" id="b-margen">—</span></div>
+        <div class="renglon aviso" id="b-fila-aviso" hidden><span class="que">Atención</span><span class="cuanto" id="b-aviso">—</span></div>
+      </div>
+
+      <p class="apunte" id="b-apunte">—</p>
+    </section>
+  </div>
+
+  <dl class="glosario">
+    <div>
+      <dt>Lote</dt>
+      <dd>El tamaño estándar del contrato. En el dólar, 1 lote son 100.000 dólares; en una acción, 50 acciones. El mínimo que se puede operar es 0,01.</dd>
+    </div>
+    <div>
+      <dt>Punto</dt>
+      <dd>El último decimal del precio. En el dólar/peso es 0,01 y en el dólar/yen 0,001, porque cada instrumento se cotiza con distinta precisión.</dd>
+    </div>
+    <div>
+      <dt>Margen</dt>
+      <dd>La parte del capital que queda inmovilizada mientras la posición está abierta. No es una pérdida: se libera al cerrar.</dd>
+    </div>
+    <div>
+      <dt>Día normal</dt>
+      <dd>Cuánto recorre el activo en una jornada corriente, promediando las dos últimas semanas. Sirve para no poner el stop más cerca que el ruido habitual.</dd>
+    </div>
+  </dl>
+
+  <footer>
+    <div class="firma">
+      <span>@grupointeligencia</span>
+      <a href="https://grupointeligencia.com" rel="noopener">grupointeligencia.com</a>
+    </div>
+    <p class="legal">
+      Los datos corresponden al momento indicado arriba: el valor de cada movimiento cambia cuando
+      cambian el precio del activo y el dólar. Los CFD son instrumentos complejos y presentan un
+      riesgo elevado de perder dinero rápidamente debido al apalancamiento. Este contenido es
+      informativo y no constituye asesoría financiera ni una recomendación de inversión.
+    </p>
+  </footer>
+</div>
+
+<script>
+  const DATOS = __DATOS__;
+  const SELLO_ISO = "__SELLO_ISO__";
+
+  const $ = id => document.getElementById(id);
+  const pesos = n => (n === null || !isFinite(n)) ? "—" : "$" + Math.round(n).toLocaleString("es-CL");
+  const num = (n, d) => n.toLocaleString("es-CL", {minimumFractionDigits: d, maximumFractionDigits: d});
+  const activo = sel => DATOS.find(a => a.tk === $(sel).value);
+  const valor = (a, lotes, mov) => a.clpPunto * lotes * (mov / a.point);
+
+  for (const sel of ["a-activo", "b-activo"]) {
+    $(sel).innerHTML = DATOS.map(a => `<option value="${a.tk}">${a.nom}</option>`).join("");
+  }
+
+  function calcularValor() {
+    const a = activo("a-activo");
+    const lotes = Math.max(0, parseFloat($("a-vol").value) || 0);
+    const mov = Math.abs(parseFloat($("a-mov").value) || 0);
+
+    $("a-precio").textContent = num(a.precio, a.dig);
+    $("a-e-punto").textContent = num(a.point, a.dig) + " de precio";
+    $("a-e-diez").textContent = num(a.point * 10, a.dig) + " de precio";
+    $("a-e-mov").textContent = num(mov, a.dig) + " con " + lotes + (lotes === 1 ? " lote" : " lotes");
+    $("a-e-atr").textContent = num(a.atr, a.dig) + " en promedio";
+
+    $("a-punto").textContent = pesos(valor(a, lotes, a.point));
+    $("a-diez").textContent = pesos(valor(a, lotes, a.point * 10));
+    $("a-mov-clp").textContent = pesos(valor(a, lotes, mov));
+    $("a-atr").textContent = pesos(valor(a, lotes, a.atr));
+    $("a-margen").textContent = pesos(a.margen * lotes);
+  }
+
+  function calcularVolumen() {
+    const a = activo("b-activo");
+    const riesgo = Math.max(0, parseFloat($("b-riesgo").value) || 0);
+    const stop = Math.abs(parseFloat($("b-stop").value) || 0);
+    const filaAviso = $("b-fila-aviso");
+
+    $("b-apunte").innerHTML = "El stop se mide en unidades del activo, tal como lo lees en el gráfico: "
+      + a.nom + " está en <b>" + num(a.precio, a.dig) + "</b> y en un día normal recorre <b>"
+      + num(a.atr, a.dig) + "</b>.";
+
+    if (!stop) {
+      ["b-lotes", "b-perdida", "b-ganancia", "b-margen"].forEach(id => $(id).textContent = "—");
+      filaAviso.hidden = false;
+      $("b-aviso").textContent = "Falta la distancia del stop";
+      return;
+    }
+
+    const porLote = valor(a, 1, stop);
+    const lotes = +(Math.floor((riesgo / porLote) / a.volStep) * a.volStep).toFixed(2);
+
+    if (lotes < a.volMin) {
+      ["b-perdida", "b-ganancia", "b-margen"].forEach(id => $(id).textContent = pesos(0));
+      $("b-lotes").textContent = "0,00";
+      filaAviso.hidden = false;
+      $("b-aviso").textContent = "Con ese riesgo no alcanza ni el volumen mínimo: el de 0,01 lote costaría "
+        + pesos(porLote * a.volMin);
+      return;
+    }
+
+    $("b-lotes").textContent = num(lotes, 2);
+    $("b-perdida").textContent = pesos(porLote * lotes);
+    $("b-ganancia").textContent = pesos(porLote * lotes * 2);
+    $("b-margen").textContent = pesos(a.margen * lotes);
+    filaAviso.hidden = true;
+  }
+
+  function ajustarPasos() {
+    $("a-mov").step = activo("a-activo").point;
+    $("b-stop").step = activo("b-activo").point;
+  }
+
+  /* Si la página quedó sin refrescar, que se delate sola: el visitante no debería
+     tener que mirar la fecha para darse cuenta. 30 h de tolerancia para que un
+     refresco de la mañana siguiente no dispare el aviso. */
+  function avisarSiVencido() {
+    const sello = new Date(SELLO_ISO);
+    if (isNaN(sello.getTime())) return;
+    const horas = (Date.now() - sello.getTime()) / 3600000;
+    if (horas < 30) return;
+
+    const dias = Math.floor(horas / 24);
+    $("vencido-edad").textContent = dias >= 1
+      ? (dias === 1 ? "Hace 1 día" : "Hace " + dias + " días")
+      : "Hace más de un día";
+    $("vencido-texto").textContent =
+      "· estos valores no se han actualizado. El dólar y los precios ya cambiaron, "
+      + "así que tómalos como referencia y no como el valor de hoy.";
+    $("vencido").hidden = false;
+  }
+
+  avisarSiVencido();
+
+  $("a-mov").value = DATOS[0].atr;
+  $("b-stop").value = DATOS[0].atr;
+  ajustarPasos();
+  calcularValor();
+  calcularVolumen();
+
+  for (const id of ["a-activo", "a-vol", "a-mov"]) {
+    $(id).addEventListener("input", () => {
+      if (id === "a-activo") { $("a-mov").value = activo("a-activo").atr; ajustarPasos(); }
+      calcularValor();
+    });
+  }
+  for (const id of ["b-activo", "b-riesgo", "b-stop"]) {
+    $(id).addEventListener("input", () => {
+      if (id === "b-activo") { $("b-stop").value = activo("b-activo").atr; ajustarPasos(); }
+      calcularVolumen();
+    });
+  }
+</script>
+</body>
+</html>
