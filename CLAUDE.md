@@ -198,7 +198,7 @@ Reglas:
 | WTI.spot | 3 | $90.181 | $90.18 / $90.2 |
 | US100.spot | 2 | 30,350.01 | 30.350 / 30,350 |
 | Acciones | 2 | $192.50 | $192.5 / $193 |
-| COPPER | 3 | $4.623 | $4.62 |
+| COPPER | 0 | 13720 | 13.720 / 13720.0 |
 
 Nunca truncar ceros al final (89.60, no 89.6). Nunca redondear a enteros salvo que digits = 0.
 

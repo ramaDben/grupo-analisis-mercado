@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calculadora de lotaje · Grupo Inteligencia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0D0D1A;
+    --bg2: #123A2A;
+    --panel: rgba(245,243,247,0.05);
+    --borde: rgba(193,229,228,0.16);
+    --txt: #F5F3F7;
+    --txt2: #C9C5D4;
+    --txt3: #A9A5B4;
+    --verde: #00DC82;
+    --verde2: #53C1AB;
+    --rojo: #FF5C7A;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px 24px 48px;
+    background: var(--bg);
+    background-image:
+      radial-gradient(90% 90% at 0% 0%, var(--bg2) 0%, var(--bg) 55%),
+      linear-gradient(180deg, var(--bg) 0%, var(--bg) 65%, var(--bg2) 100%);
+    background-attachment: fixed;
+    color: var(--txt);
+    font-family: "DM Sans", system-ui, sans-serif;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  h1 {
+    font-family: "Syne", system-ui, sans-serif; font-weight: 800;
+    font-size: clamp(30px, 4.4vw, 46px); line-height: 1.1; margin: 14px 0 0;
+  }
+  .kicker {
+    display: inline-block; font-family: "Space Grotesk", system-ui, sans-serif;
+    font-weight: 600; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 8px 18px; border-radius: 999px; color: var(--verde);
+    background: rgba(0,220,130,0.14); border: 1px solid rgba(0,220,130,0.5);
+  }
+  .sub { color: var(--txt2); font-size: 17px; line-height: 1.5; margin: 12px 0 0; max-width: 760px; }
+
+  .meta { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0 26px; }
+  .meta div {
+    padding: 9px 16px; border-radius: 12px; background: var(--panel); border: 1px solid var(--borde);
+    font-family: "Space Grotesk", system-ui, sans-serif; font-size: 14px; color: var(--txt2);
+  }
+  .meta b { color: var(--txt); font-weight: 600; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(430px, 1fr)); gap: 20px; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--borde);
+    border-radius: 20px; padding: 24px;
+  }
+  .card h2 {
+    font-family: "Syne", system-ui, sans-serif; font-weight: 700;
+    font-size: 22px; margin: 0 0 4px;
+  }
+  .card p.hint { color: var(--txt3); font-size: 14px; margin: 0 0 20px; line-height: 1.45; }
+
+  label {
+    display: block; font-family: "Space Grotesk", system-ui, sans-serif;
+    font-size: 12px; letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--txt3); margin: 0 0 6px;
+  }
+  .campo { margin-bottom: 16px; }
+  select, input {
+    width: 100%; padding: 13px 14px; border-radius: 12px;
+    background: rgba(13,13,26,0.75); color: var(--txt);
+    border: 1px solid var(--borde);
+    font-family: "Space Grotesk", system-ui, sans-serif; font-size: 19px; font-weight: 600;
+  }
+  select:focus, input:focus { outline: 2px solid var(--verde); border-color: transparent; }
+  .fila { display: flex; gap: 14px; }
+  .fila > * { flex: 1; }
+
+  .out { margin-top: 6px; border-top: 1px solid var(--borde); padding-top: 16px; }
+  .linea {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 16px; padding: 9px 0;
+  }
+  .linea + .linea { border-top: 1px solid rgba(193,229,228,0.07); }
+  .linea span { color: var(--txt2); font-size: 15px; }
+  .linea span small { display: block; color: var(--txt3); font-size: 12.5px; margin-top: 2px; }
+  .linea b {
+    font-family: "Space Grotesk", system-ui, sans-serif; font-weight: 600;
+    font-size: 23px; white-space: nowrap;
+  }
+  .linea.destacada b { color: var(--verde); font-size: 30px; }
+  .linea.alerta b { color: var(--rojo); font-size: 19px; }
+
+  .nota {
+    margin-top: 18px; padding: 14px 16px; border-radius: 12px;
+    border: 1px solid rgba(0,220,130,0.32); background: rgba(0,220,130,0.06);
+    font-size: 14px; line-height: 1.45; color: var(--txt);
+  }
+  .nota b { color: var(--verde); }
+
+  footer {
+    max-width: 1180px; margin: 34px auto 0; padding-top: 18px;
+    border-top: 1px solid var(--borde);
+  }
+  .marca {
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+    font-family: "Space Grotesk", system-ui, sans-serif; font-weight: 600; font-size: 16px;
+  }
+  .disclaimer { color: #6E6A7A; font-size: 12.5px; line-height: 1.4; margin: 8px 0 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="kicker">Herramienta interna · Grupo Inteligencia</span>
+  <h1>Calculadora de lotaje</h1>
+  <p class="sub">
+    Todo en pesos chilenos. Los valores por activo los calcula el propio terminal con
+    <code>order_calc_profit</code>, así que respetan el tamaño de contrato, la moneda de cada
+    instrumento y la conversión del broker.
+  </p>
+
+  <div class="meta">
+    <div>Broker <b id="m-broker">—</b></div>
+    <div>Cuenta <b id="m-cuenta">—</b></div>
+    <div>Moneda <b id="m-moneda">—</b></div>
+    <div>Apalancamiento <b id="m-apal">—</b></div>
+    <div>USD/CLP <b id="m-usdclp">—</b></div>
+    <div>Precios al <b id="m-fecha">—</b></div>
+  </div>
+
+  <div class="grid">
+
+    <!-- ============ PANEL A ============ -->
+    <section class="card">
+      <h2>¿Cuánto vale el movimiento?</h2>
+      <p class="hint">Eliges activo y volumen, y ves cuánto gana o pierde la posición por cada tramo de precio.</p>
+
+      <div class="campo">
+        <label for="a-activo">Activo</label>
+        <select id="a-activo"></select>
+      </div>
+
+      <div class="fila">
+        <div class="campo">
+          <label for="a-vol">Volumen (lotes)</label>
+          <input id="a-vol" type="number" value="1" min="0.01" step="0.01">
+        </div>
+        <div class="campo">
+          <label for="a-mov">Movimiento del precio</label>
+          <input id="a-mov" type="number" value="1" step="0.001">
+        </div>
+      </div>
+
+      <div class="out">
+        <div class="linea"><span>Precio actual</span><b id="a-precio">—</b></div>
+        <div class="linea"><span>1 punto <small id="a-lbl-punto">—</small></span><b id="a-punto">—</b></div>
+        <div class="linea"><span>10 puntos <small id="a-lbl-pip">—</small></span><b id="a-pip">—</b></div>
+        <div class="linea destacada"><span>Tu movimiento <small id="a-lbl-mov">—</small></span><b id="a-mov-clp">—</b></div>
+        <div class="linea"><span>Movimiento típico del día <small id="a-lbl-atr">—</small></span><b id="a-atr">—</b></div>
+        <div class="linea"><span>Margen requerido <small>lo que inmoviliza la posición</small></span><b id="a-margen">—</b></div>
+      </div>
+    </section>
+
+    <!-- ============ PANEL B ============ -->
+    <section class="card">
+      <h2>¿Cuántos lotes puedo operar?</h2>
+      <p class="hint">Al revés: defines cuánto estás dispuesto a perder y a qué distancia va el stop, y sale el volumen.</p>
+
+      <div class="campo">
+        <label for="b-activo">Activo</label>
+        <select id="b-activo"></select>
+      </div>
+
+      <div class="fila">
+        <div class="campo">
+          <label for="b-riesgo">Riesgo máximo (CLP)</label>
+          <input id="b-riesgo" type="number" value="500000" min="1000" step="10000">
+        </div>
+        <div class="campo">
+          <label for="b-stop">Distancia del stop</label>
+          <input id="b-stop" type="number" value="1" step="0.001">
+        </div>
+      </div>
+
+      <div class="out">
+        <div class="linea destacada"><span>Volumen sugerido <small>redondeado al paso del broker</small></span><b id="b-lotes">—</b></div>
+        <div class="linea"><span>Pérdida real si toca el stop</span><b id="b-riesgo-real">—</b></div>
+        <div class="linea"><span>Margen requerido</span><b id="b-margen">—</b></div>
+        <div class="linea"><span>Ganancia con objetivo 2:1 <small>si recorre el doble a favor</small></span><b id="b-ganancia">—</b></div>
+        <div class="linea alerta" id="b-aviso-fila" style="display:none"><span>Aviso</span><b id="b-aviso">—</b></div>
+      </div>
+
+      <div class="nota">
+        El stop se mide en unidades del activo, igual que lo lees en el gráfico:
+        <b id="b-ejemplo">—</b>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    <div class="marca">
+      <span>@grupointeligencia</span>
+      <span>grupointeligencia.com</span>
+    </div>
+    <p class="disclaimer">
+      Herramienta de uso interno. Los precios son una foto del momento indicado arriba: el valor del
+      movimiento cambia cuando cambian el precio del activo y el dólar. Los CFD son instrumentos
+      complejos y presentan un riesgo elevado de perder dinero rápidamente debido al apalancamiento.
+      Este contenido no constituye asesoría financiera.
+    </p>
+  </footer>
+</div>
+
+<script>
+/* Snapshot de datos: generado con order_calc_profit contra la cuenta del broker.
+   clpPunto = pesos que mueve 1 lote cuando el precio avanza 1 punto (10^-digits). */
+const DATOS = {
+  broker: "Grupo Inteligencia SpA",
+  cuenta: "51142 · GrupoInteligenciaSpA-Server",
+  moneda: "CLP",
+  apalancamiento: "1:100",
+  usdclp: 943.55,
+  fecha: "27-07-2026 11:26 CLT",
+  activos: [
+    {tk:"USDCLP",     nom:"Dólar / Peso Chileno",  dig:2, point:0.01,  precio:943.55,    clpPunto:1000.00,  atr:7.56,   margen:943550,   volMin:0.01, volStep:0.01},
+    {tk:"USDJPY",     nom:"Dólar / Yen Japonés",   dig:3, point:0.001, precio:163.649,   clpPunto:576.81,   atr:0.521,  margen:943950,   volMin:0.01, volStep:0.01},
+    {tk:"XAUUSD",     nom:"Oro",                   dig:2, point:0.01,  precio:4075.82,   clpPunto:943.55,   atr:70.09,  margen:17313166, volMin:0.01, volStep:0.01},
+    {tk:"WTI.spot",   nom:"Petróleo WTI",          dig:3, point:0.001, precio:83.534,    clpPunto:943.55,   atr:4.188,  margen:1182779,  volMin:0.01, volStep:0.01},
+    {tk:"US100.spot", nom:"Nasdaq 100",            dig:2, point:0.01,  precio:27950.46,  clpPunto:9.44,     atr:546.11, margen:1319192,  volMin:0.01, volStep:0.01},
+    {tk:"US500.spot", nom:"S&P 500",               dig:2, point:0.01,  precio:7415.48,   clpPunto:9.44,     atr:71.24,  margen:349992,   volMin:0.01, volStep:0.01},
+    {tk:"US30.spot",  nom:"Dow Jones",             dig:2, point:0.01,  precio:52195.49,  clpPunto:9.44,     atr:502.30, margen:2463497,  volMin:0.01, volStep:0.01},
+    {tk:"COPPER",     nom:"Cobre (USD/tonelada)",  dig:0, point:1,     precio:13720,     clpPunto:28306.50, atr:177.00, margen:11655895, volMin:0.01, volStep:0.01},
+    {tk:"USDIDX",     nom:"Dollar Index",          dig:3, point:0.001, precio:101.259,   clpPunto:94.36,    atr:0.407,  margen:477917,   volMin:0.01, volStep:0.01},
+    {tk:"GER40.spot", nom:"DAX 40 (Alemania)",     dig:2, point:0.01,  precio:25441.65,  clpPunto:10.73,    atr:333.14, margen:1366094,  volMin:0.01, volStep:0.01},
+    {tk:"#AAPL",      nom:"Apple",                 dig:2, point:0.01,  precio:338.57,    clpPunto:471.78,   atr:7.91,   margen:79898,    volMin:0.01, volStep:0.01},
+    {tk:"#MSFT",      nom:"Microsoft",             dig:2, point:0.01,  precio:393.18,    clpPunto:471.78,   atr:10.79,  margen:92786,    volMin:0.01, volStep:0.01},
+    {tk:"#NVDA",      nom:"NVIDIA",                dig:2, point:0.01,  precio:196.84,    clpPunto:471.78,   atr:7.54,   margen:46452,    volMin:0.01, volStep:0.01},
+    {tk:"#AMZN",      nom:"Amazon",                dig:2, point:0.01,  precio:233.17,    clpPunto:471.78,   atr:6.17,   margen:82538,    volMin:0.01, volStep:0.01},
+    {tk:"#AMD",       nom:"AMD",                   dig:2, point:0.01,  precio:481.06,    clpPunto:471.78,   atr:34.85,  margen:113524,   volMin:0.01, volStep:0.01},
+    {tk:"#JPM",       nom:"JPMorgan Chase",        dig:2, point:0.01,  precio:354.45,    clpPunto:471.78,   atr:7.48,   margen:41823,    volMin:0.01, volStep:0.01},
+    {tk:"#BAC",       nom:"Bank of America",       dig:2, point:0.01,  precio:62.32,     clpPunto:471.78,   atr:1.15,   margen:14707,    volMin:0.01, volStep:0.01},
+    {tk:"#GS",        nom:"Goldman Sachs",         dig:2, point:0.01,  precio:1046.96,   clpPunto:471.78,   atr:38.81,  margen:123535,   volMin:0.01, volStep:0.01},
+    {tk:"#MS",        nom:"Morgan Stanley",        dig:2, point:0.01,  precio:213.56,    clpPunto:471.78,   atr:7.37,   margen:50397,    volMin:0.01, volStep:0.01},
+    {tk:"#BA",        nom:"Boeing",                dig:2, point:0.01,  precio:211.56,    clpPunto:471.78,   atr:5.63,   margen:49926,    volMin:0.01, volStep:0.01},
+    {tk:"#CAT",       nom:"Caterpillar",           dig:2, point:0.01,  precio:845.25,    clpPunto:471.78,   atr:36.21,  margen:99734,    volMin:0.01, volStep:0.01},
+    {tk:"#GE",        nom:"GE Aerospace",          dig:2, point:0.01,  precio:357.97,    clpPunto:471.78,   atr:10.22,  margen:42238,    volMin:0.01, volStep:0.01},
+    {tk:"#DE",        nom:"Deere & Co.",           dig:2, point:0.01,  precio:616.12,    clpPunto:471.78,   atr:14.95,  margen:145397,   volMin:0.01, volStep:0.01}
+  ]
+};
+
+const clp = n => (n === null || n === undefined || !isFinite(n))
+  ? "—"
+  : "$" + Math.round(n).toLocaleString("es-CL");
+const precioFmt = (n, dig) => n.toLocaleString("es-CL", {minimumFractionDigits: dig, maximumFractionDigits: dig});
+const activoDe = sel => DATOS.activos.find(a => a.tk === sel.value);
+
+/* pesos = valor de 1 punto x lotes x (movimiento / point) */
+const valorMov = (a, lotes, mov) => a.clpPunto * lotes * (mov / a.point);
+
+function poblarSelects() {
+  for (const sel of [document.getElementById("a-activo"), document.getElementById("b-activo")]) {
+    sel.innerHTML = DATOS.activos
+      .map(a => `<option value="${a.tk}">${a.nom} · ${a.tk}</option>`).join("");
+  }
+  document.getElementById("m-broker").textContent = DATOS.broker;
+  document.getElementById("m-cuenta").textContent = DATOS.cuenta;
+  document.getElementById("m-moneda").textContent = DATOS.moneda;
+  document.getElementById("m-apal").textContent = DATOS.apalancamiento;
+  document.getElementById("m-usdclp").textContent = "$" + DATOS.usdclp.toFixed(2);
+  document.getElementById("m-fecha").textContent = DATOS.fecha;
+}
+
+function calcA() {
+  const a = activoDe(document.getElementById("a-activo"));
+  const lotes = Math.max(0, parseFloat(document.getElementById("a-vol").value) || 0);
+  const mov = Math.abs(parseFloat(document.getElementById("a-mov").value) || 0);
+
+  document.getElementById("a-precio").textContent = precioFmt(a.precio, a.dig);
+  document.getElementById("a-lbl-punto").textContent = `= ${precioFmt(a.point, a.dig)} de precio`;
+  document.getElementById("a-lbl-pip").textContent = `= ${precioFmt(a.point * 10, a.dig)} de precio`;
+  document.getElementById("a-lbl-mov").textContent = `${precioFmt(mov, a.dig)} con ${lotes} lote(s)`;
+  document.getElementById("a-lbl-atr").textContent = `${precioFmt(a.atr, a.dig)} en promedio (ATR 14 diario)`;
+
+  document.getElementById("a-punto").textContent = clp(valorMov(a, lotes, a.point));
+  document.getElementById("a-pip").textContent = clp(valorMov(a, lotes, a.point * 10));
+  document.getElementById("a-mov-clp").textContent = clp(valorMov(a, lotes, mov));
+  document.getElementById("a-atr").textContent = clp(valorMov(a, lotes, a.atr));
+  document.getElementById("a-margen").textContent = clp(a.margen * lotes);
+}
+
+function calcB() {
+  const a = activoDe(document.getElementById("b-activo"));
+  const riesgo = Math.max(0, parseFloat(document.getElementById("b-riesgo").value) || 0);
+  const stop = Math.abs(parseFloat(document.getElementById("b-stop").value) || 0);
+
+  document.getElementById("b-ejemplo").textContent =
+    `en ${a.nom} el movimiento típico de un día es ${precioFmt(a.atr, a.dig)}, y el precio está en ${precioFmt(a.precio, a.dig)}.`;
+
+  const avisoFila = document.getElementById("b-aviso-fila");
+  const aviso = document.getElementById("b-aviso");
+
+  if (!stop) {
+    ["b-lotes", "b-riesgo-real", "b-margen", "b-ganancia"].forEach(id => document.getElementById(id).textContent = "—");
+    avisoFila.style.display = "flex";
+    aviso.textContent = "Ingresa la distancia del stop";
+    return;
+  }
+
+  const clpPorLote = valorMov(a, 1, stop);          // pérdida por lote si toca el stop
+  const bruto = riesgo / clpPorLote;
+  const pasos = Math.floor(bruto / a.volStep);
+  const lotes = +(pasos * a.volStep).toFixed(2);
+
+  if (lotes < a.volMin) {
+    document.getElementById("b-lotes").textContent = "0.00";
+    document.getElementById("b-riesgo-real").textContent = clp(0);
+    document.getElementById("b-margen").textContent = clp(0);
+    document.getElementById("b-ganancia").textContent = clp(0);
+    avisoFila.style.display = "flex";
+    aviso.textContent = `Con ese riesgo no alcanza ni el mínimo (${a.volMin}): necesitas ${clp(clpPorLote * a.volMin)}`;
+    return;
+  }
+
+  document.getElementById("b-lotes").textContent = lotes.toFixed(2);
+  document.getElementById("b-riesgo-real").textContent = clp(clpPorLote * lotes);
+  document.getElementById("b-margen").textContent = clp(a.margen * lotes);
+  document.getElementById("b-ganancia").textContent = clp(clpPorLote * lotes * 2);
+  avisoFila.style.display = "none";
+}
+
+function sincronizarPasos() {
+  const a = activoDe(document.getElementById("a-activo"));
+  const b = activoDe(document.getElementById("b-activo"));
+  document.getElementById("a-mov").step = a.point;
+  document.getElementById("b-stop").step = b.point;
+}
+
+poblarSelects();
+document.getElementById("a-activo").value = "USDCLP";
+document.getElementById("b-activo").value = "USDCLP";
+document.getElementById("a-mov").value = DATOS.activos[0].atr;
+document.getElementById("b-stop").value = DATOS.activos[0].atr;
+sincronizarPasos();
+calcA();
+calcB();
+
+for (const id of ["a-activo", "a-vol", "a-mov"]) {
+  document.getElementById(id).addEventListener("input", () => {
+    if (id === "a-activo") {
+      const a = activoDe(document.getElementById("a-activo"));
+      document.getElementById("a-mov").value = a.atr;
+      sincronizarPasos();
+    }
+    calcA();
+  });
+}
+for (const id of ["b-activo", "b-riesgo", "b-stop"]) {
+  document.getElementById(id).addEventListener("input", () => {
+    if (id === "b-activo") {
+      const b = activoDe(document.getElementById("b-activo"));
+      document.getElementById("b-stop").value = b.atr;
+      sincronizarPasos();
+    }
+    calcB();
+  });
+}
+</script>
+</body>
+</html>
