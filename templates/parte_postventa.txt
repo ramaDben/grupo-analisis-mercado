@@ -1,0 +1,34 @@
+🔧 *PARTE POST-VENTA — {{fecha_larga}} · {{hora}}*
+🔒 INTERNO · NO ENVIAR AL CLIENTE
+━━━━━━━━━━━━━━━━━━━
+🚨 *La consulta que va a entrar hoy*
+"{{consulta_anticipada}}"
+→ {{respuesta_anticipada}}
+━━━━━━━━━━━━━━━━━━━
+❓ *Preguntas frecuentes de hoy*
+
+• "{{pregunta_1}}"
+→ {{respuesta_1}}
+
+• "{{pregunta_2}}"
+→ {{respuesta_2}}
+
+• "{{pregunta_3}}"
+→ {{respuesta_3}}
+━━━━━━━━━━━━━━━━━━━
+📞 *A quién contactar hoy*
+{{bloque_segmentos}}
+━━━━━━━━━━━━━━━━━━━
+🧭 *Si tiene posición abierta en {{activo_nombre}}*
+Escenario vigente: {{escenario_vigente}}
+Se invalida si: {{nivel_invalidacion}}
+Riesgo: {{nota_riesgo}}
+━━━━━━━━━━━━━━━━━━━
+📊 *Los otros activos, en una línea*
+{{bloque_otros_activos}}
+━━━━━━━━━━━━━━━━━━━
+📋 *Qué dijimos vs. qué pasó*
+{{bloque_rendicion}}
+━━━━━━━━━━━━━━━━━━━
+⚠️ *Lo que NO se promete hoy*
+{{bloque_no_promesas}}
