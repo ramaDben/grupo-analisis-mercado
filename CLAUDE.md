@@ -304,9 +304,9 @@ scripts\ruta_mensaje.ps1 -Fecha "2026-06-04" -Activo "USDCLP" -Tipo "dato_macro"
 ```
 El helper crea las carpetas y devuelve la ruta lista para `Write`. Si la pieza no tiene un activo protagonista (concepto, pregunta, cierre semanal, encuesta de la semana, earnings, paquete dominical), omitir `-Activo` y el helper la guarda en `_general/`. La hora `HH-mm` sale del reloj de Chile (regla canónica). Usar luego la herramienta Write sobre la ruta devuelta.
 
-**Tipos de archivo** (carpeta `<tipo>`): niveles, dato_macro, noticia, alerta, encuesta, señal, concepto, pregunta, respuesta, cierre, earnings. La salida de `/apertura` usa tipo `niveles`.
+**Tipos de archivo** (carpeta `<tipo>`): niveles, dato_macro, noticia, alerta, encuesta, señal, concepto, pregunta, respuesta, cierre, earnings, postventa. La salida de `/apertura` usa tipo `niveles`.
 
-**Modo ejecutivo (flag `ejecutivo`)**: aceptan el argumento `ejecutivo` (ej. `/lunes ejecutivo`, `/noticia ejecutivo`) **todos los comandos que producen un mensaje de cliente reenviable**: los 7 comandos de día, los comandos de tarea de Capa 2 (`/encuesta`, `/rencuesta`, `/apertura`, `/actualizacion`, `/dato_macro`, `/noticia`, `/señal`, `/alerta`, `/concepto`, `/pregunta`, `/respuesta`) y los de acción de Capa 3 (`/accion`, `/earnings`). Por cada pieza/mensaje de cliente generan, además del mensaje de cliente (idéntico, con todas las reglas de oro), un **guion de venta privado** para el grupo interno de ejecutivos (gancho + a quién, qué decir, manejo de objeciones, llamado a la acción), marcado `🔒 INTERNO · NO ENVIAR AL CLIENTE`. El guion se guarda con `ruta_mensaje.ps1` bajo el tipo `guion_<tipo>` (ej. `guion_niveles`, `guion_noticia`, `guion_señal`), mismo activo y hora que el mensaje de cliente. **No elegibles** (ignoran el flag): `/estado` (no envía nada), `/chart` (genera PNG, no texto), `/curriculo` (delega en `/rencuesta`/`/concepto`, que ya generan su guion) y `/ventas` (su contenido ya es 100% interno para el equipo de ventas — es el HUB INTERNO por sí mismo, no necesita un guion adicional que lo envuelva). Contrato único en `.claude/shared/modo_ejecutivo.md`.
+**Modo ejecutivo (flag `ejecutivo`)**: aceptan el argumento `ejecutivo` (ej. `/lunes ejecutivo`, `/noticia ejecutivo`) **todos los comandos que producen un mensaje de cliente reenviable**: los 7 comandos de día, los comandos de tarea de Capa 2 (`/encuesta`, `/rencuesta`, `/apertura`, `/actualizacion`, `/dato_macro`, `/noticia`, `/señal`, `/alerta`, `/concepto`, `/pregunta`, `/respuesta`) y los de acción de Capa 3 (`/accion`, `/earnings`). Por cada pieza/mensaje de cliente generan, además del mensaje de cliente (idéntico, con todas las reglas de oro), un **guion de venta privado** para el grupo interno de ejecutivos (gancho + a quién, qué decir, manejo de objeciones, llamado a la acción), marcado `🔒 INTERNO · NO ENVIAR AL CLIENTE`. El guion se guarda con `ruta_mensaje.ps1` bajo el tipo `guion_<tipo>` (ej. `guion_niveles`, `guion_noticia`, `guion_señal`), mismo activo y hora que el mensaje de cliente. **No elegibles** (ignoran el flag): `/estado` (no envía nada), `/chart` (genera PNG, no texto), `/curriculo` (delega en `/rencuesta`/`/concepto`, que ya generan su guion) `/ventas` (su contenido ya es 100% interno para el equipo de ventas — es el HUB INTERNO por sí mismo, no necesita un guion adicional que lo envuelva) y `/postventa` (su contenido ya es 100% interno para el equipo de post-venta — mismo criterio que `/ventas`). Contrato único en `.claude/shared/modo_ejecutivo.md`.
 
 **Convención de nombres de chart (issue #81)**: los PNG de `data/charts/` siguen el patrón único `<activo_slug>_<TF>_<YYYY-MM-DD_HH-MM>.png`, con el mismo `<activo_slug>` de `ruta_mensaje.ps1` (#45) — `lowercase(ticker_mt5)` sin `.spot`/`#`/`/` — y `<TF>` en mayúscula MT5 (`M15`/`H1`/`H4`/`D1`). Ej: `usdclp_H4_2026-06-07_11-45.png`. Los `data/charts/*.png` están gitignored.
 
@@ -314,7 +314,7 @@ El helper crea las carpetas y devuelve la ruta lista para `Write`. Si la pieza n
 
 **Nota**: Evolution API (Docker) está instalada y lista en `mcp/docker-compose.yml`. Cuando se resuelva la conexión WhatsApp/Baileys, el envío pasará a ser automático sin cambios adicionales.
 
-## Slash Commands disponibles (25)
+## Slash Commands disponibles (26)
 
 Invocar con `/nombre` desde Claude Code:
 
@@ -347,6 +347,7 @@ Invocar con `/nombre` desde Claude Code:
 | `/pregunta` | Pregunta abierta para fomentar razonamiento del grupo |
 | `/respuesta` | Responde una pregunta/comentario de cliente de forma complaciente y didáctica → guarda tipo `respuesta` |
 | `/ventas` | Genera la "Oportunidad del Día" para el equipo de ventas interno (no el cliente final): noticia/evento más relevante traducido en entrada/TP/SL, ticket mínimo $5.000.000 CLP y temporalidad, en dos formatos (email + WhatsApp). No genera infografías ni envía automáticamente. |
+| `/postventa` | Parte diario para el equipo interno de post-venta (no el cliente final): la consulta que va a generar el evento del día con su respuesta, 3 preguntas frecuentes redactadas para copiar, a quién contactar por segmento, acompañamiento de posiciones abiertas, rendición de lo dicho y límites de lo que no se promete. 100% interno, nunca se reenvía. |
 | `/estado` | Dashboard del sistema (señales, charts, plan del día, MCPs) |
 
 ### Capa 3 — Acciones individuales
@@ -374,7 +375,7 @@ grupo-analisis-mercado/
 │   │   ├── viernes_am.md · viernes_pm.md
 │   │   ├── encuesta.md · rencuesta.md · curriculo.md
 │   │   ├── apertura.md · actualizacion.md · dato_macro.md · noticia.md · chart.md · story.md
-│   │   ├── señal.md · alerta.md · concepto.md · pregunta.md · respuesta.md · ventas.md · estado.md
+│   │   ├── señal.md · alerta.md · concepto.md · pregunta.md · respuesta.md · ventas.md · postventa.md · estado.md
 │   │   └── accion.md · earnings.md
 │   └── shared/modo_ejecutivo.md  ← contrato del flag `ejecutivo` (guion_ejecutivo.txt)
 ├── agents/                ← prompts de sub-agents

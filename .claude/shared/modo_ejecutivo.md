@@ -23,10 +23,11 @@ cuando se adjunta a otra pieza, esa pieza ya lleva su guion), `/story` (genera
 una Story/imagen de marca GI, no un mensaje de texto de cliente — mismo
 criterio que `/chart`; issue #109), `/curriculo` (orquestador: su contenido de
 cliente sale por los delegados `/rencuesta` o `/concepto`, que ya generan su
-propio guion en modo ejecutivo) y `/ventas` (su contenido primario ya es 100%
+propio guion en modo ejecutivo), `/ventas` (su contenido primario ya es 100%
 interno para el equipo de ventas — ES el HUB INTERNO por sí mismo, no un
-mensaje de cliente que necesite un guion complementario). Si se invocan con
-`ejecutivo`, ignoran el flag.
+mensaje de cliente que necesite un guion complementario) y `/postventa` (su
+contenido primario ya es 100% interno para el equipo de post-venta — mismo
+criterio que `/ventas`). Si se invocan con `ejecutivo`, ignoran el flag.
 
 ## Qué activa el modo
 El comando detecta `ejecutivo` en sus argumentos. Si está presente, por CADA
