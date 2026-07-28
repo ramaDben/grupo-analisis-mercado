@@ -19,6 +19,7 @@
       China (NBS/Caixin)           -> "China Standard Time"
       Chile (BCCh/INE)             -> "Pacific SA Standard Time"
       Reino Unido (BoE)            -> "GMT Standard Time"
+      Japón (BoJ/MoF)              -> "Tokyo Standard Time"
 
 .PARAMETER Fecha
     Fecha del evento "yyyy-MM-dd". Por defecto, hoy. Importa porque el offset
@@ -26,6 +27,11 @@
 
 .OUTPUTS
     String "HH:mm CLT" o "HH:mm CLST" (ej: "08:15 CLT").
+
+    OJO: devuelve la hora, NO la fecha. Con zonas muy adelantadas (Japón va 13 h
+    sobre Chile) la conversión cruza de día: el anuncio del BoJ del viernes 31 a
+    las 12:00 JST ocurre el jueves 30 a las 23:00 CLT. Si el evento es de una
+    zona asiática, calcula además la fecha antes de fechar el mensaje al cliente.
 
 .EXAMPLE
     .\hora_chile.ps1 -Hora "08:15" -ZonaOrigen "Eastern Standard Time" -Fecha "2026-06-03"
