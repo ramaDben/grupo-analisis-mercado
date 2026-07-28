@@ -9,6 +9,16 @@
       "mensaje": null,
       "encuesta": "2026-06-02_educativa_USDCLP_stoploss",
       "comando_origen": "rencuesta"
+    },
+    {
+      "id": "2026-07-27_precio-descontado_whatsapp",
+      "concepto": "precio-descontado",
+      "ruta": "novatos",
+      "canal": "whatsapp",
+      "fecha": "2026-07-27",
+      "mensaje": "data/mensajes/2026-07-27/_general/concepto/13-16_concepto.txt",
+      "encuesta": null,
+      "comando_origen": "lunes"
     }
   ]
 }
