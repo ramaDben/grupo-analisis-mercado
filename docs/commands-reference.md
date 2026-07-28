@@ -160,6 +160,11 @@ Dashboard del sistema. Muestra:
 
 ---
 
+### `/postventa`
+Genera el Parte de Post-Venta: un informe diario para el grupo interno de post-venta (no es un mensaje de cliente, nunca se reenvía). Siete bloques: la consulta que va a entrar hoy con su respuesta, tres preguntas frecuentes redactadas para copiar, a quién contactar por segmento, cómo acompañar una posición abierta en el activo protagonista, los otros activos del día en una línea, qué dijimos vs. qué pasó, y los límites de lo que no se promete. Toma el evento de `data/ultimo_evento.json`, los niveles de `get_asset_levels` y la rendición de cuentas de `data/mensajes/<fecha>/`. Usa un catálogo cerrado de cinco segmentos: con exposición al activo protagonista, dormido (2+ semanas), novato en formación, operador frecuente, y con la posición en contra. No lee CRM ni ve posiciones reales. Rechaza el flag `ejecutivo` (su contenido ya es 100% interno).
+
+---
+
 ## Capa 3 — Acciones individuales
 
 ### `/accion [TICKER]`
@@ -210,3 +215,4 @@ Director copia texto y lo pega en el grupo WhatsApp
 | `cierre` | Cierre semanal del viernes |
 | `pregunta` | Pregunta abierta al grupo |
 | `niveles` | Niveles técnicos del día |
+| `postventa` | Parte diario para el equipo interno de post-venta |
