@@ -50,8 +50,13 @@ Si retorna `{"error": ...}` (mismo patrón que `apertura.md` PASO 4A), pedir man
 Leer `data/plan_hoy.json`.
 
 **Validar frescura**: comparar `plan_hoy.fecha` con `[FECHA]`.
-- No coincide o el archivo no existe → avisar al director y pedir los activos manualmente. No usar activos viejos.
 - Coincide → usar `activos_hoy`, **excluyendo** al protagonista.
+- No coincide o el archivo no existe → **inferir los activos de las carpetas de `data/mensajes/[FECHA]/`** (cada subcarpeta es un `activo_slug` de una pieza enviada hoy; `_general` no cuenta). Es determinista y refleja lo que realmente se cubrió en la jornada. Avisar al director qué se infirió:
+  ```
+  ⚠️ `plan_hoy.json` está desfasado (fecha: [fecha del archivo], hoy: [FECHA]).
+  Infiero los activos de hoy desde `data/mensajes/[FECHA]/`: [lista].
+  ```
+  Solo si `data/mensajes/[FECHA]/` tampoco tiene carpetas de activo, pedir los activos manualmente. Nunca usar los activos viejos de `plan_hoy.json`.
 
 Por cada uno, llamar `get_asset_levels` con `timeframe: "H1"`. Si una llamada falla, pedir ese valor manual y seguir con el resto — una fila caída no aborta la tabla.
 
@@ -66,7 +71,7 @@ Listar el contenido de `data/mensajes/[FECHA]/` (todas las carpetas de activo y 
 
 Rellenar `templates/parte_postventa.txt`. Reglas de redacción por bloque:
 
-- **Bloque 1 (consulta anticipada)**: UNA sola pregunta, la más probable dado el evento. La consulta más su respuesta deben caber en **79 caracteres sumados** — el texto fijo del encabezado consume 121 de los ~200 visibles de WhatsApp antes del "leer más". Si no alcanza, priorizar la respuesta sobre el detalle de la pregunta.
+- **Bloque 1 (consulta anticipada)**: UNA sola pregunta, la más probable dado el evento. La consulta más su respuesta deben caber en **102 caracteres sumados** — el encabezado (título con fecha y hora, banner y rótulo) consume 98 de los ~200 visibles de WhatsApp antes del "leer más". Si no alcanza, priorizar la respuesta sobre el detalle de la pregunta.
 - **Bloque 2 (preguntas frecuentes)**: exactamente 3 preguntas distintas de la del bloque 1. Cada respuesta va **redactada en la voz del ejecutivo, lista para copiar y adaptar** — nunca un bullet de tema. Incluir niveles reales cuando la respuesta lo pida.
 - **Bloque 3 (a quién contactar)**: 2 a 4 líneas, cada una con el formato `• [segmento] → [excusa de contacto y qué decir]`. Usar SOLO las cinco etiquetas del catálogo: con exposición al activo protagonista · dormido (2+ semanas) · novato en formación · operador frecuente · con la posición en contra.
 - **Bloque 4 (posición abierta)**: escenario vigente con dirección explícita (alcista/bajista/lateral), el nivel exacto que lo invalida, y una línea de riesgo apoyada en el ATR (ej. "el rango típico por hora es de ~X"). Prohibido prometer dirección.

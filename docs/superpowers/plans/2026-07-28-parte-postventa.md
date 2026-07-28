@@ -94,17 +94,21 @@ WhatsApp muestra ~200 caracteres antes del "leer más". Hay que medir cuánto co
 
 **No usar `wc -c` ni `wc -m`**: en Git Bash de este entorno el locale no es UTF-8, así que ambos cuentan **bytes**, y con emojis (4 bytes) y separadores `━` (3 bytes) el resultado infla ~30%. Medir con Python:
 
+**Ojo con el cálculo**: `{{fecha_larga}}` y `{{hora}}` **sí** se expanden a contenido real, así que no se pueden descontar como si fueran cero — solo `{{consulta_anticipada}}` y `{{respuesta_anticipada}}` son el presupuesto libre. Sustituir fecha y hora por valores de ejemplo antes de medir:
+
 ```bash
 PYTHONIOENCODING=utf-8 python -c "
 import pathlib, re
-ls = pathlib.Path('templates/parte_postventa.txt').read_text(encoding='utf-8').splitlines()[:6]
-txt = chr(10).join(ls)
-fijo = re.sub(r'\{\{[a-z_0-9]*\}\}', '', txt)
-print('texto fijo:', len(fijo), 'chars')
-print('presupuesto para consulta+respuesta:', 200 - len(fijo), 'chars')
+ls = pathlib.Path('templates/parte_postventa.txt').read_text(encoding='utf-8').splitlines()[:5]
+real = chr(10).join(ls).replace('{{fecha_larga}}','Martes 28 jul').replace('{{hora}}','18:52')
+base = re.sub(r'\{\{[a-z_0-9]*\}\}', '', real)
+print('base:', len(base), 'chars')
+print('presupuesto para consulta+respuesta:', 200 - len(base), 'chars')
 "
 ```
-Expected: `texto fijo: 121 chars` y `presupuesto: 79 chars`. Ese presupuesto de **79 caracteres** se documenta en el comando (Task 2, PASO 6).
+Expected: `base: 98 chars` y `presupuesto: 102 chars`. Ese presupuesto de **102 caracteres** se documenta en el comando (Task 2, PASO 6).
+
+El encabezado está deliberadamente comprimido (`🔧 *POST-VENTA · …*`, sin separador antes del bloque 1, rótulo corto `🚨 *La consulta de hoy*`) precisamente para liberar ese presupuesto. Un encabezado más largo dejaba solo ~61 caracteres, con los que el bloque 1 queda telegráfico e inservible.
 
 - [ ] **Step 3: Verificar que no falte ningún placeholder del design**
 
@@ -255,7 +259,7 @@ Run:
 ```bash
 grep -c 'NO ENVIAR AL CLIENTE' .claude/commands/postventa.md
 ```
-Expected: al menos `2` (la plantilla del banner en el encabezado del prompt y la regla final).
+Expected: al menos `2` — la verificación defensiva del PASO 7 (antes de mostrar el parte al director) y la regla final. El banner en sí vive en `templates/parte_postventa.txt`, no en el comando; el comando solo exige conservarlo.
 
 - [ ] **Step 3: Verificar que los placeholders del comando calzan con la plantilla**
 

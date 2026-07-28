@@ -1,7 +1,6 @@
-🔧 *PARTE POST-VENTA — {{fecha_larga}} · {{hora}}*
+🔧 *POST-VENTA · {{fecha_larga}} {{hora}}*
 🔒 INTERNO · NO ENVIAR AL CLIENTE
-━━━━━━━━━━━━━━━━━━━
-🚨 *La consulta que va a entrar hoy*
+🚨 *La consulta de hoy*
 "{{consulta_anticipada}}"
 → {{respuesta_anticipada}}
 ━━━━━━━━━━━━━━━━━━━
