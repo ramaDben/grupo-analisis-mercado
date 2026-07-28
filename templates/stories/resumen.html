@@ -1,0 +1,377 @@
+<!--
+Snapshot de marca "Resumen del día" (Stories GI · Fase C — plantilla combinada). Tablero de
+jornada: kicker + título + fecha, con DOS listas independientes en dos columnas — la agenda macro
+del día (hora, país, evento, badge de impacto, estado) y los activos vistos (nombre, tipo, último
+valor, sesgo, resistencia y soporte más próximos). Cruza la estructura de "06 Calendario
+Económico" (filas de evento con tag ALTO/MEDIO) con la tabla multi-activo de `flash.html`, del
+canvas "Plantilla contenido de marca" (dueño: Rodrigo).
+
+Sin gráfico ni dato en vivo embebido: los valores los recolecta /apertura o el hilo principal vía
+get_asset_levels. Reutiliza verbatim el andamiaje de marca (fuentes/footer/paleta) de
+`templates/stories/flash.html`. Acento estructural teal (#3E91AF); el verde/rojo es SEMÁNTICO
+(sesgo alcista/bajista e impacto alto/medio), no decorativo.
+
+Las dos listas usan el mecanismo loop del motor (marcadores reales en los contenedores más abajo;
+NO escribir el literal del marcador en este comentario, porque `resolver_loops` lo tomaría como
+marca de apertura). Campo opcional `kicker` por CSS :empty (no motor). Los encabezados de columna
+viven FUERA de las marcas del loop, para que persistan con lista vacía. NO cambiar nombres de
+tokens sin actualizar scripts/story_render.py y tests/test_story_render.py.
+-->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Resumen del día — Story GI</title>
+<style>
+  @font-face {
+    font-family: "Syne";
+    src: url("fonts/syne-800.woff2") format("woff2");
+    font-weight: 800;
+    font-style: normal;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "DM Sans";
+    src: url("fonts/dm-sans-400.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "DM Sans";
+    src: url("fonts/dm-sans-700.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "Space Grotesk";
+    src: url("fonts/space-grotesk-600.woff2") format("woff2");
+    font-weight: 600;
+    font-style: normal;
+    font-display: block;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 1920px;
+    height: 1080px;
+    background: #0D0D1A;
+    background-image:
+      radial-gradient(90% 120% at 0% 20%, #10222B 0%, #0D0D1A 55%),
+      linear-gradient(180deg, #0D0D1A 0%, #0D0D1A 60%, #10222B 100%);
+    color: #F5F3F7;
+    font-family: "DM Sans", sans-serif;
+    overflow: hidden;
+  }
+
+  .story {
+    width: 1920px;
+    height: 1080px;
+    padding: 44px 72px 32px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---- Encabezado ---- */
+  .res-head {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .res-kicker {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 19px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 9px 22px;
+    border-radius: 999px;
+    background: rgba(62, 145, 175, 0.14);
+    border: 1px solid rgba(62, 145, 175, 0.5);
+    color: #3E91AF;
+  }
+
+  .res-kicker:empty {
+    display: none;
+  }
+
+  .res-titulo {
+    font-family: "Syne", sans-serif;
+    font-weight: 800;
+    font-size: 50px;
+    line-height: 1.12;
+    color: #FFFFFF;
+    margin: 20px 0 0;
+    max-width: 1400px;
+  }
+
+  .res-fecha {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 21px;
+    letter-spacing: 0.03em;
+    color: #C9C5D4;
+    margin: 10px 0 0;
+    text-transform: uppercase;
+  }
+
+  /* ---- Cuerpo: dos columnas ---- */
+  .res-cuerpo {
+    flex: 1;
+    min-height: 0;
+    margin-top: 34px;
+    display: grid;
+    grid-template-columns: 700px 1fr;
+    gap: 64px;
+  }
+
+  .res-col {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .res-col-titulo {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 18px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: #3E91AF;
+    padding-bottom: 12px;
+    border-bottom: 2px solid rgba(62, 145, 175, 0.5);
+  }
+
+  /* ---- Columna izquierda: filas de evento ---- */
+  .res-evento {
+    display: grid;
+    grid-template-columns: 128px 1fr auto;
+    align-items: center;
+    gap: 18px;
+    padding: 19px 0;
+    border-bottom: 1px solid rgba(245, 243, 247, 0.08);
+  }
+
+  .res-ev-hora {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 27px;
+    color: #F5F3F7;
+  }
+
+  .res-ev-pais {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 16px;
+    color: #A9A5B4;
+    letter-spacing: 0.05em;
+  }
+
+  .res-ev-nombre {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 700;
+    font-size: 23px;
+    color: #FFFFFF;
+    line-height: 1.25;
+  }
+
+  .res-ev-estado {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 16px;
+    line-height: 1.3;
+    margin-top: 3px;
+  }
+
+  .res-ev-estado--salio {
+    color: #53C1AB;
+  }
+
+  .res-ev-estado--proximo {
+    color: #A9A5B4;
+  }
+
+  .res-ev-badge {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.07em;
+    padding: 7px 15px;
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+
+  .res-ev-badge--alto {
+    background: rgba(232, 64, 64, 0.16);
+    border: 1px solid rgba(232, 64, 64, 0.55);
+    color: #E84040;
+  }
+
+  .res-ev-badge--medio {
+    background: rgba(62, 145, 175, 0.14);
+    border: 1px solid rgba(62, 145, 175, 0.5);
+    color: #3E91AF;
+  }
+
+  /* ---- Columna derecha: filas de activo ---- */
+  .res-activo {
+    display: grid;
+    grid-template-columns: 1fr 210px 190px;
+    align-items: center;
+    gap: 20px;
+    padding: 16px 0;
+    border-bottom: 1px solid rgba(245, 243, 247, 0.08);
+  }
+
+  .res-ac-nombre {
+    font-family: "Syne", sans-serif;
+    font-weight: 800;
+    font-size: 29px;
+    color: #FFFFFF;
+  }
+
+  .res-ac-tipo {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 16px;
+    color: #A9A5B4;
+    margin-top: 2px;
+  }
+
+  .res-ac-valor {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 30px;
+    color: #F5F3F7;
+    text-align: right;
+  }
+
+  .res-ac-niveles {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 15px;
+    color: #A9A5B4;
+    text-align: right;
+    margin-top: 4px;
+    line-height: 1.35;
+  }
+
+  .res-ac-nivel-r {
+    color: #E84040;
+  }
+
+  .res-ac-nivel-s {
+    color: #00DC82;
+  }
+
+  .res-ac-sesgo {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 19px;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .res-ac-sesgo--alcista {
+    color: #00DC82;
+  }
+
+  .res-ac-sesgo--alcista::before {
+    content: "\25B2\00A0";
+  }
+
+  .res-ac-sesgo--bajista {
+    color: #E84040;
+  }
+
+  .res-ac-sesgo--bajista::before {
+    content: "\25BC\00A0";
+  }
+
+  .res-ac-sesgo--lateral {
+    color: #A9A5B4;
+  }
+
+  .res-ac-sesgo--lateral::before {
+    content: "\2192\00A0";
+  }
+
+  /* ---- Footer ---- */
+  .footer {
+    margin-top: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .footer-marca {
+    display: flex;
+    justify-content: space-between;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 19px;
+    color: #F5F3F7;
+  }
+
+  .footer-fuente {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.05em;
+    color: #3E91AF;
+    text-transform: uppercase;
+  }
+
+  .footer-disclaimer {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 12px;
+    color: #6E6A7A;
+    line-height: 1.35;
+  }
+</style>
+</head>
+<body class="resumen">
+  <div class="story">
+
+    <div class="res-head">
+      <span class="res-kicker">{{kicker}}</span>
+      <h1 class="res-titulo">{{titulo}}</h1>
+      <p class="res-fecha">{{fecha}}</p>
+    </div>
+
+    <div class="res-cuerpo">
+
+      <div class="res-col">
+        <div class="res-col-titulo">Agenda macro de hoy · hora Chile</div>
+        <!-- FOR:eventos --><div class="res-evento"><div><div class="res-ev-hora">{{hora}}</div><div class="res-ev-pais">{{pais}}</div></div><div><div class="res-ev-nombre">{{evento}}</div><div class="res-ev-estado res-ev-estado--{{estado_slug}}">{{estado}}</div></div><span class="res-ev-badge res-ev-badge--{{impacto_slug}}">{{impacto}}</span></div><!-- ENDFOR:eventos -->
+      </div>
+
+      <div class="res-col">
+        <div class="res-col-titulo">Activos vistos hoy · último y niveles</div>
+        <!-- FOR:activos --><div class="res-activo"><div><div class="res-ac-nombre">{{nombre}}</div><div class="res-ac-tipo">{{tipo}}</div></div><div><div class="res-ac-valor">{{valor}}</div><div class="res-ac-niveles"><span class="res-ac-nivel-r">R {{resistencia}}</span> · <span class="res-ac-nivel-s">S {{soporte}}</span></div></div><div class="res-ac-sesgo res-ac-sesgo--{{sesgo_slug}}">{{sesgo}}</div></div><!-- ENDFOR:activos -->
+      </div>
+
+    </div>
+
+    <div class="footer">
+      <div class="footer-marca">
+        <span>@grupointeligencia</span>
+        <span>grupointeligencia.com</span>
+      </div>
+      <p class="footer-fuente">Fuente: {{fuente}}</p>
+      <p class="footer-disclaimer">
+        Los CFD son instrumentos complejos y presentan un riesgo elevado de perder dinero
+        rápidamente debido al apalancamiento. Este contenido es educativo/informativo, no
+        constituye asesoría financiera.
+      </p>
+    </div>
+
+  </div>
+</body>
+</html>

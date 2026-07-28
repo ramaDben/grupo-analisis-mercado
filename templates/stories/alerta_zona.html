@@ -1,0 +1,495 @@
+<!--
+Snapshot de marca "Alerta de zona" (Stories GI · variante de "03 Alerta de Mercado"). Misma
+estructura de dos columnas (editorial | gráfico) que `templates/stories/alerta.html`, con tres
+diferencias deliberadas:
+  1. Paleta de OPORTUNIDAD (acento verde de marca #00DC82) en vez del rojo de riesgo — la pieza
+     comunica una zona de compra, no una advertencia.
+  2. La tarjeta muestra ZONA (desde-hasta) + OBJETIVO en vez de un solo soporte y una sola
+     resistencia, más una lista de confirmaciones técnicas que sustentan la zona.
+  3. El gráfico SVG dibuja la banda de la zona sombreada y la línea de objetivo rotulada.
+
+La lista de confirmaciones usa el mecanismo loop del motor (marcador real en el contenedor más
+abajo; NO escribir el literal del marcador en este comentario, porque `resolver_loops` lo tomaría
+como marca de apertura). El encabezado de la lista vive FUERA de las marcas del loop, para que
+persista con lista vacía. Reutiliza verbatim el andamiaje de fuentes y footer de `alerta.html`.
+Sin fences reservados del motor (variacion/vol/chart_img/chart_svg): el gráfico es siempre SVG.
+NO cambiar nombres de tokens sin actualizar scripts/story_render.py y tests/test_story_render.py.
+-->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Alerta de zona — Story GI</title>
+<style>
+  @font-face {
+    font-family: "Syne";
+    src: url("fonts/syne-800.woff2") format("woff2");
+    font-weight: 800;
+    font-style: normal;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "DM Sans";
+    src: url("fonts/dm-sans-400.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "DM Sans";
+    src: url("fonts/dm-sans-700.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "Space Grotesk";
+    src: url("fonts/space-grotesk-600.woff2") format("woff2");
+    font-weight: 600;
+    font-style: normal;
+    font-display: block;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 1920px;
+    height: 1080px;
+    background: #0D0D1A;
+    background-image:
+      radial-gradient(90% 120% at 0% 20%, #0B2A22 0%, #0D0D1A 55%),
+      linear-gradient(180deg, #0D0D1A 0%, #0A1712 60%, #0D0D1A 100%);
+    color: #F5F3F7;
+    font-family: "DM Sans", sans-serif;
+    overflow: hidden;
+  }
+
+  .story {
+    width: 1920px;
+    height: 1080px;
+    padding: 52px 72px 36px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .contenido {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: row;
+    gap: 56px;
+  }
+
+  .columna-editorial {
+    flex: 0 0 54%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .columna-grafico {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---- Chips (acento verde de oportunidad) ---- */
+  .chips {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+  }
+
+  .chip {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 20px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 10px 22px;
+    border-radius: 999px;
+  }
+
+  .chip-oportunidad {
+    background: #00DC82;
+    color: #0D0D1A;
+  }
+
+  .chip-categoria {
+    background: rgba(0, 220, 130, 0.12);
+    border: 1px solid rgba(0, 220, 130, 0.5);
+    color: #7CE8BB;
+  }
+
+  .fecha-hora {
+    margin-top: 16px;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 18px;
+    color: #A9A5B4;
+    letter-spacing: 0.03em;
+  }
+
+  .titular {
+    font-family: "Syne", sans-serif;
+    font-weight: 800;
+    font-size: 44px;
+    line-height: 1.1;
+    margin: 18px 0 0;
+    color: #FFFFFF;
+  }
+
+  .parrafo {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 20px;
+    line-height: 1.45;
+    color: #C9C5D4;
+    margin: 16px 0 0;
+  }
+
+  /* ---- Tarjeta (borde verde de oportunidad) ---- */
+  .tarjeta-precio {
+    margin-top: 22px;
+    border: 2px solid #00DC82;
+    border-radius: 22px;
+    background: rgba(0, 220, 130, 0.07);
+    padding: 22px 30px;
+  }
+
+  .tarjeta-cabecera {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .rotulo-activo {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 21px;
+    letter-spacing: 0.04em;
+    color: #00DC82;
+    text-transform: uppercase;
+  }
+
+  .tag-riesgo {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 17px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #0D0D1A;
+    background: #00DC82;
+    padding: 8px 18px;
+    border-radius: 999px;
+  }
+
+  .precio-linea {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    margin-top: 12px;
+  }
+
+  .precio-actual {
+    font-family: "Syne", sans-serif;
+    font-weight: 800;
+    font-size: 52px;
+    color: #FFFFFF;
+  }
+
+  .precio-etiqueta {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 17px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #A9A5B4;
+  }
+
+  .stats {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .stat-label {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #A9A5B4;
+  }
+
+  .stat-valor {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 700;
+    font-size: 26px;
+    color: #F5F3F7;
+    margin-top: 5px;
+  }
+
+  .stat-valor--zona {
+    color: #00DC82;
+  }
+
+  .stat-valor--invalida {
+    color: #E84040;
+  }
+
+  /* ---- Lista de confirmaciones técnicas ---- */
+  .confirmaciones {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .confirmaciones-titulo {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #00DC82;
+    margin-bottom: 10px;
+  }
+
+  .confirmacion {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 6px 0;
+  }
+
+  .confirmacion-etiqueta {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 18px;
+    color: #C9C5D4;
+  }
+
+  .confirmacion-etiqueta::before {
+    content: "\2713\00A0\00A0";
+    color: #00DC82;
+    font-weight: 700;
+  }
+
+  .confirmacion-nivel {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 20px;
+    color: #FFFFFF;
+  }
+
+  /* ---- Gráfico ---- */
+  .rotulo-grafico {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 18px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #A9A5B4;
+    margin-bottom: 14px;
+  }
+
+  .contenedor-grafico {
+    flex: 1;
+    min-height: 0;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  #svg-zona {
+    width: 100%;
+    height: 100%;
+  }
+
+  .rotulo-objetivo {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 17px;
+    fill: #00DC82;
+  }
+
+  .rotulo-zona {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 17px;
+    fill: #7CE8BB;
+  }
+
+  .rotulo-linea {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 12px;
+    fill: #A9A5B4;
+  }
+
+  /* ---- Footer ---- */
+  .footer {
+    margin-top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .footer-marca {
+    display: flex;
+    justify-content: space-between;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 20px;
+    color: #F5F3F7;
+  }
+
+  .footer-fuente {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 15px;
+    color: #A9A5B4;
+  }
+
+  .footer-disclaimer {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 12px;
+    color: #6E6A7A;
+    line-height: 1.35;
+  }
+</style>
+</head>
+<body class="sesgo-{{sesgo_slug}}">
+  <div class="story">
+
+    <div class="contenido">
+      <div class="columna-editorial">
+        <div class="chips">
+          <span class="chip chip-oportunidad">Zona de oportunidad</span>
+          <span class="chip chip-categoria">{{chip_categoria}}</span>
+        </div>
+        <p class="fecha-hora">{{fecha_hora}}</p>
+
+        <h1 class="titular">{{titular}}</h1>
+        <p class="parrafo">{{parrafo}}</p>
+
+        <div class="tarjeta-precio">
+          <div class="tarjeta-cabecera">
+            <span class="rotulo-activo">{{rotulo_activo}}</span>
+            <span class="tag-riesgo">{{tag_riesgo}}</span>
+          </div>
+
+          <div class="precio-linea">
+            <span class="precio-actual">{{precio_actual}}</span>
+            <span class="precio-etiqueta">precio actual</span>
+          </div>
+
+          <div class="stats">
+            <div class="stat">
+              <div class="stat-label">Zona de compra</div>
+              <div class="stat-valor stat-valor--zona">{{zona_desde}} – {{zona_hasta}}</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Objetivo</div>
+              <div class="stat-valor">{{objetivo}}</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Se invalida bajo</div>
+              <div class="stat-valor stat-valor--invalida">{{invalida}}</div>
+            </div>
+          </div>
+
+          <div class="confirmaciones">
+            <div class="confirmaciones-titulo">{{confirmaciones_titulo}}</div>
+            <!-- FOR:confirmaciones --><div class="confirmacion"><span class="confirmacion-etiqueta">{{etiqueta}}</span><span class="confirmacion-nivel">{{nivel}}</span></div><!-- ENDFOR:confirmaciones -->
+          </div>
+        </div>
+      </div>
+
+      <div class="columna-grafico">
+        <p class="rotulo-grafico">{{rotulo_grafico}}</p>
+        <div class="contenedor-grafico">
+          <svg id="svg-zona" viewBox="0 0 400 260" preserveAspectRatio="none">
+            <!-- Línea de objetivo -->
+            <line x1="0" y1="52" x2="400" y2="52" stroke="#00DC82" stroke-width="2" stroke-dasharray="7 5"/>
+            <text x="10" y="42" class="rotulo-objetivo">OBJETIVO {{objetivo}}</text>
+
+            <!-- Banda de la zona de confirmación triple -->
+            <rect x="0" y="188" width="400" height="26" fill="rgba(0,220,130,0.16)"/>
+            <line x1="0" y1="188" x2="400" y2="188" stroke="#00DC82" stroke-width="1.5"/>
+            <line x1="0" y1="214" x2="400" y2="214" stroke="#00DC82" stroke-width="1.5"/>
+            <text x="10" y="238" class="rotulo-zona">ZONA {{zona_desde}} – {{zona_hasta}}</text>
+
+            <!-- Tres líneas de confirmación dentro de la banda -->
+            <line x1="0" y1="192" x2="400" y2="192" stroke="#7CE8BB" stroke-width="0.8" stroke-dasharray="3 4"/>
+            <line x1="0" y1="201" x2="400" y2="201" stroke="#7CE8BB" stroke-width="0.8" stroke-dasharray="3 4"/>
+            <line x1="0" y1="210" x2="400" y2="210" stroke="#7CE8BB" stroke-width="0.8" stroke-dasharray="3 4"/>
+
+            <!-- Velas: descenso hacia la zona y rebote final -->
+            <rect x="24" y="70" width="13" height="52" fill="#00DC82"/>
+            <line x1="30" y1="56" x2="30" y2="70" stroke="#00DC82" stroke-width="2.5"/>
+            <line x1="30" y1="122" x2="30" y2="138" stroke="#00DC82" stroke-width="2.5"/>
+
+            <rect x="62" y="88" width="13" height="58" fill="#E84040"/>
+            <line x1="68" y1="74" x2="68" y2="88" stroke="#E84040" stroke-width="2.5"/>
+            <line x1="68" y1="146" x2="68" y2="162" stroke="#E84040" stroke-width="2.5"/>
+
+            <rect x="100" y="112" width="13" height="46" fill="#E84040"/>
+            <line x1="106" y1="98" x2="106" y2="112" stroke="#E84040" stroke-width="2.5"/>
+            <line x1="106" y1="158" x2="106" y2="172" stroke="#E84040" stroke-width="2.5"/>
+
+            <rect x="138" y="130" width="13" height="38" fill="#00DC82"/>
+            <line x1="144" y1="118" x2="144" y2="130" stroke="#00DC82" stroke-width="2.5"/>
+            <line x1="144" y1="168" x2="144" y2="180" stroke="#00DC82" stroke-width="2.5"/>
+
+            <rect x="176" y="146" width="13" height="42" fill="#E84040"/>
+            <line x1="182" y1="132" x2="182" y2="146" stroke="#E84040" stroke-width="2.5"/>
+            <line x1="182" y1="188" x2="182" y2="198" stroke="#E84040" stroke-width="2.5"/>
+
+            <rect x="214" y="164" width="13" height="30" fill="#E84040"/>
+            <line x1="220" y1="152" x2="220" y2="164" stroke="#E84040" stroke-width="2.5"/>
+            <line x1="220" y1="194" x2="220" y2="208" stroke="#E84040" stroke-width="2.5"/>
+
+            <rect x="252" y="178" width="13" height="22" fill="#E84040"/>
+            <line x1="258" y1="168" x2="258" y2="178" stroke="#E84040" stroke-width="2.5"/>
+            <line x1="258" y1="200" x2="258" y2="212" stroke="#E84040" stroke-width="2.5"/>
+
+            <rect x="290" y="170" width="13" height="28" fill="#00DC82"/>
+            <line x1="296" y1="158" x2="296" y2="170" stroke="#00DC82" stroke-width="2.5"/>
+            <line x1="296" y1="198" x2="296" y2="212" stroke="#00DC82" stroke-width="2.5"/>
+
+            <rect x="328" y="152" width="13" height="34" fill="#00DC82"/>
+            <line x1="334" y1="140" x2="334" y2="152" stroke="#00DC82" stroke-width="2.5"/>
+            <line x1="334" y1="186" x2="334" y2="204" stroke="#00DC82" stroke-width="2.5"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="footer-marca">
+        <span>@grupointeligencia</span>
+        <span>grupointeligencia.com</span>
+      </div>
+      <p class="footer-fuente">FUENTE: {{fuente}}</p>
+      <p class="footer-disclaimer">
+        Los CFD son instrumentos complejos y presentan un riesgo elevado de perder dinero
+        rápidamente debido al apalancamiento. Este contenido es educativo/informativo, no
+        constituye asesoría financiera.
+      </p>
+    </div>
+
+  </div>
+</body>
+</html>
