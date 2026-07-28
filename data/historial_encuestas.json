@@ -79,6 +79,48 @@
       ],
       "contexto_ref": "Inventarios de Petróleo EIA semana 3 junio 2026",
       "estado": "registrada"
+    },
+    {
+      "id": "2026-07-20_tendencia_USDCLP",
+      "fecha": "2026-07-20",
+      "tipo": "tendencia",
+      "activo": "USDCLP",
+      "pregunta": "¿Qué tendencia proyectan hoy para *USD/CLP (Dólar)*?",
+      "opciones": [
+        "📈 Alcista",
+        "📉 Bajista",
+        "➡️ Lateral"
+      ],
+      "contexto_ref": null,
+      "estado": "registrada"
+    },
+    {
+      "id": "2026-07-27_tendencia_USDCLP",
+      "fecha": "2026-07-27",
+      "tipo": "tendencia",
+      "activo": "USDCLP",
+      "pregunta": "¿Qué tendencia proyectas hoy para *USD/CLP (Dólar)*?",
+      "opciones": [
+        "📈 Alcista",
+        "📉 Bajista",
+        "➡️ Lateral"
+      ],
+      "contexto_ref": "data/mensajes/2026-07-27/usdclp/niveles/10-20_niveles.txt",
+      "estado": "registrada"
+    },
+    {
+      "id": "2026-07-27_tendencia_USDJPY",
+      "fecha": "2026-07-27",
+      "tipo": "tendencia",
+      "activo": "USDJPY",
+      "pregunta": "Japón despertó y el *USD/JPY* pasea por alturas que no visitaba en décadas. Ya dimos nuestra lectura ☝️. Ahora te toca: en la sesión asiática y mañana, ¿nuevo máximo o hasta acá llegó?",
+      "opciones": [
+        "📈 Rompe y marca un nuevo máximo",
+        "📉 Hasta acá llegó: se da vuelta",
+        "➡️ Ninguna: se queda dando vueltas"
+      ],
+      "contexto_ref": "data/mensajes/2026-07-27/usdjpy/niveles/19-40_niveles.txt",
+      "estado": "registrada"
     }
   ]
 }
