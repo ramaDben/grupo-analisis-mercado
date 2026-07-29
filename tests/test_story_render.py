@@ -50,6 +50,12 @@ PAYLOAD_EJEMPLO: dict = {
         "nuevos mínimos; se recomienda gestión estricta del riesgo."
     ),
     "rotulo_activo": "ORO · XAU/USD",
+    # `tag_riesgo` ya NO lo consume el snapshot de alerta: la píldora de la
+    # tarjeta pasó a mostrar el sesgo (dirección accionable) en vez de una
+    # etiqueta de riesgo sin criterio visible para el cliente. Se conserva aquí
+    # sólo porque el fixture genérico del motor (`fixture_template.html`) lo usa
+    # como token de prueba en `test_build_html_contract`; para `alerta.html` es
+    # una clave no referenciada, o sea un no-op silencioso (R3/CB-1).
     "tag_riesgo": "RIESGO ALTO",
     "precio_actual": "2.318,40",
     "soporte": "2.300,00",
@@ -333,9 +339,18 @@ def test_alerta_no_placeholders():
         PAYLOAD_EJEMPLO["precio_actual"],
         PAYLOAD_EJEMPLO["soporte"],
         PAYLOAD_EJEMPLO["resistencia"],
-        PAYLOAD_EJEMPLO["tag_riesgo"],
+        PAYLOAD_EJEMPLO["sesgo"],
     ):
         assert valor in html
+
+    # La píldora de la tarjeta muestra el sesgo con su clase de color semántico,
+    # y el antiguo elemento del tag de riesgo ya no se emite aunque el payload
+    # siga trayendo la clave. Se afirma sobre la clase y no sobre el texto
+    # "RIESGO ALTO", que sigue apareciendo en el comentario del CSS que documenta
+    # por qué se reemplazó.
+    assert 'class="tag-sesgo tag-sesgo--bajista"' in html
+    assert 'class="tag-riesgo"' not in html
+    assert ">RIESGO ALTO<" not in html
 
     # Payload sin variación/vol -> esos slots no aparecen; sin chart_png -> SVG
     # decorativo presente, sin <img>.

@@ -640,9 +640,14 @@ direccional sí, dramatización no (ver "Registro y tono" de `CLAUDE.md`).
 Límites visuales del layout: `titular` ≤ ~70 caracteres, `parrafo` ≤ ~280 caracteres. Ajusta la
 redacción antes de pasar al preview.
 
-Decide `tag_riesgo` según contexto:
-- Ruptura de nivel o evento de alto impacto → `RIESGO ALTO`.
-- Aproximación al nivel sin ruptura confirmada → `RIESGO MEDIO`.
+La píldora de la tarjeta muestra el **sesgo**, no un tag de riesgo. Se alimenta del campo `sesgo`
+del payload (`Alcista`/`Bajista`/`Lateral`) y el snapshot le pone el color semántico y la flecha
+(▲ verde / ▼ rojo / → gris). No hay que decidir ni redactar nada extra para ese espacio.
+
+> El antiguo `tag_riesgo` (`RIESGO ALTO`/`RIESGO MEDIO`) quedó **fuera del contrato** por decisión
+> del director: era una etiqueta sin criterio visible para el cliente, ocupando el lugar más
+> valioso de la tarjeta. Si un payload heredado todavía trae la clave, el motor la ignora en
+> silencio (clave no referenciada por ningún token).
 
 ---
 
@@ -678,7 +683,6 @@ de Chile (regla canónica de `CLAUDE.md`, nunca `WebSearch` para la hora):
   "titular": "[titular ≤70 car.]",
   "parrafo": "[párrafo ≤280 car.]",
   "rotulo_activo": "[NOMBRE · TICKER]",
-  "tag_riesgo": "RIESGO ALTO | RIESGO MEDIO",
   "precio_actual": "[precio con digits]",
   "variacion": { "pct": "[valor]", "direccion": "alcista|bajista" },
   "soporte": "[soporte con digits]",
@@ -693,6 +697,11 @@ de Chile (regla canónica de `CLAUDE.md`, nunca `WebSearch` para la hora):
 
 Si el director omitió variación/vol en el PASO 2, **omite esas claves por completo** del JSON
 (no las dejes en `null` ni vacías) — así el template no deja hueco visual (CB-4).
+
+⚠️ **`variacion.direccion` y `sesgo` deben ser coherentes.** El color de la píldora sale de
+`sesgo_slug`, y el motor lo deriva de `variacion.direccion` **con prioridad** sobre `sesgo`. Si se
+envía una variación `alcista` junto a un sesgo `Lateral`, la píldora dirá "LATERAL" pintada de
+verde. Cuando ambos campos viajen, que apunten en la misma dirección.
 
 `fuente`: si la narrativa nace de una noticia, usa la fuente de esa noticia (ej. `COMEX`,
 `INVESTING`); si es lectura técnica, usa `MT5 · GRUPO INTELIGENCIA`.
@@ -710,7 +719,7 @@ Activo: [nombre] ([ticker_mt5])
 Titular: [titular]
 Párrafo: [parrafo]
 Soporte: [soporte] · Resistencia: [resistencia]
-Riesgo: [tag_riesgo]
+Sesgo: [sesgo]
 Chart embebido: [sí/no]
 ━━━━━━━━━━━━━━━━━━━
 ¿Apruebas esta Story? ¿Generar y guardar el PNG final?

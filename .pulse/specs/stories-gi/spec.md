@@ -117,7 +117,6 @@ Estructura que `/story alerta` construye y pasa a `scripts/story_render.py`:
   "titular": "El Oro rompe soporte clave y activa señal de riesgo bajista",
   "parrafo": "El metal perdió la zona de 2.320 con volumen creciente, confirmando presión vendedora. Un cierre bajo el soporte abriría espacio hacia nuevos mínimos; se recomienda gestión estricta del riesgo.",
   "rotulo_activo": "ORO · XAU/USD",
-  "tag_riesgo": "RIESGO ALTO",
   "precio_actual": "2.318,40",
   "variacion": {
     "pct": "1,86",
@@ -145,10 +144,14 @@ Reglas de mapeo:
   está presente, el template incrusta esa imagen en el slot de gráfico; si es `null`/ausente,
   muestra el SVG decorativo de velas del snapshot. Si la ruta no existe →
   `StoryRenderError` accionable (nunca render con imagen rota).
-- `tag_riesgo`: texto corto (`RIESGO ALTO` / `RIESGO MEDIO`), decidido por el comando según el
-  contexto (ruptura de nivel/evento → ALTO; aproximación sin ruptura → MEDIO).
 - `sesgo`: `Alcista`/`Bajista`/`Lateral` — dirección explícita obligatoria (regla de oro del
-  repo); alimenta la coherencia del titular/párrafo, no un slot visual propio.
+  repo). Alimenta la coherencia del titular/párrafo **y** la píldora de la tarjeta, que el
+  snapshot pinta con el color semántico y la flecha (▲ verde / ▼ rojo / → gris) vía
+  `sesgo_slug`.
+- `tag_riesgo`: **retirado del contrato** (decisión del director, 2026-07-29). Ocupaba la
+  píldora de la tarjeta con una etiqueta (`RIESGO ALTO` / `RIESGO MEDIO`) sin criterio visible
+  para el cliente; ese espacio pasó a mostrar el sesgo. Un payload heredado que aún traiga la
+  clave no falla: el motor ignora en silencio las claves que ningún token referencia.
 - `fuente`: texto del footer (ej. `COMEX`, `INVESTING`, `MT5`); si la narrativa nace de una
   noticia, la fuente de la noticia; si es lectura técnica, `MT5 · GRUPO INTELIGENCIA`.
 - `titular` ≤ ~70 caracteres y `parrafo` ≤ ~280 caracteres (límites visuales del layout; el
@@ -178,8 +181,8 @@ preguntar — nunca asume un tipo por defecto.
 
 ### R3 — Construcción del payload
 Construye el payload `story_alerta` (ver "Contrato de datos"), incluyendo formateo de precios por
-`digits` con coma decimal, `tag_riesgo` según contexto y `fecha_hora` con el reloj de Chile
-(regla canónica de `CLAUDE.md`).
+`digits` con coma decimal, `sesgo` explícito (alimenta la píldora de la tarjeta) y `fecha_hora`
+con el reloj de Chile (regla canónica de `CLAUDE.md`).
 
 ### R4 — Render (Playwright headless, centralizado)
 Invoca `scripts/story_render.py` con el payload y `templates/stories/alerta.html`. El script:
@@ -262,8 +265,9 @@ explícitamente "un solo activo por corrida".
 DADO un payload de ejemplo sin `variacion`, sin `vol_pct` y con `chart_png` en `null`,
 CUANDO se ejecuta la función de mapeo sobre `templates/stories/alerta.html`,
 ENTONCES el HTML resultante contiene `titular`, `parrafo`, `precio_actual`, `soporte`,
-`resistencia` y `tag_riesgo` correctamente inyectados, NO contiene placeholders sin resolver,
-NO contiene los slots de variación/volumen, y conserva el gráfico SVG decorativo (no `<img>`).
+`resistencia` y `sesgo` (en la píldora, con su clase de color) correctamente inyectados, NO
+contiene placeholders sin resolver, NO contiene los slots de variación/volumen, y conserva el
+gráfico SVG decorativo (no `<img>`).
 
 **AC3 — dimensiones exactas del render (ejecutable, `pytest`, `skipif` sin Chromium)**
 El render completo produce un PNG con IHDR exactamente 1080×1920 y tamaño > 5 KB.
@@ -571,7 +575,7 @@ DADO el payload de ejemplo `story_alerta` (mismo de AC1, más la variante con `c
 apuntando a un fixture existente),
 CUANDO se ejecuta `build_html` contra el `templates/stories/alerta.html` migrado,
 ENTONCES el HTML contiene `titular`, `parrafo`, `precio_actual`, `soporte`, `resistencia` y
-`tag_riesgo` correctamente inyectados, NO contiene placeholders sin resolver, omite los slots
+`sesgo` correctamente inyectados, NO contiene placeholders sin resolver, omite los slots
 de variación/volumen cuando el payload no los trae, y el chart embebido/SVG decorativo se
 comporta exactamente igual que hoy (AC2/AC9 heredados de `.pulse/specs/stories-gi/spec.md`,
 sin regresión).

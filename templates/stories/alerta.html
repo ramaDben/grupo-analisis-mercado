@@ -68,13 +68,19 @@ y tests/test_story_render.py.
     flex-direction: column;
   }
 
-  /* ---- Contenido: fila de dos columnas (editorial | gráfico) ---- */
+  /* ---- Contenido: fila de dos columnas (editorial | gráfico) ----
+     `overflow: hidden` es la red de seguridad del lienzo de alto fijo: si el
+     bloque editorial pide mas alto del que cabe (titular de muchas lineas), el
+     excedente se recorta dentro de esta caja en vez de dibujarse encima del
+     footer. Sin esto, un titular largo pisaba el handle y el disclaimer en
+     formato vertical. */
   .contenido {
     flex: 1;
     min-height: 0;
     display: flex;
     flex-direction: row;
     gap: 56px;
+    overflow: hidden;
   }
 
   .columna-editorial {
@@ -168,17 +174,30 @@ y tests/test_story_render.py.
     text-transform: uppercase;
   }
 
-  .tag-riesgo {
+  /* Pildora de sesgo. Reemplaza al antiguo tag de riesgo (RIESGO ALTO/MEDIO),
+     que era una etiqueta sin criterio visible para el cliente y ocupaba el lugar
+     mas valioso de la tarjeta. Ahora ese espacio muestra la direccion -- lo
+     accionable -- con el color semantico del kit y la misma flecha que usa
+     postventa.html, para que las dos plantillas hablen el mismo idioma visual.
+     El gris del caso base tambien sirve de fallback si `sesgo_slug` trae un
+     valor inesperado. */
+  .tag-sesgo {
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
     font-size: 18px;
     letter-spacing: 0.05em;
     text-transform: uppercase;
     color: #0D0D1A;
-    background: #E84040;
+    background: #A9A5B4;
     padding: 8px 18px;
     border-radius: 999px;
   }
+  .tag-sesgo--alcista { background: #00DC82; }
+  .tag-sesgo--alcista::before { content: "\25B2\00A0"; }
+  .tag-sesgo--bajista { background: #E84040; }
+  .tag-sesgo--bajista::before { content: "\25BC\00A0"; }
+  .tag-sesgo--lateral { background: #A9A5B4; }
+  .tag-sesgo--lateral::before { content: "\2192\00A0"; }
 
   .precio-linea {
     display: flex;
@@ -199,8 +218,12 @@ y tests/test_story_render.py.
     font-weight: 600;
     font-size: 26px;
   }
-  .sesgo-alcista .variacion,
-  .sesgo-alcista .rotulo-activo { color: #00DC82; }
+  /* El color semantico se reserva para la variacion (y para la pildora de sesgo
+     de la cabecera). El `.rotulo-activo` ya no se tine de verde con sesgo
+     alcista: al quedar junto a una pildora verde en la misma linea, repetia el
+     color sin agregar informacion. El nombre del activo se lee siempre en el
+     blanco base. */
+  .sesgo-alcista .variacion { color: #00DC82; }
   .sesgo-bajista .variacion { color: #E84040; }
 
   .stats {
@@ -318,7 +341,14 @@ y tests/test_story_render.py.
      libera a `auto` para que cada bloque tome su altura real; si se mantuviera
      el 54%, en vertical reservaria mas de la mitad del alto y el grafico
      quedaria aplastado. Toda la tipografia sube: el mismo texto a tamano de
-     escritorio queda diminuto en un lienzo de 1080 de ancho. */
+     escritorio queda diminuto en un lienzo de 1080 de ancho.
+
+     Reparto del alto: el grafico es decorativo, la editorial es el contenido,
+     asi que el grafico es el que cede cuando el texto crece (`min-height: 0`).
+     El `min-height: 520px` que tenia antes se lo prohibia: con un titular de
+     varias lineas, editorial + gap + 520px superaban el alto del lienzo y el
+     desborde se dibujaba sobre el footer. La editorial queda en `0 1 auto` para
+     que tampoco fuerce mas alto del disponible. */
   @media (max-aspect-ratio: 1/1) {
     .story { padding: 76px 60px 52px; }
 
@@ -329,14 +359,14 @@ y tests/test_story_render.py.
       flex-direction: column;
       gap: 44px;
     }
-    .columna-editorial { flex: 0 0 auto; }
-    .columna-grafico { flex: 1 1 auto; min-height: 520px; }
+    .columna-editorial { flex: 0 1 auto; }
+    .columna-grafico { flex: 1 1 auto; min-height: 0; }
 
     .titular { font-size: 68px; }
     .parrafo { font-size: 32px; }
 
     .rotulo-activo { font-size: 30px; }
-    .tag-riesgo { font-size: 24px; }
+    .tag-sesgo { font-size: 24px; }
     .precio-actual { font-size: 76px; }
     .variacion { font-size: 34px; }
     .stat-label { font-size: 22px; }
@@ -369,7 +399,7 @@ y tests/test_story_render.py.
         <div class="tarjeta-precio">
           <div class="tarjeta-cabecera">
             <span class="rotulo-activo">{{rotulo_activo}}</span>
-            <span class="tag-riesgo">{{tag_riesgo}}</span>
+            <span class="tag-sesgo tag-sesgo--{{sesgo_slug}}">{{sesgo}}</span>
           </div>
 
           <div class="precio-linea">
