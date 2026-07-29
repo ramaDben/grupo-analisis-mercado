@@ -120,14 +120,18 @@ scripts/story_render.py y tests/test_story_render.py.
     margin: 40px 0 14px;
   }
 
+  /* Syne 800 es el typeface de marca (las 7 plantillas lo usan) y es ancho por
+     diseño -- NO se estira. A 52px un título largo dominaba la pieza; 44px con
+     tracking ligeramente negativo lo compacta sin salir de la marca. */
   .pv-consulta {
     font-family: "Syne", sans-serif;
     font-weight: 800;
-    font-size: 52px;
-    line-height: 1.12;
+    font-size: 44px;
+    line-height: 1.16;
+    letter-spacing: -0.015em;
     color: #FFFFFF;
     margin: 0;
-    max-width: 1560px;
+    max-width: 1440px;
   }
 
   .pv-respuesta {
@@ -140,14 +144,20 @@ scripts/story_render.py y tests/test_story_render.py.
     max-width: 1560px;
   }
 
-  /* ---- Franja de niveles: el color es SEMÁNTICO ---- */
+  /* ---- Franja de niveles: el color es SEMÁNTICO ----
+     Agrupada y centrada con ancho acotado: a todo el ancho de 1920px los
+     extremos quedaban contra los bordes y obligaban a un paneo visual entre
+     soporte y resistencia. */
   .pv-niveles {
-    margin: 38px 0 0;
-    padding: 24px 0;
+    margin: 34px auto 0;
+    padding: 22px 56px;
+    width: fit-content;
+    max-width: 1240px;
     border-top: 1px solid rgba(245, 243, 247, 0.10);
     border-bottom: 1px solid rgba(245, 243, 247, 0.10);
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: auto auto auto;
+    gap: 96px;
     align-items: center;
   }
 
@@ -244,17 +254,32 @@ scripts/story_render.py y tests/test_story_render.py.
     color: #3E91AF;
   }
 
-  /* ---- Footer INTERNO: sin handle, sin dominio, sin disclaimer de CFD ---- */
+  /* ---- Footer INTERNO: sin handle, sin dominio, sin disclaimer de CFD ----
+     El aviso de no-reenvío es una regla de compliance, no una nota al pie: en
+     gris #6E6A7A daba 3,68:1 de contraste (bajo el mínimo WCAG AA de 4,5:1) y
+     un ejecutivo apurado podía pasarlo por alto antes de sacar un pantallazo.
+     En ámbar #FFB020 sobre el fondo da 10,54:1 y se lee a distancia. */
   .pv-footer {
     margin-top: 20px;
     display: flex;
     justify-content: space-between;
+    align-items: center;
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
     font-size: 15px;
     letter-spacing: 0.05em;
     text-transform: uppercase;
     color: #6E6A7A;
+  }
+
+  .pv-aviso {
+    font-size: 19px;
+    letter-spacing: 0.07em;
+    color: #FFB020;
+    padding: 11px 26px;
+    border-radius: 8px;
+    background: rgba(255, 176, 32, 0.12);
+    border: 1px solid rgba(255, 176, 32, 0.55);
   }
 </style>
 </head>
@@ -298,7 +323,7 @@ scripts/story_render.py y tests/test_story_render.py.
     </div>
 
     <div class="pv-footer">
-      <span>Uso interno · No reenviar al cliente</span>
+      <span class="pv-aviso">⚠️ Uso interno · No reenviar al cliente</span>
       <span>Fuente: {{fuente}}</span>
     </div>
 

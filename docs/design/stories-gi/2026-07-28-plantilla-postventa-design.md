@@ -57,7 +57,11 @@ Tipografías y fondo heredados verbatim del resto de los snapshots: Syne 800, DM
 
 Reemplaza al footer público. Sale el handle, sale el dominio, sale el disclaimer de CFD (es texto para clientes; no aplica a una pieza interna y su presencia es justamente lo que la hace parecer publicable).
 
-Queda: `USO INTERNO · NO REENVIAR AL CLIENTE` a la izquierda y `Fuente: {{fuente}}` a la derecha, ambos en gris apagado `#6E6A7A`.
+Queda: `⚠️ USO INTERNO · NO REENVIAR AL CLIENTE` a la izquierda y `Fuente: {{fuente}}` a la derecha.
+
+**El aviso de no-reenvío no es una nota al pie, es una regla de compliance**, y se pinta como tal: ámbar `#FFB020` a 19px sobre fondo tenue con borde, **10,54:1** de contraste. La primera versión lo puso en el gris apagado `#6E6A7A` del resto del footer — **3,68:1**, por debajo del mínimo WCAG AA de 4,5:1 — lo que contradecía la propia mitigación del riesgo "se reenvía igual" (§10): un ejecutivo apurado podía no verlo antes de sacar un pantallazo. El dato de fuente sí queda en gris apagado: es metadato, no compliance.
+
+Con esto la pieza lleva **doble marca de interno**: el chip teal arriba y el aviso ámbar abajo.
 
 ## 6. Contrato de datos
 
