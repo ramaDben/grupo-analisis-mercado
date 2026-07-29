@@ -58,11 +58,15 @@ scripts/story_render.py y tests/test_story_render.py.
 
   * { box-sizing: border-box; }
 
+  /* El snapshot NO declara su tamaño en px: lo manda el viewport del motor
+     (--formato horizontal | vertical) y el CSS se adapta. Antes estaba fijo en
+     1920x1080 aqui Y en render_png, una duplicacion que al divergir cortaba el
+     render sin que nada lo detectara. */
   html, body {
     margin: 0;
     padding: 0;
-    width: 1920px;
-    height: 1080px;
+    width: 100vw;
+    height: 100vh;
     background: #0D0D1A;
     background-image:
       radial-gradient(90% 120% at 0% 20%, #10222B 0%, #0D0D1A 55%),
@@ -73,8 +77,8 @@ scripts/story_render.py y tests/test_story_render.py.
   }
 
   .story {
-    width: 1920px;
-    height: 1080px;
+    width: 100%;
+    height: 100%;
     padding: 52px 80px 36px;
     display: flex;
     flex-direction: column;
@@ -288,6 +292,61 @@ scripts/story_render.py y tests/test_story_render.py.
     border-radius: 8px;
     background: rgba(255, 176, 32, 0.12);
     border: 1px solid rgba(255, 176, 32, 0.55);
+  }
+
+  /* ================= FORMATO VERTICAL 9:16 (1080x1920) =================
+     Se activa solo cuando el lienzo es mas alto que ancho, es decir con
+     `--formato vertical`. Dos cambios de fondo: las columnas se apilan (no
+     caben lado a lado en 1080 px) y toda la tipografia sube, porque el mismo
+     texto a tamano de escritorio queda diminuto en un telefono.
+     El chip de INTERNO y el aviso ambar se conservan: son guardrails. */
+  @media (max-aspect-ratio: 1/1) {
+    .story { padding: 80px 64px 56px; }
+
+    .pv-chip { font-size: 26px; padding: 13px 30px; }
+    .pv-fecha { font-size: 26px; }
+
+    .pv-rotulo { font-size: 24px; margin: 56px 0 18px; }
+    .pv-consulta { font-size: 76px; line-height: 1.1; max-width: 100%; }
+    .pv-respuesta { font-size: 40px; margin-top: 26px; max-width: 100%; }
+
+    /* Los tres niveles siguen en fila -- caben en 1080 px con menos gap. */
+    .pv-niveles {
+      margin-top: 48px;
+      padding: 34px 24px;
+      width: 100%;
+      max-width: 100%;
+      gap: 24px;
+    }
+    .pv-nivel-rotulo { font-size: 21px; }
+    .pv-nivel-valor { font-size: 50px; }
+    .pv-sesgo { font-size: 28px; }
+
+    /* Las dos columnas se apilan: primero que responder, luego que NO.
+       `grid-template-rows: auto auto` + `align-content: start` es lo que evita
+       que el grid reparta el alto en dos mitades iguales: con 5 items arriba y
+       3 abajo, esa reparticion hacia que la primera lista desbordara su mitad
+       y el rotulo de la segunda quedara encima del ultimo item. */
+    .pv-cuerpo {
+      margin-top: 44px;
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto;
+      align-content: start;
+      gap: 40px;
+    }
+    .pv-col-titulo { font-size: 26px; padding-bottom: 14px; }
+    .pv-item { font-size: 30px; padding: 14px 0 14px 34px; line-height: 1.3; }
+
+    /* El footer tambien se apila: en 1080 px de ancho el badge de no-reenvio y
+       la linea de fuente no caben lado a lado sin pisarse. */
+    .pv-footer {
+      margin-top: 32px;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
+      font-size: 21px;
+    }
+    .pv-aviso { font-size: 26px; padding: 15px 30px; }
   }
 </style>
 </head>

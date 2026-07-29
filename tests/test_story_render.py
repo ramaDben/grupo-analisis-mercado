@@ -836,3 +836,110 @@ def test_postventa_render_dimensiones(tmp_path):
     assert salida.exists()
     assert salida.stat().st_size > 5 * 1024
     assert _png_size(salida) == (1920, 1080)
+
+
+# ---------------------------------------------------------------------------
+# Formato vertical 9:16 (Change fundacional). El formato viaja por el CLI /
+# argumento de `render_story`, NUNCA por el payload: el payload es contrato de
+# contenido y el formato es presentacion, asi el mismo payload rinde ambos.
+# El default es "horizontal", de modo que los 7 tests de dimensiones previos
+# siguen valiendo sin tocarse.
+# ---------------------------------------------------------------------------
+
+
+def test_formatos_mapa_cerrado():
+    assert story_render._FORMATOS["horizontal"] == (1920, 1080)
+    assert story_render._FORMATOS["vertical"] == (1080, 1920)
+
+
+def test_formato_desconocido_lanza_error_accionable():
+    with pytest.raises(story_render.StoryRenderError) as exc:
+        story_render.resolver_viewport("cuadrado")
+
+    mensaje = str(exc.value)
+    assert "cuadrado" in mensaje
+    assert "horizontal" in mensaje
+    assert "vertical" in mensaje
+
+
+def test_resolver_viewport_default_horizontal():
+    assert story_render.resolver_viewport() == (1920, 1080)
+    assert story_render.resolver_viewport("horizontal") == (1920, 1080)
+    assert story_render.resolver_viewport("vertical") == (1080, 1920)
+
+
+def test_build_html_es_independiente_del_formato():
+    """El formato es puramente CSS: el HTML resuelto no cambia."""
+    html = story_render.build_html(PAYLOAD_POSTVENTA, POSTVENTA_TEMPLATE)
+
+    assert "100vw" in html
+    assert "max-aspect-ratio" in html
+
+
+@pytest.mark.skipif(
+    not _chromium_disponible(), reason="Chromium de Playwright no instalado"
+)
+def test_postventa_render_vertical_dimensiones(tmp_path):
+    salida = tmp_path / "story_postventa_vertical.png"
+
+    resultado = story_render.render_story(
+        PAYLOAD_POSTVENTA, POSTVENTA_TEMPLATE, salida, formato="vertical"
+    )
+
+    assert resultado == salida
+    assert _png_size(salida) == (1080, 1920)
+
+
+@pytest.mark.skipif(
+    not _chromium_disponible(), reason="Chromium de Playwright no instalado"
+)
+def test_postventa_render_horizontal_sigue_siendo_default(tmp_path):
+    """Retrocompatibilidad: sin `formato`, el resultado no cambia."""
+    salida = tmp_path / "story_postventa_default.png"
+
+    story_render.render_story(PAYLOAD_POSTVENTA, POSTVENTA_TEMPLATE, salida)
+
+    assert _png_size(salida) == (1920, 1080)
+
+
+@pytest.mark.skipif(
+    not _chromium_disponible(), reason="Chromium de Playwright no instalado"
+)
+def test_postventa_vertical_apila_las_columnas(tmp_path):
+    """En vertical la columna de 'no prometer' cae DEBAJO de la de 'responder';
+    en horizontal quedan lado a lado. Se mide con el bounding box real."""
+    from playwright.sync_api import sync_playwright
+
+    html = story_render.build_html(PAYLOAD_POSTVENTA, POSTVENTA_TEMPLATE)
+    tmp_html = POSTVENTA_TEMPLATE.parent / "_test_vertical_probe.html"
+    tmp_html.write_text(html, encoding="utf-8")
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            try:
+                cajas = {}
+                for nombre, (w, h) in story_render._FORMATOS.items():
+                    page = browser.new_page(
+                        viewport={"width": w, "height": h}, device_scale_factor=1
+                    )
+                    page.goto(tmp_html.resolve().as_uri(), wait_until="networkidle")
+                    cajas[nombre] = (
+                        page.locator(".pv-col--responder").bounding_box(),
+                        page.locator(".pv-col--prometer").bounding_box(),
+                    )
+                    page.close()
+            finally:
+                browser.close()
+    finally:
+        tmp_html.unlink(missing_ok=True)
+
+    resp_h, prom_h = cajas["horizontal"]
+    resp_v, prom_v = cajas["vertical"]
+
+    # Horizontal: lado a lado (misma altura, distinta x)
+    assert prom_h["x"] > resp_h["x"]
+    assert abs(prom_h["y"] - resp_h["y"]) < 2
+
+    # Vertical: apiladas (misma x, distinta altura)
+    assert prom_v["y"] > resp_v["y"]
+    assert abs(prom_v["x"] - resp_v["x"]) < 2

@@ -47,6 +47,33 @@ _MSG_CHROMIUM_AUSENTE = (
     "  uv sync --extra stories && python -m playwright install chromium"
 )
 
+# Formatos de lienzo soportados. El formato es **presentación**, así que viaja
+# por el CLI/argumento y NUNCA por el payload -- el payload es contrato de
+# contenido, y esa separación es lo que permite que el mismo payload rinda
+# ambos formatos sin duplicarse. El snapshot no declara su tamaño: lo manda el
+# viewport y el CSS se adapta con `@media (max-aspect-ratio: 1/1)`.
+_FORMATOS: dict[str, tuple[int, int]] = {
+    "horizontal": (1920, 1080),
+    "vertical": (1080, 1920),
+}
+_FORMATO_DEFECTO = "horizontal"
+
+
+def resolver_viewport(formato: str = _FORMATO_DEFECTO) -> tuple[int, int]:
+    """Traduce el nombre de formato a `(ancho, alto)` del viewport.
+
+    Un formato desconocido lanza `StoryRenderError` nombrando los válidos --
+    mismo contrato de error accionable que el resto del módulo, nunca un
+    `KeyError` crudo.
+    """
+    try:
+        return _FORMATOS[formato]
+    except KeyError as exc:
+        validos = ", ".join(sorted(_FORMATOS))
+        raise StoryRenderError(
+            f"Formato de Story desconocido: {formato!r}. Válidos: {validos}."
+        ) from exc
+
 
 class StoryRenderError(RuntimeError):
     """Error accionable del motor de render de Stories (nunca traceback críptico)."""
@@ -294,8 +321,17 @@ def build_html(payload: dict[str, Any], template_path: Path) -> str:
     return html
 
 
-def render_png(html: str, output_path: Path, *, template_dir: Path) -> Path:
-    """Renderiza `html` a un PNG 1920x1080 con Playwright headless (AC1, D3).
+def render_png(
+    html: str,
+    output_path: Path,
+    *,
+    template_dir: Path,
+    viewport: tuple[int, int] = _FORMATOS[_FORMATO_DEFECTO],
+) -> Path:
+    """Renderiza `html` a un PNG del tamaño de `viewport` con Playwright headless.
+
+    `viewport` es `(ancho, alto)` y por defecto vale el formato horizontal
+    (1920x1080), así que las llamadas existentes no cambian de comportamiento.
 
     El HTML resuelto se escribe a un temporal dentro de `template_dir` (para que
     los assets relativos del snapshot -- fuentes locales, CSS -- resuelvan) y se
@@ -331,8 +367,9 @@ def render_png(html: str, output_path: Path, *, template_dir: Path) -> Path:
                         f"{_MSG_CHROMIUM_AUSENTE}\n(detalle: {exc})"
                     ) from exc
                 try:
+                    ancho, alto = viewport
                     page = browser.new_page(
-                        viewport={"width": 1920, "height": 1080},
+                        viewport={"width": ancho, "height": alto},
                         device_scale_factor=1,
                     )
                     page.goto(tmp_path.resolve().as_uri(), wait_until="networkidle")
@@ -350,13 +387,26 @@ def render_png(html: str, output_path: Path, *, template_dir: Path) -> Path:
     return output_path
 
 
-def render_story(payload: dict[str, Any], template_path: Path, output_path: Path) -> Path:
-    """Orquestador público: `build_html` (puro) + `render_png` (Playwright)."""
+def render_story(
+    payload: dict[str, Any],
+    template_path: Path,
+    output_path: Path,
+    formato: str = _FORMATO_DEFECTO,
+) -> Path:
+    """Orquestador público: `build_html` (puro) + `render_png` (Playwright).
+
+    `formato` selecciona el lienzo (`horizontal` | `vertical`); el HTML que
+    produce `build_html` es el mismo en ambos casos -- la diferencia es
+    puramente CSS, vía `@media (max-aspect-ratio: 1/1)` en el snapshot.
+    """
     template_path = Path(template_path)
     output_path = Path(output_path)
 
+    viewport = resolver_viewport(formato)
     html = build_html(payload, template_path)
-    return render_png(html, output_path, template_dir=template_path.parent)
+    return render_png(
+        html, output_path, template_dir=template_path.parent, viewport=viewport
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -364,6 +414,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Render de Stories GI (#109)")
     parser.add_argument("--template", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
+    parser.add_argument(
+        "--formato",
+        default=_FORMATO_DEFECTO,
+        choices=sorted(_FORMATOS),
+        help="Lienzo de salida: horizontal (1920x1080) o vertical (1080x1920).",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -371,7 +427,7 @@ def main(argv: list[str] | None = None) -> int:
         # de la consola) -- leer los bytes crudos y decodificar explícito evita
         # mojibake en tildes/ñ/· del payload (ej. "técnico" -> "tÃ©cnico").
         payload = json.loads(sys.stdin.buffer.read().decode("utf-8"))
-        ruta = render_story(payload, args.template, args.out)
+        ruta = render_story(payload, args.template, args.out, formato=args.formato)
     except StoryRenderError as exc:
         print(str(exc), file=sys.stderr)
         return 1
