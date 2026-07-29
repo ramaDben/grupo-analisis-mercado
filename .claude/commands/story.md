@@ -4,7 +4,7 @@ Genera una Story de marca GI (imagen 1920×1080, formato horizontal 16:9) combin
 $ARGUMENTS — formato esperado: `[tipo] [ejecutivo?]`
 
 - `[tipo]`: **soportados en este Change: `alerta`, `quote`, `breaking`, `encuesta`, `edu`,
-  `flash`**. Las demás plantillas del canvas (Market Update, Indicador Macro, Trading Idea,
+  `flash`, `postventa`**. Las demás plantillas del canvas (Market Update, Indicador Macro, Trading Idea,
   Calendario, Semanal, Carrusel) llegan con los issues #111-#115 — todavía no existen como `[tipo]`
   de este comando.
 - `[ejecutivo]` (opcional): `/story` **no soporta el flag ejecutivo** (ver PASO 0).
@@ -21,26 +21,31 @@ ejemplo comparativo + lista de bullets de aplicación), sin datos de mercado ni 
 evento — ver bloque "Ruta `edu`" más abajo. `/story flash` **sí** consume datos reales del motor
 (cierre multi-activo: tabla de N activos con último valor y variación del día), recolectados vía
 `get_asset_levels` × N activos con fallback manual, pero **sin gráfico embebido** (eso es Fase D) y
-sin búsqueda editorial de evento — ver bloque "Ruta `flash`" más abajo.
+sin búsqueda editorial de evento — ver bloque "Ruta `flash`" más abajo. `/story postventa` es la
+única pieza **interna** (no publicable): guion operativo del parte de post-venta, con chip de
+INTERNO no suprimible y footer sin marca pública; reusa los datos de `/postventa` si ya se corrió,
+o los toma del motor en frío — ver bloque "Ruta `postventa`" más abajo.
 
 ---
 
 ## PASO 0 — Validar `[tipo]` y el flag `ejecutivo`
 
-1. Si `$ARGUMENTS` viene vacío o `[tipo]` no es `alerta`, `quote`, `breaking`, `encuesta`, `edu`
-   ni `flash` (CB-1):
+1. Si `$ARGUMENTS` viene vacío o `[tipo]` no es `alerta`, `quote`, `breaking`, `encuesta`, `edu`,
+   `flash` ni `postventa` (CB-1):
    ```
-   📖 Tipos de Story disponibles hoy: alerta, quote, breaking, encuesta, edu, flash
+   📖 Tipos de Story disponibles hoy: alerta, quote, breaking, encuesta, edu, flash, postventa
    (Las demás plantillas del canvas — Market Update, Indicador Macro, Trading Idea,
    Calendario, Semanal, Carrusel — llegan con los issues #111-#115.)
 
-   ¿Generamos la Story de tipo "alerta", "quote", "breaking", "encuesta", "edu" o "flash"?
+   ¿Generamos la Story de tipo "alerta", "quote", "breaking", "encuesta", "edu", "flash"
+   o "postventa"?
    ```
-   No continuar hasta que el director confirme `alerta`, `quote`, `breaking`, `encuesta`, `edu` o
-   `flash`. Nunca asumir un tipo por defecto. Si el tipo confirmado es `quote`, saltar directamente
+   No continuar hasta que el director confirme `alerta`, `quote`, `breaking`, `encuesta`, `edu`,
+   `flash` o `postventa`. Nunca asumir un tipo por defecto. Si el tipo confirmado es `quote`, saltar directamente
    al bloque "Ruta `quote`"; si es `breaking`, saltar al bloque "Ruta `breaking`"; si es `encuesta`,
    saltar al bloque "Ruta `encuesta`"; si es `edu`, saltar al bloque "Ruta `edu`"; si es `flash`,
-   saltar al bloque "Ruta `flash`" (los PASO 1-5 de abajo son exclusivos de `alerta`).
+   saltar al bloque "Ruta `flash`"; si es `postventa`, saltar al bloque "Ruta `postventa`" (los
+   PASO 1-5 de abajo son exclusivos de `alerta`).
 
 2. Si el argumento `ejecutivo` está presente (CB-6/R7):
    ```
@@ -476,6 +481,89 @@ PASO 1-4 de `alerta`; el preview/render final reusa el mismo patrón de PASO 6-7
      --template templates/stories/flash.html \
      --out "[ruta devuelta por ruta_story.ps1]" <<'STORY_PAYLOAD'
    { ...payload story_flash del paso 5... }
+   STORY_PAYLOAD
+   ```
+   Mismo manejo de éxito/error que PASO 7.3-7.4.
+
+---
+
+## Ruta `postventa` — parte interno (atajo desde `/postventa`)
+
+`postventa` es la Story del parte de post-venta: pieza **interna**, no publicable. El chip
+`🔒 Interno · Post-venta` está escrito en el snapshot (no es un token, ningún payload puede
+suprimirlo) y el footer no lleva handle, dominio ni disclaimer de CFD. Reemplaza los PASO 1-4 de
+`alerta`; el preview/render final reusa el patrón de PASO 6-7 adaptado.
+
+1. **Atajo opcional**: abrir preguntando
+   ```
+   ¿Ya corriste /postventa hoy? Si sí, reuso la consulta, los niveles y los puntos
+   de ese parte. Si no, dime el activo y los recolecto del motor.
+   ```
+   - **Con parte previo** → reusar consulta, respuesta, niveles y puntos ya redactados. **No**
+     volver a llamar a `get_asset_levels`.
+   - **En frío** → pedir el activo (normalizado contra `config/activos.json`, mismo criterio que
+     `/chart` PASO 1) y llamar
+     `mcp__market-data__get_asset_levels({"ticker": "[TICKER_MT5]", "timeframe": "H1"})`, tomando
+     el precio y el soporte/resistencia más próximos. Si retorna `{"error": ...}`, pedirlos
+     manualmente (mismo patrón que `apertura.md` PASO 4A).
+
+   El atajo no bloquea ni exige corrida previa.
+
+2. **Límites editoriales** (guía de redacción de este comando — el motor **no** valida longitud,
+   no trunca ni aborta): `fecha_hora` ≤ 28 · `consulta` ≤ 60 · `respuesta` ≤ 90 ·
+   `activo_nombre` ≤ 14 · `soporte`/`precio`/`resistencia` ≤ 12 cada uno · `sesgo` ≤ 10 · cada
+   `respuestas[].texto` ≤ 62 (4 a 6 entradas) · cada `no_promesas[].texto` ≤ 62 (2 a 3 entradas) ·
+   `fuente` ≤ 30. Si algún campo excede el límite, ajusta la redacción antes del preview.
+
+3. **Payload `story_postventa`**: `sesgo` es exactamente una de `Alcista` / `Bajista` / `Lateral`
+   — el motor deriva de ahí `sesgo_slug`, que el snapshot usa como clase CSS de color y flecha
+   (▲ verde / ▼ rojo / → gris). Los precios van formateados con los `digits` de
+   `config/activos.json`. Las dos listas son arrays de objetos con la clave `texto`; si una llega
+   vacía (`[]`), su columna colapsa y el rótulo persiste.
+   ```json
+   {
+     "plantilla": "postventa",
+     "fecha_hora": "[D MES YYYY · HH:MM]",
+     "consulta": "[consulta ≤60 car.]",
+     "respuesta": "[respuesta ≤90 car.]",
+     "activo_nombre": "[nombre corto ≤14 car.]",
+     "soporte": "[precio con digits]",
+     "precio": "[precio con digits]",
+     "resistencia": "[precio con digits]",
+     "sesgo": "Alcista|Bajista|Lateral",
+     "respuestas": [ { "texto": "[≤62 car.]" } ],
+     "no_promesas": [ { "texto": "[≤62 car.]" } ],
+     "fuente": "MT5 · GRUPO INTELIGENCIA"
+   }
+   ```
+
+4. **Preview y aprobación** (mismo criterio que PASO 6, ANTES de renderizar o guardar nada):
+   ```
+   📖 *PREVIEW — Story Post-Venta (INTERNA)*
+   ━━━━━━━━━━━━━━━━━━━
+   Consulta: [consulta]
+   Respuesta: [respuesta]
+   Niveles: S [soporte] · [activo_nombre] [precio] ([sesgo]) · R [resistencia]
+   Qué responder: [n] puntos
+   Qué NO prometer: [n] puntos
+   ━━━━━━━━━━━━━━━━━━━
+   ⚠️ Pieza interna: el chip y el footer la marcan como no reenviable al cliente.
+   ¿Apruebas esta Story? ¿Generar y guardar el PNG final?
+   ```
+   Si el director **no** aprueba: no renderizar ni guardar nada en `data/stories/`. Terminar el
+   comando ahí.
+
+5. **Render y guardado** (solo tras aprobar, mismo patrón que PASO 7). A diferencia de `edu`,
+   esta pieza **sí** lleva activo protagonista:
+   ```powershell
+   scripts\ruta_story.ps1 -Fecha "[YYYY-MM-DD]" -Activo "[TICKER_MT5]" -Plantilla "postventa" -Hora "[HH-mm]"
+   ```
+   La `[Hora]` sale del reloj de Chile (regla canónica).
+   ```bash
+   uv run python scripts/story_render.py \
+     --template templates/stories/postventa.html \
+     --out "[ruta devuelta por ruta_story.ps1]" <<'STORY_PAYLOAD'
+   { ...payload story_postventa del paso 3... }
    STORY_PAYLOAD
    ```
    Mismo manejo de éxito/error que PASO 7.3-7.4.
