@@ -120,15 +120,20 @@ scripts/story_render.py y tests/test_story_render.py.
     margin: 40px 0 14px;
   }
 
-  /* Syne 800 es el typeface de marca (las 7 plantillas lo usan) y es ancho por
-     diseño -- NO se estira. A 52px un título largo dominaba la pieza; 44px con
-     tracking ligeramente negativo lo compacta sin salir de la marca. */
+  /* ÚNICA plantilla del catálogo cuyo título NO usa Syne 800.
+     Syne es ancho por diseño (no está estirado: cero scaleX/font-stretch), y a
+     tamaño de titular esa anchura se lee como grito en una pieza que debe
+     informar rápido. Como ésta es la única pieza INTERNA -- no representa a GI
+     ante ningún cliente -- la legibilidad operativa pesa más que la
+     consistencia de marca. Se usa Space Grotesk 600, que ya es la fuente
+     dominante del snapshot (chip, fecha, rótulos, precios): el título pasa a
+     hablar el mismo idioma que los datos. Sigue dentro del kit GI. */
   .pv-consulta {
-    font-family: "Syne", sans-serif;
-    font-weight: 800;
-    font-size: 44px;
-    line-height: 1.16;
-    letter-spacing: -0.015em;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 50px;
+    line-height: 1.14;
+    letter-spacing: -0.01em;
     color: #FFFFFF;
     margin: 0;
     max-width: 1440px;

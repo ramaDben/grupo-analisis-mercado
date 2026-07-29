@@ -51,7 +51,9 @@ Se reutiliza el patrón ya resuelto en `templates/stories/resumen.html`:
 
 Regla: **ningún verde decorativo**. El color aparece solo donde significa algo.
 
-Tipografías y fondo heredados verbatim del resto de los snapshots: Syne 800, DM Sans 400/700, Space Grotesk 600; fondo `#0D0D1A`, texto `#F5F3F7`.
+Fondo y familia tipográfica heredados del resto de los snapshots: DM Sans 400/700, Space Grotesk 600; fondo `#0D0D1A`, texto `#F5F3F7`.
+
+**Excepción deliberada — el título no usa Syne 800.** Es la única plantilla del catálogo que se aparta en esto. Syne es ancho por diseño (no hay estiramiento: cero `scaleX`, cero `font-stretch`), y a tamaño de titular esa anchura se lee como grito en una pieza cuyo trabajo es que un ejecutivo lea rápido bajo presión. Como ésta es la **única pieza interna** — no representa a GI ante ningún cliente — la legibilidad operativa pesa más que la consistencia de marca. Se usa **Space Grotesk 600**, que además ya es la fuente dominante del snapshot (chip, fecha, rótulos y precios): el título pasa a hablar el mismo idioma que los datos, en vez de ser el único elemento en otra familia. Sigue dentro del kit GI, sin sumar archivos ni licencias.
 
 ## 5. Footer interno
 
