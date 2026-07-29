@@ -1,0 +1,307 @@
+<!--
+Snapshot de marca "Post-Venta" (Stories GI · Fase C — plantilla interna). Guion operativo del
+parte de post-venta: chip de INTERNO + fecha, la consulta del día con su respuesta, una franja
+de niveles con color SEMÁNTICO (soporte verde / resistencia roja / sesgo con flecha) y DOS
+listas independientes en dos columnas — qué responder y qué NO prometer.
+
+DIFERENCIA CLAVE con el resto de los snapshots: esta pieza es INTERNA, no publicable. Por eso
+(1) el chip "Interno · Post-venta" va LITERAL en el HTML, nunca como token — ningún payload
+puede suprimirlo — y (2) el footer NO lleva @grupointeligencia, ni grupointeligencia.com, ni el
+disclaimer de CFD (ese texto es para clientes y haría parecer publicable la pieza); en su lugar
+va "Uso interno · No reenviar al cliente".
+
+El verde #00DC82 y el rojo #E84040 son SEMÁNTICOS (soporte/resistencia, alcista/bajista), nunca
+decorativos; el acento estructural es teal #3E91AF. Andamiaje de marca (fuentes, reset, fondo)
+heredado verbatim de `templates/stories/edu.html`; patrón de color y flechas por CSS ::before
+tomado de `templates/stories/resumen.html`.
+
+Las dos listas usan el mecanismo loop del motor (marcadores reales en los contenedores más
+abajo; NO escribir el literal del marcador en este comentario, porque `resolver_loops` lo
+tomaría como marca de apertura). Los rótulos de columna viven FUERA de las marcas del loop, para
+que persistan con lista vacía. NO cambiar nombres de tokens sin actualizar
+scripts/story_render.py y tests/test_story_render.py.
+-->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Post-Venta — Story GI</title>
+<style>
+  @font-face {
+    font-family: "Syne";
+    src: url("fonts/syne-800.woff2") format("woff2");
+    font-weight: 800;
+    font-style: normal;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "DM Sans";
+    src: url("fonts/dm-sans-400.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "DM Sans";
+    src: url("fonts/dm-sans-700.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "Space Grotesk";
+    src: url("fonts/space-grotesk-600.woff2") format("woff2");
+    font-weight: 600;
+    font-style: normal;
+    font-display: block;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 1920px;
+    height: 1080px;
+    background: #0D0D1A;
+    background-image:
+      radial-gradient(90% 120% at 0% 20%, #10222B 0%, #0D0D1A 55%),
+      linear-gradient(180deg, #0D0D1A 0%, #0D0D1A 60%, #10222B 100%);
+    color: #F5F3F7;
+    font-family: "DM Sans", sans-serif;
+    overflow: hidden;
+  }
+
+  .story {
+    width: 1920px;
+    height: 1080px;
+    padding: 52px 80px 36px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---- Encabezado ---- */
+  .pv-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .pv-chip {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 19px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 9px 22px;
+    border-radius: 999px;
+    background: rgba(62, 145, 175, 0.14);
+    border: 1px solid rgba(62, 145, 175, 0.5);
+    color: #3E91AF;
+  }
+
+  .pv-fecha {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 20px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: #A9A5B4;
+  }
+
+  /* ---- Consulta del día ---- */
+  .pv-rotulo {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 18px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: #3E91AF;
+    margin: 40px 0 14px;
+  }
+
+  .pv-consulta {
+    font-family: "Syne", sans-serif;
+    font-weight: 800;
+    font-size: 52px;
+    line-height: 1.12;
+    color: #FFFFFF;
+    margin: 0;
+    max-width: 1560px;
+  }
+
+  .pv-respuesta {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 28px;
+    line-height: 1.4;
+    color: #C9C5D4;
+    margin: 18px 0 0;
+    max-width: 1560px;
+  }
+
+  /* ---- Franja de niveles: el color es SEMÁNTICO ---- */
+  .pv-niveles {
+    margin: 38px 0 0;
+    padding: 24px 0;
+    border-top: 1px solid rgba(245, 243, 247, 0.10);
+    border-bottom: 1px solid rgba(245, 243, 247, 0.10);
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items: center;
+  }
+
+  .pv-nivel-rotulo {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #A9A5B4;
+    margin-bottom: 6px;
+  }
+
+  .pv-nivel-valor {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 40px;
+  }
+
+  .pv-nivel--soporte .pv-nivel-valor { color: #00DC82; }
+
+  .pv-nivel--resistencia { text-align: right; }
+  .pv-nivel--resistencia .pv-nivel-valor { color: #E84040; }
+
+  .pv-nivel--centro { text-align: center; }
+  .pv-nivel--centro .pv-nivel-valor { color: #F5F3F7; }
+
+  .pv-sesgo {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 21px;
+    margin-top: 4px;
+  }
+
+  .pv-sesgo--alcista { color: #00DC82; }
+  .pv-sesgo--alcista::before { content: "\25B2\00A0"; }
+
+  .pv-sesgo--bajista { color: #E84040; }
+  .pv-sesgo--bajista::before { content: "\25BC\00A0"; }
+
+  .pv-sesgo--lateral { color: #A9A5B4; }
+  .pv-sesgo--lateral::before { content: "\2192\00A0"; }
+
+  /* ---- Dos columnas: responder / no prometer ---- */
+  .pv-cuerpo {
+    flex: 1;
+    min-height: 0;
+    margin-top: 34px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 72px;
+  }
+
+  .pv-col {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .pv-col-titulo {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 18px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding-bottom: 12px;
+    margin-bottom: 8px;
+  }
+
+  .pv-col--responder .pv-col-titulo {
+    color: #00DC82;
+    border-bottom: 2px solid rgba(0, 220, 130, 0.45);
+  }
+
+  .pv-col--prometer .pv-col-titulo {
+    color: #E84040;
+    border-bottom: 2px solid rgba(232, 64, 64, 0.45);
+  }
+
+  .pv-item {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 23px;
+    line-height: 1.35;
+    color: #F5F3F7;
+    padding: 15px 0 15px 26px;
+    position: relative;
+  }
+
+  .pv-item::before {
+    content: "\25B8";
+    position: absolute;
+    left: 0;
+    color: #3E91AF;
+  }
+
+  /* ---- Footer INTERNO: sin handle, sin dominio, sin disclaimer de CFD ---- */
+  .pv-footer {
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #6E6A7A;
+  }
+</style>
+</head>
+<body class="postventa">
+  <div class="story">
+
+    <div class="pv-head">
+      <span class="pv-chip">🔒 Interno · Post-venta</span>
+      <span class="pv-fecha">{{fecha_hora}}</span>
+    </div>
+
+    <div class="pv-rotulo">La consulta de hoy</div>
+    <h1 class="pv-consulta">{{consulta}}</h1>
+    <p class="pv-respuesta">{{respuesta}}</p>
+
+    <div class="pv-niveles">
+      <div class="pv-nivel pv-nivel--soporte">
+        <div class="pv-nivel-rotulo">Soporte</div>
+        <div class="pv-nivel-valor">{{soporte}}</div>
+      </div>
+      <div class="pv-nivel pv-nivel--centro">
+        <div class="pv-nivel-rotulo">{{activo_nombre}}</div>
+        <div class="pv-nivel-valor">{{precio}}</div>
+        <div class="pv-sesgo pv-sesgo--{{sesgo_slug}}">{{sesgo}}</div>
+      </div>
+      <div class="pv-nivel pv-nivel--resistencia">
+        <div class="pv-nivel-rotulo">Resistencia</div>
+        <div class="pv-nivel-valor">{{resistencia}}</div>
+      </div>
+    </div>
+
+    <div class="pv-cuerpo">
+      <div class="pv-col pv-col--responder">
+        <div class="pv-col-titulo">✅ Qué responder</div>
+        <!-- FOR:respuestas --><div class="pv-item">{{texto}}</div><!-- ENDFOR:respuestas -->
+      </div>
+      <div class="pv-col pv-col--prometer">
+        <div class="pv-col-titulo">⚠️ Qué NO prometer</div>
+        <!-- FOR:no_promesas --><div class="pv-item">{{texto}}</div><!-- ENDFOR:no_promesas -->
+      </div>
+    </div>
+
+    <div class="pv-footer">
+      <span>Uso interno · No reenviar al cliente</span>
+      <span>Fuente: {{fuente}}</span>
+    </div>
+
+  </div>
+</body>
+</html>
