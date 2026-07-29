@@ -101,6 +101,18 @@ scripts\ruta_mensaje.ps1 -Fecha "[FECHA]" -Activo "[TICKER_MT5]" -Tipo "postvent
 ```
 Escribir el parte en la ruta devuelta y mostrar el texto listo para copiar.
 
+## PASO 9 — Story de marca (opcional)
+
+Tras guardar el parte, ofrecer la versión imagen:
+```
+🖼️ ¿Genero también la Story de marca del parte? (pieza interna 1920×1080)
+```
+Si acepta, ejecutar el flujo de `/story postventa` reusando lo que ya está en memoria: la
+consulta y su respuesta, los niveles del activo protagonista y los puntos de los bloques 2 y 7.
+**No** volver a llamar a `get_asset_levels`.
+
+Si responde que no, terminar sin generar imagen.
+
 ## REGLAS
 
 - Una corrida al día es lo normal (al cierre de la jornada o tras el evento principal); sin límite duro.

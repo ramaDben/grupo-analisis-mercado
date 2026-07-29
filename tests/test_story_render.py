@@ -31,6 +31,7 @@ BREAKING_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "breaking.html"
 ENCUESTA_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "encuesta.html"
 EDU_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "edu.html"
 FLASH_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "flash.html"
+POSTVENTA_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "postventa.html"
 
 # Fixture inline de `resolver_loops` (R4/AC4-AC6): recibe `html: str`, sin archivo.
 FIXTURE_FOR_HTML = "<!-- FOR:filas -->{{nombre}}<!-- ENDFOR:filas -->"
@@ -673,6 +674,163 @@ def test_flash_render_dimensiones(tmp_path):
     salida = tmp_path / "story_flash_test.png"
 
     resultado = story_render.render_story(PAYLOAD_FLASH, FLASH_TEMPLATE, salida)
+
+    assert resultado == salida
+    assert salida.exists()
+    assert salida.stat().st_size > 5 * 1024
+    assert _png_size(salida) == (1920, 1080)
+
+
+# ---------------------------------------------------------------------------
+# snapshot templates/stories/postventa.html -- pieza INTERNA del parte de
+# post-venta: chip no suprimible, color semantico en los niveles y DOS loops
+# independientes (respuestas / no_promesas).
+#
+# Los asserts de ausencia ("no debe aparecer X") se hacen contra `_body()`, no
+# contra el HTML completo: el comentario de cabecera del snapshot documenta lo
+# que el footer NO lleva (y por tanto nombra esas cadenas), y el <style> define
+# las tres clases de sesgo aunque solo una se aplique en el cuerpo.
+# ---------------------------------------------------------------------------
+
+PAYLOAD_POSTVENTA: dict = {
+    "plantilla": "postventa",
+    "fecha_hora": "28 JUL 2026 · 19:23",
+    "consulta": "¿Me afecta que no bajen la tasa?",
+    "respuesta": "No, ya estaba en el precio. Mañana manda la Fed.",
+    "activo_nombre": "USD/CLP",
+    "soporte": "$923.90",
+    "precio": "$930.50",
+    "resistencia": "$930.80",
+    "sesgo": "Bajista",
+    "respuestas": [
+        {"texto": "¿Cierro? → Depende del plazo, no del dato de hoy"},
+        {"texto": "¿Por qué no bajan? → Inflación 4,3% contra la meta de 3%"},
+        {"texto": "Con la posición en contra: explica el nivel"},
+    ],
+    "no_promesas": [
+        {"texto": "Que el dólar siga bajando: mañana define la Fed"},
+        {"texto": "Que el Banco Central baje pronto"},
+    ],
+    "fuente": "MT5 · GRUPO INTELIGENCIA",
+}
+
+
+def _body(html: str) -> str:
+    """Devuelve solo el <body> del HTML resuelto (sin comentario ni <style>)."""
+    return html[html.index("<body") : html.index("</body>")]
+
+
+def test_postventa_no_placeholders():
+    html = story_render.build_html(PAYLOAD_POSTVENTA, POSTVENTA_TEMPLATE)
+
+    assert PAYLOAD_POSTVENTA["consulta"] in html
+    assert PAYLOAD_POSTVENTA["respuesta"] in html
+    assert PAYLOAD_POSTVENTA["soporte"] in html
+    assert PAYLOAD_POSTVENTA["precio"] in html
+    assert PAYLOAD_POSTVENTA["resistencia"] in html
+    for item in PAYLOAD_POSTVENTA["respuestas"]:
+        assert item["texto"] in html
+    for item in PAYLOAD_POSTVENTA["no_promesas"]:
+        assert item["texto"] in html
+    assert "{{" not in html
+    assert "}}" not in html
+
+
+def test_postventa_chip_interno_no_suprimible():
+    """El chip de INTERNO es literal del snapshot: ningun payload lo quita.
+
+    Los asserts comparan contra el texto tal como esta escrito en el HTML
+    fuente ("Interno", "Post-venta"). Las mayusculas que se ven en el PNG las
+    aplica el CSS con `text-transform: uppercase`, que no altera el HTML.
+    """
+    payload = {**PAYLOAD_POSTVENTA, "kicker": "", "chip": ""}
+
+    cuerpo = _body(story_render.build_html(payload, POSTVENTA_TEMPLATE))
+
+    assert "Interno" in cuerpo
+    assert "Post-venta" in cuerpo
+
+
+def test_postventa_footer_sin_marca_publica():
+    cuerpo = _body(story_render.build_html(PAYLOAD_POSTVENTA, POSTVENTA_TEMPLATE))
+
+    assert "@grupointeligencia" not in cuerpo
+    assert "grupointeligencia.com" not in cuerpo
+    assert "apalancamiento" not in cuerpo
+    assert "No reenviar" in cuerpo
+
+
+def test_postventa_sesgo_slug_bajista():
+    cuerpo = _body(story_render.build_html(PAYLOAD_POSTVENTA, POSTVENTA_TEMPLATE))
+
+    assert "pv-sesgo--bajista" in cuerpo
+    assert "pv-sesgo--alcista" not in cuerpo
+
+
+def test_postventa_sesgo_slug_alcista():
+    payload = {**PAYLOAD_POSTVENTA, "sesgo": "Alcista"}
+
+    cuerpo = _body(story_render.build_html(payload, POSTVENTA_TEMPLATE))
+
+    assert "pv-sesgo--alcista" in cuerpo
+    assert "pv-sesgo--bajista" not in cuerpo
+
+
+def test_postventa_sesgo_slug_lateral():
+    payload = {**PAYLOAD_POSTVENTA, "sesgo": "Lateral"}
+
+    cuerpo = _body(story_render.build_html(payload, POSTVENTA_TEMPLATE))
+
+    assert "pv-sesgo--lateral" in cuerpo
+
+
+def test_postventa_listas_vacias_conservan_rotulos():
+    payload = {**PAYLOAD_POSTVENTA, "respuestas": [], "no_promesas": []}
+
+    html = story_render.build_html(payload, POSTVENTA_TEMPLATE)
+
+    assert "FOR:respuestas" not in html
+    assert "ENDFOR:respuestas" not in html
+    assert "FOR:no_promesas" not in html
+    assert "ENDFOR:no_promesas" not in html
+    # Texto tal como esta en el HTML: el uppercase lo aplica el CSS.
+    assert "Qué responder" in html
+    assert "Qué NO prometer" in html
+    assert "{{texto}}" not in html
+    assert "{{" not in html
+
+
+def test_postventa_listas_independientes():
+    """Una lista con N y la otra con 1 no se contaminan entre si."""
+    payload = {
+        **PAYLOAD_POSTVENTA,
+        "no_promesas": [{"texto": "Único límite del día"}],
+    }
+
+    html = story_render.build_html(payload, POSTVENTA_TEMPLATE)
+
+    assert html.count("Único límite del día") == 1
+    for item in PAYLOAD_POSTVENTA["respuestas"]:
+        assert html.count(item["texto"]) == 1
+    assert "{{texto}}" not in html
+
+
+def test_postventa_orden_de_respuestas():
+    html = story_render.build_html(PAYLOAD_POSTVENTA, POSTVENTA_TEMPLATE)
+
+    textos = [item["texto"] for item in PAYLOAD_POSTVENTA["respuestas"]]
+    assert html.index(textos[0]) < html.index(textos[1]) < html.index(textos[2])
+
+
+@pytest.mark.skipif(
+    not _chromium_disponible(), reason="Chromium de Playwright no instalado"
+)
+def test_postventa_render_dimensiones(tmp_path):
+    salida = tmp_path / "story_postventa_test.png"
+
+    resultado = story_render.render_story(
+        PAYLOAD_POSTVENTA, POSTVENTA_TEMPLATE, salida
+    )
 
     assert resultado == salida
     assert salida.exists()
