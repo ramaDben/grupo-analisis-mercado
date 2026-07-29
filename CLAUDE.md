@@ -277,9 +277,9 @@ del motor en frío. Único renderer: `scripts/story_render.py`
 celular). El formato viaja por el CLI y **nunca** por el payload — el payload es contrato de
 contenido y el formato es presentación, así el **mismo payload rinde ambos**. Cada snapshot es un
 único archivo que se adapta con `@media (max-aspect-ratio: 1/1)`, en vez de tener un archivo por
-formato (evita que la versión vertical se desfase de la horizontal). Hoy solo
-`templates/stories/postventa.html` está migrado a responsive; las otras 6 siguen en horizontal —
-una plantilla por Change, mismo criterio que las Fases B y C. Snapshots de marca:
+formato (evita que la versión vertical se desfase de la horizontal). Migradas a responsive:
+`templates/stories/postventa.html` y `templates/stories/alerta.html`; las otras 5 siguen solo en
+horizontal — una plantilla por Change, mismo criterio que las Fases B y C. Snapshots de marca:
 `templates/stories/alerta.html`, `templates/stories/quote.html`, `templates/stories/breaking.html`,
 `templates/stories/encuesta.html`, `templates/stories/edu.html`, `templates/stories/flash.html` y
 `templates/stories/postventa.html`. Las demás plantillas del canvas (Market Update, Indicador

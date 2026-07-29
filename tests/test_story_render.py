@@ -943,3 +943,87 @@ def test_postventa_vertical_apila_las_columnas(tmp_path):
     # Vertical: apiladas (misma x, distinta altura)
     assert prom_v["y"] > resp_v["y"]
     assert abs(prom_v["x"] - resp_v["x"]) < 2
+
+
+# ---------------------------------------------------------------------------
+# alerta.html en formato vertical (Change 1 de la serie movil). Mismo patron
+# que postventa: el snapshot deja de declarar su tamano y adapta el layout con
+# `@media (max-aspect-ratio: 1/1)`. Aqui el bloque que se apila es `.contenido`
+# (columna editorial + columna del grafico).
+# ---------------------------------------------------------------------------
+
+
+def test_alerta_snapshot_es_responsive():
+    html = story_render.build_html(PAYLOAD_EJEMPLO, ALERTA_TEMPLATE)
+
+    assert "100vw" in html
+    assert "max-aspect-ratio" in html
+    assert "width: 1920px" not in html
+    assert "height: 1080px" not in html
+
+
+@pytest.mark.skipif(
+    not _chromium_disponible(), reason="Chromium de Playwright no instalado"
+)
+def test_alerta_render_vertical_dimensiones(tmp_path):
+    salida = tmp_path / "story_alerta_vertical.png"
+
+    story_render.render_story(
+        PAYLOAD_EJEMPLO, ALERTA_TEMPLATE, salida, formato="vertical"
+    )
+
+    assert _png_size(salida) == (1080, 1920)
+
+
+@pytest.mark.skipif(
+    not _chromium_disponible(), reason="Chromium de Playwright no instalado"
+)
+def test_alerta_render_horizontal_sin_regresion(tmp_path):
+    salida = tmp_path / "story_alerta_horizontal.png"
+
+    story_render.render_story(PAYLOAD_EJEMPLO, ALERTA_TEMPLATE, salida)
+
+    assert _png_size(salida) == (1920, 1080)
+
+
+@pytest.mark.skipif(
+    not _chromium_disponible(), reason="Chromium de Playwright no instalado"
+)
+def test_alerta_vertical_apila_editorial_y_grafico(tmp_path):
+    """En vertical la columna del grafico cae DEBAJO de la editorial; en
+    horizontal quedan lado a lado. Se mide con el bounding box real."""
+    from playwright.sync_api import sync_playwright
+
+    html = story_render.build_html(PAYLOAD_EJEMPLO, ALERTA_TEMPLATE)
+    tmp_html = ALERTA_TEMPLATE.parent / "_test_alerta_probe.html"
+    tmp_html.write_text(html, encoding="utf-8")
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            try:
+                cajas = {}
+                for nombre, (w, h) in story_render._FORMATOS.items():
+                    page = browser.new_page(
+                        viewport={"width": w, "height": h}, device_scale_factor=1
+                    )
+                    page.goto(tmp_html.resolve().as_uri(), wait_until="networkidle")
+                    cajas[nombre] = (
+                        page.locator(".columna-editorial").bounding_box(),
+                        page.locator(".columna-grafico").bounding_box(),
+                    )
+                    page.close()
+            finally:
+                browser.close()
+    finally:
+        tmp_html.unlink(missing_ok=True)
+
+    edi_h, graf_h = cajas["horizontal"]
+    edi_v, graf_v = cajas["vertical"]
+
+    # Horizontal: lado a lado
+    assert graf_h["x"] > edi_h["x"]
+    assert abs(graf_h["y"] - edi_h["y"]) < 2
+
+    # Vertical: apiladas
+    assert graf_v["y"] > edi_v["y"]
+    assert abs(graf_v["x"] - edi_v["x"]) < 2
