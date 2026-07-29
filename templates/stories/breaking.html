@@ -179,7 +179,10 @@ tests/test_story_render.py.
     font-family: "DM Sans", sans-serif;
     font-weight: 400;
     font-size: 13px;
-    color: #6E6A7A;
+    /* #A9A5B4 (gris secundario del kit). El #6E6A7A anterior no alcanzaba el
+       minimo WCAG AA de 4,5:1 sobre el fondo del footer -- y este texto es el
+       aviso de riesgo por apalancamiento, tiene que poder leerse. */
+    color: #A9A5B4;
     line-height: 1.35;
   }
 </style>
