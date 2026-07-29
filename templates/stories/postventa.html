@@ -274,7 +274,10 @@ scripts/story_render.py y tests/test_story_render.py.
     font-size: 15px;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: #6E6A7A;
+    /* #A9A5B4 (gris secundario del kit) = 6,79:1 sobre el fondo del footer.
+       El #6E6A7A original daba 3,12:1, bajo el minimo AA. Es metadato, no
+       compliance, pero se iguala por coherencia con el resto del catalogo. */
+    color: #A9A5B4;
   }
 
   .pv-aviso {
