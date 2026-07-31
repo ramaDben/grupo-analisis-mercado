@@ -319,6 +319,32 @@ subidas: piezas como `Story <fecha> <activo>.dc.html` en la raíz y renders en `
 están gitignored. `playwright` es dependencia **opcional** (`[project.optional-dependencies]
 stories`): instalar con `uv sync --extra stories && python -m playwright install chromium`.
 
+## Capacitaciones internas (PPTX)
+
+Material formativo para el equipo comercial y los IBS, generado por código para que el
+contenido sea versionable y regenerable. Vive en `docs/capacitacion/`.
+
+- **Generador**: `scripts/capacitacion_fundamental_ppt.py` (motor de maqueta) +
+  `capacitacion_fundamental_contenido.py` (criterio editorial). La separación es
+  deliberada: editar un texto no debe obligar a tocar el dibujo, ni al revés.
+  ```bash
+  uv run --with python-pptx python scripts/capacitacion_fundamental_ppt.py
+  ```
+  `python-pptx` **no** es dependencia del proyecto: se inyecta con `uv run --with` para
+  no alterar el `.venv`.
+- **Tipografía**: Segoe UI + Consolas para cifras, **no** las fuentes de marca. Syne /
+  DM Sans / Space Grotesk solo existen en el repo como `.woff2` (formato web) y no están
+  instaladas en los equipos: declararlas hace que PowerPoint las sustituya y rompa la
+  maqueta en el PC de cada destinatario. Consolas preserva el alineado tabular del kit.
+- **Medición de texto**: PowerPoint no expone métricas de fuente, así que el motor
+  estima el alto de cada bloque antes de dibujar (`_n_lineas` / `_alto_texto`) y reduce
+  el tamaño hasta que quepa. Sin eso el layout falla de dos formas ya observadas: un
+  título de dos líneas se superpone con el párrafo siguiente, y una tabla larga se
+  expande por debajo del pie —PowerPoint ignora `row.height` si el texto no cabe—.
+- **Verificación obligatoria**: con decenas de slides la inspección visual no basta.
+  Exportar a PNG vía COM (`$pres.Export($ruta,"PNG",1600,900)`) y revisar, más un
+  chequeo de que ninguna forma de contenido invada la banda del pie.
+
 ## Flujo de aprobación → WhatsApp (modo semi-automático activo)
 
 Todo contenido pasa por este flujo antes de enviarse:
@@ -419,6 +445,7 @@ grupo-analisis-mercado/
 ├── scripts/               ← scripts auxiliares
 │   ├── story_render.py    ← renderer de Stories GI (payload JSON → HTML → PNG con Playwright)
 │   ├── story_grafico_operacion.py ← geometría del gráfico de recorrido de la plantilla `operacion` (paso previo al render)
+│   ├── capacitacion_fundamental_ppt.py + _contenido.py ← generador del PPTX de capacitación (motor / contenido)
 │   └── hora_chile.ps1 · ruta_mensaje.ps1 · ruta_story.ps1  ← helpers deterministas (hora Chile, ruta de guardado)
 ├── templates/             ← templates de mensajes WhatsApp
 │   ├── encuesta_tendencia.txt · encuesta_posicion.txt · encuesta_movimiento.txt
