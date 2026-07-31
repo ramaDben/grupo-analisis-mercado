@@ -1,0 +1,448 @@
+<!--
+Snapshot de marca "Operación" (Stories GI). Pieza de cliente que comunica una operación del
+equipo en cualquiera de sus dos momentos: `abierta` (posicionada) o `cerrada` (resultado ya
+materializado). El momento viaja en el payload -- un solo snapshot sirve a los dos, igual que
+un solo snapshot sirve a los dos formatos de lienzo.
+
+Kit visual de alerta.html / postventa.html: fondo #0D0D1A, Syne 800 solo en el titular, DM Sans
+cuerpo, Space Grotesk para rótulos y TODA cifra (en Syne 800 las contraformas casi se cierran y
+un precio deja de leerse). Verde #00DC82 / rojo #E84040 como colores semánticos. Responsive por
+`@media (max-aspect-ratio: 1/1)`.
+
+PRINCIPIO DE DISEÑO: la atención de quien abre la imagen es un recurso finito, así que cada
+bloque tiene que decir algo que ningún otro bloque dice:
+  - chip     -> QUÉ pasó (alcanzado / abierta)
+  - titular  -> POR QUÉ pasó (el driver; nunca repite el chip)
+  - tarjeta  -> la OPERACIÓN: dirección, tamaño y el resultado como cifra protagonista
+  - gráfico  -> el RECORRIDO (único lugar donde viven los precios)
+  - cierre   -> lo que no cabe arriba (velocidad, riesgo no usado)
+Antes de agregar un elemento: si su información ya está en otro bloque, no va. Si no se puede
+nombrar en una de esas cinco líneas, tampoco.
+
+El recorrido es un GRÁFICO DE LÍNEA y no una lista de niveles, porque la forma de la curva
+comunica por intuición lo que una lista solo enumera: acá se ve de un golpe que el precio estuvo
+lateral durante horas y que todo el movimiento ocurrió en un tramo vertical. La geometría llega
+calculada en `{{grafico}}` (el payload la deriva de los precios reales); la plantilla aporta el
+estilo vía las clases `.g-*` de abajo, así presentación y datos no se mezclan.
+
+CUIDADO al documentar esta plantilla: NO escribir los marcadores FOR/IF con su sintaxis literal
+de comentario HTML acá arriba. El motor los busca por regex sobre todo el archivo y no distingue
+documentación de marcador real.
+-->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Operación — Story GI</title>
+<style>
+  @font-face {
+    font-family: "Syne";
+    src: url("fonts/syne-800.woff2") format("woff2");
+    font-weight: 800;
+    font-style: normal;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "DM Sans";
+    src: url("fonts/dm-sans-400.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "DM Sans";
+    src: url("fonts/dm-sans-700.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "Space Grotesk";
+    src: url("fonts/space-grotesk-600.woff2") format("woff2");
+    font-weight: 600;
+    font-style: normal;
+    font-display: block;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #0D0D1A;
+    background-image:
+      radial-gradient(90% 120% at 100% 0%, #2A1220 0%, #0D0D1A 55%),
+      linear-gradient(180deg, #0D0D1A 0%, #120A12 60%, #0D0D1A 100%);
+    color: #F5F3F7;
+    font-family: "DM Sans", sans-serif;
+    overflow: hidden;
+  }
+
+  .story {
+    width: 100%;
+    height: 100%;
+    padding: 56px 72px 40px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Red de seguridad del lienzo de alto fijo: el excedente se recorta acá y nunca
+     se dibuja sobre el footer. */
+  .contenido {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: row;
+    gap: 56px;
+    overflow: hidden;
+  }
+
+  .columna-izq {
+    flex: 0 0 46%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .columna-der {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---- Header ---- */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .chip {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 20px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 10px 22px;
+    border-radius: 999px;
+    white-space: nowrap;
+    background: #E84040;
+    color: #0D0D1A;
+  }
+  .chip--cerrada { background: #00DC82; }
+
+  .fecha {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 18px;
+    color: #A9A5B4;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+
+  .activo {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 21px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: #F5A3A3;
+    margin: 22px 0 0;
+  }
+
+  .titular {
+    font-family: "Syne", sans-serif;
+    font-weight: 800;
+    font-size: 42px;
+    line-height: 1.12;
+    letter-spacing: -0.01em;
+    margin: 10px 0 0;
+    color: #FFFFFF;
+  }
+
+  /* ---- Tarjeta de la operación: dirección + tamaño + resultado ----
+     Vuelve del diseño anterior porque poder VER el tamaño operado (los lotes) es
+     parte de lo que hace creíble el resultado. Lo que no vuelve son los precios:
+     esos viven solo en el gráfico. */
+  .tarjeta {
+    margin-top: 28px;
+    border: 2px solid #E84040;
+    border-radius: 22px;
+    background: rgba(232, 64, 64, 0.08);
+    padding: 22px 28px;
+  }
+  .tarjeta--cerrada {
+    border-color: rgba(0, 220, 130, 0.55);
+    background: rgba(0, 220, 130, 0.07);
+  }
+
+  .tarjeta-cabecera {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .tag-direccion {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 21px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #0D0D1A;
+    background: #E84040;
+    padding: 9px 22px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .tag-direccion::before { content: "\25BC\00A0"; }
+
+  .volumen {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 21px;
+    font-variant-numeric: tabular-nums;
+    color: #F5F3F7;
+    text-align: right;
+  }
+  .volumen small {
+    display: block;
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 15px;
+    color: #A9A5B4;
+    margin-top: 3px;
+  }
+
+  .hero-label {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: #A9A5B4;
+    margin-top: 18px;
+  }
+
+  .hero-cifra {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 62px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.005em;
+    line-height: 1.05;
+    margin-top: 4px;
+    color: #00DC82;
+  }
+  .hero--riesgo .hero-cifra { color: #F5F3F7; }
+
+  .hero-detalle {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 19px;
+    color: #C9C5D4;
+    margin-top: 6px;
+  }
+
+  /* ---- Gráfico del recorrido ---- */
+  .rotulo-bloque {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 18px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: #A9A5B4;
+    margin: 0 0 14px;
+  }
+
+  .grafico {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+  }
+  .grafico svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .g-area { fill: url(#gradArea); }
+  .g-linea {
+    fill: none;
+    stroke: #F5A3A3;
+    stroke-width: 2.4;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+  .g-guia {
+    stroke: rgba(255, 255, 255, 0.13);
+    stroke-width: 1;
+    stroke-dasharray: 3 5;
+  }
+  .g-punto { stroke: #0D0D1A; stroke-width: 2.5; }
+  .g-punto-origen { fill: #6E6A7A; }
+  .g-punto-cumplido { fill: #00DC82; }
+  .g-punto-meta { fill: #00DC82; }
+  .g-punto-actual { fill: #F5A3A3; }
+  .g-halo { fill: rgba(0, 220, 130, 0.2); stroke: none; }
+
+  .g-precio {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 19px;
+    fill: #F5F3F7;
+  }
+  .g-precio-origen { fill: #8E8A9C; }
+  .g-precio-cumplido, .g-precio-meta { fill: #00DC82; }
+  .g-precio-actual { fill: #F5A3A3; }
+
+  .g-rol {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.07em;
+    fill: #8E8A9C;
+  }
+
+  /* ---- Cierre ---- */
+  .cierre {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 18px;
+    line-height: 1.45;
+    color: #A9A5B4;
+    margin: 18px 0 0;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  /* ---- Footer ---- */
+  .footer {
+    margin-top: 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .footer-marca {
+    display: flex;
+    justify-content: space-between;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 20px;
+    color: #F5F3F7;
+  }
+
+  /* Una línea, y solo porque aporta algo que ningún otro bloque dice: el origen
+     del dato más el caveat de lo no confirmado. */
+  .footer-fuente {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 15px;
+    color: #A9A5B4;
+    margin: 0;
+  }
+
+  .footer-disclaimer {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 13px;
+    /* #A9A5B4 (gris secundario del kit): el aviso de riesgo por apalancamiento
+       tiene que superar el mínimo WCAG AA de 4,5:1 sobre el fondo del footer. */
+    color: #A9A5B4;
+    line-height: 1.35;
+    margin: 0;
+  }
+
+  /* ================= FORMATO VERTICAL 9:16 (1080x1920) =================
+     `.contenido` se apila: editorial+tarjeta arriba, gráfico+cierre abajo, que es
+     el orden de lectura en teléfono. El gráfico cede alto cuando el editorial
+     crece (`min-height: 0`). Toda la tipografía sube: el mismo texto a tamaño de
+     escritorio queda diminuto en un lienzo de 1080 de ancho. */
+  @media (max-aspect-ratio: 1/1) {
+    .story { padding: 66px 58px 46px; }
+
+    .chip { font-size: 25px; padding: 11px 24px; }
+    .fecha { font-size: 23px; }
+
+    .contenido {
+      flex-direction: column;
+      gap: 38px;
+    }
+    .columna-izq { flex: 0 1 auto; }
+    .columna-der { flex: 1 1 auto; min-height: 0; }
+
+    .activo { font-size: 27px; margin-top: 24px; }
+    .titular { font-size: 54px; }
+
+    .tarjeta { margin-top: 32px; padding: 26px 32px; }
+    .tag-direccion { font-size: 28px; padding: 11px 26px; }
+    .volumen { font-size: 30px; }
+    .volumen small { font-size: 21px; }
+    .hero-label { font-size: 21px; margin-top: 22px; }
+    .hero-cifra { font-size: 88px; }
+    .hero-detalle { font-size: 26px; margin-top: 8px; }
+
+    .rotulo-bloque { font-size: 23px; margin-bottom: 18px; }
+
+    .cierre { font-size: 25px; margin-top: 24px; padding-top: 20px; }
+
+    .footer { gap: 10px; margin-top: 30px; }
+    .footer-marca { font-size: 27px; }
+    .footer-fuente { font-size: 21px; }
+    .footer-disclaimer { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+  <div class="story">
+
+    <div class="contenido">
+      <div class="columna-izq">
+        <div class="header">
+          <span class="chip chip--{{estado_slug}}">{{chip_estado}}</span>
+          <span class="fecha">{{fecha}}</span>
+        </div>
+
+        <p class="activo">{{activo}}</p>
+        <h1 class="titular">{{titular}}</h1>
+
+        <div class="tarjeta tarjeta--{{estado_slug}} hero--{{hero_slug}}">
+          <div class="tarjeta-cabecera">
+            <span class="tag-direccion">{{direccion}}</span>
+            <span class="volumen">{{volumen}}<small>{{volumen_nota}}</small></span>
+          </div>
+          <div class="hero-label">{{hero_label}}</div>
+          <div class="hero-cifra">{{hero_cifra}}</div>
+          <p class="hero-detalle">{{hero_detalle}}</p>
+        </div>
+      </div>
+
+      <div class="columna-der">
+        <p class="rotulo-bloque">{{rotulo_grafico}}</p>
+        <div class="grafico">{{grafico}}</div>
+        <p class="cierre">{{cierre_nota}}</p>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="footer-marca">
+        <span>@grupointeligencia</span>
+        <span>grupointeligencia.com</span>
+      </div>
+      <p class="footer-fuente">{{fuente}}</p>
+      <p class="footer-disclaimer">
+        Los CFD son instrumentos complejos y presentan un riesgo elevado de perder dinero
+        rápidamente debido al apalancamiento. Este contenido es educativo/informativo, no
+        constituye asesoría financiera.
+      </p>
+    </div>
+
+  </div>
+</body>
+</html>

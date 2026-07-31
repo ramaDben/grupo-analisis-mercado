@@ -278,13 +278,31 @@ celular). El formato viaja por el CLI y **nunca** por el payload — el payload 
 contenido y el formato es presentación, así el **mismo payload rinde ambos**. Cada snapshot es un
 único archivo que se adapta con `@media (max-aspect-ratio: 1/1)`, en vez de tener un archivo por
 formato (evita que la versión vertical se desfase de la horizontal). Migradas a responsive:
-`templates/stories/postventa.html` y `templates/stories/alerta.html`; las otras 5 siguen solo en
+`templates/stories/postventa.html`, `templates/stories/alerta.html` y
+`templates/stories/operacion.html`; las otras 5 siguen solo en
 horizontal — una plantilla por Change, mismo criterio que las Fases B y C. Snapshots de marca:
 `templates/stories/alerta.html`, `templates/stories/quote.html`, `templates/stories/breaking.html`,
-`templates/stories/encuesta.html`, `templates/stories/edu.html`, `templates/stories/flash.html` y
-`templates/stories/postventa.html`. Las demás plantillas del canvas (Market Update, Indicador
+`templates/stories/encuesta.html`, `templates/stories/edu.html`, `templates/stories/flash.html`,
+`templates/stories/postventa.html` y `templates/stories/operacion.html`. Las demás plantillas del canvas (Market Update, Indicador
 Macro, Trading Idea, Calendario, Semanal, Carrusel "Oportunidades de la semana") llegan con los issues
 #111-#115 — ver `docs/design/stories-gi/plantillas-stories-gi.md` para el mapeo campo-por-campo.
+
+**Plantilla `operacion`** (comunica una operación del equipo, en estado `abierta` o `cerrada` según
+`estado_slug` del payload): es la única con un **paso previo** al renderer. Su gráfico de recorrido
+lo produce `scripts/story_grafico_operacion.py`, que traduce la serie de precios y los hitos de la
+operación al SVG del token `{{grafico}}` y se encadena por stdin/stdout:
+```bash
+uv run python scripts/story_grafico_operacion.py < operacion.json \
+  | uv run python scripts/story_render.py --template templates/stories/operacion.html \
+      --out "$(scripts/ruta_story.ps1 ...)" --formato vertical
+```
+El payload de entrada lleva una clave `recorrido` = `{serie, marcadores}`; el script la consume y la
+reemplaza por `grafico`. El reparto es estricto: el script calcula **coordenadas** y el snapshot
+aporta color/tipografía vía sus clases `.g-*` — si el gráfico se ve mal, se corrige en la plantilla.
+**Criterio editorial de la pieza** (impuesto por el director): cada bloque dice algo que ningún otro
+bloque dice — chip = qué pasó, titular = por qué, tarjeta = la operación y su resultado, gráfico =
+el recorrido (único lugar con precios), cierre = lo que no cabe arriba. El espacio también se
+justifica: nada de aire que no comunique. Integrarla como tipo de `/story` queda **pendiente**.
 
 **Escritura en el proyecto Claude Design de GI (regla actualizada 2026-07-27)**: el proyecto
 Claude Design compartido (dueño: Rodrigo, GI) —
@@ -400,13 +418,14 @@ grupo-analisis-mercado/
 │   ├── agenda_semanal.json · feriados_bolsa.json
 ├── scripts/               ← scripts auxiliares
 │   ├── story_render.py    ← renderer de Stories GI (payload JSON → HTML → PNG con Playwright)
+│   ├── story_grafico_operacion.py ← geometría del gráfico de recorrido de la plantilla `operacion` (paso previo al render)
 │   └── hora_chile.ps1 · ruta_mensaje.ps1 · ruta_story.ps1  ← helpers deterministas (hora Chile, ruta de guardado)
 ├── templates/             ← templates de mensajes WhatsApp
 │   ├── encuesta_tendencia.txt · encuesta_posicion.txt · encuesta_movimiento.txt
 │   ├── concepto_didactico.txt · guion_ejecutivo.txt
 │   ├── ruta_curriculo.txt · dashboard_metricas.txt · mapa_conceptos.txt
 │   ├── ventas_email.txt · ventas_whatsapp.txt
-│   └── stories/           ← snapshot de marca GI (alerta.html + fonts/)
+│   └── stories/           ← snapshots de marca GI (alerta.html · operacion.html · … + fonts/)
 ├── conceptos/             ← notas canónicas de conceptos educativos (malla /rencuesta)
 │   ├── README.md · stop-loss.md
 ├── data/                  ← datos persistentes
