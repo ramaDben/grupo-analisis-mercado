@@ -7,14 +7,20 @@
 <style>
 /*FUENTES*/
 
-/* Paleta adaptada al soporte claro. El verde y el rojo de marca (#00DC82 / #E84040)
+/* Tipografía: DM Sans en todo, incluidos los títulos. Syne 800 —la tipográfica de
+   marca para titulares— tiene las contraformas casi cerradas en ese peso y se vuelve
+   pesada de leer en un documento de consulta; en pantalla oscura funciona, en papel y
+   a tamaño de lectura no. Space Grotesk queda solo para cifras y siglas, que son
+   cadenas cortas y necesitan el alineado tabular.
+
+   Paleta adaptada al soporte claro. El verde y el rojo de marca (#00DC82 / #E84040)
    están pensados para fondo oscuro: sobre blanco no alcanzan el contraste mínimo
    para texto (mismo problema que corregimos en el footer de las Stories). Se usan
    versiones oscurecidas para tipografía y los originales solo en filetes y fondos. */
 :root {
   --tinta: #14141F;
-  --tinta-media: #4A4A5A;
-  --tinta-suave: #71717F;
+  --tinta-media: #3A3A48;
+  --tinta-suave: #5A5A68;
   --linea: #E2E3E8;
   --papel: #FFFFFF;
   --tarjeta: #F6F7F9;
@@ -35,8 +41,8 @@ body {
   font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--tinta);
   background: var(--papel);
-  font-size: 9.8pt;
-  line-height: 1.42;
+  font-size: 11pt;
+  line-height: 1.5;
 }
 
 /* La escala está calibrada para que cada hoja quepa en el alto útil de una A4
@@ -54,23 +60,23 @@ body {
 .hoja:last-child { page-break-after: auto; }
 
 h1 {
-  font-family: "Syne", sans-serif;
-  font-weight: 800;
-  font-size: 22pt;
+  font-family: "DM Sans", sans-serif;
+  font-weight: 700;
+  font-size: 23pt;
   line-height: 1.02;
   margin: 0 0 1.6mm;
   letter-spacing: -0.4px;
 }
-.bajada { color: var(--tinta-media); margin: 0 0 4mm; font-size: 9.8pt; }
+.bajada { color: var(--tinta-media); margin: 0 0 4mm; font-size: 11pt; }
 .kicker {
-  font-size: 7.5pt; font-weight: 700; letter-spacing: 1.1px;
+  font-size: 8.2pt; font-weight: 700; letter-spacing: 1.1px;
   text-transform: uppercase; color: var(--verde); margin: 0 0 1.5mm;
 }
 
 h2 {
-  font-family: "Syne", sans-serif;
-  font-weight: 800;
-  font-size: 11.5pt;
+  font-family: "DM Sans", sans-serif;
+  font-weight: 700;
+  font-size: 13pt;
   margin: 4.6mm 0 2mm;
   padding-bottom: 1.1mm;
   border-bottom: 1.5px solid var(--tinta);
@@ -87,50 +93,50 @@ h2:first-of-type { margin-top: 0; }
 .regla {
   border: 2px solid var(--tinta);
   border-radius: 2mm;
-  padding: 3.2mm 4mm;
-  margin-bottom: 4mm;
+  padding: 5.5mm 6mm;
+  margin-bottom: 5mm;
   background: var(--tarjeta);
 }
 .regla .frase {
-  font-family: "Syne", sans-serif; font-weight: 800;
-  font-size: 12pt; line-height: 1.18; margin: 0 0 2mm;
+  font-family: "DM Sans", sans-serif; font-weight: 700;
+  font-size: 16pt; line-height: 1.24; margin: 0 0 3mm;
 }
-.tres-cifras { display: flex; gap: 2.5mm; margin-top: 2.5mm; }
+.tres-cifras { display: flex; gap: 3mm; margin-top: 4mm; }
 .cifra {
   flex: 1; background: var(--papel); border-radius: 1.5mm;
-  padding: 2.2mm 2.6mm; border-left: 2.2mm solid var(--linea);
+  padding: 3.2mm 3.4mm; border-left: 2.4mm solid var(--linea);
 }
 .cifra.esperado { border-left-color: var(--ambar-vivo); }
 .cifra.efectivo { border-left-color: var(--verde-vivo); }
 /* Solo el hijo directo es el rótulo del bloque. Con `.cifra b` (sin `>`) los
    destacados que van dentro del párrafo también se volvían bloque y partían la
    frase en varias líneas. Mismo criterio en .paso y .aviso. */
-.cifra > b { display: block; font-size: 9.5pt; margin-bottom: 0.8mm; }
-.cifra span { font-size: 8.5pt; color: var(--tinta-media); line-height: 1.3; display: block; }
+.cifra > b { display: block; font-size: 10.6pt; margin-bottom: 0.8mm; }
+.cifra span { font-size: 9.8pt; color: var(--tinta-media); line-height: 1.3; display: block; }
 
 /* --- Pasos numerados --- */
 .pasos { display: flex; gap: 2.5mm; margin-bottom: 1mm; }
 .paso {
-  flex: 1; background: var(--tarjeta); border-radius: 1.5mm; padding: 2.5mm 3mm;
+  flex: 1; background: var(--tarjeta); border-radius: 1.5mm; padding: 3.4mm 3.6mm;
 }
 .paso .num {
   font-family: "Space Grotesk", monospace; font-weight: 600;
   font-size: 14pt; color: var(--verde); line-height: 1; display: block;
   margin-bottom: 1.2mm;
 }
-.paso > b { display: block; font-size: 9.5pt; margin-bottom: 1mm; }
-.paso span { font-size: 8.5pt; color: var(--tinta-media); line-height: 1.35; }
+.paso > b { display: block; font-size: 10.6pt; margin-bottom: 1mm; }
+.paso span { font-size: 9.8pt; color: var(--tinta-media); line-height: 1.35; }
 
 /* --- Tablas --- */
 table { width: 100%; border-collapse: collapse; margin-bottom: 1mm; }
 th {
-  text-align: left; font-size: 7.5pt; font-weight: 700; letter-spacing: 0.6px;
+  text-align: left; font-size: 8.4pt; font-weight: 700; letter-spacing: 0.6px;
   text-transform: uppercase; color: var(--tinta-suave);
   padding: 1.5mm 2mm; border-bottom: 1.2px solid var(--tinta);
 }
 td {
-  padding: 1.4mm 2mm; font-size: 8.6pt; vertical-align: top;
-  border-bottom: 0.6px solid var(--linea); line-height: 1.32;
+  padding: 1.9mm 2.2mm; font-size: 10pt; vertical-align: top;
+  border-bottom: 0.6px solid var(--linea); line-height: 1.4;
 }
 tbody tr:nth-child(even) { background: #FBFBFC; }
 td:first-child { font-weight: 700; }
@@ -138,11 +144,11 @@ td:first-child { font-weight: 700; }
   font-family: "Space Grotesk", monospace; font-weight: 600;
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
-.dir { font-family: "Space Grotesk", monospace; font-weight: 600; white-space: nowrap; font-size: 8.5pt; }
+.dir { font-family: "Space Grotesk", monospace; font-weight: 600; white-space: nowrap; font-size: 9.6pt; }
 .sube { color: var(--verde); }
 .baja { color: var(--rojo); }
 .neutro { color: var(--tinta-suave); }
-table.compacta td { padding: 1.4mm 2mm; font-size: 8.5pt; }
+table.compacta td { padding: 1.7mm 2.2mm; font-size: 9.8pt; }
 col.angosta { width: 15%; }
 
 /* --- Avisos --- */
@@ -153,8 +159,8 @@ col.angosta { width: 15%; }
 }
 .aviso.rojo { border-left-color: var(--rojo-vivo); background: #FDF0EF; }
 .aviso.verde { border-left-color: var(--verde-vivo); background: #EEFBF4; }
-.aviso > b { display: block; font-size: 9.2pt; margin-bottom: 0.9mm; }
-.aviso p { margin: 0 0 1.3mm; font-size: 8.8pt; line-height: 1.38; }
+.aviso > b { display: block; font-size: 10.4pt; margin-bottom: 0.9mm; }
+.aviso p { margin: 0 0 1.3mm; font-size: 10.2pt; line-height: 1.45; }
 .aviso p:last-child { margin-bottom: 0; }
 
 /* --- Frases para el cliente --- */
@@ -164,11 +170,11 @@ col.angosta { width: 15%; }
   border-top: 1.2mm solid var(--azul-vivo);
 }
 .frase-caso .situacion {
-  font-size: 7.5pt; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.5px; color: var(--azul); margin-bottom: 1.2mm;
+  font-size: 8.4pt; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.4px; color: var(--azul); margin-bottom: 1.4mm;
 }
 .frase-caso q {
-  font-size: 9pt; line-height: 1.4; color: var(--tinta); font-style: normal;
+  font-size: 10.4pt; line-height: 1.48; color: var(--tinta); font-style: normal;
   quotes: "«" "»";
 }
 
@@ -178,45 +184,45 @@ col.angosta { width: 15%; }
 .decir .no { background: #FDF0EF; }
 .decir .si { background: #EEFBF4; }
 .decir h3 {
-  font-size: 9pt; margin: 0 0 2mm; font-weight: 700;
+  font-size: 10.2pt; margin: 0 0 2mm; font-weight: 700;
 }
 .decir .no h3 { color: var(--rojo); }
 .decir .si h3 { color: var(--verde); }
 .decir ul { margin: 0; padding-left: 4.5mm; }
-.decir li { font-size: 8.5pt; margin-bottom: 1.2mm; line-height: 1.35; }
+.decir li { font-size: 10pt; margin-bottom: 1.5mm; line-height: 1.42; }
 
 /* --- Autoría ---
    En la cabecera va a la derecha del título: ocupa ancho, no alto, y la hoja 1
    está calibrada al milímetro contra el alto de una A4. */
 .cabecera { display: flex; gap: 6mm; align-items: flex-start; }
 .cabecera-txt { flex: 1; min-width: 0; }
-.autor-mini { width: 46mm; flex-shrink: 0; text-align: right; padding-top: 1mm; }
+.autor-mini { width: 54mm; flex-shrink: 0; text-align: right; padding-top: 1mm; }
 .autor-mini img {
   width: 17mm; height: 17mm; border-radius: 50%;
   display: block; margin: 0 0 1.4mm auto;
 }
 .autor-mini .rol {
-  font-size: 6.5pt; font-weight: 700; letter-spacing: 0.8px;
-  text-transform: uppercase; color: var(--tinta-suave); margin-bottom: 0.5mm;
+  font-size: 7.4pt; font-weight: 700; letter-spacing: 0.8px;
+  text-transform: uppercase; color: var(--tinta-suave); margin-bottom: 0.6mm;
 }
-.autor-mini b { display: block; font-size: 8.6pt; line-height: 1.15; }
+.autor-mini b { display: block; font-size: 9.6pt; line-height: 1.2; }
 .autor-mini span {
-  display: block; font-size: 6.8pt; color: var(--tinta-suave);
-  line-height: 1.35; margin-top: 0.8mm;
+  display: block; font-size: 7.8pt; color: var(--tinta-suave);
+  line-height: 1.4; margin-top: 0.9mm;
 }
 
 .pie-autor { display: flex; gap: 3mm; align-items: center; margin-bottom: 2.5mm; }
 .pie-autor img { width: 14mm; height: 14mm; border-radius: 50%; flex-shrink: 0; }
-.pie-autor .datos b { display: block; font-size: 9pt; color: var(--tinta); }
+.pie-autor .datos b { display: block; font-size: 10.4pt; color: var(--tinta); }
 .pie-autor .datos span {
-  display: block; font-size: 7.6pt; color: var(--tinta-suave); line-height: 1.35;
+  display: block; font-size: 8.6pt; color: var(--tinta-suave); line-height: 1.4;
   margin-top: 0.5mm;
 }
 
 /* --- Pie --- */
 .pie {
   margin-top: 6mm; padding-top: 2.5mm; border-top: 0.6px solid var(--linea);
-  font-size: 7.5pt; color: var(--tinta-suave); line-height: 1.4;
+  font-size: 8.4pt; color: var(--tinta-suave); line-height: 1.45;
   display: flex; justify-content: space-between; gap: 5mm;
 }
 .pie b { color: var(--tinta-media); }
@@ -336,6 +342,13 @@ col.angosta { width: 15%; }
     </div>
   </div>
 
+  <div class="pie">
+    <span><b>Guía rápida de análisis fundamental</b> · Área de Estudios y Post-Venta · GI</span>
+    <span class="sigla">1 / 6</span>
+  </div>
+</section>
+
+<section class="hoja">
   <h2><span class="n">02</span> Qué debería hacer el precio</h2>
   <table class="movil-fichas">
     <colgroup><col style="width:34%"><col style="width:18%"><col class="angosta"><col class="angosta"><col class="angosta"><col class="angosta"></colgroup>
@@ -405,7 +418,7 @@ col.angosta { width: 15%; }
 
   <div class="pie">
     <span><b>Guía rápida de análisis fundamental</b> · Área de Estudios y Post-Venta · GI</span>
-    <span class="sigla">1 / 4</span>
+    <span class="sigla">2 / 6</span>
   </div>
 </section>
 
@@ -457,6 +470,13 @@ col.angosta { width: 15%; }
     </tbody>
   </table>
 
+  <div class="pie">
+    <span><b>Guía rápida de análisis fundamental</b> · Área de Estudios y Post-Venta · GI</span>
+    <span class="sigla">3 / 6</span>
+  </div>
+</section>
+
+<section class="hoja">
   <h2><span class="n">04</span> Chile: los cuatro que mueven el dólar acá</h2>
   <table class="compacta">
     <colgroup><col style="width:21%"><col style="width:37%"><col style="width:42%"></colgroup>
@@ -501,7 +521,7 @@ col.angosta { width: 15%; }
 
   <div class="pie">
     <span><b>Guía rápida de análisis fundamental</b> · Área de Estudios y Post-Venta · GI</span>
-    <span class="sigla">2 / 4</span>
+    <span class="sigla">4 / 6</span>
   </div>
 </section>
 
@@ -575,7 +595,7 @@ col.angosta { width: 15%; }
 
   <div class="pie">
     <span><b>Guía rápida de análisis fundamental</b> · Área de Estudios y Post-Venta · GI</span>
-    <span class="sigla">3 / 4</span>
+    <span class="sigla">5 / 6</span>
   </div>
 </section>
 
@@ -623,7 +643,7 @@ col.angosta { width: 15%; }
     <span><b>Material educativo de uso interno.</b> No constituye recomendación de
     inversión ni asesoría personalizada, y no debe entregarse a clientes en esta
     forma. Todo contenido de difusión pasa por el Área de Estudios y Post-Venta.</span>
-    <span class="sigla">4 / 4</span>
+    <span class="sigla">6 / 6</span>
   </div>
 </section>
 

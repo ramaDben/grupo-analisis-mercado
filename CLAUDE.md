@@ -369,13 +369,17 @@ qué no decir, y dónde se detiene la respuesta porque pasa a ser asesoría—.
   ```bash
   uv run --extra stories python scripts/folleto_fundamental.py
   ```
-- **Dos salidas del mismo HTML**: un **HTML autónomo** (fuentes de marca incrustadas en
-  base64, se manda por correo o WhatsApp y funciona solo) y un **PDF A4 de 4 páginas**
-  para imprimir. Bajo 820 px las hojas A4 se rompen en una columna y las tablas anchas
-  pasan a fichas apiladas vía `td[data-rot]::before`, para consultarlo en el teléfono sin
+- **Dos salidas del mismo HTML**: un **HTML autónomo** (fuentes incrustadas en base64,
+  se manda por correo o WhatsApp y funciona solo) y un **PDF A4 de 6 páginas** para
+  imprimir. Bajo 820 px las hojas A4 se rompen en una columna y las tablas anchas pasan
+  a fichas apiladas vía `td[data-rot]::before`, para consultarlo en el teléfono sin
   hacer zoom.
-- **Acá sí se usan las fuentes de marca**, al contrario que en el PPTX: en HTML los
-  `.woff2` del repo funcionan nativamente.
+- **Tipografía: DM Sans en todo, también en los títulos.** Las fuentes del repo se
+  pueden usar acá y no en el PPTX porque en HTML los `.woff2` funcionan nativamente,
+  pero **Syne queda fuera**: en peso 800 sus contraformas se cierran y cansa la vista en
+  un documento de consulta (es el mismo defecto que motivó el rediseño de la Story). El
+  cuerpo va a 11 pt y no a 9,8 por legibilidad — el material lo usa gente que no lee
+  cómodo a tamaños chicos. Space Grotesk queda solo para cifras y siglas.
 - **Paleta adaptada al soporte claro**: el verde y el rojo de marca están pensados para
   fondo oscuro y sobre blanco no alcanzan el contraste mínimo para texto (mismo problema
   del footer de las Stories, #145). Se usan versiones oscurecidas para tipografía y los

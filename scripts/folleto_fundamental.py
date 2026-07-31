@@ -7,11 +7,12 @@ el cliente al teléfono. De ahí las dos salidas:
   se manda por correo o WhatsApp y funciona solo. Bajo 820 px de ancho las hojas A4
   se rompen en una columna y las tablas anchas se vuelven fichas apiladas, para
   consultarlo en el teléfono sin hacer zoom.
-- **PDF A4 de 3 páginas** — para imprimir y tener a mano en el escritorio.
+- **PDF A4** — para imprimir y tener a mano en el escritorio.
 
-Aquí sí se usan las fuentes de marca (Syne / DM Sans / Space Grotesk), al contrario
-que en el PPTX: en HTML los `.woff2` del repo funcionan nativamente, mientras que
-PowerPoint necesitaría tenerlas instaladas en cada equipo.
+Las fuentes del repo se pueden usar acá y no en el PPTX: en HTML los `.woff2`
+funcionan nativamente, mientras que PowerPoint las necesitaría instaladas en cada
+equipo. Se usan DM Sans para todo y Space Grotesk para cifras; Syne queda fuera por
+legibilidad (ver el comentario de tipografía en la plantilla).
 
 Uso:
     uv run --frozen --with pillow python scripts/folleto_fundamental.py
@@ -45,10 +46,11 @@ AUTOR = {
     "area": "Área de Estudios y Post-Venta · GI",
 }
 
-# (archivo, familia, peso). Mismo criterio tipográfico que las Stories: Syne para
-# títulos, DM Sans para el cuerpo y Space Grotesk para cifras y siglas.
+# (archivo, familia, peso). DM Sans para títulos y cuerpo; Space Grotesk solo para
+# cifras y siglas, donde importa el alineado tabular.
 CATALOGO = [
-    ("syne-800.woff2", "Syne", 800),
+    # Syne queda fuera a propósito: en peso 800 sus contraformas se cierran y en un
+    # documento de consulta cansa la vista. Embeberla solo sumaría peso al archivo.
     ("dm-sans-400.woff2", "DM Sans", 400),
     ("dm-sans-700.woff2", "DM Sans", 700),
     ("space-grotesk-600.woff2", "Space Grotesk", 600),
