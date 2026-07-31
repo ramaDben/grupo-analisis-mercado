@@ -19,6 +19,21 @@ AMBAR = RGBColor(0xF5, 0xA5, 0x24)
 AZUL = RGBColor(0x4C, 0x8D, 0xFF)
 GRIS = RGBColor(0xA9, 0xA5, 0xB4)
 
+AUTOR = {
+    "rol": "Elaborado por",
+    "nombre": "Benjamín Ignacio Bravo Soza",
+    "credenciales": [
+        "Ingeniero en Finanzas · Diplomado en Gestión de Riesgos bajo estándar PMI",
+        "Operador Acreditado CMV",
+        "Área de Estudios y Post-Venta · Grupo de Análisis de Mercado — GI",
+    ],
+    # Variante de dos líneas para el cierre, donde queda menos espacio libre.
+    "credenciales_compactas": [
+        "Ingeniero en Finanzas · Diplomado en Gestión de Riesgos bajo estándar PMI",
+        "Operador Acreditado CMV · Área de Estudios y Post-Venta · GI",
+    ],
+}
+
 SEC_0 = "Fundamentos de lectura"
 SEC_1 = "Indicadores EE.UU."
 SEC_2 = "Indicadores Chile"
@@ -36,8 +51,8 @@ SLIDES = [
         "titulo": "Análisis\nFundamental",
         "bajada": "Cómo interpretar la publicación de datos económicos: qué mide cada "
                   "indicador, cómo se lee su resultado y *qué debería hacer el precio*.",
+        "autor": AUTOR,
         "meta": [
-            ("Preparado por", "Área de Estudios y Post-Venta"),
             ("Fecha", "31 de julio de 2026"),
             ("Naturaleza", "Material educativo interno"),
         ],
@@ -1789,9 +1804,7 @@ SLIDES = [
                      "fin de que la naturaleza del contenido quede clara y explícita.",
                      "Cualquier duda sobre qué se puede afirmar, mostrar o "
                      "recomendar se resuelve directamente con el área."]),
-        "firma": ["*Benjamín Ignacio Bravo Soza* — Ingeniero en Finanzas · Diplomado en "
-                  "Gestión de Riesgos bajo estándar PMI · Operador Acreditado CMV",
-                  "Área de Estudios y Post-Venta · Grupo de Análisis de Mercado — GI · "
-                  "31 de julio de 2026"],
+        "autor": AUTOR,
+        "fecha": "31 de julio de 2026",
     },
 ]

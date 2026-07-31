@@ -54,6 +54,10 @@ ALTO = Inches(7.5)
 MARGEN = Inches(0.72)
 UTIL = ANCHO - 2 * MARGEN
 
+# Retrato del autor, ya recortado en círculo. Lo fija `construir()` a partir del
+# argumento `--foto`; si no se entrega, portada y cierre caen al diseño sin retrato.
+FOTO: Path | None = None
+
 # --------------------------------------------------------------------------------------
 # Medición de texto
 #
@@ -222,6 +226,75 @@ def _pie(slide, numero: int, seccion: str = "") -> None:
            alineacion=PP_ALIGN.RIGHT)
 
 
+def _foto_circular(origen: Path, lado: int = 720) -> Path | None:
+    """Recorta la foto a un círculo y la deja en un PNG temporal.
+
+    PowerPoint no aplica máscaras: para que el retrato salga redondo hay que
+    recortarlo antes. Se toma el cuadrado centrado más grande que quepa y se
+    aplica un canal alfa circular, más un aro fino de acento.
+    """
+    try:
+        from PIL import Image, ImageDraw  # noqa: PLC0415
+    except ImportError:
+        print("  aviso: Pillow no disponible, la foto se omite")
+        return None
+    if not origen.exists():
+        print(f"  aviso: no existe {origen}, la foto se omite")
+        return None
+
+    imagen = Image.open(origen).convert("RGBA")
+    corto = min(imagen.size)
+    izq = (imagen.width - corto) // 2
+    # El rostro suele quedar en el tercio superior: se recorta desde más arriba
+    # que el centro geométrico para no cortar la cabeza.
+    arriba = max(0, (imagen.height - corto) // 3)
+    imagen = imagen.crop((izq, arriba, izq + corto, arriba + corto))
+    imagen = imagen.resize((lado, lado), Image.LANCZOS)
+
+    mascara = Image.new("L", (lado * 4, lado * 4), 0)
+    ImageDraw.Draw(mascara).ellipse((0, 0, lado * 4 - 1, lado * 4 - 1), fill=255)
+    imagen.putalpha(mascara.resize((lado, lado), Image.LANCZOS))
+
+    aro = ImageDraw.Draw(imagen)
+    grosor = max(2, lado // 120)
+    aro.ellipse((grosor // 2, grosor // 2, lado - grosor // 2, lado - grosor // 2),
+                outline=(0, 220, 130, 255), width=grosor)
+
+    destino = origen.parent / f".{origen.stem}_circular.png"
+    imagen.save(destino, "PNG")
+    return destino
+
+
+def _bloque_autor(slide, left, top, autor: dict, foto: Path | None,
+                  diametro: float = 1.32, tam_nombre: float = 14.0,
+                  compacto: bool = False):
+    """Retrato circular + nombre y credenciales. Devuelve el alto ocupado.
+
+    `compacto` usa la variante de dos líneas de las credenciales, para el cierre,
+    donde el espacio restante bajo los dos bloques de advertencia es escaso.
+    """
+    x_texto = left
+    if foto is not None:
+        slide.shapes.add_picture(str(foto), left, top, Inches(diametro),
+                                 Inches(diametro))
+        x_texto = left + Inches(diametro + 0.28)
+
+    cursor = top + Inches(0.06)
+    _texto(slide, x_texto, cursor, Inches(7.4), Inches(0.2),
+           autor.get("rol", "Preparado por").upper(), tam=8.5, color=GRIS_TENUE,
+           negrita=True)
+    cursor = cursor + Inches(0.24)
+    _texto(slide, x_texto, cursor, Inches(7.4), Inches(0.3), autor["nombre"],
+           tam=tam_nombre, color=BLANCO, negrita=True)
+    cursor = cursor + Inches(0.3)
+    clave = "credenciales_compactas" if compacto else "credenciales"
+    for linea in autor[clave]:
+        _texto(slide, x_texto, cursor, Inches(7.4), Inches(0.22), linea,
+               tam=10, color=GRIS, interlineado=1.2)
+        cursor = cursor + Inches(0.21)
+    return max(_pulg(cursor - top), diametro if foto is not None else 0.0)
+
+
 def _chip(slide, left, top, etiqueta: str, valor: str, ancho, color=AZUL):
     """Par etiqueta/valor sobre superficie, para metadata de un indicador."""
     alto = Inches(0.62)
@@ -262,13 +335,19 @@ def slide_portada(prs, datos, numero):
     _texto(slide, MARGEN, Inches(4.25), Inches(9.6), Inches(1.0), datos["bajada"],
            tam=16, color=GRIS, interlineado=1.32, color_fuerte=BLANCO)
 
-    y = Inches(5.75)
+    # Autoría: el retrato y las credenciales van en la portada, no solo al cierre.
+    # Es material que circula entre equipos, así que quién lo firma se ve de entrada.
+    y = Inches(5.42)
+    _rect(slide, MARGEN, y - Inches(0.3), UTIL, Emu(12700), relleno=SUPERFICIE_ALT)
+    _bloque_autor(slide, MARGEN, y, datos["autor"], FOTO)
+
+    left = MARGEN + Inches(9.35)
     for indice, (etiqueta, valor) in enumerate(datos["meta"]):
-        left = MARGEN + indice * Inches(3.0)
-        _texto(slide, left, y, Inches(2.8), Inches(0.2), etiqueta.upper(),
+        tope = y + Inches(0.06) + indice * Inches(0.62)
+        _texto(slide, left, tope, Inches(2.6), Inches(0.2), etiqueta.upper(),
                tam=8.5, color=GRIS_TENUE, negrita=True)
-        _texto(slide, left, y + Inches(0.24), Inches(2.8), Inches(0.26), valor,
-               tam=11.5, color=BLANCO, negrita=True)
+        _texto(slide, left, tope + Inches(0.22), Inches(2.6), Inches(0.26), valor,
+               tam=11, color=BLANCO, negrita=True)
     return slide
 
 
@@ -278,7 +357,9 @@ def slide_seccion(prs, datos, numero):
     color = datos.get("color", VERDE)
     _rect(slide, Emu(0), Emu(0), Inches(0.14), ALTO, relleno=color)
 
-    _texto(slide, MARGEN, Inches(2.15), Inches(2.0), Inches(1.5), datos["numero"],
+    # El ancho se queda corto respecto del inicio del título (1,9") a propósito: así
+    # las cajas no se cruzan y el verificador no reporta un solapamiento inexistente.
+    _texto(slide, MARGEN, Inches(2.15), Inches(1.75), Inches(1.5), datos["numero"],
            tam=96, color=color, tipo=TIPO_CIFRA, negrita=True, interlineado=0.9)
     _texto(slide, MARGEN + Inches(1.9), Inches(2.35), Inches(9.0), Inches(1.1),
            datos["titulo"], tam=40, color=BLANCO, negrita=True, interlineado=1.0)
@@ -570,25 +651,31 @@ def slide_cierre(prs, datos, numero):
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     _fondo(slide)
     _rect(slide, Emu(0), Emu(0), Inches(0.14), ALTO, relleno=VERDE)
-    _texto(slide, MARGEN, Inches(1.15), UTIL, Inches(0.3), datos["kicker"].upper(),
+    _texto(slide, MARGEN, Inches(0.95), UTIL, Inches(0.3), datos["kicker"].upper(),
            tam=11.5, color=VERDE, negrita=True)
-    _texto(slide, MARGEN, Inches(1.6), Inches(10.0), Inches(0.9), datos["titulo"],
-           tam=38, color=BLANCO, negrita=True, interlineado=1.0)
+    tope_titulo, TAM_TITULO = 1.32, 36
+    alto_titulo = _alto_texto(datos["titulo"], 10.0, TAM_TITULO, 1.0, negrita=True)
+    _texto(slide, MARGEN, Inches(tope_titulo), Inches(10.0), Inches(alto_titulo),
+           datos["titulo"], tam=TAM_TITULO, color=BLANCO, negrita=True,
+           interlineado=1.0)
 
     ancho_in = _pulg(UTIL)
     alto_aviso = _alto_caja(datos["aviso"][1], ancho_in, 12)
     alto_proceso = _alto_caja(datos["proceso"][1], ancho_in, 12)
 
-    y = Inches(2.32)
+    # El bloque arranca donde termina el título medido, no en una constante: con una
+    # constante el filete de la advertencia acababa cruzando el texto del título.
+    y = Inches(tope_titulo + alto_titulo + 0.26)
     _caja_titulada(slide, MARGEN, y, UTIL, Inches(alto_aviso),
                    datos["aviso"][0], datos["aviso"][1], color=AMBAR, tam=12)
-    y = y + Inches(alto_aviso + 0.18)
+    y = y + Inches(alto_aviso + 0.16)
     _caja_titulada(slide, MARGEN, y, UTIL, Inches(alto_proceso),
                    datos["proceso"][0], datos["proceso"][1], color=AZUL, tam=12)
-    y = y + Inches(alto_proceso + 0.26)
-    _texto(slide, MARGEN, y, UTIL,
-           Inches(_alto_texto(datos["firma"], ancho_in, 12, 1.3)), datos["firma"],
-           tam=12, color=GRIS, interlineado=1.3, color_fuerte=BLANCO)
+    y = y + Inches(alto_proceso + 0.2)
+    _bloque_autor(slide, MARGEN, y, datos["autor"], FOTO, diametro=1.02,
+                  tam_nombre=13, compacto=True)
+    _texto(slide, MARGEN + Inches(9.35), y + Inches(0.3), Inches(2.6), Inches(0.24),
+           datos["fecha"], tam=11, color=GRIS)
     return slide
 
 
@@ -604,7 +691,10 @@ RENDER = {
 }
 
 
-def construir(slides, destino: Path) -> Path:
+def construir(slides, destino: Path, foto: Path | None = None) -> Path:
+    global FOTO
+    FOTO = _foto_circular(foto) if foto else None
+
     prs = Presentation()
     prs.slide_width = ANCHO
     prs.slide_height = ALTO
@@ -624,8 +714,14 @@ def main() -> None:
         default="docs/capacitacion/Analisis Fundamental - Capacitacion GI.pptx",
         help="ruta del .pptx de salida",
     )
+    parser.add_argument(
+        "--foto",
+        default="docs/capacitacion/assets/autor.png",
+        help="retrato del autor; se recorta en círculo. Si no existe, se omite",
+    )
     args = parser.parse_args()
-    ruta = construir(SLIDES, Path(args.out))
+    foto = Path(args.foto) if args.foto else None
+    ruta = construir(SLIDES, Path(args.out), foto)
     print(f"{len(SLIDES)} slides -> {ruta}")
 
 

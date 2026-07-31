@@ -328,10 +328,16 @@ contenido sea versionable y regenerable. Vive en `docs/capacitacion/`.
   `capacitacion_fundamental_contenido.py` (criterio editorial). La separación es
   deliberada: editar un texto no debe obligar a tocar el dibujo, ni al revés.
   ```bash
-  uv run --with python-pptx python scripts/capacitacion_fundamental_ppt.py
+  uv run --with python-pptx --with pillow python scripts/capacitacion_fundamental_ppt.py
   ```
-  `python-pptx` **no** es dependencia del proyecto: se inyecta con `uv run --with` para
-  no alterar el `.venv`.
+  `python-pptx` y `pillow` **no** son dependencias del proyecto: se inyectan con
+  `uv run --with` para no alterar el `.venv`.
+- **Autoría**: el retrato del autor va en la portada y en el cierre, junto al nombre y
+  las credenciales — es material que circula entre equipos, así que quién lo firma se ve
+  de entrada. La foto se toma de `docs/capacitacion/assets/autor.png` (o de `--foto
+  <ruta>`) y se recorta en círculo con Pillow, porque PowerPoint no aplica máscaras. El
+  recorte se hace desde el tercio superior, no del centro geométrico, para no cortar la
+  cabeza. Si el archivo no existe, la maqueta cae al diseño sin retrato en vez de fallar.
 - **Tipografía**: Segoe UI + Consolas para cifras, **no** las fuentes de marca. Syne /
   DM Sans / Space Grotesk solo existen en el repo como `.woff2` (formato web) y no están
   instaladas en los equipos: declararlas hace que PowerPoint las sustituya y rompa la
@@ -342,8 +348,14 @@ contenido sea versionable y regenerable. Vive en `docs/capacitacion/`.
   título de dos líneas se superpone con el párrafo siguiente, y una tabla larga se
   expande por debajo del pie —PowerPoint ignora `row.height` si el texto no cabe—.
 - **Verificación obligatoria**: con decenas de slides la inspección visual no basta.
-  Exportar a PNG vía COM (`$pres.Export($ruta,"PNG",1600,900)`) y revisar, más un
-  chequeo de que ninguna forma de contenido invada la banda del pie.
+  ```bash
+  uv run --with python-pptx python scripts/verificar_capacitacion.py
+  ```
+  Detecta desbordes sobre el pie y solapamientos entre bloques de texto. Complementarlo
+  exportando a PNG vía COM (`$pres.Export($ruta,"PNG",1600,900)`) para revisar el
+  resultado real. **Ojo**: si el director tiene el `.pptx` abierto, `prs.save()` falla
+  con `PermissionError` y COM rechaza la conexión con `0x80048240` — generar entonces a
+  una ruta temporal y nunca llamar a `$app.Quit()`, que cerraría su sesión.
 
 ## Flujo de aprobación → WhatsApp (modo semi-automático activo)
 
