@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Anexo — Revisión de la Calculadora Financiera GI</title>
+<style>
+  @page { size: A4; margin: 20mm 18mm 18mm 18mm; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.55;
+    color: #1a1a1f;
+  }
+  .portada { border-bottom: 3px solid #1a1a1f; padding-bottom: 14px; margin-bottom: 26px; }
+  .portada h1 { font-size: 19pt; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .portada .sub { font-size: 11pt; color: #55555f; margin: 0 0 12px; }
+  .portada .meta { font-size: 9pt; color: #6e6e78; margin: 0; }
+
+  h2 {
+    font-size: 12.5pt; margin: 24px 0 8px; padding-bottom: 4px;
+    border-bottom: 1px solid #d8d8de; page-break-after: avoid;
+  }
+  h3 { font-size: 10.5pt; margin: 16px 0 6px; page-break-after: avoid; }
+  p { margin: 0 0 9px; }
+  ul, ol { margin: 0 0 9px; padding-left: 20px; }
+  li { margin-bottom: 4px; }
+  strong { font-weight: 600; }
+
+  .nota {
+    background: #f4f4f7; border-left: 3px solid #8a8a96;
+    padding: 11px 14px; margin: 0 0 20px; font-size: 9.5pt; color: #3a3a42;
+  }
+  .nota p:last-child { margin-bottom: 0; }
+
+  .critico {
+    background: #fdf0f0; border-left: 3px solid #c0392b;
+    padding: 11px 14px; margin: 12px 0; font-size: 10pt;
+  }
+  .critico p:last-child { margin-bottom: 0; }
+
+  .ok {
+    background: #f0f8f2; border-left: 3px solid #2e8b57;
+    padding: 11px 14px; margin: 12px 0; font-size: 10pt;
+  }
+  .ok p:last-child { margin-bottom: 0; }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: 10px 0 14px;
+    font-size: 9.5pt; page-break-inside: avoid;
+  }
+  th {
+    text-align: left; background: #f0f0f4; padding: 7px 9px;
+    border: 1px solid #d8d8de; font-weight: 600;
+  }
+  td { padding: 7px 9px; border: 1px solid #d8d8de; vertical-align: top; }
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  code {
+    font-family: Consolas, "Courier New", monospace; font-size: 9pt;
+    background: #f0f0f4; padding: 1px 4px; border-radius: 3px;
+  }
+  .cita {
+    font-style: italic; color: #3a3a42; border-left: 2px solid #c8c8d0;
+    padding-left: 10px; margin: 8px 0 10px;
+  }
+  .pie {
+    margin-top: 28px; padding-top: 12px; border-top: 1px solid #d8d8de;
+    font-size: 9pt; color: #6e6e78;
+  }
+  .fuentes li { margin-bottom: 8px; font-size: 9.5pt; }
+</style>
+</head>
+<body>
+
+<div class="portada">
+  <h1>Anexo — Revisión de la Calculadora Financiera</h1>
+  <p class="sub">Hallazgos, mediciones y referencias consultadas</p>
+  <p class="meta">Área de Estudios y Post-Venta · Grupo de Análisis de Mercado · GI &nbsp;|&nbsp; Julio de 2026</p>
+</div>
+
+<div class="nota">
+  <p><strong>Alcance.</strong> Se recorrió <code>formulario.grupointeligencia.com/calculadora/</code> como usuario: test de perfil, registro completo y las cuatro pestañas de cálculo. Cada hallazgo indica cómo se verificó.</p>
+  <p><strong>Procedencia.</strong> El recorrido y las mediciones los realizó el motor de inteligencia artificial con el que el área trabaja su análisis. El criterio normativo y la propuesta de perfilamiento son del Área de Estudios y Post-Venta, y se sustentan en formación de Ingeniería en Finanzas, Diplomado en Gestión de Riesgos bajo estándar PMI y acreditación de conocimientos del mercado de valores (CMV).</p>
+  <p><strong>Registro de prueba.</strong> Se completó el formulario con los datos de quien firma el correo. Si aparece un lead a nombre de Benjamín Bravo Soza, corresponde a esta revisión.</p>
+  <p><strong>Comparación de origen.</strong> La revisión contrasta la herramienta con la calculadora de lotaje del Área de Estudios y Post-Venta (<code>ramadben.github.io/gi-calculadora-lotaje</code>), de la que proviene el núcleo de cálculo. Ver sección 2.</p>
+</div>
+
+<h2>1. Resumen de hallazgos por prioridad</h2>
+
+<table>
+  <tr><th style="width:6%">#</th><th style="width:46%">Hallazgo</th><th style="width:20%">Tipo</th><th>Esfuerzo estimado</th></tr>
+  <tr><td>1</td><td>El perfil de riesgo se guarda con respuestas preseleccionadas que el usuario no eligió</td><td>Calidad del dato / normativo</td><td>Bajo</td></tr>
+  <tr><td>2</td><td>Las barras deslizantes no permiten parametrizar la tolerancia; conviene pasar a tramos con cifras</td><td>Perfilamiento</td><td>Medio</td></tr>
+  <tr><td>3</td><td>El puntaje suma conocimiento con tolerancia al riesgo</td><td>Normativo</td><td>Bajo</td></tr>
+  <tr><td>4</td><td>No se evalúa la capacidad financiera (capital)</td><td>Normativo</td><td>Medio</td></tr>
+  <tr><td>5</td><td>«Bajo control» nombra dos magnitudes distintas</td><td>Nomenclatura</td><td>Bajo</td></tr>
+  <tr><td>6</td><td>«Equidad de la cuenta» es traducción literal de <em>equity</em></td><td>Nomenclatura</td><td>Bajo</td></tr>
+  <tr><td>7</td><td>El descargo del pie describe mal lo que hace la herramienta</td><td>Normativo</td><td>Bajo</td></tr>
+  <tr><td>8</td><td>El riesgo combinado se suma sin considerar correlación</td><td>Cálculo</td><td>Medio</td></tr>
+  <tr><td>9</td><td>La exposición apalancada se presenta sin contexto</td><td>Comunicación de riesgo</td><td>Bajo</td></tr>
+  <tr><td>10</td><td>Detalles de lenguaje y accesibilidad (7 puntos)</td><td>Usabilidad</td><td>Bajo</td></tr>
+  <tr><td>11</td><td>Jerarquía visual aplanada y dos desbordes reproducibles</td><td>Jerarquía de información</td><td>Medio</td></tr>
+  <tr><td>12</td><td>Dos elementos de la base sin recuperar: volatilidad típica y aviso de datos vencidos</td><td>Funcionalidad</td><td>Bajo</td></tr>
+</table>
+
+<h2>2. Qué proviene de la base y qué aportó la evolución</h2>
+
+<p>La herramienta evolucionó desde la calculadora de lotaje del Área de Estudios y Post-Venta. Distinguir el origen de cada elemento no es un asunto de crédito: sirve para saber a quién preguntarle cuando algo hay que ajustar, y para no perder en un rediseño lo que ya estaba resuelto.</p>
+
+<table>
+  <tr><th style="width:44%">Elemento</th><th style="width:28%">Origen</th><th>Estado</th></tr>
+  <tr><th colspan="3" style="background:#eef2ee">Cálculos que ya resolvía la base del área</th></tr>
+  <tr><td>Moneda real de cada instrumento (unidad por activo)</td><td>Base del área</td><td>Conservado</td></tr>
+  <tr><td>Valor del movimiento del precio en pesos</td><td>Base del área</td><td>Conservado</td></tr>
+  <tr><td>Valor por tramos de precio (1 punto, 10 puntos, el ingresado)</td><td>Base del área</td><td>Parcial: se conserva el movimiento ingresado, no los tramos de referencia</td></tr>
+  <tr><td>Volumen a partir del riesgo aceptado y la distancia del stop</td><td>Base del área</td><td>Conservado</td></tr>
+  <tr><td>Relación riesgo / recompensa («objetivo 2 a 1»)</td><td>Base del área</td><td>Conservado y ampliado a pestaña propia</td></tr>
+  <tr><td>Margen que inmoviliza la posición</td><td>Base del área</td><td>Conservado y mejor explicado</td></tr>
+  <tr><td>Datos de MT5 con sello de hora</td><td>Base del área</td><td>Conservado</td></tr>
+  <tr><td>Glosario de términos</td><td>Base del área</td><td>Conservado — ver 2.2</td></tr>
+  <tr><td><strong>Volatilidad típica del activo</strong> («lo que se mueve en un día normal»)</td><td>Base del área</td><td><strong>No aparece</strong></td></tr>
+  <tr><td><strong>Aviso de datos vencidos</strong> (alerta sobre 30 h)</td><td>Base del área</td><td><strong>No detectado</strong></td></tr>
+  <tr><th colspan="3" style="background:#eef0f4">Lo que agregó la evolución</th></tr>
+  <tr><td>Salud de cuenta y StopOut (depósito, rescate, distancia al cierre)</td><td>Evolución</td><td>Aporte nuevo sobre el margen heredado</td></tr>
+  <tr><td>Diversificación (reparto de capital entre posiciones)</td><td>Evolución</td><td>Aporte nuevo, el único territorio enteramente nuevo</td></tr>
+  <tr><td>Terminación visual e identidad de marca</td><td>Evolución</td><td>Aporte nuevo</td></tr>
+  <tr><td>Flujo guiado de tres pasos</td><td>Evolución</td><td>Aporte nuevo</td></tr>
+  <tr><td>Catálogo ampliado de 23 a 50 activos</td><td>Evolución</td><td>Aporte nuevo</td></tr>
+  <tr><td>Definiciones destacadas al inicio de cada pestaña</td><td>Evolución</td><td>Aporte nuevo</td></tr>
+  <tr><td>Registro, perfil de riesgo y derivación del lead</td><td>Evolución</td><td>Aporte nuevo — ver hallazgos 1 a 4</td></tr>
+  <tr><td>Aviso de privacidad y consentimientos</td><td>Evolución</td><td>Aporte nuevo, bien resuelto</td></tr>
+  <tr><td>Descargo del pie</td><td>Evolución</td><td>Aporte nuevo — ver hallazgo 7</td></tr>
+</table>
+
+<div class="ok">
+  <p><strong>Lectura de conjunto:</strong> de las cuatro pestañas actuales, dos reorganizan cálculos que la base ya resolvía (valor del movimiento, volumen por riesgo y relación riesgo/recompensa), una amplía el cálculo de margen heredado con la simulación de StopOut, y solo Diversificación aborda territorio nuevo. El núcleo heredado se conservó correctamente, incluida la distinción entre moneda de cotización y moneda de la cuenta, verificada en cuatro instrumentos (tabla 3.1).</p>
+  <p>Los hallazgos de esta revisión se concentran, en consecuencia, en las capas agregadas —registro, perfilamiento, diversificación y descargo— y en dos elementos de la base que no llegaron a la versión nueva.</p>
+</div>
+
+<h3>2.1 Los dos elementos de la base que conviene recuperar</h3>
+
+<p><strong>Volatilidad típica del activo.</strong> La calculadora del área muestra, por instrumento, cuánto recorre el precio en un día normal. Es el dato que permite juzgar si una distancia de stop es realista: un stop de 3 yenes en un par que recorre 7 en un día promedio se activa por ruido, no por error de análisis. Sin ese número, la distancia se define a ciegas. Está calculado y disponible del lado del área.</p>
+
+<p><strong>Aviso de datos vencidos.</strong> La versión del área despliega una alerta ámbar cuando los precios llevan más de 30 horas sin refrescarse: «estos valores no se han actualizado… tómalos como referencia y no como el valor de hoy». La versión nueva muestra la hora de actualización, pero no se detectó una advertencia cuando ese sello envejece. El riesgo es calcular margen y lotaje con precios muertos sin notarlo.</p>
+
+<h3>2.2 Un término de la base que no escaló: «capital bajo control»</h3>
+
+<p>El término proviene del área. Con un único cálculo resultaba suficiente; con cuatro pestañas dejó de serlo. Hoy nombra dos magnitudes que difieren 185 veces —la exposición ($36.991.200) y la pérdida máxima ($200.000)— y se ha multiplicado en cuatro variantes: «Monto bajo control», «Monto de capital bajo control», «Límite de capital definido» y «Monto límite».</p>
+
+<p>Corresponde corregirlo desde donde se originó. La propuesta del área es reservar «bajo control» para la exposición, adoptar un rótulo inequívoco para el límite de pérdida —«pérdida máxima aceptada»— y presentar cada valor una sola vez. Ver secciones 5.4 y 6.</p>
+
+<h2>3. Mediciones realizadas</h2>
+
+<h3>3.1 Unidad del campo de variación de precio, por activo</h3>
+
+<table>
+  <tr><th style="width:26%">Activo</th><th style="width:37%">«Variación del precio»</th><th>«Monto bajo control»</th></tr>
+  <tr><td>USDCLP</td><td class="num">CLP</td><td class="num">CLP</td></tr>
+  <tr><td>USDJPY</td><td class="num">JPY</td><td class="num">CLP</td></tr>
+  <tr><td>EURUSD</td><td class="num">USD</td><td class="num">CLP</td></tr>
+  <tr><td>XAUUSD</td><td class="num">USD</td><td class="num">CLP</td></tr>
+</table>
+
+<p><strong>Conclusión: correcto.</strong> La distancia entre precios se expresa en la moneda de cotización del par y el monto de riesgo en la moneda de la cuenta. Es la distinción que corresponde.</p>
+
+<h3>3.2 Aporte del nivel de conocimiento al puntaje de riesgo</h3>
+
+<p>Con las tres barras en su posición mínima, variando solo la pregunta de conocimiento:</p>
+
+<table>
+  <tr><th style="width:64%">Nivel de conocimiento declarado</th><th>Puntaje resultante</th></tr>
+  <tr><td>Sin marcar / «Estoy comenzando y quiero entender lo esencial»</td><td class="num">0/16</td></tr>
+  <tr><td>«Conozco riesgo, margen y diversificación»</td><td class="num">2/16</td></tr>
+  <tr><td>«Ya opero o simulo inversiones»</td><td class="num">4/16</td></tr>
+</table>
+
+<p>Cada barra aporta de 0 a 4 puntos; el total posible es 16. El conocimiento se suma a la tolerancia en un mismo indicador.</p>
+
+<div class="critico">
+  <p><strong>Consecuencia verificada:</strong> un usuario que declara «estoy comenzando y quiero entender lo esencial» y lleva las tres barras al máximo obtiene <strong>12/16 → perfil DINÁMICO</strong>, con la sugerencia de comenzar por Diversificación. Un usuario que declara «ya opero» con tolerancia mínima obtiene 4/16 → PRUDENTE. El principiante recibe el tratamiento de mayor riesgo.</p>
+</div>
+
+<h3>3.3 Capacidad de discriminación de las barras</h3>
+
+<p>Se recorrieron las 125 combinaciones posibles (3 barras × 5 posiciones), sin marcar conocimiento:</p>
+
+<table>
+  <tr><th style="width:34%">Perfil devuelto</th><th style="width:26%">Combinaciones</th><th style="width:18%">Proporción</th><th>Rango de puntaje</th></tr>
+  <tr><td>EQUILIBRADO</td><td class="num">62 de 125</td><td class="num">50%</td><td class="num">6 a 9</td></tr>
+  <tr><td>PRUDENTE</td><td class="num">53 de 125</td><td class="num">42%</td><td class="num">0 a 5</td></tr>
+  <tr><td>DINÁMICO</td><td class="num">10 de 125</td><td class="num">8%</td><td class="num">10 a 12</td></tr>
+</table>
+
+<p>Tres resultados para 125 combinaciones. Mover la barra de tolerancia de la posición 0 a la 2 no cambia el perfil. La mitad de las respuestas posibles converge a «Equilibrado», de modo que el instrumento discrimina poco en el tramo medio, que es donde se concentra la mayoría de los usuarios.</p>
+
+<h3>3.4 Posiciones iniciales de las barras</h3>
+
+<table>
+  <tr><th style="width:52%">Control</th><th style="width:24%">Valor inicial</th><th>Rango</th></tr>
+  <tr><td>¿Qué pérdida temporal tolerarías?</td><td class="num">1</td><td class="num">0 – 4</td></tr>
+  <tr><td>¿Qué tan largo es tu horizonte?</td><td class="num">2</td><td class="num">0 – 4</td></tr>
+  <tr><td>Si una inversión cae 10%, ¿cómo reaccionas?</td><td class="num">1</td><td class="num">0 – 4</td></tr>
+</table>
+
+<div class="critico">
+  <p><strong>Verificado en el recorrido:</strong> sin mover ninguna de las tres barras, el registro se completó y quedó guardado el perfil <strong>«PRUDENTE · 4/16»</strong>, con el mensaje «Tu registro quedó guardado. Revisa tu perfil». El sistema no distingue entre un usuario que respondió y uno que no interactuó con la sección.</p>
+</div>
+
+<h2>4. Propuesta de perfilamiento</h2>
+
+<p>Cuatro preguntas con opciones discretas, sin respuesta preseleccionada, y separando capacidad de tolerancia. El monto de la pregunta 2 se calcula sobre lo respondido en la 1.</p>
+
+<table>
+  <tr><th style="width:16%">Dimensión</th><th style="width:38%">Pregunta</th><th>Opciones</th></tr>
+  <tr>
+    <td><strong>Capacidad</strong></td>
+    <td>¿Cuánto capital vas a destinar a esta actividad?</td>
+    <td>$2.000.000 a $5.000.000 · $5.000.000 a $15.000.000 · $15.000.000 a $50.000.000 · Más de $50.000.000</td>
+  </tr>
+  <tr>
+    <td><strong>Tolerancia</strong></td>
+    <td>De ese capital, ¿cuánto estás dispuesto a poner en riesgo?</td>
+    <td>Hasta 5% · Hasta 10% · Hasta 20% · Hasta 30% o más<br><em>mostrando al lado el monto equivalente según la respuesta anterior</em></td>
+  </tr>
+  <tr>
+    <td><strong>Comportamiento</strong></td>
+    <td>Si tu cuenta pasara de $5.000.000 a $4.000.000 en una semana, ¿qué harías?</td>
+    <td>Cerraría todo · Reduciría el tamaño y seguiría · Mantendría el plan · Aumentaría posición</td>
+  </tr>
+  <tr>
+    <td><strong>Horizonte</strong></td>
+    <td>¿En cuánto tiempo necesitas ese dinero de vuelta?</td>
+    <td>Menos de 3 meses · 3 a 12 meses · 1 a 3 años · Más de 3 años</td>
+  </tr>
+</table>
+
+<p><strong>Sobre el piso de $2.000.000:</strong> por debajo de ese capital, el volumen mínimo que acepta el broker representa un porcentaje de riesgo incompatible con una gestión ordenada de la posición. Fijarlo como primer tramo ordena la expectativa desde el inicio de la conversación comercial y evita perfilar a quien no puede operar con criterio.</p>
+
+<p><strong>Regla operativa:</strong> el riesgo utilizable es el <strong>menor</strong> entre capacidad y tolerancia. Quien puede permitirse 30% pero solo tolera 10%, trabaja con 10%; quien tolera 30% pero solo puede permitirse 5%, trabaja con 5%.</p>
+
+<p><strong>Sobre el límite normativo:</strong> recolectar información no constituye asesoría de inversión; lo que la constituye es la recomendación. La línea se cruza en lo que la herramienta devuelve, no en lo que pregunta. Preguntar mejor y con más detalle no agrega exposición; entregar un volumen sugerido sí. Con una salvedad: si se recolecta un perfil, la responsabilidad de usarlo correctamente es de la firma y no del cliente — no funciona como escudo.</p>
+
+<h2>5. Jerarquía visual y desbordes</h2>
+
+<p><strong>Delimitación:</strong> la estética corresponde al equipo de diseño y no es objeto de esta revisión. Lo que sigue se refiere a la jerarquía de la <em>información</em>, que determina qué comprende el usuario y en qué orden.</p>
+
+<h3>5.1 El peso visual no acompaña a la información</h3>
+
+<p>Se contabilizaron nueve encabezados a tamaño máximo en un recorrido: «CALCULA ANTES. DECIDE TRANQUILO.», «¿CUÁNTO SABES DE FINANZAS?», «¿QUÉ OPERACIÓN QUIERES EVALUAR?», «MARGEN Y STOPOUT», «DIVERSIFICACIÓN», «TU ESCENARIO DE UN VISTAZO», «LLEVA TU SIMULACIÓN CONTIGO.», «ENTIENDE CADA CIFRA.» y «CONSTRUYE TU DISTRIBUCIÓN».</p>
+
+<p>Cuando cada sección abre con el mismo peso máximo, la jerarquía se aplana y el lector pierde la guía sobre qué mirar primero. En una herramienta de cálculo esto invierte las prioridades: las cifras son la razón por la que alguien abre la página, y hoy un rótulo de sección como «ENTIENDE CADA CIFRA» tiene más presencia visual que varios de los números calculados.</p>
+
+<h3>5.2 Datos en espacios de titular</h3>
+
+<p class="cita">«ESTÁS EVALUANDO UNA COMPRA DE USDCLP CON 0,40 LOTES.»</p>
+
+<p>El texto está compuesto en tipografía de titular, pero su contenido es <strong>variable</strong>: cambia con el activo y el volumen. Un espacio de titular se dimensiona para un largo previsible; cuando el largo lo determina el dato, desborda. Es la causa probable de los dos defectos siguientes.</p>
+
+<h3>5.3 Desbordes reproducibles</h3>
+
+<p>Ambos se producen con los valores por defecto, en viewport de escritorio (1500 × 950), sin interacción previa:</p>
+
+<table>
+  <tr><th style="width:30%">Ubicación</th><th>Defecto</th></tr>
+  <tr><td>Pestaña 04 · Diversificación</td><td>El texto de bajada se solapa con el título: la palabra «defines» queda cubierta por la Ñ de DIVERSIFICACIÓN</td></tr>
+  <tr><td>Pestaña 01 · Simula tu operación</td><td>«TU ESCENARIO DE UN VISTAZO» se solapa con el panel del gráfico y el título se corta a media palabra</td></tr>
+</table>
+
+<h3>5.4 Duplicación de datos: causa común del ruido y de la ambigüedad</h3>
+
+<p>En la pestaña 01, la fila de métricas y el panel de «lectura visual» presentan los mismos tres valores:</p>
+
+<table>
+  <tr><th style="width:20%">Valor</th><th style="width:40%">Fila de métricas</th><th>Panel de lectura visual</th></tr>
+  <tr><td class="num">$369.912</td><td>«Margen requerido»</td><td>«Margen requerido»</td></tr>
+  <tr><td class="num">$200.000</td><td><strong>«Límite de capital definido»</strong></td><td><strong>«Monto bajo control»</strong></td></tr>
+  <tr><td class="num">$400.000</td><td>«Resultado favorable estimado»</td><td>«Resultado favorable»</td></tr>
+</table>
+
+<p>No hay quince datos compitiendo por atención: hay siete, tres de ellos repetidos. Y la duplicación obligó a nombrar dos veces el mismo número con rótulos distintos, que es el origen del problema de nomenclatura descrito en la sección 6: mostrar cada valor una sola vez resuelve el ruido y la ambigüedad a la vez.</p>
+
+<h2>6. Nomenclatura</h2>
+
+<table>
+  <tr><th style="width:30%">Término actual</th><th style="width:34%">Problema</th><th>Sugerencia</th></tr>
+  <tr>
+    <td>«Monto bajo control» / «Controla $X»</td>
+    <td>Nombra la exposición ($36.991.200) y el límite de pérdida ($200.000) en la misma pantalla. Difieren 185 veces</td>
+    <td>Reservar «bajo control» para exposición; usar «pérdida máxima aceptada» para el límite</td>
+  </tr>
+  <tr>
+    <td>«Equidad de la cuenta»</td>
+    <td>Traducción literal de <em>equity</em>. En español, equidad significa justicia o imparcialidad</td>
+    <td>«Patrimonio de la cuenta» o «capital actual de la cuenta»</td>
+  </tr>
+  <tr>
+    <td>«Monto de capital bajo control», «Límite de capital definido», «Monto límite»</td>
+    <td>Cuatro rótulos para dos conceptos</td>
+    <td>Unificar en dos: exposición y pérdida máxima</td>
+  </tr>
+  <tr>
+    <td>StopOut</td>
+    <td>Se usa como etiqueta de campo y se explica solo al final del glosario</td>
+    <td>Explicarlo en el punto de uso</td>
+  </tr>
+  <tr>
+    <td>MAM, Leaseback</td>
+    <td>Sin explicación en el selector que decide la derivación del lead</td>
+    <td>Una línea de descripción por opción</td>
+  </tr>
+</table>
+
+<h2>7. Lenguaje y accesibilidad</h2>
+
+<table>
+  <tr><th style="width:44%">Observación</th><th>Detalle</th></tr>
+  <tr><td>«SalgoEvalúo / mantengo»</td><td>Las etiquetas de los extremos de la tercera barra quedaron sin separación. Se lee una palabra inexistente</td></tr>
+  <tr><td>«Please fill out this field.»</td><td>Mensaje de validación en inglés (texto por defecto del navegador) en un formulario en español</td></tr>
+  <tr><td>Campo obligatorio sin indicar</td><td>«Cuéntanos brevemente qué necesitas aprender, evaluar o resolver» es requerido y no lo señala. Bloqueó el primer intento de registro sin explicación visible</td></tr>
+  <tr><td>Barras sin etiqueta accesible</td><td>Los tres controles carecen de <code>aria-label</code>: un lector de pantalla no puede identificarlos</td></tr>
+  <tr><td>«Usa los valores disponibles en tu MetaTrader 5»</td><td>Encabeza Margen y StopOut. Asume plataforma instalada, en una herramienta dirigida también a quien está comenzando</td></tr>
+  <tr><td>Superposición de texto</td><td>En Diversificación, la bajada se solapa con el título en ancho de escritorio</td></tr>
+  <tr><td>Tamaño de los controles</td><td>Las barras miden unos 120 px para cinco posiciones (~30 px por opción), difícil de precisar y más aún en móvil</td></tr>
+</table>
+
+<h2>8. Cálculo y comunicación de riesgo</h2>
+
+<h3>8.1 Riesgo combinado sin correlación</h3>
+
+<p>En Diversificación, el «Riesgo total estimado» se define como <em>«suma de los montos límite definidos para las posiciones»</em>. Es una suma lineal que no considera la relación entre los activos.</p>
+
+<p class="cita">La propia herramienta advierte, en otra sección: «Diversificar no es sumar activos al azar: importa cómo se relacionan entre sí y qué riesgo comparten».</p>
+
+<p>El texto educativo y el cálculo se contradicen. Si varias posiciones dependen del mismo factor, sus pérdidas no se suman de forma independiente: se activan juntas.</p>
+
+<h3>8.2 Exposición apalancada sin contexto</h3>
+
+<table>
+  <tr><th style="width:46%">Dato mostrado</th><th>Valor</th></tr>
+  <tr><td>Capital total de ejemplo</td><td class="num">$20.000.000 CLP</td></tr>
+  <tr><td>Exposición combinada</td><td class="num">$167.576.547 CLP</td></tr>
+  <tr><td><strong>Apalancamiento implícito</strong></td><td class="num"><strong>8,4 veces el capital</strong></td></tr>
+  <tr><td>Riesgo total estimado</td><td class="num">$292.500 CLP (1,5% del capital)</td></tr>
+  <tr><td>Titular de la sección</td><td>«La distribución es más equilibrada»</td></tr>
+</table>
+
+<p>Las cifras son correctas, pero presentadas juntas transmiten tranquilidad sin que el usuario perciba la magnitud del apalancamiento. Además, el riesgo declarado de 1,5% supone que todos los límites se ejecutan al precio previsto.</p>
+
+<h3>8.3 Detalles menores</h3>
+
+<ul>
+  <li><strong>La fórmula omite el factor 100.</strong> Se muestra <code>(equidad + depósito − rescate) ÷ margen</code>; con $5.000.000 y $2.500.000 el resultado es 2, y en pantalla aparece 200%.</li>
+  <li><strong>Escala invertida en la barra de margen.</strong> El 200% se ubica hacia la izquierda y el StopOut de 50% al extremo derecho, de modo que «más lleno» no equivale a «mejor» de forma evidente.</li>
+  <li><strong>El capital no persiste entre pestañas.</strong> $5.000.000 en Margen y StopOut, $20.000.000 en Diversificación. Pedirlo una vez y propagarlo daría continuidad al recorrido.</li>
+</ul>
+
+<h2>9. Texto del pie</h2>
+
+<p class="cita">«Esta herramienta es referencial y educativa. Operar instrumentos financieros implica riesgo de pérdida. Los resultados mostrados son ejemplos fijos y no constituyen recomendación de inversión.»</p>
+
+<p>Los resultados <strong>no son ejemplos fijos</strong>: se calculan con los datos que ingresa el usuario. Un descargo que describe la herramienta como más inocua de lo que es pierde su función. Debe leerse junto a que la herramienta entrega un «Volumen sugerido» y ofrece «Probar este volumen».</p>
+
+<p>El Área de Estudios y Post-Venta propondrá un texto de reemplazo.</p>
+
+<h2>10. Referencias consultadas</h2>
+
+<ol class="fuentes">
+  <li><strong>ESMA</strong> — <em>Guidelines on certain aspects of the MiFID II suitability requirements</em> (ESMA35-43-3172). Establece que la evaluación debe cubrir conocimiento y experiencia, situación financiera incluida la capacidad de asumir pérdidas, y objetivos incluida la tolerancia al riesgo; que las autoevaluaciones del cliente deben contrapesarse con criterios objetivos; y que la responsabilidad de la idoneidad recae en la firma.<br>
+  <code>esma.europa.eu/sites/default/files/2023-04/ESMA35-43-3172_Guidelines_on_certain_aspects_of_the_MiFID_II_suitability_requirements.pdf</code></li>
+
+  <li><strong>ESMA</strong> — MiFID II, Artículo 25: <em>Assessment of suitability and appropriateness and reporting to clients</em>.<br>
+  <code>esma.europa.eu/publications-and-data/interactive-single-rulebook/mifid-ii/article-25-assessment-suitability-and</code></li>
+
+  <li><strong>CONSOB</strong> (regulador de valores de Italia) — <em>Assessing investors' risk tolerance through a questionnaire</em>, Discussion Paper. Documenta por qué las escalas de adjetivos sin anclas cuantitativas resultan poco fiables, la inconsistencia entre tolerancia declarada y comportamiento real, el sesgo de deseabilidad social, y recomienda escenarios con cifras concretas y montos explícitos.<br>
+  <code>consob.it/documents/1912911/2006254/dp4en.pdf</code></li>
+
+  <li><strong>Hogan Lovells</strong> — <em>MiFID II: Investor Protection — Suitability, key points.</em> Señala que el proceso debe considerar la capacidad de pérdida del cliente, interpretar y ponderar adecuadamente las respuestas, y que la redacción debe ser justa, clara y no engañosa.</li>
+
+  <li><strong>Práctica de calificación de prospectos en servicios financieros</strong> — la separación entre la fase de recolección de información y la fase de recomendación es estándar en la industria, y es lo que permite hacer descubrimiento comercial detallado sin entrar en el régimen de asesoría.</li>
+</ol>
+
+<div class="pie">
+  Área de Estudios y Post-Venta · Grupo de Análisis de Mercado · GI &nbsp;—&nbsp; Anexo al correo «Calculadora financiera — hallazgos» &nbsp;—&nbsp; Julio de 2026
+</div>
+
+</body>
+</html>

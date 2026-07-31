@@ -1,0 +1,223 @@
+Asunto: Calculadora financiera — revisión del Área de Estudios y Post-Venta
+
+
+Hola Rodrigo,
+
+Te escribo desde el Área de Estudios y Post-Venta con la revisión de la calculadora. La recorrimos completa como lo haría un usuario: pasamos por el test de perfil, completamos el registro y usamos las cuatro pestañas.
+
+Nos dio gusto verla publicada. Como sabes, la herramienta nace de la calculadora de lotaje que desarrollamos en el área —la que está en ramadben.github.io/gi-calculadora-lotaje— y encontrarnos con esa base convertida en algo de este alcance es justamente lo que esperábamos cuando la pusimos a disposición. Se conservó el núcleo de cálculo y se le agregaron capas que nosotros no habíamos hecho.
+
+Por eso mismo te escribimos con este nivel de detalle: conocemos bien qué hace cada número por dentro, y desde ahí hay cosas que podemos aportar. Lo que sigue está ordenado de más a menos urgente. Nada requiere rehacer: son cambios de rótulo, de orden, de jerarquía y de dónde va cada advertencia.
+
+Un aviso práctico: completamos el registro con los datos de quien firma este correo, así que si aparece un lead a nombre de Benjamín Bravo Soza es de prueba. Lo dejamos anotado para que nadie lo trabaje.
+
+
+LO QUE APORTARON USTEDES, Y CONVIENE DECIRLO CON NOMBRE
+
+Antes de los hallazgos, lo que la evolución agregó y nos parece bien logrado:
+
+• La terminación visual y la identidad. La base nuestra era funcional y sobria; esto tiene presencia de marca y se ve como un producto.
+
+• El flujo de tres pasos —simula, define el monto, ajusta el tamaño— que le da un recorrido a alguien que no sabe por dónde empezar. Eso no existía.
+
+• La salud de cuenta y el StopOut. El margen ya estaba en la base, pero simular qué pasa con un depósito o un rescate y cuánto falta para el cierre automático es territorio nuevo, y responde una pregunta que en post-venta nos llega seguido.
+
+• La pestaña de Diversificación completa. Es la única enteramente nueva y aborda algo que no habíamos tocado: cómo se reparte el capital entre posiciones.
+
+• Llevarla de 23 a 50 activos.
+
+• Las definiciones destacadas al inicio de cada pestaña, que llevan los conceptos al punto donde el usuario los necesita.
+
+• El aviso de privacidad: responsable, finalidad, plazo de conservación y canal para ejercer derechos, con el consentimiento comercial separado del necesario y marcado como opcional. Está mejor resuelto que en la mayoría de los formularios del sector.
+
+• Declarar el StopOut como referencial del 50%, reconociendo que el nivel real depende del broker.
+
+
+1. LO MÁS URGENTE: EL PERFIL SE GUARDA SIN QUE EL USUARIO RESPONDA
+
+Las tres barras del test de riesgo vienen con una posición inicial ya puesta. No las movimos en ningún momento, y al enviar el registro quedó guardado "TU PUNTO DE PARTIDA: PRUDENTE · 4/16", con el mensaje "Tu registro quedó guardado. Revisa tu perfil".
+
+El efecto práctico es que el sistema recibe un perfil de riesgo que la persona nunca declaró, y el ejecutivo que tome ese lead va a llamar creyendo que el cliente se definió como prudente. No hay forma de distinguir a quien contestó de quien pasó de largo.
+
+Es el punto que más nos preocupa porque afecta la calidad del dato que usa el equipo comercial, y se resuelve de forma simple: que ninguna opción venga preseleccionada. Si el usuario no eligió, que no haya perfil.
+
+
+2. EL PERFILAMIENTO: DONDE MÁS PODEMOS APORTARLES
+
+Acá va nuestra observación principal, y la trabajamos con detalle porque es el terreno del área.
+
+Las barras deslizantes son difíciles de interpretar, tanto para quien responde como para quien después lee el resultado. "¿Qué pérdida temporal tolerarías?" con extremos "Muy baja" y "Alta" deja que cada persona entienda algo distinto: tu "alta" y mi "alta" no son el mismo número, y las respuestas no quedan comparables entre leads.
+
+No es una impresión nuestra. Es lo que concluye la investigación sobre cuestionarios de tolerancia al riesgo: las escalas de adjetivos sin referencias numéricas producen interpretaciones divergentes, no vinculan la respuesta a situaciones monetarias reales y generan inconsistencia entre lo que la persona cree que tolera y lo que hace cuando la pérdida es concreta. Va citado en el anexo.
+
+Y tres cosas que medimos al recorrerlo:
+
+• Las barras ofrecen cinco posiciones cada una, o sea 125 combinaciones posibles, pero el resultado solo distingue tres perfiles. Mover "¿qué pérdida tolerarías?" de la primera a la tercera posición no cambia nada. La barra promete una precisión que el modelo no usa.
+
+• La mitad de las combinaciones posibles cae en "Equilibrado", así que el instrumento discrimina poco justo en el tramo donde está la mayoría de la gente.
+
+• Las etiquetas no cambian nunca. El usuario mueve el control y no recibe ninguna confirmación de qué eligió, más allá de la posición del cursor.
+
+NUESTRA PROPUESTA: OPCIONES CON CIFRAS, Y EN ESTE ORDEN
+
+Recomendamos reemplazar las barras por opciones concretas, y hacer una separación que hoy no existe: preguntar primero cuánto capital hay y después cuánto de ese capital se está dispuesto a arriesgar.
+
+Esa separación importa porque son dos cosas independientes. Una persona puede tener patrimonio suficiente y poca tolerancia emocional, o al revés. La norma las trata como dimensiones distintas, y la regla que se desprende es simple: el riesgo utilizable es el menor de los dos.
+
+Un borrador para que su equipo lo ajuste:
+
+  1. CAPACIDAD — "¿Cuánto capital vas a destinar a esta actividad?"
+     $2.000.000 a $5.000.000 · $5.000.000 a $15.000.000 · $15.000.000 a $50.000.000 · Más de $50.000.000
+
+     El piso de $2.000.000 no es arbitrario: por debajo de ese capital, el volumen mínimo que acepta el broker ya representa un porcentaje de riesgo que no permite operar con criterio. Dejarlo explícito en el primer tramo también ordena la expectativa desde el inicio de la conversación.
+
+  2. TOLERANCIA — "De ese capital, ¿cuánto estás dispuesto a poner en riesgo?"
+     Hasta 5% · Hasta 10% · Hasta 20% · Hasta 30% o más
+     Y acá lo importante: mostrando al lado el monto que eso significa según lo que respondió en la pregunta 1. "20% de tu capital" es abstracto y fácil de aceptar; "$1.000.000 de tus $5.000.000" se siente. Es lo que hace que la gente responda con la verdad.
+
+  3. COMPORTAMIENTO — "Si tu cuenta pasara de $5.000.000 a $4.000.000 en una semana, ¿qué harías?"
+     Cerraría todo · Reduciría el tamaño y seguiría · Mantendría el plan · Aumentaría posición
+
+  4. HORIZONTE — "¿En cuánto tiempo necesitas ese dinero de vuelta?"
+     Menos de 3 meses · 3 a 12 meses · 1 a 3 años · Más de 3 años
+
+POR QUÉ LES CONVIENE MÁS ALLÁ DE LA CORRECCIÓN
+
+Y acá está el argumento que nos parece más relevante para ustedes: los tramos con cifras producen mejores leads, no solo más correctos.
+
+Alguien que movió una barra a "tolerancia alta" no se comprometió con nada. Alguien que eligió "estoy dispuesto a arriesgar $1.000.000 de mis $5.000.000" ya declaró un número, y con eso el ejecutivo sabe de entrada si vale la conversación, con qué producto y con qué expectativa.
+
+La pregunta 3 es la más valiosa comercialmente: detecta a quien va a reclamar. Quien responde "cerraría todo" y aun así se declara tolerante al riesgo es el que abandona con la primera pérdida y termina en post-venta. Saberlo antes de la primera llamada vale mucho.
+
+Es un argumento de conversión y retención, no de cumplimiento. Y da vuelta el planteamiento: lo que hoy es un test de descubrimiento se convierte en un instrumento de calificación.
+
+
+3. EL PUNTAJE SUMA CONOCIMIENTO CON TOLERANCIA
+
+Lo medimos: con las tres barras en cero, marcar "conozco riesgo, margen y diversificación" suma 2 puntos y "ya opero o simulo inversiones" suma 4.
+
+El resultado es que saber más de finanzas te empuja hacia un perfil de más riesgo, cuando son dimensiones independientes. El caso que lo muestra: alguien que marca "estoy comenzando y quiero entender lo esencial" y mueve las tres barras al máximo obtiene 12/16, queda como perfil dinámico y recibe la sugerencia de partir por Diversificación.
+
+Nuestra recomendación es mantener las dos mediciones separadas: el conocimiento define el lenguaje con que se le habla y el producto que se le ofrece; la tolerancia define el riesgo. Mezclarlas hace que un principiante confiado reciba el tratamiento de un experto.
+
+Relacionado: el test no pregunta capital en ninguna parte. De las tres dimensiones que se consideran para evaluar a un cliente —conocimiento, situación financiera y objetivos— hoy se cubren dos y falta justamente la que pone el techo.
+
+
+4. DOS COSAS DE LA BASE QUE SE PERDIERON EN EL CAMINO
+
+Las mencionamos porque nos parecen valiosas y son fáciles de recuperar:
+
+• LA VOLATILIDAD TÍPICA DEL ACTIVO. La calculadora original mostraba "lo que se mueve en un día normal" para cada instrumento. Es el dato que le dice a alguien si su stop es realista: un stop de 3 yenes en un par que recorre 7 en un día promedio se va a activar por ruido, no porque el análisis estuviera equivocado. Sin ese número, el usuario define distancias a ciegas. Es probablemente el dato más útil que teníamos y hoy no aparece.
+
+• EL AVISO DE DATOS VENCIDOS. La versión del área muestra una alerta ámbar cuando los precios superan las 30 horas sin actualizarse: "estos valores no se han actualizado, tómalos como referencia y no como el valor de hoy". La calculadora nueva muestra la hora de actualización, que está bien, pero no vimos una advertencia cuando ese sello envejece. Importa porque alguien puede calcular con precios muertos sin notarlo, y el margen y el lotaje cambian con el precio. Si ya lo tienen resuelto y no lo detectamos, avísennos y lo sacamos.
+
+
+5. JERARQUÍA VISUAL: UN TEMA QUE PLANTEAMOS CON CUIDADO
+
+Acá queremos ser explícitos sobre los límites: la estética es su oficio y no la vamos a discutir. Pero la jerarquía de la información sí nos toca, porque define qué entiende el cliente y en qué orden lo entiende.
+
+Nuestra observación es que el peso visual no está donde está la información. En un recorrido contamos nueve encabezados a tamaño máximo —"CALCULA ANTES. DECIDE TRANQUILO.", "¿QUÉ OPERACIÓN QUIERES EVALUAR?", "MARGEN Y STOPOUT", "TU ESCENARIO DE UN VISTAZO", "LLEVA TU SIMULACIÓN CONTIGO.", "ENTIENDE CADA CIFRA.", entre otros—. Cuando cada sección abre con el mismo peso máximo, la jerarquía se aplana: si todo destaca, nada destaca.
+
+Y en una herramienta de cálculo eso invierte las prioridades. Lo que debería tener más presencia son las cifras, porque son la razón por la que alguien abre la página. Hoy el rótulo "ENTIENDE CADA CIFRA" pesa más que varios de los números que la herramienta calcula.
+
+Es la misma lección que aprendimos armando nuestras piezas gráficas: el protagonista es el dato, no el encabezado que lo anuncia.
+
+DOS DESBORDES CONCRETOS
+
+Estos no son criterio, son defectos reproducibles con los valores por defecto y en pantalla de escritorio:
+
+• En Diversificación, el texto de la bajada se solapa con el título: la palabra "defines" queda tapada por la Ñ de DIVERSIFICACIÓN.
+
+• En Simula tu operación, "TU ESCENARIO DE UN VISTAZO" se solapa con el panel del gráfico y el título se corta a media palabra.
+
+Van las capturas en el anexo.
+
+Y una causa probable, por si ayuda: hay datos puestos en espacios de titular. "ESTÁS EVALUANDO UNA COMPRA DE USDCLP CON 0,40 LOTES." está en tipografía de titular gigante, pero es contenido variable —cambia con el activo y el volumen—. Un espacio de titular está dimensionado para un texto de largo previsible; cuando el largo lo decide el dato, desborda. Nos pasó exactamente lo mismo en nuestras piezas y lo resolvimos separando los espacios de texto fijo de los de contenido variable.
+
+
+6. NOMENCLATURA, Y UNA CAUSA COMÚN CON EL RUIDO
+
+Encontramos algo que explica dos problemas a la vez. En la pestaña 1, la fila de métricas y el panel de "lectura visual" muestran los mismos tres números:
+
+  • $369.912 — "Margen requerido" en los dos lugares
+  • $200.000 — "Límite de capital definido" arriba, "Monto bajo control" abajo
+  • $400.000 — "Resultado favorable estimado" arriba, "Resultado favorable" abajo
+
+O sea que no hay quince datos compitiendo por atención: hay siete datos, tres de ellos dos veces. Y el del medio es el que nos llamó más la atención: el mismo número aparece con dos nombres distintos en la misma pantalla.
+
+Eso conecta con el problema de nomenclatura más serio que vimos, y acá nos toca hacer autocrítica: "capital bajo control" es un término que pusimos nosotros, y hoy vemos que no aguantó el crecimiento de la herramienta.
+
+Hoy "bajo control" nombra dos magnitudes muy diferentes: "Controla $36.991.200 CLP" bajo el lotaje —que es la exposición— y "Monto bajo control: $200.000 CLP" —que es la pérdida máxima—. Difieren 185 veces. Y se multiplicó en cuatro variantes: "Monto bajo control", "Monto de capital bajo control", "Límite de capital definido" y "Monto límite". Con un solo cálculo el término alcanzaba; con cuatro pestañas ya no, y alguien que confunda una magnitud con otra dimensiona la posición mal.
+
+Nuestra propuesta, entonces, es corregir lo que aportamos mal: reservar "bajo control" para la exposición, usar un rótulo inequívoco para el límite de pérdida —del tipo "pérdida máxima aceptada"—, y mostrar cada número una sola vez. Con eso se resuelve el ruido y la ambigüedad juntos. Si quieren, redactamos nosotros los rótulos nuevos y ustedes deciden si funcionan con el diseño.
+
+Dos rótulos más:
+
+• "Equidad de la cuenta" viene del inglés equity, pero en español equidad significa justicia o imparcialidad. Quien recién empieza no va a saber qué le están preguntando. "Patrimonio de la cuenta" o "capital actual de la cuenta" dice lo mismo y se entiende.
+
+• StopOut aparece como etiqueta de campo y se explica solo al final del glosario. MAM y Leaseback están en el selector de producto sin una palabra que los aclare, justo en la pregunta que decide hacia dónde se deriva el lead.
+
+
+7. DETALLES DE LENGUAJE Y ACCESIBILIDAD
+
+Cosas chicas, todas de arreglo rápido:
+
+• Las etiquetas de la tercera barra quedaron pegadas: se lee "SalgoEvalúo / mantengo", que no significa nada. Deberían ser "Salgo" y "Evalúo / mantengo" separadas.
+
+• El mensaje de validación aparece en inglés: "Please fill out this field." Es el texto que pone el navegador por defecto y se puede personalizar.
+
+• El campo "Cuéntanos brevemente qué necesitas aprender, evaluar o resolver" es obligatorio pero no lo indica. Nos bloqueó el primer intento de registro sin que supiéramos por qué.
+
+• Las tres barras no tienen etiqueta accesible, así que un lector de pantalla no puede decir qué son.
+
+• "USA LOS VALORES DISPONIBLES EN TU METATRADER 5" encabeza la pestaña de Margen y StopOut. Asume plataforma instalada y saber dónde mirar, en una herramienta que también se dirige a quien está comenzando. Convendría explicar dónde encontrar esos dos números.
+
+
+8. DOS OBSERVACIONES DE CÁLCULO
+
+• En Diversificación, el "Riesgo total estimado" es la suma de los límites de cada posición. Eso deja fuera la correlación entre los activos, y es justamente lo que la propia herramienta enseña unas líneas más arriba: "diversificar no es sumar activos al azar: importa cómo se relacionan entre sí y qué riesgo comparten". Si varias posiciones dependen del mismo factor —el dólar, por ejemplo— sus pérdidas no se suman de forma independiente: se activan juntas. Vale la pena al menos advertirlo.
+
+• Con un capital de ejemplo de $20.000.000, la herramienta muestra "$167.576.547 CLP exposición combinada" como un dato al lado del titular "la distribución es más equilibrada". Son 8,4 veces el capital. El número está correcto, pero presentado así nadie percibe la magnitud del apalancamiento: un cliente lee "equilibrada" y "quedan $5.000.000 disponibles" y se queda tranquilo.
+
+Tres detalles menores: la fórmula del nivel de margen que se muestra omite multiplicar por cien, así que quien la aplique obtiene 2 en vez de 200%; la barra de nivel de margen tiene la escala invertida, con 200% hacia la izquierda y el StopOut de 50% a la derecha, de modo que "más lleno" no significa "mejor" de forma evidente; y el capital no se mantiene entre pestañas —$5.000.000 en Margen, $20.000.000 en Diversificación—, así que el usuario ve cifras distintas y ninguna es la suya. Pedirlo una vez y propagarlo haría que la herramienta se sienta como una sola.
+
+
+9. EL TEXTO DEL PIE
+
+El descargo dice: "Esta herramienta es referencial y educativa. Operar instrumentos financieros implica riesgo de pérdida. Los resultados mostrados son ejemplos fijos y no constituyen recomendación de inversión."
+
+Los resultados no son ejemplos fijos: son cálculos hechos con los datos que ingresa el usuario. Un descargo que describe la herramienta como algo más inocuo de lo que es pierde su función protectora. Y conviene mirarlo junto a que la herramienta entrega un "Volumen sugerido" con un botón "Probar este volumen".
+
+Este punto lo tomamos nosotros: les vamos a proponer un texto de reemplazo y con eso queda cerrado.
+
+
+CÓMO SEGUIMOS
+
+Nos gustaría trabajar con ustedes los puntos 1 y 2 —la respuesta preseleccionada y el cambio a tramos con cifras—, que son los que más mueven la aguja. Podemos llegar con el borrador de las cuatro preguntas listo y ajustarlo con su equipo en una reunión.
+
+Los puntos 4 y 6 los podemos resolver juntos rápido: la volatilidad típica y el aviso de datos vencidos ya están implementados en la versión del área, así que es cuestión de pasarles el cálculo. Y la unificación de rótulos es media hora de conversación.
+
+El resto son ajustes que su equipo puede tomar al ritmo que les acomode.
+
+Adjuntamos un anexo con el detalle de cada hallazgo —incluidas las mediciones—, las capturas de los desbordes y las referencias de los estudios y la normativa que consultamos, por si les sirven para respaldar los cambios internamente.
+
+Una nota sobre el origen de este trabajo, para ser transparentes: el recorrido de la herramienta y las mediciones las hizo nuestro motor de inteligencia artificial, con el que trabajamos el análisis del área. El criterio normativo y la propuesta de perfilamiento son nuestros.
+
+
+PARA CERRAR
+
+Nos alegra de verdad ver hasta dónde llegó esto. Que una herramienta que salió del área haya crecido con el trabajo de ustedes es la clase de cosa que nos gustaría que pasara más seguido entre las dos áreas, y el nivel de detalle de este correo es reflejo de eso: nos tomamos el tiempo porque la herramienta lo vale y porque queremos que sea sólida cuando escale.
+
+Cuenten con la total disposición del Área de Estudios y Post-Venta para acompañar los cambios que decidan hacer y para trabajar en sinergia con las distintas áreas en los objetivos de Grupo Inteligencia.
+
+Quedamos atentos y encantados de juntarnos cuando puedan.
+
+Un abrazo,
+
+
+Benjamín Ignacio Bravo Soza
+Ingeniero en Finanzas
+Diplomado en Gestión de Riesgos bajo estándar PMI
+Operador Acreditado CMV
+Área de Estudios y Post-Venta
+Grupo de Análisis de Mercado — GI
