@@ -1,8 +1,8 @@
 """Tool get_chart_objects — lee los objetos dibujados a mano en MT5.
 
 El Service MQL5 `ChartObjectsExporter.mq5` exporta los objetos de todos los
-charts abiertos (líneas horizontales, trendlines, canales, rectángulos) más un
-screenshot a `Common/Files/chart_objects.json`. Esta tool localiza ese archivo
+charts abiertos (líneas horizontales, trendlines, canales, rectángulos y
+retrocesos de Fibonacci) más un screenshot a `Common/Files/chart_objects.json`. Esta tool localiza ese archivo
 (vía la env var `MT5_COMMON_FILES`), valida frescura, filtra por símbolo +
 timeframe y clasifica las líneas horizontales en soporte/resistencia respecto
 al precio actual. Contrato de error explícito; nunca array vacío silencioso.
@@ -93,8 +93,9 @@ def register(mcp: FastMCP) -> None:
 
         Lee los objetos que el director trazó en el terminal (no los calcula):
         líneas horizontales (clasificadas en soporte/resistencia), trendlines,
-        canales y rectángulos de zona. Requiere el Service MQL5
-        `ChartObjectsExporter` corriendo y el gráfico del activo abierto en MT5.
+        canales, rectángulos de zona y retrocesos de Fibonacci (cada nivel con
+        su precio, derivado de las anclas del propio objeto). Requiere el Service
+        MQL5 `ChartObjectsExporter` corriendo y el gráfico del activo abierto en MT5.
 
         Args:
             ticker: Símbolo MT5 del catálogo (ej: XAUUSD, USDCLP, WTI.spot, #AAPL).
@@ -102,9 +103,10 @@ def register(mcp: FastMCP) -> None:
 
         Returns:
             Dict con: ticker, timeframe, current_price, soportes, resistencias,
-            trendlines, channels, rectangles, screenshot (ruta absoluta o None),
-            generated_at, source. O {"error": "CÓDIGO", "message": "..."} si el
-            dato no está disponible.
+            trendlines, channels, rectangles, fibos (cada uno con sus anclas y la
+            lista de niveles: nivel, porcentaje, precio, etiqueta), screenshot
+            (ruta absoluta o None), generated_at, source. O {"error": "CÓDIGO",
+            "message": "..."} si el dato no está disponible.
         """
         if ticker not in VALID_TICKERS:
             return {
@@ -186,6 +188,7 @@ def register(mcp: FastMCP) -> None:
             "trendlines": chart.get("trendlines", []),
             "channels": chart.get("channels", []),
             "rectangles": chart.get("rectangles", []),
+            "fibos": chart.get("fibos", []),
             "screenshot": screenshot,
             "generated_at": data.get("generated_at"),
             "source": "mt5_objects",

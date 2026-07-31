@@ -84,7 +84,7 @@ string SerializarChart(long chart_id)
    double precio = SymbolInfoDouble(symbol, SYMBOL_BID);
    datetime ahora = TimeCurrent();
 
-   string hlines = "", trendlines = "", channels = "", rectangles = "";
+   string hlines = "", trendlines = "", channels = "", rectangles = "", fibos = "";
 
    int total = ObjectsTotal(chart_id, -1, -1);
    for(int i = 0; i < total; i++)
@@ -137,6 +137,41 @@ string SerializarChart(long chart_id)
             "{\"name\": \"%s\", \"tipo\": \"%s\", \"banda_superior\": %s, \"banda_inferior\": %s}",
             nm, TipoCanal(t), DoubleToString(sup, digits), DoubleToString(inf, digits));
       }
+      else if(t == OBJ_FIBO)
+      {
+         // Retroceso de Fibonacci: se exporta el objeto tal como esta trazado.
+         // MT5 lo define con 2 anclas y dibuja cada nivel en
+         //    precio = p2 + (p1 - p2) * valor_nivel
+         // (el nivel 0.0 cae en la segunda ancla y el 1.0 en la primera), asi
+         // que el precio de cada nivel sale de las anclas del propio objeto y
+         // NO se infiere de maximos/minimos del grafico.
+         double   p1 = ObjectGetDouble(chart_id, name, OBJPROP_PRICE, 0);
+         double   p2 = ObjectGetDouble(chart_id, name, OBJPROP_PRICE, 1);
+         datetime f1 = (datetime)ObjectGetInteger(chart_id, name, OBJPROP_TIME, 0);
+         datetime f2 = (datetime)ObjectGetInteger(chart_id, name, OBJPROP_TIME, 1);
+
+         int    nlev = (int)ObjectGetInteger(chart_id, name, OBJPROP_LEVELS);
+         string niveles = "";
+         for(int l = 0; l < nlev; l++)
+         {
+            double valor    = ObjectGetDouble(chart_id, name, OBJPROP_LEVELVALUE, l);
+            double precio_n = p2 + (p1 - p2) * valor;
+            string etiqueta = ObjectGetString(chart_id, name, OBJPROP_LEVELTEXT, l);
+            if(niveles != "") niveles += ", ";
+            niveles += StringFormat(
+               "{\"nivel\": %s, \"porcentaje\": %s, \"precio\": %s, \"etiqueta\": \"%s\"}",
+               DoubleToString(valor, 3), DoubleToString(valor * 100.0, 1),
+               DoubleToString(precio_n, digits), JsonEscape(etiqueta));
+         }
+
+         if(fibos != "") fibos += ", ";
+         fibos += StringFormat(
+            "{\"name\": \"%s\", \"p1\": %s, \"t1\": \"%s\", \"p2\": %s, \"t2\": \"%s\", "
+            "\"niveles\": [%s]}",
+            nm, DoubleToString(p1, digits), FechaIso(TimeToString(f1, TIME_DATE|TIME_MINUTES)),
+            DoubleToString(p2, digits), FechaIso(TimeToString(f2, TIME_DATE|TIME_MINUTES)),
+            niveles);
+      }
       else if(t == OBJ_RECTANGLE)
       {
          double a = ObjectGetDouble(chart_id, name, OBJPROP_PRICE, 0);
@@ -161,9 +196,10 @@ string SerializarChart(long chart_id)
    return StringFormat(
       "    {\"symbol\": \"%s\", \"timeframe\": \"%s\", \"digits\": %d, "
       "\"current_price\": %s, \"screenshot\": \"%s\", "
-      "\"hlines\": [%s], \"trendlines\": [%s], \"channels\": [%s], \"rectangles\": [%s]}",
+      "\"hlines\": [%s], \"trendlines\": [%s], \"channels\": [%s], \"rectangles\": [%s], "
+      "\"fibos\": [%s]}",
       JsonEscape(symbol), tf, digits, DoubleToString(precio, digits), JsonEscape(png),
-      hlines, trendlines, channels, rectangles);
+      hlines, trendlines, channels, rectangles, fibos);
 }
 
 //+------------------------------------------------------------------+

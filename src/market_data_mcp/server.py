@@ -66,7 +66,11 @@ mcp = FastMCP(
         "Capa de datos confiable para Grupo de Análisis de Mercado. "
         "Tools: get_asset_levels (técnico MT5 auto), get_chart_objects (niveles "
         "dibujados a mano por el director en MT5: soportes/resistencias, trendlines, "
-        "canales, rectángulos + screenshot, vía Service ChartObjectsExporter), "
+        "canales, rectángulos, retrocesos de Fibonacci con el precio de cada nivel "
+        "+ screenshot, vía Service ChartObjectsExporter), "
+        "get_open_positions (operaciones abiertas del terminal: entrada, stop, take "
+        "profit, volumen y resultado flotante tal como están en la caja de "
+        "herramientas — no se recalculan), "
         "obtener_calendario_macro (calendario "
         "económico Investing.com — Chile + EE.UU. + China + Zona Euro, con resultado "
         "real `actual` y clasificación mejor/peor/en_linea; WebSearch es fallback si la fuente falla), "
@@ -84,11 +88,12 @@ mcp = FastMCP(
     mask_error_details=False,
 )
 
-from market_data_mcp.tools import levels, calendar, chart_objects, symbol_spec  # noqa: E402
+from market_data_mcp.tools import levels, calendar, chart_objects, positions, symbol_spec  # noqa: E402
 
 levels.register(mcp)
 calendar.register(mcp)
 chart_objects.register(mcp)
+positions.register(mcp)
 symbol_spec.register(mcp)
 
 

@@ -121,6 +121,41 @@ def test_pasa_trendlines_canales_rectangulos_y_screenshot(collector, monkeypatch
     assert res["screenshot"].endswith("usdclp_H4.png")
 
 
+def test_pasa_fibos_con_el_precio_de_cada_nivel(collector, monkeypatch, tmp_path):
+    """El retroceso de Fibonacci viaja tal como lo exportó el Service, con precios."""
+    chart = _chart_usdclp()
+    chart["fibos"] = [{
+        "name": "Fibo EURUSD",
+        "p1": 895.00,
+        "t1": "2026-07-01 09:00",
+        "p2": 880.00,
+        "t2": "2026-07-20 09:00",
+        "niveles": [
+            {"nivel": 0.0, "porcentaje": 0.0, "precio": 880.00, "etiqueta": "0.0"},
+            {"nivel": 0.618, "porcentaje": 61.8, "precio": 889.27, "etiqueta": "61.8"},
+            {"nivel": 1.0, "porcentaje": 100.0, "precio": 895.00, "etiqueta": "100.0"},
+        ],
+    }]
+    _escribir_json(tmp_path, [chart])
+    monkeypatch.setenv("MT5_COMMON_FILES", str(tmp_path))
+    tool = _get_tool(collector)
+    res = tool("USDCLP", "H4")
+
+    fibo = res["fibos"][0]
+    assert fibo["p1"] == 895.00
+    assert [n["porcentaje"] for n in fibo["niveles"]] == [0.0, 61.8, 100.0]
+    assert fibo["niveles"][1]["precio"] == 889.27
+
+
+def test_chart_sin_fibos_devuelve_lista_vacia(collector, monkeypatch, tmp_path):
+    """Compatibilidad con el JSON del Service anterior, que no traía la clave."""
+    _escribir_json(tmp_path, [_chart_usdclp()])
+    monkeypatch.setenv("MT5_COMMON_FILES", str(tmp_path))
+    tool = _get_tool(collector)
+    res = tool("USDCLP", "H4")
+    assert res["fibos"] == []
+
+
 def test_sin_screenshot_devuelve_none(collector, monkeypatch, tmp_path):
     chart = _chart_usdclp()
     chart["screenshot"] = ""
