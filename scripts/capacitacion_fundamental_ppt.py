@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import math
 import re
+import tempfile
 from pathlib import Path
 
 from pptx import Presentation
@@ -226,28 +227,50 @@ def _pie(slide, numero: int, seccion: str = "") -> None:
            alineacion=PP_ALIGN.RIGHT)
 
 
-def _foto_circular(origen: Path, lado: int = 720) -> Path | None:
+EXTENSIONES_FOTO = (".png", ".jpg", ".jpeg", ".webp")
+
+
+def _resolver_foto(ruta: Path | None) -> Path | None:
+    """Ubica el retrato. Si la ruta exacta no existe, toma cualquier imagen de la
+    carpeta: el archivo suele llegar con el nombre que le pone WhatsApp."""
+    if ruta is None:
+        return None
+    if ruta.exists():
+        return ruta
+    carpeta = ruta.parent
+    if not carpeta.is_dir():
+        return None
+    candidatas = sorted(
+        archivo for archivo in carpeta.iterdir()
+        if archivo.suffix.lower() in EXTENSIONES_FOTO
+        and not archivo.name.startswith(".")
+    )
+    if candidatas:
+        print(f"  retrato: se usa {candidatas[0].name}")
+        return candidatas[0]
+    return None
+
+
+def _foto_circular(origen: Path, lado: int = 720, zoom: float = 1.0,
+                   centro_y: float = 0.5) -> Path | None:
     """Recorta la foto a un círculo y la deja en un PNG temporal.
 
     PowerPoint no aplica máscaras: para que el retrato salga redondo hay que
-    recortarlo antes. Se toma el cuadrado centrado más grande que quepa y se
-    aplica un canal alfa circular, más un aro fino de acento.
+    recortarlo antes. `zoom` cierra el encuadre sobre el rostro —un círculo
+    inscrito en la foto completa deja demasiado fondo compitiendo con la cara— y
+    `centro_y` fija en qué fracción de la altura queda el centro del recorte.
     """
     try:
         from PIL import Image, ImageDraw  # noqa: PLC0415
     except ImportError:
         print("  aviso: Pillow no disponible, la foto se omite")
         return None
-    if not origen.exists():
-        print(f"  aviso: no existe {origen}, la foto se omite")
-        return None
 
     imagen = Image.open(origen).convert("RGBA")
-    corto = min(imagen.size)
-    izq = (imagen.width - corto) // 2
-    # El rostro suele quedar en el tercio superior: se recorta desde más arriba
-    # que el centro geométrico para no cortar la cabeza.
-    arriba = max(0, (imagen.height - corto) // 3)
+    corto = int(min(imagen.size) / max(1.0, zoom))
+    izq = max(0, (imagen.width - corto) // 2)
+    arriba = int(imagen.height * centro_y - corto / 2)
+    arriba = max(0, min(arriba, imagen.height - corto))
     imagen = imagen.crop((izq, arriba, izq + corto, arriba + corto))
     imagen = imagen.resize((lado, lado), Image.LANCZOS)
 
@@ -260,7 +283,9 @@ def _foto_circular(origen: Path, lado: int = 720) -> Path | None:
     aro.ellipse((grosor // 2, grosor // 2, lado - grosor // 2, lado - grosor // 2),
                 outline=(0, 220, 130, 255), width=grosor)
 
-    destino = origen.parent / f".{origen.stem}_circular.png"
+    # Al temporal del sistema y no junto al original: es un intermedio derivado y no
+    # tiene por qué ensuciar (ni acabar versionado en) la carpeta de assets.
+    destino = Path(tempfile.gettempdir()) / f"gi_retrato_{origen.stem}.png"
     imagen.save(destino, "PNG")
     return destino
 
@@ -273,13 +298,20 @@ def _bloque_autor(slide, left, top, autor: dict, foto: Path | None,
     `compacto` usa la variante de dos líneas de las credenciales, para el cierre,
     donde el espacio restante bajo los dos bloques de advertencia es escaso.
     """
+    lineas_cred = len(autor["credenciales_compactas" if compacto else "credenciales"])
+    alto_texto = 0.6 + lineas_cred * 0.21
+
     x_texto = left
+    desplazo = 0.0
     if foto is not None:
         slide.shapes.add_picture(str(foto), left, top, Inches(diametro),
                                  Inches(diametro))
         x_texto = left + Inches(diametro + 0.28)
+        # El retrato es más alto que el texto: se centra el texto contra el círculo
+        # en vez de dejarlo colgando del borde superior.
+        desplazo = max(0.0, (diametro - alto_texto) / 2)
 
-    cursor = top + Inches(0.06)
+    cursor = top + Inches(0.06 + desplazo)
     _texto(slide, x_texto, cursor, Inches(7.4), Inches(0.2),
            autor.get("rol", "Preparado por").upper(), tam=8.5, color=GRIS_TENUE,
            negrita=True)
@@ -337,13 +369,17 @@ def slide_portada(prs, datos, numero):
 
     # Autoría: el retrato y las credenciales van en la portada, no solo al cierre.
     # Es material que circula entre equipos, así que quién lo firma se ve de entrada.
-    y = Inches(5.42)
+    y = Inches(5.32)
     _rect(slide, MARGEN, y - Inches(0.3), UTIL, Emu(12700), relleno=SUPERFICIE_ALT)
-    _bloque_autor(slide, MARGEN, y, datos["autor"], FOTO)
+    # 1,55" y no 1,32": a 1,32 el rostro quedaba demasiado pequeño para reconocerse
+    # en la slide, y cerrar más el recorte cortaba la cabeza contra el círculo.
+    DIAMETRO_PORTADA = 1.55
+    _bloque_autor(slide, MARGEN, y, datos["autor"], FOTO,
+                  diametro=DIAMETRO_PORTADA)
 
     left = MARGEN + Inches(9.35)
     for indice, (etiqueta, valor) in enumerate(datos["meta"]):
-        tope = y + Inches(0.06) + indice * Inches(0.62)
+        tope = y + Inches(0.22) + indice * Inches(0.62)
         _texto(slide, left, tope, Inches(2.6), Inches(0.2), etiqueta.upper(),
                tam=8.5, color=GRIS_TENUE, negrita=True)
         _texto(slide, left, tope + Inches(0.22), Inches(2.6), Inches(0.26), valor,
@@ -691,9 +727,13 @@ RENDER = {
 }
 
 
-def construir(slides, destino: Path, foto: Path | None = None) -> Path:
+def construir(slides, destino: Path, foto: Path | None = None,
+              zoom: float = 1.0, centro_y: float = 0.5) -> Path:
     global FOTO
-    FOTO = _foto_circular(foto) if foto else None
+    origen = _resolver_foto(foto)
+    if origen is None:
+        print("  aviso: sin retrato disponible, la maqueta va sin foto")
+    FOTO = _foto_circular(origen, zoom=zoom, centro_y=centro_y) if origen else None
 
     prs = Presentation()
     prs.slide_width = ANCHO
@@ -717,11 +757,23 @@ def main() -> None:
     parser.add_argument(
         "--foto",
         default="docs/capacitacion/assets/autor.png",
-        help="retrato del autor; se recorta en círculo. Si no existe, se omite",
+        help="retrato del autor; si la ruta no existe se busca otra imagen en la "
+             "misma carpeta. Se recorta en círculo",
+    )
+    # 1.15 / 0.47 se eligieron comparando recortes: da presencia al rostro y aún deja
+    # ver el traje y el nudo de la corbata. Con 1.3 o más, el traje se pierde y la
+    # cabeza queda flotando dentro del círculo.
+    parser.add_argument(
+        "--zoom", type=float, default=1.15,
+        help="cierra el encuadre sobre el rostro (1.0 = círculo inscrito completo)",
+    )
+    parser.add_argument(
+        "--centro", type=float, default=0.47,
+        help="fracción de la altura donde queda el centro del recorte",
     )
     args = parser.parse_args()
     foto = Path(args.foto) if args.foto else None
-    ruta = construir(SLIDES, Path(args.out), foto)
+    ruta = construir(SLIDES, Path(args.out), foto, args.zoom, args.centro)
     print(f"{len(SLIDES)} slides -> {ruta}")
 
 
