@@ -357,6 +357,38 @@ contenido sea versionable y regenerable. Vive en `docs/capacitacion/`.
   con `PermissionError` y COM rechaza la conexión con `0x80048240` — generar entonces a
   una ruta temporal y nunca llamar a `$app.Quit()`, que cerraría su sesión.
 
+### Guía rápida (folleto de consulta)
+
+Complemento de la capacitación, para quien no va a estudiar las 55 láminas pero necesita
+resolver una pregunta con el cliente al teléfono. No es un resumen: es una **herramienta
+de respuesta** —tabla dato → dirección de cada activo, frases listas para el cliente,
+qué no decir, y dónde se detiene la respuesta porque pasa a ser asesoría—.
+
+- **Fuente**: `templates/capacitacion/folleto.html` · **Generador**:
+  `scripts/folleto_fundamental.py`
+  ```bash
+  uv run --extra stories python scripts/folleto_fundamental.py
+  ```
+- **Dos salidas del mismo HTML**: un **HTML autónomo** (fuentes de marca incrustadas en
+  base64, se manda por correo o WhatsApp y funciona solo) y un **PDF A4 de 4 páginas**
+  para imprimir. Bajo 820 px las hojas A4 se rompen en una columna y las tablas anchas
+  pasan a fichas apiladas vía `td[data-rot]::before`, para consultarlo en el teléfono sin
+  hacer zoom.
+- **Acá sí se usan las fuentes de marca**, al contrario que en el PPTX: en HTML los
+  `.woff2` del repo funcionan nativamente.
+- **Paleta adaptada al soporte claro**: el verde y el rojo de marca están pensados para
+  fondo oscuro y sobre blanco no alcanzan el contraste mínimo para texto (mismo problema
+  del footer de las Stories, #145). Se usan versiones oscurecidas para tipografía y los
+  originales solo en filetes y fondos.
+- **La escala está calibrada al alto útil de una A4** (1123 px a 96 dpi). Si una hoja se
+  pasa, Chromium la parte en dos y el PDF duplica páginas —pasó de 3 a 6 sin aviso—. Al
+  agregar contenido hay que **medir**, no estimar:
+  ```js
+  Array.from(document.querySelectorAll('section.hoja')).map(s => s.getBoundingClientRect().height)
+  ```
+  con `emulate_media("print")`. Y no poner `font-size` dentro de `@media print`: cambia
+  la escala justo en el PDF y descuadra la calibración.
+
 ## Flujo de aprobación → WhatsApp (modo semi-automático activo)
 
 Todo contenido pasa por este flujo antes de enviarse:

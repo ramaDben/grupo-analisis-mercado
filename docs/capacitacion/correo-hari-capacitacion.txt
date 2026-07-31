@@ -1,0 +1,109 @@
+Asunto: Capacitación de análisis fundamental — presentación lista (PPT + PDF)
+
+Adjuntos:
+  · Analisis Fundamental - Capacitacion GI.pptx
+  · Analisis Fundamental - Capacitacion GI.pdf
+
+
+Hola Hari,
+
+Ahí va la capacitación de análisis fundamental que me pediste. Te la mando en
+PowerPoint editable y también en PDF, por si necesitas abrirla en un equipo sin
+Office o revisarla desde el celular.
+
+Te llega pasadas las 17:00 y no antes de las 12:00 como necesitabas. Me tomó más
+de lo previsto y preferí entregarla completa antes que recortada; de todos modos,
+si la necesitabas para algo de hoy, dime y lo resolvemos.
+
+
+QUÉ INCLUYE
+
+Son 55 láminas y cubren los cuatro puntos que planteaste:
+
+• Indicadores de Estados Unidos: IPC, IPP y PCE (con la comparación entre los
+  tres, que es donde más se confunde la gente), el informe de empleo completo
+  —nóminas, tasa de desempleo y salarios—, PIB, ISM y PMI, ventas minoristas,
+  peticiones de subsidio, y los complementarios (vacantes, ADP, confianza,
+  bienes durables).
+
+• Indicadores de Chile: IPC, IMACEC, PIB, IPP, desempleo, balanza comercial y
+  cobre, más la tasa de política monetaria y el diferencial de tasas con la Fed.
+
+• Impacto en las decisiones de tasas: qué es una tasa de política monetaria, el
+  doble mandato de la Fed, cómo un dato se convierte en expectativa de tasa, y
+  una tabla de síntesis de dato → tasa → dirección de cada activo.
+
+• Contexto global: índice del dólar (cómo está construido y qué no dice) y PMI
+  de China, oficial y Caixin, con la cadena que llega hasta el USD/CLP.
+
+Agregué dos bloques que no estaban en tu pedido y que creo que hacen la
+diferencia:
+
+• Un bloque inicial de fundamentos de lectura: anterior/esperado/efectivo, por
+  qué el mercado se mueve con la sorpresa y no con el dato, mensual vs
+  interanual vs anualizado, efecto base, general vs subyacente, ajuste
+  estacional, revisiones, y por qué 50 es la frontera en los PMI. Es el bloque
+  que permite leer un indicador que no aparece en el material, en vez de
+  memorizar indicador por indicador.
+
+• Un bloque final de práctica: tres publicaciones resueltas paso a paso —una
+  inflación que sorprende, un informe de empleo contradictorio y un PMI de China
+  en contracción—, un método de lectura en seis pasos, ocho errores frecuentes y
+  un diccionario de siglas.
+
+También están, como pediste, los tres casos de lectura: qué se interpreta cuando
+el dato supera lo esperado, cuando queda por debajo, y cómo se resuelven los
+resultados mixtos, que en la práctica son la norma. Y hay una lámina de jerarquía
+sobre qué indicadores pesan más, con un matiz que me parece importante: el peso
+no es fijo, depende de si el mercado está preocupado por la inflación o por la
+recesión. El mismo dato de empleo se lee distinto en un régimen y en el otro.
+
+
+CÓMO ESTÁ ENFOCADA
+
+El eje es conceptual: cada indicador se explica por qué mide y cómo se construye
+antes de decir qué hace el precio. La dirección del precio está en todas las
+láminas, pero presentada como consecuencia del concepto —por ejemplo, el oro baja
+porque no paga interés y ahora el bono rinde más— y no como una tabla que haya
+que memorizar. La idea es que quien la reciba pueda razonar un dato nuevo, no
+solo reconocer los que vimos.
+
+
+TRES COSAS A TENER PRESENTES
+
+1. Todas las cifras de los ejemplos son ilustrativas y están marcadas como tal.
+   No corresponden a publicaciones reales, así que no sirven para citar datos.
+
+2. El material está declarado como educativo de uso interno y deja explícito que
+   no constituye recomendación de inversión ni asesoría personalizada. Lo dejé
+   así justamente porque mencionaste que queda para los IBS: si va a circular
+   entre ellos, conviene que el encuadre esté claro desde el archivo. Si vas a
+   usarla con alguien fuera del equipo, avísame y la revisamos antes.
+
+3. Va en PowerPoint editable, con tipografías estándar de Windows para que no se
+   descuadre al abrirla en otro equipo.
+
+
+SI HAY QUE AJUSTARLA
+
+El archivo se produce de forma reproducible, así que los cambios de contenido
+—agregar un indicador, cambiar el orden, corregir redacción— los puedo aplicar y
+volver a emitir rápido. Si al revisarla ves que falta algo o que algún punto
+quedó corto para el nivel del público, dime y lo incorporo.
+
+Una sugerencia por si la vas a dictar en sesión: el bloque de fundamentos es el
+que no conviene saltarse, porque el resto se apoya en él. Los bloques de
+Estados Unidos y Chile se pueden dosificar en más de una sesión sin perder el
+hilo, y los ejercicios del final funcionan bien como cierre o como repaso.
+
+Cualquier cosa me dices.
+
+Un abrazo,
+
+
+Benjamín Ignacio Bravo Soza
+Ingeniero en Finanzas
+Diplomado en Gestión de Riesgos bajo estándar PMI
+Operador Acreditado CMV
+Área de Estudios y Post-Venta
+Grupo de Análisis de Mercado — GI
