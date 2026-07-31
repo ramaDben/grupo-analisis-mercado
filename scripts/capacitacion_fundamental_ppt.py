@@ -694,14 +694,28 @@ def construir(slides, destino: Path, foto: Path | None = None,
     return destino
 
 
+# Dos versiones del mismo material sobre la misma maqueta: la completa y un resumen
+# de un tercio para quien no va a leerla entera. Se generan por separado y ninguna
+# sobrescribe a la otra.
+VARIANTES = {
+    "completa": ("capacitacion_fundamental_contenido",
+                 "docs/capacitacion/Analisis Fundamental - Capacitacion GI.pptx"),
+    "resumen": ("capacitacion_resumen_contenido",
+                "docs/capacitacion/Analisis Fundamental - Resumen ejecutivo GI.pptx"),
+}
+
+
 def main() -> None:
-    from capacitacion_fundamental_contenido import SLIDES  # noqa: PLC0415
+    import importlib  # noqa: PLC0415
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--out",
-        default="docs/capacitacion/Analisis Fundamental - Capacitacion GI.pptx",
-        help="ruta del .pptx de salida",
+        "--variante", choices=sorted(VARIANTES), default="completa",
+        help="qué versión generar (por defecto la completa)",
+    )
+    parser.add_argument(
+        "--out", default=None,
+        help="ruta del .pptx de salida; por defecto la de la variante",
     )
     parser.add_argument(
         "--foto",
@@ -721,9 +735,12 @@ def main() -> None:
         help="fracción de la altura donde queda el centro del recorte",
     )
     args = parser.parse_args()
+    modulo, salida_por_defecto = VARIANTES[args.variante]
+    slides = importlib.import_module(modulo).SLIDES
     foto = Path(args.foto) if args.foto else None
-    ruta = construir(SLIDES, Path(args.out), foto, args.zoom, args.centro)
-    print(f"{len(SLIDES)} slides -> {ruta}")
+    ruta = construir(slides, Path(args.out or salida_por_defecto), foto,
+                     args.zoom, args.centro)
+    print(f"{args.variante}: {len(slides)} slides -> {ruta}")
 
 
 if __name__ == "__main__":
