@@ -23,10 +23,13 @@ from __future__ import annotations
 import argparse
 import math
 import re
-import tempfile
+import sys
 from pathlib import Path
 
-from pptx import Presentation
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import retrato  # noqa: E402
+from pptx import Presentation  # noqa: E402
 from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
@@ -227,67 +230,13 @@ def _pie(slide, numero: int, seccion: str = "") -> None:
            alineacion=PP_ALIGN.RIGHT)
 
 
-EXTENSIONES_FOTO = (".png", ".jpg", ".jpeg", ".webp")
-
-
 def _resolver_foto(ruta: Path | None) -> Path | None:
-    """Ubica el retrato. Si la ruta exacta no existe, toma cualquier imagen de la
-    carpeta: el archivo suele llegar con el nombre que le pone WhatsApp."""
-    if ruta is None:
-        return None
-    if ruta.exists():
-        return ruta
-    carpeta = ruta.parent
-    if not carpeta.is_dir():
-        return None
-    candidatas = sorted(
-        archivo for archivo in carpeta.iterdir()
-        if archivo.suffix.lower() in EXTENSIONES_FOTO
-        and not archivo.name.startswith(".")
-    )
-    if candidatas:
-        print(f"  retrato: se usa {candidatas[0].name}")
-        return candidatas[0]
-    return None
+    return retrato.resolver(ruta)
 
 
-def _foto_circular(origen: Path, lado: int = 720, zoom: float = 1.0,
-                   centro_y: float = 0.5) -> Path | None:
-    """Recorta la foto a un círculo y la deja en un PNG temporal.
-
-    PowerPoint no aplica máscaras: para que el retrato salga redondo hay que
-    recortarlo antes. `zoom` cierra el encuadre sobre el rostro —un círculo
-    inscrito en la foto completa deja demasiado fondo compitiendo con la cara— y
-    `centro_y` fija en qué fracción de la altura queda el centro del recorte.
-    """
-    try:
-        from PIL import Image, ImageDraw  # noqa: PLC0415
-    except ImportError:
-        print("  aviso: Pillow no disponible, la foto se omite")
-        return None
-
-    imagen = Image.open(origen).convert("RGBA")
-    corto = int(min(imagen.size) / max(1.0, zoom))
-    izq = max(0, (imagen.width - corto) // 2)
-    arriba = int(imagen.height * centro_y - corto / 2)
-    arriba = max(0, min(arriba, imagen.height - corto))
-    imagen = imagen.crop((izq, arriba, izq + corto, arriba + corto))
-    imagen = imagen.resize((lado, lado), Image.LANCZOS)
-
-    mascara = Image.new("L", (lado * 4, lado * 4), 0)
-    ImageDraw.Draw(mascara).ellipse((0, 0, lado * 4 - 1, lado * 4 - 1), fill=255)
-    imagen.putalpha(mascara.resize((lado, lado), Image.LANCZOS))
-
-    aro = ImageDraw.Draw(imagen)
-    grosor = max(2, lado // 120)
-    aro.ellipse((grosor // 2, grosor // 2, lado - grosor // 2, lado - grosor // 2),
-                outline=(0, 220, 130, 255), width=grosor)
-
-    # Al temporal del sistema y no junto al original: es un intermedio derivado y no
-    # tiene por qué ensuciar (ni acabar versionado en) la carpeta de assets.
-    destino = Path(tempfile.gettempdir()) / f"gi_retrato_{origen.stem}.png"
-    imagen.save(destino, "PNG")
-    return destino
+def _foto_circular(origen: Path, lado: int = 720, zoom: float = retrato.ZOOM,
+                   centro_y: float = retrato.CENTRO_Y) -> Path | None:
+    return retrato.recortar(origen, lado=lado, zoom=zoom, centro_y=centro_y)
 
 
 def _bloque_autor(slide, left, top, autor: dict, foto: Path | None,

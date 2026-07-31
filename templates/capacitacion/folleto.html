@@ -185,6 +185,34 @@ col.angosta { width: 15%; }
 .decir ul { margin: 0; padding-left: 4.5mm; }
 .decir li { font-size: 8.5pt; margin-bottom: 1.2mm; line-height: 1.35; }
 
+/* --- Autoría ---
+   En la cabecera va a la derecha del título: ocupa ancho, no alto, y la hoja 1
+   está calibrada al milímetro contra el alto de una A4. */
+.cabecera { display: flex; gap: 6mm; align-items: flex-start; }
+.cabecera-txt { flex: 1; min-width: 0; }
+.autor-mini { width: 46mm; flex-shrink: 0; text-align: right; padding-top: 1mm; }
+.autor-mini img {
+  width: 17mm; height: 17mm; border-radius: 50%;
+  display: block; margin: 0 0 1.4mm auto;
+}
+.autor-mini .rol {
+  font-size: 6.5pt; font-weight: 700; letter-spacing: 0.8px;
+  text-transform: uppercase; color: var(--tinta-suave); margin-bottom: 0.5mm;
+}
+.autor-mini b { display: block; font-size: 8.6pt; line-height: 1.15; }
+.autor-mini span {
+  display: block; font-size: 6.8pt; color: var(--tinta-suave);
+  line-height: 1.35; margin-top: 0.8mm;
+}
+
+.pie-autor { display: flex; gap: 3mm; align-items: center; margin-bottom: 2.5mm; }
+.pie-autor img { width: 14mm; height: 14mm; border-radius: 50%; flex-shrink: 0; }
+.pie-autor .datos b { display: block; font-size: 9pt; color: var(--tinta); }
+.pie-autor .datos span {
+  display: block; font-size: 7.6pt; color: var(--tinta-suave); line-height: 1.35;
+  margin-top: 0.5mm;
+}
+
 /* --- Pie --- */
 .pie {
   margin-top: 6mm; padding-top: 2.5mm; border-top: 0.6px solid var(--linea);
@@ -251,10 +279,15 @@ col.angosta { width: 15%; }
 
 <!-- ================= HOJA 1 ================= -->
 <section class="hoja">
-  <p class="kicker">Guía rápida · Equipo comercial e IBS</p>
-  <h1>Cómo responder cuando sale un dato económico</h1>
-  <p class="bajada">Para consultar en el momento, con el cliente al teléfono. No reemplaza
-  la capacitación completa: resuelve las preguntas del día.</p>
+  <div class="cabecera">
+    <div class="cabecera-txt">
+      <p class="kicker">Guía rápida · Equipo comercial e IBS</p>
+      <h1>Cómo responder cuando sale un dato económico</h1>
+      <p class="bajada">Para consultar en el momento, con el cliente al teléfono. No
+      reemplaza la capacitación completa: resuelve las preguntas del día.</p>
+    </div>
+    {{AUTOR_CABECERA}}
+  </div>
 
   <div class="regla">
     <p class="frase">El mercado no reacciona al dato. Reacciona a la diferencia
@@ -584,13 +617,12 @@ col.angosta { width: 15%; }
     </tbody>
   </table>
 
+  {{AUTOR_PIE}}
+
   <div class="pie">
     <span><b>Material educativo de uso interno.</b> No constituye recomendación de
     inversión ni asesoría personalizada, y no debe entregarse a clientes en esta
-    forma. Todo contenido de difusión pasa por el Área de Estudios y Post-Venta.<br>
-    <b>Benjamín Ignacio Bravo Soza</b> — Ingeniero en Finanzas · Diplomado en Gestión
-    de Riesgos bajo estándar PMI · Operador Acreditado CMV · Área de Estudios y
-    Post-Venta · GI</span>
+    forma. Todo contenido de difusión pasa por el Área de Estudios y Post-Venta.</span>
     <span class="sigla">4 / 4</span>
   </div>
 </section>
