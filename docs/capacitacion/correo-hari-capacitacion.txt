@@ -1,117 +1,102 @@
-Asunto: Capacitación de análisis fundamental — tres materiales según cuánto quiera leer cada uno
+Asunto: Capacitación de análisis fundamental — presentación lista (PPT + PDF)
 
 Adjuntos:
-  · Analisis Fundamental - Capacitacion GI.pptx      (55 láminas, versión completa)
-  · Analisis Fundamental - Resumen ejecutivo GI.pptx (19 láminas, versión corta)
-  · Guia rapida Analisis Fundamental - GI.pdf        (6 páginas, para consultar)
-  · Guia rapida Analisis Fundamental - GI.html       (la misma guía, para el celular)
-
-  Las dos presentaciones van también en PDF, por si alguien las abre en un equipo
-  sin Office.
+  · Analisis Fundamental - Capacitacion GI.pptx
+  · Analisis Fundamental - Capacitacion GI.pdf
 
 
 Hola Hari,
 
-Ahí va la capacitación de análisis fundamental que me pediste. Terminó siendo tres
-materiales en vez de uno, y creo que así funciona mejor: el problema de una
-capacitación es que la gente tiene distinta disposición a estudiarla, y un solo
-formato siempre le queda largo a unos y corto a otros.
+Ahí va la capacitación de análisis fundamental que me pediste. Te la mando en
+PowerPoint editable y también en PDF, por si necesitas abrirla en un equipo sin
+Office o revisarla desde el celular.
 
-Te llega fuera del horario que necesitabas. Me tomó más de lo previsto y preferí
-entregarla completa antes que recortada; si te hacía falta para algo puntual,
-dime y lo resolvemos.
-
-
-CUÁL USAR EN CADA CASO
-
-1. LA CAPACITACIÓN COMPLETA — 55 láminas
-   Para quien va a estudiar de verdad, o para dictarla en sesión. Es la única que
-   deja a alguien en condiciones de leer un dato que no aparece en el material,
-   porque incluye el bloque de fundamentos: por qué el mercado se mueve con la
-   sorpresa y no con el dato, efecto base, ajuste estacional, revisiones, la línea
-   de los 50 en los PMI.
-
-2. EL RESUMEN EJECUTIVO — 19 láminas
-   Un tercio del material. Para quien no va a leer la completa y acepta saber
-   menos. Conserva el mecanismo entero y los indicadores que de verdad mueven el
-   precio; deja fuera la caja de herramientas conceptual. Su segunda lámina dice
-   explícitamente qué se sacrificó y dónde encontrarlo, para que nadie termine
-   creyendo que ya lo sabe todo.
-
-3. LA GUÍA RÁPIDA — 6 páginas
-   No es un resumen: es una herramienta de consulta para tener abierta mientras se
-   habla con un cliente. Trae la tabla de qué debería hacer cada activo, frases
-   listas para usar en seis situaciones, qué no decir, y dónde hay que dejar de
-   responder. El archivo HTML es la misma guía adaptada al celular, sin necesidad
-   de hacer zoom.
-
-Si tuviera que recomendarte un orden para el equipo: la guía rápida a todos, el
-resumen a quienes atienden clientes, y la completa a quienes quieran profundizar
-o vayan a explicarlo ellos mismos.
+Te llega pasadas las 17:00 y no antes de las 12:00 como necesitabas. Me tomó más
+de lo previsto y preferí entregarla completa antes que recortada; de todos modos,
+si la necesitabas para algo de hoy, dime y lo resolvemos.
 
 
-QUÉ CUBRE EL CONTENIDO
+QUÉ INCLUYE
 
-Los cuatro puntos que planteaste: los indicadores de Estados Unidos (inflación al
-consumidor, al productor y gasto en consumo; el informe de empleo completo; PIB,
-gerentes de compra, ventas minoristas y subsidios), los de Chile (IPC, IMACEC,
-PIB, desempleo, balanza comercial y cobre, más la tasa de política monetaria), el
-impacto en las decisiones de tasas con una tabla de síntesis, y el contexto global
-con el índice del dólar y el PMI de China.
+Son 55 láminas y cubren los cuatro puntos que planteaste:
 
-También están los tres casos de lectura que pediste: qué se interpreta cuando el
-dato supera lo esperado, cuando queda por debajo, y cómo se resuelven los
+• Indicadores de Estados Unidos: IPC, IPP y PCE (con la comparación entre los
+  tres, que es donde más se confunde la gente), el informe de empleo completo
+  —nóminas, tasa de desempleo y salarios—, PIB, ISM y PMI, ventas minoristas,
+  peticiones de subsidio, y los complementarios (vacantes, ADP, confianza,
+  bienes durables).
+
+• Indicadores de Chile: IPC, IMACEC, PIB, IPP, desempleo, balanza comercial y
+  cobre, más la tasa de política monetaria y el diferencial de tasas con la Fed.
+
+• Impacto en las decisiones de tasas: qué es una tasa de política monetaria, el
+  doble mandato de la Fed, cómo un dato se convierte en expectativa de tasa, y
+  una tabla de síntesis de dato → tasa → dirección de cada activo.
+
+• Contexto global: índice del dólar (cómo está construido y qué no dice) y PMI
+  de China, oficial y Caixin, con la cadena que llega hasta el USD/CLP.
+
+Agregué dos bloques que no estaban en tu pedido y que creo que hacen la
+diferencia:
+
+• Un bloque inicial de fundamentos de lectura: anterior/esperado/efectivo, por
+  qué el mercado se mueve con la sorpresa y no con el dato, mensual vs
+  interanual vs anualizado, efecto base, general vs subyacente, ajuste
+  estacional, revisiones, y por qué 50 es la frontera en los PMI. Es el bloque
+  que permite leer un indicador que no aparece en el material, en vez de
+  memorizar indicador por indicador.
+
+• Un bloque final de práctica: tres publicaciones resueltas paso a paso —una
+  inflación que sorprende, un informe de empleo contradictorio y un PMI de China
+  en contracción—, un método de lectura en seis pasos, ocho errores frecuentes y
+  un diccionario de siglas.
+
+También están, como pediste, los tres casos de lectura: qué se interpreta cuando
+el dato supera lo esperado, cuando queda por debajo, y cómo se resuelven los
 resultados mixtos, que en la práctica son la norma. Y hay una lámina de jerarquía
-sobre qué indicadores pesan más, con un matiz que me parece el más importante de
-todo el material: el peso no es fijo. El mismo dato de empleo se lee distinto
-según si el mercado está preocupado por la inflación o por la recesión.
+sobre qué indicadores pesan más, con un matiz que me parece importante: el peso
+no es fijo, depende de si el mercado está preocupado por la inflación o por la
+recesión. El mismo dato de empleo se lee distinto en un régimen y en el otro.
+
+
+CÓMO ESTÁ ENFOCADA
+
+El eje es conceptual: cada indicador se explica por qué mide y cómo se construye
+antes de decir qué hace el precio. La dirección del precio está en todas las
+láminas, pero presentada como consecuencia del concepto —por ejemplo, el oro baja
+porque no paga interés y ahora el bono rinde más— y no como una tabla que haya
+que memorizar. La idea es que quien la reciba pueda razonar un dato nuevo, no
+solo reconocer los que vimos.
 
 
 TRES COSAS A TENER PRESENTES
 
-1. Todas las cifras de los ejemplos son ilustrativas y están marcadas como tal. No
-   corresponden a publicaciones reales, así que no sirven para citar datos.
+1. Todas las cifras de los ejemplos son ilustrativas y están marcadas como tal.
+   No corresponden a publicaciones reales, así que no sirven para citar datos.
 
-2. Los tres materiales están declarados como educativos de uso interno y dejan
-   explícito que no constituyen recomendación de inversión. Lo dejé así porque
-   mencionaste que queda para los IBS: si va a circular entre ellos, conviene que
-   el encuadre esté claro desde el archivo. La guía rápida además tiene una
-   sección sobre qué preguntas de cliente no se responden en el momento y se
-   derivan al área.
+2. El material está declarado como educativo de uso interno y deja explícito que
+   no constituye recomendación de inversión ni asesoría personalizada. Lo dejé
+   así justamente porque mencionaste que queda para los IBS: si va a circular
+   entre ellos, conviene que el encuadre esté claro desde el archivo. Si vas a
+   usarla con alguien fuera del equipo, avísame y la revisamos antes.
 
-3. Van en formatos editables y con tipografías estándar, para que no se descuadren
-   al abrirlas en otro equipo.
-
-
-SOBRE EL COMENTARIO DE RODRIGO
-
-Rodrigo revisó la versión completa y comentó que le parecía extensa, incluso para
-quien ya sabe del tema, y pidió algo más acotado. El resumen ejecutivo y la guía
-rápida salieron de ahí, así que su comentario mejoró el entregable.
-
-Hay una parte de lo que pidió que no está en estos materiales y prefiero
-transparentarlo: mencionó también las oportunidades. Eso no es contenido
-educativo sino comercial, y son cosas distintas —una enseña a leer un dato, la
-otra dice qué operar—. Mezclarlas además tiene un costo, porque un material que
-recomienda deja de ser educativo y pasa a estar sujeto a otros requisitos. Lo
-podemos resolver, pero como pieza aparte y coordinándolo con el área.
+3. Va en PowerPoint editable, con tipografías estándar de Windows para que no se
+   descuadre al abrirla en otro equipo.
 
 
-UNA PROPUESTA QUE VALE LA PENA
+SI HAY QUE AJUSTARLA
 
-De lo que planteó Rodrigo, lo mejor fue la idea de tomar cinco o diez minutos de
-los bloques de la mañana para explicar este tipo de análisis. Me parece superior a
-cualquier documento: resuelve el problema de la extensión distribuyéndolo, se
-ancla al dato real de ese día y hace que el contenido se repita en el tiempo, que
-es la única forma de que quede.
+El archivo se produce de forma reproducible, así que los cambios de contenido
+—agregar un indicador, cambiar el orden, corregir redacción— los puedo aplicar y
+volver a emitir rápido. Si al revisarla ves que falta algo o que algún punto
+quedó corto para el nivel del público, dime y lo incorporo.
 
-Si te parece, armo una secuencia de cápsulas cortas siguiendo el orden de los
-bloques del material, para que cada mañana toque un concepto y se conecte con lo
-que sale ese día en el calendario.
+Una sugerencia por si la vas a dictar en sesión: el bloque de fundamentos es el
+que no conviene saltarse, porque el resto se apoya en él. Los bloques de
+Estados Unidos y Chile se pueden dosificar en más de una sesión sin perder el
+hilo, y los ejercicios del final funcionan bien como cierre o como repaso.
 
-
-Cualquier cosa me dices, y si al revisarlo ves que falta algo o que algún punto
-quedó corto para el nivel del público, lo incorporo.
+Cualquier cosa me dices.
 
 Un abrazo,
 
