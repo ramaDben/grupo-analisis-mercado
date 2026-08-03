@@ -16,6 +16,7 @@ tests/test_story_render.py.
 <head>
 <meta charset="utf-8">
 <title>Breaking — Story GI</title>
+<link rel="stylesheet" href="marca.css">
 <style>
   @font-face {
     font-family: "Syne";
@@ -53,11 +54,11 @@ tests/test_story_render.py.
     padding: 0;
     width: 1920px;
     height: 1080px;
-    background: #0D0D1A;
+    background: var(--fondo);
     background-image:
-      radial-gradient(90% 120% at 0% 20%, #2A1220 0%, #0D0D1A 55%),
-      linear-gradient(180deg, #0D0D1A 0%, #120A12 60%, #0D0D1A 100%);
-    color: #F5F3F7;
+      radial-gradient(90% 120% at 0% 20%, var(--fondo-baja) 0%, var(--fondo) 55%),
+      linear-gradient(180deg, var(--fondo) 0%, var(--fondo-alt) 60%, var(--fondo) 100%);
+    color: var(--texto-1);
     font-family: "DM Sans", sans-serif;
     overflow: hidden;
   }
@@ -93,7 +94,7 @@ tests/test_story_render.py.
     border-radius: 999px;
     background: rgba(232, 64, 64, 0.14);
     border: 1px solid rgba(232, 64, 64, 0.5);
-    color: #F5A3A3;
+    color: var(--baja-suave);
   }
 
   .breaking-kicker:empty {
@@ -107,7 +108,7 @@ tests/test_story_render.py.
     font-size: 64px;
     line-height: 1.15;
     margin: 24px 0 0;
-    color: #FFFFFF;
+    color: var(--blanco);
   }
 
   /* ---- Tarjeta "cifra clave" (borde rojo, estilo .tarjeta-precio de Alerta) ---- */
@@ -116,7 +117,7 @@ tests/test_story_render.py.
     display: flex;
     align-items: baseline;
     gap: 22px;
-    border: 2px solid #E84040;
+    border: 2px solid var(--baja);
     border-radius: 22px;
     background: rgba(232, 64, 64, 0.08);
     padding: 26px 34px;
@@ -129,14 +130,14 @@ tests/test_story_render.py.
     font-size: 16px;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: #A9A5B4;
+    color: var(--texto-2);
   }
 
   .breaking-cifra-valor {
     font-family: "Syne", sans-serif;
     font-weight: 800;
     font-size: 64px;
-    color: #FFFFFF;
+    color: var(--blanco);
   }
 
   /* ---- Contexto y reacción ---- */
@@ -145,7 +146,7 @@ tests/test_story_render.py.
     font-weight: 700;
     font-size: 24px;
     line-height: 1.4;
-    color: #F5F3F7;
+    color: var(--texto-1);
     margin: 28px 0 0;
   }
 
@@ -154,7 +155,7 @@ tests/test_story_render.py.
     font-weight: 400;
     font-size: 21px;
     line-height: 1.45;
-    color: #C9C5D4;
+    color: var(--texto-borde);
     margin: 16px 0 0;
   }
 
@@ -172,17 +173,17 @@ tests/test_story_render.py.
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
     font-size: 20px;
-    color: #F5F3F7;
+    color: var(--texto-1);
   }
 
   .footer-disclaimer {
     font-family: "DM Sans", sans-serif;
     font-weight: 400;
     font-size: 13px;
-    /* #A9A5B4 (gris secundario del kit). El #6E6A7A anterior no alcanzaba el
+    /* var(--texto-2) (gris secundario del kit). El var(--texto-3) anterior no alcanzaba el
        minimo WCAG AA de 4,5:1 sobre el fondo del footer -- y este texto es el
        aviso de riesgo por apalancamiento, tiene que poder leerse. */
-    color: #A9A5B4;
+    color: var(--texto-2);
     line-height: 1.35;
   }
 </style>

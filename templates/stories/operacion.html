@@ -4,9 +4,9 @@ equipo en cualquiera de sus dos momentos: `abierta` (posicionada) o `cerrada` (r
 materializado). El momento viaja en el payload -- un solo snapshot sirve a los dos, igual que
 un solo snapshot sirve a los dos formatos de lienzo.
 
-Kit visual de alerta.html / postventa.html: fondo #0D0D1A, Syne 800 solo en el titular, DM Sans
+Kit visual de alerta.html / postventa.html: fondo var(--fondo), Syne 800 solo en el titular, DM Sans
 cuerpo, Space Grotesk para rótulos y TODA cifra (en Syne 800 las contraformas casi se cierran y
-un precio deja de leerse). Verde #00DC82 / rojo #E84040 como colores semánticos. Responsive por
+un precio deja de leerse). Verde var(--sube) / rojo var(--baja) como colores semánticos. Responsive por
 `@media (max-aspect-ratio: 1/1)`.
 
 PRINCIPIO DE DISEÑO: la atención de quien abre la imagen es un recurso finito, así que cada
@@ -34,6 +34,7 @@ documentación de marcador real.
 <head>
 <meta charset="utf-8">
 <title>Operación — Story GI</title>
+<link rel="stylesheet" href="marca.css">
 <style>
   @font-face {
     font-family: "Syne";
@@ -71,11 +72,11 @@ documentación de marcador real.
     padding: 0;
     width: 100vw;
     height: 100vh;
-    background: #0D0D1A;
+    background: var(--fondo);
     background-image:
-      radial-gradient(90% 120% at 100% 0%, #2A1220 0%, #0D0D1A 55%),
-      linear-gradient(180deg, #0D0D1A 0%, #120A12 60%, #0D0D1A 100%);
-    color: #F5F3F7;
+      radial-gradient(90% 120% at 100% 0%, var(--fondo-baja) 0%, var(--fondo) 55%),
+      linear-gradient(180deg, var(--fondo) 0%, var(--fondo-alt) 60%, var(--fondo) 100%);
+    color: var(--texto-1);
     font-family: "DM Sans", sans-serif;
     overflow: hidden;
   }
@@ -130,16 +131,16 @@ documentación de marcador real.
     padding: 10px 22px;
     border-radius: 999px;
     white-space: nowrap;
-    background: #E84040;
-    color: #0D0D1A;
+    background: var(--baja);
+    color: var(--fondo);
   }
-  .chip--cerrada { background: #00DC82; }
+  .chip--cerrada { background: var(--sube); }
 
   .fecha {
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
     font-size: 18px;
-    color: #A9A5B4;
+    color: var(--texto-2);
     letter-spacing: 0.03em;
     white-space: nowrap;
   }
@@ -150,7 +151,7 @@ documentación de marcador real.
     font-size: 21px;
     letter-spacing: 0.09em;
     text-transform: uppercase;
-    color: #F5A3A3;
+    color: var(--baja-suave);
     margin: 22px 0 0;
   }
 
@@ -161,7 +162,7 @@ documentación de marcador real.
     line-height: 1.12;
     letter-spacing: -0.01em;
     margin: 10px 0 0;
-    color: #FFFFFF;
+    color: var(--blanco);
   }
 
   /* ---- Tarjeta de la operación: dirección + tamaño + resultado ----
@@ -170,7 +171,7 @@ documentación de marcador real.
      esos viven solo en el gráfico. */
   .tarjeta {
     margin-top: 28px;
-    border: 2px solid #E84040;
+    border: 2px solid var(--baja);
     border-radius: 22px;
     background: rgba(232, 64, 64, 0.08);
     padding: 22px 28px;
@@ -195,8 +196,8 @@ documentación de marcador real.
     font-size: 21px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: #0D0D1A;
-    background: #E84040;
+    color: var(--fondo);
+    background: var(--baja);
     padding: 9px 22px;
     border-radius: 999px;
     white-space: nowrap;
@@ -208,7 +209,7 @@ documentación de marcador real.
     font-weight: 600;
     font-size: 21px;
     font-variant-numeric: tabular-nums;
-    color: #F5F3F7;
+    color: var(--texto-1);
     text-align: right;
   }
   .volumen small {
@@ -216,7 +217,7 @@ documentación de marcador real.
     font-family: "DM Sans", sans-serif;
     font-weight: 400;
     font-size: 15px;
-    color: #A9A5B4;
+    color: var(--texto-2);
     margin-top: 3px;
   }
 
@@ -226,7 +227,7 @@ documentación de marcador real.
     font-size: 16px;
     letter-spacing: 0.07em;
     text-transform: uppercase;
-    color: #A9A5B4;
+    color: var(--texto-2);
     margin-top: 18px;
   }
 
@@ -238,15 +239,15 @@ documentación de marcador real.
     letter-spacing: 0.005em;
     line-height: 1.05;
     margin-top: 4px;
-    color: #00DC82;
+    color: var(--sube);
   }
-  .hero--riesgo .hero-cifra { color: #F5F3F7; }
+  .hero--riesgo .hero-cifra { color: var(--texto-1); }
 
   .hero-detalle {
     font-family: "DM Sans", sans-serif;
     font-weight: 400;
     font-size: 19px;
-    color: #C9C5D4;
+    color: var(--texto-borde);
     margin-top: 6px;
   }
 
@@ -257,7 +258,7 @@ documentación de marcador real.
     font-size: 18px;
     letter-spacing: 0.07em;
     text-transform: uppercase;
-    color: #A9A5B4;
+    color: var(--texto-2);
     margin: 0 0 14px;
   }
 
@@ -274,7 +275,7 @@ documentación de marcador real.
   .g-area { fill: url(#gradArea); }
   .g-linea {
     fill: none;
-    stroke: #F5A3A3;
+    stroke: var(--baja-suave);
     stroke-width: 2.4;
     stroke-linejoin: round;
     stroke-linecap: round;
@@ -284,29 +285,29 @@ documentación de marcador real.
     stroke-width: 1;
     stroke-dasharray: 3 5;
   }
-  .g-punto { stroke: #0D0D1A; stroke-width: 2.5; }
-  .g-punto-origen { fill: #6E6A7A; }
-  .g-punto-cumplido { fill: #00DC82; }
-  .g-punto-meta { fill: #00DC82; }
-  .g-punto-actual { fill: #F5A3A3; }
+  .g-punto { stroke: var(--fondo); stroke-width: 2.5; }
+  .g-punto-origen { fill: var(--texto-3); }
+  .g-punto-cumplido { fill: var(--sube); }
+  .g-punto-meta { fill: var(--sube); }
+  .g-punto-actual { fill: var(--baja-suave); }
   .g-halo { fill: rgba(0, 220, 130, 0.2); stroke: none; }
 
   .g-precio {
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
     font-size: 19px;
-    fill: #F5F3F7;
+    fill: var(--texto-1);
   }
-  .g-precio-origen { fill: #8E8A9C; }
-  .g-precio-cumplido, .g-precio-meta { fill: #00DC82; }
-  .g-precio-actual { fill: #F5A3A3; }
+  .g-precio-origen { fill: var(--texto-gris); }
+  .g-precio-cumplido, .g-precio-meta { fill: var(--sube); }
+  .g-precio-actual { fill: var(--baja-suave); }
 
   .g-rol {
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
     font-size: 11px;
     letter-spacing: 0.07em;
-    fill: #8E8A9C;
+    fill: var(--texto-gris);
   }
 
   /* ---- Cierre ---- */
@@ -315,7 +316,7 @@ documentación de marcador real.
     font-weight: 400;
     font-size: 18px;
     line-height: 1.45;
-    color: #A9A5B4;
+    color: var(--texto-2);
     margin: 18px 0 0;
     padding-top: 16px;
     border-top: 1px solid rgba(255, 255, 255, 0.12);
@@ -335,7 +336,7 @@ documentación de marcador real.
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
     font-size: 20px;
-    color: #F5F3F7;
+    color: var(--texto-1);
   }
 
   /* Una línea, y solo porque aporta algo que ningún otro bloque dice: el origen
@@ -344,7 +345,7 @@ documentación de marcador real.
     font-family: "DM Sans", sans-serif;
     font-weight: 400;
     font-size: 15px;
-    color: #A9A5B4;
+    color: var(--texto-2);
     margin: 0;
   }
 
@@ -352,9 +353,9 @@ documentación de marcador real.
     font-family: "DM Sans", sans-serif;
     font-weight: 400;
     font-size: 13px;
-    /* #A9A5B4 (gris secundario del kit): el aviso de riesgo por apalancamiento
+    /* var(--texto-2) (gris secundario del kit): el aviso de riesgo por apalancamiento
        tiene que superar el mínimo WCAG AA de 4,5:1 sobre el fondo del footer. */
-    color: #A9A5B4;
+    color: var(--texto-2);
     line-height: 1.35;
     margin: 0;
   }

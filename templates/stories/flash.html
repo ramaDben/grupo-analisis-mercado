@@ -3,7 +3,7 @@ Snapshot de marca "Flash" (Stories GI · Fase C, issue #129). Cierre multi-activ
 + fecha + tabla de N activos (nombre, tipo, último valor, variación del día con dirección), sin
 gráfico ni dato en vivo embebido (los valores los recolecta /story vía get_asset_levels). PRIMERA
 plantilla de Fase C (listas). Reutiliza verbatim el andamiaje de marca (fuentes/footer) de
-`templates/stories/edu.html`, con dos diferencias: paleta con acento ESTRUCTURAL teal (#3E91AF) y
+`templates/stories/edu.html`, con dos diferencias: paleta con acento ESTRUCTURAL teal (var(--acento)) y
 el bloque `filas` vía el mecanismo loop FOR del motor (el marcador real vive en el `<tbody>` más
 abajo; NO escribir el literal del marcador aquí en el comentario, porque `resolver_loops` lo
 tomaría como marca de apertura). El verde/rojo de las celdas de variación es SEMÁNTICO (dirección
@@ -16,6 +16,7 @@ tests/test_story_render.py.
 <head>
 <meta charset="utf-8">
 <title>Flash — Story GI</title>
+<link rel="stylesheet" href="marca.css">
 <style>
   @font-face {
     font-family: "Syne";
@@ -53,11 +54,11 @@ tests/test_story_render.py.
     padding: 0;
     width: 1920px;
     height: 1080px;
-    background: #0D0D1A;
+    background: var(--fondo);
     background-image:
-      radial-gradient(90% 120% at 0% 20%, #10222B 0%, #0D0D1A 55%),
-      linear-gradient(180deg, #0D0D1A 0%, #0D0D1A 60%, #10222B 100%);
-    color: #F5F3F7;
+      radial-gradient(90% 120% at 0% 20%, var(--fondo-acento) 0%, var(--fondo) 55%),
+      linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 60%, var(--fondo-acento) 100%);
+    color: var(--texto-1);
     font-family: "DM Sans", sans-serif;
     overflow: hidden;
   }
@@ -93,7 +94,7 @@ tests/test_story_render.py.
     border-radius: 999px;
     background: rgba(62, 145, 175, 0.14);
     border: 1px solid rgba(62, 145, 175, 0.5);
-    color: #3E91AF;
+    color: var(--acento);
   }
 
   .flash-kicker:empty {
@@ -106,7 +107,7 @@ tests/test_story_render.py.
     font-weight: 800;
     font-size: 52px;
     line-height: 1.15;
-    color: #FFFFFF;
+    color: var(--blanco);
     margin: 26px 0 0;
     max-width: 1500px;
   }
@@ -117,7 +118,7 @@ tests/test_story_render.py.
     font-weight: 600;
     font-size: 22px;
     letter-spacing: 0.03em;
-    color: #C9C5D4;
+    color: var(--texto-borde);
     margin: 14px 0 0;
     text-transform: uppercase;
   }
@@ -135,7 +136,7 @@ tests/test_story_render.py.
     font-size: 18px;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: #3E91AF;
+    color: var(--acento);
     text-align: right;
     padding: 0 26px 16px;
     border-bottom: 2px solid rgba(62, 145, 175, 0.5);
@@ -159,7 +160,7 @@ tests/test_story_render.py.
   .flash-nombre {
     font-family: "Syne", sans-serif;
     font-weight: 800;
-    color: #FFFFFF;
+    color: var(--blanco);
     text-align: left;
   }
 
@@ -167,14 +168,14 @@ tests/test_story_render.py.
     font-family: "DM Sans", sans-serif;
     font-weight: 400;
     font-size: 24px;
-    color: #A9A5B4;
+    color: var(--texto-2);
     text-align: left;
   }
 
   .flash-valor {
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
-    color: #F5F3F7;
+    color: var(--texto-1);
   }
 
   /* ---- Celda de variación: color + flecha SEMÁNTICOS por dirección ---- */
@@ -184,7 +185,7 @@ tests/test_story_render.py.
   }
 
   .flash-var--alcista {
-    color: #00DC82;
+    color: var(--sube);
   }
 
   .flash-var--alcista::before {
@@ -192,7 +193,7 @@ tests/test_story_render.py.
   }
 
   .flash-var--bajista {
-    color: #E84040;
+    color: var(--baja);
   }
 
   .flash-var--bajista::before {
@@ -200,7 +201,7 @@ tests/test_story_render.py.
   }
 
   .flash-var--lateral {
-    color: #A9A5B4;
+    color: var(--texto-2);
   }
 
   .flash-var--lateral::before {
@@ -221,17 +222,17 @@ tests/test_story_render.py.
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
     font-size: 20px;
-    color: #F5F3F7;
+    color: var(--texto-1);
   }
 
   .footer-disclaimer {
     font-family: "DM Sans", sans-serif;
     font-weight: 400;
     font-size: 13px;
-    /* #A9A5B4 (gris secundario del kit). El #6E6A7A anterior no alcanzaba el
+    /* var(--texto-2) (gris secundario del kit). El var(--texto-3) anterior no alcanzaba el
        minimo WCAG AA de 4,5:1 sobre el fondo del footer -- y este texto es el
        aviso de riesgo por apalancamiento, tiene que poder leerse. */
-    color: #A9A5B4;
+    color: var(--texto-2);
     line-height: 1.35;
   }
 </style>

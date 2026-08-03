@@ -61,3 +61,6 @@ data/cache/
 
 # Config local de runner de agentes externo (Antigravity u otro CLI MCP)
 .agents/
+
+# Assets de marca GI (logos y fondos originales, pesados y no editables aca)
+templates/stories/assets/*.jpg

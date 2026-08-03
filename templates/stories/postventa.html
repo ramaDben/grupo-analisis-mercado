@@ -10,8 +10,8 @@ puede suprimirlo — y (2) el footer NO lleva @grupointeligencia, ni grupointeli
 disclaimer de CFD (ese texto es para clientes y haría parecer publicable la pieza); en su lugar
 va "Uso interno · No reenviar al cliente".
 
-El verde #00DC82 y el rojo #E84040 son SEMÁNTICOS (soporte/resistencia, alcista/bajista), nunca
-decorativos; el acento estructural es teal #3E91AF. Andamiaje de marca (fuentes, reset, fondo)
+El verde var(--sube) y el rojo var(--baja) son SEMÁNTICOS (soporte/resistencia, alcista/bajista), nunca
+decorativos; el acento estructural es teal var(--acento). Andamiaje de marca (fuentes, reset, fondo)
 heredado verbatim de `templates/stories/edu.html`; patrón de color y flechas por CSS ::before
 tomado de `templates/stories/resumen.html`.
 
@@ -26,6 +26,7 @@ scripts/story_render.py y tests/test_story_render.py.
 <head>
 <meta charset="utf-8">
 <title>Post-Venta — Story GI</title>
+<link rel="stylesheet" href="marca.css">
 <style>
   @font-face {
     font-family: "Syne";
@@ -67,11 +68,11 @@ scripts/story_render.py y tests/test_story_render.py.
     padding: 0;
     width: 100vw;
     height: 100vh;
-    background: #0D0D1A;
+    background: var(--fondo);
     background-image:
-      radial-gradient(90% 120% at 0% 20%, #10222B 0%, #0D0D1A 55%),
-      linear-gradient(180deg, #0D0D1A 0%, #0D0D1A 60%, #10222B 100%);
-    color: #F5F3F7;
+      radial-gradient(90% 120% at 0% 20%, var(--fondo-acento) 0%, var(--fondo) 55%),
+      linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 60%, var(--fondo-acento) 100%);
+    color: var(--texto-1);
     font-family: "DM Sans", sans-serif;
     overflow: hidden;
   }
@@ -101,7 +102,7 @@ scripts/story_render.py y tests/test_story_render.py.
     border-radius: 999px;
     background: rgba(62, 145, 175, 0.14);
     border: 1px solid rgba(62, 145, 175, 0.5);
-    color: #3E91AF;
+    color: var(--acento);
   }
 
   .pv-fecha {
@@ -110,7 +111,7 @@ scripts/story_render.py y tests/test_story_render.py.
     font-size: 20px;
     letter-spacing: 0.03em;
     text-transform: uppercase;
-    color: #A9A5B4;
+    color: var(--texto-2);
   }
 
   /* ---- Consulta del día ---- */
@@ -120,7 +121,7 @@ scripts/story_render.py y tests/test_story_render.py.
     font-size: 18px;
     letter-spacing: 0.07em;
     text-transform: uppercase;
-    color: #3E91AF;
+    color: var(--acento);
     margin: 40px 0 14px;
   }
 
@@ -138,7 +139,7 @@ scripts/story_render.py y tests/test_story_render.py.
     font-size: 50px;
     line-height: 1.14;
     letter-spacing: -0.01em;
-    color: #FFFFFF;
+    color: var(--blanco);
     margin: 0;
     max-width: 1440px;
   }
@@ -148,7 +149,7 @@ scripts/story_render.py y tests/test_story_render.py.
     font-weight: 400;
     font-size: 28px;
     line-height: 1.4;
-    color: #C9C5D4;
+    color: var(--texto-borde);
     margin: 18px 0 0;
     max-width: 1560px;
   }
@@ -176,7 +177,7 @@ scripts/story_render.py y tests/test_story_render.py.
     font-size: 15px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: #A9A5B4;
+    color: var(--texto-2);
     margin-bottom: 6px;
   }
 
@@ -186,13 +187,13 @@ scripts/story_render.py y tests/test_story_render.py.
     font-size: 40px;
   }
 
-  .pv-nivel--soporte .pv-nivel-valor { color: #00DC82; }
+  .pv-nivel--soporte .pv-nivel-valor { color: var(--sube); }
 
   .pv-nivel--resistencia { text-align: right; }
-  .pv-nivel--resistencia .pv-nivel-valor { color: #E84040; }
+  .pv-nivel--resistencia .pv-nivel-valor { color: var(--baja); }
 
   .pv-nivel--centro { text-align: center; }
-  .pv-nivel--centro .pv-nivel-valor { color: #F5F3F7; }
+  .pv-nivel--centro .pv-nivel-valor { color: var(--texto-1); }
 
   .pv-sesgo {
     font-family: "Space Grotesk", sans-serif;
@@ -201,13 +202,13 @@ scripts/story_render.py y tests/test_story_render.py.
     margin-top: 4px;
   }
 
-  .pv-sesgo--alcista { color: #00DC82; }
+  .pv-sesgo--alcista { color: var(--sube); }
   .pv-sesgo--alcista::before { content: "\25B2\00A0"; }
 
-  .pv-sesgo--bajista { color: #E84040; }
+  .pv-sesgo--bajista { color: var(--baja); }
   .pv-sesgo--bajista::before { content: "\25BC\00A0"; }
 
-  .pv-sesgo--lateral { color: #A9A5B4; }
+  .pv-sesgo--lateral { color: var(--texto-2); }
   .pv-sesgo--lateral::before { content: "\2192\00A0"; }
 
   /* ---- Dos columnas: responder / no prometer ---- */
@@ -237,12 +238,12 @@ scripts/story_render.py y tests/test_story_render.py.
   }
 
   .pv-col--responder .pv-col-titulo {
-    color: #00DC82;
+    color: var(--sube);
     border-bottom: 2px solid rgba(0, 220, 130, 0.45);
   }
 
   .pv-col--prometer .pv-col-titulo {
-    color: #E84040;
+    color: var(--baja);
     border-bottom: 2px solid rgba(232, 64, 64, 0.45);
   }
 
@@ -251,7 +252,7 @@ scripts/story_render.py y tests/test_story_render.py.
     font-weight: 400;
     font-size: 23px;
     line-height: 1.35;
-    color: #F5F3F7;
+    color: var(--texto-1);
     padding: 15px 0 15px 26px;
     position: relative;
   }
@@ -260,14 +261,14 @@ scripts/story_render.py y tests/test_story_render.py.
     content: "\25B8";
     position: absolute;
     left: 0;
-    color: #3E91AF;
+    color: var(--acento);
   }
 
   /* ---- Footer INTERNO: sin handle, sin dominio, sin disclaimer de CFD ----
      El aviso de no-reenvío es una regla de compliance, no una nota al pie: en
-     gris #6E6A7A daba 3,68:1 de contraste (bajo el mínimo WCAG AA de 4,5:1) y
+     gris var(--texto-3) daba 3,68:1 de contraste (bajo el mínimo WCAG AA de 4,5:1) y
      un ejecutivo apurado podía pasarlo por alto antes de sacar un pantallazo.
-     En ámbar #FFB020 sobre el fondo da 10,54:1 y se lee a distancia. */
+     En ámbar var(--aviso) sobre el fondo da 10,54:1 y se lee a distancia. */
   .pv-footer {
     margin-top: 20px;
     display: flex;
@@ -278,16 +279,16 @@ scripts/story_render.py y tests/test_story_render.py.
     font-size: 15px;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    /* #A9A5B4 (gris secundario del kit) = 6,79:1 sobre el fondo del footer.
-       El #6E6A7A original daba 3,12:1, bajo el minimo AA. Es metadato, no
+    /* var(--texto-2) (gris secundario del kit) = 6,79:1 sobre el fondo del footer.
+       El var(--texto-3) original daba 3,12:1, bajo el minimo AA. Es metadato, no
        compliance, pero se iguala por coherencia con el resto del catalogo. */
-    color: #A9A5B4;
+    color: var(--texto-2);
   }
 
   .pv-aviso {
     font-size: 19px;
     letter-spacing: 0.07em;
-    color: #FFB020;
+    color: var(--aviso);
     padding: 11px 26px;
     border-radius: 8px;
     background: rgba(255, 176, 32, 0.12);

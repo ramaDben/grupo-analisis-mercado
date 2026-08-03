@@ -1,0 +1,64 @@
+/*
+  Línea de marca de las Stories GI — fuente única de la paleta.
+
+  Los ocho snapshots de `templates/stories/` referencian estos tokens con
+  `var(--…)` en vez de escribir el hex. Cambiar la línea visual de todas las
+  piezas es editar este archivo; antes eran ~19 valores repetidos 200 veces
+  entre ocho archivos.
+
+  Lo carga cada snapshot con <link rel="stylesheet" href="marca.css">. Funciona
+  con ruta relativa porque `story_render.py` escribe el HTML resuelto DENTRO de
+  `templates/stories/` y lo navega con `file://` — el mismo mecanismo por el que
+  resuelven las fuentes de `fonts/`. El renderer no se entera: cero cambios en su
+  contrato de tokens `{{campo}}`.
+
+  ── Los nombres son ROLES, no colores ──────────────────────────────────────────
+  `--acento` y no `--teal`, `--sube` y no `--verde`. Un token llamado por su
+  color miente en cuanto se cambia la paleta, y ahí es donde se rompen las cosas:
+  el día que el acento pase a azul, un `--verde: #3E91AF` deja el código
+  ilegible.
+
+  ── La distinción que no se puede colapsar ─────────────────────────────────────
+  El acento de marca y los colores de dirección son roles DISTINTOS que hoy
+  conviven:
+
+    · `--acento`  es estructura: kickers, filetes, etiquetas, bordes. Es el que
+      cambia cuando cambia la marca. Ya estaba declarado como "acento
+      ESTRUCTURAL" en flash.html y postventa.html.
+
+    · `--sube` / `--baja` son SEMÁNTICA de mercado. Verde arriba y rojo abajo es
+      una convención que el cliente lee sin pensar, no una decisión de marca. Si
+      se repintan con el color corporativo, la pieza deja de leerse como pieza de
+      mercado. No se tocan al reskinear.
+
+  Verificar que no vuelvan a aparecer hex sueltos:
+      uv run python scripts/marca_tokens.py --check
+*/
+
+:root {
+  /* ── Fondos ─────────────────────────────────────────────────────────────── */
+  --fondo:          #000000;  /* negro de marca, tomado de LOGO-Fondo-Negro */
+  --fondo-acento:   #10222B;  /* tinte del degradado, derivado del acento */
+  --fondo-alt:      #0A0A0F;  /* variante del fondo para bloques apilados */
+  --fondo-sube:     #123A2A;  /* relleno tenue en bloques alcistas */
+  --fondo-baja:     #2A1220;  /* relleno tenue en bloques bajistas */
+
+  /* ── Acento estructural — el azul de la marca ───────────────────────────── */
+  --acento:         #3C8CAA;  /* medido sobre favicon-06 y las 3 versiones del logo */
+  --acento-oscuro:  #14313D;  /* par oscuro del acento, para degradados */
+
+  /* ── Dirección de mercado — semántica, NO se reskinea ───────────────────── */
+  --sube:           #00DC82;
+  --sube-suave:     #53C1AB;
+  --baja:           #E84040;
+  --baja-suave:     #F5A3A3;
+  --aviso:          #FFB020;
+
+  /* ── Tipografía ─────────────────────────────────────────────────────────── */
+  --texto-1:        #F5F3F7;  /* principal */
+  --texto-2:        #A9A5B4;  /* secundario */
+  --texto-3:        #6E6A7A;  /* tenue: pies, disclaimers */
+  --texto-borde:    #C9C5D4;  /* filetes y separadores sobre fondo oscuro */
+  --texto-gris:     #8E8A9C;  /* gris intermedio */
+  --blanco:         #FFFFFF;
+}
