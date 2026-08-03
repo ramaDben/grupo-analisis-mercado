@@ -74,7 +74,7 @@ documentación de marcador real.
     height: 100vh;
     background: var(--fondo);
     background-image:
-      radial-gradient(90% 120% at 100% 0%, var(--fondo-baja) 0%, var(--fondo) 55%),
+      radial-gradient(90% 120% at 100% 0%, var(--fondo-acento) 0%, var(--fondo) 55%),
       linear-gradient(180deg, var(--fondo) 0%, var(--fondo-alt) 60%, var(--fondo) 100%);
     color: var(--texto-1);
     font-family: "DM Sans", sans-serif;
@@ -131,10 +131,18 @@ documentación de marcador real.
     padding: 10px 22px;
     border-radius: 999px;
     white-space: nowrap;
-    background: var(--baja);
+    background: var(--acento);
     color: var(--fondo);
   }
-  .chip--cerrada { background: var(--sube); }
+  /* El estado se distingue por relleno vs contorno, no por rojo vs verde.
+     El rojo de "abierta" no significaba nada y leia como alarma; el verde de
+     "cerrada" era peor, porque insinuaba que cerro en ganancia -y puede haber
+     cerrado en perdida-. El texto del chip ya dice el estado sin ambiguedad. */
+  .chip--cerrada {
+    background: transparent;
+    border: 2px solid var(--acento);
+    color: var(--acento);
+  }
 
   .fecha {
     font-family: "Space Grotesk", sans-serif;
@@ -151,7 +159,7 @@ documentación de marcador real.
     font-size: 21px;
     letter-spacing: 0.09em;
     text-transform: uppercase;
-    color: var(--baja-suave);
+    color: var(--texto-2);
     margin: 22px 0 0;
   }
 
@@ -171,15 +179,13 @@ documentación de marcador real.
      esos viven solo en el gráfico. */
   .tarjeta {
     margin-top: 28px;
-    border: 2px solid var(--baja);
+    border: 2px solid var(--acento);
     border-radius: 22px;
-    background: rgba(232, 64, 64, 0.08);
+    background: rgba(80, 192, 168, 0.07);
     padding: 22px 28px;
   }
-  .tarjeta--cerrada {
-    border-color: rgba(0, 220, 130, 0.55);
-    background: rgba(0, 220, 130, 0.07);
-  }
+  /* Sin override de color por estado: el marco es de la marca en los dos
+     casos. Lo que cambia entre abierta y cerrada lo dice el chip. */
 
   .tarjeta-cabecera {
     display: flex;
