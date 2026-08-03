@@ -1,0 +1,36 @@
+{
+ "plantilla": "dato_macro",
+ "chip_pais": "ECONOMÍA CHILE",
+ "fecha_hora": "3 AGO 2026 · 08:30 CLT",
+ "titular": "La economía chilena creció más de lo que el mercado tenía en sus cuentas",
+ "veredicto": "Mejor",
+ "veredicto_slug": "mejor",
+ "indicador": "Actividad económica (Imacec)",
+ "periodo": "Junio · variación anual",
+ "actual": "+2,4%",
+ "esperado": "+2,0%",
+ "anterior": "",
+ "significado": "La economía volvió a crecer tras varios meses flojos, y creció más de lo previsto. Actividad más firme significa menos presión sobre el Banco Central para seguir bajando la tasa.",
+ "activos": [
+  {
+   "nombre": "USD/CLP",
+   "direccion": "baja",
+   "etiqueta": "Baja",
+   "porque": "una tasa que deja de caer hace más atractivo mantener pesos, y eso empuja al dólar hacia abajo."
+  },
+  {
+   "nombre": "Acciones chilenas",
+   "direccion": "sube",
+   "etiqueta": "Sube",
+   "porque": "una economía más firme mejora las utilidades que el mercado espera de las empresas locales."
+  },
+  {
+   "nombre": "Cobre",
+   "direccion": "lateral",
+   "etiqueta": "Sin efecto",
+   "porque": "su precio lo manda la demanda de China, no la actividad chilena. Este dato no lo mueve."
+  }
+ ],
+ "temporalidad": "Swing de jornada (1-3 días)",
+ "fuente": "Banco Central de Chile"
+}

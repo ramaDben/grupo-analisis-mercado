@@ -1,0 +1,31 @@
+{
+ "plantilla": "recomendacion",
+ "chip_categoria": "DIVISAS · EURO",
+ "fecha_hora": "3 AGO 2026 · 13:45 CLT",
+ "titular": "El euro sostiene su avance sobre las medias de referencia",
+ "rotulo_activo": "EURO / DÓLAR · EUR/USD",
+ "sesgo": "Compra",
+ "entrada": "1,15038",
+ "volumen": "0,54 lotes",
+ "temporalidad": "Swing (1-3 días)",
+ "tp": "1,16350",
+ "tp_clp": "Ganancia objetivo +$655.700",
+ "sl": "1,14479",
+ "sl_clp": "Pérdida máxima −$279.400",
+ "bullets": [
+  {
+   "texto": "El precio (1,15022) opera sobre su media de 50 períodos (1,14577) y sobre la de 100 (1,14409). Las dos por debajo del precio y subiendo: la tendencia de fondo es compradora."
+  },
+  {
+   "texto": "El RSI está en 55,2 — zona neutra. Hay recorrido antes de llegar a sobrecompra, así que la subida no viene agotada."
+  },
+  {
+   "texto": "El riesgo: el MACD ya perdió fuerza (histograma en −0,0004) y el primer soporte está a solo 4 pips. Por eso el stop va ajustado en 1,14479, con una relación de 2,35 a 1 entre lo que se puede ganar y lo que se arriesga."
+  }
+ ],
+ "firma_nombre": "Benjamín Bravo Soza",
+ "firma_credencial": "Operador Acreditado CMV · Ingeniero en Finanzas",
+ "firma_area": "Área de Estudios y Post-Venta · Grupo Inteligencia",
+ "fuente": "MetaTrader 5 · posición abierta del equipo",
+ "costo_mantencion": "−$8.225 · 3 días"
+}

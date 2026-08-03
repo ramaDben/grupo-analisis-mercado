@@ -10,6 +10,7 @@ directamente en este archivo -- no se toca `conftest.py` (contrato de design.md 
 from __future__ import annotations
 
 import copy
+import json
 import sys
 from pathlib import Path
 
@@ -1042,3 +1043,53 @@ def test_alerta_vertical_apila_editorial_y_grafico(tmp_path):
     # Vertical: apiladas
     assert graf_v["y"] > edi_v["y"]
     assert abs(graf_v["x"] - edi_v["x"]) < 2
+
+
+# ---------------------------------------------------------------------------
+# Contrato de TODAS las plantillas, desde las fixtures compartidas
+# ---------------------------------------------------------------------------
+# Los tests de arriba cubren plantilla por plantilla con payloads escritos como
+# constantes. Eso dejó un agujero: `recomendacion`, `dato_macro` y `operacion`
+# llegaron sin test, así que nada avisaba si un cambio en el motor les rompía el
+# contrato.
+#
+# Este bloque cierra el agujero de raíz. Recorre `tests/fixtures/stories/payloads/`
+# y exige que TODA plantilla de `templates/stories/` tenga su payload y resuelva
+# sin tokens huérfanos. Una plantilla nueva sin fixture falla el test — que es lo
+# que corresponde, porque una plantilla que nadie testea tampoco es una que
+# alguien esté revisando.
+#
+# Son las MISMAS fixtures que usa `scripts/rendir_todas.py` para la revisión
+# visual. Una fixture que solo vive en el test se desactualiza sin que nadie lo
+# note; una que además se mira cada vez que se toca el diseño, no.
+
+DIR_PLANTILLAS = Path(__file__).resolve().parent.parent / "templates" / "stories"
+DIR_PAYLOADS = Path(__file__).resolve().parent / "fixtures" / "stories" / "payloads"
+
+PLANTILLAS = sorted(p.stem for p in DIR_PLANTILLAS.glob("*.html"))
+
+
+def test_toda_plantilla_tiene_payload_de_prueba():
+    faltantes = [n for n in PLANTILLAS if not (DIR_PAYLOADS / f"{n}.json").exists()]
+    assert not faltantes, (
+        f"Plantillas sin payload en tests/fixtures/stories/payloads/: {faltantes}. "
+        "Agrégalo: protege el contrato y alimenta scripts/rendir_todas.py."
+    )
+
+
+@pytest.mark.parametrize("nombre", PLANTILLAS)
+def test_plantilla_resuelve_sin_huerfanos(nombre):
+    ruta_payload = DIR_PAYLOADS / f"{nombre}.json"
+    if not ruta_payload.exists():
+        pytest.skip(f"sin payload: lo cubre test_toda_plantilla_tiene_payload_de_prueba")
+
+    payload = json.loads(ruta_payload.read_text(encoding="utf-8"))
+    if "recorrido" in payload:
+        from story_grafico_operacion import enriquecer
+
+        payload = enriquecer(payload)
+
+    html = story_render.build_html(payload, DIR_PLANTILLAS / f"{nombre}.html")
+
+    assert "{{" not in html, f"{nombre}: quedaron tokens sin resolver"
+    assert "<!-- FOR:" not in html, f"{nombre}: quedó un bloque FOR sin expandir"

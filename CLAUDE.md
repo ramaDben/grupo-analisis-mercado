@@ -251,8 +251,16 @@ Contrato de error común: si el dato no está disponible retorna `{'error': 'CÓ
 ## Stories GI
 
 Piloto (issue #109): comando `/story [tipo]` genera Stories de marca (imagen 1920×1080).
-`[tipo]` soportados hoy: `alerta`, `quote`, `breaking`, `encuesta`, `edu` (Fase B, issues
-#121/#123/#125/#127), `flash` (Fase C, issue #129) y `postventa` (Fase C). `alerta` (plantilla "03 Alerta de Mercado") combina niveles reales del motor
+`[tipo]` soportados hoy: `dato_macro`, `alerta`, `recomendacion`, `quote`, `breaking`, `encuesta`,
+`edu` (Fase B, issues #121/#123/#125/#127), `flash` (Fase C, issue #129) y `postventa` (Fase C).
+`dato_macro` cubre la **pieza 1 de la agenda diaria** —un dato económico que ya publicó, en el Modo
+resultado de `/dato_macro`— y se organiza alrededor del veredicto frente al consenso; su
+`veredicto_slug` NO se deriva de `sesgo`, porque mejor/peor es contra lo esperado y no una dirección
+de mercado (un dato "mejor" puede ser bajista para un activo). `recomendacion` es la **única
+plantilla con firma acreditada** —una recomendación induce una operación, así que tiene que constar
+quién la respalda— y **cuenta para el límite de 3 señales por semana**; obliga a TP y SL en pesos y
+tiene campo para el costo de mantención (swap), que es lo que separa una operación comunicada con
+honestidad de una que solo muestra la ganancia. `alerta` (plantilla "03 Alerta de Mercado") combina niveles reales del motor
 (`get_asset_levels`) con una narrativa de alerta (mismo criterio editorial de `/alerta`); `quote`
 es una pieza 100% editorial (cita + autor + cargo, sin dato del motor); `breaking` es una pieza
 editorial de noticia urgente (kicker + titular + cifra clave + contexto + reacción, sin dato del
@@ -283,9 +291,54 @@ formato (evita que la versión vertical se desfase de la horizontal). Migradas a
 horizontal — una plantilla por Change, mismo criterio que las Fases B y C. Snapshots de marca:
 `templates/stories/alerta.html`, `templates/stories/quote.html`, `templates/stories/breaking.html`,
 `templates/stories/encuesta.html`, `templates/stories/edu.html`, `templates/stories/flash.html`,
-`templates/stories/postventa.html` y `templates/stories/operacion.html`. Las demás plantillas del canvas (Market Update, Indicador
+`templates/stories/postventa.html`, `templates/stories/operacion.html`,
+`templates/stories/dato_macro.html` y `templates/stories/recomendacion.html`. Las demás plantillas del canvas (Market Update, Indicador
 Macro, Trading Idea, Calendario, Semanal, Carrusel "Oportunidades de la semana") llegan con los issues
 #111-#115 — ver `docs/design/stories-gi/plantillas-stories-gi.md` para el mapeo campo-por-campo.
+
+**Paleta y color (una sola fuente).** Los colores viven en `templates/stories/marca.css` y los
+snapshots los consumen con `var(--rol)`; ningún hex se escribe a mano. Los tokens se nombran por
+**rol y no por color** (`--acento`, no `--teal`): un nombre de color miente en cuanto se cambia la
+paleta. `scripts/marca_tokens.py --check` falla si una plantilla vuelve a hardcodear un color, que
+es lo único que mantiene la fuente única siendo única.
+
+Dos reglas de color que se pagaron caro y no conviene volver a discutir:
+
+1. **El cromo no opina.** Marco, chip, borde y degradado van siempre en el acento de marca. Solo se
+   colorea lo que ES un dato: la píldora de dirección, la variación, el veredicto, el resultado
+   cuando es negativo. Una pieza bajista bañada en rojo se lee como alarma y contradice la regla de
+   tono del proyecto (énfasis direccional sí, dramatización no). En una frase: **si un color no está
+   comunicando un número, va en el acento**.
+2. **`--sube` / `--baja` no se reskinean.** Verde arriba y rojo abajo es una convención que el
+   cliente lee sin pensar, no una decisión de marca. Al cambiar la línea visual se cambia
+   `--acento`, nunca la semántica de dirección.
+
+El acento es `#50C0A8`, el extremo verde del degradado del logo (el azul `#3C8CAA` es el otro
+extremo y queda disponible como `--acento-azul`). Ambos medidos sobre los assets de
+`templates/stories/assets/`, no elegidos a ojo.
+
+**Revisar y proteger las plantillas.** Cada plantilla tiene su payload de prueba en
+`tests/fixtures/stories/payloads/<plantilla>.json`, y esas MISMAS fixtures alimentan dos cosas:
+
+```bash
+uv run --extra stories python scripts/rendir_todas.py            # las 10 piezas juntas
+uv run --extra stories python scripts/rendir_todas.py --formato vertical
+uv run pytest tests/test_story_render.py                          # contrato de las 10
+```
+
+El render completo existe porque **los defectos de consistencia no se ven revisando de a una**: un
+cambio global de paleta puede dejar piezas sin regenerar, y un color equivocado sobrevive rondas
+enteras si la revisión está puesta en otra plantilla. El test exige que toda plantilla de
+`templates/stories/` tenga fixture y resuelva sin tokens huérfanos — una plantilla nueva sin payload
+falla, que es lo que corresponde, porque tampoco la estaría revisando nadie.
+
+**Serie real para los gráficos.** `scripts/serie_mt5.py` trae los cierres del terminal y arma el
+bloque `recorrido` que consume `story_grafico_operacion.py`. Los marcadores se anclan por ROL, no
+por proximidad de precio: `actual` y `meta` van al extremo derecho por definición, y `origen` se
+ancla por tiempo cuando el hito trae fecha. Anclar por precio parece razonable y no lo es —el precio
+oscila, así que el cierre más parecido puede caer en cualquier punto de la serie—. Requiere el
+terminal abierto y `MetaTrader5`, que no es dependencia del repo: se inyecta con
+`uv run --with MetaTrader5`.
 
 **Plantilla `operacion`** (comunica una operación del equipo, en estado `abierta` o `cerrada` según
 `estado_slug` del payload): es la única con un **paso previo** al renderer. Su gráfico de recorrido
@@ -492,7 +545,10 @@ grupo-analisis-mercado/
 │   ├── agenda_semanal.json · feriados_bolsa.json
 ├── scripts/               ← scripts auxiliares
 │   ├── story_render.py    ← renderer de Stories GI (payload JSON → HTML → PNG con Playwright)
-│   ├── story_grafico_operacion.py ← geometría del gráfico de recorrido de la plantilla `operacion` (paso previo al render)
+│   ├── story_grafico_operacion.py ← geometría del gráfico de recorrido (paso previo al render)
+│   ├── serie_mt5.py       ← serie real de precios desde MT5 → bloque `recorrido`
+│   ├── rendir_todas.py    ← rinde las 10 plantillas juntas, para revisión visual
+│   ├── marca_tokens.py    ← verifica que ninguna plantilla hardcodee un color
 │   ├── capacitacion_fundamental_ppt.py + _contenido.py ← generador del PPTX de capacitación (motor / contenido)
 │   └── hora_chile.ps1 · ruta_mensaje.ps1 · ruta_story.ps1  ← helpers deterministas (hora Chile, ruta de guardado)
 ├── templates/             ← templates de mensajes WhatsApp
@@ -500,7 +556,7 @@ grupo-analisis-mercado/
 │   ├── concepto_didactico.txt · guion_ejecutivo.txt
 │   ├── ruta_curriculo.txt · dashboard_metricas.txt · mapa_conceptos.txt
 │   ├── ventas_email.txt · ventas_whatsapp.txt
-│   └── stories/           ← snapshots de marca GI (alerta.html · operacion.html · … + fonts/)
+│   └── stories/           ← snapshots de marca GI (10 plantillas) + marca.css · fonts/ · assets/
 ├── conceptos/             ← notas canónicas de conceptos educativos (malla /rencuesta)
 │   ├── README.md · stop-loss.md
 ├── data/                  ← datos persistentes

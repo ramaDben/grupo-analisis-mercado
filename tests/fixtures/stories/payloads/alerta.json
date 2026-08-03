@@ -1,0 +1,21 @@
+{
+ "plantilla": "alerta",
+ "activo": {
+  "ticker_mt5": "XAUUSD",
+  "nombre": "Oro",
+  "digits": 2
+ },
+ "chip_categoria": "COMMODITIES · ORO",
+ "fecha_hora": "13 JUL 2026 · 11:15",
+ "titular": "El Oro rompe soporte clave y activa señal de riesgo bajista",
+ "parrafo": "El metal perdió la zona de 2.320 con volumen creciente, confirmando presión vendedora. Un cierre bajo el soporte abriría espacio hacia nuevos mínimos; se recomienda gestión estricta del riesgo.",
+ "rotulo_activo": "ORO · XAU/USD",
+ "tag_riesgo": "RIESGO ALTO",
+ "precio_actual": "2.318,40",
+ "soporte": "2.300,00",
+ "resistencia": "2.360,00",
+ "rotulo_grafico": "XAU/USD · VELAS 4H",
+ "chart_png": null,
+ "fuente": "COMEX",
+ "sesgo": "Bajista"
+}

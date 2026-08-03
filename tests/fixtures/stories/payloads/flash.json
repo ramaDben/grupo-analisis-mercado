@@ -1,0 +1,29 @@
+{
+ "plantilla": "flash",
+ "kicker": "CIERRE DE MERCADO",
+ "titulo": "Así cerró el mercado hoy",
+ "fecha": "16 JUL 2026 · 17:30",
+ "filas": [
+  {
+   "nombre": "USD/CLP",
+   "tipo": "Divisa",
+   "valor": "889,60",
+   "variacion": "+0,42%",
+   "direccion": "alcista"
+  },
+  {
+   "nombre": "Oro",
+   "tipo": "Metal",
+   "valor": "2.318,40",
+   "variacion": "-1,86%",
+   "direccion": "bajista"
+  },
+  {
+   "nombre": "WTI",
+   "tipo": "Energía",
+   "valor": "78,320",
+   "variacion": "0,00%",
+   "direccion": "lateral"
+  }
+ ]
+}
