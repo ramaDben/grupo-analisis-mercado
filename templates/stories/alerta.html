@@ -53,7 +53,7 @@ y tests/test_story_render.py.
     height: 100vh;
     background: var(--fondo);
     background-image:
-      radial-gradient(90% 120% at 0% 20%, var(--fondo-baja) 0%, var(--fondo) 55%),
+      radial-gradient(90% 120% at 0% 20%, var(--fondo-direccion) 0%, var(--fondo) 55%),
       linear-gradient(180deg, var(--fondo) 0%, var(--fondo-alt) 60%, var(--fondo) 100%);
     color: var(--texto-1);
     font-family: "DM Sans", sans-serif;
@@ -113,14 +113,16 @@ y tests/test_story_render.py.
     padding: 10px 22px;
     border-radius: 999px;
   }
+  /* Cromo direccional: ver el bloque "Color por dirección" de marca.css.
+     Antes iba fijo en var(--baja) y una alerta alcista salía roja. */
   .chip-alerta {
-    background: var(--baja);
+    background: var(--direccion);
     color: var(--fondo);
   }
   .chip-categoria {
     background: rgba(232, 64, 64, 0.14);
     border: 1px solid rgba(232, 64, 64, 0.5);
-    color: var(--baja-suave);
+    color: var(--direccion-suave);
   }
 
   .fecha-hora {
@@ -154,7 +156,7 @@ y tests/test_story_render.py.
   /* ---- Tarjeta de precio (borde rojo) ---- */
   .tarjeta-precio {
     margin-top: 24px;
-    border: 2px solid var(--baja);
+    border: 2px solid var(--direccion);
     border-radius: 22px;
     background: rgba(232, 64, 64, 0.08);
     padding: 24px 30px;
@@ -296,7 +298,7 @@ y tests/test_story_render.py.
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
     font-size: 20px;
-    fill: var(--baja);
+    fill: var(--direccion);
   }
 
   /* ---- Footer ---- */
@@ -437,7 +439,7 @@ y tests/test_story_render.py.
           <!-- ENDIF:chart_img -->
           <!-- IF:chart_svg -->
           <svg id="svg-alerta" viewBox="0 0 400 220" preserveAspectRatio="none">
-            <line x1="0" y1="150" x2="400" y2="150" stroke="var(--baja)" stroke-width="2" stroke-dasharray="6 6"/>
+            <line x1="0" y1="150" x2="400" y2="150" stroke="var(--direccion)" stroke-width="2" stroke-dasharray="6 6"/>
             <text x="12" y="32" class="soporte-rotulo">SOPORTE {{soporte}}</text>
             <rect x="20" y="70" width="14" height="60" fill="var(--sube)"/>
             <line x1="27" y1="55" x2="27" y2="70" stroke="var(--sube)" stroke-width="3"/>

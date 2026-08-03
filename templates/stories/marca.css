@@ -68,6 +68,42 @@
 }
 
 /*
+  Color por dirección.
+
+  Antes, el cromo de `alerta` estaba fijo en el rojo de urgencia: chip, borde de
+  la tarjeta y rótulo de soporte salían rojos aunque la píldora dijera ALCISTA.
+  La pieza se contradecía a sí misma, y el color es lo primero que el cliente
+  lee — antes que el texto.
+
+  Estos tres tokens cascadean desde la clase que el snapshot ya pone en <body>
+  (`sesgo-{{sesgo_slug}}`), así que una plantilla adopta el color por dirección
+  cambiando `var(--baja)` por `var(--direccion)` en su cromo. Sin tocar el
+  renderer ni el contrato del payload.
+
+  Lo que NO se toca al hacerlo: las etiquetas de dirección propiamente tales
+  (`.tag-sesgo--alcista`, la variación). Ahí el verde y el rojo SON el dato, no
+  el cromo.
+
+  El neutro es el acento de marca y no un gris: una pieza sin dirección definida
+  debe verse de la marca, no apagada.
+*/
+body {
+  --direccion:        var(--acento);
+  --direccion-suave:  var(--texto-borde);
+  --fondo-direccion:  var(--fondo-acento);
+}
+body.sesgo-alcista, body.sesgo-compra {
+  --direccion:        var(--sube);
+  --direccion-suave:  var(--sube-suave);
+  --fondo-direccion:  var(--fondo-sube);
+}
+body.sesgo-bajista, body.sesgo-venta {
+  --direccion:        var(--baja);
+  --direccion-suave:  var(--baja-suave);
+  --fondo-direccion:  var(--fondo-baja);
+}
+
+/*
   Filete de marca en el borde de toda pieza.
 
   Existe por una razón de canal, no decorativa: con `--fondo: #000000`, una pieza

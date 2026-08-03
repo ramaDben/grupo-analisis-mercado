@@ -72,6 +72,41 @@ def resolver_escala(serie: list[float]) -> tuple[float, float]:
     return alto + margen, bajo - margen
 
 
+# Alto que ocupa el bloque de texto de un marcador, en unidades del viewBox: el
+# precio mas su rol debajo, o solo el precio. Sale de los offsets +6 y +21 con
+# que se dibujan ambas lineas, mas holgura para que no se toquen.
+_ALTO_CON_ROL = 34.0
+_ALTO_SIN_ROL = 19.0
+
+
+def _separar_etiquetas(marcadores: list[dict], coord_y) -> dict[int, float]:
+    """Y de cada bloque de texto, ya separados para que no se pisen entre si.
+
+    Todas las etiquetas se dibujan en la misma X -pegadas al eje- asi que dos
+    marcadores con precios parecidos caen en la misma altura y sus textos se
+    superponen hasta volverse ilegibles. Paso en la primera prueba real: la
+    entrada en 1,15038 y el precio actual en 1,15022 -16 puntos de diferencia
+    sobre un rango de 1.100- salieron uno encima del otro.
+
+    El punto y su guia horizontal se quedan SIEMPRE en la altura verdadera del
+    precio; lo unico que se corre es el texto. Mover el punto seria mentir sobre
+    donde ocurrio el hito.
+
+    Se recorre de arriba hacia abajo empujando cada bloque lo justo para que no
+    invada al anterior. Con dos o tres marcadores -el caso real de una operacion:
+    entrada, actual y objetivo- el desplazamiento es de pocos pixeles y la
+    asociacion entre texto y punto sigue siendo obvia por la guia.
+    """
+    orden = sorted(range(len(marcadores)), key=lambda i: coord_y(marcadores[i]["precio"]))
+    y_texto: dict[int, float] = {}
+    libre = float("-inf")
+    for i in orden:
+        y = max(coord_y(marcadores[i]["precio"]), libre)
+        y_texto[i] = y
+        libre = y + (_ALTO_CON_ROL if marcadores[i].get("rol") else _ALTO_SIN_ROL)
+    return y_texto
+
+
 def construir_svg(
     serie: list[float], marcadores: list[dict[str, Any]]
 ) -> str:
@@ -99,8 +134,12 @@ def construir_svg(
     partes = [
         f'<svg viewBox="0 0 {VB_W} {VB_H}" preserveAspectRatio="xMidYMid meet">',
         '<defs><linearGradient id="gradArea" x1="0" y1="0" x2="0" y2="1">',
-        '<stop offset="0%" stop-color="#F5A3A3" stop-opacity="0.20"/>',
-        '<stop offset="100%" stop-color="#F5A3A3" stop-opacity="0"/>',
+        # Sin `stop-color` fijo: el color lo pone `.g-area-alto` / `.g-area-bajo`
+        # en el snapshot, igual que el resto del gráfico. Estaba hardcodeado en
+        # rosa, así que el área no seguía la dirección de la operación y bajo una
+        # línea verde quedaba un relleno rojizo.
+        '<stop class="g-area-alto" offset="0%"/>',
+        '<stop class="g-area-bajo" offset="100%"/>',
         "</linearGradient></defs>",
         f'<path class="g-area" d="M {pts[0][0]:.1f},{PLOT_Y1} L {trazo} '
         f'L {pts[-1][0]:.1f},{PLOT_Y1} Z"/>',
@@ -116,21 +155,24 @@ def construir_svg(
 
     partes.append(f'<path class="g-linea" d="M {trazo}"/>')
 
-    for m in marcadores:
+    y_etiqueta = _separar_etiquetas(marcadores, coord_y)
+
+    for i, m in enumerate(marcadores):
         clase = m.get("clase", "actual")
         x, y = coord_x(m["indice"]), coord_y(m["precio"])
+        yt = y_etiqueta[i]
         if clase == "meta":
             partes.append(f'<circle class="g-halo" cx="{x:.1f}" cy="{y:.1f}" r="11"/>')
         partes.append(
             f'<circle class="g-punto g-punto-{clase}" cx="{x:.1f}" cy="{y:.1f}" r="5.5"/>'
         )
         partes.append(
-            f'<text class="g-precio g-precio-{clase}" x="{LABEL_X}" y="{y + 6:.1f}" '
+            f'<text class="g-precio g-precio-{clase}" x="{LABEL_X}" y="{yt + 6:.1f}" '
             f'text-anchor="end">{m["etiqueta"]}</text>'
         )
         if m.get("rol"):
             partes.append(
-                f'<text class="g-rol" x="{LABEL_X}" y="{y + 21:.1f}" '
+                f'<text class="g-rol" x="{LABEL_X}" y="{yt + 21:.1f}" '
                 f'text-anchor="end">{m["rol"]}</text>'
             )
 

@@ -197,12 +197,16 @@ documentación de marcador real.
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--fondo);
-    background: var(--baja);
+    background: var(--direccion);
     padding: 9px 22px;
     border-radius: 999px;
     white-space: nowrap;
   }
-  .tag-direccion::before { content: "\25BC\00A0"; }
+  /* La flecha y el color venian fijos en venta: una compra salia con la
+     pildora roja y flecha hacia abajo. Ahora los manda la clase de sesgo del elemento raiz,
+     igual que en alerta y recomendacion. */
+  .sesgo-compra .tag-direccion::before { content: "\25B2\00A0"; }
+  .sesgo-venta  .tag-direccion::before { content: "\25BC\00A0"; }
 
   .volumen {
     font-family: "Space Grotesk", sans-serif;
@@ -239,9 +243,14 @@ documentación de marcador real.
     letter-spacing: 0.005em;
     line-height: 1.05;
     margin-top: 4px;
-    color: var(--sube);
+    color: var(--texto-1);
   }
-  .hero--riesgo .hero-cifra { color: var(--texto-1); }
+  /* El resultado se colorea por su SIGNO y no por la direccion de la
+     operacion: una compra puede ir perdiendo. Antes el verde estaba por
+     defecto y un flotante negativo salia en verde. */
+  .hero--positivo .hero-cifra { color: var(--sube); }
+  .hero--negativo .hero-cifra { color: var(--baja); }
+  .hero--riesgo   .hero-cifra { color: var(--texto-1); }
 
   .hero-detalle {
     font-family: "DM Sans", sans-serif;
@@ -273,9 +282,14 @@ documentación de marcador real.
   }
 
   .g-area { fill: url(#gradArea); }
+  /* Las paradas del degradado se pintan acá y no en el script: el generador
+     calcula coordenadas, el snapshot pone el color. Así el área sigue la
+     dirección de la operación como la línea. */
+  .g-area-alto { stop-color: var(--direccion-suave); stop-opacity: 0.20; }
+  .g-area-bajo { stop-color: var(--direccion-suave); stop-opacity: 0; }
   .g-linea {
     fill: none;
-    stroke: var(--baja-suave);
+    stroke: var(--direccion-suave);
     stroke-width: 2.4;
     stroke-linejoin: round;
     stroke-linecap: round;
@@ -289,7 +303,7 @@ documentación de marcador real.
   .g-punto-origen { fill: var(--texto-3); }
   .g-punto-cumplido { fill: var(--sube); }
   .g-punto-meta { fill: var(--sube); }
-  .g-punto-actual { fill: var(--baja-suave); }
+  .g-punto-actual { fill: var(--direccion-suave); }
   .g-halo { fill: rgba(0, 220, 130, 0.2); stroke: none; }
 
   .g-precio {
@@ -300,7 +314,7 @@ documentación de marcador real.
   }
   .g-precio-origen { fill: var(--texto-gris); }
   .g-precio-cumplido, .g-precio-meta { fill: var(--sube); }
-  .g-precio-actual { fill: var(--baja-suave); }
+  .g-precio-actual { fill: var(--direccion-suave); }
 
   .g-rol {
     font-family: "Space Grotesk", sans-serif;
@@ -400,7 +414,7 @@ documentación de marcador real.
   }
 </style>
 </head>
-<body>
+<body class="sesgo-{{sesgo_slug}}">
   <div class="story">
 
     <div class="contenido">
