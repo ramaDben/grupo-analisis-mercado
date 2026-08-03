@@ -218,13 +218,138 @@ def construir_svg(
     return "".join(partes)
 
 
+
+# ---- Gráfico de barras (series macro) -----------------------------------------
+# Reserva abajo la banda de las etiquetas del eje X, que el gráfico de línea no
+# necesita porque su eje horizontal es implícito ("las últimas N velas").
+# Lienzo propio: el del grafico de linea (440x400) es alto y angosto porque vive
+# en una columna lateral. Las barras ocupan el ancho de la tarjeta, y con
+# `preserveAspectRatio` un lienzo vertical dentro de una caja ancha se encoge
+# hasta convertirse en una estampilla al centro. Fue lo que paso en el primer
+# render.
+VB_W_BARRAS, VB_H_BARRAS = 900, 300
+PLOT_X0_BARRAS, PLOT_X1_BARRAS = 190, 880
+PLOT_Y0_BARRAS = 24
+PLOT_Y1_BARRAS = 244
+EJE_Y = 270
+LABEL_X_BARRAS = 174
+ANCHO_BARRA = 0.68   # proporción del paso entre barras; el resto es separación
+
+
+def resolver_escala_barras(valores: list[float], niveles: list[float]) -> tuple[float, float]:
+    """`(max, min)` del eje, incluyendo SIEMPRE el cero.
+
+    Una barra mide desde cero por definición: si el eje arrancara en el mínimo de
+    la serie, la altura de cada barra dejaría de ser proporcional a su valor y el
+    gráfico mentiría sobre las diferencias. Es el error clásico del eje truncado.
+    """
+    todos = list(valores) + list(niveles) + [0.0]
+    alto, bajo = max(todos), min(todos)
+    rango = alto - bajo
+    margen = rango * MARGEN_ESCALA if rango else 1.0
+    return alto + margen, bajo - margen
+
+
+def construir_svg_barras(
+    barras: list[dict[str, Any]], niveles: list[dict[str, Any]] | None = None
+) -> str:
+    """SVG de una serie histórica en barras, con la última destacada.
+
+    Pensado para datos macro: la serie de los últimos períodos de un indicador,
+    y opcionalmente el consenso como línea de nivel. Ver el valor de hoy contra
+    su propia historia Y contra lo que se esperaba es lo que convierte una cifra
+    suelta en una lectura.
+
+    El signo manda el color -sobre cero verde, bajo cero rojo- porque en una
+    serie macro el signo ES el dato: una economía que se contrae y una que crece
+    no se distinguen por la altura de la barra sino por su lado del eje.
+    """
+    if not barras:
+        raise GraficoError("El gráfico de barras necesita al menos una barra.")
+
+    niveles = niveles or []
+    valores = [float(b["valor"]) for b in barras]
+    v_max, v_min = resolver_escala_barras(valores, [float(n["valor"]) for n in niveles])
+    n = len(barras)
+
+    def coord_y(valor: float) -> float:
+        return PLOT_Y0_BARRAS + (v_max - valor) / (v_max - v_min) * (
+            PLOT_Y1_BARRAS - PLOT_Y0_BARRAS
+        )
+
+    paso = (PLOT_X1_BARRAS - PLOT_X0_BARRAS) / n
+    ancho = paso * ANCHO_BARRA
+    y_cero = coord_y(0.0)
+
+    partes = [
+        f'<svg viewBox="0 0 {VB_W_BARRAS} {VB_H_BARRAS}" preserveAspectRatio="xMidYMid meet">'
+    ]
+
+    for lv in niveles:
+        y = coord_y(float(lv["valor"]))
+        partes.append(
+            f'<line class="gb-nivel gb-nivel-{lv.get("clase", "nivel")}" '
+            f'x1="{PLOT_X0_BARRAS}" y1="{y:.1f}" x2="{PLOT_X1_BARRAS}" y2="{y:.1f}"/>'
+        )
+        partes.append(
+            f'<text class="gb-nivel-texto gb-nivel-texto-{lv.get("clase", "nivel")}" '
+            f'x="{LABEL_X_BARRAS}" y="{y + 5:.1f}" text-anchor="end">{lv["etiqueta"]}</text>'
+        )
+        if lv.get("rol"):
+            partes.append(
+                f'<text class="gb-rol" x="{LABEL_X_BARRAS}" y="{y + 20:.1f}" '
+                f'text-anchor="end">{lv["rol"]}</text>'
+            )
+
+    for i, b in enumerate(barras):
+        valor = float(b["valor"])
+        x = PLOT_X0_BARRAS + i * paso + (paso - ancho) / 2
+        y = coord_y(valor)
+        alto = abs(y - y_cero)
+        top = min(y, y_cero)
+        signo = "pos" if valor >= 0 else "neg"
+        # La última barra es el dato que se está comunicando: se destaca para que
+        # el ojo la encuentre sin buscar.
+        destacada = " gb-barra-destacada" if i == n - 1 else ""
+        partes.append(
+            f'<rect class="gb-barra gb-barra-{signo}{destacada}" x="{x:.1f}" '
+            f'y="{top:.1f}" width="{ancho:.1f}" height="{max(alto, 1.5):.1f}" rx="2"/>'
+        )
+        if b.get("etiqueta"):
+            partes.append(
+                f'<text class="gb-eje" x="{x + ancho / 2:.1f}" y="{EJE_Y}" '
+                f'text-anchor="middle">{b["etiqueta"]}</text>'
+            )
+
+    # El cero se dibuja al final para que ninguna barra lo tape: es la referencia
+    # que hace legible el signo.
+    partes.append(
+        f'<line class="gb-cero" x1="{PLOT_X0_BARRAS}" y1="{y_cero:.1f}" '
+        f'x2="{PLOT_X1_BARRAS}" y2="{y_cero:.1f}"/>'
+    )
+    partes.append("</svg>")
+    return "".join(partes)
+
+
 def enriquecer(payload: dict[str, Any]) -> dict[str, Any]:
-    """Reemplaza la clave `recorrido` del payload por el token `grafico` resuelto."""
+    """Reemplaza la clave `recorrido` del payload por el token `grafico` resuelto.
+
+    Un solo punto de entrada para los dos tipos de gráfico, y el despacho sale de
+    la forma del dato: `serie` es una línea de precios, `barras` es una serie
+    histórica. Así ni el renderer ni `rendir_todas.py` tienen que saber qué
+    gráfico lleva cada plantilla.
+    """
     recorrido = payload.pop("recorrido", None)
     if not isinstance(recorrido, dict):
         raise GraficoError(
-            "El payload no trae la clave 'recorrido' con {serie, marcadores}."
+            "El payload no trae la clave 'recorrido' con {serie, marcadores} o {barras}."
         )
+
+    if "barras" in recorrido:
+        payload["grafico"] = construir_svg_barras(
+            recorrido["barras"], recorrido.get("niveles")
+        )
+        return payload
 
     serie = recorrido.get("serie")
     if not isinstance(serie, list):

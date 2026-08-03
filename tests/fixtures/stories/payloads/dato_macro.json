@@ -32,5 +32,57 @@
   }
  ],
  "temporalidad": "Swing de jornada (1-3 días)",
- "fuente": "Banco Central de Chile"
+ "fuente": "Banco Central de Chile",
+ "recorrido": {
+  "barras": [
+   {
+    "etiqueta": "Sep",
+    "valor": 0.3
+   },
+   {
+    "etiqueta": "",
+    "valor": 0.9
+   },
+   {
+    "etiqueta": "",
+    "valor": 1.4
+   },
+   {
+    "etiqueta": "Dic",
+    "valor": 1.1
+   },
+   {
+    "etiqueta": "",
+    "valor": -0.2
+   },
+   {
+    "etiqueta": "",
+    "valor": 0.6
+   },
+   {
+    "etiqueta": "Mar",
+    "valor": 1.5
+   },
+   {
+    "etiqueta": "",
+    "valor": 1.8
+   },
+   {
+    "etiqueta": "",
+    "valor": 1.2
+   },
+   {
+    "etiqueta": "Jun",
+    "valor": 2.4
+   }
+  ],
+  "niveles": [
+   {
+    "valor": 2.0,
+    "clase": "esperado",
+    "etiqueta": "+2,0%",
+    "rol": "ESPERADO"
+   }
+  ]
+ }
 }

@@ -29,6 +29,8 @@ Contrato de tokens (ver scripts/story_render.py):
   chip_pais · fecha_hora · indicador · periodo · titular
   veredicto · veredicto_slug ("mejor" | "en-linea" | "peor")
   actual · esperado · anterior (cadena vacía oculta el bloque)
+  recorrido -> {barras: [{valor, etiqueta}], niveles: [{valor, clase, etiqueta, rol}]}
+    la historia del indicador; scripts/story_grafico.py la convierte en `grafico`
   significado · temporalidad · fuente
   activos[] -> cada objeto con nombre, direccion ("sube"|"baja"|"lateral"),
     etiqueta y porque
@@ -134,7 +136,7 @@ bajista para un activo, y esa distinción es justamente lo que la pieza enseña.
   .titular {
     font-family: "Syne", sans-serif;
     font-weight: 800;
-    font-size: 50px;
+    font-size: 44px;
     line-height: 1.07;
     letter-spacing: -0.015em;
     color: var(--texto-1);
@@ -181,10 +183,10 @@ bajista para un activo, y esa distinción es justamente lo que la pieza enseña.
 
   /* ================= CIFRAS ================= */
   .cifras {
-    margin-top: 26px;
+    margin-top: 20px;
     border: 2px solid var(--acento);
     border-radius: 20px;
-    padding: 24px 30px;
+    padding: 20px 26px;
   }
 
   .indicador {
@@ -215,7 +217,7 @@ bajista para un activo, y esa distinción es justamente lo que la pieza enseña.
   .actual-valor {
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
-    font-size: 66px;
+    font-size: 54px;
     line-height: 1;
     color: var(--veredicto-color);
     margin-top: 2px;
@@ -261,6 +263,48 @@ bajista para un activo, y esa distinción es justamente lo que la pieza enseña.
     margin-top: 3px;
   }
   .anterior:empty { display: none; }
+
+  /* ================= GRÁFICO DE BARRAS =================
+     Geometría en scripts/story_grafico.py; el color y el tamaño viven acá. El
+     generador no emite un solo atributo de estilo. */
+  /* `min-height` y no solo `flex: 1`: la columna la comparten el titular, el
+     veredicto y la tarjeta, y sin piso el grafico es lo primero que se
+     comprime hasta desaparecer. */
+  .grafico {
+    margin-top: 18px;
+    flex: 1;
+    min-height: 215px;
+    display: flex;
+    align-items: flex-end;
+  }
+  .grafico svg { width: 100%; height: 100%; }
+
+  /* El signo manda el color: en una serie macro, una economía que se contrae y
+     una que crece no se distinguen por la altura de la barra sino por su lado
+     del eje. */
+  .gb-barra-pos { fill: var(--sube); fill-opacity: 0.45; }
+  .gb-barra-neg { fill: var(--baja); fill-opacity: 0.45; }
+  /* La última barra es el dato que se está comunicando: opacidad plena para que
+     el ojo la encuentre sin buscarla. */
+  .gb-barra-destacada { fill-opacity: 1; }
+
+  .gb-cero { stroke: var(--texto-2); stroke-width: 1.5; }
+  .gb-nivel { stroke-width: 2; stroke-dasharray: 7 7; }
+  .gb-nivel-esperado { stroke: var(--acento); }
+  .gb-nivel-texto {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 17px;
+  }
+  .gb-nivel-texto-esperado { fill: var(--acento); }
+  .gb-rol, .gb-eje {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.10em;
+    fill: var(--texto-2);
+  }
+  .gb-eje { font-size: 14px; letter-spacing: 0.04em; }
 
   /* ================= LECTURA ================= */
   .bloque-titulo {
@@ -397,7 +441,8 @@ bajista para un activo, y esa distinción es justamente lo que la pieza enseña.
     .indicador       { font-size: 28px; }
     .periodo         { font-size: 24px; }
     .campo-label     { font-size: 19px; }
-    .actual-valor    { font-size: 78px; }
+    .actual-valor    { font-size: 66px; }
+    .grafico { min-height: 300px; }
     .contraste-valor { font-size: 32px; }
     .anterior { font-size: 32px; }
     .anterior::before { font-size: 19px; }
@@ -451,6 +496,8 @@ bajista para un activo, y esa distinción es justamente lo que la pieza enseña.
             <div class="anterior">{{anterior}}</div>
           </div>
         </div>
+
+        <div class="grafico">{{grafico}}</div>
       </div>
 
       <div class="columna-lectura">
