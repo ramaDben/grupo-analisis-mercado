@@ -1,0 +1,484 @@
+<!--
+Snapshot de marca "Dato macro" — la publicación de un dato económico ya salido.
+
+Es la pieza NÚMERO UNO de la agenda diaria (orden canónico del issue #43: el
+dato del calendario va primero, mientras se cargan los niveles en MT5). Hasta
+ahora se armaba con `breaking`, que es la plantilla de noticia urgente y está
+pintada en rojo: un dato que salió MEJOR de lo esperado se comunicaba en el
+color de las malas noticias.
+
+Cubre el Modo resultado de `/dato_macro` (issue #93), no el de anticipación. La
+diferencia importa: acá el dato ya tiene valor, así que la pieza se organiza
+alrededor del VEREDICTO -mejor / en línea / peor- y no alrededor de escenarios.
+
+Qué entra y qué no. El mensaje de WhatsApp lleva la explicación completa; la
+imagen lleva lo que se lee en tres segundos y sobrevive al reenvío:
+  · el veredicto, arriba y en grande, que es la conclusión;
+  · la cifra contra su consenso, porque el dato solo no dice nada -lo que mueve
+    el precio es la diferencia con lo esperado, que es el concepto de la semana;
+  · el impacto por activo, que es lo único accionable;
+  · la temporalidad, para que nadie opere un dato de swing como si fuera scalp.
+Fuera quedan el diccionario de siglas y el detalle de sub-lecturas: van en el
+texto, donde hay espacio para explicarlos en voz novata.
+
+El VEREDICTO se colorea porque ahí el verde y el rojo SON el dato. El cromo de
+la pieza no: va en el acento de marca, igual que en `alerta`. Un dato peor de lo
+esperado no justifica bañar la pieza en rojo.
+
+Contrato de tokens (ver scripts/story_render.py):
+  chip_pais · fecha_hora · indicador · periodo · titular
+  veredicto · veredicto_slug ("mejor" | "en-linea" | "peor")
+  actual · esperado · anterior (cadena vacía oculta el bloque)
+  significado · temporalidad · fuente
+  activos[] -> cada objeto con nombre, direccion ("sube"|"baja"|"lateral"),
+    etiqueta y porque
+
+Los tokens se listan SIN llaves dobles: escritos con llaves acá, la guardia de
+huérfanos de build_html los toma por tokens del cuerpo sin resolver y aborta.
+
+`veredicto_slug` viaja en el payload y NO se deriva de `sesgo`: mejor/peor es
+frente al consenso, no una dirección de mercado. Un dato "mejor" puede ser
+bajista para un activo, y esa distinción es justamente lo que la pieza enseña.
+-->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Dato macro — Story GI</title>
+<link rel="stylesheet" href="marca.css">
+<style>
+  @font-face {
+    font-family: "Syne";
+    src: url("fonts/syne-800.woff2") format("woff2");
+    font-weight: 800;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "DM Sans";
+    src: url("fonts/dm-sans-400.woff2") format("woff2");
+    font-weight: 400;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "DM Sans";
+    src: url("fonts/dm-sans-700.woff2") format("woff2");
+    font-weight: 700;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "Space Grotesk";
+    src: url("fonts/space-grotesk-600.woff2") format("woff2");
+    font-weight: 600;
+    font-display: block;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    background:
+      radial-gradient(90% 120% at 0% 20%, var(--fondo-acento) 0%, var(--fondo) 55%),
+      linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 60%, var(--acento-oscuro) 100%);
+    overflow: hidden;
+  }
+
+  .story {
+    width: 100%;
+    height: 100%;
+    padding: 56px 72px 40px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ================= CABECERA ================= */
+  .chips { display: flex; gap: 14px; align-items: center; }
+
+  .chip {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 20px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 12px 26px;
+    border-radius: 999px;
+  }
+  .chip-dato { background: var(--acento); color: var(--fondo); }
+  .chip-pais {
+    background: transparent;
+    border: 2px solid var(--acento);
+    color: var(--acento);
+  }
+
+  .fecha-hora {
+    margin-top: 18px;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 19px;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--texto-2);
+  }
+
+  .contenido {
+    flex: 1;
+    display: flex;
+    gap: 56px;
+    margin-top: 24px;
+    min-height: 0;
+  }
+
+  .columna-dato   { flex: 0 0 54%; display: flex; flex-direction: column; }
+  .columna-lectura { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+  .titular {
+    font-family: "Syne", sans-serif;
+    font-weight: 800;
+    font-size: 50px;
+    line-height: 1.07;
+    letter-spacing: -0.015em;
+    color: var(--texto-1);
+  }
+
+  /* ================= VEREDICTO ================= */
+  /* Arriba y en grande porque es la conclusión, y la conclusión va primero:
+     muchos clientes no abren el "leer más" de WhatsApp. Es el único bloque de
+     la pieza que se colorea por el resultado — ahí el verde y el rojo son el
+     dato, no decoración. */
+  .veredicto {
+    margin-top: 22px;
+    display: inline-flex;
+    align-self: flex-start;
+    align-items: baseline;
+    gap: 14px;
+    padding: 12px 26px;
+    border-radius: 14px;
+    border: 2px solid var(--veredicto-color);
+    background: var(--veredicto-fondo);
+  }
+  .veredicto-rotulo {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--texto-2);
+  }
+  .veredicto-valor {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 30px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--veredicto-color);
+  }
+
+  /* Los tres estados posibles frente al consenso. El neutro va en el acento de
+     marca y no en gris: "en línea" es un resultado, no una ausencia de dato. */
+  body { --veredicto-color: var(--acento); --veredicto-fondo: rgba(80,192,168,0.10); }
+  body.veredicto-mejor { --veredicto-color: var(--sube); --veredicto-fondo: rgba(0,220,130,0.10); }
+  body.veredicto-peor  { --veredicto-color: var(--baja); --veredicto-fondo: rgba(232,64,64,0.10); }
+
+  /* ================= CIFRAS ================= */
+  .cifras {
+    margin-top: 26px;
+    border: 2px solid var(--acento);
+    border-radius: 20px;
+    padding: 24px 30px;
+  }
+
+  .indicador {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 22px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--texto-1);
+  }
+  .periodo {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 19px;
+    color: var(--texto-2);
+    margin-top: 2px;
+  }
+
+  .campo-label {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--texto-2);
+  }
+
+  .actual-valor {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 66px;
+    line-height: 1;
+    color: var(--veredicto-color);
+    margin-top: 2px;
+  }
+
+  /* El consenso al lado de la cifra y no en letra chica: el dato solo no dice
+     nada, lo que mueve el precio es la diferencia con lo que se esperaba. */
+  .contraste {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid var(--texto-3);
+    display: flex;
+    gap: 22px;
+  }
+  .contraste > * { flex: 1; }
+
+  .contraste-valor {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 26px;
+    color: var(--texto-1);
+    margin-top: 3px;
+  }
+  /* El bloque del dato anterior desaparece entero cuando no hay valor, rótulo
+     incluido. Con el label como elemento hermano quedaba un "DATO ANTERIOR"
+     huérfano encabezando un vacío. Va por `::before` para que `:empty` mire un
+     solo nodo — misma solución que el costo de mantención en `recomendacion`. */
+  .anterior::before {
+    content: "Dato anterior";
+    display: block;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--texto-2);
+  }
+  .anterior {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 26px;
+    color: var(--texto-1);
+    margin-top: 3px;
+  }
+  .anterior:empty { display: none; }
+
+  /* ================= LECTURA ================= */
+  .bloque-titulo {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 21px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--acento);
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--acento);
+  }
+
+  .significado {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 26px;
+    line-height: 1.36;
+    color: var(--texto-1);
+    margin-top: 18px;
+  }
+
+  .impacto-titulo {
+    margin-top: 30px;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 21px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--acento);
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--acento);
+  }
+
+  .activos {
+    list-style: none;
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .activo { display: flex; gap: 14px; align-items: baseline; }
+
+  /* La flecha además del color: quien no distingue verde de rojo tiene que
+     poder leer la dirección igual. */
+  .activo-etiqueta {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 19px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex: 0 0 auto;
+    min-width: 116px;
+  }
+  .activo--sube    .activo-etiqueta { color: var(--sube); }
+  .activo--baja    .activo-etiqueta { color: var(--baja); }
+  .activo--lateral .activo-etiqueta { color: var(--texto-2); }
+  .activo--sube    .activo-etiqueta::before { content: "\25B2\00A0"; }
+  .activo--baja    .activo-etiqueta::before { content: "\25BC\00A0"; }
+  .activo--lateral .activo-etiqueta::before { content: "\2192\00A0"; }
+
+  .activo-texto {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 21px;
+    line-height: 1.3;
+    color: var(--texto-1);
+  }
+  .activo-nombre { font-weight: 700; }
+
+  /* `margin-top: auto` ancla la temporalidad al pie de la columna, alineada con
+     el fondo de la tarjeta de cifras. No es aire suelto: es lo que hace que las
+     dos columnas cierren en la misma línea. */
+  .temporalidad {
+    margin-top: auto;
+    padding-top: 20px;
+    border-top: 2px solid var(--acento);
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 19px;
+    color: var(--texto-2);
+  }
+  .temporalidad b { font-weight: 700; color: var(--texto-1); }
+
+  /* ================= FOOTER ================= */
+  .footer {
+    margin-top: 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .footer-marca {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 20px;
+    color: var(--texto-1);
+  }
+  .footer-logo { height: 66px; width: auto; }
+  .footer-fuente {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 16px;
+    color: var(--texto-2);
+  }
+  .footer-disclaimer {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--texto-2);
+    line-height: 1.35;
+  }
+
+  /* ================= FORMATO VERTICAL 9:16 ================= */
+  @media (max-aspect-ratio: 1/1) {
+    .story { padding: 68px 64px 52px; }
+
+    .chip { font-size: 26px; padding: 14px 30px; }
+    .fecha-hora { font-size: 24px; margin-top: 22px; }
+
+    .contenido { flex-direction: column; gap: 30px; margin-top: 26px; }
+    .columna-dato    { flex: 0 0 auto; }
+    .columna-lectura { flex: 1 1 auto; min-height: 0; }
+
+    .titular { font-size: 54px; }
+
+    .veredicto-rotulo { font-size: 19px; }
+    .veredicto-valor  { font-size: 38px; }
+
+    .indicador       { font-size: 28px; }
+    .periodo         { font-size: 24px; }
+    .campo-label     { font-size: 19px; }
+    .actual-valor    { font-size: 78px; }
+    .contraste-valor { font-size: 32px; }
+    .anterior { font-size: 32px; }
+    .anterior::before { font-size: 19px; }
+
+    .bloque-titulo, .impacto-titulo { font-size: 27px; }
+    .significado { font-size: 31px; }
+    .activo-etiqueta { font-size: 24px; min-width: 140px; }
+    .activo-texto { font-size: 26px; }
+
+    /* Apilada, la columna ya no tiene alto sobrante que repartir: el `auto`
+       empujaría la temporalidad contra el footer dejando un hueco. */
+    .temporalidad { margin-top: 26px; font-size: 24px; }
+
+    .footer-marca { font-size: 25px; }
+    .footer-logo  { height: 86px; }
+    .footer-fuente { font-size: 20px; }
+    .footer-disclaimer { font-size: 17px; }
+  }
+</style>
+</head>
+<body class="veredicto-{{veredicto_slug}}">
+  <div class="story">
+
+    <div class="chips">
+      <span class="chip chip-dato">Dato macro</span>
+      <span class="chip chip-pais">{{chip_pais}}</span>
+    </div>
+    <p class="fecha-hora">{{fecha_hora}}</p>
+
+    <div class="contenido">
+      <div class="columna-dato">
+        <h1 class="titular">{{titular}}</h1>
+
+        <div class="veredicto">
+          <span class="veredicto-rotulo">Frente a lo esperado</span>
+          <span class="veredicto-valor">{{veredicto}}</span>
+        </div>
+
+        <div class="cifras">
+          <div class="indicador">{{indicador}}</div>
+          <div class="periodo">{{periodo}}</div>
+
+          <div class="campo-label" style="margin-top:16px">Resultado</div>
+          <div class="actual-valor">{{actual}}</div>
+
+          <div class="contraste">
+            <div>
+              <div class="campo-label">Se esperaba</div>
+              <div class="contraste-valor">{{esperado}}</div>
+            </div>
+            <div class="anterior">{{anterior}}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="columna-lectura">
+        <h2 class="bloque-titulo">Qué significa</h2>
+        <p class="significado">{{significado}}</p>
+
+        <h2 class="impacto-titulo">Impacto por activo</h2>
+        <ul class="activos">
+          <!-- FOR:activos --><li class="activo activo--{{direccion}}"><span class="activo-etiqueta">{{etiqueta}}</span><span class="activo-texto"><span class="activo-nombre">{{nombre}}:</span> {{porque}}</span></li><!-- ENDFOR:activos -->
+        </ul>
+
+        <p class="temporalidad">Temporalidad del impacto: <b>{{temporalidad}}</b></p>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="footer-marca">
+        <span>@grupointeligencia</span>
+        <img class="footer-logo" src="assets/LOGO-LETRERO.png" alt="Grupo Inteligencia">
+      </div>
+      <p class="footer-fuente">FUENTE: {{fuente}}</p>
+      <p class="footer-disclaimer">
+        Los CFD son instrumentos complejos y presentan un riesgo elevado de perder dinero
+        rápidamente debido al apalancamiento. Este contenido es educativo/informativo, no
+        constituye asesoría financiera.
+      </p>
+    </div>
+
+  </div>
+</body>
+</html>
