@@ -18,6 +18,8 @@ Por eso tres cosas van en la pieza y no en el mensaje que la acompaña:
 Contrato de tokens (ver scripts/story_render.py):
   chip_categoria · fecha_hora · titular · rotulo_activo · sesgo ("Compra"/"Venta")
   entrada · volumen · temporalidad · tp · tp_clp · sl · sl_clp
+  costo_mantencion (swap acumulado; cadena vacia lo oculta, pero la clave
+    tiene que venir siempre en el payload)
   bullets[] -> cada objeto con clave `texto` (máximo 3, criterio de /señal)
   firma_nombre · firma_credencial · firma_area · fuente
 
@@ -192,10 +194,16 @@ scripts/story_render.py y tests/test_story_render.py.
     color: var(--texto-2);
   }
 
+  /* Space Grotesk y NO Syne, aunque Syne sea la display de la marca. Syne en
+     peso 800 cierra sus contraformas y una cifra larga con decimales -1,15038-
+     se vuelve dificil de leer de un vistazo; es el mismo defecto por el que
+     quedo fuera del folleto de consulta. El kit reserva Space Grotesk para
+     cifras y siglas: aca se cumple esa regla. Ademas iguala la entrada con el
+     TP y el SL, que ya estaban en Space Grotesk. */
   .entrada-valor {
-    font-family: "Syne", sans-serif;
-    font-weight: 800;
-    font-size: 64px;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 58px;
     line-height: 1;
     letter-spacing: -0.02em;
     color: var(--texto-1);
@@ -235,20 +243,54 @@ scripts/story_render.py y tests/test_story_render.py.
     color: var(--texto-1);
   }
 
+  /* `gap` chico y `flex: 1` parejo: con tres campos -volumen, temporalidad y
+     costo- un gap de 40px obligaba a cada valor a partirse en dos lineas. */
   .tarjeta-pie {
     margin-top: 22px;
     padding-top: 18px;
     border-top: 1px solid var(--texto-3);
     display: flex;
-    gap: 40px;
+    gap: 22px;
   }
+  .tarjeta-pie > * { flex: 1; }
 
   .pie-dato { display: flex; flex-direction: column; gap: 4px; }
+
+  /* Costo de mantencion (swap acumulado). Es el campo que separa una operacion
+     honesta de una que solo muestra la ganancia: en un swing de varios dias el
+     costo de carry es real y el cliente lo paga.
+
+     Opcional por token + `:empty` (convencion del repo para campos opcionales):
+     el payload SIEMPRE trae la clave -si falta, la guardia de huerfanos aborta-
+     pero con cadena vacia el bloque desaparece entero. Sirve asi para las
+     operaciones intradia, donde no hay swap que declarar.
+
+     El rotulo va por `::before` y no como elemento aparte justamente para que
+     `:empty` mire un solo nodo; con un <span> hijo nunca estaria vacio. */
+  .pie-costo {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 700;
+    font-size: 20px;
+    color: var(--texto-1);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .pie-costo::before {
+    content: "Costo de mantención";
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--texto-2);
+  }
+  .pie-costo:empty { display: none; }
 
   .pie-valor {
     font-family: "DM Sans", sans-serif;
     font-weight: 700;
-    font-size: 22px;
+    font-size: 20px;
     color: var(--texto-1);
   }
 
@@ -411,6 +453,8 @@ scripts/story_render.py y tests/test_story_render.py.
     .objetivo-precio { font-size: 38px; }
     .objetivo-clp    { font-size: 24px; }
     .pie-valor       { font-size: 28px; }
+    .pie-costo       { font-size: 28px; }
+    .pie-costo::before { font-size: 19px; }
 
     .tesis-titulo { font-size: 28px; }
     .bullet       { font-size: 31px; padding-left: 36px; }
@@ -476,6 +520,7 @@ scripts/story_render.py y tests/test_story_render.py.
               <span class="campo-label">Temporalidad</span>
               <span class="pie-valor">{{temporalidad}}</span>
             </div>
+            <div class="pie-costo">{{costo_mantencion}}</div>
           </div>
         </div>
       </div>
