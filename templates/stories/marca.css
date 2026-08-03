@@ -38,14 +38,21 @@
 :root {
   /* ── Fondos ─────────────────────────────────────────────────────────────── */
   --fondo:          #000000;  /* negro de marca, tomado de LOGO-Fondo-Negro */
-  --fondo-acento:   #10222B;  /* tinte del degradado, derivado del acento */
+  --fondo-acento:   #0E2420;  /* tinte del degradado, derivado del acento */
   --fondo-alt:      #0A0A0F;  /* variante del fondo para bloques apilados */
   --fondo-sube:     #123A2A;  /* relleno tenue en bloques alcistas */
   --fondo-baja:     #2A1220;  /* relleno tenue en bloques bajistas */
 
-  /* ── Acento estructural — el azul de la marca ───────────────────────────── */
-  --acento:         #3C8CAA;  /* medido sobre favicon-06 y las 3 versiones del logo */
-  --acento-oscuro:  #14313D;  /* par oscuro del acento, para degradados */
+  /* ── Acento estructural — el verde de la marca ──────────────────────────── */
+  /* El logo es un degradado que va del azul #3C8CAA al verde #50C0A8. Se toma
+     el extremo VERDE, por decisión del director: el azul convivía mal con el
+     rojo del cromo y el conjunto se leía alarmante. Es además el tono con el
+     que la marca ya publica hoy, así que las piezas se ven continuas con lo
+     que el equipo comercial venía enviando.
+     Valor medido sobre las tres versiones del logo, no elegido a ojo. */
+  --acento:         #50C0A8;
+  --acento-azul:    #3C8CAA;  /* el otro extremo del degradado, por si se necesita */
+  --acento-oscuro:  #143028;  /* par oscuro del acento, para degradados */
 
   /* ── Dirección de mercado — semántica, NO se reskinea ───────────────────── */
   --sube:           #00DC82;
