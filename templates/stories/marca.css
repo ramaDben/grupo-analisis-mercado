@@ -61,4 +61,28 @@
   --texto-borde:    #C9C5D4;  /* filetes y separadores sobre fondo oscuro */
   --texto-gris:     #8E8A9C;  /* gris intermedio */
   --blanco:         #FFFFFF;
+
+  /* ── Filete de la pieza ─────────────────────────────────────────────────── */
+  --filete:         var(--acento);
+  --filete-ancho:   4px;
+}
+
+/*
+  Filete de marca en el borde de toda pieza.
+
+  Existe por una razón de canal, no decorativa: con `--fondo: #000000`, una pieza
+  abierta en WhatsApp con tema oscuro se funde con el fondo del chat y pierde sus
+  límites — el cliente no ve dónde empieza y dónde termina la imagen. El filete
+  le devuelve el borde sin renunciar al negro de marca.
+
+  `box-shadow: inset` y NO `border`: no participa del layout, así que no desplaza
+  ni un píxel de las ocho plantillas ya calibradas. Un `border` habría corrido
+  todo hacia adentro y obligado a recalibrar cada una.
+
+  Va en `.story`, el contenedor raíz que comparten los ocho snapshots. Como
+  marca.css se carga ANTES del <style> de cada plantilla, cualquiera puede
+  anularlo si alguna vez necesita un borde propio.
+*/
+.story {
+  box-shadow: inset 0 0 0 var(--filete-ancho) var(--filete);
 }

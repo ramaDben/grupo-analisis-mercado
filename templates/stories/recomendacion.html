@@ -1,0 +1,513 @@
+<!--
+Snapshot de marca "Recomendación" — la pieza que comunica una operación sugerida
+al cliente (COMPRA / VENTA con entrada, TP y SL).
+
+Es la única plantilla que lleva FIRMA ACREDITADA, y esa es su razón de existir.
+Una recomendación induce una operación, así que no basta con que sea correcta:
+tiene que constar quién la respalda. El bloque de firma no es un adorno de
+autoría — es la diferencia entre una pieza del área y una imagen anónima
+circulando por WhatsApp.
+
+Por eso tres cosas van en la pieza y no en el mensaje que la acompaña:
+  · La firma con su credencial, porque el reenvío separa la imagen del texto.
+  · La fecha y la hora, porque una pieza sin fecha se reusa semanas después como
+    si fuera de hoy. Es el mismo riesgo que motivó el token de fecha en alerta,
+    agravado acá: una recomendación vencida es peor que ninguna.
+  · El disclaimer, que ya viaja en el footer de marca.
+
+Contrato de tokens (ver scripts/story_render.py):
+  chip_categoria · fecha_hora · titular · rotulo_activo · sesgo ("Compra"/"Venta")
+  entrada · volumen · temporalidad · tp · tp_clp · sl · sl_clp
+  bullets[] -> cada objeto con clave `texto` (máximo 3, criterio de /señal)
+  firma_nombre · firma_credencial · firma_area · fuente
+
+Los tokens se listan SIN sus llaves dobles a propósito: escritos con llaves acá,
+la guardia de huérfanos de build_html los ve como tokens sin resolver del cuerpo
+y aborta el render.
+
+`sesgo` deriva `sesgo_slug` en el motor (helper 2) y de ahí sale el color de la
+píldora de dirección. NO cambiar nombres de tokens sin actualizar
+scripts/story_render.py y tests/test_story_render.py.
+-->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Recomendación — Story GI</title>
+<link rel="stylesheet" href="marca.css">
+<style>
+  @font-face {
+    font-family: "Syne";
+    src: url("fonts/syne-800.woff2") format("woff2");
+    font-weight: 800;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "DM Sans";
+    src: url("fonts/dm-sans-400.woff2") format("woff2");
+    font-weight: 400;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "DM Sans";
+    src: url("fonts/dm-sans-700.woff2") format("woff2");
+    font-weight: 700;
+    font-display: block;
+  }
+  @font-face {
+    font-family: "Space Grotesk";
+    src: url("fonts/space-grotesk-600.woff2") format("woff2");
+    font-weight: 600;
+    font-display: block;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    background:
+      radial-gradient(90% 120% at 0% 20%, var(--fondo-acento) 0%, var(--fondo) 55%),
+      linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 60%, var(--acento-oscuro) 100%);
+    overflow: hidden;
+  }
+
+  .story {
+    width: 100%;
+    height: 100%;
+    padding: 56px 72px 40px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ================= CHIPS Y FECHA ================= */
+  .chips { display: flex; gap: 14px; align-items: center; }
+
+  .chip {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 20px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 12px 26px;
+    border-radius: 999px;
+  }
+
+  /* El chip identifica la NATURALEZA de la pieza, y es lo primero que el
+     cliente lee. Va en el acento de marca y no en verde/rojo: el color de
+     dirección se reserva para la operación, si no la pieza grita antes de
+     decir qué recomienda. */
+  .chip-recomendacion {
+    background: var(--acento);
+    color: var(--fondo);
+  }
+
+  .chip-categoria {
+    background: transparent;
+    border: 2px solid var(--acento);
+    color: var(--acento);
+  }
+
+  .fecha-hora {
+    margin-top: 18px;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 19px;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--texto-2);
+  }
+
+  /* ================= COLUMNAS ================= */
+  .contenido {
+    flex: 1;
+    display: flex;
+    gap: 56px;
+    margin-top: 26px;
+    min-height: 0;
+  }
+
+  .columna-operacion { flex: 0 0 54%; display: flex; flex-direction: column; }
+  .columna-tesis     { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+  .titular {
+    font-family: "Syne", sans-serif;
+    font-weight: 800;
+    font-size: 56px;
+    line-height: 1.06;
+    letter-spacing: -0.015em;
+    color: var(--texto-1);
+  }
+
+  /* ================= TARJETA DE OPERACIÓN ================= */
+  .tarjeta {
+    margin-top: 30px;
+    border: 2px solid var(--acento);
+    border-radius: 20px;
+    padding: 26px 30px 24px;
+    background: linear-gradient(180deg, rgba(60,140,170,0.10) 0%, rgba(0,0,0,0) 70%);
+  }
+
+  .tarjeta-cabecera {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .rotulo-activo {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 24px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--texto-1);
+  }
+
+  /* La píldora de dirección es el único lugar de la pieza donde manda el color
+     de dirección, y lleva flecha además de color: el color solo no le sirve a
+     quien no distingue verde de rojo. */
+  .tag-direccion {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 21px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    padding: 9px 22px;
+    border-radius: 999px;
+    color: var(--fondo);
+  }
+  .sesgo-compra .tag-direccion { background: var(--sube); }
+  .sesgo-compra .tag-direccion::before { content: "\25B2\00A0"; }
+  .sesgo-venta  .tag-direccion { background: var(--baja); color: var(--texto-1); }
+  .sesgo-venta  .tag-direccion::before { content: "\25BC\00A0"; }
+
+  .entrada-bloque { margin-top: 20px; }
+
+  .campo-label {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--texto-2);
+  }
+
+  .entrada-valor {
+    font-family: "Syne", sans-serif;
+    font-weight: 800;
+    font-size: 64px;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--texto-1);
+  }
+
+  /* TP y SL se colorean por lo que SON, no por la dirección de la operación:
+     el objetivo siempre es la ganancia y el stop siempre es la pérdida, tanto
+     en una compra como en una venta. Atarlos a la dirección invertiría los
+     colores en las ventas y volvería la tarjeta ilegible. */
+  .objetivos {
+    margin-top: 22px;
+    padding-top: 20px;
+    border-top: 1px solid var(--texto-3);
+    display: flex;
+    gap: 28px;
+  }
+
+  .objetivo { flex: 1; }
+
+  .objetivo-precio {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 34px;
+    line-height: 1.1;
+    margin-top: 4px;
+  }
+  .objetivo--tp .objetivo-precio { color: var(--sube); }
+  .objetivo--sl .objetivo-precio { color: var(--baja); }
+
+  /* El monto en pesos es lo que el cliente entiende sin calcular nada, así que
+     no puede quedar como letra chica: va al mismo peso visual que el label. */
+  .objetivo-clp {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    margin-top: 2px;
+    color: var(--texto-1);
+  }
+
+  .tarjeta-pie {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--texto-3);
+    display: flex;
+    gap: 40px;
+  }
+
+  .pie-dato { display: flex; flex-direction: column; gap: 4px; }
+
+  .pie-valor {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 700;
+    font-size: 22px;
+    color: var(--texto-1);
+  }
+
+  /* ================= TESIS ================= */
+  .tesis-titulo {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 22px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--acento);
+    padding-bottom: 14px;
+    border-bottom: 2px solid var(--acento);
+  }
+
+  .bullets {
+    list-style: none;
+    margin-top: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .bullet {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 27px;
+    line-height: 1.34;
+    color: var(--texto-1);
+    padding-left: 30px;
+    position: relative;
+  }
+
+  .bullet::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 13px;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    background: var(--acento);
+  }
+
+  /* ================= FIRMA ACREDITADA ================= */
+  /* `margin-top: auto` la ancla al fondo de la columna: la firma cierra la
+     pieza, no flota detrás del último bullet. Con dos bullets o con tres queda
+     en el mismo lugar. */
+  .firma {
+    margin-top: auto;
+    padding-top: 22px;
+    border-top: 2px solid var(--acento);
+  }
+
+  .firma-rotulo {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--acento);
+  }
+
+  .firma-nombre {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 27px;
+    margin-top: 8px;
+    color: var(--texto-1);
+  }
+
+  .firma-credencial {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 700;
+    font-size: 19px;
+    margin-top: 4px;
+    color: var(--texto-1);
+  }
+
+  .firma-area {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 18px;
+    margin-top: 2px;
+    color: var(--texto-2);
+  }
+
+  /* ================= FOOTER ================= */
+  .footer {
+    margin-top: 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .footer-marca {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 20px;
+    color: var(--texto-1);
+  }
+
+  /* 66px y no 34: el letrero es un logotipo con bajada, y a la altura del
+     texto del footer su marca queda como una mancha. Verificado sobre el
+     render, no estimado. */
+  .footer-logo { height: 66px; width: auto; }
+
+  .footer-fuente {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 16px;
+    color: var(--texto-2);
+  }
+
+  /* var(--texto-2) y no var(--texto-3): es el aviso de riesgo, tiene que
+     alcanzar el mínimo WCAG AA de 4,5:1 (mismo criterio que alerta.html). */
+  .footer-disclaimer {
+    font-family: "DM Sans", sans-serif;
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--texto-2);
+    line-height: 1.35;
+  }
+
+  /* ================= FORMATO VERTICAL 9:16 (1080x1920) =================
+     Las columnas se apilan: la operación arriba —es el dato que el cliente
+     busca— y la tesis debajo. La tipografía sube en bloque porque el mismo
+     tamaño en un lienzo de 1080 de ancho queda diminuto.
+
+     La firma pierde el `margin-top: auto`: apilada ya no tiene una columna
+     cuyo fondo ocupar, y el auto la empujaría contra el footer dejando un hueco
+     entre los bullets y ella. */
+  @media (max-aspect-ratio: 1/1) {
+    .story { padding: 68px 64px 52px; }
+
+    .chip { font-size: 26px; padding: 14px 30px; }
+    .fecha-hora { font-size: 24px; margin-top: 22px; }
+
+    .contenido {
+      flex-direction: column;
+      gap: 40px;
+      margin-top: 26px;
+    }
+    .columna-operacion { flex: 0 0 auto; }
+    /* `flex: 1` para que la columna ocupe el alto sobrante y el
+       `margin-top: auto` de la firma tenga contra qué anclarse: apilada, la
+       firma sigue siendo el cierre de la pieza y no un bloque suelto detrás
+       del ultimo bullet. */
+    .columna-tesis     { flex: 1 1 auto; min-height: 0; }
+
+    .titular { font-size: 58px; }
+
+    .rotulo-activo   { font-size: 30px; }
+    .tag-direccion   { font-size: 26px; padding: 11px 26px; }
+    .campo-label     { font-size: 19px; }
+    .entrada-valor   { font-size: 70px; }
+    .objetivo-precio { font-size: 38px; }
+    .objetivo-clp    { font-size: 24px; }
+    .pie-valor       { font-size: 28px; }
+
+    .tesis-titulo { font-size: 28px; }
+    .bullet       { font-size: 31px; padding-left: 36px; }
+    .bullet::before { top: 15px; width: 14px; height: 14px; }
+    .bullets { gap: 26px; margin-top: 24px; }
+
+    .firma { padding-top: 26px; }
+    .firma-rotulo     { font-size: 18px; }
+    .firma-nombre     { font-size: 33px; }
+    .firma-credencial { font-size: 24px; }
+    .firma-area       { font-size: 22px; }
+
+    .footer-marca { font-size: 25px; }
+    .footer-logo  { height: 86px; }
+    .footer-fuente { font-size: 20px; }
+    .footer-disclaimer { font-size: 15px; }
+  }
+</style>
+</head>
+<body class="sesgo-{{sesgo_slug}}">
+  <div class="story">
+
+    <div class="chips">
+      <span class="chip chip-recomendacion">Recomendación</span>
+      <span class="chip chip-categoria">{{chip_categoria}}</span>
+    </div>
+    <p class="fecha-hora">{{fecha_hora}}</p>
+
+    <div class="contenido">
+      <div class="columna-operacion">
+        <h1 class="titular">{{titular}}</h1>
+
+        <div class="tarjeta">
+          <div class="tarjeta-cabecera">
+            <span class="rotulo-activo">{{rotulo_activo}}</span>
+            <span class="tag-direccion">{{sesgo}}</span>
+          </div>
+
+          <div class="entrada-bloque">
+            <div class="campo-label">Entrada</div>
+            <div class="entrada-valor">{{entrada}}</div>
+          </div>
+
+          <div class="objetivos">
+            <div class="objetivo objetivo--tp">
+              <div class="campo-label">Objetivo (TP)</div>
+              <div class="objetivo-precio">{{tp}}</div>
+              <div class="objetivo-clp">{{tp_clp}}</div>
+            </div>
+            <div class="objetivo objetivo--sl">
+              <div class="campo-label">Stop (SL)</div>
+              <div class="objetivo-precio">{{sl}}</div>
+              <div class="objetivo-clp">{{sl_clp}}</div>
+            </div>
+          </div>
+
+          <div class="tarjeta-pie">
+            <div class="pie-dato">
+              <span class="campo-label">Volumen</span>
+              <span class="pie-valor">{{volumen}}</span>
+            </div>
+            <div class="pie-dato">
+              <span class="campo-label">Temporalidad</span>
+              <span class="pie-valor">{{temporalidad}}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="columna-tesis">
+        <h2 class="tesis-titulo">Por qué</h2>
+        <ul class="bullets">
+          <!-- FOR:bullets --><li class="bullet">{{texto}}</li><!-- ENDFOR:bullets -->
+        </ul>
+
+        <div class="firma">
+          <div class="firma-rotulo">Análisis y responsabilidad</div>
+          <div class="firma-nombre">{{firma_nombre}}</div>
+          <div class="firma-credencial">{{firma_credencial}}</div>
+          <div class="firma-area">{{firma_area}}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="footer-marca">
+        <span>@grupointeligencia</span>
+        <img class="footer-logo" src="assets/LOGO-LETRERO.png" alt="Grupo Inteligencia">
+      </div>
+      <p class="footer-fuente">FUENTE: {{fuente}}</p>
+      <p class="footer-disclaimer">
+        Los CFD son instrumentos complejos y presentan un riesgo elevado de perder dinero
+        rápidamente debido al apalancamiento. Rentabilidades pasadas no garantizan
+        resultados futuros. Evalúe si el producto es adecuado a su perfil antes de operar.
+      </p>
+    </div>
+
+  </div>
+</body>
+</html>
