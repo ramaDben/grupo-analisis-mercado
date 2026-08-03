@@ -2,13 +2,13 @@
 
 Es el puente que faltaba entre dos piezas que ya existían y no se hablaban:
 `mt5_client.get_rates()` sabe leer el histórico del terminal, y
-`story_grafico_operacion.py` sabe convertir una serie en el SVG del gráfico. En
+`story_grafico.py` sabe convertir una serie en el SVG del gráfico. En
 medio no había nada, y por eso los gráficos de las Stories eran dibujos fijos
 que no correspondían al activo.
 
     cat operacion.json \
       | uv run python scripts/serie_mt5.py --ticker EURUSD --timeframe H1 --velas 60 \
-      | uv run python scripts/story_grafico_operacion.py \
+      | uv run python scripts/story_grafico.py \
       | uv run python scripts/story_render.py --template templates/stories/operacion.html \
           --out data/stories/... --formato vertical
 
@@ -31,7 +31,7 @@ precios por el canal para que vuelvan a salir como coordenadas; acá el dato
 nace y muere en el mismo proceso.
 
 Reparto de responsabilidades, igual que en el resto del motor: este script trae
-NÚMEROS. Las coordenadas las calcula `story_grafico_operacion.py` y el color y
+NÚMEROS. Las coordenadas las calcula `story_grafico.py` y el color y
 la tipografía viven en las clases del snapshot.
 """
 from __future__ import annotations
@@ -146,7 +146,14 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     hitos = payload.pop("hitos", [])
-    payload["recorrido"] = construir_recorrido(serie, hitos, tiempos)
+    # Los `niveles` -entrada, objetivo, stop, soportes- no se anclan a una vela:
+    # son precios que valen para toda la ventana, así que pasan derecho al
+    # recorrido sin buscarles índice.
+    niveles = payload.pop("niveles", [])
+    recorrido = construir_recorrido(serie, hitos, tiempos)
+    if niveles:
+        recorrido["niveles"] = niveles
+    payload["recorrido"] = recorrido
     json.dump(payload, sys.stdout, ensure_ascii=False)
     print(
         f"serie {args.ticker} {args.timeframe}: {len(serie)} velas, "

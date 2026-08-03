@@ -62,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     import story_render
-    from story_grafico_operacion import enriquecer
+    from story_grafico import enriquecer
 
     filtro = {s.strip() for s in args.solo.split(",")} if args.solo else None
     destino = (args.salida or DIR_SALIDA) / args.formato

@@ -274,6 +274,45 @@ y tests/test_story_render.py.
     margin-bottom: 14px;
   }
 
+  /* ===== Grafico (clases .g-*, geometria en scripts/story_grafico.py) =====
+     El generador calcula coordenadas y NO emite un solo atributo de estilo; el
+     color y el grosor viven aca. Si el grafico se ve mal, se corrige en esta
+     plantilla. */
+  .g-area { fill: url(#gradArea); }
+  .g-area-alto { stop-color: var(--acento); stop-opacity: 0.18; }
+  .g-area-bajo { stop-color: var(--acento); stop-opacity: 0; }
+  .g-linea {
+    fill: none;
+    stroke: var(--acento);
+    stroke-width: 2.4;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+  /* La linea del precio va en el acento de marca y no en verde/rojo: el recorrido
+     es el dato en bruto, no una opinion. La direccion ya la dice la pildora de
+     sesgo. */
+  .g-guia { stroke: var(--texto-3); stroke-width: 1.5; stroke-dasharray: 4 5; }
+  .g-nivel { stroke-width: 2; stroke-dasharray: 7 7; fill: none; }
+  .g-nivel-resistencia { stroke: var(--baja); }
+  .g-nivel-soporte     { stroke: var(--sube); }
+  .g-punto { stroke: var(--fondo); stroke-width: 2.5; }
+  .g-punto-actual { fill: var(--texto-1); }
+  .g-precio {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 17px;
+  }
+  .g-precio-resistencia { fill: var(--baja); }
+  .g-precio-soporte     { fill: var(--sube); }
+  .g-precio-actual      { fill: var(--texto-1); }
+  .g-rol {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.10em;
+    fill: var(--texto-2);
+  }
+
   .contenedor-grafico {
     flex: 1;
     min-height: 0;
@@ -443,37 +482,12 @@ y tests/test_story_render.py.
           <img id="img-alerta" src="{{chart_src}}" alt="Gráfico del activo">
           <!-- ENDIF:chart_img -->
           <!-- IF:chart_svg -->
-          <svg id="svg-alerta" viewBox="0 0 400 220" preserveAspectRatio="none">
-            <line x1="0" y1="150" x2="400" y2="150" stroke="var(--texto-3)" stroke-width="2" stroke-dasharray="6 6"/>
-            <text x="12" y="32" class="soporte-rotulo">SOPORTE {{soporte}}</text>
-            <rect x="20" y="70" width="14" height="60" fill="var(--sube)"/>
-            <line x1="27" y1="55" x2="27" y2="70" stroke="var(--sube)" stroke-width="3"/>
-            <line x1="27" y1="130" x2="27" y2="150" stroke="var(--sube)" stroke-width="3"/>
-            <rect x="60" y="90" width="14" height="45" fill="var(--baja)"/>
-            <line x1="67" y1="75" x2="67" y2="90" stroke="var(--baja)" stroke-width="3"/>
-            <line x1="67" y1="135" x2="67" y2="160" stroke="var(--baja)" stroke-width="3"/>
-            <rect x="100" y="105" width="14" height="55" fill="var(--baja)"/>
-            <line x1="107" y1="90" x2="107" y2="105" stroke="var(--baja)" stroke-width="3"/>
-            <line x1="107" y1="160" x2="107" y2="178" stroke="var(--baja)" stroke-width="3"/>
-            <rect x="140" y="118" width="14" height="35" fill="var(--sube)"/>
-            <line x1="147" y1="105" x2="147" y2="118" stroke="var(--sube)" stroke-width="3"/>
-            <line x1="147" y1="153" x2="147" y2="168" stroke="var(--sube)" stroke-width="3"/>
-            <rect x="180" y="100" width="14" height="60" fill="var(--baja)"/>
-            <line x1="187" y1="85" x2="187" y2="100" stroke="var(--baja)" stroke-width="3"/>
-            <line x1="187" y1="160" x2="187" y2="180" stroke="var(--baja)" stroke-width="3"/>
-            <rect x="220" y="130" width="14" height="40" fill="var(--baja)"/>
-            <line x1="227" y1="118" x2="227" y2="130" stroke="var(--baja)" stroke-width="3"/>
-            <line x1="227" y1="170" x2="227" y2="185" stroke="var(--baja)" stroke-width="3"/>
-            <rect x="260" y="140" width="14" height="30" fill="var(--baja)"/>
-            <line x1="267" y1="128" x2="267" y2="140" stroke="var(--baja)" stroke-width="3"/>
-            <line x1="267" y1="170" x2="267" y2="182" stroke="var(--baja)" stroke-width="3"/>
-            <rect x="300" y="145" width="14" height="20" fill="var(--sube)"/>
-            <line x1="307" y1="135" x2="307" y2="145" stroke="var(--sube)" stroke-width="3"/>
-            <line x1="307" y1="165" x2="307" y2="175" stroke="var(--sube)" stroke-width="3"/>
-            <rect x="340" y="148" width="14" height="12" fill="var(--baja)"/>
-            <line x1="347" y1="140" x2="347" y2="148" stroke="var(--baja)" stroke-width="3"/>
-            <line x1="347" y1="160" x2="347" y2="168" stroke="var(--baja)" stroke-width="3"/>
-          </svg>
+          <!-- El grafico ya NO es un dibujo fijo. Lo produce scripts/story_grafico.py
+               con la serie real del activo -scripts/serie_mt5.py la trae del terminal- y
+               con el soporte y la resistencia como lineas de nivel. Las velas decorativas
+               que habia antes no correspondian a ningun activo y en una pieza alcista
+               llegaban a mostrar una caida: desinformaban. -->
+          {{grafico}}
           <!-- ENDIF:chart_svg -->
         </div>
       </div>

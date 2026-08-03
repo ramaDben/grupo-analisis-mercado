@@ -1,4 +1,4 @@
-"""Generador de la geometría del gráfico de recorrido para la Story `operacion`.
+"""Generador de la geometría de los gráficos de las Stories.
 
 Traduce el recorrido real de un precio (una serie de valores más los hitos de la
 operación) al SVG que la plantilla `templates/stories/operacion.html` inyecta en su
@@ -6,7 +6,7 @@ token `{{grafico}}`. Es un paso **previo** al render: enriquece el payload y lo 
 listo para `story_render.py`.
 
     cat operacion.json \
-      | uv run python scripts/story_grafico_operacion.py \
+      | uv run python scripts/story_grafico.py \
       | uv run python scripts/story_render.py --template templates/stories/operacion.html \
           --out data/stories/... --formato vertical
 
@@ -57,16 +57,21 @@ class GraficoError(RuntimeError):
     """Error accionable del generador (nunca un traceback críptico)."""
 
 
-def resolver_escala(serie: list[float]) -> tuple[float, float]:
+def resolver_escala(serie: list[float], niveles: list[float] | None = None) -> tuple[float, float]:
     """Devuelve `(precio_max, precio_min)` del eje vertical.
 
-    Se derivan de la serie con un margen proporcional al rango, de modo que la curva
-    nunca toca los bordes del área de trazado. Una serie plana (rango 0) recibe un
-    margen fijo para no dividir por cero más adelante.
+    Los NIVELES entran en la escala junto con la serie, y no es un detalle: un
+    take profit está por definición sobre los máximos recorridos y un stop bajo
+    los mínimos. Escalando solo por la serie, las dos líneas que más importan de
+    la pieza quedarían dibujadas fuera del área visible.
+
+    El margen es proporcional al rango para que nada toque los bordes. Una serie
+    plana (rango 0) recibe un margen fijo para no dividir por cero más adelante.
     """
     if not serie:
         raise GraficoError("recorrido.serie está vacío: no hay nada que graficar.")
-    alto, bajo = max(serie), min(serie)
+    valores = list(serie) + list(niveles or [])
+    alto, bajo = max(valores), min(valores)
     rango = alto - bajo
     margen = rango * MARGEN_ESCALA if rango else 0.1
     return alto + margen, bajo - margen
@@ -108,7 +113,9 @@ def _separar_etiquetas(marcadores: list[dict], coord_y) -> dict[int, float]:
 
 
 def construir_svg(
-    serie: list[float], marcadores: list[dict[str, Any]]
+    serie: list[float],
+    marcadores: list[dict[str, Any]],
+    niveles: list[dict[str, Any]] | None = None,
 ) -> str:
     """Arma el SVG del recorrido: área, línea, guías, puntos y etiquetas.
 
@@ -117,7 +124,8 @@ def construir_svg(
     diferir del punto de la serie: el hito real de la operación manda sobre el
     muestreo del gráfico).
     """
-    p_max, p_min = resolver_escala(serie)
+    niveles = niveles or []
+    p_max, p_min = resolver_escala(serie, [float(x["precio"]) for x in niveles])
     n = len(serie)
 
     def coord_y(precio: float) -> float:
@@ -145,6 +153,19 @@ def construir_svg(
         f'L {pts[-1][0]:.1f},{PLOT_Y1} Z"/>',
     ]
 
+    # Los NIVELES cruzan todo el ancho, a diferencia de la guía de un marcador
+    # que solo llega hasta su punto. Es la distinción de fondo: un marcador es un
+    # hecho que ocurrió en un momento -la entrada, el precio de ahora-, mientras
+    # que un nivel es un precio que vale para toda la ventana -el objetivo, el
+    # stop, un soporte-. Dibujar un objetivo como punto sugeriría que el precio
+    # ya pasó por ahí.
+    for lv in niveles:
+        y = coord_y(float(lv["precio"]))
+        partes.append(
+            f'<line class="g-nivel g-nivel-{lv.get("clase", "nivel")}" '
+            f'x1="{PLOT_X0}" y1="{y:.1f}" x2="{PLOT_X1}" y2="{y:.1f}"/>'
+        )
+
     # Las guías se dibujan ANTES de la línea para que nunca la tapen.
     for m in marcadores:
         y = coord_y(m["precio"])
@@ -155,12 +176,29 @@ def construir_svg(
 
     partes.append(f'<path class="g-linea" d="M {trazo}"/>')
 
-    y_etiqueta = _separar_etiquetas(marcadores, coord_y)
+    # Niveles y marcadores escriben en la MISMA columna de etiquetas, así que la
+    # separación vertical los considera juntos. Separarlos por separado dejaría
+    # que un nivel y un marcador de precio parecido se pisaran igual.
+    etiquetables = list(niveles) + list(marcadores)
+    y_etiqueta = _separar_etiquetas(etiquetables, coord_y)
+
+    for j, lv in enumerate(niveles):
+        yt = y_etiqueta[j]
+        clase = lv.get("clase", "nivel")
+        partes.append(
+            f'<text class="g-precio g-precio-{clase}" x="{LABEL_X}" y="{yt + 6:.1f}" '
+            f'text-anchor="end">{lv["etiqueta"]}</text>'
+        )
+        if lv.get("rol"):
+            partes.append(
+                f'<text class="g-rol" x="{LABEL_X}" y="{yt + 21:.1f}" '
+                f'text-anchor="end">{lv["rol"]}</text>'
+            )
 
     for i, m in enumerate(marcadores):
         clase = m.get("clase", "actual")
         x, y = coord_x(m["indice"]), coord_y(m["precio"])
-        yt = y_etiqueta[i]
+        yt = y_etiqueta[len(niveles) + i]
         if clase == "meta":
             partes.append(f'<circle class="g-halo" cx="{x:.1f}" cy="{y:.1f}" r="11"/>')
         partes.append(
@@ -192,6 +230,12 @@ def enriquecer(payload: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(serie, list):
         raise GraficoError("recorrido.serie debe ser un array de precios.")
 
+    niveles = recorrido.get("niveles") or []
+    for lv in niveles:
+        if "precio" not in lv:
+            raise GraficoError(f"Nivel sin 'precio': {lv!r}")
+        lv.setdefault("etiqueta", str(lv["precio"]))
+
     marcadores = recorrido.get("marcadores") or []
     for m in marcadores:
         faltantes = {"indice", "precio"} - set(m)
@@ -207,7 +251,7 @@ def enriquecer(payload: dict[str, Any]) -> dict[str, Any]:
         # payload ya formateada; si falta, se cae al precio crudo.
         m.setdefault("etiqueta", str(m["precio"]))
 
-    payload["grafico"] = construir_svg([float(p) for p in serie], marcadores)
+    payload["grafico"] = construir_svg([float(p) for p in serie], marcadores, niveles)
     return payload
 
 

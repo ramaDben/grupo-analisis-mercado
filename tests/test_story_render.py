@@ -65,6 +65,12 @@ PAYLOAD_EJEMPLO: dict = {
     "chart_png": None,
     "fuente": "COMEX",
     "sesgo": "Bajista",
+    # El grafico de `alerta` dejo de ser un dibujo fijo del snapshot y pasa a ser
+    # un token, alimentado por `scripts/story_grafico.py` con la serie real.
+    # Aca va un SVG minimo a proposito: estos tests ejercen el mapeo de tokens y
+    # fences, no la geometria del grafico. La geometria se prueba con la fixture
+    # de `tests/fixtures/stories/payloads/alerta.json`, que si trae `recorrido`.
+    "grafico": '<svg viewBox="0 0 440 400"></svg>',
 }
 
 # Payload de ejemplo de `quote` (spec.md/design.md #121 §"Contrato de payload
@@ -1085,7 +1091,7 @@ def test_plantilla_resuelve_sin_huerfanos(nombre):
 
     payload = json.loads(ruta_payload.read_text(encoding="utf-8"))
     if "recorrido" in payload:
-        from story_grafico_operacion import enriquecer
+        from story_grafico import enriquecer
 
         payload = enriquecer(payload)
 

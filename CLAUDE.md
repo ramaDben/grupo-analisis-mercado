@@ -333,7 +333,7 @@ enteras si la revisión está puesta en otra plantilla. El test exige que toda p
 falla, que es lo que corresponde, porque tampoco la estaría revisando nadie.
 
 **Serie real para los gráficos.** `scripts/serie_mt5.py` trae los cierres del terminal y arma el
-bloque `recorrido` que consume `story_grafico_operacion.py`. Los marcadores se anclan por ROL, no
+bloque `recorrido` que consume `story_grafico.py`. Los marcadores se anclan por ROL, no
 por proximidad de precio: `actual` y `meta` van al extremo derecho por definición, y `origen` se
 ancla por tiempo cuando el hito trae fecha. Anclar por precio parece razonable y no lo es —el precio
 oscila, así que el cierre más parecido puede caer en cualquier punto de la serie—. Requiere el
@@ -342,10 +342,10 @@ terminal abierto y `MetaTrader5`, que no es dependencia del repo: se inyecta con
 
 **Plantilla `operacion`** (comunica una operación del equipo, en estado `abierta` o `cerrada` según
 `estado_slug` del payload): es la única con un **paso previo** al renderer. Su gráfico de recorrido
-lo produce `scripts/story_grafico_operacion.py`, que traduce la serie de precios y los hitos de la
+lo produce `scripts/story_grafico.py`, que traduce la serie de precios y los hitos de la
 operación al SVG del token `{{grafico}}` y se encadena por stdin/stdout:
 ```bash
-uv run python scripts/story_grafico_operacion.py < operacion.json \
+uv run python scripts/story_grafico.py < operacion.json \
   | uv run python scripts/story_render.py --template templates/stories/operacion.html \
       --out "$(scripts/ruta_story.ps1 ...)" --formato vertical
 ```
@@ -545,7 +545,7 @@ grupo-analisis-mercado/
 │   ├── agenda_semanal.json · feriados_bolsa.json
 ├── scripts/               ← scripts auxiliares
 │   ├── story_render.py    ← renderer de Stories GI (payload JSON → HTML → PNG con Playwright)
-│   ├── story_grafico_operacion.py ← geometría del gráfico de recorrido (paso previo al render)
+│   ├── story_grafico.py ← geometría del gráfico de recorrido (paso previo al render)
 │   ├── serie_mt5.py       ← serie real de precios desde MT5 → bloque `recorrido`
 │   ├── rendir_todas.py    ← rinde las 10 plantillas juntas, para revisión visual
 │   ├── marca_tokens.py    ← verifica que ninguna plantilla hardcodee un color

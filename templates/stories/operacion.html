@@ -305,6 +305,23 @@ documentación de marcador real.
     stroke-width: 1;
     stroke-dasharray: 3 5;
   }
+  /* NIVELES: cruzan todo el ancho porque valen para toda la ventana, a
+     diferencia de la guía de un marcador, que solo llega hasta su punto.
+     El objetivo va en verde y el stop en rojo por lo que SON —la ganancia y la
+     pérdida—, no por la dirección de la operación: en una venta siguen siendo
+     lo mismo. La entrada es neutra: no es ni ganancia ni pérdida, es el origen. */
+  .g-nivel {
+    stroke-width: 2;
+    stroke-dasharray: 7 7;
+    fill: none;
+  }
+  .g-nivel-entrada { stroke: var(--texto-3); }
+  .g-nivel-meta    { stroke: var(--sube); }
+  .g-nivel-stop    { stroke: var(--baja); }
+  .g-precio-entrada { fill: var(--texto-gris); }
+  .g-precio-meta    { fill: var(--sube); }
+  .g-precio-stop    { fill: var(--baja); }
+
   .g-punto { stroke: var(--fondo); stroke-width: 2.5; }
   .g-punto-origen { fill: var(--texto-3); }
   .g-punto-cumplido { fill: var(--sube); }
