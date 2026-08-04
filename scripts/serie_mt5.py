@@ -113,12 +113,22 @@ def _indice_hito(serie: list[float], tiempos: list, hito: dict) -> int:
 
 
 def construir_recorrido(serie: list[float], hitos: list[dict], tiempos: list | None = None) -> dict:
+    """Marcadores listos para `story_grafico.py`, uno por hito.
+
+    La `etiqueta` viaja junto al hito y NO se recalcula acá: es el precio ya
+    formateado con los `digits` del activo, coma decimal y punto de miles (regla
+    de formato de precios del proyecto). Si se descarta, `story_grafico.py` cae
+    a `str(precio)` y el gráfico publica el precio crudo de MT5 —`512.3` donde
+    correspondía `512,30`—, que es exactamente lo que la regla prohíbe. Pasó en
+    una pieza real de `/story recomendacion`.
+    """
     marcadores = [
         {
             "indice": _indice_hito(serie, tiempos or [], h),
             "precio": float(h["precio"]),
             "clase": h.get("clase", "actual"),
             **({"rol": h["rol"]} if h.get("rol") else {}),
+            **({"etiqueta": h["etiqueta"]} if h.get("etiqueta") else {}),
         }
         for h in hitos
     ]
