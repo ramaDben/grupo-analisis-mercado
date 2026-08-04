@@ -81,7 +81,10 @@ salir a buscarlas acá.
 3. Armar `activos`: 3 filas con `nombre`, `direccion` (`sube` / `baja` / `lateral`), `etiqueta` y
    `porque` en una línea. Incluir cuando corresponda un activo **sin efecto**: decirle al cliente qué
    *no* lo afecta vale tanto como decirle qué sí.
-4. `temporalidad`: una de las cuatro etiquetas canónicas de CLAUDE.md.
+
+La **temporalidad del impacto no va en esta Story**: desbordaba el lienzo vertical y la etiqueta
+sirve poco sin su explicación. Sigue siendo obligatoria en el mensaje de `/dato_macro` (ambos modos),
+que es donde el cliente la lee acompañada.
 
 ⚠️ `veredicto_slug` es frente al **consenso**, no una dirección de mercado. Un dato "mejor" puede ser
 bajista para un activo — y esa distinción es lo que la pieza enseña, así que cada fila de `activos`

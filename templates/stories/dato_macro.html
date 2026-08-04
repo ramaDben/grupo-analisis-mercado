@@ -16,10 +16,18 @@ imagen lleva lo que se lee en tres segundos y sobrevive al reenvío:
   · el veredicto, arriba y en grande, que es la conclusión;
   · la cifra contra su consenso, porque el dato solo no dice nada -lo que mueve
     el precio es la diferencia con lo esperado, que es el concepto de la semana;
-  · el impacto por activo, que es lo único accionable;
-  · la temporalidad, para que nadie opere un dato de swing como si fuera scalp.
-Fuera quedan el diccionario de siglas y el detalle de sub-lecturas: van en el
-texto, donde hay espacio para explicarlos en voz novata.
+  · el impacto por activo, que es lo único accionable.
+Fuera quedan el diccionario de siglas, el detalle de sub-lecturas y la
+temporalidad del impacto: van en el texto, donde hay espacio para explicarlos en
+voz novata.
+
+La temporalidad se retiró de la imagen por decisión del director. Era la línea
+que desbordaba el lienzo vertical -se encimaba con el footer, y no solo con
+payloads largos: tambien con el propio payload de prueba-, y es lo que menos
+pierde al salir. La etiqueta sigue siendo OBLIGATORIA en el mensaje de
+`/dato_macro`, que es donde el cliente la lee junto a su explicación; suelta en
+una imagen no le enseña a nadie a no operar un dato de swing como si fuera
+scalp.
 
 El VEREDICTO se colorea porque ahí el verde y el rojo SON el dato. El cromo de
 la pieza no: va en el acento de marca, igual que en `alerta`. Un dato peor de lo
@@ -31,7 +39,7 @@ Contrato de tokens (ver scripts/story_render.py):
   actual · esperado · anterior (cadena vacía oculta el bloque)
   recorrido -> {barras: [{valor, etiqueta}], niveles: [{valor, clase, etiqueta, rol}]}
     la historia del indicador; scripts/story_grafico.py la convierte en `grafico`
-  significado · temporalidad · fuente
+  significado · fuente
   activos[] -> cada objeto con nombre, direccion ("sube"|"baja"|"lateral"),
     etiqueta y porque
 
@@ -405,20 +413,6 @@ bajista para un activo, y esa distinción es justamente lo que la pieza enseña.
   }
   .activo-nombre { font-weight: 700; }
 
-  /* `margin-top: auto` ancla la temporalidad al pie de la columna, alineada con
-     el fondo de la tarjeta de cifras. No es aire suelto: es lo que hace que las
-     dos columnas cierren en la misma línea. */
-  .temporalidad {
-    margin-top: auto;
-    padding-top: 20px;
-    border-top: 2px solid var(--acento);
-    font-family: "DM Sans", sans-serif;
-    font-weight: 400;
-    font-size: 21px;
-    color: var(--texto-2);
-  }
-  .temporalidad b { font-weight: 700; color: var(--texto-1); }
-
   /* ================= FOOTER ================= */
   .footer {
     margin-top: 26px;
@@ -482,10 +476,6 @@ bajista para un activo, y esa distinción es justamente lo que la pieza enseña.
     .activo-etiqueta { font-size: 24px; min-width: 140px; }
     .activo-texto { font-size: 26px; }
 
-    /* Apilada, la columna ya no tiene alto sobrante que repartir: el `auto`
-       empujaría la temporalidad contra el footer dejando un hueco. */
-    .temporalidad { margin-top: 26px; font-size: 24px; }
-
     .footer-marca { font-size: 25px; }
     .footer-logo  { height: 86px; }
     .footer-fuente { font-size: 20px; }
@@ -541,8 +531,6 @@ bajista para un activo, y esa distinción es justamente lo que la pieza enseña.
         <ul class="activos">
           <!-- FOR:activos --><li class="activo activo--{{direccion}}"><span class="activo-etiqueta">{{etiqueta}}</span><span class="activo-texto"><span class="activo-nombre">{{nombre}}:</span> {{porque}}</span></li><!-- ENDFOR:activos -->
         </ul>
-
-        <p class="temporalidad">Temporalidad del impacto: <b>{{temporalidad}}</b></p>
       </div>
     </div>
 
