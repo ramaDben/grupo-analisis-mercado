@@ -11,6 +11,7 @@ y tests/test_story_render.py.
 <head>
 <meta charset="utf-8">
 <title>Alerta de Mercado — Story GI</title>
+<link rel="stylesheet" href="marca.css">
 <style>
   @font-face {
     font-family: "Syne";
@@ -43,36 +44,44 @@ y tests/test_story_render.py.
 
   * { box-sizing: border-box; }
 
+  /* El snapshot NO declara su tamano en px: lo manda el viewport del motor
+     (--formato horizontal | vertical) y el CSS se adapta. */
   html, body {
     margin: 0;
     padding: 0;
-    width: 1920px;
-    height: 1080px;
-    background: #0D0D1A;
+    width: 100vw;
+    height: 100vh;
+    background: var(--fondo);
     background-image:
-      radial-gradient(90% 120% at 0% 20%, #2A1220 0%, #0D0D1A 55%),
-      linear-gradient(180deg, #0D0D1A 0%, #120A12 60%, #0D0D1A 100%);
-    color: #F5F3F7;
+      radial-gradient(90% 120% at 0% 20%, var(--fondo-acento) 0%, var(--fondo) 55%),
+      linear-gradient(180deg, var(--fondo) 0%, var(--fondo-alt) 60%, var(--fondo) 100%);
+    color: var(--texto-1);
     font-family: "DM Sans", sans-serif;
     overflow: hidden;
   }
 
   /* ---- Contenedor raíz: columna (contenido | footer) ---- */
   .story {
-    width: 1920px;
-    height: 1080px;
+    width: 100%;
+    height: 100%;
     padding: 56px 72px 40px;
     display: flex;
     flex-direction: column;
   }
 
-  /* ---- Contenido: fila de dos columnas (editorial | gráfico) ---- */
+  /* ---- Contenido: fila de dos columnas (editorial | gráfico) ----
+     `overflow: hidden` es la red de seguridad del lienzo de alto fijo: si el
+     bloque editorial pide mas alto del que cabe (titular de muchas lineas), el
+     excedente se recorta dentro de esta caja en vez de dibujarse encima del
+     footer. Sin esto, un titular largo pisaba el handle y el disclaimer en
+     formato vertical. */
   .contenido {
     flex: 1;
     min-height: 0;
     display: flex;
     flex-direction: row;
     gap: 56px;
+    overflow: hidden;
   }
 
   .columna-editorial {
@@ -104,14 +113,21 @@ y tests/test_story_render.py.
     padding: 10px 22px;
     border-radius: 999px;
   }
+  /* El CROMO va en el acento de marca, no en el color de dirección.
+     Primero estuvo fijo en rojo -una alerta alcista salía roja-. Después pasó
+     a seguir la dirección, y una pieza bajista quedaba bañada en rojo: leído
+     de lejos eso es alarma, no sesgo vendedor, y contradice la regla de tono
+     del proyecto -énfasis direccional sí, dramatización no-.
+     La dirección vive donde ES el dato: la píldora de sesgo, la variación y
+     las velas. El marco de la pieza es de la marca y no opina. */
   .chip-alerta {
-    background: #E84040;
-    color: #0D0D1A;
+    background: var(--acento);
+    color: var(--fondo);
   }
   .chip-categoria {
     background: rgba(232, 64, 64, 0.14);
     border: 1px solid rgba(232, 64, 64, 0.5);
-    color: #F5A3A3;
+    color: var(--acento);
   }
 
   .fecha-hora {
@@ -119,18 +135,18 @@ y tests/test_story_render.py.
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
     font-size: 18px;
-    color: #A9A5B4;
+    color: var(--texto-2);
     letter-spacing: 0.03em;
   }
 
   /* ---- Titular / párrafo ---- */
   .titular {
-    font-family: "Syne", sans-serif;
-    font-weight: 800;
+    font-family: "DM Sans", sans-serif;
+    font-weight: 700;
     font-size: 46px;
     line-height: 1.1;
     margin: 20px 0 0;
-    color: #FFFFFF;
+    color: var(--blanco);
   }
 
   .parrafo {
@@ -138,14 +154,14 @@ y tests/test_story_render.py.
     font-weight: 400;
     font-size: 21px;
     line-height: 1.45;
-    color: #C9C5D4;
+    color: var(--texto-borde);
     margin: 18px 0 0;
   }
 
   /* ---- Tarjeta de precio (borde rojo) ---- */
   .tarjeta-precio {
     margin-top: 24px;
-    border: 2px solid #E84040;
+    border: 2px solid var(--acento);
     border-radius: 22px;
     background: rgba(232, 64, 64, 0.08);
     padding: 24px 30px;
@@ -162,21 +178,34 @@ y tests/test_story_render.py.
     font-weight: 600;
     font-size: 22px;
     letter-spacing: 0.04em;
-    color: #F5F3F7;
+    color: var(--texto-1);
     text-transform: uppercase;
   }
 
-  .tag-riesgo {
+  /* Pildora de sesgo. Reemplaza al antiguo tag de riesgo (RIESGO ALTO/MEDIO),
+     que era una etiqueta sin criterio visible para el cliente y ocupaba el lugar
+     mas valioso de la tarjeta. Ahora ese espacio muestra la direccion -- lo
+     accionable -- con el color semantico del kit y la misma flecha que usa
+     postventa.html, para que las dos plantillas hablen el mismo idioma visual.
+     El gris del caso base tambien sirve de fallback si `sesgo_slug` trae un
+     valor inesperado. */
+  .tag-sesgo {
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
     font-size: 18px;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: #0D0D1A;
-    background: #E84040;
+    color: var(--fondo);
+    background: var(--texto-2);
     padding: 8px 18px;
     border-radius: 999px;
   }
+  .tag-sesgo--alcista { background: var(--sube); }
+  .tag-sesgo--alcista::before { content: "\25B2\00A0"; }
+  .tag-sesgo--bajista { background: var(--baja); }
+  .tag-sesgo--bajista::before { content: "\25BC\00A0"; }
+  .tag-sesgo--lateral { background: var(--texto-2); }
+  .tag-sesgo--lateral::before { content: "\2192\00A0"; }
 
   .precio-linea {
     display: flex;
@@ -186,10 +215,10 @@ y tests/test_story_render.py.
   }
 
   .precio-actual {
-    font-family: "Syne", sans-serif;
-    font-weight: 800;
+    font-family: "DM Sans", sans-serif;
+    font-weight: 700;
     font-size: 56px;
-    color: #FFFFFF;
+    color: var(--blanco);
   }
 
   .variacion {
@@ -197,9 +226,13 @@ y tests/test_story_render.py.
     font-weight: 600;
     font-size: 26px;
   }
-  .sesgo-alcista .variacion,
-  .sesgo-alcista .rotulo-activo { color: #00DC82; }
-  .sesgo-bajista .variacion { color: #E84040; }
+  /* El color semantico se reserva para la variacion (y para la pildora de sesgo
+     de la cabecera). El `.rotulo-activo` ya no se tine de verde con sesgo
+     alcista: al quedar junto a una pildora verde en la misma linea, repetia el
+     color sin agregar informacion. El nombre del activo se lee siempre en el
+     blanco base. */
+  .sesgo-alcista .variacion { color: var(--sube); }
+  .sesgo-bajista .variacion { color: var(--baja); }
 
   .stats {
     display: flex;
@@ -219,14 +252,14 @@ y tests/test_story_render.py.
     font-size: 16px;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: #A9A5B4;
+    color: var(--texto-2);
   }
 
   .stat-valor {
     font-family: "DM Sans", sans-serif;
     font-weight: 700;
     font-size: 24px;
-    color: #F5F3F7;
+    color: var(--texto-1);
     margin-top: 6px;
   }
 
@@ -237,8 +270,66 @@ y tests/test_story_render.py.
     font-size: 18px;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: #A9A5B4;
+    color: var(--texto-2);
     margin-bottom: 14px;
+  }
+
+  /* Sello de procedencia del gráfico. Va junto al gráfico y no en la letra chica
+     del pie: que los precios salgan del terminal es el argumento de valor de la
+     pieza, no un descargo. Es lo que separa un gráfico trazado con datos reales
+     de uno inventado por un modelo. */
+  .sello-datos {
+    align-self: flex-start;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--acento);
+    border: 1.5px solid var(--acento);
+    border-radius: 999px;
+    padding: 7px 18px;
+    margin-bottom: 14px;
+  }
+  .sello-datos::before { content: "◆  "; }
+
+  /* ===== Grafico (clases .g-*, geometria en scripts/story_grafico.py) =====
+     El generador calcula coordenadas y NO emite un solo atributo de estilo; el
+     color y el grosor viven aca. Si el grafico se ve mal, se corrige en esta
+     plantilla. */
+  .g-area { fill: url(#gradArea); }
+  .g-area-alto { stop-color: var(--acento); stop-opacity: 0.18; }
+  .g-area-bajo { stop-color: var(--acento); stop-opacity: 0; }
+  .g-linea {
+    fill: none;
+    stroke: var(--acento);
+    stroke-width: 2.4;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+  /* La linea del precio va en el acento de marca y no en verde/rojo: el recorrido
+     es el dato en bruto, no una opinion. La direccion ya la dice la pildora de
+     sesgo. */
+  .g-guia { stroke: var(--texto-3); stroke-width: 1.5; stroke-dasharray: 4 5; }
+  .g-nivel { stroke-width: 2; stroke-dasharray: 7 7; fill: none; }
+  .g-nivel-resistencia { stroke: var(--baja); }
+  .g-nivel-soporte     { stroke: var(--sube); }
+  .g-punto { stroke: var(--fondo); stroke-width: 2.5; }
+  .g-punto-actual { fill: var(--texto-1); }
+  .g-precio {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 17px;
+  }
+  .g-precio-resistencia { fill: var(--baja); }
+  .g-precio-soporte     { fill: var(--sube); }
+  .g-precio-actual      { fill: var(--texto-1); }
+  .g-rol {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.10em;
+    fill: var(--texto-2);
   }
 
   .contenedor-grafico {
@@ -270,7 +361,7 @@ y tests/test_story_render.py.
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
     font-size: 20px;
-    fill: #E84040;
+    fill: var(--texto-2);
   }
 
   /* ---- Footer ---- */
@@ -287,25 +378,75 @@ y tests/test_story_render.py.
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
     font-size: 20px;
-    color: #F5F3F7;
+    color: var(--texto-1);
   }
 
   .footer-fuente {
     font-family: "DM Sans", sans-serif;
     font-weight: 400;
     font-size: 16px;
-    color: #A9A5B4;
+    color: var(--texto-2);
   }
 
   .footer-disclaimer {
     font-family: "DM Sans", sans-serif;
     font-weight: 400;
     font-size: 13px;
-    /* #A9A5B4 (gris secundario del kit). El #6E6A7A anterior no alcanzaba el
+    /* var(--texto-2) (gris secundario del kit). El var(--texto-3) anterior no alcanzaba el
        minimo WCAG AA de 4,5:1 sobre el fondo del footer -- y este texto es el
        aviso de riesgo por apalancamiento, tiene que poder leerse. */
-    color: #A9A5B4;
+    color: var(--texto-2);
     line-height: 1.35;
+  }
+
+  /* ================= FORMATO VERTICAL 9:16 (1080x1920) =================
+     Se activa solo cuando el lienzo es mas alto que ancho (--formato vertical).
+     Cambio de fondo: `.contenido` deja de ser dos columnas lado a lado y pasa a
+     apilarse -- la editorial arriba y el grafico debajo, que es el orden de
+     lectura natural en telefono. `flex: 0 0 54%` de la columna editorial se
+     libera a `auto` para que cada bloque tome su altura real; si se mantuviera
+     el 54%, en vertical reservaria mas de la mitad del alto y el grafico
+     quedaria aplastado. Toda la tipografia sube: el mismo texto a tamano de
+     escritorio queda diminuto en un lienzo de 1080 de ancho.
+
+     Reparto del alto: el grafico es decorativo, la editorial es el contenido,
+     asi que el grafico es el que cede cuando el texto crece (`min-height: 0`).
+     El `min-height: 520px` que tenia antes se lo prohibia: con un titular de
+     varias lineas, editorial + gap + 520px superaban el alto del lienzo y el
+     desborde se dibujaba sobre el footer. La editorial queda en `0 1 auto` para
+     que tampoco fuerce mas alto del disponible. */
+  @media (max-aspect-ratio: 1/1) {
+    .story { padding: 76px 60px 52px; }
+
+    .chip { font-size: 26px; }
+    .fecha-hora { font-size: 25px; }
+
+    .contenido {
+      flex-direction: column;
+      gap: 44px;
+    }
+    .columna-editorial { flex: 0 1 auto; }
+    .columna-grafico { flex: 1 1 auto; min-height: 0; }
+
+    .titular { font-size: 68px; }
+    .parrafo { font-size: 32px; }
+
+    .rotulo-activo { font-size: 30px; }
+    .tag-sesgo { font-size: 24px; }
+    .precio-actual { font-size: 76px; }
+    .variacion { font-size: 34px; }
+    .stat-label { font-size: 22px; }
+    .stat-valor { font-size: 34px; }
+
+    .rotulo-grafico { font-size: 25px; }
+    .soporte-rotulo { font-size: 26px; }
+    .sello-datos { font-size: 19px; padding: 9px 22px; }
+
+
+    .footer { gap: 12px; }
+    .footer-marca { font-size: 28px; }
+    .footer-fuente { font-size: 23px; }
+    .footer-disclaimer { font-size: 19px; }
   }
 </style>
 </head>
@@ -326,7 +467,7 @@ y tests/test_story_render.py.
         <div class="tarjeta-precio">
           <div class="tarjeta-cabecera">
             <span class="rotulo-activo">{{rotulo_activo}}</span>
-            <span class="tag-riesgo">{{tag_riesgo}}</span>
+            <span class="tag-sesgo tag-sesgo--{{sesgo_slug}}">{{sesgo}}</span>
           </div>
 
           <div class="precio-linea">
@@ -357,42 +498,18 @@ y tests/test_story_render.py.
 
       <div class="columna-grafico">
         <p class="rotulo-grafico">{{rotulo_grafico}}</p>
+        <div class="sello-datos">{{sello_datos}}</div>
         <div class="contenedor-grafico">
           <!-- IF:chart_img -->
           <img id="img-alerta" src="{{chart_src}}" alt="Gráfico del activo">
           <!-- ENDIF:chart_img -->
           <!-- IF:chart_svg -->
-          <svg id="svg-alerta" viewBox="0 0 400 220" preserveAspectRatio="none">
-            <line x1="0" y1="150" x2="400" y2="150" stroke="#E84040" stroke-width="2" stroke-dasharray="6 6"/>
-            <text x="12" y="32" class="soporte-rotulo">SOPORTE {{soporte}}</text>
-            <rect x="20" y="70" width="14" height="60" fill="#00DC82"/>
-            <line x1="27" y1="55" x2="27" y2="70" stroke="#00DC82" stroke-width="3"/>
-            <line x1="27" y1="130" x2="27" y2="150" stroke="#00DC82" stroke-width="3"/>
-            <rect x="60" y="90" width="14" height="45" fill="#E84040"/>
-            <line x1="67" y1="75" x2="67" y2="90" stroke="#E84040" stroke-width="3"/>
-            <line x1="67" y1="135" x2="67" y2="160" stroke="#E84040" stroke-width="3"/>
-            <rect x="100" y="105" width="14" height="55" fill="#E84040"/>
-            <line x1="107" y1="90" x2="107" y2="105" stroke="#E84040" stroke-width="3"/>
-            <line x1="107" y1="160" x2="107" y2="178" stroke="#E84040" stroke-width="3"/>
-            <rect x="140" y="118" width="14" height="35" fill="#00DC82"/>
-            <line x1="147" y1="105" x2="147" y2="118" stroke="#00DC82" stroke-width="3"/>
-            <line x1="147" y1="153" x2="147" y2="168" stroke="#00DC82" stroke-width="3"/>
-            <rect x="180" y="100" width="14" height="60" fill="#E84040"/>
-            <line x1="187" y1="85" x2="187" y2="100" stroke="#E84040" stroke-width="3"/>
-            <line x1="187" y1="160" x2="187" y2="180" stroke="#E84040" stroke-width="3"/>
-            <rect x="220" y="130" width="14" height="40" fill="#E84040"/>
-            <line x1="227" y1="118" x2="227" y2="130" stroke="#E84040" stroke-width="3"/>
-            <line x1="227" y1="170" x2="227" y2="185" stroke="#E84040" stroke-width="3"/>
-            <rect x="260" y="140" width="14" height="30" fill="#E84040"/>
-            <line x1="267" y1="128" x2="267" y2="140" stroke="#E84040" stroke-width="3"/>
-            <line x1="267" y1="170" x2="267" y2="182" stroke="#E84040" stroke-width="3"/>
-            <rect x="300" y="145" width="14" height="20" fill="#00DC82"/>
-            <line x1="307" y1="135" x2="307" y2="145" stroke="#00DC82" stroke-width="3"/>
-            <line x1="307" y1="165" x2="307" y2="175" stroke="#00DC82" stroke-width="3"/>
-            <rect x="340" y="148" width="14" height="12" fill="#E84040"/>
-            <line x1="347" y1="140" x2="347" y2="148" stroke="#E84040" stroke-width="3"/>
-            <line x1="347" y1="160" x2="347" y2="168" stroke="#E84040" stroke-width="3"/>
-          </svg>
+          <!-- El grafico ya NO es un dibujo fijo. Lo produce scripts/story_grafico.py
+               con la serie real del activo -scripts/serie_mt5.py la trae del terminal- y
+               con el soporte y la resistencia como lineas de nivel. Las velas decorativas
+               que habia antes no correspondian a ningun activo y en una pieza alcista
+               llegaban a mostrar una caida: desinformaban. -->
+          {{grafico}}
           <!-- ENDIF:chart_svg -->
         </div>
       </div>
@@ -403,7 +520,6 @@ y tests/test_story_render.py.
         <span>@grupointeligencia</span>
         <span>grupointeligencia.com</span>
       </div>
-      <p class="footer-fuente">FUENTE: {{fuente}}</p>
       <p class="footer-disclaimer">
         Los CFD son instrumentos complejos y presentan un riesgo elevado de perder dinero
         rápidamente debido al apalancamiento. Este contenido es educativo/informativo, no

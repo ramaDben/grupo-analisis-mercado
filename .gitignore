@@ -16,7 +16,10 @@ venv/
 # Datos generados (grandes binarios o efímeros)
 data/charts/*.png
 data/mensajes/
-data/stories/**/*.png
+# data/stories/ es salida generada completa, no solo los PNG: tambien caen ahi
+# los payloads de trabajo y la carpeta _revision de rendir_todas.py. Los payloads
+# que SI se versionan viven en tests/fixtures/stories/payloads/.
+data/stories/
 data/plan_hoy.json
 data/datos_entregables.json
 data/ultimo_analisis.json
@@ -61,3 +64,6 @@ data/cache/
 
 # Config local de runner de agentes externo (Antigravity u otro CLI MCP)
 .agents/
+
+# Assets de marca GI (logos y fondos originales, pesados y no editables aca)
+templates/stories/assets/*.jpg

@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guía rápida de análisis fundamental — GI</title>
+<style>
+/*FUENTES*/
+
+/* Tipografía: DM Sans en todo, incluidos los títulos. Syne 800 —la tipográfica de
+   marca para titulares— tiene las contraformas casi cerradas en ese peso y se vuelve
+   pesada de leer en un documento de consulta; en pantalla oscura funciona, en papel y
+   a tamaño de lectura no. Space Grotesk queda solo para cifras y siglas, que son
+   cadenas cortas y necesitan el alineado tabular.
+
+   Paleta adaptada al soporte claro. El verde y el rojo de marca (#00DC82 / #E84040)
+   están pensados para fondo oscuro: sobre blanco no alcanzan el contraste mínimo
+   para texto (mismo problema que corregimos en el footer de las Stories). Se usan
+   versiones oscurecidas para tipografía y los originales solo en filetes y fondos. */
+:root {
+  --tinta: #14141F;
+  --tinta-media: #3A3A48;
+  --tinta-suave: #5A5A68;
+  --linea: #E2E3E8;
+  --papel: #FFFFFF;
+  --tarjeta: #F6F7F9;
+  --verde: #00794F;
+  --verde-vivo: #00DC82;
+  --rojo: #B3261E;
+  --rojo-vivo: #E84040;
+  --ambar: #8A5A00;
+  --ambar-vivo: #F5A524;
+  --azul: #1B4FA8;
+  --azul-vivo: #4C8DFF;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--tinta);
+  background: var(--papel);
+  font-size: 11pt;
+  line-height: 1.5;
+}
+
+/* La escala está calibrada para que cada hoja quepa en el alto útil de una A4
+   (1123 px a 96 dpi). Si se agrega contenido hay que volver a medir: cuando una
+   hoja se pasa, Chromium la parte en dos y el PDF duplica sus páginas. */
+.hoja {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 11mm 13mm 9mm;
+  margin: 0 auto;
+  background: var(--papel);
+  page-break-after: always;
+  position: relative;
+}
+.hoja:last-child { page-break-after: auto; }
+
+h1 {
+  font-family: "DM Sans", sans-serif;
+  font-weight: 700;
+  font-size: 23pt;
+  line-height: 1.02;
+  margin: 0 0 1.6mm;
+  letter-spacing: -0.4px;
+}
+.bajada { color: var(--tinta-media); margin: 0 0 4mm; font-size: 11pt; }
+.kicker {
+  font-size: 8.2pt; font-weight: 700; letter-spacing: 1.1px;
+  text-transform: uppercase; color: var(--verde); margin: 0 0 1.5mm;
+}
+
+h2 {
+  font-family: "DM Sans", sans-serif;
+  font-weight: 700;
+  font-size: 13pt;
+  margin: 4.6mm 0 2mm;
+  padding-bottom: 1.1mm;
+  border-bottom: 1.5px solid var(--tinta);
+  display: flex; align-items: baseline; gap: 2.5mm;
+}
+h2 .n {
+  font-family: "Space Grotesk", monospace;
+  font-weight: 600; font-size: 9pt; color: var(--verde);
+  font-variant-numeric: tabular-nums;
+}
+h2:first-of-type { margin-top: 0; }
+
+/* --- La regla, arriba y sin competencia visual --- */
+.regla {
+  border: 2px solid var(--tinta);
+  border-radius: 2mm;
+  padding: 5.5mm 6mm;
+  margin-bottom: 5mm;
+  background: var(--tarjeta);
+}
+.regla .frase {
+  font-family: "DM Sans", sans-serif; font-weight: 700;
+  font-size: 16pt; line-height: 1.24; margin: 0 0 3mm;
+}
+.tres-cifras { display: flex; gap: 3mm; margin-top: 4mm; }
+.cifra {
+  flex: 1; background: var(--papel); border-radius: 1.5mm;
+  padding: 3.2mm 3.4mm; border-left: 2.4mm solid var(--linea);
+}
+.cifra.esperado { border-left-color: var(--ambar-vivo); }
+.cifra.efectivo { border-left-color: var(--verde-vivo); }
+/* Solo el hijo directo es el rótulo del bloque. Con `.cifra b` (sin `>`) los
+   destacados que van dentro del párrafo también se volvían bloque y partían la
+   frase en varias líneas. Mismo criterio en .paso y .aviso. */
+.cifra > b { display: block; font-size: 10.6pt; margin-bottom: 0.8mm; }
+.cifra span { font-size: 9.8pt; color: var(--tinta-media); line-height: 1.3; display: block; }
+
+/* --- Pasos numerados --- */
+.pasos { display: flex; gap: 2.5mm; margin-bottom: 1mm; }
+.paso {
+  flex: 1; background: var(--tarjeta); border-radius: 1.5mm; padding: 3.4mm 3.6mm;
+}
+.paso .num {
+  font-family: "Space Grotesk", monospace; font-weight: 600;
+  font-size: 14pt; color: var(--verde); line-height: 1; display: block;
+  margin-bottom: 1.2mm;
+}
+.paso > b { display: block; font-size: 10.6pt; margin-bottom: 1mm; }
+.paso span { font-size: 9.8pt; color: var(--tinta-media); line-height: 1.35; }
+
+/* --- Tablas --- */
+table { width: 100%; border-collapse: collapse; margin-bottom: 1mm; }
+th {
+  text-align: left; font-size: 8.4pt; font-weight: 700; letter-spacing: 0.6px;
+  text-transform: uppercase; color: var(--tinta-suave);
+  padding: 1.5mm 2mm; border-bottom: 1.2px solid var(--tinta);
+}
+td {
+  padding: 1.9mm 2.2mm; font-size: 10pt; vertical-align: top;
+  border-bottom: 0.6px solid var(--linea); line-height: 1.4;
+}
+tbody tr:nth-child(even) { background: #FBFBFC; }
+td:first-child { font-weight: 700; }
+.sigla {
+  font-family: "Space Grotesk", monospace; font-weight: 600;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.dir { font-family: "Space Grotesk", monospace; font-weight: 600; white-space: nowrap; font-size: 9.6pt; }
+.sube { color: var(--verde); }
+.baja { color: var(--rojo); }
+.neutro { color: var(--tinta-suave); }
+table.compacta td { padding: 1.7mm 2.2mm; font-size: 9.8pt; }
+col.angosta { width: 15%; }
+
+/* --- Avisos --- */
+.aviso {
+  border-left: 3mm solid var(--ambar-vivo);
+  background: #FFF8EC;
+  padding: 2.6mm 3.4mm; margin: 2.6mm 0; border-radius: 0 1.5mm 1.5mm 0;
+}
+.aviso.rojo { border-left-color: var(--rojo-vivo); background: #FDF0EF; }
+.aviso.verde { border-left-color: var(--verde-vivo); background: #EEFBF4; }
+.aviso > b { display: block; font-size: 10.4pt; margin-bottom: 0.9mm; }
+.aviso p { margin: 0 0 1.3mm; font-size: 10.2pt; line-height: 1.45; }
+.aviso p:last-child { margin-bottom: 0; }
+
+/* --- Frases para el cliente --- */
+.frases { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5mm; }
+.frase-caso {
+  background: var(--tarjeta); border-radius: 1.5mm; padding: 2.8mm 3.2mm;
+  border-top: 1.2mm solid var(--azul-vivo);
+}
+.frase-caso .situacion {
+  font-size: 8.4pt; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.4px; color: var(--azul); margin-bottom: 1.4mm;
+}
+.frase-caso q {
+  font-size: 10.4pt; line-height: 1.48; color: var(--tinta); font-style: normal;
+  quotes: "«" "»";
+}
+
+/* --- Decir / no decir --- */
+.decir { display: grid; grid-template-columns: 1fr 1fr; gap: 3mm; }
+.decir > div { border-radius: 1.5mm; padding: 3mm 3.5mm; }
+.decir .no { background: #FDF0EF; }
+.decir .si { background: #EEFBF4; }
+.decir h3 {
+  font-size: 10.2pt; margin: 0 0 2mm; font-weight: 700;
+}
+.decir .no h3 { color: var(--rojo); }
+.decir .si h3 { color: var(--verde); }
+.decir ul { margin: 0; padding-left: 4.5mm; }
+.decir li { font-size: 10pt; margin-bottom: 1.5mm; line-height: 1.42; }
+
+/* --- Autoría ---
+   En la cabecera va a la derecha del título: ocupa ancho, no alto, y la hoja 1
+   está calibrada al milímetro contra el alto de una A4. */
+.cabecera { display: flex; gap: 6mm; align-items: flex-start; }
+.cabecera-txt { flex: 1; min-width: 0; }
+.autor-mini { width: 54mm; flex-shrink: 0; text-align: right; padding-top: 1mm; }
+.autor-mini img {
+  width: 17mm; height: 17mm; border-radius: 50%;
+  display: block; margin: 0 0 1.4mm auto;
+}
+.autor-mini .rol {
+  font-size: 7.4pt; font-weight: 700; letter-spacing: 0.8px;
+  text-transform: uppercase; color: var(--tinta-suave); margin-bottom: 0.6mm;
+}
+.autor-mini b { display: block; font-size: 9.6pt; line-height: 1.2; }
+.autor-mini span {
+  display: block; font-size: 7.8pt; color: var(--tinta-suave);
+  line-height: 1.4; margin-top: 0.9mm;
+}
+
+.pie-autor { display: flex; gap: 3mm; align-items: center; margin-bottom: 2.5mm; }
+.pie-autor img { width: 14mm; height: 14mm; border-radius: 50%; flex-shrink: 0; }
+.pie-autor .datos b { display: block; font-size: 10.4pt; color: var(--tinta); }
+.pie-autor .datos span {
+  display: block; font-size: 8.6pt; color: var(--tinta-suave); line-height: 1.4;
+  margin-top: 0.5mm;
+}
+
+/* --- Pie --- */
+.pie {
+  margin-top: 6mm; padding-top: 2.5mm; border-top: 0.6px solid var(--linea);
+  font-size: 8.4pt; color: var(--tinta-suave); line-height: 1.45;
+  display: flex; justify-content: space-between; gap: 5mm;
+}
+.pie b { color: var(--tinta-media); }
+
+/* --- Impresión --- */
+@page { size: A4; margin: 0; }
+@media print {
+  /* Sin override de font-size: la escala del cuerpo está calibrada para que cada
+     hoja quepa en una A4, y cambiarla acá la descuadraría justo en el PDF. */
+  .hoja { margin: 0; box-shadow: none; }
+}
+
+/* --- Pantalla: separación entre hojas --- */
+@media screen {
+  body { background: #EDEEF2; padding: 6mm 0; }
+  .hoja { box-shadow: 0 2px 14px rgba(0,0,0,.09); margin-bottom: 6mm; border-radius: 1mm; }
+}
+
+/* --- Celular: se rompe la hoja A4 y todo pasa a una columna --- */
+@media screen and (max-width: 820px) {
+  body { padding: 0; background: var(--papel); font-size: 15px; line-height: 1.5; }
+  .hoja {
+    width: 100%; min-height: 0; padding: 20px 16px 8px;
+    box-shadow: none; margin-bottom: 0; border-radius: 0;
+    page-break-after: auto;
+  }
+  .hoja + .hoja { border-top: 8px solid var(--tarjeta); }
+  h1 { font-size: 26px; }
+  h2 { font-size: 17px; margin: 26px 0 10px; }
+  .regla .frase { font-size: 18px; }
+  .tres-cifras, .pasos, .frases, .decir { display: block; }
+  .cifra, .paso, .frase-caso { margin-bottom: 8px; }
+  .decir > div { margin-bottom: 10px; }
+  .frases .frase-caso { margin-bottom: 8px; }
+  td, th { font-size: 14px; }
+  table.compacta td { font-size: 13px; }
+  /* Las tablas anchas se convierten en fichas apiladas: en un teléfono una tabla
+     de cinco columnas obliga a hacer zoom, que es justo lo que hay que evitar
+     cuando se consulta con el cliente al teléfono. */
+  table.movil-fichas thead { display: none; }
+  table.movil-fichas, table.movil-fichas tbody, table.movil-fichas tr,
+  table.movil-fichas td { display: block; width: 100%; }
+  table.movil-fichas tr {
+    background: var(--tarjeta) !important; border-radius: 6px;
+    padding: 10px 12px; margin-bottom: 8px;
+  }
+  table.movil-fichas td { border: 0; padding: 2px 0; }
+  table.movil-fichas td:first-child { font-size: 15px; margin-bottom: 4px; }
+  table.movil-fichas td[data-rot]::before {
+    content: attr(data-rot) " ";
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .5px; color: var(--tinta-suave);
+  }
+  .pie { display: block; }
+  .pie b { display: block; }
+}
+</style>
+</head>
+<body>
+
+<!-- ================= HOJA 1 ================= -->
+<section class="hoja">
+  <div class="cabecera">
+    <div class="cabecera-txt">
+      <p class="kicker">Guía rápida · Equipo comercial e IBS</p>
+      <h1>Cómo responder cuando sale un dato económico</h1>
+      <p class="bajada">Para consultar en el momento, con el cliente al teléfono. No
+      reemplaza la capacitación completa: resuelve las preguntas del día.</p>
+    </div>
+    {{AUTOR_CABECERA}}
+  </div>
+
+  <div class="regla">
+    <p class="frase">El mercado no reacciona al dato. Reacciona a la diferencia
+    entre el dato y lo que se esperaba.</p>
+    <p style="margin:0;font-size:9pt;color:var(--tinta-media)">Por eso un número
+    “bueno” puede hacer caer el precio y un número “malo” puede hacerlo subir.
+    Antes de opinar, busca siempre estas tres cifras:</p>
+    <div class="tres-cifras">
+      <div class="cifra">
+        <b>Anterior</b>
+        <span>El valor de la publicación pasada. Sirve para ver si viene acelerando
+        o desacelerando.</span>
+      </div>
+      <div class="cifra esperado">
+        <b>Esperado</b>
+        <span>Lo que el mercado creía que iba a salir. <b>Este número ya está en el
+        precio.</b></span>
+      </div>
+      <div class="cifra efectivo">
+        <b>Efectivo</b>
+        <span>Lo que realmente salió. Solo significa algo comparado con el esperado.
+        La resta es <b>la sorpresa</b>.</span>
+      </div>
+    </div>
+  </div>
+
+  <h2><span class="n">01</span> Los tres pasos, siempre en este orden</h2>
+  <div class="pasos">
+    <div class="paso">
+      <span class="num">1</span>
+      <b>¿Sobre o bajo lo esperado?</b>
+      <span>No importa si el número te parece alto o bajo. Importa contra qué se
+      comparaba. Si salió igual a lo esperado, no debería pasar gran cosa.</span>
+    </div>
+    <div class="paso">
+      <span class="num">2</span>
+      <b>¿Encarece o abarata el dinero?</b>
+      <span>La pregunta única: ¿esto obliga al banco central a mantener las tasas
+      altas, o le da espacio para bajarlas? Todo lo demás sale de acá.</span>
+    </div>
+    <div class="paso">
+      <span class="num">3</span>
+      <b>Dinero caro = dólar fuerte</b>
+      <span>Si las tasas quedan altas, tener dólares paga más y el dólar se
+      fortalece. Con el dólar definido, el resto de los activos se deduce.</span>
+    </div>
+  </div>
+
+  <div class="pie">
+    <span><b>Guía rápida de análisis fundamental</b> · Área de Estudios y Post-Venta · GI</span>
+    <span class="sigla">1 / 6</span>
+  </div>
+</section>
+
+<section class="hoja">
+  <h2><span class="n">02</span> Qué debería hacer el precio</h2>
+  <table class="movil-fichas">
+    <colgroup><col style="width:34%"><col style="width:18%"><col class="angosta"><col class="angosta"><col class="angosta"><col class="angosta"></colgroup>
+    <thead>
+      <tr><th>Si el dato dice…</th><th>Para las tasas</th><th>Dólar</th><th>Oro</th>
+      <th>US 100</th><th>USD/CLP</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Inflación <b>sobre</b> lo esperado</td>
+        <td data-rot="Tasas">Altas por más tiempo</td>
+        <td data-rot="Dólar" class="dir sube">Sube ▲</td>
+        <td data-rot="Oro" class="dir baja">Baja ▼</td>
+        <td data-rot="US 100" class="dir baja">Baja ▼</td>
+        <td data-rot="USD/CLP" class="dir sube">Sube ▲</td>
+      </tr>
+      <tr>
+        <td>Inflación <b>bajo</b> lo esperado</td>
+        <td data-rot="Tasas">Espacio para recortar</td>
+        <td data-rot="Dólar" class="dir baja">Baja ▼</td>
+        <td data-rot="Oro" class="dir sube">Sube ▲</td>
+        <td data-rot="US 100" class="dir sube">Sube ▲</td>
+        <td data-rot="USD/CLP" class="dir baja">Baja ▼</td>
+      </tr>
+      <tr>
+        <td>Empleo <b>muy fuerte</b><br><span style="font-weight:400;color:var(--tinta-suave);font-size:8pt">cuando preocupa la inflación</span></td>
+        <td data-rot="Tasas">Retrasa los recortes</td>
+        <td data-rot="Dólar" class="dir sube">Sube ▲</td>
+        <td data-rot="Oro" class="dir baja">Baja ▼</td>
+        <td data-rot="US 100" class="dir baja">Baja ▼</td>
+        <td data-rot="USD/CLP" class="dir sube">Sube ▲</td>
+      </tr>
+      <tr>
+        <td>Empleo <b>muy débil</b><br><span style="font-weight:400;color:var(--tinta-suave);font-size:8pt">cuando preocupa la recesión</span></td>
+        <td data-rot="Tasas">Adelanta los recortes</td>
+        <td data-rot="Dólar" class="dir baja">Baja ▼</td>
+        <td data-rot="Oro" class="dir sube">Sube ▲</td>
+        <td data-rot="US 100" class="dir neutro">Mixto</td>
+        <td data-rot="USD/CLP" class="dir sube">Sube ▲</td>
+      </tr>
+      <tr>
+        <td>Actividad <b>sobre</b> lo esperado</td>
+        <td data-rot="Tasas">Menos urgencia de estimular</td>
+        <td data-rot="Dólar" class="dir sube">Sube ▲</td>
+        <td data-rot="Oro" class="dir baja">Baja ▼</td>
+        <td data-rot="US 100" class="dir sube">Sube ▲</td>
+        <td data-rot="USD/CLP" class="dir sube">Sube ▲</td>
+      </tr>
+      <tr>
+        <td>Cobre o China <b>al alza</b></td>
+        <td data-rot="Tasas">Sin efecto directo en la Fed</td>
+        <td data-rot="Dólar" class="dir neutro">—</td>
+        <td data-rot="Oro" class="dir sube">Sube ▲</td>
+        <td data-rot="US 100" class="dir neutro">—</td>
+        <td data-rot="USD/CLP" class="dir baja">Baja ▼</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="aviso">
+    <b>Las dos filas que parecen contradictorias</b>
+    <p>Un empleo fuerte hace <b>caer</b> las bolsas cuando el problema del momento es
+    la inflación, y las hace <b>subir</b> cuando el problema es la recesión. El mismo
+    dato se lee distinto según qué le preocupa hoy al mercado. Si no sabes en qué
+    escenario estamos, pregúntale al área antes de opinar.</p>
+  </div>
+
+  <div class="pie">
+    <span><b>Guía rápida de análisis fundamental</b> · Área de Estudios y Post-Venta · GI</span>
+    <span class="sigla">2 / 6</span>
+  </div>
+</section>
+
+<!-- ================= HOJA 2 ================= -->
+<section class="hoja">
+  <h2><span class="n">03</span> Los indicadores de Estados Unidos, en una línea</h2>
+  <table class="compacta">
+    <colgroup><col style="width:21%"><col style="width:37%"><col style="width:42%"></colgroup>
+    <thead><tr><th>Indicador</th><th>Qué mide</th><th>Qué mirar de verdad</th></tr></thead>
+    <tbody>
+      <tr><td>Inflación al consumidor <span class="sigla">(IPC)</span></td>
+        <td>Cuánto subieron los precios que paga la gente</td>
+        <td>La variación <b>mensual subyacente</b> —sin alimentos ni energía—, no el
+        titular anual</td></tr>
+      <tr><td>Inflación al productor <span class="sigla">(IPP)</span></td>
+        <td>Precios de fábrica, antes de llegar al consumidor</td>
+        <td>Si apunta igual que el IPC, la señal se refuerza. Anticipa la inflación
+        de los próximos meses</td></tr>
+      <tr><td>Gasto en consumo <span class="sigla">(PCE)</span></td>
+        <td>Inflación sobre lo que la gente efectivamente gastó</td>
+        <td>Es la <b>meta oficial</b> del banco central: 2% en su versión subyacente</td></tr>
+      <tr><td>Nóminas no agrícolas</td>
+        <td>Cuántos empleos se crearon el mes pasado</td>
+        <td>Las <b>revisiones</b> de los dos meses anteriores: pueden cambiar la foto
+        más que el dato nuevo</td></tr>
+      <tr><td>Tasa de desempleo</td>
+        <td>Qué porcentaje busca trabajo y no encuentra</td>
+        <td>La <b>tasa de participación</b>: el desempleo puede bajar solo porque la
+        gente dejó de buscar</td></tr>
+      <tr><td>Salario por hora</td>
+        <td>Cuánto crecieron los sueldos</td>
+        <td>Es el puente a la inflación: sueldos al alza se traspasan a precios</td></tr>
+      <tr><td>Producto interno bruto <span class="sigla">(PIB)</span></td>
+        <td>El tamaño total de la economía</td>
+        <td>Es un dato muy atrasado: mueve poco, pero fija el relato de recesión o
+        expansión</td></tr>
+      <tr><td>Gerentes de compra <span class="sigla">(PMI / ISM)</span></td>
+        <td>Si las empresas ven su actividad mejor o peor</td>
+        <td><b>Sobre 50 se expande, bajo 50 se contrae.</b> El de servicios pesa más
+        que el manufacturero</td></tr>
+      <tr><td>Ventas minoristas</td>
+        <td>Cuánto vendió el comercio</td>
+        <td>El <b>grupo de control</b>, que excluye autos y bencina. El consumo es el
+        70% de esa economía</td></tr>
+      <tr><td>Subsidios por desempleo</td>
+        <td>Cuántos pidieron seguro de cesantía esa semana</td>
+        <td>El <b>promedio de cuatro semanas</b>, nunca la semana suelta: es muy
+        ruidosa</td></tr>
+    </tbody>
+  </table>
+
+  <div class="pie">
+    <span><b>Guía rápida de análisis fundamental</b> · Área de Estudios y Post-Venta · GI</span>
+    <span class="sigla">3 / 6</span>
+  </div>
+</section>
+
+<section class="hoja">
+  <h2><span class="n">04</span> Chile: los cuatro que mueven el dólar acá</h2>
+  <table class="compacta">
+    <colgroup><col style="width:21%"><col style="width:37%"><col style="width:42%"></colgroup>
+    <thead><tr><th>Indicador</th><th>Qué mide</th><th>Cómo leerlo</th></tr></thead>
+    <tbody>
+      <tr><td>IPC de Chile</td>
+        <td>La inflación local, que publica el INE</td>
+        <td>La meta del Banco Central es 3%. Inflación alta le impide bajar la tasa</td></tr>
+      <tr><td>Actividad mensual <span class="sigla">(IMACEC)</span></td>
+        <td>El termómetro mensual de la economía chilena</td>
+        <td>Mira si el alza viene de <b>minería</b> o del resto: el no minero dice
+        más de la demanda interna</td></tr>
+      <tr><td>Balanza comercial y cobre</td>
+        <td>Si entran o salen dólares del país</td>
+        <td>El cobre es cerca de la mitad de lo que Chile exporta: es el driver
+        local más fuerte del dólar</td></tr>
+      <tr><td>Tasa de política monetaria <span class="sigla">(TPM)</span></td>
+        <td>Cuánto cuesta el dinero en Chile</td>
+        <td>Lo que importa es la <b>diferencia</b> con la tasa de Estados Unidos, no
+        el nivel local</td></tr>
+    </tbody>
+  </table>
+
+  <div class="aviso rojo">
+    <b>Ojo con la dirección: en el USD/CLP funciona al revés</b>
+    <p>Cuando el número del par <b>sube</b>, lo que pasa es que <b>el peso se
+    debilita</b>. Entonces un IPC chileno <b>alto</b> fortalece al peso —porque el
+    Banco Central no podrá bajar la tasa— y <b>el USD/CLP baja</b>. Es el espejo del
+    caso estadounidense, donde una inflación alta fortalece al dólar.</p>
+    <p>Regla corta: <b>dato chileno fuerte → dólar más barato acá.</b> Dato
+    estadounidense fuerte → dólar más caro en todas partes.</p>
+  </div>
+
+  <div class="aviso">
+    <b>Un detalle de horario que confunde a todos</b>
+    <p>Los datos de China salen cerca de las <b>21:30 de la noche anterior</b> en
+    hora de Chile, porque van doce horas adelante. Cuando abrimos, el movimiento ya
+    empezó. Y los de Estados Unidos <b>no siempre salen a la misma hora nuestra</b>:
+    los horarios de verano de los dos países cambian en meses distintos, así que
+    confirma siempre en el calendario en vez de asumir.</p>
+  </div>
+
+  <div class="pie">
+    <span><b>Guía rápida de análisis fundamental</b> · Área de Estudios y Post-Venta · GI</span>
+    <span class="sigla">4 / 6</span>
+  </div>
+</section>
+
+<!-- ================= HOJA 3 ================= -->
+<section class="hoja">
+  <h2><span class="n">05</span> Frases listas para el cliente</h2>
+  <div class="frases">
+    <div class="frase-caso">
+      <div class="situacion">Inflación de EE.UU. sobre lo esperado</div>
+      <q>Los precios en Estados Unidos subieron más de lo que se esperaba. Eso
+      significa que su banco central no podrá abaratar el dinero pronto, y cuando el
+      dinero se mantiene caro el dólar se fortalece. Hoy el sesgo es alcista para el
+      dólar.</q>
+    </div>
+    <div class="frase-caso">
+      <div class="situacion">Inflación bajo lo esperado</div>
+      <q>La inflación cedió más de lo previsto. Eso le abre espacio al banco central
+      para bajar las tasas, y con tasas más bajas el dólar pierde atractivo. Es un
+      escenario que favorece al oro y a las bolsas.</q>
+    </div>
+    <div class="frase-caso">
+      <div class="situacion">El dato salió en línea</div>
+      <q>Salió justo como se esperaba, así que el mercado ya lo tenía incorporado en
+      el precio. Por eso no vemos un movimiento grande: la información no era nueva.</q>
+    </div>
+    <div class="frase-caso">
+      <div class="situacion">Empleo mucho más fuerte de lo previsto</div>
+      <q>Se crearon muchos más empleos de los esperados. Suena bien, y para las
+      bolsas puede ser una mala noticia: una economía muy fuerte presiona los
+      sueldos y obliga a mantener las tasas altas más tiempo.</q>
+    </div>
+    <div class="frase-caso">
+      <div class="situacion">El dato es mixto o contradictorio</div>
+      <q>El informe trae señales mixtas, así que preferimos esperar. En estos casos
+      el mercado suele reaccionar al titular en el primer minuto y corregir después,
+      cuando lee el detalle.</q>
+    </div>
+    <div class="frase-caso">
+      <div class="situacion">China débil o cobre a la baja</div>
+      <q>La actividad en China se está enfriando y China es el mayor comprador de
+      cobre del mundo. Menos demanda de cobre significa menos dólares entrando a
+      Chile, y eso presiona al dólar hacia arriba acá.</q>
+    </div>
+  </div>
+
+  <h2><span class="n">06</span> Cómo se dice y cómo no</h2>
+  <div class="decir">
+    <div class="no">
+      <h3>Evitar</h3>
+      <ul>
+        <li>“El oro se va a derrumbar”, “esto se va a disparar”</li>
+        <li>“El mercado está con pánico” o “con euforia”</li>
+        <li>“Core CPI salió hot”, “la Fed está hawkish”</li>
+        <li>Siglas sin explicar, aunque parezcan obvias</li>
+        <li>Prometer un nivel de precio o un plazo</li>
+        <li>Decir solo “el dólar sube”, sin el porqué</li>
+      </ul>
+    </div>
+    <div class="si">
+      <h3>Usar</h3>
+      <ul>
+        <li>“Sesgo bajista”, “presión vendedora”, “impulso comprador”</li>
+        <li>“Aversión al riesgo”, “apetito por riesgo”</li>
+        <li>“La inflación subyacente salió sobre lo esperado”</li>
+        <li>El nombre en español y la sigla una sola vez</li>
+        <li>Escenarios condicionales: “sobre este nivel…”</li>
+        <li>El mecanismo: “sube <b>porque</b> las tasas…”</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="pie">
+    <span><b>Guía rápida de análisis fundamental</b> · Área de Estudios y Post-Venta · GI</span>
+    <span class="sigla">5 / 6</span>
+  </div>
+</section>
+
+<!-- ================= HOJA 4 ================= -->
+<section class="hoja">
+  <div class="aviso verde">
+    <b>La estructura de tres líneas que siempre funciona</b>
+    <p><b>1.</b> Qué pasó: el dato y si sorprendió. &nbsp;<b>2.</b> Por qué importa:
+    qué le hace a las tasas. &nbsp;<b>3.</b> Qué esperar: hacia dónde apunta el
+    activo. Si el cliente no lo entiende en 30 segundos, hay que decirlo más simple
+    — pero nunca quitarle la dirección.</p>
+  </div>
+
+  <h2><span class="n">07</span> Dónde se detiene la respuesta</h2>
+  <div class="aviso rojo">
+    <b>Estas preguntas no se responden en el momento: se derivan al área</b>
+    <p>“¿Me conviene comprar dólares ahora?” · “¿Dónde pongo mi dinero?” · “¿Hasta
+    dónde va a subir?” · “¿Cuánto voy a ganar si entro hoy?” · “¿Vendo o me quedo?”</p>
+    <p>Explicar <b>qué pasó y por qué</b> es análisis, y es nuestro trabajo.
+    Indicarle a alguien <b>qué hacer con su dinero</b> es asesoría de inversión, y
+    tiene requisitos que se cumplen desde el área. Ante la duda, la respuesta segura
+    es: <i>“déjame consultarlo con el equipo de estudios y te confirmo”</i>.</p>
+  </div>
+
+  <h2><span class="n">08</span> Diccionario express</h2>
+  <table class="compacta">
+    <colgroup><col style="width:16%"><col style="width:84%"></colgroup>
+    <tbody>
+      <tr><td class="sigla">IPC</td><td>Índice de precios al consumidor: cuánto subieron los precios que paga la gente</td></tr>
+      <tr><td class="sigla">IPP</td><td>Índice de precios al productor: precios de fábrica, antes del consumidor</td></tr>
+      <tr><td class="sigla">PCE</td><td>Gasto en consumo personal: la medida de inflación que el banco central de EE.UU. usa como meta</td></tr>
+      <tr><td class="sigla">PIB</td><td>Producto interno bruto: todo lo que produce un país</td></tr>
+      <tr><td class="sigla">Subyacente</td><td>El dato sin alimentos ni energía, que son los más volátiles. En inglés aparece como <i>core</i></td></tr>
+      <tr><td class="sigla">PMI / ISM</td><td>Encuestas a gerentes de compra. Sobre 50 la actividad crece, bajo 50 se contrae</td></tr>
+      <tr><td class="sigla">IMACEC</td><td>El termómetro mensual de la economía chilena, del Banco Central</td></tr>
+      <tr><td class="sigla">TPM</td><td>Tasa de política monetaria: la tasa de interés que fija el Banco Central de Chile</td></tr>
+      <tr><td class="sigla">DXY</td><td>Índice del dólar contra seis monedas. Casi 60% de su peso es el euro</td></tr>
+      <tr><td class="sigla">Fed</td><td>La Reserva Federal, el banco central de Estados Unidos</td></tr>
+    </tbody>
+  </table>
+
+  {{AUTOR_PIE}}
+
+  <div class="pie">
+    <span><b>Material educativo de uso interno.</b> No constituye recomendación de
+    inversión ni asesoría personalizada, y no debe entregarse a clientes en esta
+    forma. Todo contenido de difusión pasa por el Área de Estudios y Post-Venta.</span>
+    <span class="sigla">6 / 6</span>
+  </div>
+</section>
+
+</body>
+</html>

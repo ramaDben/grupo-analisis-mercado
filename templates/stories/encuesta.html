@@ -15,6 +15,7 @@ tests/test_story_render.py.
 <head>
 <meta charset="utf-8">
 <title>Encuesta — Story GI</title>
+<link rel="stylesheet" href="marca.css">
 <style>
   @font-face {
     font-family: "Syne";
@@ -52,11 +53,11 @@ tests/test_story_render.py.
     padding: 0;
     width: 1920px;
     height: 1080px;
-    background: #0D0D1A;
+    background: var(--fondo);
     background-image:
-      radial-gradient(90% 120% at 0% 20%, #1E3A5F 0%, #0D0D1A 55%),
-      linear-gradient(180deg, #0D0D1A 0%, #0D0D1A 60%, #1E3A5F 100%);
-    color: #F5F3F7;
+      radial-gradient(90% 120% at 0% 20%, var(--acento-oscuro) 0%, var(--fondo) 55%),
+      linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 60%, var(--acento-oscuro) 100%);
+    color: var(--texto-1);
     font-family: "DM Sans", sans-serif;
     overflow: hidden;
   }
@@ -92,7 +93,7 @@ tests/test_story_render.py.
     border-radius: 999px;
     background: rgba(62, 145, 175, 0.14);
     border: 1px solid rgba(62, 145, 175, 0.5);
-    color: #53C1AB;
+    color: var(--sube-suave);
   }
 
   .encuesta-kicker:empty {
@@ -101,11 +102,11 @@ tests/test_story_render.py.
 
   /* ---- Pregunta ---- */
   .encuesta-pregunta {
-    font-family: "Syne", sans-serif;
-    font-weight: 800;
+    font-family: "DM Sans", sans-serif;
+    font-weight: 700;
     font-size: 56px;
     line-height: 1.2;
-    color: #FFFFFF;
+    color: var(--blanco);
     margin: 28px 0 0;
     max-width: 1400px;
   }
@@ -127,7 +128,7 @@ tests/test_story_render.py.
     flex-direction: column;
     gap: 12px;
     align-items: center;
-    border: 2px solid #3E91AF;
+    border: 2px solid var(--acento);
     background: rgba(62, 145, 175, 0.08);
     border-radius: 22px;
     padding: 26px 34px;
@@ -139,21 +140,21 @@ tests/test_story_render.py.
     font-size: 16px;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: #A9A5B4;
+    color: var(--texto-2);
   }
 
   .encuesta-opcion-valor {
-    font-family: "Syne", sans-serif;
-    font-weight: 800;
+    font-family: "DM Sans", sans-serif;
+    font-weight: 700;
     font-size: 44px;
-    color: #FFFFFF;
+    color: var(--blanco);
   }
 
   .encuesta-vs {
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
     font-size: 26px;
-    color: #3E91AF;
+    color: var(--acento);
     align-self: center;
   }
 
@@ -163,7 +164,7 @@ tests/test_story_render.py.
     font-weight: 400;
     font-size: 21px;
     line-height: 1.45;
-    color: #C9C5D4;
+    color: var(--texto-borde);
     margin: 32px 0 0;
   }
 
@@ -185,17 +186,17 @@ tests/test_story_render.py.
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
     font-size: 20px;
-    color: #F5F3F7;
+    color: var(--texto-1);
   }
 
   .footer-disclaimer {
     font-family: "DM Sans", sans-serif;
     font-weight: 400;
     font-size: 13px;
-    /* #A9A5B4 (gris secundario del kit). El #6E6A7A anterior no alcanzaba el
+    /* var(--texto-2) (gris secundario del kit). El var(--texto-3) anterior no alcanzaba el
        minimo WCAG AA de 4,5:1 sobre el fondo del footer -- y este texto es el
        aviso de riesgo por apalancamiento, tiene que poder leerse. */
-    color: #A9A5B4;
+    color: var(--texto-2);
     line-height: 1.35;
   }
 </style>

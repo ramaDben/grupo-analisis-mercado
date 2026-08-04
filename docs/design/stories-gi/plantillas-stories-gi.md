@@ -70,8 +70,13 @@ disclaimer). La integración con el motor decide qué strings se convierten en p
 ### 03 Alerta de Mercado (tema oscuro con degradado rojizo)
 - Chips: `ALERTA DE MERCADO` (fondo rojo) + categoría (ej. `COMMODITIES · ORO`) · fecha-hora
 - Titular + párrafo de contexto
-- Tarjeta de precio (borde rojo): activo, tag **RIESGO ALTO**, **precio**, **variación % ▼/▲**,
-  y 3 stats: **Soporte / Resistencia / Vol %** (un solo soporte y una sola resistencia)
+- Tarjeta de precio (borde rojo): activo, píldora de **sesgo** (`▲ ALCISTA` verde / `▼ BAJISTA`
+  rojo / `→ LATERAL` gris), **precio**, **variación % ▼/▲**, y 3 stats:
+  **Soporte / Resistencia / Vol %** (un solo soporte y una sola resistencia)
+  - El canvas original traía en esa posición un tag `RIESGO ALTO` / `RIESGO MEDIO`. Se
+    reemplazó por el sesgo por decisión del director (2026-07-29): era una etiqueta sin
+    criterio visible para el cliente, en el lugar más valioso de la tarjeta. El sesgo sí es
+    accionable y cumple la regla de oro (dirección explícita). `tag_riesgo` salió del contrato.
 - Gráfico: velas SVG con línea de soporte rotulada (`SOPORTE 2.300`) o slot captura
   (`id="img-alerta"`) — rótulo del bloque indica temporalidad (ej. `XAU/USD · VELAS 4H`)
 - Footer: `FUENTE: [ej. COMEX]`

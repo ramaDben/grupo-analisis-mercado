@@ -67,6 +67,34 @@
       }
     }
   },
+  "EUR/USD": {
+    "drivers": {
+      "tasas_bce_vs_fed": {
+        "descripcion_cliente": "Es el driver de fondo: si el Banco Central Europeo (BCE) paga más interés por el euro y la Reserva Federal (Fed) menos por el dólar, el dinero se mueve al euro y el EUR/USD sube. Si la diferencia se abre a favor de EE.UU., el par baja.",
+        "correlacion": "directa con el diferencial a favor del euro",
+        "importancia": "muy alta",
+        "donde_seguirlo": "Comunicados del BCE y de la Fed"
+      },
+      "inflacion_zona_euro": {
+        "descripcion_cliente": "Si los precios en la Zona Euro suben más de lo esperado, el BCE queda obligado a mantener las tasas altas por más tiempo y el euro se fortalece. Si la inflación cede, se abre la puerta a recortes y el euro se debilita.",
+        "correlacion": "directa",
+        "importancia": "alta",
+        "donde_seguirlo": "IPC de la Zona Euro publicado por Eurostat"
+      },
+      "dollar_index": {
+        "descripcion_cliente": "El Dollar Index mide la fuerza del dólar frente a otras monedas y el euro pesa más de la mitad de ese índice. Cuando el dólar se debilita en el mundo, el EUR/USD sube casi en espejo.",
+        "correlacion": "inversa",
+        "importancia": "alta",
+        "donde_seguirlo": "Ticker USDIDX"
+      },
+      "precios_energia_europa": {
+        "descripcion_cliente": "Europa importa la mayor parte de su energía y la paga en dólares. Si el gas y el petróleo suben, Europa necesita más dólares, el euro se debilita y el par baja.",
+        "correlacion": "inversa",
+        "importancia": "media",
+        "donde_seguirlo": "Precio del gas natural europeo y del petróleo"
+      }
+    }
+  },
   "XAU/USD": {
     "drivers": {
       "dollar_index": {

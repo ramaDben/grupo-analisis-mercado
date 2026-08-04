@@ -251,8 +251,16 @@ Contrato de error común: si el dato no está disponible retorna `{'error': 'CÓ
 ## Stories GI
 
 Piloto (issue #109): comando `/story [tipo]` genera Stories de marca (imagen 1920×1080).
-`[tipo]` soportados hoy: `alerta`, `quote`, `breaking`, `encuesta`, `edu` (Fase B, issues
-#121/#123/#125/#127), `flash` (Fase C, issue #129) y `postventa` (Fase C). `alerta` (plantilla "03 Alerta de Mercado") combina niveles reales del motor
+`[tipo]` soportados hoy: `dato_macro`, `alerta`, `recomendacion`, `quote`, `breaking`, `encuesta`,
+`edu` (Fase B, issues #121/#123/#125/#127), `flash` (Fase C, issue #129) y `postventa` (Fase C).
+`dato_macro` cubre la **pieza 1 de la agenda diaria** —un dato económico que ya publicó, en el Modo
+resultado de `/dato_macro`— y se organiza alrededor del veredicto frente al consenso; su
+`veredicto_slug` NO se deriva de `sesgo`, porque mejor/peor es contra lo esperado y no una dirección
+de mercado (un dato "mejor" puede ser bajista para un activo). `recomendacion` es la **única
+plantilla con firma acreditada** —una recomendación induce una operación, así que tiene que constar
+quién la respalda— y **cuenta para el límite de 3 señales por semana**; obliga a TP y SL en pesos y
+tiene campo para el costo de mantención (swap), que es lo que separa una operación comunicada con
+honestidad de una que solo muestra la ganancia. `alerta` (plantilla "03 Alerta de Mercado") combina niveles reales del motor
 (`get_asset_levels`) con una narrativa de alerta (mismo criterio editorial de `/alerta`); `quote`
 es una pieza 100% editorial (cita + autor + cargo, sin dato del motor); `breaking` es una pieza
 editorial de noticia urgente (kicker + titular + cifra clave + contexto + reacción, sin dato del
@@ -277,14 +285,77 @@ del motor en frío. Único renderer: `scripts/story_render.py`
 celular). El formato viaja por el CLI y **nunca** por el payload — el payload es contrato de
 contenido y el formato es presentación, así el **mismo payload rinde ambos**. Cada snapshot es un
 único archivo que se adapta con `@media (max-aspect-ratio: 1/1)`, en vez de tener un archivo por
-formato (evita que la versión vertical se desfase de la horizontal). Hoy solo
-`templates/stories/postventa.html` está migrado a responsive; las otras 6 siguen en horizontal —
-una plantilla por Change, mismo criterio que las Fases B y C. Snapshots de marca:
+formato (evita que la versión vertical se desfase de la horizontal). Migradas a responsive:
+`templates/stories/postventa.html`, `templates/stories/alerta.html` y
+`templates/stories/operacion.html`; las otras 5 siguen solo en
+horizontal — una plantilla por Change, mismo criterio que las Fases B y C. Snapshots de marca:
 `templates/stories/alerta.html`, `templates/stories/quote.html`, `templates/stories/breaking.html`,
-`templates/stories/encuesta.html`, `templates/stories/edu.html`, `templates/stories/flash.html` y
-`templates/stories/postventa.html`. Las demás plantillas del canvas (Market Update, Indicador
+`templates/stories/encuesta.html`, `templates/stories/edu.html`, `templates/stories/flash.html`,
+`templates/stories/postventa.html`, `templates/stories/operacion.html`,
+`templates/stories/dato_macro.html` y `templates/stories/recomendacion.html`. Las demás plantillas del canvas (Market Update, Indicador
 Macro, Trading Idea, Calendario, Semanal, Carrusel "Oportunidades de la semana") llegan con los issues
 #111-#115 — ver `docs/design/stories-gi/plantillas-stories-gi.md` para el mapeo campo-por-campo.
+
+**Paleta y color (una sola fuente).** Los colores viven en `templates/stories/marca.css` y los
+snapshots los consumen con `var(--rol)`; ningún hex se escribe a mano. Los tokens se nombran por
+**rol y no por color** (`--acento`, no `--teal`): un nombre de color miente en cuanto se cambia la
+paleta. `scripts/marca_tokens.py --check` falla si una plantilla vuelve a hardcodear un color, que
+es lo único que mantiene la fuente única siendo única.
+
+Dos reglas de color que se pagaron caro y no conviene volver a discutir:
+
+1. **El cromo no opina.** Marco, chip, borde y degradado van siempre en el acento de marca. Solo se
+   colorea lo que ES un dato: la píldora de dirección, la variación, el veredicto, el resultado
+   cuando es negativo. Una pieza bajista bañada en rojo se lee como alarma y contradice la regla de
+   tono del proyecto (énfasis direccional sí, dramatización no). En una frase: **si un color no está
+   comunicando un número, va en el acento**.
+2. **`--sube` / `--baja` no se reskinean.** Verde arriba y rojo abajo es una convención que el
+   cliente lee sin pensar, no una decisión de marca. Al cambiar la línea visual se cambia
+   `--acento`, nunca la semántica de dirección.
+
+El acento es `#50C0A8`, el extremo verde del degradado del logo (el azul `#3C8CAA` es el otro
+extremo y queda disponible como `--acento-azul`). Ambos medidos sobre los assets de
+`templates/stories/assets/`, no elegidos a ojo.
+
+**Revisar y proteger las plantillas.** Cada plantilla tiene su payload de prueba en
+`tests/fixtures/stories/payloads/<plantilla>.json`, y esas MISMAS fixtures alimentan dos cosas:
+
+```bash
+uv run --extra stories python scripts/rendir_todas.py            # las 10 piezas juntas
+uv run --extra stories python scripts/rendir_todas.py --formato vertical
+uv run pytest tests/test_story_render.py                          # contrato de las 10
+```
+
+El render completo existe porque **los defectos de consistencia no se ven revisando de a una**: un
+cambio global de paleta puede dejar piezas sin regenerar, y un color equivocado sobrevive rondas
+enteras si la revisión está puesta en otra plantilla. El test exige que toda plantilla de
+`templates/stories/` tenga fixture y resuelva sin tokens huérfanos — una plantilla nueva sin payload
+falla, que es lo que corresponde, porque tampoco la estaría revisando nadie.
+
+**Serie real para los gráficos.** `scripts/serie_mt5.py` trae los cierres del terminal y arma el
+bloque `recorrido` que consume `story_grafico.py`. Los marcadores se anclan por ROL, no
+por proximidad de precio: `actual` y `meta` van al extremo derecho por definición, y `origen` se
+ancla por tiempo cuando el hito trae fecha. Anclar por precio parece razonable y no lo es —el precio
+oscila, así que el cierre más parecido puede caer en cualquier punto de la serie—. Requiere el
+terminal abierto y `MetaTrader5`, que no es dependencia del repo: se inyecta con
+`uv run --with MetaTrader5`.
+
+**Plantilla `operacion`** (comunica una operación del equipo, en estado `abierta` o `cerrada` según
+`estado_slug` del payload): es la única con un **paso previo** al renderer. Su gráfico de recorrido
+lo produce `scripts/story_grafico.py`, que traduce la serie de precios y los hitos de la
+operación al SVG del token `{{grafico}}` y se encadena por stdin/stdout:
+```bash
+uv run python scripts/story_grafico.py < operacion.json \
+  | uv run python scripts/story_render.py --template templates/stories/operacion.html \
+      --out "$(scripts/ruta_story.ps1 ...)" --formato vertical
+```
+El payload de entrada lleva una clave `recorrido` = `{serie, marcadores}`; el script la consume y la
+reemplaza por `grafico`. El reparto es estricto: el script calcula **coordenadas** y el snapshot
+aporta color/tipografía vía sus clases `.g-*` — si el gráfico se ve mal, se corrige en la plantilla.
+**Criterio editorial de la pieza** (impuesto por el director): cada bloque dice algo que ningún otro
+bloque dice — chip = qué pasó, titular = por qué, tarjeta = la operación y su resultado, gráfico =
+el recorrido (único lugar con precios), cierre = lo que no cabe arriba. El espacio también se
+justifica: nada de aire que no comunique. Integrarla como tipo de `/story` queda **pendiente**.
 
 **Escritura en el proyecto Claude Design de GI (regla actualizada 2026-07-27)**: el proyecto
 Claude Design compartido (dueño: Rodrigo, GI) —
@@ -300,6 +371,80 @@ subidas: piezas como `Story <fecha> <activo>.dc.html` en la raíz y renders en `
 `scripts\ruta_story.ps1` (hermano de `ruta_mensaje.ps1`, no lo modifica). Los `data/stories/*.png`
 están gitignored. `playwright` es dependencia **opcional** (`[project.optional-dependencies]
 stories`): instalar con `uv sync --extra stories && python -m playwright install chromium`.
+
+## Capacitaciones internas (PPTX)
+
+Material formativo para el equipo comercial y los IBS, generado por código para que el
+contenido sea versionable y regenerable. Vive en `docs/capacitacion/`.
+
+- **Generador**: `scripts/capacitacion_fundamental_ppt.py` (motor de maqueta) +
+  `capacitacion_fundamental_contenido.py` (criterio editorial). La separación es
+  deliberada: editar un texto no debe obligar a tocar el dibujo, ni al revés.
+  ```bash
+  uv run --with python-pptx --with pillow python scripts/capacitacion_fundamental_ppt.py
+  ```
+  `python-pptx` y `pillow` **no** son dependencias del proyecto: se inyectan con
+  `uv run --with` para no alterar el `.venv`.
+- **Autoría**: el retrato del autor va en la portada y en el cierre, junto al nombre y
+  las credenciales — es material que circula entre equipos, así que quién lo firma se ve
+  de entrada. La foto se toma de `docs/capacitacion/assets/autor.png` (o de `--foto
+  <ruta>`) y se recorta en círculo con Pillow, porque PowerPoint no aplica máscaras. El
+  recorte se hace desde el tercio superior, no del centro geométrico, para no cortar la
+  cabeza. Si el archivo no existe, la maqueta cae al diseño sin retrato en vez de fallar.
+- **Tipografía**: Segoe UI + Consolas para cifras, **no** las fuentes de marca. Syne /
+  DM Sans / Space Grotesk solo existen en el repo como `.woff2` (formato web) y no están
+  instaladas en los equipos: declararlas hace que PowerPoint las sustituya y rompa la
+  maqueta en el PC de cada destinatario. Consolas preserva el alineado tabular del kit.
+- **Medición de texto**: PowerPoint no expone métricas de fuente, así que el motor
+  estima el alto de cada bloque antes de dibujar (`_n_lineas` / `_alto_texto`) y reduce
+  el tamaño hasta que quepa. Sin eso el layout falla de dos formas ya observadas: un
+  título de dos líneas se superpone con el párrafo siguiente, y una tabla larga se
+  expande por debajo del pie —PowerPoint ignora `row.height` si el texto no cabe—.
+- **Verificación obligatoria**: con decenas de slides la inspección visual no basta.
+  ```bash
+  uv run --with python-pptx python scripts/verificar_capacitacion.py
+  ```
+  Detecta desbordes sobre el pie y solapamientos entre bloques de texto. Complementarlo
+  exportando a PNG vía COM (`$pres.Export($ruta,"PNG",1600,900)`) para revisar el
+  resultado real. **Ojo**: si el director tiene el `.pptx` abierto, `prs.save()` falla
+  con `PermissionError` y COM rechaza la conexión con `0x80048240` — generar entonces a
+  una ruta temporal y nunca llamar a `$app.Quit()`, que cerraría su sesión.
+
+### Guía rápida (folleto de consulta)
+
+Complemento de la capacitación, para quien no va a estudiar las 55 láminas pero necesita
+resolver una pregunta con el cliente al teléfono. No es un resumen: es una **herramienta
+de respuesta** —tabla dato → dirección de cada activo, frases listas para el cliente,
+qué no decir, y dónde se detiene la respuesta porque pasa a ser asesoría—.
+
+- **Fuente**: `templates/capacitacion/folleto.html` · **Generador**:
+  `scripts/folleto_fundamental.py`
+  ```bash
+  uv run --extra stories python scripts/folleto_fundamental.py
+  ```
+- **Dos salidas del mismo HTML**: un **HTML autónomo** (fuentes incrustadas en base64,
+  se manda por correo o WhatsApp y funciona solo) y un **PDF A4 de 6 páginas** para
+  imprimir. Bajo 820 px las hojas A4 se rompen en una columna y las tablas anchas pasan
+  a fichas apiladas vía `td[data-rot]::before`, para consultarlo en el teléfono sin
+  hacer zoom.
+- **Tipografía: DM Sans en todo, también en los títulos.** Las fuentes del repo se
+  pueden usar acá y no en el PPTX porque en HTML los `.woff2` funcionan nativamente,
+  pero **Syne queda fuera**: en peso 800 sus contraformas se cierran y cansa la vista en
+  un documento de consulta (es el mismo defecto que motivó el rediseño de la Story). El
+  cuerpo va a 11 pt y no a 9,8 por legibilidad — el material lo usa gente que no lee
+  cómodo a tamaños chicos. Space Grotesk queda solo para cifras y siglas.
+- **Paleta adaptada al soporte claro**: el verde y el rojo de marca están pensados para
+  fondo oscuro y sobre blanco no alcanzan el contraste mínimo para texto (mismo problema
+  del footer de las Stories, #145). Se usan versiones oscurecidas para tipografía y los
+  originales solo en filetes y fondos.
+- **La escala está calibrada al alto útil de una A4** (1123 px a 96 dpi). Si una hoja se
+  pasa, Chromium la parte en dos y el PDF duplica páginas —pasó de 3 a 6 sin aviso—. Al
+  agregar contenido hay que **medir**, no estimar:
+  ```js
+  Array.from(document.querySelectorAll('section.hoja')).map(s => s.getBoundingClientRect().height)
+  ```
+  con `emulate_media("print")`. Y no poner `font-size` dentro de `@media print`: cambia
+  la escala justo en el PDF y descuadra la calibración.
 
 ## Flujo de aprobación → WhatsApp (modo semi-automático activo)
 
@@ -400,13 +545,18 @@ grupo-analisis-mercado/
 │   ├── agenda_semanal.json · feriados_bolsa.json
 ├── scripts/               ← scripts auxiliares
 │   ├── story_render.py    ← renderer de Stories GI (payload JSON → HTML → PNG con Playwright)
+│   ├── story_grafico.py ← geometría del gráfico de recorrido (paso previo al render)
+│   ├── serie_mt5.py       ← serie real de precios desde MT5 → bloque `recorrido`
+│   ├── rendir_todas.py    ← rinde las 10 plantillas juntas, para revisión visual
+│   ├── marca_tokens.py    ← verifica que ninguna plantilla hardcodee un color
+│   ├── capacitacion_fundamental_ppt.py + _contenido.py ← generador del PPTX de capacitación (motor / contenido)
 │   └── hora_chile.ps1 · ruta_mensaje.ps1 · ruta_story.ps1  ← helpers deterministas (hora Chile, ruta de guardado)
 ├── templates/             ← templates de mensajes WhatsApp
 │   ├── encuesta_tendencia.txt · encuesta_posicion.txt · encuesta_movimiento.txt
 │   ├── concepto_didactico.txt · guion_ejecutivo.txt
 │   ├── ruta_curriculo.txt · dashboard_metricas.txt · mapa_conceptos.txt
 │   ├── ventas_email.txt · ventas_whatsapp.txt
-│   └── stories/           ← snapshot de marca GI (alerta.html + fonts/)
+│   └── stories/           ← snapshots de marca GI (10 plantillas) + marca.css · fonts/ · assets/
 ├── conceptos/             ← notas canónicas de conceptos educativos (malla /rencuesta)
 │   ├── README.md · stop-loss.md
 ├── data/                  ← datos persistentes

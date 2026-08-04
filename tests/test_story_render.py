@@ -10,6 +10,7 @@ directamente en este archivo -- no se toca `conftest.py` (contrato de design.md 
 from __future__ import annotations
 
 import copy
+import json
 import sys
 from pathlib import Path
 
@@ -50,6 +51,12 @@ PAYLOAD_EJEMPLO: dict = {
         "nuevos mínimos; se recomienda gestión estricta del riesgo."
     ),
     "rotulo_activo": "ORO · XAU/USD",
+    # `tag_riesgo` ya NO lo consume el snapshot de alerta: la píldora de la
+    # tarjeta pasó a mostrar el sesgo (dirección accionable) en vez de una
+    # etiqueta de riesgo sin criterio visible para el cliente. Se conserva aquí
+    # sólo porque el fixture genérico del motor (`fixture_template.html`) lo usa
+    # como token de prueba en `test_build_html_contract`; para `alerta.html` es
+    # una clave no referenciada, o sea un no-op silencioso (R3/CB-1).
     "tag_riesgo": "RIESGO ALTO",
     "precio_actual": "2.318,40",
     "soporte": "2.300,00",
@@ -58,6 +65,13 @@ PAYLOAD_EJEMPLO: dict = {
     "chart_png": None,
     "fuente": "COMEX",
     "sesgo": "Bajista",
+    # El grafico de `alerta` dejo de ser un dibujo fijo del snapshot y pasa a ser
+    # un token, alimentado por `scripts/story_grafico.py` con la serie real.
+    # Aca va un SVG minimo a proposito: estos tests ejercen el mapeo de tokens y
+    # fences, no la geometria del grafico. La geometria se prueba con la fixture
+    # de `tests/fixtures/stories/payloads/alerta.json`, que si trae `recorrido`.
+    "grafico": '<svg viewBox="0 0 440 400"></svg>',
+    "sello_datos": "Datos reales · MetaTrader 5 · 13 JUL 11:15",
 }
 
 # Payload de ejemplo de `quote` (spec.md/design.md #121 §"Contrato de payload
@@ -333,9 +347,18 @@ def test_alerta_no_placeholders():
         PAYLOAD_EJEMPLO["precio_actual"],
         PAYLOAD_EJEMPLO["soporte"],
         PAYLOAD_EJEMPLO["resistencia"],
-        PAYLOAD_EJEMPLO["tag_riesgo"],
+        PAYLOAD_EJEMPLO["sesgo"],
     ):
         assert valor in html
+
+    # La píldora de la tarjeta muestra el sesgo con su clase de color semántico,
+    # y el antiguo elemento del tag de riesgo ya no se emite aunque el payload
+    # siga trayendo la clave. Se afirma sobre la clase y no sobre el texto
+    # "RIESGO ALTO", que sigue apareciendo en el comentario del CSS que documenta
+    # por qué se reemplazó.
+    assert 'class="tag-sesgo tag-sesgo--bajista"' in html
+    assert 'class="tag-riesgo"' not in html
+    assert ">RIESGO ALTO<" not in html
 
     # Payload sin variación/vol -> esos slots no aparecen; sin chart_png -> SVG
     # decorativo presente, sin <img>.
@@ -943,3 +966,137 @@ def test_postventa_vertical_apila_las_columnas(tmp_path):
     # Vertical: apiladas (misma x, distinta altura)
     assert prom_v["y"] > resp_v["y"]
     assert abs(prom_v["x"] - resp_v["x"]) < 2
+
+
+# ---------------------------------------------------------------------------
+# alerta.html en formato vertical (Change 1 de la serie movil). Mismo patron
+# que postventa: el snapshot deja de declarar su tamano y adapta el layout con
+# `@media (max-aspect-ratio: 1/1)`. Aqui el bloque que se apila es `.contenido`
+# (columna editorial + columna del grafico).
+# ---------------------------------------------------------------------------
+
+
+def test_alerta_snapshot_es_responsive():
+    html = story_render.build_html(PAYLOAD_EJEMPLO, ALERTA_TEMPLATE)
+
+    assert "100vw" in html
+    assert "max-aspect-ratio" in html
+    assert "width: 1920px" not in html
+    assert "height: 1080px" not in html
+
+
+@pytest.mark.skipif(
+    not _chromium_disponible(), reason="Chromium de Playwright no instalado"
+)
+def test_alerta_render_vertical_dimensiones(tmp_path):
+    salida = tmp_path / "story_alerta_vertical.png"
+
+    story_render.render_story(
+        PAYLOAD_EJEMPLO, ALERTA_TEMPLATE, salida, formato="vertical"
+    )
+
+    assert _png_size(salida) == (1080, 1920)
+
+
+@pytest.mark.skipif(
+    not _chromium_disponible(), reason="Chromium de Playwright no instalado"
+)
+def test_alerta_render_horizontal_sin_regresion(tmp_path):
+    salida = tmp_path / "story_alerta_horizontal.png"
+
+    story_render.render_story(PAYLOAD_EJEMPLO, ALERTA_TEMPLATE, salida)
+
+    assert _png_size(salida) == (1920, 1080)
+
+
+@pytest.mark.skipif(
+    not _chromium_disponible(), reason="Chromium de Playwright no instalado"
+)
+def test_alerta_vertical_apila_editorial_y_grafico(tmp_path):
+    """En vertical la columna del grafico cae DEBAJO de la editorial; en
+    horizontal quedan lado a lado. Se mide con el bounding box real."""
+    from playwright.sync_api import sync_playwright
+
+    html = story_render.build_html(PAYLOAD_EJEMPLO, ALERTA_TEMPLATE)
+    tmp_html = ALERTA_TEMPLATE.parent / "_test_alerta_probe.html"
+    tmp_html.write_text(html, encoding="utf-8")
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            try:
+                cajas = {}
+                for nombre, (w, h) in story_render._FORMATOS.items():
+                    page = browser.new_page(
+                        viewport={"width": w, "height": h}, device_scale_factor=1
+                    )
+                    page.goto(tmp_html.resolve().as_uri(), wait_until="networkidle")
+                    cajas[nombre] = (
+                        page.locator(".columna-editorial").bounding_box(),
+                        page.locator(".columna-grafico").bounding_box(),
+                    )
+                    page.close()
+            finally:
+                browser.close()
+    finally:
+        tmp_html.unlink(missing_ok=True)
+
+    edi_h, graf_h = cajas["horizontal"]
+    edi_v, graf_v = cajas["vertical"]
+
+    # Horizontal: lado a lado
+    assert graf_h["x"] > edi_h["x"]
+    assert abs(graf_h["y"] - edi_h["y"]) < 2
+
+    # Vertical: apiladas
+    assert graf_v["y"] > edi_v["y"]
+    assert abs(graf_v["x"] - edi_v["x"]) < 2
+
+
+# ---------------------------------------------------------------------------
+# Contrato de TODAS las plantillas, desde las fixtures compartidas
+# ---------------------------------------------------------------------------
+# Los tests de arriba cubren plantilla por plantilla con payloads escritos como
+# constantes. Eso dejó un agujero: `recomendacion`, `dato_macro` y `operacion`
+# llegaron sin test, así que nada avisaba si un cambio en el motor les rompía el
+# contrato.
+#
+# Este bloque cierra el agujero de raíz. Recorre `tests/fixtures/stories/payloads/`
+# y exige que TODA plantilla de `templates/stories/` tenga su payload y resuelva
+# sin tokens huérfanos. Una plantilla nueva sin fixture falla el test — que es lo
+# que corresponde, porque una plantilla que nadie testea tampoco es una que
+# alguien esté revisando.
+#
+# Son las MISMAS fixtures que usa `scripts/rendir_todas.py` para la revisión
+# visual. Una fixture que solo vive en el test se desactualiza sin que nadie lo
+# note; una que además se mira cada vez que se toca el diseño, no.
+
+DIR_PLANTILLAS = Path(__file__).resolve().parent.parent / "templates" / "stories"
+DIR_PAYLOADS = Path(__file__).resolve().parent / "fixtures" / "stories" / "payloads"
+
+PLANTILLAS = sorted(p.stem for p in DIR_PLANTILLAS.glob("*.html"))
+
+
+def test_toda_plantilla_tiene_payload_de_prueba():
+    faltantes = [n for n in PLANTILLAS if not (DIR_PAYLOADS / f"{n}.json").exists()]
+    assert not faltantes, (
+        f"Plantillas sin payload en tests/fixtures/stories/payloads/: {faltantes}. "
+        "Agrégalo: protege el contrato y alimenta scripts/rendir_todas.py."
+    )
+
+
+@pytest.mark.parametrize("nombre", PLANTILLAS)
+def test_plantilla_resuelve_sin_huerfanos(nombre):
+    ruta_payload = DIR_PAYLOADS / f"{nombre}.json"
+    if not ruta_payload.exists():
+        pytest.skip(f"sin payload: lo cubre test_toda_plantilla_tiene_payload_de_prueba")
+
+    payload = json.loads(ruta_payload.read_text(encoding="utf-8"))
+    if "recorrido" in payload:
+        from story_grafico import enriquecer
+
+        payload = enriquecer(payload)
+
+    html = story_render.build_html(payload, DIR_PLANTILLAS / f"{nombre}.html")
+
+    assert "{{" not in html, f"{nombre}: quedaron tokens sin resolver"
+    assert "<!-- FOR:" not in html, f"{nombre}: quedó un bloque FOR sin expandir"

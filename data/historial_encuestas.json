@@ -50,8 +50,7 @@
       ],
       "contexto_ref": null,
       "estado": "registrada"
-    }
-    ,
+    },
     {
       "id": "2026-06-03_tendencia_USDCLP",
       "fecha": "2026-06-03",
@@ -120,6 +119,20 @@
         "➡️ Ninguna: se queda dando vueltas"
       ],
       "contexto_ref": "data/mensajes/2026-07-27/usdjpy/niveles/19-40_niveles.txt",
+      "estado": "registrada"
+    },
+    {
+      "id": "2026-07-28_tendencia_USDCLP",
+      "fecha": "2026-07-28",
+      "tipo": "tendencia",
+      "activo": "USDCLP",
+      "pregunta": "¿Qué tendencia proyectas para mañana en *USD/CLP (Dólar)*?",
+      "opciones": [
+        "📈 Alcista",
+        "📉 Bajista",
+        "➡️ Lateral"
+      ],
+      "contexto_ref": "data/mensajes/2026-07-28/usdclp/dato_macro/18-01_dato_macro.txt",
       "estado": "registrada"
     }
   ]

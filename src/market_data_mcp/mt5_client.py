@@ -114,6 +114,34 @@ def get_symbol_info(ticker: str):
     return mt5.symbol_info(ticker)
 
 
+def get_positions(ticker: str):
+    """Envuelve `MetaTrader5.positions_get(symbol=ticker)` — operaciones abiertas.
+
+    Import perezoso de `MetaTrader5` (mismo patrón que `get_rates`).
+
+    Retorna la tupla de `TradePosition` de MT5 (con `ticket`, `type`, `volume`,
+    `price_open`, `sl`, `tp`, `price_current`, `profit`, `swap`, `time`,
+    `comment`, ...), una tupla vacía si el símbolo no tiene posiciones abiertas,
+    o `None` si MT5 no pudo responder. La distinción entre `()` y `None` es
+    deliberada: la primera es "sin operaciones", la segunda es un fallo.
+    """
+    import MetaTrader5 as mt5
+
+    return mt5.positions_get(symbol=ticker)
+
+
+def get_account_currency() -> str | None:
+    """Moneda de la cuenta MT5 (la que expresa el resultado de las posiciones).
+
+    Import perezoso de `MetaTrader5`. Retorna el código ISO (ej. "CLP", "USD")
+    o `None` si el terminal no reporta la cuenta.
+    """
+    import MetaTrader5 as mt5
+
+    info = mt5.account_info()
+    return info.currency if info is not None else None
+
+
 def get_session(ticker: str, day_of_week: int, index: int, tipo: str):
     """Envuelve `symbol_info_session_quote`/`symbol_info_session_trade` de MT5.
 

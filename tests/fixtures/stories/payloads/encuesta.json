@@ -1,0 +1,8 @@
+{
+ "plantilla": "encuesta",
+ "kicker": "ENCUESTA DEL DÍA",
+ "pregunta": "¿Cuál creen que será la tendencia hoy del Oro?",
+ "opcion_a": "Alcista",
+ "opcion_b": "Bajista",
+ "nota_cierre": "Vota en la encuesta fijada del grupo"
+}

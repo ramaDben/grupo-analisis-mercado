@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Anexo — Plantillas de marca GI</title>
+<style>
+  @page { size: A4; margin: 20mm 18mm 18mm 18mm; }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.55;
+    color: #1a1a1f;
+  }
+
+  .portada {
+    border-bottom: 3px solid #1a1a1f;
+    padding-bottom: 14px;
+    margin-bottom: 26px;
+  }
+  .portada h1 {
+    font-size: 20pt;
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+  }
+  .portada .sub {
+    font-size: 11pt;
+    color: #55555f;
+    margin: 0 0 12px;
+  }
+  .portada .meta {
+    font-size: 9pt;
+    color: #6e6e78;
+    margin: 0;
+  }
+
+  h2 {
+    font-size: 13pt;
+    margin: 26px 0 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #d8d8de;
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 11pt;
+    margin: 18px 0 6px;
+    page-break-after: avoid;
+  }
+  p { margin: 0 0 9px; }
+  ul, ol { margin: 0 0 9px; padding-left: 20px; }
+  li { margin-bottom: 4px; }
+
+  strong { font-weight: 600; }
+
+  .nota {
+    background: #f4f4f7;
+    border-left: 3px solid #8a8a96;
+    padding: 11px 14px;
+    margin: 0 0 20px;
+    font-size: 9.5pt;
+    color: #3a3a42;
+  }
+  .nota p:last-child { margin-bottom: 0; }
+
+  .destacado {
+    background: #fff8e6;
+    border-left: 3px solid #d9a520;
+    padding: 11px 14px;
+    margin: 12px 0;
+    font-size: 10pt;
+  }
+  .destacado p:last-child { margin-bottom: 0; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 14px;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+  }
+  th {
+    text-align: left;
+    background: #f0f0f4;
+    padding: 7px 9px;
+    border: 1px solid #d8d8de;
+    font-weight: 600;
+  }
+  td {
+    padding: 7px 9px;
+    border: 1px solid #d8d8de;
+    vertical-align: top;
+  }
+
+  code {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 9pt;
+    background: #f0f0f4;
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+  pre {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 8.5pt;
+    line-height: 1.45;
+    background: #f4f4f7;
+    border: 1px solid #e0e0e6;
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin: 8px 0 12px;
+    overflow-x: auto;
+    page-break-inside: avoid;
+  }
+  pre code { background: none; padding: 0; }
+
+  .check { list-style: none; padding-left: 0; }
+  .check li { padding-left: 22px; position: relative; margin-bottom: 5px; }
+  .check li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 3px;
+    width: 11px;
+    height: 11px;
+    border: 1.5px solid #6e6e78;
+    border-radius: 2px;
+  }
+
+  .pie {
+    margin-top: 30px;
+    padding-top: 12px;
+    border-top: 1px solid #d8d8de;
+    font-size: 9pt;
+    color: #6e6e78;
+  }
+</style>
+</head>
+<body>
+
+<div class="portada">
+  <h1>Anexo técnico — Plantillas de marca GI</h1>
+  <p class="sub">Hallazgos de nuestro motor de inteligencia artificial al trabajar las plantillas con contenido real</p>
+  <p class="meta">Área de Estudios y Post-Venta · Grupo de Análisis de Mercado · GI &nbsp;|&nbsp; Julio de 2026 &nbsp;|&nbsp; Documento de trabajo</p>
+</div>
+
+<div class="nota">
+  <p><strong>Sobre este documento.</strong> No es una especificación que haya que acatar: es la lista de cosas que fallaron o sorprendieron al trabajar las plantillas con contenido real. Lo compartimos para ahorrarles el camino que ya hicimos. Donde el criterio profesional de ustedes diga otra cosa, manda el suyo — salvo en los puntos marcados como restricción técnica, que son los que impedirían completar la plantilla con el contenido de cada día.</p>
+  <p><strong>Procedencia.</strong> Estos hallazgos los produjo <strong>nuestro motor de inteligencia artificial</strong>, con el que trabajamos el contenido y las piezas, a partir de usar las plantillas con contenido real y detectar dónde se rompían. No son criterio de diseño del Área de Estudios y Post-Venta —no es nuestro oficio— y así queremos que se lean: como observaciones surgidas del uso, no como indicaciones. Los requisitos normativos de las secciones 7 y 11 sí provienen de nuestra área.</p>
+</div>
+
+<h2>0. Cómo usamos lo que nos entreguen</h2>
+
+<p>La plantilla se abre localmente, <strong>sin conexión a internet</strong>, se completa con el contenido del día y se captura como imagen del tamaño exacto de la pieza. No hay servidor, ni instalación, ni proceso de compilación de por medio.</p>
+
+<p>De ahí sale la prueba más simple, y sirve para verificar cualquier entrega: <strong>si el archivo se ve bien al abrirlo con doble clic en un navegador y sin conexión, se va a ver bien en la pieza final.</strong></p>
+
+<h2>1. El archivo — restricciones técnicas</h2>
+
+<p>Esta sección sí es técnica: son las condiciones para que la plantilla se pueda completar con el contenido de cada día.</p>
+
+<table>
+  <tr><th style="width:38%">Condición</th><th>Por qué</th></tr>
+  <tr><td>Un archivo <code>.html</code> autocontenido por plantilla</td><td>Es la unidad con la que trabajamos</td></tr>
+  <tr><td>CSS embebido en un <code>&lt;style&gt;</code> del <code>&lt;head&gt;</code></td><td>No se cargan archivos <code>.css</code> externos</td></tr>
+  <tr><td>Sin JavaScript</td><td>La captura es estática; nada que dependa de scripts va a ejecutarse</td></tr>
+  <tr><td>Sin recursos externos</td><td>No hay conexión al generar la pieza: un CDN, Google Fonts o una imagen por URL quedan en blanco</td></tr>
+  <tr><td>Fuentes como <code>.woff2</code> locales en una carpeta <code>fonts/</code></td><td>Misma razón</td></tr>
+  <tr><td>Imágenes fijas embebidas como <code>data:</code> URI o archivo local</td><td>Misma razón</td></tr>
+</table>
+
+<p>Un detalle que nos costó descubrir: conviene <code>font-display: block</code> en cada <code>@font-face</code>. Con el valor por defecto, la captura puede dispararse antes de que la fuente termine de cargar y la pieza sale con la tipografía de reemplazo.</p>
+
+<pre><code>@font-face {
+  font-family: "Syne";
+  src: url("fonts/syne-800.woff2") format("woff2");
+  font-weight: 800;
+  font-display: block;
+}</code></pre>
+
+<h2>2. Los marcadores de datos</h2>
+
+<p>Donde va un dato que cambia en cada pieza, un marcador en lugar del texto de ejemplo.</p>
+
+<p><strong>Dato simple</strong> — <code>{{nombre}}</code>, minúsculas con guion bajo:</p>
+
+<pre><code>&lt;h1 class="titular"&gt;{{titular}}&lt;/h1&gt;
+&lt;span class="precio"&gt;{{precio_entrada}}&lt;/span&gt;</code></pre>
+
+<p><strong>Lista de largo variable</strong> — para tablas o enumeraciones:</p>
+
+<pre><code>&lt;!-- FOR:filas --&gt;
+&lt;div class="fila"&gt;
+  &lt;span class="fila-activo"&gt;{{activo}}&lt;/span&gt;
+  &lt;span class="fila-valor"&gt;{{valor}}&lt;/span&gt;
+&lt;/div&gt;
+&lt;!-- ENDFOR:filas --&gt;</code></pre>
+
+<p>Lo que está entre las marcas se repite una vez por elemento; lo que deba aparecer una sola vez —el encabezado de una tabla— va fuera. Soporta un nivel: sin listas dentro de listas.</p>
+
+<p><strong>Bloque opcional</strong> — algo que a veces aparece:</p>
+
+<pre><code>&lt;!-- IF:variacion --&gt;
+&lt;span class="variacion"&gt;{{variacion_pct}}%&lt;/span&gt;
+&lt;!-- ENDIF:variacion --&gt;</code></pre>
+
+<p><strong>Cuatro cosas que aprendimos sobre esto:</strong></p>
+
+<ol>
+  <li><strong>Los nombres son el contrato.</strong> <code>{{precio_entrada}}</code> y no <code>{{texto_3}}</code>. Si el nombre cambia después, hay que cambiar código de nuestro lado.</li>
+  <li><strong>Ningún dato variable puede quedar fijo.</strong> Si en la maqueta queda <code>4.539,72</code>, ese número sale en todas las piezas para siempre.</li>
+  <li><strong>Si un marcador queda sin dato, el proceso se detiene.</strong> Es a propósito: preferimos que se detenga a publicar una pieza con un hueco. Por eso conviene no dejar marcadores «por si acaso».</li>
+  <li><strong>La sintaxis de los marcadores no puede aparecer dentro de comentarios HTML.</strong> Esto rompió una plantilla completa: se documentó un <code>FOR</code> de ejemplo en un comentario de cabecera y, como las marcas se buscan por texto en todo el archivo, la lista se abrió ahí y se cerró al final del documento, tragándose la página entera. Si van a documentar algo dentro del archivo, mejor describirlo en palabras.</li>
+</ol>
+
+<p>Para campos que pueden llegar vacíos, nos funcionó que el contenedor colapse solo:</p>
+
+<pre><code>.subtitulo:empty { display: none; }</code></pre>
+
+<h2>3. Un archivo para los dos formatos</h2>
+
+<p>Necesitamos cada plantilla en <strong>horizontal 1920×1080</strong> y <strong>vertical 1080×1920</strong>. La vertical es la que se ve en el teléfono y hoy es la más usada.</p>
+
+<p>Empezamos con dos archivos separados y no funcionó: se desfasan. Se corrige un texto en uno y se olvida en el otro. Lo que nos resultó es <strong>un archivo que se adapta</strong>:</p>
+
+<pre><code>/* Base: horizontal */
+html, body {
+  width: 100vw;              /* y no 1920px fijo */
+  height: 100vh;
+}
+
+/* Vertical: se activa cuando el lienzo es más alto que ancho */
+@media (max-aspect-ratio: 1/1) {
+  .titular { font-size: 54px; }
+}</code></pre>
+
+<p>Dos cosas de nuestra experiencia:</p>
+
+<ul>
+  <li><strong>Fijar el tamaño en píxeles en <code>html</code>/<code>body</code> rompe el mecanismo.</strong> El tamaño lo impone el lienzo.</li>
+  <li><strong>La tipografía sube bastante en vertical, y no de forma proporcional.</strong> Un cuerpo que funciona en 1920 de ancho queda diminuto en 1080, porque el vertical se mira en un teléfono a un tamaño físico mucho menor.</li>
+</ul>
+
+<h2>4. Tipografía y cifras</h2>
+
+<p>Lo que terminamos adoptando fueron dos roles separados:</p>
+
+<table>
+  <tr><th style="width:18%">Rol</th><th style="width:32%">Dónde</th><th>Qué nos resultó</th></tr>
+  <tr><td><strong>Display</strong></td><td>Titulares, y solo titulares</td><td>Acá va la personalidad de marca</td></tr>
+  <tr><td><strong>Datos</strong></td><td>Todo número: precios, montos, porcentajes, horas</td><td>Dígitos inequívocos y <code>font-variant-numeric: tabular-nums</code></td></tr>
+</table>
+
+<p><code>tabular-nums</code> hace que todos los dígitos ocupen el mismo ancho. Sin eso, dos precios en columna no se alinean y una cifra que se actualiza «baila» entre piezas.</p>
+
+<p><strong>Lo que nos falló concretamente:</strong></p>
+
+<ul>
+  <li>Una display en cifras. Si a 100px un <code>0</code> y un <code>8</code> se parecen, en la pieza final se confunden.</li>
+  <li><code>text-decoration: line-through</code> sobre un número. Para marcar algo como superado nos funcionó color u opacidad, nunca tachado.</li>
+  <li>Tracking negativo agresivo en cifras.</li>
+</ul>
+
+<div class="destacado">
+  <p>La jerarquía con la que terminamos decidiendo: <strong>un número mal leído es peor que un número ausente.</strong></p>
+</div>
+
+<h2>5. El texto real es más largo que el de la maqueta</h2>
+
+<p>Este es el que más nos ha mordido, y es propio de nuestro caso: los textos los genera el análisis del día, no el diseñador.</p>
+
+<p>Lo que nos ayudaría:</p>
+
+<ol>
+  <li><strong>Que nos digan el rango.</strong> Por cada campo de texto, con qué largo funciona el diseño: «el titular se ve bien entre 25 y 55 caracteres». Nos ajustamos a ese rango, pero necesitamos conocerlo.</li>
+  <li><strong>Probar con el caso más largo.</strong> A nosotros nos pasó que un titular de tres líneas se dibujó encima del logo y del aviso legal en la versión vertical, y solo apareció al generar con datos reales.</li>
+  <li>Lo que usamos para contenerlo: que el bloque de contenido recorte su excedente en vez de desbordarse, con el pie de marca <strong>fuera</strong> de ese bloque para que nada lo pise.</li>
+</ol>
+
+<pre><code>.contenido { flex: 1; min-height: 0; overflow: hidden; }</code></pre>
+
+<h2>6. Color con significado</h2>
+
+<p>En nuestras piezas los colores de dirección de mercado no son decorativos:</p>
+
+<table>
+  <tr><th style="width:28%">Significado</th><th>Uso</th></tr>
+  <tr><td>Verde</td><td>Alza, ganancia, objetivo cumplido</td></tr>
+  <tr><td>Rojo</td><td>Baja, pérdida, riesgo</td></tr>
+  <tr><td>Ámbar o neutro</td><td>Espera, sin confirmación</td></tr>
+  <tr><td>Gris</td><td>Dato inactivo o ya superado</td></tr>
+</table>
+
+<p>Lo que necesitamos para poder conectarlos: <strong>que vengan como clases aplicables</strong> y no como color fijo del componente, porque el mismo elemento muestra verde o rojo según el dato del día.</p>
+
+<pre><code>.sesgo-alcista .variacion { color: #00DC82; }
+.sesgo-bajista .variacion { color: #E84040; }</code></pre>
+
+<p>La clase se aplica en el elemento raíz al completar la pieza. Si el color está fijo en el componente, la plantilla sirve para la mitad de los casos.</p>
+
+<h2>7. Accesibilidad y elementos obligatorios</h2>
+
+<ul>
+  <li><strong>Contraste de 4,5:1 hacia arriba</strong> en todo texto. Nos importa especialmente en los textos chicos, porque en estas piezas los chicos son los legales.</li>
+  <li><strong>El aviso de riesgo por apalancamiento (CFD)</strong> va en toda pieza dirigida a clientes y tiene que poder leerse. Ya lo tuvimos que corregir una vez por quedar bajo el mínimo de contraste.</li>
+  <li><strong>Pie de marca</strong>: handle, dominio y el aviso legal.</li>
+  <li>Las piezas de <strong>uso interno</strong> llevan un distintivo visible de «no reenviar al cliente» y no llevan pie de marca comercial. Si alguna plantilla es interna, se lo indicamos.</li>
+  <li><strong>La naturaleza del contenido debe declararse de forma visible</strong> —asesoría de inversión, análisis informativo o material educativo—, no al pie en letra chica. Es lo primero que un cliente debería poder saber al mirar la pieza, y aplica a todos los canales de difusión sin excepción. La plantilla necesita un lugar previsto para esa declaración.</li>
+</ul>
+
+<div class="destacado">
+  <p><strong>Validación previa.</strong> Toda pieza —cualquiera sea su canal de destino— pasa por el Área de Estudios y Post-Venta para validación y verificación de contenido antes de publicarse. Ahí se comprueba que el contenido sea correcto y verificable, y que la naturaleza de la pieza esté declarada de forma clara y específica. Conviene tenerlo presente al diseñar: el espacio para esa declaración no es opcional.</p>
+</div>
+
+<h3>Bloque normativo en piezas de recomendación</h3>
+
+<p>Las piezas de oportunidad de inversión y de resultado llevan además cuatro elementos que la normativa exige y que conviene tratar como un bloque de diseño con identidad propia, en vez de resolverlos como letra chica dispersa:</p>
+
+<table>
+  <tr><th style="width:34%">Elemento</th><th>Nota</th></tr>
+  <tr><td>Analista que firma</td><td>Nombre de la persona que emite la recomendación</td></tr>
+  <tr><td>Fundamentos técnicos</td><td>Los puntos de análisis que la sustentan</td></tr>
+  <tr><td>Declaración de apoyo automatizado</td><td>Nuestro análisis usa un motor que calcula niveles e indicadores</td></tr>
+  <tr><td>Conflictos de interés</td><td>Texto fijo que entregamos redactado</td></tr>
+</table>
+
+<div class="destacado">
+  <p>Nuestra sugerencia —y es una invitación, no un requisito—: en vez de esconderlos, <strong>tratarlos como sello de respaldo</strong>. En un canal donde circulan plataformas no reguladas prometiendo ganancias rápidas, una pieza que muestra quién firma y en qué se basa es un diferenciador de marca, no una carga.</p>
+</div>
+
+<h3>Montos, porcentajes y capital de referencia</h3>
+
+<p>Dos cosas que para nosotros no son negociables:</p>
+
+<ul>
+  <li><strong>Todo monto en pesos va acompañado de su porcentaje y de su capital de referencia.</strong> Un resultado sin la base sobre la que se calculó no informa: sugiere. Los tres datos son un solo bloque de información y deberían leerse juntos.</li>
+  <li><strong>La variante de operación en pérdida tiene que verse tan bien como la ganadora</strong>, porque de eso depende que se publique, y de que se publique depende que el conjunto de lo que mostramos sea representativo.</li>
+</ul>
+
+<p>Sobre el primer punto, una advertencia de diseño que preferimos anticipar: la tentación natural es agrandar el monto de ganancia y achicar el capital y el porcentaje, porque el monto es la cifra atractiva. Para nosotros es justamente lo que hay que evitar.</p>
+
+<h2>8. Lo que en nuestra experiencia no llega a la pieza final</h2>
+
+<ul>
+  <li>JavaScript, animaciones, transiciones, estados hover: la captura es una imagen fija.</li>
+  <li>Datos verosímiles como texto fijo. Nos confunde el contrato: no sabemos si un número es un ejemplo o algo que debe quedar.</li>
+  <li>Copy que interprete un dato de mercado. Tenemos reglas propias sobre tono, sobre no prometer resultados y sobre cómo se nombra un hecho no confirmado —de hecho tuvimos que corregir una pieza que afirmaba en indicativo algo que aún no estaba confirmado oficialmente—. Ustedes definen el espacio y la jerarquía del texto; el texto lo escribimos nosotros con ese filtro.</li>
+  <li>Gráficos con datos dibujados a mano. Si la pieza lleva un gráfico, nos basta el <strong>contenedor</strong> con su estilo: el trazado lo completamos nosotros con los datos reales. Un detalle si lo hacen en SVG: conviene declarar la proporción del contenedor, porque un SVG cuya proporción no calza con su caja deja franjas vacías arriba y abajo. Nos pasó.</li>
+</ul>
+
+<h2>9. El checklist que usamos nosotros</h2>
+
+<p>No es un criterio de aprobación de ustedes hacia nosotros: es la lista con la que nosotros revisamos una pieza antes de darla por lista. La compartimos por si les sirve.</p>
+
+<ul class="check">
+  <li>Se abre con doble clic en un navegador, <strong>sin conexión</strong>, y se ve completa</li>
+  <li>Ningún recurso externo</li>
+  <li>Cero JavaScript</li>
+  <li>Todo dato variable es un marcador con nombre semántico</li>
+  <li>Ningún dato de ejemplo quedó fijo</li>
+  <li>Correcta en 1920×1080 y 1080×1920, mismo archivo</li>
+  <li>Probada con el texto más largo del rango, sin desbordes</li>
+  <li>Ninguna cifra en tipográfica display ni con tachado</li>
+  <li>Cifras con <code>tabular-nums</code></li>
+  <li>Todo texto sobre 4,5:1 de contraste, incluido el legal</li>
+  <li>Pie de marca presente y sin nada que lo pise</li>
+  <li>Rangos de caracteres documentados por campo</li>
+  <li>Colores semánticos como clases aplicables</li>
+  <li>Número de operación presente, legible y junto a la vía de consulta</li>
+  <li>Símbolo de plataforma solo en la variante interna, no en la de cliente</li>
+  <li>Todo monto acompañado de su porcentaje y su capital de referencia</li>
+  <li>En piezas de resultado: la variante en pérdida se ve tan cuidada como la de ganancia</li>
+  <li>En piezas de recomendación: analista que firma, fundamentos técnicos, declaración de apoyo automatizado y conflictos de interés, todos presentes y legibles</li>
+  <li>En piezas de resultado: advertencia de que resultados pasados no garantizan resultados futuros</li>
+  <li>La naturaleza del contenido está declarada de forma visible, no en letra chica al pie</li>
+</ul>
+
+<h2>10. Qué les devolvemos</h2>
+
+<ol>
+  <li>La <strong>pieza generada con datos reales</strong> en los dos formatos, para que la validen contra su diseño.</li>
+  <li>La <strong>lista final de marcadores</strong> con qué dato entra en cada uno, así diseñan las siguientes sin preguntarnos.</li>
+  <li>Si al conectar aparece un problema —de los que solo salen con datos reales— se lo reportamos con la captura y la causa, no como «no funciona».</li>
+</ol>
+
+<h2>11. Las plantillas solicitadas, en detalle</h2>
+
+<h3>11.1 Oportunidad de inversión</h3>
+
+<table>
+  <tr><th style="width:24%">Dato</th><th style="width:24%">Ejemplo</th><th>Nota</th></tr>
+  <tr><td>Activo</td><td>Dólar / Yen japonés</td><td>Nombre legible en español. Si el tipo de contrato importa, poder decirlo en palabras</td></tr>
+  <tr><td><strong>Número de operación</strong></td><td>GAM-2026-0143</td><td><strong>Funciona como comprobante</strong>: prueba que es una orden real ejecutada y no un ejemplo. El cliente no accede a la terminal de la mesa, así que <strong>debe ir junto a la vía de consulta</strong> — un identificador sin canal insinúa una verificación que no puede completar. Jerarquía secundaria, cuerpo chico, pero legible</td></tr>
+  <tr><td>Dirección</td><td>Venta</td><td>Color semántico</td></tr>
+  <tr><td>Precio de entrada</td><td>163.444</td><td>La cantidad de decimales la define el activo y no se puede alterar ni redondear</td></tr>
+  <tr><td>Volumen</td><td>0.08 lotes</td><td></td></tr>
+  <tr><td>Objetivo</td><td>162.615</td><td></td></tr>
+  <tr><td>Stop de protección</td><td>163.900</td><td></td></tr>
+  <tr><td>Ganancia potencial</td><td>+$150.000 &nbsp;(+3,0%)</td><td>Monto y porcentaje, siempre juntos</td></tr>
+  <tr><td>Pérdida potencial</td><td>−$75.000 &nbsp;(−1,5%)</td><td>Monto y porcentaje, siempre juntos</td></tr>
+  <tr><td><strong>Capital de referencia</strong></td><td>$5.000.000</td><td><strong>Obligatorio siempre que se muestre un monto.</strong> Necesita lugar propio: sin él la cifra no es interpretable y puede inducir a una expectativa que no dimos</td></tr>
+  <tr><td>Temporalidad</td><td>Swing de jornada</td><td>Una de cuatro: scalper / intradía / swing de jornada / posicional</td></tr>
+  <tr><td>Horizonte</td><td>1 a 3 días</td><td>Minutos a 1-2 h / la jornada / 1-3 días / días a semanas</td></tr>
+  <tr><td><strong>Fundamentos técnicos</strong></td><td>Hasta 3 puntos breves</td><td><strong>Obligatorios por normativa.</strong> Necesitan lugar asegurado, no un espacio que se sacrifique cuando el resto crece</td></tr>
+  <tr><td><strong>Analista que firma</strong></td><td>Nombre de la persona</td><td><strong>Obligatorio por normativa</strong>: la recomendación la emite una persona identificable, no «el equipo»</td></tr>
+  <tr><td><strong>Apoyo automatizado</strong></td><td>Texto fijo</td><td><strong>Obligatorio por normativa</strong> cuando el análisis se apoya en procesos automatizados, como es nuestro caso. Puede ser una línea en el pie</td></tr>
+  <tr><td><strong>Conflictos de interés</strong></td><td>Texto fijo</td><td><strong>Obligatorio por normativa</strong> en recomendaciones de distribución amplia. Se los entregamos redactado</td></tr>
+  <tr><td>Aviso de riesgo</td><td>Texto fijo</td><td></td></tr>
+  <tr><td>Vía de consulta</td><td>Contacto del analista</td><td>Cierre habitual de nuestras piezas; el número de operación va junto a esto</td></tr>
+  <tr><td><strong>Naturaleza del contenido</strong></td><td>Ej. «Asesoría de inversión»</td><td><strong>Declaración visible</strong>, no al pie en letra chica. Debe quedar clara y específica en toda pieza y en todo canal</td></tr>
+</table>
+
+<p>Dos bloques donde más nos interesa el criterio de ustedes:</p>
+
+<ul>
+  <li><strong>Temporalidad y horizonte.</strong> Un cliente tiene que entender antes de entrar si la operación le compromete dos horas o tres semanas. En texto corrido eso se pierde; en una imagen bien jerarquizada, no.</li>
+  <li><strong>Monto, porcentaje y capital de referencia.</strong> Van juntos o no van.</li>
+</ul>
+
+<h3>11.2 Resultado de la operación</h3>
+
+<p>Comparte casi todos los datos de la oportunidad de inversión —incluidos el número de operación y el capital de referencia, y acá el número pesa todavía más: es la pieza que afirma un resultado, así que el comprobante de que la orden existió es parte del argumento— y agrega:</p>
+
+<table>
+  <tr><th style="width:28%">Dato</th><th style="width:24%">Ejemplo</th><th>Nota</th></tr>
+  <tr><td>Precio de cierre</td><td>162.615</td><td>Decimales del activo</td></tr>
+  <tr><td>Resultado</td><td>+$150.000 &nbsp;(+3,0%)</td><td>Monto, porcentaje y capital de referencia, juntos</td></tr>
+  <tr><td>Recorrido capturado</td><td>0,829 yenes</td><td>La distancia entre precios va en la moneda del par; los pesos son solo para el resultado. Mezclarlas confunde, y ya nos costó una corrección pública</td></tr>
+  <tr><td>Tiempo hasta el cierre</td><td>Menos de 14 horas</td><td></td></tr>
+  <tr><td>Si el stop se activó o no</td><td></td><td></td></tr>
+  <tr><td>Gráfico del recorrido</td><td></td><td>Contenedor con su estilo; el trazado lo completamos nosotros</td></tr>
+  <tr><td><strong>Resultados pasados</strong></td><td>Texto fijo</td><td>Advertencia de que no garantizan resultados futuros. En esta pieza es ineludible</td></tr>
+</table>
+
+<p><strong>Dos variantes del mismo diseño, con el mismo cuidado:</strong></p>
+
+<table>
+  <tr><th style="width:28%">Variante</th><th style="width:22%">Cuándo</th><th>Requisito</th></tr>
+  <tr><td>Operación en ganancia</td><td>El objetivo se alcanzó</td><td></td></tr>
+  <tr><td><strong>Operación en pérdida</strong></td><td>El stop se activó</td><td><strong>Mismo peso visual y misma prolijidad que la ganadora.</strong> Si esta variante se ve rota, en la práctica no se publica, y publicar solo las ganadoras vuelve engañoso al conjunto aunque cada pieza sea verdadera</td></tr>
+</table>
+
+<p><strong>El nombre y la estructura de esta pieza los definen ustedes; los requisitos normativos se los entregamos resueltos.</strong> Aportamos qué se operó, a qué precio, con qué resultado y en cuánto tiempo. Como toda pieza, pasa por la validación del Área de Estudios y Post-Venta antes de publicarse; en esta conviene además involucrarnos desde el diseño, porque post-venta es quien recibe las preguntas que genera y detecta en dos minutos qué frase se malinterpreta.</p>
+
+<h3>11.3 Presentaciones e informes</h3>
+
+<p>Esta plantilla es de otra naturaleza que las anteriores: no es una pieza única, es un <strong>documento de varias páginas</strong>. Para el área tiene el mismo peso que la de oportunidades de inversión, porque es la que nos permitiría comunicar visualmente el trabajo diario.</p>
+
+<p><strong>El uso que más nos importa</strong> son la <strong>apertura de mercado</strong> —el análisis con que abrimos la jornada, con los niveles y el sesgo de cada activo— y las <strong>actualizaciones</strong> durante el día, cuando el precio reacciona a esos niveles o aparece un dato que cambia el escenario. Hoy todo eso va en texto, y ahí se pierde justamente lo que el cliente necesita captar rápido: dónde están los niveles, hacia dónde apunta el sesgo y qué cambió respecto de la mañana. Es información espacial y comparativa, así que en imagen se entiende mucho mejor.</p>
+
+<p>La misma plantilla serviría además para informes de mercado, análisis de activos y presentaciones a clientes, así que una vez armada rinde en muchos frentes.</p>
+
+<p>Lo que necesitamos poder componer:</p>
+
+<table>
+  <tr><th style="width:28%">Elemento</th><th>Nota</th></tr>
+  <tr><td>Portada</td><td>Título, subtítulo, fecha, autor y área que emite</td></tr>
+  <tr><td>Jerarquía de títulos</td><td>Al menos dos niveles. Un informe puede tener quince páginas y necesita poder recorrerse con la vista</td></tr>
+  <tr><td>Cuerpo de texto</td><td>Párrafos largos: acá el criterio de legibilidad para lectura sostenida pesa más que en una pieza de redes</td></tr>
+  <tr><td>Cifras dentro del texto</td><td>Mismo criterio de la sección 4: tipografía de datos y <code>tabular-nums</code></td></tr>
+  <tr><td>Tablas</td><td>De largo variable, así que conviene que aguanten desde tres hasta veinte filas</td></tr>
+  <tr><td>Espacio para gráficos</td><td>Contenedor con su estilo; el contenido lo completamos nosotros</td></tr>
+  <tr><td>Bloques destacados</td><td>Para conclusiones o advertencias que deban resaltarse del cuerpo</td></tr>
+  <tr><td>Encabezado y pie recurrentes</td><td>Con marca y numeración de página</td></tr>
+  <tr><td>Espacio para advertencias</td><td>Las declaraciones normativas de la sección 7 también aplican acá</td></tr>
+</table>
+
+<div class="destacado">
+  <p><strong>Una duda genuina para ustedes.</strong> No tenemos criterio para decidir si conviene una plantilla en formato documento (tipo A4, para leer y enviar), una de presentación (16:9, para proyectar), o las dos. Nos gustaría que esa decisión la tomen desde el lado de la marca. Lo que sí sabemos es que el contenido es el mismo y que preferiríamos no mantener dos diseños que se desfasen entre sí.</p>
+</div>
+
+<p>Dos particularidades propias del formato multipágina que conviene tener en cuenta, y que en las piezas de una sola imagen no aparecen:</p>
+
+<ul>
+  <li><strong>El contenido decide dónde caen los cortes de página.</strong> Como el largo del texto varía, conviene evitar que un título quede solo al final de una página o que una tabla se corte por la mitad.</li>
+  <li><strong>La numeración y el pie tienen que repetirse solos</strong> en todas las páginas, sin que haya que acomodarlos manualmente en cada documento.</li>
+</ul>
+
+<div class="pie">
+  Área de Estudios y Post-Venta · Grupo de Análisis de Mercado · GI &nbsp;—&nbsp; Anexo al correo «Plantillas de marca para Estudios y Post-Venta» &nbsp;—&nbsp; Julio de 2026
+</div>
+
+</body>
+</html>

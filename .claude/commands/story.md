@@ -3,8 +3,8 @@ Genera una Story de marca GI (imagen 1920×1080, formato horizontal 16:9) combin
 ## Argumentos
 $ARGUMENTS — formato esperado: `[tipo] [ejecutivo?]`
 
-- `[tipo]`: **soportados en este Change: `alerta`, `quote`, `breaking`, `encuesta`, `edu`,
-  `flash`, `postventa`**. Las demás plantillas del canvas (Market Update, Indicador Macro, Trading Idea,
+- `[tipo]`: **soportados en este Change: `alerta`, `dato_macro`, `recomendacion`, `quote`,
+  `breaking`, `encuesta`, `edu`, `flash`, `postventa`**. Las demás plantillas del canvas (Market Update, Indicador Macro, Trading Idea,
   Calendario, Semanal, Carrusel) llegan con los issues #111-#115 — todavía no existen como `[tipo]`
   de este comando.
 - `[ejecutivo]` (opcional): `/story` **no soporta el flag ejecutivo** (ver PASO 0).
@@ -30,18 +30,21 @@ o los toma del motor en frío — ver bloque "Ruta `postventa`" más abajo.
 
 ## PASO 0 — Validar `[tipo]` y el flag `ejecutivo`
 
-1. Si `$ARGUMENTS` viene vacío o `[tipo]` no es `alerta`, `quote`, `breaking`, `encuesta`, `edu`,
-   `flash` ni `postventa` (CB-1):
+1. Si `$ARGUMENTS` viene vacío o `[tipo]` no es uno de los nueve soportados (CB-1):
    ```
-   📖 Tipos de Story disponibles hoy: alerta, quote, breaking, encuesta, edu, flash, postventa
+   📖 Tipos de Story disponibles hoy:
+      dato_macro     un dato económico que ya salió (pieza 1 de la agenda diaria)
+      alerta         niveles del día de un activo
+      recomendacion  una operación sugerida, con firma acreditada
+      quote · breaking · encuesta · edu · flash · postventa
    (Las demás plantillas del canvas — Market Update, Indicador Macro, Trading Idea,
    Calendario, Semanal, Carrusel — llegan con los issues #111-#115.)
 
-   ¿Generamos la Story de tipo "alerta", "quote", "breaking", "encuesta", "edu", "flash"
-   o "postventa"?
+   ¿Cuál generamos?
    ```
-   No continuar hasta que el director confirme `alerta`, `quote`, `breaking`, `encuesta`, `edu`,
-   `flash` o `postventa`. Nunca asumir un tipo por defecto. Si el tipo confirmado es `quote`, saltar directamente
+   No continuar hasta que el director confirme uno de los nueve. Nunca asumir un tipo por
+   defecto. Si el tipo confirmado es `dato_macro`, saltar al bloque "Ruta `dato_macro`"; si es
+   `recomendacion`, saltar al bloque "Ruta `recomendacion`"; si es `quote`, saltar directamente
    al bloque "Ruta `quote`"; si es `breaking`, saltar al bloque "Ruta `breaking`"; si es `encuesta`,
    saltar al bloque "Ruta `encuesta`"; si es `edu`, saltar al bloque "Ruta `edu`"; si es `flash`,
    saltar al bloque "Ruta `flash`"; si es `postventa`, saltar al bloque "Ruta `postventa`" (los
@@ -53,6 +56,69 @@ o los toma del motor en frío — ver bloque "Ruta `postventa`" más abajo.
    no un mensaje de cliente reenviable). Continúo generando la Story normal.
    ```
    Avisar y **continuar** con el flujo normal (no detener, no generar guion).
+
+---
+
+## Ruta `dato_macro` — un dato económico que ya publicó
+
+Es la **pieza 1 de la agenda diaria** (orden canónico del issue #43: el dato del calendario va
+primero, mientras se cargan los niveles en MT5). Acompaña al mensaje de `/dato_macro` en su **Modo
+resultado**; no cubre el modo anticipación, porque la pieza se organiza alrededor del veredicto y un
+dato que todavía no sale no tiene veredicto.
+
+**No busca el evento por su cuenta.** Reusa el dato que `/dato_macro` ya desarrolló y aprobó ese día.
+Si `/dato_macro` no se corrió, pedir al director el indicador y sus cifras; nunca inventarlas ni
+salir a buscarlas acá.
+
+1. Recolectar del mensaje ya aprobado (o preguntar):
+   - `indicador` en español con la sigla entre paréntesis una sola vez, y `periodo`.
+   - `actual`, `esperado` y `anterior`. **`anterior` puede ir como cadena vacía** si el indicador no
+     publica comparable: el bloque desaparece entero, rótulo incluido.
+   - `veredicto` (`Mejor` / `En línea` / `Peor`) y `veredicto_slug` (`mejor` / `en-linea` / `peor`).
+2. Escribir `titular` y `significado` con el criterio editorial de `/dato_macro`: voz novata, regla
+   de los 30 segundos, sin siglas sin explicar. El diccionario **no va en la imagen** — va en el
+   mensaje, donde hay espacio.
+3. Armar `activos`: 3 filas con `nombre`, `direccion` (`sube` / `baja` / `lateral`), `etiqueta` y
+   `porque` en una línea. Incluir cuando corresponda un activo **sin efecto**: decirle al cliente qué
+   *no* lo afecta vale tanto como decirle qué sí.
+
+La **temporalidad del impacto no va en esta Story**: desbordaba el lienzo vertical y la etiqueta
+sirve poco sin su explicación. Sigue siendo obligatoria en el mensaje de `/dato_macro` (ambos modos),
+que es donde el cliente la lee acompañada.
+
+⚠️ `veredicto_slug` es frente al **consenso**, no una dirección de mercado. Un dato "mejor" puede ser
+bajista para un activo — y esa distinción es lo que la pieza enseña, así que cada fila de `activos`
+lleva su propia dirección.
+
+Payload → `templates/stories/dato_macro.html`. Seguir con PASO 6 (aprobación) y PASO 7 (render).
+`ruta_story.ps1` sin activo protagonista: la pieza es del dato, no de un activo.
+
+---
+
+## Ruta `recomendacion` — una operación sugerida, con firma acreditada
+
+Es la **única plantilla que lleva firma acreditada**, y esa es su razón de existir: una recomendación
+induce una operación, así que tiene que constar quién la respalda.
+
+⚠️ **Rige el límite de 3 señales por semana.** Antes de recolectar nada, verificar
+`data/historial_senales.json` igual que `/señal`. Que la pieza sea una imagen no la saca del límite.
+Si ya hay 3 esta semana, avisar y detener.
+
+1. Datos de la operación, del motor o de la posición real del terminal:
+   - `rotulo_activo`, `sesgo` (`Compra` / `Venta`), `entrada`, `volumen`, `temporalidad`.
+   - `tp` y `sl` con los decimales del campo `digits` de `config/activos.json`.
+   - `tp_clp` y `sl_clp`: **el resultado traducido a pesos**, obligatorio. Se calcula con
+     `order_calc_profit` — el `tick_value` de MT5 da mal el valor por punto en CFDs de acciones.
+     Cotización y resultado no se mezclan: la distancia entre niveles va en la moneda del par.
+   - `costo_mantencion`: swap acumulado si la operación es de varios días. **Cadena vacía** en
+     intradía y el bloque desaparece. Omitirlo cuando existe es la omisión que vuelve deshonesta a
+     una pieza que solo muestra la ganancia.
+2. `bullets`: máximo 3, criterio de `/señal`. **El último dice el riesgo**, no la tesis.
+3. `firma_nombre`, `firma_credencial` y `firma_area` del analista acreditado que respalda la pieza.
+   Nunca la firma de alguien que no revisó el contenido.
+
+Payload → `templates/stories/recomendacion.html`. Seguir con PASO 6 y PASO 7, y registrar la señal
+en `data/historial_senales.json` al aprobar.
 
 ---
 
@@ -640,9 +706,14 @@ direccional sí, dramatización no (ver "Registro y tono" de `CLAUDE.md`).
 Límites visuales del layout: `titular` ≤ ~70 caracteres, `parrafo` ≤ ~280 caracteres. Ajusta la
 redacción antes de pasar al preview.
 
-Decide `tag_riesgo` según contexto:
-- Ruptura de nivel o evento de alto impacto → `RIESGO ALTO`.
-- Aproximación al nivel sin ruptura confirmada → `RIESGO MEDIO`.
+La píldora de la tarjeta muestra el **sesgo**, no un tag de riesgo. Se alimenta del campo `sesgo`
+del payload (`Alcista`/`Bajista`/`Lateral`) y el snapshot le pone el color semántico y la flecha
+(▲ verde / ▼ rojo / → gris). No hay que decidir ni redactar nada extra para ese espacio.
+
+> El antiguo `tag_riesgo` (`RIESGO ALTO`/`RIESGO MEDIO`) quedó **fuera del contrato** por decisión
+> del director: era una etiqueta sin criterio visible para el cliente, ocupando el lugar más
+> valioso de la tarjeta. Si un payload heredado todavía trae la clave, el motor la ignora en
+> silencio (clave no referenciada por ningún token).
 
 ---
 
@@ -678,7 +749,6 @@ de Chile (regla canónica de `CLAUDE.md`, nunca `WebSearch` para la hora):
   "titular": "[titular ≤70 car.]",
   "parrafo": "[párrafo ≤280 car.]",
   "rotulo_activo": "[NOMBRE · TICKER]",
-  "tag_riesgo": "RIESGO ALTO | RIESGO MEDIO",
   "precio_actual": "[precio con digits]",
   "variacion": { "pct": "[valor]", "direccion": "alcista|bajista" },
   "soporte": "[soporte con digits]",
@@ -693,6 +763,11 @@ de Chile (regla canónica de `CLAUDE.md`, nunca `WebSearch` para la hora):
 
 Si el director omitió variación/vol en el PASO 2, **omite esas claves por completo** del JSON
 (no las dejes en `null` ni vacías) — así el template no deja hueco visual (CB-4).
+
+⚠️ **`variacion.direccion` y `sesgo` deben ser coherentes.** El color de la píldora sale de
+`sesgo_slug`, y el motor lo deriva de `variacion.direccion` **con prioridad** sobre `sesgo`. Si se
+envía una variación `alcista` junto a un sesgo `Lateral`, la píldora dirá "LATERAL" pintada de
+verde. Cuando ambos campos viajen, que apunten en la misma dirección.
 
 `fuente`: si la narrativa nace de una noticia, usa la fuente de esa noticia (ej. `COMEX`,
 `INVESTING`); si es lectura técnica, usa `MT5 · GRUPO INTELIGENCIA`.
@@ -710,7 +785,7 @@ Activo: [nombre] ([ticker_mt5])
 Titular: [titular]
 Párrafo: [parrafo]
 Soporte: [soporte] · Resistencia: [resistencia]
-Riesgo: [tag_riesgo]
+Sesgo: [sesgo]
 Chart embebido: [sí/no]
 ━━━━━━━━━━━━━━━━━━━
 ¿Apruebas esta Story? ¿Generar y guardar el PNG final?

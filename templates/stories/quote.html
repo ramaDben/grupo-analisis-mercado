@@ -11,6 +11,7 @@ NO cambiar nombres de tokens sin actualizar tests/test_story_render.py.
 <head>
 <meta charset="utf-8">
 <title>Quote — Story GI</title>
+<link rel="stylesheet" href="marca.css">
 <style>
   @font-face {
     font-family: "Syne";
@@ -48,11 +49,11 @@ NO cambiar nombres de tokens sin actualizar tests/test_story_render.py.
     padding: 0;
     width: 1920px;
     height: 1080px;
-    background: #0D0D1A;
+    background: var(--fondo);
     background-image:
-      radial-gradient(90% 120% at 0% 20%, #2A1220 0%, #0D0D1A 55%),
-      linear-gradient(180deg, #0D0D1A 0%, #120A12 60%, #0D0D1A 100%);
-    color: #F5F3F7;
+      radial-gradient(90% 120% at 0% 20%, var(--fondo-baja) 0%, var(--fondo) 55%),
+      linear-gradient(180deg, var(--fondo) 0%, var(--fondo-alt) 60%, var(--fondo) 100%);
+    color: var(--texto-1);
     font-family: "DM Sans", sans-serif;
     overflow: hidden;
   }
@@ -79,20 +80,20 @@ NO cambiar nombres de tokens sin actualizar tests/test_story_render.py.
   }
 
   .quote-texto {
-    font-family: "Syne", sans-serif;
-    font-weight: 800;
+    font-family: "DM Sans", sans-serif;
+    font-weight: 700;
     font-size: 56px;
     line-height: 1.3;
-    color: #FFFFFF;
+    color: var(--blanco);
     margin: 0;
     max-width: 1400px;
   }
 
   .quote-texto::before,
   .quote-texto::after {
-    font-family: "Syne", sans-serif;
-    font-weight: 800;
-    color: #E84040;
+    font-family: "DM Sans", sans-serif;
+    font-weight: 700;
+    color: var(--baja);
   }
 
   .quote-texto::before {
@@ -112,7 +113,7 @@ NO cambiar nombres de tokens sin actualizar tests/test_story_render.py.
     font-weight: 600;
     font-size: 26px;
     letter-spacing: 0.03em;
-    color: #F5F3F7;
+    color: var(--texto-1);
     margin: 0;
   }
 
@@ -120,7 +121,7 @@ NO cambiar nombres de tokens sin actualizar tests/test_story_render.py.
     font-family: "DM Sans", sans-serif;
     font-weight: 400;
     font-size: 20px;
-    color: #A9A5B4;
+    color: var(--texto-2);
     margin: 8px 0 0;
   }
 
@@ -142,17 +143,17 @@ NO cambiar nombres de tokens sin actualizar tests/test_story_render.py.
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
     font-size: 20px;
-    color: #F5F3F7;
+    color: var(--texto-1);
   }
 
   .footer-disclaimer {
     font-family: "DM Sans", sans-serif;
     font-weight: 400;
     font-size: 13px;
-    /* #A9A5B4 (gris secundario del kit). El #6E6A7A anterior no alcanzaba el
+    /* var(--texto-2) (gris secundario del kit). El var(--texto-3) anterior no alcanzaba el
        minimo WCAG AA de 4,5:1 sobre el fondo del footer -- y este texto es el
        aviso de riesgo por apalancamiento, tiene que poder leerse. */
-    color: #A9A5B4;
+    color: var(--texto-2);
     line-height: 1.35;
   }
 </style>

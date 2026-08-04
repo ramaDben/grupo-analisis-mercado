@@ -1,0 +1,131 @@
+/*
+  Línea de marca de las Stories GI — fuente única de la paleta.
+
+  Los ocho snapshots de `templates/stories/` referencian estos tokens con
+  `var(--…)` en vez de escribir el hex. Cambiar la línea visual de todas las
+  piezas es editar este archivo; antes eran ~19 valores repetidos 200 veces
+  entre ocho archivos.
+
+  Lo carga cada snapshot con <link rel="stylesheet" href="marca.css">. Funciona
+  con ruta relativa porque `story_render.py` escribe el HTML resuelto DENTRO de
+  `templates/stories/` y lo navega con `file://` — el mismo mecanismo por el que
+  resuelven las fuentes de `fonts/`. El renderer no se entera: cero cambios en su
+  contrato de tokens `{{campo}}`.
+
+  ── Los nombres son ROLES, no colores ──────────────────────────────────────────
+  `--acento` y no `--teal`, `--sube` y no `--verde`. Un token llamado por su
+  color miente en cuanto se cambia la paleta, y ahí es donde se rompen las cosas:
+  el día que el acento pase a azul, un `--verde: #3E91AF` deja el código
+  ilegible.
+
+  ── La distinción que no se puede colapsar ─────────────────────────────────────
+  El acento de marca y los colores de dirección son roles DISTINTOS que hoy
+  conviven:
+
+    · `--acento`  es estructura: kickers, filetes, etiquetas, bordes. Es el que
+      cambia cuando cambia la marca. Ya estaba declarado como "acento
+      ESTRUCTURAL" en flash.html y postventa.html.
+
+    · `--sube` / `--baja` son SEMÁNTICA de mercado. Verde arriba y rojo abajo es
+      una convención que el cliente lee sin pensar, no una decisión de marca. Si
+      se repintan con el color corporativo, la pieza deja de leerse como pieza de
+      mercado. No se tocan al reskinear.
+
+  Verificar que no vuelvan a aparecer hex sueltos:
+      uv run python scripts/marca_tokens.py --check
+*/
+
+:root {
+  /* ── Fondos ─────────────────────────────────────────────────────────────── */
+  --fondo:          #000000;  /* negro de marca, tomado de LOGO-Fondo-Negro */
+  --fondo-acento:   #0E2420;  /* tinte del degradado, derivado del acento */
+  --fondo-alt:      #0A0A0F;  /* variante del fondo para bloques apilados */
+  --fondo-sube:     #123A2A;  /* relleno tenue en bloques alcistas */
+  --fondo-baja:     #2A1220;  /* relleno tenue en bloques bajistas */
+
+  /* ── Acento estructural — el verde de la marca ──────────────────────────── */
+  /* El logo es un degradado que va del azul #3C8CAA al verde #50C0A8. Se toma
+     el extremo VERDE, por decisión del director: el azul convivía mal con el
+     rojo del cromo y el conjunto se leía alarmante. Es además el tono con el
+     que la marca ya publica hoy, así que las piezas se ven continuas con lo
+     que el equipo comercial venía enviando.
+     Valor medido sobre las tres versiones del logo, no elegido a ojo. */
+  --acento:         #50C0A8;
+  --acento-azul:    #3C8CAA;  /* el otro extremo del degradado, por si se necesita */
+  --acento-oscuro:  #143028;  /* par oscuro del acento, para degradados */
+
+  /* ── Dirección de mercado — semántica, NO se reskinea ───────────────────── */
+  --sube:           #00DC82;
+  --sube-suave:     #53C1AB;
+  --baja:           #E84040;
+  --baja-suave:     #F5A3A3;
+  --aviso:          #FFB020;
+
+  /* ── Tipografía ─────────────────────────────────────────────────────────── */
+  --texto-1:        #F5F3F7;  /* principal */
+  --texto-2:        #A9A5B4;  /* secundario */
+  --texto-3:        #6E6A7A;  /* tenue: pies, disclaimers */
+  --texto-borde:    #C9C5D4;  /* filetes y separadores sobre fondo oscuro */
+  --texto-gris:     #8E8A9C;  /* gris intermedio */
+  --blanco:         #FFFFFF;
+
+  /* ── Filete de la pieza ─────────────────────────────────────────────────── */
+  --filete:         var(--acento);
+  --filete-ancho:   4px;
+}
+
+/*
+  Color por dirección.
+
+  Antes, el cromo de `alerta` estaba fijo en el rojo de urgencia: chip, borde de
+  la tarjeta y rótulo de soporte salían rojos aunque la píldora dijera ALCISTA.
+  La pieza se contradecía a sí misma, y el color es lo primero que el cliente
+  lee — antes que el texto.
+
+  Estos tres tokens cascadean desde la clase que el snapshot ya pone en <body>
+  (`sesgo-{{sesgo_slug}}`), así que una plantilla adopta el color por dirección
+  cambiando `var(--baja)` por `var(--direccion)` en su cromo. Sin tocar el
+  renderer ni el contrato del payload.
+
+  Lo que NO se toca al hacerlo: las etiquetas de dirección propiamente tales
+  (`.tag-sesgo--alcista`, la variación). Ahí el verde y el rojo SON el dato, no
+  el cromo.
+
+  El neutro es el acento de marca y no un gris: una pieza sin dirección definida
+  debe verse de la marca, no apagada.
+*/
+body {
+  --direccion:        var(--acento);
+  --direccion-suave:  var(--texto-borde);
+  --fondo-direccion:  var(--fondo-acento);
+}
+body.sesgo-alcista, body.sesgo-compra {
+  --direccion:        var(--sube);
+  --direccion-suave:  var(--sube-suave);
+  --fondo-direccion:  var(--fondo-sube);
+}
+body.sesgo-bajista, body.sesgo-venta {
+  --direccion:        var(--baja);
+  --direccion-suave:  var(--baja-suave);
+  --fondo-direccion:  var(--fondo-baja);
+}
+
+/*
+  Filete de marca en el borde de toda pieza.
+
+  Existe por una razón de canal, no decorativa: con `--fondo: #000000`, una pieza
+  abierta en WhatsApp con tema oscuro se funde con el fondo del chat y pierde sus
+  límites — el cliente no ve dónde empieza y dónde termina la imagen. El filete
+  le devuelve el borde sin renunciar al negro de marca.
+
+  `box-shadow: inset` y NO `border`: no participa del layout, así que no desplaza
+  ni un píxel de las ocho plantillas ya calibradas. Un `border` habría corrido
+  todo hacia adentro y obligado a recalibrar cada una.
+
+  Va en `.story`, el contenedor raíz que comparten los ocho snapshots. Como
+  marca.css se carga ANTES del <style> de cada plantilla, cualquiera puede
+  anularlo si alguna vez necesita un borde propio.
+*/
+.story {
+  box-shadow: inset 0 0 0 var(--filete-ancho) var(--filete);
+}
