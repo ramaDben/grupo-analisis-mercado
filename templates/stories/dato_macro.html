@@ -464,7 +464,17 @@ bajista para un activo, y esa distinción es justamente lo que la pieza enseña.
     .periodo         { font-size: 24px; }
     .campo-label     { font-size: 19px; }
     .actual-valor    { font-size: 66px; }
-    .grafico { min-height: 300px; }
+    /* 215 y no 300: en vertical las dos columnas se apilan, así que cada píxel
+       que toma el gráfico se lo quita a la lista de impacto por activo — y esa
+       lista es la que el cliente necesita leer entera. Con 300 la tercera fila
+       se montaba 90 px sobre el footer. El objetivo no es "no pisar el footer"
+       —eso deja la pieza al ras y el próximo payload con una línea más vuelve a
+       romperla— sino que la lista cierre dentro de su propia columna.
+       Va en `flex-basis` y no en `height`/`min-height` por dos motivos: el SVG
+       trae altura intrínseca (245 px), así que bajar solo el mínimo no recorta
+       nada; y la regla base declara `flex: 1`, que fija `flex-basis: 0%` y deja
+       el alto en manos del contenido, ignorando cualquier `height`. */
+    .grafico { flex: 0 0 215px; min-height: 0; }
     .sello-datos { font-size: 19px; padding: 9px 22px; }
 
     .contraste-valor { font-size: 32px; }
@@ -472,9 +482,10 @@ bajista para un activo, y esa distinción es justamente lo que la pieza enseña.
     .anterior::before { font-size: 19px; }
 
     .bloque-titulo, .impacto-titulo { font-size: 27px; }
-    .significado { font-size: 31px; }
+    .significado { font-size: 29px; }
+    .activos { gap: 16px; }
     .activo-etiqueta { font-size: 24px; min-width: 140px; }
-    .activo-texto { font-size: 26px; }
+    .activo-texto { font-size: 24px; }
 
     .footer-marca { font-size: 25px; }
     .footer-logo  { height: 86px; }
