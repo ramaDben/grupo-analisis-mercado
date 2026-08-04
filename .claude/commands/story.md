@@ -62,9 +62,12 @@ o los toma del motor en frío — ver bloque "Ruta `postventa`" más abajo.
 ## Ruta `dato_macro` — un dato económico que ya publicó
 
 Es la **pieza 1 de la agenda diaria** (orden canónico del issue #43: el dato del calendario va
-primero, mientras se cargan los niveles en MT5). Acompaña al mensaje de `/dato_macro` en su **Modo
-resultado**; no cubre el modo anticipación, porque la pieza se organiza alrededor del veredicto y un
-dato que todavía no sale no tiene veredicto.
+primero, mientras se cargan los niveles en MT5). En el **Modo resultado** de `/dato_macro` esta
+Story **es** el entregable al grupo, y el mensaje de texto quedó reducido a su pie de foto: el
+desarrollo largo (sub-lecturas, "qué significa", impacto por activo) vive acá dentro y no se manda
+además como texto. No cubre el modo anticipación, porque la pieza se organiza alrededor del
+veredicto y un dato que todavía no sale no tiene veredicto — ahí el mensaje completo sigue siendo
+el entregable.
 
 **No busca el evento por su cuenta.** Reusa el dato que `/dato_macro` ya desarrolló y aprobó ese día.
 Si `/dato_macro` no se corrió, pedir al director el indicador y sus cifras; nunca inventarlas ni
@@ -76,15 +79,18 @@ salir a buscarlas acá.
      publica comparable: el bloque desaparece entero, rótulo incluido.
    - `veredicto` (`Mejor` / `En línea` / `Peor`) y `veredicto_slug` (`mejor` / `en-linea` / `peor`).
 2. Escribir `titular` y `significado` con el criterio editorial de `/dato_macro`: voz novata, regla
-   de los 30 segundos, sin siglas sin explicar. El diccionario **no va en la imagen** — va en el
-   mensaje, donde hay espacio.
+   de los 30 segundos, sin siglas sin explicar. El bloque "🔤 Diccionario rápido" **no va en la
+   imagen** y tampoco va ya en el mensaje, que quedó reducido al pie: cada sigla se explica **en
+   línea**, dentro de la frase donde aparece, una sola vez ("vacantes de empleo (JOLTS)"). Si el
+   titular y el `significado` necesitan más de dos siglas, están mal redactados.
 3. Armar `activos`: 3 filas con `nombre`, `direccion` (`sube` / `baja` / `lateral`), `etiqueta` y
    `porque` en una línea. Incluir cuando corresponda un activo **sin efecto**: decirle al cliente qué
    *no* lo afecta vale tanto como decirle qué sí.
 
 La **temporalidad del impacto no va en esta Story**: desbordaba el lienzo vertical y la etiqueta
-sirve poco sin su explicación. Sigue siendo obligatoria en el mensaje de `/dato_macro` (ambos modos),
-que es donde el cliente la lee acompañada.
+sirve poco sin su explicación. Sigue siendo obligatoria en el mensaje de `/dato_macro` (ambos
+modos) — en el Modo resultado, dentro del pie de esta imagen, que es la única pieza del desarrollo
+largo que sobrevive en el texto.
 
 ⚠️ `veredicto_slug` es frente al **consenso**, no una dirección de mercado. Un dato "mejor" puede ser
 bajista para un activo — y esa distinción es lo que la pieza enseña, así que cada fila de `activos`
