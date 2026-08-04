@@ -32,7 +32,6 @@
   }
  ],
  "temporalidad": "Swing de jornada (1-3 días)",
- "fuente": "Banco Central de Chile",
  "recorrido": {
   "barras": [
    {
@@ -84,5 +83,6 @@
     "rol": "ESPERADO"
    }
   ]
- }
+ },
+ "sello_datos": "Serie oficial · Banco Central de Chile"
 }

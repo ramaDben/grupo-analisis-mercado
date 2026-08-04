@@ -14,7 +14,6 @@
  "rotulo_grafico": "EUR/USD · CIERRES 1H · ÚLTIMAS 60 VELAS",
  "cierre_nota": "El precio sigue sobre las medias de 50 y 100 períodos. Mientras respete 1,14985 la operación se mantiene con la tendencia a favor.",
  "fecha": "3 AGO 2026 · 14:10 CLT",
- "fuente": "MetaTrader 5",
  "sesgo": "Compra",
  "recorrido": {
   "serie": [
@@ -81,17 +80,32 @@
   ],
   "marcadores": [
    {
-    "indice": 34,
-    "precio": 1.15038,
-    "clase": "origen",
-    "rol": "ENTRADA"
-   },
-   {
     "indice": 59,
     "precio": 1.16927,
     "clase": "actual",
     "rol": "AHORA"
    }
+  ],
+  "niveles": [
+   {
+    "precio": 1.1635,
+    "clase": "meta",
+    "etiqueta": "1,16350",
+    "rol": "OBJETIVO"
+   },
+   {
+    "precio": 1.15038,
+    "clase": "entrada",
+    "etiqueta": "1,15038",
+    "rol": "ENTRADA"
+   },
+   {
+    "precio": 1.14479,
+    "clase": "stop",
+    "etiqueta": "1,14479",
+    "rol": "STOP"
+   }
   ]
- }
+ },
+ "sello_datos": "Datos reales · MetaTrader 5 · 3 AGO 14:10"
 }

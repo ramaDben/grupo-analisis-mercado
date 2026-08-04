@@ -44,12 +44,24 @@ from typing import Any
 # El viewBox va al ratio del contenedor real (~1.10 en vertical, ~1.16 en horizontal).
 # Un viewBox más ancho que su caja hace que `preserveAspectRatio` escale por el ancho
 # y deje bandas vacías arriba y abajo: espacio que no comunica nada.
-VB_W, VB_H = 440, 400
-# `PLOT_X0` deja a la izquierda la columna de etiquetas de precio.
-PLOT_X0, PLOT_X1 = 134, 424
-PLOT_Y0, PLOT_Y1 = 30, 370
-LABEL_X = 118          # etiquetas ancladas a la derecha, antes de la zona de trazado
-GUIA_X = 126           # donde arranca la guía punteada hacia el marcador
+# Dos lienzos, porque el gráfico de línea vive en cajas de formas muy distintas:
+# en `operacion` ocupa una columna alta y angosta, y en `alerta` y `recomendacion`
+# una franja apaisada. `preserveAspectRatio` encoge el SVG hasta que cabe, así que
+# un lienzo alto dentro de una caja ancha se convierte en una estampilla al
+# centro — pasó en el primer render de las dos plantillas nuevas.
+# El payload elige con `recorrido.lienzo`; por defecto, el alto.
+LIENZOS = {
+    "alto":  dict(vb_w=440, vb_h=400, x0=134, x1=424, y0=30, y1=370, label_x=118, guia_x=126),
+    # 900x230 y no 900x300: la franja bajo la tarjeta mide ~950x210, y con un
+    # lienzo 3:1 el SVG se encogia a media columna dejando bandas laterales.
+    "ancho": dict(vb_w=900, vb_h=230, x0=190, x1=880, y0=18, y1=205, label_x=174, guia_x=182),
+}
+_L = LIENZOS["alto"]
+VB_W, VB_H = _L["vb_w"], _L["vb_h"]
+PLOT_X0, PLOT_X1 = _L["x0"], _L["x1"]
+PLOT_Y0, PLOT_Y1 = _L["y0"], _L["y1"]
+LABEL_X = _L["label_x"]
+GUIA_X = _L["guia_x"]
 MARGEN_ESCALA = 0.05   # aire vertical sobre el máximo y bajo el mínimo de la serie
 
 
@@ -116,31 +128,41 @@ def construir_svg(
     serie: list[float],
     marcadores: list[dict[str, Any]],
     niveles: list[dict[str, Any]] | None = None,
+    lienzo: str = "alto",
 ) -> str:
     """Arma el SVG del recorrido: área, línea, guías, puntos y etiquetas.
 
-    La X de la serie es equiespaciada entre `PLOT_X0` y `PLOT_X1`; la X de cada
+    La X de la serie es equiespaciada entre `x_ini` y `x_fin`; la X de cada
     marcador sale de su `indice` en la serie y su Y del `precio` propio (que puede
     diferir del punto de la serie: el hito real de la operación manda sobre el
     muestreo del gráfico).
     """
     niveles = niveles or []
+    g = LIENZOS.get(lienzo)
+    if g is None:
+        raise GraficoError(
+            f"lienzo '{lienzo}' desconocido; usa {sorted(LIENZOS)}."
+        )
+    vb_w, vb_h = g["vb_w"], g["vb_h"]
+    x_ini, x_fin, y_ini, y_fin = g["x0"], g["x1"], g["y0"], g["y1"]
+    label_x, guia_x = g["label_x"], g["guia_x"]
+
     p_max, p_min = resolver_escala(serie, [float(x["precio"]) for x in niveles])
     n = len(serie)
 
     def coord_y(precio: float) -> float:
-        return PLOT_Y0 + (p_max - precio) / (p_max - p_min) * (PLOT_Y1 - PLOT_Y0)
+        return y_ini + (p_max - precio) / (p_max - p_min) * (y_fin - y_ini)
 
     def coord_x(indice: float) -> float:
         if n == 1:
-            return PLOT_X0
-        return PLOT_X0 + indice / (n - 1) * (PLOT_X1 - PLOT_X0)
+            return x_ini
+        return x_ini + indice / (n - 1) * (x_fin - x_ini)
 
     pts = [(coord_x(i), coord_y(p)) for i, p in enumerate(serie)]
     trazo = " L ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
 
     partes = [
-        f'<svg viewBox="0 0 {VB_W} {VB_H}" preserveAspectRatio="xMidYMid meet">',
+        f'<svg viewBox="0 0 {vb_w} {vb_h}" preserveAspectRatio="xMidYMid meet">',
         '<defs><linearGradient id="gradArea" x1="0" y1="0" x2="0" y2="1">',
         # Sin `stop-color` fijo: el color lo pone `.g-area-alto` / `.g-area-bajo`
         # en el snapshot, igual que el resto del gráfico. Estaba hardcodeado en
@@ -149,8 +171,8 @@ def construir_svg(
         '<stop class="g-area-alto" offset="0%"/>',
         '<stop class="g-area-bajo" offset="100%"/>',
         "</linearGradient></defs>",
-        f'<path class="g-area" d="M {pts[0][0]:.1f},{PLOT_Y1} L {trazo} '
-        f'L {pts[-1][0]:.1f},{PLOT_Y1} Z"/>',
+        f'<path class="g-area" d="M {pts[0][0]:.1f},{y_fin} L {trazo} '
+        f'L {pts[-1][0]:.1f},{y_fin} Z"/>',
     ]
 
     # Los NIVELES cruzan todo el ancho, a diferencia de la guía de un marcador
@@ -163,7 +185,7 @@ def construir_svg(
         y = coord_y(float(lv["precio"]))
         partes.append(
             f'<line class="g-nivel g-nivel-{lv.get("clase", "nivel")}" '
-            f'x1="{PLOT_X0}" y1="{y:.1f}" x2="{PLOT_X1}" y2="{y:.1f}"/>'
+            f'x1="{x_ini}" y1="{y:.1f}" x2="{x_fin}" y2="{y:.1f}"/>'
         )
 
     # Las guías se dibujan ANTES de la línea para que nunca la tapen.
@@ -171,7 +193,7 @@ def construir_svg(
         y = coord_y(m["precio"])
         x = coord_x(m["indice"])
         partes.append(
-            f'<line class="g-guia" x1="{GUIA_X}" y1="{y:.1f}" x2="{x:.1f}" y2="{y:.1f}"/>'
+            f'<line class="g-guia" x1="{guia_x}" y1="{y:.1f}" x2="{x:.1f}" y2="{y:.1f}"/>'
         )
 
     partes.append(f'<path class="g-linea" d="M {trazo}"/>')
@@ -186,12 +208,12 @@ def construir_svg(
         yt = y_etiqueta[j]
         clase = lv.get("clase", "nivel")
         partes.append(
-            f'<text class="g-precio g-precio-{clase}" x="{LABEL_X}" y="{yt + 6:.1f}" '
+            f'<text class="g-precio g-precio-{clase}" x="{label_x}" y="{yt + 6:.1f}" '
             f'text-anchor="end">{lv["etiqueta"]}</text>'
         )
         if lv.get("rol"):
             partes.append(
-                f'<text class="g-rol" x="{LABEL_X}" y="{yt + 21:.1f}" '
+                f'<text class="g-rol" x="{label_x}" y="{yt + 21:.1f}" '
                 f'text-anchor="end">{lv["rol"]}</text>'
             )
 
@@ -205,12 +227,12 @@ def construir_svg(
             f'<circle class="g-punto g-punto-{clase}" cx="{x:.1f}" cy="{y:.1f}" r="5.5"/>'
         )
         partes.append(
-            f'<text class="g-precio g-precio-{clase}" x="{LABEL_X}" y="{yt + 6:.1f}" '
+            f'<text class="g-precio g-precio-{clase}" x="{label_x}" y="{yt + 6:.1f}" '
             f'text-anchor="end">{m["etiqueta"]}</text>'
         )
         if m.get("rol"):
             partes.append(
-                f'<text class="g-rol" x="{LABEL_X}" y="{yt + 21:.1f}" '
+                f'<text class="g-rol" x="{label_x}" y="{yt + 21:.1f}" '
                 f'text-anchor="end">{m["rol"]}</text>'
             )
 
@@ -227,11 +249,11 @@ def construir_svg(
 # `preserveAspectRatio` un lienzo vertical dentro de una caja ancha se encoge
 # hasta convertirse en una estampilla al centro. Fue lo que paso en el primer
 # render.
-VB_W_BARRAS, VB_H_BARRAS = 900, 300
+VB_W_BARRAS, VB_H_BARRAS = 900, 232
 PLOT_X0_BARRAS, PLOT_X1_BARRAS = 190, 880
-PLOT_Y0_BARRAS = 24
-PLOT_Y1_BARRAS = 244
-EJE_Y = 270
+PLOT_Y0_BARRAS = 16
+PLOT_Y1_BARRAS = 186
+EJE_Y = 212
 LABEL_X_BARRAS = 174
 ANCHO_BARRA = 0.68   # proporción del paso entre barras; el resto es separación
 
@@ -376,7 +398,10 @@ def enriquecer(payload: dict[str, Any]) -> dict[str, Any]:
         # payload ya formateada; si falta, se cae al precio crudo.
         m.setdefault("etiqueta", str(m["precio"]))
 
-    payload["grafico"] = construir_svg([float(p) for p in serie], marcadores, niveles)
+    payload["grafico"] = construir_svg(
+        [float(p) for p in serie], marcadores, niveles,
+        lienzo=recorrido.get("lienzo", "alto"),
+    )
     return payload
 
 

@@ -141,8 +141,8 @@ y tests/test_story_render.py.
 
   /* ---- Titular / párrafo ---- */
   .titular {
-    font-family: "Syne", sans-serif;
-    font-weight: 800;
+    font-family: "DM Sans", sans-serif;
+    font-weight: 700;
     font-size: 46px;
     line-height: 1.1;
     margin: 20px 0 0;
@@ -215,8 +215,8 @@ y tests/test_story_render.py.
   }
 
   .precio-actual {
-    font-family: "Syne", sans-serif;
-    font-weight: 800;
+    font-family: "DM Sans", sans-serif;
+    font-weight: 700;
     font-size: 56px;
     color: var(--blanco);
   }
@@ -273,6 +273,25 @@ y tests/test_story_render.py.
     color: var(--texto-2);
     margin-bottom: 14px;
   }
+
+  /* Sello de procedencia del gráfico. Va junto al gráfico y no en la letra chica
+     del pie: que los precios salgan del terminal es el argumento de valor de la
+     pieza, no un descargo. Es lo que separa un gráfico trazado con datos reales
+     de uno inventado por un modelo. */
+  .sello-datos {
+    align-self: flex-start;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--acento);
+    border: 1.5px solid var(--acento);
+    border-radius: 999px;
+    padding: 7px 18px;
+    margin-bottom: 14px;
+  }
+  .sello-datos::before { content: "◆  "; }
 
   /* ===== Grafico (clases .g-*, geometria en scripts/story_grafico.py) =====
      El generador calcula coordenadas y NO emite un solo atributo de estilo; el
@@ -421,6 +440,8 @@ y tests/test_story_render.py.
 
     .rotulo-grafico { font-size: 25px; }
     .soporte-rotulo { font-size: 26px; }
+    .sello-datos { font-size: 19px; padding: 9px 22px; }
+
 
     .footer { gap: 12px; }
     .footer-marca { font-size: 28px; }
@@ -477,6 +498,7 @@ y tests/test_story_render.py.
 
       <div class="columna-grafico">
         <p class="rotulo-grafico">{{rotulo_grafico}}</p>
+        <div class="sello-datos">{{sello_datos}}</div>
         <div class="contenedor-grafico">
           <!-- IF:chart_img -->
           <img id="img-alerta" src="{{chart_src}}" alt="Gráfico del activo">
@@ -498,7 +520,6 @@ y tests/test_story_render.py.
         <span>@grupointeligencia</span>
         <span>grupointeligencia.com</span>
       </div>
-      <p class="footer-fuente">FUENTE: {{fuente}}</p>
       <p class="footer-disclaimer">
         Los CFD son instrumentos complejos y presentan un riesgo elevado de perder dinero
         rápidamente debido al apalancamiento. Este contenido es educativo/informativo, no

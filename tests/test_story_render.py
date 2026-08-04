@@ -71,6 +71,7 @@ PAYLOAD_EJEMPLO: dict = {
     # fences, no la geometria del grafico. La geometria se prueba con la fixture
     # de `tests/fixtures/stories/payloads/alerta.json`, que si trae `recorrido`.
     "grafico": '<svg viewBox="0 0 440 400"></svg>',
+    "sello_datos": "Datos reales · MetaTrader 5 · 13 JUL 11:15",
 }
 
 # Payload de ejemplo de `quote` (spec.md/design.md #121 §"Contrato de payload

@@ -16,7 +16,6 @@
  "resistencia": "2.360,00",
  "rotulo_grafico": "XAU/USD · CIERRES 4H · ÚLTIMAS 60 VELAS",
  "chart_png": null,
- "fuente": "COMEX",
  "sesgo": "Bajista",
  "recorrido": {
   "serie": [
@@ -104,5 +103,6 @@
     "rol": "SOPORTE"
    }
   ]
- }
+ },
+ "sello_datos": "Datos reales · MetaTrader 5 · 13 JUL 11:15"
 }
