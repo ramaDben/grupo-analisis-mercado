@@ -1,8 +1,29 @@
 # Rediseño de las Stories GI — de informe a invitación
 
-**Fecha**: 2026-08-04 · **Estado**: diseño validado con prototipo, sin implementar en producción
-**Prototipo**: `templates/stories/_exploracion/oportunidad.html`
+**Fecha**: 2026-08-04 · **Estado**: implementado (plantilla `oportunidad` integrada)
+**Prototipo**: `templates/stories/_exploracion/oportunidad.html` (prototipo archivado)
 **Piezas de referencia**: `data/stories/_revision/oro_gi_horizontal.png` · `oro_gi_vertical.png`
+
+---
+
+## Implementación
+
+Estado: completada en el repositorio.
+Cambios aplicados:
+- templates/stories/oportunidad.html — nueva plantilla integrada (horizontal + vertical via CSS responsive).
+- templates/stories/assets/activos/* — imágenes IA-normalizadas disponibles (oro/plata/wti/us100/usdclp).
+- templates/stories/marca.css — tokens de color por activo añadidos (`--activo-oro`, etc.).
+- scripts/marca_tokens.py — mapa actualizado; `--check` pasa para todas las plantillas.
+- scripts/story_grafico.py — `recorrido.ajuste` soporta `llenar` -> `preserveAspectRatio="none"` (escenario a sangre).
+- tests/fixtures/stories/payloads/oportunidad.json — payload de prueba añadido.
+
+Deuda técnica cerrada:
+1) `preserveAspectRatio` parametrizado para gráficos de escenario.
+2) Fixture de prueba para la plantilla `oportunidad`.
+3) Paleta movida a `marca.css` y verificada con `scripts/marca_tokens.py --check`.
+
+Notas:
+- Las decisiones pendientes en la spec (titular: número redondo vs motor, y color exacto del precio actual) se dejaron como opciones editoriales; los tokens permiten cambiarlos sin tocar plantillas.
 
 ---
 
