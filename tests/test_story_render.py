@@ -1109,7 +1109,7 @@ def test_oportunidad_no_promete_una_operacion():
     # volumen. Eso exigiría firma acreditada y contaría para el límite semanal.
     html = _html_oportunidad(PAYLOAD_OPORTUNIDAD).lower()
 
-    for prohibido in ("take profit", "stop loss", "volumen", "lotaje"):
+    for prohibido in ("entrada", "take profit", "stop loss", "volumen", "lotaje"):
         assert prohibido not in html
 
 
