@@ -61,6 +61,16 @@
   --baja-suave:     #F5A3A3;
   --aviso:          #FFB020;
 
+  /* ── Identidad por activo ───────────────────────────────────────────────── */
+  /* Un color por activo, para que el cliente distinga la pieza antes de leerla.
+     Es identidad, NO dirección: pinta el escenario —halo, imagen, nombre del
+     activo— y nunca la píldora ni el resultado. Si se colapsara con `--sube` /
+     `--baja`, una pieza dorada bajista se leería como alcista dorada. */
+  --activo-oro:    #E8B44C;
+  --activo-wti:    #E8783C;
+  --activo-us100:  #4C86E8;
+  --activo-usdclp: #C9743A;
+
   /* ── Tipografía ─────────────────────────────────────────────────────────── */
   --texto-1:        #F5F3F7;  /* principal */
   --texto-2:        #A9A5B4;  /* secundario */
@@ -109,6 +119,18 @@ body.sesgo-bajista, body.sesgo-venta {
   --direccion-suave:  var(--baja-suave);
   --fondo-direccion:  var(--fondo-baja);
 }
+
+/*
+  El rol `--activo` lo fija la clase que el snapshot pone en <body>
+  (`activo-{{activo_slug}}`), igual que `sesgo-*` fija la dirección. Sin clase,
+  el neutro es el acento de marca: una pieza sin activo definido debe verse de
+  la marca, no apagada.
+*/
+body                { --activo: var(--acento); }
+body.activo-oro     { --activo: var(--activo-oro); }
+body.activo-wti     { --activo: var(--activo-wti); }
+body.activo-us100   { --activo: var(--activo-us100); }
+body.activo-usdclp  { --activo: var(--activo-usdclp); }
 
 /*
   Filete de marca en el borde de toda pieza.
