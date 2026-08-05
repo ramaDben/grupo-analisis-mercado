@@ -33,6 +33,7 @@ ENCUESTA_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "encuesta.html"
 EDU_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "edu.html"
 FLASH_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "flash.html"
 POSTVENTA_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "postventa.html"
+OPORTUNIDAD_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "oportunidad.html"
 
 # Fixture inline de `resolver_loops` (R4/AC4-AC6): recibe `html: str`, sin archivo.
 FIXTURE_FOR_HTML = "<!-- FOR:filas -->{{nombre}}<!-- ENDFOR:filas -->"
@@ -1050,6 +1051,72 @@ def test_alerta_vertical_apila_editorial_y_grafico(tmp_path):
     # Vertical: apiladas
     assert graf_v["y"] > edi_v["y"]
     assert abs(graf_v["x"] - edi_v["x"]) < 2
+
+
+# ---------------------------------------------------------------------------
+# snapshot templates/stories/oportunidad.html — la pieza que invita a operar.
+# El activo es el protagonista y el dato macro baja a evidencia; ver
+# docs/superpowers/specs/2026-08-04-rediseno-stories-gi-design.md
+# ---------------------------------------------------------------------------
+
+PAYLOAD_OPORTUNIDAD = json.loads(
+    (FIXTURES_DIR / "payloads" / "oportunidad.json").read_text(encoding="utf-8")
+)
+
+
+def _html_oportunidad(payload: dict) -> str:
+    from story_grafico import enriquecer
+
+    return story_render.build_html(enriquecer(dict(payload)), OPORTUNIDAD_TEMPLATE)
+
+
+def test_oportunidad_no_placeholders():
+    html = _html_oportunidad(PAYLOAD_OPORTUNIDAD)
+
+    for clave in ("titular", "precio", "objetivo", "dato_lectura", "cta"):
+        assert PAYLOAD_OPORTUNIDAD[clave] in html
+    assert "{{" not in html
+    assert "}}" not in html
+
+
+def test_oportunidad_identidad_y_direccion_son_clases_distintas():
+    # El color del activo y la dirección de mercado son roles separados: si se
+    # colapsaran, una pieza dorada bajista se leería como alcista dorada.
+    html = _html_oportunidad(PAYLOAD_OPORTUNIDAD)
+
+    assert "activo-oro" in html
+    assert "sesgo-alcista" in html
+
+
+def test_oportunidad_sesgo_bajista_cambia_la_clase_no_el_activo():
+    payload = {**PAYLOAD_OPORTUNIDAD, "sesgo": "Bajista"}
+
+    html = _html_oportunidad(payload)
+
+    assert "sesgo-bajista" in html
+    assert "activo-oro" in html
+
+
+def test_oportunidad_modo_imagen_elige_el_tratamiento():
+    html = _html_oportunidad({**PAYLOAD_OPORTUNIDAD, "modo_imagen": "ilustracion"})
+
+    assert 'class="ilustracion"' in html
+    assert "{{" not in html
+
+
+def test_oportunidad_no_promete_una_operacion():
+    # La pieza invita a operar pero no es una señal: sin entrada, TP, SL ni
+    # volumen. Eso exigiría firma acreditada y contaría para el límite semanal.
+    html = _html_oportunidad(PAYLOAD_OPORTUNIDAD).lower()
+
+    for prohibido in ("take profit", "stop loss", "volumen", "lotaje"):
+        assert prohibido not in html
+
+
+def test_oportunidad_el_grafico_llena_el_lienzo():
+    html = _html_oportunidad(PAYLOAD_OPORTUNIDAD)
+
+    assert 'preserveAspectRatio="none"' in html
 
 
 # ---------------------------------------------------------------------------
