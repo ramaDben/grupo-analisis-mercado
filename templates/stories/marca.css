@@ -72,6 +72,9 @@
   --activo-usdclp: #C9743A;
 
   /* ── Tipografía ─────────────────────────────────────────────────────────── */
+  /* Font stacks: primary sans + emoji fallbacks. Pueden ajustarse por host. */
+  --font-sans: "Space Grotesk", "DM Sans", "Segoe UI", "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-emoji: "Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji";
   --texto-1:        #F5F3F7;  /* principal */
   --texto-2:        #A9A5B4;  /* secundario */
   --texto-3:        #6E6A7A;  /* tenue: pies, disclaimers */
