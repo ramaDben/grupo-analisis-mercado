@@ -63,13 +63,6 @@ semana.
     overflow: hidden;
   }
 
-  /* Forzar la pila de fuentes en toda la plantilla (incluye emojis como fallback).
-     Usa !important para sobreescribir declaraciones locales que definen solo
-     "Space Grotesk" y evitar missing-glyph (fallo observable en algunos hosts).
-     Si se desea, reemplazar por selectores más específicos en vez de * para
-     reducir el alcance del !important. */
-  .story, .story * { font-family: var(--font-sans), var(--font-emoji) !important; }
-
   .story {
     position: relative;
     width: 100%; height: 100%;
