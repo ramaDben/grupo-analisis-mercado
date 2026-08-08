@@ -171,21 +171,19 @@ Reglas:
 
 ## Datos macro en español + Diccionario rápido (OBLIGATORIO — issue #46)
 - **Indicadores en español**: todo dato macro se nombra en español, con la sigla original entre paréntesis **una sola vez** (ej. "Índice de gerentes de compra manufacturero (PMI manufacturero)"). Minimizar términos en otro idioma en el cuerpo del mensaje.
-- **Bloque "🔤 Diccionario rápido"**: obligatorio en `/dato_macro` (ambos modos) y en `/noticia` cuando aparezcan siglas. Por cada abreviatura del mensaje (ISM, NFP, JOLTS, PMI, PCE, IPC, ADP…), una línea explicativa en voz novata. **Ninguna abreviatura puede quedar sin explicación en español ese día.**
+- **Bloque "🔤 Diccionario rápido"**: obligatorio en el **Modo anticipación** de `/dato_macro` y en `/noticia` cuando aparezcan siglas. Por cada abreviatura del mensaje (ISM, NFP, JOLTS, PMI, PCE, IPC, ADP…), una línea explicativa en voz novata. **Ninguna abreviatura puede quedar sin explicación en español ese día.** En el **Modo resultado** el mensaje es el pie de una imagen y el bloque no cabe: la sigla se explica **en línea**, dentro de la frase, una sola vez ("vacantes de empleo (JOLTS)"). Cambia el dónde, no el si.
 - **Fuente canónica**: `data/glosario_siglas.json` (`SIGLA → {nombre_es, explicacion}`). Si aparece una sigla nueva, explicarla al vuelo y **añadirla al JSON** para reutilizarla.
 - En `/dato_macro`, la fuente principal del panorama del día es la tool MCP `obtener_calendario_macro` (calendario Investing.com — Chile/EE.UU./China/Zona Euro, con resultado real `actual` y clasificación mejor/peor/en_linea); WebSearch sobre investing.com + fuentes oficiales son fallback solo si la tool devuelve `{"error": ...}`.
 
 ### Dos modos de `/dato_macro` y plantilla del Modo resultado (issue #93)
 `/dato_macro` genera el mensaje en uno de **dos modos**, elegidos automáticamente según la hora del evento vs. la hora actual de Chile:
 - **Modo anticipación** (dato `🕐 PRÓXIMO`, aún no sale): qué es + hora CLT + anterior/consenso + 3 escenarios (mejor/peor/en línea) + activos a observar + temporalidad del impacto.
-- **Modo resultado** (dato `✅ YA SALIÓ`, ya tiene valor `actual` — plantilla issue #93): es la estructura canónica cuando el dato ya publicó. Reglas:
-  - **Veredicto above-the-fold**: encabezado + veredicto *EN LÍNEA / MEJOR / PEOR* + primera sub-lectura caben en las primeras 3-4 líneas (~200 caracteres visibles en WhatsApp).
-  - **Sub-lecturas**: una línea por sub-lectura (`actual` vs `esperado`), marcando la sorpresa con 🔥. En datos de **alto impacto** limitar a anual + mensual y normal + subyacente según el indicador; nunca volcar todas las filas.
-  - **Bloque "⚠️ PERO ojo con el detalle importante"** (OPCIONAL): solo cuando una sub-lectura se desvía del consenso mientras el dato general salió en línea — explica qué mide esa sub-lectura en voz novata y por qué cambia la lectura. Si no hay sorpresa parcial, se omite entero.
-  - **🧠 ¿Qué significa esto?**: 2-4 líneas en voz novata. Si salió en línea, explicar que el mercado ya lo tenía descontado.
-  - **💡 Impacto esperado por activo**: 3-4 activos con *SUBE ⬆️ / BAJA ⬇️* y el porqué en 1 línea, conectando con el camino a la decisión de tasas cuando aplique.
-  - **⏱️ Temporalidad del impacto** (OBLIGATORIA, ambos modos): scalper / intradía / swing de jornada / posicional (mismas 4 etiquetas canónicas de temporalidad).
-  - **📌 Resumen simple** de cierre que amarra el dato general + la sorpresa parcial si la hubo.
+- **Modo resultado** (dato `✅ YA SALIÓ`, ya tiene valor `actual`): **la pieza es la Story, el texto es su pie de foto** (decisión del director, 2026-08-04). El desarrollo largo —sub-lecturas, "🧠 ¿Qué significa esto?", "⚠️ PERO ojo con el detalle", "💡 Impacto esperado por activo" y el diccionario— vive dentro de la imagen de `/story dato_macro` y **ya no se manda además como texto**: mandar ambos obliga al cliente a leer dos veces lo mismo, y con imagen adjunta WhatsApp corta el pie antes que un mensaje suelto. Reglas:
+  - **Orden**: primero la Story, después el pie escrito desde el mismo payload — veredicto y cifras tienen que coincidir entre imagen y texto.
+  - **Pie**: chip `📊 DATO MACRO · [PAÍS]` + hora de publicación + indicador con cifra + veredicto *PEOR / MEJOR / EN LÍNEA* frente al consenso + una línea de implicancia direccional + la temporalidad + el cierre canónico.
+  - **El pie repite el veredicto de la imagen a propósito**: es lo que se ve en la notificación de WhatsApp antes de abrir el chat, y lo único legible si el cliente no descarga la imagen. Un adjunto sin pie llega mudo.
+  - **⏱️ Temporalidad del impacto** (OBLIGATORIA, ambos modos): scalper / intradía / swing de jornada / posicional (mismas 4 etiquetas canónicas). Va en el pie porque **no** está en la imagen — es la única pieza del desarrollo largo que sobrevive en el texto.
+  - La plantilla larga del issue #93 queda en el historial git por si se decide volver a ella.
 - **Cierre obligatorio (ambos modos)**: tras el último separador, link al calendario completo (`https://es.investing.com/economic-calendar/`) + CTA genérico al analista designado, siempre juntos como pie.
 - Tras aprobar y enviar, `/dato_macro` registra `data/ultimo_evento.json` y ofrece encadenar la **encuesta post-evento** pedagógica.
 
@@ -254,7 +252,9 @@ Piloto (issue #109): comando `/story [tipo]` genera Stories de marca (imagen 192
 `[tipo]` soportados hoy: `dato_macro`, `alerta`, `recomendacion`, `quote`, `breaking`, `encuesta`,
 `edu` (Fase B, issues #121/#123/#125/#127), `flash` (Fase C, issue #129) y `postventa` (Fase C).
 `dato_macro` cubre la **pieza 1 de la agenda diaria** —un dato económico que ya publicó, en el Modo
-resultado de `/dato_macro`— y se organiza alrededor del veredicto frente al consenso; su
+resultado de `/dato_macro`—, donde **es el entregable principal**: desde 2026-08-04 el mensaje de
+texto de ese modo quedó reducido al pie de esta imagen. Se organiza alrededor del veredicto frente
+al consenso; su
 `veredicto_slug` NO se deriva de `sesgo`, porque mejor/peor es contra lo esperado y no una dirección
 de mercado (un dato "mejor" puede ser bajista para un activo). `recomendacion` es la **única
 plantilla con firma acreditada** —una recomendación induce una operación, así que tiene que constar
