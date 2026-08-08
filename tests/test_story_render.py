@@ -1073,7 +1073,11 @@ def _html_oportunidad(payload: dict) -> str:
 def test_oportunidad_no_placeholders():
     html = _html_oportunidad(PAYLOAD_OPORTUNIDAD)
 
-    for clave in ("titular", "precio", "objetivo", "dato_lectura", "cta"):
+    # `cta_sub` entra a la lista porque su token llegó a perderse una vez: alguien
+    # reemplazó {{cta}}/{{cta_sub}} por texto fijo y el test no lo notó, porque el
+    # literal coincidía con el valor de la fixture. Verificar los dos campos deja
+    # el contrato cubierto en vez de depender de esa coincidencia.
+    for clave in ("titular", "precio", "objetivo", "dato_lectura", "cta", "cta_sub"):
         assert PAYLOAD_OPORTUNIDAD[clave] in html
     assert "{{" not in html
     assert "}}" not in html

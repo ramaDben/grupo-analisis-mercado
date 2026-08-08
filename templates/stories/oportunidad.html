@@ -48,6 +48,7 @@ semana.
      y Manrope fueron candidatas de comparación (ver spec de rediseño) y sus
      archivos ya no están en el repo. */
   @font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+  @font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-700.woff2") format("woff2"); font-weight: 800; font-display: swap; }
   @font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
   @font-face { font-family: "DM Sans";       src: url("fonts/dm-sans-400.woff2") format("woff2");       font-weight: 400; font-display: swap; }
   @font-face { font-family: "DM Sans";       src: url("fonts/dm-sans-700.woff2") format("woff2");       font-weight: 700; font-display: swap; }
@@ -248,8 +249,8 @@ semana.
   .evidencia-detalle { font-size: 21px; line-height: 1.35; color: var(--texto-2); margin-top: 10px; }
   .evidencia-veredicto {
     display: inline-block; margin-top: 14px; padding: 7px 16px; border-radius: 8px;
-    background: color-mix(in srgb, var(--baja) 20%, transparent);
-    color: var(--baja);
+    background: color-mix(in srgb, var(--direccion) 20%, transparent);
+    color: var(--direccion);
     font-family: "Space Grotesk", sans-serif; font-weight: 600;
     font-size: 19px; letter-spacing: 0.12em; text-transform: uppercase;
   }
@@ -412,7 +413,7 @@ semana.
           <div class="evidencia-rotulo">{{dato_rotulo}}</div>
           <div class="evidencia-lectura">{{dato_lectura}}</div>
           <div class="evidencia-detalle">{{dato_detalle}}</div>
-        <span class="evidencia-veredicto">▼ {{dato_veredicto}}</span>
+        <span class="evidencia-veredicto">{{dato_veredicto}}</span>
       </div>
 
       <div class="cta">
@@ -424,8 +425,8 @@ semana.
           </div>
         </div>
         <div class="cta-marca">
-          <span class="cta-handle">@grupointeligencia</span>
-          <img class="cta-logo" src="assets/LOGO-LETRERO.png" alt="Grupo Inteligencia">
+          <span class="cta-handle">@grupo_inteligencia</span>
+          <img class="cta-logo" src="assets/LOGO Blanco.png" alt="Grupo Inteligencia">
         </div>
       </div>
 
