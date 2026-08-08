@@ -415,6 +415,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--template", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument(
+        "--payload",
+        type=Path,
+        help="Ruta al archivo JSON con el payload. Si no se especifica, se lee de stdin.",
+    )
+    parser.add_argument(
         "--formato",
         default=_FORMATO_DEFECTO,
         choices=sorted(_FORMATOS),
@@ -423,16 +428,22 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        # sys.stdin no siempre es UTF-8 por defecto en Windows (usa la codepage
-        # de la consola) -- leer los bytes crudos y decodificar explícito evita
-        # mojibake en tildes/ñ/· del payload (ej. "técnico" -> "tÃ©cnico").
-        payload = json.loads(sys.stdin.buffer.read().decode("utf-8"))
+        # Si se especifica --payload, leer del archivo con UTF-8 explícito; si no,
+        # leer bytes de sys.stdin.buffer para evitar el mojibake de la codepage
+        # de consola en Windows PowerShell.
+        if args.payload:
+            payload_bytes = args.payload.read_bytes()
+        else:
+            payload_bytes = sys.stdin.buffer.read()
+
+        payload = json.loads(payload_bytes.decode("utf-8"))
         ruta = render_story(payload, args.template, args.out, formato=args.formato)
     except StoryRenderError as exc:
         print(str(exc), file=sys.stderr)
         return 1
     except json.JSONDecodeError as exc:
-        print(f"Payload JSON inválido en stdin: {exc}", file=sys.stderr)
+        origen = f"en {args.payload}" if args.payload else "en stdin"
+        print(f"Payload JSON inválido {origen}: {exc}", file=sys.stderr)
         return 1
 
     print(str(ruta))

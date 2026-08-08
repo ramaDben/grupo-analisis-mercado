@@ -138,7 +138,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    payload = json.load(sys.stdin)
+    payload = json.loads(sys.stdin.buffer.read().decode("utf-8-sig"))
     try:
         serie, tiempos = obtener_serie(args.ticker, args.timeframe, args.velas)
     except SerieError as exc:
@@ -154,7 +154,7 @@ def main(argv: list[str] | None = None) -> int:
     if niveles:
         recorrido["niveles"] = niveles
     payload["recorrido"] = recorrido
-    json.dump(payload, sys.stdout, ensure_ascii=False)
+    sys.stdout.buffer.write((json.dumps(payload, ensure_ascii=False) + "\n").encode("utf-8"))
     print(
         f"serie {args.ticker} {args.timeframe}: {len(serie)} velas, "
         f"{min(serie):.5f} - {max(serie):.5f}",
