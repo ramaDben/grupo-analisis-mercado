@@ -247,13 +247,28 @@ semana.
     text-transform: uppercase;
   }
   .evidencia-detalle { font-size: 21px; line-height: 1.35; color: var(--texto-2); margin-top: 10px; }
+  /* El veredicto del dato tiene semántica PROPIA y no hereda la dirección del
+     activo. Un dato peor de lo esperado en EE.UU. puede impulsar al Oro hacia
+     arriba: la píldora del activo dice SUBIENDO en verde y este chip, al mismo
+     tiempo, dice PEOR DE LO ESPERADO en rojo. Las dos cosas son ciertas y miden
+     cosas distintas — mejor/peor es contra el consenso, no una dirección de
+     mercado.
+     Colgado de `--direccion`, este chip salía verde diciendo "peor" en toda
+     pieza alcista, que es justo la confusión que la pieza debería enseñar a
+     evitar. El slug viaja en el payload y no se deriva, igual que en
+     `dato_macro.html`. */
   .evidencia-veredicto {
     display: inline-block; margin-top: 14px; padding: 7px 16px; border-radius: 8px;
-    background: color-mix(in srgb, var(--direccion) 20%, transparent);
-    color: var(--direccion);
+    background: color-mix(in srgb, var(--veredicto-color) 20%, transparent);
+    color: var(--veredicto-color);
     font-family: "Space Grotesk", sans-serif; font-weight: 600;
     font-size: 19px; letter-spacing: 0.12em; text-transform: uppercase;
   }
+  /* El neutro es el acento de marca y no un gris: "en línea" es un resultado,
+     no la ausencia de dato. Mismo criterio que dato_macro.html. */
+  .evidencia-veredicto { --veredicto-color: var(--acento); }
+  .evidencia-veredicto--mejor { --veredicto-color: var(--sube); }
+  .evidencia-veredicto--peor  { --veredicto-color: var(--baja); }
 
   /* ══════════ CTA ══════════ */
   .cta {
@@ -413,7 +428,7 @@ semana.
           <div class="evidencia-rotulo">{{dato_rotulo}}</div>
           <div class="evidencia-lectura">{{dato_lectura}}</div>
           <div class="evidencia-detalle">{{dato_detalle}}</div>
-        <span class="evidencia-veredicto">{{dato_veredicto}}</span>
+        <span class="evidencia-veredicto evidencia-veredicto--{{dato_veredicto_slug}}">{{dato_veredicto}}</span>
       </div>
 
       <div class="cta">

@@ -1092,6 +1092,35 @@ def test_oportunidad_identidad_y_direccion_son_clases_distintas():
     assert "sesgo-alcista" in html
 
 
+def test_oportunidad_el_veredicto_del_dato_no_hereda_la_direccion_del_activo():
+    """El caso que motivó la regla: dato malo, activo al alza.
+
+    Un dato peor de lo esperado en EE.UU. puede impulsar al Oro hacia arriba. La
+    píldora del activo dice SUBIENDO (verde) y el chip del dato, al mismo tiempo,
+    PEOR DE LO ESPERADO (rojo). Si el chip colgara de la dirección del activo,
+    saldría verde diciendo "peor" — la confusión exacta que la pieza enseña a
+    evitar.
+    """
+    html = _html_oportunidad(PAYLOAD_OPORTUNIDAD)
+
+    assert "sesgo-alcista" in html
+    assert "evidencia-veredicto--peor" in html
+    assert "evidencia-veredicto--alcista" not in html
+
+
+def test_oportunidad_veredicto_mejor_usa_su_propia_clase():
+    payload = {
+        **PAYLOAD_OPORTUNIDAD,
+        "dato_veredicto": "Mejor de lo esperado",
+        "dato_veredicto_slug": "mejor",
+    }
+
+    html = _html_oportunidad(payload)
+
+    assert "evidencia-veredicto--mejor" in html
+    assert "{{" not in html
+
+
 def test_oportunidad_sesgo_bajista_cambia_la_clase_no_el_activo():
     payload = {**PAYLOAD_OPORTUNIDAD, "sesgo": "Bajista"}
 

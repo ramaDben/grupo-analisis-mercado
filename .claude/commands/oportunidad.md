@@ -57,13 +57,20 @@ huérfanos" en vez de rendir una pieza incompleta.
 | `titular` | Nombra un **precio del motor**, no una figura técnica: "El oro sube y busca los 4.100", nunca "va por sus máximos". Sin jerga. |
 | `razon` | Por qué se mueve, en voz llana |
 | `precio` · `objetivo` · `objetivo_rotulo` · `nota_nivel` | Precio de ahora, hacia dónde va (con su rótulo, ej. "Hacia dónde va") y qué tiene que romper primero |
-| `dato_rotulo` · `dato_lectura` · `dato_detalle` · `dato_veredicto` | La LECTURA arriba ("Menos empleos en EE.UU.") y la cifra abajo como prueba. El número solo no le sirve a nadie. |
+| `dato_rotulo` · `dato_lectura` · `dato_detalle` | La LECTURA arriba ("Menos empleos en EE.UU.") y la cifra abajo como prueba. El número solo no le sirve a nadie. |
+| `dato_veredicto` · `dato_veredicto_slug` | El texto ("Peor de lo esperado") y su slug `mejor` / `peor` / `en-linea`, que le da el color al chip |
 | `cta` · `cta_sub` | El llamado a la acción de la imagen |
 | `recorrido` | `{serie, marcadores, "ajuste": "llenar"}` — lo arma `serie_mt5.py`; el `ajuste` es lo que hace que el gráfico llene el lienzo como escenario |
 
 **Si el activo no tiene su imagen** en `templates/stories/assets/activos/`, generarla con el
 recetario de `docs/design/stories-gi/imagenes-por-activo.md`. Y si no tiene color propio en
 `marca.css` (`--activo-<slug>`), la pieza cae al acento de marca sin romperse.
+
+**El veredicto del dato no sigue la dirección del activo.** Son dos cosas distintas y ambas ciertas
+a la vez: un dato peor de lo esperado en EE.UU. puede impulsar al Oro hacia arriba, así que la
+píldora del activo dice SUBIENDO en verde y el chip del dato dice PEOR DE LO ESPERADO en rojo. Por
+eso `dato_veredicto_slug` va aparte de `sesgo`: mejor/peor es contra el consenso, no una dirección
+de mercado.
 
 ⚠️ **Límite editorial**: la pieza invita a operar pero **no lleva entrada, TP, SL ni volumen**. Eso
 la convertiría en una señal, que exige firma acreditada y cuenta para el límite de 3 por semana —
