@@ -46,6 +46,13 @@ MAPA = {
     "#C9C5D4": "texto-borde",
     "#8E8A9C": "texto-gris",
     "#FFFFFF": "blanco",
+    # Identidad por activo (ver marca.css). Van en el MAPA para que, si una
+    # plantilla los escribe a mano, el check sugiera el token en vez de
+    # reportarlos como huérfanos sin salida.
+    "#E8B44C": "activo-oro",
+    "#E8783C": "activo-wti",
+    "#4C86E8": "activo-us100",
+    "#C9743A": "activo-usdclp",
 }
 
 # Solo 6 dígitos y con frontera: descarta `#119` de los comentarios de issue.

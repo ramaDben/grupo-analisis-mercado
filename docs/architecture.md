@@ -59,7 +59,7 @@ Los comandos de Claude Code usan herramientas externas via MCP. El estado actual
 
 | MCP | Estado | Herramientas clave |
 |-----|--------|--------------------|
-| **market-data** | ✅ Activo | `get_asset_levels`, `get_chart_objects`, `obtener_calendario_macro`, `get_symbol_spec` |
+| **market-data** | ✅ Activo | `get_asset_levels`, `get_chart_objects`, `obtener_calendario_macro`, `get_symbol_spec`, `get_open_positions` |
 | **WebSearch (investing.com + fuentes oficiales)** | ✅ Activo (fallback) | Noticias siempre; calendario solo si `obtener_calendario_macro` falla |
 | **WhatsApp (Evolution API)** | ⏳ Pendiente Docker | `send_message` al grupo |
 
@@ -71,6 +71,7 @@ Los comandos de Claude Code usan herramientas externas via MCP. El estado actual
 | `get_chart_objects` | `ticker`, `timeframe` | Niveles dibujados a mano por el director en MT5 (soportes/resistencias, trendlines, canales) + screenshot |
 | `obtener_calendario_macro` | `rango` | Calendario económico Investing.com (Chile/EE.UU./China/Zona Euro) con resultado real y clasificación mejor/peor/en_línea |
 | `get_symbol_spec` | `ticker`, `fecha` (opcional) | Especificaciones de contrato (digits, volumen, tamaño) y sesiones de trading; con `fecha` responde si el activo opera ese día |
+| `get_open_positions` | `ticker` | Operaciones abiertas en MT5 (ticket, tipo, volumen, entrada, SL, TP, precio actual, resultado flotante, swap) |
 
 > **Noticias vía WebSearch**: las noticias relevantes se obtienen con `WebSearch` sobre **investing.com + fuentes oficiales** (Fed, BCCh, OPEP+, EIA, BLS) en los comandos `/noticia` y los comandos de día. El calendario económico usa `obtener_calendario_macro` como fuente primaria; `WebSearch` es fallback solo si esa tool devuelve `{"error": ...}`. Las tools legacy `get_economic_events` / `get_market_context` (Finnhub/TrendRadar) fueron eliminadas del MCP — ver `docs/archive/` para el historial de esa migración.
 

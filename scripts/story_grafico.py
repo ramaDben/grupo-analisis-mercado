@@ -56,6 +56,13 @@ LIENZOS = {
     # lienzo 3:1 el SVG se encogia a media columna dejando bandas laterales.
     "ancho": dict(vb_w=900, vb_h=230, x0=190, x1=880, y0=18, y1=205, label_x=174, guia_x=182),
 }
+
+# Cómo se comporta el SVG dentro de su caja. `meet` conserva la proporción y deja
+# bandas; `llenar` estira. Se estira sólo cuando el gráfico es ESCENARIO —fondo a
+# sangre de la pieza—, nunca cuando es una tarjeta con ejes que se leen: ahí
+# deformar cambiaría la pendiente que el cliente está midiendo.
+AJUSTES = {"meet": "xMidYMid meet", "llenar": "none"}
+
 _L = LIENZOS["alto"]
 VB_W, VB_H = _L["vb_w"], _L["vb_h"]
 PLOT_X0, PLOT_X1 = _L["x0"], _L["x1"]
@@ -129,6 +136,7 @@ def construir_svg(
     marcadores: list[dict[str, Any]],
     niveles: list[dict[str, Any]] | None = None,
     lienzo: str = "alto",
+    ajuste: str = "meet",
 ) -> str:
     """Arma el SVG del recorrido: área, línea, guías, puntos y etiquetas.
 
@@ -143,6 +151,13 @@ def construir_svg(
         raise GraficoError(
             f"lienzo '{lienzo}' desconocido; usa {sorted(LIENZOS)}."
         )
+
+    aspecto = AJUSTES.get(ajuste)
+    if aspecto is None:
+        raise GraficoError(
+            f"ajuste '{ajuste}' desconocido; usa {sorted(AJUSTES)}."
+        )
+
     vb_w, vb_h = g["vb_w"], g["vb_h"]
     x_ini, x_fin, y_ini, y_fin = g["x0"], g["x1"], g["y0"], g["y1"]
     label_x, guia_x = g["label_x"], g["guia_x"]
@@ -162,7 +177,7 @@ def construir_svg(
     trazo = " L ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
 
     partes = [
-        f'<svg viewBox="0 0 {vb_w} {vb_h}" preserveAspectRatio="xMidYMid meet">',
+        f'<svg viewBox="0 0 {vb_w} {vb_h}" preserveAspectRatio="{aspecto}">',
         '<defs><linearGradient id="gradArea" x1="0" y1="0" x2="0" y2="1">',
         # Sin `stop-color` fijo: el color lo pone `.g-area-alto` / `.g-area-bajo`
         # en el snapshot, igual que el resto del gráfico. Estaba hardcodeado en
@@ -401,6 +416,7 @@ def enriquecer(payload: dict[str, Any]) -> dict[str, Any]:
     payload["grafico"] = construir_svg(
         [float(p) for p in serie], marcadores, niveles,
         lienzo=recorrido.get("lienzo", "alto"),
+        ajuste=recorrido.get("ajuste", "meet"),
     )
     return payload
 
