@@ -231,16 +231,17 @@ Mejorar indicadores de satisfacción del cliente, retención, NPS y reducir chur
 
 | MCP | Estado | Propósito | Usado en |
 |-----|--------|-----------|----------|
-| **market-data** | ✅ Activo | Análisis técnico MT5 (`get_asset_levels`) + niveles dibujados a mano por el director en MT5 (`get_chart_objects`: soportes/resistencias, trendlines, canales, rectángulos + screenshot) + calendario económico Investing.com (`obtener_calendario_macro`): Chile + EE.UU. + China + Zona Euro, con resultado real (`actual`) y clasificación `mejor`/`peor`/`en_linea` vs consenso. WebSearch es fallback si la fuente falla. Noticias vía WebSearch. | Comandos de niveles técnicos |
+| **market-data** | ✅ Activo | Análisis técnico MT5 (`get_asset_levels`) + niveles dibujados a mano por el director en MT5 (`get_chart_objects`) + calendario económico Investing.com (`obtener_calendario_macro`) + especificaciones de contrato y sesiones (`get_symbol_spec`) + operaciones abiertas del terminal (`get_open_positions`). Noticias vía WebSearch. | Comandos de datos de mercado y operativas |
 | **WebSearch (investing.com + fuentes oficiales)** | ✅ Activo | Calendario económico y noticias relevantes | `/dato_macro`, `/noticia` y comandos de día |
 | **WhatsApp (Evolution API)** | ⏳ Pendiente conexión Docker | Envío directo al grupo | Flujo manual por ahora |
 | **TrendRadar / Firecrawl / Finnhub** | ❌ No activos | Reemplazados por market-data (MT5) + WebSearch | — |
 
-**Nota**: el MCP `market-data` expone **tres** tools:
+**Nota**: el MCP `market-data` expone **cinco** tools:
 - `get_asset_levels` — análisis técnico MT5 automático (soportes/resistencias, indicadores).
-- `get_chart_objects` — niveles dibujados a mano por el director en MT5 (soportes/resistencias, trendlines, canales, rectángulos) más screenshot, vía el Service `ChartObjectsExporter` (sub-proyecto A, #98). Permite leer el marcado manual del director en lugar de inferirlo automáticamente.
+- `get_chart_objects` — niveles dibujados a mano por el director en MT5 (soportes/resistencias, trendlines, canales, rectángulos) más screenshot, vía el Service `ChartObjectsExporter` (sub-proyecto A, #98).
 - `obtener_calendario_macro` — calendario económico Investing.com (Chile/EE.UU./China/Zona Euro con campo `actual` y `resultado`, issue #91; WebSearch es fallback si la fuente falla).
 - `get_symbol_spec` — especificaciones de contrato de un símbolo (trade_mode, digits, volumen mínimo/paso, tamaño de contrato) y sesiones de trading semanales en hora Chile; con `fecha` responde de forma determinista si el activo opera ese día (issue #104).
+- `get_open_positions` — operaciones abiertas en el terminal MT5 (ticket, tipo BUY/SELL, volumen, entrada, SL, TP, precio actual, resultado flotante y swap en la moneda de la cuenta).
 
 Contrato de error común: si el dato no está disponible retorna `{'error': 'CÓDIGO', 'message': '...'}` — nunca array vacío ni `None` silencioso. La antigua `get_economic_events` fue reemplazada por la tool nativa (#53); `get_market_context` (noticias Finnhub) quedó deprecada y se purgó del registro — las **noticias** se obtienen vía `WebSearch` (investing.com + fuentes oficiales: Fed, BCCh, OPEP+, EIA, BLS). Ver `docs/archive/superpowers/specs/2026-06-05-calendario-macro-nativo-mt5-design.md`.
 
@@ -279,7 +280,26 @@ independientes, `<!-- FOR:respuestas -->` y `<!-- FOR:no_promesas -->`). Su chip
 `🔒 Interno · Post-venta` va **literal en el snapshot, no como token** — ningún payload puede
 suprimirlo — y su footer **no** lleva handle, dominio ni disclaimer de CFD; en su lugar,
 "Uso interno · No reenviar al cliente". Reusa los datos de `/postventa` si ya se corrió, o los toma
-del motor en frío. Único renderer: `scripts/story_render.py`
+del motor en frío.
+
+`oportunidad` es la pieza que **invita a operar**, y la única que no se invoca desde `/story`: la
+genera su propio comando `/oportunidad`, que además redacta el mensaje de WhatsApp que la acompaña.
+El protagonista es el **activo operable** —nombre, dirección, precio de ahora y hacia dónde va— y el
+dato macro que la origina baja a evidencia lateral, donde arriba va la LECTURA ("menos empleos en
+EE.UU.") y abajo la cifra que la prueba: el número solo no le sirve a nadie. **No es una señal y no
+debe convertirse en una**: no lleva entrada, TP, SL ni volumen, porque eso exigiría firma acreditada
+y contaría para el límite de 3 por semana — para eso está `recomendacion`. Su gráfico es
+**escenario a sangre** y no una tarjeta con ejes, así que consume la serie real de MT5 vía
+`scripts/serie_mt5.py` y pide `"ajuste": "llenar"` en el `recorrido`; es el único caso donde el SVG
+se estira, porque deformar un gráfico que se lee cambiaría la pendiente que el cliente está
+midiendo. Cada activo aporta su color (`--activo-*` en `marca.css`) y su imagen
+(`templates/stories/assets/activos/<slug>.jpg`, generadas con IA — recetario en
+`docs/design/stories-gi/imagenes-por-activo.md`). Identidad del activo y dirección de mercado son
+roles de color **distintos**: el activo pinta el escenario y `--sube`/`--baja` la dirección; si se
+colapsaran, una pieza dorada bajista se leería como alcista dorada. Diseño completo en
+`docs/superpowers/specs/2026-08-04-rediseno-stories-gi-design.md`.
+
+Único renderer: `scripts/story_render.py`
 (payload JSON → HTML → PNG con Playwright headless). **Formato del lienzo**: el flag
 `--formato horizontal|vertical` elige entre 16:9 (1920×1080, por defecto) y 9:16 (1080×1920, para
 celular). El formato viaja por el CLI y **nunca** por el payload — el payload es contrato de
@@ -292,7 +312,8 @@ horizontal — una plantilla por Change, mismo criterio que las Fases B y C. Sna
 `templates/stories/alerta.html`, `templates/stories/quote.html`, `templates/stories/breaking.html`,
 `templates/stories/encuesta.html`, `templates/stories/edu.html`, `templates/stories/flash.html`,
 `templates/stories/postventa.html`, `templates/stories/operacion.html`,
-`templates/stories/dato_macro.html` y `templates/stories/recomendacion.html`. Las demás plantillas del canvas (Market Update, Indicador
+`templates/stories/dato_macro.html`, `templates/stories/recomendacion.html` y
+`templates/stories/oportunidad.html`. Las demás plantillas del canvas (Market Update, Indicador
 Macro, Trading Idea, Calendario, Semanal, Carrusel "Oportunidades de la semana") llegan con los issues
 #111-#115 — ver `docs/design/stories-gi/plantillas-stories-gi.md` para el mapeo campo-por-campo.
 
@@ -473,7 +494,7 @@ El helper crea las carpetas y devuelve la ruta lista para `Write`. Si la pieza n
 
 **Nota**: Evolution API (Docker) está instalada y lista en `mcp/docker-compose.yml`. Cuando se resuelva la conexión WhatsApp/Baileys, el envío pasará a ser automático sin cambios adicionales.
 
-## Slash Commands disponibles (26)
+## Slash Commands disponibles (27)
 
 Invocar con `/nombre` desde Claude Code:
 
@@ -499,7 +520,8 @@ Invocar con `/nombre` desde Claude Code:
 | `/dato_macro` | Calendario del día → director elige dato a desarrollar |
 | `/noticia` | Busca 3-5 noticias relevantes → director elige |
 | `/chart` | Genera screenshot de MT5 con indicador y temporalidad a elección |
-| `/story [tipo]` | Genera una Story de marca GI (imagen 1920×1080). `[tipo]` soportados hoy: `alerta`, `quote`, `breaking`, `encuesta`, `edu`, `flash`, `postventa`; demás plantillas en #111-#115. Ver sección "Stories GI". |
+| `/story [tipo]` | Genera una Story de marca GI (imagen 1920×1080). `[tipo]` soportados hoy: `dato_macro`, `alerta`, `recomendacion`, `quote`, `breaking`, `encuesta`, `edu`, `flash`, `postventa`; demás plantillas en #111-#115. Ver sección "Stories GI". |
+| `/oportunidad [activo]` | Pieza que invita a operar: imagen (plantilla `oportunidad`) + mensaje de WhatsApp con contexto, llamado a la acción, fuente y disclaimer. Precios SIEMPRE del motor — si MT5 falla, se detiene, nunca deduce. No es señal: sin entrada, TP ni SL. Máximo 3 al día. |
 | `/señal` | Señal operativa (verifica límite 3/semana automáticamente) |
 | `/alerta` | Detecta qué mueve el mercado ahora y genera alerta urgente |
 | `/concepto` | Concepto educativo conectado a lo que pasó esta semana |
@@ -528,12 +550,12 @@ grupo-analisis-mercado/
 │   ├── design/            ← diseños técnicos vigentes (ciclo Pulse) — incluye stories-gi/ y motor-como-cerebro-hub-gi
 │   └── archive/           ← docs históricos de features ya implementadas (design/plan/superpowers)
 ├── .claude/
-│   ├── commands/          ← 25 slash commands (invocar con /nombre)
+│   ├── commands/          ← 27 slash commands (invocar con /nombre)
 │   │   ├── domingo.md
 │   │   ├── lunes.md · martes.md · miercoles.md · jueves.md
 │   │   ├── viernes_am.md · viernes_pm.md
 │   │   ├── encuesta.md · rencuesta.md · curriculo.md
-│   │   ├── apertura.md · actualizacion.md · dato_macro.md · noticia.md · chart.md · story.md
+│   │   ├── apertura.md · actualizacion.md · dato_macro.md · noticia.md · chart.md · story.md · oportunidad.md
 │   │   ├── señal.md · alerta.md · concepto.md · pregunta.md · respuesta.md · ventas.md · postventa.md · estado.md
 │   │   └── accion.md · earnings.md
 │   └── shared/modo_ejecutivo.md  ← contrato del flag `ejecutivo` (guion_ejecutivo.txt)
@@ -556,7 +578,7 @@ grupo-analisis-mercado/
 │   ├── concepto_didactico.txt · guion_ejecutivo.txt
 │   ├── ruta_curriculo.txt · dashboard_metricas.txt · mapa_conceptos.txt
 │   ├── ventas_email.txt · ventas_whatsapp.txt
-│   └── stories/           ← snapshots de marca GI (10 plantillas) + marca.css · fonts/ · assets/
+│   └── stories/           ← snapshots de marca GI (11 plantillas) + marca.css · fonts/ · assets/activos/
 ├── conceptos/             ← notas canónicas de conceptos educativos (malla /rencuesta)
 │   ├── README.md · stop-loss.md
 ├── data/                  ← datos persistentes

@@ -81,6 +81,7 @@ archivo acá abajo cuando se agregue.
 | `plata.jpg` | Plata (XAGUSD) | Generada con IA (Gemini), 4 ago 2026 | Propia |
 | `tech-circuito.jpg` | Acciones tecnológicas | Generada con IA (Gemini), 4 ago 2026 | Propia |
 | `tech-baterias.jpg` | Acciones de movilidad/energía | Generada con IA (Gemini), 4 ago 2026 | Propia |
+| `meli.jpg` | Mercado Libre (#MELI) | Generada con IA (Gemini), 6 ago 2026 | Propia |
 
 Todas normalizadas a 1800 px de ancho, JPG calidad 88. **Se les recortó el 8% inferior**: el
 generador estampa su marca de agua abajo a la derecha y no puede viajar en una pieza de marca.
