@@ -67,3 +67,11 @@ data/cache/
 
 # Assets de marca GI (logos y fondos originales, pesados y no editables aca)
 templates/stories/assets/*.jpg
+
+# Borradores de trabajo: payloads sueltos, scripts de una corrida, pruebas de
+# encoding. Se conservan en local porque sirven mientras se itera, pero no son
+# el proyecto — un repo que los incluye deja de mostrar qué es código y qué fue
+# un experimento de una tarde.
+scratch/
+scratch_data.py
+scripts/spanish_test.py
