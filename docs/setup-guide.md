@@ -33,7 +33,7 @@ pip install MetaTrader5 pandas requests
 
 ### 3. Configurar el MCP market-data
 
-El MCP `market-data` (`src/market_data_mcp/`) es la capa de datos técnicos del sistema. Expone 4 tools: `get_asset_levels` (precio, soportes/resistencias, sesgo, RSI, ATR), `get_chart_objects` (niveles dibujados a mano por el director en MT5 + screenshot), `obtener_calendario_macro` (calendario económico Investing.com — Chile/EE.UU./China/Zona Euro) y `get_symbol_spec` (especificaciones de contrato y sesiones de trading). Las noticias se obtienen con `WebSearch` sobre investing.com + fuentes oficiales (Fed, BCCh, OPEP+, EIA, BLS); `WebSearch` también actúa de fallback si `obtener_calendario_macro` falla.
+El MCP `market-data` (`src/market_data_mcp/`) es la capa de datos técnicos del sistema. Expone 5 tools: `get_asset_levels` (precio, soportes/resistencias, sesgo, RSI, ATR), `get_chart_objects` (niveles dibujados a mano por el director en MT5 + screenshot), `obtener_calendario_macro` (calendario económico Investing.com — Chile/EE.UU./China/Zona Euro), `get_symbol_spec` (especificaciones de contrato y sesiones de trading) y `get_open_positions` (operaciones abiertas en el terminal MT5). Las noticias se obtienen con `WebSearch` sobre investing.com + fuentes oficiales (Fed, BCCh, OPEP+, EIA, BLS); `WebSearch` también actúa de fallback si `obtener_calendario_macro` falla.
 
 El cliente MT5 (`src/market_data_mcp/mt5_client.py`) está **vendorizado dentro del repo** — el MCP es autocontenido y no depende de ninguna carpeta externa (ver issue #30).
 
@@ -51,10 +51,10 @@ cp src/market_data_mcp/.env.example src/market_data_mcp/.env
 
 > `market_data_mcp/.env` está en `.gitignore` (patrón `.env`) — nunca se commitea. Si MT5 ya está abierto y logueado en el terminal, el MCP funciona sin rellenar ninguna variable.
 
-**Para Antigravity CLI:**
-Agrega el MCP al entorno global usando el siguiente comando (ajustando la ruta a tu proyecto):
+**Para Antigravity (AGY):**
+Antigravity detecta y carga automáticamente la configuración del MCP desde `.agents/mcp.json` en la raíz del repositorio. También puedes agregarlo manualmente con:
 ```bash
-antigravity --add-mcp '{"name":"market-data","command":"python","args":["C:\Ruta\Absoluta\grupo-analisis-mercado\market_data_mcp\server.py"]}'
+agy --add-mcp '{"name":"market-data","command":"uv","args":["run","python","src/market_data_mcp/server.py"]}'
 ```
 
 **Para Claude Code:**

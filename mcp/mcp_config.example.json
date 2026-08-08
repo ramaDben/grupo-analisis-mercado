@@ -1,5 +1,12 @@
 {
   "mcpServers": {
+    "market-data": {
+      "estado": "ACTIVO — capa de datos técnicos MT5 (5 tools: get_asset_levels, get_chart_objects, obtener_calendario_macro, get_symbol_spec, get_open_positions)",
+      "command": "uv",
+      "args": ["run", "python", "src/market_data_mcp/server.py"],
+      "cwd": "<RUTA_ABSOLUTA_AL_REPO>",
+      "nota": "Servidor MCP nativo de análisis técnico, calendario, especificaciones y operaciones abiertas para Claude y AGY."
+    },
     "whatsapp": {
       "estado": "PENDIENTE — requiere Evolution API en Docker conectado a WhatsApp/Baileys",
       "command": "npx",
