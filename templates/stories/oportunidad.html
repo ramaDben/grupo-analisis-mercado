@@ -177,13 +177,17 @@ semana.
   .flecha::before { content: "▲"; font-size: 26px; }
   body.sesgo-bajista .flecha::before { content: "▼"; }
 
-  /* El texto que antes iba en blanco toma el verde de marca. Decisión del
-     director: la pieza se construye sobre el color de GI. */
+  /* Blanco, no verde. Con el titular, los dos precios, la lectura del dato y el
+     CTA todos en el acento, el precio de ahora y el objetivo quedaban en dos
+     verdes casi iguales y el par dejaba de leerse como "de acá hacia allá".
+     El verde se reserva para lo que ES dirección —el objetivo— y para el cromo
+     de marca; el texto que se lee va en blanco, que es donde mejor contrasta
+     sobre el fondo negro. */
   .titular {
     font-family: "Space Grotesk", sans-serif; font-weight: 800;
     font-size: 88px; line-height: 1.02; letter-spacing: -0.03em;
     margin: 28px 0 0;
-    color: var(--acento);
+    color: var(--blanco);
   }
   .razon {
     font-size: 29px; line-height: 1.42; color: var(--texto-2);
@@ -201,7 +205,7 @@ semana.
   .precio {
     font-family: "Space Grotesk", sans-serif; font-weight: 700;
     font-size: 96px; line-height: 1; margin-top: 6px;
-    color: var(--acento);
+    color: var(--blanco);
     text-shadow: 0 0 70px color-mix(in srgb, var(--activo) 70%, transparent);
   }
   /* Los dos precios son el corazón de la pieza: de dónde viene y hacia dónde
@@ -240,7 +244,7 @@ semana.
      le dice nada a nadie; "menos empleos" se entiende sin saber qué es JOLTS.
      El número queda igual, en chico, porque es la prueba de lo que se afirma. */
   .evidencia-lectura {
-    color: var(--acento);
+    color: var(--texto-1);
     font-family: "Space Grotesk", sans-serif; font-weight: 700;
     font-size: 46px; line-height: 1.05; margin-top: 10px;
     letter-spacing: -0.02em;
@@ -285,7 +289,7 @@ semana.
     font-size: 32px; font-weight: 700;
     box-shadow: 0 0 50px -8px var(--activo);
   }
-  .cta-titulo { color: var(--acento); font-family: "Space Grotesk", sans-serif; font-weight: 800; font-size: 37px; letter-spacing: -0.015em; }
+  .cta-titulo { color: var(--texto-1); font-family: "Space Grotesk", sans-serif; font-weight: 800; font-size: 37px; letter-spacing: -0.015em; }
   .cta-sub { font-size: 24px; color: var(--texto-2); margin-top: 3px; }
   .cta-marca { display: flex; align-items: center; gap: 20px; }
   .cta-handle { font-family: "Space Grotesk", sans-serif; font-weight: 600; font-size: 22px; color: var(--texto-2); }
