@@ -82,18 +82,17 @@ archivo acá abajo cuando se agregue.
 | `tech-circuito.jpg` | Acciones tecnológicas | Generada con IA (Gemini), 4 ago 2026 | Propia |
 | `tech-baterias.jpg` | Acciones de movilidad/energía | Generada con IA (Gemini), 4 ago 2026 | Propia |
 | `meli.jpg` | Mercado Libre (#MELI) | Generada con IA (Gemini), 6 ago 2026 | Propia |
+| `bitcoin.jpg` | Bitcoin (BTCUSD) | Generada con IA (Gemini), 9 ago 2026 | Propia |
 
-### Bitcoin (BTCUSD) — falta su imagen
-
-Hubo un `bitcoin.jpg` acá y **se eliminó**: lo agregó Antigravity el 9 ago 2026 al
-generar una pieza, sin declarar de dónde salió, y el director confirmó que es de
-origen desconocido. Una imagen sin procedencia no puede ir en una pieza de marca que
-se publica — no importa cuánto se le parezca a una generada por nosotros.
-
-Mientras no exista, las piezas de Bitcoin salen con su color y sin foto, que es la
-degradación prevista (`activo_imagen` vacío). Para generarla, el prompt está en
-`docs/design/stories-gi/imagenes-por-activo.md` § Bitcoin — y ojo, **no es una
-moneda**: el motivo correcto es el circuito.
+> **Nota de recorte para `bitcoin.jpg`.** El 8 % inferior del estándar no alcanzó:
+> Gemini estampó su marca de agua más arriba de lo habitual, a un 15,9 % del borde.
+> Se recortó el **17 %** y se verificó por píxel que no quedara rastro. Si otra
+> imagen llega con la marca en otra posición, medirla antes de recortar en vez de
+> aplicar el 8 % a ciegas.
+>
+> Es además la segunda imagen de Bitcoin: la primera se descartó por venir sin
+> procedencia declarada, y porque era una moneda — motivo equivocado para este
+> activo (ver el prompt en `docs/design/stories-gi/imagenes-por-activo.md`).
 
 Todas normalizadas a 1800 px de ancho, JPG calidad 88. **Se les recortó el 8% inferior**: el
 generador estampa su marca de agua abajo a la derecha y no puede viajar en una pieza de marca.
