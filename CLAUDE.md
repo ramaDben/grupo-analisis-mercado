@@ -341,7 +341,7 @@ extremo y queda disponible como `--acento-azul`). Ambos medidos sobre los assets
 **Piel compartida.** La línea visual de `oportunidad` —capas de fondo, imagen y
 color por activo, sello con pulso, tipografía de titulares en Space Grotesk 800,
 CTA y footer— vive en `templates/stories/piel.css`, hermano de `marca.css`. La
-consumen `oportunidad`, `alerta` y `recomendacion`; las otras siete plantillas
+consumen `oportunidad`, `alerta` y `recomendacion`; las otras ocho plantillas
 migran de a una (misma regla que las Fases B y C: una plantilla por Change).
 
 Se estandariza la **piel**, no la **estructura**. `recomendacion` conserva
