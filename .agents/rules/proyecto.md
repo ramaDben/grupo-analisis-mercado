@@ -38,6 +38,17 @@ Lo que está prohibido, sin excepción:
 servidor MCP, así que un activo agregado después aparece como inexistente hasta
 reconectar. Si sospechas de eso, dilo — no lo resuelvas por tu cuenta.
 
+### "Mejor/peor de lo esperado" exige un consenso publicado
+
+El chip de veredicto compara un dato contra lo que el mercado **esperaba**. Solo se
+puede usar cuando existe esa cifra de consenso y la tienes a la vista: la trae el
+calendario económico junto al dato.
+
+Un número sin consenso —flujos de ETFs, un volumen, una cifra de una noticia— puede
+ir en la pieza como evidencia, pero **sin veredicto**. Ponerle "mejor de lo
+esperado" a algo que nadie pronosticó es afirmar una comparación que no existe, y
+el cliente la lee como un hecho verificado.
+
 ## 1 bis. Escribe los archivos en UTF-8
 
 En Windows, `Set-Content` y `Out-File` de PowerShell usan por defecto la

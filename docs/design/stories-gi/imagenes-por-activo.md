@@ -84,6 +84,20 @@ stacked polished copper cathode sheets, warm orange-brown reflections,
 industrial warehouse dissolving into darkness
 ```
 
+### Bitcoin — BTCUSD
+```
+abstract macro of etched circuit-board tracery on a dark metallic surface,
+warm amber and orange specular highlights catching the raised lines,
+extreme shallow focus, no coins, no symbols, no readable text
+```
+⚠️ **No pedir una moneda.** Es la trampa de este activo: Bitcoin no existe como objeto
+físico, y las "monedas de Bitcoin" son souvenirs. Peor aún para el generador, que llena
+el canto de texto grabado y lo saca deformado — la primera imagen que llegó a este repo
+traía "BFW MOIACIRY DIETAI S" alrededor del borde y se descartó por eso (además de por
+origen desconocido). El motivo correcto es el **circuito**, que es lo que la cosa
+realmente es, y comparte lenguaje visual con `tech-circuito.jpg` sin repetirlo: acá la
+luz va cálida y ámbar, no fría.
+
 ### Acciones del catálogo
 No usar el logo de la empresa (marca registrada de un tercero). Generar el **sector**: chips para
 semiconductoras, aviones para aerolíneas, góndolas para retail. Mismo prompt base.
