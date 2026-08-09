@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "market-data": {
+      "command": "uv",
+      "args": [
+        "run",
+        "python",
+        "src/market_data_mcp/server.py"
+      ],
+      "cwd": "<RUTA_ABSOLUTA_AL_REPO>"
+    }
+  }
+}

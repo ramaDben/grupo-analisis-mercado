@@ -62,8 +62,15 @@ data/cache/
 # Brainstorming visual companion (superpowers)
 .superpowers/
 
-# Config local de runner de agentes externo (Antigravity u otro CLI MCP)
-.agents/
+# Antigravity (AGY). Los workflows y las reglas SÍ se versionan: son la forma en
+# que AGY ejecuta los comandos del proyecto, y si viven solo en una máquina, el
+# resto del equipo clona el repo sin ellos. Lo que queda fuera es la config local
+# del MCP, que lleva la ruta absoluta de cada quien — mismo criterio que
+# mcp/mcp_config.json frente a mcp_config.example.json.
+.agents/*
+!.agents/workflows/
+!.agents/rules/
+!.agents/mcp.example.json
 
 # Assets de marca GI (logos y fondos originales, pesados y no editables aca)
 templates/stories/assets/*.jpg
