@@ -369,7 +369,10 @@ def test_alerta_no_placeholders():
     # La piel SÍ agrega su propio <img class="foto-activo">, capa de fondo, no
     # gráfico -- por eso la aserción es específica y no un "<img" genérico.
     assert 'id="img-alerta"' not in html
-    assert 'class="foto-activo"' in html
+    # `--fondo` es la variante a sangre de piel.css: en esta pieza la columna
+    # derecha es el gráfico, así que la foto va detrás de todo el lienzo y no
+    # ocupando el 58 % derecho como en `oportunidad`.
+    assert 'class="foto-activo foto-activo--fondo"' in html
     assert "<svg" in html
 
 
@@ -426,10 +429,12 @@ def test_alerta_sin_activo_slug_no_rompe():
     assert "{{" not in _body(html)
 
 
-def test_alerta_conserva_sus_niveles_visibles():
-    # El gráfico de alerta es CONTENIDO, no atmósfera: sus niveles de soporte y
-    # resistencia son el dato que el cliente busca. Si alguien lo convierte en
-    # escenario a sangre, este test cae.
+def test_alerta_declara_las_clases_de_sus_niveles():
+    """Verifica que la plantilla DECLARA el estilo de soporte, resistencia y
+    precios — no que se vean en el PNG. El gráfico de alerta es CONTENIDO, no
+    atmósfera: si alguien lo convierte en escenario a sangre borrando estas
+    clases, este test cae. Que además quepan dentro del lienzo lo mide
+    `test_alerta_vertical_no_recorta_el_grafico`, sobre el render real."""
     html = ALERTA_TEMPLATE.read_text(encoding="utf-8")
 
     assert ".g-nivel-soporte" in html
@@ -456,11 +461,15 @@ def _payload_recomendacion_fixture() -> dict:
 
 
 def test_recomendacion_pinta_el_color_del_activo():
+    # Con un activo QUE TIENE token en marca.css. La fixture usaba `eurusd`, que
+    # no lo tiene: el test pasaba probando justamente el caso en que NO se pinta
+    # ningún color, y era el único guard de la feature en esta plantilla.
     payload = _payload_recomendacion_fixture()
 
     html = story_render.build_html(payload, RECOMENDACION_TEMPLATE)
 
-    assert "activo-eurusd" in html
+    # La clase en <body> es lo que hace cascadear `--activo` desde marca.css.
+    assert "activo-oro" in html
 
 
 def test_recomendacion_conserva_la_firma_acreditada():
@@ -485,6 +494,10 @@ def test_recomendacion_conserva_los_tres_niveles_del_grafico():
 
 
 def test_recomendacion_sin_activo_slug_no_rompe():
+    # Degradación deliberada: un activo sin color asignado —EUR/USD, por
+    # ejemplo— sale igual, en el acento de marca. La cobertura del caso vive
+    # acá y no en la fixture: una fixture sin color deja ciego al test de
+    # arriba, que es lo que pasó hasta este cambio.
     payload = _payload_recomendacion_fixture()
     payload["activo_slug"] = ""
     payload["activo_imagen"] = ""
@@ -492,6 +505,7 @@ def test_recomendacion_sin_activo_slug_no_rompe():
     html = story_render.build_html(payload, RECOMENDACION_TEMPLATE)
 
     assert "{{" not in _body(html)
+    assert "activo-oro" not in html
 
 
 # ---------------------------------------------------------------------------
@@ -1159,6 +1173,46 @@ def test_alerta_vertical_apila_editorial_y_grafico(tmp_path):
     # Vertical: apiladas
     assert graf_v["y"] > edi_v["y"]
     assert abs(graf_v["x"] - edi_v["x"]) < 2
+
+
+@pytest.mark.skipif(
+    not _chromium_disponible(), reason="Chromium de Playwright no instalado"
+)
+def test_alerta_vertical_no_recorta_el_grafico():
+    """El SVG cabe DENTRO de su contenedor en vertical, que es lo que hace
+    visibles los niveles.
+
+    El SVG entra sin ancho ni alto propios: como elemento reemplazado con
+    `viewBox` tomaba el ancho del contenedor y deducía el alto de la proporción
+    —834 px medidos dentro de una caja de 591—, y `overflow: hidden` se comía la
+    resistencia arriba y el soporte abajo. Se mide sobre el render, porque en el
+    HTML no se ve.
+    """
+    from playwright.sync_api import sync_playwright
+
+    payload = _payload_alerta_fixture()
+    payload["chart_png"] = None
+    html = story_render.build_html(payload, ALERTA_TEMPLATE)
+    tmp_html = ALERTA_TEMPLATE.parent / "_test_alerta_grafico_probe.html"
+    tmp_html.write_text(html, encoding="utf-8")
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            try:
+                page = browser.new_page(
+                    viewport={"width": 1080, "height": 1920}, device_scale_factor=1
+                )
+                page.goto(tmp_html.resolve().as_uri(), wait_until="networkidle")
+                caja = page.locator(".contenedor-grafico").bounding_box()
+                svg = page.locator(".contenedor-grafico svg").bounding_box()
+                page.close()
+            finally:
+                browser.close()
+    finally:
+        tmp_html.unlink(missing_ok=True)
+
+    assert svg["y"] >= caja["y"] - 1
+    assert svg["y"] + svg["height"] <= caja["y"] + caja["height"] + 1
 
 
 # ---------------------------------------------------------------------------

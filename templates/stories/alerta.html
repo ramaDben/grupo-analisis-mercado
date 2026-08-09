@@ -32,8 +32,13 @@ y tests/test_story_render.py.
     overflow: hidden;
   }
 
-  /* ---- Contenedor raíz: columna (contenido | footer) ---- */
+  /* ---- Contenedor raíz: columna (contenido | footer) ----
+     `position: relative` porque las capas de la piel (`.foto-activo`, `.velo`,
+     `.grilla`) y el filete de `.story::after` son absolutas y toman a `.story`
+     como bloque contenedor. Sin esto funcionaban por casualidad, apoyándose en
+     el <body>. */
   .story {
+    position: relative;
     width: 100%;
     height: 100%;
     padding: 56px 72px 40px;
@@ -95,10 +100,13 @@ y tests/test_story_render.py.
      La dirección vive donde ES el dato: la píldora de sesgo, la variación y
      las velas. El marco de la pieza es identidad del activo y no opina sobre
      hacia dónde va el precio. El sello "Alerta de mercado" con su pulso ahora
-     lo aporta piel.css (`.sello`/`.pulso`), que ya lo pinta en `var(--activo)`. */
+     lo aporta piel.css (`.sello`/`.pulso`), que ya lo pinta en `var(--activo)`.
+     El fondo y el borde del chip iban en rojo fijo hasta este cambio: el texto
+     ya estaba en el color del activo y el marco lo contradecía —un chip rojo
+     sobre una pieza dorada—. Ahora los tres salen del mismo rol. */
   .chip-categoria {
-    background: rgba(232, 64, 64, 0.14);
-    border: 1px solid rgba(232, 64, 64, 0.5);
+    background: color-mix(in srgb, var(--activo) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--activo) 50%, transparent);
     color: var(--activo);
   }
 
@@ -130,12 +138,15 @@ y tests/test_story_render.py.
     margin: 18px 0 0;
   }
 
-  /* ---- Tarjeta de precio ---- */
+  /* ---- Tarjeta de precio ----
+     El relleno acompaña al borde: los dos en `var(--activo)`. Antes el borde ya
+     era del activo y el relleno seguía en rojo fijo, así que la tarjeta salía
+     con marco dorado y fondo rojizo. */
   .tarjeta-precio {
     margin-top: 24px;
     border: 2px solid var(--activo);
     border-radius: 22px;
-    background: rgba(232, 64, 64, 0.08);
+    background: color-mix(in srgb, var(--activo) 8%, transparent);
     padding: 24px 30px;
   }
 
@@ -304,17 +315,33 @@ y tests/test_story_render.py.
     fill: var(--texto-2);
   }
 
+  /* El fondo del contenedor era un blanco al 3 %: sobre el negro se leía como
+     un gris apenas perceptible, pero sobre la foto del activo no tapaba nada.
+     Ahora es un velo OSCURO —negro de marca a media opacidad— porque su trabajo
+     es que la curva y sus rótulos se lean por encima de la imagen (§D2: si el
+     fondo compromete un bloque, gana el bloque). */
   .contenedor-grafico {
     flex: 1;
     min-height: 0;
     border-radius: 20px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: color-mix(in srgb, var(--fondo) 62%, transparent);
+    border: 1px solid color-mix(in srgb, var(--blanco) 10%, transparent);
     padding: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
+  }
+
+  /* El SVG del gráfico entra sin ancho ni alto propios: como elemento
+     reemplazado con `viewBox`, tomaba el ancho del contenedor y deducía el alto
+     de la proporción — 834 px medidos dentro de una caja de 591 en vertical, de
+     donde salían la resistencia recortada arriba y el soporte cortado abajo.
+     Con `width/height: 100%` la caja manda y `preserveAspectRatio` encaja el
+     dibujo dentro. */
+  .contenedor-grafico svg {
+    width: 100%;
+    height: 100%;
   }
 
   #img-alerta {
@@ -427,7 +454,7 @@ y tests/test_story_render.py.
 <body class="sesgo-{{sesgo_slug}} activo-{{activo_slug}}">
   <div class="story">
 
-    <img class="foto-activo" src="{{activo_imagen}}" alt="">
+    <img class="foto-activo foto-activo--fondo" src="{{activo_imagen}}" alt="">
     <div class="velo"></div>
     <div class="grilla"></div>
 

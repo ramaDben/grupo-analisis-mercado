@@ -27,7 +27,7 @@
 
 /* ── Tipografía institucional ──────────────────────────────────────────────
    Space Grotesk (titulares y cifras) y DM Sans son las únicas familias que
-   esta plantilla necesita y las únicas que siguen en `fonts/`: Sora, Outfit
+   necesitan las piezas de esta familia y las únicas que siguen en `fonts/`: Sora, Outfit
    y Manrope fueron candidatas de comparación (ver spec de rediseño) y sus
    archivos ya no están en el repo. */
 @font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
@@ -60,6 +60,35 @@
   pointer-events: none;
 }
 
+/* Variante FONDO A SANGRE — la que manda §D2 de la spec de piel compartida.
+
+   La regla de arriba es la composición de `oportunidad`: la foto toma el 58 %
+   derecho porque en esa pieza ese costado está vacío a propósito. En `alerta` y
+   `recomendacion` ese mismo 58 % ES la columna del gráfico, así que la foto le
+   caía encima y la curva competía con los lingotes. Acá la imagen cubre TODO el
+   lienzo, mucho más apagada, y queda por DEBAJO del velo (z-index 0 contra 1):
+   aporta reconocimiento del activo sin disputarle espacio a ningún bloque.
+
+   Subordinación explícita: si el fondo compromete la legibilidad de un bloque,
+   gana el bloque. Por eso el brillo baja a un tercio y la opacidad a la mitad —
+   medido sobre el render, no estimado: con la foto al valor de `oportunidad`,
+   los rótulos de soporte y resistencia quedaban ilegibles.
+
+   Es una variante y no una segunda copia: se elige poniéndole la clase al mismo
+   <img>, sin duplicar una línea de la regla base. */
+.foto-activo--fondo {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  -webkit-mask-image:
+    linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 58%, rgba(0,0,0,0.30) 100%);
+  mask-image:
+    linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 58%, rgba(0,0,0,0.30) 100%);
+  filter: saturate(0.82) contrast(0.94) brightness(0.36);
+  opacity: 0.55;
+}
+
 .ilustracion {
   position: absolute; right: -16px; top: 37%;
   transform: translateY(-50%);
@@ -85,6 +114,29 @@
 }
 
 .capa { position: relative; z-index: 2; display: flex; flex-direction: column; height: 100%; }
+
+/* ── El filete de marca sobrevive a las capas ──────────────────────────────
+   marca.css lo pone como `box-shadow: inset` en `.story`, y un inset se pinta
+   bajo el contenido de los descendientes: `.velo` y `.grilla` son hijos de
+   `.story` con `inset: 0`, así que lo tapaban. Medido sobre los PNG, el borde
+   izquierdo quedaba en negro puro y el superior al 20 % de su color.
+
+   El filete no es decoración: existe porque con el fondo de marca en negro puro una pieza
+   abierta en WhatsApp oscuro se funde con el chat (ver marca.css). Perderlo
+   bajo el velo es perder el borde de la imagen.
+
+   Se repite acá en un pseudo-elemento por encima de todas las capas. Sigue
+   siendo `box-shadow: inset` y sigue sin participar del layout — no desplaza un
+   píxel de ninguna plantilla —, y `pointer-events: none` lo deja fuera de todo.
+   Requiere `position: relative` en `.story`, que las tres plantillas declaran. */
+.story::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 var(--filete-ancho) var(--filete);
+}
 
 .sello {
   display: inline-flex; align-items: center; gap: 12px;

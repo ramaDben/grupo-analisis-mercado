@@ -5,7 +5,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 DIR_STORIES = _REPO_ROOT / "templates" / "stories"
 PIEL_CSS = DIR_STORIES / "piel.css"
 
-# Las tres plantillas de la familia. Las otras siete migran en Changes aparte
+# Las tres plantillas de la familia. Las otras ocho migran en Changes aparte
 # (ver §6 de la spec): una plantilla por vez, porque cada una tiene su propia
 # calibración de alturas.
 FAMILIA = ("oportunidad.html", "alerta.html", "recomendacion.html")
