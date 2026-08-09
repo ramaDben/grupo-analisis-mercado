@@ -78,6 +78,7 @@ MAPA = {
     "#E8783C": "activo-wti",
     "#4C86E8": "activo-us100",
     "#C9743A": "activo-usdclp",
+    "#F7931A": "activo-bitcoin",
 }
 
 # Solo 6 dígitos y con frontera: descarta `#119` de los comentarios de issue.

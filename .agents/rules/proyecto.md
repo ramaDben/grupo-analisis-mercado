@@ -17,6 +17,45 @@ nunca deducidos de otro número.
 Si el MCP falla, **detente y dilo**. Una pieza con un precio inventado es peor que
 ninguna pieza: el cliente opera con ella.
 
+### Qué hacer cuando el motor dice que no
+
+El MCP devuelve `{"error": "CÓDIGO", "message": "..."}` cuando no puede darte el
+dato. Ese error es una respuesta, no un obstáculo: **detente y repórtaselo al
+director con el código exacto**. Él decide.
+
+Lo que está prohibido, sin excepción:
+
+- Completar el dato faltante con una estimación, un recuerdo o un número
+  plausible. Un precio que nadie verificó dentro de una pieza que invita a
+  operar es el peor resultado posible de este proyecto.
+- **Modificar la configuración del proyecto para sortear el error.** Si el activo
+  no está en `config/activos.json`, no lo agregues; si falta un color en
+  `marca.css`, no lo inventes; si falta una imagen en
+  `templates/stories/assets/`, no la descargues. Propónselo al director y espera.
+  Puede que el activo no esté a propósito.
+
+`TICKER_NOT_FOUND` merece una aclaración: el catálogo se carga cuando arranca el
+servidor MCP, así que un activo agregado después aparece como inexistente hasta
+reconectar. Si sospechas de eso, dilo — no lo resuelvas por tu cuenta.
+
+## 1 bis. Escribe los archivos en UTF-8
+
+En Windows, `Set-Content` y `Out-File` de PowerShell usan por defecto la
+codificación ANSI del sistema. Un payload JSON escrito así llega al renderer con
+los acentos rotos, y la pieza sale con `AN?LISIS`, `inversi?n`, `?Quieres` — y
+también el separador `·` de las cabeceras.
+
+Usa siempre UTF-8 explícito:
+
+```powershell
+$json | Out-File -FilePath payload.json -Encoding utf8
+```
+
+o escribe el archivo con la herramienta de escritura del agente en vez de por
+consola. **Antes de dar una pieza por buena, mira el PNG y verifica que los
+acentos y los signos `¿` `¡` `·` se vean correctos.** Si aparece un `?` donde
+debería haber una tilde, el problema es este y la pieza no se puede publicar.
+
 ## 2. La hora sale del reloj, no de la web
 
 Nunca uses búsqueda web para saber la fecha o la hora. Para la hora de Chile:
@@ -76,6 +115,24 @@ aprobar, se guarda con `scripts\ruta_mensaje.ps1` (mensajes) o
 `scripts\ruta_story.ps1` (imágenes) — nunca armes la ruta a mano.
 
 El envío a WhatsApp lo hace el director copiando el texto. Tú no envías nada.
+
+### La pieza se entrega completa
+
+Varios comandos producen **imagen y texto**, no una sola cosa. `/oportunidad`
+entrega la Story más el mensaje de WhatsApp que la acompaña; `/dato_macro` en
+Modo resultado entrega la Story más su pie. Una imagen sin su texto llega muda al
+grupo: el pie es lo único que se ve en la notificación de WhatsApp antes de abrir
+el chat, y lo único legible si el cliente no descarga la imagen.
+
+Antes de dar un comando por terminado, revisa qué entregables define su archivo
+en `.claude/commands/` y confirma que produjiste **todos**, cada uno guardado con
+el helper que le corresponde.
+
+**Los nombres de archivo salen de los helpers, no de tu criterio.**
+`ruta_story.ps1` devuelve la ruta completa y ya resuelve el nombre; no le agregues
+sufijos como `_horizontal` ni `_v2`. Si necesitas guardar los dos formatos de una
+misma pieza, pregúntale al director cómo quiere distinguirlos en vez de inventar
+una convención nueva.
 
 ## 7. Color en las Stories
 

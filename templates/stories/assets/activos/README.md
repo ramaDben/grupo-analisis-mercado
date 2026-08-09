@@ -82,6 +82,16 @@ archivo acá abajo cuando se agregue.
 | `tech-circuito.jpg` | Acciones tecnológicas | Generada con IA (Gemini), 4 ago 2026 | Propia |
 | `tech-baterias.jpg` | Acciones de movilidad/energía | Generada con IA (Gemini), 4 ago 2026 | Propia |
 | `meli.jpg` | Mercado Libre (#MELI) | Generada con IA (Gemini), 6 ago 2026 | Propia |
+| `bitcoin.jpg` | Bitcoin (BTCUSD) | **Procedencia sin confirmar** — la agregó Antigravity el 9 ago 2026 sin declarar de dónde salió | ⚠️ Pendiente |
+
+> ⚠️ **`bitcoin.jpg` no está aprobada para publicar.** No trae EXIF y mide 1376 px de
+> ancho, fuera del estándar de 1800. El texto grabado en la moneda sale deformado
+> ("BFW MOIACIRY DIETAI S"), que es la firma típica de una imagen generada por IA y
+> hace improbable que sea una fotografía de stock — pero *improbable* no es
+> *verificado*, y una pieza de marca con una imagen de origen desconocido es un
+> riesgo que no corresponde correr. Antes de usarla: confirmar su origen con el
+> director, o regenerarla con el recetario de
+> `docs/design/stories-gi/imagenes-por-activo.md` y normalizarla como las demás.
 
 Todas normalizadas a 1800 px de ancho, JPG calidad 88. **Se les recortó el 8% inferior**: el
 generador estampa su marca de agua abajo a la derecha y no puede viajar en una pieza de marca.

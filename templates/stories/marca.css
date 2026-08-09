@@ -70,6 +70,7 @@
   --activo-wti:    #E8783C;
   --activo-us100:  #4C86E8;
   --activo-usdclp: #C9743A;
+  --activo-bitcoin:#F7931A;
 
   /* ── Tipografía ─────────────────────────────────────────────────────────── */
   /* Font stacks: primary sans + emoji fallbacks. Pueden ajustarse por host. */
@@ -134,6 +135,7 @@ body.activo-oro     { --activo: var(--activo-oro); }
 body.activo-wti     { --activo: var(--activo-wti); }
 body.activo-us100   { --activo: var(--activo-us100); }
 body.activo-usdclp  { --activo: var(--activo-usdclp); }
+body.activo-bitcoin { --activo: var(--activo-bitcoin); }
 
 /*
   Filete de marca en el borde de toda pieza.
