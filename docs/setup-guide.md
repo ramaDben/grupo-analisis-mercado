@@ -52,10 +52,43 @@ cp src/market_data_mcp/.env.example src/market_data_mcp/.env
 > `market_data_mcp/.env` está en `.gitignore` (patrón `.env`) — nunca se commitea. Si MT5 ya está abierto y logueado en el terminal, el MCP funciona sin rellenar ninguna variable.
 
 **Para Antigravity (AGY):**
-Antigravity detecta y carga automáticamente la configuración del MCP desde `.agents/mcp.json` en la raíz del repositorio. También puedes agregarlo manualmente con:
+Antigravity detecta y carga automáticamente la configuración del MCP desde `.agents/mcp.json` en la raíz del repositorio. Ese archivo **no está en git** porque lleva la ruta absoluta de cada máquina: copia `.agents/mcp.example.json` a `.agents/mcp.json` y reemplaza `<RUTA_ABSOLUTA_AL_REPO>`. También puedes agregarlo manualmente con:
 ```bash
 agy --add-mcp '{"name":"market-data","command":"uv","args":["run","python","src/market_data_mcp/server.py"]}'
 ```
+
+### Comandos del proyecto en Antigravity
+
+Antigravity ejecuta comandos como **workflows**: archivos markdown en
+`.agents/workflows/` que se invocan con `/nombre`, igual que los slash commands de
+Claude Code. Estos **sí** están en git.
+
+Hoy hay seis expuestos —`/story`, `/oportunidad`, `/alerta`, `/dato_macro`,
+`/apertura` y `/chart`—, los que generan piezas visuales y los datos que las
+alimentan. Los comandos de día, los educativos y los internos siguen siendo de
+Claude Code.
+
+Cada workflow es un **puntero** al comando canónico de `.claude/commands/`, no una
+copia. Por dos razones: mantener una sola definición de cada comando, y porque
+**Antigravity corta los workflows en 12.000 caracteres** — `story.md` tiene más de
+43.000 y no cabría de ninguna manera.
+
+Antigravity tampoco lee `CLAUDE.md`, así que las reglas transversales del proyecto
+—de dónde salen los datos, cómo se obtiene la hora, los decimales de cada precio,
+el tono, el flujo de aprobación— viven en `.agents/rules/proyecto.md`, y cada
+workflow manda leerlo antes de ejecutar.
+
+Para exponer un comando nuevo, agrégalo al diccionario `COMANDOS` de
+`scripts/agy_workflows.py` y regenera:
+
+```bash
+uv run python scripts/agy_workflows.py           # genera los workflows
+uv run python scripts/agy_workflows.py --check   # verifica que estén al día
+```
+
+No edites los archivos de `.agents/workflows/` a mano: el `--check` los marcaría
+como desactualizados, y ese check es lo que evita que AGY se quede atrás cuando se
+toca un comando. `tests/test_agy_workflows.py` lo corre en la suite.
 
 **Para Claude Code:**
 Verificar que esté instalado con:

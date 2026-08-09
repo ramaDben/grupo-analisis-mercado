@@ -225,6 +225,42 @@ Aunque el grupo es para clientes, sirve como espacio de alineación interna:
 ## Misión
 Mejorar indicadores de satisfacción del cliente, retención, NPS y reducir churn. Pasar de un modelo de señales a un modelo de análisis + educación donde el cliente aprende a leer el mercado.
 
+## Antigravity (AGY) — el segundo runner
+
+El repo lo ejecutan **dos** agentes: Claude Code y Antigravity. Antigravity llama
+*workflows* a lo que Claude Code llama slash commands: archivos markdown en
+`.agents/workflows/`, invocables igual con `/nombre`.
+
+Seis comandos están expuestos a AGY —`/story`, `/oportunidad`, `/alerta`,
+`/dato_macro`, `/apertura` y `/chart`—: los que generan piezas visuales y los
+datos que las alimentan. Los de día, los educativos y los internos siguen siendo
+solo de Claude Code.
+
+**Cada workflow es un puntero, no una copia.** Dos runners leyendo dos carpetas
+distintas con la misma definición duplicada es el problema que ya conocemos: a la
+segunda copia una queda atrás y nadie se entera hasta que sale una pieza mal. Hay
+además un límite duro: **Antigravity corta los workflows en 12.000 caracteres**, y
+`story.md` tiene más de 43.000 — copiarlo es imposible, no solo indeseable.
+
+**Antigravity no lee `CLAUDE.md`.** Por eso las reglas transversales —los datos
+salen del MCP y nunca se inventan, la hora sale del reloj, los decimales salen de
+`digits`, el tono, el flujo de aprobación— están en `.agents/rules/proyecto.md`, y
+cada workflow manda leerlo primero. Ese archivo es un extracto: ante cualquier
+contradicción manda `CLAUDE.md`.
+
+Para exponer un comando nuevo se agrega al diccionario `COMANDOS` de
+`scripts/agy_workflows.py` y se regenera; los archivos de `.agents/workflows/` no
+se editan a mano.
+
+```bash
+uv run python scripts/agy_workflows.py           # genera
+uv run python scripts/agy_workflows.py --check   # verifica (lo corre la suite)
+```
+
+Se versionan `.agents/workflows/` y `.agents/rules/`; queda fuera
+`.agents/mcp.json`, que lleva la ruta absoluta de cada máquina — mismo criterio
+que `mcp/mcp_config.json` frente a su `.example`.
+
 ## MCP Servers integrados
 
 | MCP | Estado | Propósito | Usado en |
