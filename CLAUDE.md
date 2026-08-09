@@ -293,7 +293,12 @@ resultado de `/dato_macro`—, donde **es el entregable principal**: desde 2026-
 texto de ese modo quedó reducido al pie de esta imagen. Se organiza alrededor del veredicto frente
 al consenso; su
 `veredicto_slug` NO se deriva de `sesgo`, porque mejor/peor es contra lo esperado y no una dirección
-de mercado (un dato "mejor" puede ser bajista para un activo). `recomendacion` es la **única
+de mercado (un dato "mejor" puede ser bajista para un activo). **El veredicto exige un consenso
+publicado**: solo se pone cuando existe la cifra que el mercado esperaba y se tiene a la vista —la
+trae el calendario junto al dato—. Un número sin consenso (flujos de ETFs, un volumen, una cifra
+suelta de una noticia) puede ir como evidencia, pero con el campo de veredicto vacío; etiquetar
+"mejor de lo esperado" algo que nadie pronosticó afirma una comparación inexistente y el cliente la
+lee como hecho verificado. `recomendacion` es la **única
 plantilla con firma acreditada** —una recomendación induce una operación, así que tiene que constar
 quién la respalda— y **cuenta para el límite de 3 señales por semana**; obliga a TP y SL en pesos y
 tiene campo para el costo de mantención (swap), que es lo que separa una operación comunicada con

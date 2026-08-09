@@ -15,7 +15,13 @@ MARCA_CSS = _REPO_ROOT / "templates" / "stories" / "marca.css"
 def test_marca_css_declara_un_color_por_activo():
     css = MARCA_CSS.read_text(encoding="utf-8")
 
-    for token in ("--activo-oro", "--activo-wti", "--activo-us100", "--activo-usdclp"):
+    for token in (
+        "--activo-oro",
+        "--activo-wti",
+        "--activo-us100",
+        "--activo-usdclp",
+        "--activo-bitcoin",
+    ):
         assert token in css, f"falta {token} en marca.css"
 
 
@@ -29,7 +35,7 @@ def test_marca_css_cascadea_el_rol_activo_por_clase():
 def test_los_colores_de_activo_tienen_rol_en_el_mapa():
     # Sin esto, una plantilla que hardcodee #E8B44C recibiría "hex huérfano" en
     # vez de la sugerencia del token correcto.
-    for hex_activo in ("#E8B44C", "#E8783C", "#4C86E8", "#C9743A"):
+    for hex_activo in ("#E8B44C", "#E8783C", "#4C86E8", "#C9743A", "#F7931A"):
         assert hex_activo in marca_tokens.MAPA, f"{hex_activo} sin rol asignado"
 
 

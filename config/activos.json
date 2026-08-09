@@ -67,6 +67,19 @@
       "temporalidades": ["4H", "1H"],
       "horario_mercado": "24h (principal: sesión NY)",
       "rotacion_diaria": true
+    },
+    {
+      "ticker": "BTC/USD",
+      "ticker_mt5": "BTCUSD",
+      "nombre": "Bitcoin",
+      "categoria": "crypto",
+      "digits": 2,
+      "volatilidad": "alta",
+      "nota_volatilidad": "movimientos amplios impulsados por flujos institucionales y sentimiento del mercado cripto",
+      "drivers": ["flujos ETFs de BTC", "tasas Fed", "Dollar Index", "regulación cripto", "sentimiento de riesgo"],
+      "temporalidades": ["4H", "1H"],
+      "horario_mercado": "24h",
+      "rotacion_diaria": true
     }
   ],
 

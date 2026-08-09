@@ -83,6 +83,18 @@ archivo acá abajo cuando se agregue.
 | `tech-baterias.jpg` | Acciones de movilidad/energía | Generada con IA (Gemini), 4 ago 2026 | Propia |
 | `meli.jpg` | Mercado Libre (#MELI) | Generada con IA (Gemini), 6 ago 2026 | Propia |
 
+### Bitcoin (BTCUSD) — falta su imagen
+
+Hubo un `bitcoin.jpg` acá y **se eliminó**: lo agregó Antigravity el 9 ago 2026 al
+generar una pieza, sin declarar de dónde salió, y el director confirmó que es de
+origen desconocido. Una imagen sin procedencia no puede ir en una pieza de marca que
+se publica — no importa cuánto se le parezca a una generada por nosotros.
+
+Mientras no exista, las piezas de Bitcoin salen con su color y sin foto, que es la
+degradación prevista (`activo_imagen` vacío). Para generarla, el prompt está en
+`docs/design/stories-gi/imagenes-por-activo.md` § Bitcoin — y ojo, **no es una
+moneda**: el motivo correcto es el circuito.
+
 Todas normalizadas a 1800 px de ancho, JPG calidad 88. **Se les recortó el 8% inferior**: el
 generador estampa su marca de agua abajo a la derecha y no puede viajar en una pieza de marca.
 Los prompts que las produjeron están en `docs/design/stories-gi/imagenes-por-activo.md`.
