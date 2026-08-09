@@ -1,0 +1,160 @@
+/*
+  Piel de las Stories GI — la línea visual que comparten las piezas.
+
+  Nace de `oportunidad`, la plantilla del rediseño de agosto de 2026 (ver
+  docs/superpowers/specs/2026-08-07-piel-compartida-stories-design.md). Antes
+  de esta hoja, adoptar esa línea en otra plantilla era copiar ~120 líneas de
+  CSS; a la tercera copia, una queda atrás y sale una pieza descoordinada. Es
+  la misma razón por la que existe marca.css.
+
+  ── Qué entra acá y qué no ───────────────────────────────────────────────────
+  Entra lo que NO depende de qué dice la pieza: capas de fondo, tipografía,
+  sello, CTA, disclaimer. Se queda en cada plantilla el layout de columnas, los
+  tamaños de cada bloque y todo lo que sea contenido.
+
+  ── Orden de carga ───────────────────────────────────────────────────────────
+  marca.css -> piel.css -> <style> de la plantilla. marca.css va primero porque
+  define los tokens que esta hoja consume; el <style> va último para que una
+  plantilla siempre pueda excepcionar.
+
+  Resuelve por ruta relativa porque story_render.py escribe el HTML DENTRO de
+  templates/stories/ y lo navega con file://, igual que marca.css y fonts/.
+
+  ── Color ────────────────────────────────────────────────────────────────────
+  Esta hoja usa `var(--activo)` —identidad— y nunca `--sube`/`--baja`
+  —dirección—. La dirección la pintan las plantillas, donde ES el dato.
+*/
+
+/* ── Tipografía institucional ──────────────────────────────────────────────
+   Space Grotesk (titulares y cifras) y DM Sans son las únicas familias que
+   esta plantilla necesita y las únicas que siguen en `fonts/`: Sora, Outfit
+   y Manrope fueron candidatas de comparación (ver spec de rediseño) y sus
+   archivos ya no están en el repo. */
+@font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-700.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+@font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "DM Sans";       src: url("fonts/dm-sans-400.woff2") format("woff2");       font-weight: 400; font-display: swap; }
+@font-face { font-family: "DM Sans";       src: url("fonts/dm-sans-700.woff2") format("woff2");       font-weight: 700; font-display: swap; }
+
+/* ══════════ CAPA 0 · EL ESCENARIO ══════════ */
+.escenario { position: absolute; inset: -2% -1% -1%; z-index: 0; pointer-events: none; }
+.escenario svg { width: 100%; height: 100%; display: block; }
+
+/* La imagen del activo. Va como <img> y no dibujada en el CSS para que sea
+   intercambiable: hoy es una ilustración propia, mañana puede ser una foto
+   con licencia sin tocar la plantilla. */
+.foto-activo {
+  position: absolute; inset: 0 -72px 0 auto;
+  width: 58%;
+  z-index: 1;
+  object-fit: cover;
+  -webkit-mask-image:
+    linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.35) 22%, var(--fondo) 62%),
+    linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 62%, transparent 96%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.35) 22%, var(--fondo) 62%),
+    linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 62%, transparent 96%);
+  mask-composite: intersect;
+  filter: saturate(1.12) contrast(1.06) brightness(0.92);
+  pointer-events: none;
+}
+
+.ilustracion {
+  position: absolute; right: -16px; top: 37%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 520px;
+  filter: drop-shadow(0 0 90px color-mix(in srgb, var(--activo) 55%, transparent));
+  pointer-events: none;
+}
+
+.velo {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    linear-gradient(100deg, var(--fondo) 24%, rgba(0,0,0,0.88) 44%, rgba(0,0,0,0.26) 70%, rgba(0,0,0,0.58) 100%),
+    radial-gradient(58% 78% at 8% 34%, color-mix(in srgb, var(--activo) 26%, transparent) 0%, rgba(0,0,0,0) 64%),
+    radial-gradient(46% 62% at 96% 92%, color-mix(in srgb, var(--acento-azul) 34%, transparent) 0%, rgba(0,0,0,0) 60%);
+}
+
+.grilla {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.026) 0 1px, transparent 1px 96px),
+    repeating-linear-gradient(0deg,  rgba(255,255,255,0.026) 0 1px, transparent 1px 96px);
+}
+
+.capa { position: relative; z-index: 2; display: flex; flex-direction: column; height: 100%; }
+
+.sello {
+  display: inline-flex; align-items: center; gap: 12px;
+  padding: 11px 24px 11px 18px;
+  border: 1px solid color-mix(in srgb, var(--activo) 46%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--activo) 11%, transparent);
+  box-shadow: 0 0 34px -10px color-mix(in srgb, var(--activo) 70%, transparent);
+  font-family: "Space Grotesk", sans-serif; font-weight: 600;
+  font-size: 20px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--activo);
+}
+.pulso {
+  width: 11px; height: 11px; border-radius: 50%;
+  background: var(--activo);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--activo) 24%, transparent),
+              0 0 18px 4px color-mix(in srgb, var(--activo) 75%, transparent);
+}
+
+/* ══════════ CTA ══════════ */
+.cta {
+  margin-top: auto;
+  display: flex; align-items: center; justify-content: space-between; gap: 40px;
+  padding: 26px 0 18px;
+  border-top: 1px solid color-mix(in srgb, var(--activo) 24%, transparent);
+}
+.cta-texto { display: flex; align-items: center; gap: 22px; }
+.cta-flecha {
+  width: 62px; height: 62px; flex: 0 0 62px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--activo); color: var(--fondo-alt);
+  font-size: 32px; font-weight: 700;
+  box-shadow: 0 0 50px -8px var(--activo);
+}
+.cta-titulo { color: var(--texto-1); font-family: "Space Grotesk", sans-serif; font-weight: 800; font-size: 37px; letter-spacing: -0.015em; }
+.cta-sub { font-size: 24px; color: var(--texto-2); margin-top: 3px; }
+.cta-marca { display: flex; align-items: center; gap: 20px; }
+.cta-handle { font-family: "Space Grotesk", sans-serif; font-weight: 600; font-size: 22px; color: var(--texto-2); }
+.cta-logo { height: 74px; }
+
+.disclaimer { padding-bottom: 20px; font-size: 14px; line-height: 1.3; color: var(--texto-3); }
+
+/* ══════════ FORMATO VERTICAL 9:16 ══════════ */
+@media (max-aspect-ratio: 1/1) {
+  /* El gráfico conserva el lienzo completo pero una máscara lo apaga en la
+     banda de los precios, que es donde estorbaba la lectura del objetivo. */
+  .escenario {
+    -webkit-mask-image: linear-gradient(180deg,
+      var(--fondo) 0%, var(--fondo) 46%, rgba(0,0,0,0.12) 55%, rgba(0,0,0,0.12) 66%, var(--fondo) 76%, var(--fondo) 100%);
+    mask-image: linear-gradient(180deg,
+      var(--fondo) 0%, var(--fondo) 46%, rgba(0,0,0,0.12) 55%, rgba(0,0,0,0.12) 66%, var(--fondo) 76%, var(--fondo) 100%);
+  }
+
+  .sello { font-size: 24px; padding: 13px 26px 13px 20px; }
+  .pulso { width: 13px; height: 13px; }
+
+  /* En vertical la ilustración NO va al centro ni grande: probada así, se
+     robaba el protagonismo que le corresponde a la dirección y a los dos
+     precios. Queda alineada a la derecha y a media escala — acompaña, no
+     encabeza. */
+  .ilustracion {
+    position: static; transform: none;
+    display: block; width: 330px; margin: 4px 0 0 auto;
+  }
+
+  .cta { padding: 28px 0 18px; gap: 24px; }
+  .cta-flecha { width: 68px; height: 68px; flex-basis: 68px; font-size: 34px; }
+  .cta-titulo { font-size: 36px; }
+  .cta-sub { font-size: 26px; }
+  .cta-handle { display: none; }
+  .cta-logo { height: 78px; }
+  .disclaimer { font-size: 16px; padding-bottom: 24px; }
+}

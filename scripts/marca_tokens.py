@@ -63,6 +63,16 @@ def _plantillas() -> list[Path]:
     return sorted(p for p in DIR_STORIES.glob("*.html"))
 
 
+def _hojas() -> list[Path]:
+    """Hojas de estilo propias, EXCEPTO marca.css.
+
+    marca.css queda fuera a propósito: es la fuente de los hex y el único
+    archivo donde escribirlos es correcto. Cualquier otra hoja —hoy piel.css—
+    debe consumir `var(--rol)` como lo hacen las plantillas.
+    """
+    return sorted(p for p in DIR_STORIES.glob("*.css") if p.name != HOJA)
+
+
 def _tokenizar(html: str) -> tuple[str, int, list[str]]:
     """Devuelve (html nuevo, nº de reemplazos, hex sin rol asignado)."""
     huerfanos: list[str] = []
@@ -141,6 +151,21 @@ def main(argv: list[str] | None = None) -> int:
             print(f"ok    {ruta.name}: {n} color(es) -> var(--rol)")
         else:
             print(f"--    {ruta.name}: sin cambios")
+
+    if args.check:
+        for ruta in _hojas():
+            css = ruta.read_text(encoding="utf-8")
+            _, n, huerfanos = _tokenizar(css)
+            if n or huerfanos:
+                problemas += 1
+                detalle = []
+                if n:
+                    detalle.append(f"{n} color(es) hardcodeado(s)")
+                if huerfanos:
+                    detalle.append(f"sin rol: {sorted(set(huerfanos))}")
+                print(f"FALLA {ruta.name}: {'; '.join(detalle)}")
+            else:
+                print(f"ok    {ruta.name}")
 
     if problemas:
         print(
