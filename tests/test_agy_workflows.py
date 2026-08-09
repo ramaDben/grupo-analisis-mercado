@@ -51,6 +51,16 @@ def test_los_workflows_apuntan_a_su_comando_y_a_las_reglas():
         assert ".agents/rules/proyecto.md" in texto
 
 
+def test_los_workflows_explican_como_recibir_los_argumentos():
+    # Los comandos de `.claude/commands/` esperan sus argumentos en `$ARGUMENTS`,
+    # un marcador que Antigravity no documenta sustituir. Sin esta explicación, el
+    # agente lee `$ARGUMENTS` literal y no se entera de que le pidieron
+    # `/story alerta`: o falla, o —peor— elige el tipo por su cuenta.
+    for nombre in agy_workflows.COMANDOS:
+        texto = (DIR_WORKFLOWS / f"{nombre}.md").read_text(encoding="utf-8")
+        assert "$ARGUMENTS" in texto, f"{nombre} no explica de dónde salen los argumentos"
+
+
 def test_las_reglas_del_proyecto_existen():
     reglas = _REPO_ROOT / ".agents" / "rules" / "proyecto.md"
     assert reglas.exists(), "falta .agents/rules/proyecto.md"
