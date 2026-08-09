@@ -36,9 +36,11 @@
 @font-face { font-family: "DM Sans";       src: url("fonts/dm-sans-400.woff2") format("woff2");       font-weight: 400; font-display: swap; }
 @font-face { font-family: "DM Sans";       src: url("fonts/dm-sans-700.woff2") format("woff2");       font-weight: 700; font-display: swap; }
 
-/* ══════════ CAPA 0 · EL ESCENARIO ══════════ */
-.escenario { position: absolute; inset: -2% -1% -1%; z-index: 0; pointer-events: none; }
-.escenario svg { width: 100%; height: 100%; display: block; }
+/* `.escenario` —el gráfico a sangre— NO vive acá: es estructura de
+   `oportunidad`, la única plantilla que lo usa, y su máscara vertical depende de
+   en qué porcentaje del lienzo cae el contenido DE ESA pieza. Un porcentaje
+   calibrado contra un titular y dos precios concretos no es piel compartida; en
+   otra plantilla no significaría nada. Vive en `oportunidad.html`. */
 
 /* La imagen del activo. Va como <img> y no dibujada en el CSS para que sea
    intercambiable: hoy es una ilustración propia, mañana puede ser una foto
@@ -181,15 +183,6 @@
 
 /* ══════════ FORMATO VERTICAL 9:16 ══════════ */
 @media (max-aspect-ratio: 1/1) {
-  /* El gráfico conserva el lienzo completo pero una máscara lo apaga en la
-     banda de los precios, que es donde estorbaba la lectura del objetivo. */
-  .escenario {
-    -webkit-mask-image: linear-gradient(180deg,
-      var(--fondo) 0%, var(--fondo) 46%, rgba(0,0,0,0.12) 55%, rgba(0,0,0,0.12) 66%, var(--fondo) 76%, var(--fondo) 100%);
-    mask-image: linear-gradient(180deg,
-      var(--fondo) 0%, var(--fondo) 46%, rgba(0,0,0,0.12) 55%, rgba(0,0,0,0.12) 66%, var(--fondo) 76%, var(--fondo) 100%);
-  }
-
   .sello { font-size: 24px; padding: 13px 26px 13px 20px; }
   .pulso { width: 13px; height: 13px; }
 
