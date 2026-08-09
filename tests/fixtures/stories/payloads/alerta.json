@@ -6,6 +6,8 @@
   "digits": 2
  },
  "chip_categoria": "COMMODITIES · ORO",
+ "activo_slug": "oro",
+ "activo_imagen": "assets/activos/oro.jpg",
  "fecha_hora": "13 JUL 2026 · 11:15",
  "titular": "El Oro rompe soporte clave y activa señal de riesgo bajista",
  "parrafo": "El metal perdió la zona de 2.320 con volumen creciente, confirmando presión vendedora. Un cierre bajo el soporte abriría espacio hacia nuevos mínimos; se recomienda gestión estricta del riesgo.",

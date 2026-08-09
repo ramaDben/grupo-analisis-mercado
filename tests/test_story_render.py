@@ -44,6 +44,8 @@ PAYLOAD_EJEMPLO: dict = {
     "plantilla": "alerta",
     "activo": {"ticker_mt5": "XAUUSD", "nombre": "Oro", "digits": 2},
     "chip_categoria": "COMMODITIES · ORO",
+    "activo_slug": "oro",
+    "activo_imagen": "assets/activos/oro.jpg",
     "fecha_hora": "13 JUL 2026 · 11:15",
     "titular": "El Oro rompe soporte clave y activa señal de riesgo bajista",
     "parrafo": (
@@ -362,8 +364,11 @@ def test_alerta_no_placeholders():
     assert ">RIESGO ALTO<" not in html
 
     # Payload sin variación/vol -> esos slots no aparecen; sin chart_png -> SVG
-    # decorativo presente, sin <img>.
-    assert "<img" not in html
+    # decorativo presente, sin el <img> del gráfico embebido (`#img-alerta`).
+    # La piel SÍ agrega su propio <img class="foto-activo">, capa de fondo, no
+    # gráfico -- por eso la aserción es específica y no un "<img" genérico.
+    assert 'id="img-alerta"' not in html
+    assert 'class="foto-activo"' in html
     assert "<svg" in html
 
 
@@ -384,6 +389,51 @@ def test_alerta_chart_png_inexistente_lanza_error():
 
     with pytest.raises(story_render.StoryRenderError):
         story_render.build_html(payload, ALERTA_TEMPLATE)
+
+
+def _payload_alerta_fixture() -> dict:
+    # La fixture trae `recorrido` (serie real), no `grafico` -- mismo patrón que
+    # `test_plantilla_resuelve_sin_huerfanos`: hay que pasarla por
+    # `story_grafico.enriquecer` antes de dársela a `build_html`.
+    from story_grafico import enriquecer
+
+    payload = json.loads((FIXTURES_DIR / "payloads" / "alerta.json").read_text(encoding="utf-8"))
+    return enriquecer(payload)
+
+
+def test_alerta_pinta_el_color_del_activo():
+    payload = _payload_alerta_fixture()
+    payload["chart_png"] = None
+
+    html = story_render.build_html(payload, ALERTA_TEMPLATE)
+
+    # La clase en <body> es lo que hace cascadear `--activo` desde marca.css.
+    assert 'activo-oro' in html
+
+
+def test_alerta_sin_activo_slug_no_rompe():
+    # Degradación deliberada: no todo activo tiene color asignado, y la pieza
+    # tiene que salir igual —en el acento de marca, que es el neutro definido
+    # en marca.css—.
+    payload = _payload_alerta_fixture()
+    payload["chart_png"] = None
+    payload["activo_slug"] = ""
+    payload["activo_imagen"] = ""
+
+    html = story_render.build_html(payload, ALERTA_TEMPLATE)
+
+    assert "{{" not in _body(html)
+
+
+def test_alerta_conserva_sus_niveles_visibles():
+    # El gráfico de alerta es CONTENIDO, no atmósfera: sus niveles de soporte y
+    # resistencia son el dato que el cliente busca. Si alguien lo convierte en
+    # escenario a sangre, este test cae.
+    html = ALERTA_TEMPLATE.read_text(encoding="utf-8")
+
+    assert ".g-nivel-soporte" in html
+    assert ".g-nivel-resistencia" in html
+    assert ".g-precio" in html
 
 
 # ---------------------------------------------------------------------------
