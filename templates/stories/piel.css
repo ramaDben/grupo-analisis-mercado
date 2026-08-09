@@ -26,10 +26,10 @@
 */
 
 /* ── Tipografía institucional ──────────────────────────────────────────────
-   Space Grotesk (titulares y cifras) y DM Sans son las únicas familias que
-   necesitan las piezas de esta familia y las únicas que siguen en `fonts/`: Sora, Outfit
-   y Manrope fueron candidatas de comparación (ver spec de rediseño) y sus
-   archivos ya no están en el repo. */
+   Space Grotesk (titulares y cifras) y DM Sans son las dos únicas familias que
+   usan las piezas de esta piel, y las únicas que siguen en `fonts/`: Sora,
+   Outfit y Manrope fueron candidatas de comparación (ver spec de rediseño) y
+   sus archivos ya no están en el repo. */
 @font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
 @font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-700.woff2") format("woff2"); font-weight: 800; font-display: swap; }
 @font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
