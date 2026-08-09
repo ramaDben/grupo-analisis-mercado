@@ -282,10 +282,20 @@ semana.
 
     /* Una sola fila: al envolverse, las tres cifras ocupaban 272 px y
        empujaban el CTA fuera del lienzo. */
+    /* `nowrap` porque al envolverse las tres cifras empujaban el CTA fuera del
+       lienzo. Eso obliga a que quepan de verdad: 76px y no 96 porque el ancho
+       útil en vertical es 960px y el par de precios más la flecha tiene que
+       entrar ahí.
+
+       El tamaño está calibrado para precios de hasta 10 caracteres
+       ("100.000,00"), no para los del Oro. Con 96px, Bitcoin en 66.883,40 —una
+       cifra más que el Oro— se salía del lienzo y el objetivo aparecía cortado
+       contra el borde: el número que la pieza existe para comunicar. Medido con
+       Playwright sobre el payload real, no estimado. */
     .cifras { gap: 30px; margin-top: 40px; flex-wrap: nowrap; }
     .cifra-rotulo { font-size: 21px; }
-    .precio { font-size: 96px; }
-    .flecha-obj { font-size: 60px; }
+    .precio { font-size: 76px; }
+    .flecha-obj { font-size: 48px; }
     .nota-nivel { font-size: 26px; margin-top: 20px; }
 
     .evidencia {
