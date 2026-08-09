@@ -27,6 +27,7 @@ FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures" / "stories"
 FIXTURE_TEMPLATE = FIXTURES_DIR / "fixture_template.html"
 FIXTURE_CHART = FIXTURES_DIR / "fixture_chart.png"
 ALERTA_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "alerta.html"
+RECOMENDACION_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "recomendacion.html"
 QUOTE_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "quote.html"
 BREAKING_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "breaking.html"
 ENCUESTA_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "encuesta.html"
@@ -434,6 +435,63 @@ def test_alerta_conserva_sus_niveles_visibles():
     assert ".g-nivel-soporte" in html
     assert ".g-nivel-resistencia" in html
     assert ".g-precio" in html
+
+
+# ---------------------------------------------------------------------------
+# Piel compartida (Tarea 3): snapshot de marca `templates/stories/recomendacion.html`
+# ---------------------------------------------------------------------------
+
+
+def _payload_recomendacion_fixture() -> dict:
+    # La fixture trae `recorrido` (serie real con entrada/objetivo/stop), no
+    # `grafico` -- mismo patrón que `_payload_alerta_fixture()`: hay que pasarla
+    # por `story_grafico.enriquecer` antes de dársela a `build_html`, o `{{grafico}}`
+    # queda huérfano.
+    from story_grafico import enriquecer
+
+    payload = json.loads(
+        (FIXTURES_DIR / "payloads" / "recomendacion.json").read_text(encoding="utf-8")
+    )
+    return enriquecer(payload)
+
+
+def test_recomendacion_pinta_el_color_del_activo():
+    payload = _payload_recomendacion_fixture()
+
+    html = story_render.build_html(payload, RECOMENDACION_TEMPLATE)
+
+    assert "activo-eurusd" in html
+
+
+def test_recomendacion_conserva_la_firma_acreditada():
+    # La firma es lo que separa una pieza del área de una imagen anónima
+    # circulando por WhatsApp. La piel no la puede desplazar ni tapar.
+    payload = _payload_recomendacion_fixture()
+
+    html = story_render.build_html(payload, RECOMENDACION_TEMPLATE)
+
+    assert payload["firma_nombre"] in html
+    assert payload["firma_credencial"] in html
+    assert payload["firma_area"] in html
+
+
+def test_recomendacion_conserva_los_tres_niveles_del_grafico():
+    # Entrada, objetivo y stop son donde se lee el riesgo/beneficio sin hacer
+    # la división. A sangre y sin rótulos esa lectura desaparece.
+    html = RECOMENDACION_TEMPLATE.read_text(encoding="utf-8")
+
+    for clase in (".g-nivel-entrada", ".g-nivel-meta", ".g-nivel-stop"):
+        assert clase in html, f"falta {clase}"
+
+
+def test_recomendacion_sin_activo_slug_no_rompe():
+    payload = _payload_recomendacion_fixture()
+    payload["activo_slug"] = ""
+    payload["activo_imagen"] = ""
+
+    html = story_render.build_html(payload, RECOMENDACION_TEMPLATE)
+
+    assert "{{" not in _body(html)
 
 
 # ---------------------------------------------------------------------------

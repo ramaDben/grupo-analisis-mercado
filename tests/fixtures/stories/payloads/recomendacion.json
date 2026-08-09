@@ -1,6 +1,8 @@
 {
  "plantilla": "recomendacion",
  "chip_categoria": "DIVISAS · EURO",
+ "activo_slug": "eurusd",
+ "activo_imagen": "",
  "fecha_hora": "3 AGO 2026 · 13:45 CLT",
  "titular": "El euro sostiene su avance sobre las medias de referencia",
  "rotulo_activo": "EURO / DÓLAR · EUR/USD",

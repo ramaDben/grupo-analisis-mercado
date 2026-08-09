@@ -56,32 +56,8 @@ scripts/story_render.py y tests/test_story_render.py.
 <meta charset="utf-8">
 <title>Recomendación — Story GI</title>
 <link rel="stylesheet" href="marca.css">
+<link rel="stylesheet" href="piel.css">
 <style>
-  @font-face {
-    font-family: "Syne";
-    src: url("fonts/syne-800.woff2") format("woff2");
-    font-weight: 800;
-    font-display: block;
-  }
-  @font-face {
-    font-family: "DM Sans";
-    src: url("fonts/dm-sans-400.woff2") format("woff2");
-    font-weight: 400;
-    font-display: block;
-  }
-  @font-face {
-    font-family: "DM Sans";
-    src: url("fonts/dm-sans-700.woff2") format("woff2");
-    font-weight: 700;
-    font-display: block;
-  }
-  @font-face {
-    font-family: "Space Grotesk";
-    src: url("fonts/space-grotesk-600.woff2") format("woff2");
-    font-weight: 600;
-    font-display: block;
-  }
-
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   html, body {
@@ -106,6 +82,8 @@ scripts/story_render.py y tests/test_story_render.py.
      superior derecha estaba vacia -181 px medidos con auditar_espacios.py- y la
      fecha bajo los chips dejaba un renglon suelto. */
   .cabecera {
+    position: relative;
+    z-index: 2;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -123,19 +101,12 @@ scripts/story_render.py y tests/test_story_render.py.
     border-radius: 999px;
   }
 
-  /* El chip identifica la NATURALEZA de la pieza, y es lo primero que el
-     cliente lee. Va en el acento de marca y no en verde/rojo: el color de
-     dirección se reserva para la operación, si no la pieza grita antes de
-     decir qué recomienda. */
-  .chip-recomendacion {
-    background: var(--acento);
-    color: var(--fondo);
-  }
-
+  /* El sello "Recomendación" con su pulso lo aporta piel.css (`.sello`/`.pulso`),
+     que ya lo pinta en `var(--activo)` — identidad del activo, no dirección. */
   .chip-categoria {
     background: transparent;
-    border: 2px solid var(--acento);
-    color: var(--acento);
+    border: 2px solid var(--activo);
+    color: var(--activo);
   }
 
   .fecha-hora {
@@ -150,6 +121,8 @@ scripts/story_render.py y tests/test_story_render.py.
 
   /* ================= COLUMNAS ================= */
   .contenido {
+    position: relative;
+    z-index: 2;
     flex: 1;
     display: flex;
     gap: 56px;
@@ -161,8 +134,8 @@ scripts/story_render.py y tests/test_story_render.py.
   .columna-tesis     { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 
   .titular {
-    font-family: "DM Sans", sans-serif;
-    font-weight: 700;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 800;
     font-size: 56px;
     line-height: 1.06;
     letter-spacing: -0.015em;
@@ -172,7 +145,7 @@ scripts/story_render.py y tests/test_story_render.py.
   /* ================= TARJETA DE OPERACIÓN ================= */
   .tarjeta {
     margin-top: 30px;
-    border: 2px solid var(--acento);
+    border: 2px solid var(--activo);
     border-radius: 20px;
     padding: 26px 30px 24px;
     background: linear-gradient(180deg, rgba(60,140,170,0.10) 0%, rgba(0,0,0,0) 70%);
@@ -336,11 +309,11 @@ scripts/story_render.py y tests/test_story_render.py.
   .grafico svg { width: 100%; height: 100%; }
 
   .g-area { fill: url(#gradArea); }
-  .g-area-alto { stop-color: var(--acento); stop-opacity: 0.16; }
-  .g-area-bajo { stop-color: var(--acento); stop-opacity: 0; }
+  .g-area-alto { stop-color: var(--activo); stop-opacity: 0.16; }
+  .g-area-bajo { stop-color: var(--activo); stop-opacity: 0; }
   .g-linea {
     fill: none;
-    stroke: var(--acento);
+    stroke: var(--activo);
     stroke-width: 2.4;
     stroke-linejoin: round;
     stroke-linecap: round;
@@ -389,7 +362,7 @@ scripts/story_render.py y tests/test_story_render.py.
     font-size: 15px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--acento);
+    color: var(--activo);
     margin-right: 12px;
   }
 
@@ -402,8 +375,8 @@ scripts/story_render.py y tests/test_story_render.py.
     font-size: 15px;
     letter-spacing: 0.10em;
     text-transform: uppercase;
-    color: var(--acento);
-    border: 1.5px solid var(--acento);
+    color: var(--activo);
+    border: 1.5px solid var(--activo);
     border-radius: 999px;
     padding: 7px 18px;
   }
@@ -416,7 +389,21 @@ scripts/story_render.py y tests/test_story_render.py.
   .firma {
     margin-top: auto;
     padding-top: 22px;
-    border-top: 2px solid var(--acento);
+    border-top: 2px solid var(--activo);
+  }
+
+  /* La piel se subordina a la firma (§D2 de la spec). El bloque de firma lleva
+     su propio fondo opaco: es lo que hace responsable a esta pieza, y una foto
+     de fondo detrás de un nombre y una credencial las vuelve dudosas de leer
+     justo donde no se puede dudar. */
+  .firma {
+    position: relative;
+    z-index: 3;
+    background: rgba(8, 8, 12, 0.86);
+    border-radius: 16px;
+    padding: 22px 24px;
+    margin-left: -24px;
+    margin-right: -24px;
   }
 
   .firma-rotulo {
@@ -425,7 +412,7 @@ scripts/story_render.py y tests/test_story_render.py.
     font-size: 14px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: var(--acento);
+    color: var(--activo);
   }
 
   .firma-nombre {
@@ -454,6 +441,8 @@ scripts/story_render.py y tests/test_story_render.py.
 
   /* ================= FOOTER ================= */
   .footer {
+    position: relative;
+    z-index: 2;
     margin-top: 26px;
     display: flex;
     flex-direction: column;
@@ -547,12 +536,16 @@ scripts/story_render.py y tests/test_story_render.py.
   }
 </style>
 </head>
-<body class="sesgo-{{sesgo_slug}}">
+<body class="sesgo-{{sesgo_slug}} activo-{{activo_slug}}">
   <div class="story">
+
+    <img class="foto-activo" src="{{activo_imagen}}" alt="">
+    <div class="velo"></div>
+    <div class="grilla"></div>
 
     <div class="cabecera">
       <div class="chips">
-      <span class="chip chip-recomendacion">Recomendación</span>
+      <span class="sello"><span class="pulso"></span>Recomendación</span>
       <span class="chip chip-categoria">{{chip_categoria}}</span>
       </div>
       <p class="fecha-hora">{{fecha_hora}}</p>
