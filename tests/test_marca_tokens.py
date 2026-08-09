@@ -38,3 +38,19 @@ def test_ninguna_plantilla_de_produccion_hardcodea_color():
         html = plantilla.read_text(encoding="utf-8")
         _, _, huerfanos = marca_tokens._tokenizar(html)
         assert not huerfanos, f"{plantilla.name} trae hex sin token: {huerfanos}"
+
+
+def test_el_gate_cubre_las_hojas_propias():
+    hojas = [p.name for p in marca_tokens._hojas()]
+
+    assert "piel.css" in hojas, "el gate no está escaneando piel.css"
+    # marca.css es la fuente de los hex: escanearla la reportaría entera como
+    # infracción.
+    assert "marca.css" not in hojas
+
+
+def test_ninguna_hoja_propia_hardcodea_color():
+    for hoja in marca_tokens._hojas():
+        css = hoja.read_text(encoding="utf-8")
+        _, n, huerfanos = marca_tokens._tokenizar(css)
+        assert not n and not huerfanos, f"{hoja.name} trae color a mano: {huerfanos or n}"

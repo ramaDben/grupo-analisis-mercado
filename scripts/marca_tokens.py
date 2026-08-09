@@ -12,6 +12,31 @@ El mapa es EXPLÍCITO a propósito: un regex genérico de 6 dígitos también ca
 las referencias a issues de los comentarios (`#119`, `#127`), y un color que no
 esté acá debe fallar el --check para que alguien decida su rol en vez de que se
 cuele silenciosamente.
+
+Qué cubre el check y qué NO
+---------------------------
+Cubre: hex de 6 dígitos y colores funcionales `rgb()`/`rgba()`. Los `rgba()`
+estuvieron ciegos hasta agosto de 2026, y por ese hueco entraron el rojo fijo del
+cromo de `alerta` y el fondo de la firma de `recomendacion`: el gate compraba una
+confianza que no tenía.
+
+De `rgba()` se permiten solo el negro y el blanco puros —`rgba(0,0,0,α)` y
+`rgba(255,255,255,α)`—, que son veladuras y no color de marca: `color-mix` sobre
+un rol no las expresa mejor y ya son el patrón de `piel.css`. Cualquier otra
+terna hay que escribirla como `color-mix(in srgb, var(--rol) N%, transparent)`.
+
+Ese chequeo entra por TRINQUETE, no de golpe: ocho plantillas anteriores traen
+`rgba()` de colores de marca y limpiarlas es una plantilla por Change. Están
+listadas en `RGBA_PENDIENTES` y salen como `aviso` en vez de `FALLA`. Todo lo
+demás —las hojas `.css`, las plantillas ya limpias y cualquier plantilla nueva—
+falla. Dicho sin adornos: hoy el gate PROTEGE lo limpio y solo INFORMA la deuda.
+
+NO cubre, y conviene saberlo antes de confiar:
+  · Hex de 3 dígitos (`#0af`). Se descartan a propósito: son indistinguibles de
+    las referencias a issues de los comentarios (`#119` es hex válido).
+  · `hsl()`, `oklch()`, `color()` y los nombres de color de CSS (`red`, `gold`).
+  · Colores dentro de los SVG que inyecta `scripts/story_grafico.py` — ese
+    generador no emite atributos de estilo, pero el check tampoco los miraría.
 """
 from __future__ import annotations
 
@@ -58,9 +83,58 @@ MAPA = {
 # Solo 6 dígitos y con frontera: descarta `#119` de los comentarios de issue.
 PATRON_HEX = re.compile(r"#[0-9A-Fa-f]{6}\b")
 
+# `rgb()` / `rgba()` con los tres canales numéricos. Ver el docstring para el
+# criterio de la allowlist.
+PATRON_RGBA = re.compile(
+    r"\brgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*[,)]"
+)
+
+# Veladuras permitidas: negro y blanco puros. No son color de marca y no hay un
+# rol que las exprese mejor.
+RGBA_PERMITIDOS = {(0, 0, 0), (255, 255, 255)}
+
+# Trinquete. Las plantillas de esta lista traen `rgba()` de colores de marca de
+# antes de que el check los mirara: se reportan como AVISO y no hacen fallar,
+# porque limpiarlas es una plantilla por Change (misma regla que la migración de
+# la piel) y no trabajo de este gate. Todo archivo FUERA de la lista falla, así
+# que lo que hoy está limpio no puede volver a ensuciarse — y una plantilla nueva
+# nace gateada. Al limpiar una, se saca de acá y queda protegida.
+RGBA_PENDIENTES = frozenset(
+    {
+        "breaking.html",
+        "dato_macro.html",
+        "edu.html",
+        "encuesta.html",
+        "flash.html",
+        "operacion.html",
+        "oportunidad.html",
+        "postventa.html",
+    }
+)
+
+
+def _rgba_huerfanos(texto: str) -> list[str]:
+    """Devuelve los `rgb()`/`rgba()` que NO son veladura permitida."""
+    fuera = []
+    for match in PATRON_RGBA.finditer(texto):
+        canales = tuple(int(c) for c in match.groups())
+        if canales not in RGBA_PERMITIDOS:
+            fuera.append(f"rgb{canales}")
+    return fuera
+
 
 def _plantillas() -> list[Path]:
     return sorted(p for p in DIR_STORIES.glob("*.html"))
+
+
+def _hojas() -> list[Path]:
+    """Hojas de estilo propias, EXCEPTO marca.css.
+
+    marca.css queda fuera a propósito: es la fuente de los hex y el único
+    archivo donde escribirlos es correcto. Cualquier otra hoja —hoy piel.css—
+    debe consumir `var(--rol)` como lo hacen las plantillas.
+    """
+    return sorted(p for p in DIR_STORIES.glob("*.css") if p.name != HOJA)
 
 
 def _tokenizar(html: str) -> tuple[str, int, list[str]]:
@@ -78,6 +152,9 @@ def _tokenizar(html: str) -> tuple[str, int, list[str]]:
         reemplazos += 1
         return f"var(--{rol})"
 
+    # Los `rgba()` NO entran acá: no se pueden sustituir automáticamente (llevan
+    # alfa, y el rol se expresa con `color-mix`). Se revisan aparte, con el
+    # trinquete de RGBA_PENDIENTES.
     return PATRON_HEX.sub(_sub, html), reemplazos, huerfanos
 
 
@@ -112,7 +189,9 @@ def main(argv: list[str] | None = None) -> int:
         nuevo = _con_link(nuevo)
 
         if args.check:
-            pendientes = n + len(huerfanos)
+            rgba = _rgba_huerfanos(html)
+            deuda = ruta.name in RGBA_PENDIENTES
+            pendientes = n + len(huerfanos) + (len(rgba) if not deuda else 0)
             falta_link = HOJA not in html
             if pendientes or falta_link:
                 problemas += 1
@@ -121,9 +200,13 @@ def main(argv: list[str] | None = None) -> int:
                     detalle.append(f"{n} color(es) hardcodeado(s)")
                 if huerfanos:
                     detalle.append(f"sin rol: {sorted(set(huerfanos))}")
+                if rgba and not deuda:
+                    detalle.append(f"rgba() sin rol: {sorted(set(rgba))}")
                 if falta_link:
                     detalle.append(f"sin <link> a {HOJA}")
                 print(f"FALLA {ruta.name}: {'; '.join(detalle)}")
+            elif rgba:
+                print(f"aviso {ruta.name}: rgba() pendiente {sorted(set(rgba))}")
             else:
                 print(f"ok    {ruta.name}")
             continue
@@ -141,6 +224,24 @@ def main(argv: list[str] | None = None) -> int:
             print(f"ok    {ruta.name}: {n} color(es) -> var(--rol)")
         else:
             print(f"--    {ruta.name}: sin cambios")
+
+    if args.check:
+        for ruta in _hojas():
+            css = ruta.read_text(encoding="utf-8")
+            _, n, huerfanos = _tokenizar(css)
+            # Las hojas propias nacen después del gate: no tienen deuda y no
+            # entran al trinquete.
+            huerfanos = huerfanos + _rgba_huerfanos(css)
+            if n or huerfanos:
+                problemas += 1
+                detalle = []
+                if n:
+                    detalle.append(f"{n} color(es) hardcodeado(s)")
+                if huerfanos:
+                    detalle.append(f"sin rol: {sorted(set(huerfanos))}")
+                print(f"FALLA {ruta.name}: {'; '.join(detalle)}")
+            else:
+                print(f"ok    {ruta.name}")
 
     if problemas:
         print(

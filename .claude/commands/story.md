@@ -112,6 +112,8 @@ Si ya hay 3 esta semana, avisar y detener.
 
 1. Datos de la operación, del motor o de la posición real del terminal:
    - `rotulo_activo`, `sesgo` (`Compra` / `Venta`), `entrada`, `volumen`, `temporalidad`.
+   - `activo_slug` y `activo_imagen` (identidad cromática, ver nota tras el PASO 5 — misma
+     convención que la ruta `alerta`).
    - `tp` y `sl` con los decimales del campo `digits` de `config/activos.json`.
    - `tp_clp` y `sl_clp`: **el resultado traducido a pesos**, obligatorio. Se calcula con
      `order_calc_profit` — el `tick_value` de MT5 da mal el valor por punto en CFDs de acciones.
@@ -751,6 +753,8 @@ de Chile (regla canónica de `CLAUDE.md`, nunca `WebSearch` para la hora):
     "digits": [digits]
   },
   "chip_categoria": "[CATEGORÍA · ACTIVO]",
+  "activo_slug": "[slug de identidad o \"\"]",
+  "activo_imagen": "[assets/activos/<slug>.jpg o \"\"]",
   "fecha_hora": "[D MES YYYY · HH:MM]",
   "titular": "[titular ≤70 car.]",
   "parrafo": "[párrafo ≤280 car.]",
@@ -777,6 +781,16 @@ verde. Cuando ambos campos viajen, que apunten en la misma dirección.
 
 `fuente`: si la narrativa nace de una noticia, usa la fuente de esa noticia (ej. `COMEX`,
 `INVESTING`); si es lectura técnica, usa `MT5 · GRUPO INTELIGENCIA`.
+
+| Campo | Qué lleva |
+|---|---|
+| `activo_slug` | Identidad cromática. **Mapeo explícito**, no derivado del ticker — son los cuatro activos con color en `templates/stories/marca.css`: Oro (`XAUUSD`) → `oro` · Petróleo WTI (`WTI.spot`) → `wti` · Nasdaq 100 (`US100.spot`) → `us100` · USD/CLP (`USDCLP`) → `usdclp`. Cualquier otro activo va **vacío** y la pieza sale en el acento de marca. Derivarlo con `lowercase(ticker_mt5)` produce `xauusd` para el Oro, que `marca.css` no define: la pieza sale en teal de marca sin ningún error visible. **No confundir con el slug de la ruta de guardado**: `ruta_story.ps1` sí usa `lowercase(ticker_mt5)` sin `.spot`/`#`/`/` (el Oro ahí es `xauusd`), y es otra cosa. |
+| `activo_imagen` | `assets/activos/<slug>.jpg` si existe la imagen; cadena vacía si no. Nunca inventar una ruta: un `src` roto deja un ícono de imagen rota en la pieza. |
+
+**Identidad del activo (plantillas `alerta`, `recomendacion` y `oportunidad`)**:
+`activo_slug` pinta el escenario y `activo_imagen` lo ilustra. Son identidad, no
+dirección — el sesgo lo sigue pintando `sesgo_slug` con `--sube`/`--baja`. Si se
+colapsaran, una pieza dorada bajista se leería como alcista dorada.
 
 ---
 

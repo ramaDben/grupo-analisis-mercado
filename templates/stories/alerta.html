@@ -12,36 +12,8 @@ y tests/test_story_render.py.
 <meta charset="utf-8">
 <title>Alerta de Mercado — Story GI</title>
 <link rel="stylesheet" href="marca.css">
+<link rel="stylesheet" href="piel.css">
 <style>
-  @font-face {
-    font-family: "Syne";
-    src: url("fonts/syne-800.woff2") format("woff2");
-    font-weight: 800;
-    font-style: normal;
-    font-display: block;
-  }
-  @font-face {
-    font-family: "DM Sans";
-    src: url("fonts/dm-sans-400.woff2") format("woff2");
-    font-weight: 400;
-    font-style: normal;
-    font-display: block;
-  }
-  @font-face {
-    font-family: "DM Sans";
-    src: url("fonts/dm-sans-700.woff2") format("woff2");
-    font-weight: 700;
-    font-style: normal;
-    font-display: block;
-  }
-  @font-face {
-    font-family: "Space Grotesk";
-    src: url("fonts/space-grotesk-600.woff2") format("woff2");
-    font-weight: 600;
-    font-style: normal;
-    font-display: block;
-  }
-
   * { box-sizing: border-box; }
 
   /* El snapshot NO declara su tamano en px: lo manda el viewport del motor
@@ -60,8 +32,13 @@ y tests/test_story_render.py.
     overflow: hidden;
   }
 
-  /* ---- Contenedor raíz: columna (contenido | footer) ---- */
+  /* ---- Contenedor raíz: columna (contenido | footer) ----
+     `position: relative` porque las capas de la piel (`.foto-activo`, `.velo`,
+     `.grilla`) y el filete de `.story::after` son absolutas y toman a `.story`
+     como bloque contenedor. Sin esto funcionaban por casualidad, apoyándose en
+     el <body>. */
   .story {
+    position: relative;
     width: 100%;
     height: 100%;
     padding: 56px 72px 40px;
@@ -76,6 +53,8 @@ y tests/test_story_render.py.
      footer. Sin esto, un titular largo pisaba el handle y el disclaimer en
      formato vertical. */
   .contenido {
+    position: relative;
+    z-index: 2;
     flex: 1;
     min-height: 0;
     display: flex;
@@ -113,21 +92,22 @@ y tests/test_story_render.py.
     padding: 10px 22px;
     border-radius: 999px;
   }
-  /* El CROMO va en el acento de marca, no en el color de dirección.
+  /* El CROMO va en el color del activo (identidad), no en el de dirección.
      Primero estuvo fijo en rojo -una alerta alcista salía roja-. Después pasó
      a seguir la dirección, y una pieza bajista quedaba bañada en rojo: leído
      de lejos eso es alarma, no sesgo vendedor, y contradice la regla de tono
      del proyecto -énfasis direccional sí, dramatización no-.
      La dirección vive donde ES el dato: la píldora de sesgo, la variación y
-     las velas. El marco de la pieza es de la marca y no opina. */
-  .chip-alerta {
-    background: var(--acento);
-    color: var(--fondo);
-  }
+     las velas. El marco de la pieza es identidad del activo y no opina sobre
+     hacia dónde va el precio. El sello "Alerta de mercado" con su pulso ahora
+     lo aporta piel.css (`.sello`/`.pulso`), que ya lo pinta en `var(--activo)`.
+     El fondo y el borde del chip iban en rojo fijo hasta este cambio: el texto
+     ya estaba en el color del activo y el marco lo contradecía —un chip rojo
+     sobre una pieza dorada—. Ahora los tres salen del mismo rol. */
   .chip-categoria {
-    background: rgba(232, 64, 64, 0.14);
-    border: 1px solid rgba(232, 64, 64, 0.5);
-    color: var(--acento);
+    background: color-mix(in srgb, var(--activo) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--activo) 50%, transparent);
+    color: var(--activo);
   }
 
   .fecha-hora {
@@ -141,8 +121,8 @@ y tests/test_story_render.py.
 
   /* ---- Titular / párrafo ---- */
   .titular {
-    font-family: "DM Sans", sans-serif;
-    font-weight: 700;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 800;
     font-size: 46px;
     line-height: 1.1;
     margin: 20px 0 0;
@@ -158,12 +138,15 @@ y tests/test_story_render.py.
     margin: 18px 0 0;
   }
 
-  /* ---- Tarjeta de precio (borde rojo) ---- */
+  /* ---- Tarjeta de precio ----
+     El relleno acompaña al borde: los dos en `var(--activo)`. Antes el borde ya
+     era del activo y el relleno seguía en rojo fijo, así que la tarjeta salía
+     con marco dorado y fondo rojizo. */
   .tarjeta-precio {
     margin-top: 24px;
-    border: 2px solid var(--acento);
+    border: 2px solid var(--activo);
     border-radius: 22px;
-    background: rgba(232, 64, 64, 0.08);
+    background: color-mix(in srgb, var(--activo) 8%, transparent);
     padding: 24px 30px;
   }
 
@@ -285,8 +268,8 @@ y tests/test_story_render.py.
     font-size: 15px;
     letter-spacing: 0.10em;
     text-transform: uppercase;
-    color: var(--acento);
-    border: 1.5px solid var(--acento);
+    color: var(--activo);
+    border: 1.5px solid var(--activo);
     border-radius: 999px;
     padding: 7px 18px;
     margin-bottom: 14px;
@@ -298,11 +281,11 @@ y tests/test_story_render.py.
      color y el grosor viven aca. Si el grafico se ve mal, se corrige en esta
      plantilla. */
   .g-area { fill: url(#gradArea); }
-  .g-area-alto { stop-color: var(--acento); stop-opacity: 0.18; }
-  .g-area-bajo { stop-color: var(--acento); stop-opacity: 0; }
+  .g-area-alto { stop-color: var(--activo); stop-opacity: 0.18; }
+  .g-area-bajo { stop-color: var(--activo); stop-opacity: 0; }
   .g-linea {
     fill: none;
-    stroke: var(--acento);
+    stroke: var(--activo);
     stroke-width: 2.4;
     stroke-linejoin: round;
     stroke-linecap: round;
@@ -332,17 +315,33 @@ y tests/test_story_render.py.
     fill: var(--texto-2);
   }
 
+  /* El fondo del contenedor era un blanco al 3 %: sobre el negro se leía como
+     un gris apenas perceptible, pero sobre la foto del activo no tapaba nada.
+     Ahora es un velo OSCURO —negro de marca a media opacidad— porque su trabajo
+     es que la curva y sus rótulos se lean por encima de la imagen (§D2: si el
+     fondo compromete un bloque, gana el bloque). */
   .contenedor-grafico {
     flex: 1;
     min-height: 0;
     border-radius: 20px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: color-mix(in srgb, var(--fondo) 62%, transparent);
+    border: 1px solid color-mix(in srgb, var(--blanco) 10%, transparent);
     padding: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
+  }
+
+  /* El SVG del gráfico entra sin ancho ni alto propios: como elemento
+     reemplazado con `viewBox`, tomaba el ancho del contenedor y deducía el alto
+     de la proporción — 834 px medidos dentro de una caja de 591 en vertical, de
+     donde salían la resistencia recortada arriba y el soporte cortado abajo.
+     Con `width/height: 100%` la caja manda y `preserveAspectRatio` encaja el
+     dibujo dentro. */
+  .contenedor-grafico svg {
+    width: 100%;
+    height: 100%;
   }
 
   #img-alerta {
@@ -366,6 +365,8 @@ y tests/test_story_render.py.
 
   /* ---- Footer ---- */
   .footer {
+    position: relative;
+    z-index: 2;
     margin-top: 28px;
     display: flex;
     flex-direction: column;
@@ -450,13 +451,17 @@ y tests/test_story_render.py.
   }
 </style>
 </head>
-<body class="sesgo-{{sesgo_slug}}">
+<body class="sesgo-{{sesgo_slug}} activo-{{activo_slug}}">
   <div class="story">
+
+    <img class="foto-activo foto-activo--fondo" src="{{activo_imagen}}" alt="">
+    <div class="velo"></div>
+    <div class="grilla"></div>
 
     <div class="contenido">
       <div class="columna-editorial">
         <div class="chips">
-          <span class="chip chip-alerta">Alerta de mercado</span>
+          <span class="sello"><span class="pulso"></span>Alerta de mercado</span>
           <span class="chip chip-categoria">{{chip_categoria}}</span>
         </div>
         <p class="fecha-hora">{{fecha_hora}}</p>

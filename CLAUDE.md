@@ -338,6 +338,24 @@ El acento es `#50C0A8`, el extremo verde del degradado del logo (el azul `#3C8CA
 extremo y queda disponible como `--acento-azul`). Ambos medidos sobre los assets de
 `templates/stories/assets/`, no elegidos a ojo.
 
+**Piel compartida.** La línea visual de `oportunidad` —capas de fondo, imagen y
+color por activo, sello con pulso, tipografía de titulares en Space Grotesk 800,
+CTA y footer— vive en `templates/stories/piel.css`, hermano de `marca.css`. La
+consumen `oportunidad`, `alerta` y `recomendacion`; las otras ocho plantillas
+migran de a una (misma regla que las Fases B y C: una plantilla por Change).
+
+Se estandariza la **piel**, no la **estructura**. `recomendacion` conserva
+entrada, TP, SL, volumen y firma acreditada; `alerta` conserva su tarjeta de
+niveles; ambas conservan el gráfico como tarjeta legible, porque ahí los niveles
+son contenido y no atmósfera. Con el layout de `oportunidad` esos campos bajarían
+a letra chica y se borraría la distinción entre **invitar a operar** y
+**recomendar una operación** — la segunda lleva firma y cuenta para el límite de
+3 señales por semana.
+
+El orden de carga es `marca.css` → `piel.css` → `<style>` de la plantilla, y
+`scripts/marca_tokens.py --check` escanea las hojas propias además de las
+plantillas (`marca.css` queda fuera: es donde los hex sí van).
+
 **Revisar y proteger las plantillas.** Cada plantilla tiene su payload de prueba en
 `tests/fixtures/stories/payloads/<plantilla>.json`, y esas MISMAS fixtures alimentan dos cosas:
 

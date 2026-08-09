@@ -99,6 +99,21 @@ Si `ejecutivo` aparece en los argumentos, además del mensaje de cliente genera 
 
 Muestra ambas salidas rotuladas `📤 MENSAJE CLIENTE` y `🔒 GUION EJECUTIVO`; al aprobar, guarda el guion con `scripts\ruta_mensaje.ps1`.
 
+## Story asociada (`/story alerta`)
+
+Este comando genera el mensaje de texto. Si además se genera la Story de marca
+(imagen 1920×1080) con `/story alerta`, su payload lleva dos campos de identidad
+por activo que no existen en el mensaje de texto — viven solo en el JSON que
+consume `templates/stories/alerta.html`:
+
+| Campo | Qué lleva |
+|---|---|
+| `activo_slug` | Identidad cromática. **Mapeo explícito**, no derivado del ticker — son los cuatro activos con color en `templates/stories/marca.css`: Oro (`XAUUSD`) → `oro` · Petróleo WTI (`WTI.spot`) → `wti` · Nasdaq 100 (`US100.spot`) → `us100` · USD/CLP (`USDCLP`) → `usdclp`. Cualquier otro activo va **vacío** y la pieza sale en el acento de marca. Derivarlo con `lowercase(ticker_mt5)` produce `xauusd` para el Oro, que `marca.css` no define: la pieza sale en teal de marca sin ningún error visible. **No confundir con el slug de la ruta de guardado**: `ruta_story.ps1` sí usa `lowercase(ticker_mt5)` sin `.spot`/`#`/`/` (el Oro ahí es `xauusd`), y es otra cosa. |
+| `activo_imagen` | `assets/activos/<slug>.jpg` si existe la imagen; cadena vacía si no. Nunca inventar una ruta: un `src` roto deja un ícono de imagen rota en la pieza. |
+
+Ver `.claude/commands/story.md` (PASO 5 y la ruta `recomendacion`) para el flujo
+completo de recolección de ambos campos.
+
 ## REGLAS
 - No repetir la misma alerta en 1 hora.
 - Máximo 2 líneas para "qué pasó".
