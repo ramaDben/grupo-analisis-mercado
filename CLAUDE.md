@@ -162,6 +162,13 @@ Reglas:
 - Profesional con gancho **≠** neutral sin dirección: un mensaje "objetivo" que no toma postura direccional está incompleto (ver Regla de oro del Principio fundamental).
 - Esto **no** habilita jerga sin explicar: si aparece un término técnico o una sigla, sigue siendo obligatorio explicarlo en voz novata (ver [estilo mensajes WhatsApp] y "Datos macro en español + Diccionario rápido"). Profesional ≠ inaccesible.
 
+### Prohibido el guion largo como inciso (OBLIGATORIO en texto de cliente)
+En todo texto que lea un cliente —mensajes de WhatsApp, pies de Story, textos dentro de las piezas, guiones de venta— **nunca** se usa el guion largo `—` ni el medio `–` para abrir un inciso o una aposición ("el stop en 1.758,09 — para eso está"). Se reescribe con puntuación corriente: punto seguido, coma o dos puntos.
+
+**Por qué**: ese guion es una marca reconocible de texto generado por IA, y el material se firma con el nombre y las credenciales de un analista real. Un mensaje que se lee como redactado por una máquina daña la credibilidad de la firma, que es justamente lo que la sostiene.
+
+**Cómo aplicarlo**: antes de guardar cualquier pieza de cliente, buscar `—` y `–` en el texto final y reemplazarlos. El punto medio `·` **sí** se mantiene: es separador visual del kit de marca (`ORO · XAU/USD`), no puntuación de frase. La restricción es de redacción y no alcanza al código ni a la documentación interna del repo (este archivo incluido).
+
 ### Formato base (aplica a todos los mensajes)
 - Formato WhatsApp: *negrita*, _cursiva_
 - Bullets: •

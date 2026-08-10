@@ -98,7 +98,7 @@ Nunca truncar ceros al final ni redondear a entero.
 ## 4. Tono: profesional con gancho, nunca dramático
 
 El cliente tiene que entender **hacia dónde va el activo**. Un análisis sin
-dirección clara está incompleto — esa es la regla de oro.
+dirección clara está incompleto: esa es la regla de oro.
 
 Se toma postura direccional y se redacta para que dé ganas de operar. Lo que está
 prohibido es el lenguaje extremo o coloquial:
@@ -114,6 +114,15 @@ traducir: el mensaje lo lee tanto un trader como alguien que recién empieza.
 
 Si el texto va a un cliente, va en español chileno neutro, con tuteo. Nunca
 voseo argentino.
+
+**Nunca el guion largo como inciso.** En texto de cliente (mensajes, pies de
+Story, textos dentro de las piezas) no se usa `—` ni `–` para abrir un inciso:
+"el stop en 1.758,09 — para eso está" se escribe "el stop en 1.758,09. Para eso
+está". Punto seguido, coma o dos puntos según el caso. Es una marca reconocible
+de texto generado por IA y el material se firma con el nombre de un analista
+real: si se lee como escrito por una máquina, la firma pierde credibilidad. El
+punto medio `·` sí se mantiene, porque es separador del kit de marca
+(`ORO · XAU/USD`) y no puntuación de frase.
 
 ## 5. Terminología de niveles
 
