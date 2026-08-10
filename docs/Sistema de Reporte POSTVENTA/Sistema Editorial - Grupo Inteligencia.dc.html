@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@500;600;700;800&amp;family=DM+Sans:wght@400;500;600;700&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#EDEDED;}
+a{color:#3E91AF;text-decoration:none;}
+a:hover{color:#53C1AB;text-decoration:underline;}
+doc-page:not(:defined){visibility:hidden;}
+</style>
+<script src="./doc-page.js"></script>
+<script src="./image-slot.js"></script>
+</helmet>
+
+<doc-page size="a4" style="position: absolute; left: -68px; top: -7px">
+
+<section class="page" data-screen-label="01 Portada" style="width:100%;height:100%;box-sizing:border-box;background:#0D0D1A;display:flex;flex-direction:column;padding:16mm 16mm 14mm 16mm;font-family:'DM Sans',sans-serif;color:#FFFFFF;position:relative;overflow:hidden;">
+  <div style="position:absolute;top:0;right:0;width:42%;height:100%;background:linear-gradient(180deg,#1A1A2E 0%,#0D0D1A 100%);opacity:0.6;"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;position:relative;z-index:1;">
+    <img src="assets/logo-white.png" alt="Grupo Inteligencia" style="height:34px;width:auto;">
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.18em;color:#53C1AB;">SISTEMA EDITORIAL</span>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:1;max-width:78%;">
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.14em;color:#3E91AF;text-transform:uppercase;margin-bottom:14px;">[Tipo de Informe]</span>
+    <h1 style="font-family:'Syne',sans-serif;font-size:52px;font-weight:800;line-height:1.05;margin:0 0 18px 0;color:#FFFFFF;">Apertura de Mercado</h1>
+    <p style="font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.6;color:#C1E5E4;margin:0 0 26px 0;max-width:88%;">Plantilla maestra editorial — sustituir este subtítulo por el enfoque del informe: contexto, sesgo, niveles técnicos y escenarios para la sesión.</p>
+    <div style="width:56px;height:3px;background:#53C1AB;"></div>
+  </div>
+  <div style="position:relative;z-index:1;border-top:1px solid rgba(255,255,255,0.18);padding-top:14px;display:flex;justify-content:space-between;align-items:center;">
+    <div style="display:flex;gap:28px;">
+      <div style="display:flex;flex-direction:column;gap:3px;">
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;letter-spacing:0.1em;text-transform:uppercase;color:#737373;">Fecha</span>
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;color:#FFFFFF;">03 de agosto de 2026</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px;">
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;letter-spacing:0.1em;text-transform:uppercase;color:#737373;">Analista</span>
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;color:#FFFFFF;">[Nombre del analista]</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px;">
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;letter-spacing:0.1em;text-transform:uppercase;color:#737373;">Cobertura</span>
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;color:#FFFFFF;">Índices · Divisas · Materias Primas</span>
+      </div>
+    </div>
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:600;color:#53C1AB;">01 / 15</span>
+  </div>
+</section>
+
+<section class="page" data-screen-label="02 Inicio de sección" style="width:100%;height:100%;box-sizing:border-box;background:#1A1A2E;display:flex;flex-direction:column;padding:16mm;font-family:'DM Sans',sans-serif;color:#FFFFFF;position:relative;">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:9px;border-bottom:1px solid rgba(255,255,255,0.15);">
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.14em;color:#53C1AB;">INICIO DE SECCIÓN</span>
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;color:#737373;">GRUPO INTELIGENCIA</span>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:22px;">
+    <span style="font-family:'Syne',sans-serif;font-size:100px;font-weight:800;line-height:1;color:#3A3F52;">01</span>
+    <h2 style="font-family:'Syne',sans-serif;font-size:38px;font-weight:800;color:#FFFFFF;margin:0;">Mercados Globales</h2>
+    <p style="font-family:'DM Sans',sans-serif;font-size:12.5px;line-height:1.65;color:#C1E5E4;max-width:70%;margin:0;">Sección editorial dedicada a la lectura diaria de los mercados: contexto macro, comportamiento de activos clave y los factores que condicionan la sesión. Reemplazar por la introducción de la sección correspondiente.</p>
+    <div style="display:flex;gap:36px;margin-top:8px;">
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#53C1AB;">Contenido</span>
+        <span style="font-family:'DM Sans',sans-serif;font-size:11px;color:#FFFFFF;">Apertura de Mercado</span>
+        <span style="font-family:'DM Sans',sans-serif;font-size:11px;color:#FFFFFF;">Actualización Intradía</span>
+        <span style="font-family:'DM Sans',sans-serif;font-size:11px;color:#FFFFFF;">Análisis Técnico y Fundamental</span>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:9px;border-top:1px solid rgba(255,255,255,0.15);">
+    <span style="font-family:'DM Sans',sans-serif;font-size:7.5px;color:#737373;">Uso exclusivo para clientes · Ver aviso legal en página 15</span>
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;color:#53C1AB;">02 / 15</span>
+  </div>
+</section>
+
+<section class="page" data-screen-label="03 Apertura de Mercado" style="width:100%;height:100%;box-sizing:border-box;background:#FFFFFF;display:flex;flex-direction:column;padding:14mm 16mm;font-family:'DM Sans',sans-serif;color:#0D0D1A;">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;padding-bottom:9px;border-bottom:1px solid #C1E5E4;margin-bottom:14px;flex-shrink:0;">
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#3E91AF;">APERTURA DE MERCADO</span>
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:500;letter-spacing:0.03em;color:#737373;">03 AGO 2026 · SESIÓN DE APERTURA</span>
+  </div>
+
+  <h2 style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;margin:0 0 4px 0;">Resumen Ejecutivo</h2>
+  <p style="font-family:'DM Sans',sans-serif;font-size:11px;line-height:1.6;color:#3A3F52;margin:0 0 12px 0;">[Resumen de dos a tres líneas sobre el tono general de la sesión: qué domina el mercado hoy, dirección predominante y el nivel de atención requerido por parte del cliente.]</p>
+
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-shrink:0;">
+    <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:2px;background:#00DC821A;color:#00A363;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:9.5px;letter-spacing:0.05em;text-transform:uppercase;"><span style="width:6px;height:6px;border-radius:50%;background:#00DC82;display:inline-block;"></span>ÍNDICE A · ALCISTA</span>
+    <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:2px;background:#E840401A;color:#C62E2E;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:9.5px;letter-spacing:0.05em;text-transform:uppercase;"><span style="width:6px;height:6px;border-radius:50%;background:#E84040;display:inline-block;"></span>DIVISA A · BAJISTA</span>
+    <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:2px;background:#7373731A;color:#595959;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:9.5px;letter-spacing:0.05em;text-transform:uppercase;"><span style="width:6px;height:6px;border-radius:50%;background:#737373;display:inline-block;"></span>COMMODITY A · NEUTRAL</span>
+  </div>
+
+  <div style="flex:1;display:grid;grid-template-columns:1.5fr 1fr;gap:20px;min-height:0;">
+    <div style="display:flex;flex-direction:column;gap:14px;min-height:0;">
+      <div>
+        <h3 style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin:0 0 6px 0;">Contexto Global</h3>
+        <p style="font-family:'DM Sans',sans-serif;font-size:10.5px;line-height:1.6;color:#3A3F52;margin:0;">[Descripción del contexto macro y global que enmarca la sesión: bancos centrales, geopolítica, flujos de capital, apertura de otras plazas.]</p>
+      </div>
+      <div>
+        <h3 style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin:0 0 6px 0;">Eventos Relevantes</h3>
+        <div style="display:flex;flex-direction:column;gap:7px;">
+          <div style="display:flex;gap:10px;align-items:baseline;"><span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:700;color:#3E91AF;width:44px;flex-shrink:0;">08:30</span><span style="font-family:'DM Sans',sans-serif;font-size:10.5px;color:#0D0D1A;">[Publicación de dato macroeconómico relevante — región / indicador]</span></div>
+          <div style="display:flex;gap:10px;align-items:baseline;"><span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:700;color:#3E91AF;width:44px;flex-shrink:0;">10:00</span><span style="font-family:'DM Sans',sans-serif;font-size:10.5px;color:#0D0D1A;">[Comparecencia o comunicado de banco central / autoridad]</span></div>
+          <div style="display:flex;gap:10px;align-items:baseline;"><span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:700;color:#3E91AF;width:44px;flex-shrink:0;">14:30</span><span style="font-family:'DM Sans',sans-serif;font-size:10.5px;color:#0D0D1A;">[Apertura de mercado de referencia / evento corporativo]</span></div>
+        </div>
+      </div>
+      <div style="border-top:1.5px solid #E84040;padding-top:8px;">
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#E84040;">Riesgos</span>
+        <p style="font-family:'DM Sans',sans-serif;font-size:10.5px;line-height:1.55;color:#0D0D1A;margin:6px 0 0 0;">[Factor de riesgo principal que podría invalidar el escenario base durante la sesión.]</p>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;min-height:0;">
+      <h3 style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin:0;">Activos Destacados</h3>
+      <div style="background:#E8F5F0;border-radius:2px;padding:12px 14px;display:flex;flex-direction:column;gap:3px;">
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;letter-spacing:0.08em;text-transform:uppercase;color:#3E91AF;font-weight:600;">Índice A</span>
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:#0D0D1A;">[4,512.3]</span>
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:10.5px;font-weight:600;color:#00A363;">[+0.8%]</span>
+      </div>
+      <div style="background:#E8F5F0;border-radius:2px;padding:12px 14px;display:flex;flex-direction:column;gap:3px;">
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;letter-spacing:0.08em;text-transform:uppercase;color:#3E91AF;font-weight:600;">Divisa A</span>
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:#0D0D1A;">[1.0862]</span>
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:10.5px;font-weight:600;color:#C62E2E;">[-0.3%]</span>
+      </div>
+      <div style="background:#E8F5F0;border-radius:2px;padding:12px 14px;display:flex;flex-direction:column;gap:3px;">
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;letter-spacing:0.08em;text-transform:uppercase;color:#3E91AF;font-weight:600;">Commodity A</span>
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:#0D0D1A;">[2,318.4]</span>
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:10.5px;font-weight:600;color:#595959;">[+0.1%]</span>
+      </div>
+      <div style="border-top:1.5px solid #53C1AB;padding-top:8px;margin-top:auto;">
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#53C1AB;">Oportunidades</span>
+        <p style="font-family:'DM Sans',sans-serif;font-size:10.5px;line-height:1.55;color:#0D0D1A;margin:6px 0 0 0;">[Configuración técnica o fundamental favorable a vigilar durante la jornada.]</p>
+      </div>
+      <div style="background:#0D0D1A;border-radius:2px;padding:10px 14px;text-align:center;">
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#C1E5E4;">Sesgo General</span>
+        <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:#53C1AB;margin-top:2px;">Moderadamente Alcista</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:9px;border-top:1px solid #C1E5E4;margin-top:14px;flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:10px;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;font-weight:700;letter-spacing:0.1em;color:#0D0D1A;">GRUPO INTELIGENCIA</span><span style="width:1px;height:9px;background:#C1E5E4;display:inline-block;"></span><span style="font-family:'DM Sans',sans-serif;font-size:8px;color:#737373;">Research &amp; Estrategia de Mercados</span></div>
+    <div style="display:flex;align-items:center;gap:16px;"><span style="font-family:'DM Sans',sans-serif;font-size:7.5px;color:#737373;">Uso exclusivo para clientes · Ver aviso legal en página 15</span><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;color:#3A3F52;">03 / 15</span></div>
+  </div>
+</section>
+
+<section class="page" data-screen-label="04 Actualización Intradía" style="width:100%;height:100%;box-sizing:border-box;background:#FFFFFF;display:flex;flex-direction:column;padding:14mm 16mm;font-family:'DM Sans',sans-serif;color:#0D0D1A;">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:9px;border-bottom:1px solid #C1E5E4;margin-bottom:14px;flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="display:inline-flex;align-items:center;padding:4px 10px;border-radius:2px;background:#3E91AF;color:#FFFFFF;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:9.5px;letter-spacing:0.08em;text-transform:uppercase;">Actualización Intradía</span>
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:#0D0D1A;">14:32 GMT-5</span>
+    </div>
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:500;color:#737373;">03 AGO 2026 · ÍNDICE A</span>
+  </div>
+
+  <h2 style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin:0 0 4px 0;">Qué cambió</h2>
+  <p style="font-family:'DM Sans',sans-serif;font-size:11px;line-height:1.6;color:#3A3F52;margin:0 0 16px 0;">[Descripción concisa del cambio observado en el mercado desde la última publicación: nivel alcanzado, ruptura de rango, giro de tendencia.]</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #C1E5E4;border-radius:2px;overflow:hidden;margin-bottom:16px;flex-shrink:0;">
+    <div style="padding:14px 16px;background:#F7F7F7;border-right:1px solid #C1E5E4;">
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;letter-spacing:0.1em;text-transform:uppercase;color:#737373;font-weight:600;">Escenario Anterior · 08:00</span>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">
+        <div style="display:flex;justify-content:space-between;"><span style="font-family:'DM Sans',sans-serif;font-size:10px;color:#737373;">Sesgo</span><span style="font-family:'Space Grotesk',sans-serif;font-size:10.5px;font-weight:600;color:#737373;">Neutral</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="font-family:'DM Sans',sans-serif;font-size:10px;color:#737373;">Resistencia</span><span style="font-family:'Space Grotesk',sans-serif;font-size:10.5px;font-weight:600;color:#737373;">[4,530]</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="font-family:'DM Sans',sans-serif;font-size:10px;color:#737373;">Soporte</span><span style="font-family:'Space Grotesk',sans-serif;font-size:10.5px;font-weight:600;color:#737373;">[4,480]</span></div>
+      </div>
+    </div>
+    <div style="padding:14px 16px;background:#E8F5F0;">
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;letter-spacing:0.1em;text-transform:uppercase;color:#3E91AF;font-weight:700;">Escenario Actualizado · 14:32</span>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">
+        <div style="display:flex;justify-content:space-between;"><span style="font-family:'DM Sans',sans-serif;font-size:10px;color:#0D0D1A;">Sesgo</span><span style="font-family:'Space Grotesk',sans-serif;font-size:10.5px;font-weight:700;color:#00A363;">Alcista</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="font-family:'DM Sans',sans-serif;font-size:10px;color:#0D0D1A;">Resistencia</span><span style="font-family:'Space Grotesk',sans-serif;font-size:10.5px;font-weight:700;color:#0D0D1A;">[4,555]</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="font-family:'DM Sans',sans-serif;font-size:10px;color:#0D0D1A;">Soporte</span><span style="font-family:'Space Grotesk',sans-serif;font-size:10.5px;font-weight:700;color:#0D0D1A;">[4,512]</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:20px;min-height:0;">
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <h3 style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin:0 0 6px 0;">Qué originó el cambio</h3>
+        <p style="font-family:'DM Sans',sans-serif;font-size:10.5px;line-height:1.55;color:#3A3F52;margin:0;">[Causa concreta: dato publicado, declaración de un funcionario, ruptura técnica confirmada.]</p>
+      </div>
+      <div>
+        <h3 style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin:0 0 6px 0;">Impacto Esperado</h3>
+        <p style="font-family:'DM Sans',sans-serif;font-size:10.5px;line-height:1.55;color:#3A3F52;margin:0;">[Efecto anticipado sobre el activo y sobre activos correlacionados durante el resto de la sesión.]&nbsp;</p>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="border-top:1.5px solid #1F76D5;padding-top:8px;">
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#1F76D5;">Nuevos Niveles</span>
+        <p style="font-family:'DM Sans',sans-serif;font-size:10.5px;line-height:1.55;color:#0D0D1A;margin:6px 0 0 0;">Vigilar ruptura sobre [4,555] para extensión hacia [4,590]. Invalidación por debajo de [4,495].</p>
+      </div>
+      <div style="background:#0D0D1A;border-radius:2px;padding:12px 14px;text-align:center;margin-top:auto;">
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#C1E5E4;">Nuevo Sesgo</span>
+        <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:#00DC82;margin-top:2px;">Alcista</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:9px;border-top:1px solid #C1E5E4;margin-top:14px;flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:10px;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;font-weight:700;letter-spacing:0.1em;color:#0D0D1A;">GRUPO INTELIGENCIA</span><span style="width:1px;height:9px;background:#C1E5E4;display:inline-block;"></span><span style="font-family:'DM Sans',sans-serif;font-size:8px;color:#737373;">Research &amp; Estrategia de Mercados</span></div>
+    <div style="display:flex;align-items:center;gap:16px;"><span style="font-family:'DM Sans',sans-serif;font-size:7.5px;color:#737373;">Uso exclusivo para clientes · Ver aviso legal en página 15</span><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;color:#3A3F52;">04 / 15</span></div>
+  </div>
+</section>
+
+<section class="page" data-screen-label="05 Análisis Técnico" style="width:100%;height:100%;box-sizing:border-box;background:#FFFFFF;display:flex;flex-direction:column;padding:14mm 16mm;font-family:'DM Sans',sans-serif;color:#0D0D1A;">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;padding-bottom:9px;border-bottom:1px solid #C1E5E4;margin-bottom:14px;flex-shrink:0;">
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#3E91AF;">ANÁLISIS TÉCNICO</span>
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:500;color:#737373;">03 AGO 2026 · ÍNDICE A · DIARIO</span>
+  </div>
+  <div style="flex:1;display:grid;grid-template-columns:1.6fr 1fr;gap:20px;min-height:0;">
+    <div style="display:flex;flex-direction:column;gap:10px;min-height:0;">
+      <image-slot id="tech-chart-01" shape="rect" placeholder="Arrastrar gráfico de velas — Índice A, diario" style="width: 556px; flex: 1; border-radius: 2px; height: 874px"></image-slot>
+      <div>
+        <h3 style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin:0 0 6px 0;">Comentario Técnico</h3>
+        <p style="font-family:'DM Sans',sans-serif;font-size:10.5px;line-height:1.55;color:#3A3F52;margin:0;">[Lectura del patrón de precio, estructura de tendencia y comportamiento del volumen. Referenciar medias móviles, canales o figuras chartistas relevantes.]</p>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:7px;min-height:0;">
+      <div style="border:1px solid #C1E5E4;border-radius:2px;overflow:hidden;flex-shrink:0;">
+        <div style="padding:5px 10px;background:#E840401A;display:flex;justify-content:space-between;"><span style="font-family:'DM Sans',sans-serif;font-size:9px;color:#3A3F52;">Resistencia 2</span><span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#C62E2E;">[4,590]</span></div>
+        <div style="padding:5px 10px;background:#E8404012;display:flex;justify-content:space-between;border-top:1px solid #C1E5E4;"><span style="font-family:'DM Sans',sans-serif;font-size:9px;color:#3A3F52;">Resistencia 1</span><span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#C62E2E;">[4,555]</span></div>
+        <div style="padding:6px 10px;background:#0D0D1A;display:flex;justify-content:space-between;border-top:1px solid #C1E5E4;"><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;color:#C1E5E4;font-weight:600;">PRECIO ACTUAL</span><span style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:#FFFFFF;">[4,512.3]</span></div>
+        <div style="padding:5px 10px;background:#00DC8212;display:flex;justify-content:space-between;border-top:1px solid #C1E5E4;"><span style="font-family:'DM Sans',sans-serif;font-size:9px;color:#3A3F52;">Soporte 1</span><span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#00A363;">[4,480]</span></div>
+        <div style="padding:5px 10px;background:#00DC821A;display:flex;justify-content:space-between;border-top:1px solid #C1E5E4;"><span style="font-family:'DM Sans',sans-serif;font-size:9px;color:#3A3F52;">Soporte 2</span><span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#00A363;">[4,440]</span></div>
+      </div>
+      <span style="flex-shrink:0;text-align:center;padding:5px 4px;border-radius:2px;background:#E8F5F0;font-family:'Space Grotesk',sans-serif;font-size:8.5px;font-weight:700;color:#3E91AF;text-transform:uppercase;letter-spacing:0.04em;">Tendencia: Alcista</span>
+      <div style="flex-shrink:0;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span style="font-family:'DM Sans',sans-serif;font-size:8.5px;color:#737373;">Volatilidad</span><span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;color:#3A3F52;font-weight:600;">Media</span></div>
+        <div style="width:100%;height:5px;background:#C1E5E4;border-radius:3px;overflow:hidden;"><div style="width:55%;height:100%;background:#3E91AF;"></div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0;">
+        <div style="border-top:1.5px solid #00DC82;padding-top:5px;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#00A363;">Escenario Alcista</span><p style="font-family:'DM Sans',sans-serif;font-size:9px;line-height:1.35;color:#0D0D1A;margin:3px 0 0 0;">[Condición y objetivo si el precio rompe resistencia 1.]</p></div>
+        <div style="border-top:1.5px solid #E84040;padding-top:5px;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#C62E2E;">Escenario Bajista</span><p style="font-family:'DM Sans',sans-serif;font-size:9px;line-height:1.35;color:#0D0D1A;margin:3px 0 0 0;">[Condición y objetivo si el precio pierde soporte 1.]</p></div>
+        <div style="border-top:1.5px solid #737373;padding-top:5px;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#595959;">Escenario Neutral</span><p style="font-family:'DM Sans',sans-serif;font-size:9px;line-height:1.35;color:#0D0D1A;margin:3px 0 0 0;">[Rango de consolidación esperado entre soporte y resistencia 1.]</p></div>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:9px;border-top:1px solid #C1E5E4;margin-top:14px;flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:10px;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;font-weight:700;letter-spacing:0.1em;color:#0D0D1A;">GRUPO INTELIGENCIA</span><span style="width:1px;height:9px;background:#C1E5E4;display:inline-block;"></span><span style="font-family:'DM Sans',sans-serif;font-size:8px;color:#737373;">Research &amp; Estrategia de Mercados</span></div>
+    <div style="display:flex;align-items:center;gap:16px;"><span style="font-family:'DM Sans',sans-serif;font-size:7.5px;color:#737373;">Uso exclusivo para clientes · Ver aviso legal en página 15</span><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;color:#3A3F52;">05 / 15</span></div>
+  </div>
+</section>
+
+<section class="page" data-screen-label="06 Análisis Fundamental" style="width:100%;height:100%;box-sizing:border-box;background:#FFFFFF;display:flex;flex-direction:column;padding:14mm 16mm;font-family:'DM Sans',sans-serif;color:#0D0D1A;">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;padding-bottom:9px;border-bottom:1px solid #C1E5E4;margin-bottom:14px;flex-shrink:0;">
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#3E91AF;">ANÁLISIS FUNDAMENTAL</span>
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:500;color:#737373;">03 AGO 2026 · MACROECONOMÍA</span>
+  </div>
+  <div style="flex:1;display:grid;grid-template-columns:1.7fr 1fr;gap:22px;min-height:0;">
+    <div style="display:flex;flex-direction:column;gap:13px;overflow:hidden;">
+      <p style="font-family:'DM Sans',sans-serif;font-size:11px;line-height:1.6;color:#3A3F52;margin:0;">[Párrafo introductorio sobre el entorno fundamental que enmarca la tesis de inversión: ciclo económico, política monetaria vigente y su efecto sobre la clase de activo cubierta.]</p>
+      <div>
+        <h3 style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin:0 0 5px 0;">Entorno Macroeconómico</h3>
+        <p style="font-family:'DM Sans',sans-serif;font-size:10.5px;line-height:1.55;color:#3A3F52;margin:0;">[Descripción de las condiciones macro dominantes: crecimiento, empleo, inflación y su trayectoria esperada.]</p>
+      </div>
+      <div>
+        <h3 style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin:0 0 5px 0;">Política Monetaria</h3>
+        <p style="font-family:'DM Sans',sans-serif;font-size:10.5px;line-height:1.55;color:#3A3F52;margin:0;">[Postura del banco central relevante, expectativas de tasas y su impacto en la valoración del activo.]</p>
+      </div>
+      <div style="border-top:1.5px solid #3E91AF;padding-top:9px;">
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#3E91AF;">Cita</span>
+        <p style="font-family:'Syne',sans-serif;font-size:14px;font-weight:600;line-height:1.4;color:#0D0D1A;margin:6px 0 0 0;">"[Cita textual de un funcionario, informe oficial o fuente relevante que respalde el análisis.]"</p>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <h3 style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;margin:0 0 2px 0;">Indicadores Clave</h3>
+      <div style="background:#E8F5F0;border-radius:2px;padding:11px 13px;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8px;letter-spacing:0.08em;text-transform:uppercase;color:#3E91AF;font-weight:600;">PIB (a/a)</span><div style="font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;color:#0D0D1A;">[2.4%]</div></div>
+      <div style="background:#E8F5F0;border-radius:2px;padding:11px 13px;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8px;letter-spacing:0.08em;text-transform:uppercase;color:#3E91AF;font-weight:600;">Inflación (a/a)</span><div style="font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;color:#0D0D1A;">[3.1%]</div></div>
+      <div style="background:#E8F5F0;border-radius:2px;padding:11px 13px;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8px;letter-spacing:0.08em;text-transform:uppercase;color:#3E91AF;font-weight:600;">Tasa de Referencia</span><div style="font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;color:#0D0D1A;">[5.25%]</div></div>
+      <div style="background:#E8F5F0;border-radius:2px;padding:11px 13px;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8px;letter-spacing:0.08em;text-transform:uppercase;color:#3E91AF;font-weight:600;">Desempleo</span><div style="font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;color:#0D0D1A;">[4.0%]</div></div>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:9px;border-top:1px solid #C1E5E4;margin-top:14px;flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:10px;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;font-weight:700;letter-spacing:0.1em;color:#0D0D1A;">GRUPO INTELIGENCIA</span><span style="width:1px;height:9px;background:#C1E5E4;display:inline-block;"></span><span style="font-family:'DM Sans',sans-serif;font-size:8px;color:#737373;">Research &amp; Estrategia de Mercados</span></div>
+    <div style="display:flex;align-items:center;gap:16px;"><span style="font-family:'DM Sans',sans-serif;font-size:7.5px;color:#737373;">Uso exclusivo para clientes · Ver aviso legal en página 15</span><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;color:#3A3F52;">06 / 15</span></div>
+  </div>
+</section>
+
+<section class="page" data-screen-label="07 Dashboard Ejecutivo" style="width:100%;height:100%;box-sizing:border-box;background:#FFFFFF;display:flex;flex-direction:column;padding:14mm 16mm;font-family:'DM Sans',sans-serif;color:#0D0D1A;">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;padding-bottom:9px;border-bottom:1px solid #C1E5E4;margin-bottom:14px;flex-shrink:0;">
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#3E91AF;">DASHBOARD EJECUTIVO</span>
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:500;color:#737373;">03 AGO 2026 · CIERRE DE SESIÓN</span>
+  </div>
+  <div style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;min-height:0;">
+    <div style="border:1px solid #C1E5E4;border-radius:2px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;"><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;letter-spacing:0.06em;text-transform:uppercase;color:#3A3F52;font-weight:600;">Índice A</span><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;color:#00A363;">[+0.8%]</span></div>
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:#0D0D1A;">[4,512.3]</span>
+      <svg viewBox="0 0 100 24" style="width:100%;height:24px;"><polyline points="0,18 15,15 30,17 45,10 60,12 75,6 100,4" fill="none" stroke="#00DC82" stroke-width="2"></polyline></svg>
+    </div>
+    <div style="border:1px solid #C1E5E4;border-radius:2px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;"><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;letter-spacing:0.06em;text-transform:uppercase;color:#3A3F52;font-weight:600;">Divisa A</span><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;color:#C62E2E;">[-0.3%]</span></div>
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:#0D0D1A;">[1.0862]</span>
+      <svg viewBox="0 0 100 24" style="width:100%;height:24px;"><polyline points="0,6 15,10 30,9 45,14 60,13 75,19 100,20" fill="none" stroke="#E84040" stroke-width="2"></polyline></svg>
+    </div>
+    <div style="border:1px solid #C1E5E4;border-radius:2px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;"><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;letter-spacing:0.06em;text-transform:uppercase;color:#3A3F52;font-weight:600;">Commodity A</span><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;color:#595959;">[+0.1%]</span></div>
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:#0D0D1A;">[2,318.4]</span>
+      <svg viewBox="0 0 100 24" style="width:100%;height:24px;"><polyline points="0,12 15,13 30,11 45,12 60,10 75,13 100,11" fill="none" stroke="#737373" stroke-width="2"></polyline></svg>
+    </div>
+    <div style="border:1px solid #C1E5E4;border-radius:2px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;"><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;letter-spacing:0.06em;text-transform:uppercase;color:#3A3F52;font-weight:600;">Commodity B</span><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;color:#00A363;">[+1.2%]</span></div>
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:#0D0D1A;">[78.4]</span>
+      <svg viewBox="0 0 100 24" style="width:100%;height:24px;"><polyline points="0,20 15,16 30,17 45,11 60,9 75,7 100,3" fill="none" stroke="#00DC82" stroke-width="2"></polyline></svg>
+    </div>
+    <div style="border:1px solid #C1E5E4;border-radius:2px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;"><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;letter-spacing:0.06em;text-transform:uppercase;color:#3A3F52;font-weight:600;">Bono A (10Y)</span><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;color:#C62E2E;">[+4bps]</span></div>
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:#0D0D1A;">[4.28%]</span>
+      <svg viewBox="0 0 100 24" style="width:100%;height:24px;"><polyline points="0,10 15,9 30,11 45,8 60,10 75,7 100,6" fill="none" stroke="#1E3A5F" stroke-width="2"></polyline></svg>
+    </div>
+    <div style="border:1px solid #C1E5E4;border-radius:2px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;"><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;letter-spacing:0.06em;text-transform:uppercase;color:#3A3F52;font-weight:600;">Activo Digital A</span><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;color:#00A363;">[+2.6%]</span></div>
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:#0D0D1A;">[61,240]</span>
+      <svg viewBox="0 0 100 24" style="width:100%;height:24px;"><polyline points="0,17 15,14 30,15 45,9 60,10 75,5 100,4" fill="none" stroke="#00DC82" stroke-width="2"></polyline></svg>
+    </div>
+    <div style="grid-column:1 / -1;background:#0D0D1A;border-radius:2px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+      <div style="display:flex;gap:24px;">
+        <div style="display:flex;flex-direction:column;gap:2px;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:#737373;">Eventos hoy</span><span style="font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:#FFFFFF;">[3 de alto impacto]</span></div>
+        <div style="display:flex;flex-direction:column;gap:2px;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:#737373;">Volatilidad implícita</span><span style="font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:#FFFFFF;">[Media]</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px;align-items:flex-end;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:#737373;">Sesgo General</span><span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#53C1AB;">Moderadamente Alcista</span></div>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:9px;border-top:1px solid #C1E5E4;margin-top:14px;flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:10px;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;font-weight:700;letter-spacing:0.1em;color:#0D0D1A;">GRUPO INTELIGENCIA</span><span style="width:1px;height:9px;background:#C1E5E4;display:inline-block;"></span><span style="font-family:'DM Sans',sans-serif;font-size:8px;color:#737373;">Research &amp; Estrategia de Mercados</span></div>
+    <div style="display:flex;align-items:center;gap:16px;"><span style="font-family:'DM Sans',sans-serif;font-size:7.5px;color:#737373;">Uso exclusivo para clientes · Ver aviso legal en página 15</span><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;color:#3A3F52;">07 / 15</span></div>
+  </div>
+</section>
+
+<section class="page" data-screen-label="08 Calendario Económico" style="width:100%;height:100%;box-sizing:border-box;background:#FFFFFF;display:flex;flex-direction:column;padding:14mm 16mm;font-family:'DM Sans',sans-serif;color:#0D0D1A;">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;padding-bottom:9px;border-bottom:1px solid #C1E5E4;margin-bottom:14px;flex-shrink:0;">
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#3E91AF;">CALENDARIO ECONÓMICO</span>
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:500;color:#737373;">SEMANA DEL 03 AL 07 DE AGOSTO 2026</span>
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:10px;">
+    <thead>
+      <tr style="background:#3A3F52;">
+        <th style="text-align:left;padding:8px 10px;font-family:'Space Grotesk',sans-serif;font-size:8.5px;letter-spacing:0.08em;text-transform:uppercase;color:#FFFFFF;font-weight:700;">Hora</th>
+        <th style="text-align:left;padding:8px 10px;font-family:'Space Grotesk',sans-serif;font-size:8.5px;letter-spacing:0.08em;text-transform:uppercase;color:#FFFFFF;font-weight:700;">País</th>
+        <th style="text-align:left;padding:8px 10px;font-family:'Space Grotesk',sans-serif;font-size:8.5px;letter-spacing:0.08em;text-transform:uppercase;color:#FFFFFF;font-weight:700;">Evento</th>
+        <th style="text-align:right;padding:8px 10px;font-family:'Space Grotesk',sans-serif;font-size:8.5px;letter-spacing:0.08em;text-transform:uppercase;color:#FFFFFF;font-weight:700;">Anterior</th>
+        <th style="text-align:right;padding:8px 10px;font-family:'Space Grotesk',sans-serif;font-size:8.5px;letter-spacing:0.08em;text-transform:uppercase;color:#FFFFFF;font-weight:700;">Pronóstico</th>
+        <th style="text-align:right;padding:8px 10px;font-family:'Space Grotesk',sans-serif;font-size:8.5px;letter-spacing:0.08em;text-transform:uppercase;color:#FFFFFF;font-weight:700;">Resultado</th>
+        <th style="text-align:center;padding:8px 10px;font-family:'Space Grotesk',sans-serif;font-size:8.5px;letter-spacing:0.08em;text-transform:uppercase;color:#FFFFFF;font-weight:700;">Impacto</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="background:#FFFFFF;border-bottom:1px solid #C1E5E4;"><td style="padding:8px 10px;font-family:'Space Grotesk',sans-serif;">08:30</td><td style="padding:8px 10px;">[País A]</td><td style="padding:8px 10px;">[Nómina no agrícola]</td><td style="padding:8px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;">[180K]</td><td style="padding:8px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;">[195K]</td><td style="padding:8px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;font-weight:700;">[—]</td><td style="padding:8px 10px;text-align:center;"><span style="display:inline-block;padding:2px 8px;border-radius:2px;background:#E840401A;color:#C62E2E;font-family:'Space Grotesk',sans-serif;font-size:8.5px;font-weight:700;">ALTO</span></td></tr>
+      <tr style="background:#F7F7F7;border-bottom:1px solid #C1E5E4;"><td style="padding:8px 10px;font-family:'Space Grotesk',sans-serif;">10:00</td><td style="padding:8px 10px;">[País B]</td><td style="padding:8px 10px;">[Decisión de tasa de interés]</td><td style="padding:8px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;">[4.50%]</td><td style="padding:8px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;">[4.50%]</td><td style="padding:8px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;font-weight:700;">[—]</td><td style="padding:8px 10px;text-align:center;"><span style="display:inline-block;padding:2px 8px;border-radius:2px;background:#E840401A;color:#C62E2E;font-family:'Space Grotesk',sans-serif;font-size:8.5px;font-weight:700;">ALTO</span></td></tr>
+      <tr style="background:#FFFFFF;border-bottom:1px solid #C1E5E4;"><td style="padding:8px 10px;font-family:'Space Grotesk',sans-serif;">09:00</td><td style="padding:8px 10px;">[País C]</td><td style="padding:8px 10px;">[Índice de precios al consumidor]</td><td style="padding:8px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;">[2.9%]</td><td style="padding:8px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;">[3.0%]</td><td style="padding:8px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;font-weight:700;">[—]</td><td style="padding:8px 10px;text-align:center;"><span style="display:inline-block;padding:2px 8px;border-radius:2px;background:#1F76D51A;color:#1F76D5;font-family:'Space Grotesk',sans-serif;font-size:8.5px;font-weight:700;">MEDIO</span></td></tr>
+      <tr style="background:#F7F7F7;border-bottom:1px solid #C1E5E4;"><td style="padding:8px 10px;font-family:'Space Grotesk',sans-serif;">11:30</td><td style="padding:8px 10px;">[País A]</td><td style="padding:8px 10px;">[Inventarios de crudo]</td><td style="padding:8px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;">[-1.2M]</td><td style="padding:8px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;">[-0.8M]</td><td style="padding:8px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;font-weight:700;">[—]</td><td style="padding:8px 10px;text-align:center;"><span style="display:inline-block;padding:2px 8px;border-radius:2px;background:#7373731A;color:#595959;font-family:'Space Grotesk',sans-serif;font-size:8.5px;font-weight:700;">BAJO</span></td></tr>
+      <tr style="background:#FFFFFF;border-bottom:1px solid #C1E5E4;"><td style="padding:8px 10px;font-family:'Space Grotesk',sans-serif;">14:00</td><td style="padding:8px 10px;">[País D]</td><td style="padding:8px 10px;">[Confianza del consumidor]</td><td style="padding:8px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;">[98.2]</td><td style="padding:8px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;">[99.0]</td><td style="padding:8px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;font-weight:700;">[—]</td><td style="padding:8px 10px;text-align:center;"><span style="display:inline-block;padding:2px 8px;border-radius:2px;background:#1F76D51A;color:#1F76D5;font-family:'Space Grotesk',sans-serif;font-size:8.5px;font-weight:700;">MEDIO</span></td></tr>
+    </tbody>
+  </table>
+  <div style="margin-top:16px;">
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#3E91AF;">Nota</span>
+    <p style="font-family:'DM Sans',sans-serif;font-size:10px;line-height:1.55;color:#3A3F52;margin:5px 0 0 0;">[Horarios en zona horaria local del cliente. Los eventos de alto impacto pueden generar volatilidad significativa en los minutos posteriores a su publicación.]</p>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:9px;border-top:1px solid #C1E5E4;margin-top:auto;flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:10px;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;font-weight:700;letter-spacing:0.1em;color:#0D0D1A;">GRUPO INTELIGENCIA</span><span style="width:1px;height:9px;background:#C1E5E4;display:inline-block;"></span><span style="font-family:'DM Sans',sans-serif;font-size:8px;color:#737373;">Research &amp; Estrategia de Mercados</span></div>
+    <div style="display:flex;align-items:center;gap:16px;"><span style="font-family:'DM Sans',sans-serif;font-size:7.5px;color:#737373;">Uso exclusivo para clientes · Ver aviso legal en página 15</span><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;color:#3A3F52;">08 / 15</span></div>
+  </div>
+</section>
+
+<section class="page" data-screen-label="09 Comparativa" style="width:100%;height:100%;box-sizing:border-box;background:#FFFFFF;display:flex;flex-direction:column;padding:14mm 16mm;font-family:'DM Sans',sans-serif;color:#0D0D1A;">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;padding-bottom:9px;border-bottom:1px solid #C1E5E4;margin-bottom:14px;flex-shrink:0;">
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#3E91AF;">COMPARATIVA DE ACTIVOS</span>
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:500;color:#737373;">03 AGO 2026 · CIERRE SEMANAL</span>
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:10px;margin-bottom:18px;flex-shrink:0;">
+    <thead><tr style="border-bottom:1.5px solid #0D0D1A;">
+      <th style="text-align:left;padding:7px 10px;font-family:'Space Grotesk',sans-serif;font-size:8.5px;letter-spacing:0.08em;text-transform:uppercase;color:#3A3F52;">Activo</th>
+      <th style="text-align:right;padding:7px 10px;font-family:'Space Grotesk',sans-serif;font-size:8.5px;letter-spacing:0.08em;text-transform:uppercase;color:#3A3F52;">Último</th>
+      <th style="text-align:right;padding:7px 10px;font-family:'Space Grotesk',sans-serif;font-size:8.5px;letter-spacing:0.08em;text-transform:uppercase;color:#3A3F52;">Var. Día</th>
+      <th style="text-align:right;padding:7px 10px;font-family:'Space Grotesk',sans-serif;font-size:8.5px;letter-spacing:0.08em;text-transform:uppercase;color:#3A3F52;">Var. Semana</th>
+      <th style="text-align:right;padding:7px 10px;font-family:'Space Grotesk',sans-serif;font-size:8.5px;letter-spacing:0.08em;text-transform:uppercase;color:#3A3F52;">RSI</th>
+      <th style="text-align:center;padding:7px 10px;font-family:'Space Grotesk',sans-serif;font-size:8.5px;letter-spacing:0.08em;text-transform:uppercase;color:#3A3F52;">Sesgo</th>
+    </tr></thead>
+    <tbody>
+      <tr style="border-bottom:1px solid #C1E5E4;"><td style="padding:7px 10px;font-weight:600;">Índice A</td><td style="padding:7px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;">4,512.3</td><td style="padding:7px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;color:#00A363;">+0.8%</td><td style="padding:7px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;color:#00A363;">+2.1%</td><td style="padding:7px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;">62</td><td style="padding:7px 10px;text-align:center;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;font-weight:700;color:#00A363;">ALCISTA</span></td></tr>
+      <tr style="border-bottom:1px solid #C1E5E4;"><td style="padding:7px 10px;font-weight:600;">Divisa A</td><td style="padding:7px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;">1.0862</td><td style="padding:7px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;color:#C62E2E;">-0.3%</td><td style="padding:7px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;color:#C62E2E;">-1.4%</td><td style="padding:7px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;">41</td><td style="padding:7px 10px;text-align:center;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;font-weight:700;color:#C62E2E;">BAJISTA</span></td></tr>
+      <tr style="border-bottom:1px solid #C1E5E4;"><td style="padding:7px 10px;font-weight:600;">Commodity A</td><td style="padding:7px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;">2,318.4</td><td style="padding:7px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;color:#595959;">+0.1%</td><td style="padding:7px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;color:#00A363;">+0.6%</td><td style="padding:7px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;">54</td><td style="padding:7px 10px;text-align:center;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;font-weight:700;color:#595959;">NEUTRAL</span></td></tr>
+      <tr><td style="padding:7px 10px;font-weight:600;">Commodity B</td><td style="padding:7px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;">78.4</td><td style="padding:7px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;color:#00A363;">+1.2%</td><td style="padding:7px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;color:#00A363;">+3.4%</td><td style="padding:7px 10px;text-align:right;font-family:'Space Grotesk',sans-serif;">68</td><td style="padding:7px 10px;text-align:center;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;font-weight:700;color:#00A363;">ALCISTA</span></td></tr>
+    </tbody>
+  </table>
+  <h3 style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin:0 0 10px 0;flex-shrink:0;">Variación Semanal Comparada</h3>
+  <div style="flex:1;display:flex;flex-direction:column;gap:10px;min-height:0;justify-content:center;">
+    <div style="display:flex;align-items:center;gap:10px;"><span style="width:90px;font-family:'DM Sans',sans-serif;font-size:10px;color:#3A3F52;flex-shrink:0;">Índice A</span><div style="flex:1;height:14px;background:#F0F0F0;position:relative;"><div style="width:52%;height:100%;background:#3E91AF;"></div></div><span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:600;color:#0D0D1A;width:44px;">+2.1%</span></div>
+    <div style="display:flex;align-items:center;gap:10px;"><span style="width:90px;font-family:'DM Sans',sans-serif;font-size:10px;color:#3A3F52;flex-shrink:0;">Divisa A</span><div style="flex:1;height:14px;background:#F0F0F0;position:relative;"><div style="width:35%;height:100%;background:#E84040;"></div></div><span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:600;color:#0D0D1A;width:44px;">-1.4%</span></div>
+    <div style="display:flex;align-items:center;gap:10px;"><span style="width:90px;font-family:'DM Sans',sans-serif;font-size:10px;color:#3A3F52;flex-shrink:0;">Commodity A</span><div style="flex:1;height:14px;background:#F0F0F0;position:relative;"><div style="width:15%;height:100%;background:#53C1AB;"></div></div><span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:600;color:#0D0D1A;width:44px;">+0.6%</span></div>
+    <div style="display:flex;align-items:center;gap:10px;"><span style="width:90px;font-family:'DM Sans',sans-serif;font-size:10px;color:#3A3F52;flex-shrink:0;">Commodity B</span><div style="flex:1;height:14px;background:#F0F0F0;position:relative;"><div style="width:85%;height:100%;background:#3E91AF;"></div></div><span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:600;color:#0D0D1A;width:44px;">+3.4%</span></div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:9px;border-top:1px solid #C1E5E4;margin-top:14px;flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:10px;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;font-weight:700;letter-spacing:0.1em;color:#0D0D1A;">GRUPO INTELIGENCIA</span><span style="width:1px;height:9px;background:#C1E5E4;display:inline-block;"></span><span style="font-family:'DM Sans',sans-serif;font-size:8px;color:#737373;">Research &amp; Estrategia de Mercados</span></div>
+    <div style="display:flex;align-items:center;gap:16px;"><span style="font-family:'DM Sans',sans-serif;font-size:7.5px;color:#737373;">Uso exclusivo para clientes · Ver aviso legal en página 15</span><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;color:#3A3F52;">09 / 15</span></div>
+  </div>
+</section>
+
+<section class="page" data-screen-label="10 Sistema de Gráficos" style="width:100%;height:100%;box-sizing:border-box;background:#FFFFFF;display:flex;flex-direction:column;padding:14mm 16mm;font-family:'DM Sans',sans-serif;color:#0D0D1A;">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;padding-bottom:9px;border-bottom:1px solid #C1E5E4;margin-bottom:14px;flex-shrink:0;">
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#3E91AF;">SISTEMA DE GRÁFICOS</span>
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:500;color:#737373;">VARIANTES DE COMPOSICIÓN MODULAR</span>
+  </div>
+  <p style="font-family:'DM Sans',sans-serif;font-size:10px;line-height:1.5;color:#3A3F52;margin:0 0 14px 0;flex-shrink:0;">La retícula admite cualquier proporción entre texto y gráfico. Combinar libremente los módulos siguientes según la extensión del contenido.</p>
+  <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:14px;min-height:0;">
+    <div style="border:1px solid #C1E5E4;border-radius:2px;padding:10px;display:flex;flex-direction:column;gap:8px;">
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#3E91AF;">60% Texto · 40% Gráfico</span>
+      <div style="flex:1;display:grid;grid-template-columns:1.5fr 1fr;gap:8px;min-height:0;">
+        <div style="display:flex;flex-direction:column;gap:4px;"><div style="height:6px;background:#EDEDED;width:90%;"></div><div style="height:6px;background:#EDEDED;width:100%;"></div><div style="height:6px;background:#EDEDED;width:70%;"></div></div><image-slot id="var-chart-01" shape="rect" placeholder="Gráfico" style="width: 299px; height: 395px; border-radius: 2px"></image-slot>
+        
+      </div>
+    </div>
+    <div style="border:1px solid #C1E5E4;border-radius:2px;padding:10px;display:flex;flex-direction:column;gap:8px;">
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#3E91AF;">50% Texto · 50% Gráfico</span>
+      <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;min-height:0;">
+        
+        <image-slot id="var-chart-02" shape="rect" placeholder="Gráfico" style="width: 304px; height: 396px; border-radius: 2px"></image-slot>
+      </div>
+    </div>
+    <div style="border:1px solid #C1E5E4;border-radius:2px;padding:10px;display:flex;flex-direction:column;gap:8px;">
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#3E91AF;">Gráfico + Tabla</span>
+      <div style="flex:1;display:flex;flex-direction:column;gap:8px;min-height:0;">
+        <image-slot id="var-chart-03" shape="rect" placeholder="Gráfico" style="width:100%;flex:1;border-radius:2px;"></image-slot>
+        <div style="display:flex;flex-direction:column;gap:3px;"><div style="height:5px;background:#EDEDED;width:100%;"></div><div style="height:5px;background:#EDEDED;width:100%;"></div></div>
+      </div>
+    </div>
+    <div style="border:1px solid #C1E5E4;border-radius:2px;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:0;overflow:hidden;">
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#3E91AF;flex-shrink:0;">Comparativo Doble</span>
+      <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;min-height:0;">
+        <image-slot id="var-chart-04a" shape="rect" placeholder="Gráfico A" style="width: 153px; height: 406px; border-radius: 2px"></image-slot>
+        <image-slot id="var-chart-04b" shape="rect" placeholder="Gráfico B" style="width: 149px; height: 407px; border-radius: 2px"></image-slot>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:9px;border-top:1px solid #C1E5E4;margin-top:14px;flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:10px;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;font-weight:700;letter-spacing:0.1em;color:#0D0D1A;">GRUPO INTELIGENCIA</span><span style="width:1px;height:9px;background:#C1E5E4;display:inline-block;"></span><span style="font-family:'DM Sans',sans-serif;font-size:8px;color:#737373;">Research &amp; Estrategia de Mercados</span></div>
+    <div style="display:flex;align-items:center;gap:16px;"><span style="font-family:'DM Sans',sans-serif;font-size:7.5px;color:#737373;">Uso exclusivo para clientes · Ver aviso legal en página 15</span><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;color:#3A3F52;">10 / 15</span></div>
+  </div>
+</section>
+
+<section class="page" data-screen-label="11 Sistema de Tablas" style="width:100%;height:100%;box-sizing:border-box;background:#FFFFFF;display:flex;flex-direction:column;padding:14mm 16mm;font-family:'DM Sans',sans-serif;color:#0D0D1A;">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;padding-bottom:9px;border-bottom:1px solid #C1E5E4;margin-bottom:14px;flex-shrink:0;">
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#3E91AF;">SISTEMA DE TABLAS</span>
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:500;color:#737373;">VARIANTES DE PRESENTACIÓN DE DATOS</span>
+  </div>
+  <h3 style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin:0 0 8px 0;flex-shrink:0;">Tabla de Ranking</h3>
+  <table style="width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:10px;margin-bottom:16px;flex-shrink:0;">
+    <thead><tr><th style="text-align:left;padding:6px 10px;border-bottom:1.5px solid #0D0D1A;font-family:'Space Grotesk',sans-serif;font-size:8.5px;color:#3A3F52;">#</th><th style="text-align:left;padding:6px 10px;border-bottom:1.5px solid #0D0D1A;font-family:'Space Grotesk',sans-serif;font-size:8.5px;color:#3A3F52;">Activo</th><th style="text-align:right;padding:6px 10px;border-bottom:1.5px solid #0D0D1A;font-family:'Space Grotesk',sans-serif;font-size:8.5px;color:#3A3F52;">Rendimiento</th></tr></thead>
+    <tbody>
+      <tr style="border-bottom:1px solid #C1E5E4;"><td style="padding:6px 10px;font-family:'Space Grotesk',sans-serif;">1</td><td style="padding:6px 10px;">Commodity B</td><td style="padding:6px 10px;text-align:right;"><div style="display:inline-flex;align-items:center;gap:6px;"><div style="width:60px;height:6px;background:#F0F0F0;"><div style="width:90%;height:100%;background:#00DC82;"></div></div><span style="font-family:'Space Grotesk',sans-serif;font-weight:600;color:#00A363;">+3.4%</span></div></td></tr>
+      <tr style="border-bottom:1px solid #C1E5E4;"><td style="padding:6px 10px;font-family:'Space Grotesk',sans-serif;">2</td><td style="padding:6px 10px;">Índice A</td><td style="padding:6px 10px;text-align:right;"><div style="display:inline-flex;align-items:center;gap:6px;"><div style="width:60px;height:6px;background:#F0F0F0;"><div style="width:55%;height:100%;background:#00DC82;"></div></div><span style="font-family:'Space Grotesk',sans-serif;font-weight:600;color:#00A363;">+2.1%</span></div></td></tr>
+      <tr style="border-bottom:1px solid #C1E5E4;"><td style="padding:6px 10px;font-family:'Space Grotesk',sans-serif;">3</td><td style="padding:6px 10px;">Commodity A</td><td style="padding:6px 10px;text-align:right;"><div style="display:inline-flex;align-items:center;gap:6px;"><div style="width:60px;height:6px;background:#F0F0F0;"><div style="width:16%;height:100%;background:#00DC82;"></div></div><span style="font-family:'Space Grotesk',sans-serif;font-weight:600;color:#00A363;">+0.6%</span></div></td></tr>
+      <tr><td style="padding:6px 10px;font-family:'Space Grotesk',sans-serif;">4</td><td style="padding:6px 10px;">Divisa A</td><td style="padding:6px 10px;text-align:right;"><div style="display:inline-flex;align-items:center;gap:6px;"><div style="width:60px;height:6px;background:#F0F0F0;"><div style="width:37%;height:100%;background:#E84040;"></div></div><span style="font-family:'Space Grotesk',sans-serif;font-weight:600;color:#C62E2E;">-1.4%</span></div></td></tr>
+    </tbody>
+  </table>
+  <h3 style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin:0 0 8px 0;flex-shrink:0;">Matriz de Correlación</h3>
+  <table style="width:100%;border-collapse:collapse;font-family:'Space Grotesk',sans-serif;font-size:10px;">
+    <thead><tr><th style="padding:6px;"></th><th style="padding:6px;font-size:8.5px;color:#3A3F52;">Índice A</th><th style="padding:6px;font-size:8.5px;color:#3A3F52;">Divisa A</th><th style="padding:6px;font-size:8.5px;color:#3A3F52;">Comm. A</th><th style="padding:6px;font-size:8.5px;color:#3A3F52;">Comm. B</th></tr></thead>
+    <tbody>
+      <tr><td style="padding:6px;font-family:'DM Sans',sans-serif;font-size:9.5px;color:#3A3F52;">Índice A</td><td style="padding:6px;text-align:center;background:#0D0D1A;color:#FFFFFF;font-weight:700;">1.00</td><td style="padding:6px;text-align:center;background:#E840401A;">-0.42</td><td style="padding:6px;text-align:center;background:#00DC8233;">0.61</td><td style="padding:6px;text-align:center;background:#00DC821A;">0.28</td></tr>
+      <tr><td style="padding:6px;font-family:'DM Sans',sans-serif;font-size:9.5px;color:#3A3F52;">Divisa A</td><td style="padding:6px;text-align:center;background:#E840401A;">-0.42</td><td style="padding:6px;text-align:center;background:#0D0D1A;color:#FFFFFF;font-weight:700;">1.00</td><td style="padding:6px;text-align:center;background:#E8404033;">-0.55</td><td style="padding:6px;text-align:center;background:#7373731A;">-0.05</td></tr>
+      <tr><td style="padding:6px;font-family:'DM Sans',sans-serif;font-size:9.5px;color:#3A3F52;">Comm. A</td><td style="padding:6px;text-align:center;background:#00DC8233;">0.61</td><td style="padding:6px;text-align:center;background:#E8404033;">-0.55</td><td style="padding:6px;text-align:center;background:#0D0D1A;color:#FFFFFF;font-weight:700;">1.00</td><td style="padding:6px;text-align:center;background:#00DC8233;">0.47</td></tr>
+      <tr><td style="padding:6px;font-family:'DM Sans',sans-serif;font-size:9.5px;color:#3A3F52;">Comm. B</td><td style="padding:6px;text-align:center;background:#00DC821A;">0.28</td><td style="padding:6px;text-align:center;background:#7373731A;">-0.05</td><td style="padding:6px;text-align:center;background:#00DC8233;">0.47</td><td style="padding:6px;text-align:center;background:#0D0D1A;color:#FFFFFF;font-weight:700;">1.00</td></tr>
+    </tbody>
+  </table>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:9px;border-top:1px solid #C1E5E4;margin-top:auto;flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:10px;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;font-weight:700;letter-spacing:0.1em;color:#0D0D1A;">GRUPO INTELIGENCIA</span><span style="width:1px;height:9px;background:#C1E5E4;display:inline-block;"></span><span style="font-family:'DM Sans',sans-serif;font-size:8px;color:#737373;">Research &amp; Estrategia de Mercados</span></div>
+    <div style="display:flex;align-items:center;gap:16px;"><span style="font-family:'DM Sans',sans-serif;font-size:7.5px;color:#737373;">Uso exclusivo para clientes · Ver aviso legal en página 15</span><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;color:#3A3F52;">11 / 15</span></div>
+  </div>
+</section>
+
+<section class="page" data-screen-label="12 Librería de Componentes I" style="width:100%;height:100%;box-sizing:border-box;background:#FFFFFF;display:flex;flex-direction:column;padding:14mm 16mm;font-family:'DM Sans',sans-serif;color:#0D0D1A;">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;padding-bottom:9px;border-bottom:1px solid #C1E5E4;margin-bottom:14px;flex-shrink:0;">
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#3E91AF;">LIBRERÍA DE COMPONENTES</span>
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:500;color:#737373;">BLOQUES EDITORIALES · 1 DE 2</span>
+  </div>
+  <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:16px;min-height:0;">
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#737373;">Componente · Insight</span>
+      <div style="border-top:1.5px solid #3E91AF;padding-top:8px;flex:1;"><span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#3E91AF;">Insight</span><p style="font-family:'DM Sans',sans-serif;font-size:10.5px;line-height:1.5;color:#0D0D1A;margin:6px 0 0 0;">[Lectura o interpretación que aporta valor añadido más allá del dato observado.]</p></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#737373;">Componente · Riesgo</span>
+      <div style="border-top:1.5px solid #E84040;padding-top:8px;flex:1;"><span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#E84040;">Riesgo</span><p style="font-family:'DM Sans',sans-serif;font-size:10.5px;line-height:1.5;color:#0D0D1A;margin:6px 0 0 0;">[Factor que podría invalidar el escenario base o generar pérdidas no contempladas.]</p></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#737373;">Componente · Oportunidad</span>
+      <div style="border-top:1.5px solid #53C1AB;padding-top:8px;flex:1;"><span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#53C1AB;">Oportunidad</span><p style="font-family:'DM Sans',sans-serif;font-size:10.5px;line-height:1.5;color:#0D0D1A;margin:6px 0 0 0;">[Configuración favorable identificada para posicionamiento táctico.]</p></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#737373;">Componente · Nota</span>
+      <div style="border-top:1.5px solid #737373;padding-top:8px;flex:1;"><span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#595959;">Nota</span><p style="font-family:'DM Sans',sans-serif;font-size:10.5px;line-height:1.5;color:#0D0D1A;margin:6px 0 0 0;">[Aclaración metodológica o contextual complementaria al análisis principal.]</p></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#737373;">Componente · Alerta Macro</span>
+      <div style="background:#1F76D5;border-radius:2px;padding:12px 14px;flex:1;display:flex;flex-direction:column;justify-content:center;"><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#C1E5E4;">Alerta Macro</span><p style="font-family:'DM Sans',sans-serif;font-size:10.5px;line-height:1.5;color:#FFFFFF;margin:5px 0 0 0;">[Evento macroeconómico de alto impacto en desarrollo. Vigilar reacción del mercado.]</p></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#737373;">Componente · Cita</span>
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding-left:14px;border-left:2px solid #0D0D1A;"><p style="font-family:'Syne',sans-serif;font-size:13px;font-weight:600;line-height:1.4;color:#0D0D1A;margin:0;">"[Cita textual atribuible a una fuente oficial o experta que refuerza el análisis.]"</p></div>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:9px;border-top:1px solid #C1E5E4;margin-top:14px;flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:10px;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;font-weight:700;letter-spacing:0.1em;color:#0D0D1A;">GRUPO INTELIGENCIA</span><span style="width:1px;height:9px;background:#C1E5E4;display:inline-block;"></span><span style="font-family:'DM Sans',sans-serif;font-size:8px;color:#737373;">Research &amp; Estrategia de Mercados</span></div>
+    <div style="display:flex;align-items:center;gap:16px;"><span style="font-family:'DM Sans',sans-serif;font-size:7.5px;color:#737373;">Uso exclusivo para clientes · Ver aviso legal en página 15</span><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;color:#3A3F52;">12 / 15</span></div>
+  </div>
+</section>
+
+<section class="page" data-screen-label="13 Librería de Componentes II" style="width:100%;height:100%;box-sizing:border-box;background:#FFFFFF;display:flex;flex-direction:column;padding:14mm 16mm;font-family:'DM Sans',sans-serif;color:#0D0D1A;">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;padding-bottom:9px;border-bottom:1px solid #C1E5E4;margin-bottom:14px;flex-shrink:0;">
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#3E91AF;">LIBRERÍA DE COMPONENTES</span>
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:500;color:#737373;">BLOQUES EDITORIALES · 2 DE 2</span>
+  </div>
+  <span style="font-family:'Space Grotesk',sans-serif;font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#737373;margin-bottom:8px;display:block;flex-shrink:0;">Etiquetas de Sesgo</span>
+  <div style="display:flex;gap:8px;margin-bottom:18px;flex-shrink:0;">
+    <span style="display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:2px;background:#00DC821A;color:#00A363;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:9.5px;letter-spacing:0.05em;text-transform:uppercase;"><span style="width:6px;height:6px;border-radius:50%;background:#00DC82;display:inline-block;"></span>Alcista</span>
+    <span style="display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:2px;background:#E840401A;color:#C62E2E;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:9.5px;letter-spacing:0.05em;text-transform:uppercase;"><span style="width:6px;height:6px;border-radius:50%;background:#E84040;display:inline-block;"></span>Bajista</span>
+    <span style="display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:2px;background:#7373731A;color:#595959;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:9.5px;letter-spacing:0.05em;text-transform:uppercase;"><span style="width:6px;height:6px;border-radius:50%;background:#737373;display:inline-block;"></span>Neutral</span>
+    <span style="display:inline-flex;align-items:center;padding:5px 11px;border-radius:2px;background:#E840401A;color:#C62E2E;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:9.5px;letter-spacing:0.05em;text-transform:uppercase;">Impacto Alto</span>
+    <span style="display:inline-flex;align-items:center;padding:5px 11px;border-radius:2px;background:#1F76D51A;color:#1F76D5;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:9.5px;letter-spacing:0.05em;text-transform:uppercase;">Impacto Medio</span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:18px;flex-shrink:0;">
+    <div style="background:#E8F5F0;border-radius:2px;padding:12px 14px;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8px;letter-spacing:0.08em;text-transform:uppercase;color:#3E91AF;font-weight:600;">Componente · KPI</span><div style="font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:#0D0D1A;margin-top:4px;">[4,512.3]</div><span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:600;color:#00A363;">[+0.8%]</span></div>
+    <div style="border:1px solid #C1E5E4;border-radius:2px;padding:12px 14px;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8px;letter-spacing:0.08em;text-transform:uppercase;color:#737373;font-weight:600;">Componente · Estadística</span><div style="font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:#0D0D1A;margin-top:4px;">[62%]</div><span style="font-family:'DM Sans',sans-serif;font-size:9px;color:#737373;">de sesiones alcistas este mes</span></div>
+    <div style="background:#0D0D1A;border-radius:2px;padding:12px 14px;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8px;letter-spacing:0.08em;text-transform:uppercase;color:#C1E5E4;font-weight:600;">Componente · Resumen</span><div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#53C1AB;margin-top:4px;">Alcista</div></div>
+  </div>
+  <span style="font-family:'Space Grotesk',sans-serif;font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#737373;margin-bottom:8px;display:block;flex-shrink:0;">Indicador de Sesgo (Gauge)</span>
+  <div style="margin-bottom:18px;flex-shrink:0;">
+    <div style="width:100%;height:10px;border-radius:5px;background:linear-gradient(90deg,#E84040 0%,#737373 50%,#00DC82 100%);position:relative;"><div style="position:absolute;left:68%;top:-4px;width:4px;height:18px;background:#0D0D1A;border-radius:2px;"></div></div>
+    <div style="display:flex;justify-content:space-between;margin-top:4px;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8px;color:#C62E2E;">Bajista</span><span style="font-family:'Space Grotesk',sans-serif;font-size:8px;color:#595959;">Neutral</span><span style="font-family:'Space Grotesk',sans-serif;font-size:8px;color:#00A363;">Alcista</span></div>
+  </div>
+  <span style="font-family:'Space Grotesk',sans-serif;font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#737373;margin-bottom:8px;display:block;flex-shrink:0;">Componente · Tarjeta de Niveles</span>
+  <div style="border:1px solid #C1E5E4;border-radius:2px;overflow:hidden;flex-shrink:0;">
+    <div style="padding:7px 12px;background:#E8404012;display:flex;justify-content:space-between;"><span style="font-family:'DM Sans',sans-serif;font-size:9.5px;color:#3A3F52;">Resistencia</span><span style="font-family:'Space Grotesk',sans-serif;font-size:10.5px;font-weight:700;color:#C62E2E;">[4,555]</span></div>
+    <div style="padding:8px 12px;background:#0D0D1A;display:flex;justify-content:space-between;border-top:1px solid #C1E5E4;border-bottom:1px solid #C1E5E4;"><span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;color:#C1E5E4;font-weight:600;">PRECIO</span><span style="font-family:'Space Grotesk',sans-serif;font-size:11.5px;font-weight:700;color:#FFFFFF;">[4,512.3]</span></div>
+    <div style="padding:7px 12px;background:#00DC8212;display:flex;justify-content:space-between;"><span style="font-family:'DM Sans',sans-serif;font-size:9.5px;color:#3A3F52;">Soporte</span><span style="font-family:'Space Grotesk',sans-serif;font-size:10.5px;font-weight:700;color:#00A363;">[4,480]</span></div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:9px;border-top:1px solid #C1E5E4;margin-top:auto;flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:10px;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;font-weight:700;letter-spacing:0.1em;color:#0D0D1A;">GRUPO INTELIGENCIA</span><span style="width:1px;height:9px;background:#C1E5E4;display:inline-block;"></span><span style="font-family:'DM Sans',sans-serif;font-size:8px;color:#737373;">Research &amp; Estrategia de Mercados</span></div>
+    <div style="display:flex;align-items:center;gap:16px;"><span style="font-family:'DM Sans',sans-serif;font-size:7.5px;color:#737373;">Uso exclusivo para clientes · Ver aviso legal en página 15</span><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;color:#3A3F52;">13 / 15</span></div>
+  </div>
+</section>
+
+<section class="page" data-screen-label="14 Conclusiones" style="width:100%;height:100%;box-sizing:border-box;background:#FFFFFF;display:flex;flex-direction:column;padding:14mm 16mm;font-family:'DM Sans',sans-serif;color:#0D0D1A;">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;padding-bottom:9px;border-bottom:1px solid #C1E5E4;margin-bottom:14px;flex-shrink:0;">
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#3E91AF;">CONCLUSIONES</span>
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:500;color:#737373;">03 AGO 2026 · SÍNTESIS DEL DÍA</span>
+  </div>
+  <div style="flex:1;display:grid;grid-template-columns:1.4fr 1fr;gap:24px;min-height:0;">
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div>
+        <h2 style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin:0 0 8px 0;">Síntesis del Día</h2>
+        <p style="font-family:'DM Sans',sans-serif;font-size:11px;line-height:1.6;color:#3A3F52;margin:0;">[Párrafo de cierre que integra los hallazgos técnicos y fundamentales del informe en una lectura coherente para el cliente.]</p>
+      </div>
+      <div>
+        <h3 style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin:0 0 8px 0;">Puntos Clave</h3>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;gap:10px;"><span style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:#3E91AF;">01</span><span style="font-family:'DM Sans',sans-serif;font-size:10.5px;line-height:1.5;color:#0D0D1A;">[Primer punto clave a retener de la sesión.]</span></div>
+          <div style="display:flex;gap:10px;"><span style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:#3E91AF;">02</span><span style="font-family:'DM Sans',sans-serif;font-size:10.5px;line-height:1.5;color:#0D0D1A;">[Segundo punto clave a retener de la sesión.]</span></div>
+          <div style="display:flex;gap:10px;"><span style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:#3E91AF;">03</span><span style="font-family:'DM Sans',sans-serif;font-size:10.5px;line-height:1.5;color:#0D0D1A;">[Tercer punto clave a retener de la sesión.]</span></div>
+        </div>
+      </div>
+      <div>
+        <h3 style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin:0 0 8px 0;">Próximos Catalizadores</h3>
+        <p style="font-family:'DM Sans',sans-serif;font-size:10.5px;line-height:1.55;color:#3A3F52;margin:0;">[Eventos o publicaciones próximas que podrían modificar el escenario actual.]</p>
+      </div>
+    </div>
+    <div style="background:#0D0D1A;border-radius:2px;padding:20px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:8px;">
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:#C1E5E4;">Sesgo Consolidado</span>
+      <span style="font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:#53C1AB;">Moderadamente Alcista</span>
+      <div style="width:40px;height:2px;background:#3E91AF;margin:6px 0;"></div>
+      <p style="font-family:'DM Sans',sans-serif;font-size:10px;line-height:1.5;color:#C1E5E4;margin:0;">Válido hasta la próxima actualización intradía o cambio material de escenario.</p>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:9px;border-top:1px solid #C1E5E4;margin-top:14px;flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:10px;"><span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;font-weight:700;letter-spacing:0.1em;color:#0D0D1A;">GRUPO INTELIGENCIA</span><span style="width:1px;height:9px;background:#C1E5E4;display:inline-block;"></span><span style="font-family:'DM Sans',sans-serif;font-size:8px;color:#737373;">Research &amp; Estrategia de Mercados</span></div>
+    <div style="display:flex;align-items:center;gap:16px;"><span style="font-family:'DM Sans',sans-serif;font-size:7.5px;color:#737373;">Uso exclusivo para clientes · Ver aviso legal en página 15</span><span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;color:#3A3F52;">14 / 15</span></div>
+  </div>
+</section>
+
+<section class="page" data-screen-label="15 Disclaimer" style="width:100%;height:100%;box-sizing:border-box;background:#0D0D1A;display:flex;flex-direction:column;padding:16mm;font-family:'DM Sans',sans-serif;color:#C1E5E4;">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:9px;border-bottom:1px solid rgba(255,255,255,0.15);margin-bottom:18px;flex-shrink:0;">
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.14em;color:#53C1AB;">AVISO LEGAL</span>
+    <img src="assets/logo-white.png" alt="Grupo Inteligencia" style="height:20px;width:auto;">
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;gap:14px;overflow:hidden;">
+    <h2 style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#FFFFFF;margin:0;">Disclaimer</h2>
+    <p style="font-family:'DM Sans',sans-serif;font-size:9.5px;line-height:1.7;color:#C1E5E4;margin:0;">[Este documento ha sido elaborado por Grupo Inteligencia con fines exclusivamente informativos y no constituye una oferta, solicitud o recomendación de inversión. Sustituir este bloque por el texto legal definitivo revisado por el área de cumplimiento normativo.]</p>
+    <p style="font-family:'DM Sans',sans-serif;font-size:9.5px;line-height:1.7;color:#C1E5E4;margin:0;">[La información contenida se basa en fuentes consideradas fiables al momento de su publicación; sin embargo, no se garantiza su exactitud, integridad o vigencia. Los mercados financieros implican riesgos, incluida la posible pérdida del capital invertido, y el desempeño pasado no garantiza resultados futuros.]</p>
+    <p style="font-family:'DM Sans',sans-serif;font-size:9.5px;line-height:1.7;color:#C1E5E4;margin:0;">[Los niveles técnicos, escenarios y sesgos presentados corresponden a la interpretación del equipo de análisis y pueden modificarse sin previo aviso ante cambios en las condiciones de mercado. Este material es de uso exclusivo para clientes de Grupo Inteligencia y no debe distribuirse a terceros sin autorización expresa.]</p>
+    <p style="font-family:'DM Sans',sans-serif;font-size:9.5px;line-height:1.7;color:#C1E5E4;margin:0;">[Cada cliente debe evaluar su propia situación financiera y, en caso de considerarlo necesario, consultar con un asesor independiente antes de tomar decisiones de inversión basadas en este contenido.]</p>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:9px;border-top:1px solid rgba(255,255,255,0.15);margin-top:14px;flex-shrink:0;">
+    <span style="font-family:'DM Sans',sans-serif;font-size:7.5px;color:#737373;">© 2026 Grupo Inteligencia · Research &amp; Estrategia de Mercados</span>
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;color:#53C1AB;">15 / 15</span>
+  </div>
+</section>
+
+</doc-page>
+
+</x-dc>
+</body>
+</html>
