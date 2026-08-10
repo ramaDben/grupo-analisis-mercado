@@ -140,7 +140,8 @@
         {"ticker_mt5": "#MSFT", "nombre": "Microsoft Corp.", "digits": 2, "drivers": ["Azure/cloud", "AI (Copilot)", "earnings", "licencias enterprise"]},
         {"ticker_mt5": "#NVDA", "nombre": "NVIDIA Corp.", "digits": 2, "drivers": ["demanda chips AI", "data centers", "earnings", "regulación exportación China"]},
         {"ticker_mt5": "#AMZN", "nombre": "Amazon.com Inc.", "digits": 2, "drivers": ["AWS/cloud", "retail/consumo", "earnings", "márgenes"]},
-        {"ticker_mt5": "#AMD", "nombre": "Advanced Micro Devices", "digits": 2, "drivers": ["demanda chips AI/GPU", "data centers", "competencia con NVIDIA", "earnings", "demanda PC/servidores"]}
+        {"ticker_mt5": "#AMD", "nombre": "Advanced Micro Devices", "digits": 2, "drivers": ["demanda chips AI/GPU", "data centers", "competencia con NVIDIA", "earnings", "demanda PC/servidores"]},
+        {"ticker_mt5": "#MELI", "nombre": "MercadoLibre Inc.", "digits": 2, "drivers": ["comercio electrónico en Latinoamérica", "Mercado Pago / fintech", "earnings", "tipo de cambio en Brasil y Argentina", "consumo en la región"]}
       ]
     },
     "bancario": {
