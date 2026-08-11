@@ -196,6 +196,10 @@ semana.
   .evidencia-veredicto { --veredicto-color: var(--acento); }
   .evidencia-veredicto--mejor { --veredicto-color: var(--sube); }
   .evidencia-veredicto--peor  { --veredicto-color: var(--baja); }
+  /* Sin consenso publicado no hay veredicto que mostrar (regla del proyecto:
+     un numero sin consenso puede ir como evidencia, pero con el veredicto
+     vacio) — la pastilla no debe quedar flotando vacia. */
+  .evidencia-veredicto:empty { display: none; }
 
   /* ══════════ CAPA 0 · EL ESCENARIO ══════════
      Vive acá y no en `piel.css` porque es estructura de ESTA plantilla: es la
