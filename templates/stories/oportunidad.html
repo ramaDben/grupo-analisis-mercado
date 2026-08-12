@@ -231,12 +231,29 @@ semana.
   }
 
   /* ══════════ CABECERA · EL SELLO DEL MOTOR ══════════ */
-  .cabecera { display: flex; justify-content: space-between; align-items: center; }
+  /* `<img class="{{modo_imagen}}">` vive DENTRO de `.hero` (no de `.story`), así
+     que su z-index:1 (piel.css, `.foto-activo`) compite dentro del stacking
+     context de `.capa` (z-index:2) contra `.cabecera`, que sin z-index propio
+     queda en el nivel 0 de ese mismo contexto — y pierde: la imagen se pintaba
+     por ENCIMA del sello y la fecha, invisibles aunque el DOM y el hit-testing
+     (con `.foto-activo` en `pointer-events:none`) parecieran decir lo
+     contrario. z-index explícito por encima de 1 lo resuelve. */
+  .cabecera { position: relative; z-index: 3; display: flex; justify-content: space-between; align-items: center; }
 
+  /* Sin fondo propio, `.fecha` quedaba casi invisible cuando cae sobre la
+     imagen del activo (el 58% derecho del lienzo, vía `.foto-activo`): medido
+     sobre MELI, donde las cajas claras del fondo se comen el gris del texto en
+     la esquina superior derecha. Un `text-shadow` con blur no alcanza contra
+     una imagen tan clara/brillante; se necesita el mismo criterio que
+     `.evidencia` (`background: rgba(8,8,12,0.80)`) — un chip sólido detrás,
+     no depender del contraste con lo que haya atrás. */
   .fecha {
     font-family: "Space Grotesk", sans-serif; font-weight: 600;
     font-size: 21px; letter-spacing: 0.14em; text-transform: uppercase;
     color: var(--texto-2);
+    padding: 8px 18px;
+    border-radius: 999px;
+    background: rgba(8,8,12,0.72);
   }
 
   /* ══════════ HERO ══════════ */
