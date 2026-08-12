@@ -294,7 +294,13 @@ Contrato de error común: si el dato no está disponible retorna `{'error': 'CÓ
 
 Piloto (issue #109): comando `/story [tipo]` genera Stories de marca (imagen 1920×1080).
 `[tipo]` soportados hoy: `dato_macro`, `alerta`, `recomendacion`, `quote`, `breaking`, `encuesta`,
-`edu` (Fase B, issues #121/#123/#125/#127), `flash` (Fase C, issue #129) y `postventa` (Fase C).
+`edu` (Fase B, issues #121/#123/#125/#127), `flash` (Fase C, issue #129), `postventa` (Fase C) y
+`calendario` (fuera de fase, pedido directo del director 2026-08-10). `calendario` señala los
+eventos macro más relevantes de la semana (selección editorial de 3 a 6, no un volcado del
+calendario completo): usa la piel de `oportunidad` (sello con pulso, CTA, disclaimer) pero sin
+activo protagonista, así que cae al acento de marca en vez de a un color por activo — mismo
+fallback que ya usan `alerta`/`recomendacion` con un activo sin token de color. Consume
+`obtener_calendario_macro` en vez de `get_asset_levels`.
 `dato_macro` cubre la **pieza 1 de la agenda diaria** —un dato económico que ya publicó, en el Modo
 resultado de `/dato_macro`—, donde **es el entregable principal**: desde 2026-08-04 el mensaje de
 texto de ese modo quedó reducido al pie de esta imagen. Se organiza alrededor del veredicto frente
@@ -354,15 +360,15 @@ celular). El formato viaja por el CLI y **nunca** por el payload — el payload 
 contenido y el formato es presentación, así el **mismo payload rinde ambos**. Cada snapshot es un
 único archivo que se adapta con `@media (max-aspect-ratio: 1/1)`, en vez de tener un archivo por
 formato (evita que la versión vertical se desfase de la horizontal). Migradas a responsive:
-`templates/stories/postventa.html`, `templates/stories/alerta.html` y
-`templates/stories/operacion.html`; las otras 5 siguen solo en
+`templates/stories/postventa.html`, `templates/stories/alerta.html`,
+`templates/stories/operacion.html` y `templates/stories/calendario.html`; las otras 5 siguen solo en
 horizontal — una plantilla por Change, mismo criterio que las Fases B y C. Snapshots de marca:
 `templates/stories/alerta.html`, `templates/stories/quote.html`, `templates/stories/breaking.html`,
 `templates/stories/encuesta.html`, `templates/stories/edu.html`, `templates/stories/flash.html`,
 `templates/stories/postventa.html`, `templates/stories/operacion.html`,
-`templates/stories/dato_macro.html`, `templates/stories/recomendacion.html` y
-`templates/stories/oportunidad.html`. Las demás plantillas del canvas (Market Update, Indicador
-Macro, Trading Idea, Calendario, Semanal, Carrusel "Oportunidades de la semana") llegan con los issues
+`templates/stories/dato_macro.html`, `templates/stories/recomendacion.html`,
+`templates/stories/oportunidad.html` y `templates/stories/calendario.html`. Las demás plantillas del canvas (Market Update, Indicador
+Macro, Trading Idea, Semanal, Carrusel "Oportunidades de la semana") llegan con los issues
 #111-#115 — ver `docs/design/stories-gi/plantillas-stories-gi.md` para el mapeo campo-por-campo.
 
 **Paleta y color (una sola fuente).** Los colores viven en `templates/stories/marca.css` y los
@@ -586,7 +592,7 @@ Invocar con `/nombre` desde Claude Code:
 | `/dato_macro` | Calendario del día → director elige dato a desarrollar |
 | `/noticia` | Busca 3-5 noticias relevantes → director elige |
 | `/chart` | Genera screenshot de MT5 con indicador y temporalidad a elección |
-| `/story [tipo]` | Genera una Story de marca GI (imagen 1920×1080). `[tipo]` soportados hoy: `dato_macro`, `alerta`, `recomendacion`, `quote`, `breaking`, `encuesta`, `edu`, `flash`, `postventa`; demás plantillas en #111-#115. Ver sección "Stories GI". |
+| `/story [tipo]` | Genera una Story de marca GI (imagen 1920×1080). `[tipo]` soportados hoy: `dato_macro`, `alerta`, `recomendacion`, `quote`, `breaking`, `encuesta`, `edu`, `flash`, `postventa`, `calendario`; demás plantillas en #111-#115. Ver sección "Stories GI". |
 | `/oportunidad [activo]` | Pieza que invita a operar: imagen (plantilla `oportunidad`) + mensaje de WhatsApp con contexto, llamado a la acción, fuente y disclaimer. Precios SIEMPRE del motor — si MT5 falla, se detiene, nunca deduce. No es señal: sin entrada, TP ni SL. Máximo 3 al día. |
 | `/señal` | Señal operativa (verifica límite 3/semana automáticamente) |
 | `/alerta` | Detecta qué mueve el mercado ahora y genera alerta urgente |
@@ -657,3 +663,25 @@ grupo-analisis-mercado/
     ├── mcp_config.example.json ← template sin credenciales (en git)
     └── mcp_config.json         ← config real con API keys (gitignored)
 ```
+
+## Stories GI — CSS embebido (solución Playwright 2026-08-12)
+
+**Problema:** `story_render.py` genera HTML temporal y lo navega con `file://`, pero Playwright no resolvía las rutas relativas `<link href="marca.css">`, causando que los estilos no se cargaran. Resultado: elementos visibles en el HTML (como fecha/hora) no aparecían en el PNG final, sin error visible.
+
+**Solución (IMPLEMENTADA):** Embeber CSS directamente en cada plantilla HTML en bloques `<style>`, eliminando la dependencia de rutas externas.
+
+**Cómo se aplicó:**
+- Todas las plantillas (`oportunidad.html`, `alerta.html`, `recomendacion.html`, etc.) ahora incluyen `marca.css` y `piel.css` (si aplica) incrustados en `<style>` en el `<head>`.
+- Script de automatización: `scripts/embeber_css_plantillas_v3.py` (incrusta CSS en cualquier plantilla que lo use).
+
+**Impacto:**
+- ✅ Playwright siempre tiene estilos disponibles, sin resolver rutas.
+- ✅ Elementos como fecha/hora ahora son visibles en los PNG.
+- ✅ No hay cambio en el contrato de tokens `{{campo}}` ni en `build_context`.
+
+**Si agregas una plantilla nueva:**
+- Si usa `<link rel="stylesheet" href="marca.css">` o `piel.css`, ejecuta:
+  ```bash
+  uv run python scripts/embeber_css_plantillas_v3.py
+  ```
+- O embebe manualmente el CSS en un `<style>` antes del `</head>`.
