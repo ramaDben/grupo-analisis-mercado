@@ -1,0 +1,104 @@
+ASUNTO: Calculadora de simulación de operaciones · nueva versión multi-instrumento
+
+
+Hola Hari,
+
+Te envío la nueva versión de la calculadora, ya revisada y funcionando. Reemplaza
+a "Simulación_USDCLP_explicativa" para todo lo que no sea USD/CLP, y esa planilla
+original te la devuelvo también, con sus fórmulas corregidas.
+
+
+QUÉ CONTIENE EL ARCHIVO
+
+Dos hojas. La primera, "Simulador", es la única que se usa: seleccionas el
+instrumento de una lista, indicas el capital de la cuenta y registras hasta 6
+operaciones, cada una con su fecha, su dirección (COMPRA o VENTA) y el capital que
+compromete. La segunda, "Datos", contiene los 25 instrumentos del catálogo con sus
+especificaciones reales del broker: tamaño de contrato, margen exigido, spread y
+swap.
+
+
+CÓMO FUNCIONA
+
+La hoja "Simulador" no tiene ningún parámetro escrito a mano. Cuando eliges un
+instrumento en la lista, un BUSCARV contra la hoja "Datos" trae automáticamente
+sus especificaciones, y con eso la planilla calcula el volumen en lotes y los
+costos. Es decir: el operador nunca tiene que saber el tamaño de contrato ni
+buscar el spread. Solo elige el instrumento y escribe pesos y precios.
+
+
+POR QUÉ MEJORA LA VERSIÓN ANTERIOR
+
+La planilla original solo era correcta en USD/CLP, y no por un error de diseño
+sino por una coincidencia: la moneda de cotización de ese par es el peso chileno,
+la misma de la cuenta, así que el resultado salía en pesos sin ninguna conversión.
+En cualquier otro instrumento ese mismo cálculo entrega el resultado en otra
+moneda, y además el lotaje cambia de unidad. Un lote de Oro son 100 onzas, uno de
+WTI son 1.000 barriles, y uno de una acción son 50 papeles, no 100.
+
+Los otros cuatro puntos que resuelve:
+
+1. El margen no es 1% para todos. Va desde 0,25% en JPM hasta 5% en el Nasdaq. La
+   planilla anterior lo tenía fijo en 1% dentro de la fórmula, así que en cualquier
+   instrumento distinto de forex daba una cifra incorrecta.
+
+2. El spread ya no es una constante. Antes estaba escrito como 0,4 dentro de la
+   fórmula. Ahora viene del terminal, y su variación es relevante: mientras probaba,
+   el spread de USD/CLP pasó de 0,40 a 1,00 en media hora, y el costo de abrir la
+   misma posición subió de $21.600 a $54.000.
+
+3. Aparece el costo de mantención (swap), que antes no estaba en ninguna parte. No
+   es un cargo menor: una compra de Apple con $300.000 de capital comprometido,
+   mantenida 20 días, acumula $169.688. Más de la mitad del capital, solo por
+   dejarla abierta.
+
+4. El volumen se deriva del capital, no al revés. Escribes que el cliente pone
+   $500.000 y la planilla responde "0,54 lotes", que es el número que se ingresa
+   en MT5.
+
+
+QUÉ INCLUYE
+
+- Los 25 instrumentos del catálogo, en lista desplegable.
+- 6 operaciones independientes por periodo, combinando compras y ventas.
+- Volumen, costo de apertura, costo de mantención y resultado neto por operación.
+- Cierre del periodo con exposición nocional, margen requerido, resultado neto y
+  patrimonio final.
+- Validaciones automáticas que avisan si el margen excede el capital de la cuenta,
+  si una operación queda bajo el volumen mínimo (varía por instrumento: cerca de
+  $9.200 en USD/CLP, cerca de $186.000 en Oro), o si quedó cargado el precio de un
+  instrumento distinto al seleccionado.
+- Las celdas de resultado están protegidas, para que no se sobrescriba una fórmula
+  por accidente.
+
+
+SOBRE EL STOP LOSS
+
+Quedó fuera a tu petición expresa. Tu indicación fue que, en lugar de un campo de
+stop loss, la planilla muestre la pérdida en forma numérica: si es una compra y el
+precio cae en vez de subir, que el neto líquido aparezca en negativo.
+
+Así quedó implementado. Registras la operación con el precio de salida por debajo
+de la entrada y la columna RESULTADO NETO entrega la pérdida en pesos, con el
+spread y el swap ya descontados, destacada en rojo. Además la columna OBSERVACIÓN
+lo explicita: "precio de salida inferior a la entrada: resultado negativo en una
+compra".
+
+
+DOS COSAS ANTES DE USARLA CON UN CLIENTE
+
+El spread queda fijado al momento de generar el archivo y se muestra arriba a la
+derecha, para que no sea un supuesto oculto. Si el archivo se generó en una ventana
+de spread ampliado, conviene regenerarlo antes de dar el costo por válido.
+
+El costo de mantención se estima por días calendario. Lo contrastamos contra
+posiciones abiertas del terminal y queda dentro de 4,7% del swap que el broker
+cobró efectivamente en una posición de 15 días. En periodos cortos que incluyan un
+fin de semana puede quedar algo por sobre el cargo real, sesgo que preferimos al
+contrario.
+
+
+Adjunto también una guía de uso con el detalle campo por campo. Cualquier duda o
+ajuste, dime y lo vemos.
+
+Saludos,

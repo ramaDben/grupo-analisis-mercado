@@ -7,6 +7,44 @@ Cada fila es una operacion independiente con su propia fecha y su propio COMPRA/
 costo de mantencion (swap). Los 25 activos del catalogo se leen del terminal MT5 y
 quedan en la hoja Datos, que es la que alimenta los BUSCARV de la hoja Simulador.
 
+Complejidad
+-----------
+Variables: n = instrumentos del catalogo (25) · k = parametros resueltos por
+instrumento (10 celdas BUSCARV) · r = filas de operacion (6) · d = dias de
+mantencion de una operacion.
+
+Generacion (este script), por corrida:
+    tiempo   O(n), con 4 llamadas IPC al terminal por instrumento
+             (symbol_info, symbol_info_tick, order_calc_profit, order_calc_margin).
+             Domina la latencia del IPC, no el computo.
+    espacio  O(n + r)
+
+Recalculo (Excel), por cambio de instrumento:
+    O(k * n) comparaciones = k busquedas lineales sobre n filas. BUSCARV con
+    coincidencia exacta (FALSE) fuerza el barrido lineal; con la columna ordenada
+    y coincidencia aproximada (TRUE) seria O(log n) por binaria. Se descarta por
+    CORRECCION, no por costo: la coincidencia aproximada devuelve la fila anterior
+    mas cercana cuando el nombre no calza exacto, entregando en silencio los
+    parametros de otro instrumento. Con n = 25 el barrido no cuesta nada.
+
+Por fila de operacion:
+    volumen, costo de apertura, costo de mantencion y resultado neto son formulas
+    cerradas, O(1) cada una. Total O(r).
+
+    El costo de mantencion es O(1) porque el conteo de cargos es d directo. El
+    modelo alternativo, recorrer cada dia evaluando su dia de semana y el cargo
+    triple, es O(d) por fila, O(r * d) en la hoja, y en Excel exige INDIRECT, que
+    es volatil y obliga a recalcular todo ante cualquier edicion. Medido contra
+    posiciones reales entrega la MISMA desviacion que la forma cerrada (4,7% en la
+    posicion de 15 dias), asi que O(1) domina: menos trabajo, sin volatilidad y sin
+    ganancia de exactitud que lo justifique.
+
+Agregados: O(r) para las sumas de totales, la exposicion por SUMPRODUCT y cada
+predicado de la franja de validacion (su cantidad es constante).
+
+Total del recalculo: O(k * n + r), acotado por constantes del catalogo, de modo que
+en la practica es tiempo constante.
+
     uv run --with MetaTrader5 --with openpyxl --with pillow --with tzdata \
         python scripts/simulador_gi.py
 """
@@ -26,7 +64,7 @@ from openpyxl.worksheet.datavalidation import DataValidation
 sys.stdout.reconfigure(encoding="utf-8")
 
 REPO = Path(__file__).resolve().parent.parent
-DESTINO = REPO / "calculadoras excel" / "Simulador GI (piloto).xlsx"
+DESTINO = REPO / "calculadoras excel" / "Simulador GI.xlsx"
 LOGO = REPO / "calculadoras excel" / "assets" / "logo_gi.png"
 
 AHORA = datetime.now(ZoneInfo("America/Santiago"))
@@ -291,12 +329,17 @@ for i, r in enumerate(OPS):
     # los lotes salen del monto: es la traduccion que el ejecutivo no tiene que hacer
     salida("I%d" % r, "=IFERROR(MAX(0,ROUNDDOWN($E{r}/($F{r}*$P$4*$P$5),2)),0)".format(r=r), LOTES)
     salida("J%d" % r, '=IF($I{r}=0,"",$I{r}*$P$6*$P$4)'.format(r=r), CLP)
-    # costo de mantencion. Los dias efectivos suman 2 por semana completa porque el
-    # broker cobra swap triple un dia a la semana (miercoles o viernes segun el activo).
+    # costo de mantencion, por dias calendario. NO se suman dias por el cargo triple:
+    # ese triple REEMPLAZA los rollovers del fin de semana, que no ocurren, asi que una
+    # semana completa son 7 cargos para 7 dias calendario (verificado 2026-08-19 contra
+    # el swap acumulado de posiciones reales: #AMD 15 dias -> 14,33 cargos).
+    # Se niega en vez de usar ABS para que una tasa positiva quede como abono y no
+    # como costo. Forma cerrada O(1) frente a O(d) del conteo por dia de semana, con
+    # la misma exactitud medida: ver el bloque Complejidad del encabezado.
     salida("K%d" % r, (
-        '=IF(OR($I{r}=0,$H{r}=0),"",ABS(IF($D{r}="VENTA",$P$10,$P$9)'
-        '*IF($P$8={pts},$I{r}*POWER(10,-$P$2)*$P$4,$I{r}*$F{r}*$P$4/100/360))'
-        '*($H{r}+2*ROUNDDOWN($H{r}/7,0)))'
+        '=IF(OR($I{r}=0,$H{r}=0),"",-IF($D{r}="VENTA",$P$10,$P$9)'
+        '*IF($P$8={pts},$I{r}*POWER(10,-$P$2)*$P$4,$I{r}*$F{r}*$P$4/100/360)'
+        '*$H{r})'
     ).format(r=r, pts=MODO_PUNTOS), CLP)
     salida("L%d" % r, (
         '=IF($I{r}=0,"",IF($D{r}="COMPRA",$G{r}-$F{r},$F{r}-$G{r})*$I{r}*$P$4'
@@ -365,9 +408,10 @@ ws.conditional_formatting.add("L21", FormulaRule(formula=["$L$21<$F$5"],
 # --- pie
 banda("C23:M23",
       "Especificaciones del broker al %s hora Chile. Celdas crema: campos editables; "
-      "el resto son fórmulas. El COSTO DE MANTENCIÓN (swap) es una estimación: agrega "
-      "2 días por semana completa, porque el broker aplica cargo triple un día a la "
-      "semana. Este simulador no incorpora stop loss." % SELLO,
+      "el resto son fórmulas. El COSTO DE MANTENCIÓN (swap) se estima por días "
+      "calendario: es exacto en periodos de semanas completas y puede quedar sobre el "
+      "cargo real en periodos cortos que incluyan un fin de semana. Este simulador no "
+      "incorpora stop loss." % SELLO,
       BLANCO, "808080", 9, 30, italica=True)
 ws["C23"].alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
 

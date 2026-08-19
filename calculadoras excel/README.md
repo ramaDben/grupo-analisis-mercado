@@ -2,12 +2,12 @@
 
 | Archivo | Función | Estado |
 |---|---|---|
-| `Simulador GI (piloto).xlsx` | Simular un periodo de operaciones sobre cualquiera de los 25 instrumentos del catálogo | **Piloto, sujeto a confirmación** |
-| `Simulación_USDCLP_explicativa 1.xlsx` | Planilla original de post-venta, exclusiva para USD/CLP | En uso, con fórmulas corregidas |
+| `Simulador GI.xlsx` | Simular un periodo de operaciones sobre cualquiera de los 25 instrumentos del catálogo | **Vigente** |
+| `Simulación_USDCLP_explicativa 1.xlsx` | Planilla original de post-venta, exclusiva para USD/CLP | Vigente, con fórmulas corregidas |
 
 ---
 
-## Simulador GI (piloto)
+## Simulador GI
 
 ### Objetivo
 
@@ -94,9 +94,13 @@ El swap se calcula según el modo que declara cada instrumento en el terminal:
 | Puntos | forex y materias primas (USD/CLP, Oro, Plata, WTI, pares) | puntos por día, por lote |
 | Interés | índices, cripto y acciones | interés anual sobre el nocional, con año bancario de 360 días |
 
-La estimación agrega **2 días por cada semana completa**, porque el broker aplica cargo triple un día a la semana (miércoles o viernes según el instrumento). Es una aproximación, no el cargo exacto del estado de cuenta.
+El conteo usa **días calendario**, sin ajustes. Es lo consistente con la forma en que cobra el broker: el cargo triple que aplica un día a la semana no se suma al fin de semana, lo reemplaza, porque sábado y domingo no hay rollover. Una semana completa son 7 cargos para 7 días calendario.
 
-Su magnitud no es marginal: **una compra de Apple con $300.000 de capital comprometido, mantenida 20 días, acumula $203.736 de costo de mantención.** Dos tercios del capital asignado, únicamente por mantener la posición abierta.
+Contrastado contra posiciones abiertas del terminal, el cálculo queda dentro de **4,7%** del swap efectivamente cobrado en una posición de 15 días, y esa diferencia se explica porque la tasa de swap varía cada día mientras la posición permanece abierta.
+
+Tiene un límite conocido: en periodos cortos que incluyan un fin de semana aún no compensado por el cargo triple, la estimación queda **por sobre** el cargo real. Se prefirió ese sesgo al contrario, porque subestimar un costo frente a un cliente es el error más costoso.
+
+Su magnitud no es marginal: **una compra de Apple con $300.000 de capital comprometido, mantenida 20 días, acumula $169.688 de costo de mantención.** Más de la mitad del capital asignado, únicamente por mantener la posición abierta.
 
 ### 3. No incorpora stop loss (exclusión deliberada)
 
