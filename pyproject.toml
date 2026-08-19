@@ -13,6 +13,9 @@ dependencies = [
 # core (issue #79/D6 — instalación manual: uv sync --extra stories && python -m
 # playwright install chromium).
 stories = ["playwright"]
+# Tests de visibilidad: OCR para verificar que elementos críticos aparecen en PNG
+# (uv sync --extra stories-test)
+stories-test = ["playwright", "easyocr", "pillow"]
 
 [dependency-groups]
 dev = [

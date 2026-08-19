@@ -188,6 +188,30 @@ def atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
     return tr.ewm(span=period, adjust=False).mean()
 
 
+def adx(df: pd.DataFrame, period: int = 14) -> pd.Series:
+    """Average Directional Index. Mismo suavizado (ewm span) que `atr()` para consistencia."""
+    high = df["high"]
+    low = df["low"]
+    up_move = high.diff()
+    down_move = -low.diff()
+
+    plus_dm = up_move.where((up_move > down_move) & (up_move > 0), 0.0)
+    minus_dm = down_move.where((down_move > up_move) & (down_move > 0), 0.0)
+
+    tr = pd.concat([
+        high - low,
+        (high - df["close"].shift(1)).abs(),
+        (low - df["close"].shift(1)).abs(),
+    ], axis=1).max(axis=1)
+
+    smoothed_tr = tr.ewm(span=period, adjust=False).mean()
+    plus_di = 100 * plus_dm.ewm(span=period, adjust=False).mean() / smoothed_tr
+    minus_di = 100 * minus_dm.ewm(span=period, adjust=False).mean() / smoothed_tr
+
+    dx = 100 * (plus_di - minus_di).abs() / (plus_di + minus_di)
+    return dx.ewm(span=period, adjust=False).mean()
+
+
 def macd(
     series: pd.Series,
     fast: int = 12,

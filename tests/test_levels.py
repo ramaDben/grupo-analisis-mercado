@@ -84,7 +84,7 @@ def test_ticker_valido_nunca_devuelve_none_ni_lanza(collector):
         # Camino feliz (solo si MT5 está conectado en el entorno)
         assert res["ticker"] == "XAUUSD"
         for k in (
-            "price", "s1", "s2", "r1", "r2", "rsi_14", "atr_14", "trend", "timestamp",
+            "price", "s1", "s2", "r1", "r2", "rsi_14", "atr_14", "adx_14", "trend", "timestamp",
             "ema_50", "ema_100",
             "macd_line", "macd_signal", "macd_hist",
             "bb_upper", "bb_mid", "bb_lower",
@@ -131,9 +131,10 @@ def test_camino_feliz_con_mt5_mockeado(collector, monkeypatch):
     assert res["r2"] >= res["r1"]
     assert res["s2"] <= res["s1"]
 
-    # RSI siempre en rango; ATR positivo; tendencia válida
+    # RSI siempre en rango; ATR positivo; ADX en rango 0-100; tendencia válida
     assert 0.0 <= res["rsi_14"] <= 100.0
     assert res["atr_14"] > 0
+    assert 0.0 <= res["adx_14"] <= 100.0
     assert res["trend"] in {"ALCISTA", "BAJISTA", "LATERAL"}
 
     # Serie con deriva alcista → precio por encima de la EMA100 → ALCISTA
@@ -183,6 +184,66 @@ def test_bollinger_upper_mayor_que_lower():
     bb_u, bb_m, bb_l = mt5_client.bollinger(serie)
     assert isinstance(bb_u, float) and isinstance(bb_m, float) and isinstance(bb_l, float)
     assert bb_u > bb_m > bb_l, "upper > mid > lower siempre"
+
+
+def test_atr_restante_solo_aparece_en_d1(collector, monkeypatch):
+    """rango_hoy y atr_restante_14 son un concepto de D1 (vela diaria en curso);
+    en otros marcos no corresponden y no deben aparecer."""
+    from market_data_mcp import mt5_client
+
+    df = _df_ohlc()
+    monkeypatch.setattr(mt5_client, "get_rates", lambda ticker, tf, n_bars=300: df)
+
+    levels.register(collector)
+    res_h4 = collector.tools["get_asset_levels"](ticker="XAUUSD", timeframe="H4")
+    assert "atr_restante_14" not in res_h4
+    assert "rango_hoy" not in res_h4
+
+    res_d1 = collector.tools["get_asset_levels"](ticker="XAUUSD", timeframe="D1")
+    assert "atr_restante_14" in res_d1
+    assert "rango_hoy" in res_d1
+    assert res_d1["rango_hoy"] > 0
+
+
+def test_atr_restante_nunca_baja_del_piso_30_por_ciento(collector, monkeypatch):
+    """Si la vela diaria en curso ya recorrió más que el ATR completo (día muy
+    volátil), el ATR restante no debe colapsar a 0: se detiene en el piso del 30%."""
+    from market_data_mcp import mt5_client
+
+    df = _df_ohlc()
+    # Fuerza que la última vela (la del día en curso) tenga un rango enorme,
+    # mayor que cualquier ATR14 razonable calculado sobre la serie.
+    df.loc[df.index[-1], "high"] = df["high"].iloc[-1] + 1000
+    df.loc[df.index[-1], "low"] = df["low"].iloc[-1] - 1000
+    monkeypatch.setattr(mt5_client, "get_rates", lambda ticker, tf, n_bars=300: df)
+
+    levels.register(collector)
+    res = collector.tools["get_asset_levels"](ticker="XAUUSD", timeframe="D1")
+
+    piso_esperado = levels.PISO_ATR_RESTANTE * res["atr_14"]
+    assert abs(res["atr_restante_14"] - piso_esperado) < 0.05
+
+
+def test_adx_serie_con_tendencia_clara_supera_umbral_de_tendencia_confirmada():
+    """Con una deriva direccional fuerte y sostenida, el ADX debe superar 25
+    (umbral de mercado para 'tendencia confirmada')."""
+    from market_data_mcp import mt5_client
+    df = _df_ohlc(n=200)  # deriva alcista + oscilación, misma serie que get_asset_levels usa
+    valor = float(mt5_client.adx(df, 14).iloc[-1])
+    assert 0.0 <= valor <= 100.0
+    assert valor > 25.0
+
+
+def test_adx_serie_lateral_sin_deriva_queda_bajo_el_gate_de_20():
+    """Sin deriva direccional (ruido puro alrededor de un nivel fijo), el ADX
+    debe quedar por debajo del gate de 20 que usa /oportunidad."""
+    from market_data_mcp import mt5_client
+    rng = np.random.default_rng(3)
+    ruido = pd.Series(100 + rng.standard_normal(200) * 0.05)
+    df = pd.DataFrame({"high": ruido + 0.1, "low": ruido - 0.1, "close": ruido})
+    valor = float(mt5_client.adx(df, 14).iloc[-1])
+    assert 0.0 <= valor <= 100.0
+    assert valor < 20.0
 
 
 def test_bollinger_banda_media_es_sma():

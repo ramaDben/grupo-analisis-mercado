@@ -9,6 +9,12 @@ from fastmcp import FastMCP
 # Catálogo de tickers válidos — fuente única compartida (market_data_mcp/catalog.py).
 from market_data_mcp.catalog import VALID_TICKERS as _VALID_TICKERS
 
+# Piso del ATR restante (issue oportunidad-adx-atr): sin esto, una tarde volátil
+# consume casi todo el ATR diario y bloquea cualquier /oportunidad el resto del
+# día, aunque siga habiendo movimiento real posible (cierre de Wall Street,
+# noticia, gap). 30% del ATR diario como mínimo disponible.
+PISO_ATR_RESTANTE = 0.30
+
 
 def _rsi(series: pd.Series, period: int = 14) -> float:
     """RSI de Wilder. Retorna el valor del último bar."""
@@ -85,7 +91,7 @@ def register(mcp: FastMCP) -> None:
 
     @mcp.tool
     def get_asset_levels(ticker: str, timeframe: str = "H4") -> dict[str, Any]:
-        """Análisis técnico completo: precio, S1/S2/R1/R2, RSI14, ATR14 y tendencia.
+        """Análisis técnico completo: precio, S1/S2/R1/R2, RSI14, ATR14, ADX14 y tendencia.
 
         Solo acepta tickers del catálogo de activos del proyecto. Si MT5 no está
         disponible o el ticker no existe, retorna {"error": "CÓDIGO", "message": "..."}.
@@ -95,9 +101,12 @@ def register(mcp: FastMCP) -> None:
             timeframe: Marco temporal MT5 (M1, M5, M15, M30, H1, H4, H12, D1, W1, MN1).
 
         Returns:
-            Dict con: ticker, timeframe, price, s1, s2, r1, r2, rsi_14, atr_14,
+            Dict con: ticker, timeframe, price, s1, s2, r1, r2, rsi_14, atr_14, adx_14,
             ema_50, ema_100, macd_line, macd_signal, macd_hist,
             bb_upper, bb_mid, bb_lower, trend, timestamp.
+            Con timeframe="D1" además incluye rango_hoy (high-low de la vela diaria
+            en curso) y atr_restante_14 (= atr_14 - rango_hoy, con piso del 30% del
+            atr_14: una tarde volátil no debe bloquear todo movimiento restante del día).
             O {"error": "CÓDIGO", "message": "..."} si el dato no está disponible.
         """
         if ticker not in _VALID_TICKERS:
@@ -112,7 +121,7 @@ def register(mcp: FastMCP) -> None:
         digits = _VALID_TICKERS[ticker]
 
         try:
-            from market_data_mcp.mt5_client import get_rates, ema, atr, macd, bollinger, TIMEFRAME_MAP
+            from market_data_mcp.mt5_client import get_rates, ema, atr, adx, macd, bollinger, TIMEFRAME_MAP
         except ImportError:
             return {
                 "error": "MT5_UNAVAILABLE",
@@ -157,6 +166,7 @@ def register(mcp: FastMCP) -> None:
         ema100_val = float(ema(close, 100).iloc[-1])
         ema50_val  = float(ema(close, 50).iloc[-1])
         atr14_val  = float(atr(df, 14).iloc[-1])
+        adx14_val  = float(adx(df, 14).iloc[-1])
         macd_l, macd_s, macd_h = macd(close)
         bb_u, bb_m, bb_l = bollinger(close)
         current = float(close.iloc[-1])
@@ -171,8 +181,7 @@ def register(mcp: FastMCP) -> None:
         rsi14_val = _rsi(close, 14)
         levels = _get_support_resistance(df, current, atr14_val, digits)
 
-        from datetime import datetime, timezone
-        return {
+        resultado: dict[str, Any] = {
             "ticker":       ticker,
             "timeframe":    timeframe.upper(),
             "price":        round(current, digits),
@@ -182,6 +191,7 @@ def register(mcp: FastMCP) -> None:
             "r2":           levels["r2"],
             "rsi_14":       round(rsi14_val, 1),
             "atr_14":       round(atr14_val, digits),
+            "adx_14":       round(adx14_val, 1),
             "ema_50":       round(ema50_val, digits),
             "ema_100":      round(ema100_val, digits),
             "macd_line":    round(macd_l, 4),
@@ -191,5 +201,18 @@ def register(mcp: FastMCP) -> None:
             "bb_mid":       round(bb_m, digits),
             "bb_lower":     round(bb_l, digits),
             "trend":        trend,
-            "timestamp":    datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         }
+
+        # Rango recorrido hoy y ATR restante: solo tienen sentido en D1, donde la
+        # última barra es la vela diaria en curso (todavía formándose). En otros
+        # marcos "hoy" no corresponde a una sola barra y el campo no aplica.
+        if timeframe.upper() == "D1":
+            rango_hoy = float(df["high"].iloc[-1] - df["low"].iloc[-1])
+            piso = PISO_ATR_RESTANTE * atr14_val
+            atr_restante = max(atr14_val - rango_hoy, piso)
+            resultado["rango_hoy"] = round(rango_hoy, digits)
+            resultado["atr_restante_14"] = round(atr_restante, digits)
+
+        from datetime import datetime, timezone
+        resultado["timestamp"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        return resultado

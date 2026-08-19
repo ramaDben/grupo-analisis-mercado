@@ -34,7 +34,73 @@ documentación de marcador real.
 <head>
 <meta charset="utf-8">
 <title>Operación — Story GI</title>
-<link rel="stylesheet" href="marca.css">
+<style>
+  /* ════ marca.css embebido ════ */
+
+:root {
+  --fondo:          #000000;  /* negro de marca, tomado de LOGO-Fondo-Negro */
+  --fondo-acento:   #0E2420;  /* tinte del degradado, derivado del acento */
+  --fondo-alt:      #0A0A0F;  /* variante del fondo para bloques apilados */
+  --fondo-sube:     #123A2A;  /* relleno tenue en bloques alcistas */
+  --fondo-baja:     #2A1220;  /* relleno tenue en bloques bajistas */
+
+  --acento:         #50C0A8;
+  --acento-oscuro:  #143028;  /* par oscuro del acento, para degradados */
+
+  --sube:           #00DC82;
+  --sube-suave:     #53C1AB;
+  --baja:           #E84040;
+  --baja-suave:     #F5A3A3;
+  --aviso:          #FFB020;
+
+  --activo-oro:    #E8B44C;
+  --activo-wti:    #E8783C;
+  --activo-us100:  #4C86E8;
+  --activo-usdclp: var(--acento);
+  --activo-bitcoin:#F7931A;
+
+  /* Font stacks: primary sans + emoji fallbacks. Pueden ajustarse por host. */
+  --font-sans: "Space Grotesk", "DM Sans", "Segoe UI", "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-emoji: "Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji";
+  --texto-1:        #F5F3F7;  /* principal */
+  --texto-2:        #A9A5B4;  /* secundario */
+  --texto-3:        #6E6A7A;  /* tenue: pies, disclaimers */
+  --texto-borde:    #C9C5D4;  /* filetes y separadores sobre fondo oscuro */
+  --texto-gris:     #8E8A9C;  /* gris intermedio */
+  --blanco:         #FFFFFF;
+
+  --filete:         var(--acento);
+  --filete-ancho:   4px;
+}
+
+body {
+  --direccion:        var(--acento);
+  --direccion-suave:  var(--texto-borde);
+  --fondo-direccion:  var(--fondo-acento);
+}
+body.sesgo-alcista, body.sesgo-compra {
+  --direccion:        var(--sube);
+  --direccion-suave:  var(--sube-suave);
+  --fondo-direccion:  var(--fondo-sube);
+}
+body.sesgo-bajista, body.sesgo-venta {
+  --direccion:        var(--baja);
+  --direccion-suave:  var(--baja-suave);
+  --fondo-direccion:  var(--fondo-baja);
+}
+
+body                { --activo: var(--acento); }
+body.activo-oro     { --activo: var(--activo-oro); }
+body.activo-wti     { --activo: var(--activo-wti); }
+body.activo-us100   { --activo: var(--activo-us100); }
+body.activo-usdclp  { --activo: var(--activo-usdclp); }
+body.activo-bitcoin { --activo: var(--activo-bitcoin); }
+
+.story {
+  box-shadow: inset 0 0 0 var(--filete-ancho) var(--filete);
+}
+
+</style>
 <style>
   @font-face {
     font-family: "Syne";
@@ -500,7 +566,7 @@ documentación de marcador real.
 
     <div class="footer">
       <div class="footer-marca">
-        <span>@grupointeligencia</span>
+        <span>@grupo_inteligencia</span>
         <span>grupointeligencia.com</span>
       </div>
       <p class="footer-disclaimer">

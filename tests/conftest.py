@@ -20,10 +20,14 @@ from pathlib import Path
 
 import pytest
 
-# Raíz src/ del proyecto para importar el paquete market_data_mcp.
-_SRC_ROOT = Path(__file__).resolve().parent.parent / "src"
+# Raíz del proyecto para importar scripts y src.
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+_SRC_ROOT = _PROJECT_ROOT / "src"
+
 if str(_SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(_SRC_ROOT))
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
 
 
 # Stub mínimo de fastmcp solo si no está disponible en el entorno.

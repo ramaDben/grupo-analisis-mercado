@@ -4,6 +4,17 @@ Siempre debes consultar los precios reales y niveles técnicos antes de armar la
 2. Usa la temporalidad `H1` y los niveles devueltos (precio actual, soporte, resistencia) para establecer el "precio ahora" y el "objetivo" o "recorrido" en el gráfico.
 3. Si el MCP devuelve los niveles dibujados por el usuario (líneas horizontales), úsalos para definir el objetivo de la oportunidad y el sesgo.
 4. **GUARDRAIL CRÍTICO**: NUNCA inventes, simules ni deduzcas precios o niveles si la conexión a MT5 falla o el MCP devuelve error. Si no puedes obtener el dato real, DEBES DETENERTE y pedirle al usuario que revise la conexión. Las proyecciones siempre deben salir matemáticamente del precio actual real.
+5. **Filtro y distancia mínima al objetivo, combinando ADX + ATR restante (OBLIGATORIO)**: pide `get_asset_levels` con `timeframe: D1` y lee `adx_14` y `atr_restante_14` **de esa llamada en D1, nunca de la llamada en H1/H4 del paso 2** (`adx_14` viene en la respuesta de cualquier timeframe, pero para este filtro solo cuenta el de D1; usar el de H1 subestima la tendencia real del activo). El ATR por sí solo dice qué tan grande es un movimiento normal en el día completo, pero no si hay convicción direccional detrás (eso lo da el ADX) ni cuánto de ese movimiento ya ocurrió hoy (eso lo da el ATR restante: `atr_14 - rango_hoy`, con piso del 30% de `atr_14` para que una tarde volátil no bloquee toda pieza el resto del día — ver `atr_restante_14`, ya calculado por la tool). Se combinan así:
+   - **Gate de entrada**: si `adx_14` (D1) < 20, el activo **no es candidato** a `oportunidad` ese día. ADX bajo 20 es mercado en rango, sin tendencia real, sin importar qué tan lejos esté una resistencia.
+   - **Distancia mínima escalada**: la distancia entre `precio` y `objetivo` debe ser ≥ N × `atr_restante_14`, donde N depende de la fuerza de la tendencia:
+
+     | `adx_14` (D1) | N (múltiplo del ATR restante) |
+     |---|---|
+     | 20-25 (tendencia emergente) | 1× |
+     | 25-40 (tendencia confirmada) | 1,5× |
+     | > 40 (tendencia muy fuerte) | 2× |
+
+   Si la resistencia/soporte más cercana en H1 o H4 no alcanza la distancia exigida por su N, sube de marco (H4 → D1) hasta encontrar un nivel real que sí la cumpla; nunca inventes un precio a medida. Si ningún nivel real del motor alcanza la distancia mínima, el activo no es candidato a `oportunidad` ese día.
 
 ## Estructura del Mensaje (Texto para WhatsApp)
 
@@ -55,8 +66,8 @@ huérfanos" en vez de rendir una pieza incompleta.
 | `activo_imagen` · `modo_imagen` | `assets/activos/<slug>.jpg` y `foto-activo` (franja) o `ilustracion` (objeto recortado) |
 | `sesgo` · `direccion_etiqueta` | `Alcista`/`Bajista`/`Lateral` y su etiqueta visible ("SUBIENDO") |
 | `titular` | Nombra un **precio del motor**, no una figura técnica: "El oro sube y busca los 4.100", nunca "va por sus máximos". Sin jerga. |
-| `razon` | Por qué se mueve, en voz llana |
-| `precio` · `objetivo` · `objetivo_rotulo` · `nota_nivel` | Precio de ahora, hacia dónde va (con su rótulo, ej. "Hacia dónde va") y qué tiene que romper primero |
+| `razon` | Por qué se mueve, en voz llana. **Máximo 2 frases**: el lienzo es fijo (`overflow: hidden`) y un `razon` largo empuja el CTA y el disclaimer fuera del margen inferior. Nunca repetir ahí lo que ya dice `nota_nivel` (qué nivel hay que romper primero) |
+| `precio` · `objetivo` · `objetivo_rotulo` · `nota_nivel` | Precio de ahora, hacia dónde va y qué tiene que romper primero. El rótulo canónico es **"Escenario"** (decisión del director, 2026-08-19): reemplaza al antiguo "Hacia dónde va", porque el número de la derecha es un escenario condicionado a que se rompa `nota_nivel`, y un rótulo que afirma el destino se lee como promesa de precio |
 | `dato_rotulo` · `dato_lectura` · `dato_detalle` | La LECTURA arriba ("Menos empleos en EE.UU.") y la cifra abajo como prueba. El número solo no le sirve a nadie. |
 | `dato_veredicto` · `dato_veredicto_slug` | El texto ("Peor de lo esperado") y su slug `mejor` / `peor` / `en-linea`, que le da el color al chip |
 | `cta` · `cta_sub` | El llamado a la acción de la imagen |
@@ -79,5 +90,5 @@ aparecen en la plantilla.
 
 ## Instrucciones para Guardar Archivos
 - **La Imagen**: en `data/stories/[YYYY-MM-DD]/[activo]/oportunidad/[HH-MM]_oportunidad.png`, con la ruta construida por `scripts/ruta_story.ps1` (nunca a mano).
-- **El Texto**: el mensaje estructurado para WhatsApp se guarda obligatoriamente como `.txt` en la misma carpeta: `data/stories/[YYYY-MM-DD]/[activo]/oportunidad/[HH-MM]_oportunidad.txt`.
+- **El Texto**: el mensaje estructurado para WhatsApp se guarda **siempre** como `.txt` en la misma carpeta y con el mismo nombre que el PNG: `data/stories/[YYYY-MM-DD]/[activo]/oportunidad/[HH-MM]_oportunidad.txt`. No es opcional ni depende de que el director lo pida: **imagen y texto salen juntos en la misma corrida**, porque un adjunto sin pie llega mudo al grupo y el texto suelto pierde la pieza. Si solo se guarda el PNG, la oportunidad está incompleta.
 - Limitar a 3 documentos de calidad al día (verificar límite en historial).
