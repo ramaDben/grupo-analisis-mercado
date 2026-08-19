@@ -91,11 +91,13 @@ El spread queda fijado al momento de generar el archivo y se muestra arriba a la
 derecha, para que no sea un supuesto oculto. Si el archivo se generó en una ventana
 de spread ampliado, conviene regenerarlo antes de dar el costo por válido.
 
-El costo de mantención se estima por días calendario. Lo contrastamos contra
-posiciones abiertas del terminal y queda dentro de 4,7% del swap que el broker
-cobró efectivamente en una posición de 15 días. En periodos cortos que incluyan un
-fin de semana puede quedar algo por sobre el cargo real, sesgo que preferimos al
-contrario.
+El costo de mantención se estima por días calendario. Lo contrastamos contra el
+historial del terminal y queda dentro de 0,3% del swap que el broker cobró
+efectivamente: en la compra de #AAPL de 2,98 lotes que estuvo abierta del 5 al 11
+de agosto, el terminal cobró $36.063 y la planilla calcula $36.163. Mientras una
+posición sigue abierta y arrastra un fin de semana que el cargo triple aún no
+compensó, la estimación puede quedar algo por sobre el cargo real, sesgo que
+preferimos al contrario.
 
 
 Adjunto también una guía de uso con el detalle campo por campo. Cualquier duda o

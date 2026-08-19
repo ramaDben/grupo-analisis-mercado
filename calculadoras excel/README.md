@@ -96,9 +96,9 @@ El swap se calcula según el modo que declara cada instrumento en el terminal:
 
 El conteo usa **días calendario**, sin ajustes. Es lo consistente con la forma en que cobra el broker: el cargo triple que aplica un día a la semana no se suma al fin de semana, lo reemplaza, porque sábado y domingo no hay rollover. Una semana completa son 7 cargos para 7 días calendario.
 
-Contrastado contra posiciones abiertas del terminal, el cálculo queda dentro de **4,7%** del swap efectivamente cobrado en una posición de 15 días, y esa diferencia se explica porque la tasa de swap varía cada día mientras la posición permanece abierta.
+Contrastado contra el historial del terminal, el cálculo queda dentro de **0,3%** del swap efectivamente cobrado. La operación de control es una compra de #AAPL de 2,98 lotes abierta el 5 de agosto y cerrada el 11, seis días calendario que incluyen un fin de semana completo: el terminal cobró $36.063,35 y la planilla calcula $36.163,34.
 
-Tiene un límite conocido: en periodos cortos que incluyan un fin de semana aún no compensado por el cargo triple, la estimación queda **por sobre** el cargo real. Se prefirió ese sesgo al contrario, porque subestimar un costo frente a un cliente es el error más costoso.
+Tiene un límite conocido: mientras la posición sigue abierta y arrastra un fin de semana que el cargo triple todavía no compensó, la estimación queda **por sobre** el cargo real. Se regulariza cuando el cargo triple se aplica. Se prefirió ese sesgo al contrario, porque subestimar un costo frente a un cliente es el error más costoso.
 
 Su magnitud no es marginal: **una compra de Apple con $300.000 de capital comprometido, mantenida 20 días, acumula $169.688 de costo de mantención.** Más de la mitad del capital asignado, únicamente por mantener la posición abierta.
 

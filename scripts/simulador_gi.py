@@ -35,8 +35,8 @@ Por fila de operacion:
     modelo alternativo, recorrer cada dia evaluando su dia de semana y el cargo
     triple, es O(d) por fila, O(r * d) en la hoja, y en Excel exige INDIRECT, que
     es volatil y obliga a recalcular todo ante cualquier edicion. Medido contra
-    posiciones reales entrega la MISMA desviacion que la forma cerrada (4,7% en la
-    posicion de 15 dias), asi que O(1) domina: menos trabajo, sin volatilidad y sin
+    el historial entrega la MISMA desviacion que la forma cerrada (0,3% en la
+    operacion de control), asi que O(1) domina: menos trabajo, sin volatilidad y sin
     ganancia de exactitud que lo justifique.
 
 Agregados: O(r) para las sumas de totales, la exposicion por SUMPRODUCT y cada
@@ -331,8 +331,10 @@ for i, r in enumerate(OPS):
     salida("J%d" % r, '=IF($I{r}=0,"",$I{r}*$P$6*$P$4)'.format(r=r), CLP)
     # costo de mantencion, por dias calendario. NO se suman dias por el cargo triple:
     # ese triple REEMPLAZA los rollovers del fin de semana, que no ocurren, asi que una
-    # semana completa son 7 cargos para 7 dias calendario (verificado 2026-08-19 contra
-    # el swap acumulado de posiciones reales: #AMD 15 dias -> 14,33 cargos).
+    # semana completa son 7 cargos para 7 dias calendario. Verificado 2026-08-19 contra
+    # el historial: posicion 590040, #AAPL BUY 2,98 lotes del 05 al 11 de agosto, 6 dias
+    # con un fin de semana completo dentro; el terminal cobro 36.063,35 y esta formula
+    # da 36.163,34, o sea 0,3% de desviacion.
     # Se niega en vez de usar ABS para que una tasa positiva quede como abono y no
     # como costo. Forma cerrada O(1) frente a O(d) del conteo por dia de semana, con
     # la misma exactitud medida: ver el bloque Complejidad del encabezado.
