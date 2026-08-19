@@ -6,7 +6,7 @@ listas independientes en dos columnas — qué responder y qué NO prometer.
 
 DIFERENCIA CLAVE con el resto de los snapshots: esta pieza es INTERNA, no publicable. Por eso
 (1) el chip "Interno · Post-venta" va LITERAL en el HTML, nunca como token — ningún payload
-puede suprimirlo — y (2) el footer NO lleva @grupointeligencia, ni grupointeligencia.com, ni el
+puede suprimirlo — y (2) el footer NO lleva @grupo_inteligencia, ni grupointeligencia.com, ni el
 disclaimer de CFD (ese texto es para clientes y haría parecer publicable la pieza); en su lugar
 va "Uso interno · No reenviar al cliente".
 
@@ -28,7 +28,6 @@ scripts/story_render.py y tests/test_story_render.py.
 <title>Post-Venta — Story GI</title>
 <style>
   /* ════ marca.css embebido ════ */
-*/
 
 :root {
   --fondo:          #000000;  /* negro de marca, tomado de LOGO-Fondo-Negro */
@@ -37,7 +36,6 @@ scripts/story_render.py y tests/test_story_render.py.
   --fondo-sube:     #123A2A;  /* relleno tenue en bloques alcistas */
   --fondo-baja:     #2A1220;  /* relleno tenue en bloques bajistas */
 
-     Valor medido sobre las tres versiones del logo, no elegido a ojo. */
   --acento:         #50C0A8;
   --acento-oscuro:  #143028;  /* par oscuro del acento, para degradados */
 
@@ -47,7 +45,6 @@ scripts/story_render.py y tests/test_story_render.py.
   --baja-suave:     #F5A3A3;
   --aviso:          #FFB020;
 
-     `--baja`, una pieza dorada bajista se leería como alcista dorada. */
   --activo-oro:    #E8B44C;
   --activo-wti:    #E8783C;
   --activo-us100:  #4C86E8;
@@ -68,7 +65,6 @@ scripts/story_render.py y tests/test_story_render.py.
   --filete-ancho:   4px;
 }
 
-*/
 body {
   --direccion:        var(--acento);
   --direccion-suave:  var(--texto-borde);
@@ -85,7 +81,6 @@ body.sesgo-bajista, body.sesgo-venta {
   --fondo-direccion:  var(--fondo-baja);
 }
 
-*/
 body                { --activo: var(--acento); }
 body.activo-oro     { --activo: var(--activo-oro); }
 body.activo-wti     { --activo: var(--activo-wti); }
@@ -93,25 +88,20 @@ body.activo-us100   { --activo: var(--activo-us100); }
 body.activo-usdclp  { --activo: var(--activo-usdclp); }
 body.activo-bitcoin { --activo: var(--activo-bitcoin); }
 
-*/
 .story {
   box-shadow: inset 0 0 0 var(--filete-ancho) var(--filete);
 }
 
 
   /* ════ piel.css embebido ════ */
-*/
 
-   sus archivos ya no están en el repo. */
 @font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
 @font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-700.woff2") format("woff2"); font-weight: 800; font-display: swap; }
 @font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
 @font-face { font-family: "DM Sans";       src: url("fonts/dm-sans-400.woff2") format("woff2");       font-weight: 400; font-display: swap; }
 @font-face { font-family: "DM Sans";       src: url("fonts/dm-sans-700.woff2") format("woff2");       font-weight: 700; font-display: swap; }
 
-   otra plantilla no significaría nada. Vive en `oportunidad.html`. */
 
-   con licencia sin tocar la plantilla. */
 .foto-activo {
   position: absolute; inset: 0 -72px 0 auto;
   width: 58%;
@@ -129,7 +119,6 @@ body.activo-bitcoin { --activo: var(--activo-bitcoin); }
   pointer-events: none;
 }
 
-   <img>, sin duplicar una línea de la regla base. */
 .foto-activo--fondo {
   inset: 0;
   width: 100%;
@@ -224,7 +213,6 @@ body.activo-bitcoin { --activo: var(--activo-bitcoin); }
   .sello { font-size: 24px; padding: 13px 26px 13px 20px; }
   .pulso { width: 13px; height: 13px; }
 
-     encabeza. */
   .ilustracion {
     position: static; transform: none;
     display: block; width: 330px; margin: 4px 0 0 auto;
