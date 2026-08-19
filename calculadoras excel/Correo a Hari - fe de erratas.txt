@@ -1,0 +1,70 @@
+ASUNTO: Fe de erratas · corrección del costo de mantención en la calculadora
+
+
+Hola Hari,
+
+Te escribo para corregir un error en el archivo que te envié: el COSTO DE
+MANTENCIÓN (swap) quedaba sobreestimado. Adjunto la versión corregida y te pido
+descartar la anterior.
+
+
+QUÉ ESTABA MAL
+
+El conteo de días sumaba 2 días adicionales por cada semana completa que la
+posición permanecía abierta. El razonamiento era que el broker aplica un cargo
+triple un día a la semana, y por lo tanto había que agregar esos días.
+
+Está al revés. Ese cargo triple no se suma al fin de semana: lo reemplaza, porque
+sábado y domingo no hay rollover y por eso no se cobran. Una semana completa son
+5 rollovers, uno de ellos triple, es decir 7 cargos para 7 días calendario. El
+conteo correcto son los días calendario, sin ningún ajuste.
+
+
+A QUÉ OPERACIONES AFECTA
+
+Solo a las que se mantienen abiertas 7 días o más, y solo en la columna COSTO DE
+MANTENCIÓN y en el RESULTADO NETO de esas filas.
+
+En operaciones de 6 días o menos el cálculo era idéntico al corregido, porque el
+ajuste indebido solo entraba al completarse una semana. Tampoco cambia nada en el
+volumen en lotes, el margen requerido, el costo de apertura ni la exposición
+nocional: esas cuatro cifras estaban y siguen correctas.
+
+La sobreestimación llega hasta un 29% del costo de mantención en las tenencias más
+largas. El ejemplo que te di en el correo anterior lo ilustra: la compra de Apple
+con $300.000 mantenida 20 días figuraba con $203.736 de costo de mantención, y la
+cifra correcta es $169.688.
+
+
+CÓMO SE VERIFICÓ LA CORRECCIÓN
+
+Contra el historial del terminal, que es el árbitro: el swap que el broker cobró
+efectivamente en una operación ya cerrada.
+
+  Posición 590040 · #AAPL · compra de 2,98 lotes
+  Abierta el 05-08-2026, cerrada el 11-08-2026 (6 días calendario, con un fin de
+  semana completo dentro)
+  Swap cobrado por el terminal: $36.063
+  Swap que calcula la planilla: $36.163
+  Desviación: 0,3%
+
+Ese caso es concluyente porque el periodo contiene un fin de semana y el terminal
+cobró 6 cargos por 6 días calendario, que es exactamente lo que ahora hace la
+planilla.
+
+Aprovecho de precisar el límite que te mencioné en el correo anterior. Mientras una
+posición sigue abierta y arrastra un fin de semana que el cargo triple todavía no
+compensó, la estimación queda algo por sobre el cargo real, y se regulariza cuando
+ese cargo se aplica. No es un problema de periodos cortos como escribí antes.
+
+
+QUÉ TE PIDO
+
+Usa el archivo adjunto y descarta el anterior. Si ya simulaste alguna operación de
+7 días o más con la versión previa, conviene rehacerla: el costo de mantención que
+mostró estaba sobre el real, y por lo tanto el resultado neto quedó por debajo.
+
+El error es mío y lo detecté al validar la planilla contra el terminal. Cualquier
+duda me dices.
+
+Saludos,
