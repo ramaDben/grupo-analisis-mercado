@@ -14,8 +14,8 @@ Dos hojas. La primera, "Simulador", es la única que se usa: seleccionas el
 instrumento de una lista, indicas el capital de la cuenta y registras hasta 6
 operaciones, cada una con su dirección (COMPRA o VENTA) y su volumen. La tabla
 mantiene la separación en bloques de SIMULACIÓN y COSTOS de la planilla original, y
-VOLUMEN EN CLP y VOLUMEN EN LOTES son la misma magnitud en dos unidades: se escribe
-el importe en pesos y el volumen en lotes se ajusta. La segunda hoja, "Datos",
+VOLUMEN EN LOTES y VOLUMEN EN CLP son la misma magnitud en dos unidades: escribes el
+volumen en lotes y el importe en pesos se ajusta solo. La segunda hoja, "Datos",
 contiene los 25 instrumentos del catálogo con sus
 especificaciones reales del broker: tamaño de contrato, margen exigido, spread y
 swap.
@@ -55,9 +55,9 @@ Los otros cuatro puntos que resuelve:
    mantenida 20 días, acumula $169.688. Más de la mitad del capital, solo por
    dejarla abierta.
 
-4. El volumen se deriva del capital, no al revés. Escribes que el cliente pone
-   $500.000 y la planilla responde "0,54 lotes", que es el número que se ingresa
-   en MT5.
+4. Se opera en la unidad del terminal. Escribes el volumen en lotes, como lo
+   explicas al cliente, y la planilla responde con el margen en pesos que ese
+   volumen compromete: 0,54 lotes de USD/CLP ocupan $496.125.
 
 
 QUÉ INCLUYE

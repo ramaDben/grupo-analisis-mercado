@@ -13,7 +13,7 @@
 
 Cuantificar, frente al cliente, el resultado real de un conjunto de operaciones: cuánto capital compromete, qué exposición controla, qué costos asume y con qué patrimonio termina.
 
-Está diseñada para que la opere alguien sin formación en trading: **no requiere conocer el volumen en lotes, el spread vigente ni el tamaño de contrato de cada instrumento**. Esos parámetros se resuelven automáticamente a partir de las especificaciones del broker.
+Se opera en **volumen de lotes**, la unidad del terminal, y la planilla responde con el importe en pesos que ese volumen compromete. **No requiere conocer el spread vigente, el margen exigido ni el tamaño de contrato de cada instrumento**: esos parámetros se resuelven automáticamente a partir de las especificaciones del broker.
 
 Al igual que la planilla original de post-venta, **cada fila es una operación independiente**, con su propia fecha, dirección y capital asignado. Se pueden combinar compras y ventas dentro del mismo periodo.
 
@@ -37,7 +37,7 @@ La tabla se divide en dos bloques, como la planilla original: **SIMULACIÓN**, c
 | Campo | Contenido |
 |---|---|
 | DIRECCIÓN | COMPRA o VENTA, desde la lista desplegable. **Una por fila** |
-| VOLUMEN EN CLP | monto en pesos que se destina a esa operación |
+| VOLUMEN EN LOTES | volumen de la operación, en múltiplos de 0,01, que es el paso mínimo de MT5 |
 | PRECIO DE ENTRADA | precio de apertura, tomado del gráfico de MT5 |
 | PRECIO DE SALIDA | precio de cierre, efectivo o proyectado |
 | DÍAS DE MANTENCIÓN | días completos que la posición permanece abierta. **0 si se abre y cierra en la misma jornada** |
@@ -46,7 +46,7 @@ La tabla se divide en dos bloques, como la planilla original: **SIMULACIÓN**, c
 
 | Columna | Qué informa |
 |---|---|
-| **VOLUMEN EN LOTES** | gemela de VOLUMEN EN CLP: la misma magnitud en la unidad del terminal. Es el número que se ingresa en MT5. Se calcula del importe y se trunca a la baja al paso de 0,01 que exige MT5, así que un importe puede quedar levemente por sobre el volumen que financia |
+| **VOLUMEN EN CLP** | gemela de VOLUMEN EN LOTES: la misma magnitud en pesos. Es el margen que ese volumen compromete al precio de entrada de la fila. Al mover el volumen, este importe se ajusta |
 | **RESULTADO BRUTO** | resultado de la operación antes de costos. Cierra el bloque SIMULACIÓN |
 | **COSTO DE APERTURA (SPREAD)** | el spread, es decir la diferencia entre precio de compra y de venta que el broker cobra al abrir. Expresado en pesos |
 | **COSTO DE MANTENCIÓN (SWAP)** | el cargo que aplica el broker por mantener la posición abierta de un día para otro. En blanco si son 0 días |
@@ -71,7 +71,7 @@ La franja bajo el bloque de contexto verifica, en este orden:
 | Seleccione un instrumento de la lista | falta el instrumento |
 | Hay una operación con volumen y sin precio de entrada | registro incompleto |
 | Un precio de entrada difiere en más de 10% del precio de referencia | típicamente, se cambió de instrumento y quedó el precio del anterior |
-| Hay una operación bajo el volumen mínimo de 0,01 lotes | el importe asignado es insuficiente. El mínimo varía por instrumento: cerca de $9.200 en USD/CLP, cerca de $186.000 en Oro |
+| Hay un volumen que no es múltiplo de 0,01 lotes | MT5 solo acepta ese paso. La referencia del capital mínimo por 0,01 lotes indica lo que cuesta el volumen más chico: cerca de $9.200 en USD/CLP, cerca de $186.000 en Oro |
 | El margen requerido excede el capital de la cuenta | sobreapalancamiento |
 | ✓ *n* operación(es) sobre *instrumento* | sin observaciones |
 

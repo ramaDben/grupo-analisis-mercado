@@ -4,19 +4,20 @@ lista y registra las operaciones del periodo, sin tener que conocer el tamano de
 contrato ni el spread vigente.
 
 La tabla separa SIMULACION de COSTOS, como la planilla original de post-venta, y
-VOLUMEN EN CLP / VOLUMEN EN LOTES son columnas gemelas: la misma magnitud en dos
-unidades, adyacentes y siempre consistentes. Se escribe el importe en pesos y el
-volumen en lotes se calcula, truncado al paso de 0,01 que exige MT5; de esa columna
-leen todas las demas formulas de la fila.
+VOLUMEN EN LOTES / VOLUMEN EN CLP son columnas gemelas: la misma magnitud en dos
+unidades, adyacentes y siempre consistentes. Se escribe el VOLUMEN EN LOTES, que es
+la unidad en que el usuario de la planilla explica la operacion a sus clientes y la
+que se ingresa en el terminal, y el importe en pesos se calcula: es el margen que ese
+volumen ocupa al precio de entrada de la fila. De la columna de lotes leen todas las
+demas formulas.
 
-La sincronizacion en los DOS sentidos, escribir indistintamente en pesos o en lotes,
-exigiria una macro (dos celdas no pueden ser a la vez editables y calculadas sin caer
-en referencia circular, y no hay forma de saber cual se edito de ultima sin capturar
-el evento de cambio). Queda escrita en assets/gemelas.bas pero NO se usa: el archivo
-se distribuye por correo a post-venta, y un .xlsm lo bloquean muchas politicas
-corporativas y varios filtros de correo lo eliminan del adjunto. Para reactivarla hay
-que pegar ese modulo en la hoja, guardar como .xlsm y devolver la celda de lotes a
-editable.
+La direccion importa y no es simetrica. Escribir indistintamente en cualquiera de las
+dos exigiria una macro: dos celdas no pueden ser a la vez editables y calculadas sin
+caer en referencia circular, y no hay forma de saber cual se edito de ultima sin
+capturar el evento de cambio. Como lo que se necesita es mover los lotes, invertir la
+direccion resuelve el requerimiento sin macro, y evita el .xlsm, que muchas politicas
+corporativas bloquean y varios filtros de correo eliminan del adjunto. La macro queda
+escrita en assets/gemelas.bas por si algun dia se necesita el sentido inverso.
 
 Cada fila es una operacion independiente con su propia direccion, y los dias de
 mantencion alimentan el swap. Los 25 instrumentos del catalogo se leen del terminal
@@ -141,9 +142,6 @@ NAVY, ACENTO, ORO, CREMA = "203864", "50C0A8", "BF8F00", "FFF2CC"
 BLANCO, GRIS, ROJO, TENUE = "FFFFFF", "F2F2F2", "C00000", "595959"
 borde = Border(*[Side(style="thin", color="BFBFBF")] * 4)
 CLP, PRECIO, LOTES, ENTERO = '"$"#,##0', "#,##0.00###", "0.00", "0"
-# el volumen de una fila vacia vale cero, pero mostrarlo como 0,00 es ruido:
-# la tercera seccion del formato deja el cero en blanco sin tocar la formula
-LOTES_FILA = '0.00;-0.00;""'
 
 OPS = list(range(11, 17))     # seis operaciones, como la planilla original
 TOT = 17
@@ -232,8 +230,8 @@ def banda(rango, texto, fondo, color, size, alto, italica=False, izq=False):
 # --- encabezado
 banda("C1:L1", "SIMULADOR DE OPERACIONES", NAVY, BLANCO, 18, 34)
 banda("C2:L2", "Seleccione el instrumento y registre las operaciones del periodo. "
-               "El volumen en pesos y el volumen en lotes son la misma magnitud: se "
-               "escribe el importe y el volumen en lotes se ajusta.",
+               "El volumen en lotes y el volumen en pesos son la misma magnitud: se "
+               "escribe el volumen en lotes y el importe en pesos se ajusta.",
       BLANCO, TENUE, 10, 20, italica=True)
 if LOGO.exists():
     img = XLImage(str(LOGO))
@@ -283,16 +281,15 @@ for r, etiqueta, formula, fmt in [
 ws.merge_cells("C7:M7")
 ws["C7"].value = (
     '=IF($F$4="","⚠ Seleccione un instrumento de la lista.",'
-    'IF(SUMPRODUCT(($E$11:$E$16>0)*($F$11:$F$16=0))>0,'
+    'IF(SUMPRODUCT(($D$11:$D$16>0)*($F$11:$F$16=0))>0,'
     '"⚠ Hay una operación con volumen y sin precio de entrada.",'
     'IF(SUMPRODUCT(($F$11:$F$16>0)*(ABS($F$11:$F$16/$P$7-1)>0.1))>0,'
     '"⚠ Un precio de entrada difiere en más de 10% del precio de referencia ($"'
     '&FIXED($P$7,$P$2)&"). Verifique que corresponda al instrumento seleccionado.",'
-    'IF(SUMPRODUCT(($D$11:$D$16>0)*($E$11:$E$16=0))>0,'
-    '"⚠ Hay una operación bajo el volumen mínimo de 0,01 lotes, que requiere $"'
-    '&FIXED(0.01*$P$7*$P$4*$P$5,0)&".",'
+    'IF(SUMPRODUCT(--(MOD(ROUND($D$11:$D$16*100,6),1)<>0))>0,'
+    '"⚠ Hay un volumen que no es múltiplo de 0,01 lotes, el paso mínimo de MT5.",'
     'IF($L$20>$F$5,"⚠ El margen requerido excede el capital de la cuenta.",'
-    '"✓ "&COUNTIF($E$11:$E$16,">0")&" operación(es) sobre "&$P$1'
+    '"✓ "&COUNTIF($D$11:$D$16,">0")&" operación(es) sobre "&$P$1'
     '&". El volumen en lotes es el que se ingresa en MT5.")))))'
 )
 for cc in "CDEFGHIJKLM":
@@ -309,8 +306,8 @@ ws["M9"].fill = PatternFill("solid", fgColor=NAVY)
 ws["M9"].border = borde
 
 # --- encabezados de columna
-cabeceras = [("C", "DIRECCIÓN", ACENTO), ("D", "VOLUMEN EN CLP", ACENTO),
-             ("E", "VOLUMEN EN LOTES", ACENTO), ("F", "PRECIO DE ENTRADA", ACENTO),
+cabeceras = [("C", "DIRECCIÓN", ACENTO), ("D", "VOLUMEN EN LOTES", ACENTO),
+             ("E", "VOLUMEN EN CLP", ACENTO), ("F", "PRECIO DE ENTRADA", ACENTO),
              ("G", "PRECIO DE SALIDA", ACENTO), ("H", "DÍAS DE MANTENCIÓN", ACENTO),
              ("I", "RESULTADO BRUTO", ACENTO),
              ("J", "COSTO DE APERTURA (SPREAD)", ORO),
@@ -332,22 +329,22 @@ for i, r in enumerate(OPS):
     if i < len(ejemplo):
         direccion, lotes, ent, sal, dias = ejemplo[i]
         entrada("C%d" % r, direccion, "General")
-        # +1 peso para que el truncado a 0,01 devuelva exactamente el volumen buscado
-        entrada("D%d" % r, round(lotes * ent * por_lote) + 1, CLP)
+        entrada("D%d" % r, lotes, LOTES)
         entrada("F%d" % r, round(ent, d), PRECIO)
         entrada("G%d" % r, round(sal, d), PRECIO)
         entrada("H%d" % r, dias, ENTERO)
     else:
-        for col, fmt in (("C", "General"), ("D", CLP),
+        for col, fmt in (("C", "General"), ("D", LOTES),
                          ("F", PRECIO), ("G", PRECIO), ("H", ENTERO)):
             entrada("%s%d" % (col, r), None, fmt)
 
-    # el volumen en lotes es la gemela calculada: sale del importe, truncado al paso
-    # de 0,01 que exige MT5. De ella leen todas las demas formulas de la fila.
-    salida("E%d" % r, "=IFERROR(MAX(0,ROUNDDOWN($D{r}/($F{r}*$P$4*$P$5),2)),0)".format(r=r), LOTES_FILA)
-    salida("I%d" % r, ('=IF(OR($E{r}=0,$G{r}=0),"",IF($C{r}="COMPRA",$G{r}-$F{r},'
-                       '$F{r}-$G{r})*$E{r}*$P$4)').format(r=r), CLP)
-    salida("J%d" % r, '=IF($E{r}=0,"",$E{r}*$P$6*$P$4)'.format(r=r), CLP)
+    # el importe en pesos es la gemela calculada: es el margen que ocupa ese volumen
+    # al precio de entrada de la fila. El volumen en lotes es el que se escribe, y de
+    # el leen todas las demas formulas.
+    salida("E%d" % r, '=IF($D{r}=0,"",$D{r}*$F{r}*$P$4*$P$5)'.format(r=r), CLP)
+    salida("I%d" % r, ('=IF(OR($D{r}=0,$G{r}=0),"",IF($C{r}="COMPRA",$G{r}-$F{r},'
+                       '$F{r}-$G{r})*$D{r}*$P$4)').format(r=r), CLP)
+    salida("J%d" % r, '=IF($D{r}=0,"",$D{r}*$P$6*$P$4)'.format(r=r), CLP)
     # costo de mantencion, por dias calendario. NO se suman dias por el cargo triple:
     # ese triple REEMPLAZA los rollovers del fin de semana, que no ocurren, asi que una
     # semana completa son 7 cargos para 7 dias calendario. Verificado 2026-08-19 contra
@@ -356,12 +353,12 @@ for i, r in enumerate(OPS):
     # da 36.163,34, o sea 0,3% de desviacion. Forma cerrada O(1) frente a O(d) del
     # conteo por dia de semana, con la misma exactitud medida: ver Complejidad arriba.
     # Se niega en vez de usar ABS para que una tasa positiva quede como abono.
-    salida("K%d" % r, ('=IF(OR($E{r}=0,$H{r}=0),"",-IF($C{r}="VENTA",$P$10,$P$9)'
-                       '*IF($P$8={pts},$E{r}*POWER(10,-$P$2)*$P$4,'
-                       '$E{r}*$F{r}*$P$4/100/360)*$H{r})').format(r=r, pts=MODO_PUNTOS), CLP)
-    salida("L%d" % r, '=IF($E{r}=0,"",N($I{r})-N($J{r})-N($K{r}))'.format(r=r), CLP)
+    salida("K%d" % r, ('=IF(OR($D{r}=0,$H{r}=0),"",-IF($C{r}="VENTA",$P$10,$P$9)'
+                       '*IF($P$8={pts},$D{r}*POWER(10,-$P$2)*$P$4,'
+                       '$D{r}*$F{r}*$P$4/100/360)*$H{r})').format(r=r, pts=MODO_PUNTOS), CLP)
+    salida("L%d" % r, '=IF($D{r}=0,"",N($I{r})-N($J{r})-N($K{r}))'.format(r=r), CLP)
     obs = salida("M%d" % r, (
-        '=IF(OR($E{r}=0,$G{r}=0),"",IF(AND($C{r}="COMPRA",$G{r}<$F{r}),'
+        '=IF(OR($D{r}=0,$G{r}=0),"",IF(AND($C{r}="COMPRA",$G{r}<$F{r}),'
         '"precio de salida inferior a la entrada: resultado negativo en una compra",'
         'IF(AND($C{r}="VENTA",$G{r}>$F{r}),'
         '"precio de salida superior a la entrada: resultado negativo en una venta","")))'
@@ -375,7 +372,7 @@ for col in "CDEFGHIJKLM":
     c = ws["%s%d" % (col, TOT)]
     if col in "DEIJKL":
         c.value = "=SUM(%s11:%s16)" % (col, col)
-        c.number_format = LOTES if col == "E" else CLP
+        c.number_format = LOTES if col == "D" else CLP
     c.fill = PatternFill("solid", fgColor=ORO if col in "JKL" else NAVY)
     c.font = Font(bold=True, size=11, color=BLANCO)
     c.alignment = Alignment(horizontal="center", vertical="center")
@@ -384,7 +381,7 @@ ws.row_dimensions[TOT].height = 24
 
 # --- cierre del periodo
 cierre = [
-    (19, "Exposición nocional total", "=SUMPRODUCT($E$11:$E$16,$F$11:$F$16)*$P$4"),
+    (19, "Exposición nocional total", "=SUMPRODUCT($D$11:$D$16,$F$11:$F$16)*$P$4"),
     # sobre el volumen en lotes, no sobre la suma de importes ingresados
     (20, "Margen requerido (posiciones simultáneas)", "=$L$19*$P$5"),
     (21, "Resultado neto del periodo", "=$L$17"),
@@ -412,9 +409,9 @@ ws.conditional_formatting.add("L22", FormulaRule(formula=["$L$22<$F$5"],
 # --- pie
 banda("C24:M24",
       "Especificaciones del broker al %s hora Chile. Celdas crema: campos editables; "
-      "el resto son fórmulas. VOLUMEN EN CLP y VOLUMEN EN LOTES son la misma "
-      "magnitud: se escribe el importe y el volumen se ajusta, truncado al paso de "
-      "0,01 lotes que exige MT5. El COSTO DE MANTENCIÓN (SWAP) se estima por días "
+      "el resto son fórmulas. VOLUMEN EN LOTES y VOLUMEN EN CLP son la misma "
+      "magnitud: se escribe el volumen en lotes, en múltiplos de 0,01, y el importe "
+      "en pesos se ajusta. El COSTO DE MANTENCIÓN (SWAP) se estima por días "
       "calendario. Este simulador no incorpora stop loss."
       % SELLO, BLANCO, "808080", 9, 30, italica=True, izq=True)
 
@@ -426,6 +423,10 @@ validaciones = [
     (DataValidation(type="list", formula1='"COMPRA,VENTA"', allow_blank=True,
                     showErrorMessage=True, errorTitle="Dirección no válida",
                     error="Seleccione COMPRA o VENTA."), ["C%d" % r for r in OPS]),
+    (DataValidation(type="decimal", operator="greaterThanOrEqual", formula1="0.01",
+                    allow_blank=True, showErrorMessage=True, errorTitle="Volumen no válido",
+                    error="El volumen mínimo que acepta MT5 es 0,01 lotes, y debe ser "
+                          "múltiplo de 0,01."), ["D%d" % r for r in OPS]),
     (DataValidation(type="whole", operator="between", formula1="0", formula2="3650",
                     allow_blank=True, showErrorMessage=True, errorTitle="Días no válidos",
                     error="Indique los días completos de mantención de la posición "
