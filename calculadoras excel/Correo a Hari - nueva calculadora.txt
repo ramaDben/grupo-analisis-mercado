@@ -70,7 +70,8 @@ QUÉ INCLUYE
   apalancamiento total del periodo.
 - Nivel de margen al abrir, el mismo indicador que muestra MT5, contra los umbrales
   reales del broker: llamada a margen en 90% y cierre forzado en 50%.
-- Cuánto pueden moverse los precios en contra antes de la llamada a margen.
+- Cuánto puede moverse el precio en contra, en la unidad del instrumento, antes de
+  que el broker llame a margen.
 - Cierre del periodo con monto total controlado, margen requerido, resultado neto y
   patrimonio final.
 - Validaciones automáticas que avisan si el margen excede el capital de la cuenta,

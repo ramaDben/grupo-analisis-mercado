@@ -405,9 +405,22 @@ cierre = [
     # el patrimonio es el capital, porque todavia no hay resultado flotante.
     (22, "Nivel de margen al abrir", '=IF($M$21=0,"",100*$F$5/$M$21)', NIVEL),
     # lo que la columna de apalancamiento provoca preguntar, respondido con la mecanica
-    # del margen y sin necesidad de stop loss
-    (23, "Movimiento adverso hasta la llamada a margen",
-     '=IF($M$19=0,"",100*($F$5-$R$11/100*$M$21)/$M$19)', ADVERSO),
+    # del margen y sin necesidad de stop loss.
+    #
+    # Va sobre la posicion NETA y no sobre el monto bruto. Todas las operaciones son del
+    # mismo instrumento, asi que el precio se mueve en una sola direccion: una compra y
+    # una venta no pueden perder a la vez. Usar el bruto supondria que todas pierden
+    # juntas y subestimaba el recorrido por un factor de 3 en una cartera mezclada. Con
+    # todas las operaciones en la misma direccion, neto y bruto coinciden.
+    #
+    # Se expresa en unidades de precio del instrumento, no en porcentaje: "el dolar
+    # puede moverse 21,62 pesos en contra" es mas concreto frente a un cliente.
+    (23, "Recorrido adverso hasta la llamada a margen",
+     '=IF(OR($M$21=0,SUMPRODUCT((($C$11:$C$16="COMPRA")*2-1)*$D$11:$D$16)=0),"",'
+     # si el margen ya deja la cuenta bajo la llamada, el recorrido seria negativo. Se
+     # lleva a cero y se pinta rojo: no queda recorrido, y la franja explica por que.
+     'MAX(0,ROUND(($F$5-$R$11/100*$M$21)/ABS(SUMPRODUCT((($C$11:$C$16="COMPRA")*2-1)'
+     '*$D$11:$D$16)*$R$4),$R$2)))', PRECIO),
     (24, "Resultado neto del periodo", "=$M$17", CLP),
     (25, "Patrimonio final", "=$F$5+$M$17", CLP),
 ]
