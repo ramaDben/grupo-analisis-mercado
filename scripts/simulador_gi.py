@@ -3,34 +3,34 @@
 lista y registra las operaciones del periodo, sin tener que conocer el tamano de
 contrato ni el spread vigente.
 
-La tabla separa SIMULACION de COSTOS, como la planilla original de post-venta, y
+La tabla separa SIMULACION de COSTOS, como la planilla original de post-venta.
+
 Se escribe el VOLUMEN EN LOTES, la unidad en que el usuario de la planilla explica la
 operacion a sus clientes y la que se ingresa en el terminal. De esa columna leen todas
 las demas formulas de la fila.
 
-La columna vecina es el MARGEN REQUERIDO, el capital que ese volumen bloquea al precio
-de entrada de la fila. Antes se rotulaba "volumen en CLP", y era un nombre equivocado:
-el equivalente en pesos de un volumen es el NOCIONAL (lotes x precio x valor por
-lote), no el margen, que es el nocional multiplicado por la tasa que exige el broker.
-Confundirlos hacia leer $496.125 como el tamano de una posicion que en realidad mueve
-$49 millones. El nocional vive en el cierre, como exposicion.
+MARGEN REQUERIDO es el capital que ese volumen bloquea al precio de entrada de la
+fila. NO es el volumen expresado en pesos: el equivalente en pesos de un volumen es el
+NOCIONAL (lotes x precio x valor por lote), y el margen es ese nocional multiplicado
+por la tasa que exige el broker. Confundirlos hacia leer $496.125 como el tamano de una
+posicion que en realidad mueve $49 millones.
 
-Por eso tampoco son "columnas gemelas": un volumen y su margen no son la misma
-magnitud en dos unidades. Escribir indistintamente en una o en otra exigiria una macro
-(dos celdas no pueden ser a la vez editables y calculadas sin caer en referencia
-circular, y no hay forma de saber cual se edito de ultima sin capturar el evento de
-cambio). Queda escrita en assets/gemelas.bas por si algun dia se necesita, pero el
-requerimiento real era mover los lotes, y para eso basta la direccion actual.
+APALANCAMIENTO = nocional / capital de la cuenta, o sea cuantas veces el capital
+controla esa operacion. Se descartaron las otras dos lecturas posibles: nocional /
+margen da 1 / tasa, constante por instrumento, de modo que la columna repetiria el
+mismo numero en todas las filas; y margen / capital no es apalancamiento sino la
+fraccion del capital comprometida. La definicion elegida es ADITIVA, asi que el total
+de la columna ES el apalancamiento del periodo, sin formula aparte.
 
-Cada fila es una operacion independiente con su propia direccion, y los dias de
-mantencion alimentan el swap. Los 25 instrumentos del catalogo se leen del terminal
-MT5 y quedan en la hoja Datos, que alimenta los BUSCARV de la hoja Simulador.
+El monto controlado por fila no se muestra porque seria redundante: con el capital
+fijo, monto y apalancamiento son el mismo numero reescalado. El monto en pesos va en
+el cierre, donde se conversa la magnitud.
 
 Complejidad
 -----------
 Variables: n = instrumentos del catalogo (25) · k = parametros resueltos por
-instrumento (10 celdas BUSCARV) · r = filas de operacion (6) · d = dias de
-mantencion de una operacion.
+instrumento (10 celdas BUSCARV) · r = filas de operacion (6) · d = dias que la
+posicion queda abierta.
 
 Generacion (este script), por corrida:
     tiempo   O(n), con 4 llamadas IPC al terminal por instrumento
@@ -46,19 +46,17 @@ Recalculo (Excel), por cambio de instrumento:
     mas cercana cuando el nombre no calza exacto, entregando en silencio los
     parametros de otro instrumento. Con n = 25 el barrido no cuesta nada.
 
-Por fila de operacion:
-    resultado bruto, costo de apertura, costo de mantencion y resultado neto son
-    formulas cerradas, O(1) cada una. Total O(r).
+Por fila de operacion: margen, apalancamiento, resultado bruto, costo de apertura,
+costo de mantencion y resultado neto son formulas cerradas, O(1) cada una. Total O(r).
 
     El costo de mantencion es O(1) porque el conteo de cargos es d directo. El
     modelo alternativo, recorrer cada dia evaluando su dia de semana y el cargo
     triple, es O(d) por fila, O(r * d) en la hoja, y en Excel exige INDIRECT, que
     es volatil y obliga a recalcular todo ante cualquier edicion. Medido contra
     el historial entrega la MISMA desviacion que la forma cerrada (0,3% en la
-    operacion de control), asi que O(1) domina: menos trabajo, sin volatilidad y
-    sin ganancia de exactitud que lo justifique.
+    operacion de control), asi que O(1) domina.
 
-Agregados: O(r) para las sumas de totales, la exposicion por SUMPRODUCT y cada
+Agregados: O(r) para las sumas de totales, el monto controlado por SUMPRODUCT y cada
 predicado de la franja de validacion (su cantidad es constante).
 
 Total del recalculo: O(k * n + r), acotado por constantes del catalogo, de modo que
@@ -86,7 +84,6 @@ REPO = Path(__file__).resolve().parent.parent
 CARPETA = REPO / "calculadoras excel"
 DESTINO = CARPETA / "Simulador GI.xlsx"
 LOGO = CARPETA / "assets" / "logo_gi.png"
-MACRO = CARPETA / "assets" / "gemelas.bas"
 
 AHORA = datetime.now(ZoneInfo("America/Santiago"))
 SELLO = AHORA.strftime("%Y-%m-%d %H:%M")
@@ -144,7 +141,8 @@ print("instrumentos con datos: %d de %d" % (len(filas), len(catalogo)))
 NAVY, ACENTO, ORO, CREMA = "203864", "50C0A8", "BF8F00", "FFF2CC"
 BLANCO, GRIS, ROJO, TENUE = "FFFFFF", "F2F2F2", "C00000", "595959"
 borde = Border(*[Side(style="thin", color="BFBFBF")] * 4)
-CLP, PRECIO, LOTES, ENTERO = '"$"#,##0', "#,##0.00###", "0.00", "0"
+CLP, PRECIO, LOTES, ENTERO, VECES = '"$"#,##0', "#,##0.00###", "0.00", "0", "0.0"
+VECES_CIERRE = '0.0" veces"'
 
 OPS = list(range(11, 17))     # seis operaciones, como la planilla original
 TOT = 17
@@ -185,8 +183,8 @@ dat.freeze_panes = "A2"
 ws = wb.active
 ws.title = "Simulador"
 ws.sheet_view.showGridLines = False
-for col, w in zip("ABCDEFGHIJKLMN",
-                  (3, 3, 13, 15, 15, 13, 13, 13, 14, 15, 16, 15, 26, 3)):
+for col, w in zip("ABCDEFGHIJKLMNO",
+                  (3, 3, 13, 14, 14, 16, 13, 13, 11, 14, 15, 16, 15, 26, 3)):
     ws.column_dimensions[col].width = w
 
 
@@ -231,15 +229,14 @@ def banda(rango, texto, fondo, color, size, alto, italica=False, izq=False):
 
 
 # --- encabezado
-banda("C1:L1", "SIMULADOR DE OPERACIONES", NAVY, BLANCO, 18, 34)
-banda("C2:L2", "Seleccione el instrumento y registre las operaciones del periodo. "
-               "Se escribe el volumen en lotes, la unidad del terminal, y la planilla "
-               "calcula el margen que bloquea y los costos que descuenta.",
-      BLANCO, TENUE, 10, 20, italica=True)
+banda("C1:M1", "SIMULADOR DE OPERACIONES", NAVY, BLANCO, 18, 34)
+banda("C2:M2", "Se escribe el volumen en lotes, la unidad del terminal. La planilla "
+               "calcula el margen que bloquea, el apalancamiento y los costos.",
+      BLANCO, TENUE, 10, 24, italica=True)
 if LOGO.exists():
     img = XLImage(str(LOGO))
     img.height, img.width = 62, 67
-    ws.add_image(img, "M1")
+    ws.add_image(img, "N1")
 
 # --- contexto del periodo
 for r, etiqueta, valor, fmt in [
@@ -262,47 +259,47 @@ for r, idx, etiqueta in [(1, 2, "ticker"), (2, 3, "digits"), (3, 4, "contrato"),
                          (4, 5, "clp_unidad"), (5, 6, "tasa"), (6, 7, "spread"),
                          (7, 8, "precio_ref"), (8, 9, "swap_modo"),
                          (9, 10, "swap_compra"), (10, 11, "swap_venta")]:
-    ws["O%d" % r] = etiqueta
-    ws["P%d" % r] = BUSCA % idx
-for col in "OP":
+    ws["Q%d" % r] = etiqueta
+    ws["R%d" % r] = BUSCA % idx
+for col in "QR":
     ws.column_dimensions[col].hidden = True
 
 # --- referencias del instrumento elegido
 for r, etiqueta, formula, fmt in [
-        (4, "Precio de referencia", "=$P$7", PRECIO),
-        (5, "Capital mínimo por operación (0,01 lotes)", "=0.01*$P$7*$P$4*$P$5", CLP),
+        (4, "Precio de referencia", "=$R$7", PRECIO),
+        (5, "Capital mínimo por operación (0,01 lotes)", "=0.01*$R$7*$R$4*$R$5", CLP),
         # el spread se congela al generar el archivo, asi que va a la vista: si se
         # genero en un momento de spread ancho, todas las simulaciones lo heredan.
-        (6, "Spread vigente al generar", "=$P$6", PRECIO)]:
-    ws.merge_cells("I%d:K%d" % (r, r))
-    ws["I%d" % r].value = etiqueta
-    ws["I%d" % r].font = Font(size=10, color=TENUE)
-    ws["I%d" % r].alignment = Alignment(horizontal="right", vertical="center")
-    salida("L%d" % r, formula, fmt)
+        (6, "Spread vigente al generar", "=$R$6", PRECIO)]:
+    ws.merge_cells("J%d:L%d" % (r, r))
+    ws["J%d" % r].value = etiqueta
+    ws["J%d" % r].font = Font(size=10, color=TENUE)
+    ws["J%d" % r].alignment = Alignment(horizontal="right", vertical="center")
+    salida("M%d" % r, formula, fmt)
 
 # --- franja de validacion
-ws.merge_cells("C7:M7")
+ws.merge_cells("C7:N7")
 ws["C7"].value = (
     '=IF($F$4="","⚠ Seleccione un instrumento de la lista.",'
     # el separador decimal de un Excel en español es la coma: un valor digitado con
     # punto queda como TEXTO y toda la fila cae en #¡VALOR!. La validación de celda lo
     # rechaza al escribirlo, pero no se dispara al pegar, así que hace falta el control
-    'IF(SUMPRODUCT(--ISTEXT($D$11:$D$16))+SUMPRODUCT(--ISTEXT($F$11:$G$16))'
-    '+SUMPRODUCT(--ISTEXT($H$11:$H$16))>0,'
+    'IF(SUMPRODUCT(--ISTEXT($D$11:$D$16))+SUMPRODUCT(--ISTEXT($G$11:$H$16))'
+    '+SUMPRODUCT(--ISTEXT($I$11:$I$16))>0,'
     '"⚠ Hay un valor escrito como texto. El separador decimal de este Excel es la '
     'coma: escriba 0,54 y no 0.54.",'
-    'IF(SUMPRODUCT(($D$11:$D$16>0)*($F$11:$F$16=0))>0,'
+    'IF(SUMPRODUCT(($D$11:$D$16>0)*($G$11:$G$16=0))>0,'
     '"⚠ Hay una operación con volumen y sin precio de entrada.",'
-    'IF(SUMPRODUCT(($F$11:$F$16>0)*(ABS($F$11:$F$16/$P$7-1)>0.1))>0,'
+    'IF(SUMPRODUCT(($G$11:$G$16>0)*(ABS($G$11:$G$16/$R$7-1)>0.1))>0,'
     '"⚠ Un precio de entrada difiere en más de 10% del precio de referencia ($"'
-    '&FIXED($P$7,$P$2)&"). Verifique que corresponda al instrumento seleccionado.",'
+    '&FIXED($R$7,$R$2)&"). Verifique que corresponda al instrumento seleccionado.",'
     'IF(SUMPRODUCT(--(MOD(ROUND($D$11:$D$16*100,6),1)<>0))>0,'
     '"⚠ Hay un volumen que no es múltiplo de 0,01 lotes, el paso mínimo de MT5.",'
-    'IF($L$20>$F$5,"⚠ El margen requerido excede el capital de la cuenta.",'
-    '"✓ "&COUNTIF($D$11:$D$16,">0")&" operación(es) sobre "&$P$1'
+    'IF($M$21>$F$5,"⚠ El margen requerido excede el capital de la cuenta.",'
+    '"✓ "&COUNTIF($D$11:$D$16,">0")&" operación(es) sobre "&$R$1'
     '&". El volumen en lotes es el que se ingresa en MT5."))))))'
 )
-for cc in "CDEFGHIJKLM":
+for cc in "CDEFGHIJKLMN":
     ws["%s7" % cc].fill = PatternFill("solid", fgColor=CREMA)
     ws["%s7" % cc].border = borde
 ws["C7"].font = Font(bold=True, size=11)
@@ -310,19 +307,19 @@ ws["C7"].alignment = Alignment(horizontal="center", vertical="center")
 ws.row_dimensions[7].height = 30
 
 # --- bandas de bloque: la separacion simulacion / costos de la planilla original
-banda("C9:I9", "SIMULACIÓN", NAVY, BLANCO, 12, 24)
-banda("J9:L9", "COSTOS", ORO, BLANCO, 12, 24)
-ws["M9"].fill = PatternFill("solid", fgColor=NAVY)
-ws["M9"].border = borde
+banda("C9:J9", "SIMULACIÓN", NAVY, BLANCO, 12, 24)
+banda("K9:M9", "COSTOS", ORO, BLANCO, 12, 24)
+ws["N9"].fill = PatternFill("solid", fgColor=NAVY)
+ws["N9"].border = borde
 
 # --- encabezados de columna
 cabeceras = [("C", "DIRECCIÓN", ACENTO), ("D", "VOLUMEN EN LOTES", ACENTO),
-             ("E", "MARGEN REQUERIDO", ACENTO), ("F", "PRECIO DE ENTRADA", ACENTO),
-             ("G", "PRECIO DE SALIDA", ACENTO), ("H", "DÍAS ABIERTA", ACENTO),
-             ("I", "RESULTADO BRUTO", ACENTO),
-             ("J", "COSTO DE APERTURA (SPREAD)", ORO),
-             ("K", "COSTO DE MANTENCIÓN (SWAP)", ORO),
-             ("L", "RESULTADO NETO", ORO), ("M", "OBSERVACIÓN", ACENTO)]
+             ("E", "MARGEN REQUERIDO", ACENTO), ("F", "APALANCAMIENTO (VECES)", ACENTO),
+             ("G", "PRECIO DE ENTRADA", ACENTO), ("H", "PRECIO DE SALIDA", ACENTO),
+             ("I", "DÍAS ABIERTA", ACENTO), ("J", "RESULTADO BRUTO", ACENTO),
+             ("K", "COSTO DE APERTURA (SPREAD)", ORO),
+             ("L", "COSTO DE MANTENCIÓN (SWAP)", ORO),
+             ("M", "RESULTADO NETO", ORO), ("N", "OBSERVACIÓN", ACENTO)]
 for col, txt, fondo in cabeceras:
     estilar(ws["%s10" % col], size=9, negrita=True, color=BLANCO, fondo=fondo, wrap=True)
     ws["%s10" % col].value = txt
@@ -330,7 +327,6 @@ ws.row_dimensions[10].height = 34
 
 # --- ejemplo: tres operaciones del periodo, la ultima perdedora
 d, base = filas[0]["digits"], round(filas[0]["precio"], filas[0]["digits"])
-por_lote = filas[0]["clp_unidad"] * filas[0]["tasa"]   # margen por lote y por 1,0 de precio
 ejemplo = [("COMPRA", 0.54, base - 3, base + 2, 2),
            ("VENTA", 0.43, base + 4, base + 1, 1),
            ("COMPRA", 0.32, base, base - 1.5, 0)]
@@ -340,38 +336,39 @@ for i, r in enumerate(OPS):
         direccion, lotes, ent, sal, dias = ejemplo[i]
         entrada("C%d" % r, direccion, "General")
         entrada("D%d" % r, lotes, LOTES)
-        entrada("F%d" % r, round(ent, d), PRECIO)
-        entrada("G%d" % r, round(sal, d), PRECIO)
-        entrada("H%d" % r, dias, ENTERO)
+        entrada("G%d" % r, round(ent, d), PRECIO)
+        entrada("H%d" % r, round(sal, d), PRECIO)
+        entrada("I%d" % r, dias, ENTERO)
     else:
         for col, fmt in (("C", "General"), ("D", LOTES),
-                         ("F", PRECIO), ("G", PRECIO), ("H", ENTERO)):
+                         ("G", PRECIO), ("H", PRECIO), ("I", ENTERO)):
             entrada("%s%d" % (col, r), None, fmt)
 
     # el margen que ese volumen bloquea al precio de entrada de la fila. NO es el
-    # volumen expresado en pesos: el equivalente en pesos de 0,54 lotes es el nocional,
-    # que va en el cierre como exposicion. Rotularlo "volumen en CLP" confundia las dos
-    # magnitudes, que difieren por el factor de la tasa de margen.
-    salida("E%d" % r, '=IF($D{r}=0,"",$D{r}*$F{r}*$P$4*$P$5)'.format(r=r), CLP)
-    salida("I%d" % r, ('=IF(OR($D{r}=0,$G{r}=0),"",IF($C{r}="COMPRA",$G{r}-$F{r},'
-                       '$F{r}-$G{r})*$D{r}*$P$4)').format(r=r), CLP)
-    salida("J%d" % r, '=IF($D{r}=0,"",$D{r}*$P$6*$P$4)'.format(r=r), CLP)
+    # volumen expresado en pesos: el equivalente en pesos de un volumen es el nocional,
+    # que es este mismo producto SIN la tasa de margen.
+    salida("E%d" % r, '=IF($D{r}=0,"",$D{r}*$G{r}*$R$4*$R$5)'.format(r=r), CLP)
+    # apalancamiento = nocional / capital de la cuenta. Es aditivo, asi que el total de
+    # la columna es el apalancamiento del periodo.
+    salida("F%d" % r, '=IF(OR($D{r}=0,$F$5=0),"",$D{r}*$G{r}*$R$4/$F$5)'.format(r=r), VECES)
+    salida("J%d" % r, ('=IF(OR($D{r}=0,$H{r}=0),"",IF($C{r}="COMPRA",$H{r}-$G{r},'
+                       '$G{r}-$H{r})*$D{r}*$R$4)').format(r=r), CLP)
+    salida("K%d" % r, '=IF($D{r}=0,"",$D{r}*$R$6*$R$4)'.format(r=r), CLP)
     # costo de mantencion, por dias calendario. NO se suman dias por el cargo triple:
     # ese triple REEMPLAZA los rollovers del fin de semana, que no ocurren, asi que una
     # semana completa son 7 cargos para 7 dias calendario. Verificado 2026-08-19 contra
     # el historial: posicion 590040, #AAPL BUY 2,98 lotes del 05 al 11 de agosto, 6 dias
     # con un fin de semana completo dentro; el terminal cobro 36.063,35 y esta formula
-    # da 36.163,34, o sea 0,3% de desviacion. Forma cerrada O(1) frente a O(d) del
-    # conteo por dia de semana, con la misma exactitud medida: ver Complejidad arriba.
-    # Se niega en vez de usar ABS para que una tasa positiva quede como abono.
-    salida("K%d" % r, ('=IF(OR($D{r}=0,$H{r}=0),"",-IF($C{r}="VENTA",$P$10,$P$9)'
-                       '*IF($P$8={pts},$D{r}*POWER(10,-$P$2)*$P$4,'
-                       '$D{r}*$F{r}*$P$4/100/360)*$H{r})').format(r=r, pts=MODO_PUNTOS), CLP)
-    salida("L%d" % r, '=IF($D{r}=0,"",N($I{r})-N($J{r})-N($K{r}))'.format(r=r), CLP)
-    obs = salida("M%d" % r, (
-        '=IF(OR($D{r}=0,$G{r}=0),"",IF(AND($C{r}="COMPRA",$G{r}<$F{r}),'
+    # da 36.163,34, o sea 0,3% de desviacion. Se niega en vez de usar ABS para que una
+    # tasa positiva quede como abono y no como costo.
+    salida("L%d" % r, ('=IF(OR($D{r}=0,$I{r}=0),"",-IF($C{r}="VENTA",$R$10,$R$9)'
+                       '*IF($R$8={pts},$D{r}*POWER(10,-$R$2)*$R$4,'
+                       '$D{r}*$G{r}*$R$4/100/360)*$I{r})').format(r=r, pts=MODO_PUNTOS), CLP)
+    salida("M%d" % r, '=IF($D{r}=0,"",N($J{r})-N($K{r})-N($L{r}))'.format(r=r), CLP)
+    obs = salida("N%d" % r, (
+        '=IF(OR($D{r}=0,$H{r}=0),"",IF(AND($C{r}="COMPRA",$H{r}<$G{r}),'
         '"precio de salida inferior a la entrada: resultado negativo en una compra",'
-        'IF(AND($C{r}="VENTA",$G{r}>$F{r}),'
+        'IF(AND($C{r}="VENTA",$H{r}>$G{r}),'
         '"precio de salida superior a la entrada: resultado negativo en una venta","")))'
     ).format(r=r), "General", size=9, negrita=False)
     obs.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
@@ -379,12 +376,13 @@ for i, r in enumerate(OPS):
 
 # --- totales
 ws["C%d" % TOT].value = "TOTALES"
-for col in "CDEFGHIJKLM":
+FORMATO_TOTAL = {"D": LOTES, "E": CLP, "F": VECES, "J": CLP, "K": CLP, "L": CLP, "M": CLP}
+for col in "CDEFGHIJKLMN":
     c = ws["%s%d" % (col, TOT)]
-    if col in "DEIJKL":
+    if col in FORMATO_TOTAL:
         c.value = "=SUM(%s11:%s16)" % (col, col)
-        c.number_format = LOTES if col == "D" else CLP
-    c.fill = PatternFill("solid", fgColor=ORO if col in "JKL" else NAVY)
+        c.number_format = FORMATO_TOTAL[col]
+    c.fill = PatternFill("solid", fgColor=ORO if col in "KLM" else NAVY)
     c.font = Font(bold=True, size=11, color=BLANCO)
     c.alignment = Alignment(horizontal="center", vertical="center")
     c.border = borde
@@ -392,39 +390,41 @@ ws.row_dimensions[TOT].height = 24
 
 # --- cierre del periodo
 cierre = [
-    (19, "Exposición nocional total", "=SUMPRODUCT($D$11:$D$16,$F$11:$F$16)*$P$4"),
-    # sobre el volumen en lotes, no sobre la suma de importes ingresados
-    (20, "Margen requerido (posiciones simultáneas)", "=$L$19*$P$5"),
-    (21, "Resultado neto del periodo", "=$L$17"),
-    (22, "Patrimonio final", "=$F$5+$L$17"),
+    (19, "Monto total controlado", "=SUMPRODUCT($D$11:$D$16,$G$11:$G$16)*$R$4", CLP),
+    # el apalancamiento del periodo es la suma de la columna, por ser aditivo
+    (20, "Apalancamiento total", "=$F$17", VECES_CIERRE),
+    (21, "Margen requerido (posiciones simultáneas)", "=$M$19*$R$5", CLP),
+    (22, "Resultado neto del periodo", "=$M$17", CLP),
+    (23, "Patrimonio final", "=$F$5+$M$17", CLP),
 ]
-for r, etiqueta, formula in cierre:
-    ws.merge_cells("I%d:K%d" % (r, r))
-    ws["I%d" % r].value = etiqueta
-    ws["I%d" % r].font = Font(bold=(r == 22), size=11)
-    ws["I%d" % r].alignment = Alignment(horizontal="right", vertical="center")
-    c = salida("L%d" % r, formula, CLP, size=13 if r == 22 else 11)
-    if r == 22:
+for r, etiqueta, formula, fmt in cierre:
+    ws.merge_cells("J%d:L%d" % (r, r))
+    ws["J%d" % r].value = etiqueta
+    ws["J%d" % r].font = Font(bold=(r == 23), size=11)
+    ws["J%d" % r].alignment = Alignment(horizontal="right", vertical="center")
+    c = salida("M%d" % r, formula, fmt, size=13 if r == 23 else 11)
+    if r == 23:
         c.fill = PatternFill("solid", fgColor=CREMA)
     ws.row_dimensions[r].height = 22
 
 # --- rojo cuando pierde, y en las observaciones
-ws.conditional_formatting.add("I11:L%d" % TOT,
-                              FormulaRule(formula=['AND(I11<>"",I11<0)'],
+ws.conditional_formatting.add("J11:M%d" % TOT,
+                              FormulaRule(formula=['AND(J11<>"",J11<0)'],
                                           font=Font(bold=True, color=ROJO)))
-ws.conditional_formatting.add("M11:M16",
-                              FormulaRule(formula=['$M11<>""'], font=Font(bold=True, color=ROJO)))
-ws.conditional_formatting.add("L22", FormulaRule(formula=["$L$22<$F$5"],
+ws.conditional_formatting.add("N11:N16",
+                              FormulaRule(formula=['$N11<>""'], font=Font(bold=True, color=ROJO)))
+ws.conditional_formatting.add("M23", FormulaRule(formula=["$M$23<$F$5"],
                                                  font=Font(bold=True, color=ROJO)))
 
 # --- pie
-banda("C24:M24",
+banda("C25:N25",
       "Especificaciones del broker al %s hora Chile. Celdas crema: campos editables; "
       "el resto son fórmulas. El volumen en lotes se escribe en múltiplos de 0,01, el "
-      "paso que acepta MT5, y el MARGEN REQUERIDO se ajusta con él. El COSTO DE "
-      "MANTENCIÓN (SWAP) se estima por días calendario. Este simulador no incorpora "
-      "stop loss."
-      % SELLO, BLANCO, "808080", 9, 30, italica=True, izq=True)
+      "paso que acepta MT5. APALANCAMIENTO son las veces que el capital de la cuenta "
+      "queda controlado por esa operación, y la columna es aditiva: su total es el "
+      "apalancamiento del periodo. El COSTO DE MANTENCIÓN (SWAP) se estima por días "
+      "calendario. Este simulador no incorpora stop loss." % SELLO,
+      BLANCO, "808080", 9, 30, italica=True, izq=True)
 
 # --- listas y validaciones (formula1 sin "=": con el igual Excel descarta la validación)
 validaciones = [
@@ -443,12 +443,12 @@ validaciones = [
                     allow_blank=True, showErrorMessage=True, errorTitle="Precio no válido",
                     error="Escriba un precio numérico, con la coma como separador "
                           "decimal: 918,75 y no 918.75."),
-     ["%s%d" % (c, r) for r in OPS for c in "FG"]),
+     ["%s%d" % (c, r) for r in OPS for c in "GH"]),
     (DataValidation(type="whole", operator="between", formula1="0", formula2="3650",
                     allow_blank=True, showErrorMessage=True, errorTitle="Días no válidos",
                     error="Indique los días completos que la posición queda abierta "
                           "(0 si se abre y cierra en la misma jornada)."),
-     ["H%d" % r for r in OPS]),
+     ["I%d" % r for r in OPS]),
     (DataValidation(type="decimal", operator="greaterThan", formula1="0",
                     allow_blank=False, showErrorMessage=True,
                     errorTitle="Capital no válido",
@@ -463,7 +463,7 @@ for dv, refs in validaciones:
 # --- proteger todo menos las celdas crema
 ws.protection.sheet = True
 ws.protection.formatCells = False
-ws.print_area = "B1:N25"
+ws.print_area = "B1:O26"
 ws.page_setup.orientation = "landscape"
 ws.page_setup.fitToPage = True
 ws.sheet_properties.pageSetUpPr.fitToPage = True
@@ -471,5 +471,4 @@ ws.sheet_properties.pageSetUpPr.fitToPage = True
 CARPETA.mkdir(parents=True, exist_ok=True)
 wb.save(DESTINO)
 print("generado:", DESTINO)
-print("macro de las gemelas:", MACRO if MACRO.exists() else "FALTA: %s" % MACRO)
 print("ejemplo:", filas[0]["nombre"], "con 3 operaciones alrededor de", base)

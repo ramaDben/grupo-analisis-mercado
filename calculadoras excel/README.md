@@ -54,7 +54,8 @@ Si se escribe `0.54`, Excel **no** lo interpreta como número: lo guarda como te
 
 | Columna | Qué informa |
 |---|---|
-| **MARGEN REQUERIDO** | el capital que ese volumen bloquea al precio de entrada de la fila. Al mover el volumen, se ajusta con él. **No es el volumen expresado en pesos**: el equivalente en pesos de un volumen es el nocional, que es este margen dividido por la tasa que exige el broker, y aparece en el cierre como exposición |
+| **MARGEN REQUERIDO** | el capital que ese volumen bloquea al precio de entrada de la fila. Al mover el volumen, se ajusta con él. **No es el volumen expresado en pesos**: el equivalente en pesos de un volumen es el monto controlado, que es este margen dividido por la tasa que exige el broker, y aparece en el cierre |
+| **APALANCAMIENTO (VECES)** | cuántas veces el capital de la cuenta queda controlado por esa operación. La columna es **aditiva**: su total es el apalancamiento del periodo |
 | **RESULTADO BRUTO** | resultado de la operación antes de costos. Cierra el bloque SIMULACIÓN |
 | **COSTO DE APERTURA (SPREAD)** | el spread, es decir la diferencia entre precio de compra y de venta que el broker cobra al abrir. Expresado en pesos |
 | **COSTO DE MANTENCIÓN (SWAP)** | el cargo que aplica el broker por mantener la posición abierta de un día para otro. En blanco si son 0 días |
@@ -65,7 +66,8 @@ Si se escribe `0.54`, Excel **no** lo interpreta como número: lo guarda como te
 
 | Indicador | Qué informa |
 |---|---|
-| **Exposición nocional total** | valor total de las posiciones controladas. Es la cifra que dimensiona el apalancamiento ante el cliente: compromete $1,2 millones y controla $119 millones |
+| **Monto total controlado** | valor total de las posiciones. Es la cifra que dimensiona el apalancamiento ante el cliente: bloquea $1,2 millones y controla $119 millones |
+| **Apalancamiento total** | las veces que el capital de la cuenta queda controlado en total. Con 59,5 veces, un movimiento adverso de 1,7% sobre las posiciones consume todo el capital. **Es la cifra que obliga a hablar del riesgo**, y la planilla no incorpora stop loss, así que ese límite se conversa por separado |
 | **Margen requerido (posiciones simultáneas)** | capital que quedaría bloqueado si todas las operaciones estuvieran abiertas al mismo tiempo. Se calcula sobre el volumen ya redondeado, de modo que no coincide exactamente con la suma del capital comprometido |
 | **Resultado neto del periodo** | suma de los resultados netos |
 | **Patrimonio final** | capital de la cuenta más el resultado neto |
@@ -102,7 +104,7 @@ El swap se calcula según el modo que declara cada instrumento en el terminal:
 | Modo | Instrumentos | Cálculo |
 |---|---|---|
 | Puntos | forex y materias primas (USD/CLP, Oro, Plata, WTI, pares) | puntos por día, por lote |
-| Interés | índices, cripto y acciones | interés anual sobre el nocional, con año bancario de 360 días |
+| Interés | índices, cripto y acciones | interés anual sobre el monto controlado, con año bancario de 360 días |
 
 El conteo usa **días calendario**, sin ajustes. Es lo consistente con la forma en que cobra el broker: el cargo triple que aplica un día a la semana no se suma al fin de semana, lo reemplaza, porque sábado y domingo no hay rollover. Una semana completa son 7 cargos para 7 días calendario.
 

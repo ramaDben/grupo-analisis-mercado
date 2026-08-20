@@ -66,7 +66,9 @@ QUÉ INCLUYE
 - Los 25 instrumentos del catálogo, en lista desplegable.
 - 6 operaciones independientes por periodo, combinando compras y ventas.
 - Volumen, costo de apertura, costo de mantención y resultado neto por operación.
-- Cierre del periodo con exposición nocional, margen requerido, resultado neto y
+- Apalancamiento por operación, en veces que el capital queda controlado, y el
+  apalancamiento total del periodo.
+- Cierre del periodo con monto total controlado, margen requerido, resultado neto y
   patrimonio final.
 - Validaciones automáticas que avisan si el margen excede el capital de la cuenta,
   si una operación queda bajo el volumen mínimo (varía por instrumento: cerca de
