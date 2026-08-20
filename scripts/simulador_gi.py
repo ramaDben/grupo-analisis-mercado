@@ -5,10 +5,18 @@ contrato ni el spread vigente.
 
 La tabla separa SIMULACION de COSTOS, como la planilla original de post-venta, y
 VOLUMEN EN CLP / VOLUMEN EN LOTES son columnas gemelas: la misma magnitud en dos
-unidades. Su sincronizacion bidireccional la hace la macro de assets/gemelas.bas,
-porque dos celdas no pueden ser a la vez editables y calculadas sin caer en
-referencia circular. Sin la macro, la columna que manda es VOLUMEN EN LOTES: todas
-las formulas de la fila leen de ella.
+unidades, adyacentes y siempre consistentes. Se escribe el importe en pesos y el
+volumen en lotes se calcula, truncado al paso de 0,01 que exige MT5; de esa columna
+leen todas las demas formulas de la fila.
+
+La sincronizacion en los DOS sentidos, escribir indistintamente en pesos o en lotes,
+exigiria una macro (dos celdas no pueden ser a la vez editables y calculadas sin caer
+en referencia circular, y no hay forma de saber cual se edito de ultima sin capturar
+el evento de cambio). Queda escrita en assets/gemelas.bas pero NO se usa: el archivo
+se distribuye por correo a post-venta, y un .xlsm lo bloquean muchas politicas
+corporativas y varios filtros de correo lo eliminan del adjunto. Para reactivarla hay
+que pegar ese modulo en la hoja, guardar como .xlsm y devolver la celda de lotes a
+editable.
 
 Cada fila es una operacion independiente con su propia direccion, y los dias de
 mantencion alimentan el swap. Los 25 instrumentos del catalogo se leen del terminal
@@ -45,10 +53,6 @@ Por fila de operacion:
     el historial entrega la MISMA desviacion que la forma cerrada (0,3% en la
     operacion de control), asi que O(1) domina: menos trabajo, sin volatilidad y
     sin ganancia de exactitud que lo justifique.
-
-Sincronizacion de las gemelas (macro): O(1) por celda editada. El evento se
-restringe al rango de las tres columnas implicadas, de modo que una edicion en
-cualquier otra parte de la hoja no ejecuta codigo.
 
 Agregados: O(r) para las sumas de totales, la exposicion por SUMPRODUCT y cada
 predicado de la franja de validacion (su cantidad es constante).
@@ -137,6 +141,9 @@ NAVY, ACENTO, ORO, CREMA = "203864", "50C0A8", "BF8F00", "FFF2CC"
 BLANCO, GRIS, ROJO, TENUE = "FFFFFF", "F2F2F2", "C00000", "595959"
 borde = Border(*[Side(style="thin", color="BFBFBF")] * 4)
 CLP, PRECIO, LOTES, ENTERO = '"$"#,##0', "#,##0.00###", "0.00", "0"
+# el volumen de una fila vacia vale cero, pero mostrarlo como 0,00 es ruido:
+# la tercera seccion del formato deja el cero en blanco sin tocar la formula
+LOTES_FILA = '0.00;-0.00;""'
 
 OPS = list(range(11, 17))     # seis operaciones, como la planilla original
 TOT = 17
@@ -225,8 +232,9 @@ def banda(rango, texto, fondo, color, size, alto, italica=False, izq=False):
 # --- encabezado
 banda("C1:L1", "SIMULADOR DE OPERACIONES", NAVY, BLANCO, 18, 34)
 banda("C2:L2", "Seleccione el instrumento y registre las operaciones del periodo. "
-               "El volumen en pesos y el volumen en lotes son la misma magnitud: al "
-               "modificar uno, el otro se ajusta.", BLANCO, TENUE, 10, 20, italica=True)
+               "El volumen en pesos y el volumen en lotes son la misma magnitud: se "
+               "escribe el importe y el volumen en lotes se ajusta.",
+      BLANCO, TENUE, 10, 20, italica=True)
 if LOGO.exists():
     img = XLImage(str(LOGO))
     img.height, img.width = 62, 67
@@ -324,17 +332,19 @@ for i, r in enumerate(OPS):
     if i < len(ejemplo):
         direccion, lotes, ent, sal, dias = ejemplo[i]
         entrada("C%d" % r, direccion, "General")
-        entrada("D%d" % r, round(lotes * ent * por_lote), CLP)
-        entrada("E%d" % r, lotes, LOTES)
+        # +1 peso para que el truncado a 0,01 devuelva exactamente el volumen buscado
+        entrada("D%d" % r, round(lotes * ent * por_lote) + 1, CLP)
         entrada("F%d" % r, round(ent, d), PRECIO)
         entrada("G%d" % r, round(sal, d), PRECIO)
         entrada("H%d" % r, dias, ENTERO)
     else:
-        for col, fmt in (("C", "General"), ("D", CLP), ("E", LOTES),
+        for col, fmt in (("C", "General"), ("D", CLP),
                          ("F", PRECIO), ("G", PRECIO), ("H", ENTERO)):
             entrada("%s%d" % (col, r), None, fmt)
 
-    # todas las formulas leen el VOLUMEN EN LOTES: es la columna que manda
+    # el volumen en lotes es la gemela calculada: sale del importe, truncado al paso
+    # de 0,01 que exige MT5. De ella leen todas las demas formulas de la fila.
+    salida("E%d" % r, "=IFERROR(MAX(0,ROUNDDOWN($D{r}/($F{r}*$P$4*$P$5),2)),0)".format(r=r), LOTES_FILA)
     salida("I%d" % r, ('=IF(OR($E{r}=0,$G{r}=0),"",IF($C{r}="COMPRA",$G{r}-$F{r},'
                        '$F{r}-$G{r})*$E{r}*$P$4)').format(r=r), CLP)
     salida("J%d" % r, '=IF($E{r}=0,"",$E{r}*$P$6*$P$4)'.format(r=r), CLP)
@@ -402,10 +412,10 @@ ws.conditional_formatting.add("L22", FormulaRule(formula=["$L$22<$F$5"],
 # --- pie
 banda("C24:M24",
       "Especificaciones del broker al %s hora Chile. Celdas crema: campos editables; "
-      "el resto son fórmulas. VOLUMEN EN CLP y VOLUMEN EN LOTES son gemelas y se "
-      "sincronizan con la macro del archivo: el importe se homologa al equivalente "
-      "exacto del volumen, cuyo paso mínimo es 0,01 lotes. El COSTO DE MANTENCIÓN "
-      "(SWAP) se estima por días calendario. Este simulador no incorpora stop loss."
+      "el resto son fórmulas. VOLUMEN EN CLP y VOLUMEN EN LOTES son la misma "
+      "magnitud: se escribe el importe y el volumen se ajusta, truncado al paso de "
+      "0,01 lotes que exige MT5. El COSTO DE MANTENCIÓN (SWAP) se estima por días "
+      "calendario. Este simulador no incorpora stop loss."
       % SELLO, BLANCO, "808080", 9, 30, italica=True, izq=True)
 
 # --- listas y validaciones (formula1 sin "=": con el igual Excel descarta la validación)
@@ -421,10 +431,6 @@ validaciones = [
                     error="Indique los días completos de mantención de la posición "
                           "(0 si se abre y cierra en la misma jornada)."),
      ["H%d" % r for r in OPS]),
-    (DataValidation(type="decimal", operator="greaterThanOrEqual", formula1="0",
-                    allow_blank=True, showErrorMessage=True, errorTitle="Volumen no válido",
-                    error="El volumen en lotes no puede ser negativo. El paso mínimo "
-                          "es 0,01."), ["E%d" % r for r in OPS]),
 ]
 for dv, refs in validaciones:
     ws.add_data_validation(dv)

@@ -32,11 +32,12 @@ Todas las operaciones de la tabla corresponden al **mismo instrumento**. Para si
 
 **Tabla de operaciones** (hasta 6 registros). Campos a completar:
 
+La tabla se divide en dos bloques, como la planilla original: **SIMULACIÓN**, con la definición de la operación y su resultado bruto, y **COSTOS**, con lo que el broker descuenta y el resultado neto.
+
 | Campo | Contenido |
 |---|---|
-| FECHA | fecha de la operación. Documenta y ordena el periodo |
 | DIRECCIÓN | COMPRA o VENTA, desde la lista desplegable. **Una por fila** |
-| CAPITAL COMPROMETIDO | monto en pesos que se destina a esa operación. Determina el volumen |
+| VOLUMEN EN CLP | monto en pesos que se destina a esa operación |
 | PRECIO DE ENTRADA | precio de apertura, tomado del gráfico de MT5 |
 | PRECIO DE SALIDA | precio de cierre, efectivo o proyectado |
 | DÍAS DE MANTENCIÓN | días completos que la posición permanece abierta. **0 si se abre y cierra en la misma jornada** |
@@ -45,9 +46,10 @@ Todas las operaciones de la tabla corresponden al **mismo instrumento**. Para si
 
 | Columna | Qué informa |
 |---|---|
-| **VOLUMEN (LOTES)** | el volumen que se ingresa en MT5. Se deriva del capital comprometido y se redondea a la baja al paso de 0,01 que exige el terminal |
-| **COSTO DE APERTURA** | el spread, es decir la diferencia entre precio de compra y de venta que el broker cobra al abrir. Expresado en pesos |
-| **COSTO DE MANTENCIÓN** | el swap, el cargo que aplica el broker por mantener la posición abierta de un día para otro. En blanco si son 0 días |
+| **VOLUMEN EN LOTES** | gemela de VOLUMEN EN CLP: la misma magnitud en la unidad del terminal. Es el número que se ingresa en MT5. Se calcula del importe y se trunca a la baja al paso de 0,01 que exige MT5, así que un importe puede quedar levemente por sobre el volumen que financia |
+| **RESULTADO BRUTO** | resultado de la operación antes de costos. Cierra el bloque SIMULACIÓN |
+| **COSTO DE APERTURA (SPREAD)** | el spread, es decir la diferencia entre precio de compra y de venta que el broker cobra al abrir. Expresado en pesos |
+| **COSTO DE MANTENCIÓN (SWAP)** | el cargo que aplica el broker por mantener la posición abierta de un día para otro. En blanco si son 0 días |
 | **RESULTADO NETO** | resultado con ambos costos ya descontados. **Es la cifra que se comunica al cliente.** Se destaca en rojo si es negativa |
 | **OBSERVACIÓN** | advierte, en rojo, cuando el precio de salida es incompatible con la dirección declarada |
 
@@ -67,9 +69,9 @@ La franja bajo el bloque de contexto verifica, en este orden:
 | Mensaje | Condición |
 |---|---|
 | Seleccione un instrumento de la lista | falta el instrumento |
-| Hay una operación con capital comprometido y sin precio de entrada | registro incompleto |
+| Hay una operación con volumen y sin precio de entrada | registro incompleto |
 | Un precio de entrada difiere en más de 10% del precio de referencia | típicamente, se cambió de instrumento y quedó el precio del anterior |
-| Hay una operación bajo el volumen mínimo de 0,01 lotes | el capital asignado es insuficiente. El mínimo varía por instrumento: cerca de $9.200 en USD/CLP, cerca de $186.000 en Oro |
+| Hay una operación bajo el volumen mínimo de 0,01 lotes | el importe asignado es insuficiente. El mínimo varía por instrumento: cerca de $9.200 en USD/CLP, cerca de $186.000 en Oro |
 | El margen requerido excede el capital de la cuenta | sobreapalancamiento |
 | ✓ *n* operación(es) sobre *instrumento* | sin observaciones |
 
