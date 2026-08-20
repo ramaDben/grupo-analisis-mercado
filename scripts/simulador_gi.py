@@ -4,20 +4,23 @@ lista y registra las operaciones del periodo, sin tener que conocer el tamano de
 contrato ni el spread vigente.
 
 La tabla separa SIMULACION de COSTOS, como la planilla original de post-venta, y
-VOLUMEN EN LOTES / VOLUMEN EN CLP son columnas gemelas: la misma magnitud en dos
-unidades, adyacentes y siempre consistentes. Se escribe el VOLUMEN EN LOTES, que es
-la unidad en que el usuario de la planilla explica la operacion a sus clientes y la
-que se ingresa en el terminal, y el importe en pesos se calcula: es el margen que ese
-volumen ocupa al precio de entrada de la fila. De la columna de lotes leen todas las
-demas formulas.
+Se escribe el VOLUMEN EN LOTES, la unidad en que el usuario de la planilla explica la
+operacion a sus clientes y la que se ingresa en el terminal. De esa columna leen todas
+las demas formulas de la fila.
 
-La direccion importa y no es simetrica. Escribir indistintamente en cualquiera de las
-dos exigiria una macro: dos celdas no pueden ser a la vez editables y calculadas sin
-caer en referencia circular, y no hay forma de saber cual se edito de ultima sin
-capturar el evento de cambio. Como lo que se necesita es mover los lotes, invertir la
-direccion resuelve el requerimiento sin macro, y evita el .xlsm, que muchas politicas
-corporativas bloquean y varios filtros de correo eliminan del adjunto. La macro queda
-escrita en assets/gemelas.bas por si algun dia se necesita el sentido inverso.
+La columna vecina es el MARGEN REQUERIDO, el capital que ese volumen bloquea al precio
+de entrada de la fila. Antes se rotulaba "volumen en CLP", y era un nombre equivocado:
+el equivalente en pesos de un volumen es el NOCIONAL (lotes x precio x valor por
+lote), no el margen, que es el nocional multiplicado por la tasa que exige el broker.
+Confundirlos hacia leer $496.125 como el tamano de una posicion que en realidad mueve
+$49 millones. El nocional vive en el cierre, como exposicion.
+
+Por eso tampoco son "columnas gemelas": un volumen y su margen no son la misma
+magnitud en dos unidades. Escribir indistintamente en una o en otra exigiria una macro
+(dos celdas no pueden ser a la vez editables y calculadas sin caer en referencia
+circular, y no hay forma de saber cual se edito de ultima sin capturar el evento de
+cambio). Queda escrita en assets/gemelas.bas por si algun dia se necesita, pero el
+requerimiento real era mover los lotes, y para eso basta la direccion actual.
 
 Cada fila es una operacion independiente con su propia direccion, y los dias de
 mantencion alimentan el swap. Los 25 instrumentos del catalogo se leen del terminal
@@ -230,8 +233,8 @@ def banda(rango, texto, fondo, color, size, alto, italica=False, izq=False):
 # --- encabezado
 banda("C1:L1", "SIMULADOR DE OPERACIONES", NAVY, BLANCO, 18, 34)
 banda("C2:L2", "Seleccione el instrumento y registre las operaciones del periodo. "
-               "El volumen en lotes y el volumen en pesos son la misma magnitud: se "
-               "escribe el volumen en lotes y el importe en pesos se ajusta.",
+               "Se escribe el volumen en lotes, la unidad del terminal, y la planilla "
+               "calcula el margen que bloquea y los costos que descuenta.",
       BLANCO, TENUE, 10, 20, italica=True)
 if LOGO.exists():
     img = XLImage(str(LOGO))
@@ -314,8 +317,8 @@ ws["M9"].border = borde
 
 # --- encabezados de columna
 cabeceras = [("C", "DIRECCIÓN", ACENTO), ("D", "VOLUMEN EN LOTES", ACENTO),
-             ("E", "VOLUMEN EN CLP", ACENTO), ("F", "PRECIO DE ENTRADA", ACENTO),
-             ("G", "PRECIO DE SALIDA", ACENTO), ("H", "DÍAS DE MANTENCIÓN", ACENTO),
+             ("E", "MARGEN REQUERIDO", ACENTO), ("F", "PRECIO DE ENTRADA", ACENTO),
+             ("G", "PRECIO DE SALIDA", ACENTO), ("H", "DÍAS ABIERTA", ACENTO),
              ("I", "RESULTADO BRUTO", ACENTO),
              ("J", "COSTO DE APERTURA (SPREAD)", ORO),
              ("K", "COSTO DE MANTENCIÓN (SWAP)", ORO),
@@ -345,9 +348,10 @@ for i, r in enumerate(OPS):
                          ("F", PRECIO), ("G", PRECIO), ("H", ENTERO)):
             entrada("%s%d" % (col, r), None, fmt)
 
-    # el importe en pesos es la gemela calculada: es el margen que ocupa ese volumen
-    # al precio de entrada de la fila. El volumen en lotes es el que se escribe, y de
-    # el leen todas las demas formulas.
+    # el margen que ese volumen bloquea al precio de entrada de la fila. NO es el
+    # volumen expresado en pesos: el equivalente en pesos de 0,54 lotes es el nocional,
+    # que va en el cierre como exposicion. Rotularlo "volumen en CLP" confundia las dos
+    # magnitudes, que difieren por el factor de la tasa de margen.
     salida("E%d" % r, '=IF($D{r}=0,"",$D{r}*$F{r}*$P$4*$P$5)'.format(r=r), CLP)
     salida("I%d" % r, ('=IF(OR($D{r}=0,$G{r}=0),"",IF($C{r}="COMPRA",$G{r}-$F{r},'
                        '$F{r}-$G{r})*$D{r}*$P$4)').format(r=r), CLP)
@@ -416,10 +420,10 @@ ws.conditional_formatting.add("L22", FormulaRule(formula=["$L$22<$F$5"],
 # --- pie
 banda("C24:M24",
       "Especificaciones del broker al %s hora Chile. Celdas crema: campos editables; "
-      "el resto son fórmulas. VOLUMEN EN LOTES y VOLUMEN EN CLP son la misma "
-      "magnitud: se escribe el volumen en lotes, en múltiplos de 0,01, y el importe "
-      "en pesos se ajusta. El COSTO DE MANTENCIÓN (SWAP) se estima por días "
-      "calendario. Este simulador no incorpora stop loss."
+      "el resto son fórmulas. El volumen en lotes se escribe en múltiplos de 0,01, el "
+      "paso que acepta MT5, y el MARGEN REQUERIDO se ajusta con él. El COSTO DE "
+      "MANTENCIÓN (SWAP) se estima por días calendario. Este simulador no incorpora "
+      "stop loss."
       % SELLO, BLANCO, "808080", 9, 30, italica=True, izq=True)
 
 # --- listas y validaciones (formula1 sin "=": con el igual Excel descarta la validación)
@@ -442,7 +446,7 @@ validaciones = [
      ["%s%d" % (c, r) for r in OPS for c in "FG"]),
     (DataValidation(type="whole", operator="between", formula1="0", formula2="3650",
                     allow_blank=True, showErrorMessage=True, errorTitle="Días no válidos",
-                    error="Indique los días completos de mantención de la posición "
+                    error="Indique los días completos que la posición queda abierta "
                           "(0 si se abre y cierra en la misma jornada)."),
      ["H%d" % r for r in OPS]),
     (DataValidation(type="decimal", operator="greaterThan", formula1="0",

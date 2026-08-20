@@ -40,7 +40,7 @@ La tabla se divide en dos bloques, como la planilla original: **SIMULACIÓN**, c
 | VOLUMEN EN LOTES | volumen de la operación, en múltiplos de 0,01, que es el paso mínimo de MT5 |
 | PRECIO DE ENTRADA | precio de apertura, tomado del gráfico de MT5 |
 | PRECIO DE SALIDA | precio de cierre, efectivo o proyectado |
-| DÍAS DE MANTENCIÓN | días completos que la posición permanece abierta. **0 si se abre y cierra en la misma jornada** |
+| DÍAS ABIERTA | días completos que la posición permanece abierta. **0 si se abre y cierra en la misma jornada** |
 
 ### Separador decimal
 
@@ -54,7 +54,7 @@ Si se escribe `0.54`, Excel **no** lo interpreta como número: lo guarda como te
 
 | Columna | Qué informa |
 |---|---|
-| **VOLUMEN EN CLP** | gemela de VOLUMEN EN LOTES: la misma magnitud en pesos. Es el margen que ese volumen compromete al precio de entrada de la fila. Al mover el volumen, este importe se ajusta |
+| **MARGEN REQUERIDO** | el capital que ese volumen bloquea al precio de entrada de la fila. Al mover el volumen, se ajusta con él. **No es el volumen expresado en pesos**: el equivalente en pesos de un volumen es el nocional, que es este margen dividido por la tasa que exige el broker, y aparece en el cierre como exposición |
 | **RESULTADO BRUTO** | resultado de la operación antes de costos. Cierra el bloque SIMULACIÓN |
 | **COSTO DE APERTURA (SPREAD)** | el spread, es decir la diferencia entre precio de compra y de venta que el broker cobra al abrir. Expresado en pesos |
 | **COSTO DE MANTENCIÓN (SWAP)** | el cargo que aplica el broker por mantener la posición abierta de un día para otro. En blanco si son 0 días |
