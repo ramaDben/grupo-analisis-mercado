@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Instrucciones de uso · Simulador de operaciones GI</title>
+<style>
+/*FUENTES*/
+
+/* Paleta adaptada al soporte claro: el verde y el rojo de marca están pensados
+   para fondo oscuro y sobre blanco no alcanzan el contraste mínimo para texto.
+   Se usan versiones oscurecidas para tipografía y los vivos solo en filetes. */
+:root {
+  --tinta: #14141F;
+  --tinta-media: #3A3A48;
+  --tinta-suave: #5A5A68;
+  --linea: #E2E3E8;
+  --papel: #FFFFFF;
+  --tarjeta: #F6F7F9;
+  --acento: #00695C;
+  --acento-vivo: #50C0A8;
+  --navy: #203864;
+  --oro: #8A5A00;
+  --rojo: #B3261E;
+  --ambar-fondo: #FFF8E6;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--tinta);
+  background: var(--papel);
+  font-size: 11pt;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* La escala está calibrada al alto útil de una A4 (1123 px a 96 dpi). Si se agrega
+   contenido hay que volver a MEDIR, no estimar: cuando una hoja se pasa, Chromium
+   la parte en dos y el PDF duplica sus páginas. */
+.hoja {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 12mm 14mm 10mm;
+  margin: 0 auto;
+  background: var(--papel);
+  page-break-after: always;
+  position: relative;
+}
+.hoja:last-child { page-break-after: auto; }
+
+/* --- Cabecera --- */
+.cabecera { display: flex; align-items: flex-start; gap: 5mm; margin: 0 0 5mm; }
+.cabecera img { width: 17mm; height: auto; flex: 0 0 auto; }
+.kicker {
+  font-size: 8pt; font-weight: 700; letter-spacing: 1.2px;
+  text-transform: uppercase; color: var(--acento); margin: 0 0 1.2mm;
+}
+h1 {
+  font-family: "DM Sans", sans-serif;
+  font-weight: 700; font-size: 25pt; line-height: 1.02;
+  margin: 0 0 2mm; letter-spacing: -0.5px;
+}
+.bajada { color: var(--tinta-media); margin: 0; font-size: 10.5pt; max-width: 155mm; }
+
+h2 {
+  font-family: "DM Sans", sans-serif;
+  font-weight: 700; font-size: 13pt;
+  margin: 6mm 0 2.4mm; padding-bottom: 1.4mm;
+  border-bottom: 1.5px solid var(--tinta);
+  display: flex; align-items: baseline; gap: 2.5mm;
+}
+h2:first-of-type { margin-top: 0; }
+h2 .n {
+  font-family: "Space Grotesk", monospace;
+  font-weight: 600; font-size: 9pt; color: var(--acento);
+  font-variant-numeric: tabular-nums;
+}
+h3 {
+  font-size: 10.5pt; font-weight: 700; margin: 4mm 0 1.4mm; color: var(--tinta);
+}
+p { margin: 0 0 2.4mm; }
+p:last-child { margin-bottom: 0; }
+
+/* --- Tablas de campos --- */
+table { width: 100%; border-collapse: collapse; margin: 0 0 3mm; }
+th {
+  text-align: left; font-size: 7.8pt; font-weight: 700; letter-spacing: 0.8px;
+  text-transform: uppercase; color: var(--papel); background: var(--navy);
+  padding: 1.8mm 2.5mm;
+}
+th.costos { background: var(--oro); }
+td {
+  padding: 1.9mm 2.5mm; border-bottom: 1px solid var(--linea);
+  vertical-align: top; font-size: 10pt;
+}
+td.campo {
+  font-weight: 700; white-space: nowrap; width: 52mm;
+  font-family: "Space Grotesk", monospace; font-size: 9pt;
+}
+tr:last-child td { border-bottom: none; }
+tbody tr:nth-child(even) { background: var(--tarjeta); }
+
+/* --- Avisos --- */
+.aviso {
+  border-left: 3px solid var(--acento-vivo);
+  background: var(--tarjeta);
+  padding: 3mm 4mm; margin: 0 0 3mm; font-size: 10pt;
+}
+.aviso.ojo { border-left-color: var(--ambar-vivo, #F5A524); background: var(--ambar-fondo); }
+.aviso.alto { border-left-color: var(--rojo); background: #FDF2F1; }
+.aviso strong { font-weight: 700; }
+
+.cifra { font-family: "Space Grotesk", monospace; font-variant-numeric: tabular-nums; }
+.mal { color: var(--rojo); font-weight: 700; }
+.bien { color: var(--acento); font-weight: 700; }
+
+.pie {
+  position: absolute; bottom: 7mm; left: 14mm; right: 14mm;
+  border-top: 1px solid var(--linea); padding-top: 2mm;
+  font-size: 7.8pt; color: var(--tinta-suave);
+  display: flex; justify-content: space-between;
+}
+
+/* --- Impresión --- */
+@page { size: A4; margin: 0; }
+@media print {
+  /* Sin override de font-size: la escala del cuerpo está calibrada para que cada
+     hoja quepa en una A4, y cambiarla acá la descuadraría justo en el PDF. */
+  .hoja { margin: 0; box-shadow: none; }
+}
+@media screen {
+  body { background: #EDEEF2; padding: 6mm 0; }
+  .hoja { box-shadow: 0 2px 14px rgba(0,0,0,.09); margin-bottom: 6mm; border-radius: 1mm; }
+}
+/* --- Celular: se rompe la hoja A4 y todo pasa a una columna --- */
+@media (max-width: 820px) {
+  .hoja { width: auto; min-height: 0; padding: 6mm 5mm 4mm; }
+  .pie { position: static; margin-top: 5mm; left: auto; right: auto; bottom: auto;
+         flex-direction: column; gap: 1mm; }
+  td.campo { width: auto; white-space: normal; }
+}
+</style>
+</head>
+<body>
+
+<!-- ================================ HOJA 1 ================================ -->
+<section class="hoja">
+  <div class="cabecera">
+    {{LOGO}}
+    <div>
+      <p class="kicker">Simulador de operaciones · GI</p>
+      <h1>Instrucciones de uso</h1>
+      <p class="bajada">Sirve para simular un periodo de operaciones sobre cualquiera
+      de los 25 instrumentos del catálogo y mostrarle al cliente el resultado real:
+      lo que gana, lo que le cuesta y cuánto riesgo asume.</p>
+    </div>
+  </div>
+
+  <h2><span class="n">01</span> Antes de partir</h2>
+  <p>Se opera en <strong>volumen de lotes</strong>, que es la unidad del terminal y la
+  misma que se ingresa en MT5. La planilla traduce ese volumen a pesos.</p>
+  <p>Solo se escriben las <strong>celdas crema</strong>. El resto son fórmulas y la hoja
+  está protegida, para que ninguna se sobrescriba por accidente.</p>
+  <p>Todas las operaciones de la tabla corresponden al <strong>mismo instrumento</strong>.
+  Para simular otro, se cambia el instrumento arriba y se actualizan los precios.</p>
+
+  <div class="aviso ojo">
+    <strong>El separador decimal es la coma.</strong> Se escribe
+    <span class="cifra bien">0,54</span> y <span class="cifra bien">918,75</span>.
+    Si se escribe <span class="cifra mal">0.54</span>, Excel no lo toma como número:
+    lo guarda como texto y la fila entera queda en <span class="cifra mal">#¡VALOR!</span>.
+    Las celdas rechazan el valor inválido al escribirlo, pero no al pegarlo, así que la
+    franja superior avisa igual.
+  </div>
+
+  <h2><span class="n">02</span> Los dos datos del periodo</h2>
+  <table>
+    <thead><tr><th>Campo</th><th>Qué se escribe</th></tr></thead>
+    <tbody>
+      <tr><td class="campo">Instrumento</td>
+          <td>Se elige de la lista desplegable. Están los 25 instrumentos del catálogo:
+          divisas, metales, petróleo, índices y las 13 acciones.</td></tr>
+      <tr><td class="campo">Capital de la cuenta</td>
+          <td>El capital total del cliente, en pesos. De este número dependen el
+          apalancamiento y el nivel de margen.</td></tr>
+    </tbody>
+  </table>
+
+  <h2><span class="n">03</span> Cada operación, fila por fila</h2>
+  <p>Hasta seis operaciones, y <strong>cada una es independiente</strong>: tiene su propia
+  dirección y su propio volumen. Se pueden combinar compras y ventas en el mismo periodo.</p>
+  <table>
+    <thead><tr><th>Campo</th><th>Qué se escribe</th></tr></thead>
+    <tbody>
+      <tr><td class="campo">Dirección</td>
+          <td>COMPRA o VENTA, desde la lista desplegable.</td></tr>
+      <tr><td class="campo">Volumen en lotes</td>
+          <td>En múltiplos de <span class="cifra">0,01</span>, que es el paso mínimo que
+          acepta MT5. La referencia de arriba a la derecha indica cuánto capital exige el
+          volumen más chico en el instrumento elegido.</td></tr>
+      <tr><td class="campo">Precio de entrada</td>
+          <td>El precio de apertura, tomado del gráfico de MT5.</td></tr>
+      <tr><td class="campo">Precio de salida</td>
+          <td>El precio de cierre, ya ocurrido o proyectado.</td></tr>
+      <tr><td class="campo">Días abierta</td>
+          <td>Días completos que la posición permanece abierta.
+          <strong>Cero si se abre y se cierra en la misma jornada.</strong></td></tr>
+    </tbody>
+  </table>
+
+  <div class="pie"><span>Simulador de operaciones · GI</span><span>1 de 3</span></div>
+</section>
+
+<!-- ================================ HOJA 2 ================================ -->
+<section class="hoja">
+  <h2><span class="n">04</span> Lo que responde por cada operación</h2>
+  <p><strong>SIMULACIÓN</strong> describe la operación y su resultado antes de costos.
+  <strong>COSTOS</strong> muestra lo que descuenta el broker y lo que queda.</p>
+  <table>
+    <thead><tr><th>Columna</th><th>Qué informa</th></tr></thead>
+    <tbody>
+      <tr><td class="campo">Margen requerido</td>
+          <td>El capital que ese volumen bloquea. No es un gasto: se libera al
+          cerrar.</td></tr>
+      <tr><td class="campo">Apalancamiento (veces)</td>
+          <td>Cuántas veces el capital de la cuenta queda controlado por esa operación.
+          La columna se suma, así que su total es el apalancamiento del periodo.</td></tr>
+      <tr><td class="campo">Resultado bruto</td>
+          <td>El resultado de la operación antes de costos.</td></tr>
+      <tr><td class="campo">Costo de apertura (spread)</td>
+          <td>El spread, o diferencia entre el precio de compra y el de venta, que el
+          broker cobra al abrir. Ya convertido a pesos.</td></tr>
+      <tr><td class="campo">Costo de mantención (swap)</td>
+          <td>El cargo por dejar la posición abierta de un día para otro. Queda en blanco
+          si son cero días.</td></tr>
+      <tr><td class="campo">Resultado neto</td>
+          <td><strong>Es la cifra que se le comunica al cliente</strong>, con los dos
+          costos ya descontados. Se destaca en rojo si es negativa.</td></tr>
+      <tr><td class="campo">Observación</td>
+          <td>Advierte en rojo cuando el precio de salida es incompatible con la dirección
+          declarada, por ejemplo una compra que cierra más abajo de donde entró.</td></tr>
+    </tbody>
+  </table>
+
+  <h2><span class="n">05</span> El cierre del periodo</h2>
+  <table>
+    <thead><tr><th>Indicador</th><th>Qué informa</th></tr></thead>
+    <tbody>
+      <tr><td class="campo">Monto total controlado</td>
+          <td>El valor total de las posiciones. Es la cifra que dimensiona el
+          apalancamiento frente al cliente: bloquea un millón y controla cien.</td></tr>
+      <tr><td class="campo">Apalancamiento total</td>
+          <td>Las veces que el capital queda controlado en total.</td></tr>
+      <tr><td class="campo">Margen requerido</td>
+          <td>Lo que quedaría bloqueado si todas las operaciones estuvieran abiertas al
+          mismo tiempo.</td></tr>
+      <tr><td class="campo">Nivel de margen al abrir</td>
+          <td>El mismo indicador que reporta MT5: patrimonio sobre margen usado.
+          <strong>El broker llama a margen cuando baja de {{LLAMADA}}% y cierra
+          posiciones en {{CIERRE}}%.</strong> Se destaca en rojo si la operación ya parte
+          bajo la llamada.</td></tr>
+      <tr><td class="campo">Recorrido adverso<br>hasta la llamada</td>
+          <td>Cuánto puede moverse el precio en contra antes de que el broker llame a
+          margen, en la unidad del instrumento. Se calcula sobre la posición neta, porque
+          el precio se mueve en una sola dirección y una compra y una venta no pueden
+          perder a la vez. Queda en blanco si la cartera está perfectamente cubierta.</td></tr>
+      <tr><td class="campo">Resultado neto<br>y patrimonio final</td>
+          <td>La suma de los resultados netos, y el capital de la cuenta más ese
+          resultado.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="aviso alto">
+    <strong>Estos dos indicadores son los que obligan a hablar de riesgo.</strong> Un
+    apalancamiento alto deja un recorrido corto, y el cliente tiene que saberlo antes de
+    operar.
+  </div>
+
+  <div class="pie"><span>Simulador de operaciones · GI</span><span>2 de 3</span></div>
+</section>
+
+<!-- ================================ HOJA 3 ================================ -->
+<section class="hoja">
+  <h2><span class="n">06</span> Los avisos de la franja superior</h2>
+  <p>Revisa la planilla en este orden y se detiene en el primer problema.</p>
+  <table>
+    <thead><tr><th>Aviso</th><th>Qué ocurrió</th></tr></thead>
+    <tbody>
+      <tr><td class="campo">Seleccione un instrumento</td>
+          <td>Falta elegirlo de la lista.</td></tr>
+      <tr><td class="campo">Hay un valor escrito<br>como texto</td>
+          <td>Un decimal con punto en lugar de coma. Sin corregirlo, la fila queda
+          inservible.</td></tr>
+      <tr><td class="campo">Volumen sin precio<br>de entrada</td>
+          <td>La operación está a medio llenar.</td></tr>
+      <tr><td class="campo">Un precio difiere en<br>más de 10%</td>
+          <td>Al cambiar de instrumento quedó el precio del anterior. Es el error más
+          fácil de cometer.</td></tr>
+      <tr><td class="campo">Volumen que no es<br>múltiplo de 0,01</td>
+          <td>MT5 solo acepta ese paso.</td></tr>
+      <tr><td class="campo">El margen excede<br>el capital</td>
+          <td>No se podría abrir en el terminal.</td></tr>
+    </tbody>
+  </table>
+
+  <h2><span class="n">07</span> Tres cuidados antes de usarla con un cliente</h2>
+
+  <h3>El spread queda fijado al generar el archivo</h3>
+  <p>Se muestra arriba a la derecha, a propósito, para que no opere como un supuesto
+  oculto. Varía harto en la jornada: el de USD/CLP pasó de <span class="cifra">0,40</span>
+  a <span class="cifra">1,00</span> en una misma tarde, y el costo de abrir la misma
+  posición subió de <span class="cifra">$21.600</span> a <span class="cifra">$54.000</span>.
+  Si el archivo se generó con el spread ampliado, conviene regenerarlo.</p>
+
+  <h3>El costo de mantención es una estimación</h3>
+  <p>Se calcula por días calendario y queda dentro de <span class="cifra">0,3%</span> del
+  cargo real, contrastado contra el historial del terminal. Su magnitud no es menor: una
+  acción comprada con <span class="cifra">$300.000</span> y mantenida veinte días acumula
+  más de la mitad de ese capital en costo de mantención.</p>
+
+  <h3>No incorpora stop loss</h3>
+  <p>Cuantifica el escenario declarado, no la pérdida máxima si el precio va en contra.
+  Ese límite se comunica por separado. Para dimensionarlo, registre la operación con el
+  precio de salida en contra.</p>
+
+  <h2><span class="n">08</span> Actualizar los datos del broker</h2>
+  <p>Las especificaciones de cada instrumento (contrato, margen, spread y swap) viven en la
+  hoja <strong>Datos</strong> y salen del terminal MT5. Son variables, así que conviene
+  refrescarlas antes de una reunión importante. Esa hoja no se edita a mano. Y regenerar el
+  archivo <strong>reemplaza las operaciones cargadas</strong>: una simulación que se quiera
+  conservar hay que guardarla antes con otro nombre.</p>
+
+  <div class="aviso">
+    <strong>Verificación recomendada.</strong> Con un cliente nuevo, cuadre un caso
+    contra el terminal: ingrese ese volumen en MT5 y compare el margen que reporta con el
+    de la hoja. Si no coinciden, la diferencia está en los datos del broker.
+  </div>
+
+  <div class="pie"><span>Generado el {{FECHA}} · datos del broker de esa fecha</span><span>3 de 3</span></div>
+</section>
+
+</body>
+</html>

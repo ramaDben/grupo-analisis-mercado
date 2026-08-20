@@ -110,7 +110,10 @@ compensó, la estimación puede quedar algo por sobre el cargo real, sesgo que
 preferimos al contrario.
 
 
-Adjunto también una guía de uso con el detalle campo por campo. Cualquier duda o
-ajuste, dime y lo vemos.
+Adjunto también las Instrucciones de uso en PDF, con el detalle campo por campo, los
+avisos que puede mostrar la planilla y los tres cuidados antes de usarla con un
+cliente. Va también la versión en HTML, que se abre en el teléfono sin hacer zoom.
+
+Cualquier duda o ajuste, dime y lo vemos.
 
 Saludos,
