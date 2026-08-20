@@ -67,7 +67,9 @@ Si se escribe `0.54`, Excel **no** lo interpreta como número: lo guarda como te
 | Indicador | Qué informa |
 |---|---|
 | **Monto total controlado** | valor total de las posiciones. Es la cifra que dimensiona el apalancamiento ante el cliente: bloquea $1,2 millones y controla $119 millones |
-| **Apalancamiento total** | las veces que el capital de la cuenta queda controlado en total. Con 59,5 veces, un movimiento adverso de 1,7% sobre las posiciones consume todo el capital. **Es la cifra que obliga a hablar del riesgo**, y la planilla no incorpora stop loss, así que ese límite se conversa por separado |
+| **Apalancamiento total** | las veces que el capital de la cuenta queda controlado en total. **Es la cifra que obliga a hablar del riesgo** |
+| **Nivel de margen al abrir** | patrimonio sobre margen usado, el mismo indicador que reporta MT5. Al abrir, el patrimonio es el capital, porque todavía no hay resultado flotante. **El broker llama a margen cuando este nivel baja de 90% y cierra posiciones en 50%**, y se destaca en rojo si ya parte bajo la llamada |
+| **Movimiento adverso hasta la llamada a margen** | cuánto pueden moverse los precios en contra antes de que el broker llame a margen. Responde con la mecánica del margen la pregunta que provoca el apalancamiento, sin necesidad de stop loss. En el ejemplo cargado son **0,78%**: con 59,5 veces de apalancamiento, menos de un punto porcentual en contra activa la llamada |
 | **Margen requerido (posiciones simultáneas)** | capital que quedaría bloqueado si todas las operaciones estuvieran abiertas al mismo tiempo. Se calcula sobre el volumen ya redondeado, de modo que no coincide exactamente con la suma del capital comprometido |
 | **Resultado neto del periodo** | suma de los resultados netos |
 | **Patrimonio final** | capital de la cuenta más el resultado neto |

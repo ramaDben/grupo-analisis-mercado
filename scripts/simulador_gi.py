@@ -134,14 +134,19 @@ for ticker, nombre in catalogo:
         "swap_modo": s.swap_mode, "swap_largo": s.swap_long, "swap_corto": s.swap_short,
     })
 
+# umbrales de margen de la cuenta, en porcentaje (margin_so_mode = 0)
+LLAMADA, CIERRE_FORZADO = cuenta.margin_so_call, cuenta.margin_so_so
+
 mt5.shutdown()
 print("instrumentos con datos: %d de %d" % (len(filas), len(catalogo)))
+print("umbrales del broker: llamada %s%% · cierre forzado %s%%" % (LLAMADA, CIERRE_FORZADO))
 
 # ------------------------------------------------------------------ estilos
 NAVY, ACENTO, ORO, CREMA = "203864", "50C0A8", "BF8F00", "FFF2CC"
 BLANCO, GRIS, ROJO, TENUE = "FFFFFF", "F2F2F2", "C00000", "595959"
 borde = Border(*[Side(style="thin", color="BFBFBF")] * 4)
 CLP, PRECIO, LOTES, ENTERO, VECES = '"$"#,##0', "#,##0.00###", "0.00", "0", "0.0"
+NIVEL, ADVERSO = '0"%"', '0.00"%"'
 VECES_CIERRE = '0.0" veces"'
 
 OPS = list(range(11, 17))     # seis operaciones, como la planilla original
@@ -261,6 +266,8 @@ for r, idx, etiqueta in [(1, 2, "ticker"), (2, 3, "digits"), (3, 4, "contrato"),
                          (9, 10, "swap_compra"), (10, 11, "swap_venta")]:
     ws["Q%d" % r] = etiqueta
     ws["R%d" % r] = BUSCA % idx
+ws["Q11"], ws["R11"] = "llamada_margen", LLAMADA
+ws["Q12"], ws["R12"] = "cierre_forzado", CIERRE_FORZADO
 for col in "QR":
     ws.column_dimensions[col].hidden = True
 
@@ -394,16 +401,23 @@ cierre = [
     # el apalancamiento del periodo es la suma de la columna, por ser aditivo
     (20, "Apalancamiento total", "=$F$17", VECES_CIERRE),
     (21, "Margen requerido (posiciones simultáneas)", "=$M$19*$R$5", CLP),
-    (22, "Resultado neto del periodo", "=$M$17", CLP),
-    (23, "Patrimonio final", "=$F$5+$M$17", CLP),
+    # nivel de margen tal como lo reporta MT5: patrimonio sobre margen usado. Al abrir,
+    # el patrimonio es el capital, porque todavia no hay resultado flotante.
+    (22, "Nivel de margen al abrir", '=IF($M$21=0,"",100*$F$5/$M$21)', NIVEL),
+    # lo que la columna de apalancamiento provoca preguntar, respondido con la mecanica
+    # del margen y sin necesidad de stop loss
+    (23, "Movimiento adverso hasta la llamada a margen",
+     '=IF($M$19=0,"",100*($F$5-$R$11/100*$M$21)/$M$19)', ADVERSO),
+    (24, "Resultado neto del periodo", "=$M$17", CLP),
+    (25, "Patrimonio final", "=$F$5+$M$17", CLP),
 ]
 for r, etiqueta, formula, fmt in cierre:
     ws.merge_cells("J%d:L%d" % (r, r))
     ws["J%d" % r].value = etiqueta
-    ws["J%d" % r].font = Font(bold=(r == 23), size=11)
+    ws["J%d" % r].font = Font(bold=(r == 25), size=11)
     ws["J%d" % r].alignment = Alignment(horizontal="right", vertical="center")
-    c = salida("M%d" % r, formula, fmt, size=13 if r == 23 else 11)
-    if r == 23:
+    c = salida("M%d" % r, formula, fmt, size=13 if r == 25 else 11)
+    if r == 25:
         c.fill = PatternFill("solid", fgColor=CREMA)
     ws.row_dimensions[r].height = 22
 
@@ -413,17 +427,23 @@ ws.conditional_formatting.add("J11:M%d" % TOT,
                                           font=Font(bold=True, color=ROJO)))
 ws.conditional_formatting.add("N11:N16",
                               FormulaRule(formula=['$N11<>""'], font=Font(bold=True, color=ROJO)))
-ws.conditional_formatting.add("M23", FormulaRule(formula=["$M$23<$F$5"],
+ws.conditional_formatting.add("M25", FormulaRule(formula=["$M$25<$F$5"],
+                                                 font=Font(bold=True, color=ROJO)))
+ws.conditional_formatting.add("M22", FormulaRule(formula=["$M$22<$R$11"],
+                                                 font=Font(bold=True, color=ROJO)))
+ws.conditional_formatting.add("M23", FormulaRule(formula=["$M$23<=0"],
                                                  font=Font(bold=True, color=ROJO)))
 
 # --- pie
-banda("C25:N25",
+banda("C27:N27",
       "Especificaciones del broker al %s hora Chile. Celdas crema: campos editables; "
       "el resto son fórmulas. El volumen en lotes se escribe en múltiplos de 0,01, el "
       "paso que acepta MT5. APALANCAMIENTO son las veces que el capital de la cuenta "
       "queda controlado por esa operación, y la columna es aditiva: su total es el "
       "apalancamiento del periodo. El COSTO DE MANTENCIÓN (SWAP) se estima por días "
-      "calendario. Este simulador no incorpora stop loss." % SELLO,
+      "calendario. El broker llama a margen cuando el nivel baja de %g%% y cierra "
+      "posiciones en %g%%. Este simulador no incorpora stop loss."
+      % (SELLO, LLAMADA, CIERRE_FORZADO),
       BLANCO, "808080", 9, 30, italica=True, izq=True)
 
 # --- listas y validaciones (formula1 sin "=": con el igual Excel descarta la validación)
@@ -463,7 +483,7 @@ for dv, refs in validaciones:
 # --- proteger todo menos las celdas crema
 ws.protection.sheet = True
 ws.protection.formatCells = False
-ws.print_area = "B1:O26"
+ws.print_area = "B1:O28"
 ws.page_setup.orientation = "landscape"
 ws.page_setup.fitToPage = True
 ws.sheet_properties.pageSetUpPr.fitToPage = True

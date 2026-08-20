@@ -68,6 +68,9 @@ QUÉ INCLUYE
 - Volumen, costo de apertura, costo de mantención y resultado neto por operación.
 - Apalancamiento por operación, en veces que el capital queda controlado, y el
   apalancamiento total del periodo.
+- Nivel de margen al abrir, el mismo indicador que muestra MT5, contra los umbrales
+  reales del broker: llamada a margen en 90% y cierre forzado en 50%.
+- Cuánto pueden moverse los precios en contra antes de la llamada a margen.
 - Cierre del periodo con monto total controlado, margen requerido, resultado neto y
   patrimonio final.
 - Validaciones automáticas que avisan si el margen excede el capital de la cuenta,
