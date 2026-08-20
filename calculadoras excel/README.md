@@ -42,6 +42,14 @@ La tabla se divide en dos bloques, como la planilla original: **SIMULACIÓN**, c
 | PRECIO DE SALIDA | precio de cierre, efectivo o proyectado |
 | DÍAS DE MANTENCIÓN | días completos que la posición permanece abierta. **0 si se abre y cierra en la misma jornada** |
 
+### Separador decimal
+
+En un Excel en español el separador decimal es la **coma**, y el punto es el separador de miles. Se escribe `0,54` y `918,75`.
+
+Si se escribe `0.54`, Excel **no** lo interpreta como número: lo guarda como texto, y la fila completa cae en `#¡VALOR!`. Las celdas de volumen, precios y capital rechazan la entrada inválida al momento de escribirla, pero **la validación no se dispara al pegar**, así que la franja superior avisa igual: *"Hay un valor escrito como texto. El separador decimal de este Excel es la coma: escriba 0,54 y no 0.54."*
+
+**No existe ninguna norma que obligue a reemplazar comas por puntos.** Aplicarlo rompería la planilla. La confusión viene de dos hechos distintos: los datos que llegan de fuentes en inglés sí usan el punto como decimal y hay que convertirlos al importarlos, y dentro del archivo `.xlsx` los números y las fórmulas se almacenan siempre con punto decimal, aunque Excel los muestre con coma. Ninguno de los dos pide cambiar nada acá.
+
 ### Resultados por operación
 
 | Columna | Qué informa |

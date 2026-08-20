@@ -281,6 +281,13 @@ for r, etiqueta, formula, fmt in [
 ws.merge_cells("C7:M7")
 ws["C7"].value = (
     '=IF($F$4="","⚠ Seleccione un instrumento de la lista.",'
+    # el separador decimal de un Excel en español es la coma: un valor digitado con
+    # punto queda como TEXTO y toda la fila cae en #¡VALOR!. La validación de celda lo
+    # rechaza al escribirlo, pero no se dispara al pegar, así que hace falta el control
+    'IF(SUMPRODUCT(--ISTEXT($D$11:$D$16))+SUMPRODUCT(--ISTEXT($F$11:$G$16))'
+    '+SUMPRODUCT(--ISTEXT($H$11:$H$16))>0,'
+    '"⚠ Hay un valor escrito como texto. El separador decimal de este Excel es la '
+    'coma: escriba 0,54 y no 0.54.",'
     'IF(SUMPRODUCT(($D$11:$D$16>0)*($F$11:$F$16=0))>0,'
     '"⚠ Hay una operación con volumen y sin precio de entrada.",'
     'IF(SUMPRODUCT(($F$11:$F$16>0)*(ABS($F$11:$F$16/$P$7-1)>0.1))>0,'
@@ -290,7 +297,7 @@ ws["C7"].value = (
     '"⚠ Hay un volumen que no es múltiplo de 0,01 lotes, el paso mínimo de MT5.",'
     'IF($L$20>$F$5,"⚠ El margen requerido excede el capital de la cuenta.",'
     '"✓ "&COUNTIF($D$11:$D$16,">0")&" operación(es) sobre "&$P$1'
-    '&". El volumen en lotes es el que se ingresa en MT5.")))))'
+    '&". El volumen en lotes es el que se ingresa en MT5."))))))'
 )
 for cc in "CDEFGHIJKLM":
     ws["%s7" % cc].fill = PatternFill("solid", fgColor=CREMA)
@@ -425,13 +432,24 @@ validaciones = [
                     error="Seleccione COMPRA o VENTA."), ["C%d" % r for r in OPS]),
     (DataValidation(type="decimal", operator="greaterThanOrEqual", formula1="0.01",
                     allow_blank=True, showErrorMessage=True, errorTitle="Volumen no válido",
-                    error="El volumen mínimo que acepta MT5 es 0,01 lotes, y debe ser "
-                          "múltiplo de 0,01."), ["D%d" % r for r in OPS]),
+                    error="El volumen mínimo que acepta MT5 es 0,01 lotes, en múltiplos "
+                          "de 0,01. Use la coma como separador decimal: 0,54 y no 0.54."),
+     ["D%d" % r for r in OPS]),
+    (DataValidation(type="decimal", operator="greaterThan", formula1="0",
+                    allow_blank=True, showErrorMessage=True, errorTitle="Precio no válido",
+                    error="Escriba un precio numérico, con la coma como separador "
+                          "decimal: 918,75 y no 918.75."),
+     ["%s%d" % (c, r) for r in OPS for c in "FG"]),
     (DataValidation(type="whole", operator="between", formula1="0", formula2="3650",
                     allow_blank=True, showErrorMessage=True, errorTitle="Días no válidos",
                     error="Indique los días completos de mantención de la posición "
                           "(0 si se abre y cierra en la misma jornada)."),
      ["H%d" % r for r in OPS]),
+    (DataValidation(type="decimal", operator="greaterThan", formula1="0",
+                    allow_blank=False, showErrorMessage=True,
+                    errorTitle="Capital no válido",
+                    error="Escriba el capital de la cuenta en pesos, sin separador "
+                          "decimal."), ["F5"]),
 ]
 for dv, refs in validaciones:
     ws.add_data_validation(dv)
