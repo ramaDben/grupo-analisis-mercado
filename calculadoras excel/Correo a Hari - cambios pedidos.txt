@@ -1,0 +1,61 @@
+ASUNTO: Simulador de operaciones · los cambios que pediste
+
+
+Hola Hari,
+
+Van aplicados los cambios de tu revisión. Adjunto la planilla nueva y las
+Instrucciones de uso en PDF.
+
+
+LO QUE PEDISTE
+
+- Saqué la columna de fecha.
+
+- El volumen ahora se escribe en lotes, como me dijiste que lo explicas a tus
+  clientes. Escribes 0,54 y al lado aparece el margen en pesos que esa operación
+  bloquea: $496.125.
+
+- Volvió la separación en dos bloques, SIMULACIÓN y COSTOS, como en la planilla
+  original.
+
+- Los costos quedaron con el nombre del terminal: costo de apertura (spread) y
+  costo de mantención (swap).
+
+
+LO QUE AGREGAMOS
+
+- Apalancamiento por operación, en veces que el capital de la cuenta queda
+  controlado, y el total del periodo.
+
+- Nivel de margen en porcentaje, el mismo que muestra MT5, para controlar la
+  llamada a margen. Con el ejemplo cargado queda en 168%, y el broker llama
+  cuando baja de 90%.
+
+- Al lado, cuánto puede moverse el precio en contra antes de esa llamada. Es el
+  número más útil que tiene la planilla para conversar el riesgo con un cliente.
+
+
+LO DE LAS COMAS
+
+Tenías razón en que el separador decimal daba problemas. Acá el decimal es la
+coma, así que escribir 0.54 con punto es justamente lo que rompe la fila: Excel
+no lo toma como número, lo guarda como texto y el cálculo se cae.
+
+Ahora las celdas de volumen, precios y capital rechazan ese valor al escribirlo,
+y si se pega, un aviso arriba lo dice con esas mismas palabras.
+
+
+DOS CAMBIOS DE NOMBRE
+
+La columna que decía "volumen en CLP" ahora dice MARGEN REQUERIDO, porque eso era
+en realidad: el capital que la operación bloquea, no el volumen expresado en
+pesos. El volumen en pesos es bastante mayor y quedó abajo, como monto controlado.
+
+Y "días de mantención" quedó como DÍAS ABIERTA, que se entiende sin que nadie lo
+explique.
+
+
+En el PDF está el detalle campo por campo y tres cuidados antes de usarla con un
+cliente. Cualquier duda me dices.
+
+Saludos,
