@@ -1,0 +1,95 @@
+# ==============================================================================
+# CONFIGURACIÓN MAESTRA DEL PLAYBOOK DE TRADING CUANTITATIVO INTERMERCADO
+# Grupo de Análisis de Mercado — Dirección de Trading
+# ==============================================================================
+
+schema_version: "2.0.0"
+config_name: "playbook_intermarket_v2"
+
+# 1. Umbrales de Conmutación de Régimen y Shocks Estructurales
+regime_thresholds:
+  # R3: Estanflación / Turbulencia Geopolítica
+  oil_shock_pct_5d: 3.5
+  oil_extreme_shock_pct: 5.25               # > 150% del umbral base
+  us10y_shock_bps_5d: 10.0
+  us10y_extreme_shock_bps: 15.0
+  tips10y_shock_bps_5d: 8.0
+  tips10y_extreme_shock_bps: 12.0
+
+  # R1: Shock Inflacionario / Cost-Push
+  breakeven_shock_bps_5d: 10.0
+  breakeven_extreme_shock_bps: 15.0
+  curve_flat_threshold_bps: 20.0            # Spread 2s10s < 0.20%
+
+  # R4: Recesión / Vuelo a la Calidad
+  curve_inversion_threshold: 0.0            # Spread 2s10s < 0
+  bull_steepener_dgs2_drop_bps: -15.0       # Caída agresiva en tasa corta (DGS2)
+  bull_steepener_spread_expansion_bps: 10.0 # Empinamiento de curva
+  copper_recession_pct_5d: -2.5
+  copper_extreme_recession_pct: -3.75
+
+  # R2: Expansión / Desinflación (Goldilocks)
+  copper_goldilocks_pct_5d: 1.5
+  copper_extreme_goldilocks_pct: 2.25
+  us10y_stable_bandwidth_bps: 6.0
+
+  # Histéresis y Anti-Parpadeo
+  hysteresis_required_confirmations: 2      # Lecturas consecutivas D1 para confirmar transición
+  extreme_shock_override_ratio: 1.5         # Salto inmediato si shock supera el 150%
+
+# 2. Ponderadores del Índice Matemático de Confianza
+confidence_weights:
+  weight_freshness: 0.40                    # % de drivers no stale
+  weight_age: 0.35                          # Decaimiento exponencial por antigüedad del driver más viejo
+  weight_coverage: 0.25                     # Cobertura de vectores requeridos por activo
+  age_decay_halflife_hours: 48.0            # Vida media en horas para el decaimiento temporal
+
+# 3. Parámetros de Riesgo Institucional y Dimensionamiento
+risk_parameters:
+  default_risk_pct: 1.0                     # Riesgo base por operación (% del capital)
+  atr_intraday_timeframe: "H1"
+  atr_intraday_period: 14
+  atr_daily_period: 20
+  stop_loss_mult_intraday: 1.5              # Distancia SL = 1.5 * ATR_14 (H1)
+  stop_loss_mult_daily: 2.5                 # Distancia SL = 2.5 * ATR_20 (D1)
+  trailing_stop_mult_trend: 3.0             # Chandelier Trailing Exit = 3.0 * ATR
+  donchian_breakout_period: 50              # Períodos de canal Donchian
+  donchian_band_atr_mult: 0.3               # Banda de tolerancia b = 0.3 * ATR para evitar falsos quiebres
+
+# 4. Catálogo de Activos Monitoreados
+assets_monitored:
+  - id: "USDCLP"
+    nombre: "Dólar / Peso Chileno"
+    tipo: "FX_EMERGENTE"
+    vectores_requeridos: ["COBRE", "SPREAD_TASAS", "FORWARD_EXTRANJEROS", "DXY"]
+    digits: 2
+
+  - id: "XAUUSD"
+    nombre: "Oro Spot"
+    tipo: "COMMODITY_REFUGIO"
+    vectores_requeridos: ["TIPS_REAL_10Y", "BREAKEVEN_10Y", "DXY", "PETROLEO"]
+    digits: 2
+
+  - id: "WTI"
+    nombre: "Petróleo Crudo WTI"
+    tipo: "COMMODITY_ENERGIA"
+    vectores_requeridos: ["TASA_10Y", "COBRE", "DXY"]
+    digits: 2
+
+  - id: "BRENT"
+    nombre: "Petróleo Crudo Brent"
+    tipo: "COMMODITY_ENERGIA"
+    vectores_requeridos: ["TASA_10Y", "COBRE", "DXY"]
+    digits: 2
+
+  - id: "US100"
+    nombre: "Nasdaq 100"
+    tipo: "EQUITY_INDEX"
+    vectores_requeridos: ["TASA_10Y", "CURVA_2S10S", "TIPS_REAL_10Y"]
+    digits: 2
+
+# 5. Umbrales de Staleness Consciente del Calendario de Negocio
+staleness_thresholds:
+  staleness_hours_weekday: 24.0   # Días hábiles (Martes a Viernes)
+  staleness_hours_weekend: 80.0   # Fines de semana y Lunes (cubre Viernes 17:00 CLT hasta Lunes noche)
+

@@ -88,13 +88,14 @@ mcp = FastMCP(
     mask_error_details=False,
 )
 
-from market_data_mcp.tools import levels, calendar, chart_objects, positions, symbol_spec  # noqa: E402
+from market_data_mcp.tools import levels, calendar, chart_objects, positions, symbol_spec, macro_bias  # noqa: E402
 
 levels.register(mcp)
 calendar.register(mcp)
 chart_objects.register(mcp)
 positions.register(mcp)
 symbol_spec.register(mcp)
+macro_bias.register(mcp)
 
 
 if __name__ == "__main__":

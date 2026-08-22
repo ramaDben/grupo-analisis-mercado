@@ -79,17 +79,24 @@ class GraficoError(RuntimeError):
 def resolver_escala(serie: list[float], niveles: list[float] | None = None) -> tuple[float, float]:
     """Devuelve `(precio_max, precio_min)` del eje vertical.
 
-    Los NIVELES entran en la escala junto con la serie, y no es un detalle: un
-    take profit está por definición sobre los máximos recorridos y un stop bajo
-    los mínimos. Escalando solo por la serie, las dos líneas que más importan de
-    la pieza quedarían dibujadas fuera del área visible.
-
-    El margen es proporcional al rango para que nada toque los bordes. Una serie
-    plana (rango 0) recibe un margen fijo para no dividir por cero más adelante.
+    Los NIVELES entran en la escala junto con la serie, pero con un límite.
+    Si un TP o SL está excesivamente lejos (operaciones 5:1 o posicionales),
+    estirar el gráfico para que quepa aplasta la serie y hace que los precios
+    cercanos colisionen. Acotamos la expansión a un máximo proporcional.
     """
     if not serie:
         raise GraficoError("recorrido.serie está vacío: no hay nada que graficar.")
-    valores = list(serie) + list(niveles or [])
+    
+    alto_s, bajo_s = max(serie), min(serie)
+    rango_s = alto_s - bajo_s if alto_s > bajo_s else 0.1
+    
+    lim_alto = alto_s + (rango_s * 1.5)
+    lim_bajo = bajo_s - (rango_s * 1.5)
+
+    valores = list(serie)
+    for n in (niveles or []):
+        valores.append(max(lim_bajo, min(lim_alto, n)))
+        
     alto, bajo = max(valores), min(valores)
     rango = alto - bajo
     margen = rango * MARGEN_ESCALA if rango else 0.1
@@ -166,7 +173,10 @@ def construir_svg(
     n = len(serie)
 
     def coord_y(precio: float) -> float:
-        return y_ini + (p_max - precio) / (p_max - p_min) * (y_fin - y_ini)
+        y = y_ini + (p_max - precio) / (p_max - p_min) * (y_fin - y_ini)
+        # Clamp visual a los bordes para que los niveles extremos (ej. TP 5:1) 
+        # que fueron acotados en resolver_escala no desaparezcan del viewBox.
+        return max(y_ini, min(y_fin, y))
 
     def coord_x(indice: float) -> float:
         if n == 1:

@@ -1,0 +1,513 @@
+import argparse
+import base64
+import markdown
+from pathlib import Path
+from playwright.sync_api import sync_playwright
+import pypdf
+
+RAIZ = Path("C:/Users/bbrav/grupo-analisis-mercado")
+FUENTES = RAIZ / "templates" / "stories" / "fonts"
+
+CATALOGO = [
+    ("space-grotesk-600.woff2", "Space Grotesk", 600),
+    ("space-grotesk-700.woff2", "Space Grotesk", 700),
+    ("syne-800.woff2", "Syne", 800),
+]
+
+def _bloque_fuentes():
+    reglas = []
+    for archivo, familia, peso in CATALOGO:
+        ruta = FUENTES / archivo
+        if ruta.exists():
+            datos = base64.b64encode(ruta.read_bytes()).decode("ascii")
+            reglas.append(
+                f'@font-face{{font-family:"{familia}";font-weight:{peso};'
+                f"font-style:normal;font-display:swap;"
+                f'src:url(data:font/woff2;base64,{datos}) format("woff2")}}'
+            )
+    reglas.append(
+        '@font-face{font-family:"Space Grotesk";font-weight:400;'
+        'font-style:normal;font-display:swap;'
+        f'src:url(data:font/woff2;base64,{base64.b64encode((FUENTES / "space-grotesk-600.woff2").read_bytes()).decode("ascii")}) format("woff2")}}'
+    )
+    return "\n".join(reglas)
+
+def _construir_html(
+    html_content: str,
+    titulo: str,
+    subtitulo: str,
+    badge_sup: str,
+    tag_tipo: str,
+    header_left: str,
+    header_right: str,
+    fecha: str,
+    analista: str,
+    paginas_badge: str,
+    tema: str = "verde"
+) -> str:
+    if tema == "verde":
+        cover_bg = "#06231C"
+        cover_grad_start = "#0F4539"
+        cover_grad_end = "#06231C"
+        disclaimer_bg = "#06231C"
+        accent_color = "#3E91AF"       # Intercambio: Azul Cian para 'RESEARCH & ESTRATEGIA' y badges
+        tag_color = "#82E0CE"          # Menta suave
+        subtitle_color = "#D1F2EB"     # Menta claro
+        divider_color = "#3E91AF"      # Azul Cian
+        disclaimer_accent = "#3E91AF"  # Azul Cian para 'AVISO LEGAL'
+    else:
+        cover_bg = "#0D0D1A"
+        cover_grad_start = "#1A1A2E"
+        cover_grad_end = "#0D0D1A"
+        disclaimer_bg = "#0D0D1A"
+        accent_color = "#53C1AB"       # Verde Menta original
+        tag_color = "#3E91AF"          # Azul Cian original
+        subtitle_color = "#C1E5E4"
+        divider_color = "#53C1AB"
+        disclaimer_accent = "#53C1AB"
+
+    return f"""<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+{_bloque_fuentes()}
+@page {{
+    size: A4 portrait;
+    margin: 0;
+}}
+body {{
+    margin: 0;
+    padding: 0;
+    font-family: 'Space Grotesk', sans-serif;
+    color: #3A3F52;
+    background: #FFFFFF;
+}}
+.page-container {{
+    width: 794px;
+    height: 1123px;
+    box-sizing: border-box;
+    position: relative;
+    overflow: hidden;
+    break-after: page;
+}}
+.cover-page {{
+    background: {cover_bg};
+    color: #FFFFFF;
+    padding: 24mm 32mm;
+    display: flex;
+    flex-direction: column;
+}}
+.cover-gradient {{
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 42%;
+    height: 100%;
+    background: linear-gradient(180deg, {cover_grad_start} 0%, {cover_grad_end} 100%);
+    opacity: 0.6;
+}}
+.flowing-container {{
+    width: 794px;
+    box-sizing: border-box;
+    background: #FFFFFF;
+    break-after: page;
+}}
+.flowing-table {{
+    width: 100%;
+    border-collapse: collapse;
+}}
+/* Thead/Tfoot para repetir margenes en cortes de pagina */
+.flowing-table thead td {{
+    padding: 13mm 24mm 0 24mm;
+}}
+.flowing-table tbody td {{
+    padding: 0 24mm;
+}}
+.flowing-table tfoot td {{
+    padding: 0 24mm 13mm 24mm;
+}}
+
+.header {{
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 7px;
+    border-bottom: 1px solid #C1E5E4;
+    margin-bottom: 16px;
+}}
+.header-left {{
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #3E91AF;
+}}
+.header-right {{
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 9px;
+    font-weight: 600;
+    color: #737373;
+    letter-spacing: 0.05em;
+}}
+.footer {{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 7px;
+    border-top: 1px solid rgba(0,0,0,0.12);
+    margin-top: 18px;
+}}
+.footer-left {{
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: #53C1AB;
+}}
+.footer-right {{
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 9px;
+    color: #737373;
+    letter-spacing: 0.05em;
+}}
+
+/* Typography inside content */
+.content {{
+    padding-top: 4px;
+}}
+p {{
+    font-size: 11.5px;
+    line-height: 1.55;
+    margin: 0 0 8px 0;
+    font-weight: 400;
+}}
+h1 {{
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: #0D0D1A;
+    margin: 6px 0 16px 0;
+    line-height: 1.25;
+    border-bottom: 2px solid #53C1AB;
+    padding-bottom: 8px;
+    letter-spacing: -0.01em;
+    display: block;
+    transform: scaleY(1.14);
+    transform-origin: left bottom;
+}}
+h2 {{
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: #3E91AF;
+    margin: 16px 0 8px 0;
+    border-left: 3.5px solid #53C1AB;
+    padding-left: 10px;
+    break-after: avoid;
+    page-break-after: avoid;
+}}
+h3 {{
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #0D0D1A;
+    margin: 10px 0 5px 0;
+    break-after: avoid;
+    page-break-after: avoid;
+}}
+ul, ol {{
+    margin: 0 0 10px 0;
+    padding-left: 18px;
+    font-size: 11px;
+    line-height: 1.55;
+}}
+li {{
+    margin-bottom: 5px;
+}}
+li strong {{
+    font-weight: 700;
+    color: #0D0D1A;
+}}
+blockquote {{
+    border-top: 1.5px solid #3E91AF;
+    margin: 18px 0;
+    background: rgba(62, 145, 175, 0.04);
+    padding: 12px 16px;
+    border-radius: 0 4px 4px 0;
+    border-left: 3px solid #3E91AF;
+}}
+blockquote p {{
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: #3E91AF;
+    margin: 0;
+}}
+hr {{
+    border: none;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    margin: 18px 0;
+}}
+img {{
+    width: 100%;
+    max-height: 240px;
+    object-fit: contain;
+    border-radius: 5px;
+    border: 1px solid #D0D7DE;
+    margin: 10px 0 14px 0;
+    display: block;
+    box-shadow: 0 2px 8px rgba(13, 13, 26, 0.05);
+    break-inside: avoid;
+    page-break-inside: avoid;
+}}
+/* Estilo para tablas Markdown */
+.content table {{
+    width: 100% !important;
+    display: table !important;
+    table-layout: auto !important;
+    border-collapse: collapse !important;
+    margin: 16px 0 20px 0;
+    font-size: 10.5px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid #D0D7DE;
+    box-shadow: 0 2px 6px rgba(13, 13, 26, 0.04);
+}}
+.content th {{
+    background: #0D0D1A !important;
+    color: #FFFFFF !important;
+    padding: 9px 12px !important;
+    font-weight: 700 !important;
+    text-align: left !important;
+    font-family: 'Space Grotesk', sans-serif !important;
+    font-size: 10px !important;
+    letter-spacing: 0.03em !important;
+    border-bottom: 2px solid #53C1AB !important;
+    white-space: normal !important;
+}}
+.content td {{
+    padding: 9px 12px !important;
+    border-bottom: 1px solid #E9ECEF !important;
+    color: #3A3F52 !important;
+    vertical-align: top !important;
+    line-height: 1.45 !important;
+    background: #FFFFFF !important;
+    font-size: 10px !important;
+    white-space: normal !important;
+}}
+.content tr:nth-child(even) td {{
+    background: #F8FAF9 !important;
+}}
+</style>
+</head>
+<body>
+
+<!-- PAGE 1: PORTADA -->
+<div class="page-container cover-page">
+    <div class="cover-gradient"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;position:relative;z-index:1;">
+        <span style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;letter-spacing:0.04em;color:#FFFFFF;display:inline-block;transform:scaleY(1.18);transform-origin:left center;">GRUPO INTELIGENCIA</span>
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:0.18em;color:{accent_color};">{badge_sup}</span>
+    </div>
+    
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:1;max-width:82%;">
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.14em;color:{tag_color};text-transform:uppercase;margin-bottom:12px;">{tag_tipo}</span>
+        <h1 style="font-family:'Syne',sans-serif;font-size:46px;font-weight:800;line-height:1.08;margin:0 0 34px 0;color:#FFFFFF;border:none;padding:0;letter-spacing:-0.02em;display:block;transform:scaleY(1.15);transform-origin:left top;">{titulo}</h1>
+        <p style="font-family:'Space Grotesk',sans-serif;font-size:13px;line-height:1.6;color:{subtitle_color};margin:0 0 24px 0;max-width:90%;font-weight:400;">{subtitulo}</p>
+        <div style="width:48px;height:3px;background:{divider_color};"></div>
+    </div>
+    
+    <div style="position:relative;z-index:1;border-top:1px solid rgba(255,255,255,0.16);padding-top:12px;display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;gap:24px;">
+            <div style="display:flex;flex-direction:column;gap:2px;">
+                <span style="font-family:'Space Grotesk',sans-serif;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:#737373;">Fecha</span>
+                <span style="font-family:'Space Grotesk',sans-serif;font-size:10.5px;font-weight:600;color:#FFFFFF;">{fecha}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:2px;">
+                <span style="font-family:'Space Grotesk',sans-serif;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:#737373;">Analista</span>
+                <span style="font-family:'Space Grotesk',sans-serif;font-size:10.5px;font-weight:600;color:#FFFFFF;">{analista}</span>
+            </div>
+        </div>
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;font-weight:600;color:{accent_color};">{paginas_badge}</span>
+    </div>
+</div>
+
+<!-- PAGINAS FLUIDAS DE CONTENIDO -->
+<div class="flowing-container">
+    <table class="flowing-table">
+        <thead>
+            <tr><td>
+                <div class="header">
+                    <span class="header-left">{header_left}</span>
+                    <span class="header-right">{header_right}</span>
+                </div>
+            </td></tr>
+        </thead>
+        <tbody>
+            <tr><td>
+                <div class="content">
+                    {html_content}
+                </div>
+            </td></tr>
+        </tbody>
+        <tfoot>
+            <tr><td>
+                <div class="footer">
+                    <span class="footer-left">GRUPO INTELIGENCIA</span>
+                    <span class="footer-right">RESEARCH Y ESTRATEGIA</span>
+                </div>
+            </td></tr>
+        </tfoot>
+    </table>
+</div>
+
+<!-- PAGE FINAL: DISCLAIMER -->
+<div class="page-container" style="background:{disclaimer_bg};color:#C1E5E4;padding:24mm 32mm;display:flex;flex-direction:column;">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:9px;border-bottom:1px solid rgba(255,255,255,0.15);margin-bottom:18px;flex-shrink:0;">
+        <span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:0.14em;color:{disclaimer_accent};">AVISO LEGAL</span>
+        <span style="font-family:'Syne',sans-serif;font-size:12px;font-weight:800;letter-spacing:0.04em;color:#FFFFFF;display:inline-block;transform:scaleY(1.18);transform-origin:left center;">GRUPO INTELIGENCIA</span>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:12px;overflow:hidden;">
+        <h2 style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#FFFFFF;margin:0;border:none;padding:0;letter-spacing:0;display:inline-block;transform:scaleY(1.15);transform-origin:left bottom;">Disclaimer</h2>
+        <p style="font-family:'Space Grotesk',sans-serif;font-size:10px;line-height:1.7;color:#C1E5E4;margin:0;">Este documento ha sido elaborado por Grupo Inteligencia con fines exclusivamente informativos y no constituye una oferta, solicitud o recomendación de inversión. Las opiniones expresadas representan el análisis actual y están sujetas a cambios sin previo aviso.</p>
+        <p style="font-family:'Space Grotesk',sans-serif;font-size:10px;line-height:1.7;color:#C1E5E4;margin:0;">La información contenida se basa en fuentes consideradas fiables al momento de su publicación; sin embargo, no se garantiza su exactitud, integridad o vigencia. Los mercados financieros implican riesgos, incluida la posible pérdida del capital invertido, y el desempeño pasado no garantiza resultados futuros.</p>
+        <p style="font-family:'Space Grotesk',sans-serif;font-size:10px;line-height:1.7;color:#C1E5E4;margin:0;">Los niveles técnicos, escenarios y sesgos presentados corresponden a la interpretación del equipo de análisis. Este material es de uso exclusivo y no debe distribuirse a terceros sin autorización expresa.</p>
+    </div>
+</div>
+
+</body>
+</html>
+"""
+
+def crear_pdf(
+    md_path: str = None,
+    out_path: str = None,
+    titulo: str = "Minutas del FOMC",
+    subtitulo: str = "Análisis de la reunión del Comité Federal de Mercado Abierto (FOMC). Perspectivas sobre tasas de interés en EE.UU., inflación, impacto de la Inteligencia Artificial y estabilidad financiera global.",
+    badge_sup: str = "RESEARCH & ESTRATEGIA",
+    tag_tipo: str = "REPORTE EJECUTIVO",
+    header_left: str = "ANÁLISIS FUNDAMENTAL",
+    header_right: str = "AGOSTO 2026 • MACROECONOMÍA",
+    fecha: str = "Agosto 2026",
+    analista: str = "Área de Estudios",
+    tema: str = "verde"
+):
+    if md_path:
+        md_file = Path(md_path)
+        if not md_file.is_absolute():
+            md_file = RAIZ / md_file
+    else:
+        candidatos = [
+            RAIZ / "data central" / "DATA USA" / "reportes_generados" / "informe_fomc.md",
+            RAIZ / "data central" / "DATA CHILE" / "reportes_generados" / "informe_mercado.md",
+            RAIZ / "data central" / "DATA DRIVERS USDCLP" / "reportes_generados" / "informe_drivers_usdclp.md"
+        ]
+        md_file = None
+        for c in candidatos:
+            if c.exists():
+                md_file = c
+                break
+        if md_file is None:
+            raise FileNotFoundError("No se encontro un archivo markdown para renderizar en las subcarpetas reportes_generados/")
+
+    if out_path:
+        out_pdf = Path(out_path)
+        if not out_pdf.is_absolute():
+            out_pdf = RAIZ / out_pdf
+    else:
+        out_pdf = md_file.parent / f"{md_file.stem}_GI.pdf"
+
+    md_text = md_file.read_text(encoding="utf-8")
+    html_content = markdown.markdown(md_text, extensions=['tables', 'fenced_code'])
+
+    tmp_html = RAIZ / "scratch" / "temp_informe_diseno.html"
+    out_pdf.parent.mkdir(parents=True, exist_ok=True)
+
+    with sync_playwright() as pw:
+        navegador = pw.chromium.launch()
+        pagina = navegador.new_page()
+
+        # Primer pase para calcular páginas
+        html_inicial = _construir_html(
+            html_content=html_content,
+            titulo=titulo,
+            subtitulo=subtitulo,
+            badge_sup=badge_sup,
+            tag_tipo=tag_tipo,
+            header_left=header_left,
+            header_right=header_right,
+            fecha=fecha,
+            analista=analista,
+            paginas_badge="01 / --",
+            tema=tema
+        )
+        tmp_html.write_text(html_inicial, encoding="utf-8")
+        pagina.goto(tmp_html.as_uri())
+        pagina.emulate_media(media="print")
+        pagina.wait_for_timeout(300)
+        pagina.pdf(path=str(out_pdf), format="A4", print_background=True,
+                   margin={"top": "0", "right": "0", "bottom": "0", "left": "0"})
+
+        # Contar páginas con pypdf
+        with open(out_pdf, "rb") as f:
+            lector = pypdf.PdfReader(f)
+            total_pags = len(lector.pages)
+
+        # Segundo pase con el badge final "01 / XX"
+        badge_final = f"01 / {total_pags:02d}"
+
+        html_final = _construir_html(
+            html_content=html_content,
+            titulo=titulo,
+            subtitulo=subtitulo,
+            badge_sup=badge_sup,
+            tag_tipo=tag_tipo,
+            header_left=header_left,
+            header_right=header_right,
+            fecha=fecha,
+            analista=analista,
+            paginas_badge=badge_final,
+            tema=tema
+        )
+        tmp_html.write_text(html_final, encoding="utf-8")
+        pagina.goto(tmp_html.as_uri())
+        pagina.emulate_media(media="print")
+        pagina.wait_for_timeout(300)
+        pagina.pdf(path=str(out_pdf), format="A4", print_background=True,
+                   margin={"top": "0", "right": "0", "bottom": "0", "left": "0"})
+        navegador.close()
+
+    print(f"PDF con diseño oficial original generado exitosamente ({total_pags} páginas) en: {out_pdf}")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Generador de Informes PDF Oficiales - Grupo Inteligencia")
+    parser.add_argument("--md", dest="md_path", help="Ruta al archivo Markdown de entrada", default=None)
+    parser.add_argument("--pdf", dest="out_path", help="Ruta de salida para el PDF", default=None)
+    parser.add_argument("--title", dest="titulo", help="Título principal del informe", default="Minutas del FOMC")
+    parser.add_argument("--subtitle", dest="subtitulo", help="Subtítulo de portada", default="Análisis de la reunión del Comité Federal de Mercado Abierto (FOMC). Perspectivas sobre tasas de interés en EE.UU., inflación, impacto de la Inteligencia Artificial y estabilidad financiera global.")
+    parser.add_argument("--badge", dest="badge_sup", help="Badge superior derecho", default="RESEARCH & ESTRATEGIA")
+    parser.add_argument("--tag", dest="tag_tipo", help="Tag sobre el título", default="REPORTE EJECUTIVO")
+    parser.add_argument("--header-left", dest="header_left", help="Encabezado izquierdo", default="ANÁLISIS FUNDAMENTAL")
+    parser.add_argument("--header-right", dest="header_right", help="Encabezado derecho", default="AGOSTO 2026 • MACROECONOMÍA")
+    parser.add_argument("--date", dest="fecha", help="Fecha para la portada", default="Agosto 2026")
+    parser.add_argument("--analyst", dest="analista", help="Nombre del analista o área", default="Área de Estudios")
+    parser.add_argument("--theme", dest="tema", help="Tema de color de portada (verde | oscuro)", default="verde")
+
+    args = parser.parse_args()
+    crear_pdf(
+        md_path=args.md_path,
+        out_path=args.out_path,
+        titulo=args.titulo,
+        subtitulo=args.subtitulo,
+        badge_sup=args.badge_sup,
+        tag_tipo=args.tag_tipo,
+        header_left=args.header_left,
+        header_right=args.header_right,
+        fecha=args.fecha,
+        analista=args.analista,
+        tema=args.tema
+    )

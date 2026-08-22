@@ -43,6 +43,19 @@
       "rotacion_diaria": false
     },
     {
+      "ticker": "GBP/USD",
+      "ticker_mt5": "GBPUSD",
+      "nombre": "Libra / Dólar",
+      "categoria": "forex",
+      "digits": 5,
+      "volatilidad": "media",
+      "nota_volatilidad": "movimientos condicionados por Banco de Inglaterra y Fed",
+      "drivers": ["diferencial de tasas BoE vs Fed", "inflación UK", "Dollar Index"],
+      "temporalidades": ["1D", "4H", "1H"],
+      "horario_mercado": "24h",
+      "rotacion_diaria": false
+    },
+    {
       "ticker": "XAU/USD",
       "ticker_mt5": "XAUUSD",
       "nombre": "Oro",
@@ -54,6 +67,19 @@
       "temporalidades": ["4H", "1H", "15M"],
       "horario_mercado": "24h (principal: sesión NY)",
       "rotacion_diaria": true
+    },
+    {
+      "ticker": "XAG/USD",
+      "ticker_mt5": "XAGUSD",
+      "nombre": "Plata",
+      "categoria": "commodity",
+      "digits": 3,
+      "volatilidad": "alta",
+      "nota_volatilidad": "se mueve mucho y rápido, con menos liquidez que el oro, por eso en 15M hay señales veloces pero con más ruido; 1H/4H ordenan mejor la tendencia del día",
+      "drivers": ["Dollar Index", "tasas reales", "demanda industrial", "correlación con el oro", "manufactura global (China)"],
+      "temporalidades": ["4H", "1H", "15M"],
+      "horario_mercado": "24h (principal: sesión NY)",
+      "rotacion_diaria": false
     },
     {
       "ticker": "WTI",

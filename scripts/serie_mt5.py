@@ -43,7 +43,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-_TIMEFRAMES = ("M5", "M15", "M30", "H1", "H4", "D1")
+_TIMEFRAMES = ("M5", "M15", "M30", "H1", "H4", "D1", "auto")
 
 
 class SerieError(RuntimeError):
@@ -138,7 +138,7 @@ def construir_recorrido(serie: list[float], hitos: list[dict], tiempos: list | N
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--ticker", required=True, help="símbolo MT5 del catálogo")
-    parser.add_argument("--timeframe", default="H1", choices=_TIMEFRAMES)
+    parser.add_argument("--timeframe", default="auto", choices=_TIMEFRAMES)
     parser.add_argument(
         "--velas",
         type=int,
@@ -149,17 +149,36 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     payload = json.loads(sys.stdin.buffer.read().decode("utf-8-sig"))
+    hitos = payload.pop("hitos", [])
+    niveles = payload.pop("niveles", [])
+
+    timeframe = args.timeframe
+    if timeframe == "auto":
+        precios_op = [float(x["precio"]) for x in hitos + niveles]
+        if precios_op:
+            rango_op = max(precios_op) - min(precios_op)
+            tf_candidatos = ("M15", "H1", "H4", "D1")
+            mejor_tf = "H1"
+            
+            for tf in tf_candidatos:
+                try:
+                    s, _ = obtener_serie(args.ticker, tf, args.velas)
+                    rango_serie = max(s) - min(s) if s else 0.001
+                    if rango_op <= 2.5 * rango_serie:
+                        mejor_tf = tf
+                        break
+                    mejor_tf = tf
+                except SerieError:
+                    pass
+            timeframe = mejor_tf
+        else:
+            timeframe = "H1"
+
     try:
-        serie, tiempos = obtener_serie(args.ticker, args.timeframe, args.velas)
+        serie, tiempos = obtener_serie(args.ticker, timeframe, args.velas)
     except SerieError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
-
-    hitos = payload.pop("hitos", [])
-    # Los `niveles` -entrada, objetivo, stop, soportes- no se anclan a una vela:
-    # son precios que valen para toda la ventana, así que pasan derecho al
-    # recorrido sin buscarles índice.
-    niveles = payload.pop("niveles", [])
     recorrido = construir_recorrido(serie, hitos, tiempos)
     if niveles:
         recorrido["niveles"] = niveles

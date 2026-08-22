@@ -1,0 +1,71 @@
+{
+  "plantilla": "calendario",
+  "sello": "CALENDARIO SEMANAL · GI",
+  "fecha_hora": "SEMANA DEL 11 AL 15 DE AGOSTO",
+  "titulo": "Lo que mueve la semana",
+  "subtitulo": "Los 5 datos de mayor impacto para Oro, WTI, USD/CLP y US100, según el calendario de Investing.com.",
+  "eventos": [
+    {
+      "numero": "01",
+      "dia": "MIÉRCOLES 12",
+      "hora": "08:30 CLT",
+      "evento": "Índice de precios al consumidor (IPC) de EE.UU., interanual",
+      "pais": "EE.UU. · USD",
+      "impacto": "Alto impacto",
+      "impacto_slug": "alto",
+      "anterior": "3,5%",
+      "esperado": "3,4%",
+      "tiene_esperado": true
+    },
+    {
+      "numero": "02",
+      "dia": "MIÉRCOLES 12",
+      "hora": "10:30 CLT",
+      "evento": "Inventarios de petróleo en EE.UU. (EIA)",
+      "pais": "EE.UU. · USD",
+      "impacto": "Alto impacto",
+      "impacto_slug": "alto",
+      "anterior": "+2,479 M barriles",
+      "esperado": "",
+      "tiene_esperado": false
+    },
+    {
+      "numero": "03",
+      "dia": "JUEVES 13",
+      "hora": "08:30 CLT",
+      "evento": "Peticiones de subsidio por desempleo en EE.UU.",
+      "pais": "EE.UU. · USD",
+      "impacto": "Alto impacto",
+      "impacto_slug": "alto",
+      "anterior": "199 K",
+      "esperado": "202 K",
+      "tiene_esperado": true
+    },
+    {
+      "numero": "04",
+      "dia": "JUEVES 13",
+      "hora": "08:30 CLT",
+      "evento": "Índice de precios al productor (IPP) de EE.UU., mensual",
+      "pais": "EE.UU. · USD",
+      "impacto": "Alto impacto",
+      "impacto_slug": "alto",
+      "anterior": "-0,3%",
+      "esperado": "0,2%",
+      "tiene_esperado": true
+    },
+    {
+      "numero": "05",
+      "dia": "VIERNES 14",
+      "hora": "08:30 CLT",
+      "evento": "Ventas retail de EE.UU., mensual",
+      "pais": "EE.UU. · USD",
+      "impacto": "Alto impacto",
+      "impacto_slug": "alto",
+      "anterior": "0,2%",
+      "esperado": "0,1%",
+      "tiene_esperado": true
+    }
+  ],
+  "cta": "¿Quieres seguir esta semana en detalle?",
+  "cta_sub": "Habla hoy con tu analista"
+}

@@ -1,0 +1,12 @@
+# strategies_live_registry.yaml
+# Registro Operativo Oficial de Estrategias Autorizadas para Producción (LIVE_LIMITED).
+# REGLA CRÍTICA: Ninguna estrategia puede registrarse aquí sin:
+# 1. Certificado inmutable emitido por Genesis con status: APROBADO_LIMITADO.
+# 2. Hash criptográfico verificado de código, catálogo, datos y régimen.
+# 3. Firma de auditoría humana explícita.
+# Cualquier hipótesis en estado CANDIDATO, GATE_ESTADISTICO_APROBADO o VALIDADO_GENESIS
+# tiene prohibida su inclusión en este archivo.
+
+schema_version: "1.0.0"
+updated_at_utc: "2026-08-20T00:00:00Z"
+active_strategies: []
