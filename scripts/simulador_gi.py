@@ -5,6 +5,12 @@ contrato ni el spread vigente.
 
 La tabla separa SIMULACION de COSTOS, como la planilla original de post-venta.
 
+El universo de instrumentos lo define el TERMINAL, no el catalogo del proyecto: se
+ofrecen todos los que el broker deja operar. El catalogo solo aporta el nombre en
+español de los 25 que cubre el grupo de analisis; el resto llega con la descripcion
+del broker. El volumen minimo y el paso son POR INSTRUMENTO (0,01 en divisas, 0,1 en
+acciones y ETF), asi que nada de eso puede quedar fijo en una formula.
+
 Se escribe el VOLUMEN EN LOTES, la unidad en que el usuario de la planilla explica la
 operacion a sus clientes y la que se ingresa en el terminal. De esa columna leen todas
 las demas formulas de la fila.
@@ -28,9 +34,9 @@ el cierre, donde se conversa la magnitud.
 
 Complejidad
 -----------
-Variables: n = instrumentos del catalogo (25) · k = parametros resueltos por
-instrumento (10 celdas BUSCARV) · r = filas de operacion (6) · d = dias que la
-posicion queda abierta.
+Variables: n = instrumentos operables del terminal (148 al 2026-08-24, antes 25) ·
+k = parametros resueltos por instrumento (12 celdas BUSCARV) · r = filas de operacion
+(6) · d = dias que la posicion queda abierta.
 
 Generacion (este script), por corrida:
     tiempo   O(n), con 4 llamadas IPC al terminal por instrumento
@@ -44,7 +50,8 @@ Recalculo (Excel), por cambio de instrumento:
     y coincidencia aproximada (TRUE) seria O(log n) por binaria. Se descarta por
     CORRECCION, no por costo: la coincidencia aproximada devuelve la fila anterior
     mas cercana cuando el nombre no calza exacto, entregando en silencio los
-    parametros de otro instrumento. Con n = 25 el barrido no cuesta nada.
+    parametros de otro instrumento. Con n del orden de 150 el barrido tampoco cuesta:
+    son unos 1.800 comparos por cambio de instrumento.
 
 Por fila de operacion: margen, apalancamiento, resultado bruto, costo de apertura,
 costo de mantencion y resultado neto son formulas cerradas, O(1) cada una. Total O(r).
@@ -67,6 +74,7 @@ en la practica es tiempo constante.
 """
 import json
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -91,55 +99,101 @@ SELLO = AHORA.strftime("%Y-%m-%d %H:%M")
 # swap_mode de MT5: solo estos dos aparecen en el catalogo (verificado 2026-08-19).
 # 1 = puntos por dia por lote. 5 = interes anual sobre el nocional, ano bancario 360.
 MODO_PUNTOS, MODO_INTERES = 1, 5
+COMPLETO = 4                  # SYMBOL_TRADE_MODE_FULL
 
 # ---------------------------------------------------------------- datos MT5
 assert mt5.initialize(), mt5.last_error()
 cuenta = mt5.account_info()
 
+# el catalogo del proyecto ya no define QUE instrumentos entran, solo aporta el
+# nombre en español de los 25 que cubre el grupo de analisis. El universo lo define
+# el terminal: el broker amplio los contratos y hay que ofrecerlos todos.
 cat = json.loads((REPO / "config" / "activos.json").read_text(encoding="utf-8"))
-catalogo = [(a["ticker_mt5"], a["nombre"]) for a in cat["forex_commodities"] + cat["indices"]]
-catalogo += [(a["ticker_mt5"], a["nombre"]) for s in cat["acciones"].values() for a in s["componentes"]]
+NOMBRES_ES = {a["ticker_mt5"]: a["nombre"]
+              for a in cat["forex_commodities"] + cat["indices"]}
+NOMBRES_ES.update({a["ticker_mt5"]: a["nombre"]
+                   for g in cat["acciones"].values() for a in g["componentes"]})
 
-filas = []
-for ticker, nombre in catalogo:
+# orden de los grupos en la lista desplegable: lo mas operado primero, las 86 acciones
+# al final. Un grupo que el broker agregue y no este aca queda al final, no se pierde.
+ORDEN_GRUPOS = ["FX", "CFD Commodities", "CFD Indices", "Criptomonedas",
+                "CFD ETF", "CFD Acciones"]
+
+todos = mt5.symbols_get()
+operables = [x.name for x in todos if x.trade_mode == COMPLETO]
+visibles_antes = {x.name for x in todos if x.visible}
+
+# hay que seleccionar el simbolo para poder consultarlo, y tras seleccionarlo el
+# terminal tarda en recibir el primer tick: preguntar de inmediato devuelve precio 0
+# aunque el mercado este operando. Se seleccionan todos y despues se consulta.
+for t in operables:
+    mt5.symbol_select(t, True)
+print("%d instrumentos operables, esperando los primeros ticks..." % len(operables))
+time.sleep(8)
+
+filas, sin_precio, swap_raro = [], [], []
+for ticker in operables:
     s = mt5.symbol_info(ticker)
-    if s is None or not s.visible:
-        mt5.symbol_select(ticker, True)
+    precio = 0
+    for _ in range(4):
+        tick = mt5.symbol_info_tick(ticker)
+        precio = (tick.ask if tick else 0) or s.ask or s.bid
+        if precio:
+            break
+        time.sleep(0.4)
         s = mt5.symbol_info(ticker)
-    if s is None:
-        print("  ! sin datos:", ticker)
-        continue
-    tick = mt5.symbol_info_tick(ticker)
-    precio = (tick.ask if tick else 0) or s.ask
     if not precio:
-        print("  ! sin precio:", ticker)
+        sin_precio.append(ticker)
         continue
 
     # CLP que vale mover el precio 1,0 con 1 lote. Trae dentro el tamano de contrato
     # Y la conversion a pesos, asi que una sola constante sirve para cualquier activo.
     # order_calc_profit y no tick_value: tick_value miente en los CFD de acciones.
+    # Ambas funcionan con credenciales de inversor: son calculos, no ordenes.
     clp_unidad = mt5.order_calc_profit(mt5.ORDER_TYPE_BUY, ticker, 1.0, precio, precio + 1.0)
     margen_lote = mt5.order_calc_margin(mt5.ORDER_TYPE_BUY, ticker, 1.0, precio)
     if not clp_unidad or not margen_lote:
-        print("  ! sin calculo:", ticker)
+        sin_precio.append(ticker)
         continue
     if s.swap_mode not in (MODO_PUNTOS, MODO_INTERES):
-        print("  ! modo de swap no soportado en %s: %d" % (ticker, s.swap_mode))
+        swap_raro.append("%s(%d)" % (ticker, s.swap_mode))
+        continue
 
+    grupo = s.path.split("\\")[0]
     filas.append({
-        "nombre": nombre, "ticker": ticker, "digits": s.digits,
+        "grupo": grupo,
+        "orden": (ORDEN_GRUPOS.index(grupo) if grupo in ORDEN_GRUPOS else len(ORDEN_GRUPOS)),
+        "nombre": NOMBRES_ES.get(ticker) or (s.description or ticker).strip(),
+        "ticker": ticker, "digits": s.digits,
         "contrato": s.trade_contract_size, "clp_unidad": clp_unidad,
         "tasa": margen_lote / (clp_unidad * precio),
         "spread": (s.spread or 0) * s.point, "precio": precio,
+        "vol_min": s.volume_min, "vol_paso": s.volume_step,
         "swap_modo": s.swap_mode, "swap_largo": s.swap_long, "swap_corto": s.swap_short,
     })
+
+# el Market Watch vuelve a como estaba: el terminal es del director, no del script
+for t in operables:
+    if t not in visibles_antes:
+        mt5.symbol_select(t, False)
 
 # umbrales de margen de la cuenta, en porcentaje (margin_so_mode = 0)
 LLAMADA, CIERRE_FORZADO = cuenta.margin_so_call, cuenta.margin_so_so
 
 mt5.shutdown()
-print("instrumentos con datos: %d de %d" % (len(filas), len(catalogo)))
-print("umbrales del broker: llamada %s%% · cierre forzado %s%%" % (LLAMADA, CIERRE_FORZADO))
+
+filas.sort(key=lambda f: (f["orden"], f["nombre"]))
+
+# ojo: no llamarla "ref", que el bucle de validaciones reutiliza ese nombre
+EJEMPLO = next((f for f in filas if f["ticker"] == "USDCLP"), filas[0])
+print("instrumentos con especificaciones: %d de %d operables" % (len(filas), len(operables)))
+if sin_precio:
+    print("  sin precio ni cálculo (%d): %s" % (len(sin_precio), ", ".join(sin_precio[:6])))
+if swap_raro:
+    print("  ! modo de swap no soportado, quedan fuera: %s" % ", ".join(swap_raro))
+print("umbrales del broker: llamada %g%% · cierre forzado %g%%" % (LLAMADA, CIERRE_FORZADO))
+print("pasos de volumen presentes: %s"
+      % sorted({f["vol_paso"] for f in filas}))
 
 # ------------------------------------------------------------------ estilos
 NAVY, ACENTO, ORO, CREMA = "203864", "50C0A8", "BF8F00", "FFF2CC"
@@ -158,7 +212,8 @@ wb = Workbook()
 dat = wb.create_sheet("Datos")
 enc = ["INSTRUMENTO", "TICKER MT5", "DECIMALES", "TAMAÑO DE CONTRATO (1 lote)",
        "VALOR EN CLP DE 1,0 DE PRECIO (POR LOTE)", "MARGEN", "SPREAD",
-       "PRECIO DE REFERENCIA", "MODO SWAP", "SWAP COMPRA", "SWAP VENTA"]
+       "PRECIO DE REFERENCIA", "MODO SWAP", "SWAP COMPRA", "SWAP VENTA",
+       "VOLUMEN MÍNIMO", "PASO DE VOLUMEN", "GRUPO"]
 for i, t in enumerate(enc, start=1):
     c = dat.cell(row=1, column=i, value=t)
     c.font = Font(bold=True, color=BLANCO, size=9)
@@ -168,7 +223,8 @@ for r, f in enumerate(filas, start=2):
     for col, val in enumerate([f["nombre"], f["ticker"], f["digits"], f["contrato"],
                                round(f["clp_unidad"], 4), round(f["tasa"], 6), f["spread"],
                                f["precio"], f["swap_modo"], f["swap_largo"],
-                               f["swap_corto"]], start=1):
+                               f["swap_corto"], f["vol_min"], f["vol_paso"],
+                               f["grupo"]], start=1):
         dat.cell(row=r, column=col, value=val)
     dat.cell(row=r, column=6).number_format = "0.00%"
     dat.cell(row=r, column=7).number_format = PRECIO
@@ -177,10 +233,12 @@ ultima = len(filas) + 1
 nota = dat.cell(row=ultima + 2, column=1, value=(
     "Actualizado desde MT5 (cuenta %s, %s) el %s hora Chile. No editar a mano: "
     "se regenera con scripts/simulador_gi.py. MODO SWAP 1 = puntos por día por lote; "
-    "5 = interés anual sobre el nocional (año de 360 días)."
+    "5 = interés anual sobre el nocional (año de 360 días). Los nombres en español son "
+    "los del catálogo del grupo de análisis; el resto llega con la descripción del broker."
     % (cuenta.login, cuenta.currency, SELLO)))
 nota.font = Font(italic=True, size=9, color="808080")
-for col, w in zip("ABCDEFGHIJK", (26, 12, 11, 17, 21, 10, 11, 13, 11, 13, 13)):
+for col, w in zip("ABCDEFGHIJKLMN",
+                  (36, 12, 11, 17, 21, 10, 11, 13, 11, 13, 13, 14, 14, 17)):
     dat.column_dimensions[col].width = w
 dat.freeze_panes = "A2"
 
@@ -245,7 +303,7 @@ if LOGO.exists():
 
 # --- contexto del periodo
 for r, etiqueta, valor, fmt in [
-        (4, "1 · Instrumento", filas[0]["nombre"], "General"),
+        (4, "1 · Instrumento", EJEMPLO["nombre"], "General"),
         (5, "2 · Capital de la cuenta", 2000000, CLP)]:
     ws.merge_cells("C%d:E%d" % (r, r))
     ws["C%d" % r].value = etiqueta
@@ -259,11 +317,12 @@ for r, etiqueta, valor, fmt in [
     ws.row_dimensions[r].height = 26
 
 # --- helpers ocultos que resuelven el instrumento elegido
-BUSCA = "=IFERROR(VLOOKUP($F$4,Datos!$A:$K,%d,FALSE),0)"
+BUSCA = "=IFERROR(VLOOKUP($F$4,Datos!$A:$N,%d,FALSE),0)"
 for r, idx, etiqueta in [(1, 2, "ticker"), (2, 3, "digits"), (3, 4, "contrato"),
                          (4, 5, "clp_unidad"), (5, 6, "tasa"), (6, 7, "spread"),
                          (7, 8, "precio_ref"), (8, 9, "swap_modo"),
-                         (9, 10, "swap_compra"), (10, 11, "swap_venta")]:
+                         (9, 10, "swap_compra"), (10, 11, "swap_venta"),
+                         (13, 12, "vol_min"), (14, 13, "vol_paso")]:
     ws["Q%d" % r] = etiqueta
     ws["R%d" % r] = BUSCA % idx
 ws["Q11"], ws["R11"] = "llamada_margen", LLAMADA
@@ -274,7 +333,9 @@ for col in "QR":
 # --- referencias del instrumento elegido
 for r, etiqueta, formula, fmt in [
         (4, "Precio de referencia", "=$R$7", PRECIO),
-        (5, "Capital mínimo por operación (0,01 lotes)", "=0.01*$R$7*$R$4*$R$5", CLP),
+        # el volumen mínimo cambia por instrumento: 0,01 en divisas, 0,1 en acciones
+        # y ETF. El rótulo se arma con el del instrumento elegido, no con una constante.
+        (5, '="Capital mínimo ("&FIXED($R$13,2)&" lotes)"', "=$R$13*$R$7*$R$4*$R$5", CLP),
         # el spread se congela al generar el archivo, asi que va a la vista: si se
         # genero en un momento de spread ancho, todas las simulaciones lo heredan.
         (6, "Spread vigente al generar", "=$R$6", PRECIO)]:
@@ -300,8 +361,10 @@ ws["C7"].value = (
     'IF(SUMPRODUCT(($G$11:$G$16>0)*(ABS($G$11:$G$16/$R$7-1)>0.1))>0,'
     '"⚠ Un precio de entrada difiere en más de 10% del precio de referencia ($"'
     '&FIXED($R$7,$R$2)&"). Verifique que corresponda al instrumento seleccionado.",'
-    'IF(SUMPRODUCT(--(MOD(ROUND($D$11:$D$16*100,6),1)<>0))>0,'
-    '"⚠ Hay un volumen que no es múltiplo de 0,01 lotes, el paso mínimo de MT5.",'
+    'IF(IFERROR(SUMPRODUCT(($D$11:$D$16>0)*(($D$11:$D$16<$R$13)'
+    '+(MOD(ROUND($D$11:$D$16/$R$14,6),1)<>0)))>0,FALSE),'
+    '"⚠ Hay un volumen inválido para este instrumento: el mínimo es "'
+    '&FIXED($R$13,2)&" lotes y debe ir en múltiplos de "&FIXED($R$14,2)&".",'
     'IF($M$21>$F$5,"⚠ El margen requerido excede el capital de la cuenta.",'
     '"✓ "&COUNTIF($D$11:$D$16,">0")&" operación(es) sobre "&$R$1'
     '&". El volumen en lotes es el que se ingresa en MT5."))))))'
@@ -333,7 +396,9 @@ for col, txt, fondo in cabeceras:
 ws.row_dimensions[10].height = 34
 
 # --- ejemplo: tres operaciones del periodo, la ultima perdedora
-d, base = filas[0]["digits"], round(filas[0]["precio"], filas[0]["digits"])
+# el ejemplo se arma sobre USD/CLP, que es el instrumento del que parte cualquier
+# conversación en la mesa. Si el broker lo retirara, cae al primero de la lista.
+d, base = EJEMPLO["digits"], round(EJEMPLO["precio"], EJEMPLO["digits"])
 ejemplo = [("COMPRA", 0.54, base - 3, base + 2, 2),
            ("VENTA", 0.43, base + 4, base + 1, 1),
            ("COMPRA", 0.32, base, base - 1.5, 0)]
@@ -407,6 +472,12 @@ cierre = [
     # lo que la columna de apalancamiento provoca preguntar, respondido con la mecanica
     # del margen y sin necesidad de stop loss.
     #
+    # Se mide contra el CIERRE FORZADO y no contra la llamada a margen. El broker pasó a
+    # llamar en 200%, y como abrir una posicion solo exige nivel sobre 100%, la distancia
+    # a la llamada seria cero en casi cualquier caso realista: no informaria nada. El
+    # cierre forzado es ademas el evento irreversible, el que le cuesta las posiciones al
+    # cliente.
+    #
     # Va sobre la posicion NETA y no sobre el monto bruto. Todas las operaciones son del
     # mismo instrumento, asi que el precio se mueve en una sola direccion: una compra y
     # una venta no pueden perder a la vez. Usar el bruto supondria que todas pierden
@@ -415,11 +486,11 @@ cierre = [
     #
     # Se expresa en unidades de precio del instrumento, no en porcentaje: "el dolar
     # puede moverse 21,62 pesos en contra" es mas concreto frente a un cliente.
-    (23, "Recorrido adverso hasta la llamada a margen",
+    (23, "Recorrido adverso hasta el cierre forzado",
      '=IF(OR($M$21=0,SUMPRODUCT((($C$11:$C$16="COMPRA")*2-1)*$D$11:$D$16)=0),"",'
      # si el margen ya deja la cuenta bajo la llamada, el recorrido seria negativo. Se
      # lleva a cero y se pinta rojo: no queda recorrido, y la franja explica por que.
-     'MAX(0,ROUND(($F$5-$R$11/100*$M$21)/ABS(SUMPRODUCT((($C$11:$C$16="COMPRA")*2-1)'
+     'MAX(0,ROUND(($F$5-$R$12/100*$M$21)/ABS(SUMPRODUCT((($C$11:$C$16="COMPRA")*2-1)'
      '*$D$11:$D$16)*$R$4),$R$2)))', PRECIO),
     (24, "Resultado neto del periodo", "=$M$17", CLP),
     (25, "Patrimonio final", "=$F$5+$M$17", CLP),
@@ -450,14 +521,16 @@ ws.conditional_formatting.add("M23", FormulaRule(formula=["$M$23<=0"],
 # --- pie
 banda("C27:N27",
       "Especificaciones del broker al %s hora Chile. Celdas crema: campos editables; "
-      "el resto son fórmulas. El volumen en lotes se escribe en múltiplos de 0,01, el "
-      "paso que acepta MT5. APALANCAMIENTO son las veces que el capital de la cuenta "
+      "el resto son fórmulas. El volumen en lotes se escribe en múltiplos del paso que "
+      "acepta MT5 en ese instrumento, indicado arriba a la derecha. APALANCAMIENTO son "
+      "las veces que el capital de la cuenta "
       "queda controlado por esa operación, y la columna es aditiva: su total es el "
       "apalancamiento del periodo. El COSTO DE MANTENCIÓN (SWAP) se estima por días "
-      "calendario. El broker llama a margen cuando el nivel baja de %g%% y cierra "
-      "posiciones en %g%%. Este simulador no incorpora stop loss."
+      "calendario. El broker avisa cuando el nivel de margen baja de %g%% y cierra "
+      "posiciones por su cuenta en %g%%, que es el umbral contra el que se mide el "
+      "recorrido. Este simulador no incorpora stop loss."
       % (SELLO, LLAMADA, CIERRE_FORZADO),
-      BLANCO, "808080", 9, 30, italica=True, izq=True)
+      BLANCO, "808080", 9, 42, italica=True, izq=True)
 
 # --- listas y validaciones (formula1 sin "=": con el igual Excel descarta la validación)
 validaciones = [
@@ -467,10 +540,11 @@ validaciones = [
     (DataValidation(type="list", formula1='"COMPRA,VENTA"', allow_blank=True,
                     showErrorMessage=True, errorTitle="Dirección no válida",
                     error="Seleccione COMPRA o VENTA."), ["C%d" % r for r in OPS]),
-    (DataValidation(type="decimal", operator="greaterThanOrEqual", formula1="0.01",
+    (DataValidation(type="decimal", operator="greaterThanOrEqual", formula1="$R$13",
                     allow_blank=True, showErrorMessage=True, errorTitle="Volumen no válido",
-                    error="El volumen mínimo que acepta MT5 es 0,01 lotes, en múltiplos "
-                          "de 0,01. Use la coma como separador decimal: 0,54 y no 0.54."),
+                    error="El volumen no alcanza el mínimo que MT5 acepta en este "
+                          "instrumento, que se indica arriba a la derecha. Use la coma "
+                          "como separador decimal: 0,54 y no 0.54."),
      ["D%d" % r for r in OPS]),
     (DataValidation(type="decimal", operator="greaterThan", formula1="0",
                     allow_blank=True, showErrorMessage=True, errorTitle="Precio no válido",
@@ -504,4 +578,4 @@ ws.sheet_properties.pageSetUpPr.fitToPage = True
 CARPETA.mkdir(parents=True, exist_ok=True)
 wb.save(DESTINO)
 print("generado:", DESTINO)
-print("ejemplo:", filas[0]["nombre"], "con 3 operaciones alrededor de", base)
+print("ejemplo:", EJEMPLO["nombre"], "con 3 operaciones alrededor de", base)

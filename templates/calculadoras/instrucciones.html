@@ -153,8 +153,8 @@ tbody tr:nth-child(even) { background: var(--tarjeta); }
       <p class="kicker">Simulador de operaciones · GI</p>
       <h1>Instrucciones de uso</h1>
       <p class="bajada">Sirve para simular un periodo de operaciones sobre cualquiera
-      de los 25 instrumentos del catálogo y mostrarle al cliente el resultado real:
-      lo que gana, lo que le cuesta y cuánto riesgo asume.</p>
+      de los instrumentos que el broker deja operar y mostrarle al cliente el resultado
+      real: lo que gana, lo que le cuesta y cuánto riesgo asume.</p>
     </div>
   </div>
 
@@ -163,16 +163,14 @@ tbody tr:nth-child(even) { background: var(--tarjeta); }
   misma que se ingresa en MT5. La planilla traduce ese volumen a pesos.</p>
   <p>Solo se escriben las <strong>celdas crema</strong>. El resto son fórmulas y la hoja
   está protegida, para que ninguna se sobrescriba por accidente.</p>
-  <p>Todas las operaciones de la tabla corresponden al <strong>mismo instrumento</strong>.
-  Para simular otro, se cambia el instrumento arriba y se actualizan los precios.</p>
+  <p>Todas las operaciones son del <strong>mismo instrumento</strong>. Para simular otro,
+  se cambia arriba.</p>
 
   <div class="aviso ojo">
     <strong>El separador decimal es la coma.</strong> Se escribe
     <span class="cifra bien">0,54</span> y <span class="cifra bien">918,75</span>.
     Si se escribe <span class="cifra mal">0.54</span>, Excel no lo toma como número:
     lo guarda como texto y la fila entera queda en <span class="cifra mal">#¡VALOR!</span>.
-    Las celdas rechazan el valor inválido al escribirlo, pero no al pegarlo, así que la
-    franja superior avisa igual.
   </div>
 
   <h2><span class="n">02</span> Los dos datos del periodo</h2>
@@ -180,8 +178,10 @@ tbody tr:nth-child(even) { background: var(--tarjeta); }
     <thead><tr><th>Campo</th><th>Qué se escribe</th></tr></thead>
     <tbody>
       <tr><td class="campo">Instrumento</td>
-          <td>Se elige de la lista desplegable. Están los 25 instrumentos del catálogo:
-          divisas, metales, petróleo, índices y las 13 acciones.</td></tr>
+          <td>De la lista desplegable, que trae <strong>todos los instrumentos
+          habilitados en el terminal</strong> ordenados por grupo: divisas, materias primas,
+          índices, criptomonedas, ETF y acciones. Los del grupo de análisis van con su
+          nombre en español; el resto, con la descripción del broker.</td></tr>
       <tr><td class="campo">Capital de la cuenta</td>
           <td>El capital total del cliente, en pesos. De este número dependen el
           apalancamiento y el nivel de margen.</td></tr>
@@ -197,9 +197,10 @@ tbody tr:nth-child(even) { background: var(--tarjeta); }
       <tr><td class="campo">Dirección</td>
           <td>COMPRA o VENTA, desde la lista desplegable.</td></tr>
       <tr><td class="campo">Volumen en lotes</td>
-          <td>En múltiplos de <span class="cifra">0,01</span>, que es el paso mínimo que
-          acepta MT5. La referencia de arriba a la derecha indica cuánto capital exige el
-          volumen más chico en el instrumento elegido.</td></tr>
+          <td><strong>El mínimo y el paso cambian según el instrumento</strong>:
+          <span class="cifra">0,01</span> en divisas, <span class="cifra">0,10</span> en
+          acciones y ETF. La referencia de arriba a la derecha muestra el del instrumento
+          elegido.</td></tr>
       <tr><td class="campo">Precio de entrada</td>
           <td>El precio de apertura, tomado del gráfico de MT5.</td></tr>
       <tr><td class="campo">Precio de salida</td>
@@ -261,11 +262,11 @@ tbody tr:nth-child(even) { background: var(--tarjeta); }
           <strong>El broker llama a margen cuando baja de {{LLAMADA}}% y cierra
           posiciones en {{CIERRE}}%.</strong> Se destaca en rojo si la operación ya parte
           bajo la llamada.</td></tr>
-      <tr><td class="campo">Recorrido adverso<br>hasta la llamada</td>
-          <td>Cuánto puede moverse el precio en contra antes de que el broker llame a
-          margen, en la unidad del instrumento. Se calcula sobre la posición neta, porque
-          el precio se mueve en una sola dirección y una compra y una venta no pueden
-          perder a la vez. Queda en blanco si la cartera está perfectamente cubierta.</td></tr>
+      <tr><td class="campo">Recorrido adverso<br>hasta el cierre forzado</td>
+          <td>Cuánto puede moverse el precio en contra antes de que el broker cierre las
+          posiciones, en la unidad del instrumento. Se mide contra el cierre forzado, que es
+          el evento irreversible, y sobre la posición neta: el precio va en una sola
+          dirección, así que una compra y una venta no pueden perder juntas.</td></tr>
       <tr><td class="campo">Resultado neto<br>y patrimonio final</td>
           <td>La suma de los resultados netos, y el capital de la cuenta más ese
           resultado.</td></tr>
@@ -298,8 +299,9 @@ tbody tr:nth-child(even) { background: var(--tarjeta); }
       <tr><td class="campo">Un precio difiere en<br>más de 10%</td>
           <td>Al cambiar de instrumento quedó el precio del anterior. Es el error más
           fácil de cometer.</td></tr>
-      <tr><td class="campo">Volumen que no es<br>múltiplo de 0,01</td>
-          <td>MT5 solo acepta ese paso.</td></tr>
+      <tr><td class="campo">Volumen inválido para<br>este instrumento</td>
+          <td>Está bajo el mínimo o no va en múltiplos del paso. El aviso indica los dos
+          valores.</td></tr>
       <tr><td class="campo">El margen excede<br>el capital</td>
           <td>No se podría abrir en el terminal.</td></tr>
     </tbody>
