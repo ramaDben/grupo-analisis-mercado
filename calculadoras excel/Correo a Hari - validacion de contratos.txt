@@ -1,68 +1,58 @@
-ASUNTO: Contratos nuevos · necesito que valides cuatro cambios antes de usarlos
+ASUNTO: Contratos nuevos · calculadora ajustada a la cuenta que rige
 
 
 Hola Hari,
 
-Cargué los contratos actualizados en la calculadora y aparecieron cuatro diferencias
-respecto de lo que teníamos registrado la semana pasada. Antes de dar las cifras
-nuevas por buenas necesito que las confirmes, porque cambian números que ya te pasé.
+Gracias por pasarme la cuenta. Quedó claro el punto que me tenía frenado: la que
+estábamos usando antes era demo, y sus contratos no eran los que aplican al cliente.
+La calculadora ya está armada sobre la cuenta que me diste.
 
 Una aclaración de origen, que corresponde: el hallazgo es de Claude, el asistente con
 el que armo la calculadora. Lo detectó al comparar las especificaciones nuevas contra
-las que había registrado el 19 de agosto, y lo contrastó contra el terminal antes de
-que yo te escribiera.
+las que había registrado el 19 de agosto, sobre la cuenta equivocada.
 
 
-LO QUE CAMBIÓ
+LO QUE CAMBIÓ RESPECTO DE LO QUE TE MANDÉ ANTES
 
-1. Tamaño de contrato de las acciones: de 50 acciones por lote a 1. Aplica a las 14
-   que seguimos en el grupo de análisis, sin excepción. En todo el listado de acciones
-   solo una conserva el contrato de 50, y es nueva.
+1. Tamaño de contrato de las acciones: de 50 acciones por lote a 1. Aplica a las 14 que
+   seguimos en el grupo de análisis, sin excepción. En todo el listado de acciones solo
+   una conserva el contrato de 50, y es nueva.
 
-2. Volumen mínimo y paso: las acciones y los ETF pasaron de 0,01 a 0,1 lotes. Las
-   divisas siguen en 0,01.
+2. Volumen mínimo y paso: las acciones y los ETF van en múltiplos de 0,1 lotes, no de
+   0,01. Las divisas siguen en 0,01.
 
-3. Llamada a margen: de 90% a 200%. El cierre forzado sigue en 50%.
+3. Llamada a margen: 200%, no 90%. El cierre forzado sigue en 50%. Esto sí conviene que
+   lo confirmes con la mesa, porque no aparece en la ventana de Especificación del
+   terminal y cambia la conversación de riesgo con el cliente.
 
-4. Instrumentos disponibles: de 25 a 148, con acciones, ETF y criptomonedas que antes
-   no estaban.
+4. Instrumentos disponibles: 148 en vez de 25, con acciones, ETF y criptomonedas que
+   antes no estaban. Todos quedaron cargados en la lista.
 
 También cambiaron el WTI, de 1.000 a 100 barriles por lote, y el US500, de 1 a 10.
 
 
-CÓMO LO PUEDES VERIFICAR
+LO QUE GANAMOS CON EL CAMBIO DE CUENTA
 
-Los tres primeros puntos se ven en el terminal. Clic derecho sobre el símbolo y luego
-Especificación: ahí salen "Tamaño de contrato", "Volumen mínimo" y "Paso de volumen".
-En #AAPL debería decir contrato 1 y paso 0,1.
-
-Los umbrales de margen no aparecen en esa ventana. Los leí de la cuenta, y ahí sí
-necesito que los confirmes con la mesa o con el contrato firmado, porque que el broker
-llame a margen en 200% y no en 90% cambia bastante la conversación de riesgo con el
-cliente.
+Pude revalidar el costo de mantención contra el historial real, y ahí el resultado
+mejoró: en las cuatro operaciones cerradas con swap cobrado, el cálculo de la planilla
+coincide exactamente con lo que cobró el broker, incluida una de tres días que pagó el
+triple justo del cargo diario. Antes la validación daba 0,3% de diferencia, y esa
+diferencia venía de la cuenta demo.
 
 
-LO QUE NECESITO QUE ME DIGAS
+CÓMO VERIFICAR LOS PRIMEROS DOS PUNTOS
 
-La comparación es entre dos cuentas distintas: la que estábamos usando antes y la de
-inversor que me habilitaron ahora. Desde acá no puedo distinguir entre dos
-posibilidades:
-
-- El broker cambió los contratos para todos, o
-- las dos cuentas tienen condiciones distintas, y hay que definir cuáles son las que
-  rigen para los clientes.
-
-Si son condiciones distintas por tipo de cuenta, la calculadora tiene que armarse con
-las del cliente y no con las de esta. Es el único punto que me bloquea.
+En MT5, clic derecho sobre el símbolo y luego Especificación. Ahí salen "Tamaño de
+contrato", "Volumen mínimo" y "Paso de volumen". En #AAPL debería decir contrato 1 y
+paso 0,1.
 
 
-MIENTRAS ESO SE ACLARA
+UNA COSA QUE TE PIDO
 
-Las cifras de acciones de mi correo anterior quedan en suspenso. En particular el
-ejemplo del costo de mantención de Apple: con contrato de 1 acción en lugar de 50, ese
-número es cincuenta veces más chico. Si lo alcanzaste a usar con algún cliente,
-avísame y lo rehacemos.
+Las cifras de acciones de mi correo anterior quedan sin efecto: salieron de la demo. Si
+alcanzaste a mostrar alguna a un cliente, avísame cuál y la rehacemos con los números
+que corresponden.
 
-Cualquier cosa me dices.
+Adjunto la planilla nueva y las Instrucciones de uso actualizadas.
 
 Saludos,

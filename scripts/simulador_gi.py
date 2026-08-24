@@ -60,8 +60,8 @@ costo de mantencion y resultado neto son formulas cerradas, O(1) cada una. Total
     modelo alternativo, recorrer cada dia evaluando su dia de semana y el cargo
     triple, es O(d) por fila, O(r * d) en la hoja, y en Excel exige INDIRECT, que
     es volatil y obliga a recalcular todo ante cualquier edicion. Medido contra
-    el historial entrega la MISMA desviacion que la forma cerrada (0,3% en la
-    operacion de control), asi que O(1) domina.
+    el historial de la cuenta real entrega la MISMA desviacion que la forma cerrada
+    (0,00% en las cuatro operaciones de control), asi que O(1) domina.
 
 Agregados: O(r) para las sumas de totales, el monto controlado por SUMPRODUCT y cada
 predicado de la franja de validacion (su cantidad es constante).
@@ -104,6 +104,18 @@ COMPLETO = 4                  # SYMBOL_TRADE_MODE_FULL
 # ---------------------------------------------------------------- datos MT5
 assert mt5.initialize(), mt5.last_error()
 cuenta = mt5.account_info()
+
+# ENUM_ACCOUNT_TRADE_MODE de MQL5: 0 = demo, 1 = concurso, 2 = real. Las
+# especificaciones de una demo NO sirven para un cliente: los contratos difieren, y
+# construir el archivo sobre la cuenta equivocada obligo a rehacer material ya enviado.
+# El script lo declara en cada corrida y avisa si la cuenta conectada no es real.
+TIPO_CUENTA = {0: "DEMO", 1: "CONCURSO", 2: "REAL"}.get(cuenta.trade_mode, "DESCONOCIDA")
+print("cuenta %s (%s) · %s · %s · cuenta %s"
+      % (cuenta.login, cuenta.name, cuenta.server, cuenta.currency, TIPO_CUENTA))
+if cuenta.trade_mode != 2:
+    print("  ! ATENCIÓN: esta cuenta es %s. Sus contratos pueden no ser los del cliente."
+          % TIPO_CUENTA)
+    print("  ! No distribuya el archivo sin verificar contra la cuenta real.")
 
 # el catalogo del proyecto ya no define QUE instrumentos entran, solo aporta el
 # nombre en español de los 25 que cubre el grupo de analisis. El universo lo define
@@ -231,11 +243,12 @@ for r, f in enumerate(filas, start=2):
     dat.cell(row=r, column=8).number_format = PRECIO
 ultima = len(filas) + 1
 nota = dat.cell(row=ultima + 2, column=1, value=(
-    "Actualizado desde MT5 (cuenta %s, %s) el %s hora Chile. No editar a mano: "
-    "se regenera con scripts/simulador_gi.py. MODO SWAP 1 = puntos por día por lote; "
-    "5 = interés anual sobre el nocional (año de 360 días). Los nombres en español son "
-    "los del catálogo del grupo de análisis; el resto llega con la descripción del broker."
-    % (cuenta.login, cuenta.currency, SELLO)))
+    "Especificaciones tomadas de la cuenta %s de MT5, %s, tipo %s, en %s, el %s hora "
+    "Chile. No editar a mano: se regenera con scripts/simulador_gi.py. MODO SWAP 1 = "
+    "puntos por día por lote; 5 = interés anual sobre el nocional (año de 360 días). Los "
+    "nombres en español son los del catálogo del grupo de análisis; el resto llega con la "
+    "descripción del broker."
+    % (cuenta.login, cuenta.server, TIPO_CUENTA, cuenta.currency, SELLO)))
 nota.font = Font(italic=True, size=9, color="808080")
 for col, w in zip("ABCDEFGHIJKLMN",
                   (36, 12, 11, 17, 21, 10, 11, 13, 11, 13, 13, 14, 14, 17)):
@@ -428,11 +441,12 @@ for i, r in enumerate(OPS):
     salida("K%d" % r, '=IF($D{r}=0,"",$D{r}*$R$6*$R$4)'.format(r=r), CLP)
     # costo de mantencion, por dias calendario. NO se suman dias por el cargo triple:
     # ese triple REEMPLAZA los rollovers del fin de semana, que no ocurren, asi que una
-    # semana completa son 7 cargos para 7 dias calendario. Verificado 2026-08-19 contra
-    # el historial: posicion 590040, #AAPL BUY 2,98 lotes del 05 al 11 de agosto, 6 dias
-    # con un fin de semana completo dentro; el terminal cobro 36.063,35 y esta formula
-    # da 36.163,34, o sea 0,3% de desviacion. Se niega en vez de usar ABS para que una
-    # tasa positiva quede como abono y no como costo.
+    # semana completa son 7 cargos para 7 dias calendario. Revalidado 2026-08-24 sobre el
+    # historial de la CUENTA REAL del cliente: las cuatro posiciones cerradas con swap
+    # cobrado coinciden EXACTAMENTE, 0,00% de desviacion en las cuatro, incluida una de
+    # 3 dias que cobro el triple exacto del cargo diario. La validacion anterior (0,3%
+    # sobre #AAPL) venia de una cuenta demo, cuyos contratos no son los del cliente.
+    # Se niega en vez de usar ABS para que una tasa positiva quede como abono y no costo.
     salida("L%d" % r, ('=IF(OR($D{r}=0,$I{r}=0),"",-IF($C{r}="VENTA",$R$10,$R$9)'
                        '*IF($R$8={pts},$D{r}*POWER(10,-$R$2)*$R$4,'
                        '$D{r}*$G{r}*$R$4/100/360)*$I{r})').format(r=r, pts=MODO_PUNTOS), CLP)
@@ -520,7 +534,8 @@ ws.conditional_formatting.add("M23", FormulaRule(formula=["$M$23<=0"],
 
 # --- pie
 banda("C27:N27",
-      "Especificaciones del broker al %s hora Chile. Celdas crema: campos editables; "
+      "Especificaciones de la cuenta real del broker al %s hora Chile. Celdas crema: "
+      "campos editables; "
       "el resto son fórmulas. El volumen en lotes se escribe en múltiplos del paso que "
       "acepta MT5 en ese instrumento, indicado arriba a la derecha. APALANCAMIENTO son "
       "las veces que el capital de la cuenta "
