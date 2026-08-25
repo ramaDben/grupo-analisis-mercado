@@ -14,7 +14,8 @@
       "drivers": ["cobre", "Dollar Index", "tasas BCCh vs Fed", "flujos de capital"],
       "temporalidades": ["4H", "1H", "15M"],
       "horario_mercado": "09:00-16:00 CLT",
-      "rotacion_diaria": true
+      "rotacion_diaria": true,
+      "imagen": "assets/activos/usdclp.jpg"
     },
     {
       "ticker": "USD/JPY",
@@ -66,7 +67,8 @@
       "drivers": ["Dollar Index", "tasas reales", "decisiones Fed", "coberturas bancos centrales", "geopolítica"],
       "temporalidades": ["4H", "1H", "15M"],
       "horario_mercado": "24h (principal: sesión NY)",
-      "rotacion_diaria": true
+      "rotacion_diaria": true,
+      "imagen": "assets/activos/oro.jpg"
     },
     {
       "ticker": "XAG/USD",
@@ -79,7 +81,8 @@
       "drivers": ["Dollar Index", "tasas reales", "demanda industrial", "correlación con el oro", "manufactura global (China)"],
       "temporalidades": ["4H", "1H", "15M"],
       "horario_mercado": "24h (principal: sesión NY)",
-      "rotacion_diaria": false
+      "rotacion_diaria": false,
+      "imagen": "assets/activos/plata.jpg"
     },
     {
       "ticker": "WTI",
@@ -92,7 +95,8 @@
       "drivers": ["inventarios EIA", "decisiones OPEP+", "demanda China", "geopolítica"],
       "temporalidades": ["4H", "1H"],
       "horario_mercado": "24h (principal: sesión NY)",
-      "rotacion_diaria": true
+      "rotacion_diaria": true,
+      "imagen": "assets/activos/wti.jpg"
     },
     {
       "ticker": "BTC/USD",
@@ -105,7 +109,73 @@
       "drivers": ["flujos ETFs de BTC", "tasas Fed", "Dollar Index", "regulación cripto", "sentimiento de riesgo"],
       "temporalidades": ["4H", "1H"],
       "horario_mercado": "24h",
-      "rotacion_diaria": true
+      "rotacion_diaria": true,
+      "imagen": "assets/activos/bitcoin.jpg"
+    },
+    {
+      "ticker": "ETH/USD",
+      "ticker_mt5": "ETHUSD",
+      "nombre": "Ethereum",
+      "categoria": "crypto",
+      "digits": 2,
+      "volatilidad": "alta",
+      "nota_volatilidad": "se mueve amplio y a toda hora, incluso el fin de semana; 1H y 4H ordenan la tendencia, y en 15M el ruido manda por sobre la dirección",
+      "drivers": ["flujos de ETFs de Ethereum", "actividad y comisiones de la red", "tasas Fed", "regulación cripto", "apetito por riesgo"],
+      "temporalidades": ["4H", "1H"],
+      "horario_mercado": "24h",
+      "rotacion_diaria": false
+    },
+    {
+      "ticker": "SOL/USD",
+      "ticker_mt5": "SOLUSD",
+      "nombre": "Solana",
+      "categoria": "crypto",
+      "digits": 2,
+      "volatilidad": "alta",
+      "nota_volatilidad": "de las más volátiles del catálogo: hace recorridos grandes en pocas horas, así que 4H da la lectura más limpia y en 15M los movimientos se desdicen solos",
+      "drivers": ["flujos de ETFs de Solana", "actividad de la red Solana", "apetito por riesgo cripto", "tasas Fed"],
+      "temporalidades": ["4H", "1H"],
+      "horario_mercado": "24h",
+      "rotacion_diaria": false
+    },
+    {
+      "ticker": "LTC/USD",
+      "ticker_mt5": "LTCUSD",
+      "nombre": "Litecoin",
+      "categoria": "crypto",
+      "digits": 2,
+      "volatilidad": "alta",
+      "nota_volatilidad": "sigue de cerca a Bitcoin y amplifica sus movimientos; 4H muestra la tendencia y 1H sirve para afinar, pero en 15M casi todo es ruido",
+      "drivers": ["correlación con Bitcoin", "apetito por riesgo cripto", "tasas Fed"],
+      "temporalidades": ["4H", "1H"],
+      "horario_mercado": "24h",
+      "rotacion_diaria": false
+    },
+    {
+      "ticker": "ADA/USD",
+      "ticker_mt5": "ADAUSD",
+      "nombre": "Cardano",
+      "categoria": "crypto",
+      "digits": 4,
+      "volatilidad": "alta",
+      "nota_volatilidad": "cotiza en centavos con 4 decimales, así que un movimiento que en pantalla parece mínimo es porcentualmente grande; conviene leerlo en 4H y mirar la variación en porcentaje antes que la cifra",
+      "drivers": ["correlación con Bitcoin", "desarrollo del ecosistema Cardano", "apetito por riesgo cripto"],
+      "temporalidades": ["4H", "1H"],
+      "horario_mercado": "24h",
+      "rotacion_diaria": false
+    },
+    {
+      "ticker": "DOGE/USD",
+      "ticker_mt5": "DOGUSD",
+      "nombre": "Dogecoin",
+      "categoria": "crypto",
+      "digits": 4,
+      "volatilidad": "alta",
+      "nota_volatilidad": "el más impredecible del catálogo: reacciona a menciones en redes sociales y no a fundamentos, así que ningún marco temporal lo vuelve ordenado; se cubre solo cuando el movimiento ya ocurrió y hay algo concreto que explicar",
+      "drivers": ["menciones en redes sociales y sentimiento de retail", "correlación con Bitcoin", "apetito por riesgo cripto"],
+      "temporalidades": ["4H", "1H"],
+      "horario_mercado": "24h",
+      "rotacion_diaria": false
     }
   ],
 
@@ -123,7 +193,8 @@
       "temporalidades": ["4H", "1H"],
       "horario_mercado": "09:30-16:00 ET (10:30-17:00 CLT)",
       "rotacion_diaria": true,
-      "componentes_clave": ["#AAPL", "#MSFT", "#NVDA", "#AMZN"]
+      "componentes_clave": ["#AAPL", "#MSFT", "#NVDA", "#AMZN"],
+      "imagen": "assets/activos/us100.jpg"
     },
     {
       "ticker": "US500",
@@ -157,6 +228,82 @@
     }
   ],
 
+  "etfs": {
+    "_nota": "Fondos cotizados (grupo 'CFD ETF' del terminal). Tickers con sufijo .US, verificados con symbol_info contra la cuenta real.",
+    "_nota_playbook": "Entrar a este catálogo NO es entrar al Playbook. Estos activos tienen niveles, indicadores y especificaciones de contrato, pero no tienen ficha operativa, régimen R0-R4, sesgo score ni setups permitidos: ese conjunto sigue siendo el de bias_reader.VALID_SYMBOLS (USDCLP, XAUUSD, WTI, BRENT, US100), porque cada ficha del Playbook cita literatura académica y elasticidades medidas.",
+    "_nota_bonos": "El broker no ofrece TLT ni ningún bono largo, así que la duración de deuda se lee de la curva soberana con get_curva_tasas (DGS10 / DGS30) y no como activo operable. SMH tampoco existe: SOXX.US es su equivalente.",
+    "componentes": [
+      {
+        "ticker": "QQQ",
+        "ticker_mt5": "QQQ.US",
+        "nombre": "Invesco QQQ Trust (Nasdaq 100)",
+        "categoria": "etf",
+        "digits": 2,
+        "volatilidad": "media",
+        "nota_volatilidad": "replica al Nasdaq 100, así que se mueve parecido al US100 pero solo en horario de bolsa; 1H y 4H equilibran señal y ruido para la lectura del día",
+        "drivers": ["tasas Fed", "earnings tecnológicos", "rendimientos Treasury", "flujos institucionales hacia tecnología"],
+        "temporalidades": ["4H", "1H"],
+        "horario_mercado": "09:30-16:00 ET (convertir con scripts/hora_chile.ps1: el desfase con Chile cambia con el horario de verano)",
+        "rotacion_diaria": false,
+        "imagen": "assets/activos/us100.jpg"
+      },
+      {
+        "ticker": "SPY",
+        "ticker_mt5": "SPY.US",
+        "nombre": "SPDR S&P 500 ETF",
+        "categoria": "etf",
+        "digits": 2,
+        "volatilidad": "media",
+        "nota_volatilidad": "al replicar 500 empresas se mueve de forma más contenida que un ETF de un solo sector; 1H y 4H dan una lectura clara de la tendencia del día",
+        "drivers": ["tasas Fed", "earnings agregados del S&P 500", "datos macro de EE.UU.", "flujos institucionales"],
+        "temporalidades": ["4H", "1H"],
+        "horario_mercado": "09:30-16:00 ET (convertir con scripts/hora_chile.ps1: el desfase con Chile cambia con el horario de verano)",
+        "rotacion_diaria": false
+      },
+      {
+        "ticker": "GLD",
+        "ticker_mt5": "GLD.US",
+        "nombre": "SPDR Gold Shares",
+        "categoria": "etf",
+        "digits": 2,
+        "volatilidad": "media",
+        "nota_volatilidad": "sigue al oro, pero cotiza solo en horario de bolsa: abre con el salto que el oro spot ya hizo durante la noche, y 4H evita leer ese salto como una tendencia nueva",
+        "drivers": ["tasa real TIPS 10Y", "Dollar Index", "decisiones Fed", "flujos de ETFs de oro", "geopolítica"],
+        "temporalidades": ["4H", "1H"],
+        "horario_mercado": "09:30-16:00 ET (convertir con scripts/hora_chile.ps1: el desfase con Chile cambia con el horario de verano)",
+        "rotacion_diaria": false,
+        "imagen": "assets/activos/oro.jpg"
+      },
+      {
+        "ticker": "IWM",
+        "ticker_mt5": "IWM.US",
+        "nombre": "iShares Russell 2000 (empresas pequeñas)",
+        "categoria": "etf",
+        "digits": 2,
+        "volatilidad": "media",
+        "nota_volatilidad": "las empresas pequeñas dependen más del crédito, así que reacciona fuerte a las tasas y se mueve más que el SPY; 1H y 4H son el marco útil",
+        "drivers": ["tasas Fed", "crédito bancario y pendiente de la curva 2s10s", "ciclo económico de EE.UU.", "earnings de empresas pequeñas"],
+        "temporalidades": ["4H", "1H"],
+        "horario_mercado": "09:30-16:00 ET (convertir con scripts/hora_chile.ps1: el desfase con Chile cambia con el horario de verano)",
+        "rotacion_diaria": false
+      },
+      {
+        "ticker": "SOXX",
+        "ticker_mt5": "SOXX.US",
+        "nombre": "iShares Semiconductor ETF (chips)",
+        "categoria": "etf",
+        "digits": 2,
+        "volatilidad": "alta",
+        "nota_volatilidad": "el sector de chips es el más volátil de la bolsa estadounidense y un earnings de NVIDIA lo mueve entero; 4H para la tendencia y 1H para el día, porque en 15M el ruido domina",
+        "drivers": ["demanda de chips para inteligencia artificial", "earnings de semiconductores", "regulación de exportación a China", "ciclo de inventarios"],
+        "temporalidades": ["4H", "1H"],
+        "horario_mercado": "09:30-16:00 ET (convertir con scripts/hora_chile.ps1: el desfase con Chile cambia con el horario de verano)",
+        "rotacion_diaria": false,
+        "imagen": "assets/activos/tech-circuito.jpg"
+      }
+    ]
+  },
+
   "acciones": {
     "tecnologico": {
       "indice_relacionado": "US100",
@@ -167,7 +314,7 @@
         {"ticker_mt5": "#NVDA", "nombre": "NVIDIA Corp.", "digits": 2, "drivers": ["demanda chips AI", "data centers", "earnings", "regulación exportación China"]},
         {"ticker_mt5": "#AMZN", "nombre": "Amazon.com Inc.", "digits": 2, "drivers": ["AWS/cloud", "retail/consumo", "earnings", "márgenes"]},
         {"ticker_mt5": "#AMD", "nombre": "Advanced Micro Devices", "digits": 2, "drivers": ["demanda chips AI/GPU", "data centers", "competencia con NVIDIA", "earnings", "demanda PC/servidores"]},
-        {"ticker_mt5": "#MELI", "nombre": "MercadoLibre Inc.", "digits": 2, "drivers": ["comercio electrónico en Latinoamérica", "Mercado Pago / fintech", "earnings", "tipo de cambio en Brasil y Argentina", "consumo en la región"]}
+        {"ticker_mt5": "#MELI", "nombre": "MercadoLibre Inc.", "digits": 2, "drivers": ["comercio electrónico en Latinoamérica", "Mercado Pago / fintech", "earnings", "tipo de cambio en Brasil y Argentina", "consumo en la región"], "imagen": "assets/activos/meli.jpg"}
       ]
     },
     "bancario": {

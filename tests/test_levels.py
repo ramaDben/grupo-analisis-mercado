@@ -18,6 +18,43 @@ def test_valid_tickers_no_vacio_y_con_nucleo():
     assert all(isinstance(d, int) and d >= 0 for d in levels._VALID_TICKERS.values())
 
 
+def test_catalogo_incluye_etfs_con_sufijo_us():
+    """Los ETF del broker llevan sufijo `.US`, no prefijo `#`.
+
+    El prefijo `#` es de las acciones. Un payload que pida "#QQQ" (como asumía el
+    plan de unificación) cae en TICKER_NOT_FOUND, y el mensaje de error lista los
+    tickers válidos para que se corrija en el momento.
+    """
+    for ticker in ("QQQ.US", "SPY.US", "GLD.US", "IWM.US", "SOXX.US"):
+        assert ticker in levels._VALID_TICKERS, f"falta el ETF {ticker}"
+        assert levels._VALID_TICKERS[ticker] == 2, f"{ticker} cotiza con 2 decimales"
+
+    # Lo que el broker NO ofrece no debe estar inventado en el catálogo.
+    for inexistente in ("#QQQ", "#SPY", "#TLT", "#SMH", "TLT.US", "SMH.US"):
+        assert inexistente not in levels._VALID_TICKERS, (
+            f"{inexistente} no existe en el terminal: verificado con symbol_info "
+            "contra la cuenta real el 2026-08-25"
+        )
+
+
+def test_catalogo_incluye_las_criptos_con_sus_decimales():
+    """ADA y DOGE cotizan con 4 decimales y el resto con 2.
+
+    Importa por la regla de formato de precios: mostrar 0.42 en vez de 0.4213 no es
+    un redondeo cosmético, es perder dos órdenes de magnitud de precisión en un
+    activo que se mueve en centavos. Y el ticker del broker es DOGUSD, no DOGEUSD.
+    """
+    esperado = {
+        "BTCUSD": 2, "ETHUSD": 2, "SOLUSD": 2, "LTCUSD": 2,
+        "ADAUSD": 4, "DOGUSD": 4,
+    }
+    for ticker, digits in esperado.items():
+        assert ticker in levels._VALID_TICKERS, f"falta la cripto {ticker}"
+        assert levels._VALID_TICKERS[ticker] == digits, f"{ticker} debe tener {digits} decimales"
+
+    assert "DOGEUSD" not in levels._VALID_TICKERS, "el broker la llama DOGUSD"
+
+
 # --- RSI (Wilder) ---
 
 def test_rsi_serie_creciente_tiende_a_100():
@@ -141,7 +178,8 @@ def test_camino_feliz_con_mt5_mockeado(collector, monkeypatch):
     assert res["trend"] == "ALCISTA"
 
     # Campos nuevos siempre presentes y con tipos correctos
-    for k in ("ema_50", "ema_100", "bb_upper", "bb_mid", "bb_lower"):
+    for k in ("ema_20", "ema_50", "ema_100", "bb_upper", "bb_mid", "bb_lower",
+              "donchian_50_high", "donchian_50_low", "donchian_50_mid"):
         assert k in res, f"falta campo {k}"
         assert isinstance(res[k], float), f"{k} debe ser float"
         assert res[k] > 0, f"{k} debe ser positivo"
@@ -152,9 +190,37 @@ def test_camino_feliz_con_mt5_mockeado(collector, monkeypatch):
 
     # EMA 50 >= EMA 100 en serie con deriva alcista fuerte
     assert res["ema_50"] >= res["ema_100"], "EMA rápida >= EMA lenta en tendencia alcista"
+    assert res["ema_20"] >= res["ema_50"], "EMA 20 >= EMA 50 en tendencia alcista"
 
     # Bollinger: upper > mid > lower
     assert res["bb_upper"] > res["bb_mid"] > res["bb_lower"]
+
+    # Donchian encierra al precio y el mid es el promedio de los extremos.
+    assert res["donchian_50_low"] <= res["price"] <= res["donchian_50_high"]
+    promedio = (res["donchian_50_high"] + res["donchian_50_low"]) / 2
+    assert abs(res["donchian_50_mid"] - promedio) < 0.01
+
+
+def test_ema_20_no_es_la_banda_media_de_bollinger(collector, monkeypatch):
+    """`ema_20` es media EXPONENCIAL y `bb_mid` es media SIMPLE de 20.
+
+    Es la confusión que motivó exponer el campo: el Playbook manda "EMA 20 en H1"
+    como gatillo, y quien tomara `bb_mid` por esa EMA estaría usando otro indicador.
+    Sobre una serie con tendencia las dos medias difieren, porque la exponencial pesa
+    más los datos recientes.
+    """
+    from market_data_mcp import mt5_client
+
+    monkeypatch.setattr(mt5_client, "get_rates", lambda ticker, tf, n_bars=300: _df_ohlc())
+
+    levels.register(collector)
+    res = collector.tools["get_asset_levels"](ticker="XAUUSD", timeframe="H1")
+
+    assert res["ema_20"] != res["bb_mid"], (
+        "si coinciden, alguien cambió una de las dos por la otra"
+    )
+    # En serie alcista la exponencial va por delante de la simple.
+    assert res["ema_20"] > res["bb_mid"]
 
 
 # --- macd() y bollinger() (mt5_client) ---
@@ -244,6 +310,54 @@ def test_adx_serie_lateral_sin_deriva_queda_bajo_el_gate_de_20():
     valor = float(mt5_client.adx(df, 14).iloc[-1])
     assert 0.0 <= valor <= 100.0
     assert valor < 20.0
+
+
+def test_donchian_toma_los_extremos_de_la_ventana():
+    """El canal es el máximo del high y el mínimo del low de las últimas `period`
+    barras, con `mid` en el centro. Valores calculados a mano para que el test falle
+    si alguien cambia la ventana o confunde high con close."""
+    from market_data_mcp import mt5_client
+
+    # 60 barras: high de 100 a 159, low siempre 10 abajo. La ventana de 50 son los
+    # índices 10..59, así que high máximo = 159 y low mínimo = 100.
+    df = pd.DataFrame({
+        "high": [100 + i for i in range(60)],
+        "low": [90 + i for i in range(60)],
+        "close": [95 + i for i in range(60)],
+    })
+    dc_h, dc_l, dc_m = mt5_client.donchian(df, period=50)
+    assert (dc_h, dc_l, dc_m) == (159.0, 100.0, 129.5)
+
+
+def test_donchian_encierra_el_precio_en_serie_ruidosa():
+    """Invariante del canal: el último cierre no puede quedar fuera de sus extremos."""
+    from market_data_mcp import mt5_client
+    rng = np.random.default_rng(11)
+    base = pd.Series(100 + rng.standard_normal(200).cumsum())
+    df = pd.DataFrame({"high": base + 0.4, "low": base - 0.4, "close": base})
+    dc_h, dc_l, dc_m = mt5_client.donchian(df, period=50)
+    assert dc_l <= float(base.iloc[-1]) <= dc_h
+    assert dc_l < dc_m < dc_h
+
+
+def test_donchian_usa_high_y_low_no_el_cierre():
+    """Regresión: con una mecha larga el canal tiene que abrirse.
+
+    Si la implementación tomara `close` en vez de `high`/`low`, una barra con mecha
+    de 50 puntos no movería el canal y el ADC quedaría subestimado justo en la barra
+    más volátil, que es cuando más importa.
+    """
+    from market_data_mcp import mt5_client
+    df = pd.DataFrame({
+        "high": [100.0] * 60,
+        "low": [90.0] * 60,
+        "close": [95.0] * 60,
+    })
+    df.loc[df.index[-1], "high"] = 150.0
+    df.loc[df.index[-1], "low"] = 50.0
+    dc_h, dc_l, _ = mt5_client.donchian(df, period=50)
+    assert dc_h == 150.0, "el máximo debe seguir al high, no al close"
+    assert dc_l == 50.0, "el mínimo debe seguir al low, no al close"
 
 
 def test_bollinger_banda_media_es_sma():

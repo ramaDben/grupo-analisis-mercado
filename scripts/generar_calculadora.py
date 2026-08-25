@@ -62,6 +62,8 @@ def tickers_del_catalogo() -> list[tuple[str, str]]:
         salida.append((activo["ticker_mt5"], activo["nombre"]))
     for clave, meta in catalogo["activos_complementarios"].items():
         salida.append((meta["ticker_mt5"], NOMBRES_COMPLEMENTARIOS.get(clave, clave)))
+    for etf in catalogo.get("etfs", {}).get("componentes", []):
+        salida.append((etf["ticker_mt5"], etf["nombre"]))
     for sector in catalogo["acciones"].values():
         for componente in sector["componentes"]:
             salida.append((componente["ticker_mt5"], componente["nombre"]))

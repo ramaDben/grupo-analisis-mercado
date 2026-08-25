@@ -125,6 +125,8 @@ NOMBRES_ES = {a["ticker_mt5"]: a["nombre"]
               for a in cat["forex_commodities"] + cat["indices"]}
 NOMBRES_ES.update({a["ticker_mt5"]: a["nombre"]
                    for g in cat["acciones"].values() for a in g["componentes"]})
+NOMBRES_ES.update({a["ticker_mt5"]: a["nombre"]
+                   for a in cat.get("etfs", {}).get("componentes", [])})
 
 # orden de los grupos en la lista desplegable: lo mas operado primero, las 86 acciones
 # al final. Un grupo que el broker agregue y no este aca queda al final, no se pierde.

@@ -51,9 +51,18 @@ _TRADE_MODE_MAP: dict[int, str] = {
 }
 
 # Q3 (design.md §5.3): mapeo ticker -> exchange cubierto por el calendario de
-# feriados. D-GATE-1 aceptado: 3 índices US + 13 acciones = 16 tickers -> NYSE.
+# feriados. 3 índices US + 14 acciones + 5 ETF = 22 tickers -> NYSE.
 # Vive aquí (no en config/activos.json) para no acoplar el catálogo de activos
 # a la lógica de feriados de esta tool.
+#
+# "NYSE" nombra el CALENDARIO de feriados, no el parqué literal: #AAPL, #MSFT,
+# #NVDA, #AMZN, #AMD y #MELI cotizan en Nasdaq, y los ETF en NYSE Arca, pero los
+# tres comparten el mismo calendario de días festivos del mercado estadounidense,
+# que es lo único que esta tool necesita cruzar.
+#
+# Las criptomonedas del catálogo (BTCUSD, ETHUSD, SOLUSD, LTCUSD, ADAUSD, DOGUSD)
+# quedan fuera a propósito: operan 24/7 y no tienen calendario de feriados. Caen en
+# la limitación documentada en `_DOCSTRING_LIMITACION`.
 _TICKER_EXCHANGE: dict[str, str] = {
     "US100.spot": "NYSE",
     "US500.spot": "NYSE",
@@ -63,6 +72,9 @@ _TICKER_EXCHANGE: dict[str, str] = {
     "#NVDA": "NYSE",
     "#AMZN": "NYSE",
     "#AMD": "NYSE",
+    # #MELI estaba en el catálogo desde antes pero faltaba en este mapa, así que
+    # `opera` con fecha futura no le cruzaba feriados. Detectado el 2026-08-25.
+    "#MELI": "NYSE",
     "#JPM": "NYSE",
     "#BAC": "NYSE",
     "#GS": "NYSE",
@@ -71,6 +83,11 @@ _TICKER_EXCHANGE: dict[str, str] = {
     "#CAT": "NYSE",
     "#GE": "NYSE",
     "#DE": "NYSE",
+    "QQQ.US": "NYSE",
+    "SPY.US": "NYSE",
+    "GLD.US": "NYSE",
+    "IWM.US": "NYSE",
+    "SOXX.US": "NYSE",
 }
 
 _RE_FECHA_ISO = re.compile(r"\d{4}-\d{2}-\d{2}")
@@ -78,11 +95,14 @@ _RE_FECHA_ISO = re.compile(r"\d{4}-\d{2}-\d{2}")
 # R11: limitación documentada (no bug) — se reutiliza en el docstring de la
 # tool y queda accesible como constante para poder verificarla en tests.
 _DOCSTRING_LIMITACION = (
-    "Limitación conocida (no es un bug): USDCLP, XAUUSD y WTI.spot no tienen "
-    "calendario de feriados en esta iteración (no mapean a ningún exchange "
-    "cubierto). Para ellos, `opera` con `fecha` futura se decide solo con el "
-    "patrón semanal de MT5 (y, si `fecha` es hoy, con `trade_mode`); "
-    "`motivo` nunca es \"feriado_bolsa\" y `calendario_feriados_fuente` es null."
+    "Limitación conocida (no es un bug): los activos que operan fuera del horario "
+    "de bolsa estadounidense no tienen calendario de feriados (no mapean a ningún "
+    "exchange cubierto). Son USDCLP, XAUUSD, XAGUSD, WTI.spot, los pares de divisas, "
+    "COPPER, USDIDX, GER40.spot y las criptomonedas (BTCUSD, ETHUSD, SOLUSD, LTCUSD, "
+    "ADAUSD, DOGUSD), que además operan 24/7. Para ellos, `opera` con `fecha` futura "
+    "se decide solo con el patrón semanal de MT5 (y, si `fecha` es hoy, con "
+    "`trade_mode`); `motivo` nunca es \"feriado_bolsa\" y "
+    "`calendario_feriados_fuente` es null."
 )
 
 
