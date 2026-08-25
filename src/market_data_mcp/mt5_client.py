@@ -238,3 +238,22 @@ def bollinger(
     return float(upper.iloc[-1]), float(mid.iloc[-1]), float(lower.iloc[-1])
 
 
+def donchian(df: pd.DataFrame, period: int = 50) -> tuple[float, float, float]:
+    """Canal de Donchian (50). Retorna (high, low, mid) del último bar.
+
+    El Playbook lo usa como gatillo de quiebre (canales de 50 períodos en H1 con
+    banda `0.3 x ATR14`) y `CLAUDE.md` lo admite como una de las dos definiciones
+    del ADC (Ancho Dinámico de Canal); la amplitud es `high - low`, que se deja al
+    consumidor igual que con las bandas de Bollinger.
+
+    Misma fórmula que `scripts/extractor_precios.py`, que ya lo persiste para 6
+    activos: máximo móvil del `high`, mínimo móvil del `low`, y `mid` como promedio
+    de ambos extremos. Se replica en vez de importarse porque ese script vive fuera
+    del paquete y trae dependencias (yfinance) que el MCP no tiene.
+    """
+    high = df["high"].rolling(period).max()
+    low = df["low"].rolling(period).min()
+    mid = (high + low) / 2.0
+    return float(high.iloc[-1]), float(low.iloc[-1]), float(mid.iloc[-1])
+
+
