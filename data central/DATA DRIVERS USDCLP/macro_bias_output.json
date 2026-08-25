@@ -1,27 +1,27 @@
 {
   "schema_version": "2.0.0",
-  "config_hash": "b571f800c4e05148",
-  "as_of_utc": "2026-08-24T20:41:33.828206+00:00",
+  "config_hash": "8735efbf1ac7c59a",
+  "as_of_utc": "2026-08-25T21:55:42.222379+00:00",
   "regimen_macro_global": {
-    "codigo": "R0_CALMA_RANGO",
-    "nombre": "Calma / Rango / Absorción",
+    "codigo": "R2_GOLDILOCKS_EXPANSION",
+    "nombre": "Expansión Sólida / Goldilocks",
     "confirmado_por_historesis": true,
-    "lecturas_consecutivas": 7,
-    "descripcion": "Drivers en equilibrio dinámico sin shocks direccionales extremos."
+    "lecturas_consecutivas": 1,
+    "descripcion": "Cobre en expansión (+3.5%) con tasas del Tesoro estables (+0.0 bps). [EVENTO EXTREMO: Conmutación Inmediata]"
   },
   "metricas_clave": {
-    "spread_2s10s_pct": 0.5,
-    "tasa_real_tips10y_pct": 2.4,
-    "breakeven_inflacion_10y_pct": 2.34,
+    "spread_2s10s_pct": 0.46,
+    "tasa_real_tips10y_pct": 2.38,
+    "breakeven_inflacion_10y_pct": 2.32,
     "spread_tasas_chile_fed_pct": 0.87,
-    "cobre_spot_comex": 6.6005,
-    "cobre_variacion_5d_pct": -0.05,
+    "cobre_spot_comex": 6.711,
+    "cobre_variacion_5d_pct": 3.52,
     "petroleo_shock_max_5d_pct": 2.18
   },
   "confianza_general": {
-    "confianza_total_pct": 70.1,
+    "confianza_total_pct": 78.4,
     "score_frescura_pct": 100.0,
-    "score_antiguedad_pct": 14.5,
+    "score_antiguedad_pct": 38.4,
     "score_cobertura_pct": 100.0
   },
   "activos": {
@@ -39,18 +39,18 @@
         "GRID_SIN_STOP"
       ],
       "parametros_riesgo": {
-        "precio_spot": 912.37,
-        "atr_h1": 1.33,
-        "atr_d1": 6.98,
+        "precio_spot": 912.95,
+        "atr_h1": 1.7,
+        "atr_d1": 6.93,
         "stop_loss_mult_intraday": 1.5,
-        "distancia_sl_h1_puntos": 2.0,
+        "distancia_sl_h1_puntos": 2.55,
         "stop_loss_mult_daily": 2.5,
-        "distancia_sl_d1_puntos": 17.44,
+        "distancia_sl_d1_puntos": 17.34,
         "take_profit_tipo": "NIVEL_OPUESTO_CANAL",
         "trailing_stop_mult_atr": null
       },
       "justificacion_vectores": [
-        "Cobre en $6.60 USD/lb frena alzas violentas (Elasticidad beta=-0.48)",
+        "Cobre en $6.71 USD/lb frena alzas violentas (Elasticidad beta=-0.48)",
         "Diferencial de tasas comprimido (+0.87%) limita caídas estructurales",
         "Posición forward no residentes compradora (+4450M USD) actúa como soporte"
       ]
@@ -68,13 +68,13 @@
         "SHORT_AGRESIVO"
       ],
       "parametros_riesgo": {
-        "precio_spot": 4648.39,
-        "atr_h1": 20.1,
-        "atr_d1": 83.99,
+        "precio_spot": 4659.54,
+        "atr_h1": 17.24,
+        "atr_d1": 84.03,
         "stop_loss_mult_intraday": 1.5,
-        "distancia_sl_h1_puntos": 30.16,
+        "distancia_sl_h1_puntos": 25.86,
         "stop_loss_mult_daily": 2.5,
-        "distancia_sl_d1_puntos": 209.99,
+        "distancia_sl_d1_puntos": 210.08,
         "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC",
         "trailing_stop_mult_atr": 3.0
       },
@@ -95,13 +95,13 @@
         "FADE_TOP_RESISTANCE"
       ],
       "parametros_riesgo": {
-        "precio_spot": 85.417,
-        "atr_h1": 0.55,
-        "atr_d1": 2.82,
+        "precio_spot": 81.504,
+        "atr_h1": 0.78,
+        "atr_d1": 3.05,
         "stop_loss_mult_intraday": 1.5,
-        "distancia_sl_h1_puntos": 0.83,
+        "distancia_sl_h1_puntos": 1.17,
         "stop_loss_mult_daily": 2.5,
-        "distancia_sl_d1_puntos": 7.06,
+        "distancia_sl_d1_puntos": 7.64,
         "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC",
         "trailing_stop_mult_atr": 3.0
       },
@@ -123,13 +123,13 @@
         "FADE_TOP_RESISTANCE"
       ],
       "parametros_riesgo": {
-        "precio_spot": 92.071,
-        "atr_h1": 0.52,
-        "atr_d1": 2.85,
+        "precio_spot": 87.497,
+        "atr_h1": 0.78,
+        "atr_d1": 3.15,
         "stop_loss_mult_intraday": 1.5,
-        "distancia_sl_h1_puntos": 0.78,
+        "distancia_sl_h1_puntos": 1.17,
         "stop_loss_mult_daily": 2.5,
-        "distancia_sl_d1_puntos": 7.14,
+        "distancia_sl_d1_puntos": 7.89,
         "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC",
         "trailing_stop_mult_atr": 3.0
       },
@@ -141,30 +141,28 @@
     "US100": {
       "nombre": "Nasdaq 100",
       "tipo": "EQUITY_INDEX",
-      "sesgo_score": -1.2,
-      "sesgo_etiqueta": "BAJISTA / PRESIÓN EN MÚLTIPLOS",
+      "sesgo_score": 0.8,
+      "sesgo_etiqueta": "ALCISTA / EXPANSION",
       "setups_permitidos": [
-        "SELL_PULLBACK_EMA50_H1",
-        "BREAKDOWN_DONCHIAN_H1"
+        "PULLBACK_EMA20_H1",
+        "BREAKOUT_DONCHIAN_H1"
       ],
       "setups_prohibidos": [
-        "BUY_THE_DIP_AGGRESSIVE",
-        "COMPRA_SIN_CONFIRMACION"
+        "SHORT_FADE"
       ],
       "parametros_riesgo": {
-        "precio_spot": 29038.03,
-        "atr_h1": 100.54,
-        "atr_d1": 409.74,
+        "precio_spot": 29225.28,
+        "atr_h1": 81.71,
+        "atr_d1": 395.42,
         "stop_loss_mult_intraday": 1.5,
-        "distancia_sl_h1_puntos": 150.82,
+        "distancia_sl_h1_puntos": 122.56,
         "stop_loss_mult_daily": 2.5,
-        "distancia_sl_d1_puntos": 1024.36,
+        "distancia_sl_d1_puntos": 988.54,
         "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC",
         "trailing_stop_mult_atr": 3.0
       },
       "justificacion_vectores": [
-        "Rendimiento UST 10Y en 4.74% comprime múltiplos de valuación en tecnológicas",
-        "Régimen de tasas elevadas penaliza activos de alta duración"
+        "Tasas 10Y estables y liquidez favorable para renta variable"
       ]
     }
   }
