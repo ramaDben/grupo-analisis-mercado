@@ -3,12 +3,37 @@
 Cada activo aporta una imagen que la pieza usa a la derecha. Hay **dos modos** de montarla, y
 la diferencia importa porque cambia por completo lo que hay que conseguir.
 
-| Activo | Archivo | Motivo |
-|---|---|---|
-| Oro (XAUUSD) | `oro.*` | Lingotes |
-| Petróleo (WTI.spot) | `wti.*` | Barriles / refinería |
-| Nasdaq 100 (US100.spot) | `us100.*` | Motivo tecnológico |
-| Dólar/Peso (USDCLP) | `usdclp.*` | Banderas de EE.UU. y Chile |
+El nombre del archivo **es el `activo_slug`** de la pieza, sin excepción: `usdjpy` → `usdjpy.jpg` →
+`body.activo-usdjpy`. Es lo que permite derivar imagen y color del mismo dato.
+
+### En disco hoy
+
+| Activo | Archivo | Motivo | Procedencia |
+|---|---|---|---|
+| Oro (XAUUSD) · GLD.US | `oro.jpg` | Lingotes en bóveda | Aprobada por el equipo; fija el estándar |
+| Petróleo (WTI.spot) | `wti.jpg` | Barriles / refinería | Generada con IA |
+| Plata (XAGUSD) | `plata.jpg` | Metal | Generada con IA |
+| Nasdaq 100 (US100.spot) · QQQ.US | `us100.jpg` | Rack de GPUs, luz fría | Generada con IA |
+| Dólar/Peso (USDCLP) | `usdclp.jpg` | Textura de grabado, abstracta | Generada con IA |
+| Bitcoin (BTCUSD) | `bitcoin.jpg` | Circuito ámbar | Generada con IA |
+| MercadoLibre (#MELI) | `meli.jpg` | Sector, no logo | Generada con IA |
+| Semiconductores (SOXX.US) | `tech-circuito.jpg` | Circuito, luz fría | Generada con IA |
+| — (sin asignar) | `tech-baterias.jpg` | Genérica de sector | Generada con IA |
+
+### Pendientes de generar
+
+Las 11 que faltan para que el escaneo del universo pueda elegir cualquier clase de activo tienen
+su prompt escrito en `docs/design/stories-gi/imagenes-por-activo.md`, sección "Ampliación para el
+escaneo del universo": `usdjpy`, `eurusd`, `gbpusd`, `us500` (sirve también para `SPY.US`), `us30`,
+`iwm`, `eth`, `sol`, `ltc`, `ada` y `doge`.
+
+**El campo `imagen` de `config/activos.json` se rellena recién cuando el archivo existe.** El
+renderer falla fuerte ante una imagen declarada que no está, y hay un test que verifica que toda
+imagen del catálogo exista en disco. Eso hace del campo el interruptor del activo: presente ⟺
+archivo en disco ⟺ el escáner de tandas lo considera renderizable.
+
+Al dejar una imagen nueva acá, anotar en la tabla **herramienta, fecha y prompt**: es lo que
+permite reproducirla o defenderla.
 
 ---
 
@@ -17,7 +42,13 @@ la diferencia importa porque cambia por completo lo que hay que conseguir.
 La foto ocupa la mitad derecha y se disuelve contra el negro con una máscara CSS. **No requiere
 recorte, ni canal alfa, ni Photoshop.** Es el modo probado y el que da resultado más realista.
 
-Clase: `.foto-activo` · Payload: `"activo_imagen": "../assets/activos/oro.jpg"`
+Clase: `.foto-activo` · Payload: `"activo_imagen": "assets/activos/oro.jpg"`
+
+> **Sin `../` al principio.** La ruta se resuelve contra la carpeta de la plantilla, porque el HTML
+> resuelto se escribe a un archivo temporal *dentro* de `templates/stories/` justamente para que los
+> assets relativos resuelvan. Un `../` sale de esa carpeta y no encuentra nada. Antes eso rendía la
+> pieza sin foto y sin error; desde el fail-fast de `story_render.py` detiene el render con un
+> mensaje que nombra la ruta esperada.
 
 **Qué se necesita**
 - JPG o PNG, horizontal, ancho ≥ 1600 px.
