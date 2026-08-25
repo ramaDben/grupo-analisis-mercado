@@ -16,35 +16,183 @@
     "nombre_es": "Índice de precios al consumidor",
     "explicacion": "Mide cuánto subieron los precios. Si sube más de lo esperado, la inflación aprieta y suele empujar las tasas y al dólar al alza."
   },
-  "PMI": { "nombre_es": "Índice de gerentes de compra", "explicacion": "Encuesta a empresas sobre cómo ven su negocio; sobre 50 = la economía crece, bajo 50 = se enfría." },
-  "ISM": { "nombre_es": "Índice del Instituto de Gestión de Suministros", "explicacion": "Encuesta de actividad de empresas en EE.UU. (manufactura o servicios); sobre 50 = expansión, bajo 50 = contracción." },
-  "NFP": { "nombre_es": "Nóminas no agrícolas", "explicacion": "Cuántos empleos creó EE.UU. el mes pasado (sin contar el campo); dato clave para la Fed y el dólar.", "titulos_ff": ["Nonfarm Payrolls"] },
-  "JOLTS": { "nombre_es": "Encuesta de vacantes y rotación laboral", "explicacion": "Mide cuántos puestos de trabajo están sin cubrir en EE.UU.; muestra si el empleo está fuerte o se enfría.", "titulos_ff": ["Job Openings"] },
-  "ADP": { "nombre_es": "Empleo privado ADP", "explicacion": "Adelanto del empleo en EE.UU. (solo sector privado), suele salir antes que las nóminas oficiales." },
-  "PCE": { "nombre_es": "Gasto en consumo personal", "explicacion": "La medida de inflación que más mira la Fed para decidir las tasas de interés.", "titulos_ff": ["Personal Consumption Expenditures"] },
-  "IPC": { "nombre_es": "Índice de precios al consumidor", "explicacion": "Cuánto subieron los precios que paga la gente; la inflación más conocida." },
-  "CPI": { "nombre_es": "Índice de precios al consumidor (IPC)", "explicacion": "Igual que el IPC: cuánto subieron los precios al consumidor (sigla en inglés)." },
-  "IPP": { "nombre_es": "Índice de precios al productor", "explicacion": "Cuánto suben los precios de fábrica antes de llegar al consumidor; anticipa la inflación." },
-  "PPI": { "nombre_es": "Índice de precios al productor (IPP)", "explicacion": "Precios mayoristas/de fábrica; adelanta hacia dónde va la inflación al consumidor." },
-  "PIB": { "nombre_es": "Producto interno bruto", "explicacion": "Todo lo que produce un país; mide si la economía crece o se contrae." },
-  "GDP": { "nombre_es": "Producto interno bruto (PIB)", "explicacion": "Lo mismo que el PIB: el tamaño total de la economía (sigla en inglés)." },
-  "EIA": { "nombre_es": "Administración de Información Energética (EE.UU.)", "explicacion": "Publica los inventarios de petróleo de EE.UU.; mueve fuerte el precio del WTI." },
-  "WTI": { "nombre_es": "Petróleo West Texas Intermediate", "explicacion": "El petróleo de referencia de EE.UU.; es el precio del crudo que seguimos a diario en el grupo." },
-  "OPEP": { "nombre_es": "Organización de Países Exportadores de Petróleo", "explicacion": "Grupo de países productores (con sus aliados = OPEP+) que coordina cuánto crudo bombear; sus decisiones mueven el precio del petróleo." },
-  "FOMC": { "nombre_es": "Comité de mercado abierto de la Fed", "explicacion": "El grupo de la Fed que decide las tasas de interés en EE.UU." },
-  "Fed": { "nombre_es": "Reserva Federal (banco central de EE.UU.)", "explicacion": "El banco central de EE.UU.; fija las tasas de interés del dólar y sus decisiones mueven a todos los mercados." },
-  "BCCh": { "nombre_es": "Banco Central de Chile", "explicacion": "Fija la tasa de interés en Chile; influye directo en el dólar (USD/CLP)." },
-  "BCE": { "nombre_es": "Banco Central Europeo", "explicacion": "Decide las tasas de interés de la zona euro." },
-  "PCE subyacente": { "nombre_es": "Gasto en consumo personal subyacente", "explicacion": "El PCE sin alimentos ni energía; la Fed lo prefiere porque es más estable." },
-  "IPC subyacente": { "nombre_es": "IPC subyacente", "explicacion": "La inflación sin alimentos ni energía; muestra la tendencia de fondo de los precios." },
-  "PMI Caixin": { "nombre_es": "PMI Caixin (China)", "explicacion": "Encuesta de actividad de empresas chinas (más pymes); sobre 50 = crece. Importa para el cobre y el WTI." },
-  "Jobless Claims": { "nombre_es": "Peticiones de subsidio por desempleo", "explicacion": "Cuántas personas pidieron seguro de cesantía en EE.UU. esta semana; termómetro rápido del empleo.", "titulos_ff": ["Unemployment Claims", "Initial Jobless Claims"] },
-  "RSI": { "nombre_es": "Índice de fuerza relativa", "explicacion": "Indicador técnico que mide si un activo está 'sobrecomprado' (subió demasiado, puede corregir) o 'sobrevendido' (bajó demasiado, puede rebotar). Va de 0 a 100; sobre 70 = sobrecomprado, bajo 30 = sobrevendido." },
-  "TPM": { "nombre_es": "Tasa de Política Monetaria", "explicacion": "La tasa de interés que fija el Banco Central de Chile (BCCh); cuando baja, el crédito se abarata y el peso puede debilitarse frente al dólar." },
-  "RPM": { "nombre_es": "Reunión de Política Monetaria", "explicacion": "La reunión del Banco Central de Chile donde se decide si la tasa de interés (TPM) sube, baja o se mantiene. Ocurre varias veces al año y mueve el USD/CLP." },
-  "IMACEC": { "nombre_es": "Índice Mensual de Actividad Económica", "explicacion": "Termómetro mensual de la economía chilena publicado por el Banco Central; si es negativo, la economía se contrajo ese mes." },
-  "INE": { "nombre_es": "Instituto Nacional de Estadísticas (Chile)", "explicacion": "El organismo oficial que mide la inflación (IPC) y el empleo en Chile." },
-  "Bienes durables": { "nombre_es": "Pedidos de bienes durables", "explicacion": "Productos que duran varios años (maquinaria, autos, aviones, electrodomésticos); sus pedidos muestran si las empresas están invirtiendo o frenando.", "titulos_ff": ["Durable Goods Orders", "Core Durable Goods Orders"] },
-  "US100": { "nombre_es": "Índice Nasdaq 100", "explicacion": "El índice de las 100 mayores empresas tecnológicas de EE.UU.; sube cuando las tasas de interés bajan." },
-  "CB": { "nombre_es": "Confianza del consumidor (The Conference Board)", "explicacion": "Encuesta que mide el optimismo de las familias en EE.UU. sobre su economía y empleo; anticipa el consumo futuro." }
+  "PMI": {
+    "nombre_es": "Índice de gerentes de compra",
+    "explicacion": "Encuesta a empresas sobre cómo ven su negocio; sobre 50 = la economía crece, bajo 50 = se enfría."
+  },
+  "ISM": {
+    "nombre_es": "Índice del Instituto de Gestión de Suministros",
+    "explicacion": "Encuesta de actividad de empresas en EE.UU. (manufactura o servicios); sobre 50 = expansión, bajo 50 = contracción."
+  },
+  "NFP": {
+    "nombre_es": "Nóminas no agrícolas",
+    "explicacion": "Cuántos empleos creó EE.UU. el mes pasado (sin contar el campo); dato clave para la Fed y el dólar.",
+    "titulos_ff": [
+      "Nonfarm Payrolls"
+    ]
+  },
+  "JOLTS": {
+    "nombre_es": "Encuesta de vacantes y rotación laboral",
+    "explicacion": "Mide cuántos puestos de trabajo están sin cubrir en EE.UU.; muestra si el empleo está fuerte o se enfría.",
+    "titulos_ff": [
+      "Job Openings"
+    ]
+  },
+  "ADP": {
+    "nombre_es": "Empleo privado ADP",
+    "explicacion": "Adelanto del empleo en EE.UU. (solo sector privado), suele salir antes que las nóminas oficiales."
+  },
+  "PCE": {
+    "nombre_es": "Gasto en consumo personal",
+    "explicacion": "La medida de inflación que más mira la Fed para decidir las tasas de interés.",
+    "titulos_ff": [
+      "Personal Consumption Expenditures"
+    ]
+  },
+  "IPC": {
+    "nombre_es": "Índice de precios al consumidor",
+    "explicacion": "Cuánto subieron los precios que paga la gente; la inflación más conocida."
+  },
+  "CPI": {
+    "nombre_es": "Índice de precios al consumidor (IPC)",
+    "explicacion": "Igual que el IPC: cuánto subieron los precios al consumidor (sigla en inglés)."
+  },
+  "IPP": {
+    "nombre_es": "Índice de precios al productor",
+    "explicacion": "Cuánto suben los precios de fábrica antes de llegar al consumidor; anticipa la inflación."
+  },
+  "PPI": {
+    "nombre_es": "Índice de precios al productor (IPP)",
+    "explicacion": "Precios mayoristas/de fábrica; adelanta hacia dónde va la inflación al consumidor."
+  },
+  "PIB": {
+    "nombre_es": "Producto interno bruto",
+    "explicacion": "Todo lo que produce un país; mide si la economía crece o se contrae."
+  },
+  "GDP": {
+    "nombre_es": "Producto interno bruto (PIB)",
+    "explicacion": "Lo mismo que el PIB: el tamaño total de la economía (sigla en inglés)."
+  },
+  "EIA": {
+    "nombre_es": "Administración de Información Energética (EE.UU.)",
+    "explicacion": "Publica los inventarios de petróleo de EE.UU.; mueve fuerte el precio del WTI."
+  },
+  "WTI": {
+    "nombre_es": "Petróleo West Texas Intermediate",
+    "explicacion": "El petróleo de referencia de EE.UU.; es el precio del crudo que seguimos a diario en el grupo."
+  },
+  "OPEP": {
+    "nombre_es": "Organización de Países Exportadores de Petróleo",
+    "explicacion": "Grupo de países productores (con sus aliados = OPEP+) que coordina cuánto crudo bombear; sus decisiones mueven el precio del petróleo."
+  },
+  "FOMC": {
+    "nombre_es": "Comité de mercado abierto de la Fed",
+    "explicacion": "El grupo de la Fed que decide las tasas de interés en EE.UU."
+  },
+  "Fed": {
+    "nombre_es": "Reserva Federal (banco central de EE.UU.)",
+    "explicacion": "El banco central de EE.UU.; fija las tasas de interés del dólar y sus decisiones mueven a todos los mercados."
+  },
+  "BCCh": {
+    "nombre_es": "Banco Central de Chile",
+    "explicacion": "Fija la tasa de interés en Chile; influye directo en el dólar (USD/CLP)."
+  },
+  "BCE": {
+    "nombre_es": "Banco Central Europeo",
+    "explicacion": "Decide las tasas de interés de la zona euro."
+  },
+  "PCE subyacente": {
+    "nombre_es": "Gasto en consumo personal subyacente",
+    "explicacion": "El PCE sin alimentos ni energía; la Fed lo prefiere porque es más estable."
+  },
+  "IPC subyacente": {
+    "nombre_es": "IPC subyacente",
+    "explicacion": "La inflación sin alimentos ni energía; muestra la tendencia de fondo de los precios."
+  },
+  "PMI Caixin": {
+    "nombre_es": "PMI Caixin (China)",
+    "explicacion": "Encuesta de actividad de empresas chinas (más pymes); sobre 50 = crece. Importa para el cobre y el WTI."
+  },
+  "Jobless Claims": {
+    "nombre_es": "Peticiones de subsidio por desempleo",
+    "explicacion": "Cuántas personas pidieron seguro de cesantía en EE.UU. esta semana; termómetro rápido del empleo.",
+    "titulos_ff": [
+      "Unemployment Claims",
+      "Initial Jobless Claims"
+    ]
+  },
+  "RSI": {
+    "nombre_es": "Índice de fuerza relativa",
+    "explicacion": "Indicador técnico que mide si un activo está 'sobrecomprado' (subió demasiado, puede corregir) o 'sobrevendido' (bajó demasiado, puede rebotar). Va de 0 a 100; sobre 70 = sobrecomprado, bajo 30 = sobrevendido."
+  },
+  "TPM": {
+    "nombre_es": "Tasa de Política Monetaria",
+    "explicacion": "La tasa de interés que fija el Banco Central de Chile (BCCh); cuando baja, el crédito se abarata y el peso puede debilitarse frente al dólar."
+  },
+  "RPM": {
+    "nombre_es": "Reunión de Política Monetaria",
+    "explicacion": "La reunión del Banco Central de Chile donde se decide si la tasa de interés (TPM) sube, baja o se mantiene. Ocurre varias veces al año y mueve el USD/CLP."
+  },
+  "IMACEC": {
+    "nombre_es": "Índice Mensual de Actividad Económica",
+    "explicacion": "Termómetro mensual de la economía chilena publicado por el Banco Central; si es negativo, la economía se contrajo ese mes."
+  },
+  "INE": {
+    "nombre_es": "Instituto Nacional de Estadísticas (Chile)",
+    "explicacion": "El organismo oficial que mide la inflación (IPC) y el empleo en Chile."
+  },
+  "Bienes durables": {
+    "nombre_es": "Pedidos de bienes durables",
+    "explicacion": "Productos que duran varios años (maquinaria, autos, aviones, electrodomésticos); sus pedidos muestran si las empresas están invirtiendo o frenando.",
+    "titulos_ff": [
+      "Durable Goods Orders",
+      "Core Durable Goods Orders"
+    ]
+  },
+  "US100": {
+    "nombre_es": "Índice Nasdaq 100",
+    "explicacion": "El índice de las 100 mayores empresas tecnológicas de EE.UU.; sube cuando las tasas de interés bajan."
+  },
+  "CB": {
+    "nombre_es": "Confianza del consumidor (The Conference Board)",
+    "explicacion": "Encuesta que mide el optimismo de las familias en EE.UU. sobre su economía y empleo; anticipa el consumo futuro."
+  },
+  "Permisos de construcción": {
+    "nombre_es": "Permisos de construcción",
+    "explicacion": "Cuántos permisos para construir viviendas nuevas se aprobaron en EE.UU.; si suben, las constructoras esperan más demanda y la economía viene firme.",
+    "titulos_ff": [
+      "Building Permits"
+    ]
+  },
+  "Case-Shiller": {
+    "nombre_es": "Índice de precios de vivienda Case-Shiller",
+    "explicacion": "Mide cuánto subieron o bajaron los precios de las casas en las 20 ciudades más grandes de EE.UU.; es el termómetro de la riqueza de las familias.",
+    "titulos_ff": [
+      "S&P/CS HPI Composite",
+      "HPI Composite"
+    ]
+  },
+  "Venta de viviendas nuevas": {
+    "nombre_es": "Venta de viviendas nuevas",
+    "explicacion": "Casas recién construidas que se vendieron en el mes en EE.UU.; cuando caen, suele ser porque las tasas hipotecarias están altas y frenan la compra.",
+    "titulos_ff": [
+      "New Home Sales"
+    ]
+  },
+  "API": {
+    "nombre_es": "Inventarios de petróleo del Instituto Americano del Petróleo (API)",
+    "explicacion": "Cuánto crudo quedó almacenado en EE.UU. según el gremio de la industria; si sobra petróleo el precio tiende a bajar, y si falta tiende a subir. Se publica un día antes del dato oficial de la EIA.",
+    "titulos_ff": [
+      "API Weekly Crude Oil Stock"
+    ]
+  },
+  "Subasta del Tesoro": {
+    "nombre_es": "Subasta de bonos del Tesoro de EE.UU.",
+    "explicacion": "El gobierno estadounidense sale a pedir prestado y el mercado decide a qué tasa se lo presta; si exige más tasa, sube el costo del dinero para todos y presiona a las acciones y al oro.",
+    "titulos_ff": [
+      "Note Auction",
+      "Bond Auction",
+      "Bill Auction"
+    ]
+  }
 }
