@@ -129,7 +129,10 @@ class TestStoryVisibility:
                 "dato_veredicto_slug": "test",
                 "cta": "Test",
                 "cta_sub": "Test",
-                "activo_imagen": "test.jpg",
+                # Ruta real y no "test.jpg": la plantilla es de producción, así que
+                # build_html verifica que el asset exista (un src roto deja el ícono
+                # de imagen rota en la pieza).
+                "activo_imagen": "assets/activos/oro.jpg",
                 "modo_imagen": "foto-activo",
                 "grafico": "<svg></svg>",
             }),

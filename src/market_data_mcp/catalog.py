@@ -26,6 +26,11 @@ def load_valid_tickers() -> dict[str, int]:
     for asset in data.get("indices", []):
         tickers[asset["ticker_mt5"]] = asset["digits"]
 
+    # Los ETF viven en un dict con notas + `componentes`, igual que `acciones`, no
+    # como lista plana: las notas explican por qué el bloque existe (ver el JSON).
+    for asset in data.get("etfs", {}).get("componentes", []):
+        tickers[asset["ticker_mt5"]] = asset["digits"]
+
     for sector in data.get("acciones", {}).values():
         for comp in sector.get("componentes", []):
             tickers[comp["ticker_mt5"]] = comp["digits"]

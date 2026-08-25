@@ -102,8 +102,11 @@ def register(mcp: FastMCP) -> None:
 
         Returns:
             Dict con: ticker, timeframe, price, s1, s2, r1, r2, rsi_14, atr_14, adx_14,
-            ema_50, ema_100, macd_line, macd_signal, macd_hist,
-            bb_upper, bb_mid, bb_lower, trend, timestamp.
+            ema_20, ema_50, ema_100, macd_line, macd_signal, macd_hist,
+            bb_upper, bb_mid, bb_lower, donchian_50_high, donchian_50_low,
+            donchian_50_mid, trend, timestamp.
+            Ojo: ema_20 es media EXPONENCIAL (el gatillo del Playbook en H1) y bb_mid
+            es la media SIMPLE de 20 de las Bandas de Bollinger. No son lo mismo.
             Con timeframe="D1" además incluye rango_hoy (high-low de la vela diaria
             en curso) y atr_restante_14 (= atr_14 - rango_hoy, con piso del 30% del
             atr_14: una tarde volátil no debe bloquear todo movimiento restante del día).
@@ -121,7 +124,7 @@ def register(mcp: FastMCP) -> None:
         digits = _VALID_TICKERS[ticker]
 
         try:
-            from market_data_mcp.mt5_client import get_rates, ema, atr, adx, macd, bollinger, TIMEFRAME_MAP
+            from market_data_mcp.mt5_client import get_rates, ema, atr, adx, macd, bollinger, donchian, TIMEFRAME_MAP
         except ImportError:
             return {
                 "error": "MT5_UNAVAILABLE",
@@ -165,10 +168,14 @@ def register(mcp: FastMCP) -> None:
         close = df["close"]
         ema100_val = float(ema(close, 100).iloc[-1])
         ema50_val  = float(ema(close, 50).iloc[-1])
+        # EMA 20: el Playbook la usa como gatillo de entrada en H1 (pullback en Oro,
+        # compras tendenciales en US100). No confundir con `bb_mid`, que es una SMA 20.
+        ema20_val  = float(ema(close, 20).iloc[-1])
         atr14_val  = float(atr(df, 14).iloc[-1])
         adx14_val  = float(adx(df, 14).iloc[-1])
         macd_l, macd_s, macd_h = macd(close)
         bb_u, bb_m, bb_l = bollinger(close)
+        dc_h, dc_l, dc_m = donchian(df)
         current = float(close.iloc[-1])
 
         if current > ema100_val:
@@ -192,6 +199,7 @@ def register(mcp: FastMCP) -> None:
             "rsi_14":       round(rsi14_val, 1),
             "atr_14":       round(atr14_val, digits),
             "adx_14":       round(adx14_val, 1),
+            "ema_20":       round(ema20_val, digits),
             "ema_50":       round(ema50_val, digits),
             "ema_100":      round(ema100_val, digits),
             "macd_line":    round(macd_l, 4),
@@ -200,6 +208,9 @@ def register(mcp: FastMCP) -> None:
             "bb_upper":     round(bb_u, digits),
             "bb_mid":       round(bb_m, digits),
             "bb_lower":     round(bb_l, digits),
+            "donchian_50_high": round(dc_h, digits),
+            "donchian_50_low":  round(dc_l, digits),
+            "donchian_50_mid":  round(dc_m, digits),
             "trend":        trend,
         }
 

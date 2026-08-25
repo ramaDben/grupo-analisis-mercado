@@ -1476,3 +1476,86 @@ def test_plantilla_resuelve_sin_huerfanos(nombre):
 
     assert "{{" not in html, f"{nombre}: quedaron tokens sin resolver"
     assert "<!-- FOR:" not in html, f"{nombre}: quedó un bloque FOR sin expandir"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Guardia de `activo_imagen` (2026-08-25)
+#
+# La convención de `.claude/commands/story.md` ya decía "nunca inventar una ruta:
+# un `src` roto deja un ícono de imagen rota en la pieza", pero nadie la
+# verificaba: una ruta equivocada rendía la pieza SIN FOTO Y SIN ERROR, y el
+# defecto solo aparecía mirando el PNG.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_activo_imagen_inexistente_falla_con_mensaje_accionable():
+    payload = _payload_alerta_fixture()
+    payload["chart_png"] = None
+    payload["activo_imagen"] = "assets/activos/no-existe-este-activo.jpg"
+
+    with pytest.raises(story_render.StoryRenderError) as exc:
+        story_render.build_html(payload, ALERTA_TEMPLATE)
+
+    mensaje = str(exc.value)
+    assert "no-existe-este-activo.jpg" in mensaje, "el mensaje nombra la ruta rota"
+    assert "imagenes-por-activo.md" in mensaje, "y dónde está el recetario"
+
+
+def test_activo_imagen_con_prefijo_relativo_falla():
+    """El README de assets/ muestra `../assets/activos/oro.jpg`, que es incorrecto:
+    la ruta se resuelve contra la carpeta de la plantilla, porque el HTML resuelto se
+    escribe a un temporal dentro de ella. Con `../` el src queda roto."""
+    payload = _payload_alerta_fixture()
+    payload["chart_png"] = None
+    payload["activo_imagen"] = "../assets/activos/oro.jpg"
+
+    with pytest.raises(story_render.StoryRenderError):
+        story_render.build_html(payload, ALERTA_TEMPLATE)
+
+
+def test_activo_imagen_vacio_no_valida_nada():
+    """Cadena vacía es la degradación deliberada y documentada: la pieza sale en el
+    color de marca y sin foto. No es un error y no debe convertirse en uno."""
+    for valor in ("", "   ", None):
+        payload = _payload_alerta_fixture()
+        payload["chart_png"] = None
+        payload["activo_imagen"] = valor
+        html = story_render.build_html(payload, ALERTA_TEMPLATE)
+        assert "{{" not in _body(html)
+
+
+def test_la_guardia_de_imagen_ignora_la_clave_ausente():
+    """Se prueba la guardia aislada porque `alerta.html` referencia
+    `{{activo_imagen}}`: sin la clave falla antes, en la guardia de huérfanos, que es
+    el comportamiento correcto y preexistente. La convención del payload es cadena
+    vacía, no ausencia, y esta guardia no debe agregar un error propio encima.
+    """
+    story_render._validar_imagen_activo({}, ALERTA_TEMPLATE)  # no lanza
+
+
+def test_activo_imagen_valida_solo_plantillas_de_produccion():
+    """Las plantillas de fixture no tienen carpeta `assets` al lado y reciben
+    payloads reales para verificar la sustitución de tokens, no la existencia de
+    archivos. Validar ahí sería un falso positivo."""
+    payload = {**PAYLOAD_EJEMPLO, "activo_imagen": "assets/activos/oro.jpg"}
+    html = story_render.build_html(payload, FIXTURE_TEMPLATE)
+    assert "{{" not in html
+
+
+def test_todas_las_imagenes_del_catalogo_existen():
+    """El campo `imagen` de config/activos.json es el que los comandos leen para
+    armar el payload. Si apunta a un archivo que no está, la guardia de arriba
+    dispara recién al rendir: mejor cazarlo acá."""
+    catalogo = json.loads((_REPO_ROOT / "config" / "activos.json").read_text(encoding="utf-8"))
+
+    activos = list(catalogo["forex_commodities"]) + list(catalogo["indices"])
+    activos += catalogo.get("etfs", {}).get("componentes", [])
+    activos += [c for s in catalogo["acciones"].values() for c in s["componentes"]]
+
+    declaradas = [(a["ticker_mt5"], a["imagen"]) for a in activos if a.get("imagen")]
+    assert declaradas, "el catálogo debe declarar al menos una imagen"
+
+    faltantes = [
+        (ticker, ruta) for ticker, ruta in declaradas
+        if not (DIR_PLANTILLAS / ruta).exists()
+    ]
+    assert not faltantes, f"imágenes declaradas que no existen en disco: {faltantes}"

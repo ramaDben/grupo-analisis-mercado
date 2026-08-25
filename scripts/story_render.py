@@ -304,15 +304,66 @@ def _validar_sin_huerfanos(html: str) -> None:
         )
 
 
+def _validar_imagen_activo(payload: dict[str, Any], template_path: Path) -> None:
+    """Guardia de `activo_imagen`: una ruta no vacía tiene que existir en disco.
+
+    La convención documentada en `.claude/commands/story.md` ya lo dice: la ruta es
+    relativa (`assets/activos/<slug>.jpg`), va **cadena vacía cuando no hay imagen**,
+    y "nunca inventar una ruta: un `src` roto deja un ícono de imagen rota en la
+    pieza". Nadie lo verificaba, así que hasta ahora una ruta equivocada rendía la
+    pieza **sin foto y sin error**: el defecto solo aparecía mirando el PNG, y en un
+    lote de piezas eso llega al cliente.
+
+    Se resuelve contra `template_path.parent` porque el HTML resuelto se escribe a un
+    temporal dentro de ese directorio, justamente para que los assets relativos
+    resuelvan (ver `render_html_a_png`). Por eso `assets/activos/oro.jpg` es correcto
+    y `../assets/activos/oro.jpg` no lo es.
+
+    Cadena vacía y clave ausente son válidas y no se tocan: son la degradación
+    deliberada (pieza en color de marca, sin foto).
+
+    Solo aplica a plantillas de producción, reconocidas por tener la carpeta `assets`
+    al lado. Las plantillas de fixture (`tests/fixtures/stories/`) no la tienen y
+    reciben payloads reales para verificar la sustitución de tokens, no la existencia
+    de archivos: validarlas ahí sería un falso positivo.
+    """
+    imagen = payload.get("activo_imagen")
+    if not imagen or not str(imagen).strip():
+        return
+
+    carpeta_plantilla = Path(template_path).parent
+    if not (carpeta_plantilla / "assets").is_dir():
+        return
+
+    relativa = str(imagen).strip()
+    ruta = carpeta_plantilla / relativa
+    if ruta.exists():
+        return
+
+    raise StoryRenderError(
+        f"activo_imagen apunta a una ruta inexistente: {relativa!r} "
+        f"(se buscó en {ruta}). La ruta es relativa a la carpeta de la plantilla, así "
+        "que se escribe 'assets/activos/<slug>.jpg' y no '../assets/...'. Si el activo "
+        "todavía no tiene imagen, el valor correcto es cadena vacía: la pieza sale en "
+        "el color de marca y sin foto. Para generarla, ver "
+        "docs/design/stories-gi/imagenes-por-activo.md."
+    )
+
+
 def build_html(payload: dict[str, Any], template_path: Path) -> str:
     """Mapea `payload` sobre el HTML de `template_path`, orden canónico
     **loops -> fences -> tokens -> guardia** (R4, #119).
 
     Puro (D1/D2): no depende de Playwright ni de red. Es el objeto de AC2-AC9.
+
+    Toca disco en dos puntos: la lectura del template y la guardia de `activo_imagen`,
+    que necesita `template_path` para resolver la ruta relativa (`build_context` no lo
+    recibe: su firma es pura sobre el payload).
     """
     html = Path(template_path).read_text(encoding="utf-8")
     contexto = build_context(payload)
 
+    _validar_imagen_activo(payload, template_path)
     html = resolver_loops(html, payload)
     html = _resolver_fences(html, payload)
     html = _sustituir_tokens(html, contexto)

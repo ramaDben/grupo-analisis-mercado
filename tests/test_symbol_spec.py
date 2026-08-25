@@ -299,3 +299,56 @@ def test_docstring_menciona_limitacion_feriados():
     doc = symbol_spec._DOCSTRING_LIMITACION
     for ticker in ("USDCLP", "XAUUSD", "WTI.spot"):
         assert ticker in doc
+
+
+def test_docstring_menciona_que_las_criptos_no_tienen_calendario():
+    """Las criptos operan 24/7 y no mapean a ningún exchange, así que la limitación
+    tiene que nombrarlas: es el caso más frecuente desde que el catálogo pasó de una
+    a seis."""
+    doc = symbol_spec._DOCSTRING_LIMITACION
+    for ticker in ("BTCUSD", "ETHUSD", "DOGUSD"):
+        assert ticker in doc, f"{ticker} no está en la limitación documentada"
+
+
+def test_los_etfs_cruzan_el_calendario_de_feriados():
+    """Los ETF son equity estadounidense: comparten el calendario de feriados con los
+    índices y las acciones. Sin este mapeo, `opera` con fecha futura los daría por
+    operables un 4 de julio."""
+    for ticker in ("QQQ.US", "SPY.US", "GLD.US", "IWM.US", "SOXX.US"):
+        assert symbol_spec._TICKER_EXCHANGE.get(ticker) == "NYSE", (
+            f"{ticker} debe mapear al calendario NYSE"
+        )
+
+
+def test_las_criptos_no_mapean_a_ningun_exchange():
+    """Operan los siete días: un feriado de bolsa no las detiene, así que mapearlas
+    a NYSE daría 'no opera' un día en que sí operan."""
+    for ticker in ("BTCUSD", "ETHUSD", "SOLUSD", "LTCUSD", "ADAUSD", "DOGUSD"):
+        assert ticker not in symbol_spec._TICKER_EXCHANGE, (
+            f"{ticker} opera 24/7 y no debe tener calendario de feriados"
+        )
+
+
+def test_todas_las_acciones_del_catalogo_tienen_calendario():
+    """Regresión: #MELI estaba en el catálogo pero faltaba en el mapa de exchanges,
+    así que era la única acción a la que `opera` con fecha futura no le cruzaba
+    feriados. Detectado el 2026-08-25. Este test cubre el hueco para cualquier acción
+    que se agregue después, no solo para esa."""
+    import json
+    from pathlib import Path
+
+    raiz = Path(__file__).resolve().parent.parent
+    catalogo = json.loads((raiz / "config" / "activos.json").read_text(encoding="utf-8"))
+
+    acciones = [
+        comp["ticker_mt5"]
+        for sector in catalogo["acciones"].values()
+        for comp in sector["componentes"]
+    ]
+    assert acciones, "el catálogo debe traer acciones"
+
+    sin_calendario = [t for t in acciones if t not in symbol_spec._TICKER_EXCHANGE]
+    assert not sin_calendario, (
+        f"acciones sin calendario de feriados: {sin_calendario}. Toda acción del "
+        "catálogo cotiza en el mercado estadounidense y debe mapear a NYSE."
+    )
