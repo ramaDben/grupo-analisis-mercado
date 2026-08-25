@@ -72,6 +72,27 @@
   --activo-usdclp: var(--acento);
   --activo-bitcoin:#F7931A;
 
+  /* Ampliación para el escaneo del universo (tandas diarias). Cada token va
+     al tono dominante de su imagen en `assets/activos/`: el color pinta el halo
+     y el tinte de la foto, así que un bronce con cromo teal se lee como dos
+     piezas pegadas. El criterio de separación es el HUE, no el brillo, porque
+     es lo que el cliente distingue de reojo en el chat.
+
+     Dos activos comparten token a propósito cuando comparten tesis: `SPY.US`
+     usa el de `US500.spot` igual que `QQQ.US` ya usa `us100.jpg`. Un ETF que
+     replica un índice no es otro activo a la vista del cliente. */
+  --activo-usdjpy: #B98A4A;  /* laca y pan de oro: latón */
+  --activo-eurusd: #6E7E96;  /* mecanismo de bóveda: acero frío */
+  --activo-gbpusd: #9E6B4A;  /* plancha de grabado: cobre */
+  --activo-us500:  #6BA3D8;  /* azul más claro que us100: misma familia, más amplitud */
+  --activo-us30:   #9C7B4E;  /* acero industrial cálido */
+  --activo-iwm:    #8F9BA8;  /* gris acero: small caps domésticas */
+  --activo-eth:    #7B7FE8;  /* prisma de obsidiana: violeta */
+  --activo-sol:    #C158D6;  /* fibra óptica: magenta */
+  --activo-ltc:    #A8B2BF;  /* plancha maquinada: plata */
+  --activo-ada:    #3B6FD4;  /* placas traslúcidas: cobalto */
+  --activo-doge:   #D9A22B;  /* resina con laminillas: ocre */
+
   /* ── Tipografía ─────────────────────────────────────────────────────────── */
   /* Font stacks: primary sans + emoji fallbacks. Pueden ajustarse por host. */
   --font-sans: "Space Grotesk", "DM Sans", "Segoe UI", "Noto Sans", "Helvetica Neue", Arial, sans-serif;
@@ -136,6 +157,17 @@ body.activo-wti     { --activo: var(--activo-wti); }
 body.activo-us100   { --activo: var(--activo-us100); }
 body.activo-usdclp  { --activo: var(--activo-usdclp); }
 body.activo-bitcoin { --activo: var(--activo-bitcoin); }
+body.activo-usdjpy  { --activo: var(--activo-usdjpy); }
+body.activo-eurusd  { --activo: var(--activo-eurusd); }
+body.activo-gbpusd  { --activo: var(--activo-gbpusd); }
+body.activo-us500   { --activo: var(--activo-us500); }
+body.activo-us30    { --activo: var(--activo-us30); }
+body.activo-iwm     { --activo: var(--activo-iwm); }
+body.activo-eth     { --activo: var(--activo-eth); }
+body.activo-sol     { --activo: var(--activo-sol); }
+body.activo-ltc     { --activo: var(--activo-ltc); }
+body.activo-ada     { --activo: var(--activo-ada); }
+body.activo-doge    { --activo: var(--activo-doge); }
 
 /*
   Filete de marca en el borde de toda pieza.

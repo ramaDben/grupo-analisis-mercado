@@ -5,7 +5,11 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 import pypdf
 
-RAIZ = Path("C:/Users/bbrav/grupo-analisis-mercado")
+# La raiz se deduce de la ubicacion del script y no se escribe a mano: son cuatro
+# niveles arriba (scripts -> generar-reporte-editorial -> skills -> .agents -> raiz).
+# Con la ruta absoluta anterior el generador solo funcionaba en la maquina del
+# director, que es la misma razon por la que .agents/mcp.json queda fuera de git.
+RAIZ = Path(__file__).resolve().parents[4]
 FUENTES = RAIZ / "templates" / "stories" / "fonts"
 
 CATALOGO = [

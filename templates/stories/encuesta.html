@@ -17,16 +17,17 @@ tests/test_story_render.py.
 <title>Encuesta — Story GI</title>
 <style>
   /* ════ marca.css embebido ════ */
-
 :root {
-  --fondo:          #000000;  /* negro de marca, tomado de LOGO-Fondo-Negro */
-  --fondo-acento:   #0E2420;  /* tinte del degradado, derivado del acento */
-  --fondo-alt:      #0A0A0F;  /* variante del fondo para bloques apilados */
-  --fondo-sube:     #123A2A;  /* relleno tenue en bloques alcistas */
-  --fondo-baja:     #2A1220;  /* relleno tenue en bloques bajistas */
+
+  --fondo:          #000000;
+  --fondo-acento:   #0E2420;
+  --fondo-alt:      #0A0A0F;
+  --fondo-sube:     #123A2A;
+  --fondo-baja:     #2A1220;
 
   --acento:         #50C0A8;
-  --acento-oscuro:  #143028;  /* par oscuro del acento, para degradados */
+  --acento-azul:    #3C8CAA;
+  --acento-oscuro:  #143028;
 
   --sube:           #00DC82;
   --sube-suave:     #53C1AB;
@@ -40,14 +41,25 @@ tests/test_story_render.py.
   --activo-usdclp: var(--acento);
   --activo-bitcoin:#F7931A;
 
-  /* Font stacks: primary sans + emoji fallbacks. Pueden ajustarse por host. */
+  --activo-usdjpy: #B98A4A;
+  --activo-eurusd: #6E7E96;
+  --activo-gbpusd: #9E6B4A;
+  --activo-us500:  #6BA3D8;
+  --activo-us30:   #9C7B4E;
+  --activo-iwm:    #8F9BA8;
+  --activo-eth:    #7B7FE8;
+  --activo-sol:    #C158D6;
+  --activo-ltc:    #A8B2BF;
+  --activo-ada:    #3B6FD4;
+  --activo-doge:   #D9A22B;
+
   --font-sans: "Space Grotesk", "DM Sans", "Segoe UI", "Noto Sans", "Helvetica Neue", Arial, sans-serif;
   --font-emoji: "Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji";
-  --texto-1:        #F5F3F7;  /* principal */
-  --texto-2:        #A9A5B4;  /* secundario */
-  --texto-3:        #6E6A7A;  /* tenue: pies, disclaimers */
-  --texto-borde:    #C9C5D4;  /* filetes y separadores sobre fondo oscuro */
-  --texto-gris:     #8E8A9C;  /* gris intermedio */
+  --texto-1:        #F5F3F7;
+  --texto-2:        #A9A5B4;
+  --texto-3:        #6E6A7A;
+  --texto-borde:    #C9C5D4;
+  --texto-gris:     #8E8A9C;
   --blanco:         #FFFFFF;
 
   --filete:         var(--acento);
@@ -76,20 +88,27 @@ body.activo-wti     { --activo: var(--activo-wti); }
 body.activo-us100   { --activo: var(--activo-us100); }
 body.activo-usdclp  { --activo: var(--activo-usdclp); }
 body.activo-bitcoin { --activo: var(--activo-bitcoin); }
+body.activo-usdjpy  { --activo: var(--activo-usdjpy); }
+body.activo-eurusd  { --activo: var(--activo-eurusd); }
+body.activo-gbpusd  { --activo: var(--activo-gbpusd); }
+body.activo-us500   { --activo: var(--activo-us500); }
+body.activo-us30    { --activo: var(--activo-us30); }
+body.activo-iwm     { --activo: var(--activo-iwm); }
+body.activo-eth     { --activo: var(--activo-eth); }
+body.activo-sol     { --activo: var(--activo-sol); }
+body.activo-ltc     { --activo: var(--activo-ltc); }
+body.activo-ada     { --activo: var(--activo-ada); }
+body.activo-doge    { --activo: var(--activo-doge); }
 
 .story {
   box-shadow: inset 0 0 0 var(--filete-ancho) var(--filete);
 }
-
-
   /* ════ piel.css embebido ════ */
-
 @font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
 @font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-700.woff2") format("woff2"); font-weight: 800; font-display: swap; }
 @font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
 @font-face { font-family: "DM Sans";       src: url("fonts/dm-sans-400.woff2") format("woff2");       font-weight: 400; font-display: swap; }
 @font-face { font-family: "DM Sans";       src: url("fonts/dm-sans-700.woff2") format("woff2");       font-weight: 700; font-display: swap; }
-
 
 .foto-activo {
   position: absolute; inset: 0 -72px 0 auto;
@@ -174,7 +193,6 @@ body.activo-bitcoin { --activo: var(--activo-bitcoin); }
               0 0 18px 4px color-mix(in srgb, var(--activo) 75%, transparent);
 }
 
-/* ══════════ CTA ══════════ */
 .cta {
   margin-top: auto;
   display: flex; align-items: center; justify-content: space-between; gap: 40px;
@@ -197,7 +215,6 @@ body.activo-bitcoin { --activo: var(--activo-bitcoin); }
 
 .disclaimer { padding-bottom: 20px; font-size: 14px; line-height: 1.3; color: var(--texto-3); }
 
-/* ══════════ FORMATO VERTICAL 9:16 ══════════ */
 @media (max-aspect-ratio: 1/1) {
   .sello { font-size: 24px; padding: 13px 26px 13px 20px; }
   .pulso { width: 13px; height: 13px; }
@@ -215,7 +232,6 @@ body.activo-bitcoin { --activo: var(--activo-bitcoin); }
   .cta-logo { height: 78px; }
   .disclaimer { font-size: 16px; padding-bottom: 24px; }
 }
-
 </style>
 <style>
   @font-face {
