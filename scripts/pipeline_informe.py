@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from datetime import datetime
@@ -105,21 +106,43 @@ def _playbook() -> tuple[dict[str, Any], list[str]]:
     return res, []
 
 
-def _tabla_curva(curva: dict[str, Any]) -> str:
-    """La curva como tabla, con el delta en puntos base y la fecha del dato.
+def _pct_es(valor: Any) -> str:
+    """Un porcentaje en notación chilena y con dos decimales siempre.
 
-    La fecha va en la tabla y no al pie: FRED publica con rezago, así que el dato
-    "de hoy" puede ser de anteayer y el lector tiene derecho a verlo junto a la
-    cifra que va a citar.
+    La fuente entrega 4.7 y 4.24 indistintamente. En una columna, "4.7%" al lado
+    de "4.24%" se lee como si uno tuviera menos precisión que el otro, cuando en
+    realidad son la misma medida. Y el separador decimal en Chile es la coma.
     """
-    def bps(valor: Any) -> str:
+    try:
+        return f"{float(valor):.2f}".replace(".", ",") + "%"
+    except (TypeError, ValueError):
+        return "sin dato"
+
+
+def _tabla_curva(curva: dict[str, Any]) -> str:
+    """La curva como tabla, en lenguaje de cliente.
+
+    Tres cosas que NO se escriben acá aunque sean el estándar del oficio:
+    `Δ` como encabezado de columna, `bps` como abreviatura, y "2s10s" como nombre
+    de la pendiente. Las tres son taquigrafía de mesa de dinero: quien las conoce
+    no las necesita, y quien no, se detiene en ellas antes de llegar al número.
+
+    La fecha del dato va en la tabla y no al pie. FRED publica con rezago, así que
+    el dato "de hoy" puede ser de anteayer, y quien va a citar la cifra tiene
+    derecho a verlo junto a ella.
+    """
+    def puntos_base(valor: Any) -> str:
         # `null` y `0` son afirmaciones distintas: cero es "no se movió", null es
         # "no se pudo calcular". Mostrar 0 donde no hay dato sería inventar una
         # quietud que nadie midió.
-        return "sin dato" if valor is None else f"{valor:+.1f} bps"
+        if valor is None:
+            return "sin dato"
+        return f"{valor:+.0f} puntos base"
 
-    filas = ["| Tramo | Nivel | Δ 1 día | Δ 5 días | Fecha del dato |",
-             "|---|---|---|---|---|"]
+    filas = [
+        "| Tramo | Nivel | Cambio en 1 día | Cambio en 5 días | Fecha del dato |",
+        "|---|---|---|---|---|",
+    ]
 
     series = curva.get("series", {})
     for clave in TRAMOS_CURVA:
@@ -127,16 +150,16 @@ def _tabla_curva(curva: dict[str, Any]) -> str:
         if not s:
             continue
         filas.append(
-            f"| {_TRAMOS_ES.get(clave, s.get('nombre', clave))} | {s.get('nivel_pct', '?')}% "
-            f"| {bps(s.get('delta_1d_bps'))} | {bps(s.get('delta_5d_bps'))} "
+            f"| {_TRAMOS_ES.get(clave, s.get('nombre', clave))} | {_pct_es(s.get('nivel_pct'))} "
+            f"| {puntos_base(s.get('delta_1d_bps'))} | {puntos_base(s.get('delta_5d_bps'))} "
             f"| {s.get('fecha_dato', '?')} |"
         )
 
     spread = curva.get("spread_2s10s")
     if spread:
         filas.append(
-            f"| Pendiente 2s10s | {spread.get('nivel_pct', '?')}% "
-            f"| {bps(spread.get('delta_1d_bps'))} | {bps(spread.get('delta_5d_bps'))} "
+            f"| Diferencia entre 10 y 2 años | {_pct_es(spread.get('nivel_pct'))} "
+            f"| {puntos_base(spread.get('delta_1d_bps'))} | {puntos_base(spread.get('delta_5d_bps'))} "
             f"| {spread.get('fecha_dato', '?')} |"
         )
 
@@ -194,33 +217,53 @@ def _momento_snapshot(as_of_utc: str | None) -> str:
     return f"{_fecha_es(momento)}, {momento.strftime('%H:%M')} hora de Chile"
 
 
-def _nombre_indicador(ev: dict[str, Any]) -> str:
-    """El indicador en español, con su sigla original entre paréntesis.
+# Sufijos que la fuente pega al nombre del indicador. Sin traducir, la agenda de
+# un informe en español termina diciendo "S&P/CS HPI Composite - 20 n.s.a. (YoY)
+# (Jun)", que para un cliente es ruido con el que tiene que lidiar antes de llegar
+# a la hora y al impacto, que es lo único que iba a mirar.
+_SUFIJOS_ES = {
+    "YoY": "variación anual",
+    "MoM": "variación mensual",
+    "QoQ": "variación trimestral",
+    "WoW": "variación semanal",
+}
+_MESES_CORTOS = {
+    "Jan": "enero", "Feb": "febrero", "Mar": "marzo", "Apr": "abril",
+    "May": "mayo", "Jun": "junio", "Jul": "julio", "Aug": "agosto",
+    "Sep": "septiembre", "Oct": "octubre", "Nov": "noviembre", "Dec": "diciembre",
+}
 
-    No traduce a mano: `obtener_calendario_macro` ya engancha
-    `data/glosario_siglas.json` y devuelve `diccionario.nombre_es` cuando el
-    evento está en el glosario. Cuando no está, queda el nombre de la fuente y el
-    evento viene marcado con `glosario_pendiente`, que es la señal de que hay una
-    sigla nueva por agregar al JSON.
+
+def _nombre_indicador(ev: dict[str, Any]) -> str:
+    """El indicador en español, con su período, para un lector no especializado.
+
+    No se traduce a mano: `obtener_calendario_macro` ya engancha
+    `data/glosario_siglas.json` y devuelve `diccionario.nombre_es`. Lo que se hace
+    acá es quedarse con ese nombre y **descartar el de la fuente**, conservando
+    solo los sufijos que aportan información real: el período que mide y el mes al
+    que corresponde. Sin eso, dos filas del mismo indicador se leerían idénticas.
+
+    Cuando el indicador no está en el glosario se devuelve el nombre de la fuente
+    tal cual y el evento viene marcado `glosario_pendiente`, que es la señal de
+    que hay una sigla nueva por agregar al JSON.
     """
     nombre_fuente = ev.get("nombre", "?")
     entrada = ev.get("diccionario") or {}
     nombre_es = entrada.get("nombre_es")
     if not nombre_es:
         return nombre_fuente
-    # Varias entradas del glosario ya traen su sigla entre paréntesis
-    # ("Confianza del consumidor (The Conference Board)"). Agregar el nombre de la
-    # fuente detrás produce paréntesis anidados ilegibles, y la regla del proyecto
-    # es explicar la sigla UNA sola vez.
-    if "(" in nombre_es:
+
+    matices: list[str] = []
+    for sufijo, traduccion in _SUFIJOS_ES.items():
+        if f"({sufijo})" in nombre_fuente:
+            matices.append(traduccion)
+    for mes_en, mes_es in _MESES_CORTOS.items():
+        if f"({mes_en})" in nombre_fuente:
+            matices.append(f"dato de {mes_es}")
+
+    if not matices:
         return nombre_es
-    # El nombre de la fuente muchas veces trae su propio paréntesis con el período
-    # o la variación ("New Home Sales (MoM) (Jul)"), y ese sufijo es lo único que
-    # distingue dos filas que si no se leerían idénticas. Se conserva, pero
-    # separado con punto medio en vez de anidar paréntesis.
-    if "(" in nombre_fuente:
-        return f"{nombre_es} · {nombre_fuente}"
-    return f"{nombre_es} ({nombre_fuente})"
+    return f"{nombre_es} · {', '.join(matices)}"
 
 
 def _tabla_calendario(eventos: list[dict[str, Any]]) -> str:
@@ -250,6 +293,143 @@ def _tabla_playbook(playbook: dict[str, Any]) -> str:
             f"{', '.join(a.get('setups_prohibidos') or []) or '—'} |"
         )
     return "\n".join(filas)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El traductor del motor: ningún token interno llega al cliente
+# ─────────────────────────────────────────────────────────────────────────────
+_GLOSARIO_MOTOR = RAIZ / "data" / "glosario_motor.json"
+
+
+def cargar_glosario_motor() -> dict[str, Any]:
+    """`data/glosario_motor.json`, o vacío si falta (el guard lo detecta igual)."""
+    try:
+        return json.loads(_GLOSARIO_MOTOR.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _traducir_setup(token: str, glosario: dict[str, Any]) -> str:
+    """Un setup del motor, en lenguaje de cliente.
+
+    Si el token no está en el glosario se devuelve tal cual, y ahí lo caza el
+    test: preferimos que falle la suite a que `FADE_TOP_RESISTANCE` llegue a un
+    documento que lee un cliente.
+    """
+    return (glosario.get("setups") or {}).get(token, token)
+
+
+def _lectura_por_activo(playbook: dict[str, Any], glosario: dict[str, Any]) -> str:
+    """El sesgo por activo en prosa, no en una matriz de cinco columnas.
+
+    Sigue el ritmo pedagógico que la skill de reporte editorial exige y que el
+    informe del Motor GI ya usa: qué pasa, qué significa para ti, y qué NO vamos
+    a hacer hoy. La versión anterior era una tabla con `setups_permitidos` y
+    `setups_prohibidos` volcados del JSON: nombres de variable del motor, en
+    inglés y en mayúsculas, que un cliente lee como ruido.
+
+    Tres decisiones de redacción que se tomaron mirando el resultado:
+
+    - **El porqué de las prohibiciones va una sola vez, al final.** Repetirlo bajo
+      cada activo lo convertía en relleno que el ojo aprende a saltar, y con eso
+      se pierde justo lo que había que comunicar.
+    - **Los activos con lectura idéntica se agrupan.** WTI y Brent salían como dos
+      bloques palabra por palabra iguales: para un cliente eso no es más
+      información, es la misma dos veces.
+    - **El matiz del sesgo se traduce.** Sin eso la frase quedaba colgando: "lo
+      vemos con más probabilidad de subir, moderado".
+    """
+    activos = playbook.get("activos", {})
+    if not activos:
+        return "_Lectura por activo no disponible en esta corrida._"
+
+    sesgos = glosario.get("sesgos") or {}
+    matices_es = glosario.get("matices") or {}
+
+    def descripcion(a: dict[str, Any]) -> tuple[str, list[str], list[str]]:
+        etiqueta = str(a.get("sesgo_etiqueta", ""))
+        primera = etiqueta.split()[0] if etiqueta else ""
+        direccion = sesgos.get(primera, primera.lower())
+        matiz_crudo = etiqueta[len(primera):].strip(" /").strip()
+        matiz = matices_es.get(matiz_crudo.upper(), "")
+        if not matiz and matiz_crudo:
+            # Los rangos vienen como "RANGO (912 - 925)": se deja el número, que
+            # es lo único que el cliente necesita de ahí.
+            numeros = re.search(r"\(([^)]+)\)", matiz_crudo)
+            matiz = ("entre " + numeros.group(1).replace(" - ", " y ")) if numeros else matiz_crudo.lower()
+        frase = f"Hoy lo vemos {direccion}"
+        if matiz:
+            frase += f", {matiz}"
+        return frase + ".", (
+            [_traducir_setup(s, glosario) for s in (a.get("setups_permitidos") or [])]
+        ), (
+            [_traducir_setup(s, glosario) for s in (a.get("setups_prohibidos") or [])]
+        )
+
+    # Agrupar los activos cuya lectura es identica palabra por palabra.
+    grupos: dict[tuple, list[str]] = {}
+    for ticker, a in activos.items():
+        clave = descripcion(a)
+        clave_hash = (clave[0], tuple(clave[1]), tuple(clave[2]))
+        grupos.setdefault(clave_hash, []).append(a.get("nombre", ticker))
+
+    bloques: list[str] = []
+    hubo_prohibiciones = False
+    for (frase, permitidos, prohibidos), nombres in grupos.items():
+        titulo = nombres[0] if len(nombres) == 1 else " y ".join(
+            [", ".join(nombres[:-1]), nombres[-1]]
+        )
+        bloque = f"### {titulo}\n\n**{frase}**"
+        if permitidos:
+            bloque += "\n\nQué estamos mirando: " + "; ".join(
+                p[0].lower() + p[1:] for p in permitidos
+            ) + "."
+        if prohibidos:
+            hubo_prohibiciones = True
+            bloque += "\n\n**Lo que hoy no hacemos:** " + "; ".join(prohibidos) + "."
+        bloques.append(bloque)
+
+    texto = "\n\n".join(bloques)
+    if hubo_prohibiciones:
+        texto += (
+            "\n\n> **Sobre lo que no hacemos.** No es una opinión sobre esos activos "
+            "ni una predicción de que vayan a moverse al revés. Son jugadas que, en el "
+            "escenario de mercado de hoy, ofrecen poco a favor y mucho en contra. "
+            "Cuando el escenario cambia, la lista cambia con él."
+        )
+    return texto
+
+
+def _bloque_regimen(regimen: dict[str, Any], glosario: dict[str, Any]) -> str:
+    """El régimen macro explicado, sin su código interno.
+
+    `R2_GOLDILOCKS_EXPANSION` es un identificador para que el motor compare
+    estados entre sí. En un informe de cliente no aporta nada y resta: parece
+    jerga que hay que descifrar antes de llegar al contenido.
+    """
+    codigo = regimen.get("codigo")
+    entrada = (glosario.get("regimenes") or {}).get(codigo)
+    if not entrada:
+        return ""
+    return (
+        f"**El escenario de fondo: {entrada['nombre'].lower()}.** "
+        f"{entrada['explicacion']} {entrada['que_implica']}"
+    )
+
+
+def _diccionario(glosario: dict[str, Any], texto: str) -> str:
+    """Las pocas expresiones técnicas que sobreviven, explicadas una vez.
+
+    Regla del proyecto: ninguna abreviatura queda sin explicación en español. Se
+    incluyen solo las que de verdad aparecen en el documento, para que el bloque
+    no sea una lista muerta que nadie lee.
+    """
+    conceptos = glosario.get("conceptos") or {}
+    presentes = [(k, v) for k, v in conceptos.items() if k.lower() in texto.lower()]
+    if not presentes:
+        return ""
+    filas = [f"- **{k.capitalize()}.** {v}" for k, v in presentes]
+    return "## Diccionario rápido\n\n" + "\n".join(filas)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -313,28 +493,39 @@ def preparar(tipo: str, con_datos_viejos: bool = False) -> dict[str, Any]:
         encabezado.insert(0, "")
         encabezado.insert(0, aviso)
 
+    glosario = cargar_glosario_motor()
+
     secciones = [
         "\n".join(encabezado),
-        "## 02. Régimen macro y sesgo por activo\n\n"
-        + (f"**Régimen vigente:** {regimen.get('codigo', 'no disponible')} · "
-           f"{regimen.get('nombre', '')}\n\n" if regimen else "")
-        + _tabla_playbook(playbook) + "\n\n"
-        + f"{MARCA_EDITORIAL} Una lectura de qué significa este régimen para la jornada.",
-        "## 03. Curva soberana de EE.UU.\n\n"
+        "## 02. El escenario de hoy\n\n"
+        + (_bloque_regimen(regimen, glosario) + "\n\n" if regimen else "")
+        + f"{MARCA_EDITORIAL} Una o dos frases sobre cómo se traduce ese escenario "
+          "en la jornada de hoy.\n\n"
+        + _lectura_por_activo(playbook, glosario),
+        "## 03. Qué están haciendo las tasas en EE.UU.\n\n"
+        + f"{MARCA_EDITORIAL} Una frase de entrada: hacia dónde se movieron las tasas "
+          "y por qué le importa a alguien que no opera bonos.\n\n"
         + _tabla_curva(curva) + "\n\n"
-        + f"{MARCA_EDITORIAL} Qué dice el movimiento de tasas sobre el dólar, el oro y el Nasdaq.",
-        "## 04. Agenda del día\n\n"
+        + f"{MARCA_EDITORIAL} Qué implica para el oro, para las acciones tecnológicas "
+          "y para el dólar. Una viñeta por activo, en frases cortas.",
+        "## 04. La agenda del día\n\n"
         + _tabla_calendario(eventos) + "\n\n"
-        + f"{MARCA_EDITORIAL} Cuál de estos eventos puede mover la jornada y por qué.",
-        "## 05. Fuentes consultadas\n\n"
-        + "- Curva soberana y tasa real: Reserva Federal (FRED), vía `data central/`.\n"
-        + "- Calendario económico: Investing.com.\n"
-        + "- Precios y niveles: terminal MetaTrader 5, cuenta Grupo Inteligencia SpA.\n"
-        + (f"- Sesgo cuantitativo: Motor GI, snapshot del {fecha_dato}.\n" if playbook else ""),
+        + f"{MARCA_EDITORIAL} Cuál de estos datos puede mover la jornada, qué mide y "
+          "qué pasa si sale mejor o peor de lo esperado.",
+        "## 05. De dónde salen estos datos\n\n"
+        + "- Tasas de los bonos e inflación esperada: Reserva Federal de Estados Unidos (FRED).\n"
+        + "- Calendario económico y consensos de mercado: Investing.com.\n"
+        + "- Precios y niveles de los activos: terminal MetaTrader 5, cuenta Grupo Inteligencia SpA.\n"
+        + (f"- Lectura cuantitativa de escenario: Motor GI, cálculo del {fecha_dato}.\n" if playbook else ""),
     ]
 
+    cuerpo = "\n\n".join(secciones)
+    diccionario = _diccionario(glosario, cuerpo)
+    if diccionario:
+        cuerpo += "\n\n" + diccionario
+
     md = destino / f"informe_{tipo}.md"
-    md.write_text("\n\n".join(secciones) + "\n", encoding="utf-8")
+    md.write_text(cuerpo + "\n", encoding="utf-8")
 
     (destino / "_datos.json").write_text(
         json.dumps(
@@ -398,7 +589,12 @@ def rendir(directorio: Path, tipo: str) -> dict[str, Any]:
          "--header-left", "MARCO DE APERTURA",
          "--header-right", _fecha_es(datetime.now(tz=SANTIAGO)).upper(),
          "--date", _fecha_es(datetime.now(tz=SANTIAGO)),
-         "--theme", "verde"],
+         "--theme", "verde",
+         # El informe de apertura lo lee un cliente. El maquetador trae el cuerpo
+         # en 7,5-7,9 pt, bajo el piso de legibilidad impresa; esta escala lo deja
+         # cerca de 11 pt, que es donde se calibro el folleto del repo por la misma
+         # razon. Los informes internos no la pasan y conservan su tamano.
+         "--escala", "1.4"],
         capture_output=True, text=True, cwd=str(RAIZ),
     )
     if proceso.returncode != 0:

@@ -100,8 +100,9 @@ def test_un_delta_nulo_se_muestra_como_sin_dato_y_nunca_como_cero():
     }}}
     salida = pi._tabla_curva(curva)
     assert "sin dato" in salida
-    assert "+5.0 bps" in salida
-    assert "+0.0 bps" not in salida
+    assert "+5 puntos base" in salida
+    assert "+0 puntos base" not in salida
+    assert "bps" not in salida, "bps es taquigrafia de mesa, no va a un cliente"
 
 
 def test_el_playbook_sin_activos_declara_la_ausencia():
@@ -118,19 +119,26 @@ def test_los_paises_de_la_fuente_se_traducen():
     assert "United States" not in pi._tabla_calendario(eventos)
 
 
-def test_el_indicador_usa_el_nombre_en_espanol_del_glosario():
-    """No se traduce a mano: el calendario ya engancha `glosario_siglas.json`."""
+def test_el_indicador_usa_el_nombre_en_espanol_y_descarta_el_de_la_fuente():
+    """No se traduce a mano: el calendario ya engancha `glosario_siglas.json`.
+
+    El nombre en ingles se descarta y no se arrastra entre parentesis: en un
+    informe en espanol es ruido con el que el lector tiene que lidiar antes de
+    llegar a la hora y al impacto, que es lo unico que iba a mirar.
+    """
     ev = {"nombre": "ADP Employment Change Weekly",
           "diccionario": {"nombre_es": "Empleo privado ADP"}}
-    assert pi._nombre_indicador(ev) == "Empleo privado ADP (ADP Employment Change Weekly)"
+    assert pi._nombre_indicador(ev) == "Empleo privado ADP"
 
 
-def test_un_nombre_del_glosario_que_ya_trae_parentesis_no_se_anida():
-    """La regla del proyecto es explicar la sigla UNA vez; los parentesis
-    anidados son ilegibles."""
+def test_el_nombre_conserva_el_periodo_porque_es_lo_que_distingue_dos_filas():
+    """Descartar el nombre de la fuente no puede costar la desambiguacion: dos
+    lecturas del mismo indicador tienen que poder distinguirse."""
     ev = {"nombre": "CB Consumer Confidence (Aug)",
           "diccionario": {"nombre_es": "Confianza del consumidor (The Conference Board)"}}
-    assert pi._nombre_indicador(ev) == "Confianza del consumidor (The Conference Board)"
+    salida = pi._nombre_indicador(ev)
+    assert salida == "Confianza del consumidor (The Conference Board) \u00b7 dato de agosto"
+    assert salida.count("(") == 1, "un solo parentesis: los anidados son ilegibles"
 
 
 def test_un_indicador_fuera_del_glosario_conserva_el_nombre_de_la_fuente():

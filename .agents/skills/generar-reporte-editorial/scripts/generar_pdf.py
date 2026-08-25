@@ -1,4 +1,5 @@
 import argparse
+import re
 import base64
 import markdown
 from pathlib import Path
@@ -36,6 +37,36 @@ def _bloque_fuentes():
     )
     return "\n".join(reglas)
 
+# Tamano de letra base del maquetador: 10 a 10.5 px. Chromium imprime la A4 a
+# 794 px de ancho, asi que 1 px equivale a 0,75 pt y el cuerpo del texto queda en
+# 7,5-7,9 pt. El piso de legibilidad para texto impreso es 8 pt, y el folleto de
+# este mismo repo se calibro a 11 pt con una nota explicita: "el material lo usa
+# gente que no lee comodo a tamanos chicos".
+#
+# `escala` existe para subirlo SIN reescribir el CSS, porque este maquetador es
+# compartido: cambiarlo de raiz alteraria tambien los informes ya emitidos (el del
+# Motor GI entre ellos). Los documentos de cliente piden una escala mayor; los
+# internos conservan la suya con el valor por defecto de 1.0.
+#
+# Solo se escalan los tamanos de lectura (<= 14 px). Los titulares de portada
+# (46 px, 22 px) ya son grandes y multiplicarlos romperia el encuadre.
+_LIMITE_ESCALADO_PX = 14.0
+
+
+def _escalar_tipografia(html: str, escala: float) -> str:
+    """Multiplica los tamanos de letra de lectura por `escala`."""
+    if escala == 1.0:
+        return html
+
+    def _reemplazo(m: re.Match) -> str:
+        valor = float(m.group(2))
+        if valor > _LIMITE_ESCALADO_PX:
+            return m.group(0)
+        return f"{m.group(1)}{round(valor * escala, 2)}px"
+
+    return re.sub(r"(font-size:\s*)([\d.]+)px", _reemplazo, html)
+
+
 def _construir_html(
     html_content: str,
     titulo: str,
@@ -47,7 +78,8 @@ def _construir_html(
     fecha: str,
     analista: str,
     paginas_badge: str,
-    tema: str = "verde"
+    tema: str = "verde",
+    escala: float = 1.0
 ) -> str:
     if tema == "verde":
         cover_bg = "#06231C"
@@ -70,7 +102,7 @@ def _construir_html(
         divider_color = "#53C1AB"
         disclaimer_accent = "#53C1AB"
 
-    return f"""<!doctype html>
+    html = f"""<!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
@@ -386,6 +418,9 @@ img {{
 </body>
 </html>
 """
+    return _escalar_tipografia(html, escala)
+
+
 
 def crear_pdf(
     md_path: str = None,
@@ -398,7 +433,8 @@ def crear_pdf(
     header_right: str = "AGOSTO 2026 • MACROECONOMÍA",
     fecha: str = "Agosto 2026",
     analista: str = "Área de Estudios",
-    tema: str = "verde"
+    tema: str = "verde",
+    escala: float = 1.0
 ):
     if md_path:
         md_file = Path(md_path)
@@ -447,7 +483,8 @@ def crear_pdf(
             fecha=fecha,
             analista=analista,
             paginas_badge="01 / --",
-            tema=tema
+            tema=tema,
+            escala=escala,
         )
         tmp_html.write_text(html_inicial, encoding="utf-8")
         pagina.goto(tmp_html.as_uri())
@@ -475,7 +512,8 @@ def crear_pdf(
             fecha=fecha,
             analista=analista,
             paginas_badge=badge_final,
-            tema=tema
+            tema=tema,
+            escala=escala,
         )
         tmp_html.write_text(html_final, encoding="utf-8")
         pagina.goto(tmp_html.as_uri())
@@ -499,6 +537,8 @@ if __name__ == "__main__":
     parser.add_argument("--header-right", dest="header_right", help="Encabezado derecho", default="AGOSTO 2026 • MACROECONOMÍA")
     parser.add_argument("--date", dest="fecha", help="Fecha para la portada", default="Agosto 2026")
     parser.add_argument("--analyst", dest="analista", help="Nombre del analista o área", default="Área de Estudios")
+    parser.add_argument("--escala", dest="escala", type=float, default=1.0,
+                        help="Multiplica el tamano de letra de lectura (1.45 deja el cuerpo en ~11 pt)")
     parser.add_argument("--theme", dest="tema", help="Tema de color de portada (verde | oscuro)", default="verde")
 
     args = parser.parse_args()
@@ -513,5 +553,6 @@ if __name__ == "__main__":
         header_right=args.header_right,
         fecha=args.fecha,
         analista=args.analista,
-        tema=args.tema
+        tema=args.tema,
+        escala=args.escala,
     )
