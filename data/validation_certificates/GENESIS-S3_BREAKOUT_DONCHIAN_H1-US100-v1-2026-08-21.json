@@ -1,0 +1,43 @@
+{
+  "certificate_schema_version": "1.0.0",
+  "certificate_id": "GENESIS-S3_BREAKOUT_DONCHIAN_H1-US100-v1-2026-08-21",
+  "trial_id": "S3_BREAKOUT_DONCHIAN_H1__US100__v1",
+  "status": "REVOKED",
+  "human_review": "PENDING",
+  "operational_status": "BLOQUEADO",
+  "genesis_repo": "ramaDben/genesis",
+  "genesis_commit": "genesis-v1.4-verified",
+  "catalogue_version": "1.3.0",
+  "catalogue_hash": "11769072ae1740d22d27602a2f0472b45868d21d35e63e8085a83afe2a33429f",
+  "strategy_code_version": "s3_donchian_breakout_v1",
+  "data_snapshot_id": "SNAP-US100-H1-23b0028a",
+  "data_hash": "23b0028a4c5bab5cb62e117b7f2fdea3d4f06fd973fa007a38422776464e8180",
+  "regime_snapshot_id": "REG-e4b0a451",
+  "config_hash": "aca059b58ecd21cd",
+  "n_trials_total": 5400,
+  "metrics": {
+    "dsr": 0.96,
+    "pbo": 0.12,
+    "sharpe_is": 1.375,
+    "sharpe_oos": 1.25,
+    "max_drawdown_oos": 0.0026117462492333287,
+    "trades_oos": 45,
+    "profit_factor": 1.65,
+    "wfe": 0.68
+  },
+  "gate": {
+    "dsr_min": 0.0,
+    "pbo_max": 0.2,
+    "sharpe_oos_ratio_min": 0.5,
+    "trades_oos_min": 30,
+    "max_drawdown_oos_max": 0.15
+  },
+  "issued_at_utc": "2026-08-21T14:28:41.848739+00:00",
+  "signature_hash": "b241e24dd3e829bbf9abfe92e6a682c005823030cf1aa84148c0068f180639fd",
+  "reviewer_notes": null,
+  "live_approval_notes": null,
+  "lifecycle_status": "CANDIDATO",
+  "certificate_status": "REVOKED",
+  "revocation_reason": "INVALID_METRICS_AND_INSUFFICIENT_SAMPLE",
+  "revoked_at_utc": "2026-08-21T16:28:39.271987+00:00"
+}

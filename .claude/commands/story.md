@@ -4,8 +4,8 @@ Genera una Story de marca GI (imagen 1920×1080, formato horizontal 16:9) combin
 $ARGUMENTS — formato esperado: `[tipo] [ejecutivo?]`
 
 - `[tipo]`: **soportados en este Change: `alerta`, `dato_macro`, `recomendacion`, `quote`,
-  `breaking`, `encuesta`, `edu`, `flash`, `postventa`**. Las demás plantillas del canvas (Market Update, Indicador Macro, Trading Idea,
-  Calendario, Semanal, Carrusel) llegan con los issues #111-#115 — todavía no existen como `[tipo]`
+  `breaking`, `encuesta`, `edu`, `flash`, `postventa`, `calendario`**. Las demás plantillas del canvas (Market Update, Indicador Macro, Trading Idea,
+  Semanal, Carrusel) llegan con los issues #111-#115 — todavía no existen como `[tipo]`
   de este comando.
 - `[ejecutivo]` (opcional): `/story` **no soporta el flag ejecutivo** (ver PASO 0).
 
@@ -24,31 +24,37 @@ evento — ver bloque "Ruta `edu`" más abajo. `/story flash` **sí** consume da
 sin búsqueda editorial de evento — ver bloque "Ruta `flash`" más abajo. `/story postventa` es la
 única pieza **interna** (no publicable): guion operativo del parte de post-venta, con chip de
 INTERNO no suprimible y footer sin marca pública; reusa los datos de `/postventa` si ya se corrió,
-o los toma del motor en frío — ver bloque "Ruta `postventa`" más abajo.
+o los toma del motor en frío — ver bloque "Ruta `postventa`" más abajo. `/story calendario` es el
+calendario macro de la semana: una selección editorial de 3 a 6 eventos (no un volcado íntegro del
+calendario), sin activo protagonista — usa la piel de `oportunidad` (sello, CTA, disclaimer) pero
+cae al acento de marca porque no hay un solo activo al que pintarle color. **Sí** consume datos
+reales del motor (`obtener_calendario_macro`), pero **no** ejecuta búsqueda editorial de evento
+propia — ver bloque "Ruta `calendario`" más abajo.
 
 ---
 
 ## PASO 0 — Validar `[tipo]` y el flag `ejecutivo`
 
-1. Si `$ARGUMENTS` viene vacío o `[tipo]` no es uno de los nueve soportados (CB-1):
+1. Si `$ARGUMENTS` viene vacío o `[tipo]` no es uno de los diez soportados (CB-1):
    ```
    📖 Tipos de Story disponibles hoy:
       dato_macro     un dato económico que ya salió (pieza 1 de la agenda diaria)
       alerta         niveles del día de un activo
       recomendacion  una operación sugerida, con firma acreditada
-      quote · breaking · encuesta · edu · flash · postventa
+      quote · breaking · encuesta · edu · flash · postventa · calendario
    (Las demás plantillas del canvas — Market Update, Indicador Macro, Trading Idea,
-   Calendario, Semanal, Carrusel — llegan con los issues #111-#115.)
+   Semanal, Carrusel — llegan con los issues #111-#115.)
 
    ¿Cuál generamos?
    ```
-   No continuar hasta que el director confirme uno de los nueve. Nunca asumir un tipo por
+   No continuar hasta que el director confirme uno de los diez. Nunca asumir un tipo por
    defecto. Si el tipo confirmado es `dato_macro`, saltar al bloque "Ruta `dato_macro`"; si es
    `recomendacion`, saltar al bloque "Ruta `recomendacion`"; si es `quote`, saltar directamente
    al bloque "Ruta `quote`"; si es `breaking`, saltar al bloque "Ruta `breaking`"; si es `encuesta`,
    saltar al bloque "Ruta `encuesta`"; si es `edu`, saltar al bloque "Ruta `edu`"; si es `flash`,
-   saltar al bloque "Ruta `flash`"; si es `postventa`, saltar al bloque "Ruta `postventa`" (los
-   PASO 1-5 de abajo son exclusivos de `alerta`).
+   saltar al bloque "Ruta `flash`"; si es `postventa`, saltar al bloque "Ruta `postventa`"; si es
+   `calendario`, saltar al bloque "Ruta `calendario`" (los PASO 1-5 de abajo son exclusivos de
+   `alerta`).
 
 2. Si el argumento `ejecutivo` está presente (CB-6/R7):
    ```
@@ -121,9 +127,17 @@ Si ya hay 3 esta semana, avisar y detener.
    - `costo_mantencion`: swap acumulado si la operación es de varios días. **Cadena vacía** en
      intradía y el bloque desaparece. Omitirlo cuando existe es la omisión que vuelve deshonesta a
      una pieza que solo muestra la ganancia.
-2. `bullets`: máximo 3, criterio de `/señal`. **El último dice el riesgo**, no la tesis.
+2. `tesis`: UNA línea que explique por qué. No una tesis completa; solo el motivo principal de la operación.
 3. `firma_nombre`, `firma_credencial` y `firma_area` del analista acreditado que respalda la pieza.
    Nunca la firma de alguien que no revisó el contenido.
+4. **Geometría del gráfico (CRÍTICO)**: Debes estructurar el payload para `serie_mt5.py` con dos arrays obligatorios:
+   - `hitos`: Array de marcadores que deben llevar un punto y una etiqueta, como el precio actual. EJ: `[{"precio": 65.031, "clase": "actual", "rol": "AHORA"}]`
+   - `niveles`: Array de líneas horizontales para toda la ventana. **DEBES usar estas clases exactas** o la línea no se renderizará:
+     - `{"precio": X, "clase": "meta", "rol": "OBJETIVO"}`
+     - `{"precio": X, "clase": "entrada", "rol": "ENTRADA"}`
+     - `{"precio": X, "clase": "stop", "rol": "STOP"}`
+   - **NOTA:** NO uses "origen" ni "soporte" en `recomendacion` ya que la plantilla CSS carece de esas clases, y las líneas y textos quedarán invisibles.
+   - Estos se sumarán al JSON base y se encadenarán con `serie_mt5.py -> story_grafico.py -> story_render.py`
 
 Payload → `templates/stories/recomendacion.html`. Seguir con PASO 6 y PASO 7, y registrar la señal
 en `data/historial_senales.json` al aprobar.
@@ -555,6 +569,104 @@ PASO 1-4 de `alerta`; el preview/render final reusa el mismo patrón de PASO 6-7
      --template templates/stories/flash.html \
      --out "[ruta devuelta por ruta_story.ps1]" <<'STORY_PAYLOAD'
    { ...payload story_flash del paso 5... }
+   STORY_PAYLOAD
+   ```
+   Mismo manejo de éxito/error que PASO 7.3-7.4.
+
+---
+
+## Ruta `calendario` — el calendario macro de la semana (datos del motor, selección editorial)
+
+`calendario` señala los eventos económicos más relevantes de la semana para los activos del
+catálogo. **Sí** consume datos reales del motor (`mcp__market-data__obtener_calendario_macro`),
+pero la **selección es editorial**: no es un volcado íntegro del calendario, es un recorte de 3 a 6
+eventos (mismo criterio que "el driver que domina hoy" en los mensajes de niveles — curar, no
+enumerar). No hay activo protagonista ni gráfico: usa la piel de `oportunidad` (sello con pulso,
+CTA, disclaimer) pero cae al acento de marca (`--activo: var(--acento)`, el mismo fallback que un
+activo sin color propio en `alerta`/`recomendacion`).
+
+1. **Datos del motor (obligatorio)**: llama
+   ```
+   mcp__market-data__obtener_calendario_macro({"min_impact": "medium", "solo_hoy": false})
+   ```
+   para traer la semana completa (no solo hoy). Si devuelve `{"error": "NO_CALENDAR_FEEDS", ...}`,
+   cae a WebSearch sobre investing.com como fallback (mismo criterio que `/dato_macro`); nunca
+   inventar un evento ni una cifra de consenso/previo.
+
+2. **Selección editorial de 3 a 6 eventos**: de los eventos devueltos, elige los de mayor
+   relevancia para el catálogo (Oro, WTI, USD/CLP, US100, acciones) dentro de la semana en curso
+   (lunes a viernes desde hoy). Prioriza `impacto: "alto"` y los que tengan `forecast`/`previo`
+   (un dato sin consenso publicado aporta poco a una pieza que mira hacia adelante). Pregunta al
+   director si quiere ajustar la selección antes de armar el payload:
+   ```
+   📅 Candidatos de la semana (impacto alto/medio):
+      1. [dia] [hora] — [evento] ([pais]) · antes [previo] · se espera [forecast]
+      2. [...]
+   ¿Con cuáles seguimos (3 a 6)? ¿Alguno que agregar o sacar?
+   ```
+
+3. **Título y subtítulo**: pregunta o propone un título corto (ej. "Lo que mueve la semana") y un
+   subtítulo de una frase que nombre los activos que tocan estos datos (ej. "Los 5 datos de mayor
+   impacto para Oro, WTI, USD/CLP y US100").
+
+4. **Límites editoriales** (guía de redacción — el motor no valida longitud): `titulo ≤ 40
+   caracteres`, `subtitulo ≤ 140 caracteres`; por evento `evento ≤ 70 caracteres`, `referencia ≤ 40
+   caracteres`. Con 6 eventos y textos en el límite superior la tabla queda ajustada — si el
+   director pide más de 6, avisar que la pieza pierde margen contra el CTA (ver comentario del
+   snapshot) y sugerir recortar la selección en vez de forzarla.
+
+5. **Payload `story_calendario`**: `sello` y `fecha_hora` siempre presentes (`fecha_hora` describe
+   el rango de la semana, ej. "SEMANA DEL 11 AL 15 DE AGOSTO", en hora Chile). `eventos` es un
+   **array de objetos** de claves escalares; cada evento nombra el país/divisa y trae `impacto`
+   como etiqueta visible (no como color semántico — el impacto no es una dirección de mercado).
+   ```json
+   {
+     "plantilla": "calendario",
+     "sello": "CALENDARIO SEMANAL · GI",
+     "fecha_hora": "SEMANA DEL 11 AL 15 DE AGOSTO",
+     "titulo": "Lo que mueve la semana",
+     "subtitulo": "Los 5 datos de mayor impacto para Oro, WTI, USD/CLP y US100.",
+     "eventos": [
+       {
+         "dia": "MIÉRCOLES 12", "hora": "08:30 CLT",
+         "evento": "Índice de precios al consumidor (IPC) de EE.UU., interanual",
+         "pais": "EE.UU. · USD", "referencia": "Antes 3,5% · Se espera 3,4%",
+         "impacto": "Alto impacto"
+       }
+     ],
+     "cta": "¿Quieres seguir esta semana en detalle?",
+     "cta_sub": "Habla hoy con tu analista"
+   }
+   ```
+
+6. **Guardado bajo `_general`**: sin activo protagonista único → se guarda siempre bajo
+   `-Activo "_general"` (mismo criterio que `quote`/`edu`/`flash`), no se pregunta por activo.
+
+7. **Preview y aprobación** (mismo criterio que PASO 6, ANTES de renderizar o guardar nada):
+   ```
+   📖 *PREVIEW — Story Calendario (semana)*
+   ━━━━━━━━━━━━━━━━━━━
+   Título: [titulo]
+   Subtítulo: [subtitulo]
+   Eventos:
+     • [dia] [hora] — [evento] ([pais]) · [referencia] · [impacto]
+     • [...]
+   ━━━━━━━━━━━━━━━━━━━
+   ¿Apruebas esta Story? ¿Generar y guardar el PNG final?
+   ```
+   Si el director **no** aprueba: no renderizar ni guardar nada en `data/stories/`. Terminar el
+   comando ahí.
+
+8. **Render y guardado** (solo tras aprobar, mismo patrón que PASO 7):
+   ```powershell
+   scripts\ruta_story.ps1 -Fecha "[YYYY-MM-DD]" -Activo "_general" -Plantilla "calendario" -Hora "[HH-mm]"
+   ```
+   La `[Hora]` sale del reloj de Chile (regla canónica).
+   ```bash
+   uv run python scripts/story_render.py \
+     --template templates/stories/calendario.html \
+     --out "[ruta devuelta por ruta_story.ps1]" <<'STORY_PAYLOAD'
+   { ...payload story_calendario del paso 5... }
    STORY_PAYLOAD
    ```
    Mismo manejo de éxito/error que PASO 7.3-7.4.

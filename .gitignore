@@ -70,6 +70,7 @@ data/cache/
 .agents/*
 !.agents/workflows/
 !.agents/rules/
+!.agents/skills/
 !.agents/mcp.example.json
 
 # Assets de marca GI (logos y fondos originales, pesados y no editables aca)

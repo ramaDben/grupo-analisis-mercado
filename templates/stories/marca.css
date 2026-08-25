@@ -69,7 +69,7 @@
   --activo-oro:    #E8B44C;
   --activo-wti:    #E8783C;
   --activo-us100:  #4C86E8;
-  --activo-usdclp: #C9743A;
+  --activo-usdclp: var(--acento);
   --activo-bitcoin:#F7931A;
 
   /* ── Tipografía ─────────────────────────────────────────────────────────── */

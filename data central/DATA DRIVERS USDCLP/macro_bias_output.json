@@ -1,0 +1,171 @@
+{
+  "schema_version": "2.0.0",
+  "config_hash": "b571f800c4e05148",
+  "as_of_utc": "2026-08-24T20:41:33.828206+00:00",
+  "regimen_macro_global": {
+    "codigo": "R0_CALMA_RANGO",
+    "nombre": "Calma / Rango / Absorción",
+    "confirmado_por_historesis": true,
+    "lecturas_consecutivas": 7,
+    "descripcion": "Drivers en equilibrio dinámico sin shocks direccionales extremos."
+  },
+  "metricas_clave": {
+    "spread_2s10s_pct": 0.5,
+    "tasa_real_tips10y_pct": 2.4,
+    "breakeven_inflacion_10y_pct": 2.34,
+    "spread_tasas_chile_fed_pct": 0.87,
+    "cobre_spot_comex": 6.6005,
+    "cobre_variacion_5d_pct": -0.05,
+    "petroleo_shock_max_5d_pct": 2.18
+  },
+  "confianza_general": {
+    "confianza_total_pct": 70.1,
+    "score_frescura_pct": 100.0,
+    "score_antiguedad_pct": 14.5,
+    "score_cobertura_pct": 100.0
+  },
+  "activos": {
+    "USDCLP": {
+      "nombre": "Dólar / Peso Chileno",
+      "tipo": "FX_EMERGENTE",
+      "sesgo_score": 0.1,
+      "sesgo_etiqueta": "NEUTRAL / RANGO (912 - 925)",
+      "setups_permitidos": [
+        "FADE_SUPPORT_RESISTANCE_M15",
+        "MEAN_REVERSION_RSI_H1"
+      ],
+      "setups_prohibidos": [
+        "BREAKOUT_CHASE_LONG",
+        "GRID_SIN_STOP"
+      ],
+      "parametros_riesgo": {
+        "precio_spot": 912.37,
+        "atr_h1": 1.33,
+        "atr_d1": 6.98,
+        "stop_loss_mult_intraday": 1.5,
+        "distancia_sl_h1_puntos": 2.0,
+        "stop_loss_mult_daily": 2.5,
+        "distancia_sl_d1_puntos": 17.44,
+        "take_profit_tipo": "NIVEL_OPUESTO_CANAL",
+        "trailing_stop_mult_atr": null
+      },
+      "justificacion_vectores": [
+        "Cobre en $6.60 USD/lb frena alzas violentas (Elasticidad beta=-0.48)",
+        "Diferencial de tasas comprimido (+0.87%) limita caídas estructurales",
+        "Posición forward no residentes compradora (+4450M USD) actúa como soporte"
+      ]
+    },
+    "XAUUSD": {
+      "nombre": "Oro Spot",
+      "tipo": "COMMODITY_REFUGIO",
+      "sesgo_score": 0.4,
+      "sesgo_etiqueta": "ALCISTA MODERADO",
+      "setups_permitidos": [
+        "PULLBACK_EMA50_H1",
+        "BREAKOUT_DONCHIAN_H1"
+      ],
+      "setups_prohibidos": [
+        "SHORT_AGRESIVO"
+      ],
+      "parametros_riesgo": {
+        "precio_spot": 4648.39,
+        "atr_h1": 20.1,
+        "atr_d1": 83.99,
+        "stop_loss_mult_intraday": 1.5,
+        "distancia_sl_h1_puntos": 30.16,
+        "stop_loss_mult_daily": 2.5,
+        "distancia_sl_d1_puntos": 209.99,
+        "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC",
+        "trailing_stop_mult_atr": 3.0
+      },
+      "justificacion_vectores": [
+        "Estructura de mediano plazo constructiva con tasas reales estables"
+      ]
+    },
+    "WTI": {
+      "nombre": "Petróleo Crudo WTI",
+      "tipo": "COMMODITY_ENERGIA",
+      "sesgo_score": 1.5,
+      "sesgo_etiqueta": "ALCISTA POR SHOCK",
+      "setups_permitidos": [
+        "BREAKOUT_VOLATILITY_H1",
+        "PULLBACK_EMA16_H1"
+      ],
+      "setups_prohibidos": [
+        "FADE_TOP_RESISTANCE"
+      ],
+      "parametros_riesgo": {
+        "precio_spot": 85.417,
+        "atr_h1": 0.55,
+        "atr_d1": 2.82,
+        "stop_loss_mult_intraday": 1.5,
+        "distancia_sl_h1_puntos": 0.83,
+        "stop_loss_mult_daily": 2.5,
+        "distancia_sl_d1_puntos": 7.06,
+        "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC",
+        "trailing_stop_mult_atr": 3.0
+      },
+      "justificacion_vectores": [
+        "Impulso de 5 días en crudo (+2.2%) bajo modelo Kilian (Shock Precautorio/Demanda)",
+        "Uso obligatorio de Trailing Stop por ATR para captura de colas derechas"
+      ]
+    },
+    "BRENT": {
+      "nombre": "Petróleo Crudo Brent",
+      "tipo": "COMMODITY_ENERGIA",
+      "sesgo_score": 1.5,
+      "sesgo_etiqueta": "ALCISTA POR SHOCK",
+      "setups_permitidos": [
+        "BREAKOUT_VOLATILITY_H1",
+        "PULLBACK_EMA16_H1"
+      ],
+      "setups_prohibidos": [
+        "FADE_TOP_RESISTANCE"
+      ],
+      "parametros_riesgo": {
+        "precio_spot": 92.071,
+        "atr_h1": 0.52,
+        "atr_d1": 2.85,
+        "stop_loss_mult_intraday": 1.5,
+        "distancia_sl_h1_puntos": 0.78,
+        "stop_loss_mult_daily": 2.5,
+        "distancia_sl_d1_puntos": 7.14,
+        "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC",
+        "trailing_stop_mult_atr": 3.0
+      },
+      "justificacion_vectores": [
+        "Impulso de 5 días en crudo (+2.2%) bajo modelo Kilian (Shock Precautorio/Demanda)",
+        "Uso obligatorio de Trailing Stop por ATR para captura de colas derechas"
+      ]
+    },
+    "US100": {
+      "nombre": "Nasdaq 100",
+      "tipo": "EQUITY_INDEX",
+      "sesgo_score": -1.2,
+      "sesgo_etiqueta": "BAJISTA / PRESIÓN EN MÚLTIPLOS",
+      "setups_permitidos": [
+        "SELL_PULLBACK_EMA50_H1",
+        "BREAKDOWN_DONCHIAN_H1"
+      ],
+      "setups_prohibidos": [
+        "BUY_THE_DIP_AGGRESSIVE",
+        "COMPRA_SIN_CONFIRMACION"
+      ],
+      "parametros_riesgo": {
+        "precio_spot": 29038.03,
+        "atr_h1": 100.54,
+        "atr_d1": 409.74,
+        "stop_loss_mult_intraday": 1.5,
+        "distancia_sl_h1_puntos": 150.82,
+        "stop_loss_mult_daily": 2.5,
+        "distancia_sl_d1_puntos": 1024.36,
+        "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC",
+        "trailing_stop_mult_atr": 3.0
+      },
+      "justificacion_vectores": [
+        "Rendimiento UST 10Y en 4.74% comprime múltiplos de valuación en tecnológicas",
+        "Régimen de tasas elevadas penaliza activos de alta duración"
+      ]
+    }
+  }
+}

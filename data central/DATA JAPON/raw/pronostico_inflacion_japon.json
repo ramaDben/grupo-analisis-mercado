@@ -1,0 +1,119 @@
+{
+  "timestamp_generacion_utc": "2026-08-24T20:41:33.835253+00:00",
+  "evento_objetivo": {
+    "nombre": "Índice de Precios al Consumidor (IPC) de Japón",
+    "periodo_referencia": "Julio / Agosto 2026",
+    "entidad_emisora": "Statistics Bureau of Japan (Ministry of Internal Affairs and Communications)",
+    "benchmark_politica_monetaria": "IPC Subyacente (Core CPI ex-Alimentos Frescos)",
+    "meta_oficial_boj_pct": 2.0
+  },
+  "pronostico_cifras": {
+    "cpi_core_yoy": {
+      "nombre": "IPC Subyacente Nacional (Ex-Alimentos Frescos)",
+      "dato_anterior_pct": 2.7,
+      "consenso_mercado_pct": 2.7,
+      "modelo_pronostico_gi_pct": 2.75,
+      "rango_esperado": [
+        2.6,
+        2.9
+      ],
+      "desviacion_vs_meta_boj_pct": 0.75,
+      "evaluacion": "PERSISTENTEMENTE_SOBRE_META"
+    },
+    "cpi_headline_yoy": {
+      "nombre": "IPC General Nacional (All Items)",
+      "dato_anterior_pct": 2.8,
+      "consenso_mercado_pct": 2.8,
+      "modelo_pronostico_gi_pct": 2.8
+    },
+    "cpi_core_core_yoy": {
+      "nombre": "IPC Subyacente Estructural (Ex-Alimentos Frescos y Energía)",
+      "dato_anterior_pct": 2.3,
+      "consenso_mercado_pct": 2.3,
+      "modelo_pronostico_gi_pct": 2.3
+    },
+    "tokyo_core_cpi_yoy": {
+      "nombre": "IPC Subyacente de Tokio (Adelantado)",
+      "dato_anterior_pct": 2.3,
+      "modelo_pronostico_gi_pct": 2.35
+    }
+  },
+  "desglose_componentes": {
+    "energia_y_servicios_publicos": {
+      "ponderacion_canasta_pct": 7.1,
+      "tendencia": "ALCISTA_MODERADA",
+      "impacto_yoy_puntos": 0.35,
+      "driver_principal": "Reducción progresiva de subsidios gubernamentales a tarifas eléctricas y gas.",
+      "detalle": "El levantamiento parcial de los subsidios estatales de energía empuja al alza el componente energético interanual."
+    },
+    "alimentos_procesados_ex_frescos": {
+      "ponderacion_canasta_pct": 22.5,
+      "tendencia": "PRESION_SOSTENIDA",
+      "impacto_yoy_puntos": 0.85,
+      "driver_principal": "Traspaso de costos de materias primas agrícolas importadas y debilidad acumulada del Yen.",
+      "detalle": "Las empresas continúan ajustando precios de alimentos envasados y bebidas para defender márgenes operativos."
+    },
+    "salarios_y_servicios": {
+      "ponderacion_canasta_pct": 34.8,
+      "tendencia": "EXPANSION_ESTRUCTURAL",
+      "impacto_yoy_puntos": 1.15,
+      "driver_principal": "Efecto de las negociaciones salariales de primavera Shunto 2026 (+5.1% de incremento promedio).",
+      "detalle": "El traspaso de mayores costos laborales a los precios finales de servicios confirma la espiral virtuosa salarios-precios buscada por el BoJ."
+    },
+    "bienes_durables_y_manufacturas": {
+      "ponderacion_canasta_pct": 18.2,
+      "tendencia": "NEUTRAL",
+      "impacto_yoy_puntos": 0.4,
+      "driver_principal": "Consumo discrecional moderado y normalización de cadenas de suministro globales.",
+      "detalle": "Demanda interna cautelosa limita aumentos agresivos en bienes no esenciales."
+    }
+  },
+  "matriz_sensibilidad_boj_usdjpy": {
+    "escenario_hawkish_sorpresa_alcista": {
+      "condicion": "Core CPI >= 2.90%",
+      "probabilidad_estimada_pct": 25,
+      "lectura_macro": "Aceleración inflacionaria impulsada por servicios y segunda ronda de precios.",
+      "reaccion_esperada_boj": "Aumenta al 80% la probabilidad de alza de tasas a 1.25% en la reunión del 16-17 Septiembre.",
+      "sesgo_usdjpy": "FUERTE_BAJISTA_JPY_FORTALECIDO",
+      "niveles_objetivo_usdjpy": {
+        "soporte_inmediato": 156.5,
+        "soporte_extension": 154.0,
+        "target_swing": 152.5
+      },
+      "estrategia_operativa": "Ventas escalonadas en rebotes de USD/JPY o compras de JPY."
+    },
+    "escenario_base_en_linea": {
+      "condicion": "Core CPI entre 2.60% y 2.80%",
+      "probabilidad_estimada_pct": 60,
+      "lectura_macro": "Inflación se mantiene sólidamente anclada sobre el 2.0%, validando la senda de subidas graduales.",
+      "reaccion_esperada_boj": "El BoJ mantiene la tasa en 1.00% en Septiembre pero refuerza el forward guidance para alza en Octubre/Diciembre.",
+      "sesgo_usdjpy": "LATERAL_BAJISTA_MODERADO",
+      "niveles_objetivo_usdjpy": {
+        "soporte": 157.2,
+        "resistencia": 159.5,
+        "rango_esperado": "157.000 - 159.800"
+      },
+      "estrategia_operativa": "Operativa en rango con preferencia por buscar techos de confirmación técnica."
+    },
+    "escenario_dovish_sorpresa_bajista": {
+      "condicion": "Core CPI <= 2.50%",
+      "probabilidad_estimada_pct": 15,
+      "lectura_macro": "Desaceleración mayor a la prevista por debilidad del consumo de los hogares.",
+      "reaccion_esperada_boj": "Pausa prolongada en 1.00%; se reduce la presión para endurecer la política en 2026.",
+      "sesgo_usdjpy": "ALCISTA_PRESION_DEPRECIATORIA_YEN",
+      "niveles_objetivo_usdjpy": {
+        "resistencia_inmediata": 160.5,
+        "resistencia_clave": 162.0,
+        "zona_alerta_intervencion_mof": 163.5
+      },
+      "estrategia_operativa": "Compras tácticas intradía hacia resistencias con monitoreo estricto de declaraciones del Ministerio de Finanzas (MoF)."
+    }
+  },
+  "contexto_intermercado_usd_jpy": {
+    "tasa_actual_fed": 5.25,
+    "tasa_actual_boj": 1.0,
+    "diferencial_tasas_bps": 425,
+    "correlacion_us10y": "Directa (+0.82)",
+    "alerta_intervencion_mof": "Activa si USD/JPY supera 162.500 con velocidad intradía acelerada."
+  }
+}

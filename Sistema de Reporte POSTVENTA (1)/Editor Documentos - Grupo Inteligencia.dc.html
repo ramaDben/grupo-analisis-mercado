@@ -1,0 +1,1955 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+<template id="__bundler_thumbnail" data-bg-color="#0D0D1A">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#0D0D1A"/>
+    <rect x="420" y="100" width="360" height="600" fill="#FFFFFF"/>
+    <rect x="460" y="150" width="200" height="24" fill="#0D0D1A"/>
+    <rect x="460" y="200" width="280" height="10" fill="#3A3F52"/>
+    <rect x="460" y="220" width="280" height="10" fill="#3A3F52"/>
+    <rect x="460" y="260" width="120" height="60" fill="#3E91AF"/>
+    <rect x="600" y="260" width="120" height="60" fill="#53C1AB"/>
+  </svg>
+</template>
+</head>
+<body>
+<x-dc>
+
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&amp;family=DM+Sans:wght@400;500;600;700&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<meta name="omelette-owns-print">
+<style>
+body{margin:0;}
+a{color:#3E91AF;text-decoration:none;}
+a:hover{color:#53C1AB;text-decoration:underline;}
+#gi-print-root { display: none; }
+@media print {
+  @page { size: A4 portrait; margin: 0; }
+  body.gi-printing > *:not(#gi-print-root) { display: none !important; }
+  body.gi-printing { margin: 0; padding: 0; background: #FFFFFF; }
+  #gi-print-root { display: block !important; }
+  #gi-print-root .gi-print-sheet { width: 794px; height: 1123px; overflow: hidden; position: relative; page-break-after: always; break-after: page; }
+  #gi-print-root .gi-print-sheet:last-child { page-break-after: auto; break-after: auto; }
+  #gi-print-root .gi-print-sheet > * { transform: none !important; }
+}
+</style>
+<script src="./image-slot.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</helmet>
+
+<div style="height:100vh;width:100%;display:flex;flex-direction:column;background:#EDEDED;font-family:'DM Sans',sans-serif;overflow:hidden;">
+
+  <div style="height:52px;flex-shrink:0;background:#0D0D1A;display:flex;align-items:center;gap:16px;padding:0 16px;box-sizing:border-box;">
+    <button onClick="{{ toggleSidebar }}" style="width:32px;height:32px;border:none;background:transparent;cursor:pointer;border-radius:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;" style-hover="background:#1A1A2E;">
+      <span style="width:16px;height:2px;background:#FFFFFF;display:block;"></span>
+      <span style="width:16px;height:2px;background:#FFFFFF;display:block;"></span>
+      <span style="width:16px;height:2px;background:#FFFFFF;display:block;"></span>
+    </button>
+    <span style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#FFFFFF;">Grupo Inteligencia</span>
+    <span style="width:1px;height:18px;background:rgba(255,255,255,0.2);"></span>
+    <span style="font-family:'DM Sans',sans-serif;font-size:11px;color:#8A8A94;">Editor de Documentos Financieros</span>
+    <div style="flex:1;"></div>
+    <span style="font-family:'Space Grotesk',sans-serif;font-size:10px;letter-spacing:0.05em;color:#8A8A94;text-transform:uppercase;">{{ pageCount }} páginas</span>
+    <div style="display:flex;align-items:center;gap:2px;background:#1A1A2E;border-radius:3px;padding:3px;">
+      <button onClick="{{ setZoomDown }}" style="width:24px;height:24px;border:none;background:transparent;color:#FFFFFF;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;cursor:pointer;border-radius:2px;" style-hover="background:#3A3F52;">–</button>
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:10.5px;color:#FFFFFF;width:42px;text-align:center;">{{ zoomPct }}</span>
+      <button onClick="{{ setZoomUp }}" style="width:24px;height:24px;border:none;background:transparent;color:#FFFFFF;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;cursor:pointer;border-radius:2px;" style-hover="background:#3A3F52;">+</button>
+    </div>
+    <button onClick="{{ exportPdf }}" style="padding:6px 12px;border:none;background:#3E91AF;color:#FFFFFF;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;" style-hover="background:#53C1AB;">Exportar PDF</button>
+  </div>
+
+  <div style="flex:1;display:flex;min-height:0;">
+
+    <sc-if value="{{ sidebarOpen }}" hint-placeholder-val="{{ true }}">
+      <div style="width:250px;flex-shrink:0;background:#FFFFFF;border-right:1px solid #E2E2E2;overflow-y:auto;padding:16px;box-sizing:border-box;display:flex;flex-direction:column;gap:20px;">
+
+        <div>
+          <span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#3E91AF;display:block;margin-bottom:8px;">Datos y Análisis</span>
+          <div style="border:1px solid #E2E2E2;border-radius:2px;padding:10px;display:flex;flex-direction:column;gap:8px;">
+            <span style="font-family:'DM Sans',sans-serif;font-size:8.5px;color:#737373;">Importa .docx, .pdf, .xlsx, .pptx, .txt o .csv — o pega texto libre. Para indicadores: Nombre, Actual, Anterior, Forecast, Unidad</span>
+            <input type="file" accept=".txt,.csv,.pdf,.docx,.pptx,.xlsx" onChange="{{ dataInput.onFileSelect }}" style="font-family:'DM Sans',sans-serif;font-size:8.5px;">
+            <sc-if value="{{ dataInput.fileProcessing }}" hint-placeholder-val="{{ false }}">
+              <span style="font-family:'Space Grotesk',sans-serif;font-size:8px;color:#737373;">Procesando {{ dataInput.fileProcessing }}…</span>
+            </sc-if>
+            <sc-if value="{{ dataInput.lastImportedFile }}" hint-placeholder-val="{{ false }}">
+              <span style="font-family:'Space Grotesk',sans-serif;font-size:8px;color:#3E91AF;">Importado: {{ dataInput.lastImportedFile }} — texto extraído y agregado al cuadro (revisa antes de analizar)</span>
+            </sc-if>
+            <sc-if value="{{ dataInput.unsupportedFile }}" hint-placeholder-val="{{ false }}">
+              <span style="font-family:'DM Sans',sans-serif;font-size:8.5px;color:#C62E2E;line-height:1.5;">{{ dataInput.unsupportedFile }}</span>
+            </sc-if>
+            <textarea value="{{ dataInput.text }}" onChange="{{ dataInput.onTextChange }}" placeholder="ÍNDICE A, 4520, 4480, 4600, ..." style="width:100%;height:60px;box-sizing:border-box;padding:6px;border:1px solid #E2E2E2;border-radius:2px;font-family:'Space Grotesk',sans-serif;font-size:9px;resize:vertical;"></textarea>
+            <div style="display:flex;gap:6px;">
+              <button onClick="{{ dataInput.onAnalyze }}" style="flex:1;padding:6px;border:1px solid #3E91AF;background:#FFFFFF;color:#3E91AF;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:9.5px;font-weight:600;cursor:pointer;">Analizar indicadores</button>
+              <button onClick="{{ dataInput.onAnalyzeDocument }}" style="flex:1;padding:6px;border:1px solid #3E91AF;background:#FFFFFF;color:#3E91AF;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:9.5px;font-weight:600;cursor:pointer;">Analizar como documento</button>
+            </div>
+            <span style="font-family:'DM Sans',sans-serif;font-size:8px;color:#8A8A94;line-height:1.5;">"Analizar indicadores" busca pares Nombre/valor para actualizar KPIs. "Analizar como documento" estructura el texto pegado en secciones, párrafos y tablas (columnas separadas por tabulaciones).</span>
+            <sc-if value="{{ dataInput.importWarning }}" hint-placeholder-val="{{ false }}">
+              <div style="border-top:2px solid #E84040;background:#E840400D;padding:8px;display:flex;flex-direction:column;gap:3px;">
+                <span style="font-family:'Space Grotesk',sans-serif;font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#C62E2E;">Revisión requerida antes de importar</span>
+                <span style="font-family:'DM Sans',sans-serif;font-size:8.5px;color:#0D0D1A;line-height:1.55;">{{ dataInput.importWarning }}</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ dataInput.importInfo }}" hint-placeholder-val="{{ false }}">
+              <span style="font-family:'DM Sans',sans-serif;font-size:8px;color:#8A8A94;line-height:1.5;">{{ dataInput.importInfo }}</span>
+            </sc-if>
+            <sc-if value="{{ dataInput.hasStructure }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#E8F5F0;border-radius:2px;padding:8px;display:flex;flex-direction:column;gap:6px;">
+                <span style="font-family:'DM Sans',sans-serif;font-size:9px;color:#0D0D1A;line-height:1.5;">Estructura del documento importada: {{ dataInput.structureSummary }}</span>
+                <button onClick="{{ dataInput.onPreview }}" style="padding:7px;border:none;background:#0D0D1A;color:#FFFFFF;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:9.5px;font-weight:700;cursor:pointer;">Previsualizar cambios</button>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ dataInput.pending }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#F7F7F7;border-radius:2px;padding:8px;display:flex;flex-direction:column;gap:6px;">
+                <span style="font-family:'Space Grotesk',sans-serif;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#3E91AF;">Cambios detectados</span>
+                <sc-if value="{{ dataInput.emptyParse }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-family:'DM Sans',sans-serif;font-size:9px;color:#C62E2E;line-height:1.5;">No se detectaron pares indicador/valor. Usa el formato <strong>Nombre, Actual, Anterior</strong> (una línea por indicador) o <strong>Nombre: 2.7%</strong>. No se inventará ningún dato.</span>
+                </sc-if>
+                <sc-if value="{{ dataInput.noMatches }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-family:'DM Sans',sans-serif;font-size:9px;color:#3A3F52;line-height:1.5;">Ningún indicador coincide con las etiquetas de los KPI existentes. Puedes insertarlos como KPI nuevos o renombrar el KPI del documento para que coincida.</span>
+                </sc-if>
+                <sc-for list="{{ dataInput.pending }}" as="pi" hint-placeholder-count="2">
+                  <div style="font-family:'DM Sans',sans-serif;font-size:9px;color:#0D0D1A;line-height:1.5;border-bottom:1px solid #E2E2E2;padding-bottom:5px;">
+                    <strong>{{ pi.name }}</strong> · Actual: {{ pi.current }} · Anterior: {{ pi.previous }}<br>
+                    <span style="color:#3E91AF;">✓ {{ pi.matchCount }} KPI coincidente(s)</span> <span style="color:#C62E2E;">⚠ {{ pi.lockedCount }} con edición manual (no se sobrescribirá)</span>
+                    <sc-if value="{{ pi.canInsert }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ pi.onInsert }}" style="display:block;margin-top:4px;padding:3px 8px;border:1px solid #3E91AF;background:#FFFFFF;color:#3E91AF;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:8.5px;cursor:pointer;">Insertar como KPI nuevo</button>
+                    </sc-if>
+                  </div>
+                </sc-for>
+                <button onClick="{{ dataInput.onPreview }}" style="padding:7px;border:none;background:#0D0D1A;color:#FFFFFF;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:9.5px;font-weight:700;cursor:pointer;">Previsualizar cambios</button>
+                <div style="display:flex;gap:6px;">
+                  <button onClick="{{ dataInput.onApply }}" style="flex:1;padding:6px;border:none;background:#3E91AF;color:#FFFFFF;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:9.5px;font-weight:600;cursor:pointer;">Aplicar directo</button>
+                  <button onClick="{{ dataInput.onCancel }}" style="flex:1;padding:6px;border:1px solid #E2E2E2;background:#FAFAFA;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:9.5px;cursor:pointer;">Cancelar</button>
+                </div>
+              </div>
+            </sc-if>
+
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button onClick="{{ dataInput.onSaveVersion }}" style="flex:1;padding:5px 6px;border:1px solid #E2E2E2;background:#FAFAFA;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:8.5px;cursor:pointer;">Guardar versión</button>
+              <sc-if value="{{ dataInput.hasSavedVersion }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ dataInput.onRestoreVersion }}" style="flex:1;padding:5px 6px;border:1px solid #E2E2E2;background:#FAFAFA;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:8.5px;cursor:pointer;">Restaurar versión</button>
+              </sc-if>
+              <sc-if value="{{ dataInput.canUndo }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ dataInput.onUndo }}" style="flex:1;padding:5px 6px;border:1px solid #E2E2E2;background:#FAFAFA;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:8.5px;cursor:pointer;">Deshacer última</button>
+              </sc-if>
+              <sc-if value="{{ dataInput.pending }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ dataInput.onApply }}" style="flex:1;padding:5px 6px;border:none;background:#3E91AF;color:#FFFFFF;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:8.5px;font-weight:600;cursor:pointer;">Aplicar cambios</button>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#3E91AF;">Motor de Datos</span>
+            <label style="display:flex;align-items:center;gap:4px;font-family:'DM Sans',sans-serif;font-size:8.5px;color:#3A3F52;"><input type="checkbox" checked="{{ dataEngine.advancedMode }}" onChange="{{ dataEngine.onToggleAdvanced }}">Avanzado</label>
+          </div>
+          <div style="border:1px solid #E2E2E2;border-radius:2px;padding:10px;display:flex;flex-direction:column;gap:10px;">
+
+            <div>
+              <span style="font-family:'DM Sans',sans-serif;font-size:9px;color:#737373;display:block;margin-bottom:4px;">Sincronización</span>
+              <label style="display:flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif;font-size:9.5px;color:#0D0D1A;"><input type="radio" name="syncmode" checked="{{ dataEngine.isAuto }}" onChange="{{ dataEngine.onSyncAuto }}">Automática (tiempo real)</label>
+              <label style="display:flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif;font-size:9.5px;color:#0D0D1A;"><input type="radio" name="syncmode" checked="{{ dataEngine.isManual }}" onChange="{{ dataEngine.onSyncManual }}">Manual</label>
+              <button onClick="{{ dataEngine.onApplyUpdate }}" style="width:100%;margin-top:6px;padding:6px;border:1px solid #3E91AF;background:#3E91AF;color:#FFFFFF;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:9.5px;font-weight:600;cursor:pointer;">Actualizar datos</button>
+              <span style="display:block;margin-top:4px;font-family:'Space Grotesk',sans-serif;font-size:8px;color:#737373;">Última sincronización: {{ dataEngine.lastUpdatedLabel }}</span>
+            </div>
+
+            <div>
+              <span style="font-family:'DM Sans',sans-serif;font-size:9px;color:#737373;display:block;margin-bottom:4px;">Recálculo automático</span>
+              <sc-for list="{{ dataEngine.recalcItems }}" as="ri" hint-placeholder-count="8">
+                <label style="display:flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif;font-size:9px;color:#0D0D1A;"><input type="checkbox" checked="{{ ri.checked }}" onChange="{{ ri.onToggle }}">{{ ri.label }}</label>
+              </sc-for>
+            </div>
+
+            <div>
+              <span style="font-family:'DM Sans',sans-serif;font-size:9px;color:#737373;display:block;margin-bottom:4px;">Actualización visual</span>
+              <sc-for list="{{ dataEngine.visualItems }}" as="vi" hint-placeholder-count="7">
+                <label style="display:flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif;font-size:9px;color:#0D0D1A;"><input type="checkbox" checked="{{ vi.checked }}" onChange="{{ vi.onToggle }}">{{ vi.label }}</label>
+              </sc-for>
+            </div>
+
+            <div>
+              <span style="font-family:'DM Sans',sans-serif;font-size:9px;color:#737373;display:block;margin-bottom:4px;">Escalas</span>
+              <sc-for list="{{ dataEngine.scaleOptions }}" as="so" hint-placeholder-count="5">
+                <label style="display:flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif;font-size:9px;color:#0D0D1A;"><input type="radio" name="scale" checked="{{ so.checked }}" onChange="{{ so.onSelect }}">{{ so.label }}</label>
+              </sc-for>
+            </div>
+
+            <div>
+              <span style="font-family:'DM Sans',sans-serif;font-size:9px;color:#737373;display:block;margin-bottom:4px;">Ordenamiento</span>
+              <sc-for list="{{ dataEngine.sortOptions }}" as="sto" hint-placeholder-count="4">
+                <label style="display:flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif;font-size:9px;color:#0D0D1A;"><input type="radio" name="sortmode" checked="{{ sto.checked }}" onChange="{{ sto.onSelect }}">{{ sto.label }}</label>
+              </sc-for>
+              <span style="display:block;margin-top:3px;font-family:'DM Sans',sans-serif;font-size:8px;color:#737373;">Activa "Reordenar categorías" arriba para aplicar el orden.</span>
+            </div>
+
+            <sc-if value="{{ dataEngine.advancedMode }}" hint-placeholder-val="{{ false }}">
+              <div>
+                <span style="font-family:'DM Sans',sans-serif;font-size:9px;color:#737373;display:block;margin-bottom:4px;">Frecuencia de actualización automática</span>
+                <select onChange="{{ dataEngine.onRefreshChange }}" value="{{ dataEngine.refreshSeconds }}" style="width:100%;padding:5px;border:1px solid #E2E2E2;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:9.5px;">
+                  <option value="10">Cada 10s</option>
+                  <option value="30">Cada 30s</option>
+                  <option value="60">Cada 60s</option>
+                  <option value="300">Cada 5 min</option>
+                </select>
+              </div>
+
+              <div>
+                <span style="font-family:'DM Sans',sans-serif;font-size:9px;color:#737373;display:block;margin-bottom:4px;">Fórmulas</span>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                  <sc-for list="{{ dataEngine.formulas }}" as="fm" hint-placeholder-count="2">
+                    <div style="border:1px solid #E2E2E2;border-radius:2px;padding:6px;display:flex;flex-direction:column;gap:4px;">
+                      <div style="display:flex;gap:4px;">
+                        <input type="text" value="{{ fm.name }}" onChange="{{ fm.onNameChange }}" style="flex:1;min-width:0;padding:4px;border:1px solid #E2E2E2;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:9px;">
+                        <button onClick="{{ fm.onRemove }}" style="border:none;background:transparent;color:#C62E2E;font-size:9px;cursor:pointer;">✕</button>
+                      </div>
+                      <input type="text" value="{{ fm.expr }}" onChange="{{ fm.onExprChange }}" style="padding:4px;border:1px solid #E2E2E2;border-radius:2px;font-family:'Space Grotesk',sans-serif;font-size:9px;">
+                      <span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:700;color:#3E91AF;">= {{ fm.result }}</span>
+                    </div>
+                  </sc-for>
+                  <button onClick="{{ dataEngine.onAddFormula }}" style="padding:5px;border:1px dashed #3E91AF;background:transparent;color:#3E91AF;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:9px;cursor:pointer;">+ Agregar fórmula</button>
+                </div>
+              </div>
+
+              <div>
+                <span style="font-family:'DM Sans',sans-serif;font-size:9px;color:#737373;display:block;margin-bottom:4px;">Dependencias (ejemplo)</span>
+                <div style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;color:#3A3F52;line-height:1.9;">Ventas Enero → Total General → Participación % → Gráfico de Barras → Donut → KPI → Ranking</div>
+              </div>
+            </sc-if>
+
+            <div style="background:#E8F5F0;border-radius:2px;padding:8px;">
+              <span style="font-family:'Space Grotesk',sans-serif;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#3E91AF;display:block;margin-bottom:3px;">Vista previa</span>
+              <span style="font-family:'DM Sans',sans-serif;font-size:8.5px;color:#0D0D1A;line-height:1.5;">{{ dataEngine.previewText }}</span>
+            </div>
+
+          </div>
+        </div>
+
+        <div>
+          <span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#3E91AF;display:block;margin-bottom:8px;">Documento</span>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <sc-for list="{{ docList }}" as="doc" hint-placeholder-count="3">
+              <div style="border:1px solid #E2E2E2;border-radius:2px;padding:8px;display:flex;flex-direction:column;gap:6px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <span style="font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;color:#0D0D1A;">{{ doc.label }}</span>
+                  <button onClick="{{ doc.onDelete }}" style="border:none;background:transparent;color:#C62E2E;font-family:'DM Sans',sans-serif;font-size:9px;cursor:pointer;">Eliminar</button>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <label style="display:flex;align-items:center;gap:4px;font-family:'DM Sans',sans-serif;font-size:9px;color:#3A3F52;"><input type="checkbox" checked="{{ doc.visible }}" onChange="{{ doc.onToggleVisible }}">Visible</label>
+                  <label style="display:flex;align-items:center;gap:4px;font-family:'DM Sans',sans-serif;font-size:9px;color:#3A3F52;"><input type="checkbox" checked="{{ doc.showHeader }}" onChange="{{ doc.onToggleHeader }}">Encabezado</label>
+                  <label style="display:flex;align-items:center;gap:4px;font-family:'DM Sans',sans-serif;font-size:9px;color:#3A3F52;"><input type="checkbox" checked="{{ doc.showFooter }}" onChange="{{ doc.onToggleFooter }}">Pie</label>
+                  <label style="display:flex;align-items:center;gap:4px;font-family:'DM Sans',sans-serif;font-size:9px;color:#3A3F52;"><input type="checkbox" checked="{{ doc.showDisclaimer }}" onChange="{{ doc.onToggleDisclaimer }}">Disclaimer</label>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div>
+          <span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#3E91AF;display:block;margin-bottom:8px;">Páginas</span>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <sc-for list="{{ pageLibrary }}" as="item" hint-placeholder-count="6">
+              <button onClick="{{ item.onClick }}" style="text-align:left;padding:7px 9px;border:1px solid #E2E2E2;background:#FAFAFA;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:10.5px;color:#0D0D1A;cursor:pointer;" style-hover="background:#E8F5F0;border-color:#3E91AF;">{{ item.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div>
+          <span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#3E91AF;display:block;margin-bottom:8px;">Componentes</span>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">
+            <sc-for list="{{ componentLibrary }}" as="item" hint-placeholder-count="8">
+              <button onClick="{{ item.onClick }}" style="padding:7px 6px;border:1px solid #E2E2E2;background:#FAFAFA;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:9.5px;color:#0D0D1A;cursor:pointer;" style-hover="background:#E8F5F0;border-color:#3E91AF;">{{ item.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div>
+          <span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#3E91AF;display:block;margin-bottom:8px;">Gráficos</span>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">
+            <sc-for list="{{ chartLibrary }}" as="item" hint-placeholder-count="6">
+              <button onClick="{{ item.onClick }}" style="padding:7px 6px;border:1px solid #E2E2E2;background:#FAFAFA;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:9.5px;color:#0D0D1A;cursor:pointer;" style-hover="background:#E8F5F0;border-color:#3E91AF;">{{ item.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div>
+          <span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#3E91AF;display:block;margin-bottom:8px;">Tablas</span>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <sc-for list="{{ tableLibrary }}" as="item" hint-placeholder-count="4">
+              <button onClick="{{ item.onClick }}" style="text-align:left;padding:7px 9px;border:1px solid #E2E2E2;background:#FAFAFA;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:10.5px;color:#0D0D1A;cursor:pointer;" style-hover="background:#E8F5F0;border-color:#3E91AF;">{{ item.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div>
+          <span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#3E91AF;display:block;margin-bottom:8px;">Multimedia</span>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">
+            <sc-for list="{{ multimediaLibrary }}" as="item" hint-placeholder-count="3">
+              <button onClick="{{ item.onClick }}" style="padding:7px 6px;border:1px solid #E2E2E2;background:#FAFAFA;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:9.5px;color:#0D0D1A;cursor:pointer;" style-hover="background:#E8F5F0;border-color:#3E91AF;">{{ item.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+
+      </div>
+    </sc-if>
+
+    
+
+    <div style="flex:1;overflow:auto;padding:40px;display:flex;flex-direction:column;align-items:flex-start;gap:28px;" onMouseDown="{{ deselectAllBg }}">
+      <sc-for list="{{ pages }}" as="page" hint-placeholder-count="1">
+        <div class="print-page" style="width:{{ pageW }}px;height:{{ pageH }}px;position:relative;flex-shrink:0;margin-left:auto;margin-right:auto;box-shadow:0 4px 22px rgba(0,0,0,0.18);" onMouseDown="{{ page.onBg }}">
+          <div style="width:794px;height:1123px;transform:scale({{ zoom }});transform-origin:top left;position:relative;background:{{ page.bg }};overflow:hidden;">
+            <sc-if value="{{ page.showHeader }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;top:0;left:0;width:794px;height:40px;box-sizing:border-box;padding:0 40px;border-bottom:1px solid {{ page.chromeBorder }};display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.08em;color:{{ page.chromeText }};">GRUPO INTELIGENCIA</span>
+                <span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#3E91AF;">{{ page.headerCategory }}</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ page.showDisclaimer }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;bottom:40px;left:0;width:794px;height:22px;box-sizing:border-box;padding:0 40px;display:flex;align-items:center;">
+                <span style="font-family:'DM Sans',sans-serif;font-size:7.5px;color:{{ page.chromeMuted }};">Documento informativo, no constituye recomendación de inversión. Ver aviso legal completo en la página de Disclaimer.</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ page.showFooter }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;bottom:0;left:0;width:794px;height:40px;box-sizing:border-box;padding:0 40px;border-top:1px solid {{ page.chromeBorder }};display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-family:'DM Sans',sans-serif;font-size:8px;color:{{ page.chromeMuted }};">Grupo Inteligencia · Research &amp; Estrategia de Mercados</span>
+                <span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;color:{{ page.chromeText }};">{{ page.footerLabel }}</span>
+              </div>
+            </sc-if>
+            <sc-for list="{{ page.blocks }}" as="block" hint-placeholder-count="3">
+              <div style="position:absolute;left:{{ block.x }}px;top:{{ block.y }}px;width:{{ block.w }}px;height:{{ block.h }}px;border-width:{{ block.borderWidth }}px;border-color:{{ block.borderColor }};border-style:{{ block.borderStyleVal }};opacity:{{ block.opacity }};box-sizing:border-box;cursor:move;" onMouseDown="{{ block.onDragStart }}">
+
+                <sc-if value="{{ block.isTitle }}" hint-placeholder-val="{{ false }}">
+                  <div contentEditable="true" suppressContentEditableWarning="true" onBlur="{{ block.onTextBlur }}" onMouseDown="{{ block.onSelect }}" style="width:100%;height:100%;font-family:'Syne',sans-serif;font-weight:800;font-size:{{ block.fontSize }}px;color:{{ block.color }};text-align:{{ block.textAlign }};outline:none;overflow:hidden;">{{ block.text }}</div>
+                </sc-if>
+                <sc-if value="{{ block.isSubtitle }}" hint-placeholder-val="{{ false }}">
+                  <div contentEditable="true" suppressContentEditableWarning="true" onBlur="{{ block.onTextBlur }}" onMouseDown="{{ block.onSelect }}" style="width:100%;height:100%;font-family:'Space Grotesk',sans-serif;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;font-size:{{ block.fontSize }}px;color:{{ block.color }};text-align:{{ block.textAlign }};outline:none;overflow:hidden;">{{ block.text }}</div>
+                </sc-if>
+                <sc-if value="{{ block.isText }}" hint-placeholder-val="{{ false }}">
+                  <div contentEditable="true" suppressContentEditableWarning="true" onBlur="{{ block.onTextBlur }}" onMouseDown="{{ block.onSelect }}" style="width:100%;height:100%;font-family:'DM Sans',sans-serif;font-weight:400;line-height:1.55;font-size:{{ block.fontSize }}px;color:{{ block.color }};text-align:{{ block.textAlign }};outline:none;overflow:hidden;">{{ block.text }}</div>
+                </sc-if>
+                <sc-if value="{{ block.isQuote }}" hint-placeholder-val="{{ false }}">
+                  <div contentEditable="true" suppressContentEditableWarning="true" onBlur="{{ block.onTextBlur }}" onMouseDown="{{ block.onSelect }}" style="width:100%;height:100%;font-family:'Syne',sans-serif;font-weight:600;line-height:1.4;font-size:{{ block.fontSize }}px;color:#0D0D1A;border-left:2px solid #0D0D1A;padding-left:12px;box-sizing:border-box;outline:none;overflow:hidden;">{{ block.text }}</div>
+                </sc-if>
+                <sc-if value="{{ block.isAlert }}" hint-placeholder-val="{{ false }}">
+                  
+                </sc-if>
+                <sc-if value="{{ block.isCallout }}" hint-placeholder-val="{{ false }}">
+                  <div onMouseDown="{{ block.onSelect }}" style="width:100%;height:100%;border-top:2px solid {{ block.accentColor }};padding-top:8px;box-sizing:border-box;overflow:hidden;">
+                    <span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:{{ block.labelColor }};">{{ block.labelText }}</span>
+                    <div contentEditable="true" suppressContentEditableWarning="true" onBlur="{{ block.onTextBlur }}" style="font-family:'DM Sans',sans-serif;font-size:10.5px;line-height:1.5;color:#0D0D1A;outline:none;margin-top:4px;">{{ block.text }}</div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ block.isKpi }}" hint-placeholder-val="{{ false }}">
+                  <div onMouseDown="{{ block.onSelect }}" style="width:100%;height:100%;background:{{ block.kpiBg }};border-radius:2px;padding:10px 12px;box-sizing:border-box;display:flex;flex-direction:column;gap:2px;overflow:hidden;">
+                    <span contentEditable="true" suppressContentEditableWarning="true" onBlur="{{ block.onLabelBlur }}" style="font-family:'Space Grotesk',sans-serif;font-size:8px;letter-spacing:0.08em;text-transform:uppercase;color:{{ block.kpiLabelColor }};font-weight:600;outline:none;">{{ block.label }}</span>
+                    <span contentEditable="true" suppressContentEditableWarning="true" onBlur="{{ block.onValueBlur }}" style="font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;color:{{ block.kpiText }};outline:none;">{{ block.value }}</span>
+                    <span contentEditable="true" suppressContentEditableWarning="true" onBlur="{{ block.onDeltaBlur }}" style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:600;color:{{ block.deltaColor }};outline:none;">{{ block.delta }}</span>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ block.isTag }}" hint-placeholder-val="{{ false }}">
+                  <div onMouseDown="{{ block.onSelect }}" style="width:100%;height:100%;background:{{ block.tagBg }};color:{{ block.tagFg }};border-radius:2px;display:flex;align-items:center;gap:6px;padding:0 10px;box-sizing:border-box;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:9.5px;letter-spacing:0.05em;text-transform:uppercase;overflow:hidden;">
+                    <span style="width:6px;height:6px;border-radius:50%;background:{{ block.tagDot }};flex-shrink:0;display:block;"></span>
+                    <span>{{ block.tagLabel }}</span>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ block.isChartLine }}" hint-placeholder-val="{{ false }}">
+                  <div onMouseDown="{{ block.onSelect }}" style="width:100%;height:100%;border:1px solid #C1E5E4;border-radius:2px;box-sizing:border-box;padding:6px;overflow:hidden;">
+                    <svg viewBox="0 0 100 {{ block.vbHeight }}" preserveAspectRatio="none" style="width:100%;height:100%;display:block;">
+                      <sc-if value="{{ block.filled }}" hint-placeholder-val="{{ false }}"><polygon points="{{ block.areaPoints }}" fill="#3E91AF22"></polygon></sc-if>
+                      <polyline points="{{ block.seriesA }}" fill="none" stroke="#3E91AF" stroke-width="2"></polyline>
+                      <sc-if value="{{ block.hasSeriesB }}" hint-placeholder-val="{{ false }}"><polyline points="{{ block.seriesB }}" fill="none" stroke="#53C1AB" stroke-width="2"></polyline></sc-if>
+                    </svg>
+                    <sc-if value="{{ block.showLegend }}" hint-placeholder-val="{{ false }}">
+                      <div style="display:flex;gap:8px;margin-top:2px;">
+                        <span style="display:flex;align-items:center;gap:3px;font-family:'DM Sans',sans-serif;font-size:8px;color:#3A3F52;"><span style="width:6px;height:6px;background:#3E91AF;display:inline-block;border-radius:50%;"></span>Serie A</span>
+                        <span style="display:flex;align-items:center;gap:3px;font-family:'DM Sans',sans-serif;font-size:8px;color:#3A3F52;"><span style="width:6px;height:6px;background:#53C1AB;display:inline-block;border-radius:50%;"></span>Serie B</span>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ block.isChartBar }}" hint-placeholder-val="{{ false }}">
+                  <div onMouseDown="{{ block.onSelect }}" style="width:100%;height:100%;border:1px solid #C1E5E4;border-radius:2px;box-sizing:border-box;padding:6px;display:flex;align-items:flex-end;gap:4px;overflow:hidden;">
+                    <sc-for list="{{ block.bars }}" as="bar" hint-placeholder-count="6"><div style="flex:1;height:{{ bar.h }}%;background:{{ bar.color }};"></div></sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ block.isTable }}" hint-placeholder-val="{{ false }}">
+                  <div onMouseDown="{{ block.onSelect }}" style="width:100%;height:100%;overflow:hidden;">
+                    <table style="width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:9.5px;">
+                      <thead><tr>
+                        <sc-for list="{{ block.headers }}" as="h" hint-placeholder-count="4"><th style="text-align:left;padding:5px 8px;background:#3A3F52;color:#FFFFFF;font-family:'Space Grotesk',sans-serif;font-size:8px;letter-spacing:0.06em;text-transform:uppercase;">{{ h }}</th></sc-for>
+                      </tr></thead>
+                      <tbody>
+                        <sc-for list="{{ block.rows }}" as="row" hint-placeholder-count="3"><tr style="border-bottom:1px solid #C1E5E4;">
+                          <sc-for list="{{ row.cells }}" as="cell" hint-placeholder-count="4"><td style="padding:5px 8px;color:#0D0D1A;">{{ cell }}</td></sc-for>
+                        </tr></sc-for>
+                      </tbody>
+                    </table>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ block.isImage }}" hint-placeholder-val="{{ false }}">
+                  <image-slot id="{{ block.slotId }}" shape="rect" placeholder="Arrastrar imagen" style="width:100%;height:100%;border-radius:2px;"></image-slot>
+                </sc-if>
+                <sc-if value="{{ block.isLogo }}" hint-placeholder-val="{{ false }}">
+                  <div onMouseDown="{{ block.onSelect }}" style="width:100%;height:100%;background:#0D0D1A;border-radius:2px;display:flex;align-items:center;justify-content:center;padding:8px;box-sizing:border-box;">
+                    <img src="assets/logo-white.png" alt="Logo" style="max-width:100%;max-height:100%;object-fit:contain;">
+                  </div>
+                </sc-if>
+                <sc-if value="{{ block.isDivider }}" hint-placeholder-val="{{ false }}">
+                  <div onMouseDown="{{ block.onSelect }}" style="width:100%;height:100%;background:{{ block.color }};"></div>
+                </sc-if>
+                <sc-if value="{{ block.isIcon }}" hint-placeholder-val="{{ false }}">
+                  <div onMouseDown="{{ block.onSelect }}" style="width:100%;height:100%;border-radius:50%;background:{{ block.color }};"></div>
+                </sc-if>
+
+                <sc-if value="{{ block.isSelected }}" hint-placeholder-val="{{ false }}">
+                  <div onMouseDown="{{ block.onResizeStart }}" style="position:absolute;right:-4px;bottom:-4px;width:10px;height:10px;background:#3E91AF;border-radius:2px;cursor:nwse-resize;"></div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div><div style="width:260px;flex-shrink:0;background:#FFFFFF;border-left:1px solid #E2E2E2;overflow-y:auto;padding:16px;box-sizing:border-box;">
+      <sc-if value="{{ hasSelection }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#3E91AF;">{{ selected.kindLabel }}</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button onClick="{{ duplicateSelected }}" style="font-family:'DM Sans',sans-serif;font-size:9.5px;padding:4px 8px;border:1px solid #E2E2E2;background:#FAFAFA;border-radius:2px;cursor:pointer;">Duplicar</button>
+              <button onClick="{{ deleteSelected }}" style="font-family:'DM Sans',sans-serif;font-size:9.5px;padding:4px 8px;border:1px solid #E840401A;background:#E840401A;color:#C62E2E;border-radius:2px;cursor:pointer;">Eliminar</button>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button onClick="{{ selected.onToggleHidden }}" style="flex:1;font-family:'DM Sans',sans-serif;font-size:9.5px;padding:5px 6px;border:1px solid #E2E2E2;background:#FAFAFA;border-radius:2px;cursor:pointer;">{{ selected.hiddenLabel }}</button>
+            <button onClick="{{ selected.onBringFront }}" style="flex:1;font-family:'DM Sans',sans-serif;font-size:9.5px;padding:5px 6px;border:1px solid #E2E2E2;background:#FAFAFA;border-radius:2px;cursor:pointer;">Al frente</button>
+            <button onClick="{{ selected.onSendBack }}" style="flex:1;font-family:'DM Sans',sans-serif;font-size:9.5px;padding:5px 6px;border:1px solid #E2E2E2;background:#FAFAFA;border-radius:2px;cursor:pointer;">Atrás</button>
+          </div>
+
+          <sc-if value="{{ selected.isAutoOverridden }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#E840401A;border-radius:2px;padding:8px;display:flex;flex-direction:column;gap:6px;">
+              <span style="font-family:'DM Sans',sans-serif;font-size:9px;color:#C62E2E;">Este valor fue editado manualmente y ya no se actualiza automáticamente.</span>
+              <button onClick="{{ selected.onRestoreAuto }}" style="padding:5px;border:1px solid #C62E2E;background:#FFFFFF;color:#C62E2E;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:9px;cursor:pointer;">Restaurar automático</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ selected.showTypeControls }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <span style="font-family:'DM Sans',sans-serif;font-size:10px;color:#737373;">Formato de texto seleccionado</span>
+              <div style="display:flex;gap:5px;">
+                <button onMouseDown="{{ onFormatBold }}" style="flex:1;padding:6px;border:1px solid #E2E2E2;background:#FAFAFA;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;">N</button>
+                <button onMouseDown="{{ onFormatItalic }}" style="flex:1;padding:6px;border:1px solid #E2E2E2;background:#FAFAFA;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:11px;font-style:italic;cursor:pointer;">K</button>
+                <button onMouseDown="{{ onFormatHighlight }}" style="flex:1;padding:6px;border:1px solid #E2E2E2;background:#FAFAFA;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:11px;cursor:pointer;"><span style="background:#53C1AB55;padding:0 2px;">H</span></button>
+                <button onMouseDown="{{ onFormatClear }}" style="flex:1;padding:6px;border:1px solid #E2E2E2;background:#FAFAFA;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:9.5px;cursor:pointer;">✕</button>
+              </div>
+              <span style="font-family:'DM Sans',sans-serif;font-size:8px;color:#8A8A94;">Selecciona texto dentro del bloque en el documento y luego usa estos botones.</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <span style="font-family:'DM Sans',sans-serif;font-size:10px;color:#737373;">Tamaño de fuente</span>
+              <input type="range" min="8" max="60" value="{{ selected.fontSize }}" onChange="{{ selected.onFontSizeChange }}" style="width:100%;">
+              <span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;color:#0D0D1A;">{{ selected.fontSize }}px</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <span style="font-family:'DM Sans',sans-serif;font-size:10px;color:#737373;">Alineación</span>
+              <div style="display:flex;gap:5px;">
+                <button onClick="{{ selected.onAlignLeft }}" style="flex:1;padding:6px;border:1px solid #E2E2E2;background:#FAFAFA;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:9.5px;cursor:pointer;">Izq.</button>
+                <button onClick="{{ selected.onAlignCenter }}" style="flex:1;padding:6px;border:1px solid #E2E2E2;background:#FAFAFA;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:9.5px;cursor:pointer;">Centro</button>
+                <button onClick="{{ selected.onAlignRight }}" style="flex:1;padding:6px;border:1px solid #E2E2E2;background:#FAFAFA;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:9.5px;cursor:pointer;">Der.</button>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <span style="font-family:'DM Sans',sans-serif;font-size:10px;color:#737373;">Color</span>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <sc-for list="{{ swatches }}" as="sw" hint-placeholder-count="6">
+                  <button onClick="{{ sw.onClick }}" style="width:22px;height:22px;border-radius:3px;border:1px solid #E2E2E2;background:{{ sw.hex }};cursor:pointer;"></button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ selected.isCallout }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <span style="font-family:'DM Sans',sans-serif;font-size:10px;color:#737373;">Variante</span>
+              <select onChange="{{ selected.onVariantChange }}" value="{{ selected.variant }}" style="padding:6px;border:1px solid #E2E2E2;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:10.5px;">
+                <option value="insight">Insight</option>
+                <option value="riesgo">Riesgo</option>
+                <option value="oportunidad">Oportunidad</option>
+                <option value="nota">Nota</option>
+              </select>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ selected.isKpi }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <span style="font-family:'DM Sans',sans-serif;font-size:10px;color:#737373;">Tema</span>
+              <div style="display:flex;gap:5px;">
+                <button onClick="{{ selected.onThemeLight }}" style="flex:1;padding:6px;border:1px solid #E2E2E2;background:#FAFAFA;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:9.5px;cursor:pointer;">Claro</button>
+                <button onClick="{{ selected.onThemeDark }}" style="flex:1;padding:6px;border:1px solid #E2E2E2;background:#FAFAFA;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:9.5px;cursor:pointer;">Oscuro</button>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <span style="font-family:'DM Sans',sans-serif;font-size:10px;color:#737373;">Variación</span>
+              <div style="display:flex;gap:5px;">
+                <button onClick="{{ selected.onDeltaPositive }}" style="flex:1;padding:6px;border:1px solid #E2E2E2;background:#FAFAFA;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:9.5px;cursor:pointer;color:#00A363;">Positiva</button>
+                <button onClick="{{ selected.onDeltaNegative }}" style="flex:1;padding:6px;border:1px solid #E2E2E2;background:#FAFAFA;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:9.5px;cursor:pointer;color:#C62E2E;">Negativa</button>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ selected.isTag }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <span style="font-family:'DM Sans',sans-serif;font-size:10px;color:#737373;">Sesgo</span>
+              <select onChange="{{ selected.onSesgoChange }}" value="{{ selected.sesgo }}" style="padding:6px;border:1px solid #E2E2E2;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:10.5px;">
+                <option value="alcista">Alcista</option>
+                <option value="bajista">Bajista</option>
+                <option value="neutral">Neutral</option>
+              </select>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ selected.isDividerOrIcon }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <span style="font-family:'DM Sans',sans-serif;font-size:10px;color:#737373;">Color</span>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <sc-for list="{{ swatches }}" as="sw" hint-placeholder-count="6">
+                  <button onClick="{{ sw.onClick }}" style="width:22px;height:22px;border-radius:3px;border:1px solid #E2E2E2;background:{{ sw.hex }};cursor:pointer;"></button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ selected.isChart }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <span style="font-family:'DM Sans',sans-serif;font-size:10px;color:#737373;">Tipo de gráfico</span>
+              <select onChange="{{ selected.onChartKindChange }}" value="{{ selected.chartKind }}" style="padding:6px;border:1px solid #E2E2E2;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:10.5px;">
+                <option value="line">Línea</option>
+                <option value="area">Área</option>
+                <option value="comparative">Comparativo</option>
+                <option value="bar">Barras</option>
+                <option value="candle">Velas</option>
+                <option value="heatmap">Heatmap</option>
+              </select>
+            </div>
+          </sc-if>
+          <sc-if value="{{ selected.isTable }}" hint-placeholder-val="{{ false }}">
+            <p style="font-family:'DM Sans',sans-serif;font-size:10.5px;color:#3A3F52;line-height:1.5;margin:0;">Tabla con {{ selected.rowCount }} filas y {{ selected.colCount }} columnas.</p>
+          </sc-if>
+
+        </div>
+      </sc-if>
+      <sc-if value="{{ noSelection }}" hint-placeholder-val="{{ true }}">
+        <p style="font-family:'DM Sans',sans-serif;font-size:11px;line-height:1.55;color:#737373;margin:0;">Selecciona un elemento del documento para editar sus propiedades: tipografía, color, alineación y variantes.</p>
+      </sc-if>
+    </div>
+
+  </div>
+
+  <sc-if value="{{ previewModal.isOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(13,13,26,0.55);display:flex;align-items:center;justify-content:center;z-index:1000;">
+      <div style="width:560px;max-height:80vh;overflow-y:auto;background:#FFFFFF;border-radius:4px;padding:20px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:#0D0D1A;">Vista previa de cambios</span>
+          <button onClick="{{ previewModal.onCancel }}" style="border:none;background:transparent;font-size:16px;cursor:pointer;color:#737373;">✕</button>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button onClick="{{ previewModal.onModeActual }}" style="flex:1;padding:6px;border:1px solid #E2E2E2;border-radius:2px;background:{{ previewModal.actualBg }};color:{{ previewModal.actualFg }};font-family:'DM Sans',sans-serif;font-size:9.5px;cursor:pointer;">Documento actual</button>
+          <button onClick="{{ previewModal.onModePropuesta }}" style="flex:1;padding:6px;border:1px solid #E2E2E2;border-radius:2px;background:{{ previewModal.propuestaBg }};color:{{ previewModal.propuestaFg }};font-family:'DM Sans',sans-serif;font-size:9.5px;cursor:pointer;">Propuesta</button>
+          <button onClick="{{ previewModal.onModeComparar }}" style="flex:1;padding:6px;border:1px solid #E2E2E2;border-radius:2px;background:{{ previewModal.compararBg }};color:{{ previewModal.compararFg }};font-family:'DM Sans',sans-serif;font-size:9.5px;cursor:pointer;">Comparar</button>
+        </div>
+        <div style="background:#1A1A2E;border-radius:12px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:10px;color:#FFFFFF;line-height:1.7;">
+          <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:13px;color:#FFFFFF;">Cambios detectados: {{ previewModal.totalChangeCount }}</span><br>
+          <span style="color:#C1E5E4;">　- {{ previewModal.changedCount }} indicadores (KPI)</span><br>
+          <span style="color:#C1E5E4;">　- {{ previewModal.structBlockCount }} bloques de documento: {{ previewModal.sectionsCount }} secciones · {{ previewModal.textsCount }} textos · {{ previewModal.tablesCount }} tablas</span><br>
+          <span style="color:#8A8A94;">　- {{ previewModal.chartsCount }} gráficos (no aplica en este análisis)</span><br>
+          <span style="color:#8A8A94;">　- {{ previewModal.unchangedCount }} indicadores sin cambios</span><br>
+          <span style="color:#E84040;font-weight:600;">Elementos protegidos por edición manual: {{ previewModal.lockedCount }}</span>
+        </div>
+        <sc-if value="{{ previewModal.hasStructure }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#3E91AF;">{{ previewModal.viewTitle }}</span>
+            <span style="font-family:'DM Sans',sans-serif;font-size:9px;color:#737373;">Se añadirán {{ previewModal.structPageCount }} página(s) nueva(s): {{ previewModal.sectionsCount }} secciones, {{ previewModal.parasCount }} párrafos, {{ previewModal.tablesCount }} tablas. El contenido existente no se modifica.</span>
+            <div style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;border:1px solid #E2E2E2;border-radius:12px;padding:8px;">
+              <sc-for list="{{ previewModal.structRows }}" as="sr" hint-placeholder-count="4">
+                <div style="display:flex;gap:8px;align-items:flex-start;">
+                  <span style="font-family:'Space Grotesk',sans-serif;font-size:8px;color:#8A8A94;width:18px;flex-shrink:0;text-align:right;">{{ sr.order }}</span>
+                  <span style="font-family:'Space Grotesk',sans-serif;font-size:7.5px;font-weight:700;letter-spacing:0.06em;color:{{ sr.badgeColor }};width:52px;flex-shrink:0;">{{ sr.badge }}</span>
+                  <span style="font-family:'DM Sans',sans-serif;font-size:9px;color:#3A3F52;line-height:1.45;">{{ sr.preview }} <span style="color:#8A8A94;">{{ sr.tableMeta }}</span> <span style="font-family:'Space Grotesk',sans-serif;font-size:7.5px;font-weight:700;color:{{ sr.tagColor }};">{{ sr.newTag }}</span></span>
+                </div>
+              </sc-for>
+              <sc-if value="{{ previewModal.structTruncated }}" hint-placeholder-val="{{ false }}">
+                <span style="font-family:'DM Sans',sans-serif;font-size:8.5px;color:#8A8A94;">Mostrando los primeros 60 de {{ previewModal.structTotal }} bloques. Se aplicarán todos.</span>
+              </sc-if>
+            </div>
+          </div>
+        </sc-if>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <sc-for list="{{ previewModal.rows }}" as="row" hint-placeholder-count="3">
+            <div style="border:1px solid #E2E2E2;border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:5px;">
+              <span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:#0D0D1A;">{{ row.label }}</span>
+              <sc-if value="{{ row.showLockedBadge }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                  <span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;color:#E84040;background:#E840401A;border-radius:20px;padding:3px 9px;">🔒 Edición manual — no modificar automáticamente</span>
+                  <button onClick="{{ row.onToggleForce }}" style="border:none;background:transparent;color:#3E91AF;font-family:'DM Sans',sans-serif;font-size:9px;cursor:pointer;text-decoration:underline;">Reemplazar de todas formas</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ row.showForcedNote }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                  <span style="font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:700;color:#3E91AF;background:#3E91AF1A;border-radius:20px;padding:3px 9px;">Reemplazo forzado por el usuario</span>
+                  <button onClick="{{ row.onToggleForce }}" style="border:none;background:transparent;color:#737373;font-family:'DM Sans',sans-serif;font-size:9px;cursor:pointer;text-decoration:underline;">Conservar protegido</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ row.showUnchanged }}" hint-placeholder-val="{{ false }}">
+                <span style="font-family:'DM Sans',sans-serif;font-size:9px;color:#737373;">Sin cambios</span>
+              </sc-if>
+              <sc-if value="{{ row.showActual }}" hint-placeholder-val="{{ false }}">
+                <span style="font-family:'Space Grotesk',sans-serif;font-size:11px;color:#3A3F52;">{{ row.oldValue }} <span style="color:#737373;font-size:9.5px;">{{ row.oldDelta }}</span></span>
+              </sc-if>
+              <sc-if value="{{ row.showPropuesta }}" hint-placeholder-val="{{ false }}">
+                <span style="font-family:'Syne',sans-serif;font-size:13px;color:#0D0D1A;font-weight:800;">{{ row.newValue }} <span style="color:{{ row.deltaColor }};font-size:10px;">{{ row.newDelta }}</span></span>
+              </sc-if>
+              <sc-if value="{{ row.showCompare }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span style="font-family:'Space Grotesk',sans-serif;font-size:10.5px;color:#737373;text-decoration:line-through;">{{ row.oldValue }}</span>
+                  <span style="color:#3E91AF;">→</span>
+                  <span style="font-family:'Syne',sans-serif;font-size:13px;color:#0D0D1A;font-weight:800;">{{ row.newValue }}</span>
+                  <span style="font-family:'DM Sans',sans-serif;font-size:9.5px;font-weight:600;color:{{ row.deltaColor }};">{{ row.newDelta }}</span>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button onClick="{{ previewModal.onApply }}" style="flex:1;padding:8px;border:none;background:#3E91AF;color:#FFFFFF;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:700;cursor:pointer;">Aplicar cambios</button>
+          <button onClick="{{ previewModal.onKeepEditing }}" style="flex:1;padding:8px;border:1px solid #E2E2E2;background:#FAFAFA;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:10px;cursor:pointer;">Seguir editando</button>
+          <button onClick="{{ previewModal.onCancel }}" style="flex:1;padding:8px;border:1px solid #E840401A;background:#E840401A;color:#C62E2E;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:10px;cursor:pointer;">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    pages: [],
+    activePageId: null,
+    selected: null,
+    drag: null,
+    resize: null,
+    sidebarOpen: true,
+    zoom: 0.82,
+    dataEngine: {
+      syncMode: 'auto',
+      refreshSeconds: 30,
+      lastUpdated: null,
+      recalc: { totales: true, porcentajes: true, promedios: true, rankings: true, posiciones: true, acumulados: true, kpis: true, variaciones: true },
+      visual: { graficos: true, tablas: true, indicadores: true, kpis: true, insights: true, leyendas: true, categorias: false },
+      appliedRecalc: { totales: true, porcentajes: true, promedios: true, rankings: true, posiciones: true, acumulados: true, kpis: true, variaciones: true },
+      appliedVisual: { graficos: true, tablas: true, indicadores: true, kpis: true, insights: true, leyendas: true, categorias: false },
+      scale: 'auto',
+      sort: 'original',
+      advancedMode: false,
+      formulas: [{ name: 'Total', expr: '=SUM(120,340,90)' }, { name: 'Variación %', expr: '=(340-310)/310' }],
+    },
+    reportData: { indicators: [] },
+    dataInputText: '',
+    pendingIndicators: null,
+    savedVersion: null,
+    historyStack: [],
+    previewOpen: false,
+    previewMode: 'comparar',
+    previewOverrides: {},
+    importedStructure: null,
+  };
+
+  componentDidMount() {
+    const p1 = this.buildPage('portada', 'p1');
+    const p2 = this.buildPage('apertura', 'p2');
+    const p3 = this.buildPage('dashboard', 'p3');
+    this.setState({ pages: [p1, p2, p3], activePageId: 'p2' });
+    this._onMove = (e) => this.handlePointerMove(e);
+    this._onUp = () => this.handlePointerUp();
+    window.addEventListener('mousemove', this._onMove);
+    window.addEventListener('mouseup', this._onUp);
+    this.startSyncTimer();
+  }
+  componentWillUnmount() {
+    window.removeEventListener('mousemove', this._onMove);
+    window.removeEventListener('mouseup', this._onUp);
+    this.stopSyncTimer();
+  }
+
+  startSyncTimer() {
+    this.stopSyncTimer();
+    this._syncTimer = setInterval(() => {
+      if (this.state.dataEngine.syncMode === 'auto') this.applyDataUpdate();
+    }, Math.max(5, this.state.dataEngine.refreshSeconds) * 1000);
+  }
+  stopSyncTimer() { if (this._syncTimer) clearInterval(this._syncTimer); }
+
+  setSyncMode(mode) { this.setState((s) => ({ dataEngine: { ...s.dataEngine, syncMode: mode } })); }
+  setRefreshSeconds(v) {
+    this.setState((s) => ({ dataEngine: { ...s.dataEngine, refreshSeconds: v } }), () => this.startSyncTimer());
+  }
+  toggleRecalcFlag(key) {
+    this.setState((s) => {
+      const recalc = { ...s.dataEngine.recalc, [key]: !s.dataEngine.recalc[key] };
+      const auto = s.dataEngine.syncMode === 'auto';
+      return { dataEngine: { ...s.dataEngine, recalc, appliedRecalc: auto ? recalc : s.dataEngine.appliedRecalc } };
+    });
+  }
+  toggleVisualFlag(key) {
+    this.setState((s) => {
+      const visual = { ...s.dataEngine.visual, [key]: !s.dataEngine.visual[key] };
+      const auto = s.dataEngine.syncMode === 'auto';
+      return { dataEngine: { ...s.dataEngine, visual, appliedVisual: auto ? visual : s.dataEngine.appliedVisual } };
+    });
+  }
+  applyDataUpdate() {
+    this.setState((s) => ({
+      dataEngine: { ...s.dataEngine, appliedRecalc: { ...s.dataEngine.recalc }, appliedVisual: { ...s.dataEngine.visual }, lastUpdated: Date.now() },
+    }));
+  }
+  setScale(v) { this.setState((s) => ({ dataEngine: { ...s.dataEngine, scale: v } })); }
+  setSort(v) { this.setState((s) => ({ dataEngine: { ...s.dataEngine, sort: v } })); }
+  toggleAdvanced() { this.setState((s) => ({ dataEngine: { ...s.dataEngine, advancedMode: !s.dataEngine.advancedMode } })); }
+  addFormula() {
+    this.setState((s) => ({ dataEngine: { ...s.dataEngine, formulas: [...s.dataEngine.formulas, { name: 'Nueva fórmula', expr: '=SUM(0)' }] } }));
+  }
+  removeFormula(idx) {
+    this.setState((s) => ({ dataEngine: { ...s.dataEngine, formulas: s.dataEngine.formulas.filter((_, i) => i !== idx) } }));
+  }
+  updateFormula(idx, field, value) {
+    this.setState((s) => ({ dataEngine: { ...s.dataEngine, formulas: s.dataEngine.formulas.map((f, i) => (i === idx ? { ...f, [field]: value } : f)) } }));
+  }
+  evalFormula(expr) {
+    if (!expr) return '—';
+    let e = expr.trim().replace(/^=/, '');
+    try {
+      e = e.replace(/(SUM|AVERAGE|MAX|MIN|MEDIAN)\(([^)]*)\)/gi, (m, fn, args) => {
+        const nums = args.split(',').map((s) => parseFloat(s.trim())).filter((n) => !isNaN(n));
+        if (!nums.length) return '0';
+        const f = fn.toUpperCase();
+        if (f === 'SUM') return String(nums.reduce((a, b) => a + b, 0));
+        if (f === 'AVERAGE') return String(nums.reduce((a, b) => a + b, 0) / nums.length);
+        if (f === 'MAX') return String(Math.max(...nums));
+        if (f === 'MIN') return String(Math.min(...nums));
+        if (f === 'MEDIAN') { const s2 = [...nums].sort((a, b) => a - b); const mid = Math.floor(s2.length / 2); return String(s2.length % 2 ? s2[mid] : (s2[mid - 1] + s2[mid]) / 2); }
+        return '0';
+      });
+      if (!/^[0-9+\-*/(). ]+$/.test(e)) return 'Fórmula inválida';
+      const result = Function('"use strict"; return (' + e + ')')();
+      return typeof result === 'number' && !isNaN(result) ? (Math.round(result * 10000) / 10000).toString() : 'Fórmula inválida';
+    } catch (err) { return 'Fórmula inválida'; }
+  }
+  sortRows(rows, mode) {
+    if (!rows || mode === 'original') return rows;
+    const arr = [...rows];
+    if (mode === 'asc') return arr.sort((a, b) => String(a.cells[0]).localeCompare(String(b.cells[0])));
+    if (mode === 'desc') return arr.sort((a, b) => String(b.cells[0]).localeCompare(String(a.cells[0])));
+    if (mode === 'auto') return arr.sort((a, b) => {
+      const na = parseFloat(String(a.cells[a.cells.length - 1]).replace(/[^0-9.-]/g, ''));
+      const nb = parseFloat(String(b.cells[b.cells.length - 1]).replace(/[^0-9.-]/g, ''));
+      if (!isNaN(na) && !isNaN(nb)) return nb - na;
+      return String(a.cells[0]).localeCompare(String(b.cells[0]));
+    });
+    return arr;
+  }
+  computeAffected() {
+    const counts = { chart: 0, table: 0, kpi: 0, alert: 0, callout: 0 };
+    this.state.pages.forEach((p) => p.blocks.forEach((b) => { if (counts[b.kind] !== undefined) counts[b.kind]++; }));
+    const de = this.state.dataEngine;
+    const visMap = { graficos: 'chart', tablas: 'table', kpis: 'kpi', indicadores: 'alert', insights: 'callout' };
+    let affected = 0;
+    Object.keys(visMap).forEach((k) => { if (de.visual[k] !== de.appliedVisual[k]) affected += counts[visMap[k]]; });
+    const recalcChanged = Object.keys(de.recalc).some((k) => de.recalc[k] !== de.appliedRecalc[k]);
+    if (recalcChanged) affected += counts.kpi;
+    return { affected, chartCount: counts.chart, tableCount: counts.table, kpiCount: counts.kpi, formulaCount: de.formulas.length, pending: de.syncMode === 'manual' && (affected > 0) };
+  }
+
+  normalizeKey(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, ''); }
+  setDataInputText(v) { this.setState({ dataInputText: v }); }
+  onFileSelected(ev) {
+    const file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    const ext = file.name.split('.').pop().toLowerCase();
+    ev.target.value = '';
+    if (ext === 'txt' || ext === 'csv') {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const text = String(reader.result || '');
+        this.setState((s) => ({ dataInputText: (s.dataInputText ? s.dataInputText + '\n' : '') + text, lastImportedFile: file.name, unsupportedFile: null }));
+      };
+      reader.readAsText(file);
+      return;
+    }
+    if (!['pdf', 'docx', 'pptx', 'xlsx'].includes(ext)) {
+      this.setState({ unsupportedFile: file.name + ' — formato no soportado.', lastImportedFile: null });
+      return;
+    }
+    this.setState({ fileProcessing: file.name, unsupportedFile: null, importWarning: '', importInfo: '' });
+    this.processFile(file, ext).then((res) => {
+      const structure = (res && res.structure) || [];
+      const clean = ((res && res.text) || '').trim();
+      if (!clean && !structure.length) {
+        this.setState({ fileProcessing: null, unsupportedFile: file.name + ' — no se encontró texto seleccionable (posible documento escaneado o basado en imágenes). OCR no disponible en este entorno. Revisión manual requerida: pega el contenido manualmente.' });
+        return;
+      }
+      this.setState((s) => ({ dataInputText: (s.dataInputText ? s.dataInputText + '\n' : '') + clean, lastImportedFile: file.name, fileProcessing: null, importedStructure: structure.length ? structure : null, importWarning: (res && res.warning) || '', importInfo: (res && res.info) || '' }));
+    }).catch((err) => {
+      this.setState({ fileProcessing: null, unsupportedFile: file.name + ' — error al leer el archivo (' + (err && err.message ? err.message : 'formato inválido') + '). Pega el contenido manualmente.' });
+    });
+  }
+
+  async processFile(file, ext) {
+    const buf = await file.arrayBuffer();
+    let res;
+    if (ext === 'pdf') res = await this.extractPdfStructured(buf);
+    else if (ext === 'docx') res = await this.extractDocxStructured(buf);
+    else if (ext === 'pptx') res = await this.extractPptxStructured(buf);
+    else if (ext === 'xlsx') res = await this.extractXlsxStructured(buf);
+    else return { structure: [], text: '', warning: '' };
+    const items = res.items || [];
+    const warns = [], infos = [];
+    if (ext === 'docx') {
+      if (!res.nativeHeadings) warns.push('Este documento no usa estilos de título nativos de Word (Título 1 / Título 2). Los encabezados se detectaron por heurística (líneas cortas en mayúsculas) y pueden clasificarse mal. Para una estructura fiable: aplica los estilos "Título 1"/"Título 2" en Word y vuelve a exportar.');
+      if (!res.nativeTables) infos.push('No se detectaron tablas nativas de Word; si el documento tenía tablas hechas con tabulaciones, llegan como párrafos.');
+    }
+    if (ext === 'pdf') warns.push('El PDF no conserva estilos de título ni tablas nativas. Las secciones se detectan por heurística (posición de línea, mayúsculas, numeración) y las tablas llegan como líneas de texto. Si tienes el original en Word, impórtalo en su lugar para una estructura fiable.');
+    if (ext === 'pptx' && !res.nativeTables) infos.push('Las diapositivas no contienen tablas nativas; su texto se importa como sección + párrafos.');
+    if (!items.length) warns.push('No se detectó estructura utilizable en el archivo.');
+    return { structure: items, text: this.structureToText(items), warning: warns.join(' '), info: infos.join(' ') };
+  }
+  structureToText(structure) {
+    return (structure || []).map((it) => {
+      if (it.type === 'table') return [it.headers.join(', ')].concat(it.rows.map((r) => r.cells.join(', '))).join('\n');
+      return it.text;
+    }).join('\n');
+  }
+  async extractPdfStructured(buf) {
+    if (!window.pdfjsLib) throw new Error('lector de PDF no disponible');
+    if (!window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+    const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+    const out = [];
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const lines = [];
+      let cur = null;
+      content.items.forEach((it) => {
+        const y = Math.round(it.transform[5]);
+        if (!cur || Math.abs(cur.y - y) > 2) { cur = { y, parts: [] }; lines.push(cur); }
+        cur.parts.push(it.str);
+      });
+      lines.forEach((l) => {
+        const text = l.parts.join('').replace(/\s+/g, ' ').trim();
+        if (!text) return;
+        const isHeading = text.length <= 70 && !/[.;]$/.test(text) && (text === text.toUpperCase() || /^\d+[.)]\s/.test(text));
+        out.push({ type: isHeading ? 'heading' : 'para', text, page: i });
+      });
+    }
+    return { items: out, nativeHeadings: false, nativeTables: false };
+  }
+  async extractDocxStructured(buf) {
+    if (!window.JSZip) throw new Error('lector de DOCX no disponible');
+    const zip = await window.JSZip.loadAsync(buf);
+    const entry = zip.file('word/document.xml');
+    if (!entry) throw new Error('document.xml no encontrado');
+    const xml = await entry.async('string');
+    const out = [];
+    let nativeHeadings = false, nativeTables = false;
+    const nodeRe = /<w:tbl>[\s\S]*?<\/w:tbl>|<w:p[\s>][\s\S]*?<\/w:p>/g;
+    let m;
+    while ((m = nodeRe.exec(xml))) {
+      const node = m[0];
+      if (node.indexOf('<w:tbl>') === 0) {
+        const rows = [];
+        const trRe = /<w:tr[\s>][\s\S]*?<\/w:tr>/g;
+        let tm;
+        while ((tm = trRe.exec(node))) {
+          const cells = [];
+          const tcRe = /<w:tc[\s>][\s\S]*?<\/w:tc>/g;
+          let cm;
+          while ((cm = tcRe.exec(tm[0]))) {
+            cells.push(this.extractXmlTags(cm[0], 'w:t').map((t) => this.decodeXml(t)).join('').trim());
+          }
+          if (cells.length) rows.push(cells);
+        }
+        if (rows.length) { nativeTables = true; out.push({ type: 'table', headers: rows[0], rows: rows.slice(1).map((cells) => ({ cells })) }); }
+      } else {
+        const text = this.extractXmlTags(node, 'w:t').map((t) => this.decodeXml(t)).join('').trim();
+        if (!text) continue;
+        const styleMatch = node.match(/<w:pStyle[^>]*w:val="([^"]*)"/);
+        const style = styleMatch ? styleMatch[1] : '';
+        const styleHeading = /heading|title|ttulo|titulo/i.test(style);
+        if (styleHeading) nativeHeadings = true;
+        const isHeading = styleHeading || (text.length <= 70 && !/[.;]$/.test(text) && text === text.toUpperCase());
+        out.push({ type: isHeading ? 'heading' : 'para', text });
+      }
+    }
+    return { items: out, nativeHeadings, nativeTables };
+  }
+  async extractPptxStructured(buf) {
+    if (!window.JSZip) throw new Error('lector de PPTX no disponible');
+    const zip = await window.JSZip.loadAsync(buf);
+    const slideFiles = Object.keys(zip.files).filter((n) => /^ppt\/slides\/slide\d+\.xml$/.test(n))
+      .sort((a, b) => parseInt(a.match(/(\d+)/)[1], 10) - parseInt(b.match(/(\d+)/)[1], 10));
+    const out = [];
+    let nativeTables = false;
+    for (const name of slideFiles) {
+      const xml = await zip.file(name).async('string');
+      const num = name.match(/(\d+)/)[1];
+      let firstText = true;
+      const nodes = [];
+      const nodeRe = /<a:tbl>[\s\S]*?<\/a:tbl>|<a:p>[\s\S]*?<\/a:p>/g;
+      let m;
+      while ((m = nodeRe.exec(xml))) nodes.push(m[0]);
+      if (!nodes.length) continue;
+      out.push({ type: 'heading', text: 'Diapositiva ' + num });
+      nodes.forEach((node) => {
+        if (node.indexOf('<a:tbl>') === 0) {
+          const rows = [];
+          const trRe = /<a:tr[\s>][\s\S]*?<\/a:tr>/g;
+          let tm;
+          while ((tm = trRe.exec(node))) {
+            const cells = [];
+            const tcRe = /<a:tc[\s>][\s\S]*?<\/a:tc>/g;
+            let cm;
+            while ((cm = tcRe.exec(tm[0]))) cells.push(this.extractXmlTags(cm[0], 'a:t').map((t) => this.decodeXml(t)).join('').trim());
+            if (cells.length) rows.push(cells);
+          }
+          if (rows.length) { nativeTables = true; out.push({ type: 'table', headers: rows[0], rows: rows.slice(1).map((cells) => ({ cells })) }); }
+        } else {
+          const text = this.extractXmlTags(node, 'a:t').map((t) => this.decodeXml(t)).join('').trim();
+          if (!text) return;
+          out.push({ type: firstText ? 'heading' : 'para', text });
+          firstText = false;
+        }
+      });
+    }
+    return { items: out, nativeHeadings: true, nativeTables };
+  }
+  async extractXlsxStructured(buf) {
+    if (!window.JSZip) throw new Error('lector de XLSX no disponible');
+    const zip = await window.JSZip.loadAsync(buf);
+    let shared = [];
+    if (zip.file('xl/sharedStrings.xml')) {
+      const sx = await zip.file('xl/sharedStrings.xml').async('string');
+      shared = this.extractXmlTags(sx, 't').map((t) => this.decodeXml(t));
+    }
+    let names = [];
+    if (zip.file('xl/workbook.xml')) {
+      const wx = await zip.file('xl/workbook.xml').async('string');
+      const re = /<sheet[^>]*name="([^"]*)"/g;
+      let sm;
+      while ((sm = re.exec(wx))) names.push(this.decodeXml(sm[1]));
+    }
+    const sheetFiles = Object.keys(zip.files).filter((n) => /^xl\/worksheets\/sheet\d+\.xml$/.test(n))
+      .sort((a, b) => parseInt(a.match(/(\d+)/)[1], 10) - parseInt(b.match(/(\d+)/)[1], 10));
+    const out = [];
+    for (let si = 0; si < sheetFiles.length; si++) {
+      const xml = await zip.file(sheetFiles[si]).async('string');
+      const rows = [];
+      const rowRe = /<row[^>]*>([\s\S]*?)<\/row>/g;
+      let rm;
+      while ((rm = rowRe.exec(xml))) {
+        const cellRe = /<c[^>]*?(?:\st="([^"]*)")?[^>]*>(?:<v>([^<]*)<\/v>)?<\/c>/g;
+        let cm; const cells = [];
+        while ((cm = cellRe.exec(rm[1]))) {
+          const type = cm[1], val = cm[2];
+          if (val === undefined) { cells.push(''); continue; }
+          cells.push(type === 's' ? (shared[parseInt(val, 10)] || '') : val);
+        }
+        if (cells.some((c) => c !== '')) rows.push(cells);
+      }
+      if (!rows.length) continue;
+      out.push({ type: 'heading', text: names[si] || ('Hoja ' + (si + 1)) });
+      out.push({ type: 'table', headers: rows[0], rows: rows.slice(1).map((cells) => ({ cells })) });
+    }
+    return { items: out, nativeHeadings: true, nativeTables: out.some((i) => i.type === 'table') };
+  }
+  structureFromPlainText(text) {
+    const lines = String(text || '').split('\n').map((l) => l.replace(/\s+$/, '')).filter((l) => l.trim());
+    const items = [];
+    let i = 0;
+    let headingCount = 0, tableCount = 0;
+    while (i < lines.length) {
+      const line = lines[i];
+      if (line.indexOf('\t') !== -1) {
+        const rows = [];
+        while (i < lines.length && lines[i].indexOf('\t') !== -1) {
+          rows.push(lines[i].split('\t').map((c) => c.trim()));
+          i++;
+        }
+        if (rows.length) {
+          tableCount++;
+          items.push({ type: 'table', headers: rows[0], rows: rows.slice(1).map((cells) => ({ cells })) });
+        }
+        continue;
+      }
+      const t = line.trim();
+      const next = (lines[i + 1] || '').trim();
+      const shortLine = t.length <= 70 && !/[.;,]$/.test(t);
+      const isHeading = shortLine && (t === t.toUpperCase() || /^\d+[.)]\s/.test(t) || (next.length > t.length && next.length > 60));
+      if (isHeading) headingCount++;
+      items.push({ type: isHeading ? 'heading' : 'para', text: t });
+      i++;
+    }
+    const warns = [], infos = [];
+    if (!items.length) warns.push('El texto pegado está vacío o no contiene líneas utilizables.');
+    else if (!headingCount) warns.push('No se detectó ningún título o sección en el texto pegado. Todo el contenido se importará como párrafos corridos. Para que se detecten secciones: escribe los títulos en una línea propia, en MAYÚSCULAS o numerados (por ejemplo "1. Resumen"), y sin punto final.');
+    if (items.length === 1) warns.push('Todo el texto quedó en un solo bloque: revisa que cada párrafo esté en su propia línea.');
+    if (!tableCount) infos.push('Sin tablas detectadas. Si necesitas una, separa las columnas con tabulaciones; la primera fila será el encabezado.');
+    return { items, warning: warns.join(' '), info: infos.join(' ') };
+  }
+  analyzeAsDocument() {
+    const res = this.structureFromPlainText(this.state.dataInputText);
+    this.setState({
+      importedStructure: res.items.length ? res.items : null,
+      importWarning: res.warning,
+      importInfo: res.info,
+      lastImportedFile: res.items.length ? 'Texto pegado' : null,
+    });
+  }
+  buildStructurePages(structure) {
+    const pages = [];
+    let blocks = [];
+    let y = 56;
+    const flush = () => {
+      if (blocks.length) pages.push({ id: 'imp' + Date.now().toString(36) + pages.length, type: 'importado', bg: '#FFFFFF', blocks, showHeader: true, showFooter: true, showDisclaimer: false, visible: true });
+      blocks = []; y = 56;
+    };
+    (structure || []).forEach((it) => {
+      let block, h;
+      if (it.type === 'heading') {
+        h = 34;
+        block = this.defaultBlock('title', y, {});
+        block.text = it.text; block.fontSize = 17; block.w = 714;
+      } else if (it.type === 'table') {
+        h = 28 + (it.rows.length + 1) * 20;
+        block = this.defaultBlock('table', y, {});
+        block.headers = it.headers; block.rows = it.rows; block.w = 714;
+      } else {
+        h = Math.max(26, Math.ceil(it.text.length / 108) * 17 + 9);
+        block = this.defaultBlock('text', y, {});
+        block.text = it.text; block.fontSize = 10.5; block.w = 714;
+      }
+      if (h > 960) h = 960;
+      if (y + h > 1030) flush();
+      block.y = y; block.h = h; block.x = 40; block.autoGenerated = true;
+      blocks.push(block);
+      y += h + 9;
+    });
+    flush();
+    return pages;
+  }
+  extractXmlTags(xml, tag) {
+    const re = new RegExp('<' + tag + '[^>]*>([^<]*)</' + tag + '>', 'g');
+    const out = []; let m;
+    while ((m = re.exec(xml))) out.push(m[1]);
+    return out;
+  }
+  async extractPdfText(buf) {
+    if (!window.pdfjsLib) throw new Error('lector de PDF no disponible');
+    if (!window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+    const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+    let out = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items.map((it) => it.str).join(' ').trim();
+      if (pageText) out += '[Página ' + i + '] ' + pageText + '\n';
+    }
+    return out.trim();
+  }
+  decodeXml(s) {
+    return String(s || '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#(\d+);/g, (m, d) => String.fromCharCode(+d));
+  }
+  async extractDocxText(buf) {
+    if (!window.JSZip) throw new Error('lector de DOCX no disponible');
+    const zip = await window.JSZip.loadAsync(buf);
+    const entry = zip.file('word/document.xml');
+    if (!entry) throw new Error('document.xml no encontrado');
+    const xml = await entry.async('string');
+    const lines = [];
+    const paraRe = /<w:p[\s>][\s\S]*?<\/w:p>/g;
+    let pm;
+    while ((pm = paraRe.exec(xml))) {
+      const text = this.extractXmlTags(pm[0], 'w:t').map((t) => this.decodeXml(t)).join('').trim();
+      if (text) lines.push(text);
+    }
+    return lines.join('\n');
+  }
+  async extractPptxText(buf) {
+    if (!window.JSZip) throw new Error('lector de PPTX no disponible');
+    const zip = await window.JSZip.loadAsync(buf);
+    const slideFiles = Object.keys(zip.files).filter((n) => /^ppt\/slides\/slide\d+\.xml$/.test(n))
+      .sort((a, b) => parseInt(a.match(/(\d+)/)[1], 10) - parseInt(b.match(/(\d+)/)[1], 10));
+    let out = '';
+    for (const name of slideFiles) {
+      const xml = await zip.file(name).async('string');
+      const texts = this.extractXmlTags(xml, 'a:t');
+      if (texts.length) out += '[Diapositiva ' + name.match(/(\d+)/)[1] + '] ' + texts.join(' ') + '\n';
+    }
+    return out.trim();
+  }
+  async extractXlsxText(buf) {
+    if (!window.JSZip) throw new Error('lector de XLSX no disponible');
+    const zip = await window.JSZip.loadAsync(buf);
+    let shared = [];
+    if (zip.file('xl/sharedStrings.xml')) {
+      const xml = await zip.file('xl/sharedStrings.xml').async('string');
+      shared = this.extractXmlTags(xml, 't');
+    }
+    const sheetFile = zip.file('xl/worksheets/sheet1.xml');
+    if (!sheetFile) throw new Error('sheet1.xml no encontrado');
+    const xml = await sheetFile.async('string');
+    const rows = [];
+    const rowRe = /<row[^>]*>([\s\S]*?)<\/row>/g;
+    let rm;
+    while ((rm = rowRe.exec(xml))) {
+      const rowXml = rm[1];
+      const cellRe = /<c[^>]*?(?:\st="([^"]*)")?[^>]*>(?:<v>([^<]*)<\/v>)?<\/c>/g;
+      let cm; const cells = [];
+      while ((cm = cellRe.exec(rowXml))) {
+        const type = cm[1], val = cm[2];
+        if (val === undefined) { cells.push(''); continue; }
+        cells.push(type === 's' ? (shared[parseInt(val, 10)] || '') : val);
+      }
+      if (cells.length) rows.push(cells.join(', '));
+    }
+    return rows.join('\n');
+  }
+  parseIndicatorsFromText(text) {
+    const toNum = (s) => { if (s === undefined) return undefined; const n = parseFloat(String(s).replace(/[^0-9.\-]/g, '')); return isNaN(n) ? undefined : n; };
+    const out = [];
+    String(text || '').split('\n').map((l) => l.trim()).filter(Boolean).forEach((line) => {
+      if (/[,;|\t]/.test(line)) {
+        const parts = line.split(/[,;|\t]/).map((s) => s.trim());
+        const cur = toNum(parts[1]);
+        if (parts[0] && parts[0].length <= 60 && cur !== undefined) {
+          out.push({ name: parts[0], current: cur, previous: toNum(parts[2]), forecast: toNum(parts[3]), unit: parts[4] || '', date: parts[5] || '', source: parts[6] || '' });
+          return;
+        }
+      }
+      const m = line.match(/^(.{2,50}?)[:\s]+(-?[\d.,]+\s*%?)(?:\s*(?:vs\.?|anterior|previo)\s*(-?[\d.,]+\s*%?))?\s*$/i);
+      if (m) {
+        const cur = toNum(m[2]);
+        if (cur !== undefined) out.push({ name: m[1].trim().replace(/[:\-–]$/, ''), current: cur, previous: toNum(m[3]), forecast: undefined, unit: /%/.test(m[2]) ? '%' : '', date: '', source: '' });
+      }
+    });
+    return out;
+  }
+  matchKpiBlocksForIndicator(name) {
+    const key = this.normalizeKey(name);
+    const matches = [];
+    this.state.pages.forEach((p) => p.blocks.forEach((b) => { if (b.kind === 'kpi' && this.normalizeKey(b.label) === key) matches.push({ pageId: p.id, block: b }); }));
+    return matches;
+  }
+  analyzeData() {
+    const parsed = this.parseIndicatorsFromText(this.state.dataInputText);
+    const pending = parsed.map((ind) => {
+      const matches = this.matchKpiBlocksForIndicator(ind.name);
+      const lockedCount = matches.filter((m) => m.block.manualOverride).length;
+      return { ...ind, matchCount: matches.length, lockedCount };
+    });
+    this.setState({ pendingIndicators: pending });
+  }
+  cancelAnalysis() { this.setState({ pendingIndicators: null }); }
+  buildProposal() {
+    const pending = this.state.pendingIndicators || [];
+    const changes = [];
+    this.state.pages.forEach((p) => p.blocks.forEach((b) => {
+      if (b.kind !== 'kpi') return;
+      const ind = pending.find((i) => this.normalizeKey(i.name) === this.normalizeKey(b.label));
+      if (!ind || ind.current === undefined) return;
+      const newValue = String(ind.current) + (ind.unit || '');
+      let newDelta = b.delta, newPositive = b.deltaPositive;
+      if (ind.previous !== undefined && ind.previous !== 0) {
+        const pct = ((ind.current - ind.previous) / Math.abs(ind.previous)) * 100;
+        newDelta = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
+        newPositive = pct >= 0;
+      }
+      const changed = newValue !== b.value || newDelta !== b.delta;
+      changes.push({ pageId: p.id, blockId: b.id, label: b.label, oldValue: b.value, oldDelta: b.delta, newValue, newDelta, newPositive, locked: !!b.manualOverride, changed });
+    }));
+    return changes;
+  }
+  openPreview() { if (this.state.pendingIndicators || this.state.importedStructure) this.setState({ previewOpen: true, previewMode: 'comparar' }); }
+  setPreviewMode(m) { this.setState({ previewMode: m }); }
+  closePreviewKeepEditing() { this.setState({ previewOpen: false }); }
+  closePreviewCancel() { this.cancelAnalysis(); this.setState({ previewOpen: false, previewOverrides: {}, importedStructure: null, importWarning: '', importInfo: '', lastImportedFile: null }); }
+  toggleForceOverride(blockId) {
+    this.setState((s) => ({ previewOverrides: { ...s.previewOverrides, [blockId]: !s.previewOverrides[blockId] } }));
+  }
+  closePreviewApply() {
+    const pending = this.state.pendingIndicators || [];
+    const structure = this.state.importedStructure;
+    if (!pending.length && !structure) return;
+    const overrides = this.state.previewOverrides;
+    const newPages = structure ? this.buildStructurePages(structure) : [];
+    this.pushHistory();
+    this.setState((s) => {
+      const indicators = [...s.reportData.indicators];
+      pending.forEach((ind) => {
+        const idx = indicators.findIndex((i) => this.normalizeKey(i.name) === this.normalizeKey(ind.name));
+        if (idx >= 0) indicators[idx] = ind; else indicators.push(ind);
+      });
+      const pages = s.pages.map((p) => ({
+        ...p,
+        blocks: p.blocks.map((b) => {
+          if (b.kind !== 'kpi') return b;
+          if (b.manualOverride && !overrides[b.id]) return b;
+          const ind = pending.find((i) => this.normalizeKey(i.name) === this.normalizeKey(b.label));
+          if (!ind || ind.current === undefined) return b;
+          const patch = { autoGenerated: true, manualOverride: false, value: String(ind.current) + (ind.unit || '') };
+          if (ind.previous !== undefined && ind.previous !== 0) {
+            const pct = ((ind.current - ind.previous) / Math.abs(ind.previous)) * 100;
+            patch.delta = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
+            patch.deltaPositive = pct >= 0;
+          }
+          return { ...b, ...patch };
+        }),
+      }));
+      return { pages: pages.concat(newPages), reportData: { indicators }, pendingIndicators: null, dataInputText: '', previewOpen: false, previewOverrides: {}, importedStructure: null, importWarning: '', importInfo: '', lastImportedFile: null };
+    });
+  }
+  pushHistory() {
+    this.setState((s) => ({ historyStack: [...s.historyStack, JSON.parse(JSON.stringify(s.pages))].slice(-5) }));
+  }
+  insertIndicatorAsKpi(ind) {
+    const pageId = this.state.activePageId || (this.state.pages[0] && this.state.pages[0].id);
+    if (!pageId) return;
+    const page = this.state.pages.find((p) => p.id === pageId);
+    if (!page) return;
+    const y = this.computeNextY(page);
+    const block = this.defaultBlock('kpi', y, {});
+    block.label = String(ind.name || '').toUpperCase().slice(0, 40);
+    block.value = String(ind.current) + (ind.unit || '');
+    block.autoGenerated = true;
+    if (ind.previous !== undefined && ind.previous !== 0) {
+      const pct = ((ind.current - ind.previous) / Math.abs(ind.previous)) * 100;
+      block.delta = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
+      block.deltaPositive = pct >= 0;
+    } else { block.delta = ''; }
+    this.setState((s) => ({
+      pages: s.pages.map((p) => (p.id !== pageId ? p : { ...p, blocks: [...p.blocks, block] })),
+      selected: { pageId, blockId: block.id },
+      reportData: { indicators: [...s.reportData.indicators, ind] },
+    }));
+  }
+  applyAnalysis() {
+    const pending = this.state.pendingIndicators;
+    if (!pending) return;
+    this.pushHistory();
+    this.setState((s) => {
+      const indicators = [...s.reportData.indicators];
+      pending.forEach((ind) => {
+        const idx = indicators.findIndex((i) => this.normalizeKey(i.name) === this.normalizeKey(ind.name));
+        if (idx >= 0) indicators[idx] = ind; else indicators.push(ind);
+      });
+      const pages = s.pages.map((p) => ({
+        ...p,
+        blocks: p.blocks.map((b) => {
+          if (b.kind !== 'kpi' || b.manualOverride) return b;
+          const ind = pending.find((i) => this.normalizeKey(i.name) === this.normalizeKey(b.label));
+          if (!ind || ind.current === undefined) return b;
+          const patch = { autoGenerated: true, value: String(ind.current) + (ind.unit || '') };
+          if (ind.previous !== undefined && ind.previous !== 0) {
+            const pct = ((ind.current - ind.previous) / Math.abs(ind.previous)) * 100;
+            patch.delta = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
+            patch.deltaPositive = pct >= 0;
+          }
+          return { ...b, ...patch };
+        }),
+      }));
+      return { pages, reportData: { indicators }, pendingIndicators: null, dataInputText: '' };
+    });
+  }
+  undoLastApply() {
+    this.setState((s) => {
+      if (!s.historyStack.length) return s;
+      const stack = [...s.historyStack];
+      const pages = stack.pop();
+      return { pages, historyStack: stack };
+    });
+  }
+  saveVersion() { this.setState((s) => ({ savedVersion: JSON.parse(JSON.stringify(s.pages)) })); }
+  restoreVersion() {
+    this.setState((s) => (s.savedVersion ? { pages: JSON.parse(JSON.stringify(s.savedVersion)) } : s));
+  }
+  restoreAutoForBlock(pageId, blockId) {
+    const b = this.findBlock(pageId, blockId);
+    if (!b) return;
+    const ind = this.state.reportData.indicators.find((i) => this.normalizeKey(i.name) === this.normalizeKey(b.label));
+    if (!ind || ind.current === undefined) { this.updateBlock(pageId, blockId, { manualOverride: false }); return; }
+    const patch = { manualOverride: false, value: String(ind.current) + (ind.unit || '') };
+    if (ind.previous !== undefined && ind.previous !== 0) {
+      const pct = ((ind.current - ind.previous) / Math.abs(ind.previous)) * 100;
+      patch.delta = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
+      patch.deltaPositive = pct >= 0;
+    }
+    this.updateBlock(pageId, blockId, patch);
+  }
+
+  snap(v) { return Math.round(v / 8) * 8; }
+  clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+  newId() { return 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+  findBlock(pageId, blockId) {
+    const p = this.state.pages.find((pg) => pg.id === pageId);
+    return p && p.blocks.find((b) => b.id === blockId);
+  }
+  updateBlock(pageId, blockId, patch) {
+    this.setState((s) => ({
+      pages: s.pages.map((p) =>
+        p.id !== pageId ? p : { ...p, blocks: p.blocks.map((b) => (b.id !== blockId ? b : { ...b, ...patch })) }
+      ),
+    }));
+  }
+
+  selectBlock(pageId, blockId, e) {
+    if (e) e.stopPropagation();
+    this.setState({ selected: { pageId, blockId }, activePageId: pageId });
+  }
+  startDrag(e, pageId, blockId) {
+    e.stopPropagation();
+    const b = this.findBlock(pageId, blockId);
+    if (!b) return;
+    this.setState({
+      selected: { pageId, blockId },
+      activePageId: pageId,
+      drag: { pageId, blockId, startX: e.clientX, startY: e.clientY, origX: b.x, origY: b.y },
+    });
+  }
+  startResize(e, pageId, blockId) {
+    e.stopPropagation();
+    e.preventDefault();
+    const b = this.findBlock(pageId, blockId);
+    if (!b) return;
+    this.setState({
+      resize: { pageId, blockId, startX: e.clientX, startY: e.clientY, origW: b.w, origH: b.h },
+    });
+  }
+  handlePointerMove(e) {
+    const { drag, resize, zoom } = this.state;
+    if (drag) {
+      const dx = (e.clientX - drag.startX) / zoom;
+      const dy = (e.clientY - drag.startY) / zoom;
+      const nx = this.clamp(this.snap(drag.origX + dx), 0, 794 - 24);
+      const ny = this.clamp(this.snap(drag.origY + dy), 0, 1123 - 16);
+      this.updateBlock(drag.pageId, drag.blockId, { x: nx, y: ny });
+    } else if (resize) {
+      const dx = (e.clientX - resize.startX) / zoom;
+      const dy = (e.clientY - resize.startY) / zoom;
+      const nw = this.clamp(this.snap(resize.origW + dx), 40, 794);
+      const nh = this.clamp(this.snap(resize.origH + dy), 24, 1123);
+      this.updateBlock(resize.pageId, resize.blockId, { w: nw, h: nh });
+    }
+  }
+  handlePointerUp() {
+    if (this.state.drag || this.state.resize) this.setState({ drag: null, resize: null });
+  }
+
+  deleteSelected() {
+    const sel = this.state.selected;
+    if (!sel) return;
+    this.setState((s) => ({
+      pages: s.pages.map((p) => (p.id !== sel.pageId ? p : { ...p, blocks: p.blocks.filter((b) => b.id !== sel.blockId) })),
+      selected: null,
+    }));
+  }
+  duplicateSelected() {
+    const sel = this.state.selected;
+    if (!sel) return;
+    const b = this.findBlock(sel.pageId, sel.blockId);
+    if (!b) return;
+    const nb = { ...b, id: this.newId(), x: this.snap(b.x + 16), y: this.snap(b.y + 16) };
+    this.setState((s) => ({
+      pages: s.pages.map((p) => (p.id !== sel.pageId ? p : { ...p, blocks: [...p.blocks, nb] })),
+      selected: { pageId: sel.pageId, blockId: nb.id },
+    }));
+  }
+  updateText(pageId, blockId, field, value) {
+    this.updateBlock(pageId, blockId, { [field]: value });
+  }
+  setField(field, value) {
+    const sel = this.state.selected;
+    if (!sel) return;
+    this.updateBlock(sel.pageId, sel.blockId, { [field]: value });
+  }
+
+  applyFormat(cmd, val) {
+    document.execCommand(cmd, false, val);
+    const sel = this.state.selected;
+    if (sel) {
+      const el = document.querySelector('[data-block-id="' + sel.blockId + '"] [contenteditable]');
+      if (el) this.updateText(sel.pageId, sel.blockId, 'text', el.innerHTML);
+    }
+  }
+  toggleSidebar() { this.setState((s) => ({ sidebarOpen: !s.sidebarOpen })); }
+  setZoom(v) { this.setState({ zoom: this.clamp(+v.toFixed(2), 0.5, 1.5) }); }
+  exportPdf() {
+    if (this._printing) return;
+    const pages = document.querySelectorAll('.print-page');
+    if (!pages.length) return;
+    this._printing = true;
+    const holder = document.createElement('div');
+    holder.id = 'gi-print-root';
+    pages.forEach((p) => {
+      const inner = p.firstElementChild;
+      if (!inner) return;
+      const sheet = document.createElement('div');
+      sheet.className = 'gi-print-sheet';
+      sheet.appendChild(inner.cloneNode(true));
+      holder.appendChild(sheet);
+    });
+    document.body.appendChild(holder);
+    document.body.classList.add('gi-printing');
+    const cleanup = () => {
+      window.removeEventListener('afterprint', cleanup);
+      clearTimeout(fallback);
+      document.body.classList.remove('gi-printing');
+      if (holder.parentNode) holder.parentNode.removeChild(holder);
+      this._printing = false;
+    };
+    const fallback = setTimeout(cleanup, 1500);
+    window.addEventListener('afterprint', cleanup);
+    requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
+  }
+
+  typeLabel(type) {
+    const m = { portada: 'Portada', apertura: 'Apertura de Mercado', actualizacion: 'Actualización Intradía', dashboard: 'Dashboard', tecnico: 'Análisis Técnico', fundamental: 'Análisis Fundamental', calendario: 'Calendario Económico', comparativas: 'Comparativas', conclusiones: 'Conclusiones', disclaimer: 'Disclaimer', importado: 'Documento importado' };
+    return m[type] || 'Página';
+  }
+  togglePageFlag(pageId, flag) {
+    this.setState((s) => ({ pages: s.pages.map((p) => (p.id !== pageId ? p : { ...p, [flag]: !p[flag] })) }));
+  }
+  deletePage(pageId) {
+    this.setState((s) => {
+      if (s.pages.length <= 1) return s;
+      const pages = s.pages.filter((p) => p.id !== pageId);
+      const activePageId = s.activePageId === pageId ? (pages[0] && pages[0].id) : s.activePageId;
+      const selected = s.selected && s.selected.pageId === pageId ? null : s.selected;
+      return { pages, activePageId, selected };
+    });
+  }
+  moveBlockFront(pageId, blockId) {
+    this.setState((s) => ({
+      pages: s.pages.map((p) => {
+        if (p.id !== pageId) return p;
+        const bl = [...p.blocks];
+        const idx = bl.findIndex((b) => b.id === blockId);
+        if (idx < 0) return p;
+        const [item] = bl.splice(idx, 1);
+        bl.push(item);
+        return { ...p, blocks: bl };
+      }),
+    }));
+  }
+  moveBlockBack(pageId, blockId) {
+    this.setState((s) => ({
+      pages: s.pages.map((p) => {
+        if (p.id !== pageId) return p;
+        const bl = [...p.blocks];
+        const idx = bl.findIndex((b) => b.id === blockId);
+        if (idx < 0) return p;
+        const [item] = bl.splice(idx, 1);
+        bl.unshift(item);
+        return { ...p, blocks: bl };
+      }),
+    }));
+  }
+  changeChartKind(kind) {
+    const sel = this.state.selected;
+    if (!sel) return;
+    let patch;
+    if (kind === 'bar' || kind === 'candle' || kind === 'heatmap') {
+      patch = { chartKind: kind, bars: this.presetBars(kind), seriesA: null, seriesB: null, filled: false };
+    } else {
+      const seriesA = '0,40 20,32 40,36 60,20 80,24 100,10';
+      patch = { chartKind: kind, seriesA, seriesB: kind === 'comparative' ? '0,20 20,26 40,18 60,30 80,22 100,34' : null, filled: kind === 'area', areaPoints: seriesA + ' 100,60 0,60', bars: null };
+    }
+    this.updateBlock(sel.pageId, sel.blockId, patch);
+  }
+
+  computeNextY(page) {
+    let maxY = 40;
+    page.blocks.forEach((b) => { maxY = Math.max(maxY, b.y + b.h + 16); });
+    return Math.min(maxY, 1123 - 100);
+  }
+
+  presetBars(kind) {
+    if (kind === 'bar') return [40, 65, 50, 80, 60, 90].map((h) => ({ h, color: '#3E91AF' }));
+    if (kind === 'candle') return [
+      { h: 55, color: '#00DC82' }, { h: 40, color: '#E84040' }, { h: 70, color: '#00DC82' },
+      { h: 35, color: '#E84040' }, { h: 60, color: '#00DC82' }, { h: 45, color: '#E84040' },
+    ];
+    return [
+      { h: 100, color: '#3E91AF33' }, { h: 100, color: '#3E91AF66' }, { h: 100, color: '#3E91AF99' },
+      { h: 100, color: '#3E91AFCC' }, { h: 100, color: '#3E91AF80' }, { h: 100, color: '#3E91AF4D' },
+    ];
+  }
+  presetTable(preset) {
+    if (preset === 'calendar') return {
+      headers: ['Hora', 'País', 'Evento', 'Ant.', 'Prev.', 'Res.'],
+      rows: [
+        { cells: ['08:30', '[A]', '[Evento macro]', '1.2%', '1.3%', '—'] },
+        { cells: ['10:00', '[B]', '[Decisión de tasa]', '4.50%', '4.50%', '—'] },
+        { cells: ['14:00', '[C]', '[Confianza consumidor]', '98.2', '99.0', '—'] },
+      ],
+    };
+    if (preset === 'comparative') return {
+      headers: ['Activo', 'Último', 'Var. Día', 'Sesgo'],
+      rows: [
+        { cells: ['Índice A', '4,512.3', '+0.8%', 'Alcista'] },
+        { cells: ['Divisa A', '1.0862', '-0.3%', 'Bajista'] },
+        { cells: ['Commodity A', '2,318.4', '+0.1%', 'Neutral'] },
+      ],
+    };
+    if (preset === 'results') return {
+      headers: ['Indicador', 'Actual', 'Anterior'],
+      rows: [
+        { cells: ['Ingresos', '[$1.2B]', '[$1.1B]'] },
+        { cells: ['EBITDA', '[$340M]', '[$310M]'] },
+        { cells: ['Margen', '[28.3%]', '[27.1%]'] },
+      ],
+    };
+    return {
+      headers: ['Nivel', 'Precio'],
+      rows: [
+        { cells: ['Resistencia njnjkn2', '4,590'] }, { cells: ['Resistencia 1', '4,555'] },
+        { cells: ['Precio Actual', '4,512.3'] }, { cells: ['Soporte 1', '4,480'] }, { cells: ['Soporte 2', '4,440'] },
+      ],
+    };
+  }
+
+  defaultBlock(kind, y, opts) {
+    opts = opts || {};
+    const base = { id: this.newId(), kind, x: 40, y, textAlign: 'left' };
+    switch (kind) {
+      case 'title': return { ...base, w: 460, h: 56, text: 'Título de sección', fontSize: 26, color: '#0D0D1A' };
+      case 'subtitle': return { ...base, w: 360, h: 28, text: 'Subtítulo editorial', fontSize: 13, color: '#3E91AF' };
+      case 'text': return { ...base, w: 400, h: 90, text: '[Texto editable. Escribe aquí el contenido del párrafo.]', fontSize: 11, color: '#3A3F52' };
+      case 'quote': return { ...base, w: 340, h: 90, text: '"[Cita textual de una fuente relevante.]"', fontSize: 14 };
+      case 'alert': return { ...base, w: 380, h: 70, text: '[Alerta macroeconómica en desarrollo.]' };
+      case 'callout': return { ...base, w: 300, h: 120, text: '[Texto del callout.]', variant: opts.variant || 'insight' };
+      case 'kpi': return { ...base, w: 170, h: 96, label: 'ACTIVO A', value: '0.00', delta: '+0.0%', deltaPositive: true, theme: 'light' };
+      case 'tag': return { ...base, w: 150, h: 32, sesgo: 'neutral' };
+      case 'chart': {
+        const ck = opts.chartKind || 'line';
+        if (ck === 'bar' || ck === 'candle' || ck === 'heatmap') {
+          return { ...base, w: 340, h: 190, chartKind: ck, bars: this.presetBars(ck) };
+        }
+        const seriesA = '0,40 20,32 40,36 60,20 80,24 100,10';
+        return {
+          ...base, w: 340, h: 190, chartKind: ck, seriesA,
+          seriesB: ck === 'comparative' ? '0,20 20,26 40,18 60,30 80,22 100,34' : null,
+          filled: ck === 'area', areaPoints: seriesA + ' 100,60 0,60',
+        };
+      }
+      case 'table': {
+        const t = this.presetTable(opts.preset || 'financial');
+        return { ...base, w: 440, h: 150, headers: t.headers, rows: t.rows };
+      }
+      case 'image': return { ...base, w: 260, h: 170 };
+      case 'logo': return { ...base, w: 140, h: 44 };
+      case 'divider': return { ...base, w: 340, h: 4, color: '#C1E5E4' };
+      case 'icon': return { ...base, w: 40, h: 40, color: '#3E91AF' };
+      default: return { ...base, w: 200, h: 60, text: '' };
+    }
+  }
+  addBlock(kind, opts) {
+    const pageId = this.state.activePageId || (this.state.pages[0] && this.state.pages[0].id);
+    if (!pageId) return;
+    const page = this.state.pages.find((p) => p.id === pageId);
+    if (!page) return;
+    const y = this.computeNextY(page);
+    const block = this.defaultBlock(kind, y, opts);
+    this.setState((s) => ({
+      pages: s.pages.map((p) => (p.id !== pageId ? p : { ...p, blocks: [...p.blocks, block] })),
+      selected: { pageId, blockId: block.id },
+    }));
+  }
+
+  buildPage(type, id) {
+    const dark = type === 'portada' || type === 'disclaimer';
+    const bg = dark ? '#0D0D1A' : '#FFFFFF';
+    const mk = (kind, x, y, w, h, extra) => ({ id: this.newId(), kind, x, y, w, h, textAlign: 'left', ...extra });
+    let blocks = [];
+    if (type === 'portada') {
+      blocks = [
+        mk('subtitle', 40, 420, 400, 24, { text: '[TIPO DE INFORME]', fontSize: 12, color: '#53C1AB' }),
+        mk('title', 40, 440, 714, 110, { text: 'Apertura de Mercado', fontSize: 44, color: '#FFFFFF' }),
+        mk('text', 40, 548, 620, 60, { text: 'Plantilla maestra — sustituir por el enfoque del informe: contexto, sesgo y niveles técnicos.', fontSize: 13, color: '#C1E5E4' }),
+        mk('divider', 40, 980, 714, 2, { color: 'rgba(255,255,255,0.18)' }),
+        mk('text', 40, 1000, 700, 30, { text: '03 de agosto de 2026 · [Analista] · Índices · Divisas · Materias Primas', fontSize: 10, color: '#8A8A94' }),
+      ];
+    } else if (type === 'apertura') {
+      blocks = [
+        mk('title', 40, 40, 500, 56, { text: 'Apertura de Mercado', fontSize: 26, color: '#0D0D1A' }),
+        mk('text', 40, 96, 714, 50, { text: '[Resumen ejecutivo de la sesión: tono general, dirección predominante y nivel de atención requerido.]', fontSize: 11, color: '#3A3F52' }),
+        mk('tag', 40, 156, 150, 30, { sesgo: 'alcista' }),
+        mk('tag', 204, 156, 150, 30, { sesgo: 'bajista' }),
+        mk('tag', 368, 156, 150, 30, { sesgo: 'neutral' }),
+        mk('kpi', 40, 204, 170, 96, { label: 'ÍNDICE A', value: '4,512.3', delta: '+0.8%', deltaPositive: true, theme: 'light' }),
+        mk('kpi', 224, 204, 170, 96, { label: 'DIVISA A', value: '1.0862', delta: '-0.3%', deltaPositive: false, theme: 'light' }),
+        mk('kpi', 408, 204, 170, 96, { label: 'COMMODITY A', value: '2,318.4', delta: '+0.1%', deltaPositive: true, theme: 'light' }),
+        mk('callout', 40, 320, 340, 130, { variant: 'riesgo', text: '[Factor de riesgo que podría invalidar el escenario base.]' }),
+        mk('callout', 404, 320, 350, 130, { variant: 'oportunidad', text: '[Configuración favorable a vigilar durante la jornada.]' }),
+      ];
+    } else if (type === 'dashboard') {
+      blocks = [
+        mk('title', 40, 40, 460, 52, { text: 'Dashboard Ejecutivo', fontSize: 24, color: '#0D0D1A' }),
+        mk('kpi', 40, 96, 164, 96, { label: 'ÍNDICE A', value: '4,512.3', delta: '+0.8%', deltaPositive: true, theme: 'light' }),
+        mk('kpi', 218, 96, 164, 96, { label: 'DIVISA A', value: '1.0862', delta: '-0.3%', deltaPositive: false, theme: 'light' }),
+        mk('kpi', 396, 96, 164, 96, { label: 'COMMODITY A', value: '2,318.4', delta: '+0.1%', deltaPositive: true, theme: 'light' }),
+        mk('kpi', 574, 96, 180, 96, { label: 'COMMODITY B', value: '78.4', delta: '+1.2%', deltaPositive: true, theme: 'dark' }),
+        mk('chart', 40, 216, 714, 220, { chartKind: 'line', seriesA: '0,40 20,32 40,36 60,20 80,24 100,10', filled: false, areaPoints: '0,40 20,32 40,36 60,20 80,24 100,10 100,60 0,60' }),
+        mk('table', 40, 460, 714, 180, { headers: ['Activo', 'Último', 'Var. Día', 'Sesgo'], rows: [{ cells: ['Índice A', '4,512.3', '+0.8%', 'Alcista'] }, { cells: ['Divisa A', '1.0862', '-0.3%', 'Bajista'] }, { cells: ['Commodity A', '2,318.4', '+0.1%', 'Neutral'] }] }),
+      ];
+    } else if (type === 'tecnico') {
+      blocks = [
+        mk('title', 40, 40, 460, 52, { text: 'Análisis Técnico', fontSize: 24, color: '#0D0D1A' }),
+        mk('chart', 40, 96, 480, 260, { chartKind: 'line', seriesA: '0,40 20,32 40,36 60,20 80,24 100,10', filled: false, areaPoints: '0,40 20,32 40,36 60,20 80,24 100,10 100,60 0,60' }),
+        mk('table', 540, 96, 214, 260, { headers: ['Nivel', 'Precio'], rows: [{ cells: ['Resist. 2', '4,590'] }, { cells: ['Resist. 1', '4,555'] }, { cells: ['Precio', '4,512.3'] }, { cells: ['Soporte 1', '4,480'] }, { cells: ['Soporte 2', '4,440'] }] }),
+        mk('callout', 40, 376, 230, 110, { variant: 'insight', text: '[Escenario alcista si rompe resistencia 1.]' }),
+        mk('callout', 288, 376, 230, 110, { variant: 'riesgo', text: '[Escenario bajista si pierde soporte 1.]' }),
+        mk('callout', 540, 376, 214, 110, { variant: 'nota', text: '[Rango neutral entre soporte y resistencia.]' }),
+      ];
+    } else if (type === 'calendario') {
+      blocks = [
+        mk('title', 40, 40, 460, 52, { text: 'Calendario Económico', fontSize: 24, color: '#0D0D1A' }),
+        mk('table', 40, 96, 714, 220, this.presetTable('calendar')),
+      ];
+    } else if (type === 'disclaimer') {
+      blocks = [
+        mk('title', 40, 60, 460, 52, { text: 'Disclaimer', fontSize: 24, color: '#FFFFFF' }),
+        mk('text', 40, 120, 714, 300, { text: '[Este documento ha sido elaborado por Grupo Inteligencia con fines exclusivamente informativos y no constituye una recomendación de inversión. Sustituir por el texto legal definitivo revisado por cumplimiento.]', fontSize: 10, color: '#C1E5E4' }),
+      ];
+    } else {
+      blocks = [
+        mk('title', 40, 40, 460, 52, { text: this.typeLabel(type), fontSize: 24, color: '#0D0D1A' }),
+        mk('subtitle', 40, 90, 400, 24, { text: 'Plantilla base', fontSize: 12, color: '#3E91AF' }),
+        mk('text', 40, 124, 714, 90, { text: '[Contenido editable. Inserta componentes desde el panel izquierdo para construir esta página.]', fontSize: 11, color: '#3A3F52' }),
+      ];
+    }
+    return { id, type, bg, blocks, showHeader: true, showFooter: true, showDisclaimer: false, visible: true };
+  }
+  addPage(type) {
+    const id = 'p' + Date.now().toString(36);
+    const page = this.buildPage(type, id);
+    this.setState((s) => ({ pages: [...s.pages, page], activePageId: id }));
+  }
+
+  enrichBlock(b, pageId) {
+    const isSel = !!(this.state.selected && this.state.selected.blockId === b.id && this.state.selected.pageId === pageId);
+    const kindLabels = { title: 'Título', subtitle: 'Subtítulo', text: 'Texto', quote: 'Cita', alert: 'Alerta', callout: 'Callout', kpi: 'KPI', tag: 'Etiqueta', chart: 'Gráfico', table: 'Tabla', image: 'Imagen', logo: 'Logo', divider: 'Separador', icon: 'Icono' };
+    const isChartLine = b.kind === 'chart' && (b.chartKind === 'line' || b.chartKind === 'area' || b.chartKind === 'comparative');
+    const isChartBar = b.kind === 'chart' && (b.chartKind === 'bar' || b.chartKind === 'candle' || b.chartKind === 'heatmap');
+    const e = {
+      ...b, pageId, isSelected: isSel,
+      kindLabel: kindLabels[b.kind] || b.kind,
+      isTitle: b.kind === 'title', isSubtitle: b.kind === 'subtitle', isText: b.kind === 'text',
+      isCallout: b.kind === 'callout', isKpi: b.kind === 'kpi', isTag: b.kind === 'tag',
+      isAlert: b.kind === 'alert', isQuote: b.kind === 'quote',
+      isChartLine, isChartBar, isChart: b.kind === 'chart',
+      isTable: b.kind === 'table', isImage: b.kind === 'image', isLogo: b.kind === 'logo',
+      isDivider: b.kind === 'divider', isIcon: b.kind === 'icon',
+      isDividerOrIcon: b.kind === 'divider' || b.kind === 'icon',
+      showTypeControls: b.kind === 'title' || b.kind === 'subtitle' || b.kind === 'text' || b.kind === 'quote',
+      hasSeriesB: !!b.seriesB,
+      hidden: !!b.hidden,
+      opacity: b.hidden ? 0.35 : 1,
+      borderWidth: isSel ? 2 : (b.hidden ? 1 : 0),
+      borderColor: isSel ? '#3E91AF' : (b.hidden ? '#B0B0B0' : 'transparent'),
+      borderStyleVal: b.hidden && !isSel ? 'dashed' : 'solid',
+      onSelect: (ev) => this.selectBlock(pageId, b.id, ev),
+      onDragStart: (ev) => this.startDrag(ev, pageId, b.id),
+      onResizeStart: (ev) => this.startResize(ev, pageId, b.id),
+      onTextBlur: (ev) => this.updateText(pageId, b.id, 'text', ev.target.innerText),
+      onLabelBlur: (ev) => this.updateText(pageId, b.id, 'label', ev.target.innerText),
+      onValueBlur: (ev) => { this.updateText(pageId, b.id, 'value', ev.target.innerText); if (b.autoGenerated) this.updateBlock(pageId, b.id, { manualOverride: true }); },
+      onDeltaBlur: (ev) => { this.updateText(pageId, b.id, 'delta', ev.target.innerText); if (b.autoGenerated) this.updateBlock(pageId, b.id, { manualOverride: true }); },
+    };
+    if (e.isCallout) {
+      const map = { insight: ['#3E91AF', 'INSIGHT', '#3E91AF'], riesgo: ['#E84040', 'RIESGO', '#C62E2E'], oportunidad: ['#53C1AB', 'OPORTUNIDAD', '#2E9C86'], nota: ['#737373', 'NOTA', '#595959'] };
+      const [ac, lbl, lc] = map[b.variant] || map.insight;
+      e.accentColor = ac; e.labelText = lbl; e.labelColor = lc;
+    }
+    if (e.isTag) {
+      const map = { alcista: ['#00DC821A', '#00A363', '#00DC82', 'ALCISTA'], bajista: ['#E840401A', '#C62E2E', '#E84040', 'BAJISTA'], neutral: ['#7373731A', '#595959', '#737373', 'NEUTRAL'] };
+      const [bg, fg, dot, lbl] = map[b.sesgo] || map.neutral;
+      e.tagBg = bg; e.tagFg = fg; e.tagDot = dot; e.tagLabel = lbl;
+    }
+    if (e.isKpi) {
+      e.kpiBg = b.theme === 'dark' ? '#0D0D1A' : '#E8F5F0';
+      e.kpiText = b.theme === 'dark' ? '#FFFFFF' : '#0D0D1A';
+      e.kpiLabelColor = b.theme === 'dark' ? '#C1E5E4' : '#3E91AF';
+      e.deltaColor = b.deltaPositive ? '#00A363' : '#C62E2E';
+    }
+    if (e.isImage) e.slotId = 'slot-' + b.id;
+    const de = this.state.dataEngine;
+    const av = de.appliedVisual, ar = de.appliedRecalc;
+    let engineDim = false;
+    if (e.isChart && !av.graficos) engineDim = true;
+    if (e.isTable && !av.tablas) engineDim = true;
+    if (e.isKpi && (!av.kpis || !ar.kpis || !ar.variaciones)) engineDim = true;
+    if (e.isAlert && !av.indicadores) engineDim = true;
+    if (e.isCallout && !av.insights) engineDim = true;
+    e.opacity = b.hidden ? 0.35 : (engineDim ? 0.2 : 1);
+    if (e.isTable) e.rows = av.categorias ? this.sortRows(b.rows, de.sort) : b.rows;
+    if (e.isChartLine || e.isChartBar) {
+      const scaleMap = { auto: 60, fija: 60, mantenerY: 100, maximo: 30, rango: 45 };
+      e.vbHeight = scaleMap[de.scale] || 60;
+      e.showLegend = av.leyendas && e.hasSeriesB;
+    }
+    if (isSel) {
+      e.onToggleHidden = () => this.setField('hidden', !b.hidden);
+      e.onBringFront = () => this.moveBlockFront(pageId, b.id);
+      e.onSendBack = () => this.moveBlockBack(pageId, b.id);
+      e.onChartKindChange = (ev) => this.changeChartKind(ev.target.value);
+      e.hiddenLabel = b.hidden ? 'Mostrar' : 'Ocultar';
+      e.onFontSizeChange = (ev) => this.setField('fontSize', +ev.target.value);
+      e.onAlignLeft = () => this.setField('textAlign', 'left');
+      e.onAlignCenter = () => this.setField('textAlign', 'center');
+      e.onAlignRight = () => this.setField('textAlign', 'right');
+      e.onVariantChange = (ev) => this.setField('variant', ev.target.value);
+      e.onSesgoChange = (ev) => this.setField('sesgo', ev.target.value);
+      e.onThemeLight = () => this.setField('theme', 'light');
+      e.onThemeDark = () => this.setField('theme', 'dark');
+      e.onDeltaPositive = () => this.setField('deltaPositive', true);
+      e.onDeltaNegative = () => this.setField('deltaPositive', false);
+      e.rowCount = (b.rows || []).length;
+      e.colCount = (b.headers || []).length;
+      e.canRestoreAuto = e.isKpi && !!b.autoGenerated && !!b.manualOverride;
+      e.onRestoreAuto = () => this.restoreAutoForBlock(pageId, b.id);
+    }
+    e.isAutoOverridden = e.isKpi && !!b.autoGenerated && !!b.manualOverride;
+    return e;
+  }
+
+  renderVals() {
+    const { pages, sidebarOpen, zoom, selected } = this.state;
+    const total = pages.length;
+    const pagesDisplay = pages.filter((p) => p.visible !== false).map((p) => {
+      const idx = pages.indexOf(p) + 1;
+      const isDark = p.bg === '#0D0D1A';
+      return {
+        id: p.id, bg: p.bg, isDark,
+        chromeBorder: isDark ? 'rgba(255,255,255,0.15)' : '#C1E5E4',
+        chromeText: isDark ? '#C1E5E4' : '#3A3F52',
+        chromeMuted: isDark ? '#8A8A94' : '#737373',
+        headerCategory: this.typeLabel(p.type),
+        showHeader: !!p.showHeader, showFooter: !!p.showFooter, showDisclaimer: !!p.showDisclaimer,
+        footerLabel: idx + ' / ' + total,
+        blocks: p.blocks.map((b) => this.enrichBlock(b, p.id)),
+        onBg: (e) => {
+          const clearSel = e.target === e.currentTarget;
+          this.setState((s) => ({ activePageId: p.id, selected: clearSel ? null : s.selected }));
+        },
+      };
+    });
+    const docList = pages.map((p, i) => ({
+      id: p.id, label: (i + 1) + '. ' + this.typeLabel(p.type),
+      visible: p.visible !== false, showHeader: !!p.showHeader, showFooter: !!p.showFooter, showDisclaimer: !!p.showDisclaimer,
+      onToggleVisible: () => this.togglePageFlag(p.id, 'visible'),
+      onToggleHeader: () => this.togglePageFlag(p.id, 'showHeader'),
+      onToggleFooter: () => this.togglePageFlag(p.id, 'showFooter'),
+      onToggleDisclaimer: () => this.togglePageFlag(p.id, 'showDisclaimer'),
+      onDelete: () => this.deletePage(p.id),
+    }));
+    const selBlock = selected ? this.findBlock(selected.pageId, selected.blockId) : null;
+    const selInfo = selBlock ? this.enrichBlock(selBlock, selected.pageId) : null;
+
+    const pageTypes = [
+      ['portada', 'Portada'], ['apertura', 'Apertura de Mercado'], ['actualizacion', 'Actualización Intradía'],
+      ['dashboard', 'Dashboard'], ['tecnico', 'Análisis Técnico'], ['fundamental', 'Análisis Fundamental'],
+      ['calendario', 'Calendario Económico'], ['comparativas', 'Comparativas'], ['conclusiones', 'Conclusiones'],
+      ['disclaimer', 'Disclaimer'],
+    ];
+    const pageLibrary = pageTypes.map(([type, label]) => ({ label, onClick: () => this.addPage(type) }));
+
+    const compItems = [
+      ['title', null, 'Título'], ['subtitle', null, 'Subtítulo'], ['text', null, 'Texto'],
+      ['callout', 'insight', 'Callout Insight'], ['callout', 'riesgo', 'Callout Riesgo'], ['callout', 'oportunidad', 'Callout Oport.'],
+      ['kpi', null, 'KPI'], ['tag', null, 'Etiqueta'], ['alert', null, 'Alerta'], ['quote', null, 'Cita'],
+    ];
+    const componentLibrary = compItems.map(([kind, variant, label]) => ({ label, onClick: () => this.addBlock(kind, { variant }) }));
+
+    const chartItems = [['line', 'Línea'], ['area', 'Área'], ['comparative', 'Comparativo'], ['bar', 'Barras'], ['candle', 'Velas'], ['heatmap', 'Heatmap']];
+    const chartLibrary = chartItems.map(([chartKind, label]) => ({ label, onClick: () => this.addBlock('chart', { chartKind }) }));
+
+    const tableItems = [['financial', 'Tabla Financiera'], ['calendar', 'Calendario Económico'], ['comparative', 'Comparativa'], ['results', 'Resultados']];
+    const tableLibrary = tableItems.map(([preset, label]) => ({ label, onClick: () => this.addBlock('table', { preset }) }));
+
+    const mmItems = [['image', 'Imagen'], ['logo', 'Logo'], ['divider', 'Separador'], ['icon', 'Icono']];
+    const multimediaLibrary = mmItems.map(([kind, label]) => ({ label, onClick: () => this.addBlock(kind) }));
+
+    const swatchHexes = ['#0D0D1A', '#3E91AF', '#53C1AB', '#3A3F52', '#737373', '#FFFFFF'];
+    const swatches = swatchHexes.map((hex) => ({ hex, onClick: () => this.setField('color', hex) }));
+
+    const de = this.state.dataEngine;
+    const preview = this.computeAffected();
+    const recalcLabels = { totales: 'Totales', porcentajes: 'Porcentajes', promedios: 'Promedios', rankings: 'Rankings', posiciones: 'Posiciones', acumulados: 'Acumulados', kpis: 'KPIs', variaciones: 'Variaciones' };
+    const visualLabels = { graficos: 'Gráficos', tablas: 'Tablas', indicadores: 'Indicadores', kpis: 'Tarjetas KPI', insights: 'Insights', leyendas: 'Leyendas', categorias: 'Reordenar categorías' };
+    const dataEngine = {
+      isAuto: de.syncMode === 'auto', isManual: de.syncMode === 'manual',
+      onSyncAuto: () => this.setSyncMode('auto'), onSyncManual: () => this.setSyncMode('manual'),
+      onApplyUpdate: () => this.applyDataUpdate(),
+      lastUpdatedLabel: de.lastUpdated ? new Date(de.lastUpdated).toLocaleTimeString('es-ES') : 'Sin sincronizar',
+      recalcItems: Object.keys(recalcLabels).map((k) => ({ key: k, label: recalcLabels[k], checked: de.recalc[k], onToggle: () => this.toggleRecalcFlag(k) })),
+      visualItems: Object.keys(visualLabels).map((k) => ({ key: k, label: visualLabels[k], checked: de.visual[k], onToggle: () => this.toggleVisualFlag(k) })),
+      scale: de.scale,
+      scaleOptions: [['auto', 'Escala automática'], ['fija', 'Escala fija'], ['mantenerY', 'Mantener eje Y'], ['maximo', 'Ajustar al máximo valor'], ['rango', 'Ajustar al rango de datos']].map(([v, l]) => ({ value: v, label: l, checked: de.scale === v, onSelect: () => this.setScale(v) })),
+      sort: de.sort,
+      sortOptions: [['original', 'Mantener orden original'], ['asc', 'Orden ascendente'], ['desc', 'Orden descendente'], ['auto', 'Automático según valor']].map(([v, l]) => ({ value: v, label: l, checked: de.sort === v, onSelect: () => this.setSort(v) })),
+      advancedMode: de.advancedMode, onToggleAdvanced: () => this.toggleAdvanced(),
+      refreshSeconds: de.refreshSeconds,
+      onRefreshChange: (ev) => this.setRefreshSeconds(+ev.target.value),
+      formulas: de.formulas.map((f, i) => ({
+        idx: i, name: f.name, expr: f.expr, result: this.evalFormula(f.expr),
+        onNameChange: (ev) => this.updateFormula(i, 'name', ev.target.value),
+        onExprChange: (ev) => this.updateFormula(i, 'expr', ev.target.value),
+        onRemove: () => this.removeFormula(i),
+      })),
+      onAddFormula: () => this.addFormula(),
+      previewText: 'Componentes afectados: ' + preview.affected + ' · Gráficos: ' + preview.chartCount + ' · Tablas: ' + preview.tableCount + ' · KPIs: ' + preview.kpiCount + ' · Fórmulas activas: ' + preview.formulaCount,
+      pendingChanges: preview.pending,
+    };
+
+    const dataInput = {
+      text: this.state.dataInputText,
+      onTextChange: (ev) => this.setDataInputText(ev.target.value),
+      onFileSelect: (ev) => this.onFileSelected(ev),
+      lastImportedFile: this.state.lastImportedFile,
+      unsupportedFile: this.state.unsupportedFile,
+      fileProcessing: this.state.fileProcessing,
+      onAnalyze: () => this.analyzeData(),
+      onAnalyzeDocument: () => this.analyzeAsDocument(),
+      hasText: !!(this.state.dataInputText || '').trim(),
+      onPreview: () => this.openPreview(),
+      hasStructure: !!this.state.importedStructure,
+      importWarning: this.state.importWarning,
+      importInfo: this.state.importInfo,
+      structureSummary: this.state.importedStructure ? (this.state.importedStructure.length + ' bloques detectados (' + this.state.importedStructure.filter((i) => i.type === 'heading').length + ' secciones, ' + this.state.importedStructure.filter((i) => i.type === 'table').length + ' tablas)') : '',
+      noMatches: !!(this.state.pendingIndicators && this.state.pendingIndicators.length && this.state.pendingIndicators.every((i) => i.matchCount === 0)),
+      emptyParse: !!(this.state.pendingIndicators && this.state.pendingIndicators.length === 0),
+      pending: this.state.pendingIndicators && this.state.pendingIndicators.map((pi) => ({ ...pi, canInsert: pi.matchCount === 0, onInsert: () => this.insertIndicatorAsKpi(pi) })),
+      onApply: () => this.applyAnalysis(),
+      onCancel: () => this.cancelAnalysis(),
+      canUndo: this.state.historyStack.length > 0,
+      onUndo: () => this.undoLastApply(),
+      hasSavedVersion: !!this.state.savedVersion,
+      onSaveVersion: () => this.saveVersion(),
+      onRestoreVersion: () => this.restoreVersion(),
+    };
+
+    const pvMode = this.state.previewMode;
+    const pvOverrides = this.state.previewOverrides;
+    const pvChanges = this.state.pendingIndicators ? this.buildProposal() : [];
+    const pvRows = pvChanges.map((c) => {
+      const forced = !!pvOverrides[c.blockId];
+      const effLocked = c.locked && !forced;
+      return {
+        blockId: c.blockId, label: c.label, oldValue: c.oldValue, oldDelta: c.oldDelta, newValue: c.newValue, newDelta: c.newDelta,
+        deltaColor: c.newPositive ? '#00DC82' : '#E84040',
+        isLocked: c.locked, forced,
+        showLockedBadge: effLocked,
+        showForcedNote: c.locked && forced,
+        onToggleForce: () => this.toggleForceOverride(c.blockId),
+        showUnchanged: !c.changed && !effLocked,
+        showActual: (pvMode === 'actual' || effLocked || (!c.changed && !effLocked)),
+        showPropuesta: pvMode === 'propuesta' && !effLocked && c.changed,
+        showCompare: pvMode === 'comparar' && !effLocked && c.changed,
+      };
+    });
+    const changedCount = pvChanges.filter((c) => c.changed && (!c.locked || pvOverrides[c.blockId])).length;
+    const lockedCount = pvChanges.filter((c) => c.locked && !pvOverrides[c.blockId]).length;
+    const unchangedCount = pvChanges.filter((c) => !c.changed && !c.locked).length;
+    const struct = this.state.importedStructure || [];
+    const structRows = struct.slice(0, 60).map((it, i) => ({
+      order: i + 1,
+      badge: it.type === 'heading' ? 'SECCIÓN' : (it.type === 'table' ? 'TABLA' : 'TEXTO'),
+      badgeColor: it.type === 'heading' ? '#3E91AF' : (it.type === 'table' ? '#1E3A5F' : '#737373'),
+      isTable: it.type === 'table',
+      preview: it.type === 'table' ? (it.headers || []).join(' · ') : String(it.text || '').slice(0, 150),
+      tableMeta: it.type === 'table' ? ((it.rows || []).length + ' fila(s) × ' + (it.headers || []).length + ' columna(s)') : '',
+    }));
+    const structPages = struct.length ? this.buildStructurePages(struct) : [];
+    const badgeFor = { title: ['SECCIÓN', '#3E91AF'], subtitle: ['SUBTÍTULO', '#3E91AF'], text: ['TEXTO', '#737373'], quote: ['CITA', '#737373'], table: ['TABLA', '#1E3A5F'], kpi: ['KPI', '#53C1AB'], chart: ['GRÁFICO', '#1E3A5F'], callout: ['CALLOUT', '#737373'], tag: ['ETIQUETA', '#737373'], alert: ['ALERTA', '#1F76D5'], image: ['IMAGEN', '#737373'], logo: ['LOGO', '#737373'], divider: ['SEPARADOR', '#737373'], icon: ['ICONO', '#737373'] };
+    const outlineRows = [];
+    this.state.pages.forEach((p) => p.blocks.forEach((b) => {
+      const [badge, badgeColor] = badgeFor[b.kind] || ['BLOQUE', '#737373'];
+      outlineRows.push({
+        order: outlineRows.length + 1, badge, badgeColor, isNew: false, newTag: '', tagColor: '#737373',
+        preview: b.kind === 'table' ? (b.headers || []).join(' · ') : String(b.text || b.label || '').slice(0, 150),
+        tableMeta: b.kind === 'table' ? ((b.rows || []).length + ' fila(s)') : '',
+      });
+    }));
+    const outlineCapped = outlineRows.slice(0, 60);
+    const proposalRows = structRows.map((r) => ({ ...r, isNew: true, newTag: 'NUEVO', tagColor: '#00DC82' }));
+    const compareRows = outlineCapped.map((r) => ({ ...r, newTag: 'sin cambios', tagColor: '#737373' }))
+      .concat(proposalRows.map((r, i) => ({ ...r, order: outlineCapped.length + i + 1 })));
+    const viewRows = pvMode === 'actual' ? outlineCapped : (pvMode === 'propuesta' ? proposalRows : compareRows);
+    const viewTitle = pvMode === 'actual'
+      ? 'Documento actual · ' + outlineRows.length + ' bloques existentes (sin modificar)'
+      : (pvMode === 'propuesta'
+        ? 'Propuesta · documento resultante con ' + struct.length + ' bloques importados'
+        : 'Comparar · bloques existentes vs. bloques que se añadirán');
+    const previewModal = {
+      isOpen: this.state.previewOpen, rows: pvRows,
+      changedCount, lockedCount, unchangedCount,
+      structRows: viewRows, viewTitle, hasStructure: struct.length > 0,
+      structTruncated: struct.length > 60,
+      structTotal: struct.length,
+      structPageCount: structPages.length,
+      totalChangeCount: changedCount + struct.length,
+      structBlockCount: struct.length,
+      sectionsCount: struct.filter((i) => i.type === 'heading').length,
+      parasCount: struct.filter((i) => i.type === 'para').length,
+      chartsCount: 0, tablesCount: struct.filter((i) => i.type === 'table').length, textsCount: struct.filter((i) => i.type === 'para').length,
+      actualBg: pvMode === 'actual' ? '#1A1A2E' : '#FAFAFA', actualFg: pvMode === 'actual' ? '#FFFFFF' : '#0D0D1A',
+      propuestaBg: pvMode === 'propuesta' ? '#1A1A2E' : '#FAFAFA', propuestaFg: pvMode === 'propuesta' ? '#FFFFFF' : '#0D0D1A',
+      compararBg: pvMode === 'comparar' ? '#1A1A2E' : '#FAFAFA', compararFg: pvMode === 'comparar' ? '#FFFFFF' : '#0D0D1A',
+      onModeActual: () => this.setPreviewMode('actual'),
+      onModePropuesta: () => this.setPreviewMode('propuesta'),
+      onModeComparar: () => this.setPreviewMode('comparar'),
+      onApply: () => this.closePreviewApply(),
+      onKeepEditing: () => this.closePreviewKeepEditing(),
+      onCancel: () => this.closePreviewCancel(),
+    };
+
+    return {
+      dataInput, previewModal,
+      sidebarOpen, toggleSidebar: () => this.toggleSidebar(),
+      zoom, zoomPct: Math.round(zoom * 100) + '%',
+      setZoomDown: () => this.setZoom(zoom - 0.1), setZoomUp: () => this.setZoom(zoom + 0.1),
+      exportPdf: () => this.exportPdf(),
+      pageW: Math.round(794 * zoom), pageH: Math.round(1123 * zoom),
+      pages: pagesDisplay, pageCount: pages.length, docList,
+      selected: selInfo, hasSelection: !!selInfo, noSelection: !selInfo,
+      deleteSelected: () => this.deleteSelected(), duplicateSelected: () => this.duplicateSelected(),
+      deselectAllBg: (e) => { if (e.target === e.currentTarget) this.setState({ selected: null }); },
+      pageLibrary, componentLibrary, chartLibrary, tableLibrary, multimediaLibrary, swatches,
+      dataEngine,
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -286,15 +286,21 @@ body.activo-bitcoin { --activo: var(--activo-bitcoin); }
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   html, body {
-    width: 100%;
-    height: 100%;
-    background:
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    background: var(--fondo);
+    background-image:
       radial-gradient(90% 120% at 0% 20%, var(--fondo-acento) 0%, var(--fondo) 55%),
       linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 60%, var(--acento-oscuro) 100%);
+    color: var(--texto-1);
+    font-family: var(--font-sans), var(--font-emoji);
     overflow: hidden;
   }
 
   .story {
+    position: relative;
     width: 100%;
     height: 100%;
     padding: 56px 72px 40px;

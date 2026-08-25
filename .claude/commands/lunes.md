@@ -3,9 +3,10 @@ Genera el paquete completo del lunes pieza por pieza para aprobación.
 ## Contexto
 Hoy es lunes. Ejecuta cada pieza en orden, mostrándola al director para aprobación antes de continuar con la siguiente.
 
-> **Orden del flujo**: este paquete ya respeta el principio "fundamental primero" — el calendario semanal (PIEZA 1), earnings y concepto van antes que la apertura/niveles (PIEZA 4), de modo que el cliente recibe el contexto fundamental mientras se cargan los niveles en MT5.
+> **Orden del flujo**: este paquete ya respeta el principio "fundamental primero": el calendario semanal (PIEZA 1), earnings y concepto van antes que la apertura/niveles (PIEZA 4), de modo que el cliente recibe el contexto fundamental mientras se cargan los niveles en MT5.
 
 ## SETUP
+1. Verifica el estado de ingesta soberana en data central/DATA AGENDA/calendario_2026.json y pipeline_ingesta.py.
 1. Determina los activos del día leyendo `config/agenda_semanal.json` y `config/activos.json` según el día de la semana.
 
 ---
@@ -18,10 +19,10 @@ Sin ese argumento, ignora esta sección y genera solo el contenido de cliente, c
 
 ---
 
-## PIEZA 1 — Resumen semanal del calendario económico
+## PIEZA 1: Resumen semanal del calendario económico
 
 Obtén el calendario económico de toda esta semana:
-- Obtén con `WebSearch` sobre investing.com los datos de **alto impacto** de la semana (próximos 7 días; Chile, EE.UU., Zona Euro, China). Convierte cada hora a Chile con el helper determinista `scripts\hora_chile.ps1` (según la zona de origen del dato; nunca offsets fijos) — ver PASO 1B de `/dato_macro`.
+- Obtén con `WebSearch` sobre investing.com los datos de **alto impacto** de la semana (próximos 7 días; Chile, EE.UU., Zona Euro, China). Convierte cada hora a Chile con el helper determinista `scripts\hora_chile.ps1` (según la zona de origen del dato; nunca offsets fijos): ver PASO 1B de `/dato_macro`.
 - Si no encuentras eventos de alto impacto para la semana → informar al director y DETENER el comando.
 
 Lista cada dato con:
@@ -51,7 +52,7 @@ Si MCP WhatsApp no disponible: muestra el texto listo para copiar y avisa.
 
 ---
 
-## PIEZA 2 — Earnings de la semana
+## PIEZA 2: Earnings de la semana
 
 Ejecuta la lógica de /earnings:
 - Con `WebSearch` busca el calendario de earnings de las 13 acciones del catálogo para esta semana (investing.com + fuentes oficiales de cada empresa). Confirma fechas/horas.
@@ -70,7 +71,7 @@ Formato WhatsApp:
 ━━━━━━━━━━━━━━━━━━━
 💼 Empresas que reportan:
 
-🍎 *#AAPL* — [Día] [Hora CLT] (BMO/AMC)
+🍎 *#AAPL*: [Día] [Hora CLT] (BMO/AMC)
 • EPS esperado: $X.XX
 • Foco: [qué mira el mercado]
 • Afecta: US100
@@ -84,7 +85,7 @@ _Los earnings pueden mover fuerte el activo y su índice_
 
 ---
 
-## PIEZA 3 — Concepto de la semana
+## PIEZA 3: Concepto de la semana
 
 Ejecuta la lógica de /concepto:
 - Analiza los datos publicados esta semana y los activos que se cubren.
@@ -119,7 +120,7 @@ Cómo lo usamos:
 
 ---
 
-## PIEZA 4 — Apertura de mercado
+## PIEZA 4: Apertura de mercado
 
 Ejecuta `/apertura` (ver `.claude/commands/apertura.md`).
 
@@ -127,21 +128,21 @@ Ejecuta `/apertura` (ver `.claude/commands/apertura.md`).
 
 ---
 
-## PIEZA 5 — Encuesta de tendencia
+## PIEZA 5: Encuesta de tendencia
 
 Genera la encuesta del lunes (tipo: tendencia AM).
 
 Elige el activo principal del día. Genera 2 bloques consecutivos:
 
-**Bloque A — Contexto previo** (para que el cliente vote con información):
+**Bloque A: Contexto previo** (para que el cliente vote con información):
 ```
-🎯 *ANÁLISIS RÁPIDO — [ACTIVO]*
+🎯 *ANÁLISIS RÁPIDO: [ACTIVO]*
 ━━━━━━━━━━━━━━━━━━━
 [2-3 líneas con lo más relevante del activo hoy: precio, sesgo, dato clave]
 ━━━━━━━━━━━━━━━━━━━
 ```
 
-**Bloque B — Encuesta**:
+**Bloque B: Encuesta**:
 ```
 📊 *ENCUESTA DEL DÍA*
 

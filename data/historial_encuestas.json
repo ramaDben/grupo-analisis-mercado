@@ -134,6 +134,56 @@
       ],
       "contexto_ref": "data/mensajes/2026-07-28/usdclp/dato_macro/18-01_dato_macro.txt",
       "estado": "registrada"
+    },
+    {
+      "id": "2026-08-19_apertura_nivel_USDCLP",
+      "fecha": "2026-08-19",
+      "tipo": "apertura_nivel",
+      "activo": "USDCLP",
+      "pregunta": "¿Cómo ves la apertura de mañana en *USD/CLP* frente a *$926.05*?",
+      "opciones": [
+        "🟢 Alcista (sobre $926.05)",
+        "🔴 Bajista (bajo $926.05)",
+        "🟡 Lateral (cerca de $926.05)"
+      ],
+      "nivel_calculado": {
+        "valor": 926.05,
+        "metodo": "precio_actual + 1.5x ATR14 en direccion de la tendencia (ADX14 39.9, banda 25-40 => N=1.5, misma tabla que /oportunidad)",
+        "precio_actual": 920.75,
+        "atr_14": 3.53,
+        "adx_14": 39.9,
+        "tendencia": "ALCISTA",
+        "timeframe": "H4",
+        "timestamp_mt5": "2026-08-19 20:29 UTC"
+      },
+      "contexto_ref": null,
+      "estado": "registrada"
+    },
+    {
+      "id": "2026-08-20_tendencia_USDCLP_concursal",
+      "fecha": "2026-08-20",
+      "tipo": "cierre_apertura",
+      "activo": "USDCLP",
+      "pregunta": "¿Dónde ves la apertura de mañana para el USD/CLP frente a estos niveles?",
+      "opciones": [
+        "🟢 Alcista (por encima de $926.70)",
+        "🟡 Lateral (cerca de $921.60)",
+        "🔴 Bajista (por debajo de $916.50)"
+      ],
+      "nivel_calculado": {
+        "valor_alcista": 926.70,
+        "valor_lateral": 921.60,
+        "valor_bajista": 916.50,
+        "metodo": "precio_actual +/- 1.5x ATR14 (ADX14 30.9 D1 / 26.8 H4 en banda 25-40 => N=1.5, Delta=$5.10 sobre ATR14 H4=$3.40)",
+        "precio_actual": 921.60,
+        "atr_14_h4": 3.40,
+        "adx_14_d1": 30.9,
+        "tendencia": "ALCISTA",
+        "timeframe": "H4/D1",
+        "timestamp_mt5": "2026-08-20 21:05 UTC"
+      },
+      "contexto_ref": "data/mensajes/2026-08-20/usdclp/encuesta/17-06_encuesta.txt",
+      "estado": "registrada"
     }
   ]
 }

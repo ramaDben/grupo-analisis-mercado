@@ -1,8 +1,9 @@
 Genera la operativa de la mañana del viernes pieza por pieza para aprobación.
 
 ## SETUP
+1. Verifica el estado de ingesta soberana en data central/DATA AGENDA/calendario_2026.json y pipeline_ingesta.py.
 1. Determina los activos del día leyendo `config/agenda_semanal.json` y `config/activos.json` según el día de la semana.
-2. **NOTA VIERNES**: Los viernes cubrir 3 activos (en vez de 2). El primer viernes del mes publicación de NFP (Non-Farm Payrolls) — si es hoy, destacarlo especialmente.
+2. **NOTA VIERNES**: Los viernes cubrir 3 activos (en vez de 2). El primer viernes del mes publicación de NFP (Non-Farm Payrolls): si es hoy, destacarlo especialmente.
 
 > **Orden del flujo**: el dato macro se genera y envía PRIMERO, para que el cliente reciba el fundamental del día mientras se cargan los niveles en MT5 (los niveles requieren input manual y tardan más).
 
@@ -16,7 +17,7 @@ Sin ese argumento, ignora esta sección y genera solo el contenido de cliente, c
 
 ---
 
-## PIEZA 1 — Dato macro del día
+## PIEZA 1: Dato macro del día
 
 Verifica si hoy es el **primer viernes del mes** (= NFP day).
 
@@ -24,7 +25,7 @@ Verifica si hoy es el **primer viernes del mes** (= NFP day).
 ```
 ⚠️ *HOY ES DÍA DE NFP*
 ━━━━━━━━━━━━━━━━━━━
-Non-Farm Payrolls — el dato de empleo más importante de EE.UU.
+Non-Farm Payrolls: el dato de empleo más importante de EE.UU.
 
 🕐 Sale hoy a las 9:30 CLT
 
@@ -39,14 +40,14 @@ El NFP mide cuántos trabajos se crearon en EE.UU. el mes pasado.
 ```
 
 **Independientemente**, obtén el calendario completo de hoy:
-- Obtén el calendario de hoy con `WebSearch` sobre investing.com (Chile, EE.UU., Zona Euro, China; impacto medio y alto), como en el PASO 1 de `/dato_macro`. Convierte cada hora a Chile con el helper determinista `scripts\hora_chile.ps1` (según la zona de origen del dato; nunca offsets fijos) — ver PASO 1B de `/dato_macro`.
+- Obtén el calendario de hoy con `WebSearch` sobre investing.com (Chile, EE.UU., Zona Euro, China; impacto medio y alto), como en el PASO 1 de `/dato_macro`. Convierte cada hora a Chile con el helper determinista `scripts\hora_chile.ps1` (según la zona de origen del dato; nunca offsets fijos): ver PASO 1B de `/dato_macro`.
 - Si no hay eventos de impacto medio/alto hoy → continuar.
 
 Lista numerada. Director elige cuál(es) desarrollar.
 
 Genera el mensaje WhatsApp estándar para el dato elegido:
 ```
-📅 *DATO MACRO — [INDICADOR]*
+📅 *DATO MACRO: [INDICADOR]*
 ━━━━━━━━━━━━━━━━━━━
 ¿Qué es? [1-2 líneas]
 🕐 Sale hoy a las [Hora CLT]
@@ -63,7 +64,7 @@ Genera el mensaje WhatsApp estándar para el dato elegido:
 
 ---
 
-## PIEZA 2 — Apertura de mercado (3 activos el viernes)
+## PIEZA 2: Apertura de mercado (3 activos el viernes)
 
 Ejecuta `/apertura` (ver `.claude/commands/apertura.md`). Nota: hoy son **3 activos** (en vez de 2).
 
@@ -71,21 +72,21 @@ Ejecuta `/apertura` (ver `.claude/commands/apertura.md`). Nota: hoy son **3 acti
 
 ---
 
-## PIEZA 3 — Encuesta de precio de apertura del lunes
+## PIEZA 3: Encuesta de precio de apertura del lunes
 
 El viernes la encuesta pregunta por el precio de APERTURA DEL LUNES.
 
 Genera 2 bloques:
 
-**Bloque A — Contexto previo** (¿qué dejó la semana para el lunes?):
+**Bloque A: Contexto previo** (¿qué dejó la semana para el lunes?):
 ```
-🎯 *CIERRE DE SEMANA — [ACTIVO]*
+🎯 *CIERRE DE SEMANA: [ACTIVO]*
 ━━━━━━━━━━━━━━━━━━━
 [2-3 líneas: qué pasó esta semana con el activo, dato clave del viernes, qué viene el lunes]
 ━━━━━━━━━━━━━━━━━━━
 ```
 
-**Bloque B — Encuesta de precio apertura lunes**:
+**Bloque B: Encuesta de precio apertura lunes**:
 ```
 📊 *ENCUESTA DE CIERRE*
 ━━━━━━━━━━━━━━━━━━━
@@ -107,5 +108,5 @@ Genera 2 bloques:
 - Un indicador por aviso.
 - Los viernes 3 activos (no 2).
 - Si WhatsApp MCP no está disponible: mostrar texto listo para copiar.
-- **Dirección explícita**: SIEMPRE usar `*Alcista* 🟢` o `*Bajista* 🔴` en escenarios — nunca "puede subir", "podría bajar", "fuerza compradora" ni "presión vendedora".
+- **Dirección explícita**: SIEMPRE usar `*Alcista* 🟢` o `*Bajista* 🔴` en escenarios: nunca "puede subir", "podría bajar", "fuerza compradora" ni "presión vendedora".
 - **Temporalidad obligatoria**: cada reacción a dato macro lleva `(impacto inmediato, ~1-2h)` o `(tendencia del día, intra-day)`. Si no hay certeza de dirección: `*Esperar confirmación* 🟡`.

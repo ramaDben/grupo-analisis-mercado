@@ -1,6 +1,7 @@
 Genera la operativa diaria del miércoles pieza por pieza para aprobación.
 
 ## SETUP
+1. Verifica el estado de ingesta soberana en data central/DATA AGENDA/calendario_2026.json y pipeline_ingesta.py.
 1. Determina los activos del día leyendo `config/agenda_semanal.json` y `config/activos.json` según el día de la semana.
 2. **NOTA MIÉRCOLES**: Si hoy hay publicación de inventarios EIA de petróleo, priorizarlo en la pieza de dato macro.
 
@@ -16,7 +17,7 @@ Sin ese argumento, ignora esta sección y genera solo el contenido de cliente, c
 
 ---
 
-## PIEZA 1 — Dato macro del día (con prioridad EIA si corresponde)
+## PIEZA 1: Dato macro del día (con prioridad EIA si corresponde)
 
 Verifica si hoy es miércoles con publicación de inventarios EIA de petróleo (normalmente cada miércoles ~10:30 CLT durante sesión NY).
 
@@ -24,7 +25,7 @@ Ejecuta `/dato_macro` completo (ver `.claude/commands/dato_macro.md`), incluyend
 
 Cuando el director elige el dato a desarrollar, genera:
 ```
-📅 *DATO MACRO — [INDICADOR]*
+📅 *DATO MACRO: [INDICADOR]*
 ━━━━━━━━━━━━━━━━━━━
 ¿Qué es?
 [Explicación simple en 1-2 líneas]
@@ -46,7 +47,7 @@ Cuando el director elige el dato a desarrollar, genera:
 
 Si los inventarios EIA están en el calendario, generar también este mensaje específico:
 ```
-⛽ *INVENTARIOS EIA — Petróleo*
+⛽ *INVENTARIOS EIA: Petróleo*
 ━━━━━━━━━━━━━━━━━━━
 ¿Qué mide? Cuánto petróleo tienen almacenado en EE.UU. esta semana.
 
@@ -65,7 +66,7 @@ Si los inventarios EIA están en el calendario, generar también este mensaje es
 
 ---
 
-## PIEZA 2 — Apertura de mercado
+## PIEZA 2: Apertura de mercado
 
 Ejecuta `/apertura` (ver `.claude/commands/apertura.md`).
 
@@ -73,21 +74,21 @@ Ejecuta `/apertura` (ver `.claude/commands/apertura.md`).
 
 ---
 
-## PIEZA 3 — Encuesta de tendencia (miércoles = tendencia AM)
+## PIEZA 3: Encuesta de tendencia (miércoles = tendencia AM)
 
 El miércoles la encuesta es de TENDENCIA.
 
 Genera 2 bloques:
 
-**Bloque A — Contexto previo**:
+**Bloque A: Contexto previo**:
 ```
-🎯 *ANÁLISIS RÁPIDO — [ACTIVO]*
+🎯 *ANÁLISIS RÁPIDO: [ACTIVO]*
 ━━━━━━━━━━━━━━━━━━━
 [2-3 líneas con precio actual, sesgo, dato clave del día]
 ━━━━━━━━━━━━━━━━━━━
 ```
 
-**Bloque B — Encuesta de tendencia**:
+**Bloque B: Encuesta de tendencia**:
 ```
 📊 *ENCUESTA DEL DÍA*
 ━━━━━━━━━━━━━━━━━━━
@@ -110,5 +111,5 @@ Voten y veamos si acertamos 👇
 - Hora siempre en hora Chile (CLT/CLST).
 - Un indicador por aviso (nunca mezclar en el mismo mensaje).
 - Si WhatsApp MCP no está disponible: mostrar texto listo para copiar.
-- **Dirección explícita**: SIEMPRE usar `*Alcista* 🟢` o `*Bajista* 🔴` en escenarios — nunca "puede subir", "podría bajar", "fuerza compradora" ni "presión vendedora".
+- **Dirección explícita**: SIEMPRE usar `*Alcista* 🟢` o `*Bajista* 🔴` en escenarios: nunca "puede subir", "podría bajar", "fuerza compradora" ni "presión vendedora".
 - **Temporalidad obligatoria**: cada reacción a dato macro lleva `(impacto inmediato, ~1-2h)` o `(tendencia del día, intra-day)`. Si no hay certeza de dirección: `*Esperar confirmación* 🟡`.

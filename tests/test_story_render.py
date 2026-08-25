@@ -505,7 +505,7 @@ def test_recomendacion_sin_activo_slug_no_rompe():
     html = story_render.build_html(payload, RECOMENDACION_TEMPLATE)
 
     assert "{{" not in _body(html)
-    assert "activo-oro" not in html
+    assert "activo-oro" not in _body(html)
 
 
 # ---------------------------------------------------------------------------
@@ -1312,6 +1312,120 @@ def test_oportunidad_el_grafico_llena_el_lienzo():
     html = _html_oportunidad(PAYLOAD_OPORTUNIDAD)
 
     assert 'preserveAspectRatio="none"' in html
+
+
+# ---------------------------------------------------------------------------
+# snapshot templates/stories/calendario.html — el calendario macro de la
+# semana, con la piel de `oportunidad` (sello/CTA/disclaimer de piel.css) pero
+# sin activo protagonista: cae al `--activo: var(--acento)` por defecto de
+# marca.css, igual que un activo sin color propio en las otras piezas de piel.
+# Tercer consumidor real del mecanismo FOR (`eventos`), con varios tokens
+# escalares por fila (mismo patrón que `flash`).
+# ---------------------------------------------------------------------------
+
+CALENDARIO_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "calendario.html"
+
+PAYLOAD_CALENDARIO = json.loads(
+    (FIXTURES_DIR / "payloads" / "calendario.json").read_text(encoding="utf-8")
+)
+
+
+def test_calendario_no_placeholders():
+    html = story_render.build_html(PAYLOAD_CALENDARIO, CALENDARIO_TEMPLATE)
+
+    for clave in ("sello", "fecha_hora", "titulo", "subtitulo", "cta", "cta_sub"):
+        assert PAYLOAD_CALENDARIO[clave] in html
+    for evento in PAYLOAD_CALENDARIO["eventos"]:
+        assert evento["evento"] in html
+        assert evento["dia"] in html
+        assert evento["numero"] in html
+        assert evento["anterior"] in html
+        if evento["tiene_esperado"]:
+            assert evento["esperado"] in html
+    assert "{{" not in html
+    assert "}}" not in html
+
+
+def test_calendario_evento_sin_esperado_omite_flecha_y_dato():
+    # El caso real que motiva el fence IF: un evento sin consenso publicado
+    # (ej. inventarios semanales) no lleva "Se espera" ni flecha, solo "Antes".
+    html = story_render.build_html(PAYLOAD_CALENDARIO, CALENDARIO_TEMPLATE)
+
+    eventos = PAYLOAD_CALENDARIO["eventos"]
+    idx = next(i for i, e in enumerate(eventos) if not e["tiene_esperado"])
+    sin_esperado = eventos[idx]
+    siguiente = eventos[idx + 1]
+
+    # Recorta el HTML entre esta tarjeta y la siguiente para no confundirla con
+    # la flecha de otra tarjeta que sí trae "Se espera".
+    inicio = html.index(sin_esperado["evento"])
+    fin = html.index(siguiente["evento"])
+    tramo = html[inicio:fin]
+
+    assert "Se espera" not in tramo
+    assert "cal-comp-flecha" not in tramo
+    assert sin_esperado["anterior"] in tramo
+
+
+def test_calendario_sin_activo_cae_al_acento_de_marca():
+    # No hay clase `activo-<slug>` en el <body>: la pieza no tiene un solo
+    # activo protagonista, así que `--activo` debe caer al `--acento` de
+    # marca.css por el fallback `body { --activo: var(--acento); }`.
+    html = story_render.build_html(PAYLOAD_CALENDARIO, CALENDARIO_TEMPLATE)
+
+    assert '<body>' in html
+    assert "activo-" not in html.split("<body>")[1].split(">")[0]
+
+
+def test_calendario_eventos_vacio():
+    payload = {**PAYLOAD_CALENDARIO, "eventos": []}
+
+    html = story_render.build_html(payload, CALENDARIO_TEMPLATE)
+
+    assert "FOR:eventos" not in html
+    assert "ENDFOR:eventos" not in html
+    assert "{{evento}}" not in html
+    assert "{{" not in html
+    assert "}}" not in html
+    # El contenedor de la lista (fuera del FOR) persiste con la lista vacía.
+    assert 'class="cal-lista"' in html
+
+
+def test_calendario_eventos_uno():
+    payload = {
+        **PAYLOAD_CALENDARIO,
+        "eventos": [PAYLOAD_CALENDARIO["eventos"][0]],
+    }
+
+    html = story_render.build_html(payload, CALENDARIO_TEMPLATE)
+
+    assert html.count(PAYLOAD_CALENDARIO["eventos"][0]["evento"]) == 1
+    assert "FOR:eventos" not in html
+    assert "{{evento}}" not in html
+
+
+def test_calendario_eventos_n_mantienen_orden():
+    html = story_render.build_html(PAYLOAD_CALENDARIO, CALENDARIO_TEMPLATE)
+
+    nombres = [e["evento"] for e in PAYLOAD_CALENDARIO["eventos"]]
+    posiciones = [html.index(n) for n in nombres]
+    assert posiciones == sorted(posiciones)
+    assert "FOR:eventos" not in html
+    assert "ENDFOR:eventos" not in html
+
+
+@pytest.mark.skipif(
+    not _chromium_disponible(), reason="Chromium de Playwright no instalado"
+)
+def test_calendario_render_dimensiones(tmp_path):
+    salida = tmp_path / "story_calendario_test.png"
+
+    resultado = story_render.render_story(PAYLOAD_CALENDARIO, CALENDARIO_TEMPLATE, salida)
+
+    assert resultado == salida
+    assert salida.exists()
+    assert salida.stat().st_size > 5 * 1024
+    assert _png_size(salida) == (1920, 1080)
 
 
 # ---------------------------------------------------------------------------

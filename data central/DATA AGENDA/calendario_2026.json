@@ -1,0 +1,193 @@
+[
+  {
+    "id": "fomc_2026_07_minutas",
+    "nombre": "Minutas FOMC Reunión Julio 2026",
+    "entidad": "FED",
+    "pais": "USA",
+    "fecha_publicacion": "2026-08-19",
+    "hora_publicacion": "14:00",
+    "timezone": "America/New_York",
+    "impacto": "ALTO",
+    "reporte_asociado": "flash_minutas_fomc",
+    "fuente_oficial": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+    "ultima_verificacion": "2026-08-24T19:27:57.874995+00:00",
+    "series_afectadas": [
+      "DFF",
+      "DGS2",
+      "DGS10",
+      "DGS30"
+    ]
+  },
+  {
+    "id": "treasury_buybacks_ops_semanal",
+    "nombre": "Resultados de Operaciones de Recompra del Tesoro de EE.UU.",
+    "entidad": "TREASURY",
+    "pais": "USA",
+    "fecha_publicacion": "2026-08-20",
+    "hora_publicacion": "13:00",
+    "timezone": "America/New_York",
+    "impacto": "MEDIO_ALTO",
+    "reporte_asociado": "flash_buybacks_ops",
+    "fuente_oficial": "https://fiscaldata.treasury.gov/datasets/treasury-securities-buybacks/",
+    "ultima_verificacion": "2026-08-24T19:27:57.874995+00:00",
+    "series_afectadas": [
+      "BUYBACK_TOTAL_ACCEPTED"
+    ]
+  },
+  {
+    "id": "imacec_2026_07",
+    "nombre": "Imacec Julio 2026",
+    "entidad": "BCCH",
+    "pais": "CHILE",
+    "fecha_publicacion": "2026-09-01",
+    "hora_publicacion": "08:30",
+    "timezone": "America/Santiago",
+    "impacto": "ALTO",
+    "reporte_asociado": "flash_imacec",
+    "fuente_oficial": "https://www.bcentral.cl",
+    "ultima_verificacion": "2026-08-24T19:27:57.874995+00:00",
+    "series_afectadas": [
+      "IMACEC_TOTAL",
+      "IMACEC_MINERO",
+      "IMACEC_NO_MINERO"
+    ]
+  },
+  {
+    "id": "rpm_2026_09",
+    "nombre": "Reunión de Política Monetaria (RPM) Septiembre 2026",
+    "entidad": "BCCH",
+    "pais": "CHILE",
+    "fecha_publicacion": "2026-09-08",
+    "hora_publicacion": "18:00",
+    "timezone": "America/Santiago",
+    "impacto": "ALTO",
+    "reporte_asociado": "flash_tpm",
+    "fuente_oficial": "https://www.bcentral.cl",
+    "ultima_verificacion": "2026-08-24T19:27:57.874995+00:00",
+    "series_afectadas": [
+      "TPM"
+    ]
+  },
+  {
+    "id": "ipom_2026_09",
+    "nombre": "Informe de Política Monetaria (IPoM) Septiembre 2026",
+    "entidad": "BCCH",
+    "pais": "CHILE",
+    "fecha_publicacion": "2026-09-09",
+    "hora_publicacion": "08:30",
+    "timezone": "America/Santiago",
+    "impacto": "ALTO",
+    "reporte_asociado": "informe_ipom",
+    "fuente_oficial": "https://www.bcentral.cl",
+    "ultima_verificacion": "2026-08-24T19:27:57.874995+00:00",
+    "series_afectadas": [
+      "PROYECCIONES_PIB",
+      "PROYECCIONES_IPC"
+    ]
+  },
+  {
+    "id": "fomc_2026_09_decision",
+    "nombre": "Decisión de Tasas de Interés FOMC Septiembre 2026",
+    "entidad": "FED",
+    "pais": "USA",
+    "fecha_publicacion": "2026-09-16",
+    "hora_publicacion": "14:00",
+    "timezone": "America/New_York",
+    "impacto": "CRITICO",
+    "reporte_asociado": "flash_fomc",
+    "fuente_oficial": "https://www.federalreserve.gov",
+    "ultima_verificacion": "2026-08-24T19:27:57.874995+00:00",
+    "series_afectadas": [
+      "DFF",
+      "DGS2",
+      "DGS10",
+      "DGS30"
+    ]
+  },
+  {
+    "id": "bce_2026_09_tasas",
+    "nombre": "Decisión de Política Monetaria BCE Septiembre 2026",
+    "entidad": "BCE",
+    "pais": "EUROPA",
+    "fecha_publicacion": "2026-09-10",
+    "hora_publicacion": "14:15",
+    "timezone": "Europe/Berlin",
+    "impacto": "ALTO",
+    "reporte_asociado": "flash_bce",
+    "fuente_oficial": "https://data.ecb.europa.eu",
+    "ultima_verificacion": "2026-08-24T19:27:57.874995+00:00",
+    "series_afectadas": [
+      "DFR",
+      "MRO"
+    ]
+  },
+  {
+    "id": "boe_2026_09_rates",
+    "nombre": "Decisión de Tasas Bank of England (Bank Rate)",
+    "entidad": "BOE",
+    "pais": "UK",
+    "fecha_publicacion": "2026-09-17",
+    "hora_publicacion": "12:00",
+    "timezone": "Europe/London",
+    "impacto": "ALTO",
+    "reporte_asociado": "flash_boe",
+    "fuente_oficial": "https://www.bankofengland.co.uk",
+    "ultima_verificacion": "2026-08-24T19:27:57.874995+00:00",
+    "series_afectadas": [
+      "IUMABEDR"
+    ]
+  },
+  {
+    "id": "cpi_japon_2026_08",
+    "nombre": "Índice de Precios al Consumidor (IPC) e Inflación Japón",
+    "entidad": "STAT_JAPAN",
+    "pais": "JAPON",
+    "fecha_publicacion": "2026-08-25",
+    "hora_publicacion": "08:30",
+    "timezone": "Asia/Tokyo",
+    "impacto": "ALTO",
+    "reporte_asociado": "flash_cpi_japon",
+    "fuente_oficial": "https://www.stat.go.jp/english/data/cpi/",
+    "ultima_verificacion": "2026-08-24T19:27:57.874995+00:00",
+    "series_afectadas": [
+      "JAPAN_CPI_YOY",
+      "JAPAN_CORE_CPI_YOY",
+      "USDJPY"
+    ]
+  },
+  {
+    "id": "boj_2026_09_decision",
+    "nombre": "Decisión de Política Monetaria Banco de Japón (BoJ)",
+    "entidad": "BOJ",
+    "pais": "JAPON",
+    "fecha_publicacion": "2026-09-17",
+    "hora_publicacion": "12:00",
+    "timezone": "Asia/Tokyo",
+    "impacto": "CRITICO",
+    "reporte_asociado": "flash_boj_tasas",
+    "fuente_oficial": "https://www.boj.or.jp/en/",
+    "ultima_verificacion": "2026-08-24T19:27:57.874995+00:00",
+    "series_afectadas": [
+      "BOJ_POLICY_RATE",
+      "JGB_10Y_YIELD",
+      "USDJPY"
+    ]
+  },
+  {
+    "id": "treasury_qra_2026_q4",
+    "nombre": "Quarterly Refunding Announcement (QRA) Q4-2026",
+    "entidad": "TREASURY",
+    "pais": "USA",
+    "fecha_publicacion": "2026-11-04",
+    "hora_publicacion": "08:30",
+    "timezone": "America/New_York",
+    "impacto": "ALTO",
+    "reporte_asociado": "flash_qra_tesoro",
+    "fuente_oficial": "https://home.treasury.gov",
+    "ultima_verificacion": "2026-08-24T19:27:57.874995+00:00",
+    "series_afectadas": [
+      "BUYBACK_MAX_CAP",
+      "REFUNDING_ESTIMATES"
+    ]
+  }
+]

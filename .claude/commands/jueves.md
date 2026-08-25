@@ -1,6 +1,7 @@
 Genera la operativa diaria del jueves pieza por pieza para aprobación.
 
 ## SETUP
+1. Verifica el estado de ingesta soberana en data central/DATA AGENDA/calendario_2026.json y pipeline_ingesta.py.
 1. Determina los activos del día leyendo `config/agenda_semanal.json` y `config/activos.json` según el día de la semana.
 
 > **Orden del flujo**: el dato macro se genera y envía PRIMERO, para que el cliente reciba el fundamental del día mientras se cargan los niveles en MT5 (los niveles requieren input manual y tardan más).
@@ -15,10 +16,10 @@ Sin ese argumento, ignora esta sección y genera solo el contenido de cliente, c
 
 ---
 
-## PIEZA 1 — Dato macro del día
+## PIEZA 1: Dato macro del día
 
 Obtén el calendario económico de hoy:
-- Obtén el calendario de hoy con `WebSearch` sobre investing.com (Chile, EE.UU., Zona Euro, China; impacto medio y alto), como en el PASO 1 de `/dato_macro`. Convierte cada hora a Chile con el helper determinista `scripts\hora_chile.ps1` (según la zona de origen del dato; nunca offsets fijos) — ver PASO 1B de `/dato_macro`.
+- Obtén el calendario de hoy con `WebSearch` sobre investing.com (Chile, EE.UU., Zona Euro, China; impacto medio y alto), como en el PASO 1 de `/dato_macro`. Convierte cada hora a Chile con el helper determinista `scripts\hora_chile.ps1` (según la zona de origen del dato; nunca offsets fijos): ver PASO 1B de `/dato_macro`.
 - Si no hay eventos de impacto medio/alto hoy → continuar.
 
 **NOTA JUEVES**: Los jueves suelen publicarse solicitudes de desempleo semanal (Jobless Claims) de EE.UU. (~9:30 CLT). Si aparece, recomendarlo al director como dato para desarrollar (afecta DXY, USD/CLP, US100, US500).
@@ -27,7 +28,7 @@ Lista numerada con los datos del día. Pregunta al director cuál(es) desarrolla
 
 Al generar el mensaje WhatsApp:
 ```
-📅 *DATO MACRO — [INDICADOR]*
+📅 *DATO MACRO: [INDICADOR]*
 ━━━━━━━━━━━━━━━━━━━
 ¿Qué es?
 [Explicación simple en 1-2 líneas]
@@ -58,7 +59,7 @@ Si el dato ya tiene valor "actual" (ya salió), modo resultado:
 
 ---
 
-## PIEZA 2 — Apertura de mercado
+## PIEZA 2: Apertura de mercado
 
 Ejecuta `/apertura` (ver `.claude/commands/apertura.md`).
 
@@ -66,21 +67,21 @@ Ejecuta `/apertura` (ver `.claude/commands/apertura.md`).
 
 ---
 
-## PIEZA 3 — Encuesta de tendencia (jueves = tendencia AM)
+## PIEZA 3: Encuesta de tendencia (jueves = tendencia AM)
 
 El jueves la encuesta es de TENDENCIA.
 
 Genera 2 bloques:
 
-**Bloque A — Contexto previo**:
+**Bloque A: Contexto previo**:
 ```
-🎯 *ANÁLISIS RÁPIDO — [ACTIVO]*
+🎯 *ANÁLISIS RÁPIDO: [ACTIVO]*
 ━━━━━━━━━━━━━━━━━━━
 [2-3 líneas con precio actual, sesgo, dato clave del día o de la semana]
 ━━━━━━━━━━━━━━━━━━━
 ```
 
-**Bloque B — Encuesta de tendencia**:
+**Bloque B: Encuesta de tendencia**:
 ```
 📊 *ENCUESTA DEL DÍA*
 ━━━━━━━━━━━━━━━━━━━
@@ -103,5 +104,5 @@ Voten y veamos si acertamos 👇
 - Hora siempre en hora Chile (CLT/CLST).
 - Un indicador por aviso (nunca mezclar en el mismo mensaje).
 - Si WhatsApp MCP no está disponible: mostrar texto listo para copiar.
-- **Dirección explícita**: SIEMPRE usar `*Alcista* 🟢` o `*Bajista* 🔴` en escenarios — nunca "puede subir", "podría bajar", "fuerza compradora" ni "presión vendedora".
+- **Dirección explícita**: SIEMPRE usar `*Alcista* 🟢` o `*Bajista* 🔴` en escenarios: nunca "puede subir", "podría bajar", "fuerza compradora" ni "presión vendedora".
 - **Temporalidad obligatoria**: cada reacción a dato macro lleva `(impacto inmediato, ~1-2h)` o `(tendencia del día, intra-day)`. Si no hay certeza de dirección: `*Esperar confirmación* 🟡`.

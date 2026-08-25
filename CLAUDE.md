@@ -100,10 +100,15 @@ Zonas canónicas (IDs Windows): EE.UU. (BLS/ISM/ADP/EIA/Fed) → `Eastern Standa
 
 ## Indicadores técnicos
 Un aviso = un indicador. NUNCA mezclar múltiples señales técnicas al mismo tiempo:
-- **ATR** → recalcar su uso en USD/CLP como indicador de volatilidad
+- **ADC (Ancho Dinámico de Canal)** → medir la amplitud del canal operativo (Donchian 50 / distancia entre Bandas de Bollinger: Superior - Inferior) para evaluar compresión de volatilidad vs. fases de expansión
+- **Modelo ADC + ATR** → modelo cuantitativo estándar para proyectar recorridos:
+  1. *Amplitud de canal (ADC)*: define los límites y la zona de compresión/rango del precio
+  2. *Impulso intradía proyectado*: se calcula como $1.5 \times \text{ATR}_{14}(\text{H1})$ tras la ruptura o rebote de un nivel clave
+  3. *Validación de volatilidad diaria*: se contrasta con el ATR restante diario ($\text{ATR}_{14}\text{ D1} - \text{Rango Hoy}$) para asegurar que el movimiento quepa dentro del espacio disponible de la sesión sin forzar la lectura
+- **ATR** → recalcar su uso en USD/CLP como indicador de volatilidad y recorridos proyectados
 - **RSI** → avisar cuando esté sobrecomprado o sobrevendido
 - **MACD** → avisar cruces relevantes
-- **Medias móviles** → avisar cruces de medias (ej: cruce de la 50 con la 200)
+- **Medias móviles** → avisar cruces y niveles de soporte/resistencia dinámicos (ej: cruce o rebote en EMA 50 y EMA 100)
 
 ## Formato visual de mensajes WhatsApp
 
@@ -558,7 +563,7 @@ El helper crea las carpetas y devuelve la ruta lista para `Write`. Si la pieza n
 
 **Tipos de archivo** (carpeta `<tipo>`): niveles, dato_macro, noticia, alerta, encuesta, señal, concepto, pregunta, respuesta, cierre, earnings, postventa. La salida de `/apertura` usa tipo `niveles`.
 
-**Modo ejecutivo (flag `ejecutivo`)**: aceptan el argumento `ejecutivo` (ej. `/lunes ejecutivo`, `/noticia ejecutivo`) **todos los comandos que producen un mensaje de cliente reenviable**: los 7 comandos de día, los comandos de tarea de Capa 2 (`/encuesta`, `/rencuesta`, `/apertura`, `/actualizacion`, `/dato_macro`, `/noticia`, `/señal`, `/alerta`, `/concepto`, `/pregunta`, `/respuesta`) y los de acción de Capa 3 (`/accion`, `/earnings`). Por cada pieza/mensaje de cliente generan, además del mensaje de cliente (idéntico, con todas las reglas de oro), un **guion de venta privado** para el grupo interno de ejecutivos (gancho + a quién, qué decir, manejo de objeciones, llamado a la acción), marcado `🔒 INTERNO · NO ENVIAR AL CLIENTE`. El guion se guarda con `ruta_mensaje.ps1` bajo el tipo `guion_<tipo>` (ej. `guion_niveles`, `guion_noticia`, `guion_señal`), mismo activo y hora que el mensaje de cliente. **No elegibles** (ignoran el flag): `/estado` (no envía nada), `/chart` (genera PNG, no texto), `/curriculo` (delega en `/rencuesta`/`/concepto`, que ya generan su guion) `/ventas` (su contenido ya es 100% interno para el equipo de ventas — es el HUB INTERNO por sí mismo, no necesita un guion adicional que lo envuelva) y `/postventa` (su contenido ya es 100% interno para el equipo de post-venta — mismo criterio que `/ventas`). Contrato único en `.claude/shared/modo_ejecutivo.md`.
+**Piezas públicas limpias (sin guiones internos)**: los comandos y flujos que generan piezas de mercado (`/alerta`, `/apertura`, `/dato_macro`, `/noticia`, `/señal`, `/oportunidad`, `/story`, etc.) entregan **exclusivamente material para el cliente final** (mensaje de WhatsApp + Story visual de marca). Queda estrictamente excluido del flujo la generación automática o paralela de guiones internos o piezas para ejecutivos. El material 100% interno queda reservado única y exclusivamente a los comandos dedicados `/ventas` (para el equipo de ventas) y `/postventa` (para el equipo de post-venta).
 
 **Convención de nombres de chart (issue #81)**: los PNG de `data/charts/` siguen el patrón único `<activo_slug>_<TF>_<YYYY-MM-DD_HH-MM>.png`, con el mismo `<activo_slug>` de `ruta_mensaje.ps1` (#45) — `lowercase(ticker_mt5)` sin `.spot`/`#`/`/` — y `<TF>` en mayúscula MT5 (`M15`/`H1`/`H4`/`D1`). Ej: `usdclp_H4_2026-06-07_11-45.png`. Los `data/charts/*.png` están gitignored.
 

@@ -1,0 +1,150 @@
+{
+  "metadatos": {
+    "titulo": "Oro consolida sobre $4.600 y sólida expansión en servicios de EE. UU.",
+    "subtitulo": "El oro mantiene un firme sesgo comprador en torno a los $4.624, mientras los PMIs de servicios en EE. UU. sorprenden al alza (56.8) y el USD/CLP opera estable en $915.20.",
+    "fecha_rango": "17 al 21 de Agosto, 2026",
+    "edicion": "Edición N° 34",
+    "fecha_publicacion": "Viernes, 21 de Agosto de 2026 · 17:30 CLT",
+    "analista": "Departamento de Estudios",
+    "departamento": "Research & Estrategia",
+    "kpi_portada_1_sym": "USD/CLP",
+    "kpi_portada_1_val": "$915.20",
+    "kpi_portada_1_chg": "+0.32% ▲",
+    "kpi_portada_1_desc": "Consolidó sobre soporte de $905.30",
+    "kpi_portada_2_sym": "ORO (XAU/USD)",
+    "kpi_portada_2_val": "$4,624.14",
+    "kpi_portada_2_chg": "+2.85% ▲",
+    "kpi_portada_2_desc": "Firme impulso comprador sobre $4.600",
+    "kpi_portada_3_sym": "WTI (CRUDO)",
+    "kpi_portada_3_val": "$87.402",
+    "kpi_portada_3_chg": "+1.95% ▲",
+    "kpi_portada_3_desc": "Sólido soporte sobre media de 50 ($82.35)"
+  },
+  "scorecard_activos": [
+    {
+      "simbolo": "USD/CLP",
+      "nombre": "Dólar / Peso Chileno",
+      "precio_cierre": "$915.20",
+      "variacion_semanal": "+0.32%",
+      "direccion": "sube",
+      "rango_semanal": "$905.30 – $922.07",
+      "driver_clave": "Mantuvo soporte clave de $905.30 amortiguado por la firmeza del cobre sobre 14.180 puntos."
+    },
+    {
+      "simbolo": "Oro (XAU/USD)",
+      "nombre": "Onza Troy de Oro",
+      "precio_cierre": "$4,624.14",
+      "variacion_semanal": "+2.85%",
+      "direccion": "sube",
+      "rango_semanal": "$4,453.48 – $4,624.14",
+      "driver_clave": "Fuerte presión compradora; consolida sobre $4.600 respaldado por coberturas de bancos centrales."
+    },
+    {
+      "simbolo": "WTI (Petróleo)",
+      "nombre": "Crudo West Texas",
+      "precio_cierre": "$87.402",
+      "variacion_semanal": "+1.95%",
+      "direccion": "sube",
+      "rango_semanal": "$85.772 – $89.359",
+      "driver_clave": "Consolidación alcista sobre su media de 50 ($82.35); prima de riesgo compensó alza de inventarios EIA."
+    },
+    {
+      "simbolo": "US100 (Nasdaq)",
+      "nombre": "Nasdaq 100",
+      "precio_cierre": "29,330.71",
+      "variacion_semanal": "-0.40%",
+      "direccion": "baja",
+      "rango_semanal": "28,935.51 – 29,704.61",
+      "driver_clave": "Pausa técnica y toma de beneficios ordenada tras testear la resistencia de 29.700 puntos."
+    },
+    {
+      "simbolo": "Cobre (COPPER)",
+      "nombre": "Cobre Grado A",
+      "precio_cierre": "14183",
+      "variacion_semanal": "+1.15%",
+      "direccion": "sube",
+      "rango_semanal": "13544 – 14336",
+      "driver_clave": "Resiliencia sobre los 14.000 puntos; sostiene la balanza comercial y al peso chileno."
+    }
+  ],
+  "catalizadores_macro": [
+    {
+      "categoria": "ACTIVIDAD & SERVICIOS EE. UU.",
+      "icono": "📊",
+      "titulo": "Expansión en Servicios (PMI 56.8) y Salto en Philly Fed (47.4)",
+      "texto": "El PMI de Servicios de S&P Global repuntó con fuerza a 56.8 puntos (frente al 54.6 anterior), confirmando un ritmo de crecimiento robusto en el sector terciario estadounidense. Complementariamente, el índice manufacturero de la Fed de Filadelfia saltó a 47.4 puntos (superando ampliamente los 24.1 proyectados por el consenso). Estos datos reducen significativamente las probabilidades de una desaceleración brusca en el corto plazo y respaldan la resiliencia del consumo privado."
+    },
+    {
+      "categoria": "POLÍTICA MONETARIA & TASAS FED",
+      "icono": "🏛️",
+      "titulo": "Minutas del FOMC: Cautela en Recortes y Fortaleza Laboral (206K)",
+      "texto": "Las actas de la última reunión de la Reserva Federal reiteraron un enfoque estrictamente condicionado a la inflación antes de acelerar el ciclo de recortes de tasas de interés. En el frente laboral, las peticiones iniciales de subsidio por desempleo marcaron 206K (frente a las 210K esperadas), ratificando un mercado laboral que se mantiene firme y da margen a la Fed para mantener una política monetaria restrictiva sin presiones de urgencia."
+    },
+    {
+      "categoria": "MERCADO LOCAL & COMMODITIES",
+      "icono": "🇨🇱",
+      "titulo": "Cobre en 14.183 Puntos y Estabilidad en el Tipo de Cambio",
+      "texto": "Pese a que la producción industrial de China creció un 4.5% interanual (ligeramente por debajo del 5.0% esperado), la cotización del cobre se mantuvo sólida en 14.183 puntos debido a los bajos niveles de inventarios en bodegas internacionales. Esta fortaleza del metal rojo actuó como un ancla estabilizadora decisiva para el peso chileno, impidiendo que el USD/CLP superara la resistencia técnica de los $922 durante la semana."
+    }
+  ],
+  "analisis_intermercado": {
+    "titulo": "Dinámica Intermercado de la Semana",
+    "parrafo": "El cierre semanal exhibió una clara divergencia constructiva: el oro consolidó su fortaleza por encima de los $4.600 con un sesgo comprador dominante, mientras que la solidez de los indicadores de actividad en EE. UU. mantuvo firmes los rendimientos de los bonos del Tesoro. El Nasdaq (29.330,71) experimentó una toma de beneficios técnica sin comprometer su estructura de mediano plazo. Por su parte, el crudo WTI ($87.402) defendió su rango alto ante la prima de riesgo geopolítico, y el USD/CLP ($915.20) cerró con balance neutral respaldado por el cobre."
+  },
+  "semaforo_tactico": {
+    "oportunidades": {
+      "titulo": "Oportunidades & Momentum (Flujo Comprador)",
+      "items": [
+        "**Oro (XAU/USD):** Compras tácticas en testeos de soporte en la zona de $4.500 buscando continuidad de la tendencia compradora.",
+        "**Petróleo WTI:** Posicionamiento alcista sobre el piso técnico de $85.70 con objetivo primario en la resistencia de $93.80.",
+        "**Cobre & Renta Variable Minera:** Exposición favorable en activos ligados a materias primas sobre los 14.000 puntos del metal."
+      ]
+    },
+    "cautela": {
+      "titulo": "Zonas de Cautela & Confirmación (Esperar)",
+      "items": [
+        "**USD/CLP:** Rango lateral $905.30 – $922.07; esperar confirmación direccional de ruptura antes de ejecutar operativas swing.",
+        "**Nasdaq (US100):** Aguardar consolidación en soporte de 28.935 puntos o superación confirmada de 29.705 para nuevas entradas."
+      ]
+    },
+    "riesgo": {
+      "titulo": "Focos de Riesgo & Evitar (Gestión de Capital)",
+      "items": [
+        "**Ventas descubiertas en activos con fuerte momentum:** Evitar contratendencias agresivas en metales preciosos.",
+        "**Operaciones de fin de semana sin Stop Loss:** Proteger carteras frente a eventuales brechas de apertura (gaps) el domingo."
+      ]
+    }
+  },
+  "radar_proxima_semana": [
+    {
+      "dia": "Lunes 24",
+      "evento": "Subastas de Deuda del Tesoro (2Y y 5Y)",
+      "impacto": "Medio",
+      "relevancia": "Medirá la demanda global por bonos soberanos y el costo de financiamiento en dólares."
+    },
+    {
+      "dia": "Martes 25",
+      "evento": "Confianza del Consumidor (Conference Board)",
+      "impacto": "Alto",
+      "relevancia": "Termómetro directo sobre las expectativas económicas y presiones de gasto de los hogares."
+    },
+    {
+      "dia": "Miércoles 26",
+      "evento": "Inventarios Semanales de Crudo (EIA)",
+      "impacto": "Alto",
+      "relevancia": "Verificará si el consumo de refinados y la demanda real respaldan el nivel actual del crudo."
+    },
+    {
+      "dia": "Jueves 27",
+      "evento": "PIB Preliminar Q2 y Subsidios por Desempleo",
+      "impacto": "Alto",
+      "relevancia": "Actualización oficial del crecimiento económico de EE. UU. y seguimiento al empleo semanal."
+    },
+    {
+      "dia": "Viernes 28",
+      "evento": "Deflactor del Consumo PCE Subyacente",
+      "impacto": "Crítico",
+      "relevancia": "El dato de inflación rector para la Reserva Federal previo a la reunión de política monetaria."
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "certificate_schema_version": "1.0.0",
+  "certificate_id": "GENESIS-S3_BREAKOUT_DONCHIAN_H1-XAUUSD-v1-2026-08-21",
+  "trial_id": "S3_BREAKOUT_DONCHIAN_H1__XAUUSD__v1",
+  "status": "REVOKED",
+  "human_review": "PENDING",
+  "operational_status": "BLOQUEADO",
+  "genesis_repo": "ramaDben/genesis",
+  "genesis_commit": "genesis-v1.4-verified",
+  "catalogue_version": "1.3.0",
+  "catalogue_hash": "11769072ae1740d22d27602a2f0472b45868d21d35e63e8085a83afe2a33429f",
+  "strategy_code_version": "s3_donchian_breakout_v1",
+  "data_snapshot_id": "SNAP-XAUUSD-H1-32ced7a1",
+  "data_hash": "32ced7a16c220132f33d96bac2bca3266d7866c45c89d6ec1d0fcbc9fde8e6c2",
+  "regime_snapshot_id": "REG-e4b0a451",
+  "config_hash": "fd5f79d6354cb602",
+  "n_trials_total": 5400,
+  "metrics": {
+    "dsr": 0.96,
+    "pbo": 0.12,
+    "sharpe_is": 0.056248499837278546,
+    "sharpe_oos": 0.0511349998520714,
+    "max_drawdown_oos": 0.008473945484659816,
+    "trades_oos": 45,
+    "profit_factor": 1.155906096289828,
+    "wfe": 0.68
+  },
+  "gate": {
+    "dsr_min": 0.0,
+    "pbo_max": 0.2,
+    "sharpe_oos_ratio_min": 0.5,
+    "trades_oos_min": 30,
+    "max_drawdown_oos_max": 0.15
+  },
+  "issued_at_utc": "2026-08-21T14:28:43.205347+00:00",
+  "signature_hash": "77b29c36dfecc3ff73880bb7f73fdfb6ed20c680c1d2fc9d1979ebb0523391af",
+  "reviewer_notes": null,
+  "live_approval_notes": null,
+  "lifecycle_status": "CANDIDATO",
+  "certificate_status": "REVOKED",
+  "revocation_reason": "INVALID_METRICS_AND_INSUFFICIENT_SAMPLE",
+  "revoked_at_utc": "2026-08-21T16:28:39.283604+00:00"
+}

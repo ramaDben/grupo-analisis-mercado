@@ -56,14 +56,15 @@ Para la conversión a CLP:
 **IMPORTANTE**: verificar en data/historial_senales.json que no se excedan 3 señales por semana.
 
 ### 4. Indicadores técnicos
-Cuando se use un indicador, explicar UNO SOLO por aviso:
+Cuando se use un indicador, explicarlo con claridad y en lenguaje ciudadano:
 
-- **ATR**: "La volatilidad del USD/CLP está [alta/baja/normal]. El ATR en 4H muestra [valor], lo que significa que el precio puede moverse [X pips] en las próximas horas."
-- **RSI**: "El RSI en [temporalidad] está en [valor] — zona de [sobrecompra/sobreventa]. Esto sugiere que [interpretación simple]."
+- **ADC (Ancho Dinámico de Canal)**: "El canal operativo muestra [compresión/expansión] de volatilidad (amplitud: [X] pts). Esto anticipa una posible ruptura direccional."
+- **ATR**: "La volatilidad del activo se ubica en [valor] pts en H1. El recorrido proyectado tras ruptura es de [X.XX] pts (1.5x ATR H1)."
+- **RSI**: "El RSI en [temporalidad] está en [valor], zona de [sobrecompra/sobreventa]. Esto sugiere [interpretación simple]."
 - **MACD**: "El MACD acaba de cruzar al [alza/baja] en [temporalidad]. Esto suele indicar [interpretación simple]."
-- **Medias móviles**: "La media de [50/200] períodos acaba de cruzar [por encima/debajo] de la de [200/50]. Este cruce se conoce como [golden cross / death cross] y suele indicar [interpretación]."
+- **Medias móviles (EMAs)**: "La media de [50/100/200] períodos actúa como soporte/resistencia institucional en [precio]."
 
-**Regla**: UN indicador por aviso. Nunca mezclar.
+**Regla**: Claridad ante todo. Explicar el concepto en lenguaje directo sin abrumar.
 
 ## Formato de salida
 Retornar JSON estructurado:

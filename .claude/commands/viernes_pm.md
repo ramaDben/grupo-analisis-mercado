@@ -3,6 +3,7 @@ Genera el cierre semanal del viernes por la tarde para aprobación.
 Este comando se ejecuta por la tarde (después del cierre de mercados en NY) para cerrar la semana del grupo.
 
 ## SETUP
+1. Verifica el estado de ingesta soberana en data central/DATA AGENDA/calendario_2026.json y pipeline_ingesta.py.
 Hoy es viernes por la tarde. El mercado de EE.UU. cerró. Es momento del resumen semanal.
 
 ---
@@ -15,7 +16,7 @@ Sin ese argumento, ignora esta sección y genera solo el contenido de cliente, c
 
 ---
 
-## PIEZA ÚNICA — Cierre semanal
+## PIEZA ÚNICA: Cierre semanal
 
 Recopila qué pasó esta semana con nuestros activos:
 - Con `WebSearch` obtén el resumen de eventos de la semana (últimos ~5 días) sobre investing.com + fuentes oficiales.
@@ -25,7 +26,7 @@ Recopila qué pasó esta semana con nuestros activos:
 Estructura el mensaje así:
 
 ```
-📊 *CIERRE SEMANAL — [FECHA]*
+📊 *CIERRE SEMANAL: [FECHA]*
 ━━━━━━━━━━━━━━━━━━━
 🎯 Esta semana: [1 frase clave que resume lo más importante]
 ━━━━━━━━━━━━━━━━━━━

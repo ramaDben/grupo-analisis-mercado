@@ -12,7 +12,8 @@ Léelo antes de ejecutar cualquier workflow de `.agents/workflows/`.
 
 Precios, niveles, indicadores, calendario económico y operaciones abiertas salen
 **siempre** del MCP `market-data`. Nunca de tu memoria, nunca de una búsqueda web,
-nunca deducidos de otro número.
+nunca deducidos de otro número, **y NUNCA delegados a un subagente que pueda alucinar el resultado**. 
+Para asegurar fidelidad, extrae el precio y los niveles ejecutando tú mismo los scripts del MCP (ej. llamando a `mt5_client.get_rates` vía Python) en lugar de depender de resúmenes de subagentes.
 
 Si el MCP falla, **detente y dilo**. Una pieza con un precio inventado es peor que
 ninguna pieza: el cliente opera con ella.
@@ -49,12 +50,14 @@ ir en la pieza como evidencia, pero **sin veredicto**. Ponerle "mejor de lo
 esperado" a algo que nadie pronosticó es afirmar una comparación que no existe, y
 el cliente la lee como un hecho verificado.
 
-## 1 bis. Escribe los archivos en UTF-8
+## 1 bis. Escribe los archivos en UTF-8 y CUIDADO con las tuberías (`|`)
 
 En Windows, `Set-Content` y `Out-File` de PowerShell usan por defecto la
-codificación ANSI del sistema. Un payload JSON escrito así llega al renderer con
-los acentos rotos, y la pieza sale con `AN?LISIS`, `inversi?n`, `?Quieres` — y
-también el separador `·` de las cabeceras.
+codificación ANSI del sistema. Además, **usar tuberías (`|`) en PowerShell (ej: `Get-Content payload.json | python script.py`) corromperá irremediablemente los caracteres UTF-8 (tildes, eñes, y el punto medio `·`) inyectando signos de interrogación (`?`)**, ya que PowerShell transforma los bytes en Strings y los envía usando `$OutputEncoding` en US-ASCII.
+
+Para ejecutar los pipelines encadenados (como `serie_mt5 | story_grafico | story_render`), **NUNCA uses la consola de PowerShell conectando comandos con `|` o `Get-Content`**. Escribe un pequeño script puente en Python que lea el JSON en bytes y utilice `subprocess` para ejecutar el pipeline de forma segura y binaria.
+
+Un payload JSON mal escrito llega al renderer con los acentos rotos, y la pieza sale con `AN?LISIS`, `inversi?n`, `?Quieres`.
 
 Usa siempre UTF-8 explícito:
 
@@ -124,15 +127,23 @@ real: si se lee como escrito por una máquina, la firma pierde credibilidad. El
 punto medio `·` sí se mantiene, porque es separador del kit de marca
 (`ORO · XAU/USD`) y no puntuación de frase.
 
-## 5. Terminología de niveles
+## 5. Terminología de niveles e Indicadores
 
 Siempre "soporte" y "resistencia". Nunca "techo" ni "suelo".
 
-## 6. Nada se envía sin aprobación
+### Modelo ADC (Ancho Dinámico de Canal) y Volatilidad ATR
+El análisis técnico e intradía utiliza formalmente el **Modelo ADC + ATR**:
+1. **ADC (Ancho Dinámico de Canal)**: Mide la amplitud técnica del canal operativo (Donchian 50 o distancia entre Bandas de Bollinger: $\text{Superior} - \text{Inferior}$) para determinar si el activo se encuentra en fase de compresión (acumulación / rango estrecho) o fase de expansión.
+2. **Proyección de Impulso por ATR**: Para establecer recorridos y zonas objetivo tras el quiebre o rebote de un nivel clave, se utiliza el impulso proyectado de $1.5 \times \text{ATR}_{14}\text{ (H1)}$ (calibrado con la lectura de tendencia del ADX).
+3. **Validación contra ATR Restante Diario**: Toda proyección intradía debe validarse contra el ATR restante diario ($\text{ATR}_{14}\text{ D1} - \text{Rango Hoy}$), asegurando que el recorrido estimado quepa holgadamente dentro de la volatilidad esperada de la jornada sin sobreextender el movimiento.
+
+## 6. Nada se envía sin aprobación (Piezas públicas limpias)
 
 Todo contenido se genera, se muestra al director y **espera su aprobación**. Al
 aprobar, se guarda con `scripts\ruta_mensaje.ps1` (mensajes) o
 `scripts\ruta_story.ps1` (imágenes) — nunca armes la ruta a mano.
+
+**Piezas públicas 100% limpias para clientes**: Los flujos y comandos públicos (`/alerta`, `/apertura`, `/dato_macro`, `/noticia`, `/señal`, `/oportunidad`, `/story`) generan **exclusivamente material para el cliente final** (mensaje de WhatsApp + Story visual de marca). Queda terminantemente excluida la generación automática de guiones o piezas internas para ejecutivos en estos flujos. Las herramientas internas quedan reservadas exclusivamente a los comandos dedicados `/ventas` y `/postventa`.
 
 El envío a WhatsApp lo hace el director copiando el texto. Tú no envías nada.
 
@@ -172,3 +183,11 @@ Verifica con `uv run python scripts/marca_tokens.py --check`.
 - `CLAUDE.md` — las reglas completas del proyecto.
 - `.claude/commands/<nombre>.md` — la definición canónica de cada comando.
 - `docs/architecture.md` — cómo encaja todo.
+
+## 8. Pipeline de Generación de Gráficos (El Gold Standard)
+
+El pipeline de gráficos (`serie_mt5.py` -> `story_grafico.py` -> `story_render.py`) es extremadamente delicado. Para garantizar su funcionamiento, debes seguir estrictamente estas reglas empíricas de renderización:
+
+1. **Uso de Clases Exactas en el Payload**: En los comandos de operaciones (como `/recomendacion`), NUNCA inventes clases para los `hitos` o `niveles`. Debes usar EXCLUSIVAMENTE las clases soportadas por el CSS del snapshot (`meta`, `entrada`, `stop`, `actual`). Usar clases como `"origen"` o `"soporte"` hará que el nivel desaparezca por completo, arruinando la imagen.
+2. **Uso de H1 Estricto**: Por requerimiento corporativo, las operaciones (incluso las Posicionales de semanas) DEBEN renderizarse con `--timeframe H1 --velas 60`. El motor gráfico (`story_grafico.py`) cuenta con matemáticas de *clamping* (anclaje) que evitarán que el gráfico se aplaste si el Take Profit o Stop Loss están demasiado lejos, garantizando la correcta lectura visual de la volatilidad sin sacrificar el encuadre.
+3. **Cuidado con el CSS**: Si en algún momento debes editar o inspeccionar los archivos `.css` de las plantillas (como `marca.css` o `recomendacion.html`), NUNCA dejes comentarios truncos (`*/` sueltos). Playwright usa un motor de render estricto que invisibilizará variables y elementos completos si detecta sintaxis CSS rota.

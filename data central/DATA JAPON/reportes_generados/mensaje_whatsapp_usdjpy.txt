@@ -1,0 +1,53 @@
+🎯 Activo: Dólar / Yen Japonés (USD/JPY)
+📌 Nivel a vigilar: 159.618 (50% de Fibonacci y zona de EMA 100 diaria)
+⚡ Qué esperar: Definición de tendencia tras el dato de inflación de Japón (01:00 AM)
+
+━━━━━━━━━━━━━━━━━━━
+
+📊 *DATO MACRO EN LA MIRA: IPC DE JAPÓN*
+
+Esta madrugada a la *01:00 AM (hora de Chile)* se publica el *Índice de Precios al Consumidor (IPC subyacente)* de Japón. Este dato es el termómetro principal que utiliza el Banco de Japón (BoJ) para decidir si continuará subiendo su tasa de interés desde el actual 1.00% hacia 1.25% en su reunión de septiembre.
+
+Un dato de inflación más alto de lo esperado acelera las alzas de tasas en Tokio, lo que fortalece al yen y empuja al par a la baja. Por el contrario, una inflación débil da un respiro al banco central, restándole fuerza a la moneda nipona.
+
+━━━━━━━━━━━━━━━━━━━
+
+📈 *CONFLUENCIA TÉCNICA EN DIARIA (D1)*
+
+Niveles en D1: marco swing de jornada (1 a 3 días).
+
+💡 Por qué D1 aquí: tras el fuerte movimiento bajista previo desde 163.979 hasta 155.256, el precio ha desarrollado un rebote correctivo que se encuentra testeando una zona de alta confluencia técnica:
+
+• *50% de Fibonacci (159.618)*: nivel matemático de equilibrio del último impulso bajista.
+• *Medias móviles clave*: la cotización presiona la zona de la media móvil exponencial de 100 periodos (EMA 100 D1 en 160.051) y la EMA 50 D1 (160.219), que actúan como resistencia dinámica.
+• *Soporte estructural*: el 61.8% de Fibonacci en 158.588 junto a la EMA 200 D1 en 158.493 conforman el piso a defender para los compradores.
+
+━━━━━━━━━━━━━━━━━━━
+
+🎯 *ESCENARIOS OPERATIVOS FRENTE AL DATO*
+
+🟢 *Escenario Alcista (Inflación bajo lo esperado, Core CPI ≤ 2.5%)*
+• Lectura: Alivio inflacionario que posterga nuevas alzas de tasas.
+• Implicancia: Rebote comprador en el par por debilidad del yen.
+• Objetivos: Superación de 159.618 para buscar 160.647 (38.2% Fibo) y 161.800.
+
+🟡 *Escenario Base (En línea con consenso, Core CPI entre 2.6% y 2.8%)*
+• Lectura: Normalización monetaria gradual confirmada y ya descontada.
+• Implicancia: Movimiento lateral y absorción en zona de medias móviles.
+• Rango esperado: Fluctuación entre 158.500 y 159.800.
+
+🔴 *Escenario Bajista (Inflación sobre lo esperado, Core CPI ≥ 2.9%)*
+• Lectura: Presión máxima sobre el BoJ para subir tasas en septiembre.
+• Implicancia: Fuerte impulso vendedor en USD/JPY por apreciación del yen.
+• Objetivos: Ruptura de 158.588 con extensión hacia soportes en 156.500 y 154.000.
+
+━━━━━━━━━━━━━━━━━━━
+
+🟢 Sobre 159.618: impulso comprador hacia resistencias (160.647)
+🟡 Entre 158.588 y 159.618: zona de espera y confirmación
+🔴 Bajo 158.588: confirmación de presión vendedora (156.500)
+
+━━━━━━━━━━━━━━━━━━━
+
+📅 *Calendario económico completo*: https://es.investing.com/economic-calendar/
+💬 Consulta con tu analista asignado para evaluar la estrategia de cobertura antes de la publicación.

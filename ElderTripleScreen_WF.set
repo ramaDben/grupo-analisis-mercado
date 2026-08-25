@@ -1,0 +1,14 @@
+InpTimeframeBase=16408||0||0||0||N
+InpTimeframeTrend=16413||0||0||0||N
+InpEmaImpulsePeriod=13||9||2||21||Y
+InpMacdFast=12||8||1||16||N
+InpMacdSlow=26||20||2||34||N
+InpMacdSignal=9||5||1||14||N
+InpForceIndexPeriod=2||2||1||5||N
+InpEmaBasePeriod=13||9||2||21||N
+InpAtrPeriod=14||10||2||20||N
+InpRiskPercent=2.0||1.0||0.5||5.0||N
+InpMaxMonthlyDrawdown=6.0||3.0||1.0||10.0||N
+InpAtrStopLossMult=2.0||1.0||0.5||3.5||Y
+InpAtrTakeProfitMult=2.5||1.5||0.5||4.5||Y
+InpPenetrationLookback=50||20||10||100||N

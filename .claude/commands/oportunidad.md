@@ -18,19 +18,20 @@ Siempre debes consultar los precios reales y niveles técnicos antes de armar la
 
 ## Estructura del Mensaje (Texto para WhatsApp)
 
-El texto debe seguir estrictamente esta estructura, con un tono profesional, orientado a la acción comercial, pero sin ser una recomendación directa de inversión:
+El texto debe seguir estrictamente esta estructura, con un tono profesional y técnico, combinando análisis fundamental y técnico en un enfoque híbrido sin ser una recomendación directa de inversión:
 
-1. **¿Qué está pasando y por qué es relevante? (Contexto y Fundamental)**
-   (Ej. "Mercado Libre (MELI) continúa consolidándose... Diversos analistas del mercado mantienen una visión positiva...")
-2. **¿Qué vemos en el gráfico? (Análisis técnico — OPCIONAL)**
-   (No es estrictamente necesario, úsalo solo si aporta valor claro, ya que la imagen ya incluye los niveles y puede ser confuso).
-3. **¿Cómo puede acceder el cliente? (Llamado a la acción comercial)**
-   Debe estar orientado tanto a ejecutivos (prospección) como analistas (postventa). SIEMPRE debe invitar a una reunión.
-   (Ej. "Si deseas conocer cómo acceder a esta acción y revisar si se ajusta a tu perfil de inversión, contáctanos. En Grupo Inteligencia contamos con este instrumento disponible para nuestros clientes. ¿Generemos una reunión para revisar en detalle esta acción?")
+1. **Resumen inicial (Above the fold)**
+   - 🎯 Activo: [Nombre activo] ([Ticker])
+   - 📌 Nivel a vigilar: [Precio nivel intermedio / resistencia inmediata]
+   - ⚡ Qué esperar: [1 línea de acción y proyección hacia el posible escenario]
+2. **¿Qué está pasando y por qué es relevante? (Contexto Híbrido: Fundamental + Técnico)**
+   - Explicar la convergencia del driver macroeconómico/fundamental (consenso, noticia, demanda, tasas, Dollar Index) junto con la validación de niveles técnicos en el gráfico (ej. rebote en EMA, soporte dinámico, zona de consolidación).
+3. **¿Qué vemos en el gráfico? (Análisis técnico)**
+   - 📊 Lectura técnica (1H / D1): precio actual en negrita, resistencia o soporte inmediato a superar, y proyección hacia el posible escenario en el marco superior.
 4. **Fuente de la información**
-   (Debe incluirse la fuente de los datos/noticia).
+   - 📚 Fuente: Investing.com · análisis técnico del motor GI sobre MetaTrader 5.
 5. **Disclaimer de riesgo**
-   "Este contenido es informativo y no constituye una recomendación personalizada de inversión. Toda inversión conlleva riesgos y el rendimiento pasado no garantiza resultados futuros."
+   - ⚠️ Este contenido es informativo y no constituye una recomendación personalizada de inversión. Toda inversión conlleva riesgos y el rendimiento pasado no garantiza resultados futuros.
 
 ## La Imagen — plantilla `oportunidad`
 
@@ -42,7 +43,7 @@ para generarla.
 **Pipeline de tres pasos** — la serie de precios pasa por dos scripts antes del render:
 
 ```bash
-uv run --with MetaTrader5 python scripts/serie_mt5.py --ticker [TICKER] --timeframe H1 --velas 72 \
+uv run --with MetaTrader5 python scripts/serie_mt5.py --ticker [TICKER] --timeframe H1 --velas 60 \
   | uv run python scripts/story_grafico.py \
   | uv run --extra stories python scripts/story_render.py \
       --template templates/stories/oportunidad.html \
@@ -66,10 +67,10 @@ huérfanos" en vez de rendir una pieza incompleta.
 | `activo_imagen` · `modo_imagen` | `assets/activos/<slug>.jpg` y `foto-activo` (franja) o `ilustracion` (objeto recortado) |
 | `sesgo` · `direccion_etiqueta` | `Alcista`/`Bajista`/`Lateral` y su etiqueta visible ("SUBIENDO") |
 | `titular` | Nombra un **precio del motor**, no una figura técnica: "El oro sube y busca los 4.100", nunca "va por sus máximos". Sin jerga. |
-| `razon` | Por qué se mueve, en voz llana. **Máximo 2 frases**: el lienzo es fijo (`overflow: hidden`) y un `razon` largo empuja el CTA y el disclaimer fuera del margen inferior. Nunca repetir ahí lo que ya dice `nota_nivel` (qué nivel hay que romper primero) |
-| `precio` · `objetivo` · `objetivo_rotulo` · `nota_nivel` | Precio de ahora, hacia dónde va y qué tiene que romper primero. El rótulo canónico es **"Escenario"** (decisión del director, 2026-08-19): reemplaza al antiguo "Hacia dónde va", porque el número de la derecha es un escenario condicionado a que se rompa `nota_nivel`, y un rótulo que afirma el destino se lee como promesa de precio |
-| `dato_rotulo` · `dato_lectura` · `dato_detalle` | La LECTURA arriba ("Menos empleos en EE.UU.") y la cifra abajo como prueba. El número solo no le sirve a nadie. |
-| `dato_veredicto` · `dato_veredicto_slug` | El texto ("Peor de lo esperado") y su slug `mejor` / `peor` / `en-linea`, que le da el color al chip |
+| `razon` | Enfoque híbrido: por qué se mueve conectando fundamental y técnico en voz llana. **Máximo 2 frases**: el lienzo es fijo (`overflow: hidden`) y un `razon` largo empuja el CTA y el disclaimer fuera del margen inferior. Nunca repetir ahí lo que ya dice `nota_nivel` (qué nivel hay que romper primero) |
+| `precio` · `objetivo` · `objetivo_rotulo` · `nota_nivel` | Precio de ahora, hacia dónde va y qué tiene que romper primero. El rótulo canónico es **"Posible escenario"**: reemplaza a "Hacia dónde va" / "Escenario", porque el número de la derecha es un escenario condicionado a que se rompa `nota_nivel`, y un rótulo que afirma el destino se lee como promesa de precio |
+| `dato_rotulo` · `dato_lectura` · `dato_detalle` | La LECTURA arriba ("Mayor demanda industrial" / "Menos empleos en EE.UU.") y la cifra abajo como prueba. El número solo no le sirve a nadie. |
+| `dato_veredicto` · `dato_veredicto_slug` | El texto ("Mejor de lo esperado" / "Peor de lo esperado") y su slug `mejor` / `peor` / `en-linea`, que le da el color al chip |
 | `cta` · `cta_sub` | El llamado a la acción de la imagen |
 | `recorrido` | `{serie, marcadores, "ajuste": "llenar"}` — lo arma `serie_mt5.py`; el `ajuste` es lo que hace que el gráfico llene el lienzo como escenario |
 

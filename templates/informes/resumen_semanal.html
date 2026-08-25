@@ -1,0 +1,1296 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Resumen Semanal de Mercados — Grupo Inteligencia</title>
+<style>
+/* ==========================================================================
+   INYECCIÓN DE FUENTES LOCALES (Base64)
+   ========================================================================== */
+{{bloque_fuentes}}
+
+/* ==========================================================================
+   VARIABLES DE COLOR Y DISEÑO
+   ========================================================================== */
+:root {
+  --fondo-pagina: #F8FAFC;
+  --blanco: #FFFFFF;
+  --tinta-principal: #0F172A;
+  --tinta-secundaria: #334155;
+  --tinta-suave: #64748B;
+  --borde-suave: #E2E8F0;
+  --borde-tarjeta: #CBD5E1;
+  --acento-marca: #00875A;
+  --acento-menta: #50C0A8;
+  --acento-azul: #1E3A8A;
+  --acento-cyan: #3E91AF;
+  --sube: #059669;
+  --sube-bg: rgba(5, 150, 105, 0.08);
+  --sube-border: rgba(5, 150, 105, 0.25);
+  --baja: #DC2626;
+  --baja-bg: rgba(220, 38, 38, 0.08);
+  --baja-border: rgba(220, 38, 38, 0.25);
+  --alerta-amarillo: #D97706;
+  --alerta-bg: rgba(217, 119, 6, 0.08);
+  --alerta-border: rgba(217, 119, 6, 0.25);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+body {
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--tinta-principal);
+  background: #E5E7EB;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* ==========================================================================
+   CONTENEDOR DE PÁGINA A4 (Exactamente 210mm x 297mm)
+   ========================================================================== */
+.page {
+  width: 210mm;
+  height: 297mm;
+  max-height: 297mm;
+  padding: 10.5mm 14mm 9.5mm 14mm;
+  margin: 0 auto;
+  background: var(--fondo-pagina);
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  page-break-after: always;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.page:last-child {
+  page-break-after: auto;
+}
+
+/* ==========================================================================
+   PÁGINA 1: PORTADA EJECUTIVA MODERNA (DARK SLEEK)
+   ========================================================================== */
+.cover-page {
+  background: #0A0E1A;
+  color: #FFFFFF;
+  padding: 16mm 18mm 13mm 18mm;
+  position: relative;
+}
+
+.cover-glow {
+  position: absolute;
+  top: -10%;
+  right: -10%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(80, 192, 168, 0.12) 0%, rgba(62, 145, 175, 0.05) 50%, transparent 70%);
+  pointer-events: none;
+}
+
+.cover-glow-bottom {
+  position: absolute;
+  bottom: -15%;
+  left: -10%;
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, rgba(30, 58, 138, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.cover-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+  padding-bottom: 13px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.cover-brand-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cover-logo-badge {
+  width: 38px;
+  height: 38px;
+  background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+  border: 1px solid rgba(80, 192, 168, 0.3);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #50C0A8;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 800;
+  font-size: 17px;
+  box-shadow: 0 0 15px rgba(80, 192, 168, 0.2);
+}
+
+.cover-brand-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #FFFFFF;
+}
+
+.cover-brand-sub {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: #50C0A8;
+  text-transform: uppercase;
+}
+
+.cover-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cover-pill {
+  background: rgba(80, 192, 168, 0.12);
+  border: 1px solid rgba(80, 192, 168, 0.3);
+  color: #50C0A8;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 5px 11px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.cover-pill-edition {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94A3B8;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 4px;
+}
+
+.cover-center {
+  position: relative;
+  z-index: 1;
+  margin: auto 0;
+  max-width: 94%;
+}
+
+.cover-kicker {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: #3E91AF;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.cover-title {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.15;
+  color: #FFFFFF;
+  letter-spacing: -0.025em;
+  margin-bottom: 18px;
+}
+
+.cover-subtitle {
+  font-size: 14.5px;
+  line-height: 1.62;
+  color: #94A3B8;
+  margin-bottom: 24px;
+  max-width: 94%;
+}
+
+.cover-divider {
+  width: 58px;
+  height: 4px;
+  background: linear-gradient(90deg, #50C0A8 0%, #3E91AF 100%);
+  border-radius: 2px;
+  margin-bottom: 28px;
+}
+
+.cover-highlights-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.cover-kpi-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 12px 14px;
+  backdrop-filter: blur(8px);
+}
+
+.cover-kpi-sym {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #94A3B8;
+  letter-spacing: 0.05em;
+  margin-bottom: 5px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.cover-kpi-val {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16.5px;
+  font-weight: 700;
+  color: #FFFFFF;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 3px;
+}
+
+.cover-kpi-desc {
+  font-size: 9.2px;
+  color: #64748B;
+  line-height: 1.3;
+}
+
+.cover-footer {
+  position: relative;
+  z-index: 1;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cover-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cover-meta-lbl {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #64748B;
+}
+
+.cover-meta-val {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: #FFFFFF;
+}
+
+/* ==========================================================================
+   HEADER PÁGINAS INTERNAS (PÁGINAS 2, 3, 4)
+   ========================================================================== */
+.header-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1.5px solid var(--borde-suave);
+  margin-bottom: 10px;
+}
+
+.brand-col {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-logo-badge {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #50C0A8;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 800;
+  font-size: 15px;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.15);
+}
+
+.brand-text-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--tinta-principal);
+  line-height: 1.1;
+}
+
+.brand-sub {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 8.8px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--acento-cyan);
+  text-transform: uppercase;
+}
+
+.meta-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badge-tag {
+  background: #0F172A;
+  color: #50C0A8;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 4.5px 10px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.badge-date {
+  background: var(--blanco);
+  border: 1px solid var(--borde-suave);
+  color: var(--tinta-secundaria);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 4px;
+}
+
+.badge-edition {
+  background: rgba(62, 145, 175, 0.1);
+  color: var(--acento-cyan);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+/* ==========================================================================
+   HERO / TESIS SEMANAL (PÁGINA 2)
+   ========================================================================== */
+.hero-card {
+  background: var(--blanco);
+  border: 1px solid var(--borde-suave);
+  border-left: 5px solid var(--acento-menta);
+  border-radius: 8px;
+  padding: 11px 18px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+.hero-kicker {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--acento-cyan);
+  text-transform: uppercase;
+  margin-bottom: 3.5px;
+  display: block;
+}
+
+.hero-title {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--tinta-principal);
+  line-height: 1.2;
+  margin-bottom: 4px;
+  letter-spacing: -0.02em;
+}
+
+.hero-sub {
+  font-size: 11.5px;
+  color: var(--tinta-secundaria);
+  line-height: 1.52;
+}
+
+/* ==========================================================================
+   TÍTULOS DE SECCIÓN
+   ========================================================================== */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6.5px;
+  padding-bottom: 3.5px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+
+.section-num {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  color: var(--blanco);
+  background: var(--tinta-principal);
+  padding: 2.5px 7px;
+  border-radius: 3.5px;
+}
+
+.section-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12.2px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta-principal);
+}
+
+/* ==========================================================================
+   SCOREBOARD / TABLA DE ACTIVOS (PÁGINA 2)
+   ========================================================================== */
+.scoreboard-container {
+  background: var(--blanco);
+  border: 1px solid var(--borde-suave);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+.score-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10.5px;
+}
+
+.score-table th {
+  background: #0F172A;
+  color: #FFFFFF;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 7px 10px;
+  text-align: left;
+  border-bottom: 2px solid var(--acento-menta);
+}
+
+.score-table th.text-center { text-align: center; }
+.score-table th.text-right { text-align: right; }
+
+.score-table td {
+  padding: 6.5px 10px;
+  border-bottom: 1px solid #F1F5F9;
+  vertical-align: middle;
+  line-height: 1.35;
+}
+
+.score-table tr:nth-child(even) td {
+  background: #FAFCFE;
+}
+
+.asset-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.asset-symbol {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--tinta-principal);
+  font-size: 11px;
+}
+
+.asset-desc {
+  color: var(--tinta-suave);
+  font-size: 9px;
+}
+
+.price-value {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  color: var(--tinta-principal);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.range-value {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 9.8px;
+  color: var(--tinta-suave);
+  font-variant-numeric: tabular-nums;
+}
+
+.change-badge {
+  display: inline-block;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  padding: 2.5px 7.5px;
+  border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  min-width: 52px;
+}
+
+.change-badge.sube {
+  background: var(--sube-bg);
+  color: var(--sube);
+  border: 1px solid var(--sube-border);
+}
+
+.change-badge.baja {
+  background: var(--baja-bg);
+  color: var(--baja);
+  border: 1px solid var(--baja-border);
+}
+
+.driver-text {
+  font-size: 9.8px;
+  color: var(--tinta-secundaria);
+  line-height: 1.35;
+}
+
+/* ==========================================================================
+   CATALIZADORES MACRO AMPLIADOS (PÁGINA 2: CASILLAS RECTANGULARES)
+   ========================================================================== */
+.macro-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 2px;
+}
+
+.macro-card-rect {
+  background: var(--blanco);
+  border: 1px solid var(--borde-suave);
+  border-left: 4.5px solid var(--acento-cyan);
+  border-radius: 8px;
+  padding: 9.5px 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+.macro-tag-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+
+.macro-tag-pill {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--acento-cyan);
+  text-transform: uppercase;
+}
+
+.macro-title-rect {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--tinta-principal);
+  line-height: 1.25;
+  margin-bottom: 3.5px;
+}
+
+.macro-body-rect {
+  font-size: 10.2px;
+  color: var(--tinta-secundaria);
+  line-height: 1.5;
+}
+
+/* ==========================================================================
+   PÁGINA 3: LECTURA INTERMERCADO (AMPLIADA)
+   ========================================================================== */
+.intermarket-card {
+  background: var(--blanco);
+  border: 1px solid var(--borde-suave);
+  border-left: 5px solid var(--acento-azul);
+  border-radius: 8px;
+  padding: 13px 18px;
+  margin-bottom: 11px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+.intermarket-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--acento-azul);
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+
+.intermarket-text {
+  font-size: 11px;
+  color: var(--tinta-secundaria);
+  line-height: 1.6;
+}
+
+/* ==========================================================================
+   PÁGINA 3: SEMÁFORO TÁCTICO (AMPLIADO)
+   ========================================================================== */
+.semaforo-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-bottom: 11px;
+}
+
+.semaforo-card {
+  background: var(--blanco);
+  border: 1px solid var(--borde-suave);
+  border-radius: 8px;
+  padding: 11px 16px;
+}
+
+.semaforo-card.verde { border-left: 5px solid var(--sube); }
+.semaforo-card.amarillo { border-left: 5px solid var(--alerta-amarillo); }
+.semaforo-card.rojo { border-left: 5px solid var(--baja); }
+
+.semaforo-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 5px;
+}
+
+.semaforo-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.semaforo-dot.verde { background: var(--sube); box-shadow: 0 0 6px rgba(5, 150, 105, 0.4); }
+.semaforo-dot.amarillo { background: var(--alerta-amarillo); box-shadow: 0 0 6px rgba(217, 119, 6, 0.4); }
+.semaforo-dot.rojo { background: var(--baja); box-shadow: 0 0 6px rgba(220, 38, 38, 0.4); }
+
+.semaforo-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11.2px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.semaforo-title.verde { color: var(--sube); }
+.semaforo-title.amarillo { color: var(--alerta-amarillo); }
+.semaforo-title.rojo { color: var(--baja); }
+
+.semaforo-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.semaforo-item {
+  font-size: 10.5px;
+  color: var(--tinta-secundaria);
+  line-height: 1.5;
+  padding-left: 13px;
+  position: relative;
+}
+
+.semaforo-item::before {
+  content: "•";
+  position: absolute;
+  left: 3px;
+  color: var(--tinta-suave);
+  font-weight: bold;
+}
+
+.semaforo-item strong {
+  color: var(--tinta-principal);
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   PÁGINA 3: RADAR PRÓXIMA SEMANA (AMPLIADO)
+   ========================================================================== */
+.radar-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.radar-card {
+  background: var(--blanco);
+  border: 1px solid var(--borde-suave);
+  border-top: 3.5px solid var(--acento-cyan);
+  border-radius: 7px;
+  padding: 10px 9px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 115px;
+}
+
+.radar-day {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--tinta-principal);
+  margin-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.radar-impact {
+  font-size: 8px;
+  font-weight: 700;
+  padding: 1.5px 5px;
+  border-radius: 2.5px;
+  text-transform: uppercase;
+}
+
+.radar-impact.alto { background: rgba(220, 38, 38, 0.1); color: var(--baja); }
+.radar-impact.critico { background: #0F172A; color: #50C0A8; }
+.radar-impact.medio { background: rgba(217, 119, 6, 0.1); color: var(--alerta-amarillo); }
+
+.radar-event {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  color: var(--tinta-principal);
+  line-height: 1.3;
+  margin-bottom: 4px;
+}
+
+.radar-note {
+  font-size: 9px;
+  color: var(--tinta-suave);
+  line-height: 1.38;
+}
+
+/* ==========================================================================
+   PÁGINA 4: DISCLAIMER DEDICADO & FUENTES OFICIALES (DARK SLEEK DEDICADA)
+   ========================================================================== */
+.disclaimer-page {
+  background: #0A0E1A;
+  color: #C1E5E4;
+  padding: 15mm 18mm 12mm 18mm;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.disclaimer-page .cover-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  margin-bottom: 14px;
+}
+
+.disclaimer-card-group {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  position: relative;
+  z-index: 1;
+}
+
+.disclaimer-block {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 4px solid #50C0A8;
+  border-radius: 7px;
+  padding: 11px 15px;
+}
+
+.disclaimer-block-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #FFFFFF;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.disclaimer-block-text {
+  font-size: 9.8px;
+  color: #94A3B8;
+  line-height: 1.55;
+  text-align: justify;
+}
+
+.sources-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.source-item {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.source-bullet {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #3E91AF;
+}
+
+.source-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 9.8px;
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.source-sub {
+  font-size: 8.5px;
+  color: #64748B;
+}
+
+/* ==========================================================================
+   FOOTERS
+   ========================================================================== */
+.footer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 7px;
+  border-top: 1px solid var(--borde-suave);
+  margin-top: auto;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 9px;
+  color: var(--tinta-suave);
+}
+
+.disclaimer-page .footer-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  color: #64748B;
+}
+
+.footer-brand {
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--acento-cyan);
+}
+
+.footer-page-num {
+  font-weight: 700;
+  color: var(--tinta-principal);
+}
+
+.disclaimer-page .footer-page-num {
+  color: #FFFFFF;
+}
+</style>
+</head>
+<body>
+
+<!-- ==========================================================================
+     PÁGINA 1: PORTADA EJECUTIVA MODERNA (DARK SLEEK)
+     ========================================================================== -->
+<div class="page cover-page">
+  <div class="cover-glow"></div>
+  <div class="cover-glow-bottom"></div>
+
+  <!-- HEADER PORTADA -->
+  <header class="cover-header">
+    <div class="cover-brand-block">
+      <div class="cover-logo-badge">GI</div>
+      <div>
+        <div class="cover-brand-name">GRUPO INTELIGENCIA</div>
+        <div class="cover-brand-sub">{{metadatos.departamento}}</div>
+      </div>
+    </div>
+    <div class="cover-badges">
+      <span class="cover-pill">Resumen Semanal</span>
+      <span class="cover-pill-edition">{{metadatos.edicion}}</span>
+    </div>
+  </header>
+
+  <!-- CONTENIDO CENTRAL PORTADA -->
+  <main class="cover-center">
+    <span class="cover-kicker">Informe Ejecutivo · Cierre de Mercados</span>
+    <h1 class="cover-title">{{metadatos.titulo}}</h1>
+    <p class="cover-subtitle">{{metadatos.subtitulo}}</p>
+    <div class="cover-divider"></div>
+
+    <!-- 3 HIGHLIGHTS CLAVE -->
+    <div class="cover-highlights-grid">
+      <div class="cover-kpi-card">
+        <div class="cover-kpi-sym">
+          <span>{{metadatos.kpi_portada_1_sym}}</span>
+          <span style="color:#50C0A8;">{{metadatos.kpi_portada_1_chg}}</span>
+        </div>
+        <div class="cover-kpi-val">{{metadatos.kpi_portada_1_val}}</div>
+        <div class="cover-kpi-desc">{{metadatos.kpi_portada_1_desc}}</div>
+      </div>
+
+      <div class="cover-kpi-card">
+        <div class="cover-kpi-sym">
+          <span>{{metadatos.kpi_portada_2_sym}}</span>
+          <span style="color:#50C0A8;">{{metadatos.kpi_portada_2_chg}}</span>
+        </div>
+        <div class="cover-kpi-val">{{metadatos.kpi_portada_2_val}}</div>
+        <div class="cover-kpi-desc">{{metadatos.kpi_portada_2_desc}}</div>
+      </div>
+
+      <div class="cover-kpi-card">
+        <div class="cover-kpi-sym">
+          <span>{{metadatos.kpi_portada_3_sym}}</span>
+          <span style="color:#50C0A8;">{{metadatos.kpi_portada_3_chg}}</span>
+        </div>
+        <div class="cover-kpi-val">{{metadatos.kpi_portada_3_val}}</div>
+        <div class="cover-kpi-desc">{{metadatos.kpi_portada_3_desc}}</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- FOOTER PORTADA -->
+  <footer class="cover-footer">
+    <div class="cover-meta-item">
+      <span class="cover-meta-lbl">Semana</span>
+      <span class="cover-meta-val">{{metadatos.fecha_rango}}</span>
+    </div>
+    <div class="cover-meta-item">
+      <span class="cover-meta-lbl">Área Responsable</span>
+      <span class="cover-meta-val">{{metadatos.analista}}</span>
+    </div>
+    <div class="cover-meta-item">
+      <span class="cover-meta-lbl">Publicación</span>
+      <span class="cover-meta-val">{{metadatos.fecha_publicacion}}</span>
+    </div>
+    <div class="cover-meta-item" style="text-align: right;">
+      <span class="cover-meta-lbl">Extensión</span>
+      <span class="cover-meta-val" style="color:#50C0A8;">04 Páginas · PDF Oficial</span>
+    </div>
+  </footer>
+</div>
+
+<!-- ==========================================================================
+     PÁGINA 2: EL PULSO DE LA SEMANA & SCOREBOARD INTERMERCADO
+     ========================================================================== -->
+<div class="page">
+  <div>
+    <!-- HEADER -->
+    <header class="header-main">
+      <div class="brand-col">
+        <div class="brand-logo-badge">GI</div>
+        <div class="brand-text-block">
+          <span class="brand-name">GRUPO INTELIGENCIA</span>
+          <span class="brand-sub">{{metadatos.departamento}}</span>
+        </div>
+      </div>
+      <div class="meta-badges">
+        <span class="badge-tag">Cierre Semanal</span>
+        <span class="badge-date">{{metadatos.fecha_rango}}</span>
+        <span class="badge-edition">{{metadatos.edicion}}</span>
+      </div>
+    </header>
+
+    <!-- HERO / TESIS CENTRAL -->
+    <section class="hero-card">
+      <span class="hero-kicker">Balance Ejecutivo de Mercados</span>
+      <h2 class="hero-title">{{metadatos.titulo}}</h2>
+      <p class="hero-sub">{{metadatos.subtitulo}}</p>
+    </section>
+
+    <!-- SECCIÓN 01: SCOREBOARD DE ACTIVOS -->
+    <section>
+      <div class="section-header">
+        <span class="section-num">01</span>
+        <h3 class="section-title">Termómetro Semanal de Activos (Intermercado)</h3>
+      </div>
+
+      <div class="scoreboard-container">
+        <table class="score-table">
+          <thead>
+            <tr>
+              <th style="width: 22%;">Activo / Instrumento</th>
+              <th style="width: 14%;">Cierre</th>
+              <th class="text-center" style="width: 13%;">Var. Semanal</th>
+              <th style="width: 17%;">Rango Semanal</th>
+              <th style="width: 34%;">Driver Clave de la Semana</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#scorecard_activos}}
+            <tr>
+              <td>
+                <div class="asset-pill">
+                  <span class="asset-symbol">{{simbolo}}</span>
+                </div>
+                <div class="asset-desc">{{nombre}}</div>
+              </td>
+              <td><span class="price-value">{{precio_cierre}}</span></td>
+              <td class="text-center">
+                <span class="change-badge {{direccion}}">{{variacion_semanal}}</span>
+              </td>
+              <td><span class="range-value">{{rango_semanal}}</span></td>
+              <td><p class="driver-text">{{driver_clave}}</p></td>
+            </tr>
+            {{/scorecard_activos}}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 02: CATALIZADORES MACRO AMPLIADOS (CASILLAS RECTANGULARES) -->
+    <section>
+      <div class="section-header">
+        <span class="section-num">02</span>
+        <h3 class="section-title">Grandes Catalizadores Macroeconómicos de la Semana</h3>
+      </div>
+
+      <div class="macro-stack">
+        {{#catalizadores_macro}}
+        <article class="macro-card-rect">
+          <div class="macro-tag-row">
+            <span>{{icono}}</span>
+            <span class="macro-tag-pill">{{categoria}}</span>
+          </div>
+          <h4 class="macro-title-rect">{{titulo}}</h4>
+          <p class="macro-body-rect">{{texto}}</p>
+        </article>
+        {{/catalizadores_macro}}
+      </div>
+    </section>
+  </div>
+
+  <!-- FOOTER PÁGINA 2 -->
+  <footer class="footer-row">
+    <span class="footer-brand">GRUPO INTELIGENCIA · RESEARCH & ESTRATEGIA</span>
+    <span>{{metadatos.fecha_publicacion}}</span>
+    <span class="footer-page-num">Página 02 / 04</span>
+  </footer>
+</div>
+
+<!-- ==========================================================================
+     PÁGINA 3: ANÁLISIS TÁCTICO, SEMÁFORO & RADAR PRÓXIMA SEMANA
+     ========================================================================== -->
+<div class="page">
+  <div>
+    <!-- HEADER PÁGINA 3 -->
+    <header class="header-main" style="margin-bottom: 9px;">
+      <div class="brand-col">
+        <div class="brand-logo-badge" style="width: 30px; height: 30px; font-size: 14px;">GI</div>
+        <div class="brand-text-block">
+          <span class="brand-name" style="font-size: 14px;">GRUPO INTELIGENCIA</span>
+          <span class="brand-sub">DEPARTAMENTO DE ESTUDIOS · ANÁLISIS TÁCTICO</span>
+        </div>
+      </div>
+      <div class="meta-badges">
+        <span class="badge-date">{{metadatos.fecha_rango}}</span>
+        <span class="badge-tag" style="background:#1E3A8A;color:#FFFFFF;">Estrategia</span>
+      </div>
+    </header>
+
+    <!-- SECCIÓN 03: INTERMERCADO -->
+    <section class="intermarket-card">
+      <h3 class="intermarket-title">03. {{analisis_intermercado.titulo}}</h3>
+      <p class="intermarket-text">{{analisis_intermercado.parrafo}}</p>
+    </section>
+
+    <!-- SECCIÓN 04: SEMÁFORO TÁCTICO -->
+    <section style="margin-bottom: 9px;">
+      <div class="section-header">
+        <span class="section-num">04</span>
+        <h3 class="section-title">Brújula Táctica: Semáforo de Acción de Bolsillo</h3>
+      </div>
+
+      <div class="semaforo-grid">
+        <!-- OPORTUNIDADES -->
+        <div class="semaforo-card verde">
+          <div class="semaforo-header">
+            <div class="semaforo-dot verde"></div>
+            <h4 class="semaforo-title verde">{{semaforo_tactico.oportunidades.titulo}}</h4>
+          </div>
+          <ul class="semaforo-list">
+            {{#semaforo_tactico.oportunidades.items}}
+            <li class="semaforo-item">{{{.}}}</li>
+            {{/semaforo_tactico.oportunidades.items}}
+          </ul>
+        </div>
+
+        <!-- CAUTELA -->
+        <div class="semaforo-card amarillo">
+          <div class="semaforo-header">
+            <div class="semaforo-dot amarillo"></div>
+            <h4 class="semaforo-title amarillo">{{semaforo_tactico.cautela.titulo}}</h4>
+          </div>
+          <ul class="semaforo-list">
+            {{#semaforo_tactico.cautela.items}}
+            <li class="semaforo-item">{{{.}}}</li>
+            {{/semaforo_tactico.cautela.items}}
+          </ul>
+        </div>
+
+        <!-- RIESGO -->
+        <div class="semaforo-card rojo">
+          <div class="semaforo-header">
+            <div class="semaforo-dot rojo"></div>
+            <h4 class="semaforo-title rojo">{{semaforo_tactico.riesgo.titulo}}</h4>
+          </div>
+          <ul class="semaforo-list">
+            {{#semaforo_tactico.riesgo.items}}
+            <li class="semaforo-item">{{{.}}}</li>
+            {{/semaforo_tactico.riesgo.items}}
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 05: RADAR PRÓXIMA SEMANA -->
+    <section style="margin-bottom: 1px;">
+      <div class="section-header">
+        <span class="section-num">05</span>
+        <h3 class="section-title">Radar Próxima Semana: Catalizadores de Alto Impacto</h3>
+      </div>
+
+      <div class="radar-grid">
+        {{#radar_proxima_semana}}
+        <div class="radar-card">
+          <div>
+            <div class="radar-day">
+              <span>{{dia}}</span>
+              <span class="radar-impact {{impacto_class}}">{{impacto}}</span>
+            </div>
+            <div class="radar-event">{{evento}}</div>
+          </div>
+          <div class="radar-note">{{relevancia}}</div>
+        </div>
+        {{/radar_proxima_semana}}
+      </div>
+    </section>
+  </div>
+
+  <!-- FOOTER PÁGINA 3 -->
+  <footer class="footer-row">
+    <span class="footer-brand">GRUPO INTELIGENCIA · RESEARCH & ESTRATEGIA</span>
+    <span>{{metadatos.analista}}</span>
+    <span class="footer-page-num">Página 03 / 04</span>
+  </footer>
+</div>
+
+<!-- ==========================================================================
+     PÁGINA 4: AVISO LEGAL & METODOLOGÍA INSTITUCIONAL (DARK SLEEK DEDICADA)
+     ========================================================================== -->
+<div class="page disclaimer-page">
+  <div class="cover-glow"></div>
+  <div class="cover-glow-bottom"></div>
+
+  <div>
+    <!-- HEADER DISCLAIMER -->
+    <header class="cover-header">
+      <div class="cover-brand-block">
+        <div class="cover-logo-badge" style="width: 32px; height: 32px; font-size: 14px;">GI</div>
+        <div>
+          <div class="cover-brand-name" style="font-size: 14px;">GRUPO INTELIGENCIA</div>
+          <div class="cover-brand-sub">COMPLIANCE & RESEARCH INSTITUCIONAL</div>
+        </div>
+      </div>
+      <div class="cover-badges">
+        <span class="cover-pill">Aviso Legal Oficial</span>
+      </div>
+    </header>
+
+    <!-- BLOQUES DE DISCLAIMER -->
+    <div class="disclaimer-card-group">
+      <div class="disclaimer-block">
+        <div class="disclaimer-block-title">01. Naturaleza del Informe y Finalidad Informativa</div>
+        <p class="disclaimer-block-text">
+          Este informe ha sido elaborado por el Departamento de Estudios y Análisis Cuantitativo de Grupo Inteligencia con propósitos exclusivamente educativos, formativos y de divulgación financiera. No constituye, bajo ninguna circunstancia, una recomendación individualizada de inversión, asesoría tributaria, legal ni una oferta o solicitud para comprar o vender activos, divisas o contratos por diferencia (CFDs).
+        </p>
+      </div>
+
+      <div class="disclaimer-block">
+        <div class="disclaimer-block-title">02. Advertencia Regulatoria de Riesgo de Mercado y Apalancamiento</div>
+        <p class="disclaimer-block-text">
+          El trading de instrumentos financieros, divisas (Forex), materias primas e índices bursátiles conlleva un nivel sustancial de riesgo debido a la volatilidad inherente del mercado y al efecto multiplicador del apalancamiento financiero. Existe la posibilidad de perder parte o la totalidad del capital invertido. El rendimiento pasado de un activo o estrategia no garantiza ni predice rendimientos futuros.
+        </p>
+      </div>
+
+      <div class="disclaimer-block">
+        <div class="disclaimer-block-title">03. Metodología de Análisis Cuantitativo e Intermercado</div>
+        <p class="disclaimer-block-text">
+          Las lecturas de sesgo, zonas de interés, soportes y resistencias se calculan mediante algoritmos cuantitativos integrados con la terminal MetaTrader 5 (MT5), indicadores técnicos multitemporales (ATR, Medias Móviles Exponenciales, RSI) y modelos de correlación intermercado. Todos los escenarios presentados son condicionales y están sujetos a reevaluación permanente ante eventos macroeconómicos.
+        </p>
+      </div>
+
+      <!-- FUENTES OFICIALES -->
+      <div class="disclaimer-block" style="border-left-color: #3E91AF;">
+        <div class="disclaimer-block-title">04. Directorio de Fuentes Oficiales Consultadas</div>
+        <div class="sources-grid">
+          <div class="source-item">
+            <div class="source-bullet"></div>
+            <div>
+              <div class="source-name">Federal Reserve (Fed) & FOMC</div>
+              <div class="source-sub">Política monetaria y tasas EE.UU.</div>
+            </div>
+          </div>
+          <div class="source-item">
+            <div class="source-bullet"></div>
+            <div>
+              <div class="source-name">Banco Central de Chile (BCCh)</div>
+              <div class="source-sub">RPM, TPM e informes de política financiera</div>
+            </div>
+          </div>
+          <div class="source-item">
+            <div class="source-bullet"></div>
+            <div>
+              <div class="source-name">U.S. Department of the Treasury</div>
+              <div class="source-sub">Subastas de deuda, TBAC y recompras</div>
+            </div>
+          </div>
+          <div class="source-item">
+            <div class="source-bullet"></div>
+            <div>
+              <div class="source-name">U.S. Bureau of Labor & EIA</div>
+              <div class="source-sub">Empleo, inflación (IPC/PCE) y crudo</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER PÁGINA 4 -->
+  <footer class="footer-row">
+    <span class="footer-brand">GRUPO INTELIGENCIA · RESEARCH & ESTRATEGIA</span>
+    <span>Santiago de Chile · www.grupointeligencia.cl</span>
+    <span class="footer-page-num">Página 04 / 04</span>
+  </footer>
+</div>
+
+</body>
+</html>

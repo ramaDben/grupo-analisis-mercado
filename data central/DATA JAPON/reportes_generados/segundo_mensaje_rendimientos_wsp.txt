@@ -1,0 +1,46 @@
+🎯 Activo: Dólar / Yen Japonés (USD/JPY)
+📌 El motor de fondo: La competencia de tasas entre EE.UU. (4.70%) y Japón (2.88%)
+⚡ Qué esperar: Definición de rumbo tras el dato de inflación de Japón (01:00 AM)
+
+━━━━━━━━━━━━━━━━━━━
+
+🏛️ *CÓMO ENTENDER EL GRÁFICO ADJUNTO EN 30 SEGUNDOS*
+
+Para saber hacia dónde se moverá el dólar frente al yen, no necesitas complicarte con fórmulas. Solo mira la imagen adjunta dividida en dos pisos con datos del Ministerio de Finanzas de Japón (MOF):
+
+• *Piso 1 (La Causa)*: muestra cuánto interés paga cada país por sus bonos a 10 años.
+  - Línea Azul (EE.UU.): paga un 4.70% al año.
+  - Línea Naranja (Japón Oficial MOF): subió con fuerza hasta 2.88%.
+  - Línea Verde punteada: es la ventaja que le lleva EE.UU. a Japón (1.82%).
+
+• *Piso 2 (El Efecto)*: muestra el precio del Dólar frente al Yen.
+  - Fíjate en la flecha roja de finales de julio: cuando Japón subió sus tasas, la ventaja de EE.UU. se achicó y el dólar se desplomó desde 164 hacia 155.
+
+━━━━━━━━━━━━━━━━━━━
+
+📊 *QUÉ ESPERAR CON LA INFLACIÓN DE LA 01:00 AM*
+
+Hoy el precio está frenado en la zona de equilibrio del 50% de Fibonacci (159.618), esperando el dato de inflación:
+
+🟢 *Si la inflación en Japón sale baja (Core CPI ≤ 2.5%)*:
+Japón frena sus alzas de tasas. EE.UU. mantiene su ventaja y el dólar recupera fuerza:
+• Escenario Alcista: superación de 159.618 para buscar el techo en 160.647.
+
+🟡 *Si sale en línea con lo esperado (2.6% a 2.8%)*:
+El mercado ya tiene descontado este ritmo gradual:
+• Escenario Lateral: oscilación entre 158.500 y 159.800.
+
+🔴 *Si la inflación en Japón sale alta (Core CPI ≥ 2.9%)*:
+Japón se verá obligado a subir más sus intereses (la línea naranja superará el 2.90%). La ventaja de EE.UU. se achica aún más y los grandes fondos venderán dólares para comprar yenes:
+• Escenario Bajista: ruptura de 158.588 hacia 156.500.
+
+━━━━━━━━━━━━━━━━━━━
+
+🟢 Sobre 159.618: impulso comprador hacia resistencias (160.647)
+🟡 Entre 158.588 y 159.618: zona de espera y confirmación
+🔴 Bajo 158.588: confirmación de presión vendedora (156.500)
+
+━━━━━━━━━━━━━━━━━━━
+
+📅 *Calendario económico completo*: https://es.investing.com/economic-calendar/
+💬 Consulta con tu analista asignado para evaluar la estrategia de cobertura antes del cierre de sesión.

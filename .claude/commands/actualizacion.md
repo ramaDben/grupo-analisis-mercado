@@ -1,54 +1,44 @@
-Genera la Actualización de Mercado (issue #58): informa al cliente sobre la evolución del precio del activo durante la jornada, comparándolo con los niveles enviados en la apertura.
+Genera la Actualización de Mercado: informa al cliente sobre la evolución del precio del activo durante la jornada, comparándolo con los niveles enviados en la apertura y conectando con el motor de sesgo macro.
 
 ## SETUP
 1. Lee `config/activos.json`.
 
 ---
 
-## PASO 1 — Selección del activo
+## PASO 1: Selección del activo
 Pregunta al director de qué activo quiere generar la actualización hoy.
-Normaliza a `ticker_mt5` según `config/activos.json`.
+Normaliza a `ticker_mt5` según `config/activos.json` (incluyendo USD/JPY, USD/CLP, Oro, Petróleo, US100).
 
 ---
 
-## PASO 2 — Obtención de niveles previos
-Busca el último archivo de tipo `niveles` para este activo en la carpeta `data/mensajes/` (generalmente dentro de la carpeta con la fecha de hoy).
-Extrae automáticamente los niveles (Techos y Suelos) previamente informados.
-Si no se encuentra el archivo o no se puede extraer la información, solicita al director que ingrese los niveles previos manualmente.
+## PASO 2: Obtención de niveles previos
+Busca el último archivo de tipo `niveles` para este activo en la carpeta `data/mensajes/` (o pídelos al director si no existe).
 Muestra los niveles extraídos al director para su confirmación o corrección.
 
 ---
 
-## PASO 3 — Precio actual (fetch automático MT5)
-Llama **una sola vez**:
+## PASO 3: Precio actual (fetch automático MT5)
+Llama una sola vez:
 ```
 mcp__market-data__get_asset_levels({"ticker": "[TICKER_MT5]", "timeframe": "H1"})
 ```
-Extrae el campo `price` y formatea según el campo `digits` de `config/activos.json`. Nunca truncar ceros.
-Si devuelve `"error"`, solicita al director que ingrese el precio actual manualmente:
-`⚠️ No se pudo obtener el precio desde MT5. Ingresa el precio actual manualmente:`
+Extrae el campo `price` y formatea según el campo `digits` de `config/activos.json` (USD/JPY: 3 decimales, USD/CLP: 2 decimales). Nunca truncar ceros.
 
 ---
 
-## PASO 4 — Análisis y Reacción del Mercado
-Muestra al director el precio actual y los niveles previos, y solicita la siguiente información:
-
+## PASO 4: Análisis y Reacción del Mercado
+Muestra al director el precio actual y los niveles previos, y solicita:
 1. **Nivel a vigilar ahora** (para el bloque inicial de resumen).
-2. **Qué esperar** (1 línea de acción concreta para el bloque inicial).
-3. **Reacción del mercado**:
-   ```
-   📥 Ingresa la explicación de la reacción del mercado:
-   (Ejemplo: Por qué rebotó en el soporte o rompió la resistencia. Usa lenguaje para novatos, explicativo en menos de 30 segundos)
-   ```
+2. **Qué esperar** (1 línea de acción concreta).
+3. **Reacción del mercado**: análisis didáctico de por qué rebotó o rompió niveles.
 4. **Escenarios de cierre**:
-   Condiciones y acciones para los escenarios de la jornada:
-   - Alcista 🟢: Condición y acción
-   - Esperar 🟡: Condición y acción
-   - Bajista 🔴: Condición y acción
+   - 🟢 Sobre [Resistencia]: impulso comprador
+   - 🟡 Entre [Soporte] y [Resistencia]: zona de espera
+   - 🔴 Bajo [Soporte]: confirmación de presión vendedora
 
 ---
 
-## PASO 5 — Render del mensaje
+## PASO 5: Render del mensaje
 Plantilla oficial:
 
 ```
@@ -57,41 +47,29 @@ Plantilla oficial:
 ⚡ Qué esperar: [1 línea de acción concreta]
 ━━━━━━━━━━━━━━━━━━━
 
-📊 *ACTUALIZACIÓN DE MERCADO — [HH:mm] CLT*
+📊 *ACTUALIZACIÓN DE MERCADO: [HH:mm] CLT*
 ━━━━━━━━━━━━━━━━━━━
 📈 *[NOMBRE ACTIVO]*
 
 💰 Precio actual: [precio formateado según digits]
 📌 Niveles previos vigentes:
-• Techo más próximo: [T1]
-• Suelo más próximo: [Su1]
-(Añadir T2/Su2 solo si fueron informados previamente y siguen relevantes. Si no, omitir estas líneas)
+• Resistencia más próxima: [R1]
+• Soporte más próximo: [S1]
+(Añadir R2/S2 solo si fueron informados previamente y siguen relevantes. Si no, omitir)
 
 🔎 Reacción del mercado:
 [Análisis didáctico ingresado por el director]
 
 ━━━━━━━━━━━━━━━━━━━
-🟢 *Alcista* — [Condición] → [Acción]
-🟡 *Esperar* — [Condición] → [Acción]
-🔴 *Bajista* — [Condición] → [Acción]
+🟢 *Alcista*: Sobre [R1] -> [Objetivo / Acción]
+🟡 *Esperar*: Entre [S1] y [R1] -> [Zona de consolidación]
+🔴 *Bajista*: Bajo [S1] -> [Objetivo / Acción]
 ━━━━━━━━━━━━━━━━━━━
 ```
 
-**Reglas de render (OBLIGATORIAS):**
-- **Hora**: Usa el reloj del sistema para obtener la hora actual en Chile (CLT/CLST) tal como se indica en CLAUDE.md. El formato de la hora es `HH:mm`.
-- **Decimales**: Respeta estrictamente los decimales según `digits` en `config/activos.json` al mostrar el precio actual y los niveles. Nunca truncar ceros.
-- **Lenguaje**: Español de Chile, amigable, no hiper-técnico. Uso estricto de viñetas y emojis.
+**Reglas de render:**
+- **Cero guiones largos**: Prohibido el uso de `—` o `–` en el texto.
+- **Decimales**: Respeta estrictamente los decimales según `digits` en `config/activos.json` (USD/JPY con 3 decimales, USD/CLP con 2).
+- **Semáforo Canónico de Precios**: 🟢 Sobre (Alcista), 🟡 Entre (Rango), 🔴 Bajo (Bajista).
 
-**→ ¿Apruebas? ¿Adjuntar chart de MT5? ¿Enviar al grupo?**
-Al aprobar: construye la ruta con `scripts\ruta_mensaje.ps1 -Fecha [FECHA] -Activo [TICKER_MT5] -Tipo actualizacion -Hora [HH-MM]` y guarda el mensaje usando Write. Muestra el texto listo para copiar.
-
----
-
-## Modo ejecutivo (flag `ejecutivo`)
-
-Si `ejecutivo` aparece en los argumentos, además del mensaje de cliente genera el **guion de venta interno** siguiendo `.claude/shared/modo_ejecutivo.md` (formato, banner `🔒 INTERNO · NO ENVIAR AL CLIENTE`, flujo de aprobación y guardrails). Para esta pieza:
-- **Tipo de guion**: `guion_actualizacion`.
-- **`-Activo`**: el `ticker_mt5` del activo actualizado.
-- Mismo `-Hora` que el mensaje de cliente.
-
-Muestra ambas salidas rotuladas `📤 MENSAJE CLIENTE` y `🔒 GUION EJECUTIVO`; al aprobar, guarda el guion con `scripts\ruta_mensaje.ps1`.
+Al aprobar: construye la ruta con `scripts\ruta_mensaje.ps1 -Fecha [FECHA] -Activo [TICKER_MT5] -Tipo actualizacion -Hora [HH-MM]` y guarda el mensaje. Muestra el texto listo para copiar.

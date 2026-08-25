@@ -1,0 +1,23 @@
+{
+  "ultima_ejecucion_utc": "2026-08-24T20:41:08.904938+00:00",
+  "hay_novedades": true,
+  "novedades_detalle": [
+    "Datos actualizados en USA (Curva Treasuries / Buybacks / Fed Funds)",
+    "Datos actualizados en Commodities (Cobre / WTI / Brent / Oro)",
+    "Datos actualizados en Japón (Banco de Japón / IPC / JGB / USD-JPY)"
+  ],
+  "status_por_fuente": {
+    "usa": "ERROR_FALLBACK",
+    "chile": "OK",
+    "europa_uk": "OK",
+    "commodities": "OK",
+    "japon": "OK"
+  },
+  "hashes_canonicos": {
+    "usa": "8b1c5192ba33f754632129ea88f0251efb88346be6aa69e0349c94149a5f1d39",
+    "chile": "fa41199c782ff26e318347f6a9483e5aa97a88fc7f72463e1f2134fcaa797dec",
+    "europa_uk": "c96fbc03a803d2f0366bb3d622b78cbf6aaaf9c4ca508a49919369a2e986a70e",
+    "commodities": "d0e522081382a4694ed993aeaed8544cb213f9c6cb6ddd91fb68f06b81212a79",
+    "japon": "76a4e497b18fef24a2e60c86284b6d936d2ec20065bd622bed487165ef71aaf2"
+  }
+}

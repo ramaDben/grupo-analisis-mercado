@@ -29,6 +29,11 @@ if str(_SRC_ROOT) not in sys.path:
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
+# Ruta del repositorio Genesis para pruebas de integración del puente
+_GENESIS_SRC = Path("C:/Users/bbrav/genesis/src")
+if _GENESIS_SRC.exists() and str(_GENESIS_SRC) not in sys.path:
+    sys.path.insert(0, str(_GENESIS_SRC))
+
 
 # Stub mínimo de fastmcp solo si no está disponible en el entorno.
 try:  # pragma: no cover - depende del entorno de ejecución

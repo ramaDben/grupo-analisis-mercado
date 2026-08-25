@@ -15,7 +15,7 @@ Sin ese argumento, ignora esta sección y genera solo el contenido de cliente, c
 
 ---
 
-## PIEZA 1 — Noticias del fin de semana
+## PIEZA 1: Noticias del fin de semana
 
 Busca eventos relevantes ocurridos entre el sábado y hoy domingo que puedan mover nuestros activos al inicio de semana:
 - Con `WebSearch` busca noticias del fin de semana (últimas ~48 h) sobre investing.com + fuentes oficiales (Fed, BCCh, OPEP+, EIA), como en el PASO 1 de `/noticia`.
@@ -36,7 +36,7 @@ Si no hay noticias de impacto: generar el mensaje de "mercados tranquilos" (ver 
 ━━━━━━━━━━━━━━━━━━━
 📰 Esto pasó mientras los mercados estaban cerrados:
 
-[Noticia 1 — 2 líneas máximo]
+[Noticia 1: 2 líneas máximo]
 → Afecta: [activo(s)]
 
 [Noticia 2 si aplica]
@@ -62,10 +62,10 @@ Al aprobar: guardar con la ruta de `scripts\ruta_mensaje.ps1 -Fecha [FECHA] -Tip
 
 ---
 
-## PIEZA 2 — Preview de la semana
+## PIEZA 2: Preview de la semana
 
 Obtén el calendario económico de la semana que viene:
-- Con `WebSearch` sobre investing.com obtén el calendario de **alto impacto** de la semana que viene (próximos 7 días). Convierte cada hora a Chile con el helper determinista `scripts\hora_chile.ps1` (según la zona de origen del dato; nunca offsets fijos) — ver PASO 1B de `/dato_macro`.
+- Con `WebSearch` sobre investing.com obtén el calendario de **alto impacto** de la semana que viene (próximos 7 días). Convierte cada hora a Chile con el helper determinista `scripts\hora_chile.ps1` (según la zona de origen del dato; nunca offsets fijos): ver PASO 1B de `/dato_macro`.
 - Si no encuentras eventos de alto impacto → informar y DETENER.
 
 Filtra los 4-6 datos más importantes. Marca con 🔴 los de máximo impacto (NFP, IPC EE.UU., decisiones de tasas). Incluir siempre la hora en CLT.
@@ -77,15 +77,15 @@ Formato WhatsApp:
 Los datos que pueden mover el mercado:
 
 📌 *Lunes [fecha]*
-🕐 [Hora CLT] — [Dato] ([País])
+🕐 [Hora CLT]: [Dato] ([País])
 → Afecta: [activo]
 
 📌 *Miércoles [fecha]*
-🕐 [Hora CLT] — [Dato] ([País])
+🕐 [Hora CLT]: [Dato] ([País])
 → Afecta: [activo]
 
-🔴 *Viernes [fecha] — ALTA VOLATILIDAD*
-🕐 [Hora CLT] — NFP / [Dato crítico] (EE.UU.)
+🔴 *Viernes [fecha]: ALTA VOLATILIDAD*
+🕐 [Hora CLT]: NFP / [Dato crítico] (EE.UU.)
 → Afecta: todos los activos
 
 _Horarios en hora Chile (CLT)_
@@ -97,9 +97,9 @@ Al aprobar: guardar con la ruta de `scripts\ruta_mensaje.ps1 -Fecha [FECHA] -Tip
 
 ---
 
-## PIEZA 3 — Sesgo de entrada al lunes
+## PIEZA 3: Sesgo de entrada al lunes
 
-Basado en los precios de cierre del viernes y las noticias del fin de semana, genera un resumen de cómo llegan los activos principales al lunes. MT5 puede estar cerrado el domingo — usar precios de referencia del viernes via WebSearch.
+Basado en los precios de cierre del viernes y las noticias del fin de semana, genera un resumen de cómo llegan los activos principales al lunes. MT5 puede estar cerrado el domingo: usar precios de referencia del viernes via WebSearch.
 
 WebSearch sugerida: "precios cierre viernes [fecha] USD/CLP oro WTI nasdaq".
 
@@ -135,7 +135,7 @@ Al aprobar: guardar con la ruta de `scripts\ruta_mensaje.ps1 -Fecha [FECHA] -Tip
 
 ---
 
-## PIEZA 4 — Apertura asiática (solo si es después de las 21:30 CLT)
+## PIEZA 4: Apertura asiática (solo si es después de las 21:30 CLT)
 
 Solo incluir si el director ejecuta el comando después de las 21:30 CLT (mercados de Tokio ya abrieron).
 
@@ -143,7 +143,7 @@ Busca la dirección inicial de los mercados asiáticos vía `WebSearch`: "apertu
 
 Formato WhatsApp:
 ```
-🌏 *APERTURA ASIÁTICA — LUNES*
+🌏 *APERTURA ASIÁTICA: LUNES*
 ━━━━━━━━━━━━━━━━━━━
 🕐 [Hora CLT actual]
 
@@ -155,7 +155,7 @@ Formato WhatsApp:
 → Señal [positiva/negativa] para la apertura europea y americana.
 
 [Si movimiento neutro:]
-📌 Apertura asiática sin grandes movimientos — mercados en compás de espera.
+📌 Apertura asiática sin grandes movimientos: mercados en compás de espera.
 ━━━━━━━━━━━━━━━━━━━
 ```
 
@@ -164,11 +164,11 @@ Al aprobar: guardar con la ruta de `scripts\ruta_mensaje.ps1 -Fecha [FECHA] -Tip
 
 ---
 
-## PIEZA 5 — Encuesta de la semana
+## PIEZA 5: Encuesta de la semana
 
 Genera 2 bloques: contexto previo + encuesta.
 
-**Bloque A — Contexto** (elige el activo más interesante de esta semana según las noticias):
+**Bloque A: Contexto** (elige el activo más interesante de esta semana según las noticias):
 ```
 🎯 *ACTIVO A SEGUIR ESTA SEMANA*
 ━━━━━━━━━━━━━━━━━━━
@@ -176,12 +176,12 @@ Genera 2 bloques: contexto previo + encuesta.
 ━━━━━━━━━━━━━━━━━━━
 ```
 
-**Bloque B — Encuesta**:
+**Bloque B: Encuesta**:
 ```
 📊 *ENCUESTA DE LA SEMANA*
 
 ¿Cuál creen que será el activo con mayor movimiento esta semana?
-Voten 👇 — el viernes vemos quién acertó
+Voten 👇: el viernes vemos quién acertó
 
 🇨🇱 USD/CLP
 🥇 Oro
@@ -199,6 +199,6 @@ Al aprobar: guardar con la ruta de `scripts\ruta_mensaje.ps1 -Fecha [FECHA] -Tip
 - Hora siempre en hora Chile (CLT/CLST).
 - NO usar MT5 (mercados cerrados el domingo).
 - NO generar niveles técnicos (sin mercado abierto no hay niveles válidos).
-- La PIEZA 4 (apertura asiática) es opcional — incluirla solo después de las 21:30 CLT.
+- La PIEZA 4 (apertura asiática) es opcional: incluirla solo después de las 21:30 CLT.
 - Al aprobar cada pieza: guardar en `data/mensajes/` (ruta vía `scripts\ruta_mensaje.ps1`, transversal → `_general`) antes de continuar con la siguiente.
 - Si WhatsApp MCP disponible: enviar automáticamente tras aprobación. Si no: mostrar texto listo para copiar.

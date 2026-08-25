@@ -32,6 +32,7 @@ import extractor_usa
 import extractor_chile
 import extractor_europa_uk
 import extractor_commodities
+import extractor_japon
 
 def calcular_hash_canonico(payload: dict) -> str:
     """Calcula un hash SHA-256 sobre un payload serializado con claves ordenadas."""
@@ -72,9 +73,11 @@ def _extraer_ultimo_valido(hist: dict):
     _, orig_fecha, val = valid_items[-1]
     return orig_fecha, val
 
-def consolidar_latest_drivers(usa_data: dict, chile_data: dict, eu_data: dict, comm_data: dict) -> dict:
+def consolidar_latest_drivers(usa_data: dict, chile_data: dict, eu_data: dict, comm_data: dict, japon_data: dict = None) -> dict:
     """Genera el snapshot de drivers con frescura (as_of) y flag is_stale."""
     ahora_utc = datetime.now(timezone.utc).isoformat()
+    if japon_data is None:
+        japon_data = {}
     
     # Curva US 10Y
     d10_hist = usa_data.get("curva_rendimientos_yields", {}).get("DGS10", {}).get("historico", {})
@@ -108,6 +111,19 @@ def consolidar_latest_drivers(usa_data: dict, chile_data: dict, eu_data: dict, c
     oro_hist = comm_data.get("commodities", {}).get("ORO_SPOT", {}).get("historico", {})
     ult_oro_fecha, ult_oro_val = _extraer_ultimo_valido(oro_hist)
     
+    # Japón: Tasa BoJ, IPC Core, JGB 10Y, USD/JPY
+    boj_tasa_val = japon_data.get("politica_monetaria_boj", {}).get("tasa_politica_overnight", {}).get("valor_actual", 1.00)
+    boj_tasa_fecha = japon_data.get("politica_monetaria_boj", {}).get("tasa_politica_overnight", {}).get("ultima_decision", "")
+    
+    cpi_core_hist = japon_data.get("inflacion_japon", {}).get("cpi_core_yoy", {}).get("historico", {})
+    ult_cpi_fecha, ult_cpi_val = _extraer_ultimo_valido(cpi_core_hist)
+    
+    jgb_hist = japon_data.get("politica_monetaria_boj", {}).get("rendimiento_jgb_10y", {}).get("historico", {})
+    ult_jgb_fecha, ult_jgb_val = _extraer_ultimo_valido(jgb_hist)
+    
+    usdjpy_hist = japon_data.get("mercado_divisas", {}).get("usdjpy", {}).get("historico", {})
+    ult_usdjpy_fecha, ult_usdjpy_val = _extraer_ultimo_valido(usdjpy_hist)
+
     return {
         "timestamp_consolidacion": ahora_utc,
         "drivers": {
@@ -158,6 +174,30 @@ def consolidar_latest_drivers(usa_data: dict, chile_data: dict, eu_data: dict, c
                 "unidad": "millones_USD",
                 "fecha_dato": ult_fwd_fecha,
                 "is_stale": chile_data.get("series", {}).get("POSICION_FORWARD_EXTRANJEROS", {}).get("status") != "OK"
+            },
+            "BOJ_POLICY_RATE": {
+                "valor": boj_tasa_val,
+                "unidad": "%",
+                "fecha_dato": boj_tasa_fecha,
+                "is_stale": japon_data.get("politica_monetaria_boj", {}).get("tasa_politica_overnight", {}).get("status") != "OK"
+            },
+            "JAPAN_CORE_CPI_YOY": {
+                "valor": ult_cpi_val,
+                "unidad": "%",
+                "fecha_dato": ult_cpi_fecha,
+                "is_stale": japon_data.get("inflacion_japon", {}).get("cpi_core_yoy", {}).get("status") != "OK"
+            },
+            "JGB_10Y_YIELD": {
+                "valor": ult_jgb_val,
+                "unidad": "%",
+                "fecha_dato": ult_jgb_fecha,
+                "is_stale": japon_data.get("politica_monetaria_boj", {}).get("rendimiento_jgb_10y", {}).get("status") != "OK"
+            },
+            "USD_JPY": {
+                "valor": ult_usdjpy_val,
+                "unidad": "JPY",
+                "fecha_dato": ult_usdjpy_fecha,
+                "is_stale": "OK" not in japon_data.get("mercado_divisas", {}).get("usdjpy", {}).get("status", "")
             }
         }
     }
@@ -179,34 +219,40 @@ def ejecutar_pipeline(forzar: bool = False) -> dict:
     hashes_previos = estado_previo.get("hashes_canonicos", {})
     
     # 2. Ejecutar extractores
-    print("\n[1/4] Ejecutando Extractor USA...")
+    print("\n[1/5] Ejecutando Extractor USA...")
     usa_data = extractor_usa.ejecutar_extraccion_usa()
     
-    print("\n[2/4] Ejecutando Extractor Chile...")
+    print("\n[2/5] Ejecutando Extractor Chile...")
     chile_data = extractor_chile.ejecutar_extraccion_chile()
     
-    print("\n[3/4] Ejecutando Extractor Europa y UK...")
+    print("\n[3/5] Ejecutando Extractor Europa y UK...")
     eu_data = extractor_europa_uk.ejecutar_extraccion_europa_uk()
     
-    print("\n[4/4] Ejecutando Extractor Commodities...")
+    print("\n[4/5] Ejecutando Extractor Commodities...")
     comm_data = extractor_commodities.ejecutar_extraccion_commodities()
+
+    print("\n[5/5] Ejecutando Extractor Japón (BoJ / Inflación)...")
+    japon_data = extractor_japon.ejecutar_extraccion_japon()
     
     # 3. Calcular hashes canonicos de datos puros (excluyendo 'as_of')
     puro_usa = {k: v for k, v in usa_data.items() if k != "as_of"}
     puro_chile = {k: v for k, v in chile_data.items() if k != "as_of"}
     puro_eu = {k: v for k, v in eu_data.items() if k != "as_of"}
     puro_comm = {k: v for k, v in comm_data.items() if k != "as_of"}
+    puro_japon = {k: v for k, v in japon_data.items() if k != "as_of"}
     
     hash_usa = calcular_hash_canonico(puro_usa)
     hash_chile = calcular_hash_canonico(puro_chile)
     hash_eu = calcular_hash_canonico(puro_eu)
     hash_comm = calcular_hash_canonico(puro_comm)
+    hash_japon = calcular_hash_canonico(puro_japon)
     
     nuevos_hashes = {
         "usa": hash_usa,
         "chile": hash_chile,
         "europa_uk": hash_eu,
-        "commodities": hash_comm
+        "commodities": hash_comm,
+        "japon": hash_japon
     }
     
     # 4. Detectar cambios y revisiones
@@ -220,6 +266,8 @@ def ejecutar_pipeline(forzar: bool = False) -> dict:
         novedades_detalle.append("Datos actualizados en Europa/UK (Tasas BCE / Bank Rate)")
     if hash_comm != hashes_previos.get("commodities"):
         novedades_detalle.append("Datos actualizados en Commodities (Cobre / WTI / Brent / Oro)")
+    if hash_japon != hashes_previos.get("japon"):
+        novedades_detalle.append("Datos actualizados en Japón (Banco de Japón / IPC / JGB / USD-JPY)")
         
     hay_novedades = (len(novedades_detalle) > 0) or forzar
     if forzar and len(novedades_detalle) == 0:
@@ -227,7 +275,7 @@ def ejecutar_pipeline(forzar: bool = False) -> dict:
         
     # 5. Consolidar latest_drivers.json
     DATA_DRIVERS.mkdir(parents=True, exist_ok=True)
-    latest_drivers = consolidar_latest_drivers(usa_data, chile_data, eu_data, comm_data)
+    latest_drivers = consolidar_latest_drivers(usa_data, chile_data, eu_data, comm_data, japon_data)
     with open(LATEST_DRIVERS_FILE, "w", encoding="utf-8") as f:
         json.dump(latest_drivers, f, indent=2, ensure_ascii=False)
         
@@ -242,7 +290,8 @@ def ejecutar_pipeline(forzar: bool = False) -> dict:
             "usa": usa_data.get("tesoro_status", "OK"),
             "chile": chile_data.get("series", {}).get("IMACEC_TOTAL", {}).get("status", "OK"),
             "europa_uk": eu_data.get("series", {}).get("BCE_DFR", {}).get("status", "OK"),
-            "commodities": comm_data.get("commodities", {}).get("COBRE_COMEX", {}).get("status", "OK")
+            "commodities": comm_data.get("commodities", {}).get("COBRE_COMEX", {}).get("status", "OK"),
+            "japon": japon_data.get("politica_monetaria_boj", {}).get("tasa_politica_overnight", {}).get("status", "OK")
         },
         "hashes_canonicos": nuevos_hashes
     }
@@ -278,6 +327,13 @@ def ejecutar_pipeline(forzar: bool = False) -> dict:
         ejecutar_motor_sesgo(verbose=True)
     except Exception as exc:
         print(f"[WARN HOOK] Motor Cuantitativo falló de forma aislada: {exc}")
+
+    try:
+        from scripts.pronostico_inflacion_japon import construir_pronostico_inflacion
+        print("\n[HOOK] Actualizando Modelo de Pronóstico de Inflación Japón...")
+        construir_pronostico_inflacion()
+    except Exception as exc:
+        print(f"[WARN HOOK] Modelo de Pronóstico de Japón falló de forma aislada: {exc}")
     
     return nuevo_estado
 

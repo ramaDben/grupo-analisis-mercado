@@ -1,6 +1,7 @@
 Genera la operativa diaria del martes pieza por pieza para aprobación.
 
 ## SETUP
+1. Verifica el estado de ingesta soberana en data central/DATA AGENDA/calendario_2026.json y pipeline_ingesta.py.
 1. Determina los activos del día leyendo `config/agenda_semanal.json` y `config/activos.json` según el día de la semana.
 
 > **Orden del flujo**: el dato macro se genera y envía PRIMERO, para que el cliente reciba el fundamental del día mientras se cargan los niveles en MT5 (los niveles requieren input manual y tardan más).
@@ -15,16 +16,16 @@ Sin ese argumento, ignora esta sección y genera solo el contenido de cliente, c
 
 ---
 
-## PIEZA 1 — Dato macro del día
+## PIEZA 1: Dato macro del día
 
 Ejecuta la lógica de /dato_macro:
-- Obtén el calendario de hoy con `WebSearch` sobre investing.com (Chile, EE.UU., Zona Euro, China; impacto medio y alto), como en el PASO 1 de `/dato_macro`. Convierte cada hora a Chile con el helper determinista `scripts\hora_chile.ps1` (según la zona de origen del dato; nunca offsets fijos) — ver PASO 1B de `/dato_macro`.
+- Obtén el calendario de hoy con `WebSearch` sobre investing.com (Chile, EE.UU., Zona Euro, China; impacto medio y alto), como en el PASO 1 de `/dato_macro`. Convierte cada hora a Chile con el helper determinista `scripts\hora_chile.ps1` (según la zona de origen del dato; nunca offsets fijos): ver PASO 1B de `/dato_macro`.
 - Si no hay eventos de impacto medio/alto hoy → continuar (domingo/feriado es esperado).
 
 Lista numerada con los datos del día:
 ```
-1. 🔴 [Hora CLT] — [Indicador] ([País], ★★★) | Prev: X | Esp: Y
-2. 🟡 [Hora CLT] — [Indicador] ([País], ★★) | Prev: X | Esp: Y
+1. 🔴 [Hora CLT]: [Indicador] ([País], ★★★) | Prev: X | Esp: Y
+2. 🟡 [Hora CLT]: [Indicador] ([País], ★★) | Prev: X | Esp: Y
 ...
 ```
 
@@ -32,7 +33,7 @@ Pregunta al director: "¿Cuál(es) quieres desarrollar? (escribe el número o n�
 
 Cuando el director elige, genera el mensaje WhatsApp:
 ```
-📅 *DATO MACRO — [INDICADOR]*
+📅 *DATO MACRO: [INDICADOR]*
 ━━━━━━━━━━━━━━━━━━━
 ¿Qué es?
 [Explicación simple en 1-2 líneas]
@@ -62,7 +63,7 @@ Si el dato ya salió (tiene valor "actual"), usar modo resultado:
 
 ---
 
-## PIEZA 2 — Apertura de mercado
+## PIEZA 2: Apertura de mercado
 
 Ejecuta `/apertura` (ver `.claude/commands/apertura.md`).
 
@@ -70,21 +71,21 @@ Ejecuta `/apertura` (ver `.claude/commands/apertura.md`).
 
 ---
 
-## PIEZA 3 — Encuesta de precio de apertura (martes = precio)
+## PIEZA 3: Encuesta de precio de apertura (martes = precio)
 
 El martes la encuesta es de PRECIO, no tendencia.
 
 Genera 2 bloques consecutivos:
 
-**Bloque A — Contexto previo**:
+**Bloque A: Contexto previo**:
 ```
-🎯 *CONTEXTO — [ACTIVO]*
+🎯 *CONTEXTO: [ACTIVO]*
 ━━━━━━━━━━━━━━━━━━━
 [2-3 líneas con precio actual, sesgo, evento relevante del día]
 ━━━━━━━━━━━━━━━━━━━
 ```
 
-**Bloque B — Encuesta de precio**:
+**Bloque B: Encuesta de precio**:
 ```
 📊 *ENCUESTA DEL DÍA*
 ━━━━━━━━━━━━━━━━━━━
@@ -105,5 +106,5 @@ Genera 2 bloques consecutivos:
 - Hora siempre en hora Chile (CLT/CLST).
 - Un indicador por aviso (nunca mezclar en el mismo mensaje).
 - Si WhatsApp MCP no está disponible: mostrar texto listo para copiar.
-- **Dirección explícita**: SIEMPRE usar `*Alcista* 🟢` o `*Bajista* 🔴` en escenarios — nunca "puede subir", "podría bajar", "fuerza compradora" ni "presión vendedora".
+- **Dirección explícita**: SIEMPRE usar `*Alcista* 🟢` o `*Bajista* 🔴` en escenarios: nunca "puede subir", "podría bajar", "fuerza compradora" ni "presión vendedora".
 - **Temporalidad obligatoria**: cada reacción a dato macro lleva `(impacto inmediato, ~1-2h)` o `(tendencia del día, intra-day)`. Si no hay certeza de dirección: `*Esperar confirmación* 🟡`.

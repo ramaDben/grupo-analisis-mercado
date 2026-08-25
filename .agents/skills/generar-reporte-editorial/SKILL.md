@@ -1,83 +1,108 @@
 ---
 name: generar-reporte-editorial
-description: Automatiza la lectura de datos económicos desde data central/, redacta un informe ciudadano con fechas exactas, genera un PDF con diseño oficial (Space Grotesk / Syne con altitud estilizada), integra gráficos de alta resolución y crea el mensaje de WhatsApp.
+description: Automatiza la lectura de datos económicos desde data central/, gestiona el criterio de canal (PDF institucional vs Chat-First en WhatsApp con gráfico didáctico), redacta informes ciudadanos con fechas exactas y genera visualizaciones de alta resolución.
 ---
 
-# Flujo de Trabajo: Generación de Reporte Editorial de Mercado
+# Flujo de Trabajo: Generación de Reporte Editorial de Mercado y Mensajería
 
-Esta skill formaliza el proceso integral para emitir los informes oficiales de Grupo Inteligencia dirigidos a clientes finales, inversionistas y PYMEs, garantizando un estándar de diseño gráfico y editorial de nivel banca institucional.
-
----
-
-## 1. Verificación de Estado y Consolidación de Datos
-- Lee el archivo de control `data central/DATA AGENDA/estado_ejecucion.json`.
-- Si `hay_novedades == False` y no se especificó forzar (`--force`), notifica que los informes están al día y no requiere reescritura innecesaria.
-- Lee el consolidado instantáneo:
-  `data central/DATA DRIVERS USDCLP/latest_drivers.json`
-  así como las series en `data central/DATA [PAIS|TEMA]/raw/*.json`.
+Esta skill formaliza el proceso integral para emitir los informes oficiales y cápsulas de WhatsApp de Grupo Inteligencia dirigidos a clientes finales, inversionistas y traders, garantizando rigor de banca institucional y máxima claridad pedagógica.
 
 ---
 
-## 2. Generación e Integración de Gráficos Editoriales (Estándar Estricto)
-Para respaldar visualmente el análisis sin romper la paginación ni generar hojas en blanco:
-- **Motor Gráfico:** Utilizar siempre [`scripts/generar_graficos.py`](file:///C:/Users/bbrav/grupo-analisis-mercado/.agents/skills/generar-reporte-editorial/scripts/generar_graficos.py) o [`scripts/generar_graficos_drivers.py`](file:///C:/Users/bbrav/grupo-analisis-mercado/scripts/generar_graficos_drivers.py).
-- **Dimensiones Obligatorias:** Formato banner compacto de **7.2 x 2.5 pulgadas** (`figsize=(7.2, 2.5)` a **300 DPI**).
+## 1. Criterio de Canal y Prevención de Spam (PDF vs Chat-First)
+
+> [!IMPORTANT]
+> **Para evitar la fatiga de descargas y la percepción de "spam de archivos" en los grupos de clientes:**
+> 
+> * 📄 **Documento PDF Oficial:** Reservado estrictamente para hitos macro de alta densidad:
+>   - *Resumen Semanal de Mercados (Friday Weekly Wrap)*.
+>   - *Informes Especiales IPoM del Banco Central de Chile*.
+>   - *Decisiones Mayores de Política Monetaria (Fed / BCCh / BCE / BoE)*.
+>   - *Dossiers y Manuales de Capacitación Comercial*.
+> 
+> * 💬 **Formato Chat-First (Mensaje WhatsApp + Gráfico Adjunto Directo):** Obligatorio para:
+>   - Eventos tácticos intradía o de madrugada (ej. *IPC de Japón*, datos de inventarios WTI).
+>   - Cobertura puntual de activos fuera de rotación (ej. *USD/JPY*).
+>   - Cápsulas de seguimiento donde el cliente necesita entender la dirección en **menos de 30 segundos** sin salir de la app ni descargar documentos pesados.
+
+---
+
+## 2. Estándar Visual de Gráficos: Estructura "Causa y Efecto" (Auto-Explicativos)
+
+Para que cualquier persona (desde un cliente novato hasta un trader profesional) comprenda un gráfico macro o intermercado:
+- **Dimensiones:** Formato banner institucional de **7.2 x 2.8 a 7.2 x 3.2 pulgadas** a **300 DPI** (o `11.2 x 6.2` in para gráficos duales).
 - **Paleta Institucional Oficial:**
-  - Fondo: Blanco `#FFFFFF`
-  - Texto y Títulos: Negro Profundo `#0D0D1A`
-  - Línea de Acento 1: Verde Menta `#53C1AB`
-  - Línea de Acento 2: Azul Cian `#3E91AF`
-  - Alerta / Conflicto: Coral `#E76F51`
-  - Rejilla Suave: `#E9ECEF` (alpha 0.9)
-- **Embebido en Markdown:** `![Descripción](C:/Users/bbrav/.../graficos/nombre.png)`.
+  - Fondo: Oscuro `#0D0D1A` o Claro `#FFFFFF`.
+  - Acento 1 (Línea Principal / Fibo / Menta): `#53C1AB`.
+  - Acento 2 (Línea Secundaria / Bonos / Azul Cian): `#3E91AF`.
+  - Alerta / Resistencias / Coral: `#E76F51`.
+  - Rejilla Suave: `#E9ECEF` (alpha 0.2 a 0.25).
+- **Estructura Dual Obligatoria:**
+  - **Piso 1 (La Causa):** Muestra los intereses, diferenciales de tasas o drivers macro con **cita explícita al organismo oficial emisor** (ej. *Ministerio de Finanzas de Japón - MOF*, *Tesoro EE.UU.*).
+  - **Piso 2 (El Efecto):** Muestra la cotización del par con **cajas de llamada visuales (*callouts*)** que traduzcan caídas históricas y el punto de decisión de hoy.
 
 ---
 
-## 3. Pauta de Redacción: "Modelo de 3 Capas" (Hecho -> Traducción -> Decisión)
-Cada capítulo del informe debe estructurarse obligatoriamente bajo **3 capas de contenido**:
-1. 📌 **El Hecho Oficial:** El dato macroeconómico formal con fecha exacta y cifra dura (ej. *"El 19 de agosto, el Tesoro de EE.UU. anunció..."*).
-2. 💡 **La Traducción en Simple (¿Qué significa para ti?):** Explicación aterrizada en lenguaje cotidiano, sin jerga innecesaria.
-3. 🎯 **La Decisión Financiera (Semáforo de Acción de Bolsillo):**
-   - 🟢 **Momento de Invertir / Oportunidad:** Dónde colocar el dinero hoy (Depósitos a Plazo, Fondos en UF, Dólares escalonados, Renta Fija Corta).
-   - 🟡 **Momento de Cautela / Esperar:** Qué compras o decisiones postergar.
-   - 🔴 **Momento de Evitar:** Riesgos concretos (sobreendeudamiento a crédito, créditos de consumo caros, deudas en moneda extranjera).
+## 3. Pauta de Redacción y Consistencia Semántica de Semáforos
 
-**Estructura Obligatoria del Documento:**
-- `## 01. ...` a `## 03. ...`: Capítulos temáticos con el modelo de 3 capas y gráficos tipo banner integrados.
-- `## 04. Brújula de Decisiones: ¿Qué Hacer con tu Dinero Hoy?`: Tabla ejecutiva por perfiles (Ahorrante/Familia, Inversionista, PYME/Empresa).
-- `## 05. Fuentes Consultadas`: Listado formal de entidades oficiales.
+### Regla Semántica Estricta de Colores en Precios:
+En los mensajes de WhatsApp y resúmenes de cierre, **los colores miden siempre la dirección del precio del activo en el gráfico**, nunca la fuerza del dato macro:
+* 🟢 **Verde = ALCISTA / Sobre Resistencia:** Impulso comprador y subida de precio (`🟢 Sobre [Nivel]`).
+* 🟡 **Amarillo = RANGO / Neutral:** Zona de espera, oscilación y absorción (`🟡 Entre [Soporte] y [Resistencia]`).
+* 🔴 **Rojo = BAJISTA / Bajo Soporte:** Presión vendedora y caída de precio (`🔴 Bajo [Nivel]`).
+
+> [!CAUTION]
+> **Prohibición:** Queda estrictamente prohibido invertir los colores en función del sesgo del dato (ej. poner verde en una caída de precio porque el IPC salió alto).
+
+### Reglas de Formato Auditadas para Clientes:
+1. **Cero Guiones Largos:** Prohibido el uso de guiones largos (`—`) y medios (`–`) en textos de WhatsApp. Sustituir por dos puntos, puntos o comas.
+2. **Tabla de Decimales Estricta:**
+   - `USDCLP`: 2 decimales (`$912.37`).
+   - `USDJPY`: 3 decimales (`159.618`).
+   - `XAUUSD`: 2 decimales (`$4648.39`).
+   - `WTI / BRENT`: 2 a 3 decimales (`$85.42`).
+   - `US100`: 2 decimales (`29038.03`).
+3. **Resumen Above-the-Fold:** Las primeras 3 líneas deben entregar Activo, Nivel Clave y Qué esperar sin obligar a desplegar el texto largo.
 
 ---
 
 ## 4. Motor de Renderizado PDF ([`generar_pdf.py`](file:///C:/Users/bbrav/grupo-analisis-mercado/.agents/skills/generar-reporte-editorial/scripts/generar_pdf.py))
 
 ### Variantes de Edición y Paleta Institucional:
-1. **Edición Temática / Macro (Estándar durante la semana):**
+1. **Edición Temática / Macro / Especial (Estándar durante la semana):**
    - **Portada y Disclaimer:** Azul Negro Oscuro (`#0D0D1A`).
    - **Acentos y Badges:** Verde Menta (`#53C1AB`) y Azul Cian (`#3E91AF`).
+   - **Badge Superior Inmutable:** `RESEARCH & ESTRATEGIA` (esquina superior derecha junto a `GRUPO INTELIGENCIA`).
+   - **Pie de Página:** `RESEARCH Y ESTRATEGIA` (derecha) y `GRUPO INTELIGENCIA` (izquierda).
    - **Comando:** `--theme oscuro`.
 2. **Edición Resumen Semanal de Mercados (Friday Weekly Wrap):**
    - **Portada y Disclaimer:** Verde Oscuro Institucional (`#062C22` / `#0F4539`).
    - **Acentos y Badges:** Azul Cian (`#3E91AF`) para el texto superior, barra divisoria y badges.
+   - **Badge Superior Inmutable:** `RESEARCH & ESTRATEGIA`.
    - **Comando:** `--theme verde`.
 
+### Jerarquía Editorial de Portada:
+- **Título Protagonista (`--title`):** Renderizado a gran escala en **Syne 800** (46px). Debe ser el concepto, activo o sistema protagonista (ej. `Motor GI`, `Minutas del FOMC`, `Monitor USD/CLP`).
+- **Pretítulo / Tag Superior (`--tag`):** En Azul Cian/Menta (`#3E91AF`), define la categoría o contexto temático (ej. `DE LOS DATOS A LA DECISIÓN • METODOLOGÍA & ESTRATEGIA` o `REPORTE EJECUTIVO`).
+- **Subtítulo (`--subtitle`):** Párrafo explicativo en **Space Grotesk** que traduce el valor práctico del informe.
+- **Firma / Emisor (`--analyst`):** `Área de Estudios & Estrategia` o `Dirección de Trading & Research Cuantitativo`.
+
+### Estándar de Fuentes Oficiales Auditables:
+Toda sección `05. Fuentes Consultadas` debe utilizar terminología financiera rigurosa y verificable:
+1. **MetaTrader 5 Broker Gateway:** *Flujos de precios Spot en tiempo real, profundidad de mercado, spread y series de velas de alta frecuencia (OHLCV).* (Nunca usar "interbancario" para MT5).
+2. **Sistemas de Calendario y Consenso Macroeconómico:** *Monitoreo de publicaciones de alta relevancia y medición de desviaciones respecto al consenso.*
+3. **U.S. Department of the Treasury & Federal Reserve Bank of St. Louis (FRED):** *Curva de rendimientos soberanos (2Y, 10Y, 30Y) y tasas reales TIPS.*
+4. **Banco Central de Chile:** *Estadísticas cambiarias del mercado formal, Tasa de Política Monetaria (TPM) y derivados cambiarios.*
+5. **CME Group / ICE:** *Precios oficiales de liquidación para contratos de futuros de Cobre COMEX (HG), Petróleo WTI/Brent y Oro.*
+
 ### Reglas de Diseño y Tipografía:
-1. **Tipografía Syne 800 (Altitud Estilizada y Mayor Legibilidad):**
-   - Portada (Título Principal): `display: block; transform: scaleY(1.15); transform-origin: left top; font-size: 46px; margin: 0 0 34px 0;`.
-   - Portada y Disclaimer (Marca): `display: inline-block; transform: scaleY(1.18); transform-origin: left center;`.
-   - Encabezados `h1`: `display: block; transform: scaleY(1.14); transform-origin: left bottom; font-size: 22px;`.
-   - Título Disclaimer: `display: inline-block; transform: scaleY(1.15); transform-origin: left bottom; font-size: 20px;`.
-   - Cuerpo de texto, párrafos, tablas y semáforos en **Space Grotesk** (`11.5px` – `12px`, interlineado `1.55 – 1.6`).
-2. **Tablas Markdown Estructuradas:**
-   - Conversión obligatoria con `markdown.markdown(md_text, extensions=['tables', 'fenced_code'])`.
-   - Regla CSS estricta: `table-layout: auto !important` y `white-space: normal !important` para evitar el colapso de columnas.
-   - Encabezados oscuros `#0D0D1A` con línea de acento menta `#53C1AB` y filas alternadas en `#F8FAF9`.
-3. **Control Anti-Cortes (`break-inside: avoid`):**
-   - Imágenes, tablas y encabezados no deben cortarse entre páginas.
+- Tipografía **Syne 800** con altitud estilizada (`scaleY(1.15)`) para títulos y **Space Grotesk** para cuerpo.
+- Tablas Markdown estructuradas con `table-layout: auto !important` y `break-inside: avoid`.
+- Control anti-cortes (`break-inside: avoid`) en imágenes y encabezados.
 
 ---
 
 ## 5. Resumen para WhatsApp
-- Generar siempre `mensaje_resumen_whatsapp.txt` o `cierre_semanal_whatsapp.txt` en `reportes_generados/`.
-- Consejos de bolsillo rápidos, párrafos cortos y emojis estratégicos (🏛️, 🛢️, 🇨🇱, 💡, 🎯).
-- Respetar estrictamente la tabla de decimales (`digits`) y la ausencia de guiones largos (`—`) según `CLAUDE.md`.
+- Generar siempre `mensaje_resumen_whatsapp.txt` o `mensaje_presentacion_*.txt` en `reportes_generados/`.
+- Consejos de bolsillo rápidos, párrafos cortos y emojis estratégicos (🏛️, 🛢️, 🇨🇱, 💡, 🎯, 🔹).
+- Respetar estrictamente la tabla de decimales (`digits`) y la ausencia de guiones largos (`—`) o medios (`–`) según `CLAUDE.md`.

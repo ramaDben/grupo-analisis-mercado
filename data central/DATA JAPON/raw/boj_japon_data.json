@@ -1,0 +1,106 @@
+{
+  "pais": "Japón",
+  "timestamp_actualizacion": "2026-08-24T16:41:08.885735",
+  "fuentes_oficiales": {
+    "bonos_soberanos": "Ministerio de Finanzas de Japón (Ministry of Finance - MOF)",
+    "inflacion": "Oficina de Estadísticas de Japón (Statistics Bureau / MIC - stat.go.jp)",
+    "politica_monetaria": "Banco de Japón (Bank of Japan - BOJ - boj.or.jp)"
+  },
+  "indicadores_financieros": {
+    "jgb_10y_yield": 2.882,
+    "us_10y_yield": 4.704,
+    "yield_spread_us_jp": 1.822,
+    "yield_spread_bps": 182.2,
+    "usd_jpy_spot": 159.133,
+    "mof_fecha_registro": "2026-08-21",
+    "curva_jgb_mof": {
+      "1年": 1.438,
+      "2年": 1.682,
+      "3年": 1.823,
+      "4年": 2.015,
+      "5年": 2.146,
+      "6年": 2.287,
+      "7年": 2.432,
+      "8年": 2.601,
+      "9年": 2.739,
+      "10年": 2.882,
+      "15年": 3.448,
+      "20年": 3.76,
+      "25年": 4.049,
+      "30年": 4.042,
+      "40年": 4.069
+    },
+    "historico_jgb_mof": [
+      {
+        "fecha": "2026-08-03",
+        "jgb_10y": 2.824
+      },
+      {
+        "fecha": "2026-08-04",
+        "jgb_10y": 2.848
+      },
+      {
+        "fecha": "2026-08-05",
+        "jgb_10y": 2.813
+      },
+      {
+        "fecha": "2026-08-06",
+        "jgb_10y": 2.773
+      },
+      {
+        "fecha": "2026-08-07",
+        "jgb_10y": 2.804
+      },
+      {
+        "fecha": "2026-08-10",
+        "jgb_10y": 2.815
+      },
+      {
+        "fecha": "2026-08-12",
+        "jgb_10y": 2.856
+      },
+      {
+        "fecha": "2026-08-13",
+        "jgb_10y": 2.873
+      },
+      {
+        "fecha": "2026-08-14",
+        "jgb_10y": 2.878
+      },
+      {
+        "fecha": "2026-08-17",
+        "jgb_10y": 2.919
+      },
+      {
+        "fecha": "2026-08-18",
+        "jgb_10y": 2.934
+      },
+      {
+        "fecha": "2026-08-19",
+        "jgb_10y": 2.894
+      },
+      {
+        "fecha": "2026-08-20",
+        "jgb_10y": 2.854
+      },
+      {
+        "fecha": "2026-08-21",
+        "jgb_10y": 2.882
+      }
+    ]
+  },
+  "politica_monetaria_boj": {
+    "tasa_politica_actual": 1.0,
+    "meta_inflacion": 2.0,
+    "proxima_reunion": "2026-09-17",
+    "sesgo": "Hawkish Gradual / Normalización Activa"
+  },
+  "inflacion_oficial_mic": {
+    "ultimo_headline_cpi_yoy": 2.8,
+    "ultimo_core_cpi_yoy": 2.7,
+    "ultimo_core_core_cpi_yoy": 2.3,
+    "ultimo_tokyo_core_cpi_yoy": 2.2,
+    "periodo_referencia": "Julio 2026",
+    "proxima_publicacion": "2026-08-25 01:00 CLT"
+  }
+}
