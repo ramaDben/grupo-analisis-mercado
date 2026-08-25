@@ -1,7 +1,7 @@
-Asunto: Propuesta: producción diaria del grupo con escaneo del universo completo
+Asunto: Lo que produce el sistema de análisis diario: informe de apertura y piezas del día
 
 Adjuntos:
-  · Produccion Diaria GI - Propuesta.pdf
+  · Marco de Apertura - GI.pdf
   · 01 - Divisas (USD-CLP).png
   · 02 - Commodities (Oro).png
   · 03 - Criptomonedas (Bitcoin).png
@@ -13,44 +13,52 @@ Adjuntos:
 
 Hola Hari,
 
-Te mando una propuesta para cambiar cómo producimos el contenido diario del grupo.
-El resumen en una línea: hoy elegimos a criterio qué activo comunicar, y la idea es
-que el sistema escanee el universo completo, puntúe cada activo con una fórmula
-auditable y arme las piezas, dejando el criterio editorial y la aprobación donde
-corresponde.
+Te mando el resultado de algo en lo que vengo trabajando: un sistema que escanea el
+universo de activos, decide cuáles vale la pena comunicar y arma las piezas del día.
 
-Van siete imágenes de muestra, una por cada clase de activo que el sistema cubre, y
-un documento que explica cómo funciona.
-
-
-POR QUÉ CREO QUE VALE LA PENA
-
-Tres problemas que hoy se resuelven con horas de analista:
-
-1. La rotación diaria cubre cuatro activos base. El terminal ofrece 148 instrumentos
-   y ya tenemos 38 en el catálogo técnico, así que la mayor parte del universo no se
-   mira nunca. No porque no interese, sino porque no alcanza el tiempo.
-
-2. Si un cliente pregunta por qué hablamos del Oro y no del Nasdaq, la respuesta hoy
-   es una opinión. Con esto hay un número detrás y queda guardado.
-
-3. Aumentar el volumen de piezas significa contratar. Con el sistema, significa
-   configurar.
+Preferí mandarte el producto y no una presentación sobre el producto. El PDF que va
+adjunto es el informe de apertura tal cual sale, con los datos de hoy, y las siete
+imágenes son las piezas para el grupo, una por cada clase de activo que el sistema
+cubre.
 
 
-LO QUE MÁS ME IMPORTA QUE MIRES
+QUÉ MIRAR EN EL INFORME
 
-No es el puntaje, es lo que el sistema se niega a publicar. Antes de puntuar hay
-cuatro filtros que sacan al activo de la selección y que ningún puntaje alto puede
-compensar: feriado de bolsa, ventana de bloqueo alrededor de un dato macro,
-prohibición del modelo de régimen, y agotamiento del recorrido del día.
+La sección 02 es la que me parece más interesante. Además del sesgo por activo, trae
+la columna de operaciones prohibidas: hoy, por ejemplo, el modelo prohíbe vender el
+Nasdaq contra la tendencia y vender el Oro agresivamente. Eso no es una sugerencia
+del sistema, es un filtro: una señal técnica de venta en cualquiera de los dos no se
+publica hoy, por buena que se vea en el gráfico.
 
-En la corrida real que está en la página 4 del documento, cuatro activos quedaron
-fuera por el último filtro. El dólar había movido 6,53 pesos cuando su promedio de
-catorce días es 6,77, y el petróleo casi había duplicado su rango habitual. Un
-sistema que solo puntuara habría publicado los cuatro; este dice que no hay espacio
-y explica por qué. Esa es la parte que hace la diferencia entre una herramienta que
-llena el grupo de contenido y una en la que podemos firmar lo que sale.
+La sección 03 lleva cada tasa con su variación en puntos base y la fecha del dato al
+lado. Está así a propósito. Los datos de la Reserva Federal se publican con rezago,
+así que el número "de hoy" a veces es de anteayer, y quien va a citar la cifra tiene
+derecho a saberlo sin preguntar.
+
+La 04 nombra cada indicador en español con su nombre original al lado. Eso sale de un
+glosario que vamos ampliando: cuando aparece una sigla que no está, el sistema la
+marca en vez de dejarla pasar en inglés.
+
+
+LO QUE HAY DETRÁS
+
+Cada activo del catálogo recibe un puntaje sobre 100 compuesto por cuatro factores:
+la señal técnica, si recibe un dato macro de alto impacto del día, cuánto espacio le
+queda para moverse, y su fuerza de tendencia. Se eligen los mejores y queda guardado
+el desglose, así que si alguien pregunta por qué se habló del Oro y no del Nasdaq hay
+un número detrás y no una opinión.
+
+Pero antes de puntuar hay cuatro filtros que sacan al activo de la selección y que
+ningún puntaje alto compensa: feriado de bolsa, ventana de bloqueo alrededor de un
+dato macro, prohibición del modelo de régimen, y agotamiento del recorrido del día.
+
+Ese último vale un ejemplo concreto, porque me pasó armando esto. Esta tarde el
+sistema dejó fuera al dólar, a Bitcoin, a MercadoLibre y al petróleo: el dólar ya
+había movido 6,53 pesos cuando su promedio de catorce días es 6,77, y el petróleo
+casi había duplicado su rango habitual. Un sistema que solo puntuara habría publicado
+los cuatro. Este dice que no hay espacio para el movimiento que la pieza anunciaría, y
+explica por qué. Para mí esa es la diferencia entre una herramienta que llena el grupo
+de contenido y una en la que podemos firmar lo que sale.
 
 
 DOS COSAS QUE QUIERO DEJAR CLARAS
@@ -60,28 +68,27 @@ DOS COSAS QUE QUIERO DEJAR CLARAS
    persona. La máquina aporta los datos y la selección, no el criterio.
 
 2. Los datos salen del terminal y de fuentes oficiales, nunca de una estimación. Si
-   una cifra no se puede calcular, el sistema la informa como ausente en vez de
-   poner un cero, y el informe de apertura directamente no se emite si el modelo
-   cuantitativo no se refrescó ese día.
+   una cifra no se puede calcular, se informa como ausente en vez de poner un cero, y
+   el informe directamente no se emite si el modelo no se refrescó ese día. Se puede
+   forzar, pero en ese caso el documento sale con el aviso impreso en la portada.
 
 
-QUÉ FALTA PARA DEJARLO OPERANDO
+QUÉ FALTA
 
-Está en la página 5 con más detalle, pero en corto son tres cosas y ninguna es un
-bloqueo de fondo:
+Tres cosas, ninguna de fondo:
 
 - Producir el material visual de los activos que todavía no lo tienen. Hay nueve
   imágenes en uso y once especificadas y pendientes. Mientras falten, el sistema se
-  limita solo a los activos que sí pueden rendir una pieza completa.
-- Programar el disparo de las cuatro entregas diarias. Hoy se invocan a mano, que es
-  lo correcto mientras calibramos.
-- Extender el modelo de régimen a más activos, que es el más lento de los tres
-  porque cada ficha se apoya en literatura y en elasticidades medidas.
+  limita a los activos que sí pueden rendir una pieza completa.
+- Programar el disparo de las entregas diarias. Hoy se invocan a mano, que es lo
+  correcto mientras calibramos.
+- Extender el modelo de régimen a más activos. Es el más lento de los tres, porque
+  cada ficha se apoya en literatura y en elasticidades medidas.
 
 
-Si te hace sentido, dime y coordinamos una revisión para ver la cadencia y qué
-clases de activo priorizamos. Y si ves que algo no calza con cómo funciona el grupo
-hoy, prefiero saberlo ahora que después de dejarlo andando.
+Si te hace sentido, dime y coordinamos para ver la cadencia y qué clases de activo
+priorizamos. Y si al revisarlo ves que algo no calza con cómo funciona el grupo hoy,
+prefiero saberlo ahora que después de dejarlo andando.
 
 Cualquier cosa me dices.
 

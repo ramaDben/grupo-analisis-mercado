@@ -61,6 +61,19 @@ TRAMOS_CURVA = ("DGS2", "DGS10", "DGS30", "DFII10")
 
 MARCA_EDITORIAL = "[[ESCRIBIR]]"
 
+# El lector de la curva devuelve el nombre que usa FRED, en inglés. El informe lo
+# lee un cliente en español, así que cada tramo se nombra acá. No se traduce en
+# `curva_reader` porque ahí el nombre es el de la fuente, y cambiarlo haría que la
+# tool devuelva algo distinto de lo que el organismo publica.
+_TRAMOS_ES = {
+    "DGS2": "Bono del Tesoro a 2 años",
+    "DGS10": "Bono del Tesoro a 10 años",
+    "DGS30": "Bono del Tesoro a 30 años",
+    "DFII10": "Tasa real a 10 años (TIPS)",
+    "DFF": "Tasa efectiva de fondos federales",
+    "T10YIE": "Inflación esperada a 10 años",
+}
+
 
 def _curva() -> tuple[dict[str, Any], list[str]]:
     from market_data_mcp.curva_reader import cargar_curva_tasas
@@ -114,7 +127,7 @@ def _tabla_curva(curva: dict[str, Any]) -> str:
         if not s:
             continue
         filas.append(
-            f"| {s.get('nombre', clave)} | {s.get('nivel_pct', '?')}% "
+            f"| {_TRAMOS_ES.get(clave, s.get('nombre', clave))} | {s.get('nivel_pct', '?')}% "
             f"| {bps(s.get('delta_1d_bps'))} | {bps(s.get('delta_5d_bps'))} "
             f"| {s.get('fecha_dato', '?')} |"
         )
@@ -165,6 +178,22 @@ def _fecha_es(momento: datetime) -> str:
     return f"{momento.day} de {_MESES_ES[momento.month - 1]} de {momento.year}"
 
 
+def _momento_snapshot(as_of_utc: str | None) -> str:
+    """La marca de tiempo del motor, en hora de Chile y legible.
+
+    El campo viene en ISO con microsegundos y en UTC
+    (`2026-08-25T21:55:42.222379+00:00`). Citado tal cual en un informe obliga al
+    lector a hacer dos conversiones mentales para saber si el dato es de hoy.
+    """
+    if not as_of_utc:
+        return "no disponible"
+    try:
+        momento = datetime.fromisoformat(as_of_utc).astimezone(SANTIAGO)
+    except (TypeError, ValueError):
+        return str(as_of_utc)
+    return f"{_fecha_es(momento)}, {momento.strftime('%H:%M')} hora de Chile"
+
+
 def _nombre_indicador(ev: dict[str, Any]) -> str:
     """El indicador en español, con su sigla original entre paréntesis.
 
@@ -185,6 +214,12 @@ def _nombre_indicador(ev: dict[str, Any]) -> str:
     # es explicar la sigla UNA sola vez.
     if "(" in nombre_es:
         return nombre_es
+    # El nombre de la fuente muchas veces trae su propio paréntesis con el período
+    # o la variación ("New Home Sales (MoM) (Jul)"), y ese sufijo es lo único que
+    # distingue dos filas que si no se leerían idénticas. Se conserva, pero
+    # separado con punto medio en vez de anidar paréntesis.
+    if "(" in nombre_fuente:
+        return f"{nombre_es} · {nombre_fuente}"
     return f"{nombre_es} ({nombre_fuente})"
 
 
@@ -249,12 +284,12 @@ def preparar(tipo: str, con_datos_viejos: bool = False) -> dict[str, Any]:
     destino.mkdir(parents=True, exist_ok=True)
 
     regimen = (playbook.get("regimen_macro_global") or {}) if playbook else {}
-    fecha_dato = playbook.get("as_of_utc", "no disponible") if playbook else "no disponible"
+    fecha_dato = _momento_snapshot(playbook.get("as_of_utc")) if playbook else "no disponible"
 
     encabezado = [
         f"## 01. Marco de la jornada",
         "",
-        f"{MARCA_EDITORIAL} Dos parrafos: que deja la sesion anterior y con que abre esta.",
+        f"{MARCA_EDITORIAL} Dos párrafos: qué deja la sesión anterior y con qué abre esta.",
         "",
     ]
     if not playbook or con_datos_viejos:
@@ -280,20 +315,20 @@ def preparar(tipo: str, con_datos_viejos: bool = False) -> dict[str, Any]:
 
     secciones = [
         "\n".join(encabezado),
-        "## 02. Regimen macro y sesgo por activo\n\n"
-        + (f"**Regimen vigente:** {regimen.get('codigo', 'no disponible')} — "
+        "## 02. Régimen macro y sesgo por activo\n\n"
+        + (f"**Régimen vigente:** {regimen.get('codigo', 'no disponible')} · "
            f"{regimen.get('nombre', '')}\n\n" if regimen else "")
         + _tabla_playbook(playbook) + "\n\n"
-        + f"{MARCA_EDITORIAL} Una lectura de que significa este regimen para la jornada.",
+        + f"{MARCA_EDITORIAL} Una lectura de qué significa este régimen para la jornada.",
         "## 03. Curva soberana de EE.UU.\n\n"
         + _tabla_curva(curva) + "\n\n"
-        + f"{MARCA_EDITORIAL} Que dice el movimiento de tasas sobre el dolar, el oro y el Nasdaq.",
-        "## 04. Agenda del dia\n\n"
+        + f"{MARCA_EDITORIAL} Qué dice el movimiento de tasas sobre el dólar, el oro y el Nasdaq.",
+        "## 04. Agenda del día\n\n"
         + _tabla_calendario(eventos) + "\n\n"
-        + f"{MARCA_EDITORIAL} Cual de estos eventos puede mover la jornada y por que.",
+        + f"{MARCA_EDITORIAL} Cuál de estos eventos puede mover la jornada y por qué.",
         "## 05. Fuentes consultadas\n\n"
-        + "- Curva soberana y tasa real: Reserva Federal (FRED), via `data central/`.\n"
-        + "- Calendario economico: Investing.com.\n"
+        + "- Curva soberana y tasa real: Reserva Federal (FRED), vía `data central/`.\n"
+        + "- Calendario económico: Investing.com.\n"
         + "- Precios y niveles: terminal MetaTrader 5, cuenta Grupo Inteligencia SpA.\n"
         + (f"- Sesgo cuantitativo: Motor GI, snapshot del {fecha_dato}.\n" if playbook else ""),
     ]
