@@ -20,6 +20,10 @@ data/mensajes/
 # de cada exclusion. Es evidencia de una jornada, no fuente: se regenera corriendo
 # el escaner, y versionarla llenaria el repo de snapshots de mercado.
 data/screener/
+# Directorio de trabajo del carrusel: payloads intermedios de una tanda, con su
+# copia del ranking. Se regenera con --preparar; la pieza final vive en
+# data/stories/, que tambien esta ignorado.
+data/carrusel/
 # data/stories/ es salida generada completa, no solo los PNG: tambien caen ahi
 # los payloads de trabajo y la carpeta _revision de rendir_todas.py. Los payloads
 # que SI se versionan viven en tests/fixtures/stories/payloads/.
