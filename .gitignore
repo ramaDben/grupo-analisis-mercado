@@ -24,6 +24,9 @@ data/screener/
 # copia del ranking. Se regenera con --preparar; la pieza final vive en
 # data/stories/, que tambien esta ignorado.
 data/carrusel/
+# Directorio de trabajo del informe: markdown intermedio, datos crudos y el PDF
+# compilado. Se regenera con --preparar.
+data/informes/
 # data/stories/ es salida generada completa, no solo los PNG: tambien caen ahi
 # los payloads de trabajo y la carpeta _revision de rendir_todas.py. Los payloads
 # que SI se versionan viven en tests/fixtures/stories/payloads/.
