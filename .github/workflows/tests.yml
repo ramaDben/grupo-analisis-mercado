@@ -23,10 +23,11 @@ jobs:
 
       - name: Install test dependencies
         # La suite corre sin MT5 ni fastmcp: el stack pesado se sustituye por un
-        # stub del framework en tests/conftest.py. pyyaml y requests si hacen
-        # falta: bias_reader lee playbook_config.yaml y pipeline_ingesta llama a
-        # FRED, y sin ellos esos modulos ni se importan.
-        run: python -m pip install --upgrade pip pytest pandas pyyaml requests
+        # stub del framework en tests/conftest.py. Las otras tres si hacen
+        # falta: bias_reader lee playbook_config.yaml con yaml, y la cadena
+        # pipeline_ingesta -> extractor_usa llama a FRED con requests y lee su
+        # API key con dotenv. Sin ellas esos modulos ni se importan.
+        run: python -m pip install --upgrade pip pytest pandas pyyaml requests python-dotenv
 
       - name: Run market-data MCP tests
         run: python -m pytest tests -v
