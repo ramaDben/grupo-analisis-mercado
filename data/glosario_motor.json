@@ -1,0 +1,78 @@
+{
+  "_nota": "Traduce el vocabulario INTERNO del motor a lenguaje de cliente. Los tokens tipo SHORT_AGRESIVO o R2_GOLDILOCKS_EXPANSION son nombres de variable: existen para que el motor los compare entre sí, no para que alguien los lea. Ninguno puede llegar a una pieza ni a un informe de cliente. Hermano de glosario_siglas.json, mismo criterio: si aparece un token nuevo, se explica al vuelo y se agrega acá.",
+  "_nota_voz": "La regla es la del proyecto: si un cliente nuevo sin experiencia no lo entiende en menos de 30 segundos, está mal escrito. 'accion' se redacta como lo que la persona haría, en presente y sin jerga; 'prohibicion' se redacta como lo que NO vamos a hacer hoy y por qué, porque una prohibición sin motivo suena arbitraria.",
+  "regimenes": {
+    "R0_CALMA_RANGO": {
+      "nombre": "Mercado en calma",
+      "explicacion": "No hay sustos ni sorpresas grandes: los precios se mueven dentro de un rango conocido, sin una dirección clara.",
+      "que_implica": "Conviene operar los extremos del rango y desconfiar de los movimientos bruscos, que suelen devolverse."
+    },
+    "R1_SHOCK_INFLACIONARIO": {
+      "nombre": "Susto inflacionario",
+      "explicacion": "Los precios de la economía suben más rápido de lo esperado y el mercado teme que los bancos centrales tengan que subir las tasas de interés.",
+      "que_implica": "Las materias primas y el oro suelen defenderse; las acciones sufren porque el dinero se encarece."
+    },
+    "R2_GOLDILOCKS_EXPANSION": {
+      "nombre": "La economía crece sin que la inflación se dispare",
+      "explicacion": "La combinación más favorable: hay crecimiento y al mismo tiempo los precios están contenidos, así que los bancos centrales no tienen apuro en subir las tasas.",
+      "que_implica": "Es un entorno que suele acompañar a las acciones y a las materias primas, con el dólar sin una tendencia marcada."
+    },
+    "R3_ESTANFLACION_SHOCK": {
+      "nombre": "Precios altos con economía frenada",
+      "explicacion": "Lo peor de dos mundos: la actividad se enfría pero los precios siguen subiendo, normalmente por un golpe en la energía o los alimentos.",
+      "que_implica": "El refugio gana y los activos que dependen del crecimiento pierden."
+    },
+    "R4_RECESION_VUELO_CALIDAD": {
+      "nombre": "Miedo a una recesión",
+      "explicacion": "El mercado empieza a descontar que la economía se contrae, y el dinero se va a lo más seguro que encuentra.",
+      "que_implica": "Los bonos del Tesoro y el dólar se fortalecen; las acciones y las materias primas industriales caen."
+    }
+  },
+  "setups": {
+    "PULLBACK_EMA20_H1": "Comprar cuando el precio retrocede hasta su promedio de las últimas 20 horas y ahí encuentra apoyo",
+    "PULLBACK_EMA50_H1": "Comprar cuando el precio retrocede hasta su promedio de las últimas 50 horas y ahí encuentra apoyo",
+    "PULLBACK_EMA16_H1": "Comprar en los retrocesos cortos, cuando el precio vuelve a su promedio de las últimas 16 horas",
+    "PULLBACK_SHORT_EMA20": "Vender cuando el precio rebota hasta su promedio de las últimas 20 horas y ahí se frena",
+    "SELL_PULLBACK_EMA50_H1": "Vender cuando el precio rebota hasta su promedio de las últimas 50 horas y ahí se frena",
+    "BREAKOUT_DONCHIAN_H1": "Entrar cuando el precio supera el techo del rango en el que venía moviéndose",
+    "BREAKOUT_DONCHIAN_50_H1": "Entrar cuando el precio supera el techo del rango de las últimas 50 horas",
+    "BREAKDOWN_DONCHIAN_H1": "Entrar a la baja cuando el precio pierde el piso del rango en el que venía moviéndose",
+    "BREAKOUT_VOLATILITY_H1": "Entrar cuando el precio rompe con un salto de volatilidad, señal de que el movimiento tiene fuerza detrás",
+    "MEAN_REVERSION_RSI_H1": "Apostar a que el precio vuelve a su promedio cuando se estiró demasiado hacia un lado",
+    "FADE_SUPPORT_RESISTANCE_M15": "Operar los extremos del rango: comprar cerca del piso y vender cerca del techo",
+    "RANGE_DONCHIAN_FADE": "Operar dentro del rango, sin perseguir los quiebres",
+    "RANGE_TRADING": "Operar entre el piso y el techo del rango, sin apostar a que se rompan",
+    "LONG_SWING_FADE": "Sostener una compra de varios días esperando el regreso del precio",
+    "SHORT_AGRESIVO": "apostar fuerte a que el precio se derrumba",
+    "SHORT_FADE": "vender apostando a que la subida se acaba",
+    "SHORT_FADE_OVERBOUGHT": "vender solo porque el precio subió mucho",
+    "VENTA_CONTRA_TENDENCIA": "vender mientras el precio sigue subiendo",
+    "BREAKOUT_CHASE": "perseguir el precio cuando ya rompió y se escapó",
+    "BREAKOUT_CHASE_LONG": "comprar persiguiendo un quiebre que ya se escapó",
+    "BUY_THE_DIP_AGGRESSIVE": "comprar cada caída sin esperar confirmación",
+    "COMPRA_SIN_CONFIRMACION": "comprar antes de que el gráfico confirme el giro",
+    "FADE_TOP_RESISTENCIA": "vender en el techo apostando a que ahí se frena",
+    "FADE_TOP_RESISTANCE": "vender en el techo apostando a que ahí se frena",
+    "GRID_SIN_STOP": "operar sumando posiciones sin un límite de pérdida definido"
+  },
+  "sesgos": {
+    "ALCISTA": "con más probabilidad de subir",
+    "BAJISTA": "con más probabilidad de bajar",
+    "NEUTRAL": "sin una dirección definida",
+    "LATERAL": "moviéndose de lado, dentro de un rango"
+  },
+  "conceptos": {
+    "puntos base": "Un punto base es la centésima parte de un uno por ciento. Se usa para hablar de movimientos de tasas: cuando una tasa pasa de 4,70% a 4,74%, subió 4 puntos base.",
+    "tasa real": "Es lo que un bono paga descontando la inflación esperada. Cuando baja, guardar oro cuesta menos y el metal tiende a subir.",
+    "pendiente de la curva": "La diferencia entre lo que paga un bono a 10 años y uno a 2 años. Cuando se achica, el mercado espera que la economía se enfríe.",
+    "ATR": "El recorrido que un activo suele hacer en un día normal. Sirve para saber si todavía le queda espacio para moverse o si ya se movió todo lo que suele moverse."
+  },
+  "matices": {
+    "_nota": "La etiqueta del motor viene como 'ALCISTA MODERADO' o 'ALCISTA POR SHOCK'. La primera palabra es la direccion y se traduce con `sesgos`; el resto es el matiz y sin traducir queda colgando ('lo vemos con mas probabilidad de subir, moderado').",
+    "MODERADO": "aunque sin una fuerza excesiva",
+    "POR SHOCK": "empujado por un golpe en la oferta",
+    "EXPANSION": "acompañado por el buen momento de la economía",
+    "PRESION EN MULTIPLOS": "presionado por el costo del dinero",
+    "PRESIÓN EN MÚLTIPLOS": "presionado por el costo del dinero"
+  }
+}

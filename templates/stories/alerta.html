@@ -13,16 +13,17 @@ y tests/test_story_render.py.
 <title>Alerta de Mercado — Story GI</title>
 <style>
   /* ════ marca.css embebido ════ */
-
 :root {
-  --fondo:          #000000;  /* negro de marca, tomado de LOGO-Fondo-Negro */
-  --fondo-acento:   #0E2420;  /* tinte del degradado, derivado del acento */
-  --fondo-alt:      #0A0A0F;  /* variante del fondo para bloques apilados */
-  --fondo-sube:     #123A2A;  /* relleno tenue en bloques alcistas */
-  --fondo-baja:     #2A1220;  /* relleno tenue en bloques bajistas */
+
+  --fondo:          #000000;
+  --fondo-acento:   #0E2420;
+  --fondo-alt:      #0A0A0F;
+  --fondo-sube:     #123A2A;
+  --fondo-baja:     #2A1220;
 
   --acento:         #50C0A8;
-  --acento-oscuro:  #143028;  /* par oscuro del acento, para degradados */
+  --acento-azul:    #3C8CAA;
+  --acento-oscuro:  #143028;
 
   --sube:           #00DC82;
   --sube-suave:     #53C1AB;
@@ -36,14 +37,29 @@ y tests/test_story_render.py.
   --activo-usdclp: var(--acento);
   --activo-bitcoin:#F7931A;
 
-  /* Font stacks: primary sans + emoji fallbacks. Pueden ajustarse por host. */
+  --activo-plata:  #C6CBD1;
+  --activo-meli:   #F2C14E;
+  --activo-tech-circuito: #4FB0C6;
+
+  --activo-usdjpy: #B98A4A;
+  --activo-eurusd: #6E7E96;
+  --activo-gbpusd: #9E6B4A;
+  --activo-us500:  #6BA3D8;
+  --activo-us30:   #9C7B4E;
+  --activo-iwm:    #8F9BA8;
+  --activo-eth:    #7B7FE8;
+  --activo-sol:    #C158D6;
+  --activo-ltc:    #A8B2BF;
+  --activo-ada:    #3B6FD4;
+  --activo-doge:   #D9A22B;
+
   --font-sans: "Space Grotesk", "DM Sans", "Segoe UI", "Noto Sans", "Helvetica Neue", Arial, sans-serif;
   --font-emoji: "Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji";
-  --texto-1:        #F5F3F7;  /* principal */
-  --texto-2:        #A9A5B4;  /* secundario */
-  --texto-3:        #6E6A7A;  /* tenue: pies, disclaimers */
-  --texto-borde:    #C9C5D4;  /* filetes y separadores sobre fondo oscuro */
-  --texto-gris:     #8E8A9C;  /* gris intermedio */
+  --texto-1:        #F5F3F7;
+  --texto-2:        #A9A5B4;
+  --texto-3:        #6E6A7A;
+  --texto-borde:    #C9C5D4;
+  --texto-gris:     #8E8A9C;
   --blanco:         #FFFFFF;
 
   --filete:         var(--acento);
@@ -72,20 +88,30 @@ body.activo-wti     { --activo: var(--activo-wti); }
 body.activo-us100   { --activo: var(--activo-us100); }
 body.activo-usdclp  { --activo: var(--activo-usdclp); }
 body.activo-bitcoin { --activo: var(--activo-bitcoin); }
+body.activo-plata   { --activo: var(--activo-plata); }
+body.activo-meli    { --activo: var(--activo-meli); }
+body.activo-tech-circuito { --activo: var(--activo-tech-circuito); }
+body.activo-usdjpy  { --activo: var(--activo-usdjpy); }
+body.activo-eurusd  { --activo: var(--activo-eurusd); }
+body.activo-gbpusd  { --activo: var(--activo-gbpusd); }
+body.activo-us500   { --activo: var(--activo-us500); }
+body.activo-us30    { --activo: var(--activo-us30); }
+body.activo-iwm     { --activo: var(--activo-iwm); }
+body.activo-eth     { --activo: var(--activo-eth); }
+body.activo-sol     { --activo: var(--activo-sol); }
+body.activo-ltc     { --activo: var(--activo-ltc); }
+body.activo-ada     { --activo: var(--activo-ada); }
+body.activo-doge    { --activo: var(--activo-doge); }
 
 .story {
   box-shadow: inset 0 0 0 var(--filete-ancho) var(--filete);
 }
-
-
   /* ════ piel.css embebido ════ */
-
 @font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
 @font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-700.woff2") format("woff2"); font-weight: 800; font-display: swap; }
 @font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
 @font-face { font-family: "DM Sans";       src: url("fonts/dm-sans-400.woff2") format("woff2");       font-weight: 400; font-display: swap; }
 @font-face { font-family: "DM Sans";       src: url("fonts/dm-sans-700.woff2") format("woff2");       font-weight: 700; font-display: swap; }
-
 
 .foto-activo {
   position: absolute; inset: 0 -72px 0 auto;
@@ -170,7 +196,6 @@ body.activo-bitcoin { --activo: var(--activo-bitcoin); }
               0 0 18px 4px color-mix(in srgb, var(--activo) 75%, transparent);
 }
 
-/* ══════════ CTA ══════════ */
 .cta {
   margin-top: auto;
   display: flex; align-items: center; justify-content: space-between; gap: 40px;
@@ -193,7 +218,6 @@ body.activo-bitcoin { --activo: var(--activo-bitcoin); }
 
 .disclaimer { padding-bottom: 20px; font-size: 14px; line-height: 1.3; color: var(--texto-3); }
 
-/* ══════════ FORMATO VERTICAL 9:16 ══════════ */
 @media (max-aspect-ratio: 1/1) {
   .sello { font-size: 24px; padding: 13px 26px 13px 20px; }
   .pulso { width: 13px; height: 13px; }
@@ -211,7 +235,6 @@ body.activo-bitcoin { --activo: var(--activo-bitcoin); }
   .cta-logo { height: 78px; }
   .disclaimer { font-size: 16px; padding-bottom: 24px; }
 }
-
 </style>
 <style>
   * { box-sizing: border-box; }
@@ -264,7 +287,7 @@ body.activo-bitcoin { --activo: var(--activo-bitcoin); }
   }
 
   .columna-editorial {
-    flex: 0 0 54%;
+    flex: 0 0 50%;
     min-width: 0;
     display: flex;
     flex-direction: column;
@@ -323,19 +346,19 @@ body.activo-bitcoin { --activo: var(--activo-bitcoin); }
   .titular {
     font-family: "Space Grotesk", sans-serif;
     font-weight: 800;
-    font-size: 46px;
-    line-height: 1.1;
-    margin: 20px 0 0;
+    font-size: 52px;
+    line-height: 1.08;
+    margin: 16px 0 0;
     color: var(--blanco);
   }
 
   .parrafo {
     font-family: "DM Sans", sans-serif;
     font-weight: 400;
-    font-size: 21px;
-    line-height: 1.45;
+    font-size: 25px;
+    line-height: 1.4;
     color: var(--texto-borde);
-    margin: 18px 0 0;
+    margin: 16px 0 0;
   }
 
   /* ---- Tarjeta de precio ----
@@ -343,7 +366,7 @@ body.activo-bitcoin { --activo: var(--activo-bitcoin); }
      era del activo y el relleno seguía en rojo fijo, así que la tarjeta salía
      con marco dorado y fondo rojizo. */
   .tarjeta-precio {
-    margin-top: 24px;
+    margin-top: 22px;
     border: 2px solid var(--activo);
     border-radius: 22px;
     background: color-mix(in srgb, var(--activo) 8%, transparent);
@@ -359,7 +382,7 @@ body.activo-bitcoin { --activo: var(--activo-bitcoin); }
   .rotulo-activo {
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
-    font-size: 22px;
+    font-size: 26px;
     letter-spacing: 0.04em;
     color: var(--texto-1);
     text-transform: uppercase;
@@ -375,7 +398,7 @@ body.activo-bitcoin { --activo: var(--activo-bitcoin); }
   .tag-sesgo {
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
-    font-size: 18px;
+    font-size: 20px;
     letter-spacing: 0.05em;
     text-transform: uppercase;
     color: var(--fondo);
@@ -394,20 +417,20 @@ body.activo-bitcoin { --activo: var(--activo-bitcoin); }
     display: flex;
     align-items: baseline;
     gap: 16px;
-    margin-top: 14px;
+    margin-top: 12px;
   }
 
   .precio-actual {
     font-family: "DM Sans", sans-serif;
     font-weight: 700;
-    font-size: 56px;
+    font-size: 64px;
     color: var(--blanco);
   }
 
   .variacion {
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
-    font-size: 26px;
+    font-size: 28px;
   }
   /* El color semantico se reserva para la variacion (y para la pildora de sesgo
      de la cabecera). El `.rotulo-activo` ya no se tine de verde con sesgo
@@ -420,8 +443,8 @@ body.activo-bitcoin { --activo: var(--activo-bitcoin); }
   .stats {
     display: flex;
     justify-content: space-between;
-    margin-top: 20px;
-    padding-top: 18px;
+    margin-top: 18px;
+    padding-top: 16px;
     border-top: 1px solid rgba(255, 255, 255, 0.12);
   }
 
@@ -432,7 +455,7 @@ body.activo-bitcoin { --activo: var(--activo-bitcoin); }
   .stat-label {
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
-    font-size: 16px;
+    font-size: 18px;
     letter-spacing: 0.05em;
     text-transform: uppercase;
     color: var(--texto-2);
@@ -441,16 +464,16 @@ body.activo-bitcoin { --activo: var(--activo-bitcoin); }
   .stat-valor {
     font-family: "DM Sans", sans-serif;
     font-weight: 700;
-    font-size: 24px;
+    font-size: 28px;
     color: var(--texto-1);
-    margin-top: 6px;
+    margin-top: 4px;
   }
 
   /* ---- Gráfico ---- */
   .rotulo-grafico {
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
-    font-size: 18px;
+    font-size: 22px;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--texto-2);
@@ -465,7 +488,7 @@ body.activo-bitcoin { --activo: var(--activo-bitcoin); }
     align-self: flex-start;
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
-    font-size: 15px;
+    font-size: 18px;
     letter-spacing: 0.10em;
     text-transform: uppercase;
     color: var(--activo);
@@ -486,7 +509,7 @@ body.activo-bitcoin { --activo: var(--activo-bitcoin); }
   .g-linea {
     fill: none;
     stroke: var(--activo);
-    stroke-width: 2.4;
+    stroke-width: 3.2;
     stroke-linejoin: round;
     stroke-linecap: round;
   }
@@ -494,7 +517,7 @@ body.activo-bitcoin { --activo: var(--activo-bitcoin); }
      es el dato en bruto, no una opinion. La direccion ya la dice la pildora de
      sesgo. */
   .g-guia { stroke: var(--texto-3); stroke-width: 1.5; stroke-dasharray: 4 5; }
-  .g-nivel { stroke-width: 2; stroke-dasharray: 7 7; fill: none; }
+  .g-nivel { stroke-width: 2.6; stroke-dasharray: 7 7; fill: none; }
   .g-nivel-resistencia { stroke: var(--baja); }
   .g-nivel-soporte     { stroke: var(--sube); }
   .g-punto { stroke: var(--fondo); stroke-width: 2.5; }
@@ -502,7 +525,7 @@ body.activo-bitcoin { --activo: var(--activo-bitcoin); }
   .g-precio {
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
-    font-size: 17px;
+    font-size: 22px;
   }
   .g-precio-resistencia { fill: var(--baja); }
   .g-precio-soporte     { fill: var(--sube); }
@@ -510,7 +533,7 @@ body.activo-bitcoin { --activo: var(--activo-bitcoin); }
   .g-rol {
     font-family: "Space Grotesk", sans-serif;
     font-weight: 600;
-    font-size: 12px;
+    font-size: 15px;
     letter-spacing: 0.10em;
     fill: var(--texto-2);
   }
@@ -693,7 +716,7 @@ body.activo-bitcoin { --activo: var(--activo-bitcoin); }
             </div>
             <!-- IF:vol -->
             <div class="stat">
-              <div class="stat-label">Vol %</div>
+              <div class="stat-label">Impulso ADC/ATR</div>
               <div class="stat-valor">{{vol_pct}}</div>
             </div>
             <!-- ENDIF:vol -->

@@ -1,0 +1,103 @@
+Asunto: Lo que produce el sistema de análisis diario: informe de apertura y piezas del día
+
+Adjuntos:
+  · Marco de Apertura - GI.pdf
+  · 01 - Divisas (USD-CLP).png
+  · 02 - Commodities (Oro).png
+  · 03 - Criptomonedas (Bitcoin).png
+  · 04 - Indices (Nasdaq 100).png
+  · 05 - ETF (Semiconductores).png
+  · 06 - Acciones (MercadoLibre).png
+  · 07 - Macro y tasas (Agenda del dia).png
+
+
+Hola Hari,
+
+Te mando el resultado de algo en lo que vengo trabajando: un sistema que escanea el
+universo de activos, decide cuáles vale la pena comunicar y arma las piezas del día.
+
+Preferí mandarte el producto y no una presentación sobre el producto. El PDF que va
+adjunto es el informe de apertura tal cual sale, con los datos de hoy, y las siete
+imágenes son las piezas para el grupo, una por cada clase de activo que el sistema
+cubre.
+
+
+QUÉ MIRAR EN EL INFORME
+
+La sección 02 es la que me parece más interesante. Además del sesgo por activo, trae
+la columna de operaciones prohibidas: hoy, por ejemplo, el modelo prohíbe vender el
+Nasdaq contra la tendencia y vender el Oro agresivamente. Eso no es una sugerencia
+del sistema, es un filtro: una señal técnica de venta en cualquiera de los dos no se
+publica hoy, por buena que se vea en el gráfico.
+
+La sección 03 lleva cada tasa con su variación en puntos base y la fecha del dato al
+lado. Está así a propósito. Los datos de la Reserva Federal se publican con rezago,
+así que el número "de hoy" a veces es de anteayer, y quien va a citar la cifra tiene
+derecho a saberlo sin preguntar.
+
+La 04 nombra cada indicador en español con su nombre original al lado. Eso sale de un
+glosario que vamos ampliando: cuando aparece una sigla que no está, el sistema la
+marca en vez de dejarla pasar en inglés.
+
+
+LO QUE HAY DETRÁS
+
+Cada activo del catálogo recibe un puntaje sobre 100 compuesto por cuatro factores:
+la señal técnica, si recibe un dato macro de alto impacto del día, cuánto espacio le
+queda para moverse, y su fuerza de tendencia. Se eligen los mejores y queda guardado
+el desglose, así que si alguien pregunta por qué se habló del Oro y no del Nasdaq hay
+un número detrás y no una opinión.
+
+Pero antes de puntuar hay cuatro filtros que sacan al activo de la selección y que
+ningún puntaje alto compensa: feriado de bolsa, ventana de bloqueo alrededor de un
+dato macro, prohibición del modelo de régimen, y agotamiento del recorrido del día.
+
+Ese último vale un ejemplo concreto, porque me pasó armando esto. Esta tarde el
+sistema dejó fuera al dólar, a Bitcoin, a MercadoLibre y al petróleo: el dólar ya
+había movido 6,53 pesos cuando su promedio de catorce días es 6,77, y el petróleo
+casi había duplicado su rango habitual. Un sistema que solo puntuara habría publicado
+los cuatro. Este dice que no hay espacio para el movimiento que la pieza anunciaría, y
+explica por qué. Para mí esa es la diferencia entre una herramienta que llena el grupo
+de contenido y una en la que podemos firmar lo que sale.
+
+
+DOS COSAS QUE QUIERO DEJAR CLARAS
+
+1. El sistema no envía nada solo. Produce las piezas y las deja listas; el envío al
+   grupo sigue pasando por aprobación, y el texto de cada pieza lo escribe una
+   persona. La máquina aporta los datos y la selección, no el criterio.
+
+2. Los datos salen del terminal y de fuentes oficiales, nunca de una estimación. Si
+   una cifra no se puede calcular, se informa como ausente en vez de poner un cero, y
+   el informe directamente no se emite si el modelo no se refrescó ese día. Se puede
+   forzar, pero en ese caso el documento sale con el aviso impreso en la portada.
+
+
+QUÉ FALTA
+
+Tres cosas, ninguna de fondo:
+
+- Producir el material visual de los activos que todavía no lo tienen. Hay nueve
+  imágenes en uso y once especificadas y pendientes. Mientras falten, el sistema se
+  limita a los activos que sí pueden rendir una pieza completa.
+- Programar el disparo de las entregas diarias. Hoy se invocan a mano, que es lo
+  correcto mientras calibramos.
+- Extender el modelo de régimen a más activos. Es el más lento de los tres, porque
+  cada ficha se apoya en literatura y en elasticidades medidas.
+
+
+Si te hace sentido, dime y coordinamos para ver la cadencia y qué clases de activo
+priorizamos. Y si al revisarlo ves que algo no calza con cómo funciona el grupo hoy,
+prefiero saberlo ahora que después de dejarlo andando.
+
+Cualquier cosa me dices.
+
+Un abrazo,
+
+
+Benjamín Ignacio Bravo Soza
+Ingeniero en Finanzas
+Diplomado en Gestión de Riesgos bajo estándar PMI
+Operador Acreditado CMV
+Área de Estudios y Post-Venta
+Grupo de Análisis de Mercado — GI

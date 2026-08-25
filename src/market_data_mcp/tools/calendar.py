@@ -212,6 +212,77 @@ def _enganchar_glosario(nombre: str, glosario: dict) -> dict | None:
     return None
 
 
+def cargar_calendario(
+    solo_hoy: bool = True,
+    min_impact: str = "medium",
+    ahora: datetime | None = None,
+) -> dict[str, Any]:
+    """Calendario económico de Investing.com, como función y no solo como tool.
+
+    Existe por la misma razón que `market_data_mcp.analisis.analizar_activo`: el
+    cuerpo vivía dentro del closure de `register(mcp)` y solo se podía obtener
+    hablando MCP. El escáner de tandas necesita el calendario para su gate de
+    blackout, y un script no puede llamar a una tool.
+
+    Se queda en este módulo en vez de mudarse a uno nuevo porque los ayudantes de
+    descarga, caché y parseo son casi 200 líneas que nadie más usa: moverlos sería
+    churn sin beneficio.
+
+    `ahora` se inyecta para poder testear el filtro `solo_hoy` sin depender del
+    reloj de la máquina.
+    """
+    if min_impact not in _IMPACTO_RANK_EN:
+        return {
+            "error": "INVALID_IMPACT",
+            "message": (
+                f"min_impact '{min_impact}' inválido. "
+                f"Opciones: {list(_IMPACTO_RANK_EN)}"
+            ),
+        }
+
+    html = _fetch_calendario("thisWeek")
+    if not html:
+        return {
+            "error": "NO_CALENDAR_FEEDS",
+            "message": (
+                "Investing.com no respondió y no hay caché local. "
+                "Usar WebSearch investing.com como fallback."
+            ),
+        }
+
+    todos = _parsear_filas(html)
+    umbral = _IMPACTO_RANK_EN[min_impact]
+    hoy = (ahora or datetime.now(tz=_SANTIAGO)).date()
+    glosario = _cargar_glosario()
+
+    eventos: list[dict[str, Any]] = []
+    for ev in todos:
+        if _IMPACTO_RANK_ES.get(ev["impacto"], 0) < umbral:
+            continue
+        if solo_hoy:
+            fecha_ev = datetime.strptime(
+                ev["hora_servidor"], "%Y-%m-%d %H:%M"
+            ).date()
+            if fecha_ev != hoy:
+                continue
+        ev = dict(ev)
+        entrada = _enganchar_glosario(ev["nombre"], glosario)
+        if entrada:
+            ev["diccionario"] = entrada
+        else:
+            ev["glosario_pendiente"] = True
+        eventos.append(ev)
+
+    resultado: dict[str, Any] = {"source": "investing"}
+    if not eventos:
+        resultado["eventos"] = []
+        resultado["info"] = "sin eventos de impacto medio/alto hoy"
+        return resultado
+
+    resultado["eventos"] = eventos
+    return resultado
+
+
 def register(mcp: FastMCP) -> None:
 
     @mcp.tool
@@ -234,53 +305,4 @@ def register(mcp: FastMCP) -> None:
             {"eventos": [...], "source": "investing", ...}
             o {"error": CÓDIGO, "message": "..."} si la fuente falla.
         """
-        if min_impact not in _IMPACTO_RANK_EN:
-            return {
-                "error": "INVALID_IMPACT",
-                "message": (
-                    f"min_impact '{min_impact}' inválido. "
-                    f"Opciones: {list(_IMPACTO_RANK_EN)}"
-                ),
-            }
-
-        html = _fetch_calendario("thisWeek")
-        if not html:
-            return {
-                "error": "NO_CALENDAR_FEEDS",
-                "message": (
-                    "Investing.com no respondió y no hay caché local. "
-                    "Usar WebSearch investing.com como fallback."
-                ),
-            }
-
-        todos = _parsear_filas(html)
-        umbral = _IMPACTO_RANK_EN[min_impact]
-        hoy = datetime.now(tz=_SANTIAGO).date()
-        glosario = _cargar_glosario()
-
-        eventos: list[dict[str, Any]] = []
-        for ev in todos:
-            if _IMPACTO_RANK_ES.get(ev["impacto"], 0) < umbral:
-                continue
-            if solo_hoy:
-                fecha_ev = datetime.strptime(
-                    ev["hora_servidor"], "%Y-%m-%d %H:%M"
-                ).date()
-                if fecha_ev != hoy:
-                    continue
-            ev = dict(ev)
-            entrada = _enganchar_glosario(ev["nombre"], glosario)
-            if entrada:
-                ev["diccionario"] = entrada
-            else:
-                ev["glosario_pendiente"] = True
-            eventos.append(ev)
-
-        resultado: dict[str, Any] = {"source": "investing"}
-        if not eventos:
-            resultado["eventos"] = []
-            resultado["info"] = "sin eventos de impacto medio/alto hoy"
-            return resultado
-
-        resultado["eventos"] = eventos
-        return resultado
+        return cargar_calendario(solo_hoy=solo_hoy, min_impact=min_impact)

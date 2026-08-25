@@ -1,22 +1,22 @@
 {
-  "timestamp_consolidacion": "2026-08-24T20:41:08.901009+00:00",
+  "timestamp_consolidacion": "2026-08-25T21:55:10.605624+00:00",
   "drivers": {
     "US_10Y_TREASURY": {
-      "valor": 4.74,
+      "valor": 4.7,
       "unidad": "%",
-      "fecha_dato": "2026-08-21",
+      "fecha_dato": "2026-08-24",
       "is_stale": false
     },
     "FED_FUNDS_RATE": {
       "valor": 3.63,
       "unidad": "%",
-      "fecha_dato": "2026-08-21",
+      "fecha_dato": "2026-08-24",
       "is_stale": false
     },
     "COBRE_HG": {
-      "valor": 6.6005,
+      "valor": 6.711,
       "unidad": "USD/lb",
-      "fecha_dato": "2026-08-24",
+      "fecha_dato": "2026-08-25",
       "is_stale": false
     },
     "PETROLEO_BRENT": {
@@ -26,9 +26,9 @@
       "is_stale": false
     },
     "ORO_SPOT": {
-      "valor": 4706.1,
+      "valor": 4715.9,
       "unidad": "USD/oz",
-      "fecha_dato": "2026-08-24",
+      "fecha_dato": "2026-08-25",
       "is_stale": false
     },
     "CHILE_IMACEC_12M": {
@@ -40,7 +40,7 @@
     "CHILE_TPM": {
       "valor": 4.5,
       "unidad": "%",
-      "fecha_dato": "2026-08-24",
+      "fecha_dato": "2026-08-25",
       "is_stale": false
     },
     "POSICION_FORWARD_EXTRANJEROS_USD": {

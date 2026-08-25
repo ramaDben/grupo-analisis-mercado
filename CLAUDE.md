@@ -94,6 +94,82 @@ Zonas canónicas (IDs Windows): EE.UU. (BLS/ISM/ADP/EIA/Fed) → `Eastern Standa
 | Jueves | Niveles + noticia + drivers | Tendencia AM | Según oportunidad |
 | Viernes | Niveles + noticia + drivers + cierre semanal | Precio apertura lunes | Según oportunidad |
 
+## Producción diaria en 3 tandas (escáner + carrusel + informe)
+
+Sistema de producción estructurado que **complementa** la agenda de arriba, no la reemplaza:
+la rotación diaria de 2-3 activos y las piezas de la estructura obligatoria siguen igual. Lo
+que agrega es una selección **objetiva** del universo completo, para que la elección de qué
+activo comunicar no dependa de a quién se le ocurrió primero.
+
+### Las 3 tandas, ancladas a Nueva York
+
+| Tanda | Ancla (Nueva York) | Comando | Salida |
+|---|---|---|---|
+| — | 08:30 aprox. | `/informe apertura` | PDF institucional A4 + mensaje |
+| 1 | 10:30 (apertura + 1 h) | `/carrusel` | Hasta 3 Stories + mensaje índice |
+| 2 | 14:30 | `/carrusel 2` | Hasta 3 Stories + mensaje índice |
+| 3 | 16:45 (cierre + 45 min) | `/informe cierre` | Mensaje con gráfico, **sin PDF** |
+
+**El ancla es la hora de Nueva York y no la de Chile.** Los dos hemisferios cambian de
+horario en sentido opuesto, así que el desfase se mueve dos veces al año: NYSE abre 09:30 CLT
+en agosto y 11:30 CLST en diciembre. Un cronograma escrito en hora chilena describe en enero
+un mercado que ya cerró. `scripts/screener_gi.py` deriva la tanda de la hora de Nueva York y
+comunica siempre en hora de Chile.
+
+**Un PDF al día, no dos.** La skill `generar-reporte-editorial` reserva el PDF
+"estrictamente" para hitos de alta densidad y manda chat-first para piezas tácticas, por
+fatiga de descargas. La apertura sí va en PDF; el cierre es mensaje con gráfico.
+
+### El `Score_GI` y sus gates
+
+`scripts/screener_gi.py` puntúa cada activo del catálogo sobre 100:
+
+| Factor | Tope | De dónde sale |
+|---|---|---|
+| Técnico (quiebre) | 35 | `ema_20`, `ema_50/100`, `s1/r1` de `get_asset_levels` |
+| Catalizador macro | 25 | `obtener_calendario_macro` (impacto **alto**) + `get_curva_tasas` |
+| Espacio ADC+ATR | 20 | `atr_14` de H1 contra `rango_hoy` / `atr_restante_14` de D1 |
+| Momentum | 20 | `adx_14`, `rsi_14`, `macd_hist` |
+
+Los rangos de puntos **son** la ponderación: `Score = T + M + C + F`. No se multiplican por
+pesos, porque los factores ya vienen escalados a su máximo y hacerlo dejaría el techo real en
+26,5 sobre una escala de 100.
+
+**Cuatro gates se aplican ANTES de puntuar, y son prohibiciones, no puntos:**
+
+1. **Feriado de la bolsa** del activo (`config/feriados_bolsa.json`).
+2. **Blackout por calendario** (skill cuantitativa §4: FOMC −30/+75 min, NFP e IPC de EE.UU.
+   −15/+30, RPM y Imacec de Chile, BoJ). Ojo: `obtener_calendario_macro` ya entrega la hora en
+   America/Santiago, así que la ventana se compara directo — volver a convertir produce el
+   desfase de ±1 h del issue #38.
+3. **Prohibición del Playbook** para los 5 activos con ficha, leída de `setups_prohibidos`.
+   Solo bloquea si apunta en la misma dirección que la lectura técnica: que esté prohibido
+   comprar agresivamente no impide comunicar una caída.
+4. **Agotamiento**: ATR diario consumido sobre 90%.
+
+Un setup prohibido puede puntuar alto, y con scoring puro ganaría la tanda. Por eso el filtro
+va antes.
+
+**El escáner informa el motivo de cada exclusión y arrastra sus avisos.** Si el calendario no
+respondió, dice que no pudo verificar blackouts en vez de reportar cero exclusiones. Un
+escáner que descarta en silencio no es auditable.
+
+### El reparto entre script y comando
+
+Los pipelines producen los **datos**; el texto lo escribe el comando. `pipeline_carrusel.py`
+y `pipeline_informe.py` tienen dos pasos (`--preparar` y `--rendir`) y el segundo **se
+detiene** si un campo editorial quedó vacío, por la misma razón que el renderer falla ante
+una imagen inexistente: una pieza a medias que sale sin avisar llega al cliente.
+
+### Dos condiciones de frescura que conviene no descubrir en vivo
+
+- El **informe de apertura** no se emite si `macro_bias_output.json` está vencido. La salida
+  explícita es `--con-datos-viejos`, que estampa el aviso en la primera página.
+- El escáner limita el universo a los activos con campo `imagen` en `config/activos.json`
+  (`--todos` lo desactiva). Ese campo es el **interruptor del activo**: se rellena solo cuando
+  el `.jpg` existe en disco, porque el renderer detiene la pieza sin él. Los prompts de las
+  imágenes que faltan están en `docs/design/stories-gi/imagenes-por-activo.md`.
+
 ## Señales operativas
 - **Máximo 3 por semana** (hard limit, verificar en data/historial_senales.json)
 - Tipo: swing (varios días) o scalper (intradía cortas)
@@ -253,7 +329,8 @@ El repo lo ejecutan **dos** agentes: Claude Code y Antigravity. Antigravity llam
 *workflows* a lo que Claude Code llama slash commands: archivos markdown en
 `.agents/workflows/`, invocables igual con `/nombre`.
 
-Seis comandos están expuestos a AGY —`/story`, `/oportunidad`, `/alerta`,
+Ocho comandos están expuestos a AGY —`/story`, `/oportunidad`, `/alerta`,
+`/carrusel`, `/informe`,
 `/dato_macro`, `/apertura` y `/chart`—: los que generan piezas visuales y los
 datos que las alimentan. Los de día, los educativos y los internos siguen siendo
 solo de Claude Code.
@@ -583,7 +660,7 @@ El helper crea las carpetas y devuelve la ruta lista para `Write`. Si la pieza n
 
 **Nota**: Evolution API (Docker) está instalada y lista en `mcp/docker-compose.yml`. Cuando se resuelva la conexión WhatsApp/Baileys, el envío pasará a ser automático sin cambios adicionales.
 
-## Slash Commands disponibles (27)
+## Slash Commands disponibles (29)
 
 Invocar con `/nombre` desde Claude Code:
 
@@ -611,6 +688,8 @@ Invocar con `/nombre` desde Claude Code:
 | `/chart` | Genera screenshot de MT5 con indicador y temporalidad a elección |
 | `/story [tipo]` | Genera una Story de marca GI (imagen 1920×1080). `[tipo]` soportados hoy: `dato_macro`, `alerta`, `recomendacion`, `quote`, `breaking`, `encuesta`, `edu`, `flash`, `postventa`, `calendario`; demás plantillas en #111-#115. Ver sección "Stories GI". |
 | `/oportunidad [activo]` | Pieza que invita a operar: imagen (plantilla `oportunidad`) + mensaje de WhatsApp con contexto, llamado a la acción, fuente y disclaimer. Precios SIEMPRE del motor — si MT5 falla, se detiene, nunca deduce. No es señal: sin entrada, TP ni SL. Máximo 3 al día. |
+| `/carrusel [tanda]` | Carrusel de una tanda: `screener_gi.py` puntúa el universo con el `Score_GI` y elige el Top 3; el comando escribe el texto y rinde las Stories en ambos formatos. Máximo 3 imágenes (WhatsApp corta con `+2` a partir de la cuarta). |
+| `/informe [apertura\|cierre]` | Informe de la jornada. Apertura en PDF institucional A4; cierre chat-first (mensaje + gráfico), por el criterio de canal de la skill de reporte editorial. La apertura no se emite con el sesgo del motor vencido salvo `--con-datos-viejos`, que estampa el aviso. |
 | `/señal` | Señal operativa (verifica límite 3/semana automáticamente) |
 | `/alerta` | Detecta qué mueve el mercado ahora y genera alerta urgente |
 | `/concepto` | Concepto educativo conectado a lo que pasó esta semana |
@@ -645,6 +724,7 @@ grupo-analisis-mercado/
 │   │   ├── viernes_am.md · viernes_pm.md
 │   │   ├── encuesta.md · rencuesta.md · curriculo.md
 │   │   ├── apertura.md · actualizacion.md · dato_macro.md · noticia.md · chart.md · story.md · oportunidad.md
+│   │   ├── carrusel.md · informe.md   ← produccion diaria en 3 tandas
 │   │   ├── señal.md · alerta.md · concepto.md · pregunta.md · respuesta.md · ventas.md · postventa.md · estado.md
 │   │   └── accion.md · earnings.md
 │   └── shared/modo_ejecutivo.md  ← contrato del flag `ejecutivo` (guion_ejecutivo.txt)
@@ -655,6 +735,10 @@ grupo-analisis-mercado/
 │   ├── drivers.json · drivers_indices_sectores.json
 │   ├── agenda_semanal.json · feriados_bolsa.json
 ├── scripts/               ← scripts auxiliares
+│   ├── screener_gi.py     ← Score_GI sobre el universo + gates (feriado, blackout, Playbook, ATR)
+│   ├── pipeline_carrusel.py ← Top 3 del escaner → 3 Stories (--preparar / --rendir)
+│   ├── pipeline_informe.py  ← informe de apertura (PDF) y de cierre (chat-first)
+│   ├── sincronizar_css_plantillas.py ← re-embebe marca.css/piel.css en los 12 snapshots
 │   ├── story_render.py    ← renderer de Stories GI (payload JSON → HTML → PNG con Playwright)
 │   ├── story_grafico.py ← geometría del gráfico de recorrido (paso previo al render)
 │   ├── serie_mt5.py       ← serie real de precios desde MT5 → bloque `recorrido`

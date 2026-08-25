@@ -98,6 +98,127 @@ origen desconocido). El motivo correcto es el **circuito**, que es lo que la cos
 realmente es, y comparte lenguaje visual con `tech-circuito.jpg` sin repetirlo: acá la
 luz va cálida y ámbar, no fría.
 
+---
+
+## Ampliación para el escaneo del universo (11 imágenes)
+
+Las tandas diarias puntúan las 7 clases de activos, así que la selección puede caer en cualquiera
+de ellas. Cada activo que pueda ganar una tanda necesita su imagen. Estas 11 cubren lo que falta.
+
+**Dos reglas que gobiernan esta tanda de prompts:**
+
+1. **Nada de repetir el motivo del vecino.** `us100.jpg` ya es un rack de GPUs, así que ningún
+   otro índice puede ser tecnología; `bitcoin.jpg` ya es circuito ámbar, así que ninguna cripto
+   puede ser circuito. Si dos piezas comparten motivo, el color por activo deja de servir para
+   distinguirlas y se pierde lo único que hace reconocible la pieza antes de leerla.
+2. **Un ETF que replica un índice comparte su imagen.** `SPY.US` usa `us500.jpg`, igual que
+   `QQQ.US` ya usa `us100.jpg` y `GLD.US` usa `oro.jpg`. Son 11 archivos para 12 activos.
+
+**El nombre del archivo es el `activo_slug`**, sin excepción: `usdjpy` → `usdjpy.jpg` →
+`body.activo-usdjpy`. Es lo que permite que el pipeline derive imagen y color del mismo dato.
+
+### Divisas
+
+El prompt de `USDCLP` es textura de billete, y repetirlo tres veces daría cuatro piezas iguales.
+Estos tres motivos se apartan del billete a propósito: retratan **el material del dinero o la
+herramienta que lo fabrica**, que es igual de honesto y esquiva por completo el riesgo legal de
+reproducir moneda circulante.
+
+**USD/JPY** → `usdjpy.jpg`
+```
+macro of dark lacquered wood surface with inlaid gold leaf seams, deep urushi black,
+warm specular highlights following the gold veins, extreme shallow focus
+```
+
+**EUR/USD** → `eurusd.jpg`
+```
+macro of a cold-rolled steel bank vault door mechanism, concentric brushed circular grain,
+heavy locking bolts receding into shadow, cool steel-blue key light
+```
+⚠️ Es el único de los tres con **luz fría**. El motivo es acero, no materia noble. Si sale cálido
+se confunde con `gbpusd` y con `us30`.
+
+**GBP/USD** → `gbpusd.jpg`
+```
+macro of an engraved copperplate intaglio printing die, fine hand-cut line work in bronze metal,
+warm raking light across the incised lines, no readable letters or numerals
+```
+⚠️ La trampa acá es la misma del billete: pedir **líneas grabadas abstractas**, nunca una plancha
+con cifras o retratos legibles. Si sale con texto se descarta, no se retoca.
+
+### Índices y ETF de índice
+
+**S&P 500** → `us500.jpg` · sirve también para `SPY.US`
+```
+macro of a glass curtain wall facade at dusk, receding diagonal grid of dark panels,
+cool blue glass with sparse warm interior lights deep in the bokeh
+```
+
+**Dow Jones** → `us30.jpg`
+```
+macro of a forged steel crankshaft and gear train in a dark machine shop,
+oiled metal surfaces, warm tungsten side light, heavy industrial mass
+```
+
+**Russell 2000** → `iwm.jpg`
+```
+macro of steel pallet racking in a distribution warehouse, rows receding into darkness,
+cool sodium-grey light from above, no boxes with labels
+```
+El motivo es la empresa mediana doméstica, que es lo que el índice mide. ⚠️ Sin etiquetas ni
+cajas rotuladas: es donde el generador inventa texto.
+
+### Criptomonedas
+
+⚠️ **Ninguna lleva moneda**, por la razón que este documento ya explica en Bitcoin: no existen
+como objeto físico y el generador llena el canto de texto deformado. Cada una toma el motivo de
+**lo que la cosa realmente es o dice ser**, con un tono dominante distinto para que las cinco no
+se confundan entre sí ni con `bitcoin.jpg`, que es circuito ámbar.
+
+**Ethereum** → `eth.jpg`
+```
+macro cluster of faceted obsidian and smoked glass prisms, sharp geometric edges,
+cool violet and indigo rim light refracting through the facets, deep black background
+```
+
+**Solana** → `sol.jpg`
+```
+macro of a bundled fiber-optic strand end face, hundreds of lit fiber tips,
+magenta and cyan light bleeding from the cores, extreme shallow focus
+```
+
+**Litecoin** → `ltc.jpg`
+```
+macro of a machined silver-grey metal plate, fine parallel tooling grooves catching light,
+cool neutral key light, industrial precision surface
+```
+
+**Cardano** → `ada.jpg`
+```
+macro of stacked translucent cobalt blue glass plates seen edge-on, layered depth,
+cool blue internal glow along the edges, dark surroundings
+```
+
+**Dogecoin** → `doge.jpg`
+```
+macro of warm amber resin with suspended gold flakes caught mid-swirl,
+honey-toned translucency, strong warm side light, abstract
+```
+⚠️ **Sin perros.** El Shiba Inu es la marca del meme, no el activo, y una imagen de mascota
+fecha la pieza y compite con el mensaje igual que una persona. El motivo elegido comunica el
+carácter especulativo sin ilustrar el chiste.
+
+### Cuándo se activa un activo
+
+**No rellenar el campo `imagen` de `config/activos.json` hasta que el `.jpg` exista en disco.**
+El renderer falla fuerte ante una imagen declarada que no está (es su comportamiento deseado, no
+un defecto), y `tests/test_story_render.py` verifica que toda imagen del catálogo exista. Eso
+convierte al campo en el interruptor del activo: `imagen` presente ⟺ archivo en disco ⟺ el
+escáner de tandas lo considera renderizable. Agregar la línea es el único paso que hace falta
+cuando la imagen llega.
+
+---
+
 ### Acciones del catálogo
 No usar el logo de la empresa (marca registrada de un tercero). Generar el **sector**: chips para
 semiconductoras, aviones para aerolíneas, góndolas para retail. Mismo prompt base.

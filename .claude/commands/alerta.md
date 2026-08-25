@@ -31,36 +31,43 @@ Verifica si en la sesión actual ya se generó una alerta sobre el mismo evento 
 
 ## PASO 4: Generar la alerta
 
+Genera el mensaje para WhatsApp y la Story visual asociada (`/story alerta` con `lienzo: "alto"` y bloque `Impulso ADC/ATR`):
+
 ```
-⚠️ *ALERTA DE MERCADO*
+🎯 Activo: [Nombre del activo protagonista (TICKER)]
+📌 Nivel a vigilar: [Precio de resistencia o soporte clave con digits]
+⚡ Qué esperar: [1 línea de acción direccional clara: quiebre o rebote hacia nivel objetivo]
+
 ━━━━━━━━━━━━━━━━━━━
+⚠️ *ALERTA DE MERCADO: [TITULAR DIRECCIONAL]*
 🕐 [Hora CLT]
 
 *¿Qué pasó?*
-[2 líneas MÁXIMO. Claro y directo. Qué ocurrió y dónde.]
+[2 líneas MÁXIMO. Claro y directo. Qué ocurrió técnica y fundamentalmente.]
 
-*¿Cómo afecta nuestros activos?*
-🇨🇱 USD/CLP: *Alcista/Bajista*: [1 línea explicando por qué] (impacto estimado: ~Xh)
-🇯🇵 USD/JPY: *Alcista/Bajista*: [1 línea explicando por qué] (impacto estimado: ~Xh)
-🥇 Oro: *Alcista/Bajista*: [1 línea] (impacto estimado: ~Xh)
-⛽ WTI: *Alcista/Bajista*: [1 línea si aplica] (impacto estimado: ~Xh)
-📱 US100: *Alcista/Bajista*: [1 línea si aplica] (impacto estimado: ~Xh)
-[Incluir solo los activos realmente impactados]
-
-[Si aplica: conexión con escenario macro]
-_[Ej: "Esto refuerza el escenario de recorte de tasas de la Fed"]_
+*Impacto y Drivers Intermercado:*
+• 🏛️ *Tasas y Bonos / Macro:* [1 línea explicando el driver soberano o macro que mueve el activo]
+• 📊 *Modelo ADC + ATR:* [Explicación pedagógica sin fórmulas matemáticas: canal operativo, impulso proyectado en puntos y capacidad validada frente a la volatilidad de la jornada]
+• 📱 *[ACTIVO] (Sesgo Intradía):* *[Alcista/Bajista]* con objetivo técnico en [Nivel R1] y extensión a [Nivel R2].
 
 ━━━━━━━━━━━━━━━━━━━
-🟢 *Alcista*: [qué nivel tendría que superar para activar impulso comprador]
-🟡 *Esperar*: [rango base de oscilación sin sorpresas]
-🔴 *Bajista*: [qué soporte activaría presión vendedora]
+🟢 Sobre [Resistencia] → fuerza compradora hacia [Objetivo / R2]
+🟡 Entre [Soporte] y [Resistencia] → consolidación y espera de confirmación
+🔴 Bajo [Soporte] → presión vendedora hacia [Soporte 2]
 ━━━━━━━━━━━━━━━━━━━
 ```
 
-**Tono**: urgente pero NO alarmista. Mentor confiable informando.
-**Cero guiones largos**: Prohibido el uso de `—` o `–` en el texto.
-**Formato decimales**: Precios y niveles respetando `config/activos.json` (USD/JPY: 3 decimales, USD/CLP: 2 decimales).
+**Reglas de formato y redacción:**
+- **Above-the-fold obligatorio**: Las 3 primeras líneas entregan Activo, Nivel y Qué esperar.
+- **Sin fórmulas matemáticas en texto**: Prohibido escribir `1.5 x ATR14`, LaTeX o fórmulas crudas en el mensaje; explicar el concepto cuantitativo en voz pedagógica.
+- **Cero guiones largos ni medios**: Prohibido el uso de `—` o `–` en el texto.
+- **Formato decimales**: Precios y niveles respetando `config/activos.json` (USD/JPY: 3 decimales, USD/CLP: 2 decimales, US100: 2 decimales).
+- **Gráfico de Story Alerta**: Utilizar estrictamente temporalidad H1 (60 velas) con `lienzo: "alto"` y el token `vol_pct` configurado con el impulso en puntos para el bloque `Impulso ADC/ATR`.
 
 ## PASO 5: Aprobación y envío
-Pregunta al director: "¿Apruebas? ¿Enviar al grupo WhatsApp?"
-Al aprobar, muestra el texto listo para copiar.
+1. Muestra el mensaje de WhatsApp y el preview de la Story al director.
+2. Pregunta: "¿Apruebas? ¿Generar Story final y guardar para enviar?"
+3. Al aprobar:
+   - Guarda el mensaje con `scripts\ruta_mensaje.ps1 -Tipo "alerta"`.
+   - Genera y guarda la Story PNG (horizontal y vertical) con `scripts\ruta_story.ps1 -Plantilla "alerta"`.
+   - Muestra el texto listo para copiar.

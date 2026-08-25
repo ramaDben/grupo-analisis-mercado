@@ -875,13 +875,26 @@ de Chile (regla canónica de `CLAUDE.md`, nunca `WebSearch` para la hora):
   "variacion": { "pct": "[valor]", "direccion": "alcista|bajista" },
   "soporte": "[soporte con digits]",
   "resistencia": "[resistencia con digits]",
-  "vol_pct": "[valor u omitir la clave]",
-  "rotulo_grafico": "[TICKER · VELAS TF]",
+  "vol_pct": "[impulso proyectado en puntos, ej. '150,69 pts' para Impulso ADC/ATR]",
+  "rotulo_grafico": "[TICKER · CIERRES H1 · ÚLTIMAS 60 VELAS]",
   "chart_png": "[ruta o null]",
   "fuente": "[COMEX/INVESTING/MT5 · GRUPO INTELIGENCIA]",
-  "sesgo": "Alcista|Bajista|Lateral"
+  "sesgo": "Alcista|Bajista|Lateral",
+  "recorrido": {
+    "serie": "[array de 60 cierres H1 reales]",
+    "marcadores": [ { "indice": 59, "precio": "[spot]", "clase": "actual", "etiqueta": "[spot con digits]", "rol": "AHORA" } ],
+    "niveles": [
+      { "precio": "[resistencia]", "clase": "resistencia", "etiqueta": "[resistencia con digits]", "rol": "RESISTENCIA" },
+      { "precio": "[soporte]", "clase": "soporte", "etiqueta": "[soporte con digits]", "rol": "SOPORTE" }
+    ],
+    "lienzo": "alto"
+  }
 }
 ```
+
+**Geometría y Proporción del Gráfico:**
+- Usar siempre `"lienzo": "alto"` en el bloque `recorrido` de `alerta` para maximizar la altura vertical del gráfico y la legibilidad de las etiquetas de precios (`22px`).
+- El campo `vol_pct` alimenta la columna **`Impulso ADC/ATR`** en la tarjeta de estadísticas de la Story.
 
 Si el director omitió variación/vol en el PASO 2, **omite esas claves por completo** del JSON
 (no las dejes en `null` ni vacías) — así el template no deja hueco visual (CB-4).

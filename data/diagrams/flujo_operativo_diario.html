@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Diagrama de Flujo Operativo Diario · Grupo Inteligencia</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;800&family=Syne:wght@700;800&display=swap');
+
+  :root {
+    --bg: #0D0D1A;
+    --card-bg: #161626;
+    --card-border: rgba(255, 255, 255, 0.12);
+    --text-primary: #FFFFFF;
+    --text-secondary: #9AA4B2;
+    --accent-mint: #53C1AB;
+    --accent-cyan: #3E91AF;
+    --accent-gold: #D4AF37;
+    --accent-coral: #E76F51;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: 'Space Grotesk', sans-serif;
+    padding: 40px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .container {
+    max-width: 1200px;
+    width: 100%;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 40px;
+    border-bottom: 1px solid var(--card-border);
+    padding-bottom: 24px;
+  }
+
+  .header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 38px;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+  }
+
+  .header p {
+    font-size: 18px;
+    color: var(--accent-mint);
+    margin-top: 8px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-bottom: 40px;
+  }
+
+  .phase-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .phase-card.focal {
+    border: 2px solid var(--accent-mint);
+    box-shadow: 0 0 24px rgba(83, 193, 171, 0.15);
+  }
+
+  .time-badge {
+    align-self: flex-start;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .badge-apertura { background: rgba(62, 145, 175, 0.2); color: var(--accent-cyan); border: 1px solid var(--accent-cyan); }
+  .badge-carrusel { background: rgba(83, 193, 171, 0.2); color: var(--accent-mint); border: 1px solid var(--accent-mint); }
+  .badge-cierre   { background: rgba(212, 175, 55, 0.2); color: var(--accent-gold); border: 1px solid var(--accent-gold); }
+
+  .phase-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    margin-bottom: 12px;
+  }
+
+  .step-list {
+    list-style: none;
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .step-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .step-item strong {
+    color: var(--accent-mint);
+    display: block;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+
+  .output-box {
+    margin-top: auto;
+    padding-top: 16px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+  }
+
+  .output-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+  }
+
+  .output-val {
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--text-primary);
+    margin-top: 4px;
+  }
+
+  .skills-box {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 28px;
+  }
+
+  .skills-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: var(--text-primary);
+    text-align: center;
+  }
+
+  .skills-flow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .skill-node {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .skill-node.highlight {
+    border: 1px solid var(--accent-mint);
+    background: rgba(83, 193, 171, 0.08);
+  }
+
+  .skill-node h4 {
+    font-size: 15px;
+    color: var(--accent-mint);
+    margin-bottom: 6px;
+  }
+
+  .skill-node p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.35;
+  }
+
+  .arrow {
+    font-size: 24px;
+    color: var(--text-secondary);
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>SISTEMA OPERATIVO DIARIO · GRUPO INTELIGENCIA</h1>
+    <p>Orquestación Unificada de Skills y Canales de Producción</p>
+  </div>
+
+  <div class="grid">
+    <!-- FASE 1: APERTURA -->
+    <div class="phase-card">
+      <span class="time-badge badge-apertura">08:30 CLT · Apertura</span>
+      <h2 class="phase-title">/informe apertura</h2>
+      <ul class="step-list">
+        <li class="step-item">
+          <strong>1. Ingesta Macro</strong>
+          Skill <code>ecosistema-datos-macro</code> lee calendario, UST 10Y y diferenciales en <code>data central/</code>.
+        </li>
+        <li class="step-item">
+          <strong>2. Matriz de Cartera</strong>
+          Skill <code>trading-cuantitativo-intermercado</code> toma niveles base de 8 activos.
+        </li>
+        <li class="step-item">
+          <strong>3. Compilación A4</strong>
+          Motor <code>generar_pdf.py</code> compila el PDF institucional en tema oscuro.
+        </li>
+      </ul>
+      <div class="output-box">
+        <div class="output-label">Entregable Oficial</div>
+        <div class="output-val">📄 PDF 2 Págs + Mensaje WhatsApp</div>
+      </div>
+    </div>
+
+    <!-- FASE 2: CARRUSEL -->
+    <div class="phase-card focal">
+      <span class="time-badge badge-carrusel">10:30 CLT · Media Mañana</span>
+      <h2 class="phase-title">/carrusel</h2>
+      <ul class="step-list">
+        <li class="step-item">
+          <strong>1. Filtro de Convicción</strong>
+          Escaneo MT5 y selección de 2 a 4 activos con quiebre técnico y catalizador.
+        </li>
+        <li class="step-item">
+          <strong>2. Motor ADC + ATR</strong>
+          Cálculo del <code>Impulso ADC/ATR</code> en puntos sin fórmulas crudas.
+        </li>
+        <li class="step-item">
+          <strong>3. Batch Render PNG</strong>
+          Renderizado en lote de Stories <code>alerta.html</code> (Lienzo Alto + 60 velas H1).
+        </li>
+      </ul>
+      <div class="output-box">
+        <div class="output-label">Entregable Oficial</div>
+        <div class="output-val">🖼️ Mensaje Índice + 2 a 4 Stories PNG</div>
+      </div>
+    </div>
+
+    <!-- FASE 3: CIERRE -->
+    <div class="phase-card">
+      <span class="time-badge badge-cierre">17:00 CLT · Cierre</span>
+      <h2 class="phase-title">/informe cierre</h2>
+      <ul class="step-list">
+        <li class="step-item">
+          <strong>1. Auditoría de Alertas</strong>
+          Verificación de objetivos alcanzados (US100, Oro, USD/CLP) en sesión NY.
+        </li>
+        <li class="step-item">
+          <strong>2. Balance de Volatilidad</strong>
+          Evaluación de ATR consumido y preparación de niveles para sesión Asia.
+        </li>
+        <li class="step-item">
+          <strong>3. Compilación A4</strong>
+          Motor <code>generar_pdf.py</code> compila el dossier de cierre.
+        </li>
+      </ul>
+      <div class="output-box">
+        <div class="output-label">Entregable Oficial</div>
+        <div class="output-val">📄 PDF Cierre 2 Págs + Mensaje WhatsApp</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="skills-box">
+    <h3 class="skills-title">Cadena de Orquestación de Skills Existentes</h3>
+    <div class="skills-flow">
+      <div class="skill-node">
+        <h4>1. ecosistema-datos-macro</h4>
+        <p>Lectura oficial de agenda, UST 2Y/10Y/TIPS, BCCh y datos soberanos en <code>data central/</code>.</p>
+      </div>
+      <div class="arrow">→</div>
+      <div class="skill-node highlight">
+        <h4>2. trading-cuantitativo-intermercado</h4>
+        <p>Alineación EMAs (20/50/100), Bandas de Bollinger, Modelo ADC + ATR y selección de convicción.</p>
+      </div>
+      <div class="arrow">→</div>
+      <div class="skill-node">
+        <h4>3. generar-reporte-editorial</h4>
+        <p>Criterio de canal anti-spam, redacción clara y ejecución de <code>story_render.py</code> y <code>generar_pdf.py</code>.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
