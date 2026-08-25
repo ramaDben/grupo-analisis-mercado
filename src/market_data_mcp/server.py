@@ -78,7 +78,12 @@ mcp = FastMCP(
         "digits, volumen mínimo/paso, tamaño de contrato — y sesiones de trading "
         "semanales en hora Chile; con `fecha` responde de forma determinista si el "
         "activo opera ese día, cruzando patrón semanal MT5 + calendario de feriados "
-        "NYSE versionado + trade_mode en vivo). "
+        "NYSE versionado + trade_mode en vivo), "
+        "get_curva_tasas (curva soberana de EE.UU. desde data central/: rendimientos "
+        "del Tesoro 2Y/10Y/30Y, tasa efectiva de fondos federales, tasa real TIPS 10Y "
+        "y compensación por inflación, con variación en puntos base a 1 y 5 días, más "
+        "la pendiente 2s10s; incluye procedencia y frescura, y un delta que no se "
+        "puede calcular viene null y nunca 0). "
         "Hora en America/Santiago. Noticias vía WebSearch. "
         "Contrato de error: si el dato no está disponible retorna {'error': 'CÓDIGO', 'message': '...'} "
         "— nunca array vacío, nunca None silencioso."
@@ -88,7 +93,7 @@ mcp = FastMCP(
     mask_error_details=False,
 )
 
-from market_data_mcp.tools import levels, calendar, chart_objects, positions, symbol_spec, macro_bias  # noqa: E402
+from market_data_mcp.tools import levels, calendar, chart_objects, positions, symbol_spec, macro_bias, curva_tasas  # noqa: E402
 
 levels.register(mcp)
 calendar.register(mcp)
@@ -96,6 +101,7 @@ chart_objects.register(mcp)
 positions.register(mcp)
 symbol_spec.register(mcp)
 macro_bias.register(mcp)
+curva_tasas.register(mcp)
 
 
 if __name__ == "__main__":

@@ -60,14 +60,37 @@ except ModuleNotFoundError:
 
 class _ToolCollector:
     """Reemplaza al objeto FastMCP dentro de `register()`: captura las funciones
-    decoradas con `@mcp.tool` para poder invocarlas directamente en los tests."""
+    decoradas con `@mcp.tool` para poder invocarlas directamente en los tests.
+
+    Soporta las dos formas que usa el repo:
+
+    - `@mcp.tool` (sin paréntesis): levels, calendar, chart_objects, positions,
+      symbol_spec. La descripción sale del docstring.
+    - `@mcp.tool(name=..., description=...)`: macro_bias, curva_tasas. La descripción
+      se escribe explícita para que el modelo la lea sin tener que inferirla.
+
+    Antes solo soportaba la primera, así que las tools del segundo estilo no se
+    podían invocar desde un test y había que llamar a su lector por debajo,
+    dejando el registro sin cubrir.
+    """
 
     def __init__(self) -> None:
         self.tools: dict[str, object] = {}
+        self.metadata: dict[str, dict] = {}
 
-    def tool(self, fn):  # uso en el código: @mcp.tool (sin paréntesis)
-        self.tools[fn.__name__] = fn
-        return fn
+    def tool(self, fn=None, **kwargs):
+        if fn is not None:  # @mcp.tool (sin paréntesis)
+            self.tools[fn.__name__] = fn
+            self.metadata[fn.__name__] = {}
+            return fn
+
+        def decorador(func):  # @mcp.tool(name=..., description=...)
+            nombre = kwargs.get("name", func.__name__)
+            self.tools[nombre] = func
+            self.metadata[nombre] = kwargs
+            return func
+
+        return decorador
 
 
 @pytest.fixture
