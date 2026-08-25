@@ -45,5 +45,6 @@
   "IMACEC": { "nombre_es": "Índice Mensual de Actividad Económica", "explicacion": "Termómetro mensual de la economía chilena publicado por el Banco Central; si es negativo, la economía se contrajo ese mes." },
   "INE": { "nombre_es": "Instituto Nacional de Estadísticas (Chile)", "explicacion": "El organismo oficial que mide la inflación (IPC) y el empleo en Chile." },
   "Bienes durables": { "nombre_es": "Pedidos de bienes durables", "explicacion": "Productos que duran varios años (maquinaria, autos, aviones, electrodomésticos); sus pedidos muestran si las empresas están invirtiendo o frenando.", "titulos_ff": ["Durable Goods Orders", "Core Durable Goods Orders"] },
-  "US100": { "nombre_es": "Índice Nasdaq 100", "explicacion": "El índice de las 100 mayores empresas tecnológicas de EE.UU.; sube cuando las tasas de interés bajan." }
+  "US100": { "nombre_es": "Índice Nasdaq 100", "explicacion": "El índice de las 100 mayores empresas tecnológicas de EE.UU.; sube cuando las tasas de interés bajan." },
+  "CB": { "nombre_es": "Confianza del consumidor (The Conference Board)", "explicacion": "Encuesta que mide el optimismo de las familias en EE.UU. sobre su economía y empleo; anticipa el consumo futuro." }
 }

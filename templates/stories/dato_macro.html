@@ -528,8 +528,11 @@ body.activo-bitcoin { --activo: var(--activo-bitcoin); }
   .gb-barra-pos { fill: var(--sube); fill-opacity: 0.45; }
   .gb-barra-neg { fill: var(--baja); fill-opacity: 0.45; }
   /* La última barra es el dato que se está comunicando: opacidad plena para que
-     el ojo la encuentre sin buscarla. */
+     el ojo la encuentre sin buscarla. Si el resultado es peor de lo esperado,
+     se resalta en color bajista (--baja). */
   .gb-barra-destacada { fill-opacity: 1; }
+  body.veredicto-peor .gb-barra-destacada { fill: var(--baja); }
+  body.veredicto-mejor .gb-barra-destacada { fill: var(--sube); }
 
   .gb-cero { stroke: var(--texto-2); stroke-width: 1.5; }
   .gb-nivel { stroke-width: 2; stroke-dasharray: 7 7; }
