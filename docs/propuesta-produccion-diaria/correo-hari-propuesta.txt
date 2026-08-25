@@ -1,0 +1,96 @@
+Asunto: Propuesta: producción diaria del grupo con escaneo del universo completo
+
+Adjuntos:
+  · Produccion Diaria GI - Propuesta.pdf
+  · 01 - Divisas (USD-CLP).png
+  · 02 - Commodities (Oro).png
+  · 03 - Criptomonedas (Bitcoin).png
+  · 04 - Indices (Nasdaq 100).png
+  · 05 - ETF (Semiconductores).png
+  · 06 - Acciones (MercadoLibre).png
+  · 07 - Macro y tasas (Agenda del dia).png
+
+
+Hola Hari,
+
+Te mando una propuesta para cambiar cómo producimos el contenido diario del grupo.
+El resumen en una línea: hoy elegimos a criterio qué activo comunicar, y la idea es
+que el sistema escanee el universo completo, puntúe cada activo con una fórmula
+auditable y arme las piezas, dejando el criterio editorial y la aprobación donde
+corresponde.
+
+Van siete imágenes de muestra, una por cada clase de activo que el sistema cubre, y
+un documento que explica cómo funciona.
+
+
+POR QUÉ CREO QUE VALE LA PENA
+
+Tres problemas que hoy se resuelven con horas de analista:
+
+1. La rotación diaria cubre cuatro activos base. El terminal ofrece 148 instrumentos
+   y ya tenemos 38 en el catálogo técnico, así que la mayor parte del universo no se
+   mira nunca. No porque no interese, sino porque no alcanza el tiempo.
+
+2. Si un cliente pregunta por qué hablamos del Oro y no del Nasdaq, la respuesta hoy
+   es una opinión. Con esto hay un número detrás y queda guardado.
+
+3. Aumentar el volumen de piezas significa contratar. Con el sistema, significa
+   configurar.
+
+
+LO QUE MÁS ME IMPORTA QUE MIRES
+
+No es el puntaje, es lo que el sistema se niega a publicar. Antes de puntuar hay
+cuatro filtros que sacan al activo de la selección y que ningún puntaje alto puede
+compensar: feriado de bolsa, ventana de bloqueo alrededor de un dato macro,
+prohibición del modelo de régimen, y agotamiento del recorrido del día.
+
+En la corrida real que está en la página 4 del documento, cuatro activos quedaron
+fuera por el último filtro. El dólar había movido 6,53 pesos cuando su promedio de
+catorce días es 6,77, y el petróleo casi había duplicado su rango habitual. Un
+sistema que solo puntuara habría publicado los cuatro; este dice que no hay espacio
+y explica por qué. Esa es la parte que hace la diferencia entre una herramienta que
+llena el grupo de contenido y una en la que podemos firmar lo que sale.
+
+
+DOS COSAS QUE QUIERO DEJAR CLARAS
+
+1. El sistema no envía nada solo. Produce las piezas y las deja listas; el envío al
+   grupo sigue pasando por aprobación, y el texto de cada pieza lo escribe una
+   persona. La máquina aporta los datos y la selección, no el criterio.
+
+2. Los datos salen del terminal y de fuentes oficiales, nunca de una estimación. Si
+   una cifra no se puede calcular, el sistema la informa como ausente en vez de
+   poner un cero, y el informe de apertura directamente no se emite si el modelo
+   cuantitativo no se refrescó ese día.
+
+
+QUÉ FALTA PARA DEJARLO OPERANDO
+
+Está en la página 5 con más detalle, pero en corto son tres cosas y ninguna es un
+bloqueo de fondo:
+
+- Producir el material visual de los activos que todavía no lo tienen. Hay nueve
+  imágenes en uso y once especificadas y pendientes. Mientras falten, el sistema se
+  limita solo a los activos que sí pueden rendir una pieza completa.
+- Programar el disparo de las cuatro entregas diarias. Hoy se invocan a mano, que es
+  lo correcto mientras calibramos.
+- Extender el modelo de régimen a más activos, que es el más lento de los tres
+  porque cada ficha se apoya en literatura y en elasticidades medidas.
+
+
+Si te hace sentido, dime y coordinamos una revisión para ver la cadencia y qué
+clases de activo priorizamos. Y si ves que algo no calza con cómo funciona el grupo
+hoy, prefiero saberlo ahora que después de dejarlo andando.
+
+Cualquier cosa me dices.
+
+Un abrazo,
+
+
+Benjamín Ignacio Bravo Soza
+Ingeniero en Finanzas
+Diplomado en Gestión de Riesgos bajo estándar PMI
+Operador Acreditado CMV
+Área de Estudios y Post-Venta
+Grupo de Análisis de Mercado — GI
