@@ -191,3 +191,93 @@ El pipeline de gráficos (`serie_mt5.py` -> `story_grafico.py` -> `story_render.
 1. **Uso de Clases Exactas en el Payload**: En los comandos de operaciones (como `/recomendacion`), NUNCA inventes clases para los `hitos` o `niveles`. Debes usar EXCLUSIVAMENTE las clases soportadas por el CSS del snapshot (`meta`, `entrada`, `stop`, `actual`). Usar clases como `"origen"` o `"soporte"` hará que el nivel desaparezca por completo, arruinando la imagen.
 2. **Uso de H1 Estricto**: Por requerimiento corporativo, las operaciones (incluso las Posicionales de semanas) DEBEN renderizarse con `--timeframe H1 --velas 60`. El motor gráfico (`story_grafico.py`) cuenta con matemáticas de *clamping* (anclaje) que evitarán que el gráfico se aplaste si el Take Profit o Stop Loss están demasiado lejos, garantizando la correcta lectura visual de la volatilidad sin sacrificar el encuadre.
 3. **Cuidado con el CSS**: Si en algún momento debes editar o inspeccionar los archivos `.css` de las plantillas (como `marca.css` o `recomendacion.html`), NUNCA dejes comentarios truncos (`*/` sueltos). Playwright usa un motor de render estricto que invisibilizará variables y elementos completos si detecta sintaxis CSS rota.
+
+
+## 9. Producción diaria en tandas (`/carrusel` y `/informe`)
+
+Estos dos comandos funcionan distinto a los demás y conviene entender **por qué**
+antes de correrlos, porque las reglas que siguen no son preferencias de estilo: sin
+ellas el sistema deja de servir para lo que existe.
+
+### 9.1. No elijes los activos. El escáner elige.
+
+`scripts/screener_gi.py` recorre el catálogo, puntúa cada activo sobre 100 y
+selecciona. **Tu trabajo empieza después de eso.**
+
+La razón es que la selección tiene que ser auditable: si un cliente pregunta por qué
+se habló del Oro y no del Nasdaq, la respuesta tiene que ser un número y no una
+opinión. En el momento en que el agente ajusta la lista "porque queda mejor", el
+sistema completo pierde su sentido y volvemos a elegir a dedo con más pasos.
+
+Si el resultado no te convence, **se discute el criterio del escáner**, no la corrida
+del día. Y si selecciona menos de 3 activos, o ninguno, **ese es el resultado**: una
+tanda de 2 piezas bien elegidas es mejor que una de 3 con un relleno.
+
+### 9.2. El script calcula, tú escribes.
+
+Los dos pipelines tienen dos pasos, y la separación es deliberada:
+
+- `--preparar` arma los payloads (o el markdown del informe) con **todos los datos
+  resueltos** y los campos editoriales vacíos.
+- `--rendir` **se detiene** si alguno quedó en blanco.
+
+Lo que tú aportas es el titular, el párrafo y el análisis, que es lo único que un
+script no puede producir. Lo que **no** aportas son cifras: precio, soporte,
+resistencia e impulso ya vienen en el payload y salieron del motor. Si necesitas un
+dato que no está, lo pides al MCP; nunca lo deduces.
+
+El freno de `--rendir` es hermano del fail-fast de imagen: una pieza a medias que
+sale sin avisar llega al cliente.
+
+### 9.3. Ningún nombre interno del motor llega a un texto de cliente.
+
+`SHORT_AGRESIVO`, `PULLBACK_EMA50_H1`, `R2_GOLDILOCKS_EXPANSION` y similares **no son
+términos técnicos difíciles: son nombres de variable**, escritos para que el motor los
+compare entre sí. Nadie los pensó para que un lector los viera.
+
+La traducción vive en **`data/glosario_motor.json`** (regímenes, setups, sesgos,
+matices y conceptos). Cuando aparezca un token que no está ahí, **se agrega al JSON**,
+no se parafrasea en la pieza: ese glosario lo consumen también otros comandos, y una
+traducción improvisada en un solo lugar se contradice con la del siguiente.
+
+Lo mismo vale para la taquigrafía de mesa de dinero. En texto de cliente no se
+escribe `Δ` como encabezado, ni `bps`, ni `2s10s`. Se escriben completos: "Cambio en
+1 día", "puntos base", "Diferencia entre 10 y 2 años". Y los porcentajes van en
+notación chilena con dos decimales siempre (`4,70%` y `4,24%`): en una columna, `4.7`
+junto a `4.24` se lee como si uno tuviera menos precisión que el otro.
+
+Hay una guardia que lo verifica, `tests/test_voz_cliente_informe.py`. Si la rompes,
+te está diciendo que un token se escapó, no que el test esté mal.
+
+### 9.4. El dato viejo se refresca, no se fuerza.
+
+El informe de apertura **no se emite** si el snapshot del motor está vencido. El
+remedio es siempre el mismo y en este orden: `pipeline_ingesta.py` y después
+`macro_bias_engine.py`.
+
+`--con-datos-viejos` existe para cuando el director decide publicar igual, y en ese
+caso el documento sale con el aviso impreso en la primera página. **No es un atajo
+para saltarse el error**: es una decisión que deja constancia.
+
+Dos consecuencias del mismo principio: una cifra que no se puede calcular se informa
+como **ausente y nunca como cero** (cero significa "no se movió", que es distinto de
+"no sé"), y cada cifra con rezago lleva **su fecha al lado**, en la tabla y no al pie.
+
+### 9.5. El horario sale de Nueva York, no del reloj chileno.
+
+Las tandas se anclan a la sesión estadounidense: 10:30, 14:30 y 16:45 hora de Nueva
+York. Chile y Estados Unidos cambian de horario en sentido opuesto, así que el
+desfase se mueve dos veces al año. Un cronograma escrito en hora chilena describe en
+enero un mercado que ya cerró. El script deriva la tanda solo y comunica en hora de
+Chile; no la calcules a mano.
+
+### 9.6. Cuatro filtros que ningún puntaje compensa.
+
+Antes de puntuar, el escáner excluye por feriado de bolsa, por ventana de bloqueo
+alrededor de un dato macro, por prohibición del modelo de régimen, y por agotamiento
+del recorrido diario. Son **prohibiciones, no penalizaciones**: un setup prohibido
+puede puntuar alto, y sin el filtro ganaría la tanda.
+
+Lee siempre los avisos que imprime. Si dice que el calendario no respondió, el gate de
+blackout **no se pudo verificar** y la decisión de publicar pasa a ser manual. El
+escáner nunca reporta "cero exclusiones" cuando en realidad no pudo mirar.
