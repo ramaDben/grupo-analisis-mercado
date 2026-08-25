@@ -18,6 +18,16 @@ Criterio de claridad (subordinado a la regla de oro): si un cliente nuevo sin ex
 - **USD/JPY (Dólar / Yen japonés)**: cobertura por pedido externo, **fuera de la rotación diaria** de 2-3 activos (se cubre cuando el director lo pide). drivers → diferencial de tasas Fed vs BoJ, decisiones del BoJ, rendimientos Treasury, intervención del Ministerio de Finanzas de Japón, precios de energía, aversión al riesgo
 - **Acciones (rotación por análisis previo)**: además de los 4 activos base, la rotación diaria puede incluir 1-2 acciones del catálogo elegidas por análisis previo. Fuente interina: las 2 acciones destacadas por `/earnings` esa semana. Mecanismo definitivo (market screener que recorra las acciones disponibles en MT5 y elija las 2 mejores): **pendiente, issue aparte**.
 
+### El catálogo técnico es más amplio que la rotación diaria
+`config/activos.json` cubre 38 tickers, e incluye desde el 2026-08-25 cinco ETF (`QQQ.US`, `SPY.US`, `GLD.US`, `IWM.US`, `SOXX.US`) y cinco criptos nuevas (`ETHUSD`, `SOLUSD`, `LTCUSD`, `ADAUSD`, `DOGUSD`). Todos entran con `rotacion_diaria: false`: **la rotación diaria de 2-3 activos no cambia**, y estos existen para que `get_asset_levels` y `get_symbol_spec` puedan responder por ellos cuando el director los pida.
+
+Tres cosas que conviene no volver a averiguar:
+- **Los ETF llevan sufijo `.US`, no prefijo `#`** (el `#` es de las acciones). El broker **no ofrece** `TLT` ni `SMH`: `SOXX.US` es el equivalente de SMH, y la duración de deuda se lee de la curva con `get_curva_tasas`, no como activo operable.
+- **La cripto de Dogecoin es `DOGUSD`**, no `DOGEUSD`. `ADAUSD` y `DOGUSD` cotizan con 4 decimales.
+- **Entrar al catálogo técnico no es entrar al Playbook.** Un ETF tiene niveles, indicadores y especificaciones de contrato, pero no tiene ficha operativa, régimen R0-R4, sesgo score ni setups permitidos: ese conjunto sigue siendo el de `bias_reader.VALID_SYMBOLS` (`USDCLP`, `XAUUSD`, `WTI`, `BRENT`, `US100`), porque cada ficha del Playbook cita literatura académica y elasticidades medidas.
+
+El universo completo del terminal (32 pares FX, 86 acciones, 13 ETF, 6 criptos) está capturado en `calculadoras excel/Simulador GI Real.xlsx`, hoja `Datos`, que genera `scripts/simulador_gi.py` con `mt5.symbols_get()`. Es la fuente para verificar si un instrumento existe y con qué `digits`, sin abrir MT5.
+
 ## Estructura diaria obligatoria (lunes a viernes)
 
 > **Orden canónico (issue #43)**: el dato/noticia del calendario va PRIMERO, para enviar el fundamental del día al cliente mientras se cargan los niveles en MT5 (los niveles requieren input manual y tardan más). Los comandos de día (`/martes`, `/miercoles`, `/jueves`, `/viernes_am`) generan el dato macro como PIEZA 1 y la apertura/niveles como PIEZA 2.
@@ -282,12 +292,14 @@ que `mcp/mcp_config.json` frente a su `.example`.
 | **WhatsApp (Evolution API)** | ⏳ Pendiente conexión Docker | Envío directo al grupo | Flujo manual por ahora |
 | **TrendRadar / Firecrawl / Finnhub** | ❌ No activos | Reemplazados por market-data (MT5) + WebSearch | — |
 
-**Nota**: el MCP `market-data` expone **cinco** tools:
-- `get_asset_levels` — análisis técnico MT5 automático (soportes/resistencias, indicadores).
+**Nota**: el MCP `market-data` expone **siete** tools:
+- `get_asset_levels` — análisis técnico MT5 automático (soportes/resistencias, indicadores). Devuelve `ema_20`, `ema_50`, `ema_100`, RSI, ATR, ADX, MACD, Bollinger y el canal `donchian_50_high/low/mid`. Ojo: `ema_20` es media **exponencial** (el gatillo que manda el Playbook en H1) y `bb_mid` es la media **simple** de 20 de las Bandas de Bollinger — no son lo mismo, y confundirlas cambia el indicador.
 - `get_chart_objects` — niveles dibujados a mano por el director en MT5 (soportes/resistencias, trendlines, canales, rectángulos) más screenshot, vía el Service `ChartObjectsExporter` (sub-proyecto A, #98).
 - `obtener_calendario_macro` — calendario económico Investing.com (Chile/EE.UU./China/Zona Euro con campo `actual` y `resultado`, issue #91; WebSearch es fallback si la fuente falla).
 - `get_symbol_spec` — especificaciones de contrato de un símbolo (trade_mode, digits, volumen mínimo/paso, tamaño de contrato) y sesiones de trading semanales en hora Chile; con `fecha` responde de forma determinista si el activo opera ese día (issue #104).
 - `get_open_positions` — operaciones abiertas en el terminal MT5 (ticket, tipo BUY/SELL, volumen, entrada, SL, TP, precio actual, resultado flotante y swap en la moneda de la cuenta).
+- `get_macro_bias` — sesgo cuantitativo del Playbook: régimen macro R0-R4, sesgo score `[-2,+2]`, SL dinámico por ATR y matriz de permisos técnicos. Solo para los 5 activos con ficha (`USDCLP`, `XAUUSD`, `WTI`, `BRENT`, `US100`); lee el snapshot que emite `scripts/macro_bias_engine.py`.
+- `get_curva_tasas` — curva soberana de EE.UU. desde `data central/`: rendimientos del Tesoro 2Y/10Y/30Y, tasa efectiva de fondos federales, tasa real TIPS 10Y (`DFII10`) y compensación por inflación (`T10YIE`), con **variación en puntos base a 1 y 5 días** y la pendiente 2s10s. La curva no es un símbolo de mercado, así que no se puede pedir con `get_asset_levels`. Cada serie informa su `frecuencia_publicacion` (`DFF` publica los siete días porque es un promedio diario; las yields solo días hábiles), y **un delta que no se puede calcular viene `null` y nunca `0`** — cero significa "no se movió", que es distinto de "no sé". La tasa real es `DFII10`: el CSV `US_TIPS_Real_Rates_ETF_*` es el precio de un ETF (~105), no una tasa.
 
 Contrato de error común: si el dato no está disponible retorna `{'error': 'CÓDIGO', 'message': '...'}` — nunca array vacío ni `None` silencioso. La antigua `get_economic_events` fue reemplazada por la tool nativa (#53); `get_market_context` (noticias Finnhub) quedó deprecada y se purgó del registro — las **noticias** se obtienen vía `WebSearch` (investing.com + fuentes oficiales: Fed, BCCh, OPEP+, EIA, BLS). Ver `docs/archive/superpowers/specs/2026-06-05-calendario-macro-nativo-mt5-design.md`.
 
@@ -639,7 +651,7 @@ grupo-analisis-mercado/
 ├── agents/                ← prompts de sub-agents
 │   ├── recolector.md · analista.md · redactor.md
 ├── config/                ← configuración del sistema
-│   ├── activos.json       ← 22 activos: forex + índices + 13 acciones
+│   ├── activos.json       ← 38 tickers: forex + commodities + 6 criptos + índices + 5 ETF + 14 acciones
 │   ├── drivers.json · drivers_indices_sectores.json
 │   ├── agenda_semanal.json · feriados_bolsa.json
 ├── scripts/               ← scripts auxiliares
