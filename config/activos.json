@@ -28,7 +28,8 @@
       "drivers": ["diferencial de tasas Fed vs BoJ", "decisiones BoJ", "rendimientos Treasury", "intervención Ministerio de Finanzas de Japón", "precios de energía"],
       "temporalidades": ["1D", "4H", "1H"],
       "horario_mercado": "24h (principal: sesión Tokio y sesión NY)",
-      "rotacion_diaria": false
+      "rotacion_diaria": false,
+      "imagen": "assets/activos/usdjpy.jpg"
     },
     {
       "ticker": "EUR/USD",
@@ -41,7 +42,8 @@
       "drivers": ["diferencial de tasas BCE vs Fed", "decisiones del BCE", "inflación de la Zona Euro", "Dollar Index", "precios de energía en Europa"],
       "temporalidades": ["1D", "4H", "1H"],
       "horario_mercado": "24h (principal: sesión Londres y sesión NY)",
-      "rotacion_diaria": false
+      "rotacion_diaria": false,
+      "imagen": "assets/activos/eurusd.jpg"
     },
     {
       "ticker": "GBP/USD",
@@ -54,7 +56,8 @@
       "drivers": ["diferencial de tasas BoE vs Fed", "inflación UK", "Dollar Index"],
       "temporalidades": ["1D", "4H", "1H"],
       "horario_mercado": "24h",
-      "rotacion_diaria": false
+      "rotacion_diaria": false,
+      "imagen": "assets/activos/gbpusd.jpg"
     },
     {
       "ticker": "XAU/USD",

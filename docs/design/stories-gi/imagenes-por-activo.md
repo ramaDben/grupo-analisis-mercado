@@ -119,94 +119,97 @@ de ellas. Cada activo que pueda ganar una tanda necesita su imagen. Estas 11 cub
 
 ### Divisas
 
-El prompt de `USDCLP` es textura de billete, y repetirlo tres veces daría cuatro piezas iguales.
-Estos tres motivos se apartan del billete a propósito: retratan **el material del dinero o la
-herramienta que lo fabrica**, que es igual de honesto y esquiva por completo el riesgo legal de
-reproducir moneda circulante.
-
 **USD/JPY** → `usdjpy.jpg`
 ```
-macro of dark lacquered wood surface with inlaid gold leaf seams, deep urushi black,
-warm specular highlights following the gold veins, extreme shallow focus
+photorealistic macro photograph, tight crop, diagonal composition, shallow depth of field,
+dramatic warm amber and cool neon lighting, rapid falloff into deep black background,
+high contrast, cinematic color grading, Tokyo financial district high-rise towers at night,
+illuminated glass architecture reflecting warm city glow, deep shadows, 16:9 --no text, watermark, logo, people, hands, faces
 ```
 
 **EUR/USD** → `eurusd.jpg`
 ```
-macro of a cold-rolled steel bank vault door mechanism, concentric brushed circular grain,
-heavy locking bolts receding into shadow, cool steel-blue key light
+photorealistic macro photograph, tight crop, diagonal composition, shallow depth of field,
+cool steel-blue and navy lighting from upper left, rapid falloff into deep black background,
+high contrast, cinematic color grading, European Central Bank modern angular glass and steel architectural facade at twilight,
+reflective dark panels, heavy institutional presence, 16:9 --no text, watermark, logo, people, hands, faces
 ```
-⚠️ Es el único de los tres con **luz fría**. El motivo es acero, no materia noble. Si sale cálido
-se confunde con `gbpusd` y con `us30`.
 
 **GBP/USD** → `gbpusd.jpg`
 ```
-macro of an engraved copperplate intaglio printing die, fine hand-cut line work in bronze metal,
-warm raking light across the incised lines, no readable letters or numerals
+photorealistic macro photograph, tight crop, diagonal composition, shallow depth of field,
+dramatic warm amber raking light from upper left, rapid falloff into deep black background,
+high contrast, cinematic color grading, monumental neoclassical stone fluted pillars and classical cornice facade of the Bank of England at night,
+deep shadows, textured Portland stone, 16:9 --no text, watermark, logo, people, hands, faces
 ```
-⚠️ La trampa acá es la misma del billete: pedir **líneas grabadas abstractas**, nunca una plancha
-con cifras o retratos legibles. Si sale con texto se descarta, no se retoca.
 
 ### Índices y ETF de índice
 
 **S&P 500** → `us500.jpg` · sirve también para `SPY.US`
 ```
-macro of a glass curtain wall facade at dusk, receding diagonal grid of dark panels,
-cool blue glass with sparse warm interior lights deep in the bokeh
+photorealistic macro photograph, tight crop, diagonal composition, shallow depth of field,
+rapid falloff into deep black background, high contrast, cinematic color grading,
+modern glass curtain wall skyscraper facade at dusk, receding diagonal grid of dark reflective panels,
+cool blue glass with sparse warm interior lights deep in the bokeh, 16:9 --no text, watermark, logo, people, hands, faces
 ```
 
 **Dow Jones** → `us30.jpg`
 ```
-macro of a forged steel crankshaft and gear train in a dark machine shop,
-oiled metal surfaces, warm tungsten side light, heavy industrial mass
+photorealistic macro photograph, tight crop, diagonal composition, shallow depth of field,
+dramatic warm golden side lighting from upper left, rapid falloff into deep black background,
+high contrast, cinematic color grading, monumental neoclassical colonnade of the New York Stock Exchange building on Wall Street at night,
+textured stone pillars receding into darkness, 16:9 --no text, watermark, logo, people, hands, faces
 ```
 
 **Russell 2000** → `iwm.jpg`
 ```
-macro of steel pallet racking in a distribution warehouse, rows receding into darkness,
-cool sodium-grey light from above, no boxes with labels
+photorealistic macro photograph, tight crop, diagonal composition, shallow depth of field,
+industrial cool blue and amber LED lighting from upper left, rapid falloff into deep black background,
+high contrast, cinematic color grading, modern automated logistics distribution hub,
+robotic conveyor transport lines in dark warehouse, high tech industrial operations, 16:9 --no text, watermark, logo, people, hands, faces, boxes with labels
 ```
-El motivo es la empresa mediana doméstica, que es lo que el índice mide. ⚠️ Sin etiquetas ni
-cajas rotuladas: es donde el generador inventa texto.
 
 ### Criptomonedas
 
-⚠️ **Ninguna lleva moneda**, por la razón que este documento ya explica en Bitcoin: no existen
-como objeto físico y el generador llena el canto de texto deformado. Cada una toma el motivo de
-**lo que la cosa realmente es o dice ser**, con un tono dominante distinto para que las cinco no
-se confundan entre sí ni con `bitcoin.jpg`, que es circuito ámbar.
-
 **Ethereum** → `eth.jpg`
 ```
-macro cluster of faceted obsidian and smoked glass prisms, sharp geometric edges,
-cool violet and indigo rim light refracting through the facets, deep black background
+photorealistic macro photograph, tight crop, diagonal composition, shallow depth of field,
+cool violet and deep indigo neon rim lighting from upper left, rapid falloff into pitch black background,
+high contrast, cinematic color grading, geometric faceted octahedron crystal prism made of smoked glass and dark titanium,
+luminescent ultraviolet glowing edges, abstract digital cryptography motif, 16:9 --no text, watermark, logo, people, hands, faces
 ```
 
 **Solana** → `sol.jpg`
 ```
-macro of a bundled fiber-optic strand end face, hundreds of lit fiber tips,
-magenta and cyan light bleeding from the cores, extreme shallow focus
+photorealistic macro photograph, tight crop, diagonal composition, shallow depth of field,
+glowing vibrant cyan and magenta gradient LED lighting from upper left, rapid falloff into deep black background,
+high contrast, cinematic color grading, ultra high speed microchip processor mounted on dark matte black carbon surface,
+glowing neon cyan and purple data bus traces, high tech blockchain engine, 16:9 --no text, watermark, logo, people, hands, faces
 ```
 
 **Litecoin** → `ltc.jpg`
 ```
-macro of a machined silver-grey metal plate, fine parallel tooling grooves catching light,
-cool neutral key light, industrial precision surface
+photorealistic macro photograph, tight crop, diagonal composition, shallow depth of field,
+cool crisp silver and steel rim light from upper left, rapid falloff into deep black background,
+high contrast, cinematic color grading, solid brushed silver bullion ingot with laser-etched precision cryptographic micro-circuit lines,
+polished metallic chamfered edges, dark mirror reflections, 16:9 --no text, watermark, logo, people, hands, faces
 ```
 
 **Cardano** → `ada.jpg`
 ```
-macro of stacked translucent cobalt blue glass plates seen edge-on, layered depth,
-cool blue internal glow along the edges, dark surroundings
+photorealistic macro photograph, tight crop, diagonal composition, shallow depth of field,
+intense cobalt blue and royal blue luminescence from upper left, rapid falloff into pure black background,
+high contrast, cinematic color grading, 3D interconnected geometric network lattice of glowing cobalt blue nodes and crystal filaments,
+abstract blockchain topology, mathematical precision, 16:9 --no text, watermark, logo, people, hands, faces
 ```
 
 **Dogecoin** → `doge.jpg`
 ```
-macro of warm amber resin with suspended gold flakes caught mid-swirl,
-honey-toned translucency, strong warm side light, abstract
+photorealistic macro photograph, tight crop, diagonal composition, shallow depth of field,
+dramatic warm golden side lighting from upper left, rapid falloff into deep black background,
+high contrast, cinematic color grading, heavy solid gold cryptocurrency coin medallion resting on dark textured slate stone,
+macro close up of polished gold rim and raised geometric minting relief, warm golden specular sheen, 16:9 --no text, watermark, logo, people, hands, faces
 ```
-⚠️ **Sin perros.** El Shiba Inu es la marca del meme, no el activo, y una imagen de mascota
-fecha la pieza y compite con el mensaje igual que una persona. El motivo elegido comunica el
-carácter especulativo sin ilustrar el chiste.
 
 ### Cuándo se activa un activo
 
