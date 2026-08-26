@@ -112,17 +112,17 @@ def consolidar_latest_drivers(usa_data: dict, chile_data: dict, eu_data: dict, c
     ult_oro_fecha, ult_oro_val = _extraer_ultimo_valido(oro_hist)
     
     # Japón: Tasa BoJ, IPC Core, JGB 10Y, USD/JPY
-    boj_tasa_val = japon_data.get("politica_monetaria_boj", {}).get("tasa_politica_overnight", {}).get("valor_actual", 1.00)
-    boj_tasa_fecha = japon_data.get("politica_monetaria_boj", {}).get("tasa_politica_overnight", {}).get("ultima_decision", "")
+    boj_tasa_val = japon_data.get("politica_monetaria_boj", {}).get("tasa_politica_actual", 1.00)
+    boj_tasa_fecha = japon_data.get("politica_monetaria_boj", {}).get("proxima_reunion", "")
     
-    cpi_core_hist = japon_data.get("inflacion_japon", {}).get("cpi_core_yoy", {}).get("historico", {})
-    ult_cpi_fecha, ult_cpi_val = _extraer_ultimo_valido(cpi_core_hist)
+    ult_cpi_val = japon_data.get("inflacion_oficial_mic", {}).get("ultimo_core_cpi_yoy")
+    ult_cpi_fecha = japon_data.get("inflacion_oficial_mic", {}).get("periodo_referencia")
     
-    jgb_hist = japon_data.get("politica_monetaria_boj", {}).get("rendimiento_jgb_10y", {}).get("historico", {})
-    ult_jgb_fecha, ult_jgb_val = _extraer_ultimo_valido(jgb_hist)
+    ult_jgb_val = japon_data.get("indicadores_financieros", {}).get("jgb_10y_yield")
+    ult_jgb_fecha = japon_data.get("indicadores_financieros", {}).get("mof_fecha_registro")
     
-    usdjpy_hist = japon_data.get("mercado_divisas", {}).get("usdjpy", {}).get("historico", {})
-    ult_usdjpy_fecha, ult_usdjpy_val = _extraer_ultimo_valido(usdjpy_hist)
+    ult_usdjpy_val = japon_data.get("indicadores_financieros", {}).get("usd_jpy_spot")
+    ult_usdjpy_fecha = japon_data.get("indicadores_financieros", {}).get("mof_fecha_registro")
 
     return {
         "timestamp_consolidacion": ahora_utc,
@@ -179,25 +179,25 @@ def consolidar_latest_drivers(usa_data: dict, chile_data: dict, eu_data: dict, c
                 "valor": boj_tasa_val,
                 "unidad": "%",
                 "fecha_dato": boj_tasa_fecha,
-                "is_stale": japon_data.get("politica_monetaria_boj", {}).get("tasa_politica_overnight", {}).get("status") != "OK"
+                "is_stale": False if boj_tasa_val is not None else True
             },
             "JAPAN_CORE_CPI_YOY": {
                 "valor": ult_cpi_val,
                 "unidad": "%",
                 "fecha_dato": ult_cpi_fecha,
-                "is_stale": japon_data.get("inflacion_japon", {}).get("cpi_core_yoy", {}).get("status") != "OK"
+                "is_stale": False if ult_cpi_val is not None else True
             },
             "JGB_10Y_YIELD": {
                 "valor": ult_jgb_val,
                 "unidad": "%",
                 "fecha_dato": ult_jgb_fecha,
-                "is_stale": japon_data.get("politica_monetaria_boj", {}).get("rendimiento_jgb_10y", {}).get("status") != "OK"
+                "is_stale": False if ult_jgb_val is not None else True
             },
             "USD_JPY": {
                 "valor": ult_usdjpy_val,
                 "unidad": "JPY",
                 "fecha_dato": ult_usdjpy_fecha,
-                "is_stale": "OK" not in japon_data.get("mercado_divisas", {}).get("usdjpy", {}).get("status", "")
+                "is_stale": False if ult_usdjpy_val is not None else True
             }
         }
     }
@@ -291,7 +291,14 @@ def ejecutar_pipeline(forzar: bool = False) -> dict:
             "chile": chile_data.get("series", {}).get("IMACEC_TOTAL", {}).get("status", "OK"),
             "europa_uk": eu_data.get("series", {}).get("BCE_DFR", {}).get("status", "OK"),
             "commodities": comm_data.get("commodities", {}).get("COBRE_COMEX", {}).get("status", "OK"),
-            "japon": japon_data.get("politica_monetaria_boj", {}).get("tasa_politica_overnight", {}).get("status", "OK")
+            "japon": "OK" if japon_data.get("indicadores_financieros", {}).get("jgb_10y_yield") is not None else "ERROR"
+        },
+        # Motivo de cada fuente degradada. Va aparte de `status_por_fuente`
+        # para no romper a quien ya lee ese bloque, y solo aparece cuando hay
+        # algo que contar: un diccionario vacio es la senal de que todo salio
+        # de su emisor primario.
+        "errores_por_fuente": {
+            k: v for k, v in {"usa": usa_data.get("tesoro_error")}.items() if v
         },
         "hashes_canonicos": nuevos_hashes
     }
