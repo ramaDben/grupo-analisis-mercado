@@ -243,6 +243,11 @@ def cargar_universo(solo_renderizables: bool = True) -> list[dict[str, Any]]:
             "clase": clase,
             "categoria": a.get("categoria", clase),
             "digits": a.get("digits", 2),
+            # Moneda en que cotiza, para rotular distancias de precio en la
+            # pieza. Sin default a proposito: un "USD" supuesto sobre el USD/CLP
+            # rotularia pesos como dolares, y un rotulo equivocado se lee peor
+            # que uno ausente. `preparar()` excluye al activo si falta.
+            "unidad": a.get("unidad"),
             "imagen": a.get("imagen"),
         })
 
