@@ -129,7 +129,7 @@ def construir_payload(
         "precio_actual": fmt(seleccion["precio"]),
         "soporte": fmt(seleccion["soporte"]),
         "resistencia": fmt(seleccion["resistencia"]),
-        "vol_pct": f"{fmt(seleccion['impulso_adc_atr'])} pts",
+        "vol_pct": f"{fmt(seleccion['impulso_adc_atr'])} {activo_catalogo['unidad']}",
         "rotulo_grafico": (
             f"{seleccion['ticker']} · CIERRES {TIMEFRAME_GRAFICO} · "
             f"ÚLTIMAS {VELAS_GRAFICO} VELAS"

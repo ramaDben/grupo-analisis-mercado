@@ -563,7 +563,13 @@ def evaluar_activo(
         "resistencia": h1["r1"],
         "atr_h1": h1["atr_14"],
         # Impulso proyectado del modelo ADC+ATR: 1,5 x ATR14 de H1 tras el
-        # quiebre. Es lo que alimenta el bloque "Impulso ADC/ATR" de la Story.
+        # quiebre. El nombre interno sigue al modelo cuantitativo, que es donde
+        # esta definido; hacia el cliente el mismo numero se comunica como
+        # "Volatilidad tipica", sin la palabra proyectado y sin sumarlo al
+        # precio. La pieza de alerta no lleva firma acreditada, asi que afirmar
+        # un recorrido futuro la convertiria en una recomendacion de inversion
+        # sin quien la respalde. El ATR es un promedio de rangos PASADOS:
+        # describe cuanto se mueve el instrumento, no hacia donde va.
         "impulso_adc_atr": round(1.5 * h1["atr_14"], activo["digits"]),
     }
 
