@@ -51,6 +51,23 @@ _BLOQUE = re.compile(
 )
 
 
+def quitar_css_embebido(html: str) -> str:
+    """Devuelve la plantilla sin su bloque de CSS embebido.
+
+    Lo que queda es el CSS **propio** de la plantilla, que es lo unico que sus
+    guardias deben mirar. Hasta agosto de 2026 no habia distincion porque las
+    hojas se enlazaban con `<link>`; al embeberlas, `marca.css` entero paso a
+    vivir dentro de cada snapshot y los guardias empezaron a leer sus hex como
+    si la plantilla los hubiera escrito a mano. Reportaban veinte colores
+    hardcodeados en `alerta.html` que en realidad eran la paleta, copiada ahi
+    por el propio sincronizador.
+
+    Si no hay bloque embebido, devuelve el HTML tal cual: una plantilla que
+    todavia enlaza las hojas no tiene nada que recortar.
+    """
+    return _BLOQUE.sub("", html, count=1)
+
+
 _COMENTARIO = re.compile(r"/\*.*?\*/", re.DOTALL)
 _LINEAS_VACIAS = re.compile(r"\n{3,}")
 
