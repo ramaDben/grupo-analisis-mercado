@@ -9,6 +9,7 @@ Valida determinismo, precedencia de estados R0-R4, histéresis anti-parpadeo y c
 import json
 import math
 import pytest
+from datetime import datetime, timezone
 from pathlib import Path
 
 from scripts.macro_bias_engine import (
@@ -109,13 +110,19 @@ def test_shock_extremo_override_inmediato(config_playbook):
 
 def test_formula_auditable_confianza(config_playbook):
     """Valida matemáticamente la ponderación del índice de confianza."""
+    # Fechas y reloj fijos: la fórmula se evalúa siempre en el mismo instante
+    # relativo. Antes las fechas eran fijas y el reloj no, así que el test medía
+    # cuántos días habían pasado desde que se escribió. Empezó a fallar solo.
+    ahora = datetime(2026, 8, 20, 12, 0, tzinfo=timezone.utc)
     drivers_test = [
         {"nombre": "DGS10", "fecha": "2026-08-20", "status": "OK", "cobertura": 1.0},
         {"nombre": "DFII10", "fecha": "2026-08-20", "status": "OK", "cobertura": 1.0},
         {"nombre": "T10YIE", "fecha": "2026-08-20", "status": "OK", "cobertura": 1.0},
         {"nombre": "TPM_CHILE", "fecha": "2026-08-20", "status": "OK", "cobertura": 1.0},
     ]
-    conf_total, f_frescura, f_antiguedad, f_cobertura = calcular_confianza(drivers_test, config_playbook)
+    conf_total, f_frescura, f_antiguedad, f_cobertura = calcular_confianza(
+        drivers_test, config_playbook, ahora=ahora
+    )
     assert f_frescura == 100.0
     assert f_cobertura == 100.0
     assert conf_total >= 70.0

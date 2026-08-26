@@ -1,17 +1,35 @@
 """Migra los snapshots de Stories GI a los tokens de `templates/stories/marca.css`.
 
-Reemplaza cada hex conocido por su `var(--rol)` e inyecta el <link> a marca.css.
-Con `--check` no escribe: falla si algún snapshot volvió a hardcodear un color, que
-es la única forma de que la fuente única siga siendo única cuando se agregue una
-plantilla nueva.
+Reemplaza cada hex conocido por su `var(--rol)`. Con `--check` no escribe: falla
+si algún snapshot volvió a hardcodear un color, que es la única forma de que la
+fuente única siga siendo única cuando se agregue una plantilla nueva.
 
     uv run python scripts/marca_tokens.py            # migra
     uv run python scripts/marca_tokens.py --check     # verifica
 
-El mapa es EXPLÍCITO a propósito: un regex genérico de 6 dígitos también captura
-las referencias a issues de los comentarios (`#119`, `#127`), y un color que no
-esté acá debe fallar el --check para que alguien decida su rol en vez de que se
-cuele silenciosamente.
+Qué se mira de cada plantilla
+-----------------------------
+Solo su CSS **propio**. Desde que las hojas se embeben (solución del 2026-08-12),
+`marca.css` entero vive dentro de cada snapshot, y ahí los hex no son un defecto:
+son la paleta. Mirarlos hacía que el gate reportara veinte colores hardcodeados
+en `alerta.html` que el propio sincronizador había copiado. El corte lo hace
+`quitar_css_embebido`, en `sincronizar_css_plantillas.py`, que es donde viven los
+marcadores del bloque.
+
+Por la misma razón, la exigencia dejó de ser el `<link>` y pasó a ser que la hoja
+esté presente: embebida con su marcador, o enlazada si la plantilla todavía no
+migró.
+
+Qué es explícito y qué se deriva
+--------------------------------
+La DETECCIÓN es explícita: `PATRON_HEX` pide 6 dígitos con frontera porque un
+regex más suelto captura las referencias a issues de los comentarios (`#119` es
+hex válido).
+
+El MAPA hex -> rol se deriva de `marca.css` (ver `cargar_mapa`). Escrito a mano
+se pudrió una vez ya: al cambiar la paleta al verde del logo quedaron veinte hex
+de la hoja sin entrada y cinco entradas apuntando a colores inexistentes, y el
+gate siguió diciendo "ok" mientras sugería roles equivocados.
 
 Qué cubre el check y qué NO
 ---------------------------
@@ -45,41 +63,47 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from sincronizar_css_plantillas import (  # noqa: E402
+    _BLOQUE,
+    MARCADOR_MARCA,
+    quitar_css_embebido,
+)
+
 RAIZ = Path(__file__).resolve().parent.parent
 DIR_STORIES = RAIZ / "templates" / "stories"
 HOJA = "marca.css"
 LINK = f'<link rel="stylesheet" href="{HOJA}">'
 
-# hex -> rol semántico. Ver el encabezado de marca.css para el criterio de los
-# nombres y para por qué --sube/--baja no son parte del reskin de marca.
-MAPA = {
-    "#0D0D1A": "fondo",
-    "#10222B": "fondo-acento",
-    "#120A12": "fondo-alt",
-    "#123A2A": "fondo-sube",
-    "#2A1220": "fondo-baja",
-    "#3E91AF": "acento",
-    "#1E3A5F": "acento-oscuro",
-    "#00DC82": "sube",
-    "#53C1AB": "sube-suave",
-    "#E84040": "baja",
-    "#F5A3A3": "baja-suave",
-    "#FFB020": "aviso",
-    "#F5F3F7": "texto-1",
-    "#A9A5B4": "texto-2",
-    "#6E6A7A": "texto-3",
-    "#C9C5D4": "texto-borde",
-    "#8E8A9C": "texto-gris",
-    "#FFFFFF": "blanco",
-    # Identidad por activo (ver marca.css). Van en el MAPA para que, si una
-    # plantilla los escribe a mano, el check sugiera el token en vez de
-    # reportarlos como huérfanos sin salida.
-    "#E8B44C": "activo-oro",
-    "#E8783C": "activo-wti",
-    "#4C86E8": "activo-us100",
-    "#C9743A": "activo-usdclp",
-    "#F7931A": "activo-bitcoin",
-}
+# `--rol: #hex;` en una hoja. Solo declaraciones: las mencion es de un hex
+# dentro de un comentario explicativo no son la definición de un rol.
+PATRON_DECLARACION = re.compile(r"--([a-z0-9-]+)\s*:\s*(#[0-9A-Fa-f]{6})\s*;")
+
+
+def cargar_mapa(hoja: Path | None = None) -> dict[str, str]:
+    """hex -> rol semántico, leído de `marca.css`.
+
+    Antes era un diccionario escrito a mano, y se pudrió: cuando la paleta pasó
+    al verde del logo quedaron veinte hex de la hoja sin entrada y cinco
+    entradas apuntando a colores que ya no existían. El gate seguía corriendo y
+    seguía diciendo "ok", pero sugería roles equivocados y no sabía nombrar los
+    nuevos. Un mapa de la paleta que se mantiene aparte de la paleta solo puede
+    envejecer mal.
+
+    Lo que sí sigue siendo explícito es la DETECCIÓN (`PATRON_HEX`): ahí el
+    criterio del autor original vale entero, porque un regex genérico también
+    captura las referencias a issues de los comentarios (`#119` es hex válido).
+    Derivar el mapa no reintroduce ese problema.
+
+    Ante dos roles con el mismo valor gana el primero declarado, que en
+    `marca.css` es siempre el rol base: los alias van después y por `var()`.
+    """
+    ruta = hoja or (DIR_STORIES / HOJA)
+    mapa: dict[str, str] = {}
+    for rol, hex_ in PATRON_DECLARACION.findall(ruta.read_text(encoding="utf-8")):
+        mapa.setdefault(hex_.upper(), rol)
+    return mapa
+
 
 # Solo 6 dígitos y con frontera: descarta `#119` de los comentarios de issue.
 PATRON_HEX = re.compile(r"#[0-9A-Fa-f]{6}\b")
@@ -138,15 +162,17 @@ def _hojas() -> list[Path]:
     return sorted(p for p in DIR_STORIES.glob("*.css") if p.name != HOJA)
 
 
-def _tokenizar(html: str) -> tuple[str, int, list[str]]:
+def _tokenizar(html: str, mapa: dict[str, str] | None = None) -> tuple[str, int, list[str]]:
     """Devuelve (html nuevo, nº de reemplazos, hex sin rol asignado)."""
+    if mapa is None:
+        mapa = cargar_mapa()
     huerfanos: list[str] = []
     reemplazos = 0
 
     def _sub(match: re.Match[str]) -> str:
         nonlocal reemplazos
         hex_original = match.group(0)
-        rol = MAPA.get(hex_original.upper())
+        rol = mapa.get(hex_original.upper())
         if rol is None:
             huerfanos.append(hex_original)
             return hex_original
@@ -157,6 +183,35 @@ def _tokenizar(html: str) -> tuple[str, int, list[str]]:
     # alfa, y el rol se expresa con `color-mix`). Se revisan aparte, con el
     # trinquete de RGBA_PENDIENTES.
     return PATRON_HEX.sub(_sub, html), reemplazos, huerfanos
+
+
+def _tokenizar_respetando_paleta(
+    html: str, mapa: dict[str, str]
+) -> tuple[str, int, list[str]]:
+    """Tokeniza la plantilla dejando intacta la paleta que trae embebida.
+
+    Sin esto, migrar un snapshot lo destruye. El bloque embebido es una copia
+    literal de `marca.css`, y ahí cada hex ES la definición del rol: sustituirlo
+    produce `--acento: var(--acento);`, una variable que se referencia a sí misma
+    y por lo tanto no resuelve a ningún color. La pieza no falla al renderizar,
+    sale sin paleta.
+
+    El peligro apareció recién al arreglar el mapa. Mientras estuvo
+    desactualizado ninguno de esos hex tenía rol, así que el migrador los
+    reportaba como huérfanos y se negaba a escribir: el archivo estaba a salvo
+    por accidente, que es la clase de protección que deja de existir sin avisar.
+    """
+    bloque = _BLOQUE.search(html)
+    if bloque is None:
+        return _tokenizar(html, mapa)
+
+    antes, n_antes, huerf_antes = _tokenizar(html[: bloque.start()], mapa)
+    despues, n_despues, huerf_despues = _tokenizar(html[bloque.end() :], mapa)
+    return (
+        antes + bloque.group(0) + despues,
+        n_antes + n_despues,
+        huerf_antes + huerf_despues,
+    )
 
 
 def _con_link(html: str) -> str:
@@ -184,17 +239,24 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     problemas = 0
+    mapa = cargar_mapa()
     for ruta in _plantillas():
         html = ruta.read_text(encoding="utf-8")
-        nuevo, n, huerfanos = _tokenizar(html)
+        nuevo, n, huerfanos = _tokenizar_respetando_paleta(html, mapa)
         nuevo = _con_link(nuevo)
 
         if args.check:
-            rgba = _rgba_huerfanos(html)
+            # Se mira el CSS PROPIO de la plantilla. El bloque embebido es una
+            # copia literal de `marca.css`, o sea el único lugar donde escribir
+            # un hex es correcto: contarlo ahí reportaba la paleta entera como
+            # veinte colores hardcodeados de `alerta.html`.
+            propio = quitar_css_embebido(html)
+            _, n, huerfanos = _tokenizar(propio, mapa)
+            rgba = _rgba_huerfanos(propio)
             deuda = ruta.name in RGBA_PENDIENTES
             pendientes = n + len(huerfanos) + (len(rgba) if not deuda else 0)
-            falta_link = HOJA not in html
-            if pendientes or falta_link:
+            falta_hoja = MARCADOR_MARCA not in html and HOJA not in html
+            if pendientes or falta_hoja:
                 problemas += 1
                 detalle = []
                 if n:
@@ -203,8 +265,8 @@ def main(argv: list[str] | None = None) -> int:
                     detalle.append(f"sin rol: {sorted(set(huerfanos))}")
                 if rgba and not deuda:
                     detalle.append(f"rgba() sin rol: {sorted(set(rgba))}")
-                if falta_link:
-                    detalle.append(f"sin <link> a {HOJA}")
+                if falta_hoja:
+                    detalle.append(f"no embebe ni enlaza {HOJA}")
                 print(f"FALLA {ruta.name}: {'; '.join(detalle)}")
             elif rgba:
                 print(f"aviso {ruta.name}: rgba() pendiente {sorted(set(rgba))}")
@@ -229,7 +291,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.check:
         for ruta in _hojas():
             css = ruta.read_text(encoding="utf-8")
-            _, n, huerfanos = _tokenizar(css)
+            _, n, huerfanos = _tokenizar(css, mapa)
             # Las hojas propias nacen después del gate: no tienen deuda y no
             # entran al trinquete.
             huerfanos = huerfanos + _rgba_huerfanos(css)

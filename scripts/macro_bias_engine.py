@@ -135,8 +135,18 @@ def evaluar_regimen_candidato(deltas: dict, cfg: dict) -> tuple[str, str, bool, 
     return "R0_CALMA_RANGO", "Calma / Rango / Absorción", False, "Drivers en equilibrio dinámico sin shocks direccionales extremos."
 
 
-def calcular_confianza(drivers_info: list[dict], cfg: dict) -> tuple[float, float, float, float]:
-    """Calcula el índice de confianza matemático auditable."""
+def calcular_confianza(
+    drivers_info: list[dict], cfg: dict, ahora: datetime | None = None
+) -> tuple[float, float, float, float]:
+    """Calcula el índice de confianza matemático auditable.
+
+    `ahora` se inyecta para poder testear la ponderación sin depender del reloj
+    de la máquina, igual que `cargar_calendario` con su filtro de hoy. El factor
+    de antigüedad se mide contra el momento actual, así que un test con fechas
+    fijas no comprueba una fórmula: comprueba qué día se ejecutó. El de esta
+    función pasaba cuando se escribió y fallaba desde una semana después, con las
+    mismas entradas y la misma fórmula.
+    """
     cw = cfg["confidence_weights"]
     total = len(drivers_info)
     if total == 0:
@@ -147,7 +157,7 @@ def calcular_confianza(drivers_info: list[dict], cfg: dict) -> tuple[float, floa
     s_frescura = frescos / float(total)
 
     # 2. Antigüedad (basada en el driver más antiguo)
-    ahora = datetime.now(timezone.utc)
+    ahora = ahora or datetime.now(timezone.utc)
     max_horas = 0.0
     for d in drivers_info:
         fecha_str = d.get("fecha")
