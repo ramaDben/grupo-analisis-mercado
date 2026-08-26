@@ -240,8 +240,13 @@ def consolidar_latest_drivers(usa_data: dict, chile_data: dict, eu_data: dict, c
     # que no existe. Antes traia `proxima_reunion` -cuando se va a REVISAR, no
     # cuando se midio-, asi que la antiguedad daba negativa y el driver pasaba
     # cualquier filtro de frescura para siempre.
-    boj_tasa_fecha = japon_data.get("as_of", "")[:10] or str(date.today())
-    boj_proxima_reunion = japon_data.get("politica_monetaria_boj", {}).get("proxima_reunion", "")
+    # Fecha de la DECISION que fijo la tasa, no la de la ingesta ni la de la
+    # proxima reunion. La trae el extractor desde la glosa del BIS, que cita el
+    # comunicado del BoJ. Sin ella no habia con que medir la frescura de un
+    # driver que no envejece por dias sino por reuniones.
+    boj_bloque = japon_data.get("politica_monetaria_boj", {})
+    boj_tasa_fecha = boj_bloque.get("vigente_desde") or japon_data.get("as_of", "")[:10]
+    boj_proxima_reunion = boj_bloque.get("proxima_reunion", "")
     
     ult_cpi_val = japon_data.get("inflacion_oficial_mic", {}).get("ultimo_core_cpi_yoy")
     ult_cpi_fecha = japon_data.get("inflacion_oficial_mic", {}).get("periodo_referencia")
@@ -318,7 +323,8 @@ def consolidar_latest_drivers(usa_data: dict, chile_data: dict, eu_data: dict, c
                 "is_stale": esta_vencido("BOJ_POLICY_RATE", boj_tasa_fecha,
                     "OK" if boj_tasa_val is not None else "ERROR"),
                 "proxima_reunion": boj_proxima_reunion,
-                "origen": "declarado a mano en extractor_japon.py"
+                "vigente_desde": boj_bloque.get("vigente_desde", ""),
+                "fuente": boj_bloque.get("fuente_tasa", "")
             },
             "JAPAN_CORE_CPI_YOY": {
                 "valor": ult_cpi_val,
