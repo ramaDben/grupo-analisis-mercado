@@ -1,5 +1,5 @@
 {
-  "ultima_ejecucion_utc": "2026-08-26T04:28:02.433383+00:00",
+  "ultima_ejecucion_utc": "2026-08-26T04:46:46.384346+00:00",
   "hay_novedades": true,
   "novedades_detalle": [
     "Datos actualizados en Commodities (Cobre / WTI / Brent / Oro)",
@@ -17,7 +17,7 @@
     "usa": "099159746db336ea7352c8ffae961a64aa15ff82f5c15b6ee374d5d7724a3dcd",
     "chile": "d55411b325d5cc299c81eabe5d03fb6c9328657213240a371bb59da0aa5b7a23",
     "europa_uk": "1f41bec544447e5de972e5a2e919155cbe3981403653a73b8504ea443229700f",
-    "commodities": "5bcf016279130b7a2061d65fb741d56cd814bbc5754cb39fbde2b8d4cb5fcf84",
-    "japon": "9ee7a312ad35876de2a16d0852175cede793d5046efbe35f6f9f5732592d3430"
+    "commodities": "e47dc13e8fefe1eee185d9959d39bd90e6a7380cfbc2bbffad26861dd256cf9d",
+    "japon": "4dc1e93337dda73bd0f116fe53585c0af661cd4182c92fa39d8824d779a47102"
   }
 }

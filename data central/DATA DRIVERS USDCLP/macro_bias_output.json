@@ -1,27 +1,27 @@
 {
   "schema_version": "2.0.0",
   "config_hash": "8735efbf1ac7c59a",
-  "as_of_utc": "2026-08-26T04:28:43.784477+00:00",
+  "as_of_utc": "2026-08-26T04:49:38.822272+00:00",
   "regimen_macro_global": {
     "codigo": "R2_GOLDILOCKS_EXPANSION",
     "nombre": "Expansión Sólida / Goldilocks",
     "confirmado_por_historesis": true,
     "lecturas_consecutivas": 1,
-    "descripcion": "Cobre en expansión (+4.2%) con tasas del Tesoro estables (+0.0 bps). [EVENTO EXTREMO: Conmutación Inmediata]"
+    "descripcion": "Cobre en expansión (+4.1%) con tasas del Tesoro estables (+0.0 bps). [EVENTO EXTREMO: Conmutación Inmediata]"
   },
   "metricas_clave": {
     "spread_2s10s_pct": 0.46,
     "tasa_real_tips10y_pct": 2.38,
     "breakeven_inflacion_10y_pct": 2.32,
     "spread_tasas_chile_fed_pct": 0.87,
-    "cobre_spot_comex": 6.757,
-    "cobre_variacion_5d_pct": 4.15,
+    "cobre_spot_comex": 6.7545,
+    "cobre_variacion_5d_pct": 4.12,
     "petroleo_shock_max_5d_pct": 2.18
   },
   "confianza_general": {
-    "confianza_total_pct": 76.7,
+    "confianza_total_pct": 76.6,
     "score_frescura_pct": 100.0,
-    "score_antiguedad_pct": 33.5,
+    "score_antiguedad_pct": 33.3,
     "score_cobertura_pct": 100.0
   },
   "activos": {
@@ -50,7 +50,7 @@
         "trailing_stop_mult_atr": null
       },
       "justificacion_vectores": [
-        "Cobre en $6.76 USD/lb frena alzas violentas (Elasticidad beta=-0.48)",
+        "Cobre en $6.75 USD/lb frena alzas violentas (Elasticidad beta=-0.48)",
         "Diferencial de tasas comprimido (+0.87%) limita caídas estructurales",
         "Posición neta forward de bancos residentes con no residentes vendedora (-16866 millones de USD)"
       ]
@@ -68,7 +68,7 @@
         "SHORT_AGRESIVO"
       ],
       "parametros_riesgo": {
-        "precio_spot": 4641.49,
+        "precio_spot": 4641.61,
         "atr_h1": 16.72,
         "atr_d1": 76.73,
         "stop_loss_mult_intraday": 1.5,
@@ -123,7 +123,7 @@
         "FADE_TOP_RESISTANCE"
       ],
       "parametros_riesgo": {
-        "precio_spot": 86.914,
+        "precio_spot": 86.924,
         "atr_h1": 0.57,
         "atr_d1": 2.88,
         "stop_loss_mult_intraday": 1.5,
@@ -151,7 +151,7 @@
         "SHORT_FADE"
       ],
       "parametros_riesgo": {
-        "precio_spot": 29213.94,
+        "precio_spot": 29211.79,
         "atr_h1": 72.43,
         "atr_d1": 364.62,
         "stop_loss_mult_intraday": 1.5,
