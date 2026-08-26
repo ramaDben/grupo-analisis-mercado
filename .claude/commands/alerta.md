@@ -31,7 +31,7 @@ Verifica si en la sesión actual ya se generó una alerta sobre el mismo evento 
 
 ## PASO 4: Generar la alerta
 
-Genera el mensaje para WhatsApp y la Story visual asociada (`/story alerta` con `lienzo: "alto"` y bloque `Impulso ADC/ATR`):
+Genera el mensaje para WhatsApp y la Story visual asociada (`/story alerta` con `lienzo: "alto"` y bloque `Volatilidad típica`):
 
 ```
 🎯 Activo: [Nombre del activo protagonista (TICKER)]
@@ -62,7 +62,7 @@ Genera el mensaje para WhatsApp y la Story visual asociada (`/story alerta` con 
 - **Sin fórmulas matemáticas en texto**: Prohibido escribir `1.5 x ATR14`, LaTeX o fórmulas crudas en el mensaje; explicar el concepto cuantitativo en voz pedagógica.
 - **Cero guiones largos ni medios**: Prohibido el uso de `—` o `–` en el texto.
 - **Formato decimales**: Precios y niveles respetando `config/activos.json` (USD/JPY: 3 decimales, USD/CLP: 2 decimales, US100: 2 decimales).
-- **Gráfico de Story Alerta**: Utilizar estrictamente temporalidad H1 (60 velas) con `lienzo: "alto"` y el token `vol_pct` configurado con el impulso en puntos para el bloque `Impulso ADC/ATR`.
+- **Gráfico de Story Alerta**: Utilizar estrictamente temporalidad H1 (60 velas) con `lienzo: "alto"` y el token `vol_pct` con la cifra del modelo ADC+ATR seguida de la unidad en que cotiza el activo (campo `unidad` de `config/activos.json`: USD, CLP, JPY o puntos), para el bloque `Volatilidad típica`. **Nunca** rotularlo como objetivo, impulso ni recorrido esperado: la pieza no lleva firma acreditada y un destino de precio la volvería una recomendación de inversión.
 
 ## PASO 5: Aprobación y envío
 1. Muestra el mensaje de WhatsApp y el preview de la Story al director.

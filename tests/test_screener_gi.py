@@ -115,7 +115,7 @@ def test_la_suma_de_los_maximos_de_los_factores_es_100():
 
 
 def test_el_impulso_proyectado_es_una_vez_y_media_el_atr_de_h1():
-    """Es el número que alimenta el bloque Impulso ADC/ATR de la Story."""
+    """Es el número que alimenta el bloque "Volatilidad típica" de la Story."""
     res = sc.evaluar_activo(
         ACTIVO, [], None, {}, AHORA.astimezone(sc.SANTIAGO),
         analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),

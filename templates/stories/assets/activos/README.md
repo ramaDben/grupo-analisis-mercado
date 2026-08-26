@@ -12,28 +12,29 @@ El nombre del archivo **es el `activo_slug`** de la pieza, sin excepción: `usdj
 |---|---|---|---|
 | Oro (XAUUSD) · GLD.US | `oro.jpg` | Lingotes en bóveda | Aprobada por el equipo; fija el estándar |
 | Petróleo (WTI.spot) | `wti.jpg` | Barriles / refinería | Generada con IA |
-| Plata (XAGUSD) | `plata.jpg` | Metal | Generada con IA |
+| Plata (XAGUSD) | `plata.jpg` | Metal / lingotes plata | Generada con IA |
 | Nasdaq 100 (US100.spot) · QQQ.US | `us100.jpg` | Rack de GPUs, luz fría | Generada con IA |
 | Dólar/Peso (USDCLP) | `usdclp.jpg` | Textura de grabado, abstracta | Generada con IA |
 | Bitcoin (BTCUSD) | `bitcoin.jpg` | Circuito ámbar | Generada con IA |
-| MercadoLibre (#MELI) | `meli.jpg` | Sector, no logo | Generada con IA |
+| MercadoLibre (#MELI) | `meli.jpg` | Sector / paquetería e-commerce | Generada con IA |
 | Semiconductores (SOXX.US) | `tech-circuito.jpg` | Circuito, luz fría | Generada con IA |
 | — (sin asignar) | `tech-baterias.jpg` | Genérica de sector | Generada con IA |
+| S&P 500 (US500.spot) · SPY.US | `us500.jpg` | Fachada corporativa rascacielos Wall St | Generada con IA |
+| Dow Jones (US30.spot) | `us30.jpg` | Columnata clásica Wall St / NYSE | Generada con IA |
+| Russell 2000 (IWM.US) | `iwm.jpg` | Hub logístico automatizado / robótica | Generada con IA |
+| Dólar/Yen (USDJPY) | `usdjpy.jpg` | Distrito financiero de Tokio de noche | Generada con IA |
+| Euro/Dólar (EURUSD) | `eurusd.jpg` | Arquitectura angular Fráncfort / BCE | Generada con IA |
+| Libra/Dólar (GBPUSD) | `gbpusd.jpg` | Columnas Banco de Inglaterra de noche | Generada con IA |
+| Ethereum (ETHUSD) | `eth.jpg` | Prisma octaédrico cristal/grafeno índigo | Generada con IA |
+| Solana (SOLUSD) | `sol.jpg` | Chip procesador cuántico cian/magenta | Generada con IA |
+| Litecoin (LTCUSD) | `ltc.jpg` | Lingote titanio/plata criptográfico | Generada con IA |
+| Cardano (ADAUSD) | `ada.jpg` | Red de nodos azul cobalto / topología | Generada con IA |
+| Dogecoin (DOGUSD) | `doge.jpg` | Medallón de oro macizo sobre grafito | Generada con IA |
 
-### Pendientes de generar
+### Catálogo completo de imágenes
 
-Las 11 que faltan para que el escaneo del universo pueda elegir cualquier clase de activo tienen
-su prompt escrito en `docs/design/stories-gi/imagenes-por-activo.md`, sección "Ampliación para el
-escaneo del universo": `usdjpy`, `eurusd`, `gbpusd`, `us500` (sirve también para `SPY.US`), `us30`,
-`iwm`, `eth`, `sol`, `ltc`, `ada` y `doge`.
+El universo completo de 20 activos para escaneo y renderizado de stories cuenta con su asset visual normalizado (1800×924 px, JPG calidad 88, recorte inferior de marca de agua aplicado).
 
-**El campo `imagen` de `config/activos.json` se rellena recién cuando el archivo existe.** El
-renderer falla fuerte ante una imagen declarada que no está, y hay un test que verifica que toda
-imagen del catálogo exista en disco. Eso hace del campo el interruptor del activo: presente ⟺
-archivo en disco ⟺ el escáner de tandas lo considera renderizable.
-
-Al dejar una imagen nueva acá, anotar en la tabla **herramienta, fecha y prompt**: es lo que
-permite reproducirla o defenderla.
 
 ---
 
@@ -114,6 +115,17 @@ archivo acá abajo cuando se agregue.
 | `tech-baterias.jpg` | Acciones de movilidad/energía | Generada con IA (Gemini), 4 ago 2026 | Propia |
 | `meli.jpg` | Mercado Libre (#MELI) | Generada con IA (Gemini), 6 ago 2026 | Propia |
 | `bitcoin.jpg` | Bitcoin (BTCUSD) | Generada con IA (Gemini), 9 ago 2026 | Propia |
+| `us500.jpg` | S&P 500 (US500.spot) · SPY.US | Generada con IA (Gemini), 25 ago 2026 | Propia |
+| `us30.jpg` | Dow Jones (US30.spot) | Generada con IA (Gemini), 25 ago 2026 | Propia |
+| `iwm.jpg` | Russell 2000 (IWM.US) | Generada con IA (Gemini), 25 ago 2026 | Propia |
+| `usdjpy.jpg` | Dólar/Yen (USDJPY) | Generada con IA (Gemini), 25 ago 2026 | Propia |
+| `eurusd.jpg` | Euro/Dólar (EURUSD) | Generada con IA (Gemini), 25 ago 2026 | Propia |
+| `gbpusd.jpg` | Libra/Dólar (GBPUSD) | Generada con IA (Gemini), 25 ago 2026 | Propia |
+| `eth.jpg` | Ethereum (ETHUSD) | Generada con IA (Gemini), 25 ago 2026 | Propia |
+| `sol.jpg` | Solana (SOLUSD) | Generada con IA (Gemini), 25 ago 2026 | Propia |
+| `ltc.jpg` | Litecoin (LTCUSD) | Generada con IA (Gemini), 25 ago 2026 | Propia |
+| `ada.jpg` | Cardano (ADAUSD) | Generada con IA (Gemini), 25 ago 2026 | Propia |
+| `doge.jpg` | Dogecoin (DOGUSD) | Generada con IA (Gemini), 25 ago 2026 | Propia |
 
 > **Nota de recorte para `bitcoin.jpg`.** El 8 % inferior del estándar no alcanzó:
 > Gemini estampó su marca de agua más arriba de lo habitual, a un 15,9 % del borde.

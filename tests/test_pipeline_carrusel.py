@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import sys
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -31,7 +32,8 @@ SELECCION = {
 
 ACTIVO = {
     "ticker": "XAGUSD", "nombre": "Plata", "clase": "forex_commodities",
-    "categoria": "commodity", "digits": 3, "imagen": "assets/activos/plata.jpg",
+    "categoria": "commodity", "digits": 3, "unidad": "USD",
+    "imagen": "assets/activos/plata.jpg",
 }
 
 CIERRES = [68.0 + i * 0.01 for i in range(60)]
@@ -89,7 +91,7 @@ def test_los_precios_respetan_los_decimales_del_catalogo_en_notacion_chilena():
     assert payload["resistencia"] == "68,974"
 
     us100 = {**ACTIVO, "ticker": "US100.spot", "nombre": "Nasdaq 100", "digits": 2,
-             "imagen": "assets/activos/us100.jpg"}
+             "unidad": "puntos", "imagen": "assets/activos/us100.jpg"}
     grande = payload_de_prueba(
         {**SELECCION, "ticker": "US100.spot", "precio": 29225.28,
          "soporte": 29000.5, "resistencia": 29400.0},
@@ -109,11 +111,61 @@ def test_los_campos_editoriales_nacen_vacios_y_marcados():
     assert payload["_pendiente_editorial"] == list(pc.CAMPOS_EDITORIALES)
 
 
-def test_el_impulso_va_al_bloque_de_la_story_con_su_unidad():
-    """`vol_pct` alimenta el bloque "Impulso ADC/ATR" que AGY renombró: son
-    puntos proyectados, no un porcentaje."""
-    payload = payload_de_prueba()
-    assert payload["vol_pct"] == "0,661 pts"
+def test_la_volatilidad_sale_en_la_moneda_en_que_cotiza_el_activo():
+    """`vol_pct` alimenta el bloque "Volatilidad típica" de la Story.
+
+    Decía "pts" para todos, y puntos solo es correcto para un índice: el Oro se
+    mueve en dólares, el USD/CLP en pesos y el USD/JPY en yenes. Una distancia
+    de precio sin su unidad no se puede leer, y con la unidad equivocada se lee
+    mal, que es peor.
+
+    Se usa el código de moneda y no el símbolo a propósito: en Chile `$` es
+    ambiguo entre peso y dólar, y esta cifra aparece justo al lado de dos
+    precios en una pieza que ve el cliente.
+    """
+    plata = payload_de_prueba()                       # XAGUSD, cotiza en dólares
+    assert plata["vol_pct"] == "0,661 USD"
+
+    clp = payload_de_prueba(
+        {**SELECCION, "ticker": "USDCLP"},
+        {**ACTIVO, "ticker": "USDCLP", "nombre": "Dólar / Peso Chileno",
+         "digits": 2, "unidad": "CLP", "imagen": "assets/activos/usdclp.jpg"},
+    )
+    assert clp["vol_pct"] == "0,66 CLP"
+
+    indice = payload_de_prueba(
+        {**SELECCION, "ticker": "US100.spot"},
+        {**ACTIVO, "ticker": "US100.spot", "nombre": "Nasdaq 100",
+         "digits": 2, "unidad": "puntos", "imagen": "assets/activos/us100.jpg"},
+    )
+    assert indice["vol_pct"] == "0,66 puntos"
+
+
+def test_la_volatilidad_no_afirma_un_recorrido_futuro():
+    """El rótulo del bloque no puede sugerir a qué precio va a llegar el activo.
+
+    La pieza no lleva firma acreditada -esa es `recomendacion`-, así que un
+    precio objetivo la convertiría en una recomendación de inversión sin quién
+    la respalde. El ATR es un promedio de rangos pasados: describe cuánto se
+    mueve el instrumento, no hacia dónde va. El rótulo tiene que decir eso y no
+    otra cosa, sobre todo porque a diez centímetros hay una píldora que sí
+    marca dirección y el cliente compone las dos lecturas.
+    """
+    plantilla = (
+        Path(__file__).resolve().parents[1] / "templates" / "stories" / "alerta.html"
+    ).read_text(encoding="utf-8")
+    # Solo los rótulos VISIBLES. Buscar en todo el archivo daría un falso
+    # positivo con cualquier comentario que explique por qué el bloque no
+    # proyecta, que es justo lo que queremos que alguien escriba.
+    rotulos = re.findall(r'<div class="stat-label">([^<]+)</div>', plantilla)
+    assert "Volatilidad típica" in rotulos
+    for rotulo in rotulos:
+        bajo = rotulo.lower()
+        for prohibido in ("objetivo", "impulso", "proyect", "esperad", "target"):
+            assert prohibido not in bajo, (
+                f"el rótulo {rotulo!r} insinúa un destino de precio; la pieza no "
+                "lleva firma acreditada y no puede recomendar"
+            )
 
 
 def test_el_recorrido_pide_lienzo_alto_y_ancla_el_ahora_al_ultimo_cierre():
