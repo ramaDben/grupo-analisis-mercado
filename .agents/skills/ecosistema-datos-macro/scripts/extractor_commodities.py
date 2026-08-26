@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 extractor_commodities.py
-Extractor oficial para Commodities: Petróleo (EIA/FRED), Cobre (COMEX HG) y Oro Spot (Stooq / Yahoo).
+Extractor oficial para Commodities: Petróleo (EIA/FRED), Cobre (COMEX HG) y Oro (LBMA / Yahoo).
 Normalización estricta: Cobre en USD/lb y Petróleo en USD/bbl.
 """
 
@@ -70,6 +70,35 @@ def extraer_fred_petroleo(series_id: str) -> dict:
         return {k: obs[k] for k in fechas_ordenadas}
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), reraise=True)
+def extraer_oro_lbma() -> dict:
+    """Precio de referencia del Oro desde LBMA, el emisor primario del metal.
+
+    Reemplaza a Stooq, que dejo de servir el CSV: responde HTTP 200 con una
+    pagina que exige JavaScript, asi que `raise_for_status()` no dispara y el
+    codigo parseaba HTML como si fueran filas. El fallo se notaba recien al
+    quedar con cero observaciones, un sintoma a dos pasos de la causa.
+
+    LBMA es ademas la fuente que declara el principio rector de esta skill para
+    el Oro. Publica el fixing PM del dia -un precio de referencia acordado en
+    subasta, no el spot continuo-, que es lo que corresponde para lectura macro.
+    Su JSON trae `v` como [USD, GBP, EUR]: se toma el dolar.
+    """
+    url = "https://prices.lbma.org.uk/json/gold_pm.json"
+    resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=25)
+    resp.raise_for_status()
+    obs = {}
+    for fila in resp.json():
+        fecha, valores = fila.get("d"), fila.get("v") or []
+        if not fecha or not valores or valores[0] in (None, ""):
+            continue
+        try:
+            obs[fecha] = float(valores[0])
+        except (ValueError, TypeError):
+            continue
+    ultimas = sorted(obs, reverse=True)[:30]
+    return {k: obs[k] for k in ultimas}
+
+
 def extraer_oro_stooq() -> dict:
     """Extrae precios diarios de Oro Spot XAU/USD desde Stooq (fuente primaria)."""
     url = "https://stooq.com/q/d/l/?s=xauusd&i=d"
@@ -152,7 +181,7 @@ def ejecutar_extraccion_commodities() -> dict:
             "ORO_SPOT": {
                 "nombre": "Oro Spot (XAU/USD)",
                 "unidad": "USD/onza_troy",
-                "fuente": "Stooq (Primaria) / Yahoo Finance (Fallback)",
+                "fuente": "LBMA Gold Price PM (Primaria) / Yahoo Finance (Fallback)",
                 "historico": existente.get("commodities", {}).get("ORO_SPOT", {}).get("historico", {}),
                 "status": "OK"
             }
@@ -191,14 +220,14 @@ def ejecutar_extraccion_commodities() -> dict:
         
     # 4. Extraer Oro Spot (Stooq con fallback a yfinance)
     try:
-        oro = extraer_oro_stooq()
+        oro = extraer_oro_lbma()
         if oro:
             resultado["commodities"]["ORO_SPOT"]["historico"].update(oro)
             resultado["commodities"]["ORO_SPOT"]["status"] = "OK"
         else:
-            raise ValueError("Stooq no devolvio datos")
+            raise ValueError("LBMA no devolvio datos")
     except Exception as e:
-        print(f"[WARN] Error extrayendo Oro de Stooq ({e}), intentando fallback...")
+        print(f"[WARN] Error extrayendo Oro de LBMA ({e}), intentando fallback...")
         try:
             oro_fb = extraer_oro_fallback()
             if oro_fb:

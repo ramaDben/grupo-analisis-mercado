@@ -29,6 +29,25 @@ OUTPUT_FILE = OUTPUT_DIR / "bcch_macro_data.json"
 BCCH_USER = os.getenv("BCCH_USER", "")
 BCCH_PASS = os.getenv("BCCH_PASS", "")
 
+# Codigos de la base de datos estadistica del BCCh. Se listan juntos porque un
+# codigo equivocado no se distingue de una caida: la API responde HTTP 200 con
+# `Codigo=-50` y la serie en null, igual que ante un error interno de verdad.
+SERIES_BCCH = {
+    "TPM": "F022.TPM.TIN.D001.NO.Z.D",
+    "IMACEC_TOTAL": "F032.IMC.IND.Z.Z.EP18.Z.Z.0.M",
+    "DOLAR_OBSERVADO": "F073.TCO.PRE.Z.D",
+    # Posicion neta VIGENTE (STO = stock) de forwards por compensacion de bancos
+    # residentes con no residentes, en USD-CLP y millones de dolares. El codigo
+    # anterior -`F073.FWD.EXT.NETA.D`- no existe en el catalogo.
+    # Se elige el NDF y no el agregado de derivados de monedas porque el campo
+    # habla de forwards, y es el instrumento con que los no residentes toman
+    # posicion en pesos. El agregado vive en
+    # `F099.DER.STO.Z.40.N.NR.NET.Z.MMUSD.CLPUSD.Z.Z.0.D` si algun dia se
+    # prefiere la mirada mas amplia.
+    "POSICION_FORWARD_EXTRANJEROS": "F099.DER.STO.Z.40.N.NR.NET.NDF.MMUSD.CLPUSD.C.Z.0.D",
+}
+
+
 def extraer_bde_serie(serie_code: str) -> dict:
     """Extrae una serie de la API BDE SIETE del Banco Central de Chile."""
     if BCCH_USER and BCCH_PASS and BCCH_USER != "tu_usuario_si3_bcentral":
@@ -46,8 +65,18 @@ def extraer_bde_serie(serie_code: str) -> dict:
         data = resp.json()
         
         obs = {}
-        # Estructura de respuesta BDE SIETE
-        series_data = data.get("Series", {}).get("Obs", [])
+        # Estructura de respuesta BDE SIETE. El `or {}` no es defensa de mas:
+        # ante un codigo inexistente la API responde HTTP 200 con `Series` en
+        # NULL, y `data.get("Series", {})` no protege de eso -el default solo
+        # aplica si la clave falta, no si viene con valor null-, asi que el
+        # `.get("Obs")` siguiente devolvia None y el `for` reventaba.
+        series_raw = data.get("Series") or {}
+        series_data = series_raw.get("Obs") or []
+        if not series_data and data.get("Codigo", 0) != 0:
+            raise ValueError(
+                f"el BCCh no sirve la serie {serie_code}: "
+                f"Codigo={data.get('Codigo')} {data.get('Descripcion', '')}".strip()
+            )
         for item in series_data:
             fecha_raw = item.get("indexDateString") or item.get("date")
             val_raw = item.get("value")
@@ -94,7 +123,7 @@ def ejecutar_extraccion_chile() -> dict:
             "TPM": {
                 "nombre": "Tasa de Política Monetaria",
                 "unidad": "porcentaje",
-                "codigo_serie": "F022.TPM.TIN.D001.NO.Z.D",
+                "codigo_serie": SERIES_BCCH["TPM"],
                 "historico": existente.get("series", {}).get("TPM", {}).get("historico", {
                     "2026-07-30": 4.50,
                     "2026-08-20": 4.50
@@ -104,7 +133,7 @@ def ejecutar_extraccion_chile() -> dict:
             "IMACEC_TOTAL": {
                 "nombre": "Imacec Empalmado Serie Original (Índice 2018=100)",
                 "unidad": "indice",
-                "codigo_serie": "F032.IMC.IND.Z.Z.EP18.Z.Z.0.M",
+                "codigo_serie": SERIES_BCCH["IMACEC_TOTAL"],
                 "historico": existente.get("series", {}).get("IMACEC_TOTAL", {}).get("historico", {
                     "2026-05-01": 112.11,
                     "2026-06-01": 110.60
@@ -114,7 +143,7 @@ def ejecutar_extraccion_chile() -> dict:
             "DOLAR_OBSERVADO": {
                 "nombre": "Dólar Observado Diario (CLP/USD)",
                 "unidad": "CLP",
-                "codigo_serie": "F073.TCO.PRE.Z.D",
+                "codigo_serie": SERIES_BCCH["DOLAR_OBSERVADO"],
                 "historico": existente.get("series", {}).get("DOLAR_OBSERVADO", {}).get("historico", {
                     "2026-08-20": 920.26
                 }),
@@ -123,7 +152,7 @@ def ejecutar_extraccion_chile() -> dict:
             "POSICION_FORWARD_EXTRANJEROS": {
                 "nombre": "Posicion Neta Forward de Extranjeros USD/CLP (T-2)",
                 "unidad": "millones_usd",
-                "codigo_serie": "F073.FWD.EXT.NETA.D",
+                "codigo_serie": SERIES_BCCH["POSICION_FORWARD_EXTRANJEROS"],
                 "historico": existente.get("series", {}).get("POSICION_FORWARD_EXTRANJEROS", {}).get("historico", {
                     "2026-08-15": 4200.5,
                     "2026-08-18": 4450.0

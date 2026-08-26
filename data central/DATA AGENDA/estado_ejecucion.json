@@ -1,8 +1,8 @@
 {
-  "ultima_ejecucion_utc": "2026-08-26T03:35:28.567047+00:00",
+  "ultima_ejecucion_utc": "2026-08-26T04:07:27.976840+00:00",
   "hay_novedades": true,
   "novedades_detalle": [
-    "Datos actualizados en USA (Curva Treasuries / Buybacks / Fed Funds)",
+    "Datos actualizados en Chile (Imacec / TPM / Posición Forward)",
     "Datos actualizados en Commodities (Cobre / WTI / Brent / Oro)",
     "Datos actualizados en Japón (Banco de Japón / IPC / JGB / USD-JPY)"
   ],
@@ -16,9 +16,9 @@
   "errores_por_fuente": {},
   "hashes_canonicos": {
     "usa": "099159746db336ea7352c8ffae961a64aa15ff82f5c15b6ee374d5d7724a3dcd",
-    "chile": "4eec745acffe77647c23024c2237df27f24964cad37a286bfda60a3960681e6d",
+    "chile": "d55411b325d5cc299c81eabe5d03fb6c9328657213240a371bb59da0aa5b7a23",
     "europa_uk": "1f41bec544447e5de972e5a2e919155cbe3981403653a73b8504ea443229700f",
-    "commodities": "8e3d8a87da673393964e670f6cfde66080d7f4eb671cc8d2e0666f7542439a75",
-    "japon": "373e7a453ce50c08b1897a3d203643986803a151bb722b3b91fed4c773828d05"
+    "commodities": "19829ed985faa753b86d405cf5fbb8426a64f2b3b2c7b799910a6acaae98a739",
+    "japon": "83fe40fe8c39447716c791dfd671de07b9414e3368ef8a6040ff34410766dd62"
   }
 }

@@ -200,6 +200,12 @@ def evaluar_activos(regimen_activo: str, drivers_data: dict, precios_summary: di
     fed_funds = drivers_data.get("fed_funds", 3.63)
     spread_tasas = tpm_chile - fed_funds
     fwd_ext = drivers_data.get("fwd_extranjeros", 4450.0)
+    # El BCCh publica el monto vigente NETO de bancos residentes con no
+    # residentes: el signo es parte del dato y cambia lo que la frase dice.
+    # Estuvo hardcodeado como "compradora (+...)" mientras la serie traia un
+    # valor de relleno positivo; con la serie real, que es negativa, la
+    # justificacion salia como "(+-16866M USD)" afirmando lo contrario del dato.
+    fwd_sentido = "vendedora" if fwd_ext < 0 else "compradora"
     tips_10y = drivers_data.get("tips_10y", 2.35)
     breakeven_10y = drivers_data.get("breakeven_10y", 2.34)
     dgs10 = drivers_data.get("dgs10", 4.65)
@@ -231,7 +237,8 @@ def evaluar_activos(regimen_activo: str, drivers_data: dict, precios_summary: di
                 justificacion = [
                     f"Cobre en ${cobre_spot:.2f} USD/lb frena alzas violentas (Elasticidad beta=-0.48)",
                     f"Diferencial de tasas comprimido ({spread_tasas:+.2f}%) limita caídas estructurales",
-                    f"Posición forward no residentes compradora (+{fwd_ext:.0f}M USD) actúa como soporte"
+                    f"Posición neta forward de bancos residentes con no residentes "
+                    f"{fwd_sentido} ({fwd_ext:+.0f} millones de USD)"
                 ]
             else:
                 sesgo_score = -0.50

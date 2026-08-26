@@ -13,8 +13,11 @@ import pytest
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BASE_DIR / ".agents" / "skills" / "ecosistema-datos-macro" / "scripts"))
+sys.path.insert(0, str(BASE_DIR / "scripts"))  # RAIZ_SCRIPTS: macro_bias_engine
 
 import agenda
+import extractor_chile
+import extractor_commodities
 import extractor_usa
 import pipeline_ingesta
 
@@ -167,3 +170,130 @@ def test_sin_fallos_no_hay_motivo_que_reportar(monkeypatch, tmp_path, sin_backof
     assert resultado["tesoro_status"] == "OK"
     assert "tesoro_error" not in resultado
 
+
+def test_la_serie_forward_del_bcch_existe_en_el_catalogo():
+    """`F073.FWD.EXT.NETA.D` no existe en el BCCh.
+
+    La API respondia HTTP 200 con `Codigo=-50` ("an internal error has
+    occurred, information is not available") y `Series.Obs` en null, asi que el
+    extractor moria con "'NoneType' object is not iterable". Las otras tres
+    series del mismo archivo -TPM, Imacec y dolar observado- respondian bien.
+
+    La real es la posicion neta VIGENTE (STO, un stock) de forwards por
+    compensacion de bancos residentes con no residentes en USD-CLP. Coincide
+    con lo que el campo dice ser, incluido el rezago: publica en T-2 habiles.
+    """
+    codigo = extractor_chile.SERIES_BCCH["POSICION_FORWARD_EXTRANJEROS"]
+    assert codigo == "F099.DER.STO.Z.40.N.NR.NET.NDF.MMUSD.CLPUSD.C.Z.0.D"
+    assert ".STO." in codigo, "tiene que ser un stock (posicion), no un flujo (FLU)"
+    assert ".NR." in codigo, "tiene que ser frente a no residentes"
+
+
+def _bcch_responde(monkeypatch, payload):
+    class Respuesta:
+        status_code = 200
+        def raise_for_status(self): pass
+        def json(self): return payload
+    monkeypatch.setattr(extractor_chile.requests, "get", lambda *a, **k: Respuesta())
+    monkeypatch.setattr(extractor_chile, "BCCH_USER", "usuario")
+    monkeypatch.setattr(extractor_chile, "BCCH_PASS", "clave")
+
+
+def test_un_codigo_inexistente_falla_con_su_motivo(monkeypatch):
+    """`data.get("Series", {})` no protege de un null: el default solo aplica si
+    la CLAVE falta, y aca viene presente con valor null. El `.get("Obs", [])`
+    siguiente devolvia None y el `for` moria con "'NoneType' object is not
+    iterable", un mensaje que no dice ni que serie ni por que.
+
+    No basta con devolver {} y seguir: un codigo que el BCCh no reconoce es un
+    error de configuracion, no un dato que todavia no publicaron. Tiene que
+    fallar, y el mensaje tiene que nombrar la serie y el codigo de la API.
+    """
+    _bcch_responde(monkeypatch, {"Codigo": -50, "Descripcion": "An internal error has occurred",
+                                 "Series": None})
+
+    with pytest.raises(ValueError) as err:
+        extractor_chile.extraer_bde_serie("F073.NO.EXISTE.D")
+
+    mensaje = str(err.value)
+    assert "F073.NO.EXISTE.D" in mensaje, "el error no dice que serie fallo"
+    assert "-50" in mensaje, "el error no trae el codigo que devolvio la API"
+
+
+def test_una_serie_valida_sin_datos_en_el_rango_devuelve_vacio(monkeypatch):
+    """La contraparte, y la razon por la que el fallo se distingue del vacio.
+
+    Una serie que existe pero no publico en el rango pedido responde `Codigo=0`
+    con la lista vacia. Eso NO es un error: es un feriado, o una serie con
+    rezago. Sin esta distincion, o se traga los codigos rotos o alarma cada vez
+    que el BCCh no publico todavia.
+    """
+    _bcch_responde(monkeypatch, {"Codigo": 0, "Series": {"Obs": []}})
+    assert extractor_chile.extraer_bde_serie("F029.FWD.STO.ME.D") == {}
+
+
+def test_el_oro_sale_de_lbma_y_no_de_stooq(monkeypatch):
+    """Stooq dejo de servir el CSV: responde HTTP 200 con una pagina que pide
+    JavaScript, asi que `raise_for_status()` no dispara y el codigo parseaba
+    HTML como si fueran filas. El fallo se notaba recien al quedar cero filas.
+
+    LBMA es el emisor primario que declara la propia skill, publica el fixing
+    del dia y su JSON trae `v` como [USD, GBP, EUR].
+    """
+    pedidas = []
+
+    class RespuestaLBMA:
+        status_code = 200
+        def raise_for_status(self): pass
+        def json(self):
+            return [{"d": "2026-08-24", "v": [4600.0, 3380.0, 3950.0]},
+                    {"d": "2026-08-25", "v": [4615.45, 3383.12, 3954.06]}]
+
+    def falsa_get(url, **kwargs):
+        pedidas.append(url)
+        return RespuestaLBMA()
+
+    monkeypatch.setattr(extractor_commodities.requests, "get", falsa_get)
+    obs = extractor_commodities.extraer_oro_lbma()
+
+    assert "lbma.org.uk" in pedidas[0], f"sigue pidiendo a otra fuente: {pedidas}"
+    assert "stooq" not in pedidas[0]
+    assert obs["2026-08-25"] == 4615.45, "debe tomar el precio en USD, que es v[0]"
+
+
+def test_el_estado_de_una_fuente_mira_todas_sus_series():
+    """Miraba UNA serie testigo por fuente: chile el Imacec, commodities el
+    cobre. Por eso el forward roto del BCCh y el Oro cayendo a respaldo no
+    aparecian en ningun lado, y las dos fuentes se reportaban OK.
+
+    Un estado que resume por muestreo no es un estado: es una serie con nombre
+    de fuente.
+    """
+    fuente = {
+        "IMACEC_TOTAL": {"status": "OK"},
+        "DOLAR_OBSERVADO": {"status": "OK"},
+        "POSICION_FORWARD_EXTRANJEROS": {"status": "ERROR_STALE"},
+    }
+    assert pipeline_ingesta.peor_status(fuente) == "ERROR_STALE"
+
+    assert pipeline_ingesta.peor_status({"A": {"status": "OK"}, "B": {"status": "OK"}}) == "OK"
+    # Un respaldo no es un fallo, pero tampoco es "salio del emisor primario".
+    assert pipeline_ingesta.peor_status(
+        {"A": {"status": "OK"}, "B": {"status": "OK_FALLBACK"}}
+    ) == "OK_FALLBACK"
+
+
+
+def test_la_frase_del_forward_sigue_al_signo_del_dato():
+    """La justificacion decia "compradora (+...)" con el signo escrito a mano.
+
+    Funcionaba por casualidad: la serie traia un valor de relleno positivo
+    porque su codigo del BCCh no existia. Con el dato real, que es negativo, esa
+    frase salia como "(+-16866M USD)" y afirmaba que la posicion era compradora
+    cuando el BCCh publica lo contrario. Es texto que llega al informe.
+    """
+    import macro_bias_engine as mbe
+
+    fuente = Path(mbe.__file__).read_text(encoding="utf-8")
+    assert 'compradora (+{fwd_ext' not in fuente, "el sentido volvio a estar escrito a mano"
+    assert 'fwd_sentido = "vendedora" if fwd_ext < 0 else "compradora"' in fuente

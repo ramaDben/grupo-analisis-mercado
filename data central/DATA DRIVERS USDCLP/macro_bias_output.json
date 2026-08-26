@@ -1,27 +1,27 @@
 {
   "schema_version": "2.0.0",
   "config_hash": "8735efbf1ac7c59a",
-  "as_of_utc": "2026-08-26T03:35:46.817450+00:00",
+  "as_of_utc": "2026-08-26T04:13:00.482423+00:00",
   "regimen_macro_global": {
     "codigo": "R2_GOLDILOCKS_EXPANSION",
     "nombre": "Expansión Sólida / Goldilocks",
     "confirmado_por_historesis": true,
     "lecturas_consecutivas": 1,
-    "descripcion": "Cobre en expansión (+4.3%) con tasas del Tesoro estables (+0.0 bps). [EVENTO EXTREMO: Conmutación Inmediata]"
+    "descripcion": "Cobre en expansión (+3.5%) con tasas del Tesoro estables (+0.0 bps). [EVENTO EXTREMO: Conmutación Inmediata]"
   },
   "metricas_clave": {
     "spread_2s10s_pct": 0.46,
     "tasa_real_tips10y_pct": 2.38,
     "breakeven_inflacion_10y_pct": 2.32,
     "spread_tasas_chile_fed_pct": 0.87,
-    "cobre_spot_comex": 6.759,
-    "cobre_variacion_5d_pct": 4.27,
+    "cobre_spot_comex": 6.7095,
+    "cobre_variacion_5d_pct": 3.5,
     "petroleo_shock_max_5d_pct": 2.18
   },
   "confianza_general": {
-    "confianza_total_pct": 76.9,
+    "confianza_total_pct": 76.8,
     "score_frescura_pct": 100.0,
-    "score_antiguedad_pct": 34.1,
+    "score_antiguedad_pct": 33.7,
     "score_cobertura_pct": 100.0
   },
   "activos": {
@@ -50,9 +50,9 @@
         "trailing_stop_mult_atr": null
       },
       "justificacion_vectores": [
-        "Cobre en $6.76 USD/lb frena alzas violentas (Elasticidad beta=-0.48)",
+        "Cobre en $6.71 USD/lb frena alzas violentas (Elasticidad beta=-0.48)",
         "Diferencial de tasas comprimido (+0.87%) limita caídas estructurales",
-        "Posición forward no residentes compradora (+4450M USD) actúa como soporte"
+        "Posición neta forward de bancos residentes con no residentes vendedora (-16866 millones de USD)"
       ]
     },
     "XAUUSD": {
@@ -68,13 +68,13 @@
         "SHORT_AGRESIVO"
       ],
       "parametros_riesgo": {
-        "precio_spot": 4649.52,
-        "atr_h1": 18.36,
-        "atr_d1": 84.48,
+        "precio_spot": 4641.84,
+        "atr_h1": 16.63,
+        "atr_d1": 76.67,
         "stop_loss_mult_intraday": 1.5,
-        "distancia_sl_h1_puntos": 27.54,
+        "distancia_sl_h1_puntos": 24.95,
         "stop_loss_mult_daily": 2.5,
-        "distancia_sl_d1_puntos": 211.2,
+        "distancia_sl_d1_puntos": 191.68,
         "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC",
         "trailing_stop_mult_atr": 3.0
       },
@@ -95,13 +95,13 @@
         "FADE_TOP_RESISTANCE"
       ],
       "parametros_riesgo": {
-        "precio_spot": 80.631,
-        "atr_h1": 0.54,
-        "atr_d1": 3.07,
+        "precio_spot": 80.766,
+        "atr_h1": 0.48,
+        "atr_d1": 2.79,
         "stop_loss_mult_intraday": 1.5,
-        "distancia_sl_h1_puntos": 0.81,
+        "distancia_sl_h1_puntos": 0.73,
         "stop_loss_mult_daily": 2.5,
-        "distancia_sl_d1_puntos": 7.68,
+        "distancia_sl_d1_puntos": 6.98,
         "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC",
         "trailing_stop_mult_atr": 3.0
       },
@@ -123,13 +123,13 @@
         "FADE_TOP_RESISTANCE"
       ],
       "parametros_riesgo": {
-        "precio_spot": 86.754,
-        "atr_h1": 0.63,
-        "atr_d1": 3.16,
+        "precio_spot": 86.904,
+        "atr_h1": 0.56,
+        "atr_d1": 2.87,
         "stop_loss_mult_intraday": 1.5,
-        "distancia_sl_h1_puntos": 0.94,
+        "distancia_sl_h1_puntos": 0.85,
         "stop_loss_mult_daily": 2.5,
-        "distancia_sl_d1_puntos": 7.9,
+        "distancia_sl_d1_puntos": 7.18,
         "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC",
         "trailing_stop_mult_atr": 3.0
       },
@@ -151,13 +151,13 @@
         "SHORT_FADE"
       ],
       "parametros_riesgo": {
-        "precio_spot": 29173.64,
-        "atr_h1": 75.11,
-        "atr_d1": 400.94,
+        "precio_spot": 29212.04,
+        "atr_h1": 72.06,
+        "atr_d1": 364.36,
         "stop_loss_mult_intraday": 1.5,
-        "distancia_sl_h1_puntos": 112.67,
+        "distancia_sl_h1_puntos": 108.09,
         "stop_loss_mult_daily": 2.5,
-        "distancia_sl_d1_puntos": 1002.34,
+        "distancia_sl_d1_puntos": 910.9,
         "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC",
         "trailing_stop_mult_atr": 3.0
       },
