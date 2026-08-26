@@ -1,5 +1,5 @@
 {
-  "timestamp_consolidacion": "2026-08-26T04:07:27.973826+00:00",
+  "timestamp_consolidacion": "2026-08-26T04:28:02.432388+00:00",
   "drivers": {
     "US_10Y_TREASURY": {
       "valor": 4.7,
@@ -14,9 +14,9 @@
       "is_stale": false
     },
     "COBRE_HG": {
-      "valor": 6.7095,
+      "valor": 6.757,
       "unidad": "USD/lb",
-      "fecha_dato": "2026-08-25",
+      "fecha_dato": "2026-08-26",
       "is_stale": false
     },
     "PETROLEO_BRENT": {
@@ -52,8 +52,10 @@
     "BOJ_POLICY_RATE": {
       "valor": 1.0,
       "unidad": "%",
-      "fecha_dato": "2026-09-17",
-      "is_stale": false
+      "fecha_dato": "2026-08-26",
+      "is_stale": false,
+      "proxima_reunion": "2026-09-17",
+      "origen": "declarado a mano en extractor_japon.py"
     },
     "JAPAN_CORE_CPI_YOY": {
       "valor": 2.7,
@@ -68,7 +70,7 @@
       "is_stale": false
     },
     "USD_JPY": {
-      "valor": 158.965,
+      "valor": 158.982,
       "unidad": "JPY",
       "fecha_dato": "2026-08-25",
       "is_stale": false

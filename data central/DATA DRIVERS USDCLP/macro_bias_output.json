@@ -1,27 +1,27 @@
 {
   "schema_version": "2.0.0",
   "config_hash": "8735efbf1ac7c59a",
-  "as_of_utc": "2026-08-26T04:13:00.482423+00:00",
+  "as_of_utc": "2026-08-26T04:28:43.784477+00:00",
   "regimen_macro_global": {
     "codigo": "R2_GOLDILOCKS_EXPANSION",
     "nombre": "Expansión Sólida / Goldilocks",
     "confirmado_por_historesis": true,
     "lecturas_consecutivas": 1,
-    "descripcion": "Cobre en expansión (+3.5%) con tasas del Tesoro estables (+0.0 bps). [EVENTO EXTREMO: Conmutación Inmediata]"
+    "descripcion": "Cobre en expansión (+4.2%) con tasas del Tesoro estables (+0.0 bps). [EVENTO EXTREMO: Conmutación Inmediata]"
   },
   "metricas_clave": {
     "spread_2s10s_pct": 0.46,
     "tasa_real_tips10y_pct": 2.38,
     "breakeven_inflacion_10y_pct": 2.32,
     "spread_tasas_chile_fed_pct": 0.87,
-    "cobre_spot_comex": 6.7095,
-    "cobre_variacion_5d_pct": 3.5,
+    "cobre_spot_comex": 6.757,
+    "cobre_variacion_5d_pct": 4.15,
     "petroleo_shock_max_5d_pct": 2.18
   },
   "confianza_general": {
-    "confianza_total_pct": 76.8,
+    "confianza_total_pct": 76.7,
     "score_frescura_pct": 100.0,
-    "score_antiguedad_pct": 33.7,
+    "score_antiguedad_pct": 33.5,
     "score_cobertura_pct": 100.0
   },
   "activos": {
@@ -50,7 +50,7 @@
         "trailing_stop_mult_atr": null
       },
       "justificacion_vectores": [
-        "Cobre en $6.71 USD/lb frena alzas violentas (Elasticidad beta=-0.48)",
+        "Cobre en $6.76 USD/lb frena alzas violentas (Elasticidad beta=-0.48)",
         "Diferencial de tasas comprimido (+0.87%) limita caídas estructurales",
         "Posición neta forward de bancos residentes con no residentes vendedora (-16866 millones de USD)"
       ]
@@ -68,13 +68,13 @@
         "SHORT_AGRESIVO"
       ],
       "parametros_riesgo": {
-        "precio_spot": 4641.84,
-        "atr_h1": 16.63,
-        "atr_d1": 76.67,
+        "precio_spot": 4641.49,
+        "atr_h1": 16.72,
+        "atr_d1": 76.73,
         "stop_loss_mult_intraday": 1.5,
-        "distancia_sl_h1_puntos": 24.95,
+        "distancia_sl_h1_puntos": 25.08,
         "stop_loss_mult_daily": 2.5,
-        "distancia_sl_d1_puntos": 191.68,
+        "distancia_sl_d1_puntos": 191.84,
         "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC",
         "trailing_stop_mult_atr": 3.0
       },
@@ -95,13 +95,13 @@
         "FADE_TOP_RESISTANCE"
       ],
       "parametros_riesgo": {
-        "precio_spot": 80.766,
-        "atr_h1": 0.48,
-        "atr_d1": 2.79,
+        "precio_spot": 80.751,
+        "atr_h1": 0.49,
+        "atr_d1": 2.8,
         "stop_loss_mult_intraday": 1.5,
         "distancia_sl_h1_puntos": 0.73,
         "stop_loss_mult_daily": 2.5,
-        "distancia_sl_d1_puntos": 6.98,
+        "distancia_sl_d1_puntos": 6.99,
         "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC",
         "trailing_stop_mult_atr": 3.0
       },
@@ -123,13 +123,13 @@
         "FADE_TOP_RESISTANCE"
       ],
       "parametros_riesgo": {
-        "precio_spot": 86.904,
-        "atr_h1": 0.56,
-        "atr_d1": 2.87,
+        "precio_spot": 86.914,
+        "atr_h1": 0.57,
+        "atr_d1": 2.88,
         "stop_loss_mult_intraday": 1.5,
-        "distancia_sl_h1_puntos": 0.85,
+        "distancia_sl_h1_puntos": 0.86,
         "stop_loss_mult_daily": 2.5,
-        "distancia_sl_d1_puntos": 7.18,
+        "distancia_sl_d1_puntos": 7.2,
         "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC",
         "trailing_stop_mult_atr": 3.0
       },
@@ -151,13 +151,13 @@
         "SHORT_FADE"
       ],
       "parametros_riesgo": {
-        "precio_spot": 29212.04,
-        "atr_h1": 72.06,
-        "atr_d1": 364.36,
+        "precio_spot": 29213.94,
+        "atr_h1": 72.43,
+        "atr_d1": 364.62,
         "stop_loss_mult_intraday": 1.5,
-        "distancia_sl_h1_puntos": 108.09,
+        "distancia_sl_h1_puntos": 108.64,
         "stop_loss_mult_daily": 2.5,
-        "distancia_sl_d1_puntos": 910.9,
+        "distancia_sl_d1_puntos": 911.56,
         "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC",
         "trailing_stop_mult_atr": 3.0
       },

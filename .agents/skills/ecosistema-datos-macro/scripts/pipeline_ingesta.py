@@ -10,7 +10,7 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from pathlib import Path
 
 if sys.platform == "win32":
@@ -37,6 +37,100 @@ import extractor_japon
 # De mejor a peor. `OK_FALLBACK` no es un fallo -el dato esta- pero tampoco es
 # "salio del emisor primario", y esa diferencia es la que permite notar que una
 # fuente lleva semanas viviendo de su respaldo.
+# Ventana maxima esperada entre la fecha del dato y hoy, por driver. NO es un
+# umbral de calidad: es la cadencia con que cada emisor publica.
+#
+# Sin esto, `is_stale` medía si BAJAR el archivo funciono, asi que un Imacec de
+# 86 dias salia "fresco". Pero un umbral unico seria igual de inutil al reves:
+# marcaria vencido al Imacec todos los meses, porque el dato de junio se publica
+# a inicios de agosto y ese ES su ritmo. Eso bajaria la confianza del motor bajo
+# su umbral por datos que estan al dia, y dejaria de emitirse el informe.
+#
+# `None` = no envejece por calendario. Una tasa de politica en 4,5 % no esta
+# vieja porque el banco central no la movio: es el valor VIGENTE, y cambia por
+# reuniones y no por dias.
+CADENCIA_DIAS = {
+    # Diarias de mercado. FRED publica las yields en T+1 habil; el margen cubre
+    # un fin de semana largo sin gritar.
+    "US_10Y_TREASURY": 6,
+    "FED_FUNDS_RATE": 6,
+    "COBRE_HG": 6,
+    "ORO_SPOT": 6,
+    "JGB_10Y_YIELD": 6,
+    "USD_JPY": 6,
+    # El BCCh publica la posicion forward en T-2 habiles, mas el fin de semana.
+    "POSICION_FORWARD_EXTRANJEROS_USD": 8,
+    # La EIA llega a FRED con rezago propio: se han visto 8 dias corridos.
+    "PETROLEO_BRENT": 14,
+    # Mensuales con rezago de publicacion: el Imacec de junio sale en agosto.
+    "CHILE_IMACEC_12M": 95,
+    "JAPAN_CORE_CPI_YOY": 95,
+    # Tasas de politica: valor vigente.
+    "CHILE_TPM": None,
+    "BOJ_POLICY_RATE": None,
+}
+
+
+MESES_ES = {
+    "enero": 1, "febrero": 2, "marzo": 3, "abril": 4, "mayo": 5, "junio": 6,
+    "julio": 7, "agosto": 8, "septiembre": 9, "setiembre": 9, "octubre": 10,
+    "noviembre": 11, "diciembre": 12,
+}
+
+
+def _periodo_a_iso(periodo) -> str:
+    """"Julio 2026" -> "2026-07-01".
+
+    El MIC japones publica el periodo de referencia como texto, y `esta_vencido`
+    trata una fecha ilegible como vencida -lo prudente: si no se sabe de cuando
+    es el dato, tampoco se puede afirmar que sirve-. Sin esta conversion el IPC
+    de Japon quedaria marcado vencido para siempre por el formato y no por su
+    antiguedad.
+    """
+    texto = str(periodo or "").strip().lower()
+    partes = texto.replace(",", " ").split()
+    if len(partes) == 2 and partes[0] in MESES_ES and partes[1].isdigit():
+        return f"{int(partes[1]):04d}-{MESES_ES[partes[0]]:02d}-01"
+    return str(periodo or "")
+
+
+def esta_vencido(driver: str, fecha_dato, status: str, hoy=None) -> bool:
+    """Un driver esta vencido si la descarga fallo O el dato excedio su cadencia.
+
+    Los dos criterios se suman y no se reemplazan: una descarga rota con fecha
+    de hoy sigue siendo un driver en el que no se puede confiar.
+
+    Una fecha ilegible cuenta como vencida. Es lo unico prudente: si no se puede
+    saber de cuando es el dato, tampoco se puede afirmar que sirve.
+    """
+    if status != "OK" and not str(status).startswith("OK"):
+        return True
+
+    ventana = CADENCIA_DIAS.get(driver, 6)
+    hoy = hoy or datetime.now(timezone.utc).date()
+
+    try:
+        anio, mes, dia = (int(x) for x in str(fecha_dato).split("-")[:3])
+        antiguedad = (hoy - date(anio, mes, dia)).days
+    except (ValueError, TypeError):
+        # Una fecha ilegible cuenta como vencida incluso para las series sin
+        # ventana: si no se sabe de cuando es el dato, tampoco se puede afirmar
+        # que sirve.
+        return True
+
+    # Una fecha futura no es "muy fresca": es un campo mal poblado, y se revisa
+    # ANTES de la cadencia. La tasa del BoJ venia fechada con su proxima
+    # reunion, y como las tasas de politica no tienen ventana, salir temprano
+    # por `ventana is None` dejaba pasar justamente el caso que motivo esto.
+    if antiguedad < 0:
+        return True
+
+    if ventana is None:
+        return False
+
+    return antiguedad > ventana
+
+
 ORDEN_STATUS = ["OK", "OK_FALLBACK", "ERROR_FALLBACK", "ERROR_STALE", "ERROR"]
 
 
@@ -140,7 +234,14 @@ def consolidar_latest_drivers(usa_data: dict, chile_data: dict, eu_data: dict, c
     
     # Japón: Tasa BoJ, IPC Core, JGB 10Y, USD/JPY
     boj_tasa_val = japon_data.get("politica_monetaria_boj", {}).get("tasa_politica_actual", 1.00)
-    boj_tasa_fecha = japon_data.get("politica_monetaria_boj", {}).get("proxima_reunion", "")
+    # OJO: la tasa del BoJ y su proxima reunion estan escritas a mano en
+    # extractor_japon.py, no se ingestan de ninguna fuente. Hasta que se
+    # automaticen, el campo declara la fecha de la ingesta y no una observacion
+    # que no existe. Antes traia `proxima_reunion` -cuando se va a REVISAR, no
+    # cuando se midio-, asi que la antiguedad daba negativa y el driver pasaba
+    # cualquier filtro de frescura para siempre.
+    boj_tasa_fecha = japon_data.get("as_of", "")[:10] or str(date.today())
+    boj_proxima_reunion = japon_data.get("politica_monetaria_boj", {}).get("proxima_reunion", "")
     
     ult_cpi_val = japon_data.get("inflacion_oficial_mic", {}).get("ultimo_core_cpi_yoy")
     ult_cpi_fecha = japon_data.get("inflacion_oficial_mic", {}).get("periodo_referencia")
@@ -158,73 +259,87 @@ def consolidar_latest_drivers(usa_data: dict, chile_data: dict, eu_data: dict, c
                 "valor": ult_d10_val,
                 "unidad": "%",
                 "fecha_dato": ult_d10_fecha,
-                "is_stale": usa_data.get("curva_rendimientos_yields", {}).get("DGS10", {}).get("status") != "OK"
+                "is_stale": esta_vencido("US_10Y_TREASURY", ult_d10_fecha,
+                    usa_data.get("curva_rendimientos_yields", {}).get("DGS10", {}).get("status", "OK"))
             },
             "FED_FUNDS_RATE": {
                 "valor": ult_dff_val,
                 "unidad": "%",
                 "fecha_dato": ult_dff_fecha,
-                "is_stale": usa_data.get("curva_rendimientos_yields", {}).get("DFF", {}).get("status") != "OK"
+                "is_stale": esta_vencido("FED_FUNDS_RATE", ult_dff_fecha,
+                    usa_data.get("curva_rendimientos_yields", {}).get("DFF", {}).get("status", "OK"))
             },
             "COBRE_HG": {
                 "valor": ult_cu_val,
                 "unidad": "USD/lb",
                 "fecha_dato": ult_cu_fecha,
-                "is_stale": comm_data.get("commodities", {}).get("COBRE_COMEX", {}).get("status") != "OK"
+                "is_stale": esta_vencido("COBRE_HG", ult_cu_fecha,
+                    comm_data.get("commodities", {}).get("COBRE_COMEX", {}).get("status", "OK"))
             },
             "PETROLEO_BRENT": {
                 "valor": ult_brent_val,
                 "unidad": "USD/bbl",
                 "fecha_dato": ult_brent_fecha,
-                "is_stale": comm_data.get("commodities", {}).get("PETROLEO_BRENT", {}).get("status") != "OK"
+                "is_stale": esta_vencido("PETROLEO_BRENT", ult_brent_fecha,
+                    comm_data.get("commodities", {}).get("PETROLEO_BRENT", {}).get("status", "OK"))
             },
             "ORO_SPOT": {
                 "valor": ult_oro_val,
                 "unidad": "USD/oz",
                 "fecha_dato": ult_oro_fecha,
-                "is_stale": "OK" not in comm_data.get("commodities", {}).get("ORO_SPOT", {}).get("status", "")
+                "is_stale": esta_vencido("ORO_SPOT", ult_oro_fecha,
+                    comm_data.get("commodities", {}).get("ORO_SPOT", {}).get("status", "OK"))
             },
             "CHILE_IMACEC_12M": {
                 "valor": ult_imc_val,
                 "unidad": "%",
                 "fecha_dato": ult_imc_fecha,
-                "is_stale": chile_data.get("series", {}).get("IMACEC_TOTAL", {}).get("status") != "OK"
+                "is_stale": esta_vencido("CHILE_IMACEC_12M", ult_imc_fecha,
+                    chile_data.get("series", {}).get("IMACEC_TOTAL", {}).get("status", "OK"))
             },
             "CHILE_TPM": {
                 "valor": ult_tpm_val,
                 "unidad": "%",
                 "fecha_dato": ult_tpm_fecha,
-                "is_stale": chile_data.get("series", {}).get("TPM", {}).get("status") != "OK"
+                "is_stale": esta_vencido("CHILE_TPM", ult_tpm_fecha,
+                    chile_data.get("series", {}).get("TPM", {}).get("status", "OK"))
             },
             "POSICION_FORWARD_EXTRANJEROS_USD": {
                 "valor": ult_fwd_val,
                 "unidad": "millones_USD",
                 "fecha_dato": ult_fwd_fecha,
-                "is_stale": chile_data.get("series", {}).get("POSICION_FORWARD_EXTRANJEROS", {}).get("status") != "OK"
+                "is_stale": esta_vencido("POSICION_FORWARD_EXTRANJEROS_USD", ult_fwd_fecha,
+                    chile_data.get("series", {}).get("POSICION_FORWARD_EXTRANJEROS", {}).get("status", "OK"))
             },
             "BOJ_POLICY_RATE": {
                 "valor": boj_tasa_val,
                 "unidad": "%",
                 "fecha_dato": boj_tasa_fecha,
-                "is_stale": False if boj_tasa_val is not None else True
+                "is_stale": esta_vencido("BOJ_POLICY_RATE", boj_tasa_fecha,
+                    "OK" if boj_tasa_val is not None else "ERROR"),
+                "proxima_reunion": boj_proxima_reunion,
+                "origen": "declarado a mano en extractor_japon.py"
             },
             "JAPAN_CORE_CPI_YOY": {
                 "valor": ult_cpi_val,
                 "unidad": "%",
                 "fecha_dato": ult_cpi_fecha,
-                "is_stale": False if ult_cpi_val is not None else True
+                "is_stale": esta_vencido("JAPAN_CORE_CPI_YOY", _periodo_a_iso(ult_cpi_fecha),
+                    "OK" if ult_cpi_val is not None else "ERROR")
             },
             "JGB_10Y_YIELD": {
                 "valor": ult_jgb_val,
                 "unidad": "%",
                 "fecha_dato": ult_jgb_fecha,
-                "is_stale": False if ult_jgb_val is not None else True
+                "is_stale": esta_vencido("JGB_10Y_YIELD", ult_jgb_fecha,
+                    "OK" if ult_jgb_val is not None else "ERROR")
             },
             "USD_JPY": {
                 "valor": ult_usdjpy_val,
                 "unidad": "JPY",
                 "fecha_dato": ult_usdjpy_fecha,
-                "is_stale": False if ult_usdjpy_val is not None else True
+                "is_stale": esta_vencido("USD_JPY", ult_usdjpy_fecha,
+                    "OK" if ult_usdjpy_val is not None else "ERROR")
             }
         }
     }
