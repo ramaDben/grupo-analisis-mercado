@@ -282,3 +282,43 @@ def test_min_impact_invalido_retorna_error(collector, monkeypatch):
 
     assert res["error"] == "INVALID_IMPACT"
     assert isinstance(res["message"], str) and res["message"]
+
+
+def test_gana_la_entrada_mas_especifica_y_no_la_que_va_primero():
+    """El orden del JSON no puede decidir el nombre de un evento.
+
+    Con el primer match, la entrada de Cushing quedaba inalcanzable porque
+    "Crude Oil Inventories" estaba escrita antes en el archivo, y el inventario
+    de un punto de entrega salia nombrado como el inventario nacional. Son dos
+    datos distintos que mueven al WTI de forma distinta.
+    """
+    glosario = {
+        "Crude Oil Inventories": {"nombre_es": "Inventarios de petroleo crudo (EIA)"},
+        "Cushing Crude Oil Inventories": {"nombre_es": "Inventarios de crudo en Cushing"},
+    }
+    general = calendar._enganchar_glosario("Crude Oil Inventories", glosario)
+    cushing = calendar._enganchar_glosario("Cushing Crude Oil Inventories", glosario)
+    assert general["nombre_es"] == "Inventarios de petroleo crudo (EIA)"
+    assert cushing["nombre_es"] == "Inventarios de crudo en Cushing"
+
+
+def test_el_desempate_por_largo_no_depende_del_orden_del_archivo():
+    """La misma pregunta con las claves al reves: el resultado no cambia."""
+    invertido = {
+        "Cushing Crude Oil Inventories": {"nombre_es": "Inventarios de crudo en Cushing"},
+        "Crude Oil Inventories": {"nombre_es": "Inventarios de petroleo crudo (EIA)"},
+    }
+    entrada = calendar._enganchar_glosario("Cushing Crude Oil Inventories", invertido)
+    assert entrada["nombre_es"] == "Inventarios de crudo en Cushing"
+
+
+def test_un_alias_largo_le_gana_a_una_sigla_corta():
+    """Los `titulos_ff` entran al mismo desempate que las claves."""
+    glosario = {
+        "PCE": {"nombre_es": "Gasto en consumo personal"},
+        "IPC": {"nombre_es": "Inflacion",
+                "titulos_ff": ["Core PCE Price Index"]},
+    }
+    entrada = calendar._enganchar_glosario("Core PCE Price Index (MoM)", glosario)
+    assert entrada["nombre_es"] == "Inflacion", "gano la sigla corta"
+

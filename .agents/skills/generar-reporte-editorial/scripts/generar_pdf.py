@@ -314,6 +314,17 @@ img {{
     border: 1px solid #D0D7DE;
     box-shadow: 0 2px 6px rgba(13, 13, 26, 0.04);
 }}
+/* Una agenda de quince eventos es mas alta que una pagina A4, y `break-inside:
+   avoid` es una preferencia que el motor abandona cuando el bloque no cabe en
+   ninguna pagina. Sin esto, la tabla se parte y la continuacion arranca sin
+   encabezado: media docena de filas de numeros sin columna que los nombre. */
+.content thead {{
+    display: table-header-group !important;
+}}
+.content tbody tr {{
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+}}
 .content th {{
     background: #0D0D1A !important;
     color: #FFFFFF !important;
@@ -338,6 +349,22 @@ img {{
 }}
 .content tr:nth-child(even) td {{
     background: #F8FAF9 !important;
+}}
+/* El cuerpo de la tabla va en #3A3F52, y a 14 px la diferencia entre peso 400 y
+   700 de DM Sans casi no se lee. La cifra destacada de una celda se separa por
+   color ademas de por peso: es el dato que el lector esta buscando. */
+.content td strong {{
+    color: #0D0D1A !important;
+    font-weight: 700 !important;
+}}
+/* Links. El acento de marca (#3E91AF) da 3,58:1 sobre blanco y no llega al
+   minimo de 4,5:1 para texto; es el mismo problema que obligo a oscurecer la
+   paleta del folleto. Esta variante mide 5,7:1 y sigue siendo de la familia. */
+.content a {{
+    color: #2A6E88 !important;
+    text-decoration: underline !important;
+    text-underline-offset: 2px;
+    font-weight: 600 !important;
 }}
 </style>
 </head>

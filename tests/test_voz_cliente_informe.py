@@ -145,6 +145,22 @@ def test_los_porcentajes_van_en_notacion_chilena_y_con_dos_decimales():
     assert pi._pct_es(None) == "sin dato"
 
 
+def test_las_cifras_del_calendario_se_pasan_a_notacion_chilena():
+    """Investing publica en notacion estadounidense: el punto es decimal y la
+    coma es de miles. Copiado tal cual a un informe chileno, `1.600M` se lee como
+    mil seiscientos millones cuando es un millon seiscientos mil, y `216,000`
+    como doscientos dieciseis.
+
+    Los dos separadores se intercambian en un solo paso: hacerlo en dos pisa el
+    trabajo del primero y deja todo con el mismo separador.
+    """
+    assert pi._cifra_es("1.600M") == "1,600M"
+    assert pi._cifra_es("216,000") == "216.000"
+    assert pi._cifra_es("1,234.5") == "1.234,5"
+    assert pi._cifra_es("-1.314M") == "-1,314M"
+    assert pi._cifra_es("") == ""
+
+
 def test_la_agenda_descarta_el_nombre_en_ingles_pero_conserva_el_periodo():
     """Dos filas del mismo indicador tienen que distinguirse, pero por su período
     y no por un nombre en inglés que el cliente no va a leer."""

@@ -23,6 +23,23 @@ soberana de EE.UU. con su variación en puntos base y la fecha de cada dato, age
 día en hora de Chile con los indicadores nombrados en español, y régimen macro más sesgo por
 activo del Motor GI.
 
+La agenda trae seis columnas: **Estado**, hora, país, indicador, impacto y **Cifras**. Tres
+cosas que conviene saber antes de editarla a mano:
+
+- **El estado lo decide la cifra publicada, no el reloj.** `Publicado` es que la fuente ya
+  entregó el valor; `Pendiente`, que falta; `Sin cifra`, que pasó la hora y el evento no
+  entrega número (subastas, intervenciones, feriados). El informe de apertura se emite justo
+  a las 08:30 de Nueva York, que es la hora en que EE.UU. publica: la mitad de la tabla
+  cambia de estado en esos minutos.
+- **La columna Cifras nunca lleva tres números.** Antes de publicarse informa el consenso;
+  después, el valor real sobre el consenso; y solo cuando no hay consenso publicado cae al
+  anterior. Con una columna más por número, el nombre del indicador se va a cuatro líneas y
+  la tabla no cabe en la página.
+- **`(general)`, `(Cushing)` o `(manufacturero)` al final de un indicador no es un error.**
+  El glosario engancha por sigla, así que "Core PCE" y "PCE" caen en la misma entrada y sin
+  esa marca la tabla mostraría dos filas idénticas con cifras distintas. La tabla garantiza
+  que ninguna fila se lea igual que otra, y cita solo la palabra que las diferencia.
+
 **Si la apertura se niega a generarse, no la fuerces sin leer por qué.** El informe de
 apertura depende de `macro_bias_output.json`; si está vencido, el script se detiene y nombra
 el remedio: correr `pipeline_ingesta.py` y después `macro_bias_engine.py`. Refrescar el dato
@@ -76,6 +93,10 @@ viene armada y hay que dejarla: un número sin decir de dónde salió no es audi
 Si un indicador de la agenda aparece con su nombre en inglés, es porque no está en
 `data/glosario_siglas.json`. Agrégalo ahí con su `nombre_es` y su explicación en voz novata,
 y vuelve a correr `--preparar`.
+
+El pie de la agenda cierra con el link al calendario económico completo. La tabla trae solo
+los eventos de impacto medio y alto de cuatro países: no es el calendario del día, y el
+lector tiene que poder llegar al resto.
 
 ## PASO 3 — Compilar
 

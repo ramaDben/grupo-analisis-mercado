@@ -137,7 +137,9 @@ def test_el_nombre_conserva_el_periodo_porque_es_lo_que_distingue_dos_filas():
     ev = {"nombre": "CB Consumer Confidence (Aug)",
           "diccionario": {"nombre_es": "Confianza del consumidor (The Conference Board)"}}
     salida = pi._nombre_indicador(ev)
-    assert salida == "Confianza del consumidor (The Conference Board) \u00b7 dato de agosto"
+    # Solo el nombre del mes: la palabra "dato" ocupa trece caracteres en la
+    # columna que decide el alto de la fila y no distingue una fila de otra.
+    assert salida == "Confianza del consumidor (The Conference Board) \u00b7 agosto"
     assert salida.count("(") == 1, "un solo parentesis: los anidados son ilegibles"
 
 
@@ -152,3 +154,212 @@ def test_la_fecha_va_en_espanol_y_no_segun_el_locale(mes, esperado):
     """`strftime('%B')` usa el locale del sistema, que aca es ingles: la portada
     salia "25 de August de 2026"."""
     assert pi._fecha_es(datetime(2026, mes, 25)) == f"25 de {esperado} de 2026"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# La agenda del día: si el dato ya salió, y con qué cifras
+# ─────────────────────────────────────────────────────────────────────────────
+AHORA = datetime(2026, 8, 26, 9, 15, tzinfo=pi.SANTIAGO)
+
+
+def _evento(**campos):
+    base = {"hora_servidor": "2026-08-26 08:30", "pais": "United States",
+            "nombre": "Durable Goods Orders (MoM) (Jul)", "impacto": "alto",
+            "forecast": "", "previo": "", "actual": ""}
+    base.update(campos)
+    return base
+
+
+def _celdas(tabla: str) -> list[list[str]]:
+    """Las filas de datos, ya partidas en celdas."""
+    return [
+        [c.strip() for c in linea.strip("|").split("|")]
+        for linea in tabla.splitlines()
+        if linea.startswith("| ") and "Indicador" not in linea and "---" not in linea
+    ]
+
+
+def test_la_agenda_dice_si_el_dato_ya_salio():
+    """Es lo que pidió el director: la tabla anterior no permitía distinguir un
+    dato publicado de uno que faltaba, y el informe se emite justo a la hora en
+    que EE.UU. publica."""
+    tabla = pi._tabla_calendario(
+        [_evento(actual="1.1%", forecast="0.4%"),
+         _evento(hora_servidor="2026-08-26 10:30", forecast="1.600M")],
+        AHORA,
+    )
+    estados = [fila[0] for fila in _celdas(tabla)]
+    assert estados == ["Publicado", "Pendiente"]
+
+
+def test_el_estado_lo_decide_la_cifra_y_no_el_reloj():
+    """La fuente publica con retraso más seguido de lo que uno querría. Un
+    informe que dice "ya salió" porque pasó la hora obliga al lector a
+    desmentirlo con la pantalla al lado."""
+    pasada_con_dato = pi._estado_evento(
+        _evento(hora_servidor="2026-08-26 08:30", actual="1.1%"), AHORA)
+    futura_con_dato = pi._estado_evento(
+        _evento(hora_servidor="2026-08-26 23:00", actual="1.1%"), AHORA)
+    assert pasada_con_dato == "Publicado"
+    assert futura_con_dato == "Publicado", "el testigo es la cifra, no la hora"
+
+
+def test_un_evento_sin_cifra_al_que_ya_le_paso_la_hora_no_queda_pendiente():
+    """Las subastas del Tesoro, las intervenciones de gobernadores y los feriados
+    nunca traen cifra. Marcarlos "pendiente" para siempre haría que la tabla del
+    cierre mienta todas las tardes."""
+    ev = _evento(hora_servidor="2026-08-26 08:00", nombre="2-Year Note Auction",
+                 previo="4.315%")
+    assert pi._estado_evento(ev, AHORA) == "Sin cifra"
+
+
+def test_un_dato_publicado_se_muestra_contra_su_consenso():
+    """El número solo no dice nada: 3,3% de inflación es una noticia distinta
+    según si el mercado esperaba 3,1% o 3,5%."""
+    tabla = pi._tabla_calendario([_evento(actual="3.3%", forecast="3.1%")], AHORA)
+    cifras = _celdas(tabla)[0][-1]
+    assert "3,3%" in cifras and "esperado 3,1%" in cifras
+
+
+def test_antes_de_publicarse_la_columna_lleva_el_consenso_y_nunca_un_dato():
+    tabla = pi._tabla_calendario(
+        [_evento(hora_servidor="2026-08-26 10:30", forecast="1.600M", previo="4.405M")],
+        AHORA,
+    )
+    cifras = _celdas(tabla)[0][-1]
+    assert cifras == "esperado 1,600M"
+    assert "4" not in cifras.replace("1,600M", ""), "el anterior no entra teniendo consenso"
+
+
+def test_sin_consenso_publicado_la_columna_cae_al_anterior():
+    """Las subastas no tienen consenso. Una celda vacía se lee como dato faltante
+    cuando en realidad hay algo que decir."""
+    tabla = pi._tabla_calendario(
+        [_evento(nombre="2-Year Note Auction", previo="4.315%")], AHORA)
+    assert _celdas(tabla)[0][-1] == "anterior 4,315%"
+
+
+def test_la_columna_de_cifras_nunca_lleva_tres_numeros():
+    """Es la razón de que la tabla tenga seis columnas y no ocho: el anterior
+    importa antes de que salga el dato y el dato después, nunca los tres juntos.
+    Con una columna más, el nombre del indicador se va a tres líneas y el bloque
+    no cabe en la página."""
+    completo = _evento(actual="1.1%", forecast="0.4%", previo="0.3%")
+    assert pi._cifras_evento(completo).count("%") == 2
+
+    encabezado = pi._tabla_calendario([completo], AHORA).splitlines()[0]
+    assert encabezado.strip("|").count("|") == 5, "la agenda tiene seis columnas"
+
+
+def test_la_agenda_lleva_el_link_al_calendario():
+    """La tabla trae los eventos de impacto medio y alto de cuatro países: no es
+    el calendario completo, y el lector tiene que poder llegar al resto."""
+    con_eventos = pi._tabla_calendario([_evento(actual="1.1%")], AHORA)
+    sin_eventos = pi._tabla_calendario([], AHORA)
+    for tabla in (con_eventos, sin_eventos):
+        assert pi.CALENDARIO_URL in tabla
+        assert "calendario económico" in tabla
+
+
+def test_el_pie_de_la_agenda_cuenta_cuantos_datos_ya_salieron():
+    """En una tabla de quince filas, el recuento es lo que se lee de un golpe."""
+    eventos = [_evento(actual="1.1%"), _evento(actual="3.3%"),
+               _evento(hora_servidor="2026-08-26 13:00", forecast="0.2%")]
+    assert "2 de 3 eventos ya publicados" in pi._tabla_calendario(eventos, AHORA)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Unicidad: ninguna fila puede leerse igual que otra
+# ─────────────────────────────────────────────────────────────────────────────
+def test_el_subyacente_no_se_lee_igual_que_el_general():
+    """El caso que motivó el cambio. El glosario engancha por sigla, así que
+    "Core PCE" y "PCE" caen en la misma entrada y la tabla mostraba dos filas
+    idénticas con cifras distintas. Y la distinción no es menor: el subyacente
+    excluye alimentos y energía, y es el que mira la Fed."""
+    core = pi._nombre_indicador({
+        "nombre": "Core PCE Price Index (YoY) (Jul)",
+        "diccionario": {"nombre_es": "Gasto en consumo personal"}})
+    general = pi._nombre_indicador({
+        "nombre": "PCE Price index (YoY) (Jul)",
+        "diccionario": {"nombre_es": "Gasto en consumo personal"}})
+    assert "subyacente" in core
+    assert "subyacente" not in general
+    assert core != general
+
+
+def test_un_agregado_no_se_lee_igual_que_su_deflactor():
+    """"GDP" y "GDP Price Index" comparten la sigla y miden cosas distintas:
+    cuánto se produjo contra cuánto subieron los precios de lo producido."""
+    pib = pi._nombre_indicador({
+        "nombre": "GDP (QoQ) (Q2)",
+        "diccionario": {"nombre_es": "Producto interno bruto (PIB)"}})
+    deflactor = pi._nombre_indicador({
+        "nombre": "GDP Price Index (QoQ) (Q2)",
+        "diccionario": {"nombre_es": "Producto interno bruto (PIB)"}})
+    assert "índice de precios" in deflactor
+    assert "índice de precios" not in pib
+    assert "segundo trimestre" in pib
+
+
+def test_dos_subastas_se_distinguen_por_su_plazo():
+    dos = pi._nombre_indicador({
+        "nombre": "2-Year Note Auction",
+        "diccionario": {"nombre_es": "Subasta de bonos del Tesoro de EE.UU."}})
+    cinco = pi._nombre_indicador({
+        "nombre": "5-Year Note Auction",
+        "diccionario": {"nombre_es": "Subasta de bonos del Tesoro de EE.UU."}})
+    assert "a 2 años" in dos and "a 5 años" in cinco
+
+
+def test_el_desempate_cita_la_palabra_propia_y_no_el_nombre_en_ingles():
+    """Entre "Crude Oil Inventories" y "Cushing Crude Oil Inventories" la
+    diferencia es Cushing. Pegar los dos nombres completos para decir eso metería
+    seis palabras en inglés en un informe en español."""
+    eia = {"nombre_es": "Inventarios de petróleo crudo (EIA)"}
+    eventos = [
+        _evento(nombre="Crude Oil Inventories", forecast="1.600M", diccionario=eia),
+        _evento(nombre="Cushing Crude Oil Inventories", previo="-1.314M", diccionario=eia),
+    ]
+    tabla = pi._tabla_calendario(eventos, AHORA)
+    indicadores = [fila[3] for fila in _celdas(tabla)]
+    assert indicadores[0].endswith("(general)")
+    assert indicadores[1].endswith("(Cushing)")
+    assert "Crude Oil Inventories" not in tabla
+
+
+def test_ninguna_fila_de_la_agenda_se_lee_igual_que_otra():
+    """Barrido sobre la mañana real que destapó el defecto: diez datos de EE.UU.
+    a las 08:30, de los cuales seis colapsaban en tres pares idénticos.
+
+    Dos filas iguales no son un defecto cosmético: el lector no puede saber cuál
+    de las dos cifras corresponde a cuál indicador, y la tabla deja de servir
+    para lo único que sirve una tabla.
+    """
+    familias = {
+        "Gasto en consumo personal": [
+            "Core PCE Price Index (MoM) (Jul)", "Core PCE Price Index (YoY) (Jul)",
+            "Core PCE Prices (Q2)", "PCE price index (MoM) (Jul)",
+            "PCE Price index (YoY) (Jul)",
+        ],
+        "Pedidos de bienes durables": [
+            "Core Durable Goods Orders (MoM) (Jul)", "Durable Goods Orders (MoM) (Jul)",
+        ],
+        "Producto interno bruto (PIB)": [
+            "GDP (QoQ) (Q2)", "GDP Price Index (QoQ) (Q2)",
+        ],
+        "Subasta de bonos del Tesoro de EE.UU.": [
+            "2-Year Note Auction", "5-Year Note Auction",
+        ],
+        "Inventarios de petróleo crudo (EIA)": [
+            "Crude Oil Inventories", "Cushing Crude Oil Inventories",
+        ],
+    }
+    eventos = [
+        _evento(nombre=fuente, diccionario={"nombre_es": es})
+        for es, fuentes in familias.items() for fuente in fuentes
+    ]
+    indicadores = [fila[3] for fila in _celdas(pi._tabla_calendario(eventos, AHORA))]
+    repetidos = {n for n in indicadores if indicadores.count(n) > 1}
+    assert not repetidos, f"filas indistinguibles: {sorted(repetidos)}"
+    assert len(indicadores) == len(eventos)
+
