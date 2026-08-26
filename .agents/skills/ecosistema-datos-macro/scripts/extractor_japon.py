@@ -10,12 +10,14 @@ Extractor de datos macroeconómicos y financieros de Japón desde Fuentes Oficia
 
 import sys
 import json
+import re
 import csv
 import io
 import urllib.request
+import requests
 import ssl
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, date
 import yfinance as yf
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -32,6 +34,26 @@ OUTPUT_DIR = BASE_DIR / "data central" / "DATA JAPON" / "raw"
 OUTPUT_FILE = OUTPUT_DIR / "boj_japon_data.json"
 
 MOF_JGB_CSV_URL = "https://www.mof.go.jp/jgbs/reference/interest_rate/jgbcm.csv"
+
+# Tasa de politica del BoJ. Se toma del dataset de tasas de politica del BIS y
+# no del BoJ directamente porque el BoJ no publica la tasa vigente en ningun
+# formato estructurado: vive dentro del PDF de cada declaracion. El BIS la
+# compila citando la decision textual en su campo `COMPILATION` -"From 17 Jun
+# 2026 onwards: the BOJ encourages the uncollateralized overnight call rate to
+# remain at around 1.00 percent"-, que es justamente de donde sale la fecha de
+# vigencia que hacia falta para medir la frescura del driver.
+BIS_CBPOL_JP_URL = (
+    "https://stats.bis.org/api/v2/data/dataflow/BIS/WS_CBPOL/1.0/D.JP"
+    "?format=csv&lastNObservations=5"
+)
+
+# Calendario de reuniones de politica monetaria, del propio BoJ.
+BOJ_MPM_URL = "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm"
+
+MESES_EN = {
+    "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+    "jul": 7, "aug": 8, "sep": 9, "sept": 9, "oct": 10, "nov": 11, "dec": 12,
+}
 
 def parse_reiwa_date(reiwa_str: str) -> str:
     """
@@ -51,6 +73,79 @@ def parse_reiwa_date(reiwa_str: str) -> str:
         return reiwa_str
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=6))
+def extraer_tasa_politica_boj() -> dict:
+    """Tasa de politica del BoJ y la fecha de la decision que la fijo.
+
+    Estaba escrita a mano en el payload (`tasa_politica_actual: 1.00`), en un
+    pipeline cuyo principio rector es "100 % del organismo emisor primario". El
+    valor resultaba correcto, y ese es justamente el riesgo de un literal: el
+    dia que el BoJ mueva la tasa, el pipeline seguiria informando la vieja sin
+    una sola senal de que algo quedo atras.
+
+    La fecha de vigencia se parsea de la glosa del BIS. Sin ella no habia con
+    que medir la frescura del driver, y el pipeline terminaba fechandolo con su
+    PROXIMA reunion: cuando se va a revisar, no cuando se decidio.
+    """
+    resp = requests.get(BIS_CBPOL_JP_URL, headers={"User-Agent": "Mozilla/5.0"}, timeout=40)
+    resp.raise_for_status()
+    filas = list(csv.DictReader(io.StringIO(resp.text)))
+    if not filas:
+        raise ValueError("el BIS no devolvio observaciones para la tasa de Japon")
+
+    ultima = filas[-1]
+    tasa = float(ultima["OBS_VALUE"])
+
+    vigente_desde = ""
+    m = re.search(r"From (\d{1,2}) (\w+) (\d{4}) onwards", ultima.get("COMPILATION", ""))
+    if m:
+        dia, mes_txt, anio = m.group(1), m.group(2)[:3].lower(), m.group(3)
+        if mes_txt in MESES_EN:
+            vigente_desde = f"{int(anio):04d}-{MESES_EN[mes_txt]:02d}-{int(dia):02d}"
+
+    return {
+        "tasa": tasa,
+        "vigente_desde": vigente_desde,
+        "observacion": ultima.get("TIME_PERIOD", ""),
+        "glosa": ultima.get("COMPILATION", "")[:200],
+    }
+
+
+def extraer_proxima_reunion_boj(hoy=None) -> str:
+    """Primera reunion de politica monetaria que todavia no ocurrio.
+
+    Estaba escrita a mano (`proxima_reunion: "2026-09-17"`). La fecha era
+    correcta, y ese es el problema: nadie se entera el dia que deja de serlo.
+
+    El calendario del BoJ lista cada reunion como "Sept. 17 (Thurs.), 18
+    (Fri.)": dos dias, y el que importa es el primero. El anio no aparece en la
+    fila sino como encabezado de la tabla, asi que se deduce del contexto -si el
+    mes ya paso, la reunion es del anio siguiente-.
+    """
+    hoy = hoy or date.today()
+    resp = requests.get(BOJ_MPM_URL, headers={"User-Agent": "Mozilla/5.0"}, timeout=30)
+    resp.raise_for_status()
+    texto = re.sub(r"<[^>]+>", " ", resp.text)
+    texto = re.sub(r"\s+", " ", texto)
+
+    candidatas = []
+    for mes_txt, dia in re.findall(r"\b(Jan|Feb|Mar|Apr|May|June?|July?|Aug|Sept?|Oct|Nov|Dec)\w*\.? (\d{1,2}) \(", texto):
+        mes = MESES_EN.get(mes_txt[:3].lower())
+        if not mes:
+            continue
+        for anio in (hoy.year, hoy.year + 1):
+            try:
+                fecha = date(anio, mes, int(dia))
+            except ValueError:
+                continue
+            if fecha >= hoy:
+                candidatas.append(fecha)
+                break
+
+    if not candidatas:
+        raise ValueError("no se encontro ninguna reunion futura en el calendario del BoJ")
+    return min(candidatas).isoformat()
+
+
 def extraer_curva_jgb_mof() -> dict:
     """
     Descarga directamente desde el Ministerio de Finanzas de Japón (MOF)
@@ -142,17 +237,32 @@ def obtener_us_10y_y_fx() -> tuple:
 def ejecutar_extraccion_japon() -> dict:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     
-    print("[1/3] Conectando con Ministerio de Finanzas de Japón (MOF)...")
+    print("[1/4] Conectando con Ministerio de Finanzas de Japón (MOF)...")
     datos_mof = extraer_curva_jgb_mof()
     jgb_10y = datos_mof["jgb_10y_yield"]
     print(f"  [OK] Curva MOF capturada exitosamente. JGB 10Y Oficial = {jgb_10y:.3f}% ({datos_mof['ultima_fecha_oficial']})")
     
-    print("[2/3] Obteniendo Rendimiento US 10Y y USD/JPY...")
+    print("[2/4] Obteniendo Rendimiento US 10Y y USD/JPY...")
     us_10y, usdjpy_spot = obtener_us_10y_y_fx()
     spread = us_10y - jgb_10y
     print(f"  [OK] US 10Y = {us_10y:.2f}% | Spread US-JGB = {spread:.2f}% ({spread*100:.0f} bps)")
     
-    print("[3/3] Estructurando Base Maestra de Japón...")
+    print("[3/4] Consultando política monetaria del BoJ...")
+    try:
+        boj = extraer_tasa_politica_boj()
+        print(f"  [OK] Tasa de política = {boj['tasa']:.2f}% (vigente desde {boj['vigente_desde'] or 's/f'})")
+    except Exception as e:
+        print(f"  [WARN] No se pudo obtener la tasa del BoJ ({e})")
+        boj = {"tasa": None, "vigente_desde": "", "observacion": "", "glosa": ""}
+
+    try:
+        proxima_reunion = extraer_proxima_reunion_boj()
+        print(f"  [OK] Próxima reunión de política monetaria: {proxima_reunion}")
+    except Exception as e:
+        print(f"  [WARN] No se pudo leer el calendario del BoJ ({e})")
+        proxima_reunion = ""
+
+    print("[4/4] Estructurando Base Maestra de Japón...")
     payload = {
         "pais": "Japón",
         "timestamp_actualizacion": datetime.now().isoformat(),
@@ -172,12 +282,29 @@ def ejecutar_extraccion_japon() -> dict:
             "historico_jgb_mof": datos_mof["historico_reciente"]
         },
         "politica_monetaria_boj": {
-            "tasa_politica_actual": 1.00,
+            "tasa_politica_actual": boj["tasa"],
+            "vigente_desde": boj["vigente_desde"],
+            "glosa_decision": boj["glosa"],
+            "fuente_tasa": "BIS, dataset WS_CBPOL (compila la decisión del BoJ)",
             "meta_inflacion": 2.00,
-            "proxima_reunion": "2026-09-17",
-            "sesgo": "Hawkish Gradual / Normalización Activa"
+            "proxima_reunion": proxima_reunion,
+            "fuente_calendario": BOJ_MPM_URL,
+            # El sesgo es lectura editorial, no un dato: no lo publica nadie en
+            # ningún formato. Se declara como lo que es en vez de mezclarse con
+            # los campos ingestados.
+            "sesgo": "Hawkish Gradual / Normalización Activa",
+            "sesgo_origen": "declarado a mano"
         },
+        # NO ingestado. El Statistics Bureau (MIC) no publica el IPC en ningún
+        # formato abierto: exige un appId de e-Stat que el proyecto no tiene, y
+        # sus rutas de CSV responden 404. FRED no sirve de reemplazo porque sus
+        # series de IPC de Japón están congeladas en junio de 2021.
+        #
+        # Se deja escrito a mano, pero DECLARADO: un dato manual disfrazado de
+        # ingesta es peor que uno manual que lo dice. `is_stale` lo vence a los
+        # 95 días, así que el día que quede atrás se nota.
         "inflacion_oficial_mic": {
+            "origen": "declarado a mano",
             "ultimo_headline_cpi_yoy": 2.80,
             "ultimo_core_cpi_yoy": 2.70,
             "ultimo_core_core_cpi_yoy": 2.30,

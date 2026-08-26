@@ -1,6 +1,6 @@
 {
   "pais": "Japón",
-  "timestamp_actualizacion": "2026-08-26T00:28:02.429349",
+  "timestamp_actualizacion": "2026-08-26T00:46:46.380803",
   "fuentes_oficiales": {
     "bonos_soberanos": "Ministerio de Finanzas de Japón (Ministry of Finance - MOF)",
     "inflacion": "Oficina de Estadísticas de Japón (Statistics Bureau / MIC - stat.go.jp)",
@@ -11,7 +11,7 @@
     "us_10y_yield": 4.639,
     "yield_spread_us_jp": 1.742,
     "yield_spread_bps": 174.2,
-    "usd_jpy_spot": 158.982,
+    "usd_jpy_spot": 158.99,
     "mof_fecha_registro": "2026-08-25",
     "curva_jgb_mof": {
       "1年": 1.447,
@@ -95,11 +95,17 @@
   },
   "politica_monetaria_boj": {
     "tasa_politica_actual": 1.0,
+    "vigente_desde": "2026-06-17",
+    "glosa_decision": "From 17 Jun 2026 onwards: the BOJ encourages the uncollateralized overnight call rate to remain at around 1.00 percent; From 22 Dec 2025 to 16 Jun 2026: the BOJ encourages the uncollateralized overnig",
+    "fuente_tasa": "BIS, dataset WS_CBPOL (compila la decisión del BoJ)",
     "meta_inflacion": 2.0,
     "proxima_reunion": "2026-09-17",
-    "sesgo": "Hawkish Gradual / Normalización Activa"
+    "fuente_calendario": "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm",
+    "sesgo": "Hawkish Gradual / Normalización Activa",
+    "sesgo_origen": "declarado a mano"
   },
   "inflacion_oficial_mic": {
+    "origen": "declarado a mano",
     "ultimo_headline_cpi_yoy": 2.8,
     "ultimo_core_cpi_yoy": 2.7,
     "ultimo_core_core_cpi_yoy": 2.3,

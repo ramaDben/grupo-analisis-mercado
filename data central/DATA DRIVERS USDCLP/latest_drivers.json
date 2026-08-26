@@ -1,5 +1,5 @@
 {
-  "timestamp_consolidacion": "2026-08-26T04:28:02.432388+00:00",
+  "timestamp_consolidacion": "2026-08-26T04:46:46.383349+00:00",
   "drivers": {
     "US_10Y_TREASURY": {
       "valor": 4.7,
@@ -14,7 +14,7 @@
       "is_stale": false
     },
     "COBRE_HG": {
-      "valor": 6.757,
+      "valor": 6.7545,
       "unidad": "USD/lb",
       "fecha_dato": "2026-08-26",
       "is_stale": false
@@ -52,10 +52,11 @@
     "BOJ_POLICY_RATE": {
       "valor": 1.0,
       "unidad": "%",
-      "fecha_dato": "2026-08-26",
+      "fecha_dato": "2026-06-17",
       "is_stale": false,
       "proxima_reunion": "2026-09-17",
-      "origen": "declarado a mano en extractor_japon.py"
+      "vigente_desde": "2026-06-17",
+      "fuente": "BIS, dataset WS_CBPOL (compila la decisión del BoJ)"
     },
     "JAPAN_CORE_CPI_YOY": {
       "valor": 2.7,
@@ -70,7 +71,7 @@
       "is_stale": false
     },
     "USD_JPY": {
-      "valor": 158.982,
+      "valor": 158.99,
       "unidad": "JPY",
       "fecha_dato": "2026-08-25",
       "is_stale": false

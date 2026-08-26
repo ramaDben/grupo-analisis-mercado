@@ -18,6 +18,7 @@ sys.path.insert(0, str(BASE_DIR / "scripts"))  # RAIZ_SCRIPTS: macro_bias_engine
 import agenda
 import extractor_chile
 import extractor_commodities
+import extractor_japon
 import extractor_usa
 import pipeline_ingesta
 
@@ -379,3 +380,129 @@ def test_una_fecha_futura_vence_hasta_a_las_tasas_de_politica():
 def test_una_fecha_ilegible_vence_aunque_la_serie_no_tenga_ventana():
     hoy = date(2026, 8, 26)
     assert pipeline_ingesta.esta_vencido("BOJ_POLICY_RATE", "no es una fecha", "OK", hoy)
+
+
+# ── La tasa del BoJ, que estaba escrita a mano ──────────────────────────────
+
+CSV_BIS = """FREQ,REF_AREA,COMPILATION,TITLE,TIME_PERIOD,OBS_VALUE
+D,JP,"From 17 Jun 2026 onwards: the BOJ encourages the uncollateralized overnight call rate to remain at around 1.00 percent; From 22 Dec 2025 to 16 Jun 2026: the BOJ encourages it to remain at around 0.75 percent",Central bank policy rates - Japan,2026-08-18,1
+"""
+
+
+def _responde(monkeypatch, texto, registro=None):
+    class Respuesta:
+        status_code = 200
+        text = texto
+        def raise_for_status(self): pass
+    def get(url, **kwargs):
+        if registro is not None:
+            registro.append(url)
+        return Respuesta()
+    monkeypatch.setattr(extractor_japon.requests, "get", get)
+
+
+def test_la_tasa_del_boj_sale_de_una_fuente_y_no_de_un_literal(monkeypatch):
+    """`tasa_politica_actual: 1.00` estaba escrito a mano en el extractor, en un
+    pipeline cuyo principio rector es "100 % del organismo emisor primario".
+
+    El valor resultaba correcto, pero un literal no se entera de una reunion: el
+    dia que el BoJ mueva la tasa, el pipeline seguiria informando la vieja sin
+    una sola senal de que algo quedo atras.
+    """
+    urls = []
+    _responde(monkeypatch, CSV_BIS, urls)
+    datos = extractor_japon.extraer_tasa_politica_boj()
+
+    assert datos["tasa"] == 1.00
+    assert "bis.org" in urls[0]
+
+
+def test_la_tasa_trae_la_fecha_de_la_decision_que_la_fijo(monkeypatch):
+    """Es lo que faltaba para poder medir su frescura.
+
+    Una tasa de politica no envejece por dias, pero si por reuniones, y sin la
+    fecha de la decision no habia con que compararla. El pipeline terminaba
+    fechandola con su PROXIMA reunion, que es al reves.
+    """
+    _responde(monkeypatch, CSV_BIS)
+    datos = extractor_japon.extraer_tasa_politica_boj()
+    assert datos["vigente_desde"] == "2026-06-17"
+
+
+def test_el_calendario_del_boj_da_la_proxima_reunion(monkeypatch):
+    """`proxima_reunion: "2026-09-17"` tambien estaba escrita a mano. La fecha
+    era correcta, y ese es justamente el problema: nadie se entera cuando deja
+    de serlo."""
+    html = """<table><tr><td>July 30 (Thurs.), 31 (Fri.)</td></tr>
+              <tr><td>Sept. 17 (Thurs.), 18 (Fri.)</td></tr>
+              <tr><td>Oct. 29 (Thurs.), 30 (Fri.)</td></tr></table>"""
+    _responde(monkeypatch, html)
+    # Desde el 26 de agosto, la proxima es la de septiembre y no la de julio.
+    assert extractor_japon.extraer_proxima_reunion_boj(
+        hoy=date(2026, 8, 26)) == "2026-09-17"
+    # Y en octubre ya no puede seguir devolviendo la de septiembre.
+    assert extractor_japon.extraer_proxima_reunion_boj(
+        hoy=date(2026, 10, 1)) == "2026-10-29"
+
+
+def test_el_cpi_de_japon_se_declara_como_lo_que_es():
+    """No se pudo automatizar: FRED tiene sus series de CPI Japon congeladas en
+    junio de 2021, y el Statistics Bureau exige un appId de e-Stat que el
+    proyecto no tiene. Se deja escrito a mano, pero DECLARADO: un dato manual
+    disfrazado de ingesta es peor que uno manual que lo dice."""
+    fuente = Path(extractor_japon.__file__).read_text(encoding="utf-8")
+    assert '"origen": "declarado a mano"' in fuente
+
+
+def test_el_payload_usa_las_fuentes_y_no_vuelve_a_los_literales(monkeypatch, tmp_path):
+    """Los tests de arriba prueban las FUNCIONES; este, que el payload las use.
+
+    Sin el, alguien puede volver a escribir la tasa a mano en el payload y la
+    suite sigue verde: las funciones seguirian existiendo y andando, solo que
+    nadie las llamaria. Lo detecto una prueba de mutacion, no los tests.
+
+    Los valores falsos son deliberadamente distintos de los literales que
+    estaban (1.00 y 2026-09-17), para que reaparecer un literal no pueda
+    confundirse con un mock que funciono.
+    """
+    monkeypatch.setattr(extractor_japon, "extraer_tasa_politica_boj",
+                        lambda: {"tasa": 7.77, "vigente_desde": "2026-03-03",
+                                 "observacion": "2026-08-18", "glosa": "glosa de prueba"})
+    monkeypatch.setattr(extractor_japon, "extraer_proxima_reunion_boj",
+                        lambda: "2027-01-15")
+    monkeypatch.setattr(extractor_japon, "extraer_curva_jgb_mof",
+                        lambda: {"jgb_10y_yield": 2.5, "ultima_fecha_oficial": "2026-08-25",
+                                 "curva_completa": {}, "historico_reciente": []})
+    monkeypatch.setattr(extractor_japon, "obtener_us_10y_y_fx", lambda: (4.5, 150.0))
+    monkeypatch.setattr(extractor_japon, "OUTPUT_DIR", tmp_path)
+    monkeypatch.setattr(extractor_japon, "OUTPUT_FILE", tmp_path / "boj_japon_data.json")
+
+    bloque = extractor_japon.ejecutar_extraccion_japon()["politica_monetaria_boj"]
+
+    assert bloque["tasa_politica_actual"] == 7.77, "la tasa volvio a estar escrita a mano"
+    assert bloque["proxima_reunion"] == "2027-01-15", "la reunion volvio a estar escrita a mano"
+    assert bloque["vigente_desde"] == "2026-03-03"
+
+
+def test_si_la_fuente_de_la_tasa_cae_el_extractor_no_se_lleva_todo(monkeypatch, tmp_path):
+    """El BoJ es un bloque de un payload que trae ademas la curva del MOF. Que
+    el BIS no responda no puede costar tambien los datos que si llegaron."""
+    def explota():
+        raise ConnectionError("el BIS no responde")
+
+    monkeypatch.setattr(extractor_japon, "extraer_tasa_politica_boj", explota)
+    monkeypatch.setattr(extractor_japon, "extraer_proxima_reunion_boj", explota)
+    monkeypatch.setattr(extractor_japon, "extraer_curva_jgb_mof",
+                        lambda: {"jgb_10y_yield": 2.5, "ultima_fecha_oficial": "2026-08-25",
+                                 "curva_completa": {}, "historico_reciente": []})
+    monkeypatch.setattr(extractor_japon, "obtener_us_10y_y_fx", lambda: (4.5, 150.0))
+    monkeypatch.setattr(extractor_japon, "OUTPUT_DIR", tmp_path)
+    monkeypatch.setattr(extractor_japon, "OUTPUT_FILE", tmp_path / "boj_japon_data.json")
+
+    payload = extractor_japon.ejecutar_extraccion_japon()
+
+    assert payload["indicadores_financieros"]["jgb_10y_yield"] == 2.5
+    # Y la tasa cae a None, que `esta_vencido` traduce en un driver vencido en
+    # vez de en un numero inventado.
+    assert payload["politica_monetaria_boj"]["tasa_politica_actual"] is None
+
