@@ -1,8 +1,7 @@
 {
-  "ultima_ejecucion_utc": "2026-08-26T04:07:27.976840+00:00",
+  "ultima_ejecucion_utc": "2026-08-26T04:28:02.433383+00:00",
   "hay_novedades": true,
   "novedades_detalle": [
-    "Datos actualizados en Chile (Imacec / TPM / Posición Forward)",
     "Datos actualizados en Commodities (Cobre / WTI / Brent / Oro)",
     "Datos actualizados en Japón (Banco de Japón / IPC / JGB / USD-JPY)"
   ],
@@ -18,7 +17,7 @@
     "usa": "099159746db336ea7352c8ffae961a64aa15ff82f5c15b6ee374d5d7724a3dcd",
     "chile": "d55411b325d5cc299c81eabe5d03fb6c9328657213240a371bb59da0aa5b7a23",
     "europa_uk": "1f41bec544447e5de972e5a2e919155cbe3981403653a73b8504ea443229700f",
-    "commodities": "19829ed985faa753b86d405cf5fbb8426a64f2b3b2c7b799910a6acaae98a739",
-    "japon": "83fe40fe8c39447716c791dfd671de07b9414e3368ef8a6040ff34410766dd62"
+    "commodities": "5bcf016279130b7a2061d65fb741d56cd814bbc5754cb39fbde2b8d4cb5fcf84",
+    "japon": "9ee7a312ad35876de2a16d0852175cede793d5046efbe35f6f9f5732592d3430"
   }
 }
