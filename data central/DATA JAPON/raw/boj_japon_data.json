@@ -1,6 +1,6 @@
 {
   "pais": "Japón",
-  "timestamp_actualizacion": "2026-08-25T23:35:28.561393",
+  "timestamp_actualizacion": "2026-08-26T00:07:27.966468",
   "fuentes_oficiales": {
     "bonos_soberanos": "Ministerio de Finanzas de Japón (Ministry of Finance - MOF)",
     "inflacion": "Oficina de Estadísticas de Japón (Statistics Bureau / MIC - stat.go.jp)",
@@ -11,7 +11,7 @@
     "us_10y_yield": 4.639,
     "yield_spread_us_jp": 1.742,
     "yield_spread_bps": 174.2,
-    "usd_jpy_spot": 158.913,
+    "usd_jpy_spot": 158.965,
     "mof_fecha_registro": "2026-08-25",
     "curva_jgb_mof": {
       "1年": 1.447,
