@@ -6,7 +6,7 @@ Suite de pruebas automatizadas para el Ecosistema de Ingesta Macro, Agenda y Det
 
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from pathlib import Path
 from zoneinfo import ZoneInfo
 import pytest
@@ -297,3 +297,85 @@ def test_la_frase_del_forward_sigue_al_signo_del_dato():
     fuente = Path(mbe.__file__).read_text(encoding="utf-8")
     assert 'compradora (+{fwd_ext' not in fuente, "el sentido volvio a estar escrito a mano"
     assert 'fwd_sentido = "vendedora" if fwd_ext < 0 else "compradora"' in fuente
+
+
+def test_stale_mide_antiguedad_y_no_solo_si_la_descarga_funciono():
+    """`is_stale` era `status != "OK"`: medía si BAJAR el archivo funcionó.
+
+    Un dato de ocho días con la descarga correcta salía `is_stale: False`. El
+    Imacec llevaba 86 días declarandose fresco. El booleano que alguien lee para
+    decidir si confiar en un driver no miraba la unica cosa que importa.
+    """
+    hoy = date(2026, 8, 26)
+    # Serie diaria con dato de ayer: fresca.
+    assert not pipeline_ingesta.esta_vencido("COBRE_HG", "2026-08-25", "OK", hoy)
+    # La misma serie con tres semanas: vencida, aunque la descarga saliera bien.
+    assert pipeline_ingesta.esta_vencido("COBRE_HG", "2026-08-05", "OK", hoy)
+
+
+def test_la_ventana_es_la_cadencia_de_cada_serie_y_no_un_numero_fijo():
+    """Un umbral unico marcaria vencido al Imacec todos los meses.
+
+    El Imacec de junio se publica a inicios de agosto: 86 dias de antiguedad son
+    su ritmo normal, no un fallo. El Brent de FRED llega con rezago propio de la
+    EIA. Aplicarles la ventana de una serie diaria seria alarmismo, y bajaria la
+    confianza del motor bajo su umbral por datos que estan al dia.
+    """
+    hoy = date(2026, 8, 26)
+    # Mensuales en su ritmo: no vencidos.
+    assert not pipeline_ingesta.esta_vencido("CHILE_IMACEC_12M", "2026-06-01", "OK", hoy)
+    assert not pipeline_ingesta.esta_vencido("PETROLEO_BRENT", "2026-08-18", "OK", hoy)
+    # Un Imacec de hace medio año si esta vencido.
+    assert pipeline_ingesta.esta_vencido("CHILE_IMACEC_12M", "2026-02-01", "OK", hoy)
+
+
+def test_una_tasa_de_politica_no_envejece_por_calendario():
+    """La TPM en 4,5 % no esta "vieja" porque el Banco Central no la movio: es el
+    valor VIGENTE. Envejece por reuniones, no por dias, asi que para estas
+    series el unico criterio es si la descarga funciono."""
+    hoy = date(2026, 8, 26)
+    assert not pipeline_ingesta.esta_vencido("CHILE_TPM", "2026-01-30", "OK", hoy)
+    assert pipeline_ingesta.esta_vencido("CHILE_TPM", "2026-08-26", "ERROR_STALE", hoy)
+
+
+def test_una_descarga_fallida_vence_el_driver_aunque_la_fecha_sea_de_hoy():
+    """Los dos criterios se suman, no se reemplazan."""
+    hoy = date(2026, 8, 26)
+    assert pipeline_ingesta.esta_vencido("COBRE_HG", "2026-08-26", "ERROR_FALLBACK", hoy)
+
+
+def test_la_fecha_del_boj_no_puede_ser_la_de_su_proxima_reunion():
+    """`fecha_dato` traia `proxima_reunion`: cuando se va a REVISAR, no cuando se
+    midio. La antiguedad daba negativa, asi que ese driver pasaba cualquier
+    filtro de frescura para siempre."""
+    fuente = Path(pipeline_ingesta.__file__).read_text(encoding="utf-8")
+    # Se prohibe el USO incorrecto, no la cadena: exponer la proxima reunion
+    # como campo informativo aparte si es correcto, y un assert sobre el texto
+    # suelto impediria justamente eso.
+    assert 'boj_tasa_fecha = japon_data.get("politica_monetaria_boj"' not in fuente, (
+        "la fecha del dato volvio a salir de la proxima reunion"
+    )
+    # Y una fecha futura cuenta como vencida, sea cual sea su origen: es un
+    # campo mal poblado, no un dato muy fresco.
+    assert pipeline_ingesta.esta_vencido("COBRE_HG", "2026-09-17", "OK", date(2026, 8, 26))
+
+
+
+def test_una_fecha_futura_vence_hasta_a_las_tasas_de_politica():
+    """El caso que motivo todo esto, y que casi se escapa.
+
+    Las tasas de politica no tienen ventana de cadencia, asi que `esta_vencido`
+    salia temprano con False sin mirar la fecha. Justamente el driver que traia
+    una fecha futura -la tasa del BoJ, fechada con su proxima reunion- era uno
+    de ellos: el guardia no habria detectado la reincidencia.
+    """
+    hoy = date(2026, 8, 26)
+    assert pipeline_ingesta.esta_vencido("BOJ_POLICY_RATE", "2026-09-17", "OK", hoy)
+    assert pipeline_ingesta.esta_vencido("CHILE_TPM", "2026-12-01", "OK", hoy)
+    # Sigue sin envejecer por calendario hacia atras.
+    assert not pipeline_ingesta.esta_vencido("BOJ_POLICY_RATE", "2026-01-30", "OK", hoy)
+
+
+def test_una_fecha_ilegible_vence_aunque_la_serie_no_tenga_ventana():
+    hoy = date(2026, 8, 26)
+    assert pipeline_ingesta.esta_vencido("BOJ_POLICY_RATE", "no es una fecha", "OK", hoy)
