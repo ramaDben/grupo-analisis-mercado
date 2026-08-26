@@ -34,6 +34,33 @@ import extractor_europa_uk
 import extractor_commodities
 import extractor_japon
 
+# De mejor a peor. `OK_FALLBACK` no es un fallo -el dato esta- pero tampoco es
+# "salio del emisor primario", y esa diferencia es la que permite notar que una
+# fuente lleva semanas viviendo de su respaldo.
+ORDEN_STATUS = ["OK", "OK_FALLBACK", "ERROR_FALLBACK", "ERROR_STALE", "ERROR"]
+
+
+def peor_status(series: dict) -> str:
+    """El peor status entre las series de una fuente.
+
+    El estado miraba UNA serie testigo por fuente: Chile el Imacec, commodities
+    el cobre. Por eso una serie rota del BCCh y el Oro cayendo a su respaldo no
+    aparecian en ningun lado y las dos fuentes se reportaban OK.
+
+    Un estado que resume por muestreo no es un estado: es una serie con nombre
+    de fuente. Un status desconocido se trata como el peor, para que agregar un
+    estado nuevo no lo vuelva invisible por omision.
+    """
+    if not series:
+        return "ERROR"
+    peor = 0
+    for detalle in series.values():
+        actual = (detalle or {}).get("status", "OK")
+        peor = max(peor, ORDEN_STATUS.index(actual)
+                   if actual in ORDEN_STATUS else len(ORDEN_STATUS) - 1)
+    return ORDEN_STATUS[peor]
+
+
 def calcular_hash_canonico(payload: dict) -> str:
     """Calcula un hash SHA-256 sobre un payload serializado con claves ordenadas."""
     payload_str = json.dumps(payload, sort_keys=True, ensure_ascii=False)
@@ -287,10 +314,15 @@ def ejecutar_pipeline(forzar: bool = False) -> dict:
         "hay_novedades": hay_novedades,
         "novedades_detalle": novedades_detalle,
         "status_por_fuente": {
-            "usa": usa_data.get("tesoro_status", "OK"),
-            "chile": chile_data.get("series", {}).get("IMACEC_TOTAL", {}).get("status", "OK"),
-            "europa_uk": eu_data.get("series", {}).get("BCE_DFR", {}).get("status", "OK"),
-            "commodities": comm_data.get("commodities", {}).get("COBRE_COMEX", {}).get("status", "OK"),
+            # `usa` suma dos cosas: el Tesoro (las recompras) y las series de
+            # FRED (la curva), que se reportan por separado.
+            "usa": peor_status({
+                "tesoro": {"status": usa_data.get("tesoro_status", "OK")},
+                **usa_data.get("curva_rendimientos_yields", {}),
+            }),
+            "chile": peor_status(chile_data.get("series", {})),
+            "europa_uk": peor_status(eu_data.get("series", {})),
+            "commodities": peor_status(comm_data.get("commodities", {})),
             "japon": "OK" if japon_data.get("indicadores_financieros", {}).get("jgb_10y_yield") is not None else "ERROR"
         },
         # Motivo de cada fuente degradada. Va aparte de `status_por_fuente`
