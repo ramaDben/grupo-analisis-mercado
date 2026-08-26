@@ -621,20 +621,24 @@ def _sesgos_playbook() -> tuple[dict[str, Any], list[str]]:
     avisos: list[str] = []
     sesgos: dict[str, Any] = {}
     try:
-        from market_data_mcp.bias_reader import cargar_macro_bias, VALID_SYMBOLS
+        from market_data_mcp.bias_reader import (
+            TICKER_MT5,
+            VALID_SYMBOLS,
+            cargar_macro_bias,
+        )
     except Exception as exc:  # noqa: BLE001
         return {}, [f"sesgo del Playbook no disponible ({exc.__class__.__name__})"]
 
     # El Playbook nombra WTI y US100; el catálogo técnico usa el símbolo del
     # broker (WTI.spot, US100.spot). Sin traducir, el gate no encontraría la
-    # ficha del activo que está evaluando y quedaría ciego sin avisar.
-    equivalencias = {"WTI": "WTI.spot", "US100": "US100.spot"}
+    # ficha del activo que está evaluando y quedaría ciego sin avisar. La tabla
+    # vive en bias_reader, junto a VALID_SYMBOLS: es la misma pregunta.
     for sym in sorted(VALID_SYMBOLS - {"ALL"}):
         res = cargar_macro_bias(sym)
         if "error" in res:
             avisos.append(f"sesgo de {sym} no disponible ({res['error']})")
             continue
-        sesgos[equivalencias.get(sym, sym)] = res
+        sesgos[TICKER_MT5.get(sym) or sym] = res
     if avisos:
         avisos.append(
             "gate de prohibiciones del Playbook parcialmente ciego: correr "

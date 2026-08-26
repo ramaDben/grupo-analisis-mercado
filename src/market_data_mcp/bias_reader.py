@@ -21,6 +21,22 @@ CONFIG_FILE_DEFAULT = BASE_DIR / "config" / "playbook_config.yaml"
 
 VALID_SYMBOLS = {"ALL", "USDCLP", "XAUUSD", "WTI", "BRENT", "US100"}
 
+# El Playbook nombra sus fichas con el símbolo genérico del activo; el catálogo
+# técnico usa el símbolo del broker. Sin traducir, quien cruce ficha y precio
+# busca un ticker que MT5 no conoce y se queda ciego sin enterarse.
+#
+# `BRENT` mapea a None a propósito y no se omite: el broker no ofrece Brent, así
+# que la ausencia es un hecho del catálogo y no un olvido. Un `.get()` sobre un
+# dict sin la clave devuelve None igual, pero deja al lector sin saber si el
+# activo falta porque nadie lo agregó todavía.
+TICKER_MT5: dict[str, str | None] = {
+    "USDCLP": "USDCLP",
+    "XAUUSD": "XAUUSD",
+    "WTI": "WTI.spot",
+    "US100": "US100.spot",
+    "BRENT": None,
+}
+
 
 def cargar_config_staleness(config_path: Path | None = None) -> dict[str, float]:
     """Carga los umbrales de staleness desde el YAML o usa valores por defecto."""

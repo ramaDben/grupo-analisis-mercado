@@ -3,6 +3,7 @@ import re
 import base64
 import markdown
 from pathlib import Path
+from urllib.parse import unquote
 from playwright.sync_api import sync_playwright
 import pypdf
 
@@ -422,6 +423,32 @@ img {{
 
 
 
+def _absolutizar_imagenes(html: str, base: Path) -> str:
+    """Resuelve los `src` relativos contra la carpeta del markdown.
+
+    Hace falta porque el HTML no se renderiza donde vive el markdown: se escribe
+    en `scratch/temp_informe_diseno.html` y se navega con `file://`, asi que un
+    `src="graficos/oro.png"` se busca dentro de `scratch/` y no aparece. El
+    navegador no considera eso un error — dibuja el hueco y sigue —, de modo que
+    el PDF sale con los graficos ausentes y sin que nada lo avise. Es el mismo
+    fallo que ya tuvo `marca.css` con Playwright.
+
+    Una ruta que no existe en disco se deja intacta a proposito: si el markdown
+    apunta a un archivo equivocado, conviene que se vea el hueco en la revision
+    y no que quede convertido en una ruta absoluta igual de rota.
+    """
+    def _sub(m):
+        crudo = m.group(2)
+        if re.match(r"^(?:[a-zA-Z][a-zA-Z0-9+.-]*:|//|/|data:)", crudo):
+            return m.group(0)  # absoluta, con esquema o data URI: no se toca
+        destino = (base / unquote(crudo)).resolve()
+        if not destino.is_file():
+            return m.group(0)
+        return f'{m.group(1)}{destino.as_uri()}{m.group(3)}'
+
+    return re.sub(r'(<img[^>]*\ssrc=")([^"]+)(")', _sub, html)
+
+
 def crear_pdf(
     md_path: str = None,
     out_path: str = None,
@@ -463,6 +490,7 @@ def crear_pdf(
 
     md_text = md_file.read_text(encoding="utf-8")
     html_content = markdown.markdown(md_text, extensions=['tables', 'fenced_code'])
+    html_content = _absolutizar_imagenes(html_content, md_file.parent)
 
     tmp_html = RAIZ / "scratch" / "temp_informe_diseno.html"
     out_pdf.parent.mkdir(parents=True, exist_ok=True)
