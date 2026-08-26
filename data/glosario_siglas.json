@@ -194,5 +194,17 @@
       "Bond Auction",
       "Bill Auction"
     ]
+  },
+  "Personal Spending": {
+    "nombre_es": "Gasto personal",
+    "explicacion": "Mide cuánto gastaron las familias en EE.UU. en bienes y servicios; refleja el dinamismo del consumo interno."
+  },
+  "Crude Oil Inventories": {
+    "nombre_es": "Inventarios de petróleo crudo (EIA)",
+    "explicacion": "Informe semanal oficial del gobierno de EE.UU. sobre las reservas comerciales de petróleo; mueve con fuerza el WTI."
+  },
+  "Cushing Crude Oil Inventories": {
+    "nombre_es": "Inventarios de crudo en Cushing",
+    "explicacion": "Nivel de almacenamiento de petróleo en Cushing, Oklahoma (punto de entrega del contrato WTI)."
   }
 }

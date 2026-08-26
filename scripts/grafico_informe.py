@@ -244,7 +244,7 @@ def construir_grafico(
         titulo += "\n" + "\n".join(lineas)
     ax.set_title(titulo, fontsize=9.5, fontweight="bold", color=c["texto"],
                  pad=7, loc="left")
-    leg = ax.legend(loc="best", frameon=True, facecolor=c["fondo"],
+    leg = ax.legend(loc="lower left", frameon=True, facecolor=c["fondo"],
                     edgecolor=c["borde"], fontsize=7, framealpha=0.93,
                     ncol=2, columnspacing=1.1, handlelength=1.8)
     for t in leg.get_texts():
