@@ -136,7 +136,8 @@
       "drivers": ["flujos de ETFs de Ethereum", "actividad y comisiones de la red", "tasas Fed", "regulación cripto", "apetito por riesgo"],
       "temporalidades": ["4H", "1H"],
       "horario_mercado": "24h",
-      "rotacion_diaria": false
+      "rotacion_diaria": false,
+      "imagen": "assets/activos/eth.jpg"
     },
     {
       "ticker": "SOL/USD",
@@ -150,7 +151,8 @@
       "drivers": ["flujos de ETFs de Solana", "actividad de la red Solana", "apetito por riesgo cripto", "tasas Fed"],
       "temporalidades": ["4H", "1H"],
       "horario_mercado": "24h",
-      "rotacion_diaria": false
+      "rotacion_diaria": false,
+      "imagen": "assets/activos/sol.jpg"
     },
     {
       "ticker": "LTC/USD",
@@ -164,7 +166,8 @@
       "drivers": ["correlación con Bitcoin", "apetito por riesgo cripto", "tasas Fed"],
       "temporalidades": ["4H", "1H"],
       "horario_mercado": "24h",
-      "rotacion_diaria": false
+      "rotacion_diaria": false,
+      "imagen": "assets/activos/ltc.jpg"
     },
     {
       "ticker": "ADA/USD",
@@ -178,7 +181,8 @@
       "drivers": ["correlación con Bitcoin", "desarrollo del ecosistema Cardano", "apetito por riesgo cripto"],
       "temporalidades": ["4H", "1H"],
       "horario_mercado": "24h",
-      "rotacion_diaria": false
+      "rotacion_diaria": false,
+      "imagen": "assets/activos/ada.jpg"
     },
     {
       "ticker": "DOGE/USD",
@@ -192,7 +196,8 @@
       "drivers": ["menciones en redes sociales y sentimiento de retail", "correlación con Bitcoin", "apetito por riesgo cripto"],
       "temporalidades": ["4H", "1H"],
       "horario_mercado": "24h",
-      "rotacion_diaria": false
+      "rotacion_diaria": false,
+      "imagen": "assets/activos/doge.jpg"
     }
   ],
 
@@ -228,7 +233,8 @@
       "temporalidades": ["4H", "1H"],
       "horario_mercado": "09:30-16:00 ET (10:30-17:00 CLT)",
       "rotacion_diaria": true,
-      "componentes_clave": ["#AAPL", "#MSFT", "#NVDA", "#JPM", "#BAC"]
+      "componentes_clave": ["#AAPL", "#MSFT", "#NVDA", "#JPM", "#BAC"],
+      "imagen": "assets/activos/us500.jpg"
     },
     {
       "ticker": "US30",
@@ -244,7 +250,8 @@
       "temporalidades": ["4H", "1H"],
       "horario_mercado": "09:30-16:00 ET (10:30-17:00 CLT)",
       "rotacion_diaria": true,
-      "componentes_clave": ["#BA", "#CAT", "#GS", "#JPM"]
+      "componentes_clave": ["#BA", "#CAT", "#GS", "#JPM"],
+      "imagen": "assets/activos/us30.jpg"
     }
   ],
 
@@ -309,7 +316,8 @@
         "drivers": ["tasas Fed", "crédito bancario y pendiente de la curva 2s10s", "ciclo económico de EE.UU.", "earnings de empresas pequeñas"],
         "temporalidades": ["4H", "1H"],
         "horario_mercado": "09:30-16:00 ET (convertir con scripts/hora_chile.ps1: el desfase con Chile cambia con el horario de verano)",
-        "rotacion_diaria": false
+        "rotacion_diaria": false,
+        "imagen": "assets/activos/iwm.jpg"
       },
       {
         "ticker": "SOXX",
