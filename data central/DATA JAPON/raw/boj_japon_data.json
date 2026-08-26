@@ -1,40 +1,36 @@
 {
   "pais": "Japón",
-  "timestamp_actualizacion": "2026-08-25T17:55:10.602100",
+  "timestamp_actualizacion": "2026-08-25T23:35:28.561393",
   "fuentes_oficiales": {
     "bonos_soberanos": "Ministerio de Finanzas de Japón (Ministry of Finance - MOF)",
     "inflacion": "Oficina de Estadísticas de Japón (Statistics Bureau / MIC - stat.go.jp)",
     "politica_monetaria": "Banco de Japón (Bank of Japan - BOJ - boj.or.jp)"
   },
   "indicadores_financieros": {
-    "jgb_10y_yield": 2.887,
+    "jgb_10y_yield": 2.897,
     "us_10y_yield": 4.639,
-    "yield_spread_us_jp": 1.752,
-    "yield_spread_bps": 175.2,
-    "usd_jpy_spot": 159.197,
-    "mof_fecha_registro": "2026-08-24",
+    "yield_spread_us_jp": 1.742,
+    "yield_spread_bps": 174.2,
+    "usd_jpy_spot": 158.913,
+    "mof_fecha_registro": "2026-08-25",
     "curva_jgb_mof": {
-      "1年": 1.437,
-      "2年": 1.685,
-      "3年": 1.824,
-      "4年": 2.013,
-      "5年": 2.155,
-      "6年": 2.292,
-      "7年": 2.429,
-      "8年": 2.603,
-      "9年": 2.741,
-      "10年": 2.887,
-      "15年": 3.449,
-      "20年": 3.748,
-      "25年": 4.045,
-      "30年": 4.036,
-      "40年": 4.067
+      "1年": 1.447,
+      "2年": 1.684,
+      "3年": 1.836,
+      "4年": 2.023,
+      "5年": 2.167,
+      "6年": 2.305,
+      "7年": 2.443,
+      "8年": 2.616,
+      "9年": 2.754,
+      "10年": 2.897,
+      "15年": 3.461,
+      "20年": 3.764,
+      "25年": 4.055,
+      "30年": 4.04,
+      "40年": 4.06
     },
     "historico_jgb_mof": [
-      {
-        "fecha": "2026-08-03",
-        "jgb_10y": 2.824
-      },
       {
         "fecha": "2026-08-04",
         "jgb_10y": 2.848
@@ -90,6 +86,10 @@
       {
         "fecha": "2026-08-24",
         "jgb_10y": 2.887
+      },
+      {
+        "fecha": "2026-08-25",
+        "jgb_10y": 2.897
       }
     ]
   },

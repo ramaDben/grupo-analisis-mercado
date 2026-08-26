@@ -30,10 +30,17 @@ FRED_API_KEY = os.getenv("FRED_API_KEY", "")
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), reraise=True)
 def extraer_buybacks_tesoro() -> list:
-    """Extrae las operaciones de recompra de bonos del dataset oficial de Fiscal Data."""
-    url = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/treasury_securities_buybacks"
+    """Extrae las operaciones de recompra de bonos del dataset oficial de Fiscal Data.
+
+    El dataset es `buybacks_operations` y vive en v1. `treasury_securities_buybacks`
+    no existe en la API: devuelve 404 en v1 y en v2, y no figura en el catalogo.
+    Su campo de fecha es `operation_date` y no `record_date`, que es el nombre
+    generico de otros datasets de Fiscal Data; con ese nombre la API responde 400
+    "Invalid query parameter", o sea el mismo fallo por otra causa.
+    """
+    url = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/buybacks_operations"
     params = {
-        "sort": "-record_date",
+        "sort": "-operation_date",
         "page[size]": "20"
     }
     resp = requests.get(url, params=params, timeout=15)
@@ -120,6 +127,10 @@ def ejecutar_extraccion_usa() -> dict:
         print(f"[WARN] Error extrayendo Buybacks Tesoro: {e}")
         resultado["buybacks_operaciones"] = existente.get("buybacks_operaciones", [])
         resultado["tesoro_status"] = "ERROR_FALLBACK"
+        # El motivo viaja con el dato. Imprimirlo por consola no alcanza: el
+        # pipeline corre desatendido y esa salida no queda en ningun lado, asi
+        # que el fallo se lee despues como un "ERROR_FALLBACK" sin causa.
+        resultado["tesoro_error"] = f"{type(e).__name__}: {e}"
 
     # 2. Extraer Series FRED (Curva y Tasas)
     series_map = {

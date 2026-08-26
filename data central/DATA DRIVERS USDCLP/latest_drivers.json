@@ -1,5 +1,5 @@
 {
-  "timestamp_consolidacion": "2026-08-25T21:55:10.605624+00:00",
+  "timestamp_consolidacion": "2026-08-26T03:35:28.564041+00:00",
   "drivers": {
     "US_10Y_TREASURY": {
       "valor": 4.7,
@@ -14,7 +14,7 @@
       "is_stale": false
     },
     "COBRE_HG": {
-      "valor": 6.711,
+      "valor": 6.759,
       "unidad": "USD/lb",
       "fecha_dato": "2026-08-25",
       "is_stale": false
@@ -26,7 +26,7 @@
       "is_stale": false
     },
     "ORO_SPOT": {
-      "valor": 4715.9,
+      "valor": 4706.9,
       "unidad": "USD/oz",
       "fecha_dato": "2026-08-25",
       "is_stale": false
@@ -52,26 +52,26 @@
     "BOJ_POLICY_RATE": {
       "valor": 1.0,
       "unidad": "%",
-      "fecha_dato": "",
-      "is_stale": true
+      "fecha_dato": "2026-09-17",
+      "is_stale": false
     },
     "JAPAN_CORE_CPI_YOY": {
-      "valor": null,
+      "valor": 2.7,
       "unidad": "%",
-      "fecha_dato": null,
-      "is_stale": true
+      "fecha_dato": "Julio 2026",
+      "is_stale": false
     },
     "JGB_10Y_YIELD": {
-      "valor": null,
+      "valor": 2.897,
       "unidad": "%",
-      "fecha_dato": null,
-      "is_stale": true
+      "fecha_dato": "2026-08-25",
+      "is_stale": false
     },
     "USD_JPY": {
-      "valor": null,
+      "valor": 158.913,
       "unidad": "JPY",
-      "fecha_dato": null,
-      "is_stale": true
+      "fecha_dato": "2026-08-25",
+      "is_stale": false
     }
   }
 }
