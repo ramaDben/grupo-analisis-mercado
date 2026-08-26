@@ -189,6 +189,8 @@ def preparar(
         json.dumps(resultado, ensure_ascii=False, indent=2), encoding="utf-8"
     )
 
+    barridos = limpiar_payloads(destino)
+
     payloads: list[dict[str, Any]] = []
     problemas: list[str] = []
     for i, sel in enumerate(resultado["seleccion"], 1):
@@ -196,6 +198,15 @@ def preparar(
         if not activo or not activo.get("imagen"):
             problemas.append(
                 f"{sel['ticker']} no tiene imagen declarada: su pieza no se puede rendir"
+            )
+            continue
+        if not activo.get("unidad"):
+            # Se excluye en vez de reventar, igual que con la imagen: una tanda
+            # que se cae entera por un activo mal declarado es peor que una
+            # tanda de dos piezas que dice a quien dejo afuera y por que.
+            problemas.append(
+                f"{sel['ticker']} no declara `unidad` en config/activos.json: "
+                "la volatilidad quedaria sin moneda"
             )
             continue
         try:
@@ -216,7 +227,13 @@ def preparar(
         "directorio": str(destino),
         "payloads": payloads,
         "problemas": problemas,
-        "avisos": resultado["avisos"],
+        # El barrido se informa: si una corrida anterior dejo piezas y estas
+        # desaparecen sin decirlo, el director no puede distinguir "se limpio"
+        # de "nunca se genero".
+        "avisos": resultado["avisos"] + (
+            [f"barridos {len(barridos)} payload(s) de una corrida anterior: "
+             + ", ".join(barridos)] if barridos else []
+        ),
         "campos_por_escribir": list(CAMPOS_EDITORIALES),
     }
 
@@ -238,6 +255,27 @@ def _ruta_story(activo_slug: str, hora: str, fecha: str) -> Path:
     if salida.returncode != 0:
         raise RuntimeError(f"ruta_story.ps1 fallo: {salida.stderr.strip()}")
     return Path(salida.stdout.strip())
+
+
+def limpiar_payloads(directorio: Path) -> list[str]:
+    """Borra los payloads de una corrida anterior de la MISMA tanda.
+
+    `rendir()` toma todos los `.json` sin prefijo `_` del directorio, no una
+    lista explicita. Sin este barrido, volver a preparar -por un reintento, o
+    porque el escaner eligio distinto al mirar de nuevo- deja los viejos al
+    lado de los nuevos y la tanda sale con mas de 3 piezas, algunas de activos
+    ya descartados y con precios de horas antes.
+
+    El prefijo `_` marca lo que no es pieza (`_screener.json`, la trazabilidad
+    de por que se eligio cada activo) y se conserva.
+    """
+    barridos = []
+    for archivo in directorio.glob("*.json"):
+        if archivo.name.startswith("_"):
+            continue
+        archivo.unlink()
+        barridos.append(archivo.name)
+    return sorted(barridos)
 
 
 def rendir(directorio: Path) -> dict[str, Any]:
