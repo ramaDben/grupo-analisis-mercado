@@ -21,6 +21,9 @@ stories = ["playwright"]
 # Tests de visibilidad: OCR para verificar que elementos críticos aparecen en PNG
 # (uv sync --extra stories-test)
 stories-test = ["playwright", "easyocr", "pillow"]
+# Graficos del informe de la jornada: matplotlib, opcional por el mismo criterio
+# que `stories` — el core del MCP no lo necesita y no se fuerza en cada entorno.
+informe = ["matplotlib"]
 
 [dependency-groups]
 dev = [

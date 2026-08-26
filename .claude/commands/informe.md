@@ -33,6 +33,29 @@ informe **estampa el aviso en la primera página** diciendo que va sin el sesgo 
 que ninguna cifra debe leerse como lectura suya. La decisión de publicar con datos vencidos
 es del director; que el lector lo sepa, no.
 
+### Los gráficos salen solos
+
+`--preparar` dibuja un gráfico por activo del Playbook y lo referencia bajo su bloque en
+la sección 02. Sale del terminal, no de un archivo aparte: la serie de cierres la trae
+`scripts/serie_mt5.py` y los niveles `analizar_activo`, así que si MT5 está cerrado el
+informe se emite **sin imágenes** y lo dice en los avisos, en vez de caerse o dibujar algo
+plausible.
+
+Requiere `matplotlib`, que es dependencia opcional:
+
+```bash
+uv sync --extra informe        # una vez
+```
+
+Dos cosas que conviene saber antes de que llamen la atención:
+
+- **Brent no lleva gráfico.** El broker no ofrece el símbolo, así que no hay serie que
+  pedir. Como comparte lectura con el WTI, el bloque agrupado se queda con el del WTI y el
+  aviso lo dice con esas palabras.
+- **El subtítulo del gráfico es el sesgo del activo**, tomado de la misma frase que ya está
+  en el texto. Si cambia la traducción de un matiz, cambian los dos a la vez: imagen y
+  párrafo no pueden decir cosas distintas del mismo activo en la misma página.
+
 ## PASO 2 — Escribir el análisis
 
 El markdown trae 4 secciones marcadas con `[[ESCRIBIR]]`. Las tablas son datos; el análisis
@@ -57,8 +80,8 @@ y vuelve a correr `--preparar`.
 ## PASO 3 — Compilar
 
 ```bash
-uv run --extra stories --with markdown --with pypdf python scripts/pipeline_informe.py \
-  --tipo apertura --rendir data/informes/<dir>
+uv run --extra stories --extra informe --with markdown --with pypdf \
+  python scripts/pipeline_informe.py --tipo apertura --rendir data/informes/<dir>
 ```
 
 Produce el PDF A4 con la maqueta institucional. Si queda una sola marca `[[ESCRIBIR]]`, se

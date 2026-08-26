@@ -116,6 +116,17 @@ en agosto y 11:30 CLST en diciembre. Un cronograma escrito en hora chilena descr
 un mercado que ya cerró. `scripts/screener_gi.py` deriva la tanda de la hora de Nueva York y
 comunica siempre en hora de Chile.
 
+**El informe de apertura lleva un gráfico por activo.** `scripts/grafico_informe.py`
+dibuja la serie real del terminal (cierres de `serie_mt5.py`, niveles de `analizar_activo`)
+con sus medias de 50 y 100 días, y el pipeline lo referencia bajo el bloque de cada activo.
+Nunca se dibuja un sustituto: sin terminal, el informe sale sin imágenes y lo dice en los
+avisos. Es la diferencia con `scripts/generar_graficos_drivers.py`, que tiene las series
+escritas a mano y produce piezas de aspecto institucional a partir de números que nadie
+midió. Requiere `uv sync --extra informe` (matplotlib es opcional, mismo criterio que
+`stories`). Brent no tiene gráfico porque el broker no ofrece el símbolo, y el mapeo
+Playbook → ticker MT5 vive en `bias_reader.TICKER_MT5`, que es también el que usa el
+escáner.
+
 **Un PDF al día, no dos.** La skill `generar-reporte-editorial` reserva el PDF
 "estrictamente" para hitos de alta densidad y manda chat-first para piezas tácticas, por
 fatiga de descargas. La apertura sí va en PDF; el cierre es mensaje con gráfico.

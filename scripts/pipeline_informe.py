@@ -319,7 +319,102 @@ def _traducir_setup(token: str, glosario: dict[str, Any]) -> str:
     return (glosario.get("setups") or {}).get(token, token)
 
 
-def _lectura_por_activo(playbook: dict[str, Any], glosario: dict[str, Any]) -> str:
+def _frase_sesgo(a: dict[str, Any], glosario: dict[str, Any]) -> str:
+    """El sesgo de un activo en una frase de cliente, sin punto final.
+
+    Vive aparte porque la usan dos consumidores: la prosa de la seccion y el
+    subtitulo del grafico. Si cada uno la derivara por su cuenta, el dia que
+    cambie la traduccion de un matiz la imagen y el texto dirian cosas
+    distintas sobre el mismo activo, en la misma pagina.
+    """
+    sesgos = glosario.get("sesgos") or {}
+    matices_es = glosario.get("matices") or {}
+    etiqueta = str(a.get("sesgo_etiqueta", ""))
+    primera = etiqueta.split()[0] if etiqueta else ""
+    direccion = sesgos.get(primera, primera.lower())
+    matiz_crudo = etiqueta[len(primera):].strip(" /").strip()
+    matiz = matices_es.get(matiz_crudo.upper(), "")
+    if not matiz and matiz_crudo:
+        # Los rangos vienen como "RANGO (912 - 925)": se deja el numero, que
+        # es lo unico que el cliente necesita de ahi.
+        numeros = re.search(r"\(([^)]+)\)", matiz_crudo)
+        matiz = ("entre " + numeros.group(1).replace(" - ", " y ")) if numeros else matiz_crudo.lower()
+    frase = f"Hoy lo vemos {direccion}"
+    if matiz:
+        frase += f", {matiz}"
+    return frase
+
+
+def generar_graficos_activos(
+    playbook: dict[str, Any], glosario: dict[str, Any], destino: Path
+) -> tuple[dict[str, str], list[str]]:
+    """Un grafico por activo del Playbook, con la serie real del terminal.
+
+    Devuelve `{simbolo_playbook: ruta_relativa}` y los avisos de lo que no se
+    pudo dibujar. **Nunca lanza**: un informe sin graficos sigue siendo un
+    informe, mientras que uno que se cae por una imagen deja al director sin
+    nada a las ocho de la manana. Cada ausencia queda dicha en los avisos, que
+    es lo que la hace auditable en vez de invisible.
+
+    Brent no tiene grafico y no es un olvido: el broker no lo ofrece, asi que no
+    hay serie que pedir. Como comparte lectura con WTI, el bloque agrupado se
+    queda con el grafico del WTI.
+    """
+    avisos: list[str] = []
+    activos = (playbook or {}).get("activos") or {}
+    if not activos:
+        return {}, avisos
+
+    try:
+        sys.path.insert(0, str(RAIZ / "scripts"))
+        from grafico_informe import GraficoError, construir_grafico
+        from market_data_mcp import mt5_client
+        from market_data_mcp.analisis import analizar_activo
+        from market_data_mcp.bias_reader import TICKER_MT5
+    except ImportError as exc:
+        return {}, [
+            f"informe sin gráficos: no se pudo importar el generador ({exc}). "
+            "Instalar con `uv sync --extra informe` y correr con `--with MetaTrader5`."
+        ]
+
+    # `analizar_activo` no abre la conexion por su cuenta: sin esto responde
+    # MT5_UNAVAILABLE y los niveles saldrian vacios sin que se note.
+    try:
+        mt5_client.connect()
+    except Exception as exc:  # noqa: BLE001
+        return {}, [f"informe sin gráficos: MT5 no conectó ({exc.__class__.__name__})."]
+
+    salida: dict[str, str] = {}
+    for simbolo, a in activos.items():
+        ticker = TICKER_MT5.get(simbolo)
+        if not ticker:
+            avisos.append(f"{simbolo} sin gráfico: el broker no ofrece el símbolo.")
+            continue
+        niveles = analizar_activo(ticker, "D1")
+        if niveles.get("error"):
+            avisos.append(f"{simbolo}: niveles no disponibles ({niveles['error']}).")
+            niveles = {}
+        nombre = a.get("nombre", simbolo)
+        relativa = f"graficos/{simbolo.lower()}.png"
+        try:
+            construir_grafico(
+                ticker, nombre, destino / relativa,
+                timeframe="D1", tema="claro",
+                subtitulo=_frase_sesgo(a, glosario),
+                niveles=niveles,
+            )
+        except GraficoError as exc:
+            avisos.append(f"{simbolo} sin gráfico: {exc}")
+            continue
+        salida[simbolo] = relativa
+    return salida, avisos
+
+
+def _lectura_por_activo(
+    playbook: dict[str, Any],
+    glosario: dict[str, Any],
+    graficos: dict[str, str] | None = None,
+) -> str:
     """El sesgo por activo en prosa, no en una matriz de cinco columnas.
 
     Sigue el ritmo pedagógico que la skill de reporte editorial exige y que el
@@ -343,39 +438,25 @@ def _lectura_por_activo(playbook: dict[str, Any], glosario: dict[str, Any]) -> s
     if not activos:
         return "_Lectura por activo no disponible en esta corrida._"
 
-    sesgos = glosario.get("sesgos") or {}
-    matices_es = glosario.get("matices") or {}
-
     def descripcion(a: dict[str, Any]) -> tuple[str, list[str], list[str]]:
-        etiqueta = str(a.get("sesgo_etiqueta", ""))
-        primera = etiqueta.split()[0] if etiqueta else ""
-        direccion = sesgos.get(primera, primera.lower())
-        matiz_crudo = etiqueta[len(primera):].strip(" /").strip()
-        matiz = matices_es.get(matiz_crudo.upper(), "")
-        if not matiz and matiz_crudo:
-            # Los rangos vienen como "RANGO (912 - 925)": se deja el número, que
-            # es lo único que el cliente necesita de ahí.
-            numeros = re.search(r"\(([^)]+)\)", matiz_crudo)
-            matiz = ("entre " + numeros.group(1).replace(" - ", " y ")) if numeros else matiz_crudo.lower()
-        frase = f"Hoy lo vemos {direccion}"
-        if matiz:
-            frase += f", {matiz}"
-        return frase + ".", (
+        return _frase_sesgo(a, glosario) + ".", (
             [_traducir_setup(s, glosario) for s in (a.get("setups_permitidos") or [])]
         ), (
             [_traducir_setup(s, glosario) for s in (a.get("setups_prohibidos") or [])]
         )
 
     # Agrupar los activos cuya lectura es identica palabra por palabra.
-    grupos: dict[tuple, list[str]] = {}
+    grupos: dict[tuple, list[tuple[str, str]]] = {}
     for ticker, a in activos.items():
         clave = descripcion(a)
         clave_hash = (clave[0], tuple(clave[1]), tuple(clave[2]))
-        grupos.setdefault(clave_hash, []).append(a.get("nombre", ticker))
+        grupos.setdefault(clave_hash, []).append((ticker, a.get("nombre", ticker)))
 
     bloques: list[str] = []
     hubo_prohibiciones = False
-    for (frase, permitidos, prohibidos), nombres in grupos.items():
+    graficos = graficos or {}
+    for (frase, permitidos, prohibidos), miembros in grupos.items():
+        nombres = [n for _, n in miembros]
         titulo = nombres[0] if len(nombres) == 1 else " y ".join(
             [", ".join(nombres[:-1]), nombres[-1]]
         )
@@ -387,6 +468,12 @@ def _lectura_por_activo(playbook: dict[str, Any], glosario: dict[str, Any]) -> s
         if prohibidos:
             hubo_prohibiciones = True
             bloque += "\n\n**Lo que hoy no hacemos:** " + "; ".join(prohibidos) + "."
+        # El grafico cierra el bloque: primero se dice que pasa y despues se
+        # muestra. Al reves, el cliente mira la imagen sin saber que buscar.
+        for simbolo, nombre in miembros:
+            ruta = graficos.get(simbolo)
+            if ruta:
+                bloque += f"\n\n![{nombre}: precio de los últimos meses]({ruta})"
         bloques.append(bloque)
 
     texto = "\n\n".join(bloques)
@@ -495,13 +582,20 @@ def preparar(tipo: str, con_datos_viejos: bool = False) -> dict[str, Any]:
 
     glosario = cargar_glosario_motor()
 
+    # Los graficos se dibujan antes de componer el texto porque la seccion
+    # los referencia. Si el terminal no responde, `generar_graficos_activos`
+    # devuelve el diccionario vacio y sus motivos: el informe sale sin
+    # imagenes en vez de no salir.
+    graficos, av = generar_graficos_activos(playbook, glosario, destino)
+    avisos.extend(av)
+
     secciones = [
         "\n".join(encabezado),
         "## 02. El escenario de hoy\n\n"
         + (_bloque_regimen(regimen, glosario) + "\n\n" if regimen else "")
         + f"{MARCA_EDITORIAL} Una o dos frases sobre cómo se traduce ese escenario "
           "en la jornada de hoy.\n\n"
-        + _lectura_por_activo(playbook, glosario),
+        + _lectura_por_activo(playbook, glosario, graficos),
         "## 03. Qué están haciendo las tasas en EE.UU.\n\n"
         + f"{MARCA_EDITORIAL} Una frase de entrada: hacia dónde se movieron las tasas "
           "y por qué le importa a alguien que no opera bonos.\n\n"
@@ -541,6 +635,7 @@ def preparar(tipo: str, con_datos_viejos: bool = False) -> dict[str, Any]:
         "markdown": str(md),
         "avisos": avisos,
         "secciones_por_escribir": md.read_text(encoding="utf-8").count(MARCA_EDITORIAL),
+        "graficos": len(graficos),
         "canal": "PDF institucional A4" if tipo == "apertura" else "chat-first (mensaje + grafico)",
     }
 
