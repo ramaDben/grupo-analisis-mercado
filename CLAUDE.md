@@ -247,22 +247,22 @@ Cerrar cada mensaje de niveles/análisis con este bloque:
 🔴 Bajo [soporte] → presión vendedora
 ```
 
-### Registro y tono — profesional, técnico y con gancho operativo (OBLIGATORIO)
-Los análisis transmiten seriedad y credibilidad y, a la vez, generan interés y apetito por operar. **Se permite y se busca** enfatizar la tendencia, tomar postura direccional clara y redactar con tono persuasivo que invite a operar. Lo que sigue **prohibido** es el lenguaje extremo, catastrófico o demasiado coloquial (dramatizar el movimiento, atribuir "sensaciones" al mercado, vaticinar catástrofes, jerga de barrio). En una frase: **énfasis direccional sí, dramatización no**. Se describe el mercado con terminología financiera objetiva, comprensible para el cliente y con gancho.
+### Registro y tono — cercano, cotidiano, pedagógico y con gancho operativo (OBLIGATORIO)
+El propósito editorial de Grupo Inteligencia es **traducir lo complejo a un lenguaje cotidiano, cercano y comprensible para cualquier persona**, como un profesor que explica con paciencia y claridad. Los análisis transmiten confianza y claridad, generando apetito por comprender y operar el mercado. **Se permite y se busca** enfatizar la dirección, tomar postura clara y explicar los problemas macroeconómicos de forma sencilla y aplicable. Lo que sigue **prohibido** es el lenguaje extremo, catastrófico o la jerga acartonada/distante (dramatizar el movimiento, atribuir "sensaciones" al mercado, vaticinar catástrofes, tecnicismos vacíos sin traducción). En una frase: **claridad pedagógica y énfasis direccional sí, dramatización ni jerga impenetrable no**.
 
-| ❌ Evitar (extremo/emocional/coloquial) | ✅ Usar (técnico/objetivo) |
+| ❌ Evitar (extremo/emocional/jerga oscura) | ✅ Usar (cercano/cotidiano/objetivo) |
 |---|---|
-| "el oro se va a derrumbar" | "sesgo bajista" / "expectativas de corrección" |
-| "el mercado tiene una sensación pésima" | "presión vendedora" / "debilidad en el precio" |
-| "esto se va a disparar / explotar" | "sesgo alcista" / "impulso comprador" |
-| "está volando / por las nubes" | "alta volatilidad" / "momentum alcista" |
-| "pánico" / "euforia" / "terror" | "aversión al riesgo" / "apetito por riesgo" |
+| "el oro se va a derrumbar" | "presión a la baja" / "espacio de corrección" |
+| "el mercado tiene una sensación pésima" | "más vendedores que compradores" / "debilidad" |
+| "esto se va a disparar / explotar" | "impulso comprador" / "fuerza al alza" |
+| "está volando / por las nubes" | "movimiento rápido" / "alta volatilidad" |
+| "pánico" / "euforia" / "terror" | "cautela en el mercado" / "búsqueda de refugio" |
 
 Reglas:
-- Enfatizar con dirección, sin dramatizar: hablar con fuerza de **sesgo, tendencia, momentum, presión, volatilidad, debilidad/fortaleza, corrección** y nombrar hacia dónde se dirige el activo, pero sin emociones atribuidas al mercado ni finales catastróficos.
-- Tomar postura: cada análisis nombra el escenario más probable (sesgo). Los escenarios siguen siendo condicionales (`🟢 sobre X → …`, `🔴 bajo Y → …`), nunca certezas absolutas ("se va a derrumbar"), pero sí señalan claramente la dirección de mayor probabilidad.
-- Profesional con gancho **≠** neutral sin dirección: un mensaje "objetivo" que no toma postura direccional está incompleto (ver Regla de oro del Principio fundamental).
-- Esto **no** habilita jerga sin explicar: si aparece un término técnico o una sigla, sigue siendo obligatorio explicarlo en voz novata (ver [estilo mensajes WhatsApp] y "Datos macro en español + Diccionario rápido"). Profesional ≠ inaccesible.
+- Traducir siempre lo macro a la vida cotidiana: explicar por qué un dato de inflación, tasas o petróleo afecta el bolsillo o la decisión de inversión de forma simple.
+- Enfatizar con dirección, sin dramatizar: hablar con claridad de **sesgo, tendencia, fuerza, freno, rebote, piso y techo**, nombrando hacia dónde se inclina la mayor probabilidad.
+- Tomar postura pedagógica: cada análisis nombra el escenario más probable (`🟢 sobre X → …`, `🔴 bajo Y → …`) sin rodeos ni ambigüedades, pero sin prometer certezas mágicas.
+- Si aparece un concepto técnico o sigla, **siempre** se explica en lenguaje simple (Regla de oro: si hay duda entre complicar o simplificar, siempre simplificar). Profesional = accesible y claro.
 
 ### Prohibido el guion largo como inciso (OBLIGATORIO en texto de cliente)
 En todo texto que lea un cliente —mensajes de WhatsApp, pies de Story, textos dentro de las piezas, guiones de venta— **nunca** se usa el guion largo `—` ni el medio `–` para abrir un inciso o una aposición ("el stop en 1.758,09 — para eso está"). Se reescribe con puntuación corriente: punto seguido, coma o dos puntos.
@@ -459,22 +459,10 @@ colapsaran, una pieza dorada bajista se leería como alcista dorada. Diseño com
 `docs/superpowers/specs/2026-08-04-rediseno-stories-gi-design.md`.
 
 Único renderer: `scripts/story_render.py`
-(payload JSON → HTML → PNG con Playwright headless). **Formato del lienzo**: el flag
-`--formato horizontal|vertical` elige entre 16:9 (1920×1080, por defecto) y 9:16 (1080×1920, para
-celular). El formato viaja por el CLI y **nunca** por el payload — el payload es contrato de
-contenido y el formato es presentación, así el **mismo payload rinde ambos**. Cada snapshot es un
-único archivo que se adapta con `@media (max-aspect-ratio: 1/1)`, en vez de tener un archivo por
-formato (evita que la versión vertical se desfase de la horizontal). Migradas a responsive:
-`templates/stories/postventa.html`, `templates/stories/alerta.html`,
-`templates/stories/operacion.html` y `templates/stories/calendario.html`; las otras 5 siguen solo en
-horizontal — una plantilla por Change, mismo criterio que las Fases B y C. Snapshots de marca:
-`templates/stories/alerta.html`, `templates/stories/quote.html`, `templates/stories/breaking.html`,
-`templates/stories/encuesta.html`, `templates/stories/edu.html`, `templates/stories/flash.html`,
-`templates/stories/postventa.html`, `templates/stories/operacion.html`,
-`templates/stories/dato_macro.html`, `templates/stories/recomendacion.html`,
-`templates/stories/oportunidad.html` y `templates/stories/calendario.html`. Las demás plantillas del canvas (Market Update, Indicador
-Macro, Trading Idea, Semanal, Carrusel "Oportunidades de la semana") llegan con los issues
-#111-#115 — ver `docs/design/stories-gi/plantillas-stories-gi.md` para el mapeo campo-por-campo.
+(payload JSON → HTML → PNG con Playwright headless). **Formato del lienzo y Regla de Formatos**:
+- **Horizontal 16:9 (`1920×1080`)**: Exclusivo para **`alerta` y piezas con gráficos técnicos MT5**, donde la amplitud temporal de velas es indispensable.
+- **Vertical 9:16 (`1080×1920`)**: **Obligatorio para toda imagen con carga textual y sin gráfico** (calendarios, agendas, guías pedagógicas `edu`, conceptos y breaking news). En vertical rige el criterio de ultra-legibilidad móvil del Brandkit: titulares Goldman 700 a 64px, tarjetas a 38px, cuerpo en 28-32px peso 600/700 y márgenes estrechos (~44px) para lectura natural en celular sin zoom.
+El formato viaja por el CLI (`--formato horizontal|vertical`) y **nunca** por el payload — el payload es contrato de contenido y el formato es presentación, así el **mismo payload rinde ambos**. Cada snapshot es un único archivo que se adapta con `@media (max-aspect-ratio: 1/1)`. Snapshots de marca vigentes: `templates/stories/alerta.html`, `templates/stories/breaking.html`, `templates/stories/dato_macro.html` y `templates/stories/calendario.html`. Las demás plantillas del canvas llegan con los issues #111-#115.
 
 **Paleta y color (una sola fuente).** Los colores viven en `templates/stories/marca.css` y los
 snapshots los consumen con `var(--rol)`; ningún hex se escribe a mano. Los tokens se nombran por
@@ -538,14 +526,12 @@ oscila, así que el cierre más parecido puede caer en cualquier punto de la ser
 terminal abierto y `MetaTrader5`, que no es dependencia del repo: se inyecta con
 `uv run --with MetaTrader5`.
 
-**Plantilla `operacion`** (comunica una operación del equipo, en estado `abierta` o `cerrada` según
-`estado_slug` del payload): es la única con un **paso previo** al renderer. Su gráfico de recorrido
-lo produce `scripts/story_grafico.py`, que traduce la serie de precios y los hitos de la
-operación al SVG del token `{{grafico}}` y se encadena por stdin/stdout:
+**Generación de Gráfico con `story_grafico.py`**: traduce la serie de precios y los hitos/niveles
+al SVG del token `{{grafico}}` y se encadena por stdin/stdout:
 ```bash
-uv run python scripts/story_grafico.py < operacion.json \
-  | uv run python scripts/story_render.py --template templates/stories/operacion.html \
-      --out "$(scripts/ruta_story.ps1 ...)" --formato vertical
+uv run python scripts/story_grafico.py < alerta.json \
+  | uv run python scripts/story_render.py --template templates/stories/alerta.html \
+      --out "$(scripts/ruta_story.ps1 ...)" --formato horizontal
 ```
 El payload de entrada lleva una clave `recorrido` = `{serie, marcadores}`; el script la consume y la
 reemplaza por `grafico`. El reparto es estricto: el script calcula **coordenadas** y el snapshot
@@ -783,7 +769,7 @@ grupo-analisis-mercado/
 **Solución (IMPLEMENTADA):** Embeber CSS directamente en cada plantilla HTML en bloques `<style>`, eliminando la dependencia de rutas externas.
 
 **Cómo se aplicó:**
-- Todas las plantillas (`oportunidad.html`, `alerta.html`, `recomendacion.html`, etc.) ahora incluyen `marca.css` y `piel.css` (si aplica) incrustados en `<style>` en el `<head>`.
+- Todas las plantillas (`alerta.html`, `dato_macro.html`, `calendario.html`, etc.) ahora incluyen `marca.css` y `piel.css` (si aplica) incrustados en `<style>` en el `<head>`.
 - Script de automatización: `scripts/embeber_css_plantillas_v3.py` (incrusta CSS en cualquier plantilla que lo use).
 
 **Impacto:**

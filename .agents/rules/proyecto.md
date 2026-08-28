@@ -143,13 +143,13 @@ Todo contenido se genera, se muestra al director y **espera su aprobación**. Al
 aprobar, se guarda con `scripts\ruta_mensaje.ps1` (mensajes) o
 `scripts\ruta_story.ps1` (imágenes) — nunca armes la ruta a mano.
 
-**Piezas públicas 100% limpias para clientes**: Los flujos y comandos públicos (`/alerta`, `/apertura`, `/dato_macro`, `/noticia`, `/señal`, `/oportunidad`, `/story`) generan **exclusivamente material para el cliente final** (mensaje de WhatsApp + Story visual de marca). Queda terminantemente excluida la generación automática de guiones o piezas internas para ejecutivos en estos flujos. Las herramientas internas quedan reservadas exclusivamente a los comandos dedicados `/ventas` y `/postventa`.
+**Piezas públicas 100% limpias para clientes**: Los flujos y comandos públicos (`/alerta`, `/apertura`, `/dato_macro`, `/noticia`, `/story`) generan **exclusivamente material para el cliente final** (mensaje de WhatsApp + Story visual de marca). Queda terminantemente excluida la generación automática de guiones o piezas internas para ejecutivos en estos flujos. Las herramientas internas quedan reservadas exclusivamente a los comandos dedicados `/ventas` y `/postventa`.
 
 El envío a WhatsApp lo hace el director copiando el texto. Tú no envías nada.
 
 ### La pieza se entrega completa
 
-Varios comandos producen **imagen y texto**, no una sola cosa. `/oportunidad`
+Varios comandos producen **imagen y texto**, no una sola cosa. `/alerta`
 entrega la Story más el mensaje de WhatsApp que la acompaña; `/dato_macro` en
 Modo resultado entrega la Story más su pie. Una imagen sin su texto llega muda al
 grupo: el pie es lo único que se ve en la notificación de WhatsApp antes de abrir
@@ -175,6 +175,16 @@ escenario) y `--sube`/`--baja` es la dirección del mercado. Si se colapsaran, u
 pieza dorada bajista se leería como alcista dorada.
 
 Verifica con `uv run python scripts/marca_tokens.py --check`.
+
+## 7.1. Norma de Formatos de Stories (Horizontal 16:9 vs Vertical 9:16)
+
+El formato del lienzo es obligatorio según el tipo de contenido y su carga técnica:
+
+1. **Horizontal 16:9 (`1920×1080`) — Exclusivo para Alertas con Gráficos**:
+   - Se utiliza **únicamente para `alerta` y piezas que incluyan gráficos técnicos MT5** (series temporales de velas H1), donde la horizontalidad es indispensable para proyectar la acción del precio y las líneas de soporte/resistencia sin aplastar el eje temporal.
+2. **Vertical 9:16 (`1080×1920`) — Obligatorio para Carga Textual sin Gráficos**:
+   - Se utiliza **obligatoriamente para calendarios, agendas, guías pedagógicas, conceptos didácticos y breaking news** (todas las piezas que lleven carga textual y no incluyan gráfico de mercado).
+   - **Criterio de Ultra-Legibilidad Móvil (Brandkit)**: Las piezas verticales 9:16 se diseñan para lectura nativa en celular (WhatsApp) sin necesidad de zoom. Deben usar tipografía a escala grande (titulares en Goldman 700 a 64px, tarjetas a 38px, cuerpo en 28-32px peso 600/700) y márgenes estrechos (~44px) para ocupar el 100% del ancho útil.
 
 ---
 

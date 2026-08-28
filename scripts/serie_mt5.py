@@ -6,11 +6,11 @@ Es el puente que faltaba entre dos piezas que ya existían y no se hablaban:
 medio no había nada, y por eso los gráficos de las Stories eran dibujos fijos
 que no correspondían al activo.
 
-    cat operacion.json \
+    cat alerta.json \
       | uv run python scripts/serie_mt5.py --ticker EURUSD --timeframe H1 --velas 60 \
       | uv run python scripts/story_grafico.py \
-      | uv run python scripts/story_render.py --template templates/stories/operacion.html \
-          --out data/stories/... --formato vertical
+      | uv run python scripts/story_render.py --template templates/stories/alerta.html \
+          --out data/stories/... --formato horizontal
 
 Entrada (stdin): el payload de la Story. Puede traer una clave `hitos` con los
 precios de la operación; el script los ubica en la serie por proximidad y los
