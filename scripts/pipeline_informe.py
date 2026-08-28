@@ -892,6 +892,7 @@ def rendir(
          "--header-left", f"{titulo.upper()} • {tag.upper()}",
          "--header-right", _fecha_es(datetime.now(tz=SANTIAGO)).upper(),
          "--date", _fecha_es(datetime.now(tz=SANTIAGO)),
+         "--analyst", "Área de Research & Estrategia",
          "--theme", "verde",
          # El informe de apertura lo lee un cliente. El maquetador trae el cuerpo
          # en 7,5-7,9 pt, bajo el piso de legibilidad impresa; esta escala lo deja

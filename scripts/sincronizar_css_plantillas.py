@@ -119,7 +119,12 @@ def sincronizar(check: bool = False) -> int:
             continue
 
         usa_piel = MARCADOR_PIEL in contenido
-        nuevo_bloque = bloque_embebido(usa_piel, reglas_marca, reglas_piel)
+        piel_para_plantilla = reglas_piel
+        if "estrictamente horizontal" in contenido:
+            piel_para_plantilla = re.sub(
+                r"@media\s*\(\s*max-aspect-ratio.*", "", reglas_piel, flags=re.DOTALL
+            ).strip()
+        nuevo_bloque = bloque_embebido(usa_piel, reglas_marca, piel_para_plantilla)
         nuevo, n = _BLOQUE.subn(lambda _m: nuevo_bloque, contenido, count=1)
         if n != 1:
             print(

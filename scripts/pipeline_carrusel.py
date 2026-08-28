@@ -77,15 +77,19 @@ def _slug_de_imagen(imagen: str) -> str:
     return Path(imagen).stem
 
 
-def _chip_categoria(clase: str, nombre_activo: str) -> str:
+def _chip_categoria(clase_o_cat: str, nombre_activo: str) -> str:
     etiquetas = {
+        "forex": "DIVISAS",
+        "commodities": "COMMODITIES",
         "forex_commodities": "COMMODITIES",
         "crypto": "CRIPTOMONEDAS",
         "indices": "ÍNDICES",
         "etfs": "ETF",
+        "etf": "ETF",
         "acciones": "ACCIONES",
     }
-    return f"{etiquetas.get(clase, 'MERCADO')} · {nombre_activo.upper()}"
+    cat = etiquetas.get(clase_o_cat.lower(), "MERCADO")
+    return f"{cat} · {nombre_activo.upper()}"
 
 
 def _serie_para(ticker: str) -> dict[str, Any]:
@@ -107,6 +111,7 @@ def construir_payload(
     imagen = activo_catalogo["imagen"]
     slug = _slug_de_imagen(imagen)
     alcista = seleccion["direccion"] == "ALCISTA"
+    cat_real = activo_catalogo.get("categoria", seleccion["clase"])
 
     def fmt(valor: float) -> str:
         return f"{valor:,.{digits}f}".replace(",", "@").replace(".", ",").replace("@", ".")
@@ -121,7 +126,7 @@ def construir_payload(
         "activo_slug": slug,
         "activo_imagen": imagen,
         "rotulo_activo": f"{activo_catalogo['nombre'].upper()} · {seleccion['ticker']}",
-        "chip_categoria": _chip_categoria(seleccion["clase"], activo_catalogo["nombre"]),
+        "chip_categoria": _chip_categoria(cat_real, activo_catalogo["nombre"]),
         "fecha_hora": ahora.strftime("%d %b %Y · %H:%M").upper(),
         "sesgo": "Alcista" if alcista else "Bajista",
         "tag_riesgo": "ALCISTA" if alcista else "BAJISTA",
@@ -179,10 +184,12 @@ def preparar(
     resultado = sc.escanear(tanda=tanda, top=top, solo_renderizables=solo_renderizables)
     ahora = datetime.now(tz=SANTIAGO)
     n_tanda = resultado["tanda"]
+    slug_sesion = resultado.get("sesion_slug", f"tanda{n_tanda}")
+    hora_str = ahora.strftime("%H-%M")
 
     catalogo = {a["ticker"]: a for a in sc.cargar_universo(solo_renderizables=False)}
 
-    destino = DIR_TRABAJO / f"{ahora.strftime('%Y-%m-%d')}_tanda{n_tanda}"
+    destino = DIR_TRABAJO / f"{ahora.strftime('%Y-%m-%d')}_{hora_str}_{slug_sesion}"
     destino.mkdir(parents=True, exist_ok=True)
 
     (destino / "_screener.json").write_text(
@@ -222,8 +229,12 @@ def preparar(
 
     return {
         "tanda": n_tanda,
+        "sesion_slug": slug_sesion,
         "nombre_tanda": resultado["nombre_tanda"],
+        "nombre_sesion": resultado.get("nombre_sesion", resultado["nombre_tanda"]),
+        "foco": resultado.get("foco", ""),
         "hora_chile_tanda": resultado["hora_chile_tanda"],
+        "hora_real": ahora.strftime("%H:%M"),
         "directorio": str(destino),
         "payloads": payloads,
         "problemas": problemas,
@@ -334,13 +345,14 @@ def rendir(directorio: Path) -> dict[str, Any]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Carrusel de la tanda: 3 Stories de alerta")
+    parser = argparse.ArgumentParser(description="Carrusel responsivo: Stories de alerta segun sesion y hora real")
     grupo = parser.add_mutually_exclusive_group(required=True)
     grupo.add_argument("--preparar", action="store_true",
                        help="corre el escaner y deja los payloads con lo editorial en blanco")
     grupo.add_argument("--rendir", type=Path, metavar="DIR",
                        help="rinde los payloads ya escritos de ese directorio")
-    parser.add_argument("--tanda", type=int, choices=sorted(sc.TANDAS))
+    parser.add_argument("--tanda", type=int, choices=sorted(sc.TANDAS),
+                        help="fuerza una tanda especifica (por defecto detecta la sesion y hora real)")
     parser.add_argument("--top", type=int, default=3,
                         help="tope de piezas (default 3: WhatsApp muestra 3 adjuntos sin el boton +2)")
     parser.add_argument("--todos", action="store_true",
@@ -355,7 +367,8 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
         res = preparar(tanda=args.tanda, top=args.top, solo_renderizables=not args.todos)
-        print(f"\nTANDA {res['tanda']} - {res['nombre_tanda']} ({res['hora_chile_tanda']} hora Chile)")
+        nombre = res.get("nombre_sesion", res["nombre_tanda"])
+        print(f"\nSESIÓN: {nombre} ({res['hora_real']} hrs hora Chile)")
         print(f"Directorio: {res['directorio']}")
         print(f"\nPAYLOADS ({len(res['payloads'])})")
         for p in res["payloads"]:
@@ -369,7 +382,7 @@ def main(argv: list[str] | None = None) -> int:
             for a in res["avisos"]:
                 print(f"  - {a}")
         print(f"\nFalta escribir en cada payload: {', '.join(res['campos_por_escribir'])}")
-        print(f"Despues: --rendir {res['directorio']}")
+        print(f"Despues: uv run --extra stories python scripts/pipeline_carrusel.py --rendir {res['directorio']}")
         return 0
 
     res = rendir(args.rendir)

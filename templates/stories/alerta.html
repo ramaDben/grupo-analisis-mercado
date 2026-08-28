@@ -12,6 +12,7 @@ Tipografía Goldman 700 para titulares y precios gigantes, y Plus Jakarta Sans p
 <style>
   /* ════ marca.css embebido ════ */
 :root {
+
   --fondo:          #000000;
   --fondo-acento:   #0E2420;
   --fondo-alt:      #0A0A0F;
@@ -28,35 +29,37 @@ Tipografía Goldman 700 para titulares y precios gigantes, y Plus Jakarta Sans p
   --baja-suave:     #F5A3A3;
   --aviso:          #FFB020;
 
-  --activo-oro:     #E8B44C;
-  --activo-wti:     #E8783C;
-  --activo-us100:   #4C86E8;
-  --activo-usdclp:  var(--acento);
-  --activo-bitcoin: #F7931A;
+  --activo-oro:    #E8B44C;
+  --activo-wti:    #E8783C;
+  --activo-us100:  #4C86E8;
+  --activo-usdclp: var(--acento);
+  --activo-bitcoin:#F7931A;
 
-  --activo-plata:   #C6CBD1;
-  --activo-meli:    #F2C14E;
+  --activo-plata:  #C6CBD1;
+  --activo-meli:   #F2C14E;
   --activo-tech-circuito: #4FB0C6;
 
-  --activo-usdjpy:  #B98A4A;
-  --activo-eurusd:  #6E7E96;
-  --activo-gbpusd:  #9E6B4A;
-  --activo-us500:   #6BA3D8;
-  --activo-us30:    #9C7B4E;
-  --activo-iwm:     #8F9BA8;
-  --activo-eth:     #7B7FE8;
-  --activo-sol:     #C158D6;
-  --activo-ltc:     #A8B2BF;
-  --activo-ada:     #3B6FD4;
-  --activo-doge:    #D9A22B;
+  --activo-usdjpy: #B98A4A;
+  --activo-eurusd: #6E7E96;
+  --activo-gbpusd: #9E6B4A;
+  --activo-us500:  #6BA3D8;
+  --activo-us30:   #9C7B4E;
+  --activo-iwm:    #8F9BA8;
+  --activo-eth:    #7B7FE8;
+  --activo-sol:    #C158D6;
+  --activo-ltc:    #A8B2BF;
+  --activo-ada:    #3B6FD4;
+  --activo-doge:   #D9A22B;
 
-  --font-sans: "Plus Jakarta Sans", "Segoe UI", "Noto Sans", Arial, sans-serif;
-  --font-display: "Goldman", "Plus Jakarta Sans", sans-serif;
-  --font-emoji: "Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji";
-  --texto-1:        #FFFFFF;
-  --texto-2:        #B0B5C0;
-  --texto-3:        #8E8A9C;
-  --texto-borde:    #E2E8F0;
+  --font-display:   "Goldman", sans-serif;
+  --font-titular:   "Goldman", sans-serif;
+  --font-sans:      "Plus Jakarta Sans", "Segoe UI", "Noto Sans", Arial, sans-serif;
+  --font-emoji:     "Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji";
+  --texto-1:        #F5F3F7;
+  --texto-2:        #A9A5B4;
+  --texto-3:        #6E6A7A;
+  --texto-borde:    #C9C5D4;
+  --texto-gris:     #8E8A9C;
   --blanco:         #FFFFFF;
 
   --filete:         var(--acento);
@@ -70,12 +73,12 @@ body {
 }
 body.sesgo-alcista, body.sesgo-compra {
   --direccion:        var(--sube);
-  --direccion-suave:  --sube-suave;
+  --direccion-suave:  var(--sube-suave);
   --fondo-direccion:  var(--fondo-sube);
 }
 body.sesgo-bajista, body.sesgo-venta {
   --direccion:        var(--baja);
-  --direccion-suave:  --baja-suave;
+  --direccion-suave:  var(--baja-suave);
   --fondo-direccion:  var(--fondo-baja);
 }
 
@@ -103,13 +106,122 @@ body.activo-doge    { --activo: var(--activo-doge); }
 .story {
   box-shadow: inset 0 0 0 var(--filete-ancho) var(--filete);
 }
-
-/* ════ Tipografías oficiales ════ */
+  /* ════ piel.css embebido ════ */
 @font-face { font-family: "Goldman"; src: url("fonts/goldman-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
 @font-face { font-family: "Goldman"; src: url("fonts/goldman-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 @font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/plus-jakarta-sans-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 @font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/plus-jakarta-sans-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
 @font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/plus-jakarta-sans-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/plus-jakarta-sans-800.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+@font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "DM Sans"; src: url("fonts/dm-sans-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+
+.foto-activo {
+  position: absolute; inset: 0 -72px 0 auto;
+  width: 58%;
+  z-index: 1;
+  object-fit: cover;
+  -webkit-mask-image:
+    linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.35) 22%, var(--fondo) 62%),
+    linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 62%, transparent 96%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.35) 22%, var(--fondo) 62%),
+    linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 62%, transparent 96%);
+  mask-composite: intersect;
+  filter: saturate(1.12) contrast(1.06) brightness(0.92);
+  pointer-events: none;
+}
+
+.foto-activo--fondo {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  -webkit-mask-image:
+    linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 58%, rgba(0,0,0,0.30) 100%);
+  mask-image:
+    linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 58%, rgba(0,0,0,0.30) 100%);
+  filter: saturate(0.82) contrast(0.94) brightness(0.36);
+  opacity: 0.55;
+}
+
+.ilustracion {
+  position: absolute; right: -16px; top: 37%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 520px;
+  filter: drop-shadow(0 0 90px color-mix(in srgb, var(--activo) 55%, transparent));
+  pointer-events: none;
+}
+
+.velo {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    linear-gradient(100deg, var(--fondo) 24%, rgba(0,0,0,0.88) 44%, rgba(0,0,0,0.26) 70%, rgba(0,0,0,0.58) 100%),
+    radial-gradient(58% 78% at 8% 34%, color-mix(in srgb, var(--activo) 26%, transparent) 0%, rgba(0,0,0,0) 64%),
+    radial-gradient(46% 62% at 96% 92%, color-mix(in srgb, var(--acento-azul) 34%, transparent) 0%, rgba(0,0,0,0) 60%);
+}
+
+.grilla {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.026) 0 1px, transparent 1px 96px),
+    repeating-linear-gradient(0deg,  rgba(255,255,255,0.026) 0 1px, transparent 1px 96px);
+}
+
+.capa { position: relative; z-index: 2; display: flex; flex-direction: column; height: 100%; }
+
+.story::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 var(--filete-ancho) var(--filete);
+}
+
+.sello {
+  display: inline-flex; align-items: center; gap: 12px;
+  padding: 11px 24px 11px 18px;
+  border: 1px solid color-mix(in srgb, var(--activo) 46%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--activo) 11%, transparent);
+  box-shadow: 0 0 34px -10px color-mix(in srgb, var(--activo) 70%, transparent);
+  font-family: var(--font-sans); font-weight: 700;
+  font-size: 20px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--activo);
+}
+.pulso {
+  width: 11px; height: 11px; border-radius: 50%;
+  background: var(--activo);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--activo) 24%, transparent),
+              0 0 18px 4px color-mix(in srgb, var(--activo) 75%, transparent);
+}
+
+.cta {
+  margin-top: auto;
+  display: flex; align-items: center; justify-content: space-between; gap: 40px;
+  padding: 26px 0 18px;
+  border-top: 1px solid color-mix(in srgb, var(--activo) 24%, transparent);
+}
+.cta-texto { display: flex; align-items: center; gap: 22px; }
+.cta-flecha {
+  width: 62px; height: 62px; flex: 0 0 62px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--activo); color: var(--fondo-alt);
+  font-size: 32px; font-weight: 700;
+  box-shadow: 0 0 50px -8px var(--activo);
+}
+.cta-titulo { color: var(--texto-1); font-family: var(--font-titular); font-weight: 700; font-size: 37px; letter-spacing: -0.015em; }
+.cta-sub { font-family: var(--font-sans); font-size: 24px; color: var(--texto-2); margin-top: 3px; }
+.cta-marca { display: flex; align-items: center; gap: 20px; }
+.cta-handle { font-family: var(--font-sans); font-weight: 600; font-size: 22px; color: var(--texto-2); }
+.cta-logo { height: 74px; }
+
+.disclaimer { padding-bottom: 20px; font-size: 14px; line-height: 1.3; color: var(--texto-3); }
+</style>
+<style>
 
 * { box-sizing: border-box; }
 
@@ -146,26 +258,7 @@ html, body {
   pointer-events: none;
 }
 
-/* 2. Sombra Asimétrica Focalizada (Opción A) */
-.velo {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background:
-    linear-gradient(90deg, rgba(3, 14, 11, 0.96) 0%, rgba(3, 14, 11, 0.88) 35%, rgba(3, 14, 11, 0.40) 56%, rgba(0, 0, 0, 0.10) 100%),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.30) 0%, transparent 35%, rgba(0, 0, 0, 0.60) 100%);
-}
-
-.grilla {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background-image:
-    repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0 1px, transparent 1px 96px),
-    repeating-linear-gradient(0deg,  rgba(255,255,255,0.02) 0 1px, transparent 1px 96px);
-}
+/* 2. Sombra Asimétrica Focalizada (Opción A) y Grilla provistas por piel.css */
 
 .contenido {
   position: relative;
@@ -200,33 +293,7 @@ html, body {
   align-items: center;
 }
 
-.sello {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 16px;
-  border: 1.5px solid var(--acento);
-  border-radius: 999px;
-  background: rgba(6, 35, 28, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 14px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--acento);
-}
-
-.pulso {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--sube);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--sube) 24%, transparent),
-              0 0 18px 4px color-mix(in srgb, var(--sube) 75%, transparent);
-}
+/* .sello y .pulso provistos por piel.css */
 
 .chip-categoria {
   font-family: var(--font-sans);
@@ -249,7 +316,7 @@ html, body {
   font-family: var(--font-sans);
   font-weight: 600;
   font-size: 18px;
-  color: #CBD5E1;
+  color: var(--texto-borde);
   letter-spacing: 0.04em;
 }
 
@@ -269,7 +336,7 @@ html, body {
   font-weight: 600;
   font-size: 24px;
   line-height: 1.40;
-  color: #F1F5F9;
+  color: var(--texto-1);
   margin: 10px 0 0;
 }
 
@@ -311,11 +378,11 @@ html, body {
   padding: 6px 20px;
   border-radius: 999px;
 }
-.tag-sesgo--alcista { background: var(--sube); color: #06231C; }
+.tag-sesgo--alcista { background: var(--sube); color: var(--fondo-acento); }
 .tag-sesgo--alcista::before { content: "\25B2\00A0"; }
-.tag-sesgo--bajista { background: var(--baja); color: #FFFFFF; }
+.tag-sesgo--bajista { background: var(--baja); color: var(--blanco); }
 .tag-sesgo--bajista::before { content: "\25BC\00A0"; }
-.tag-sesgo--lateral { background: var(--texto-2); color: #06231C; }
+.tag-sesgo--lateral { background: var(--texto-2); color: var(--fondo-acento); }
 .tag-sesgo--lateral::before { content: "\2192\00A0"; }
 
 .precio-linea {
@@ -361,7 +428,7 @@ html, body {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #CBD5E1;
+  color: var(--texto-borde);
 }
 
 .stat-valor {
@@ -417,8 +484,8 @@ html, body {
 .g-nivel-resistencia, .g-nivel-meta { stroke: var(--baja); }
 .g-nivel-soporte, .g-nivel-origen     { stroke: var(--sube); }
 .g-nivel-nivel                       { stroke: var(--acento); }
-.g-punto { stroke: #000000; stroke-width: 3; }
-.g-punto-actual { fill: #FFFFFF; }
+.g-punto { stroke: var(--fondo); stroke-width: 3; }
+.g-punto-actual { fill: var(--blanco); }
 .g-precio {
   font-family: var(--font-sans);
   font-weight: 800;
@@ -427,18 +494,18 @@ html, body {
   stroke: rgba(0, 0, 0, 0.98);
   stroke-width: 5px;
   stroke-linejoin: round;
-  fill: #FFFFFF;
+  fill: var(--blanco);
 }
 .g-precio-resistencia, .g-precio-meta { fill: var(--baja); }
 .g-precio-soporte, .g-precio-origen     { fill: var(--sube); }
-.g-precio-actual      { fill: #FFFFFF; }
+.g-precio-actual      { fill: var(--blanco); }
 .g-precio-nivel       { fill: var(--texto-1); }
 .g-rol {
   font-family: var(--font-sans);
   font-weight: 800;
   font-size: 17px;
   letter-spacing: 0.08em;
-  fill: #E2E8F0;
+  fill: var(--texto-borde);
   paint-order: stroke fill;
   stroke: rgba(0, 0, 0, 0.98);
   stroke-width: 4px;
@@ -489,14 +556,14 @@ html, body {
   font-weight: 700;
   font-size: 16px;
   letter-spacing: 0.08em;
-  color: #50C0A8;
+  color: var(--acento);
 }
 
 .footer-disclaimer {
   font-family: var(--font-sans);
   font-weight: 400;
   font-size: 13px;
-  color: #94A3B8;
+  color: var(--texto-2);
   margin: 0;
 }
 </style>
@@ -545,7 +612,7 @@ html, body {
             </div>
             <!-- IF:vol -->
             <div class="stat">
-              <div class="stat-label">Rango H1 (ATR)</div>
+              <div class="stat-label">Volatilidad típica</div>
               <div class="stat-valor">{{vol_pct}}</div>
             </div>
             <!-- ENDIF:vol -->

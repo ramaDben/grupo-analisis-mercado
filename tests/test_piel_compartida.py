@@ -30,7 +30,7 @@ PIEL_CSS = DIR_STORIES / "piel.css"
 # Las tres plantillas de la familia. Las otras ocho migran en Changes aparte
 # (ver §6 de la spec): una plantilla por vez, porque cada una tiene su propia
 # calibración de alturas.
-FAMILIA = ("oportunidad.html", "alerta.html", "recomendacion.html")
+FAMILIA = ("alerta.html",)
 
 # Reglas que, por definición, viven en la hoja. Si una plantilla las redeclara,
 # volvemos a tener copias desincronizadas — que es exactamente lo que la hoja

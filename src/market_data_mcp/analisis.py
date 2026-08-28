@@ -175,18 +175,23 @@ def analizar_activo(ticker: str, timeframe: str = "H4") -> dict[str, Any]:
             "message": f"Solo {len(df)} velas disponibles para {ticker} {timeframe}. Mínimo requerido: 150.",
         }
 
-    close = df["close"]
-    ema100_val = float(ema(close, 100).iloc[-1])
-    ema50_val = float(ema(close, 50).iloc[-1])
+    # P0: Indicadores de estado sobre velas cerradas (df_closed) para evitar
+    # que Donchian se autoanule y que el ATR se distorsione al abrir la barra.
+    # El precio spot en tiempo real (current) se evalúa contra estos niveles congelados.
+    df_closed = df.iloc[:-1] if len(df) >= 2 else df
+    close_closed = df_closed["close"]
+
+    ema100_val = float(ema(close_closed, 100).iloc[-1])
+    ema50_val = float(ema(close_closed, 50).iloc[-1])
     # EMA 20: el Playbook la usa como gatillo de entrada en H1 (pullback en Oro,
     # compras tendenciales en US100). No confundir con `bb_mid`, que es una SMA 20.
-    ema20_val = float(ema(close, 20).iloc[-1])
-    atr14_val = float(atr(df, 14).iloc[-1])
-    adx14_val = float(adx(df, 14).iloc[-1])
-    macd_l, macd_s, macd_h = macd(close)
-    bb_u, bb_m, bb_l = bollinger(close)
-    dc_h, dc_l, dc_m = donchian(df)
-    current = float(close.iloc[-1])
+    ema20_val = float(ema(close_closed, 20).iloc[-1])
+    atr14_val = float(atr(df_closed, 14).iloc[-1])
+    adx14_val = float(adx(df_closed, 14).iloc[-1])
+    macd_l, macd_s, macd_h = macd(close_closed)
+    bb_u, bb_m, bb_l = bollinger(close_closed)
+    dc_h, dc_l, dc_m = donchian(df_closed)
+    current = float(df["close"].iloc[-1])
 
     if current > ema100_val:
         trend = "ALCISTA"
@@ -195,8 +200,8 @@ def analizar_activo(ticker: str, timeframe: str = "H4") -> dict[str, Any]:
     else:
         trend = "LATERAL"
 
-    rsi14_val = _rsi(close, 14)
-    levels = _get_support_resistance(df, current, atr14_val, digits)
+    rsi14_val = _rsi(close_closed, 14)
+    levels = _get_support_resistance(df_closed, current, atr14_val, digits)
 
     resultado: dict[str, Any] = {
         "ticker":       ticker,

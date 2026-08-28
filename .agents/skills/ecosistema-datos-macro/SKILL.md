@@ -21,7 +21,7 @@ Esta skill formaliza la ingesta de datos, la gestión de calendarios oficiales y
 >   - **Curva Soberana JGB (1Y a 40Y):** Ministerio de Finanzas de Japón (*Ministry of Finance - MOF* vía `jgbcm.csv`).
 >   - **Inflación e IPC:** Oficina de Estadísticas del Ministerio de Asuntos Internos (*Statistics Bureau - MIC* vía `stat.go.jp` y `e-stat.go.jp`).
 >   - **Política Monetaria:** Banco de Japón (*Bank of Japan - BOJ* vía `boj.or.jp` y `stat-search.boj.or.jp`).
-> * 🛢️ **Commodities:** U.S. Energy Information Administration (*EIA* para WTI/Brent), COMEX (*Cobre en USD/lb*) y LBMA/Spot (*Oro*).
+> * 🛢️ **Commodities:** U.S. Energy Information Administration (*EIA* para WTI/Brent), LME / COMEX / MT5 (*Cobre en USD/t*) y LBMA/Spot (*Oro*).
 
 ---
 

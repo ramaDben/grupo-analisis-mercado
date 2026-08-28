@@ -70,7 +70,7 @@ consola. **Antes de dar una pieza por buena, mira el PNG y verifica que los
 acentos y los signos `¿` `¡` `·` se vean correctos.** Si aparece un `?` donde
 debería haber una tilde, el problema es este y la pieza no se puede publicar.
 
-## 2. La hora sale del reloj, no de la web
+## 2. La fecha y hora salen del reloj, no de la web (Guardrail de Consistencia Temporal)
 
 Nunca uses búsqueda web para saber la fecha o la hora. Para la hora de Chile:
 
@@ -80,9 +80,12 @@ $now = [System.TimeZoneInfo]::ConvertTime([DateTime]::UtcNow, [System.TimeZoneIn
 $now.ToString('yyyy-MM-dd HH:mm')
 ```
 
-Para convertir la hora de un dato económico extranjero, usa
-`scripts\hora_chile.ps1` — nunca offsets fijos, que producen desfases de una hora
-cuando cambia el horario de verano.
+Para convertir la hora de un dato económico extranjero, usa `scripts\hora_chile.ps1` — nunca offsets fijos, que producen desfases de una hora cuando cambia el horario de verano.
+
+### Regla Estricta Anti-Anacronismos (Eventos Futuros vs Pasados)
+Queda **terminantemente prohibido** redactar eventos futuros en tiempo pasado (ej. "tras la asimilación de los discursos de Jackson Hole", "luego del dato de inflación") si dicho evento aún no ha ocurrido según el reloj real de Chile.
+- **Eventos Futuros / Próximos:** Se redactan exclusivamente en **Modo Anticipación** ("en la antesala de...", "a la espera de los discursos previstos para mañana...", "el mercado aguarda la publicación...").
+- **Validador Automático:** `generar_pdf.py` y `pipeline_informe.py` ejecutan automáticamente `scripts/validar_consistencia_temporal.py`. Si detectan discrepancia de fecha o anacronismos en el texto, el proceso aborta inmediatamente (*Fail-Fast*).
 
 ## 3. Los decimales de cada precio están definidos
 
@@ -94,9 +97,12 @@ Nunca truncar ceros al final ni redondear a entero.
 | USDCLP | 2 | $889.60 |
 | USDJPY | 3 | 163.731 |
 | XAUUSD | 2 | $4,539.72 |
-| WTI.spot | 3 | $90.181 |
+| WTI.spot | 2-3 | $90.18 |
 | US100.spot | 2 | 30,350.01 |
 | Acciones | 2 | $192.50 |
+| COPPER | 1 | $14274.0 USD/t |
+
+*El Cobre se analiza y cotiza siempre por su valor por tonelada métrica (`USD/t`) disponible en el terminal MT5.*
 
 ## 4. Tono: profesional con gancho, nunca dramático
 
@@ -116,7 +122,7 @@ Toda sigla se explica en español la primera vez que aparece. Nada de jerga sin
 traducir: el mensaje lo lee tanto un trader como alguien que recién empieza.
 
 Si el texto va a un cliente, va en español chileno neutro, con tuteo. Nunca
-voseo argentino.
+voseo argentino. La firma institucional oficial es **Área de Research & Estrategia**.
 
 **Nunca el guion largo como inciso.** En texto de cliente (mensajes, pies de
 Story, textos dentro de las piezas) no se usa `—` ni `–` para abrir un inciso:
@@ -127,9 +133,23 @@ real: si se lee como escrito por una máquina, la firma pierde credibilidad. El
 punto medio `·` sí se mantiene, porque es separador del kit de marca
 (`ORO · XAU/USD`) y no puntuación de frase.
 
-## 5. Terminología de niveles e Indicadores
+## 5. Terminología de niveles, Trazado Horizontal Obligatorio e Indicadores
 
 Siempre "soporte" y "resistencia". Nunca "techo" ni "suelo".
+
+### Regla de Oro de Trazado Horizontal Obligatorio en Gráficos e Inyección en Stories
+Todo nivel numérico citado en el texto ($S_1, S_2, R_1, R_2$, Fibonacci 50%, medias o niveles tácticos), así como **barreras macroeconómicas de intervención soberana** (ej. nivel de intervención MOF 160.000 en USD/JPY, techos cambiarios del BCCh, metas de inflación) **deben estar obligatoriamente trazados como líneas horizontales explícitas y etiquetas de precios en el gráfico**.
+- **En Gráficos de Informe (Matplotlib):** Se trazan con `ax.axhline` y sus anotaciones de texto.
+- **En Gráficos de Stories (SVG / Playwright):** Queda **estrictamente prohibido** enviar payloads con gráficos mudos (solo curva de velas). Todo payload para `alerta.html`, `recomendacion.html` u otras plantillas con gráfico DEBE incluir obligatoriamente:
+  1. `hitos`: Marcador del punto `actual` con guía y precio formateado (`"clase": "actual"`, `"rol": "SPOT"`).
+  2. `niveles`: Lista de niveles horizontales que cruzan todo el gráfico (`"clase": "meta" | "resistencia" | "soporte" | "nivel"`), con `"etiqueta"` (precio formateado a sus `digits`) y `"rol"` explícito (ej. `"MOF INTERVENCIÓN"`, `"RESISTENCIA R1"`, `"SOPORTE S1"`).
+Nunca dejar un nivel mencionado en la prosa sin su correspondiente línea visual y etiqueta numérica en el gráfico.
+
+### Embudo Técnico / Zona de Compresión
+Cuando múltiples medias móviles (EMAs 50/100) y retrocesos de Fibonacci colisionan en una franja estrecha, se sombrea el área y se explica en el análisis como un *embudo de decisión previo a una expansión de volatilidad*.
+
+### Criterio de Estado de Mercado (USD/CLP Mercado Cerrado)
+Durante la sesión asiática / nocturna, el mercado formal chileno permanece cerrado. La narrativa sobre el USD/CLP se aborda como **Radar de Madrugada**, monitoreando el Cobre en LME/Shanghái ($14.274,0 USD/t) y el DXY para proyectar la apertura formal de las 08:30 CLT.
 
 ### Modelo ADC (Ancho Dinámico de Canal) y Volatilidad ATR
 El análisis técnico e intradía utiliza formalmente el **Modelo ADC + ATR**:
@@ -194,10 +214,11 @@ El formato del lienzo es obligatorio según el tipo de contenido y su carga téc
 - `.claude/commands/<nombre>.md` — la definición canónica de cada comando.
 - `docs/architecture.md` — cómo encaja todo.
 
-## 8. Pipeline de Generación de Gráficos (El Gold Standard)
+## 8. Pipeline de Generación de Gráficos e Imágenes (El Gold Standard)
 
-El pipeline de gráficos (`serie_mt5.py` -> `story_grafico.py` -> `story_render.py`) es extremadamente delicado. Para garantizar su funcionamiento, debes seguir estrictamente estas reglas empíricas de renderización:
+El pipeline de gráficos e imágenes institucionales (`serie_mt5.py` -> `story_grafico.py` -> `story_render.py` o plantillas HTML de `templates/stories/` + Playwright) es la **única vía autorizada** para generar piezas visuales en este repositorio:
 
+0. **Prohibición Total de Modelos de Difusión / IA Text-to-Image (`generate_image`)**: Queda **terminantemente prohibido** utilizar la herramienta `generate_image` o modelos de generación de imágenes por difusión de IA para crear piezas, terminales, infografías o gráficos en este proyecto. Todo el contenido visual DEBE ser maquetado en HTML/CSS estructurado y renderizado vía Playwright/Chromium siguiendo el Brandkit oficial.
 1. **Uso de Clases Exactas en el Payload**: En los comandos de operaciones (como `/recomendacion`), NUNCA inventes clases para los `hitos` o `niveles`. Debes usar EXCLUSIVAMENTE las clases soportadas por el CSS del snapshot (`meta`, `entrada`, `stop`, `actual`). Usar clases como `"origen"` o `"soporte"` hará que el nivel desaparezca por completo, arruinando la imagen.
 2. **Uso de H1 Estricto**: Por requerimiento corporativo, las operaciones (incluso las Posicionales de semanas) DEBEN renderizarse con `--timeframe H1 --velas 60`. El motor gráfico (`story_grafico.py`) cuenta con matemáticas de *clamping* (anclaje) que evitarán que el gráfico se aplaste si el Take Profit o Stop Loss están demasiado lejos, garantizando la correcta lectura visual de la volatilidad sin sacrificar el encuadre.
 3. **Cuidado con el CSS**: Si en algún momento debes editar o inspeccionar los archivos `.css` de las plantillas (como `marca.css` o `recomendacion.html`), NUNCA dejes comentarios truncos (`*/` sueltos). Playwright usa un motor de render estricto que invisibilizará variables y elementos completos si detecta sintaxis CSS rota.
@@ -291,3 +312,11 @@ puede puntuar alto, y sin el filtro ganaría la tanda.
 Lee siempre los avisos que imprime. Si dice que el calendario no respondió, el gate de
 blackout **no se pudo verificar** y la decisión de publicar pasa a ser manual. El
 escáner nunca reporta "cero exclusiones" cuando en realidad no pudo mirar.
+
+### 9.7. Estándares Cuantitativos del Modelo ADC + ATR y Motor GI (Auditoría 2026-08-28).
+
+1. **Suavizado de Volatilidad Welles Wilder RMA:** `atr()` y `adx()` en `mt5_client.py` usan estrictamente `alpha = 1.0 / period` (`adjust=False`) para paridad 1:1 con MetaTrader 5 y Bloomberg (evitar `span=period` que otorga 86,7% de sobrepeso reactivo).
+2. **Indicadores de Estado sobre Velas Cerradas:** Canales Donchian, ATR, ADX, MACD, Bollinger y niveles S/R se calculan sobre `df.iloc[:-1]` para evitar que Donchian se autoanule y que la barra abierta contamine el cálculo. El spot en vivo se evalúa contra estos niveles congelados (`rango_hoy` en D1 conserva la barra viva).
+3. **Piso de Actividad en Consumo Diario:** `factor_espacio` en `screener_gi.py` exige que la sesión tenga al menos 15% de consumo realizado para otorgar los 20 puntos, eliminando falsos positivos por simple reloj en la apertura.
+4. **Multiplicador de Impulso Discreto por Régimen:** $k$ no se modula por función continua de ADX (en compresión el ADX es bajo por diseño). Se calibra por régimen $R_0-R_4$ y clase de activo.
+5. **Documentación Oficial:** Consultar `docs/auditoria_modelo_adc_atr.md`, `docs/dictamen_auditoria_adc_atr.md` y `docs/funcionamiento_motor_gi.md`.

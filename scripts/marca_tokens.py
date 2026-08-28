@@ -124,18 +124,7 @@ RGBA_PERMITIDOS = {(0, 0, 0), (255, 255, 255)}
 # la piel) y no trabajo de este gate. Todo archivo FUERA de la lista falla, así
 # que lo que hoy está limpio no puede volver a ensuciarse — y una plantilla nueva
 # nace gateada. Al limpiar una, se saca de acá y queda protegida.
-RGBA_PENDIENTES = frozenset(
-    {
-        "breaking.html",
-        "dato_macro.html",
-        "edu.html",
-        "encuesta.html",
-        "flash.html",
-        "operacion.html",
-        "oportunidad.html",
-        "postventa.html",
-    }
-)
+RGBA_PENDIENTES = frozenset()
 
 
 def _rgba_huerfanos(texto: str) -> list[str]:

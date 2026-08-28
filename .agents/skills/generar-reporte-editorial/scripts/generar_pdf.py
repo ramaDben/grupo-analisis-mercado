@@ -1,23 +1,30 @@
 import argparse
-import re
 import base64
 import markdown
+import re
+import sys
 from pathlib import Path
 from urllib.parse import unquote
 from playwright.sync_api import sync_playwright
 import pypdf
 
-# La raiz se deduce de la ubicacion del script y no se escribe a mano: son cuatro
-# niveles arriba (scripts -> generar-reporte-editorial -> skills -> .agents -> raiz).
-# Con la ruta absoluta anterior el generador solo funcionaba en la maquina del
-# director, que es la misma razon por la que .agents/mcp.json queda fuera de git.
 RAIZ = Path(__file__).resolve().parents[4]
+if str(RAIZ / "scripts") not in sys.path:
+    sys.path.insert(0, str(RAIZ / "scripts"))
+
+try:
+    from validar_consistencia_temporal import validar_archivo_markdown, TemporalConsistencyError
+except ImportError:
+    validar_archivo_markdown = None
+    TemporalConsistencyError = Exception
 FUENTES = RAIZ / "templates" / "stories" / "fonts"
 
 CATALOGO = [
-    ("space-grotesk-600.woff2", "Space Grotesk", 600),
-    ("space-grotesk-700.woff2", "Space Grotesk", 700),
-    ("syne-800.woff2", "Syne", 800),
+    ("plus-jakarta-sans-400.woff2", "Plus Jakarta Sans", 400),
+    ("plus-jakarta-sans-600.woff2", "Plus Jakarta Sans", 600),
+    ("plus-jakarta-sans-700.woff2", "Plus Jakarta Sans", 700),
+    ("goldman-400.woff2", "Goldman", 400),
+    ("goldman-700.woff2", "Goldman", 700),
 ]
 
 def _bloque_fuentes():
@@ -31,11 +38,6 @@ def _bloque_fuentes():
                 f"font-style:normal;font-display:swap;"
                 f'src:url(data:font/woff2;base64,{datos}) format("woff2")}}'
             )
-    reglas.append(
-        '@font-face{font-family:"Space Grotesk";font-weight:400;'
-        'font-style:normal;font-display:swap;'
-        f'src:url(data:font/woff2;base64,{base64.b64encode((FUENTES / "space-grotesk-600.woff2").read_bytes()).decode("ascii")}) format("woff2")}}'
-    )
     return "\n".join(reglas)
 
 # Tamano de letra base del maquetador: 10 a 10.5 px. Chromium imprime la A4 a
@@ -116,9 +118,10 @@ def _construir_html(
 body {{
     margin: 0;
     padding: 0;
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     color: #3A3F52;
     background: #FFFFFF;
+    -webkit-font-smoothing: antialiased;
 }}
 .page-container {{
     width: 794px;
@@ -174,7 +177,7 @@ body {{
     margin-bottom: 16px;
 }}
 .header-left {{
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 9.5px;
     font-weight: 700;
     letter-spacing: 0.14em;
@@ -182,7 +185,7 @@ body {{
     color: #3E91AF;
 }}
 .header-right {{
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 9px;
     font-weight: 600;
     color: #737373;
@@ -197,14 +200,14 @@ body {{
     margin-top: 18px;
 }}
 .footer-left {{
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 9.5px;
     font-weight: 700;
     letter-spacing: 0.14em;
     color: #53C1AB;
 }}
 .footer-right {{
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 9px;
     color: #737373;
     letter-spacing: 0.05em;
@@ -221,9 +224,9 @@ p {{
     font-weight: 400;
 }}
 h1 {{
-    font-family: 'Syne', sans-serif;
-    font-size: 22px;
-    font-weight: 800;
+    font-family: 'Goldman', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
     color: #0D0D1A;
     margin: 6px 0 16px 0;
     line-height: 1.25;
@@ -231,11 +234,9 @@ h1 {{
     padding-bottom: 8px;
     letter-spacing: -0.01em;
     display: block;
-    transform: scaleY(1.14);
-    transform-origin: left bottom;
 }}
 h2 {{
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 14px;
     font-weight: 700;
     color: #3E91AF;
@@ -246,7 +247,7 @@ h2 {{
     page-break-after: avoid;
 }}
 h3 {{
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 11.5px;
     font-weight: 700;
     color: #0D0D1A;
@@ -276,7 +277,7 @@ blockquote {{
     border-left: 3px solid #3E91AF;
 }}
 blockquote p {{
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 12px;
     font-weight: 700;
     color: #3E91AF;
@@ -331,7 +332,7 @@ img {{
     padding: 9px 12px !important;
     font-weight: 700 !important;
     text-align: left !important;
-    font-family: 'Space Grotesk', sans-serif !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
     font-size: 10px !important;
     letter-spacing: 0.03em !important;
     border-bottom: 2px solid #53C1AB !important;
@@ -374,29 +375,29 @@ img {{
 <div class="page-container cover-page">
     <div class="cover-gradient"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;position:relative;z-index:1;">
-        <span style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;letter-spacing:0.04em;color:#FFFFFF;display:inline-block;transform:scaleY(1.18);transform-origin:left center;">GRUPO INTELIGENCIA</span>
-        <span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:0.18em;color:{accent_color};">{badge_sup}</span>
+        <span style="font-family:'Goldman',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.06em;color:#FFFFFF;display:inline-block;">GRUPO INTELIGENCIA</span>
+        <span style="font-family:'Plus Jakarta Sans',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:0.18em;color:{accent_color};">{badge_sup}</span>
     </div>
     
     <div style="flex:1;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:1;max-width:82%;">
-        <span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.14em;color:{tag_color};text-transform:uppercase;margin-bottom:12px;">{tag_tipo}</span>
-        <h1 style="font-family:'Syne',sans-serif;font-size:46px;font-weight:800;line-height:1.08;margin:0 0 34px 0;color:#FFFFFF;border:none;padding:0;letter-spacing:-0.02em;display:block;transform:scaleY(1.15);transform-origin:left top;">{titulo}</h1>
-        <p style="font-family:'Space Grotesk',sans-serif;font-size:13px;line-height:1.6;color:{subtitle_color};margin:0 0 24px 0;max-width:90%;font-weight:400;">{subtitulo}</p>
+        <span style="font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.14em;color:{tag_color};text-transform:uppercase;margin-bottom:14px;">{tag_tipo}</span>
+        <h1 style="font-family:'Goldman',sans-serif;font-size:38px;font-weight:700;line-height:1.12;margin:0 0 26px 0;color:#FFFFFF;border:none;padding:0;letter-spacing:-0.01em;display:block;">{titulo}</h1>
+        <p style="font-family:'Plus Jakarta Sans',sans-serif;font-size:13.5px;line-height:1.6;color:{subtitle_color};margin:0 0 24px 0;max-width:90%;font-weight:400;">{subtitulo}</p>
         <div style="width:48px;height:3px;background:{divider_color};"></div>
     </div>
     
-    <div style="position:relative;z-index:1;border-top:1px solid rgba(255,255,255,0.16);padding-top:12px;display:flex;justify-content:space-between;align-items:center;">
+    <div style="position:relative;z-index:1;border-top:1px solid rgba(255,255,255,0.16);padding-top:14px;display:flex;justify-content:space-between;align-items:center;">
         <div style="display:flex;gap:24px;">
             <div style="display:flex;flex-direction:column;gap:2px;">
-                <span style="font-family:'Space Grotesk',sans-serif;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:#737373;">Fecha</span>
-                <span style="font-family:'Space Grotesk',sans-serif;font-size:10.5px;font-weight:600;color:#FFFFFF;">{fecha}</span>
+                <span style="font-family:'Plus Jakarta Sans',sans-serif;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:#737373;font-weight:600;">Fecha</span>
+                <span style="font-family:'Plus Jakarta Sans',sans-serif;font-size:10.5px;font-weight:600;color:#FFFFFF;">{fecha}</span>
             </div>
             <div style="display:flex;flex-direction:column;gap:2px;">
-                <span style="font-family:'Space Grotesk',sans-serif;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:#737373;">Analista</span>
-                <span style="font-family:'Space Grotesk',sans-serif;font-size:10.5px;font-weight:600;color:#FFFFFF;">{analista}</span>
+                <span style="font-family:'Plus Jakarta Sans',sans-serif;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:#737373;font-weight:600;">Analista</span>
+                <span style="font-family:'Plus Jakarta Sans',sans-serif;font-size:10.5px;font-weight:600;color:#FFFFFF;">{analista}</span>
             </div>
         </div>
-        <span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;font-weight:600;color:{accent_color};">{paginas_badge}</span>
+        <span style="font-family:'Plus Jakarta Sans',sans-serif;font-size:8.5px;font-weight:700;color:{accent_color};">{paginas_badge}</span>
     </div>
 </div>
 
@@ -432,14 +433,14 @@ img {{
 <!-- PAGE FINAL: DISCLAIMER -->
 <div class="page-container" style="background:{disclaimer_bg};color:#C1E5E4;padding:24mm 32mm;display:flex;flex-direction:column;">
     <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:9px;border-bottom:1px solid rgba(255,255,255,0.15);margin-bottom:18px;flex-shrink:0;">
-        <span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:0.14em;color:{disclaimer_accent};">AVISO LEGAL</span>
-        <span style="font-family:'Syne',sans-serif;font-size:12px;font-weight:800;letter-spacing:0.04em;color:#FFFFFF;display:inline-block;transform:scaleY(1.18);transform-origin:left center;">GRUPO INTELIGENCIA</span>
+        <span style="font-family:'Plus Jakarta Sans',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:0.14em;color:{disclaimer_accent};">AVISO LEGAL</span>
+        <span style="font-family:'Goldman',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.05em;color:#FFFFFF;display:inline-block;">GRUPO INTELIGENCIA</span>
     </div>
     <div style="flex:1;display:flex;flex-direction:column;gap:12px;overflow:hidden;">
-        <h2 style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#FFFFFF;margin:0;border:none;padding:0;letter-spacing:0;display:inline-block;transform:scaleY(1.15);transform-origin:left bottom;">Disclaimer</h2>
-        <p style="font-family:'Space Grotesk',sans-serif;font-size:10px;line-height:1.7;color:#C1E5E4;margin:0;">Este documento ha sido elaborado por Grupo Inteligencia con fines exclusivamente informativos y no constituye una oferta, solicitud o recomendación de inversión. Las opiniones expresadas representan el análisis actual y están sujetas a cambios sin previo aviso.</p>
-        <p style="font-family:'Space Grotesk',sans-serif;font-size:10px;line-height:1.7;color:#C1E5E4;margin:0;">La información contenida se basa en fuentes consideradas fiables al momento de su publicación; sin embargo, no se garantiza su exactitud, integridad o vigencia. Los mercados financieros implican riesgos, incluida la posible pérdida del capital invertido, y el desempeño pasado no garantiza resultados futuros.</p>
-        <p style="font-family:'Space Grotesk',sans-serif;font-size:10px;line-height:1.7;color:#C1E5E4;margin:0;">Los niveles técnicos, escenarios y sesgos presentados corresponden a la interpretación del equipo de análisis. Este material es de uso exclusivo y no debe distribuirse a terceros sin autorización expresa.</p>
+        <h2 style="font-family:'Goldman',sans-serif;font-size:18px;font-weight:700;color:#FFFFFF;margin:0;border:none;padding:0;letter-spacing:0.02em;display:inline-block;">Disclaimer</h2>
+        <p style="font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;line-height:1.7;color:#C1E5E4;margin:0;">Este documento ha sido elaborado por Grupo Inteligencia con fines exclusivamente informativos y no constituye una oferta, solicitud o recomendación de inversión. Las opiniones expresadas representan el análisis actual y están sujetas a cambios sin previo aviso.</p>
+        <p style="font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;line-height:1.7;color:#C1E5E4;margin:0;">La información contenida se basa en fuentes consideradas fiables al momento de su publicación; sin embargo, no se garantiza su exactitud, integridad o vigencia. Los mercados financieros implican riesgos, incluida la posible pérdida del capital invertido, y el desempeño pasado no garantiza resultados futuros.</p>
+        <p style="font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;line-height:1.7;color:#C1E5E4;margin:0;">Los niveles técnicos, escenarios y sesgos presentados corresponden a la interpretación del equipo de análisis. Este material es de uso exclusivo y no debe distribuirse a terceros sin autorización expresa.</p>
     </div>
 </div>
 
@@ -486,7 +487,7 @@ def crear_pdf(
     header_left: str = "ANÁLISIS FUNDAMENTAL",
     header_right: str = "AGOSTO 2026 • MACROECONOMÍA",
     fecha: str = "Agosto 2026",
-    analista: str = "Área de Estudios",
+    analista: str = "Área de Research & Estrategia",
     tema: str = "verde",
     escala: float = 1.0
 ):
@@ -514,6 +515,13 @@ def crear_pdf(
             out_pdf = RAIZ / out_pdf
     else:
         out_pdf = md_file.parent / f"{md_file.stem}_GI.pdf"
+
+    # Guardrail de Consistencia Temporal y Anti-Anacronismos
+    if validar_archivo_markdown:
+        try:
+            validar_archivo_markdown(md_file, fecha_param=fecha, estricto=True)
+        except TemporalConsistencyError as err:
+            raise SystemExit(f"\n[ERROR GUARDRAIL TEMPORAL]\n{err}\n")
 
     md_text = md_file.read_text(encoding="utf-8")
     html_content = markdown.markdown(md_text, extensions=['tables', 'fenced_code'])
@@ -591,7 +599,7 @@ if __name__ == "__main__":
     parser.add_argument("--header-left", dest="header_left", help="Encabezado izquierdo", default="ANÁLISIS FUNDAMENTAL")
     parser.add_argument("--header-right", dest="header_right", help="Encabezado derecho", default="AGOSTO 2026 • MACROECONOMÍA")
     parser.add_argument("--date", dest="fecha", help="Fecha para la portada", default="Agosto 2026")
-    parser.add_argument("--analyst", dest="analista", help="Nombre del analista o área", default="Área de Estudios")
+    parser.add_argument("--analyst", dest="analista", help="Nombre del analista o área", default="Área de Research & Estrategia")
     parser.add_argument("--escala", dest="escala", type=float, default=1.0,
                         help="Multiplica el tamano de letra de lectura (1.45 deja el cuerpo en ~11 pt)")
     parser.add_argument("--theme", dest="tema", help="Tema de color de portada (verde | oscuro)", default="verde")

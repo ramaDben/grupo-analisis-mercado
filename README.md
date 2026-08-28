@@ -182,4 +182,4 @@ grupo-analisis-mercado/
 >
 > **Criterio de claridad** (subordinado a la regla de oro): si un cliente nuevo sin experiencia no entiende el mensaje en menos de 30 segundos, hay que reescribirlo más simple — pero "más simple" nunca significa "sin dirección".
 
-Análisis técnico simple y directo, con tono profesional y gancho operativo: énfasis direccional sí, dramatización no. El contenido se redacta para clientes que están aprendiendo, no para traders profesionales — y a la vez debe ser accionable para quien ya opera.
+Análisis técnico y macroeconómico simple, cercano y cotidiano: traducir lo complejo a un lenguaje claro para que cualquiera entienda qué pasa en el mercado. Énfasis direccional claro, sin tecnicismos innecesarios ni dramatización. El contenido se redacta para personas que están aprendiendo y a la vez resulta accionable para quien ya opera.

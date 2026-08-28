@@ -1,0 +1,11 @@
+version: 2
+brand:
+  name: Grupo Inteligencia
+  description: Plataforma de Inteligencia Cuantitativa de Mercados, Modelos Macro y Análisis Intermercado.
+  root: ./brand_atomic_system
+contexts:
+  - base
+  - web
+  - product
+ignore:
+  - human/

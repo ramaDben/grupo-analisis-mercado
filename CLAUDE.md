@@ -83,6 +83,11 @@ Zonas canónicas (IDs Windows): EE.UU. (BLS/ISM/ADP/EIA/Fed) → `Eastern Standa
 
 **Cruce de día en eventos asiáticos (OBLIGATORIO)**: el helper devuelve la hora, **no la fecha**. Japón va 13 h adelante de Chile, así que un evento japonés cae el **día anterior** en nuestro calendario: la decisión del BoJ del viernes 31 a las 12:00 JST ocurre el **jueves 30 a las 23:00 CLT**. Al fechar un evento asiático, calcula también la fecha en Chile y comunícala siempre en hora Chile. Caso especial del BoJ: **no compromete hora exacta** de anuncio (publica entre 11:30 y 12:30 JST), así que la ventana en Chile es 22:30–23:30; la conferencia posterior del gobernador sí tiene hora fija (15:30 JST) y es donde suele estar el movimiento del USD/JPY.
 
+### Guardrail Anti-Anacronismos y Modo Anticipación (OBLIGATORIO)
+Queda **estrictamente prohibido** redactar eventos futuros en tiempo pasado (ej. "tras la asimilación de los discursos de Jackson Hole", "luego del dato de IPC") si dicho evento aún no ha ocurrido según el reloj real de Chile.
+- **Eventos Futuros / Próximos:** Se redactan exclusivamente en **Modo Anticipación** ("en la antesala de...", "a la espera de los discursos previstos para mañana...", "el mercado aguarda la publicación...").
+- **Validador Automático:** `generar_pdf.py` y `pipeline_informe.py` ejecutan automáticamente `scripts/validar_consistencia_temporal.py`. Si detectan discrepancia de fecha o anacronismos en el texto, el proceso aborta inmediatamente (*Fail-Fast*).
+
 ## Agenda semanal
 
 | Día | Contenido principal | Encuesta | Señales |
@@ -101,24 +106,23 @@ la rotación diaria de 2-3 activos y las piezas de la estructura obligatoria sig
 que agrega es una selección **objetiva** del universo completo, para que la elección de qué
 activo comunicar no dependa de a quién se le ocurrió primero.
 
-### Las 3 tandas, ancladas a Nueva York
+### Producción diaria responsiva (escáner + carrusel + informe)
 
-| Tanda | Ancla (Nueva York) | Comando | Salida |
+| Momento / Sesión | Ventana (Nueva York) | Comando | Salida |
 |---|---|---|---|
-| — | 08:30 aprox. | `/informe apertura` | PDF institucional A4 + mensaje |
-| 1 | 10:30 (apertura + 1 h) | `/carrusel` | Hasta 3 Stories + mensaje índice |
-| 2 | 14:30 | `/carrusel 2` | Hasta 3 Stories + mensaje índice |
-| 3 | 16:45 (cierre + 45 min) | `/informe cierre` | Mensaje con gráfico, **sin PDF** |
+| Apertura | 08:30 aprox. | `/informe apertura` | PDF institucional A4 + mensaje |
+| Responsivo 24h | Cualquier hora | `/carrusel` | Hasta 3 Stories + mensaje índice (detección automática de sesión y hora real) |
+| Pre-cierre | 16:45 (cierre + 45 min) | `/informe cierre` | Mensaje con gráfico, **sin PDF** |
 
-**El ancla es la hora de Nueva York y no la de Chile.** Los dos hemisferios cambian de
-horario en sentido opuesto, así que el desfase se mueve dos veces al año: NYSE abre 09:30 CLT
-en agosto y 11:30 CLST en diciembre. Un cronograma escrito en hora chilena describe en enero
-un mercado que ya cerró. `scripts/screener_gi.py` deriva la tanda de la hora de Nueva York y
-comunica siempre en hora de Chile.
+**El ancla es la hora de Nueva York y se comunica en hora real de Chile.** El escáner detecta
+automáticamente la sesión activa (Asiática, Europea, Apertura Wall Street, Rotación de Tarde,
+Cierre o Fin de Semana), permitiendo ejecutar `/carrusel` en cualquier momento. La hora real
+de ejecución queda estampada con fidelidad en los payloads y en el mensaje índice. Adicionalmente,
+el escáner excluye activos publicados en corridas previas de hoy para evitar redundancia.
 
 **El informe de apertura lleva un gráfico por activo.** `scripts/grafico_informe.py`
 dibuja la serie real del terminal (cierres de `serie_mt5.py`, niveles de `analizar_activo`)
-con sus medias de 50 y 100 días, y el pipeline lo referencia bajo el bloque de cada activo.
+con sus medias de 50 y 100 días en formato banner institucional de **7.2 × 2.82 pulgadas a 300 DPI**, trazando obligatoriamente como líneas horizontales todo nivel de soporte/resistencia o Fibo mencionado en el texto, y el pipeline lo referencia bajo el bloque de cada activo.
 Nunca se dibuja un sustituto: sin terminal, el informe sale sin imágenes y lo dice en los
 avisos. Es la diferencia con `scripts/generar_graficos_drivers.py`, que tiene las series
 escritas a mano y produce piezas de aspecto institucional a partir de números que nadie
@@ -307,8 +311,9 @@ En todo texto que lea un cliente —mensajes de WhatsApp, pies de Story, textos 
 | WTI.spot | 3 | $90.181 | $90.18 / $90.2 |
 | US100.spot | 2 | 30,350.01 | 30.350 / 30,350 |
 | Acciones | 2 | $192.50 | $192.5 / $193 |
-| COPPER | 0 | 13720 | 13.720 / 13720.0 |
+| COPPER | 1 | $14274.0 USD/t | $14.274 / 14274 |
 
+*El Cobre se analiza y cotiza siempre por su valor por tonelada métrica (`USD/t`) disponible en el terminal MT5.*
 Nunca truncar ceros al final (89.60, no 89.6). Nunca redondear a enteros salvo que digits = 0.
 
 ## Eventos de alto impacto (decisiones de tasas)
@@ -395,9 +400,12 @@ Contrato de error común: si el dato no está disponible retorna `{'error': 'CÓ
 
 **Setup WhatsApp**: requiere Evolution API en Docker (`docker run -d --name evolution-api -p 8080:8080 atendai/evolution-api`). Ver instrucciones en `mcp/mcp_config.json`.
 
-## Stories GI
+## Stories GI y Generación de Imágenes
 
-Piloto (issue #109): comando `/story [tipo]` genera Stories de marca (imagen 1920×1080).
+> [!CRITICAL]
+> **Prohibición Total de Modelos de Difusión / IA Text-to-Image (`generate_image`)**: Queda **estrictamente prohibido** utilizar la herramienta `generate_image` o modelos de generación de imágenes por difusión de IA para crear piezas, terminales, infografías o gráficos en este proyecto. Todo el contenido visual DEBE ser maquetado en HTML/CSS estructurado (`templates/stories/`) con datos reales y renderizado vía Playwright/Chromium siguiendo el Brandkit oficial.
+
+Piloto (issue #109): comando `/story [tipo]` genera Stories de marca (imagen 1920×1080 o 1080×1920).
 `[tipo]` soportados hoy: `dato_macro`, `alerta`, `recomendacion`, `quote`, `breaking`, `encuesta`,
 `edu` (Fase B, issues #121/#123/#125/#127), `flash` (Fase C, issue #129), `postventa` (Fase C) y
 `calendario` (fuera de fase, pedido directo del director 2026-08-10). `calendario` señala los
@@ -421,7 +429,7 @@ plantilla con firma acreditada** —una recomendación induce una operación, as
 quién la respalda— y **cuenta para el límite de 3 señales por semana**; obliga a TP y SL en pesos y
 tiene campo para el costo de mantención (swap), que es lo que separa una operación comunicada con
 honestidad de una que solo muestra la ganancia. `alerta` (plantilla "03 Alerta de Mercado") combina niveles reales del motor
-(`get_asset_levels`) con una narrativa de alerta (mismo criterio editorial de `/alerta`); `quote`
+(`get_asset_levels`) con una narrativa de alerta (mismo criterio editorial de `/alerta`). **Regla de Inyección Obligatoria de Niveles en Gráficos de Stories**: el payload DEBE incluir obligatoriamente el array `hitos` (punto `actual` con precio formateado y guía) y el array `niveles` (líneas horizontales con `etiqueta` y `rol`, como $S_1$, $R_1$ o barreras macro/intervenciones soberanas como el nivel MOF 160.000 en USD/JPY). Queda terminantemente prohibido generar gráficos con la serie de velas muda / sin niveles numéricos trazados. `quote`
 es una pieza 100% editorial (cita + autor + cargo, sin dato del motor); `breaking` es una pieza
 editorial de noticia urgente (kicker + titular + cifra clave + contexto + reacción, sin dato del
 motor ni búsqueda propia de evento); `encuesta` es una pieza editorial de sentimiento binario
@@ -685,7 +693,7 @@ Invocar con `/nombre` desde Claude Code:
 | `/chart` | Genera screenshot de MT5 con indicador y temporalidad a elección |
 | `/story [tipo]` | Genera una Story de marca GI (imagen 1920×1080). `[tipo]` soportados hoy: `dato_macro`, `alerta`, `recomendacion`, `quote`, `breaking`, `encuesta`, `edu`, `flash`, `postventa`, `calendario`; demás plantillas en #111-#115. Ver sección "Stories GI". |
 | `/oportunidad [activo]` | Pieza que invita a operar: imagen (plantilla `oportunidad`) + mensaje de WhatsApp con contexto, llamado a la acción, fuente y disclaimer. Precios SIEMPRE del motor — si MT5 falla, se detiene, nunca deduce. No es señal: sin entrada, TP ni SL. Máximo 3 al día. |
-| `/carrusel [tanda]` | Carrusel de una tanda: `screener_gi.py` puntúa el universo con el `Score_GI` y elige el Top 3; el comando escribe el texto y rinde las Stories en ambos formatos. Máximo 3 imágenes (WhatsApp corta con `+2` a partir de la cuarta). |
+| `/carrusel` | Carrusel responsivo de alertas de mercado: `screener_gi.py` detecta la sesión activa y hora real, puntúa el universo con el `Score_GI` y elige el Top 3; el comando escribe el texto y rinde las Stories en ambos formatos. Máximo 3 imágenes (WhatsApp corta con `+2` a partir de la cuarta). |
 | `/informe [apertura\|cierre]` | Informe de la jornada. Apertura en PDF institucional A4; cierre chat-first (mensaje + gráfico), por el criterio de canal de la skill de reporte editorial. La apertura no se emite con el sesgo del motor vencido salvo `--con-datos-viejos`, que estampa el aviso. |
 | `/señal` | Señal operativa (verifica límite 3/semana automáticamente) |
 | `/alerta` | Detecta qué mueve el mercado ahora y genera alerta urgente |

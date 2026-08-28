@@ -44,3 +44,27 @@ def test_enriquecer_propaga_el_ajuste_del_recorrido():
 
     assert 'preserveAspectRatio="none"' in resultado["grafico"]
     assert "recorrido" not in resultado
+
+
+def test_marcador_actual_se_alinea_con_el_vertice_de_la_linea_incluso_si_precio_difiere():
+    """El punto y la guía del marcador 'actual' deben anclarse exactamente al final de la línea."""
+    import re
+
+    serie = [10.0, 11.0, 12.0]
+    # Supongamos que el marcador trae un precio 15.0 que no coincide con serie[-1] (12.0)
+    marcadores = [{"indice": 2, "precio": 15.0, "clase": "actual", "etiqueta": "12,00"}]
+    svg = story_grafico.construir_svg(serie, marcadores)
+
+    # Extraer el último punto de la línea SVG
+    match_linea = re.search(r'class="g-linea"\s+d="M\s+([^"]+)"', svg)
+    assert match_linea is not None
+    puntos = match_linea.group(1).split(" L ")
+    ultimo_x, ultimo_y = puntos[-1].split(",")
+
+    # Extraer cx y cy del punto actual
+    match_punto = re.search(r'class="g-punto\s+g-punto-actual"\s+cx="([^"]+)"\s+cy="([^"]+)"', svg)
+    assert match_punto is not None
+    cx, cy = match_punto.group(1), match_punto.group(2)
+
+    assert cx == ultimo_x
+    assert cy == ultimo_y

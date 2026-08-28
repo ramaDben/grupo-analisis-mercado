@@ -176,7 +176,7 @@ def ema(series: pd.Series, period: int) -> pd.Series:
 
 
 def atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
-    """Average True Range (suavizado exponencial)."""
+    """Average True Range (suavizado Welles Wilder RMA, alpha=1/period)."""
     high = df["high"]
     low = df["low"]
     prev_close = df["close"].shift(1)
@@ -185,11 +185,11 @@ def atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
         (high - prev_close).abs(),
         (low - prev_close).abs(),
     ], axis=1).max(axis=1)
-    return tr.ewm(span=period, adjust=False).mean()
+    return tr.ewm(alpha=1.0 / period, adjust=False).mean()
 
 
 def adx(df: pd.DataFrame, period: int = 14) -> pd.Series:
-    """Average Directional Index. Mismo suavizado (ewm span) que `atr()` para consistencia."""
+    """Average Directional Index (suavizado Welles Wilder RMA, alpha=1/period)."""
     high = df["high"]
     low = df["low"]
     up_move = high.diff()
@@ -204,12 +204,13 @@ def adx(df: pd.DataFrame, period: int = 14) -> pd.Series:
         (low - df["close"].shift(1)).abs(),
     ], axis=1).max(axis=1)
 
-    smoothed_tr = tr.ewm(span=period, adjust=False).mean()
-    plus_di = 100 * plus_dm.ewm(span=period, adjust=False).mean() / smoothed_tr
-    minus_di = 100 * minus_dm.ewm(span=period, adjust=False).mean() / smoothed_tr
+    alpha = 1.0 / period
+    smoothed_tr = tr.ewm(alpha=alpha, adjust=False).mean()
+    plus_di = 100 * plus_dm.ewm(alpha=alpha, adjust=False).mean() / smoothed_tr
+    minus_di = 100 * minus_dm.ewm(alpha=alpha, adjust=False).mean() / smoothed_tr
 
     dx = 100 * (plus_di - minus_di).abs() / (plus_di + minus_di)
-    return dx.ewm(span=period, adjust=False).mean()
+    return dx.ewm(alpha=alpha, adjust=False).mean()
 
 
 def macd(

@@ -1,18 +1,15 @@
-Genera el carrusel de una tanda diaria: hasta 3 Stories de alerta con los activos que
-el escáner eligió objetivamente, más el mensaje índice para el grupo.
+Genera el carrusel responsivo de alertas de mercado: hasta 3 Stories de alerta con los activos que
+el escáner eligió objetivamente según la sesión activa y la hora real, más el mensaje índice para el grupo.
 
-Uso: `/carrusel` (deriva la tanda de la hora) · `/carrusel 2` (fuerza la tanda)
+Uso: `/carrusel` (detecta automáticamente la sesión activa y la hora real)
 
 ## PASO 1 — Escanear el universo (OBLIGATORIO, y no se hace a mano)
 
 ```bash
 uv run --with MetaTrader5 python scripts/pipeline_carrusel.py --preparar
-uv run --with MetaTrader5 python scripts/pipeline_carrusel.py --preparar --tanda 2
 ```
 
-Esto corre `scripts/screener_gi.py`, que puntúa el universo con el `Score_GI`
-(técnico 35 + catalizador 25 + espacio 20 + momentum 20 = 100), aplica los gates y deja
-los payloads con **todos los datos resueltos**.
+Esto corre `scripts/screener_gi.py`, que detecta dinámicamente la sesión de mercado (Asiática, Europea, Apertura Wall Street, Rotación de Tarde o Cierre), puntúa el universo con el `Score_GI` (técnico 35 + catalizador 25 + espacio 20 + momentum 20 = 100), aplica los gates, excluye activos ya publicados en corridas previas de hoy y deja los payloads con **todos los datos resueltos**.
 
 **No elijas los activos por tu cuenta ni negocies con el escáner.** La razón de que exista
 es que la selección sea objetiva y auditable: si el resultado no te gusta, se discute el
@@ -28,7 +25,7 @@ con ficha: correr `pipeline_ingesta.py` y después `macro_bias_engine.py`.
 ## PASO 2 — Escribir el texto de cada pieza
 
 El escáner y el pipeline no escriben el titular ni el párrafo, porque eso es criterio
-editorial. Cada payload en `data/carrusel/<fecha>_tanda<N>/` tiene los dos campos vacíos y
+editorial. Cada payload en `data/carrusel/<fecha>_<hora>_<sesion>/` tiene los dos campos vacíos y
 marcados en `_pendiente_editorial`. Por cada pieza, escribe:
 
 - **`titular`**: qué está pasando con ese activo y hacia dónde va. Toma postura direccional:
@@ -48,7 +45,7 @@ salieron del motor. Si necesitas un dato que no está, pídelo al MCP; nunca lo 
 ## PASO 3 — Rendir las piezas
 
 ```bash
-uv run --extra stories python scripts/pipeline_carrusel.py --rendir data/carrusel/<dir>
+uv run --extra stories python scripts/pipeline_carrusel.py --rendir data/carrusel/<directorio>
 ```
 
 Produce 2 imágenes por pieza (horizontal y vertical) en `data/stories/`. Si algún campo
@@ -57,10 +54,10 @@ cliente.
 
 ## PASO 4 — Mensaje índice para el grupo
 
-Un solo mensaje que acompaña los adjuntos, con las 6 reglas de formato del proyecto:
+Un solo mensaje que acompaña los adjuntos, con las 6 reglas de formato del proyecto y la **hora real** de ejecución:
 
 ```text
-📊 *[NOMBRE DE LA TANDA]* · [hora] hrs
+📊 *ALERTA DE MERCADO · [NOMBRE DE LA SESIÓN]* · [HH:MM] hrs
 ━━━━━━━━━━━━━━━━━━━
 🎯 Lo que estamos mirando ahora en [N] activos
 
@@ -69,7 +66,7 @@ Un solo mensaje que acompaña los adjuntos, con las 6 reglas de formato del proy
 3️⃣ *[Activo]* → [dirección en una línea]
 ━━━━━━━━━━━━━━━━━━━
 ⏱️ Temporalidad: intradía (dentro de la jornada)
-[Una línea sobre el evento macro que ordena la jornada, si hubo]
+[Una línea sobre el evento macro o driver que ordena el mercado, si hubo]
 ━━━━━━━━━━━━━━━━━━━
 Cada imagen tiene los niveles del activo. ¿Dudas? Habla con tu analista.
 ```
@@ -90,16 +87,17 @@ Sin activo protagonista (`-Activo` omitido) porque el índice cubre varios: cae 
 
 **Nunca se envía nada al grupo sin aprobación explícita del director.**
 
-## Las 3 tandas
+## Sesiones de mercado continuas (24 horas)
 
-Ancladas a la hora de **Nueva York**, no al reloj chileno: Chile y EE.UU. cambian de
-horario en sentido opuesto, así que el desfase se mueve dos veces al año. El script
-imprime la hora de Chile equivalente del día en que corre.
+El ciclo global de mercado está anclado a la hora de **Nueva York**, informando la hora equivalente de **Chile** en tiempo real:
 
-| Tanda | Ancla (Nueva York) | Foco |
-|---|---|---|
-| 1 | 10:30 (apertura + 1 h) | Volatilidad y quiebres de la primera hora |
-| 2 | 14:30 | Flujos vespertinos, sin repetir la tesis de la mañana |
-| 3 | 16:45 (cierre + 45 min) | Balance de la sesión y preparación de Asia |
+| Sesión | Ventana (Nueva York) | Ventana (Chile / CLT aprox.) | Foco Operativo |
+|---|---|---|---|
+| **Sesión Asiática / Pacífico** | 18:00 – 02:00 | 19:00 – 03:00 | Activos de Asia, JPY, Oro, Cobre, Cripto y materias primas |
+| **Sesión Europea / Londres** | 02:00 – 08:30 | 03:00 – 09:30 | Quiebres de apertura europea, EUR, GBP, DAX y pre-mercado EE.UU. |
+| **Apertura Wall Street** | 08:30 – 12:30 | 09:30 – 13:30 | Volatilidad de primera hora, quiebres intradía y catalizadores macro |
+| **Rotación de Tarde Wall Street** | 12:30 – 15:30 | 13:30 – 16:30 | Flujos vespertinos, rebalanceo institucional y continuidad de tendencia |
+| **Cierre Wall Street / Post-Mercado** | 15:30 – 18:00 | 16:30 – 19:00 | Balance de sesión americana, earnings y preparación para Asia |
+| **Fin de Semana** | Sábado / Domingo | Sábado / Domingo | Activos Cripto y preparación estratégica para la apertura semanal |
 
-La tanda 2 excluye automáticamente los activos que ya salieron en la tanda 1 del mismo día.
+El escáner excluye automáticamente los activos que ya salieron en cualquier corrida anterior del mismo día, permitiendo ejecutar `/carrusel` en cualquier momento sin repetir activos.

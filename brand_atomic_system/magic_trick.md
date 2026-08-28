@@ -26,10 +26,12 @@
 ---
 
 ## 3. Prohibiciones Visuales Absolutas (Anti-Patrones de Marca)
+- **Cero Modelos de Difusión o IA Text-to-Image (`generate_image`)**: Queda estrictamente prohibido usar modelos de difusión/generación de imágenes por prompt (`generate_image` o similares) para representar mercados, gráficos, terminales o infografías de Grupo Inteligencia. Toda pieza visual, Story o gráfico DEBE construirse a partir de plantillas HTML (`templates/stories/`) con datos reales y renderizarse a través de Playwright/Chromium.
 - **Cero Gráficos Mock o SVGs Manuales**: Queda estrictamente prohibido dibujar curvas o vectores de precios "a mano", inventar polilíneas simplificadas de pocos puntos o incrustar SVGs aproximados en scripts ad-hoc.
 - **Obligatoriedad del Pipeline Canónico de Gráficos**: Todo gráfico técnico de mercado DEBE generarse obligatoriamente mediante la cadena oficial: `serie_mt5.py` (60 velas H1 de alta densidad) ➔ `story_grafico.py` (motor geométrico y anti-colisión) ➔ `story_render.py`.
 - **Prohibición de Templates HTML Inline Improvisados**: Jamás se debe renderizar una pieza de mercado usando HTML temporal escrito a mano dentro de un script si ya existe la plantilla oficial en `templates/stories/` (`alerta.html`, `calendario.html`, `dato_macro.html`, `breaking.html`).
 - **Integridad de Cromo y Fidelidad Visual**: Todo gráfico debe conservar sus clases de alta fidelidad (`.g-linea`, `.g-area`, `.g-punto`, `.g-halo`, `.g-nivel`), las transparencias Dark Emerald y el biselado reflectivo del snapshot oficial.
+- **Prohibición Total de Gráficos Mudos**: Queda estrictamente prohibido renderizar un gráfico de mercado sin sus niveles de precios, guías horizontales y etiquetas numéricas explícitas. Todo payload para templates con gráfico DEBE alimentar obligatoriamente los arrays `hitos` (punto SPOT actual) y `niveles` (soportes, resistencias y niveles de intervención soberana / macro como el nivel MOF 160.000 en USD/JPY).
 
 ---
 

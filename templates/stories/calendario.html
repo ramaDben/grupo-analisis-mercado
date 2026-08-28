@@ -1,50 +1,8 @@
-<!--
-Story "calendario" — el calendario macro de la semana, con la misma fuerza
-visual que `oportunidad` pero sin activo protagonista.
-
-Nace de un pedido del director (10 ago 2026): una pieza semanal que señale los
-datos más importantes, con el mismo peso visual que las piezas de mercado en
-vez de una tabla plana. Reutiliza `piel.css` (sello con pulso, capas de fondo,
-CTA, disclaimer) tal como lo hacen `oportunidad`/`alerta`/`recomendacion`, pero
-sin `.foto-activo` ni `.escenario`: no hay un solo activo al que pintarle color
-ni una serie de precios que graficar. Por eso el body NO lleva clase
-`activo-<slug>` — cae al `--activo: var(--acento)` que ya define `marca.css`
-como default, así que la pieza sale en el acento de marca sin declarar nada
-especial (mismo fallback que ya usan `alerta`/`recomendacion` con un activo sin
-color propio).
-
-La lista de eventos es contenido curado por el director (los más relevantes de
-la semana para los activos del catálogo), no un volcado íntegro del
-calendario — por eso no hay más de 5-6 filas: es una selección editorial, igual
-que "el driver que domina hoy" en los mensajes de niveles.
-
-SEGUNDA VUELTA DE DISEÑO (mismo día): la primera versión era una tabla correcta
-pero plana — "no tiene la fuerza de oportunidad". El ajuste no fue agregar
-color decorativo (eso rompería "el cromo no opina"), fue subir la jerarquía de
-lo que YA es un dato:
-  · `anterior` vs `esperado` pasan de un string único a un par con la MISMA
-    lógica visual que precio→objetivo de `oportunidad`: el dato viejo en gris,
-    el dato que importa (hacia dónde se espera que se mueva) grande, en
-    `var(--activo)` y con glow. Antes eran un renglón gris sin jerarquía.
-  · El número de orden (`numero`, "01".."05") es la única cifra puramente
-    decorativa de la pieza -y por eso es la única que NO lleva color de dato:
-    vive en `var(--texto-2)`, discreta, solo para dar ritmo a la lista.
-  · `impacto_slug` (alto/medio) gradúa la intensidad de la píldora de impacto:
-    alto = píldora rellena, medio = solo borde. Sigue siendo el mismo rol
-    (clasificación del evento), no una escala de mercado nueva.
-
-Reutiliza el mecanismo FOR del motor (tercer consumidor, tras `edu`/`flash`)
-para `eventos`, y el fence IF anidado (`tiene_esperado`) para el caso real en
-que el calendario no trae consenso publicado (ej. inventarios semanales) — ahí
-no hay flecha ni "se espera", solo el dato anterior. El marcador FOR real vive
-en el <tbody>; no escribir su literal en comentarios de HTML (`resolver_loops`
-lo tomaría como apertura).
--->
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>Calendario — Story GI</title>
+<title>Calendario Macro</title>
 <style>
   /* ════ marca.css embebido ════ */
 :root {
@@ -87,8 +45,10 @@ lo tomaría como apertura).
   --activo-ada:    #3B6FD4;
   --activo-doge:   #D9A22B;
 
-  --font-sans: "Space Grotesk", "DM Sans", "Segoe UI", "Noto Sans", "Helvetica Neue", Arial, sans-serif;
-  --font-emoji: "Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji";
+  --font-display:   "Goldman", sans-serif;
+  --font-titular:   "Goldman", sans-serif;
+  --font-sans:      "Plus Jakarta Sans", "Segoe UI", "Noto Sans", Arial, sans-serif;
+  --font-emoji:     "Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji";
   --texto-1:        #F5F3F7;
   --texto-2:        #A9A5B4;
   --texto-3:        #6E6A7A;
@@ -140,392 +100,171 @@ body.activo-doge    { --activo: var(--activo-doge); }
 .story {
   box-shadow: inset 0 0 0 var(--filete-ancho) var(--filete);
 }
-  /* ════ piel.css embebido ════ */
-@font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
-@font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-700.woff2") format("woff2"); font-weight: 800; font-display: swap; }
-@font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
-@font-face { font-family: "DM Sans";       src: url("fonts/dm-sans-400.woff2") format("woff2");       font-weight: 400; font-display: swap; }
-@font-face { font-family: "DM Sans";       src: url("fonts/dm-sans-700.woff2") format("woff2");       font-weight: 700; font-display: swap; }
+</style>
+<style>
+@font-face { font-family: "Goldman"; src: url("fonts/goldman-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Goldman"; src: url("fonts/goldman-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/plus-jakarta-sans-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/plus-jakarta-sans-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/plus-jakarta-sans-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
 
-.foto-activo {
-  position: absolute; inset: 0 -72px 0 auto;
-  width: 58%;
-  z-index: 1;
-  object-fit: cover;
-  -webkit-mask-image:
-    linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.35) 22%, var(--fondo) 62%),
-    linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 62%, transparent 96%);
-  -webkit-mask-composite: source-in;
-  mask-image:
-    linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.35) 22%, var(--fondo) 62%),
-    linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 62%, transparent 96%);
-  mask-composite: intersect;
-  filter: saturate(1.12) contrast(1.06) brightness(0.92);
-  pointer-events: none;
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  width: 1920px; height: 1080px;
+  background: var(--fondo);
+  color: var(--texto-1);
+  font-family: var(--font-sans);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
-.foto-activo--fondo {
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  -webkit-mask-image:
-    linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 58%, rgba(0,0,0,0.30) 100%);
-  mask-image:
-    linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 58%, rgba(0,0,0,0.30) 100%);
-  filter: saturate(0.82) contrast(0.94) brightness(0.36);
-  opacity: 0.55;
-}
-
-.ilustracion {
-  position: absolute; right: -16px; top: 37%;
-  transform: translateY(-50%);
-  z-index: 2;
-  width: 520px;
-  filter: drop-shadow(0 0 90px color-mix(in srgb, var(--activo) 55%, transparent));
-  pointer-events: none;
+.story {
+  position: relative; width: 100%; height: 100%;
+  padding: 48px 64px 36px;
+  display: flex; flex-direction: column;
 }
 
 .velo {
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background:
-    linear-gradient(100deg, var(--fondo) 24%, rgba(0,0,0,0.88) 44%, rgba(0,0,0,0.26) 70%, rgba(0,0,0,0.58) 100%),
-    radial-gradient(58% 78% at 8% 34%, color-mix(in srgb, var(--activo) 26%, transparent) 0%, rgba(0,0,0,0) 64%),
-    radial-gradient(46% 62% at 96% 92%, color-mix(in srgb, var(--acento-azul) 34%, transparent) 0%, rgba(0,0,0,0) 60%);
+    radial-gradient(circle at 90% 10%, color-mix(in srgb, var(--acento) 15%, transparent) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(4,18,14,0.95) 100%);
 }
 
 .grilla {
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background-image:
-    repeating-linear-gradient(90deg, rgba(255,255,255,0.026) 0 1px, transparent 1px 96px),
-    repeating-linear-gradient(0deg,  rgba(255,255,255,0.026) 0 1px, transparent 1px 96px);
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0 1px, transparent 1px 96px),
+    repeating-linear-gradient(0deg,  rgba(255,255,255,0.02) 0 1px, transparent 1px 96px);
 }
 
-.capa { position: relative; z-index: 2; display: flex; flex-direction: column; height: 100%; }
-
-.story::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 9;
-  pointer-events: none;
-  box-shadow: inset 0 0 0 var(--filete-ancho) var(--filete);
+.contenido {
+  position: relative; z-index: 2; flex: 1; min-height: 0;
+  display: flex; flex-direction: column; justify-content: space-between;
 }
+
+.cabecera { display: flex; justify-content: space-between; align-items: flex-start; }
 
 .sello {
-  display: inline-flex; align-items: center; gap: 12px;
-  padding: 11px 24px 11px 18px;
-  border: 1px solid color-mix(in srgb, var(--activo) 46%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--activo) 11%, transparent);
-  box-shadow: 0 0 34px -10px color-mix(in srgb, var(--activo) 70%, transparent);
-  font-family: "Space Grotesk", sans-serif; font-weight: 600;
-  font-size: 20px; letter-spacing: 0.16em; text-transform: uppercase;
-  color: var(--activo);
-}
-.pulso {
-  width: 11px; height: 11px; border-radius: 50%;
-  background: var(--activo);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--activo) 24%, transparent),
-              0 0 18px 4px color-mix(in srgb, var(--activo) 75%, transparent);
+  font-family: var(--font-display); font-weight: 700; font-size: 14px;
+  letter-spacing: 0.10em; text-transform: uppercase; color: var(--acento);
+  background: color-mix(in srgb, var(--fondo-acento) 85%, var(--fondo)); border: 1.5px solid var(--acento);
+  border-radius: 999px; padding: 6px 18px;
 }
 
-.cta {
-  margin-top: auto;
-  display: flex; align-items: center; justify-content: space-between; gap: 40px;
-  padding: 26px 0 18px;
-  border-top: 1px solid color-mix(in srgb, var(--activo) 24%, transparent);
+.fecha { font-size: 15px; font-weight: 600; color: var(--texto-2); letter-spacing: 0.05em; }
+
+.titulo {
+  font-family: var(--font-display); font-weight: 700; font-size: 38px;
+  color: var(--blanco); margin: 10px 0 0; letter-spacing: -0.01em;
 }
-.cta-texto { display: flex; align-items: center; gap: 22px; }
-.cta-flecha {
-  width: 62px; height: 62px; flex: 0 0 62px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--activo); color: var(--fondo-alt);
-  font-size: 32px; font-weight: 700;
-  box-shadow: 0 0 50px -8px var(--activo);
+
+.subtitulo {
+  font-family: var(--font-sans); font-weight: 400; font-size: 18px;
+  color: var(--texto-borde); margin: 6px 0 0;
 }
-.cta-titulo { color: var(--texto-1); font-family: "Space Grotesk", sans-serif; font-weight: 800; font-size: 37px; letter-spacing: -0.015em; }
-.cta-sub { font-size: 24px; color: var(--texto-2); margin-top: 3px; }
-.cta-marca { display: flex; align-items: center; gap: 20px; }
-.cta-handle { font-family: "Space Grotesk", sans-serif; font-weight: 600; font-size: 22px; color: var(--texto-2); }
-.cta-logo { height: 74px; }
 
-.disclaimer { padding-bottom: 20px; font-size: 14px; line-height: 1.3; color: var(--texto-3); }
-
-@media (max-aspect-ratio: 1/1) {
-  .sello { font-size: 24px; padding: 13px 26px 13px 20px; }
-  .pulso { width: 13px; height: 13px; }
-
-  .ilustracion {
-    position: static; transform: none;
-    display: block; width: 330px; margin: 4px 0 0 auto;
-  }
-
-  .cta { padding: 28px 0 18px; gap: 24px; }
-  .cta-flecha { width: 68px; height: 68px; flex-basis: 68px; font-size: 34px; }
-  .cta-titulo { font-size: 36px; }
-  .cta-sub { font-size: 26px; }
-  .cta-handle { display: none; }
-  .cta-logo { height: 78px; }
-  .disclaimer { font-size: 16px; padding-bottom: 24px; }
+.tabla-eventos {
+  margin-top: 18px;
+  display: flex; flex-direction: column; gap: 10px;
+  flex: 1; justify-content: center;
 }
-</style>
-<style>
-  * { box-sizing: border-box; }
 
-  html, body {
-    margin: 0; padding: 0;
-    width: 100vw; height: 100vh;
-    background: var(--fondo);
-    color: var(--texto-1);
-    font-family: var(--font-sans), var(--font-emoji);
-    overflow: hidden;
-  }
+.fila-evento {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 24px; border-radius: 18px;
+  background: color-mix(in srgb, var(--fondo-acento) 75%, var(--fondo));
+  border: 1.5px solid color-mix(in srgb, var(--acento) 25%, transparent);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+}
 
-  .story {
-    position: relative;
-    width: 100%; height: 100%;
-    padding: 52px 72px 0;
-    display: flex; flex-direction: column;
-    overflow: hidden;
-  }
+.ev-num {
+  font-family: var(--font-display); font-weight: 700; font-size: 18px;
+  color: var(--acento); width: 36px;
+}
+.ev-dia-hora {
+  display: flex; flex-direction: column; width: 150px;
+}
+.ev-dia { font-weight: 700; font-size: 14px; text-transform: uppercase; color: var(--blanco); }
+.ev-hora { font-weight: 600; font-size: 13px; color: var(--texto-2); margin-top: 2px; }
 
-  /* ══════════ CABECERA · EL SELLO DEL MOTOR ══════════ */
-  .cabecera { display: flex; justify-content: space-between; align-items: center; }
+.ev-info { flex: 1; padding: 0 24px; }
+.ev-nombre { font-weight: 700; font-size: 17px; color: var(--blanco); }
+.ev-pais { font-size: 13px; color: var(--texto-2); margin-top: 2px; }
 
-  .fecha {
-    font-family: "Space Grotesk", sans-serif; font-weight: 600;
-    font-size: 21px; letter-spacing: 0.14em; text-transform: uppercase;
-    color: var(--texto-2);
-    text-shadow: 0 2px 14px var(--fondo), 0 0 6px var(--fondo);
-  }
+.ev-datos {
+  display: flex; gap: 24px; align-items: center;
+}
+.ev-stat { display: flex; flex-direction: column; text-align: right; min-width: 90px; }
+.ev-stat-label { font-size: 11px; text-transform: uppercase; color: var(--texto-2); font-weight: 600; }
+.ev-stat-val { font-family: var(--font-display); font-weight: 700; font-size: 17px; color: var(--blanco); margin-top: 2px; }
 
-  /* ══════════ HERO ══════════
-     La barra + el glow tras el título son lo que le faltaba a la primera
-     versión para leerse con la misma autoridad que el titular de
-     `oportunidad`: ahí el peso lo daba el precio a 96px; acá no hay un precio
-     único, así que el peso lo da el título mismo. */
-  .hero { margin-top: 18px; }
+.tag-impacto {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+  padding: 4px 12px; border-radius: 999px;
+  background: color-mix(in srgb, var(--baja) 20%, transparent); color: var(--baja); border: 1px solid var(--baja);
+}
 
-  .cal-titulo-linea { display: flex; align-items: flex-start; gap: 22px; }
-  .cal-barra {
-    flex: 0 0 8px; width: 8px; margin-top: 10px;
-    border-radius: 999px;
-    background: var(--activo);
-    box-shadow: 0 0 26px 2px color-mix(in srgb, var(--activo) 80%, transparent);
-    align-self: stretch;
-  }
-  .cal-titulo {
-    font-family: "Space Grotesk", sans-serif; font-weight: 800;
-    font-size: 62px; line-height: 1.02; letter-spacing: -0.025em;
-    margin: 0;
-    color: var(--blanco);
-    text-shadow: 0 6px 34px rgba(0,0,0,0.55);
-    max-width: 1350px;
-  }
-  .cal-subtitulo {
-    font-size: 22px; line-height: 1.3; color: var(--texto-2);
-    margin: 10px 0 0 30px; max-width: 1280px;
-  }
-
-  /* ══════════ LISTA DE EVENTOS ══════════
-     Deja de ser tabla desde el inicio (no solo en vertical): cada evento es
-     una tarjeta con borde/glow en `var(--activo)`, igual tratamiento que la
-     tarjeta `.evidencia` de `oportunidad`. Una tabla con líneas divisorias se
-     leía como planilla; la tarjeta se lee como pieza de marca. */
-  .cal-lista { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
-
-  .cal-fila {
-    display: flex; align-items: flex-start; gap: 26px;
-    padding: 15px 28px;
-    border: 1px solid color-mix(in srgb, var(--activo) 24%, transparent);
-    border-left: 4px solid color-mix(in srgb, var(--activo) 70%, transparent);
-    border-radius: 16px;
-    background:
-      linear-gradient(90deg, color-mix(in srgb, var(--activo) 10%, transparent) 0%, transparent 60%),
-      color-mix(in srgb, var(--fondo-acento) 55%, transparent);
-    box-shadow: 0 14px 34px -22px color-mix(in srgb, var(--activo) 70%, transparent);
-  }
-
-  .cal-numero {
-    flex: 0 0 auto;
-    font-family: "Space Grotesk", sans-serif; font-weight: 700;
-    font-size: 17px; letter-spacing: 0.06em;
-    color: var(--texto-2);
-    padding-top: 3px;
-  }
-
-  .cal-cuerpo { flex: 1 1 auto; min-width: 0; }
-
-  .cal-cuando {
-    font-family: "Space Grotesk", sans-serif; font-weight: 700;
-    font-size: 19px; color: var(--blanco);
-  }
-  .cal-hora {
-    margin-left: 10px;
-    font-family: "Space Grotesk", sans-serif; font-weight: 500;
-    font-size: 16px; color: var(--texto-2);
-  }
-
-  .cal-evento {
-    display: block; margin-top: 6px;
-    font-family: "DM Sans", sans-serif; font-weight: 700;
-    font-size: 23px; color: var(--blanco);
-    line-height: 1.2;
-  }
-  .cal-linea-meta { display: flex; align-items: center; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
-  .cal-pais {
-    font-family: "Space Grotesk", sans-serif; font-weight: 600;
-    font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase;
-    color: var(--texto-2);
-  }
-
-  .cal-impacto {
-    display: inline-block;
-    padding: 3px 12px;
-    border-radius: 999px;
-    border: 1px solid color-mix(in srgb, var(--activo) 55%, transparent);
-    font-family: "Space Grotesk", sans-serif; font-weight: 600;
-    font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;
-    color: var(--activo);
-  }
-  /* Alto impacto: píldora rellena. Medio: solo el borde. Misma escala del
-     evento, no una dirección de mercado -- por eso sigue en `var(--activo)`
-     y no en `--sube`/`--baja`. */
-  .cal-impacto--alto {
-    background: color-mix(in srgb, var(--activo) 22%, transparent);
-    box-shadow: 0 0 20px -6px color-mix(in srgb, var(--activo) 70%, transparent);
-  }
-  .cal-impacto--medio { background: transparent; }
-
-  /* ══════════ COMPARACIÓN ANTERIOR → ESPERADO ══════════
-     Mismo rol que `.cifras` en `oportunidad` (precio ahora → hacia dónde va):
-     el dato viejo se lee, el dato que importa se SIENTE. */
-  .cal-comparacion { flex: 0 0 auto; display: flex; align-items: center; gap: 14px; padding-top: 2px; }
-  .cal-comp-item { text-align: right; }
-  .cal-comp-rotulo {
-    display: block;
-    font-family: "Space Grotesk", sans-serif; font-weight: 600;
-    font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;
-    color: var(--texto-2);
-  }
-  .cal-comp-valor {
-    display: block; margin-top: 2px;
-    font-family: "Space Grotesk", sans-serif; font-weight: 700;
-    font-size: 21px; color: var(--texto-1);
-  }
-  .cal-comp-flecha {
-    font-family: "Space Grotesk", sans-serif; font-weight: 700;
-    font-size: 22px; color: var(--activo);
-    padding-top: 14px;
-  }
-  .cal-comp-valor--esperado {
-    font-size: 30px; color: var(--activo);
-    text-shadow: 0 0 26px color-mix(in srgb, var(--activo) 60%, transparent);
-  }
-
-  /* ══════════ FORMATO VERTICAL 9:16 ══════════
-     Mismo criterio que `oportunidad`: el vertical tiene MÁS alto disponible
-     (1920 contra 1080), así que los tamaños SUBEN, no bajan. La comparación
-     anterior/esperado pasa de una columna a la derecha a una fila propia
-     debajo del evento -- a lo ancho de la tarjeta hay espacio de sobra y
-     leerla en una franja horizontal es más natural que apretarla a un costado. */
-  @media (max-aspect-ratio: 1/1) {
-    .story { padding: 64px 60px 0; }
-    .fecha { font-size: 23px; }
-
-    .hero { margin-top: 30px; }
-    .cal-titulo { font-size: 68px; line-height: 1.03; max-width: 100%; }
-    .cal-subtitulo { font-size: 25px; margin: 12px 0 0 30px; }
-
-    .cal-lista { margin-top: 22px; gap: 12px; }
-    .cal-fila { flex-direction: column; gap: 0; padding: 19px 26px; }
-    .cal-numero { padding-top: 0; }
-
-    .cal-cuando { font-size: 23px; }
-    .cal-hora { font-size: 18px; }
-    .cal-evento { font-size: 27px; margin-top: 8px; }
-    .cal-linea-meta { margin-top: 10px; }
-    .cal-pais { font-size: 15px; }
-    .cal-impacto { font-size: 12px; padding: 3px 12px; }
-
-    .cal-comparacion {
-      width: 100%; margin-top: 14px; padding-top: 12px;
-      border-top: 1px solid color-mix(in srgb, var(--activo) 18%, transparent);
-      justify-content: flex-start; gap: 22px;
-    }
-    .cal-comp-item { text-align: left; }
-    .cal-comp-valor { font-size: 22px; }
-    .cal-comp-valor--esperado { font-size: 31px; }
-    .cal-comp-flecha { font-size: 24px; padding-top: 14px; }
-  }
+.footer {
+  position: relative; z-index: 2; margin-top: 16px;
+  display: flex; justify-content: space-between; align-items: center;
+  padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+.footer-marca { font-family: var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: 0.08em; color: var(--acento); }
+.footer-cta { font-family: var(--font-sans); font-weight: 600; font-size: 14px; color: var(--texto-2); margin: 0; }
 </style>
 </head>
 <body>
   <div class="story">
-
     <div class="velo"></div>
     <div class="grilla"></div>
 
-    <div class="capa">
-      <div class="cabecera">
-        <span class="sello"><span class="pulso"></span>{{sello}}</span>
-        <span class="fecha">{{fecha_hora}}</span>
+    <div class="contenido">
+      <div>
+        <div class="cabecera">
+          <span class="sello">{{sello}}</span>
+          <span class="fecha">{{fecha_hora}}</span>
+        </div>
+        <h1 class="titulo">{{titulo}}</h1>
+        <p class="subtitulo">{{subtitulo}}</p>
       </div>
 
-      <div class="hero">
-        <div class="cal-titulo-linea">
-          <span class="cal-barra"></span>
-          <h1 class="cal-titulo">{{titulo}}</h1>
-        </div>
-        <p class="cal-subtitulo">{{subtitulo}}</p>
-
-        <div class="cal-lista">
-          <!-- FOR:eventos --><div class="cal-fila">
-            <span class="cal-numero">{{numero}}</span>
-            <div class="cal-cuerpo">
-              <span class="cal-cuando">{{dia}}</span><span class="cal-hora">{{hora}}</span>
-              <span class="cal-evento">{{evento}}</span>
-              <div class="cal-linea-meta">
-                <span class="cal-pais">{{pais}}</span>
-                <span class="cal-impacto cal-impacto--{{impacto_slug}}">{{impacto}}</span>
-              </div>
+      <div class="tabla-eventos">
+        <!-- FOR:eventos -->
+        <div class="fila-evento">
+          <span class="ev-num">{{numero}}</span>
+          <div class="ev-dia-hora">
+            <span class="ev-dia">{{dia}}</span>
+            <span class="ev-hora">{{hora}}</span>
+          </div>
+          <div class="ev-info">
+            <div class="ev-nombre">{{evento}}</div>
+            <div class="ev-pais">{{pais}}</div>
+          </div>
+          <div class="ev-datos">
+            <div class="ev-stat">
+              <span class="ev-stat-label">Previo</span>
+              <span class="ev-stat-val">{{anterior}}</span>
             </div>
-            <div class="cal-comparacion">
-              <div class="cal-comp-item">
-                <span class="cal-comp-rotulo">Antes</span>
-                <span class="cal-comp-valor">{{anterior}}</span>
-              </div>
-              <!-- IF:tiene_esperado --><span class="cal-comp-flecha">→</span>
-              <div class="cal-comp-item">
-                <span class="cal-comp-rotulo">Se espera</span>
-                <span class="cal-comp-valor cal-comp-valor--esperado">{{esperado}}</span>
-              </div><!-- ENDIF:tiene_esperado -->
+            <!-- IF:tiene_esperado -->
+            <div class="ev-stat">
+              <span class="ev-stat-label">Esperado</span>
+              <span class="ev-stat-val">{{esperado}}</span>
             </div>
-          </div><!-- ENDFOR:eventos -->
-        </div>
-      </div>
-
-      <div class="cta">
-        <div class="cta-texto">
-          <span class="cta-flecha">→</span>
-          <div>
-            <div class="cta-titulo">{{cta}}</div>
-            <div class="cta-sub">{{cta_sub}}</div>
+            <!-- ENDIF:tiene_esperado -->
+            <span class="tag-impacto">{{impacto}}</span>
           </div>
         </div>
-        <div class="cta-marca">
-          <span class="cta-handle">@grupo_inteligencia</span>
-          <img class="cta-logo" src="assets/LOGO Blanco.png" alt="Grupo Inteligencia">
-        </div>
+        <!-- ENDFOR:eventos -->
       </div>
-
-      <p class="disclaimer">
-        Los CFD son instrumentos complejos y presentan un riesgo elevado de perder dinero rápidamente
-        debido al apalancamiento. Este contenido es educativo/informativo, no constituye asesoría financiera.
-      </p>
     </div>
 
+    <div class="footer">
+      <span class="footer-marca">GRUPO INTELIGENCIA</span>
+      <p class="footer-cta">{{cta}} · {{cta_sub}}</p>
+    </div>
   </div>
 </body>
 </html>
