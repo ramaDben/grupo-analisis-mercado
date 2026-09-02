@@ -60,8 +60,12 @@ CADENCIA_DIAS = {
     "USD_JPY": 6,
     # El BCCh publica la posicion forward en T-2 habiles, mas el fin de semana.
     "POSICION_FORWARD_EXTRANJEROS_USD": 8,
-    # La EIA llega a FRED con rezago propio: se han visto 8 dias corridos.
-    "PETROLEO_BRENT": 14,
+    # FRED publica DCOILWTICO/DCOILBRENTEU en T+1 habil, igual que las yields.
+    # Estuvo en 14 con el comentario "la EIA llega con rezago propio: se han
+    # visto 8 dias corridos". Ese diagnostico era falso: el 2026-09-02 la serie
+    # de FRED tenia dato del 01-09 y la del repo estaba en el 25-08. La ventana
+    # ancha tapaba un fallo silencioso del extractor, no un rezago de la fuente.
+    "PETROLEO_BRENT": 6,
     # Mensuales con rezago de publicacion: el Imacec de junio sale en agosto.
     "CHILE_IMACEC_12M": 95,
     "JAPAN_CORE_CPI_YOY": 95,
@@ -131,7 +135,10 @@ def esta_vencido(driver: str, fecha_dato, status: str, hoy=None) -> bool:
     return antiguedad > ventana
 
 
-ORDEN_STATUS = ["OK", "OK_FALLBACK", "ERROR_FALLBACK", "ERROR_STALE", "ERROR"]
+# NO_DATA va al final porque es el peor caso: la descarga no trajo ni una
+# observacion. El fallback de `peor_status` ya trata lo desconocido como lo peor,
+# asi que esto no cambia comportamiento; declara el vocabulario.
+ORDEN_STATUS = ["OK", "OK_FALLBACK", "ERROR_FALLBACK", "ERROR_STALE", "ERROR", "NO_DATA"]
 
 
 def peor_status(series: dict) -> str:

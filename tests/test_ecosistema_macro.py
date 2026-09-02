@@ -318,16 +318,25 @@ def test_la_ventana_es_la_cadencia_de_cada_serie_y_no_un_numero_fijo():
     """Un umbral unico marcaria vencido al Imacec todos los meses.
 
     El Imacec de junio se publica a inicios de agosto: 86 dias de antiguedad son
-    su ritmo normal, no un fallo. El Brent de FRED llega con rezago propio de la
-    EIA. Aplicarles la ventana de una serie diaria seria alarmismo, y bajaria la
-    confianza del motor bajo su umbral por datos que estan al dia.
+    su ritmo normal, no un fallo. Aplicarle la ventana de una serie diaria seria
+    alarmismo, y bajaria la confianza del motor por un dato que esta al dia.
+
+    Este test afirmaba tambien que el Brent con 8 dias de atraso NO estaba
+    vencido, "porque el Brent de FRED llega con rezago propio de la EIA". Esa
+    premisa era falsa y se corrigio el 2026-09-02: verificado contra
+    fred.stlouisfed.org/series/DCOILWTICO, la ultima observacion era del 01-09
+    publicada el 02-09, un dia habil de rezago igual que las yields del Tesoro.
+    Los 8 dias que se habian "visto" eran un fallo silencioso del extractor de
+    commodities, no un ritmo de la fuente, y la ventana ancha lo tapaba.
     """
     hoy = date(2026, 8, 26)
     # Mensuales en su ritmo: no vencidos.
     assert not pipeline_ingesta.esta_vencido("CHILE_IMACEC_12M", "2026-06-01", "OK", hoy)
-    assert not pipeline_ingesta.esta_vencido("PETROLEO_BRENT", "2026-08-18", "OK", hoy)
     # Un Imacec de hace medio año si esta vencido.
     assert pipeline_ingesta.esta_vencido("CHILE_IMACEC_12M", "2026-02-01", "OK", hoy)
+    # El petroleo es diario: dos dias pasan, ocho no.
+    assert not pipeline_ingesta.esta_vencido("PETROLEO_BRENT", "2026-08-24", "OK", hoy)
+    assert pipeline_ingesta.esta_vencido("PETROLEO_BRENT", "2026-08-18", "OK", hoy)
 
 
 def test_una_tasa_de_politica_no_envejece_por_calendario():
