@@ -294,6 +294,27 @@ class WhatsAppSender:
         except OSError as exc:  # noqa: BLE001
             logger.warning("No se pudo registrar el envío (%s); el freno queda ciego.", exc)
 
+    def _reservar_turno(self, piezas: int = 1) -> None:
+        """Espera el turno y **descuenta el cupo antes** de intentar el envío.
+
+        El orden era: esperar turno → enviar → anotar. Si el proceso muere, lo
+        interrumpen con Ctrl+C, o `_clic_enviar_y_confirmar` falla *después* de
+        que WhatsApp ya aceptó el mensaje (la verificación contra el DOM expira
+        con una subida lenta), las piezas salieron y el contador no registró
+        nada. Peor: `ultimo_ts` tampoco quedaba sellado, así que la llamada
+        siguiente encontraba la cadencia cumplida y disparaba de inmediato.
+        Ráfaga es justamente el patrón por el que marcan una cuenta.
+
+        Reservar antes invierte la dirección del error: si algo falla se
+        sobrecuenta, y sobrecontar cuesta una pieza de cupo. Subcontar cuesta la
+        cuenta. Con ese riesgo asimétrico no hay decisión que tomar.
+
+        El rechazo por desborde ocurre antes de descontar, así que un lote que
+        no cabe no consume nada.
+        """
+        self._esperar_turno(piezas=piezas)
+        self._registrar_envio(piezas)
+
     def _esperar_turno(self, piezas: int = 1) -> None:
         """Impone el cupo diario y la cadencia mínima entre acciones de envío.
 
@@ -1187,7 +1208,7 @@ class WhatsAppSender:
                 "Playwright no está instalado. Ejecute: uv sync --extra stories"
             ) from err
 
-        self._esperar_turno(piezas=len(piezas))
+        self._reservar_turno(piezas=len(piezas))
 
         with sync_playwright() as p:
             context = self._crear_contexto(p, headless=self.headless)
@@ -1210,7 +1231,6 @@ class WhatsAppSender:
                     con_adjunto=True,
                 )
                 self._pausa_humana(1.0)
-                self._registrar_envio(len(piezas))
 
                 return {
                     "status": "enviado",
@@ -1270,7 +1290,7 @@ class WhatsAppSender:
 
         # El freno va ANTES de abrir el navegador: así la espera no deja una
         # sesión de WhatsApp Web colgando y sin actividad.
-        self._esperar_turno()
+        self._reservar_turno()
 
         with sync_playwright() as p:
             context = self._crear_contexto(p, headless=self.headless)
@@ -1303,7 +1323,6 @@ class WhatsAppSender:
                     con_adjunto=ruta_adjunto is not None,
                 )
                 self._pausa_humana(1.0)
-                self._registrar_envio()
 
                 return {
                     "status": "enviado",

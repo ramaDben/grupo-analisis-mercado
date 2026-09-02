@@ -719,3 +719,90 @@ def test_el_cli_expone_el_lote_y_lo_hace_excluyente_con_el_adjunto_suelto():
 
     with pytest.raises(SystemExit):
         parser.parse_args(["--grupo", "forex", "--lote", "x", "--adjunto", "y.png"])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El cupo se RESERVA antes de enviar, no se anota despues
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_reservar_turno_descuenta_el_cupo_antes_del_envio(tmp_path, monkeypatch):
+    """El freno tiene que quedar aplicado ANTES de tocar el boton de enviar.
+
+    El orden era: esperar turno -> enviar -> anotar. Si el proceso muere, lo
+    interrumpen con Ctrl+C, o `_clic_enviar_y_confirmar` falla DESPUES de que
+    WhatsApp acepto el mensaje (una verificacion que expira con la subida
+    lenta), las piezas salieron y el contador no registro nada.
+
+    Sobrecontar cuesta una pieza de cupo. Subcontar cuesta la cuenta.
+    """
+    import whatsapp_sender as ws
+
+    monkeypatch.setattr(ws, "ESTADO_ENVIOS_PATH", tmp_path / "envios.json")
+    monkeypatch.setattr(ws.time, "sleep", lambda s: None)
+
+    sender = WhatsAppSender()
+    sender.max_envios_dia = 50
+    sender.segundos_entre_envios = 45
+
+    sender._reservar_turno(piezas=3)
+
+    assert sender._leer_estado_envios()["enviados"] == 3
+
+
+def test_reservar_turno_sella_la_hora_para_que_un_fallo_no_permita_rafaga(tmp_path, monkeypatch):
+    """`ultimo_ts` vivia solo en `_registrar_envio`, que corria despues del envio.
+
+    Un fallo lo dejaba sin sellar, asi que la llamada siguiente encontraba la
+    cadencia ya cumplida y disparaba de inmediato. Rafaga es exactamente el
+    patron que hace que marquen una cuenta.
+    """
+    import whatsapp_sender as ws
+
+    monkeypatch.setattr(ws, "ESTADO_ENVIOS_PATH", tmp_path / "envios.json")
+    monkeypatch.setattr(ws.time, "sleep", lambda s: None)
+
+    sender = WhatsAppSender()
+    sender.max_envios_dia = 50
+    sender.segundos_entre_envios = 45
+
+    antes = sender._leer_estado_envios().get("ultimo_ts", 0.0)
+    sender._reservar_turno(piezas=1)
+    assert sender._leer_estado_envios()["ultimo_ts"] > antes
+
+
+def test_reservar_turno_rechaza_el_desborde_sin_descontar(tmp_path, monkeypatch):
+    """La reserva no puede consumir cupo cuando el lote ni siquiera cabe."""
+    import whatsapp_sender as ws
+
+    monkeypatch.setattr(ws, "ESTADO_ENVIOS_PATH", tmp_path / "envios.json")
+    sender = WhatsAppSender()
+    sender.max_envios_dia = 5
+    sender.segundos_entre_envios = 0
+    sender._registrar_envio(3)
+
+    with pytest.raises(ws.LimiteEnviosError, match="cupo"):
+        sender._reservar_turno(piezas=4)
+
+    assert sender._leer_estado_envios()["enviados"] == 3
+
+
+@pytest.mark.parametrize("metodo", ["enviar", "enviar_lote"])
+def test_las_dos_rutas_reservan_antes_de_pulsar_enviar(metodo):
+    """El contrato de orden, leido del codigo de cada ruta.
+
+    Sin este test la regresion es invisible: mover `_registrar_envio` de vuelta
+    despues del envio no rompe ninguna asercion de comportamiento, y el sintoma
+    (cupo desbordado, rafaga) solo aparece cuando algo ya falló en produccion.
+    """
+    import inspect
+
+    fuente = inspect.getsource(getattr(WhatsAppSender, metodo))
+
+    assert "_reservar_turno" in fuente, f"{metodo} no reserva el turno"
+    assert "_registrar_envio" not in fuente, (
+        f"{metodo} anota el envio por su cuenta: el descuento tiene que venir de "
+        "la reserva, o vuelve a quedar despues del envio"
+    )
+    assert fuente.index("_reservar_turno") < fuente.index("_clic_enviar_y_confirmar"), (
+        f"{metodo} reserva despues de pulsar enviar"
+    )
