@@ -167,6 +167,15 @@ def construir_payload(
             "score": seleccion["score"],
             "factores": seleccion["factores"],
             "ticker": seleccion["ticker"],
+            # Los precios SIN formatear. El payload solo lleva la notación
+            # chilena ("936,32"), que sirve para dibujar pero no para comparar:
+            # el despacho necesita números para saber si el precio cruzó un
+            # nivel que el texto ya dio por bueno.
+            "crudos": {
+                "precio": float(seleccion["precio"]),
+                "soporte": float(seleccion["soporte"]),
+                "resistencia": float(seleccion["resistencia"]),
+            },
         },
         "_pendiente_editorial": list(CAMPOS_EDITORIALES),
     }
@@ -462,6 +471,148 @@ def preparar(
     }
 
 
+class PiezaSinMensajeError(RuntimeError):
+    """Una imagen rendida se quedó sin su texto: saldría muda."""
+
+
+def piezas_del_grupo(dir_grupo: Path) -> list[Any]:
+    """Las piezas de un canal, en el orden en que deben salir.
+
+    El orden lo da el prefijo numérico que escribe `preparar`: `0_` es el
+    contexto macro y `1_`, `2_`… los activos. Es el orden canónico del proyecto,
+    con la agenda del día arriba y los niveles debajo.
+
+    Las copias sin prefijo (`contexto_macro.png`, `mensaje.txt`) quedan fuera a
+    propósito: `rendir` las deja por comodidad, y contarlas como piezas mandaría
+    la agenda dos veces al mismo canal.
+    """
+    from whatsapp_sender import Pieza
+
+    piezas: list[Any] = []
+    for png in sorted(dir_grupo.glob("*.png")):
+        if not png.stem[:1].isdigit():
+            continue                       # copia sin prefijo: no es una pieza
+
+        # El contexto macro guarda su texto como `0_contexto_macro.txt`; los
+        # activos, como `N_slug_mensaje.txt`.
+        candidatos = [
+            dir_grupo / f"{png.stem}_mensaje.txt",
+            dir_grupo / f"{png.stem}.txt",
+        ]
+        txt = next((c for c in candidatos if c.exists()), None)
+        if txt is None:
+            raise PiezaSinMensajeError(
+                f"{png.stem} tiene imagen pero no mensaje. Se detiene el despacho: "
+                "una pieza muda llega al cliente sin decir qué mira."
+            )
+        piezas.append(Pieza(adjunto=png, mensaje=txt.read_text(encoding="utf-8").strip()))
+
+    return piezas
+
+
+def divergencia_editorial(crudos: dict[str, Any], precio_nuevo: float) -> str | None:
+    """Motivo por el que el texto ya no describe el mercado, o `None`.
+
+    Que el precio se mueva entre que se preparó la pieza y que sale es normal y
+    no invalida nada. Lo que sí la invalida es que **cruce un nivel que el texto
+    da por vigente**: un párrafo que dice "se apoya en el soporte" publicado
+    cuando el soporte ya se perforó es peor que no publicar.
+    """
+    try:
+        p0 = float(crudos["precio"])
+        soporte = float(crudos["soporte"])
+        resistencia = float(crudos["resistencia"])
+    except (KeyError, TypeError, ValueError):
+        return (
+            "no se pudo comparar contra los precios de preparación: el payload no "
+            "trae `_procedencia.crudos`. Se prepara de nuevo antes de despachar."
+        )
+
+    niveles = (
+        ("el soporte", "perforó", soporte),
+        ("la resistencia", "quebró", resistencia),
+    )
+    for nombre, verbo, nivel in niveles:
+        antes = p0 - nivel
+        ahora = precio_nuevo - nivel
+        if antes * ahora < 0:
+            return (
+                f"el precio {verbo} {nombre} de {nivel:g}: pasó de {p0:g} a "
+                f"{precio_nuevo:g} y el texto quedó describiendo otro mercado"
+            )
+
+    return None
+
+
+def refrescar_payload(
+    payload: dict[str, Any],
+    ahora: datetime,
+    h1: dict[str, Any],
+    digits: int,
+    cierres: dict[str, Any] | list[float],
+) -> tuple[dict[str, Any], str | None]:
+    """Vuelve a atar el payload al mercado de ahora, justo antes de rendirlo.
+
+    Es lo que evita que la última pieza de una tanda llegue con el precio de
+    hace veinte minutos: se refrescan las cifras y el sello de procedencia, y se
+    devuelve el motivo si el movimiento invalidó el texto que ya está escrito.
+
+    **Se toca lo que es dato, nunca lo editorial**: titular y párrafo son
+    criterio de quien los escribió.
+    """
+    nuevo = json.loads(json.dumps(payload))          # copia honda
+
+    precio = float(h1["price"])
+    soporte = float(h1["s1"])
+    resistencia = float(h1["r1"])
+
+    motivo = divergencia_editorial(
+        nuevo.get("_procedencia", {}).get("crudos", {}), precio
+    )
+
+    def fmt(valor: float) -> str:
+        return f"{valor:,.{digits}f}".replace(",", "@").replace(".", ",").replace("@", ".")
+
+    nuevo["precio_actual"] = fmt(precio)
+    nuevo["soporte"] = fmt(soporte)
+    nuevo["resistencia"] = fmt(resistencia)
+    nuevo["impulso_adc_atr_valor"] = round(1.5 * float(h1["atr_14"]), digits)
+
+    unidad = str(nuevo.get("vol_pct", "")).split(" ")[-1]
+    nuevo["vol_pct"] = f"{fmt(nuevo['impulso_adc_atr_valor'])} {unidad}".strip()
+
+    nuevo["fecha_hora"] = ahora.strftime("%d %b %Y · %H:%M").upper()
+    nuevo["sello_datos"] = (
+        f"DATOS REALES · METATRADER 5 · {ahora.strftime('%d %b %H:%M').upper()}"
+    )
+
+    nuevo["_procedencia"].setdefault("crudos", {})
+    nuevo["_procedencia"]["crudos"] = {
+        "precio": precio, "soporte": soporte, "resistencia": resistencia,
+    }
+
+    # El gráfico se redibuja con la serie nueva y sus niveles al día.
+    serie = cierres if isinstance(cierres, list) else cierres.get("serie", [])
+    recorrido = nuevo.get("recorrido", {})
+    recorrido["serie"] = serie
+    recorrido["marcadores"] = [{
+        "indice": max(len(serie) - 1, 0),
+        "precio": precio,
+        "clase": "actual",
+        "etiqueta": fmt(precio),
+        "rol": "AHORA",
+    }]
+    recorrido["niveles"] = [
+        {"precio": resistencia, "clase": "resistencia",
+         "etiqueta": fmt(resistencia), "rol": "RESISTENCIA"},
+        {"precio": soporte, "clase": "soporte",
+         "etiqueta": fmt(soporte), "rol": "SOPORTE"},
+    ]
+    nuevo["recorrido"] = recorrido
+
+    return nuevo, motivo
+
+
 def rendir(directorio: Path) -> dict[str, Any]:
     """Valida lo editorial, produce las piezas en horizontal y actualiza los mensajes modulares dentro de cada grupo."""
     from story_grafico import enriquecer
@@ -544,6 +695,116 @@ def rendir(directorio: Path) -> dict[str, Any]:
     return {"directorio": str(directorio), "imagenes": generadas}
 
 
+def _refrescar_y_rendir(dir_grupo: Path) -> list[str]:
+    """Vuelve a leer el mercado, redibuja las piezas de precio y reescribe sus textos.
+
+    Solo toca las piezas de activo (`1_`, `2_`…). El contexto macro (`0_`) es la
+    agenda del día: no decae por minuto y su fuente es el calendario, no una
+    cotización.
+    """
+    from market_data_mcp.analisis import analizar_activo
+    from story_grafico import enriquecer
+    from story_render import render_story
+
+    catalogo = {a["ticker"]: a for a in sc.cargar_universo(solo_renderizables=False)}
+    ahora = datetime.now(tz=SANTIAGO)
+    avisos: list[str] = []
+
+    for archivo in sorted(dir_grupo.glob("*.json")):
+        if archivo.stem.startswith("0_") or archivo.stem.startswith("_"):
+            continue
+
+        payload = json.loads(archivo.read_text(encoding="utf-8"))
+        ticker = payload.get("_procedencia", {}).get("ticker")
+        activo = catalogo.get(ticker)
+        if not ticker or not activo:
+            avisos.append(f"{archivo.stem}: sin ticker en la procedencia, se despacha tal cual")
+            continue
+
+        try:
+            h1 = analizar_activo(ticker, "H1")
+            cierres = _serie_para(ticker)
+        except Exception as exc:  # noqa: BLE001
+            avisos.append(
+                f"{ticker}: no se pudo refrescar ({exc}). Sale con los datos de la "
+                "preparación, que ya no son de ahora."
+            )
+            continue
+
+        nuevo, motivo = refrescar_payload(
+            payload, ahora=ahora, h1=h1, digits=activo["digits"], cierres=cierres
+        )
+        if motivo:
+            avisos.append(f"⚠️ {ticker} NO se despacha: {motivo}")
+            archivo.rename(archivo.with_suffix(".json.divergente"))
+            png = dir_grupo / f"{archivo.stem}.png"
+            if png.exists():
+                png.rename(png.with_suffix(".png.divergente"))
+            continue
+
+        archivo.write_text(json.dumps(nuevo, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        pieza = json.loads(json.dumps(nuevo))
+        pieza.pop("_procedencia", None)
+        pieza.pop("_pendiente_editorial", None)
+        render_story(enriquecer(pieza), PLANTILLA, dir_grupo / f"{archivo.stem}.png",
+                     formato="horizontal")
+        (dir_grupo / f"{archivo.stem}_mensaje.txt").write_text(
+            construir_mensaje_alerta(nuevo), encoding="utf-8"
+        )
+        avisos.append(f"✅ {ticker} refrescado a las {ahora.strftime('%H:%M')}")
+
+    return avisos
+
+
+def despachar(
+    directorio: Path,
+    desde: int = 1,
+    dry_run: bool = False,
+    headless: bool = True,
+) -> dict[str, Any]:
+    """Rinde y despacha canal por canal, en orden y sin dejar envejecer las piezas.
+
+    Cada canal sale en **una sola acción**: el editor de medios acepta varias
+    imágenes y cada una conserva su propio pie, así que las cuatro piezas de un
+    canal no necesitan cuatro aperturas de navegador espaciadas 45 s.
+
+    Y cada canal se rinde **justo antes** de despacharse, no al principio de la
+    tanda: así el precio de la última pieza tiene minutos y no media hora. El
+    render cabe entero dentro de la espera de cadencia, así que no cuesta tiempo.
+    """
+    from whatsapp_sender import WhatsAppSender
+
+    grupos = sorted(d for d in directorio.iterdir() if d.is_dir())
+    if not grupos:
+        raise SystemExit(f"No hay carpetas de grupo en {directorio}")
+
+    sender = WhatsAppSender(headless=headless)
+    resultados: list[dict[str, Any]] = []
+
+    for i, dir_grupo in enumerate(grupos, 1):
+        if i < desde:
+            print(f"[{i}/{len(grupos)}] {dir_grupo.name}: omitido (--desde {desde})", flush=True)
+            resultados.append({"grupo": dir_grupo.name, "status": "omitido"})
+            continue
+
+        print(f"\n[{i}/{len(grupos)}] {dir_grupo.name}", flush=True)
+        for aviso in _refrescar_y_rendir(dir_grupo):
+            print(f"    {aviso}", flush=True)
+
+        piezas = piezas_del_grupo(dir_grupo)
+        if not piezas:
+            print("    sin piezas: se omite", flush=True)
+            resultados.append({"grupo": dir_grupo.name, "status": "vacio"})
+            continue
+
+        print(f"    despachando {len(piezas)} pieza(s) en una acción...", flush=True)
+        res = sender.enviar_lote(dir_grupo.name, piezas, dry_run=dry_run)
+        resultados.append({"grupo": dir_grupo.name, **res})
+
+    return {"directorio": str(directorio), "grupos": resultados}
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Carrusel responsivo: Stories de alerta segun sesion y hora real")
     grupo = parser.add_mutually_exclusive_group(required=True)
@@ -551,6 +812,14 @@ def main(argv: list[str] | None = None) -> int:
                        help="corre el escaner y deja los payloads con lo editorial en blanco")
     grupo.add_argument("--rendir", type=Path, metavar="DIR",
                        help="rinde los payloads ya escritos de ese directorio")
+    grupo.add_argument("--despachar", type=Path, metavar="DIR",
+                       help="rinde y envia canal por canal: un lote por canal, refrescado justo antes de salir")
+    parser.add_argument("--desde", type=int, default=1, metavar="N",
+                        help="retoma el despacho desde el canal N (1-based), para no duplicar lo ya enviado")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="con --despachar: refresca y rinde, pero no envia nada")
+    parser.add_argument("--visible", action="store_false", dest="headless",
+                        help="con --despachar: muestra el navegador durante el envio")
     parser.add_argument("--tanda", type=int, choices=sorted(sc.TANDAS),
                         help="fuerza una tanda especifica (por defecto detecta la sesion y hora real)")
     parser.add_argument("--top", type=int, default=3,
@@ -604,6 +873,19 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"  - {a}")
         print(f"\nFalta escribir en cada payload: {', '.join(res['campos_por_escribir'])}")
         print(f"Despues: uv run --extra stories python scripts/pipeline_carrusel.py --rendir {res['directorio']}")
+        return 0
+
+    if args.despachar:
+        res = despachar(
+            args.despachar,
+            desde=args.desde,
+            dry_run=args.dry_run,
+            headless=args.headless,
+        )
+        print("\nRESUMEN DEL DESPACHO")
+        for g in res["grupos"]:
+            piezas = g.get("piezas", "")
+            print(f"  {g['grupo']:<35} {g.get('status', ''):<10} {piezas} pieza(s)")
         return 0
 
     res = rendir(args.rendir)

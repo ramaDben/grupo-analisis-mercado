@@ -107,13 +107,37 @@ Muestra el mensaje índice y las rutas de las piezas modularizadas. Pregunta: "�
 ## PASO 6 — Envío (solo después del "sí" del director)
 
 El envío **no** es parte de la generación y nunca se encadena solo. Una vez que el
-director aprueba, cada canal se manda con su imagen y su texto:
+director aprueba, la tanda entera se despacha canal por canal:
 
 ```bash
-uv run --extra stories python scripts/enviar_whatsapp.py \
-  --grupo metales \
-  --adjunto "data/carrusel/<tanda>/03_commodities_materias_primas/0_contexto_macro.png" \
-  --mensaje-archivo "data/carrusel/<tanda>/03_commodities_materias_primas/contexto_macro.txt"
+uv run --extra stories python scripts/pipeline_carrusel.py --despachar data/carrusel/<tanda>
+```
+
+**Cada canal sale en UNA sola acción, con todas sus piezas.** El editor de medios de
+WhatsApp acepta varias imágenes a la vez y **cada una conserva su propio pie** (medido
+contra el DOM real el 2026-09-02). Así, las cuatro piezas de un canal dejan de ser
+cuatro aperturas de navegador espaciadas 45 s: una tanda de cinco canales pasa de
+7-15 minutos a unos 3, y de consumir 20 del cupo diario a consumir 5.
+
+**Y cada canal se rinde justo antes de despacharse, no al principio de la tanda.** Antes
+se rendía todo primero y la última pieza llegaba con el precio de hacía veinte minutos;
+ahora el refresco cabe entero dentro de la espera de cadencia, así que no cuesta tiempo
+y el precio llega fresco. Si el movimiento **invalidó el texto** —el precio cruzó un
+soporte o una resistencia que el párrafo daba por vigentes— esa pieza **no sale**: se
+renombra a `.divergente` y el despacho lo informa.
+
+Si el despacho se corta a la mitad, se retoma sin duplicar lo ya enviado:
+
+```bash
+uv run --extra stories python scripts/pipeline_carrusel.py --despachar data/carrusel/<tanda> --desde 3
+```
+
+Para una pieza suelta o un canal concreto sigue estando el envío directo, que también
+acepta una carpeta entera como lote:
+
+```bash
+uv run --extra stories python scripts/enviar_whatsapp.py --grupo metales \
+  --lote "data/carrusel/<tanda>/03_commodities_materias_primas"
 ```
 
 Tres cosas que conviene no volver a averiguar:
@@ -126,8 +150,14 @@ Tres cosas que conviene no volver a averiguar:
   "enviado", y compara la cabecera del chat abierto contra el destinatario de forma
   exacta. Si aborta, no se envió: no lo des por bueno ni lo repitas a ciegas, revisa
   primero si llegó.
-- **Un envío por canal, y máximo 3 imágenes por canal.** Del cuarto adjunto en
-  adelante WhatsApp muestra el botón `+2` y el cliente ya no ve la pieza.
+- **Un lote es UNA acción pero N mensajes entregados.** La cadencia de 45 s se aplica
+  una vez por lote; el cupo diario se descuenta por pieza. Contar cuatro imágenes como
+  un solo envío relajaría el freno por la puerta de atrás. Y sigue el tope editorial de
+  3 piezas de activo por canal: del cuarto adjunto en adelante WhatsApp muestra el
+  botón `+2`.
+- **Un lote tiene que ser del mismo tipo.** El menú Adjuntar entra por "Fotos y videos"
+  o por "Documento", no por ambas: un PDF de informe no viaja en el mismo lote que las
+  Stories.
 
 Comprobar la sesión antes de una tanda: `python scripts/enviar_whatsapp.py --status`.
 Si pide vinculación: `--login` y escanear el QR.
