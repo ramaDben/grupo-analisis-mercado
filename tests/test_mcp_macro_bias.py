@@ -12,15 +12,45 @@ from pathlib import Path
 import pytest
 
 from market_data_mcp.bias_reader import (
+    OUTPUT_FILE_DEFAULT,
     cargar_macro_bias,
     validar_staleness,
     VALID_SYMBOLS
 )
 
 
+def _reloj_del_snapshot():
+    """Un `now_dt` anclado al `as_of_utc` del propio snapshot versionado.
+
+    Los dos tests de contrato de abajo validan la FORMA del payload, no su
+    frescura, pero llamaban sin `now_dt` y quedaban a merced del reloj de pared
+    contra un archivo que vive en git. El resultado era una bomba de tiempo: el
+    2026-09-02 a las 17:53 UTC el snapshot committeado cruzó las 24 h de umbral y
+    CI pasó a rojo en master y en las cinco ramas abiertas a la vez, sin que
+    nadie hubiera tocado una línea de código. La última corrida verde de master
+    fue a las 13:52, con el mismo commit.
+
+    Un test cuyo resultado depende de la hora a la que corre no informa nada:
+    ni afirma que el contrato está bien ni que el dato está fresco. La frescura
+    ya la cubre `test_mcp_macro_bias_weekend_staleness`, que la ejercita con
+    fechas sintéticas y sin depender de qué día se corra la suite.
+
+    Es el mismo criterio que el resto del archivo: los otros cinco tests montan
+    su propio JSON en `tmp_path` y pasan `now_dt` explícito.
+    """
+    if not OUTPUT_FILE_DEFAULT.exists():
+        pytest.skip("no hay snapshot del motor en este clon")
+    as_of = json.loads(OUTPUT_FILE_DEFAULT.read_text(encoding="utf-8")).get("as_of_utc")
+    if not as_of:
+        pytest.skip("el snapshot no declara as_of_utc")
+    # Una hora después de la emisión: dentro de cualquier umbral, y sigue siendo
+    # un instante real relativo al dato en vez de un valor inventado.
+    return datetime.fromisoformat(as_of.replace("Z", "+00:00")) + timedelta(hours=1)
+
+
 def test_mcp_macro_bias_all_contract():
     """Valida que la consulta 'ALL' retorne exactamente el contrato Schema v2.0.0."""
-    res = cargar_macro_bias("ALL")
+    res = cargar_macro_bias("ALL", now_dt=_reloj_del_snapshot())
     assert "error" not in res, f"Retornó error inesperado: {res.get('error')}"
     assert res.get("schema_version") == "2.0.0"
     assert "config_hash" in res and len(res["config_hash"]) == 16
@@ -35,7 +65,7 @@ def test_mcp_macro_bias_all_contract():
 
 def test_mcp_macro_bias_single_symbol_contract():
     """Valida que la consulta por símbolo individual incluya trazabilidad completa."""
-    res = cargar_macro_bias("USDCLP")
+    res = cargar_macro_bias("USDCLP", now_dt=_reloj_del_snapshot())
     assert "error" not in res
     assert res.get("symbol") == "USDCLP"
     assert res.get("schema_version") == "2.0.0"
