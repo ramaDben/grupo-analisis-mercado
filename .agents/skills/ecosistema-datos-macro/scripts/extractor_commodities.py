@@ -161,14 +161,18 @@ def ejecutar_extraccion_commodities() -> dict:
                 "unidad": "USD/barril",
                 "fuente": "U.S. Energy Information Administration (EIA / FRED DCOILWTICO)",
                 "historico": existente.get("commodities", {}).get("PETROLEO_WTI", {}).get("historico", {}),
-                "status": "OK"
+                # NO_DATA es el estado inicial y "OK" se gana con una observacion
+                # recibida. Estaba al reves: arrancaba en "OK" y solo se degradaba
+                # ante excepcion, asi que una descarga vacia sin error dejaba el
+                # semaforo verde sobre la serie de la semana pasada.
+                "status": "NO_DATA"
             },
             "PETROLEO_BRENT": {
                 "nombre": "Crudo Brent Europeo",
                 "unidad": "USD/barril",
                 "fuente": "U.S. Energy Information Administration (EIA / FRED DCOILBRENTEU)",
                 "historico": existente.get("commodities", {}).get("PETROLEO_BRENT", {}).get("historico", {}),
-                "status": "OK"
+                "status": "NO_DATA"
             },
             "COBRE_COMEX": {
                 "nombre": "Cobre Grado Alto COMEX (HG)",
@@ -176,14 +180,14 @@ def ejecutar_extraccion_commodities() -> dict:
                 "factor_conversion_tonelada": 2204.62,
                 "fuente": "COMEX / CME Group",
                 "historico": existente.get("commodities", {}).get("COBRE_COMEX", {}).get("historico", {}),
-                "status": "OK"
+                "status": "NO_DATA"
             },
             "ORO_SPOT": {
                 "nombre": "Oro Spot (XAU/USD)",
                 "unidad": "USD/onza_troy",
                 "fuente": "LBMA Gold Price PM (Primaria) / Yahoo Finance (Fallback)",
                 "historico": existente.get("commodities", {}).get("ORO_SPOT", {}).get("historico", {}),
-                "status": "OK"
+                "status": "NO_DATA"
             }
         }
     }
@@ -194,6 +198,8 @@ def ejecutar_extraccion_commodities() -> dict:
         if wti:
             resultado["commodities"]["PETROLEO_WTI"]["historico"].update(wti)
             resultado["commodities"]["PETROLEO_WTI"]["status"] = "OK"
+        else:
+            raise ValueError("la fuente no devolvio observaciones")
     except Exception as e:
         print(f"[WARN] Error extrayendo WTI: {e}")
         resultado["commodities"]["PETROLEO_WTI"]["status"] = "ERROR_STALE"
@@ -204,6 +210,8 @@ def ejecutar_extraccion_commodities() -> dict:
         if brent:
             resultado["commodities"]["PETROLEO_BRENT"]["historico"].update(brent)
             resultado["commodities"]["PETROLEO_BRENT"]["status"] = "OK"
+        else:
+            raise ValueError("la fuente no devolvio observaciones")
     except Exception as e:
         print(f"[WARN] Error extrayendo Brent: {e}")
         resultado["commodities"]["PETROLEO_BRENT"]["status"] = "ERROR_STALE"
@@ -214,6 +222,8 @@ def ejecutar_extraccion_commodities() -> dict:
         if cobre:
             resultado["commodities"]["COBRE_COMEX"]["historico"].update(cobre)
             resultado["commodities"]["COBRE_COMEX"]["status"] = "OK"
+        else:
+            raise ValueError("la fuente no devolvio observaciones")
     except Exception as e:
         print(f"[WARN] Error extrayendo Cobre HG: {e}")
         resultado["commodities"]["COBRE_COMEX"]["status"] = "ERROR_STALE"

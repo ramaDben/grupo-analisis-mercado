@@ -611,7 +611,11 @@ def ejecutar_motor_sesgo(verbose: bool = True) -> dict:
 
     # Chile data
     chile_series = chile_data.get("series", {})
-    tpm_cron = _obtener_serie_cronologica(chile_series.get("TPM_CHILE", {}).get("historico", {}))
+    # La serie se llama "TPM" en bcch_macro_data.json, no "TPM_CHILE". Con la clave
+    # equivocada esto devolvia lista vacia, el spread de carry salia null ("Diferencial
+    # de tasas N/A" en la justificacion) y TPM_CHILE contaba como MISSING en el indice
+    # de confianza, dejandolo en 54,6% en vez de 65,4%. 665 observaciones en disco sin usar.
+    tpm_cron = _obtener_serie_cronologica(chile_series.get("TPM", {}).get("historico", {}))
     _, _, tpm_fecha = _delta_n_dias(tpm_cron, 5)
     tpm_actual = tpm_cron[-1][1] if tpm_cron else None
     fed_funds_actual = dff_cron[-1][1] if dff_cron else None
@@ -653,7 +657,7 @@ def ejecutar_motor_sesgo(verbose: bool = True) -> dict:
         {"nombre": "DGS10", "fecha": dgs10_fecha, "status": yields.get("DGS10", {}).get("status", "OK") if dgs10_cron else "MISSING", "cobertura": 1.0 if dgs10_cron else 0.0},
         {"nombre": "DFII10", "fecha": tips_fecha, "status": yields.get("DFII10", {}).get("status", "OK") if dfii10_cron else "MISSING", "cobertura": 1.0 if dfii10_cron else 0.0},
         {"nombre": "T10YIE", "fecha": breakeven_fecha, "status": yields.get("T10YIE", {}).get("status", "OK") if t10yie_cron else "MISSING", "cobertura": 1.0 if t10yie_cron else 0.0},
-        {"nombre": "TPM_CHILE", "fecha": tpm_fecha, "status": chile_series.get("TPM_CHILE", {}).get("status", "OK") if tpm_cron else "MISSING", "cobertura": 1.0 if tpm_cron else 0.0},
+        {"nombre": "TPM_CHILE", "fecha": tpm_fecha, "status": chile_series.get("TPM", {}).get("status", "OK") if tpm_cron else "MISSING", "cobertura": 1.0 if tpm_cron else 0.0},
         {"nombre": "COBRE", "fecha": copper_fecha, "status": comm_series.get("COBRE_COMEX", {}).get("status", "OK") if copper_cron else "MISSING", "cobertura": 1.0 if copper_cron else 0.0},
         {"nombre": "PETROLEO", "fecha": wti_fecha or brent_fecha, "status": comm_series.get("PETROLEO_WTI", {}).get("status", "OK") if wti_cron else "MISSING", "cobertura": 1.0 if wti_cron else 0.0}
     ]
