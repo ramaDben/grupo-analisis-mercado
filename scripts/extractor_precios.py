@@ -87,9 +87,16 @@ def calcular_indicadores(df: pd.DataFrame) -> pd.DataFrame:
         (low - prev_close).abs(),
     ], axis=1).max(axis=1)
 
-    # ATR 14 y ATR 20 (suavizado exponencial y simple)
-    df["atr_14"] = tr.ewm(span=14, adjust=False).mean()
-    df["atr_20"] = tr.ewm(span=20, adjust=False).mean()
+    # ATR 14 y ATR 20 (suavizado Welles Wilder RMA, alpha=1/period)
+    #
+    # Wilder es alpha=1/n, NO span=n (que es alpha=2/(n+1)). Esto estuvo mal hasta
+    # el 2026-09-02 y no era un detalle de redondeo: sobre la serie H1 real de
+    # USDCLP daba 2,1613 contra los 2,3347 del MCP, un -7,4 %. Como el Playbook
+    # define el stop en 1,5 x ATR_14(H1) y el lote en funcion de esa distancia,
+    # dos ATR eran dos lotajes distintos para la misma operacion. Es la misma
+    # formula que ya usaba el RSI de aca abajo y la que usa mt5_client.atr.
+    df["atr_14"] = tr.ewm(alpha=1.0 / 14.0, adjust=False).mean()
+    df["atr_20"] = tr.ewm(alpha=1.0 / 20.0, adjust=False).mean()
 
     # EMAs institucionales
     df["ema_16"] = close.ewm(span=16, adjust=False).mean()

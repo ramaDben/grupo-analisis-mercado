@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from market_data_mcp.tools import levels
 
@@ -420,3 +421,43 @@ def test_la_ruta_feliz_no_exige_conexion_viva_a_mt5(collector, monkeypatch):
     res = collector.tools["get_asset_levels"](ticker="XAUUSD", timeframe="H4")
     assert "error" not in res, res
     assert res["ticker"] == "XAUUSD"
+
+
+def test_d1_incluye_atr_20(collector, monkeypatch):
+    """El Playbook define el stop swing como 2.5 x ATR_20(D1), y hasta ahora
+    `get_asset_levels` solo devolvía ATR_14: el stop swing no era calculable
+    desde la tool. ATR_20 es por definición el ATR diario (`atr_daily_period`
+    en playbook_config.yaml), así que va con D1 y no con los demás marcos."""
+    from market_data_mcp import mt5_client
+
+    df = _df_ohlc()
+    monkeypatch.setattr(mt5_client, "get_rates", lambda ticker, tf, n_bars=300: df)
+
+    levels.register(collector)
+
+    res_h4 = collector.tools["get_asset_levels"](ticker="XAUUSD", timeframe="H4")
+    assert "atr_20" not in res_h4
+
+    res_d1 = collector.tools["get_asset_levels"](ticker="XAUUSD", timeframe="D1")
+    assert "atr_20" in res_d1
+    assert res_d1["atr_20"] > 0
+
+    # Que el campo exista no prueba que use el período 20: `_df_ohlc` tiene rango
+    # constante, así que ahí ATR_14 y ATR_20 valen lo mismo y no discriminan nada.
+    # Con rango variable sí se separan, y se contrasta contra Wilder-20 calculado
+    # aparte sobre la misma serie sin la barra en formación.
+    n = 300
+    x = np.linspace(0, 8 * np.pi, n)
+    base = 100 + 0.05 * np.arange(n)
+    amplitud = 0.5 + 0.4 * np.abs(np.sin(x))
+    variable = pd.DataFrame({
+        "time": pd.date_range("2026-01-01", periods=n, freq="D"),
+        "open": base, "high": base + amplitud, "low": base - amplitud, "close": base,
+    })
+    monkeypatch.setattr(mt5_client, "get_rates", lambda ticker, tf, n_bars=300: variable)
+    res_var = collector.tools["get_asset_levels"](ticker="XAUUSD", timeframe="D1")
+
+    cerradas = variable.iloc[:-1]
+    esperado = mt5_client.atr(cerradas, 20).iloc[-1]
+    assert res_var["atr_20"] == pytest.approx(round(float(esperado), 2), abs=1e-9)
+    assert res_var["atr_20"] != res_var["atr_14"]
