@@ -469,3 +469,26 @@ def test_el_adjunto_se_confirma_cuando_la_ultima_burbuja_lo_trae_con_su_pie():
         con_adjunto=True,
         timeout_s=2.0,
     )
+
+
+def test_el_dry_run_y_las_validaciones_no_necesitan_playwright(monkeypatch):
+    """Playwright es un extra opcional (`uv sync --extra stories`). Pedirlo para
+    simular un envío deja la suite sin correr donde no está instalado, que es
+    justo lo que le pasó a CI el 2026-09-01."""
+    import builtins
+
+    importar_real = builtins.__import__
+
+    def sin_playwright(nombre, *args, **kwargs):
+        if nombre.startswith("playwright"):
+            raise ModuleNotFoundError("No module named 'playwright'")
+        return importar_real(nombre, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", sin_playwright)
+    sender = WhatsAppSender()
+
+    resultado = sender.enviar(destinatario="forex", mensaje="prueba", dry_run=True)
+    assert resultado["status"] == "simulado"
+
+    with pytest.raises(ValueError):
+        sender.enviar(destinatario="forex", mensaje="", adjunto=None)

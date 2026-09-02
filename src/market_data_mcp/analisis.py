@@ -148,7 +148,14 @@ def analizar_activo(ticker: str, timeframe: str = "H4") -> dict[str, Any]:
         }
 
     try:
-        connect()
+        # La conexión se intenta por prudencia, pero su fallo NO aborta: la fuente
+        # de verdad es `get_rates`, que conecta de forma perezosa y reporta el
+        # error correcto si de verdad no hay terminal. Exigirla acá dejaba la ruta
+        # feliz sin poder testearse con datos mockeados, y CI ciega.
+        try:
+            connect()
+        except Exception:  # noqa: BLE001
+            pass
         df = get_rates(ticker, timeframe.upper(), n_bars=300)
     except ImportError:
         # mt5_client importa MetaTrader5 de forma perezosa dentro de get_rates;

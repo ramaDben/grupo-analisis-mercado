@@ -861,11 +861,6 @@ class WhatsAppSender:
         dry_run: bool = False,
     ) -> dict[str, Any]:
         """Ejecuta el ciclo completo de envío a un grupo o contacto."""
-        try:
-            from playwright.sync_api import sync_playwright
-        except ImportError as err:
-            raise WhatsAppError("Playwright no está instalado. Ejecute: uv sync --extra stories") from err
-
         nombre_oficial = self.config.resolver_nombre_oficial(destinatario)
         ruta_adjunto = Path(adjunto) if adjunto else None
 
@@ -884,6 +879,16 @@ class WhatsAppSender:
                 "adjunto": str(ruta_adjunto) if ruta_adjunto else None,
                 "mensaje_len": len(mensaje),
             }
+
+        # Playwright se importa acá y no al entrar: es un extra opcional
+        # (`uv sync --extra stories`), y pedirlo antes dejaba sin funcionar el
+        # dry-run y las validaciones, que no tocan el navegador.
+        try:
+            from playwright.sync_api import sync_playwright
+        except ImportError as err:
+            raise WhatsAppError(
+                "Playwright no está instalado. Ejecute: uv sync --extra stories"
+            ) from err
 
         # El freno va ANTES de abrir el navegador: así la espera no deja una
         # sesión de WhatsApp Web colgando y sin actividad.
