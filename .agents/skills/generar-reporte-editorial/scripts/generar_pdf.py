@@ -94,6 +94,16 @@ def _construir_html(
         subtitle_color = "#D1F2EB"     # Menta claro
         divider_color = "#3E91AF"      # Azul Cian
         disclaimer_accent = "#3E91AF"  # Azul Cian para 'AVISO LEGAL'
+    elif tema in ["rojizo", "rojo", "ruby"]:
+        cover_bg = "#180710"
+        cover_grad_start = "#2D0B1A"
+        cover_grad_end = "#12050D"
+        disclaimer_bg = "#180710"
+        accent_color = "#50C0A8"       # Verde marca GI
+        tag_color = "#82E0CE"          # Menta suave
+        subtitle_color = "#E2E8F0"
+        divider_color = "#50C0A8"
+        disclaimer_accent = "#50C0A8"
     else:
         cover_bg = "#0D0D1A"
         cover_grad_start = "#1A1A2E"
@@ -148,7 +158,7 @@ body {{
     opacity: 0.6;
 }}
 .flowing-container {{
-    width: 794px;
+    width: 100%;
     box-sizing: border-box;
     background: #FFFFFF;
     break-after: page;
@@ -157,15 +167,74 @@ body {{
     width: 100%;
     border-collapse: collapse;
 }}
-/* Thead/Tfoot para repetir margenes en cortes de pagina */
+/* Thead/Tfoot para repetir margenes en cortes de pagina de forma simétrica */
 .flowing-table thead td {{
-    padding: 13mm 24mm 0 24mm;
+    padding: 12mm 18mm 0 18mm;
 }}
 .flowing-table tbody td {{
-    padding: 0 24mm;
+    padding: 0 18mm;
 }}
 .flowing-table tfoot td {{
-    padding: 0 24mm 13mm 24mm;
+    padding: 0 18mm 12mm 18mm;
+}}
+
+/* Cajas de Aviso / Admonitions con diseño de alta gama */
+.admonition {{
+    margin: 14px 0;
+    padding: 12px 16px;
+    border-radius: 6px;
+    box-sizing: border-box;
+    width: 100%;
+    break-inside: avoid;
+    page-break-inside: avoid;
+}}
+.admonition.caution, .admonition.warning {{
+    background: #FFF5F5;
+    border: 1px solid #FEB2B2;
+    border-left: 4.5px solid #E84040;
+    color: #742A2A;
+}}
+.admonition.important, .admonition.tip {{
+    background: #F0FDF9;
+    border: 1px solid #A7F3D0;
+    border-left: 4.5px solid #50C0A8;
+    color: #064E3B;
+}}
+.admonition.note {{
+    background: #F0F9FF;
+    border: 1px solid #BAE6FD;
+    border-left: 4.5px solid #0284C7;
+    color: #0C4A6E;
+}}
+.admonition-header {{
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}}
+.admonition-body {{
+    font-size: 10.5px;
+    line-height: 1.55;
+    color: inherit;
+}}
+
+pre {{
+    background: #F8FAFC !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 6px !important;
+    padding: 10px 14px !important;
+    font-family: 'Space Grotesk', monospace !important;
+    font-size: 9.5px !important;
+    line-height: 1.4 !important;
+    color: #1E293B !important;
+    overflow-x: auto !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
 }}
 
 .header {{
@@ -393,7 +462,7 @@ img {{
                 <span style="font-family:'Plus Jakarta Sans',sans-serif;font-size:10.5px;font-weight:600;color:#FFFFFF;">{fecha}</span>
             </div>
             <div style="display:flex;flex-direction:column;gap:2px;">
-                <span style="font-family:'Plus Jakarta Sans',sans-serif;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:#737373;font-weight:600;">Analista</span>
+                <span style="font-family:'Plus Jakarta Sans',sans-serif;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:#737373;font-weight:600;">Área</span>
                 <span style="font-family:'Plus Jakarta Sans',sans-serif;font-size:10.5px;font-weight:600;color:#FFFFFF;">{analista}</span>
             </div>
         </div>
@@ -477,6 +546,43 @@ def _absolutizar_imagenes(html: str, base: Path) -> str:
     return re.sub(r'(<img[^>]*\ssrc=")([^"]+)(")', _sub, html)
 
 
+def _preprocesar_admoniciones(md: str) -> str:
+    def _reemplazar_callout(m: re.Match) -> str:
+        tipo = m.group(1).upper()
+        contenido = m.group(2).strip()
+        
+        iconos = {
+            "CAUTION": "⚠️",
+            "WARNING": "🛑",
+            "IMPORTANT": "💡",
+            "NOTE": "ℹ️",
+            "TIP": "🎯",
+        }
+        titulos = {
+            "CAUTION": "Aviso de Riesgo y Transparencia Operativa",
+            "WARNING": "Advertencia de Control Operativo",
+            "IMPORTANT": "Punto Clave para el Alumno",
+            "NOTE": "Nota Importante",
+            "TIP": "Recomendación de Mesa",
+        }
+        icono = iconos.get(tipo, "ℹ️")
+        titulo_def = titulos.get(tipo, "Información")
+        
+        lineas = [re.sub(r"^>\s*", "", l) for l in contenido.splitlines()]
+        texto_limpio = "<br>".join(lineas)
+        
+        clase = tipo.lower()
+        return (
+            f'<div class="admonition {clase}">\n'
+            f'<div class="admonition-header"><span>{icono}</span> <strong>{titulo_def}</strong></div>\n'
+            f'<div class="admonition-body">{texto_limpio}</div>\n'
+            f'</div>\n\n'
+        )
+
+    patron = r">\s*\[!(CAUTION|WARNING|IMPORTANT|NOTE|TIP)\]\s*\n((?:>.*(?:\n|$))*)"
+    return re.sub(patron, _reemplazar_callout, md)
+
+
 def crear_pdf(
     md_path: str = None,
     out_path: str = None,
@@ -524,6 +630,7 @@ def crear_pdf(
             raise SystemExit(f"\n[ERROR GUARDRAIL TEMPORAL]\n{err}\n")
 
     md_text = md_file.read_text(encoding="utf-8")
+    md_text = _preprocesar_admoniciones(md_text)
     html_content = markdown.markdown(md_text, extensions=['tables', 'fenced_code'])
     html_content = _absolutizar_imagenes(html_content, md_file.parent)
 
