@@ -55,7 +55,14 @@ risk_parameters:
   atr_daily_period: 20
   stop_loss_mult_intraday: 1.5              # Distancia SL = 1.5 * ATR_14 (H1)
   stop_loss_mult_daily: 2.5                 # Distancia SL = 2.5 * ATR_20 (D1)
-  trailing_stop_mult_trend: 3.0             # Chandelier Trailing Exit = 3.0 * ATR
+  trailing_stop_mult_trend: 3.0             # Chandelier Trailing Exit = 3.0 * ATR (constante de LeBeau)
+  # Ventana del maximo/minimo de referencia del Chandelier. Es la otra mitad del par
+  # de LeBeau: sin ella el nivel no es determinable. Calibrado el 2026-09-02 sobre las
+  # series H1 propias de los 5 activos (9.800 barras c/u). Lookbacks 33 y 50 quedan
+  # descartados porque su percentil 10 de distancia se vuelve NEGATIVO: el "stop" cae
+  # sobre el precio en un estado alcista, que es una contradiccion, no un stop. Ojo con
+  # la intuicion: un lookback mas largo APRIETA el stop (el maximo(N) sube), no lo suelta.
+  trailing_stop_lookback_period: 22         # Chandelier = maximo(22) - 3.0 * ATR_14(H1)
   donchian_breakout_period: 50              # Períodos de canal Donchian
   donchian_band_atr_mult: 0.3               # Banda de tolerancia b = 0.3 * ATR para evitar falsos quiebres
 

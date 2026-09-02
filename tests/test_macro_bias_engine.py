@@ -445,3 +445,42 @@ def test_wti_missing_oil_signed_no_shock(config_playbook):
     assert res["WTI"]["sesgo_etiqueta"] != "ALCISTA POR SHOCK"
 
 
+
+
+def test_trailing_stop_emite_su_lookback(config_playbook):
+    """El Chandelier necesita DOS parámetros: el múltiplo y la ventana del máximo.
+
+    El Playbook escribió el múltiplo (3.0, la constante de LeBeau) y dejó la
+    ventana sin fijar. Sin ella el nivel no es determinable: medido sobre las
+    series propias, el mismo activo el mismo día da "vigente" con lookback 22 y
+    "invalidado" con 50. El motor tiene que emitir ambos o no emitir ninguno.
+
+    Solo aplica a los activos en modo sostenido (TRAILING_STOP_ASYMMETRIC); los
+    que salen al nivel opuesto del canal no arrastran nada y llevan None.
+    """
+    deltas = {
+        "copper_spot": 4.48, "copper_pct_5d": 1.0, "tpm_chile": 4.50,
+        "fed_funds": 3.63, "fwd_extranjeros": 4450.0, "tips_10y": 2.35,
+        "breakeven_10y": 2.34, "dgs10": 4.65,
+        "oil_max_pct_5d": 1.0, "oil_signed_pct_5d": 1.0,
+    }
+    precios_dummy = {
+        "activos": {
+            "USDCLP": {"H1": {"close": 920.0, "atr_14": 4.0}, "D1": {"close": 920.0, "atr_20": 8.0}},
+            "XAUUSD": {"H1": {"close": 4500.0, "atr_14": 20.0}, "D1": {"close": 4500.0, "atr_20": 40.0}},
+            "WTI": {"H1": {"close": 85.0, "atr_14": 1.0}, "D1": {"close": 85.0, "atr_20": 2.0}},
+            "BRENT": {"H1": {"close": 92.0, "atr_14": 1.2}, "D1": {"close": 92.0, "atr_20": 2.2}},
+            "US100": {"H1": {"close": 29000.0, "atr_14": 100.0}, "D1": {"close": 29000.0, "atr_20": 250.0}},
+        }
+    }
+    res = evaluar_activos("R0_CALMA_RANGO", deltas, precios_dummy, config_playbook)
+
+    oro = res["XAUUSD"]["parametros_riesgo"]
+    assert oro["take_profit_tipo"] == "TRAILING_STOP_ASYMMETRIC"
+    assert oro["trailing_stop_mult_atr"] == 3.0
+    assert oro["trailing_stop_lookback"] == 22
+
+    usdclp = res["USDCLP"]["parametros_riesgo"]
+    assert usdclp["take_profit_tipo"] == "NIVEL_OPUESTO_CANAL"
+    assert usdclp["trailing_stop_mult_atr"] is None
+    assert usdclp["trailing_stop_lookback"] is None

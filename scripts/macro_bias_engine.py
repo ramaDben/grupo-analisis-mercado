@@ -533,7 +533,12 @@ def evaluar_activos(regimen_activo: str, drivers_data: dict, precios_summary: di
                 "stop_loss_mult_daily": rp["stop_loss_mult_daily"],
                 "distancia_sl_d1_puntos": sl_dist_d1,
                 "take_profit_tipo": tp_tipo,
-                "trailing_stop_mult_atr": trailing_mult
+                "trailing_stop_mult_atr": trailing_mult,
+                # El Chandelier son dos parametros, no uno. Viajan juntos o el
+                # consumidor no puede calcular el nivel y lo inventa.
+                "trailing_stop_lookback": (
+                    rp["trailing_stop_lookback_period"] if trailing_mult is not None else None
+                ),
             },
             "justificacion_vectores": justificacion
         }
