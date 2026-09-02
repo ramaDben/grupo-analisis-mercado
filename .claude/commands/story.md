@@ -3,80 +3,72 @@ Genera una Story de marca GI (imagen 1920×1080, formato horizontal 16:9) combin
 ## Argumentos
 $ARGUMENTS — formato esperado: `[tipo] [ejecutivo?]`
 
-- `[tipo]`: **soportados en este Change: `alerta`, `dato_macro`, `recomendacion`, `quote`,
-  `breaking`, `encuesta`, `edu`, `flash`, `postventa`, `calendario`**. Las demás plantillas del canvas (Market Update, Indicador Macro, Trading Idea,
-  Semanal, Carrusel) llegan con los issues #111-#115 — todavía no existen como `[tipo]`
-  de este comando.
+- `[tipo]`: **`alerta`, `breaking`, `calendario`, `dato_macro`** — y solo esos: son las
+  cuatro plantillas que existen en `templates/stories/`. El resto del catálogo se retiró
+  cuando el estándar de diseño pasó a estar comandado por el brand kit
+  (`brand_atomic_system/`). Un tipo que no tiene plantilla no se inventa: se detiene y se
+  reporta.
 - `[ejecutivo]` (opcional): `/story` **no soporta el flag ejecutivo** (ver PASO 0).
 
 `/story alerta` genera **un solo activo por corrida** (exactamente 1 Story para 1 activo). Para
-varios activos, se ejecuta el comando una vez por activo. `/story quote` es 100% editorial (sin
-activo protagonista) — ver bloque de recolección propio más abajo. `/story breaking` también es
-100% editorial (noticia urgente: kicker + titular + cifra clave + contexto + reacción), sin datos
-de mercado ni búsqueda propia de evento — ver bloque "Ruta `breaking`" más abajo. `/story encuesta`
-también es 100% editorial (sentimiento binario: kicker + pregunta + dos opciones + nota de
-cierre), sin datos de mercado ni búsqueda propia de evento — ver bloque "Ruta `encuesta`" más
-abajo. `/story edu` también es 100% editorial (concepto educativo: kicker + título + definición +
-ejemplo comparativo + lista de bullets de aplicación), sin datos de mercado ni búsqueda propia de
-evento — ver bloque "Ruta `edu`" más abajo. `/story flash` **sí** consume datos reales del motor
-(cierre multi-activo: tabla de N activos con último valor y variación del día), recolectados vía
-`get_asset_levels` × N activos con fallback manual, pero **sin gráfico embebido** (eso es Fase D) y
-sin búsqueda editorial de evento — ver bloque "Ruta `flash`" más abajo. `/story postventa` es la
-única pieza **interna** (no publicable): guion operativo del parte de post-venta, con chip de
-INTERNO no suprimible y footer sin marca pública; reusa los datos de `/postventa` si ya se corrió,
-o los toma del motor en frío — ver bloque "Ruta `postventa`" más abajo. `/story calendario` es el
-calendario macro de la semana: una selección editorial de 3 a 6 eventos (no un volcado íntegro del
-calendario), sin activo protagonista — usa la piel de `oportunidad` (sello, CTA, disclaimer) pero
-cae al acento de marca porque no hay un solo activo al que pintarle color. **Sí** consume datos
-reales del motor (`obtener_calendario_macro`), pero **no** ejecuta búsqueda editorial de evento
-propia — ver bloque "Ruta `calendario`" más abajo.
+varios activos, se ejecuta el comando una vez por activo.
+
+`/story breaking` es 100% editorial (noticia urgente: kicker + titular + cifra clave + contexto +
+reacción), sin datos de mercado ni búsqueda propia de evento — ver bloque "Ruta `breaking`" más
+abajo.
+
+`/story dato_macro` cubre un dato económico que ya publicó y se organiza alrededor del veredicto
+frente al consenso — ver bloque "Ruta `dato_macro`" más abajo.
+
+`/story calendario` es el calendario macro de la semana: una selección editorial de 3 a 6 eventos
+(no un volcado íntegro del calendario), sin activo protagonista, así que cae al acento de marca
+porque no hay un solo activo al que pintarle color. **Sí** consume datos reales del motor
+(`obtener_calendario_macro`), pero **no** ejecuta búsqueda editorial de evento propia — ver bloque
+"Ruta `calendario`" más abajo.
 
 ---
 
-## PASO 0 — Validar `[tipo]` y el flag `ejecutivo`
+## PASO 0 — Validar `[tipo]`
 
-1. Si `$ARGUMENTS` viene vacío o `[tipo]` no es uno de los diez soportados (CB-1):
-   ```
-   📖 Tipos de Story disponibles hoy:
-      dato_macro     un dato económico que ya salió (pieza 1 de la agenda diaria)
-      alerta         niveles del día de un activo
-      recomendacion  una operación sugerida, con firma acreditada
-      quote · breaking · encuesta · edu · flash · postventa · calendario
-   (Las demás plantillas del canvas — Market Update, Indicador Macro, Trading Idea,
-   Semanal, Carrusel — llegan con los issues #111-#115.)
+`/story` **no pregunta nada**: el tipo, el activo y la temporalidad llegan como argumentos.
+Si falta alguno, se detiene y lo dice; nunca asume un valor por defecto ni abre un menú.
 
-   ¿Cuál generamos?
-   ```
-   No continuar hasta que el director confirme uno de los diez. Nunca asumir un tipo por
-   defecto. Si el tipo confirmado es `dato_macro`, saltar al bloque "Ruta `dato_macro`"; si es
-   `recomendacion`, saltar al bloque "Ruta `recomendacion`"; si es `quote`, saltar directamente
-   al bloque "Ruta `quote`"; si es `breaking`, saltar al bloque "Ruta `breaking`"; si es `encuesta`,
-   saltar al bloque "Ruta `encuesta`"; si es `edu`, saltar al bloque "Ruta `edu`"; si es `flash`,
-   saltar al bloque "Ruta `flash`"; si es `postventa`, saltar al bloque "Ruta `postventa`"; si es
-   `calendario`, saltar al bloque "Ruta `calendario`" (los PASO 1-5 de abajo son exclusivos de
-   `alerta`).
+Tipos válidos, que son las cuatro plantillas que existen en `templates/stories/`:
 
-2. Si el argumento `ejecutivo` está presente (CB-6/R7):
-   ```
-   ℹ️ /story no soporta el flag "ejecutivo" (mismo criterio que /chart — genera una imagen,
-   no un mensaje de cliente reenviable). Continúo generando la Story normal.
-   ```
-   Avisar y **continuar** con el flujo normal (no detener, no generar guion).
+| tipo | qué es | necesita |
+|---|---|---|
+| `alerta` | niveles del día de un activo | activo + temporalidad |
+| `dato_macro` | un dato económico que ya publicó | el evento |
+| `breaking` | noticia urgente, 100% editorial | el titular y su cifra |
+| `calendario` | 3 a 6 eventos macro de la semana | nada (los trae el motor) |
+
+Cualquier otro tipo **se rechaza**:
+
+```
+❌ "<tipo>" no existe. El catálogo se redujo a alerta, dato_macro, breaking y calendario
+   cuando el estándar de diseño pasó al brand kit (brand_atomic_system/).
+```
+
+No lo inventes ni lo sustituyas por el más parecido: publicar una pieza que el director no
+pidió es peor que no publicar.
+
+Despacho: `dato_macro` → bloque "Ruta `dato_macro`"; `breaking` → "Ruta `breaking`";
+`calendario` → "Ruta `calendario`". Los PASO 1-7 son exclusivos de `alerta`.
 
 ---
 
 ## Ruta `dato_macro` — un dato económico que ya publicó
 
 Es la **pieza 1 de la agenda diaria** (orden canónico del issue #43: el dato del calendario va
-primero, mientras se cargan los niveles en MT5). En el **Modo resultado** de `/dato_macro` esta
+primero, mientras se cargan los niveles en MT5). En el **Modo resultado** de esta ruta, la
 Story **es** el entregable al grupo, y el mensaje de texto quedó reducido a su pie de foto: el
 desarrollo largo (sub-lecturas, "qué significa", impacto por activo) vive acá dentro y no se manda
 además como texto. No cubre el modo anticipación, porque la pieza se organiza alrededor del
 veredicto y un dato que todavía no sale no tiene veredicto — ahí el mensaje completo sigue siendo
 el entregable.
 
-**No busca el evento por su cuenta.** Reusa el dato que `/dato_macro` ya desarrolló y aprobó ese día.
-Si `/dato_macro` no se corrió, pedir al director el indicador y sus cifras; nunca inventarlas ni
+**No busca el evento por su cuenta.** El indicador y sus cifras llegan en la invocación, o se leen
+de `obtener_calendario_macro`; nunca inventarlas ni
 salir a buscarlas acá.
 
 1. Recolectar del mensaje ya aprobado (o preguntar):
@@ -84,7 +76,7 @@ salir a buscarlas acá.
    - `actual`, `esperado` y `anterior`. **`anterior` puede ir como cadena vacía** si el indicador no
      publica comparable: el bloque desaparece entero, rótulo incluido.
    - `veredicto` (`Mejor` / `En línea` / `Peor`) y `veredicto_slug` (`mejor` / `en-linea` / `peor`).
-2. Escribir `titular` y `significado` con el criterio editorial de `/dato_macro`: voz novata, regla
+2. Escribir `titular` y `significado` con el criterio editorial del proyecto: voz novata, regla
    de los 30 segundos, sin siglas sin explicar. El bloque "🔤 Diccionario rápido" **no va en la
    imagen** y tampoco va ya en el mensaje, que quedó reducido al pie: cada sigla se explica **en
    línea**, dentro de la frase donde aparece, una sola vez ("vacantes de empleo (JOLTS)"). Si el
@@ -94,7 +86,7 @@ salir a buscarlas acá.
    *no* lo afecta vale tanto como decirle qué sí.
 
 La **temporalidad del impacto no va en esta Story**: desbordaba el lienzo vertical y la etiqueta
-sirve poco sin su explicación. Sigue siendo obligatoria en el mensaje de `/dato_macro` (ambos
+sirve poco sin su explicación. Sigue siendo obligatoria en el pie del mensaje (ambos
 modos) — en el Modo resultado, dentro del pie de esta imagen, que es la única pieza del desarrollo
 largo que sobrevive en el texto.
 
@@ -107,126 +99,22 @@ Payload → `templates/stories/dato_macro.html`. Seguir con PASO 6 (aprobación)
 
 ---
 
-## Ruta `recomendacion` — una operación sugerida, con firma acreditada
-
-Es la **única plantilla que lleva firma acreditada**, y esa es su razón de existir: una recomendación
-induce una operación, así que tiene que constar quién la respalda.
-
-⚠️ **Rige el límite de 3 señales por semana.** Antes de recolectar nada, verificar
-`data/historial_senales.json` igual que `/señal`. Que la pieza sea una imagen no la saca del límite.
-Si ya hay 3 esta semana, avisar y detener.
-
-1. Datos de la operación, del motor o de la posición real del terminal:
-   - `rotulo_activo`, `sesgo` (`Compra` / `Venta`), `entrada`, `volumen`, `temporalidad`.
-   - `activo_slug` y `activo_imagen` (identidad cromática, ver nota tras el PASO 5 — misma
-     convención que la ruta `alerta`).
-   - `tp` y `sl` con los decimales del campo `digits` de `config/activos.json`.
-   - `tp_clp` y `sl_clp`: **el resultado traducido a pesos**, obligatorio. Se calcula con
-     `order_calc_profit` — el `tick_value` de MT5 da mal el valor por punto en CFDs de acciones.
-     Cotización y resultado no se mezclan: la distancia entre niveles va en la moneda del par.
-   - `costo_mantencion`: swap acumulado si la operación es de varios días. **Cadena vacía** en
-     intradía y el bloque desaparece. Omitirlo cuando existe es la omisión que vuelve deshonesta a
-     una pieza que solo muestra la ganancia.
-2. `tesis`: UNA línea que explique por qué. No una tesis completa; solo el motivo principal de la operación.
-3. `firma_nombre`, `firma_credencial` y `firma_area` del analista acreditado que respalda la pieza.
-   Nunca la firma de alguien que no revisó el contenido.
-4. **Geometría del gráfico (CRÍTICO)**: Debes estructurar el payload para `serie_mt5.py` con dos arrays obligatorios:
-   - `hitos`: Array de marcadores que deben llevar un punto y una etiqueta, como el precio actual. EJ: `[{"precio": 65.031, "clase": "actual", "rol": "AHORA"}]`
-   - `niveles`: Array de líneas horizontales para toda la ventana. **DEBES usar estas clases exactas** o la línea no se renderizará:
-     - `{"precio": X, "clase": "meta", "rol": "OBJETIVO"}`
-     - `{"precio": X, "clase": "entrada", "rol": "ENTRADA"}`
-     - `{"precio": X, "clase": "stop", "rol": "STOP"}`
-   - **NOTA:** NO uses "origen" ni "soporte" en `recomendacion` ya que la plantilla CSS carece de esas clases, y las líneas y textos quedarán invisibles.
-   - Estos se sumarán al JSON base y se encadenarán con `serie_mt5.py -> story_grafico.py -> story_render.py`
-
-Payload → `templates/stories/recomendacion.html`. Seguir con PASO 6 y PASO 7, y registrar la señal
-en `data/historial_senales.json` al aprobar.
-
----
-
-## Ruta `quote` — recolección editorial (sin datos de mercado)
-
-`quote` es una pieza 100% editorial (cita + autor + cargo): **no** llama a
-`get_asset_levels` ni a ningún comando fuente de datos de mercado (`/apertura`,
-`/dato_macro`, etc.). Reemplaza los PASO 1-4 de `alerta`; el preview/render final
-reusa el mismo patrón de PASO 6-7 adaptado a `quote` (ver abajo).
-
-1. **Cita**: pregunta al director si quiere dictarla él mismo o que el modelo redacte
-   una propuesta editorial (ej. resumiendo una idea de mercado de la semana, mismo
-   criterio que `/concepto`) para que la apruebe/ajuste:
-   ```
-   ¿Dictas tú la cita o prefieres que redacte una propuesta?
-   ```
-   - **Límite editorial**: `cita ≤ 220 caracteres` — guía de redacción de este comando
-     (el motor de render no valida longitud, no trunca ni aborta). Si la cita excede el
-     límite, ajusta la redacción antes del preview.
-   - Recolecta la cita **sin comillas propias** — las comillas decorativas las pone el
-     snapshot (`templates/stories/quote.html`), nunca el texto del payload.
-
-2. **Autor y cargo**: pregunta ambos campos:
-   ```
-   ¿Nombre del autor de la cita?
-   ¿Cargo/rol del autor? (Intro para omitir)
-   ```
-   Construye el payload con `autor_sub` **siempre presente** — si el director no da
-   cargo, `"autor_sub": ""` (nunca omitir la clave).
-
-3. **Payload `story_quote`**:
-   ```json
-   {
-     "plantilla": "quote",
-     "cita": "[cita ≤220 car., sin comillas propias]",
-     "autor": "[nombre del autor]",
-     "autor_sub": "[cargo o \"\"]"
-   }
-   ```
-
-4. **Preview y aprobación** (mismo criterio que PASO 6, ANTES de renderizar o guardar
-   nada):
-   ```
-   📖 *PREVIEW — Story Quote*
-   ━━━━━━━━━━━━━━━━━━━
-   Cita: [cita]
-   Autor: [autor] — [autor_sub o "(sin cargo)"]
-   ━━━━━━━━━━━━━━━━━━━
-   ¿Apruebas esta Story? ¿Generar y guardar el PNG final?
-   ```
-   Si el director **no** aprueba: no renderizar ni guardar nada en `data/stories/`.
-   Terminar el comando ahí.
-
-5. **Render y guardado** (solo tras aprobar, mismo patrón que PASO 7):
-   ```powershell
-   scripts\ruta_story.ps1 -Fecha "[YYYY-MM-DD]" -Activo "_general" -Plantilla "quote" -Hora "[HH-mm]"
-   ```
-   (`quote` es editorial sin activo protagonista → se guarda bajo `_general`.) La
-   `[Hora]` sale del reloj de Chile (regla canónica).
-   ```bash
-   uv run python scripts/story_render.py \
-     --template templates/stories/quote.html \
-     --out "[ruta devuelta por ruta_story.ps1]" <<'STORY_PAYLOAD'
-   { ...payload story_quote del paso 3... }
-   STORY_PAYLOAD
-   ```
-   Mismo manejo de éxito/error que PASO 7.3-7.4.
-
----
-
 ## Ruta `breaking` — recolección editorial (sin datos de mercado)
 
 `breaking` es una pieza editorial de noticia urgente (kicker + titular + cifra clave + contexto
 + reacción): **no** llama a `get_asset_levels` ni a ningún comando/tool de datos de mercado, y
-**no ejecuta su propia búsqueda de evento** — no reusa el WebSearch de `/alerta` PASO 1 ni su
+**no ejecuta su propia búsqueda de evento** — no ejecuta el WebSearch de la ruta `alerta` ni su
 mecanismo de detección de noticias; no busca por cuenta propia. Reemplaza los PASO 1-4 de
 `alerta`; el preview/render final reusa el mismo patrón de PASO 6-7 adaptado a `breaking` (ver
 abajo).
 
-1. **Fuente editorial**: pregunta si el director ya corrió `/noticia` o `/alerta` en la misma
+1. **Fuente editorial**: el titular y la cifra llegan en la invocación. Si no vinieron
    sesión (o si ya tiene el evento/cifra redactado):
    ```
-   ¿Ya corriste /noticia o /alerta con este evento, o tienes el titular y la cifra listos?
+   ❌ Falta el titular y la cifra del evento. No los busco por mi cuenta.
    Si no, dime directamente: tema, titular, cifra clave, contexto y reacción del mercado.
    ```
-   No bloquea ni exige una corrida previa de `/noticia`/`/alerta` — es un atajo opcional; si el
+   Se detiene ahí: inventar una noticia urgente es el peor error posible de esta pieza; si el
    director no corrió nada antes, pide que dicte los cinco campos directamente.
 
 2. **Campos y límites editoriales** (guía de redacción de este comando — el motor de render
@@ -266,7 +154,7 @@ abajo).
    ¿Esta noticia tiene un activo protagonista claro? (ticker o "no" si es ambigua/general)
    ```
    - **Sí** → usa `-Activo [TICKER_MT5]` (normalizado contra `config/activos.json`, mismo
-     criterio que `/chart` PASO 1).
+     criterio del catálogo de activos).
    - **No / ambiguo / múltiples activos** → usa `-Activo "_general"` (igual que `quote`).
 
 5. **Preview y aprobación** (mismo criterio que PASO 6, ANTES de renderizar o guardar nada):
@@ -300,281 +188,6 @@ abajo).
 
 ---
 
-## Ruta `encuesta` — recolección editorial (sin datos de mercado)
-
-`encuesta` es una pieza 100% editorial de sentimiento binario (kicker + pregunta + dos opciones
-+ nota de cierre): **no llama a `get_asset_levels`** ni a ninguna otra tool de mercado
-(`obtener_calendario_macro`, `get_chart_objects`, `get_symbol_spec`), y **no ejecuta su propia
-búsqueda de evento** (no invoca WebSearch) — es **sentimiento puro, sin precios ni datos de
-mercado**, mismo contrato que `/encuesta` (sin precios ni educación). Reemplaza los PASO 1-4 de
-`alerta`; el preview/render final reusa el mismo patrón de PASO 6-7 adaptado a `encuesta` (ver
-abajo).
-
-1. **Recolección editorial**: pregunta la pregunta binaria y sus dos opciones con el mismo
-   criterio de sentimiento puro de `/encuesta`:
-   ```
-   ¿Cuál es la pregunta de la encuesta? (ej. "¿Cuál creen que será la tendencia hoy del Oro?")
-   ¿Opción A?
-   ¿Opción B?
-   ¿Kicker/tema del chip? (ej. "ENCUESTA DEL DÍA" — Intro para omitir)
-   ¿Nota de cierre? (ej. "Vota en la encuesta fijada del grupo" — Intro para omitir)
-   ```
-
-2. **Atajo opcional**: si el director ya corrió `/encuesta [tipo] [activo]` en la misma sesión,
-   ofrece reutilizar esa pregunta/opciones ya redactadas como base editorial — no bloquea ni
-   exige corrida previa; si prefiere redactar de cero, lo hace directamente.
-
-3. **Layout binario único**: la Story usa siempre el mismo layout `opcion_a`/`opcion_b` sin
-   distinguir entre los 3 tipos de `/encuesta` (`posicion`/`tendencia`/`movimiento`) — el tipo de
-   origen se refleja en la **redacción** de la pregunta/opciones, no en el layout.
-
-4. **Límites editoriales** (guía de redacción de este comando — el motor de render **no** valida
-   longitud, no trunca ni aborta): `kicker ≤ 30 caracteres`, `pregunta ≤ 90 caracteres`,
-   `opcion_a ≤ 25 caracteres`, `opcion_b ≤ 25 caracteres`, `nota_cierre ≤ 80 caracteres`. Si algún
-   campo excede el límite, ajusta la redacción antes del preview.
-
-5. **Payload `story_encuesta`**: construye `kicker` y `nota_cierre` **siempre presentes** — si el
-   director no da alguno, `""` (nunca omitir la clave). Los otros tres campos
-   (`pregunta`/`opcion_a`/`opcion_b`) siempre no vacíos; si el director no puede dar alguno, el
-   comando insiste, nunca cadena vacía en esos tres.
-   ```json
-   {
-     "plantilla": "encuesta",
-     "kicker": "[kicker ≤30 car. o \"\"]",
-     "pregunta": "[pregunta ≤90 car.]",
-     "opcion_a": "[opción A ≤25 car.]",
-     "opcion_b": "[opción B ≤25 car.]",
-     "nota_cierre": "[nota ≤80 car. o \"\"]"
-   }
-   ```
-
-6. **Guardado con o sin `-Activo`**: pregunta si la pregunta nombra un activo protagonista claro
-   (decisión editorial del director, no regla automática nueva ni del motor ni de
-   `ruta_story.ps1`):
-   ```
-   ¿La pregunta tiene un activo protagonista claro? (ticker, o "no" si es general/ambigua)
-   ```
-   - **Sí** (ej. "…tendencia hoy del Oro" → Oro) → usa `-Activo [TICKER_MT5]` (normalizado
-     contra `config/activos.json`, mismo criterio que `/chart` PASO 1).
-   - **No / ambiguo / múltiples activos** (ej. "¿Suben o bajan los mercados esta semana?") → usa
-     `-Activo "_general"` (igual que `quote`/`breaking`).
-
-7. **Preview y aprobación** (mismo criterio que PASO 6, ANTES de renderizar o guardar nada):
-   ```
-   📖 *PREVIEW — Story Encuesta*
-   ━━━━━━━━━━━━━━━━━━━
-   Kicker: [kicker o "(sin kicker)"]
-   Pregunta: [pregunta]
-   Opción A: [opcion_a]   |   Opción B: [opcion_b]
-   Nota: [nota_cierre o "(sin nota)"]
-   ━━━━━━━━━━━━━━━━━━━
-   ¿Apruebas esta Story? ¿Generar y guardar el PNG final?
-   ```
-   Si el director **no** aprueba: no renderizar ni guardar nada en `data/stories/`. Terminar el
-   comando ahí.
-
-8. **Render y guardado** (solo tras aprobar, mismo patrón que PASO 7):
-   ```powershell
-   scripts\ruta_story.ps1 -Fecha "[YYYY-MM-DD]" -Activo "[TICKER_MT5 o _general]" -Plantilla "encuesta" -Hora "[HH-mm]"
-   ```
-   La `[Hora]` sale del reloj de Chile (regla canónica).
-   ```bash
-   uv run python scripts/story_render.py \
-     --template templates/stories/encuesta.html \
-     --out "[ruta devuelta por ruta_story.ps1]" <<'STORY_PAYLOAD'
-   { ...payload story_encuesta del paso 5... }
-   STORY_PAYLOAD
-   ```
-   Mismo manejo de éxito/error que PASO 7.3-7.4.
-
----
-
-## Ruta `edu` — recolección editorial (sin datos de mercado)
-
-`edu` es una pieza 100% editorial de concepto educativo (kicker + título del concepto +
-definición + ejemplo comparativo + lista de bullets de aplicación): **no llama a
-`get_asset_levels`** ni a ninguna otra tool de mercado (`obtener_calendario_macro`,
-`get_chart_objects`, `get_symbol_spec`), y **no ejecuta su propia búsqueda de evento** (no invoca
-WebSearch) — es contenido **educativo, sin datos de mercado**, mismo criterio editorial que
-`/concepto` y `/rencuesta` (definición + ejemplo real + puntos de aplicación en voz novata).
-Reemplaza los PASO 1-4 de `alerta`; el preview/render final reusa el mismo patrón de PASO 6-7
-adaptado a `edu` (ver abajo).
-
-1. **Recolección editorial**: pregunta el concepto con el criterio de `/concepto`/`/rencuesta`:
-   ```
-   ¿Nombre del concepto? (ej. "Cruce de medias móviles")
-   ¿Definición en una o dos líneas (voz novata)?
-   Ejemplo comparativo — ¿valor A? ¿operador/relación? ¿valor B? (ej. "Media 50" / "cruza sobre" / "Media 200")
-   ¿Bullets de aplicación? (uno por línea; 2 a 4 recomendados)
-   ¿Kicker/tema del chip? (ej. "CONCEPTO DE LA SEMANA" — Intro para omitir)
-   ```
-
-2. **Atajo opcional**: si el director ya corrió `/concepto` o `/rencuesta` en la misma sesión,
-   ofrece reutilizar ese concepto/definición/ejemplo ya redactados como base editorial — no
-   bloquea ni exige corrida previa; si prefiere redactar de cero, lo hace directamente.
-
-3. **Límites editoriales** (guía de redacción de este comando — el motor de render **no** valida
-   longitud, no trunca ni aborta): `kicker ≤ 30 caracteres`, `titulo_concepto ≤ 45 caracteres`,
-   `definicion ≤ 160 caracteres`, `valor_a`/`operador`/`valor_b ≤ 24 caracteres` cada uno, cada
-   `bullet ≤ 70 caracteres` (2 a 4 bullets recomendados). Si algún campo excede el límite, ajusta
-   la redacción antes del preview.
-
-4. **Payload `story_edu`**: construye `kicker` **siempre presente** — si el director no lo da, `""`
-   (nunca omitir la clave). `titulo_concepto`, `definicion` y los tres campos del ejemplo siempre
-   no vacíos. El ejemplo se recolecta como objeto editorial pero se **aplana** a las tres claves
-   escalares `valor_a`/`operador`/`valor_b` en el payload al motor (el motor solo resuelve claves
-   escalares top-level, no `ejemplo.valor_a`). `bullets` es un **array de objetos** `[{"texto": "…"}]`
-   (una entrada por bullet dictado); si el director no dicta ninguno, `bullets: []` (la lista
-   colapsa limpio en el render).
-   ```json
-   {
-     "plantilla": "edu",
-     "kicker": "[kicker ≤30 car. o \"\"]",
-     "titulo_concepto": "[nombre ≤45 car.]",
-     "definicion": "[definición ≤160 car.]",
-     "valor_a": "[valor A ≤24 car.]",
-     "operador": "[operador ≤24 car.]",
-     "valor_b": "[valor B ≤24 car.]",
-     "bullets": [
-       { "texto": "[bullet ≤70 car.]" }
-     ]
-   }
-   ```
-
-5. **Guardado bajo `_general`**: `edu` es una pieza educativa sin activo protagonista único → se
-   guarda siempre bajo `-Activo "_general"` (mismo criterio que `quote`), no se pregunta por
-   activo.
-
-6. **Preview y aprobación** (mismo criterio que PASO 6, ANTES de renderizar o guardar nada):
-   ```
-   📖 *PREVIEW — Story Edu*
-   ━━━━━━━━━━━━━━━━━━━
-   Kicker: [kicker o "(sin kicker)"]
-   Concepto: [titulo_concepto]
-   Definición: [definicion]
-   Ejemplo: [valor_a] [operador] [valor_b]
-   En la práctica:
-     • [bullet 1]
-     • [bullet 2]
-     • [...]
-   ━━━━━━━━━━━━━━━━━━━
-   ¿Apruebas esta Story? ¿Generar y guardar el PNG final?
-   ```
-   Si el director **no** aprueba: no renderizar ni guardar nada en `data/stories/`. Terminar el
-   comando ahí.
-
-7. **Render y guardado** (solo tras aprobar, mismo patrón que PASO 7):
-   ```powershell
-   scripts\ruta_story.ps1 -Fecha "[YYYY-MM-DD]" -Activo "_general" -Plantilla "edu" -Hora "[HH-mm]"
-   ```
-   La `[Hora]` sale del reloj de Chile (regla canónica).
-   ```bash
-   uv run python scripts/story_render.py \
-     --template templates/stories/edu.html \
-     --out "[ruta devuelta por ruta_story.ps1]" <<'STORY_PAYLOAD'
-   { ...payload story_edu del paso 4... }
-   STORY_PAYLOAD
-   ```
-   Mismo manejo de éxito/error que PASO 7.3-7.4.
-
----
-
-## Ruta `flash` — cierre multi-activo (datos del motor, sin gráfico)
-
-`flash` es una pieza de **cierre multi-activo**: una tabla de N activos (2 a 6 recomendados) con su
-último valor y su variación del día. **Sí** consume datos reales del motor
-(`mcp__market-data__get_asset_levels` por activo, con fallback manual), pero **no** lleva gráfico
-embebido (eso es Fase D) y **no** ejecuta búsqueda editorial de evento (no invoca WebSearch) — la
-narrativa la da la propia tabla, con dirección explícita por fila (regla de oro). Reemplaza los
-PASO 1-4 de `alerta`; el preview/render final reusa el mismo patrón de PASO 6-7 adaptado a `flash`
-(ver abajo).
-
-1. **Recolección del encabezado**: pregunta el título del cierre, la lista de activos y
-   opcionalmente el kicker:
-   ```
-   ¿Título del cierre? (ej. "Así cerró el mercado hoy")
-   ¿Qué activos incluimos? (2 a 6 — tickers o nombres; o "rotación de hoy")
-   ¿Kicker/tema del chip? (ej. "CIERRE DE MERCADO" — Intro para omitir)
-   ```
-   Normaliza cada activo contra `config/activos.json` (mismo criterio que `/chart` PASO 1).
-
-2. **Datos por activo (motor, con fallback manual)**: para **cada activo**, llama una vez
-   ```
-   mcp__market-data__get_asset_levels({"ticker": "[TICKER_MT5]", "timeframe": "H1"})
-   ```
-   y extrae el último precio (`valor`) y la variación del día. Si el resultado contiene `"error"`
-   (mismo patrón `apertura.md` PASO 4A), pide manualmente el último valor y la variación del día de
-   ese activo (no aborta toda la tabla, solo esa fila). Por cada activo arma:
-   - `valor`: precio formateado según los `digits` de `config/activos.json` (regla MT5 — coma
-     decimal y punto de miles, nunca truncar ceros).
-   - `variacion`: pct del día con signo y `%` (ej. `+0,42%`, `-1,86%`, `0,00%`).
-   - `direccion`: `alcista` si la variación es > 0, `bajista` si < 0, `lateral` si ≈ 0. **No** se
-     escribe como texto: el snapshot la usa como clase CSS (`flash-var--<direccion>`) para el color
-     y la flecha ▲/▼/→.
-   - `tipo`: clase del activo en voz simple (ej. "Divisa", "Metal", "Energía", "Índice", "Acción").
-
-3. **Sin búsqueda editorial de evento**: `flash` no invoca WebSearch ni reusa la detección de
-   noticias de `/alerta` — es un tablero de cierre, no una alerta noticiosa.
-
-4. **Límites editoriales** (guía de redacción de este comando — el motor de render **no** valida
-   longitud, no trunca ni aborta): `kicker ≤ 30 caracteres`, `titulo ≤ 45 caracteres`,
-   `fecha ≤ 40 caracteres`; por fila `nombre ≤ 16`, `tipo ≤ 14`, `valor ≤ 14`, `variacion ≤ 10`
-   caracteres; 2 a 6 filas recomendadas. Si algún campo excede el límite, ajusta la redacción antes
-   del preview.
-
-5. **Payload `story_flash`**: construye `kicker` **siempre presente** — si el director no lo da,
-   `"kicker": ""` (nunca omitir la clave). `titulo` y `fecha` siempre no vacíos; `fecha` sale del
-   reloj de Chile (regla canónica, nunca `WebSearch` para la hora). `filas` es un **array de
-   objetos** de claves escalares (una entrada por activo); si el director no da ningún activo, el
-   comando insiste (una tabla vacía no aporta).
-   ```json
-   {
-     "plantilla": "flash",
-     "kicker": "[kicker ≤30 car. o \"\"]",
-     "titulo": "[título ≤45 car.]",
-     "fecha": "[D MES YYYY · HH:MM]",
-     "filas": [
-       { "nombre": "USD/CLP", "tipo": "Divisa", "valor": "889,60", "variacion": "+0,42%", "direccion": "alcista" }
-     ]
-   }
-   ```
-
-6. **Guardado bajo `_general`**: `flash` es una pieza multi-activo sin activo protagonista único →
-   se guarda siempre bajo `-Activo "_general"` (mismo criterio que `quote`/`edu`), no se pregunta
-   por activo.
-
-7. **Preview y aprobación** (mismo criterio que PASO 6, ANTES de renderizar o guardar nada):
-   ```
-   📖 *PREVIEW — Story Flash (cierre multi-activo)*
-   ━━━━━━━━━━━━━━━━━━━
-   Kicker: [kicker o "(sin kicker)"]
-   Título: [titulo]
-   Fecha: [fecha]
-   Activos:
-     • [nombre] · [tipo] · [valor] · [variacion] ([direccion])
-     • [...]
-   ━━━━━━━━━━━━━━━━━━━
-   ¿Apruebas esta Story? ¿Generar y guardar el PNG final?
-   ```
-   Si el director **no** aprueba: no renderizar ni guardar nada en `data/stories/`. Terminar el
-   comando ahí.
-
-8. **Render y guardado** (solo tras aprobar, mismo patrón que PASO 7):
-   ```powershell
-   scripts\ruta_story.ps1 -Fecha "[YYYY-MM-DD]" -Activo "_general" -Plantilla "flash" -Hora "[HH-mm]"
-   ```
-   La `[Hora]` sale del reloj de Chile (regla canónica).
-   ```bash
-   uv run python scripts/story_render.py \
-     --template templates/stories/flash.html \
-     --out "[ruta devuelta por ruta_story.ps1]" <<'STORY_PAYLOAD'
-   { ...payload story_flash del paso 5... }
-   STORY_PAYLOAD
-   ```
-   Mismo manejo de éxito/error que PASO 7.3-7.4.
-
----
-
 ## Ruta `calendario` — el calendario macro de la semana (datos del motor, selección editorial)
 
 `calendario` señala los eventos económicos más relevantes de la semana para los activos del
@@ -590,7 +203,7 @@ activo sin color propio en `alerta`/`recomendacion`).
    mcp__market-data__obtener_calendario_macro({"min_impact": "medium", "solo_hoy": false})
    ```
    para traer la semana completa (no solo hoy). Si devuelve `{"error": "NO_CALENDAR_FEEDS", ...}`,
-   cae a WebSearch sobre investing.com como fallback (mismo criterio que `/dato_macro`); nunca
+   cae a WebSearch sobre investing.com como fallback; nunca
    inventar un evento ni una cifra de consenso/previo.
 
 2. **Selección editorial de 3 a 6 eventos**: de los eventos devueltos, elige los de mayor
@@ -673,144 +286,57 @@ activo sin color propio en `alerta`/`recomendacion`).
 
 ---
 
-## Ruta `postventa` — parte interno (atajo desde `/postventa`)
+## PASO 1 — Activo y temporalidad (de los argumentos, no de una pregunta)
 
-`postventa` es la Story del parte de post-venta: pieza **interna**, no publicable. El chip
-`🔒 Interno · Post-venta` está escrito en el snapshot (no es un token, ningún payload puede
-suprimirlo) y el footer no lleva handle, dominio ni disclaimer de CFD. Reemplaza los PASO 1-4 de
-`alerta`; el preview/render final reusa el patrón de PASO 6-7 adaptado.
+`alerta` cubre **un solo activo por corrida**. El activo y la temporalidad vienen en la
+invocación (`/story alerta USDCLP 1H`); el activo se normaliza contra `config/activos.json`
+en cualquier formato (ticker, nombre, `#TICKER`).
 
-1. **Atajo opcional**: abrir preguntando
-   ```
-   ¿Ya corriste /postventa hoy? Si sí, reuso la consulta, los niveles y los puntos
-   de ese parte. Si no, dime el activo y los recolecto del motor.
-   ```
-   - **Con parte previo** → reusar consulta, respuesta, niveles y puntos ya redactados. **No**
-     volver a llamar a `get_asset_levels`.
-   - **En frío** → pedir el activo (normalizado contra `config/activos.json`, mismo criterio que
-     `/chart` PASO 1) y llamar
-     `mcp__market-data__get_asset_levels({"ticker": "[TICKER_MT5]", "timeframe": "H1"})`, tomando
-     el precio y el soporte/resistencia más próximos. Si retorna `{"error": ...}`, pedirlos
-     manualmente (mismo patrón que `apertura.md` PASO 4A).
+Temporalidades válidas, con las etiquetas canónicas del repo:
 
-   El atajo no bloquea ni exige corrida previa.
+| | |
+|---|---|
+| `15M` | scalper (minutos a 1-2 h) |
+| `1H` | intradía (dentro de la jornada) |
+| `4H` | swing de jornada (1-3 días) |
+| `1D` | posicional (días a semanas) |
 
-2. **Límites editoriales** (guía de redacción de este comando — el motor **no** valida longitud,
-   no trunca ni aborta): `fecha_hora` ≤ 28 · `consulta` ≤ 60 · `respuesta` ≤ 90 ·
-   `activo_nombre` ≤ 14 · `soporte`/`precio`/`resistencia` ≤ 12 cada uno · `sesgo` ≤ 10 · cada
-   `respuestas[].texto` ≤ 62 (4 a 6 entradas) · cada `no_promesas[].texto` ≤ 62 (2 a 3 entradas) ·
-   `fuente` ≤ 30. Si algún campo excede el límite, ajusta la redacción antes del preview.
-
-3. **Payload `story_postventa`**: `sesgo` es exactamente una de `Alcista` / `Bajista` / `Lateral`
-   — el motor deriva de ahí `sesgo_slug`, que el snapshot usa como clase CSS de color y flecha
-   (▲ verde / ▼ rojo / → gris). Los precios van formateados con los `digits` de
-   `config/activos.json`. Las dos listas son arrays de objetos con la clave `texto`; si una llega
-   vacía (`[]`), su columna colapsa y el rótulo persiste.
-   ```json
-   {
-     "plantilla": "postventa",
-     "fecha_hora": "[D MES YYYY · HH:MM]",
-     "consulta": "[consulta ≤60 car.]",
-     "respuesta": "[respuesta ≤90 car.]",
-     "activo_nombre": "[nombre corto ≤14 car.]",
-     "soporte": "[precio con digits]",
-     "precio": "[precio con digits]",
-     "resistencia": "[precio con digits]",
-     "sesgo": "Alcista|Bajista|Lateral",
-     "respuestas": [ { "texto": "[≤62 car.]" } ],
-     "no_promesas": [ { "texto": "[≤62 car.]" } ],
-     "fuente": "MT5 · GRUPO INTELIGENCIA"
-   }
-   ```
-
-4. **Preview y aprobación** (mismo criterio que PASO 6, ANTES de renderizar o guardar nada):
-   ```
-   📖 *PREVIEW — Story Post-Venta (INTERNA)*
-   ━━━━━━━━━━━━━━━━━━━
-   Consulta: [consulta]
-   Respuesta: [respuesta]
-   Niveles: S [soporte] · [activo_nombre] [precio] ([sesgo]) · R [resistencia]
-   Qué responder: [n] puntos
-   Qué NO prometer: [n] puntos
-   ━━━━━━━━━━━━━━━━━━━
-   ⚠️ Pieza interna: el chip y el footer la marcan como no reenviable al cliente.
-   ¿Apruebas esta Story? ¿Generar y guardar el PNG final?
-   ```
-   Si el director **no** aprueba: no renderizar ni guardar nada en `data/stories/`. Terminar el
-   comando ahí.
-
-5. **Render y guardado** (solo tras aprobar, mismo patrón que PASO 7). A diferencia de `edu`,
-   esta pieza **sí** lleva activo protagonista:
-   ```powershell
-   scripts\ruta_story.ps1 -Fecha "[YYYY-MM-DD]" -Activo "[TICKER_MT5]" -Plantilla "postventa" -Hora "[HH-mm]"
-   ```
-   La `[Hora]` sale del reloj de Chile (regla canónica).
-   ```bash
-   uv run python scripts/story_render.py \
-     --template templates/stories/postventa.html \
-     --out "[ruta devuelta por ruta_story.ps1]" <<'STORY_PAYLOAD'
-   { ...payload story_postventa del paso 3... }
-   STORY_PAYLOAD
-   ```
-   Mismo manejo de éxito/error que PASO 7.3-7.4.
+Si el activo no está en el catálogo o falta la temporalidad, **detente y dilo**, nombrando lo
+que recibiste. No elijas por el director.
 
 ---
 
-## PASO 1 — Preguntar activo y temporalidad del gráfico
-
-Pregunta al director **un solo activo** (acepta cualquier formato — ticker, nombre, `#TICKER` —
-normaliza contra `config/activos.json`, mismo criterio que `/chart` PASO 1) y la temporalidad
-del gráfico usando las etiquetas canónicas del repo:
-
-```
-¿Qué activo genera la Alerta? (uno solo por corrida)
-
-¿Qué temporalidad usamos para el gráfico?
-1. 15M — scalper (minutos a 1-2 h)
-2. 1H  — intradía (dentro de la jornada)
-3. 4H  — swing de jornada (1-3 días)
-4. 1D  — posicional (días a semanas)
-```
-
-Si no reconoces el activo, muestra la lista de disponibles (igual que `/chart` PASO 1) y vuelve
-a preguntar.
-
----
-
-## PASO 2 — Niveles y precio (motor, con fallback manual — R2.2/CB-2)
+## PASO 2 — Niveles y precio (del motor, o no hay pieza)
 
 Llama **una sola vez**:
 ```
 mcp__market-data__get_asset_levels({"ticker": "[TICKER_MT5]", "timeframe": "[M15|H1|H4|D1]"})
 ```
 
-- Si responde con éxito: extrae `price` (precio actual) y deriva **un solo soporte y una sola
-  resistencia** — los más próximos al precio actual.
-- Si el resultado contiene `"error"` (mismo patrón `apertura.md` PASO 4A):
-  ```
-  ⚠️ No se pudo obtener niveles desde MT5. Ingresa manualmente:
-  Precio actual:
-  Soporte más próximo:
-  Resistencia más próxima:
-  ```
-  Pedir los 3 valores manualmente. Aceptar valores con o sin `$`, coma de miles o espacios.
+- Con éxito: toma `price` y deriva **un soporte y una resistencia**, los más próximos al precio.
+- Si la respuesta trae `"error"`, **detente y reporta el código exacto**:
+
+```
+❌ El motor no entregó niveles para [ACTIVO]: [CÓDIGO] — [mensaje].
+   No genero la pieza. Revisa que MT5 esté abierto y vuelve a pedirla.
+```
+
+No hay fallback manual y no se piden precios por teclado. Es la REGLA 1 del proyecto: un
+precio que nadie verificó dentro de una pieza que invita a operar es el peor resultado
+posible, y el error del motor es una respuesta, no un obstáculo que rodear.
+
+`variacion_pct` y `volumen_relativo` son opcionales: si vienen en la respuesta del motor se
+usan, y si no, se omiten. Tampoco se preguntan.
 
 Formatea `precio_actual`/`soporte`/`resistencia` según `digits` de `config/activos.json`, con
-**coma decimal y punto de miles** (regla del contrato de datos: `2.318,40`, nunca `2318.4`).
-
-Pregunta también, de forma opcional (CB-4 — si no hay dato confiable, se omiten sin pedirlos
-de nuevo):
-```
-¿Variación % del día? (Intro para omitir)
-¿Volumen % relativo? (Intro para omitir)
-```
+**coma decimal y punto de miles** (`2.318,40`, nunca `2318.4`).
 
 ---
 
-## PASO 3 — Narrativa (criterio editorial de `/alerta` PASO 1 — R2.3/CB-5)
+## PASO 3 — Narrativa (criterio editorial de la alerta de mercado — R2.3/CB-5)
 
 Detecta si hay un evento real de las últimas horas que afecte al activo, con el mismo criterio
-y las mismas fuentes de `.claude/commands/alerta.md` PASO 1 (`WebSearch` sobre investing.com +
+y las mismas fuentes de siempre (`WebSearch` sobre investing.com +
 fuentes oficiales: Fed, BCCh, BCE, OPEP+, EIA, BLS, geopolítica, earnings tech):
 
 - **Si HAY evento reciente**: la narrativa es noticiosa — titular tipo noticia + párrafo de
@@ -837,17 +363,15 @@ del payload (`Alcista`/`Bajista`/`Lateral`) y el snapshot le pone el color semá
 
 ---
 
-## PASO 4 — Chart embebido (opcional)
+## PASO 4 — Chart embebido (opcional, por argumento)
 
-Pregunta:
-```
-¿Quieres embeber un chart de /chart en esta Story? (s/n)
-```
-- Si **sí**: pide la ruta del PNG ya generado en `data/charts/` (o invoca `/chart` primero si
-  aún no existe). Verifica que el archivo exista antes de continuar — si no existe, avisa y
-  vuelve a preguntar (el motor de render también valida esto y falla con error accionable si la
-  ruta es inválida, CB-8).
-- Si **no**: continúa sin `chart_png` — el template usa el gráfico decorativo SVG del snapshot.
+Si la invocación trae la ruta de un PNG ya generado en `data/charts/`, se embebe. Si no viene,
+la Story sale sin chart y se sigue adelante. **No se pregunta**: una pieza sin chart es una
+pieza válida, y detener el flujo por eso convierte un opcional en un bloqueo.
+
+Si la ruta viene pero el archivo no existe, **detente y dilo** en vez de rendir la pieza sin él:
+el renderer falla ante una imagen inexistente y ese fallo es la garantía de que nadie publica
+una Story a la que le falta lo que prometió.
 
 ---
 

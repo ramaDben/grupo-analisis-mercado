@@ -1,218 +1,104 @@
 # Referencia de comandos
 
-Todos los comandos se invocan desde Claude Code con `/nombre`. Cada comando genera contenido formateado para WhatsApp y lo muestra para aprobación antes de guardarlo en `data/mensajes/`.
+Seis comandos, expuestos por igual a Claude Code y a Antigravity. La producción diaria se rige
+por **el carrusel y el informe**; el resto son piezas puntuales y utilidades.
+
+El catálogo era de veintiocho. Se retiró todo lo que orquestaban los comandos de día
+(`/lunes` … `/domingo`, `/apertura`, `/alerta`, `/dato_macro`, `/noticia`, `/actualizacion`,
+`/accion`, `/earnings`, `/señal`), lo educativo satélite (`/concepto`, `/pregunta`,
+`/respuesta`, `/curriculo`), `/chart`, y los internos `/ventas` y `/postventa`. Sus definiciones
+siguen en la historia de git si alguna vez hacen falta.
 
 ---
 
-## Capa 1 — Comandos de día
+## `/carrusel` — la producción diaria
 
-Paquetes completos para cada día de la semana. Generan varias piezas en orden, una por una, esperando aprobación entre cada una.
+Escanea el universo, elige objetivamente qué comunicar y arma las piezas por canal.
 
-### `/domingo`
-**Cuándo**: domingo, para preparar la semana.
-
-**Genera**:
-1. Resumen noticias del fin de semana (eventos que pasaron sábado-domingo)
-2. Preview de la semana: datos macro importantes, eventos a monitorear
-3. Sesgo para el lunes: qué esperar en la apertura
-4. Encuesta de la semana para el grupo
-
-**Tipo de archivo guardado**: `domingo.txt`
-
----
-
-### `/lunes`
-**Cuándo**: lunes AM, antes de la apertura del mercado.
-
-**Genera** (5 piezas):
-1. Resumen del calendario económico semanal (datos de alto impacto L-V)
-2. Earnings de la semana (empresas del catálogo que reportan)
-3. Concepto de la semana (macro / técnico / conceptual)
-4. Apertura de mercado (2 activos del día, niveles 4H)
-5. Encuesta de tendencia AM
-
-**Tipo de archivo guardado**: `apertura.txt`, `concepto.txt`, `encuesta.txt`
-
----
-
-### `/martes`
-**Cuándo**: martes AM.
-
-**Genera** (3 piezas):
-1. Apertura de mercado (2 activos del día, niveles 4H)
-2. Dato macro del día (calendario → director elige)
-3. Encuesta de precio de apertura
-
-**Tipo de archivo guardado**: `apertura.txt`, `dato_macro.txt`, `encuesta.txt`
-
----
-
-### `/miercoles`
-**Cuándo**: miércoles AM. Prioridad: datos EIA de inventarios de petróleo (suelen publicarse miércoles).
-
-**Genera** (3 piezas):
-1. Apertura de mercado (2 activos, con énfasis en WTI si hay EIA)
-2. Dato macro del día (EIA tiene prioridad si aplica)
-3. Encuesta de tendencia AM
-
-**Tipo de archivo guardado**: `apertura.txt`, `dato_macro.txt`, `encuesta.txt`
-
----
-
-### `/jueves`
-**Cuándo**: jueves AM. Alerta especial para Jobless Claims (dato semanal de desempleo EE.UU.).
-
-**Genera** (3 piezas):
-1. Apertura de mercado (2 activos)
-2. Dato macro (Jobless Claims tiene prioridad si aplica)
-3. Encuesta de tendencia AM
-
-**Tipo de archivo guardado**: `apertura.txt`, `dato_macro.txt`, `encuesta.txt`
-
----
-
-### `/viernes_am`
-**Cuándo**: viernes AM. Cubre **3 activos** (en vez de 2). Primer viernes del mes = NFP (dato de empleo).
-
-**Genera** (3 piezas):
-1. Apertura de 3 activos (niveles 4H cada uno)
-2. Dato macro del día (NFP destacado si aplica)
-3. Encuesta de precio de apertura del lunes
-
-**Tipo de archivo guardado**: `apertura.txt`, `dato_macro.txt`, `encuesta.txt`
-
----
-
-### `/viernes_pm`
-**Cuándo**: viernes PM, tras el cierre del mercado (~16:00-17:00 CLT).
-
-**Genera**:
-1. Resumen de la semana por activo (cómo cerró cada uno, hecho relevante)
-2. Qué viene la próxima semana (datos macro, eventos)
-3. Reflexión o aprendizaje de la semana
-
-**Tipo de archivo guardado**: `cierre.txt`
-
----
-
-## Capa 2 — Comandos de tarea (ad hoc)
-
-Para situaciones puntuales que no corresponden a la operativa estándar del día.
-
-### `/encuesta [tipo] [activo]`
-Genera una encuesta de **sentimiento puro** para el grupo. Sin precios, sin números y sin contenido educativo. Tres tipos:
-- `posicion [activo?]` — qué está operando el grupo (🟢 Compré / 🔴 Vendí / ⚪ No operé). Sin activo, un poll por cada activo del día.
-- `tendencia [activo?]` — qué tendencia proyectan (📈 Alcista / 📉 Bajista / ➡️ Lateral).
-- `movimiento [semana?]` — qué activo tendrá más movimiento (hoy, o `semana` para la dominical).
-
-El tipo es obligatorio (sin tipo, el comando pregunta). Los activos salen de `data/plan_hoy.json`. La contextualización la da el mensaje previo de la mañana, no la encuesta. Lo educativo (revelado, lección) vive en `/rencuesta` y futuros comandos.
-
-**Ejemplo**: `/encuesta posicion USDCLP`
-
----
-
-### `/dato_macro`
-Trae el calendario económico del día y lista los datos disponibles. El director elige cuál desarrollar. El comando genera el mensaje explicativo para ese dato (qué es, a qué hora sale, qué se espera, cómo podría reaccionar el activo).
-
-Dos modos automáticos según el estado del evento: **anticipación** (aún no sale: qué es, qué se espera, escenarios) y **resultado** (ya publicó, issue #93: desglose de sub-lecturas con ✅/🔥, bloque "🧠 ¿Qué significa esto?" con lectura de "ya descontado", "⚠️ PERO ojo" si hay sorpresa parcial, impacto esperado por activo con dirección ⬆️/⬇️ y resumen simple).
-
----
-
-### `/noticia`
-Busca 3-5 noticias relevantes del momento para los activos del grupo. El director elige cuál publicar. El comando la formatea en lenguaje simple para el grupo.
-
----
-
-### `/chart`
-Genera un screenshot de MT5 para el activo y temporalidad elegidos. Opciones de indicador: EMA+ATR o S/R fractal. El chart se guarda en `data/charts/`.
-
----
-
-### `/señal`
-Genera una señal operativa. **Antes de generar**, verifica en `data/historial_senales.json` cuántas señales se han enviado esta semana. Si ya hay 3, informa al director y no genera una nueva.
-
-Campos obligatorios: ticker, nombre activo, BUY/SELL, entrada, TP, SL (en puntos y en CLP), volumen, tipo (swing/scalper), hasta 3 bullets de análisis.
-
----
-
-### `/alerta`
-Detecta qué está moviendo el mercado ahora mismo y genera una alerta urgente para el grupo. Busca noticias frescas (últimas 2 horas) y las conecta con el impacto en los activos cubiertos.
-
----
-
-### `/concepto`
-Genera un concepto educativo conectado a algo que pasó esta semana. Propone 3 opciones y el director elige una. El mensaje explica el concepto en lenguaje simple con un ejemplo real del mercado actual.
-
----
-
-### `/pregunta`
-Genera una pregunta abierta para fomentar la participación del grupo. Ejemplo: *"¿Por qué creen que el oro subió tras el dato de inflación?"*. Máximo 1 por semana.
-
----
-
-### `/estado`
-Dashboard del sistema. Muestra:
-- Señales de la semana (cuántas usadas de 3)
-- Plan del día según `config/agenda_semanal.json`
-- Activos del día
-- Estado de MCPs (market-data ✅, WhatsApp ⏳)
-- Mensajes guardados hoy en `data/mensajes/`
-
----
-
-### `/postventa`
-Genera el Parte de Post-Venta: un informe diario para el grupo interno de post-venta (no es un mensaje de cliente, nunca se reenvía). Siete bloques: la consulta que va a entrar hoy con su respuesta, tres preguntas frecuentes redactadas para copiar, a quién contactar por segmento, cómo acompañar una posición abierta en el activo protagonista, los otros activos del día en una línea, qué dijimos vs. qué pasó, y los límites de lo que no se promete. Toma el evento de `data/ultimo_evento.json`, los niveles de `get_asset_levels` y la rendición de cuentas de `data/mensajes/<fecha>/`. Usa un catálogo cerrado de cinco segmentos: con exposición al activo protagonista, dormido (2+ semanas), novato en formación, operador frecuente, y con la posición en contra. No lee CRM ni ve posiciones reales. Rechaza el flag `ejecutivo` (su contenido ya es 100% interno).
-
----
-
-## Capa 3 — Acciones individuales
-
-### `/accion [TICKER]`
-Análisis completo de una de las 13 acciones del catálogo. Incluye:
-- Análisis técnico (4H via `analyze_ticker`)
-- Drivers específicos de la empresa
-- Noticias recientes de earnings o eventos corporativos
-- Conexión con su índice (US100, US30)
-
-**Tickers válidos**: `#AAPL` · `#MSFT` · `#NVDA` · `#AMZN` · `#AMD` · `#JPM` · `#BAC` · `#GS` · `#MS` · `#BA` · `#CAT` · `#GE` · `#DE`
-
----
-
-### `/earnings`
-Calendario de earnings de las 13 acciones para la semana actual. Para cada empresa que reporta incluye: día, hora Chile (BMO/AMC), EPS esperado, ingresos esperados, foco del mercado y conexión con su índice.
-
----
-
-## Flujo de aprobación (aplica a todos los comandos)
-
-```
-Comando genera borrador
-        ↓
-Director revisa en pantalla
-        ↓
-¿Apruebas? ¿Adjuntar chart? ¿Enviar al grupo?
-        ↓
-Si aprueba → Claude guarda en data/mensajes/YYYY-MM-DD_HH-MM_[tipo].txt
-        ↓
-Director copia texto y lo pega en el grupo WhatsApp
+```bash
+/carrusel                      # Top 3 de la sesión activa
+/carrusel --grupo metales      # un canal concreto
+/carrusel --matriz             # Top 1 de cada uno de los 5 canales de mercado
 ```
 
-**Nunca se envía nada sin aprobación explícita.**
+`scripts/screener_gi.py` detecta la sesión (Asiática, Europea, Apertura Wall Street, Rotación de
+Tarde, Cierre o Fin de Semana) y puntúa cada activo con el `Score_GI` sobre 100: técnico 35 +
+catalizador macro 25 + espacio ADC/ATR 20 + momentum 20. Antes de puntuar aplica cuatro
+**gates**, que son prohibiciones y no puntos: feriado de la bolsa, blackout por calendario,
+prohibición del Playbook y agotamiento del ATR diario.
+
+Cada canal recibe además **su propia lectura macro**: `contexto_macro_grupos.py` arma la agenda
+del día filtrada para ese canal, la curva soberana y el mecanismo que explica por qué le importa,
+más una Story de dato macro. Todo derivado de las series oficiales de `data central/`.
+
+`--grupo` acepta los alias de `config/whatsapp_grupos.json` (`metales`, `oro`, `forex`,
+`indices`, `acciones`, `cripto`, `senales`, `macro`, o el nombre del canal). **Un alias que no se
+reconoce aborta**: antes caía en silencio al canal macro y publicaba en el grupo equivocado.
+
+> **No corras `--preparar` de prueba.** El escáner lee las corridas anteriores del día para no
+> repetir activos, así que un ensayo los excluye de la corrida real.
+
+## `/informe [apertura|cierre]` — el informe de la jornada
+
+- **Apertura**: PDF institucional A4 con banners por activo a 300 DPI, curva soberana y agenda.
+- **Cierre**: chat-first, mensaje con gráfico y **sin PDF**. Un PDF al día, no dos: la fatiga de
+  descargas es real.
+
+La apertura **no se emite con el sesgo del motor vencido**, salvo `--con-datos-viejos`, que
+estampa el aviso en la primera página.
+
+## `/story [tipo]` — una pieza suelta
+
+Para cuando hace falta algo fuera de la tanda. **No pregunta nada**: el tipo, el activo y la
+temporalidad van como argumentos, y si falta alguno se detiene.
+
+| tipo | qué es | datos |
+|---|---|---|
+| `alerta` | niveles del día de un activo | `get_asset_levels` |
+| `dato_macro` | un dato que ya publicó, con su veredicto | calendario + `data central/` |
+| `breaking` | noticia urgente, 100% editorial | ninguno |
+| `calendario` | 3 a 6 eventos macro de la semana | `obtener_calendario_macro` |
+
+Son las cuatro plantillas que existen en `templates/stories/`. Un tipo sin plantilla se rechaza:
+el estándar de diseño lo comanda ahora el brand kit (`brand_atomic_system/`).
+
+## `/encuesta [tipo] [activo]` — sentimiento del canal
+
+Tres tipos: `posicion`, `tendencia`, `movimiento`. Sin precios ni contenido educativo dentro.
+
+Regla de oro: **antes de la encuesta, el canal tiene que haber recibido contexto** para votar
+informado. En la práctica, el contexto macro que publica el carrusel esa mañana.
+
+## `/rencuesta` — el desarrollo didáctico
+
+Toma el tema de una encuesta y lo explica, construyendo la malla de conceptos.
+`/rencuesta` (la última), `/rencuesta [tema]`, `/rencuesta mapa` (vista de repaso).
+
+## `/estado` — diagnóstico
+
+Dashboard del sistema: si la sesión de WhatsApp sigue vinculada, cuántos envíos van hoy contra el
+cupo, frescura del sesgo del motor y estado de los MCPs. **No envía nada.**
 
 ---
+
+## Flujo de aprobación (aplica a todos)
+
+1. El comando genera el contenido y lo muestra.
+2. El director aprueba o pide ajustes.
+3. **Al aprobar**: se guarda con `scripts\ruta_mensaje.ps1` o `scripts\ruta_story.ps1` — nunca se
+   arma la ruta a mano.
+4. Se envía con `scripts/enviar_whatsapp.py --grupo <alias> [--adjunto ...] --mensaje-archivo ...`
+
+**Nunca se envía nada sin la aprobación explícita del director.**
+
+El envío verifica que la pieza aparezca en la conversación antes de reportar éxito, y compara la
+cabecera del chat contra el destinatario de forma exacta. **Si aborta, no se envió**: revisa si
+llegó antes de reintentar, porque repetir a ciegas duplica la pieza.
+
+Automatizar WhatsApp Web va contra sus términos de servicio: el comando impone 45 s mínimos entre
+envíos y un cupo de 40 al día, y espera cuando toca.
 
 ## Tipos de archivo guardado
 
-| Tipo | Descripción |
-|------|-------------|
-| `alerta` | Alerta urgente de mercado |
-| `apertura` | Análisis de apertura de mercado |
-| `concepto` | Concepto educativo de la semana |
-| `encuesta` | Encuesta de sentimiento (posicion/tendencia/movimiento) |
-| `señal` | Señal operativa (BUY/SELL) |
-| `noticia` | Noticia seleccionada del día |
-| `dato_macro` | Explicación de dato económico |
-| `cierre` | Cierre semanal del viernes |
-| `pregunta` | Pregunta abierta al grupo |
-| `niveles` | Niveles técnicos del día |
-| `postventa` | Parte diario para el equipo interno de post-venta |
+`niveles`, `dato_macro`, `alerta`, `encuesta`, `cierre` — la carpeta `<tipo>` dentro de
+`data/mensajes/<fecha>/<activo>/`. Sin activo protagonista, cae en `_general/`.

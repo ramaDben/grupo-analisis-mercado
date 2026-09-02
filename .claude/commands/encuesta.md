@@ -26,7 +26,7 @@ Ejemplos:
 > 2. **CERO contenido educativo.** No explicar conceptos, no causa-efecto, no "respuesta
 >    correcta". Eso vive en la futura área educativa con comandos propios.
 > 3. **Una invocación = una sola pieza del tipo pedido.** Nunca arrastrar otros tipos.
-> 4. La contextualización la da el mensaje previo de la mañana (`/dato_macro` + `/noticia`),
+> 4. La contextualización la da el contexto macro que el carrusel publica en el canal esa mañana,
 >    NO la encuesta. El poll solo hace un guiño cualitativo opcional, sin números.
 > 5. Límites WhatsApp: pregunta ≤ 255 caracteres — cada opción ≤ 100 caracteres (emoji incluido) — 2 a 12 opciones.
 

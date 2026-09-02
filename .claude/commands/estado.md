@@ -33,9 +33,9 @@ Lista cualquier contenido generado en la sesión actual que NO se haya enviado t
 
 ### 5. Próximas tareas
 Basado en el plan del día y la hora actual (hora Chile), sugiere qué corresponde hacer ahora:
-- Ej: "Faltan 30 min para el dato del IPC → ejecuta /dato_macro"
-- Ej: "Hora de apertura del mercado → ejecuta /martes"
-- Ej: "NFP sale en 1 hora → prepara análisis previo con /dato_macro"
+- Ej: "Faltan 30 min para el dato del IPC → el carrusel lo va a recoger en la próxima tanda"
+- Ej: "Hora de apertura de Wall Street → ejecuta /informe apertura"
+- Ej: "Cierre en 45 min → ejecuta /informe cierre"
 
 ### 6. Estado de los MCPs
 Informa el estado de cada MCP relevante:
@@ -49,8 +49,8 @@ Informa el estado de cada MCP relevante:
 Basado en el estado actual, sugiere acciones:
 - Si no hay análisis enviado hoy: "→ Ejecuta /[dia_semana] para la operativa del día"
 - Si faltan señales disponibles (< 3): "→ [N] señal(es) disponible(s) esta semana"
-- Si hay chart antiguo del activo de hoy: "→ Generar chart actualizado con /chart"
-- Si es viernes PM: "→ Recuerda ejecutar /viernes_pm para el cierre semanal"
+- Si la sesión de WhatsApp no está vinculada: "→ Re-vincular con enviar_whatsapp.py --login"
+- Si el cupo diario de envíos va alto: decir cuántos quedan antes del tope
 
 ---
 

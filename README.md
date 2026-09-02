@@ -46,49 +46,25 @@ uv sync --extra stories && python -m playwright install chromium
 
 Ver [docs/setup-guide.md](docs/setup-guide.md) para instrucciones detalladas.
 
-## 25 Slash Commands
+## 6 Slash Commands
 
-Invocar desde Claude Code con `/nombre`. Organizados en 3 capas:
+Expuestos por igual a Claude Code y a Antigravity. La producción diaria se rige por el carrusel
+y el informe; el resto son piezas puntuales y utilidades.
 
-### Capa 1 — Comandos de día (paquete completo, lunes a domingo)
+| Comando | Qué hace |
+|---------|----------|
+| `/carrusel` | **La producción diaria.** Escanea el universo con el `Score_GI`, elige el Top 3 de la sesión y arma las piezas por canal con su contexto macro. `--grupo <alias>` para un canal, `--matriz` para todos. |
+| `/informe [apertura\|cierre]` | Informe de la jornada: PDF institucional en la apertura, mensaje con gráfico al cierre. |
+| `/story [tipo]` | Una pieza suelta: `alerta`, `dato_macro`, `breaking`, `calendario`. No pregunta nada, todo va por argumento. |
+| `/encuesta [tipo] [activo]` | Encuesta de sentimiento: `posicion`, `tendencia`, `movimiento`. |
+| `/rencuesta` | Desarrolla el tema de una encuesta y construye la malla de conceptos. |
+| `/estado` | Dashboard: sesión de WhatsApp, cupo de envíos del día, frescura del motor. No envía nada. |
 
-| Comando | Propósito |
-|---------|-----------|
-| `/domingo` | Paquete dominical: noticias fin de semana + preview + sesgo lunes + encuesta semana |
-| `/lunes` | Paquete del lunes: resumen semanal + earnings + concepto + apertura + encuesta |
-| `/martes` | Operativa martes: apertura + dato macro + encuesta precio |
-| `/miercoles` | Operativa miércoles + prioridad EIA de petróleo |
-| `/jueves` | Operativa jueves + alerta Jobless Claims |
-| `/viernes_am` | AM viernes: 3 activos + NFP si aplica + encuesta precio del lunes |
-| `/viernes_pm` | Cierre semanal por la tarde |
+El catálogo era de veintiocho. Se retiró todo lo que orquestaban los comandos de día, las piezas
+sueltas que los alimentaban y los internos de equipo; sus definiciones siguen en la historia de
+git. El estándar de diseño de las piezas lo comanda ahora el brand kit (`brand_atomic_system/`).
 
-### Capa 2 — Comandos de tarea (ad hoc)
-
-| Comando | Propósito |
-|---------|-----------|
-| `/apertura` | Niveles técnicos interactivos (activo + temporalidad + indicador por activo) |
-| `/actualizacion` | Evolución del precio y reacción frente a los niveles de la apertura |
-| `/dato_macro` | Calendario del día → director elige dato a desarrollar (modo anticipación / resultado) |
-| `/noticia` | 3-5 noticias relevantes → director elige |
-| `/alerta` | Detecta qué mueve el mercado ahora y genera alerta urgente |
-| `/señal` | Señal operativa (verifica límite 3/semana) |
-| `/encuesta [tipo] [activo]` | Encuesta de sentimiento puro (3 tipos: posicion, tendencia, movimiento) |
-| `/rencuesta` | Desarrolla el tema de una encuesta y construye la malla de conceptos |
-| `/curriculo` | Planifica el currículo educativo y despacha conceptos en orden |
-| `/concepto` | Concepto educativo conectado a lo que pasó esta semana |
-| `/pregunta` | Pregunta abierta para fomentar el razonamiento del grupo |
-| `/respuesta` | Responde una pregunta/comentario de cliente de forma didáctica |
-| `/chart` | Screenshot MT5 con indicador y temporalidad a elección |
-| `/story [tipo]` | Story de marca GI (imagen 1920×1080). Tipos: alerta, quote, breaking, encuesta, edu |
-| `/ventas` | Oportunidad del Día para el equipo de ventas interno (email + WhatsApp) |
-| `/estado` | Dashboard del sistema (señales, charts, plan del día, MCPs) — no envía nada |
-
-### Capa 3 — Acciones individuales
-
-| Comando | Propósito |
-|---------|-----------|
-| `/accion [TICKER]` | Análisis completo de una de las 13 acciones del catálogo |
-| `/earnings` | Calendario de earnings de las 13 acciones para la semana |
+Detalle completo en [docs/commands-reference.md](docs/commands-reference.md).
 
 ## Activos cubiertos
 

@@ -23,7 +23,7 @@ Criterio de claridad (subordinado a la regla de oro): si un cliente nuevo sin ex
 - **WTI (Petróleo)**: drivers → inventarios EIA, decisiones OPEP+, demanda China, geopolítica
 - **US100 (Nasdaq 100)**: drivers → tasas Fed, earnings tech, rendimientos Treasury
 - **USD/JPY (Dólar / Yen japonés)**: cobertura por pedido externo, **fuera de la rotación diaria** de 2-3 activos (se cubre cuando el director lo pide). drivers → diferencial de tasas Fed vs BoJ, decisiones del BoJ, rendimientos Treasury, intervención del Ministerio de Finanzas de Japón, precios de energía, aversión al riesgo
-- **Acciones (rotación por análisis previo)**: además de los 4 activos base, la rotación diaria puede incluir 1-2 acciones del catálogo elegidas por análisis previo. Fuente interina: las 2 acciones destacadas por `/earnings` esa semana. Mecanismo definitivo (market screener que recorra las acciones disponibles en MT5 y elija las 2 mejores): **pendiente, issue aparte**.
+- **Acciones (rotación por análisis previo)**: además de los 4 activos base, la rotación diaria puede incluir 1-2 acciones del catálogo elegidas por análisis previo. Las elige el `Score_GI` del escáner como a cualquier otro activo del universo.
 
 ### El catálogo técnico es más amplio que la rotación diaria
 `config/activos.json` cubre 38 tickers, e incluye desde el 2026-08-25 cinco ETF (`QQQ.US`, `SPY.US`, `GLD.US`, `IWM.US`, `SOXX.US`) y cinco criptos nuevas (`ETHUSD`, `SOLUSD`, `LTCUSD`, `ADAUSD`, `DOGUSD`). Todos entran con `rotacion_diaria: false`: **la rotación diaria de 2-3 activos no cambia**, y estos existen para que `get_asset_levels` y `get_symbol_spec` puedan responder por ellos cuando el director los pida.
@@ -37,7 +37,7 @@ El universo completo del terminal (32 pares FX, 86 acciones, 13 ETF, 6 criptos) 
 
 ## Estructura diaria obligatoria (lunes a viernes)
 
-> **Orden canónico (issue #43)**: el dato/noticia del calendario va PRIMERO, para enviar el fundamental del día al cliente mientras se cargan los niveles en MT5 (los niveles requieren input manual y tardan más). Los comandos de día (`/martes`, `/miercoles`, `/jueves`, `/viernes_am`) generan el dato macro como PIEZA 1 y la apertura/niveles como PIEZA 2.
+> **Orden canónico (issue #43)**: el dato/noticia del calendario va PRIMERO y los niveles después. Lo cumple `contexto_macro_grupos.py`, que arma el mensaje de cada canal con la agenda del día arriba y la lectura técnica debajo.
 
 ### 1. Noticia relevante del calendario económico
 - 1 noticia o dato del día que impacte directamente a alguno de los activos
@@ -49,7 +49,7 @@ El universo completo del terminal (32 pares FX, 86 acciones, 13 ETF, 6 criptos) 
 - Enviar niveles en temporalidades 4H, 1H o 15M
 - Cubrir 2 o 3 activos por día (rotar entre USD/CLP, Oro, WTI, US100)
 - Indicar: soportes, resistencias, zona de interés y posible sesgo
-- La temporalidad y el indicador se eligen por activo vía `/apertura` (nunca se asume 4H fijo). Los niveles se presentan como **lectura/marco temporal**, no como señal de operativa.
+- La temporalidad se elige por activo según su volatilidad (nunca se asume 4H fijo). Los niveles se presentan como **lectura/marco temporal**, no como señal de operativa.
 
 ### 3. Drivers del activo
 - Explicación corta de los drivers que están moviendo al activo
@@ -95,16 +95,12 @@ Queda **estrictamente prohibido** redactar eventos futuros en tiempo pasado (ej.
 - **Eventos Futuros / Próximos:** Se redactan exclusivamente en **Modo Anticipación** ("en la antesala de...", "a la espera de los discursos previstos para mañana...", "el mercado aguarda la publicación...").
 - **Validador Automático:** `generar_pdf.py` y `pipeline_informe.py` ejecutan automáticamente `scripts/validar_consistencia_temporal.py`. Si detectan discrepancia de fecha o anacronismos en el texto, el proceso aborta inmediatamente (*Fail-Fast*).
 
-## Agenda semanal
+## Cadencia
 
-| Día | Contenido principal | Encuesta | Señales |
-|-----|---------------------|----------|---------|
-| Domingo | Noticias fin de semana + preview semana + sesgo lunes | Encuesta semana | No aplica |
-| Lunes | Resumen calendario semanal + concepto de la semana | Tendencia AM | Según oportunidad |
-| Martes | Niveles + noticia + drivers | Precio apertura | Según oportunidad |
-| Miércoles | Niveles + noticia + drivers | Tendencia AM | Según oportunidad |
-| Jueves | Niveles + noticia + drivers | Tendencia AM | Según oportunidad |
-| Viernes | Niveles + noticia + drivers + cierre semanal | Precio apertura lunes | Según oportunidad |
+No hay agenda por día de la semana ni comandos de día: la producción se rige por **el carrusel y
+el informe**, que detectan la sesión y la hora reales. El carrusel se puede correr en cualquier
+momento; el informe tiene dos momentos (apertura y cierre). Las encuestas se mandan cuando el
+director lo decide, siempre después de que el canal recibió contexto para votar informado.
 
 ## Producción diaria en 3 tandas (escáner + carrusel + informe)
 
@@ -291,12 +287,12 @@ En todo texto que lea un cliente —mensajes de WhatsApp, pies de Story, textos 
 
 ## Datos macro en español + Diccionario rápido (OBLIGATORIO — issue #46)
 - **Indicadores en español**: todo dato macro se nombra en español, con la sigla original entre paréntesis **una sola vez** (ej. "Índice de gerentes de compra manufacturero (PMI manufacturero)"). Minimizar términos en otro idioma en el cuerpo del mensaje.
-- **Bloque "🔤 Diccionario rápido"**: obligatorio en el **Modo anticipación** de `/dato_macro` y en `/noticia` cuando aparezcan siglas. Por cada abreviatura del mensaje (ISM, NFP, JOLTS, PMI, PCE, IPC, ADP…), una línea explicativa en voz novata. **Ninguna abreviatura puede quedar sin explicación en español ese día.** En el **Modo resultado** el mensaje es el pie de una imagen y el bloque no cabe: la sigla se explica **en línea**, dentro de la frase, una sola vez ("vacantes de empleo (JOLTS)"). Cambia el dónde, no el si.
+- **Bloque "🔤 Diccionario rápido"**: obligatorio en toda pieza donde aparezcan siglas. Por cada abreviatura del mensaje (ISM, NFP, JOLTS, PMI, PCE, IPC, ADP…), una línea explicativa en voz novata. **Ninguna abreviatura puede quedar sin explicación en español ese día.** En el **Modo resultado** el mensaje es el pie de una imagen y el bloque no cabe: la sigla se explica **en línea**, dentro de la frase, una sola vez ("vacantes de empleo (JOLTS)"). Cambia el dónde, no el si.
 - **Fuente canónica**: `data/glosario_siglas.json` (`SIGLA → {nombre_es, explicacion}`). Si aparece una sigla nueva, explicarla al vuelo y **añadirla al JSON** para reutilizarla.
-- En `/dato_macro`, la fuente principal del panorama del día es la tool MCP `obtener_calendario_macro` (calendario Investing.com — Chile/EE.UU./China/Zona Euro, con resultado real `actual` y clasificación mejor/peor/en_linea); WebSearch sobre investing.com + fuentes oficiales son fallback solo si la tool devuelve `{"error": ...}`.
+- La fuente principal del panorama del día es la tool MCP `obtener_calendario_macro` (calendario Investing.com — Chile/EE.UU./China/Zona Euro, con resultado real `actual` y clasificación mejor/peor/en_linea); WebSearch sobre investing.com + fuentes oficiales son fallback solo si la tool devuelve `{"error": ...}`.
 
-### Dos modos de `/dato_macro` y plantilla del Modo resultado (issue #93)
-`/dato_macro` genera el mensaje en uno de **dos modos**, elegidos automáticamente según la hora del evento vs. la hora actual de Chile:
+### Dos modos de la pieza de dato macro (issue #93)
+La pieza de un dato económico se arma en uno de **dos modos**, según la hora del evento vs. la hora actual de Chile:
 - **Modo anticipación** (dato `🕐 PRÓXIMO`, aún no sale): qué es + hora CLT + anterior/consenso + 3 escenarios (mejor/peor/en línea) + activos a observar + temporalidad del impacto.
 - **Modo resultado** (dato `✅ YA SALIÓ`, ya tiene valor `actual`): **la pieza es la Story, el texto es su pie de foto** (decisión del director, 2026-08-04). El desarrollo largo —sub-lecturas, "🧠 ¿Qué significa esto?", "⚠️ PERO ojo con el detalle", "💡 Impacto esperado por activo" y el diccionario— vive dentro de la imagen de `/story dato_macro` y **ya no se manda además como texto**: mandar ambos obliga al cliente a leer dos veces lo mismo, y con imagen adjunta WhatsApp corta el pie antes que un mensaje suelto. Reglas:
   - **Orden**: primero la Story, después el pie escrito desde el mismo payload — veredicto y cifras tienen que coincidir entre imagen y texto.
@@ -305,7 +301,7 @@ En todo texto que lea un cliente —mensajes de WhatsApp, pies de Story, textos 
   - **⏱️ Temporalidad del impacto** (OBLIGATORIA, ambos modos): scalper / intradía / swing de jornada / posicional (mismas 4 etiquetas canónicas). Va en el pie porque **no** está en la imagen — es la única pieza del desarrollo largo que sobrevive en el texto.
   - La plantilla larga del issue #93 queda en el historial git por si se decide volver a ella.
 - **Cierre obligatorio (ambos modos)**: tras el último separador, link al calendario completo (`https://es.investing.com/economic-calendar/`) + CTA genérico al analista designado, siempre juntos como pie.
-- Tras aprobar y enviar, `/dato_macro` registra `data/ultimo_evento.json` y ofrece encadenar la **encuesta post-evento** pedagógica.
+- Tras aprobar y enviar, se registra `data/ultimo_evento.json` para poder encadenar la **encuesta post-evento** pedagógica.
 
 ## Formato de precios — regla de decimales MT5
 **OBLIGATORIO**: al mostrar cualquier precio (entrada, TP, SL, soporte, resistencia, precio actual), respetar exactamente los decimales del campo `digits` definido en `config/activos.json` para ese activo.
@@ -352,11 +348,9 @@ El repo lo ejecutan **dos** agentes: Claude Code y Antigravity. Antigravity llam
 *workflows* a lo que Claude Code llama slash commands: archivos markdown en
 `.agents/workflows/`, invocables igual con `/nombre`.
 
-Ocho comandos están expuestos a AGY —`/story`, `/oportunidad`, `/alerta`,
-`/carrusel`, `/informe`,
-`/dato_macro`, `/apertura` y `/chart`—: los que generan piezas visuales y los
-datos que las alimentan. Los de día, los educativos y los internos siguen siendo
-solo de Claude Code.
+**Los seis comandos están expuestos a AGY**, sin distinción: `/carrusel`, `/informe`,
+`/story`, `/encuesta`, `/rencuesta` y `/estado`. El flujo es ejecutable igual por los dos
+runners, envío incluido, siempre después de la aprobación explícita del director.
 
 **Cada workflow es un puntero, no una copia.** Dos runners leyendo dos carpetas
 distintas con la misma definición duplicada es el problema que ya conocemos: a la
@@ -388,7 +382,7 @@ que `mcp/mcp_config.json` frente a su `.example`.
 | MCP | Estado | Propósito | Usado en |
 |-----|--------|-----------|----------|
 | **market-data** | ✅ Activo | Análisis técnico MT5 (`get_asset_levels`) + niveles dibujados a mano por el director en MT5 (`get_chart_objects`) + calendario económico Investing.com (`obtener_calendario_macro`) + especificaciones de contrato y sesiones (`get_symbol_spec`) + operaciones abiertas del terminal (`get_open_positions`). Noticias vía WebSearch. | Comandos de datos de mercado y operativas |
-| **WebSearch (investing.com + fuentes oficiales)** | ✅ Activo | Calendario económico y noticias relevantes | `/dato_macro`, `/noticia` y comandos de día |
+| **WebSearch (investing.com + fuentes oficiales)** | ✅ Activo | Calendario económico y noticias relevantes | Contexto macro de cada canal y piezas de dato macro |
 | **WhatsApp Web (Playwright)** | ✅ Activo | Envío directo a los 7 canales (`scripts/enviar_whatsapp.py`), con verificación de entrega contra el DOM y frenos de cadencia | Tras la aprobación del director |
 | **TrendRadar / Firecrawl / Finnhub** | ❌ No activos | Reemplazados por market-data (MT5) + WebSearch | — |
 
@@ -436,166 +430,70 @@ las series.
 ## Stories GI y Generación de Imágenes
 
 > [!CRITICAL]
-> **Prohibición Total de Modelos de Difusión / IA Text-to-Image (`generate_image`)**: Queda **estrictamente prohibido** utilizar la herramienta `generate_image` o modelos de generación de imágenes por difusión de IA para crear piezas, terminales, infografías o gráficos en este proyecto. Todo el contenido visual DEBE ser maquetado en HTML/CSS estructurado (`templates/stories/`) con datos reales y renderizado vía Playwright/Chromium siguiendo el Brandkit oficial.
+> **Prohibición total de modelos de difusión (`generate_image`)**: toda pieza visual se maqueta
+> en HTML/CSS (`templates/stories/`) y se rinde con Playwright sobre datos reales. Nunca se
+> genera una imagen con un modelo de difusión.
 
-Piloto (issue #109): comando `/story [tipo]` genera Stories de marca (imagen 1920×1080 o 1080×1920).
-`[tipo]` soportados hoy: `dato_macro`, `alerta`, `recomendacion`, `quote`, `breaking`, `encuesta`,
-`edu` (Fase B, issues #121/#123/#125/#127), `flash` (Fase C, issue #129), `postventa` (Fase C) y
-`calendario` (fuera de fase, pedido directo del director 2026-08-10). `calendario` señala los
-eventos macro más relevantes de la semana (selección editorial de 3 a 6, no un volcado del
-calendario completo): usa la piel de `oportunidad` (sello con pulso, CTA, disclaimer) pero sin
-activo protagonista, así que cae al acento de marca en vez de a un color por activo — mismo
-fallback que ya usan `alerta`/`recomendacion` con un activo sin token de color. Consume
-`obtener_calendario_macro` en vez de `get_asset_levels`.
-`dato_macro` cubre la **pieza 1 de la agenda diaria** —un dato económico que ya publicó, en el Modo
-resultado de `/dato_macro`—, donde **es el entregable principal**: desde 2026-08-04 el mensaje de
-texto de ese modo quedó reducido al pie de esta imagen. Se organiza alrededor del veredicto frente
-al consenso; su
-`veredicto_slug` NO se deriva de `sesgo`, porque mejor/peor es contra lo esperado y no una dirección
-de mercado (un dato "mejor" puede ser bajista para un activo). **El veredicto exige un consenso
-publicado**: solo se pone cuando existe la cifra que el mercado esperaba y se tiene a la vista —la
-trae el calendario junto al dato—. Un número sin consenso (flujos de ETFs, un volumen, una cifra
-suelta de una noticia) puede ir como evidencia, pero con el campo de veredicto vacío; etiquetar
-"mejor de lo esperado" algo que nadie pronosticó afirma una comparación inexistente y el cliente la
-lee como hecho verificado. `recomendacion` es la **única
-plantilla con firma acreditada** —una recomendación induce una operación, así que tiene que constar
-quién la respalda— y **cuenta para el límite de 3 señales por semana**; obliga a TP y SL en pesos y
-tiene campo para el costo de mantención (swap), que es lo que separa una operación comunicada con
-honestidad de una que solo muestra la ganancia. `alerta` (plantilla "03 Alerta de Mercado") combina niveles reales del motor
-(`get_asset_levels`) con una narrativa de alerta (mismo criterio editorial de `/alerta`). **Regla de Inyección Obligatoria de Niveles en Gráficos de Stories**: el payload DEBE incluir obligatoriamente el array `hitos` (punto `actual` con precio formateado y guía) y el array `niveles` (líneas horizontales con `etiqueta` y `rol`, como $S_1$, $R_1$ o barreras macro/intervenciones soberanas como el nivel MOF 160.000 en USD/JPY). Queda terminantemente prohibido generar gráficos con la serie de velas muda / sin niveles numéricos trazados. `quote`
-es una pieza 100% editorial (cita + autor + cargo, sin dato del motor); `breaking` es una pieza
-editorial de noticia urgente (kicker + titular + cifra clave + contexto + reacción, sin dato del
-motor ni búsqueda propia de evento); `encuesta` es una pieza editorial de sentimiento binario
-(kicker + pregunta + dos opciones "A vs B" + nota de cierre, sin dato del motor ni búsqueda
-propia de evento, mismo criterio que `/encuesta`); `edu` es una pieza editorial de concepto
-educativo (kicker + título + definición + ejemplo comparativo + lista de bullets de aplicación
-vía loop `<!-- FOR:bullets -->`, sin dato del motor ni búsqueda propia de evento, mismo criterio
-que `/concepto` y `/rencuesta`); `flash` es una pieza de cierre multi-activo (kicker + título +
-fecha + tabla de N activos con último valor y variación del día, vía loop `<!-- FOR:filas -->`),
-que **sí** consume datos reales del motor (`get_asset_levels` × N activos, con fallback manual)
-pero **sin gráfico embebido** ni búsqueda editorial de evento — es la primera plantilla de Fase C
-(plantillas con listas). `postventa` es la **única pieza interna** (no publicable): guion operativo
-del parte de post-venta (consulta del día + franja de niveles con color semántico + dos listas
-independientes, `<!-- FOR:respuestas -->` y `<!-- FOR:no_promesas -->`). Su chip
-`🔒 Interno · Post-venta` va **literal en el snapshot, no como token** — ningún payload puede
-suprimirlo — y su footer **no** lleva handle, dominio ni disclaimer de CFD; en su lugar,
-"Uso interno · No reenviar al cliente". Reusa los datos de `/postventa` si ya se corrió, o los toma
-del motor en frío.
+**El estándar de diseño lo comanda el brand kit** (`brand_atomic_system/`, layout v2, consumido
+por su MCP). El catálogo de plantillas del repo se redujo a **cuatro**, que son las que existen
+en `templates/stories/`:
 
-`oportunidad` es la pieza que **invita a operar**, y la única que no se invoca desde `/story`: la
-genera su propio comando `/oportunidad`, que además redacta el mensaje de WhatsApp que la acompaña.
-El protagonista es el **activo operable** —nombre, dirección, precio de ahora y hacia dónde va— y el
-dato macro que la origina baja a evidencia lateral, donde arriba va la LECTURA ("menos empleos en
-EE.UU.") y abajo la cifra que la prueba: el número solo no le sirve a nadie. **No es una señal y no
-debe convertirse en una**: no lleva entrada, TP, SL ni volumen, porque eso exigiría firma acreditada
-y contaría para el límite de 3 por semana — para eso está `recomendacion`. Su gráfico es
-**escenario a sangre** y no una tarjeta con ejes, así que consume la serie real de MT5 vía
-`scripts/serie_mt5.py` y pide `"ajuste": "llenar"` en el `recorrido`; es el único caso donde el SVG
-se estira, porque deformar un gráfico que se lee cambiaría la pendiente que el cliente está
-midiendo. Cada activo aporta su color (`--activo-*` en `marca.css`) y su imagen
-(`templates/stories/assets/activos/<slug>.jpg`, generadas con IA — recetario en
-`docs/design/stories-gi/imagenes-por-activo.md`). Identidad del activo y dirección de mercado son
-roles de color **distintos**: el activo pinta el escenario y `--sube`/`--baja` la dirección; si se
-colapsaran, una pieza dorada bajista se leería como alcista dorada. Diseño completo en
-`docs/superpowers/specs/2026-08-04-rediseno-stories-gi-design.md`.
+| Plantilla | Qué es | Datos |
+|---|---|---|
+| `alerta` | Niveles del día de un activo | `get_asset_levels` |
+| `dato_macro` | Un dato económico que ya publicó, con su veredicto frente al consenso | calendario + series de `data central/` |
+| `breaking` | Noticia urgente (kicker, titular, cifra, contexto, reacción) | 100% editorial |
+| `calendario` | 3 a 6 eventos macro de la semana, selección editorial | `obtener_calendario_macro` |
 
-Único renderer: `scripts/story_render.py`
-(payload JSON → HTML → PNG con Playwright headless). **Formato del lienzo y Regla de Formatos**:
-- **Horizontal 16:9 (`1920×1080`)**: Exclusivo para **`alerta` y piezas con gráficos técnicos MT5**, donde la amplitud temporal de velas es indispensable.
-- **Vertical 9:16 (`1080×1920`)**: **Obligatorio para toda imagen con carga textual y sin gráfico** (calendarios, agendas, guías pedagógicas `edu`, conceptos y breaking news). En vertical rige el criterio de ultra-legibilidad móvil del Brandkit: titulares Goldman 700 a 64px, tarjetas a 38px, cuerpo en 28-32px peso 600/700 y márgenes estrechos (~44px) para lectura natural en celular sin zoom.
-El formato viaja por el CLI (`--formato horizontal|vertical`) y **nunca** por el payload — el payload es contrato de contenido y el formato es presentación, así el **mismo payload rinde ambos**. Cada snapshot es un único archivo que se adapta con `@media (max-aspect-ratio: 1/1)`. Snapshots de marca vigentes: `templates/stories/alerta.html`, `templates/stories/breaking.html`, `templates/stories/dato_macro.html` y `templates/stories/calendario.html`. Las demás plantillas del canvas llegan con los issues #111-#115.
+Las demás (`recomendacion`, `quote`, `encuesta`, `edu`, `flash`, `postventa`, `oportunidad`,
+`operacion`) **se retiraron**. No las reconstruyas por tu cuenta: si hace falta una pieza nueva,
+el estándar sale del brand kit.
 
-**Paleta y color (una sola fuente).** Los colores viven en `templates/stories/marca.css` y los
-snapshots los consumen con `var(--rol)`; ningún hex se escribe a mano. Los tokens se nombran por
-**rol y no por color** (`--acento`, no `--teal`): un nombre de color miente en cuanto se cambia la
-paleta. `scripts/marca_tokens.py --check` falla si una plantilla vuelve a hardcodear un color, que
-es lo único que mantiene la fuente única siendo única.
+Único renderer: `scripts/story_render.py` (payload JSON → HTML → PNG con Playwright headless).
 
-Dos reglas de color que se pagaron caro y no conviene volver a discutir:
+**Formato del lienzo**: horizontal `1920×1080` para piezas con gráfico técnico; vertical
+`1080×1920` para piezas de carga textual sin gráfico. El formato viaja por el CLI
+(`--formato horizontal|vertical`), **nunca** por el payload: el payload es contrato de
+contenido y el formato es presentación, así el mismo payload rinde ambos.
 
-1. **El cromo no opina.** Marco, chip, borde y degradado van siempre en el acento de marca. Solo se
-   colorea lo que ES un dato: la píldora de dirección, la variación, el veredicto, el resultado
-   cuando es negativo. Una pieza bajista bañada en rojo se lee como alarma y contradice la regla de
-   tono del proyecto (énfasis direccional sí, dramatización no). En una frase: **si un color no está
-   comunicando un número, va en el acento**.
+**Paleta y color (una sola fuente).** Los colores viven en `templates/stories/marca.css` y las
+plantillas los consumen con `var(--rol)`; ningún hex se escribe a mano. Los tokens se nombran
+por **rol y no por color** (`--acento`, no `--teal`). `scripts/marca_tokens.py --check` falla si
+una plantilla vuelve a hardcodear un color, que es lo único que mantiene la fuente única siendo
+única.
+
+Dos reglas de color que se pagaron caro:
+
+1. **El cromo no opina.** Marco, chip, borde y degradado van siempre en el acento de marca. Solo
+   se colorea lo que ES un dato: la píldora de dirección, la variación, el veredicto. Una pieza
+   bajista bañada en rojo se lee como alarma y contradice la regla de tono del proyecto.
 2. **`--sube` / `--baja` no se reskinean.** Verde arriba y rojo abajo es una convención que el
-   cliente lee sin pensar, no una decisión de marca. Al cambiar la línea visual se cambia
-   `--acento`, nunca la semántica de dirección.
+   cliente lee sin pensar, no una decisión de marca.
 
-El acento es `#50C0A8`, el extremo verde del degradado del logo (el azul `#3C8CAA` es el otro
-extremo y queda disponible como `--acento-azul`). Ambos medidos sobre los assets de
-`templates/stories/assets/`, no elegidos a ojo.
-
-**Piel compartida.** La línea visual de `oportunidad` —capas de fondo, imagen y
-color por activo, sello con pulso, tipografía de titulares en Space Grotesk 800,
-CTA y footer— vive en `templates/stories/piel.css`, hermano de `marca.css`. La
-consumen `oportunidad`, `alerta` y `recomendacion`; las otras ocho plantillas
-migran de a una (misma regla que las Fases B y C: una plantilla por Change).
-
-Se estandariza la **piel**, no la **estructura**. `recomendacion` conserva
-entrada, TP, SL, volumen y firma acreditada; `alerta` conserva su tarjeta de
-niveles; ambas conservan el gráfico como tarjeta legible, porque ahí los niveles
-son contenido y no atmósfera. Con el layout de `oportunidad` esos campos bajarían
-a letra chica y se borraría la distinción entre **invitar a operar** y
-**recomendar una operación** — la segunda lleva firma y cuenta para el límite de
-3 señales por semana.
-
-El orden de carga es `marca.css` → `piel.css` → `<style>` de la plantilla, y
-`scripts/marca_tokens.py --check` escanea las hojas propias además de las
-plantillas (`marca.css` queda fuera: es donde los hex sí van).
-
-**Revisar y proteger las plantillas.** Cada plantilla tiene su payload de prueba en
-`tests/fixtures/stories/payloads/<plantilla>.json`, y esas MISMAS fixtures alimentan dos cosas:
-
-```bash
-uv run --extra stories python scripts/rendir_todas.py            # las 10 piezas juntas
-uv run --extra stories python scripts/rendir_todas.py --formato vertical
-uv run pytest tests/test_story_render.py                          # contrato de las 10
-```
-
-El render completo existe porque **los defectos de consistencia no se ven revisando de a una**: un
-cambio global de paleta puede dejar piezas sin regenerar, y un color equivocado sobrevive rondas
-enteras si la revisión está puesta en otra plantilla. El test exige que toda plantilla de
-`templates/stories/` tenga fixture y resuelva sin tokens huérfanos — una plantilla nueva sin payload
-falla, que es lo que corresponde, porque tampoco la estaría revisando nadie.
+El acento es `#50C0A8`, el extremo verde del degradado del logo, medido sobre los assets.
 
 **Serie real para los gráficos.** `scripts/serie_mt5.py` trae los cierres del terminal y arma el
-bloque `recorrido` que consume `story_grafico.py`. Los marcadores se anclan por ROL, no
-por proximidad de precio: `actual` y `meta` van al extremo derecho por definición, y `origen` se
-ancla por tiempo cuando el hito trae fecha. Anclar por precio parece razonable y no lo es —el precio
-oscila, así que el cierre más parecido puede caer en cualquier punto de la serie—. Requiere el
-terminal abierto y `MetaTrader5`, que no es dependencia del repo: se inyecta con
-`uv run --with MetaTrader5`.
+bloque `recorrido` que consume `story_grafico.py`, que traduce serie e hitos al SVG del token
+`{{grafico}}`. Los marcadores se anclan por ROL, no por proximidad de precio: `actual` y `meta`
+van al extremo derecho por definición. Anclar por precio parece razonable y no lo es, porque el
+precio oscila y el cierre más parecido puede caer en cualquier punto de la serie.
 
-**Generación de Gráfico con `story_grafico.py`**: traduce la serie de precios y los hitos/niveles
-al SVG del token `{{grafico}}` y se encadena por stdin/stdout:
+**Revisión y protección.** Cada plantilla tiene su payload en
+`tests/fixtures/stories/payloads/<plantilla>.json`, y esas mismas fixtures alimentan el render
+completo y el test de contrato:
+
 ```bash
-uv run python scripts/story_grafico.py < alerta.json \
-  | uv run python scripts/story_render.py --template templates/stories/alerta.html \
-      --out "$(scripts/ruta_story.ps1 ...)" --formato horizontal
+uv run --extra stories python scripts/rendir_todas.py
+uv run pytest tests/test_story_render.py
 ```
-El payload de entrada lleva una clave `recorrido` = `{serie, marcadores}`; el script la consume y la
-reemplaza por `grafico`. El reparto es estricto: el script calcula **coordenadas** y el snapshot
-aporta color/tipografía vía sus clases `.g-*` — si el gráfico se ve mal, se corrige en la plantilla.
-**Criterio editorial de la pieza** (impuesto por el director): cada bloque dice algo que ningún otro
-bloque dice — chip = qué pasó, titular = por qué, tarjeta = la operación y su resultado, gráfico =
-el recorrido (único lugar con precios), cierre = lo que no cabe arriba. El espacio también se
-justifica: nada de aire que no comunique. Integrarla como tipo de `/story` queda **pendiente**.
 
-**Escritura en el proyecto Claude Design de GI (regla actualizada 2026-07-27)**: el proyecto
-Claude Design compartido (dueño: Rodrigo, GI) —
-`https://claude.ai/design/p/05b3bfe8-d8ad-4f83-b7b0-e8de4d77a3cf` — es de **lectura y escritura**
-vía la tool `DesignSync`. La antigua regla "solo lectura" quedó **revocada por decisión del
-director**. Se mantienen dos condiciones: (1) el render final se produce y se aprueba **siempre
-dentro de este repo** (`scripts/story_render.py` sobre los snapshots de `templates/stories/`), y
-(2) **nada se sube sin aprobación explícita del director** — la subida pasa por `finalize_plan`,
-que le muestra el listado exacto de rutas antes de escribir. Convención del canvas para las
-subidas: piezas como `Story <fecha> <activo>.dc.html` en la raíz y renders en `exports/*.png`.
+El test exige que toda plantilla tenga fixture y resuelva sin tokens huérfanos. **Ojo con su
+límite**: compara el conjunto de plantillas contra el de fixtures, así que si ambas se borran en
+pareja el test sigue verde. No detecta que el catálogo encogió, solo que quedó descuadrado.
 
 **Guardado**: `data/stories/<Fecha>/<activo_slug>/<plantilla>/<Hora>_<plantilla>.png` vía
-`scripts\ruta_story.ps1` (hermano de `ruta_mensaje.ps1`, no lo modifica). Los `data/stories/*.png`
-están gitignored. `playwright` es dependencia **opcional** (`[project.optional-dependencies]
-stories`): instalar con `uv sync --extra stories && python -m playwright install chromium`.
+`scripts\ruta_story.ps1`. Los `data/stories/*.png` están gitignored. `playwright` es dependencia
+**opcional** (`stories`): `uv sync --extra stories && python -m playwright install chromium`.
 
 ## Capacitaciones internas (PPTX)
 
@@ -690,9 +588,9 @@ scripts\ruta_mensaje.ps1 -Fecha "2026-06-04" -Activo "USDCLP" -Tipo "dato_macro"
 ```
 El helper crea las carpetas y devuelve la ruta lista para `Write`. Si la pieza no tiene un activo protagonista (concepto, pregunta, cierre semanal, encuesta de la semana, earnings, paquete dominical), omitir `-Activo` y el helper la guarda en `_general/`. La hora `HH-mm` sale del reloj de Chile (regla canónica). Usar luego la herramienta Write sobre la ruta devuelta.
 
-**Tipos de archivo** (carpeta `<tipo>`): niveles, dato_macro, noticia, alerta, encuesta, señal, concepto, pregunta, respuesta, cierre, earnings, postventa. La salida de `/apertura` usa tipo `niveles`.
+**Tipos de archivo** (carpeta `<tipo>`): niveles, dato_macro, alerta, encuesta, cierre.
 
-**Piezas públicas limpias (sin guiones internos)**: los comandos y flujos que generan piezas de mercado (`/alerta`, `/apertura`, `/dato_macro`, `/noticia`, `/señal`, `/oportunidad`, `/story`, etc.) entregan **exclusivamente material para el cliente final** (mensaje de WhatsApp + Story visual de marca). Queda estrictamente excluido del flujo la generación automática o paralela de guiones internos o piezas para ejecutivos. El material 100% interno queda reservado única y exclusivamente a los comandos dedicados `/ventas` (para el equipo de ventas) y `/postventa` (para el equipo de post-venta).
+**Piezas públicas limpias**: `/carrusel`, `/informe` y `/story` entregan **exclusivamente material para el cliente final** (mensaje de WhatsApp + pieza visual de marca). Queda excluida la generación automática de guiones internos o piezas para ejecutivos: ese material salió del repo junto con `/ventas` y `/postventa`.
 
 **Convención de nombres de chart (issue #81)**: los PNG de `data/charts/` siguen el patrón único `<activo_slug>_<TF>_<YYYY-MM-DD_HH-MM>.png`, con el mismo `<activo_slug>` de `ruta_mensaje.ps1` (#45) — `lowercase(ticker_mt5)` sin `.spot`/`#`/`/` — y `<TF>` en mayúscula MT5 (`M15`/`H1`/`H4`/`D1`). Ej: `usdclp_H4_2026-06-07_11-45.png`. Los `data/charts/*.png` están gitignored.
 
@@ -702,50 +600,23 @@ El helper crea las carpetas y devuelve la ruta lista para `Write`. Si la pieza n
 `src/whatsapp_sender.py`. WhatsApp cambia su interfaz sin avisar: si un envío empieza a fallar, el primer paso es
 volver a medir esos selectores, **nunca** relajar la verificación de entrega.
 
-## Slash Commands disponibles (29)
+## Slash Commands disponibles (6)
 
-Invocar con `/nombre` desde Claude Code:
+El catálogo se redujo a seis. Todo lo demás se retiró cuando la producción pasó a regirse por
+el carrusel y el informe: los siete comandos de día, las piezas sueltas que ellos orquestaban
+(`/apertura`, `/alerta`, `/dato_macro`, `/noticia`, `/actualizacion`, `/accion`, `/earnings`,
+`/señal`), lo educativo satélite (`/concepto`, `/pregunta`, `/respuesta`, `/curriculo`),
+`/chart`, y los internos `/ventas` y `/postventa`. Los seis que quedan están expuestos por
+igual a Claude Code y a Antigravity.
 
-### Capa 1 — Comandos de día
 | Comando | Cuándo usarlo |
 |---------|---------------|
-| `/domingo` | Paquete dominical: noticias fin de semana + preview semana + sesgo lunes + encuesta semana |
-| `/lunes` | Paquete completo del lunes (resumen semanal + earnings + concepto + apertura + encuesta) |
-| `/martes` | Operativa estándar martes (apertura + dato macro + encuesta precio) |
-| `/miercoles` | Operativa miércoles + prioridad EIA de petróleo |
-| `/jueves` | Operativa jueves + alerta Jobless Claims |
-| `/viernes_am` | AM del viernes: 3 activos + NFP si aplica + encuesta precio del lunes |
-| `/viernes_pm` | Cierre semanal por la tarde |
-
-### Capa 2 — Comandos de tarea (ad hoc)
-| Comando | Cuándo usarlo |
-|---------|---------------|
-| `/encuesta [tipo] [activo]` | Encuesta de sentimiento puro (sin precios ni educación). 3 tipos: `posicion`, `tendencia`, `movimiento`. Lo educativo migró fuera de `/encuesta`. |
-| `/rencuesta` | Desarrolla didácticamente el tema de una encuesta y construye la malla de conceptos. `/rencuesta` (última encuesta), `/rencuesta [tema]`, `/rencuesta mapa` (vista de repaso). |
-| `/curriculo` | Planifica el currículo educativo evolutivo (niveles + prerrequisitos), despacha conceptos en orden reutilizando `/rencuesta`/`/concepto` y mide el avance (4 métricas). Modos: `/curriculo`, `despachar`, `ruta`, `progreso`, `agregar`. |
-| `/apertura` | Niveles técnicos interactivos: pregunta activo, temporalidad e indicador (RSI/ATR) por activo. Lo invocan los comandos de día en su PIEZA de apertura. |
-| `/actualizacion` | Evolución del precio y reacción frente a niveles de la apertura |
-| `/dato_macro` | Calendario del día → director elige dato a desarrollar |
-| `/noticia` | Busca 3-5 noticias relevantes → director elige |
-| `/chart` | Genera screenshot de MT5 con indicador y temporalidad a elección |
-| `/story [tipo]` | Genera una Story de marca GI (imagen 1920×1080). `[tipo]` soportados hoy: `dato_macro`, `alerta`, `recomendacion`, `quote`, `breaking`, `encuesta`, `edu`, `flash`, `postventa`, `calendario`; demás plantillas en #111-#115. Ver sección "Stories GI". |
-| `/oportunidad [activo]` | Pieza que invita a operar: imagen (plantilla `oportunidad`) + mensaje de WhatsApp con contexto, llamado a la acción, fuente y disclaimer. Precios SIEMPRE del motor — si MT5 falla, se detiene, nunca deduce. No es señal: sin entrada, TP ni SL. Máximo 3 al día. |
-| `/carrusel` | Carrusel responsivo de alertas de mercado: `screener_gi.py` detecta la sesión activa y hora real, puntúa el universo con el `Score_GI` y elige el Top 3; el comando escribe el texto y rinde las Stories en ambos formatos. Máximo 3 imágenes (WhatsApp corta con `+2` a partir de la cuarta). |
-| `/informe [apertura\|cierre]` | Informe de la jornada. Apertura en PDF institucional A4; cierre chat-first (mensaje + gráfico), por el criterio de canal de la skill de reporte editorial. La apertura no se emite con el sesgo del motor vencido salvo `--con-datos-viejos`, que estampa el aviso. |
-| `/señal` | Señal operativa (verifica límite 3/semana automáticamente) |
-| `/alerta` | Detecta qué mueve el mercado ahora y genera alerta urgente |
-| `/concepto` | Concepto educativo conectado a lo que pasó esta semana |
-| `/pregunta` | Pregunta abierta para fomentar razonamiento del grupo |
-| `/respuesta` | Responde una pregunta/comentario de cliente de forma complaciente y didáctica → guarda tipo `respuesta` |
-| `/ventas` | Genera la "Oportunidad del Día" para el equipo de ventas interno (no el cliente final): noticia/evento más relevante traducido en entrada/TP/SL, ticket mínimo $5.000.000 CLP y temporalidad, en dos formatos (email + WhatsApp). No genera infografías ni envía automáticamente. |
-| `/postventa` | Parte diario para el equipo interno de post-venta (no el cliente final): la consulta que va a generar el evento del día con su respuesta, 3 preguntas frecuentes redactadas para copiar, a quién contactar por segmento, acompañamiento de posiciones abiertas, rendición de lo dicho y límites de lo que no se promete. 100% interno, nunca se reenvía. |
-| `/estado` | Dashboard del sistema (señales, charts, plan del día, MCPs) |
-
-### Capa 3 — Acciones individuales
-| Comando | Cuándo usarlo |
-|---------|---------------|
-| `/accion [TICKER]` | Análisis completo de una de las 13 acciones del catálogo |
-| `/earnings` | Calendario de earnings de las 13 acciones para la semana |
+| `/carrusel` | **La producción diaria.** El escáner detecta la sesión y la hora real, puntúa el universo con el `Score_GI`, elige el Top 3 y arma las piezas por canal, con su contexto macro. Acepta `--grupo <alias>` para un canal concreto y `--matriz` para cubrirlos todos. |
+| `/informe [apertura\|cierre]` | El informe de la jornada. Apertura en PDF institucional A4; cierre chat-first (mensaje con gráfico). |
+| `/story [tipo]` | Una pieza suelta, cuando hace falta fuera de la tanda. Tipos: `alerta`, `dato_macro`, `breaking`, `calendario` — las cuatro plantillas que existen. No pregunta nada: todo va por argumento. |
+| `/encuesta [tipo] [activo]` | Encuesta de sentimiento (`posicion`, `tendencia`, `movimiento`). |
+| `/rencuesta` | Desarrolla didácticamente el tema de una encuesta y construye la malla de conceptos. |
+| `/estado` | Dashboard del sistema: sesión de WhatsApp, cupo de envíos del día, frescura del motor, MCPs. No envía nada. |
 
 ## Estructura del proyecto
 ```
@@ -760,16 +631,10 @@ grupo-analisis-mercado/
 │   ├── design/            ← diseños técnicos vigentes (ciclo Pulse) — incluye stories-gi/ y motor-como-cerebro-hub-gi
 │   └── archive/           ← docs históricos de features ya implementadas (design/plan/superpowers)
 ├── .claude/
-│   ├── commands/          ← 27 slash commands (invocar con /nombre)
-│   │   ├── domingo.md
-│   │   ├── lunes.md · martes.md · miercoles.md · jueves.md
-│   │   ├── viernes_am.md · viernes_pm.md
-│   │   ├── encuesta.md · rencuesta.md · curriculo.md
-│   │   ├── apertura.md · actualizacion.md · dato_macro.md · noticia.md · chart.md · story.md · oportunidad.md
-│   │   ├── carrusel.md · informe.md   ← produccion diaria en 3 tandas
-│   │   ├── señal.md · alerta.md · concepto.md · pregunta.md · respuesta.md · ventas.md · postventa.md · estado.md
-│   │   └── accion.md · earnings.md
-│   └── shared/modo_ejecutivo.md  ← contrato del flag `ejecutivo` (guion_ejecutivo.txt)
+│   ├── commands/          ← 6 slash commands (invocar con /nombre)
+│       ├── carrusel.md · informe.md   ← la produccion diaria
+│       ├── story.md                   ← una pieza suelta (4 plantillas)
+│       └── encuesta.md · rencuesta.md · estado.md
 ├── agents/                ← prompts de sub-agents
 │   ├── recolector.md · analista.md · redactor.md
 ├── config/                ← configuración del sistema
@@ -790,16 +655,13 @@ grupo-analisis-mercado/
 │   └── hora_chile.ps1 · ruta_mensaje.ps1 · ruta_story.ps1  ← helpers deterministas (hora Chile, ruta de guardado)
 ├── templates/             ← templates de mensajes WhatsApp
 │   ├── encuesta_tendencia.txt · encuesta_posicion.txt · encuesta_movimiento.txt
-│   ├── concepto_didactico.txt · guion_ejecutivo.txt
-│   ├── ruta_curriculo.txt · dashboard_metricas.txt · mapa_conceptos.txt
-│   ├── ventas_email.txt · ventas_whatsapp.txt
+│   ├── mapa_conceptos.txt
 │   └── stories/           ← snapshots de marca GI (11 plantillas) + marca.css · fonts/ · assets/activos/
 ├── conceptos/             ← notas canónicas de conceptos educativos (malla /rencuesta)
 │   ├── README.md · stop-loss.md
 ├── data/                  ← datos persistentes
-│   ├── historial_senales.json · historial_encuestas.json · historial_ventas.json
-│   ├── mapa_conceptos.json · glosario_siglas.json
-│   ├── curriculo.json · entregas_educativas.json · metricas_educativas.json
+│   ├── historial_senales.json · historial_encuestas.json
+│   ├── mapa_conceptos.json · glosario_siglas.json · glosario_motor.json
 │   └── charts/ · mensajes/ · stories/  ← generados (gitignored)
 ├── mql5/                  ← Service MQL5 (ChartObjectsExporter) + archive/ (CalendarExporter, deprecado)
 └── mcp/
