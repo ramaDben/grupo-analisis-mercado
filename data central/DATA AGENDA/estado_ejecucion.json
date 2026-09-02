@@ -1,5 +1,5 @@
 {
-  "ultima_ejecucion_utc": "2026-08-28T14:12:37.639693+00:00",
+  "ultima_ejecucion_utc": "2026-09-01T17:52:43.566134+00:00",
   "hay_novedades": true,
   "novedades_detalle": [
     "Datos actualizados en Chile (Imacec / TPM / Posición Forward)",
@@ -15,10 +15,10 @@
   },
   "errores_por_fuente": {},
   "hashes_canonicos": {
-    "usa": "e3fb4ef29f93c65c4f32d231dc3c7b4b85cdc2b959e1d4393b94683e5593c298",
-    "chile": "1cca1c3e28cfa83311cfc956ff6858f4b0462a9dbbc921f7c1965ef139184d6f",
-    "europa_uk": "97a5fc6722fde8d9a0887a5416f79c374c5097890424d109b99dc523a334e966",
-    "commodities": "66ca2f427db7d29c9c4cc27f128921ee7745956cdabcca7f79931b6600c66b8b",
-    "japon": "58eae656fc9613a08b01599986f53b64a676a0b7fbb0f60750ded42e2debbd52"
+    "usa": "0649203aacb6d29a81042b3fa4926ffe4809b99d99569e2687deaecdf4f34841",
+    "chile": "19ca289ff072ec63bc345118e80f74e116b3ef9b7a02a49f4dfede0b82d7dff1",
+    "europa_uk": "061b73aa03bb97e35dbd9b5621fa99b3fdd783f018ac1e7c21bbdcf4cade057c",
+    "commodities": "8d3798585599473b0af8f9d81b5981d97ba4b2e05652d2013c07c99bf52d7f63",
+    "japon": "2606557e8655e0a71daaa66b39fcc8f08c3cd28f7aee428665b2d91e6541ec4f"
   }
 }
