@@ -133,7 +133,7 @@ def analizar_activo(ticker: str, timeframe: str = "H4") -> dict[str, Any]:
 
     try:
         from market_data_mcp.mt5_client import (
-            get_rates, ema, atr, adx, macd, bollinger, donchian, TIMEFRAME_MAP,
+            connect, get_rates, ema, atr, adx, macd, bollinger, donchian, TIMEFRAME_MAP,
         )
     except ImportError:
         return {
@@ -148,6 +148,14 @@ def analizar_activo(ticker: str, timeframe: str = "H4") -> dict[str, Any]:
         }
 
     try:
+        # La conexión se intenta por prudencia, pero su fallo NO aborta: la fuente
+        # de verdad es `get_rates`, que conecta de forma perezosa y reporta el
+        # error correcto si de verdad no hay terminal. Exigirla acá dejaba la ruta
+        # feliz sin poder testearse con datos mockeados, y CI ciega.
+        try:
+            connect()
+        except Exception:  # noqa: BLE001
+            pass
         df = get_rates(ticker, timeframe.upper(), n_bars=300)
     except ImportError:
         # mt5_client importa MetaTrader5 de forma perezosa dentro de get_rates;
@@ -175,18 +183,23 @@ def analizar_activo(ticker: str, timeframe: str = "H4") -> dict[str, Any]:
             "message": f"Solo {len(df)} velas disponibles para {ticker} {timeframe}. Mínimo requerido: 150.",
         }
 
-    close = df["close"]
-    ema100_val = float(ema(close, 100).iloc[-1])
-    ema50_val = float(ema(close, 50).iloc[-1])
+    # P0: Indicadores de estado sobre velas cerradas (df_closed) para evitar
+    # que Donchian se autoanule y que el ATR se distorsione al abrir la barra.
+    # El precio spot en tiempo real (current) se evalúa contra estos niveles congelados.
+    df_closed = df.iloc[:-1] if len(df) >= 2 else df
+    close_closed = df_closed["close"]
+
+    ema100_val = float(ema(close_closed, 100).iloc[-1])
+    ema50_val = float(ema(close_closed, 50).iloc[-1])
     # EMA 20: el Playbook la usa como gatillo de entrada en H1 (pullback en Oro,
     # compras tendenciales en US100). No confundir con `bb_mid`, que es una SMA 20.
-    ema20_val = float(ema(close, 20).iloc[-1])
-    atr14_val = float(atr(df, 14).iloc[-1])
-    adx14_val = float(adx(df, 14).iloc[-1])
-    macd_l, macd_s, macd_h = macd(close)
-    bb_u, bb_m, bb_l = bollinger(close)
-    dc_h, dc_l, dc_m = donchian(df)
-    current = float(close.iloc[-1])
+    ema20_val = float(ema(close_closed, 20).iloc[-1])
+    atr14_val = float(atr(df_closed, 14).iloc[-1])
+    adx14_val = float(adx(df_closed, 14).iloc[-1])
+    macd_l, macd_s, macd_h = macd(close_closed)
+    bb_u, bb_m, bb_l = bollinger(close_closed)
+    dc_h, dc_l, dc_m = donchian(df_closed)
+    current = float(df["close"].iloc[-1])
 
     if current > ema100_val:
         trend = "ALCISTA"
@@ -195,13 +208,21 @@ def analizar_activo(ticker: str, timeframe: str = "H4") -> dict[str, Any]:
     else:
         trend = "LATERAL"
 
-    rsi14_val = _rsi(close, 14)
-    levels = _get_support_resistance(df, current, atr14_val, digits)
+    rsi14_val = _rsi(close_closed, 14)
+    levels = _get_support_resistance(df_closed, current, atr14_val, digits)
+    bar_open = float(df["open"].iloc[-1])
+    bar_high = float(df["high"].iloc[-1])
+    bar_low = float(df["low"].iloc[-1])
+    change_pct = round(((current - bar_open) / bar_open) * 100, 2) if bar_open else 0.0
 
     resultado: dict[str, Any] = {
         "ticker":       ticker,
         "timeframe":    timeframe.upper(),
         "price":        round(current, digits),
+        "open_price":   round(bar_open, digits),
+        "high_price":   round(bar_high, digits),
+        "low_price":    round(bar_low, digits),
+        "change_pct":   change_pct,
         "s2":           levels["s2"],
         "s1":           levels["s1"],
         "r1":           levels["r1"],

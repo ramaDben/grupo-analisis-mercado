@@ -1,16 +1,8 @@
 /*
   Piel de las Stories GI — la línea visual que comparten las piezas.
 
-  Nace de `oportunidad`, la plantilla del rediseño de agosto de 2026 (ver
-  docs/superpowers/specs/2026-08-07-piel-compartida-stories-design.md). Antes
-  de esta hoja, adoptar esa línea en otra plantilla era copiar ~120 líneas de
-  CSS; a la tercera copia, una queda atrás y sale una pieza descoordinada. Es
-  la misma razón por la que existe marca.css.
-
-  ── Qué entra acá y qué no ───────────────────────────────────────────────────
-  Entra lo que NO depende de qué dice la pieza: capas de fondo, tipografía,
-  sello, CTA, disclaimer. Se queda en cada plantilla el layout de columnas, los
-  tamaños de cada bloque y todo lo que sea contenido.
+  Define las capas base: fondo, tipografía institucional, sello, CTA y disclaimer.
+  El layout específico y contenido vive en cada plantilla activa (alerta.html, dato_macro.html, etc.).
 
   ── Orden de carga ───────────────────────────────────────────────────────────
   marca.css -> piel.css -> <style> de la plantilla. marca.css va primero porque
@@ -25,22 +17,15 @@
   —dirección—. La dirección la pintan las plantillas, donde ES el dato.
 */
 
-/* ── Tipografía institucional ──────────────────────────────────────────────
-   Space Grotesk (titulares y cifras) y DM Sans son las dos únicas familias que
-   usan las piezas de esta piel, y las únicas que siguen en `fonts/`: Sora,
-   Outfit y Manrope fueron candidatas de comparación (ver spec de rediseño) y
-   sus archivos ya no están en el repo. */
+/* ── Tipografía institucional del Brandkit ────────────────────────────────── */
+@font-face { font-family: "Goldman"; src: url("fonts/goldman-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Goldman"; src: url("fonts/goldman-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/plus-jakarta-sans-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/plus-jakarta-sans-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/plus-jakarta-sans-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/plus-jakarta-sans-800.woff2") format("woff2"); font-weight: 800; font-display: swap; }
 @font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
-@font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-700.woff2") format("woff2"); font-weight: 800; font-display: swap; }
-@font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
-@font-face { font-family: "DM Sans";       src: url("fonts/dm-sans-400.woff2") format("woff2");       font-weight: 400; font-display: swap; }
-@font-face { font-family: "DM Sans";       src: url("fonts/dm-sans-700.woff2") format("woff2");       font-weight: 700; font-display: swap; }
-
-/* `.escenario` —el gráfico a sangre— NO vive acá: es estructura de
-   `oportunidad`, la única plantilla que lo usa, y su máscara vertical depende de
-   en qué porcentaje del lienzo cae el contenido DE ESA pieza. Un porcentaje
-   calibrado contra un titular y dos precios concretos no es piel compartida; en
-   otra plantilla no significaría nada. Vive en `oportunidad.html`. */
+@font-face { font-family: "DM Sans"; src: url("fonts/dm-sans-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 
 /* La imagen del activo. Va como <img> y no dibujada en el CSS para que sea
    intercambiable: hoy es una ilustración propia, mañana puede ser una foto
@@ -58,37 +43,22 @@
     linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.35) 22%, var(--fondo) 62%),
     linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 62%, transparent 96%);
   mask-composite: intersect;
-  filter: saturate(1.12) contrast(1.06) brightness(0.92);
+  filter: saturate(1.20) contrast(1.10) brightness(0.95);
   pointer-events: none;
 }
 
-/* Variante FONDO A SANGRE — la que manda §D2 de la spec de piel compartida.
-
-   La regla de arriba es la composición de `oportunidad`: la foto toma el 58 %
-   derecho porque en esa pieza ese costado está vacío a propósito. En `alerta` y
-   `recomendacion` ese mismo 58 % ES la columna del gráfico, así que la foto le
-   caía encima y la curva competía con los lingotes. Acá la imagen cubre TODO el
-   lienzo, mucho más apagada, y queda por DEBAJO del velo (z-index 0 contra 1):
-   aporta reconocimiento del activo sin disputarle espacio a ningún bloque.
-
-   Subordinación explícita: si el fondo compromete la legibilidad de un bloque,
-   gana el bloque. Por eso el brillo baja a un tercio y la opacidad a la mitad —
-   medido sobre el render, no estimado: con la foto al valor de `oportunidad`,
-   los rótulos de soporte y resistencia quedaban ilegibles.
-
-   Es una variante y no una segunda copia: se elige poniéndole la clase al mismo
-   <img>, sin duplicar una línea de la regla base. */
+/* Variante FONDO A SANGRE:
+   La imagen cubre todo el lienzo con alta visibilidad y textura cinematográfica,
+   permitiendo que el fondo se aprecie claramente e impacte visualmente. */
 .foto-activo--fondo {
   inset: 0;
   width: 100%;
   height: 100%;
   z-index: 0;
-  -webkit-mask-image:
-    linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 58%, rgba(0,0,0,0.30) 100%);
-  mask-image:
-    linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 58%, rgba(0,0,0,0.30) 100%);
-  filter: saturate(0.82) contrast(0.94) brightness(0.36);
-  opacity: 0.55;
+  -webkit-mask-image: none;
+  mask-image: none;
+  filter: saturate(1.15) contrast(1.10) brightness(0.72);
+  opacity: 0.88;
 }
 
 .ilustracion {
@@ -103,9 +73,9 @@
 .velo {
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background:
-    linear-gradient(100deg, var(--fondo) 24%, rgba(0,0,0,0.88) 44%, rgba(0,0,0,0.26) 70%, rgba(0,0,0,0.58) 100%),
-    radial-gradient(58% 78% at 8% 34%, color-mix(in srgb, var(--activo) 26%, transparent) 0%, rgba(0,0,0,0) 64%),
-    radial-gradient(46% 62% at 96% 92%, color-mix(in srgb, var(--acento-azul) 34%, transparent) 0%, rgba(0,0,0,0) 60%);
+    linear-gradient(100deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.48) 45%, rgba(0, 0, 0, 0.15) 75%, rgba(0, 0, 0, 0.35) 100%),
+    radial-gradient(58% 78% at 8% 34%, color-mix(in srgb, var(--activo) 24%, transparent) 0%, rgba(0,0,0,0) 64%),
+    radial-gradient(46% 62% at 96% 92%, color-mix(in srgb, var(--acento-azul) 30%, transparent) 0%, rgba(0,0,0,0) 60%);
 }
 
 .grilla {
@@ -147,7 +117,7 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--activo) 11%, transparent);
   box-shadow: 0 0 34px -10px color-mix(in srgb, var(--activo) 70%, transparent);
-  font-family: "Space Grotesk", sans-serif; font-weight: 600;
+  font-family: var(--font-sans); font-weight: 700;
   font-size: 20px; letter-spacing: 0.16em; text-transform: uppercase;
   color: var(--activo);
 }
@@ -173,10 +143,10 @@
   font-size: 32px; font-weight: 700;
   box-shadow: 0 0 50px -8px var(--activo);
 }
-.cta-titulo { color: var(--texto-1); font-family: "Space Grotesk", sans-serif; font-weight: 800; font-size: 37px; letter-spacing: -0.015em; }
-.cta-sub { font-size: 24px; color: var(--texto-2); margin-top: 3px; }
+.cta-titulo { color: var(--texto-1); font-family: var(--font-titular); font-weight: 700; font-size: 37px; letter-spacing: -0.015em; }
+.cta-sub { font-family: var(--font-sans); font-size: 24px; color: var(--texto-2); margin-top: 3px; }
 .cta-marca { display: flex; align-items: center; gap: 20px; }
-.cta-handle { font-family: "Space Grotesk", sans-serif; font-weight: 600; font-size: 22px; color: var(--texto-2); }
+.cta-handle { font-family: var(--font-sans); font-weight: 600; font-size: 22px; color: var(--texto-2); }
 .cta-logo { height: 74px; }
 
 .disclaimer { padding-bottom: 20px; font-size: 14px; line-height: 1.3; color: var(--texto-3); }

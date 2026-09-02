@@ -29,17 +29,17 @@
     }
   },
   "setups": {
-    "PULLBACK_EMA20_H1": "Comprar cuando el precio retrocede hasta su promedio de las últimas 20 horas y ahí encuentra apoyo",
-    "PULLBACK_EMA50_H1": "Comprar cuando el precio retrocede hasta su promedio de las últimas 50 horas y ahí encuentra apoyo",
-    "PULLBACK_EMA16_H1": "Comprar en los retrocesos cortos, cuando el precio vuelve a su promedio de las últimas 16 horas",
+    "PULLBACK_EMA20": "Comprar cuando el precio retrocede hasta su promedio de las últimas 20 {periodos} y ahí encuentra apoyo",
+    "PULLBACK_EMA50": "Comprar cuando el precio retrocede hasta su promedio de las últimas 50 {periodos} y ahí encuentra apoyo",
+    "PULLBACK_EMA16": "Comprar en los retrocesos cortos, cuando el precio vuelve a su promedio de las últimas 16 {periodos}",
     "PULLBACK_SHORT_EMA20": "Vender cuando el precio rebota hasta su promedio de las últimas 20 horas y ahí se frena",
-    "SELL_PULLBACK_EMA50_H1": "Vender cuando el precio rebota hasta su promedio de las últimas 50 horas y ahí se frena",
-    "BREAKOUT_DONCHIAN_H1": "Entrar cuando el precio supera el techo del rango en el que venía moviéndose",
-    "BREAKOUT_DONCHIAN_50_H1": "Entrar cuando el precio supera el techo del rango de las últimas 50 horas",
-    "BREAKDOWN_DONCHIAN_H1": "Entrar a la baja cuando el precio pierde el piso del rango en el que venía moviéndose",
-    "BREAKOUT_VOLATILITY_H1": "Entrar cuando el precio rompe con un salto de volatilidad, señal de que el movimiento tiene fuerza detrás",
-    "MEAN_REVERSION_RSI_H1": "Apostar a que el precio vuelve a su promedio cuando se estiró demasiado hacia un lado",
-    "FADE_SUPPORT_RESISTANCE_M15": "Operar los extremos del rango: comprar cerca del piso y vender cerca del techo",
+    "SELL_PULLBACK_EMA50": "Vender cuando el precio rebota hasta su promedio de las últimas 50 {periodos} y ahí se frena",
+    "BREAKOUT_DONCHIAN": "Entrar cuando el precio supera el techo del rango en el que venía moviéndose",
+    "BREAKOUT_DONCHIAN_50": "Entrar cuando el precio supera el techo del rango de las últimas 50 {periodos}",
+    "BREAKDOWN_DONCHIAN": "Entrar a la baja cuando el precio pierde el piso del rango en el que venía moviéndose",
+    "BREAKOUT_VOLATILITY": "Entrar cuando el precio rompe con un salto de volatilidad, señal de que el movimiento tiene fuerza detrás",
+    "MEAN_REVERSION_RSI": "Apostar a que el precio vuelve a su promedio cuando se estiró demasiado hacia un lado",
+    "FADE_SUPPORT_RESISTANCE": "Operar los extremos del rango: comprar cerca del piso y vender cerca del techo",
     "RANGE_DONCHIAN_FADE": "Operar dentro del rango, sin perseguir los quiebres",
     "RANGE_TRADING": "Operar entre el piso y el techo del rango, sin apostar a que se rompan",
     "LONG_SWING_FADE": "Sostener una compra de varios días esperando el regreso del precio",
@@ -74,5 +74,6 @@
     "EXPANSION": "acompañado por el buen momento de la economía",
     "PRESION EN MULTIPLOS": "presionado por el costo del dinero",
     "PRESIÓN EN MÚLTIPLOS": "presionado por el costo del dinero"
-  }
+  },
+  "_nota_setups": "Las claves NO llevan temporalidad: el motor mira el marco que necesita y `_traducir_setup` resuelve FADE_SUPPORT_RESISTANCE_H1, _M15, _H4 o _D1 contra la misma entrada. Donde la unidad del período depende del marco (una EMA20 en H1 son 20 horas; en M15, 20 velas de 15 minutos) se escribe el marcador {periodos} y el traductor lo rellena."
 }

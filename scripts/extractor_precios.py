@@ -226,7 +226,11 @@ def extraer_activo(asset_id: str, timeframe: str = "H1", n_bars: int = 10000) ->
         "data_hash": data_hash,
         "quality_report_id": f"QR-{asset_id}-{timeframe}-{data_hash[:8]}",
         "snapshot_actual": {
+            "open": float(ultimo["open"]),
+            "high": float(ultimo["high"]),
+            "low": float(ultimo["low"]),
             "close": float(ultimo["close"]),
+            "change_pct": round(((float(ultimo["close"]) - float(ultimo["open"])) / float(ultimo["open"])) * 100, 2) if float(ultimo["open"]) != 0 else 0.0,
             "rsi_14": float(ultimo["rsi_14"]) if not np.isnan(ultimo["rsi_14"]) else None,
             "atr_14": float(ultimo["atr_14"]) if not np.isnan(ultimo["atr_14"]) else None,
             "atr_20": float(ultimo["atr_20"]) if not np.isnan(ultimo["atr_20"]) else None,
@@ -245,7 +249,7 @@ def extraer_activo(asset_id: str, timeframe: str = "H1", n_bars: int = 10000) ->
 
 
 def ejecutar_extraccion_precios() -> dict:
-    """Ejecuta la descarga de todos los activos en M15, H1 y D1 y persiste en JSON."""
+    """Ejecuta la descarga de todos los activos en M15, H1, D1 y W1 y persiste en JSON."""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     resumen = {
         "as_of_utc": datetime.now(timezone.utc).isoformat(),
@@ -254,7 +258,7 @@ def ejecutar_extraccion_precios() -> dict:
 
     for asset_id in ASSET_CONFIG.keys():
         resumen["activos"][asset_id] = {}
-        for tf in ["M15", "H1", "D1"]:
+        for tf in ["M15", "H1", "D1", "W1"]:
             data = extraer_activo(asset_id, tf)
             if data:
                 archivo_out = OUTPUT_DIR / f"{asset_id}_{tf}.json"

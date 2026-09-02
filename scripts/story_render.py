@@ -336,6 +336,10 @@ def _validar_imagen_activo(payload: dict[str, Any], template_path: Path) -> None
         return
 
     relativa = str(imagen).strip()
+    if relativa.startswith(("./", "../", "/", "\\")):
+        raise StoryRenderError(
+            f"activo_imagen debe ser una ruta relativa limpia sin prefijos './' o '../': {relativa!r}."
+        )
     ruta = carpeta_plantilla / relativa
     if ruta.exists():
         return
@@ -487,7 +491,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             payload_bytes = sys.stdin.buffer.read()
 
-        payload = json.loads(payload_bytes.decode("utf-8"))
+        payload = json.loads(payload_bytes.decode("utf-8-sig"))
         ruta = render_story(payload, args.template, args.out, formato=args.formato)
     except StoryRenderError as exc:
         print(str(exc), file=sys.stderr)

@@ -5,9 +5,10 @@ Sistema que automatiza la operativa semanal del Grupo de Análisis de Mercado pa
 ## Cómo funciona
 
 ```
-Director (Claude Code) → genera contenido → aprueba → guarda en data/mensajes/ → copia al grupo WhatsApp
+Director (Claude Code o Antigravity) → genera contenido → aprueba
                                                 ↓
-                              (futuro: Evolution API lo envía directo)
+                        guarda en data/mensajes/ → lo envía al canal de WhatsApp
+                                                   (scripts/enviar_whatsapp.py)
 ```
 
 Todo el contenido pasa por aprobación explícita del director antes de enviarse. Nunca se envía nada automáticamente sin confirmación. Al aprobar, cada mensaje se guarda en `data/mensajes/` con estructura **día → activo → tipo**.
@@ -22,7 +23,7 @@ Todo el contenido pasa por aprobación explícita del director antes de enviarse
 - **MetaTrader 5** abierto en la máquina del director (el MCP lee de MT5 en vivo)
 - **uv** para la toolchain de desarrollo y el gate de calidad (opcional)
 - **Playwright** para renderizar Stories GI (opcional, extra `stories`)
-- **Evolution API en Docker** para envío directo WhatsApp (instalada y lista; conexión pendiente)
+- **Playwright** también para el envío a WhatsApp Web (`scripts/enviar_whatsapp.py`, sesión vinculada con `--login`)
 - **gh CLI** para gestión de issues/PRs (opcional)
 
 ## Instalación rápida
@@ -182,4 +183,4 @@ grupo-analisis-mercado/
 >
 > **Criterio de claridad** (subordinado a la regla de oro): si un cliente nuevo sin experiencia no entiende el mensaje en menos de 30 segundos, hay que reescribirlo más simple — pero "más simple" nunca significa "sin dirección".
 
-Análisis técnico simple y directo, con tono profesional y gancho operativo: énfasis direccional sí, dramatización no. El contenido se redacta para clientes que están aprendiendo, no para traders profesionales — y a la vez debe ser accionable para quien ya opera.
+Análisis técnico y macroeconómico simple, cercano y cotidiano: traducir lo complejo a un lenguaje claro para que cualquiera entienda qué pasa en el mercado. Énfasis direccional claro, sin tecnicismos innecesarios ni dramatización. El contenido se redacta para personas que están aprendiendo y a la vez resulta accionable para quien ya opera.

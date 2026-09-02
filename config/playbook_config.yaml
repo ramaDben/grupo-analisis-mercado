@@ -7,6 +7,9 @@ schema_version: "2.0.0"
 config_name: "playbook_intermarket_v2"
 
 # 1. Umbrales de Conmutación de Régimen y Shocks Estructurales
+# NOTA DE CONVENCIÓN: Los deltas de tasas de FRED (DGS10, DGS2, DFII10, T10YIE) se calculan
+# en puntos porcentuales (ej. 4.65 -> diff 0.10 = 10 bps). El engine multiplica por 100 (* 100.0)
+# para evaluar contra estos umbrales en bps. El alias 'us10y_diff_5d' mapea a 'dgs10_diff_5d'.
 regime_thresholds:
   # R3: Estanflación / Turbulencia Geopolítica
   oil_shock_pct_5d: 3.5
@@ -92,4 +95,18 @@ assets_monitored:
 staleness_thresholds:
   staleness_hours_weekday: 24.0   # Días hábiles (Martes a Viernes)
   staleness_hours_weekend: 80.0   # Fines de semana y Lunes (cubre Viernes 17:00 CLT hasta Lunes noche)
+
+# 6. Parámetros de Emisión de Tickets Cuantitativos (Jugada 2)
+ticket_parameters:
+  donchian_period: 50
+  donchian_max_width_atr: 2.5
+  entry_valid_bars: 2
+  rr_min_tp1: 1.0
+  friction_caps:
+    USDCLP: 0.15
+    XAUUSD: 0.10
+    WTI: 0.10
+    BRENT: 0.10
+    US100: 0.12
+
 

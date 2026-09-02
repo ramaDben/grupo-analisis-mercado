@@ -94,3 +94,32 @@ templates/stories/assets/*.jpg
 scratch/
 scratch_data.py
 scripts/spanish_test.py
+
+# Contador de envíos de WhatsApp (freno anti-baneo, estado local)
+data/.whatsapp_envios.json
+
+# Sesión persistente de WhatsApp Web (Playwright) — resguardo de credenciales y tokens
+.whatsapp_session/
+data/.whatsapp_session/
+
+# Trabajo antiguo archivado a mano: son cientos de MB de mensajes y stories ya
+# emitidos. No aportan al repo y un `git add .` distraido los subiria enteros.
+data/old/
+
+# Artefactos generados dentro de la data lake (PDFs, PNG e informes compilados).
+# Se regeneran con sus scripts; versionarlos infla el repo sin dar nada a cambio.
+data central/**/reportes_generados/
+
+# Series OHLC intradia y diarias: las regenera `scripts/extractor_precios.py`
+# desde MT5 (10.000 velas por simbolo, ~5 MB cada una). Versionarlas sumaba ~66 MB
+# por ingesta a la historia del repo sin aportar nada que MT5 no devuelva. Se
+# conservan versionadas las semanales y `latest_prices_summary.json`, que son
+# livianas y sirven de referencia cuando no hay terminal.
+data central/DATA PRECIOS OHLC/*_M15.json
+data central/DATA PRECIOS OHLC/*_H1.json
+data central/DATA PRECIOS OHLC/*_D1.json
+
+# PDF del manual y su vista previa: los produce `scripts/compilar_manual_pdf.py`
+# desde el markdown, que si se versiona.
+docs/MANUAL_DE_OPERACIONES_TRADING_CUANTITATIVO_GI.pdf
+docs/preview_portada.png

@@ -1,0 +1,158 @@
+{
+  "grupos": {
+    "01_macro_y_apertura": {
+      "alias": [
+        "macro",
+        "apertura",
+        "01",
+        "global",
+        "calendario",
+        "padre",
+        "comunidad",
+        "general",
+        "traders",
+        "intermercado"
+      ],
+      "nombre_oficial": "Grupo Inteligencia | Comunidad de Traders 📈",
+      "carpeta_docs": "docs/grupos_whatsapp/01_macro_y_apertura",
+      "descripcion": "Grupo padre / comunidad. Recibe el contexto macro transversal, los datos de alto impacto y los informes PDF de la jornada.",
+      "nombre_aspiracional": "GI · Macro & Apertura Global"
+    },
+    "02_forex_divisas": {
+      "alias": [
+        "forex",
+        "divisas",
+        "usdclp",
+        "02",
+        "dolar",
+        "eurusd",
+        "usdjpy",
+        "fx",
+        "divisa",
+        "monedas",
+        "gbpusd"
+      ],
+      "nombre_oficial": "Grupo Inteligencia | Dólar & FX",
+      "carpeta_docs": "docs/grupos_whatsapp/02_forex_divisas",
+      "descripcion": "Monitoreo del tipo de cambio, diferenciales de tasas y niveles técnicos MT5.",
+      "nombre_aspiracional": "GI · Forex & Divisas"
+    },
+    "03_commodities_materias_primas": {
+      "alias": [
+        "commodities",
+        "oro",
+        "cobre",
+        "petroleo",
+        "03",
+        "wti",
+        "plata",
+        "xauusd",
+        "metales",
+        "energia",
+        "energía",
+        "materias primas",
+        "commodity",
+        "brent",
+        "xagusd",
+        "crudo",
+        "petróleo"
+      ],
+      "nombre_oficial": "Grupo Inteligencia | Metales & Energía",
+      "carpeta_docs": "docs/grupos_whatsapp/03_commodities_materias_primas",
+      "descripcion": "Metales y energía con drivers de OPEP+, inventarios EIA y demanda China.",
+      "nombre_aspiracional": "GI · Commodities & Materias Primas"
+    },
+    "04_indices_bursatiles": {
+      "alias": [
+        "indices",
+        "nasdaq",
+        "sp500",
+        "04",
+        "us100",
+        "us500",
+        "us30",
+        "dax",
+        "indice",
+        "índices",
+        "wall street",
+        "bolsas"
+      ],
+      "nombre_oficial": "Grupo Inteligencia | Wall Street & Índices",
+      "carpeta_docs": "docs/grupos_whatsapp/04_indices_bursatiles",
+      "descripcion": "Apertura de Wall Street, rotación sectorial y sentimiento de riesgo.",
+      "nombre_aspiracional": "GI · Índices Bursátiles"
+    },
+    "05_acciones_etfs": {
+      "alias": [
+        "acciones",
+        "etfs",
+        "tech",
+        "05",
+        "aapl",
+        "nvda",
+        "msft",
+        "qqq",
+        "spy",
+        "accion",
+        "acción",
+        "etf",
+        "renta variable"
+      ],
+      "nombre_oficial": "Grupo Inteligencia | Acciones & ETFs",
+      "carpeta_docs": "docs/grupos_whatsapp/05_acciones_etfs",
+      "descripcion": "Temporada de earnings, ciclo de semiconductores/IA y fondos cotizados.",
+      "nombre_aspiracional": "GI · Acciones & ETFs"
+    },
+    "06_criptoactivos": {
+      "alias": [
+        "cripto",
+        "crypto",
+        "btc",
+        "eth",
+        "06",
+        "sol",
+        "bitcoin",
+        "ethereum",
+        "criptomercados",
+        "criptoactivos",
+        "cryptos",
+        "criptos"
+      ],
+      "nombre_oficial": "Grupo Inteligencia | Criptomercados",
+      "carpeta_docs": "docs/grupos_whatsapp/06_criptoactivos",
+      "descripcion": "Análisis cuantitativo sobrio en 4H/1D y flujos institucionales en ETFs spot.",
+      "nombre_aspiracional": "GI · Criptoactivos & Digital Assets"
+    },
+    "07_oportunidades_cuantitativas": {
+      "alias": [
+        "cuantitativo",
+        "vip",
+        "setups",
+        "07",
+        "playbook",
+        "senales",
+        "senal",
+        "señal",
+        "señales",
+        "oportunidades",
+        "trading",
+        "cuantitativas"
+      ],
+      "nombre_oficial": "Grupo Inteligencia | Señales De Trading",
+      "carpeta_docs": "docs/grupos_whatsapp/07_oportunidades_cuantitativas",
+      "descripcion": "Señales tácticas selectivas con TP y SL calculados en CLP según Playbook V2.",
+      "nombre_aspiracional": "GI · Oportunidades & Trading Cuantitativo"
+    }
+  },
+  "seguridad": {
+    "session_dir": ".whatsapp_session",
+    "timeout_busqueda_ms": 15000,
+    "timeout_envio_ms": 30000,
+    "min_jitter_ms": 800,
+    "max_jitter_ms": 2200,
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+    "segundos_entre_envios": 45,
+    "max_envios_dia": 40,
+    "_nota_frenos": "Automatizar WhatsApp Web va contra sus terminos de servicio: estos dos frenos existen para que el sistema no pueda enviar en rafaga ni superar un volumen diario razonable. Subirlos aumenta el riesgo de que la cuenta sea marcada. El contador vive en data/.whatsapp_envios.json (gitignored)."
+  }
+}

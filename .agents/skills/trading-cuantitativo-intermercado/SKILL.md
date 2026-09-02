@@ -42,6 +42,7 @@ $$\text{Lotaje} = \frac{\text{Capital}_{\text{USD}} \times \text{Riesgo\%}}{\tex
   $$\text{TickValue}_{\text{USD}} = \frac{100.000 \text{ USD} \times 0.01 \text{ JPY}}{\text{Precio Spot}_{\text{USDJPY}}}$$
   *(Ejemplo: Con Spot 159.200, 1 pip / 0.01 JPY $\approx 6.28\text{ USD por lote estándar}$)*.
 * **Para `XAU/USD` (Oro)**: $\text{TickValue} = 100\text{ USD por punto}$ ($1\text{ lote} = 100\text{ oz}$).
+* **Para `COPPER` (Cobre)**: $\text{TickValue} = 1.0\text{ USD por punto}$ ($1\text{ lote} = 1\text{ tonelada métrica, cotizado en USD/t}$).
 * **Para `WTI / BRENT` (Petróleo)**: $\text{TickValue} = 1.000\text{ USD por punto}$ ($1\text{ lote} = 1.000\text{ barriles}$).
 * **Para `US100` (Nasdaq)**: $\text{TickValue} = 20\text{ USD por punto}$ ($1\text{ lote estándar CFD}$).
 
@@ -71,7 +72,7 @@ El dimensionamiento de objetivos y recorridos se apoya en el **Modelo ADC + ATR*
 1. **Autonomía y Cero Operativa Delegada:**
    El Motor GI **no emite señales a ciegas ni opera por nadie**. Su propósito institucional es entregar **claridad matemática, niveles técnicos objetivos ($S_1/R_1$) y fundamentos de riesgo**, permitiendo que cada trader, inversionista o empresa tome sus propias decisiones informadas.
 2. **Piezas Públicas 100% Limpias:**
-   Los flujos y comandos públicos (`/alerta`, `/apertura`, `/dato_macro`, `/noticia`, `/señal`, `/oportunidad`, `/story`) entregan **exclusivamente material para el cliente final** (Mensaje WhatsApp + Story visual de marca). Queda excluida la generación automática de guiones o piezas internas en canales públicos.
+   Los flujos y comandos públicos (`/alerta`, `/apertura`, `/dato_macro`, `/noticia`, `/story`) entregan **exclusivamente material para el cliente final** (Mensaje WhatsApp + Story visual de marca). Queda excluida la generación automática de guiones o piezas internas en canales públicos.
 
 ---
 

@@ -110,6 +110,20 @@
       "imagen": "assets/activos/wti.jpg"
     },
     {
+      "ticker": "COPPER",
+      "ticker_mt5": "COPPER",
+      "nombre": "Cobre Grado A",
+      "categoria": "commodity",
+      "digits": 1,
+      "unidad": "USD/t",
+      "volatilidad": "media",
+      "nota_volatilidad": "metal conductor clave de la economía global, cotizado por tonelada métrica en terminales institucionales y bolsas de Londres/Shanghái",
+      "drivers": ["demanda industrial China", "inventarios LME/SHFE", "Dollar Index", "transición energética"],
+      "temporalidades": ["1D", "4H", "1H"],
+      "horario_mercado": "24h",
+      "rotacion_diaria": false
+    },
+    {
       "ticker": "BTC/USD",
       "ticker_mt5": "BTCUSD",
       "nombre": "Bitcoin",
@@ -373,7 +387,7 @@
   },
 
   "activos_complementarios": {
-    "COBRE": {"ticker_mt5": "COPPER", "digits": 0, "unidad": "USD", "relevancia": "Driver principal del USD/CLP. Chile es el mayor productor mundial.", "_nota_escala": "El símbolo del broker cotiza en USD por tonelada métrica con 0 decimales (ej. 13720 = 6.22 USD/libra). El digits 3 anterior correspondía a una cotización en USD/libra que ya no aplica — verificado con symbol_info el 2026-07-27."},
+    "COBRE": {"ticker_mt5": "COPPER", "digits": 1, "unidad": "USD/t", "relevancia": "Driver principal del USD/CLP. Chile es el mayor productor mundial.", "_nota_escala": "El símbolo del broker cotiza en USD por tonelada métrica (USD/t). Cotización institucional MT5."},
     "DXY": {"ticker_mt5": "USDIDX", "digits": 3, "unidad": "USD", "relevancia": "Dollar Index. Fortaleza del dólar. Afecta a todos los activos."},
     "GER40": {"ticker_mt5": "GER40.spot", "digits": 2, "unidad": "USD", "relevancia": "DAX 40 alemán. Referencia para sentimiento europeo (opcional)."}
   },

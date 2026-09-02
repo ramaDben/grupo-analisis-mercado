@@ -1,14 +1,14 @@
 """Generador de la geometría de los gráficos de las Stories.
 
 Traduce el recorrido real de un precio (una serie de valores más los hitos de la
-operación) al SVG que la plantilla `templates/stories/operacion.html` inyecta en su
+operación) al SVG que la plantilla `templates/stories/alerta.html` inyecta en su
 token `{{grafico}}`. Es un paso **previo** al render: enriquece el payload y lo deja
 listo para `story_render.py`.
 
-    cat operacion.json \
+    cat alerta.json \
       | uv run python scripts/story_grafico.py \
-      | uv run python scripts/story_render.py --template templates/stories/operacion.html \
-          --out data/stories/... --formato vertical
+      | uv run python scripts/story_render.py --template templates/stories/alerta.html \
+          --out data/stories/... --formato horizontal
 
 Reparto de responsabilidades (mismo criterio que el resto del motor de Stories): acá
 solo se calculan **coordenadas**; el color, el grosor y la tipografía viven en las
@@ -51,10 +51,12 @@ from typing import Any
 # centro — pasó en el primer render de las dos plantillas nuevas.
 # El payload elige con `recorrido.lienzo`; por defecto, el alto.
 LIENZOS = {
-    "alto":  dict(vb_w=440, vb_h=400, x0=134, x1=424, y0=30, y1=370, label_x=118, guia_x=126),
+    "alto":  dict(vb_w=520, vb_h=400, x0=175, x1=500, y0=30, y1=370, label_x=160, guia_x=168),
     # 900x230 y no 900x300: la franja bajo la tarjeta mide ~950x210, y con un
     # lienzo 3:1 el SVG se encogia a media columna dejando bandas laterales.
     "ancho": dict(vb_w=900, vb_h=230, x0=190, x1=880, y0=18, y1=205, label_x=174, guia_x=182),
+    # 900x460 para la tarjeta lateral completa de dato_macro.html
+    "macro": dict(vb_w=900, vb_h=460, x0=180, x1=870, y0=40, y1=410, label_x=164, guia_x=172),
 }
 
 # Cómo se comporta el SVG dentro de su caja. `meet` conserva la proporción y deja
@@ -215,8 +217,10 @@ def construir_svg(
 
     # Las guías se dibujan ANTES de la línea para que nunca la tapen.
     for m in marcadores:
-        y = coord_y(m["precio"])
-        x = coord_x(m["indice"])
+        idx = m["indice"]
+        y_val = serie[idx] if (0 <= idx < len(serie) and m.get("clase") == "actual") else m["precio"]
+        y = coord_y(y_val)
+        x = coord_x(idx)
         partes.append(
             f'<line class="g-guia" x1="{guia_x}" y1="{y:.1f}" x2="{x:.1f}" y2="{y:.1f}"/>'
         )
@@ -244,7 +248,9 @@ def construir_svg(
 
     for i, m in enumerate(marcadores):
         clase = m.get("clase", "actual")
-        x, y = coord_x(m["indice"]), coord_y(m["precio"])
+        idx = m["indice"]
+        y_val = serie[idx] if (0 <= idx < len(serie) and clase == "actual") else m["precio"]
+        x, y = coord_x(idx), coord_y(y_val)
         yt = y_etiqueta[len(niveles) + i]
         if clase == "meta":
             partes.append(f'<circle class="g-halo" cx="{x:.1f}" cy="{y:.1f}" r="11"/>')
@@ -274,12 +280,12 @@ def construir_svg(
 # `preserveAspectRatio` un lienzo vertical dentro de una caja ancha se encoge
 # hasta convertirse en una estampilla al centro. Fue lo que paso en el primer
 # render.
-VB_W_BARRAS, VB_H_BARRAS = 900, 232
-PLOT_X0_BARRAS, PLOT_X1_BARRAS = 190, 880
-PLOT_Y0_BARRAS = 16
-PLOT_Y1_BARRAS = 186
-EJE_Y = 212
-LABEL_X_BARRAS = 174
+VB_W_BARRAS, VB_H_BARRAS = 900, 460
+PLOT_X0_BARRAS, PLOT_X1_BARRAS = 180, 870
+PLOT_Y0_BARRAS = 36
+PLOT_Y1_BARRAS = 390
+EJE_Y = 432
+LABEL_X_BARRAS = 164
 ANCHO_BARRA = 0.68   # proporción del paso entre barras; el resto es separación
 
 

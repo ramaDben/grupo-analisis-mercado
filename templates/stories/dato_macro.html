@@ -1,60 +1,8 @@
-<!--
-Snapshot de marca "Dato macro" — la publicación de un dato económico ya salido.
-
-Es la pieza NÚMERO UNO de la agenda diaria (orden canónico del issue #43: el
-dato del calendario va primero, mientras se cargan los niveles en MT5). Hasta
-ahora se armaba con `breaking`, que es la plantilla de noticia urgente y está
-pintada en rojo: un dato que salió MEJOR de lo esperado se comunicaba en el
-color de las malas noticias.
-
-Cubre el Modo resultado de `/dato_macro` (issue #93), no el de anticipación. La
-diferencia importa: acá el dato ya tiene valor, así que la pieza se organiza
-alrededor del VEREDICTO -mejor / en línea / peor- y no alrededor de escenarios.
-
-Qué entra y qué no. El mensaje de WhatsApp lleva la explicación completa; la
-imagen lleva lo que se lee en tres segundos y sobrevive al reenvío:
-  · el veredicto, arriba y en grande, que es la conclusión;
-  · la cifra contra su consenso, porque el dato solo no dice nada -lo que mueve
-    el precio es la diferencia con lo esperado, que es el concepto de la semana;
-  · el impacto por activo, que es lo único accionable.
-Fuera quedan el diccionario de siglas, el detalle de sub-lecturas y la
-temporalidad del impacto: van en el texto, donde hay espacio para explicarlos en
-voz novata.
-
-La temporalidad se retiró de la imagen por decisión del director. Era la línea
-que desbordaba el lienzo vertical -se encimaba con el footer, y no solo con
-payloads largos: tambien con el propio payload de prueba-, y es lo que menos
-pierde al salir. La etiqueta sigue siendo OBLIGATORIA en el mensaje de
-`/dato_macro`, que es donde el cliente la lee junto a su explicación; suelta en
-una imagen no le enseña a nadie a no operar un dato de swing como si fuera
-scalp.
-
-El VEREDICTO se colorea porque ahí el verde y el rojo SON el dato. El cromo de
-la pieza no: va en el acento de marca, igual que en `alerta`. Un dato peor de lo
-esperado no justifica bañar la pieza en rojo.
-
-Contrato de tokens (ver scripts/story_render.py):
-  chip_pais · fecha_hora · indicador · periodo · titular
-  veredicto · veredicto_slug ("mejor" | "en-linea" | "peor")
-  actual · esperado · anterior (cadena vacía oculta el bloque)
-  recorrido -> {barras: [{valor, etiqueta}], niveles: [{valor, clase, etiqueta, rol}]}
-    la historia del indicador; scripts/story_grafico.py la convierte en `grafico`
-  significado · fuente
-  activos[] -> cada objeto con nombre, direccion ("sube"|"baja"|"lateral"),
-    etiqueta y porque
-
-Los tokens se listan SIN llaves dobles: escritos con llaves acá, la guardia de
-huérfanos de build_html los toma por tokens del cuerpo sin resolver y aborta.
-
-`veredicto_slug` viaja en el payload y NO se deriva de `sesgo`: mejor/peor es
-frente al consenso, no una dirección de mercado. Un dato "mejor" puede ser
-bajista para un activo, y esa distinción es justamente lo que la pieza enseña.
--->
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>Dato macro — Story GI</title>
+<title>Dato Macro</title>
 <style>
   /* ════ marca.css embebido ════ */
 :root {
@@ -64,6 +12,8 @@ bajista para un activo, y esa distinción es justamente lo que la pieza enseña.
   --fondo-alt:      #0A0A0F;
   --fondo-sube:     #123A2A;
   --fondo-baja:     #2A1220;
+
+  --velo-inferior:  rgba(4, 18, 14, 0.95);
 
   --acento:         #50C0A8;
   --acento-azul:    #3C8CAA;
@@ -97,8 +47,10 @@ bajista para un activo, y esa distinción es justamente lo que la pieza enseña.
   --activo-ada:    #3B6FD4;
   --activo-doge:   #D9A22B;
 
-  --font-sans: "Space Grotesk", "DM Sans", "Segoe UI", "Noto Sans", "Helvetica Neue", Arial, sans-serif;
-  --font-emoji: "Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji";
+  --font-display:   "Goldman", sans-serif;
+  --font-titular:   "Goldman", sans-serif;
+  --font-sans:      "Plus Jakarta Sans", "Segoe UI", "Noto Sans", Arial, sans-serif;
+  --font-emoji:     "Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji";
   --texto-1:        #F5F3F7;
   --texto-2:        #A9A5B4;
   --texto-3:        #6E6A7A;
@@ -150,646 +102,320 @@ body.activo-doge    { --activo: var(--activo-doge); }
 .story {
   box-shadow: inset 0 0 0 var(--filete-ancho) var(--filete);
 }
-  /* ════ piel.css embebido ════ */
-@font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
-@font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-700.woff2") format("woff2"); font-weight: 800; font-display: swap; }
-@font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
-@font-face { font-family: "DM Sans";       src: url("fonts/dm-sans-400.woff2") format("woff2");       font-weight: 400; font-display: swap; }
-@font-face { font-family: "DM Sans";       src: url("fonts/dm-sans-700.woff2") format("woff2");       font-weight: 700; font-display: swap; }
+</style>
+<style>
+@font-face { font-family: "Goldman"; src: url("fonts/goldman-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Goldman"; src: url("fonts/goldman-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/plus-jakarta-sans-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/plus-jakarta-sans-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/plus-jakarta-sans-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
 
-.foto-activo {
-  position: absolute; inset: 0 -72px 0 auto;
-  width: 58%;
-  z-index: 1;
-  object-fit: cover;
-  -webkit-mask-image:
-    linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.35) 22%, var(--fondo) 62%),
-    linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 62%, transparent 96%);
-  -webkit-mask-composite: source-in;
-  mask-image:
-    linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.35) 22%, var(--fondo) 62%),
-    linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 62%, transparent 96%);
-  mask-composite: intersect;
-  filter: saturate(1.12) contrast(1.06) brightness(0.92);
-  pointer-events: none;
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  width: 1920px; height: 1080px;
+  background: var(--fondo);
+  color: var(--texto-1);
+  font-family: var(--font-sans);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
-.foto-activo--fondo {
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  -webkit-mask-image:
-    linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 58%, rgba(0,0,0,0.30) 100%);
-  mask-image:
-    linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 58%, rgba(0,0,0,0.30) 100%);
-  filter: saturate(0.82) contrast(0.94) brightness(0.36);
-  opacity: 0.55;
-}
-
-.ilustracion {
-  position: absolute; right: -16px; top: 37%;
-  transform: translateY(-50%);
-  z-index: 2;
-  width: 520px;
-  filter: drop-shadow(0 0 90px color-mix(in srgb, var(--activo) 55%, transparent));
-  pointer-events: none;
+.story {
+  position: relative; width: 100%; height: 100%;
+  padding: 48px 64px 36px;
+  display: flex; flex-direction: column;
 }
 
 .velo {
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background:
-    linear-gradient(100deg, var(--fondo) 24%, rgba(0,0,0,0.88) 44%, rgba(0,0,0,0.26) 70%, rgba(0,0,0,0.58) 100%),
-    radial-gradient(58% 78% at 8% 34%, color-mix(in srgb, var(--activo) 26%, transparent) 0%, rgba(0,0,0,0) 64%),
-    radial-gradient(46% 62% at 96% 92%, color-mix(in srgb, var(--acento-azul) 34%, transparent) 0%, rgba(0,0,0,0) 60%);
+    radial-gradient(circle at 80% 20%, color-mix(in srgb, var(--acento) 15%, transparent) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(0,0,0,0.6) 0%, var(--velo-inferior) 100%);
 }
 
 .grilla {
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background-image:
-    repeating-linear-gradient(90deg, rgba(255,255,255,0.026) 0 1px, transparent 1px 96px),
-    repeating-linear-gradient(0deg,  rgba(255,255,255,0.026) 0 1px, transparent 1px 96px);
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0 1px, transparent 1px 96px),
+    repeating-linear-gradient(0deg,  rgba(255,255,255,0.02) 0 1px, transparent 1px 96px);
 }
 
-.capa { position: relative; z-index: 2; display: flex; flex-direction: column; height: 100%; }
-
-.story::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 9;
-  pointer-events: none;
-  box-shadow: inset 0 0 0 var(--filete-ancho) var(--filete);
+.contenido {
+  position: relative; z-index: 2; flex: 1; min-height: 0;
+  display: flex; flex-direction: row; gap: 48px;
 }
+
+.col-izq {
+  flex: 0 0 48%;
+  display: flex; flex-direction: column; justify-content: space-between;
+  gap: 20px;
+}
+
+.col-der {
+  flex: 1;
+  display: flex; flex-direction: column; justify-content: space-between;
+  gap: 20px;
+}
+
+.chips { display: flex; gap: 14px; align-items: center; }
 
 .sello {
-  display: inline-flex; align-items: center; gap: 12px;
-  padding: 11px 24px 11px 18px;
-  border: 1px solid color-mix(in srgb, var(--activo) 46%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--activo) 11%, transparent);
-  box-shadow: 0 0 34px -10px color-mix(in srgb, var(--activo) 70%, transparent);
-  font-family: "Space Grotesk", sans-serif; font-weight: 600;
-  font-size: 20px; letter-spacing: 0.16em; text-transform: uppercase;
-  color: var(--activo);
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 16px; border: 1.5px solid var(--acento);
+  border-radius: 999px; background: color-mix(in srgb, var(--fondo-acento) 85%, var(--fondo));
+  font-family: var(--font-display); font-weight: 700; font-size: 14px;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--acento);
 }
-.pulso {
-  width: 11px; height: 11px; border-radius: 50%;
-  background: var(--activo);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--activo) 24%, transparent),
-              0 0 18px 4px color-mix(in srgb, var(--activo) 75%, transparent);
+.pulso { width: 8px; height: 8px; border-radius: 50%; background: var(--sube); }
+
+.chip-pais {
+  font-family: var(--font-sans); font-weight: 700; font-size: 13px;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 6px 16px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--blanco);
 }
 
-.cta {
-  margin-top: auto;
-  display: flex; align-items: center; justify-content: space-between; gap: 40px;
-  padding: 26px 0 18px;
-  border-top: 1px solid color-mix(in srgb, var(--activo) 24%, transparent);
+.fecha { font-size: 14px; font-weight: 600; color: var(--texto-2); margin-top: 10px; }
+
+.indicador-titulo {
+  font-family: var(--font-display); font-weight: 700; font-size: 42px;
+  line-height: 1.15; color: var(--blanco); margin: 8px 0 0;
 }
-.cta-texto { display: flex; align-items: center; gap: 22px; }
-.cta-flecha {
-  width: 62px; height: 62px; flex: 0 0 62px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--activo); color: var(--fondo-alt);
-  font-size: 32px; font-weight: 700;
-  box-shadow: 0 0 50px -8px var(--activo);
+
+.periodo { font-size: 17px; font-weight: 600; color: var(--acento); margin-top: 4px; }
+
+.titular { font-size: 21px; font-weight: 700; line-height: 1.4; color: var(--texto-1); margin: 12px 0 0; }
+.significado { font-size: 16px; line-height: 1.5; color: var(--texto-2); margin: 10px 0 0; }
+
+.tarjeta-macro {
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--fondo-acento) 75%, var(--fondo));
+  border: 1.5px solid color-mix(in srgb, var(--acento) 35%, transparent);
+  backdrop-filter: blur(28px) saturate(1.6);
+  -webkit-backdrop-filter: blur(28px) saturate(1.6);
+  box-shadow: inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.20), 0 20px 50px rgba(0, 0, 0, 0.65);
+  padding: 22px 28px;
 }
-.cta-titulo { color: var(--texto-1); font-family: "Space Grotesk", sans-serif; font-weight: 800; font-size: 37px; letter-spacing: -0.015em; }
-.cta-sub { font-size: 24px; color: var(--texto-2); margin-top: 3px; }
-.cta-marca { display: flex; align-items: center; gap: 20px; }
-.cta-handle { font-family: "Space Grotesk", sans-serif; font-weight: 600; font-size: 22px; color: var(--texto-2); }
-.cta-logo { height: 74px; }
 
-.disclaimer { padding-bottom: 20px; font-size: 14px; line-height: 1.3; color: var(--texto-3); }
-
-@media (max-aspect-ratio: 1/1) {
-  .sello { font-size: 24px; padding: 13px 26px 13px 20px; }
-  .pulso { width: 13px; height: 13px; }
-
-  .ilustracion {
-    position: static; transform: none;
-    display: block; width: 330px; margin: 4px 0 0 auto;
-  }
-
-  .cta { padding: 28px 0 18px; gap: 24px; }
-  .cta-flecha { width: 68px; height: 68px; flex-basis: 68px; font-size: 34px; }
-  .cta-titulo { font-size: 36px; }
-  .cta-sub { font-size: 26px; }
-  .cta-handle { display: none; }
-  .cta-logo { height: 78px; }
-  .disclaimer { font-size: 16px; padding-bottom: 24px; }
+.macro-cabecera { display: flex; justify-content: space-between; align-items: center; }
+.veredicto-tag {
+  font-family: var(--font-sans); font-weight: 700; font-size: 15px;
+  letter-spacing: 0.08em; text-transform: uppercase; padding: 6px 18px; border-radius: 999px;
 }
-</style>
-<style>
-  @font-face {
-    font-family: "Syne";
-    src: url("fonts/syne-800.woff2") format("woff2");
-    font-weight: 800;
-    font-display: block;
-  }
-  @font-face {
-    font-family: "DM Sans";
-    src: url("fonts/dm-sans-400.woff2") format("woff2");
-    font-weight: 400;
-    font-display: block;
-  }
-  @font-face {
-    font-family: "DM Sans";
-    src: url("fonts/dm-sans-700.woff2") format("woff2");
-    font-weight: 700;
-    font-display: block;
-  }
-  @font-face {
-    font-family: "Space Grotesk";
-    src: url("fonts/space-grotesk-600.woff2") format("woff2");
-    font-weight: 600;
-    font-display: block;
-  }
+.veredicto--mejor    { background: var(--sube); color: var(--fondo-acento); }
+.veredicto--peor     { background: var(--baja); color: var(--blanco); }
+.veredicto--en-linea { background: var(--acento); color: var(--fondo-acento); }
+/* Sin consenso publicado no hay veredicto: la píldora desaparece en vez de
+   quedar como una etiqueta vacía (convención de campos opcionales del kit).
+   Por la misma razón se oculta la columna "Esperado" cuando no hay consenso:
+   un rótulo sin cifra debajo se lee como un error de la pieza. */
+.veredicto-tag:empty { display: none; }
+.cifra-col:has(.cifra-val:empty) { display: none; }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+.cifras-grid {
+  display: flex; gap: 32px; margin-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15); padding-top: 14px;
+}
+.cifra-col { display: flex; flex-direction: column; }
+.cifra-col--actual .cifra-val { font-size: 48px; color: var(--blanco); }
+.cifra-lbl { font-size: 12px; text-transform: uppercase; color: var(--texto-2); font-weight: 600; }
+.cifra-val { font-family: var(--font-display); font-weight: 700; font-size: 26px; color: var(--texto-borde); margin-top: 2px; }
 
-  html, body {
-    margin: 0;
-    padding: 0;
-    width: 100vw;
-    height: 100vh;
-    background: var(--fondo);
-    background-image:
-      radial-gradient(90% 120% at 0% 20%, var(--fondo-acento) 0%, var(--fondo) 55%),
-      linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 60%, var(--acento-oscuro) 100%);
-    color: var(--texto-1);
-    font-family: var(--font-sans), var(--font-emoji);
-    overflow: hidden;
-  }
+.tarjeta-grafico {
+  flex: 1; min-height: 0; border-radius: 24px;
+  background: color-mix(in srgb, var(--fondo-acento) 75%, var(--fondo));
+  border: 1.5px solid color-mix(in srgb, var(--acento) 35%, transparent);
+  backdrop-filter: blur(28px) saturate(1.6);
+  -webkit-backdrop-filter: blur(28px) saturate(1.6);
+  padding: 24px; display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.tarjeta-grafico svg { width: 100%; height: 100%; max-height: 520px; }
 
-  .story {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    padding: 56px 72px 40px;
-    display: flex;
-    flex-direction: column;
-  }
+/* ════ Estilos SVG para Gráfico de Barras Macro (.gb-*) ════ */
+.gb-nivel {
+  stroke-width: 2.5;
+  stroke-dasharray: 6 6;
+  fill: none;
+}
+.gb-nivel-esperado, .gb-nivel-promedio, .gb-nivel-consenso, .gb-nivel-base, .gb-nivel-referencia {
+  stroke: var(--acento);
+}
+.gb-nivel-nivel {
+  stroke: var(--texto-2);
+}
 
-  /* ================= CABECERA ================= */
-  /* La fecha se va a la derecha, en la misma linea de los chips: la esquina
-     superior derecha estaba vacia -181 px medidos con auditar_espacios.py- y la
-     fecha bajo los chips dejaba un renglon suelto. */
-  .cabecera {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 24px;
-  }
-  .chips { display: flex; gap: 14px; align-items: center; }
+.gb-nivel-texto {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  fill: var(--texto-1);
+}
+.gb-nivel-texto-esperado, .gb-nivel-texto-promedio, .gb-nivel-texto-consenso, .gb-nivel-texto-base, .gb-nivel-texto-referencia {
+  fill: var(--acento);
+}
 
-  .chip {
-    font-family: "Space Grotesk", sans-serif;
-    font-weight: 600;
-    font-size: 20px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding: 12px 26px;
-    border-radius: 999px;
-  }
-  .chip-dato { background: var(--acento); color: var(--fondo); }
-  .chip-pais {
-    background: transparent;
-    border: 2px solid var(--acento);
-    color: var(--acento);
-  }
+.gb-rol {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  fill: var(--texto-2);
+}
 
-  .fecha-hora {
-    margin-top: 0;
-    font-family: "Space Grotesk", sans-serif;
-    font-weight: 600;
-    font-size: 19px;
-    letter-spacing: 0.10em;
-    text-transform: uppercase;
-    color: var(--texto-2);
-  }
+.gb-barra {
+  transition: opacity 0.2s ease;
+}
+.gb-barra-pos {
+  fill: var(--sube);
+  opacity: 0.70;
+}
+.gb-barra-neg {
+  fill: var(--baja);
+  opacity: 0.70;
+}
+.gb-barra-destacada {
+  opacity: 1.0;
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--acento) 50%, transparent));
+}
+.gb-barra-pos.gb-barra-destacada {
+  fill: var(--sube);
+}
+.gb-barra-neg.gb-barra-destacada {
+  fill: var(--baja);
+}
 
-  .contenido {
-    flex: 1;
-    display: flex;
-    gap: 56px;
-    margin-top: 24px;
-    min-height: 0;
-  }
+.gb-eje {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  fill: var(--texto-2);
+}
 
-  .columna-dato   { flex: 0 0 54%; display: flex; flex-direction: column; }
-  .columna-lectura { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.gb-cero {
+  stroke: rgba(255, 255, 255, 0.35);
+  stroke-width: 1.5;
+}
 
-  .titular {
-    font-family: "DM Sans", sans-serif;
-    font-weight: 700;
-    font-size: 52px;
-    line-height: 1.08;
-    letter-spacing: -0.015em;
-    color: var(--texto-1);
-  }
+/* ════ Estilos SVG para Gráfico de Línea Soberana (.g-*) ════ */
+.g-area { fill: url(#gradArea); }
+.g-area-alto { stop-color: var(--acento); stop-opacity: 0.35; }
+.g-area-bajo { stop-color: var(--acento); stop-opacity: 0.02; }
+.g-linea {
+  fill: none;
+  stroke: var(--acento);
+  stroke-width: 4.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--acento) 45%, transparent));
+}
+.g-guia { stroke: rgba(255, 255, 255, 0.40); stroke-width: 1.8; stroke-dasharray: 5 5; }
+.g-nivel { stroke-width: 2.8; stroke-dasharray: 6 6; fill: none; }
+.g-nivel-esperado, .g-nivel-promedio, .g-nivel-consenso, .g-nivel-base, .g-nivel-referencia, .g-nivel-nivel {
+  stroke: var(--texto-2);
+}
+.g-nivel-resistencia, .g-nivel-meta { stroke: var(--baja); }
+.g-nivel-soporte, .g-nivel-origen   { stroke: var(--sube); }
 
-  /* ================= VEREDICTO ================= */
-  /* Arriba y en grande porque es la conclusión, y la conclusión va primero:
-     muchos clientes no abren el "leer más" de WhatsApp. Es el único bloque de
-     la pieza que se colorea por el resultado — ahí el verde y el rojo son el
-     dato, no decoración. */
-  .veredicto {
-    margin-top: 22px;
-    display: inline-flex;
-    align-self: flex-start;
-    align-items: baseline;
-    gap: 14px;
-    padding: 12px 26px;
-    border-radius: 14px;
-    border: 2px solid var(--veredicto-color);
-    background: var(--veredicto-fondo);
-  }
-  .veredicto-rotulo {
-    font-family: "Space Grotesk", sans-serif;
-    font-weight: 600;
-    font-size: 15px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--texto-2);
-  }
-  .veredicto-valor {
-    font-family: "Space Grotesk", sans-serif;
-    font-weight: 600;
-    font-size: 30px;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-    color: var(--veredicto-color);
-  }
+.g-punto { stroke: var(--fondo); stroke-width: 3.5; }
+.g-punto-actual { fill: var(--blanco); }
+.g-halo { fill: var(--acento); opacity: 0.35; }
 
-  /* Los tres estados posibles frente al consenso. El neutro va en el acento de
-     marca y no en gris: "en línea" es un resultado, no una ausencia de dato. */
-  body { --veredicto-color: var(--acento); --veredicto-fondo: rgba(80,192,168,0.10); }
-  body.veredicto-mejor { --veredicto-color: var(--sube); --veredicto-fondo: rgba(0,220,130,0.10); }
-  body.veredicto-peor  { --veredicto-color: var(--baja); --veredicto-fondo: rgba(232,64,64,0.10); }
+.g-precio { font-family: var(--font-display); font-weight: 700; font-size: 20px; fill: var(--texto-1); }
+.g-precio-actual { fill: var(--blanco); }
+.g-precio-esperado, .g-precio-promedio, .g-precio-consenso, .g-precio-base, .g-precio-referencia { fill: var(--acento); }
+.g-rol { font-family: var(--font-sans); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; fill: var(--texto-2); }
 
-  /* ================= CIFRAS ================= */
-  .cifras {
-    margin-top: 20px;
-    border: 2px solid var(--acento);
-    border-radius: 20px;
-    padding: 20px 26px;
-  }
+.lista-activos {
+  display: flex; gap: 12px; margin-top: 14px;
+}
+.item-activo {
+  flex: 1; padding: 14px 18px; border-radius: 18px;
+  background: color-mix(in srgb, var(--fondo-acento) 75%, var(--fondo)); border: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex; flex-direction: column; justify-content: space-between; gap: 6px;
+}
+.activo-nom { font-weight: 700; font-size: 15px; color: var(--blanco); }
+.activo-dir { font-size: 13px; font-weight: 700; }
+.activo-porque { font-size: 12px; line-height: 1.35; color: var(--texto-2); }
+.dir-sube { color: var(--sube); }
+.dir-baja { color: var(--baja); }
+.dir-lateral { color: var(--acento); }
 
-  .indicador {
-    font-family: "Space Grotesk", sans-serif;
-    font-weight: 600;
-    font-size: 22px;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--texto-1);
-  }
-  .periodo {
-    font-family: "DM Sans", sans-serif;
-    font-weight: 400;
-    font-size: 19px;
-    color: var(--texto-2);
-    margin-top: 2px;
-  }
-
-  .campo-label {
-    font-family: "Space Grotesk", sans-serif;
-    font-weight: 600;
-    font-size: 15px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--texto-2);
-  }
-
-  .actual-valor {
-    font-family: "Space Grotesk", sans-serif;
-    font-weight: 600;
-    font-size: 54px;
-    line-height: 1;
-    color: var(--veredicto-color);
-    margin-top: 2px;
-  }
-
-  /* El consenso al lado de la cifra y no en letra chica: el dato solo no dice
-     nada, lo que mueve el precio es la diferencia con lo que se esperaba. */
-  .contraste {
-    margin-top: 20px;
-    padding-top: 18px;
-    border-top: 1px solid var(--texto-3);
-    display: flex;
-    gap: 22px;
-  }
-  .contraste > * { flex: 1; }
-
-  .contraste-valor {
-    font-family: "Space Grotesk", sans-serif;
-    font-weight: 600;
-    font-size: 26px;
-    color: var(--texto-1);
-    margin-top: 3px;
-  }
-  /* El bloque del dato anterior desaparece entero cuando no hay valor, rótulo
-     incluido. Con el label como elemento hermano quedaba un "DATO ANTERIOR"
-     huérfano encabezando un vacío. Va por `::before` para que `:empty` mire un
-     solo nodo — misma solución que el costo de mantención en `recomendacion`. */
-  .anterior::before {
-    content: "Dato anterior";
-    display: block;
-    font-family: "Space Grotesk", sans-serif;
-    font-weight: 600;
-    font-size: 15px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--texto-2);
-  }
-  .anterior {
-    font-family: "Space Grotesk", sans-serif;
-    font-weight: 600;
-    font-size: 26px;
-    color: var(--texto-1);
-    margin-top: 3px;
-  }
-  .anterior:empty { display: none; }
-
-  /* Sello de procedencia del gráfico. Va junto al gráfico y no en la letra chica
-     del pie: que los precios salgan del terminal es el argumento de valor de la
-     pieza, no un descargo. Es lo que separa un gráfico trazado con datos reales
-     de uno inventado por un modelo. */
-  .sello-datos {
-    align-self: flex-start;
-    font-family: "Space Grotesk", sans-serif;
-    font-weight: 600;
-    font-size: 15px;
-    letter-spacing: 0.10em;
-    text-transform: uppercase;
-    color: var(--acento);
-    border: 1.5px solid var(--acento);
-    border-radius: 999px;
-    padding: 7px 18px;
-    margin-bottom: 14px;
-  }
-  .sello-datos::before { content: "◆  "; }
-
-  /* ================= GRÁFICO DE BARRAS =================
-     Geometría en scripts/story_grafico.py; el color y el tamaño viven acá. El
-     generador no emite un solo atributo de estilo. */
-  /* `min-height` y no solo `flex: 1`: la columna la comparten el titular, el
-     veredicto y la tarjeta, y sin piso el grafico es lo primero que se
-     comprime hasta desaparecer. */
-  .grafico {
-    margin-top: 18px;
-    flex: 1;
-    min-height: 236px;
-    display: flex;
-    align-items: flex-end;
-  }
-  .grafico svg { width: 100%; height: 100%; }
-
-  /* El signo manda el color: en una serie macro, una economía que se contrae y
-     una que crece no se distinguen por la altura de la barra sino por su lado
-     del eje. */
-  .gb-barra-pos { fill: var(--sube); fill-opacity: 0.45; }
-  .gb-barra-neg { fill: var(--baja); fill-opacity: 0.45; }
-  /* La última barra es el dato que se está comunicando: opacidad plena para que
-     el ojo la encuentre sin buscarla. Si el resultado es peor de lo esperado,
-     se resalta en color bajista (--baja). */
-  .gb-barra-destacada { fill-opacity: 1; }
-  body.veredicto-peor .gb-barra-destacada { fill: var(--baja); }
-  body.veredicto-mejor .gb-barra-destacada { fill: var(--sube); }
-
-  .gb-cero { stroke: var(--texto-2); stroke-width: 1.5; }
-  .gb-nivel { stroke-width: 2; stroke-dasharray: 7 7; }
-  .gb-nivel-esperado { stroke: var(--acento); }
-  .gb-nivel-texto {
-    font-family: "Space Grotesk", sans-serif;
-    font-weight: 600;
-    font-size: 17px;
-  }
-  .gb-nivel-texto-esperado { fill: var(--acento); }
-  .gb-rol, .gb-eje {
-    font-family: "Space Grotesk", sans-serif;
-    font-weight: 600;
-    font-size: 12px;
-    letter-spacing: 0.10em;
-    fill: var(--texto-2);
-  }
-  .gb-eje { font-size: 14px; letter-spacing: 0.04em; }
-
-  /* ================= LECTURA ================= */
-  .bloque-titulo {
-    font-family: "Space Grotesk", sans-serif;
-    font-weight: 600;
-    font-size: 21px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--acento);
-    padding-bottom: 12px;
-    border-bottom: 2px solid var(--acento);
-  }
-
-  .significado {
-    font-family: "DM Sans", sans-serif;
-    font-weight: 400;
-    font-size: 30px;
-    line-height: 1.38;
-    color: var(--texto-1);
-    margin-top: 20px;
-  }
-
-  .impacto-titulo {
-    margin-top: 30px;
-    font-family: "Space Grotesk", sans-serif;
-    font-weight: 600;
-    font-size: 21px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--acento);
-    padding-bottom: 12px;
-    border-bottom: 2px solid var(--acento);
-  }
-
-  .activos {
-    list-style: none;
-    margin-top: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 22px;
-  }
-
-  .activo { display: flex; gap: 14px; align-items: baseline; }
-
-  /* La flecha además del color: quien no distingue verde de rojo tiene que
-     poder leer la dirección igual. */
-  .activo-etiqueta {
-    font-family: "Space Grotesk", sans-serif;
-    font-weight: 600;
-    font-size: 21px;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    white-space: nowrap;
-    flex: 0 0 auto;
-    min-width: 128px;
-  }
-  .activo--sube    .activo-etiqueta { color: var(--sube); }
-  .activo--baja    .activo-etiqueta { color: var(--baja); }
-  .activo--lateral .activo-etiqueta { color: var(--texto-2); }
-  .activo--sube    .activo-etiqueta::before { content: "\25B2\00A0"; }
-  .activo--baja    .activo-etiqueta::before { content: "\25BC\00A0"; }
-  .activo--lateral .activo-etiqueta::before { content: "\2192\00A0"; }
-
-  .activo-texto {
-    font-family: "DM Sans", sans-serif;
-    font-weight: 400;
-    font-size: 24px;
-    line-height: 1.32;
-    color: var(--texto-1);
-  }
-  .activo-nombre { font-weight: 700; }
-
-  /* ================= FOOTER ================= */
-  .footer {
-    margin-top: 26px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .footer-marca {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-family: "Space Grotesk", sans-serif;
-    font-weight: 600;
-    font-size: 20px;
-    color: var(--texto-1);
-  }
-  .footer-logo { height: 66px; width: auto; }
-  .footer-fuente {
-    font-family: "DM Sans", sans-serif;
-    font-weight: 400;
-    font-size: 16px;
-    color: var(--texto-2);
-  }
-  .footer-disclaimer {
-    font-family: "DM Sans", sans-serif;
-    font-weight: 400;
-    font-size: 13px;
-    color: var(--texto-2);
-    line-height: 1.35;
-  }
-
-  /* ================= FORMATO VERTICAL 9:16 ================= */
-  @media (max-aspect-ratio: 1/1) {
-    .story { padding: 68px 64px 52px; }
-
-    .chip { font-size: 26px; padding: 14px 30px; }
-    .fecha-hora { font-size: 24px; margin-top: 22px; }
-
-    .contenido { flex-direction: column; gap: 30px; margin-top: 26px; }
-    .columna-dato    { flex: 0 0 auto; }
-    .columna-lectura { flex: 1 1 auto; min-height: 0; }
-
-    .titular { font-size: 54px; }
-
-    .veredicto-rotulo { font-size: 19px; }
-    .veredicto-valor  { font-size: 38px; }
-
-    .indicador       { font-size: 28px; }
-    .periodo         { font-size: 24px; }
-    .campo-label     { font-size: 19px; }
-    .actual-valor    { font-size: 66px; }
-    /* 215 y no 300: en vertical las dos columnas se apilan, así que cada píxel
-       que toma el gráfico se lo quita a la lista de impacto por activo — y esa
-       lista es la que el cliente necesita leer entera. Con 300 la tercera fila
-       se montaba 90 px sobre el footer. El objetivo no es "no pisar el footer"
-       —eso deja la pieza al ras y el próximo payload con una línea más vuelve a
-       romperla— sino que la lista cierre dentro de su propia columna.
-       Va en `flex-basis` y no en `height`/`min-height` por dos motivos: el SVG
-       trae altura intrínseca (245 px), así que bajar solo el mínimo no recorta
-       nada; y la regla base declara `flex: 1`, que fija `flex-basis: 0%` y deja
-       el alto en manos del contenido, ignorando cualquier `height`. */
-    .grafico { flex: 0 0 215px; min-height: 0; }
-    .sello-datos { font-size: 19px; padding: 9px 22px; }
-
-    .contraste-valor { font-size: 32px; }
-    .anterior { font-size: 32px; }
-    .anterior::before { font-size: 19px; }
-
-    .bloque-titulo, .impacto-titulo { font-size: 27px; }
-    .significado { font-size: 29px; }
-    .activos { gap: 16px; }
-    .activo-etiqueta { font-size: 24px; min-width: 140px; }
-    .activo-texto { font-size: 24px; }
-
-    .footer-marca { font-size: 25px; }
-    .footer-logo  { height: 86px; }
-    .footer-fuente { font-size: 20px; }
-    .footer-disclaimer { font-size: 17px; }
-  }
+.footer {
+  position: relative; z-index: 2; margin-top: 16px;
+  display: flex; justify-content: space-between; align-items: center;
+  padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+.footer-marca { font-family: var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: 0.08em; color: var(--acento); }
+.footer-disc { font-family: var(--font-sans); font-weight: 400; font-size: 13px; color: var(--texto-3); margin: 0; }
 </style>
 </head>
-<body class="veredicto-{{veredicto_slug}}">
+<body>
   <div class="story">
-
-    <div class="cabecera">
-      <div class="chips">
-      <span class="chip chip-dato">Dato macro</span>
-      <span class="chip chip-pais">{{chip_pais}}</span>
-      </div>
-      <p class="fecha-hora">{{fecha_hora}}</p>
-    </div>
+    <div class="velo"></div>
+    <div class="grilla"></div>
 
     <div class="contenido">
-      <div class="columna-dato">
-        <h1 class="titular">{{titular}}</h1>
-
-        <div class="veredicto">
-          <span class="veredicto-rotulo">Frente a lo esperado</span>
-          <span class="veredicto-valor">{{veredicto}}</span>
+      <div class="col-izq">
+        <div>
+          <div class="chips">
+            <span class="sello"><span class="pulso"></span>Dato macro</span>
+            <span class="chip-pais">{{chip_pais}}</span>
+          </div>
+          <p class="fecha">{{fecha_hora}}</p>
+          <h1 class="indicador-titulo">{{indicador}}</h1>
+          <div class="periodo">{{periodo}}</div>
+          <p class="titular">{{titular}}</p>
+          <p class="significado">{{significado}}</p>
         </div>
 
-        <div class="cifras">
-          <div class="indicador">{{indicador}}</div>
-          <div class="periodo">{{periodo}}</div>
-
-          <div class="campo-label" style="margin-top:16px">Resultado</div>
-          <div class="actual-valor">{{actual}}</div>
-
-          <div class="contraste">
-            <div>
-              <div class="campo-label">Se esperaba</div>
-              <div class="contraste-valor">{{esperado}}</div>
+        <div class="tarjeta-macro">
+          <div class="macro-cabecera">
+            <span style="font-size:13px; font-weight:600; color:var(--texto-2); text-transform:uppercase;">Resultado Oficial</span>
+            <span class="veredicto-tag veredicto--{{veredicto_slug}}">{{veredicto}}</span>
+          </div>
+          <div class="cifras-grid">
+            <div class="cifra-col cifra-col--actual">
+              <span class="cifra-lbl">Publicado</span>
+              <span class="cifra-val">{{actual}}</span>
             </div>
-            <div class="anterior">{{anterior}}</div>
+            <div class="cifra-col">
+              <span class="cifra-lbl">Esperado</span>
+              <span class="cifra-val">{{esperado}}</span>
+            </div>
+            <div class="cifra-col">
+              <span class="cifra-lbl">Anterior</span>
+              <span class="cifra-val">{{anterior}}</span>
+            </div>
           </div>
         </div>
-
-        <div class="sello-datos">{{sello_datos}}</div>
-        <div class="grafico">{{grafico}}</div>
       </div>
 
-      <div class="columna-lectura">
-        <h2 class="bloque-titulo">Qué significa</h2>
-        <p class="significado">{{significado}}</p>
-
-        <h2 class="impacto-titulo">Impacto por activo</h2>
-        <ul class="activos">
-          <!-- FOR:activos --><li class="activo activo--{{direccion}}"><span class="activo-etiqueta">{{etiqueta}}</span><span class="activo-texto"><span class="activo-nombre">{{nombre}}:</span> {{porque}}</span></li><!-- ENDFOR:activos -->
-        </ul>
+      <div class="col-der">
+        <div class="tarjeta-grafico">
+          {{grafico}}
+        </div>
+        <div class="lista-activos">
+          <!-- FOR:activos -->
+          <div class="item-activo">
+            <div>
+              <div class="activo-nom">{{nombre}}</div>
+              <div class="activo-dir dir-{{direccion}}">{{etiqueta}}</div>
+            </div>
+            <div class="activo-porque">{{porque}}</div>
+          </div>
+          <!-- ENDFOR:activos -->
+        </div>
       </div>
     </div>
 
     <div class="footer">
-      <div class="footer-marca">
-        <span>@grupo_inteligencia</span>
-        <img class="footer-logo" src="assets/LOGO-LETRERO.png" alt="Grupo Inteligencia">
-      </div>
-      <p class="footer-disclaimer">
-        Los CFD son instrumentos complejos y presentan un riesgo elevado de perder dinero
-        rápidamente debido al apalancamiento. Este contenido es educativo/informativo, no
-        constituye asesoría financiera.
-      </p>
+      <span class="footer-marca">GRUPO INTELIGENCIA</span>
+      <p class="footer-disc">{{sello_datos}} · Análisis técnico cuantitativo GI.</p>
     </div>
-
   </div>
 </body>
 </html>

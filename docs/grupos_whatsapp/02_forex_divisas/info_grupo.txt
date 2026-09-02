@@ -1,0 +1,53 @@
+================================================================================
+02. CANAL FOREX & DIVISAS
+================================================================================
+
+[1] NOMBRES PARA WHATSAPP
+--------------------------------------------------------------------------------
+• Nombre Oficial Recomendado (Copiar y Pegar):
+  GI · Forex & Divisas
+
+• Nombre Alternativo:
+  Grupo Inteligencia | Dólar & FX
+
+• Nombre Corto (para identificadores rápidos):
+  GI Forex
+
+[2] ARCHIVO DE FOTO DE PERFIL
+--------------------------------------------------------------------------------
+• Archivo asignado: foto_perfil.jpg (ubicado en esta misma carpeta)
+• Origen del asset: templates/stories/assets/activos/usdclp.jpg
+
+[3] DESCRIPCIÓN OFICIAL PARA EL GRUPO (Copiar y Pegar en WhatsApp)
+--------------------------------------------------------------------------------
+💱 *GI · Forex & Divisas*
+_Grupo de Análisis de Mercado | Grupo Inteligencia_
+
+Canal especializado en el monitoreo técnico y cuantitativo del mercado cambiario local e internacional.
+
+🎯 *PROPÓSITO DEL CANAL*
+Identificar la tendencia, los niveles de quiebre y las zonas de rebote en los principales pares de divisas, con foco prioritario en el tipo de cambio chileno y las divisas del G10.
+
+📈 *PARES CUBIERTOS*
+• *USD/CLP* (Dólar / Peso Chileno) · Ticker MT5: USDCLP (2 decimales).
+• *EUR/USD* (Euro / Dólar) · Ticker MT5: EURUSD (5 decimales).
+• *USD/JPY* (Dólar / Yen Japonés) · Ticker MT5: USDJPY (3 decimales).
+• *GBP/USD* (Libra / Dólar) · Ticker MT5: GBPUSD (5 decimales).
+• *DXY* (Dollar Index) · Fortaleza global del billete verde.
+
+⚡ *DRIVERS Y CATALIZADORES ANALIZADOS*
+• Diferencial de tasas de interés (BCCh vs. Fed / BCE vs. Fed / BoJ).
+• Cotización internacional del Cobre (principal driver del peso chileno).
+• Flujos corporativos, balanza comercial e intervenciones del Ministerio de Finanzas / BoJ.
+
+🔍 *FORMATO DE ALERTAS*
+• *Niveles Técnicos*: Soportes, Resistencias, Canal ADC y proyección ATR en temporalidades 1H, 4H y 1D.
+• *Escenarios con Código Visual*:
+  🟢 Sobre resistencia clave → Fuerza compradora
+  🟡 Rango medio → Esperar confirmación
+  🔴 Bajo soporte clave → Presión vendedora
+
+📌 *PAUTAS DEL CANAL*
+Canal oficial de análisis técnico directo y cuantitativo. Los precios se leen en tiempo real de terminales MetaTrader 5 sin estimaciones manuales. Operar con gestión de riesgo estricta.
+
+================================================================================

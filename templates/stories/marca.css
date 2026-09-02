@@ -10,7 +10,7 @@
   con ruta relativa porque `story_render.py` escribe el HTML resuelto DENTRO de
   `templates/stories/` y lo navega con `file://` — el mismo mecanismo por el que
   resuelven las fuentes de `fonts/`. El renderer no se entera: cero cambios en su
-  contrato de tokens `{{campo}}`.
+  contrato de tokens `<campo>`.
 
   ── Los nombres son ROLES, no colores ──────────────────────────────────────────
   `--acento` y no `--teal`, `--sube` y no `--verde`. Un token llamado por su
@@ -42,6 +42,9 @@
   --fondo-alt:      #0A0A0F;  /* variante del fondo para bloques apilados */
   --fondo-sube:     #123A2A;  /* relleno tenue en bloques alcistas */
   --fondo-baja:     #2A1220;  /* relleno tenue en bloques bajistas */
+  /* Velo inferior de las piezas a sangre: oscurece la imagen para que el texto
+     encima mantenga contraste. Es fondo, no dato, asi que va en el acento. */
+  --velo-inferior:  rgba(4, 18, 14, 0.95);
 
   /* ── Acento estructural — el verde de la marca ──────────────────────────── */
   /* El logo es un degradado que va del azul #3C8CAA al verde #50C0A8. Se toma
@@ -100,10 +103,11 @@
   --activo-ada:    #3B6FD4;  /* placas traslúcidas: cobalto */
   --activo-doge:   #D9A22B;  /* resina con laminillas: ocre */
 
-  /* ── Tipografía ─────────────────────────────────────────────────────────── */
-  /* Font stacks: primary sans + emoji fallbacks. Pueden ajustarse por host. */
-  --font-sans: "Space Grotesk", "DM Sans", "Segoe UI", "Noto Sans", "Helvetica Neue", Arial, sans-serif;
-  --font-emoji: "Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji";
+  /* ── Tipografía Oficial de Marca (Brandkit) ─────────────────────────────────── */
+  --font-display:   "Goldman", sans-serif;
+  --font-titular:   "Goldman", sans-serif;
+  --font-sans:      "Plus Jakarta Sans", "Segoe UI", "Noto Sans", Arial, sans-serif;
+  --font-emoji:     "Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji";
   --texto-1:        #F5F3F7;  /* principal */
   --texto-2:        #A9A5B4;  /* secundario */
   --texto-3:        #6E6A7A;  /* tenue: pies, disclaimers */
@@ -125,7 +129,7 @@
   lee — antes que el texto.
 
   Estos tres tokens cascadean desde la clase que el snapshot ya pone en <body>
-  (`sesgo-{{sesgo_slug}}`), así que una plantilla adopta el color por dirección
+  (`sesgo-<sesgo_slug>`), así que una plantilla adopta el color por dirección
   cambiando `var(--baja)` por `var(--direccion)` en su cromo. Sin tocar el
   renderer ni el contrato del payload.
 
@@ -154,7 +158,7 @@ body.sesgo-bajista, body.sesgo-venta {
 
 /*
   El rol `--activo` lo fija la clase que el snapshot pone en <body>
-  (`activo-{{activo_slug}}`), igual que `sesgo-*` fija la dirección. Sin clase,
+  (`activo-<activo_slug>`), igual que `sesgo-*` fija la dirección. Sin clase,
   el neutro es el acento de marca: una pieza sin activo definido debe verse de
   la marca, no apagada.
 */

@@ -39,9 +39,7 @@ styles_solo_marca = f"""  /* ════ marca.css embebido ════ */
 
 # Plantillas y su configuración
 plantillas_config = {
-    "oportunidad.html": (True, False),
     "alerta.html": (True, False),
-    "recomendacion.html": (True, False),
     "operacion.html": (False, False),
     "quote.html": (True, True),
     "breaking.html": (True, True),

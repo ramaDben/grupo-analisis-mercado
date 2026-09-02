@@ -1,0 +1,50 @@
+================================================================================
+06. CANAL CRIPTOACTIVOS & DIGITAL ASSETS
+================================================================================
+
+[1] NOMBRES PARA WHATSAPP
+--------------------------------------------------------------------------------
+• Nombre Oficial Recomendado (Copiar y Pegar):
+  GI · Criptoactivos & Digital Assets
+
+• Nombre Alternativo:
+  Grupo Inteligencia | Criptomercados
+
+• Nombre Corto (para identificadores rápidos):
+  GI Cripto
+
+[2] ARCHIVO DE FOTO DE PERFIL
+--------------------------------------------------------------------------------
+• Archivo asignado: foto_perfil.jpg (ubicado en esta misma carpeta)
+• Origen del asset: templates/stories/assets/activos/eth.jpg
+
+[3] DESCRIPCIÓN OFICIAL PARA EL GRUPO (Copiar y Pegar en WhatsApp)
+--------------------------------------------------------------------------------
+🪙 *GI · Criptoactivos & Digital Assets*
+_Grupo de Análisis de Mercado | Grupo Inteligencia_
+
+Canal con enfoque cuantitativo, sobrio e institucional para el análisis de criptomonedas y tecnología blockchain.
+
+🎯 *PROPÓSITO DEL CANAL*
+Separar el ruido de la tendencia real. Ofrecemos análisis técnico limpio y seguimiento de flujos institucionales en activos digitales, alejándonos de la especulación desmedida y el FOMO.
+
+🌐 *ACTIVOS CUBIERTOS*
+• *Bitcoin (BTC/USD)*: Reserva digital y líder del ecosistema cripto.
+• *Ethereum (ETH/USD)*: Infraestructura de contratos inteligentes y finanzas descentralizadas.
+• *Solana (SOL/USD)*: Blockchain de alta velocidad y adopción masiva.
+• *Litecoin (LTC/USD)*: Red de pagos de baja comisión y alta correlación con BTC.
+• *Cardano (ADA/USD)* & *Dogecoin (DOG/USD)*: Cobertura táctica ante movimientos de alto volumen.
+
+⚡ *DRIVERS CLAVE*
+• *Flujos Netos de ETFs Spot de Bitcoin y Ethereum* (entradas/salidas institucionales).
+• *Liquidez Global y Política Monetaria de la Fed*.
+• *Correlación con el Nasdaq 100 y Apetito por Riesgo*.
+• *Métricas On-Chain y Actividad de Red*.
+
+📊 *MARCOS TEMPORALES*
+Dado el alto nivel de volatilidad del mercado cripto (que opera 24/7), las alertas se concentran en marcos de *4H y 1D*, evitando el exceso de señales falsas en temporalidades pequeñas.
+
+📌 *AVISO DE RIESGO*
+Los criptoactivos presentan volatilidad extrema. No sobreapalancar posiciones y operar siempre con tamaño de lote prudente.
+
+================================================================================

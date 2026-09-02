@@ -1,6 +1,6 @@
 # /story
 
-Genera una Story de marca GI a partir de una plantilla (dato_macro, alerta, recomendacion, quote, breaking, encuesta, edu, flash, postventa).
+Genera una Story de marca GI a partir de una plantilla (dato_macro, alerta, quote, breaking, encuesta, edu, flash, postventa, operacion).
 
 ## Cómo ejecutar este comando
 

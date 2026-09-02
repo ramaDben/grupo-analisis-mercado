@@ -301,7 +301,7 @@ def test_la_tanda_2_no_repite_un_activo_de_la_tanda_1(tmp_path, monkeypatch):
     deja de ser una selección y pasa a ser insistencia."""
     monkeypatch.setattr(sc, "DIR_SALIDA", tmp_path)
     (tmp_path / "2026-08-25_10-30_tanda1.json").write_text(
-        json.dumps({"tanda": 1, "seleccion": [{"ticker": "XAUUSD"}, {"ticker": "US100.spot"}]}),
+        json.dumps({"tanda": 1, "generado": "2026-08-25 10:30", "seleccion": [{"ticker": "XAUUSD"}, {"ticker": "US100.spot"}]}),
         encoding="utf-8",
     )
     assert sc._publicados_hoy("2026-08-25", tanda=2) == {"XAUUSD", "US100.spot"}
@@ -309,6 +309,49 @@ def test_la_tanda_2_no_repite_un_activo_de_la_tanda_1(tmp_path, monkeypatch):
     assert sc._publicados_hoy("2026-08-25", tanda=1) == set()
     # Otro día no arrastra nada.
     assert sc._publicados_hoy("2026-08-26", tanda=2) == set()
+
+
+def test_desduplicacion_continua_intradia_por_horario_de_ejecucion(tmp_path, monkeypatch):
+    """El carrusel responsivo excluye activos de corridas anteriores del mismo día."""
+    monkeypatch.setattr(sc, "DIR_SALIDA", tmp_path)
+    (tmp_path / "2026-08-25_10-30_apertura_ny.json").write_text(
+        json.dumps({
+            "sesion_slug": "apertura_ny",
+            "generado": "2026-08-25 10:30",
+            "seleccion": [{"ticker": "XAUUSD"}, {"ticker": "US100.spot"}],
+        }),
+        encoding="utf-8",
+    )
+    # Corrida a las 14:00 detecta la corrida previa de las 10:30
+    assert sc._publicados_hoy("2026-08-25", hora_actual="14:00") == {"XAUUSD", "US100.spot"}
+    # Corrida a las 09:00 no ve la de las 10:30
+    assert sc._publicados_hoy("2026-08-25", hora_actual="09:00") == set()
+
+
+@pytest.mark.parametrize("hora, minuto, dia_semana, slug_esperado, tanda_esperada", [
+    (21, 0, 1, "asiatica", 3),      # Martes 21:00 NY -> Asia
+    (1, 30, 2, "asiatica", 3),      # Miércoles 01:30 NY -> Asia
+    (5, 0, 2, "europea", 1),        # Miércoles 05:00 NY -> Europa
+    (10, 30, 3, "apertura_ny", 1),  # Jueves 10:30 NY -> Apertura Wall Street
+    (14, 0, 3, "tarde_ny", 2),      # Jueves 14:00 NY -> Rotación de Tarde
+    (16, 45, 4, "cierre_ny", 3),    # Viernes 16:45 NY -> Cierre Wall Street
+    (12, 0, 5, "fin_de_semana", 1), # Sábado 12:00 NY -> Fin de semana
+    (15, 0, 6, "fin_de_semana", 1), # Domingo 15:00 NY -> Fin de semana
+    (19, 0, 6, "asiatica", 3),      # Domingo 19:00 NY -> Apertura Asia semanal
+])
+def test_detectar_sesion_cubre_todo_el_ciclo_de_mercado(
+    hora, minuto, dia_semana, slug_esperado, tanda_esperada
+):
+    # 2026-08-24 fue lunes (weekday 0)
+    # Lunes=24, Martes=25, Miercoles=26, Jueves=27, Viernes=28, Sabado=29, Domingo=30
+    dia = 24 + dia_semana
+    dt = datetime(2026, 8, dia, hora, minuto, tzinfo=NY)
+    sesion = sc.detectar_sesion(dt)
+    assert sesion["slug"] == slug_esperado
+    assert sesion["tanda"] == tanda_esperada
+    assert "nombre" in sesion
+    assert "foco" in sesion
+    assert sesion["hora_real_ny"] == f"{hora:02d}:{minuto:02d}"
 
 
 def test_el_feriado_de_nyse_excluye_a_una_accion_pero_no_a_una_cripto():
@@ -432,3 +475,44 @@ def test_un_evento_sin_hora_valida_no_revienta_el_gate():
     ]
     ahora = datetime(2026, 8, 25, 10, 0, tzinfo=sc.SANTIAGO)
     assert sc.gate_blackout("XAUUSD", malos, ahora) is None
+
+
+def test_filtrar_por_grupo_acota_correctamente_el_universo():
+    universo = sc.cargar_universo(solo_renderizables=True)
+
+    fx = sc.filtrar_por_grupo(universo, "forex")
+    assert all(a["categoria"] == "forex" for a in fx)
+    assert any(a["ticker"] == "USDCLP" for a in fx)
+
+    comm = sc.filtrar_por_grupo(universo, "commodities")
+    assert any(a["ticker"] == "XAUUSD" for a in comm)
+    assert any(a["ticker"] == "WTI.spot" for a in comm)
+
+    indices = sc.filtrar_por_grupo(universo, "indices")
+    assert any(a["ticker"] == "US100.spot" for a in indices)
+
+    crypto = sc.filtrar_por_grupo(universo, "crypto")
+    assert any(a["ticker"] == "BTCUSD" for a in crypto)
+    assert any(a["ticker"] == "ETHUSD" for a in crypto)
+
+
+def test_escanear_con_modo_matriz_selecciona_un_activo_por_grupo():
+    """Modo matriz de cobertura total: debe seleccionar hasta 1 activo por grupo."""
+    def fake_analizador(ticker, tf):
+        res = dict(h1_perfecto() if tf == "H1" else d1_con_consumo(0.30))
+        res["ticker"] = ticker
+        return res
+
+    resultado = sc.escanear(
+        tanda=1,
+        solo_renderizables=True,
+        analizador=fake_analizador,
+        modo_matriz=True,
+    )
+    seleccion = resultado["seleccion"]
+    assert len(seleccion) > 0
+    # Ningún grupo debe estar repetido en la selección
+    import pipeline_carrusel as pc
+    grupos_sel = [pc.obtener_grupo_whatsapp(s["clase"], s["ticker"]) for s in seleccion]
+    assert len(grupos_sel) == len(set(grupos_sel)), "El modo matriz no debe repetir grupos"
+

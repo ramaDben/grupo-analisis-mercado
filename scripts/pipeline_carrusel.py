@@ -13,8 +13,8 @@ porque eso es criterio editorial y un script no lo tiene. Por eso hay dos pasos:
 
     1. `--preparar`  arma los 3 payloads con todos los datos resueltos y los
                      campos editoriales vacíos, marcados como pendientes.
-    2. `--rendir`    valida que estén escritos y produce las 6 imágenes
-                     (3 piezas x 2 formatos).
+    2. `--rendir`    valida que estén escritos y produce las imágenes
+                     horizontales 16:9 de las piezas.
 
 Si el paso 2 encuentra un campo editorial vacío, se detiene. Es la misma razón
 por la que el renderer falla ante una imagen inexistente: una pieza a medias que
@@ -77,15 +77,19 @@ def _slug_de_imagen(imagen: str) -> str:
     return Path(imagen).stem
 
 
-def _chip_categoria(clase: str, nombre_activo: str) -> str:
+def _chip_categoria(clase_o_cat: str, nombre_activo: str) -> str:
     etiquetas = {
+        "forex": "DIVISAS",
+        "commodities": "COMMODITIES",
         "forex_commodities": "COMMODITIES",
         "crypto": "CRIPTOMONEDAS",
         "indices": "ÍNDICES",
         "etfs": "ETF",
+        "etf": "ETF",
         "acciones": "ACCIONES",
     }
-    return f"{etiquetas.get(clase, 'MERCADO')} · {nombre_activo.upper()}"
+    cat = etiquetas.get(clase_o_cat.lower(), "MERCADO")
+    return f"{cat} · {nombre_activo.upper()}"
 
 
 def _serie_para(ticker: str) -> dict[str, Any]:
@@ -107,6 +111,7 @@ def construir_payload(
     imagen = activo_catalogo["imagen"]
     slug = _slug_de_imagen(imagen)
     alcista = seleccion["direccion"] == "ALCISTA"
+    cat_real = activo_catalogo.get("categoria", seleccion["clase"])
 
     def fmt(valor: float) -> str:
         return f"{valor:,.{digits}f}".replace(",", "@").replace(".", ",").replace("@", ".")
@@ -121,7 +126,7 @@ def construir_payload(
         "activo_slug": slug,
         "activo_imagen": imagen,
         "rotulo_activo": f"{activo_catalogo['nombre'].upper()} · {seleccion['ticker']}",
-        "chip_categoria": _chip_categoria(seleccion["clase"], activo_catalogo["nombre"]),
+        "chip_categoria": _chip_categoria(cat_real, activo_catalogo["nombre"]),
         "fecha_hora": ahora.strftime("%d %b %Y · %H:%M").upper(),
         "sesgo": "Alcista" if alcista else "Bajista",
         "tag_riesgo": "ALCISTA" if alcista else "BAJISTA",
@@ -167,6 +172,182 @@ def construir_payload(
     }
 
 
+MAPEO_GRUPOS_WHATSAPP: dict[str, str] = {
+    "forex": "02_forex_divisas",
+    "commodity": "03_commodities_materias_primas",
+    "commodities": "03_commodities_materias_primas",
+    "forex_commodities": "03_commodities_materias_primas",
+    "indices": "04_indices_bursatiles",
+    "indice": "04_indices_bursatiles",
+    "acciones": "05_acciones_etfs",
+    "accion": "05_acciones_etfs",
+    "etfs": "05_acciones_etfs",
+    "etf": "05_acciones_etfs",
+    "crypto": "06_criptoactivos",
+    "macro": "01_macro_y_apertura",
+}
+
+
+class GrupoDesconocidoError(ValueError):
+    """El destino pedido no corresponde a ningún canal configurado.
+
+    Se levanta en vez de caer al canal macro: un `--grupo metales` que no se
+    reconoce y termina publicando en el grupo padre es un error silencioso que
+    solo se descubre cuando el cliente ya lo recibió.
+    """
+
+
+CONFIG_GRUPOS_PATH = Path(__file__).resolve().parent.parent / "config" / "whatsapp_grupos.json"
+
+
+def _indice_alias() -> dict[str, str]:
+    """alias/slug/nombre oficial -> slug de la carpeta, leído del config.
+
+    La fuente es `config/whatsapp_grupos.json` y no una tabla propia: cuando el
+    vocabulario vive en dos lados, uno queda atrás y el mismo pedido termina en
+    canales distintos según quién lo ejecute.
+    """
+    try:
+        datos = json.loads(CONFIG_GRUPOS_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    indice: dict[str, str] = {}
+    for slug, info in (datos.get("grupos") or {}).items():
+        indice[slug.lower()] = slug
+        for clave in ("nombre_oficial", "nombre_aspiracional"):
+            valor = str(info.get(clave) or "").strip().lower()
+            if valor:
+                indice[valor] = slug
+        for alias in info.get("alias", []):
+            indice[str(alias).strip().lower()] = slug
+    return indice
+
+
+def resolver_grupo_solicitado(pedido: str) -> str:
+    """El canal que pidió el director, o un error que nombra las opciones."""
+    clave = str(pedido).strip().lower()
+    indice = _indice_alias()
+    if clave in indice:
+        return indice[clave]
+    # Se acepta también el nombre corto del canal ("metales & energía").
+    for nombre, slug in indice.items():
+        if clave and (clave in nombre or nombre.endswith(f"| {clave}")):
+            return slug
+    opciones = sorted({s for s in indice.values()})
+    raise GrupoDesconocidoError(
+        f"No reconozco el canal {pedido!r}. Canales configurados: {', '.join(opciones)}. "
+        "Usa un alias de config/whatsapp_grupos.json (por ejemplo: forex, metales, indices, "
+        "acciones, cripto, senales, macro)."
+    )
+
+
+def obtener_grupo_whatsapp(cat_o_clase: str, ticker: str) -> str:
+    """Mapea un activo o categoría al directorio del grupo de WhatsApp correspondiente."""
+    ticker_clean = ticker.upper()
+    if (
+        ticker_clean in ("USDCLP", "EURUSD", "USDJPY", "GBPUSD", "USDIDX")
+        or "USD/CLP" in ticker_clean
+        or "EUR/USD" in ticker_clean
+        or "USD/JPY" in ticker_clean
+        or "GBP/USD" in ticker_clean
+    ):
+        return "02_forex_divisas"
+    if ticker_clean in (
+        "XAUUSD", "XAGUSD", "WTI.SPOT", "WTI", "BRENT.SPOT", "BRENT", "COPPER",
+        "ORO", "PLATA", "COBRE",
+    ):
+        return "03_commodities_materias_primas"
+    if ticker_clean in (
+        "BTCUSD", "ETHUSD", "SOLUSD", "LTCUSD", "ADAUSD", "DOGUSD", "DOGEUSD",
+    ):
+        return "06_criptoactivos"
+    if ticker_clean in (
+        "US100.SPOT", "US500.SPOT", "US30.SPOT", "GER40.SPOT",
+        "US100", "US500", "US30", "GER40",
+    ):
+        return "04_indices_bursatiles"
+    if (
+        ticker_clean.startswith("#")
+        or ticker_clean.endswith(".US")
+        or cat_o_clase.lower() in ("acciones", "accion", "etf", "etfs")
+    ):
+        return "05_acciones_etfs"
+    return MAPEO_GRUPOS_WHATSAPP.get(cat_o_clase.lower(), "01_macro_y_apertura")
+
+
+def construir_mensaje_alerta(payload: dict[str, Any]) -> str:
+    """Genera el mensaje de texto de alerta formateado para WhatsApp según las 6 reglas canónicas."""
+    activo = payload["activo"]
+    rotulo = payload.get("rotulo_activo", activo)
+    ticker = rotulo.split("·")[-1].strip() if "·" in rotulo else activo
+    precio = payload["precio_actual"]
+    soporte = payload["soporte"]
+    resistencia = payload["resistencia"]
+    vol = payload.get("vol_pct", "")
+    sesgo = payload.get("sesgo", "Alcista")
+    alcista = sesgo.lower() == "alcista"
+
+    nivel_vigilar = resistencia if alcista else soporte
+    accion = f"Fuerza compradora sobre {resistencia}" if alcista else f"Presión vendedora bajo {soporte}"
+
+    titular = payload.get("titular", "").strip()
+    parrafo = payload.get("parrafo", "").strip()
+
+    lineas = [
+        f"🎯 Activo: {activo} ({ticker})",
+        f"📌 Nivel a vigilar: {nivel_vigilar}",
+        f"⚡ Qué esperar: {accion}",
+        "━━━━━━━━━━━━━━━━━━━",
+    ]
+    if titular:
+        lineas.append(f"*{titular}*")
+        lineas.append("")
+    if parrafo:
+        lineas.append(parrafo)
+        lineas.append("━━━━━━━━━━━━━━━━━━━")
+
+    lineas.extend([
+        f"📊 *Niveles técnicos ({TIMEFRAME_GRAFICO})*:",
+        f"• Precio actual: {precio}",
+        f"• 🟢 Resistencia clave: {resistencia}",
+        f"• 🔴 Soporte clave: {soporte}",
+        f"• 💡 Volatilidad típica: {vol}",
+        "━━━━━━━━━━━━━━━━━━━",
+        f"🟢 Sobre {resistencia} → fuerza compradora",
+        f"🟡 Entre {soporte} y {resistencia} → esperar confirmación",
+        f"🔴 Bajo {soporte} → presión vendedora",
+        "━━━━━━━━━━━━━━━━━━━",
+        "Cada imagen adjunta contiene el gráfico y análisis técnico. ¿Dudas? Consulta a tu analista.",
+    ])
+    return "\n".join(lineas)
+
+
+def limpiar_payloads(directorio: Path) -> list[str]:
+    """Borra los payloads y archivos generados de una corrida anterior de la MISMA tanda.
+
+    `rendir()` toma todos los `.json` sin prefijo `_` del directorio de forma recursiva.
+    Sin este barrido, volver a preparar deja los viejos al lado de los nuevos.
+    """
+    barridos = []
+    if not directorio.exists():
+        return barridos
+    for archivo in directorio.rglob("*"):
+        if archivo.is_file():
+            if archivo.name.startswith("_"):
+                continue
+            if archivo.suffix in (".json", ".png", ".txt"):
+                archivo.unlink()
+                barridos.append(archivo.name)
+    # Limpiar directorios vacíos
+    for sub in list(directorio.iterdir()):
+        if sub.is_dir() and not any(sub.iterdir()):
+            try:
+                sub.rmdir()
+            except OSError:
+                pass
+    return sorted(barridos)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Paso 1: preparar
 # ─────────────────────────────────────────────────────────────────────────────
@@ -174,15 +355,27 @@ def preparar(
     tanda: int | None = None,
     top: int = 3,
     solo_renderizables: bool = True,
+    grupo: str | None = None,
+    modo_matriz: bool = False,
+    forzar: bool = False,
 ) -> dict[str, Any]:
-    """Corre el escáner y deja los payloads listos salvo lo editorial."""
-    resultado = sc.escanear(tanda=tanda, top=top, solo_renderizables=solo_renderizables)
+    """Corre el escáner y deja los payloads listos organizados por grupo de WhatsApp."""
+    resultado = sc.escanear(
+        tanda=tanda,
+        top=top,
+        solo_renderizables=solo_renderizables,
+        grupo=grupo,
+        modo_matriz=modo_matriz,
+        ignorar_agotamiento=forzar or (grupo is not None),
+    )
     ahora = datetime.now(tz=SANTIAGO)
     n_tanda = resultado["tanda"]
+    slug_sesion = resultado.get("sesion_slug", f"tanda{n_tanda}")
+    hora_str = ahora.strftime("%H-%M")
 
     catalogo = {a["ticker"]: a for a in sc.cargar_universo(solo_renderizables=False)}
 
-    destino = DIR_TRABAJO / f"{ahora.strftime('%Y-%m-%d')}_tanda{n_tanda}"
+    destino = DIR_TRABAJO / f"{ahora.strftime('%Y-%m-%d')}_{hora_str}_{slug_sesion}"
     destino.mkdir(parents=True, exist_ok=True)
 
     (destino / "_screener.json").write_text(
@@ -201,9 +394,6 @@ def preparar(
             )
             continue
         if not activo.get("unidad"):
-            # Se excluye en vez de reventar, igual que con la imagen: una tanda
-            # que se cae entera por un activo mal declarado es peor que una
-            # tanda de dos piezas que dice a quien dejo afuera y por que.
             problemas.append(
                 f"{sel['ticker']} no declara `unidad` en config/activos.json: "
                 "la volatilidad quedaria sin moneda"
@@ -216,20 +406,54 @@ def preparar(
             continue
 
         payload = construir_payload(sel, activo, ahora, cierres)
-        archivo = destino / f"{i}_{sc._normalizar(sel['ticker']).replace('.', '').replace('#', '')}.json"
+        cat_real = activo.get("categoria", sel["clase"])
+        grupo_nombre = obtener_grupo_whatsapp(cat_real, sel["ticker"])
+        grupo_dir = destino / grupo_nombre
+        grupo_dir.mkdir(parents=True, exist_ok=True)
+
+        slug_nombre = sc._normalizar(sel["ticker"]).replace(".", "").replace("#", "")
+        archivo = grupo_dir / f"{i}_{slug_nombre}.json"
         archivo.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-        payloads.append({"archivo": str(archivo), "ticker": sel["ticker"], "score": sel["score"]})
+
+        # Guardar borrador del mensaje de WhatsApp para ese grupo
+        msg_draft = construir_mensaje_alerta(payload)
+        (grupo_dir / f"{i}_{slug_nombre}_mensaje.txt").write_text(msg_draft, encoding="utf-8")
+
+        payloads.append({
+            "archivo": str(archivo),
+            "ticker": sel["ticker"],
+            "score": sel["score"],
+            "grupo": grupo_nombre,
+        })
+
+    # Asegurar la cobertura de contexto macro diario en cada carpeta de grupo activa
+    from contexto_macro_grupos import asegurar_contexto_macro_grupo
+    eventos_macro, delta_ust, _ = sc._contexto_macro(ahora)
+    grupos_activos = {p["grupo"] for p in payloads if p.get("grupo")}
+    if grupo:
+        grp_mapeado = obtener_grupo_whatsapp(grupo, "")
+        grupos_activos.add(grp_mapeado)
+
+    for grp in grupos_activos:
+        asegurar_contexto_macro_grupo(
+            grupo=grp,
+            destino_grupo=destino / grp,
+            eventos=eventos_macro,
+            delta_ust_bps=delta_ust,
+            ahora=ahora,
+        )
 
     return {
         "tanda": n_tanda,
+        "sesion_slug": slug_sesion,
         "nombre_tanda": resultado["nombre_tanda"],
+        "nombre_sesion": resultado.get("nombre_sesion", resultado["nombre_tanda"]),
+        "foco": resultado.get("foco", ""),
         "hora_chile_tanda": resultado["hora_chile_tanda"],
+        "hora_real": ahora.strftime("%H:%M"),
         "directorio": str(destino),
         "payloads": payloads,
         "problemas": problemas,
-        # El barrido se informa: si una corrida anterior dejo piezas y estas
-        # desaparecen sin decirlo, el director no puede distinguir "se limpio"
-        # de "nunca se genero".
         "avisos": resultado["avisos"] + (
             [f"barridos {len(barridos)} payload(s) de una corrida anterior: "
              + ", ".join(barridos)] if barridos else []
@@ -238,61 +462,22 @@ def preparar(
     }
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Paso 2: rendir
-# ─────────────────────────────────────────────────────────────────────────────
-def _ruta_story(activo_slug: str, hora: str, fecha: str) -> Path:
-    """Delega en `ruta_story.ps1`, que es el helper determinista del repo.
-
-    No se arma la ruta a mano: la convención día/activo/plantilla vive en ese
-    script y duplicarla acá garantizaría que las dos versiones se separen.
-    """
-    salida = subprocess.run(
-        ["powershell", "-NoProfile", "-File", str(RAIZ / "scripts" / "ruta_story.ps1"),
-         "-Fecha", fecha, "-Plantilla", "alerta", "-Hora", hora, "-Activo", activo_slug],
-        capture_output=True, text=True, cwd=str(RAIZ),
-    )
-    if salida.returncode != 0:
-        raise RuntimeError(f"ruta_story.ps1 fallo: {salida.stderr.strip()}")
-    return Path(salida.stdout.strip())
-
-
-def limpiar_payloads(directorio: Path) -> list[str]:
-    """Borra los payloads de una corrida anterior de la MISMA tanda.
-
-    `rendir()` toma todos los `.json` sin prefijo `_` del directorio, no una
-    lista explicita. Sin este barrido, volver a preparar -por un reintento, o
-    porque el escaner eligio distinto al mirar de nuevo- deja los viejos al
-    lado de los nuevos y la tanda sale con mas de 3 piezas, algunas de activos
-    ya descartados y con precios de horas antes.
-
-    El prefijo `_` marca lo que no es pieza (`_screener.json`, la trazabilidad
-    de por que se eligio cada activo) y se conserva.
-    """
-    barridos = []
-    for archivo in directorio.glob("*.json"):
-        if archivo.name.startswith("_"):
-            continue
-        archivo.unlink()
-        barridos.append(archivo.name)
-    return sorted(barridos)
-
-
 def rendir(directorio: Path) -> dict[str, Any]:
-    """Valida lo editorial y produce las piezas en horizontal y vertical."""
+    """Valida lo editorial, produce las piezas en horizontal y actualiza los mensajes modulares dentro de cada grupo."""
     from story_grafico import enriquecer
     from story_render import render_story
 
-    archivos = sorted(p for p in directorio.glob("*.json") if not p.name.startswith("_"))
+    archivos = sorted(p for p in directorio.rglob("*.json") if not p.name.startswith("_") and not p.name.startswith("0_contexto_macro"))
     if not archivos:
-        raise SystemExit(f"No hay payloads en {directorio}")
+        raise SystemExit(f"No hay payloads de alerta en {directorio}")
 
     sin_escribir: list[str] = []
     for archivo in archivos:
         payload = json.loads(archivo.read_text(encoding="utf-8"))
         faltan = [c for c in CAMPOS_EDITORIALES if not str(payload.get(c, "")).strip()]
         if faltan:
-            sin_escribir.append(f"{archivo.name}: falta {', '.join(faltan)}")
+            nombre_rel = archivo.relative_to(directorio) if archivo.is_relative_to(directorio) else archivo.name
+            sin_escribir.append(f"{nombre_rel}: falta {', '.join(faltan)}")
 
     if sin_escribir:
         raise SystemExit(
@@ -302,64 +487,113 @@ def rendir(directorio: Path) -> dict[str, Any]:
         )
 
     ahora = datetime.now(tz=SANTIAGO)
-    fecha, hora = ahora.strftime("%Y-%m-%d"), ahora.strftime("%H-%M")
     generadas: list[dict[str, Any]] = []
+    resumen_piezas: list[dict[str, Any]] = []
 
     for archivo in archivos:
         payload = json.loads(archivo.read_text(encoding="utf-8"))
         procedencia = payload.pop("_procedencia", {})
         payload.pop("_pendiente_editorial", None)
 
-        # `story_grafico.enriquecer` consume `recorrido` y lo reemplaza por
-        # `grafico`: el reparto es estricto, el script calcula coordenadas y la
-        # plantilla aporta color y tipografia con sus clases .g-*.
+        # `story_grafico.enriquecer` consume `recorrido` y lo reemplaza por `grafico`
         payload = enriquecer(payload)
 
-        for formato in ("horizontal", "vertical"):
-            destino = _ruta_story(payload["activo_slug"], hora, fecha)
-            if formato == "vertical":
-                # `ruta_story.ps1` no distingue formato, y las dos piezas del
-                # mismo activo se pisarían en la misma ruta. El sufijo va acá y
-                # no en el helper para no cambiar el contrato que ya usan /story
-                # y /oportunidad.
-                destino = destino.with_name(destino.stem + "_vertical" + destino.suffix)
-            render_story(payload, PLANTILLA, destino, formato=formato)
-            generadas.append({
-                "ticker": procedencia.get("ticker", payload["activo_slug"]),
-                "formato": formato,
-                "archivo": str(destino),
-            })
+        # Alerta de mercado es exclusivamente horizontal 16:9 guardada directamente en la carpeta del grupo
+        formato = "horizontal"
+        destino_local_png = archivo.parent / f"{archivo.stem}.png"
+        render_story(payload, PLANTILLA, destino_local_png, formato=formato)
+
+        # Generar mensaje final para WhatsApp dentro de la carpeta del grupo
+        msg_final = construir_mensaje_alerta(payload)
+        (archivo.parent / "mensaje.txt").write_text(msg_final, encoding="utf-8")
+        (archivo.parent / f"{archivo.stem}_mensaje.txt").write_text(msg_final, encoding="utf-8")
+
+        grupo_nombre = archivo.parent.name if archivo.parent != directorio else "general"
+        generadas.append({
+            "ticker": procedencia.get("ticker", payload["activo_slug"]),
+            "grupo": grupo_nombre,
+            "formato": formato,
+            "archivo": str(destino_local_png),
+            "archivo_local": str(destino_local_png),
+        })
+        resumen_piezas.append({
+            "activo": payload["activo"],
+            "titular": payload.get("titular", ""),
+            "sesgo": payload.get("sesgo", ""),
+            "grupo": grupo_nombre,
+        })
+
+    # Mensaje índice general en la raíz de la tanda
+    lineas_indice = [
+        f"📊 *ALERTA DE MERCADO · SESIÓN MULTIACTIVO* · {ahora.strftime('%H:%M')} hrs",
+        "━━━━━━━━━━━━━━━━━━━",
+        f"🎯 Lo que estamos mirando ahora en {len(resumen_piezas)} activo(s):",
+        "",
+    ]
+    for idx, item in enumerate(resumen_piezas, 1):
+        num_emoji = f"{idx}️⃣"
+        lineas_indice.append(f"{num_emoji} *{item['activo']}* → {item['titular'] or item['sesgo']}")
+    lineas_indice.extend([
+        "━━━━━━━━━━━━━━━━━━━",
+        "⏱️ Temporalidad: intradía (dentro de la jornada)",
+        "━━━━━━━━━━━━━━━━━━━",
+        "Cada imagen y mensaje detallado han sido modularizados en su carpeta de grupo correspondiente.",
+    ])
+    (directorio / "mensaje_indice.txt").write_text("\n".join(lineas_indice), encoding="utf-8")
 
     return {"directorio": str(directorio), "imagenes": generadas}
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Carrusel de la tanda: 3 Stories de alerta")
+    parser = argparse.ArgumentParser(description="Carrusel responsivo: Stories de alerta segun sesion y hora real")
     grupo = parser.add_mutually_exclusive_group(required=True)
     grupo.add_argument("--preparar", action="store_true",
                        help="corre el escaner y deja los payloads con lo editorial en blanco")
     grupo.add_argument("--rendir", type=Path, metavar="DIR",
                        help="rinde los payloads ya escritos de ese directorio")
-    parser.add_argument("--tanda", type=int, choices=sorted(sc.TANDAS))
+    parser.add_argument("--tanda", type=int, choices=sorted(sc.TANDAS),
+                        help="fuerza una tanda especifica (por defecto detecta la sesion y hora real)")
     parser.add_argument("--top", type=int, default=3,
                         help="tope de piezas (default 3: WhatsApp muestra 3 adjuntos sin el boton +2)")
+    parser.add_argument("--grupo", type=str, default=None,
+                        help="filtra exclusivamente a un grupo de WhatsApp (forex, commodities, indices, acciones, crypto)")
+    parser.add_argument("--matriz", action="store_true",
+                        help="cobertura total: selecciona el Top 1 de cada uno de los 5 grupos de mercado")
     parser.add_argument("--todos", action="store_true",
                         help="incluye activos sin imagen (su pieza no se va a poder rendir)")
+    parser.add_argument("--forzar", action="store_true",
+                        help="ignora gate de agotamiento para evaluar activos en sesiones avanzadas")
     args = parser.parse_args(argv)
 
+    if args.grupo:
+        try:
+            args.grupo = resolver_grupo_solicitado(args.grupo)
+        except GrupoDesconocidoError as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 2
+
     if args.preparar:
-        if args.top > 3:
+        if args.top > 3 and not args.matriz:
             print(
                 f"AVISO: --top {args.top} rompe la regla de cero spam. WhatsApp muestra "
                 "3 adjuntos con previsualizacion; del cuarto en adelante aparece el boton +2.",
                 file=sys.stderr,
             )
-        res = preparar(tanda=args.tanda, top=args.top, solo_renderizables=not args.todos)
-        print(f"\nTANDA {res['tanda']} - {res['nombre_tanda']} ({res['hora_chile_tanda']} hora Chile)")
+        res = preparar(
+            tanda=args.tanda,
+            top=args.top,
+            solo_renderizables=not args.todos,
+            grupo=args.grupo,
+            modo_matriz=args.matriz,
+            forzar=args.forzar,
+        )
+        nombre = res.get("nombre_sesion", res["nombre_tanda"])
+        print(f"\nSESIÓN: {nombre} ({res['hora_real']} hrs hora Chile)")
         print(f"Directorio: {res['directorio']}")
         print(f"\nPAYLOADS ({len(res['payloads'])})")
         for p in res["payloads"]:
-            print(f"  {p['ticker']:<12} score {p['score']:>3}/100  {Path(p['archivo']).name}")
+            grupo_info = f"[{p.get('grupo', '')}]" if p.get("grupo") else ""
+            print(f"  {p['ticker']:<12} {grupo_info:<35} score {p['score']:>3}/100  {Path(p['archivo']).name}")
         if res["problemas"]:
             print("\nPROBLEMAS")
             for p in res["problemas"]:
@@ -369,13 +603,14 @@ def main(argv: list[str] | None = None) -> int:
             for a in res["avisos"]:
                 print(f"  - {a}")
         print(f"\nFalta escribir en cada payload: {', '.join(res['campos_por_escribir'])}")
-        print(f"Despues: --rendir {res['directorio']}")
+        print(f"Despues: uv run --extra stories python scripts/pipeline_carrusel.py --rendir {res['directorio']}")
         return 0
 
     res = rendir(args.rendir)
     print(f"\n{len(res['imagenes'])} imagen(es) generadas")
     for img in res["imagenes"]:
-        print(f"  {img['ticker']:<12} {img['formato']:<11} {img['archivo']}")
+        grupo_str = f"[{img.get('grupo', '')}]" if img.get("grupo") else ""
+        print(f"  {img['ticker']:<12} {grupo_str:<35} {img['formato']:<11} {img['archivo_local']}")
     return 0
 
 

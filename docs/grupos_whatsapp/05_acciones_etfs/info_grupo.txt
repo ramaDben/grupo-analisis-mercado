@@ -1,0 +1,56 @@
+================================================================================
+05. CANAL ACCIONES & ETFS INTERNACIONALES
+================================================================================
+
+[1] NOMBRES PARA WHATSAPP
+--------------------------------------------------------------------------------
+• Nombre Oficial Recomendado (Copiar y Pegar):
+  GI · Acciones & ETFs
+
+• Nombre Actual en WhatsApp (el que usa el envío automatizado):
+  Grupo Inteligencia | Acciones & ETFs
+
+• Nombre Alternativo:
+  Grupo Inteligencia | Renta Variable & ETFs
+
+• Nombre Corto (para identificadores rápidos):
+  GI Acciones
+
+[2] ARCHIVO DE FOTO DE PERFIL
+--------------------------------------------------------------------------------
+• Archivo asignado: foto_perfil.jpg (ubicado en esta misma carpeta)
+• Origen del asset: templates/stories/assets/activos/tech-circuito.jpg
+
+[3] DESCRIPCIÓN OFICIAL PARA EL GRUPO (Copiar y Pegar en WhatsApp)
+--------------------------------------------------------------------------------
+💻 *GI · Acciones & ETFs Internacionales*
+_Grupo de Análisis de Mercado | Grupo Inteligencia_
+
+Canal de análisis táctico y fundamental de acciones líderes de Wall Street y ETFs sectoriales.
+
+🎯 *PROPÓSITO DEL CANAL*
+Detectar movimientos relevantes, quiebres de tendencia y oportunidades en empresas líderes y fondos temáticos cotizados en las bolsas estadounidenses.
+
+🏢 *UNIVERSO DE ACTIVOS*
+• *Tecnología & Inteligencia Artificial*: Apple (#AAPL), Microsoft (#MSFT), NVIDIA (#NVDA), Amazon (#AMZN), AMD (#AMD), MercadoLibre (#MELI).
+• *Banca & Finanzas*: JPMorgan Chase (#JPM), Bank of America (#BAC), Goldman Sachs (#GS), Morgan Stanley (#MS).
+• *Industriales & Movilidad*: Caterpillar (#CAT), Boeing (#BA), GE Aerospace (#GE), Deere (#DE).
+• *ETFs Temáticos*:
+  - QQQ.US (Invesco QQQ - Nasdaq 100)
+  - SPY.US (SPDR S&P 500)
+  - SOXX.US (Semiconductores & Chips AI)
+  - IWM.US (Russell 2000 - Empresas pequeñas)
+  - GLD.US (SPDR Gold Shares)
+
+⚡ *CATALIZADORES MONITOREADOS*
+• *Calendario de Earnings*: Informes de resultados por acción (EPS), ingresos y proyecciones (Guidance).
+• *Ciclo de Semiconductores y Hardware AI*.
+• *Flujos Institucionales* y compras sectoriales.
+
+⏰ *HORARIOS Y FRECUENCIA*
+Análisis focalizados durante la sesión regular de Wall Street (10:30 a 17:00 CLT), con reportes especiales post-cierre al publicar resultados corporativos.
+
+📌 *AVISO DE GESTIÓN*
+Las acciones individuales conllevan riesgo específico de balance corporativo. Se recomienda diversificar y respetar estrictamente los niveles de soporte.
+
+================================================================================

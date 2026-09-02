@@ -1,21 +1,8 @@
-<!--
-Snapshot de marca "Breaking" (Stories GI · Fase B, issue #123). Pieza editorial de
-noticia urgente — kicker + titular + cifra clave + contexto + reacción, sin gráfico
-ni dato en vivo del motor. Reutiliza verbatim el andamiaje de marca (fuentes/paleta/
-footer) de `templates/stories/alerta.html:14-58,398-409` y los acentos rojos del chip
-`.chip-categoria`/tarjeta `.tarjeta-precio` de Alerta (con layout distinto). Tercer
-consumidor del motor sin fences IF/FOR ni loops (tras `quote`): los cinco tokens de
-este archivo ({{kicker_tema}}, {{titular}}, {{valor}}, {{contexto}},
-{{parrafo_reaccion}}) son escalares incondicionales; el único campo opcional
-(`kicker_tema`) se resuelve por CSS `:empty`, no por el motor.
-NO cambiar nombres de tokens sin actualizar scripts/story_render.py y
-tests/test_story_render.py.
--->
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>Breaking — Story GI</title>
+<title>Breaking News</title>
 <style>
   /* ════ marca.css embebido ════ */
 :root {
@@ -25,6 +12,8 @@ tests/test_story_render.py.
   --fondo-alt:      #0A0A0F;
   --fondo-sube:     #123A2A;
   --fondo-baja:     #2A1220;
+
+  --velo-inferior:  rgba(4, 18, 14, 0.95);
 
   --acento:         #50C0A8;
   --acento-azul:    #3C8CAA;
@@ -58,8 +47,10 @@ tests/test_story_render.py.
   --activo-ada:    #3B6FD4;
   --activo-doge:   #D9A22B;
 
-  --font-sans: "Space Grotesk", "DM Sans", "Segoe UI", "Noto Sans", "Helvetica Neue", Arial, sans-serif;
-  --font-emoji: "Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji";
+  --font-display:   "Goldman", sans-serif;
+  --font-titular:   "Goldman", sans-serif;
+  --font-sans:      "Plus Jakarta Sans", "Segoe UI", "Noto Sans", Arial, sans-serif;
+  --font-emoji:     "Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji";
   --texto-1:        #F5F3F7;
   --texto-2:        #A9A5B4;
   --texto-3:        #6E6A7A;
@@ -111,335 +102,160 @@ body.activo-doge    { --activo: var(--activo-doge); }
 .story {
   box-shadow: inset 0 0 0 var(--filete-ancho) var(--filete);
 }
-  /* ════ piel.css embebido ════ */
-@font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
-@font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-700.woff2") format("woff2"); font-weight: 800; font-display: swap; }
-@font-face { font-family: "Space Grotesk"; src: url("fonts/space-grotesk-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
-@font-face { font-family: "DM Sans";       src: url("fonts/dm-sans-400.woff2") format("woff2");       font-weight: 400; font-display: swap; }
-@font-face { font-family: "DM Sans";       src: url("fonts/dm-sans-700.woff2") format("woff2");       font-weight: 700; font-display: swap; }
+</style>
+<style>
+@font-face { font-family: "Goldman"; src: url("fonts/goldman-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Goldman"; src: url("fonts/goldman-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/plus-jakarta-sans-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/plus-jakarta-sans-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/plus-jakarta-sans-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
 
-.foto-activo {
-  position: absolute; inset: 0 -72px 0 auto;
-  width: 58%;
-  z-index: 1;
-  object-fit: cover;
-  -webkit-mask-image:
-    linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.35) 22%, var(--fondo) 62%),
-    linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 62%, transparent 96%);
-  -webkit-mask-composite: source-in;
-  mask-image:
-    linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.35) 22%, var(--fondo) 62%),
-    linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 62%, transparent 96%);
-  mask-composite: intersect;
-  filter: saturate(1.12) contrast(1.06) brightness(0.92);
-  pointer-events: none;
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  width: 1920px; height: 1080px;
+  background: var(--fondo);
+  color: var(--texto-1);
+  font-family: var(--font-sans);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
-.foto-activo--fondo {
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  -webkit-mask-image:
-    linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 58%, rgba(0,0,0,0.30) 100%);
-  mask-image:
-    linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 58%, rgba(0,0,0,0.30) 100%);
-  filter: saturate(0.82) contrast(0.94) brightness(0.36);
-  opacity: 0.55;
-}
-
-.ilustracion {
-  position: absolute; right: -16px; top: 37%;
-  transform: translateY(-50%);
-  z-index: 2;
-  width: 520px;
-  filter: drop-shadow(0 0 90px color-mix(in srgb, var(--activo) 55%, transparent));
-  pointer-events: none;
+.story {
+  position: relative; width: 100%; height: 100%;
+  padding: 56px 72px 40px;
+  display: flex; flex-direction: column;
 }
 
 .velo {
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background:
-    linear-gradient(100deg, var(--fondo) 24%, rgba(0,0,0,0.88) 44%, rgba(0,0,0,0.26) 70%, rgba(0,0,0,0.58) 100%),
-    radial-gradient(58% 78% at 8% 34%, color-mix(in srgb, var(--activo) 26%, transparent) 0%, rgba(0,0,0,0) 64%),
-    radial-gradient(46% 62% at 96% 92%, color-mix(in srgb, var(--acento-azul) 34%, transparent) 0%, rgba(0,0,0,0) 60%);
+    radial-gradient(circle at 80% 20%, color-mix(in srgb, var(--baja) 15%, transparent) 0%, transparent 60%),
+    radial-gradient(circle at 20% 80%, color-mix(in srgb, var(--acento) 12%, transparent) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(0,0,0,0.6) 0%, var(--velo-inferior) 100%);
 }
 
 .grilla {
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background-image:
-    repeating-linear-gradient(90deg, rgba(255,255,255,0.026) 0 1px, transparent 1px 96px),
-    repeating-linear-gradient(0deg,  rgba(255,255,255,0.026) 0 1px, transparent 1px 96px);
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0 1px, transparent 1px 96px),
+    repeating-linear-gradient(0deg,  rgba(255,255,255,0.02) 0 1px, transparent 1px 96px);
 }
 
-.capa { position: relative; z-index: 2; display: flex; flex-direction: column; height: 100%; }
-
-.story::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 9;
-  pointer-events: none;
-  box-shadow: inset 0 0 0 var(--filete-ancho) var(--filete);
+.contenido {
+  position: relative; z-index: 2; flex: 1; min-height: 0;
+  display: flex; flex-direction: row; gap: 56px;
 }
+
+.col-izq {
+  flex: 0 0 54%;
+  display: flex; flex-direction: column; justify-content: space-between;
+}
+
+.col-der {
+  flex: 1;
+  display: flex; flex-direction: column; justify-content: center;
+}
+
+.chips { display: flex; gap: 14px; align-items: center; }
 
 .sello {
-  display: inline-flex; align-items: center; gap: 12px;
-  padding: 11px 24px 11px 18px;
-  border: 1px solid color-mix(in srgb, var(--activo) 46%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--activo) 11%, transparent);
-  box-shadow: 0 0 34px -10px color-mix(in srgb, var(--activo) 70%, transparent);
-  font-family: "Space Grotesk", sans-serif; font-weight: 600;
-  font-size: 20px; letter-spacing: 0.16em; text-transform: uppercase;
-  color: var(--activo);
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 18px; border: 1.5px solid var(--baja);
+  border-radius: 999px; background: color-mix(in srgb, var(--baja) 25%, var(--fondo));
+  font-family: var(--font-display); font-weight: 700; font-size: 14px;
+  letter-spacing: 0.10em; text-transform: uppercase; color: var(--baja);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--baja) 35%, transparent);
 }
-.pulso {
-  width: 11px; height: 11px; border-radius: 50%;
-  background: var(--activo);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--activo) 24%, transparent),
-              0 0 18px 4px color-mix(in srgb, var(--activo) 75%, transparent);
+.pulso { width: 8px; height: 8px; border-radius: 50%; background: var(--baja); }
+
+.chip-tema {
+  font-family: var(--font-sans); font-weight: 700; font-size: 13px;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 6px 16px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--blanco);
+}
+.chip-tema:empty { display: none; }
+
+.titular {
+  font-family: var(--font-display); font-weight: 700; font-size: 48px;
+  line-height: 1.12; margin: 18px 0 0; color: var(--blanco);
+  letter-spacing: -0.01em;
 }
 
-.cta {
-  margin-top: auto;
-  display: flex; align-items: center; justify-content: space-between; gap: 40px;
-  padding: 26px 0 18px;
-  border-top: 1px solid color-mix(in srgb, var(--activo) 24%, transparent);
+.parrafo-reaccion {
+  font-family: var(--font-sans); font-weight: 400; font-size: 22px;
+  line-height: 1.48; color: var(--texto-borde); margin: 18px 0 0;
 }
-.cta-texto { display: flex; align-items: center; gap: 22px; }
-.cta-flecha {
-  width: 62px; height: 62px; flex: 0 0 62px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--activo); color: var(--fondo-alt);
-  font-size: 32px; font-weight: 700;
-  box-shadow: 0 0 50px -8px var(--activo);
+
+.tarjeta-cifra {
+  border-radius: 28px;
+  background: color-mix(in srgb, var(--fondo-acento) 80%, var(--fondo));
+  border: 1.5px solid color-mix(in srgb, var(--acento) 40%, transparent);
+  backdrop-filter: blur(28px) saturate(1.6);
+  -webkit-backdrop-filter: blur(28px) saturate(1.6);
+  box-shadow: inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.25), 0 20px 50px rgba(0, 0, 0, 0.65);
+  padding: 44px 48px;
+  display: flex; flex-direction: column; justify-content: center;
 }
-.cta-titulo { color: var(--texto-1); font-family: "Space Grotesk", sans-serif; font-weight: 800; font-size: 37px; letter-spacing: -0.015em; }
-.cta-sub { font-size: 24px; color: var(--texto-2); margin-top: 3px; }
-.cta-marca { display: flex; align-items: center; gap: 20px; }
-.cta-handle { font-family: "Space Grotesk", sans-serif; font-weight: 600; font-size: 22px; color: var(--texto-2); }
-.cta-logo { height: 74px; }
 
-.disclaimer { padding-bottom: 20px; font-size: 14px; line-height: 1.3; color: var(--texto-3); }
-
-@media (max-aspect-ratio: 1/1) {
-  .sello { font-size: 24px; padding: 13px 26px 13px 20px; }
-  .pulso { width: 13px; height: 13px; }
-
-  .ilustracion {
-    position: static; transform: none;
-    display: block; width: 330px; margin: 4px 0 0 auto;
-  }
-
-  .cta { padding: 28px 0 18px; gap: 24px; }
-  .cta-flecha { width: 68px; height: 68px; flex-basis: 68px; font-size: 34px; }
-  .cta-titulo { font-size: 36px; }
-  .cta-sub { font-size: 26px; }
-  .cta-handle { display: none; }
-  .cta-logo { height: 78px; }
-  .disclaimer { font-size: 16px; padding-bottom: 24px; }
+.cifra-label {
+  font-family: var(--font-sans); font-weight: 700; font-size: 16px;
+  letter-spacing: 0.10em; text-transform: uppercase; color: var(--acento);
 }
-</style>
-<style>
-  @font-face {
-    font-family: "Syne";
-    src: url("fonts/syne-800.woff2") format("woff2");
-    font-weight: 800;
-    font-style: normal;
-    font-display: block;
-  }
-  @font-face {
-    font-family: "DM Sans";
-    src: url("fonts/dm-sans-400.woff2") format("woff2");
-    font-weight: 400;
-    font-style: normal;
-    font-display: block;
-  }
-  @font-face {
-    font-family: "DM Sans";
-    src: url("fonts/dm-sans-700.woff2") format("woff2");
-    font-weight: 700;
-    font-style: normal;
-    font-display: block;
-  }
-  @font-face {
-    font-family: "Space Grotesk";
-    src: url("fonts/space-grotesk-600.woff2") format("woff2");
-    font-weight: 600;
-    font-style: normal;
-    font-display: block;
-  }
 
-  * { box-sizing: border-box; }
+.cifra-valor {
+  font-family: var(--font-display); font-weight: 700; font-size: 82px;
+  line-height: 1.05; color: var(--blanco); margin: 10px 0 0;
+}
 
-  html, body {
-    margin: 0;
-    padding: 0;
-    width: 1920px;
-    height: 1080px;
-    background: var(--fondo);
-    background-image:
-      radial-gradient(90% 120% at 0% 20%, var(--fondo-baja) 0%, var(--fondo) 55%),
-      linear-gradient(180deg, var(--fondo) 0%, var(--fondo-alt) 60%, var(--fondo) 100%);
-    color: var(--texto-1);
-    font-family: "DM Sans", sans-serif;
-    overflow: hidden;
-  }
+.cifra-contexto {
+  font-family: var(--font-sans); font-weight: 400; font-size: 22px;
+  line-height: 1.45; color: var(--texto-2); margin: 18px 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.15); padding-top: 18px;
+}
 
-  /* ---- Contenedor raíz: columna (cuerpo | footer) ---- */
-  .story {
-    width: 1920px;
-    height: 1080px;
-    padding: 56px 72px 40px;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* ---- Cuerpo: una sola columna editorial, centrada verticalmente ---- */
-  .breaking-cuerpo {
-    flex: 1;
-    min-height: 0;
-    max-width: 1400px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-
-  /* ---- Kicker (chip acento rojo, estilo .chip-categoria de Alerta) ---- */
-  .breaking-kicker {
-    align-self: flex-start;
-    font-family: "Space Grotesk", sans-serif;
-    font-weight: 600;
-    font-size: 20px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    padding: 10px 22px;
-    border-radius: 999px;
-    background: rgba(232, 64, 64, 0.14);
-    border: 1px solid rgba(232, 64, 64, 0.5);
-    color: var(--baja-suave);
-  }
-
-  .breaking-kicker:empty {
-    display: none;
-  }
-
-  /* ---- Titular ---- */
-  .breaking-titular {
-    font-family: "DM Sans", sans-serif;
-    font-weight: 700;
-    font-size: 64px;
-    line-height: 1.15;
-    margin: 24px 0 0;
-    color: var(--blanco);
-  }
-
-  /* ---- Tarjeta "cifra clave" (borde rojo, estilo .tarjeta-precio de Alerta) ---- */
-  .breaking-cifra {
-    margin-top: 32px;
-    display: flex;
-    align-items: baseline;
-    gap: 22px;
-    border: 2px solid var(--baja);
-    border-radius: 22px;
-    background: rgba(232, 64, 64, 0.08);
-    padding: 26px 34px;
-    width: fit-content;
-  }
-
-  .breaking-cifra-rotulo {
-    font-family: "Space Grotesk", sans-serif;
-    font-weight: 600;
-    font-size: 16px;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--texto-2);
-  }
-
-  .breaking-cifra-valor {
-    font-family: "DM Sans", sans-serif;
-    font-weight: 700;
-    font-size: 64px;
-    color: var(--blanco);
-  }
-
-  /* ---- Contexto y reacción ---- */
-  .breaking-contexto {
-    font-family: "DM Sans", sans-serif;
-    font-weight: 700;
-    font-size: 24px;
-    line-height: 1.4;
-    color: var(--texto-1);
-    margin: 28px 0 0;
-  }
-
-  .breaking-reaccion {
-    font-family: "DM Sans", sans-serif;
-    font-weight: 400;
-    font-size: 21px;
-    line-height: 1.45;
-    color: var(--texto-borde);
-    margin: 16px 0 0;
-  }
-
-  /* ---- Footer ---- */
-  .footer {
-    margin-top: 28px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .footer-marca {
-    display: flex;
-    justify-content: space-between;
-    font-family: "Space Grotesk", sans-serif;
-    font-weight: 600;
-    font-size: 20px;
-    color: var(--texto-1);
-  }
-
-  .footer-disclaimer {
-    font-family: "DM Sans", sans-serif;
-    font-weight: 400;
-    font-size: 13px;
-    /* var(--texto-2) (gris secundario del kit). El var(--texto-3) anterior no alcanzaba el
-       minimo WCAG AA de 4,5:1 sobre el fondo del footer -- y este texto es el
-       aviso de riesgo por apalancamiento, tiene que poder leerse. */
-    color: var(--texto-2);
-    line-height: 1.35;
-  }
+.footer {
+  position: relative; z-index: 2; margin-top: 20px;
+  display: flex; justify-content: space-between; align-items: center;
+  padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+.footer-marca { font-family: var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: 0.08em; color: var(--acento); }
+.footer-disc { font-family: var(--font-sans); font-weight: 400; font-size: 13px; color: var(--texto-3); margin: 0; }
 </style>
 </head>
-<body class="breaking">
+<body>
   <div class="story">
+    <div class="velo"></div>
+    <div class="grilla"></div>
 
-    <div class="breaking-cuerpo">
-      <span class="breaking-kicker">{{kicker_tema}}</span>
-      <h1 class="breaking-titular">{{titular}}</h1>
-
-      <div class="breaking-cifra">
-        <span class="breaking-cifra-rotulo">CIFRA CLAVE</span>
-        <span class="breaking-cifra-valor">{{valor}}</span>
+    <div class="contenido">
+      <div class="col-izq">
+        <div>
+          <div class="chips">
+            <span class="sello"><span class="pulso"></span>Última hora</span>
+            <span class="chip-tema">{{kicker_tema}}</span>
+          </div>
+          <h1 class="titular">{{titular}}</h1>
+        </div>
+        <p class="parrafo-reaccion">{{parrafo_reaccion}}</p>
       </div>
 
-      <p class="breaking-contexto">{{contexto}}</p>
-      <p class="breaking-reaccion">{{parrafo_reaccion}}</p>
+      <div class="col-der">
+        <div class="tarjeta-cifra">
+          <span class="cifra-label">Dato Destacado</span>
+          <div class="cifra-valor">{{valor}}</div>
+          <p class="cifra-contexto">{{contexto}}</p>
+        </div>
+      </div>
     </div>
 
     <div class="footer">
-      <div class="footer-marca">
-        <span>@grupointeligencia</span>
-        <span>grupointeligencia.com</span>
-      </div>
-      <p class="footer-disclaimer">
-        Los CFD son instrumentos complejos y presentan un riesgo elevado de perder dinero
-        rápidamente debido al apalancamiento. Este contenido es educativo/informativo, no
-        constituye asesoría financiera.
-      </p>
+      <span class="footer-marca">GRUPO INTELIGENCIA</span>
+      <p class="footer-disc">Información con fines informativos y de análisis de coyuntura. No constituye asesoría financiera.</p>
     </div>
-
   </div>
 </body>
 </html>

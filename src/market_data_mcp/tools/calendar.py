@@ -196,20 +196,28 @@ def _parsear_filas(html: str) -> list[dict]:
 def _enganchar_glosario(nombre: str, glosario: dict) -> dict | None:
     """Busca entrada del glosario para un nombre de evento.
 
-    Paso 1: sigla como palabra en el título (case-insensitive).
-    Paso 2: alias en titulos_ff.
-    Retorna None si no hay match.
+    Gana la entrada cuya clave o alias coincide con el tramo **más largo** del
+    título, y no la que aparece primero en el JSON. La versión anterior devolvía
+    el primer match, así que el resultado dependía del orden del archivo: la
+    entrada "Cushing Crude Oil Inventories" quedaba inalcanzable porque "Crude
+    Oil Inventories" estaba escrita unas líneas antes, y el evento de Cushing
+    salía nombrado como el inventario nacional.
+
+    Un match más largo es siempre más específico, así que el criterio no puede
+    empeorar un enganche que ya funcionaba: solo desempata entre varios.
+
+    Retorna None si no hay match, y el evento queda marcado `glosario_pendiente`.
     """
     nombre_upper = nombre.upper()
+    mejor: dict | None = None
+    mejor_largo = -1
     for key, entry in glosario.items():
         if key.startswith("_") or key.isdigit():
             continue
-        if key.upper() in nombre_upper:
-            return entry
-        for alias in entry.get("titulos_ff", []):
-            if alias.upper() in nombre_upper:
-                return entry
-    return None
+        for candidato in (key, *entry.get("titulos_ff", [])):
+            if candidato.upper() in nombre_upper and len(candidato) > mejor_largo:
+                mejor, mejor_largo = entry, len(candidato)
+    return mejor
 
 
 def cargar_calendario(

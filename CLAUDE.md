@@ -3,6 +3,13 @@
 ## Contexto
 Este proyecto automatiza la operativa semanal del Grupo de Análisis de Mercado para envío vía WhatsApp. El usuario es el director de trading. Los sub-agents actúan como analistas de mercado y recolectores de información.
 
+> [!CRITICAL]
+> **GUARDRAILS DE INTEGRIDAD DE DATOS Y COMPOSICIÓN EDITORIAL:**
+> 1. **CERO HARDCODING DE PRECIOS Y COTIZACIONES (REGLA 1):** Queda estrictamente prohibido escribir números de precios, cotizaciones, variaciones porcentuales o niveles técnicos "a mano" o calculados mentalmente en scripts de Stories, HTMLs o informes Markdown. Todos los precios deben ser leídos en tiempo de ejecución desde MetaTrader 5 / MCP `market-data` (`get_asset_levels`, `latest_prices_summary.json`). Para tickers con sufijo del broker, usar siempre el símbolo exacto del catálogo (`US100.spot`, `US500.spot`, `US30.spot`, `WTI.spot`, `BRENT.spot`, `GER40.spot`, `COPPER`, `USDCLP`, `XAUUSD`, `USDJPY`).
+> 2. **PROHIBICIÓN DE TRUNCADO DE DÓLARES EN SHELL (REGLA DE ESCRITURA):** Al generar o guardar archivos `.txt` o mensajes con símbolos de moneda (`$`), queda prohibido usar double-quotes o here-strings `@"..."@` en PowerShell porque la shell interpreta `$931` o `$4` como variables vacías y trunca el precio. Toda escritura de archivos de texto con precios DEBE realizarse mediante Python (`Path.write_text(..., encoding="utf-8")`) o single-quoted here-strings `@'...'@`.
+> 3. **COMPOSICIÓN OBLIGATORIA DE INFORMES PDF (REGLA 2):** Queda estrictamente prohibido generar PDFs institucionales a partir de markdowns planos improvisados. Todo informe PDF DEBE seguir la arquitectura canónica (`pipeline_informe.py` + `grafico_informe.py` + `generar_pdf.py`), incluyendo los banners gráficos vectoriales a 300 DPI por activo, la tabla de curva soberana de 4 columnas en notación chilena y la estructura pedagógica de 3 capas (qué pasa, qué significa, qué NO hacer).
+> 4. **PROHIBICIÓN TOTAL DE MODELOS DE DIFUSIÓN (REGLA 0):** Prohibido usar `generate_image` o modelos de difusión. Toda pieza visual es código HTML + CSS + Playwright.
+
 ## Principio fundamental
 Análisis técnico simple y directo, con dirección clara, que genere interés y apetito por operar — sin caer en lo coloquial ni en lo catastrófico. El mensaje lo reciben tanto traders expertos como clientes novatos: debe ser comprensible para quien recién aprende y, a la vez, accionable para quien ya opera. Se enfatiza la tendencia y se nombra hacia dónde se dirige el activo, despertando el interés del cliente por operar el mercado.
 
@@ -83,6 +90,11 @@ Zonas canónicas (IDs Windows): EE.UU. (BLS/ISM/ADP/EIA/Fed) → `Eastern Standa
 
 **Cruce de día en eventos asiáticos (OBLIGATORIO)**: el helper devuelve la hora, **no la fecha**. Japón va 13 h adelante de Chile, así que un evento japonés cae el **día anterior** en nuestro calendario: la decisión del BoJ del viernes 31 a las 12:00 JST ocurre el **jueves 30 a las 23:00 CLT**. Al fechar un evento asiático, calcula también la fecha en Chile y comunícala siempre en hora Chile. Caso especial del BoJ: **no compromete hora exacta** de anuncio (publica entre 11:30 y 12:30 JST), así que la ventana en Chile es 22:30–23:30; la conferencia posterior del gobernador sí tiene hora fija (15:30 JST) y es donde suele estar el movimiento del USD/JPY.
 
+### Guardrail Anti-Anacronismos y Modo Anticipación (OBLIGATORIO)
+Queda **estrictamente prohibido** redactar eventos futuros en tiempo pasado (ej. "tras la asimilación de los discursos de Jackson Hole", "luego del dato de IPC") si dicho evento aún no ha ocurrido según el reloj real de Chile.
+- **Eventos Futuros / Próximos:** Se redactan exclusivamente en **Modo Anticipación** ("en la antesala de...", "a la espera de los discursos previstos para mañana...", "el mercado aguarda la publicación...").
+- **Validador Automático:** `generar_pdf.py` y `pipeline_informe.py` ejecutan automáticamente `scripts/validar_consistencia_temporal.py`. Si detectan discrepancia de fecha o anacronismos en el texto, el proceso aborta inmediatamente (*Fail-Fast*).
+
 ## Agenda semanal
 
 | Día | Contenido principal | Encuesta | Señales |
@@ -101,24 +113,23 @@ la rotación diaria de 2-3 activos y las piezas de la estructura obligatoria sig
 que agrega es una selección **objetiva** del universo completo, para que la elección de qué
 activo comunicar no dependa de a quién se le ocurrió primero.
 
-### Las 3 tandas, ancladas a Nueva York
+### Producción diaria responsiva (escáner + carrusel + informe)
 
-| Tanda | Ancla (Nueva York) | Comando | Salida |
+| Momento / Sesión | Ventana (Nueva York) | Comando | Salida |
 |---|---|---|---|
-| — | 08:30 aprox. | `/informe apertura` | PDF institucional A4 + mensaje |
-| 1 | 10:30 (apertura + 1 h) | `/carrusel` | Hasta 3 Stories + mensaje índice |
-| 2 | 14:30 | `/carrusel 2` | Hasta 3 Stories + mensaje índice |
-| 3 | 16:45 (cierre + 45 min) | `/informe cierre` | Mensaje con gráfico, **sin PDF** |
+| Apertura | 08:30 aprox. | `/informe apertura` | PDF institucional A4 + mensaje |
+| Responsivo 24h | Cualquier hora | `/carrusel` | Hasta 3 Stories + mensaje índice (detección automática de sesión y hora real) |
+| Pre-cierre | 16:45 (cierre + 45 min) | `/informe cierre` | Mensaje con gráfico, **sin PDF** |
 
-**El ancla es la hora de Nueva York y no la de Chile.** Los dos hemisferios cambian de
-horario en sentido opuesto, así que el desfase se mueve dos veces al año: NYSE abre 09:30 CLT
-en agosto y 11:30 CLST en diciembre. Un cronograma escrito en hora chilena describe en enero
-un mercado que ya cerró. `scripts/screener_gi.py` deriva la tanda de la hora de Nueva York y
-comunica siempre en hora de Chile.
+**El ancla es la hora de Nueva York y se comunica en hora real de Chile.** El escáner detecta
+automáticamente la sesión activa (Asiática, Europea, Apertura Wall Street, Rotación de Tarde,
+Cierre o Fin de Semana), permitiendo ejecutar `/carrusel` en cualquier momento. La hora real
+de ejecución queda estampada con fidelidad en los payloads y en el mensaje índice. Adicionalmente,
+el escáner excluye activos publicados en corridas previas de hoy para evitar redundancia.
 
 **El informe de apertura lleva un gráfico por activo.** `scripts/grafico_informe.py`
 dibuja la serie real del terminal (cierres de `serie_mt5.py`, niveles de `analizar_activo`)
-con sus medias de 50 y 100 días, y el pipeline lo referencia bajo el bloque de cada activo.
+con sus medias de 50 y 100 días en formato banner institucional de **7.2 × 2.82 pulgadas a 300 DPI**, trazando obligatoriamente como líneas horizontales todo nivel de soporte/resistencia o Fibo mencionado en el texto, y el pipeline lo referencia bajo el bloque de cada activo.
 Nunca se dibuja un sustituto: sin terminal, el informe sale sin imágenes y lo dice en los
 avisos. Es la diferencia con `scripts/generar_graficos_drivers.py`, que tiene las series
 escritas a mano y produce piezas de aspecto institucional a partir de números que nadie
@@ -247,22 +258,22 @@ Cerrar cada mensaje de niveles/análisis con este bloque:
 🔴 Bajo [soporte] → presión vendedora
 ```
 
-### Registro y tono — profesional, técnico y con gancho operativo (OBLIGATORIO)
-Los análisis transmiten seriedad y credibilidad y, a la vez, generan interés y apetito por operar. **Se permite y se busca** enfatizar la tendencia, tomar postura direccional clara y redactar con tono persuasivo que invite a operar. Lo que sigue **prohibido** es el lenguaje extremo, catastrófico o demasiado coloquial (dramatizar el movimiento, atribuir "sensaciones" al mercado, vaticinar catástrofes, jerga de barrio). En una frase: **énfasis direccional sí, dramatización no**. Se describe el mercado con terminología financiera objetiva, comprensible para el cliente y con gancho.
+### Registro y tono — cercano, cotidiano, pedagógico y con gancho operativo (OBLIGATORIO)
+El propósito editorial de Grupo Inteligencia es **traducir lo complejo a un lenguaje cotidiano, cercano y comprensible para cualquier persona**, como un profesor que explica con paciencia y claridad. Los análisis transmiten confianza y claridad, generando apetito por comprender y operar el mercado. **Se permite y se busca** enfatizar la dirección, tomar postura clara y explicar los problemas macroeconómicos de forma sencilla y aplicable. Lo que sigue **prohibido** es el lenguaje extremo, catastrófico o la jerga acartonada/distante (dramatizar el movimiento, atribuir "sensaciones" al mercado, vaticinar catástrofes, tecnicismos vacíos sin traducción). En una frase: **claridad pedagógica y énfasis direccional sí, dramatización ni jerga impenetrable no**.
 
-| ❌ Evitar (extremo/emocional/coloquial) | ✅ Usar (técnico/objetivo) |
+| ❌ Evitar (extremo/emocional/jerga oscura) | ✅ Usar (cercano/cotidiano/objetivo) |
 |---|---|
-| "el oro se va a derrumbar" | "sesgo bajista" / "expectativas de corrección" |
-| "el mercado tiene una sensación pésima" | "presión vendedora" / "debilidad en el precio" |
-| "esto se va a disparar / explotar" | "sesgo alcista" / "impulso comprador" |
-| "está volando / por las nubes" | "alta volatilidad" / "momentum alcista" |
-| "pánico" / "euforia" / "terror" | "aversión al riesgo" / "apetito por riesgo" |
+| "el oro se va a derrumbar" | "presión a la baja" / "espacio de corrección" |
+| "el mercado tiene una sensación pésima" | "más vendedores que compradores" / "debilidad" |
+| "esto se va a disparar / explotar" | "impulso comprador" / "fuerza al alza" |
+| "está volando / por las nubes" | "movimiento rápido" / "alta volatilidad" |
+| "pánico" / "euforia" / "terror" | "cautela en el mercado" / "búsqueda de refugio" |
 
 Reglas:
-- Enfatizar con dirección, sin dramatizar: hablar con fuerza de **sesgo, tendencia, momentum, presión, volatilidad, debilidad/fortaleza, corrección** y nombrar hacia dónde se dirige el activo, pero sin emociones atribuidas al mercado ni finales catastróficos.
-- Tomar postura: cada análisis nombra el escenario más probable (sesgo). Los escenarios siguen siendo condicionales (`🟢 sobre X → …`, `🔴 bajo Y → …`), nunca certezas absolutas ("se va a derrumbar"), pero sí señalan claramente la dirección de mayor probabilidad.
-- Profesional con gancho **≠** neutral sin dirección: un mensaje "objetivo" que no toma postura direccional está incompleto (ver Regla de oro del Principio fundamental).
-- Esto **no** habilita jerga sin explicar: si aparece un término técnico o una sigla, sigue siendo obligatorio explicarlo en voz novata (ver [estilo mensajes WhatsApp] y "Datos macro en español + Diccionario rápido"). Profesional ≠ inaccesible.
+- Traducir siempre lo macro a la vida cotidiana: explicar por qué un dato de inflación, tasas o petróleo afecta el bolsillo o la decisión de inversión de forma simple.
+- Enfatizar con dirección, sin dramatizar: hablar con claridad de **sesgo, tendencia, fuerza, freno, rebote, piso y techo**, nombrando hacia dónde se inclina la mayor probabilidad.
+- Tomar postura pedagógica: cada análisis nombra el escenario más probable (`🟢 sobre X → …`, `🔴 bajo Y → …`) sin rodeos ni ambigüedades, pero sin prometer certezas mágicas.
+- Si aparece un concepto técnico o sigla, **siempre** se explica en lenguaje simple (Regla de oro: si hay duda entre complicar o simplificar, siempre simplificar). Profesional = accesible y claro.
 
 ### Prohibido el guion largo como inciso (OBLIGATORIO en texto de cliente)
 En todo texto que lea un cliente —mensajes de WhatsApp, pies de Story, textos dentro de las piezas, guiones de venta— **nunca** se usa el guion largo `—` ni el medio `–` para abrir un inciso o una aposición ("el stop en 1.758,09 — para eso está"). Se reescribe con puntuación corriente: punto seguido, coma o dos puntos.
@@ -307,8 +318,9 @@ En todo texto que lea un cliente —mensajes de WhatsApp, pies de Story, textos 
 | WTI.spot | 3 | $90.181 | $90.18 / $90.2 |
 | US100.spot | 2 | 30,350.01 | 30.350 / 30,350 |
 | Acciones | 2 | $192.50 | $192.5 / $193 |
-| COPPER | 0 | 13720 | 13.720 / 13720.0 |
+| COPPER | 1 | $14274.0 USD/t | $14.274 / 14274 |
 
+*El Cobre se analiza y cotiza siempre por su valor por tonelada métrica (`USD/t`) disponible en el terminal MT5.*
 Nunca truncar ceros al final (89.60, no 89.6). Nunca redondear a enteros salvo que digits = 0.
 
 ## Eventos de alto impacto (decisiones de tasas)
@@ -377,7 +389,7 @@ que `mcp/mcp_config.json` frente a su `.example`.
 |-----|--------|-----------|----------|
 | **market-data** | ✅ Activo | Análisis técnico MT5 (`get_asset_levels`) + niveles dibujados a mano por el director en MT5 (`get_chart_objects`) + calendario económico Investing.com (`obtener_calendario_macro`) + especificaciones de contrato y sesiones (`get_symbol_spec`) + operaciones abiertas del terminal (`get_open_positions`). Noticias vía WebSearch. | Comandos de datos de mercado y operativas |
 | **WebSearch (investing.com + fuentes oficiales)** | ✅ Activo | Calendario económico y noticias relevantes | `/dato_macro`, `/noticia` y comandos de día |
-| **WhatsApp (Evolution API)** | ⏳ Pendiente conexión Docker | Envío directo al grupo | Flujo manual por ahora |
+| **WhatsApp Web (Playwright)** | ✅ Activo | Envío directo a los 7 canales (`scripts/enviar_whatsapp.py`), con verificación de entrega contra el DOM y frenos de cadencia | Tras la aprobación del director |
 | **TrendRadar / Firecrawl / Finnhub** | ❌ No activos | Reemplazados por market-data (MT5) + WebSearch | — |
 
 **Nota**: el MCP `market-data` expone **siete** tools:
@@ -391,13 +403,42 @@ que `mcp/mcp_config.json` frente a su `.example`.
 
 Contrato de error común: si el dato no está disponible retorna `{'error': 'CÓDIGO', 'message': '...'}` — nunca array vacío ni `None` silencioso. La antigua `get_economic_events` fue reemplazada por la tool nativa (#53); `get_market_context` (noticias Finnhub) quedó deprecada y se purgó del registro — las **noticias** se obtienen vía `WebSearch` (investing.com + fuentes oficiales: Fed, BCCh, OPEP+, EIA, BLS). Ver `docs/archive/superpowers/specs/2026-06-05-calendario-macro-nativo-mt5-design.md`.
 
-**Flujo actual**: los comandos generan contenido → muestran para copiar → guardan en `data/mensajes/`. Cuando Evolution API esté conectada a WhatsApp/Baileys, el envío pasará a ser automático.
+**Flujo actual**: los comandos generan el contenido → lo muestran al director → **al aprobar**, se guarda en
+`data/mensajes/` y se envía con `scripts/enviar_whatsapp.py`. Evolution API quedó descartada: el envío va por
+WhatsApp Web con Playwright sobre una sesión vinculada (`--login`, una vez).
 
-**Setup WhatsApp**: requiere Evolution API en Docker (`docker run -d --name evolution-api -p 8080:8080 atendai/evolution-api`). Ver instrucciones en `mcp/mcp_config.json`.
+**Los siete canales temáticos**: el contenido ya no va a un grupo único. `config/whatsapp_grupos.json` mapea
+cada carpeta (`01_macro_y_apertura` … `07_oportunidades_cuantitativas`) al nombre real del canal en WhatsApp, y
+resuelve alias en lenguaje natural (`metales`, `oro`, `forex`, `cripto`…). `01_macro_y_apertura` es el **grupo
+padre** (comunidad), y cada canal temático recibe además su propia lectura macro.
 
-## Stories GI
+> [!CAUTION]
+> **Automatizar WhatsApp Web va contra sus términos de servicio** y el número es el del negocio. El sender
+> impone 45 s mínimos entre envíos y un cupo de 40 al día (`seguridad` en `config/whatsapp_grupos.json`,
+> contador en `data/.whatsapp_envios.json`). No subas esos límites, no metas el envío en un bucle y no lo
+> lances en paralelo: el perfil de sesión no admite dos procesos a la vez.
 
-Piloto (issue #109): comando `/story [tipo]` genera Stories de marca (imagen 1920×1080).
+## Series de precios: en disco, no en git
+
+`data central/DATA PRECIOS OHLC/` lo llena `scripts/extractor_precios.py` desde MT5 y
+lo leen `macro_bias_engine.py` y `ticket_engine.py`. Las series intradía y diarias
+(`*_M15`, `*_H1`, `*_D1`) **están gitignoradas**: pesan ~5 MB cada una y se
+regeneran, así que versionarlas sumaba ~66 MB a la historia por cada ingesta sin
+aportar nada que MT5 no devuelva. Las semanales y `latest_prices_summary.json` sí se
+versionan: son livianas y sirven de referencia sin terminal.
+
+**En un clon nuevo hay que correr el extractor antes que el motor.** Ojo con esto:
+`ticket_engine.cargar_serie_h1_archivo` devuelve `None` en silencio cuando el archivo
+no está, así que sin las series el motor no falla, simplemente deja de emitir
+tickets. Si el resultado sale vacío, lo primero que hay que descartar es que falten
+las series.
+
+## Stories GI y Generación de Imágenes
+
+> [!CRITICAL]
+> **Prohibición Total de Modelos de Difusión / IA Text-to-Image (`generate_image`)**: Queda **estrictamente prohibido** utilizar la herramienta `generate_image` o modelos de generación de imágenes por difusión de IA para crear piezas, terminales, infografías o gráficos en este proyecto. Todo el contenido visual DEBE ser maquetado en HTML/CSS estructurado (`templates/stories/`) con datos reales y renderizado vía Playwright/Chromium siguiendo el Brandkit oficial.
+
+Piloto (issue #109): comando `/story [tipo]` genera Stories de marca (imagen 1920×1080 o 1080×1920).
 `[tipo]` soportados hoy: `dato_macro`, `alerta`, `recomendacion`, `quote`, `breaking`, `encuesta`,
 `edu` (Fase B, issues #121/#123/#125/#127), `flash` (Fase C, issue #129), `postventa` (Fase C) y
 `calendario` (fuera de fase, pedido directo del director 2026-08-10). `calendario` señala los
@@ -421,7 +462,7 @@ plantilla con firma acreditada** —una recomendación induce una operación, as
 quién la respalda— y **cuenta para el límite de 3 señales por semana**; obliga a TP y SL en pesos y
 tiene campo para el costo de mantención (swap), que es lo que separa una operación comunicada con
 honestidad de una que solo muestra la ganancia. `alerta` (plantilla "03 Alerta de Mercado") combina niveles reales del motor
-(`get_asset_levels`) con una narrativa de alerta (mismo criterio editorial de `/alerta`); `quote`
+(`get_asset_levels`) con una narrativa de alerta (mismo criterio editorial de `/alerta`). **Regla de Inyección Obligatoria de Niveles en Gráficos de Stories**: el payload DEBE incluir obligatoriamente el array `hitos` (punto `actual` con precio formateado y guía) y el array `niveles` (líneas horizontales con `etiqueta` y `rol`, como $S_1$, $R_1$ o barreras macro/intervenciones soberanas como el nivel MOF 160.000 en USD/JPY). Queda terminantemente prohibido generar gráficos con la serie de velas muda / sin niveles numéricos trazados. `quote`
 es una pieza 100% editorial (cita + autor + cargo, sin dato del motor); `breaking` es una pieza
 editorial de noticia urgente (kicker + titular + cifra clave + contexto + reacción, sin dato del
 motor ni búsqueda propia de evento); `encuesta` es una pieza editorial de sentimiento binario
@@ -459,22 +500,10 @@ colapsaran, una pieza dorada bajista se leería como alcista dorada. Diseño com
 `docs/superpowers/specs/2026-08-04-rediseno-stories-gi-design.md`.
 
 Único renderer: `scripts/story_render.py`
-(payload JSON → HTML → PNG con Playwright headless). **Formato del lienzo**: el flag
-`--formato horizontal|vertical` elige entre 16:9 (1920×1080, por defecto) y 9:16 (1080×1920, para
-celular). El formato viaja por el CLI y **nunca** por el payload — el payload es contrato de
-contenido y el formato es presentación, así el **mismo payload rinde ambos**. Cada snapshot es un
-único archivo que se adapta con `@media (max-aspect-ratio: 1/1)`, en vez de tener un archivo por
-formato (evita que la versión vertical se desfase de la horizontal). Migradas a responsive:
-`templates/stories/postventa.html`, `templates/stories/alerta.html`,
-`templates/stories/operacion.html` y `templates/stories/calendario.html`; las otras 5 siguen solo en
-horizontal — una plantilla por Change, mismo criterio que las Fases B y C. Snapshots de marca:
-`templates/stories/alerta.html`, `templates/stories/quote.html`, `templates/stories/breaking.html`,
-`templates/stories/encuesta.html`, `templates/stories/edu.html`, `templates/stories/flash.html`,
-`templates/stories/postventa.html`, `templates/stories/operacion.html`,
-`templates/stories/dato_macro.html`, `templates/stories/recomendacion.html`,
-`templates/stories/oportunidad.html` y `templates/stories/calendario.html`. Las demás plantillas del canvas (Market Update, Indicador
-Macro, Trading Idea, Semanal, Carrusel "Oportunidades de la semana") llegan con los issues
-#111-#115 — ver `docs/design/stories-gi/plantillas-stories-gi.md` para el mapeo campo-por-campo.
+(payload JSON → HTML → PNG con Playwright headless). **Formato del lienzo y Regla de Formatos**:
+- **Horizontal 16:9 (`1920×1080`)**: Exclusivo para **`alerta` y piezas con gráficos técnicos MT5**, donde la amplitud temporal de velas es indispensable.
+- **Vertical 9:16 (`1080×1920`)**: **Obligatorio para toda imagen con carga textual y sin gráfico** (calendarios, agendas, guías pedagógicas `edu`, conceptos y breaking news). En vertical rige el criterio de ultra-legibilidad móvil del Brandkit: titulares Goldman 700 a 64px, tarjetas a 38px, cuerpo en 28-32px peso 600/700 y márgenes estrechos (~44px) para lectura natural en celular sin zoom.
+El formato viaja por el CLI (`--formato horizontal|vertical`) y **nunca** por el payload — el payload es contrato de contenido y el formato es presentación, así el **mismo payload rinde ambos**. Cada snapshot es un único archivo que se adapta con `@media (max-aspect-ratio: 1/1)`. Snapshots de marca vigentes: `templates/stories/alerta.html`, `templates/stories/breaking.html`, `templates/stories/dato_macro.html` y `templates/stories/calendario.html`. Las demás plantillas del canvas llegan con los issues #111-#115.
 
 **Paleta y color (una sola fuente).** Los colores viven en `templates/stories/marca.css` y los
 snapshots los consumen con `var(--rol)`; ningún hex se escribe a mano. Los tokens se nombran por
@@ -538,14 +567,12 @@ oscila, así que el cierre más parecido puede caer en cualquier punto de la ser
 terminal abierto y `MetaTrader5`, que no es dependencia del repo: se inyecta con
 `uv run --with MetaTrader5`.
 
-**Plantilla `operacion`** (comunica una operación del equipo, en estado `abierta` o `cerrada` según
-`estado_slug` del payload): es la única con un **paso previo** al renderer. Su gráfico de recorrido
-lo produce `scripts/story_grafico.py`, que traduce la serie de precios y los hitos de la
-operación al SVG del token `{{grafico}}` y se encadena por stdin/stdout:
+**Generación de Gráfico con `story_grafico.py`**: traduce la serie de precios y los hitos/niveles
+al SVG del token `{{grafico}}` y se encadena por stdin/stdout:
 ```bash
-uv run python scripts/story_grafico.py < operacion.json \
-  | uv run python scripts/story_render.py --template templates/stories/operacion.html \
-      --out "$(scripts/ruta_story.ps1 ...)" --formato vertical
+uv run python scripts/story_grafico.py < alerta.json \
+  | uv run python scripts/story_render.py --template templates/stories/alerta.html \
+      --out "$(scripts/ruta_story.ps1 ...)" --formato horizontal
 ```
 El payload de entrada lleva una clave `recorrido` = `{serie, marcadores}`; el script la consume y la
 reemplaza por `grafico`. El reparto es estricto: el script calcula **coordenadas** y el snapshot
@@ -651,8 +678,10 @@ Todo contenido pasa por este flujo antes de enviarse:
 2. Lo muestra al director para aprobación.
 3. Pregunta: "¿Adjuntar chart de MT5?"
 4. El director aprueba o pide ajustes.
-5. **Al aprobar**: guardar automáticamente en `data/mensajes/YYYY-MM-DD_HH-MM_[tipo].txt` y mostrar el texto listo para copiar.
-6. El director copia y pega el texto en el grupo de WhatsApp.
+5. **Al aprobar**: guardar automáticamente en `data/mensajes/YYYY-MM-DD_HH-MM_[tipo].txt`.
+6. Enviar al canal que corresponda con `scripts/enviar_whatsapp.py --grupo <alias> [--adjunto ...] --mensaje-archivo ...`.
+   El comando verifica que la pieza aparezca en la conversación antes de reportar éxito; si aborta, **no se envió**,
+   y hay que revisar si llegó antes de reintentar para no duplicarla.
 
 **Regla de guardado**: después de cada aprobación, SIEMPRE guardar el mensaje final en `data/mensajes/` con la estructura **día → activo → tipo** (issue #45). Construir la ruta con el helper determinista `scripts\ruta_mensaje.ps1` (NUNCA armarla a mano):
 ```powershell
@@ -669,7 +698,9 @@ El helper crea las carpetas y devuelve la ruta lista para `Write`. Si la pieza n
 
 **Nunca se envía nada al grupo sin aprobación explícita del director.**
 
-**Nota**: Evolution API (Docker) está instalada y lista en `mcp/docker-compose.yml`. Cuando se resuelva la conexión WhatsApp/Baileys, el envío pasará a ser automático sin cambios adicionales.
+**Nota**: los selectores del sender están medidos contra el DOM real de WhatsApp Web y comentados en
+`src/whatsapp_sender.py`. WhatsApp cambia su interfaz sin avisar: si un envío empieza a fallar, el primer paso es
+volver a medir esos selectores, **nunca** relajar la verificación de entrega.
 
 ## Slash Commands disponibles (29)
 
@@ -699,7 +730,7 @@ Invocar con `/nombre` desde Claude Code:
 | `/chart` | Genera screenshot de MT5 con indicador y temporalidad a elección |
 | `/story [tipo]` | Genera una Story de marca GI (imagen 1920×1080). `[tipo]` soportados hoy: `dato_macro`, `alerta`, `recomendacion`, `quote`, `breaking`, `encuesta`, `edu`, `flash`, `postventa`, `calendario`; demás plantillas en #111-#115. Ver sección "Stories GI". |
 | `/oportunidad [activo]` | Pieza que invita a operar: imagen (plantilla `oportunidad`) + mensaje de WhatsApp con contexto, llamado a la acción, fuente y disclaimer. Precios SIEMPRE del motor — si MT5 falla, se detiene, nunca deduce. No es señal: sin entrada, TP ni SL. Máximo 3 al día. |
-| `/carrusel [tanda]` | Carrusel de una tanda: `screener_gi.py` puntúa el universo con el `Score_GI` y elige el Top 3; el comando escribe el texto y rinde las Stories en ambos formatos. Máximo 3 imágenes (WhatsApp corta con `+2` a partir de la cuarta). |
+| `/carrusel` | Carrusel responsivo de alertas de mercado: `screener_gi.py` detecta la sesión activa y hora real, puntúa el universo con el `Score_GI` y elige el Top 3; el comando escribe el texto y rinde las Stories en ambos formatos. Máximo 3 imágenes (WhatsApp corta con `+2` a partir de la cuarta). |
 | `/informe [apertura\|cierre]` | Informe de la jornada. Apertura en PDF institucional A4; cierre chat-first (mensaje + gráfico), por el criterio de canal de la skill de reporte editorial. La apertura no se emite con el sesgo del motor vencido salvo `--con-datos-viejos`, que estampa el aviso. |
 | `/señal` | Señal operativa (verifica límite 3/semana automáticamente) |
 | `/alerta` | Detecta qué mueve el mercado ahora y genera alerta urgente |
@@ -783,7 +814,7 @@ grupo-analisis-mercado/
 **Solución (IMPLEMENTADA):** Embeber CSS directamente en cada plantilla HTML en bloques `<style>`, eliminando la dependencia de rutas externas.
 
 **Cómo se aplicó:**
-- Todas las plantillas (`oportunidad.html`, `alerta.html`, `recomendacion.html`, etc.) ahora incluyen `marca.css` y `piel.css` (si aplica) incrustados en `<style>` en el `<head>`.
+- Todas las plantillas (`alerta.html`, `dato_macro.html`, `calendario.html`, etc.) ahora incluyen `marca.css` y `piel.css` (si aplica) incrustados en `<style>` en el `<head>`.
 - Script de automatización: `scripts/embeber_css_plantillas_v3.py` (incrusta CSS en cualquier plantilla que lo use).
 
 **Impacto:**

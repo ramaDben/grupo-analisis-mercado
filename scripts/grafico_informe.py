@@ -168,7 +168,7 @@ def construir_grafico(
     x = list(tiempos[corte:]) if tiempos else list(range(len(cierres) - corte))
     y = cierres[corte:]
 
-    fig, ax = plt.subplots(figsize=(7.2, 2.5), dpi=300)
+    fig, ax = plt.subplots(figsize=(7.2, 2.82), dpi=300)
     fig.patch.set_facecolor(c["fondo"])
     ax.set_facecolor(c["fondo"])
     ax.grid(True, linestyle="--", linewidth=0.6, color=c["grilla"], alpha=0.9)
@@ -194,20 +194,19 @@ def construir_grafico(
             )
 
     niveles = niveles or {}
-    for clave, color, rotulo in (
-        ("r1", c["resistencia"], "Resistencia"),
-        ("s1", c["soporte"], "Soporte"),
+    for clave, color, estilo, rotulo in (
+        ("r2", c["resistencia"], "--", "Resistencia R2"),
+        ("r1", c["resistencia"], ":", "Resistencia R1"),
+        ("fibo_50", c["ema_larga"], "-.", "Fibo 50%"),
+        ("nivel_tactico", c["ema_larga"], "-.", "Nivel Clave"),
+        ("s1", c["soporte"], ":", "Soporte S1"),
+        ("s2", c["soporte"], "--", "Soporte S2"),
     ):
         nivel = niveles.get(clave)
         if not isinstance(nivel, (int, float)):
             continue
-        # El rotulo va a la leyenda y no flotando sobre la linea. Una etiqueta
-        # suelta se cruza con la leyenda apenas el nivel queda cerca del precio,
-        # que es justo cuando el nivel importa: en USD/CLP la resistencia quedaba
-        # ilegible detras del recuadro. `loc="best"` no lo evita porque solo
-        # considera lineas y parches, no anotaciones.
         ax.axhline(
-            float(nivel), color=color, linestyle=":", linewidth=1.3, alpha=0.95,
+            float(nivel), color=color, linestyle=estilo, linewidth=1.2, alpha=0.95,
             zorder=3, label=f"{rotulo} {formatear_precio(float(nivel), digits)}",
         )
 
@@ -244,7 +243,7 @@ def construir_grafico(
         titulo += "\n" + "\n".join(lineas)
     ax.set_title(titulo, fontsize=9.5, fontweight="bold", color=c["texto"],
                  pad=7, loc="left")
-    leg = ax.legend(loc="best", frameon=True, facecolor=c["fondo"],
+    leg = ax.legend(loc="lower left", frameon=True, facecolor=c["fondo"],
                     edgecolor=c["borde"], fontsize=7, framealpha=0.93,
                     ncol=2, columnspacing=1.1, handlelength=1.8)
     for t in leg.get_texts():

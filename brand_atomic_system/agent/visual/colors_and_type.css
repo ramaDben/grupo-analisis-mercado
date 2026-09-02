@@ -1,0 +1,38 @@
+/* Paleta de Marca y Tipografía Oficial de Grupo Inteligencia */
+:root {
+  --fondo:          #000000;
+  --fondo-acento:   #0E2420;
+  --fondo-alt:      #0A0A0F;
+  --fondo-sube:     #123A2A;
+  --fondo-baja:     #2A1220;
+
+  --acento:         #50C0A8;
+  --acento-azul:    #3C8CAA;
+  --acento-oscuro:  #143028;
+
+  --sube:           #00DC82;
+  --sube-suave:     #53C1AB;
+  --baja:           #E84040;
+  --baja-suave:     #F5A3A3;
+  --aviso:          #FFB020;
+
+  --activo-oro:     #E8B44C;
+  --activo-wti:     #E8783C;
+  --activo-us100:   #4C86E8;
+  --activo-usdclp:  var(--acento);
+  --activo-bitcoin: #F7931A;
+  --activo-sol:     #C158D6;
+
+  --texto-1:        #FFFFFF;
+  --texto-2:        #B0B5C0;
+  --texto-3:        #6E6A7A;
+  --texto-borde:    #E2E8F0;
+  --blanco:         #FFFFFF;
+
+  --font-display:   "Goldman", sans-serif;
+  --font-sans:      "Plus Jakarta Sans", sans-serif;
+
+  --glass-bg:       rgba(8, 20, 24, 0.75);
+  --glass-border:   rgba(80, 192, 168, 0.40);
+  --glass-blur:     blur(28px);
+}

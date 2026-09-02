@@ -1,23 +1,30 @@
 import argparse
-import re
 import base64
 import markdown
+import re
+import sys
 from pathlib import Path
 from urllib.parse import unquote
 from playwright.sync_api import sync_playwright
 import pypdf
 
-# La raiz se deduce de la ubicacion del script y no se escribe a mano: son cuatro
-# niveles arriba (scripts -> generar-reporte-editorial -> skills -> .agents -> raiz).
-# Con la ruta absoluta anterior el generador solo funcionaba en la maquina del
-# director, que es la misma razon por la que .agents/mcp.json queda fuera de git.
 RAIZ = Path(__file__).resolve().parents[4]
+if str(RAIZ / "scripts") not in sys.path:
+    sys.path.insert(0, str(RAIZ / "scripts"))
+
+try:
+    from validar_consistencia_temporal import validar_archivo_markdown, TemporalConsistencyError
+except ImportError:
+    validar_archivo_markdown = None
+    TemporalConsistencyError = Exception
 FUENTES = RAIZ / "templates" / "stories" / "fonts"
 
 CATALOGO = [
-    ("space-grotesk-600.woff2", "Space Grotesk", 600),
-    ("space-grotesk-700.woff2", "Space Grotesk", 700),
-    ("syne-800.woff2", "Syne", 800),
+    ("plus-jakarta-sans-400.woff2", "Plus Jakarta Sans", 400),
+    ("plus-jakarta-sans-600.woff2", "Plus Jakarta Sans", 600),
+    ("plus-jakarta-sans-700.woff2", "Plus Jakarta Sans", 700),
+    ("goldman-400.woff2", "Goldman", 400),
+    ("goldman-700.woff2", "Goldman", 700),
 ]
 
 def _bloque_fuentes():
@@ -31,11 +38,6 @@ def _bloque_fuentes():
                 f"font-style:normal;font-display:swap;"
                 f'src:url(data:font/woff2;base64,{datos}) format("woff2")}}'
             )
-    reglas.append(
-        '@font-face{font-family:"Space Grotesk";font-weight:400;'
-        'font-style:normal;font-display:swap;'
-        f'src:url(data:font/woff2;base64,{base64.b64encode((FUENTES / "space-grotesk-600.woff2").read_bytes()).decode("ascii")}) format("woff2")}}'
-    )
     return "\n".join(reglas)
 
 # Tamano de letra base del maquetador: 10 a 10.5 px. Chromium imprime la A4 a
@@ -92,6 +94,16 @@ def _construir_html(
         subtitle_color = "#D1F2EB"     # Menta claro
         divider_color = "#3E91AF"      # Azul Cian
         disclaimer_accent = "#3E91AF"  # Azul Cian para 'AVISO LEGAL'
+    elif tema in ["rojizo", "rojo", "ruby"]:
+        cover_bg = "#180710"
+        cover_grad_start = "#2D0B1A"
+        cover_grad_end = "#12050D"
+        disclaimer_bg = "#180710"
+        accent_color = "#50C0A8"       # Verde marca GI
+        tag_color = "#82E0CE"          # Menta suave
+        subtitle_color = "#E2E8F0"
+        divider_color = "#50C0A8"
+        disclaimer_accent = "#50C0A8"
     else:
         cover_bg = "#0D0D1A"
         cover_grad_start = "#1A1A2E"
@@ -116,9 +128,10 @@ def _construir_html(
 body {{
     margin: 0;
     padding: 0;
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     color: #3A3F52;
     background: #FFFFFF;
+    -webkit-font-smoothing: antialiased;
 }}
 .page-container {{
     width: 794px;
@@ -145,7 +158,7 @@ body {{
     opacity: 0.6;
 }}
 .flowing-container {{
-    width: 794px;
+    width: 100%;
     box-sizing: border-box;
     background: #FFFFFF;
     break-after: page;
@@ -154,15 +167,74 @@ body {{
     width: 100%;
     border-collapse: collapse;
 }}
-/* Thead/Tfoot para repetir margenes en cortes de pagina */
+/* Thead/Tfoot para repetir margenes en cortes de pagina de forma simétrica */
 .flowing-table thead td {{
-    padding: 13mm 24mm 0 24mm;
+    padding: 12mm 18mm 0 18mm;
 }}
 .flowing-table tbody td {{
-    padding: 0 24mm;
+    padding: 0 18mm;
 }}
 .flowing-table tfoot td {{
-    padding: 0 24mm 13mm 24mm;
+    padding: 0 18mm 12mm 18mm;
+}}
+
+/* Cajas de Aviso / Admonitions con diseño de alta gama */
+.admonition {{
+    margin: 14px 0;
+    padding: 12px 16px;
+    border-radius: 6px;
+    box-sizing: border-box;
+    width: 100%;
+    break-inside: avoid;
+    page-break-inside: avoid;
+}}
+.admonition.caution, .admonition.warning {{
+    background: #FFF5F5;
+    border: 1px solid #FEB2B2;
+    border-left: 4.5px solid #E84040;
+    color: #742A2A;
+}}
+.admonition.important, .admonition.tip {{
+    background: #F0FDF9;
+    border: 1px solid #A7F3D0;
+    border-left: 4.5px solid #50C0A8;
+    color: #064E3B;
+}}
+.admonition.note {{
+    background: #F0F9FF;
+    border: 1px solid #BAE6FD;
+    border-left: 4.5px solid #0284C7;
+    color: #0C4A6E;
+}}
+.admonition-header {{
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}}
+.admonition-body {{
+    font-size: 10.5px;
+    line-height: 1.55;
+    color: inherit;
+}}
+
+pre {{
+    background: #F8FAFC !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 6px !important;
+    padding: 10px 14px !important;
+    font-family: 'Space Grotesk', monospace !important;
+    font-size: 9.5px !important;
+    line-height: 1.4 !important;
+    color: #1E293B !important;
+    overflow-x: auto !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
 }}
 
 .header {{
@@ -174,7 +246,7 @@ body {{
     margin-bottom: 16px;
 }}
 .header-left {{
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 9.5px;
     font-weight: 700;
     letter-spacing: 0.14em;
@@ -182,7 +254,7 @@ body {{
     color: #3E91AF;
 }}
 .header-right {{
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 9px;
     font-weight: 600;
     color: #737373;
@@ -197,14 +269,14 @@ body {{
     margin-top: 18px;
 }}
 .footer-left {{
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 9.5px;
     font-weight: 700;
     letter-spacing: 0.14em;
     color: #53C1AB;
 }}
 .footer-right {{
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 9px;
     color: #737373;
     letter-spacing: 0.05em;
@@ -221,9 +293,9 @@ p {{
     font-weight: 400;
 }}
 h1 {{
-    font-family: 'Syne', sans-serif;
-    font-size: 22px;
-    font-weight: 800;
+    font-family: 'Goldman', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
     color: #0D0D1A;
     margin: 6px 0 16px 0;
     line-height: 1.25;
@@ -231,11 +303,9 @@ h1 {{
     padding-bottom: 8px;
     letter-spacing: -0.01em;
     display: block;
-    transform: scaleY(1.14);
-    transform-origin: left bottom;
 }}
 h2 {{
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 14px;
     font-weight: 700;
     color: #3E91AF;
@@ -246,7 +316,7 @@ h2 {{
     page-break-after: avoid;
 }}
 h3 {{
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 11.5px;
     font-weight: 700;
     color: #0D0D1A;
@@ -276,7 +346,7 @@ blockquote {{
     border-left: 3px solid #3E91AF;
 }}
 blockquote p {{
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 12px;
     font-weight: 700;
     color: #3E91AF;
@@ -314,13 +384,24 @@ img {{
     border: 1px solid #D0D7DE;
     box-shadow: 0 2px 6px rgba(13, 13, 26, 0.04);
 }}
+/* Una agenda de quince eventos es mas alta que una pagina A4, y `break-inside:
+   avoid` es una preferencia que el motor abandona cuando el bloque no cabe en
+   ninguna pagina. Sin esto, la tabla se parte y la continuacion arranca sin
+   encabezado: media docena de filas de numeros sin columna que los nombre. */
+.content thead {{
+    display: table-header-group !important;
+}}
+.content tbody tr {{
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+}}
 .content th {{
     background: #0D0D1A !important;
     color: #FFFFFF !important;
     padding: 9px 12px !important;
     font-weight: 700 !important;
     text-align: left !important;
-    font-family: 'Space Grotesk', sans-serif !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
     font-size: 10px !important;
     letter-spacing: 0.03em !important;
     border-bottom: 2px solid #53C1AB !important;
@@ -339,6 +420,22 @@ img {{
 .content tr:nth-child(even) td {{
     background: #F8FAF9 !important;
 }}
+/* El cuerpo de la tabla va en #3A3F52, y a 14 px la diferencia entre peso 400 y
+   700 de DM Sans casi no se lee. La cifra destacada de una celda se separa por
+   color ademas de por peso: es el dato que el lector esta buscando. */
+.content td strong {{
+    color: #0D0D1A !important;
+    font-weight: 700 !important;
+}}
+/* Links. El acento de marca (#3E91AF) da 3,58:1 sobre blanco y no llega al
+   minimo de 4,5:1 para texto; es el mismo problema que obligo a oscurecer la
+   paleta del folleto. Esta variante mide 5,7:1 y sigue siendo de la familia. */
+.content a {{
+    color: #2A6E88 !important;
+    text-decoration: underline !important;
+    text-underline-offset: 2px;
+    font-weight: 600 !important;
+}}
 </style>
 </head>
 <body>
@@ -347,29 +444,29 @@ img {{
 <div class="page-container cover-page">
     <div class="cover-gradient"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;position:relative;z-index:1;">
-        <span style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;letter-spacing:0.04em;color:#FFFFFF;display:inline-block;transform:scaleY(1.18);transform-origin:left center;">GRUPO INTELIGENCIA</span>
-        <span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:0.18em;color:{accent_color};">{badge_sup}</span>
+        <span style="font-family:'Goldman',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.06em;color:#FFFFFF;display:inline-block;">GRUPO INTELIGENCIA</span>
+        <span style="font-family:'Plus Jakarta Sans',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:0.18em;color:{accent_color};">{badge_sup}</span>
     </div>
     
     <div style="flex:1;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:1;max-width:82%;">
-        <span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.14em;color:{tag_color};text-transform:uppercase;margin-bottom:12px;">{tag_tipo}</span>
-        <h1 style="font-family:'Syne',sans-serif;font-size:46px;font-weight:800;line-height:1.08;margin:0 0 34px 0;color:#FFFFFF;border:none;padding:0;letter-spacing:-0.02em;display:block;transform:scaleY(1.15);transform-origin:left top;">{titulo}</h1>
-        <p style="font-family:'Space Grotesk',sans-serif;font-size:13px;line-height:1.6;color:{subtitle_color};margin:0 0 24px 0;max-width:90%;font-weight:400;">{subtitulo}</p>
+        <span style="font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.14em;color:{tag_color};text-transform:uppercase;margin-bottom:14px;">{tag_tipo}</span>
+        <h1 style="font-family:'Goldman',sans-serif;font-size:38px;font-weight:700;line-height:1.12;margin:0 0 26px 0;color:#FFFFFF;border:none;padding:0;letter-spacing:-0.01em;display:block;">{titulo}</h1>
+        <p style="font-family:'Plus Jakarta Sans',sans-serif;font-size:13.5px;line-height:1.6;color:{subtitle_color};margin:0 0 24px 0;max-width:90%;font-weight:400;">{subtitulo}</p>
         <div style="width:48px;height:3px;background:{divider_color};"></div>
     </div>
     
-    <div style="position:relative;z-index:1;border-top:1px solid rgba(255,255,255,0.16);padding-top:12px;display:flex;justify-content:space-between;align-items:center;">
+    <div style="position:relative;z-index:1;border-top:1px solid rgba(255,255,255,0.16);padding-top:14px;display:flex;justify-content:space-between;align-items:center;">
         <div style="display:flex;gap:24px;">
             <div style="display:flex;flex-direction:column;gap:2px;">
-                <span style="font-family:'Space Grotesk',sans-serif;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:#737373;">Fecha</span>
-                <span style="font-family:'Space Grotesk',sans-serif;font-size:10.5px;font-weight:600;color:#FFFFFF;">{fecha}</span>
+                <span style="font-family:'Plus Jakarta Sans',sans-serif;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:#737373;font-weight:600;">Fecha</span>
+                <span style="font-family:'Plus Jakarta Sans',sans-serif;font-size:10.5px;font-weight:600;color:#FFFFFF;">{fecha}</span>
             </div>
             <div style="display:flex;flex-direction:column;gap:2px;">
-                <span style="font-family:'Space Grotesk',sans-serif;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:#737373;">Analista</span>
-                <span style="font-family:'Space Grotesk',sans-serif;font-size:10.5px;font-weight:600;color:#FFFFFF;">{analista}</span>
+                <span style="font-family:'Plus Jakarta Sans',sans-serif;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:#737373;font-weight:600;">Área</span>
+                <span style="font-family:'Plus Jakarta Sans',sans-serif;font-size:10.5px;font-weight:600;color:#FFFFFF;">{analista}</span>
             </div>
         </div>
-        <span style="font-family:'Space Grotesk',sans-serif;font-size:8.5px;font-weight:600;color:{accent_color};">{paginas_badge}</span>
+        <span style="font-family:'Plus Jakarta Sans',sans-serif;font-size:8.5px;font-weight:700;color:{accent_color};">{paginas_badge}</span>
     </div>
 </div>
 
@@ -405,14 +502,14 @@ img {{
 <!-- PAGE FINAL: DISCLAIMER -->
 <div class="page-container" style="background:{disclaimer_bg};color:#C1E5E4;padding:24mm 32mm;display:flex;flex-direction:column;">
     <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:9px;border-bottom:1px solid rgba(255,255,255,0.15);margin-bottom:18px;flex-shrink:0;">
-        <span style="font-family:'Space Grotesk',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:0.14em;color:{disclaimer_accent};">AVISO LEGAL</span>
-        <span style="font-family:'Syne',sans-serif;font-size:12px;font-weight:800;letter-spacing:0.04em;color:#FFFFFF;display:inline-block;transform:scaleY(1.18);transform-origin:left center;">GRUPO INTELIGENCIA</span>
+        <span style="font-family:'Plus Jakarta Sans',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:0.14em;color:{disclaimer_accent};">AVISO LEGAL</span>
+        <span style="font-family:'Goldman',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.05em;color:#FFFFFF;display:inline-block;">GRUPO INTELIGENCIA</span>
     </div>
     <div style="flex:1;display:flex;flex-direction:column;gap:12px;overflow:hidden;">
-        <h2 style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#FFFFFF;margin:0;border:none;padding:0;letter-spacing:0;display:inline-block;transform:scaleY(1.15);transform-origin:left bottom;">Disclaimer</h2>
-        <p style="font-family:'Space Grotesk',sans-serif;font-size:10px;line-height:1.7;color:#C1E5E4;margin:0;">Este documento ha sido elaborado por Grupo Inteligencia con fines exclusivamente informativos y no constituye una oferta, solicitud o recomendación de inversión. Las opiniones expresadas representan el análisis actual y están sujetas a cambios sin previo aviso.</p>
-        <p style="font-family:'Space Grotesk',sans-serif;font-size:10px;line-height:1.7;color:#C1E5E4;margin:0;">La información contenida se basa en fuentes consideradas fiables al momento de su publicación; sin embargo, no se garantiza su exactitud, integridad o vigencia. Los mercados financieros implican riesgos, incluida la posible pérdida del capital invertido, y el desempeño pasado no garantiza resultados futuros.</p>
-        <p style="font-family:'Space Grotesk',sans-serif;font-size:10px;line-height:1.7;color:#C1E5E4;margin:0;">Los niveles técnicos, escenarios y sesgos presentados corresponden a la interpretación del equipo de análisis. Este material es de uso exclusivo y no debe distribuirse a terceros sin autorización expresa.</p>
+        <h2 style="font-family:'Goldman',sans-serif;font-size:18px;font-weight:700;color:#FFFFFF;margin:0;border:none;padding:0;letter-spacing:0.02em;display:inline-block;">Disclaimer</h2>
+        <p style="font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;line-height:1.7;color:#C1E5E4;margin:0;">Este documento ha sido elaborado por Grupo Inteligencia con fines exclusivamente informativos y no constituye una oferta, solicitud o recomendación de inversión. Las opiniones expresadas representan el análisis actual y están sujetas a cambios sin previo aviso.</p>
+        <p style="font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;line-height:1.7;color:#C1E5E4;margin:0;">La información contenida se basa en fuentes consideradas fiables al momento de su publicación; sin embargo, no se garantiza su exactitud, integridad o vigencia. Los mercados financieros implican riesgos, incluida la posible pérdida del capital invertido, y el desempeño pasado no garantiza resultados futuros.</p>
+        <p style="font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;line-height:1.7;color:#C1E5E4;margin:0;">Los niveles técnicos, escenarios y sesgos presentados corresponden a la interpretación del equipo de análisis. Este material es de uso exclusivo y no debe distribuirse a terceros sin autorización expresa.</p>
     </div>
 </div>
 
@@ -449,6 +546,43 @@ def _absolutizar_imagenes(html: str, base: Path) -> str:
     return re.sub(r'(<img[^>]*\ssrc=")([^"]+)(")', _sub, html)
 
 
+def _preprocesar_admoniciones(md: str) -> str:
+    def _reemplazar_callout(m: re.Match) -> str:
+        tipo = m.group(1).upper()
+        contenido = m.group(2).strip()
+        
+        iconos = {
+            "CAUTION": "⚠️",
+            "WARNING": "🛑",
+            "IMPORTANT": "💡",
+            "NOTE": "ℹ️",
+            "TIP": "🎯",
+        }
+        titulos = {
+            "CAUTION": "Aviso de Riesgo y Transparencia Operativa",
+            "WARNING": "Advertencia de Control Operativo",
+            "IMPORTANT": "Punto Clave para el Alumno",
+            "NOTE": "Nota Importante",
+            "TIP": "Recomendación de Mesa",
+        }
+        icono = iconos.get(tipo, "ℹ️")
+        titulo_def = titulos.get(tipo, "Información")
+        
+        lineas = [re.sub(r"^>\s*", "", l) for l in contenido.splitlines()]
+        texto_limpio = "<br>".join(lineas)
+        
+        clase = tipo.lower()
+        return (
+            f'<div class="admonition {clase}">\n'
+            f'<div class="admonition-header"><span>{icono}</span> <strong>{titulo_def}</strong></div>\n'
+            f'<div class="admonition-body">{texto_limpio}</div>\n'
+            f'</div>\n\n'
+        )
+
+    patron = r">\s*\[!(CAUTION|WARNING|IMPORTANT|NOTE|TIP)\]\s*\n((?:>.*(?:\n|$))*)"
+    return re.sub(patron, _reemplazar_callout, md)
+
+
 def crear_pdf(
     md_path: str = None,
     out_path: str = None,
@@ -459,7 +593,7 @@ def crear_pdf(
     header_left: str = "ANÁLISIS FUNDAMENTAL",
     header_right: str = "AGOSTO 2026 • MACROECONOMÍA",
     fecha: str = "Agosto 2026",
-    analista: str = "Área de Estudios",
+    analista: str = "Área de Research & Estrategia",
     tema: str = "verde",
     escala: float = 1.0
 ):
@@ -488,7 +622,15 @@ def crear_pdf(
     else:
         out_pdf = md_file.parent / f"{md_file.stem}_GI.pdf"
 
+    # Guardrail de Consistencia Temporal y Anti-Anacronismos
+    if validar_archivo_markdown:
+        try:
+            validar_archivo_markdown(md_file, fecha_param=fecha, estricto=True)
+        except TemporalConsistencyError as err:
+            raise SystemExit(f"\n[ERROR GUARDRAIL TEMPORAL]\n{err}\n")
+
     md_text = md_file.read_text(encoding="utf-8")
+    md_text = _preprocesar_admoniciones(md_text)
     html_content = markdown.markdown(md_text, extensions=['tables', 'fenced_code'])
     html_content = _absolutizar_imagenes(html_content, md_file.parent)
 
@@ -564,7 +706,7 @@ if __name__ == "__main__":
     parser.add_argument("--header-left", dest="header_left", help="Encabezado izquierdo", default="ANÁLISIS FUNDAMENTAL")
     parser.add_argument("--header-right", dest="header_right", help="Encabezado derecho", default="AGOSTO 2026 • MACROECONOMÍA")
     parser.add_argument("--date", dest="fecha", help="Fecha para la portada", default="Agosto 2026")
-    parser.add_argument("--analyst", dest="analista", help="Nombre del analista o área", default="Área de Estudios")
+    parser.add_argument("--analyst", dest="analista", help="Nombre del analista o área", default="Área de Research & Estrategia")
     parser.add_argument("--escala", dest="escala", type=float, default=1.0,
                         help="Multiplica el tamano de letra de lectura (1.45 deja el cuerpo en ~11 pt)")
     parser.add_argument("--theme", dest="tema", help="Tema de color de portada (verde | oscuro)", default="verde")

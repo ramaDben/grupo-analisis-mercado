@@ -1,6 +1,6 @@
 # /carrusel
 
-Carrusel de una tanda diaria: el escáner elige el Top 3 del universo con el Score_GI, y el comando escribe el texto y rinde las Stories.
+Carrusel responsivo de alertas de mercado: el escáner detecta la sesión activa, elige el Top 3 con el Score_GI, y el comando escribe el texto y rinde las Stories.
 
 ## Cómo ejecutar este comando
 

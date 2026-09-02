@@ -43,10 +43,9 @@ LIMITE_CARACTERES = 12_000
 # Para exponer uno nuevo: agregarlo acá y correr el script. No crear el archivo
 # a mano — el --check lo marcaría como desactualizado.
 COMANDOS = {
-"story": "Genera una Story de marca GI a partir de una plantilla (dato_macro, alerta, recomendacion, quote, breaking, encuesta, edu, flash, postventa).",
-    "oportunidad": "Genera la pieza que invita a operar: imagen más mensaje de WhatsApp. No es una señal: sin entrada, TP ni SL.",
+    "story": "Genera una Story de marca GI a partir de una plantilla (dato_macro, alerta, quote, breaking, encuesta, edu, flash, postventa, operacion).",
     "alerta": "Detecta qué está moviendo el mercado ahora y genera la alerta urgente para el grupo.",
-    "carrusel": "Carrusel de una tanda diaria: el escáner elige el Top 3 del universo con el Score_GI, y el comando escribe el texto y rinde las Stories.",
+    "carrusel": "Carrusel responsivo de alertas de mercado: el escáner detecta la sesión activa, elige el Top 3 con el Score_GI, y el comando escribe el texto y rinde las Stories.",
     "informe": "Informe de la jornada: PDF institucional en la apertura, mensaje con gráfico al cierre.",
     "dato_macro": "Lista los datos económicos del día y arma la pieza del que elija el director, en modo anticipación o resultado.",
     "apertura": "Niveles técnicos del día: pregunta activo, temporalidad e indicador, y arma el mensaje de apertura.",

@@ -67,17 +67,44 @@ DIR_SALIDA = RAIZ / "data" / "screener"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Las 3 tandas, ancladas a Nueva York
+# Sesiones de mercado continuas y tandas de referencia
 # ─────────────────────────────────────────────────────────────────────────────
-# El plan las define en hora de Chile (10:30 / 14:30 / 16:45 CLT), y ese es el
-# defecto: el desfase con Nueva York cambia dos veces al año porque los dos
-# hemisferios cambian de horario en sentido opuesto. NYSE abre 09:30 CLT en
-# agosto y 11:30 CLST en diciembre, así que "pre-cierre 16:45 CLT" describe en
-# enero un mercado que ya cerró hace horas.
-#
-# La referencia es la sesión, no el reloj local: apertura + 1 h, media tarde, y
-# cierre + 45 min. Expresado en hora de Nueva York el ancla no se mueve nunca, y
-# la hora de Chile se deriva para comunicarla.
+# El escáner opera de forma responsiva las 24 horas del día. La referencia es
+# el ciclo global de mercado anclado a Nueva York, derivando la hora de Chile
+# en tiempo real para comunicarla.
+SESIONES: dict[str, dict[str, Any]] = {
+    "asiatica": {
+        "nombre": "Sesión Asiática / Pacífico",
+        "tanda": 3,
+        "foco": "Foco en activos de Asia, JPY, Oro, Cobre, Cripto y materias primas",
+    },
+    "europea": {
+        "nombre": "Sesión Europea / Londres",
+        "tanda": 1,
+        "foco": "Quiebres de apertura europea, EUR, GBP, DAX y posicionamiento previo a EE.UU.",
+    },
+    "apertura_ny": {
+        "nombre": "Apertura Wall Street",
+        "tanda": 1,
+        "foco": "Volatilidad de primera hora, quiebres intradía y catalizadores macro",
+    },
+    "tarde_ny": {
+        "nombre": "Rotación de Tarde Wall Street",
+        "tanda": 2,
+        "foco": "Flujos vespertinos, rebalanceo institucional y continuidad de tendencia",
+    },
+    "cierre_ny": {
+        "nombre": "Cierre Wall Street / Post-Mercado",
+        "tanda": 3,
+        "foco": "Balance de la sesión americana, resultados corporativos y preparación para Asia",
+    },
+    "fin_de_semana": {
+        "nombre": "Fin de Semana / Cripto & Pre-Apertura",
+        "tanda": 1,
+        "foco": "Mercado OTC/Cripto y preparación estratégica para la apertura semanal",
+    },
+}
+
 TANDAS: dict[int, dict[str, Any]] = {
     1: {
         "nombre": "Apertura Wall Street",
@@ -211,8 +238,8 @@ _PATRONES_SEGUNDO_ORDEN = (
 # (SHORT_AGRESIVO, BUY_THE_DIP_AGGRESSIVE, FADE_TOP_RESISTANCE...). Un token
 # prohibido solo bloquea si apunta en la MISMA dirección que la lectura técnica:
 # que esté prohibido comprar agresivamente no impide comunicar una caída.
-_PROHIBIDO_BAJISTA = ("SHORT", "SELL", "BREAKDOWN", "FADE_TOP", "VENTA")
-_PROHIBIDO_ALCISTA = ("LONG", "BUY", "COMPRA", "CHASE", "FADE_SUPPORT")
+_PROHIBIDO_BAJISTA = ("SHORT_AGRESIVO", "VENTA_CONTRA_TENDENCIA", "SHORT_FADE_OVERBOUGHT", "SHORT_FADE")
+_PROHIBIDO_ALCISTA = ("BUY_THE_DIP_AGGRESSIVE", "COMPRA_SIN_CONFIRMACION", "LONG_INVERTIDO", "LONG_SWING_FADE")
 
 
 def _normalizar(texto: str) -> str:
@@ -272,30 +299,109 @@ def cargar_universo(solo_renderizables: bool = True) -> list[dict[str, Any]]:
     return universo
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Tandas
-# ─────────────────────────────────────────────────────────────────────────────
-def tanda_vigente(ahora_ny: datetime | None = None) -> int:
-    """La tanda cuyo ancla está más cerca de la hora de Nueva York.
+def filtrar_por_grupo(universo: list[dict[str, Any]], grupo: str) -> list[dict[str, Any]]:
+    """Filtra los activos del universo por grupo modular de WhatsApp o alias de categoría."""
+    slug = grupo.lower().strip()
+    alias = {
+        "fx": "forex",
+        "forex": "forex",
+        "divisas": "forex",
+        "dolar": "forex",
+        "commodities": "commodity",
+        "commodity": "commodity",
+        "materias_primas": "commodity",
+        "metales": "commodity",
+        "energia": "commodity",
+        "indices": "indice",
+        "indice": "indice",
+        "wallstreet": "indice",
+        "acciones": "accion",
+        "accion": "accion",
+        "etf": "accion",
+        "etfs": "accion",
+        "equities": "accion",
+        "crypto": "crypto",
+        "cripto": "crypto",
+        "criptomonedas": "crypto",
+        "02_forex_divisas": "forex",
+        "03_commodities_materias_primas": "commodity",
+        "04_indices_bursatiles": "indice",
+        "05_acciones_etfs": "accion",
+        "06_criptoactivos": "crypto",
+    }
+    objetivo = alias.get(slug, slug)
 
-    Se elige la más cercana en vez de exigir una ventana exacta porque el
-    director invoca a mano: si corre 20 minutos tarde, quiere la tanda que
-    corresponde, no un error.
+    filtrados = []
+    for a in universo:
+        cat = a.get("categoria", "").lower()
+        clase = a.get("clase", "").lower()
+        if objetivo == "forex" and (cat == "forex" or a["ticker"] in ("USDCLP", "EURUSD", "USDJPY", "GBPUSD", "USDIDX")):
+            filtrados.append(a)
+        elif objetivo == "commodity" and (cat in ("commodity", "commodities") or (clase == "forex_commodities" and cat not in ("forex", "crypto"))):
+            filtrados.append(a)
+        elif objetivo == "crypto" and (cat == "crypto" or clase == "crypto"):
+            filtrados.append(a)
+        elif objetivo == "indice" and (cat in ("indice", "indices") or clase == "indices"):
+            filtrados.append(a)
+        elif objetivo == "accion" and (cat in ("accion", "acciones", "etf", "etfs") or clase in ("acciones", "etfs")):
+            filtrados.append(a)
+    return filtrados
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Detección de sesión y tandas
+# ─────────────────────────────────────────────────────────────────────────────
+def detectar_sesion(ahora_ny: datetime | None = None) -> dict[str, Any]:
+    """Detecta dinámicamente la sesión activa del mercado según la hora en Nueva York.
+
+    Permite que el carrusel sea responsivo a cualquier hora de ejecución las 24 horas del día.
     """
     ahora = ahora_ny or datetime.now(tz=NY)
-    referencia = ahora.replace(second=0, microsecond=0)
+    dow = ahora.weekday()  # 0=Lunes, ..., 5=Sábado, 6=Domingo
+    minutos_dia = ahora.hour * 60 + ahora.minute
 
-    def distancia(n: int) -> timedelta:
-        h, m = TANDAS[n]["hora_ny"]
-        ancla = referencia.replace(hour=h, minute=m)
-        return abs(referencia - ancla)
+    # Sábado completo o Domingo antes de las 18:00 NY (apertura semanal)
+    if dow == 5 or (dow == 6 and minutos_dia < 18 * 60):
+        slug = "fin_de_semana"
+    # 02:00 (120 min) a 08:30 (510 min) -> Europa / Londres
+    elif 2 * 60 <= minutos_dia < 8 * 60 + 30:
+        slug = "europea"
+    # 08:30 (510 min) a 12:30 (750 min) -> Apertura Wall Street
+    elif 8 * 60 + 30 <= minutos_dia < 12 * 60 + 30:
+        slug = "apertura_ny"
+    # 12:30 (750 min) a 15:30 (930 min) -> Rotación Tarde Wall Street
+    elif 12 * 60 + 30 <= minutos_dia < 15 * 60 + 30:
+        slug = "tarde_ny"
+    # 15:30 (930 min) a 18:00 (1080 min) -> Cierre Wall Street / Post-Mercado
+    elif 15 * 60 + 30 <= minutos_dia < 18 * 60:
+        slug = "cierre_ny"
+    # 18:00 (1080 min) a 24:00 o 00:00 a 02:00 -> Asia / Pacífico
+    else:
+        slug = "asiatica"
 
-    return min(TANDAS, key=distancia)
+    datos_sesion = SESIONES[slug]
+    return {
+        "slug": slug,
+        "nombre": datos_sesion["nombre"],
+        "tanda": datos_sesion["tanda"],
+        "foco": datos_sesion["foco"],
+        "hora_real_ny": ahora.strftime("%H:%M"),
+        "hora_real_chile": ahora.astimezone(SANTIAGO).strftime("%H:%M"),
+    }
+
+
+def tanda_vigente(ahora_ny: datetime | None = None) -> int:
+    """La tanda correspondiente según la sesión detectada o el ancla más cercana."""
+    ahora = ahora_ny or datetime.now(tz=NY)
+    sesion = detectar_sesion(ahora)
+    return sesion.get("tanda", 1)
 
 
 def hora_chile_de_tanda(n: int, dia_ny: datetime | None = None) -> str:
     """El ancla de la tanda, expresada en hora de Chile para comunicarla."""
     base = dia_ny or datetime.now(tz=NY)
+    if n not in TANDAS:
+        return base.astimezone(SANTIAGO).strftime("%H:%M")
     h, m = TANDAS[n]["hora_ny"]
     ancla_ny = base.replace(hour=h, minute=m, second=0, microsecond=0)
     return ancla_ny.astimezone(SANTIAGO).strftime("%H:%M")
@@ -484,8 +590,12 @@ def factor_espacio(h1: dict[str, Any], d1: dict[str, Any], direccion: str) -> tu
 
     if consumo is None:
         return 0, f"espacio {espacio:.1f}x ATR H1, sin consumo diario medible"
-    if espacio >= 1.5 and consumo < 0.70:
+    # P0: Piso operativo para evitar falsos positivos a primera hora (reloj vs mercado).
+    # Si el consumo es < 15%, la sesión apenas comienza y no se otorga el bonus completo de 20 puntos.
+    if espacio >= 1.5 and 0.15 <= consumo < 0.70:
         return 20, f"espacio {espacio:.1f}x ATR H1 y ATR diario al {consumo:.0%}"
+    if espacio >= 1.5 and consumo < 0.15:
+        return 10, f"espacio {espacio:.1f}x ATR H1 (sesión inicial, consumo al {consumo:.0%})"
     if espacio >= 1.0 and 0.70 <= consumo <= 0.85:
         return 10, f"espacio {espacio:.1f}x ATR H1 y ATR diario al {consumo:.0%}"
     return 0, f"espacio {espacio:.1f}x ATR H1 y ATR diario al {consumo:.0%}"
@@ -518,6 +628,7 @@ def evaluar_activo(
     sesgos: dict[str, Any],
     ahora_santiago: datetime,
     analizador: Callable[[str, str], dict[str, Any]] = analizar_activo,
+    ignorar_agotamiento: bool = False,
 ) -> dict[str, Any]:
     """Puntúa un activo, o explica por qué queda fuera."""
     ticker = activo["ticker"]
@@ -534,9 +645,10 @@ def evaluar_activo(
     if "error" in d1:
         return {**base, "excluido": f"D1 {d1['error']}: {d1.get('message', '')}"}
 
-    motivo = gate_agotamiento(d1)
-    if motivo:
-        return {**base, "excluido": motivo}
+    if not ignorar_agotamiento:
+        motivo = gate_agotamiento(d1)
+        if motivo:
+            return {**base, "excluido": motivo}
 
     direccion = direccion_tecnica(h1)
 
@@ -671,23 +783,35 @@ def _conectar_terminal() -> list[str]:
         ]
 
 
-def _publicados_hoy(fecha_iso: str, tanda: int) -> set[str]:
-    """Tickers que ya salieron en una tanda anterior de hoy.
+def _publicados_hoy(
+    fecha_iso: str,
+    tanda: int | None = None,
+    hora_actual: str | None = None,
+) -> set[str]:
+    """Tickers que ya salieron en una corrida anterior de hoy.
 
-    La tanda 2 no debe repetir la tesis de la mañana: si el cliente recibe el
-    mismo activo tres veces en un día, el carrusel deja de ser una selección y
-    pasa a ser insistencia.
+    Si el cliente recibe el mismo activo tres veces en un día, el carrusel deja
+    de ser una selección y pasa a ser insistencia.
     """
     usados: set[str] = set()
     if not DIR_SALIDA.is_dir():
         return usados
-    for archivo in DIR_SALIDA.glob(f"{fecha_iso}_*_tanda*.json"):
+    for archivo in DIR_SALIDA.glob(f"{fecha_iso}_*.json"):
         try:
             datos = json.loads(archivo.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             continue
-        if datos.get("tanda", 0) >= tanda:
+        if tanda is not None and datos.get("tanda", 0) >= tanda:
             continue
+        if hora_actual is not None:
+            gen = datos.get("generado", "")
+            if gen:
+                try:
+                    hora_gen = gen.split(" ")[1].replace(":", "-")
+                    if hora_gen >= hora_actual.replace(":", "-"):
+                        continue
+                except Exception:
+                    pass
         for sel in datos.get("seleccion", []):
             usados.add(sel["ticker"])
     return usados
@@ -699,36 +823,52 @@ def escanear(
     solo_renderizables: bool = True,
     ahora_ny: datetime | None = None,
     analizador: Callable[[str, str], dict[str, Any]] = analizar_activo,
+    grupo: str | None = None,
+    modo_matriz: bool = False,
+    ignorar_agotamiento: bool = False,
 ) -> dict[str, Any]:
-    """Recorre el universo, aplica gates, puntúa y elige el Top N de la tanda."""
+    """Recorre el universo, aplica gates, puntúa y elige el Top N de la sesión/tanda o matriz por grupos."""
     ahora_ny = ahora_ny or datetime.now(tz=NY)
     ahora_stgo = ahora_ny.astimezone(SANTIAGO)
-    n_tanda = tanda or tanda_vigente(ahora_ny)
+
+    info_sesion = detectar_sesion(ahora_ny)
+    n_tanda = tanda or info_sesion["tanda"]
+    nombre_sesion = (
+        TANDAS[tanda]["nombre"]
+        if tanda and tanda in TANDAS
+        else info_sesion["nombre"]
+    )
+    foco_sesion = (
+        TANDAS[tanda]["foco"]
+        if tanda and tanda in TANDAS
+        else info_sesion["foco"]
+    )
+    sesion_slug = info_sesion["slug"] if not tanda else f"tanda{n_tanda}"
 
     eventos, delta_ust, avisos = _contexto_macro(ahora_stgo)
     sesgos, avisos_sesgo = _sesgos_playbook()
     avisos.extend(avisos_sesgo)
 
-    # Abrir el canal con el terminal antes de pedir la primera vela. `get_rates`
-    # no lo hace: dentro del MCP la conexión la abre el lifespan del server al
-    # arrancar, así que un script tiene que abrirla por su cuenta (mismo patrón
-    # que `scripts/serie_mt5.py`). Sin esto, MT5 responde -10004 'No IPC
-    # connection' en cada activo y el escaneo sale vacío culpando al terminal.
-    #
-    # Solo cuando el analizador es el real: los tests inyectan uno sintético
-    # justamente para no necesitar MT5.
     if analizador is analizar_activo:
         avisos.extend(_conectar_terminal())
 
     universo = cargar_universo(solo_renderizables)
-    if solo_renderizables:
+    if grupo:
+        universo = filtrar_por_grupo(universo, grupo)
+        avisos.append(f"universo filtrado exclusivamente al grupo/categoría '{grupo}' ({len(universo)} activos)")
+
+    if solo_renderizables and not grupo:
         avisos.append(
             f"universo limitado a {len(universo)} activos con imagen en disco. "
             "Los prompts de las que faltan estan en "
             "docs/design/stories-gi/imagenes-por-activo.md; --todos ignora el filtro"
         )
 
-    ya_usados = _publicados_hoy(ahora_stgo.date().isoformat(), n_tanda)
+    ya_usados = _publicados_hoy(
+        ahora_stgo.date().isoformat(),
+        tanda=tanda,
+        hora_actual=ahora_stgo.strftime("%H:%M"),
+    )
 
     evaluados: list[dict[str, Any]] = []
     excluidos: list[dict[str, Any]] = []
@@ -738,14 +878,27 @@ def escanear(
                 "ticker": activo["ticker"],
                 "nombre": activo["nombre"],
                 "clase": activo["clase"],
-                "excluido": "ya salio en una tanda anterior de hoy",
+                "excluido": "ya salio en una corrida anterior de hoy",
             })
             continue
-        res = evaluar_activo(activo, eventos, delta_ust, sesgos, ahora_stgo, analizador)
+        res = evaluar_activo(activo, eventos, delta_ust, sesgos, ahora_stgo, analizador, ignorar_agotamiento=ignorar_agotamiento)
         (excluidos if "excluido" in res else evaluados).append(res)
 
     evaluados.sort(key=lambda r: (-r["score"], r["ticker"]))
-    seleccion = [r for r in evaluados if r["score"] > 0][:top]
+
+    if modo_matriz:
+        # Cobertura Total: selecciona el Top 1 con score > 0 de cada una de las 5 categorías clave de mercado
+        categorias_orden = ["forex", "commodity", "indice", "accion", "crypto"]
+        seleccion = []
+        for cat_obj in categorias_orden:
+            candidatos_cat = [
+                r for r in evaluados
+                if r["score"] > 0 and r["ticker"] in {a["ticker"] for a in filtrar_por_grupo(universo, cat_obj)}
+            ]
+            if candidatos_cat:
+                seleccion.append(candidatos_cat[0])
+    else:
+        seleccion = [r for r in evaluados if r["score"] > 0][:top]
 
     if not seleccion:
         avisos.append(
@@ -753,12 +906,21 @@ def escanear(
             "Es un resultado valido, no una falla"
         )
 
+    ancla_ny_str = (
+        "{:02d}:{:02d}".format(*TANDAS[n_tanda]["hora_ny"])
+        if n_tanda in TANDAS
+        else ahora_ny.strftime("%H:%M")
+    )
+
     return {
         "tanda": n_tanda,
-        "nombre_tanda": TANDAS[n_tanda]["nombre"],
-        "foco": TANDAS[n_tanda]["foco"],
-        "ancla_ny": "{:02d}:{:02d}".format(*TANDAS[n_tanda]["hora_ny"]),
+        "sesion_slug": sesion_slug,
+        "nombre_tanda": nombre_sesion,
+        "nombre_sesion": nombre_sesion,
+        "foco": foco_sesion,
+        "ancla_ny": ancla_ny_str,
         "hora_chile_tanda": hora_chile_de_tanda(n_tanda, ahora_ny),
+        "hora_real_chile": ahora_stgo.strftime("%H:%M"),
         "generado": ahora_stgo.strftime("%Y-%m-%d %H:%M"),
         "delta_ust_10y_bps": delta_ust,
         "eventos_del_dia": len(eventos),
@@ -773,7 +935,8 @@ def escanear(
 def _guardar(resultado: dict[str, Any]) -> Path:
     DIR_SALIDA.mkdir(parents=True, exist_ok=True)
     fecha, hora = resultado["generado"].split(" ")
-    destino = DIR_SALIDA / f"{fecha}_{hora.replace(':', '-')}_tanda{resultado['tanda']}.json"
+    slug = resultado.get("sesion_slug", f"tanda{resultado['tanda']}")
+    destino = DIR_SALIDA / f"{fecha}_{hora.replace(':', '-')}_{slug}.json"
     destino.write_text(
         json.dumps(resultado, ensure_ascii=False, indent=2), encoding="utf-8"
     )
@@ -782,9 +945,10 @@ def _guardar(resultado: dict[str, Any]) -> Path:
 
 def _imprimir(resultado: dict[str, Any]) -> None:
     r = resultado
-    print(f"\nTANDA {r['tanda']} - {r['nombre_tanda']}")
-    print(f"Ancla {r['ancla_ny']} Nueva York = {r['hora_chile_tanda']} hora Chile")
-    print(r["foco"])
+    nombre = r.get("nombre_sesion", r["nombre_tanda"])
+    hora_real = r.get("hora_real_chile", r["generado"].split(" ")[-1])
+    print(f"\nSESIÓN: {nombre} ({hora_real} hrs hora Chile)")
+    print(f"Foco: {r['foco']}")
     linea = f"Generado {r['generado']} - eventos del dia: {r['eventos_del_dia']}"
     if r["delta_ust_10y_bps"] is not None:
         linea += f" - UST 10Y {r['delta_ust_10y_bps']:+.1f} bps"
@@ -795,8 +959,8 @@ def _imprimir(resultado: dict[str, Any]) -> None:
         print("  (vacia)")
     for i, s in enumerate(r["seleccion"], 1):
         print(f"  {i}. {s['nombre']} ({s['ticker']}) - {s['direccion']} - {s['score']}/100")
-        for nombre, f in s["factores"].items():
-            print(f"       {nombre:12s} {f['puntos']:>2}/{f['max']:<2} {f['detalle']}")
+        for n, f in s["factores"].items():
+            print(f"       {n:12s} {f['puntos']:>2}/{f['max']:<2} {f['detalle']}")
 
     if r["excluidos"]:
         print(f"\nEXCLUIDOS ({len(r['excluidos'])})")
@@ -811,15 +975,23 @@ def _imprimir(resultado: dict[str, Any]) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Escaner del universo para las tandas diarias de produccion"
+        description="Escaner responsivo del universo para alertas de mercado y carrusel"
     )
     parser.add_argument(
         "--tanda", type=int, choices=sorted(TANDAS),
-        help="tanda a escanear (por defecto, la mas cercana a la hora de Nueva York)",
+        help="fuerza una tanda especifica (por defecto detecta la sesion y hora real)",
     )
     parser.add_argument(
         "--top", type=int, default=3,
         help="cuantos activos selecciona (default 3, el tope de adjuntos sin +2 en WhatsApp)",
+    )
+    parser.add_argument(
+        "--grupo", type=str, default=None,
+        help="filtra exclusivamente a un grupo de WhatsApp (forex, commodities, indices, acciones, crypto)",
+    )
+    parser.add_argument(
+        "--matriz", action="store_true",
+        help="cobertura total: selecciona el Top 1 de cada uno de los 5 grupos de mercado",
     )
     parser.add_argument(
         "--todos", action="store_true",
@@ -829,7 +1001,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--sin-guardar", action="store_true", help="no escribe en data/screener/")
     args = parser.parse_args(argv)
 
-    resultado = escanear(tanda=args.tanda, top=args.top, solo_renderizables=not args.todos)
+    resultado = escanear(
+        tanda=args.tanda,
+        top=args.top,
+        solo_renderizables=not args.todos,
+        grupo=args.grupo,
+        modo_matriz=args.matriz,
+    )
 
     if not args.sin_guardar:
         resultado["archivo"] = str(_guardar(resultado))
@@ -845,3 +1023,4 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+

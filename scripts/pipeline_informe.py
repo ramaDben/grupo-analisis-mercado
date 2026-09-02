@@ -232,6 +232,8 @@ _MESES_CORTOS = {
     "May": "mayo", "Jun": "junio", "Jul": "julio", "Aug": "agosto",
     "Sep": "septiembre", "Oct": "octubre", "Nov": "noviembre", "Dec": "diciembre",
 }
+_TRIMESTRES = {"Q1": "primer", "Q2": "segundo", "Q3": "tercer", "Q4": "cuarto"}
+_PLAZOS = {"Year": "años", "Month": "meses", "Week": "semanas"}
 
 
 def _nombre_indicador(ev: dict[str, Any]) -> str:
@@ -253,31 +255,232 @@ def _nombre_indicador(ev: dict[str, Any]) -> str:
     if not nombre_es:
         return nombre_fuente
 
+    # El orden no es cosmético: primero lo que cambia QUÉ se mide, después cómo
+    # se mide y al final a qué período corresponde. Al revés, el lector llega al
+    # dato distintivo cuando ya decidió que la fila es igual a la anterior.
     matices: list[str] = []
+
+    # `Core` es el caso que más duplicados produce. El glosario engancha por
+    # sigla (PCE, GDP), así que "Core PCE" y "PCE" caen los dos en la misma
+    # entrada y salen dos filas idénticas en la tabla. La distinción no es
+    # menor: el subyacente excluye alimentos y energía, y es el que mira la Fed.
+    if re.search(r"\bCore\b", nombre_fuente, re.IGNORECASE):
+        matices.append("subyacente")
+
+    # Mismo problema entre un agregado y su deflactor: "GDP" y "GDP Price Index"
+    # comparten la sigla y miden cosas distintas (cuánto se produjo contra
+    # cuánto subieron los precios de lo producido).
+    if re.search(r"\bPrices?(\s+Index)?\b", nombre_fuente, re.IGNORECASE) \
+            and "precio" not in nombre_es.lower():
+        matices.append("índice de precios")
+
+    # El plazo de una subasta o de un bono: "2-Year Note Auction" y "5-Year Note
+    # Auction" son la misma entrada del glosario y dos eventos distintos.
+    plazo = re.search(r"\b(\d+)[-\s](Year|Month|Week)\b", nombre_fuente, re.IGNORECASE)
+    if plazo:
+        matices.append(f"a {plazo.group(1)} {_PLAZOS[plazo.group(2).capitalize()]}")
+
     for sufijo, traduccion in _SUFIJOS_ES.items():
         if f"({sufijo})" in nombre_fuente:
             matices.append(traduccion)
+    # Solo el nombre del período. "dato de julio" son trece caracteres en la
+    # columna que decide el alto de toda la fila, y la palabra "dato" no agrega
+    # nada que la columna Cifras no diga al lado.
     for mes_en, mes_es in _MESES_CORTOS.items():
         if f"({mes_en})" in nombre_fuente:
-            matices.append(f"dato de {mes_es}")
+            matices.append(mes_es)
+    for trimestre, orden in _TRIMESTRES.items():
+        if f"({trimestre})" in nombre_fuente:
+            matices.append(f"{orden} trimestre")
 
     if not matices:
         return nombre_es
     return f"{nombre_es} · {', '.join(matices)}"
 
 
-def _tabla_calendario(eventos: list[dict[str, Any]]) -> str:
+CALENDARIO_URL = "https://es.investing.com/economic-calendar/"
+
+
+def _cifra_es(valor: str) -> str:
+    """La cifra de la fuente en notación chilena.
+
+    Investing publica en notación estadounidense: el punto es el separador
+    decimal y la coma el de miles. Copiada tal cual a un informe chileno,
+    `1.600M` se lee como mil seiscientos millones cuando son un millón seiscientos
+    mil, y `216,000` como doscientos dieciséis. Se intercambian los dos
+    separadores en un solo paso para no pisar el trabajo del anterior.
+    """
+    if not valor:
+        return ""
+    return valor.replace(",", "\x00").replace(".", ",").replace("\x00", ".")
+
+
+def _estado_evento(ev: dict[str, Any], ahora: datetime) -> str:
+    """Si el dato ya salió, si falta, o si pasó la hora y no trajo cifra.
+
+    El testigo de que un dato se publicó es su valor (`actual`), no el reloj: la
+    fuente publica con retraso más seguido de lo que uno querría, y un informe
+    que dice "ya salió" porque pasó la hora obliga al lector a desmentirlo.
+
+    El tercer estado no es un caso de borde: las subastas del Tesoro, las
+    intervenciones de gobernadores y los feriados nunca traen cifra. Marcarlos
+    "pendiente" para siempre haría que la tabla del cierre mienta todas las
+    tardes.
+    """
+    if str(ev.get("actual") or "").strip():
+        return "Publicado"
+    try:
+        momento = datetime.strptime(
+            str(ev.get("hora_servidor", "")), "%Y-%m-%d %H:%M"
+        ).replace(tzinfo=SANTIAGO)
+    except ValueError:
+        return "Pendiente"
+    return "Pendiente" if momento > ahora else "Sin cifra"
+
+
+def _cifras_evento(ev: dict[str, Any]) -> str:
+    """Las dos cifras que importan, que dependen de si el dato salió o no.
+
+    Antes de publicarse, lo que informa es el consenso; después, el valor real
+    contra ese consenso. El anterior solo entra cuando es lo único que hay
+    (subastas, series sin consenso publicado): así la columna nunca lleva tres
+    números ni queda vacía teniendo algo que decir.
+    """
+    actual = _cifra_es(str(ev.get("actual") or "").strip())
+    consenso = _cifra_es(str(ev.get("forecast") or "").strip())
+    previo = _cifra_es(str(ev.get("previo") or "").strip())
+
+    # El salto de linea es explicito y no decorativo. Con seis columnas esta
+    # queda en unos 100 px, y `0,2% · esperado 0,1%` en una sola linea se parte
+    # donde el navegador quiera: la primera version dejaba el separador colgando
+    # al final de la linea (`0,2% ·`) y la celda en tres o cuatro lineas, que es
+    # lo que hacia que la tabla de quince filas no cupiera en la pagina.
+    if actual and consenso:
+        return f"**{actual}**<br>esperado {consenso}"
+    if actual:
+        return f"**{actual}**<br>sin consenso"
+    if consenso:
+        return f"esperado {consenso}"
+    if previo:
+        return f"anterior {previo}"
+    return "—"
+
+
+# Palabras con las que la fuente distingue dos eventos que el glosario mete en
+# la misma entrada. No es un traductor: es la lista corta de las que aparecen
+# seguido en un calendario de cuatro países. Lo que no está acá pasa tal cual,
+# que para un nombre propio como Cushing es justamente lo correcto.
+_CALIFICADORES_ES = {
+    "manufacturing": "manufacturero",
+    "services": "servicios",
+    "composite": "compuesto",
+    "preliminary": "preliminar",
+    "prelim": "preliminar",
+    "flash": "preliminar",
+    "revised": "revisado",
+    "final": "final",
+    "excluding": "excluyendo",
+    "ex": "excluyendo",
+    "transportation": "transporte",
+    "defense": "defensa",
+    "continuing": "continuas",
+    "initial": "iniciales",
+}
+
+# Ruido que la fuente pega al nombre y que `_nombre_indicador` ya tradujo o
+# descartó. Si entrara al desempate, dos filas se "distinguirían" por la palabra
+# que tienen en común.
+_RUIDO_FUENTE = {
+    "mom", "yoy", "qoq", "wow", "sa", "nsa", "n", "s", "a",
+    "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "sept",
+    "oct", "nov", "dec", "q1", "q2", "q3", "q4", "index", "core",
+}
+
+
+def _palabras_fuente(nombre: str) -> list[str]:
+    """Las palabras del nombre de la fuente que pueden diferenciar dos filas."""
+    crudas = re.findall(r"[A-Za-z][A-Za-z&/\.-]*", nombre)
+    return [p for p in crudas if p.lower().strip(".") not in _RUIDO_FUENTE]
+
+
+def _distinguir(nombres: list[str], eventos: list[dict[str, Any]]) -> list[str]:
+    """Ninguna fila de la tabla puede leerse igual que otra.
+
+    Dos filas idénticas no son un defecto cosmético: el lector no puede saber
+    cuál de las dos cifras corresponde a cuál indicador, y la tabla deja de
+    servir para lo único que sirve una tabla.
+
+    `_nombre_indicador` cubre los matices que ya conocemos (subyacente, índice
+    de precios, plazo, período). Esta es la red para el que aparezca mañana, y
+    cita **solo la palabra que diferencia** en vez del nombre completo de la
+    fuente: entre "Crude Oil Inventories" y "Cushing Crude Oil Inventories" la
+    diferencia es Cushing, y pegar los dos nombres en inglés para decir eso
+    metería en un informe en español seis palabras que el lector no necesita.
+
+    La fila que no tiene ninguna palabra propia es la general del grupo, y se
+    dice así: es la lectura nacional frente a la de un punto de entrega, o el
+    agregado frente a uno de sus componentes.
+    """
+    repetidos = {n for n in nombres if nombres.count(n) > 1}
+    if not repetidos:
+        return nombres
+
+    distinguidos: list[str] = []
+    for nombre, ev in zip(nombres, eventos):
+        if nombre not in repetidos:
+            distinguidos.append(nombre)
+            continue
+
+        grupo = [e for n, e in zip(nombres, eventos) if n == nombre]
+        comunes = set.intersection(*(
+            {p.lower() for p in _palabras_fuente(e.get("nombre", ""))} for e in grupo
+        ))
+        propias = [
+            _CALIFICADORES_ES.get(p.lower(), p)
+            for p in _palabras_fuente(ev.get("nombre", ""))
+            if p.lower() not in comunes
+        ]
+        distinguidos.append(f"{nombre} ({', '.join(propias) if propias else 'general'})")
+    return distinguidos
+
+
+def _tabla_calendario(
+    eventos: list[dict[str, Any]], ahora: datetime | None = None
+) -> str:
+    """La agenda del día, con el estado de cada dato y sus cifras.
+
+    Seis columnas y no ocho: el anterior, el consenso y el dato real no caben
+    los tres, y tampoco hacen falta los tres a la vez (ver `_cifras_evento`).
+    Con la escala tipográfica del informe de cliente, una columna más deja el
+    nombre del indicador en tres líneas y el bloque no cabe en la página.
+    """
     if not eventos:
-        return "_Sin eventos de impacto medio o alto en la jornada._"
-    filas = ["| Hora Chile | País | Indicador | Impacto |", "|---|---|---|---|"]
-    for ev in eventos:
+        return (
+            "_Sin eventos de impacto medio o alto en la jornada._\n\n"
+            f"Agenda completa: [calendario económico]({CALENDARIO_URL})"
+        )
+
+    ahora = ahora or datetime.now(tz=SANTIAGO)
+    nombres = _distinguir([_nombre_indicador(ev) for ev in eventos], eventos)
+
+    filas = ["| Estado | Hora | País | Indicador | Impacto | Cifras |",
+             "|---|---|---|---|---|---|"]
+    for ev, nombre in zip(eventos, nombres):
         hora = str(ev.get("hora_servidor", "?")).split(" ")[-1]
         pais = ev.get("pais", "?")
         filas.append(
-            f"| {hora} | {_PAISES_ES.get(pais, pais)} | {_nombre_indicador(ev)} | "
-            f"{ev.get('impacto', '?')} |"
+            f"| {_estado_evento(ev, ahora)} | {hora} | {_PAISES_ES.get(pais, pais)} | "
+            f"{nombre} | {str(ev.get('impacto', '?')).capitalize()} | "
+            f"{_cifras_evento(ev)} |"
         )
-    return "\n".join(filas)
+
+    publicados = sum(1 for ev in eventos if _estado_evento(ev, ahora) == "Publicado")
+    pie = (
+        f"Horas en hora de Chile. {publicados} de {len(eventos)} eventos ya "
+        f"publicados al momento de emitir este informe. "
+        f"Agenda completa y actualizada: [calendario económico]({CALENDARIO_URL})"
+    )
+    return "\n".join(filas) + "\n\n" + pie
 
 
 def _tabla_playbook(playbook: dict[str, Any]) -> str:
@@ -309,14 +512,58 @@ def cargar_glosario_motor() -> dict[str, Any]:
         return {}
 
 
-def _traducir_setup(token: str, glosario: dict[str, Any]) -> str:
-    """Un setup del motor, en lenguaje de cliente.
+# Cómo se nombra cada marco temporal en voz de cliente, y en qué unidad cae el
+# período de un indicador medido en ese marco.
+_TF_ES = {
+    "M1": "1 minuto", "M5": "5 minutos", "M15": "15 minutos", "M30": "30 minutos",
+    "H1": "1 hora", "H4": "4 horas", "H12": "12 horas",
+    "D1": "1 día", "W1": "1 semana", "MN1": "1 mes",
+}
+# Todas femeninas a propósito: los textos dicen "las últimas N {periodos}", y
+# una unidad masculina deja "las últimas 20 días".
+_TF_PERIODOS = {
+    "M1": "velas de 1 minuto", "M5": "velas de 5 minutos",
+    "M15": "velas de 15 minutos", "M30": "velas de 30 minutos",
+    "H1": "horas", "H4": "velas de 4 horas", "H12": "velas de 12 horas",
+    "D1": "velas diarias", "W1": "velas semanales", "MN1": "velas mensuales",
+}
 
-    Si el token no está en el glosario se devuelve tal cual, y ahí lo caza el
+
+def _partir_timeframe(token: str) -> tuple[str, str | None]:
+    """`FADE_SUPPORT_RESISTANCE_H1` -> `("FADE_SUPPORT_RESISTANCE", "H1")`."""
+    for tf in _TF_ES:
+        if token.endswith(f"_{tf}"):
+            return token[: -(len(tf) + 1)], tf
+    return token, None
+
+
+def _traducir_setup(token: str, glosario: dict[str, Any]) -> str:
+    """Un setup del motor, en lenguaje de cliente y en cualquier temporalidad.
+
+    Las claves del glosario NO llevan marco temporal: el motor mira el que
+    necesita, y exigir una entrada por cada uno hacía que el primer `_H4` que
+    emitiera llegara al informe como token crudo. Se resuelve la clave base y el
+    marco se comunica aparte.
+
+    Si el setup no está en el glosario se devuelve tal cual, y ahí lo caza el
     test: preferimos que falle la suite a que `FADE_TOP_RESISTANCE` llegue a un
     documento que lee un cliente.
     """
-    return (glosario.get("setups") or {}).get(token, token)
+    setups = glosario.get("setups") or {}
+    base, tf = _partir_timeframe(token)
+    texto = setups.get(base, setups.get(token))
+    if texto is None:
+        return token
+    if "{periodos}" in texto:
+        return texto.replace("{periodos}", _TF_PERIODOS.get(tf or "", "velas"))
+    if tf:
+        return f"{texto} (en {_TF_ES[tf]})"
+    return texto
+
+
+def _setup_traducible(token: str, glosario: dict[str, Any]) -> bool:
+    """¿El glosario sabe explicar este setup, en la temporalidad que sea?"""
+    return _traducir_setup(token, glosario) != token
 
 
 def _frase_sesgo(a: dict[str, Any], glosario: dict[str, Any]) -> str:
@@ -603,7 +850,7 @@ def preparar(tipo: str, con_datos_viejos: bool = False) -> dict[str, Any]:
         + f"{MARCA_EDITORIAL} Qué implica para el oro, para las acciones tecnológicas "
           "y para el dólar. Una viñeta por activo, en frases cortas.",
         "## 04. La agenda del día\n\n"
-        + _tabla_calendario(eventos) + "\n\n"
+        + _tabla_calendario(eventos, ahora) + "\n\n"
         + f"{MARCA_EDITORIAL} Cuál de estos datos puede mover la jornada, qué mide y "
           "qué pasa si sale mejor o peor de lo esperado.",
         "## 05. De dónde salen estos datos\n\n"
@@ -643,7 +890,12 @@ def preparar(tipo: str, con_datos_viejos: bool = False) -> dict[str, Any]:
 # ─────────────────────────────────────────────────────────────────────────────
 # Paso 2: rendir
 # ─────────────────────────────────────────────────────────────────────────────
-def rendir(directorio: Path, tipo: str) -> dict[str, Any]:
+def rendir(
+    directorio: Path,
+    tipo: str,
+    titulo: str = "Flash de Mercado",
+    tag: str = "APERTURA DE NUEVA YORK",
+) -> dict[str, Any]:
     """Compila el PDF de apertura. El cierre no lleva PDF por decision de canal."""
     md = directorio / f"informe_{tipo}.md"
     if not md.is_file():
@@ -678,12 +930,13 @@ def rendir(directorio: Path, tipo: str) -> dict[str, Any]:
         [sys.executable, str(GENERADOR_PDF),
          "--md", str(md),
          "--pdf", str(salida),
-         "--title", "Marco de Apertura",
-         "--tag", "INFORME DE APERTURA",
+         "--title", titulo,
+         "--tag", tag.upper(),
          "--subtitle", "Regimen macro, curva soberana y agenda del dia para la sesion de hoy.",
-         "--header-left", "MARCO DE APERTURA",
+         "--header-left", f"{titulo.upper()} • {tag.upper()}",
          "--header-right", _fecha_es(datetime.now(tz=SANTIAGO)).upper(),
          "--date", _fecha_es(datetime.now(tz=SANTIAGO)),
+         "--analyst", "Área de Research & Estrategia",
          "--theme", "verde",
          # El informe de apertura lo lee un cliente. El maquetador trae el cuerpo
          # en 7,5-7,9 pt, bajo el piso de legibilidad impresa; esta escala lo deja
@@ -708,6 +961,14 @@ def main(argv: list[str] | None = None) -> int:
     grupo.add_argument("--preparar", action="store_true")
     grupo.add_argument("--rendir", type=Path, metavar="DIR")
     parser.add_argument(
+        "--titulo", default="Flash de Mercado",
+        help="titulo principal de la portada del PDF",
+    )
+    parser.add_argument(
+        "--tag", default="APERTURA DE NUEVA YORK",
+        help="pretitulo o tag superior de la portada del PDF",
+    )
+    parser.add_argument(
         "--con-datos-viejos", action="store_true",
         help="emite la apertura aunque el sesgo este vencido, estampando la antiguedad",
     )
@@ -725,7 +986,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\nDespues: --tipo {res['tipo']} --rendir {res['directorio']}")
         return 0
 
-    res = rendir(args.rendir, args.tipo)
+    res = rendir(args.rendir, args.tipo, titulo=args.titulo, tag=args.tag)
     print(f"\nINFORME DE {res['tipo'].upper()} - canal: {res['canal']}")
     if res.get("pdf"):
         print(f"PDF: {res['pdf']}")
