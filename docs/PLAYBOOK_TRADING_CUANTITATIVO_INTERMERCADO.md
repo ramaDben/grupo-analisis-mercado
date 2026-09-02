@@ -121,7 +121,11 @@ Donde:
 * **Reglas Operativas**:
   * **En Régimen $\mathcal{R}_3 / \mathcal{R}_1$**: Sesgo **Fuerte Alcista (+1.80 a +2.00)**. **Prohibido abrir posiciones cortas (Short)** aun con RSI sobrecomprado en 80.
   * **Gatillos Permitidos**: Compras en retroceso (*Pullbacks*) hacia EMA 20 en H1 o roturas del canal Donchian de 50 en H1.
-  * **Salida Asimétrica**: Prohibido Take Profit rígido; salida obligatoria por *Chandelier Trailing Stop* a **$3.0 \times \text{ATR}_{14}(\text{H1})$**.
+  * **Salida Asimétrica**: Prohibido Take Profit rígido; salida obligatoria por *Chandelier Trailing Stop*:
+
+$$\text{Stop}_{\text{largo}} = \max(\text{High}_{22}) - 3.0 \times \text{ATR}_{14}(\text{H1}) \qquad \text{Stop}_{\text{corto}} = \min(\text{Low}_{22}) + 3.0 \times \text{ATR}_{14}(\text{H1})$$
+
+    El stop es **monótono** (*ratchet*): solo se mueve a favor de la posición, nunca en contra.
 
 ---
 
@@ -154,6 +158,33 @@ $$L_t = \frac{\text{Capital de la Cuenta} \times \text{Riesgo\%}}{\text{Distanci
 Donde:
 * $\text{Distancia Stop Loss (Intradía H1)} = 1.5 \times \text{ATR}_{14}(\text{H1})$
 * $\text{Distancia Stop Loss (Swing D1)} = 2.5 \times \text{ATR}_{20}(\text{D1})$
+* $\text{Chandelier Trailing (posición sostenida)} = \max(\text{High}_{22}) - 3.0 \times \text{ATR}_{14}(\text{H1})$
+
+> [!IMPORTANT]
+> **El Chandelier son dos parámetros, no uno.** El múltiplo $k = 3.0$ y la ventana $N = 22$
+> son el par calibrado de LeBeau y no se separan. Fijar solo el múltiplo deja el nivel
+> indeterminado, y la indeterminación no es teórica: medido el 2026-09-02 sobre el Oro, el
+> mismo activo el mismo día daba **vigente** con $N=22$ (nivel 4.312,40) e **invalidado** con
+> $N=50$ (nivel 4.400,90 sobre un precio de 4.370,35).
+>
+> **Calibración *walk-forward* (2026-09-02)** sobre las series H1 propias de los 5 activos con
+> ficha, 9.800 barras cada una, entrando en cruce sobre EMA 50 y arrastrando con *ratchet*:
+>
+> | $N$ | Nivel publicable | Distancia mediana | **Distancia p10** | Mediana sostenida |
+> |---:|---:|---:|---:|---:|
+> | 14 | 95,2 % | 2,02 ATR | +0,52 | 14,0 h |
+> | **22** | **92,6 %** | **1,86 ATR** | **+0,22** | **9,7 h** |
+> | 33 | 89,6 % | 1,68 ATR | −0,03 ❌ | 4,7 h |
+> | 50 | 82,6 % | 1,39 ATR | −0,56 ❌ | 1,0 h |
+>
+> El criterio de descarte es el **percentil 10 de la distancia**: en $N=33$ y $N=50$ se vuelve
+> negativo, es decir el "stop" queda *sobre* el precio en un estado alcista normal. Eso no es
+> un stop ceñido, es un nivel incoherente. La banda viable es $\{14, 22\}$ y se adopta el valor
+> de la literatura, que cae dentro de ella.
+>
+> **Contra la intuición**: un lookback más largo **aprieta** el stop, no lo suelta, porque
+> $\max(\text{High}_N)$ crece con $N$ y el nivel resultante sube. Por eso $N=50$ liquida la
+> posición en una hora mediana.
 * **Regla Anti-Colapso**: Si la volatilidad del activo se duplica ($\text{ATR}$ se duplica), el lotaje $L_t$ se reduce automáticamente al 50%, manteniendo la pérdida máxima en dólares estrictamente acotada al 1.0% del capital.
 
 ---
@@ -183,3 +214,4 @@ El sistema consulta dinámicamente [`data central/DATA AGENDA/calendario_{YYYY}.
 13. **Caputo, R., Núñez, M., & Valdés, R. (2007)**. *Análisis del Tipo de Cambio en la Práctica*. Banco Central de Chile, DT N° 434.
 14. **Carreño, G., & Cox, P. (2014)**. *Carry Trade y Turbulencias Cambiarias*. Banco Central de Chile, DT N° 722.
 15. **Menkhoff, L., Sarno, L., Schmeling, M., & Schrimpf, A. (2012)**. *Carry Trades and Global FX Volatility*. The Journal of Finance, 67(2), 681–718.
+16. **LeBeau, C., & Lucas, D. W. (1992)**. *Technical Traders Guide to Computer Analysis of the Futures Markets*. McGraw-Hill. — Origen del *Chandelier Exit*; fuente del par $(N = 22,\ k = 3.0)$ adoptado en §5.
