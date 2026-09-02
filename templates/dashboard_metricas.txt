@@ -1,7 +1,0 @@
-📊 *DASHBOARD EDUCATIVO — semana {SEMANA}*
-━━━━━━━━━━━━━━━━━━━
-👥 Participación: {VOTOS_PROMEDIO} votos/encuesta ({N_ENCUESTAS} encuestas)
-🧠 Comprensión: {ACIERTOS_PCT}% de aciertos
-📚 Cobertura: {COBERTURA_PCT}% ({ENTREGADOS}/{TOTAL}) · N1 {N1} · N2 {N2} · N3 {N3}
-😊 Satisfacción: {SATISFACCION} ({RESPUESTAS} respuestas, {CANAL})
-━━━━━━━━━━━━━━━━━━━

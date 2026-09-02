@@ -44,33 +44,11 @@ LIMITE_CARACTERES = 12_000
 # a mano — el --check lo marcaría como desactualizado.
 COMANDOS = {
     "story": "Genera una Story de marca GI a partir de una plantilla (dato_macro, alerta, quote, breaking, encuesta, edu, flash, postventa, operacion).",
-    "alerta": "Detecta qué está moviendo el mercado ahora y genera la alerta urgente para el grupo.",
     "carrusel": "Carrusel responsivo de alertas de mercado: el escáner detecta la sesión activa, elige el Top 3 con el Score_GI, y el comando escribe el texto y rinde las Stories.",
     "informe": "Informe de la jornada: PDF institucional en la apertura, mensaje con gráfico al cierre.",
-    "dato_macro": "Lista los datos económicos del día y arma la pieza del que elija el director, en modo anticipación o resultado.",
-    "apertura": "Niveles técnicos del día: pregunta activo, temporalidad e indicador, y arma el mensaje de apertura.",
-    "chart": "Genera un screenshot de MT5 con el indicador y la temporalidad elegidos.",
-    "accion": "Ejecuta el comando accion de la misma forma que Claude Code.",
-    "actualizacion": "Ejecuta el comando actualizacion de la misma forma que Claude Code.",
-    "concepto": "Ejecuta el comando concepto de la misma forma que Claude Code.",
-    "curriculo": "Ejecuta el comando curriculo de la misma forma que Claude Code.",
-    "domingo": "Ejecuta el comando domingo de la misma forma que Claude Code.",
-    "earnings": "Ejecuta el comando earnings de la misma forma que Claude Code.",
     "encuesta": "Ejecuta el comando encuesta de la misma forma que Claude Code.",
     "estado": "Ejecuta el comando estado de la misma forma que Claude Code.",
-    "jueves": "Ejecuta el comando jueves de la misma forma que Claude Code.",
-    "lunes": "Ejecuta el comando lunes de la misma forma que Claude Code.",
-    "martes": "Ejecuta el comando martes de la misma forma que Claude Code.",
-    "miercoles": "Ejecuta el comando miercoles de la misma forma que Claude Code.",
-    "noticia": "Ejecuta el comando noticia de la misma forma que Claude Code.",
-    "postventa": "Ejecuta el comando postventa de la misma forma que Claude Code.",
-    "pregunta": "Ejecuta el comando pregunta de la misma forma que Claude Code.",
     "rencuesta": "Ejecuta el comando rencuesta de la misma forma que Claude Code.",
-    "respuesta": "Ejecuta el comando respuesta de la misma forma que Claude Code.",
-    "señal": "Ejecuta el comando señal de la misma forma que Claude Code.",
-    "ventas": "Ejecuta el comando ventas de la misma forma que Claude Code.",
-    "viernes_am": "Ejecuta el comando viernes_am de la misma forma que Claude Code.",
-    "viernes_pm": "Ejecuta el comando viernes_pm de la misma forma que Claude Code.",
 }
 
 PLANTILLA = """# /{nombre}
