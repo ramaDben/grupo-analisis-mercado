@@ -133,7 +133,7 @@ def analizar_activo(ticker: str, timeframe: str = "H4") -> dict[str, Any]:
 
     try:
         from market_data_mcp.mt5_client import (
-            get_rates, ema, atr, adx, macd, bollinger, donchian, TIMEFRAME_MAP,
+            connect, get_rates, ema, atr, adx, macd, bollinger, donchian, TIMEFRAME_MAP,
         )
     except ImportError:
         return {
@@ -148,6 +148,7 @@ def analizar_activo(ticker: str, timeframe: str = "H4") -> dict[str, Any]:
         }
 
     try:
+        connect()
         df = get_rates(ticker, timeframe.upper(), n_bars=300)
     except ImportError:
         # mt5_client importa MetaTrader5 de forma perezosa dentro de get_rates;
@@ -202,11 +203,19 @@ def analizar_activo(ticker: str, timeframe: str = "H4") -> dict[str, Any]:
 
     rsi14_val = _rsi(close_closed, 14)
     levels = _get_support_resistance(df_closed, current, atr14_val, digits)
+    bar_open = float(df["open"].iloc[-1])
+    bar_high = float(df["high"].iloc[-1])
+    bar_low = float(df["low"].iloc[-1])
+    change_pct = round(((current - bar_open) / bar_open) * 100, 2) if bar_open else 0.0
 
     resultado: dict[str, Any] = {
         "ticker":       ticker,
         "timeframe":    timeframe.upper(),
         "price":        round(current, digits),
+        "open_price":   round(bar_open, digits),
+        "high_price":   round(bar_high, digits),
+        "low_price":    round(bar_low, digits),
+        "change_pct":   change_pct,
         "s2":           levels["s2"],
         "s1":           levels["s1"],
         "r1":           levels["r1"],

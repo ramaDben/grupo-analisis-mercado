@@ -475,3 +475,44 @@ def test_un_evento_sin_hora_valida_no_revienta_el_gate():
     ]
     ahora = datetime(2026, 8, 25, 10, 0, tzinfo=sc.SANTIAGO)
     assert sc.gate_blackout("XAUUSD", malos, ahora) is None
+
+
+def test_filtrar_por_grupo_acota_correctamente_el_universo():
+    universo = sc.cargar_universo(solo_renderizables=True)
+
+    fx = sc.filtrar_por_grupo(universo, "forex")
+    assert all(a["categoria"] == "forex" for a in fx)
+    assert any(a["ticker"] == "USDCLP" for a in fx)
+
+    comm = sc.filtrar_por_grupo(universo, "commodities")
+    assert any(a["ticker"] == "XAUUSD" for a in comm)
+    assert any(a["ticker"] == "WTI.spot" for a in comm)
+
+    indices = sc.filtrar_por_grupo(universo, "indices")
+    assert any(a["ticker"] == "US100.spot" for a in indices)
+
+    crypto = sc.filtrar_por_grupo(universo, "crypto")
+    assert any(a["ticker"] == "BTCUSD" for a in crypto)
+    assert any(a["ticker"] == "ETHUSD" for a in crypto)
+
+
+def test_escanear_con_modo_matriz_selecciona_un_activo_por_grupo():
+    """Modo matriz de cobertura total: debe seleccionar hasta 1 activo por grupo."""
+    def fake_analizador(ticker, tf):
+        res = dict(h1_perfecto() if tf == "H1" else d1_con_consumo(0.30))
+        res["ticker"] = ticker
+        return res
+
+    resultado = sc.escanear(
+        tanda=1,
+        solo_renderizables=True,
+        analizador=fake_analizador,
+        modo_matriz=True,
+    )
+    seleccion = resultado["seleccion"]
+    assert len(seleccion) > 0
+    # Ningún grupo debe estar repetido en la selección
+    import pipeline_carrusel as pc
+    grupos_sel = [pc.obtener_grupo_whatsapp(s["clase"], s["ticker"]) for s in seleccion]
+    assert len(grupos_sel) == len(set(grupos_sel)), "El modo matriz no debe repetir grupos"
+

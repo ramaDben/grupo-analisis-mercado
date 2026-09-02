@@ -238,8 +238,8 @@ _PATRONES_SEGUNDO_ORDEN = (
 # (SHORT_AGRESIVO, BUY_THE_DIP_AGGRESSIVE, FADE_TOP_RESISTANCE...). Un token
 # prohibido solo bloquea si apunta en la MISMA dirección que la lectura técnica:
 # que esté prohibido comprar agresivamente no impide comunicar una caída.
-_PROHIBIDO_BAJISTA = ("SHORT", "SELL", "BREAKDOWN", "FADE_TOP", "VENTA")
-_PROHIBIDO_ALCISTA = ("LONG", "BUY", "COMPRA", "CHASE", "FADE_SUPPORT")
+_PROHIBIDO_BAJISTA = ("SHORT_AGRESIVO", "VENTA_CONTRA_TENDENCIA", "SHORT_FADE_OVERBOUGHT", "SHORT_FADE")
+_PROHIBIDO_ALCISTA = ("BUY_THE_DIP_AGGRESSIVE", "COMPRA_SIN_CONFIRMACION", "LONG_INVERTIDO", "LONG_SWING_FADE")
 
 
 def _normalizar(texto: str) -> str:
@@ -297,6 +297,55 @@ def cargar_universo(solo_renderizables: bool = True) -> list[dict[str, Any]]:
     if solo_renderizables:
         universo = [a for a in universo if a.get("imagen")]
     return universo
+
+
+def filtrar_por_grupo(universo: list[dict[str, Any]], grupo: str) -> list[dict[str, Any]]:
+    """Filtra los activos del universo por grupo modular de WhatsApp o alias de categoría."""
+    slug = grupo.lower().strip()
+    alias = {
+        "fx": "forex",
+        "forex": "forex",
+        "divisas": "forex",
+        "dolar": "forex",
+        "commodities": "commodity",
+        "commodity": "commodity",
+        "materias_primas": "commodity",
+        "metales": "commodity",
+        "energia": "commodity",
+        "indices": "indice",
+        "indice": "indice",
+        "wallstreet": "indice",
+        "acciones": "accion",
+        "accion": "accion",
+        "etf": "accion",
+        "etfs": "accion",
+        "equities": "accion",
+        "crypto": "crypto",
+        "cripto": "crypto",
+        "criptomonedas": "crypto",
+        "02_forex_divisas": "forex",
+        "03_commodities_materias_primas": "commodity",
+        "04_indices_bursatiles": "indice",
+        "05_acciones_etfs": "accion",
+        "06_criptoactivos": "crypto",
+    }
+    objetivo = alias.get(slug, slug)
+
+    filtrados = []
+    for a in universo:
+        cat = a.get("categoria", "").lower()
+        clase = a.get("clase", "").lower()
+        if objetivo == "forex" and (cat == "forex" or a["ticker"] in ("USDCLP", "EURUSD", "USDJPY", "GBPUSD", "USDIDX")):
+            filtrados.append(a)
+        elif objetivo == "commodity" and (cat in ("commodity", "commodities") or (clase == "forex_commodities" and cat not in ("forex", "crypto"))):
+            filtrados.append(a)
+        elif objetivo == "crypto" and (cat == "crypto" or clase == "crypto"):
+            filtrados.append(a)
+        elif objetivo == "indice" and (cat in ("indice", "indices") or clase == "indices"):
+            filtrados.append(a)
+        elif objetivo == "accion" and (cat in ("accion", "acciones", "etf", "etfs") or clase in ("acciones", "etfs")):
+            filtrados.append(a)
+    return filtrados
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -579,6 +628,7 @@ def evaluar_activo(
     sesgos: dict[str, Any],
     ahora_santiago: datetime,
     analizador: Callable[[str, str], dict[str, Any]] = analizar_activo,
+    ignorar_agotamiento: bool = False,
 ) -> dict[str, Any]:
     """Puntúa un activo, o explica por qué queda fuera."""
     ticker = activo["ticker"]
@@ -595,9 +645,10 @@ def evaluar_activo(
     if "error" in d1:
         return {**base, "excluido": f"D1 {d1['error']}: {d1.get('message', '')}"}
 
-    motivo = gate_agotamiento(d1)
-    if motivo:
-        return {**base, "excluido": motivo}
+    if not ignorar_agotamiento:
+        motivo = gate_agotamiento(d1)
+        if motivo:
+            return {**base, "excluido": motivo}
 
     direccion = direccion_tecnica(h1)
 
@@ -772,8 +823,11 @@ def escanear(
     solo_renderizables: bool = True,
     ahora_ny: datetime | None = None,
     analizador: Callable[[str, str], dict[str, Any]] = analizar_activo,
+    grupo: str | None = None,
+    modo_matriz: bool = False,
+    ignorar_agotamiento: bool = False,
 ) -> dict[str, Any]:
-    """Recorre el universo, aplica gates, puntúa y elige el Top N de la sesión/tanda."""
+    """Recorre el universo, aplica gates, puntúa y elige el Top N de la sesión/tanda o matriz por grupos."""
     ahora_ny = ahora_ny or datetime.now(tz=NY)
     ahora_stgo = ahora_ny.astimezone(SANTIAGO)
 
@@ -795,19 +849,15 @@ def escanear(
     sesgos, avisos_sesgo = _sesgos_playbook()
     avisos.extend(avisos_sesgo)
 
-    # Abrir el canal con el terminal antes de pedir la primera vela. `get_rates`
-    # no lo hace: dentro del MCP la conexión la abre el lifespan del server al
-    # arrancar, así que un script tiene que abrirla por su cuenta (mismo patrón
-    # que `scripts/serie_mt5.py`). Sin esto, MT5 responde -10004 'No IPC
-    # connection' en cada activo y el escaneo sale vacío culpando al terminal.
-    #
-    # Solo cuando el analizador es el real: los tests inyectan uno sintético
-    # justamente para no necesitar MT5.
     if analizador is analizar_activo:
         avisos.extend(_conectar_terminal())
 
     universo = cargar_universo(solo_renderizables)
-    if solo_renderizables:
+    if grupo:
+        universo = filtrar_por_grupo(universo, grupo)
+        avisos.append(f"universo filtrado exclusivamente al grupo/categoría '{grupo}' ({len(universo)} activos)")
+
+    if solo_renderizables and not grupo:
         avisos.append(
             f"universo limitado a {len(universo)} activos con imagen en disco. "
             "Los prompts de las que faltan estan en "
@@ -831,11 +881,24 @@ def escanear(
                 "excluido": "ya salio en una corrida anterior de hoy",
             })
             continue
-        res = evaluar_activo(activo, eventos, delta_ust, sesgos, ahora_stgo, analizador)
+        res = evaluar_activo(activo, eventos, delta_ust, sesgos, ahora_stgo, analizador, ignorar_agotamiento=ignorar_agotamiento)
         (excluidos if "excluido" in res else evaluados).append(res)
 
     evaluados.sort(key=lambda r: (-r["score"], r["ticker"]))
-    seleccion = [r for r in evaluados if r["score"] > 0][:top]
+
+    if modo_matriz:
+        # Cobertura Total: selecciona el Top 1 con score > 0 de cada una de las 5 categorías clave de mercado
+        categorias_orden = ["forex", "commodity", "indice", "accion", "crypto"]
+        seleccion = []
+        for cat_obj in categorias_orden:
+            candidatos_cat = [
+                r for r in evaluados
+                if r["score"] > 0 and r["ticker"] in {a["ticker"] for a in filtrar_por_grupo(universo, cat_obj)}
+            ]
+            if candidatos_cat:
+                seleccion.append(candidatos_cat[0])
+    else:
+        seleccion = [r for r in evaluados if r["score"] > 0][:top]
 
     if not seleccion:
         avisos.append(
@@ -923,6 +986,14 @@ def main(argv: list[str] | None = None) -> int:
         help="cuantos activos selecciona (default 3, el tope de adjuntos sin +2 en WhatsApp)",
     )
     parser.add_argument(
+        "--grupo", type=str, default=None,
+        help="filtra exclusivamente a un grupo de WhatsApp (forex, commodities, indices, acciones, crypto)",
+    )
+    parser.add_argument(
+        "--matriz", action="store_true",
+        help="cobertura total: selecciona el Top 1 de cada uno de los 5 grupos de mercado",
+    )
+    parser.add_argument(
         "--todos", action="store_true",
         help="escanea tambien los activos sin imagen (su Story no va a poder rendirse)",
     )
@@ -930,7 +1001,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--sin-guardar", action="store_true", help="no escribe en data/screener/")
     args = parser.parse_args(argv)
 
-    resultado = escanear(tanda=args.tanda, top=args.top, solo_renderizables=not args.todos)
+    resultado = escanear(
+        tanda=args.tanda,
+        top=args.top,
+        solo_renderizables=not args.todos,
+        grupo=args.grupo,
+        modo_matriz=args.matriz,
+    )
 
     if not args.sin_guardar:
         resultado["archivo"] = str(_guardar(resultado))
@@ -946,3 +1023,4 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+

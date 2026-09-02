@@ -118,3 +118,8 @@ data central/**/reportes_generados/
 data central/DATA PRECIOS OHLC/*_M15.json
 data central/DATA PRECIOS OHLC/*_H1.json
 data central/DATA PRECIOS OHLC/*_D1.json
+
+# PDF del manual y su vista previa: los produce `scripts/compilar_manual_pdf.py`
+# desde el markdown, que si se versiona.
+docs/MANUAL_DE_OPERACIONES_TRADING_CUANTITATIVO_GI.pdf
+docs/preview_portada.png
