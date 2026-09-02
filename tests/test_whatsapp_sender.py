@@ -501,3 +501,46 @@ def test_la_sesion_no_depende_del_directorio_desde_el_que_se_ejecute(tmp_path, m
     monkeypatch.chdir(tmp_path)
     sender = WhatsAppSender()
     assert sender.session_dir.resolve() == (RAIZ / ".whatsapp_session").resolve()
+
+
+def test_el_login_no_da_por_vinculada_una_sesion_sin_comprobarla():
+    """Presionar ENTER en la consola confirmaba la vinculación a ciegas. Si el QR
+    no se llegó a escanear, `--login` reportaba éxito y el primer envío moría."""
+    sender = WhatsAppSender()
+    page_con_qr = MagicMock()
+
+    def locator_qr(selector: str):
+        m = MagicMock()
+        m.count.return_value = 1 if "canvas" in selector else 0
+        m.first = m
+        return m
+
+    page_con_qr.locator.side_effect = locator_qr
+    assert sender._hay_qr_visible(page_con_qr) is True
+    assert sender._esta_autenticado(page_con_qr) is False
+    # Con QR en pantalla, la confirmación manual no puede valer como vinculación.
+    assert sender._confirmacion_valida(page_con_qr) is False
+
+    page_ok = MagicMock()
+
+    def locator_ok(selector: str):
+        m = MagicMock()
+        m.count.return_value = 1 if "pane-side" in selector else 0
+        m.first = m
+        return m
+
+    page_ok.locator.side_effect = locator_ok
+    assert sender._confirmacion_valida(page_ok) is True
+
+
+def test_sin_teclado_interactivo_no_se_simula_un_enter():
+    """`readline()` sobre un stdin no interactivo devuelve "" al instante. Tomar
+    eso por un ENTER hacía que el aviso se repitiera decenas de veces por segundo
+    durante todo el --login (observado el 2026-09-02)."""
+    import io
+
+    from whatsapp_sender import _hubo_enter
+
+    assert _hubo_enter(io.StringIO("")) is False          # EOF: no hay teclado
+    assert _hubo_enter(io.StringIO("\n")) is True         # ENTER de verdad
+    assert _hubo_enter(io.StringIO("listo\n")) is True
