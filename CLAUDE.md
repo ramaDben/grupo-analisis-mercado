@@ -427,6 +427,29 @@ no está, así que sin las series el motor no falla, simplemente deja de emitir
 tickets. Si el resultado sale vacío, lo primero que hay que descartar es que falten
 las series.
 
+### La cadena de datos tiene un solo punto de entrada
+
+`scripts/pipeline_datos.py` corre los tres pasos **en orden y aborta al primer fallo**:
+
+```bash
+uv run --with MetaTrader5 python scripts/pipeline_datos.py   # ingesta → precios → sesgo
+uv run python scripts/pipeline_datos.py --estado             # solo reporta, no ejecuta
+```
+
+Abortar es deliberado. Saltarse un paso o invertirlos no rompe nada de forma visible,
+y ese es el problema: correr el motor sobre precios que no se actualizaron produce un
+sesgo que **parece** fresco. Peor que fallar es fallar de forma convincente.
+
+`--estado` lee los **tres relojes** que antes nadie miraba juntos
+(`estado_ejecucion.json`, `latest_prices_summary.json`, `macro_bias_output.json`) y
+aplica el mismo umbral de staleness del Playbook vía `bias_reader` — inventar una
+segunda regla de vencimiento sería el mismo error que tener dos fórmulas de ATR.
+
+Informa además la **confianza del modelo**, que hasta ahora solo se imprimía en
+consola del motor y no la leía nadie. **Ese número todavía no bloquea**: qué umbral
+corresponde es una decisión de método pendiente del director. Lo que sí cambia es que
+deja de estar enterrado en un JSON.
+
 ## Stories GI y Generación de Imágenes
 
 > [!CRITICAL]
