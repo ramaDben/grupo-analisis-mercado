@@ -492,3 +492,12 @@ def test_el_dry_run_y_las_validaciones_no_necesitan_playwright(monkeypatch):
 
     with pytest.raises(ValueError):
         sender.enviar(destinatario="forex", mensaje="", adjunto=None)
+
+
+def test_la_sesion_no_depende_del_directorio_desde_el_que_se_ejecute(tmp_path, monkeypatch):
+    """`session_dir` viene relativo en el config. Sin anclarlo a la raíz del repo,
+    ejecutar desde otro cwd apunta a una carpeta vacía y reporta "sesión expirada"
+    con la sesión intacta — y un `--login` ahí vincularía OTRO perfil."""
+    monkeypatch.chdir(tmp_path)
+    sender = WhatsAppSender()
+    assert sender.session_dir.resolve() == (RAIZ / ".whatsapp_session").resolve()
