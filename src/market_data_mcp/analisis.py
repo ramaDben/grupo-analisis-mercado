@@ -254,6 +254,11 @@ def analizar_activo(ticker: str, timeframe: str = "H4") -> dict[str, Any]:
         atr_restante = max(atr14_val - rango_hoy, piso)
         resultado["rango_hoy"] = round(rango_hoy, digits)
         resultado["atr_restante_14"] = round(atr_restante, digits)
+        # ATR_20 es por definición el ATR diario del Playbook (`atr_daily_period`
+        # en playbook_config.yaml) y la base del stop swing, 2.5 x ATR_20(D1).
+        # Sin él ese stop no era calculable desde la tool y había que ir al
+        # snapshot del motor, que puede tener 24 h.
+        resultado["atr_20"] = round(float(atr(df_closed, 20).iloc[-1]), digits)
 
     resultado["timestamp"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     return resultado
