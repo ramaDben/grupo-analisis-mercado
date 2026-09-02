@@ -117,7 +117,11 @@ uv run --extra stories python scripts/pipeline_carrusel.py --despachar data/carr
 WhatsApp acepta varias imágenes a la vez y **cada una conserva su propio pie** (medido
 contra el DOM real el 2026-09-02). Así, las cuatro piezas de un canal dejan de ser
 cuatro aperturas de navegador espaciadas 45 s: una tanda de cinco canales pasa de
-7-15 minutos a unos 3, y de consumir 20 del cupo diario a consumir 5.
+7-15 minutos a unos 3.
+
+**El cupo diario no baja.** Cuenta mensajes entregados, no acciones: veinte piezas siguen
+siendo veinte mensajes salgan en veinte acciones o en cinco. Lo que baja son las aperturas
+de navegador y las esperas.
 
 **Y cada canal se rinde justo antes de despacharse, no al principio de la tanda.** Antes
 se rendía todo primero y la última pieza llegaba con el precio de hacía veinte minutos;

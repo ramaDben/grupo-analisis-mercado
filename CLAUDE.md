@@ -187,9 +187,12 @@ una imagen inexistente: una pieza a medias que sale sin avisar llega al cliente.
 imágenes a la vez y **cada una conserva su propio pie** (medido contra el DOM real el
 2026-09-02: se escribió en la primera, se cambió a la segunda —que apareció vacía— y al
 volver a la primera su pie seguía ahí; el botón queda etiquetado "Enviar 2 seleccionados").
-Una tanda de cinco canales pasa de 10-20 acciones a 5, de 7-15 minutos a unos 3, y de
-consumir 20 del cupo diario a consumir 5. Menos acciones es también menos superficie de
-detección, que importa más que el tiempo.
+Una tanda de cinco canales pasa de 10-20 acciones a 5 y de 7-15 minutos a unos 3. Menos
+acciones es también menos superficie de detección, que importa más que el tiempo.
+
+**El cupo diario no baja, y no debe bajar.** Cuenta mensajes entregados, no clics: veinte
+piezas siguen siendo veinte mensajes, salgan en veinte acciones o en cinco. Lo que baja es
+el número de aperturas de navegador y de esperas de 45 s.
 
 **Cada canal se rinde justo antes de despacharse.** Rendir todo al principio hacía que la
 última pieza llegara con el precio de hacía veinte minutos. El refresco (1-3 s de datos +
