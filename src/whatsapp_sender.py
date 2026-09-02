@@ -1,4 +1,4 @@
-﻿"""Módulo de automatización segura y robusta de WhatsApp Web con Playwright.
+"""Módulo de automatización segura y robusta de WhatsApp Web con Playwright.
 
 Proporciona el cliente WhatsAppSender con:
 - Persistencia de sesión (IndexedDB/cookies en .whatsapp_session/).
@@ -558,8 +558,52 @@ class WhatsAppSender:
             finally:
                 context.close()
 
+    def _cerrar_modales_emergentes(self, page: Any) -> None:
+        """Cierra modales de bienvenida, anuncios o novedades de WhatsApp Web."""
+        selectores_cerrar = [
+            'button:has-text("Continuar")',
+            'button:has-text("Aceptar")',
+            'button:has-text("OK")',
+            'button:has-text("Entendido")',
+            'button:has-text("Cerrar")',
+            'div[role="dialog"] button',
+            'div[role="dialog"] [data-icon="x"]',
+            'div[role="dialog"] [aria-label="Cerrar"]',
+            'div[role="dialog"] [aria-label="Close"]',
+            '[aria-label="Cerrar"]',
+            '[aria-label="Close"]',
+        ]
+        for _ in range(4):
+            try:
+                hubo_accion = False
+                for sel in selectores_cerrar:
+                    btns = page.locator(sel)
+                    total = btns.count()
+                    for i in range(total):
+                        btn = btns.nth(i)
+                        try:
+                            if btn.is_visible():
+                                btn.click(timeout=1500, force=True)
+                                self._pausa_humana(0.4)
+                                hubo_accion = True
+                                break
+                        except Exception:
+                            pass
+                    if hubo_accion:
+                        break
+                if not hubo_accion:
+                    if page.locator('div[role="dialog"]').count() > 0 or page.locator('[aria-modal="true"]').count() > 0:
+                        page.keyboard.press("Escape")
+                        self._pausa_humana(0.4)
+                    else:
+                        break
+            except Exception:  # noqa: BLE001
+                break
+
     def _buscar_y_abrir_chat(self, page: Any, nombre_oficial: str) -> None:
         """Busca el chat por nombre y valida la cabecera activa (Double Check)."""
+        self._cerrar_modales_emergentes(page)
+
         # 1. Localizar la barra de búsqueda de chats
         buscador = self._primer_locator(page, SELECTORES_BUSCADOR)
         if buscador is None:
@@ -568,7 +612,11 @@ class WhatsAppSender:
                 "El DOM pudo haber cambiado: revisa SELECTORES_BUSCADOR."
             )
 
-        buscador.click()
+        try:
+            buscador.click(timeout=5000)
+        except Exception:
+            self._cerrar_modales_emergentes(page)
+            buscador.click(timeout=5000, force=True)
         self._pausa_humana(0.5)
 
         # `fill` y no `type`: el tipeo carácter a carácter parte los pares
@@ -588,7 +636,12 @@ class WhatsAppSender:
                 "Verifique que la cuenta esté añadida a dicho grupo."
             )
 
-        resultado.first.click()
+        self._cerrar_modales_emergentes(page)
+        try:
+            resultado.first.click(timeout=8000)
+        except Exception:
+            self._cerrar_modales_emergentes(page)
+            resultado.first.click(timeout=8000, force=True)
         try:
             page.wait_for_selector("div#main", timeout=self.timeout_busqueda_ms)
         except Exception as exc:  # noqa: BLE001
@@ -596,6 +649,7 @@ class WhatsAppSender:
                 f'No se llegó a abrir la conversación con "{nombre_oficial}": {exc}'
             ) from exc
         self._pausa_humana(1.0)
+        self._cerrar_modales_emergentes(page)
 
         # 3. DOBLE CHEQUEO DE SEGURIDAD (Active Header Check)
         # El fallback NO puede ser `header` a secas: el primero de la página es
@@ -614,11 +668,16 @@ class WhatsAppSender:
 
     def _insertar_texto(self, page: Any, texto: str) -> None:
         """Escribe el texto en la caja de conversación respetando saltos de línea."""
+        self._cerrar_modales_emergentes(page)
         caja = self._primer_locator(page, SELECTORES_CAJA_TEXTO)
         if caja is None:
             raise EnvioMensajeError("No se encontró la caja de texto para escribir el mensaje.")
 
-        caja.click()
+        try:
+            caja.click(timeout=5000)
+        except Exception:
+            self._cerrar_modales_emergentes(page)
+            caja.click(timeout=5000, force=True)
         self._pausa_humana(0.4)
         # Un borrador olvidado de una corrida anterior se enviaría pegado a este
         # mensaje. Se limpia siempre antes de escribir.
@@ -647,13 +706,18 @@ class WhatsAppSender:
         if not ruta_archivo.exists():
             raise FileNotFoundError(f"El archivo adjunto no existe: {ruta_archivo}")
 
+        self._cerrar_modales_emergentes(page)
         boton = self._primer_locator(page, SELECTORES_ADJUNTAR)
         if boton is None:
             raise EnvioMensajeError(
                 'No se encontró el botón "Adjuntar". Es la única vía correcta: el '
                 "campo de archivo suelto del chat es el creador de stickers."
             )
-        boton.click()
+        try:
+            boton.click(timeout=5000)
+        except Exception:
+            self._cerrar_modales_emergentes(page)
+            boton.click(timeout=5000, force=True)
         self._pausa_humana(0.8)
 
         opcion = _opcion_menu_adjuntar(ruta_archivo)

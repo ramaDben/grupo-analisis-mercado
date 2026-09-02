@@ -360,7 +360,8 @@ def construir_svg_barras(
         y = coord_y(valor)
         alto = abs(y - y_cero)
         top = min(y, y_cero)
-        signo = "pos" if valor >= 0 else "neg"
+        signo_default = "pos" if valor >= 0 else "neg"
+        signo = b.get("signo") or b.get("clase") or signo_default
         # La última barra es el dato que se está comunicando: se destaca para que
         # el ojo la encuentre sin buscar.
         destacada = " gb-barra-destacada" if i == n - 1 else ""
