@@ -516,3 +516,100 @@ def test_escanear_con_modo_matriz_selecciona_un_activo_por_grupo():
     grupos_sel = [pc.obtener_grupo_whatsapp(s["clase"], s["ticker"]) for s in seleccion]
     assert len(grupos_sel) == len(set(grupos_sel)), "El modo matriz no debe repetir grupos"
 
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Vocabulario de prohibiciones: el gate tiene que conocer TODOS los tokens
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _sesgo_con(prohibidos, regimen="R0_CALMA_RANGO"):
+    return {
+        "regimen_macro_global": {"codigo": regimen},
+        "activo": {"setups_prohibidos": list(prohibidos), "setups_permitidos": []},
+    }
+
+
+def test_gate_bloquea_breakout_chase_long_en_lectura_alcista():
+    """La violación que estaba viva el 2026-09-02.
+
+    En R0 el Playbook y la skill §4 coinciden: prohibido perseguir quiebres
+    tendenciales. El motor lo emitía bien (`BREAKOUT_CHASE_LONG` en USD/CLP) y el
+    vocabulario del escáner no lo reconocía, así que el gate lo dejaba pasar y la
+    tanda podía publicar el quiebre alcista que el Playbook prohíbe.
+    """
+    res = sc.evaluar_activo(
+        ACTIVO, [], None, {"XAUUSD": _sesgo_con(["BREAKOUT_CHASE_LONG"])},
+        AHORA.astimezone(sc.SANTIAGO),
+        analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),  # alcista
+    )
+    assert "excluido" in res
+    assert "BREAKOUT_CHASE_LONG" in res["excluido"]
+
+
+def test_gate_bloquea_fade_top_resistance_en_lectura_bajista():
+    """El otro hueco. Estaba citado literalmente en el comentario del módulo como
+    ejemplo del vocabulario que el gate sí capturaba, y no lo capturaba."""
+    h1_bajista = h1_perfecto()
+    h1_bajista.update(price=100.0, ema_20=101.0, ema_50=102.0, ema_100=103.0,
+                      rsi_14=40.0, macd_hist=-0.3, s1=96.0, r1=101.0)
+    res = sc.evaluar_activo(
+        ACTIVO, [], None, {"XAUUSD": _sesgo_con(["FADE_TOP_RESISTANCE"])},
+        AHORA.astimezone(sc.SANTIAGO),
+        analizador_falso(h1_bajista, d1_con_consumo(0.30)),
+    )
+    assert "excluido" in res
+    assert "FADE_TOP_RESISTANCE" in res["excluido"]
+
+
+@pytest.mark.parametrize("token", ["BREAKOUT_CHASE", "GRID_SIN_STOP",
+                                   "MEAN_REVERSION_RSI_H1", "FADE_SUPPORT_RESISTANCE_M15"])
+def test_gate_no_bloquea_tokens_sin_direccion(token):
+    """Estos prohíben una FORMA de operar, no un lado del mercado. Bloquear con
+    ellos dejaría al escáner sin universo por una prohibición que no se opone a
+    la lectura técnica."""
+    res = sc.evaluar_activo(
+        ACTIVO, [], None, {"XAUUSD": _sesgo_con([token])},
+        AHORA.astimezone(sc.SANTIAGO),
+        analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
+    )
+    assert "excluido" not in res, f"{token} no tiene dirección y no debería bloquear"
+
+
+def test_gate_bloquea_token_desconocido_en_vez_de_ignorarlo():
+    """Un token sin clasificar es más probable que sea una prohibición real a que
+    sea inocuo. No publicar un activo cuesta una pieza; publicar contra el
+    Playbook cuesta el método. Ante la duda el gate bloquea y dice por qué."""
+    res = sc.evaluar_activo(
+        ACTIVO, [], None, {"XAUUSD": _sesgo_con(["SETUP_QUE_NADIE_CLASIFICO"])},
+        AHORA.astimezone(sc.SANTIAGO),
+        analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
+    )
+    assert "excluido" in res
+    assert "SETUP_QUE_NADIE_CLASIFICO" in res["excluido"]
+
+
+def test_todo_token_del_motor_esta_clasificado_en_el_escaner():
+    """El contrato que impide repetir el error.
+
+    Si alguien agrega un `setups_prohibidos` nuevo al motor y no lo clasifica
+    acá, este test falla. Sin él, el token entra al snapshot, el gate no lo
+    reconoce y la omisión no se nota hasta que sale una pieza que no debía salir
+    — que es exactamente cómo llegamos acá, y el mismo patrón de los filtros de
+    calendario escritos en español contra una fuente en inglés.
+    """
+    import re
+
+    fuente = (RAIZ / "scripts" / "macro_bias_engine.py").read_text(encoding="utf-8")
+    emitidos = {
+        token
+        for bloque in re.findall(r"setups_prohibidos\s*=\s*\[(.*?)\]", fuente, re.S)
+        for token in re.findall(r'"([^"]+)"', bloque)
+    }
+    assert emitidos, "no se pudo leer ningún token del motor: el patrón quedó obsoleto"
+
+    sin_clasificar = sorted(emitidos - set(sc._DIRECCION_PROHIBIDA))
+    assert not sin_clasificar, (
+        f"el motor emite tokens que el gate no conoce: {sin_clasificar}. "
+        "Agrégalos a _DIRECCION_PROHIBIDA con su dirección, o None si prohíben "
+        "una forma de operar y no un lado del mercado."
+    )

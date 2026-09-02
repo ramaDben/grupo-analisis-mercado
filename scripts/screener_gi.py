@@ -238,8 +238,36 @@ _PATRONES_SEGUNDO_ORDEN = (
 # (SHORT_AGRESIVO, BUY_THE_DIP_AGGRESSIVE, FADE_TOP_RESISTANCE...). Un token
 # prohibido solo bloquea si apunta en la MISMA dirección que la lectura técnica:
 # que esté prohibido comprar agresivamente no impide comunicar una caída.
-_PROHIBIDO_BAJISTA = ("SHORT_AGRESIVO", "VENTA_CONTRA_TENDENCIA", "SHORT_FADE_OVERBOUGHT", "SHORT_FADE")
-_PROHIBIDO_ALCISTA = ("BUY_THE_DIP_AGGRESSIVE", "COMPRA_SIN_CONFIRMACION", "LONG_INVERTIDO", "LONG_SWING_FADE")
+#
+# El mapa es EXHAUSTIVO y se compara por igualdad, no por substring. La versión
+# anterior eran dos tuplas de fragmentos y dejó dos huecos que nadie vio: el
+# `BREAKOUT_CHASE_LONG` que el motor emite para USD/CLP en R0 (donde el Playbook
+# y la skill §4 prohíben perseguir quiebres) y el `FADE_TOP_RESISTANCE`, que
+# estaba citado acá arriba como ejemplo de lo que el gate capturaba y no
+# capturaba. Con substrings la omisión es invisible; con un mapa exhaustivo,
+# `test_todo_token_del_motor_esta_clasificado_en_el_escaner` la detecta.
+#
+# `None` significa "prohíbe una FORMA de operar, no un lado del mercado": no se
+# opone a ninguna lectura técnica y por eso no bloquea.
+_DIRECCION_PROHIBIDA: dict[str, str | None] = {
+    # Bloquean una lectura BAJISTA
+    "SHORT_AGRESIVO": "BAJISTA",
+    "VENTA_CONTRA_TENDENCIA": "BAJISTA",
+    "SHORT_FADE_OVERBOUGHT": "BAJISTA",
+    "SHORT_FADE": "BAJISTA",
+    "FADE_TOP_RESISTANCE": "BAJISTA",
+    # Bloquean una lectura ALCISTA
+    "BUY_THE_DIP_AGGRESSIVE": "ALCISTA",
+    "COMPRA_SIN_CONFIRMACION": "ALCISTA",
+    "LONG_INVERTIDO": "ALCISTA",
+    "LONG_SWING_FADE": "ALCISTA",
+    "BREAKOUT_CHASE_LONG": "ALCISTA",
+    # Sin dirección
+    "BREAKOUT_CHASE": None,
+    "GRID_SIN_STOP": None,
+    "MEAN_REVERSION_RSI_H1": None,
+    "FADE_SUPPORT_RESISTANCE_M15": None,
+}
 
 
 def _normalizar(texto: str) -> str:
@@ -470,10 +498,16 @@ def gate_playbook(direccion: str, sesgo: dict[str, Any] | None) -> str | None:
         return None
     activo = sesgo.get("activo") or {}
     prohibidos = activo.get("setups_prohibidos") or []
-    claves = _PROHIBIDO_BAJISTA if direccion == "BAJISTA" else _PROHIBIDO_ALCISTA
+    regimen = (sesgo.get("regimen_macro_global") or {}).get("codigo", "?")
     for token in prohibidos:
-        if any(c in token.upper() for c in claves):
-            regimen = (sesgo.get("regimen_macro_global") or {}).get("codigo", "?")
+        clave = token.upper()
+        if clave not in _DIRECCION_PROHIBIDA:
+            # Un token sin clasificar es mas probable que sea una prohibicion real
+            # a que sea inocuo. No publicar un activo cuesta una pieza; publicar
+            # contra el Playbook cuesta el metodo. El escaner informa el motivo,
+            # asi que la exclusion queda auditada y no desaparece en silencio.
+            return f"el Playbook prohibe {token} en {regimen} (sin clasificar en el escaner)"
+        if _DIRECCION_PROHIBIDA[clave] == direccion:
             return f"el Playbook prohibe {token} en {regimen}"
     return None
 
