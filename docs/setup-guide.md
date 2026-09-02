@@ -157,6 +157,23 @@ Cubren: matemática técnica (RSI, clustering, soportes/resistencias), el contra
 
 ---
 
+## Series de precios (prerrequisito del motor)
+
+Las series OHLC **no se versionan**: las regenera `scripts/extractor_precios.py`
+desde MT5 (10.000 velas por símbolo). En un clon nuevo hay que producirlas antes de
+correr el motor, o `macro_bias_engine.py` y `ticket_engine.py` trabajan sin datos de
+precio.
+
+```bash
+# Con MetaTrader 5 abierto:
+uv run --with MetaTrader5 python scripts/extractor_precios.py
+```
+
+Quedan versionadas solo las semanales (`*_W1.json`) y `latest_prices_summary.json`,
+que son livianas y sirven de referencia cuando no hay terminal.
+
+---
+
 ## Configuración del envío a WhatsApp
 
 El envío va por **WhatsApp Web con Playwright**, sobre una sesión vinculada una sola

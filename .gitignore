@@ -109,3 +109,12 @@ data/old/
 # Artefactos generados dentro de la data lake (PDFs, PNG e informes compilados).
 # Se regeneran con sus scripts; versionarlos infla el repo sin dar nada a cambio.
 data central/**/reportes_generados/
+
+# Series OHLC intradia y diarias: las regenera `scripts/extractor_precios.py`
+# desde MT5 (10.000 velas por simbolo, ~5 MB cada una). Versionarlas sumaba ~66 MB
+# por ingesta a la historia del repo sin aportar nada que MT5 no devuelva. Se
+# conservan versionadas las semanales y `latest_prices_summary.json`, que son
+# livianas y sirven de referencia cuando no hay terminal.
+data central/DATA PRECIOS OHLC/*_M15.json
+data central/DATA PRECIOS OHLC/*_H1.json
+data central/DATA PRECIOS OHLC/*_D1.json

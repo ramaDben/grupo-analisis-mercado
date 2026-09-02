@@ -418,6 +418,21 @@ padre** (comunidad), y cada canal temático recibe además su propia lectura mac
 > contador en `data/.whatsapp_envios.json`). No subas esos límites, no metas el envío en un bucle y no lo
 > lances en paralelo: el perfil de sesión no admite dos procesos a la vez.
 
+## Series de precios: en disco, no en git
+
+`data central/DATA PRECIOS OHLC/` lo llena `scripts/extractor_precios.py` desde MT5 y
+lo leen `macro_bias_engine.py` y `ticket_engine.py`. Las series intradía y diarias
+(`*_M15`, `*_H1`, `*_D1`) **están gitignoradas**: pesan ~5 MB cada una y se
+regeneran, así que versionarlas sumaba ~66 MB a la historia por cada ingesta sin
+aportar nada que MT5 no devuelva. Las semanales y `latest_prices_summary.json` sí se
+versionan: son livianas y sirven de referencia sin terminal.
+
+**En un clon nuevo hay que correr el extractor antes que el motor.** Ojo con esto:
+`ticket_engine.cargar_serie_h1_archivo` devuelve `None` en silencio cuando el archivo
+no está, así que sin las series el motor no falla, simplemente deja de emitir
+tickets. Si el resultado sale vacío, lo primero que hay que descartar es que falten
+las series.
+
 ## Stories GI y Generación de Imágenes
 
 > [!CRITICAL]
