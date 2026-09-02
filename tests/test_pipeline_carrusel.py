@@ -284,3 +284,80 @@ def test_preparar_barre_los_payloads_de_la_corrida_anterior(tmp_path):
     assert not viejo.exists(), "el payload de la corrida anterior sobrevivio"
     assert conservar.exists(), "se llevo puesto el registro del escaner"
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Modularización de grupos de WhatsApp
+# ─────────────────────────────────────────────────────────────────────────────
+@pytest.mark.parametrize("cat, ticker, grupo_esperado", [
+    ("forex", "USDCLP", "02_forex_divisas"),
+    ("forex", "EURUSD", "02_forex_divisas"),
+    ("forex", "USDJPY", "02_forex_divisas"),
+    ("commodity", "XAUUSD", "03_commodities_materias_primas"),
+    ("commodity", "WTI.spot", "03_commodities_materias_primas"),
+    ("commodity", "COPPER", "03_commodities_materias_primas"),
+    ("crypto", "BTCUSD", "06_criptoactivos"),
+    ("crypto", "ETHUSD", "06_criptoactivos"),
+    ("indices", "US100.spot", "04_indices_bursatiles"),
+    ("indices", "US500.spot", "04_indices_bursatiles"),
+    ("acciones", "#AAPL", "05_acciones_etfs"),
+    ("acciones", "#MELI", "05_acciones_etfs"),
+    ("etfs", "QQQ.US", "05_acciones_etfs"),
+    ("etfs", "SOXX.US", "05_acciones_etfs"),
+])
+def test_obtener_grupo_whatsapp_mapea_correctamente_cada_categoria(cat, ticker, grupo_esperado):
+    assert pc.obtener_grupo_whatsapp(cat, ticker) == grupo_esperado
+
+
+def test_construir_mensaje_alerta_cumple_reglas_canonicas_whatsapp():
+    payload = payload_de_prueba()
+    payload["titular"] = "Quiebre alcista sobre 68,97"
+    payload["parrafo"] = "La plata consolida fuerza compradora tras cruzar la resistencia técnica."
+    msg = pc.construir_mensaje_alerta(payload)
+
+    # 1. Resumen al inicio
+    assert "🎯 Activo:" in msg
+    assert "📌 Nivel a vigilar:" in msg
+    assert "⚡ Qué esperar:" in msg
+
+    # 2. Separadores
+    assert "━━━━━━━━━━━━━━━━━━━" in msg
+
+    # 3. Código de emojis de escenarios
+    assert "🟢 Sobre" in msg
+    assert "🟡 Entre" in msg
+    assert "🔴 Bajo" in msg
+
+    # 4. Niveles y cifras
+    assert "68,716" in msg
+    assert "0,661 USD" in msg
+
+
+
+
+# ---------------------------------------------------------------------------
+# El destino que pide el director se resuelve contra el config, o falla fuerte
+# ---------------------------------------------------------------------------
+
+def test_el_grupo_pedido_se_resuelve_con_los_alias_del_config():
+    """`--grupo metales` tiene que llegar a Metales & Energía, no al cajón macro."""
+    from pipeline_carrusel import resolver_grupo_solicitado
+    casos = {
+        "commodities": "03_commodities_materias_primas",
+        "metales": "03_commodities_materias_primas",
+        "oro": "03_commodities_materias_primas",
+        "Grupo Inteligencia | Metales & Energía": "03_commodities_materias_primas",
+        "cripto": "06_criptoactivos",
+        "crypto": "06_criptoactivos",
+        "forex": "02_forex_divisas",
+        "indices": "04_indices_bursatiles",
+    }
+    for pedido, esperado in casos.items():
+        assert resolver_grupo_solicitado(pedido) == esperado, pedido
+
+
+def test_un_grupo_desconocido_aborta_en_vez_de_caer_al_canal_macro():
+    """Un destino que no se reconoce publica en el canal equivocado: mejor detenerse."""
+    import pytest as _pytest
+    from pipeline_carrusel import GrupoDesconocidoError, resolver_grupo_solicitado
+    with _pytest.raises(GrupoDesconocidoError):
+        resolver_grupo_solicitado("bonos soberanos")

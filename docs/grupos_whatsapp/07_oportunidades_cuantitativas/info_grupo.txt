@@ -1,0 +1,51 @@
+================================================================================
+07. CANAL OPORTUNIDADES & TRADING CUANTITATIVO (SEÑALES VIP)
+================================================================================
+
+[1] NOMBRES PARA WHATSAPP
+--------------------------------------------------------------------------------
+• Nombre Oficial Recomendado (Copiar y Pegar):
+  GI · Oportunidades & Trading Cuantitativo
+
+• Nombre Actual en WhatsApp (el que usa el envío automatizado):
+  Grupo Inteligencia | Señales De Trading
+
+• Nombre Alternativo:
+  Grupo Inteligencia | Señales & Setups VIP
+
+• Nombre Corto (para identificadores rápidos):
+  GI Oportunidades
+
+[2] ARCHIVO DE FOTO DE PERFIL
+--------------------------------------------------------------------------------
+• Archivo asignado: foto_perfil.jpg (ubicado en esta misma carpeta)
+• Origen del asset: templates/stories/assets/activos/us500.jpg
+
+[3] DESCRIPCIÓN OFICIAL PARA EL GRUPO (Copiar y Pegar en WhatsApp)
+--------------------------------------------------------------------------------
+🎯 *GI · Oportunidades & Trading Cuantitativo*
+_Grupo de Análisis de Mercado | Grupo Inteligencia_
+
+Canal exclusivo para el envío de configuraciones operativas de alta convicción bajo el Playbook Cuantitativo Intermercado de Grupo Inteligencia.
+
+🎯 *PROPÓSITO DEL CANAL*
+Proveer oportunidades operativas concretas con parámetros institucionales de gestión de riesgo, puntos exactos de entrada, Take Profit y Stop Loss calculados en pesos chilenos (CLP).
+
+⚙️ *CARACTERÍSTICAS DEL SERVICIO*
+• *Límite de Frecuencia*: Máximo 3 señales por semana (calidad y selectividad por sobre cantidad).
+• *Transparencia Total*: Cada setup indica:
+  - Ticker y Tipo de Orden (BUY / SELL)
+  - Precio de Entrada
+  - Stop Loss (SL) con cálculo monetario estimado en CLP
+  - Take Profit (TP) con cálculo monetario estimado en CLP
+  - Razón técnica y fundamental de respaldo
+  - Costo de mantención estimado (Swap)
+• *Metodología*: Modelos cuantitativos intermercado, Volatility Targeting y validación de filtros de calendario macro (sin operar durante blackouts de noticias críticas).
+
+🏆 *ACTIVOS PRIORITARIOS*
+USD/CLP, Oro (XAU/USD), Petróleo WTI, Nasdaq 100 (US100), S&P 500 y pares mayores FX.
+
+📌 *POLÍTICA DE GESTIÓN DE RIESGO*
+Toda operación debe ejecutarse respetando el tamaño de lote adecuado a su capital. Nunca arriesgar más del 1% al 2% de la cuenta por operación. El trading con apalancamiento implica riesgo significativo.
+
+================================================================================

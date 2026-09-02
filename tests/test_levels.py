@@ -402,3 +402,21 @@ def test_mt5_no_instalado_retorna_error_no_lanza(collector, monkeypatch):
 
     assert res["error"] == "MT5_UNAVAILABLE"
     assert isinstance(res["message"], str) and res["message"]
+
+
+def test_la_ruta_feliz_no_exige_conexion_viva_a_mt5(collector, monkeypatch):
+    """`analizar_activo` llama a `connect()` por prudencia, pero la fuente de verdad
+    es `get_rates`. Si exigir la conexión aborta el análisis, la ruta feliz deja de
+    ser testeable sin terminal y CI vuelve a quedar ciega (pasó el 2026-09-01)."""
+    from market_data_mcp import mt5_client
+
+    def connect_caido():
+        raise RuntimeError("MetaTrader5 no está instalado en este entorno")
+
+    monkeypatch.setattr(mt5_client, "connect", connect_caido)
+    monkeypatch.setattr(mt5_client, "get_rates", lambda ticker, tf, n_bars=300: _df_ohlc())
+
+    levels.register(collector)
+    res = collector.tools["get_asset_levels"](ticker="XAUUSD", timeframe="H4")
+    assert "error" not in res, res
+    assert res["ticker"] == "XAUUSD"

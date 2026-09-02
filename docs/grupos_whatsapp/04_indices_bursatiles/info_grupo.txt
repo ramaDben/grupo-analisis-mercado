@@ -1,0 +1,53 @@
+================================================================================
+04. CANAL ÍNDICES BURSÁTILES
+================================================================================
+
+[1] NOMBRES PARA WHATSAPP
+--------------------------------------------------------------------------------
+• Nombre Oficial Recomendado (Copiar y Pegar):
+  GI · Índices Bursátiles
+
+• Nombre Alternativo:
+  Grupo Inteligencia | Wall Street & Índices
+
+• Nombre Corto (para identificadores rápidos):
+  GI Índices
+
+[2] ARCHIVO DE FOTO DE PERFIL
+--------------------------------------------------------------------------------
+• Archivo asignado: foto_perfil.jpg (ubicado en esta misma carpeta)
+• Origen del asset: templates/stories/assets/activos/us100.jpg
+
+[3] DESCRIPCIÓN OFICIAL PARA EL GRUPO (Copiar y Pegar en WhatsApp)
+--------------------------------------------------------------------------------
+📈 *GI · Índices Bursátiles*
+_Grupo de Análisis de Mercado | Grupo Inteligencia_
+
+Canal enfocado en el monitoreo del pulso y la tendencia de las principales bolsas de valores de Estados Unidos y Europa.
+
+🎯 *PROPÓSITO DEL CANAL*
+Entregar una lectura clara de la rotación de capital, el apetito por riesgo y los niveles clave de entrada y salida en los índices más operados del mundo.
+
+🏛️ *ÍNDICES CUBIERTOS*
+• *Nasdaq 100 (US100.spot)*: Sector tecnológico, semiconductores y megacaps de crecimiento.
+• *S&P 500 (US500.spot)*: Las 500 mayores empresas de EE.UU., barómetro macroeconómico global.
+• *Dow Jones (US30.spot)*: Sector industrial, bancario y financiero tradicional.
+• *DAX 40 (GER40.spot)*: Referencia líder de la renta variable de la Zona Euro.
+
+⚡ *DRIVERS Y CATALIZADORES*
+• *Resultados Trimestrales (Earnings)* de los pesos pesados tecnológicos e industriales.
+• *Rendimientos de la curva de Bonos del Tesoro de EE.UU.* (Yields 2Y, 10Y y pendiente 2s10s).
+• *Decisiones de política monetaria y discursos de la Fed*.
+• *Sentimiento de Mercado*: Régimen Risk-On (apetito por riesgo) vs. Risk-Off (cautela/refugio).
+
+🔍 *DINÁMICA DE PUBLICACIÓN*
+• *Niveles de Apertura*: Publicados antes de las 10:30 CLT (apertura de Wall Street).
+• *Estructura de Alerta*:
+  🎯 Activo y Precio actual
+  📌 Nivel a vigilar (Resistencia / Soporte)
+  ⚡ Qué esperar (Fuerza compradora / Presión vendedora / Pausa)
+
+📌 *REGLAS DE OPERATORIA*
+Análisis técnico basado en MetaTrader 5 institucional y modelos de momentum (ADX, RSI, Medias Móviles EMA 20/50/100).
+
+================================================================================

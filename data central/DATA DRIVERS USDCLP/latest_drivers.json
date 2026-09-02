@@ -1,22 +1,22 @@
 {
-  "timestamp_consolidacion": "2026-08-28T14:12:37.633586+00:00",
+  "timestamp_consolidacion": "2026-09-01T17:52:43.564526+00:00",
   "drivers": {
     "US_10Y_TREASURY": {
-      "valor": 4.66,
+      "valor": 4.73,
       "unidad": "%",
-      "fecha_dato": "2026-08-26",
+      "fecha_dato": "2026-08-28",
       "is_stale": false
     },
     "FED_FUNDS_RATE": {
       "valor": 3.63,
       "unidad": "%",
-      "fecha_dato": "2026-08-26",
+      "fecha_dato": "2026-08-28",
       "is_stale": false
     },
     "COBRE_HG": {
-      "valor": 6.7025,
+      "valor": 6.585,
       "unidad": "USD/lb",
-      "fecha_dato": "2026-08-28",
+      "fecha_dato": "2026-09-01",
       "is_stale": false
     },
     "PETROLEO_BRENT": {
@@ -26,27 +26,27 @@
       "is_stale": false
     },
     "ORO_SPOT": {
-      "valor": 4568.95,
+      "valor": 4562.75,
       "unidad": "USD/oz",
-      "fecha_dato": "2026-08-27",
+      "fecha_dato": "2026-08-28",
       "is_stale": false
     },
     "CHILE_IMACEC_12M": {
-      "valor": 2.02,
+      "valor": -1.49,
       "unidad": "%",
-      "fecha_dato": "2026-06-01",
+      "fecha_dato": "2026-07-01",
       "is_stale": false
     },
     "CHILE_TPM": {
       "valor": 4.5,
       "unidad": "%",
-      "fecha_dato": "2026-08-28",
+      "fecha_dato": "2026-09-01",
       "is_stale": false
     },
     "POSICION_FORWARD_EXTRANJEROS_USD": {
-      "valor": -16005.29017,
+      "valor": -16178.33569,
       "unidad": "millones_USD",
-      "fecha_dato": "2026-08-26",
+      "fecha_dato": "2026-08-28",
       "is_stale": false
     },
     "BOJ_POLICY_RATE": {
@@ -65,15 +65,15 @@
       "is_stale": false
     },
     "JGB_10Y_YIELD": {
-      "valor": 2.897,
+      "valor": 2.943,
       "unidad": "%",
-      "fecha_dato": "2026-08-27",
+      "fecha_dato": "2026-08-31",
       "is_stale": false
     },
     "USD_JPY": {
-      "valor": 159.737,
+      "valor": 160.234,
       "unidad": "JPY",
-      "fecha_dato": "2026-08-27",
+      "fecha_dato": "2026-08-31",
       "is_stale": false
     }
   }

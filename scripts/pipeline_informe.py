@@ -512,14 +512,58 @@ def cargar_glosario_motor() -> dict[str, Any]:
         return {}
 
 
-def _traducir_setup(token: str, glosario: dict[str, Any]) -> str:
-    """Un setup del motor, en lenguaje de cliente.
+# Cómo se nombra cada marco temporal en voz de cliente, y en qué unidad cae el
+# período de un indicador medido en ese marco.
+_TF_ES = {
+    "M1": "1 minuto", "M5": "5 minutos", "M15": "15 minutos", "M30": "30 minutos",
+    "H1": "1 hora", "H4": "4 horas", "H12": "12 horas",
+    "D1": "1 día", "W1": "1 semana", "MN1": "1 mes",
+}
+# Todas femeninas a propósito: los textos dicen "las últimas N {periodos}", y
+# una unidad masculina deja "las últimas 20 días".
+_TF_PERIODOS = {
+    "M1": "velas de 1 minuto", "M5": "velas de 5 minutos",
+    "M15": "velas de 15 minutos", "M30": "velas de 30 minutos",
+    "H1": "horas", "H4": "velas de 4 horas", "H12": "velas de 12 horas",
+    "D1": "velas diarias", "W1": "velas semanales", "MN1": "velas mensuales",
+}
 
-    Si el token no está en el glosario se devuelve tal cual, y ahí lo caza el
+
+def _partir_timeframe(token: str) -> tuple[str, str | None]:
+    """`FADE_SUPPORT_RESISTANCE_H1` -> `("FADE_SUPPORT_RESISTANCE", "H1")`."""
+    for tf in _TF_ES:
+        if token.endswith(f"_{tf}"):
+            return token[: -(len(tf) + 1)], tf
+    return token, None
+
+
+def _traducir_setup(token: str, glosario: dict[str, Any]) -> str:
+    """Un setup del motor, en lenguaje de cliente y en cualquier temporalidad.
+
+    Las claves del glosario NO llevan marco temporal: el motor mira el que
+    necesita, y exigir una entrada por cada uno hacía que el primer `_H4` que
+    emitiera llegara al informe como token crudo. Se resuelve la clave base y el
+    marco se comunica aparte.
+
+    Si el setup no está en el glosario se devuelve tal cual, y ahí lo caza el
     test: preferimos que falle la suite a que `FADE_TOP_RESISTANCE` llegue a un
     documento que lee un cliente.
     """
-    return (glosario.get("setups") or {}).get(token, token)
+    setups = glosario.get("setups") or {}
+    base, tf = _partir_timeframe(token)
+    texto = setups.get(base, setups.get(token))
+    if texto is None:
+        return token
+    if "{periodos}" in texto:
+        return texto.replace("{periodos}", _TF_PERIODOS.get(tf or "", "velas"))
+    if tf:
+        return f"{texto} (en {_TF_ES[tf]})"
+    return texto
+
+
+def _setup_traducible(token: str, glosario: dict[str, Any]) -> bool:
+    """¿El glosario sabe explicar este setup, en la temporalidad que sea?"""
+    return _traducir_setup(token, glosario) != token
 
 
 def _frase_sesgo(a: dict[str, Any], glosario: dict[str, Any]) -> str:

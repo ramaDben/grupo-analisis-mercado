@@ -55,6 +55,8 @@ LIENZOS = {
     # 900x230 y no 900x300: la franja bajo la tarjeta mide ~950x210, y con un
     # lienzo 3:1 el SVG se encogia a media columna dejando bandas laterales.
     "ancho": dict(vb_w=900, vb_h=230, x0=190, x1=880, y0=18, y1=205, label_x=174, guia_x=182),
+    # 900x460 para la tarjeta lateral completa de dato_macro.html
+    "macro": dict(vb_w=900, vb_h=460, x0=180, x1=870, y0=40, y1=410, label_x=164, guia_x=172),
 }
 
 # Cómo se comporta el SVG dentro de su caja. `meet` conserva la proporción y deja
@@ -278,12 +280,12 @@ def construir_svg(
 # `preserveAspectRatio` un lienzo vertical dentro de una caja ancha se encoge
 # hasta convertirse en una estampilla al centro. Fue lo que paso en el primer
 # render.
-VB_W_BARRAS, VB_H_BARRAS = 900, 232
-PLOT_X0_BARRAS, PLOT_X1_BARRAS = 190, 880
-PLOT_Y0_BARRAS = 16
-PLOT_Y1_BARRAS = 186
-EJE_Y = 212
-LABEL_X_BARRAS = 174
+VB_W_BARRAS, VB_H_BARRAS = 900, 460
+PLOT_X0_BARRAS, PLOT_X1_BARRAS = 180, 870
+PLOT_Y0_BARRAS = 36
+PLOT_Y1_BARRAS = 390
+EJE_Y = 432
+LABEL_X_BARRAS = 164
 ANCHO_BARRA = 0.68   # proporción del paso entre barras; el resto es separación
 
 

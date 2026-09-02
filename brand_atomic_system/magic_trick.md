@@ -30,8 +30,9 @@
 - **Cero Gráficos Mock o SVGs Manuales**: Queda estrictamente prohibido dibujar curvas o vectores de precios "a mano", inventar polilíneas simplificadas de pocos puntos o incrustar SVGs aproximados en scripts ad-hoc.
 - **Obligatoriedad del Pipeline Canónico de Gráficos**: Todo gráfico técnico de mercado DEBE generarse obligatoriamente mediante la cadena oficial: `serie_mt5.py` (60 velas H1 de alta densidad) ➔ `story_grafico.py` (motor geométrico y anti-colisión) ➔ `story_render.py`.
 - **Prohibición de Templates HTML Inline Improvisados**: Jamás se debe renderizar una pieza de mercado usando HTML temporal escrito a mano dentro de un script si ya existe la plantilla oficial en `templates/stories/` (`alerta.html`, `calendario.html`, `dato_macro.html`, `breaking.html`).
-- **Integridad de Cromo y Fidelidad Visual**: Todo gráfico debe conservar sus clases de alta fidelidad (`.g-linea`, `.g-area`, `.g-punto`, `.g-halo`, `.g-nivel`), las transparencias Dark Emerald y el biselado reflectivo del snapshot oficial.
 - **Prohibición Total de Gráficos Mudos**: Queda estrictamente prohibido renderizar un gráfico de mercado sin sus niveles de precios, guías horizontales y etiquetas numéricas explícitas. Todo payload para templates con gráfico DEBE alimentar obligatoriamente los arrays `hitos` (punto SPOT actual) y `niveles` (soportes, resistencias y niveles de intervención soberana / macro como el nivel MOF 160.000 en USD/JPY).
+- **Cero Hardcoding de Cotizaciones y Precios**: Queda estrictamente prohibido escribir precios, cotizaciones o porcentajes a mano en scripts de Stories o Markdowns. Todas las cifras deben ser consumidas en vivo desde MetaTrader 5 o el MCP `market-data`. Para índices o commodities spot, usar siempre el símbolo exacto del catálogo (`US100.spot`, `US500.spot`, `WTI.spot`, etc.).
+- **Prohibición de Informes PDF Planos o Improvisados**: Todo informe PDF institucional DEBE generarse a través del pipeline canónico (`pipeline_informe.py` + `grafico_informe.py` + `generar_pdf.py`), incorporando los banners gráficos vectoriales a 300 DPI, tabla de curva soberana estructurada de 4 columnas y bloques pedagógicos de 3 capas.
 
 ---
 

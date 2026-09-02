@@ -8,7 +8,7 @@
 | Python | 3.10+ | MCP `market-data` (`src/market_data_mcp/`) |
 | git | cualquiera | Control de versiones |
 | gh CLI | cualquiera | Crear issues/PRs (opcional) |
-| Docker Desktop | cualquiera | Evolution API para WhatsApp (futuro) |
+| Chromium (vía Playwright) | el que instala `playwright install` | Render de Stories y envío a WhatsApp Web |
 | MetaTrader 5 | cualquiera | Requerido por el MCP market-data (`get_asset_levels`, `get_chart_objects`, `get_symbol_spec`) |
 | Playwright (opcional) | cualquiera | Extra `stories` — render de Stories GI (`/story`), instalar con `uv sync --extra stories && python -m playwright install chromium` |
 
@@ -106,7 +106,7 @@ cp mcp/mcp_config.example.json mcp/mcp_config.json
 ```
 
 Editar `mcp/mcp_config.json` con las credenciales reales:
-- `WHATSAPP_API_KEY`: API key de Evolution API
+- (el envío a WhatsApp no usa API keys: va con la sesión vinculada en `.whatsapp_session/`)
 - `WHATSAPP_GROUP_ID`: ID del grupo de WhatsApp
 
 > `mcp/mcp_config.json` está en `.gitignore` — nunca se commitea al repositorio.
@@ -157,26 +157,48 @@ Cubren: matemática técnica (RSI, clustering, soportes/resistencias), el contra
 
 ---
 
-## Configuración de Evolution API (WhatsApp — pendiente)
+## Series de precios (prerrequisito del motor)
 
-Cuando la conexión WhatsApp/Baileys esté lista, el flujo pasará a ser automático. Pasos:
+Las series OHLC **no se versionan**: las regenera `scripts/extractor_precios.py`
+desde MT5 (10.000 velas por símbolo). En un clon nuevo hay que producirlas antes de
+correr el motor, o `macro_bias_engine.py` y `ticket_engine.py` trabajan sin datos de
+precio.
 
 ```bash
-# 1. Levantar Evolution API
-docker run -d --name evolution-api -p 8080:8080 atendai/evolution-api
-
-# 2. Conectar WhatsApp
-# Abrir http://localhost:8080 en el navegador
-# Escanear el QR con el teléfono del número del grupo
-
-# 3. Obtener credenciales
-# - API Key: en la interfaz de Evolution API
-# - Group ID: copiar el ID del grupo de la interfaz
-
-# 4. Actualizar mcp_config.json con las credenciales
+# Con MetaTrader 5 abierto:
+uv run --with MetaTrader5 python scripts/extractor_precios.py
 ```
 
-Ver documentación oficial: https://doc.evolution-api.com/
+Quedan versionadas solo las semanales (`*_W1.json`) y `latest_prices_summary.json`,
+que son livianas y sirven de referencia cuando no hay terminal.
+
+---
+
+## Configuración del envío a WhatsApp
+
+El envío va por **WhatsApp Web con Playwright**, sobre una sesión vinculada una sola
+vez. Evolution API quedó descartada: no requiere Docker ni credenciales.
+
+```bash
+# 1. Instalar el extra que trae Playwright
+uv sync --extra stories && python -m playwright install chromium
+
+# 2. Vincular la sesión (una vez): abre Chromium y muestra el QR
+python scripts/enviar_whatsapp.py --login
+
+# 3. Comprobar que la sesión sigue viva
+python scripts/enviar_whatsapp.py --status
+
+# 4. Ver los canales y sus alias
+python scripts/enviar_whatsapp.py --listar-grupos
+```
+
+La sesión queda en `.whatsapp_session/` (gitignored: contiene credenciales). Los
+canales y sus alias viven en `config/whatsapp_grupos.json`.
+
+> **Automatizar WhatsApp Web va contra sus términos de servicio.** El sender impone
+> 45 s mínimos entre envíos y un cupo de 40 al día para que el sistema no pueda
+> comportarse como un bot. No subas esos límites ni lo metas en un bucle.
 
 ---
 
@@ -232,7 +254,12 @@ PNGs generados desde MT5. Se regeneran bajo demanda con `/chart`.
 - Problema de doble codificación UTF-8 en Windows (ANSI → UTF-8 → Git)
 - Solución: usar PowerShell para renombrar, nunca bash en Windows para archivos con `ñ`
 
-**Evolution API no conecta**
-- Verificar que Docker Desktop esté corriendo
-- El contenedor `evolution-api` debe estar en estado `Up`
-- El QR expira cada 30-60 segundos: escanear rápido
+**El envío a WhatsApp falla**
+- `python scripts/enviar_whatsapp.py --status` dice si la sesión sigue vinculada; si pide
+  QR, re-vincular con `--login` (el QR expira en 30-60 segundos: escanear rápido)
+- "No se encontró la barra de búsqueda": WhatsApp cambió su interfaz. Hay que volver a
+  medir los selectores de `src/whatsapp_sender.py` contra el DOM real, **nunca** relajar
+  la verificación de entrega
+- "El adjunto no apareció en la conversación": el envío **no** se completó. Revisar si la
+  pieza llegó antes de reintentar, o se duplica en el grupo
+- "Se alcanzó el cupo de N envíos para hoy": es intencional. Retomar mañana

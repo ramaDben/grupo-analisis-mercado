@@ -91,7 +91,9 @@ Mostrar el borrador completo (PASO 2-6) y preguntar al director:
 ```
 
 - Si pide ajustar niveles/temporalidad: volver al PASO 3/PASO 5 con los nuevos valores y volver a presentar para aprobación.
-- "¿Enviar por correo/WhatsApp?" es informativo — no dispara ningún envío automático (Evolution API para WhatsApp no está conectada; no existe integración de email en el proyecto).
+- "¿Enviar por correo/WhatsApp?" es informativo — no dispara ningún envío automático. El sender de WhatsApp existe
+  y funciona, pero apunta a los canales de **clientes**: este material es interno del equipo de ventas y no se
+  publica ahí. No hay integración de email en el proyecto.
 - Si el director **no aprueba**: **DETENER. No guardar nada** (ni en `data/historial_ventas.json` ni en `data/mensajes/`).
 
 ## PASO 8 — Guardado
@@ -125,7 +127,8 @@ No hay límite semanal sobre este historial (a diferencia de `data/historial_sen
 - Nunca generar una Oportunidad del Día sin un evento con relevancia suficiente (PASO 1) ni sin un activo protagonista (PASO 2).
 - Ticket mínimo SIEMPRE `$5.000.000 CLP`, como texto fijo — nunca placeholder variable.
 - Ambas piezas (email + WhatsApp) se generan siempre juntas.
-- Sin envío automático — solo texto listo para copiar, igual que el resto del pipeline hasta que Evolution API esté conectada.
+- Sin envío automático — solo texto listo para copiar. El envío automatizado es para los canales de clientes; este
+  material es interno y lo distribuye el director por su cuenta.
 - No genera infografías — eso lo conecta otro equipo, fuera de este comando.
 - `/ventas` no soporta el flag `ejecutivo` — su contenido ya es 100% interno, no necesita un guion complementario.
 - Registro directo y profesional para la audiencia comercial interna (sin obligación de explicar siglas como al cliente final), manteniendo siempre la norma general de evitar dramatización catastrófica.

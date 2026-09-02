@@ -8,14 +8,18 @@ Léelo antes de ejecutar cualquier workflow de `.agents/workflows/`.
 
 ---
 
-## 1. Los datos no se inventan
+## 1. Los datos no se inventan (Cero Hardcoding)
 
-Precios, niveles, indicadores, calendario económico y operaciones abiertas salen
-**siempre** del MCP `market-data`. Nunca de tu memoria, nunca de una búsqueda web,
-nunca deducidos de otro número, **y NUNCA delegados a un subagente que pueda alucinar el resultado**. 
-Para asegurar fidelidad, extrae el precio y los niveles ejecutando tú mismo los scripts del MCP (ej. llamando a `mt5_client.get_rates` vía Python) en lugar de depender de resúmenes de subagentes.
+Precios, cotizaciones, niveles, indicadores, calendario económico y operaciones abiertas salen
+**siempre y en tiempo de ejecución** del MCP `market-data`. Nunca de tu memoria, nunca de una búsqueda web,
+nunca deducidos de otro número, **nunca escritos a mano en strings de plantillas o markdowns**, y NUNCA delegados a un subagente que pueda alucinar el resultado. 
 
-Si el MCP falla, **detente y dilo**. Una pieza con un precio inventado es peor que
+Para asegurar fidelidad:
+- Extrae el precio y los niveles ejecutando tú mismo las tools del MCP (ej. `get_asset_levels`, `get_curva_tasas`, o `latest_prices_summary.json`).
+- **Mapeo estricto de tickers del broker:** Para índices, commodities y activos con cotización spot en MT5, utiliza siempre el símbolo exacto del catálogo: `US100.spot`, `US500.spot`, `US30.spot`, `WTI.spot`, `BRENT.spot`, `GER40.spot`, `COPPER`, `USDCLP`, `XAUUSD`, `USDJPY`.
+- **Prohibición de Truncado de Símbolos de Dólar ($):** Al guardar mensajes en archivos `.txt`, queda prohibido usar strings con comillas dobles en PowerShell (`@"..."@`), ya que PowerShell interpreta `$931` o `$14` como variables nulas y borra el precio. Toda persistencia de textos con cotizaciones se debe realizar mediante Python (`Path.write_text(..., encoding="utf-8")`) o bloques no interpolados.
+
+Si el MCP falla, **detente y dilo**. Una pieza con un precio inventado o hardcodeado es peor que
 ninguna pieza: el cliente opera con ella.
 
 ### Qué hacer cuando el motor dice que no
@@ -165,7 +169,35 @@ aprobar, se guarda con `scripts\ruta_mensaje.ps1` (mensajes) o
 
 **Piezas públicas 100% limpias para clientes**: Los flujos y comandos públicos (`/alerta`, `/apertura`, `/dato_macro`, `/noticia`, `/story`) generan **exclusivamente material para el cliente final** (mensaje de WhatsApp + Story visual de marca). Queda terminantemente excluida la generación automática de guiones o piezas internas para ejecutivos en estos flujos. Las herramientas internas quedan reservadas exclusivamente a los comandos dedicados `/ventas` y `/postventa`.
 
-El envío a WhatsApp lo hace el director copiando el texto. Tú no envías nada.
+### El envío a WhatsApp sí se ejecuta, y solo después del "sí"
+
+El envío está automatizado (`scripts/enviar_whatsapp.py`, WhatsApp Web vía
+Playwright) y **lo puedes ejecutar tú**, con una condición que no admite atajos:
+**solo después de que el director apruebe explícitamente esa pieza**. Generar no
+es aprobar, y "se ve bien" no es aprobar. Si no hay un sí, no se envía.
+
+```bash
+uv run --extra stories python scripts/enviar_whatsapp.py \
+  --grupo metales \
+  --adjunto "<ruta a la imagen>" \
+  --mensaje-archivo "<ruta al texto>"
+```
+
+- `--grupo` acepta los alias de `config/whatsapp_grupos.json` (`metales`, `oro`,
+  `forex`, `indices`, `acciones`, `cripto`, `senales`, `macro`, o el nombre del
+  canal). Un alias que no se reconoce **aborta**: nunca elijas un canal "parecido".
+- El comando **verifica que el mensaje aparezca en la conversación** antes de
+  reportar éxito, y compara la cabecera del chat contra el destinatario de forma
+  exacta. Si aborta, **no se envió**: revisa si llegó antes de reintentar, porque
+  repetir a ciegas duplica la pieza en el grupo.
+- Comprobar la sesión antes de una tanda: `--status`. Si pide vinculación, el QR
+  lo escanea el director con `--login`; eso no lo puedes hacer tú.
+
+**El ritmo no es negociable.** Automatizar WhatsApp Web va contra sus términos de
+servicio y el número es el del negocio. El comando impone 45 s mínimos entre
+envíos y un cupo de 40 al día, y **espera** cuando toca. No subas esos límites, no
+metas el envío en un bucle, y no lo lances en paralelo: el perfil de sesión no
+admite dos procesos a la vez.
 
 ### La pieza se entrega completa
 
@@ -320,3 +352,11 @@ escáner nunca reporta "cero exclusiones" cuando en realidad no pudo mirar.
 3. **Piso de Actividad en Consumo Diario:** `factor_espacio` en `screener_gi.py` exige que la sesión tenga al menos 15% de consumo realizado para otorgar los 20 puntos, eliminando falsos positivos por simple reloj en la apertura.
 4. **Multiplicador de Impulso Discreto por Régimen:** $k$ no se modula por función continua de ADX (en compresión el ADX es bajo por diseño). Se calibra por régimen $R_0-R_4$ y clase de activo.
 5. **Documentación Oficial:** Consultar `docs/auditoria_modelo_adc_atr.md`, `docs/dictamen_auditoria_adc_atr.md` y `docs/funcionamiento_motor_gi.md`.
+
+### 9.8. Composición Obligatoria de Informes PDF Institucionales.
+
+Todo informe PDF de análisis de mercado debe seguir la arquitectura canónica de **`pipeline_informe.py`** y **`generar_pdf.py`**:
+1. **Gráficos Panorámicos a 300 DPI (`grafico_informe.py`):** Cada activo del informe debe incluir su gráfico de 7.2 × 2.82 pulgadas con las 60 velas D1/H1 de MT5, medias móviles (50 y 100) y líneas de niveles técnicos. Queda prohibido compilar PDFs con tablas planas sin gráficos de terminal.
+2. **Estructura Pedagógica de 3 Capas por Activo:** Cada sección debe desglosar qué pasa, qué significa para el lector y qué NO operar hoy (setups prohibidos).
+3. **Tabla de Curva Soberana Estructurada:** Con variaciones en puntos base a 1D y 5D en notación chilena (`_tabla_curva`).
+4. **Dimensionamiento de Riesgo y Lote:** Cálculo explícito de lotaje por Volatility Targeting según el ATR del día.

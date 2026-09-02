@@ -3,6 +3,13 @@
 ## Contexto
 Este proyecto automatiza la operativa semanal del Grupo de Análisis de Mercado para envío vía WhatsApp. El usuario es el director de trading. Los sub-agents actúan como analistas de mercado y recolectores de información.
 
+> [!CRITICAL]
+> **GUARDRAILS DE INTEGRIDAD DE DATOS Y COMPOSICIÓN EDITORIAL:**
+> 1. **CERO HARDCODING DE PRECIOS Y COTIZACIONES (REGLA 1):** Queda estrictamente prohibido escribir números de precios, cotizaciones, variaciones porcentuales o niveles técnicos "a mano" o calculados mentalmente en scripts de Stories, HTMLs o informes Markdown. Todos los precios deben ser leídos en tiempo de ejecución desde MetaTrader 5 / MCP `market-data` (`get_asset_levels`, `latest_prices_summary.json`). Para tickers con sufijo del broker, usar siempre el símbolo exacto del catálogo (`US100.spot`, `US500.spot`, `US30.spot`, `WTI.spot`, `BRENT.spot`, `GER40.spot`, `COPPER`, `USDCLP`, `XAUUSD`, `USDJPY`).
+> 2. **PROHIBICIÓN DE TRUNCADO DE DÓLARES EN SHELL (REGLA DE ESCRITURA):** Al generar o guardar archivos `.txt` o mensajes con símbolos de moneda (`$`), queda prohibido usar double-quotes o here-strings `@"..."@` en PowerShell porque la shell interpreta `$931` o `$4` como variables vacías y trunca el precio. Toda escritura de archivos de texto con precios DEBE realizarse mediante Python (`Path.write_text(..., encoding="utf-8")`) o single-quoted here-strings `@'...'@`.
+> 3. **COMPOSICIÓN OBLIGATORIA DE INFORMES PDF (REGLA 2):** Queda estrictamente prohibido generar PDFs institucionales a partir de markdowns planos improvisados. Todo informe PDF DEBE seguir la arquitectura canónica (`pipeline_informe.py` + `grafico_informe.py` + `generar_pdf.py`), incluyendo los banners gráficos vectoriales a 300 DPI por activo, la tabla de curva soberana de 4 columnas en notación chilena y la estructura pedagógica de 3 capas (qué pasa, qué significa, qué NO hacer).
+> 4. **PROHIBICIÓN TOTAL DE MODELOS DE DIFUSIÓN (REGLA 0):** Prohibido usar `generate_image` o modelos de difusión. Toda pieza visual es código HTML + CSS + Playwright.
+
 ## Principio fundamental
 Análisis técnico simple y directo, con dirección clara, que genere interés y apetito por operar — sin caer en lo coloquial ni en lo catastrófico. El mensaje lo reciben tanto traders expertos como clientes novatos: debe ser comprensible para quien recién aprende y, a la vez, accionable para quien ya opera. Se enfatiza la tendencia y se nombra hacia dónde se dirige el activo, despertando el interés del cliente por operar el mercado.
 
@@ -382,7 +389,7 @@ que `mcp/mcp_config.json` frente a su `.example`.
 |-----|--------|-----------|----------|
 | **market-data** | ✅ Activo | Análisis técnico MT5 (`get_asset_levels`) + niveles dibujados a mano por el director en MT5 (`get_chart_objects`) + calendario económico Investing.com (`obtener_calendario_macro`) + especificaciones de contrato y sesiones (`get_symbol_spec`) + operaciones abiertas del terminal (`get_open_positions`). Noticias vía WebSearch. | Comandos de datos de mercado y operativas |
 | **WebSearch (investing.com + fuentes oficiales)** | ✅ Activo | Calendario económico y noticias relevantes | `/dato_macro`, `/noticia` y comandos de día |
-| **WhatsApp (Evolution API)** | ⏳ Pendiente conexión Docker | Envío directo al grupo | Flujo manual por ahora |
+| **WhatsApp Web (Playwright)** | ✅ Activo | Envío directo a los 7 canales (`scripts/enviar_whatsapp.py`), con verificación de entrega contra el DOM y frenos de cadencia | Tras la aprobación del director |
 | **TrendRadar / Firecrawl / Finnhub** | ❌ No activos | Reemplazados por market-data (MT5) + WebSearch | — |
 
 **Nota**: el MCP `market-data` expone **siete** tools:
@@ -396,9 +403,35 @@ que `mcp/mcp_config.json` frente a su `.example`.
 
 Contrato de error común: si el dato no está disponible retorna `{'error': 'CÓDIGO', 'message': '...'}` — nunca array vacío ni `None` silencioso. La antigua `get_economic_events` fue reemplazada por la tool nativa (#53); `get_market_context` (noticias Finnhub) quedó deprecada y se purgó del registro — las **noticias** se obtienen vía `WebSearch` (investing.com + fuentes oficiales: Fed, BCCh, OPEP+, EIA, BLS). Ver `docs/archive/superpowers/specs/2026-06-05-calendario-macro-nativo-mt5-design.md`.
 
-**Flujo actual**: los comandos generan contenido → muestran para copiar → guardan en `data/mensajes/`. Cuando Evolution API esté conectada a WhatsApp/Baileys, el envío pasará a ser automático.
+**Flujo actual**: los comandos generan el contenido → lo muestran al director → **al aprobar**, se guarda en
+`data/mensajes/` y se envía con `scripts/enviar_whatsapp.py`. Evolution API quedó descartada: el envío va por
+WhatsApp Web con Playwright sobre una sesión vinculada (`--login`, una vez).
 
-**Setup WhatsApp**: requiere Evolution API en Docker (`docker run -d --name evolution-api -p 8080:8080 atendai/evolution-api`). Ver instrucciones en `mcp/mcp_config.json`.
+**Los siete canales temáticos**: el contenido ya no va a un grupo único. `config/whatsapp_grupos.json` mapea
+cada carpeta (`01_macro_y_apertura` … `07_oportunidades_cuantitativas`) al nombre real del canal en WhatsApp, y
+resuelve alias en lenguaje natural (`metales`, `oro`, `forex`, `cripto`…). `01_macro_y_apertura` es el **grupo
+padre** (comunidad), y cada canal temático recibe además su propia lectura macro.
+
+> [!CAUTION]
+> **Automatizar WhatsApp Web va contra sus términos de servicio** y el número es el del negocio. El sender
+> impone 45 s mínimos entre envíos y un cupo de 40 al día (`seguridad` en `config/whatsapp_grupos.json`,
+> contador en `data/.whatsapp_envios.json`). No subas esos límites, no metas el envío en un bucle y no lo
+> lances en paralelo: el perfil de sesión no admite dos procesos a la vez.
+
+## Series de precios: en disco, no en git
+
+`data central/DATA PRECIOS OHLC/` lo llena `scripts/extractor_precios.py` desde MT5 y
+lo leen `macro_bias_engine.py` y `ticket_engine.py`. Las series intradía y diarias
+(`*_M15`, `*_H1`, `*_D1`) **están gitignoradas**: pesan ~5 MB cada una y se
+regeneran, así que versionarlas sumaba ~66 MB a la historia por cada ingesta sin
+aportar nada que MT5 no devuelva. Las semanales y `latest_prices_summary.json` sí se
+versionan: son livianas y sirven de referencia sin terminal.
+
+**En un clon nuevo hay que correr el extractor antes que el motor.** Ojo con esto:
+`ticket_engine.cargar_serie_h1_archivo` devuelve `None` en silencio cuando el archivo
+no está, así que sin las series el motor no falla, simplemente deja de emitir
+tickets. Si el resultado sale vacío, lo primero que hay que descartar es que falten
+las series.
 
 ## Stories GI y Generación de Imágenes
 
@@ -645,8 +678,10 @@ Todo contenido pasa por este flujo antes de enviarse:
 2. Lo muestra al director para aprobación.
 3. Pregunta: "¿Adjuntar chart de MT5?"
 4. El director aprueba o pide ajustes.
-5. **Al aprobar**: guardar automáticamente en `data/mensajes/YYYY-MM-DD_HH-MM_[tipo].txt` y mostrar el texto listo para copiar.
-6. El director copia y pega el texto en el grupo de WhatsApp.
+5. **Al aprobar**: guardar automáticamente en `data/mensajes/YYYY-MM-DD_HH-MM_[tipo].txt`.
+6. Enviar al canal que corresponda con `scripts/enviar_whatsapp.py --grupo <alias> [--adjunto ...] --mensaje-archivo ...`.
+   El comando verifica que la pieza aparezca en la conversación antes de reportar éxito; si aborta, **no se envió**,
+   y hay que revisar si llegó antes de reintentar para no duplicarla.
 
 **Regla de guardado**: después de cada aprobación, SIEMPRE guardar el mensaje final en `data/mensajes/` con la estructura **día → activo → tipo** (issue #45). Construir la ruta con el helper determinista `scripts\ruta_mensaje.ps1` (NUNCA armarla a mano):
 ```powershell
@@ -663,7 +698,9 @@ El helper crea las carpetas y devuelve la ruta lista para `Write`. Si la pieza n
 
 **Nunca se envía nada al grupo sin aprobación explícita del director.**
 
-**Nota**: Evolution API (Docker) está instalada y lista en `mcp/docker-compose.yml`. Cuando se resuelva la conexión WhatsApp/Baileys, el envío pasará a ser automático sin cambios adicionales.
+**Nota**: los selectores del sender están medidos contra el DOM real de WhatsApp Web y comentados en
+`src/whatsapp_sender.py`. WhatsApp cambia su interfaz sin avisar: si un envío empieza a fallar, el primer paso es
+volver a medir esos selectores, **nunca** relajar la verificación de entrega.
 
 ## Slash Commands disponibles (29)
 
