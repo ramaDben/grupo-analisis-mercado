@@ -211,7 +211,14 @@ class WhatsAppSender:
         headless: bool = True,
     ) -> None:
         self.config = WhatsAppConfig(config_path)
-        self.session_dir = Path(session_dir) if session_dir else Path(self.config.seguridad.get("session_dir", DEFAULT_SESSION_DIR))
+        # `session_dir` viene relativo en el config. Anclarlo a la raíz del repo y no
+        # al directorio de trabajo: si no, ejecutar desde otro cwd apunta a una
+        # carpeta vacía, reporta "sesión expirada" con la sesión intacta, y un
+        # `--login` ahí vincularía un perfil distinto del que usan los envíos.
+        cruda = Path(session_dir) if session_dir else Path(
+            self.config.seguridad.get("session_dir", DEFAULT_SESSION_DIR)
+        )
+        self.session_dir = cruda if cruda.is_absolute() else (RAIZ_PROYECTO / cruda)
         self.headless = headless
         self.timeout_busqueda_ms = int(self.config.seguridad.get("timeout_busqueda_ms", 15000))
         self.timeout_envio_ms = int(self.config.seguridad.get("timeout_envio_ms", 30000))
@@ -496,13 +503,13 @@ class WhatsAppSender:
                         return {
                             "autenticado": False,
                             "estado": "requiere_login",
-                            "mensaje": "Se detectó código QR (sesión expirada o no vinculada).",
+                            "mensaje": f"Se detectó código QR: la sesión expiró o no está vinculada ({self.session_dir}).",
                         }
                     if self._esta_autenticado(page):
                         return {
                             "autenticado": True,
                             "estado": "activa",
-                            "mensaje": "Sesión de WhatsApp Web activa y lista para enviar mensajes.",
+                            "mensaje": f"Sesión activa y lista para enviar ({self.session_dir}).",
                         }
                     time.sleep(1.0)
 
