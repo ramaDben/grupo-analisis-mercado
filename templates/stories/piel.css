@@ -43,24 +43,22 @@
     linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.35) 22%, var(--fondo) 62%),
     linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 62%, transparent 96%);
   mask-composite: intersect;
-  filter: saturate(1.12) contrast(1.06) brightness(0.92);
+  filter: saturate(1.20) contrast(1.10) brightness(0.95);
   pointer-events: none;
 }
 
 /* Variante FONDO A SANGRE:
-   La imagen cubre todo el lienzo por debajo del velo para aportar reconocimiento
-   del activo sin competir con los datos técnicos. */
+   La imagen cubre todo el lienzo con alta visibilidad y textura cinematográfica,
+   permitiendo que el fondo se aprecie claramente e impacte visualmente. */
 .foto-activo--fondo {
   inset: 0;
   width: 100%;
   height: 100%;
   z-index: 0;
-  -webkit-mask-image:
-    linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 58%, rgba(0,0,0,0.30) 100%);
-  mask-image:
-    linear-gradient(180deg, var(--fondo) 0%, var(--fondo) 58%, rgba(0,0,0,0.30) 100%);
-  filter: saturate(0.82) contrast(0.94) brightness(0.36);
-  opacity: 0.55;
+  -webkit-mask-image: none;
+  mask-image: none;
+  filter: saturate(1.15) contrast(1.10) brightness(0.72);
+  opacity: 0.88;
 }
 
 .ilustracion {
@@ -75,9 +73,9 @@
 .velo {
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background:
-    linear-gradient(100deg, var(--fondo) 24%, rgba(0,0,0,0.88) 44%, rgba(0,0,0,0.26) 70%, rgba(0,0,0,0.58) 100%),
-    radial-gradient(58% 78% at 8% 34%, color-mix(in srgb, var(--activo) 26%, transparent) 0%, rgba(0,0,0,0) 64%),
-    radial-gradient(46% 62% at 96% 92%, color-mix(in srgb, var(--acento-azul) 34%, transparent) 0%, rgba(0,0,0,0) 60%);
+    linear-gradient(100deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.48) 45%, rgba(0, 0, 0, 0.15) 75%, rgba(0, 0, 0, 0.35) 100%),
+    radial-gradient(58% 78% at 8% 34%, color-mix(in srgb, var(--activo) 24%, transparent) 0%, rgba(0,0,0,0) 64%),
+    radial-gradient(46% 62% at 96% 92%, color-mix(in srgb, var(--acento-azul) 30%, transparent) 0%, rgba(0,0,0,0) 60%);
 }
 
 .grilla {

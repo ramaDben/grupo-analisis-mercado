@@ -42,6 +42,9 @@
   --fondo-alt:      #0A0A0F;  /* variante del fondo para bloques apilados */
   --fondo-sube:     #123A2A;  /* relleno tenue en bloques alcistas */
   --fondo-baja:     #2A1220;  /* relleno tenue en bloques bajistas */
+  /* Velo inferior de las piezas a sangre: oscurece la imagen para que el texto
+     encima mantenga contraste. Es fondo, no dato, asi que va en el acento. */
+  --velo-inferior:  rgba(4, 18, 14, 0.95);
 
   /* ── Acento estructural — el verde de la marca ──────────────────────────── */
   /* El logo es un degradado que va del azul #3C8CAA al verde #50C0A8. Se toma

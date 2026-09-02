@@ -40,7 +40,8 @@ Basado en el plan del día y la hora actual (hora Chile), sugiere qué correspon
 ### 6. Estado de los MCPs
 Informa el estado de cada MCP relevante:
 - ✅ **market-data**: activo — expone 5 tools: `get_asset_levels` (técnico MT5), `get_chart_objects` (marcado manual MT5), `obtener_calendario_macro` (calendario económico), `get_symbol_spec` (especificaciones/sesiones de contrato) y `get_open_positions` (operaciones abiertas). Las noticias se obtienen vía WebSearch.
-- ⏳ **WhatsApp (Evolution API)**: pendiente — requiere Docker conectado a WhatsApp/Baileys
+- ✅ **WhatsApp Web (Playwright)**: activo — `scripts/enviar_whatsapp.py`. Reportar la sesión con
+  `--status` y, si existe `data/.whatsapp_envios.json`, cuántos envíos van hoy contra el cupo diario.
 - ❌ **TrendRadar / Firecrawl / Finnhub**: no activos — reemplazados por market-data (MT5) + WebSearch
 
 ### 7. Sugerencias del sistema

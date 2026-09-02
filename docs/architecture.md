@@ -45,12 +45,12 @@ El sistema conecta a Claude Code (agente IA) con el flujo de trabajo diario del 
                             │
           ┌─────────────────┴──────────────────┐
           ▼                                     ▼
-┌─────────────────┐                   ┌────────────────────┐
-│ Modo actual:     │                   │ Modo futuro:        │
-│ texto en pantalla│                   │ Evolution API       │
-│ → director copia │                   │ → envío automático  │
-│ → pega en WA     │                   │   al grupo WA       │
-└─────────────────┘                   └────────────────────┘
+┌──────────────────┐                  ┌──────────────────────┐
+│ Aprobación del   │                  │ enviar_whatsapp.py    │
+│ director         │ ───── sí ──────▶ │ WhatsApp Web          │
+│ (nada sale sin   │                  │ → canal temático      │
+│  su sí)          │                  │ → verifica la entrega │
+└──────────────────┘                  └──────────────────────┘
 ```
 
 ## MCPs (Model Context Protocol)
@@ -61,7 +61,7 @@ Los comandos de Claude Code usan herramientas externas via MCP. El estado actual
 |-----|--------|--------------------|
 | **market-data** | ✅ Activo | `get_asset_levels`, `get_chart_objects`, `obtener_calendario_macro`, `get_symbol_spec`, `get_open_positions` |
 | **WebSearch (investing.com + fuentes oficiales)** | ✅ Activo (fallback) | Noticias siempre; calendario solo si `obtener_calendario_macro` falla |
-| **WhatsApp (Evolution API)** | ⏳ Pendiente Docker | `send_message` al grupo |
+| **WhatsApp Web (Playwright)** | ✅ Activo | `scripts/enviar_whatsapp.py` — envío a los 7 canales, con verificación de entrega y frenos de cadencia |
 
 ### MCP market-data — herramientas
 

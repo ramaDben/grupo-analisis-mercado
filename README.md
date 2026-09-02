@@ -5,9 +5,10 @@ Sistema que automatiza la operativa semanal del Grupo de Análisis de Mercado pa
 ## Cómo funciona
 
 ```
-Director (Claude Code) → genera contenido → aprueba → guarda en data/mensajes/ → copia al grupo WhatsApp
+Director (Claude Code o Antigravity) → genera contenido → aprueba
                                                 ↓
-                              (futuro: Evolution API lo envía directo)
+                        guarda en data/mensajes/ → lo envía al canal de WhatsApp
+                                                   (scripts/enviar_whatsapp.py)
 ```
 
 Todo el contenido pasa por aprobación explícita del director antes de enviarse. Nunca se envía nada automáticamente sin confirmación. Al aprobar, cada mensaje se guarda en `data/mensajes/` con estructura **día → activo → tipo**.
@@ -22,7 +23,7 @@ Todo el contenido pasa por aprobación explícita del director antes de enviarse
 - **MetaTrader 5** abierto en la máquina del director (el MCP lee de MT5 en vivo)
 - **uv** para la toolchain de desarrollo y el gate de calidad (opcional)
 - **Playwright** para renderizar Stories GI (opcional, extra `stories`)
-- **Evolution API en Docker** para envío directo WhatsApp (instalada y lista; conexión pendiente)
+- **Playwright** también para el envío a WhatsApp Web (`scripts/enviar_whatsapp.py`, sesión vinculada con `--login`)
 - **gh CLI** para gestión de issues/PRs (opcional)
 
 ## Instalación rápida

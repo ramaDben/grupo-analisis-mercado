@@ -102,3 +102,10 @@ data/.whatsapp_envios.json
 .whatsapp_session/
 data/.whatsapp_session/
 
+# Trabajo antiguo archivado a mano: son cientos de MB de mensajes y stories ya
+# emitidos. No aportan al repo y un `git add .` distraido los subiria enteros.
+data/old/
+
+# Artefactos generados dentro de la data lake (PDFs, PNG e informes compilados).
+# Se regeneran con sus scripts; versionarlos infla el repo sin dar nada a cambio.
+data central/**/reportes_generados/

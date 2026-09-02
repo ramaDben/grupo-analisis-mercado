@@ -39,8 +39,4 @@ jobs:
           pytest pandas pyyaml requests python-dotenv tenacity yfinance
 
       - name: Run market-data MCP tests
-        # `tests/genesis_bridge/` importa el paquete `genesis`, que pertenece a
-        # otro proyecto y no vive en este repo: sus cinco modulos no son tests
-        # que fallan, son tests que no se pueden coleccionar aca. Se excluyen
-        # para que su ImportError no aborte la suite propia.
-        run: python -m pytest tests --ignore=tests/genesis_bridge -v
+        run: python -m pytest tests -v

@@ -13,6 +13,8 @@
   --fondo-sube:     #123A2A;
   --fondo-baja:     #2A1220;
 
+  --velo-inferior:  rgba(4, 18, 14, 0.95);
+
   --acento:         #50C0A8;
   --acento-azul:    #3C8CAA;
   --acento-oscuro:  #143028;
@@ -131,7 +133,7 @@ html, body {
   background:
     radial-gradient(circle at 80% 20%, color-mix(in srgb, var(--baja) 15%, transparent) 0%, transparent 60%),
     radial-gradient(circle at 20% 80%, color-mix(in srgb, var(--acento) 12%, transparent) 0%, transparent 60%),
-    linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(4,18,14,0.95) 100%);
+    linear-gradient(180deg, rgba(0,0,0,0.6) 0%, var(--velo-inferior) 100%);
 }
 
 .grilla {
