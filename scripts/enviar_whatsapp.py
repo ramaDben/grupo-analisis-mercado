@@ -88,10 +88,21 @@ def construir_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Ruta a un archivo de texto (.txt / .md) cuyo contenido será el cuerpo del mensaje.",
     )
-    parser.add_argument(
+    envio = parser.add_mutually_exclusive_group()
+    envio.add_argument(
         "-a", "--adjunto",
         type=Path,
         help="Ruta al archivo adjunto (PNG de Story, gráfico H1, PDF de informe, etc.).",
+    )
+    envio.add_argument(
+        "--lote",
+        type=Path,
+        metavar="DIR",
+        help=(
+            "Carpeta de grupo del carrusel: manda TODAS sus piezas en una sola acción, "
+            "cada imagen con su propio pie. Cuatro piezas dejan de ser cuatro envíos "
+            "espaciados 45 s."
+        ),
     )
     parser.add_argument(
         "--dry-run",
@@ -167,6 +178,46 @@ def main() -> int:
         print("[ERROR] Debe especificar un destinatario o grupo con --grupo o --destinatario.", file=sys.stderr)
         print("Use --listar-grupos para ver los canales disponibles.", file=sys.stderr)
         return 1
+
+    # 4.b Modo lote: una carpeta de grupo entera, en una sola acción de envío
+    if args.lote:
+        if not args.lote.is_dir():
+            print(f"[ERROR] La carpeta del lote no existe: {args.lote}", file=sys.stderr)
+            return 1
+
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from pipeline_carrusel import PiezaSinMensajeError, piezas_del_grupo
+
+        try:
+            piezas = piezas_del_grupo(args.lote)
+        except PiezaSinMensajeError as exc:
+            print(f"\n[ERROR DE LOTE] {exc}", file=sys.stderr)
+            return 4
+
+        if not piezas:
+            print(f"[ERROR] No hay piezas en {args.lote}", file=sys.stderr)
+            return 1
+
+        try:
+            resultado = sender.enviar_lote(
+                destinatario=args.destinatario,
+                piezas=piezas,
+                dry_run=args.dry_run,
+            )
+            print("\n[ÉXITO] Lote despachado:")
+            print(f"  • Destinatario : {resultado['destinatario']}")
+            print(f"  • Estado       : {resultado['status']}")
+            print(f"  • Piezas       : {resultado['piezas']}")
+            return 0
+        except SesionNoIniciadaError as exc:
+            print(f"\n[ERROR DE SESIÓN] {exc}", file=sys.stderr)
+            return 2
+        except DestinatarioInvalidoError as exc:
+            print(f"\n[ERROR DE SEGURIDAD / DESTINATARIO] {exc}", file=sys.stderr)
+            return 3
+        except WhatsAppError as exc:
+            print(f"\n[ERROR WHATSAPP] {exc}", file=sys.stderr)
+            return 4
 
     cuerpo_mensaje = args.mensaje
     if args.mensaje_archivo:

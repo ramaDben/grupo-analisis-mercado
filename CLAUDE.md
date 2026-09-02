@@ -179,6 +179,39 @@ y `pipeline_informe.py` tienen dos pasos (`--preparar` y `--rendir`) y el segund
 detiene** si un campo editorial quedó vacío, por la misma razón que el renderer falla ante
 una imagen inexistente: una pieza a medias que sale sin avisar llega al cliente.
 
+### El despacho: un lote por canal, rendido justo antes de salir
+
+`pipeline_carrusel.py --despachar <tanda>` cierra el ciclo. Dos decisiones lo definen:
+
+**Un canal es una acción, no cuatro.** El editor de medios de WhatsApp acepta varias
+imágenes a la vez y **cada una conserva su propio pie** (medido contra el DOM real el
+2026-09-02: se escribió en la primera, se cambió a la segunda —que apareció vacía— y al
+volver a la primera su pie seguía ahí; el botón queda etiquetado "Enviar 2 seleccionados").
+Una tanda de cinco canales pasa de 10-20 acciones a 5 y de 7-15 minutos a unos 3. Menos
+acciones es también menos superficie de detección, que importa más que el tiempo.
+
+**El cupo diario no baja, y no debe bajar.** Cuenta mensajes entregados, no clics: veinte
+piezas siguen siendo veinte mensajes, salgan en veinte acciones o en cinco. Lo que baja es
+el número de aperturas de navegador y de esperas de 45 s.
+
+**Cada canal se rinde justo antes de despacharse.** Rendir todo al principio hacía que la
+última pieza llegara con el precio de hacía veinte minutos. El refresco (1-3 s de datos +
+5-15 s de render) cabe entero dentro de la espera de cadencia de 45 s, así que no cuesta
+tiempo. Si el movimiento **invalidó el texto** —el precio cruzó un soporte o una
+resistencia que el párrafo daba por vigentes— la pieza no sale: se renombra a
+`.divergente` y el despacho lo informa. `--desde N` retoma sin duplicar lo ya enviado.
+
+Tres reglas que se pagaron caro:
+
+1. **Un lote es UNA acción pero N mensajes entregados.** La cadencia de 45 s se aplica una
+   vez por lote; el cupo diario se descuenta por pieza. Contarlo como un envío relajaría
+   el freno por la puerta de atrás.
+2. **Un lote tiene que ser homogéneo.** El menú Adjuntar entra por "Fotos y videos" o por
+   "Documento", no por ambas: un PDF de informe no viaja con las Stories.
+3. **Un solo dueño de la sesión a la vez.** El perfil de Chromium admite un proceso. Claude
+   Code y Antigravity abriéndolo a la vez crean un perfil paralelo, y ese patrón desvinculó
+   la sesión el 2026-09-01 y el 2026-09-02.
+
 ### Dos condiciones de frescura que conviene no descubrir en vivo
 
 - El **informe de apertura** no se emite si `macro_bias_output.json` está vencido. La salida

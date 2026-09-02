@@ -176,13 +176,39 @@ Playwright) y **lo puedes ejecutar tú**, con una condición que no admite atajo
 **solo después de que el director apruebe explícitamente esa pieza**. Generar no
 es aprobar, y "se ve bien" no es aprobar. Si no hay un sí, no se envía.
 
+La tanda completa se despacha canal por canal con un solo comando:
+
 ```bash
+uv run --extra stories python scripts/pipeline_carrusel.py --despachar data/carrusel/<tanda>
+```
+
+**Cada canal sale en UNA acción con todas sus piezas.** El editor de medios acepta
+varias imágenes y cada una conserva su propio pie (medido contra el DOM real el
+2026-09-02). No mandes las piezas de a una: cuatro envíos espaciados 45 s son
+cuatro veces más exposición que un lote, y llegan con el precio viejo.
+
+Cada canal además **se rinde justo antes de salir**, no al principio de la tanda.
+Si el precio cruzó un soporte o una resistencia que el texto daba por vigentes,
+esa pieza **no sale** (se renombra a `.divergente`) y el despacho lo informa.
+
+Si se corta a la mitad, `--desde N` retoma en el canal N sin duplicar lo enviado.
+
+Para una pieza suelta o un canal concreto:
+
+```bash
+uv run --extra stories python scripts/enviar_whatsapp.py \
+  --grupo metales \
+  --lote "data/carrusel/<tanda>/03_commodities_materias_primas"
+
+# o un archivo solo:
 uv run --extra stories python scripts/enviar_whatsapp.py \
   --grupo metales \
   --adjunto "<ruta a la imagen>" \
   --mensaje-archivo "<ruta al texto>"
 ```
 
+- Un **lote tiene que ser del mismo tipo**: el menú Adjuntar entra por "Fotos y
+  videos" o por "Documento", no por ambas. Un PDF no viaja con las Stories.
 - `--grupo` acepta los alias de `config/whatsapp_grupos.json` (`metales`, `oro`,
   `forex`, `indices`, `acciones`, `cripto`, `senales`, `macro`, o el nombre del
   canal). Un alias que no se reconoce **aborta**: nunca elijas un canal "parecido".
@@ -195,9 +221,17 @@ uv run --extra stories python scripts/enviar_whatsapp.py \
 
 **El ritmo no es negociable.** Automatizar WhatsApp Web va contra sus términos de
 servicio y el número es el del negocio. El comando impone 45 s mínimos entre
-envíos y un cupo de 40 al día, y **espera** cuando toca. No subas esos límites, no
-metas el envío en un bucle, y no lo lances en paralelo: el perfil de sesión no
-admite dos procesos a la vez.
+acciones de envío y un cupo de 40 mensajes al día, y **espera** cuando toca. Un
+lote es UNA acción pero N mensajes: la cadencia se aplica una vez, el cupo se
+descuenta por pieza. No subas esos límites, no metas el envío en un bucle, y no lo
+lances en paralelo: el perfil de sesión no admite dos procesos a la vez.
+
+> [!CAUTION]
+> **Un solo dueño de la sesión a la vez.** El perfil de Chromium
+> (`.whatsapp_session/`) admite un único proceso. Si Claude Code y tú abrís el
+> navegador a la vez, uno de los dos termina creando un perfil paralelo, y ese
+> patrón desvinculó la sesión dos veces el 2026-09-01 y el 2026-09-02. Antes de
+> despachar, confirma con el director que nadie más la está usando.
 
 ### La pieza se entrega completa
 

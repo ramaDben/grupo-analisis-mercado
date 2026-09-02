@@ -544,3 +544,265 @@ def test_sin_teclado_interactivo_no_se_simula_un_enter():
     assert _hubo_enter(io.StringIO("")) is False          # EOF: no hay teclado
     assert _hubo_enter(io.StringIO("\n")) is True         # ENTER de verdad
     assert _hubo_enter(io.StringIO("listo\n")) is True
+
+
+# ---------------------------------------------------------------------------
+# Despacho por lote: varias piezas al mismo canal en una sola acción.
+#
+# Medido contra el DOM real el 2026-09-02: el selector de archivos acepta
+# múltiples (`is_multiple() == True`), cada imagen conserva SU PROPIO pie
+# (se escribió en la 1, se cambió a la 2, se volvió a la 1 y el pie seguía
+# ahí) y el botón queda etiquetado "Enviar 2 seleccionados".
+# ---------------------------------------------------------------------------
+
+
+def test_un_lote_vacio_se_rechaza():
+    from whatsapp_sender import LoteInvalidoError
+
+    sender = WhatsAppSender()
+    with pytest.raises(LoteInvalidoError, match="vacío"):
+        sender.enviar_lote("macro", [], dry_run=True)
+
+
+def test_un_lote_que_mezcla_imagen_y_pdf_se_rechaza(tmp_path):
+    """El menú Adjuntar tiene una entrada por tipo: un lote mixto no cabe."""
+    from whatsapp_sender import LoteInvalidoError, Pieza
+
+    png = tmp_path / "a.png"
+    png.write_bytes(b"x")
+    pdf = tmp_path / "b.pdf"
+    pdf.write_bytes(b"x")
+
+    sender = WhatsAppSender()
+    with pytest.raises(LoteInvalidoError, match="mismo tipo"):
+        sender.enviar_lote(
+            "macro",
+            [Pieza(adjunto=png, mensaje="uno"), Pieza(adjunto=pdf, mensaje="dos")],
+            dry_run=True,
+        )
+
+
+def test_un_lote_con_un_archivo_inexistente_se_rechaza(tmp_path):
+    from whatsapp_sender import Pieza
+
+    png = tmp_path / "a.png"
+    png.write_bytes(b"x")
+
+    sender = WhatsAppSender()
+    with pytest.raises(FileNotFoundError):
+        sender.enviar_lote(
+            "macro",
+            [Pieza(adjunto=png, mensaje="uno"), Pieza(adjunto=tmp_path / "no.png", mensaje="dos")],
+            dry_run=True,
+        )
+
+
+def test_el_dry_run_del_lote_enumera_todas_las_piezas(tmp_path, capsys):
+    from whatsapp_sender import Pieza
+
+    piezas = []
+    for i in range(3):
+        p = tmp_path / f"{i}.png"
+        p.write_bytes(b"x")
+        piezas.append(Pieza(adjunto=p, mensaje=f"pie {i}"))
+
+    sender = WhatsAppSender()
+    res = sender.enviar_lote("macro", piezas, dry_run=True)
+
+    assert res["status"] == "simulado"
+    assert res["piezas"] == 3
+    salida = capsys.readouterr().out
+    for i in range(3):
+        assert f"pie {i}" in salida
+
+
+def test_el_lote_descuenta_del_cupo_una_vez_por_pieza(tmp_path, monkeypatch):
+    """Un lote es UNA acción pero N mensajes entregados.
+
+    Contar el lote como un solo envío relajaría el freno por la puerta de
+    atrás: el cupo diario existe para limitar mensajes, no clics.
+    """
+    import whatsapp_sender as ws
+
+    monkeypatch.setattr(ws, "ESTADO_ENVIOS_PATH", tmp_path / "envios.json")
+    sender = WhatsAppSender()
+    sender._registrar_envio(4)
+
+    assert sender._leer_estado_envios()["enviados"] == 4
+
+
+def test_un_lote_que_desborda_el_cupo_se_rechaza_antes_de_abrir_el_navegador(tmp_path, monkeypatch):
+    import whatsapp_sender as ws
+
+    monkeypatch.setattr(ws, "ESTADO_ENVIOS_PATH", tmp_path / "envios.json")
+    sender = WhatsAppSender()
+    sender.max_envios_dia = 5
+    sender.segundos_entre_envios = 0
+    sender._registrar_envio(3)
+
+    with pytest.raises(ws.LimiteEnviosError, match="cupo"):
+        sender._esperar_turno(piezas=4)      # 3 + 4 = 7 > 5
+
+
+def test_el_lote_espera_la_cadencia_una_sola_vez(tmp_path, monkeypatch):
+    """Cuatro piezas en un lote no son cuatro esperas de 45 s."""
+    import whatsapp_sender as ws
+
+    monkeypatch.setattr(ws, "ESTADO_ENVIOS_PATH", tmp_path / "envios.json")
+    dormido = []
+    monkeypatch.setattr(ws.time, "sleep", lambda s: dormido.append(s))
+
+    sender = WhatsAppSender()
+    sender.max_envios_dia = 50
+    sender.segundos_entre_envios = 45
+
+    sender._registrar_envio(1)
+    sender._esperar_turno(piezas=4)
+
+    assert len(dormido) == 1, f"esperó {len(dormido)} veces en vez de una"
+    assert 0 < dormido[0] <= 45
+
+
+def test_el_pie_de_cada_pieza_se_escribe_en_su_propia_miniatura(tmp_path):
+    """Cada imagen conserva su pie: hay que seleccionar su miniatura antes.
+
+    Sin el clic en la miniatura, los cuatro pies se apilarían en la primera
+    imagen y las otras tres saldrían mudas.
+    """
+    from whatsapp_sender import Pieza
+
+    piezas = []
+    for i in range(3):
+        p = tmp_path / f"{i}.png"
+        p.write_bytes(b"x")
+        piezas.append(Pieza(adjunto=p, mensaje=f"pie {i}"))
+
+    sender = WhatsAppSender()
+    orden: list[str] = []
+
+    mini = MagicMock()
+    mini.click.side_effect = lambda *a, **k: orden.append("miniatura")
+    mini.bounding_box.return_value = {"x": 0, "y": 900, "width": 52, "height": 52}
+
+    caja = MagicMock()
+    caja.inner_text.return_value = "algo"
+    caja.click.side_effect = lambda *a, **k: orden.append("caja")
+
+    page = MagicMock()
+    page.locator.return_value = MagicMock(count=MagicMock(return_value=3), nth=lambda i: mini)
+    sender._primer_locator = lambda p, s: caja           # type: ignore[assignment]
+    sender._escribir_multilinea = staticmethod(          # type: ignore[assignment]
+        lambda p, t: orden.append(f"texto:{t}")
+    )
+    sender._pausa_humana = lambda factor=1.0: None       # type: ignore[assignment]
+
+    sender._escribir_pies_del_lote(page, piezas)
+
+    textos = [o for o in orden if o.startswith("texto:")]
+    assert textos == ["texto:pie 0", "texto:pie 1", "texto:pie 2"]
+    # Antes de cada pie, su miniatura
+    assert orden.count("miniatura") >= 2, "no cambió de miniatura entre pies"
+
+
+def test_el_cli_expone_el_lote_y_lo_hace_excluyente_con_el_adjunto_suelto():
+    """`--lote` manda una carpeta entera; `--adjunto` manda un archivo.
+
+    Aceptar ambos dejaría sin definir qué se envía y en qué orden.
+    """
+    import sys as _sys
+    _sys.path.insert(0, str(RAIZ / "scripts"))
+    from enviar_whatsapp import construir_parser
+
+    parser = construir_parser()
+    args = parser.parse_args(["--grupo", "forex", "--lote", "data/carrusel/x/02_forex_divisas"])
+    assert args.lote == Path("data/carrusel/x/02_forex_divisas")
+
+    with pytest.raises(SystemExit):
+        parser.parse_args(["--grupo", "forex", "--lote", "x", "--adjunto", "y.png"])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El cupo se RESERVA antes de enviar, no se anota despues
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_reservar_turno_descuenta_el_cupo_antes_del_envio(tmp_path, monkeypatch):
+    """El freno tiene que quedar aplicado ANTES de tocar el boton de enviar.
+
+    El orden era: esperar turno -> enviar -> anotar. Si el proceso muere, lo
+    interrumpen con Ctrl+C, o `_clic_enviar_y_confirmar` falla DESPUES de que
+    WhatsApp acepto el mensaje (una verificacion que expira con la subida
+    lenta), las piezas salieron y el contador no registro nada.
+
+    Sobrecontar cuesta una pieza de cupo. Subcontar cuesta la cuenta.
+    """
+    import whatsapp_sender as ws
+
+    monkeypatch.setattr(ws, "ESTADO_ENVIOS_PATH", tmp_path / "envios.json")
+    monkeypatch.setattr(ws.time, "sleep", lambda s: None)
+
+    sender = WhatsAppSender()
+    sender.max_envios_dia = 50
+    sender.segundos_entre_envios = 45
+
+    sender._reservar_turno(piezas=3)
+
+    assert sender._leer_estado_envios()["enviados"] == 3
+
+
+def test_reservar_turno_sella_la_hora_para_que_un_fallo_no_permita_rafaga(tmp_path, monkeypatch):
+    """`ultimo_ts` vivia solo en `_registrar_envio`, que corria despues del envio.
+
+    Un fallo lo dejaba sin sellar, asi que la llamada siguiente encontraba la
+    cadencia ya cumplida y disparaba de inmediato. Rafaga es exactamente el
+    patron que hace que marquen una cuenta.
+    """
+    import whatsapp_sender as ws
+
+    monkeypatch.setattr(ws, "ESTADO_ENVIOS_PATH", tmp_path / "envios.json")
+    monkeypatch.setattr(ws.time, "sleep", lambda s: None)
+
+    sender = WhatsAppSender()
+    sender.max_envios_dia = 50
+    sender.segundos_entre_envios = 45
+
+    antes = sender._leer_estado_envios().get("ultimo_ts", 0.0)
+    sender._reservar_turno(piezas=1)
+    assert sender._leer_estado_envios()["ultimo_ts"] > antes
+
+
+def test_reservar_turno_rechaza_el_desborde_sin_descontar(tmp_path, monkeypatch):
+    """La reserva no puede consumir cupo cuando el lote ni siquiera cabe."""
+    import whatsapp_sender as ws
+
+    monkeypatch.setattr(ws, "ESTADO_ENVIOS_PATH", tmp_path / "envios.json")
+    sender = WhatsAppSender()
+    sender.max_envios_dia = 5
+    sender.segundos_entre_envios = 0
+    sender._registrar_envio(3)
+
+    with pytest.raises(ws.LimiteEnviosError, match="cupo"):
+        sender._reservar_turno(piezas=4)
+
+    assert sender._leer_estado_envios()["enviados"] == 3
+
+
+@pytest.mark.parametrize("metodo", ["enviar", "enviar_lote"])
+def test_las_dos_rutas_reservan_antes_de_pulsar_enviar(metodo):
+    """El contrato de orden, leido del codigo de cada ruta.
+
+    Sin este test la regresion es invisible: mover `_registrar_envio` de vuelta
+    despues del envio no rompe ninguna asercion de comportamiento, y el sintoma
+    (cupo desbordado, rafaga) solo aparece cuando algo ya falló en produccion.
+    """
+    import inspect
+
+    fuente = inspect.getsource(getattr(WhatsAppSender, metodo))
+
+    assert "_reservar_turno" in fuente, f"{metodo} no reserva el turno"
+    assert "_registrar_envio" not in fuente, (
+        f"{metodo} anota el envio por su cuenta: el descuento tiene que venir de "
+        "la reserva, o vuelve a quedar despues del envio"
+    )
+    assert fuente.index("_reservar_turno") < fuente.index("_clic_enviar_y_confirmar"), (
+        f"{metodo} reserva despues de pulsar enviar"
+    )

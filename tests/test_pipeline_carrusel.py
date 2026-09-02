@@ -361,3 +361,198 @@ def test_un_grupo_desconocido_aborta_en_vez_de_caer_al_canal_macro():
     from pipeline_carrusel import GrupoDesconocidoError, resolver_grupo_solicitado
     with _pytest.raises(GrupoDesconocidoError):
         resolver_grupo_solicitado("bonos soberanos")
+
+
+# ---------------------------------------------------------------------------
+# Despacho por lote: la tanda de un canal sale en una acción, y cada pieza
+# se rinde justo antes de salir para que el precio no llegue viejo.
+# ---------------------------------------------------------------------------
+
+
+def _carpeta_de_grupo(tmp_path):
+    """Reproduce la forma real de una carpeta de grupo ya rendida."""
+    d = tmp_path / "02_forex_divisas"
+    d.mkdir()
+    for nombre in [
+        "0_contexto_macro.png", "1_usdclp.png", "2_usdjpy.png", "3_gbpusd.png",
+        # Copias sin prefijo que deja `rendir`: NO son piezas nuevas.
+        "contexto_macro.png",
+    ]:
+        (d / nombre).write_bytes(b"x")
+    (d / "0_contexto_macro.txt").write_text("agenda del dia", encoding="utf-8")
+    (d / "1_usdclp_mensaje.txt").write_text("usdclp", encoding="utf-8")
+    (d / "2_usdjpy_mensaje.txt").write_text("usdjpy", encoding="utf-8")
+    (d / "3_gbpusd_mensaje.txt").write_text("gbpusd", encoding="utf-8")
+    (d / "contexto_macro.txt").write_text("agenda del dia", encoding="utf-8")
+    (d / "mensaje.txt").write_text("gbpusd", encoding="utf-8")
+    return d
+
+
+def test_las_piezas_del_grupo_salen_con_el_macro_primero_y_en_orden(tmp_path):
+    """El orden canónico del proyecto: la agenda arriba, los niveles después."""
+    from pipeline_carrusel import piezas_del_grupo
+
+    piezas = piezas_del_grupo(_carpeta_de_grupo(tmp_path))
+
+    assert [p.adjunto.name for p in piezas] == [
+        "0_contexto_macro.png",
+        "1_usdclp.png",
+        "2_usdjpy.png",
+        "3_gbpusd.png",
+    ]
+    assert piezas[0].mensaje == "agenda del dia"
+    assert piezas[3].mensaje == "gbpusd"
+
+
+def test_las_copias_sin_prefijo_no_se_despachan_dos_veces(tmp_path):
+    """`rendir` deja `contexto_macro.png` y `mensaje.txt` como copias.
+
+    Contarlas como piezas mandaría la agenda dos veces al mismo canal.
+    """
+    from pipeline_carrusel import piezas_del_grupo
+
+    nombres = [p.adjunto.name for p in piezas_del_grupo(_carpeta_de_grupo(tmp_path))]
+    assert "contexto_macro.png" not in nombres
+    assert len(nombres) == len(set(nombres))
+
+
+def test_una_pieza_sin_su_mensaje_aborta_en_vez_de_salir_muda(tmp_path):
+    from pipeline_carrusel import PiezaSinMensajeError, piezas_del_grupo
+
+    d = _carpeta_de_grupo(tmp_path)
+    (d / "2_usdjpy_mensaje.txt").unlink()
+
+    with pytest.raises(PiezaSinMensajeError, match="2_usdjpy"):
+        piezas_del_grupo(d)
+
+
+def test_divergencia_detecta_que_el_precio_perforo_el_soporte():
+    """El texto dice 'se apoya en el soporte' y el precio ya lo perforó."""
+    from pipeline_carrusel import divergencia_editorial
+
+    crudos = {"precio": 936.32, "soporte": 926.90, "resistencia": 938.27}
+    motivo = divergencia_editorial(crudos, precio_nuevo=924.10)
+
+    assert motivo is not None
+    assert "soporte" in motivo.lower()
+
+
+def test_divergencia_detecta_que_el_precio_quebro_la_resistencia():
+    from pipeline_carrusel import divergencia_editorial
+
+    crudos = {"precio": 936.32, "soporte": 926.90, "resistencia": 938.27}
+    motivo = divergencia_editorial(crudos, precio_nuevo=941.00)
+
+    assert motivo is not None
+    assert "resistencia" in motivo.lower()
+
+
+def test_sin_cruzar_ningun_nivel_no_hay_divergencia():
+    """Que el precio se mueva es normal: solo importa si invalida el texto."""
+    from pipeline_carrusel import divergencia_editorial
+
+    crudos = {"precio": 936.32, "soporte": 926.90, "resistencia": 938.27}
+    assert divergencia_editorial(crudos, precio_nuevo=937.80) is None
+
+
+def test_sin_precios_crudos_no_se_puede_juzgar_y_se_avisa():
+    """Un payload viejo sin `_crudos` no permite comparar: no se finge que sí."""
+    from pipeline_carrusel import divergencia_editorial
+
+    motivo = divergencia_editorial({}, precio_nuevo=100.0)
+    assert motivo is not None
+    assert "no se pudo" in motivo.lower()
+
+
+def test_el_payload_preparado_guarda_los_precios_crudos():
+    """Sin los números sin formatear, el corte por divergencia es imposible.
+
+    El payload solo lleva precios ya en notación chilena ('936,32'), que sirven
+    para dibujar pero no para comparar.
+    """
+    from pipeline_carrusel import construir_payload
+
+    seleccion = {
+        "ticker": "USDCLP", "direccion": "ALCISTA", "clase": "forex",
+        "precio": 936.32, "soporte": 926.90, "resistencia": 938.27,
+        "impulso_adc_atr": 4.02, "score": 71, "factores": {},
+    }
+    activo = {
+        "nombre": "Dólar / Peso Chileno", "digits": 2, "imagen": "dolar.jpg",
+        "categoria": "forex", "unidad": "CLP",
+    }
+    payload = construir_payload(
+        seleccion, activo, datetime(2026, 9, 2, 10, 0), [1.0, 2.0, 3.0]
+    )
+
+    crudos = payload["_procedencia"]["crudos"]
+    assert crudos["precio"] == 936.32
+    assert crudos["soporte"] == 926.90
+    assert crudos["resistencia"] == 938.27
+
+
+def _payload_preparado():
+    from pipeline_carrusel import construir_payload
+    seleccion = {
+        "ticker": "USDCLP", "direccion": "ALCISTA", "clase": "forex",
+        "precio": 936.32, "soporte": 926.90, "resistencia": 938.27,
+        "impulso_adc_atr": 4.02, "score": 71, "factores": {},
+    }
+    activo = {
+        "nombre": "Dólar / Peso Chileno", "digits": 2, "imagen": "dolar.jpg",
+        "categoria": "forex", "unidad": "CLP",
+    }
+    p = construir_payload(seleccion, activo, datetime(2026, 9, 2, 10, 0), [1.0, 2.0, 3.0])
+    p["titular"] = "Dólar consolida sobre $935"
+    p["parrafo"] = "La cotización presiona la resistencia."
+    return p
+
+
+def test_el_refresco_actualiza_las_cifras_y_el_sello_de_datos():
+    """La pieza se rinde justo antes de salir: su sello no puede mentir la hora."""
+    from pipeline_carrusel import refrescar_payload
+
+    payload = _payload_preparado()
+    sello_viejo = payload["sello_datos"]
+
+    nuevo, motivo = refrescar_payload(
+        payload,
+        ahora=datetime(2026, 9, 2, 11, 30),
+        h1={"price": 937.80, "s1": 926.90, "r1": 938.27, "atr_14": 2.70},
+        digits=2,
+        cierres=[1.0, 2.0, 4.0],
+    )
+
+    assert motivo is None
+    assert nuevo["precio_actual"] == "937,80"
+    assert nuevo["_procedencia"]["crudos"]["precio"] == 937.80
+    assert nuevo["sello_datos"] != sello_viejo
+    assert "11:30" in nuevo["sello_datos"]
+
+
+def test_el_refresco_conserva_el_texto_editorial():
+    """El refresco toca las cifras, no el criterio de quien escribió."""
+    from pipeline_carrusel import refrescar_payload
+
+    nuevo, _ = refrescar_payload(
+        _payload_preparado(),
+        ahora=datetime(2026, 9, 2, 11, 30),
+        h1={"price": 937.80, "s1": 926.90, "r1": 938.27, "atr_14": 2.70},
+        digits=2,
+        cierres=[1.0, 2.0, 4.0],
+    )
+    assert nuevo["titular"] == "Dólar consolida sobre $935"
+    assert nuevo["parrafo"] == "La cotización presiona la resistencia."
+
+
+def test_el_refresco_avisa_cuando_el_precio_invalido_el_texto():
+    from pipeline_carrusel import refrescar_payload
+
+    _, motivo = refrescar_payload(
+        _payload_preparado(),
+        ahora=datetime(2026, 9, 2, 11, 30),
+        h1={"price": 924.10, "s1": 926.90, "r1": 938.27, "atr_14": 2.70},
+        digits=2,
+        cierres=[1.0, 2.0, 0.5],
+    )
+    assert motivo is not None and "soporte" in motivo.lower()

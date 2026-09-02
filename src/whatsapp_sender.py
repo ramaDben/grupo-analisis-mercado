@@ -1,4 +1,4 @@
-﻿"""Módulo de automatización segura y robusta de WhatsApp Web con Playwright.
+"""Módulo de automatización segura y robusta de WhatsApp Web con Playwright.
 
 Proporciona el cliente WhatsAppSender con:
 - Persistencia de sesión (IndexedDB/cookies en .whatsapp_session/).
@@ -17,6 +17,7 @@ import random
 import sys
 import threading
 import time
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -93,6 +94,12 @@ SELECTORES_ADJUNTAR = [
 # otra cosa —un PDF de informe, un .txt— tiene que entrar por el menú Adjuntar.
 EXTENSIONES_IMAGEN = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"}
 
+# Ancho máximo de una miniatura de la tira inferior del editor de medios.
+# Medido el 2026-09-02 con dos imágenes adjuntas: las miniaturas salieron de
+# 52 px y la previsualización grande de 982 px, así que cualquier corte
+# intermedio las separa sin ambigüedad.
+UMBRAL_MINIATURA_PX = 130
+
 
 # El pie de foto vive en el editor de medios, NO en el composer del chat.
 SELECTORES_CAPTION = [
@@ -159,6 +166,23 @@ class LimiteEnviosError(WhatsAppError):
     proyecto es la del negocio. El cupo no es una cortesía: es el freno que evita
     que un bucle mal escrito mande cien mensajes y se lleve el número por delante.
     """
+
+
+class LoteInvalidoError(WhatsAppError):
+    """El lote de piezas no se puede despachar en una sola acción."""
+
+
+@dataclass(frozen=True)
+class Pieza:
+    """Un adjunto con su propio pie de foto, dentro de un lote.
+
+    El pie es **por pieza** y no del lote: medido contra el editor de medios el
+    2026-09-02, se escribió en la primera imagen, se cambió a la segunda (que
+    apareció vacía) y al volver a la primera su pie seguía ahí.
+    """
+
+    adjunto: Path
+    mensaje: str = ""
 
 
 class WhatsAppConfig:
@@ -255,9 +279,14 @@ class WhatsAppSender:
             "ultimo_ts": float(datos.get("ultimo_ts", 0.0)),
         }
 
-    def _registrar_envio(self) -> None:
+    def _registrar_envio(self, piezas: int = 1) -> None:
+        """Anota `piezas` mensajes entregados y sella la hora de la acción.
+
+        Un lote es UNA acción pero N mensajes: el cupo diario mide mensajes,
+        así que contarlo como uno solo relajaría el freno por la puerta de atrás.
+        """
         estado = self._leer_estado_envios()
-        estado["enviados"] += 1
+        estado["enviados"] += piezas
         estado["ultimo_ts"] = time.time()
         try:
             ESTADO_ENVIOS_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -265,14 +294,47 @@ class WhatsAppSender:
         except OSError as exc:  # noqa: BLE001
             logger.warning("No se pudo registrar el envío (%s); el freno queda ciego.", exc)
 
-    def _esperar_turno(self) -> None:
-        """Impone el cupo diario y la cadencia mínima entre envíos."""
+    def _reservar_turno(self, piezas: int = 1) -> None:
+        """Espera el turno y **descuenta el cupo antes** de intentar el envío.
+
+        El orden era: esperar turno → enviar → anotar. Si el proceso muere, lo
+        interrumpen con Ctrl+C, o `_clic_enviar_y_confirmar` falla *después* de
+        que WhatsApp ya aceptó el mensaje (la verificación contra el DOM expira
+        con una subida lenta), las piezas salieron y el contador no registró
+        nada. Peor: `ultimo_ts` tampoco quedaba sellado, así que la llamada
+        siguiente encontraba la cadencia cumplida y disparaba de inmediato.
+        Ráfaga es justamente el patrón por el que marcan una cuenta.
+
+        Reservar antes invierte la dirección del error: si algo falla se
+        sobrecuenta, y sobrecontar cuesta una pieza de cupo. Subcontar cuesta la
+        cuenta. Con ese riesgo asimétrico no hay decisión que tomar.
+
+        El rechazo por desborde ocurre antes de descontar, así que un lote que
+        no cabe no consume nada.
+        """
+        self._esperar_turno(piezas=piezas)
+        self._registrar_envio(piezas)
+
+    def _esperar_turno(self, piezas: int = 1) -> None:
+        """Impone el cupo diario y la cadencia mínima entre acciones de envío.
+
+        `piezas` son los mensajes que va a entregar esta acción. El cupo se
+        comprueba contra el total resultante —un lote de cuatro no puede colarse
+        cuando solo queda hueco para uno—, mientras que la cadencia se aplica
+        **una vez** por acción: cuatro imágenes que salen en un clic no son
+        cuatro ráfagas.
+        """
         estado = self._leer_estado_envios()
 
-        if estado["enviados"] >= self.max_envios_dia:
+        if estado["enviados"] + piezas > self.max_envios_dia:
+            detalle = (
+                f"{estado['enviados']} hechos"
+                if piezas == 1
+                else f"{estado['enviados']} hechos + {piezas} de este lote"
+            )
             raise LimiteEnviosError(
                 f"Se alcanzó el cupo de {self.max_envios_dia} envíos para hoy "
-                f"({estado['enviados']} hechos). Se detiene a propósito: pasar de ahí "
+                f"({detalle}). Se detiene a propósito: pasar de ahí "
                 "es lo que hace que WhatsApp marque la cuenta. Retoma mañana o sube "
                 "'max_envios_dia' en config/whatsapp_grupos.json sabiendo el riesgo."
             )
@@ -558,8 +620,52 @@ class WhatsAppSender:
             finally:
                 context.close()
 
+    def _cerrar_modales_emergentes(self, page: Any) -> None:
+        """Cierra modales de bienvenida, anuncios o novedades de WhatsApp Web."""
+        selectores_cerrar = [
+            'button:has-text("Continuar")',
+            'button:has-text("Aceptar")',
+            'button:has-text("OK")',
+            'button:has-text("Entendido")',
+            'button:has-text("Cerrar")',
+            'div[role="dialog"] button',
+            'div[role="dialog"] [data-icon="x"]',
+            'div[role="dialog"] [aria-label="Cerrar"]',
+            'div[role="dialog"] [aria-label="Close"]',
+            '[aria-label="Cerrar"]',
+            '[aria-label="Close"]',
+        ]
+        for _ in range(4):
+            try:
+                hubo_accion = False
+                for sel in selectores_cerrar:
+                    btns = page.locator(sel)
+                    total = btns.count()
+                    for i in range(total):
+                        btn = btns.nth(i)
+                        try:
+                            if btn.is_visible():
+                                btn.click(timeout=1500, force=True)
+                                self._pausa_humana(0.4)
+                                hubo_accion = True
+                                break
+                        except Exception:
+                            pass
+                    if hubo_accion:
+                        break
+                if not hubo_accion:
+                    if page.locator('div[role="dialog"]').count() > 0 or page.locator('[aria-modal="true"]').count() > 0:
+                        page.keyboard.press("Escape")
+                        self._pausa_humana(0.4)
+                    else:
+                        break
+            except Exception:  # noqa: BLE001
+                break
+
     def _buscar_y_abrir_chat(self, page: Any, nombre_oficial: str) -> None:
         """Busca el chat por nombre y valida la cabecera activa (Double Check)."""
+        self._cerrar_modales_emergentes(page)
+
         # 1. Localizar la barra de búsqueda de chats
         buscador = self._primer_locator(page, SELECTORES_BUSCADOR)
         if buscador is None:
@@ -568,7 +674,11 @@ class WhatsAppSender:
                 "El DOM pudo haber cambiado: revisa SELECTORES_BUSCADOR."
             )
 
-        buscador.click()
+        try:
+            buscador.click(timeout=5000)
+        except Exception:
+            self._cerrar_modales_emergentes(page)
+            buscador.click(timeout=5000, force=True)
         self._pausa_humana(0.5)
 
         # `fill` y no `type`: el tipeo carácter a carácter parte los pares
@@ -588,7 +698,12 @@ class WhatsAppSender:
                 "Verifique que la cuenta esté añadida a dicho grupo."
             )
 
-        resultado.first.click()
+        self._cerrar_modales_emergentes(page)
+        try:
+            resultado.first.click(timeout=8000)
+        except Exception:
+            self._cerrar_modales_emergentes(page)
+            resultado.first.click(timeout=8000, force=True)
         try:
             page.wait_for_selector("div#main", timeout=self.timeout_busqueda_ms)
         except Exception as exc:  # noqa: BLE001
@@ -596,6 +711,7 @@ class WhatsAppSender:
                 f'No se llegó a abrir la conversación con "{nombre_oficial}": {exc}'
             ) from exc
         self._pausa_humana(1.0)
+        self._cerrar_modales_emergentes(page)
 
         # 3. DOBLE CHEQUEO DE SEGURIDAD (Active Header Check)
         # El fallback NO puede ser `header` a secas: el primero de la página es
@@ -614,11 +730,16 @@ class WhatsAppSender:
 
     def _insertar_texto(self, page: Any, texto: str) -> None:
         """Escribe el texto en la caja de conversación respetando saltos de línea."""
+        self._cerrar_modales_emergentes(page)
         caja = self._primer_locator(page, SELECTORES_CAJA_TEXTO)
         if caja is None:
             raise EnvioMensajeError("No se encontró la caja de texto para escribir el mensaje.")
 
-        caja.click()
+        try:
+            caja.click(timeout=5000)
+        except Exception:
+            self._cerrar_modales_emergentes(page)
+            caja.click(timeout=5000, force=True)
         self._pausa_humana(0.4)
         # Un borrador olvidado de una corrida anterior se enviaría pegado a este
         # mensaje. Se limpia siempre antes de escribir.
@@ -647,13 +768,18 @@ class WhatsAppSender:
         if not ruta_archivo.exists():
             raise FileNotFoundError(f"El archivo adjunto no existe: {ruta_archivo}")
 
+        self._cerrar_modales_emergentes(page)
         boton = self._primer_locator(page, SELECTORES_ADJUNTAR)
         if boton is None:
             raise EnvioMensajeError(
                 'No se encontró el botón "Adjuntar". Es la única vía correcta: el '
                 "campo de archivo suelto del chat es el creador de stickers."
             )
-        boton.click()
+        try:
+            boton.click(timeout=5000)
+        except Exception:
+            self._cerrar_modales_emergentes(page)
+            boton.click(timeout=5000, force=True)
         self._pausa_humana(0.8)
 
         opcion = _opcion_menu_adjuntar(ruta_archivo)
@@ -705,6 +831,155 @@ class WhatsAppSender:
                 "El pie de foto no quedó en el editor de medios. Se aborta antes de "
                 "enviar para no publicar la imagen sin texto."
             )
+
+    @staticmethod
+    def _validar_lote(piezas: list[Pieza]) -> str:
+        """Comprueba que el lote se pueda despachar de una y devuelve su opción de menú.
+
+        El menú Adjuntar tiene **una entrada por tipo** ("Fotos y videos",
+        "Documento"), y una sola acción de adjuntar solo puede pasar por una de
+        ellas. Un lote mixto se rechaza acá en vez de descubrirlo con el editor
+        ya abierto.
+        """
+        if not piezas:
+            raise LoteInvalidoError("El lote está vacío: no hay nada que despachar.")
+
+        opciones = set()
+        for pieza in piezas:
+            ruta = Path(pieza.adjunto)
+            if not ruta.exists():
+                raise FileNotFoundError(f"El archivo adjunto no existe: {ruta}")
+            opciones.add(_opcion_menu_adjuntar(ruta))
+
+        if len(opciones) > 1:
+            raise LoteInvalidoError(
+                "Un lote tiene que ser del mismo tipo: el menú Adjuntar entra por "
+                f'"Fotos y videos" o por "Documento", no por ambas. Llegaron {sorted(opciones)}. '
+                "Sepáralo en dos lotes."
+            )
+        return opciones.pop()
+
+    def _miniaturas_del_lote(self, page: Any, esperadas: int) -> list[Any]:
+        """Las miniaturas de la tira inferior del editor, en orden.
+
+        Se distinguen de la previsualización grande por el ancho, y de las
+        imágenes del historial del chat quedándose con las últimas: la tira se
+        monta después que la conversación.
+        """
+        imgs = page.locator('img[src^="blob:"]')
+        try:
+            total = imgs.count()
+        except Exception:  # noqa: BLE001
+            total = 0
+
+        candidatas: list[Any] = []
+        for i in range(total):
+            nodo = imgs.nth(i)
+            try:
+                caja = nodo.bounding_box()
+            except Exception:  # noqa: BLE001
+                continue
+            if caja and caja.get("width", 10**6) < UMBRAL_MINIATURA_PX:
+                candidatas.append(nodo)
+
+        if len(candidatas) < esperadas:
+            raise EnvioMensajeError(
+                f"El editor mostró {len(candidatas)} miniatura(s) para un lote de "
+                f"{esperadas} pieza(s). Se aborta antes de escribir los pies: sin la "
+                "tira completa, todos terminarían apilados en la primera imagen."
+            )
+        return candidatas[-esperadas:]
+
+    def _escribir_pies_del_lote(self, page: Any, piezas: list[Pieza]) -> None:
+        """Escribe el pie de cada pieza en SU miniatura.
+
+        Sin seleccionar la miniatura antes de escribir, los pies se apilan en la
+        primera imagen y el resto sale mudo.
+        """
+        minis = self._miniaturas_del_lote(page, len(piezas))
+
+        for i, pieza in enumerate(piezas):
+            # La primera imagen ya viene seleccionada al abrirse el editor.
+            if i > 0:
+                try:
+                    minis[i].click(timeout=8000)
+                except Exception:  # noqa: BLE001
+                    minis[i].click(timeout=8000, force=True)
+                self._pausa_humana(1.4)
+
+            texto = pieza.mensaje.strip()
+            if not texto:
+                continue
+
+            caja = self._primer_locator(page, SELECTORES_CAPTION)
+            if caja is None:
+                raise EnvioMensajeError(
+                    f"No apareció el campo de pie de foto para {Path(pieza.adjunto).name}. "
+                    "Se aborta para no mandar la pieza muda."
+                )
+            try:
+                caja.click(timeout=8000)
+            except Exception:  # noqa: BLE001
+                caja.click(timeout=8000, force=True)
+            self._pausa_humana(0.5)
+            self._escribir_multilinea(page, texto)
+            self._pausa_humana(0.8)
+
+            try:
+                quedo = caja.inner_text().strip()
+            except Exception:  # noqa: BLE001
+                quedo = ""
+            if not quedo:
+                raise EnvioMensajeError(
+                    f"El pie de {Path(pieza.adjunto).name} no quedó en el editor. Se "
+                    "aborta antes de enviar para no publicar la imagen sin texto."
+                )
+
+    def _adjuntar_lote(self, page: Any, piezas: list[Pieza]) -> None:
+        """Adjunta todas las piezas en una sola acción y escribe sus pies."""
+        opcion = self._validar_lote(piezas)
+
+        self._cerrar_modales_emergentes(page)
+        boton = self._primer_locator(page, SELECTORES_ADJUNTAR)
+        if boton is None:
+            raise EnvioMensajeError(
+                'No se encontró el botón "Adjuntar". Es la única vía correcta: el '
+                "campo de archivo suelto del chat es el creador de stickers."
+            )
+        try:
+            boton.click(timeout=5000)
+        except Exception:  # noqa: BLE001
+            self._cerrar_modales_emergentes(page)
+            boton.click(timeout=5000, force=True)
+        self._pausa_humana(0.8)
+
+        rutas = [str(Path(p.adjunto).resolve()) for p in piezas]
+        try:
+            with page.expect_file_chooser(timeout=self.timeout_envio_ms) as selector_archivo:
+                page.get_by_text(opcion, exact=True).first.click()
+            chooser = selector_archivo.value
+            if len(rutas) > 1 and not chooser.is_multiple():
+                raise EnvioMensajeError(
+                    f'La entrada "{opcion}" no acepta varios archivos en esta versión '
+                    "de WhatsApp Web. Despacha las piezas de a una."
+                )
+            chooser.set_files(rutas)
+        except EnvioMensajeError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            raise EnvioMensajeError(
+                f'No se pudo adjuntar el lote de {len(rutas)} pieza(s) por "{opcion}": {exc}'
+            ) from exc
+
+        try:
+            page.wait_for_selector('[aria-label^="Enviar"]', timeout=self.timeout_envio_ms)
+        except Exception as exc:  # noqa: BLE001
+            raise EnvioMensajeError(
+                f"El editor de medios no terminó de abrirse para el lote: {exc}"
+            ) from exc
+        self._pausa_humana(2.5)
+
+        self._escribir_pies_del_lote(page, piezas)
 
     @staticmethod
     def _contar_mensajes(page: Any) -> int:
@@ -897,6 +1172,85 @@ class WhatsAppSender:
             f"({timeout_s:.0f}s de espera). No se puede dar el envío por bueno."
         )
 
+    def enviar_lote(
+        self,
+        destinatario: str,
+        piezas: list[Pieza],
+        dry_run: bool = False,
+    ) -> dict[str, Any]:
+        """Despacha varias piezas al mismo canal en UNA acción de envío.
+
+        Es la forma natural de mandar una tanda: el editor de medios acepta
+        varios archivos a la vez y cada uno conserva su propio pie, así que las
+        cuatro piezas de un canal salen con un clic en vez de con cuatro
+        aperturas de navegador espaciadas 45 s. Menos acciones es también menos
+        superficie de detección.
+        """
+        nombre_oficial = self.config.resolver_nombre_oficial(destinatario)
+        self._validar_lote(piezas)
+
+        if dry_run:
+            print(f'[DRY RUN] Lote de {len(piezas)} pieza(s) a: "{nombre_oficial}"')
+            for i, pieza in enumerate(piezas, 1):
+                print(f"[DRY RUN] {i}. {Path(pieza.adjunto)}")
+                if pieza.mensaje:
+                    print(f"[DRY RUN]    pie:\n{pieza.mensaje}")
+            return {
+                "status": "simulado",
+                "destinatario": nombre_oficial,
+                "piezas": len(piezas),
+            }
+
+        try:
+            from playwright.sync_api import sync_playwright
+        except ImportError as err:
+            raise WhatsAppError(
+                "Playwright no está instalado. Ejecute: uv sync --extra stories"
+            ) from err
+
+        self._reservar_turno(piezas=len(piezas))
+
+        with sync_playwright() as p:
+            context = self._crear_contexto(p, headless=self.headless)
+            page = None
+            try:
+                page = context.pages[0] if context.pages else context.new_page()
+                page.goto(self.URL_WHATSAPP, wait_until="domcontentloaded")
+                self._verificar_autenticacion(page)
+                self._buscar_y_abrir_chat(page, nombre_oficial)
+
+                mensajes_antes = self._contar_mensajes(page)
+                self._adjuntar_lote(page, piezas)
+
+                # El testigo es el pie de la ÚLTIMA pieza: es la que queda abajo
+                # en la conversación cuando el lote termina de subir.
+                self._clic_enviar_y_confirmar(
+                    page,
+                    mensajes_antes,
+                    testigo=self._testigo(piezas[-1].mensaje),
+                    con_adjunto=True,
+                )
+                self._pausa_humana(1.0)
+
+                return {
+                    "status": "enviado",
+                    "destinatario": nombre_oficial,
+                    "piezas": len(piezas),
+                    "adjuntos": [str(Path(x.adjunto)) for x in piezas],
+                }
+            except Exception as e:
+                if page is not None:
+                    try:
+                        debug_png = RAIZ_PROYECTO / "scratch" / f"whatsapp_error_{int(time.time())}.png"
+                        debug_png.parent.mkdir(parents=True, exist_ok=True)
+                        page.screenshot(path=str(debug_png))
+                        logger.error("Captura de error guardada en %s", debug_png)
+                    except Exception:  # noqa: BLE001
+                        pass
+                raise e
+            finally:
+                context.close()
+
     def enviar(
         self,
         destinatario: str,
@@ -936,7 +1290,7 @@ class WhatsAppSender:
 
         # El freno va ANTES de abrir el navegador: así la espera no deja una
         # sesión de WhatsApp Web colgando y sin actividad.
-        self._esperar_turno()
+        self._reservar_turno()
 
         with sync_playwright() as p:
             context = self._crear_contexto(p, headless=self.headless)
@@ -969,7 +1323,6 @@ class WhatsAppSender:
                     con_adjunto=ruta_adjunto is not None,
                 )
                 self._pausa_humana(1.0)
-                self._registrar_envio()
 
                 return {
                     "status": "enviado",

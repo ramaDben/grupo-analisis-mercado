@@ -87,7 +87,18 @@ cupo, frescura del sesgo del motor y estado de los MCPs. **No envía nada.**
 2. El director aprueba o pide ajustes.
 3. **Al aprobar**: se guarda con `scripts\ruta_mensaje.ps1` o `scripts\ruta_story.ps1` — nunca se
    arma la ruta a mano.
-4. Se envía con `scripts/enviar_whatsapp.py --grupo <alias> [--adjunto ...] --mensaje-archivo ...`
+4. Se envía. La tanda completa, canal por canal:
+   `scripts/pipeline_carrusel.py --despachar data/carrusel/<tanda>` (`--desde N` retoma).
+   Una pieza o un canal suelto:
+   `scripts/enviar_whatsapp.py --grupo <alias> [--lote <carpeta> | --adjunto ... --mensaje-archivo ...]`
+
+**Cada canal sale en una sola acción con todas sus piezas.** El editor de medios acepta
+varias imágenes y cada una conserva su propio pie, así que una tanda de cinco canales son
+cinco acciones y no veinte. Y cada canal se rinde **justo antes** de salir: si el precio
+cruzó un nivel que el texto daba por vigente, esa pieza no se envía y el despacho lo dice.
+
+Un lote tiene que ser del mismo tipo: el menú Adjuntar entra por "Fotos y videos" o por
+"Documento", no por ambas.
 
 **Nunca se envía nada sin la aprobación explícita del director.**
 
@@ -96,7 +107,12 @@ cabecera del chat contra el destinatario de forma exacta. **Si aborta, no se env
 llegó antes de reintentar, porque repetir a ciegas duplica la pieza.
 
 Automatizar WhatsApp Web va contra sus términos de servicio: el comando impone 45 s mínimos entre
-envíos y un cupo de 40 al día, y espera cuando toca.
+acciones de envío y un cupo de 40 mensajes al día, y espera cuando toca. Un lote es una acción
+pero N mensajes: la cadencia se aplica una vez, el cupo se descuenta por pieza.
+
+**Un solo dueño de la sesión a la vez.** El perfil de Chromium admite un proceso; Claude Code y
+Antigravity abriéndolo a la vez crean un perfil paralelo, y eso desvinculó la sesión el
+2026-09-01 y el 2026-09-02.
 
 ## Tipos de archivo guardado
 
