@@ -176,11 +176,19 @@ def calcular_lote_riesgo(
     riesgo_pct: float,
     sl_puntos: float,
     symbol: str,
-    spot: float
+    spot: float,
+    factor_apalancamiento: float = 1.0
 ) -> tuple[float, float, float]:
     """
     Calcula el tamaño de lote con Volatility Targeting y conversión multidivisa.
     Retorna: (lotes, riesgo_usd, tick_value_usd)
+
+    `factor_apalancamiento` escala el lote resultante. Lo emite el motor en
+    `parametros_riesgo` y vale 1.0 salvo en el shock precautorio del crudo, donde
+    el Playbook §4 manda operar al 50 % (Kilian 2009: un alza que la demanda real
+    no sostiene no merece posición completa). El riesgo en dólares reportado NO
+    se escala: sigue siendo el presupuesto del trade, y el factor es lo que
+    decide cuánto de ese presupuesto se pone en juego.
     """
     if sl_puntos <= 0:
         return 0.0, 0.0, 0.0
@@ -206,7 +214,7 @@ def calcular_lote_riesgo(
     else:
         tick_value_usd = 1.0
 
-    lotes_raw = riesgo_usd / (sl_puntos * tick_value_usd)
+    lotes_raw = (riesgo_usd / (sl_puntos * tick_value_usd)) * factor_apalancamiento
     lotes_ajustados = max(0.01, round(lotes_raw, 2))
 
     return lotes_ajustados, round(riesgo_usd, 2), round(tick_value_usd, 2)

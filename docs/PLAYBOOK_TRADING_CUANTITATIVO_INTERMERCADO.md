@@ -136,6 +136,33 @@ $$\text{Stop}_{\text{largo}} = \max(\text{High}_{22}) - 3.0 \times \text{ATR}_{1
   2. **Shock Precautorio / Geopolítico** (Bolsas caen + Oro sube + Crudo explota): Operar con apalancamiento reducido al 50% y Trailing Stop ceñido a $2.0 \times \text{ATR}$.
   3. **Shock de Oferta Transitorio** (Titular OPEP sin respaldo en fletes ni cobre): *Fade the spike* en resistencias Donchian.
 
+> [!IMPORTANT]
+> **El discriminador operativo es el Cobre.** El hallazgo que da título a Kilian (2009) es que
+> los tres shocks **tienen efectos distintos**, así que el trato de riesgo no puede ser uno solo.
+> El motor los separa con el cobre, que es el proxy del propio paper para la demanda global de
+> commodities industriales y el que esta ficha ya nombra en su caso 3:
+>
+> | Condición medida | Shock identificado | Trailing | Apalancamiento |
+> |---|---|---:|---:|
+> | Crudo al alza **y** $\Delta\%\text{Cobre}_{5\text{D}} \ge +1.5\%$ | Demanda agregada (caso 1) | $3.0 \times \text{ATR}$ | 100 % |
+> | Crudo al alza **sin** confirmación del cobre | Precautorio u oferta (casos 2 y 3) | $2.0 \times \text{ATR}$ | **50 %** |
+>
+> El umbral de confirmación **no es nuevo**: es `copper_goldilocks_pct_5d`, el mismo que la
+> máquina de estados usa para declarar "cobre en expansión" en $\mathcal{R}_2$. Un segundo
+> umbral de cobre sería el mismo error que tener dos fórmulas de ATR.
+>
+> **Corregido el 2026-09-02.** El config tenía una sola constante de trailing (3,0) y la
+> justificación emitida decía *"Shock Precautorio/Demanda"*, juntando en una barra las dos
+> cosas que el paper existe para separar. Ese mismo día el caso se presentó real: crudo
+> **+9,03 %** con el cobre en **+0,19 %**, bolsas a la baja y Oro en fuerte alcista. Las tres
+> patas del shock precautorio, y el sistema lo estaba tratando como tendencia con posición
+> completa.
+>
+> **Nota sobre la EMA 16.** El motor emitía `PULLBACK_EMA16_H1` como setup permitido del crudo
+> en shock. Esa media no aparece en este Playbook —que usa EMA 20 y EMA 50— ni la devuelve
+> `get_asset_levels`, que expone 20, 50 y 100: era una instrucción que nadie podía ejecutar.
+> Se reemplazó por `PULLBACK_EMA20_H1`, el gatillo de retroceso que este documento sí define.
+
 ---
 
 ### 💻 Activo 5: Nasdaq 100 (`US100`)
