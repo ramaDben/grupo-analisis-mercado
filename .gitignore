@@ -94,3 +94,11 @@ templates/stories/assets/*.jpg
 scratch/
 scratch_data.py
 scripts/spanish_test.py
+
+# Contador de envíos de WhatsApp (freno anti-baneo, estado local)
+data/.whatsapp_envios.json
+
+# Sesión persistente de WhatsApp Web (Playwright) — resguardo de credenciales y tokens
+.whatsapp_session/
+data/.whatsapp_session/
+

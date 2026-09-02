@@ -1,0 +1,50 @@
+================================================================================
+03. CANAL COMMODITIES & MATERIAS PRIMAS
+================================================================================
+
+[1] NOMBRES PARA WHATSAPP
+--------------------------------------------------------------------------------
+• Nombre Oficial Recomendado (Copiar y Pegar):
+  GI · Commodities & Materias Primas
+
+• Nombre Alternativo:
+  Grupo Inteligencia | Metales & Energía
+
+• Nombre Corto (para identificadores rápidos):
+  GI Commodities
+
+[2] ARCHIVO DE FOTO DE PERFIL
+--------------------------------------------------------------------------------
+• Archivo asignado: foto_perfil.jpg (ubicado en esta misma carpeta)
+• Origen del asset: templates/stories/assets/activos/oro.jpg
+
+[3] DESCRIPCIÓN OFICIAL PARA EL GRUPO (Copiar y Pegar en WhatsApp)
+--------------------------------------------------------------------------------
+🛢️ *GI · Commodities & Materias Primas*
+_Grupo de Análisis de Mercado | Grupo Inteligencia_
+
+Canal especializado en el análisis intermercado de metales preciosos, metales industriales y energía global.
+
+🎯 *PROPÓSITO DEL CANAL*
+Brindar un seguimiento riguroso a los activos reales que mueven la inflación y los flujos globales de cobertura, definiendo zonas de soporte y resistencia claras para operar con convicción.
+
+🏆 *ACTIVOS CUBIERTOS*
+• *Oro (XAU/USD)*: Activo refugio, sensible a tasas reales de EE.UU. y compras de bancos centrales.
+• *Petróleo WTI (WTI.spot) & Brent*: Benchmark energético global, altamente reactivo a OPEP+ e inventarios EIA.
+• *Cobre Grado A (COPPER)*: Metal conductor de la economía mundial, cotizado en USD/t (bolsas de Londres y Shanghái).
+• *Plata (XAG/USD)*: Metal dual (industrial y refugio monetario) con alta aceleración de volatilidad.
+
+⚡ *DRIVERS Y FUNDAMENTALES*
+• *Tasas Reales (TIPS 10Y)* y variaciones del Dollar Index (DXY).
+• *Informe de Inventarios de Crudo (EIA)* cada miércoles en horario Chile.
+• *Reuniones y cuotas de producción OPEP+*.
+• *Datos de manufactura y demanda industrial de China* (PMI Caixin/NBS).
+• *Tensiones geopolíticas* y riesgo sistémico.
+
+📊 *METODOLOGÍA TÉCNICA*
+Alertas estructuradas con el Modelo Cuantitativo ADC + ATR en gráficos de 1H y 4H, proyectando recorridos proporcionales a la volatilidad real del activo.
+
+📌 *AVISO INSTITUCIONAL*
+Los commodities presentan alta volatilidad intradía. Cada alerta define explícitamente su temporalidad y nivel de invalidación.
+
+================================================================================

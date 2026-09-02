@@ -1,0 +1,50 @@
+================================================================================
+01. CANAL MACRO & APERTURA GLOBAL
+================================================================================
+
+[1] NOMBRES PARA WHATSAPP
+--------------------------------------------------------------------------------
+• Nombre Oficial Recomendado (Copiar y Pegar):
+  GI · Macro & Apertura Global
+
+• Nombre Actual en WhatsApp (grupo padre; lo usa el envío automatizado):
+  Grupo Inteligencia | Comunidad de Traders 📈
+
+• Nombre Alternativo:
+  Grupo Inteligencia | Macro & Calendario
+
+• Nombre Corto (para identificadores rápidos):
+  GI Macro
+
+[2] ARCHIVO DE FOTO DE PERFIL
+--------------------------------------------------------------------------------
+• Archivo asignado: foto_perfil.jpg (ubicado en esta misma carpeta)
+• Origen del asset: templates/stories/assets/LOGO-Fondo-Negro.jpg
+
+[3] DESCRIPCIÓN OFICIAL PARA EL GRUPO (Copiar y Pegar en WhatsApp)
+--------------------------------------------------------------------------------
+🏛️ *GI · Macro & Apertura Global*
+_Grupo de Análisis de Mercado | Grupo Inteligencia_
+
+Bienvenido al canal central de apertura macroeconómica y lectura intermercado de Grupo Inteligencia.
+
+🎯 *PROPÓSITO DEL CANAL*
+Entregar la dirección y el contexto macroeconómico clave antes de la apertura de los mercados, traduciendo datos complejos a una lectura clara, práctica y accionable para tu operativa diaria.
+
+📊 *CONTENIDO Y REPORTES*
+• *Calendario Económico Diario*: Publicación anticipada de los datos de alto impacto (IPC, Empleo, Tasas, PIB) de EE.UU., Chile, Eurozona y Asia con horario oficial de Chile (CLT).
+• *Apertura de Mercado*: Panorama matutino con la dirección de las bolsas, Dollar Index y rendimiento de bonos del Tesoro.
+• *Decisiones de Bancos Centrales*: Seguimiento y análisis pedagógico de la Fed, Banco Central de Chile (BCCh), BCE y BoJ.
+• *Informes Editoriales & Stories*: Reportes institucionales en PDF y Stories visuales de alto impacto para entender hacia dónde va el dinero.
+
+⏰ *HORARIOS DE PUBLICACIÓN*
+• *Apertura AM*: Lunes a viernes entre 08:00 y 09:30 CLT.
+• *Alertas Flash*: En tiempo real al publicarse catalizadores macroeconómicos.
+• *Pre-Cierre*: Resumen de la sesión a las 16:45 CLT.
+
+📌 *REGLAS Y PAUTAS DE LA COMUNIDAD*
+1. Canal unidireccional de alertas e investigación para mantener la limpieza y relevancia de la información.
+2. Todo dato publicado cuenta con verificación de fuentes soberanas oficiales (Investing, FRED, Tesoro EE.UU., BCCh).
+3. _Aviso Legal_: El contenido compartido tiene fines exclusivamente formativos e informativos sobre análisis técnico y macroeconómico. No constituye asesoría financiera personalizada ni recomendación de inversión directa. Los CFDs son instrumentos de riesgo.
+
+================================================================================
