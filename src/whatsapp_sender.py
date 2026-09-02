@@ -101,6 +101,16 @@ SELECTORES_CAPTION = [
 ]
 
 
+def _hubo_enter(stream: Any) -> bool:
+    """¿Alguien presionó ENTER de verdad, o el stdin simplemente no es un teclado?
+
+    `readline()` sobre un stdin no interactivo devuelve `""` al instante. Tomar eso
+    por una confirmación hacía que el aviso del `--login` se repitiera decenas de
+    veces por segundo durante toda la vinculación.
+    """
+    return bool(stream.readline())
+
+
 def _requiere_menu_documento(ruta: Path) -> bool:
     """True si el archivo no es una imagen."""
     return Path(ruta).suffix.lower() not in EXTENSIONES_IMAGEN
@@ -386,6 +396,16 @@ class WhatsAppSender:
                 pass
         return False
 
+    def _confirmacion_valida(self, page: Any) -> bool:
+        """¿La pantalla respalda que la sesión quedó vinculada?
+
+        Con el QR todavía visible la respuesta es no, por muy convencido que esté
+        quien apretó ENTER.
+        """
+        if self._hay_qr_visible(page):
+            return False
+        return self._esta_autenticado(page)
+
     def ejecutar_login_interactivo(self, timeout_s: int = 120) -> bool:
         """Abre Chromium visible para vincular la sesión con código QR y confirmación dual."""
         try:
@@ -407,13 +427,12 @@ class WhatsAppSender:
 
         def escuchar_enter():
             try:
-                sys.stdin.readline()
-                confirmacion_manual.set()
-            except Exception:
+                if _hubo_enter(sys.stdin):
+                    confirmacion_manual.set()
+            except Exception:  # noqa: BLE001
                 pass
 
-        hilo_teclado = threading.Thread(target=escuchar_enter, daemon=True)
-        hilo_teclado.start()
+        threading.Thread(target=escuchar_enter, daemon=True).start()
 
         with sync_playwright() as p:
             context = self._crear_contexto(p, headless=False)
@@ -426,11 +445,22 @@ class WhatsAppSender:
                 autenticado = False
 
                 while time.time() - inicio < timeout_s:
-                    # 1. Si el usuario presionó ENTER en la consola
+                    # 1. Si el usuario presionó ENTER en la consola: se COMPRUEBA,
+                    #    no se cree. El ENTER dice "ya escaneé", no "está vinculado",
+                    #    y darlo por bueno hacía que --login reportara éxito con el QR
+                    #    todavía en pantalla: el fallo aparecía recién en el envío.
                     if confirmacion_manual.is_set():
-                        print("\n[WHATSAPP SETUP] Confirmación manual recibida por teclado.")
-                        autenticado = True
-                        break
+                        if self._confirmacion_valida(page):
+                            print("\n[WHATSAPP SETUP] Confirmación verificada contra la pantalla.")
+                            autenticado = True
+                            break
+                        print(
+                            "\n[WHATSAPP SETUP] Recibí el ENTER, pero la pantalla todavía muestra "
+                            "el código QR. Escanéalo; sigo mirando por mi cuenta.",
+                            flush=True,
+                        )
+                        confirmacion_manual.clear()
+                        threading.Thread(target=escuchar_enter, daemon=True).start()
 
                     # 2. Detección de presencia de QR
                     if self._hay_qr_visible(page):
@@ -454,7 +484,14 @@ class WhatsAppSender:
                 if autenticado:
                     print("\n[WHATSAPP SETUP] Guardando estado de sesión en disco...")
                     page.wait_for_timeout(3500)  # Asegura flush completo de IndexedDB a disco
-                    print("[WHATSAPP SETUP] ¡Excelente! Sesión vinculada y guardada con éxito.")
+                    if not self._confirmacion_valida(page):
+                        print(
+                            "[WHATSAPP SETUP] ❌ La pantalla ya no muestra una sesión vinculada. "
+                            "NO se completó: vuelve a ejecutar --login."
+                        )
+                        return False
+                    print("[WHATSAPP SETUP] ¡Listo! Sesión vinculada y verificada contra la pantalla.")
+                    print("   Compruébalo cuando quieras con: --status")
                     return True
                 else:
                     print("\n[WHATSAPP SETUP] Tiempo de espera agotado sin detectar inicio de sesión.")
