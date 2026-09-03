@@ -461,3 +461,41 @@ def test_d1_incluye_atr_20(collector, monkeypatch):
     esperado = mt5_client.atr(cerradas, 20).iloc[-1]
     assert res_var["atr_20"] == pytest.approx(round(float(esperado), 2), abs=1e-9)
     assert res_var["atr_20"] != res_var["atr_14"]
+
+
+def test_h1_incluye_los_anclajes_del_chandelier(collector, monkeypatch):
+    """El Chandelier necesita el extremo de una ventana, y el MCP es el único que
+    tiene la serie: el motor lee `latest_prices_summary.json`, que trae solo la
+    última vela de cada marco.
+
+    Van los ANCLAJES y no el nivel calculado. La decisión de Kilian dejó el
+    multiplicador dependiente del activo y del régimen (3,0 con respaldo del
+    cobre, 2,0 sin él), así que hornearlo acá obligaría al MCP a conocer el sesgo
+    macro, que es la capa de arriba. La herramienta mide el mercado; el
+    multiplicador viaja en el snapshot.
+
+    Solo en H1, porque ahí lo define el Playbook — mismo criterio que `atr_20`
+    en D1.
+    """
+    from market_data_mcp import mt5_client
+    from market_data_mcp.bias_reader import cargar_config_riesgo
+
+    df = _df_ohlc()
+    monkeypatch.setattr(mt5_client, "get_rates", lambda ticker, tf, n_bars=300: df)
+    levels.register(collector)
+
+    res_h4 = collector.tools["get_asset_levels"](ticker="XAUUSD", timeframe="H4")
+    assert "chandelier_max" not in res_h4
+    assert "chandelier_min" not in res_h4
+
+    res = collector.tools["get_asset_levels"](ticker="XAUUSD", timeframe="H1")
+    assert "chandelier_max" in res
+    assert "chandelier_min" in res
+    assert res["chandelier_lookback"] == cargar_config_riesgo()["trailing_stop_lookback_period"]
+
+    # Contra el cálculo directo sobre las velas cerradas, sin la barra en formación.
+    n = res["chandelier_lookback"]
+    cerradas = df.iloc[:-1]
+    assert res["chandelier_max"] == pytest.approx(round(float(cerradas["high"].tail(n).max()), 2))
+    assert res["chandelier_min"] == pytest.approx(round(float(cerradas["low"].tail(n).min()), 2))
+    assert res["chandelier_max"] > res["chandelier_min"]

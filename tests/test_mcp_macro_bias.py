@@ -163,3 +163,53 @@ def test_mcp_macro_bias_missing_file(tmp_path):
     res = cargar_macro_bias("USDCLP", output_file=missing_file)
     assert res.get("error") == "STALE_DATA"
     assert not missing_file.exists(), "No debe crear archivos en lecturas de solo lectura"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El nivel del Chandelier: una sola implementación de la aritmética
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_config_de_riesgo_expone_los_parametros_del_playbook():
+    """Los parámetros no se hardcodean en el MCP: salen del YAML que el Playbook
+    hashea. Dos fuentes para el mismo número es el error del ATR otra vez."""
+    from market_data_mcp.bias_reader import cargar_config_riesgo
+
+    cfg = cargar_config_riesgo()
+    assert cfg["trailing_stop_lookback_period"] == 22
+    assert cfg["trailing_stop_mult_trend"] == 3.0
+    assert cfg["trailing_stop_mult_precautorio"] == 2.0
+
+
+def test_nivel_chandelier_en_las_dos_direcciones():
+    """Largo: máximo menos k×ATR. Corto: mínimo más k×ATR."""
+    from market_data_mcp.bias_reader import nivel_chandelier
+
+    largo = nivel_chandelier(extremo=4463.84, atr=20.98, multiplo=3.0, direccion="LARGO", digits=2)
+    corto = nivel_chandelier(extremo=4282.38, atr=20.98, multiplo=3.0, direccion="CORTO", digits=2)
+
+    assert largo == pytest.approx(4463.84 - 3.0 * 20.98, abs=0.01)
+    assert corto == pytest.approx(4282.38 + 3.0 * 20.98, abs=0.01)
+    assert largo < 4463.84, "el stop de un largo queda POR DEBAJO del máximo"
+    assert corto > 4282.38, "el stop de un corto queda POR ENCIMA del mínimo"
+
+
+def test_el_nivel_cambia_con_el_multiplicador_del_snapshot():
+    """La consecuencia de la decisión de Kilian: WTI en shock precautorio arrastra
+    con 2,0 y no con 3,0, así que su "hasta dónde" es otro nivel. Si el MCP
+    horneara el 3,0, publicaríamos el nivel equivocado justo en el activo más
+    direccional del día."""
+    from market_data_mcp.bias_reader import nivel_chandelier
+
+    tendencia = nivel_chandelier(extremo=92.553, atr=0.755, multiplo=3.0, direccion="LARGO", digits=3)
+    precaut = nivel_chandelier(extremo=92.553, atr=0.755, multiplo=2.0, direccion="LARGO", digits=3)
+
+    assert precaut > tendencia, "un trailing más ceñido queda MÁS CERCA del precio"
+    assert precaut - tendencia == pytest.approx(0.755, abs=0.001)
+
+
+def test_el_nivel_rechaza_una_direccion_que_no_existe():
+    """Fail-fast: un typo en la dirección no puede devolver un número plausible."""
+    from market_data_mcp.bias_reader import nivel_chandelier
+
+    with pytest.raises(ValueError, match="LARGO"):
+        nivel_chandelier(extremo=100.0, atr=1.0, multiplo=3.0, direccion="ALCISTA", digits=2)

@@ -260,5 +260,23 @@ def analizar_activo(ticker: str, timeframe: str = "H4") -> dict[str, Any]:
         # snapshot del motor, que puede tener 24 h.
         resultado["atr_20"] = round(float(atr(df_closed, 20).iloc[-1]), digits)
 
+    # Anclajes del Chandelier Exit: el extremo de las últimas N velas cerradas.
+    #
+    # Van solo en H1 porque ahí lo define el Playbook (3.0 x ATR_14(H1)), mismo
+    # criterio que `atr_20` en D1. Y van los ANCLAJES, no el nivel calculado: el
+    # múltiplo depende del activo y del régimen desde que se implementó la
+    # descomposición de Kilian (3,0 con respaldo del cobre, 2,0 sin él), así que
+    # hornearlo acá obligaría a la tool a conocer el sesgo macro. La tool mide el
+    # mercado; el múltiplo viaja en el snapshot y la aritmética vive en
+    # `bias_reader.nivel_chandelier`.
+    if timeframe.upper() == "H1":
+        from market_data_mcp.bias_reader import cargar_config_riesgo
+
+        n = int(cargar_config_riesgo()["trailing_stop_lookback_period"])
+        ventana = df_closed.tail(n)
+        resultado["chandelier_lookback"] = n
+        resultado["chandelier_max"] = round(float(ventana["high"].max()), digits)
+        resultado["chandelier_min"] = round(float(ventana["low"].min()), digits)
+
     resultado["timestamp"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     return resultado

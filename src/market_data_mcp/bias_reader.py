@@ -60,6 +60,79 @@ def cargar_config_staleness(config_path: Path | None = None) -> dict[str, float]
         return defaults
 
 
+def cargar_config_riesgo(config_path: Path | None = None) -> dict[str, float]:
+    """Los parámetros de riesgo del Playbook, leídos del YAML que él mismo hashea.
+
+    Existe para que nadie los hardcodee. El `atr_14` con dos fórmulas conviviendo
+    salió de ahí: dos lugares que definen el mismo número terminan definiendo
+    números distintos.
+
+    Los defaults reproducen el config real y solo aplican si el archivo falta,
+    para que un clon sin `config/` degrade en vez de reventar.
+    """
+    c_path = config_path or CONFIG_FILE_DEFAULT
+    defaults = {
+        "trailing_stop_lookback_period": 22.0,
+        "trailing_stop_mult_trend": 3.0,
+        "trailing_stop_mult_precautorio": 2.0,
+        "stop_loss_mult_intraday": 1.5,
+        "stop_loss_mult_daily": 2.5,
+        "atr_intraday_period": 14.0,
+        "atr_daily_period": 20.0,
+    }
+    if not c_path.exists():
+        return defaults
+
+    try:
+        with open(c_path, "r", encoding="utf-8") as f:
+            rp = (yaml.safe_load(f) or {}).get("risk_parameters", {})
+        # El lookback es un conteo de barras: entero, no float.
+        return {
+            k: (int(rp[k]) if k.endswith(("_period",)) and k in rp else float(rp.get(k, v)))
+            for k, v in defaults.items()
+        }
+    except Exception:
+        return defaults
+
+
+def nivel_chandelier(
+    extremo: float,
+    atr: float,
+    multiplo: float,
+    direccion: str,
+    digits: int = 2,
+) -> float:
+    """El nivel del Chandelier Exit a partir del extremo de la ventana y el ATR.
+
+    Una sola implementación de la aritmética, porque hay dos consumidores con
+    necesidades distintas: la pieza que publica «el sesgo sigue vigente hasta X»
+    y el motor de tickets que gestiona una posición abierta.
+
+    El `multiplo` NO se asume: viene de `trailing_stop_mult_atr` del snapshot,
+    que vale 3,0 en tendencia y 2,0 en el shock precautorio del crudo (Kilian
+    2009, Playbook §4). Fijarlo acá publicaría el nivel equivocado justo en el
+    activo que el modelo pone como más direccional.
+
+    El `extremo` es el máximo (para un largo) o el mínimo (para un corto) de las
+    últimas N velas cerradas, con N = `trailing_stop_lookback_period`. Lo entrega
+    `get_asset_levels` en H1 como `chandelier_max` / `chandelier_min`.
+
+    **El ratchet queda fuera a propósito.** Que el stop solo se mueva a favor
+    exige saber dónde entró la posición, y eso es gestión, no lectura de niveles.
+    Quien gestione toma `max(stop_previo, este_nivel)`.
+    """
+    d = direccion.upper().strip()
+    if d not in ("LARGO", "CORTO"):
+        raise ValueError(
+            f"dirección '{direccion}' inválida: se espera LARGO o CORTO. "
+            "El sesgo del Playbook es un score con signo, no una etiqueta: "
+            "traducirlo antes de llamar."
+        )
+    desplazamiento = multiplo * atr
+    nivel = extremo - desplazamiento if d == "LARGO" else extremo + desplazamiento
+    return round(nivel, digits)
+
+
 def validar_staleness(
     as_of_str: str | None,
     config: dict[str, float] | None = None,
