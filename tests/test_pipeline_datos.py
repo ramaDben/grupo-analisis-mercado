@@ -132,3 +132,58 @@ def test_la_cadena_aborta_al_primer_fallo_y_no_sigue():
     assert [r.nombre for r in resultados] == ["ingesta", "precios"]
     assert resultados[-1].ok is False
     assert "MT5 no responde" in resultados[-1].detalle
+
+
+# --- El umbral de confianza, visible antes de publicar ---
+
+def test_una_confianza_bajo_el_umbral_deja_los_datos_no_utilizables(base):
+    """Frescura y confianza son cosas distintas, pero ninguna de las dos sola
+    alcanza para publicar.
+
+    El estado decía "Datos frescos" con la confianza en 54,7 % y dos drivers
+    rotos. Técnicamente cierto -los archivos eran de hace minutos- y
+    operativamente inútil: el modelo estaba avisando que no veía.
+    """
+    _escribir(base / "DATA DRIVERS USDCLP" / "macro_bias_output.json", {
+        "as_of_utc": _hace(1),
+        "confianza_general": {"confianza_total_pct": 54.6},
+        "activos": {},
+    })
+    est = pd_.estado_datos(base)
+
+    assert est.confianza_pct == pytest.approx(54.6)
+    assert not est.confianza_suficiente
+    assert not est.listo, "relojes frescos no bastan si el modelo no ve"
+
+
+def test_una_confianza_sobre_el_umbral_no_bloquea(base):
+    est = pd_.estado_datos(base)   # la fixture trae 91 %
+    assert est.confianza_suficiente
+    assert est.listo
+
+
+def test_el_umbral_del_estado_es_el_mismo_del_escaner():
+    """Dos umbrales distintos para la misma decisión es el error del ATR otra
+    vez: el estado diría que se puede publicar y el escáner excluiría igual."""
+    import sys
+    from pathlib import Path as _P
+    raiz = _P(__file__).resolve().parents[1]
+    if str(raiz / "scripts") not in sys.path:
+        sys.path.insert(0, str(raiz / "scripts"))
+    import screener_gi
+
+    assert pd_.UMBRAL_CONFIANZA_PCT == screener_gi.UMBRAL_CONFIANZA_PCT
+
+
+def test_sin_confianza_declarada_no_se_asume_que_alcanza(tmp_path):
+    """Un snapshot sin `confianza_general` no puede pasar por defecto: sería
+    exactamente la puerta de atrás que el umbral existe para cerrar."""
+    _escribir(tmp_path / "DATA AGENDA" / "estado_ejecucion.json", {
+        "ultima_ejecucion_utc": _hace(1), "status_por_fuente": {}, "errores_por_fuente": {},
+    })
+    _escribir(tmp_path / "DATA PRECIOS OHLC" / "latest_prices_summary.json", {"as_of_utc": _hace(1)})
+    _escribir(tmp_path / "DATA DRIVERS USDCLP" / "macro_bias_output.json", {"as_of_utc": _hace(1)})
+
+    est = pd_.estado_datos(tmp_path)
+    assert est.confianza_pct is None
+    assert not est.confianza_suficiente

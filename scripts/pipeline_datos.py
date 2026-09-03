@@ -53,6 +53,13 @@ if str(RAIZ / "src") not in sys.path:
 DATA_CENTRAL = RAIZ / "data central"
 INGESTA = RAIZ / ".agents" / "skills" / "ecosistema-datos-macro" / "scripts" / "pipeline_ingesta.py"
 
+# El mismo umbral que aplica el escaner, importado y no copiado: dos numeros para
+# la misma decision dejarian al estado diciendo que se puede publicar mientras el
+# escaner excluye igual.
+if str(RAIZ / "scripts") not in sys.path:
+    sys.path.insert(0, str(RAIZ / "scripts"))
+from screener_gi import UMBRAL_CONFIANZA_PCT  # noqa: E402
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Los pasos, en el único orden que produce un resultado coherente
@@ -131,8 +138,27 @@ class EstadoDatos:
     confianza_pct: float | None = None
 
     @property
+    def confianza_suficiente(self) -> bool:
+        """Un snapshot sin confianza declarada NO pasa.
+
+        Asumir que alcanza seria la puerta de atras que el umbral existe para
+        cerrar: bastaria con que el motor dejara de emitir el campo.
+        """
+        return self.confianza_pct is not None and self.confianza_pct >= UMBRAL_CONFIANZA_PCT
+
+    @property
     def listo(self) -> bool:
-        return bool(self.relojes) and all(r.fresco for r in self.relojes)
+        """Relojes frescos Y modelo que ve.
+
+        Frescura y confianza son cosas distintas, pero ninguna sola alcanza para
+        publicar. El estado decia "Datos frescos" con la confianza en 54,7 % y
+        dos drivers rotos: tecnicamente cierto y operativamente inutil.
+        """
+        return (
+            bool(self.relojes)
+            and all(r.fresco for r in self.relojes)
+            and self.confianza_suficiente
+        )
 
 
 def _leer(ruta: Path) -> tuple[dict | None, str | None]:
@@ -220,14 +246,22 @@ def imprimir_estado(est: EstadoDatos) -> None:
         else:
             edad = f"{r.antiguedad_h:5.1f} h  " if r.antiguedad_h is not None else "  --    "
             print(f"  [FALLA]{r.nombre:8s} {edad}{r.error}")
-    if est.confianza_pct is not None:
-        print(f"\n  Confianza del modelo: {est.confianza_pct:.1f} %")
-        # Deliberadamente NO se bloquea por este número: qué umbral corresponde es
-        # una decisión de método del director, no del código. Lo que sí se hace es
-        # ponerlo delante en vez de dejarlo en un JSON que nadie abre. El Playbook
-        # §3 dice que la frescura "debe ser 1.0 en operación normal".
-        print("  (frescura y confianza son cosas distintas: esto último no bloquea todavía)")
-    print(f"\n  {'Datos frescos' if est.listo else 'Datos NO utilizables: corre la cadena antes de publicar'}\n")
+    # El umbral es el piso algebraico del §3: si frescura y cobertura valen 1,0
+    # -la condición que ese párrafo llama "operación normal"- el puntaje arrastra
+    # 0,40 + 0,25 = 0,65 antes de que la antigüedad aporte nada. Bajo eso es
+    # aritméticamente imposible que ambas sean 1,0.
+    if est.confianza_pct is None:
+        print(f"\n  [FALLA]confianza no declarada por el motor (mínimo {UMBRAL_CONFIANZA_PCT:.0f} %)")
+    elif est.confianza_suficiente:
+        print(f"\n  [OK]   confianza {est.confianza_pct:.1f} %  (mínimo {UMBRAL_CONFIANZA_PCT:.0f} %)")
+    else:
+        print(f"\n  [FALLA]confianza {est.confianza_pct:.1f} %, bajo el mínimo de "
+              f"{UMBRAL_CONFIANZA_PCT:.0f} %: falta un driver o está roto")
+
+    if est.listo:
+        print("\n  LISTO: relojes frescos y el modelo ve\n")
+    else:
+        print("\n  NO utilizable para publicar: revisa las líneas [FALLA] de arriba\n")
 
 
 def main() -> int:
