@@ -540,3 +540,36 @@ def test_ningun_activo_declara_una_imagen_que_no_existe():
         if isinstance(a, dict) and a.get("imagen") and not (base / a["imagen"]).exists()
     ]
     assert not faltantes, f"declaran una imagen inexistente: {faltantes}"
+
+
+def test_ningun_ticker_se_declara_dos_veces_con_digits_distintos():
+    """`COPPER` estaba en `forex_commodities` con 1 y en `activos_complementarios`
+    con 1, y al bajarlo a 0 en el primero el catálogo seguía devolviendo 1.
+
+    La causa: `catalog.load_valid_tickers` recorre los bloques en orden y
+    `activos_complementarios` va **al final**, así que su valor sobrescribe en
+    silencio. Un ticker declarado dos veces no tiene dos decimales: tiene los del
+    bloque que se lea último, y eso no es una decisión, es un accidente de orden.
+    """
+    import json
+    from collections import defaultdict
+    from pathlib import Path
+
+    raiz = Path(__file__).resolve().parents[1]
+    d = json.loads((raiz / "config" / "activos.json").read_text(encoding="utf-8"))
+
+    vistos = defaultdict(set)
+    for a in d.get("forex_commodities", []):
+        vistos[a["ticker_mt5"]].add(a["digits"])
+    for a in d.get("indices", []):
+        vistos[a["ticker_mt5"]].add(a["digits"])
+    for a in d.get("etfs", {}).get("componentes", []):
+        vistos[a["ticker_mt5"]].add(a["digits"])
+    for sector in d.get("acciones", {}).values():
+        for c in sector.get("componentes", []):
+            vistos[c["ticker_mt5"]].add(c["digits"])
+    for c in d.get("activos_complementarios", {}).values():
+        vistos[c["ticker_mt5"]].add(c["digits"])
+
+    conflictos = {t: sorted(v) for t, v in vistos.items() if len(v) > 1}
+    assert not conflictos, f"tickers con decimales contradictorios: {conflictos}"

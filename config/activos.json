@@ -201,7 +201,7 @@
       "ticker_mt5": "COPPER",
       "nombre": "Cobre Grado A",
       "categoria": "commodity",
-      "digits": 1,
+      "digits": 0,
       "unidad": "USD/t",
       "volatilidad": "media",
       "nota_volatilidad": "metal conductor clave de la economía global, cotizado por tonelada métrica en terminales institucionales y bolsas de Londres/Shanghái",
@@ -217,7 +217,8 @@
         "1H"
       ],
       "horario_mercado": "24h",
-      "rotacion_diaria": false
+      "rotacion_diaria": false,
+      "_nota_digits": "El broker cotiza el cobre por tonelada metrica en enteros: symbol_info('COPPER').digits es 0 y su bid 14197.0 (verificado 2026-09-03, cuenta 51492). No confundir con COBRE_COMEX de commodities_data.json, que es el precio COMEX en USD/libra y va con 4 decimales: son dos series del mismo metal en dos unidades."
     },
     {
       "ticker": "BTC/USD",
@@ -786,10 +787,11 @@
   "activos_complementarios": {
     "COBRE": {
       "ticker_mt5": "COPPER",
-      "digits": 1,
+      "digits": 0,
       "unidad": "USD/t",
       "relevancia": "Driver principal del USD/CLP. Chile es el mayor productor mundial.",
-      "_nota_escala": "El símbolo del broker cotiza en USD por tonelada métrica (USD/t). Cotización institucional MT5."
+      "_nota_escala": "El símbolo del broker cotiza en USD por tonelada métrica (USD/t). Cotización institucional MT5.",
+      "_nota_duplicado": "Este ticker tambien esta en `forex_commodities`. `catalog.load_valid_tickers` recorre `activos_complementarios` AL FINAL, asi que este valor sobrescribe al otro: los dos tienen que coincidir. Lo impone test_ningun_ticker_se_declara_dos_veces_con_digits_distintos."
     },
     "DXY": {
       "ticker_mt5": "USDIDX",
