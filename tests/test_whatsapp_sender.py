@@ -871,3 +871,53 @@ def test_las_dos_rutas_reservan_antes_de_pulsar_enviar(metodo):
     assert fuente.index("_reservar_turno") < fuente.index("_clic_enviar_y_confirmar"), (
         f"{metodo} reserva despues de pulsar enviar"
     )
+
+
+def test_la_previsualizacion_de_enlace_se_cierra_antes_de_abrir_adjuntar():
+    """El segundo defecto del orden nuevo, y mato el despacho de las 12:26.
+
+    Casi todos los mensajes del proyecto llevan enlaces (Investing, BCCh, FRED).
+    Al dejar el texto en el cuadro, WhatsApp despliega una tarjeta de
+    previsualizacion que ocupa el area donde se abre el menu Adjuntar, y el clic
+    en "Fotos y videos" espera 30 s a un elemento tapado.
+
+    Se verifica el ORDEN: la tarjeta se cierra antes de tocar el boton Adjuntar.
+    """
+    import inspect
+
+    fuente = inspect.getsource(WhatsAppSender._adjuntar_archivo)
+    pos_cerrar = fuente.index("_cerrar_previsualizacion_enlace")
+    pos_adjuntar = fuente.index("SELECTORES_ADJUNTAR")
+
+    assert pos_cerrar < pos_adjuntar, (
+        "el menu Adjuntar se abre antes de cerrar la previsualizacion: la tarjeta "
+        "tapa la opcion 'Fotos y videos' y el envio muere esperandola"
+    )
+
+
+def test_sin_previsualizacion_el_cierre_no_hace_nada_y_no_falla():
+    """Un mensaje sin URLs no despliega tarjeta. El paso tiene que ser inocuo,
+    no un requisito: la mayoria de las piezas de activo no llevan enlace."""
+    sender = WhatsAppSender()
+    vacio = MagicMock()
+    vacio.count.return_value = 0
+    page = MagicMock()
+    page.locator.return_value = vacio
+
+    assert sender._cerrar_previsualizacion_enlace(page) is False
+    vacio.first.click.assert_not_called()
+
+
+def test_si_la_tarjeta_no_se_puede_cerrar_el_envio_sigue():
+    """Fail-open a proposito, y es la excepcion a la regla del proyecto: acá el
+    guardia que importa es el del pie completo, que corre despues. Abortar por
+    no poder cerrar una tarjeta que quiza no estorba dejaria la tanda detenida
+    por un adorno."""
+    sender = WhatsAppSender()
+    tarjeta = MagicMock()
+    tarjeta.count.return_value = 1
+    tarjeta.first.click.side_effect = RuntimeError("no se pudo")
+    page = MagicMock()
+    page.locator.return_value = tarjeta
+
+    assert sender._cerrar_previsualizacion_enlace(page) is False
