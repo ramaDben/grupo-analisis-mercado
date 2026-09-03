@@ -32,11 +32,21 @@ from __future__ import annotations
 import json
 import re
 from collections import Counter
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
 RAIZ = Path(__file__).resolve().parent.parent
 MAPA_CONCEPTOS = RAIZ / "data" / "mapa_conceptos.json"
+HISTORIAL = RAIZ / "data" / "historial_suplementos.json"
+
+# Cuantos dias tiene que pasar un concepto sin repetirse en el MISMO canal.
+#
+# Dos semanas es la ventana porque hay seis conceptos tecnicos aplicables: con
+# menos, un canal que se vacia seguido agota el repertorio y vuelve al primero
+# antes de que nadie lo haya olvidado. Con mas, la mayoria de los canales
+# quedaria sin parte educativa la mayor parte del tiempo.
+VENTANA_CONCEPTO_DIAS = 14
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Los motivos del escáner, traducidos a categoría y concepto
@@ -171,15 +181,106 @@ def _concepto(clave: str | None) -> dict[str, Any] | None:
     return (mapa.get("conceptos") or {}).get(clave)
 
 
-def suplemento(canal: str, excluidos: list[dict[str, Any]]) -> dict[str, Any] | None:
+def cargar_historial(ruta: Path | None = None) -> list[dict[str, Any]]:
+    """Lo que ya se publicó como suplemento, para no repetirlo.
+
+    Se **versiona** a propósito, igual que `historial_senales.json`: es historia
+    editorial de lo que el cliente ya leyó, no un archivo generado que se pueda
+    regenerar. Sin él, la ventana anti repetición no sobrevive a un clon nuevo.
+    """
+    p = ruta or HISTORIAL
+    if not p.exists():
+        return []
+    try:
+        datos = json.loads(p.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        return []
+    return datos if isinstance(datos, list) else (datos.get("suplementos") or [])
+
+
+def concepto_en_cooldown(
+    canal: str,
+    clave: str | None,
+    hoy: date,
+    historial: list[dict[str, Any]] | None = None,
+) -> bool:
+    """¿Este concepto ya se publicó en este canal hace poco?
+
+    **La ventana es por canal**, porque cada uno tiene su propia audiencia: que
+    divisas haya visto la volatilidad no significa que cripto la haya visto.
+
+    El riesgo que cierra es real y estaba en producción: el 2026-09-03 tres
+    canales recibieron el **mismo** concepto porque los tres se vaciaron por el
+    mismo motivo. Y va a pasar seguido, porque el recorrido disponible solo baja
+    con el día y las tardes vacías no son la excepción.
+    """
+    if not clave:
+        return False
+    for entrada in historial if historial is not None else cargar_historial():
+        if entrada.get("canal") != canal or entrada.get("clave") != clave:
+            continue
+        try:
+            cuando = datetime.strptime(str(entrada.get("fecha")), "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            continue
+        if (hoy - cuando).days < VENTANA_CONCEPTO_DIAS:
+            return True
+    return False
+
+
+def registrar_suplemento(
+    sup: dict[str, Any] | None,
+    hoy: date | None = None,
+    ruta: Path | None = None,
+) -> None:
+    """Anota el concepto publicado, para que la ventana lo tome en cuenta.
+
+    **Un suplemento sin concepto no se anota.** Si el concepto ya estaba en
+    cooldown, no hay nada nuevo que registrar: anotarlo otra vez extendería la
+    ventana sola, indefinidamente, y el concepto no volvería nunca.
+
+    Se registra al **preparar** y no al despachar. Una tanda preparada y
+    descartada gasta la ventana igual, y ese error va hacia el lado seguro:
+    repetir de menos, no de más.
+    """
+    if not sup or not sup.get("concepto"):
+        return
+    p = ruta or HISTORIAL
+    historial = cargar_historial(p)
+    historial.append({
+        "fecha": (hoy or date.today()).isoformat(),
+        "canal": sup["canal"],
+        "tipo": "concepto",
+        "clave": sup["concepto"]["clave"],
+        "categoria": sup["resumen"]["categoria"],
+    })
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(
+        json.dumps(historial, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+
+
+def suplemento(
+    canal: str,
+    excluidos: list[dict[str, Any]],
+    hoy: date | None = None,
+    historial: list[dict[str, Any]] | None = None,
+) -> dict[str, Any] | None:
     """El suplemento de un canal, o `None` si no se lo gana.
 
     Devuelve datos, no texto: el mensaje se arma aparte, igual que en el resto
     del repo.
+
+    **Si el concepto está en cooldown se cae el concepto, no la pieza.** La cifra
+    del estado ES la novedad: hoy el USD/JPY al 290 % y mañana otra. Lo que se
+    gasta con la repetición es la parte educativa.
     """
     resumen = resumen_del_canal(excluidos)
     if resumen is None:
         return None
+
+    if concepto_en_cooldown(canal, resumen["concepto"], hoy or date.today(), historial):
+        resumen = {**resumen, "concepto": None}
 
     ficha = _concepto(resumen["concepto"])
     return {

@@ -258,8 +258,11 @@ def test_el_suplemento_se_escribe_con_su_json_de_procedencia(tmp_path):
     salio, igual que `_procedencia` en las piezas de activo."""
     import pipeline_carrusel as pc
 
+    # La ruta del historial va aparte: sin esto el test escribia en el historial
+    # REAL y gastaba la ventana anti repeticion de produccion. Paso de verdad.
     escritos, avisos = pc.escribir_suplementos(
-        tmp_path, FOREX_AGOTADO_CON_CLASE, grupos_activos=set(), catalogo={}
+        tmp_path, FOREX_AGOTADO_CON_CLASE, grupos_activos=set(), catalogo={},
+        ruta_historial=tmp_path / "historial.json",
     )
 
     assert len(escritos) == 1
@@ -277,6 +280,139 @@ def test_un_canal_con_piezas_no_recibe_suplemento(tmp_path):
     escritos, _ = pc.escribir_suplementos(
         tmp_path, FOREX_AGOTADO_CON_CLASE,
         grupos_activos={"02_forex_divisas"}, catalogo={},
+        ruta_historial=tmp_path / "historial.json",
     )
     assert escritos == []
     assert not (tmp_path / "02_forex_divisas").exists()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# La ventana anti repeticion
+# ─────────────────────────────────────────────────────────────────────────────
+from datetime import date  # noqa: E402
+
+HOY = date(2026, 9, 3)
+
+
+def test_un_concepto_recien_usado_no_se_repite_en_el_mismo_canal():
+    """El riesgo real de lo que ya esta en produccion: hoy tres canales
+    recibieron el MISMO concepto porque los tres se vaciaron por el mismo
+    motivo. Si manana pasa igual, lo reciben otra vez.
+
+    Y va a pasar seguido: el recorrido disponible solo baja con el dia, asi que
+    las tardes vacias no son la excepcion.
+    """
+    historial = [{"fecha": "2026-08-28", "canal": "02_forex_divisas",
+                  "tipo": "concepto", "clave": "volatilidad-atr"}]
+
+    assert sup.concepto_en_cooldown("02_forex_divisas", "volatilidad-atr", HOY, historial)
+
+
+def test_el_mismo_concepto_en_OTRO_canal_no_esta_en_cooldown():
+    """La ventana es por canal: cada uno tiene su propia audiencia."""
+    historial = [{"fecha": "2026-08-28", "canal": "02_forex_divisas",
+                  "tipo": "concepto", "clave": "volatilidad-atr"}]
+
+    assert not sup.concepto_en_cooldown("06_criptoactivos", "volatilidad-atr", HOY, historial)
+
+
+def test_pasada_la_ventana_el_concepto_vuelve_a_estar_disponible():
+    viejo = [{"fecha": "2026-07-01", "canal": "02_forex_divisas",
+              "tipo": "concepto", "clave": "volatilidad-atr"}]
+
+    assert not sup.concepto_en_cooldown("02_forex_divisas", "volatilidad-atr", HOY, viejo)
+
+
+def test_el_estado_se_publica_igual_y_solo_se_cae_el_concepto():
+    """La cifra del estado ES la novedad: hoy el USD/JPY al 290% y manana otra.
+    Lo que se gasta con la repeticion es la parte educativa, no el estado.
+
+    Por eso la pieza sale igual, sin el bloque del concepto, en vez de no salir.
+    """
+    historial = [{"fecha": "2026-09-01", "canal": "02_forex_divisas",
+                  "tipo": "concepto", "clave": "volatilidad-atr"}]
+
+    s = sup.suplemento("02_forex_divisas", FOREX_AGOTADO, hoy=HOY, historial=historial)
+
+    assert s is not None, "el estado no deberia perderse por un concepto repetido"
+    assert s["concepto"] is None
+    assert s["resumen"]["maximo_pct"] == 290
+
+    mensaje = sup.construir_mensaje_suplemento(s)
+    assert "2,9 veces" in mensaje, "el estado tiene que seguir ahi"
+    assert "📚" not in mensaje, "el bloque del concepto no se cayo"
+
+
+def test_sin_historial_nada_esta_en_cooldown():
+    s = sup.suplemento("02_forex_divisas", FOREX_AGOTADO, hoy=HOY, historial=[])
+    assert s["concepto"] is not None
+
+
+def test_registrar_deja_la_entrada_con_su_fecha_y_canal(tmp_path):
+    ruta = tmp_path / "historial_suplementos.json"
+    s = sup.suplemento("02_forex_divisas", FOREX_AGOTADO, hoy=HOY, historial=[])
+
+    sup.registrar_suplemento(s, HOY, ruta=ruta)
+    historial = sup.cargar_historial(ruta)
+
+    assert len(historial) == 1
+    assert historial[0]["canal"] == "02_forex_divisas"
+    assert historial[0]["fecha"] == "2026-09-03"
+    assert historial[0]["clave"] == "volatilidad-atr"
+    # Y registrar de nuevo lo pone en cooldown.
+    assert sup.concepto_en_cooldown("02_forex_divisas", "volatilidad-atr", HOY, historial)
+
+
+def test_un_suplemento_sin_concepto_no_ensucia_el_historial(tmp_path):
+    """Si el concepto ya estaba en cooldown no hay nada nuevo que registrar:
+    anotarlo de nuevo extenderia la ventana sola, indefinidamente."""
+    ruta = tmp_path / "h.json"
+    historial = [{"fecha": "2026-09-01", "canal": "02_forex_divisas",
+                  "tipo": "concepto", "clave": "volatilidad-atr"}]
+    s = sup.suplemento("02_forex_divisas", FOREX_AGOTADO, hoy=HOY, historial=historial)
+
+    sup.registrar_suplemento(s, HOY, ruta=ruta)
+    assert sup.cargar_historial(ruta) == []
+
+
+def test_el_historial_esta_gitignoreado_o_versionado_a_proposito():
+    """Decision explicita: se VERSIONA. Es historia editorial de lo que se
+    publico, igual que `historial_senales.json`, no un archivo generado."""
+    gitignore = (RAIZ / ".gitignore").read_text(encoding="utf-8")
+    assert "historial_suplementos" not in gitignore
+
+
+def test_el_pipeline_registra_el_suplemento_al_prepararlo():
+    """Sin el registro, la ventana anti repeticion nunca se llena y el mismo
+    concepto sale todos los dias."""
+    import inspect
+
+    import pipeline_carrusel as pc
+
+    fuente = inspect.getsource(pc.escribir_suplementos)
+    assert "registrar_suplemento(sup" in fuente, (
+        "el pipeline escribe el suplemento y no lo anota: la ventana queda vacia"
+    )
+    pos_registro = fuente.index("registrar_suplemento(sup")
+    pos_append = fuente.index("escritos.append(sup)")
+    assert pos_registro < pos_append
+
+
+def test_ningun_test_escribe_en_el_historial_real():
+    """El bug que se acaba de corregir: `escribir_suplementos` registraba en el
+    historial REAL aunque el test le pasara un `tmp_path` para la tanda. Un test
+    contaminando datos de produccion y gastando la ventana anti repeticion.
+
+    La ruta del historial tiene que ser un parametro, no una constante.
+    """
+    import inspect
+
+    import pipeline_carrusel as pc
+
+    firma = inspect.signature(pc.escribir_suplementos)
+    assert "ruta_historial" in firma.parameters, (
+        "sin parametro de ruta, cualquier test que llame a esta funcion escribe "
+        "en el historial de produccion"
+    )
+    fuente = inspect.getsource(pc.escribir_suplementos)
+    assert "registrar_suplemento(sup, ruta=ruta_historial)" in fuente

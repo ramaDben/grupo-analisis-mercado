@@ -226,9 +226,20 @@ Cuatro reglas que lo mantienen del lado del contenido y no del relleno:
    pieza visual. El despacho lo manda con `enviar()` porque `piezas_del_grupo` recorre los
    PNG y el suplemento no tiene.
 
-> **Pendiente conocido**: falta la ventana anti repetición. Un canal que queda vacío varios
-> días seguidos por el mismo motivo recibiría el mismo concepto cada vez. La solución es un
-> `data/historial_suplementos.json` con el mismo patrón de `historial_senales.json`.
+**La ventana anti repetición.** Un concepto no vuelve al mismo canal antes de **14 días**,
+y el historial vive en `data/historial_suplementos.json`, **versionado** igual que
+`historial_senales.json`: es historia editorial de lo que el cliente ya leyó, no un archivo
+generado. Tres decisiones que conviene no revertir:
+
+- **La ventana es por canal**, porque cada uno tiene su propia audiencia.
+- **Si el concepto está en cooldown se cae el concepto, no la pieza.** La cifra del estado
+  ES la novedad: hoy el USD/JPY al 290 % y mañana otra. Lo que se gasta con la repetición es
+  la parte educativa.
+- **Se anota al preparar, no al despachar.** Una tanda preparada y descartada gasta la
+  ventana igual, y ese error va hacia el lado seguro: repetir de menos, no de más.
+
+Catorce días porque hay seis conceptos técnicos aplicables: con menos, un canal que se vacía
+seguido agota el repertorio antes de que nadie lo haya olvidado.
 
 ### El reparto entre script y comando
 
