@@ -92,6 +92,13 @@ $$\text{Confianza}_t = 100 \times \left( 0.40 \cdot \mathcal{S}_{\text{frescura}
 
 Donde:
 * $\mathcal{S}_{\text{frescura}} = \frac{N_{\text{drivers no stale}}}{N_{\text{drivers requeridos}}}$ (debe ser $1.0$ en operación normal).
+  **Un driver está *stale* por dos criterios que se suman**: la descarga falló, **o** el dato
+  excedió la cadencia propia de su serie (6 días para las diarias de mercado, 95 para el
+  Imacec, ninguna para las tasas de política, que valen hasta la próxima reunión). Hasta el
+  2026-09-02 el motor solo aplicaba el primero, así que un driver de ocho días con la descarga
+  correcta contaba como fresco: el petróleo detenido marcaba frescura $1.0$ y la confianza
+  quedaba en 65,4 %, apenas sobre el umbral. Con la cadencia aplicada baja a 58,7 % y bloquea.
+  La regla es la de la ingesta (`pipeline_ingesta.esta_vencido`), importada y no reimplementada.
 * $\mathcal{S}_{\text{antigüedad}} = \exp\left( -\frac{\text{Horas desde el driver más antiguo}}{48.0} \right)$ (decaimiento exponencial con vida media de 48 horas).
 * $\mathcal{S}_{\text{cobertura}} = \frac{\text{Vectores disponibles del activo}}{\text{Vectores teóricos del modelo}}$.
 

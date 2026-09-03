@@ -593,3 +593,96 @@ def test_ningun_setup_nombra_una_ema_que_el_mcp_no_devuelve():
         f"estos setups nombran una EMA que get_asset_levels no devuelve: {huerfanos}. "
         f"Disponibles: {sorted(EMAS_DEL_MCP)}."
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# La frescura mide EDAD del dato, no exito de la descarga
+# ─────────────────────────────────────────────────────────────────────────────
+# `calcular_confianza` ya leia `is_stale` desde su primera version, pero el motor
+# nunca lo ponia en `drivers_audit`, asi que valia False para todos. La frescura
+# se calculaba solo con `status`, que dice "la descarga funciono".
+#
+# Consecuencia medida: el 2026-09-02 el petroleo llevaba 8 dias detenido con
+# `status: OK` y contaba como fresco. Con la clave de la TPM ya corregida, la
+# frescura marcaba 100 % y la confianza 65,4 %, apenas sobre el umbral de 65.
+# Aplicando la cadencia real de cada serie baja a 58,7 % y BLOQUEA, que es lo que
+# corresponde. El gate del umbral estaba recibiendo una frescura que no podia
+# detectar staleness.
+#
+# La regla no se reimplementa: se importa `esta_vencido` de la ingesta, que ya la
+# tiene con la cadencia por serie. Dos reglas de vencimiento serian el mismo error
+# que dos formulas de ATR.
+
+from datetime import date as _date
+
+
+def test_un_driver_vencido_por_su_cadencia_baja_la_frescura():
+    from scripts.macro_bias_engine import driver_vencido
+
+    hoy = _date(2026, 9, 2)
+    # El Brent llega a FRED en T+1 habil: 8 dias es un fallo, no su ritmo.
+    assert driver_vencido("PETROLEO", "2026-08-25", "OK", hoy) is True
+
+
+def test_un_driver_dentro_de_su_cadencia_no_baja_la_frescura():
+    from scripts.macro_bias_engine import driver_vencido
+
+    hoy = _date(2026, 9, 2)
+    assert driver_vencido("PETROLEO", "2026-09-01", "OK", hoy) is False
+    assert driver_vencido("DGS10", "2026-08-31", "OK", hoy) is False
+
+
+def test_una_tasa_de_politica_no_vence_por_calendario():
+    """La TPM en 4,5 % no esta vieja porque el Banco Central no la movio: es el
+    valor VIGENTE. La cadencia de la ingesta ya lo contempla con ventana None, y
+    el motor tiene que heredar ese criterio y no inventar otro."""
+    from scripts.macro_bias_engine import driver_vencido
+
+    hoy = _date(2026, 9, 2)
+    assert driver_vencido("TPM_CHILE", "2026-01-30", "OK", hoy) is False
+    # Pero una descarga rota si lo vence, con fecha de hoy incluida.
+    assert driver_vencido("TPM_CHILE", "2026-09-02", "ERROR_STALE", hoy) is True
+
+
+def test_todo_driver_del_motor_declara_su_clave_de_cadencia():
+    """El contrato que impide el bug de la TPM en su version de cadencias.
+
+    Los nombres NO coinciden entre los dos lados: el motor dice DGS10 y la
+    ingesta US_10Y_TREASURY, el motor dice COBRE y la ingesta COBRE_HG. Un
+    `.get()` con la clave equivocada caeria al default de 6 dias en silencio, y
+    para la TPM eso seria vencerla cada vez que el Banco Central no se reune.
+    """
+    import re
+    from pathlib import Path as _P
+    from scripts.macro_bias_engine import CADENCIA_POR_DRIVER
+
+    raiz = _P(__file__).resolve().parents[1]
+    fuente = (raiz / "scripts" / "macro_bias_engine.py").read_text(encoding="utf-8")
+    bloque = re.search(r"drivers_audit = \[(.*?)\n    \]", fuente, re.S)
+    assert bloque, "no se pudo leer drivers_audit: el patron quedo obsoleto"
+
+    nombres = set(re.findall(r'\{"nombre": "([^"]+)"', bloque.group(1)))
+    assert nombres, "drivers_audit no declara nombres"
+    sin_declarar = sorted(nombres - set(CADENCIA_POR_DRIVER))
+    assert not sin_declarar, (
+        f"drivers sin clave de cadencia declarada: {sin_declarar}. Agregalos a "
+        "CADENCIA_POR_DRIVER, con None si su ritmo es el default diario."
+    )
+
+
+def test_el_motor_usa_la_misma_regla_de_vencimiento_que_la_ingesta():
+    """Una sola implementacion: si la cadencia del petroleo cambia en la ingesta,
+    cambia para el motor sin tocar nada."""
+    import sys
+    from pathlib import Path as _P
+    raiz = _P(__file__).resolve().parents[1]
+    skill = raiz / ".agents" / "skills" / "ecosistema-datos-macro" / "scripts"
+    if str(skill) not in sys.path:
+        sys.path.insert(0, str(skill))
+    import pipeline_ingesta
+    from scripts.macro_bias_engine import driver_vencido, CADENCIA_POR_DRIVER
+
+    hoy = _date(2026, 9, 2)
+    for nombre, clave in CADENCIA_POR_DRIVER.items():
+        esperado = pipeline_ingesta.esta_vencido(clave or nombre, "2026-08-25", "OK", hoy)
+        assert driver_vencido(nombre, "2026-08-25", "OK", hoy) is esperado, nombre
