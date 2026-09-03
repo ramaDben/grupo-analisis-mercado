@@ -500,8 +500,18 @@ def test_filtrar_por_grupo_acota_correctamente_el_universo():
     assert any(a["ticker"] == "ETHUSD" for a in crypto)
 
 
-def test_escanear_con_modo_matriz_selecciona_un_activo_por_grupo():
-    """Modo matriz de cobertura total: debe seleccionar hasta 1 activo por grupo."""
+def test_el_modo_matriz_cubre_cada_grupo_que_tenga_con_que():
+    """Modo matriz: cobertura de TODOS los grupos, hasta `top` piezas cada uno.
+
+    El test anterior exigía que ningún grupo se repitiera, porque la matriz
+    tomaba el Top 1 fijo. Ese contrato se cambió el 2026-09-03: con un solo
+    activo por canal el carrusel de un grupo con cinco elegibles quedaba en una
+    pieza. Lo que sí se conserva, porque es el propósito de este modo, es que
+    **ningún grupo con candidatos quede fuera**: la matriz reparte antes de
+    profundizar, y es lo que la distingue de un Top N global.
+    """
+    import pipeline_carrusel as pc
+
     def fake_analizador(ticker, tf):
         res = dict(h1_perfecto() if tf == "H1" else d1_con_consumo(0.30))
         res["ticker"] = ticker
@@ -509,16 +519,30 @@ def test_escanear_con_modo_matriz_selecciona_un_activo_por_grupo():
 
     resultado = sc.escanear(
         tanda=1,
+        top=1,
         solo_renderizables=True,
         analizador=fake_analizador,
         modo_matriz=True,
     )
     seleccion = resultado["seleccion"]
     assert len(seleccion) > 0
-    # Ningún grupo debe estar repetido en la selección
-    import pipeline_carrusel as pc
+
     grupos_sel = [pc.obtener_grupo_whatsapp(s["clase"], s["ticker"]) for s in seleccion]
-    assert len(grupos_sel) == len(set(grupos_sel)), "El modo matriz no debe repetir grupos"
+    assert len(grupos_sel) == len(set(grupos_sel)), (
+        "con --top 1 la matriz sigue siendo un activo por grupo"
+    )
+
+    # Con el tope por defecto, un grupo puede repetirse: eso es lo que se busca.
+    amplio = sc.escanear(
+        tanda=1, top=3, solo_renderizables=True,
+        analizador=fake_analizador, modo_matriz=True,
+    )["seleccion"]
+    grupos_amplio = {pc.obtener_grupo_whatsapp(s["clase"], s["ticker"]) for s in amplio}
+    assert len(amplio) >= len(seleccion), "subir el tope no puede dar menos piezas"
+    assert grupos_amplio >= set(grupos_sel), (
+        "al subir el tope se perdió la cobertura de algún grupo, que es justo lo "
+        "que este modo existe para garantizar"
+    )
 
 
 
@@ -759,3 +783,36 @@ def test_un_activo_sin_ficha_de_playbook_sale_sin_vigencia_y_no_se_cae():
 
     assert "excluido" not in res
     assert res["vigencia"] is None
+
+
+def test_el_modo_matriz_respeta_el_tope_por_grupo():
+    """La matriz daba UNA pieza por grupo e ignoraba `--top`, asi que un canal
+    con cinco activos elegibles recibia un carrusel de una sola pieza.
+
+    El tope editorial del proyecto es de 3 piezas de activo por canal, y es el
+    default de `--top`: la matriz tiene que llegar hasta ahi cuando hay con que,
+    sin tocar los gates.
+    """
+    universo = sc.cargar_universo(solo_renderizables=False)
+    cripto = [a for a in universo if a["categoria"] == "crypto"]
+    assert len(cripto) >= 3, "el catalogo dejo de tener criptos suficientes para la prueba"
+
+    h1 = h1_perfecto()
+    d1 = d1_con_consumo(0.30)
+
+    def escanear_con(top):
+        res = sc.escanear(
+            top=top, solo_renderizables=False, modo_matriz=True,
+            analizador=analizador_falso(h1, d1),
+        )
+        return [s["ticker"] for s in res["seleccion"]
+                if s["ticker"] in {a["ticker"] for a in cripto}]
+
+    con_uno = escanear_con(1)
+    con_tres = escanear_con(3)
+
+    assert len(con_uno) == 1, f"con --top 1 la matriz dio {con_uno}"
+    assert len(con_tres) == 3, (
+        f"con --top 3 la matriz sigue dando {len(con_tres)} pieza(s) de cripto: {con_tres}"
+    )
+    assert con_tres[0] == con_uno[0], "el mejor del grupo cambio al subir el tope"
