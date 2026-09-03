@@ -754,6 +754,19 @@ def evaluar_activo(
     if motivo:
         return {**base, "excluido": motivo}
 
+    # El "hasta donde" del sesgo se resuelve aca porque aca estan las dos piezas
+    # en la mano: el H1 con las anclas del Chandelier y el sesgo del activo.
+    # Pedirlas de nuevo en el carrusel seria un segundo viaje al terminal por
+    # datos que ya viajaron, y dos calculos del mismo nivel que pueden discrepar.
+    vigencia = None
+    try:
+        from market_data_mcp.bias_reader import resolver_vigencia
+        vigencia = resolver_vigencia(sesgos.get(ticker), h1, activo["digits"])
+    except ImportError:
+        # Mismo criterio que `_sesgos_playbook`: sin el Playbook el escaner
+        # sigue puntuando, y la pieza sale sin su "hasta donde" en vez de no salir.
+        pass
+
     t, det_t = factor_tecnico(h1, d1, direccion)
     m, det_m = factor_catalizador(ticker, eventos, delta_ust_bps)
     c, det_c = factor_espacio(h1, d1, direccion)
@@ -773,6 +786,9 @@ def evaluar_activo(
         "soporte": h1["s1"],
         "resistencia": h1["r1"],
         "atr_h1": h1["atr_14"],
+        # Hasta donde sigue vigente el sesgo del Playbook, en su gramatica.
+        # `None` para los 33 activos del catalogo que no tienen ficha.
+        "vigencia": vigencia,
         # Impulso proyectado del modelo ADC+ATR: 1,5 x ATR14 de H1 tras el
         # quiebre. El nombre interno sigue al modelo cuantitativo, que es donde
         # esta definido; hacia el cliente el mismo numero se comunica como

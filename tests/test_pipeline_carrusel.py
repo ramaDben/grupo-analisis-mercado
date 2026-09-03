@@ -556,3 +556,156 @@ def test_el_refresco_avisa_cuando_el_precio_invalido_el_texto():
         cierres=[1.0, 2.0, 0.5],
     )
     assert motivo is not None and "soporte" in motivo.lower()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Las dos gramaticas de vigencia
+# ─────────────────────────────────────────────────────────────────────────────
+VIGENCIA_NIVEL = {
+    "gramatica": "NIVEL", "direccion": "LARGO",
+    "nivel": 933.44, "borde_inferior": None, "borde_superior": None,
+    "multiplo_atr": 3.0, "lookback": 22, "vigente": True,
+    "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC",
+}
+
+VIGENCIA_RANGO = {
+    "gramatica": "RANGO", "direccion": None,
+    "nivel": None, "borde_inferior": 68.394, "borde_superior": 68.974,
+    "multiplo_atr": None, "lookback": None, "vigente": True,
+    "take_profit_tipo": "NIVEL_OPUESTO_CANAL",
+}
+
+
+def _mensaje_con(vigencia, direccion="ALCISTA"):
+    payload = pc.construir_payload(
+        {**SELECCION, "direccion": direccion, "vigencia": vigencia},
+        ACTIVO, AHORA, CIERRES,
+    )
+    payload["titular"] = "La plata se apoya en su soporte"
+    payload["parrafo"] = "El metal sostiene el nivel."
+    return pc.construir_mensaje_alerta(payload), payload
+
+
+def test_un_sesgo_sostenido_se_comunica_como_un_solo_hasta_donde():
+    """`TRAILING_STOP_ASYMMETRIC` significa posicion sostenida: la lectura vale
+    mientras el precio no pierda el Chandelier. Un nivel, no un rango."""
+    mensaje, payload = _mensaje_con(VIGENCIA_NIVEL)
+
+    assert payload["vigencia"]["gramatica"] == "NIVEL"
+    assert "vigente hasta 933,440" in mensaje
+    assert "rota entre" not in mensaje
+
+
+def test_un_activo_en_rango_se_comunica_entre_dos_bordes():
+    """`NIVEL_OPUESTO_CANAL` es score cero: no hay tendencia que sostener, hay un
+    canal. Decir "vigente hasta X" ahi afirmaria una direccion inexistente."""
+    mensaje, _ = _mensaje_con(VIGENCIA_RANGO)
+
+    assert "rota entre 68,394 y 68,974" in mensaje
+    assert "vigente hasta" not in mensaje
+
+
+def test_las_dos_gramaticas_no_producen_el_mismo_texto():
+    """El defecto que este cambio cierra: el carrusel las trataba igual. Un
+    activo sostenido y uno en rotacion salian con el mismo cierre, y el cliente
+    no tenia forma de distinguir "sigue vigente hasta X" de "no hay direccion"."""
+    sostenido, _ = _mensaje_con(VIGENCIA_NIVEL)
+    rotando, _ = _mensaje_con(VIGENCIA_RANGO)
+
+    assert sostenido != rotando
+
+
+def test_sin_vigencia_el_mensaje_no_inventa_un_hasta_donde():
+    """Fail-closed y sin perder el cierre canonico: la lectura practica de tres
+    escenarios es obligatoria en todo mensaje, con Playbook o sin el."""
+    mensaje, payload = _mensaje_con(None)
+
+    assert payload["vigencia"] is None
+    assert "vigente hasta" not in mensaje and "rota entre" not in mensaje
+    assert "🟢 Sobre" in mensaje and "🟡 Entre" in mensaje and "🔴 Bajo" in mensaje
+
+
+def test_un_sesgo_ya_invalidado_lo_dice_en_vez_de_afirmar_vigencia():
+    """Brent el 2026-09-02: sesgo +1,50 con el precio ya bajo su Chandelier.
+    Publicar "sigue vigente" ahi es afirmar lo contrario de lo que pasa."""
+    mensaje, _ = _mensaje_con({**VIGENCIA_NIVEL, "vigente": False})
+
+    assert "vigente hasta" not in mensaje
+    assert "invalid" in mensaje.lower()
+
+
+def test_una_direccion_de_playbook_contraria_a_la_tecnica_no_se_publica():
+    """Nunca dos direcciones opuestas en el mismo mensaje. La lectura tecnica
+    dice compradores y el Playbook dice corto: el mensaje callaria la vigencia
+    antes que contradecirse a si mismo en dos lineas seguidas."""
+    _, payload = _mensaje_con({**VIGENCIA_NIVEL, "direccion": "CORTO"}, direccion="ALCISTA")
+
+    assert payload["vigencia"] is None
+    assert "contradice" in payload["_procedencia"]["vigencia_omitida"].lower()
+
+
+def test_la_vigencia_viaja_cruda_en_la_procedencia():
+    """El despacho necesita el numero, no el texto: comparar "933,440" con un
+    float no se puede, y es justo lo que hay que hacer antes de que la pieza
+    salga."""
+    _, payload = _mensaje_con(VIGENCIA_NIVEL)
+
+    assert payload["_procedencia"]["crudos"]["vigencia_nivel"] == 933.44
+
+
+def test_el_precio_que_pierde_el_chandelier_invalida_la_pieza():
+    """La divergencia por S1/R1 no cubre este caso: el Chandelier no es ninguno
+    de los dos, y es el stop del propio Playbook."""
+    from pipeline_carrusel import divergencia_vigencia
+
+    motivo = divergencia_vigencia(VIGENCIA_NIVEL, precio_nuevo=932.90)
+
+    assert motivo is not None and "933,44" in motivo.replace(".", ",")
+
+
+def test_un_precio_sobre_el_chandelier_no_es_divergencia():
+    from pipeline_carrusel import divergencia_vigencia
+
+    assert divergencia_vigencia(VIGENCIA_NIVEL, precio_nuevo=936.10) is None
+    assert divergencia_vigencia(None, precio_nuevo=936.10) is None
+    assert divergencia_vigencia(VIGENCIA_RANGO, precio_nuevo=936.10) is None, (
+        "el rango ya lo cubre la divergencia por soporte y resistencia"
+    )
+
+
+def test_el_refresco_recalcula_el_nivel_con_las_anclas_de_ahora():
+    """El Chandelier se mueve con cada vela cerrada. Publicar el nivel calculado
+    veinte minutos antes es publicar un dato viejo con cara de fresco."""
+    from pipeline_carrusel import refrescar_payload
+
+    payload = _mensaje_con(VIGENCIA_NIVEL)[1]
+
+    nuevo, motivo = refrescar_payload(
+        payload,
+        ahora=datetime(2026, 8, 25, 11, 30, tzinfo=pc.SANTIAGO),
+        h1={"price": 68.900, "s1": 68.500, "r1": 69.300, "atr_14": 0.050,
+            "chandelier_max": 69.000, "chandelier_min": 68.100},
+        digits=3,
+        cierres=CIERRES,
+    )
+
+    assert motivo is None
+    assert nuevo["_procedencia"]["crudos"]["vigencia_nivel"] == pytest.approx(
+        69.000 - 3.0 * 0.050, abs=0.001
+    )
+    assert "68,850" in pc.construir_mensaje_alerta(nuevo)
+
+
+def test_el_refresco_detiene_la_pieza_si_el_sesgo_quedo_invalidado():
+    from pipeline_carrusel import refrescar_payload
+
+    _, motivo = refrescar_payload(
+        _mensaje_con(VIGENCIA_NIVEL)[1],
+        ahora=datetime(2026, 8, 25, 11, 30, tzinfo=pc.SANTIAGO),
+        h1={"price": 68.500, "s1": 68.400, "r1": 69.300, "atr_14": 0.050,
+            "chandelier_max": 69.000, "chandelier_min": 68.100},
+        digits=3,
+        cierres=CIERRES,
+    )
+
+    assert motivo is not None and "sesgo" in motivo.lower()

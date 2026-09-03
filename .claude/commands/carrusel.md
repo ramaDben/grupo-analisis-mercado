@@ -67,6 +67,18 @@ payload, no los toques), y toda sigla explicada en voz novata.
 **No inventes cifras.** Precio, soporte, resistencia e impulso ya están en el payload y
 salieron del motor. Si necesitas un dato que no está, pídelo al MCP; nunca lo deduzcas.
 
+**El "hasta dónde" ya está escrito: no lo repitas ni lo contradigas.** Si el payload trae
+`vigencia`, el mensaje ya abre con el bloque que dice hasta qué nivel sigue vigente el
+sesgo, en la gramática que le corresponde (un nivel si es posición sostenida, dos bordes
+si el activo rota en un canal). Lee ese bloque **antes** de escribir:
+
+- `"vigente": false` significa que el sesgo del Playbook ya se rompió. El titular no puede
+  celebrar la dirección que acaba de caer.
+- Con `"gramatica": "RANGO"` no hay dirección que afirmar: el titular habla de rango,
+  compresión o falta de definición, no de tendencia.
+- `vigencia: null` es que el activo no tiene ficha en el Playbook, o que el modelo no lo
+  pudo leer. Ahí el texto se apoya solo en el score técnico, sin invocar sesgo macro.
+
 ## PASO 3 — Rendir las piezas y generar mensajes modulares
 
 ```bash
@@ -127,8 +139,9 @@ de navegador y las esperas.
 se rendía todo primero y la última pieza llegaba con el precio de hacía veinte minutos;
 ahora el refresco cabe entero dentro de la espera de cadencia, así que no cuesta tiempo
 y el precio llega fresco. Si el movimiento **invalidó el texto** —el precio cruzó un
-soporte o una resistencia que el párrafo daba por vigentes— esa pieza **no sale**: se
-renombra a `.divergente` y el despacho lo informa.
+soporte o una resistencia que el párrafo daba por vigentes, o perdió el nivel de
+vigencia del sesgo— esa pieza **no sale**: se renombra a `.divergente` y el despacho
+lo informa.
 
 Si el despacho se corta a la mitad, se retoma sin duplicar lo ya enviado:
 

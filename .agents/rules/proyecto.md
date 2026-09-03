@@ -189,7 +189,17 @@ cuatro veces más exposición que un lote, y llegan con el precio viejo.
 
 Cada canal además **se rinde justo antes de salir**, no al principio de la tanda.
 Si el precio cruzó un soporte o una resistencia que el texto daba por vigentes,
-esa pieza **no sale** (se renombra a `.divergente`) y el despacho lo informa.
+o perdió el nivel de vigencia del sesgo, esa pieza **no sale** (se renombra a
+`.divergente`) y el despacho lo informa.
+
+**El sesgo se comunica con su vigencia, y en dos gramáticas distintas.** El campo
+`vigencia` del payload ya viene resuelto por el escáner: `NIVEL` es una posición
+sostenida y se dice "vigente hasta X" (un solo borde, el Chandelier); `RANGO` es
+score cero y se dice "rota entre S1 y R1" (dos bordes, sin dirección). Si viene
+`null` el activo no tiene ficha en el Playbook o el modelo no lo pudo leer, y la
+pieza sale sin ese bloque. **No lo escribas a mano ni lo deduzcas**: lee el bloque
+antes de redactar el titular, para no afirmar una dirección que el sesgo acaba de
+perder.
 
 Si se corta a la mitad, `--desde N` retoma en el canal N sin duplicar lo enviado.
 

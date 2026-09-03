@@ -201,8 +201,46 @@ el número de aperturas de navegador y de esperas de 45 s.
 última pieza llegara con el precio de hacía veinte minutos. El refresco (1-3 s de datos +
 5-15 s de render) cabe entero dentro de la espera de cadencia de 45 s, así que no cuesta
 tiempo. Si el movimiento **invalidó el texto** —el precio cruzó un soporte o una
-resistencia que el párrafo daba por vigentes— la pieza no sale: se renombra a
-`.divergente` y el despacho lo informa. `--desde N` retoma sin duplicar lo ya enviado.
+resistencia que el párrafo daba por vigentes, o perdió el nivel de vigencia del
+sesgo— la pieza no sale: se renombra a `.divergente` y el despacho lo informa.
+`--desde N` retoma sin duplicar lo ya enviado.
+
+### El "hasta dónde" del sesgo tiene dos gramáticas, no una
+
+El Playbook no emite señales: emite **sesgo con su vigencia**. Y ese "hasta dónde" no
+se dice igual en los dos casos que el motor distingue, porque no son la misma lectura.
+La traducción vive en un solo lugar, `bias_reader.resolver_vigencia`, y la consume el
+escáner (que ya tiene el H1 y el sesgo en la mano) para que viaje en la selección:
+
+| `take_profit_tipo` | Gramática | Qué se publica |
+|---|---|---|
+| `TRAILING_STOP_ASYMMETRIC` | **NIVEL** | Un borde: *"el sesgo alcista sigue vigente hasta 933,44"*. Es el Chandelier, y se mueve con cada vela cerrada. |
+| `NIVEL_OPUESTO_CANAL` | **RANGO** | Dos bordes: *"sin sesgo direccional, el activo rota entre S1 y R1"*. |
+
+Decir "vigente hasta X" en un activo neutral le inventa una dirección; decir "rota
+entre S1 y R1" en uno sostenido le borra la que tiene.
+
+**Hay un tercer caso, y es el que no era obvio.** `DATOS_INCOMPLETOS` sale del motor
+con `NIVEL_OPUESTO_CANAL` y score cero, **idéntico a un rango genuino**, porque ese es
+el valor neutro de esos campos y no una lectura de canal. Publicarlo como rango
+afirmaría que el activo rota entre dos niveles cuando en realidad el modelo no lo pudo
+leer. Se distingue por la **lista de setups permitidos vacía** (criterio estructural, no
+por el texto de la etiqueta: eso sería otro contrato por nombre de los que ya costaron
+caro) y esa pieza sale **sin** bloque de vigencia. El cierre canónico de tres escenarios
+va igual, así que el mensaje nunca queda sin lectura práctica.
+
+Dos reglas más que se decidieron mirando el resultado:
+
+1. **Un sesgo ya invalidado lo dice, no lo esconde.** `vigente` compara el precio contra
+   el borde. Brent el 2026-09-02 llevaba sesgo +1,50 con el precio ya bajo su Chandelier,
+   y el USD/CLP estaba igual el 2026-09-03: publicar "sigue vigente" ahí dice lo
+   contrario de lo que pasa. Si se rompe **entre preparar y despachar**, la pieza además
+   no sale.
+2. **Ante direcciones contrarias se calla la vigencia, no la lectura técnica.** Si el
+   signo del score macro contradice la lectura de medias de la pieza, el bloque se omite
+   y el motivo queda en `_procedencia.vigencia_omitida`. El gate del Playbook ya bloquea
+   la mayoría de esos casos, pero "la mayoría" no alcanza: dos direcciones opuestas en el
+   mismo mensaje cuestan la credibilidad del mensaje entero.
 
 Tres reglas que se pagaron caro:
 

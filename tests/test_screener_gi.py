@@ -713,3 +713,49 @@ def test_un_payload_sin_confianza_declarada_bloquea():
     motivo = sc.gate_confianza({"regimen_macro_global": {}, "activo": {}})
     assert motivo is not None
     assert "no declara" in motivo
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# La vigencia del sesgo viaja con la seleccion
+# ─────────────────────────────────────────────────────────────────────────────
+def test_la_seleccion_arrastra_la_vigencia_del_playbook():
+    """El escaner ya tiene las dos piezas en la mano: el H1 con las anclas del
+    Chandelier y el sesgo del activo. Resolverlo aca sale gratis y evita que el
+    carrusel vuelva a pedir los mismos datos al terminal."""
+    h1 = h1_perfecto()
+    h1.update(chandelier_max=104.5, chandelier_min=94.0, chandelier_lookback=22)
+    sesgo = {
+        "regimen_macro_global": {"codigo": "R2_GOLDILOCKS_EXPANSION"},
+        "confianza_general": {"confianza_total_pct": 90.0},
+        "activo": {
+            "sesgo_score": 1.80, "sesgo_etiqueta": "ALCISTA",
+            "setups_permitidos": ["PULLBACK_EMA20_H1"], "setups_prohibidos": [],
+            "parametros_riesgo": {
+                "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC",
+                "trailing_stop_mult_atr": 3.0, "trailing_stop_lookback": 22,
+            },
+        },
+    }
+
+    res = sc.evaluar_activo(
+        ACTIVO, [], None, {"XAUUSD": sesgo},
+        AHORA.astimezone(sc.SANTIAGO),
+        analizador_falso(h1, d1_con_consumo(0.30)),
+    )
+
+    assert "excluido" not in res, res.get("excluido")
+    assert res["vigencia"]["gramatica"] == "NIVEL"
+    assert res["vigencia"]["nivel"] == pytest.approx(104.5 - 3.0 * 2.0, abs=0.01)
+
+
+def test_un_activo_sin_ficha_de_playbook_sale_sin_vigencia_y_no_se_cae():
+    """Los 33 activos del catalogo sin ficha son la mayoria del universo. Su
+    seleccion tiene que existir igual, con el campo en `None`."""
+    res = sc.evaluar_activo(
+        ACTIVO, [], None, {},
+        AHORA.astimezone(sc.SANTIAGO),
+        analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
+    )
+
+    assert "excluido" not in res
+    assert res["vigencia"] is None

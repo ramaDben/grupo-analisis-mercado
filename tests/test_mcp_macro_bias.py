@@ -18,6 +18,8 @@ from market_data_mcp.bias_reader import (
     VALID_SYMBOLS
 )
 
+RAIZ = Path(__file__).resolve().parent.parent
+
 
 def _reloj_del_snapshot():
     """Un `now_dt` anclado al `as_of_utc` del propio snapshot versionado.
@@ -238,3 +240,158 @@ def test_todo_activo_del_playbook_mapea_a_un_ticker_del_catalogo():
     assert not fuera_del_catalogo, (
         f"mapean a un ticker que el catálogo técnico no conoce: {fuera_del_catalogo}"
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Las dos gramaticas de vigencia
+# ─────────────────────────────────────────────────────────────────────────────
+def _sesgo(tp_tipo, score, permitidos=("PULLBACK_EMA20_H1",), mult=3.0, etiqueta="ALCISTA"):
+    """Payload de `cargar_macro_bias(sym)` reducido a lo que mira el resolutor."""
+    return {
+        "symbol": "USDCLP",
+        "activo": {
+            "sesgo_score": score,
+            "sesgo_etiqueta": etiqueta,
+            "setups_permitidos": list(permitidos),
+            "parametros_riesgo": {
+                "take_profit_tipo": tp_tipo,
+                "trailing_stop_mult_atr": mult,
+                "trailing_stop_lookback": 22,
+                "atr_h1": 2.17,
+            },
+        },
+    }
+
+
+_H1 = {
+    "price": 937.25, "s1": 933.10, "r1": 941.80,
+    "atr_14": 2.17, "chandelier_max": 939.95, "chandelier_min": 928.40,
+    "chandelier_lookback": 22,
+}
+
+
+def test_trailing_asimetrico_se_resuelve_como_un_solo_nivel():
+    """Score distinto de cero: posicion sostenida, un solo borde (el Chandelier)."""
+    from market_data_mcp.bias_reader import resolver_vigencia
+
+    v = resolver_vigencia(_sesgo("TRAILING_STOP_ASYMMETRIC", 0.80), _H1, digits=2)
+
+    assert v["gramatica"] == "NIVEL"
+    assert v["direccion"] == "LARGO"
+    assert v["nivel"] == pytest.approx(939.95 - 3.0 * 2.17, abs=0.01)
+    assert v["borde_inferior"] is None and v["borde_superior"] is None
+    assert v["vigente"] is True, "937,25 esta por encima del stop: la lectura sigue en pie"
+
+
+def test_un_score_negativo_ancla_en_el_minimo_y_el_nivel_queda_arriba():
+    from market_data_mcp.bias_reader import resolver_vigencia
+
+    v = resolver_vigencia(_sesgo("TRAILING_STOP_ASYMMETRIC", -1.20, etiqueta="BAJISTA"), _H1, digits=2)
+
+    assert v["direccion"] == "CORTO"
+    assert v["nivel"] == pytest.approx(928.40 + 3.0 * 2.17, abs=0.01)
+    assert v["nivel"] > _H1["chandelier_min"], "el stop de un corto va POR ENCIMA del minimo"
+    # El precio de la fixture (937,25) esta por encima de ese stop, asi que este
+    # corto ya se rompio. Se afirma a proposito: la invalidacion tiene que
+    # detectarse en las dos direcciones, no solo cuando cae un largo.
+    assert v["vigente"] is False
+
+
+def test_nivel_opuesto_canal_se_resuelve_como_rango_de_dos_bordes():
+    """Score cero: no hay tendencia que sostener, hay un canal por el que rota."""
+    from market_data_mcp.bias_reader import resolver_vigencia
+
+    v = resolver_vigencia(
+        _sesgo("NIVEL_OPUESTO_CANAL", 0.0, permitidos=("RANGE_DONCHIAN_FADE",),
+               mult=None, etiqueta="NEUTRAL / CONSOLIDACIÓN"),
+        _H1, digits=2,
+    )
+
+    assert v["gramatica"] == "RANGO"
+    assert v["nivel"] is None, "un rango no tiene un solo 'hasta donde'"
+    assert (v["borde_inferior"], v["borde_superior"]) == (933.10, 941.80)
+    assert v["direccion"] is None
+    assert v["vigente"] is True, "el precio esta dentro del canal"
+
+
+def test_el_precio_fuera_del_canal_deja_el_rango_sin_vigencia():
+    from market_data_mcp.bias_reader import resolver_vigencia
+
+    fuera = {**_H1, "price": 942.60}
+    v = resolver_vigencia(
+        _sesgo("NIVEL_OPUESTO_CANAL", 0.0, mult=None), fuera, digits=2
+    )
+
+    assert v["vigente"] is False
+
+
+def test_un_activo_sin_setups_permitidos_no_publica_vigencia():
+    """`DATOS_INCOMPLETOS` trae `NIVEL_OPUESTO_CANAL` y score cero, igual que un
+    rango genuino. Pero no es lo mismo: ahi el modelo no leyo el activo, no leyo
+    que rote. Publicar "vigente entre S1 y R1" afirmaria una lectura que nadie
+    hizo, que es exactamente el error que este resolutor existe para evitar."""
+    from market_data_mcp.bias_reader import resolver_vigencia
+
+    v = resolver_vigencia(
+        _sesgo("NIVEL_OPUESTO_CANAL", 0.0, permitidos=(), mult=None,
+               etiqueta="DATOS_INCOMPLETOS"),
+        _H1, digits=2,
+    )
+
+    assert v is None
+
+
+def test_sin_anclas_del_chandelier_no_se_inventa_el_nivel():
+    """Fail-closed: el MCP viejo no devuelve `chandelier_max`. Sin el ancla no
+    hay nivel, y un `s1` cualquiera en su lugar publicaria otro numero."""
+    from market_data_mcp.bias_reader import resolver_vigencia
+
+    sin_ancla = {k: v for k, v in _H1.items() if not k.startswith("chandelier")}
+    v = resolver_vigencia(_sesgo("TRAILING_STOP_ASYMMETRIC", 0.80), sin_ancla, digits=2)
+
+    assert v is None
+
+
+def test_un_sesgo_con_error_no_produce_vigencia():
+    from market_data_mcp.bias_reader import resolver_vigencia
+
+    assert resolver_vigencia({"error": "STALE_DATA", "message": "..."}, _H1, digits=2) is None
+    assert resolver_vigencia(None, _H1, digits=2) is None
+
+
+def test_todo_take_profit_tipo_del_motor_tiene_gramatica():
+    """Contrato de nombres: el motor y el resolutor se hablan por el valor de
+    `take_profit_tipo`. Si el motor gana un tipo nuevo y nadie le asigna
+    gramatica, la pieza saldria sin su "hasta donde" y en silencio."""
+    import re
+
+    from market_data_mcp.bias_reader import GRAMATICA_VIGENCIA
+
+    fuente = (RAIZ / "scripts" / "macro_bias_engine.py").read_text(encoding="utf-8")
+    emitidos = set(re.findall(r'tp_tipo\s*=\s*"([A-Z_]+)"', fuente))
+
+    assert emitidos, "el regex dejo de encontrar las asignaciones de tp_tipo"
+    huerfanos = emitidos - set(GRAMATICA_VIGENCIA)
+    assert not huerfanos, (
+        f"el motor emite {sorted(huerfanos)} y el resolutor no sabe con que "
+        f"gramatica comunicarlo. Clasificarlo en GRAMATICA_VIGENCIA."
+    )
+
+
+def test_datos_incompletos_siempre_llega_sin_setups_permitidos():
+    """El resolutor distingue "no hay lectura" de "la lectura es un rango" por la
+    lista de setups vacia, no por el texto de la etiqueta. Este contrato es lo
+    que sostiene ese criterio estructural."""
+    import re
+
+    fuente = (RAIZ / "scripts" / "macro_bias_engine.py").read_text(encoding="utf-8")
+    marcas = list(re.finditer(r'sesgo_etiqueta\s*=\s*"DATOS_INCOMPLETOS"', fuente))
+
+    assert marcas, "el regex dejo de encontrar las ramas de DATOS_INCOMPLETOS"
+    for m in marcas:
+        ventana = fuente[m.end(): m.end() + 400]
+        assert re.search(r"setups_permitidos\s*=\s*\[\s*\]", ventana), (
+            "una rama de DATOS_INCOMPLETOS declara setups permitidos: el "
+            "resolutor la tomaria por un rango real y publicaria una lectura "
+            "que el modelo no hizo"
+        )
