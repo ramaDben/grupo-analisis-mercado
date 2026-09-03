@@ -762,6 +762,39 @@ class WhatsAppSender:
                 page.keyboard.up("Shift")
                 time.sleep(0.05)
 
+    def _cerrar_previsualizacion_enlace(self, page: Any) -> bool:
+        """Descarta la tarjeta de previsualización que WhatsApp arma con una URL.
+
+        **Consecuencia directa de escribir el texto antes de adjuntar.** Casi
+        todos los mensajes del proyecto llevan enlaces (el calendario de
+        Investing, la serie del BCCh, FRED), y al quedar el texto en el cuadro
+        WhatsApp despliega una tarjeta de previsualización que **ocupa el área
+        donde se abre el menú Adjuntar**. El clic en "Fotos y videos" se queda
+        esperando un elemento que la tarjeta tapa, y el despacho muere ahí: pasó
+        el 2026-09-03 a las 12:26 con el contexto macro de commodities, que
+        lleva tres URLs.
+
+        El botón es `footer [aria-label="Cancelar"]`, medido ese día. Cerrar la
+        tarjeta **no toca el texto** (1.451 caracteres antes y después) y el pie
+        sigue heredándolo completo. La previsualización no se pierde: un mensaje
+        con imagen adjunta no la muestra de todos modos.
+
+        Devuelve si había una tarjeta que cerrar, para que el llamador lo sepa.
+        """
+        tarjeta = page.locator('footer [aria-label="Cancelar"]')
+        try:
+            if tarjeta.count() == 0:
+                return False
+            tarjeta.first.click(timeout=8000)
+        except Exception:  # noqa: BLE001
+            # Que no se pueda cerrar no justifica abortar: si la tarjeta no
+            # estorba, el menú abre igual y el envío sigue. Si estorba, el error
+            # de "no se pudo adjuntar" lo dirá con su propio mensaje.
+            logger.warning("no se pudo cerrar la previsualización de enlace")
+            return False
+        self._pausa_humana(1.0)
+        return True
+
     @staticmethod
     def _huella(texto: str) -> str:
         """El texto sin ningún espacio ni salto de línea.
@@ -804,6 +837,7 @@ class WhatsAppSender:
         if caption.strip():
             self._insertar_texto(page, caption.strip())
             self._pausa_humana(0.8)
+            self._cerrar_previsualizacion_enlace(page)
 
         self._cerrar_modales_emergentes(page)
         boton = self._primer_locator(page, SELECTORES_ADJUNTAR)
