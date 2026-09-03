@@ -46,13 +46,13 @@ ASSET_CONFIG = {
         "mt5_symbol": ["WTI.spot", "WTI", "OIL"],
         "yf_symbol": "CL=F",
         "nombre": "Petróleo Crudo WTI",
-        "digits": 2
+        "digits": 3
     },
     "BRENT": {
         "mt5_symbol": ["BRENT.spot", "BRENT", "UKOIL"],
         "yf_symbol": "BZ=F",
         "nombre": "Petróleo Crudo Brent",
-        "digits": 2
+        "digits": 3
     },
     "US100": {
         "mt5_symbol": ["US100.spot", "US100", "NAS100"],
@@ -64,7 +64,10 @@ ASSET_CONFIG = {
         "mt5_symbol": ["COPPER", "COPPER.spot", "HG"],
         "yf_symbol": "HG=F",
         "nombre": "Cobre COMEX de Alta Calidad",
-        "digits": 4
+        # 0 y no 4: la serie que se persiste es la de MT5, en USD/tonelada y en
+        # enteros. El 4 venia de cuando esto miraba el precio COMEX en USD/libra,
+        # que hoy vive aparte en commodities_data.json como COBRE_COMEX.
+        "digits": 0
     }
 }
 

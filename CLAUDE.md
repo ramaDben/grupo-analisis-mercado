@@ -350,10 +350,25 @@ La pieza de un dato económico se arma en uno de **dos modos**, según la hora d
 | WTI.spot | 3 | $90.181 | $90.18 / $90.2 |
 | US100.spot | 2 | 30,350.01 | 30.350 / 30,350 |
 | Acciones | 2 | $192.50 | $192.5 / $193 |
-| COPPER | 1 | $14274.0 USD/t | $14.274 / 14274 |
+| COPPER | 0 | $14197 USD/t | $14.197 / $14197.0 |
 
 *El Cobre se analiza y cotiza siempre por su valor por tonelada métrica (`USD/t`) disponible en el terminal MT5.*
 Nunca truncar ceros al final (89.60, no 89.6). Nunca redondear a enteros salvo que digits = 0.
+
+> [!NOTE]
+> **El Cobre es el único con `digits = 0`, y por eso se escribe entero** (`$14197 USD/t`). El
+> broker lo cotiza así: `symbol_info("COPPER").digits` devuelve 0 (verificado el 2026-09-03).
+> Estuvo declarado con 1 en dos bloques distintos de `activos.json` y con 4 en
+> `extractor_precios.py`, tres valores para el mismo símbolo. **Decisión del director el
+> 2026-09-03: manda el terminal.**
+>
+> No confundir esa serie con `COBRE_COMEX` de `commodities_data.json`, que es el precio COMEX
+> en **USD/libra** (6,602) y sí lleva 4 decimales. Son dos series del mismo metal en dos
+> unidades, y solo la de MT5 es el símbolo operable.
+>
+> Ojo con el catálogo: `COPPER` figura en `forex_commodities` **y** en
+> `activos_complementarios`, y `catalog.load_valid_tickers` recorre el segundo al final, así que
+> su valor sobrescribe. Los dos tienen que coincidir, y un test lo impone.
 
 ## Eventos de alto impacto (decisiones de tasas)
 Cuando hay decisión de tasas (Fed, BCCh, BCE):

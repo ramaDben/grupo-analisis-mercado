@@ -74,3 +74,59 @@ def test_atr_del_extractor_coincide_con_el_del_mcp():
     del_mcp = mt5_client.atr(df, 14).iloc[-1]
 
     assert del_extractor == pytest.approx(del_mcp, rel=1e-9)
+
+
+def test_los_digits_del_extractor_coinciden_con_el_catalogo():
+    """Tres valores para los decimales del cobre es dos de mas.
+
+    Medido el 2026-09-03: `config/activos.json` decia 1, `ASSET_CONFIG` decia 4 y
+    el terminal reporta 0. El del extractor no lo lee nadie -aparece solo en los
+    literales de ASSET_CONFIG- y por eso el valor equivocado nunca dio un
+    problema visible. Pero es una trampa: quien lea `ASSET_CONFIG["COPPER"]
+    ["digits"] == 4` va a creerle.
+
+    Y no era solo el cobre: WTI y Brent estaban en 2 cuando el broker los cotiza
+    con 3.
+
+    La fuente unica es `config/activos.json`, que alimenta `VALID_TICKERS` y es lo
+    que `analisis.py` usa para redondear. Este test la impone sobre el extractor.
+    """
+    import sys
+    from pathlib import Path as _P
+    raiz = _P(__file__).resolve().parents[1]
+    if str(raiz / "scripts") not in sys.path:
+        sys.path.insert(0, str(raiz / "scripts"))
+    from extractor_precios import ASSET_CONFIG
+    from market_data_mcp.catalog import VALID_TICKERS
+
+    discrepancias = []
+    for asset_id, cfg in ASSET_CONFIG.items():
+        candidatos = cfg["mt5_symbol"]
+        ticker = next((s for s in candidatos if s in VALID_TICKERS), None)
+        assert ticker, f"{asset_id}: ninguno de sus simbolos {candidatos} esta en el catalogo"
+        if cfg["digits"] != VALID_TICKERS[ticker]:
+            discrepancias.append(
+                f"{asset_id} ({ticker}): extractor={cfg['digits']} catalogo={VALID_TICKERS[ticker]}"
+            )
+    assert not discrepancias, (
+        "los decimales del extractor no coinciden con el catalogo: "
+        + "; ".join(discrepancias)
+    )
+
+
+def test_el_cobre_lleva_los_decimales_del_terminal():
+    """Decision del director el 2026-09-03: manda el terminal.
+
+    `symbol_info("COPPER").digits` devuelve 0 y su bid es 14197.0, porque el
+    broker cotiza el cobre por tonelada metrica en enteros. La regla de formato
+    del proyecto ya contempla el caso: "nunca redondear a enteros salvo que
+    digits = 0".
+
+    Ojo con no confundir esta serie con `COBRE_COMEX` de `commodities_data.json`,
+    que es el precio COMEX en USD/libra (6,602) y va con 4 decimales. Son dos
+    series distintas del mismo metal, en dos unidades, y solo una es el simbolo
+    operable del broker.
+    """
+    from market_data_mcp.catalog import VALID_TICKERS
+
+    assert VALID_TICKERS["COPPER"] == 0

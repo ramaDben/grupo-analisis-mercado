@@ -70,7 +70,12 @@ def test_todos_los_activos_mencionados_existen_en_catalogo_con_sus_digits():
         ("XAUUSD", 2),
         ("XAGUSD", 3),
         ("WTI.spot", 3),
-        ("COPPER", 1),
+        # 0 y no 1: manda el terminal. `symbol_info("COPPER").digits` devuelve 0
+        # y su bid es 14197.0, porque el broker cotiza el cobre por tonelada
+        # métrica en enteros (verificado el 2026-09-03 contra la cuenta 51492).
+        # La regla de formato del proyecto ya contempla el caso: "nunca redondear
+        # a enteros salvo que digits = 0".
+        ("COPPER", 0),
         ("US100.spot", 2),
         ("US500.spot", 2),
         ("US30.spot", 2),
