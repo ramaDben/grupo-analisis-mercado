@@ -220,6 +220,13 @@ escáner (que ya tiene el H1 y el sesgo en la mano) para que viaje en la selecci
 Decir "vigente hasta X" en un activo neutral le inventa una dirección; decir "rota
 entre S1 y R1" en uno sostenido le borra la que tiene.
 
+**El informe de apertura lo lleva también**, con la misma aritmética y su propia voz: un
+bloque "Hasta dónde vale esta lectura" con **una línea por activo**, no por grupo. WTI y
+Brent siguen agrupados porque su lectura es palabra por palabra la misma, pero cada uno
+tiene su borde, y un solo nivel para los dos publicaría el del vecino. Lo resuelve
+`resolver_vigencias`, que no lanza nunca: sin terminal el informe sale sin el bloque y lo
+dice en los avisos, mismo criterio que los gráficos.
+
 **Hay un tercer caso, y es el que no era obvio.** `DATOS_INCOMPLETOS` sale del motor
 con `NIVEL_OPUESTO_CANAL` y score cero, **idéntico a un rango genuino**, porque ese es
 el valor neutro de esos campos y no una lectura de canal. Publicarlo como rango

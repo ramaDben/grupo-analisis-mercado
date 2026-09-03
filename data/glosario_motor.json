@@ -73,7 +73,16 @@
     "POR SHOCK": "empujado por un golpe en la oferta",
     "EXPANSION": "acompañado por el buen momento de la economía",
     "PRESION EN MULTIPLOS": "presionado por el costo del dinero",
-    "PRESIÓN EN MÚLTIPLOS": "presionado por el costo del dinero"
+    "PRESIÓN EN MÚLTIPLOS": "presionado por el costo del dinero",
+    "_nota_causa": "Seis etiquetas traen la CAUSA entre parentesis, no un rango: se traducen por su contenido. El guion separador distingue un rango de una causa, porque '(S1 - R1)' tambien tiene digitos.",
+    "RANGO": "moviéndose de lado",
+    "CONSOLIDACIÓN": "tomándose una pausa después del último movimiento",
+    "ESTANFLACION GLOBAL": "en un mundo con precios al alza y economía frenada",
+    "SHOCK INFLACION US": "por el salto de la inflación en Estados Unidos",
+    "CAIDA COBRE EN R0": "por la caída del cobre, que es la principal exportación de Chile",
+    "RALLY COBRE EN R0": "por el alza del cobre, que es la principal exportación de Chile",
+    "PESO DÉBIL POR RECESIÓN/VUELO A CALIDAD": "porque cuando la economía se enfría el capital busca refugio en dólares",
+    "PESO FUERTE POR GOLDILOCKS": "porque el buen momento de la economía fortalece al peso"
   },
   "_nota_setups": "Las claves NO llevan temporalidad: el motor mira el marco que necesita y `_traducir_setup` resuelve FADE_SUPPORT_RESISTANCE_H1, _M15, _H4 o _D1 contra la misma entrada. Donde la unidad del período depende del marco (una EMA20 en H1 son 20 horas; en M15, 20 velas de 15 minutos) se escribe el marcador {periodos} y el traductor lo rellena."
 }
