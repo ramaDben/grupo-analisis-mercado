@@ -80,7 +80,10 @@ es tuyo:
 
 1. **Marco de la jornada**: dos párrafos. Qué deja la sesión anterior y con qué abre esta.
 2. **Régimen y sesgo**: qué significa el régimen vigente para operar hoy. Los `setups_prohibidos`
-   de la tabla son prohibiciones, no sugerencias: nómbralas como tales.
+   de la tabla son prohibiciones, no sugerencias: nómbralas como tales. El bloque **"Hasta
+   dónde vale esta lectura"** de cada activo ya viene escrito y sale del Playbook: no lo
+   repitas ni lo contradigas, y si alguno dice *"la lectura ya no vale"*, ese activo no puede
+   aparecer en tu análisis como si su dirección siguiera en pie.
 3. **Curva soberana**: qué dice el movimiento de tasas sobre el dólar, el oro y el Nasdaq.
    El umbral del Playbook es explícito: sobre 4,70% en la de 10 años se comprimen los
    múltiplos del US100.

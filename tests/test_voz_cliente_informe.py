@@ -247,3 +247,209 @@ def test_la_unidad_del_periodo_concuerda_en_genero_con_la_frase(glosario):
         assert "las últimas" in texto, texto
         for masculino in ("días", "meses", "minutos", "segundos"):
             assert f"últimas 20 {masculino}" not in texto, texto
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El "hasta donde" del sesgo en el informe
+# ─────────────────────────────────────────────────────────────────────────────
+_SNAP_CRUDO = {
+    "regimen_macro_global": {"codigo": "R3_ESTANFLACION_SHOCK", "nombre": "Estanflación"},
+    "activos": {
+        "WTI": {
+            "nombre": "Petróleo WTI", "sesgo_etiqueta": "ALCISTA POR SHOCK",
+            "setups_permitidos": ["BREAKOUT_VOLATILITY_H1"], "setups_prohibidos": [],
+        },
+        "BRENT": {
+            "nombre": "Petróleo Brent", "sesgo_etiqueta": "ALCISTA POR SHOCK",
+            "setups_permitidos": ["BREAKOUT_VOLATILITY_H1"], "setups_prohibidos": [],
+        },
+        "USDCLP": {
+            "nombre": "Dólar / Peso Chileno", "sesgo_etiqueta": "ALCISTA MODERADO",
+            "setups_permitidos": ["PULLBACK_EMA20_H1"], "setups_prohibidos": [],
+        },
+    },
+}
+
+_VIG_NIVEL_WTI = {"gramatica": "NIVEL", "direccion": "LARGO", "nivel": 91.745,
+                  "borde_inferior": None, "borde_superior": None, "vigente": True,
+                  "multiplo_atr": 2.0, "lookback": 22,
+                  "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC"}
+_VIG_NIVEL_BRENT = {**_VIG_NIVEL_WTI, "nivel": 97.135}
+_VIG_RANGO = {"gramatica": "RANGO", "direccion": None, "nivel": None,
+              "borde_inferior": 928.90, "borde_superior": 936.20, "vigente": True,
+              "multiplo_atr": None, "lookback": None,
+              "take_profit_tipo": "NIVEL_OPUESTO_CANAL"}
+
+_DIGITS = {"WTI": 3, "BRENT": 3, "USDCLP": 2}
+
+
+def test_la_lectura_por_activo_dice_hasta_donde_vale_cada_sesgo(glosario):
+    """El informe decia el sesgo sin su borde: "lo vemos alcista" y nada mas. El
+    director pidio sesgo CON su vigencia, y el PDF de apertura es donde mas
+    sirve."""
+    salida = pi._lectura_por_activo(
+        _SNAP_CRUDO, glosario, None,
+        {"WTI": _VIG_NIVEL_WTI}, _DIGITS,
+    )
+
+    assert "Hasta dónde vale" in salida
+    assert "91,745" in salida
+
+
+def test_los_activos_agrupados_conservan_su_nivel_propio(glosario):
+    """WTI y Brent se agrupan porque su lectura es palabra por palabra la misma,
+    y eso no cambia: lo que cambia es que cada uno tiene SU nivel. Si el bloque
+    agrupado publicara uno solo, el otro saldria con el borde del vecino."""
+    salida = pi._lectura_por_activo(
+        _SNAP_CRUDO, glosario, None,
+        {"WTI": _VIG_NIVEL_WTI, "BRENT": _VIG_NIVEL_BRENT}, _DIGITS,
+    )
+
+    assert "Petróleo WTI y Petróleo Brent" in salida, "el agrupamiento se mantiene"
+    assert "91,745" in salida and "97,135" in salida
+
+
+def test_un_activo_en_rango_dice_entre_que_bordes_vale(glosario):
+    salida = pi._lectura_por_activo(
+        _SNAP_CRUDO, glosario, None, {"USDCLP": _VIG_RANGO}, _DIGITS,
+    )
+
+    assert "entre 928,90 y 936,20" in salida
+    assert "936,20" in salida
+
+
+def test_un_sesgo_invalidado_lo_dice_en_el_informe(glosario):
+    salida = pi._lectura_por_activo(
+        _SNAP_CRUDO, glosario, None,
+        {"USDCLP": {**_VIG_NIVEL_WTI, "nivel": 932.69, "vigente": False}},
+        {"USDCLP": 2},
+    )
+
+    assert "ya no vale" in salida
+    assert "932,69" in salida
+
+
+def test_sin_vigencia_el_informe_no_inventa_un_borde(glosario):
+    """Compatibilidad hacia atras y fail-closed: sin terminal MT5 no hay anclas
+    del Chandelier, y el informe sale sin el bloque en vez de no salir."""
+    salida = pi._lectura_por_activo(_SNAP_CRUDO, glosario)
+
+    assert "Hasta dónde vale" not in salida
+    assert "Petróleo WTI" in salida, "el resto de la lectura sale igual"
+
+
+def test_la_vigencia_no_filtra_tokens_del_motor_al_informe(glosario):
+    """La misma guardia de voz que el resto de la seccion: `Chandelier`,
+    `TRAILING_STOP_ASYMMETRIC` y `LARGO` son vocabulario del motor."""
+    salida = pi._lectura_por_activo(
+        _SNAP_CRUDO, glosario, None,
+        {"WTI": _VIG_NIVEL_WTI, "USDCLP": _VIG_RANGO}, _DIGITS,
+    )
+
+    assert not _TOKEN_MAQUINA.findall(salida)
+    for jerga in ("Chandelier", "LARGO", "CORTO", "trailing", "ATR"):
+        assert jerga not in salida, f"'{jerga}' es vocabulario de mesa, no de cliente"
+
+
+def test_las_cifras_de_la_vigencia_respetan_los_decimales_del_activo(glosario):
+    """El crudo va con 3 decimales y el dolar con 2, igual que en toda pieza del
+    proyecto. Y el separador decimal en Chile es la coma."""
+    salida = pi._lectura_por_activo(
+        _SNAP_CRUDO, glosario, None,
+        {"WTI": _VIG_NIVEL_WTI, "USDCLP": _VIG_RANGO}, _DIGITS,
+    )
+
+    assert "91,745" in salida and "91.745" not in salida
+    assert "928,90" in salida, "no se truncan los ceros finales"
+
+
+def test_resolver_vigencias_sin_terminal_no_lanza_y_avisa():
+    """Mismo criterio que los graficos: un informe sin este bloque sigue siendo
+    un informe, mientras que uno que se cae deja al director sin nada a las ocho
+    de la manana. Cada ausencia queda dicha en los avisos."""
+    vigencias, avisos = pi.resolver_vigencias({"activos": {}})
+
+    assert vigencias == {}
+    assert isinstance(avisos, list)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El parentesis de la etiqueta significa dos cosas, no una
+# ─────────────────────────────────────────────────────────────────────────────
+def test_un_parentesis_de_causa_se_traduce_y_no_se_lee_como_un_rango(glosario):
+    """El defecto que salio a la luz al agregar la vigencia, y estaba en el PDF.
+
+    `_frase_sesgo` asumia que todo parentesis de la etiqueta era un rango de
+    precios, asi que a `ALCISTA MODERADO USD (ESTANFLACION GLOBAL)` le ponia
+    delante la palabra "entre" y publicaba **"lo vemos con mas probabilidad de
+    subir, entre ESTANFLACION GLOBAL"**. Seis de las quince etiquetas del motor
+    traen la CAUSA entre parentesis, no un rango.
+    """
+    frase = pi._frase_sesgo(
+        {"sesgo_etiqueta": "ALCISTA MODERADO USD (ESTANFLACION GLOBAL)"}, glosario
+    )
+
+    assert "entre ESTANFLACION" not in frase
+    assert "ESTANFLACION" not in frase, "vocabulario de maquina en texto de cliente"
+    assert "más probabilidad de subir" in frase
+
+
+def test_un_parentesis_de_rango_sigue_diciendo_entre_que_precios(glosario):
+    """La otra mitad del contrato: `NEUTRAL / RANGO (912 - 925)` si es un rango y
+    los numeros son justo lo que el cliente necesita de ahi. Se reconoce por el
+    guion separador, no por tener digitos: `(S1 - R1)` tambien los tiene."""
+    frase = pi._frase_sesgo(
+        {"sesgo_etiqueta": "NEUTRAL / RANGO (912 - 925)"}, glosario
+    )
+
+    assert "entre 912 y 925" in frase
+
+
+def test_el_usd_de_la_etiqueta_no_llega_al_cliente(glosario):
+    """`ALCISTA USD` en la ficha del USD/CLP dice que el sesgo es del dolar, cosa
+    que el nombre del par ya dice. Repetirlo suena a sigla sin explicar."""
+    frase = pi._frase_sesgo(
+        {"sesgo_etiqueta": "BAJISTA USD (PESO FUERTE POR GOLDILOCKS)"}, glosario
+    )
+
+    assert "USD" not in frase
+    assert "GOLDILOCKS" not in frase
+
+
+def test_toda_etiqueta_de_sesgo_del_motor_sale_en_voz_de_cliente(glosario):
+    """Contrato de nombres sobre las quince etiquetas que el motor puede emitir.
+
+    El barrido de vocabulario que ya existia mira `setups` y el codigo de
+    regimen del snapshot de HOY, asi que no veia ni las etiquetas de sesgo ni las
+    catorce que hoy no estan activas. Este las saca del codigo del motor, que es
+    donde estan todas.
+    """
+    fuente = (RAIZ / "scripts" / "macro_bias_engine.py").read_text(encoding="utf-8")
+    etiquetas = set(re.findall(r'sesgo_etiqueta = "([^"]+)"', fuente))
+
+    assert len(etiquetas) >= 10, "el regex dejo de encontrar las etiquetas"
+    gritos = {}
+    for etiqueta in etiquetas:
+        if etiqueta == "DATOS_INCOMPLETOS":
+            continue          # ese caso no se publica: el activo sale sin lectura
+        frase = pi._frase_sesgo({"sesgo_etiqueta": etiqueta}, glosario)
+        restos = re.findall(r"\b[A-ZÁÉÍÓÚÑ]{4,}\b", frase)
+        if restos:
+            gritos[etiqueta] = restos
+
+    assert not gritos, (
+        "etiquetas que llegan al informe en vocabulario de maquina: "
+        + "; ".join(f"{k} -> {v}" for k, v in sorted(gritos.items()))
+        + ". Traducir el matiz en data/glosario_motor.json."
+    )
+
+
+def test_un_intensificador_no_se_confunde_con_la_direccion(glosario):
+    """`FUERTE ALCISTA` es el sesgo del Oro hoy, y el parser tomaba la primera
+    palabra como direccion: salia "Hoy lo vemos fuerte, alcista". La direccion es
+    alcista y "fuerte" es su intensidad, no otra direccion."""
+    frase = pi._frase_sesgo({"sesgo_etiqueta": "FUERTE ALCISTA"}, glosario)
+
+    assert "fuerte, alcista" not in frase
+    assert "más probabilidad de subir" in frase
+    assert frase.count(",") == 0, "una direccion con intensidad es una sola frase"

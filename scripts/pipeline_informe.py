@@ -566,6 +566,12 @@ def _setup_traducible(token: str, glosario: dict[str, Any]) -> bool:
     return _traducir_setup(token, glosario) != token
 
 
+# Palabras que el motor pone ANTES de la dirección y que modifican su fuerza,
+# no la reemplazan. Van acá y no en el glosario porque cambian la gramática de
+# la frase (adverbio + dirección), mientras que `matices` la continúa.
+_INTENSIFICADORES = {"FUERTE": "claramente"}
+
+
 def _frase_sesgo(a: dict[str, Any], glosario: dict[str, Any]) -> str:
     """El sesgo de un activo en una frase de cliente, sin punto final.
 
@@ -577,19 +583,55 @@ def _frase_sesgo(a: dict[str, Any], glosario: dict[str, Any]) -> str:
     sesgos = glosario.get("sesgos") or {}
     matices_es = glosario.get("matices") or {}
     etiqueta = str(a.get("sesgo_etiqueta", ""))
+
+    # `FUERTE ALCISTA` es intensidad + direccion, no dos direcciones. Tomar la
+    # primera palabra como direccion publicaba "Hoy lo vemos fuerte, alcista",
+    # y es el sesgo del Oro cuando el score llega a +1,80.
+    intensidad = ""
+    palabras = etiqueta.split()
+    if palabras and palabras[0] in _INTENSIFICADORES:
+        intensidad = _INTENSIFICADORES[palabras[0]] + " "
+        etiqueta = " ".join(palabras[1:])
+
     primera = etiqueta.split()[0] if etiqueta else ""
     direccion = sesgos.get(primera, primera.lower())
     matiz_crudo = etiqueta[len(primera):].strip(" /").strip()
+    frase = f"Hoy lo vemos {intensidad}{direccion}"
+    if not matiz_crudo:
+        return frase
+
     matiz = matices_es.get(matiz_crudo.upper(), "")
-    if not matiz and matiz_crudo:
-        # Los rangos vienen como "RANGO (912 - 925)": se deja el numero, que
-        # es lo unico que el cliente necesita de ahi.
-        numeros = re.search(r"\(([^)]+)\)", matiz_crudo)
-        matiz = ("entre " + numeros.group(1).replace(" - ", " y ")) if numeros else matiz_crudo.lower()
-    frase = f"Hoy lo vemos {direccion}"
     if matiz:
-        frase += f", {matiz}"
-    return frase
+        return f"{frase}, {matiz}"
+
+    # **El parentesis de la etiqueta significa dos cosas distintas**, y tratarlas
+    # igual publico "lo vemos con mas probabilidad de subir, entre ESTANFLACION
+    # GLOBAL" en el PDF de apertura:
+    #
+    #   "RANGO (912 - 925)"        -> un RANGO de precios. Se deja el numero,
+    #                                 que es lo unico que el cliente necesita.
+    #   "MODERADO USD (ESTANFLACION GLOBAL)" -> la CAUSA del sesgo. Se traduce.
+    #
+    # Se distinguen por el guion separador y no por tener digitos: "(S1 - R1)"
+    # tambien los tiene. Seis de las quince etiquetas del motor traen causa.
+    partes: list[str] = []
+    parentesis = re.search(r"\(([^)]+)\)", matiz_crudo)
+    previo = (matiz_crudo[:parentesis.start()] if parentesis else matiz_crudo).strip()
+
+    # "USD" sobra: que el sesgo sea del dolar ya lo dice el nombre del par, y
+    # repetirlo deja una sigla sin explicar en texto de cliente.
+    previo = re.sub(r"\bUSD\b", "", previo).strip(" /").strip()
+    if previo:
+        partes.append(matices_es.get(previo.upper(), previo.lower()))
+
+    if parentesis:
+        dentro = parentesis.group(1).strip()
+        if " - " in dentro:
+            partes.append("entre " + dentro.replace(" - ", " y "))
+        else:
+            partes.append(matices_es.get(dentro.upper(), dentro.lower()))
+
+    return f"{frase}, {', '.join(partes)}" if partes else frase
 
 
 def generar_graficos_activos(
@@ -658,10 +700,128 @@ def generar_graficos_activos(
     return salida, avisos
 
 
+def _digits_playbook() -> dict[str, int]:
+    """Los decimales de cada activo del Playbook, del catálogo y no del gusto.
+
+    Sale de `catalog`, que no necesita terminal: así el formato de las cifras no
+    depende de que MT5 conteste, y un informe con datos parciales igual escribe
+    los números bien.
+    """
+    try:
+        from market_data_mcp.bias_reader import TICKER_MT5
+        from market_data_mcp.catalog import VALID_TICKERS
+    except ImportError:
+        return {}
+    return {
+        simbolo: VALID_TICKERS[ticker]
+        for simbolo, ticker in TICKER_MT5.items()
+        if ticker and ticker in VALID_TICKERS
+    }
+
+
+def resolver_vigencias(playbook: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    """Hasta dónde vale la lectura de cada activo, con sus avisos.
+
+    El informe decía el sesgo sin su borde: "hoy lo vemos alcista" y nada más.
+    El Playbook no emite señales sino **sesgo con su vigencia**, y el PDF de
+    apertura es donde ese "hasta dónde" más sirve.
+
+    La aritmética no vive acá: la resuelve `bias_reader.resolver_vigencia`, la
+    misma que consume el escáner para las piezas del carrusel. Un segundo cálculo
+    del mismo nivel es un segundo cálculo que puede discrepar, y el informe y la
+    Story del mismo activo saldrían el mismo día con dos bordes distintos.
+
+    **Nunca lanza**, igual que `generar_graficos_activos`: un informe sin este
+    bloque sigue siendo un informe, y uno que se cae por MT5 deja al director sin
+    nada a las ocho de la mañana. Cada ausencia queda en los avisos, que es lo
+    que la hace auditable en vez de invisible.
+    """
+    avisos: list[str] = []
+    activos = (playbook or {}).get("activos") or {}
+    if not activos:
+        return {}, avisos
+
+    try:
+        from market_data_mcp import mt5_client
+        from market_data_mcp.analisis import analizar_activo
+        from market_data_mcp.bias_reader import TICKER_MT5, resolver_vigencia
+    except ImportError as exc:
+        return {}, [
+            f"informe sin el hasta dónde de cada sesgo: no se pudo importar el "
+            f"lector del Playbook ({exc})."
+        ]
+
+    # `analizar_activo` no abre la conexión por su cuenta: sin esto responde
+    # MT5_UNAVAILABLE y no habría anclas que leer.
+    try:
+        mt5_client.connect()
+    except Exception as exc:  # noqa: BLE001
+        return {}, [
+            f"informe sin el hasta dónde de cada sesgo: MT5 no conectó "
+            f"({exc.__class__.__name__})."
+        ]
+
+    digits = _digits_playbook()
+    salida: dict[str, Any] = {}
+    for simbolo, a in activos.items():
+        ticker = TICKER_MT5.get(simbolo)
+        if not ticker:
+            avisos.append(f"{simbolo} sin vigencia: no está mapeado a un símbolo del broker.")
+            continue
+        h1 = analizar_activo(ticker, "H1")
+        if h1.get("error"):
+            avisos.append(f"{simbolo} sin vigencia: niveles H1 no disponibles ({h1['error']}).")
+            continue
+        vigencia = resolver_vigencia({"activo": a}, h1, digits.get(simbolo, 2))
+        if vigencia is None:
+            avisos.append(
+                f"{simbolo} sin vigencia publicable: el modelo no tiene lectura de "
+                f"este activo hoy, o falta el ancla para calcular el borde."
+            )
+            continue
+        salida[simbolo] = vigencia
+    return salida, avisos
+
+
+def _frase_vigencia(vigencia: dict[str, Any] | None, digits: int) -> str:
+    """El borde de un activo en voz de cliente, sin punto final.
+
+    Las dos gramáticas del Playbook, traducidas: un solo borde cuando hay
+    dirección sostenida, dos cuando el activo rota en un canal. Y el caso que
+    importa comunicar y no esconder: cuando el precio ya lo perdió.
+
+    Nada de vocabulario de mesa. El nivel es un Chandelier de 22 velas por su
+    múltiplo de ATR, y eso queda en el payload para quien audite: al cliente se
+    le dice el número y qué pasa si lo pierde.
+    """
+    if not vigencia:
+        return ""
+    from grafico_informe import formatear_precio
+
+    if vigencia["gramatica"] == "RANGO":
+        inferior, superior = vigencia.get("borde_inferior"), vigencia.get("borde_superior")
+        if inferior is None or superior is None:
+            return ""
+        inf, sup = formatear_precio(inferior, digits), formatear_precio(superior, digits)
+        if not vigencia.get("vigente"):
+            return f"la lectura ya no vale, el precio salió del rango de {inf} a {sup}"
+        return f"vale mientras se mueva entre {inf} y {sup}"
+
+    if vigencia.get("nivel") is None:
+        return ""
+    nivel = formatear_precio(vigencia["nivel"], digits)
+    alcista = vigencia.get("direccion") == "LARGO"
+    if not vigencia.get("vigente"):
+        return f"la lectura ya no vale, el precio {'perdió' if alcista else 'superó'} {nivel}"
+    return f"vale mientras el precio siga {'sobre' if alcista else 'bajo'} {nivel}"
+
+
 def _lectura_por_activo(
     playbook: dict[str, Any],
     glosario: dict[str, Any],
     graficos: dict[str, str] | None = None,
+    vigencias: dict[str, Any] | None = None,
+    digits: dict[str, int] | None = None,
 ) -> str:
     """El sesgo por activo en prosa, no en una matriz de cinco columnas.
 
@@ -703,6 +863,8 @@ def _lectura_por_activo(
     bloques: list[str] = []
     hubo_prohibiciones = False
     graficos = graficos or {}
+    vigencias = vigencias or {}
+    digits = digits or {}
     for (frase, permitidos, prohibidos), miembros in grupos.items():
         nombres = [n for _, n in miembros]
         titulo = nombres[0] if len(nombres) == 1 else " y ".join(
@@ -716,6 +878,22 @@ def _lectura_por_activo(
         if prohibidos:
             hubo_prohibiciones = True
             bloque += "\n\n**Lo que hoy no hacemos:** " + "; ".join(prohibidos) + "."
+        # El "hasta donde" va por miembro y no por grupo, igual que el grafico.
+        # WTI y Brent comparten la lectura palabra por palabra, pero cada uno
+        # tiene SU borde: un solo nivel para los dos publicaria el del vecino.
+        lineas_vigencia = []
+        for simbolo, nombre in miembros:
+            frase = _frase_vigencia(vigencias.get(simbolo), digits.get(simbolo, 2))
+            if frase:
+                lineas_vigencia.append(f"- **{nombre}**: {frase}.")
+        if lineas_vigencia:
+            bloque += (
+                "\n\n**Hasta dónde vale esta lectura.** Mientras el precio respete "
+                "el nivel de cada activo, seguimos viéndolo así. Si lo pierde, damos "
+                "la lectura por terminada y volvemos a leer el activo desde cero.\n\n"
+                + "\n".join(lineas_vigencia)
+            )
+
         # El grafico cierra el bloque: primero se dice que pasa y despues se
         # muestra. Al reves, el cliente mira la imagen sin saber que buscar.
         for simbolo, nombre in miembros:
@@ -837,13 +1015,21 @@ def preparar(tipo: str, con_datos_viejos: bool = False) -> dict[str, Any]:
     graficos, av = generar_graficos_activos(playbook, glosario, destino)
     avisos.extend(av)
 
+    # El "hasta dónde" de cada sesgo. Va aparte de los gráficos a propósito: son
+    # dos ausencias distintas y la del borde no depende de que matplotlib esté
+    # instalado. Ninguna de las dos detiene el informe.
+    vigencias, av = resolver_vigencias(playbook)
+    avisos.extend(av)
+
     secciones = [
         "\n".join(encabezado),
         "## 02. El escenario de hoy\n\n"
         + (_bloque_regimen(regimen, glosario) + "\n\n" if regimen else "")
         + f"{MARCA_EDITORIAL} Una o dos frases sobre cómo se traduce ese escenario "
           "en la jornada de hoy.\n\n"
-        + _lectura_por_activo(playbook, glosario, graficos),
+        + _lectura_por_activo(
+            playbook, glosario, graficos, vigencias, _digits_playbook()
+        ),
         "## 03. Qué están haciendo las tasas en EE.UU.\n\n"
         + f"{MARCA_EDITORIAL} Una frase de entrada: hacia dónde se movieron las tasas "
           "y por qué le importa a alguien que no opera bonos.\n\n"
