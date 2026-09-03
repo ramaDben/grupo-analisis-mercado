@@ -40,6 +40,66 @@ OUTPUT_DIR = DATA_CENTRAL / "DATA DRIVERS USDCLP"
 OUTPUT_FILE = OUTPUT_DIR / "macro_bias_output.json"
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Vencimiento de drivers: la regla es de la ingesta, no se reimplementa
+# ─────────────────────────────────────────────────────────────────────────────
+# `calcular_confianza` lee `is_stale` desde su primera versión, pero el motor
+# nunca lo ponía en `drivers_audit`, así que valía `False` para todos: la frescura
+# se calculaba solo con `status`, que dice "la descarga funcionó" y no "el dato es
+# reciente".
+#
+# El costo, medido el 2026-09-02: el petróleo llevaba 8 días detenido con
+# `status: OK` y contaba como fresco. Con la clave de la TPM ya corregida, la
+# frescura marcaba 100 % y la confianza 65,4 %, apenas sobre el umbral de 65.
+# Aplicando la cadencia real baja a 58,7 % y bloquea, que es lo que corresponde:
+# el gate del umbral estaba recibiendo una frescura incapaz de detectar staleness.
+#
+# La regla vive en la ingesta, que ya tiene la cadencia por serie. Se importa en
+# vez de copiarse: dos reglas de vencimiento serían el mismo error que dos
+# fórmulas de ATR. El cruce de frontera hacia `.agents/skills/` es deliberado
+# —motor e ingesta son dos mitades de la misma cadena, y `pipeline_datos.py`
+# corre las dos— y si el módulo no está, se falla cerrado: la confianza se
+# desploma y el gate detiene la publicación, que es la dirección segura.
+_SKILL_INGESTA = BASE_DIR / ".agents" / "skills" / "ecosistema-datos-macro" / "scripts"
+if str(_SKILL_INGESTA) not in sys.path:
+    sys.path.insert(0, str(_SKILL_INGESTA))
+
+try:
+    from pipeline_ingesta import esta_vencido as _esta_vencido  # type: ignore
+    REGLA_VENCIMIENTO_DISPONIBLE = True
+except Exception:  # noqa: BLE001
+    REGLA_VENCIMIENTO_DISPONIBLE = False
+
+    def _esta_vencido(driver, fecha_dato, status, hoy=None):  # noqa: ARG001
+        """Fail-closed: sin la regla no se puede afirmar que el dato sirve."""
+        return True
+
+
+# Los nombres NO coinciden entre los dos lados: el motor dice DGS10 y la ingesta
+# US_10Y_TREASURY. Un `.get()` con la clave equivocada caería al default de 6 días
+# en silencio, y para la TPM eso sería vencerla cada vez que el Banco Central no
+# se reúne. `None` significa "usa el default diario de la ingesta".
+CADENCIA_POR_DRIVER: dict[str, str | None] = {
+    "DGS10": "US_10Y_TREASURY",
+    "DFII10": None,          # TIPS 10Y: serie diaria de FRED, default de 6 días
+    "T10YIE": None,          # compensación por inflación: ídem
+    "TPM_CHILE": "CHILE_TPM",  # tasa de política: no envejece por calendario
+    "COBRE": "COBRE_HG",
+    "PETROLEO": "PETROLEO_BRENT",
+}
+
+
+def driver_vencido(nombre: str, fecha, status: str, hoy=None) -> bool:
+    """¿El driver está vencido, por descarga rota o por edad del dato?
+
+    Delega en `pipeline_ingesta.esta_vencido`, que suma los dos criterios y aplica
+    la cadencia propia de cada serie: 6 días para las diarias de mercado, 95 para
+    el Imacec, y ninguna para las tasas de política, que valen hasta la próxima
+    reunión.
+    """
+    return bool(_esta_vencido(CADENCIA_POR_DRIVER.get(nombre) or nombre, fecha, status, hoy))
+
+
 def calcular_hash_config(config_path: Path) -> str:
     """Genera hash SHA256 de la configuración para trazabilidad y auditoría."""
     if not config_path.exists():
@@ -703,6 +763,12 @@ def ejecutar_motor_sesgo(verbose: bool = True) -> dict:
         {"nombre": "COBRE", "fecha": copper_fecha, "status": comm_series.get("COBRE_COMEX", {}).get("status", "OK") if copper_cron else "MISSING", "cobertura": 1.0 if copper_cron else 0.0},
         {"nombre": "PETROLEO", "fecha": wti_fecha or brent_fecha, "status": comm_series.get("PETROLEO_WTI", {}).get("status", "OK") if wti_cron else "MISSING", "cobertura": 1.0 if wti_cron else 0.0}
     ]
+
+    # `is_stale` con la cadencia propia de cada serie. Sin esta línea el campo
+    # quedaba ausente, `calcular_confianza` lo leía como False, y un driver de 8
+    # días con la descarga OK contaba como fresco.
+    for _d in drivers_audit:
+        _d["is_stale"] = driver_vencido(_d["nombre"], _d["fecha"], _d["status"])
     conf_global, f_frescura, f_antiguedad, f_cobertura = calcular_confianza(drivers_audit, cfg)
 
     # Si la confianza es muy baja o faltan drivers clave, desconfirmar
