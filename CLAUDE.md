@@ -184,6 +184,52 @@ exclusiones porque no las hubo. Con el gate encendido ese mismo canal devuelve
 **"ningún activo puntuó sobre 0: no hay tanda que publicar. Es un resultado válido, no una
 falla"**, que es la respuesta correcta y la que el manual del comando ya exigía.
 
+### Un canal vacío se suplementa con el motivo por el que quedó vacío
+
+**El motivo ya es contenido.** El 2026-09-03 el canal de divisas quedó en cero porque sus
+cuatro activos habían consumido su recorrido del día, con el USD/JPY al 290 %. Eso es una
+lectura de mercado, no un premio de consuelo, y explica algo que el cliente necesita
+entender: que no operar también es una decisión.
+
+Y hay una razón **estructural** para que esto haga falta: el recorrido disponible es
+`ATR − rango_hoy`, una función que **solo baja** con el día. Por construcción, un sistema
+cuyo criterio de selección exige espacio tiene su mejor momento al abrir y se apaga solo.
+A las 10:24 de ese día había 4 activos de forex entre 93 % y 290 %; a las 12:11 había 15
+excluidos en todo el universo. **El gate está bien y lo que falta es otro eje de contenido
+para la tarde.**
+
+`scripts/suplemento_canal.py` lo resuelve leyendo las exclusiones que el escáner ya
+escribió, no generando contenido:
+
+| Motivo del gate | Categoría | Concepto que enseña |
+|---|---|---|
+| ATR diario consumido | `recorrido_agotado` | `volatilidad-atr` |
+| Blackout por calendario | `dato_en_curso` | `precio-descontado` |
+| Prohibición del Playbook | `setup_prohibido` | `riesgo` |
+| Feriado de bolsa | `mercado_cerrado` | `temporalidades` |
+
+**El concepto lo elige el motivo, no el azar**, así la parte educativa queda pegada a lo que
+de verdad pasó en vez de ser una cápsula suelta. Hay contrato de nombres: todo motivo que el
+escáner pueda emitir tiene categoría, o está declarado `publicable: False`.
+
+Cuatro reglas que lo mantienen del lado del contenido y no del relleno:
+
+1. **Solo cubre canales VACÍOS.** Un suplemento junto a piezas de activo sería exactamente
+   el relleno que el manual prohíbe. Su valor está en aparecer cuando no hay nada más.
+2. **Un problema nuestro de datos no es contenido.** La confianza baja del modelo o un fallo
+   del analizador dejan al canal **sin** suplemento: publicar "no pudimos leer el activo" no
+   le sirve a nadie y suena a excusa.
+3. **No promete niveles.** El cierre canónico de tres escenarios necesita soporte y
+   resistencia; sin ellos, prometerlos sería inventarlos. Cierra con el CTA al analista.
+4. **Es solo texto, por fase.** Las plantillas educativas se retiraron y el estándar sale del
+   brand kit, así que primero se mide si el canal engancha y solo después se le pide una
+   pieza visual. El despacho lo manda con `enviar()` porque `piezas_del_grupo` recorre los
+   PNG y el suplemento no tiene.
+
+> **Pendiente conocido**: falta la ventana anti repetición. Un canal que queda vacío varios
+> días seguidos por el mismo motivo recibiría el mismo concepto cada vez. La solución es un
+> `data/historial_suplementos.json` con el mismo patrón de `historial_senales.json`.
+
 ### El reparto entre script y comando
 
 Los pipelines producen los **datos**; el texto lo escribe el comando. `pipeline_carrusel.py`

@@ -658,6 +658,65 @@ def limpiar_payloads(directorio: Path) -> list[str]:
 # ─────────────────────────────────────────────────────────────────────────────
 # Paso 1: preparar
 # ─────────────────────────────────────────────────────────────────────────────
+def escribir_suplementos(
+    destino: Path,
+    excluidos: list[dict[str, Any]],
+    grupos_activos: set[str],
+    catalogo: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Escribe el suplemento de cada canal que quedo sin activos publicables.
+
+    **Solo cubre canales VACIOS.** Un suplemento junto a piezas de activo seria
+    el relleno que el manual del comando prohibe; su valor esta justamente en
+    que aparece cuando no hay nada mas que decir, y explica por que.
+
+    El motivo lo pone el escaner y no se inventa aca: si el canal quedo vacio
+    porque sus activos gastaron el recorrido del dia, eso es lo que se publica,
+    con la cifra medida y el concepto que lo explica. Ver `suplemento_canal`.
+
+    Devuelve los suplementos escritos y los avisos, porque un canal que se queda
+    sin suplemento tambien tiene que decirlo: en silencio parece que no habia
+    nada que cubrir.
+    """
+    from suplemento_canal import construir_mensaje_suplemento, suplemento
+
+    # Las exclusiones se reparten por canal con el mismo mapeo que las piezas.
+    por_canal: dict[str, list[dict[str, Any]]] = {}
+    for ex in excluidos:
+        activo = catalogo.get(ex.get("ticker", ""))
+        clase = ex.get("clase") or (activo or {}).get("clase", "")
+        canal = obtener_grupo_whatsapp(clase, ex.get("ticker", ""))
+        por_canal.setdefault(canal, []).append(ex)
+
+    escritos: list[dict[str, Any]] = []
+    avisos: list[str] = []
+    for canal, exclusiones in sorted(por_canal.items()):
+        if canal in grupos_activos:
+            continue                      # el canal tiene piezas: no hay vacio que cubrir
+        sup = suplemento(canal, exclusiones)
+        if sup is None:
+            avisos.append(
+                f"{canal} quedo vacio y sin suplemento: sus {len(exclusiones)} "
+                f"exclusiones no son una lectura de mercado publicable"
+            )
+            continue
+        carpeta = destino / canal
+        carpeta.mkdir(parents=True, exist_ok=True)
+        (carpeta / "0_suplemento.txt").write_text(
+            construir_mensaje_suplemento(sup), encoding="utf-8"
+        )
+        (carpeta / "_suplemento.json").write_text(
+            json.dumps(sup, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        escritos.append(sup)
+        avisos.append(
+            f"{canal} quedo vacio: se suplementa con "
+            f"{sup['resumen']['categoria']} y el concepto "
+            f"{(sup.get('concepto') or {}).get('clave', 'ninguno')}"
+        )
+    return escritos, avisos
+
+
 def preparar(
     tanda: int | None = None,
     top: int = 3,
@@ -760,6 +819,10 @@ def preparar(
             ahora=ahora,
         )
 
+    suplementos, avisos_sup = escribir_suplementos(
+        destino, resultado.get("excluidos") or [], grupos_activos, catalogo
+    )
+
     return {
         "tanda": n_tanda,
         "sesion_slug": slug_sesion,
@@ -771,7 +834,8 @@ def preparar(
         "directorio": str(destino),
         "payloads": payloads,
         "problemas": problemas,
-        "avisos": resultado["avisos"] + (
+        "suplementos": suplementos,
+        "avisos": resultado["avisos"] + avisos_sup + (
             [f"barridos {len(barridos)} payload(s) de una corrida anterior: "
              + ", ".join(barridos)] if barridos else []
         ),
@@ -1127,6 +1191,23 @@ def despachar(
 
         piezas = piezas_del_grupo(dir_grupo)
         if not piezas:
+            # **Un canal sin imágenes puede tener suplemento.** El suplemento es
+            # solo texto por decisión de fase: se mide si el canal engancha antes
+            # de pedirle una plantilla al brand kit. `piezas_del_grupo` recorre
+            # los PNG, así que sin esta rama el suplemento se escribía a disco y
+            # el despacho lo saltaba en silencio.
+            suplemento = dir_grupo / "0_suplemento.txt"
+            if suplemento.exists():
+                texto = suplemento.read_text(encoding="utf-8").strip()
+                print(f"    suplemento de {len(texto)} caracteres, sin adjunto...", flush=True)
+                res = sender.enviar(
+                    dir_grupo.name, mensaje=texto, dry_run=dry_run
+                )
+                resultados.append({"grupo": dir_grupo.name, "suplemento": True, **res})
+                # La cadencia no se maneja aca: `enviar` reserva su turno y
+                # espera por su cuenta, igual que el resto de las piezas.
+                continue
+
             print("    sin piezas: se omite", flush=True)
             resultados.append({"grupo": dir_grupo.name, "status": "vacio"})
             continue

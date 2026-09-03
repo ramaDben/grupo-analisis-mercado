@@ -29,6 +29,13 @@ no pudo verificarse y hay que decidir a mano si se publica. Si dice que el sesgo
 Playbook está vencido, el gate de prohibiciones está parcialmente ciego para los 5 activos
 con ficha: correr `pipeline_ingesta.py` y después `macro_bias_engine.py`.
 
+**Si un canal quedó vacío, mira si trae suplemento.** El aviso lo dice (`02_forex_divisas
+quedó vacío: se suplementa con recorrido_agotado y el concepto volatilidad-atr`) y el texto
+ya está escrito en `<canal>/0_suplemento.txt`. **No lo reescribas**: sale de las cifras que
+el escáner midió, y el concepto lo elige el motivo. Si el aviso dice que quedó vacío **sin**
+suplemento, es porque el motivo era un problema nuestro de datos y no una lectura de
+mercado; ese canal no recibe nada, y así corresponde.
+
 **Y si dice que el gate de agotamiento está DESACTIVADO, la tanda no está verificada.** Ese
 gate excluye lo que ya consumió su recorrido del día y solo se apaga con `--forzar`.
 `--grupo` acota el universo y **nada más**: hasta el 2026-09-03 también lo apagaba en

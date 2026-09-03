@@ -1,15 +1,183 @@
 {
   "conceptos": {
-    "leer-un-grafico": { "nombre": "Leer un gráfico", "tipo": "tecnico", "nivel": 1, "glosario": "Qué muestra un gráfico: precio, tiempo y velas.", "nota": null, "estado": "pendiente", "anclas": [], "encuestas": [], "aristas": { "prerequisito-de": ["velas", "temporalidades", "tendencia"] } },
-    "velas": { "nombre": "Velas japonesas", "tipo": "tecnico", "nivel": 1, "glosario": "Cada vela resume el precio de un periodo: cuerpo y mechas.", "nota": null, "estado": "pendiente", "anclas": [], "encuestas": [], "aristas": {} },
-    "temporalidades": { "nombre": "Temporalidades", "tipo": "tecnico", "nivel": 1, "glosario": "15M/1H/4H/1D: cada una implica una operativa distinta.", "nota": null, "estado": "pendiente", "anclas": [], "encuestas": [], "aristas": {} },
-    "tendencia": { "nombre": "Tendencia", "tipo": "tecnico", "nivel": 1, "glosario": "Hacia dónde va el precio: alcista, bajista o lateral.", "nota": null, "estado": "pendiente", "anclas": [], "encuestas": [], "aristas": { "prerequisito-de": ["soporte-resistencia", "volatilidad-atr"] } },
-    "soporte-resistencia": { "nombre": "Soporte y resistencia", "tipo": "tecnico", "nivel": 1, "glosario": "Niveles donde el precio suele reaccionar.", "nota": null, "estado": "pendiente", "anclas": [], "encuestas": [], "aristas": { "prerequisito-de": ["puntos-interes"] } },
-    "puntos-interes": { "nombre": "Puntos de interés", "tipo": "tecnico", "nivel": 1, "glosario": "Zonas clave a vigilar en el gráfico.", "nota": null, "estado": "pendiente", "anclas": [], "encuestas": [], "aristas": { "prerequisito-de": ["confluencia"] } },
-    "confluencia": { "nombre": "Confluencia", "tipo": "tecnico", "nivel": 1, "glosario": "Varios factores apuntando al mismo nivel.", "nota": null, "estado": "pendiente", "anclas": [], "encuestas": [], "aristas": { "prerequisito-de": ["stop-loss"] } },
-    "volatilidad-atr": { "nombre": "Volatilidad (ATR)", "tipo": "tecnico", "nivel": 1, "glosario": "Cuánto se mueve normalmente el activo; clave en USD/CLP.", "nota": null, "estado": "pendiente", "anclas": ["atr"], "encuestas": [], "aristas": {} },
-    "riesgo": { "nombre": "Riesgo", "tipo": "tecnico", "nivel": 1, "glosario": "Cuánto estás dispuesto a perder en una operación.", "nota": null, "estado": "pendiente", "anclas": ["riesgo"], "encuestas": [], "aristas": { "prerequisito-de": ["stop-loss"] } },
-    "stop-loss": { "nombre": "Stop loss", "tipo": "tecnico", "nivel": 1, "glosario": "Tu freno de emergencia: cierra la operación si el precio va en contra.", "nota": "conceptos/stop-loss.md", "estado": "explicado", "anclas": ["atr", "riesgo"], "encuestas": ["2026-06-02_educativa_USDCLP_stoploss"], "aristas": { "se-apoya-en": ["confluencia"], "usa": ["atr", "riesgo"], "relacionado": ["puntos-interes"] } },
-    "precio-descontado": { "nombre": "Precio descontado", "tipo": "macro", "nivel": 1, "glosario": "El precio ya incorpora lo que todos esperan; el mercado reacciona a la sorpresa, no a la noticia.", "nota": null, "estado": "explicado", "anclas": ["consenso"], "encuestas": [], "aristas": { "prerequisito-de": ["dato-vs-consenso", "decision-de-tasas"] } }
+    "leer-un-grafico": {
+      "nombre": "Leer un gráfico",
+      "tipo": "tecnico",
+      "nivel": 1,
+      "glosario": "Qué muestra un gráfico: precio, tiempo y velas.",
+      "nota": null,
+      "estado": "pendiente",
+      "anclas": [],
+      "encuestas": [],
+      "aristas": {
+        "prerequisito-de": [
+          "velas",
+          "temporalidades",
+          "tendencia"
+        ]
+      }
+    },
+    "velas": {
+      "nombre": "Velas japonesas",
+      "tipo": "tecnico",
+      "nivel": 1,
+      "glosario": "Cada vela resume el precio de un periodo: cuerpo y mechas.",
+      "nota": null,
+      "estado": "pendiente",
+      "anclas": [],
+      "encuestas": [],
+      "aristas": {}
+    },
+    "temporalidades": {
+      "nombre": "Temporalidades",
+      "tipo": "tecnico",
+      "nivel": 1,
+      "glosario": "15M/1H/4H/1D: cada una implica una operativa distinta.",
+      "nota": null,
+      "estado": "pendiente",
+      "anclas": [],
+      "encuestas": [],
+      "aristas": {},
+      "explicacion": "El mismo activo cuenta historias distintas según el marco temporal que se mire: 15 minutos sirve para movimientos de una o dos horas, 1 hora para la jornada, 4 horas para varios días. Elegir mal el marco es una de las causas más comunes de una operación que parecía ir bien y terminó mal. Cuando el mercado está cerrado no hay marco que leer, y ese es el momento de preparar el siguiente."
+    },
+    "tendencia": {
+      "nombre": "Tendencia",
+      "tipo": "tecnico",
+      "nivel": 1,
+      "glosario": "Hacia dónde va el precio: alcista, bajista o lateral.",
+      "nota": null,
+      "estado": "pendiente",
+      "anclas": [],
+      "encuestas": [],
+      "aristas": {
+        "prerequisito-de": [
+          "soporte-resistencia",
+          "volatilidad-atr"
+        ]
+      }
+    },
+    "soporte-resistencia": {
+      "nombre": "Soporte y resistencia",
+      "tipo": "tecnico",
+      "nivel": 1,
+      "glosario": "Niveles donde el precio suele reaccionar.",
+      "nota": null,
+      "estado": "pendiente",
+      "anclas": [],
+      "encuestas": [],
+      "aristas": {
+        "prerequisito-de": [
+          "puntos-interes"
+        ]
+      }
+    },
+    "puntos-interes": {
+      "nombre": "Puntos de interés",
+      "tipo": "tecnico",
+      "nivel": 1,
+      "glosario": "Zonas clave a vigilar en el gráfico.",
+      "nota": null,
+      "estado": "pendiente",
+      "anclas": [],
+      "encuestas": [],
+      "aristas": {
+        "prerequisito-de": [
+          "confluencia"
+        ]
+      }
+    },
+    "confluencia": {
+      "nombre": "Confluencia",
+      "tipo": "tecnico",
+      "nivel": 1,
+      "glosario": "Varios factores apuntando al mismo nivel.",
+      "nota": null,
+      "estado": "pendiente",
+      "anclas": [],
+      "encuestas": [],
+      "aristas": {
+        "prerequisito-de": [
+          "stop-loss"
+        ]
+      }
+    },
+    "volatilidad-atr": {
+      "nombre": "Volatilidad (ATR)",
+      "tipo": "tecnico",
+      "nivel": 1,
+      "glosario": "Cuánto se mueve normalmente el activo; clave en USD/CLP.",
+      "nota": null,
+      "estado": "pendiente",
+      "anclas": [
+        "atr"
+      ],
+      "encuestas": [],
+      "aristas": {},
+      "explicacion": "Cada activo tiene un rango típico de movimiento diario, y eso se mide con un indicador llamado ATR. Sirve para saber cuánto espacio queda: si un activo ya recorrió su rango habitual, lo que falta del día suele ser más ruido que tendencia. Entrar con espacio disponible y entrar cuando el movimiento ya pasó no son la misma operación, aunque el gráfico se vea parecido."
+    },
+    "riesgo": {
+      "nombre": "Riesgo",
+      "tipo": "tecnico",
+      "nivel": 1,
+      "glosario": "Cuánto estás dispuesto a perder en una operación.",
+      "nota": null,
+      "estado": "pendiente",
+      "anclas": [
+        "riesgo"
+      ],
+      "encuestas": [],
+      "aristas": {
+        "prerequisito-de": [
+          "stop-loss"
+        ]
+      },
+      "explicacion": "Antes de pensar cuánto se puede ganar, conviene decidir cuánto se está dispuesto a perder. Ese número define el tamaño de la operación, y no al revés. Y hay escenarios donde la respuesta correcta es no operar: cuando el contexto de fondo deja fuera justamente la jugada que el gráfico sugiere, forzarla es pagar por aprender algo que ya sabíamos."
+    },
+    "stop-loss": {
+      "nombre": "Stop loss",
+      "tipo": "tecnico",
+      "nivel": 1,
+      "glosario": "Tu freno de emergencia: cierra la operación si el precio va en contra.",
+      "nota": "conceptos/stop-loss.md",
+      "estado": "explicado",
+      "anclas": [
+        "atr",
+        "riesgo"
+      ],
+      "encuestas": [
+        "2026-06-02_educativa_USDCLP_stoploss"
+      ],
+      "aristas": {
+        "se-apoya-en": [
+          "confluencia"
+        ],
+        "usa": [
+          "atr",
+          "riesgo"
+        ],
+        "relacionado": [
+          "puntos-interes"
+        ]
+      }
+    },
+    "precio-descontado": {
+      "nombre": "Precio descontado",
+      "tipo": "macro",
+      "nivel": 1,
+      "glosario": "El precio ya incorpora lo que todos esperan; el mercado reacciona a la sorpresa, no a la noticia.",
+      "nota": null,
+      "estado": "explicado",
+      "anclas": [
+        "consenso"
+      ],
+      "encuestas": [],
+      "aristas": {
+        "prerequisito-de": [
+          "dato-vs-consenso",
+          "decision-de-tasas"
+        ]
+      },
+      "explicacion": "El precio de hoy ya incluye lo que todo el mercado espera que pase. Por eso un dato que sale igual al consenso casi no mueve nada, y uno que sorprende mueve mucho: el mercado reacciona a la diferencia, no a la noticia. Y mientras un dato de alto impacto se está publicando, los niveles de antes dejan de describir el mercado."
+    }
   }
 }
