@@ -175,6 +175,15 @@ va antes.
 respondió, dice que no pudo verificar blackouts en vez de reportar cero exclusiones. Un
 escáner que descarta en silencio no es auditable.
 
+**Y un gate apagado también lo dice.** El de agotamiento es el único que se puede desactivar,
+y solo con `--forzar`: el escáner entonces estampa el aviso de que el espacio proyectado no
+está verificado. **`--grupo` acota el universo y nada más.** Hasta el 2026-09-03 también
+apagaba ese gate sin decirlo, y por eso el canal de forex salió con tres piezas cuyo
+recorrido diario estaba consumido al 93 %, 290 % y 115 %, con el escáner reportando cero
+exclusiones porque no las hubo. Con el gate encendido ese mismo canal devuelve
+**"ningún activo puntuó sobre 0: no hay tanda que publicar. Es un resultado válido, no una
+falla"**, que es la respuesta correcta y la que el manual del comando ya exigía.
+
 ### El reparto entre script y comando
 
 Los pipelines producen los **datos**; el texto lo escribe el comando. `pipeline_carrusel.py`

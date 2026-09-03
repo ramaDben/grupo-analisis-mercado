@@ -617,7 +617,17 @@ def preparar(
         solo_renderizables=solo_renderizables,
         grupo=grupo,
         modo_matriz=modo_matriz,
-        ignorar_agotamiento=forzar or (grupo is not None),
+        # Pedir un canal acota el universo y **nada más**. Antes esto también
+        # apagaba el gate de agotamiento, sin decirlo: dos cosas sin relación
+        # metidas en la misma bandera. El 2026-09-03 el canal de forex salió con
+        # tres piezas cuyo recorrido diario estaba consumido al 93 %, 290 % y
+        # 115 %, y el escáner no reportó ninguna exclusión porque no las hubo.
+        #
+        # El manual del comando ya exigía lo contrario: "una tanda de 2 piezas
+        # bien elegidas es mejor que una de 3 con un relleno". Apagar un gate
+        # para llenar cupos es el relleno. Ahora solo `--forzar` lo apaga, y el
+        # escáner lo anuncia en sus avisos.
+        ignorar_agotamiento=forzar,
     )
     ahora = datetime.now(tz=SANTIAGO)
     n_tanda = resultado["tanda"]
