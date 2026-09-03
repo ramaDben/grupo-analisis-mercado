@@ -63,6 +63,26 @@ NY = ZoneInfo("America/New_York")
 SANTIAGO = ZoneInfo("America/Santiago")
 
 ACTIVOS_JSON = RAIZ / "config" / "activos.json"
+PLAYBOOK_CONFIG = RAIZ / "config" / "playbook_config.yaml"
+
+
+def _umbral_confianza() -> float:
+    """El piso de confianza, del YAML que el Playbook hashea.
+
+    Se lee del config y no se escribe aca para que un cambio de criterio quede
+    registrado en el `config_hash` del snapshot. El default reproduce el valor
+    real y solo aplica si el archivo falta.
+    """
+    try:
+        import yaml
+
+        cfg = yaml.safe_load(PLAYBOOK_CONFIG.read_text(encoding="utf-8")) or {}
+        return float(cfg.get("confidence_weights", {}).get("umbral_minimo_pct", 65.0))
+    except Exception:  # noqa: BLE001
+        return 65.0
+
+
+UMBRAL_CONFIANZA_PCT = _umbral_confianza()
 DIR_SALIDA = RAIZ / "data" / "screener"
 
 
@@ -512,6 +532,42 @@ def gate_playbook(direccion: str, sesgo: dict[str, Any] | None) -> str | None:
     return None
 
 
+def gate_confianza(sesgo: dict[str, Any] | None) -> str | None:
+    """Excluye si el modelo declara que no ve lo suficiente.
+
+    El motor emite `confianza_total_pct` y hasta ahora ese número solo se imprimía
+    en su propia consola: un modelo que avisa que ve al 55 % y aun así publica es
+    peor que uno que no avisa.
+
+    **Solo alcanza a los 5 activos con ficha.** La confianza mide los drivers
+    macro que alimentan el régimen, y el régimen solo entra al sesgo de esos
+    cinco. Los otros 33 del catálogo se puntúan con técnica y calendario, sin
+    insumo macro: bloquearlos por una confianza que no usan dejaría al escáner sin
+    universo por nada. El scoping sale gratis, igual que en `gate_playbook`: un
+    activo sin entrada de sesgo pasa de largo.
+
+    Un sesgo con `error` tampoco se toca: ese caso ya lo informa
+    `_sesgos_playbook` como aviso, y fabricar acá un motivo de confianza sobre un
+    payload que no la trae sería reportar dos veces la misma falla con nombres
+    distintos.
+    """
+    if not sesgo or "error" in sesgo:
+        return None
+    conf = (sesgo.get("confianza_general") or {}).get("confianza_total_pct")
+    if conf is None:
+        # Fail-closed y consistente con `pipeline_datos.confianza_suficiente`. Un
+        # payload valido de `cargar_macro_bias` siempre trae el campo, asi que su
+        # ausencia es un esquema viejo, no una lectura buena. Dejarlo pasar seria
+        # la puerta de atras que el umbral existe para cerrar.
+        return "el snapshot no declara la confianza del modelo"
+    if float(conf) < UMBRAL_CONFIANZA_PCT:
+        return (
+            f"la confianza del modelo esta en {float(conf):.1f}% y el minimo es "
+            f"{UMBRAL_CONFIANZA_PCT:.0f}%: bajo ese piso falta un driver o esta roto"
+        )
+    return None
+
+
 def gate_agotamiento(d1: dict[str, Any]) -> str | None:
     """Excluye si el activo ya consumió su recorrido diario.
 
@@ -687,6 +743,10 @@ def evaluar_activo(
     direccion = direccion_tecnica(h1)
 
     motivo = gate_blackout(ticker, eventos, ahora_santiago)
+    if motivo:
+        return {**base, "excluido": motivo}
+
+    motivo = gate_confianza(sesgos.get(ticker))
     if motivo:
         return {**base, "excluido": motivo}
 

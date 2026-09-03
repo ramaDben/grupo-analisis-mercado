@@ -46,6 +46,18 @@ confidence_weights:
   weight_age: 0.35                          # Decaimiento exponencial por antigüedad del driver más viejo
   weight_coverage: 0.25                     # Cobertura de vectores requeridos por activo
   age_decay_halflife_hours: 48.0            # Vida media en horas para el decaimiento temporal
+  # Umbral bajo el cual un activo con ficha NO se comunica. No es una preferencia:
+  # es el piso algebraico de la norma que el §3 ya escribe. Si frescura y cobertura
+  # valen 1,0 -la condicion que ese parrafo llama "operacion normal"- el puntaje
+  # arrastra 0,40 + 0,25 = 0,65 antes de que la antiguedad aporte nada. Bajo 65 % es
+  # ARITMETICAMENTE IMPOSIBLE que ambas sean 1,0: no significa "datos algo viejos",
+  # significa que falta un driver o esta roto.
+  #
+  # 80 % habria sido un error. El techo real de la escala es ~89 %, porque el campo
+  # `fecha` de cada driver no trae hora y se parsea como medianoche, asi que la
+  # antiguedad nunca aporta sus 35 puntos completos. Medido el 2026-09-02: 54,6 %
+  # con dos drivers rotos, 77,5 % con todo al dia desde el broker correcto.
+  umbral_minimo_pct: 65.0
 
 # 3. Parámetros de Riesgo Institucional y Dimensionamiento
 risk_parameters:

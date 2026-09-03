@@ -138,6 +138,9 @@ def test_un_setup_prohibido_por_el_playbook_queda_fuera_aunque_puntue_alto():
                       rsi_14=40.0, macd_hist=-0.3, s1=96.0, r1=101.0)
     sesgo = {
         "regimen_macro_global": {"codigo": "R1_RIESGO_INFLACION"},
+        # `gate_confianza` corre antes y es fail-closed: un payload sin el campo
+        # queda excluido por otro motivo y este test dejaria de probar lo suyo.
+        "confianza_general": {"confianza_total_pct": 90.0},
         "activo": {"setups_prohibidos": ["SHORT_AGRESIVO"], "setups_permitidos": []},
     }
     res = sc.evaluar_activo(
@@ -154,6 +157,7 @@ def test_una_prohibicion_de_la_direccion_contraria_no_bloquea():
     bien fundada: la prohibición solo aplica si apunta al mismo lado."""
     sesgo = {
         "regimen_macro_global": {"codigo": "R0_CALMA_RANGO"},
+        "confianza_general": {"confianza_total_pct": 90.0},
         "activo": {"setups_prohibidos": ["SHORT_AGRESIVO"], "setups_permitidos": []},
     }
     res = sc.evaluar_activo(
@@ -522,9 +526,12 @@ def test_escanear_con_modo_matriz_selecciona_un_activo_por_grupo():
 # Vocabulario de prohibiciones: el gate tiene que conocer TODOS los tokens
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _sesgo_con(prohibidos, regimen="R0_CALMA_RANGO"):
+def _sesgo_con(prohibidos, regimen="R0_CALMA_RANGO", confianza=90.0):
+    """La confianza va en la fixture porque un payload real siempre la trae, y
+    `gate_confianza` corre antes que el del Playbook."""
     return {
         "regimen_macro_global": {"codigo": regimen},
+        "confianza_general": {"confianza_total_pct": confianza},
         "activo": {"setups_prohibidos": list(prohibidos), "setups_permitidos": []},
     }
 
@@ -613,3 +620,96 @@ def test_todo_token_del_motor_esta_clasificado_en_el_escaner():
         "Agrégalos a _DIRECCION_PROHIBIDA con su dirección, o None si prohíben "
         "una forma de operar y no un lado del mercado."
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Gate 5: el modelo no comunica cuando no ve
+# ─────────────────────────────────────────────────────────────────────────────
+# El umbral es 65 % y no es una preferencia: es el piso algebraico de la norma
+# que el Playbook §3 ya escribió. Si frescura y cobertura valen 1,0 -la condición
+# que ese párrafo llama "operación normal"- el puntaje arrastra 0,40 + 0,25 =
+# 0,65 antes de que la antigüedad aporte nada. Bajo 65 % es ARITMÉTICAMENTE
+# IMPOSIBLE que ambas sean 1,0: no significa "datos algo viejos", significa que
+# falta un driver o está roto.
+#
+# 80 % habría sido un error: el techo real de la escala es ~89 %, porque el campo
+# `fecha` de cada driver no trae hora y se parsea como medianoche, así que la
+# antigüedad nunca aporta sus 35 puntos completos.
+
+def _sesgo_con_confianza(pct, prohibidos=()):
+    return {
+        "regimen_macro_global": {"codigo": "R3_ESTANFLACION_SHOCK"},
+        "confianza_general": {"confianza_total_pct": pct},
+        "activo": {"setups_prohibidos": list(prohibidos), "setups_permitidos": []},
+    }
+
+
+def test_el_umbral_de_confianza_sale_del_config_del_playbook():
+    """Hardcodearlo lo dejaría fuera del `config_hash`, así que un cambio de
+    criterio no quedaría registrado en la trazabilidad del snapshot."""
+    import yaml
+
+    cfg = yaml.safe_load((RAIZ / "config" / "playbook_config.yaml").read_text(encoding="utf-8"))
+    assert cfg["confidence_weights"]["umbral_minimo_pct"] == 65.0
+    assert sc.UMBRAL_CONFIANZA_PCT == 65.0
+
+
+def test_una_confianza_insuficiente_excluye_el_activo():
+    """El caso real del 2026-09-02 por la mañana: 54,6 %, con la clave de la TPM
+    rota y el petróleo detenido ocho días. El activo no debía comunicarse y nada
+    lo detenía."""
+    res = sc.evaluar_activo(
+        ACTIVO, [], None, {"XAUUSD": _sesgo_con_confianza(54.6)},
+        AHORA.astimezone(sc.SANTIAGO),
+        analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
+    )
+    assert "excluido" in res
+    assert "54.6" in res["excluido"] or "54,6" in res["excluido"]
+    assert "65" in res["excluido"], "el motivo tiene que decir contra qué umbral"
+
+
+def test_la_confianza_justo_en_el_umbral_no_excluye():
+    """65,0 es el valor que da frescura y cobertura en 1,0. Excluirlo dejaría
+    fuera la propia condición que el Playbook llama operación normal."""
+    res = sc.evaluar_activo(
+        ACTIVO, [], None, {"XAUUSD": _sesgo_con_confianza(65.0)},
+        AHORA.astimezone(sc.SANTIAGO),
+        analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
+    )
+    assert "excluido" not in res
+
+
+def test_el_gate_de_confianza_no_alcanza_a_los_activos_sin_ficha():
+    """La confianza mide los drivers macro que alimentan el régimen, y el régimen
+    solo entra al sesgo de los 5 activos con ficha. Los otros 33 del catálogo se
+    puntúan con técnica y calendario, sin insumo macro: bloquearlos por una
+    confianza que no usan dejaría al escáner sin universo por nada."""
+    res = sc.evaluar_activo(
+        ACTIVO, [], None, {},  # sin entrada de sesgo: no es activo del Playbook
+        AHORA.astimezone(sc.SANTIAGO),
+        analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
+    )
+    assert "excluido" not in res
+
+
+def test_un_sesgo_con_error_no_se_confunde_con_confianza_baja():
+    """`cargar_macro_bias` devuelve `{"error": ...}` cuando el snapshot está
+    vencido o ilegible. Ese caso ya lo informa `_sesgos_playbook` como aviso, y
+    fabricar acá un motivo de confianza sobre un payload que no la trae sería
+    reportar dos veces la misma falla con nombres distintos."""
+    assert sc.gate_confianza({"error": "STALE_DATA"}) is None
+    assert sc.gate_confianza(None) is None
+
+
+def test_un_payload_sin_confianza_declarada_bloquea():
+    """Fail-closed, y por consistencia con `pipeline_datos.confianza_suficiente`.
+
+    La primera versión de este gate dejaba pasar el campo ausente mientras el
+    estado lo bloqueaba: dos comportamientos para el mismo caso. Un payload
+    válido de `cargar_macro_bias` SIEMPRE trae `confianza_general`, así que su
+    ausencia es un esquema viejo o un dict armado a mano, no una lectura buena.
+    Asumir que alcanza sería la puerta de atrás que el umbral existe para cerrar.
+    """
+    motivo = sc.gate_confianza({"regimen_macro_global": {}, "activo": {}})
+    assert motivo is not None
+    assert "no declara" in motivo
