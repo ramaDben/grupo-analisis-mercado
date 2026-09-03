@@ -663,6 +663,7 @@ def escribir_suplementos(
     excluidos: list[dict[str, Any]],
     grupos_activos: set[str],
     catalogo: dict[str, Any],
+    ruta_historial: Path | None = None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """Escribe el suplemento de cada canal que quedo sin activos publicables.
 
@@ -678,7 +679,11 @@ def escribir_suplementos(
     sin suplemento tambien tiene que decirlo: en silencio parece que no habia
     nada que cubrir.
     """
-    from suplemento_canal import construir_mensaje_suplemento, suplemento
+    from suplemento_canal import (
+        construir_mensaje_suplemento,
+        registrar_suplemento,
+        suplemento,
+    )
 
     # Las exclusiones se reparten por canal con el mismo mapeo que las piezas.
     por_canal: dict[str, list[dict[str, Any]]] = {}
@@ -708,6 +713,10 @@ def escribir_suplementos(
         (carpeta / "_suplemento.json").write_text(
             json.dumps(sup, ensure_ascii=False, indent=2), encoding="utf-8"
         )
+        # La ventana anti repeticion se anota al PREPARAR. Una tanda preparada y
+        # descartada gasta la ventana igual, y ese error va hacia el lado
+        # seguro: repetir de menos, no de mas.
+        registrar_suplemento(sup, ruta=ruta_historial)
         escritos.append(sup)
         avisos.append(
             f"{canal} quedo vacio: se suplementa con "
