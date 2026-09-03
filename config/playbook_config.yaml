@@ -56,6 +56,19 @@ risk_parameters:
   stop_loss_mult_intraday: 1.5              # Distancia SL = 1.5 * ATR_14 (H1)
   stop_loss_mult_daily: 2.5                 # Distancia SL = 2.5 * ATR_20 (D1)
   trailing_stop_mult_trend: 3.0             # Chandelier Trailing Exit = 3.0 * ATR (constante de LeBeau)
+  # Kilian (AER 2009) descompone el crudo en tres shocks -oferta, demanda global de
+  # commodities industriales, y demanda especifica precautoria- y su hallazgo central
+  # es que CADA UNO tiene efectos distintos. La ficha del Playbook §4 lo traduce y le
+  # asigna a cada uno su trato de riesgo; colapsarlos en una sola constante
+  # contradecia al paper que el propio documento cita.
+  #
+  # El discriminador es el COBRE, que es el proxy de Kilian para la demanda industrial
+  # global y el que la ficha usa en su texto ("titular OPEP sin respaldo en fletes ni
+  # cobre"). El umbral NO se inventa: se reutiliza `copper_goldilocks_pct_5d`, que ya
+  # significa "cobre en expansion" en la maquina de regimenes. Un segundo umbral de
+  # cobre seria el mismo error que tener dos formulas de ATR.
+  trailing_stop_mult_precautorio: 2.0       # Crudo se dispara SIN respaldo del cobre
+  factor_apalancamiento_precautorio: 0.5    # "apalancamiento reducido al 50%" (§4, ficha del crudo)
   # Ventana del maximo/minimo de referencia del Chandelier. Es la otra mitad del par
   # de LeBeau: sin ella el nivel no es determinable. Calibrado el 2026-09-02 sobre las
   # series H1 propias de los 5 activos (9.800 barras c/u). Lookbacks 33 y 50 quedan

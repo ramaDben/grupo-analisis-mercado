@@ -99,6 +99,11 @@ def calcular_indicadores(df: pd.DataFrame) -> pd.DataFrame:
     df["atr_20"] = tr.ewm(alpha=1.0 / 20.0, adjust=False).mean()
 
     # EMAs institucionales
+    # ema_16 no la usa nadie y NO esta en el Playbook, que define EMA 20 y EMA 50.
+    # Su unico consumidor era el setup `PULLBACK_EMA16_H1` del motor, retirado el
+    # 2026-09-02 por nombrar una media que `get_asset_levels` tampoco devuelve. Se
+    # conserva en el esquema para no romper archivos ya escritos; no la uses como
+    # base de un setup nuevo sin subirla antes al documento.
     df["ema_16"] = close.ewm(span=16, adjust=False).mean()
     df["ema_20"] = close.ewm(span=20, adjust=False).mean()
     df["ema_50"] = close.ewm(span=50, adjust=False).mean()

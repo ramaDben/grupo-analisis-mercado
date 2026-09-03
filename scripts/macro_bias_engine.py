@@ -346,6 +346,10 @@ def evaluar_activos(regimen_activo: str, drivers_data: dict, precios_summary: di
         atr_h1 = float(atr_h1_raw) if (atr_h1_raw is not None and atr_h1_raw > 0) else None
         atr_d1 = float(atr_d1_raw) if (atr_d1_raw is not None and atr_d1_raw > 0) else None
 
+        # Solo el crudo en shock precautorio lo baja (Kilian #1 y #3, Playbook §4).
+        # Se declara para TODOS: un consumidor que lo lea con `.get()` y no lo
+        # encuentre dimensiona al 100 % sin enterarse.
+        factor_apalancamiento = 1.0
         sl_dist_h1 = round(rp["stop_loss_mult_intraday"] * atr_h1, asset_cfg["digits"]) if atr_h1 is not None else None
         sl_dist_d1 = round(rp["stop_loss_mult_daily"] * atr_d1, asset_cfg["digits"]) if atr_d1 is not None else None
 
@@ -461,14 +465,46 @@ def evaluar_activos(regimen_activo: str, drivers_data: dict, precios_summary: di
             if oil_signed is not None and (regimen_activo == "R3_ESTANFLACION_SHOCK" or oil_signed > 2.0):
                 sesgo_score = 1.50
                 sesgo_etiqueta = "ALCISTA POR SHOCK"
-                setups_permitidos = ["BREAKOUT_VOLATILITY_H1", "PULLBACK_EMA16_H1"]
                 setups_prohibidos = ["FADE_TOP_RESISTANCE"]
                 tp_tipo = "TRAILING_STOP_ASYMMETRIC"
-                trailing_mult = rp["trailing_stop_mult_trend"]
-                justificacion = [
-                    f"Rally de 5 días en crudo (+{oil_signed:.1f}%) bajo modelo Kilian (Shock Precautorio/Demanda)",
-                    "Uso obligatorio de Trailing Stop por ATR para captura de colas derechas"
-                ]
+
+                # Kilian (2009): el crudo sube por razones distintas y cada una
+                # exige un manejo distinto. La justificación anterior decía
+                # "Shock Precautorio/Demanda", juntando en una barra las dos
+                # cosas que el paper existe para separar.
+                #
+                # El cobre es el proxy de la demanda industrial global. Si sube
+                # con el crudo, el alza es demanda agregada (Kilian #2) y se
+                # sigue la tendencia con posición completa. Si el crudo se
+                # dispara solo, es demanda precautoria por temor a faltantes o
+                # un shock de oferta (Kilian #3 y #1): ahí el Playbook manda
+                # ceñir el trailing y operar al 50 %.
+                cobre_confirma = (
+                    copper_pct_5d is not None
+                    and copper_pct_5d >= rt["copper_goldilocks_pct_5d"]
+                )
+                if cobre_confirma:
+                    setups_permitidos = ["BREAKOUT_VOLATILITY_H1", "PULLBACK_EMA20_H1"]
+                    trailing_mult = rp["trailing_stop_mult_trend"]
+                    factor_apalancamiento = 1.0
+                    justificacion = [
+                        f"Rally de 5 días en crudo ({oil_signed:+.1f}%) CON respaldo del cobre "
+                        f"({copper_pct_5d:+.1f}%): shock de demanda agregada (Kilian 2009)",
+                        "Se sigue la tendencia con posición completa y trailing amplio",
+                    ]
+                else:
+                    # `PULLBACK_EMA20_H1` y no EMA16: la media de 16 no existe en el
+                    # Playbook —que usa 20 y 50— ni la devuelve `get_asset_levels`.
+                    # Era un setup permitido que nadie podía ejecutar.
+                    setups_permitidos = ["BREAKOUT_VOLATILITY_H1", "PULLBACK_EMA20_H1"]
+                    trailing_mult = rp["trailing_stop_mult_precautorio"]
+                    factor_apalancamiento = rp["factor_apalancamiento_precautorio"]
+                    cobre_txt = f"{copper_pct_5d:+.1f}%" if copper_pct_5d is not None else "N/A"
+                    justificacion = [
+                        f"Rally de 5 días en crudo ({oil_signed:+.1f}%) SIN respaldo del cobre "
+                        f"({cobre_txt}): shock precautorio o de oferta (Kilian 2009)",
+                        "Trailing ceñido y apalancamiento al 50 %: el alza no la sostiene la demanda real",
+                    ]
             else:
                 sesgo_score = 0.0
                 sesgo_etiqueta = "NEUTRAL / CONSOLIDACIÓN"
@@ -534,6 +570,7 @@ def evaluar_activos(regimen_activo: str, drivers_data: dict, precios_summary: di
                 "distancia_sl_d1_puntos": sl_dist_d1,
                 "take_profit_tipo": tp_tipo,
                 "trailing_stop_mult_atr": trailing_mult,
+                "factor_apalancamiento": factor_apalancamiento,
                 # El Chandelier son dos parametros, no uno. Viajan juntos o el
                 # consumidor no puede calcular el nivel y lo inventa.
                 "trailing_stop_lookback": (

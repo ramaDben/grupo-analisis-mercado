@@ -83,3 +83,54 @@ def test_render_briefing_activo():
     assert "FADE_SUPPORT_RESISTANCE_M15" in rendered
     assert "BREAKOUT_CHASE_LONG" in rendered
     assert "Cobre estable frena alzas" in rendered
+
+
+def test_el_factor_de_apalancamiento_reduce_el_lote():
+    """Emitir el factor y no aplicarlo lo dejaría como la confianza del modelo:
+    un número correcto que nadie lee.
+
+    El Playbook §4 manda "apalancamiento reducido al 50 %" en el shock
+    precautorio del crudo. Si el lote no cambia, la instrucción es decorativa.
+    """
+    # El lote se cuantiza a 2 decimales (paso del broker), así que se eligen
+    # valores que dividen limpio: con SL de 0,5 pts en WTI el lote crudo es 0,50
+    # y su mitad 0,25. Con 1,0 pt daría 0,125, que redondea a 0,12 y mezclaría
+    # el efecto del factor con el de la cuantización.
+    base, riesgo_base, _ = calcular_lote_riesgo(25000.0, 1.0, 0.5, "WTI", 90.0)
+    mitad, riesgo_mitad, _ = calcular_lote_riesgo(
+        25000.0, 1.0, 0.5, "WTI", 90.0, factor_apalancamiento=0.5
+    )
+
+    assert base == pytest.approx(0.50)
+    assert mitad == pytest.approx(0.25)
+    # El presupuesto de riesgo NO se escala: es el mismo, y el factor decide
+    # cuánto de ese presupuesto se pone en juego.
+    assert riesgo_mitad == riesgo_base
+
+
+def test_el_factor_por_defecto_no_altera_el_lote():
+    """La contraparte: sin factor explícito el resultado tiene que ser idéntico
+    al de antes, o el cambio sería una regresión silenciosa en los otros cuatro
+    activos."""
+    sin, _, _ = calcular_lote_riesgo(25000.0, 1.0, 30.0, "XAUUSD", 4500.0)
+    con_uno, _, _ = calcular_lote_riesgo(25000.0, 1.0, 30.0, "XAUUSD", 4500.0, factor_apalancamiento=1.0)
+
+    assert sin == con_uno
+
+
+def test_el_briefing_aplica_el_factor_que_trae_el_snapshot():
+    """El contrato de orden: `premarket` tiene que leer el campo del snapshot,
+    no asumir 1.0."""
+    import inspect
+    import sys
+    from pathlib import Path as _P
+    raiz = _P(__file__).resolve().parents[1]
+    if str(raiz / "scripts") not in sys.path:
+        sys.path.insert(0, str(raiz / "scripts"))
+    import premarket
+
+    fuente = inspect.getsource(premarket.render_briefing_activo)
+    assert "factor_apalancamiento" in fuente, (
+        "el briefing dimensiona sin mirar el factor: un shock precautorio saldría "
+        "con lote completo"
+    )

@@ -45,7 +45,11 @@ def render_briefing_activo(activo_data: dict, metricas: dict, regimen: dict, cap
 
     # Cálculo de lote
     symbol_id = activo_data.get("symbol_id", "USDCLP")
-    lotes, riesgo_usd, tick_val = calcular_lote_riesgo(capital, riesgo_pct, sl_h1, symbol_id, spot)
+    # 1.0 salvo shock precautorio del crudo, donde el Playbook §4 manda 50 %.
+    factor = riesgo_params.get("factor_apalancamiento", 1.0)
+    lotes, riesgo_usd, tick_val = calcular_lote_riesgo(
+        capital, riesgo_pct, sl_h1, symbol_id, spot, factor_apalancamiento=factor
+    )
 
     lines = []
     lines.append(f"📌 ACTIVO: {nombre} ({tipo})")

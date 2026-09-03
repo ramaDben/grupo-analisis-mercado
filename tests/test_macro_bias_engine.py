@@ -484,3 +484,112 @@ def test_trailing_stop_emite_su_lookback(config_playbook):
     assert usdclp["take_profit_tipo"] == "NIVEL_OPUESTO_CANAL"
     assert usdclp["trailing_stop_mult_atr"] is None
     assert usdclp["trailing_stop_lookback"] is None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Kilian (2009): los tres shocks del crudo no comparten trato de riesgo
+# ─────────────────────────────────────────────────────────────────────────────
+# El Playbook §4 asigna a cada shock un manejo distinto y el config lo colapsaba
+# en una sola constante `trailing_stop_mult_trend: 3.0`, contradiciendo al paper
+# que el propio documento cita. El discriminador es el COBRE: es el proxy de
+# Kilian para la demanda global de commodities industriales, y el Playbook lo usa
+# asi en su texto ("titular OPEP sin respaldo en fletes ni cobre").
+
+def _precios_dummy():
+    return {
+        "activos": {
+            "USDCLP": {"H1": {"close": 920.0, "atr_14": 4.0}, "D1": {"close": 920.0, "atr_20": 8.0}},
+            "XAUUSD": {"H1": {"close": 4500.0, "atr_14": 20.0}, "D1": {"close": 4500.0, "atr_20": 40.0}},
+            "WTI": {"H1": {"close": 90.0, "atr_14": 1.0}, "D1": {"close": 90.0, "atr_20": 2.0}},
+            "BRENT": {"H1": {"close": 96.0, "atr_14": 1.2}, "D1": {"close": 96.0, "atr_20": 2.2}},
+            "US100": {"H1": {"close": 29000.0, "atr_14": 100.0}, "D1": {"close": 29000.0, "atr_20": 250.0}},
+        }
+    }
+
+
+def _deltas(oil: float, cobre: float):
+    return {
+        "copper_spot": 4.48, "copper_pct_5d": cobre, "tpm_chile": 4.50,
+        "fed_funds": 3.63, "fwd_extranjeros": -4450.0, "tips_10y": 2.35,
+        "breakeven_10y": 2.34, "dgs10": 4.65,
+        "oil_max_pct_5d": abs(oil), "oil_signed_pct_5d": oil,
+    }
+
+
+def test_shock_de_demanda_agregada_deja_el_trailing_amplio(config_playbook):
+    """Kilian #2: crudo Y cobre suben juntos -> demanda industrial global.
+
+    El Playbook manda "seguir tendencia alcista con posición completa", así que
+    el trailing queda en 3,0 y el apalancamiento intacto.
+    """
+    res = evaluar_activos(
+        "R3_ESTANFLACION_SHOCK", _deltas(oil=9.0, cobre=2.5), _precios_dummy(), config_playbook
+    )
+    for sym in ("WTI", "BRENT"):
+        rp = res[sym]["parametros_riesgo"]
+        assert rp["trailing_stop_mult_atr"] == 3.0, sym
+        assert rp["factor_apalancamiento"] == 1.0, sym
+        assert "demanda" in " ".join(res[sym]["justificacion_vectores"]).lower(), sym
+
+
+def test_shock_precautorio_cine_el_trailing_y_reduce_el_apalancamiento(config_playbook):
+    """Kilian #3: el crudo se dispara SIN respaldo del cobre -> demanda
+    precautoria por temor a faltantes, o shock de oferta.
+
+    El Playbook manda "apalancamiento reducido al 50 % y Trailing Stop ceñido a
+    2,0 x ATR". Es el caso real del 2026-09-02: crudo +9,03 % con el cobre en
+    +0,19 %, bolsas a la baja y Oro fuerte alcista.
+    """
+    res = evaluar_activos(
+        "R3_ESTANFLACION_SHOCK", _deltas(oil=9.0, cobre=0.2), _precios_dummy(), config_playbook
+    )
+    for sym in ("WTI", "BRENT"):
+        rp = res[sym]["parametros_riesgo"]
+        assert rp["trailing_stop_mult_atr"] == 2.0, sym
+        assert rp["factor_apalancamiento"] == 0.5, sym
+        assert "precautori" in " ".join(res[sym]["justificacion_vectores"]).lower(), sym
+
+
+def test_todos_los_activos_declaran_su_factor_de_apalancamiento(config_playbook):
+    """El campo no puede existir solo para el petróleo: un consumidor que lo
+    lea con `.get()` y no lo encuentre dimensiona al 100 % sin enterarse."""
+    res = evaluar_activos(
+        "R0_CALMA_RANGO", _deltas(oil=0.5, cobre=0.3), _precios_dummy(), config_playbook
+    )
+    for sym, datos in res.items():
+        factor = datos["parametros_riesgo"].get("factor_apalancamiento")
+        assert factor is not None, f"{sym} no declara factor_apalancamiento"
+        assert 0.0 < factor <= 1.0, f"{sym}: factor fuera de rango ({factor})"
+
+
+def test_ningun_setup_nombra_una_ema_que_el_mcp_no_devuelve():
+    """`PULLBACK_EMA16_H1` nombraba una media que no existe en ninguna parte.
+
+    No está en el Playbook —que usa EMA 20 y EMA 50— ni la devuelve
+    `get_asset_levels`, que expone 20, 50 y 100. La calculaba solo
+    `extractor_precios` para nadie. Un setup permitido que nombra un indicador
+    incomunicable es una instrucción que no se puede ejecutar, y el 2026-09-02
+    fue uno de los dos setups vivos en WTI y Brent.
+    """
+    import re
+    from market_data_mcp.analisis import analizar_activo  # noqa: F401  (documenta la fuente)
+
+    EMAS_DEL_MCP = {20, 50, 100}
+    raiz = Path(__file__).resolve().parents[1]
+    fuente = (raiz / "scripts" / "macro_bias_engine.py").read_text(encoding="utf-8")
+    tokens = {
+        t
+        for bloque in re.findall(r"setups_(?:permitidos|prohibidos)\s*=\s*\[(.*?)\]", fuente, re.S)
+        for t in re.findall(r'"([^"]+)"', bloque)
+    }
+    assert tokens, "no se leyó ningún setup: el patrón quedó obsoleto"
+
+    huerfanos = sorted(
+        t for t in tokens
+        for n in re.findall(r"EMA(\d+)", t.upper())
+        if int(n) not in EMAS_DEL_MCP
+    )
+    assert not huerfanos, (
+        f"estos setups nombran una EMA que get_asset_levels no devuelve: {huerfanos}. "
+        f"Disponibles: {sorted(EMAS_DEL_MCP)}."
+    )
