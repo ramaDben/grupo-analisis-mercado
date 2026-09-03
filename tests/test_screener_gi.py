@@ -816,3 +816,53 @@ def test_el_modo_matriz_respeta_el_tope_por_grupo():
         f"con --top 3 la matriz sigue dando {len(con_tres)} pieza(s) de cripto: {con_tres}"
     )
     assert con_tres[0] == con_uno[0], "el mejor del grupo cambio al subir el tope"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El gate de agotamiento no se apaga en silencio
+# ─────────────────────────────────────────────────────────────────────────────
+def test_un_gate_apagado_lo_dice_en_los_avisos():
+    """Un gate inerte que no se anuncia es peor que no tenerlo.
+
+    `--grupo` apagaba el de agotamiento sin decirlo, y el 2026-09-03 eso habria
+    publicado el USD/JPY con el 290% de su rango diario consumido y EUR/USD con
+    el 93%. El escaner informaba "0 exclusiones" cuando en realidad no habia
+    mirado, que es exactamente el defecto que su propio modulo denuncia para el
+    calendario.
+    """
+    res = sc.escanear(
+        top=3, solo_renderizables=False, ignorar_agotamiento=True,
+        analizador=analizador_falso(h1_perfecto(), d1_con_consumo(0.95)),
+    )
+    avisos = " ".join(res["avisos"]).lower()
+
+    assert "agotamiento" in avisos, f"el gate apagado no aparece en los avisos: {res['avisos']}"
+    assert "forzar" in avisos, "el aviso no dice como se apago"
+
+
+def test_con_el_gate_encendido_no_hay_aviso_que_dar():
+    """El aviso es de excepcion: en la corrida normal no ensucia la salida."""
+    res = sc.escanear(
+        top=3, solo_renderizables=False,
+        analizador=analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
+    )
+    assert not any("agotamiento" in a.lower() for a in res["avisos"])
+
+
+def test_pedir_un_grupo_ya_no_apaga_el_gate_de_agotamiento():
+    """La decision del director: `--grupo` acotaba el universo Y apagaba el gate,
+    dos cosas sin relacion. Ahora solo `--forzar` lo apaga, y lo dice.
+
+    El manual del comando ya exigia esto: "una tanda de 2 piezas bien elegidas es
+    mejor que una de 3 con un relleno". Apagar un gate para llenar cupos es
+    justamente el relleno.
+    """
+    import inspect
+
+    import pipeline_carrusel as pc
+
+    fuente = inspect.getsource(pc.preparar)
+    assert "ignorar_agotamiento=forzar," in fuente or "ignorar_agotamiento=forzar\n" in fuente, (
+        "preparar sigue apagando el gate cuando se pide un grupo"
+    )
+    assert "grupo is not None" not in fuente.split("ignorar_agotamiento")[1][:80]

@@ -29,6 +29,12 @@ no pudo verificarse y hay que decidir a mano si se publica. Si dice que el sesgo
 Playbook está vencido, el gate de prohibiciones está parcialmente ciego para los 5 activos
 con ficha: correr `pipeline_ingesta.py` y después `macro_bias_engine.py`.
 
+**Y si dice que el gate de agotamiento está DESACTIVADO, la tanda no está verificada.** Ese
+gate excluye lo que ya consumió su recorrido del día y solo se apaga con `--forzar`.
+`--grupo` acota el universo y **nada más**: hasta el 2026-09-03 también lo apagaba en
+silencio, y el canal de forex salió con tres piezas al 93 %, 290 % y 115 % de su rango
+diario. Un canal en cero es una respuesta legítima, sobre todo a media jornada.
+
 **Si la preparación aborta con `DatosMacroNoDisponiblesError`, es a propósito.** Significa que
 falta la serie oficial que alimenta el contexto macro de ese grupo (Imacec o TPM del BCCh, o una
 serie del Tesoro en `data central/`). El módulo se detiene en vez de rellenar con una serie

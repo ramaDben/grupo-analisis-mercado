@@ -962,6 +962,18 @@ def escanear(
     if analizador is analizar_activo:
         avisos.extend(_conectar_terminal())
 
+    # **Un gate apagado tiene que decirlo.** Este módulo ya denuncia el mismo
+    # defecto para el calendario: "un escáner que informa 0 exclusiones cuando en
+    # realidad no pudo mirar es peor que uno que falla". El de agotamiento se
+    # apagaba con `--grupo` y en silencio, y el 2026-09-03 eso habría publicado
+    # el USD/JPY con el 290 % de su rango diario consumido.
+    if ignorar_agotamiento:
+        avisos.append(
+            "gate de agotamiento DESACTIVADO por --forzar: pueden entrar activos "
+            "que ya consumieron su recorrido del día, así que el espacio proyectado "
+            "no está verificado"
+        )
+
     universo = cargar_universo(solo_renderizables)
     if grupo:
         universo = filtrar_por_grupo(universo, grupo)
