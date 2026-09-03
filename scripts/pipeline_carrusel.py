@@ -137,6 +137,48 @@ def vigencia_publicable(
     return vigencia, None
 
 
+def direccion_publicada(
+    direccion_tecnica: str,
+    vigencia: dict[str, Any] | None,
+    omitida: str | None,
+) -> str:
+    """La dirección que muestra el chip de la pieza: `Alcista`, `Bajista` o `Lateral`.
+
+    **El chip mostraba la lectura técnica siempre, y eso lo hacía contradecir al
+    Playbook en su propia pieza**: el 2026-09-03 una alerta salió con `▲ ALCISTA`
+    en verde justo encima del aviso de que el sesgo alcista había quedado
+    invalidado. Un cliente lee esa contradicción en 30 segundos, que es todo el
+    tiempo que el proyecto se da para explicarse.
+
+    Decisión del director: **cuando el Playbook opina, manda el Playbook**; la
+    lectura técnica queda para los 33 activos del catálogo que no tienen ficha,
+    que son la mayoría del universo.
+
+    Los tres casos en que no se afirma dirección alguna:
+
+    - **Sesgo invalidado**: el precio perdió su borde. Afirmar la dirección que
+      acaba de caer es decir lo contrario de lo que pasa.
+    - **Rango** (`NIVEL_OPUESTO_CANAL`): score cero, no hay dirección que exista.
+    - **Contradicción**: el score macro y las medias apuntan al revés. La
+      vigencia ya se omitía; el chip seguía afirmando igual, y es justo cuando
+      las dos capas discrepan que no hay que afirmar.
+
+    `Lateral` no necesitó nada visual nuevo: la plantilla ya tenía
+    `tag-sesgo--lateral` con su flecha y color de texto, y el `body` sin clase de
+    sesgo deja el cromo en el acento de marca. Es la regla de color del proyecto
+    aplicándose sola: el cromo no opina.
+    """
+    if omitida:
+        return "Lateral"
+    if not vigencia:
+        return "Alcista" if direccion_tecnica == "ALCISTA" else "Bajista"
+    if not vigencia.get("vigente"):
+        return "Lateral"
+    if vigencia.get("gramatica") == "RANGO":
+        return "Lateral"
+    return "Alcista" if vigencia.get("direccion") == "LARGO" else "Bajista"
+
+
 def formatear_vigencia(
     vigencia: dict[str, Any] | None, fmt: Callable[[float], str]
 ) -> dict[str, Any] | None:
@@ -330,7 +372,6 @@ def construir_payload(
     digits = activo_catalogo["digits"]
     imagen = activo_catalogo["imagen"]
     slug = _slug_de_imagen(imagen)
-    alcista = seleccion["direccion"] == "ALCISTA"
     cat_real = activo_catalogo.get("categoria", seleccion["clase"])
 
     def fmt(valor: float) -> str:
@@ -339,6 +380,7 @@ def construir_payload(
     vigencia_cruda, omitida = vigencia_publicable(
         seleccion.get("vigencia"), seleccion["direccion"]
     )
+    sesgo_pieza = direccion_publicada(seleccion["direccion"], vigencia_cruda, omitida)
 
     return {
         "plantilla": "alerta",
@@ -352,8 +394,10 @@ def construir_payload(
         "rotulo_activo": f"{activo_catalogo['nombre'].upper()} · {seleccion['ticker']}",
         "chip_categoria": _chip_categoria(cat_real, activo_catalogo["nombre"]),
         "fecha_hora": ahora.strftime("%d %b %Y · %H:%M").upper(),
-        "sesgo": "Alcista" if alcista else "Bajista",
-        "tag_riesgo": "ALCISTA" if alcista else "BAJISTA",
+        # El chip lo manda el Playbook cuando opina; la lectura tecnica solo
+        # cubre los activos sin ficha. Ver `direccion_publicada`.
+        "sesgo": sesgo_pieza,
+        "tag_riesgo": sesgo_pieza.upper(),
         # Hasta donde sigue vigente el sesgo del Playbook, en la gramatica que
         # le corresponde. `None` si el activo no tiene ficha, si el modelo no lo
         # pudo leer, o si su direccion contradice la lectura tecnica de la pieza.
@@ -532,9 +576,21 @@ def construir_mensaje_alerta(payload: dict[str, Any]) -> str:
     vol = payload.get("vol_pct", "")
     sesgo = payload.get("sesgo", "Alcista")
     alcista = sesgo.lower() == "alcista"
+    lateral = sesgo.lower() == "lateral"
 
-    nivel_vigilar = resistencia if alcista else soporte
-    accion = f"Fuerza compradora sobre {resistencia}" if alcista else f"Presión vendedora bajo {soporte}"
+    # **`no alcista` no significa bajista.** Desde que el chip puede quedar
+    # neutro (sesgo invalidado, rango, o contradicción entre el Playbook y las
+    # medias), caer al caso bajista por descarte publicaba "presión vendedora"
+    # sobre un activo del que justamente no se afirma dirección.
+    if lateral:
+        nivel_vigilar = f"{soporte} y {resistencia}"
+        accion = "Definición al salir del rango, por arriba o por abajo"
+    elif alcista:
+        nivel_vigilar = resistencia
+        accion = f"Fuerza compradora sobre {resistencia}"
+    else:
+        nivel_vigilar = soporte
+        accion = f"Presión vendedora bajo {soporte}"
 
     titular = payload.get("titular", "").strip()
     parrafo = payload.get("parrafo", "").strip()
@@ -849,6 +905,14 @@ def refrescar_payload(
 
     nuevo["vigencia"] = formatear_vigencia(vigencia_cruda, fmt)
     nuevo["_procedencia"]["vigencia"] = vigencia_cruda
+
+    # El chip sigue al estado recalculado. Si el precio recupero su nivel entre
+    # preparar y despachar, un chip neutro junto a "el sesgo sigue vigente" seria
+    # la misma contradiccion que este cambio vino a cerrar, al reves.
+    if vigencia_cruda:
+        tecnica = "ALCISTA" if nuevo.get("sesgo", "").lower() != "bajista" else "BAJISTA"
+        nuevo["sesgo"] = direccion_publicada(tecnica, vigencia_cruda, None)
+        nuevo["tag_riesgo"] = nuevo["sesgo"].upper()
 
     nuevo["_procedencia"].setdefault("crudos", {})
     nuevo["_procedencia"]["crudos"] = {
