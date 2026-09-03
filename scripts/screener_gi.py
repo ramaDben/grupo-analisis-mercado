@@ -997,7 +997,17 @@ def escanear(
     evaluados.sort(key=lambda r: (-r["score"], r["ticker"]))
 
     if modo_matriz:
-        # Cobertura Total: selecciona el Top 1 con score > 0 de cada una de las 5 categorías clave de mercado
+        # Cobertura total: el mejor de cada una de las 5 categorías clave, hasta
+        # `top` por categoría.
+        #
+        # Antes tomaba el Top 1 fijo e ignoraba `--top`, así que un canal con
+        # cinco activos elegibles recibía un carrusel de una sola pieza. El tope
+        # editorial del proyecto son 3 piezas de activo por canal y es el default
+        # de `--top`: la matriz llega hasta ahí cuando hay con qué.
+        #
+        # Los gates no se tocan. Un grupo puede quedar en cero y eso **es** el
+        # resultado: el 2026-09-03 a las 12:06 forex e índices quedaron vacíos
+        # porque todo su universo había consumido el recorrido del día.
         categorias_orden = ["forex", "commodity", "indice", "accion", "crypto"]
         seleccion = []
         for cat_obj in categorias_orden:
@@ -1005,8 +1015,7 @@ def escanear(
                 r for r in evaluados
                 if r["score"] > 0 and r["ticker"] in {a["ticker"] for a in filtrar_por_grupo(universo, cat_obj)}
             ]
-            if candidatos_cat:
-                seleccion.append(candidatos_cat[0])
+            seleccion.extend(candidatos_cat[:top])
     else:
         seleccion = [r for r in evaluados if r["score"] > 0][:top]
 
