@@ -85,6 +85,13 @@ si el activo rota en un canal). Lee ese bloque **antes** de escribir:
 - `vigencia: null` es que el activo no tiene ficha en el Playbook, o que el modelo no lo
   pudo leer. Ahí el texto se apoya solo en el score técnico, sin invocar sesgo macro.
 
+**Y mira el campo `sesgo` del payload, que es el chip de la pieza.** Cuando el Playbook
+opina, manda el Playbook: puede decir `Lateral` aunque la lectura técnica sea alcista, y en
+ese caso **el titular no puede afirmar una dirección**. Los tres casos en que sale neutro
+son sesgo invalidado, activo en rango, y contradicción entre el score macro y las medias.
+Un titular direccional junto a un chip `→ LATERAL` es la contradicción que este campo
+existe para evitar.
+
 ## PASO 3 — Rendir las piezas y generar mensajes modulares
 
 ```bash

@@ -709,3 +709,97 @@ def test_el_refresco_detiene_la_pieza_si_el_sesgo_quedo_invalidado():
     )
 
     assert motivo is not None and "sesgo" in motivo.lower()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El chip refleja el Playbook, no solo la lectura tecnica
+# ─────────────────────────────────────────────────────────────────────────────
+def _payload_chip(vigencia, direccion="ALCISTA"):
+    return pc.construir_payload(
+        {**SELECCION, "direccion": direccion, "vigencia": vigencia},
+        ACTIVO, AHORA, CIERRES,
+    )
+
+
+def test_sin_ficha_del_playbook_el_chip_sigue_siendo_la_lectura_tecnica():
+    """Los 33 activos del catalogo sin ficha son la mayoria del universo: ahi la
+    lectura tecnica es lo unico que hay, y el chip la refleja como siempre."""
+    p = _payload_chip(None)
+    assert p["sesgo"] == "Alcista"
+    assert p["tag_riesgo"] == "ALCISTA"
+
+
+def test_con_sesgo_sostenido_el_chip_lo_toma_del_playbook():
+    p = _payload_chip(VIGENCIA_NIVEL)
+    assert p["sesgo"] == "Alcista"
+
+    corto = {**VIGENCIA_NIVEL, "direccion": "CORTO"}
+    p = _payload_chip(corto, direccion="BAJISTA")
+    assert p["sesgo"] == "Bajista"
+
+
+def test_un_sesgo_invalidado_deja_el_chip_neutro_y_no_alcista():
+    """El defecto que el director mando arreglar: la pieza mostraba `ALCISTA` en
+    verde junto al aviso de que el sesgo alcista quedo invalidado. Un cliente lee
+    esa contradiccion en 30 segundos.
+
+    La plantilla ya tenia el estado neutro (`tag-sesgo--lateral`, flecha y color
+    de texto), y el `body` sin clase de sesgo deja el cromo en el acento de
+    marca: no habia que inventar nada visual.
+    """
+    p = _payload_chip({**VIGENCIA_NIVEL, "vigente": False})
+    assert p["sesgo"] == "Lateral"
+    assert p["tag_riesgo"] == "LATERAL"
+
+
+def test_un_activo_en_rango_no_afirma_direccion_en_el_chip():
+    """`NIVEL_OPUESTO_CANAL` es score cero: no hay direccion que mostrar."""
+    p = _payload_chip(VIGENCIA_RANGO)
+    assert p["sesgo"] == "Lateral"
+
+
+def test_si_el_playbook_contradice_la_lectura_tecnica_el_chip_queda_neutro():
+    """El caso donde el chip mas engana. La vigencia ya se omitia por
+    contradiccion, pero el chip seguia afirmando la direccion tecnica como si
+    nada: justo cuando las dos capas discrepan es cuando no hay que afirmar."""
+    p = _payload_chip({**VIGENCIA_NIVEL, "direccion": "CORTO"}, direccion="ALCISTA")
+    assert p["vigencia"] is None, "la vigencia se sigue omitiendo"
+    assert p["sesgo"] == "Lateral", "el chip afirma una direccion que el Playbook niega"
+
+
+def test_el_mensaje_lateral_no_habla_de_presion_vendedora():
+    """Con el chip neutro, el bloque de apertura no puede caer al caso bajista:
+    `alcista == False` no significa bajista, significa que no hay direccion."""
+    p = _payload_chip(VIGENCIA_RANGO)
+    p["titular"] = "La plata se mueve de lado"
+    p["parrafo"] = "Sin definicion por ahora."
+    mensaje = pc.construir_mensaje_alerta(p)
+
+    assert "Presión vendedora bajo" not in mensaje.split("━")[0]
+    assert "Fuerza compradora sobre" not in mensaje.split("━")[0]
+    # Y nombra los DOS bordes, que es lo que hay que vigilar en un rango.
+    assert "68,394" in mensaje and "68,974" in mensaje
+
+
+def test_el_refresco_recalcula_el_chip_si_el_sesgo_cambio_de_estado():
+    """Si entre preparar y despachar el precio recupera su nivel, el chip no
+    puede seguir neutro mientras el bloque dice que el sesgo esta vigente."""
+    from pipeline_carrusel import refrescar_payload
+
+    payload = _payload_chip({**VIGENCIA_NIVEL, "vigente": False})
+    payload["titular"] = "t"
+    payload["parrafo"] = "p"
+    assert payload["sesgo"] == "Lateral"
+
+    nuevo, motivo = refrescar_payload(
+        payload,
+        ahora=datetime(2026, 8, 25, 11, 30, tzinfo=pc.SANTIAGO),
+        h1={"price": 68.900, "s1": 68.500, "r1": 68.960, "atr_14": 0.050,
+            "chandelier_max": 69.000, "chandelier_min": 68.100},
+        digits=3,
+        cierres=CIERRES,
+    )
+
+    assert motivo is None
+    assert nuevo["vigencia"]["vigente"] is True
+    assert nuevo["sesgo"] == "Alcista", "el chip quedo neutro con el sesgo ya vigente"

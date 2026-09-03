@@ -529,8 +529,18 @@ WhatsApp Web con Playwright sobre una sesión vinculada (`--login`, una vez).
 
 **Los siete canales temáticos**: el contenido ya no va a un grupo único. `config/whatsapp_grupos.json` mapea
 cada carpeta (`01_macro_y_apertura` … `07_oportunidades_cuantitativas`) al nombre real del canal en WhatsApp, y
-resuelve alias en lenguaje natural (`metales`, `oro`, `forex`, `cripto`…). `01_macro_y_apertura` es el **grupo
-padre** (comunidad), y cada canal temático recibe además su propia lectura macro.
+resuelve alias en lenguaje natural (`metales`, `oro`, `forex`, `cripto`…), y cada canal temático recibe además
+su propia lectura macro.
+
+**`01_macro_y_apertura` es el grupo de AVISOS de la comunidad**, no un canal temático aparte. Decisión del
+director el 2026-09-03: **no se crea un "GI · Macro & Apertura Global"**, y ese nombre se quitó del config,
+donde figuraba como aspiracional y prometía un canal que no existe en WhatsApp. El síntoma fue que el macro
+parecía no llegar cuando en realidad llegaba a Avisos.
+
+> **Ojo al buscar un canal en WhatsApp Web**: en la lista de chats **todos los grupos de la comunidad se
+> muestran con el nombre de la comunidad como título**, y el nombre real del grupo aparece en la primera línea
+> del preview. Por eso siete chats distintos se ven iguales al buscarlos, y por eso `nombre_oficial` del grupo
+> padre coincide con el de la comunidad.
 
 > [!CAUTION]
 > **Automatizar WhatsApp Web va contra sus términos de servicio** y el número es el del negocio. El sender
