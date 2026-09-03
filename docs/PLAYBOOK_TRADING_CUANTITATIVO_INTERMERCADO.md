@@ -95,6 +95,41 @@ Donde:
 * $\mathcal{S}_{\text{antigüedad}} = \exp\left( -\frac{\text{Horas desde el driver más antiguo}}{48.0} \right)$ (decaimiento exponencial con vida media de 48 horas).
 * $\mathcal{S}_{\text{cobertura}} = \frac{\text{Vectores disponibles del activo}}{\text{Vectores teóricos del modelo}}$.
 
+> [!IMPORTANT]
+> **Umbral operativo: 65 %.** Bajo esa cifra el activo con ficha **no se comunica**, y el
+> escáner informa el motivo. No es una preferencia calibrada a gusto: es el piso algebraico
+> de la norma que este mismo párrafo escribe. Si $\mathcal{S}_{\text{frescura}} = 1.0$ y
+> $\mathcal{S}_{\text{cobertura}} = 1.0$ (la condición que aquí se llama *operación normal*),
+> el puntaje ya arrastra $0.40 + 0.25 = 0.65$ antes de que la antigüedad aporte nada.
+>
+> Por lo tanto **bajo 65 % es aritméticamente imposible que ambas valgan 1,0**. Un puntaje
+> inferior no significa "datos algo viejos": significa que **falta un driver o está roto**.
+> Es una identidad, no un juicio de tolerancia.
+>
+> **Un umbral de 80 % habría sido un error.** El techo real de la escala es ~89 %, porque el
+> campo `fecha` de cada driver no trae hora y se parsea como medianoche UTC, así que
+> $\mathcal{S}_{\text{antigüedad}}$ nunca aporta sus 35 puntos completos:
+>
+> | Escenario medido el 2026-09-02 | Frescura | Cobertura | Antigüedad | Total |
+> |---|---:|---:|---:|---:|
+> | Clave de la TPM rota y petróleo detenido 8 días | 83,3 % | 83,3 % | 1,3 % | **54,6 %** |
+> | Solo corrigiendo la clave de la TPM | 100 % | 100 % | 1,3 % | **65,4 %** |
+> | Todo al día desde el terminal correcto | 100 % | 100 % | 38,9 % | **77,5 %** |
+> | Techo aritmético (todo fechado hoy) | 100 % | 100 % | 68,4 % | **88,9 %** |
+>
+> El parámetro vive en `confidence_weights.umbral_minimo_pct`, dentro del YAML que este
+> Playbook hashea, para que un cambio de criterio quede registrado en el `config_hash` del
+> snapshot. Lo aplican `screener_gi.gate_confianza` (quinto gate, y corre **antes** del gate
+> del Playbook: si el modelo no ve, sus setups permitidos y prohibidos tampoco son de fiar) y
+> `pipeline_datos --estado`, que **importa** la constante en vez de copiarla.
+>
+> **Solo alcanza a los 5 activos con ficha.** La confianza mide los drivers macro que
+> alimentan el régimen, y el régimen solo entra al sesgo de esos cinco. Los otros 33 del
+> catálogo técnico se puntúan con técnica y calendario, sin insumo macro.
+>
+> **Ausencia de dato = bloqueo.** Un snapshot que no declara su confianza no pasa: asumir que
+> alcanza sería la puerta de atrás que el umbral existe para cerrar.
+
 ---
 
 ## 4. Fichas Operativas por Activo
