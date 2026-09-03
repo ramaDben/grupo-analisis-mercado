@@ -210,6 +210,36 @@ class WhatsAppConfig:
         data = json.loads(self.path.read_text(encoding="utf-8"))
         self.grupos = data.get("grupos", {})
         self.seguridad = data.get("seguridad", {})
+        # Destino de pruebas, DELIBERADAMENTE fuera de `grupos`: ese diccionario
+        # es el mapa de canales de clientes y su contrato de siete lo cubre un
+        # test. Un octavo ahí sería un destino de publicación accidental
+        # esperando a que alguien resuelva un alias con un typo.
+        self.banco_de_pruebas = data.get("banco_de_pruebas", {})
+
+    @property
+    def destino_de_pruebas(self) -> str:
+        """A dónde mandar lo que se está midiendo, en vez de a un canal real.
+
+        Existe porque durante todo el 2026-09-03 los diagnósticos contra el DOM
+        se hicieron improvisando el destino en scripts sueltos, y el número
+        quedaba escrito a mano en cada uno.
+
+        **Hoy es el chat consigo mismo del número de la sesión**, autorizado por
+        el director: un envío accidental ahí no lo ve nadie. No es un grupo, así
+        que no sirve para medir lo que solo existe en uno (el subtítulo con los
+        miembros, la restricción de solo administradores, la cabecera con el
+        nombre de la comunidad). WhatsApp Web exige al menos un miembro real para
+        crear un grupo, así que un banco de pruebas completo necesita que el
+        director agregue a alguien.
+        """
+        destino = str(self.banco_de_pruebas.get("destinatario", "")).strip()
+        if not destino:
+            raise WhatsAppError(
+                "No hay destino de pruebas configurado (`banco_de_pruebas."
+                "destinatario` en config/whatsapp_grupos.json). No uses un canal "
+                "de clientes para medir."
+            )
+        return destino
 
     def resolver_nombre_oficial(self, alias_o_nombre: str) -> str:
         """Resuelve un alias o slug (ej. 'forex', '02_forex_divisas') al nombre oficial de WhatsApp."""

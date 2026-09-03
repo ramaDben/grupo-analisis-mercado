@@ -154,5 +154,12 @@
     "segundos_entre_envios": 45,
     "max_envios_dia": 40,
     "_nota_frenos": "Automatizar WhatsApp Web va contra sus terminos de servicio: estos dos frenos existen para que el sistema no pueda enviar en rafaga ni superar un volumen diario razonable. Subirlos aumenta el riesgo de que la cuenta sea marcada. El contador vive en data/.whatsapp_envios.json (gitignored)."
+  },
+  "banco_de_pruebas": {
+    "destinatario": "+56 9 3332 3263",
+    "es_chat_propio": true,
+    "_nota": "Destino para medir contra el DOM de WhatsApp Web sin tocar un canal de clientes. Es el chat consigo mismo del numero de la sesion, autorizado por el director el 2026-09-03: un envio accidental ahi no lo ve nadie.",
+    "_limitacion": "NO es un grupo, asi que no sirve para medir lo que solo existe en un grupo: el subtitulo con los miembros, la restriccion de solo administradores, o la cabecera con el nombre de la comunidad. WhatsApp Web exige al menos un miembro real para crear un grupo, asi que un banco de pruebas de verdad necesita que el director agregue a alguien.",
+    "_no_esta_en_grupos_a_proposito": "`grupos` es el mapa de canales de clientes y su contrato de siete lo cubre un test. Un octavo ahi seria un destino de publicacion accidental."
   }
 }
