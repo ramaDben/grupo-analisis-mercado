@@ -130,7 +130,10 @@ Nunca se dibuja un sustituto: sin terminal, el informe sale sin imágenes y lo d
 avisos. Es la diferencia con `scripts/generar_graficos_drivers.py`, que tiene las series
 escritas a mano y produce piezas de aspecto institucional a partir de números que nadie
 midió. Requiere `uv sync --extra informe` (matplotlib es opcional, mismo criterio que
-`stories`). Brent no tiene gráfico porque el broker no ofrece el símbolo, y el mapeo
+`stories`). Brent **sí** tiene ticker (`BRENT.spot`, verificado contra la cuenta 51492 el
+2026-09-02): el mapeo lo apuntaba a `None` afirmando que el broker no lo ofrecía, y
+no era cierto. Lo que Brent no tiene es `brent.jpg`, así que queda fuera del escáner
+hasta que exista la imagen, pero ya recibe niveles y gráfico. El mapeo
 Playbook → ticker MT5 vive en `bias_reader.TICKER_MT5`, que es también el que usa el
 escáner.
 

@@ -88,6 +88,20 @@ def get_rates(ticker: str, timeframe: str, n_bars: int = 200) -> pd.DataFrame:
         )
 
     tf = getattr(mt5, tf_attr)
+
+    # MT5 solo sirve `copy_rates_from_pos` para símbolos presentes en el Market
+    # Watch del terminal. Sin esta línea la tool funcionaba para lo que el
+    # director tuviera abierto y fallaba para el resto con "Terminal: Call
+    # failed", un mensaje que no nombra la causa. Medido el 2026-09-02 desde un
+    # proceso nuevo: USDCLP respondió y XAUUSD, US100 y WTI fallaron los tres,
+    # del mismo terminal y en la misma corrida.
+    if not mt5.symbol_select(ticker, True):
+        raise RuntimeError(
+            f"MT5 no pudo seleccionar '{ticker}': no está en el Market Watch del "
+            f"terminal o el broker no lo ofrece. Agrégalo desde la ventana de "
+            f"Observación de mercado. Detalle: {mt5.last_error()}"
+        )
+
     rates = mt5.copy_rates_from_pos(ticker, tf, 0, n_bars)
     if rates is None or len(rates) == 0:
         raise RuntimeError(

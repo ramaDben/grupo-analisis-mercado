@@ -2,7 +2,6 @@
   "_nota": "Tickers confirmados en broker Grupo Inteligencia SpA. Índices usan sufijo .spot, acciones usan prefijo #",
   "_nota_unidad": "Campo 'unidad' = moneda en que cotiza el activo, para rotular distancias de precio. No siempre es el dolar: USD/CLP se mueve en pesos y USD/JPY en yenes. Los indices no cotizan en una moneda, se miden en puntos.",
   "_nota_digits": "Campo 'digits' = decimales del precio según contrato MT5 del broker. Verificar con symbol_info('TICKER').digits en MT5 si hay dudas.",
-
   "forex_commodities": [
     {
       "ticker": "USD/CLP",
@@ -13,8 +12,17 @@
       "unidad": "CLP",
       "volatilidad": "baja",
       "nota_volatilidad": "se mueve poco dentro del día, así que marcos más amplios (1H/4H) dan una lectura más limpia; en 15M aparece mucho ruido",
-      "drivers": ["cobre", "Dollar Index", "tasas BCCh vs Fed", "flujos de capital"],
-      "temporalidades": ["4H", "1H", "15M"],
+      "drivers": [
+        "cobre",
+        "Dollar Index",
+        "tasas BCCh vs Fed",
+        "flujos de capital"
+      ],
+      "temporalidades": [
+        "4H",
+        "1H",
+        "15M"
+      ],
       "horario_mercado": "09:00-16:00 CLT",
       "rotacion_diaria": true,
       "imagen": "assets/activos/usdclp.jpg"
@@ -28,8 +36,18 @@
       "unidad": "JPY",
       "volatilidad": "media",
       "nota_volatilidad": "se mueve por decisiones de tasas más que por el minuto a minuto, así que 4H y 1D muestran la tendencia de varios días; en 15M aparece ruido sin dirección clara",
-      "drivers": ["diferencial de tasas Fed vs BoJ", "decisiones BoJ", "rendimientos Treasury", "intervención Ministerio de Finanzas de Japón", "precios de energía"],
-      "temporalidades": ["1D", "4H", "1H"],
+      "drivers": [
+        "diferencial de tasas Fed vs BoJ",
+        "decisiones BoJ",
+        "rendimientos Treasury",
+        "intervención Ministerio de Finanzas de Japón",
+        "precios de energía"
+      ],
+      "temporalidades": [
+        "1D",
+        "4H",
+        "1H"
+      ],
       "horario_mercado": "24h (principal: sesión Tokio y sesión NY)",
       "rotacion_diaria": false,
       "imagen": "assets/activos/usdjpy.jpg"
@@ -43,8 +61,18 @@
       "unidad": "USD",
       "volatilidad": "media",
       "nota_volatilidad": "se mueve por decisiones de tasas y datos de inflación más que por el minuto a minuto, así que 4H y 1D ordenan la tendencia de varios días; en 15M aparece ruido sin dirección clara",
-      "drivers": ["diferencial de tasas BCE vs Fed", "decisiones del BCE", "inflación de la Zona Euro", "Dollar Index", "precios de energía en Europa"],
-      "temporalidades": ["1D", "4H", "1H"],
+      "drivers": [
+        "diferencial de tasas BCE vs Fed",
+        "decisiones del BCE",
+        "inflación de la Zona Euro",
+        "Dollar Index",
+        "precios de energía en Europa"
+      ],
+      "temporalidades": [
+        "1D",
+        "4H",
+        "1H"
+      ],
       "horario_mercado": "24h (principal: sesión Londres y sesión NY)",
       "rotacion_diaria": false,
       "imagen": "assets/activos/eurusd.jpg"
@@ -58,8 +86,16 @@
       "unidad": "USD",
       "volatilidad": "media",
       "nota_volatilidad": "movimientos condicionados por Banco de Inglaterra y Fed",
-      "drivers": ["diferencial de tasas BoE vs Fed", "inflación UK", "Dollar Index"],
-      "temporalidades": ["1D", "4H", "1H"],
+      "drivers": [
+        "diferencial de tasas BoE vs Fed",
+        "inflación UK",
+        "Dollar Index"
+      ],
+      "temporalidades": [
+        "1D",
+        "4H",
+        "1H"
+      ],
       "horario_mercado": "24h",
       "rotacion_diaria": false,
       "imagen": "assets/activos/gbpusd.jpg"
@@ -73,8 +109,18 @@
       "unidad": "USD",
       "volatilidad": "alta",
       "nota_volatilidad": "se mueve mucho y rápido, por eso en 15M hay señales veloces pero con más ruido; 1H/4H ordenan mejor la tendencia del día",
-      "drivers": ["Dollar Index", "tasas reales", "decisiones Fed", "coberturas bancos centrales", "geopolítica"],
-      "temporalidades": ["4H", "1H", "15M"],
+      "drivers": [
+        "Dollar Index",
+        "tasas reales",
+        "decisiones Fed",
+        "coberturas bancos centrales",
+        "geopolítica"
+      ],
+      "temporalidades": [
+        "4H",
+        "1H",
+        "15M"
+      ],
       "horario_mercado": "24h (principal: sesión NY)",
       "rotacion_diaria": true,
       "imagen": "assets/activos/oro.jpg"
@@ -88,8 +134,18 @@
       "unidad": "USD",
       "volatilidad": "alta",
       "nota_volatilidad": "se mueve mucho y rápido, con menos liquidez que el oro, por eso en 15M hay señales veloces pero con más ruido; 1H/4H ordenan mejor la tendencia del día",
-      "drivers": ["Dollar Index", "tasas reales", "demanda industrial", "correlación con el oro", "manufactura global (China)"],
-      "temporalidades": ["4H", "1H", "15M"],
+      "drivers": [
+        "Dollar Index",
+        "tasas reales",
+        "demanda industrial",
+        "correlación con el oro",
+        "manufactura global (China)"
+      ],
+      "temporalidades": [
+        "4H",
+        "1H",
+        "15M"
+      ],
       "horario_mercado": "24h (principal: sesión NY)",
       "rotacion_diaria": false,
       "imagen": "assets/activos/plata.jpg"
@@ -103,11 +159,42 @@
       "unidad": "USD",
       "volatilidad": "alta",
       "nota_volatilidad": "reacciona fuerte a inventarios y noticias OPEP+, así que 1H/4H dan una lectura más estable; en 15M el ruido es alto",
-      "drivers": ["inventarios EIA", "decisiones OPEP+", "demanda China", "geopolítica"],
-      "temporalidades": ["4H", "1H"],
+      "drivers": [
+        "inventarios EIA",
+        "decisiones OPEP+",
+        "demanda China",
+        "geopolítica"
+      ],
+      "temporalidades": [
+        "4H",
+        "1H"
+      ],
       "horario_mercado": "24h (principal: sesión NY)",
       "rotacion_diaria": true,
       "imagen": "assets/activos/wti.jpg"
+    },
+    {
+      "ticker": "BRENT",
+      "ticker_mt5": "BRENT.spot",
+      "nombre": "Petróleo Brent",
+      "categoria": "commodity",
+      "digits": 3,
+      "unidad": "USD",
+      "volatilidad": "alta",
+      "nota_volatilidad": "referencia europea del crudo: se mueve con OPEP+, Medio Oriente y fletes, así que 1H/4H dan lectura más estable que 15M",
+      "drivers": [
+        "decisiones OPEP+",
+        "geopolítica de Medio Oriente",
+        "demanda europea y asiática",
+        "diferencial contra WTI"
+      ],
+      "temporalidades": [
+        "4H",
+        "1H"
+      ],
+      "horario_mercado": "24h (principal: sesión Londres)",
+      "rotacion_diaria": false,
+      "_nota_imagen": "Sin campo `imagen` a propósito: no existe brent.jpg y ese campo es el interruptor del activo en el escáner. Se rellena cuando el .jpg esté en disco."
     },
     {
       "ticker": "COPPER",
@@ -118,8 +205,17 @@
       "unidad": "USD/t",
       "volatilidad": "media",
       "nota_volatilidad": "metal conductor clave de la economía global, cotizado por tonelada métrica en terminales institucionales y bolsas de Londres/Shanghái",
-      "drivers": ["demanda industrial China", "inventarios LME/SHFE", "Dollar Index", "transición energética"],
-      "temporalidades": ["1D", "4H", "1H"],
+      "drivers": [
+        "demanda industrial China",
+        "inventarios LME/SHFE",
+        "Dollar Index",
+        "transición energética"
+      ],
+      "temporalidades": [
+        "1D",
+        "4H",
+        "1H"
+      ],
       "horario_mercado": "24h",
       "rotacion_diaria": false
     },
@@ -132,8 +228,17 @@
       "unidad": "USD",
       "volatilidad": "alta",
       "nota_volatilidad": "movimientos amplios impulsados por flujos institucionales y sentimiento del mercado cripto",
-      "drivers": ["flujos ETFs de BTC", "tasas Fed", "Dollar Index", "regulación cripto", "sentimiento de riesgo"],
-      "temporalidades": ["4H", "1H"],
+      "drivers": [
+        "flujos ETFs de BTC",
+        "tasas Fed",
+        "Dollar Index",
+        "regulación cripto",
+        "sentimiento de riesgo"
+      ],
+      "temporalidades": [
+        "4H",
+        "1H"
+      ],
       "horario_mercado": "24h",
       "rotacion_diaria": true,
       "imagen": "assets/activos/bitcoin.jpg"
@@ -147,8 +252,17 @@
       "unidad": "USD",
       "volatilidad": "alta",
       "nota_volatilidad": "se mueve amplio y a toda hora, incluso el fin de semana; 1H y 4H ordenan la tendencia, y en 15M el ruido manda por sobre la dirección",
-      "drivers": ["flujos de ETFs de Ethereum", "actividad y comisiones de la red", "tasas Fed", "regulación cripto", "apetito por riesgo"],
-      "temporalidades": ["4H", "1H"],
+      "drivers": [
+        "flujos de ETFs de Ethereum",
+        "actividad y comisiones de la red",
+        "tasas Fed",
+        "regulación cripto",
+        "apetito por riesgo"
+      ],
+      "temporalidades": [
+        "4H",
+        "1H"
+      ],
       "horario_mercado": "24h",
       "rotacion_diaria": false,
       "imagen": "assets/activos/eth.jpg"
@@ -162,8 +276,16 @@
       "unidad": "USD",
       "volatilidad": "alta",
       "nota_volatilidad": "de las más volátiles del catálogo: hace recorridos grandes en pocas horas, así que 4H da la lectura más limpia y en 15M los movimientos se desdicen solos",
-      "drivers": ["flujos de ETFs de Solana", "actividad de la red Solana", "apetito por riesgo cripto", "tasas Fed"],
-      "temporalidades": ["4H", "1H"],
+      "drivers": [
+        "flujos de ETFs de Solana",
+        "actividad de la red Solana",
+        "apetito por riesgo cripto",
+        "tasas Fed"
+      ],
+      "temporalidades": [
+        "4H",
+        "1H"
+      ],
       "horario_mercado": "24h",
       "rotacion_diaria": false,
       "imagen": "assets/activos/sol.jpg"
@@ -177,8 +299,15 @@
       "unidad": "USD",
       "volatilidad": "alta",
       "nota_volatilidad": "sigue de cerca a Bitcoin y amplifica sus movimientos; 4H muestra la tendencia y 1H sirve para afinar, pero en 15M casi todo es ruido",
-      "drivers": ["correlación con Bitcoin", "apetito por riesgo cripto", "tasas Fed"],
-      "temporalidades": ["4H", "1H"],
+      "drivers": [
+        "correlación con Bitcoin",
+        "apetito por riesgo cripto",
+        "tasas Fed"
+      ],
+      "temporalidades": [
+        "4H",
+        "1H"
+      ],
       "horario_mercado": "24h",
       "rotacion_diaria": false,
       "imagen": "assets/activos/ltc.jpg"
@@ -192,8 +321,15 @@
       "unidad": "USD",
       "volatilidad": "alta",
       "nota_volatilidad": "cotiza en centavos con 4 decimales, así que un movimiento que en pantalla parece mínimo es porcentualmente grande; conviene leerlo en 4H y mirar la variación en porcentaje antes que la cifra",
-      "drivers": ["correlación con Bitcoin", "desarrollo del ecosistema Cardano", "apetito por riesgo cripto"],
-      "temporalidades": ["4H", "1H"],
+      "drivers": [
+        "correlación con Bitcoin",
+        "desarrollo del ecosistema Cardano",
+        "apetito por riesgo cripto"
+      ],
+      "temporalidades": [
+        "4H",
+        "1H"
+      ],
       "horario_mercado": "24h",
       "rotacion_diaria": false,
       "imagen": "assets/activos/ada.jpg"
@@ -207,14 +343,20 @@
       "unidad": "USD",
       "volatilidad": "alta",
       "nota_volatilidad": "el más impredecible del catálogo: reacciona a menciones en redes sociales y no a fundamentos, así que ningún marco temporal lo vuelve ordenado; se cubre solo cuando el movimiento ya ocurrió y hay algo concreto que explicar",
-      "drivers": ["menciones en redes sociales y sentimiento de retail", "correlación con Bitcoin", "apetito por riesgo cripto"],
-      "temporalidades": ["4H", "1H"],
+      "drivers": [
+        "menciones en redes sociales y sentimiento de retail",
+        "correlación con Bitcoin",
+        "apetito por riesgo cripto"
+      ],
+      "temporalidades": [
+        "4H",
+        "1H"
+      ],
       "horario_mercado": "24h",
       "rotacion_diaria": false,
       "imagen": "assets/activos/doge.jpg"
     }
   ],
-
   "indices": [
     {
       "ticker": "US100",
@@ -226,11 +368,24 @@
       "unidad": "puntos",
       "volatilidad": "media",
       "nota_volatilidad": "tiene movimientos amplios cuando hay datos o earnings; 1H/4H equilibran señal y ruido para la lectura del día",
-      "drivers": ["tasas Fed", "earnings tecnológicos", "rendimientos Treasury", "sentimiento AI/chips"],
-      "temporalidades": ["4H", "1H"],
+      "drivers": [
+        "tasas Fed",
+        "earnings tecnológicos",
+        "rendimientos Treasury",
+        "sentimiento AI/chips"
+      ],
+      "temporalidades": [
+        "4H",
+        "1H"
+      ],
       "horario_mercado": "09:30-16:00 ET (10:30-17:00 CLT)",
       "rotacion_diaria": true,
-      "componentes_clave": ["#AAPL", "#MSFT", "#NVDA", "#AMZN"],
+      "componentes_clave": [
+        "#AAPL",
+        "#MSFT",
+        "#NVDA",
+        "#AMZN"
+      ],
       "imagen": "assets/activos/us100.jpg"
     },
     {
@@ -243,11 +398,25 @@
       "unidad": "puntos",
       "volatilidad": "media",
       "nota_volatilidad": "al promediar 500 empresas se mueve de forma más contenida; 1H/4H dan una lectura clara de la tendencia del día",
-      "drivers": ["tasas Fed", "earnings agregados", "datos macro EE.UU.", "rendimientos Treasury"],
-      "temporalidades": ["4H", "1H"],
+      "drivers": [
+        "tasas Fed",
+        "earnings agregados",
+        "datos macro EE.UU.",
+        "rendimientos Treasury"
+      ],
+      "temporalidades": [
+        "4H",
+        "1H"
+      ],
       "horario_mercado": "09:30-16:00 ET (10:30-17:00 CLT)",
       "rotacion_diaria": true,
-      "componentes_clave": ["#AAPL", "#MSFT", "#NVDA", "#JPM", "#BAC"],
+      "componentes_clave": [
+        "#AAPL",
+        "#MSFT",
+        "#NVDA",
+        "#JPM",
+        "#BAC"
+      ],
       "imagen": "assets/activos/us500.jpg"
     },
     {
@@ -260,15 +429,27 @@
       "unidad": "puntos",
       "volatilidad": "media",
       "nota_volatilidad": "se mueve de forma más pausada que el Nasdaq; 1H/4H dan una lectura ordenada de la tendencia del día",
-      "drivers": ["datos macro EE.UU.", "earnings industriales", "tasas Fed", "ciclo económico"],
-      "temporalidades": ["4H", "1H"],
+      "drivers": [
+        "datos macro EE.UU.",
+        "earnings industriales",
+        "tasas Fed",
+        "ciclo económico"
+      ],
+      "temporalidades": [
+        "4H",
+        "1H"
+      ],
       "horario_mercado": "09:30-16:00 ET (10:30-17:00 CLT)",
       "rotacion_diaria": true,
-      "componentes_clave": ["#BA", "#CAT", "#GS", "#JPM"],
+      "componentes_clave": [
+        "#BA",
+        "#CAT",
+        "#GS",
+        "#JPM"
+      ],
       "imagen": "assets/activos/us30.jpg"
     }
   ],
-
   "etfs": {
     "_nota": "Fondos cotizados (grupo 'CFD ETF' del terminal). Tickers con sufijo .US, verificados con symbol_info contra la cuenta real.",
     "_nota_playbook": "Entrar a este catálogo NO es entrar al Playbook. Estos activos tienen niveles, indicadores y especificaciones de contrato, pero no tienen ficha operativa, régimen R0-R4, sesgo score ni setups permitidos: ese conjunto sigue siendo el de bias_reader.VALID_SYMBOLS (USDCLP, XAUUSD, WTI, BRENT, US100), porque cada ficha del Playbook cita literatura académica y elasticidades medidas.",
@@ -283,8 +464,16 @@
         "unidad": "USD",
         "volatilidad": "media",
         "nota_volatilidad": "replica al Nasdaq 100, así que se mueve parecido al US100 pero solo en horario de bolsa; 1H y 4H equilibran señal y ruido para la lectura del día",
-        "drivers": ["tasas Fed", "earnings tecnológicos", "rendimientos Treasury", "flujos institucionales hacia tecnología"],
-        "temporalidades": ["4H", "1H"],
+        "drivers": [
+          "tasas Fed",
+          "earnings tecnológicos",
+          "rendimientos Treasury",
+          "flujos institucionales hacia tecnología"
+        ],
+        "temporalidades": [
+          "4H",
+          "1H"
+        ],
         "horario_mercado": "09:30-16:00 ET (convertir con scripts/hora_chile.ps1: el desfase con Chile cambia con el horario de verano)",
         "rotacion_diaria": false,
         "imagen": "assets/activos/us100.jpg"
@@ -298,8 +487,16 @@
         "unidad": "USD",
         "volatilidad": "media",
         "nota_volatilidad": "al replicar 500 empresas se mueve de forma más contenida que un ETF de un solo sector; 1H y 4H dan una lectura clara de la tendencia del día",
-        "drivers": ["tasas Fed", "earnings agregados del S&P 500", "datos macro de EE.UU.", "flujos institucionales"],
-        "temporalidades": ["4H", "1H"],
+        "drivers": [
+          "tasas Fed",
+          "earnings agregados del S&P 500",
+          "datos macro de EE.UU.",
+          "flujos institucionales"
+        ],
+        "temporalidades": [
+          "4H",
+          "1H"
+        ],
         "horario_mercado": "09:30-16:00 ET (convertir con scripts/hora_chile.ps1: el desfase con Chile cambia con el horario de verano)",
         "rotacion_diaria": false
       },
@@ -312,8 +509,17 @@
         "unidad": "USD",
         "volatilidad": "media",
         "nota_volatilidad": "sigue al oro, pero cotiza solo en horario de bolsa: abre con el salto que el oro spot ya hizo durante la noche, y 4H evita leer ese salto como una tendencia nueva",
-        "drivers": ["tasa real TIPS 10Y", "Dollar Index", "decisiones Fed", "flujos de ETFs de oro", "geopolítica"],
-        "temporalidades": ["4H", "1H"],
+        "drivers": [
+          "tasa real TIPS 10Y",
+          "Dollar Index",
+          "decisiones Fed",
+          "flujos de ETFs de oro",
+          "geopolítica"
+        ],
+        "temporalidades": [
+          "4H",
+          "1H"
+        ],
         "horario_mercado": "09:30-16:00 ET (convertir con scripts/hora_chile.ps1: el desfase con Chile cambia con el horario de verano)",
         "rotacion_diaria": false,
         "imagen": "assets/activos/oro.jpg"
@@ -327,8 +533,16 @@
         "unidad": "USD",
         "volatilidad": "media",
         "nota_volatilidad": "las empresas pequeñas dependen más del crédito, así que reacciona fuerte a las tasas y se mueve más que el SPY; 1H y 4H son el marco útil",
-        "drivers": ["tasas Fed", "crédito bancario y pendiente de la curva 2s10s", "ciclo económico de EE.UU.", "earnings de empresas pequeñas"],
-        "temporalidades": ["4H", "1H"],
+        "drivers": [
+          "tasas Fed",
+          "crédito bancario y pendiente de la curva 2s10s",
+          "ciclo económico de EE.UU.",
+          "earnings de empresas pequeñas"
+        ],
+        "temporalidades": [
+          "4H",
+          "1H"
+        ],
         "horario_mercado": "09:30-16:00 ET (convertir con scripts/hora_chile.ps1: el desfase con Chile cambia con el horario de verano)",
         "rotacion_diaria": false,
         "imagen": "assets/activos/iwm.jpg"
@@ -342,59 +556,262 @@
         "unidad": "USD",
         "volatilidad": "alta",
         "nota_volatilidad": "el sector de chips es el más volátil de la bolsa estadounidense y un earnings de NVIDIA lo mueve entero; 4H para la tendencia y 1H para el día, porque en 15M el ruido domina",
-        "drivers": ["demanda de chips para inteligencia artificial", "earnings de semiconductores", "regulación de exportación a China", "ciclo de inventarios"],
-        "temporalidades": ["4H", "1H"],
+        "drivers": [
+          "demanda de chips para inteligencia artificial",
+          "earnings de semiconductores",
+          "regulación de exportación a China",
+          "ciclo de inventarios"
+        ],
+        "temporalidades": [
+          "4H",
+          "1H"
+        ],
         "horario_mercado": "09:30-16:00 ET (convertir con scripts/hora_chile.ps1: el desfase con Chile cambia con el horario de verano)",
         "rotacion_diaria": false,
         "imagen": "assets/activos/tech-circuito.jpg"
       }
     ]
   },
-
   "acciones": {
     "tecnologico": {
       "indice_relacionado": "US100",
-      "drivers_sector": ["tasas Fed", "earnings trimestrales", "ciclo de innovación AI/chips", "rendimientos Treasury", "regulación tech"],
+      "drivers_sector": [
+        "tasas Fed",
+        "earnings trimestrales",
+        "ciclo de innovación AI/chips",
+        "rendimientos Treasury",
+        "regulación tech"
+      ],
       "componentes": [
-        {"ticker_mt5": "#AAPL", "nombre": "Apple Inc.", "digits": 2, "unidad": "USD", "drivers": ["ventas iPhone", "servicios", "earnings", "demanda China"]},
-        {"ticker_mt5": "#MSFT", "nombre": "Microsoft Corp.", "digits": 2, "unidad": "USD", "drivers": ["Azure/cloud", "AI (Copilot)", "earnings", "licencias enterprise"]},
-        {"ticker_mt5": "#NVDA", "nombre": "NVIDIA Corp.", "digits": 2, "unidad": "USD", "drivers": ["demanda chips AI", "data centers", "earnings", "regulación exportación China"]},
-        {"ticker_mt5": "#AMZN", "nombre": "Amazon.com Inc.", "digits": 2, "unidad": "USD", "drivers": ["AWS/cloud", "retail/consumo", "earnings", "márgenes"]},
-        {"ticker_mt5": "#AMD", "nombre": "Advanced Micro Devices", "digits": 2, "unidad": "USD", "drivers": ["demanda chips AI/GPU", "data centers", "competencia con NVIDIA", "earnings", "demanda PC/servidores"]},
-        {"ticker_mt5": "#MELI", "nombre": "MercadoLibre Inc.", "digits": 2, "unidad": "USD", "drivers": ["comercio electrónico en Latinoamérica", "Mercado Pago / fintech", "earnings", "tipo de cambio en Brasil y Argentina", "consumo en la región"], "imagen": "assets/activos/meli.jpg"}
+        {
+          "ticker_mt5": "#AAPL",
+          "nombre": "Apple Inc.",
+          "digits": 2,
+          "unidad": "USD",
+          "drivers": [
+            "ventas iPhone",
+            "servicios",
+            "earnings",
+            "demanda China"
+          ]
+        },
+        {
+          "ticker_mt5": "#MSFT",
+          "nombre": "Microsoft Corp.",
+          "digits": 2,
+          "unidad": "USD",
+          "drivers": [
+            "Azure/cloud",
+            "AI (Copilot)",
+            "earnings",
+            "licencias enterprise"
+          ]
+        },
+        {
+          "ticker_mt5": "#NVDA",
+          "nombre": "NVIDIA Corp.",
+          "digits": 2,
+          "unidad": "USD",
+          "drivers": [
+            "demanda chips AI",
+            "data centers",
+            "earnings",
+            "regulación exportación China"
+          ]
+        },
+        {
+          "ticker_mt5": "#AMZN",
+          "nombre": "Amazon.com Inc.",
+          "digits": 2,
+          "unidad": "USD",
+          "drivers": [
+            "AWS/cloud",
+            "retail/consumo",
+            "earnings",
+            "márgenes"
+          ]
+        },
+        {
+          "ticker_mt5": "#AMD",
+          "nombre": "Advanced Micro Devices",
+          "digits": 2,
+          "unidad": "USD",
+          "drivers": [
+            "demanda chips AI/GPU",
+            "data centers",
+            "competencia con NVIDIA",
+            "earnings",
+            "demanda PC/servidores"
+          ]
+        },
+        {
+          "ticker_mt5": "#MELI",
+          "nombre": "MercadoLibre Inc.",
+          "digits": 2,
+          "unidad": "USD",
+          "drivers": [
+            "comercio electrónico en Latinoamérica",
+            "Mercado Pago / fintech",
+            "earnings",
+            "tipo de cambio en Brasil y Argentina",
+            "consumo en la región"
+          ],
+          "imagen": "assets/activos/meli.jpg"
+        }
       ]
     },
     "bancario": {
       "indice_relacionado": "US30",
-      "drivers_sector": ["tasas Fed", "curva de rendimientos", "margen de interés neto", "regulación financiera", "crédito al consumo", "trading revenue"],
+      "drivers_sector": [
+        "tasas Fed",
+        "curva de rendimientos",
+        "margen de interés neto",
+        "regulación financiera",
+        "crédito al consumo",
+        "trading revenue"
+      ],
       "componentes": [
-        {"ticker_mt5": "#JPM", "nombre": "JPMorgan Chase", "digits": 2, "unidad": "USD", "drivers": ["margen interés", "banca inversión", "earnings", "provisiones crédito"]},
-        {"ticker_mt5": "#BAC", "nombre": "Bank of America", "digits": 2, "unidad": "USD", "drivers": ["margen interés", "crédito consumo", "earnings", "exposición tasas"]},
-        {"ticker_mt5": "#GS", "nombre": "Goldman Sachs", "digits": 2, "unidad": "USD", "drivers": ["trading revenue", "banca inversión", "earnings", "actividad M&A"]},
-        {"ticker_mt5": "#MS", "nombre": "Morgan Stanley", "digits": 2, "unidad": "USD", "drivers": ["wealth management", "trading", "earnings", "mercados de capital"]}
+        {
+          "ticker_mt5": "#JPM",
+          "nombre": "JPMorgan Chase",
+          "digits": 2,
+          "unidad": "USD",
+          "drivers": [
+            "margen interés",
+            "banca inversión",
+            "earnings",
+            "provisiones crédito"
+          ]
+        },
+        {
+          "ticker_mt5": "#BAC",
+          "nombre": "Bank of America",
+          "digits": 2,
+          "unidad": "USD",
+          "drivers": [
+            "margen interés",
+            "crédito consumo",
+            "earnings",
+            "exposición tasas"
+          ]
+        },
+        {
+          "ticker_mt5": "#GS",
+          "nombre": "Goldman Sachs",
+          "digits": 2,
+          "unidad": "USD",
+          "drivers": [
+            "trading revenue",
+            "banca inversión",
+            "earnings",
+            "actividad M&A"
+          ]
+        },
+        {
+          "ticker_mt5": "#MS",
+          "nombre": "Morgan Stanley",
+          "digits": 2,
+          "unidad": "USD",
+          "drivers": [
+            "wealth management",
+            "trading",
+            "earnings",
+            "mercados de capital"
+          ]
+        }
       ]
     },
     "industrial": {
       "indice_relacionado": "US30",
-      "drivers_sector": ["PMI manufactura", "gasto en infraestructura", "demanda global", "comercio internacional", "precios de materias primas", "ciclo económico"],
+      "drivers_sector": [
+        "PMI manufactura",
+        "gasto en infraestructura",
+        "demanda global",
+        "comercio internacional",
+        "precios de materias primas",
+        "ciclo económico"
+      ],
       "componentes": [
-        {"ticker_mt5": "#BA", "nombre": "Boeing Co.", "digits": 2, "unidad": "USD", "drivers": ["pedidos aviones", "producción 737/787", "earnings", "defensa"]},
-        {"ticker_mt5": "#CAT", "nombre": "Caterpillar Inc.", "digits": 2, "unidad": "USD", "drivers": ["demanda construcción", "minería", "earnings", "demanda China"]},
-        {"ticker_mt5": "#GE", "nombre": "GE Aerospace", "digits": 2, "unidad": "USD", "drivers": ["motores aviación", "servicios", "earnings", "demanda aerolíneas"]},
-        {"ticker_mt5": "#DE", "nombre": "Deere & Co.", "digits": 2, "unidad": "USD", "drivers": ["demanda agrícola", "precios commodities agrícolas", "earnings", "maquinaria"]}
+        {
+          "ticker_mt5": "#BA",
+          "nombre": "Boeing Co.",
+          "digits": 2,
+          "unidad": "USD",
+          "drivers": [
+            "pedidos aviones",
+            "producción 737/787",
+            "earnings",
+            "defensa"
+          ]
+        },
+        {
+          "ticker_mt5": "#CAT",
+          "nombre": "Caterpillar Inc.",
+          "digits": 2,
+          "unidad": "USD",
+          "drivers": [
+            "demanda construcción",
+            "minería",
+            "earnings",
+            "demanda China"
+          ]
+        },
+        {
+          "ticker_mt5": "#GE",
+          "nombre": "GE Aerospace",
+          "digits": 2,
+          "unidad": "USD",
+          "drivers": [
+            "motores aviación",
+            "servicios",
+            "earnings",
+            "demanda aerolíneas"
+          ]
+        },
+        {
+          "ticker_mt5": "#DE",
+          "nombre": "Deere & Co.",
+          "digits": 2,
+          "unidad": "USD",
+          "drivers": [
+            "demanda agrícola",
+            "precios commodities agrícolas",
+            "earnings",
+            "maquinaria"
+          ]
+        }
       ]
     }
   },
-
   "activos_complementarios": {
-    "COBRE": {"ticker_mt5": "COPPER", "digits": 1, "unidad": "USD/t", "relevancia": "Driver principal del USD/CLP. Chile es el mayor productor mundial.", "_nota_escala": "El símbolo del broker cotiza en USD por tonelada métrica (USD/t). Cotización institucional MT5."},
-    "DXY": {"ticker_mt5": "USDIDX", "digits": 3, "unidad": "USD", "relevancia": "Dollar Index. Fortaleza del dólar. Afecta a todos los activos."},
-    "GER40": {"ticker_mt5": "GER40.spot", "digits": 2, "unidad": "USD", "relevancia": "DAX 40 alemán. Referencia para sentimiento europeo (opcional)."}
+    "COBRE": {
+      "ticker_mt5": "COPPER",
+      "digits": 1,
+      "unidad": "USD/t",
+      "relevancia": "Driver principal del USD/CLP. Chile es el mayor productor mundial.",
+      "_nota_escala": "El símbolo del broker cotiza en USD por tonelada métrica (USD/t). Cotización institucional MT5."
+    },
+    "DXY": {
+      "ticker_mt5": "USDIDX",
+      "digits": 3,
+      "unidad": "USD",
+      "relevancia": "Dollar Index. Fortaleza del dólar. Afecta a todos los activos."
+    },
+    "GER40": {
+      "ticker_mt5": "GER40.spot",
+      "digits": 2,
+      "unidad": "USD",
+      "relevancia": "DAX 40 alemán. Referencia para sentimiento europeo (opcional)."
+    }
   },
-
   "config_señales": {
     "max_señales_semana": 3,
-    "aplica_a": ["forex", "commodity", "indice", "accion"],
+    "aplica_a": [
+      "forex",
+      "commodity",
+      "indice",
+      "accion"
+    ],
     "nota": "El límite de 3 señales/semana es global, incluye forex, commodities, índices y acciones individuales"
   }
 }
