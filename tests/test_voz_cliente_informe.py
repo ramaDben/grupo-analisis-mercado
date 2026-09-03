@@ -453,3 +453,60 @@ def test_un_intensificador_no_se_confunde_con_la_direccion(glosario):
     assert "fuerte, alcista" not in frase
     assert "más probabilidad de subir" in frase
     assert frase.count(",") == 0, "una direccion con intensidad es una sola frase"
+
+
+def test_dos_eventos_distintos_de_la_fed_no_salen_como_la_misma_linea(glosario):
+    """El 2026-09-03 el calendario traia "Fed Waller Speaks" y "Fed's Balance
+    Sheet", y los DOS salieron al canal como la misma linea: "Reserva Federal
+    (banco central de EE.UU.)", sin cifra y sin decir que eran.
+
+    El glosario agrupa por sigla, que es correcto para el nombre pero no alcanza
+    para el tipo de evento. Una linea de agenda que no distingue un discurso de
+    una hoja de balance no informa nada.
+    """
+    discurso = pi._nombre_indicador({
+        "nombre": "Fed Waller Speaks",
+        "diccionario": {"nombre_es": "Reserva Federal (banco central de EE.UU.)"},
+    })
+    balance = pi._nombre_indicador({
+        "nombre": "Fed's Balance Sheet",
+        "diccionario": {"nombre_es": "Reserva Federal (banco central de EE.UU.)"},
+    })
+
+    assert discurso != balance, "los dos eventos siguen saliendo identicos"
+    assert "discurso" in discurso
+    assert "hoja de balance" in balance
+
+
+def test_los_tipos_de_evento_se_traducen_y_no_se_acumulan(glosario):
+    """Un solo tipo por evento: `break` tras el primer patron. Sin eso, un
+    "Fed Chair Powell Testimony Speech" acumularia dos matices contradictorios."""
+    for fuente, esperado in (
+        ("Fed Chair Powell Testimony", "comparecencia"),
+        ("FOMC Meeting Minutes", "acta de la reunión"),
+        ("ECB Press Conference", "conferencia de prensa"),
+    ):
+        salida = pi._nombre_indicador({
+            "nombre": fuente,
+            "diccionario": {"nombre_es": "Reserva Federal (banco central de EE.UU.)"},
+        })
+        assert esperado in salida, f"{fuente} no se tradujo: {salida}"
+        assert salida.count("·") <= 2, f"se acumularon matices en {salida}"
+
+
+def test_los_tres_indicadores_que_salian_en_ingles_ya_tienen_nombre():
+    """`Trade Balance`, `Nonfarm Productivity` y `Unit Labor Costs` volvian del
+    calendario con `glosario_pendiente` y salian tal cual a la agenda."""
+    import json
+
+    glosario_siglas = json.loads(
+        (RAIZ / "data" / "glosario_siglas.json").read_text(encoding="utf-8")
+    )
+    for clave, nombre_es in (
+        ("Trade Balance", "Balanza comercial"),
+        ("Nonfarm Productivity", "Productividad laboral"),
+        ("Unit Labor Costs", "Costo laboral unitario"),
+    ):
+        assert clave in glosario_siglas, f"{clave} sigue sin entrada en el glosario"
+        assert glosario_siglas[clave]["nombre_es"] == nombre_es
+        assert glosario_siglas[clave]["explicacion"], f"{clave} sin explicacion novata"

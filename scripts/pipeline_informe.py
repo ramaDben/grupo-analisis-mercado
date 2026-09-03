@@ -235,6 +235,21 @@ _MESES_CORTOS = {
 _TRIMESTRES = {"Q1": "primer", "Q2": "segundo", "Q3": "tercer", "Q4": "cuarto"}
 _PLAZOS = {"Year": "años", "Month": "meses", "Week": "semanas"}
 
+# Un mismo organismo emite eventos muy distintos y el glosario los agrupa por
+# sigla. El 2026-09-03 el calendario traía "Fed Waller Speaks" y "Fed's Balance
+# Sheet", y los dos salieron al canal como **la misma línea**: "Reserva Federal
+# (banco central de EE.UU.)", sin cifra y sin decir qué eran. Una línea de agenda
+# que no distingue un discurso de una hoja de balance no informa nada.
+#
+# Se buscan en el nombre de la fuente, igual que `Core` y los plazos de subasta.
+_EVENTOS_POR_PALABRA: tuple[tuple[str, str], ...] = (
+    (r"\bSpeaks?\b|\bSpeech\b|\bRemarks\b", "discurso"),
+    (r"\bTestimony\b|\bTestifies\b", "comparecencia"),
+    (r"\bMinutes\b", "acta de la reunión"),
+    (r"\bBalance Sheet\b", "hoja de balance"),
+    (r"\bPress Conference\b", "conferencia de prensa"),
+)
+
 
 def _nombre_indicador(ev: dict[str, Any]) -> str:
     """El indicador en español, con su período, para un lector no especializado.
@@ -273,6 +288,14 @@ def _nombre_indicador(ev: dict[str, Any]) -> str:
     if re.search(r"\bPrices?(\s+Index)?\b", nombre_fuente, re.IGNORECASE) \
             and "precio" not in nombre_es.lower():
         matices.append("índice de precios")
+
+    # Qué TIPO de evento es, cuando el organismo emite varios. Ver el comentario
+    # de `_EVENTOS_POR_PALABRA`: sin esto, un discurso y una hoja de balance
+    # salían como la misma línea.
+    for patron, traduccion in _EVENTOS_POR_PALABRA:
+        if re.search(patron, nombre_fuente, re.IGNORECASE):
+            matices.append(traduccion)
+            break
 
     # `Continuing` es el mismo caso que `Core` y el mas enganoso de los tres.
     # "Initial Jobless Claims" (206K esta semana) y "Continuing Jobless Claims"

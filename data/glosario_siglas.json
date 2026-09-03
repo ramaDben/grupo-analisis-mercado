@@ -220,5 +220,26 @@
     "titulos_ff": [
       "Imports"
     ]
+  },
+  "Trade Balance": {
+    "nombre_es": "Balanza comercial",
+    "explicacion": "La diferencia entre lo que un país vende al exterior y lo que le compra. Si es negativa, salen más dólares del país de los que entran.",
+    "titulos_ff": [
+      "Trade Balance"
+    ]
+  },
+  "Nonfarm Productivity": {
+    "nombre_es": "Productividad laboral",
+    "explicacion": "Cuánto produce cada hora trabajada en EE.UU., sin contar el campo. Si sube, las empresas pueden pagar mejores sueldos sin subir precios.",
+    "titulos_ff": [
+      "Nonfarm Productivity"
+    ]
+  },
+  "Unit Labor Costs": {
+    "nombre_es": "Costo laboral unitario",
+    "explicacion": "Cuánto le cuesta a las empresas la mano de obra por unidad producida. Es el dato que la Reserva Federal mira para ver si los sueldos empujan la inflación.",
+    "titulos_ff": [
+      "Unit Labor Costs"
+    ]
   }
 }
