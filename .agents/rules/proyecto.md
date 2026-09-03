@@ -182,10 +182,13 @@ La tanda completa se despacha canal por canal con un solo comando:
 uv run --extra stories python scripts/pipeline_carrusel.py --despachar data/carrusel/<tanda>
 ```
 
-**Cada canal sale en UNA acción con todas sus piezas.** El editor de medios acepta
-varias imágenes y cada una conserva su propio pie (medido contra el DOM real el
-2026-09-02). No mandes las piezas de a una: cuatro envíos espaciados 45 s son
-cuatro veces más exposición que un lote, y llegan con el precio viejo.
+**Cada pieza sale en su propia acción, y el texto va SIEMPRE antes del adjunto.**
+El campo de pie del editor tope en **1.024 caracteres** y descarta entera cada
+línea que no cabe, así que el mensaje llega con renglones ausentes en vez de
+cortado al final. Escribir en el cuadro de conversación y adjuntar después no
+tiene ese tope: 2.042 de 2.016 caracteres, contra 1.029 al revés (medido el
+2026-09-03). Eso revirtió el despacho por lote, porque el truco solo llena el pie
+de una imagen. El despacho ya lo hace así; **no lo cambies de vuelta.**
 
 Cada canal además **se rinde justo antes de salir**, no al principio de la tanda.
 Si el precio cruzó un soporte o una resistencia que el texto daba por vigentes,
@@ -231,10 +234,10 @@ uv run --extra stories python scripts/enviar_whatsapp.py \
 
 **El ritmo no es negociable.** Automatizar WhatsApp Web va contra sus términos de
 servicio y el número es el del negocio. El comando impone 45 s mínimos entre
-acciones de envío y un cupo de 40 mensajes al día, y **espera** cuando toca. Un
-lote es UNA acción pero N mensajes: la cadencia se aplica una vez, el cupo se
-descuenta por pieza. No subas esos límites, no metas el envío en un bucle, y no lo
-lances en paralelo: el perfil de sesión no admite dos procesos a la vez.
+acciones de envío y un cupo de 40 mensajes al día, y **espera** cuando toca. Cada
+pieza es una acción y un mensaje: la cadencia y el cupo se cuentan por pieza. No
+subas esos límites, no metas el envío en un bucle, y no lo lances en paralelo: el
+perfil de sesión no admite dos procesos a la vez.
 
 > [!CAUTION]
 > **Un solo dueño de la sesión a la vez.** El perfil de Chromium

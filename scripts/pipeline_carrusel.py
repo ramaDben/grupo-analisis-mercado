@@ -1057,7 +1057,7 @@ def despachar(
             resultados.append({"grupo": dir_grupo.name, "status": "vacio"})
             continue
 
-        print(f"    despachando {len(piezas)} pieza(s) en una acción...", flush=True)
+        print(f"    despachando {len(piezas)} pieza(s), una por acción...", flush=True)
         res = sender.enviar_lote(dir_grupo.name, piezas, dry_run=dry_run)
         resultados.append({"grupo": dir_grupo.name, **res})
 
