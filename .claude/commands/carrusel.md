@@ -191,6 +191,14 @@ Tres cosas que conviene no volver a averiguar:
   Stories.
 
 Comprobar la sesión antes de una tanda: `python scripts/enviar_whatsapp.py --status`.
+
+**Para medir algo contra el DOM, nunca uses un canal de clientes.** El destino de pruebas
+está en `banco_de_pruebas.destinatario` del config y se lee con
+`WhatsAppConfig().destino_de_pruebas`: hoy es el chat consigo mismo del número de la
+sesión, donde un envío accidental no lo ve nadie. **No sirve para lo que solo existe en un
+grupo** (el subtítulo con los miembros, la restricción de solo administradores, la cabecera
+con el nombre de la comunidad): WhatsApp Web exige al menos un miembro real para crear un
+grupo, así que eso necesita que el director agregue a alguien.
 Si pide vinculación: `--login` y escanear el QR.
 
 ### El ritmo no es negociable

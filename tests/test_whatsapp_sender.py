@@ -1037,3 +1037,47 @@ def test_el_lector_de_cabecera_ignora_lo_invisible_y_los_svg():
     fuente = inspect.getsource(WhatsAppSender._texto_con_emojis)
     for filtro in ("SVG", "TITLE", "aria-hidden", "display === 'none'", "visibility === 'hidden'"):
         assert filtro in fuente, f"el recorrido no filtra {filtro}"
+
+
+def test_el_destino_de_pruebas_existe_y_no_es_un_canal_de_clientes():
+    """Durante todo el 2026-09-03 los diagnosticos contra el DOM improvisaron el
+    destino en scripts sueltos, con el numero escrito a mano en cada uno."""
+    config = WhatsAppConfig()
+
+    destino = config.destino_de_pruebas
+    assert destino, "no hay destino de pruebas configurado"
+
+    nombres_de_canales = {g["nombre_oficial"] for g in config.grupos.values()}
+    assert destino not in nombres_de_canales, (
+        "el destino de pruebas es un canal de clientes: medir ahi publica"
+    )
+
+
+def test_el_banco_de_pruebas_no_entra_al_mapa_de_canales():
+    """`grupos` es el mapa de canales de clientes y su contrato son siete. Un
+    octavo ahi seria un destino de publicacion accidental esperando a que alguien
+    resuelva un alias con un typo, que es el defecto que el sender ya arreglo
+    para los alias no reconocidos."""
+    config = WhatsAppConfig()
+
+    assert len(config.grupos) == 7
+    assert "banco_de_pruebas" not in config.grupos
+    assert config.banco_de_pruebas, "el banco de pruebas no se cargo"
+
+    # Y no se puede alcanzar resolviendo un alias.
+    for intento in ("pruebas", "banco_de_pruebas", "test", "prueba"):
+        assert config.resolver_nombre_oficial(intento) not in {
+            g["nombre_oficial"] for g in config.grupos.values()
+        }
+
+
+def test_sin_destino_configurado_se_niega_en_vez_de_elegir_uno():
+    """Fail-closed: caer a un canal de clientes por defecto es exactamente lo que
+    no debe pasar cuando falta configuracion."""
+    from whatsapp_sender import WhatsAppError
+
+    config = WhatsAppConfig()
+    config.banco_de_pruebas = {}
+
+    with pytest.raises(WhatsAppError, match="destino de pruebas"):
+        _ = config.destino_de_pruebas
