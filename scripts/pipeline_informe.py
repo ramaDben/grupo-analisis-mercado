@@ -603,9 +603,10 @@ def generar_graficos_activos(
     nada a las ocho de la manana. Cada ausencia queda dicha en los avisos, que
     es lo que la hace auditable en vez de invisible.
 
-    Brent no tiene grafico y no es un olvido: el broker no lo ofrece, asi que no
-    hay serie que pedir. Como comparte lectura con WTI, el bloque agrupado se
-    queda con el grafico del WTI.
+    Brent SI tiene grafico desde el 2026-09-02: el mapeo lo apuntaba a `None`
+    afirmando que el broker no lo ofrecia, y el terminal lo desmintio
+    (`BRENT.spot`, digits 3). El comentario viejo decia lo contrario y quedaba
+    como coartada de una ausencia que ya no existe.
     """
     avisos: list[str] = []
     activos = (playbook or {}).get("activos") or {}

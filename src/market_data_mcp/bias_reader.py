@@ -139,6 +139,146 @@ def nivel_chandelier(
     return round(nivel, digits)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Las dos gramáticas de vigencia
+# ─────────────────────────────────────────────────────────────────────────────
+# El "hasta dónde" del sesgo no se dice igual en los dos casos que el motor
+# distingue, y el carrusel los trataba igual. Esta es la única traducción de
+# `take_profit_tipo` a forma de comunicar, para que la pieza y el informe no
+# deriven cada uno la suya.
+#
+#   TRAILING_STOP_ASYMMETRIC → NIVEL: hay dirección y posición sostenida, así
+#       que hay UN borde. Es el Chandelier, y se mueve con cada vela cerrada.
+#   NIVEL_OPUESTO_CANAL      → RANGO: score cero, no hay tendencia que sostener
+#       sino un canal por el que el precio rota. Son DOS bordes, S1 y R1.
+#
+# Decir "vigente hasta X" en un activo neutral le inventa una dirección; decir
+# "rota entre S1 y R1" en uno sostenido le borra la que tiene. Son dos frases
+# distintas porque son dos lecturas distintas.
+GRAMATICA_VIGENCIA: dict[str, str] = {
+    "TRAILING_STOP_ASYMMETRIC": "NIVEL",
+    "NIVEL_OPUESTO_CANAL": "RANGO",
+}
+
+
+def resolver_vigencia(
+    sesgo: dict[str, Any] | None,
+    niveles_h1: dict[str, Any] | None,
+    digits: int = 2,
+) -> dict[str, Any] | None:
+    """Hasta dónde sigue vigente el sesgo, en la gramática que le corresponde.
+
+    Recibe el payload de `cargar_macro_bias(symbol)` tal cual (mira su clave
+    `activo`, igual que los gates del escáner) y los niveles de `analizar_activo`
+    en H1, que es donde viven las anclas del Chandelier. Devuelve `None` cuando
+    no hay vigencia publicable, y nunca un número aproximado: un "hasta dónde"
+    equivocado es peor que ninguno, porque el cliente lo usa para decidir.
+
+    Hay **tres** salidas, no dos, y la tercera es la que faltaba:
+
+    - `NIVEL`: un borde, el Chandelier, con su dirección.
+    - `RANGO`: dos bordes, S1 y R1, sin dirección.
+    - `None`: el modelo no tiene lectura de este activo.
+
+    El tercer caso se reconoce por **la lista de setups permitidos vacía**, no
+    por el texto de la etiqueta. `DATOS_INCOMPLETOS` sale del motor con
+    `NIVEL_OPUESTO_CANAL` y score cero, exactamente igual que un rango genuino,
+    porque es el valor neutro de esos campos y no una lectura de canal. Tratarlo
+    como rango publicaría "el activo rota entre 933,10 y 941,80" sobre un activo
+    que el modelo no pudo leer: una afirmación que nadie hizo, con la firma del
+    Playbook detrás. Un activo sin ningún setup permitido no tiene nada que
+    seguir vigente.
+
+    El criterio es estructural a propósito. Comparar contra la cadena
+    "DATOS_INCOMPLETOS" sería otro contrato por nombre de los que ya costaron
+    caro en este repo; `test_datos_incompletos_siempre_llega_sin_setups_permitidos`
+    sostiene el criterio desde el lado del motor.
+
+    `vigente` es lo que hace la diferencia entre informar y afirmar: compara el
+    precio contra el borde. Brent el 2026-09-02 llevaba sesgo +1,50 con el precio
+    ya bajo su Chandelier, y publicar "sigue vigente" ahí habría dicho lo
+    contrario de lo que pasaba.
+    """
+    if not sesgo or not isinstance(sesgo, dict) or "error" in sesgo:
+        return None
+    if not niveles_h1 or "error" in niveles_h1:
+        return None
+
+    activo = sesgo.get("activo") or {}
+    riesgo = activo.get("parametros_riesgo") or {}
+    tp_tipo = riesgo.get("take_profit_tipo")
+    gramatica = GRAMATICA_VIGENCIA.get(tp_tipo)
+    if not gramatica:
+        return None
+
+    # Sin setups permitidos no hay lectura que sostener. Ver el docstring.
+    if not (activo.get("setups_permitidos") or []):
+        return None
+
+    try:
+        precio = float(niveles_h1["price"])
+    except (KeyError, TypeError, ValueError):
+        return None
+
+    base = {
+        "gramatica": gramatica,
+        "take_profit_tipo": tp_tipo,
+        "direccion": None,
+        "nivel": None,
+        "borde_inferior": None,
+        "borde_superior": None,
+        "multiplo_atr": None,
+        "lookback": None,
+    }
+
+    if gramatica == "RANGO":
+        try:
+            inferior = round(float(niveles_h1["s1"]), digits)
+            superior = round(float(niveles_h1["r1"]), digits)
+        except (KeyError, TypeError, ValueError):
+            return None
+        return {
+            **base,
+            "borde_inferior": inferior,
+            "borde_superior": superior,
+            "vigente": inferior <= precio <= superior,
+        }
+
+    # NIVEL: el Chandelier. Las tres piezas viajan juntas o no se calcula.
+    score = activo.get("sesgo_score")
+    try:
+        score = float(score)
+    except (TypeError, ValueError):
+        return None
+    if score == 0:
+        # Un trailing sin dirección no existe: el Chandelier se ancla en el
+        # máximo o en el mínimo según de qué lado esté la posición.
+        return None
+
+    direccion = "LARGO" if score > 0 else "CORTO"
+    clave_ancla = "chandelier_max" if direccion == "LARGO" else "chandelier_min"
+    try:
+        ancla = float(niveles_h1[clave_ancla])
+        atr = float(niveles_h1["atr_14"])
+        multiplo = float(riesgo["trailing_stop_mult_atr"])
+    except (KeyError, TypeError, ValueError):
+        # El MCP viejo no devuelve las anclas y un snapshot en rango trae
+        # `trailing_stop_mult_atr: null`. Sin las tres no hay nivel, y poner un
+        # `s1` en su lugar publicaría otro número con la misma cara.
+        return None
+
+    nivel = nivel_chandelier(ancla, atr, multiplo, direccion, digits)
+    return {
+        **base,
+        "direccion": direccion,
+        "nivel": nivel,
+        "multiplo_atr": multiplo,
+        "lookback": riesgo.get("trailing_stop_lookback")
+        or niveles_h1.get("chandelier_lookback"),
+        "vigente": precio > nivel if direccion == "LARGO" else precio < nivel,
+    }
+
+
 def validar_staleness(
     as_of_str: str | None,
     config: dict[str, float] | None = None,

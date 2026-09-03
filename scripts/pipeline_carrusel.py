@@ -34,7 +34,7 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 from zoneinfo import ZoneInfo
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -100,6 +100,226 @@ def _serie_para(ticker: str) -> dict[str, Any]:
     return cierres
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Las dos gramáticas de vigencia
+# ─────────────────────────────────────────────────────────────────────────────
+_DIRECCION_TECNICA_A_PLAYBOOK = {"ALCISTA": "LARGO", "BAJISTA": "CORTO"}
+
+
+def vigencia_publicable(
+    vigencia: dict[str, Any] | None, direccion_tecnica: str
+) -> tuple[dict[str, Any] | None, str | None]:
+    """La vigencia que se puede publicar junto a esta lectura, y el motivo si no.
+
+    El único filtro es la contradicción de dirección. La lectura técnica de la
+    pieza sale de `direccion_tecnica` (medias y estructura en H1) y la del sesgo
+    sale del signo del score macro. Casi siempre coinciden, y cuando no, el gate
+    del Playbook del escáner ya suele bloquear el activo. Pero "suele" no
+    alcanza: si las dos frases salieran en el mismo mensaje, el cliente leería
+    "fuerza compradora" y dos líneas más abajo "sesgo bajista vigente hasta X".
+
+    Ante esa contradicción se calla la vigencia, no la lectura técnica: la pieza
+    del carrusel es de niveles, y el sesgo es el añadido. Callarlo cuesta una
+    línea de información; publicarlo cuesta la credibilidad del mensaje entero.
+    El motivo queda en la procedencia para que la omisión sea auditable en vez
+    de invisible.
+    """
+    if not vigencia:
+        return None, None
+
+    esperada = _DIRECCION_TECNICA_A_PLAYBOOK.get(direccion_tecnica)
+    del_sesgo = vigencia.get("direccion")
+    if del_sesgo and esperada and del_sesgo != esperada:
+        return None, (
+            f"la vigencia se omite: el sesgo del Playbook va {del_sesgo} y "
+            f"contradice la lectura técnica {direccion_tecnica} de esta pieza"
+        )
+    return vigencia, None
+
+
+def formatear_vigencia(
+    vigencia: dict[str, Any] | None, fmt: Callable[[float], str]
+) -> dict[str, Any] | None:
+    """La vigencia con sus cifras en notación chilena, lista para el mensaje.
+
+    Los números crudos viajan aparte, en `_procedencia`: el despacho necesita
+    comparar el precio contra el nivel, y "933,440" no se compara con un float.
+    """
+    if not vigencia:
+        return None
+
+    formateada = {
+        "gramatica": vigencia["gramatica"],
+        "direccion": vigencia.get("direccion"),
+        "vigente": bool(vigencia.get("vigente")),
+        "nivel": None,
+        "borde_inferior": None,
+        "borde_superior": None,
+    }
+    if vigencia.get("nivel") is not None:
+        formateada["nivel"] = fmt(float(vigencia["nivel"]))
+    if vigencia.get("borde_inferior") is not None:
+        formateada["borde_inferior"] = fmt(float(vigencia["borde_inferior"]))
+    if vigencia.get("borde_superior") is not None:
+        formateada["borde_superior"] = fmt(float(vigencia["borde_superior"]))
+
+    # Trazabilidad, no texto de cliente: de dónde salió el nivel. "Chandelier"
+    # es jerga y no aparece en el mensaje, pero sin esto la revisión del payload
+    # no puede reconstruir por qué el borde está donde está.
+    if vigencia["gramatica"] == "NIVEL" and vigencia.get("multiplo_atr"):
+        mult = f"{float(vigencia['multiplo_atr']):.1f}".replace(".", ",")
+        formateada["detalle"] = (
+            f"Chandelier {vigencia.get('lookback') or '?'} velas × {mult} ATR H1"
+        )
+    return formateada
+
+
+def bloque_vigencia(vigencia: dict[str, Any] | None) -> list[str]:
+    """Las líneas del mensaje que dicen hasta dónde sigue vigente el sesgo.
+
+    Dos gramáticas, porque son dos lecturas:
+
+    - `NIVEL` (posición sostenida): hay dirección, y un solo borde la sostiene.
+    - `RANGO` (score cero): no hay dirección, hay un canal con dos bordes.
+
+    Y un tercer caso que no es una gramática sino su ausencia: sin vigencia el
+    bloque no sale. El cierre canónico de tres escenarios va igual, así que el
+    mensaje nunca queda sin lectura práctica.
+    """
+    if not vigencia:
+        return []
+
+    if vigencia["gramatica"] == "RANGO":
+        inferior, superior = vigencia.get("borde_inferior"), vigencia.get("borde_superior")
+        if not inferior or not superior:
+            return []
+        if vigencia.get("vigente"):
+            return [
+                f"🟡 *Sin sesgo direccional: el activo rota entre {inferior} y {superior}*",
+                "Mientras se mueva dentro de ese rango no hay tendencia que seguir. "
+                "La lectura vale hasta que salga por uno de los dos bordes.",
+                "━━━━━━━━━━━━━━━━━━━",
+            ]
+        return [
+            f"⚠️ *El activo dejó el rango de {inferior} a {superior}*",
+            "La lectura de canal deja de estar vigente. Conviene esperar el nuevo "
+            "marco de precios antes de volver a leerlo.",
+            "━━━━━━━━━━━━━━━━━━━",
+        ]
+
+    nivel = vigencia.get("nivel")
+    if not nivel:
+        return []
+    alcista = vigencia.get("direccion") == "LARGO"
+    palabra = "alcista" if alcista else "bajista"
+
+    if vigencia.get("vigente"):
+        lado_bien = "Sobre" if alcista else "Bajo"
+        lado_mal = "Bajo" if alcista else "Sobre"
+        return [
+            f"🎯 *El sesgo {palabra} sigue vigente hasta {nivel}*",
+            f"{lado_bien} ese nivel la lectura se mantiene. {lado_mal} {nivel} "
+            "se invalida y hay que volver a leer el activo.",
+            "━━━━━━━━━━━━━━━━━━━",
+        ]
+
+    verbo = "perdió" if alcista else "superó"
+    return [
+        f"⚠️ *El sesgo {palabra} quedó invalidado: el precio {verbo} {nivel}*",
+        "La lectura direccional deja de estar vigente. Conviene esperar a que el "
+        "activo se reordene antes de volver a leerlo.",
+        "━━━━━━━━━━━━━━━━━━━",
+    ]
+
+
+def divergencia_vigencia(
+    vigencia: dict[str, Any] | None, precio_nuevo: float
+) -> str | None:
+    """Motivo por el que el sesgo dejó de estar vigente entre preparar y salir.
+
+    Complementa a `divergencia_editorial`, que vigila el soporte y la
+    resistencia. El Chandelier no es ninguno de los dos y es el stop del propio
+    Playbook: una pieza que afirma "sigue vigente hasta 933,44" publicada con el
+    precio en 932,90 dice exactamente lo contrario de lo que pasa.
+
+    Solo aplica a la gramática `NIVEL`. El rango ya queda cubierto: sus dos
+    bordes **son** el soporte y la resistencia que la otra función compara.
+    """
+    if not vigencia or vigencia.get("gramatica") != "NIVEL":
+        return None
+    nivel = vigencia.get("nivel")
+    direccion = vigencia.get("direccion")
+    if nivel is None or direccion not in ("LARGO", "CORTO"):
+        return None
+
+    nivel = float(nivel)
+    sigue = precio_nuevo > nivel if direccion == "LARGO" else precio_nuevo < nivel
+    if sigue:
+        return None
+
+    verbo = "perdió" if direccion == "LARGO" else "superó"
+    palabra = "alcista" if direccion == "LARGO" else "bajista"
+    return (
+        f"el sesgo {palabra} quedó invalidado: el precio {verbo} el nivel de "
+        f"{nivel:g} y quedó en {precio_nuevo:g}, así que el texto afirma una "
+        f"vigencia que ya no existe"
+    )
+
+
+def revigenciar(
+    vigencia: dict[str, Any] | None, h1: dict[str, Any], digits: int
+) -> dict[str, Any] | None:
+    """La vigencia recalculada contra el mercado de ahora.
+
+    El Chandelier se mueve con cada vela que cierra, así que el nivel calculado
+    al preparar la tanda envejece igual que el precio. Publicarlo veinte minutos
+    después sería un dato viejo con cara de fresco, que es justo lo que el
+    refresco por pieza existe para evitar.
+
+    **Sin ratchet, a propósito.** Que el nivel solo avance a favor exige saber
+    dónde entró una posición, y esto no gestiona posiciones: publica una lectura.
+    El criterio es el mismo que documenta `bias_reader.nivel_chandelier`.
+    """
+    if not vigencia:
+        return None
+
+    from market_data_mcp.bias_reader import nivel_chandelier
+
+    nueva = dict(vigencia)
+    try:
+        precio = float(h1["price"])
+    except (KeyError, TypeError, ValueError):
+        return nueva
+
+    if nueva["gramatica"] == "RANGO":
+        try:
+            nueva["borde_inferior"] = round(float(h1["s1"]), digits)
+            nueva["borde_superior"] = round(float(h1["r1"]), digits)
+        except (KeyError, TypeError, ValueError):
+            return nueva
+        nueva["vigente"] = nueva["borde_inferior"] <= precio <= nueva["borde_superior"]
+        return nueva
+
+    direccion = nueva.get("direccion")
+    clave = "chandelier_max" if direccion == "LARGO" else "chandelier_min"
+    try:
+        nueva["nivel"] = nivel_chandelier(
+            float(h1[clave]), float(h1["atr_14"]),
+            float(nueva["multiplo_atr"]), direccion, digits,
+        )
+    except (KeyError, TypeError, ValueError):
+        # Sin anclas frescas se conserva el nivel de la preparación: es un dato
+        # de hace un rato, pero es el que el texto afirma. Inventar otro sería peor.
+        pass
+
+    if nueva.get("nivel") is not None:
+        nueva["vigente"] = (
+            precio > float(nueva["nivel"]) if direccion == "LARGO"
+            else precio < float(nueva["nivel"])
+        )
+    return nueva
+
+
 def construir_payload(
     seleccion: dict[str, Any],
     activo_catalogo: dict[str, Any],
@@ -116,6 +336,10 @@ def construir_payload(
     def fmt(valor: float) -> str:
         return f"{valor:,.{digits}f}".replace(",", "@").replace(".", ",").replace("@", ".")
 
+    vigencia_cruda, omitida = vigencia_publicable(
+        seleccion.get("vigencia"), seleccion["direccion"]
+    )
+
     return {
         "plantilla": "alerta",
         # Editorial: lo llena el comando, no el script.
@@ -130,6 +354,10 @@ def construir_payload(
         "fecha_hora": ahora.strftime("%d %b %Y · %H:%M").upper(),
         "sesgo": "Alcista" if alcista else "Bajista",
         "tag_riesgo": "ALCISTA" if alcista else "BAJISTA",
+        # Hasta donde sigue vigente el sesgo del Playbook, en la gramatica que
+        # le corresponde. `None` si el activo no tiene ficha, si el modelo no lo
+        # pudo leer, o si su direccion contradice la lectura tecnica de la pieza.
+        "vigencia": formatear_vigencia(vigencia_cruda, fmt),
         # Datos del motor
         "precio_actual": fmt(seleccion["precio"]),
         "soporte": fmt(seleccion["soporte"]),
@@ -175,7 +403,16 @@ def construir_payload(
                 "precio": float(seleccion["precio"]),
                 "soporte": float(seleccion["soporte"]),
                 "resistencia": float(seleccion["resistencia"]),
+                "vigencia_nivel": (
+                    float(vigencia_cruda["nivel"])
+                    if vigencia_cruda and vigencia_cruda.get("nivel") is not None
+                    else None
+                ),
             },
+            # El sesgo con sus numeros, para poder recalcularlo justo antes de
+            # despachar sin volver a pedirle el snapshot al Playbook.
+            "vigencia": vigencia_cruda,
+            "vigencia_omitida": omitida,
         },
         "_pendiente_editorial": list(CAMPOS_EDITORIALES),
     }
@@ -308,6 +545,11 @@ def construir_mensaje_alerta(payload: dict[str, Any]) -> str:
         f"⚡ Qué esperar: {accion}",
         "━━━━━━━━━━━━━━━━━━━",
     ]
+    # El "hasta donde" va arriba y no al final: la regla de "above the fold" pide
+    # la conclusion practica en las primeras lineas, y para el director esta es
+    # LA conclusion. Que el sesgo siga vigente, y hasta que nivel, es lo que
+    # decide si el cliente hace algo con el mensaje o solo lo lee.
+    lineas.extend(bloque_vigencia(payload.get("vigencia")))
     if titular:
         lineas.append(f"*{titular}*")
         lineas.append("")
@@ -586,9 +828,26 @@ def refrescar_payload(
         f"DATOS REALES · METATRADER 5 · {ahora.strftime('%d %b %H:%M').upper()}"
     )
 
+    # La vigencia se recalcula con las anclas de ahora, igual que el precio, y
+    # se vuelve a preguntar si el sesgo sigue en pie. Un motivo por soporte o
+    # resistencia manda sobre este: es el que ya estaba medido contra el texto.
+    vigencia_cruda = revigenciar(
+        nuevo.get("_procedencia", {}).get("vigencia"), h1, digits
+    )
+    if motivo is None:
+        motivo = divergencia_vigencia(vigencia_cruda, precio)
+
+    nuevo["vigencia"] = formatear_vigencia(vigencia_cruda, fmt)
+    nuevo["_procedencia"]["vigencia"] = vigencia_cruda
+
     nuevo["_procedencia"].setdefault("crudos", {})
     nuevo["_procedencia"]["crudos"] = {
         "precio": precio, "soporte": soporte, "resistencia": resistencia,
+        "vigencia_nivel": (
+            float(vigencia_cruda["nivel"])
+            if vigencia_cruda and vigencia_cruda.get("nivel") is not None
+            else None
+        ),
     }
 
     # El gráfico se redibuja con la serie nueva y sus niveles al día.
