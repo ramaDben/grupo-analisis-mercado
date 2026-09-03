@@ -187,3 +187,78 @@ def test_sin_confianza_declarada_no_se_asume_que_alcanza(tmp_path):
     est = pd_.estado_datos(tmp_path)
     assert est.confianza_pct is None
     assert not est.confianza_suficiente
+
+
+# --- El fallback a yfinance tiene que anunciarse ---
+
+def _precios_con_fuentes(base, fuentes: dict[str, str], as_of_h: float = 1.0):
+    _escribir(base / "DATA PRECIOS OHLC" / "latest_prices_summary.json", {
+        "as_of_utc": _hace(as_of_h),
+        "activos": {
+            act: {"H1": {"close": 1.0}, "H1_fuente": f, "D1": {"close": 1.0}, "D1_fuente": f}
+            for act, f in fuentes.items()
+        },
+    })
+
+
+def test_los_precios_declaran_de_donde_vienen(base):
+    est = pd_.estado_datos(base)
+    precios = next(r for r in est.relojes if r.nombre == "precios")
+    assert precios.fuentes == {}, "la fixture base no declara fuentes"
+
+
+def test_un_fallback_a_yfinance_se_reporta_aunque_los_relojes_esten_frescos(base):
+    """El 2026-09-02 el terminal estaba en otra cuenta y el extractor cayó a
+    yfinance en cinco de seis activos. La cadena reportó `[OK] precios` y
+    `Datos frescos`, porque los archivos eran de hace minutos.
+
+    El campo `broker: YFINANCE` quedaba registrado en cada archivo, así que era
+    auditable, pero **nada lo decía en voz alta**. Costó una hora de diagnóstico
+    y los stops del Playbook quedaron calculados sobre futuros de yfinance en vez
+    de los CFD del broker.
+
+    Es el mismo defecto que el `status: "OK"` regalado del extractor de
+    commodities: un fallback que hace su trabajo y no se anuncia.
+    """
+    _precios_con_fuentes(base, {
+        "USDCLP": "MT5", "XAUUSD": "YFINANCE", "WTI": "YFINANCE",
+        "BRENT": "YFINANCE", "US100": "YFINANCE", "COPPER": "YFINANCE",
+    })
+    est = pd_.estado_datos(base)
+    precios = next(r for r in est.relojes if r.nombre == "precios")
+
+    assert precios.antiguedad_h is not None, "sigue siendo un reloj fresco"
+    assert not precios.fresco, "un fallback masivo no es una lectura utilizable"
+    assert "5 de 6" in precios.error
+    assert "YFINANCE" in precios.error.upper()
+    assert not est.listo
+
+
+def test_todo_desde_mt5_no_genera_aviso(base):
+    """La contraparte: sin esto, "siempre avisa" y "avisa cuando corresponde"
+    serían indistinguibles."""
+    _precios_con_fuentes(base, {
+        "USDCLP": "MT5", "XAUUSD": "MT5", "WTI": "MT5",
+        "BRENT": "MT5", "US100": "MT5", "COPPER": "MT5",
+    })
+    est = pd_.estado_datos(base)
+    precios = next(r for r in est.relojes if r.nombre == "precios")
+
+    assert precios.fresco
+    assert precios.fuentes == {"MT5": 6}
+    assert est.listo
+
+
+def test_un_solo_activo_en_fallback_tambien_se_nombra(base):
+    """No hay umbral de tolerancia: el Playbook cubre cinco activos y un stop
+    calculado sobre otra fuente de precio es un stop de otro mercado."""
+    _precios_con_fuentes(base, {
+        "USDCLP": "MT5", "XAUUSD": "MT5", "WTI": "YFINANCE",
+        "BRENT": "MT5", "US100": "MT5", "COPPER": "MT5",
+    })
+    est = pd_.estado_datos(base)
+    precios = next(r for r in est.relojes if r.nombre == "precios")
+
+    assert not precios.fresco
+    assert "1 de 6" in precios.error
+    assert "WTI" in precios.error
