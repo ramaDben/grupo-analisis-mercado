@@ -686,12 +686,14 @@ def test_el_texto_va_antes_del_adjunto_y_no_al_reves():
 
     fuente = inspect.getsource(WhatsAppSender._adjuntar_archivo)
     pos_texto = fuente.index("_insertar_texto")
-    pos_chooser = fuente.index("expect_file_chooser")
+    pos_editor = fuente.index("_abrir_editor_de_medios(page, ruta_archivo, caption)\n        except")
 
-    assert pos_texto < pos_chooser, (
-        "el adjunto se resuelve antes de escribir el texto: ese es exactamente el "
-        "orden que tope en 1.024 caracteres y mutila el mensaje"
+    assert pos_texto < pos_editor, (
+        "el editor de medios se abre antes de escribir el texto: ese es exactamente "
+        "el orden que tope en 1.024 caracteres y mutila el mensaje"
     )
+    # Y el adjunto de verdad vive en el otro metodo, no duplicado aca.
+    assert "expect_file_chooser" not in fuente
 
 
 def test_un_pie_incompleto_aborta_en_vez_de_enviarse_a_medias():
@@ -887,9 +889,9 @@ def test_la_previsualizacion_de_enlace_se_cierra_antes_de_abrir_adjuntar():
 
     fuente = inspect.getsource(WhatsAppSender._adjuntar_archivo)
     pos_cerrar = fuente.index("_cerrar_previsualizacion_enlace")
-    pos_adjuntar = fuente.index("SELECTORES_ADJUNTAR")
+    pos_editor = fuente.index("_abrir_editor_de_medios(page, ruta_archivo, caption)\n        except")
 
-    assert pos_cerrar < pos_adjuntar, (
+    assert pos_cerrar < pos_editor, (
         "el menu Adjuntar se abre antes de cerrar la previsualizacion: la tarjeta "
         "tapa la opcion 'Fotos y videos' y el envio muere esperandola"
     )
@@ -921,3 +923,117 @@ def test_si_la_tarjeta_no_se_puede_cerrar_el_envio_sigue():
     page.locator.return_value = tarjeta
 
     assert sender._cerrar_previsualizacion_enlace(page) is False
+
+
+def test_un_fallo_al_adjuntar_no_deja_el_texto_de_borrador_en_el_chat():
+    """El riesgo que se materializo el 2026-09-03 y hubo que limpiar a mano.
+
+    Con el texto escrito antes de adjuntar, cualquier fallo posterior lo deja de
+    borrador VIVO en el chat del cliente: quedaron 1.451 caracteres del contexto
+    macro en el cuadro de Metales & Energia, y un Enter de cualquiera los publica
+    sin su imagen. Se descubrio porque el error dejo captura; sin ella, el texto
+    seguiria ahi.
+    """
+    import inspect
+
+    fuente = inspect.getsource(WhatsAppSender._adjuntar_archivo)
+    assert "_descartar_borrador" in fuente, (
+        "el camino de error no limpia el cuadro: el texto queda publicable"
+    )
+    pos_except = fuente.index("except Exception:")
+    pos_descartar = fuente.index("_descartar_borrador")
+    pos_raise = fuente.index("raise", pos_descartar)
+    assert pos_except < pos_descartar < pos_raise, (
+        "el descarte tiene que ir dentro del manejo de error y antes de re-lanzar"
+    )
+
+
+def test_descartar_el_borrador_nunca_lanza():
+    """Se llama desde el camino de error: una excepcion aca taparia la causa real
+    del fallo con una secundaria."""
+    sender = WhatsAppSender()
+    page = MagicMock()
+    page.locator.side_effect = RuntimeError("la pagina se murio")
+
+    sender._descartar_borrador(page)          # no debe lanzar
+
+
+def test_sin_pie_no_hay_borrador_que_descartar():
+    """Una pieza sin texto no escribe nada en el cuadro, asi que el camino corto
+    va directo al editor y no necesita limpieza."""
+    import inspect
+
+    fuente = inspect.getsource(WhatsAppSender._adjuntar_archivo)
+    pos_corto = fuente.index("if not caption.strip():")
+    pos_insertar = fuente.index("_insertar_texto")
+    assert pos_corto < pos_insertar, (
+        "el atajo sin pie tiene que resolverse antes de tocar el cuadro del chat"
+    )
+
+
+def test_la_cabecera_se_lee_con_sus_emojis_y_no_sin_ellos():
+    """El envio correcto que la verificacion aborto el 2026-09-03.
+
+    `inner_text()` no devuelve los emoji: WhatsApp los dibuja como <img> y el
+    caracter vive en su `alt`. El grupo padre se llamaba "...Comunidad de
+    Traders 📈" y la cabecera devolvia el nombre SIN el emoji, asi que la
+    verificacion no reconocio su propio destino y abortó.
+
+    Se resolvio quitandole el emoji al grupo, que arregla el caso y no la causa:
+    cualquier canal que gane uno vuelve a romper el envio.
+    """
+    import inspect
+
+    fuente = inspect.getsource(WhatsAppSender._buscar_y_abrir_chat)
+    assert "_texto_con_emojis" in fuente, (
+        "la cabecera se sigue leyendo con inner_text, que come los emoji"
+    )
+    assert "header_locator.inner_text()" not in fuente
+
+
+def test_el_lector_de_cabecera_sustituye_cada_imagen_por_su_alt():
+    """El contrato del reemplazo: el emoji sale del atributo `alt` del <img>."""
+    import inspect
+
+    fuente = inspect.getsource(WhatsAppSender._texto_con_emojis)
+    assert "getAttribute('alt')" in fuente
+    assert "IMG" in fuente
+    # Y los saltos de linea se preservan: `_header_coincide` compara contra la
+    # PRIMERA linea, asi que sin ellos el nombre quedaria pegado al subtitulo.
+    assert "BR" in fuente
+
+
+def test_sin_evaluate_el_lector_cae_a_inner_text_y_no_revienta():
+    """Degradar es aceptable; quedarse sin verificacion no. El fallback devuelve
+    el texto sin emoji, que es lo que habia antes: peor, nunca menos estricto."""
+    locator = MagicMock()
+    locator.evaluate.side_effect = RuntimeError("sin evaluate")
+    locator.inner_text.return_value = "Grupo Inteligencia | Metales & Energía"
+
+    assert WhatsAppSender._texto_con_emojis(locator) == "Grupo Inteligencia | Metales & Energía"
+    assert WhatsAppSender._texto_con_emojis(None) == ""
+
+
+def test_un_nombre_con_emoji_calza_cuando_la_cabecera_lo_devuelve():
+    """La consecuencia practica: con el emoji reconstruido, el destino calza."""
+    sender = WhatsAppSender()
+    nombre = "Grupo Inteligencia | Comunidad de Traders \U0001F4C8"
+
+    assert sender._header_coincide(nombre, nombre + "\nSolo los administradores")
+    # Y sin el emoji NO calza, que es lo que pasaba y por eso abortaba.
+    assert not sender._header_coincide(nombre, "Grupo Inteligencia | Comunidad de Traders ")
+
+
+def test_el_lector_de_cabecera_ignora_lo_invisible_y_los_svg():
+    """`inner_text` descarta lo oculto y el texto de los SVG, y hace bien.
+
+    Sin esos filtros el recorrido se traia el <title> de los iconos: medido el
+    2026-09-03, una burbuja devolvia "tail-out" (el icono de la cola del globo)
+    como su PRIMERA linea. La cabecera se compara justo contra la primera linea,
+    asi que eso abortaria un envio legitimo por un adorno.
+    """
+    import inspect
+
+    fuente = inspect.getsource(WhatsAppSender._texto_con_emojis)
+    for filtro in ("SVG", "TITLE", "aria-hidden", "display === 'none'", "visibility === 'hidden'"):
+        assert filtro in fuente, f"el recorrido no filtra {filtro}"

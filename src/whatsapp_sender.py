@@ -719,7 +719,7 @@ class WhatsAppSender:
         header_locator = self._primer_locator(
             page, ['[data-testid="conversation-info-header"]', "div#main header"]
         )
-        texto_header = header_locator.inner_text() if header_locator is not None else ""
+        texto_header = self._texto_con_emojis(header_locator)
 
         if not self._header_coincide(nombre_oficial, texto_header):
             raise DestinatarioInvalidoError(
@@ -761,6 +761,103 @@ class WhatsAppSender:
                 page.keyboard.press("Enter")
                 page.keyboard.up("Shift")
                 time.sleep(0.05)
+
+    @staticmethod
+    def _texto_con_emojis(locator: Any) -> str:
+        """El texto de un elemento **incluyendo los emoji**, por líneas.
+
+        `inner_text()` no los devuelve: WhatsApp los dibuja como `<img>` y el
+        carácter vive en su atributo `alt`. Eso abortó un envío correcto el
+        2026-09-03: el grupo padre se llamaba "…Comunidad de Traders 📈" y la
+        cabecera devolvía "…Comunidad de Traders " sin el emoji, así que la
+        verificación de destinatario no reconoció su propio destino. Era el único
+        de los siete canales con emoji, y por eso nunca se había visto.
+
+        Se resolvió quitándole el emoji al grupo, que arregla el caso y no la
+        causa: cualquier canal que gane uno vuelve a romper el envío. Acá el
+        texto se reconstruye sustituyendo cada `<img>` por su `alt`, así que la
+        comparación sigue siendo **exacta** y además completa. Relajar la
+        comparación no era opción: es lo único que impide publicar en el grupo
+        equivocado.
+
+        Los saltos de línea se preservan porque `_header_coincide` compara contra
+        la PRIMERA línea de la cabecera; sin ellos, el nombre del chat quedaría
+        pegado a su subtítulo y nada calzaría nunca.
+        """
+        if locator is None:
+            return ""
+        try:
+            return locator.evaluate(
+                """el => {
+                    const bloques = new Set(['DIV', 'P', 'LI', 'SPAN']);
+                    // `inner_text` descarta lo invisible y lo de los SVG, y hace
+                    // bien: sin esto, el <title> de un icono se cuela como texto.
+                    // Medido el 2026-09-03: una burbuja devolvia "tail-out" (el
+                    // icono de la cola del globo) como su PRIMERA linea, y la
+                    // cabecera se compara justo contra la primera linea.
+                    const ignorar = new Set(['SCRIPT', 'STYLE', 'SVG', 'TITLE', 'PATH']);
+                    const partes = [];
+                    const recorrer = (nodo) => {
+                        if (nodo.nodeType === 3) { partes.push(nodo.nodeValue); return; }
+                        if (nodo.nodeType !== 1) { return; }
+                        const etiqueta = nodo.nodeName.toUpperCase();
+                        if (ignorar.has(etiqueta)) { return; }
+                        if (nodo.getAttribute('aria-hidden') === 'true') { return; }
+                        if (etiqueta === 'IMG') {
+                            partes.push(nodo.getAttribute('alt') || '');
+                            return;
+                        }
+                        if (etiqueta === 'BR') { partes.push('\\n'); return; }
+                        const estilo = getComputedStyle(nodo);
+                        if (estilo.display === 'none' || estilo.visibility === 'hidden') {
+                            return;
+                        }
+                        const corta = bloques.has(etiqueta) && estilo.display !== 'inline';
+                        if (corta) partes.push('\\n');
+                        for (const hijo of nodo.childNodes) recorrer(hijo);
+                        if (corta) partes.push('\\n');
+                    };
+                    recorrer(el);
+                    return partes.join('')
+                        .split('\\n').map(l => l.trim()).filter(l => l).join('\\n');
+                }"""
+            )
+        except Exception:  # noqa: BLE001
+            # Sin `evaluate` se cae al texto sin emoji, que es lo que había antes:
+            # peor, pero nunca menos estricto. La verificación exacta sigue en pie.
+            logger.warning("no se pudo leer la cabecera con emoji, se usa inner_text")
+            try:
+                return locator.inner_text()
+            except Exception:  # noqa: BLE001
+                return ""
+
+    def _descartar_borrador(self, page: Any) -> None:
+        """Borra el texto del cuadro de conversación. Nunca lanza.
+
+        **Existe por un riesgo que se materializó.** Con el texto escrito antes
+        de adjuntar, cualquier fallo posterior lo deja de borrador VIVO en el
+        chat del cliente: el 2026-09-03 quedaron 1.451 caracteres del contexto
+        macro en el cuadro de Metales & Energía, y un Enter de cualquiera los
+        publica sin su imagen. Se limpió a mano porque el error dejó captura; sin
+        ella, el texto seguiría ahí.
+
+        No lanza a propósito: se llama desde el camino de error, y una excepción
+        acá taparía la causa real del fallo con una secundaria.
+        """
+        try:
+            caja = self._primer_locator(page, SELECTORES_CAJA_TEXTO)
+            if caja is None:
+                logger.warning("no se encontró el cuadro para descartar el borrador")
+                return
+            caja.click(timeout=5000)
+            page.keyboard.press("Control+A")
+            page.keyboard.press("Backspace")
+            logger.info("borrador descartado tras el fallo, el chat queda limpio")
+        except Exception:  # noqa: BLE001
+            logger.warning(
+                "NO se pudo descartar el borrador: puede haber texto suelto en el "
+                "cuadro del chat. Revisar antes de volver a despachar."
+            )
 
     def _cerrar_previsualizacion_enlace(self, page: Any) -> bool:
         """Descarta la tarjeta de previsualización que WhatsApp arma con una URL.
@@ -834,11 +931,25 @@ class WhatsAppSender:
             raise FileNotFoundError(f"El archivo adjunto no existe: {ruta_archivo}")
 
         # El texto va PRIMERO, en el cuadro de conversación. Nunca al revés.
-        if caption.strip():
-            self._insertar_texto(page, caption.strip())
-            self._pausa_humana(0.8)
-            self._cerrar_previsualizacion_enlace(page)
+        if not caption.strip():
+            self._abrir_editor_de_medios(page, ruta_archivo, caption)
+            return
 
+        self._insertar_texto(page, caption.strip())
+        self._pausa_humana(0.8)
+        self._cerrar_previsualizacion_enlace(page)
+
+        # Desde acá el texto YA está en el cuadro del chat. Cualquier fallo lo
+        # deja de borrador vivo, y un Enter de cualquiera lo publica sin su
+        # imagen: pasó el 2026-09-03 con 1.451 caracteres en Metales & Energía.
+        try:
+            self._abrir_editor_de_medios(page, ruta_archivo, caption)
+        except Exception:
+            self._descartar_borrador(page)
+            raise
+
+    def _abrir_editor_de_medios(self, page: Any, ruta_archivo: Path, caption: str) -> None:
+        """Adjunta el archivo por el menú y verifica el pie que heredó el editor."""
         self._cerrar_modales_emergentes(page)
         boton = self._primer_locator(page, SELECTORES_ADJUNTAR)
         if boton is None:
