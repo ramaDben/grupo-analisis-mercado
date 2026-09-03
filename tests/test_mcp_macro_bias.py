@@ -213,3 +213,28 @@ def test_el_nivel_rechaza_una_direccion_que_no_existe():
 
     with pytest.raises(ValueError, match="LARGO"):
         nivel_chandelier(extremo=100.0, atr=1.0, multiplo=3.0, direccion="ALCISTA", digits=2)
+
+
+def test_todo_activo_del_playbook_mapea_a_un_ticker_del_catalogo():
+    """El contrato que impide que un activo tenga sesgo y no tenga niveles.
+
+    `TICKER_MT5` traduce el símbolo genérico del Playbook al del broker. Brent
+    apuntaba a None con el comentario "el broker no ofrece Brent", cosa que el
+    terminal desmintió el 2026-09-02: `BRENT.spot` cotizaba a 96,439.
+
+    Un activo con ficha, régimen, sesgo y setups permitidos pero sin ticker es un
+    activo del que el sistema opina y sobre el que no puede medir nada.
+    """
+    from market_data_mcp.bias_reader import TICKER_MT5, VALID_SYMBOLS
+    from market_data_mcp.catalog import VALID_TICKERS
+
+    con_ficha = VALID_SYMBOLS - {"ALL"}
+    sin_mapeo = sorted(s for s in con_ficha if not TICKER_MT5.get(s))
+    assert not sin_mapeo, f"activos del Playbook sin ticker MT5: {sin_mapeo}"
+
+    fuera_del_catalogo = sorted(
+        f"{s} -> {TICKER_MT5[s]}" for s in con_ficha if TICKER_MT5[s] not in VALID_TICKERS
+    )
+    assert not fuera_del_catalogo, (
+        f"mapean a un ticker que el catálogo técnico no conoce: {fuera_del_catalogo}"
+    )

@@ -499,3 +499,44 @@ def test_h1_incluye_los_anclajes_del_chandelier(collector, monkeypatch):
     assert res["chandelier_max"] == pytest.approx(round(float(cerradas["high"].tail(n).max()), 2))
     assert res["chandelier_min"] == pytest.approx(round(float(cerradas["low"].tail(n).min()), 2))
     assert res["chandelier_max"] > res["chandelier_min"]
+
+
+def test_el_catalogo_incluye_brent_que_el_broker_si_ofrece():
+    """`BRENT.spot` cotiza en el terminal y el repo afirmaba lo contrario.
+
+    Verificado el 2026-09-02 contra la cuenta 51492 (GrupoInteligenciaSpA-Server):
+    `symbol_info("BRENT.spot")` responde con digits=3 y bid 96,439. Sin embargo
+    `bias_reader.TICKER_MT5` lo mapeaba a None con el comentario "el broker no
+    ofrece Brent", y el ticker no estaba en el catálogo técnico.
+
+    El costo no era teórico: Brent tiene ficha en el Playbook y ese día llevaba
+    sesgo +1,50 (ALCISTA POR SHOCK), pero sin ticker no había niveles, ni
+    gráfico, ni forma de decir hasta dónde seguía vigente ese sesgo.
+    """
+    assert "BRENT.spot" in levels._VALID_TICKERS
+    assert levels._VALID_TICKERS["BRENT.spot"] == 3, "cotiza con 3 decimales, igual que WTI"
+
+
+def test_ningun_activo_declara_una_imagen_que_no_existe():
+    """`imagen` es el interruptor del activo: el escáner limita su universo a
+    quien lo tenga, porque el renderer detiene la pieza sin el `.jpg`.
+
+    Declararlo sin que el archivo exista deja al activo entrando al escáner para
+    morir en el render. Brent se agrega SIN el campo justamente por eso: gana
+    niveles y especificaciones, y entra al escáner cuando alguien dibuje su
+    imagen.
+    """
+    import json
+    from pathlib import Path
+
+    raiz = Path(__file__).resolve().parents[1]
+    catalogo = json.loads((raiz / "config" / "activos.json").read_text(encoding="utf-8"))
+    base = raiz / "templates" / "stories"
+
+    faltantes = [
+        f"{a['ticker_mt5']} -> {a['imagen']}"
+        for grupo in catalogo.values() if isinstance(grupo, list)
+        for a in grupo
+        if isinstance(a, dict) and a.get("imagen") and not (base / a["imagen"]).exists()
+    ]
+    assert not faltantes, f"declaran una imagen inexistente: {faltantes}"

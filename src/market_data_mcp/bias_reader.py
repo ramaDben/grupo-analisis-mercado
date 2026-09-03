@@ -25,16 +25,22 @@ VALID_SYMBOLS = {"ALL", "USDCLP", "XAUUSD", "WTI", "BRENT", "US100"}
 # técnico usa el símbolo del broker. Sin traducir, quien cruce ficha y precio
 # busca un ticker que MT5 no conoce y se queda ciego sin enterarse.
 #
-# `BRENT` mapea a None a propósito y no se omite: el broker no ofrece Brent, así
-# que la ausencia es un hecho del catálogo y no un olvido. Un `.get()` sobre un
-# dict sin la clave devuelve None igual, pero deja al lector sin saber si el
-# activo falta porque nadie lo agregó todavía.
+# `BRENT` apuntaba a None con el comentario "el broker no ofrece Brent". El
+# terminal lo desmintió el 2026-09-02: sobre la cuenta 51492
+# (GrupoInteligenciaSpA-Server), `symbol_info("BRENT.spot")` responde con
+# digits=3 y bid 96,439. El costo no era teórico: Brent tiene ficha en el
+# Playbook y ese día llevaba sesgo +1,50 (ALCISTA POR SHOCK), pero sin ticker no
+# había niveles, ni gráfico, ni forma de decir hasta dónde seguía vigente.
+#
+# Un activo del que el sistema opina y sobre el que no puede medir nada es peor
+# que un activo ausente. `test_todo_activo_del_playbook_mapea_a_un_ticker_del_catalogo`
+# impide que vuelva a pasar.
 TICKER_MT5: dict[str, str | None] = {
     "USDCLP": "USDCLP",
     "XAUUSD": "XAUUSD",
     "WTI": "WTI.spot",
     "US100": "US100.spot",
-    "BRENT": None,
+    "BRENT": "BRENT.spot",
 }
 
 
