@@ -18,18 +18,89 @@
   },
   "PMI": {
     "nombre_es": "Índice de gerentes de compra",
-    "explicacion": "Encuesta a empresas sobre cómo ven su negocio; sobre 50 = la economía crece, bajo 50 = se enfría."
+    "explicacion": "Encuesta a empresas sobre cómo ven su negocio; sobre 50 = la economía crece, bajo 50 = se enfría.",
+    "pais": "United States",
+    "tier": 2,
+    "canales": [
+      "04_indices_bursatiles",
+      "05_acciones_etfs",
+      "02_forex_divisas"
+    ],
+    "cadencia": "mensual",
+    "puede_disparar_momento": false,
+    "fuente": {
+      "tipo": "comercial",
+      "organismo": "S&P Global",
+      "nota": "Sin fuente oficial gratuita: los PMI de S&P Global y Caixin son privados. El número viene de Investing y la pieza declara la fuente."
+    },
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "las empresas ven mejor su negocio",
+      "dolar": "sube",
+      "oro": "baja",
+      "indices": "sube",
+      "usdclp": "sube",
+      "porque": "sobre 50 la economía crece, y eso sostiene a la moneda y a las acciones"
+    }
   },
   "ISM": {
     "nombre_es": "Índice del Instituto de Gestión de Suministros",
-    "explicacion": "Encuesta de actividad de empresas en EE.UU. (manufactura o servicios); sobre 50 = expansión, bajo 50 = contracción."
+    "explicacion": "Encuesta de actividad de empresas en EE.UU. (manufactura o servicios); sobre 50 = expansión, bajo 50 = contracción.",
+    "pais": "United States",
+    "tier": 2,
+    "canales": [
+      "04_indices_bursatiles",
+      "05_acciones_etfs",
+      "02_forex_divisas"
+    ],
+    "cadencia": "mensual",
+    "puede_disparar_momento": false,
+    "fuente": {
+      "tipo": "comercial",
+      "organismo": "Institute for Supply Management",
+      "nota": "Sin fuente oficial gratuita: el ISM licencia su distribución y FRED no publica sus series. Medido el 2026-09-03: NAPM y NMFCI devuelven no disponible. El número viene de Investing y la pieza declara la fuente."
+    },
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "actividad empresarial más fuerte de lo esperado",
+      "dolar": "sube",
+      "oro": "baja",
+      "indices": "sube",
+      "usdclp": "sube",
+      "porque": "una economía más fuerte sostiene las utilidades y aleja los recortes"
+    }
   },
   "NFP": {
     "nombre_es": "Nóminas no agrícolas",
     "explicacion": "Cuántos empleos creó EE.UU. el mes pasado (sin contar el campo); dato clave para la Fed y el dólar.",
     "titulos_ff": [
       "Nonfarm Payrolls"
-    ]
+    ],
+    "pais": "United States",
+    "tier": 1,
+    "canales": [
+      "02_forex_divisas",
+      "03_commodities_materias_primas",
+      "04_indices_bursatiles",
+      "05_acciones_etfs",
+      "06_criptoactivos"
+    ],
+    "cadencia": "mensual_primer_viernes",
+    "puede_disparar_momento": true,
+    "fuente": {
+      "tipo": "fred",
+      "serie": "PAYEMS",
+      "organismo": "Oficina de Estadísticas Laborales de EE.UU. (BLS)"
+    },
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "más empleos creados: mercado laboral fuerte",
+      "dolar": "sube",
+      "oro": "baja",
+      "indices": "mixto",
+      "usdclp": "sube",
+      "porque": "un empleo fuerte aleja los recortes de tasa de la Fed"
+    }
   },
   "JOLTS": {
     "nombre_es": "Encuesta de vacantes y rotación laboral",
@@ -46,24 +117,122 @@
     "nombre_es": "Gasto en consumo personal",
     "explicacion": "La medida de inflación que más mira la Fed para decidir las tasas de interés.",
     "titulos_ff": [
+      "Core PCE Price Index",
+      "PCE Price Index",
       "Personal Consumption Expenditures"
-    ]
+    ],
+    "pais": "United States",
+    "tier": 1,
+    "canales": [
+      "02_forex_divisas",
+      "03_commodities_materias_primas",
+      "04_indices_bursatiles",
+      "05_acciones_etfs",
+      "06_criptoactivos"
+    ],
+    "cadencia": "mensual",
+    "puede_disparar_momento": true,
+    "fuente": {
+      "tipo": "fred",
+      "serie": "PCEPI",
+      "organismo": "Oficina de Análisis Económico de EE.UU. (BEA)"
+    },
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "el termómetro de inflación preferido de la Fed, más alto",
+      "dolar": "sube",
+      "oro": "baja",
+      "indices": "baja",
+      "usdclp": "sube",
+      "porque": "es la medida que la Fed usa para su meta del 2%"
+    }
   },
   "IPC": {
     "nombre_es": "Índice de precios al consumidor",
-    "explicacion": "Cuánto subieron los precios que paga la gente; la inflación más conocida."
+    "explicacion": "Cuánto subieron los precios que paga la gente; la inflación más conocida.",
+    "pais": "Chile",
+    "tier": 2,
+    "canales": [
+      "02_forex_divisas"
+    ],
+    "cadencia": "mensual",
+    "puede_disparar_momento": false,
+    "fuente": {
+      "tipo": "ine",
+      "serie": "IPC",
+      "organismo": "Instituto Nacional de Estadísticas"
+    },
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "inflación chilena más alta de lo esperado",
+      "usdclp": "baja",
+      "dolar": "neutro",
+      "porque": "más inflación le quita espacio al Banco Central para bajar la tasa, y una tasa que se mantiene alta sostiene al peso"
+    }
   },
   "CPI": {
     "nombre_es": "Índice de precios al consumidor (IPC)",
-    "explicacion": "Igual que el IPC: cuánto subieron los precios al consumidor (sigla en inglés)."
+    "explicacion": "Igual que el IPC: cuánto subieron los precios al consumidor (sigla en inglés).",
+    "pais": "United States",
+    "tier": 1,
+    "canales": [
+      "02_forex_divisas",
+      "03_commodities_materias_primas",
+      "04_indices_bursatiles",
+      "05_acciones_etfs",
+      "06_criptoactivos"
+    ],
+    "cadencia": "mensual",
+    "puede_disparar_momento": true,
+    "fuente": {
+      "tipo": "fred",
+      "serie": "CPIAUCSL",
+      "organismo": "Oficina de Estadísticas Laborales de EE.UU. (BLS)"
+    },
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "inflación más alta de lo esperado en EE.UU.",
+      "dolar": "sube",
+      "oro": "baja",
+      "indices": "baja",
+      "usdclp": "sube",
+      "porque": "más inflación obliga a la Fed a mantener las tasas altas, y eso sube la tasa real"
+    }
   },
   "IPP": {
     "nombre_es": "Índice de precios al productor",
-    "explicacion": "Cuánto suben los precios de fábrica antes de llegar al consumidor; anticipa la inflación."
+    "explicacion": "Cuánto suben los precios de fábrica antes de llegar al consumidor; anticipa la inflación.",
+    "_sin_clasificar": "idem: `PPI` esta clasificado como de EE.UU. y este alias no dice pais"
   },
   "PPI": {
     "nombre_es": "Índice de precios al productor (IPP)",
-    "explicacion": "Precios mayoristas/de fábrica; adelanta hacia dónde va la inflación al consumidor."
+    "explicacion": "Precios mayoristas/de fábrica; adelanta hacia dónde va la inflación al consumidor.",
+    "pais": "United States",
+    "tier": 2,
+    "canales": [
+      "02_forex_divisas",
+      "04_indices_bursatiles"
+    ],
+    "cadencia": "mensual",
+    "puede_disparar_momento": true,
+    "fuente": {
+      "tipo": "fred",
+      "serie": "PPIACO",
+      "organismo": "Oficina de Estadísticas Laborales de EE.UU. (BLS)"
+    },
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "los precios que cobran los productores suben más de lo esperado",
+      "dolar": "sube",
+      "oro": "baja",
+      "indices": "baja",
+      "usdclp": "sube",
+      "porque": "la inflación del productor suele llegar después a la del consumidor"
+    },
+    "titulos_ff": [
+      "Core PPI",
+      "PPI"
+    ]
   },
   "PIB": {
     "nombre_es": "Producto interno bruto",
@@ -71,11 +240,40 @@
   },
   "GDP": {
     "nombre_es": "Producto interno bruto (PIB)",
-    "explicacion": "Lo mismo que el PIB: el tamaño total de la economía (sigla en inglés)."
+    "explicacion": "Lo mismo que el PIB: el tamaño total de la economía (sigla en inglés).",
+    "pais": "United States",
+    "tier": 2,
+    "canales": [
+      "04_indices_bursatiles",
+      "05_acciones_etfs",
+      "02_forex_divisas"
+    ],
+    "cadencia": "trimestral",
+    "puede_disparar_momento": true,
+    "fuente": {
+      "tipo": "fred",
+      "serie": "GDPC1",
+      "organismo": "Oficina de Análisis Económico de EE.UU. (BEA)"
+    },
+    "titulos_ff": [
+      "GDP",
+      "GDPNow",
+      "Gross Domestic Product"
+    ],
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "la economía de EE.UU. crece más de lo esperado",
+      "dolar": "sube",
+      "oro": "baja",
+      "indices": "sube",
+      "usdclp": "sube",
+      "porque": "una economía más fuerte sostiene las utilidades y aleja los recortes de tasa"
+    }
   },
   "EIA": {
     "nombre_es": "Administración de Información Energética (EE.UU.)",
-    "explicacion": "Publica los inventarios de petróleo de EE.UU.; mueve fuerte el precio del WTI."
+    "explicacion": "Publica los inventarios de petróleo de EE.UU.; mueve fuerte el precio del WTI.",
+    "_nota_clasificacion": "La clasificacion vive en 'Crude Oil Inventories', que es como publica la fuente. Esta entrada solo explica la sigla."
   },
   "WTI": {
     "nombre_es": "Petróleo West Texas Intermediate",
@@ -87,11 +285,65 @@
   },
   "FOMC": {
     "nombre_es": "Comité de mercado abierto de la Fed",
-    "explicacion": "El grupo de la Fed que decide las tasas de interés en EE.UU."
+    "explicacion": "El grupo de la Fed que decide las tasas de interés en EE.UU.",
+    "pais": "United States",
+    "tier": 1,
+    "canales": [
+      "02_forex_divisas",
+      "03_commodities_materias_primas",
+      "04_indices_bursatiles",
+      "05_acciones_etfs",
+      "06_criptoactivos"
+    ],
+    "cadencia": "ocho_veces_al_anio",
+    "puede_disparar_momento": true,
+    "fuente": {
+      "tipo": "fred",
+      "serie": "DFEDTARU",
+      "organismo": "Reserva Federal"
+    },
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "tasa más alta de lo esperado, o tono más duro",
+      "dolar": "sube",
+      "oro": "baja",
+      "indices": "baja",
+      "usdclp": "sube",
+      "porque": "una tasa más alta encarece el dólar y castiga a los activos de riesgo"
+    },
+    "titulos_ff": [
+      "FOMC Economic Projections",
+      "FOMC Press Conference",
+      "FOMC Statement",
+      "Fed Interest Rate Decision",
+      "Federal Funds Rate"
+    ]
   },
   "Fed": {
     "nombre_es": "Reserva Federal (banco central de EE.UU.)",
-    "explicacion": "El banco central de EE.UU.; fija las tasas de interés del dólar y sus decisiones mueven a todos los mercados."
+    "explicacion": "El banco central de EE.UU.; fija las tasas de interés del dólar y sus decisiones mueven a todos los mercados.",
+    "pais": "United States",
+    "tier": 3,
+    "canales": [
+      "02_forex_divisas",
+      "03_commodities_materias_primas",
+      "04_indices_bursatiles",
+      "05_acciones_etfs",
+      "06_criptoactivos"
+    ],
+    "cadencia": "irregular",
+    "puede_disparar_momento": false,
+    "fuente": {
+      "tipo": "fred",
+      "serie": "WALCL",
+      "organismo": "Reserva Federal"
+    },
+    "_nota_tier": "Tier 3 y NO 1 a proposito: esta entrada cubre discursos, comparecencias y la hoja de balance, no la decisión de tasas. La decisión vive en FOMC. Un discurso de Waller con tier 1 habría disparado el momento de un dato que no existe.",
+    "titulos_ff": [
+      "Fed Speaks",
+      "Fed Waller Speaks",
+      "Fed's Balance Sheet"
+    ]
   },
   "BCCh": {
     "nombre_es": "Banco Central de Chile",
@@ -103,11 +355,13 @@
   },
   "PCE subyacente": {
     "nombre_es": "Gasto en consumo personal subyacente",
-    "explicacion": "El PCE sin alimentos ni energía; la Fed lo prefiere porque es más estable."
+    "explicacion": "El PCE sin alimentos ni energía; la Fed lo prefiere porque es más estable.",
+    "_sin_clasificar": "se hereda de PCE cuando el evento declare pais EE.UU."
   },
   "IPC subyacente": {
     "nombre_es": "IPC subyacente",
-    "explicacion": "La inflación sin alimentos ni energía; muestra la tendencia de fondo de los precios."
+    "explicacion": "La inflación sin alimentos ni energía; muestra la tendencia de fondo de los precios.",
+    "_sin_clasificar": "el glosario no distingue si es el de Chile o el de EE.UU."
   },
   "PMI Caixin": {
     "nombre_es": "PMI Caixin (China)",
@@ -119,7 +373,30 @@
     "titulos_ff": [
       "Unemployment Claims",
       "Initial Jobless Claims"
-    ]
+    ],
+    "pais": "United States",
+    "tier": 2,
+    "canales": [
+      "02_forex_divisas",
+      "03_commodities_materias_primas",
+      "04_indices_bursatiles"
+    ],
+    "cadencia": "semanal_jueves",
+    "puede_disparar_momento": true,
+    "fuente": {
+      "tipo": "fred",
+      "serie": "ICSA",
+      "organismo": "Departamento del Trabajo de EE.UU. (DOL)"
+    },
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "más gente pidiendo seguro de cesantía: empleo más débil",
+      "dolar": "baja",
+      "oro": "sube",
+      "indices": "sube",
+      "usdclp": "baja",
+      "porque": "un empleo más débil acerca los recortes de tasa de la Fed"
+    }
   },
   "RSI": {
     "nombre_es": "Índice de fuerza relativa",
@@ -127,7 +404,32 @@
   },
   "TPM": {
     "nombre_es": "Tasa de Política Monetaria",
-    "explicacion": "La tasa de interés que fija el Banco Central de Chile (BCCh); cuando baja, el crédito se abarata y el peso puede debilitarse frente al dólar."
+    "explicacion": "La tasa de interés que fija el Banco Central de Chile (BCCh); cuando baja, el crédito se abarata y el peso puede debilitarse frente al dólar.",
+    "pais": "Chile",
+    "tier": 1,
+    "canales": [
+      "02_forex_divisas"
+    ],
+    "cadencia": "ocho_veces_al_anio",
+    "puede_disparar_momento": true,
+    "fuente": {
+      "tipo": "bcch",
+      "serie": "TPM",
+      "organismo": "Banco Central de Chile"
+    },
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "tasa de política monetaria más alta de lo esperado",
+      "usdclp": "baja",
+      "dolar": "neutro",
+      "porque": "una tasa local más alta hace más atractivo tener pesos que dólares"
+    },
+    "titulos_ff": [
+      "Chile Interest Rate Decision",
+      "Interest Rate Decision",
+      "Monetary Policy Meeting",
+      "Tasa de Politica Monetaria"
+    ]
   },
   "RPM": {
     "nombre_es": "Reunión de Política Monetaria",
@@ -135,7 +437,30 @@
   },
   "IMACEC": {
     "nombre_es": "Índice Mensual de Actividad Económica",
-    "explicacion": "Termómetro mensual de la economía chilena publicado por el Banco Central; si es negativo, la economía se contrajo ese mes."
+    "explicacion": "Termómetro mensual de la economía chilena publicado por el Banco Central; si es negativo, la economía se contrajo ese mes.",
+    "pais": "Chile",
+    "tier": 2,
+    "canales": [
+      "02_forex_divisas"
+    ],
+    "cadencia": "mensual",
+    "puede_disparar_momento": true,
+    "fuente": {
+      "tipo": "bcch",
+      "serie": "IMACEC",
+      "organismo": "Banco Central de Chile"
+    },
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "la economía chilena crece más de lo esperado",
+      "usdclp": "baja",
+      "dolar": "neutro",
+      "porque": "una actividad más fuerte le quita razones al Banco Central para bajar la tasa, y una tasa local más alta le da atractivo al peso: menos pesos por dólar"
+    },
+    "titulos_ff": [
+      "Imacec",
+      "Monthly Economic Activity"
+    ]
   },
   "INE": {
     "nombre_es": "Instituto Nacional de Estadísticas (Chile)",
@@ -201,7 +526,26 @@
   },
   "Crude Oil Inventories": {
     "nombre_es": "Inventarios de petróleo crudo (EIA)",
-    "explicacion": "Informe semanal oficial del gobierno de EE.UU. sobre las reservas comerciales de petróleo; mueve con fuerza el WTI."
+    "explicacion": "Informe semanal oficial del gobierno de EE.UU. sobre las reservas comerciales de petróleo; mueve con fuerza el WTI.",
+    "pais": "United States",
+    "tier": 2,
+    "canales": [
+      "03_commodities_materias_primas"
+    ],
+    "cadencia": "semanal_miercoles",
+    "puede_disparar_momento": true,
+    "fuente": {
+      "tipo": "fred",
+      "serie": "WCESTUS1",
+      "organismo": "Administración de Información Energética (EIA)"
+    },
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "más petróleo almacenado de lo esperado: sobra oferta",
+      "petroleo": "baja",
+      "dolar": "neutro",
+      "porque": "un inventario que crece más de lo previsto presiona el precio del crudo"
+    }
   },
   "Cushing Crude Oil Inventories": {
     "nombre_es": "Inventarios de crudo en Cushing",
@@ -212,34 +556,140 @@
     "explicacion": "Cuánto le vendió EE.UU. al resto del mundo en el mes. Junto con las importaciones arma la balanza comercial.",
     "titulos_ff": [
       "Exports"
-    ]
+    ],
+    "pais": "United States",
+    "tier": 3,
+    "canales": [
+      "02_forex_divisas"
+    ],
+    "cadencia": "mensual",
+    "puede_disparar_momento": true,
+    "fuente": {
+      "tipo": "fred",
+      "serie": "EXPGS",
+      "organismo": "Oficina de Análisis Económico de EE.UU. (BEA)"
+    },
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "EE.UU. vendió más al exterior de lo esperado",
+      "dolar": "sube",
+      "oro": "baja",
+      "usdclp": "sube",
+      "porque": "más exportaciones significa más demanda de dólares desde afuera"
+    }
   },
   "Imports": {
     "nombre_es": "Importaciones",
     "explicacion": "Cuánto le compró EE.UU. al resto del mundo en el mes. Si supera a las exportaciones, salen más dólares del país de los que entran.",
     "titulos_ff": [
       "Imports"
-    ]
+    ],
+    "pais": "United States",
+    "tier": 3,
+    "canales": [
+      "02_forex_divisas"
+    ],
+    "cadencia": "mensual",
+    "puede_disparar_momento": true,
+    "fuente": {
+      "tipo": "fred",
+      "serie": "IMPGS",
+      "organismo": "Oficina de Análisis Económico de EE.UU. (BEA)"
+    },
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "EE.UU. le compró más al exterior de lo esperado",
+      "dolar": "baja",
+      "oro": "sube",
+      "usdclp": "baja",
+      "porque": "más importaciones significa más dólares saliendo del país"
+    }
   },
   "Trade Balance": {
     "nombre_es": "Balanza comercial",
     "explicacion": "La diferencia entre lo que un país vende al exterior y lo que le compra. Si es negativa, salen más dólares del país de los que entran.",
     "titulos_ff": [
       "Trade Balance"
-    ]
+    ],
+    "pais": "United States",
+    "tier": 3,
+    "canales": [
+      "02_forex_divisas"
+    ],
+    "cadencia": "mensual",
+    "puede_disparar_momento": true,
+    "fuente": {
+      "tipo": "fred",
+      "serie": "BOPGSTB",
+      "organismo": "BEA y Oficina del Censo"
+    },
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "déficit comercial menor de lo esperado",
+      "dolar": "sube",
+      "oro": "baja",
+      "indices": "neutro",
+      "usdclp": "sube",
+      "porque": "salen menos dólares del país de los que se esperaba"
+    }
   },
   "Nonfarm Productivity": {
     "nombre_es": "Productividad laboral",
     "explicacion": "Cuánto produce cada hora trabajada en EE.UU., sin contar el campo. Si sube, las empresas pueden pagar mejores sueldos sin subir precios.",
     "titulos_ff": [
       "Nonfarm Productivity"
-    ]
+    ],
+    "pais": "United States",
+    "tier": 3,
+    "canales": [
+      "04_indices_bursatiles",
+      "05_acciones_etfs"
+    ],
+    "cadencia": "trimestral",
+    "puede_disparar_momento": true,
+    "fuente": {
+      "tipo": "fred",
+      "serie": "OPHNFB",
+      "organismo": "Oficina de Estadísticas Laborales de EE.UU. (BLS)"
+    },
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "se produce más por hora trabajada",
+      "dolar": "sube",
+      "oro": "baja",
+      "indices": "sube",
+      "usdclp": "sube",
+      "porque": "más productividad permite mejores sueldos sin subir precios"
+    }
   },
   "Unit Labor Costs": {
     "nombre_es": "Costo laboral unitario",
     "explicacion": "Cuánto le cuesta a las empresas la mano de obra por unidad producida. Es el dato que la Reserva Federal mira para ver si los sueldos empujan la inflación.",
     "titulos_ff": [
       "Unit Labor Costs"
-    ]
-  }
+    ],
+    "pais": "United States",
+    "tier": 2,
+    "canales": [
+      "02_forex_divisas",
+      "04_indices_bursatiles"
+    ],
+    "cadencia": "trimestral",
+    "puede_disparar_momento": true,
+    "fuente": {
+      "tipo": "fred",
+      "serie": "ULCNFB",
+      "organismo": "Oficina de Estadísticas Laborales de EE.UU. (BLS)"
+    },
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "la mano de obra le cuesta más a las empresas por unidad producida",
+      "dolar": "sube",
+      "oro": "baja",
+      "indices": "baja",
+      "usdclp": "sube",
+      "porque": "es la vía por la que los sueldos empujan la inflación, y la Fed la mira"
+    }
+  },
+  "_nota_eurozona": "Los PMI de la Zona Euro NO heredan el mapeo de los de EE.UU.: un PMI europeo mas fuerte fortalece al EURO, o sea DEBILITA al dolar, que es el signo contrario. Quedan sin clasificar hasta tener su propio mapeo, porque el chequeo de pais los rechaza y eso es correcto."
 }
