@@ -125,15 +125,18 @@ director aprueba, la tanda entera se despacha canal por canal:
 uv run --extra stories python scripts/pipeline_carrusel.py --despachar data/carrusel/<tanda>
 ```
 
-**Cada canal sale en UNA sola acción, con todas sus piezas.** El editor de medios de
-WhatsApp acepta varias imágenes a la vez y **cada una conserva su propio pie** (medido
-contra el DOM real el 2026-09-02). Así, las cuatro piezas de un canal dejan de ser
-cuatro aperturas de navegador espaciadas 45 s: una tanda de cinco canales pasa de
-7-15 minutos a unos 3.
+**Cada pieza sale en su propia acción, y el texto va SIEMPRE antes del adjunto.** El
+campo de pie del editor de medios tope en **1.024 caracteres** y descarta entera cada
+línea que no cabe, así que el mensaje no llega cortado al final: llega con renglones
+ausentes y su espacio en blanco. El 2026-09-03 el canal recibió el contexto macro sin la
+línea del Imacec ni las de tasas, y el despacho reportó éxito.
 
-**El cupo diario no baja.** Cuenta mensajes entregados, no acciones: veinte piezas siguen
-siendo veinte mensajes salgan en veinte acciones o en cinco. Lo que baja son las aperturas
-de navegador y las esperas.
+Escribir en el cuadro de conversación y adjuntar después no tiene ese tope (medido:
+2.042 de 2.016 caracteres, contra 1.029 al revés). Eso **revirtió el despacho por lote**,
+porque el truco solo llena el pie de una imagen: con dos o más, las demás se cortan.
+
+**El cupo y la cadencia se cuentan por pieza.** Cada pieza espera sus 45 s y descuenta su
+unidad. Una tanda tarda más que antes; el mensaje llega entero.
 
 **Y cada canal se rinde justo antes de despacharse, no al principio de la tanda.** Antes
 se rendía todo primero y la última pieza llegaba con el precio de hacía veinte minutos;
@@ -167,11 +170,9 @@ Tres cosas que conviene no volver a averiguar:
   "enviado", y compara la cabecera del chat abierto contra el destinatario de forma
   exacta. Si aborta, no se envió: no lo des por bueno ni lo repitas a ciegas, revisa
   primero si llegó.
-- **Un lote es UNA acción pero N mensajes entregados.** La cadencia de 45 s se aplica
-  una vez por lote; el cupo diario se descuenta por pieza. Contar cuatro imágenes como
-  un solo envío relajaría el freno por la puerta de atrás. Y sigue el tope editorial de
-  3 piezas de activo por canal: del cuarto adjunto en adelante WhatsApp muestra el
-  botón `+2`.
+- **Cada pieza es una acción y un mensaje entregado.** La cadencia de 45 s y el cupo se
+  aplican por pieza. Y sigue el tope editorial de 3 piezas de activo por canal, ahora por
+  volumen y no por el botón `+2` del editor.
 - **Un lote tiene que ser del mismo tipo.** El menú Adjuntar entra por "Fotos y videos"
   o por "Documento", no por ambas: un PDF de informe no viaja en el mismo lote que las
   Stories.

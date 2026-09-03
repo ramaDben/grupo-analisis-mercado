@@ -38,9 +38,9 @@ def test_resolucion_alias_a_nombres_oficiales():
     config = WhatsAppConfig()
 
     casos = [
-        ("macro", "Grupo Inteligencia | Comunidad de Traders 📈"),
-        ("apertura", "Grupo Inteligencia | Comunidad de Traders 📈"),
-        ("01_macro_y_apertura", "Grupo Inteligencia | Comunidad de Traders 📈"),
+        ("macro", "Grupo Inteligencia | Comunidad de Traders"),
+        ("apertura", "Grupo Inteligencia | Comunidad de Traders"),
+        ("01_macro_y_apertura", "Grupo Inteligencia | Comunidad de Traders"),
         ("forex", "Grupo Inteligencia | Dólar & FX"),
         ("usdclp", "Grupo Inteligencia | Dólar & FX"),
         ("dolar", "Grupo Inteligencia | Dólar & FX"),
@@ -663,45 +663,110 @@ def test_el_lote_espera_la_cadencia_una_sola_vez(tmp_path, monkeypatch):
     assert 0 < dormido[0] <= 45
 
 
-def test_el_pie_de_cada_pieza_se_escribe_en_su_propia_miniatura(tmp_path):
-    """Cada imagen conserva su pie: hay que seleccionar su miniatura antes.
+def test_el_texto_va_antes_del_adjunto_y_no_al_reves():
+    """El defecto que mutiló el mensaje del canal el 2026-09-03.
 
-    Sin el clic en la miniatura, los cuatro pies se apilarían en la primera
-    imagen y las otras tres saldrían mudas.
+    El campo de pie del editor de medios tope en **1.024 caracteres**, y una
+    línea que no cabe se rechaza ENTERA mientras el salto de línea que la sigue
+    sí entra. El resultado no es un texto cortado al final: son renglones que
+    desaparecen dejando su espacio en blanco, con las líneas cortas posteriores
+    intactas porque todavía cabían. El canal recibió el contexto macro sin la
+    línea del Imacec ni las dos de tasas, pero con el link del BCCh que iba en
+    medio, y el despacho reportó éxito.
+
+    Medido contra el DOM real ese día con un texto de 2.016 caracteres:
+    adjuntando primero entraron 1.029; escribiendo primero en el cuadro de
+    conversación, 2.042 (completo).
+
+    Se verifica el ORDEN en el código y no el resultado, porque el resultado
+    solo se ve contra WhatsApp Web. Es el mismo criterio del test de la reserva
+    de cupo.
     """
-    from whatsapp_sender import Pieza
+    import inspect
 
-    piezas = []
-    for i in range(3):
-        p = tmp_path / f"{i}.png"
-        p.write_bytes(b"x")
-        piezas.append(Pieza(adjunto=p, mensaje=f"pie {i}"))
+    fuente = inspect.getsource(WhatsAppSender._adjuntar_archivo)
+    pos_texto = fuente.index("_insertar_texto")
+    pos_chooser = fuente.index("expect_file_chooser")
+
+    assert pos_texto < pos_chooser, (
+        "el adjunto se resuelve antes de escribir el texto: ese es exactamente el "
+        "orden que tope en 1.024 caracteres y mutila el mensaje"
+    )
+
+
+def test_un_pie_incompleto_aborta_en_vez_de_enviarse_a_medias():
+    """El guardia que faltaba. El anterior solo preguntaba si había ALGO escrito,
+    y un mensaje al que le faltan renglones se lee como completo: nadie lo nota
+    desde afuera, así que el defecto viaja al cliente sin dejar rastro."""
+    from whatsapp_sender import EnvioMensajeError
 
     sender = WhatsAppSender()
-    orden: list[str] = []
-
-    mini = MagicMock()
-    mini.click.side_effect = lambda *a, **k: orden.append("miniatura")
-    mini.bounding_box.return_value = {"x": 0, "y": 900, "width": 52, "height": 52}
-
+    esperado = "linea uno\n" + "x" * 2000
     caja = MagicMock()
-    caja.inner_text.return_value = "algo"
-    caja.click.side_effect = lambda *a, **k: orden.append("caja")
+    caja.inner_text.return_value = "linea uno\n" + "x" * 900
 
-    page = MagicMock()
-    page.locator.return_value = MagicMock(count=MagicMock(return_value=3), nth=lambda i: mini)
-    sender._primer_locator = lambda p, s: caja           # type: ignore[assignment]
-    sender._escribir_multilinea = staticmethod(          # type: ignore[assignment]
-        lambda p, t: orden.append(f"texto:{t}")
+    with pytest.raises(EnvioMensajeError, match="incompleto"):
+        sender._verificar_pie_completo(caja, esperado, Path("contexto_macro.png"))
+
+
+def test_un_pie_completo_pasa_aunque_el_editor_cuente_distinto_los_saltos():
+    """El contenteditable devolvió 2.042 caracteres para un texto de 2.016: los
+    saltos de línea los cuenta a su manera. Comparar largos crudos daría un
+    falso negativo, así que se compara la huella sin espacios."""
+    sender = WhatsAppSender()
+    esperado = "una linea\notra linea\ntercera"
+    caja = MagicMock()
+    caja.inner_text.return_value = "una linea\n\notra linea\n\n\ntercera\n"
+
+    sender._verificar_pie_completo(caja, esperado, Path("story.png"))
+
+
+def test_un_pie_vacio_sigue_abortando():
+    """El texto que termina en el composer en vez del editor: enviar mandaría el
+    párrafo suelto y tiraría la imagen."""
+    from whatsapp_sender import EnvioMensajeError
+
+    sender = WhatsAppSender()
+    caja = MagicMock()
+    caja.inner_text.return_value = "   "
+
+    with pytest.raises(EnvioMensajeError, match="no quedó en el editor"):
+        sender._verificar_pie_completo(caja, "un pie cualquiera", Path("story.png"))
+
+
+def test_el_lote_manda_una_pieza_por_accion_y_reserva_cupo_en_cada_una():
+    """La decisión del director del 2026-09-03, que revierte el despacho por lote.
+
+    Mandar todas las piezas en una acción es incompatible con el pie completo:
+    escribir en el cuadro antes de adjuntar solo llena el pie de UNA imagen, la
+    que el editor abre seleccionada. Las demás vuelven al editor y se cortan.
+
+    Se paga con una espera de cadencia por pieza. Lo que se compra es que el
+    mensaje llegue entero.
+    """
+    import inspect
+
+    fuente = inspect.getsource(WhatsAppSender.enviar_lote)
+    pos_bucle = fuente.index("for indice, pieza in enumerate(piezas")
+    pos_reserva = fuente.index("_reservar_turno")
+    pos_adjuntar = fuente.index("_adjuntar_archivo")
+
+    assert pos_bucle < pos_reserva, (
+        "la reserva quedó fuera del bucle: la cadencia no se aplicaría entre piezas"
     )
-    sender._pausa_humana = lambda factor=1.0: None       # type: ignore[assignment]
+    assert pos_reserva < pos_adjuntar, "el cupo se anota después de intentar"
+    assert "_adjuntar_lote" not in fuente, (
+        "sigue usando el adjunto por lote, que escribe los pies dentro del editor"
+    )
 
-    sender._escribir_pies_del_lote(page, piezas)
 
-    textos = [o for o in orden if o.startswith("texto:")]
-    assert textos == ["texto:pie 0", "texto:pie 1", "texto:pie 2"]
-    # Antes de cada pie, su miniatura
-    assert orden.count("miniatura") >= 2, "no cambió de miniatura entre pies"
+def test_el_adjunto_por_lote_ya_no_existe():
+    """Se eliminó en vez de dejarse como referencia: era el orden equivocado,
+    escrito y a mano para el próximo que pasara por ahí."""
+    for muerto in ("_adjuntar_lote", "_escribir_pies_del_lote", "_miniaturas_del_lote"):
+        assert not hasattr(WhatsAppSender, muerto), (
+            f"{muerto} volvió: adjunta antes de escribir el pie"
+        )
 
 
 def test_el_cli_expone_el_lote_y_lo_hace_excluyente_con_el_adjunto_suelto():

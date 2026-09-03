@@ -186,16 +186,34 @@ una imagen inexistente: una pieza a medias que sale sin avisar llega al cliente.
 
 `pipeline_carrusel.py --despachar <tanda>` cierra el ciclo. Dos decisiones lo definen:
 
-**Un canal es una acción, no cuatro.** El editor de medios de WhatsApp acepta varias
-imágenes a la vez y **cada una conserva su propio pie** (medido contra el DOM real el
-2026-09-02: se escribió en la primera, se cambió a la segunda —que apareció vacía— y al
-volver a la primera su pie seguía ahí; el botón queda etiquetado "Enviar 2 seleccionados").
-Una tanda de cinco canales pasa de 10-20 acciones a 5 y de 7-15 minutos a unos 3. Menos
-acciones es también menos superficie de detección, que importa más que el tiempo.
+**Una pieza por acción, y el texto SIEMPRE antes del adjunto.** El campo de pie del
+editor de medios **tope en 1.024 caracteres**, y `insert_text` de una línea que no cabe
+se rechaza **entera** mientras el salto de línea que la sigue sí entra. Así que el
+mensaje no llega cortado al final: llega con **renglones ausentes** y su espacio en
+blanco, y con las líneas cortas posteriores intactas porque todavía cabían. El
+2026-09-03 el canal recibió el contexto macro sin la línea del Imacec ni las dos de
+tasas, pero con el link del BCCh que iba en medio, y el despacho reportó éxito.
 
-**El cupo diario no baja, y no debe bajar.** Cuenta mensajes entregados, no clics: veinte
-piezas siguen siendo veinte mensajes, salgan en veinte acciones o en cinco. Lo que baja es
-el número de aperturas de navegador y de esperas de 45 s.
+Escribir el texto en el cuadro de conversación y adjuntar **después** no tiene ese tope.
+Medido contra el DOM real ese día con un texto de 2.016 caracteres:
+
+| Orden | Pie resultante |
+|---|---|
+| adjuntar primero, pie en el editor | **1.029** de 2.016 |
+| texto en el cuadro, adjuntar después | **2.042** de 2.016 (completo) |
+
+> **Esto revirtió el despacho por lote** (decisión del director, 2026-09-03). Antes cada
+> canal salía en UNA acción con todas sus piezas, porque el editor acepta varias imágenes
+> y cada una conserva su pie. Pero el truco del cuadro solo puede llenar el pie de **una**
+> imagen, la que el editor abre seleccionada: con dos o más, las demás se escriben dentro
+> del editor y vuelven a cortarse. Las dos cosas eran incompatibles y manda el mensaje
+> completo. Se paga con una espera de cadencia por pieza y más aperturas del menú.
+
+**El guardia compara el texto, no solo que haya algo escrito.** Esa era la falla que dejó
+pasar el mensaje mutilado: `_verificar_pie_completo` contrasta la huella sin espacios de
+lo que se quiso escribir contra lo que quedó, y aborta si faltan caracteres. Un mensaje
+al que le faltan renglones **se lee como completo**, así que nadie lo nota desde afuera:
+eso lo hace peor, no menor.
 
 **Cada canal se rinde justo antes de despacharse.** Rendir todo al principio hacía que la
 última pieza llegara con el precio de hacía veinte minutos. El refresco (1-3 s de datos +
@@ -251,11 +269,14 @@ Dos reglas más que se decidieron mirando el resultado:
 
 Tres reglas que se pagaron caro:
 
-1. **Un lote es UNA acción pero N mensajes entregados.** La cadencia de 45 s se aplica una
-   vez por lote; el cupo diario se descuenta por pieza. Contarlo como un envío relajaría
+1. **La cadencia y el cupo se cuentan por pieza.** Cada pieza es su propia acción, espera
+   sus 45 s y descuenta su unidad del cupo. Contar un canal como un solo envío relajaría
    el freno por la puerta de atrás.
-2. **Un lote tiene que ser homogéneo.** El menú Adjuntar entra por "Fotos y videos" o por
-   "Documento", no por ambas: un PDF de informe no viaja con las Stories.
+2. **Un lote sigue teniendo que ser homogéneo.** El menú Adjuntar entra por "Fotos y
+   videos" o por "Documento", no por ambas: un PDF de informe no viaja con las Stories.
+   Con una pieza por acción esto ya no es una restricción técnica, pero la validación se
+   mantiene porque mezclar tipos en un mismo canal no es una decisión editorial que
+   convenga tomar por accidente.
 3. **Un solo dueño de la sesión a la vez.** El perfil de Chromium admite un proceso. Claude
    Code y Antigravity abriéndolo a la vez crean un perfil paralelo, y ese patrón desvinculó
    la sesión el 2026-09-01 y el 2026-09-02.

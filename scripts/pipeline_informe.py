@@ -274,6 +274,16 @@ def _nombre_indicador(ev: dict[str, Any]) -> str:
             and "precio" not in nombre_es.lower():
         matices.append("índice de precios")
 
+    # `Continuing` es el mismo caso que `Core` y el mas enganoso de los tres.
+    # "Initial Jobless Claims" (206K esta semana) y "Continuing Jobless Claims"
+    # (1.779K acumuladas) caen los dos en la entrada "Jobless Claims" del
+    # glosario, asi que el canal publicaba 1.779K bajo el nombre "Peticiones de
+    # subsidio por desempleo": el numero equivocado con el nombre correcto, que
+    # es peor que un nombre en ingles. Miden cosas distintas: cuantos pidieron
+    # esta semana frente a cuantos siguen cobrando.
+    if re.search(r"\bContinuing\b", nombre_fuente, re.IGNORECASE):
+        matices.append("continuadas")
+
     # El plazo de una subasta o de un bono: "2-Year Note Auction" y "5-Year Note
     # Auction" son la misma entrada del glosario y dos eventos distintos.
     plazo = re.search(r"\b(\d+)[-\s](Year|Month|Week)\b", nombre_fuente, re.IGNORECASE)

@@ -206,5 +206,19 @@
   "Cushing Crude Oil Inventories": {
     "nombre_es": "Inventarios de crudo en Cushing",
     "explicacion": "Nivel de almacenamiento de petróleo en Cushing, Oklahoma (punto de entrega del contrato WTI)."
+  },
+  "Exports": {
+    "nombre_es": "Exportaciones",
+    "explicacion": "Cuánto le vendió EE.UU. al resto del mundo en el mes. Junto con las importaciones arma la balanza comercial.",
+    "titulos_ff": [
+      "Exports"
+    ]
+  },
+  "Imports": {
+    "nombre_es": "Importaciones",
+    "explicacion": "Cuánto le compró EE.UU. al resto del mundo en el mes. Si supera a las exportaciones, salen más dólares del país de los que entran.",
+    "titulos_ff": [
+      "Imports"
+    ]
   }
 }

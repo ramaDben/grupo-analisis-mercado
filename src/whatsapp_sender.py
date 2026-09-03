@@ -762,11 +762,48 @@ class WhatsAppSender:
                 page.keyboard.up("Shift")
                 time.sleep(0.05)
 
+    @staticmethod
+    def _huella(texto: str) -> str:
+        """El texto sin ningún espacio ni salto de línea.
+
+        Sirve para comparar lo que se quiso escribir con lo que quedó en el
+        editor **sin depender de cómo el contenteditable cuenta los saltos**: en
+        la medición del 2026-09-03 un texto de 2.016 caracteres devolvía 2.042
+        por ese motivo, así que comparar largos crudos daba falsos negativos.
+        """
+        return "".join(texto.split())
+
     def _adjuntar_archivo(self, page: Any, ruta_archivo: Path, caption: str = "") -> None:
-        """Adjunta por el menú Adjuntar y escribe el pie dentro del editor."""
+        """Escribe el pie en el cuadro de conversación y DESPUÉS adjunta el archivo.
+
+        **El orden importa y se pagó caro.** El campo de pie de foto del editor
+        de medios tope en **1.024 caracteres**, y `insert_text` de una línea que
+        no cabe se rechaza ENTERA mientras el salto de línea que la sigue sí
+        entra. El resultado no es un texto cortado al final: son líneas sueltas
+        que desaparecen dejando su renglón en blanco, y las cortas posteriores
+        que todavía caben sí aparecen. Por eso el contexto macro del 2026-09-03
+        salió al canal sin la línea del Imacec ni las dos de tasas, pero con el
+        link del BCCh que venía en medio.
+
+        Escribir primero en el cuadro de conversación y adjuntar después no tiene
+        ese tope: el editor hereda el texto completo. Medido contra el DOM real
+        ese mismo día, con el contexto macro de 2.016 caracteres:
+
+            imagen primero, pie en el editor  ->  1.029 de 2.016
+            texto en el cuadro, imagen después ->  2.042 de 2.016 (completo)
+
+        La verificación de abajo compara la **huella** del texto y no solo que el
+        campo esté lleno. Esa era la falla que dejó pasar el mensaje mutilado: el
+        guardia solo preguntaba si había algo escrito.
+        """
         ruta_archivo = Path(ruta_archivo)
         if not ruta_archivo.exists():
             raise FileNotFoundError(f"El archivo adjunto no existe: {ruta_archivo}")
+
+        # El texto va PRIMERO, en el cuadro de conversación. Nunca al revés.
+        if caption.strip():
+            self._insertar_texto(page, caption.strip())
+            self._pausa_humana(0.8)
 
         self._cerrar_modales_emergentes(page)
         boton = self._primer_locator(page, SELECTORES_ADJUNTAR)
@@ -804,32 +841,56 @@ class WhatsAppSender:
         if not caption.strip():
             return
 
+        if not caption.strip():
+            return
+
         caja_caption = self._primer_locator(page, SELECTORES_CAPTION)
         if caja_caption is None:
             raise EnvioMensajeError(
                 "No apareció el campo de pie de foto del editor. Se aborta para no "
                 "mandar la pieza muda ni dejar el texto como borrador en el chat."
             )
-        # `click()` sobre el contenedor: el <p> del placeholder intercepta el
-        # puntero, así que se enfoca el editor por su propio nodo.
-        try:
-            caja_caption.click(timeout=8000)
-        except Exception:  # noqa: BLE001
-            caja_caption.click(timeout=8000, force=True)
-        self._pausa_humana(0.5)
-        self._escribir_multilinea(page, caption.strip())
-        self._pausa_humana(0.8)
+        self._pausa_humana(1.2)
+        self._verificar_pie_completo(caja_caption, caption, ruta_archivo)
 
-        # El pie tiene que haber quedado DENTRO del editor. Si terminó en el
-        # composer del chat, enviar mandaría el texto suelto y tiraría la imagen.
+    def _verificar_pie_completo(self, caja_caption: Any, esperado: str, ruta: Path) -> None:
+        """Aborta si el pie que quedó en el editor no es el que se quiso escribir.
+
+        Dos fallas distintas caen acá, y la segunda es la que ya llegó al cliente:
+
+        - **Vacío**: el texto terminó en el composer del chat. Enviar mandaría el
+          párrafo suelto y tiraría la imagen.
+        - **Incompleto**: el editor se quedó con parte. Un mensaje al que le
+          faltan renglones se lee como un mensaje entero, así que nadie lo nota;
+          el 2026-09-03 el canal recibió el contexto macro sin la línea del
+          Imacec ni las de tasas y el despacho reportó éxito.
+
+        Se compara la huella (sin espacios) porque el contenteditable cuenta los
+        saltos de línea a su manera. El margen de 2 caracteres absorbe alguna
+        normalización del editor sin dejar pasar un renglón perdido, que son
+        decenas de caracteres.
+        """
         try:
-            texto_pie = caja_caption.inner_text().strip()
+            quedo = caja_caption.inner_text().strip()
         except Exception:  # noqa: BLE001
-            texto_pie = ""
-        if not texto_pie:
+            quedo = ""
+
+        if not quedo:
             raise EnvioMensajeError(
-                "El pie de foto no quedó en el editor de medios. Se aborta antes de "
-                "enviar para no publicar la imagen sin texto."
+                f"El pie de {ruta.name} no quedó en el editor de medios. Se aborta "
+                "antes de enviar para no publicar la imagen sin texto."
+            )
+
+        huella_esperada = self._huella(esperado)
+        huella_quedo = self._huella(quedo)
+        if len(huella_quedo) < len(huella_esperada) - 2:
+            faltan = len(huella_esperada) - len(huella_quedo)
+            raise EnvioMensajeError(
+                f"El pie de {ruta.name} quedó incompleto: entraron "
+                f"{len(huella_quedo)} de {len(huella_esperada)} caracteres y faltan "
+                f"{faltan}. El campo del editor tope en 1.024, así que el texto hay "
+                f"que escribirlo en el cuadro ANTES de adjuntar, o acortarlo. Se "
+                f"aborta: un mensaje al que le faltan renglones se lee como completo."
             )
 
     @staticmethod
@@ -859,127 +920,12 @@ class WhatsAppSender:
             )
         return opciones.pop()
 
-    def _miniaturas_del_lote(self, page: Any, esperadas: int) -> list[Any]:
-        """Las miniaturas de la tira inferior del editor, en orden.
+    # `_miniaturas_del_lote`, `_escribir_pies_del_lote` y `_adjuntar_lote`
+    # vivian aca y se eliminaron el 2026-09-03: adjuntaban primero y escribian
+    # el pie dentro del editor, que es el orden que tope en 1.024 caracteres y
+    # mutilo el mensaje del canal. Dejarlas como referencia habria dejado el
+    # orden equivocado escrito y a mano para el proximo que pase por aca.
 
-        Se distinguen de la previsualización grande por el ancho, y de las
-        imágenes del historial del chat quedándose con las últimas: la tira se
-        monta después que la conversación.
-        """
-        imgs = page.locator('img[src^="blob:"]')
-        try:
-            total = imgs.count()
-        except Exception:  # noqa: BLE001
-            total = 0
-
-        candidatas: list[Any] = []
-        for i in range(total):
-            nodo = imgs.nth(i)
-            try:
-                caja = nodo.bounding_box()
-            except Exception:  # noqa: BLE001
-                continue
-            if caja and caja.get("width", 10**6) < UMBRAL_MINIATURA_PX:
-                candidatas.append(nodo)
-
-        if len(candidatas) < esperadas:
-            raise EnvioMensajeError(
-                f"El editor mostró {len(candidatas)} miniatura(s) para un lote de "
-                f"{esperadas} pieza(s). Se aborta antes de escribir los pies: sin la "
-                "tira completa, todos terminarían apilados en la primera imagen."
-            )
-        return candidatas[-esperadas:]
-
-    def _escribir_pies_del_lote(self, page: Any, piezas: list[Pieza]) -> None:
-        """Escribe el pie de cada pieza en SU miniatura.
-
-        Sin seleccionar la miniatura antes de escribir, los pies se apilan en la
-        primera imagen y el resto sale mudo.
-        """
-        minis = self._miniaturas_del_lote(page, len(piezas))
-
-        for i, pieza in enumerate(piezas):
-            # La primera imagen ya viene seleccionada al abrirse el editor.
-            if i > 0:
-                try:
-                    minis[i].click(timeout=8000)
-                except Exception:  # noqa: BLE001
-                    minis[i].click(timeout=8000, force=True)
-                self._pausa_humana(1.4)
-
-            texto = pieza.mensaje.strip()
-            if not texto:
-                continue
-
-            caja = self._primer_locator(page, SELECTORES_CAPTION)
-            if caja is None:
-                raise EnvioMensajeError(
-                    f"No apareció el campo de pie de foto para {Path(pieza.adjunto).name}. "
-                    "Se aborta para no mandar la pieza muda."
-                )
-            try:
-                caja.click(timeout=8000)
-            except Exception:  # noqa: BLE001
-                caja.click(timeout=8000, force=True)
-            self._pausa_humana(0.5)
-            self._escribir_multilinea(page, texto)
-            self._pausa_humana(0.8)
-
-            try:
-                quedo = caja.inner_text().strip()
-            except Exception:  # noqa: BLE001
-                quedo = ""
-            if not quedo:
-                raise EnvioMensajeError(
-                    f"El pie de {Path(pieza.adjunto).name} no quedó en el editor. Se "
-                    "aborta antes de enviar para no publicar la imagen sin texto."
-                )
-
-    def _adjuntar_lote(self, page: Any, piezas: list[Pieza]) -> None:
-        """Adjunta todas las piezas en una sola acción y escribe sus pies."""
-        opcion = self._validar_lote(piezas)
-
-        self._cerrar_modales_emergentes(page)
-        boton = self._primer_locator(page, SELECTORES_ADJUNTAR)
-        if boton is None:
-            raise EnvioMensajeError(
-                'No se encontró el botón "Adjuntar". Es la única vía correcta: el '
-                "campo de archivo suelto del chat es el creador de stickers."
-            )
-        try:
-            boton.click(timeout=5000)
-        except Exception:  # noqa: BLE001
-            self._cerrar_modales_emergentes(page)
-            boton.click(timeout=5000, force=True)
-        self._pausa_humana(0.8)
-
-        rutas = [str(Path(p.adjunto).resolve()) for p in piezas]
-        try:
-            with page.expect_file_chooser(timeout=self.timeout_envio_ms) as selector_archivo:
-                page.get_by_text(opcion, exact=True).first.click()
-            chooser = selector_archivo.value
-            if len(rutas) > 1 and not chooser.is_multiple():
-                raise EnvioMensajeError(
-                    f'La entrada "{opcion}" no acepta varios archivos en esta versión '
-                    "de WhatsApp Web. Despacha las piezas de a una."
-                )
-            chooser.set_files(rutas)
-        except EnvioMensajeError:
-            raise
-        except Exception as exc:  # noqa: BLE001
-            raise EnvioMensajeError(
-                f'No se pudo adjuntar el lote de {len(rutas)} pieza(s) por "{opcion}": {exc}'
-            ) from exc
-
-        try:
-            page.wait_for_selector('[aria-label^="Enviar"]', timeout=self.timeout_envio_ms)
-        except Exception as exc:  # noqa: BLE001
-            raise EnvioMensajeError(
-                f"El editor de medios no terminó de abrirse para el lote: {exc}"
-            ) from exc
-        self._pausa_humana(2.5)
-
-        self._escribir_pies_del_lote(page, piezas)
 
     @staticmethod
     def _contar_mensajes(page: Any) -> int:
@@ -1178,13 +1124,33 @@ class WhatsAppSender:
         piezas: list[Pieza],
         dry_run: bool = False,
     ) -> dict[str, Any]:
-        """Despacha varias piezas al mismo canal en UNA acción de envío.
+        """Despacha las piezas de un canal, **una por acción**, en una sola sesión.
 
-        Es la forma natural de mandar una tanda: el editor de medios acepta
-        varios archivos a la vez y cada uno conserva su propio pie, así que las
-        cuatro piezas de un canal salen con un clic en vez de con cuatro
-        aperturas de navegador espaciadas 45 s. Menos acciones es también menos
-        superficie de detección.
+        > Antes esto mandaba todas las piezas en UNA acción: el editor de medios
+        > acepta varios archivos y cada uno conserva su propio pie, así que un
+        > canal de cuatro piezas salía con un clic en vez de con cuatro aperturas
+        > de navegador espaciadas 45 s. **Esa decisión se revirtió el 2026-09-03
+        > por orden del director, y la razón es que era incompatible con mandar
+        > el mensaje completo.**
+
+        El campo de pie del editor tope en 1.024 caracteres. La única forma de
+        superarlo es escribir el texto en el cuadro de conversación **antes** de
+        adjuntar, y eso solo puede llenar el pie de UNA imagen: la que el editor
+        abre seleccionada. Con dos o más piezas en la misma acción, las demás se
+        escriben dentro del editor y vuelven a cortarse.
+
+        El costo asumido es real: una espera de cadencia por pieza y más
+        aperturas del menú, o sea más superficie de detección. Lo que se compra
+        es que el cliente reciba el mensaje entero, incluido su cierre. Un
+        mensaje al que le faltan renglones se lee como completo, así que el
+        defecto no se nota desde afuera: eso lo hace peor, no menor.
+
+        La conversación se abre **una sola vez** y se reutiliza para todas las
+        piezas del canal. La verificación de destinatario ya corrió sobre ella y
+        el chat no cambia entre piezas.
+
+        El cupo y la cadencia se descuentan **por pieza**, que es lo que siempre
+        fueron: mensajes entregados, no clics.
         """
         nombre_oficial = self.config.resolver_nombre_oficial(destinatario)
         self._validar_lote(piezas)
@@ -1208,8 +1174,6 @@ class WhatsAppSender:
                 "Playwright no está instalado. Ejecute: uv sync --extra stories"
             ) from err
 
-        self._reservar_turno(piezas=len(piezas))
-
         with sync_playwright() as p:
             context = self._crear_contexto(p, headless=self.headless)
             page = None
@@ -1219,18 +1183,25 @@ class WhatsAppSender:
                 self._verificar_autenticacion(page)
                 self._buscar_y_abrir_chat(page, nombre_oficial)
 
-                mensajes_antes = self._contar_mensajes(page)
-                self._adjuntar_lote(page, piezas)
+                for indice, pieza in enumerate(piezas, 1):
+                    # La reserva va DENTRO del bucle: la cadencia se respeta entre
+                    # piezas y el cupo se descuenta antes de cada intento, así un
+                    # fallo sobrecuenta en vez de subcontar.
+                    self._reservar_turno(piezas=1)
 
-                # El testigo es el pie de la ÚLTIMA pieza: es la que queda abajo
-                # en la conversación cuando el lote termina de subir.
-                self._clic_enviar_y_confirmar(
-                    page,
-                    mensajes_antes,
-                    testigo=self._testigo(piezas[-1].mensaje),
-                    con_adjunto=True,
-                )
-                self._pausa_humana(1.0)
+                    mensajes_antes = self._contar_mensajes(page)
+                    self._adjuntar_archivo(page, Path(pieza.adjunto), pieza.mensaje)
+                    self._clic_enviar_y_confirmar(
+                        page,
+                        mensajes_antes,
+                        testigo=self._testigo(pieza.mensaje),
+                        con_adjunto=True,
+                    )
+                    logger.info(
+                        "pieza %d/%d entregada a %s: %s",
+                        indice, len(piezas), nombre_oficial, Path(pieza.adjunto).name,
+                    )
+                    self._pausa_humana(1.0)
 
                 return {
                     "status": "enviado",
