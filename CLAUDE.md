@@ -481,6 +481,16 @@ sesgo que **parece** fresco. Peor que fallar es fallar de forma convincente.
 aplica el mismo umbral de staleness del Playbook vía `bias_reader` — inventar una
 segunda regla de vencimiento sería el mismo error que tener dos fórmulas de ATR.
 
+**Avisa cuando los precios no vienen de MT5.** El extractor cae a yfinance si el
+terminal no le sirve un símbolo, y ese fallback es correcto pero **no es equivalente**:
+son futuros (`GC=F`, `CL=F`, `NQ=F`) y no los CFD del broker. El 2026-09-02 el terminal
+quedó conectado a otra cuenta y cinco de seis activos salieron de yfinance mientras la
+cadena reportaba `[OK] precios` y `Datos frescos`. El campo `broker: YFINANCE` sí quedaba
+escrito en cada archivo, así que era auditable, pero nada lo decía en voz alta: costó una
+hora de diagnóstico y los stops del Playbook quedaron calculados sobre otro instrumento.
+Ahora `--estado` nombra cada activo caído y el veredicto pasa a no utilizable, sin umbral
+de tolerancia: un stop calculado sobre otra fuente de precio es un stop de otro mercado.
+
 Informa además la **confianza del modelo**, que hasta ahora solo se imprimía en
 consola del motor y no la leía nadie. **Ese número todavía no bloquea**: qué umbral
 corresponde es una decisión de método pendiente del director. Lo que sí cambia es que

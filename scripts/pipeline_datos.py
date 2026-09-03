@@ -126,6 +126,10 @@ class Reloj:
     antiguedad_h: float | None = None
     umbral_h: float | None = None
     error: str | None = None
+    # Recuento de fuentes por activo, solo para `precios`. El extractor cae a
+    # yfinance cuando MT5 no le sirve un simbolo, y ese fallback es correcto pero
+    # no es equivalente: son futuros (GC=F, CL=F, NQ=F) y no los CFD del broker.
+    fuentes: dict[str, int] = field(default_factory=dict)
 
     @property
     def fresco(self) -> bool:
@@ -188,6 +192,67 @@ def _evaluar(reloj: Reloj, as_of: str | None, ahora: datetime | None) -> Reloj:
     return reloj
 
 
+def _fuente_del_activo(marcos: dict) -> str | None:
+    """La fuente de un activo, tomada de sus campos `<TF>_fuente`.
+
+    Si sus marcos no coinciden se devuelve el peor caso: un activo con H1 de MT5
+    y D1 de yfinance no está "medio bien", está mezclando dos mercados.
+    """
+    vistas = {v for k, v in marcos.items() if k.endswith("_fuente") and v}
+    if not vistas:
+        return None
+    return "MT5" if vistas == {"MT5"} else sorted(vistas - {"MT5"})[0]
+
+
+def _fuentes_por_activo(summary: dict) -> dict[str, str]:
+    """De qué fuente salió cada activo, por nombre."""
+    return {
+        act: f
+        for act, marcos in (summary.get("activos") or {}).items()
+        if (f := _fuente_del_activo(marcos or {}))
+    }
+
+
+def _contar_fuentes(por_activo: dict[str, str]) -> dict[str, int]:
+    """Cuántos activos vienen de cada fuente."""
+    conteo: dict[str, int] = {}
+    for f in por_activo.values():
+        conteo[f] = conteo.get(f, 0) + 1
+    return conteo
+
+
+def _motivo_fallback(por_activo: dict[str, str]) -> str | None:
+    """El aviso cuando algún activo no salió de MT5.
+
+    Por qué existe. El 2026-09-02 el terminal quedó conectado a otra cuenta y el
+    extractor cayó a yfinance en cinco de seis activos. La cadena reportó
+    `[OK] precios` y `Datos frescos`, porque los archivos eran de hace minutos, y
+    los stops del Playbook quedaron calculados sobre futuros de yfinance en vez
+    de los CFD del broker. El campo `broker: YFINANCE` sí quedaba escrito en cada
+    archivo, así que era auditable, pero **nada lo decía en voz alta**: costó una
+    hora de diagnóstico.
+
+    Es el mismo defecto que el `status: "OK"` regalado del extractor de
+    commodities: un fallback que hace su trabajo y no se anuncia.
+
+    **Sin umbral de tolerancia.** El Playbook cubre cinco activos y un stop
+    calculado sobre otra fuente de precio es un stop de otro mercado: un solo
+    activo en fallback ya se nombra.
+    """
+    ajenos = {a: f for a, f in por_activo.items() if f != "MT5"}
+    if not ajenos:
+        return None
+    # Se nombra CADA activo, no solo el conteo: saber que "5 de 6 cayeron" no dice
+    # cuáles stops quedaron calculados sobre otro mercado. Con seis activos la
+    # lista cabe entera.
+    detalle = ", ".join(f"{a} ({f})" for a, f in sorted(ajenos.items()))
+    return (
+        f"{len(ajenos)} de {len(por_activo)} activos no vienen de MT5: {detalle}. "
+        f"Son otro instrumento, no el mismo precio: revisa a que cuenta esta "
+        f"conectado el terminal"
+    )
+
+
 def estado_datos(data_central: Path | None = None, ahora: datetime | None = None) -> EstadoDatos:
     """Los tres relojes de la cadena en una sola respuesta.
 
@@ -212,13 +277,18 @@ def estado_datos(data_central: Path | None = None, ahora: datetime | None = None
             r.error = f"fuentes con problemas: {', '.join(fallidas)}"
     est.relojes.append(r)
 
-    # 2. Precios
+    # 2. Precios: además de la fecha, de qué fuente salió cada activo.
     r = Reloj("precios", "series OHLC + indicadores")
     data, err = _leer(raiz / "DATA PRECIOS OHLC" / "latest_prices_summary.json")
     if err:
         r.error = err
     else:
         _evaluar(r, data.get("as_of_utc"), ahora)
+        por_activo = _fuentes_por_activo(data)
+        r.fuentes = _contar_fuentes(por_activo)
+        fallback = _motivo_fallback(por_activo)
+        if fallback and r.error is None:
+            r.error = fallback
     est.relojes.append(r)
 
     # 3. Sesgo del Playbook
