@@ -32,6 +32,7 @@ import argparse
 import json
 import subprocess
 import sys
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
@@ -362,13 +363,90 @@ def revigenciar(
     return nueva
 
 
+class PayloadIncoherenteError(ValueError):
+    """El payload no describe un solo instante del mercado."""
+
+
+# Tope del desfase entre el precio del analizador y el ultimo cierre de la serie,
+# en fracciones del ATR de H1. **Medido, no estimado**: sobre los 16 payloads que
+# quedaron en disco, 15 dan desfase EXACTAMENTE 0,000 y el peor sano da 0,0033 ATR
+# (un tick de USD/JPY). El caso que motivo el control daba 1,9 ATR. 0,25 deja 75
+# veces de margen sobre lo sano y 7,5 veces por debajo del fallo.
+TOLERANCIA_DESFASE_ATR = 0.25
+
+
+def incoherencia_del_payload(
+    seleccion: dict[str, Any], cierres: list[float]
+) -> str | None:
+    """Por que este payload no describe un solo instante, o `None` si esta sano.
+
+    Un payload de activo junta DOS lecturas independientes del terminal: el
+    analizador tecnico (`analizar_activo`, 300 velas) da precio y niveles, y
+    `serie_mt5` (60 velas) da la serie del grafico. Nada las confrontaba, y el
+    2026-09-04 salieron desacopladas: GLD.US se preparo con score 100/100, precio
+    410,37 y una serie que terminaba en 405,32, o sea que el precio era el CUARTO
+    valor desde el final de su propia serie.
+
+    El renderer no lo delata: dibuja el punto en `serie[idx]` y le pone como
+    rotulo el precio del marcador, asi que la pieza se veia impecable con dos
+    numeros distintos adentro. Por eso el control tiene que estar aca, antes de
+    que el payload exista.
+
+    Lo que este control NO cubre, para no prometer de mas: la invariante
+    `soporte < precio < resistencia` la cumplen los 16 payloads de disco, GLD
+    incluido (410,37 cae entre 409,72 y 424,45), asi que **no** habria atajado el
+    caso. Se verifica igual porque es gratis y sostiene otra falla distinta, pero
+    el desfase contra la serie es el que importa.
+    """
+    if not cierres:
+        return "la serie del grafico vino vacia: la pieza no tendria recorrido que dibujar"
+
+    precio = float(seleccion["precio"])
+    soporte = float(seleccion["soporte"])
+    resistencia = float(seleccion["resistencia"])
+    ultimo = float(cierres[-1])
+    atr = float(seleccion.get("atr_h1") or 0.0)
+
+    if atr <= 0:
+        return (
+            "el analizador no devolvio ATR de H1, asi que el desfase contra la serie "
+            "no se puede juzgar en la escala del activo"
+        )
+
+    desfase = abs(precio - ultimo)
+    if desfase > TOLERANCIA_DESFASE_ATR * atr:
+        return (
+            f"el precio ({precio}) no es el ultimo cierre de su propia serie "
+            f"({ultimo}): {desfase:.4f} de diferencia, "
+            f"{desfase / atr:.2f} veces el ATR de H1. El analizador y la serie "
+            "leyeron momentos distintos del mercado"
+        )
+
+    if not soporte < precio < resistencia:
+        return (
+            f"el precio ({precio}) no cae entre el soporte ({soporte}) y la "
+            f"resistencia ({resistencia}): los niveles no corresponden a este precio"
+        )
+
+    return None
+
+
 def construir_payload(
     seleccion: dict[str, Any],
     activo_catalogo: dict[str, Any],
     ahora: datetime,
     cierres: list[float],
 ) -> dict[str, Any]:
-    """Payload de `alerta` con los datos resueltos y lo editorial en blanco."""
+    """Payload de `alerta` con los datos resueltos y lo editorial en blanco.
+
+    Levanta `PayloadIncoherenteError` si las dos lecturas del terminal que se
+    juntan aca no describen el mismo instante. Se niega a construir en vez de
+    devolver algo marcado, por la misma politica de `rendir` ante un campo
+    editorial vacio: una pieza a medias que sale sin avisar llega al cliente.
+    """
+    motivo = incoherencia_del_payload(seleccion, cierres)
+    if motivo is not None:
+        raise PayloadIncoherenteError(f"{seleccion['ticker']}: {motivo}")
     digits = activo_catalogo["digits"]
     imagen = activo_catalogo["imagen"]
     slug = _slug_de_imagen(imagen)
@@ -562,7 +640,46 @@ def obtener_grupo_whatsapp(cat_o_clase: str, ticker: str) -> str:
         or cat_o_clase.lower() in ("acciones", "accion", "etf", "etfs")
     ):
         return "05_acciones_etfs"
-    return MAPEO_GRUPOS_WHATSAPP.get(cat_o_clase.lower(), "01_macro_y_apertura")
+    canal = MAPEO_GRUPOS_WHATSAPP.get(cat_o_clase.lower())
+    if canal is None:
+        raise GrupoDesconocidoError(
+            f"No reconozco la categoria {cat_o_clase!r} (ticker {ticker!r}). "
+            f"Categorias mapeadas: {', '.join(sorted(MAPEO_GRUPOS_WHATSAPP))}. "
+            "Si lo que tienes es el slug de un canal, ya esta resuelto y no hay que "
+            "mapearlo; si es una categoria nueva del catalogo, agregala al mapeo."
+        )
+    return canal
+
+
+CANAL_AVISOS = "01_macro_y_apertura"
+
+
+def canales_con_contexto_macro(
+    payloads: list[dict[str, Any]],
+    grupo_pedido: str | None = None,
+) -> set[str]:
+    """Los canales que reciben la lectura macro de esta corrida.
+
+    Vive aparte porque las tres reglas que la componen se decidieron por separado
+    y antes estaban mezcladas en tres lineas de `preparar`, donde una de ellas
+    estaba equivocada y no se veia:
+
+    1. **Todo canal con piezas** recibe su macro: es el contexto de lo que va a leer.
+    2. **El canal pedido con `--grupo`**, aunque quede vacio. `grupo_pedido` llega
+       ya resuelto a slug por `resolver_grupo_solicitado`, asi que se usa tal cual.
+       Antes se lo pasaba a `obtener_grupo_whatsapp`, que espera una *categoria*:
+       ninguna rama aplicaba, caia al default y el resultado era que el canal
+       pedido no recibia nada y el macro se lo llevaba entero el de avisos.
+    3. **El canal de avisos, siempre**, por decision del director del 2026-09-03.
+       Declararlo importa: el mismo resultado salia antes del default de
+       `obtener_grupo_whatsapp`, o sea que habria seguido ocurriendo aunque la
+       decision hubiera sido la contraria.
+    """
+    canales = {p["grupo"] for p in payloads if p.get("grupo")}
+    if grupo_pedido:
+        canales.add(grupo_pedido)
+    canales.add(CANAL_AVISOS)
+    return canales
 
 
 def construir_mensaje_alerta(payload: dict[str, Any]) -> str:
@@ -818,7 +935,11 @@ def preparar(
             problemas.append(f"{sel['ticker']}: no se pudo traer la serie ({exc})")
             continue
 
-        payload = construir_payload(sel, activo, ahora, cierres)
+        try:
+            payload = construir_payload(sel, activo, ahora, cierres)
+        except PayloadIncoherenteError as exc:
+            problemas.append(str(exc))
+            continue
         cat_real = activo.get("categoria", sel["clase"])
         grupo_nombre = obtener_grupo_whatsapp(cat_real, sel["ticker"])
         grupo_dir = destino / grupo_nombre
@@ -842,11 +963,12 @@ def preparar(
     # Asegurar la cobertura de contexto macro diario en cada carpeta de grupo activa
     from contexto_macro_grupos import asegurar_contexto_macro_grupo
     eventos_macro, delta_ust, _ = sc._contexto_macro(ahora)
-    grupos_activos = {p["grupo"] for p in payloads if p.get("grupo")}
-    if grupo:
-        grp_mapeado = obtener_grupo_whatsapp(grupo, "")
-        grupos_activos.add(grp_mapeado)
+    grupos_activos = canales_con_contexto_macro(payloads, grupo_pedido=grupo)
 
+    # Cuantas piezas de niveles va a recibir cada canal. El cierre del contexto
+    # macro las anuncia, y hasta el 2026-09-04 las prometia siempre: el canal de
+    # avisos, que nunca lleva niveles, recibio la promesa igual.
+    piezas_por_canal = Counter(p["grupo"] for p in payloads if p.get("grupo"))
     for grp in grupos_activos:
         asegurar_contexto_macro_grupo(
             grupo=grp,
@@ -854,6 +976,7 @@ def preparar(
             eventos=eventos_macro,
             delta_ust_bps=delta_ust,
             ahora=ahora,
+            piezas_de_niveles=piezas_por_canal[grp],
         )
 
     # Un solo descargador con cache para toda la corrida: el feed de la Fed
@@ -1020,10 +1143,29 @@ def refrescar_payload(
     # El chip sigue al estado recalculado. Si el precio recupero su nivel entre
     # preparar y despachar, un chip neutro junto a "el sesgo sigue vigente" seria
     # la misma contradiccion que este cambio vino a cerrar, al reves.
-    if vigencia_cruda:
-        tecnica = "ALCISTA" if nuevo.get("sesgo", "").lower() != "bajista" else "BAJISTA"
-        nuevo["sesgo"] = direccion_publicada(tecnica, vigencia_cruda, None)
-        nuevo["tag_riesgo"] = nuevo["sesgo"].upper()
+    #
+    # Dos cosas cambiaron el 2026-09-04 y las dos venian del mismo caso, GLD.US:
+    #
+    # 1. **Se recalcula siempre, no solo con vigencia.** GLD llegaba con
+    #    `vigencia: None` (no tiene ficha del Playbook), asi que entraba por el
+    #    `else` inexistente: el sesgo "Alcista" de la preparacion sobrevivia
+    #    intacto aunque la lectura de ahora fuera bajista. Los 33 activos del
+    #    catalogo sin ficha estaban en ese agujero, o sea casi todos.
+    # 2. **La direccion se lee del mercado, no del propio payload.** Antes se
+    #    re-derivaba del string `nuevo["sesgo"]`, que es circular: si venia mal,
+    #    seguia mal. Ahora sale de `direccion_tecnica`, que es **la misma funcion
+    #    que uso el escaner** para elegir el activo. Usar `h1["trend"]` habria
+    #    parecido equivalente y no lo es: `trend` compara contra la EMA 100 y
+    #    `direccion_tecnica` contra la EMA 50, asi que preparar y refrescar
+    #    habrian medido con distinta vara.
+    if "ema_50" not in h1:
+        return nuevo, motivo or (
+            "el analizador no devolvio la EMA 50 de H1, asi que la direccion de "
+            "la pieza no se puede confirmar contra el mercado de ahora"
+        )
+    tecnica = sc.direccion_tecnica(h1)
+    nuevo["sesgo"] = direccion_publicada(tecnica, vigencia_cruda, None)
+    nuevo["tag_riesgo"] = nuevo["sesgo"].upper()
 
     nuevo["_procedencia"].setdefault("crudos", {})
     nuevo["_procedencia"]["crudos"] = {
@@ -1037,6 +1179,24 @@ def refrescar_payload(
 
     # El gráfico se redibuja con la serie nueva y sus niveles al día.
     serie = cierres if isinstance(cierres, list) else cierres.get("serie", [])
+
+    # El refresco vuelve a juntar las mismas dos lecturas del terminal que junta
+    # `construir_payload`, y con el mismo acoplamiento ciego: indice de una fuente
+    # y precio de la otra. Si llegan desacopladas la pieza no sale, que es lo que
+    # ya hace ante una divergencia de precio. Se comprueba **despues** de las otras
+    # divergencias para no tapar un motivo de mercado con uno de datos: que el
+    # precio haya perforado el soporte le interesa mas al director.
+    if motivo is None:
+        motivo = incoherencia_del_payload(
+            {
+                "ticker": nuevo.get("_procedencia", {}).get("ticker", nuevo.get("activo", "?")),
+                "precio": precio,
+                "soporte": soporte,
+                "resistencia": resistencia,
+                "atr_h1": h1.get("atr_14"),
+            },
+            serie,
+        )
     recorrido = nuevo.get("recorrido", {})
     recorrido["serie"] = serie
     recorrido["marcadores"] = [{
@@ -1217,7 +1377,10 @@ def despachar(
     tanda: así el precio de la última pieza tiene minutos y no media hora. El
     render cabe entero dentro de la espera de cadencia, así que no cuesta tiempo.
     """
-    from whatsapp_sender import WhatsAppSender
+    from whatsapp_sender import WhatsAppSender, huella
+    from bitacora_despachos import cargar as cargar_bitacora
+    from bitacora_despachos import registrar as anotar_despacho
+    from bitacora_despachos import ya_despachada
 
     grupos = sorted(d for d in directorio.iterdir() if d.is_dir())
     if not grupos:
@@ -1225,6 +1388,13 @@ def despachar(
 
     sender = WhatsAppSender(headless=headless)
     resultados: list[dict[str, Any]] = []
+
+    # La bitacora es la unidad correcta para retomar. `--desde N` cuenta CANALES,
+    # y desde el 2026-09-03 el envio cuenta PIEZAS: retomar un canal que fallo en
+    # su segunda de tres reenviaba la primera. Se conserva `--desde` como control
+    # manual del director, pero lo normal es que ya no haga falta.
+    tanda = directorio.name
+    bitacora = cargar_bitacora()
 
     for i, dir_grupo in enumerate(grupos, 1):
         if i < desde:
@@ -1247,9 +1417,18 @@ def despachar(
             if suplemento.exists():
                 texto = suplemento.read_text(encoding="utf-8").strip()
                 print(f"    suplemento de {len(texto)} caracteres, sin adjunto...", flush=True)
+                if ya_despachada(bitacora, tanda, dir_grupo.name, "0_suplemento"):
+                    print("    suplemento ya despachado segun la bitacora: se omite", flush=True)
+                    resultados.append({"grupo": dir_grupo.name, "status": "ya_despachado"})
+                    continue
                 res = sender.enviar(
                     dir_grupo.name, mensaje=texto, dry_run=dry_run
                 )
+                if not dry_run:
+                    anotar_despacho(
+                        tanda, dir_grupo.name, "0_suplemento",
+                        huella=huella(texto),
+                    )
                 resultados.append({"grupo": dir_grupo.name, "suplemento": True, **res})
                 # La cadencia no se maneja aca: `enviar` reserva su turno y
                 # espera por su cuenta, igual que el resto de las piezas.
@@ -1259,9 +1438,34 @@ def despachar(
             resultados.append({"grupo": dir_grupo.name, "status": "vacio"})
             continue
 
-        print(f"    despachando {len(piezas)} pieza(s), una por acción...", flush=True)
-        res = sender.enviar_lote(dir_grupo.name, piezas, dry_run=dry_run)
-        resultados.append({"grupo": dir_grupo.name, **res})
+        canal = dir_grupo.name
+        pendientes = [
+            pz for pz in piezas
+            if not ya_despachada(bitacora, tanda, canal, Path(pz.adjunto).stem)
+        ]
+        if not pendientes:
+            print("    todas sus piezas ya salieron segun la bitacora: se omite", flush=True)
+            resultados.append({"grupo": canal, "status": "ya_despachado",
+                               "piezas": len(piezas)})
+            continue
+        if len(pendientes) < len(piezas):
+            print(
+                f"    {len(piezas) - len(pendientes)} pieza(s) ya despachada(s): "
+                "se retoma en la que falta", flush=True
+            )
+
+        def anotar(pieza: Any, _canal: str = canal) -> None:
+            # La huella sale de la MISMA funcion que compara el guardia de entrega
+            # contra el DOM. Una segunda implementacion seria otro de los relojes
+            # duplicados que ya costaron caro en este repo.
+            anotar_despacho(
+                tanda, _canal, Path(pieza.adjunto).stem,
+                huella=huella(pieza.mensaje or ""),
+            )
+
+        print(f"    despachando {len(pendientes)} pieza(s), una por acción...", flush=True)
+        res = sender.enviar_lote(canal, pendientes, dry_run=dry_run, al_entregar=anotar)
+        resultados.append({"grupo": canal, **res})
 
     return {"directorio": str(directorio), "grupos": resultados}
 

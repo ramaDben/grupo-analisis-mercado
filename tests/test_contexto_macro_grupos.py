@@ -33,6 +33,55 @@ def test_filtrar_eventos_para_forex_incluye_eurozona_usa_y_chile():
     assert "Interest Rate Decision" in nombres
 
 
+PROMESA = "compartimos los niveles"
+
+
+def _texto(piezas_de_niveles):
+    return cmg.construir_texto_contexto_macro(
+        grupo="04_indices_bursatiles",
+        eventos_grupo=[],
+        delta_ust_bps=6.0,
+        ahora=_AHORA,
+        con_imagen=True,
+        piezas_de_niveles=piezas_de_niveles,
+    )
+
+
+def test_sin_piezas_de_niveles_el_cierre_no_los_promete():
+    """El defecto que llego a un canal real el 2026-09-04.
+
+    El cierre prometia "a continuacion compartimos los niveles tecnicos" en el
+    canal de avisos, que estructuralmente solo lleva el contexto macro y nunca
+    tuvo una pieza de niveles. El archivo ya aplicaba este mismo criterio a la
+    imagen ("un texto que anuncia un grafico inexistente llega roto al cliente");
+    esto lo extiende a lo que el texto promete despues.
+    """
+    txt = _texto(0)
+    assert PROMESA not in txt
+    assert "Consulta a tu analista" in txt
+
+
+def test_con_piezas_de_niveles_el_cierre_si_las_anuncia():
+    """El reciproco: quitar la promesa cuando SI se cumple dejaria al cliente sin
+    saber que vienen mas piezas en el mismo canal."""
+    txt = _texto(3)
+    assert PROMESA in txt
+
+
+def test_el_cierre_sigue_prometiendo_la_imagen_solo_si_existe():
+    """La regla vieja no se toca al agregar la nueva."""
+    con = cmg.construir_texto_contexto_macro(
+        grupo="04_indices_bursatiles", eventos_grupo=[], delta_ust_bps=6.0,
+        ahora=_AHORA, con_imagen=True, piezas_de_niveles=2,
+    )
+    sin = cmg.construir_texto_contexto_macro(
+        grupo="04_indices_bursatiles", eventos_grupo=[], delta_ust_bps=6.0,
+        ahora=_AHORA, con_imagen=False, piezas_de_niveles=2,
+    )
+    assert "imagen adjunta" in con
+    assert "imagen adjunta" not in sin
+
+
 def test_construir_texto_contexto_macro_formatea_cifras_reales_y_curva():
     ahora = datetime(2026, 9, 1, 10, 0, tzinfo=SANTIAGO)
     eventos = [

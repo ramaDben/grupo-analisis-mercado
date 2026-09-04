@@ -140,6 +140,55 @@ def _separar_etiquetas(marcadores: list[dict], coord_y) -> dict[int, float]:
     return y_texto
 
 
+# Cuanto puede separarse el precio del marcador `actual` de su punto en la serie,
+# como fraccion del rango dibujado. Es un criterio VISUAL y no de mercado: si el
+# punto quedaria a mas del 1% de la altura del grafico de donde su rotulo dice,
+# el dibujo afirma dos precios distintos a la vez.
+TOLERANCIA_ACTUAL_RANGO = 0.01
+
+
+def _verificar_marcador_actual(
+    serie: list[float], marcadores: list[dict[str, Any]]
+) -> None:
+    """El marcador `actual` no puede decir un precio y dibujarse en otro.
+
+    `actual` es el UNICO marcador donde la serie manda sobre el precio propio: el
+    punto se ancla en `serie[idx]` para quedar pegado al vertice de la linea,
+    mientras el rotulo sigue siendo `etiqueta`, que el payload deriva del precio.
+    Los demas marcadores conservan su precio a proposito, porque el hito real de
+    la operacion manda sobre el muestreo del grafico.
+
+    Esa asimetria, sin control, convierte una incoherencia de datos en un dibujo
+    impecable. Es lo que paso con GLD.US el 2026-09-04: el punto se dibujo en
+    405,32 con el rotulo "410,37", sin un solo error, y por eso la pieza parecia
+    sana. El renderer era el ultimo lugar donde el defecto podia verse y era
+    justamente el que lo tapaba.
+
+    No reemplaza al control de `pipeline_carrusel.incoherencia_del_payload`, que
+    ataja el caso antes de que el payload exista: esto cubre las piezas que se
+    arman a mano por `/story`, donde no pasa por ese camino.
+    """
+    if not serie:
+        return
+    rango = max(serie) - min(serie)
+    if rango <= 0:
+        return
+    for m in marcadores:
+        if m.get("clase") != "actual":
+            continue
+        idx = m.get("indice")
+        if not isinstance(idx, int) or not 0 <= idx < len(serie):
+            continue
+        desvio = abs(float(m["precio"]) - float(serie[idx]))
+        if desvio > TOLERANCIA_ACTUAL_RANGO * rango:
+            raise GraficoError(
+                f"El marcador 'actual' trae precio {m['precio']} y su punto en la "
+                f"serie es {serie[idx]} (rotulo {m.get('etiqueta')!r}): "
+                f"{desvio:.4f} de separacion, {desvio / rango:.1%} del rango del "
+                "grafico. La pieza mostraria dos precios distintos a la vez."
+            )
+
+
 def construir_svg(
     serie: list[float],
     marcadores: list[dict[str, Any]],
@@ -155,6 +204,7 @@ def construir_svg(
     muestreo del gráfico).
     """
     niveles = niveles or []
+    _verificar_marcador_actual(serie, marcadores)
     g = LIENZOS.get(lienzo)
     if g is None:
         raise GraficoError(

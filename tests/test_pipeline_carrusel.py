@@ -37,11 +37,223 @@ ACTIVO = {
     "imagen": "assets/activos/plata.jpg",
 }
 
-CIERRES = [68.0 + i * 0.01 for i in range(60)]
+def cierres_para(precio: float, n: int = 60, paso: float = 0.01) -> list[float]:
+    """Serie de `n` cierres que TERMINA en `precio`.
+
+    Los payloads reales terminan exactamente en el precio: de los 16 que quedaron
+    en disco, 15 dan desfase 0,000 y el peor sano da un tick. Las fixtures traian
+    series que no llegaban al precio (68,00 a 68,59 contra un precio de 68,716;
+    o [1, 2, 3] contra 936,32), y esa incoherencia es justamente la razon por la
+    que nadie noto que la invariante no existia. Una fixture imposible no protege.
+    """
+    return [round(precio - (n - 1 - i) * paso, 6) for i in range(n)]
 
 
-def payload_de_prueba(seleccion=None, activo=None) -> dict:
-    return pc.construir_payload(seleccion or SELECCION, activo or ACTIVO, AHORA, CIERRES)
+CIERRES = cierres_para(SELECCION["precio"])
+
+
+def payload_de_prueba(seleccion=None, activo=None, cierres=None) -> dict:
+    sel = seleccion or SELECCION
+    return pc.construir_payload(
+        sel, activo or ACTIVO, AHORA,
+        cierres if cierres is not None else cierres_para(sel["precio"]),
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Un payload describe UN instante del mercado, o no se publica
+# ─────────────────────────────────────────────────────────────────────────────
+# Las cifras son las del caso real: GLD.US el 2026-09-04, score 100/100, con el
+# precio y la serie leidos en momentos distintos. Su ATR de H1 sale del `vol_pct`
+# del payload del dia anterior (3,92 USD = 1,5 x ATR).
+GLD = {
+    "ticker": "GLD.US", "nombre": "SPDR Gold Shares", "clase": "etfs",
+    "direccion": "ALCISTA", "score": 100,
+    "precio": 410.37, "soporte": 409.72, "resistencia": 424.45,
+    "atr_h1": 2.61, "impulso_adc_atr": 3.92,
+    "factores": {},
+}
+GLD_ACTIVO = {
+    "ticker": "GLD.US", "nombre": "SPDR Gold Shares", "clase": "etfs",
+    "categoria": "etf", "digits": 2, "unidad": "USD",
+    "imagen": "assets/activos/oro.jpg",
+}
+
+
+def test_un_precio_que_no_es_el_ultimo_cierre_de_su_serie_no_se_publica():
+    """El caso GLD.US, tal como quedo registrado en PAUSADOS.txt.
+
+    El payload traia precio 410,37 y su propia serie terminaba en 405,32: el
+    precio era el cuarto valor desde el final. Con score perfecto y sello
+    "DATOS REALES · METATRADER 5", a un paso de un canal de cliente.
+    """
+    serie = cierres_para(405.32)
+    motivo = pc.incoherencia_del_payload(GLD, serie)
+    assert motivo is not None
+    assert "no es el ultimo cierre de su propia serie" in motivo
+    assert "1.93" in motivo          # veces el ATR de H1
+
+
+def test_construir_payload_se_niega_ante_el_caso_gld():
+    """No alcanza con detectarlo: el payload no puede llegar a existir."""
+    with pytest.raises(pc.PayloadIncoherenteError) as exc:
+        pc.construir_payload(GLD, GLD_ACTIVO, AHORA, cierres_para(405.32))
+    assert "GLD.US" in str(exc.value)
+
+
+def test_el_desfase_de_un_tick_pasa():
+    """El unico payload sano de disco con desfase no nulo: USD/JPY, un tick.
+
+    Si el control fuera estricto, la pieza legitima se caeria. Medido: 0,001 de
+    desfase sobre un ATR de 0,304, o sea 0,0033 ATR, 75 veces por debajo del tope.
+    """
+    sel = {**SELECCION, "precio": 163.731, "soporte": 163.400,
+           "resistencia": 164.100, "atr_h1": 0.304}
+    serie = cierres_para(163.730)
+    assert pc.incoherencia_del_payload(sel, serie) is None
+
+
+def test_un_desfase_exacto_pasa():
+    """El caso normal: 15 de los 16 payloads de disco dan desfase 0,000."""
+    assert pc.incoherencia_del_payload(SELECCION, cierres_para(SELECCION["precio"])) is None
+
+
+def test_un_soporte_sobre_el_precio_no_se_publica():
+    """Publicar un soporte por encima del precio es publicar un nivel ya roto.
+
+    Este control **no** habria atajado a GLD (410,37 si cae entre 409,72 y
+    424,45): sostiene una falla distinta. Se verifica porque es gratis.
+    """
+    sel = {**SELECCION, "soporte": 68.800}      # sobre el precio de 68,716
+    motivo = pc.incoherencia_del_payload(sel, cierres_para(SELECCION["precio"]))
+    assert motivo is not None and "no cae entre el soporte" in motivo
+
+
+def test_sin_atr_el_desfase_no_se_puede_juzgar_y_la_pieza_no_sale():
+    """Fail-closed. Sin la escala del activo, "5 de diferencia" no significa nada:
+    son cuatro ATR en el oro y un tick en el Nasdaq."""
+    sel = {k: v for k, v in SELECCION.items() if k != "atr_h1"}
+    motivo = pc.incoherencia_del_payload(sel, cierres_para(SELECCION["precio"]))
+    assert motivo is not None and "ATR de H1" in motivo
+
+
+def test_una_serie_vacia_no_se_publica():
+    assert pc.incoherencia_del_payload(SELECCION, []) is not None
+
+
+def test_el_refresco_detiene_la_pieza_si_el_precio_y_la_serie_se_desacoplan():
+    """El refresco vuelve a juntar las dos lecturas, con el mismo acoplamiento
+    ciego. Si llegan desacopladas, la pieza se renombra a `.divergente`."""
+    from pipeline_carrusel import refrescar_payload
+
+    _, motivo = refrescar_payload(
+        _payload_preparado(),
+        ahora=datetime(2026, 9, 2, 11, 30),
+        h1={"price": 937.80, "s1": 926.90, "r1": 938.27, "atr_14": 2.70,
+            "ema_50": 930.00},
+        digits=2,
+        cierres=cierres_para(930.00, n=3, paso=0.5),
+    )
+    assert motivo is not None
+    assert "no es el ultimo cierre de su propia serie" in motivo
+
+
+def test_el_refresco_corrige_un_sesgo_obsoleto_sin_ficha_del_playbook():
+    """El agujero por el que paso GLD.US, y es el caso mayoritario.
+
+    Antes el sesgo solo se recalculaba `if vigencia_cruda`, y los 33 activos del
+    catalogo que no tienen ficha del Playbook llegan con `vigencia: None`. GLD se
+    preparo "Alcista" y el H1 vivo daba bajista: la direccion invertida sobrevivio
+    el refresco intacta porque esa rama nunca se ejecutaba para el.
+    """
+    from pipeline_carrusel import refrescar_payload
+
+    payload = _payload_preparado()
+    assert payload["_procedencia"]["vigencia"] is None
+    assert payload["sesgo"] == "Alcista"
+
+    nuevo, _ = refrescar_payload(
+        payload,
+        ahora=datetime(2026, 9, 2, 11, 30),
+        # El precio quedo BAJO su EMA 50: la lectura de ahora es bajista.
+        h1={"price": 928.00, "s1": 926.90, "r1": 938.27, "atr_14": 2.70,
+            "ema_50": 934.00},
+        digits=2,
+        cierres=cierres_para(928.00, n=3, paso=0.5),
+    )
+    assert nuevo["sesgo"] == "Bajista"
+    assert nuevo["tag_riesgo"] == "BAJISTA"
+
+
+def test_el_refresco_no_deriva_la_direccion_del_propio_payload():
+    """Era circular: `tecnica` se leia del string `nuevo["sesgo"]`, asi que un
+    sesgo que venia mal se confirmaba a si mismo. Ahora sale del mercado."""
+    from pipeline_carrusel import refrescar_payload
+
+    payload = _payload_preparado()
+    payload["sesgo"] = "Bajista"          # el payload afirma lo contrario
+    payload["tag_riesgo"] = "BAJISTA"
+
+    nuevo, _ = refrescar_payload(
+        payload,
+        ahora=datetime(2026, 9, 2, 11, 30),
+        h1={"price": 937.80, "s1": 926.90, "r1": 938.27, "atr_14": 2.70,
+            "ema_50": 930.00},          # precio SOBRE la EMA 50: alcista
+        digits=2,
+        cierres=cierres_para(937.80, n=3, paso=0.5),
+    )
+    assert nuevo["sesgo"] == "Alcista"
+
+
+def test_sin_ema50_el_refresco_no_confirma_la_direccion_y_detiene_la_pieza():
+    """Fail-closed: sin la media no hay con que contrastar el sesgo escrito."""
+    from pipeline_carrusel import refrescar_payload
+
+    _, motivo = refrescar_payload(
+        _payload_preparado(),
+        ahora=datetime(2026, 9, 2, 11, 30),
+        h1={"price": 937.80, "s1": 926.90, "r1": 938.27, "atr_14": 2.70},
+        digits=2,
+        cierres=cierres_para(937.80, n=3, paso=0.5),
+    )
+    assert motivo is not None and "EMA 50" in motivo
+
+
+def test_ningun_payload_de_disco_es_incoherente():
+    """Contrato contra los payloads reales que quedaron en `data/carrusel/`.
+
+    `data/carrusel/` esta gitignoreado, asi que en un clon nuevo este test no
+    tiene nada que mirar y se salta. Cuando hay tandas en disco, ninguna puede
+    contener un payload que el control de hoy rechazaria: si aparece uno, o el
+    umbral esta mal calibrado o volvio el defecto.
+    """
+    import glob
+
+    revisados = 0
+    for ruta in glob.glob("data/carrusel/*/0*/[1-9]_*.json"):
+        datos = json.loads(Path(ruta).read_text(encoding="utf-8"))
+        crudos = (datos.get("_procedencia") or {}).get("crudos")
+        serie = (datos.get("recorrido") or {}).get("serie")
+        if not crudos or not serie:
+            continue
+        vol = datos.get("vol_pct") or ""
+        cifra = re.match(r"^([\d.]*\d)(?:,(\d+))?", str(vol))
+        if not cifra:
+            continue
+        valor = float(cifra.group(1).replace(".", "")
+                      + ("." + cifra.group(2) if cifra.group(2) else ""))
+        sel = {
+            "ticker": datos.get("activo", "?"),
+            "precio": crudos["precio"],
+            "soporte": crudos["soporte"],
+            "resistencia": crudos["resistencia"],
+            "atr_h1": valor / 1.5,          # vol_pct = 1,5 x ATR de H1
+        }
+        assert pc.incoherencia_del_payload(sel, serie) is None, ruta
+        revisados += 1
+
+    if not revisados:
+        pytest.skip("no hay tandas en data/carrusel/ (esta gitignoreado)")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -308,6 +520,79 @@ def test_obtener_grupo_whatsapp_mapea_correctamente_cada_categoria(cat, ticker, 
     assert pc.obtener_grupo_whatsapp(cat, ticker) == grupo_esperado
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# El canal de avisos llega por intención, no por un default
+# ─────────────────────────────────────────────────────────────────────────────
+SLUGS_DE_CANAL = [
+    "01_macro_y_apertura",
+    "02_forex_divisas",
+    "03_commodities_materias_primas",
+    "04_indices_bursatiles",
+    "05_acciones_etfs",
+    "06_criptoactivos",
+    "07_oportunidades_cuantitativas",
+]
+
+
+def test_una_categoria_desconocida_falla_en_vez_de_caer_al_canal_de_avisos():
+    """El default silencioso publicaba en el grupo de la comunidad.
+
+    `MAPEO_GRUPOS_WHATSAPP.get(clave, "01_macro_y_apertura")` convertía cualquier
+    categoría que no reconociéramos en un envío al canal de avisos, que es el que
+    más gente lee. Ninguna categoría real del universo necesita ese default
+    (verificado contra `cargar_universo`), así que su único efecto era tapar
+    errores de nombre.
+    """
+    with pytest.raises(pc.GrupoDesconocidoError):
+        pc.obtener_grupo_whatsapp("categoria_que_no_existe", "")
+
+
+@pytest.mark.parametrize("slug", SLUGS_DE_CANAL)
+def test_el_slug_de_un_canal_no_se_confunde_con_una_categoria(slug):
+    """Es el defecto exacto del 2026-09-04.
+
+    `preparar` pasaba a `obtener_grupo_whatsapp` el slug ya resuelto por
+    `resolver_grupo_solicitado`, y esta función espera una categoría. Ninguna rama
+    aplicaba, caía al default, y **todo** `--preparar --grupo <canal>` terminaba
+    escribiéndole contexto macro al canal de avisos en vez de al canal pedido.
+    """
+    with pytest.raises(pc.GrupoDesconocidoError):
+        pc.obtener_grupo_whatsapp(slug, "")
+
+
+def test_el_canal_pedido_recibe_contexto_macro_aunque_no_tenga_piezas():
+    """Era el daño de fondo, y no se veía.
+
+    Con el canal pedido vacío, `grupos_activos` quedaba en {avisos}: el canal que
+    el director pidió no recibía **nada** y el macro se lo llevaba entero el grupo
+    de la comunidad. Asegurar el canal pedido era justamente la intención de esa
+    línea, y nunca funcionó.
+    """
+    canales = pc.canales_con_contexto_macro([], grupo_pedido="04_indices_bursatiles")
+    assert "04_indices_bursatiles" in canales
+
+
+def test_el_canal_de_avisos_recibe_el_macro_por_declaracion():
+    """Decisión del director el 2026-09-03: el macro vive en Avisos.
+
+    Se conserva, pero declarada. Antes el mismo resultado salía del default de
+    `obtener_grupo_whatsapp`, así que habría seguido ocurriendo aunque la decisión
+    hubiera sido la contraria.
+    """
+    canales = pc.canales_con_contexto_macro([], grupo_pedido=None)
+    assert canales == {"01_macro_y_apertura"}
+
+
+def test_los_canales_con_piezas_reciben_su_contexto_macro():
+    payloads = [{"grupo": "06_criptoactivos"}, {"grupo": "03_commodities_materias_primas"}]
+    canales = pc.canales_con_contexto_macro(payloads, grupo_pedido=None)
+    assert canales == {
+        "01_macro_y_apertura",
+        "03_commodities_materias_primas",
+        "06_criptoactivos",
+    }
+
+
 def test_construir_mensaje_alerta_cumple_reglas_canonicas_whatsapp():
     payload = payload_de_prueba()
     payload["titular"] = "Quiebre alcista sobre 68,97"
@@ -475,14 +760,15 @@ def test_el_payload_preparado_guarda_los_precios_crudos():
     seleccion = {
         "ticker": "USDCLP", "direccion": "ALCISTA", "clase": "forex",
         "precio": 936.32, "soporte": 926.90, "resistencia": 938.27,
-        "impulso_adc_atr": 4.02, "score": 71, "factores": {},
+        "impulso_adc_atr": 4.02, "atr_h1": 2.68, "score": 71, "factores": {},
     }
     activo = {
         "nombre": "Dólar / Peso Chileno", "digits": 2, "imagen": "dolar.jpg",
         "categoria": "forex", "unidad": "CLP",
     }
     payload = construir_payload(
-        seleccion, activo, datetime(2026, 9, 2, 10, 0), [1.0, 2.0, 3.0]
+        seleccion, activo, datetime(2026, 9, 2, 10, 0),
+        cierres_para(seleccion["precio"], n=3, paso=0.5),
     )
 
     crudos = payload["_procedencia"]["crudos"]
@@ -496,13 +782,16 @@ def _payload_preparado():
     seleccion = {
         "ticker": "USDCLP", "direccion": "ALCISTA", "clase": "forex",
         "precio": 936.32, "soporte": 926.90, "resistencia": 938.27,
-        "impulso_adc_atr": 4.02, "score": 71, "factores": {},
+        "impulso_adc_atr": 4.02, "atr_h1": 2.68, "score": 71, "factores": {},
     }
     activo = {
         "nombre": "Dólar / Peso Chileno", "digits": 2, "imagen": "dolar.jpg",
         "categoria": "forex", "unidad": "CLP",
     }
-    p = construir_payload(seleccion, activo, datetime(2026, 9, 2, 10, 0), [1.0, 2.0, 3.0])
+    p = construir_payload(
+        seleccion, activo, datetime(2026, 9, 2, 10, 0),
+        cierres_para(seleccion["precio"], n=3, paso=0.5),
+    )
     p["titular"] = "Dólar consolida sobre $935"
     p["parrafo"] = "La cotización presiona la resistencia."
     return p
@@ -518,9 +807,10 @@ def test_el_refresco_actualiza_las_cifras_y_el_sello_de_datos():
     nuevo, motivo = refrescar_payload(
         payload,
         ahora=datetime(2026, 9, 2, 11, 30),
-        h1={"price": 937.80, "s1": 926.90, "r1": 938.27, "atr_14": 2.70},
+        h1={"price": 937.80, "s1": 926.90, "r1": 938.27, "atr_14": 2.70,
+            "ema_50": 930.00},
         digits=2,
-        cierres=[1.0, 2.0, 4.0],
+        cierres=cierres_para(937.80, n=3, paso=0.5),
     )
 
     assert motivo is None
@@ -537,9 +827,10 @@ def test_el_refresco_conserva_el_texto_editorial():
     nuevo, _ = refrescar_payload(
         _payload_preparado(),
         ahora=datetime(2026, 9, 2, 11, 30),
-        h1={"price": 937.80, "s1": 926.90, "r1": 938.27, "atr_14": 2.70},
+        h1={"price": 937.80, "s1": 926.90, "r1": 938.27, "atr_14": 2.70,
+            "ema_50": 930.00},
         digits=2,
-        cierres=[1.0, 2.0, 4.0],
+        cierres=cierres_para(937.80, n=3, paso=0.5),
     )
     assert nuevo["titular"] == "Dólar consolida sobre $935"
     assert nuevo["parrafo"] == "La cotización presiona la resistencia."
@@ -551,9 +842,10 @@ def test_el_refresco_avisa_cuando_el_precio_invalido_el_texto():
     _, motivo = refrescar_payload(
         _payload_preparado(),
         ahora=datetime(2026, 9, 2, 11, 30),
-        h1={"price": 924.10, "s1": 926.90, "r1": 938.27, "atr_14": 2.70},
+        h1={"price": 924.10, "s1": 926.90, "r1": 938.27, "atr_14": 2.70,
+            "ema_50": 930.00},
         digits=2,
-        cierres=[1.0, 2.0, 0.5],
+        cierres=cierres_para(924.10, n=3, paso=0.5),
     )
     assert motivo is not None and "soporte" in motivo.lower()
 
@@ -684,9 +976,10 @@ def test_el_refresco_recalcula_el_nivel_con_las_anclas_de_ahora():
         payload,
         ahora=datetime(2026, 8, 25, 11, 30, tzinfo=pc.SANTIAGO),
         h1={"price": 68.900, "s1": 68.500, "r1": 69.300, "atr_14": 0.050,
-            "chandelier_max": 69.000, "chandelier_min": 68.100},
+            "chandelier_max": 69.000, "chandelier_min": 68.100,
+            "ema_50": 68.600},
         digits=3,
-        cierres=CIERRES,
+        cierres=cierres_para(68.900),
     )
 
     assert motivo is None
@@ -703,9 +996,10 @@ def test_el_refresco_detiene_la_pieza_si_el_sesgo_quedo_invalidado():
         _mensaje_con(VIGENCIA_NIVEL)[1],
         ahora=datetime(2026, 8, 25, 11, 30, tzinfo=pc.SANTIAGO),
         h1={"price": 68.500, "s1": 68.400, "r1": 69.300, "atr_14": 0.050,
-            "chandelier_max": 69.000, "chandelier_min": 68.100},
+            "chandelier_max": 69.000, "chandelier_min": 68.100,
+            "ema_50": 68.600},
         digits=3,
-        cierres=CIERRES,
+        cierres=cierres_para(68.500),
     )
 
     assert motivo is not None and "sesgo" in motivo.lower()
@@ -795,9 +1089,10 @@ def test_el_refresco_recalcula_el_chip_si_el_sesgo_cambio_de_estado():
         payload,
         ahora=datetime(2026, 8, 25, 11, 30, tzinfo=pc.SANTIAGO),
         h1={"price": 68.900, "s1": 68.500, "r1": 68.960, "atr_14": 0.050,
-            "chandelier_max": 69.000, "chandelier_min": 68.100},
+            "chandelier_max": 69.000, "chandelier_min": 68.100,
+            "ema_50": 68.600},
         digits=3,
-        cierres=CIERRES,
+        cierres=cierres_para(68.900),
     )
 
     assert motivo is None

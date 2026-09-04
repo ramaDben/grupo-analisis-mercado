@@ -326,8 +326,15 @@ def construir_texto_contexto_macro(
     delta_ust_bps: float | None,
     ahora: datetime,
     con_imagen: bool = True,
+    piezas_de_niveles: int = 0,
 ) -> str:
-    """Genera el mensaje de contexto macro diario en formato canónico de WhatsApp con enlaces institucionales."""
+    """Genera el mensaje de contexto macro diario en formato canónico de WhatsApp con enlaces institucionales.
+
+    `piezas_de_niveles` son las piezas de activo que ese canal va a recibir en la
+    misma tanda. Se pide explícito y su default es 0 porque el cierre las anuncia:
+    prometerlas sin saber si existen es lo que llegó a un canal real el
+    2026-09-04. Con 0 el default calla, que es el lado seguro del error.
+    """
     cfg = CONFIG_MACRO_GRUPOS.get(grupo, {
         "nombre": grupo.replace("_", " ").title(),
         "foco": "Seguimiento macroeconómico de la jornada.",
@@ -427,17 +434,29 @@ def construir_texto_contexto_macro(
         f"{interpretacion}",
         "━━━━━━━━━━━━━━━━━━━",
     ])
-    # Solo se promete la imagen si efectivamente se produjo: un texto que anuncia
-    # un gráfico inexistente llega roto al cliente.
+    # Solo se promete la imagen si efectivamente se produjo, y solo se prometen los
+    # niveles si el canal los lleva: un texto que anuncia algo inexistente llega
+    # roto al cliente. La segunda mitad de esa regla faltaba, y el motivo se ve en
+    # el código que había acá: la frase de los niveles estaba escrita **dos veces**,
+    # una por rama de `con_imagen`, así que al condicionar la imagen nadie notó que
+    # la promesa de niveles quedaba incondicional en ambas. Ahora cada promesa es
+    # una frase con su propia condición y no hay copia que se olvide.
+    anuncios = []
     if con_imagen:
-        lineas.append(
-            "💡 *En la imagen adjunta encuentras el gráfico y el detalle de la serie oficial. "
-            "A continuación compartimos los niveles técnicos y alertas para operar la jornada.*"
+        anuncios.append(
+            "En la imagen adjunta encuentras el gráfico y el detalle de la serie oficial."
         )
-    else:
-        lineas.append(
-            "💡 *A continuación compartimos los niveles técnicos y alertas para operar la jornada.*"
+    if piezas_de_niveles > 0:
+        anuncios.append(
+            "A continuación compartimos los niveles técnicos y alertas para operar la jornada."
         )
+    if anuncios:
+        lineas.append("💡 *" + " ".join(anuncios) + "*")
+    if piezas_de_niveles == 0:
+        # Sin niveles el mensaje se quedaba sin cierre. El CTA al analista es el
+        # mismo que usa el suplemento de canal vacío, por la misma razón: es lo
+        # que corresponde cuando no hay una lectura operativa que entregar.
+        lineas.append("¿Dudas? Consulta a tu analista.")
 
     return "\n".join(lineas)
 
@@ -709,6 +728,7 @@ def asegurar_contexto_macro_grupo(
     eventos: list[dict[str, Any]],
     delta_ust_bps: float | None,
     ahora: datetime | None = None,
+    piezas_de_niveles: int = 0,
 ) -> Path:
     """Verifica y genera deterministamente el contexto macro en la carpeta del grupo con su Story dato_macro."""
     ahora = ahora or datetime.now(tz=SANTIAGO)
@@ -738,7 +758,8 @@ def asegurar_contexto_macro_grupo(
             print(f"AVISO: No se pudo renderizar la Story macro para {grupo}: {exc}", file=sys.stderr)
 
     texto = construir_texto_contexto_macro(
-        grupo, eventos_filtrados, delta_ust_bps, ahora, con_imagen=imagen_lista
+        grupo, eventos_filtrados, delta_ust_bps, ahora,
+        con_imagen=imagen_lista, piezas_de_niveles=piezas_de_niveles,
     )
     archivo_contexto.write_text(texto, encoding="utf-8")
     archivo_con_prefijo.write_text(texto, encoding="utf-8")

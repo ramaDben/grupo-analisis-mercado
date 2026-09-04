@@ -20,7 +20,7 @@ import time
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 # Configurar encoding seguro para consola de Windows
 if hasattr(sys.stdout, "reconfigure"):
@@ -170,6 +170,22 @@ class LimiteEnviosError(WhatsAppError):
 
 class LoteInvalidoError(WhatsAppError):
     """El lote de piezas no se puede despachar en una sola acción."""
+
+
+def huella(texto: str) -> str:
+    """El texto sin ningún espacio ni salto de línea.
+
+    Sirve para comparar lo que se quiso escribir con lo que quedó en el editor
+    **sin depender de cómo el contenteditable cuenta los saltos**: en la medición
+    del 2026-09-03 un texto de 2.016 caracteres devolvía 2.042 por ese motivo, así
+    que comparar largos crudos daba falsos negativos.
+
+    Vive a nivel de módulo porque tiene **dos** consumidores: el guardia de
+    entrega, que compara contra el DOM, y la bitácora de despachos, que guarda la
+    huella de lo que salió. Una segunda implementación sería otro de los relojes
+    duplicados que ya costaron caro en este repo.
+    """
+    return "".join(texto.split())
 
 
 @dataclass(frozen=True)
@@ -924,14 +940,8 @@ class WhatsAppSender:
 
     @staticmethod
     def _huella(texto: str) -> str:
-        """El texto sin ningún espacio ni salto de línea.
-
-        Sirve para comparar lo que se quiso escribir con lo que quedó en el
-        editor **sin depender de cómo el contenteditable cuenta los saltos**: en
-        la medición del 2026-09-03 un texto de 2.016 caracteres devolvía 2.042
-        por ese motivo, así que comparar largos crudos daba falsos negativos.
-        """
-        return "".join(texto.split())
+        """Alias de la función de módulo `huella`, para el código de la clase."""
+        return huella(texto)
 
     def _adjuntar_archivo(self, page: Any, ruta_archivo: Path, caption: str = "") -> None:
         """Escribe el pie en el cuadro de conversación y DESPUÉS adjunta el archivo.
@@ -1298,6 +1308,7 @@ class WhatsAppSender:
         destinatario: str,
         piezas: list[Pieza],
         dry_run: bool = False,
+        al_entregar: Callable[[Pieza], None] | None = None,
     ) -> dict[str, Any]:
         """Despacha las piezas de un canal, **una por acción**, en una sola sesión.
 
@@ -1376,6 +1387,24 @@ class WhatsAppSender:
                         "pieza %d/%d entregada a %s: %s",
                         indice, len(piezas), nombre_oficial, Path(pieza.adjunto).name,
                     )
+                    # Se avisa DENTRO del bucle, no en el `return`: si una pieza
+                    # posterior falla esta funcion levanta y el `return` no ocurre,
+                    # asi que anotar al final perderia justamente el registro de lo
+                    # que SI salio, que es lo unico que permite retomar sin duplicar.
+                    if al_entregar is not None:
+                        try:
+                            al_entregar(pieza)
+                        except Exception as exc:  # noqa: BLE001
+                            # La pieza ya salio: abortar aca no la devuelve. Se
+                            # avisa fuerte para que quede anotada a mano, porque
+                            # sin registro un reintento la manda dos veces.
+                            print(
+                                f"[ATENCION] {Path(pieza.adjunto).name} SE ENVIO pero "
+                                f"no se pudo anotar en la bitacora ({exc}). Anotalo "
+                                "antes de reintentar el despacho.",
+                                flush=True,
+                            )
+                            logger.error("fallo al anotar la pieza entregada: %s", exc)
                     self._pausa_humana(1.0)
 
                 return {
