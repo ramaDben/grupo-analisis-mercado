@@ -1247,3 +1247,59 @@ def test_preparar_acota_el_barrido_al_canal_pedido():
 
     fuente = inspect.getsource(pc.preparar)
     assert "solo_canales=" in fuente, "preparar volvio a barrer la tanda completa"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El freno editorial vale para las DOS rutas de render
+#
+# `rendir` lo tenía y el despacho no, y el despacho es el que llega al cliente:
+# `_refrescar_y_rendir` hacía `pop("_pendiente_editorial")`, descartando la
+# marca que existe justamente para frenar. Es el patrón de dos caminos al mismo
+# resultado con el freno en uno solo.
+# ─────────────────────────────────────────────────────────────────────────────
+def test_el_despacho_se_niega_a_rendir_una_pieza_sin_editorial(tmp_path):
+    """El camino que llega al cliente necesita el mismo freno que `rendir`."""
+    (tmp_path / "1_xagusd.json").write_text(
+        json.dumps(payload_de_prueba(), ensure_ascii=False), encoding="utf-8"
+    )
+    with pytest.raises(SystemExit) as exc:
+        pc._refrescar_y_rendir(tmp_path)
+    mensaje = str(exc.value)
+    assert "titular" in mensaje and "parrafo" in mensaje
+
+
+def test_el_freno_editorial_del_despacho_actua_antes_de_leer_el_mercado(tmp_path, monkeypatch):
+    """Si el guardia corriera después, gastaría una lectura del terminal para
+    descubrir algo que el payload ya decía en disco."""
+    def no_llamar(*_a, **_k):
+        raise AssertionError("se leyó el mercado antes de validar lo editorial")
+
+    monkeypatch.setattr("market_data_mcp.analisis.analizar_activo", no_llamar)
+    (tmp_path / "1_xagusd.json").write_text(
+        json.dumps(payload_de_prueba(), ensure_ascii=False), encoding="utf-8"
+    )
+    with pytest.raises(SystemExit):
+        pc._refrescar_y_rendir(tmp_path)
+
+
+def test_el_contexto_macro_no_necesita_editorial(tmp_path):
+    """`0_contexto_macro` no tiene titular ni párrafo por diseño: su texto lo
+    escribe `contexto_macro_grupos`. El guardia no puede confundirlo con una
+    pieza a medias."""
+    (tmp_path / "0_contexto_macro.json").write_text(
+        json.dumps({"activo": "Mercado"}, ensure_ascii=False), encoding="utf-8"
+    )
+    assert pc._refrescar_y_rendir(tmp_path) == []
+
+
+def test_las_dos_rutas_comparten_un_solo_guardia_editorial():
+    """Dos implementaciones del mismo freno divergen: es el defecto recurrente
+    del repo. Ambas rutas tienen que llamar a la misma función."""
+    import inspect
+
+    guardia = pc.exigir_texto_editorial
+    for funcion in (pc.rendir, pc._refrescar_y_rendir):
+        fuente = inspect.getsource(funcion)
+        assert guardia.__name__ in fuente, (
+            f"{funcion.__name__} no usa {guardia.__name__}: el freno se duplicó"
+        )

@@ -1296,6 +1296,30 @@ def refrescar_payload(
     return nuevo, motivo
 
 
+def exigir_texto_editorial(payloads: list[tuple[str, dict[str, Any]]]) -> None:
+    """Detiene el render si a alguna pieza le falta un campo editorial.
+
+    Fuente unica del freno, y por eso recibe pares `(nombre, payload)` en vez
+    de leer el disco: las dos rutas de render llegan al payload por caminos
+    distintos. `rendir` lo tenia y el despacho no, que es justo el que llega al
+    cliente; `_refrescar_y_rendir` hacia `pop("_pendiente_editorial")` y
+    descartaba la marca que existe para frenar. Dos caminos al mismo resultado
+    con el freno en uno solo es el defecto recurrente del repo.
+    """
+    sin_escribir: list[str] = []
+    for nombre, payload in payloads:
+        faltan = [c for c in CAMPOS_EDITORIALES if not str(payload.get(c, "")).strip()]
+        if faltan:
+            sin_escribir.append(f"{nombre}: falta {', '.join(faltan)}")
+
+    if sin_escribir:
+        raise SystemExit(
+            "Hay piezas sin texto editorial. Una pieza a medias que sale sin avisar "
+            "llega al cliente, asi que el render se detiene:\n  "
+            + "\n  ".join(sin_escribir)
+        )
+
+
 def rendir(directorio: Path) -> dict[str, Any]:
     """Valida lo editorial, produce las piezas en horizontal y actualiza los mensajes modulares dentro de cada grupo."""
     from story_grafico import enriquecer
@@ -1305,20 +1329,15 @@ def rendir(directorio: Path) -> dict[str, Any]:
     if not archivos:
         raise SystemExit(f"No hay payloads de alerta en {directorio}")
 
-    sin_escribir: list[str] = []
-    for archivo in archivos:
-        payload = json.loads(archivo.read_text(encoding="utf-8"))
-        faltan = [c for c in CAMPOS_EDITORIALES if not str(payload.get(c, "")).strip()]
-        if faltan:
-            nombre_rel = archivo.relative_to(directorio) if archivo.is_relative_to(directorio) else archivo.name
-            sin_escribir.append(f"{nombre_rel}: falta {', '.join(faltan)}")
-
-    if sin_escribir:
-        raise SystemExit(
-            "Hay piezas sin texto editorial. Una pieza a medias que sale sin avisar "
-            "llega al cliente, asi que el render se detiene:\n  "
-            + "\n  ".join(sin_escribir)
+    exigir_texto_editorial([
+        (
+            str(archivo.relative_to(directorio))
+            if archivo.is_relative_to(directorio)
+            else archivo.name,
+            json.loads(archivo.read_text(encoding="utf-8")),
         )
+        for archivo in archivos
+    ])
 
     ahora = datetime.now(tz=SANTIAGO)
     generadas: list[dict[str, Any]] = []
@@ -1392,13 +1411,22 @@ def _refrescar_y_rendir(dir_grupo: Path) -> list[str]:
     from story_grafico import enriquecer
     from story_render import render_story
 
+    piezas = [
+        p for p in sorted(dir_grupo.glob("*.json"))
+        if not p.stem.startswith("0_") and not p.stem.startswith("_")
+    ]
+    # Mismo freno que `rendir`, y por eso antes de leer el mercado: el payload
+    # en disco ya dice lo que falta. El contexto macro (`0_`) queda fuera de la
+    # lista porque su texto no lo escribe el comando.
+    exigir_texto_editorial([
+        (p.name, json.loads(p.read_text(encoding="utf-8"))) for p in piezas
+    ])
+
     catalogo = {a["ticker"]: a for a in sc.cargar_universo(solo_renderizables=False)}
     ahora = datetime.now(tz=SANTIAGO)
     avisos: list[str] = []
 
-    for archivo in sorted(dir_grupo.glob("*.json")):
-        if archivo.stem.startswith("0_") or archivo.stem.startswith("_"):
-            continue
+    for archivo in piezas:
 
         payload = json.loads(archivo.read_text(encoding="utf-8"))
         ticker = payload.get("_procedencia", {}).get("ticker")

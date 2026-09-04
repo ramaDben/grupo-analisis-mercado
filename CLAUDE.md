@@ -466,6 +466,24 @@ y `pipeline_informe.py` tienen dos pasos (`--preparar` y `--rendir`) y el segund
 detiene** si un campo editorial quedó vacío, por la misma razón que el renderer falla ante
 una imagen inexistente: una pieza a medias que sale sin avisar llega al cliente.
 
+**Y el freno vale para las DOS rutas de render, que es lo que no era obvio.** El despacho
+vuelve a rendir justo antes de enviar, y esa ruta no tenía el guardia: `_refrescar_y_rendir`
+hacía `pop("_pendiente_editorial")`, **descartando la marca que existe justamente para
+frenar**. Así que el único camino sin freno era el que llega al cliente. Se descubrió el
+2026-09-04 en un `--dry-run`, con la pieza de Solana rindiéndose con titular y párrafo
+vacíos y el despacho reportando dos piezas listas.
+
+La fuente única es `exigir_texto_editorial`, que reciben ambas rutas, y **hay un test de
+contrato que falla si alguna deja de llamarla**: dos implementaciones del mismo freno
+divergen, y eso ya es el defecto recurrente del repo. El guardia del despacho corre **antes**
+de leer el mercado, porque el payload en disco ya dice lo que falta y gastar una lectura del
+terminal para descubrirlo es trabajo perdido.
+
+**Lo que el guardia no hace es validar la tanda entera al empezar.** Aborta en el canal donde
+encuentra el hueco, así que los canales anteriores ya salieron. El daño queda acotado por la
+bitácora de despachos, que es exactamente para eso: al arreglar el texto y reanudar, lo
+entregado no se repite.
+
 ### El despacho: un lote por canal, rendido justo antes de salir
 
 `pipeline_carrusel.py --despachar <tanda>` cierra el ciclo. Dos decisiones lo definen:
