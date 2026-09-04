@@ -363,13 +363,90 @@ def revigenciar(
     return nueva
 
 
+class PayloadIncoherenteError(ValueError):
+    """El payload no describe un solo instante del mercado."""
+
+
+# Tope del desfase entre el precio del analizador y el ultimo cierre de la serie,
+# en fracciones del ATR de H1. **Medido, no estimado**: sobre los 16 payloads que
+# quedaron en disco, 15 dan desfase EXACTAMENTE 0,000 y el peor sano da 0,0033 ATR
+# (un tick de USD/JPY). El caso que motivo el control daba 1,9 ATR. 0,25 deja 75
+# veces de margen sobre lo sano y 7,5 veces por debajo del fallo.
+TOLERANCIA_DESFASE_ATR = 0.25
+
+
+def incoherencia_del_payload(
+    seleccion: dict[str, Any], cierres: list[float]
+) -> str | None:
+    """Por que este payload no describe un solo instante, o `None` si esta sano.
+
+    Un payload de activo junta DOS lecturas independientes del terminal: el
+    analizador tecnico (`analizar_activo`, 300 velas) da precio y niveles, y
+    `serie_mt5` (60 velas) da la serie del grafico. Nada las confrontaba, y el
+    2026-09-04 salieron desacopladas: GLD.US se preparo con score 100/100, precio
+    410,37 y una serie que terminaba en 405,32, o sea que el precio era el CUARTO
+    valor desde el final de su propia serie.
+
+    El renderer no lo delata: dibuja el punto en `serie[idx]` y le pone como
+    rotulo el precio del marcador, asi que la pieza se veia impecable con dos
+    numeros distintos adentro. Por eso el control tiene que estar aca, antes de
+    que el payload exista.
+
+    Lo que este control NO cubre, para no prometer de mas: la invariante
+    `soporte < precio < resistencia` la cumplen los 16 payloads de disco, GLD
+    incluido (410,37 cae entre 409,72 y 424,45), asi que **no** habria atajado el
+    caso. Se verifica igual porque es gratis y sostiene otra falla distinta, pero
+    el desfase contra la serie es el que importa.
+    """
+    if not cierres:
+        return "la serie del grafico vino vacia: la pieza no tendria recorrido que dibujar"
+
+    precio = float(seleccion["precio"])
+    soporte = float(seleccion["soporte"])
+    resistencia = float(seleccion["resistencia"])
+    ultimo = float(cierres[-1])
+    atr = float(seleccion.get("atr_h1") or 0.0)
+
+    if atr <= 0:
+        return (
+            "el analizador no devolvio ATR de H1, asi que el desfase contra la serie "
+            "no se puede juzgar en la escala del activo"
+        )
+
+    desfase = abs(precio - ultimo)
+    if desfase > TOLERANCIA_DESFASE_ATR * atr:
+        return (
+            f"el precio ({precio}) no es el ultimo cierre de su propia serie "
+            f"({ultimo}): {desfase:.4f} de diferencia, "
+            f"{desfase / atr:.2f} veces el ATR de H1. El analizador y la serie "
+            "leyeron momentos distintos del mercado"
+        )
+
+    if not soporte < precio < resistencia:
+        return (
+            f"el precio ({precio}) no cae entre el soporte ({soporte}) y la "
+            f"resistencia ({resistencia}): los niveles no corresponden a este precio"
+        )
+
+    return None
+
+
 def construir_payload(
     seleccion: dict[str, Any],
     activo_catalogo: dict[str, Any],
     ahora: datetime,
     cierres: list[float],
 ) -> dict[str, Any]:
-    """Payload de `alerta` con los datos resueltos y lo editorial en blanco."""
+    """Payload de `alerta` con los datos resueltos y lo editorial en blanco.
+
+    Levanta `PayloadIncoherenteError` si las dos lecturas del terminal que se
+    juntan aca no describen el mismo instante. Se niega a construir en vez de
+    devolver algo marcado, por la misma politica de `rendir` ante un campo
+    editorial vacio: una pieza a medias que sale sin avisar llega al cliente.
+    """
+    motivo = incoherencia_del_payload(seleccion, cierres)
+    if motivo is not None:
+        raise PayloadIncoherenteError(f"{seleccion['ticker']}: {motivo}")
     digits = activo_catalogo["digits"]
     imagen = activo_catalogo["imagen"]
     slug = _slug_de_imagen(imagen)
@@ -858,7 +935,11 @@ def preparar(
             problemas.append(f"{sel['ticker']}: no se pudo traer la serie ({exc})")
             continue
 
-        payload = construir_payload(sel, activo, ahora, cierres)
+        try:
+            payload = construir_payload(sel, activo, ahora, cierres)
+        except PayloadIncoherenteError as exc:
+            problemas.append(str(exc))
+            continue
         cat_real = activo.get("categoria", sel["clase"])
         grupo_nombre = obtener_grupo_whatsapp(cat_real, sel["ticker"])
         grupo_dir = destino / grupo_nombre
@@ -1062,10 +1143,29 @@ def refrescar_payload(
     # El chip sigue al estado recalculado. Si el precio recupero su nivel entre
     # preparar y despachar, un chip neutro junto a "el sesgo sigue vigente" seria
     # la misma contradiccion que este cambio vino a cerrar, al reves.
-    if vigencia_cruda:
-        tecnica = "ALCISTA" if nuevo.get("sesgo", "").lower() != "bajista" else "BAJISTA"
-        nuevo["sesgo"] = direccion_publicada(tecnica, vigencia_cruda, None)
-        nuevo["tag_riesgo"] = nuevo["sesgo"].upper()
+    #
+    # Dos cosas cambiaron el 2026-09-04 y las dos venian del mismo caso, GLD.US:
+    #
+    # 1. **Se recalcula siempre, no solo con vigencia.** GLD llegaba con
+    #    `vigencia: None` (no tiene ficha del Playbook), asi que entraba por el
+    #    `else` inexistente: el sesgo "Alcista" de la preparacion sobrevivia
+    #    intacto aunque la lectura de ahora fuera bajista. Los 33 activos del
+    #    catalogo sin ficha estaban en ese agujero, o sea casi todos.
+    # 2. **La direccion se lee del mercado, no del propio payload.** Antes se
+    #    re-derivaba del string `nuevo["sesgo"]`, que es circular: si venia mal,
+    #    seguia mal. Ahora sale de `direccion_tecnica`, que es **la misma funcion
+    #    que uso el escaner** para elegir el activo. Usar `h1["trend"]` habria
+    #    parecido equivalente y no lo es: `trend` compara contra la EMA 100 y
+    #    `direccion_tecnica` contra la EMA 50, asi que preparar y refrescar
+    #    habrian medido con distinta vara.
+    if "ema_50" not in h1:
+        return nuevo, motivo or (
+            "el analizador no devolvio la EMA 50 de H1, asi que la direccion de "
+            "la pieza no se puede confirmar contra el mercado de ahora"
+        )
+    tecnica = sc.direccion_tecnica(h1)
+    nuevo["sesgo"] = direccion_publicada(tecnica, vigencia_cruda, None)
+    nuevo["tag_riesgo"] = nuevo["sesgo"].upper()
 
     nuevo["_procedencia"].setdefault("crudos", {})
     nuevo["_procedencia"]["crudos"] = {
@@ -1079,6 +1179,24 @@ def refrescar_payload(
 
     # El gráfico se redibuja con la serie nueva y sus niveles al día.
     serie = cierres if isinstance(cierres, list) else cierres.get("serie", [])
+
+    # El refresco vuelve a juntar las mismas dos lecturas del terminal que junta
+    # `construir_payload`, y con el mismo acoplamiento ciego: indice de una fuente
+    # y precio de la otra. Si llegan desacopladas la pieza no sale, que es lo que
+    # ya hace ante una divergencia de precio. Se comprueba **despues** de las otras
+    # divergencias para no tapar un motivo de mercado con uno de datos: que el
+    # precio haya perforado el soporte le interesa mas al director.
+    if motivo is None:
+        motivo = incoherencia_del_payload(
+            {
+                "ticker": nuevo.get("_procedencia", {}).get("ticker", nuevo.get("activo", "?")),
+                "precio": precio,
+                "soporte": soporte,
+                "resistencia": resistencia,
+                "atr_h1": h1.get("atr_14"),
+            },
+            serie,
+        )
     recorrido = nuevo.get("recorrido", {})
     recorrido["serie"] = serie
     recorrido["marcadores"] = [{
