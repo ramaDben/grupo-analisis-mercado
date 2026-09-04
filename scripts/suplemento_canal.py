@@ -82,6 +82,23 @@ CATEGORIAS: dict[str, dict[str, Any]] = {
         "concepto": "temporalidades",
         "publicable": True,
     },
+    # La vela tipica cubre la banda entre soporte y resistencia: los bordes no
+    # aguantan una hora. El concepto no es la volatilidad (ese lo tiene el
+    # recorrido agotado) sino que un nivel solo significa algo si el precio no lo
+    # cruza a cada rato.
+    "la vela tipica cubre la banda": {
+        "categoria": "banda_estrecha",
+        "concepto": "soporte-resistencia",
+        "publicable": True,
+    },
+    # Un borde que sale de `precio ± ATR` no es un nivel: es una distancia
+    # calculada. La leccion es que un punto de interes es donde el precio de
+    # verdad reacciono, no donde una formula dice.
+    "niveles de respaldo por ATR": {
+        "categoria": "sin_niveles_medidos",
+        "concepto": "puntos-interes",
+        "publicable": True,
+    },
     # Problemas nuestros, no del mercado.
     "el snapshot no declara la confianza": {
         "categoria": "modelo_sin_vista",

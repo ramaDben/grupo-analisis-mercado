@@ -302,6 +302,11 @@ def cargar_universo(solo_renderizables: bool = True) -> list[dict[str, Any]]:
             # que uno ausente. `preparar()` excluye al activo si falta.
             "unidad": a.get("unidad"),
             "imagen": a.get("imagen"),
+            # Con que se justifica la temporalidad de la pieza. Estaban en el
+            # catalogo desde el issue #44 y `agregar()` no los copiaba, asi que el
+            # generador del mensaje nunca los vio y la linea obligatoria no existia.
+            "volatilidad": a.get("volatilidad"),
+            "nota_volatilidad": a.get("nota_volatilidad"),
         })
 
     for a in data.get("forex_commodities", []):
@@ -544,6 +549,106 @@ def gate_agotamiento(d1: dict[str, Any]) -> str | None:
     return None
 
 
+# Cuanto de la banda entre soporte y resistencia puede cubrir una vela tipica.
+# Umbrales fijados por el director el 2026-09-04, con las mediciones de esa tanda
+# a la vista: excluye desde 1,00x y avisa entre 0,70x y 1,00x.
+UMBRAL_BANDA_EXCLUYE = 1.00
+UMBRAL_BANDA_AVISA = 0.70
+
+
+def _banda_y_vela(h1: dict[str, Any]) -> tuple[float, float] | None:
+    """La banda soporte-resistencia y la vela tipica, o `None` si no se pueden leer.
+
+    La vela tipica es `1,5 x ATR(H1)`, que es **la misma cifra** que la pieza le
+    publica al cliente como "Volatilidad tipica". Usar otra medida aca dejaria al
+    gate juzgando con un numero distinto del que el cliente lee.
+    """
+    try:
+        banda = float(h1["r1"]) - float(h1["s1"])
+        vela = 1.5 * float(h1["atr_14"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    if banda <= 0 or vela <= 0:
+        return None
+    return banda, vela
+
+
+def gate_banda(h1: dict[str, Any]) -> str | None:
+    """Excluye si los niveles no aguantan una hora, o si no son niveles.
+
+    Un activo cuya vela tipica cubre la banda entera entre soporte y resistencia
+    no tiene niveles operables: el precio cruza los dos bordes dentro de una hora
+    normal. Publicarlos es entregar ruido con forma de estructura, y el cierre
+    canonico de la pieza ("sobre X fuerza compradora, bajo Y presion vendedora")
+    los presenta como si el precio fuera a respetarlos.
+
+    El 2026-09-04 esto se aplico a mano cuatro veces: Litecoin cubria 3,2 veces su
+    banda, Dogecoin 1,8 y el S&P 500 1,03. Ninguna de las tres la ataja el gate de
+    agotamiento, porque tener recorrido disponible no dice nada sobre si los
+    bordes se sostienen.
+
+    **El respaldo por ATR se trata aparte y no por el ratio.** Cuando un lado sale
+    de `current ± ATR` en vez de un swing medido, ese borde no es un nivel: es una
+    banda de volatilidad con nombre de soporte. Y cuando ambos lados son
+    sinteticos la banda vale 2 ATR **exactos por construccion**, con lo que el
+    ratio da siempre 0,75 y no mide nada: avisar ahi seria avisar siempre y
+    siempre por la misma razon artificial.
+    """
+    origen = h1.get("niveles_origen")
+    if origen:
+        # Se miran solo los dos bordes que la pieza publica.
+        sinteticos = [lado for lado in ("s1", "r1") if origen.get(lado) == "atr"]
+        if sinteticos:
+            cuales = " y ".join(
+                "el soporte" if lado == "s1" else "la resistencia"
+                for lado in sinteticos
+            )
+            # El prefijo tiene que ser ESTABLE: `suplemento_canal` mapea el motivo
+            # a su categoria por prefijo, y arrancar con "el soporte" o "la
+            # resistencia" segun el lado daba dos prefijos para un mismo motivo.
+            return (
+                f"niveles de respaldo por ATR: {cuales} no sale de un swing "
+                "medido, asi que no hay estructura que publicar"
+            )
+
+    medida = _banda_y_vela(h1)
+    if medida is None:
+        return None
+    banda, vela = medida
+    ratio = vela / banda
+    if ratio >= UMBRAL_BANDA_EXCLUYE:
+        return (
+            f"la vela tipica cubre la banda entre soporte y resistencia "
+            # El motivo lo lee el cliente a traves del suplemento de canal, asi
+            # que la cifra va en notacion chilena.
+            f"{f'{ratio:.2f}'.replace('.', ',')} veces"
+        )
+    return None
+
+
+def banda_estrecha(h1: dict[str, Any]) -> float | None:
+    """El ratio vela/banda cuando cae en la zona de aviso, o `None`.
+
+    Zona de aviso: la vela cubre entre el 70% y el 100% de la banda. La pieza
+    sale, porque los bordes todavia se distinguen del ruido, pero el operador
+    tiene que saber que son estrechos para la volatilidad de ese activo.
+
+    Devuelve `None` cuando algun lado es respaldo por ATR: eso ya lo excluye
+    `gate_banda`, y el ratio de ese caso es artificial.
+    """
+    origen = h1.get("niveles_origen")
+    if origen and any(origen.get(lado) == "atr" for lado in ("s1", "r1")):
+        return None
+    medida = _banda_y_vela(h1)
+    if medida is None:
+        return None
+    banda, vela = medida
+    ratio = vela / banda
+    if UMBRAL_BANDA_AVISA <= ratio < UMBRAL_BANDA_EXCLUYE:
+        return round(ratio, 4)
+    return None
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Los 4 factores del Score_GI
 # ─────────────────────────────────────────────────────────────────────────────
@@ -709,6 +814,12 @@ def evaluar_activo(
     if motivo:
         return {**base, "excluido": motivo}
 
+    # Va antes de puntuar, como los otros: un activo cuyos niveles no aguantan una
+    # hora puede puntuar alto y con scoring puro ganaria la tanda.
+    motivo = gate_banda(h1)
+    if motivo:
+        return {**base, "excluido": motivo}
+
     motivo = gate_playbook(direccion, sesgos.get(ticker))
     if motivo:
         return {**base, "excluido": motivo}
@@ -745,6 +856,11 @@ def evaluar_activo(
         "soporte": h1["s1"],
         "resistencia": h1["r1"],
         "atr_h1": h1["atr_14"],
+        # Zona de aviso del gate de banda: la vela tipica cubre entre el 70% y el
+        # 100% de la banda. La pieza sale, pero con los bordes estrechos para la
+        # volatilidad del activo, y eso tiene que viajar en la seleccion para que
+        # el escaner lo pueda reportar sin volver a pedir el H1.
+        "banda_estrecha": banda_estrecha(h1),
         # Hasta donde sigue vigente el sesgo del Playbook, en su gramatica.
         # `None` para los 33 activos del catalogo que no tienen ficha.
         "vigencia": vigencia,
@@ -782,6 +898,22 @@ def _contexto_macro(ahora_santiago: datetime) -> tuple[list[dict[str, Any]], flo
             )
         else:
             eventos = cal.get("eventos", [])
+            # `glosario_pendiente` la marca `calendar.py` en todo evento que no
+            # engancha con el glosario, y **ningun consumidor de produccion la
+            # leia**: solo tests y docs. Mientras tanto el nombre en ingles pasaba
+            # al mensaje sin ninguna marca, porque el fallback de
+            # `_nombre_indicador` devuelve el titulo de la fuente tal cual. Asi
+            # salieron "Average Hourly Earnings", "Participation Rate" y
+            # "U6 Unemployment Rate" a cinco canales el 2026-09-04.
+            pendientes = sorted({
+                str(e.get("nombre", "?")) for e in eventos if e.get("glosario_pendiente")
+            })
+            if pendientes:
+                avisos.append(
+                    "hay indicadores fuera de data/glosario_siglas.json, asi que "
+                    "saldrian con su nombre en ingles: "
+                    + ", ".join(pendientes)
+                )
     except Exception as exc:  # noqa: BLE001
         avisos.append(
             f"calendario no disponible ({exc.__class__.__name__}): blackouts sin verificar"
@@ -989,6 +1121,17 @@ def escanear(
             seleccion.extend(candidatos_cat[:top])
     else:
         seleccion = [r for r in evaluados if r["score"] > 0][:top]
+
+    # Los bordes estrechos se reportan: no excluyen, pero el operador tiene que
+    # saber que esa pieza lleva niveles apretados para lo que el activo se mueve.
+    for elegido in seleccion:
+        ratio = elegido.get("banda_estrecha")
+        if ratio:
+            avisos.append(
+                f"{elegido['ticker']}: niveles estrechos para su volatilidad, la vela "
+                f"tipica cubre {f'{ratio:.2f}'.replace('.', ',')} de la banda entre "
+                "soporte y resistencia"
+            )
 
     if not seleccion:
         avisos.append(

@@ -62,11 +62,19 @@ Cada análisis indica explícitamente su temporalidad con un rango cuantificado 
 - **4H** → swing de jornada (1-3 días) — tendencia del día y operativas de varias horas
 - **1D** → posicional (días a semanas) — lectura general del activo
 
-Estas 4 etiquetas son la fuente única y deben ser idénticas en `.claude/commands/apertura.md` (PASO 2 y PASO 5).
+**La fuente única de las 4 etiquetas es `pipeline_carrusel.MARCOS_CANONICOS`**, y un test de contrato la compara contra la tabla de `.claude/commands/story.md`. Hasta el 2026-09-04 este párrafo declaraba fuente única a `.claude/commands/apertura.md`, **que ya no existe**: ese comando se retiró y la tabla quedó viviendo solo en markdown, en dos copias, justo antes de que el código necesitara una tercera.
 
-**Justificar la temporalidad por la volatilidad del activo (OBLIGATORIO)**: cada activo tiene un nivel de `volatilidad` y una `nota_volatilidad` en `config/activos.json`. El mensaje de niveles incluye la línea `{{por_que_temporalidad}}` (`💡 Por qué [TF] aquí: …`) que explica al cliente, en lenguaje novato, por qué la temporalidad elegida encaja con la volatilidad de ese activo (ej.: USD/CLP es de baja volatilidad → 1H/4H dan lectura más limpia; WTI/Oro son de alta volatilidad → 15M tiene más ruido).
+**Justificar la temporalidad por la volatilidad del activo (OBLIGATORIO)**: cada activo tiene `volatilidad` y `nota_volatilidad` en `config/activos.json`, y el mensaje de niveles cierra con `⏱️ *Temporalidad*` más la línea `💡 Por qué [TF] acá: …`, que explica en lenguaje novato por qué ese marco encaja con lo que ese activo se mueve.
 
-Ejemplo obligatorio: "Niveles en 15M — marco scalper (minutos a 1-2 h)"
+**Esto estuvo declarado y sin implementar desde el issue #44.** El 2026-09-04 se descubrió que el token `por_que_temporalidad` existía en **un solo lugar del repo: este archivo**, y que dos piezas habían salido sin el bloque. Faltaban tres cosas a la vez: los campos no estaban en las 14 acciones, `cargar_universo` no los copiaba (así que el generador nunca los veía) y el mensaje no emitía la línea.
+
+Tres reglas que salieron de arreglarlo, y que imponen tests:
+
+1. **Toda nota nombra el marco que el carrusel publica.** Nueve notas recomendaban otro marco o ninguno, y publicadas se contradecían solas: *"Por qué 1H acá: … 4H da la lectura más limpia"*. Pueden (y deben) nombrar el marco más amplio, pero tienen que explicar también el que sale.
+2. **Toda nota habla de marcos, no de drivers.** Tres notas (GBP/USD, cobre, bitcoin) eran descripciones de lo que mueve al activo, sin nombrar ninguna temporalidad: la línea prometía una justificación y entregaba otra cosa.
+3. **El carrusel publica H1 y eso no se toca acá.** La selección de marco por activo es otro trabajo; lo que corresponde es que el texto justifique el marco que de verdad sale. Prometer selección por activo sin implementarla sería repetir el defecto de esta sección.
+
+Ejemplo obligatorio: "Niveles en 15M, marco scalper (minutos a 1-2 h)"
 
 ## Fecha y hora actual — regla canónica (OBLIGATORIO)
 **Nunca** uses `WebSearch` para obtener la fecha o la hora actual: devuelve snippets de búsqueda (cacheados, imprecisos o ausentes), no un reloj, y produce errores al fechar mensajes o marcar eventos pasados/futuros.
@@ -288,7 +296,7 @@ Los rangos de puntos **son** la ponderación: `Score = T + M + C + F`. No se mul
 pesos, porque los factores ya vienen escalados a su máximo y hacerlo dejaría el techo real en
 26,5 sobre una escala de 100.
 
-**Cuatro gates se aplican ANTES de puntuar, y son prohibiciones, no puntos:**
+**Seis gates se aplican ANTES de puntuar, y son prohibiciones, no puntos:**
 
 1. **Feriado de la bolsa** del activo (`config/feriados_bolsa.json`).
 2. **Blackout por calendario** (skill cuantitativa §4: FOMC −30/+75 min, NFP e IPC de EE.UU.
@@ -299,6 +307,34 @@ pesos, porque los factores ya vienen escalados a su máximo y hacerlo dejaría e
    Solo bloquea si apunta en la misma dirección que la lectura técnica: que esté prohibido
    comprar agresivamente no impide comunicar una caída.
 4. **Agotamiento**: ATR diario consumido sobre 90%.
+5. **Confianza del modelo** (`gate_confianza`): estuvo sin documentar hasta el 2026-09-04, así
+   que la cuenta de "cuatro gates" llevaba tiempo desactualizada. Es el único con
+   `publicable: False` en el suplemento junto al del snapshot: un problema nuestro de datos no
+   es contenido para el cliente.
+6. **Banda contra vela típica** (`gate_banda`): excluye cuando la vela típica cubre la banda
+   entre soporte y resistencia. Ver abajo.
+
+**El gate de banda, y por qué el agotamiento no lo cubría.** Tener recorrido disponible no dice
+nada sobre si los bordes se sostienen: son dos preguntas distintas y el 2026-09-04 hubo que
+aplicar esta a mano cuatro veces. Litecoin cubría **3,2 veces** su banda, Dogecoin 1,8 y el
+S&P 500 1,03, con banda de 16,54 puntos contra una vela típica de 17,00. Publicar esos niveles
+es entregar ruido con forma de estructura, y el cierre canónico de la pieza los presenta como si
+el precio fuera a respetarlos.
+
+Umbrales fijados por el director el 2026-09-04: **excluye desde 1,00x y avisa entre 0,70x y
+1,00x**. La zona de aviso no detiene la pieza, viaja en la selección como `banda_estrecha` y sale
+en los avisos del escáner. La "vela típica" es `1,5 × ATR(H1)`, **la misma cifra** que la pieza
+publica como "Volatilidad típica": juzgar con otro número dejaría al gate midiendo distinto de lo
+que el cliente lee.
+
+**El respaldo por ATR se trata aparte, y esa es la parte que no era obvia.**
+`_get_support_resistance` cae a `precio ± ATR` cuando no encuentra swings del lado que necesita.
+Es una red de seguridad correcta, pero ese borde **no es un nivel**: es una distancia calculada
+con nombre de soporte. Y cuando ambos lados caen, la banda vale **2 ATR exactos por
+construcción**, así que el ratio da siempre 0,75 y no mide nada: un gate que no lo distinguiera
+avisaría siempre y siempre por la misma razón artificial. Por eso `analizar_activo` declara
+`niveles_origen` por lado (`swing` o `atr`) y el gate le da su propio motivo. Los cuatro lados
+caen por separado: se puede tener una resistencia real con un soporte sintético.
 
 Un setup prohibido puede puntuar alto, y con scoring puro ganaría la tanda. Por eso el filtro
 va antes.

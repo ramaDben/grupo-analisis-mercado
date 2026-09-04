@@ -34,6 +34,72 @@ def test_filtrar_eventos_para_forex_incluye_eurozona_usa_y_chile():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# La curva con rezago: un cero de anteayer no es "no se movió"
+# ─────────────────────────────────────────────────────────────────────────────
+# Los valores son los reales de DGS10 el 2026-09-04, que es el dia en que un
+# "0,0 bps" salio a cinco canales.
+SERIE_CON_REZAGO = {
+    "nivel_pct": 4.79, "fecha_dato": "2026-09-02", "delta_1d_bps": 0.0,
+    "fecha_base_1d": "2026-09-01", "delta_5d_bps": 13.0, "rezago_dias_habiles": 2,
+}
+SERIE_FRESCA = {
+    "nivel_pct": 4.79, "fecha_dato": "2026-09-04", "delta_1d_bps": 6.0,
+    "fecha_base_1d": "2026-09-03", "delta_5d_bps": 13.0, "rezago_dias_habiles": 1,
+}
+
+
+def test_con_rezago_se_publica_la_variacion_de_cinco_dias_con_su_fecha():
+    """El caso del 2026-09-04. `delta_1d_bps` valia 0,0 porque el ultimo dato era
+    del 02-sep y el anterior del 01-sep: cierto y editorialmente falso, porque se
+    publico el 04-sep sin fecha. Los 13 bps de la semana estaban en el JSON y no
+    salieron.
+    """
+    texto, fecha = cmg.variacion_soberana(SERIE_CON_REZAGO)
+    assert "13,0" in texto and "5 días" in texto
+    assert "0,0" not in texto
+    assert "02 Sep" in fecha
+
+
+def test_sin_rezago_se_publica_la_variacion_del_dia_y_sin_fecha():
+    """Con el dato fresco la fecha es hoy y decirla es ruido."""
+    texto, fecha = cmg.variacion_soberana(SERIE_FRESCA)
+    assert texto == "+6,0 bps"
+    assert fecha == ""
+
+
+def test_un_delta_que_no_se_puede_calcular_se_dice_en_vez_de_desaparecer():
+    """`null` significa "no sé" y `0` significa "no se movió": son distintos.
+
+    El codigo solo miraba `is not None`, asi que un `null` hacia **desaparecer la
+    linea**, y si el bloque quedaba vacio se iba tambien el encabezado de la curva
+    completo. Callar es peor que el cero: el cero al menos se puede cuestionar.
+    """
+    serie = {**SERIE_FRESCA, "delta_1d_bps": None, "delta_5d_bps": None}
+    texto, _ = cmg.variacion_soberana(serie)
+    assert "no disponible" in texto.lower() or "sin variación" in texto.lower()
+    assert "bps" not in texto
+
+
+def test_una_serie_vacia_no_produce_linea():
+    assert cmg.variacion_soberana({}) is None
+
+
+def test_el_texto_publicado_nombra_los_trece_bps_y_no_el_cero(monkeypatch):
+    """El contrato de punta a punta, sobre el mensaje que recibe el cliente."""
+    monkeypatch.setattr(
+        cmg, "cargar_curva_tasas",
+        lambda serie="ALL": {"series": {"DGS10": SERIE_CON_REZAGO}},
+    )
+    txt = cmg.construir_texto_contexto_macro(
+        grupo="01_macro_y_apertura", eventos_grupo=[], delta_ust_bps=0.0,
+        ahora=_AHORA, con_imagen=True, piezas_de_niveles=0,
+    )
+    assert "13,0 bps en 5 días" in txt
+    assert "*0,0 bps*" not in txt
+    assert "02 Sep" in txt
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # El canal de avisos no nombra un canal que no existe
 # ─────────────────────────────────────────────────────────────────────────────
 def _macro_de(grupo: str) -> str:
@@ -167,7 +233,22 @@ def test_el_cierre_sigue_prometiendo_la_imagen_solo_si_existe():
     assert "imagen adjunta" not in sin
 
 
-def test_construir_texto_contexto_macro_formatea_cifras_reales_y_curva():
+def test_construir_texto_contexto_macro_formatea_cifras_reales_y_curva(monkeypatch):
+    """La notacion chilena de la curva, sobre una fuente determinista.
+
+    Este test afirmaba `+6,0 bps` pasando 6,0 por el parametro `delta_ust_bps`,
+    que era el unico camino por el que la linea del 10Y NO salia de la curva. Al
+    unificar las tres lineas bajo `variacion_soberana`, el parametro paso a ser
+    respaldo y la cifra sale de `cargar_curva_tasas`, que en disco trae rezago:
+    con el dato real el mensaje publica la variacion de 5 dias, no la de 1.
+
+    Se monkeypatchea la curva para probar la notacion sin depender de la frescura
+    de `data central/`, que cambia con cada ingesta.
+    """
+    monkeypatch.setattr(
+        cmg, "cargar_curva_tasas",
+        lambda serie="ALL": {"series": {"DGS10": SERIE_FRESCA}},
+    )
     ahora = datetime(2026, 9, 1, 10, 0, tzinfo=SANTIAGO)
     eventos = [
         {

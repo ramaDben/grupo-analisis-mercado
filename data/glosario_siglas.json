@@ -691,5 +691,133 @@
       "porque": "es la vía por la que los sueldos empujan la inflación, y la Fed la mira"
     }
   },
-  "_nota_eurozona": "Los PMI de la Zona Euro NO heredan el mapeo de los de EE.UU.: un PMI europeo mas fuerte fortalece al EURO, o sea DEBILITA al dolar, que es el signo contrario. Quedan sin clasificar hasta tener su propio mapeo, porque el chequeo de pais los rechaza y eso es correcto."
+  "_nota_eurozona": "Los PMI de la Zona Euro NO heredan el mapeo de los de EE.UU.: un PMI europeo mas fuerte fortalece al EURO, o sea DEBILITA al dolar, que es el signo contrario. Quedan sin clasificar hasta tener su propio mapeo, porque el chequeo de pais los rechaza y eso es correcto.",
+  "Average Hourly Earnings": {
+    "nombre_es": "Salario promedio por hora",
+    "explicacion": "Cuánto subieron los sueldos en EE.UU.; si suben rápido, la Fed tiene más razones para no bajar la tasa.",
+    "titulos_ff": [
+      "Average Hourly Earnings"
+    ],
+    "pais": "United States",
+    "tier": 1,
+    "canales": [
+      "02_forex_divisas",
+      "03_commodities_materias_primas",
+      "04_indices_bursatiles",
+      "05_acciones_etfs",
+      "06_criptoactivos"
+    ],
+    "cadencia": "mensual_primer_viernes",
+    "puede_disparar_momento": false,
+    "fuente": {
+      "tipo": "fred",
+      "serie": "CES0500000003",
+      "organismo": "Oficina de Estadísticas Laborales de EE.UU. (BLS)"
+    },
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "los sueldos suben más rápido de lo esperado: presión de inflación",
+      "dolar": "sube",
+      "oro": "baja",
+      "indices": "baja",
+      "usdclp": "sube",
+      "porque": "sueldos al alza empujan los precios, y eso aleja los recortes de tasa de la Fed"
+    }
+  },
+  "Unemployment Rate": {
+    "nombre_es": "Tasa de desempleo",
+    "explicacion": "Qué porcentaje de la gente que busca trabajo no lo encuentra; sube cuando la economía se enfría.",
+    "titulos_ff": [
+      "Unemployment Rate"
+    ],
+    "pais": "United States",
+    "tier": 1,
+    "canales": [
+      "02_forex_divisas",
+      "03_commodities_materias_primas",
+      "04_indices_bursatiles",
+      "05_acciones_etfs",
+      "06_criptoactivos"
+    ],
+    "cadencia": "mensual_primer_viernes",
+    "puede_disparar_momento": false,
+    "fuente": {
+      "tipo": "fred",
+      "serie": "UNRATE",
+      "organismo": "Oficina de Estadísticas Laborales de EE.UU. (BLS)"
+    },
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "más desempleo del esperado: mercado laboral debilitándose",
+      "dolar": "baja",
+      "oro": "sube",
+      "indices": "mixto",
+      "usdclp": "baja",
+      "porque": "un empleo más débil acerca los recortes de tasa de la Fed"
+    }
+  },
+  "U6 Unemployment Rate": {
+    "nombre_es": "Tasa de desempleo amplia (U6)",
+    "explicacion": "La medida ancha del desempleo: suma a quienes trabajan menos horas de las que querrían y a quienes dejaron de buscar. Suele contar la historia completa mejor que la tasa oficial.",
+    "titulos_ff": [
+      "U6 Unemployment Rate"
+    ],
+    "pais": "United States",
+    "tier": 2,
+    "canales": [
+      "02_forex_divisas",
+      "03_commodities_materias_primas",
+      "04_indices_bursatiles",
+      "05_acciones_etfs",
+      "06_criptoactivos"
+    ],
+    "cadencia": "mensual_primer_viernes",
+    "puede_disparar_momento": false,
+    "fuente": {
+      "tipo": "fred",
+      "serie": "U6RATE",
+      "organismo": "Oficina de Estadísticas Laborales de EE.UU. (BLS)"
+    },
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "el desempleo amplio sube: hay más gente subempleada de lo que muestra la tasa oficial",
+      "dolar": "baja",
+      "oro": "sube",
+      "indices": "mixto",
+      "usdclp": "baja",
+      "porque": "confirma debilidad laboral que la tasa oficial no alcanza a mostrar"
+    }
+  },
+  "Participation Rate": {
+    "nombre_es": "Tasa de participación laboral",
+    "explicacion": "Qué proporción de la población en edad de trabajar está buscando trabajo o ya trabaja. Si cae, la tasa de desempleo puede bajar sin que se hayan creado empleos.",
+    "titulos_ff": [
+      "Participation Rate"
+    ],
+    "pais": "United States",
+    "tier": 2,
+    "canales": [
+      "02_forex_divisas",
+      "03_commodities_materias_primas",
+      "04_indices_bursatiles",
+      "05_acciones_etfs",
+      "06_criptoactivos"
+    ],
+    "cadencia": "mensual_primer_viernes",
+    "puede_disparar_momento": false,
+    "fuente": {
+      "tipo": "fred",
+      "serie": "CIVPART",
+      "organismo": "Oficina de Estadísticas Laborales de EE.UU. (BLS)"
+    },
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "más gente entra a buscar trabajo: hay confianza en encontrarlo",
+      "dolar": "sube",
+      "oro": "baja",
+      "indices": "sube",
+      "usdclp": "sube",
+      "porque": "una fuerza laboral que crece sostiene el consumo sin forzar los sueldos"
+    }
+  }
 }

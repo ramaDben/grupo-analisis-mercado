@@ -69,7 +69,8 @@
         "prerequisito-de": [
           "puntos-interes"
         ]
-      }
+      },
+      "explicacion": "Un soporte es un precio donde antes aparecieron compradores y frenaron la caída; una resistencia es donde aparecieron vendedores y frenaron la subida. Lo que los vuelve útiles es que el precio los respete por un rato. Si el activo recorre en una hora normal toda la distancia que hay entre uno y otro, los cruza a cada rato y dejan de marcar nada. Ahí el problema no es el nivel: es que está demasiado cerca para lo que ese activo se mueve."
     },
     "puntos-interes": {
       "nombre": "Puntos de interés",
@@ -84,7 +85,8 @@
         "prerequisito-de": [
           "confluencia"
         ]
-      }
+      },
+      "explicacion": "Un punto de interés es una zona donde el precio ya reaccionó antes: se detuvo, rebotó o giró, y eso quedó registrado en el gráfico. No es lo mismo que una distancia calculada desde el precio de hoy, aunque las dos se dibujen como una línea horizontal. Cuando no hay ninguna reacción previa que marcar, lo honesto es decir que no hay punto de interés, en vez de poner una línea a una distancia fija y llamarla soporte."
     },
     "confluencia": {
       "nombre": "Confluencia",

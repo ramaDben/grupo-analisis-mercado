@@ -41,7 +41,23 @@ def h1_perfecto() -> dict:
         "bb_upper": 103.0, "bb_mid": 99.5, "bb_lower": 96.0,
         "donchian_50_high": 105.0, "donchian_50_low": 92.0, "donchian_50_mid": 98.5,
         "trend": "ALCISTA",
+        # `analizar_activo` siempre lo devuelve: sin el campo, el gate de banda no
+        # puede distinguir un nivel medido de un respaldo por ATR.
+        "niveles_origen": {"r1": "swing", "r2": "swing", "s1": "swing", "s2": "swing"},
     }
+
+
+def h1_con_banda(banda: float, vela: float) -> dict:
+    """Un H1 con la banda soporte-resistencia y la vela tipica que se le pidan.
+
+    La vela tipica es `1,5 x ATR(H1)`, la misma cifra que la pieza publica como
+    "Volatilidad tipica", asi que se despeja el ATR desde ella.
+    """
+    h1 = dict(h1_perfecto())
+    h1["atr_14"] = vela / 1.5
+    h1["s1"] = round(h1["price"] - banda / 2, 4)
+    h1["r1"] = round(h1["price"] + banda / 2, 4)
+    return h1
 
 
 def d1_con_consumo(fraccion: float) -> dict:
@@ -866,3 +882,187 @@ def test_pedir_un_grupo_ya_no_apaga_el_gate_de_agotamiento():
         "preparar sigue apagando el gate cuando se pide un grupo"
     )
     assert "grupo is not None" not in fuente.split("ignorar_agotamiento")[1][:80]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El gate de banda contra vela tipica
+# ─────────────────────────────────────────────────────────────────────────────
+# Las tres mediciones son las de la tanda del 2026-09-04, donde estas piezas se
+# descartaron a mano: el S&P 500 con banda de 16,54 puntos y vela de 17,00.
+def test_una_vela_que_cubre_la_banda_entera_excluye():
+    """Dar esos niveles es entregar ruido como si fuera estructura: el precio
+    cruza los dos bordes dentro de una hora normal."""
+    motivo = sc.gate_banda(h1_con_banda(banda=16.54, vela=17.00))
+    assert motivo is not None
+    assert "1,03" in motivo or "1.03" in motivo
+
+
+def test_una_banda_estrecha_pero_no_cubierta_pasa():
+    """0,80x queda en la zona de aviso que fijo el director: la pieza sale, con la
+    advertencia de que sus niveles son estrechos para su volatilidad."""
+    assert sc.gate_banda(h1_con_banda(banda=41.20, vela=33.00)) is None
+
+
+def test_una_banda_holgada_pasa_limpia():
+    assert sc.gate_banda(h1_con_banda(banda=60.00, vela=33.00)) is None
+    assert sc.banda_estrecha(h1_con_banda(banda=60.00, vela=33.00)) is None
+
+
+def test_la_zona_de_aviso_se_reporta_sin_excluir():
+    ratio = sc.banda_estrecha(h1_con_banda(banda=41.20, vela=33.00))
+    assert ratio is not None and 0.70 <= ratio < 1.00
+
+
+def test_unos_niveles_de_respaldo_por_atr_tienen_su_propio_motivo():
+    """No es un caso del ratio: cuando los dos lados son sinteticos la banda vale
+    2 ATR **exactos por construccion** y el ratio da siempre 0,75. Medir ahi no
+    mide nada, y ademas no hay estructura que publicar."""
+    h1 = h1_con_banda(banda=4.0, vela=3.0)          # 2 ATR exactos
+    h1["niveles_origen"] = {"r1": "atr", "r2": "atr", "s1": "atr", "s2": "atr"}
+    motivo = sc.gate_banda(h1)
+    assert motivo is not None
+    assert "respaldo" in motivo.lower()
+    assert "0,75" not in motivo and "0.75" not in motivo
+
+
+def test_un_solo_lado_sintetico_tambien_tiene_motivo_propio():
+    """Se puede tener una resistencia real y un soporte sintetico. Publicar
+    "Soporte clave" cuando es el precio menos el ATR es la misma afirmacion sin
+    respaldo, aunque el otro borde si exista."""
+    h1 = h1_con_banda(banda=60.0, vela=33.0)
+    h1["niveles_origen"] = {"r1": "swing", "r2": "swing", "s1": "atr", "s2": "atr"}
+    motivo = sc.gate_banda(h1)
+    assert motivo is not None and "respaldo" in motivo.lower()
+
+
+def test_sin_el_campo_de_origen_no_se_excluye_pero_no_se_afirma_nada():
+    """Compatibilidad con una respuesta vieja del analizador. El criterio es el
+    mismo que con el calendario caido: no se inventa una exclusion, y el escaner
+    dice que no pudo verificarlo."""
+    h1 = h1_con_banda(banda=60.0, vela=33.0)
+    del h1["niveles_origen"]
+    assert sc.gate_banda(h1) is None
+
+
+def test_el_gate_de_banda_excluye_antes_de_puntuar():
+    """Un activo con niveles que no aguantan una hora puede puntuar alto: por eso
+    el filtro va antes del score, como los otros cuatro."""
+    h1 = h1_con_banda(banda=16.54, vela=17.00)
+    res = sc.evaluar_activo(
+        {"ticker": "TEST", "nombre": "Prueba", "clase": "forex_commodities",
+         "categoria": "forex", "digits": 2},
+        eventos=[], delta_ust_bps=0.0, sesgos={},
+        ahora_santiago=datetime(2026, 9, 4, 10, 0, tzinfo=sc.SANTIAGO),
+        analizador=analizador_falso(h1, d1_con_consumo(0.30)),
+    )
+    assert "excluido" in res
+    assert "score" not in res
+
+
+def test_la_zona_de_aviso_llega_a_los_avisos_del_escaner():
+    """Un aviso que se calcula y no se publica no sirve de nada.
+
+    La zona de 0,70x a 1,00x no excluye: la pieza sale. Lo que no puede pasar es
+    que salga sin que nadie sepa que sus bordes son estrechos para lo que ese
+    activo se mueve.
+    """
+    res = sc.escanear(
+        top=3, solo_renderizables=False,
+        analizador=analizador_falso(
+            h1_con_banda(banda=41.20, vela=33.00), d1_con_consumo(0.30)
+        ),
+    )
+    avisos = " ".join(res["avisos"]).lower()
+    assert "estrechos para su volatilidad" in avisos, res["avisos"]
+    assert "0,80" in avisos, res["avisos"]
+
+
+def test_una_banda_holgada_no_genera_aviso():
+    res = sc.escanear(
+        top=3, solo_renderizables=False,
+        analizador=analizador_falso(
+            h1_con_banda(banda=60.00, vela=33.00), d1_con_consumo(0.30)
+        ),
+    )
+    assert not any("estrechos" in a for a in res["avisos"]), res["avisos"]
+
+
+def test_todo_activo_del_universo_trae_su_nota_de_volatilidad():
+    """Contrato: sin la nota, el mensaje no puede justificar su temporalidad.
+
+    `CLAUDE.md` declara esa linea obligatoria desde el issue #44, y los campos
+    estaban en `config/activos.json` para 23 de los 37 activos: **las 14 acciones
+    no los tenian**, y `cargar_universo` tampoco los copiaba, asi que el generador
+    del mensaje nunca los vio.
+    """
+    sin_nota = [
+        a["ticker"] for a in sc.cargar_universo(solo_renderizables=False)
+        if not a.get("nota_volatilidad") or not a.get("volatilidad")
+    ]
+    assert not sin_nota, f"activos sin volatilidad ni nota: {sin_nota}"
+
+
+def test_la_volatilidad_declarada_es_una_de_las_tres_etiquetas():
+    validas = {"baja", "media", "alta"}
+    raras = {
+        a["ticker"]: a.get("volatilidad")
+        for a in sc.cargar_universo(solo_renderizables=False)
+        if a.get("volatilidad") not in validas
+    }
+    assert not raras, raras
+
+
+def test_toda_nota_de_volatilidad_justifica_un_marco_temporal():
+    """La nota se publica detras de "Por que 1H aca:", asi que tiene que hablar de
+    marcos y no de drivers.
+
+    Tres notas (GBP/USD, cobre, bitcoin) eran descripciones de lo que mueve al
+    activo, sin nombrar ninguna temporalidad: publicadas asi, la linea prometia
+    una justificacion y entregaba otra cosa.
+    """
+    import pipeline_carrusel as pc
+
+    etiquetas = {e for e, _ in pc.MARCOS_CANONICOS.values()}
+    sin_marco = [
+        a["ticker"] for a in sc.cargar_universo(solo_renderizables=False)
+        if not any(e in a["nota_volatilidad"] for e in etiquetas)
+    ]
+    assert not sin_marco, f"notas que no nombran ningun marco: {sin_marco}"
+
+
+def test_toda_nota_nombra_el_marco_que_el_carrusel_publica():
+    """Si la nota recomienda 4H y la pieza sale en 1H, la linea se contradice sola.
+
+    Paso con Solana: "Por que 1H aca: ... 4H da la lectura mas limpia". Las notas
+    pueden (y deben) nombrar el marco mas amplio, pero tienen que explicar tambien
+    el que se publica.
+    """
+    import pipeline_carrusel as pc
+
+    etiqueta = pc.MARCOS_CANONICOS[pc.TIMEFRAME_GRAFICO][0]
+    sin_el = [
+        a["ticker"] for a in sc.cargar_universo(solo_renderizables=False)
+        if etiqueta not in a["nota_volatilidad"]
+    ]
+    assert not sin_el, f"notas que no justifican {etiqueta}: {sin_el}"
+
+
+def test_un_indicador_fuera_del_glosario_levanta_aviso(monkeypatch):
+    """`glosario_pendiente` se emitia y nadie la leia.
+
+    `calendar.py` la marca en todo evento que no engancha, y ningun consumidor de
+    produccion la consultaba: solo tests y docs. Mientras tanto el nombre en
+    ingles pasaba al mensaje sin marca, porque el fallback devuelve el titulo de
+    la fuente tal cual. Asi salieron cuatro terminos del informe de empleo a cinco
+    canales el 2026-09-04.
+    """
+    import market_data_mcp.tools.calendar as cal
+
+    monkeypatch.setattr(cal, "cargar_calendario", lambda **k: {"eventos": [
+        {"nombre": "Richmond Manufacturing Index (Aug)", "glosario_pendiente": True},
+        {"nombre": "Nonfarm Payrolls (Aug)"},
+    ]})
+    _, _, avisos = sc._contexto_macro(datetime(2026, 9, 4, 10, 0, tzinfo=sc.SANTIAGO))
+    texto = " ".join(avisos)
+    assert "glosario" in texto and "Richmond" in texto, avisos
+    assert "Nonfarm Payrolls" not in texto, "el que SI esta en el glosario no se reporta"

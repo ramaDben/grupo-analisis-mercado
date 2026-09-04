@@ -100,6 +100,54 @@ def test_support_resistance_quedan_del_lado_correcto_del_precio():
     assert niveles["s2"] < current
 
 
+def test_los_niveles_declaran_si_salieron_de_un_swing_o_del_respaldo_atr():
+    """Un nivel de respaldo NO es un nivel: es el precio mas o menos el ATR.
+
+    `_get_support_resistance` cae a `current ± atr14` cuando no encuentra swings
+    del lado que necesita, y eso esta bien como red de seguridad. Lo que no esta
+    bien es que el resultado sea indistinguible de una resistencia medida: la
+    pieza publica "🟢 Resistencia clave: X" y el cliente lee estructura donde solo
+    hay una banda de volatilidad.
+
+    Y tiene una consecuencia que no se ve: cuando AMBOS lados caen al respaldo, la
+    banda vale exactamente 2 ATR **por construccion**, asi que cualquier medida de
+    "cabe la vela dentro de la banda" da un numero fijo y no mide nada.
+    """
+    df = _df_sintetico()
+    current = float(df["close"].iloc[-1])
+    niveles = levels._get_support_resistance(df, current=current, atr14=1.0, digits=2)
+    assert niveles["origen"]["r1"] in ("swing", "atr")
+    assert niveles["origen"]["s1"] in ("swing", "atr")
+
+
+def test_una_serie_sin_swings_declara_ambos_lados_como_respaldo():
+    """Una recta monotona no tiene pivotes, asi que los dos lados son sinteticos."""
+    df = pd.DataFrame({
+        "high": [100.0 + i for i in range(80)],
+        "low": [99.0 + i for i in range(80)],
+        "close": [99.5 + i for i in range(80)],
+    })
+    current = float(df["close"].iloc[-1])
+    niveles = levels._get_support_resistance(df, current=current, atr14=1.0, digits=2)
+    assert niveles["origen"] == {"r1": "atr", "r2": "atr", "s1": "atr", "s2": "atr"}
+    # La banda es 2 ATR exactos: es la cifra que vuelve inutil cualquier ratio.
+    assert round(niveles["r1"] - niveles["s1"], 6) == 2.0
+
+
+def test_el_origen_de_los_niveles_viaja_en_la_respuesta_de_la_tool(collector, monkeypatch):
+    """El escaner lo necesita para no puntuar una banda que es el ATR disfrazado."""
+    from market_data_mcp import mt5_client
+
+    df = _df_ohlc()
+    monkeypatch.setattr(mt5_client, "get_rates", lambda ticker, tf, n_bars=300: df)
+
+    levels.register(collector)
+    res = collector.tools["get_asset_levels"](ticker="XAUUSD", timeframe="H1")
+    assert "error" not in res, res
+    assert set(res["niveles_origen"]) == {"r1", "r2", "s1", "s2"}
+    assert all(v in ("swing", "atr") for v in res["niveles_origen"].values())
+
+
 # --- Contrato de error de get_asset_levels ---
 
 def test_ticker_fuera_de_catalogo_retorna_error(collector):

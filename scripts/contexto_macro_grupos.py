@@ -420,21 +420,35 @@ def construir_texto_contexto_macro(
     bloque_soberano = []
     enlaces_bloque = []
 
-    if delta_ust_bps is not None:
-        signo = "+" if delta_ust_bps > 0 else ""
-        bloque_soberano.append(f"• 📈 Rendimiento Bono EE.UU. 10Y (UST 10Y): *{_bps(delta_ust_bps)} bps*")
+    # Las tres lineas siguen la MISMA regla, que vive en `variacion_soberana`.
+    # Antes cada una repetia `if delta_1d_bps is not None` con su propio `signo`
+    # calculado y sin usar (tres veces), y la del 10Y no salia de la curva sino
+    # de un parametro: cuatro copias de la misma decision, ninguna mirando el
+    # rezago. El parametro queda como respaldo por si la curva no responde.
+    dgs10 = curva_info.get("DGS10") or {}
+    if not dgs10 and delta_ust_bps is not None:
+        dgs10 = {"delta_1d_bps": delta_ust_bps, "rezago_dias_habiles": 1}
+    linea = _linea_soberana("📈 Rendimiento Bono EE.UU. 10Y (UST 10Y)", dgs10)
+    if linea:
+        bloque_soberano.append(linea)
         enlaces_bloque.append(f"🔗 Gráfico UST 10Y (FRED): {ENLACES_INSTITUCIONALES['UST_10Y']}")
 
     if curva_info:
-        dgs2 = curva_info.get("DGS2", {})
-        dfii10 = curva_info.get("DFII10", {})
-        if dgs2.get("delta_1d_bps") is not None and grupo in ("02_forex_divisas", "04_indices_bursatiles"):
-            s2 = "+" if dgs2["delta_1d_bps"] > 0 else ""
-            bloque_soberano.append(f"• 🏛️ Tasa 2 Años EE.UU. (sensible a Fed): *{_bps(dgs2['delta_1d_bps'])} bps*")
-        if dfii10.get("delta_1d_bps") is not None and grupo == "03_commodities_materias_primas":
-            stips = "+" if dfii10["delta_1d_bps"] > 0 else ""
-            bloque_soberano.append(f"• 🪙 Tasa Real TIPS 10Y (driver del Oro): *{_bps(dfii10['delta_1d_bps'])} bps*")
-            enlaces_bloque.append(f"🔗 Gráfico Tasa Real TIPS 10Y (FRED): {ENLACES_INSTITUCIONALES['TIPS_10Y']}")
+        if grupo in ("02_forex_divisas", "04_indices_bursatiles"):
+            linea = _linea_soberana(
+                "🏛️ Tasa 2 Años EE.UU. (sensible a Fed)", curva_info.get("DGS2") or {}
+            )
+            if linea:
+                bloque_soberano.append(linea)
+        if grupo == "03_commodities_materias_primas":
+            linea = _linea_soberana(
+                "🪙 Tasa Real TIPS 10Y (driver del Oro)", curva_info.get("DFII10") or {}
+            )
+            if linea:
+                bloque_soberano.append(linea)
+                enlaces_bloque.append(
+                    f"🔗 Gráfico Tasa Real TIPS 10Y (FRED): {ENLACES_INSTITUCIONALES['TIPS_10Y']}"
+                )
 
     if bloque_soberano:
         lineas.append("🏛️ *CURVA SOBERANA Y TASAS*")
@@ -626,6 +640,65 @@ def _bps(valor: float) -> str:
     """
     signo = "+" if valor > 0 else ""
     return f"{signo}{valor:.1f}".replace(".", ",")
+
+
+def variacion_soberana(serie: dict[str, Any]) -> tuple[str, str] | None:
+    """La variación publicable de una serie de la curva, con su fecha si hace falta.
+
+    Devuelve `(texto, fecha)` o `None` si la serie no trae nada. `fecha` viene
+    vacía cuando el dato es de hoy, porque ahí decirla es ruido.
+
+    Existe porque el 2026-09-04 salió a cinco canales
+    `Rendimiento Bono EE.UU. 10Y: *0,0 bps*`. Era **cierto y editorialmente
+    falso**: el último dato era del 02-sep y el anterior del 01-sep, así que ese
+    cero describía el movimiento de anteayer, se publicó el 04-sep sin fecha, y
+    los 13 bps que el bono sí se movió en la semana estaban en el mismo JSON sin
+    salir. `curva_reader` entrega once campos por serie y el consumidor leía uno.
+
+    Tres reglas:
+
+    1. **Con rezago de dos días hábiles o más manda la variación de 5 días**, con
+       la fecha del dato al lado. Es la cifra que dice algo; la de 1 día compara
+       dos días que ya pasaron.
+    2. **Un `null` se dice, no se omite.** El código solo miraba `is not None`,
+       así que un delta incalculable hacía desaparecer la línea, y con el bloque
+       vacío se iba también el encabezado de la curva completo. `null` significa
+       "no sé" y `0` significa "no se movió": callar es peor que el cero, porque
+       el cero al menos se puede cuestionar.
+    3. **Sin rezago manda la variación del día**, que es lo que el cliente espera
+       cuando el dato es de hoy.
+    """
+    if not serie:
+        return None
+
+    d1 = serie.get("delta_1d_bps")
+    d5 = serie.get("delta_5d_bps")
+    rezago = serie.get("rezago_dias_habiles")
+    fecha_iso = serie.get("fecha_dato")
+    fecha = f"dato al {_etiqueta_dia(fecha_iso)}" if fecha_iso else ""
+
+    if rezago is not None and rezago >= 2:
+        if d5 is not None:
+            return f"{_bps(d5)} bps en 5 días", fecha
+        if d1 is not None:
+            return f"{_bps(d1)} bps", fecha
+        return "variación no disponible", fecha
+
+    if d1 is not None:
+        return f"{_bps(d1)} bps", ""
+    if d5 is not None:
+        return f"{_bps(d5)} bps en 5 días", fecha
+    return "variación no disponible", fecha
+
+
+def _linea_soberana(rotulo: str, serie: dict[str, Any]) -> str | None:
+    """El bullet de una serie de la curva, o `None` si no hay serie."""
+    resultado = variacion_soberana(serie)
+    if resultado is None:
+        return None
+    texto, fecha = resultado
+    sufijo = f" _({fecha})_" if fecha else ""
+    return f"• {rotulo}: *{texto}*{sufijo}"
 
 
 def _bloque_activos(pares: list[tuple[str, int, str]], mov: int) -> list[dict[str, Any]]:
