@@ -505,7 +505,27 @@ eso lo hace peor, no menor.
 tiempo. Si el movimiento **invalidó el texto** —el precio cruzó un soporte o una
 resistencia que el párrafo daba por vigentes, o perdió el nivel de vigencia del
 sesgo— la pieza no sale: se renombra a `.divergente` y el despacho lo informa.
-`--desde N` retoma sin duplicar lo ya enviado.
+**La reanudación la manda la bitácora, no `--desde`.**
+`data/historial_despachos.json` anota **una entrada por pieza entregada** (fecha, hora,
+tanda, canal, pieza y la huella del texto), y `despachar` la consulta antes de cada canal
+para saltar lo que ya salió. Se versiona, igual que `historial_senales.json` y
+`historial_suplementos.json`: es historia de lo que el cliente recibió, y un clon nuevo sin
+ella reenviaría la tanda del día.
+
+Dos cosas que la hacen confiable:
+
+- **Se anota DENTRO del bucle de piezas**, vía el callback `al_entregar` que el sender
+  invoca tras confirmar cada entrega contra el DOM. `enviar_lote` levanta ante un fallo y
+  su `return` no ocurre, así que anotar al final perdería justamente el registro de lo que
+  **sí** salió. Si el anotado falla, la pieza ya salió y abortar no la devuelve: se avisa
+  fuerte en vez de romper el despacho.
+- **La identidad de una pieza es (tanda, canal, pieza)**, no el activo. Una tanda nueva del
+  mismo activo es contenido legítimo con niveles nuevos; la misma pieza de la misma tanda es
+  una repetición.
+
+`--desde N` queda como control manual del director. **Ojo con lo que medía**: cuenta
+**canales** mientras el envío cuenta **piezas** desde el 2026-09-03, así que por sí solo
+reenviaba las primeras piezas de un canal que falló a la mitad.
 
 ### El "hasta dónde" del sesgo tiene dos gramáticas, no una
 
@@ -551,7 +571,7 @@ Dos reglas más que se decidieron mirando el resultado:
    la mayoría de esos casos, pero "la mayoría" no alcanza: dos direcciones opuestas en el
    mismo mensaje cuestan la credibilidad del mensaje entero.
 
-Tres reglas que se pagaron caro:
+Cuatro reglas que se pagaron caro:
 
 1. **La cadencia y el cupo se cuentan por pieza.** Cada pieza es su propia acción, espera
    sus 45 s y descuenta su unidad del cupo. Contar un canal como un solo envío relajaría
@@ -564,6 +584,13 @@ Tres reglas que se pagaron caro:
 3. **Un solo dueño de la sesión a la vez.** El perfil de Chromium admite un proceso. Claude
    Code y Antigravity abriéndolo a la vez crean un perfil paralelo, y ese patrón desvinculó
    la sesión el 2026-09-01 y el 2026-09-02.
+4. **El barrido de payloads mide en la unidad del preparado.** El directorio de tanda se
+   nombra por **minuto** y `--preparar --grupo` opera por **canal**, así que dos corridas en
+   el mismo minuto natural comparten carpeta. `limpiar_payloads` hacía `rglob` sobre la
+   tanda entera y la segunda se llevaba los payloads de la primera: pasó el 2026-09-04 con
+   doce de commodities, y el escáner reportó "barridos 12 payload(s)" sin que eso se leyera
+   como un problema. Ahora recibe `solo_canales`; sin ese argumento el barrido sigue siendo
+   global, que es lo correcto para `--matriz`.
 
 ### Dos condiciones de frescura que conviene no descubrir en vivo
 

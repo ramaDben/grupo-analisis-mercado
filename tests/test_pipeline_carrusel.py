@@ -1185,3 +1185,65 @@ def test_los_avisos_de_la_fuente_macro_no_se_descartan():
     fuente = inspect.getsource(pc.preparar)
     assert "avisos_macro" in fuente, "los avisos de _contexto_macro volvieron al piso"
     assert ", _ = sc._contexto_macro" not in fuente
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El barrido mide en la unidad del preparado, no en la de la tanda
+# ─────────────────────────────────────────────────────────────────────────────
+def _tanda_con_dos_canales(tmp_path):
+    tanda = tmp_path / "2026-09-04_10-12_apertura_ny"
+    for canal, pieza in (("02_forex_divisas", "1_usdclp"), ("04_indices_bursatiles", "1_us500spot")):
+        d = tanda / canal
+        d.mkdir(parents=True)
+        (d / f"{pieza}.json").write_text("{}", encoding="utf-8")
+        (d / f"{pieza}.png").write_bytes(b"png")
+        (d / f"{pieza}_mensaje.txt").write_text("pie", encoding="utf-8")
+        (d / "0_contexto_macro.txt").write_text("macro", encoding="utf-8")
+    (tanda / "_screener.json").write_text("{}", encoding="utf-8")
+    return tanda
+
+
+def test_preparar_un_canal_no_barre_los_payloads_de_otro(tmp_path):
+    """El defecto del 2026-09-04: dos `--preparar --grupo` en el mismo minuto.
+
+    El directorio se nombra por MINUTO y el preparado opera por CANAL, asi que la
+    segunda corrida reutilizaba la carpeta y `limpiar_payloads` hacia `rglob` sobre
+    la tanda ENTERA. Me borro los doce payloads de commodities y el escaner reporto
+    "barridos 12 payload(s)" sin que eso significara nada malo a la vista.
+    """
+    tanda = _tanda_con_dos_canales(tmp_path)
+    barridos = pc.limpiar_payloads(tanda, solo_canales={"04_indices_bursatiles"})
+
+    assert (tanda / "02_forex_divisas" / "1_usdclp.json").exists(), "se barrio otro canal"
+    assert not (tanda / "04_indices_bursatiles" / "1_us500spot.json").exists()
+    assert any("us500" in b for b in barridos)
+    assert not any("usdclp" in b for b in barridos)
+
+
+def test_sin_canales_declarados_el_barrido_sigue_siendo_de_toda_la_tanda(tmp_path):
+    """`--matriz` prepara todos los canales, asi que ahi el barrido global es el
+    correcto. El cambio acota la unidad, no la elimina."""
+    tanda = _tanda_con_dos_canales(tmp_path)
+    pc.limpiar_payloads(tanda)
+    assert not (tanda / "02_forex_divisas" / "1_usdclp.json").exists()
+    assert not (tanda / "04_indices_bursatiles" / "1_us500spot.json").exists()
+
+
+def test_el_barrido_nunca_toca_el_screener(tmp_path):
+    """Sobrevive por el prefijo `_`, y eso es deliberado."""
+    tanda = _tanda_con_dos_canales(tmp_path)
+    pc.limpiar_payloads(tanda)
+    assert (tanda / "_screener.json").exists()
+
+
+def test_preparar_acota_el_barrido_al_canal_pedido():
+    """El contrato: `preparar` tiene que pasarle los canales que va a escribir.
+
+    Si volviera a llamar `limpiar_payloads(destino)` sin acotar, el defecto
+    reaparece y ningun test de arriba lo detecta, porque prueban la funcion y no
+    su uso.
+    """
+    import inspect
+
+    fuente = inspect.getsource(pc.preparar)
+    assert "solo_canales=" in fuente, "preparar volvio a barrer la tanda completa"

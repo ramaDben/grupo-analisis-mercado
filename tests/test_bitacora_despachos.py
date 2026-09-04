@@ -223,3 +223,17 @@ def test_el_sender_real_no_anota_en_un_dry_run(tmp_path):
     )
     assert res["status"] == "simulado"
     assert entregadas == []
+
+
+def test_la_docstring_de_despachar_no_describe_el_diseno_revertido():
+    """El despacho por lote se revirtio el 2026-09-03 y la docstring siguio
+    afirmandolo hasta el 2026-09-04, mientras el codigo hacia lo contrario.
+
+    Una docstring que describe un diseno descartado es justo lo que hace que
+    alguien lo "restaure" creyendo que arregla algo. Y en este caso restaurarlo
+    volveria a mandar mensajes con renglones faltantes, que se leen como completos
+    desde afuera.
+    """
+    doc = pc.despachar.__doc__ or ""
+    assert "una sola acción" not in doc, "la docstring volvio al diseno por lote"
+    assert "su propia acción" in doc
