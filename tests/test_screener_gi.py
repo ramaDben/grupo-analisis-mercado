@@ -1045,3 +1045,24 @@ def test_toda_nota_nombra_el_marco_que_el_carrusel_publica():
         if etiqueta not in a["nota_volatilidad"]
     ]
     assert not sin_el, f"notas que no justifican {etiqueta}: {sin_el}"
+
+
+def test_un_indicador_fuera_del_glosario_levanta_aviso(monkeypatch):
+    """`glosario_pendiente` se emitia y nadie la leia.
+
+    `calendar.py` la marca en todo evento que no engancha, y ningun consumidor de
+    produccion la consultaba: solo tests y docs. Mientras tanto el nombre en
+    ingles pasaba al mensaje sin marca, porque el fallback devuelve el titulo de
+    la fuente tal cual. Asi salieron cuatro terminos del informe de empleo a cinco
+    canales el 2026-09-04.
+    """
+    import market_data_mcp.tools.calendar as cal
+
+    monkeypatch.setattr(cal, "cargar_calendario", lambda **k: {"eventos": [
+        {"nombre": "Richmond Manufacturing Index (Aug)", "glosario_pendiente": True},
+        {"nombre": "Nonfarm Payrolls (Aug)"},
+    ]})
+    _, _, avisos = sc._contexto_macro(datetime(2026, 9, 4, 10, 0, tzinfo=sc.SANTIAGO))
+    texto = " ".join(avisos)
+    assert "glosario" in texto and "Richmond" in texto, avisos
+    assert "Nonfarm Payrolls" not in texto, "el que SI esta en el glosario no se reporta"

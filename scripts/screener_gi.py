@@ -898,6 +898,22 @@ def _contexto_macro(ahora_santiago: datetime) -> tuple[list[dict[str, Any]], flo
             )
         else:
             eventos = cal.get("eventos", [])
+            # `glosario_pendiente` la marca `calendar.py` en todo evento que no
+            # engancha con el glosario, y **ningun consumidor de produccion la
+            # leia**: solo tests y docs. Mientras tanto el nombre en ingles pasaba
+            # al mensaje sin ninguna marca, porque el fallback de
+            # `_nombre_indicador` devuelve el titulo de la fuente tal cual. Asi
+            # salieron "Average Hourly Earnings", "Participation Rate" y
+            # "U6 Unemployment Rate" a cinco canales el 2026-09-04.
+            pendientes = sorted({
+                str(e.get("nombre", "?")) for e in eventos if e.get("glosario_pendiente")
+            })
+            if pendientes:
+                avisos.append(
+                    "hay indicadores fuera de data/glosario_siglas.json, asi que "
+                    "saldrian con su nombre en ingles: "
+                    + ", ".join(pendientes)
+                )
     except Exception as exc:  # noqa: BLE001
         avisos.append(
             f"calendario no disponible ({exc.__class__.__name__}): blackouts sin verificar"

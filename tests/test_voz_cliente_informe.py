@@ -510,3 +510,79 @@ def test_los_tres_indicadores_que_salian_en_ingles_ya_tienen_nombre():
         assert clave in glosario_siglas, f"{clave} sigue sin entrada en el glosario"
         assert glosario_siglas[clave]["nombre_es"] == nombre_es
         assert glosario_siglas[clave]["explicacion"], f"{clave} sin explicacion novata"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Los terminos del informe de empleo, que salieron en ingles a cinco canales
+# ─────────────────────────────────────────────────────────────────────────────
+TERMINOS_EMPLEO = [
+    "Average Hourly Earnings",
+    "Participation Rate",
+    "Unemployment Rate",
+    "U6 Unemployment Rate",
+]
+
+
+@pytest.mark.parametrize("termino", TERMINOS_EMPLEO)
+def test_los_terminos_del_informe_de_empleo_se_traducen(termino):
+    """El 2026-09-04 estos cuatro salieron en ingles a cinco canales.
+
+    El fallback de `_nombre_indicador` devuelve el titulo de la fuente **sin
+    ninguna marca** cuando el termino no esta en el glosario, asi que el ingles
+    pasa como si estuviera traducido.
+    """
+    import json
+
+    glosario = json.loads(
+        (RAIZ / "data" / "glosario_siglas.json").read_text(encoding="utf-8")
+    )
+    encontrado = None
+    for clave, entrada in glosario.items():
+        if not isinstance(entrada, dict):
+            continue
+        candidatos = [clave, *entrada.get("titulos_ff", [])]
+        if any(c.upper() == termino.upper() for c in candidatos):
+            encontrado = entrada
+            break
+    assert encontrado, f"{termino} no esta en el glosario"
+    assert encontrado.get("nombre_es"), f"{termino} sin nombre_es"
+    assert encontrado.get("explicacion"), f"{termino} sin explicacion"
+
+
+def test_el_sufijo_duplicado_de_la_fuente_se_colapsa():
+    """El "(YoY) (YoY)" que se publico no lo produce nuestro codigo.
+
+    El titulo crudo de Investing para el evento 1777 es literalmente
+    `Average Hourly Earnings (YoY) (YoY)  (Aug)`. Sobrevivia **solo porque el
+    termino faltaba en el glosario**: con la entrada presente, el bucle de
+    `_SUFIJOS_ES` colapsa el sufijo a "variacion anual" y el duplicado desaparece.
+    """
+    import json
+
+    glosario = json.loads(
+        (RAIZ / "data" / "glosario_siglas.json").read_text(encoding="utf-8")
+    )
+    entrada = next(
+        e for k, e in glosario.items()
+        if isinstance(e, dict)
+        and "Average Hourly Earnings" in [k, *e.get("titulos_ff", [])]
+    )
+    ev = {"nombre": "Average Hourly Earnings (YoY) (YoY)  (Aug)", "diccionario": entrada}
+    nombre = pi._nombre_indicador(ev)
+    assert "(YoY)" not in nombre, nombre
+    assert "Average Hourly Earnings" not in nombre, nombre
+
+
+def test_la_tasa_amplia_no_se_confunde_con_la_tasa_de_desempleo():
+    """`Unemployment Rate` es substring de `U6 Unemployment Rate`.
+
+    El matcher desempata por match mas largo (`calendar.py`), asi que un evento
+    U6 tiene que resolver a la entrada U6 y no a la general. Es el mismo patron
+    de colision que el codigo ya documenta para `Cushing Crude Oil Inventories`.
+    """
+    from market_data_mcp.tools import calendar as cal
+
+    glosario = cal._cargar_glosario()
+    entrada = cal._enganchar_glosario("U6 Unemployment Rate  (Aug)", glosario)
+    assert entrada is not None
+    assert "amplia" in entrada["nombre_es"].lower() or "U6" in entrada["nombre_es"]
