@@ -214,6 +214,65 @@ nueva se quede fuera del reloj en silencio.
 > `resumen_semanal`, los comandos de día). `/estado` y `docs/architecture.md` todavía la
 > citan. `agenda_mercado.json` es la vigente.
 
+### El reloj de sucesos: latido del sistema, decisión en Python
+
+`scripts/reloj_gi.py` es quien decide si a alguna clase de activo le toca salir.
+`scripts/instalar_reloj.ps1` registra el latido en el Programador de tareas (cada 15 min, sin
+parámetros muestra qué haría y **no instala nada**).
+
+**La trampa que esto evita.** El Programador de tareas dispara en hora **local**. Una tarea a
+las 08:30 de Chile es 08:30 de Nueva York hoy y **06:30 de Nueva York en noviembre**: dos
+horas antes del dato que justifica la hora. La tarea seguiría corriendo puntual y publicando
+el cierre de ayer. Por eso **el agendador no sabe nada de mercados**: late, y Python decide
+leyendo la agenda y convirtiendo en ese instante.
+
+Cuatro decisiones que lo sostienen:
+
+1. **Idempotencia por momento y por día**, en `data/.reloj_disparos.json` (gitignoreado: es
+   estado generado, no historia editorial). El latido puede pasar cuatro veces por la ventana
+   de gracia de 20 min y la pieza sale una sola vez. Y hace **recuperable** la noche en que
+   Chile entra en horario de verano, donde una hora local simplemente no existe: una tarea
+   anclada a esa hora no dispararía nunca, y acá el momento sale en el siguiente latido.
+2. **Un momento que falló sigue pendiente.** MT5 puede no estar conectado en ese latido;
+   anotar el disparo igual perdería la pieza por el día entero. Solo se anota si al menos una
+   corrida terminó bien.
+3. **El reloj solo prepara.** Corre `pipeline_carrusel.py --preparar --grupo <canal>` y nada
+   más. Que un proceso automático pueda publicar en un canal es justamente lo que el flujo de
+   aprobación prohíbe, y **hay un test que falla si alguien conecta el envío ahí**.
+4. **Los canales de un momento se derivan del mapeo real** de activo a canal, recorriendo el
+   universo del escáner. Una lista de canales por momento sería otro contrato por nombre.
+
+**Anclado al mercado, con el cambio narrado** (decisión del director, 2026-09-04). La hora
+sigue al mercado y la hora chilena drifta; cuando el desfase cambia, el reloj levanta el aviso
+y deja el mensaje listo para que el director lo revise y lo mande. Se descartó anclar a hora
+chilena fija **midiéndolo**: la pieza de índices habría salido en noviembre a las 08:00 de
+Nueva York, hora y media antes de la campana, publicando el cierre de ayer con fecha de hoy.
+
+| Fecha | Desfase | premercado_fx | cripto | índices |
+|---|---|---|---|---|
+| hasta el 5 sep 2026 | NY+0 | 08:30 CL | 09:00 CL | 10:00 CL |
+| 6 sep 2026 | NY+1 | 09:30 CL | 10:00 CL | 11:00 CL |
+| 1 nov 2026 | NY+2 | 10:30 CL | 11:00 CL | 12:00 CL |
+| mar 2027 | NY+1 | 09:30 CL | 10:00 CL | 11:00 CL |
+| abr 2027 | NY+0 | 08:30 CL | 09:00 CL | 10:00 CL |
+
+**El aviso nombra al país que de verdad movió su reloj.** En septiembre es Chile entrando en
+su horario de verano; en noviembre es **Estados Unidos saliendo del suyo**. Decir "horario de
+verano de Chile" en noviembre sería contarle al cliente algo que no pasó, así que
+`quien_cambio` lo deduce comparando el desplazamiento de cada zona con el de una semana antes.
+
+Y como el aviso lo lee el cliente, se le aplican las reglas de texto de cliente: los nombres
+de los momentos van **acentuados** en el config porque salen publicados, los momentos se
+listan en **orden de reloj** y no en el del archivo, y no lleva guion largo ni cifras de precio.
+
+**El campo `zona` por momento** permite que un momento se ancle al reloj del mercado que lo
+mueve. Hoy los tres van a Nueva York. Un premercado del USD/CLP tendría que ir anclado a
+Santiago, porque con el desfase en su máximo las 08:30 de Nueva York caen hora y media
+**después** de que Santiago abrió, y dejaría de ser premercado. El invariante que lo hace
+seguro: **un test verifica que ningún par de momentos caiga dentro de la tolerancia uno del
+otro, en las tres configuraciones de desfase del año** (si se pisaran, el decisor dispararía
+uno y perdería el otro en silencio).
+
 ### El `Score_GI` y sus gates
 
 `scripts/screener_gi.py` puntúa cada activo del catálogo sobre 100:
@@ -994,6 +1053,8 @@ grupo-analisis-mercado/
 ├── scripts/               ← scripts auxiliares
 │   ├── screener_gi.py     ← Score_GI sobre el universo + gates (feriado, blackout, Playbook, ATR)
 │   ├── agenda_mercado.py  ← el unico reloj: ventanas, anclajes y momentos
+│   ├── reloj_gi.py        ← el decisor del latido (solo prepara, nunca envia)
+│   ├── instalar_reloj.ps1 ← registra el latido en el Programador de tareas
 │   ├── noticia_oficial.py ← la nota oficial fresca que suplementa (EIA, BCE, Fed)
 │   ├── pipeline_carrusel.py ← Top 3 del escaner → 3 Stories (--preparar / --rendir)
 │   ├── pipeline_informe.py  ← informe de apertura (PDF) y de cierre (chat-first)

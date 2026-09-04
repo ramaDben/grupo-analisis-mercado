@@ -90,6 +90,18 @@ def _minutos(hhmm: str) -> int:
     return h * 60 + m
 
 
+def _en_ancla(cuando: datetime) -> datetime:
+    """El mismo instante, leído con el reloj del ancla.
+
+    Las sesiones son el ciclo de mercado de Nueva York, así que se miden con ese
+    reloj sin importar con qué zona venga el llamador. Antes se leía
+    `cuando.hour` a secas, que solo era correcto si el llamador ya había
+    convertido: una suposición silenciosa esperando a que alguien pase la hora
+    de Chile.
+    """
+    return cuando.astimezone(zona_ancla())
+
+
 def _es_finde(cuando: datetime) -> bool:
     """Sábado completo, más domingo hasta que abre la semana.
 
@@ -97,6 +109,7 @@ def _es_finde(cuando: datetime) -> bool:
     `abre_la_semana`. Escribirla en la entrada del fin de semana sería el segundo
     reloj que este módulo vino a eliminar.
     """
+    cuando = _en_ancla(cuando)
     dow = cuando.weekday()
     if dow == SABADO:
         return True
@@ -122,6 +135,7 @@ def dentro_de(sesion: dict[str, Any], cuando: datetime) -> bool:
     if finde:
         return False
 
+    cuando = _en_ancla(cuando)
     ahora = cuando.hour * 60 + cuando.minute
     desde, hasta = _minutos(sesion["desde"]), _minutos(sesion["hasta"])
     if desde <= hasta:
@@ -150,6 +164,31 @@ def momento(slug: str) -> dict[str, Any]:
     raise KeyError(f"no hay momento {slug!r} en la agenda")
 
 
+def zona_del_momento(m: dict[str, Any]) -> ZoneInfo:
+    """La zona a la que está anclado un momento, por default la del ancla.
+
+    **Cada momento se ancla al reloj del mercado que lo mueve.** El dato de
+    empleo de EE.UU. sale a las 08:30 de Nueva York todo el año, así que un
+    momento que existe por ese dato va anclado a Nueva York. Un momento que
+    existe por la apertura de Santiago iría anclado a Santiago, o dejaría de ser
+    premercado cuatro meses al año: con el desfase en su valor máximo, las 08:30
+    de Nueva York caen hora y media después de que Santiago abrió.
+    """
+    return ZoneInfo(m.get("zona") or _cfg()["zona_ancla"])
+
+
+def instante(m: dict[str, Any], dia: datetime) -> datetime:
+    """El instante exacto en que le toca a este momento, ese día.
+
+    Devuelve un `datetime` con zona, así que dos momentos anclados a relojes
+    distintos se pueden comparar entre sí sin convertir a mano.
+    """
+    z = zona_del_momento(m)
+    d = dia.astimezone(z).date()
+    h, mi = (int(x) for x in str(m["hora"]).split(":"))
+    return datetime(d.year, d.month, d.day, h, mi, tzinfo=z)
+
+
 def momento_en(
     cuando: datetime, tolerancia: int | None = None
 ) -> dict[str, Any] | None:
@@ -163,10 +202,9 @@ def momento_en(
     las 08:15 publicaría niveles anteriores al dato que motiva la hora.
     """
     margen = tolerancia if tolerancia is not None else tolerancia_minutos()
-    ahora = cuando.hour * 60 + cuando.minute
     for m in momentos():
-        inicio = _minutos(m["hora"])
-        if inicio <= ahora <= inicio + margen:
+        atraso = (cuando - instante(m, cuando)).total_seconds() / 60
+        if 0 <= atraso <= margen:
             return m
     return None
 
