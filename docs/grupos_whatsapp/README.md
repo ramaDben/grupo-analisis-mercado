@@ -19,7 +19,7 @@ Cada carpeta contiene:
 
 | Carpeta | Canal / Grupo en WhatsApp | Activos Principales | Foto Asignada | Propósito Editorial |
 |---|---|---|---|---|
-| [`01_macro_y_apertura`](./01_macro_y_apertura/) | **GI · Macro & Apertura Global** | Calendario Económico, Tasas (Fed, BCCh, BCE, BoJ), Yields USA, DXY | `LOGO-Fondo-Negro.jpg` | Contexto macro de la mañana, datos de alto impacto e informes PDF. |
+| [`01_macro_y_apertura`](./01_macro_y_apertura/) | **Grupo Inteligencia \| Comunidad de Traders** _(grupo de Avisos)_ | Calendario Económico, Tasas (Fed, BCCh, BCE, BoJ), Yields USA, DXY | `LOGO-Fondo-Negro.jpg` | Contexto macro de la mañana, datos de alto impacto e informes PDF. **No es un canal temático**: es el grupo de Avisos de la comunidad. |
 | [`02_forex_divisas`](./02_forex_divisas/) | **GI · Forex & Divisas** | USD/CLP, EUR/USD, USD/JPY, GBP/USD, DXY | `usdclp.jpg` | Monitoreo del tipo de cambio, diferenciales de tasas y niveles técnicos MT5. |
 | [`03_commodities_materias_primas`](./03_commodities_materias_primas/) | **GI · Commodities & Materias Primas** | Oro (XAU/USD), WTI, Cobre (COPPER USD/t), Plata (XAG/USD) | `oro.jpg` | Metales y energía con drivers de OPEP+, inventarios EIA y demanda China. |
 | [`04_indices_bursatiles`](./04_indices_bursatiles/) | **GI · Índices Bursátiles** | Nasdaq 100 (US100), S&P 500 (US500), Dow Jones (US30), DAX 40 | `us100.jpg` | Apertura de Wall Street, rotación sectorial y sentimiento de riesgo. |

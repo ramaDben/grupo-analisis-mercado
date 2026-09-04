@@ -58,7 +58,13 @@ except ImportError:
 
 CONFIG_MACRO_GRUPOS: dict[str, dict[str, Any]] = {
     "01_macro_y_apertura": {
-        "nombre": "Macro & Apertura Global",
+        # **Sin `nombre` a proposito.** No es un canal tematico: es el grupo de
+        # Avisos de la comunidad, y su lectura macro ES el panorama general, sin
+        # apellido. Aca vivia un nombre de canal que el director descarto el
+        # 2026-09-03 por no existir en WhatsApp, y como este modulo redacta texto
+        # de cliente, el 2026-09-04 un grupo real recibio una pregunta dirigida a
+        # un canal que nadie puede abrir. Un test de contrato impide que vuelva.
+        "sujeto": "el mercado",
         "paises": ("united states", "estados unidos", "chile", "euro zone", "zona euro", "china", "japan", "japon"),
         "foco": "Panorama macroeconómico intermercado, política monetaria y catalizadores de la sesión global.",
         "interpretacion": (
@@ -340,13 +346,22 @@ def construir_texto_contexto_macro(
         "foco": "Seguimiento macroeconómico de la jornada.",
         "interpretacion": "Seguimiento de factores fundamentales y técnicos de la sesión.",
     })
-    nombre_grupo = cfg["nombre"]
+    # `nombre` es el apellido tematico del canal y **puede no haberlo**: el grupo
+    # de Avisos no tiene tema. `sujeto` es de quien habla la interpretacion, que
+    # en un canal tematico es su propio tema y en el de avisos es el mercado.
+    nombre_grupo = cfg.get("nombre")
+    sujeto = cfg.get("sujeto") or nombre_grupo or "el mercado"
     foco = cfg["foco"]
     interpretacion = cfg.get("interpretacion", foco)
     hora_str = ahora.strftime("%H:%M")
 
+    encabezado = (
+        f"📊 *CONTEXTO MACRO DIARIO · {nombre_grupo.upper()}*"
+        if nombre_grupo
+        else "📊 *CONTEXTO MACRO DIARIO*"
+    )
     lineas = [
-        f"📊 *CONTEXTO MACRO DIARIO · {nombre_grupo.upper()}*",
+        encabezado,
         f"📅 {ahora.strftime('%d/%m/%Y')} · {hora_str} hrs hora Chile",
         "━━━━━━━━━━━━━━━━━━━",
     ]
@@ -430,7 +445,7 @@ def construir_texto_contexto_macro(
         lineas.append("━━━━━━━━━━━━━━━━━━━")
 
     lineas.extend([
-        f"🧠 *¿QUÉ SIGNIFICA PARA {nombre_grupo.upper()}?*",
+        f"🧠 *¿QUÉ SIGNIFICA PARA {sujeto.upper()}?*",
         f"{interpretacion}",
         "━━━━━━━━━━━━━━━━━━━",
     ])

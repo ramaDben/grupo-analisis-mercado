@@ -33,6 +33,91 @@ def test_filtrar_eventos_para_forex_incluye_eurozona_usa_y_chile():
     assert "Interest Rate Decision" in nombres
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# El canal de avisos no nombra un canal que no existe
+# ─────────────────────────────────────────────────────────────────────────────
+def _macro_de(grupo: str) -> str:
+    return cmg.construir_texto_contexto_macro(
+        grupo=grupo, eventos_grupo=[], delta_ust_bps=6.0, ahora=_AHORA,
+        con_imagen=True, piezas_de_niveles=0,
+    )
+
+
+def test_el_canal_de_avisos_no_nombra_el_canal_aspiracional():
+    """El 2026-09-03 se decidio no crear un canal tematico aparte para el macro.
+
+    El nombre inventado se quito del config y sobrevivio en
+    `CONFIG_MACRO_GRUPOS`, que es texto de cliente: el 2026-09-04 el grupo de
+    Avisos recibio "¿QUE SIGNIFICA PARA MACRO & APERTURA GLOBAL?", nombrando un
+    canal que nadie puede abrir en WhatsApp.
+    """
+    txt = _macro_de("01_macro_y_apertura").upper()
+    assert "APERTURA GLOBAL" not in txt
+
+
+def test_el_encabezado_del_canal_de_avisos_no_lleva_sufijo_de_canal():
+    """No es un canal tematico: su macro ES el panorama general, sin apellido."""
+    txt = _macro_de("01_macro_y_apertura")
+    assert "📊 *CONTEXTO MACRO DIARIO*" in txt
+    assert "CONTEXTO MACRO DIARIO ·" not in txt
+
+
+def test_el_canal_de_avisos_pregunta_que_significa_para_el_mercado():
+    """La pregunta necesita un sujeto. En un canal tematico es el tema; en el de
+    avisos, que no tiene tema, es el mercado."""
+    txt = _macro_de("01_macro_y_apertura")
+    assert "¿QUÉ SIGNIFICA PARA EL MERCADO?" in txt
+
+
+@pytest.mark.parametrize("grupo, esperado", [
+    ("02_forex_divisas", "FOREX & DIVISAS"),
+    ("04_indices_bursatiles", "ÍNDICES BURSÁTILES"),
+    ("06_criptoactivos", "CRIPTOACTIVOS & DIGITAL ASSETS"),
+])
+def test_los_canales_tematicos_siguen_nombrandose(grupo, esperado):
+    """El cambio es solo para el canal sin tema: los demas no se tocan."""
+    txt = _macro_de(grupo)
+    assert f"CONTEXTO MACRO DIARIO · {esperado}" in txt
+    assert f"¿QUÉ SIGNIFICA PARA {esperado}?" in txt
+
+
+def test_ninguna_fuente_del_repo_nombra_el_canal_aspiracional():
+    """Contrato: el nombre no puede volver por ninguna puerta.
+
+    Ya volvio una vez. Se quito del config el 2026-09-03 y siguio vivo en el
+    modulo que redacta el mensaje, en la ficha del canal y en el indice de
+    `docs/grupos_whatsapp/`, hasta que llego a un cliente. Un `grep` a mano no
+    lo ataja: por eso es un test.
+
+    `data/` queda fuera a proposito: guarda mensajes ya enviados y tandas
+    generadas, o sea historia. Lo que este test protege son las FUENTES que
+    producen texto nuevo.
+    """
+    prohibido = ("apertura global", "macro & apertura", "macro y apertura global")
+    raices = ["scripts", "src", "config", "templates", "conceptos",
+              "docs/grupos_whatsapp", ".claude/commands", ".agents"]
+    ofensores = []
+    for raiz in raices:
+        base = RAIZ / raiz
+        if not base.exists():
+            continue
+        for archivo in base.rglob("*"):
+            if not archivo.is_file() or "__pycache__" in archivo.parts:
+                continue
+            if archivo.suffix.lower() in {".png", ".jpg", ".jpeg", ".woff2", ".pdf", ".pptx", ".xlsx"}:
+                continue
+            try:
+                texto = archivo.read_text(encoding="utf-8", errors="ignore").lower()
+            except OSError:
+                continue
+            for frase in prohibido:
+                if frase in texto:
+                    ofensores.append(f"{archivo.relative_to(RAIZ)} -> {frase!r}")
+    assert not ofensores, "el nombre del canal que no existe volvio a aparecer: " + "; ".join(
+        ofensores
+    )
+
+
 PROMESA = "compartimos los niveles"
 
 

@@ -1,50 +1,77 @@
 ================================================================================
-01. CANAL MACRO & APERTURA GLOBAL
+01. GRUPO DE AVISOS DE LA COMUNIDAD
 ================================================================================
 
-[1] NOMBRES PARA WHATSAPP
+NOTA SOBRE ESTA FICHA
 --------------------------------------------------------------------------------
-• Nombre Oficial Recomendado (Copiar y Pegar):
-  GI · Macro & Apertura Global
+Esta carpeta se llama `01_macro_y_apertura` y su contenido es la lectura macro
+del dia, pero NO corresponde a un canal tematico propio. Corresponde al grupo de
+Avisos de la comunidad, que ya existe en WhatsApp.
 
-• Nombre Actual en WhatsApp (grupo padre; lo usa el envío automatizado):
+Hasta el 2026-09-04 esta ficha proponia crear un canal tematico aparte con un
+nombre inventado. El director descarto esa creacion el 2026-09-03 y el nombre se
+quito del config, pero sobrevivio aca y en el modulo que redacta el mensaje: el
+2026-09-04 el grupo de Avisos recibio una pieza que preguntaba que significaba el
+dato "para" un canal que nadie puede abrir. El rastro se elimino por completo del
+repo y hay un test de contrato que impide que vuelva
+(`tests/test_contexto_macro_grupos.py`).
+
+[1] NOMBRE EN WHATSAPP
+--------------------------------------------------------------------------------
+- Nombre real del grupo (el que usa el envio automatizado):
   Grupo Inteligencia | Comunidad de Traders
 
-• Nombre Alternativo:
-  Grupo Inteligencia | Macro & Calendario
+- No hay nombre "recomendado" ni "alternativo": el grupo existe y su nombre es
+  ese. Proponer otro es lo que produjo el defecto de arriba.
 
-• Nombre Corto (para identificadores rápidos):
-  GI Macro
+- Ojo al buscarlo en WhatsApp Web: en la lista de chats TODOS los grupos de la
+  comunidad se muestran con el nombre de la comunidad como titulo, y el nombre
+  real del grupo aparece en la primera linea del preview. Por eso siete chats
+  distintos se ven iguales al buscarlos.
 
 [2] ARCHIVO DE FOTO DE PERFIL
 --------------------------------------------------------------------------------
-• Archivo asignado: foto_perfil.jpg (ubicado en esta misma carpeta)
-• Origen del asset: templates/stories/assets/LOGO-Fondo-Negro.jpg
+- Archivo asignado: foto_perfil.jpg (ubicado en esta misma carpeta)
+- Origen del asset: templates/stories/assets/LOGO-Fondo-Negro.jpg
 
-[3] DESCRIPCIÓN OFICIAL PARA EL GRUPO (Copiar y Pegar en WhatsApp)
+[3] DESCRIPCION DEL GRUPO (Copiar y Pegar en WhatsApp)
 --------------------------------------------------------------------------------
-🏛️ *GI · Macro & Apertura Global*
-_Grupo de Análisis de Mercado | Grupo Inteligencia_
+🏛️ *Grupo Inteligencia | Comunidad de Traders*
+_Grupo de Analisis de Mercado | Grupo Inteligencia_
 
-Bienvenido al canal central de apertura macroeconómica y lectura intermercado de Grupo Inteligencia.
+Bienvenido al grupo de avisos de la comunidad. Aca llega la lectura macro del dia
+y todo aviso relevante para el resto de los canales.
 
-🎯 *PROPÓSITO DEL CANAL*
-Entregar la dirección y el contexto macroeconómico clave antes de la apertura de los mercados, traduciendo datos complejos a una lectura clara, práctica y accionable para tu operativa diaria.
+🎯 *PARA QUE SIRVE ESTE GRUPO*
+Entregar la direccion y el contexto macroeconomico del dia, traduciendo datos
+complejos a una lectura clara, practica y aplicable a tu operativa. Los niveles
+tecnicos por activo viven en los canales tematicos, no aca.
 
-📊 *CONTENIDO Y REPORTES*
-• *Calendario Económico Diario*: Publicación anticipada de los datos de alto impacto (IPC, Empleo, Tasas, PIB) de EE.UU., Chile, Eurozona y Asia con horario oficial de Chile (CLT).
-• *Apertura de Mercado*: Panorama matutino con la dirección de las bolsas, Dollar Index y rendimiento de bonos del Tesoro.
-• *Decisiones de Bancos Centrales*: Seguimiento y análisis pedagógico de la Fed, Banco Central de Chile (BCCh), BCE y BoJ.
-• *Informes Editoriales & Stories*: Reportes institucionales en PDF y Stories visuales de alto impacto para entender hacia dónde va el dinero.
+📊 *QUE SE PUBLICA*
+- *Calendario economico diario*: los datos de alto impacto (IPC, empleo, tasas,
+  PIB) de EE.UU., Chile, Zona Euro y Asia, con hora oficial de Chile (CLT/CLST).
+- *Panorama de apertura*: direccion de las bolsas, Dollar Index y rendimiento de
+  los bonos del Tesoro.
+- *Decisiones de bancos centrales*: seguimiento y explicacion pedagogica de la
+  Fed, el Banco Central de Chile (BCCh), el BCE y el BoJ.
+- *Informes editoriales*: reportes institucionales en PDF y piezas visuales para
+  entender hacia donde va el dinero.
 
-⏰ *HORARIOS DE PUBLICACIÓN*
-• *Apertura AM*: Lunes a viernes entre 08:00 y 09:30 CLT.
-• *Alertas Flash*: En tiempo real al publicarse catalizadores macroeconómicos.
-• *Pre-Cierre*: Resumen de la sesión a las 16:45 CLT.
+⏰ *CUANDO SE PUBLICA*
+Los horarios siguen a la apertura del mercado de Nueva York y se comunican en
+hora real de Chile, asi que se mueven dos veces al ano cuando cambia el desfase
+entre ambos husos. La agenda vigente vive en `config/agenda_mercado.json` y el
+sistema avisa cuando el desfase cambia. Las alertas de un dato macro salen en
+cuanto el dato se publica.
 
-📌 *REGLAS Y PAUTAS DE LA COMUNIDAD*
-1. Canal unidireccional de alertas e investigación para mantener la limpieza y relevancia de la información.
-2. Todo dato publicado cuenta con verificación de fuentes soberanas oficiales (Investing, FRED, Tesoro EE.UU., BCCh).
-3. _Aviso Legal_: El contenido compartido tiene fines exclusivamente formativos e informativos sobre análisis técnico y macroeconómico. No constituye asesoría financiera personalizada ni recomendación de inversión directa. Los CFDs son instrumentos de riesgo.
+📌 *REGLAS Y PAUTAS*
+1. Grupo de avisos e investigacion, para mantener limpia y relevante la
+   informacion.
+2. Todo dato publicado se verifica contra fuentes oficiales (Investing, FRED,
+   Tesoro de EE.UU., BCCh) y todo precio sale del terminal MetaTrader 5.
+3. _Aviso legal_: el contenido tiene fines exclusivamente formativos e
+   informativos sobre analisis tecnico y macroeconomico. No constituye asesoria
+   financiera personalizada ni recomendacion de inversion directa. Los CFDs son
+   instrumentos de riesgo.
 
 ================================================================================
