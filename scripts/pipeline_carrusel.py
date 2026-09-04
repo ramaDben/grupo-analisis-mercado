@@ -32,6 +32,7 @@ import argparse
 import json
 import subprocess
 import sys
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
@@ -562,7 +563,46 @@ def obtener_grupo_whatsapp(cat_o_clase: str, ticker: str) -> str:
         or cat_o_clase.lower() in ("acciones", "accion", "etf", "etfs")
     ):
         return "05_acciones_etfs"
-    return MAPEO_GRUPOS_WHATSAPP.get(cat_o_clase.lower(), "01_macro_y_apertura")
+    canal = MAPEO_GRUPOS_WHATSAPP.get(cat_o_clase.lower())
+    if canal is None:
+        raise GrupoDesconocidoError(
+            f"No reconozco la categoria {cat_o_clase!r} (ticker {ticker!r}). "
+            f"Categorias mapeadas: {', '.join(sorted(MAPEO_GRUPOS_WHATSAPP))}. "
+            "Si lo que tienes es el slug de un canal, ya esta resuelto y no hay que "
+            "mapearlo; si es una categoria nueva del catalogo, agregala al mapeo."
+        )
+    return canal
+
+
+CANAL_AVISOS = "01_macro_y_apertura"
+
+
+def canales_con_contexto_macro(
+    payloads: list[dict[str, Any]],
+    grupo_pedido: str | None = None,
+) -> set[str]:
+    """Los canales que reciben la lectura macro de esta corrida.
+
+    Vive aparte porque las tres reglas que la componen se decidieron por separado
+    y antes estaban mezcladas en tres lineas de `preparar`, donde una de ellas
+    estaba equivocada y no se veia:
+
+    1. **Todo canal con piezas** recibe su macro: es el contexto de lo que va a leer.
+    2. **El canal pedido con `--grupo`**, aunque quede vacio. `grupo_pedido` llega
+       ya resuelto a slug por `resolver_grupo_solicitado`, asi que se usa tal cual.
+       Antes se lo pasaba a `obtener_grupo_whatsapp`, que espera una *categoria*:
+       ninguna rama aplicaba, caia al default y el resultado era que el canal
+       pedido no recibia nada y el macro se lo llevaba entero el de avisos.
+    3. **El canal de avisos, siempre**, por decision del director del 2026-09-03.
+       Declararlo importa: el mismo resultado salia antes del default de
+       `obtener_grupo_whatsapp`, o sea que habria seguido ocurriendo aunque la
+       decision hubiera sido la contraria.
+    """
+    canales = {p["grupo"] for p in payloads if p.get("grupo")}
+    if grupo_pedido:
+        canales.add(grupo_pedido)
+    canales.add(CANAL_AVISOS)
+    return canales
 
 
 def construir_mensaje_alerta(payload: dict[str, Any]) -> str:
@@ -842,11 +882,12 @@ def preparar(
     # Asegurar la cobertura de contexto macro diario en cada carpeta de grupo activa
     from contexto_macro_grupos import asegurar_contexto_macro_grupo
     eventos_macro, delta_ust, _ = sc._contexto_macro(ahora)
-    grupos_activos = {p["grupo"] for p in payloads if p.get("grupo")}
-    if grupo:
-        grp_mapeado = obtener_grupo_whatsapp(grupo, "")
-        grupos_activos.add(grp_mapeado)
+    grupos_activos = canales_con_contexto_macro(payloads, grupo_pedido=grupo)
 
+    # Cuantas piezas de niveles va a recibir cada canal. El cierre del contexto
+    # macro las anuncia, y hasta el 2026-09-04 las prometia siempre: el canal de
+    # avisos, que nunca lleva niveles, recibio la promesa igual.
+    piezas_por_canal = Counter(p["grupo"] for p in payloads if p.get("grupo"))
     for grp in grupos_activos:
         asegurar_contexto_macro_grupo(
             grupo=grp,
@@ -854,6 +895,7 @@ def preparar(
             eventos=eventos_macro,
             delta_ust_bps=delta_ust,
             ahora=ahora,
+            piezas_de_niveles=piezas_por_canal[grp],
         )
 
     # Un solo descargador con cache para toda la corrida: el feed de la Fed

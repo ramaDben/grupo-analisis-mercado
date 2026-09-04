@@ -308,6 +308,79 @@ def test_obtener_grupo_whatsapp_mapea_correctamente_cada_categoria(cat, ticker, 
     assert pc.obtener_grupo_whatsapp(cat, ticker) == grupo_esperado
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# El canal de avisos llega por intención, no por un default
+# ─────────────────────────────────────────────────────────────────────────────
+SLUGS_DE_CANAL = [
+    "01_macro_y_apertura",
+    "02_forex_divisas",
+    "03_commodities_materias_primas",
+    "04_indices_bursatiles",
+    "05_acciones_etfs",
+    "06_criptoactivos",
+    "07_oportunidades_cuantitativas",
+]
+
+
+def test_una_categoria_desconocida_falla_en_vez_de_caer_al_canal_de_avisos():
+    """El default silencioso publicaba en el grupo de la comunidad.
+
+    `MAPEO_GRUPOS_WHATSAPP.get(clave, "01_macro_y_apertura")` convertía cualquier
+    categoría que no reconociéramos en un envío al canal de avisos, que es el que
+    más gente lee. Ninguna categoría real del universo necesita ese default
+    (verificado contra `cargar_universo`), así que su único efecto era tapar
+    errores de nombre.
+    """
+    with pytest.raises(pc.GrupoDesconocidoError):
+        pc.obtener_grupo_whatsapp("categoria_que_no_existe", "")
+
+
+@pytest.mark.parametrize("slug", SLUGS_DE_CANAL)
+def test_el_slug_de_un_canal_no_se_confunde_con_una_categoria(slug):
+    """Es el defecto exacto del 2026-09-04.
+
+    `preparar` pasaba a `obtener_grupo_whatsapp` el slug ya resuelto por
+    `resolver_grupo_solicitado`, y esta función espera una categoría. Ninguna rama
+    aplicaba, caía al default, y **todo** `--preparar --grupo <canal>` terminaba
+    escribiéndole contexto macro al canal de avisos en vez de al canal pedido.
+    """
+    with pytest.raises(pc.GrupoDesconocidoError):
+        pc.obtener_grupo_whatsapp(slug, "")
+
+
+def test_el_canal_pedido_recibe_contexto_macro_aunque_no_tenga_piezas():
+    """Era el daño de fondo, y no se veía.
+
+    Con el canal pedido vacío, `grupos_activos` quedaba en {avisos}: el canal que
+    el director pidió no recibía **nada** y el macro se lo llevaba entero el grupo
+    de la comunidad. Asegurar el canal pedido era justamente la intención de esa
+    línea, y nunca funcionó.
+    """
+    canales = pc.canales_con_contexto_macro([], grupo_pedido="04_indices_bursatiles")
+    assert "04_indices_bursatiles" in canales
+
+
+def test_el_canal_de_avisos_recibe_el_macro_por_declaracion():
+    """Decisión del director el 2026-09-03: el macro vive en Avisos.
+
+    Se conserva, pero declarada. Antes el mismo resultado salía del default de
+    `obtener_grupo_whatsapp`, así que habría seguido ocurriendo aunque la decisión
+    hubiera sido la contraria.
+    """
+    canales = pc.canales_con_contexto_macro([], grupo_pedido=None)
+    assert canales == {"01_macro_y_apertura"}
+
+
+def test_los_canales_con_piezas_reciben_su_contexto_macro():
+    payloads = [{"grupo": "06_criptoactivos"}, {"grupo": "03_commodities_materias_primas"}]
+    canales = pc.canales_con_contexto_macro(payloads, grupo_pedido=None)
+    assert canales == {
+        "01_macro_y_apertura",
+        "03_commodities_materias_primas",
+        "06_criptoactivos",
+    }
+
+
 def test_construir_mensaje_alerta_cumple_reglas_canonicas_whatsapp():
     payload = payload_de_prueba()
     payload["titular"] = "Quiebre alcista sobre 68,97"
