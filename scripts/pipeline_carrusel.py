@@ -795,11 +795,24 @@ def construir_mensaje_alerta(payload: dict[str, Any]) -> str:
     return "\n".join(lineas)
 
 
-def limpiar_payloads(directorio: Path) -> list[str]:
+def limpiar_payloads(
+    directorio: Path, solo_canales: set[str] | None = None
+) -> list[str]:
     """Borra los payloads y archivos generados de una corrida anterior de la MISMA tanda.
 
     `rendir()` toma todos los `.json` sin prefijo `_` del directorio de forma recursiva.
     Sin este barrido, volver a preparar deja los viejos al lado de los nuevos.
+
+    **`solo_canales` acota el barrido a la unidad del preparado.** El directorio de
+    tanda se nombra por MINUTO y `--preparar --grupo` opera por CANAL: dos
+    corridas en el mismo minuto natural comparten carpeta, y el `rglob` sobre la
+    tanda entera hacia que la segunda se llevara los payloads de la primera. Paso
+    el 2026-09-04 con doce payloads de commodities, y el escaner reporto
+    "barridos 12 payload(s)" sin que eso se leyera como un problema.
+
+    Sin `solo_canales` el barrido sigue siendo global, que es lo correcto para
+    `--matriz`: ahi la corrida escribe todos los canales. El cambio acota la
+    unidad, no elimina el barrido.
     """
     barridos = []
     if not directorio.exists():
@@ -808,6 +821,13 @@ def limpiar_payloads(directorio: Path) -> list[str]:
         if archivo.is_file():
             if archivo.name.startswith("_"):
                 continue
+            if solo_canales is not None:
+                # La carpeta de canal es el primer tramo relativo. Un archivo en
+                # la raiz de la tanda (el mensaje indice) no pertenece a ningun
+                # canal, asi que con barrido acotado se conserva.
+                relativo = archivo.relative_to(directorio).parts
+                if len(relativo) < 2 or relativo[0] not in solo_canales:
+                    continue
             if archivo.suffix in (".json", ".png", ".txt"):
                 archivo.unlink()
                 barridos.append(archivo.name)
@@ -961,7 +981,12 @@ def preparar(
         json.dumps(resultado, ensure_ascii=False, indent=2), encoding="utf-8"
     )
 
-    barridos = limpiar_payloads(destino)
+    # Los canales que ESTA corrida va a escribir: el pedido con `--grupo` (mas el
+    # de avisos, que siempre recibe macro) o todos si es una corrida completa.
+    canales_a_barrer = (
+        canales_con_contexto_macro([], grupo_pedido=grupo) if grupo else None
+    )
+    barridos = limpiar_payloads(destino, solo_canales=canales_a_barrer)
 
     payloads: list[dict[str, Any]] = []
     problemas: list[str] = []
@@ -1426,13 +1451,23 @@ def despachar(
 ) -> dict[str, Any]:
     """Rinde y despacha canal por canal, en orden y sin dejar envejecer las piezas.
 
-    Cada canal sale en **una sola acción**: el editor de medios acepta varias
-    imágenes y cada una conserva su propio pie, así que las cuatro piezas de un
-    canal no necesitan cuatro aperturas de navegador espaciadas 45 s.
+    Cada pieza sale en **su propia acción**, con su espera de cadencia y su unidad
+    de cupo. Esta docstring decía lo contrario hasta el 2026-09-04: describía el
+    despacho por lote que **se revirtió el 2026-09-03**, mientras el código de más
+    abajo hacía una pieza por acción. El motivo del cambio está en
+    `whatsapp_sender.enviar_lote`: el pie del editor de medios tope en 1.024
+    caracteres y la única forma de superarlo es escribir el texto en el cuadro de
+    conversación antes de adjuntar, lo que solo llena el pie de UNA imagen.
+
+    Se corrige porque una docstring que describe un diseño ya descartado es
+    justamente lo que hace que alguien lo "restaure" creyendo que arregla algo.
 
     Y cada canal se rinde **justo antes** de despacharse, no al principio de la
     tanda: así el precio de la última pieza tiene minutos y no media hora. El
     render cabe entero dentro de la espera de cadencia, así que no cuesta tiempo.
+
+    Lo ya entregado se salta leyendo `data/historial_despachos.json`, así que una
+    reanudación no repite piezas. `--desde N` queda como control manual.
     """
     from whatsapp_sender import WhatsAppSender, huella
     from bitacora_despachos import cargar as cargar_bitacora
