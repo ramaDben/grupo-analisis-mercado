@@ -16,7 +16,7 @@ Cuando el usuario proponga o pregunte por una operación (ej. *"¿Puedo comprar 
 ### Paso 1: Consultar el Snapshot de Sesgo (Tool MCP o Bias Reader)
 - Consulta la herramienta `get_macro_bias(symbol="<ACTIVO>")` o ejecuta `python scripts/premarket.py --symbol <ACTIVO>`.
 - Revisa el **Régimen Macro Global** ($\mathcal{R}_0$ a $\mathcal{R}_4$), el **Sesgo Score** $[-2.0, +2.0]$ y el **Índice de Confianza**.
-- Si la tool retorna `STALE_DATA` (>24h en días hábiles o >80h en fin de semana), indica al usuario que debe ejecutar primero `python .agents/skills/ecosistema-datos-macro/scripts/pipeline_ingesta.py`.
+- Si la tool retorna `STALE_DATA` (>24h en días hábiles o >80h en fin de semana), indica al usuario que debe ejecutar primero la **cadena completa**: `uv run --with MetaTrader5 python scripts/pipeline_datos.py`. La ingesta sola es el paso 1 de 3 y dejaría el sesgo igual de vencido, porque `macro_bias_output.json` lo produce el paso 3.
 
 ### Paso 2: Validar la Dirección y el Régimen
 - **En Régimen $\mathcal{R}_0$ (Calma/Rango)**: Solo se permite operar reversión a la media entre soportes y resistencias ($S_1/R_1$) o canales Donchian. Prohibido perseguir quiebres tendenciales (*Breakout Chase*).
