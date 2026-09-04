@@ -485,6 +485,14 @@ def construir_payload(
         "soporte": fmt(seleccion["soporte"]),
         "resistencia": fmt(seleccion["resistencia"]),
         "vol_pct": f"{fmt(seleccion['impulso_adc_atr'])} {activo_catalogo['unidad']}",
+        # Por que ESTA temporalidad para ESTE activo. Sin default a proposito, con
+        # el mismo criterio que `unidad`: la linea es obligatoria en el mensaje, y
+        # una justificacion generica ("1H equilibra senal y ruido") no explica
+        # nada. `preparar()` excluye al activo si falta.
+        "nota_volatilidad": activo_catalogo["nota_volatilidad"],
+        "volatilidad": activo_catalogo.get("volatilidad"),
+        # Zona de aviso del gate de banda, si el escaner la marco.
+        "banda_estrecha": seleccion.get("banda_estrecha"),
         "rotulo_grafico": (
             f"{seleccion['ticker']} · CIERRES {TIMEFRAME_GRAFICO} · "
             f"ÚLTIMAS {VELAS_GRAFICO} VELAS"
@@ -651,6 +659,22 @@ def obtener_grupo_whatsapp(cat_o_clase: str, ticker: str) -> str:
     return canal
 
 
+# Las cuatro etiquetas canonicas de temporalidad (`CLAUDE.md`, issue #44). Cada
+# marco lleva su rango cuantificado porque decir "corto" sin numero esta prohibido:
+# el cliente no sabe si son minutos o semanas.
+#
+# Vivian SOLO en markdown (`CLAUDE.md` y `.claude/commands/story.md`) y ahora
+# tambien aca, que es lo que las publica. Un test de contrato compara las dos
+# copias, porque tres tablas iguales divergen: `CLAUDE.md` todavia nombra como
+# fuente unica a `.claude/commands/apertura.md`, que **ya no existe**.
+MARCOS_CANONICOS: dict[str, tuple[str, str]] = {
+    "M15": ("15M", "scalper (minutos a 1-2 h)"),
+    "H1": ("1H", "intradía (dentro de la jornada)"),
+    "H4": ("4H", "swing de jornada (1-3 días)"),
+    "D1": ("1D", "posicional (días a semanas)"),
+}
+
+
 CANAL_AVISOS = "01_macro_y_apertura"
 
 
@@ -736,6 +760,31 @@ def construir_mensaje_alerta(payload: dict[str, Any]) -> str:
         f"• 🟢 Resistencia clave: {resistencia}",
         f"• 🔴 Soporte clave: {soporte}",
         f"• 💡 Volatilidad típica: {vol}",
+    ])
+
+    # La temporalidad, justificada por la volatilidad de ESE activo. Obligatoria
+    # desde el issue #44 y nunca implementada: el token `por_que_temporalidad`
+    # existia en un solo lugar del repo, que era la propia norma, y el 2026-09-04
+    # dos piezas salieron sin el bloque.
+    etiqueta, descripcion = MARCOS_CANONICOS[TIMEFRAME_GRAFICO]
+    lineas.append(f"⏱️ *Temporalidad*: {etiqueta} · marco {descripcion}")
+    nota = payload.get("nota_volatilidad")
+    if nota:
+        lineas.append(f"💡 Por qué {etiqueta} acá: {nota}")
+
+    # Los bordes estrechos se dicen. El gate de banda deja pasar la pieza entre
+    # 0,70x y 1,00x, y callar que sus niveles son apretados para lo que el activo
+    # se mueve seria publicar la parte comoda de la medicion.
+    ratio = payload.get("banda_estrecha")
+    if ratio:
+        veces = f"{float(ratio):.2f}".replace(".", ",")
+        lineas.append(
+            f"⚠️ Niveles estrechos para su volatilidad: en una hora normal el "
+            f"activo recorre {veces} de la distancia entre soporte y resistencia, "
+            "así que conviene esperar confirmación antes de operar los bordes."
+        )
+
+    lineas.extend([
         "━━━━━━━━━━━━━━━━━━━",
         f"🟢 Sobre {resistencia} → fuerza compradora",
         f"🟡 Entre {soporte} y {resistencia} → esperar confirmación",
@@ -1290,7 +1339,10 @@ def rendir(directorio: Path) -> dict[str, Any]:
         lineas_indice.append(f"{num_emoji} *{item['activo']}* → {item['titular'] or item['sesgo']}")
     lineas_indice.extend([
         "━━━━━━━━━━━━━━━━━━━",
-        "⏱️ Temporalidad: intradía (dentro de la jornada)",
+        # Derivada del marco real de las piezas, no escrita a mano. La constante
+        # que habia aca decia "intradía" pase lo que pase, y era el tercer lugar
+        # del repo donde vivia la misma tabla de etiquetas.
+        f"⏱️ Temporalidad: {MARCOS_CANONICOS[TIMEFRAME_GRAFICO][1]}",
         "━━━━━━━━━━━━━━━━━━━",
         "Cada imagen y mensaje detallado han sido modularizados en su carpeta de grupo correspondiente.",
     ])

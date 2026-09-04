@@ -62,11 +62,19 @@ Cada análisis indica explícitamente su temporalidad con un rango cuantificado 
 - **4H** → swing de jornada (1-3 días) — tendencia del día y operativas de varias horas
 - **1D** → posicional (días a semanas) — lectura general del activo
 
-Estas 4 etiquetas son la fuente única y deben ser idénticas en `.claude/commands/apertura.md` (PASO 2 y PASO 5).
+**La fuente única de las 4 etiquetas es `pipeline_carrusel.MARCOS_CANONICOS`**, y un test de contrato la compara contra la tabla de `.claude/commands/story.md`. Hasta el 2026-09-04 este párrafo declaraba fuente única a `.claude/commands/apertura.md`, **que ya no existe**: ese comando se retiró y la tabla quedó viviendo solo en markdown, en dos copias, justo antes de que el código necesitara una tercera.
 
-**Justificar la temporalidad por la volatilidad del activo (OBLIGATORIO)**: cada activo tiene un nivel de `volatilidad` y una `nota_volatilidad` en `config/activos.json`. El mensaje de niveles incluye la línea `{{por_que_temporalidad}}` (`💡 Por qué [TF] aquí: …`) que explica al cliente, en lenguaje novato, por qué la temporalidad elegida encaja con la volatilidad de ese activo (ej.: USD/CLP es de baja volatilidad → 1H/4H dan lectura más limpia; WTI/Oro son de alta volatilidad → 15M tiene más ruido).
+**Justificar la temporalidad por la volatilidad del activo (OBLIGATORIO)**: cada activo tiene `volatilidad` y `nota_volatilidad` en `config/activos.json`, y el mensaje de niveles cierra con `⏱️ *Temporalidad*` más la línea `💡 Por qué [TF] acá: …`, que explica en lenguaje novato por qué ese marco encaja con lo que ese activo se mueve.
 
-Ejemplo obligatorio: "Niveles en 15M — marco scalper (minutos a 1-2 h)"
+**Esto estuvo declarado y sin implementar desde el issue #44.** El 2026-09-04 se descubrió que el token `por_que_temporalidad` existía en **un solo lugar del repo: este archivo**, y que dos piezas habían salido sin el bloque. Faltaban tres cosas a la vez: los campos no estaban en las 14 acciones, `cargar_universo` no los copiaba (así que el generador nunca los veía) y el mensaje no emitía la línea.
+
+Tres reglas que salieron de arreglarlo, y que imponen tests:
+
+1. **Toda nota nombra el marco que el carrusel publica.** Nueve notas recomendaban otro marco o ninguno, y publicadas se contradecían solas: *"Por qué 1H acá: … 4H da la lectura más limpia"*. Pueden (y deben) nombrar el marco más amplio, pero tienen que explicar también el que sale.
+2. **Toda nota habla de marcos, no de drivers.** Tres notas (GBP/USD, cobre, bitcoin) eran descripciones de lo que mueve al activo, sin nombrar ninguna temporalidad: la línea prometía una justificación y entregaba otra cosa.
+3. **El carrusel publica H1 y eso no se toca acá.** La selección de marco por activo es otro trabajo; lo que corresponde es que el texto justifique el marco que de verdad sale. Prometer selección por activo sin implementarla sería repetir el defecto de esta sección.
+
+Ejemplo obligatorio: "Niveles en 15M, marco scalper (minutos a 1-2 h)"
 
 ## Fecha y hora actual — regla canónica (OBLIGATORIO)
 **Nunca** uses `WebSearch` para obtener la fecha o la hora actual: devuelve snippets de búsqueda (cacheados, imprecisos o ausentes), no un reloj, y produce errores al fechar mensajes o marcar eventos pasados/futuros.

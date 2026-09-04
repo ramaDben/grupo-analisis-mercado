@@ -302,6 +302,11 @@ def cargar_universo(solo_renderizables: bool = True) -> list[dict[str, Any]]:
             # que uno ausente. `preparar()` excluye al activo si falta.
             "unidad": a.get("unidad"),
             "imagen": a.get("imagen"),
+            # Con que se justifica la temporalidad de la pieza. Estaban en el
+            # catalogo desde el issue #44 y `agregar()` no los copiaba, asi que el
+            # generador del mensaje nunca los vio y la linea obligatoria no existia.
+            "volatilidad": a.get("volatilidad"),
+            "nota_volatilidad": a.get("nota_volatilidad"),
         })
 
     for a in data.get("forex_commodities", []):

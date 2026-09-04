@@ -985,3 +985,63 @@ def test_una_banda_holgada_no_genera_aviso():
         ),
     )
     assert not any("estrechos" in a for a in res["avisos"]), res["avisos"]
+
+
+def test_todo_activo_del_universo_trae_su_nota_de_volatilidad():
+    """Contrato: sin la nota, el mensaje no puede justificar su temporalidad.
+
+    `CLAUDE.md` declara esa linea obligatoria desde el issue #44, y los campos
+    estaban en `config/activos.json` para 23 de los 37 activos: **las 14 acciones
+    no los tenian**, y `cargar_universo` tampoco los copiaba, asi que el generador
+    del mensaje nunca los vio.
+    """
+    sin_nota = [
+        a["ticker"] for a in sc.cargar_universo(solo_renderizables=False)
+        if not a.get("nota_volatilidad") or not a.get("volatilidad")
+    ]
+    assert not sin_nota, f"activos sin volatilidad ni nota: {sin_nota}"
+
+
+def test_la_volatilidad_declarada_es_una_de_las_tres_etiquetas():
+    validas = {"baja", "media", "alta"}
+    raras = {
+        a["ticker"]: a.get("volatilidad")
+        for a in sc.cargar_universo(solo_renderizables=False)
+        if a.get("volatilidad") not in validas
+    }
+    assert not raras, raras
+
+
+def test_toda_nota_de_volatilidad_justifica_un_marco_temporal():
+    """La nota se publica detras de "Por que 1H aca:", asi que tiene que hablar de
+    marcos y no de drivers.
+
+    Tres notas (GBP/USD, cobre, bitcoin) eran descripciones de lo que mueve al
+    activo, sin nombrar ninguna temporalidad: publicadas asi, la linea prometia
+    una justificacion y entregaba otra cosa.
+    """
+    import pipeline_carrusel as pc
+
+    etiquetas = {e for e, _ in pc.MARCOS_CANONICOS.values()}
+    sin_marco = [
+        a["ticker"] for a in sc.cargar_universo(solo_renderizables=False)
+        if not any(e in a["nota_volatilidad"] for e in etiquetas)
+    ]
+    assert not sin_marco, f"notas que no nombran ningun marco: {sin_marco}"
+
+
+def test_toda_nota_nombra_el_marco_que_el_carrusel_publica():
+    """Si la nota recomienda 4H y la pieza sale en 1H, la linea se contradice sola.
+
+    Paso con Solana: "Por que 1H aca: ... 4H da la lectura mas limpia". Las notas
+    pueden (y deben) nombrar el marco mas amplio, pero tienen que explicar tambien
+    el que se publica.
+    """
+    import pipeline_carrusel as pc
+
+    etiqueta = pc.MARCOS_CANONICOS[pc.TIMEFRAME_GRAFICO][0]
+    sin_el = [
+        a["ticker"] for a in sc.cargar_universo(solo_renderizables=False)
+        if etiqueta not in a["nota_volatilidad"]
+    ]
+    assert not sin_el, f"notas que no justifican {etiqueta}: {sin_el}"

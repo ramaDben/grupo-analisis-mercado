@@ -35,6 +35,11 @@ ACTIVO = {
     "ticker": "XAGUSD", "nombre": "Plata", "clase": "forex_commodities",
     "categoria": "commodity", "digits": 3, "unidad": "USD",
     "imagen": "assets/activos/plata.jpg",
+    "volatilidad": "alta",
+    "nota_volatilidad": (
+        "se mueve rápido y en tramos amplios, así que en 15M los movimientos se "
+        "desdicen solos; 1H y 4H sostienen mejor la lectura"
+    ),
 }
 
 def cierres_para(precio: float, n: int = 60, paso: float = 0.01) -> list[float]:
@@ -593,6 +598,65 @@ def test_los_canales_con_piezas_reciben_su_contexto_macro():
     }
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# La temporalidad, justificada por la volatilidad del activo
+# ─────────────────────────────────────────────────────────────────────────────
+def test_el_mensaje_justifica_la_temporalidad_con_la_volatilidad_del_activo():
+    """`CLAUDE.md` la declara OBLIGATORIA desde el issue #44 y nunca se implemento:
+    el token `por_que_temporalidad` existia en un solo lugar del repo, que era la
+    propia norma. El 2026-09-04 dos piezas salieron sin el bloque.
+    """
+    msg = pc.construir_mensaje_alerta(payload_de_prueba())
+    assert "⏱️ *Temporalidad*" in msg
+    assert "Por qué 1H acá" in msg
+    # La justificacion es la del activo, no una frase generica.
+    assert "los movimientos se desdicen solos" in msg
+
+
+def test_la_temporalidad_usa_la_etiqueta_canonica_de_su_marco():
+    """Cuatro etiquetas y ni una mas: prohibido decir "corto" sin numero."""
+    msg = pc.construir_mensaje_alerta(payload_de_prueba())
+    assert "1H · marco intradía (dentro de la jornada)" in msg
+
+
+def test_las_cuatro_etiquetas_canonicas_calzan_con_las_documentadas():
+    """El contrato que evita el tercer reloj.
+
+    Las etiquetas vivian SOLO en markdown (`CLAUDE.md` y `.claude/commands/story.md`)
+    y ahora tambien en codigo, que es lo que las publica. Tres copias de la misma
+    tabla divergen: la de `apertura.md` que `CLAUDE.md` todavia nombra como fuente
+    unica ni existe, porque ese comando se retiro.
+    """
+    tabla = (RAIZ / ".claude" / "commands" / "story.md").read_text(encoding="utf-8")
+    filas = dict(re.findall(r"\|\s*`(15M|1H|4H|1D)`\s*\|\s*([^|]+?)\s*\|", tabla))
+    assert len(filas) == 4, f"la tabla de story.md cambio de forma: {filas}"
+    for marco, (etiqueta, descripcion) in pc.MARCOS_CANONICOS.items():
+        assert filas[etiqueta] == descripcion, (
+            f"{marco}: el codigo dice {descripcion!r} y story.md dice {filas[etiqueta]!r}"
+        )
+
+
+def test_sin_nota_de_volatilidad_el_payload_no_se_construye():
+    """Fail-closed, igual que con `unidad`: la linea es obligatoria, asi que un
+    activo sin su nota no puede producir una pieza a medias en silencio."""
+    activo = {k: v for k, v in ACTIVO.items() if k != "nota_volatilidad"}
+    with pytest.raises(KeyError):
+        pc.construir_payload(SELECCION, activo, AHORA, CIERRES)
+
+
+def test_una_banda_estrecha_se_estampa_en_el_mensaje():
+    """Zona de aviso del gate de banda: la pieza sale, pero diciendo que sus
+    bordes son estrechos para lo que ese activo se mueve."""
+    sel = {**SELECCION, "banda_estrecha": 0.80}
+    msg = pc.construir_mensaje_alerta(payload_de_prueba(seleccion=sel))
+    assert "niveles estrechos" in msg.lower()
+
+
+def test_sin_banda_estrecha_no_se_estampa_nada():
+    msg = pc.construir_mensaje_alerta(payload_de_prueba())
+    assert "estrechos" not in msg.lower()
+
+
 def test_construir_mensaje_alerta_cumple_reglas_canonicas_whatsapp():
     payload = payload_de_prueba()
     payload["titular"] = "Quiebre alcista sobre 68,97"
@@ -764,7 +828,11 @@ def test_el_payload_preparado_guarda_los_precios_crudos():
     }
     activo = {
         "nombre": "Dólar / Peso Chileno", "digits": 2, "imagen": "dolar.jpg",
-        "categoria": "forex", "unidad": "CLP",
+        "categoria": "forex", "unidad": "CLP", "volatilidad": "baja",
+        "nota_volatilidad": (
+            "se mueve poco dentro del día, así que marcos más amplios (1H/4H) dan "
+            "una lectura más limpia; en 15M aparece mucho ruido"
+        ),
     }
     payload = construir_payload(
         seleccion, activo, datetime(2026, 9, 2, 10, 0),
@@ -786,7 +854,11 @@ def _payload_preparado():
     }
     activo = {
         "nombre": "Dólar / Peso Chileno", "digits": 2, "imagen": "dolar.jpg",
-        "categoria": "forex", "unidad": "CLP",
+        "categoria": "forex", "unidad": "CLP", "volatilidad": "baja",
+        "nota_volatilidad": (
+            "se mueve poco dentro del día, así que marcos más amplios (1H/4H) dan "
+            "una lectura más limpia; en 15M aparece mucho ruido"
+        ),
     }
     p = construir_payload(
         seleccion, activo, datetime(2026, 9, 2, 10, 0),
