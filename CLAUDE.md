@@ -241,6 +241,56 @@ generado. Tres decisiones que conviene no revertir:
 Catorce días porque hay seis conceptos técnicos aplicables: con menos, un canal que se vacía
 seguido agota el repertorio antes de que nadie lo haya olvidado.
 
+### La noticia oficial: oficial no es relevante
+
+Sobre el suplemento se apoya un escalón más, **estrictamente aditivo**:
+`scripts/noticia_oficial.py` busca la última nota de una fuente oficial que toque un activo
+del canal. Si la encuentra, `--preparar` la deja en `<canal>/_noticia.json` y el **comando**
+la traduce y la antepone al rendir; si no la encuentra, el canal conserva su suplemento de
+estado y no se pierde nada.
+
+**El núcleo del módulo es descartar, no descargar.** El 2026-09-03 la nota más fresca de la
+EIA era *"Weekly average load in ERCOT continues near record high"*: carga eléctrica en
+Texas. Oficial, del día, y sin ninguna relación con el petróleo. Un filtro de frescura sin
+filtro de relevancia la habría mandado al canal de metales y energía justo el día en que ese
+canal quedó vacío. Tres reglas salen de ahí:
+
+1. **La relevancia se decide en el TITULAR, no en el cuerpo.** La descripción de casi
+   cualquier nota trae una línea de contexto donde cabe la palabra *oil* o *inflation*:
+   buscar ahí vuelve el filtro decorativo.
+2. **En los bancos centrales la relevancia la da quién habla.** Un discurso de Lagarde mueve
+   el euro aunque el titular no nombre ningún activo, así que el vocabulario incluye a los
+   oradores del directorio.
+3. **El URL no tiene ventana.** Que un concepto vuelva a los 14 días es refuerzo; que vuelva
+   la misma noticia es un error visible desde afuera. Se comparte
+   `data/historial_suplementos.json` con `tipo: "noticia"`.
+
+Ventana de frescura: **72 h**, con la fecha siempre a la vista en el mensaje. Es lo que hace
+honesto publicar algo de anteayer; a una semana ya no es noticia.
+
+**Las fuentes que responden, medidas el 2026-09-03:**
+
+| Fuente | Feed | Cadencia | Canal |
+|---|---|---|---|
+| EIA | `rss/todayinenergy.xml` | ~3/semana, 3 de 12 tocan crudo | metales y energía |
+| BCE | `rss/press.html` | ~4/semana, discursos del directorio | divisas |
+| Fed | `feeds/press_monetary.xml` | ~2/mes | divisas, índices |
+
+El feed general de la Fed (`press_all.xml`) **queda fuera a propósito**: sus últimas piezas
+eran sanciones y aprobaciones bancarias, que no le importan a nadie acá. Y tres fuentes no
+se pueden leer: el Tesoro de EE.UU. responde 404, la BLS y la OPEP responden 403 al bot, y
+el Banco Central de Chile devuelve HTML en la ruta de su RSS.
+
+**El flujo relevante combinado es de una nota cada dos o tres días, y eso está bien.** Esto
+no cubre los canales todos los días ni pretende hacerlo: el piso confiable sigue siendo el
+suplemento de estado más concepto. Si algún día hace falta cobertura diaria de noticias, la
+fuente no puede ser RSS oficial, y ahí ya no sería "fuente oficial".
+
+**El titular es un campo editorial.** Viene en inglés y `--preparar` es Python puro, así que
+`bloque_noticia(noticia, titular_es)` **lanza** con el titular vacío, mismo contrato que el
+resto del pipeline. Y ninguna cifra sale de la noticia: los precios y niveles salen del
+terminal (regla 1), siempre.
+
 ### El reparto entre script y comando
 
 Los pipelines producen los **datos**; el texto lo escribe el comando. `pipeline_carrusel.py`
