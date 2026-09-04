@@ -36,6 +36,27 @@ el escáner midió, y el concepto lo elige el motivo. Si el aviso dice que qued�
 suplemento, es porque el motivo era un problema nuestro de datos y no una lectura de
 mercado; ese canal no recibe nada, y así corresponde.
 
+**Si además existe `<canal>/_noticia.json`, ese canal tiene una nota oficial fresca para
+anexar, y anexarla es tu trabajo.** El aviso lo dice (`hay nota oficial de EIA … para
+anexar al rendir`). El titular viene **en inglés**, porque `--preparar` es Python puro y no
+traduce, así que:
+
+1. Lee `_noticia.json` (`titulo`, `url`, `organismo`, `fecha`, `activos`).
+2. Traduce el titular al español chileno, **sin agregarle nada que la fuente no diga** y sin
+   cifras propias.
+3. Arma el bloque con `noticia_oficial.bloque_noticia(noticia, titular_es)` y **antepónlo**
+   al contenido de `0_suplemento.txt`, reescribiendo el archivo.
+
+Tres reglas que no se negocian: **ninguna cifra sale de la noticia** (los precios y niveles
+salen del terminal, regla 1); **el link va siempre**, porque es lo que hace verificable la
+atribución; y si no puedes traducir el titular con fidelidad, **no anexes el bloque** y el
+canal se queda con su suplemento de estado, que ya es válido por sí solo.
+
+Que la mayoría de los días **no** haya `_noticia.json` es lo esperado, no una falla: medido
+sobre el último mes, las fuentes oficiales que responden (EIA, BCE y política monetaria de
+la Fed) producen una nota relevante cada dos o tres días. El piso confiable del canal vacío
+sigue siendo el suplemento de estado más concepto.
+
 **Y si dice que el gate de agotamiento está DESACTIVADO, la tanda no está verificada.** Ese
 gate excluye lo que ya consumió su recorrido del día y solo se apaga con `--forzar`.
 `--grupo` acota el universo y **nada más**: hasta el 2026-09-03 también lo apagaba en

@@ -664,6 +664,7 @@ def escribir_suplementos(
     grupos_activos: set[str],
     catalogo: dict[str, Any],
     ruta_historial: Path | None = None,
+    buscar_noticia: Any = None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """Escribe el suplemento de cada canal que quedo sin activos publicables.
 
@@ -679,6 +680,7 @@ def escribir_suplementos(
     sin suplemento tambien tiene que decirlo: en silencio parece que no habia
     nada que cubrir.
     """
+    from noticia_oficial import registrar_noticia
     from suplemento_canal import (
         construir_mensaje_suplemento,
         registrar_suplemento,
@@ -717,6 +719,32 @@ def escribir_suplementos(
         # descartada gasta la ventana igual, y ese error va hacia el lado
         # seguro: repetir de menos, no de mas.
         registrar_suplemento(sup, ruta=ruta_historial)
+
+        # **La noticia es estrictamente aditiva.** El suplemento de estado de
+        # arriba ya quedo escrito y es dispachable tal cual; si hay una nota
+        # oficial fresca y relevante, el comando la anexa al RENDIR, porque el
+        # titular viene en ingles y `--preparar` es Python puro. Si el comando
+        # no corre, no se pierde nada: el canal conserva su suplemento.
+        noticia = None
+        if buscar_noticia is not None:
+            try:
+                noticia = buscar_noticia(canal)
+            except Exception as e:  # noqa: BLE001
+                avisos.append(
+                    f"{canal}: no se pudo consultar fuentes oficiales ({e})"
+                )
+        if noticia:
+            (carpeta / "_noticia.json").write_text(
+                json.dumps(noticia, ensure_ascii=False, indent=2, default=str),
+                encoding="utf-8",
+            )
+            registrar_noticia(noticia, ruta=ruta_historial)
+            sup["noticia"] = True
+            avisos.append(
+                f"{canal}: hay nota oficial de {noticia['organismo']} del "
+                f"{noticia['fecha'].date()} para anexar al rendir"
+            )
+
         escritos.append(sup)
         avisos.append(
             f"{canal} quedo vacio: se suplementa con "
@@ -828,8 +856,18 @@ def preparar(
             ahora=ahora,
         )
 
+    # Un solo descargador con cache para toda la corrida: el feed de la Fed
+    # sirve a dos canales y sin cache se baja dos veces.
+    from noticia_oficial import descargar_con_cache, noticia_para_canal
+    from suplemento_canal import cargar_historial
+
+    _bajar = descargar_con_cache()
+    _hist = cargar_historial()
     suplementos, avisos_sup = escribir_suplementos(
-        destino, resultado.get("excluidos") or [], grupos_activos, catalogo
+        destino, resultado.get("excluidos") or [], grupos_activos, catalogo,
+        buscar_noticia=lambda canal: noticia_para_canal(
+            canal, ahora=ahora, historial=_hist, descargar=_bajar
+        ),
     )
 
     return {
