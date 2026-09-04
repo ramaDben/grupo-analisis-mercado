@@ -141,6 +141,52 @@ escáner.
 "estrictamente" para hitos de alta densidad y manda chat-first para piezas tácticas, por
 fatiga de descargas. La apertura sí va en PDF; el cierre es mensaje con gráfico.
 
+### Un solo reloj: `config/agenda_mercado.json`
+
+Las ventanas de sesión, los anclajes de tanda y los **momentos del día** viven en un solo
+archivo y se leen con `scripts/agenda_mercado.py`. Antes las ventanas estaban en una cadena
+de `elif` dentro de `detectar_sesion`, con los minutos sumados a mano, y los anclajes en otra
+tabla del mismo módulo. El reloj de sucesos habría agregado un tercer lugar declarando el
+mismo hecho, y **dos relojes divergen siempre**: es el defecto recurrente del repo.
+
+Tres invariantes las imponen tests, no la buena intención:
+
+1. **Cada minuto del día hábil pertenece a exactamente una sesión.** Un hueco deja al escáner
+   sin sesión; un solape hace que el resultado dependa del orden del JSON, que es un
+   accidente esperando a que alguien reordene el archivo.
+2. **Las ventanas no pueden volver al código del escáner.** Un test lee su fuente y falla si
+   aparecen los minutos escritos a mano.
+3. **El desfase con Chile no está escrito en ninguna parte.** El ancla es Nueva York y la hora
+   se comunica en hora real de Chile. Chile y EE.UU. cambian de horario en sentido opuesto,
+   así que el desfase se mueve dos veces al año: hoy es +0 h y **desde el 2026-09-06 pasa a
+   +1 h**. Un offset fijo es el error de ±1 h del issue #38.
+
+**Los momentos separan por clase de activo, y esa es la decisión de fondo.**
+
+| Momento | Hora (NY) | Clases | Por qué |
+|---|---|---|---|
+| `premercado_fx` | 08:30 | `forex_commodities` | Es la hora del dato de empleo e inflación de EE.UU. Divisas, oro y petróleo cotizan 24 h, así que ya tienen precio formado y el nivel es real. |
+| `apertura_indices` | 10:00 | `indices`, `acciones`, `etfs` | La bolsa abre 09:30 y la primera media hora es el barrido de órdenes de apertura, donde el rango del día todavía no existe. |
+
+Publicar niveles de índices a las 08:30 es **publicar el cierre de ayer con fecha de hoy**:
+esos activos no tienen precio hasta que abre la bolsa. Por eso la separación no es una
+preferencia editorial, es una condición del dato.
+
+La tolerancia es de **20 minutos y solo hacia adelante**. El disparo del sistema operativo,
+la lectura de precios y el render se llevan minutos, así que sin ventana de gracia un momento
+se pierde por llegar dos minutos tarde; y disparar el de las 08:30 a las 08:15 publicaría
+niveles anteriores al dato que motiva la hora.
+
+**Cripto no tiene momento, y está declarado como pendiente** en `clases_sin_momento`. Opera
+24/7 y su hora natural sería el rollover diario, que hay que medir antes de fijarlo.
+Declararlo es lo que impide que se quede fuera del reloj en silencio; un test exige que toda
+clase del universo esté asignada a un momento **o** declarada pendiente.
+
+> **Ojo, no confundir con `config/agenda_semanal.json`**, que es la agenda por día de la
+> semana de antes del rediseño y describe una cadencia que ya no existe (`apertura_mercado`,
+> `resumen_semanal`, los comandos de día). `/estado` y `docs/architecture.md` todavía la
+> citan. `agenda_mercado.json` es la vigente.
+
 ### El `Score_GI` y sus gates
 
 `scripts/screener_gi.py` puntúa cada activo del catálogo sobre 100:
@@ -916,9 +962,12 @@ grupo-analisis-mercado/
 ├── config/                ← configuración del sistema
 │   ├── activos.json       ← 38 tickers: forex + commodities + 6 criptos + índices + 5 ETF + 14 acciones
 │   ├── drivers.json · drivers_indices_sectores.json
+│   ├── agenda_mercado.json  ← ventanas de sesion, anclajes de tanda y momentos del dia
 │   ├── agenda_semanal.json · feriados_bolsa.json
 ├── scripts/               ← scripts auxiliares
 │   ├── screener_gi.py     ← Score_GI sobre el universo + gates (feriado, blackout, Playbook, ATR)
+│   ├── agenda_mercado.py  ← el unico reloj: ventanas, anclajes y momentos
+│   ├── noticia_oficial.py ← la nota oficial fresca que suplementa (EIA, BCE, Fed)
 │   ├── pipeline_carrusel.py ← Top 3 del escaner → 3 Stories (--preparar / --rendir)
 │   ├── pipeline_informe.py  ← informe de apertura (PDF) y de cierre (chat-first)
 │   ├── sincronizar_css_plantillas.py ← re-embebe marca.css/piel.css en los 12 snapshots

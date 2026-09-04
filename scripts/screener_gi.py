@@ -85,6 +85,8 @@ def _umbral_confianza() -> float:
 UMBRAL_CONFIANZA_PCT = _umbral_confianza()
 DIR_SALIDA = RAIZ / "data" / "screener"
 
+import agenda_mercado as agenda  # noqa: E402  (necesita RAIZ en sys.path)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Sesiones de mercado continuas y tandas de referencia
@@ -92,55 +94,31 @@ DIR_SALIDA = RAIZ / "data" / "screener"
 # El escáner opera de forma responsiva las 24 horas del día. La referencia es
 # el ciclo global de mercado anclado a Nueva York, derivando la hora de Chile
 # en tiempo real para comunicarla.
+# Las ventanas, los focos y los anclajes se declaran en
+# `config/agenda_mercado.json` y se leen desde `agenda_mercado`. Estaban escritos
+# a mano acá, con los minutos sumados a mano en una cadena de `elif` y los
+# anclajes en una tabla aparte. El reloj de sucesos habría agregado un tercer
+# lugar declarando el mismo hecho, y dos relojes divergen siempre.
+#
+# `SESIONES` y `TANDAS` se conservan con los mismos nombres y la misma forma
+# porque el resto del módulo y el CLI los indexan; lo que cambia es de dónde
+# salen.
 SESIONES: dict[str, dict[str, Any]] = {
-    "asiatica": {
-        "nombre": "Sesión Asiática / Pacífico",
-        "tanda": 3,
-        "foco": "Foco en activos de Asia, JPY, Oro, Cobre, Cripto y materias primas",
-    },
-    "europea": {
-        "nombre": "Sesión Europea / Londres",
-        "tanda": 1,
-        "foco": "Quiebres de apertura europea, EUR, GBP, DAX y posicionamiento previo a EE.UU.",
-    },
-    "apertura_ny": {
-        "nombre": "Apertura Wall Street",
-        "tanda": 1,
-        "foco": "Volatilidad de primera hora, quiebres intradía y catalizadores macro",
-    },
-    "tarde_ny": {
-        "nombre": "Rotación de Tarde Wall Street",
-        "tanda": 2,
-        "foco": "Flujos vespertinos, rebalanceo institucional y continuidad de tendencia",
-    },
-    "cierre_ny": {
-        "nombre": "Cierre Wall Street / Post-Mercado",
-        "tanda": 3,
-        "foco": "Balance de la sesión americana, resultados corporativos y preparación para Asia",
-    },
-    "fin_de_semana": {
-        "nombre": "Fin de Semana / Cripto & Pre-Apertura",
-        "tanda": 1,
-        "foco": "Mercado OTC/Cripto y preparación estratégica para la apertura semanal",
-    },
+    s["slug"]: {
+        "nombre": s["nombre"],
+        "tanda": s["tanda"],
+        "foco": s["foco"],
+    }
+    for s in agenda.sesiones()
 }
 
 TANDAS: dict[int, dict[str, Any]] = {
-    1: {
-        "nombre": "Apertura Wall Street",
-        "hora_ny": (10, 30),
-        "foco": "Volatilidad y quiebres de la primera hora",
-    },
-    2: {
-        "nombre": "Rotación de tarde",
-        "hora_ny": (14, 30),
-        "foco": "Flujos vespertinos, sin repetir la tesis de la mañana",
-    },
-    3: {
-        "nombre": "Pre-cierre y sesión asiática",
-        "hora_ny": (16, 45),
-        "foco": "Balance de la sesión y preparación de Asia",
-    },
+    n: {
+        "nombre": t["nombre"],
+        "hora_ny": tuple(int(x) for x in t["hora_ny"].split(":")),
+        "foco": t["foco"],
+    }
+    for n, t in agenda.tandas().items()
 }
 
 
@@ -400,39 +378,20 @@ def filtrar_por_grupo(universo: list[dict[str, Any]], grupo: str) -> list[dict[s
 # Detección de sesión y tandas
 # ─────────────────────────────────────────────────────────────────────────────
 def detectar_sesion(ahora_ny: datetime | None = None) -> dict[str, Any]:
-    """Detecta dinámicamente la sesión activa del mercado según la hora en Nueva York.
+    """La sesión activa según la hora de Nueva York, leída de la agenda.
 
-    Permite que el carrusel sea responsivo a cualquier hora de ejecución las 24 horas del día.
+    Permite que el carrusel sea responsivo a cualquier hora de ejecución. Las
+    ventanas **no están acá**: viven en `config/agenda_mercado.json`, que es
+    también de donde las va a leer el reloj de sucesos. Un test falla si vuelven
+    al código.
     """
     ahora = ahora_ny or datetime.now(tz=NY)
-    dow = ahora.weekday()  # 0=Lunes, ..., 5=Sábado, 6=Domingo
-    minutos_dia = ahora.hour * 60 + ahora.minute
-
-    # Sábado completo o Domingo antes de las 18:00 NY (apertura semanal)
-    if dow == 5 or (dow == 6 and minutos_dia < 18 * 60):
-        slug = "fin_de_semana"
-    # 02:00 (120 min) a 08:30 (510 min) -> Europa / Londres
-    elif 2 * 60 <= minutos_dia < 8 * 60 + 30:
-        slug = "europea"
-    # 08:30 (510 min) a 12:30 (750 min) -> Apertura Wall Street
-    elif 8 * 60 + 30 <= minutos_dia < 12 * 60 + 30:
-        slug = "apertura_ny"
-    # 12:30 (750 min) a 15:30 (930 min) -> Rotación Tarde Wall Street
-    elif 12 * 60 + 30 <= minutos_dia < 15 * 60 + 30:
-        slug = "tarde_ny"
-    # 15:30 (930 min) a 18:00 (1080 min) -> Cierre Wall Street / Post-Mercado
-    elif 15 * 60 + 30 <= minutos_dia < 18 * 60:
-        slug = "cierre_ny"
-    # 18:00 (1080 min) a 24:00 o 00:00 a 02:00 -> Asia / Pacífico
-    else:
-        slug = "asiatica"
-
-    datos_sesion = SESIONES[slug]
+    sesion = agenda.sesion_en(ahora)
     return {
-        "slug": slug,
-        "nombre": datos_sesion["nombre"],
-        "tanda": datos_sesion["tanda"],
-        "foco": datos_sesion["foco"],
+        "slug": sesion["slug"],
+        "nombre": sesion["nombre"],
+        "tanda": sesion["tanda"],
+        "foco": sesion["foco"],
         "hora_real_ny": ahora.strftime("%H:%M"),
         "hora_real_chile": ahora.astimezone(SANTIAGO).strftime("%H:%M"),
     }
