@@ -172,3 +172,39 @@ def test_el_desfase_con_chile_no_esta_escrito_en_ningun_lado():
     cfg = (RAIZ / "config" / "agenda_mercado.json").read_text(encoding="utf-8")
     for offset in ("UTC-3", "UTC-4", "UTC-5", "GMT-3", "GMT-4"):
         assert offset not in cfg, f"hay un desfase fijo escrito: {offset}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Cripto: medido, no supuesto
+# ─────────────────────────────────────────────────────────────────────────────
+def test_la_cripto_tiene_su_momento_en_la_manana_de_nueva_york():
+    """Medido sobre 90 dias de H1 en BTC, ETH, SOL y LTC.
+
+    El bloque 08-12 de Nueva York rinde entre 1,49x y 1,80x la mediana diaria de
+    rango, con el maximo en 09:00-10:00 (BTC llega a 2,09x). No es una
+    preferencia: es donde esta el movimiento.
+    """
+    m = ag.momento("cripto")
+    hora = _minutos(m["hora"])
+    assert _minutos("08:00") <= hora < _minutos("12:00"), (
+        f"la cripto quedo a las {m['hora']} de Nueva York, fuera del bloque medido"
+    )
+    assert m["clases"] == ["crypto"]
+
+
+def test_la_cripto_no_va_en_la_sesion_asiatica():
+    """La hipotesis del rollover asiatico se midio y era falsa.
+
+    Asia (18-02 NY) rinde entre 0,94x y 1,01x: plano. Europa (03-08) igual. Todo
+    el exceso de rango esta en la manana americana.
+    """
+    assert ag.momento("cripto")["sesion"] != "asiatica"
+
+
+def test_ninguna_clase_del_universo_quedo_sin_momento():
+    """Con cripto asignada, la lista de pendientes tiene que estar vacia."""
+    assert ag.clases_sin_momento() == []
+
+
+def _minutos(hhmm: str) -> int:
+    return ag._minutos(hhmm)

@@ -91,9 +91,17 @@
       "sesion": "apertura_ny",
       "clases": ["indices", "acciones", "etfs"],
       "por_que": "La bolsa abre a las 09:30 y los primeros treinta minutos son el barrido de ordenes de apertura, donde el rango del dia todavia no existe. A las 10:00 ya hay rango medible y el nivel que se publica es el del dia, no el de ayer."
+    },
+    {
+      "slug": "cripto",
+      "nombre": "Criptoactivos",
+      "hora": "09:00",
+      "sesion": "apertura_ny",
+      "clases": ["crypto"],
+      "por_que": "Medido sobre 90 dias de velas H1 en BTC, ETH, SOL y LTC: el bloque 08-12 de Nueva York rinde entre 1,49x y 1,80x la mediana diaria de rango, con el maximo en 09:00-10:00 (BTC llega a 2,09x). La sesion asiatica esta plana (0,94x a 1,01x) y Europa tambien. Va a las 09:00 y no a las 10:00 para no chocar con el momento de los indices: cada momento produce su propia tanda."
     }
   ],
 
-  "_nota_pendientes": "Cripto no tiene momento asignado y eso es una decision pendiente del director, no un olvido: opera 24/7 y su hora natural seria el rollover diario, que hay que medir antes de fijarlo. Declararlo aca es lo que impide que se quede fuera en silencio.",
-  "clases_sin_momento": ["crypto"]
+  "_nota_pendientes": "La lista existe para que ninguna clase del universo se quede fuera del reloj en silencio: un test exige que toda clase este asignada a un momento O declarada aca. Cripto estuvo pendiente hasta que se midio (2026-09-04) y quedo en la manana americana, no en el rollover asiatico que se suponia.",
+  "clases_sin_momento": []
 }
