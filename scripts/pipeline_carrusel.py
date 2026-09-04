@@ -1011,7 +1011,12 @@ def preparar(
 
     # Asegurar la cobertura de contexto macro diario en cada carpeta de grupo activa
     from contexto_macro_grupos import asegurar_contexto_macro_grupo
-    eventos_macro, delta_ust, _ = sc._contexto_macro(ahora)
+    # El tercer valor son los avisos de la fuente macro, y se descartaban con un
+    # `_`. `_contexto_macro` ya emitia "la UST 10Y no tiene variacion diaria
+    # calculable hoy" y "calendario no disponible: blackouts sin verificar", y
+    # nadie los leia: el escaner los reporta por su cuenta, pero estos son de la
+    # segunda llamada que hace el pipeline y quedaban en el piso.
+    eventos_macro, delta_ust, avisos_macro = sc._contexto_macro(ahora)
     grupos_activos = canales_con_contexto_macro(payloads, grupo_pedido=grupo)
 
     # Cuantas piezas de niveles va a recibir cada canal. El cierre del contexto
@@ -1054,7 +1059,7 @@ def preparar(
         "payloads": payloads,
         "problemas": problemas,
         "suplementos": suplementos,
-        "avisos": resultado["avisos"] + avisos_sup + (
+        "avisos": resultado["avisos"] + avisos_macro + avisos_sup + (
             [f"barridos {len(barridos)} payload(s) de una corrida anterior: "
              + ", ".join(barridos)] if barridos else []
         ),

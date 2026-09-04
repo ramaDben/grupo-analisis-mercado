@@ -1170,3 +1170,18 @@ def test_el_refresco_recalcula_el_chip_si_el_sesgo_cambio_de_estado():
     assert motivo is None
     assert nuevo["vigencia"]["vigente"] is True
     assert nuevo["sesgo"] == "Alcista", "el chip quedo neutro con el sesgo ya vigente"
+
+
+def test_los_avisos_de_la_fuente_macro_no_se_descartan():
+    """`preparar` recogia los avisos de `_contexto_macro` en un `_`.
+
+    Esa funcion ya emitia "la UST 10Y no tiene variacion diaria calculable hoy" y
+    "calendario no disponible: blackouts sin verificar", y nadie los leia. Un
+    aviso que se calcula y se tira es peor que no calcularlo: da la impresion de
+    que se verifico.
+    """
+    import inspect
+
+    fuente = inspect.getsource(pc.preparar)
+    assert "avisos_macro" in fuente, "los avisos de _contexto_macro volvieron al piso"
+    assert ", _ = sc._contexto_macro" not in fuente
