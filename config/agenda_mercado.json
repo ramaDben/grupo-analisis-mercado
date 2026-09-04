@@ -1,0 +1,99 @@
+{
+  "_nota": "Fuente unica de las ventanas de sesion y de los momentos del dia. Antes las ventanas vivian en una cadena de elif dentro de detectar_sesion, con los minutos escritos a mano, y los anclajes de tanda en otra tabla. El reloj de sucesos habria agregado un tercer lugar declarando el mismo hecho.",
+  "_nota_ancla": "Todas las horas son de Nueva York, que es el ancla del proyecto, y se comunican en hora real de Chile. El desfase NO se escribe en ninguna parte: Chile y EE.UU. cambian de horario en sentido opuesto, asi que se mueve dos veces al ano (hoy +0 h, desde el 2026-09-06 +1 h). Un offset fijo es el error de +-1 h del issue #38.",
+  "zona_ancla": "America/New_York",
+
+  "sesiones": [
+    {
+      "slug": "europea",
+      "nombre": "Sesion Europea / Londres",
+      "desde": "02:00",
+      "hasta": "08:30",
+      "tanda": 1,
+      "foco": "Quiebres de apertura europea, EUR, GBP, DAX y posicionamiento previo a EE.UU."
+    },
+    {
+      "slug": "apertura_ny",
+      "nombre": "Apertura Wall Street",
+      "desde": "08:30",
+      "hasta": "12:30",
+      "tanda": 1,
+      "foco": "Volatilidad de primera hora, quiebres intradia y catalizadores macro"
+    },
+    {
+      "slug": "tarde_ny",
+      "nombre": "Rotacion de Tarde Wall Street",
+      "desde": "12:30",
+      "hasta": "15:30",
+      "tanda": 2,
+      "foco": "Flujos vespertinos, rebalanceo institucional y continuidad de tendencia"
+    },
+    {
+      "slug": "cierre_ny",
+      "nombre": "Cierre Wall Street / Post-Mercado",
+      "desde": "15:30",
+      "hasta": "18:00",
+      "tanda": 3,
+      "foco": "Balance de la sesion americana, resultados corporativos y preparacion para Asia"
+    },
+    {
+      "slug": "asiatica",
+      "nombre": "Sesion Asiatica / Pacifico",
+      "desde": "18:00",
+      "hasta": "02:00",
+      "abre_la_semana": true,
+      "tanda": 3,
+      "foco": "Foco en activos de Asia, JPY, Oro, Cobre, Cripto y materias primas"
+    },
+    {
+      "slug": "fin_de_semana",
+      "nombre": "Fin de Semana / Cripto & Pre-Apertura",
+      "tanda": 1,
+      "dias": "finde",
+      "_nota": "No lleva ventana horaria a proposito. El finde es el sabado completo mas el domingo hasta que abre la semana, y esa hora se DERIVA de la sesion marcada abre_la_semana. Escribirla aca otra vez seria el segundo reloj que este archivo vino a eliminar.",
+      "foco": "Mercado OTC/Cripto y preparacion estrategica para la apertura semanal"
+    }
+  ],
+
+  "tandas": {
+    "1": {
+      "nombre": "Apertura Wall Street",
+      "hora_ny": "10:30",
+      "foco": "Volatilidad y quiebres de la primera hora"
+    },
+    "2": {
+      "nombre": "Rotacion de tarde",
+      "hora_ny": "14:30",
+      "foco": "Flujos vespertinos, sin repetir la tesis de la manana"
+    },
+    "3": {
+      "nombre": "Pre-cierre y sesion asiatica",
+      "hora_ny": "16:45",
+      "foco": "Balance de la sesion y preparacion de Asia"
+    }
+  },
+
+  "_nota_momentos": "Los momentos son el reloj de sucesos: el instante en que a cada clase de activo le conviene salir. Se separan por clase porque las divisas y los metales se mueven con el dato macro de las 08:30 de Nueva York, mientras que los indices, las acciones y los ETF no tienen precio hasta que abre la bolsa a las 09:30. Publicar niveles de indices a las 08:30 es publicar el cierre de ayer.",
+  "tolerancia_minutos": 20,
+  "momentos": [
+    {
+      "slug": "premercado_fx",
+      "nombre": "Premercado de divisas, metales y energia",
+      "hora": "08:30",
+      "sesion": "apertura_ny",
+      "clases": ["forex_commodities"],
+      "por_que": "Es la hora en que EE.UU. publica sus datos de empleo e inflacion, y el momento en que el dolar global se reacomoda. Las divisas, el oro y el petroleo cotizan las 24 horas, asi que ya tienen precio formado y el nivel es real."
+    },
+    {
+      "slug": "apertura_indices",
+      "nombre": "Apertura de indices, acciones y ETF",
+      "hora": "10:00",
+      "sesion": "apertura_ny",
+      "clases": ["indices", "acciones", "etfs"],
+      "por_que": "La bolsa abre a las 09:30 y los primeros treinta minutos son el barrido de ordenes de apertura, donde el rango del dia todavia no existe. A las 10:00 ya hay rango medible y el nivel que se publica es el del dia, no el de ayer."
+    }
+  ],
+
+  "_nota_pendientes": "Cripto no tiene momento asignado y eso es una decision pendiente del director, no un olvido: opera 24/7 y su hora natural seria el rollover diario, que hay que medir antes de fijarlo. Declararlo aca es lo que impide que se quede fuera en silencio.",
+  "clases_sin_momento": ["crypto"]
+}
