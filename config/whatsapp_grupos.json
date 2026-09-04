@@ -16,7 +16,7 @@
       "nombre_oficial": "Grupo Inteligencia | Comunidad de Traders",
       "carpeta_docs": "docs/grupos_whatsapp/01_macro_y_apertura",
       "descripcion": "Grupo de AVISOS de la comunidad, y el canal macro del sistema. Recibe el contexto macro transversal, los datos de alto impacto y los informes PDF de la jornada. Solo los administradores pueden publicar.",
-      "_nota_canal": "Es el grupo de Avisos de la comunidad, no un canal tematico aparte. Decision del director el 2026-09-03: no se crea un 'GI · Macro & Apertura Global'. Ese nombre figuraba aca como aspiracional y prometia un canal que no existe en WhatsApp, asi que el macro parecia no llegar cuando en realidad llegaba a Avisos. En la lista de chats de WhatsApp Web TODOS los grupos de la comunidad se muestran con el nombre de la comunidad como titulo, y el nombre real del grupo aparece en la primera linea del preview: por eso siete chats distintos se ven iguales al buscarlos."
+      "_nota_canal": "Es el grupo de Avisos de la comunidad, no un canal tematico aparte. Decision del director el 2026-09-03: no se crea un canal tematico propio para el macro. Aca figuraba un nombre aspiracional que prometia un canal inexistente en WhatsApp, asi que el macro parecia no llegar cuando en realidad llegaba a Avisos; el 2026-09-04 se elimino todo su rastro del repo, este texto incluido, porque desde aca se copiaba de vuelta. El nombre que manda es el de arriba. En la lista de chats de WhatsApp Web TODOS los grupos de la comunidad se muestran con el nombre de la comunidad como titulo, y el nombre real del grupo aparece en la primera linea del preview: por eso siete chats distintos se ven iguales al buscarlos."
     },
     "02_forex_divisas": {
       "alias": [

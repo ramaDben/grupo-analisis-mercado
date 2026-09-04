@@ -772,9 +772,22 @@ resuelve alias en lenguaje natural (`metales`, `oro`, `forex`, `cripto`…), y c
 su propia lectura macro.
 
 **`01_macro_y_apertura` es el grupo de AVISOS de la comunidad**, no un canal temático aparte. Decisión del
-director el 2026-09-03: **no se crea un "GI · Macro & Apertura Global"**, y ese nombre se quitó del config,
-donde figuraba como aspiracional y prometía un canal que no existe en WhatsApp. El síntoma fue que el macro
-parecía no llegar cuando en realidad llegaba a Avisos.
+director el 2026-09-03: **no se crea un canal temático propio para el macro**. Ahí figuraba un nombre
+aspiracional que prometía un canal inexistente en WhatsApp, y el síntoma fue que el macro parecía no llegar
+cuando en realidad llegaba a Avisos.
+
+**El nombre inventado se borró del repo entero el 2026-09-04, y este párrafo no lo repite a propósito.**
+Quitarlo del config no alcanzó: sobrevivió en `CONFIG_MACRO_GRUPOS`, que es el módulo que **redacta texto de
+cliente**, y en la ficha del canal y el índice de `docs/grupos_whatsapp/`. Así llegó a un grupo real, que
+recibió una pieza preguntando qué significaba el dato *"para"* un canal que nadie puede abrir. Lo impide ahora
+un test de contrato que barre `scripts/`, `src/`, `config/`, `templates/`, `docs/grupos_whatsapp/`,
+`.claude/commands/` y `.agents/`. Dejar el nombre escrito en la explicación de por qué no existe es
+exactamente de dónde se copiaba de vuelta.
+
+**Ese grupo no lleva apellido temático, y el mensaje lo refleja**: su encabezado es `CONTEXTO MACRO DIARIO`
+sin sufijo, porque su lectura macro *es* el panorama general. Y como la pregunta de cierre necesita un sujeto
+("¿qué significa para X?"), los canales temáticos usan su propio tema y este usa **el mercado**: eso es lo que
+hace el campo `sujeto` de `CONFIG_MACRO_GRUPOS`, que existe solo para él.
 
 > **Ojo al buscar un canal en WhatsApp Web**: en la lista de chats **todos los grupos de la comunidad se
 > muestran con el nombre de la comunidad como título**, y el nombre real del grupo aparece en la primera línea
