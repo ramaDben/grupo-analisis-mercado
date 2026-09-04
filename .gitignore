@@ -123,3 +123,4 @@ data central/DATA PRECIOS OHLC/*_D1.json
 # desde el markdown, que si se versiona.
 docs/MANUAL_DE_OPERACIONES_TRADING_CUANTITATIVO_GI.pdf
 docs/preview_portada.png
+data/.reloj_disparos.json

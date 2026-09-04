@@ -78,7 +78,7 @@
   "momentos": [
     {
       "slug": "premercado_fx",
-      "nombre": "Premercado de divisas, metales y energia",
+      "nombre": "Premercado de divisas, metales y energía",
       "hora": "08:30",
       "sesion": "apertura_ny",
       "clases": ["forex_commodities"],
@@ -86,7 +86,7 @@
     },
     {
       "slug": "apertura_indices",
-      "nombre": "Apertura de indices, acciones y ETF",
+      "nombre": "Apertura de índices, acciones y ETF",
       "hora": "10:00",
       "sesion": "apertura_ny",
       "clases": ["indices", "acciones", "etfs"],
