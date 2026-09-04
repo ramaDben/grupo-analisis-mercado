@@ -97,11 +97,30 @@ def _get_support_resistance(df: pd.DataFrame, current: float, atr14: float, digi
     s1 = below[0] if len(below) > 0 else round(current - atr14, digits)
     s2 = below[1] if len(below) > 1 else round(current - 2 * atr14, digits)
 
+    # De donde salio cada nivel, lado por lado. El respaldo por ATR es una red de
+    # seguridad correcta (garantiza R > precio > S) pero **no es un nivel**: es el
+    # precio mas o menos el ATR, y sin esta marca el resultado es indistinguible
+    # de una resistencia medida sobre swings. La pieza publica "Resistencia clave"
+    # y el cliente lee estructura donde solo hay una banda de volatilidad.
+    #
+    # Los cuatro lados caen por separado, asi que se declaran por separado: se
+    # puede tener una resistencia real con un soporte sintetico. Y cuando ambos
+    # son sinteticos la banda vale 2 ATR **exactos por construccion**, con lo que
+    # cualquier medida de "cuanto de la banda cubre una vela" devuelve un numero
+    # fijo que no mide nada.
+    origen = {
+        "r1": "swing" if len(above) > 0 else "atr",
+        "r2": "swing" if len(above) > 1 else "atr",
+        "s1": "swing" if len(below) > 0 else "atr",
+        "s2": "swing" if len(below) > 1 else "atr",
+    }
+
     return {
         "s2": round(s2, digits),
         "s1": round(s1, digits),
         "r1": round(r1, digits),
         "r2": round(r2, digits),
+        "origen": origen,
     }
 
 
@@ -227,6 +246,7 @@ def analizar_activo(ticker: str, timeframe: str = "H4") -> dict[str, Any]:
         "s1":           levels["s1"],
         "r1":           levels["r1"],
         "r2":           levels["r2"],
+        "niveles_origen": levels["origen"],
         "rsi_14":       round(rsi14_val, 1),
         "atr_14":       round(atr14_val, digits),
         "adx_14":       round(adx14_val, 1),
