@@ -166,6 +166,7 @@ Tres invariantes las imponen tests, no la buena intención:
 | Momento | Hora (NY) | Clases | Por qué |
 |---|---|---|---|
 | `premercado_fx` | 08:30 | `forex_commodities` | Es la hora del dato de empleo e inflación de EE.UU. Divisas, oro y petróleo cotizan 24 h, así que ya tienen precio formado y el nivel es real. |
+| `cripto` | 09:00 | `crypto` | **Medido**, no supuesto. Ver abajo. |
 | `apertura_indices` | 10:00 | `indices`, `acciones`, `etfs` | La bolsa abre 09:30 y la primera media hora es el barrido de órdenes de apertura, donde el rango del día todavía no existe. |
 
 Publicar niveles de índices a las 08:30 es **publicar el cierre de ayer con fecha de hoy**:
@@ -177,10 +178,36 @@ la lectura de precios y el render se llevan minutos, así que sin ventana de gra
 se pierde por llegar dos minutos tarde; y disparar el de las 08:30 a las 08:15 publicaría
 niveles anteriores al dato que motiva la hora.
 
-**Cripto no tiene momento, y está declarado como pendiente** en `clases_sin_momento`. Opera
-24/7 y su hora natural sería el rollover diario, que hay que medir antes de fijarlo.
-Declararlo es lo que impide que se quede fuera del reloj en silencio; un test exige que toda
-clase del universo esté asignada a un momento **o** declarada pendiente.
+**La cripto se mueve en la mañana americana, no en Asia.** Se midió el 2026-09-04 sobre 90
+días de velas H1 en BTC, ETH, SOL y LTC (mediana del rango por hora, solo días hábiles):
+
+| Bloque (hora NY) | BTC | ETH | SOL | LTC |
+|---|---|---|---|---|
+| Asia 18–02 | 1,01x | 0,98x | 0,94x | 0,97x |
+| Europa 03–08 | 0,98x | 0,96x | 0,90x | 0,98x |
+| **NY mañana 08–12** | **1,80x** | **1,65x** | **1,52x** | **1,49x** |
+| NY tarde 12–16 | 1,23x | 1,17x | 1,16x | 1,14x |
+
+El máximo está en 09:00–10:00, donde BTC llega a **2,09x** su mediana diaria. La sesión
+asiática está plana y Europa también: **la hipótesis del rollover asiático era falsa.** Va a
+las 09:00 y no a las 10:00 solo para no chocar con el momento de los índices, porque cada
+momento produce su propia tanda.
+
+Dos cosas más que salieron de esa medición y conviene no volver a averiguar:
+
+1. **MT5 devuelve las marcas de tiempo en hora del SERVIDOR, empaquetadas como si fueran un
+   timestamp UTC.** Interpretarlas como UTC desplaza la serie entera por el offset del broker.
+   La primera corrida de esta medición dio el máximo en las 06:00 de Nueva York, que habría
+   apuntado a la apertura de Londres; el servidor corre en **UTC−4** y el máximo real está
+   cuatro horas después. El offset se mide comparando `symbol_info_tick().time` contra
+   `datetime.now(timezone.utc)`, y `tools/symbol_spec.py` ya lo trata correctamente como
+   `server_naive`.
+2. **El fin de semana la cripto está más quieta, no más activa**: 0,76x a 0,85x del día hábil.
+   La sesión `fin_de_semana` existía en parte pensando en ella, y el dato no respalda esa idea.
+
+`clases_sin_momento` queda vacía, y la lista se conserva porque un test exige que toda clase
+del universo esté asignada a un momento **o** declarada ahí. Es lo que impide que una clase
+nueva se quede fuera del reloj en silencio.
 
 > **Ojo, no confundir con `config/agenda_semanal.json`**, que es la agenda por día de la
 > semana de antes del rediseño y describe una cadencia que ya no existe (`apertura_mercado`,
