@@ -1207,21 +1207,56 @@ class WhatsAppSender:
                 "   .some(i => (i.src || '').startsWith('blob:'))"
                 "   || !!r.querySelector('audio, video')"
                 "   || /\bPDF\b|\bDOCX?\b|\bXLSX?\b|p\u00e1ginas/i.test(texto);"
-                " return {texto, media};"
+                # WhatsApp pinta la burbuja al instante y sube en segundo plano;
+                # el tic es lo unico que dice que el servidor ya la recibio.
+                " const entregado = !!r.querySelector('[data-icon=msg-check],"
+                "   [data-icon=msg-dblcheck], [data-icon=msg-dblcheck-ack]');"
+                " return {texto, media, entregado};"
                 "}"
             )
         except Exception:  # noqa: BLE001
-            return {"texto": "", "media": False}
+            return {"texto": "", "media": False, "entregado": False}
         return datos if isinstance(datos, dict) else {"texto": "", "media": False}
 
-    def _adjunto_confirmado(self, page: Any, testigo: str) -> bool:
-        """La última burbuja es el adjunto recién enviado, con su pie."""
+    def _adjunto_confirmado(
+        self, page: Any, testigo: str, nombre_archivo: str = ""
+    ) -> bool:
+        """La última burbuja es ESTE adjunto y el servidor ya lo recibió.
+
+        **El falso "enviado" del 2026-09-04.** Un PDF de 2 MB se reportó
+        entregado y no llegó al canal; el director tuvo que mandarlo a mano. Con
+        el pie vacío esta función devolvía `True` apenas la última burbuja tenía
+        `media`, y `media` se decide con un regex sobre el texto (`/PDF/`),
+        que da verdadero en cuanto WhatsApp **pinta** la burbuja, antes de
+        terminar la subida. Con un PNG de 500 KB la subida es instantánea y el
+        hueco nunca se noto.
+
+        Dos condiciones lo cierran:
+
+        1. **Sin pie, el testigo es el nombre del archivo.** La burbuja de un
+           documento lo muestra, así que la confirmación queda atada a ESTE
+           envío y no a cualquier adjunto anterior. Sin pie ni nombre no hay
+           nada que atar, y entonces no se confirma.
+        2. **El tic de enviado.** Es lo único del DOM que dice que el servidor
+           la recibió. La espera anterior miraba `status-upload`, un testid
+           muerto que se cumplía en la primera vuelta, y al retirarlo no se
+           reemplazó por nada.
+        """
         burbuja = self._ultima_burbuja(page)
         if not burbuja.get("media"):
             return False
-        if not testigo:
-            return True
-        return testigo in self._normalizar(str(burbuja.get("texto", "")))
+
+        texto = self._normalizar(str(burbuja.get("texto", "")))
+        if testigo:
+            if testigo not in texto:
+                return False
+        elif nombre_archivo:
+            if self._normalizar(nombre_archivo) not in texto:
+                return False
+        else:
+            return False
+
+        return bool(burbuja.get("entregado"))
 
     def _clic_enviar_y_confirmar(
         self,
@@ -1230,6 +1265,7 @@ class WhatsAppSender:
         testigo: str = "",
         con_adjunto: bool = False,
         timeout_s: float = 25.0,
+        nombre_archivo: str = "",
     ) -> None:
         """Envía y verifica que la burbuja nueva efectivamente apareció.
 
@@ -1277,7 +1313,7 @@ class WhatsAppSender:
                 # El testigo de texto NO alcanza: si el pie viaja como mensaje
                 # suelto también aparece, y la imagen se quedó sin enviar. Se
                 # exige que la burbuja NUEVA sea el adjunto y lleve ese pie.
-                if self._adjunto_confirmado(page, testigo):
+                if self._adjunto_confirmado(page, testigo, nombre_archivo):
                     self._pausa_humana(0.6)
                     return
             elif testigo:
@@ -1382,6 +1418,7 @@ class WhatsAppSender:
                         mensajes_antes,
                         testigo=self._testigo(pieza.mensaje),
                         con_adjunto=True,
+                        nombre_archivo=Path(pieza.adjunto).name,
                     )
                     logger.info(
                         "pieza %d/%d entregada a %s: %s",
@@ -1496,6 +1533,7 @@ class WhatsAppSender:
                     mensajes_antes,
                     testigo=self._testigo(mensaje),
                     con_adjunto=ruta_adjunto is not None,
+                    nombre_archivo=ruta_adjunto.name if ruta_adjunto else "",
                 )
                 self._pausa_humana(1.0)
 

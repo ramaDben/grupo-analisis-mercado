@@ -2,6 +2,7 @@
   "grupos": {
     "01_macro_y_apertura": {
       "alias": [
+        "avisos",
         "macro",
         "apertura",
         "01",

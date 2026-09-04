@@ -456,9 +456,13 @@ def test_el_adjunto_se_confirma_cuando_la_ultima_burbuja_lo_trae_con_su_pie():
     boton.evaluate.return_value = False
     mock_page = MagicMock()
     mock_page.locator.return_value = boton
+    # `entregado` es el tic: sin el, la burbuja solo esta PINTADA y la subida
+    # puede fallar despues. Es el hueco por el que un PDF de 2 MB se reporto
+    # entregado el 2026-09-04 sin llegar al canal.
     mock_page.evaluate.return_value = {
         "texto": "PDF | informe.pdf | 11 paginas | PRUEBA PDF de auditoria",
         "media": True,
+        "entregado": True,
     }
     sender.min_jitter_ms = sender.max_jitter_ms = 1
 
@@ -1081,3 +1085,50 @@ def test_sin_destino_configurado_se_niega_en_vez_de_elegir_uno():
 
     with pytest.raises(WhatsAppError, match="destino de pruebas"):
         _ = config.destino_de_pruebas
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El falso "enviado" del 2026-09-04
+#
+# Un PDF de 2 MB se reporto ENTREGADO y no llego al canal. `_adjunto_confirmado`
+# con el testigo vacio devolvia True apenas la ultima burbuja tenia `media`, y
+# `media` se decide con un regex sobre el texto (`/\bPDF\b/`), que da verdadero
+# en cuanto WhatsApp pinta la burbuja **antes de terminar la subida**. Con un PNG
+# de 500 KB la subida es instantanea y nunca se noto.
+# ─────────────────────────────────────────────────────────────────────────────
+def test_un_adjunto_sin_pie_no_se_confirma_solo_porque_haya_media():
+    """Sin pie, el unico testigo posible es el archivo: hay que exigirlo."""
+    sender = WhatsAppSender()
+    mock_page = MagicMock()
+    # Una burbuja de documento CUALQUIERA, que no es la que se acaba de mandar.
+    mock_page.evaluate.return_value = {"texto": "otro_informe.pdf 1 MB PDF", "media": True}
+
+    assert not sender._adjunto_confirmado(
+        mock_page, testigo="", nombre_archivo="informe_cierre_semanal_20260904_GI.pdf"
+    )
+
+
+def test_un_adjunto_sin_pie_se_confirma_con_el_nombre_del_archivo():
+    sender = WhatsAppSender()
+    mock_page = MagicMock()
+    mock_page.evaluate.return_value = {
+        "texto": "informe_cierre_semanal_20260904_GI.pdf 2 MB PDF", "media": True, "entregado": True
+    }
+
+    assert sender._adjunto_confirmado(
+        mock_page, testigo="", nombre_archivo="informe_cierre_semanal_20260904_GI.pdf"
+    )
+
+
+def test_la_burbuja_pintada_sin_terminar_la_subida_no_cuenta_como_entregada():
+    """WhatsApp pinta la burbuja al instante y sube en segundo plano. El tic de
+    enviado es lo unico que dice que el servidor la recibio."""
+    sender = WhatsAppSender()
+    mock_page = MagicMock()
+    mock_page.evaluate.return_value = {
+        "texto": "informe.pdf 2 MB PDF", "media": True, "entregado": False
+    }
+
+    assert not sender._adjunto_confirmado(
+        mock_page, testigo="", nombre_archivo="informe.pdf"
+    )
