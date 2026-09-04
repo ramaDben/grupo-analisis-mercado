@@ -158,22 +158,70 @@ def test_sin_suplemento_publicable_devuelve_none():
 # ─────────────────────────────────────────────────────────────────────────────
 # Contratos de nombres
 # ─────────────────────────────────────────────────────────────────────────────
+def _motivos_de_los_gates() -> list[tuple[str, str]]:
+    """Todo texto que un `gate_*` del escaner puede devolver, con su funcion.
+
+    Se recorre el AST y no un regex. La version anterior buscaba
+    `return f?"(feriado|ATR diario|blackout|el Playbook|el snapshot|la confianza)..."`,
+    o sea que estaba **anclada a los seis prefijos que ya existian**: un gate
+    nuevo con otro prefijo no lo capturaba y entraba sin categoria en silencio,
+    que es justo lo que este contrato existe para impedir. El `assert len >= 4`
+    solo protegia de que el regex dejara de encontrar los viejos.
+
+    De un f-string se toma el tramo literal inicial, que es el prefijo por el que
+    `categoria_del_motivo` mapea.
+    """
+    import ast
+
+    arbol = ast.parse((RAIZ / "scripts" / "screener_gi.py").read_text(encoding="utf-8"))
+    motivos: list[tuple[str, str]] = []
+    for nodo in ast.walk(arbol):
+        if not isinstance(nodo, ast.FunctionDef) or not nodo.name.startswith("gate_"):
+            continue
+        for hijo in ast.walk(nodo):
+            if not isinstance(hijo, ast.Return) or hijo.value is None:
+                continue
+            for texto in _literales_de(hijo.value):
+                if texto.strip():
+                    motivos.append((nodo.name, texto))
+    return motivos
+
+
+def _literales_de(valor) -> list[str]:
+    """El texto literal de un `return`, sea str, f-string o concatenacion."""
+    import ast
+
+    if isinstance(valor, ast.Constant) and isinstance(valor.value, str):
+        return [valor.value]
+    if isinstance(valor, ast.JoinedStr):
+        # Solo el arranque literal: lo interpolado no forma parte del prefijo.
+        trozos = []
+        for parte in valor.values:
+            if isinstance(parte, ast.Constant) and isinstance(parte.value, str):
+                trozos.append(parte.value)
+            else:
+                break
+        return ["".join(trozos)] if trozos else []
+    if isinstance(valor, ast.BinOp) and isinstance(valor.op, ast.Add):
+        izq = _literales_de(valor.left)
+        return izq or _literales_de(valor.right)
+    return []
+
+
 def test_todo_gate_del_escaner_tiene_categoria_o_esta_declarado_no_publicable():
     """El contrato que impide que un gate nuevo deje al canal sin suplemento en
     silencio. Se leen los motivos del CODIGO del escaner, que es donde estan
     todos, y no los del snapshot de hoy."""
-    fuente = (RAIZ / "scripts" / "screener_gi.py").read_text(encoding="utf-8")
-    # Los `return` de los gates, que son los motivos de exclusion.
-    motivos = re.findall(r'return f?"((?:feriado|ATR diario|blackout|el Playbook|el snapshot|la confianza)[^"]*)"', fuente)
+    motivos = _motivos_de_los_gates()
 
-    assert len(motivos) >= 4, f"el regex dejo de encontrar los motivos: {motivos}"
-    sin_clasificar = []
-    for plantilla in motivos:
-        # Se limpia la interpolacion para dejar el prefijo estable.
-        texto = re.sub(r"\{[^}]*\}", "X", plantilla)
-        if sup.categoria_del_motivo(texto) is None:
-            sin_clasificar.append(plantilla)
+    gates = {nombre for nombre, _ in motivos}
+    assert len(gates) >= 5, f"se dejaron de encontrar gates: {sorted(gates)}"
 
+    sin_clasificar = [
+        f"{nombre}: {texto!r}"
+        for nombre, texto in motivos
+        if sup.categoria_del_motivo(texto) is None
+    ]
     assert not sin_clasificar, (
         "motivos del escaner sin categoria ni declaracion de no publicable: "
         + ", ".join(sin_clasificar)

@@ -288,7 +288,7 @@ Los rangos de puntos **son** la ponderación: `Score = T + M + C + F`. No se mul
 pesos, porque los factores ya vienen escalados a su máximo y hacerlo dejaría el techo real en
 26,5 sobre una escala de 100.
 
-**Cuatro gates se aplican ANTES de puntuar, y son prohibiciones, no puntos:**
+**Seis gates se aplican ANTES de puntuar, y son prohibiciones, no puntos:**
 
 1. **Feriado de la bolsa** del activo (`config/feriados_bolsa.json`).
 2. **Blackout por calendario** (skill cuantitativa §4: FOMC −30/+75 min, NFP e IPC de EE.UU.
@@ -299,6 +299,34 @@ pesos, porque los factores ya vienen escalados a su máximo y hacerlo dejaría e
    Solo bloquea si apunta en la misma dirección que la lectura técnica: que esté prohibido
    comprar agresivamente no impide comunicar una caída.
 4. **Agotamiento**: ATR diario consumido sobre 90%.
+5. **Confianza del modelo** (`gate_confianza`): estuvo sin documentar hasta el 2026-09-04, así
+   que la cuenta de "cuatro gates" llevaba tiempo desactualizada. Es el único con
+   `publicable: False` en el suplemento junto al del snapshot: un problema nuestro de datos no
+   es contenido para el cliente.
+6. **Banda contra vela típica** (`gate_banda`): excluye cuando la vela típica cubre la banda
+   entre soporte y resistencia. Ver abajo.
+
+**El gate de banda, y por qué el agotamiento no lo cubría.** Tener recorrido disponible no dice
+nada sobre si los bordes se sostienen: son dos preguntas distintas y el 2026-09-04 hubo que
+aplicar esta a mano cuatro veces. Litecoin cubría **3,2 veces** su banda, Dogecoin 1,8 y el
+S&P 500 1,03, con banda de 16,54 puntos contra una vela típica de 17,00. Publicar esos niveles
+es entregar ruido con forma de estructura, y el cierre canónico de la pieza los presenta como si
+el precio fuera a respetarlos.
+
+Umbrales fijados por el director el 2026-09-04: **excluye desde 1,00x y avisa entre 0,70x y
+1,00x**. La zona de aviso no detiene la pieza, viaja en la selección como `banda_estrecha` y sale
+en los avisos del escáner. La "vela típica" es `1,5 × ATR(H1)`, **la misma cifra** que la pieza
+publica como "Volatilidad típica": juzgar con otro número dejaría al gate midiendo distinto de lo
+que el cliente lee.
+
+**El respaldo por ATR se trata aparte, y esa es la parte que no era obvia.**
+`_get_support_resistance` cae a `precio ± ATR` cuando no encuentra swings del lado que necesita.
+Es una red de seguridad correcta, pero ese borde **no es un nivel**: es una distancia calculada
+con nombre de soporte. Y cuando ambos lados caen, la banda vale **2 ATR exactos por
+construcción**, así que el ratio da siempre 0,75 y no mide nada: un gate que no lo distinguiera
+avisaría siempre y siempre por la misma razón artificial. Por eso `analizar_activo` declara
+`niveles_origen` por lado (`swing` o `atr`) y el gate le da su propio motivo. Los cuatro lados
+caen por separado: se puede tener una resistencia real con un soporte sintético.
 
 Un setup prohibido puede puntuar alto, y con scoring puro ganaría la tanda. Por eso el filtro
 va antes.
