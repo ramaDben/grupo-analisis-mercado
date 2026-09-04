@@ -1377,7 +1377,10 @@ def despachar(
     tanda: así el precio de la última pieza tiene minutos y no media hora. El
     render cabe entero dentro de la espera de cadencia, así que no cuesta tiempo.
     """
-    from whatsapp_sender import WhatsAppSender
+    from whatsapp_sender import WhatsAppSender, huella
+    from bitacora_despachos import cargar as cargar_bitacora
+    from bitacora_despachos import registrar as anotar_despacho
+    from bitacora_despachos import ya_despachada
 
     grupos = sorted(d for d in directorio.iterdir() if d.is_dir())
     if not grupos:
@@ -1385,6 +1388,13 @@ def despachar(
 
     sender = WhatsAppSender(headless=headless)
     resultados: list[dict[str, Any]] = []
+
+    # La bitacora es la unidad correcta para retomar. `--desde N` cuenta CANALES,
+    # y desde el 2026-09-03 el envio cuenta PIEZAS: retomar un canal que fallo en
+    # su segunda de tres reenviaba la primera. Se conserva `--desde` como control
+    # manual del director, pero lo normal es que ya no haga falta.
+    tanda = directorio.name
+    bitacora = cargar_bitacora()
 
     for i, dir_grupo in enumerate(grupos, 1):
         if i < desde:
@@ -1407,9 +1417,18 @@ def despachar(
             if suplemento.exists():
                 texto = suplemento.read_text(encoding="utf-8").strip()
                 print(f"    suplemento de {len(texto)} caracteres, sin adjunto...", flush=True)
+                if ya_despachada(bitacora, tanda, dir_grupo.name, "0_suplemento"):
+                    print("    suplemento ya despachado segun la bitacora: se omite", flush=True)
+                    resultados.append({"grupo": dir_grupo.name, "status": "ya_despachado"})
+                    continue
                 res = sender.enviar(
                     dir_grupo.name, mensaje=texto, dry_run=dry_run
                 )
+                if not dry_run:
+                    anotar_despacho(
+                        tanda, dir_grupo.name, "0_suplemento",
+                        huella=huella(texto),
+                    )
                 resultados.append({"grupo": dir_grupo.name, "suplemento": True, **res})
                 # La cadencia no se maneja aca: `enviar` reserva su turno y
                 # espera por su cuenta, igual que el resto de las piezas.
@@ -1419,9 +1438,34 @@ def despachar(
             resultados.append({"grupo": dir_grupo.name, "status": "vacio"})
             continue
 
-        print(f"    despachando {len(piezas)} pieza(s), una por acción...", flush=True)
-        res = sender.enviar_lote(dir_grupo.name, piezas, dry_run=dry_run)
-        resultados.append({"grupo": dir_grupo.name, **res})
+        canal = dir_grupo.name
+        pendientes = [
+            pz for pz in piezas
+            if not ya_despachada(bitacora, tanda, canal, Path(pz.adjunto).stem)
+        ]
+        if not pendientes:
+            print("    todas sus piezas ya salieron segun la bitacora: se omite", flush=True)
+            resultados.append({"grupo": canal, "status": "ya_despachado",
+                               "piezas": len(piezas)})
+            continue
+        if len(pendientes) < len(piezas):
+            print(
+                f"    {len(piezas) - len(pendientes)} pieza(s) ya despachada(s): "
+                "se retoma en la que falta", flush=True
+            )
+
+        def anotar(pieza: Any, _canal: str = canal) -> None:
+            # La huella sale de la MISMA funcion que compara el guardia de entrega
+            # contra el DOM. Una segunda implementacion seria otro de los relojes
+            # duplicados que ya costaron caro en este repo.
+            anotar_despacho(
+                tanda, _canal, Path(pieza.adjunto).stem,
+                huella=huella(pieza.mensaje or ""),
+            )
+
+        print(f"    despachando {len(pendientes)} pieza(s), una por acción...", flush=True)
+        res = sender.enviar_lote(canal, pendientes, dry_run=dry_run, al_entregar=anotar)
+        resultados.append({"grupo": canal, **res})
 
     return {"directorio": str(directorio), "grupos": resultados}
 
