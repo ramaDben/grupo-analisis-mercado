@@ -1071,6 +1071,72 @@ qué no decir, y dónde se detiene la respuesta porque pasa a ser asesoría—.
   con `emulate_media("print")`. Y no poner `font-size` dentro de `@media print`: cambia
   la escala justo en el PDF y descuadra la calibración.
 
+## Manual de Operaciones (el que va a los miembros)
+
+`docs/MANUAL_DE_OPERACIONES_TRADING_CUANTITATIVO.md` es un **manual de trading autónomo**,
+no una guía de lectura de nuestras piezas. Su propósito (director, 2026-09-04) es que un
+miembro **ejecute sus propias operaciones** con el Playbook de guía. Son 12 módulos
+autocontenidos y 3 anexos, y sale en PDF A4 al grupo de avisos.
+
+```bash
+uv run --extra stories --with markdown-it-py --with pypdf python scripts/compilar_manual_pdf.py
+```
+
+**El markdown es la fuente única, y eso hubo que arreglarlo.** El 2026-09-04 había **tres**
+documentos: el markdown de 10 secciones, un PDF en disco **truncado a mitad de la sección 6**
+(sin riesgo, lotaje, filtros, checklist ni glosario, con el pie numerado sobre 11 páginas y 6
+renderizadas), y `compilar_manual_pdf.py` con un cuarto documento escrito adentro en una
+constante `HTML_PAGES`, con secciones que el markdown no tenía. Corregir uno no tocaba a los
+otros.
+
+Tres reglas del compilador que conviene no revertir:
+
+1. **La paginación es por flujo, no por páginas fijas.** El diseño anterior maquetaba
+   `div.a4-page` de 794×1123 con `overflow: hidden`, así que **el contenido que no cabía
+   desaparecía sin aviso**. Es el mismo modo de falla del `@media print` del folleto, pero
+   silencioso. Ahora Chromium pagina y cada módulo abre página con `break-before`.
+2. **El compilador cuenta las páginas y falla bajo `PAGINAS_MINIMAS`.** Un manual al que le
+   faltan secciones **se lee como completo**, igual que el mensaje de WhatsApp al que le
+   faltaban renglones: nadie lo nota desde afuera, y eso lo hace peor.
+3. **Ojo con `hr + h1` en el CSS.** CSS no tiene selector de hermano anterior, y esa regla
+   (puesta para ocultar el separador que precede a cada título) **ocultó los 15 títulos de
+   módulo** en la primera compilación. El `h1` abre página, así que el `hr` anterior queda al
+   final de la anterior y no molesta: solo hace falta `h1 + hr`.
+
+### Lo que el manual afirma tiene que coincidir con el motor
+
+**El manual es el tercer lugar donde viven los umbrales**, después del YAML y el Playbook, y
+es el único que un miembro va a usar para arriesgar dinero. La revisión del 2026-09-04 encontró
+cinco discrepancias que ya están corregidas, y las tres primeras costaban plata:
+
+| Lo que decía | Lo que hace el motor |
+|---|---|
+| "Valor Punto (1 lote): $100.000 CLP" | **$100.000 es el valor de 1 PESO** (100 puntos). El punto vale $1.000. Cruzar distancia en pesos con valor del punto da un lote **100 veces mayor** |
+| "Spread sobre 15 % del SL bloquea" (3 veces) | `friction_caps` tiene **cinco topes**: 0,15 USDCLP · 0,12 US100 · 0,10 Oro, WTI y Brent |
+| "Stop estrictamente 1 tick bajo el mínimo de la vela" | Mínimo de **20 velas** si su distancia cae entre 0,5 y 1,5 ATR; si no, **1,5 × ATR** |
+| "TP1 = ganancia 1R" | **1,0 × ATR** (y hay un TP2 a 1,5 × ATR que el manual no mencionaba) |
+| Blackout FOMC −30/+60 | **−30/+75** (`screener_gi._BLACKOUTS`) |
+
+Y omitía los gates que de verdad deciden: ancho Donchian ≤ 2,5 ATR, ADX (≥ 20 para pullback,
+< 20 para reversión), alineación EMA 20/50/100, rango de vela ≥ 1,0 ATR, RSI no extremo, y
+sobre todo **la firma Dow**, que es la confirmación intermercado y le da el nombre al método.
+
+**El protocolo de rachas es criterio de mesa, no salida del motor**, y el módulo 9 lo declara
+así en su primer aviso: esos límites (2,5 % simultáneo, 2 pérdidas diarias, 4 % semanal, 0,5 %
+tras 3 pérdidas) **no están en el YAML ni en el código**. Presentarlos como cálculo del modelo
+era la quinta discrepancia.
+
+> [!CAUTION]
+> **`scripts/ticket_engine.py` no lo consume nadie.** Su única mención en el repo es un
+> comentario en la docstring de `pipeline_datos.py`. Es el módulo que emitiría la ficha
+> completa (entrada, SL, TP, R:R, estado READY/ARMED/BLOCKED/WAIT), y **no está conectado a
+> ningún pipeline ni comando**. Lo que sí publicamos es `get_macro_bias`: régimen, sesgo,
+> setups permitidos y prohibidos, y distancia de SL.
+>
+> Por eso el manual enseña al miembro a **construir su propia ficha** y el semáforo es un
+> estado que él determina, no uno que recibe. La versión anterior decía "el sistema publica
+> fichas de operación" y "la ficha autoriza", prometiendo un producto que no existe.
+
 ## Flujo de aprobación → WhatsApp (modo semi-automático activo)
 
 Todo contenido pasa por este flujo antes de enviarse:
