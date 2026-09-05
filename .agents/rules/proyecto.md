@@ -529,7 +529,7 @@ Son las mismas de la sección 3 y 4, y acá se verifican así:
 
 ## 11. La memoria compartida (OMEGA)
 
-El proyecto lleva 44 memorias del director y del trabajo hecho: correcciones de estilo
+El proyecto lleva 45 memorias del director y del trabajo hecho: correcciones de estilo
 que costaron una pieza mal enviada, decisiones que no están en el código, hechos
 medidos contra el terminal o contra el DOM. Vivían solo del lado de Claude Code. El
 2026-09-05 se respaldaron en **OMEGA**, que es una base de memoria persistente
@@ -541,20 +541,34 @@ puede repetir entero, y ahorran repetir un error que ya se pagó una vez.
 
 ### Cómo buscarlas, con el detalle que importa
 
-El modelo de embeddings de OMEGA es `bge-small-en-v1.5`, **entrenado en inglés**, y las
-memorias están en español. Medido el 2026-09-05 sobre cuatro consultas cuyo tema sí
-estaba guardado: acertó en las dos que compartían una palabra literal con la memoria y
-falló en las otras dos. O sea que **lo que encuentra la memoria es la coincidencia
-léxica, no el vector**.
+Medido el 2026-09-05 sobre seis consultas en español cuyo tema **sí** estaba guardado:
+la memoria correcta sale primera en **3 de 6**. Lo que la encuentra es sobre todo la
+coincidencia léxica, no el significado.
 
-Falla de dos formas y la segunda es la peligrosa:
+**Y la causa no es el idioma del modelo.** Eso se probó cambiándolo: con
+`multilingual-e5-small`, que es multilingüe, el coseno acierta 6 de 6, pero el resultado
+que OMEGA devuelve sigue siendo 3 de 6 y con **menos** candidatos recuperados. Se
+revirtió. Son dos mecanismos del ranking, los dos ajenos al modelo:
 
-- Devuelve algo irrelevante **con puntaje 1,00**. La confianza alta no significa nada
-  acá; no la leas como acierto.
-- Devuelve **cero resultados existiendo la memoria**, cuando no compartes ninguna
-  palabra con ella: preguntar por "MetaTrader" no encuentra la memoria que dice "MT5".
-  Un `sin resultados` de OMEGA **no prueba que no haya memoria** sobre el tema. Reformula
-  con el término que el proyecto usa de verdad, o lista con `browse`.
+- **El atajo de FTS5** (`sqlite_store/_query.py`): si el canal de texto encuentra un
+  match fuerte, OMEGA **se salta la fase vectorial y el reranker** y devuelve el orden
+  del texto. Ahí el significado de la consulta no se llega a mirar.
+- **La fusión RRF con k=60**: combina los canales por puesto, no por puntaje, y
+  `1/(60+1)` contra `1/(60+5)` son un 6% de diferencia. Sobre 45 memorias eso aplana
+  la señal, y un match textual casual empata con el semántico correcto.
+
+En la práctica eso se te presenta de dos maneras, y la segunda es la peligrosa:
+
+- Devuelve **la memoria equivocada con puntaje 1,00**. La confianza alta no significa
+  nada acá; no la leas como acierto. Preguntando por la cuenta de "MetaTrader" salió
+  primera la memoria de la cuenta de GitHub, porque comparten la palabra "cuenta".
+- Devuelve **poco o nada existiendo la memoria**, cuando no compartes vocabulario con
+  ella: la memoria de la cuenta dice "MT5", no "MetaTrader". Un `sin resultados` de
+  OMEGA **no prueba que no haya memoria** sobre el tema.
+
+Así que no intentes arreglar esto cambiando el modelo: ya se midió y no es ahí. Lo que
+sí funciona es cambiar **cómo preguntas**: con el término que el proyecto usa de
+verdad, o listando con `browse`.
 
 | Qué quieres | Modo | Ejemplo |
 |---|---|---|
