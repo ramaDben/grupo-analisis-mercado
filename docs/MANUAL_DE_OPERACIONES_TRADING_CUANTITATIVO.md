@@ -43,39 +43,39 @@ El **Anexo A2** trae los umbrales exactos del clima, así que también puedes ve
 
 <div style="width: 100%; margin: 16px 0; display: flex; justify-content: center;">
 <svg viewBox="0 0 720 150" width="100%" height="150" xmlns="http://www.w3.org/2000/svg" style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; font-family:'Plus Jakarta Sans', sans-serif;">
-  <rect x="25" y="20" width="185" height="55" rx="6" fill="#FFFFFF" stroke="#0F172A" stroke-width="1.5"/>
-  <text x="117" y="42" font-size="10.5" font-weight="700" fill="#0F172A" text-anchor="middle">1. EL CLIMA (D1)</text>
+  <rect x="25" y="20" width="185" height="55" rx="6" fill="#FFFFFF" stroke="#0B1916" stroke-width="1.5"/>
+  <text x="117" y="42" font-family="'Goldman', sans-serif" font-size="10.5" font-weight="700" fill="#0B1916" text-anchor="middle">1. EL CLIMA (D1)</text>
   <text x="117" y="58" font-size="9" fill="#64748B" text-anchor="middle">¿Confirmado por 2 días?</text>
 
-  <line x1="210" y1="47" x2="255" y2="47" stroke="#10B981" stroke-width="2"/>
-  <polygon points="255,47 248,43 248,51" fill="#10B981"/>
-  <text x="232" y="40" font-size="8.5" font-weight="700" fill="#059669" text-anchor="middle">SÍ</text>
+  <line x1="210" y1="47" x2="255" y2="47" stroke="#50C0A8" stroke-width="2"/>
+  <polygon points="255,47 248,43 248,51" fill="#50C0A8"/>
+  <text x="232" y="40" font-family="'Goldman', sans-serif" font-size="8.5" font-weight="700" fill="#065F46" text-anchor="middle">SÍ</text>
 
   <line x1="117" y1="75" x2="117" y2="105" stroke="#E84040" stroke-width="1.5"/>
   <polygon points="117,105 113,98 121,98" fill="#E84040"/>
-  <text x="127" y="93" font-size="8" font-weight="700" fill="#DC2626">NO</text>
+  <text x="127" y="93" font-family="'Goldman', sans-serif" font-size="8" font-weight="700" fill="#991B1B">NO</text>
 
-  <rect x="260" y="20" width="185" height="55" rx="6" fill="#FFFFFF" stroke="#0F172A" stroke-width="1.5"/>
-  <text x="352" y="42" font-size="10.5" font-weight="700" fill="#0F172A" text-anchor="middle">2. TU FICHA (H1)</text>
+  <rect x="260" y="20" width="185" height="55" rx="6" fill="#FFFFFF" stroke="#0B1916" stroke-width="1.5"/>
+  <text x="352" y="42" font-family="'Goldman', sans-serif" font-size="10.5" font-weight="700" fill="#0B1916" text-anchor="middle">2. TU FICHA (H1)</text>
   <text x="352" y="58" font-size="9" fill="#64748B" text-anchor="middle">¿Los 8 campos completos?</text>
 
-  <line x1="445" y1="47" x2="490" y2="47" stroke="#10B981" stroke-width="2"/>
-  <polygon points="490,47 483,43 483,51" fill="#10B981"/>
-  <text x="467" y="40" font-size="8.5" font-weight="700" fill="#059669" text-anchor="middle">SÍ</text>
+  <line x1="445" y1="47" x2="490" y2="47" stroke="#50C0A8" stroke-width="2"/>
+  <polygon points="490,47 483,43 483,51" fill="#50C0A8"/>
+  <text x="467" y="40" font-family="'Goldman', sans-serif" font-size="8.5" font-weight="700" fill="#065F46" text-anchor="middle">SÍ</text>
 
   <line x1="352" y1="75" x2="352" y2="105" stroke="#E84040" stroke-width="1.5"/>
   <polygon points="352,105 348,98 356,98" fill="#E84040"/>
-  <text x="362" y="93" font-size="8" font-weight="700" fill="#DC2626">NO</text>
+  <text x="362" y="93" font-family="'Goldman', sans-serif" font-size="8" font-weight="700" fill="#991B1B">NO</text>
 
-  <rect x="495" y="20" width="200" height="55" rx="6" fill="#ECFDF5" stroke="#10B981" stroke-width="2"/>
-  <text x="595" y="42" font-size="10.5" font-weight="700" fill="#065F46" text-anchor="middle">3. EJECUCIÓN EN MT5</text>
-  <text x="595" y="58" font-size="9" fill="#047857" text-anchor="middle">Lote 1% + los 5 filtros</text>
+  <rect x="495" y="20" width="200" height="55" rx="6" fill="#F0FDF4" stroke="#50C0A8" stroke-width="2"/>
+  <text x="595" y="42" font-family="'Goldman', sans-serif" font-size="10.5" font-weight="700" fill="#065F46" text-anchor="middle">3. EJECUCIÓN EN MT5</text>
+  <text x="595" y="58" font-size="9" font-weight="600" fill="#047857" text-anchor="middle">Lote 1% + los 5 filtros</text>
 
-  <rect x="45" y="105" width="145" height="28" rx="4" fill="#FEF2F2" stroke="#EF4444" stroke-width="1"/>
-  <text x="117" y="123" font-size="9" font-weight="700" fill="#991B1B" text-anchor="middle">🛑 MANOS QUIETAS</text>
+  <rect x="45" y="105" width="145" height="28" rx="4" fill="#FEF2F2" stroke="#FCA5A5" stroke-width="1"/>
+  <text x="117" y="123" font-family="'Goldman', sans-serif" font-size="9" font-weight="700" fill="#991B1B" text-anchor="middle">🛑 MANOS QUIETAS</text>
 
-  <rect x="280" y="105" width="145" height="28" rx="4" fill="#FEF2F2" stroke="#EF4444" stroke-width="1"/>
-  <text x="352" y="123" font-size="9" font-weight="700" fill="#991B1B" text-anchor="middle">🛑 MANOS QUIETAS</text>
+  <rect x="280" y="105" width="145" height="28" rx="4" fill="#FEF2F2" stroke="#FCA5A5" stroke-width="1"/>
+  <text x="352" y="123" font-family="'Goldman', sans-serif" font-size="9" font-weight="700" fill="#991B1B" text-anchor="middle">🛑 MANOS QUIETAS</text>
 </svg>
 </div>
 
@@ -122,34 +122,34 @@ Todo este método trabaja sobre velas de **1 hora (H1)**. Cada vela cuenta lo qu
 
 <div style="width: 100%; margin: 16px 0; display: flex; justify-content: center;">
 <svg viewBox="0 0 720 220" width="100%" height="220" xmlns="http://www.w3.org/2000/svg" style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:8px; font-family:'Plus Jakarta Sans', sans-serif;">
-  <line x1="220" y1="20" x2="220" y2="60" stroke="#0F172A" stroke-width="2"/>
-  <rect x="175" y="60" width="90" height="100" rx="4" fill="#D1FAE5" stroke="#10B981" stroke-width="2"/>
-  <line x1="220" y1="160" x2="220" y2="200" stroke="#0F172A" stroke-width="2"/>
+  <line x1="220" y1="20" x2="220" y2="60" stroke="#0B1916" stroke-width="2"/>
+  <rect x="175" y="60" width="90" height="100" rx="4" fill="#DCFCE7" stroke="#10B981" stroke-width="2"/>
+  <line x1="220" y1="160" x2="220" y2="200" stroke="#0B1916" stroke-width="2"/>
 
-  <text x="155" y="25" font-size="11" font-weight="700" fill="#0F172A" text-anchor="end">Máximo (High)</text>
+  <text x="155" y="25" font-size="11" font-weight="700" fill="#0B1916" text-anchor="end">Máximo (High)</text>
   <line x1="160" y1="20" x2="210" y2="20" stroke="#94A3B8" stroke-width="1" stroke-dasharray="2,2"/>
 
-  <text x="155" y="65" font-size="11" font-weight="700" fill="#059669" text-anchor="end">Cierre (Close)</text>
+  <text x="155" y="65" font-size="11" font-weight="700" fill="#065F46" text-anchor="end">Cierre (Close)</text>
   <line x1="160" y1="60" x2="175" y2="60" stroke="#059669" stroke-width="1.5"/>
 
-  <text x="155" y="165" font-size="11" font-weight="700" fill="#0F172A" text-anchor="end">Apertura (Open)</text>
+  <text x="155" y="165" font-size="11" font-weight="700" fill="#0B1916" text-anchor="end">Apertura (Open)</text>
   <line x1="160" y1="160" x2="175" y2="160" stroke="#94A3B8" stroke-width="1.5"/>
 
-  <text x="155" y="205" font-size="11" font-weight="700" fill="#0F172A" text-anchor="end">Mínimo (Low)</text>
+  <text x="155" y="205" font-size="11" font-weight="700" fill="#0B1916" text-anchor="end">Mínimo (Low)</text>
   <line x1="160" y1="200" x2="210" y2="200" stroke="#94A3B8" stroke-width="1" stroke-dasharray="2,2"/>
 
   <rect x="310" y="25" width="380" height="170" rx="6" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
-  <text x="330" y="52" font-size="12" font-weight="700" fill="#0F172A">ANATOMÍA CLAVE</text>
+  <text x="330" y="52" font-family="'Goldman', sans-serif" font-size="12" font-weight="700" fill="#0B1916">ANATOMÍA CLAVE</text>
 
-  <circle cx="338" cy="78" r="4" fill="#10B981"/>
+  <circle cx="338" cy="78" r="4" fill="#50C0A8"/>
   <text x="350" y="82" font-size="10.5" font-weight="600" fill="#334155">1. Cuerpo: la batalla neta ganada en esa hora.</text>
 
-  <circle cx="338" cy="110" r="4" fill="#64748B"/>
+  <circle cx="338" cy="110" r="4" fill="#3C8CAA"/>
   <text x="350" y="114" font-size="10.5" font-weight="600" fill="#334155">2. Mechas: precios extremos que fueron rechazados.</text>
 
-  <rect x="325" y="138" width="350" height="42" rx="4" fill="#EFF6FF" stroke="#BFDBFE" stroke-width="1"/>
-  <text x="340" y="156" font-size="10" font-weight="700" fill="#1E40AF">3. EL CIERRE: SE DECIDE AL MINUTO :00</text>
-  <text x="340" y="170" font-size="9" fill="#1E3A8A">Nunca a mitad de hora. La vela tiene que cerrar completa.</text>
+  <rect x="325" y="138" width="350" height="42" rx="4" fill="#F0FDF4" stroke="#50C0A8" stroke-width="1"/>
+  <text x="340" y="156" font-family="'Goldman', sans-serif" font-size="10" font-weight="700" fill="#065F46">3. EL CIERRE: SE DECIDE AL MINUTO :00</text>
+  <text x="340" y="170" font-size="9" font-weight="600" fill="#047857">Nunca a mitad de hora. La vela tiene que cerrar completa.</text>
 </svg>
 </div>
 
@@ -305,53 +305,53 @@ La armas tú, con el clima que publicamos y el gráfico que tienes en pantalla.
 Al terminar de llenar la ficha, tu operación queda en uno de estos cuatro estados. **Los cuatro son resultados legítimos**, y tres de ellos significan no operar:
 
 <div style="width: 100%; margin: 16px 0; display: flex; justify-content: center;">
-<svg viewBox="0 0 720 180" width="100%" height="180" xmlns="http://www.w3.org/2000/svg" style="background:#FFFFFF; font-family:'Plus Jakarta Sans', sans-serif;">
+<svg viewBox="0 0 720 180" width="100%" height="180" xmlns="http://www.w3.org/2000/svg" style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:8px; font-family:'Plus Jakarta Sans', sans-serif;">
   <g transform="translate(10, 10)">
-    <rect width="165" height="160" rx="6" fill="#F0FDF4" stroke="#10B981" stroke-width="1.5"/>
-    <circle cx="28" cy="30" r="12" fill="#10B981"/>
-    <text x="28" y="34" font-size="11" font-weight="700" fill="#FFFFFF" text-anchor="middle">✓</text>
-    <text x="48" y="34" font-size="11" font-weight="700" fill="#065F46">VERDE</text>
+    <rect width="165" height="160" rx="6" fill="#F0FDF4" stroke="#50C0A8" stroke-width="1.5"/>
+    <circle cx="28" cy="30" r="12" fill="#50C0A8"/>
+    <text x="28" y="34" font-size="11" font-weight="700" fill="#04100D" text-anchor="middle">✓</text>
+    <text x="48" y="34" font-family="'Goldman', sans-serif" font-size="11" font-weight="700" fill="#065F46">VERDE</text>
     <text x="14" y="62" font-size="9" font-weight="700" fill="#047857">Los 8 campos listos</text>
     <text x="14" y="80" font-size="8" fill="#334155">Vela H1 cerrada.</text>
     <text x="14" y="93" font-size="8" fill="#334155">Filtros aprobados.</text>
-    <rect x="10" y="115" width="145" height="32" rx="4" fill="#10B981"/>
-    <text x="82" y="135" font-size="8.5" font-weight="700" fill="#FFFFFF" text-anchor="middle">INGRESAR EN MT5</text>
+    <rect x="10" y="115" width="145" height="32" rx="4" fill="#50C0A8"/>
+    <text x="82" y="135" font-family="'Goldman', sans-serif" font-size="8.5" font-weight="700" fill="#04100D" text-anchor="middle">INGRESAR EN MT5</text>
   </g>
 
   <g transform="translate(185, 10)">
-    <rect width="165" height="160" rx="6" fill="#FFFBEB" stroke="#F59E0B" stroke-width="1.5"/>
+    <rect width="165" height="160" rx="6" fill="#FEFCE8" stroke="#F59E0B" stroke-width="1.5"/>
     <circle cx="28" cy="30" r="12" fill="#F59E0B"/>
     <text x="28" y="34" font-size="11" font-weight="700" fill="#FFFFFF" text-anchor="middle">⏳</text>
-    <text x="48" y="34" font-size="11" font-weight="700" fill="#92400E">AMARILLO</text>
+    <text x="48" y="34" font-family="'Goldman', sans-serif" font-size="11" font-weight="700" fill="#92400E">AMARILLO</text>
     <text x="14" y="62" font-size="9" font-weight="700" fill="#B45309">Setup sin gatillo</text>
     <text x="14" y="80" font-size="8" fill="#334155">El clima habilita,</text>
     <text x="14" y="93" font-size="8" fill="#334155">la vela aún no gatilla.</text>
-    <rect x="10" y="115" width="145" height="32" rx="4" fill="#F59E0B"/>
-    <text x="82" y="135" font-size="8.5" font-weight="700" fill="#FFFFFF" text-anchor="middle">ESPERAR EL :00</text>
+    <rect x="10" y="115" width="145" height="32" rx="4" fill="#D97706"/>
+    <text x="82" y="135" font-family="'Goldman', sans-serif" font-size="8.5" font-weight="700" fill="#FFFFFF" text-anchor="middle">ESPERAR EL :00</text>
   </g>
 
   <g transform="translate(360, 10)">
-    <rect width="165" height="160" rx="6" fill="#F8FAFC" stroke="#94A3B8" stroke-width="1.5"/>
+    <rect width="165" height="160" rx="6" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.5"/>
     <circle cx="28" cy="30" r="12" fill="#94A3B8"/>
     <text x="28" y="34" font-size="11" font-weight="700" fill="#FFFFFF" text-anchor="middle">○</text>
-    <text x="48" y="34" font-size="11" font-weight="700" fill="#334155">BLANCO</text>
+    <text x="48" y="34" font-family="'Goldman', sans-serif" font-size="11" font-weight="700" fill="#334155">BLANCO</text>
     <text x="14" y="62" font-size="9" font-weight="700" fill="#475569">Ningún setup aplica</text>
     <text x="14" y="80" font-size="8" fill="#64748B">El clima y la</text>
     <text x="14" y="93" font-size="8" fill="#64748B">estructura no calzan.</text>
     <rect x="10" y="115" width="145" height="32" rx="4" fill="#64748B"/>
-    <text x="82" y="135" font-size="8.5" font-weight="700" fill="#FFFFFF" text-anchor="middle">CERO ÓRDENES</text>
+    <text x="82" y="135" font-family="'Goldman', sans-serif" font-size="8.5" font-weight="700" fill="#FFFFFF" text-anchor="middle">CERO ÓRDENES</text>
   </g>
 
   <g transform="translate(535, 10)">
     <rect width="175" height="160" rx="6" fill="#FEF2F2" stroke="#E84040" stroke-width="1.5"/>
     <circle cx="28" cy="30" r="12" fill="#E84040"/>
     <text x="28" y="34" font-size="11" font-weight="700" fill="#FFFFFF" text-anchor="middle">✕</text>
-    <text x="48" y="34" font-size="11" font-weight="700" fill="#991B1B">ROJO</text>
+    <text x="48" y="34" font-family="'Goldman', sans-serif" font-size="11" font-weight="700" fill="#991B1B">ROJO</text>
     <text x="14" y="62" font-size="9" font-weight="700" fill="#B91C1C">Un filtro bloquea</text>
     <text x="14" y="80" font-size="8" fill="#334155">Spread, horario, noticia,</text>
     <text x="14" y="93" font-size="8" fill="#334155">R:R o confirmación.</text>
-    <rect x="10" y="115" width="155" height="32" rx="4" fill="#E84040"/>
-    <text x="87" y="135" font-size="8.5" font-weight="700" fill="#FFFFFF" text-anchor="middle">PROHIBIDO OPERAR</text>
+    <rect x="10" y="115" width="155" height="32" rx="4" fill="#DC2626"/>
+    <text x="87" y="135" font-family="'Goldman', sans-serif" font-size="8.5" font-weight="700" fill="#FFFFFF" text-anchor="middle">PROHIBIDO OPERAR</text>
   </g>
 </svg>
 </div>
@@ -421,29 +421,29 @@ No eliges el setup que más te gusta. Recorres este orden y te quedas con el pri
 
 <div style="width: 100%; margin: 16px 0; display: flex; justify-content: center;">
 <svg viewBox="0 0 720 180" width="100%" height="180" xmlns="http://www.w3.org/2000/svg" style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:8px; font-family:'Plus Jakarta Sans', sans-serif;">
-  <rect x="20" y="15" width="220" height="150" rx="4" fill="#F8FAFC" stroke="#E2E8F0" stroke-dasharray="3,3"/>
-  <text x="130" y="35" font-size="9.5" font-weight="700" fill="#64748B" text-anchor="middle">50 HORAS COMPRIMIDAS</text>
+  <rect x="20" y="15" width="220" height="150" rx="4" fill="#F8FAFC" stroke="#CBD5E1" stroke-dasharray="3,3"/>
+  <text x="130" y="35" font-family="'Goldman', sans-serif" font-size="9.5" font-weight="700" fill="#64748B" text-anchor="middle">50 HORAS COMPRIMIDAS</text>
   <line x1="30" y1="55" x2="230" y2="55" stroke="#CBD5E1" stroke-width="1.5"/>
   <line x1="30" y1="135" x2="230" y2="135" stroke="#CBD5E1" stroke-width="1.5"/>
-  <text x="130" y="98" font-size="9" fill="#94A3B8" text-anchor="middle">Canal Donchian 50</text>
-  <text x="130" y="112" font-size="8.5" font-weight="700" fill="#059669" text-anchor="middle">Ancho 2,1 × ATR (máx 2,5) ✓</text>
+  <text x="130" y="98" font-size="9" font-weight="600" fill="#64748B" text-anchor="middle">Canal Donchian 50</text>
+  <text x="130" y="112" font-family="'Goldman', sans-serif" font-size="8.5" font-weight="700" fill="#065F46" text-anchor="middle">Ancho 2,1 × ATR (máx 2,5) ✓</text>
 
-  <line x1="310" y1="20" x2="310" y2="40" stroke="#0F172A" stroke-width="2"/>
-  <rect x="285" y="40" width="50" height="90" rx="3" fill="#D1FAE5" stroke="#10B981" stroke-width="2"/>
-  <line x1="310" y1="130" x2="310" y2="160" stroke="#0F172A" stroke-width="2"/>
+  <line x1="310" y1="20" x2="310" y2="40" stroke="#0B1916" stroke-width="2"/>
+  <rect x="285" y="40" width="50" height="90" rx="3" fill="#DCFCE7" stroke="#10B981" stroke-width="2"/>
+  <line x1="310" y1="130" x2="310" y2="160" stroke="#0B1916" stroke-width="2"/>
 
-  <line x1="310" y1="20" x2="480" y2="20" stroke="#059669" stroke-width="1.5" stroke-dasharray="3,3"/>
-  <rect x="483" y="8" width="230" height="26" rx="4" fill="#ECFDF5" stroke="#10B981" stroke-width="1"/>
-  <text x="493" y="25" font-size="9" font-weight="700" fill="#065F46">BUY_STOP en el máximo · vence 2 velas</text>
+  <line x1="310" y1="20" x2="480" y2="20" stroke="#50C0A8" stroke-width="1.5" stroke-dasharray="3,3"/>
+  <rect x="483" y="8" width="230" height="26" rx="4" fill="#F0FDF4" stroke="#50C0A8" stroke-width="1"/>
+  <text x="493" y="25" font-family="'Goldman', sans-serif" font-size="9" font-weight="700" fill="#065F46">BUY_STOP en el máximo · vence 2 velas</text>
 
-  <text x="345" y="58" font-size="9" font-weight="700" fill="#059669">Cierra fuera del canal</text>
+  <text x="345" y="58" font-size="9" font-weight="700" fill="#065F46">Cierra fuera del canal</text>
   <text x="345" y="74" font-size="8.5" font-weight="700" fill="#047857">Cuerpo 71 % (mín 50 %)</text>
   <text x="345" y="90" font-size="8.5" font-weight="700" fill="#047857">Rango 1,3 × ATR (mín 1,0)</text>
   <text x="345" y="106" font-size="8.5" font-weight="700" fill="#047857">RSI 62 (máx 75)</text>
 
-  <line x1="310" y1="160" x2="480" y2="160" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="3,3"/>
-  <rect x="483" y="148" width="230" height="26" rx="4" fill="#FEF2F2" stroke="#EF4444" stroke-width="1"/>
-  <text x="493" y="165" font-size="9" font-weight="700" fill="#991B1B">STOP: ver Módulo 6, no el mínimo</text>
+  <line x1="310" y1="160" x2="480" y2="160" stroke="#E84040" stroke-width="1.5" stroke-dasharray="3,3"/>
+  <rect x="483" y="148" width="230" height="26" rx="4" fill="#FEF2F2" stroke="#FCA5A5" stroke-width="1"/>
+  <text x="493" y="165" font-family="'Goldman', sans-serif" font-size="9" font-weight="700" fill="#991B1B">STOP: ver Módulo 6, no el mínimo</text>
 </svg>
 </div>
 
@@ -460,24 +460,24 @@ No eliges el setup que más te gusta. Recorres este orden y te quedas con el pri
 
 <div style="width: 100%; margin: 16px 0; display: flex; justify-content: center;">
 <svg viewBox="0 0 720 180" width="100%" height="180" xmlns="http://www.w3.org/2000/svg" style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:8px; font-family:'Plus Jakarta Sans', sans-serif;">
-  <path d="M 40 130 Q 250 110 660 70" stroke="#0284C7" stroke-width="2.5" fill="none"/>
-  <text x="672" y="66" font-size="9.5" font-weight="700" fill="#0284C7" text-anchor="start">EMA 20</text>
-  <path d="M 40 150 Q 250 133 660 96" stroke="#F59E0B" stroke-width="2" fill="none"/>
-  <text x="672" y="99" font-size="9.5" font-weight="700" fill="#D97706" text-anchor="start">EMA 50</text>
-  <path d="M 40 168 Q 250 154 660 122" stroke="#8B5CF6" stroke-width="2" fill="none"/>
-  <text x="672" y="125" font-size="9.5" font-weight="700" fill="#7C3AED" text-anchor="start">EMA 100</text>
-  <text x="55" y="30" font-size="9.5" font-weight="700" fill="#047857">Las tres alineadas: 20 sobre 50 sobre 100</text>
+  <path d="M 40 130 Q 250 110 660 70" stroke="#3C8CAA" stroke-width="2.5" fill="none"/>
+  <text x="672" y="66" font-family="'Goldman', sans-serif" font-size="9.5" font-weight="700" fill="#3C8CAA" text-anchor="start">EMA 20</text>
+  <path d="M 40 150 Q 250 133 660 96" stroke="#E8B44C" stroke-width="2" fill="none"/>
+  <text x="672" y="99" font-family="'Goldman', sans-serif" font-size="9.5" font-weight="700" fill="#854D0E" text-anchor="start">EMA 50</text>
+  <path d="M 40 168 Q 250 154 660 122" stroke="#C158D6" stroke-width="2" fill="none"/>
+  <text x="672" y="125" font-family="'Goldman', sans-serif" font-size="9.5" font-weight="700" fill="#7E22CE" text-anchor="start">EMA 100</text>
+  <text x="55" y="30" font-family="'Goldman', sans-serif" font-size="9.5" font-weight="700" fill="#065F46">Las tres alineadas: 20 sobre 50 sobre 100</text>
 
-  <line x1="360" y1="30" x2="360" y2="45" stroke="#0F172A" stroke-width="2"/>
-  <rect x="335" y="45" width="50" height="40" rx="3" fill="#D1FAE5" stroke="#10B981" stroke-width="2"/>
-  <line x1="360" y1="85" x2="360" y2="135" stroke="#0F172A" stroke-width="2"/>
+  <line x1="360" y1="30" x2="360" y2="45" stroke="#0B1916" stroke-width="2"/>
+  <rect x="335" y="45" width="50" height="40" rx="3" fill="#DCFCE7" stroke="#10B981" stroke-width="2"/>
+  <line x1="360" y1="85" x2="360" y2="135" stroke="#0B1916" stroke-width="2"/>
 
   <circle cx="360" cy="112" r="5" fill="#E84040"/>
   <text x="378" y="122" font-size="9.5" font-weight="600" fill="#334155">Perfora la EMA 20 y cierra arriba</text>
 
-  <line x1="360" y1="30" x2="500" y2="30" stroke="#059669" stroke-width="1.5" stroke-dasharray="3,3"/>
-  <rect x="503" y="18" width="185" height="26" rx="4" fill="#ECFDF5" stroke="#10B981" stroke-width="1"/>
-  <text x="513" y="35" font-size="9.5" font-weight="700" fill="#065F46">BUY_STOP en el máximo</text>
+  <line x1="360" y1="30" x2="500" y2="30" stroke="#50C0A8" stroke-width="1.5" stroke-dasharray="3,3"/>
+  <rect x="503" y="18" width="185" height="26" rx="4" fill="#F0FDF4" stroke="#50C0A8" stroke-width="1"/>
+  <text x="513" y="35" font-family="'Goldman', sans-serif" font-size="9.5" font-weight="700" fill="#065F46">BUY_STOP en el máximo</text>
 </svg>
 </div>
 
@@ -495,26 +495,26 @@ No eliges el setup que más te gusta. Recorres este orden y te quedas con el pri
 
 <div style="width: 100%; margin: 16px 0; display: flex; justify-content: center;">
 <svg viewBox="0 0 720 180" width="100%" height="180" xmlns="http://www.w3.org/2000/svg" style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:8px; font-family:'Plus Jakarta Sans', sans-serif;">
-  <line x1="40" y1="95" x2="600" y2="95" stroke="#F59E0B" stroke-width="2" stroke-dasharray="4,4"/>
-  <text x="608" y="99" font-size="9" font-weight="700" fill="#D97706" text-anchor="start">BANDA INFERIOR</text>
+  <line x1="40" y1="95" x2="600" y2="95" stroke="#E8783C" stroke-width="2" stroke-dasharray="4,4"/>
+  <text x="608" y="99" font-family="'Goldman', sans-serif" font-size="9" font-weight="700" fill="#9A3412" text-anchor="start">BANDA INFERIOR</text>
 
-  <line x1="200" y1="75" x2="200" y2="90" stroke="#0F172A" stroke-width="1.5"/>
-  <rect x="185" y="90" width="30" height="35" rx="2" fill="#FEE2E2" stroke="#EF4444" stroke-width="1.5"/>
-  <line x1="200" y1="125" x2="200" y2="140" stroke="#0F172A" stroke-width="1.5"/>
-  <text x="200" y="160" font-size="8.5" fill="#64748B" text-anchor="middle">1. Cierra afuera</text>
+  <line x1="200" y1="75" x2="200" y2="90" stroke="#0B1916" stroke-width="1.5"/>
+  <rect x="185" y="90" width="30" height="35" rx="2" fill="#FEF2F2" stroke="#E84040" stroke-width="1.5"/>
+  <line x1="200" y1="125" x2="200" y2="140" stroke="#0B1916" stroke-width="1.5"/>
+  <text x="200" y="160" font-size="8.5" font-weight="600" fill="#64748B" text-anchor="middle">1. Cierra afuera</text>
 
-  <line x1="300" y1="45" x2="300" y2="60" stroke="#0F172A" stroke-width="1.5"/>
-  <rect x="285" y="60" width="30" height="45" rx="2" fill="#D1FAE5" stroke="#10B981" stroke-width="1.5"/>
-  <line x1="300" y1="105" x2="300" y2="125" stroke="#0F172A" stroke-width="1.5"/>
-  <text x="300" y="160" font-size="8.5" font-weight="700" fill="#059669" text-anchor="middle">2. Reingresa (gatillo)</text>
+  <line x1="300" y1="45" x2="300" y2="60" stroke="#0B1916" stroke-width="1.5"/>
+  <rect x="285" y="60" width="30" height="45" rx="2" fill="#DCFCE7" stroke="#10B981" stroke-width="1.5"/>
+  <line x1="300" y1="105" x2="300" y2="125" stroke="#0B1916" stroke-width="1.5"/>
+  <text x="300" y="160" font-family="'Goldman', sans-serif" font-size="8.5" font-weight="700" fill="#065F46" text-anchor="middle">2. Reingresa (gatillo)</text>
 
-  <line x1="40" y1="32" x2="600" y2="32" stroke="#10B981" stroke-width="2"/>
-  <text x="608" y="36" font-size="9" font-weight="700" fill="#059669" text-anchor="start">MEDIA CENTRAL</text>
+  <line x1="40" y1="32" x2="600" y2="32" stroke="#50C0A8" stroke-width="2"/>
+  <text x="608" y="36" font-family="'Goldman', sans-serif" font-size="9" font-weight="700" fill="#065F46" text-anchor="start">MEDIA CENTRAL</text>
   <text x="608" y="47" font-size="8" font-weight="700" fill="#047857" text-anchor="start">objetivo obligatorio</text>
 
   <rect x="360" y="108" width="330" height="42" rx="4" fill="#F0FDF4" stroke="#50C0A8" stroke-width="1"/>
-  <text x="372" y="125" font-size="9" font-weight="700" fill="#065F46">BUY_LIMIT en el cierre · RSI bajo 35</text>
-  <text x="372" y="140" font-size="8.5" fill="#047857">Exige clima Calma y ADX bajo 20, o no aplica</text>
+  <text x="372" y="125" font-family="'Goldman', sans-serif" font-size="9" font-weight="700" fill="#065F46">BUY_LIMIT en el cierre · RSI bajo 35</text>
+  <text x="372" y="140" font-size="8.5" font-weight="600" fill="#047857">Exige clima Calma y ADX bajo 20, o no aplica</text>
 </svg>
 </div>
 
@@ -735,20 +735,20 @@ Cuando se publica un dato macro grande, el spread se abre y el precio salta. Una
 <svg viewBox="0 0 720 120" width="100%" height="120" xmlns="http://www.w3.org/2000/svg" style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:8px; font-family:'Plus Jakarta Sans', sans-serif;">
   <line x1="40" y1="60" x2="680" y2="60" stroke="#CBD5E1" stroke-width="3"/>
 
-  <circle cx="100" cy="60" r="10" fill="#10B981"/>
-  <text x="100" y="40" font-size="9.5" font-weight="700" fill="#065F46" text-anchor="middle">SESIÓN NORMAL</text>
+  <circle cx="100" cy="60" r="10" fill="#50C0A8"/>
+  <text x="100" y="40" font-family="'Goldman', sans-serif" font-size="9.5" font-weight="700" fill="#065F46" text-anchor="middle">SESIÓN NORMAL</text>
 
-  <rect x="215" y="30" width="125" height="60" rx="4" fill="#FEF2F2" stroke="#EF4444" stroke-width="1.5"/>
-  <text x="277" y="52" font-size="9" font-weight="700" fill="#991B1B" text-anchor="middle">ANTES DEL DATO</text>
-  <text x="277" y="68" font-size="8" fill="#B91C1C" text-anchor="middle">Cancelar pendientes</text>
+  <rect x="215" y="30" width="125" height="60" rx="4" fill="#FEF2F2" stroke="#FCA5A5" stroke-width="1.5"/>
+  <text x="277" y="52" font-family="'Goldman', sans-serif" font-size="9" font-weight="700" fill="#991B1B" text-anchor="middle">ANTES DEL DATO</text>
+  <text x="277" y="68" font-size="8" font-weight="600" fill="#B91C1C" text-anchor="middle">Cancelar pendientes</text>
 
   <circle cx="400" cy="60" r="16" fill="#E84040"/>
-  <text x="400" y="66" font-size="13" fill="#FFFFFF" text-anchor="middle">!</text>
-  <text x="400" y="22" font-size="9.5" font-weight="700" fill="#E84040" text-anchor="middle">DATO MACRO</text>
+  <text x="400" y="66" font-family="'Goldman', sans-serif" font-size="13" font-weight="700" fill="#FFFFFF" text-anchor="middle">!</text>
+  <text x="400" y="22" font-family="'Goldman', sans-serif" font-size="9.5" font-weight="700" fill="#991B1B" text-anchor="middle">DATO MACRO</text>
 
-  <rect x="460" y="30" width="140" height="60" rx="4" fill="#FEF2F2" stroke="#EF4444" stroke-width="1.5"/>
-  <text x="530" y="52" font-size="9" font-weight="700" fill="#991B1B" text-anchor="middle">DESPUÉS DEL DATO</text>
-  <text x="530" y="68" font-size="8" fill="#B91C1C" text-anchor="middle">Esperar vela cerrada</text>
+  <rect x="460" y="30" width="140" height="60" rx="4" fill="#FEF2F2" stroke="#FCA5A5" stroke-width="1.5"/>
+  <text x="530" y="52" font-family="'Goldman', sans-serif" font-size="9" font-weight="700" fill="#991B1B" text-anchor="middle">DESPUÉS DEL DATO</text>
+  <text x="530" y="68" font-size="8" font-weight="600" fill="#B91C1C" text-anchor="middle">Esperar vela cerrada</text>
 </svg>
 </div>
 
@@ -889,32 +889,32 @@ Recorre esto **completo** antes de cada orden. Si algo falla, no hay operación.
 
 <div style="width: 100%; margin: 16px 0; display: flex; justify-content: center;">
 <svg viewBox="0 0 720 250" width="100%" height="250" xmlns="http://www.w3.org/2000/svg" style="background:#F8FAFC; border:1.5px solid #50C0A8; border-radius:8px; font-family:'Plus Jakarta Sans', sans-serif;">
-  <rect x="0" y="0" width="720" height="32" fill="#064E3B"/>
-  <text x="20" y="21" font-size="11" font-weight="700" fill="#FFFFFF">CHECKLIST ANTES DEL CLIC</text>
+  <rect x="0" y="0" width="720" height="32" fill="#0B1916"/>
+  <text x="20" y="21" font-family="'Goldman', sans-serif" font-size="11" font-weight="700" fill="#FFFFFF">CHECKLIST ANTES DEL CLIC</text>
 
-  <circle cx="35" cy="58" r="10" fill="#10B981"/>
-  <text x="35" y="62" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">1</text>
-  <text x="55" y="62" font-size="10" font-weight="700" fill="#0F172A">¿El clima está confirmado por 2 días y la confianza sobre 65 %?</text>
+  <circle cx="35" cy="58" r="10" fill="#50C0A8"/>
+  <text x="35" y="62" font-family="'Goldman', sans-serif" font-size="10" font-weight="700" fill="#04100D" text-anchor="middle">1</text>
+  <text x="55" y="62" font-size="10" font-weight="600" fill="#0B1916">¿El clima está confirmado por 2 días y la confianza sobre 65 %?</text>
 
-  <circle cx="35" cy="90" r="10" fill="#10B981"/>
-  <text x="35" y="94" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">2</text>
-  <text x="55" y="94" font-size="10" font-weight="700" fill="#0F172A">¿La dirección que quiero tomar es la que el clima permite? (M10)</text>
+  <circle cx="35" cy="90" r="10" fill="#50C0A8"/>
+  <text x="35" y="94" font-family="'Goldman', sans-serif" font-size="10" font-weight="700" fill="#04100D" text-anchor="middle">2</text>
+  <text x="55" y="94" font-size="10" font-weight="600" fill="#0B1916">¿La dirección que quiero tomar es la que el clima permite? (M10)</text>
 
-  <circle cx="35" cy="122" r="10" fill="#10B981"/>
-  <text x="35" y="126" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">3</text>
-  <text x="55" y="126" font-size="10" font-weight="700" fill="#0F172A">¿El setup calificó sobre una vela H1 CERRADA, con todas sus condiciones?</text>
+  <circle cx="35" cy="122" r="10" fill="#50C0A8"/>
+  <text x="35" y="126" font-family="'Goldman', sans-serif" font-size="10" font-weight="700" fill="#04100D" text-anchor="middle">3</text>
+  <text x="55" y="126" font-size="10" font-weight="600" fill="#0B1916">¿El setup calificó sobre una vela H1 CERRADA, con todas sus condiciones?</text>
 
-  <circle cx="35" cy="154" r="10" fill="#10B981"/>
-  <text x="35" y="158" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">4</text>
-  <text x="55" y="158" font-size="10" font-weight="700" fill="#0F172A">¿El stop sale de las 20 velas o de 1,5 × ATR, y el R:R llega a 1,0?</text>
+  <circle cx="35" cy="154" r="10" fill="#50C0A8"/>
+  <text x="35" y="158" font-family="'Goldman', sans-serif" font-size="10" font-weight="700" fill="#04100D" text-anchor="middle">4</text>
+  <text x="55" y="158" font-size="10" font-weight="600" fill="#0B1916">¿El stop sale de las 20 velas o de 1,5 × ATR, y el R:R llega a 1,0?</text>
 
-  <circle cx="35" cy="186" r="10" fill="#10B981"/>
-  <text x="35" y="190" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">5</text>
-  <text x="55" y="190" font-size="10" font-weight="700" fill="#0F172A">¿El lote es del 1 %, redondeado hacia abajo, y en la misma unidad?</text>
+  <circle cx="35" cy="186" r="10" fill="#50C0A8"/>
+  <text x="35" y="190" font-family="'Goldman', sans-serif" font-size="10" font-weight="700" fill="#04100D" text-anchor="middle">5</text>
+  <text x="55" y="190" font-size="10" font-weight="600" fill="#0B1916">¿El lote es del 1 %, redondeado hacia abajo, y en la misma unidad?</text>
 
-  <circle cx="35" cy="218" r="10" fill="#10B981"/>
-  <text x="35" y="222" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">6</text>
-  <text x="55" y="222" font-size="10" font-weight="700" fill="#0F172A">¿Spread bajo el tope del activo, horario válido, sin blackout, con confirmación?</text>
+  <circle cx="35" cy="218" r="10" fill="#50C0A8"/>
+  <text x="35" y="222" font-family="'Goldman', sans-serif" font-size="10" font-weight="700" fill="#04100D" text-anchor="middle">6</text>
+  <text x="55" y="222" font-size="10" font-weight="600" fill="#0B1916">¿Spread bajo el tope del activo, horario válido, sin blackout, con confirmación?</text>
 </svg>
 </div>
 
