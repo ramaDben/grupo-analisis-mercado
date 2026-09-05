@@ -243,7 +243,7 @@ cadencia, perfil de Chromium y guardrails de texto.
 | Campo editorial vacío | sí | sí |
 | Cupo diario (40) y cadencia (45 s) | sí | sí |
 | Un solo dueño del perfil de Chromium | sí | sí |
-| Ventana horaria y días, en el ancla que corresponda (§5.3) | no | sí |
+| Ventana horaria y días, en el ancla que corresponda (§5.4) | no | sí |
 | Canal, momento y tipo autorizados | no | sí |
 | Sub-cupo autónomo | no | sí |
 | Interruptor de corte | no | sí |
@@ -259,7 +259,7 @@ cadencia, perfil de Chromium y guardrails de texto.
     "ancla_por_defecto": "America/New_York",
     "por_ancla": {
       "America/New_York": { "desde": "08:00", "hasta": "18:00" },
-      "America/Santiago": { "desde": "08:00", "hasta": "18:00" }
+      "America/Santiago": { "desde": "08:00", "hasta": "17:30" }
     },
     "anclaje_santiago": {
       "tickers": ["USDCLP"],
@@ -269,13 +269,17 @@ cadencia, perfil de Chromium y guardrails de texto.
   "dias": ["lun", "mar", "mie", "jue", "vie"],
   "canales_autorizados": ["banco_de_pruebas"],
   "momentos_autorizados": ["premercado_fx", "cripto", "apertura_indices"],
-  "tipos_autorizados": ["niveles", "contexto_macro"],
+  "tipos_autorizados": {
+    "generado": ["contexto_macro", "suplemento_canal"],
+    "diferido": ["niveles"]
+  },
   "cupo_autonomo": 6,
   "requiere_guardrails_verdes": true
 }
 ```
 
-Cuatro decisiones, con su razón (el anclaje de la ventana va aparte, en §5.3):
+Cuatro decisiones, con su razón (qué se puede despachar solo va en §5.3 y el anclaje de la
+ventana en §5.4):
 
 1. **Todo es lista blanca, nunca lista negra.** Un tipo de pieza nuevo queda denegado por
    defecto hasta que alguien lo autorice explícitamente. Con lista negra, cada pieza nueva
@@ -285,12 +289,74 @@ Cuatro decisiones, con su razón (el anclaje de la ventana va aparte, en §5.3):
    contra sus términos de servicio y el número es el del negocio.
 3. **Las señales y el informe en PDF quedan fuera.** No están en `tipos_autorizados` y no
    deben entrar. Son las piezas donde un error cuesta plata del cliente, y el PDF ya se
-   duplicó una vez.
+   duplicó una vez. Qué sí entra, y por qué el resto no puede, está en §5.3.
 4. **Arranca solo en `GI · Banco de Pruebas`**, que ya existe desde el 2026-09-03 justamente
    para medir contra el DOM sin tocar un canal de clientes. Los canales reales entran cuando
    la bitácora muestre una semana limpia.
 
-### 5.3 El anclaje de la ventana: Nueva York, salvo lo chileno
+### 5.3 Qué se puede despachar solo, y qué la arquitectura no permite
+
+**El primer borrador de este spec proponía `["niveles", "contexto_macro"]` y estaba mal en la
+mitad que más importa.** Verificado en el código el 2026-09-05:
+
+- `pipeline_carrusel.CAMPOS_EDITORIALES` es `("titular", "parrafo")`, y `exigir_texto_editorial`
+  **detiene el render** si alguno está vacío.
+- `reloj_gi._correr_preparar` corre exactamente `pipeline_carrusel.py --preparar --grupo <canal>`
+  y nada más, dejando esos campos en `_pendiente_editorial`.
+
+Es decir: **el reloj no puede rendir una pieza de niveles, y lo que no se puede rendir no se
+puede despachar.** No es una restricción de política, es la arquitectura. Cualquier promesa de
+"el sistema publica niveles solo" sería falsa hasta que un modelo escriba ese texto.
+
+En cambio hay dos tipos que **no tienen ningún campo editorial** y por tanto sí se generan
+enteros sin nadie:
+
+- **`contexto_macro`**: `contexto_macro_grupos.py` lleva los titulares escritos en el código en
+  tres variantes (`titular_sube` / `titular_baja` / `titular_plano`) y elige según la dirección
+  del dato. Las cifras salen del terminal.
+- **`suplemento_canal`**: se arma de los motivos de exclusión que el escáner ya escribió, con
+  su concepto elegido por el motivo. Es "solo texto, por fase" por diseño.
+
+#### De ahí salen dos modos, y conviene nombrarlos distinto
+
+| Modo | Qué es | Quién escribe el texto |
+|---|---|---|
+| **Generado** | El reloj lo produce y lo despacha. Nadie miró. | El código |
+| **Diferido** | Una sesión escribió el texto y dejó la tanda aprobada; el reloj la despacha al llegar el momento. | Una sesión, antes |
+
+El modo diferido es el que da la capacidad que de verdad se pidió: **escribís a las 08:00 y
+sale a las 10:00 sin que estés**. El humano sigue en el circuito, solo que desacoplado en el
+tiempo. Y cuesta casi nada, porque el pipeline ya tiene todo salvo la marca.
+
+Esa marca es `_aprobada_para_despacho`, que una sesión escribe en el payload junto con la
+**huella del texto aprobado**. `puede_despachar` exige las dos cosas y **vuelve a calcular la
+huella**: si el texto cambió después de la aprobación, la pieza no sale. Sin eso, "aprobado"
+sería una casilla y no una afirmación sobre un contenido concreto.
+
+La regla que ordena todo:
+
+> Una pieza **con** campos editoriales solo se despacha en modo diferido, con marca y huella
+> válidas. Una pieza **sin** campos editoriales solo se despacha en modo generado, y solo si su
+> tipo está en la lista. No hay tercera vía.
+
+#### El sub-cupo, derivado en vez de inventado
+
+**`cupo_autonomo: 6`.** El propósito del sub-cupo no es modular volumen (de eso ya se encargan
+los momentos) sino **acotar el radio de daño** si algo entra en bucle. Con la configuración
+inicial —1 canal × 3 momentos, más un suplemento eventual— el tráfico legítimo máximo es 4 al
+día. Seis deja margen sin que un bucle pueda gastar el cupo del director.
+
+**Y hay una consecuencia que conviene saber antes de expandir:** con los 7 canales autorizados,
+7 × 3 momentos son **21 envíos autónomos al día**, más de la mitad del tope diario de 40. El
+día de mayor tráfico medido fueron 22 envíos totales. Así que habilitar todos los canales a la
+vez no es una decisión de configuración, es un cambio de escala del uso de la cuenta.
+
+Por eso el sub-cupo **se recalcula cada vez que se agrega un canal**, y hay un test que falla
+si queda por debajo del tráfico legítimo de la configuración vigente: autorizar un canal y
+descubrir en producción que el cupo lo estrangula es exactamente la clase de falla silenciosa
+que este diseño combate.
+
+### 5.4 El anclaje de la ventana: Nueva York, salvo lo chileno
 
 **Decisión del director, 2026-09-05.** La ventana se ancla a **Nueva York**, excepto para el
 USD/CLP y los datos del Banco Central de Chile, que se anclan a **Santiago**.
@@ -343,13 +409,35 @@ el oro. Eso es correcto y es el punto de la decisión, pero visto en vivo se lee
 así que el motivo de la denegación lo dice con todas sus letras: `fuera_de_ventana`, nombrando
 el ancla que se aplicó y su horario local.
 
-#### Una cosa que hay que confirmar
+#### La ventana de Santiago cierra 17:30, y ese número no es simétrico por casualidad
 
-Fijé la ventana de Santiago en 08:00–18:00 por simetría con la de Nueva York, pero **es una
-asunción mía, no una medición**. Las decisiones de tasas del BCCh se publican al final de la
-tarde de Chile, y si caen al filo de las 18:00 la pieza de reacción quedaría fuera de la
-ventana justo el día que más importa. Antes de habilitar la autonomía para el USD/CLP hay que
-cruzar el horario real de la RPM contra `obtener_calendario_macro` y ajustar `hasta`.
+El borrador tenía 18:00 por simetría con Nueva York. **Verificado el 2026-09-05 contra el
+Banco Central de Chile: el comunicado de la RPM se publica a las 18:00 hora de Chile**, y la
+próxima reunión es el **martes 8 de septiembre de 2026**. La ventana simétrica cerraba exacto
+en el instante del dato más importante del trimestre para el USD/CLP.
+
+`screener_gi._BLACKOUTS` aplica a la RPM una ventana de **−15 / +45 minutos**, así que el
+blackout corre de **17:45 a 18:45** y la pieza de reacción no podría salir antes de las 18:45.
+
+Había dos salidas y se toma la conservadora:
+
+| Opción | Efecto |
+|---|---|
+| `hasta: "19:30"` | El sistema publica solo la reacción a la RPM |
+| **`hasta: "17:30"`** | **La ventana cierra antes del blackout; la RPM la publica el director** |
+
+**Se elige 17:30.** La RPM es el evento chileno de mayor consecuencia del trimestre y no puede
+ser el debut autónomo del sistema. Ocho veces al año, esa pieza la escribe y la manda una
+persona.
+
+Y como "17:30 cae antes de 17:45" es una coincidencia que un futuro ajuste podría romper sin
+darse cuenta, **queda fijado por un test**:
+`test_la_ventana_de_santiago_cierra_antes_del_blackout_de_la_rpm`. Si alguien extiende la
+ventana, el test le dice que está autorizando la RPM en automático. Eso pasa a ser una
+decisión, y no un descuido.
+
+El resto de la agenda chilena no se ve afectada: el Imacec sale **08:30** hora de Chile, según
+el propio calendario del 2026-09-01, bien dentro de la ventana.
 
 #### El día se evalúa en la misma zona que la hora
 
@@ -357,7 +445,7 @@ cruzar el horario real de la RPM contra `obtener_calendario_macro` y ajustar `ha
 dos anclas y una sola zona para el día, un viernes por la tarde podría contarse como sábado
 para una mitad del sistema y no para la otra.
 
-### 5.4 El interruptor de corte
+### 5.5 El interruptor de corte
 
 `data/.autonomia_off`. Si el archivo existe, todo despacho con `origen="autonomo"` queda
 denegado. El director no se ve afectado.
@@ -432,7 +520,7 @@ trabajo todavía está sin commitear.
 
 ## 8. Pruebas
 
-Cada módulo de `guardrails/` lleva su test unitario. Además, **siete tests de contrato**, que
+Cada módulo de `guardrails/` lleva su test unitario. Además, **diez tests de contrato**, que
 son los que impiden que el sistema se desarme con el tiempo:
 
 | Test | Qué impide |
@@ -444,12 +532,19 @@ son los que impiden que el sistema se desarme con el tiempo:
 | `test_matchers_cubren_los_dos_shells` | un guardia que solo mira `Bash` y deja pasar PowerShell |
 | `test_ancla_usa_el_vocabulario_del_escaner` | escribir "Chile" donde el calendario dice `chile`, y dejar el anclaje inerte |
 | `test_las_dos_ventanas_en_los_tres_desfases` | que el USD/CLP se juzgue con el reloj de Nueva York |
+| `test_la_ventana_de_santiago_cierra_antes_del_blackout_de_la_rpm` | autorizar la RPM en automático sin darse cuenta |
+| `test_todo_tipo_generado_no_tiene_campos_editoriales` | prometer despacho autónomo de una pieza que el reloj no puede rendir |
+| `test_el_subcupo_alcanza_para_los_canales_autorizados` | autorizar un canal y descubrir en producción que el cupo lo estrangula |
 
-Los dos últimos nacen del anclaje doble de §5.3. `test_las_dos_ventanas_en_los_tres_desfases`
-recorre las tres configuraciones del año (NY+0, NY+1, NY+2) y verifica las franjas asimétricas
-de esa tabla: es el mismo patrón que ya usa el test de momentos que no se pueden pisar, y por
-la misma razón, porque un error de anclaje **solo aparece medio año después**, cuando ya nadie
-recuerda que se tocó esto.
+**`test_las_dos_ventanas_en_los_tres_desfases`** recorre las tres configuraciones del año
+(NY+0, NY+1, NY+2) y verifica las franjas asimétricas de la tabla de §5.4. Es el mismo patrón
+que ya usa el test de momentos que no se pueden pisar, y por la misma razón: un error de
+anclaje **solo aparece medio año después**, cuando ya nadie recuerda que se tocó esto.
+
+**`test_todo_tipo_generado_no_tiene_campos_editoriales`** es el que habría atajado el error de
+la primera versión de este spec, que prometía despacho autónomo de las piezas de niveles sin
+notar que `exigir_texto_editorial` las detiene. Compara `tipos_autorizados.generado` contra los
+campos que cada tipo declara, y falla si alguno pide texto que nadie va a escribir.
 
 `test_hooks_registrados_existen` merece una nota: un hook mal referenciado **no rompe nada
 visiblemente**. La sesión abre igual y el guardia simplemente no corre. Es el mismo modo de
@@ -464,9 +559,15 @@ Una rama y un PR por fase, en orden de retorno.
 | **0** | Commitear el hook de ingesta pendiente | Está terminado y documentado, y bloquea el resto |
 | **1** | `guardrails/` + H5, H6, H8 | Máximo retorno: cubre las fallas que ya llegaron al cliente |
 | **2** | H3, H4 | Barato, y elimina el error de nombres de raíz |
-| **3** | `despacho.py` + H7 + política + tests reescritos + `CLAUDE.md` | El corazón del encargo; depende de la fase 1 |
+| **3a** | `despacho.py` + H7 + política + tests reescritos + `CLAUDE.md` | El gate. Depende de la fase 1 |
+| **3b** | Despacho autónomo **generado** (`contexto_macro`, `suplemento_canal`) en el banco de pruebas | Lo único que el reloj puede producir entero hoy |
+| **3c** | Despacho autónomo **diferido**: marca `_aprobada_para_despacho` y su huella | Da el "escribo a las 08:00 y sale a las 10:00" sin sacar al humano |
 | **4** | H9, H12, H13 | Los caros, medibles y apagables |
 | **5** | H10, H11 | Cierre |
+
+La fase 3 se parte en tres porque **3b es la primera vez que algo sale al mundo sin que nadie
+lo mire**. Merece su propio PR, su propia semana de observación en el banco de pruebas y su
+propia decisión de seguir, en vez de viajar dentro del PR que construye el gate.
 
 ## 10. Lo que queda fuera, a propósito
 
@@ -476,6 +577,13 @@ Una rama y un PR por fase, en orden de retorno.
   documentada.
 - **`TaskCreated`, `TaskCompleted`, `ConfigChange`, `TeammateIdle` y los hooks `http`**: ningún
   problema real del repo los pide hoy.
+- **Un modelo dentro del reloj.** Sería el tercer modo: el reloj invoca a Claude Code headless
+  o a Antigravity para que escriba el titular y el párrafo, y despacha piezas de niveles sin
+  que nadie las haya leído. Es técnicamente alcanzable (la invocación de `agy` está medida y
+  documentada) y queda **fuera de este diseño a propósito**: el modo diferido de §5.3 entrega
+  la mayor parte del valor —la pieza sale a la hora exacta sin que estés— conservando a una
+  persona en el circuito. Meter un modelo ahí es una decisión de otra magnitud y merece su
+  propio spec, tomada mirando cómo se comportó lo anterior.
 
 El criterio es uniforme: **un hook que no previene una falla documentada es fricción**, y la
 fricción diaria es lo que hace que la gente termine desactivando el sistema entero.
