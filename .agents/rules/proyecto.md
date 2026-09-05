@@ -101,12 +101,23 @@ Nunca truncar ceros al final ni redondear a entero.
 | USDCLP | 2 | $889.60 |
 | USDJPY | 3 | 163.731 |
 | XAUUSD | 2 | $4,539.72 |
-| WTI.spot | 2-3 | $90.18 |
+| WTI.spot | 3 | $90.181 |
+| BRENT.spot | 3 | $94.507 |
 | US100.spot | 2 | 30,350.01 |
 | Acciones | 2 | $192.50 |
-| COPPER | 1 | $14274.0 USD/t |
+| COPPER | 0 | $14197 USD/t |
 
 *El Cobre se analiza y cotiza siempre por su valor por tonelada métrica (`USD/t`) disponible en el terminal MT5.*
+
+**El Cobre es el único con `digits = 0`, así que se escribe entero y sin separador de
+miles** (`$14197 USD/t`): así lo cotiza el broker, verificado contra la cuenta el
+2026-09-03, y el punto de miles se confundiría con el decimal inglés. No lo confundas
+con `COBRE_COMEX` de `commodities_data.json`, que es el precio COMEX en **USD/libra**
+(6,602) y sí lleva 4 decimales: son dos series del mismo metal en dos unidades, y solo
+la de MT5 es el símbolo operable.
+
+Ante cualquier duda, el `digits` de un activo está en `config/activos.json` y manda el
+terminal. Esta tabla es una copia de conveniencia; si no coinciden, gana el catálogo.
 
 ## 4. Tono: profesional con gancho, nunca dramático
 
@@ -542,12 +553,12 @@ puede repetir entero, y ahorran repetir un error que ya se pagó una vez.
 ### Cómo buscarlas, con el detalle que importa
 
 Medido el 2026-09-05 sobre seis consultas en español cuyo tema **sí** estaba guardado:
-la memoria correcta sale primera en **3 de 6**. Lo que la encuentra es sobre todo la
+la memoria correcta sale primera en **4 de 6**. Lo que la encuentra es sobre todo la
 coincidencia léxica, no el significado.
 
 **Y la causa no es el idioma del modelo.** Eso se probó cambiándolo: con
 `multilingual-e5-small`, que es multilingüe, el coseno acierta 6 de 6, pero el resultado
-que OMEGA devuelve sigue siendo 3 de 6 y con **menos** candidatos recuperados. Se
+que OMEGA devuelve no mejora, y con **menos** candidatos recuperados. Se
 revirtió. Son dos mecanismos del ranking, los dos ajenos al modelo:
 
 - **El atajo de FTS5** (`sqlite_store/_query.py`): si el canal de texto encuentra un
