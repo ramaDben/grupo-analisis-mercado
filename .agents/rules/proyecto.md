@@ -541,10 +541,20 @@ puede repetir entero, y ahorran repetir un error que ya se pagó una vez.
 
 ### Cómo buscarlas, con el detalle que importa
 
-El modelo de embeddings de OMEGA es `bge-small-en-v1.5`, **entrenado en inglés**, y
-las memorias están en español. Medido el 2026-09-05: una consulta semántica en español
-devuelve resultados irrelevantes **con puntaje 1,00**, o sea que la confianza alta no
-significa nada acá. No la leas como acierto.
+El modelo de embeddings de OMEGA es `bge-small-en-v1.5`, **entrenado en inglés**, y las
+memorias están en español. Medido el 2026-09-05 sobre cuatro consultas cuyo tema sí
+estaba guardado: acertó en las dos que compartían una palabra literal con la memoria y
+falló en las otras dos. O sea que **lo que encuentra la memoria es la coincidencia
+léxica, no el vector**.
+
+Falla de dos formas y la segunda es la peligrosa:
+
+- Devuelve algo irrelevante **con puntaje 1,00**. La confianza alta no significa nada
+  acá; no la leas como acierto.
+- Devuelve **cero resultados existiendo la memoria**, cuando no compartes ninguna
+  palabra con ella: preguntar por "MetaTrader" no encuentra la memoria que dice "MT5".
+  Un `sin resultados` de OMEGA **no prueba que no haya memoria** sobre el tema. Reformula
+  con el término que el proyecto usa de verdad, o lista con `browse`.
 
 | Qué quieres | Modo | Ejemplo |
 |---|---|---|
