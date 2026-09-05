@@ -4,6 +4,12 @@
 
 Diagrama de arquitectura: [`arquitectura-hooks.html`](arquitectura-hooks.html)
 
+> **Continúa en [`cobertura-eventos-macro`](../cobertura-eventos-macro/2026-09-05-cobertura-eventos-macro-design.md).**
+> Esa segunda parte enmienda tres cosas de aquí: las fases 3b y 3c quedan **después** de la
+> cobertura de eventos, H13 pasa de opcional a **obligatorio**, y la ventana de Santiago se
+> moverá de 17:30 a 19:30 cuando exista el disparador por evento. Este documento sigue siendo
+> el piso: sin los guardrails y el gate, nada de lo que sigue puede publicar.
+
 ---
 
 ## 1. Qué problema resuelve
