@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>El sistema inmune y la autonomía graduada</title>
+<link href="https://fonts.googleapis.com/css2?family=Goldman:wght@400;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --paper:        #000000;
+    --paper-2:      #0A0A0F;
+    --ink:          #F5F3F7;
+    --muted:        #A9A5B4;
+    --soft:         #6E6A7A;
+    --rule:         rgba(245,243,247,0.12);
+    --accent:       #50C0A8;
+    --accent-tint:  rgba(80,192,168,0.10);
+    --link:         #3C8CAA;
+    --bloqueado:    #E84040;
+    --font-display: 'Goldman', 'Segoe UI', sans-serif;
+    --font-sans:    'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+    --font-mono:    'Geist Mono', ui-monospace, monospace;
+  }
+  body {
+    font-family: var(--font-sans);
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 3rem 2rem 4rem;
+    display: flex;
+    justify-content: center;
+  }
+  .frame { max-width: 1280px; width: 100%; }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.66rem; font-weight: 500;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 0.5rem;
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+    font-weight: 400; letter-spacing: 0.01em; line-height: 1.15;
+    color: var(--ink); margin-bottom: 0.75rem;
+  }
+  .dek {
+    font-size: 0.95rem; line-height: 1.55; color: var(--muted);
+    max-width: 70ch; margin-bottom: 2rem;
+  }
+  .lienzo { overflow-x: auto; }
+  svg.diagrama { width: 100%; min-width: 1000px; display: block; }
+  .tarjetas {
+    display: grid; grid-template-columns: 1.1fr 1fr 0.9fr;
+    gap: 1rem; margin-top: 2.5rem;
+  }
+  @media (max-width: 900px) { .tarjetas { grid-template-columns: 1fr; } }
+  .tarjeta {
+    background: var(--paper-2);
+    border: 1px solid var(--rule);
+    border-radius: 6px; padding: 1.25rem;
+  }
+  .tarjeta .eyebrow { margin-bottom: 0.75rem; }
+  .tarjeta-cab { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+  .punto { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .punto.acento { background: var(--accent); }
+  .punto.tinta  { background: var(--ink); }
+  .punto.bloq   { background: var(--bloqueado); }
+  .tarjeta h3 { font-size: 0.95rem; font-weight: 600; letter-spacing: -0.01em; }
+  .tarjeta ul { list-style: none; display: grid; gap: 0.55rem; }
+  .tarjeta li {
+    font-size: 0.82rem; line-height: 1.5; color: var(--muted);
+    padding-left: 0.9rem; position: relative;
+  }
+  .tarjeta li::before {
+    content: ''; position: absolute; left: 0; top: 0.6em;
+    width: 4px; height: 1px; background: var(--soft);
+  }
+  .tarjeta strong { color: var(--ink); font-weight: 600; }
+  .tarjeta code {
+    font-family: var(--font-mono); font-size: 0.78em; color: var(--ink);
+  }
+  footer {
+    margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--rule);
+    font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.1em;
+    color: var(--soft); text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <p class="eyebrow">Arquitectura · Hooks de automatización</p>
+  <h1>El sistema inmune y la autonomía graduada</h1>
+  <p class="dek">Dos mitades ejecutan el sistema y ninguna decide sola: los hooks de la sesión y el reloj del Programador de tareas consultan el mismo módulo de guardrails. Hacia el cliente existe un único camino, y pasa por el gate. Toda otra ruta al canal está prohibida, y un test de contrato la mantiene así.</p>
+
+  <div class="lienzo">
+  <svg class="diagrama" viewBox="0 0 1280 744" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="hooks-gi-title hooks-gi-desc">
+    <title id="hooks-gi-title">El sistema inmune y la autonomía graduada</title>
+    <desc id="hooks-gi-desc">Diagrama de arquitectura: los hooks de contexto y los hooks guardia de una sesión de Claude Code, junto con el reloj del Programador de tareas, consultan un módulo compartido de guardrails cuya función puede_despachar actúa como único gate hacia el sender de WhatsApp y los canales de la comunidad. Una política de autonomía alimenta el gate, el sender anota cada entrega en una bitácora, y una ruta que intenta alcanzar al cliente sin pasar por el gate se detiene antes de entrar en la zona de salida.</desc>
+
+    <defs>
+      <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#A9A5B4"/></marker>
+      <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#50C0A8"/></marker>
+      <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#3C8CAA"/></marker>
+    </defs>
+
+    <rect width="100%" height="100%" fill="#000000"/>
+
+    <!-- ============ ZONAS (antes que flechas y nodos) ============ -->
+    <rect x="32" y="72" width="272" height="264" rx="8" fill="rgba(245,243,247,0.02)" stroke="rgba(245,243,247,0.10)" stroke-width="0.8"/>
+    <rect x="86" y="76" width="164" height="12" rx="2" fill="#000000"/>
+    <text x="168" y="85" fill="rgba(245,243,247,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">SESIÓN CLAUDE CODE · EFÍMERA</text>
+
+    <rect x="464" y="72" width="272" height="264" rx="8" fill="rgba(245,243,247,0.02)" stroke="rgba(245,243,247,0.10)" stroke-width="0.8"/>
+    <rect x="526" y="76" width="148" height="12" rx="2" fill="#000000"/>
+    <text x="600" y="85" fill="rgba(245,243,247,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">FUENTE ÚNICA DEL CRITERIO</text>
+
+    <rect x="896" y="200" width="272" height="288" rx="8" fill="rgba(245,243,247,0.02)" stroke="rgba(245,243,247,0.22)" stroke-width="0.8" stroke-dasharray="4,4"/>
+    <rect x="942" y="204" width="180" height="12" rx="2" fill="#000000"/>
+    <text x="1032" y="213" fill="rgba(245,243,247,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">SALIDA AL CLIENTE · IRREVERSIBLE</text>
+
+    <!-- ============ RUTAS (antes que nodos) ============ -->
+
+    <!-- N1 -> Guardrails : lee estado -->
+    <line x1="288" y1="148" x2="480" y2="148" stroke="#A9A5B4" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+    <rect x="354" y="128" width="60" height="12" rx="2" fill="#000000"/>
+    <text x="384" y="137" fill="#6E6A7A" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">LEE ESTADO</text>
+
+    <!-- N2 -> Gate : consulta -->
+    <line x1="288" y1="276" x2="480" y2="276" stroke="#A9A5B4" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <rect x="358" y="256" width="52" height="12" rx="2" fill="#000000"/>
+    <text x="384" y="265" fill="#6E6A7A" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">CONSULTA</text>
+
+    <!-- Reloj -> Gate : pide permiso -->
+    <path d="M 288,444 H 552 Q 560,444 560,436 V 320" fill="none" stroke="#A9A5B4" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <rect x="480" y="372" width="68" height="12" rx="2" fill="#000000"/>
+    <text x="514" y="381" fill="#6E6A7A" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">PIDE PERMISO</text>
+
+    <!-- Guardrails -> Gate : misma fuente -->
+    <line x1="600" y1="192" x2="600" y2="232" stroke="#A9A5B4" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <rect x="612" y="206" width="68" height="12" rx="2" fill="#000000"/>
+    <text x="646" y="215" fill="#6E6A7A" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">MISMA FUENTE</text>
+
+    <!-- Politica -> Gate : ventana y cupo -->
+    <line x1="640" y1="520" x2="640" y2="320" stroke="#A9A5B4" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+    <rect x="652" y="412" width="80" height="12" rx="2" fill="#000000"/>
+    <text x="692" y="421" fill="#6E6A7A" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">VENTANA · CUPO</text>
+
+    <!-- Gate -> Sender : LA RUTA PERMITIDA -->
+    <line x1="720" y1="276" x2="912" y2="276" stroke="#50C0A8" stroke-width="1.6" marker-end="url(#arrow-accent)"/>
+    <rect x="786" y="256" width="60" height="12" rx="2" fill="#000000"/>
+    <text x="816" y="265" fill="#50C0A8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">SOLO SI OK</text>
+
+    <!-- Sender -> Canales : entrega -->
+    <line x1="1032" y1="320" x2="1032" y2="384" stroke="#A9A5B4" stroke-width="1.2" marker-end="url(#arrow)"/>
+    <rect x="1044" y="340" width="44" height="12" rx="2" fill="#000000"/>
+    <text x="1066" y="349" fill="#6E6A7A" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">ENTREGA</text>
+
+    <!-- Sender -> Bitacora : auditoria -->
+    <path d="M 1152,276 H 1192 Q 1200,276 1200,284 V 564 Q 1200,572 1192,572 H 1152" fill="none" stroke="#A9A5B4" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+    <rect x="1212" y="412" width="36" height="12" rx="2" fill="#000000"/>
+    <text x="1230" y="421" fill="#6E6A7A" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">ANOTA</text>
+
+    <!-- RUTA PROHIBIDA : se detiene antes de la zona del cliente -->
+    <path d="M 168,488 V 640 Q 168,648 176,648 H 824 Q 832,648 832,640 V 416 Q 832,408 840,408 H 848" fill="none" stroke="#E84040" stroke-width="1.2" stroke-dasharray="5,4"/>
+    <line x1="852" y1="392" x2="852" y2="424" stroke="#E84040" stroke-width="2"/>
+    <line x1="860" y1="392" x2="860" y2="424" stroke="#E84040" stroke-width="2"/>
+    <rect x="472" y="626" width="80" height="12" rx="2" fill="#000000"/>
+    <text x="512" y="635" fill="#E84040" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">SIN EL GATE</text>
+
+    <!-- ============ NODOS ============ -->
+
+    <!-- Hooks de contexto -->
+    <rect x="48" y="104" width="240" height="88" rx="6" fill="#000000"/>
+    <rect x="48" y="104" width="240" height="88" rx="6" fill="#0E0E13" stroke="rgba(245,243,247,0.45)" stroke-width="1"/>
+    <rect x="56" y="112" width="36" height="12" rx="2" fill="transparent" stroke="rgba(245,243,247,0.30)" stroke-width="0.8"/>
+    <text x="74" y="121" fill="rgba(245,243,247,0.70)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CTX</text>
+    <text x="168" y="156" fill="#F5F3F7" font-size="12" font-weight="600" font-family="'Plus Jakarta Sans', sans-serif" text-anchor="middle">Hooks de contexto</text>
+    <text x="168" y="174" fill="#A9A5B4" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">SessionStart · UserPromptSubmit</text>
+
+    <!-- Hooks guardia -->
+    <rect x="48" y="232" width="240" height="88" rx="6" fill="#000000"/>
+    <rect x="48" y="232" width="240" height="88" rx="6" fill="#0E0E13" stroke="rgba(245,243,247,0.45)" stroke-width="1"/>
+    <rect x="56" y="240" width="36" height="12" rx="2" fill="transparent" stroke="rgba(245,243,247,0.30)" stroke-width="0.8"/>
+    <text x="74" y="249" fill="rgba(245,243,247,0.70)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DENY</text>
+    <text x="168" y="284" fill="#F5F3F7" font-size="12" font-weight="600" font-family="'Plus Jakarta Sans', sans-serif" text-anchor="middle">Hooks guardia</text>
+    <text x="168" y="302" fill="#A9A5B4" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">PreToolUse · Stop · bloquean</text>
+
+    <!-- Reloj (fuera de la sesion) -->
+    <rect x="48" y="400" width="240" height="88" rx="6" fill="#000000"/>
+    <rect x="48" y="400" width="240" height="88" rx="6" fill="rgba(245,243,247,0.03)" stroke="rgba(245,243,247,0.30)" stroke-width="1" stroke-dasharray="4,3"/>
+    <rect x="56" y="408" width="36" height="12" rx="2" fill="transparent" stroke="rgba(245,243,247,0.30)" stroke-width="0.8"/>
+    <text x="74" y="417" fill="rgba(245,243,247,0.70)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">24/7</text>
+    <text x="168" y="452" fill="#F5F3F7" font-size="12" font-weight="600" font-family="'Plus Jakarta Sans', sans-serif" text-anchor="middle">Reloj del sistema</text>
+    <text x="168" y="470" fill="#A9A5B4" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">reloj_gi.py · latido 15 min</text>
+
+    <!-- Guardrails -->
+    <rect x="480" y="104" width="240" height="88" rx="6" fill="#000000"/>
+    <rect x="480" y="104" width="240" height="88" rx="6" fill="#0E0E13" stroke="rgba(245,243,247,0.45)" stroke-width="1"/>
+    <rect x="488" y="112" width="36" height="12" rx="2" fill="transparent" stroke="rgba(245,243,247,0.30)" stroke-width="0.8"/>
+    <text x="506" y="121" fill="rgba(245,243,247,0.70)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">LIB</text>
+    <text x="600" y="156" fill="#F5F3F7" font-size="12" font-weight="600" font-family="'Plus Jakarta Sans', sans-serif" text-anchor="middle">Guardrails</text>
+    <text x="600" y="174" fill="#A9A5B4" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">7 módulos puros · un veredicto</text>
+
+    <!-- EL GATE (focal) -->
+    <rect x="480" y="232" width="240" height="88" rx="6" fill="#000000"/>
+    <rect x="480" y="232" width="240" height="88" rx="6" fill="rgba(80,192,168,0.10)" stroke="#50C0A8" stroke-width="1.4"/>
+    <rect x="488" y="240" width="36" height="12" rx="2" fill="transparent" stroke="rgba(80,192,168,0.55)" stroke-width="0.8"/>
+    <text x="506" y="249" fill="#50C0A8" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">GATE</text>
+    <text x="600" y="284" fill="#F5F3F7" font-size="12" font-weight="700" font-family="'Plus Jakarta Sans', sans-serif" text-anchor="middle">El gate de despacho</text>
+    <text x="600" y="302" fill="#50C0A8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">puede_despachar()</text>
+
+    <!-- Politica de autonomia -->
+    <rect x="480" y="520" width="240" height="88" rx="6" fill="#000000"/>
+    <rect x="480" y="520" width="240" height="88" rx="6" fill="rgba(245,243,247,0.05)" stroke="rgba(169,165,180,0.55)" stroke-width="1"/>
+    <rect x="488" y="528" width="36" height="12" rx="2" fill="transparent" stroke="rgba(169,165,180,0.40)" stroke-width="0.8"/>
+    <text x="506" y="537" fill="rgba(245,243,247,0.70)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CFG</text>
+    <text x="600" y="572" fill="#F5F3F7" font-size="12" font-weight="600" font-family="'Plus Jakarta Sans', sans-serif" text-anchor="middle">Política de autonomía</text>
+    <text x="600" y="590" fill="#A9A5B4" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">config + interruptor de corte</text>
+
+    <!-- Sender -->
+    <rect x="912" y="232" width="240" height="88" rx="6" fill="#000000"/>
+    <rect x="912" y="232" width="240" height="88" rx="6" fill="#0E0E13" stroke="rgba(245,243,247,0.45)" stroke-width="1"/>
+    <rect x="920" y="240" width="36" height="12" rx="2" fill="transparent" stroke="rgba(245,243,247,0.30)" stroke-width="0.8"/>
+    <text x="938" y="249" fill="rgba(245,243,247,0.70)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">OUT</text>
+    <text x="1032" y="284" fill="#F5F3F7" font-size="12" font-weight="600" font-family="'Plus Jakarta Sans', sans-serif" text-anchor="middle">Sender de WhatsApp</text>
+    <text x="1032" y="302" fill="#A9A5B4" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">45 s entre piezas · 40 al día</text>
+
+    <!-- Canales (externo) -->
+    <rect x="912" y="384" width="240" height="88" rx="6" fill="#000000"/>
+    <rect x="912" y="384" width="240" height="88" rx="6" fill="rgba(245,243,247,0.03)" stroke="rgba(245,243,247,0.30)" stroke-width="1"/>
+    <rect x="920" y="392" width="36" height="12" rx="2" fill="transparent" stroke="rgba(245,243,247,0.30)" stroke-width="0.8"/>
+    <text x="938" y="401" fill="rgba(245,243,247,0.70)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">EXT</text>
+    <text x="1032" y="436" fill="#F5F3F7" font-size="12" font-weight="600" font-family="'Plus Jakarta Sans', sans-serif" text-anchor="middle">Los 7 canales</text>
+    <text x="1032" y="454" fill="#A9A5B4" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">entrega verificada en el DOM</text>
+
+    <!-- Bitacora (auditoria) -->
+    <rect x="912" y="536" width="240" height="72" rx="6" fill="#000000"/>
+    <rect x="912" y="536" width="240" height="72" rx="6" fill="rgba(245,243,247,0.05)" stroke="rgba(169,165,180,0.55)" stroke-width="1"/>
+    <rect x="920" y="544" width="36" height="12" rx="2" fill="transparent" stroke="rgba(169,165,180,0.40)" stroke-width="0.8"/>
+    <text x="938" y="553" fill="rgba(245,243,247,0.70)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">LOG</text>
+    <text x="1032" y="578" fill="#F5F3F7" font-size="12" font-weight="600" font-family="'Plus Jakarta Sans', sans-serif" text-anchor="middle">Bitácora de despachos</text>
+    <text x="1032" y="596" fill="#A9A5B4" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">historial_despachos.json</text>
+
+    <!-- ============ LEYENDA ============ -->
+    <line x1="32" y1="680" x2="1248" y2="680" stroke="rgba(245,243,247,0.10)" stroke-width="0.8"/>
+    <text x="32" y="704" fill="#6E6A7A" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEYENDA</text>
+
+    <line x1="120" y1="700" x2="152" y2="700" stroke="#50C0A8" stroke-width="1.6"/>
+    <text x="160" y="704" fill="#A9A5B4" font-size="8" font-family="'Geist Mono', monospace">RUTA PERMITIDA AL CLIENTE</text>
+
+    <line x1="420" y1="700" x2="444" y2="700" stroke="#E84040" stroke-width="1.2" stroke-dasharray="5,4"/>
+    <line x1="448" y1="692" x2="448" y2="708" stroke="#E84040" stroke-width="2"/>
+    <line x1="456" y1="692" x2="456" y2="708" stroke="#E84040" stroke-width="2"/>
+    <text x="468" y="704" fill="#A9A5B4" font-size="8" font-family="'Geist Mono', monospace">RUTA PROHIBIDA · SE DETIENE</text>
+
+    <line x1="736" y1="700" x2="768" y2="700" stroke="#A9A5B4" stroke-width="1" stroke-dasharray="4,3"/>
+    <text x="776" y="704" fill="#A9A5B4" font-size="8" font-family="'Geist Mono', monospace">LECTURA · POLÍTICA · AUDITORÍA</text>
+
+    <rect x="1052" y="692" width="16" height="16" rx="3" fill="rgba(80,192,168,0.10)" stroke="#50C0A8" stroke-width="1.2"/>
+    <text x="1076" y="704" fill="#A9A5B4" font-size="8" font-family="'Geist Mono', monospace">GATE PRIVILEGIADO</text>
+  </svg>
+  </div>
+
+  <div class="tarjetas">
+    <div class="tarjeta">
+      <p class="eyebrow">Mitad izquierda</p>
+      <div class="tarjeta-cab"><span class="punto tinta"></span><h3>Trece hooks, siete eventos</h3></div>
+      <ul>
+        <li><strong>Contexto</strong>, no bloquean: brief operativo en <code>SessionStart</code>, decimales y nombres reales en <code>UserPromptSubmit</code>, aviso en <code>FileChanged</code> cuando la ingesta reescribe las cifras a mitad de conversación, y volcado en <code>PreCompact</code>.</li>
+        <li><strong>Guardia</strong>, bloquean: <code>PreToolUse</code> sobre escritura de piezas, shell y git. <code>PostToolUse</code> corre los <code>--check</code> que ya existen en el repo.</li>
+        <li><strong>Los dos caros</strong>, apagados por defecto: un verificador con herramientas en <code>Stop</code> y una revisión editorial tipo <code>prompt</code> antes de guardar texto de cliente.</li>
+        <li>Un hook solo vive mientras la sesión está abierta. Por eso la producción autónoma no puede colgar de aquí.</li>
+      </ul>
+    </div>
+
+    <div class="tarjeta">
+      <p class="eyebrow">El centro</p>
+      <div class="tarjeta-cab"><span class="punto acento"></span><h3>Un solo criterio</h3></div>
+      <ul>
+        <li><code>scripts/guardrails/</code> son funciones puras que devuelven un veredicto con su motivo. Nunca lanzan.</li>
+        <li>El mismo motivo se lee igual en un rechazo de hook, en el registro del reloj y en un fallo de pytest.</li>
+        <li><code>puede_despachar()</code> es el único gate. Lo llaman las dos mitades, y un test de contrato falla si alguna deja de llamarlo.</li>
+        <li>La política declara ventana, canales, momentos, tipos y sub-cupo. El interruptor de corte detiene todo en el siguiente latido.</li>
+      </ul>
+    </div>
+
+    <div class="tarjeta">
+      <p class="eyebrow">Lo prohibido</p>
+      <div class="tarjeta-cab"><span class="punto bloq"></span><h3>La ruta que se detiene</h3></div>
+      <ul>
+        <li>Llamar al sender sin pasar por el gate. Hoy lo impide <code>test_el_reloj_no_puede_enviar_nada_a_whatsapp</code>.</li>
+        <li>Ese test se reescribe, no se borra: pasa a exigir que el despacho ocurra únicamente a través del gate.</li>
+        <li>Las señales y el informe en PDF quedan fuera de los tipos autorizados. Es donde un error cuesta plata del cliente.</li>
+        <li>La autonomía arranca solo en el banco de pruebas. Los canales reales entran cuando la bitácora muestre una semana limpia.</li>
+      </ul>
+    </div>
+  </div>
+
+  <footer>Grupo de Análisis de Mercado · diseño de hooks · 2026-09-05 · tokens de marca desde templates/stories/marca.css</footer>
+</div>
+</body>
+</html>
