@@ -462,7 +462,7 @@ def test_el_adjunto_se_confirma_cuando_la_ultima_burbuja_lo_trae_con_su_pie():
     mock_page.evaluate.return_value = {
         "texto": "PDF | informe.pdf | 11 paginas | PRUEBA PDF de auditoria",
         "media": True,
-        "entregado": True,
+        "etiquetas": ["Tu  Nombre del documento: informe.pdf  17:38 Enviado  "],
     }
     sender.min_jitter_ms = sender.max_jitter_ms = 1
 
@@ -1112,7 +1112,8 @@ def test_un_adjunto_sin_pie_se_confirma_con_el_nombre_del_archivo():
     sender = WhatsAppSender()
     mock_page = MagicMock()
     mock_page.evaluate.return_value = {
-        "texto": "informe_cierre_semanal_20260904_GI.pdf 2 MB PDF", "media": True, "entregado": True
+        "texto": "informe_cierre_semanal_20260904_GI.pdf 2 MB PDF", "media": True,
+        "etiquetas": ["Tu  Nombre del documento  20:08 Enviado  "],
     }
 
     assert sender._adjunto_confirmado(
@@ -1125,10 +1126,71 @@ def test_la_burbuja_pintada_sin_terminar_la_subida_no_cuenta_como_entregada():
     enviado es lo unico que dice que el servidor la recibio."""
     sender = WhatsAppSender()
     mock_page = MagicMock()
+    # "Pendiente" es el estado real del PDF que nunca salio al canal.
     mock_page.evaluate.return_value = {
-        "texto": "informe.pdf 2 MB PDF", "media": True, "entregado": False
+        "texto": "informe.pdf 2 MB PDF", "media": True,
+        "etiquetas": ["Tu  Nombre del documento  17:38 Pendiente  "],
     }
 
     assert not sender._adjunto_confirmado(
         mock_page, testigo="", nombre_archivo="informe.pdf"
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El falso NEGATIVO del 2026-09-04, que es el que de verdad duplica
+#
+# El PDF de 2 MB SI llego al canal a las 17:38, pero el sender lo dio por fallido
+# a los 25 s de espera fija. El director no lo vio, lo mando a mano un minuto
+# despues, y el canal quedo con dos copias. Un falso negativo induce el reenvio,
+# asi que hace el mismo dano que un falso positivo.
+# ─────────────────────────────────────────────────────────────────────────────
+def test_la_espera_de_confirmacion_crece_con_el_tamano_del_archivo():
+    from whatsapp_sender import espera_confirmacion_s
+
+    chico = espera_confirmacion_s(0)                 # texto suelto
+    png = espera_confirmacion_s(500 * 1024)          # una Story tipica
+    pdf = espera_confirmacion_s(2 * 1024 * 1024)     # el informe semanal
+
+    assert chico < png < pdf, "la espera tiene que escalar con el peso"
+    assert pdf >= 60, "2 MB tardaron mas de 25 s en subir el 2026-09-04"
+
+
+def test_la_espera_tiene_techo_para_no_colgar_el_despacho():
+    from whatsapp_sender import espera_confirmacion_s
+
+    assert espera_confirmacion_s(500 * 1024 * 1024) <= 180
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El estado de entrega vive en el aria-label, no en un data-icon
+#
+# Medido contra el DOM real el 2026-09-04: una burbuja de documento ENTREGADA
+# trae `iconos: ['document-PDF-icon']` y ningun `msg-check`. El estado esta en el
+# aria-label ("... 20:08 Enviado"). Buscar el tic como data-icon deja al sender
+# abortando envios que si llegaron, y un falso negativo induce el reenvio manual:
+# es lo que dejo dos PDF en el canal de clientes ese mismo dia.
+# ─────────────────────────────────────────────────────────────────────────────
+@pytest.mark.parametrize(
+    "aria, entregado",
+    [
+        ("Tu  Nombre del documento: x.pdf. 6 paginas 20:08 Enviado  ", True),
+        ("Tu  Nombre del documento: x.pdf. 2 MB  19:48 Entregado  ", True),
+        ("Tu  mensaje  10:16 Leido  ", True),
+        # El caso real del PDF que NUNCA salio al canal de clientes.
+        ("Tu  Nombre del documento: x.pdf. 6 paginas 17:38 Pendiente  ", False),
+        ("Tu  Nombre del documento: x.pdf.", False),
+        ("", False),
+    ],
+)
+def test_el_estado_de_entrega_se_lee_del_aria_label(aria, entregado):
+    from whatsapp_sender import burbuja_entregada
+
+    assert burbuja_entregada([aria]) is entregado
+
+
+def test_pendiente_gana_sobre_cualquier_otra_marca():
+    """Si una etiqueta dice Pendiente, la burbuja no salio, sin importar el resto."""
+    from whatsapp_sender import burbuja_entregada
+
+    assert burbuja_entregada(["algo Enviado", "estado: Pendiente"]) is False

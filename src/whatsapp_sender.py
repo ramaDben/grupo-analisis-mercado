@@ -118,6 +118,53 @@ def _hubo_enter(stream: Any) -> bool:
     return bool(stream.readline())
 
 
+ESPERA_BASE_S = 25.0
+ESPERA_POR_MB_S = 20.0
+ESPERA_TECHO_S = 180.0
+
+
+ESTADOS_ENTREGADA = ("enviado", "entregado", "leido", "leído")
+ESTADO_PENDIENTE = "pendiente"
+
+
+def burbuja_entregada(etiquetas: list[str]) -> bool:
+    """¿El servidor recibió esta burbuja, según sus etiquetas de accesibilidad?
+
+    **El estado NO es un `data-icon`.** Medido contra el DOM real el 2026-09-04:
+    una burbuja de documento entregada trae `['document-PDF-icon']` y ningún
+    `msg-check`; el estado está en el `aria-label` ("... 20:08 Enviado").
+
+    Distinguirlo importa porque el PDF que nunca salió al canal de clientes
+    quedó como **"Pendiente"**, pintado en el navegador y ausente para todos los
+    demás. `Pendiente` gana sobre cualquier otra marca de la fila: si algo dice
+    que sigue en cola, la pieza no está entregada.
+    """
+    texto = " ".join(e or "" for e in etiquetas).lower()
+    if ESTADO_PENDIENTE in texto:
+        return False
+    return any(estado in texto for estado in ESTADOS_ENTREGADA)
+
+
+def espera_confirmacion_s(tamano_bytes: int) -> float:
+    """Cuánto esperar a que la burbuja del adjunto aparezca confirmada.
+
+    **El falso negativo del 2026-09-04, que es el que duplica.** La espera era
+    fija en 25 s. Un PDF de 2 MB llegó al canal a las 17:38 y el sender lo dio
+    por fallido; el director no lo vio, lo mandó a mano un minuto después, y el
+    canal de clientes quedó con dos copias del mismo informe.
+
+    Un falso negativo hace el mismo daño que un falso positivo: el primero
+    induce el reenvío y duplica, el segundo da por entregado lo que no salió. La
+    espera tiene que dar tiempo a la subida real, y la subida escala con el peso.
+
+    El techo existe para que un archivo enorme no cuelgue el despacho entero: si
+    a los tres minutos no se confirmó, corresponde revisar a mano y no seguir
+    esperando.
+    """
+    mb = max(0.0, tamano_bytes) / (1024 * 1024)
+    return min(ESPERA_BASE_S + ESPERA_POR_MB_S * mb, ESPERA_TECHO_S)
+
+
 def _requiere_menu_documento(ruta: Path) -> bool:
     """True si el archivo no es una imagen."""
     return Path(ruta).suffix.lower() not in EXTENSIONES_IMAGEN
@@ -1026,17 +1073,39 @@ class WhatsAppSender:
         if not caption.strip():
             return
 
-        if not caption.strip():
-            return
-
-        caja_caption = self._primer_locator(page, SELECTORES_CAPTION)
+        # **El campo de pie aparece DESPUES de que el editor termina de procesar
+        # el archivo, y eso escala con el peso.** Antes habia una pausa fija de
+        # 2 s y una unica busqueda del campo: con un PNG de 500 KB alcanzaba, y
+        # con el PDF de 2 MB del informe semanal no. El sender abortaba diciendo
+        # "no aparecio el campo de pie de foto", y eso me hizo concluir que el
+        # editor de documento imponia un tope de 1.024 caracteres. No era el
+        # tope: era que el archivo todavia estaba cargando.
+        caja_caption = self._esperar_campo_pie(
+            page, espera_confirmacion_s(ruta_archivo.stat().st_size)
+        )
         if caja_caption is None:
             raise EnvioMensajeError(
-                "No apareció el campo de pie de foto del editor. Se aborta para no "
-                "mandar la pieza muda ni dejar el texto como borrador en el chat."
+                f"No apareció el campo de pie del editor para {ruta_archivo.name} "
+                "tras esperar la carga. Se aborta para no mandar la pieza muda ni "
+                "dejar el texto como borrador en el chat."
             )
         self._pausa_humana(1.2)
         self._verificar_pie_completo(caja_caption, caption, ruta_archivo)
+
+    def _esperar_campo_pie(self, page: Any, timeout_s: float) -> Any:
+        """Espera activa a que el editor exponga su campo de pie.
+
+        Reintenta en vez de mirar una sola vez: el campo aparece cuando el editor
+        termina de procesar el archivo, y un PDF de 2 MB tarda bastante mas que
+        una imagen.
+        """
+        limite = time.time() + max(5.0, timeout_s)
+        while time.time() < limite:
+            caja = self._primer_locator(page, SELECTORES_CAPTION)
+            if caja is not None:
+                return caja
+            time.sleep(0.5)
+        return None
 
     def _verificar_pie_completo(self, caja_caption: Any, esperado: str, ruta: Path) -> None:
         """Aborta si el pie que quedó en el editor no es el que se quiso escribir.
@@ -1209,13 +1278,13 @@ class WhatsAppSender:
                 "   || /\bPDF\b|\bDOCX?\b|\bXLSX?\b|p\u00e1ginas/i.test(texto);"
                 # WhatsApp pinta la burbuja al instante y sube en segundo plano;
                 # el tic es lo unico que dice que el servidor ya la recibio.
-                " const entregado = !!r.querySelector('[data-icon=msg-check],"
-                "   [data-icon=msg-dblcheck], [data-icon=msg-dblcheck-ack]');"
-                " return {texto, media, entregado};"
+                " const etiquetas = Array.from(r.querySelectorAll('[aria-label]'))"
+                "   .map(e => e.getAttribute('aria-label') || '');"
+                " return {texto, media, etiquetas};"
                 "}"
             )
         except Exception:  # noqa: BLE001
-            return {"texto": "", "media": False, "entregado": False}
+            return {"texto": "", "media": False, "etiquetas": []}
         return datos if isinstance(datos, dict) else {"texto": "", "media": False}
 
     def _adjunto_confirmado(
@@ -1256,7 +1325,7 @@ class WhatsAppSender:
         else:
             return False
 
-        return bool(burbuja.get("entregado"))
+        return burbuja_entregada(list(burbuja.get("etiquetas") or []))
 
     def _clic_enviar_y_confirmar(
         self,
@@ -1419,6 +1488,9 @@ class WhatsAppSender:
                         testigo=self._testigo(pieza.mensaje),
                         con_adjunto=True,
                         nombre_archivo=Path(pieza.adjunto).name,
+                        timeout_s=espera_confirmacion_s(
+                            Path(pieza.adjunto).stat().st_size
+                        ),
                     )
                     logger.info(
                         "pieza %d/%d entregada a %s: %s",
@@ -1534,6 +1606,9 @@ class WhatsAppSender:
                     testigo=self._testigo(mensaje),
                     con_adjunto=ruta_adjunto is not None,
                     nombre_archivo=ruta_adjunto.name if ruta_adjunto else "",
+                    timeout_s=espera_confirmacion_s(
+                        ruta_adjunto.stat().st_size if ruta_adjunto else 0
+                    ),
                 )
                 self._pausa_humana(1.0)
 

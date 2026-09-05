@@ -545,45 +545,44 @@ Dos cosas que la hacen confiable:
 **canales** mientras el envío cuenta **piezas** desde el 2026-09-03, así que por sí solo
 reenviaba las primeras piezas de un canal que falló a la mitad.
 
-### Un PDF no viaja como una imagen, y eso se midió el 2026-09-04
+### Un PDF adjunto SÍ lleva su pie, pero hay que esperar la carga
 
-Dos hechos del despacho de documentos que costaron un envío fallido y que
-conviene no volver a averiguar.
+Medido contra el DOM real el 2026-09-04, corrigiendo una conclusión apresurada
+del mismo día.
 
-**1. El truco del cuadro de conversación NO le quita el tope a un documento.**
-El sender escribe el texto en el cuadro del chat y adjunta después, y para
-imágenes eso elimina el tope de 1.024 caracteres del pie (medido el 2026-09-03:
-2.042 de 2.016 caracteres). **Con un PDF el editor aplica el límite igual**: un
-mensaje de 1.222 caracteres dejó el contador del editor en **−197** y el texto
-truncado. Así que un informe en PDF va en **dos envíos**: el texto completo como
-mensaje y el documento después, sin pie.
+**El truco del cuadro de conversación funciona igual con documentos.** Se
+escribe el texto en el cuadro del chat, se adjunta, y el editor hereda el texto
+completo: se envió un pie de **1.222 caracteres** con un PDF de 2 MB y llegó
+entero. **No hay tope de 1.024 para el texto heredado**, ni en imágenes ni en
+documentos. El contador negativo que muestra el editor (`-197` con ese pie) no
+impide enviar.
 
-**2. La burbuja aparece antes de que la subida termine.** WhatsApp pinta la
-burbuja del documento al instante, con su nombre y su tamaño, y sube en segundo
-plano. `_ultima_burbuja` decide `media` con un regex sobre el texto
-(`/\bPDF\b/`), que da verdadero apenas se pinta.
+**Lo que sí cambia es el tiempo.** El campo de pie aparece cuando el editor
+termina de procesar el archivo, y eso escala con el peso. Había una pausa fija
+de 2 s y **una sola** búsqueda del campo: con un PNG de 500 KB alcanzaba y con el
+PDF de 2 MB no. El sender abortaba con "no apareció el campo de pie de foto", y
+ese mensaje me llevó a concluir que el editor de documento imponía un tope. No
+era el tope: **era que el archivo seguía cargando**. Ahora la espera es activa y
+proporcional (`espera_confirmacion_s`).
 
-Sumado a que `_adjunto_confirmado` devolvía `True` con el pie vacío en cuanto
-veía `media`, el resultado fue **un PDF de 2 MB reportado como entregado que no
-llegó al canal**: el director tuvo que mandarlo a mano. Con un PNG de 500 KB la
-subida es instantánea y el hueco nunca se había notado.
-
-La confirmación ahora exige **las dos cosas**:
-
-- **Sin pie, el testigo es el nombre del archivo**, que la burbuja del documento
-  muestra. Ata la confirmación a ESE envío y no a cualquier adjunto anterior.
-  Sin pie ni nombre no hay nada que atar, y entonces no se confirma.
-- **El tic de enviado** (`msg-check` / `msg-dblcheck`), que es lo único del DOM
-  que dice que el servidor la recibió. La espera anterior miraba `status-upload`,
-  un testid muerto que se cumplía en la primera vuelta; al retirarlo **no se
-  reemplazó por nada**, y quedó un año de confirmaciones que solo probaban que la
-  burbuja existía.
+**El estado de entrega NO es un `data-icon`.** Una burbuja de documento entregada
+trae `['document-PDF-icon']` y ningún `msg-check`; el estado vive en el
+`aria-label` (`"... 20:08 Enviado"`). Lo lee `burbuja_entregada`, y `Pendiente`
+gana sobre cualquier otra marca de la fila.
 
 > [!CAUTION]
-> **Un "enviado" falso es peor que un error.** Lleva a dar la pieza por
-> entregada, a que la bitácora anote lo que no salió y a que el cupo descuente un
-> envío que no ocurrió. Es el mismo patrón que el freno editorial que faltaba en
-> el despacho: **se verificaba la mecánica y no el hecho**.
+> **Un falso negativo duplica igual que un falso positivo miente.** Ese mismo día
+> pasaron los dos. Primero `_adjunto_confirmado` devolvió `True` sin pie apenas
+> vio `media`, el proceso cerró el navegador y la subida quedó a medias: el PDF
+> se reportó entregado y quedó **"Pendiente"**, invisible para el canal. Después,
+> con la espera corregida pero leyendo el tic donde no estaba, abortó envíos que
+> **sí** habían llegado. El primero da por entregado lo que no salió; el segundo
+> induce el reenvío manual, y así el canal de clientes terminó con dos copias del
+> mismo informe.
+>
+> La confirmación exige ahora las tres cosas: que la última burbuja sea **este**
+> archivo (por nombre, cuando no hay pie), que su etiqueta diga entregada, y una
+> espera que alcance para la subida.
 
 ### El "hasta dónde" del sesgo tiene dos gramáticas, no una
 
