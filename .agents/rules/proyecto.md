@@ -407,3 +407,120 @@ Todo informe PDF de análisis de mercado debe seguir la arquitectura canónica d
 2. **Estructura Pedagógica de 3 Capas por Activo:** Cada sección debe desglosar qué pasa, qué significa para el lector y qué NO operar hoy (setups prohibidos).
 3. **Tabla de Curva Soberana Estructurada:** Con variaciones en puntos base a 1D y 5D en notación chilena (`_tabla_curva`).
 4. **Dimensionamiento de Riesgo y Lote:** Cálculo explícito de lotaje por Volatility Targeting según el ATR del día.
+
+## 10. Documentos largos: el manual y el cierre semanal
+
+Dos piezas institucionales de varias páginas, con reglas propias. Todo lo de abajo
+se midió el 2026-09-04 y cada punto costó un defecto real, así que conviene leerlo
+antes de tocar la maqueta.
+
+### 10.1. Una sola fuente por documento. Siempre.
+
+| Documento | Fuente del contenido | Compilador | Salida |
+|---|---|---|---|
+| Manual de Operaciones | `docs/MANUAL_DE_OPERACIONES_TRADING_CUANTITATIVO.md` | `scripts/compilar_manual_pdf.py` | PDF A4, 31 páginas |
+| Cierre semanal | `scripts/cierre_semanal_contenido.py` (texto) + `cierre_semanal_datos.py` (cifras) | `scripts/compilar_informe_cierre_semanal.py` | PDF A4, 6 páginas |
+
+**Los dos tenían el documento escrito adentro del compilador y hubo que sacarlo.**
+El manual llegó a tener tres versiones distintas conviviendo (el markdown, un PDF
+truncado en disco, y un cuarto documento dentro del script). El cierre semanal
+tenía las rutas clavadas a una fecha, así que correrlo una semana después
+regeneraba el informe anterior.
+
+Si necesitas cambiar un texto, cambia la fuente. **Nunca escribas contenido dentro
+del compilador**: a la segunda copia una queda atrás y nadie se entera hasta que
+sale una pieza mal.
+
+### 10.2. El manual pagina por FLUJO. No lo vuelvas a páginas fijas.
+
+`compilar_manual_pdf.py` deja que Chromium pagine, y cada módulo abre página con
+`break-before: page`. El diseño anterior maquetaba `div.a4-page` de 794×1123 con
+`overflow: hidden`, y **el contenido que no cabía desaparecía sin aviso**: así el
+PDF que estaba en disco perdió la mitad operativa (riesgo, lotaje, filtros,
+checklist y glosario) mostrando su pie numerado sobre 11 páginas con solo 6
+renderizadas.
+
+Tres reglas del CSS que no se tocan:
+
+1. **`main h1 + hr` sí, `hr + h1` NO.** CSS no tiene selector de hermano anterior.
+   La regla `hr + h1 { display: none }` parece razonable para ocultar el separador
+   que precede a cada título y en realidad **oculta el título**: se comió los 15
+   encabezados de módulo en la primera compilación. El `h1` abre página, así que el
+   `hr` anterior queda al final de la anterior y no molesta.
+2. **`break-inside: avoid`** en tablas, avisos, bloques de código y los envoltorios
+   de los diagramas (`div[style*="justify-content: center"]`). Un diagrama partido
+   entre dos páginas es ilegible.
+3. **El compilador cuenta las páginas y falla bajo `PAGINAS_MINIMAS`.** No bajes ese
+   número para que pase: un manual al que le faltan secciones **se lee como
+   completo**, y nadie lo nota desde afuera.
+
+### 10.3. El cierre semanal sí usa páginas fijas, y por eso mide su alto.
+
+Acá `.a4-page` es de 1123 px con `overflow: hidden`, que es el diseño aprobado. El
+riesgo es el mismo de siempre y se controla midiendo: `_medir_desbordes` calcula el
+alto natural de cada página en el DOM y **aborta si alguna se pasa**.
+
+Sin esa medición, el primer armado puso cuatro fichas en una página y **la ficha del
+yen desapareció entera**. El control de "salieron las páginas esperadas" no lo
+detectó, porque el desborde fue *dentro* de una página.
+
+- **Máximo dos fichas de activo por página** (`PAGINAS_ACTIVOS`). Si agregas
+  contenido, corre el compilador y mira la línea `Altos:`; el margen actual ronda
+  los 300 px por página.
+- **Ojo con `scrollHeight` del contenedor**: `.a4-page` es flex con
+  `space-between`, así que los hijos se comprimen y el valor queda clavado en el
+  alto de la página. Hay que medir el alto natural de cada hijo, filtrando los
+  `position: absolute` porque la portada lleva una capa de brillo que falsea la suma.
+
+### 10.4. El brand kit existe y estos dos documentos todavía NO lo usan.
+
+`brand_atomic_system/agent/visual/` tiene los tokens CSS, las especificaciones de
+componentes, los specimens, la tipografía y los assets. Medido: `compilar_manual_pdf.py`
+y `cierre_semanal_estilo.py` tienen **cero referencias** al kit. Su paleta y su
+tipografía están escritas a mano.
+
+Eso es deuda conocida, no una decisión. Al trabajar la parte visual, **el kit manda**:
+alinea los colores y la tipografía a sus tokens en vez de conservar los valores
+escritos a mano. Si un token del kit contradice lo que hay, gana el kit; si el kit no
+cubre un caso, dilo en vez de inventar un valor.
+
+Dos cosas que no son negociables aunque el kit no las mencione:
+
+- **Verde arriba y rojo abajo** en variaciones de precio. Es una convención que el
+  cliente lee sin pensar, no una decisión de marca.
+- **Contraste real sobre cada fondo.** El rojo y el verde de marca están pensados para
+  fondo claro: sobre la portada oscura no alcanzan y el texto se pierde. Ya pasó con el
+  rótulo "AVISO DE RIESGO" de la portada del manual y con el encabezado de una tabla,
+  donde el `strong` global pintaba oscuro sobre fondo oscuro.
+
+### 10.5. Cómo verificar antes de dar por bueno
+
+```bash
+# Manual: 31 paginas, y falla si perdio secciones
+uv run --extra stories --with markdown-it-py --with pypdf python scripts/compilar_manual_pdf.py
+
+# Cierre semanal: 6 paginas, informa el alto de cada una y aborta si desborda
+uv run --extra informe --extra stories --with MetaTrader5 --with pypdf \
+    python scripts/compilar_informe_cierre_semanal.py
+
+# La suite completa
+uv run pytest -q
+```
+
+**Los dos compiladores abortan solos si algo se rompió.** Si uno falla, la salida
+dice qué medir; no bajes el umbral para que pase.
+
+Y revisa el PDF resultante, no solo que compile: abre un par de páginas y mira que
+los títulos estén, que ningún bloque quede partido y que el texto se lea sobre su
+fondo.
+
+### 10.6. Reglas de texto que aplican a los dos
+
+Son las mismas de la sección 3 y 4, y acá se verifican así:
+
+- **Cero guiones largos** (`—`) y medios (`–`) como inciso. El punto medio `·` sí se
+  mantiene: es separador visual de marca, no puntuación de frase.
+- **Notación chilena** en toda cifra: miles con punto, decimales con coma.
+- **El Cobre se escribe entero**, sin separador de miles (`$14386 USD/t`), porque es
+  el único con `digits = 0` y el punto se confundiría con el decimal inglés.
+- **Toda sigla se explica** la primera vez que aparece.

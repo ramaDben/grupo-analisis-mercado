@@ -58,7 +58,12 @@ def test_ema_de_una_serie_plana_es_la_misma_constante():
         (889.6, 2, "889,60"),        # el cero final no se trunca
         (4539.72, 2, "4.539,72"),    # miles con punto, decimales con coma
         (90.18, 3, "90,180"),        # WTI va a 3 aunque el float traiga 2
-        (13720, 0, "13.720"),        # digits 0: sin parte decimal
+        # `digits 0` es solo el Cobre, y CLAUDE.md lo lista entero
+        # (`$14197 USD/t`) marcando `$14.197` como incorrecto: el punto se
+        # confunde con el decimal ingles, y el mismo metal cotiza tambien en
+        # USD/libra con 4 decimales (6,602). Sin separador no hay ambiguedad.
+        (13720, 0, "13720"),
+        (14386, 0, "14386"),
         (163.7315, 3, "163,732"),    # redondeo, no truncado
     ],
 )

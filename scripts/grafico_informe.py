@@ -102,7 +102,15 @@ def formatear_precio(valor: float, digits: int) -> str:
     La regla de decimales del proyecto es del catálogo y no del gusto de quien
     dibuja: USD/CLP va a 2 y WTI a 3. Truncar un cero final cambia el número a
     la vista del cliente.
+
+    **Con `digits = 0` no va separador de miles.** Ese caso es solo el Cobre, y
+    `CLAUDE.md` lo lista entero (`$14197 USD/t`) marcando `$14.197` como
+    incorrecto: sin decimales, el punto de millar se confunde con el decimal
+    inglés, y el mismo metal cotiza también en USD/libra con 4 decimales
+    (6,602). Ahí un `$14.197` mal leído es un error de dos órdenes de magnitud.
     """
+    if digits == 0:
+        return f"{valor:.0f}"
     return f"{valor:,.{digits}f}".replace(",", "@").replace(".", ",").replace("@", ".")
 
 

@@ -545,6 +545,45 @@ Dos cosas que la hacen confiable:
 **canales** mientras el envío cuenta **piezas** desde el 2026-09-03, así que por sí solo
 reenviaba las primeras piezas de un canal que falló a la mitad.
 
+### Un PDF adjunto SÍ lleva su pie, pero hay que esperar la carga
+
+Medido contra el DOM real el 2026-09-04, corrigiendo una conclusión apresurada
+del mismo día.
+
+**El truco del cuadro de conversación funciona igual con documentos.** Se
+escribe el texto en el cuadro del chat, se adjunta, y el editor hereda el texto
+completo: se envió un pie de **1.222 caracteres** con un PDF de 2 MB y llegó
+entero. **No hay tope de 1.024 para el texto heredado**, ni en imágenes ni en
+documentos. El contador negativo que muestra el editor (`-197` con ese pie) no
+impide enviar.
+
+**Lo que sí cambia es el tiempo.** El campo de pie aparece cuando el editor
+termina de procesar el archivo, y eso escala con el peso. Había una pausa fija
+de 2 s y **una sola** búsqueda del campo: con un PNG de 500 KB alcanzaba y con el
+PDF de 2 MB no. El sender abortaba con "no apareció el campo de pie de foto", y
+ese mensaje me llevó a concluir que el editor de documento imponía un tope. No
+era el tope: **era que el archivo seguía cargando**. Ahora la espera es activa y
+proporcional (`espera_confirmacion_s`).
+
+**El estado de entrega NO es un `data-icon`.** Una burbuja de documento entregada
+trae `['document-PDF-icon']` y ningún `msg-check`; el estado vive en el
+`aria-label` (`"... 20:08 Enviado"`). Lo lee `burbuja_entregada`, y `Pendiente`
+gana sobre cualquier otra marca de la fila.
+
+> [!CAUTION]
+> **Un falso negativo duplica igual que un falso positivo miente.** Ese mismo día
+> pasaron los dos. Primero `_adjunto_confirmado` devolvió `True` sin pie apenas
+> vio `media`, el proceso cerró el navegador y la subida quedó a medias: el PDF
+> se reportó entregado y quedó **"Pendiente"**, invisible para el canal. Después,
+> con la espera corregida pero leyendo el tic donde no estaba, abortó envíos que
+> **sí** habían llegado. El primero da por entregado lo que no salió; el segundo
+> induce el reenvío manual, y así el canal de clientes terminó con dos copias del
+> mismo informe.
+>
+> La confirmación exige ahora las tres cosas: que la última burbuja sea **este**
+> archivo (por nombre, cuando no hay pie), que su etiqueta diga entregada, y una
+> espera que alcance para la subida.
+
 ### El "hasta dónde" del sesgo tiene dos gramáticas, no una
 
 El Playbook no emite señales: emite **sesgo con su vigencia**. Y ese "hasta dónde" no
