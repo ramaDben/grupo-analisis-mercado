@@ -243,7 +243,7 @@ cadencia, perfil de Chromium y guardrails de texto.
 | Campo editorial vacío | sí | sí |
 | Cupo diario (40) y cadencia (45 s) | sí | sí |
 | Un solo dueño del perfil de Chromium | sí | sí |
-| Ventana horaria y días | no | sí |
+| Ventana horaria y días, en el ancla que corresponda (§5.3) | no | sí |
 | Canal, momento y tipo autorizados | no | sí |
 | Sub-cupo autónomo | no | sí |
 | Interruptor de corte | no | sí |
@@ -255,7 +255,17 @@ cadencia, perfil de Chromium y guardrails de texto.
 ```jsonc
 {
   "habilitada": false,
-  "ventana": { "desde": "08:00", "hasta": "18:00", "zona": "America/Santiago" },
+  "ventanas": {
+    "ancla_por_defecto": "America/New_York",
+    "por_ancla": {
+      "America/New_York": { "desde": "08:00", "hasta": "18:00" },
+      "America/Santiago": { "desde": "08:00", "hasta": "18:00" }
+    },
+    "anclaje_santiago": {
+      "tickers": ["USDCLP"],
+      "paises_del_evento": ["chile"]
+    }
+  },
   "dias": ["lun", "mar", "mie", "jue", "vie"],
   "canales_autorizados": ["banco_de_pruebas"],
   "momentos_autorizados": ["premercado_fx", "cripto", "apertura_indices"],
@@ -265,7 +275,7 @@ cadencia, perfil de Chromium y guardrails de texto.
 }
 ```
 
-Cuatro decisiones, con su razón:
+Cuatro decisiones, con su razón (el anclaje de la ventana va aparte, en §5.3):
 
 1. **Todo es lista blanca, nunca lista negra.** Un tipo de pieza nuevo queda denegado por
    defecto hasta que alguien lo autorice explícitamente. Con lista negra, cada pieza nueva
@@ -280,7 +290,74 @@ Cuatro decisiones, con su razón:
    para medir contra el DOM sin tocar un canal de clientes. Los canales reales entran cuando
    la bitácora muestre una semana limpia.
 
-### 5.3 El interruptor de corte
+### 5.3 El anclaje de la ventana: Nueva York, salvo lo chileno
+
+**Decisión del director, 2026-09-05.** La ventana se ancla a **Nueva York**, excepto para el
+USD/CLP y los datos del Banco Central de Chile, que se anclan a **Santiago**.
+
+No es una preferencia: es la misma razón por la que existe el campo `zona` en
+`config/agenda_mercado.json`. Ese archivo ya declara `zona_ancla: America/New_York` y permite
+que un momento se ancle a otro reloj, y `CLAUDE.md` ya anticipaba este caso exacto: *"un
+premercado del USD/CLP tendría que ir anclado a Santiago, porque con el desfase en su máximo
+las 08:30 de Nueva York caen hora y media después de que Santiago abrió"*. Una ventana anclada
+a Nueva York autorizaría la pieza del USD/CLP cuando su propio mercado ya lleva rato operando.
+
+**El orden de resolución es fijo y gana el primero que resuelve:**
+
+1. El activo protagonista de la pieza está en `anclaje_santiago.tickers` → **Santiago**.
+2. La pieza es de dato macro y el país de su evento está en
+   `anclaje_santiago.paises_del_evento` → **Santiago**.
+3. Cualquier otro caso → **`ancla_por_defecto`**, hoy Nueva York.
+
+Que el orden sea fijo es lo que hace la decisión reproducible. Una pieza que mencione a la vez
+a la Fed y al BCCh resuelve por su protagonista, no por cuál se nombró primero en el texto.
+
+#### El vocabulario es el del escáner, y está en inglés
+
+`obtener_calendario_macro` devuelve el país en **inglés** (`Chile`, `United States`), y
+`screener_gi._BLACKOUTS` ya lo consume así: `paises: ("chile",)` en minúscula, con
+`alcance: "USDCLP"` para la reunión de política monetaria del BCCh.
+
+El gate usa **esa misma normalización**, no una propia. Escribir el patrón en español dejaría
+el filtro inerte sin que nada avise, que es un error que este repo ya cometió. Y como esto crea
+un cruce nuevo entre dos módulos que se hablan por nombre, **lleva su test de contrato** (§8).
+
+#### El desfase no se escribe en ninguna parte
+
+Las horas se guardan como hora de pared en su zona y se convierten **en el instante de
+evaluar**. Chile y Estados Unidos cambian de horario en sentido opuesto, así que el desfase se
+mueve dos veces al año. Un offset fijo es el error de ±1 h del issue #38.
+
+#### La consecuencia práctica, que parece un bug y no lo es
+
+Durante buena parte del año las dos ventanas no coinciden vistas desde Chile:
+
+| Desfase | Ventana de Nueva York, en hora Chile | Ventana de Santiago | Franjas asimétricas |
+|---|---|---|---|
+| NY+0 (hasta el 5 sep 2026) | 08:00–18:00 | 08:00–18:00 | ninguna |
+| NY+1 (desde el 6 sep 2026) | 09:00–19:00 | 08:00–18:00 | 08–09 solo chileno · 18–19 solo NY |
+| NY+2 (desde el 1 nov 2026) | 10:00–20:00 | 08:00–18:00 | 08–10 solo chileno · 18–20 solo NY |
+
+En noviembre, entre las 08:00 y las 10:00 de Chile el sistema podrá despachar el USD/CLP y no
+el oro. Eso es correcto y es el punto de la decisión, pero visto en vivo se lee como una falla,
+así que el motivo de la denegación lo dice con todas sus letras: `fuera_de_ventana`, nombrando
+el ancla que se aplicó y su horario local.
+
+#### Una cosa que hay que confirmar
+
+Fijé la ventana de Santiago en 08:00–18:00 por simetría con la de Nueva York, pero **es una
+asunción mía, no una medición**. Las decisiones de tasas del BCCh se publican al final de la
+tarde de Chile, y si caen al filo de las 18:00 la pieza de reacción quedaría fuera de la
+ventana justo el día que más importa. Antes de habilitar la autonomía para el USD/CLP hay que
+cruzar el horario real de la RPM contra `obtener_calendario_macro` y ajustar `hasta`.
+
+#### El día se evalúa en la misma zona que la hora
+
+`dias` se comprueba contra la fecha **en la zona que resolvió el anclaje**, no en una fija. Con
+dos anclas y una sola zona para el día, un viernes por la tarde podría contarse como sábado
+para una mitad del sistema y no para la otra.
+
+### 5.4 El interruptor de corte
 
 `data/.autonomia_off`. Si el archivo existe, todo despacho con `origen="autonomo"` queda
 denegado. El director no se ve afectado.
@@ -355,7 +432,7 @@ trabajo todavía está sin commitear.
 
 ## 8. Pruebas
 
-Cada módulo de `guardrails/` lleva su test unitario. Además, **cinco tests de contrato**, que
+Cada módulo de `guardrails/` lleva su test unitario. Además, **siete tests de contrato**, que
 son los que impiden que el sistema se desarme con el tiempo:
 
 | Test | Qué impide |
@@ -365,6 +442,14 @@ son los que impiden que el sistema se desarme con el tiempo:
 | `test_el_reloj_no_llama_al_sender_directo` | saltarse el gate desde el reloj |
 | `test_hooks_registrados_existen` | un `settings.json` que apunta a un script borrado |
 | `test_matchers_cubren_los_dos_shells` | un guardia que solo mira `Bash` y deja pasar PowerShell |
+| `test_ancla_usa_el_vocabulario_del_escaner` | escribir "Chile" donde el calendario dice `chile`, y dejar el anclaje inerte |
+| `test_las_dos_ventanas_en_los_tres_desfases` | que el USD/CLP se juzgue con el reloj de Nueva York |
+
+Los dos últimos nacen del anclaje doble de §5.3. `test_las_dos_ventanas_en_los_tres_desfases`
+recorre las tres configuraciones del año (NY+0, NY+1, NY+2) y verifica las franjas asimétricas
+de esa tabla: es el mismo patrón que ya usa el test de momentos que no se pueden pisar, y por
+la misma razón, porque un error de anclaje **solo aparece medio año después**, cuando ya nadie
+recuerda que se tocó esto.
 
 `test_hooks_registrados_existen` merece una nota: un hook mal referenciado **no rompe nada
 visiblemente**. La sesión abre igual y el guardia simplemente no corre. Es el mismo modo de
