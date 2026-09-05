@@ -101,12 +101,23 @@ Nunca truncar ceros al final ni redondear a entero.
 | USDCLP | 2 | $889.60 |
 | USDJPY | 3 | 163.731 |
 | XAUUSD | 2 | $4,539.72 |
-| WTI.spot | 2-3 | $90.18 |
+| WTI.spot | 3 | $90.181 |
+| BRENT.spot | 3 | $94.507 |
 | US100.spot | 2 | 30,350.01 |
 | Acciones | 2 | $192.50 |
-| COPPER | 1 | $14274.0 USD/t |
+| COPPER | 0 | $14197 USD/t |
 
 *El Cobre se analiza y cotiza siempre por su valor por tonelada métrica (`USD/t`) disponible en el terminal MT5.*
+
+**El Cobre es el único con `digits = 0`, así que se escribe entero y sin separador de
+miles** (`$14197 USD/t`): así lo cotiza el broker, verificado contra la cuenta el
+2026-09-03, y el punto de miles se confundiría con el decimal inglés. No lo confundas
+con `COBRE_COMEX` de `commodities_data.json`, que es el precio COMEX en **USD/libra**
+(6,602) y sí lleva 4 decimales: son dos series del mismo metal en dos unidades, y solo
+la de MT5 es el símbolo operable.
+
+Ante cualquier duda, el `digits` de un activo está en `config/activos.json` y manda el
+terminal. Esta tabla es una copia de conveniencia; si no coinciden, gana el catálogo.
 
 ## 4. Tono: profesional con gancho, nunca dramático
 
@@ -524,3 +535,75 @@ Son las mismas de la sección 3 y 4, y acá se verifican así:
 - **El Cobre se escribe entero**, sin separador de miles (`$14386 USD/t`), porque es
   el único con `digits = 0` y el punto se confundiría con el decimal inglés.
 - **Toda sigla se explica** la primera vez que aparece.
+
+---
+
+## 11. La memoria compartida (OMEGA)
+
+El proyecto lleva 45 memorias del director y del trabajo hecho: correcciones de estilo
+que costaron una pieza mal enviada, decisiones que no están en el código, hechos
+medidos contra el terminal o contra el DOM. Vivían solo del lado de Claude Code. El
+2026-09-05 se respaldaron en **OMEGA**, que es una base de memoria persistente
+compartida entre modelos, y **el MCP `omega-memory` ya está registrado para ti** en
+`~/.gemini/antigravity/mcp_config.json`.
+
+**Consúltalas antes de una tarea no trivial.** Son el contexto que este archivo no
+puede repetir entero, y ahorran repetir un error que ya se pagó una vez.
+
+### Cómo buscarlas, con el detalle que importa
+
+Medido el 2026-09-05 sobre seis consultas en español cuyo tema **sí** estaba guardado:
+la memoria correcta sale primera en **4 de 6**. Lo que la encuentra es sobre todo la
+coincidencia léxica, no el significado.
+
+**Y la causa no es el idioma del modelo.** Eso se probó cambiándolo: con
+`multilingual-e5-small`, que es multilingüe, el coseno acierta 6 de 6, pero el resultado
+que OMEGA devuelve no mejora, y con **menos** candidatos recuperados. Se
+revirtió. Son dos mecanismos del ranking, los dos ajenos al modelo:
+
+- **El atajo de FTS5** (`sqlite_store/_query.py`): si el canal de texto encuentra un
+  match fuerte, OMEGA **se salta la fase vectorial y el reranker** y devuelve el orden
+  del texto. Ahí el significado de la consulta no se llega a mirar.
+- **La fusión RRF con k=60**: combina los canales por puesto, no por puntaje, y
+  `1/(60+1)` contra `1/(60+5)` son un 6% de diferencia. Sobre 45 memorias eso aplana
+  la señal, y un match textual casual empata con el semántico correcto.
+
+En la práctica eso se te presenta de dos maneras, y la segunda es la peligrosa:
+
+- Devuelve **la memoria equivocada con puntaje 1,00**. La confianza alta no significa
+  nada acá; no la leas como acierto. Preguntando por la cuenta de "MetaTrader" salió
+  primera la memoria de la cuenta de GitHub, porque comparten la palabra "cuenta".
+- Devuelve **poco o nada existiendo la memoria**, cuando no compartes vocabulario con
+  ella: la memoria de la cuenta dice "MT5", no "MetaTrader". Un `sin resultados` de
+  OMEGA **no prueba que no haya memoria** sobre el tema.
+
+Así que no intentes arreglar esto cambiando el modelo: ya se midió y no es ahí. Lo que
+sí funciona es cambiar **cómo preguntas**: con el término que el proyecto usa de
+verdad, o listando con `browse`.
+
+| Qué quieres | Modo | Ejemplo |
+|---|---|---|
+| Un término que sabes que aparece | `phrase` | `omega_query(query="guion largo", mode="phrase")` |
+| Orientarte sobre qué hay | `browse` | `omega_query(query="", mode="browse", limit=20)` |
+| Búsqueda por significado | `semantic` | Úsala al final y **verifica** lo que devuelva |
+
+Cada memoria abre con un encabezado `[MEMORIA GI - <tipo>] <nombre>` y su descripción
+en una línea, así que en `browse` se distingue de un vistazo cuál sirve. Los tipos son
+`feedback` (correcciones del director, con su porqué), `project` (trabajo en curso y
+decisiones), `reference` (datos externos). Los enlaces `[[nombre]]` del cuerpo apuntan
+a otras memorias por su nombre.
+
+### Tres reglas de uso
+
+1. **Manda `CLAUDE.md`, después este archivo, y OMEGA es contexto.** Una memoria
+   describe lo que era cierto el día que se escribió. Si nombra un archivo, una función
+   o un flag, **verifica que siga existiendo** antes de apoyarte en él. Una memoria que
+   contradice una regla vigente está vencida, no es una excepción.
+2. **Lo que aprendas, guárdalo**: `omega_store(content=..., event_type="preference")`.
+   Se usa `preference` porque es el único tipo **sin caducidad**; `decision` y
+   `lesson_learned` se podan a los 90 días y un respaldo que caduca no es un respaldo.
+   El tipo real va escrito en el encabezado del texto.
+3. **Una memoria dice el porqué, no el qué.** Lo que el repo ya registra (estructura
+   del código, historia de git, lo que dice este archivo) no se guarda: se duplicaría, y
+   a la segunda copia una queda atrás. Se guarda lo que no se puede deducir leyendo el
+   repo.
