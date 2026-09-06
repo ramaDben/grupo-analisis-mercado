@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# punto-de-entrada: lo corre el director a mano para el informe de sesion asiatica; lee MT5, no trae cifras escritas
 # -*- coding: utf-8 -*-
 """
 generar_graficos_sesion_asiatica.py

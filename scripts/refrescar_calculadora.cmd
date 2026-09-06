@@ -1,4 +1,5 @@
 @echo off
+rem punto-de-entrada: tarea programada de Windows GI-CalculadoraLotaje (verificada Ready el 2026-09-06); tambien se corre a mano
 setlocal enabledelayedexpansion
 rem ============================================================================
 rem Refresco de la calculadora de lotaje publica (Grupo Inteligencia).

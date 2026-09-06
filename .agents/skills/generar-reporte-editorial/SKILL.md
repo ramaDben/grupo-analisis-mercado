@@ -49,7 +49,7 @@ Para que cualquier persona (desde un cliente novato hasta un trader profesional)
 ## 3. Pauta de Redacción, Consistencia Semántica y Estado de Mercado
 
 ### Criterio de Estado de Mercado (Narrativa de Mercado Cerrado):
-Durante sesiones nocturnas o asiáticas donde el mercado formal chileno está inactivo, el par USD/CLP no se analiza como un activo táctico en vivo, sino como **"Mercado Cerrado · Radar de Madrugada"**, monitoreando el Cobre asiático ($14.274,0 USD/t) y el DXY para proyectar el punto de equilibrio de la apertura formal a las 08:30 CLT.
+Durante sesiones nocturnas o asiáticas donde el mercado formal chileno está inactivo, el par USD/CLP no se analiza como un activo táctico en vivo, sino como **"Mercado Cerrado · Radar de Madrugada"**, monitoreando el Cobre asiático (nivel leído del terminal en el momento, entero y sin separador de miles porque `COPPER` tiene `digits = 0`) y el DXY para proyectar el punto de equilibrio de la apertura formal a las 08:30 CLT.
 
 ### Regla Semántica Estricta de Colores en Precios:
 En los mensajes de WhatsApp y resúmenes de cierre, **los colores miden siempre la dirección del precio del activo en el gráfico**, nunca la fuerza del dato macro:

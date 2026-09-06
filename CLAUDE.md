@@ -1,16 +1,36 @@
 # Grupo de Análisis de Mercado — Sistema Automatizado
+<!-- ambito: claude -->
+
+
+> **Qué vive en este archivo.** Acá está lo que cambia lo que sale a un grupo hoy: la cadena de
+> datos, la selección de activos, la producción de las piezas, el despacho, y las reglas de
+> contenido que deciden si un mensaje sirve. **Todo lo demás vive en `docs/` y se enlaza en una
+> línea.** Si una sección nueva no pasa ese criterio, su lugar es `docs/`.
+>
+> **Cada sección declara su ámbito** en un comentario `<!-- ambito: ambos | claude | agy -->`, y
+> `.agents/rules/proyecto.md` **se genera desde acá** con `scripts/agy_reglas.py`. No edites ese
+> archivo a mano: editá la sección correspondiente de este y volvé a generar. Hasta el
+> 2026-09-06 se mantenía a mano y había divergido en las dos direcciones.
 
 ## Contexto
+<!-- ambito: ambos -->
 Este proyecto automatiza la operativa semanal del Grupo de Análisis de Mercado para envío vía WhatsApp. El usuario es el director de trading. Los sub-agents actúan como analistas de mercado y recolectores de información.
 
 > [!CRITICAL]
 > **GUARDRAILS DE INTEGRIDAD DE DATOS Y COMPOSICIÓN EDITORIAL:**
 > 1. **CERO HARDCODING DE PRECIOS Y COTIZACIONES (REGLA 1):** Queda estrictamente prohibido escribir números de precios, cotizaciones, variaciones porcentuales o niveles técnicos "a mano" o calculados mentalmente en scripts de Stories, HTMLs o informes Markdown. Todos los precios deben ser leídos en tiempo de ejecución desde MetaTrader 5 / MCP `market-data` (`get_asset_levels`, `latest_prices_summary.json`). Para tickers con sufijo del broker, usar siempre el símbolo exacto del catálogo (`US100.spot`, `US500.spot`, `US30.spot`, `WTI.spot`, `BRENT.spot`, `GER40.spot`, `COPPER`, `USDCLP`, `XAUUSD`, `USDJPY`).
-> 2. **PROHIBICIÓN DE TRUNCADO DE DÓLARES EN SHELL (REGLA DE ESCRITURA):** Al generar o guardar archivos `.txt` o mensajes con símbolos de moneda (`$`), queda prohibido usar double-quotes o here-strings `@"..."@` en PowerShell porque la shell interpreta `$931` o `$4` como variables vacías y trunca el precio. Toda escritura de archivos de texto con precios DEBE realizarse mediante Python (`Path.write_text(..., encoding="utf-8")`) o single-quoted here-strings `@'...'@`.
+> 2. **NADA DE TEXTO DE CLIENTE POR LA CONSOLA DE POWERSHELL (REGLA DE ESCRITURA):** la shell rompe el texto de dos maneras distintas y las dos llegan al canal. **(a) Trunca los precios:** con double-quotes o here-strings `@"..."@`, PowerShell interpreta `$931` o `$4` como variables vacías y el precio desaparece. **(b) Rompe los acentos:** `Set-Content` y `Out-File` usan por defecto la codificación ANSI del sistema, y una tubería (`Get-Content payload.json | python script.py`) convierte los bytes en strings con `$OutputEncoding` en US-ASCII, así que las tildes, las eñes y el punto medio `·` salen como `?` y la pieza se publica con `AN?LISIS` e `inversi?n`. Toda escritura de texto con precios o acentos va por Python (`Path.write_text(..., encoding="utf-8")`) o por single-quoted here-strings `@'...'@`, y **los pipelines encadenados** (`serie_mt5` → `story_grafico` → `story_render`) se corren con un puente en Python que use `subprocess` en binario, nunca conectando comandos con `|`. Antes de dar una pieza por buena, mirá el PNG y verificá que `¿` `¡` `·` y las tildes se vean.
 > 3. **COMPOSICIÓN OBLIGATORIA DE INFORMES PDF (REGLA 2):** Queda estrictamente prohibido generar PDFs institucionales a partir de markdowns planos improvisados. Todo informe PDF DEBE seguir la arquitectura canónica (`pipeline_informe.py` + `grafico_informe.py` + `generar_pdf.py`), incluyendo los banners gráficos vectoriales a 300 DPI por activo, la tabla de curva soberana de 4 columnas en notación chilena y la estructura pedagógica de 3 capas (qué pasa, qué significa, qué NO hacer).
 > 4. **PROHIBICIÓN TOTAL DE MODELOS DE DIFUSIÓN (REGLA 0):** Prohibido usar `generate_image` o modelos de difusión. Toda pieza visual es código HTML + CSS + Playwright.
 
+El grupo es para clientes y a la vez alinea al equipo: los ejecutivos se mantienen al tanto del
+mercado y replican el lenguaje simple con sus carteras, y los analistas verifican que lo que se
+comunica sea consistente. La meta de fondo es pasar de un modelo de señales a uno de análisis y
+educación, donde el cliente aprende a leer el mercado: eso es lo que mueve satisfacción,
+retención y NPS, y lo que reduce churn.
+
 ## Principio fundamental
+<!-- ambito: ambos -->
 Análisis técnico simple y directo, con dirección clara, que genere interés y apetito por operar — sin caer en lo coloquial ni en lo catastrófico. El mensaje lo reciben tanto traders expertos como clientes novatos: debe ser comprensible para quien recién aprende y, a la vez, accionable para quien ya opera. Se enfatiza la tendencia y se nombra hacia dónde se dirige el activo, despertando el interés del cliente por operar el mercado.
 
 **Regla de oro**: el cliente debe entender siempre hacia dónde se dirige el activo, para saber qué operar. Un análisis que no deja clara la dirección (alcista / bajista / lateral) está incompleto.
@@ -18,6 +38,7 @@ Análisis técnico simple y directo, con dirección clara, que genere interés y
 Criterio de claridad (subordinado a la regla de oro): si un cliente nuevo sin experiencia no entiende el mensaje en menos de 30 segundos, hay que reescribirlo más simple — pero "más simple" nunca significa "sin dirección".
 
 ## Activos cubiertos (rotación diaria, 2-3 por día)
+<!-- ambito: ambos -->
 - **USD/CLP**: drivers → cobre, Dollar Index, tasas BCCh vs Fed, flujos
 - **Oro (XAU/USD)**: drivers → Dollar Index, tasas reales, decisiones Fed, coberturas bancos centrales, geopolítica
 - **WTI (Petróleo)**: drivers → inventarios EIA, decisiones OPEP+, demanda China, geopolítica
@@ -26,6 +47,7 @@ Criterio de claridad (subordinado a la regla de oro): si un cliente nuevo sin ex
 - **Acciones (rotación por análisis previo)**: además de los 4 activos base, la rotación diaria puede incluir 1-2 acciones del catálogo elegidas por análisis previo. Las elige el `Score_GI` del escáner como a cualquier otro activo del universo.
 
 ### El catálogo técnico es más amplio que la rotación diaria
+<!-- ambito: ambos -->
 `config/activos.json` cubre 38 tickers, e incluye desde el 2026-08-25 cinco ETF (`QQQ.US`, `SPY.US`, `GLD.US`, `IWM.US`, `SOXX.US`) y cinco criptos nuevas (`ETHUSD`, `SOLUSD`, `LTCUSD`, `ADAUSD`, `DOGUSD`). Todos entran con `rotacion_diaria: false`: **la rotación diaria de 2-3 activos no cambia**, y estos existen para que `get_asset_levels` y `get_symbol_spec` puedan responder por ellos cuando el director los pida.
 
 Tres cosas que conviene no volver a averiguar:
@@ -36,26 +58,31 @@ Tres cosas que conviene no volver a averiguar:
 El universo completo del terminal (32 pares FX, 86 acciones, 13 ETF, 6 criptos) está capturado en `calculadoras excel/Simulador GI Real.xlsx`, hoja `Datos`, que genera `scripts/simulador_gi.py` con `mt5.symbols_get()`. Es la fuente para verificar si un instrumento existe y con qué `digits`, sin abrir MT5.
 
 ## Estructura diaria obligatoria (lunes a viernes)
+<!-- ambito: ambos -->
 
 > **Orden canónico (issue #43)**: el dato/noticia del calendario va PRIMERO y los niveles después. Lo cumple `contexto_macro_grupos.py`, que arma el mensaje de cada canal con la agenda del día arriba y la lectura técnica debajo.
 
 ### 1. Noticia relevante del calendario económico
+<!-- ambito: ambos -->
 - 1 noticia o dato del día que impacte directamente a alguno de los activos
 - Explicar simple: qué es, a qué hora sale, qué se espera y cómo podría reaccionar el activo
 - Fuente oficial: calendario de Investing.com
 - Hora siempre en hora Chile (CLT/CLST)
 
 ### 2. Niveles técnicos del día
+<!-- ambito: ambos -->
 - Enviar niveles en temporalidades 4H, 1H o 15M
 - Cubrir 2 o 3 activos por día (rotar entre USD/CLP, Oro, WTI, US100)
 - Indicar: soportes, resistencias, zona de interés y posible sesgo
 - La temporalidad se elige por activo según su volatilidad (nunca se asume 4H fijo). Los niveles se presentan como **lectura/marco temporal**, no como señal de operativa.
 
 ### 3. Drivers del activo
+<!-- ambito: ambos -->
 - Explicación corta de los drivers que están moviendo al activo
 - Si hay información relevante durante el día (declaraciones, datos sorpresivos, eventos geopolíticos), informar de inmediato
 
 ## Reglas de temporalidad
+<!-- ambito: ambos -->
 Cada análisis indica explícitamente su temporalidad con un rango cuantificado (prohibido usar "corto" sin número — issue #44):
 - **15M** → scalper (minutos a 1-2 h) — alta rotación, movimientos rápidos del día
 - **1H** → intradía (dentro de la jornada) — movimientos del día, confirmar entradas finas
@@ -77,6 +104,7 @@ Tres reglas que salieron de arreglarlo, y que imponen tests:
 Ejemplo obligatorio: "Niveles en 15M, marco scalper (minutos a 1-2 h)"
 
 ## Fecha y hora actual — regla canónica (OBLIGATORIO)
+<!-- ambito: ambos -->
 **Nunca** uses `WebSearch` para obtener la fecha o la hora actual: devuelve snippets de búsqueda (cacheados, imprecisos o ausentes), no un reloj, y produce errores al fechar mensajes o marcar eventos pasados/futuros.
 
 **Método único y determinista** — obtén la hora de Chile (CLT/CLST, ajuste de horario de verano automático) con el reloj del sistema:
@@ -99,11 +127,13 @@ Zonas canónicas (IDs Windows): EE.UU. (BLS/ISM/ADP/EIA/Fed) → `Eastern Standa
 **Cruce de día en eventos asiáticos (OBLIGATORIO)**: el helper devuelve la hora, **no la fecha**. Japón va 13 h adelante de Chile, así que un evento japonés cae el **día anterior** en nuestro calendario: la decisión del BoJ del viernes 31 a las 12:00 JST ocurre el **jueves 30 a las 23:00 CLT**. Al fechar un evento asiático, calcula también la fecha en Chile y comunícala siempre en hora Chile. Caso especial del BoJ: **no compromete hora exacta** de anuncio (publica entre 11:30 y 12:30 JST), así que la ventana en Chile es 22:30–23:30; la conferencia posterior del gobernador sí tiene hora fija (15:30 JST) y es donde suele estar el movimiento del USD/JPY.
 
 ### Guardrail Anti-Anacronismos y Modo Anticipación (OBLIGATORIO)
+<!-- ambito: ambos -->
 Queda **estrictamente prohibido** redactar eventos futuros en tiempo pasado (ej. "tras la asimilación de los discursos de Jackson Hole", "luego del dato de IPC") si dicho evento aún no ha ocurrido según el reloj real de Chile.
 - **Eventos Futuros / Próximos:** Se redactan exclusivamente en **Modo Anticipación** ("en la antesala de...", "a la espera de los discursos previstos para mañana...", "el mercado aguarda la publicación...").
 - **Validador Automático:** `generar_pdf.py` y `pipeline_informe.py` ejecutan automáticamente `scripts/validar_consistencia_temporal.py`. Si detectan discrepancia de fecha o anacronismos en el texto, el proceso aborta inmediatamente (*Fail-Fast*).
 
 ## Cadencia
+<!-- ambito: ambos -->
 
 No hay agenda por día de la semana ni comandos de día: la producción se rige por **el carrusel y
 el informe**, que detectan la sesión y la hora reales. El carrusel se puede correr en cualquier
@@ -111,6 +141,7 @@ momento; el informe tiene dos momentos (apertura y cierre). Las encuestas se man
 director lo decide, siempre después de que el canal recibió contexto para votar informado.
 
 ## Producción diaria en 3 tandas (escáner + carrusel + informe)
+<!-- ambito: ambos -->
 
 Sistema de producción estructurado que **complementa** la agenda de arriba, no la reemplaza:
 la rotación diaria de 2-3 activos y las piezas de la estructura obligatoria siguen igual. Lo
@@ -118,6 +149,7 @@ que agrega es una selección **objetiva** del universo completo, para que la ele
 activo comunicar no dependa de a quién se le ocurrió primero.
 
 ### Producción diaria responsiva (escáner + carrusel + informe)
+<!-- ambito: ambos -->
 
 | Momento / Sesión | Ventana (Nueva York) | Comando | Salida |
 |---|---|---|---|
@@ -150,138 +182,110 @@ escáner.
 fatiga de descargas. La apertura sí va en PDF; el cierre es mensaje con gráfico.
 
 ### Un solo reloj: `config/agenda_mercado.json`
+<!-- ambito: ambos -->
 
 Las ventanas de sesión, los anclajes de tanda y los **momentos del día** viven en un solo
-archivo y se leen con `scripts/agenda_mercado.py`. Antes las ventanas estaban en una cadena
-de `elif` dentro de `detectar_sesion`, con los minutos sumados a mano, y los anclajes en otra
-tabla del mismo módulo. El reloj de sucesos habría agregado un tercer lugar declarando el
-mismo hecho, y **dos relojes divergen siempre**: es el defecto recurrente del repo.
+archivo y se leen con `scripts/agenda_mercado.py`. Estuvieron repartidos entre una cadena de
+`elif` y otra tabla del mismo módulo, y el reloj de sucesos habría agregado un tercero:
+**dos relojes divergen siempre**, que es el defecto recurrente del repo.
 
 Tres invariantes las imponen tests, no la buena intención:
 
 1. **Cada minuto del día hábil pertenece a exactamente una sesión.** Un hueco deja al escáner
-   sin sesión; un solape hace que el resultado dependa del orden del JSON, que es un
-   accidente esperando a que alguien reordene el archivo.
+   sin sesión; un solape hace que el resultado dependa del orden del JSON.
 2. **Las ventanas no pueden volver al código del escáner.** Un test lee su fuente y falla si
    aparecen los minutos escritos a mano.
 3. **El desfase con Chile no está escrito en ninguna parte.** El ancla es Nueva York y la hora
-   se comunica en hora real de Chile. Chile y EE.UU. cambian de horario en sentido opuesto,
-   así que el desfase se mueve dos veces al año: hoy es +0 h y **desde el 2026-09-06 pasa a
-   +1 h**. Un offset fijo es el error de ±1 h del issue #38.
+   se comunica en hora real de Chile; Chile y EE.UU. cambian de horario en sentido opuesto, así
+   que el desfase se mueve dos veces al año. Un offset fijo es el error de ±1 h del issue #38.
 
 **Los momentos separan por clase de activo, y esa es la decisión de fondo.**
 
 | Momento | Hora (NY) | Clases | Por qué |
 |---|---|---|---|
-| `premercado_fx` | 08:30 | `forex_commodities` | Es la hora del dato de empleo e inflación de EE.UU. Divisas, oro y petróleo cotizan 24 h, así que ya tienen precio formado y el nivel es real. |
-| `cripto` | 09:00 | `crypto` | **Medido**, no supuesto. Ver abajo. |
-| `apertura_indices` | 10:00 | `indices`, `acciones`, `etfs` | La bolsa abre 09:30 y la primera media hora es el barrido de órdenes de apertura, donde el rango del día todavía no existe. |
+| `premercado_fx` | 08:30 | `forex_commodities` | Es la hora del dato de empleo e inflación de EE.UU., y estos activos cotizan 24 h: ya tienen precio formado. |
+| `cripto` | 09:00 | `crypto` | **Medido**: la cripto se mueve en la mañana americana, a 1,8x su mediana diaria, no en Asia. |
+| `apertura_indices` | 10:00 | `indices`, `acciones`, `etfs` | La bolsa abre 09:30 y la primera media hora es el barrido de apertura, donde el rango del día todavía no existe. |
 
-Publicar niveles de índices a las 08:30 es **publicar el cierre de ayer con fecha de hoy**:
-esos activos no tienen precio hasta que abre la bolsa. Por eso la separación no es una
-preferencia editorial, es una condición del dato.
+Publicar niveles de índices a las 08:30 es **publicar el cierre de ayer con fecha de hoy**. La
+separación no es una preferencia editorial, es una condición del dato.
 
-La tolerancia es de **20 minutos y solo hacia adelante**. El disparo del sistema operativo,
-la lectura de precios y el render se llevan minutos, así que sin ventana de gracia un momento
-se pierde por llegar dos minutos tarde; y disparar el de las 08:30 a las 08:15 publicaría
-niveles anteriores al dato que motiva la hora.
+**Tolerancia de 20 minutos y solo hacia adelante.** El disparo del sistema operativo, la lectura
+de precios y el render se llevan minutos, así que sin ventana de gracia un momento se pierde por
+llegar dos minutos tarde; y disparar el de las 08:30 a las 08:15 publicaría niveles anteriores al
+dato que motiva la hora.
 
-**La cripto se mueve en la mañana americana, no en Asia.** Se midió el 2026-09-04 sobre 90
-días de velas H1 en BTC, ETH, SOL y LTC (mediana del rango por hora, solo días hábiles):
+**Ojo con MT5: devuelve las marcas de tiempo en hora del SERVIDOR, empaquetadas como si fueran un
+timestamp UTC.** Interpretarlas como UTC desplaza la serie entera por el offset del broker, y así
+una medición horaria puede señalar la apertura de Londres cuando el máximo real estaba cuatro
+horas después. El offset se mide comparando `symbol_info_tick().time` contra
+`datetime.now(timezone.utc)`; `tools/symbol_spec.py` ya lo trata como `server_naive`.
 
-| Bloque (hora NY) | BTC | ETH | SOL | LTC |
-|---|---|---|---|---|
-| Asia 18–02 | 1,01x | 0,98x | 0,94x | 0,97x |
-| Europa 03–08 | 0,98x | 0,96x | 0,90x | 0,98x |
-| **NY mañana 08–12** | **1,80x** | **1,65x** | **1,52x** | **1,49x** |
-| NY tarde 12–16 | 1,23x | 1,17x | 1,16x | 1,14x |
+`clases_sin_momento` queda vacía, y la lista se conserva porque un test exige que toda clase del
+universo esté asignada a un momento **o** declarada ahí: es lo que impide que una clase nueva se
+quede fuera del reloj en silencio.
 
-El máximo está en 09:00–10:00, donde BTC llega a **2,09x** su mediana diaria. La sesión
-asiática está plana y Europa también: **la hipótesis del rollover asiático era falsa.** Va a
-las 09:00 y no a las 10:00 solo para no chocar con el momento de los índices, porque cada
-momento produce su propia tanda.
+> **No confundir con `config/agenda_semanal.json`**, que es la agenda por día de la semana de
+> antes del rediseño y describe una cadencia que ya no existe. `/estado` y
+> `docs/architecture.md` todavía la citan; `agenda_mercado.json` es la vigente.
 
-Dos cosas más que salieron de esa medición y conviene no volver a averiguar:
-
-1. **MT5 devuelve las marcas de tiempo en hora del SERVIDOR, empaquetadas como si fueran un
-   timestamp UTC.** Interpretarlas como UTC desplaza la serie entera por el offset del broker.
-   La primera corrida de esta medición dio el máximo en las 06:00 de Nueva York, que habría
-   apuntado a la apertura de Londres; el servidor corre en **UTC−4** y el máximo real está
-   cuatro horas después. El offset se mide comparando `symbol_info_tick().time` contra
-   `datetime.now(timezone.utc)`, y `tools/symbol_spec.py` ya lo trata correctamente como
-   `server_naive`.
-2. **El fin de semana la cripto está más quieta, no más activa**: 0,76x a 0,85x del día hábil.
-   La sesión `fin_de_semana` existía en parte pensando en ella, y el dato no respalda esa idea.
-
-`clases_sin_momento` queda vacía, y la lista se conserva porque un test exige que toda clase
-del universo esté asignada a un momento **o** declarada ahí. Es lo que impide que una clase
-nueva se quede fuera del reloj en silencio.
-
-> **Ojo, no confundir con `config/agenda_semanal.json`**, que es la agenda por día de la
-> semana de antes del rediseño y describe una cadencia que ya no existe (`apertura_mercado`,
-> `resumen_semanal`, los comandos de día). `/estado` y `docs/architecture.md` todavía la
-> citan. `agenda_mercado.json` es la vigente.
+Mediciones completas de volatilidad por hora: `docs/historia-forense.md`.
 
 ### El reloj de sucesos: latido del sistema, decisión en Python
+<!-- ambito: ambos -->
 
 `scripts/reloj_gi.py` es quien decide si a alguna clase de activo le toca salir.
-`scripts/instalar_reloj.ps1` registra el latido en el Programador de tareas (cada 15 min, sin
+`scripts/instalar_reloj.ps1` registra el latido en el Programador de tareas (cada 15 min; sin
 parámetros muestra qué haría y **no instala nada**).
 
 **La trampa que esto evita.** El Programador de tareas dispara en hora **local**. Una tarea a
-las 08:30 de Chile es 08:30 de Nueva York hoy y **06:30 de Nueva York en noviembre**: dos
-horas antes del dato que justifica la hora. La tarea seguiría corriendo puntual y publicando
-el cierre de ayer. Por eso **el agendador no sabe nada de mercados**: late, y Python decide
-leyendo la agenda y convirtiendo en ese instante.
+las 08:30 de Chile es 08:30 de Nueva York hoy y **06:30 de Nueva York en noviembre**: dos horas
+antes del dato que justifica la hora. La tarea seguiría corriendo puntual y publicando el cierre
+de ayer. Por eso **el agendador no sabe nada de mercados**: late, y Python decide leyendo la
+agenda y convirtiendo en ese instante.
 
-Cuatro decisiones que lo sostienen:
+Cuatro decisiones lo sostienen:
 
 1. **Idempotencia por momento y por día**, en `data/.reloj_disparos.json` (gitignoreado: es
-   estado generado, no historia editorial). El latido puede pasar cuatro veces por la ventana
-   de gracia de 20 min y la pieza sale una sola vez. Y hace **recuperable** la noche en que
-   Chile entra en horario de verano, donde una hora local simplemente no existe: una tarea
-   anclada a esa hora no dispararía nunca, y acá el momento sale en el siguiente latido.
-2. **Un momento que falló sigue pendiente.** MT5 puede no estar conectado en ese latido;
-   anotar el disparo igual perdería la pieza por el día entero. Solo se anota si al menos una
-   corrida terminó bien.
-3. **El reloj solo prepara.** Corre `pipeline_carrusel.py --preparar --grupo <canal>` y nada
-   más. Que un proceso automático pueda publicar en un canal es justamente lo que el flujo de
+   estado generado, no historia editorial). El latido puede pasar cuatro veces por la ventana de
+   gracia y la pieza sale una sola vez. Y hace **recuperable** la noche en que Chile entra en
+   horario de verano, donde una hora local simplemente no existe: una tarea anclada a esa hora no
+   dispararía nunca, y acá el momento sale en el siguiente latido.
+2. **Un momento que falló sigue pendiente.** MT5 puede no estar conectado en ese latido; anotar
+   el disparo igual perdería la pieza por el día entero. Solo se anota si al menos una corrida
+   terminó bien.
+3. **El reloj solo prepara.** Corre `pipeline_carrusel.py --preparar --grupo <canal>` y nada más.
+   Que un proceso automático pueda publicar en un canal es justamente lo que el flujo de
    aprobación prohíbe, y **hay un test que falla si alguien conecta el envío ahí**.
 4. **Los canales de un momento se derivan del mapeo real** de activo a canal, recorriendo el
    universo del escáner. Una lista de canales por momento sería otro contrato por nombre.
 
-**Anclado al mercado, con el cambio narrado** (decisión del director, 2026-09-04). La hora
-sigue al mercado y la hora chilena drifta; cuando el desfase cambia, el reloj levanta el aviso
-y deja el mensaje listo para que el director lo revise y lo mande. Se descartó anclar a hora
-chilena fija **midiéndolo**: la pieza de índices habría salido en noviembre a las 08:00 de
-Nueva York, hora y media antes de la campana, publicando el cierre de ayer con fecha de hoy.
+**Anclado al mercado, con el cambio narrado** (decisión del director, 2026-09-04). La hora sigue
+al mercado y la hora chilena drifta; cuando el desfase cambia, el reloj levanta el aviso y deja
+el mensaje listo para que el director lo revise y lo mande. Se descartó anclar a hora chilena
+fija **midiéndolo**: la pieza de índices habría salido en noviembre a las 08:00 de Nueva York,
+hora y media antes de la campana.
 
-| Fecha | Desfase | premercado_fx | cripto | índices |
-|---|---|---|---|---|
-| hasta el 5 sep 2026 | NY+0 | 08:30 CL | 09:00 CL | 10:00 CL |
-| 6 sep 2026 | NY+1 | 09:30 CL | 10:00 CL | 11:00 CL |
-| 1 nov 2026 | NY+2 | 10:30 CL | 11:00 CL | 12:00 CL |
-| mar 2027 | NY+1 | 09:30 CL | 10:00 CL | 11:00 CL |
-| abr 2027 | NY+0 | 08:30 CL | 09:00 CL | 10:00 CL |
+**El aviso nombra al país que de verdad movió su reloj.** En septiembre es Chile entrando en su
+horario de verano; en noviembre es **Estados Unidos saliendo del suyo**. Decir "horario de verano
+de Chile" en noviembre sería contarle al cliente algo que no pasó, así que `quien_cambio` lo
+deduce comparando el desplazamiento de cada zona con el de una semana antes.
 
-**El aviso nombra al país que de verdad movió su reloj.** En septiembre es Chile entrando en
-su horario de verano; en noviembre es **Estados Unidos saliendo del suyo**. Decir "horario de
-verano de Chile" en noviembre sería contarle al cliente algo que no pasó, así que
-`quien_cambio` lo deduce comparando el desplazamiento de cada zona con el de una semana antes.
+Y como el aviso lo lee el cliente, se le aplican las reglas de texto de cliente: los nombres de
+los momentos van **acentuados** en el config porque salen publicados, los momentos se listan en
+**orden de reloj** y no en el del archivo, y no lleva guion largo ni cifras de precio.
 
-Y como el aviso lo lee el cliente, se le aplican las reglas de texto de cliente: los nombres
-de los momentos van **acentuados** en el config porque salen publicados, los momentos se
-listan en **orden de reloj** y no en el del archivo, y no lleva guion largo ni cifras de precio.
+**El campo `zona` por momento** permite que un momento se ancle al reloj del mercado que lo mueve.
+Hoy los tres van a Nueva York. Un premercado del USD/CLP tendría que ir anclado a Santiago, porque
+con el desfase en su máximo las 08:30 de Nueva York caen hora y media **después** de que Santiago
+abrió. El invariante que lo hace seguro: **un test verifica que ningún par de momentos caiga
+dentro de la tolerancia uno del otro, en las tres configuraciones de desfase del año** (si se
+pisaran, el decisor dispararía uno y perdería el otro en silencio).
 
-**El campo `zona` por momento** permite que un momento se ancle al reloj del mercado que lo
-mueve. Hoy los tres van a Nueva York. Un premercado del USD/CLP tendría que ir anclado a
-Santiago, porque con el desfase en su máximo las 08:30 de Nueva York caen hora y media
-**después** de que Santiago abrió, y dejaría de ser premercado. El invariante que lo hace
-seguro: **un test verifica que ningún par de momentos caiga dentro de la tolerancia uno del
-otro, en las tres configuraciones de desfase del año** (si se pisaran, el decisor dispararía
-uno y perdería el otro en silencio).
+Calendario del desfase año por año: `docs/historia-forense.md`.
 
 ### El `Score_GI` y sus gates
+<!-- ambito: ambos -->
 
 `scripts/screener_gi.py` puntúa cada activo del catálogo sobre 100:
 
@@ -292,40 +296,33 @@ uno y perdería el otro en silencio).
 | Espacio ADC+ATR | 20 | `atr_14` de H1 contra `rango_hoy` / `atr_restante_14` de D1 |
 | Momentum | 20 | `adx_14`, `rsi_14`, `macd_hist` |
 
-Los rangos de puntos **son** la ponderación: `Score = T + M + C + F`. No se multiplican por
-pesos, porque los factores ya vienen escalados a su máximo y hacerlo dejaría el techo real en
-26,5 sobre una escala de 100.
+Los rangos de puntos **son** la ponderación: `Score = T + M + C + F`. No se multiplican por pesos,
+porque los factores ya vienen escalados a su máximo y hacerlo dejaría el techo real en 26,5 sobre
+una escala de 100.
 
 **Seis gates se aplican ANTES de puntuar, y son prohibiciones, no puntos:**
 
 1. **Feriado de la bolsa** del activo (`config/feriados_bolsa.json`).
-2. **Blackout por calendario** (skill cuantitativa §4: FOMC −30/+75 min, NFP e IPC de EE.UU.
-   −15/+30, RPM y Imacec de Chile, BoJ). Ojo: `obtener_calendario_macro` ya entrega la hora en
-   America/Santiago, así que la ventana se compara directo — volver a convertir produce el
-   desfase de ±1 h del issue #38.
-3. **Prohibición del Playbook** para los 5 activos con ficha, leída de `setups_prohibidos`.
-   Solo bloquea si apunta en la misma dirección que la lectura técnica: que esté prohibido
-   comprar agresivamente no impide comunicar una caída.
+2. **Blackout por calendario** (FOMC −30/+75 min, NFP e IPC de EE.UU. −15/+30, RPM e Imacec de
+   Chile, BoJ). Ojo: `obtener_calendario_macro` ya entrega la hora en America/Santiago, así que la
+   ventana se compara directo; volver a convertir produce el desfase de ±1 h del issue #38.
+3. **Prohibición del Playbook** para los 5 activos con ficha, leída de `setups_prohibidos`. Solo
+   bloquea si apunta en la misma dirección que la lectura técnica: que esté prohibido comprar
+   agresivamente no impide comunicar una caída.
 4. **Agotamiento**: ATR diario consumido sobre 90%.
-5. **Confianza del modelo** (`gate_confianza`): estuvo sin documentar hasta el 2026-09-04, así
-   que la cuenta de "cuatro gates" llevaba tiempo desactualizada. Es el único con
-   `publicable: False` en el suplemento junto al del snapshot: un problema nuestro de datos no
-   es contenido para el cliente.
-6. **Banda contra vela típica** (`gate_banda`): excluye cuando la vela típica cubre la banda
-   entre soporte y resistencia. Ver abajo.
+5. **Confianza del modelo** (`gate_confianza`). Es uno de los dos con `publicable: False`: un
+   problema nuestro de datos no es contenido para el cliente.
+6. **Banda contra vela típica** (`gate_banda`): excluye cuando la vela típica cubre la banda entre
+   soporte y resistencia. **Excluye desde 1,00x y avisa entre 0,70x y 1,00x** (umbrales del
+   director, 2026-09-04). La zona de aviso no detiene la pieza: viaja como `banda_estrecha` y sale
+   en los avisos del escáner.
 
-**El gate de banda, y por qué el agotamiento no lo cubría.** Tener recorrido disponible no dice
-nada sobre si los bordes se sostienen: son dos preguntas distintas y el 2026-09-04 hubo que
-aplicar esta a mano cuatro veces. Litecoin cubría **3,2 veces** su banda, Dogecoin 1,8 y el
-S&P 500 1,03, con banda de 16,54 puntos contra una vela típica de 17,00. Publicar esos niveles
-es entregar ruido con forma de estructura, y el cierre canónico de la pieza los presenta como si
-el precio fuera a respetarlos.
-
-Umbrales fijados por el director el 2026-09-04: **excluye desde 1,00x y avisa entre 0,70x y
-1,00x**. La zona de aviso no detiene la pieza, viaja en la selección como `banda_estrecha` y sale
-en los avisos del escáner. La "vela típica" es `1,5 × ATR(H1)`, **la misma cifra** que la pieza
-publica como "Volatilidad típica": juzgar con otro número dejaría al gate midiendo distinto de lo
-que el cliente lee.
+**Tener recorrido disponible no dice nada sobre si los bordes se sostienen**, y por eso el gate de
+agotamiento no cubría al de banda: son dos preguntas distintas. Publicar niveles que la vela
+típica se come de una es entregar ruido con forma de estructura, y el cierre canónico de la pieza
+los presenta como si el precio fuera a respetarlos. La "vela típica" es `1,5 × ATR(H1)`, **la
+misma cifra** que la pieza publica como "Volatilidad típica": juzgar con otro número dejaría al
+gate midiendo distinto de lo que el cliente lee.
 
 **El respaldo por ATR se trata aparte, y esa es la parte que no era obvia.**
 `_get_support_resistance` cae a `precio ± ATR` cuando no encuentra swings del lado que necesita.
@@ -336,38 +333,36 @@ avisaría siempre y siempre por la misma razón artificial. Por eso `analizar_ac
 `niveles_origen` por lado (`swing` o `atr`) y el gate le da su propio motivo. Los cuatro lados
 caen por separado: se puede tener una resistencia real con un soporte sintético.
 
-Un setup prohibido puede puntuar alto, y con scoring puro ganaría la tanda. Por eso el filtro
-va antes.
+Un setup prohibido puede puntuar alto, y con scoring puro ganaría la tanda. Por eso el filtro va
+antes.
 
 **El escáner informa el motivo de cada exclusión y arrastra sus avisos.** Si el calendario no
-respondió, dice que no pudo verificar blackouts en vez de reportar cero exclusiones. Un
-escáner que descarta en silencio no es auditable.
+respondió, dice que no pudo verificar blackouts en vez de reportar cero exclusiones. Un escáner
+que descarta en silencio no es auditable.
 
-**Y un gate apagado también lo dice.** El de agotamiento es el único que se puede desactivar,
-y solo con `--forzar`: el escáner entonces estampa el aviso de que el espacio proyectado no
-está verificado. **`--grupo` acota el universo y nada más.** Hasta el 2026-09-03 también
-apagaba ese gate sin decirlo, y por eso el canal de forex salió con tres piezas cuyo
-recorrido diario estaba consumido al 93 %, 290 % y 115 %, con el escáner reportando cero
-exclusiones porque no las hubo. Con el gate encendido ese mismo canal devuelve
-**"ningún activo puntuó sobre 0: no hay tanda que publicar. Es un resultado válido, no una
-falla"**, que es la respuesta correcta y la que el manual del comando ya exigía.
+**Y un gate apagado también lo dice.** El de agotamiento es el único que se puede desactivar, y
+solo con `--forzar`: el escáner entonces estampa el aviso de que el espacio proyectado no está
+verificado. **`--grupo` acota el universo y nada más**, y hasta el 2026-09-03 también apagaba ese
+gate sin decirlo. Con el gate encendido, un canal sin candidatos devuelve **"ningún activo puntuó
+sobre 0: no hay tanda que publicar. Es un resultado válido, no una falla"**, que es la respuesta
+correcta y la que el manual del comando ya exigía.
+
+Las cifras medidas que fijaron los umbrales: `docs/historia-forense.md`.
 
 ### Un canal vacío se suplementa con el motivo por el que quedó vacío
+<!-- ambito: ambos -->
 
-**El motivo ya es contenido.** El 2026-09-03 el canal de divisas quedó en cero porque sus
-cuatro activos habían consumido su recorrido del día, con el USD/JPY al 290 %. Eso es una
-lectura de mercado, no un premio de consuelo, y explica algo que el cliente necesita
-entender: que no operar también es una decisión.
+**El motivo ya es contenido**: que los activos de un canal hayan consumido su recorrido del día
+es una lectura de mercado, no un premio de consuelo, y explica algo que el cliente necesita
+entender, que no operar también es una decisión.
 
 Y hay una razón **estructural** para que esto haga falta: el recorrido disponible es
-`ATR − rango_hoy`, una función que **solo baja** con el día. Por construcción, un sistema
-cuyo criterio de selección exige espacio tiene su mejor momento al abrir y se apaga solo.
-A las 10:24 de ese día había 4 activos de forex entre 93 % y 290 %; a las 12:11 había 15
-excluidos en todo el universo. **El gate está bien y lo que falta es otro eje de contenido
-para la tarde.**
+`ATR − rango_hoy`, una función que **solo baja** con el día. Por construcción, un sistema cuyo
+criterio de selección exige espacio tiene su mejor momento al abrir y se apaga solo. **El gate
+está bien y lo que falta es otro eje de contenido para la tarde.**
 
-`scripts/suplemento_canal.py` lo resuelve leyendo las exclusiones que el escáner ya
-escribió, no generando contenido:
+`scripts/suplemento_canal.py` lo resuelve leyendo las exclusiones que el escáner ya escribió, no
+generando contenido:
 
 | Motivo del gate | Categoría | Concepto que enseña |
 |---|---|---|
@@ -376,90 +371,87 @@ escribió, no generando contenido:
 | Prohibición del Playbook | `setup_prohibido` | `riesgo` |
 | Feriado de bolsa | `mercado_cerrado` | `temporalidades` |
 
-**El concepto lo elige el motivo, no el azar**, así la parte educativa queda pegada a lo que
-de verdad pasó en vez de ser una cápsula suelta. Hay contrato de nombres: todo motivo que el
-escáner pueda emitir tiene categoría, o está declarado `publicable: False`.
+**El concepto lo elige el motivo, no el azar**, así la parte educativa queda pegada a lo que de
+verdad pasó en vez de ser una cápsula suelta. Hay contrato de nombres: todo motivo que el escáner
+pueda emitir tiene categoría, o está declarado `publicable: False`.
 
-Cuatro reglas que lo mantienen del lado del contenido y no del relleno:
+Cuatro reglas lo mantienen del lado del contenido y no del relleno:
 
-1. **Solo cubre canales VACÍOS.** Un suplemento junto a piezas de activo sería exactamente
-   el relleno que el manual prohíbe. Su valor está en aparecer cuando no hay nada más.
-2. **Un problema nuestro de datos no es contenido.** La confianza baja del modelo o un fallo
-   del analizador dejan al canal **sin** suplemento: publicar "no pudimos leer el activo" no
-   le sirve a nadie y suena a excusa.
-3. **No promete niveles.** El cierre canónico de tres escenarios necesita soporte y
-   resistencia; sin ellos, prometerlos sería inventarlos. Cierra con el CTA al analista.
-4. **Es solo texto, por fase.** Las plantillas educativas se retiraron y el estándar sale del
-   brand kit, así que primero se mide si el canal engancha y solo después se le pide una
-   pieza visual. El despacho lo manda con `enviar()` porque `piezas_del_grupo` recorre los
-   PNG y el suplemento no tiene.
+1. **Solo cubre canales VACÍOS.** Un suplemento junto a piezas de activo sería exactamente el
+   relleno que el manual prohíbe. Su valor está en aparecer cuando no hay nada más.
+2. **Un problema nuestro de datos no es contenido.** La confianza baja del modelo o un fallo del
+   analizador dejan al canal **sin** suplemento: publicar "no pudimos leer el activo" no le sirve
+   a nadie y suena a excusa.
+3. **No promete niveles.** El cierre canónico de tres escenarios necesita soporte y resistencia;
+   sin ellos, prometerlos sería inventarlos. Cierra con el CTA al analista.
+4. **Es solo texto, por fase.** Primero se mide si el canal engancha y solo después se le pide una
+   pieza visual. El despacho lo manda con `enviar()` porque `piezas_del_grupo` recorre los PNG y
+   el suplemento no tiene.
 
-**La ventana anti repetición.** Un concepto no vuelve al mismo canal antes de **14 días**,
-y el historial vive en `data/historial_suplementos.json`, **versionado** igual que
-`historial_senales.json`: es historia editorial de lo que el cliente ya leyó, no un archivo
-generado. Tres decisiones que conviene no revertir:
+**La ventana anti repetición.** Un concepto no vuelve al mismo canal antes de **14 días**, y el
+historial vive en `data/historial_suplementos.json`, **versionado**: es historia editorial de lo
+que el cliente ya leyó, no un archivo generado. Tres decisiones que conviene no revertir:
 
 - **La ventana es por canal**, porque cada uno tiene su propia audiencia.
-- **Si el concepto está en cooldown se cae el concepto, no la pieza.** La cifra del estado
-  ES la novedad: hoy el USD/JPY al 290 % y mañana otra. Lo que se gasta con la repetición es
-  la parte educativa.
-- **Se anota al preparar, no al despachar.** Una tanda preparada y descartada gasta la
-  ventana igual, y ese error va hacia el lado seguro: repetir de menos, no de más.
+- **Si el concepto está en cooldown se cae el concepto, no la pieza.** La cifra del estado ES la
+  novedad; lo que se gasta con la repetición es la parte educativa.
+- **Se anota al preparar, no al despachar.** Una tanda preparada y descartada gasta la ventana
+  igual, y ese error va hacia el lado seguro: repetir de menos, no de más.
 
 Catorce días porque hay seis conceptos técnicos aplicables: con menos, un canal que se vacía
 seguido agota el repertorio antes de que nadie lo haya olvidado.
 
+Las cifras del día que motivó esto: `docs/historia-forense.md`.
+
 ### La noticia oficial: oficial no es relevante
+<!-- ambito: ambos -->
 
 Sobre el suplemento se apoya un escalón más, **estrictamente aditivo**:
-`scripts/noticia_oficial.py` busca la última nota de una fuente oficial que toque un activo
-del canal. Si la encuentra, `--preparar` la deja en `<canal>/_noticia.json` y el **comando**
-la traduce y la antepone al rendir; si no la encuentra, el canal conserva su suplemento de
-estado y no se pierde nada.
+`scripts/noticia_oficial.py` busca la última nota de una fuente oficial que toque un activo del
+canal. Si la encuentra, `--preparar` la deja en `<canal>/_noticia.json` y el **comando** la
+traduce y la antepone al rendir; si no la encuentra, el canal conserva su suplemento de estado.
 
-**El núcleo del módulo es descartar, no descargar.** El 2026-09-03 la nota más fresca de la
-EIA era *"Weekly average load in ERCOT continues near record high"*: carga eléctrica en
-Texas. Oficial, del día, y sin ninguna relación con el petróleo. Un filtro de frescura sin
-filtro de relevancia la habría mandado al canal de metales y energía justo el día en que ese
-canal quedó vacío. Tres reglas salen de ahí:
+**El núcleo del módulo es descartar, no descargar.** Una nota puede ser oficial, del día, y no
+tener ninguna relación con el activo. Tres reglas salen de ahí:
 
-1. **La relevancia se decide en el TITULAR, no en el cuerpo.** La descripción de casi
-   cualquier nota trae una línea de contexto donde cabe la palabra *oil* o *inflation*:
-   buscar ahí vuelve el filtro decorativo.
-2. **En los bancos centrales la relevancia la da quién habla.** Un discurso de Lagarde mueve
-   el euro aunque el titular no nombre ningún activo, así que el vocabulario incluye a los
-   oradores del directorio.
-3. **El URL no tiene ventana.** Que un concepto vuelva a los 14 días es refuerzo; que vuelva
-   la misma noticia es un error visible desde afuera. Se comparte
+1. **La relevancia se decide en el TITULAR, no en el cuerpo.** La descripción de casi cualquier
+   nota trae una línea de contexto donde cabe la palabra *oil* o *inflation*: buscar ahí vuelve el
+   filtro decorativo.
+2. **En los bancos centrales la relevancia la da quién habla.** Un discurso de Lagarde mueve el
+   euro aunque el titular no nombre ningún activo, así que el vocabulario incluye a los oradores
+   del directorio.
+3. **El URL no tiene ventana.** Que un concepto vuelva a los 14 días es refuerzo; que vuelva la
+   misma noticia es un error visible desde afuera. Se comparte
    `data/historial_suplementos.json` con `tipo: "noticia"`.
 
 Ventana de frescura: **72 h**, con la fecha siempre a la vista en el mensaje. Es lo que hace
 honesto publicar algo de anteayer; a una semana ya no es noticia.
 
-**Las fuentes que responden, medidas el 2026-09-03:**
+**Las fuentes que responden**, medidas el 2026-09-03:
 
-| Fuente | Feed | Cadencia | Canal |
-|---|---|---|---|
-| EIA | `rss/todayinenergy.xml` | ~3/semana, 3 de 12 tocan crudo | metales y energía |
-| BCE | `rss/press.html` | ~4/semana, discursos del directorio | divisas |
-| Fed | `feeds/press_monetary.xml` | ~2/mes | divisas, índices |
+| Fuente | Feed | Canal |
+|---|---|---|
+| EIA | `rss/todayinenergy.xml` | metales y energía |
+| BCE | `rss/press.html` | divisas |
+| Fed | `feeds/press_monetary.xml` | divisas, índices |
 
-El feed general de la Fed (`press_all.xml`) **queda fuera a propósito**: sus últimas piezas
-eran sanciones y aprobaciones bancarias, que no le importan a nadie acá. Y tres fuentes no
-se pueden leer: el Tesoro de EE.UU. responde 404, la BLS y la OPEP responden 403 al bot, y
-el Banco Central de Chile devuelve HTML en la ruta de su RSS.
+El feed general de la Fed (`press_all.xml`) **queda fuera a propósito**: sus piezas son sanciones
+y aprobaciones bancarias, que no le importan a nadie acá.
 
-**El flujo relevante combinado es de una nota cada dos o tres días, y eso está bien.** Esto
-no cubre los canales todos los días ni pretende hacerlo: el piso confiable sigue siendo el
-suplemento de estado más concepto. Si algún día hace falta cobertura diaria de noticias, la
-fuente no puede ser RSS oficial, y ahí ya no sería "fuente oficial".
+**El flujo relevante combinado es de una nota cada dos o tres días, y eso está bien.** Esto no
+cubre los canales todos los días ni pretende hacerlo: el piso confiable sigue siendo el suplemento
+de estado más concepto. Si algún día hace falta cobertura diaria de noticias, la fuente no puede
+ser RSS oficial, y ahí ya no sería "fuente oficial".
 
 **El titular es un campo editorial.** Viene en inglés y `--preparar` es Python puro, así que
-`bloque_noticia(noticia, titular_es)` **lanza** con el titular vacío, mismo contrato que el
-resto del pipeline. Y ninguna cifra sale de la noticia: los precios y niveles salen del
-terminal (regla 1), siempre.
+`bloque_noticia(noticia, titular_es)` **lanza** con el titular vacío, mismo contrato que el resto
+del pipeline. Y ninguna cifra sale de la noticia: los precios y niveles salen del terminal
+(regla 1), siempre.
+
+Cadencias medidas y las fuentes que no se pueden leer: `docs/historia-forense.md`.
 
 ### El reparto entre script y comando
+<!-- ambito: ambos -->
 
 Los pipelines producen los **datos**; el texto lo escribe el comando. `pipeline_carrusel.py`
 y `pipeline_informe.py` tienen dos pasos (`--preparar` y `--rendir`) y el segundo **se
@@ -485,171 +477,147 @@ bitácora de despachos, que es exactamente para eso: al arreglar el texto y rean
 entregado no se repite.
 
 ### El despacho: un lote por canal, rendido justo antes de salir
+<!-- ambito: ambos -->
 
 `pipeline_carrusel.py --despachar <tanda>` cierra el ciclo. Dos decisiones lo definen:
 
-**Una pieza por acción, y el texto SIEMPRE antes del adjunto.** El campo de pie del
-editor de medios **tope en 1.024 caracteres**, y `insert_text` de una línea que no cabe
-se rechaza **entera** mientras el salto de línea que la sigue sí entra. Así que el
-mensaje no llega cortado al final: llega con **renglones ausentes** y su espacio en
-blanco, y con las líneas cortas posteriores intactas porque todavía cabían. El
-2026-09-03 el canal recibió el contexto macro sin la línea del Imacec ni las dos de
-tasas, pero con el link del BCCh que iba en medio, y el despacho reportó éxito.
-
-Escribir el texto en el cuadro de conversación y adjuntar **después** no tiene ese tope.
-Medido contra el DOM real ese día con un texto de 2.016 caracteres:
-
-| Orden | Pie resultante |
-|---|---|
-| adjuntar primero, pie en el editor | **1.029** de 2.016 |
-| texto en el cuadro, adjuntar después | **2.042** de 2.016 (completo) |
-
-> **Esto revirtió el despacho por lote** (decisión del director, 2026-09-03). Antes cada
-> canal salía en UNA acción con todas sus piezas, porque el editor acepta varias imágenes
-> y cada una conserva su pie. Pero el truco del cuadro solo puede llenar el pie de **una**
-> imagen, la que el editor abre seleccionada: con dos o más, las demás se escriben dentro
-> del editor y vuelven a cortarse. Las dos cosas eran incompatibles y manda el mensaje
-> completo. Se paga con una espera de cadencia por pieza y más aperturas del menú.
-
-**El guardia compara el texto, no solo que haya algo escrito.** Esa era la falla que dejó
-pasar el mensaje mutilado: `_verificar_pie_completo` contrasta la huella sin espacios de
-lo que se quiso escribir contra lo que quedó, y aborta si faltan caracteres. Un mensaje
-al que le faltan renglones **se lee como completo**, así que nadie lo nota desde afuera:
+**Una pieza por acción, y el texto SIEMPRE antes del adjunto.** El campo de pie del editor de
+medios **tope en 1.024 caracteres**, y una línea que no cabe se rechaza **entera** mientras el
+salto de línea que la sigue sí entra. Así que el mensaje no llega cortado al final: llega con
+**renglones ausentes** y su espacio en blanco, y con las líneas cortas posteriores intactas. Un
+mensaje al que le faltan renglones **se lee como completo**, así que nadie lo nota desde afuera:
 eso lo hace peor, no menor.
 
-**Cada canal se rinde justo antes de despacharse.** Rendir todo al principio hacía que la
-última pieza llegara con el precio de hacía veinte minutos. El refresco (1-3 s de datos +
-5-15 s de render) cabe entero dentro de la espera de cadencia de 45 s, así que no cuesta
-tiempo. Si el movimiento **invalidó el texto** —el precio cruzó un soporte o una
-resistencia que el párrafo daba por vigentes, o perdió el nivel de vigencia del
-sesgo— la pieza no sale: se renombra a `.divergente` y el despacho lo informa.
-**La reanudación la manda la bitácora, no `--desde`.**
-`data/historial_despachos.json` anota **una entrada por pieza entregada** (fecha, hora,
-tanda, canal, pieza y la huella del texto), y `despachar` la consulta antes de cada canal
-para saltar lo que ya salió. Se versiona, igual que `historial_senales.json` y
-`historial_suplementos.json`: es historia de lo que el cliente recibió, y un clon nuevo sin
-ella reenviaría la tanda del día.
+Escribir el texto en el cuadro de conversación y adjuntar **después** no tiene ese tope.
 
-Dos cosas que la hacen confiable:
+> **Esto revirtió el despacho por lote** (decisión del director, 2026-09-03). El truco del cuadro
+> solo puede llenar el pie de **una** imagen, la que el editor abre seleccionada: con dos o más,
+> las demás se escriben dentro del editor y vuelven a cortarse. Las dos cosas eran incompatibles
+> y manda el mensaje completo. Se paga con una espera de cadencia por pieza.
 
-- **Se anota DENTRO del bucle de piezas**, vía el callback `al_entregar` que el sender
-  invoca tras confirmar cada entrega contra el DOM. `enviar_lote` levanta ante un fallo y
-  su `return` no ocurre, así que anotar al final perdería justamente el registro de lo que
-  **sí** salió. Si el anotado falla, la pieza ya salió y abortar no la devuelve: se avisa
-  fuerte en vez de romper el despacho.
-- **La identidad de una pieza es (tanda, canal, pieza)**, no el activo. Una tanda nueva del
-  mismo activo es contenido legítimo con niveles nuevos; la misma pieza de la misma tanda es
-  una repetición.
+**El guardia compara el texto, no solo que haya algo escrito.** Esa era la falla que dejó pasar
+el mensaje mutilado: `_verificar_pie_completo` contrasta la huella sin espacios de lo que se quiso
+escribir contra lo que quedó, y aborta si faltan caracteres.
 
-`--desde N` queda como control manual del director. **Ojo con lo que medía**: cuenta
-**canales** mientras el envío cuenta **piezas** desde el 2026-09-03, así que por sí solo
-reenviaba las primeras piezas de un canal que falló a la mitad.
+**Cada canal se rinde justo antes de despacharse.** Rendir todo al principio hacía que la última
+pieza llegara con el precio de hacía veinte minutos. El refresco (1-3 s de datos + 5-15 s de
+render) cabe entero dentro de la espera de cadencia de 45 s, así que no cuesta tiempo. Si el
+movimiento **invalidó el texto** (el precio cruzó un soporte o una resistencia que el párrafo daba
+por vigentes, o perdió el nivel de vigencia del sesgo), la pieza no sale: se renombra a
+`.divergente` y el despacho lo informa.
+
+**La reanudación la manda la bitácora, no `--desde`.** `data/historial_despachos.json` anota **una
+entrada por pieza entregada** (fecha, hora, tanda, canal, pieza y la huella del texto), y
+`despachar` la consulta antes de cada canal para saltar lo que ya salió. Se versiona: es historia
+de lo que el cliente recibió, y un clon nuevo sin ella reenviaría la tanda del día.
+
+Dos cosas la hacen confiable:
+
+- **Se anota DENTRO del bucle de piezas**, vía el callback `al_entregar` que el sender invoca tras
+  confirmar cada entrega contra el DOM. `enviar_lote` levanta ante un fallo y su `return` no
+  ocurre, así que anotar al final perdería justamente el registro de lo que **sí** salió.
+- **La identidad de una pieza es (tanda, canal, pieza)**, no el activo. Una tanda nueva del mismo
+  activo es contenido legítimo con niveles nuevos; la misma pieza de la misma tanda es una
+  repetición.
+
+`--desde N` queda como control manual del director. **Ojo con lo que mide**: cuenta **canales**
+mientras el envío cuenta **piezas**, así que por sí solo reenviaba las primeras piezas de un canal
+que falló a la mitad.
+
+Cuatro reglas que se pagaron caro:
+
+1. **La cadencia y el cupo se cuentan por pieza.** Contar un canal como un solo envío relajaría el
+   freno por la puerta de atrás.
+2. **Un lote sigue teniendo que ser homogéneo.** El menú Adjuntar entra por "Fotos y videos" o por
+   "Documento", no por ambas: un PDF de informe no viaja con las Stories.
+3. **Un solo dueño de la sesión a la vez.** El perfil de Chromium admite un proceso. Claude Code y
+   Antigravity abriéndolo a la vez crean un perfil paralelo, y ese patrón desvinculó la sesión dos
+   veces.
+4. **El barrido de payloads mide en la unidad del preparado.** El directorio de tanda se nombra
+   por **minuto** y `--preparar --grupo` opera por **canal**, así que dos corridas en el mismo
+   minuto comparten carpeta. `limpiar_payloads` recibe `solo_canales`; sin ese argumento el
+   barrido es global, que es lo correcto para `--matriz`.
+
+Las mediciones contra el DOM real: `docs/historia-forense.md`.
 
 ### Un PDF adjunto SÍ lleva su pie, pero hay que esperar la carga
+<!-- ambito: ambos -->
 
-Medido contra el DOM real el 2026-09-04, corrigiendo una conclusión apresurada
-del mismo día.
-
-**El truco del cuadro de conversación funciona igual con documentos.** Se
-escribe el texto en el cuadro del chat, se adjunta, y el editor hereda el texto
-completo: se envió un pie de **1.222 caracteres** con un PDF de 2 MB y llegó
-entero. **No hay tope de 1.024 para el texto heredado**, ni en imágenes ni en
-documentos. El contador negativo que muestra el editor (`-197` con ese pie) no
+**El truco del cuadro de conversación funciona igual con documentos.** Se escribe el texto en el
+cuadro del chat, se adjunta, y el editor hereda el texto completo. **No hay tope de 1.024 para el
+texto heredado**, ni en imágenes ni en documentos, y el contador negativo que muestra el editor no
 impide enviar.
 
-**Lo que sí cambia es el tiempo.** El campo de pie aparece cuando el editor
-termina de procesar el archivo, y eso escala con el peso. Había una pausa fija
-de 2 s y **una sola** búsqueda del campo: con un PNG de 500 KB alcanzaba y con el
-PDF de 2 MB no. El sender abortaba con "no apareció el campo de pie de foto", y
-ese mensaje me llevó a concluir que el editor de documento imponía un tope. No
-era el tope: **era que el archivo seguía cargando**. Ahora la espera es activa y
-proporcional (`espera_confirmacion_s`).
+**Lo que sí cambia es el tiempo.** El campo de pie aparece cuando el editor termina de procesar el
+archivo, y eso escala con el peso. Había una pausa fija de 2 s y **una sola** búsqueda del campo:
+con un PNG chico alcanzaba y con un PDF de 2 MB no. El sender abortaba con "no apareció el campo
+de pie de foto", y ese mensaje llevó a concluir que el editor de documento imponía un tope. No era
+el tope: **era que el archivo seguía cargando**. Ahora la espera es activa y proporcional
+(`espera_confirmacion_s`).
 
-**El estado de entrega NO es un `data-icon`.** Una burbuja de documento entregada
-trae `['document-PDF-icon']` y ningún `msg-check`; el estado vive en el
-`aria-label` (`"... 20:08 Enviado"`). Lo lee `burbuja_entregada`, y `Pendiente`
-gana sobre cualquier otra marca de la fila.
+**El estado de entrega NO es un `data-icon`.** Una burbuja de documento entregada trae
+`['document-PDF-icon']` y ningún `msg-check`; el estado vive en el `aria-label`. Lo lee
+`burbuja_entregada`, y `Pendiente` gana sobre cualquier otra marca de la fila.
 
 > [!CAUTION]
-> **Un falso negativo duplica igual que un falso positivo miente.** Ese mismo día
-> pasaron los dos. Primero `_adjunto_confirmado` devolvió `True` sin pie apenas
-> vio `media`, el proceso cerró el navegador y la subida quedó a medias: el PDF
-> se reportó entregado y quedó **"Pendiente"**, invisible para el canal. Después,
-> con la espera corregida pero leyendo el tic donde no estaba, abortó envíos que
-> **sí** habían llegado. El primero da por entregado lo que no salió; el segundo
-> induce el reenvío manual, y así el canal de clientes terminó con dos copias del
-> mismo informe.
+> **Un falso negativo duplica igual que un falso positivo miente.** Los dos pasaron el mismo día.
+> Primero `_adjunto_confirmado` devolvió `True` sin pie apenas vio `media`, el proceso cerró el
+> navegador y la subida quedó a medias: el PDF se reportó entregado y quedó "Pendiente", invisible
+> para el canal. Después, con la espera corregida pero leyendo el tic donde no estaba, abortó
+> envíos que **sí** habían llegado. El primero da por entregado lo que no salió; el segundo induce
+> el reenvío manual, y así el canal terminó con dos copias del mismo informe.
 >
-> La confirmación exige ahora las tres cosas: que la última burbuja sea **este**
-> archivo (por nombre, cuando no hay pie), que su etiqueta diga entregada, y una
-> espera que alcance para la subida.
+> La confirmación exige ahora las tres cosas: que la última burbuja sea **este** archivo (por
+> nombre, cuando no hay pie), que su etiqueta diga entregada, y una espera que alcance para la
+> subida.
+
+Las mediciones exactas: `docs/historia-forense.md`.
 
 ### El "hasta dónde" del sesgo tiene dos gramáticas, no una
+<!-- ambito: ambos -->
 
-El Playbook no emite señales: emite **sesgo con su vigencia**. Y ese "hasta dónde" no
-se dice igual en los dos casos que el motor distingue, porque no son la misma lectura.
-La traducción vive en un solo lugar, `bias_reader.resolver_vigencia`, y la consume el
-escáner (que ya tiene el H1 y el sesgo en la mano) para que viaje en la selección:
+El Playbook no emite señales: emite **sesgo con su vigencia**. Y ese "hasta dónde" no se dice
+igual en los dos casos que el motor distingue. La traducción vive en un solo lugar,
+`bias_reader.resolver_vigencia`, y la consume el escáner para que viaje en la selección:
 
 | `take_profit_tipo` | Gramática | Qué se publica |
 |---|---|---|
 | `TRAILING_STOP_ASYMMETRIC` | **NIVEL** | Un borde: *"el sesgo alcista sigue vigente hasta 933,44"*. Es el Chandelier, y se mueve con cada vela cerrada. |
 | `NIVEL_OPUESTO_CANAL` | **RANGO** | Dos bordes: *"sin sesgo direccional, el activo rota entre S1 y R1"*. |
 
-Decir "vigente hasta X" en un activo neutral le inventa una dirección; decir "rota
-entre S1 y R1" en uno sostenido le borra la que tiene.
+Decir "vigente hasta X" en un activo neutral le inventa una dirección; decir "rota entre S1 y R1"
+en uno sostenido le borra la que tiene.
 
-**El informe de apertura lo lleva también**, con la misma aritmética y su propia voz: un
-bloque "Hasta dónde vale esta lectura" con **una línea por activo**, no por grupo. WTI y
-Brent siguen agrupados porque su lectura es palabra por palabra la misma, pero cada uno
-tiene su borde, y un solo nivel para los dos publicaría el del vecino. Lo resuelve
-`resolver_vigencias`, que no lanza nunca: sin terminal el informe sale sin el bloque y lo
-dice en los avisos, mismo criterio que los gráficos.
+**El informe de apertura lo lleva también**, con la misma aritmética y su propia voz: un bloque
+"Hasta dónde vale esta lectura" con **una línea por activo**, no por grupo. WTI y Brent siguen
+agrupados porque su lectura es palabra por palabra la misma, pero cada uno tiene su borde, y un
+solo nivel para los dos publicaría el del vecino. Lo resuelve `resolver_vigencias`, que no lanza
+nunca: sin terminal el informe sale sin el bloque y lo dice en los avisos, mismo criterio que los
+gráficos.
 
-**Hay un tercer caso, y es el que no era obvio.** `DATOS_INCOMPLETOS` sale del motor
-con `NIVEL_OPUESTO_CANAL` y score cero, **idéntico a un rango genuino**, porque ese es
-el valor neutro de esos campos y no una lectura de canal. Publicarlo como rango
-afirmaría que el activo rota entre dos niveles cuando en realidad el modelo no lo pudo
-leer. Se distingue por la **lista de setups permitidos vacía** (criterio estructural, no
-por el texto de la etiqueta: eso sería otro contrato por nombre de los que ya costaron
-caro) y esa pieza sale **sin** bloque de vigencia. El cierre canónico de tres escenarios
-va igual, así que el mensaje nunca queda sin lectura práctica.
+**Hay un tercer caso, y es el que no era obvio.** `DATOS_INCOMPLETOS` sale del motor con
+`NIVEL_OPUESTO_CANAL` y score cero, **idéntico a un rango genuino**, porque ese es el valor neutro
+de esos campos y no una lectura de canal. Publicarlo como rango afirmaría que el activo rota entre
+dos niveles cuando en realidad el modelo no lo pudo leer. Se distingue por la **lista de setups
+permitidos vacía** (criterio estructural, no por el texto de la etiqueta: eso sería otro contrato
+por nombre) y esa pieza sale **sin** bloque de vigencia. El cierre canónico de tres escenarios va
+igual, así que el mensaje nunca queda sin lectura práctica.
 
-Dos reglas más que se decidieron mirando el resultado:
+Dos reglas más, decididas mirando el resultado:
 
-1. **Un sesgo ya invalidado lo dice, no lo esconde.** `vigente` compara el precio contra
-   el borde. Brent el 2026-09-02 llevaba sesgo +1,50 con el precio ya bajo su Chandelier,
-   y el USD/CLP estaba igual el 2026-09-03: publicar "sigue vigente" ahí dice lo
-   contrario de lo que pasa. Si se rompe **entre preparar y despachar**, la pieza además
-   no sale.
-2. **Ante direcciones contrarias se calla la vigencia, no la lectura técnica.** Si el
-   signo del score macro contradice la lectura de medias de la pieza, el bloque se omite
-   y el motivo queda en `_procedencia.vigencia_omitida`. El gate del Playbook ya bloquea
-   la mayoría de esos casos, pero "la mayoría" no alcanza: dos direcciones opuestas en el
-   mismo mensaje cuestan la credibilidad del mensaje entero.
+1. **Un sesgo ya invalidado lo dice, no lo esconde.** `vigente` compara el precio contra el borde:
+   publicar "sigue vigente" con el precio del otro lado dice lo contrario de lo que pasa. Si se
+   rompe **entre preparar y despachar**, la pieza además no sale.
+2. **Ante direcciones contrarias se calla la vigencia, no la lectura técnica.** Si el signo del
+   score macro contradice la lectura de medias de la pieza, el bloque se omite y el motivo queda
+   en `_procedencia.vigencia_omitida`. El gate del Playbook ya bloquea la mayoría de esos casos,
+   pero "la mayoría" no alcanza: dos direcciones opuestas en el mismo mensaje cuestan la
+   credibilidad del mensaje entero.
 
-Cuatro reglas que se pagaron caro:
-
-1. **La cadencia y el cupo se cuentan por pieza.** Cada pieza es su propia acción, espera
-   sus 45 s y descuenta su unidad del cupo. Contar un canal como un solo envío relajaría
-   el freno por la puerta de atrás.
-2. **Un lote sigue teniendo que ser homogéneo.** El menú Adjuntar entra por "Fotos y
-   videos" o por "Documento", no por ambas: un PDF de informe no viaja con las Stories.
-   Con una pieza por acción esto ya no es una restricción técnica, pero la validación se
-   mantiene porque mezclar tipos en un mismo canal no es una decisión editorial que
-   convenga tomar por accidente.
-3. **Un solo dueño de la sesión a la vez.** El perfil de Chromium admite un proceso. Claude
-   Code y Antigravity abriéndolo a la vez crean un perfil paralelo, y ese patrón desvinculó
-   la sesión el 2026-09-01 y el 2026-09-02.
-4. **El barrido de payloads mide en la unidad del preparado.** El directorio de tanda se
-   nombra por **minuto** y `--preparar --grupo` opera por **canal**, así que dos corridas en
-   el mismo minuto natural comparten carpeta. `limpiar_payloads` hacía `rglob` sobre la
-   tanda entera y la segunda se llevaba los payloads de la primera: pasó el 2026-09-04 con
-   doce de commodities, y el escáner reportó "barridos 12 payload(s)" sin que eso se leyera
-   como un problema. Ahora recibe `solo_canales`; sin ese argumento el barrido sigue siendo
-   global, que es lo correcto para `--matriz`.
+Los casos reales que fijaron estas reglas: `docs/historia-forense.md`.
 
 ### Dos condiciones de frescura que conviene no descubrir en vivo
+<!-- ambito: ambos -->
 
 - El **informe de apertura** no se emite si `macro_bias_output.json` está vencido. La salida
   explícita es `--con-datos-viejos`, que estampa el aviso en la primera página.
@@ -658,7 +626,24 @@ Cuatro reglas que se pagaron caro:
   el `.jpg` existe en disco, porque el renderer detiene la pieza sin él. Los prompts de las
   imágenes que faltan están en `docs/design/stories-gi/imagenes-por-activo.md`.
 
+### El USD/CLP de madrugada no tiene precio, tiene radar
+<!-- ambito: ambos -->
+
+El reloj puede disparar de madrugada, y en la sesión asiática **el mercado formal chileno está
+cerrado**: el USD/CLP no tiene precio formado y publicar niveles suyos a esa hora es publicar el
+cierre de ayer con fecha de hoy, el mismo defecto que separa los momentos por clase de activo.
+
+Así que a esa hora el par no se comunica como activo táctico en vivo, sino como
+**"Mercado Cerrado · Radar de Madrugada"**: se leen el cobre asiático (LME y Shanghái) y el
+Dollar Index para proyectar en qué punto de equilibrio abre la sesión formal de las 08:30 CLT.
+
+**Las cifras de ese radar salen del terminal en el momento, como cualquier otra** (Regla 1). Esta
+regla vivía solo del lado de AGY y traía el cobre escrito a mano, con un decimal que además
+contradecía el `digits = 0` que el broker reporta: un precio congelado dentro de la regla que
+prohíbe congelar precios.
+
 ## Señales operativas
+<!-- ambito: ambos -->
 - **Máximo 3 por semana** (hard limit, verificar en data/historial_senales.json)
 - Tipo: swing (varios días) o scalper (intradía cortas)
 - Campos obligatorios: ticker, nombre activo, BUY/SELL, entrada, volumen, acciones, TP, SL
@@ -668,11 +653,13 @@ Cuatro reglas que se pagaron caro:
 - Las señales son complementarias, NO el foco principal del grupo
 
 ## Encuestas diarias (lunes a viernes)
+<!-- ambito: ambos -->
 - **3 días (L, X, J)** → Encuesta de tendencia AM: "¿Cuál creen que será la tendencia hoy del [activo]?" → Alcista / Bajista / Lateral
 - **2 días (M, V)** → Encuesta de precio de apertura: "¿A qué precio creen que abrirá el [activo] mañana / el lunes?"
 - **IMPORTANTE**: siempre enviar previamente una noticia, evento o análisis para que el cliente vote con base en información, no en intuición
 
 ## Indicadores técnicos
+<!-- ambito: ambos -->
 Un aviso = un indicador. NUNCA mezclar múltiples señales técnicas al mismo tiempo:
 - **ADC (Ancho Dinámico de Canal)** → medir la amplitud del canal operativo (Donchian 50 / distancia entre Bandas de Bollinger: Superior - Inferior) para evaluar compresión de volatilidad vs. fases de expansión
 - **Modelo ADC + ATR** → modelo cuantitativo estándar para proyectar recorridos:
@@ -685,11 +672,14 @@ Un aviso = un indicador. NUNCA mezclar múltiples señales técnicas al mismo ti
 - **Medias móviles** → avisar cruces y niveles de soporte/resistencia dinámicos (ej: cruce o rebote en EMA 50 y EMA 100)
 
 ## Formato visual de mensajes WhatsApp
+<!-- ambito: ambos -->
 
 ### Principio rector: el reporte como mapa rápido
+<!-- ambito: ambos -->
 Primero conclusión, después detalle técnico. Las primeras 3-4 líneas deben entregar lo esencial — muchos clientes no abren el "leer más" de WhatsApp (~200 caracteres visibles).
 
 ### 6 reglas de formato (OBLIGATORIAS en todos los mensajes)
+<!-- ambito: ambos -->
 
 **1. Resumen al inicio**
 Abrir cada mensaje de análisis/niveles con 3 líneas antes de cualquier detalle técnico:
@@ -725,6 +715,7 @@ Cerrar cada mensaje de niveles/análisis con este bloque:
 ```
 
 ### Registro y tono — cercano, cotidiano, pedagógico y con gancho operativo (OBLIGATORIO)
+<!-- ambito: ambos -->
 El propósito editorial de Grupo Inteligencia es **traducir lo complejo a un lenguaje cotidiano, cercano y comprensible para cualquier persona**, como un profesor que explica con paciencia y claridad. Los análisis transmiten confianza y claridad, generando apetito por comprender y operar el mercado. **Se permite y se busca** enfatizar la dirección, tomar postura clara y explicar los problemas macroeconómicos de forma sencilla y aplicable. Lo que sigue **prohibido** es el lenguaje extremo, catastrófico o la jerga acartonada/distante (dramatizar el movimiento, atribuir "sensaciones" al mercado, vaticinar catástrofes, tecnicismos vacíos sin traducción). En una frase: **claridad pedagógica y énfasis direccional sí, dramatización ni jerga impenetrable no**.
 
 | ❌ Evitar (extremo/emocional/jerga oscura) | ✅ Usar (cercano/cotidiano/objetivo) |
@@ -742,6 +733,7 @@ Reglas:
 - Si aparece un concepto técnico o sigla, **siempre** se explica en lenguaje simple (Regla de oro: si hay duda entre complicar o simplificar, siempre simplificar). Profesional = accesible y claro.
 
 ### Prohibido el guion largo como inciso (OBLIGATORIO en texto de cliente)
+<!-- ambito: ambos -->
 En todo texto que lea un cliente —mensajes de WhatsApp, pies de Story, textos dentro de las piezas, guiones de venta— **nunca** se usa el guion largo `—` ni el medio `–` para abrir un inciso o una aposición ("el stop en 1.758,09 — para eso está"). Se reescribe con puntuación corriente: punto seguido, coma o dos puntos.
 
 **Por qué**: ese guion es una marca reconocible de texto generado por IA, y el material se firma con el nombre y las credenciales de un analista real. Un mensaje que se lee como redactado por una máquina daña la credibilidad de la firma, que es justamente lo que la sostiene.
@@ -749,6 +741,7 @@ En todo texto que lea un cliente —mensajes de WhatsApp, pies de Story, textos 
 **Cómo aplicarlo**: antes de guardar cualquier pieza de cliente, buscar `—` y `–` en el texto final y reemplazarlos. El punto medio `·` **sí** se mantiene: es separador visual del kit de marca (`ORO · XAU/USD`), no puntuación de frase. La restricción es de redacción y no alcanza al código ni a la documentación interna del repo (este archivo incluido).
 
 ### Formato base (aplica a todos los mensajes)
+<!-- ambito: ambos -->
 - Formato WhatsApp: *negrita*, _cursiva_
 - Bullets: •
 - Horas siempre en hora Chile (CLT/CLST)
@@ -756,12 +749,14 @@ En todo texto que lea un cliente —mensajes de WhatsApp, pies de Story, textos 
 - Emojis con moderación: 📊 📈 📉 ⚠️ 🕐 📚 📅 (más 🟢🔴🟡🎯 del sistema de escenarios)
 
 ## Datos macro en español + Diccionario rápido (OBLIGATORIO — issue #46)
+<!-- ambito: ambos -->
 - **Indicadores en español**: todo dato macro se nombra en español, con la sigla original entre paréntesis **una sola vez** (ej. "Índice de gerentes de compra manufacturero (PMI manufacturero)"). Minimizar términos en otro idioma en el cuerpo del mensaje.
 - **Bloque "🔤 Diccionario rápido"**: obligatorio en toda pieza donde aparezcan siglas. Por cada abreviatura del mensaje (ISM, NFP, JOLTS, PMI, PCE, IPC, ADP…), una línea explicativa en voz novata. **Ninguna abreviatura puede quedar sin explicación en español ese día.** En el **Modo resultado** el mensaje es el pie de una imagen y el bloque no cabe: la sigla se explica **en línea**, dentro de la frase, una sola vez ("vacantes de empleo (JOLTS)"). Cambia el dónde, no el si.
 - **Fuente canónica**: `data/glosario_siglas.json` (`SIGLA → {nombre_es, explicacion}`). Si aparece una sigla nueva, explicarla al vuelo y **añadirla al JSON** para reutilizarla.
 - La fuente principal del panorama del día es la tool MCP `obtener_calendario_macro` (calendario Investing.com — Chile/EE.UU./China/Zona Euro, con resultado real `actual` y clasificación mejor/peor/en_linea); WebSearch sobre investing.com + fuentes oficiales son fallback solo si la tool devuelve `{"error": ...}`.
 
 ### Dos modos de la pieza de dato macro (issue #93)
+<!-- ambito: ambos -->
 La pieza de un dato económico se arma en uno de **dos modos**, según la hora del evento vs. la hora actual de Chile:
 - **Modo anticipación** (dato `🕐 PRÓXIMO`, aún no sale): qué es + hora CLT + anterior/consenso + 3 escenarios (mejor/peor/en línea) + activos a observar + temporalidad del impacto.
 - **Modo resultado** (dato `✅ YA SALIÓ`, ya tiene valor `actual`): **la pieza es la Story, el texto es su pie de foto** (decisión del director, 2026-08-04). El desarrollo largo —sub-lecturas, "🧠 ¿Qué significa esto?", "⚠️ PERO ojo con el detalle", "💡 Impacto esperado por activo" y el diccionario— vive dentro de la imagen de `/story dato_macro` y **ya no se manda además como texto**: mandar ambos obliga al cliente a leer dos veces lo mismo, y con imagen adjunta WhatsApp corta el pie antes que un mensaje suelto. Reglas:
@@ -774,6 +769,7 @@ La pieza de un dato económico se arma en uno de **dos modos**, según la hora d
 - Tras aprobar y enviar, se registra `data/ultimo_evento.json` para poder encadenar la **encuesta post-evento** pedagógica.
 
 ## Formato de precios — regla de decimales MT5
+<!-- ambito: ambos -->
 **OBLIGATORIO**: al mostrar cualquier precio (entrada, TP, SL, soporte, resistencia, precio actual), respetar exactamente los decimales del campo `digits` definido en `config/activos.json` para ese activo.
 
 | Activo | Digits | Ejemplo correcto | Ejemplo incorrecto |
@@ -805,6 +801,7 @@ Nunca truncar ceros al final (89.60, no 89.6). Nunca redondear a enteros salvo q
 > su valor sobrescribe. Los dos tienen que coincidir, y un test lo impone.
 
 ## Eventos de alto impacto (decisiones de tasas)
+<!-- ambito: ambos -->
 Cuando hay decisión de tasas (Fed, BCCh, BCE):
 1. Anticipar la reunión con varios días de antelación
 2. Conectar datos previos (IPC, PCE, PMI, empleo) con el escenario de tasas
@@ -814,20 +811,14 @@ Cuando hay decisión de tasas (Fed, BCCh, BCE):
 Objetivo: que el cliente entienda que los datos económicos son piezas que van armando el camino hacia la decisión de tasas.
 
 ## Contenido educativo
+<!-- ambito: ambos -->
 - **Concepto de la semana** (lunes): un concepto que se refuerza durante la semana
 - **Pregunta del día** (1x semana): pregunta abierta tipo "¿Por qué creen que el oro subió tras el dato de inflación?"
 - **Glosario fijado**: mensaje fijo en el grupo con conceptos clave (IPC, PMI, PCE, NFP, Dollar Index, ATR, RSI, etc.)
 - Temas: tendencias, canales, rangos, indicadores (uno a la vez)
 
-## Rol paralelo del grupo
-Aunque el grupo es para clientes, sirve como espacio de alineación interna:
-- **Ejecutivos**: se mantienen al tanto del mercado, refuerzan conceptos, replican el lenguaje simple con sus carteras
-- **Analistas**: observan cómo se comunica al cliente, aseguran consistencia y aportan profundidad
-
-## Misión
-Mejorar indicadores de satisfacción del cliente, retención, NPS y reducir churn. Pasar de un modelo de señales a un modelo de análisis + educación donde el cliente aprende a leer el mercado.
-
 ## Antigravity (AGY) — el segundo runner
+<!-- ambito: claude -->
 
 El repo lo ejecutan **dos** agentes: Claude Code y Antigravity. Antigravity llama
 *workflows* a lo que Claude Code llama slash commands: archivos markdown en
@@ -863,6 +854,7 @@ Se versionan `.agents/workflows/` y `.agents/rules/`; queda fuera
 que `mcp/mcp_config.json` frente a su `.example`.
 
 ## MCP Servers integrados
+<!-- ambito: ambos -->
 
 | MCP | Estado | Propósito | Usado en |
 |-----|--------|-----------|----------|
@@ -921,6 +913,7 @@ hace el campo `sujeto` de `CONFIG_MACRO_GRUPOS`, que existe solo para él.
 > lances en paralelo: el perfil de sesión no admite dos procesos a la vez.
 
 ## Series de precios: en disco, no en git
+<!-- ambito: ambos -->
 
 `data central/DATA PRECIOS OHLC/` lo llena `scripts/extractor_precios.py` desde MT5 y
 lo leen `macro_bias_engine.py` y `ticket_engine.py`. Las series intradía y diarias
@@ -936,6 +929,7 @@ tickets. Si el resultado sale vacío, lo primero que hay que descartar es que fa
 las series.
 
 ### La cadena de datos tiene un solo punto de entrada
+<!-- ambito: ambos -->
 
 `scripts/pipeline_datos.py` corre los tres pasos **en orden y aborta al primer fallo**:
 
@@ -968,7 +962,46 @@ consola del motor y no la leía nadie. **Ese número todavía no bloquea**: qué
 corresponde es una decisión de método pendiente del director. Lo que sí cambia es que
 deja de estar enterrado en un JSON.
 
+### La ingesta se engancha al arranque de sesión (Claude Code)
+<!-- ambito: claude -->
+
+`scripts/hook_ingesta_macro.py` conecta la ingesta macro al evento `SessionStart`, y
+está registrado en `.claude/settings.json` (versionado, así lo hereda cualquier clon).
+Son **dos hooks del mismo módulo** y esa división es la decisión de fondo:
+
+| Modo | Cómo corre | Qué hace |
+|---|---|---|
+| `--estado` | bloqueante, solo stdlib, < 1 s | Lee `estado_ejecucion.json` e inyecta al contexto la última ingesta en hora Chile, el status por fuente, los errores y las novedades. |
+| `--refrescar` | `async`, sin bloquear | Si esa misma lectura está vencida, corre `pipeline_ingesta.py` y deja la bitácora en `data/logs/`. |
+
+**La ingesta completa tarda ~55 s medidos el 2026-09-05**, y dispara además el motor de
+sesgo y el pronóstico de inflación de Japón. Bloquear cada arranque con eso cuesta un
+minuto por sesión y en un día se abren varias; pero un hook `async` **no le puede contar
+nada al modelo**, porque su salida no entra al contexto. De ahí los dos.
+
+Cuatro reglas que lo sostienen:
+
+1. **El umbral de vencimiento vive en `esta_vencida` y lo consultan los dos modos.** Son
+   6 h: los emisores publican una vez al día (FRED en T+1 hábil, el BCCh en T-2), así que
+   refrescar más seguido golpea las APIs sin traer un dato nuevo. Dos umbrales para la
+   misma decisión dejarían al contexto afirmando que el dato está fresco mientras el otro
+   hook lo está bajando, que es el defecto recurrente del repo.
+2. **El aviso al modelo dice que los datos van a cambiar durante la sesión.** Cuando el
+   refresco se lanza, los JSON de `data central/` y `macro_bias_output.json` cambian bajo
+   los pies de la conversación: citar una cifra leída antes del refresco es publicar el
+   dato de anoche con fecha de hoy.
+3. **Un lock (`data/.ingesta_macro.lock`) impide dos ingestas simultáneas**, porque dos
+   ventanas abiertas a la vez escribirían sobre los mismos archivos. Un lock de más de 15
+   min se ignora: un proceso que murió sin limpiarlo no puede dejar la ingesta bloqueada
+   para siempre.
+4. **El hook nunca aborta la sesión.** Todo error se traga y se reporta como texto: un
+   fallo de red del BCCh no puede impedir abrir Claude Code.
+
+El lock y la bitácora están gitignoreados, mismo criterio que `data/.reloj_disparos.json`:
+son estado generado, no historia editorial.
+
 ## Stories GI y Generación de Imágenes
+<!-- ambito: ambos -->
 
 > [!CRITICAL]
 > **Prohibición total de modelos de difusión (`generate_image`)**: toda pieza visual se maqueta
@@ -1019,6 +1052,15 @@ bloque `recorrido` que consume `story_grafico.py`, que traduce serie e hitos al 
 van al extremo derecho por definición. Anclar por precio parece razonable y no lo es, porque el
 precio oscila y el cierre más parecido puede caer en cualquier punto de la serie.
 
+**Todo nivel citado en el texto va trazado, y eso vale también para las Stories.** El informe ya
+lo exige para su gráfico; la pieza de Story tiene su propia mitad de la regla y estaba solo del
+lado de AGY. Queda prohibido mandar un payload con el gráfico mudo: si el párrafo nombra un
+soporte, una resistencia, un Fibo o una barrera de intervención soberana, el payload lleva su
+`hitos` con el marcador `actual` (`"rol": "SPOT"`) y su `niveles` con una entrada por nivel,
+cada una con su `clase` (`meta` / `resistencia` / `soporte` / `nivel`), su `etiqueta` con el
+precio formateado a los `digits` del activo, y su `rol` explícito. Un nivel mencionado en la
+prosa y ausente del dibujo le pide al cliente que confíe en un número que no puede ver.
+
 **Revisión y protección.** Cada plantilla tiene su payload en
 `tests/fixtures/stories/payloads/<plantilla>.json`, y esas mismas fixtures alimentan el render
 completo y el test de contrato:
@@ -1036,147 +1078,16 @@ pareja el test sigue verde. No detecta que el catálogo encogió, solo que qued�
 `scripts\ruta_story.ps1`. Los `data/stories/*.png` están gitignored. `playwright` es dependencia
 **opcional** (`stories`): `uv sync --extra stories && python -m playwright install chromium`.
 
-## Capacitaciones internas (PPTX)
+## Documentos largos
+<!-- ambito: ambos -->
 
-Material formativo para el equipo comercial y los IBS, generado por código para que el
-contenido sea versionable y regenerable. Vive en `docs/capacitacion/`.
-
-- **Generador**: `scripts/capacitacion_fundamental_ppt.py` (motor de maqueta) +
-  `capacitacion_fundamental_contenido.py` (criterio editorial). La separación es
-  deliberada: editar un texto no debe obligar a tocar el dibujo, ni al revés.
-  ```bash
-  uv run --with python-pptx --with pillow python scripts/capacitacion_fundamental_ppt.py
-  ```
-  `python-pptx` y `pillow` **no** son dependencias del proyecto: se inyectan con
-  `uv run --with` para no alterar el `.venv`.
-- **Autoría**: el retrato del autor va en la portada y en el cierre, junto al nombre y
-  las credenciales — es material que circula entre equipos, así que quién lo firma se ve
-  de entrada. La foto se toma de `docs/capacitacion/assets/autor.png` (o de `--foto
-  <ruta>`) y se recorta en círculo con Pillow, porque PowerPoint no aplica máscaras. El
-  recorte se hace desde el tercio superior, no del centro geométrico, para no cortar la
-  cabeza. Si el archivo no existe, la maqueta cae al diseño sin retrato en vez de fallar.
-- **Tipografía**: Segoe UI + Consolas para cifras, **no** las fuentes de marca. Syne /
-  DM Sans / Space Grotesk solo existen en el repo como `.woff2` (formato web) y no están
-  instaladas en los equipos: declararlas hace que PowerPoint las sustituya y rompa la
-  maqueta en el PC de cada destinatario. Consolas preserva el alineado tabular del kit.
-- **Medición de texto**: PowerPoint no expone métricas de fuente, así que el motor
-  estima el alto de cada bloque antes de dibujar (`_n_lineas` / `_alto_texto`) y reduce
-  el tamaño hasta que quepa. Sin eso el layout falla de dos formas ya observadas: un
-  título de dos líneas se superpone con el párrafo siguiente, y una tabla larga se
-  expande por debajo del pie —PowerPoint ignora `row.height` si el texto no cabe—.
-- **Verificación obligatoria**: con decenas de slides la inspección visual no basta.
-  ```bash
-  uv run --with python-pptx python scripts/verificar_capacitacion.py
-  ```
-  Detecta desbordes sobre el pie y solapamientos entre bloques de texto. Complementarlo
-  exportando a PNG vía COM (`$pres.Export($ruta,"PNG",1600,900)`) para revisar el
-  resultado real. **Ojo**: si el director tiene el `.pptx` abierto, `prs.save()` falla
-  con `PermissionError` y COM rechaza la conexión con `0x80048240` — generar entonces a
-  una ruta temporal y nunca llamar a `$app.Quit()`, que cerraría su sesión.
-
-### Guía rápida (folleto de consulta)
-
-Complemento de la capacitación, para quien no va a estudiar las 55 láminas pero necesita
-resolver una pregunta con el cliente al teléfono. No es un resumen: es una **herramienta
-de respuesta** —tabla dato → dirección de cada activo, frases listas para el cliente,
-qué no decir, y dónde se detiene la respuesta porque pasa a ser asesoría—.
-
-- **Fuente**: `templates/capacitacion/folleto.html` · **Generador**:
-  `scripts/folleto_fundamental.py`
-  ```bash
-  uv run --extra stories python scripts/folleto_fundamental.py
-  ```
-- **Dos salidas del mismo HTML**: un **HTML autónomo** (fuentes incrustadas en base64,
-  se manda por correo o WhatsApp y funciona solo) y un **PDF A4 de 6 páginas** para
-  imprimir. Bajo 820 px las hojas A4 se rompen en una columna y las tablas anchas pasan
-  a fichas apiladas vía `td[data-rot]::before`, para consultarlo en el teléfono sin
-  hacer zoom.
-- **Tipografía: DM Sans en todo, también en los títulos.** Las fuentes del repo se
-  pueden usar acá y no en el PPTX porque en HTML los `.woff2` funcionan nativamente,
-  pero **Syne queda fuera**: en peso 800 sus contraformas se cierran y cansa la vista en
-  un documento de consulta (es el mismo defecto que motivó el rediseño de la Story). El
-  cuerpo va a 11 pt y no a 9,8 por legibilidad — el material lo usa gente que no lee
-  cómodo a tamaños chicos. Space Grotesk queda solo para cifras y siglas.
-- **Paleta adaptada al soporte claro**: el verde y el rojo de marca están pensados para
-  fondo oscuro y sobre blanco no alcanzan el contraste mínimo para texto (mismo problema
-  del footer de las Stories, #145). Se usan versiones oscurecidas para tipografía y los
-  originales solo en filetes y fondos.
-- **La escala está calibrada al alto útil de una A4** (1123 px a 96 dpi). Si una hoja se
-  pasa, Chromium la parte en dos y el PDF duplica páginas —pasó de 3 a 6 sin aviso—. Al
-  agregar contenido hay que **medir**, no estimar:
-  ```js
-  Array.from(document.querySelectorAll('section.hoja')).map(s => s.getBoundingClientRect().height)
-  ```
-  con `emulate_media("print")`. Y no poner `font-size` dentro de `@media print`: cambia
-  la escala justo en el PDF y descuadra la calibración.
-
-## Manual de Operaciones (el que va a los miembros)
-
-`docs/MANUAL_DE_OPERACIONES_TRADING_CUANTITATIVO.md` es un **manual de trading autónomo**,
-no una guía de lectura de nuestras piezas. Su propósito (director, 2026-09-04) es que un
-miembro **ejecute sus propias operaciones** con el Playbook de guía. Son 12 módulos
-autocontenidos y 3 anexos, y sale en PDF A4 al grupo de avisos.
-
-```bash
-uv run --extra stories --with markdown-it-py --with pypdf python scripts/compilar_manual_pdf.py
-```
-
-**El markdown es la fuente única, y eso hubo que arreglarlo.** El 2026-09-04 había **tres**
-documentos: el markdown de 10 secciones, un PDF en disco **truncado a mitad de la sección 6**
-(sin riesgo, lotaje, filtros, checklist ni glosario, con el pie numerado sobre 11 páginas y 6
-renderizadas), y `compilar_manual_pdf.py` con un cuarto documento escrito adentro en una
-constante `HTML_PAGES`, con secciones que el markdown no tenía. Corregir uno no tocaba a los
-otros.
-
-Tres reglas del compilador que conviene no revertir:
-
-1. **La paginación es por flujo, no por páginas fijas.** El diseño anterior maquetaba
-   `div.a4-page` de 794×1123 con `overflow: hidden`, así que **el contenido que no cabía
-   desaparecía sin aviso**. Es el mismo modo de falla del `@media print` del folleto, pero
-   silencioso. Ahora Chromium pagina y cada módulo abre página con `break-before`.
-2. **El compilador cuenta las páginas y falla bajo `PAGINAS_MINIMAS`.** Un manual al que le
-   faltan secciones **se lee como completo**, igual que el mensaje de WhatsApp al que le
-   faltaban renglones: nadie lo nota desde afuera, y eso lo hace peor.
-3. **Ojo con `hr + h1` en el CSS.** CSS no tiene selector de hermano anterior, y esa regla
-   (puesta para ocultar el separador que precede a cada título) **ocultó los 15 títulos de
-   módulo** en la primera compilación. El `h1` abre página, así que el `hr` anterior queda al
-   final de la anterior y no molesta: solo hace falta `h1 + hr`.
-
-### Lo que el manual afirma tiene que coincidir con el motor
-
-**El manual es el tercer lugar donde viven los umbrales**, después del YAML y el Playbook, y
-es el único que un miembro va a usar para arriesgar dinero. La revisión del 2026-09-04 encontró
-cinco discrepancias que ya están corregidas, y las tres primeras costaban plata:
-
-| Lo que decía | Lo que hace el motor |
-|---|---|
-| "Valor Punto (1 lote): $100.000 CLP" | **$100.000 es el valor de 1 PESO** (100 puntos). El punto vale $1.000. Cruzar distancia en pesos con valor del punto da un lote **100 veces mayor** |
-| "Spread sobre 15 % del SL bloquea" (3 veces) | `friction_caps` tiene **cinco topes**: 0,15 USDCLP · 0,12 US100 · 0,10 Oro, WTI y Brent |
-| "Stop estrictamente 1 tick bajo el mínimo de la vela" | Mínimo de **20 velas** si su distancia cae entre 0,5 y 1,5 ATR; si no, **1,5 × ATR** |
-| "TP1 = ganancia 1R" | **1,0 × ATR** (y hay un TP2 a 1,5 × ATR que el manual no mencionaba) |
-| Blackout FOMC −30/+60 | **−30/+75** (`screener_gi._BLACKOUTS`) |
-
-Y omitía los gates que de verdad deciden: ancho Donchian ≤ 2,5 ATR, ADX (≥ 20 para pullback,
-< 20 para reversión), alineación EMA 20/50/100, rango de vela ≥ 1,0 ATR, RSI no extremo, y
-sobre todo **la firma Dow**, que es la confirmación intermercado y le da el nombre al método.
-
-**El protocolo de rachas es criterio de mesa, no salida del motor**, y el módulo 9 lo declara
-así en su primer aviso: esos límites (2,5 % simultáneo, 2 pérdidas diarias, 4 % semanal, 0,5 %
-tras 3 pérdidas) **no están en el YAML ni en el código**. Presentarlos como cálculo del modelo
-era la quinta discrepancia.
-
-> [!CAUTION]
-> **`scripts/ticket_engine.py` no lo consume nadie.** Su única mención en el repo es un
-> comentario en la docstring de `pipeline_datos.py`. Es el módulo que emitiría la ficha
-> completa (entrada, SL, TP, R:R, estado READY/ARMED/BLOCKED/WAIT), y **no está conectado a
-> ningún pipeline ni comando**. Lo que sí publicamos es `get_macro_bias`: régimen, sesgo,
-> setups permitidos y prohibidos, y distancia de SL.
->
-> Por eso el manual enseña al miembro a **construir su propia ficha** y el semáforo es un
-> estado que él determina, no uno que recibe. La versión anterior decía "el sistema publica
-> fichas de operación" y "la ficha autoriza", prometiendo un producto que no existe.
+El manual de operaciones, el cierre semanal, la capacitación en PPTX y la guía rápida: qué es
+cada uno, con qué comando se compila y qué trampa de maqueta tiene medida, en
+`docs/documentos-largos.md`. El manual va al grupo de avisos en PDF; el cierre semanal sale
+semanal al canal; los otros dos circulan entre equipos.
 
 ## Flujo de aprobación → WhatsApp (modo semi-automático activo)
+<!-- ambito: ambos -->
 
 Todo contenido pasa por este flujo antes de enviarse:
 1. El comando genera el contenido.
@@ -1208,6 +1119,7 @@ El helper crea las carpetas y devuelve la ruta lista para `Write`. Si la pieza n
 volver a medir esos selectores, **nunca** relajar la verificación de entrega.
 
 ## Slash Commands disponibles (6)
+<!-- ambito: ambos -->
 
 El catálogo se redujo a seis. Todo lo demás se retiró cuando la producción pasó a regirse por
 el carrusel y el informe: los siete comandos de día, las piezas sueltas que ellos orquestaban
@@ -1225,80 +1137,46 @@ igual a Claude Code y a Antigravity.
 | `/rencuesta` | Desarrolla didácticamente el tema de una encuesta y construye la malla de conceptos. |
 | `/estado` | Dashboard del sistema: sesión de WhatsApp, cupo de envíos del día, frescura del motor, MCPs. No envía nada. |
 
-## Estructura del proyecto
-```
-grupo-analisis-mercado/
-├── README.md              ← introducción y referencia rápida
-├── CLAUDE.md              ← este archivo (instrucciones para Claude Code)
-├── docs/
-│   ├── architecture.md    ← flujo del sistema, MCPs, aprobación, señales
-│   ├── commands-reference.md ← referencia detallada de los comandos
-│   ├── setup-guide.md     ← instalación paso a paso + troubleshooting
-│   ├── activos-y-drivers.md  ← 20 activos con drivers y datos macro
-│   ├── design/            ← diseños técnicos vigentes (ciclo Pulse) — incluye stories-gi/ y motor-como-cerebro-hub-gi
-│   └── archive/           ← docs históricos de features ya implementadas (design/plan/superpowers)
-├── .claude/
-│   ├── commands/          ← 6 slash commands (invocar con /nombre)
-│       ├── carrusel.md · informe.md   ← la produccion diaria
-│       ├── story.md                   ← una pieza suelta (4 plantillas)
-│       └── encuesta.md · rencuesta.md · estado.md
-├── agents/                ← prompts de sub-agents
-│   ├── recolector.md · analista.md · redactor.md
-├── config/                ← configuración del sistema
-│   ├── activos.json       ← 38 tickers: forex + commodities + 6 criptos + índices + 5 ETF + 14 acciones
-│   ├── drivers.json · drivers_indices_sectores.json
-│   ├── agenda_mercado.json  ← ventanas de sesion, anclajes de tanda y momentos del dia
-│   ├── agenda_semanal.json · feriados_bolsa.json
-├── scripts/               ← scripts auxiliares
-│   ├── screener_gi.py     ← Score_GI sobre el universo + gates (feriado, blackout, Playbook, ATR)
-│   ├── agenda_mercado.py  ← el unico reloj: ventanas, anclajes y momentos
-│   ├── reloj_gi.py        ← el decisor del latido (solo prepara, nunca envia)
-│   ├── instalar_reloj.ps1 ← registra el latido en el Programador de tareas
-│   ├── noticia_oficial.py ← la nota oficial fresca que suplementa (EIA, BCE, Fed)
-│   ├── pipeline_carrusel.py ← Top 3 del escaner → 3 Stories (--preparar / --rendir)
-│   ├── pipeline_informe.py  ← informe de apertura (PDF) y de cierre (chat-first)
-│   ├── sincronizar_css_plantillas.py ← re-embebe marca.css/piel.css en los 12 snapshots
-│   ├── story_render.py    ← renderer de Stories GI (payload JSON → HTML → PNG con Playwright)
-│   ├── story_grafico.py ← geometría del gráfico de recorrido (paso previo al render)
-│   ├── serie_mt5.py       ← serie real de precios desde MT5 → bloque `recorrido`
-│   ├── rendir_todas.py    ← rinde las 10 plantillas juntas, para revisión visual
-│   ├── marca_tokens.py    ← verifica que ninguna plantilla hardcodee un color
-│   ├── capacitacion_fundamental_ppt.py + _contenido.py ← generador del PPTX de capacitación (motor / contenido)
-│   └── hora_chile.ps1 · ruta_mensaje.ps1 · ruta_story.ps1  ← helpers deterministas (hora Chile, ruta de guardado)
-├── templates/             ← templates de mensajes WhatsApp
-│   ├── encuesta_tendencia.txt · encuesta_posicion.txt · encuesta_movimiento.txt
-│   ├── mapa_conceptos.txt
-│   └── stories/           ← snapshots de marca GI (11 plantillas) + marca.css · fonts/ · assets/activos/
-├── conceptos/             ← notas canónicas de conceptos educativos (malla /rencuesta)
-│   ├── README.md · stop-loss.md
-├── data/                  ← datos persistentes
-│   ├── historial_senales.json · historial_encuestas.json
-│   ├── mapa_conceptos.json · glosario_siglas.json · glosario_motor.json
-│   └── charts/ · mensajes/ · stories/  ← generados (gitignored)
-├── mql5/                  ← Service MQL5 (ChartObjectsExporter) + archive/ (CalendarExporter, deprecado)
-└── mcp/
-    ├── mcp_config.example.json ← template sin credenciales (en git)
-    └── mcp_config.json         ← config real con API keys (gitignored)
-```
+## La memoria compartida (OMEGA)
+<!-- ambito: agy -->
 
-## Stories GI — CSS embebido (solución Playwright 2026-08-12)
+El proyecto lleva 45 memorias del director y del trabajo hecho: correcciones de estilo que
+costaron una pieza mal enviada, decisiones que no están en el código, hechos medidos contra el
+terminal o contra el DOM. El MCP `omega-memory` ya está registrado para ti en
+`~/.gemini/antigravity/mcp_config.json`.
 
-**Problema:** `story_render.py` genera HTML temporal y lo navega con `file://`, pero Playwright no resolvía las rutas relativas `<link href="marca.css">`, causando que los estilos no se cargaran. Resultado: elementos visibles en el HTML (como fecha/hora) no aparecían en el PNG final, sin error visible.
+**Consúltalas antes de una tarea no trivial.** Son el contexto que este archivo no puede repetir
+entero, y ahorran repetir un error que ya se pagó una vez.
 
-**Solución (IMPLEMENTADA):** Embeber CSS directamente en cada plantilla HTML en bloques `<style>`, eliminando la dependencia de rutas externas.
+**Ojo con cómo busca, que se midió el 2026-09-05.** Sobre seis consultas en español cuyo tema sí
+estaba guardado, la memoria correcta sale primera en 4 de 6, y lo que la encuentra es la
+coincidencia léxica y no el significado. La causa **no es el idioma del modelo**: se probó con
+`multilingual-e5-small` y el resultado no mejoró. Son dos mecanismos del ranking, los dos ajenos
+al modelo: el atajo de FTS5, que se salta la fase vectorial y el reranker cuando el canal de
+texto encuentra un match fuerte, y la fusión RRF con `k=60`, que combina por puesto y aplana la
+señal sobre 45 memorias.
 
-**Cómo se aplicó:**
-- Todas las plantillas (`alerta.html`, `dato_macro.html`, `calendario.html`, etc.) ahora incluyen `marca.css` y `piel.css` (si aplica) incrustados en `<style>` en el `<head>`.
-- Script de automatización: `scripts/embeber_css_plantillas_v3.py` (incrusta CSS en cualquier plantilla que lo use).
+Eso te llega de dos maneras, y la segunda es la peligrosa:
 
-**Impacto:**
-- ✅ Playwright siempre tiene estilos disponibles, sin resolver rutas.
-- ✅ Elementos como fecha/hora ahora son visibles en los PNG.
-- ✅ No hay cambio en el contrato de tokens `{{campo}}` ni en `build_context`.
+- Devuelve **la memoria equivocada con puntaje 1,00**. La confianza alta no significa nada acá.
+  Preguntando por la cuenta de "MetaTrader" salió primera la de GitHub, por la palabra "cuenta".
+- Devuelve **poco o nada existiendo la memoria**, cuando no compartís su vocabulario: la memoria
+  de la cuenta dice "MT5" y no "MetaTrader". Un `sin resultados` **no prueba que no haya memoria**.
 
-**Si agregas una plantilla nueva:**
-- Si usa `<link rel="stylesheet" href="marca.css">` o `piel.css`, ejecuta:
-  ```bash
-  uv run python scripts/embeber_css_plantillas_v3.py
-  ```
-- O embebe manualmente el CSS en un `<style>` antes del `</head>`.
+No intentes arreglarlo cambiando el modelo: ya se midió y no es ahí. Lo que funciona es cambiar
+cómo preguntás.
+
+| Qué querés | Modo | Ejemplo |
+|---|---|---|
+| Un término que sabés que aparece | `phrase` | `omega_query(query="guion largo", mode="phrase")` |
+| Orientarte sobre qué hay | `browse` | `omega_query(query="", mode="browse", limit=20)` |
+| Búsqueda por significado | `semantic` | Úsala al final y **verificá** lo que devuelva |
+
+Cada memoria abre con un encabezado `[MEMORIA GI - <tipo>] <nombre>` y su descripción.
+
+## Notas de implementación
+<!-- ambito: ambos -->
+
+El árbol del proyecto y las decisiones técnicas ya aplicadas que no hace falta re-decidir (el
+CSS embebido en las plantillas de Stories, entre otras): `docs/notas-implementacion.md`.
+

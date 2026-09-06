@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# punto-de-entrada: lo corre el director a mano; genera las Instrucciones del Simulador GI en PDF y HTML para post-venta
 """Genera las Instrucciones de uso del Simulador GI, en PDF A4 y en HTML autónomo.
 
 Reemplaza al README.md que acompañaba la planilla: el destinatario es el equipo de

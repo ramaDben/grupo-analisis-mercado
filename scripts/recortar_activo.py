@@ -1,3 +1,4 @@
+# punto-de-entrada: lo corre el director a mano al sumar la foto de un activo nuevo
 """Recorta el fondo de una foto de activo y deja un PNG con transparencia.
 
 Existe porque el equipo no tiene Photoshop ni un diseñador disponible, y las

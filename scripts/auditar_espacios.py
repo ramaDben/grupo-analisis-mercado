@@ -1,3 +1,4 @@
+# punto-de-entrada: lo corre el director a mano para revisar bandas vacias en piezas ya renderizadas
 """Detecta bandas vacías en las piezas ya renderizadas.
 
 El aire injustificado es el defecto más difícil de cazar a ojo: no se ve como un

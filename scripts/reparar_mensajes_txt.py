@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# punto-de-entrada: lo corre el director a mano cuando un .txt de data/mensajes/ quedo con la codificacion rota
 # -*- coding: utf-8 -*-
 """
 reparar_mensajes_txt.py
