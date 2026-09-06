@@ -273,3 +273,43 @@ existen, este verifica que los archivos que existen estén nombrados por la pros
 
 Son las dos direcciones del mismo invariante, y por eso conviene que este vaya primero: fija
 el conjunto de código antes de que la otra spec reorganice el conjunto de prosa.
+
+---
+
+## 13. Qué cambió al implementarlo
+
+Implementado el 2026-09-06 en `scripts/huerfanos.py` y `tests/test_huerfanos.py`.
+Cinco cosas salieron distintas del diseño, y las cinco por mirar el resultado.
+
+**1. El marcado va desde raíces, no barriendo desde el total.** §5.1 describía iterar quitando
+a los injustificados hasta que una vuelta no saque a nadie. Ese algoritmo **no cierra el caso
+de la referencia mutua**: dos módulos muertos que se llaman entre sí se mantienen vivos para
+siempre, porque cada uno es la prueba de que el otro se usa. Lo correcto es exigir que lo vivo
+sea *alcanzable* desde algo que no está bajo juicio, desde la prosa operativa, o desde su
+propia declaración, y propagar desde ahí. Hay un test con ese caso exacto.
+
+**2. Un `.md` que no es prosa operativa no justifica, y había que decírselo al código.** La
+primera corrida dio **cero huérfanos**: el detector contaba cualquier archivo no candidato como
+referencia válida, así que los docs de diseño justificaban todo. Es literalmente lo que §4
+prohíbe, implementado al revés. Ahora solo el código y la configuración justifican por sí
+solos (`EXTS_CODIGO`); la prosa justifica únicamente si está en `PROSA_OPERATIVA`.
+
+**3. Una raíz que es una palabra corriente justifica cualquier cosa.**
+`templates/calculadoras/instrucciones.html` aparecía justificado por `README.md`, que **nunca
+lo nombra**: usa la palabra "instrucciones" en una frase. Los `.py` se siguen buscando por
+nombre de módulo, que es lo que usan los imports; todo lo demás se busca por archivo completo,
+o por su raíz **entre comillas**, que es como el código elige una plantilla.
+
+**4. Eran 18, no 17.** Con la propagación correcta y la regla de raíces, `instrucciones.html`
+(347 líneas) aparece, y `generar_calculadora.py` también: es transitivo de un `.cmd` que
+todavía no estaba declarado. Declarar el `.cmd` alcanza a los dos. **Esa es la misma cadena que
+el primer barrido leyó al revés**, dando por muerto al generador cuando el huérfano era su
+punto de entrada.
+
+**5. `instrucciones_simulador.py` no se borra.** §9 lo dejaba pendiente de confirmación y al
+abrirlo resultó ser un entregable real: genera las Instrucciones del Simulador GI en PDF A4 y
+HTML autónomo para el equipo de post-venta, leyendo los umbrales de margen del terminal en vez
+de escribirlos a mano. No es residuo; solo lo corre una persona. Queda declarado.
+
+El arco real quedó: **18 → 9 tras declarar ocho encabezados → 0 tras borrar ocho archivos**
+(1.668 líneas, un poco más que las 1.635 estimadas). Suite verde, `ruff` limpio.
