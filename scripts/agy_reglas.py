@@ -173,7 +173,7 @@ def main(argv: list[str] | None = None) -> int:
         for p in problemas:
             print(f"  {p}", file=sys.stderr)
         print(
-            f"\nAgregá `<!-- ambito: ambos|claude|agy -->` debajo del encabezado. "
+            "\nAgregá `<!-- ambito: ambos|claude|agy -->` debajo del encabezado. "
             "Sin marcador no se asume nada: un ámbito por omisión es una decisión "
             "que nadie tomó.",
             file=sys.stderr,

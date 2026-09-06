@@ -103,6 +103,30 @@ def test_un_h3_puede_sobrescribir_a_su_padre():
     }
 
 
+# El techo de `CLAUDE.md`, en bytes. Se mide en bytes y no en tokens porque el
+# conteo de tokens depende del tokenizador y cambia sin que el archivo cambie: un
+# test sobre tokens fallaría por razones ajenas al diff. Para referencia, 88.072
+# bytes son unos 37,6k tokens; el archivo llegó a estar en 100.901 bytes / 43,1k.
+#
+# **El margen es chico a propósito.** El recorte del 2026-09-06 dejó el archivo en
+# 88.072 bytes, y un margen del 15% habría puesto el techo en 101.282: por encima
+# de donde empezó. Un presupuesto que permite volver al punto de partida no es un
+# presupuesto. Con 92.000 quedan ~4.000 bytes (unas 50 líneas) para lo que
+# legítimamente haga falta agregar, y para subirlo hay que editar este número a
+# propósito: la decisión de agrandar el archivo se toma, no se acumula sola.
+PRESUPUESTO_BYTES = 92_000
+
+
+def test_claude_md_no_pasa_del_presupuesto():
+    peso = len(CLAUDE.read_bytes())
+    assert peso <= PRESUPUESTO_BYTES, (
+        f"CLAUDE.md pesa {peso:,} bytes y el techo es {PRESUPUESTO_BYTES:,}. "
+        "Se carga entero en cada sesión de las dos runners: si lo que agregaste no "
+        "cambia lo que sale a un grupo hoy, su lugar es docs/ con un puntero de una "
+        "línea. Si sí lo cambia, subí este número y decilo en el commit."
+    )
+
+
 def test_todo_enlace_a_docs_existe():
     # Sostiene la estrategia entera. Si el plan es "puntero de una línea a
     # `docs/`", un puntero muerto es peor que no haber puesto nada: promete algo
