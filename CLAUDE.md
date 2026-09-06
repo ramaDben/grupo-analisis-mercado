@@ -10,6 +10,12 @@ Este proyecto automatiza la operativa semanal del Grupo de Análisis de Mercado 
 > 3. **COMPOSICIÓN OBLIGATORIA DE INFORMES PDF (REGLA 2):** Queda estrictamente prohibido generar PDFs institucionales a partir de markdowns planos improvisados. Todo informe PDF DEBE seguir la arquitectura canónica (`pipeline_informe.py` + `grafico_informe.py` + `generar_pdf.py`), incluyendo los banners gráficos vectoriales a 300 DPI por activo, la tabla de curva soberana de 4 columnas en notación chilena y la estructura pedagógica de 3 capas (qué pasa, qué significa, qué NO hacer).
 > 4. **PROHIBICIÓN TOTAL DE MODELOS DE DIFUSIÓN (REGLA 0):** Prohibido usar `generate_image` o modelos de difusión. Toda pieza visual es código HTML + CSS + Playwright.
 
+El grupo es para clientes y a la vez alinea al equipo: los ejecutivos se mantienen al tanto del
+mercado y replican el lenguaje simple con sus carteras, y los analistas verifican que lo que se
+comunica sea consistente. La meta de fondo es pasar de un modelo de señales a uno de análisis y
+educación, donde el cliente aprende a leer el mercado: eso es lo que mueve satisfacción,
+retención y NPS, y lo que reduce churn.
+
 ## Principio fundamental
 Análisis técnico simple y directo, con dirección clara, que genere interés y apetito por operar — sin caer en lo coloquial ni en lo catastrófico. El mensaje lo reciben tanto traders expertos como clientes novatos: debe ser comprensible para quien recién aprende y, a la vez, accionable para quien ya opera. Se enfatiza la tendencia y se nombra hacia dónde se dirige el activo, despertando el interés del cliente por operar el mercado.
 
@@ -819,14 +825,6 @@ Objetivo: que el cliente entienda que los datos económicos son piezas que van a
 - **Glosario fijado**: mensaje fijo en el grupo con conceptos clave (IPC, PMI, PCE, NFP, Dollar Index, ATR, RSI, etc.)
 - Temas: tendencias, canales, rangos, indicadores (uno a la vez)
 
-## Rol paralelo del grupo
-Aunque el grupo es para clientes, sirve como espacio de alineación interna:
-- **Ejecutivos**: se mantienen al tanto del mercado, refuerzan conceptos, replican el lenguaje simple con sus carteras
-- **Analistas**: observan cómo se comunica al cliente, aseguran consistencia y aportan profundidad
-
-## Misión
-Mejorar indicadores de satisfacción del cliente, retención, NPS y reducir churn. Pasar de un modelo de señales a un modelo de análisis + educación donde el cliente aprende a leer el mercado.
-
 ## Antigravity (AGY) — el segundo runner
 
 El repo lo ejecutan **dos** agentes: Claude Code y Antigravity. Antigravity llama
@@ -968,6 +966,43 @@ consola del motor y no la leía nadie. **Ese número todavía no bloquea**: qué
 corresponde es una decisión de método pendiente del director. Lo que sí cambia es que
 deja de estar enterrado en un JSON.
 
+### La ingesta se engancha al arranque de sesión (Claude Code)
+
+`scripts/hook_ingesta_macro.py` conecta la ingesta macro al evento `SessionStart`, y
+está registrado en `.claude/settings.json` (versionado, así lo hereda cualquier clon).
+Son **dos hooks del mismo módulo** y esa división es la decisión de fondo:
+
+| Modo | Cómo corre | Qué hace |
+|---|---|---|
+| `--estado` | bloqueante, solo stdlib, < 1 s | Lee `estado_ejecucion.json` e inyecta al contexto la última ingesta en hora Chile, el status por fuente, los errores y las novedades. |
+| `--refrescar` | `async`, sin bloquear | Si esa misma lectura está vencida, corre `pipeline_ingesta.py` y deja la bitácora en `data/logs/`. |
+
+**La ingesta completa tarda ~55 s medidos el 2026-09-05**, y dispara además el motor de
+sesgo y el pronóstico de inflación de Japón. Bloquear cada arranque con eso cuesta un
+minuto por sesión y en un día se abren varias; pero un hook `async` **no le puede contar
+nada al modelo**, porque su salida no entra al contexto. De ahí los dos.
+
+Cuatro reglas que lo sostienen:
+
+1. **El umbral de vencimiento vive en `esta_vencida` y lo consultan los dos modos.** Son
+   6 h: los emisores publican una vez al día (FRED en T+1 hábil, el BCCh en T-2), así que
+   refrescar más seguido golpea las APIs sin traer un dato nuevo. Dos umbrales para la
+   misma decisión dejarían al contexto afirmando que el dato está fresco mientras el otro
+   hook lo está bajando, que es el defecto recurrente del repo.
+2. **El aviso al modelo dice que los datos van a cambiar durante la sesión.** Cuando el
+   refresco se lanza, los JSON de `data central/` y `macro_bias_output.json` cambian bajo
+   los pies de la conversación: citar una cifra leída antes del refresco es publicar el
+   dato de anoche con fecha de hoy.
+3. **Un lock (`data/.ingesta_macro.lock`) impide dos ingestas simultáneas**, porque dos
+   ventanas abiertas a la vez escribirían sobre los mismos archivos. Un lock de más de 15
+   min se ignora: un proceso que murió sin limpiarlo no puede dejar la ingesta bloqueada
+   para siempre.
+4. **El hook nunca aborta la sesión.** Todo error se traga y se reporta como texto: un
+   fallo de red del BCCh no puede impedir abrir Claude Code.
+
+El lock y la bitácora están gitignoreados, mismo criterio que `data/.reloj_disparos.json`:
+son estado generado, no historia editorial.
+
 ## Stories GI y Generación de Imágenes
 
 > [!CRITICAL]
@@ -1036,145 +1071,13 @@ pareja el test sigue verde. No detecta que el catálogo encogió, solo que qued�
 `scripts\ruta_story.ps1`. Los `data/stories/*.png` están gitignored. `playwright` es dependencia
 **opcional** (`stories`): `uv sync --extra stories && python -m playwright install chromium`.
 
-## Capacitaciones internas (PPTX)
+## Documentos largos
+<!-- ambito: ambos -->
 
-Material formativo para el equipo comercial y los IBS, generado por código para que el
-contenido sea versionable y regenerable. Vive en `docs/capacitacion/`.
-
-- **Generador**: `scripts/capacitacion_fundamental_ppt.py` (motor de maqueta) +
-  `capacitacion_fundamental_contenido.py` (criterio editorial). La separación es
-  deliberada: editar un texto no debe obligar a tocar el dibujo, ni al revés.
-  ```bash
-  uv run --with python-pptx --with pillow python scripts/capacitacion_fundamental_ppt.py
-  ```
-  `python-pptx` y `pillow` **no** son dependencias del proyecto: se inyectan con
-  `uv run --with` para no alterar el `.venv`.
-- **Autoría**: el retrato del autor va en la portada y en el cierre, junto al nombre y
-  las credenciales — es material que circula entre equipos, así que quién lo firma se ve
-  de entrada. La foto se toma de `docs/capacitacion/assets/autor.png` (o de `--foto
-  <ruta>`) y se recorta en círculo con Pillow, porque PowerPoint no aplica máscaras. El
-  recorte se hace desde el tercio superior, no del centro geométrico, para no cortar la
-  cabeza. Si el archivo no existe, la maqueta cae al diseño sin retrato en vez de fallar.
-- **Tipografía**: Segoe UI + Consolas para cifras, **no** las fuentes de marca. Syne /
-  DM Sans / Space Grotesk solo existen en el repo como `.woff2` (formato web) y no están
-  instaladas en los equipos: declararlas hace que PowerPoint las sustituya y rompa la
-  maqueta en el PC de cada destinatario. Consolas preserva el alineado tabular del kit.
-- **Medición de texto**: PowerPoint no expone métricas de fuente, así que el motor
-  estima el alto de cada bloque antes de dibujar (`_n_lineas` / `_alto_texto`) y reduce
-  el tamaño hasta que quepa. Sin eso el layout falla de dos formas ya observadas: un
-  título de dos líneas se superpone con el párrafo siguiente, y una tabla larga se
-  expande por debajo del pie —PowerPoint ignora `row.height` si el texto no cabe—.
-- **Verificación obligatoria**: con decenas de slides la inspección visual no basta.
-  ```bash
-  uv run --with python-pptx python scripts/verificar_capacitacion.py
-  ```
-  Detecta desbordes sobre el pie y solapamientos entre bloques de texto. Complementarlo
-  exportando a PNG vía COM (`$pres.Export($ruta,"PNG",1600,900)`) para revisar el
-  resultado real. **Ojo**: si el director tiene el `.pptx` abierto, `prs.save()` falla
-  con `PermissionError` y COM rechaza la conexión con `0x80048240` — generar entonces a
-  una ruta temporal y nunca llamar a `$app.Quit()`, que cerraría su sesión.
-
-### Guía rápida (folleto de consulta)
-
-Complemento de la capacitación, para quien no va a estudiar las 55 láminas pero necesita
-resolver una pregunta con el cliente al teléfono. No es un resumen: es una **herramienta
-de respuesta** —tabla dato → dirección de cada activo, frases listas para el cliente,
-qué no decir, y dónde se detiene la respuesta porque pasa a ser asesoría—.
-
-- **Fuente**: `templates/capacitacion/folleto.html` · **Generador**:
-  `scripts/folleto_fundamental.py`
-  ```bash
-  uv run --extra stories python scripts/folleto_fundamental.py
-  ```
-- **Dos salidas del mismo HTML**: un **HTML autónomo** (fuentes incrustadas en base64,
-  se manda por correo o WhatsApp y funciona solo) y un **PDF A4 de 6 páginas** para
-  imprimir. Bajo 820 px las hojas A4 se rompen en una columna y las tablas anchas pasan
-  a fichas apiladas vía `td[data-rot]::before`, para consultarlo en el teléfono sin
-  hacer zoom.
-- **Tipografía: DM Sans en todo, también en los títulos.** Las fuentes del repo se
-  pueden usar acá y no en el PPTX porque en HTML los `.woff2` funcionan nativamente,
-  pero **Syne queda fuera**: en peso 800 sus contraformas se cierran y cansa la vista en
-  un documento de consulta (es el mismo defecto que motivó el rediseño de la Story). El
-  cuerpo va a 11 pt y no a 9,8 por legibilidad — el material lo usa gente que no lee
-  cómodo a tamaños chicos. Space Grotesk queda solo para cifras y siglas.
-- **Paleta adaptada al soporte claro**: el verde y el rojo de marca están pensados para
-  fondo oscuro y sobre blanco no alcanzan el contraste mínimo para texto (mismo problema
-  del footer de las Stories, #145). Se usan versiones oscurecidas para tipografía y los
-  originales solo en filetes y fondos.
-- **La escala está calibrada al alto útil de una A4** (1123 px a 96 dpi). Si una hoja se
-  pasa, Chromium la parte en dos y el PDF duplica páginas —pasó de 3 a 6 sin aviso—. Al
-  agregar contenido hay que **medir**, no estimar:
-  ```js
-  Array.from(document.querySelectorAll('section.hoja')).map(s => s.getBoundingClientRect().height)
-  ```
-  con `emulate_media("print")`. Y no poner `font-size` dentro de `@media print`: cambia
-  la escala justo en el PDF y descuadra la calibración.
-
-## Manual de Operaciones (el que va a los miembros)
-
-`docs/MANUAL_DE_OPERACIONES_TRADING_CUANTITATIVO.md` es un **manual de trading autónomo**,
-no una guía de lectura de nuestras piezas. Su propósito (director, 2026-09-04) es que un
-miembro **ejecute sus propias operaciones** con el Playbook de guía. Son 12 módulos
-autocontenidos y 3 anexos, y sale en PDF A4 al grupo de avisos.
-
-```bash
-uv run --extra stories --with markdown-it-py --with pypdf python scripts/compilar_manual_pdf.py
-```
-
-**El markdown es la fuente única, y eso hubo que arreglarlo.** El 2026-09-04 había **tres**
-documentos: el markdown de 10 secciones, un PDF en disco **truncado a mitad de la sección 6**
-(sin riesgo, lotaje, filtros, checklist ni glosario, con el pie numerado sobre 11 páginas y 6
-renderizadas), y `compilar_manual_pdf.py` con un cuarto documento escrito adentro en una
-constante `HTML_PAGES`, con secciones que el markdown no tenía. Corregir uno no tocaba a los
-otros.
-
-Tres reglas del compilador que conviene no revertir:
-
-1. **La paginación es por flujo, no por páginas fijas.** El diseño anterior maquetaba
-   `div.a4-page` de 794×1123 con `overflow: hidden`, así que **el contenido que no cabía
-   desaparecía sin aviso**. Es el mismo modo de falla del `@media print` del folleto, pero
-   silencioso. Ahora Chromium pagina y cada módulo abre página con `break-before`.
-2. **El compilador cuenta las páginas y falla bajo `PAGINAS_MINIMAS`.** Un manual al que le
-   faltan secciones **se lee como completo**, igual que el mensaje de WhatsApp al que le
-   faltaban renglones: nadie lo nota desde afuera, y eso lo hace peor.
-3. **Ojo con `hr + h1` en el CSS.** CSS no tiene selector de hermano anterior, y esa regla
-   (puesta para ocultar el separador que precede a cada título) **ocultó los 15 títulos de
-   módulo** en la primera compilación. El `h1` abre página, así que el `hr` anterior queda al
-   final de la anterior y no molesta: solo hace falta `h1 + hr`.
-
-### Lo que el manual afirma tiene que coincidir con el motor
-
-**El manual es el tercer lugar donde viven los umbrales**, después del YAML y el Playbook, y
-es el único que un miembro va a usar para arriesgar dinero. La revisión del 2026-09-04 encontró
-cinco discrepancias que ya están corregidas, y las tres primeras costaban plata:
-
-| Lo que decía | Lo que hace el motor |
-|---|---|
-| "Valor Punto (1 lote): $100.000 CLP" | **$100.000 es el valor de 1 PESO** (100 puntos). El punto vale $1.000. Cruzar distancia en pesos con valor del punto da un lote **100 veces mayor** |
-| "Spread sobre 15 % del SL bloquea" (3 veces) | `friction_caps` tiene **cinco topes**: 0,15 USDCLP · 0,12 US100 · 0,10 Oro, WTI y Brent |
-| "Stop estrictamente 1 tick bajo el mínimo de la vela" | Mínimo de **20 velas** si su distancia cae entre 0,5 y 1,5 ATR; si no, **1,5 × ATR** |
-| "TP1 = ganancia 1R" | **1,0 × ATR** (y hay un TP2 a 1,5 × ATR que el manual no mencionaba) |
-| Blackout FOMC −30/+60 | **−30/+75** (`screener_gi._BLACKOUTS`) |
-
-Y omitía los gates que de verdad deciden: ancho Donchian ≤ 2,5 ATR, ADX (≥ 20 para pullback,
-< 20 para reversión), alineación EMA 20/50/100, rango de vela ≥ 1,0 ATR, RSI no extremo, y
-sobre todo **la firma Dow**, que es la confirmación intermercado y le da el nombre al método.
-
-**El protocolo de rachas es criterio de mesa, no salida del motor**, y el módulo 9 lo declara
-así en su primer aviso: esos límites (2,5 % simultáneo, 2 pérdidas diarias, 4 % semanal, 0,5 %
-tras 3 pérdidas) **no están en el YAML ni en el código**. Presentarlos como cálculo del modelo
-era la quinta discrepancia.
-
-> [!CAUTION]
-> **`scripts/ticket_engine.py` no lo consume nadie.** Su única mención en el repo es un
-> comentario en la docstring de `pipeline_datos.py`. Es el módulo que emitiría la ficha
-> completa (entrada, SL, TP, R:R, estado READY/ARMED/BLOCKED/WAIT), y **no está conectado a
-> ningún pipeline ni comando**. Lo que sí publicamos es `get_macro_bias`: régimen, sesgo,
-> setups permitidos y prohibidos, y distancia de SL.
->
-> Por eso el manual enseña al miembro a **construir su propia ficha** y el semáforo es un
-> estado que él determina, no uno que recibe. La versión anterior decía "el sistema publica
-> fichas de operación" y "la ficha autoriza", prometiendo un producto que no existe.
+El manual de operaciones, el cierre semanal, la capacitación en PPTX y la guía rápida: qué es
+cada uno, con qué comando se compila y qué trampa de maqueta tiene medida, en
+`docs/documentos-largos.md`. El manual va al grupo de avisos en PDF; el cierre semanal sale
+semanal al canal; los otros dos circulan entre equipos.
 
 ## Flujo de aprobación → WhatsApp (modo semi-automático activo)
 
@@ -1225,80 +1128,9 @@ igual a Claude Code y a Antigravity.
 | `/rencuesta` | Desarrolla didácticamente el tema de una encuesta y construye la malla de conceptos. |
 | `/estado` | Dashboard del sistema: sesión de WhatsApp, cupo de envíos del día, frescura del motor, MCPs. No envía nada. |
 
-## Estructura del proyecto
-```
-grupo-analisis-mercado/
-├── README.md              ← introducción y referencia rápida
-├── CLAUDE.md              ← este archivo (instrucciones para Claude Code)
-├── docs/
-│   ├── architecture.md    ← flujo del sistema, MCPs, aprobación, señales
-│   ├── commands-reference.md ← referencia detallada de los comandos
-│   ├── setup-guide.md     ← instalación paso a paso + troubleshooting
-│   ├── activos-y-drivers.md  ← 20 activos con drivers y datos macro
-│   ├── design/            ← diseños técnicos vigentes (ciclo Pulse) — incluye stories-gi/ y motor-como-cerebro-hub-gi
-│   └── archive/           ← docs históricos de features ya implementadas (design/plan/superpowers)
-├── .claude/
-│   ├── commands/          ← 6 slash commands (invocar con /nombre)
-│       ├── carrusel.md · informe.md   ← la produccion diaria
-│       ├── story.md                   ← una pieza suelta (4 plantillas)
-│       └── encuesta.md · rencuesta.md · estado.md
-├── agents/                ← prompts de sub-agents
-│   ├── recolector.md · analista.md · redactor.md
-├── config/                ← configuración del sistema
-│   ├── activos.json       ← 38 tickers: forex + commodities + 6 criptos + índices + 5 ETF + 14 acciones
-│   ├── drivers.json · drivers_indices_sectores.json
-│   ├── agenda_mercado.json  ← ventanas de sesion, anclajes de tanda y momentos del dia
-│   ├── agenda_semanal.json · feriados_bolsa.json
-├── scripts/               ← scripts auxiliares
-│   ├── screener_gi.py     ← Score_GI sobre el universo + gates (feriado, blackout, Playbook, ATR)
-│   ├── agenda_mercado.py  ← el unico reloj: ventanas, anclajes y momentos
-│   ├── reloj_gi.py        ← el decisor del latido (solo prepara, nunca envia)
-│   ├── instalar_reloj.ps1 ← registra el latido en el Programador de tareas
-│   ├── noticia_oficial.py ← la nota oficial fresca que suplementa (EIA, BCE, Fed)
-│   ├── pipeline_carrusel.py ← Top 3 del escaner → 3 Stories (--preparar / --rendir)
-│   ├── pipeline_informe.py  ← informe de apertura (PDF) y de cierre (chat-first)
-│   ├── sincronizar_css_plantillas.py ← re-embebe marca.css/piel.css en los 12 snapshots
-│   ├── story_render.py    ← renderer de Stories GI (payload JSON → HTML → PNG con Playwright)
-│   ├── story_grafico.py ← geometría del gráfico de recorrido (paso previo al render)
-│   ├── serie_mt5.py       ← serie real de precios desde MT5 → bloque `recorrido`
-│   ├── rendir_todas.py    ← rinde las 10 plantillas juntas, para revisión visual
-│   ├── marca_tokens.py    ← verifica que ninguna plantilla hardcodee un color
-│   ├── capacitacion_fundamental_ppt.py + _contenido.py ← generador del PPTX de capacitación (motor / contenido)
-│   └── hora_chile.ps1 · ruta_mensaje.ps1 · ruta_story.ps1  ← helpers deterministas (hora Chile, ruta de guardado)
-├── templates/             ← templates de mensajes WhatsApp
-│   ├── encuesta_tendencia.txt · encuesta_posicion.txt · encuesta_movimiento.txt
-│   ├── mapa_conceptos.txt
-│   └── stories/           ← snapshots de marca GI (11 plantillas) + marca.css · fonts/ · assets/activos/
-├── conceptos/             ← notas canónicas de conceptos educativos (malla /rencuesta)
-│   ├── README.md · stop-loss.md
-├── data/                  ← datos persistentes
-│   ├── historial_senales.json · historial_encuestas.json
-│   ├── mapa_conceptos.json · glosario_siglas.json · glosario_motor.json
-│   └── charts/ · mensajes/ · stories/  ← generados (gitignored)
-├── mql5/                  ← Service MQL5 (ChartObjectsExporter) + archive/ (CalendarExporter, deprecado)
-└── mcp/
-    ├── mcp_config.example.json ← template sin credenciales (en git)
-    └── mcp_config.json         ← config real con API keys (gitignored)
-```
+## Notas de implementación
+<!-- ambito: ambos -->
 
-## Stories GI — CSS embebido (solución Playwright 2026-08-12)
+El árbol del proyecto y las decisiones técnicas ya aplicadas que no hace falta re-decidir (el
+CSS embebido en las plantillas de Stories, entre otras): `docs/notas-implementacion.md`.
 
-**Problema:** `story_render.py` genera HTML temporal y lo navega con `file://`, pero Playwright no resolvía las rutas relativas `<link href="marca.css">`, causando que los estilos no se cargaran. Resultado: elementos visibles en el HTML (como fecha/hora) no aparecían en el PNG final, sin error visible.
-
-**Solución (IMPLEMENTADA):** Embeber CSS directamente en cada plantilla HTML en bloques `<style>`, eliminando la dependencia de rutas externas.
-
-**Cómo se aplicó:**
-- Todas las plantillas (`alerta.html`, `dato_macro.html`, `calendario.html`, etc.) ahora incluyen `marca.css` y `piel.css` (si aplica) incrustados en `<style>` en el `<head>`.
-- Script de automatización: `scripts/embeber_css_plantillas_v3.py` (incrusta CSS en cualquier plantilla que lo use).
-
-**Impacto:**
-- ✅ Playwright siempre tiene estilos disponibles, sin resolver rutas.
-- ✅ Elementos como fecha/hora ahora son visibles en los PNG.
-- ✅ No hay cambio en el contrato de tokens `{{campo}}` ni en `build_context`.
-
-**Si agregas una plantilla nueva:**
-- Si usa `<link rel="stylesheet" href="marca.css">` o `piel.css`, ejecuta:
-  ```bash
-  uv run python scripts/embeber_css_plantillas_v3.py
-  ```
-- O embebe manualmente el CSS en un `<style>` antes del `</head>`.
