@@ -124,3 +124,8 @@ data central/DATA PRECIOS OHLC/*_D1.json
 docs/MANUAL_DE_OPERACIONES_TRADING_CUANTITATIVO_GI.pdf
 docs/preview_portada.png
 data/.reloj_disparos.json
+
+# Estado generado por el hook de ingesta macro (scripts/hook_ingesta_macro.py):
+# el lock que impide dos ingestas simultaneas y su bitacora. Se regeneran solos.
+data/.ingesta_macro.lock
+data/logs/

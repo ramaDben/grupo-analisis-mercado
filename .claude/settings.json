@@ -1,5 +1,27 @@
 {
   "enabledPlugins": {
     "pulse@grupo-analisis-mercado": true
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/scripts/hook_ingesta_macro.py\" --estado",
+            "timeout": 15,
+            "statusMessage": "Leyendo el estado de los datos macro..."
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/scripts/hook_ingesta_macro.py\" --refrescar",
+            "async": true,
+            "timeout": 600,
+            "statusMessage": "Refrescando datos de bancos centrales..."
+          }
+        ]
+      }
+    ]
   }
 }
