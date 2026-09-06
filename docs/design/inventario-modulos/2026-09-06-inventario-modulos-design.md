@@ -1,6 +1,6 @@
 # Inventario de módulos: qué corre, qué está declarado, qué sobra
 
-**Fecha:** 2026-09-05
+**Fecha:** 2026-09-06
 **Estado:** diseño aprobado por el director, pendiente de plan de implementación
 **Precede a:** la reestructuración de `CLAUDE.md` (spec aparte, todavía sin escribir)
 
