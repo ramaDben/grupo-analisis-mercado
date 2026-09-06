@@ -110,7 +110,18 @@ CAMPOS_OBLIGATORIOS = ("archivos", "verificar")
 # encargo lo prohibía, y el informe salió limpio. La lista es corta a propósito
 # (2,6 MB medidos) porque estas se hashean enteras en cada instantánea; barrer todo
 # lo gitignoreado costaría 95 MB por corrida y traería `.venv` de arrastre.
-VIGILADAS_IGNORADAS = ("data/logs", "data/stories", "data/charts", "data/mensajes")
+# Acepta carpetas y archivos sueltos. El contador de envios esta en la lista porque
+# un encargo que despacha no produce ningun archivo nuevo: lo unico que deja es esa
+# cifra moviendose, y sin ella el control de ambito no ve la accion mas irreversible
+# que una delegacion puede tomar.
+VIGILADAS_IGNORADAS = (
+    "data/logs",
+    "data/stories",
+    "data/charts",
+    "data/mensajes",
+    "data/.whatsapp_envios.json",
+    "data/historial_despachos.json",
+)
 
 # Un encargo real tarda entre 5 y 8 minutos: tres módulos medidos el 2026-09-06 dieron
 # 295 s, 365 s y 432 s. El techo por defecto de agy son 5 min, que corta justo en la
@@ -250,11 +261,10 @@ def instantanea() -> dict[str, str]:
         except OSError:
             huellas[rel] = "(ilegible)"
 
-    for carpeta in VIGILADAS_IGNORADAS:
-        base = RAIZ / carpeta
-        if not base.is_dir():
-            continue
-        for ruta in base.rglob("*"):
+    for vigilada in VIGILADAS_IGNORADAS:
+        base = RAIZ / vigilada
+        candidatos = base.rglob("*") if base.is_dir() else [base]
+        for ruta in candidatos:
             if not ruta.is_file():
                 continue
             rel = ruta.relative_to(RAIZ).as_posix()
