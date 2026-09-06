@@ -293,3 +293,75 @@ de contenido operativo: es justo donde un error se paga.
 
 **La fase 6 se parte por sección** porque es la única irreversible de verdad. Una compresión
 que se pasó de mano se revierte sola si tiene su commit; mezclada con otras ocho, no.
+
+---
+
+## 13. Qué cambió al implementarlo
+
+Implementado el 2026-09-06. Tres cosas salieron distintas, y la primera invalida una premisa
+central de este documento.
+
+### 13.1 La premisa de la compresión era falsa
+
+§8 daba por hecho que las nueve secciones forenses eran regla enterrada en relato, y que
+conservar "el invariante más la razón en una frase" iba a recortarlas a la mitad. **Medido, el
+recorte real fue del 12%: de 543 a 478 líneas.** Una sección incluso creció.
+
+| Sección | Antes | Después |
+|---|---|---|
+| Un solo reloj | 73 | 49 |
+| El "hasta dónde" del sesgo | 65 | 42 |
+| El reloj de sucesos | 59 | 52 |
+| El `Score_GI` y sus gates | 71 | 64 |
+| Un PDF adjunto | 39 | 32 |
+| Un canal vacío se suplementa | 57 | 53 |
+| La noticia oficial | 50 | 46 |
+| El despacho | 61 | **63** |
+| Stories GI | 68 | **77** |
+
+**El diagnóstico estaba mal, no la ejecución.** La razón en una frase **ya estaba escrita** en
+casi todos los párrafos: lo único genuinamente movible eran las tablas de medición, las cifras
+exactas y las fechas, y eso es entre 4 y 24 líneas por sección. Comprimir más habría significado
+borrar reglas o sus razones, que es lo que §8 prohíbe explícitamente.
+
+Así que la conclusión de fondo se invierte: **`CLAUDE.md` no pesaba 43k tokens por estar inflado.
+Pesaba eso porque está denso.** Es una conclusión más útil que un archivo mutilado.
+
+Las dos que crecieron lo hicieron por buenas razones: Stories GI recibió el trazado horizontal
+obligatorio que solo tenía AGY, y el despacho quedó mejor explicado con la tabla afuera.
+
+### 13.2 El resultado real, y las tres estimaciones que hice mal
+
+| | Líneas | Bytes | Tokens aprox. |
+|---|---|---|---|
+| Antes | 1.341 | 100.901 | 43,1k |
+| Después | 1.182 | 88.072 | **37,6k** |
+| Reducción | **12%** | 12,7% | 12,8% |
+
+Estimé 46% (~620 líneas), después 36% (~855) y el resultado fue 12%. **Las dos primeras
+correcciones fueron por optimismo; la tercera fue por haber diagnosticado mal el problema.**
+
+Conviene decir qué sí se logró, porque no es el tamaño:
+
+- **El fork está cerrado**, que era el problema serio. `proyecto.md` ya no puede divergir.
+- **Cuatro reglas que solo tenía AGY** están ahora en los dos archivos, generadas.
+- **225 líneas** genuinamente ajenas al flujo de entrega salieron a `docs/`.
+- **El cobre congelado** desapareció de las reglas y de la skill.
+- El criterio está escrito arriba, con un presupuesto que lo sostiene.
+
+### 13.3 El margen del presupuesto tuvo que bajar de 15% a ~4,5%
+
+§10 pedía el tamaño de corte más 15%. Con el recorte real, ese margen ponía el techo en **101.282
+bytes: por encima de los 100.901 con que el archivo empezó.** El presupuesto habría permitido
+exactamente la regresión que existe para impedir.
+
+Quedó en **92.000 bytes** contra los 88.072 actuales: unas 50 líneas de margen. Es el mismo
+razonamiento del margen, aplicado a la reducción que de verdad hubo.
+
+### 13.4 Lo que sí funcionó tal como estaba diseñado
+
+- **El parser fence-aware encontró 55 secciones donde un regex encontraba 56.** El encabezado
+  fantasma era real y habría partido el documento.
+- **El fail-closed del ámbito** obligó a decidir las 51 secciones una por una, que es el punto.
+- **El test de `proyecto.md` desactualizado falló en cuanto comprimí la primera sección**, antes
+  de que yo me acordara de regenerar. Es la demostración de que el fork no puede volver.
