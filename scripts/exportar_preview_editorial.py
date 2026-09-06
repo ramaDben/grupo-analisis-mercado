@@ -1,3 +1,4 @@
+# punto-de-entrada: lo corre el director a mano para exportar un preview editorial
 import base64
 from pathlib import Path
 from playwright.sync_api import sync_playwright

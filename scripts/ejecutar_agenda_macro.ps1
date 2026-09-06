@@ -1,3 +1,4 @@
+# punto-de-entrada: orquestador para el Programador de tareas, TODAVIA SIN REGISTRAR. Lo toma la spec de cobertura de eventos macro
 # PowerShell script: ejecutar_agenda_macro.ps1
 # Orquestador para Windows Task Scheduler o ejecucion manual bajo demanda.
 
