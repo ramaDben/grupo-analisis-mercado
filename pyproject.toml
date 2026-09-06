@@ -44,7 +44,7 @@ testpaths = ["tests"]
 [tool.ruff]
 target-version = "py311"
 # scripts/ es legacy en resolución (issue #79/D2).
-extend-exclude = ["scripts", ".pulse"]
+extend-exclude = ["scripts"]
 
 [tool.ty.src]
 include = ["src"]

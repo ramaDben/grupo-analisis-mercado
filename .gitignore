@@ -38,14 +38,6 @@ data/ultimo_evento.json
 data/mt5_command.json
 data/mt5_response.json
 
-# Pulse — estado de runtime efímero (changes/, specs/ y heuristics/ SÍ se versionan)
-# El ledger sqlite vive en el volumen Docker pulse-gam-ledger (ver .claude/plugins/pulse/.mcp.json)
-.pulse/state.sqlite
-.pulse/state.sqlite-shm
-.pulse/state.sqlite-wal
-.pulse/audit.jsonl
-.pulse/*.bak
-
 # MQL5 compilado: el fuente .mq5 se versiona; el binario .ex5 (output del compilador) no
 *.ex5
 
