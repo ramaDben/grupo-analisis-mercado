@@ -1,7 +1,5 @@
 {
-  "enabledPlugins": {
-    "pulse@grupo-analisis-mercado": true
-  },
+  "enabledPlugins": {},
   "hooks": {
     "SessionStart": [
       {
