@@ -21,9 +21,19 @@ stories = ["playwright"]
 # Tests de visibilidad: OCR para verificar que elementos críticos aparecen en PNG
 # (uv sync --extra stories-test)
 stories-test = ["playwright", "easyocr", "pillow"]
-# Graficos del informe de la jornada: matplotlib, opcional por el mismo criterio
-# que `stories` — el core del MCP no lo necesita y no se fuerza en cada entorno.
-informe = ["matplotlib"]
+# Informe de la jornada. Opcional por el mismo criterio que `stories`: el core
+# del MCP no lo necesita y no se fuerza en cada entorno.
+#
+# Son cuatro y no una. Hasta el 2026-09-06 este extra declaraba solo matplotlib,
+# que es lo que necesita el grafico, y se pasaba por alto que el PDF lo compila
+# `.agents/skills/generar-reporte-editorial/scripts/generar_pdf.py`, que importa
+# markdown, pypdf y playwright en el nivel de modulo. En un clon nuevo, `--extra
+# informe` instalaba matplotlib y el render moria con ModuleNotFoundError. Se
+# descubrio corriendo el informe desde el segundo runner, que no tenia esos
+# paquetes y tuvo que instalarlos a mano para poder terminar.
+#
+# Lo impide ahora `test_el_extra_informe_cubre_lo_que_el_generador_importa`.
+informe = ["matplotlib", "markdown", "pypdf", "playwright"]
 
 [dependency-groups]
 dev = [
