@@ -185,75 +185,51 @@ fatiga de descargas. La apertura sí va en PDF; el cierre es mensaje con gráfic
 <!-- ambito: ambos -->
 
 Las ventanas de sesión, los anclajes de tanda y los **momentos del día** viven en un solo
-archivo y se leen con `scripts/agenda_mercado.py`. Antes las ventanas estaban en una cadena
-de `elif` dentro de `detectar_sesion`, con los minutos sumados a mano, y los anclajes en otra
-tabla del mismo módulo. El reloj de sucesos habría agregado un tercer lugar declarando el
-mismo hecho, y **dos relojes divergen siempre**: es el defecto recurrente del repo.
+archivo y se leen con `scripts/agenda_mercado.py`. Estuvieron repartidos entre una cadena de
+`elif` y otra tabla del mismo módulo, y el reloj de sucesos habría agregado un tercero:
+**dos relojes divergen siempre**, que es el defecto recurrente del repo.
 
 Tres invariantes las imponen tests, no la buena intención:
 
 1. **Cada minuto del día hábil pertenece a exactamente una sesión.** Un hueco deja al escáner
-   sin sesión; un solape hace que el resultado dependa del orden del JSON, que es un
-   accidente esperando a que alguien reordene el archivo.
+   sin sesión; un solape hace que el resultado dependa del orden del JSON.
 2. **Las ventanas no pueden volver al código del escáner.** Un test lee su fuente y falla si
    aparecen los minutos escritos a mano.
 3. **El desfase con Chile no está escrito en ninguna parte.** El ancla es Nueva York y la hora
-   se comunica en hora real de Chile. Chile y EE.UU. cambian de horario en sentido opuesto,
-   así que el desfase se mueve dos veces al año: hoy es +0 h y **desde el 2026-09-06 pasa a
-   +1 h**. Un offset fijo es el error de ±1 h del issue #38.
+   se comunica en hora real de Chile; Chile y EE.UU. cambian de horario en sentido opuesto, así
+   que el desfase se mueve dos veces al año. Un offset fijo es el error de ±1 h del issue #38.
 
 **Los momentos separan por clase de activo, y esa es la decisión de fondo.**
 
 | Momento | Hora (NY) | Clases | Por qué |
 |---|---|---|---|
-| `premercado_fx` | 08:30 | `forex_commodities` | Es la hora del dato de empleo e inflación de EE.UU. Divisas, oro y petróleo cotizan 24 h, así que ya tienen precio formado y el nivel es real. |
-| `cripto` | 09:00 | `crypto` | **Medido**, no supuesto. Ver abajo. |
-| `apertura_indices` | 10:00 | `indices`, `acciones`, `etfs` | La bolsa abre 09:30 y la primera media hora es el barrido de órdenes de apertura, donde el rango del día todavía no existe. |
+| `premercado_fx` | 08:30 | `forex_commodities` | Es la hora del dato de empleo e inflación de EE.UU., y estos activos cotizan 24 h: ya tienen precio formado. |
+| `cripto` | 09:00 | `crypto` | **Medido**: la cripto se mueve en la mañana americana, a 1,8x su mediana diaria, no en Asia. |
+| `apertura_indices` | 10:00 | `indices`, `acciones`, `etfs` | La bolsa abre 09:30 y la primera media hora es el barrido de apertura, donde el rango del día todavía no existe. |
 
-Publicar niveles de índices a las 08:30 es **publicar el cierre de ayer con fecha de hoy**:
-esos activos no tienen precio hasta que abre la bolsa. Por eso la separación no es una
-preferencia editorial, es una condición del dato.
+Publicar niveles de índices a las 08:30 es **publicar el cierre de ayer con fecha de hoy**. La
+separación no es una preferencia editorial, es una condición del dato.
 
-La tolerancia es de **20 minutos y solo hacia adelante**. El disparo del sistema operativo,
-la lectura de precios y el render se llevan minutos, así que sin ventana de gracia un momento
-se pierde por llegar dos minutos tarde; y disparar el de las 08:30 a las 08:15 publicaría
-niveles anteriores al dato que motiva la hora.
+**Tolerancia de 20 minutos y solo hacia adelante.** El disparo del sistema operativo, la lectura
+de precios y el render se llevan minutos, así que sin ventana de gracia un momento se pierde por
+llegar dos minutos tarde; y disparar el de las 08:30 a las 08:15 publicaría niveles anteriores al
+dato que motiva la hora.
 
-**La cripto se mueve en la mañana americana, no en Asia.** Se midió el 2026-09-04 sobre 90
-días de velas H1 en BTC, ETH, SOL y LTC (mediana del rango por hora, solo días hábiles):
+**Ojo con MT5: devuelve las marcas de tiempo en hora del SERVIDOR, empaquetadas como si fueran un
+timestamp UTC.** Interpretarlas como UTC desplaza la serie entera por el offset del broker, y así
+una medición horaria puede señalar la apertura de Londres cuando el máximo real estaba cuatro
+horas después. El offset se mide comparando `symbol_info_tick().time` contra
+`datetime.now(timezone.utc)`; `tools/symbol_spec.py` ya lo trata como `server_naive`.
 
-| Bloque (hora NY) | BTC | ETH | SOL | LTC |
-|---|---|---|---|---|
-| Asia 18–02 | 1,01x | 0,98x | 0,94x | 0,97x |
-| Europa 03–08 | 0,98x | 0,96x | 0,90x | 0,98x |
-| **NY mañana 08–12** | **1,80x** | **1,65x** | **1,52x** | **1,49x** |
-| NY tarde 12–16 | 1,23x | 1,17x | 1,16x | 1,14x |
+`clases_sin_momento` queda vacía, y la lista se conserva porque un test exige que toda clase del
+universo esté asignada a un momento **o** declarada ahí: es lo que impide que una clase nueva se
+quede fuera del reloj en silencio.
 
-El máximo está en 09:00–10:00, donde BTC llega a **2,09x** su mediana diaria. La sesión
-asiática está plana y Europa también: **la hipótesis del rollover asiático era falsa.** Va a
-las 09:00 y no a las 10:00 solo para no chocar con el momento de los índices, porque cada
-momento produce su propia tanda.
+> **No confundir con `config/agenda_semanal.json`**, que es la agenda por día de la semana de
+> antes del rediseño y describe una cadencia que ya no existe. `/estado` y
+> `docs/architecture.md` todavía la citan; `agenda_mercado.json` es la vigente.
 
-Dos cosas más que salieron de esa medición y conviene no volver a averiguar:
-
-1. **MT5 devuelve las marcas de tiempo en hora del SERVIDOR, empaquetadas como si fueran un
-   timestamp UTC.** Interpretarlas como UTC desplaza la serie entera por el offset del broker.
-   La primera corrida de esta medición dio el máximo en las 06:00 de Nueva York, que habría
-   apuntado a la apertura de Londres; el servidor corre en **UTC−4** y el máximo real está
-   cuatro horas después. El offset se mide comparando `symbol_info_tick().time` contra
-   `datetime.now(timezone.utc)`, y `tools/symbol_spec.py` ya lo trata correctamente como
-   `server_naive`.
-2. **El fin de semana la cripto está más quieta, no más activa**: 0,76x a 0,85x del día hábil.
-   La sesión `fin_de_semana` existía en parte pensando en ella, y el dato no respalda esa idea.
-
-`clases_sin_momento` queda vacía, y la lista se conserva porque un test exige que toda clase
-del universo esté asignada a un momento **o** declarada ahí. Es lo que impide que una clase
-nueva se quede fuera del reloj en silencio.
-
-> **Ojo, no confundir con `config/agenda_semanal.json`**, que es la agenda por día de la
-> semana de antes del rediseño y describe una cadencia que ya no existe (`apertura_mercado`,
-> `resumen_semanal`, los comandos de día). `/estado` y `docs/architecture.md` todavía la
-> citan. `agenda_mercado.json` es la vigente.
+Mediciones completas de volatilidad por hora: `docs/historia-forense.md`.
 
 ### El reloj de sucesos: latido del sistema, decisión en Python
 <!-- ambito: ambos -->
