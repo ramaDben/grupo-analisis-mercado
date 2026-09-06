@@ -1194,3 +1194,34 @@ def test_pendiente_gana_sobre_cualquier_otra_marca():
     from whatsapp_sender import burbuja_entregada
 
     assert burbuja_entregada(["algo Enviado", "estado: Pendiente"]) is False
+
+
+def test_el_cli_puede_alcanzar_el_banco_de_pruebas():
+    """Un canal de pruebas al que no se puede enviar no sirve de nada.
+
+    Hasta el 2026-09-06 `destino_de_pruebas` existia, estaba testeado y **ningun
+    camino del CLI lo llamaba**: `--grupo banco_de_pruebas` cae en el paso 3 de
+    `resolver_nombre_oficial` (devolver el nombre tal cual) y WhatsApp Web no
+    encuentra ningun chat con ese literal. El efecto real era que el mecanismo de
+    entrega se verificaba contra canales de clientes, o no se verificaba.
+
+    Lo resuelve el flag `--pruebas`, que **no toma un destino**: lo resuelve del
+    config. Esa es la parte que importa, y por eso se testea la firma y no solo el
+    resultado. Un flag que aceptara un destino podria apuntar a un canal de
+    clientes con un typo, que es justo lo que los dos tests de arriba impiden.
+    """
+    import runpy
+
+    ruta = Path(__file__).resolve().parent.parent / "scripts" / "enviar_whatsapp.py"
+    modulo = runpy.run_path(str(ruta), run_name="_no_es_main_")
+    parser = modulo["construir_parser"]()
+
+    args = parser.parse_args(["--pruebas", "-m", "x"])
+    assert args.pruebas is True
+    assert args.destinatario is None, "--pruebas no puede tomar un destino"
+
+    # El destino sale del config, no del argumento, y no es un canal de clientes.
+    config = WhatsAppConfig()
+    assert config.destino_de_pruebas not in {
+        g["nombre_oficial"] for g in config.grupos.values()
+    }

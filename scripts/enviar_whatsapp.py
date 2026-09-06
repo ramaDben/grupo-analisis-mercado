@@ -78,6 +78,13 @@ def construir_parser() -> argparse.ArgumentParser:
         help="Alias, slug o nombre oficial del grupo de WhatsApp destino (ej. 'macro', 'forex', '03_commodities_materias_primas').",
     )
     parser.add_argument(
+        "--pruebas",
+        action="store_true",
+        help="Envia al banco de pruebas interno en vez de a un canal. No acepta destino: "
+             "lo resuelve de config/whatsapp_grupos.json, asi que no puede apuntar a un "
+             "canal de clientes ni por error de tipeo.",
+    )
+    parser.add_argument(
         "-m", "--mensaje",
         type=str,
         default="",
@@ -173,7 +180,33 @@ def main() -> int:
             print(f"\n[ERROR SETUP] {exc}", file=sys.stderr)
             return 1
 
-    # 4. Validación de Parámetros de Envío
+    # 4. Destino: el banco de pruebas se resuelve aparte y a proposito
+    #
+    # `--grupo banco_de_pruebas` NO funciona, y eso es deliberado: el banco vive
+    # fuera del mapa de canales y `resolver_nombre_oficial` no lo reconoce, con un
+    # test de contrato que lo impone para que ningun typo de alias termine
+    # publicando en un destino equivocado en cualquiera de las dos direcciones.
+    #
+    # Pero hasta el 2026-09-06 eso dejaba al banco **inalcanzable desde el CLI**:
+    # la propiedad `destino_de_pruebas` existia, tenia tests, y ningun camino la
+    # llamaba. Un canal de pruebas al que no se puede enviar no sirve de nada, y
+    # el efecto real era que el mecanismo de entrega se verificaba contra canales
+    # de clientes o no se verificaba.
+    #
+    # El flag es mas seguro que pasar el nombre a mano: no toma un destino, asi
+    # que no hay forma de que apunte a otro lado.
+    if args.pruebas:
+        if args.destinatario:
+            print("[ERROR] --pruebas y --grupo son excluyentes: --pruebas ya sabe a "
+                  "donde va.", file=sys.stderr)
+            return 1
+        try:
+            args.destinatario = sender.config.destino_de_pruebas
+        except Exception as exc:
+            print(f"[ERROR] {exc}", file=sys.stderr)
+            return 1
+        print(f"[PRUEBAS] Destino interno: {args.destinatario}")
+
     if not args.destinatario:
         print("[ERROR] Debe especificar un destinatario o grupo con --grupo o --destinatario.", file=sys.stderr)
         print("Use --listar-grupos para ver los canales disponibles.", file=sys.stderr)
