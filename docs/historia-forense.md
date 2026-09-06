@@ -41,3 +41,83 @@ La primera corrida de esa medición dio el máximo en las 06:00 de Nueva York, q
 a la apertura de Londres y a una conclusión distinta. El servidor del broker corre en **UTC−4**,
 así que el máximo real estaba cuatro horas después. Es el mismo error de interpretar la marca de
 tiempo de MT5 como UTC cuando viene en hora del servidor.
+
+## El reloj de sucesos: el desfase con Chile, año por año
+
+| Fecha | Desfase | premercado_fx | cripto | índices |
+|---|---|---|---|---|
+| hasta el 5 sep 2026 | NY+0 | 08:30 CL | 09:00 CL | 10:00 CL |
+| 6 sep 2026 | NY+1 | 09:30 CL | 10:00 CL | 11:00 CL |
+| 1 nov 2026 | NY+2 | 10:30 CL | 11:00 CL | 12:00 CL |
+| mar 2027 | NY+1 | 09:30 CL | 10:00 CL | 11:00 CL |
+| abr 2027 | NY+0 | 08:30 CL | 09:00 CL | 10:00 CL |
+
+Anclar a hora chilena fija se descartó midiendo esta tabla: con el desfase en NY+2, la pieza de
+índices habría salido a las 08:00 de Nueva York, hora y media antes de la campana, publicando el
+cierre de ayer con fecha de hoy.
+
+## El `Score_GI`: las cifras que fijaron el gate de banda
+
+El 2026-09-04 hubo que aplicar a mano el criterio de banda contra vela típica cuatro veces:
+
+| Activo | Banda cubierta por la vela típica |
+|---|---|
+| Litecoin | **3,2 veces** |
+| Dogecoin | 1,8 veces |
+| S&P 500 | 1,03 veces (banda de 16,54 puntos contra una vela típica de 17,00) |
+
+De ahí salieron los umbrales de excluir desde 1,00x y avisar desde 0,70x.
+
+### Y las que mostraron que `--grupo` apagaba un gate en silencio
+
+Hasta el 2026-09-03, `--grupo` también desactivaba el gate de agotamiento sin decirlo. Por eso el
+canal de forex salió con tres piezas cuyo recorrido diario estaba consumido al **93 %, 290 % y
+115 %**, con el escáner reportando cero exclusiones porque no las hubo.
+
+## Un canal vacío: las cifras del día que lo motivó
+
+El 2026-09-03 el canal de divisas quedó en cero porque sus cuatro activos habían consumido su
+recorrido del día, con el USD/JPY al **290 %**. A las 10:24 había 4 activos de forex entre 93 % y
+290 %; a las 12:11 había **15 excluidos en todo el universo**. Es la demostración de que
+`ATR − rango_hoy` solo baja: el sistema tiene su mejor momento al abrir y se apaga solo.
+
+## La noticia oficial: el descarte que la justifica
+
+El 2026-09-03 la nota más fresca de la EIA era *"Weekly average load in ERCOT continues near
+record high"*: carga eléctrica en Texas. Oficial, del día, y sin ninguna relación con el petróleo.
+Un filtro de frescura sin filtro de relevancia la habría mandado al canal de metales y energía
+justo el día en que ese canal quedó vacío.
+
+**Cadencias medidas** el 2026-09-03: EIA ~3 por semana, de las cuales 3 de 12 tocan crudo; BCE ~4
+por semana contando discursos del directorio; Fed ~2 por mes.
+
+**Tres fuentes no se pueden leer:** el Tesoro de EE.UU. responde 404, la BLS y la OPEP responden
+403 al bot, y el Banco Central de Chile devuelve HTML en la ruta de su RSS.
+
+## El despacho: el pie de foto, medido contra el DOM real
+
+El 2026-09-03, con un texto de 2.016 caracteres:
+
+| Orden | Pie resultante |
+|---|---|
+| adjuntar primero, pie en el editor | **1.029** de 2.016 |
+| texto en el cuadro, adjuntar después | **2.042** de 2.016 (completo) |
+
+Ese día el canal recibió el contexto macro **sin la línea del Imacec ni las dos de tasas**, pero
+con el link del BCCh que iba en medio, y con las líneas cortas posteriores intactas porque todavía
+cabían. El despacho reportó éxito.
+
+El 2026-09-04, `limpiar_payloads` hacía `rglob` sobre la tanda entera y una segunda corrida en el
+mismo minuto se llevó los payloads de la primera: doce de commodities, con el escáner reportando
+"barridos 12 payload(s)" sin que eso se leyera como un problema.
+
+## Un PDF adjunto: las mediciones
+
+Medido el 2026-09-04: se envió un pie de **1.222 caracteres** con un PDF de **2 MB** y llegó
+entero. El editor mostraba un contador en **−197** y el envío funcionó igual.
+
+## El sesgo: los casos que fijaron las reglas
+
+Brent el 2026-09-02 llevaba sesgo **+1,50** con el precio ya bajo su Chandelier, y el USD/CLP
+estaba en la misma situación el 2026-09-03. Publicar "sigue vigente" en cualquiera de los dos
+habría dicho lo contrario de lo que pasaba.

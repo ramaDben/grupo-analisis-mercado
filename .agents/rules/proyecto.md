@@ -224,61 +224,54 @@ Mediciones completas de volatilidad por hora: `docs/historia-forense.md`.
 ### El reloj de sucesos: latido del sistema, decisión en Python
 
 `scripts/reloj_gi.py` es quien decide si a alguna clase de activo le toca salir.
-`scripts/instalar_reloj.ps1` registra el latido en el Programador de tareas (cada 15 min, sin
+`scripts/instalar_reloj.ps1` registra el latido en el Programador de tareas (cada 15 min; sin
 parámetros muestra qué haría y **no instala nada**).
 
 **La trampa que esto evita.** El Programador de tareas dispara en hora **local**. Una tarea a
-las 08:30 de Chile es 08:30 de Nueva York hoy y **06:30 de Nueva York en noviembre**: dos
-horas antes del dato que justifica la hora. La tarea seguiría corriendo puntual y publicando
-el cierre de ayer. Por eso **el agendador no sabe nada de mercados**: late, y Python decide
-leyendo la agenda y convirtiendo en ese instante.
+las 08:30 de Chile es 08:30 de Nueva York hoy y **06:30 de Nueva York en noviembre**: dos horas
+antes del dato que justifica la hora. La tarea seguiría corriendo puntual y publicando el cierre
+de ayer. Por eso **el agendador no sabe nada de mercados**: late, y Python decide leyendo la
+agenda y convirtiendo en ese instante.
 
-Cuatro decisiones que lo sostienen:
+Cuatro decisiones lo sostienen:
 
 1. **Idempotencia por momento y por día**, en `data/.reloj_disparos.json` (gitignoreado: es
-   estado generado, no historia editorial). El latido puede pasar cuatro veces por la ventana
-   de gracia de 20 min y la pieza sale una sola vez. Y hace **recuperable** la noche en que
-   Chile entra en horario de verano, donde una hora local simplemente no existe: una tarea
-   anclada a esa hora no dispararía nunca, y acá el momento sale en el siguiente latido.
-2. **Un momento que falló sigue pendiente.** MT5 puede no estar conectado en ese latido;
-   anotar el disparo igual perdería la pieza por el día entero. Solo se anota si al menos una
-   corrida terminó bien.
-3. **El reloj solo prepara.** Corre `pipeline_carrusel.py --preparar --grupo <canal>` y nada
-   más. Que un proceso automático pueda publicar en un canal es justamente lo que el flujo de
+   estado generado, no historia editorial). El latido puede pasar cuatro veces por la ventana de
+   gracia y la pieza sale una sola vez. Y hace **recuperable** la noche en que Chile entra en
+   horario de verano, donde una hora local simplemente no existe: una tarea anclada a esa hora no
+   dispararía nunca, y acá el momento sale en el siguiente latido.
+2. **Un momento que falló sigue pendiente.** MT5 puede no estar conectado en ese latido; anotar
+   el disparo igual perdería la pieza por el día entero. Solo se anota si al menos una corrida
+   terminó bien.
+3. **El reloj solo prepara.** Corre `pipeline_carrusel.py --preparar --grupo <canal>` y nada más.
+   Que un proceso automático pueda publicar en un canal es justamente lo que el flujo de
    aprobación prohíbe, y **hay un test que falla si alguien conecta el envío ahí**.
 4. **Los canales de un momento se derivan del mapeo real** de activo a canal, recorriendo el
    universo del escáner. Una lista de canales por momento sería otro contrato por nombre.
 
-**Anclado al mercado, con el cambio narrado** (decisión del director, 2026-09-04). La hora
-sigue al mercado y la hora chilena drifta; cuando el desfase cambia, el reloj levanta el aviso
-y deja el mensaje listo para que el director lo revise y lo mande. Se descartó anclar a hora
-chilena fija **midiéndolo**: la pieza de índices habría salido en noviembre a las 08:00 de
-Nueva York, hora y media antes de la campana, publicando el cierre de ayer con fecha de hoy.
+**Anclado al mercado, con el cambio narrado** (decisión del director, 2026-09-04). La hora sigue
+al mercado y la hora chilena drifta; cuando el desfase cambia, el reloj levanta el aviso y deja
+el mensaje listo para que el director lo revise y lo mande. Se descartó anclar a hora chilena
+fija **midiéndolo**: la pieza de índices habría salido en noviembre a las 08:00 de Nueva York,
+hora y media antes de la campana.
 
-| Fecha | Desfase | premercado_fx | cripto | índices |
-|---|---|---|---|---|
-| hasta el 5 sep 2026 | NY+0 | 08:30 CL | 09:00 CL | 10:00 CL |
-| 6 sep 2026 | NY+1 | 09:30 CL | 10:00 CL | 11:00 CL |
-| 1 nov 2026 | NY+2 | 10:30 CL | 11:00 CL | 12:00 CL |
-| mar 2027 | NY+1 | 09:30 CL | 10:00 CL | 11:00 CL |
-| abr 2027 | NY+0 | 08:30 CL | 09:00 CL | 10:00 CL |
+**El aviso nombra al país que de verdad movió su reloj.** En septiembre es Chile entrando en su
+horario de verano; en noviembre es **Estados Unidos saliendo del suyo**. Decir "horario de verano
+de Chile" en noviembre sería contarle al cliente algo que no pasó, así que `quien_cambio` lo
+deduce comparando el desplazamiento de cada zona con el de una semana antes.
 
-**El aviso nombra al país que de verdad movió su reloj.** En septiembre es Chile entrando en
-su horario de verano; en noviembre es **Estados Unidos saliendo del suyo**. Decir "horario de
-verano de Chile" en noviembre sería contarle al cliente algo que no pasó, así que
-`quien_cambio` lo deduce comparando el desplazamiento de cada zona con el de una semana antes.
+Y como el aviso lo lee el cliente, se le aplican las reglas de texto de cliente: los nombres de
+los momentos van **acentuados** en el config porque salen publicados, los momentos se listan en
+**orden de reloj** y no en el del archivo, y no lleva guion largo ni cifras de precio.
 
-Y como el aviso lo lee el cliente, se le aplican las reglas de texto de cliente: los nombres
-de los momentos van **acentuados** en el config porque salen publicados, los momentos se
-listan en **orden de reloj** y no en el del archivo, y no lleva guion largo ni cifras de precio.
+**El campo `zona` por momento** permite que un momento se ancle al reloj del mercado que lo mueve.
+Hoy los tres van a Nueva York. Un premercado del USD/CLP tendría que ir anclado a Santiago, porque
+con el desfase en su máximo las 08:30 de Nueva York caen hora y media **después** de que Santiago
+abrió. El invariante que lo hace seguro: **un test verifica que ningún par de momentos caiga
+dentro de la tolerancia uno del otro, en las tres configuraciones de desfase del año** (si se
+pisaran, el decisor dispararía uno y perdería el otro en silencio).
 
-**El campo `zona` por momento** permite que un momento se ancle al reloj del mercado que lo
-mueve. Hoy los tres van a Nueva York. Un premercado del USD/CLP tendría que ir anclado a
-Santiago, porque con el desfase en su máximo las 08:30 de Nueva York caen hora y media
-**después** de que Santiago abrió, y dejaría de ser premercado. El invariante que lo hace
-seguro: **un test verifica que ningún par de momentos caiga dentro de la tolerancia uno del
-otro, en las tres configuraciones de desfase del año** (si se pisaran, el decisor dispararía
-uno y perdería el otro en silencio).
+Calendario del desfase año por año: `docs/historia-forense.md`.
 
 ### El `Score_GI` y sus gates
 
@@ -291,40 +284,33 @@ uno y perdería el otro en silencio).
 | Espacio ADC+ATR | 20 | `atr_14` de H1 contra `rango_hoy` / `atr_restante_14` de D1 |
 | Momentum | 20 | `adx_14`, `rsi_14`, `macd_hist` |
 
-Los rangos de puntos **son** la ponderación: `Score = T + M + C + F`. No se multiplican por
-pesos, porque los factores ya vienen escalados a su máximo y hacerlo dejaría el techo real en
-26,5 sobre una escala de 100.
+Los rangos de puntos **son** la ponderación: `Score = T + M + C + F`. No se multiplican por pesos,
+porque los factores ya vienen escalados a su máximo y hacerlo dejaría el techo real en 26,5 sobre
+una escala de 100.
 
 **Seis gates se aplican ANTES de puntuar, y son prohibiciones, no puntos:**
 
 1. **Feriado de la bolsa** del activo (`config/feriados_bolsa.json`).
-2. **Blackout por calendario** (skill cuantitativa §4: FOMC −30/+75 min, NFP e IPC de EE.UU.
-   −15/+30, RPM y Imacec de Chile, BoJ). Ojo: `obtener_calendario_macro` ya entrega la hora en
-   America/Santiago, así que la ventana se compara directo — volver a convertir produce el
-   desfase de ±1 h del issue #38.
-3. **Prohibición del Playbook** para los 5 activos con ficha, leída de `setups_prohibidos`.
-   Solo bloquea si apunta en la misma dirección que la lectura técnica: que esté prohibido
-   comprar agresivamente no impide comunicar una caída.
+2. **Blackout por calendario** (FOMC −30/+75 min, NFP e IPC de EE.UU. −15/+30, RPM e Imacec de
+   Chile, BoJ). Ojo: `obtener_calendario_macro` ya entrega la hora en America/Santiago, así que la
+   ventana se compara directo; volver a convertir produce el desfase de ±1 h del issue #38.
+3. **Prohibición del Playbook** para los 5 activos con ficha, leída de `setups_prohibidos`. Solo
+   bloquea si apunta en la misma dirección que la lectura técnica: que esté prohibido comprar
+   agresivamente no impide comunicar una caída.
 4. **Agotamiento**: ATR diario consumido sobre 90%.
-5. **Confianza del modelo** (`gate_confianza`): estuvo sin documentar hasta el 2026-09-04, así
-   que la cuenta de "cuatro gates" llevaba tiempo desactualizada. Es el único con
-   `publicable: False` en el suplemento junto al del snapshot: un problema nuestro de datos no
-   es contenido para el cliente.
-6. **Banda contra vela típica** (`gate_banda`): excluye cuando la vela típica cubre la banda
-   entre soporte y resistencia. Ver abajo.
+5. **Confianza del modelo** (`gate_confianza`). Es uno de los dos con `publicable: False`: un
+   problema nuestro de datos no es contenido para el cliente.
+6. **Banda contra vela típica** (`gate_banda`): excluye cuando la vela típica cubre la banda entre
+   soporte y resistencia. **Excluye desde 1,00x y avisa entre 0,70x y 1,00x** (umbrales del
+   director, 2026-09-04). La zona de aviso no detiene la pieza: viaja como `banda_estrecha` y sale
+   en los avisos del escáner.
 
-**El gate de banda, y por qué el agotamiento no lo cubría.** Tener recorrido disponible no dice
-nada sobre si los bordes se sostienen: son dos preguntas distintas y el 2026-09-04 hubo que
-aplicar esta a mano cuatro veces. Litecoin cubría **3,2 veces** su banda, Dogecoin 1,8 y el
-S&P 500 1,03, con banda de 16,54 puntos contra una vela típica de 17,00. Publicar esos niveles
-es entregar ruido con forma de estructura, y el cierre canónico de la pieza los presenta como si
-el precio fuera a respetarlos.
-
-Umbrales fijados por el director el 2026-09-04: **excluye desde 1,00x y avisa entre 0,70x y
-1,00x**. La zona de aviso no detiene la pieza, viaja en la selección como `banda_estrecha` y sale
-en los avisos del escáner. La "vela típica" es `1,5 × ATR(H1)`, **la misma cifra** que la pieza
-publica como "Volatilidad típica": juzgar con otro número dejaría al gate midiendo distinto de lo
-que el cliente lee.
+**Tener recorrido disponible no dice nada sobre si los bordes se sostienen**, y por eso el gate de
+agotamiento no cubría al de banda: son dos preguntas distintas. Publicar niveles que la vela
+típica se come de una es entregar ruido con forma de estructura, y el cierre canónico de la pieza
+los presenta como si el precio fuera a respetarlos. La "vela típica" es `1,5 × ATR(H1)`, **la
+misma cifra** que la pieza publica como "Volatilidad típica": juzgar con otro número dejaría al
+gate midiendo distinto de lo que el cliente lee.
 
 **El respaldo por ATR se trata aparte, y esa es la parte que no era obvia.**
 `_get_support_resistance` cae a `precio ± ATR` cuando no encuentra swings del lado que necesita.
@@ -335,38 +321,35 @@ avisaría siempre y siempre por la misma razón artificial. Por eso `analizar_ac
 `niveles_origen` por lado (`swing` o `atr`) y el gate le da su propio motivo. Los cuatro lados
 caen por separado: se puede tener una resistencia real con un soporte sintético.
 
-Un setup prohibido puede puntuar alto, y con scoring puro ganaría la tanda. Por eso el filtro
-va antes.
+Un setup prohibido puede puntuar alto, y con scoring puro ganaría la tanda. Por eso el filtro va
+antes.
 
 **El escáner informa el motivo de cada exclusión y arrastra sus avisos.** Si el calendario no
-respondió, dice que no pudo verificar blackouts en vez de reportar cero exclusiones. Un
-escáner que descarta en silencio no es auditable.
+respondió, dice que no pudo verificar blackouts en vez de reportar cero exclusiones. Un escáner
+que descarta en silencio no es auditable.
 
-**Y un gate apagado también lo dice.** El de agotamiento es el único que se puede desactivar,
-y solo con `--forzar`: el escáner entonces estampa el aviso de que el espacio proyectado no
-está verificado. **`--grupo` acota el universo y nada más.** Hasta el 2026-09-03 también
-apagaba ese gate sin decirlo, y por eso el canal de forex salió con tres piezas cuyo
-recorrido diario estaba consumido al 93 %, 290 % y 115 %, con el escáner reportando cero
-exclusiones porque no las hubo. Con el gate encendido ese mismo canal devuelve
-**"ningún activo puntuó sobre 0: no hay tanda que publicar. Es un resultado válido, no una
-falla"**, que es la respuesta correcta y la que el manual del comando ya exigía.
+**Y un gate apagado también lo dice.** El de agotamiento es el único que se puede desactivar, y
+solo con `--forzar`: el escáner entonces estampa el aviso de que el espacio proyectado no está
+verificado. **`--grupo` acota el universo y nada más**, y hasta el 2026-09-03 también apagaba ese
+gate sin decirlo. Con el gate encendido, un canal sin candidatos devuelve **"ningún activo puntuó
+sobre 0: no hay tanda que publicar. Es un resultado válido, no una falla"**, que es la respuesta
+correcta y la que el manual del comando ya exigía.
+
+Las cifras medidas que fijaron los umbrales: `docs/historia-forense.md`.
 
 ### Un canal vacío se suplementa con el motivo por el que quedó vacío
 
-**El motivo ya es contenido.** El 2026-09-03 el canal de divisas quedó en cero porque sus
-cuatro activos habían consumido su recorrido del día, con el USD/JPY al 290 %. Eso es una
-lectura de mercado, no un premio de consuelo, y explica algo que el cliente necesita
-entender: que no operar también es una decisión.
+**El motivo ya es contenido**: que los activos de un canal hayan consumido su recorrido del día
+es una lectura de mercado, no un premio de consuelo, y explica algo que el cliente necesita
+entender, que no operar también es una decisión.
 
 Y hay una razón **estructural** para que esto haga falta: el recorrido disponible es
-`ATR − rango_hoy`, una función que **solo baja** con el día. Por construcción, un sistema
-cuyo criterio de selección exige espacio tiene su mejor momento al abrir y se apaga solo.
-A las 10:24 de ese día había 4 activos de forex entre 93 % y 290 %; a las 12:11 había 15
-excluidos en todo el universo. **El gate está bien y lo que falta es otro eje de contenido
-para la tarde.**
+`ATR − rango_hoy`, una función que **solo baja** con el día. Por construcción, un sistema cuyo
+criterio de selección exige espacio tiene su mejor momento al abrir y se apaga solo. **El gate
+está bien y lo que falta es otro eje de contenido para la tarde.**
 
-`scripts/suplemento_canal.py` lo resuelve leyendo las exclusiones que el escáner ya
-escribió, no generando contenido:
+`scripts/suplemento_canal.py` lo resuelve leyendo las exclusiones que el escáner ya escribió, no
+generando contenido:
 
 | Motivo del gate | Categoría | Concepto que enseña |
 |---|---|---|
@@ -375,88 +358,83 @@ escribió, no generando contenido:
 | Prohibición del Playbook | `setup_prohibido` | `riesgo` |
 | Feriado de bolsa | `mercado_cerrado` | `temporalidades` |
 
-**El concepto lo elige el motivo, no el azar**, así la parte educativa queda pegada a lo que
-de verdad pasó en vez de ser una cápsula suelta. Hay contrato de nombres: todo motivo que el
-escáner pueda emitir tiene categoría, o está declarado `publicable: False`.
+**El concepto lo elige el motivo, no el azar**, así la parte educativa queda pegada a lo que de
+verdad pasó en vez de ser una cápsula suelta. Hay contrato de nombres: todo motivo que el escáner
+pueda emitir tiene categoría, o está declarado `publicable: False`.
 
-Cuatro reglas que lo mantienen del lado del contenido y no del relleno:
+Cuatro reglas lo mantienen del lado del contenido y no del relleno:
 
-1. **Solo cubre canales VACÍOS.** Un suplemento junto a piezas de activo sería exactamente
-   el relleno que el manual prohíbe. Su valor está en aparecer cuando no hay nada más.
-2. **Un problema nuestro de datos no es contenido.** La confianza baja del modelo o un fallo
-   del analizador dejan al canal **sin** suplemento: publicar "no pudimos leer el activo" no
-   le sirve a nadie y suena a excusa.
-3. **No promete niveles.** El cierre canónico de tres escenarios necesita soporte y
-   resistencia; sin ellos, prometerlos sería inventarlos. Cierra con el CTA al analista.
-4. **Es solo texto, por fase.** Las plantillas educativas se retiraron y el estándar sale del
-   brand kit, así que primero se mide si el canal engancha y solo después se le pide una
-   pieza visual. El despacho lo manda con `enviar()` porque `piezas_del_grupo` recorre los
-   PNG y el suplemento no tiene.
+1. **Solo cubre canales VACÍOS.** Un suplemento junto a piezas de activo sería exactamente el
+   relleno que el manual prohíbe. Su valor está en aparecer cuando no hay nada más.
+2. **Un problema nuestro de datos no es contenido.** La confianza baja del modelo o un fallo del
+   analizador dejan al canal **sin** suplemento: publicar "no pudimos leer el activo" no le sirve
+   a nadie y suena a excusa.
+3. **No promete niveles.** El cierre canónico de tres escenarios necesita soporte y resistencia;
+   sin ellos, prometerlos sería inventarlos. Cierra con el CTA al analista.
+4. **Es solo texto, por fase.** Primero se mide si el canal engancha y solo después se le pide una
+   pieza visual. El despacho lo manda con `enviar()` porque `piezas_del_grupo` recorre los PNG y
+   el suplemento no tiene.
 
-**La ventana anti repetición.** Un concepto no vuelve al mismo canal antes de **14 días**,
-y el historial vive en `data/historial_suplementos.json`, **versionado** igual que
-`historial_senales.json`: es historia editorial de lo que el cliente ya leyó, no un archivo
-generado. Tres decisiones que conviene no revertir:
+**La ventana anti repetición.** Un concepto no vuelve al mismo canal antes de **14 días**, y el
+historial vive en `data/historial_suplementos.json`, **versionado**: es historia editorial de lo
+que el cliente ya leyó, no un archivo generado. Tres decisiones que conviene no revertir:
 
 - **La ventana es por canal**, porque cada uno tiene su propia audiencia.
-- **Si el concepto está en cooldown se cae el concepto, no la pieza.** La cifra del estado
-  ES la novedad: hoy el USD/JPY al 290 % y mañana otra. Lo que se gasta con la repetición es
-  la parte educativa.
-- **Se anota al preparar, no al despachar.** Una tanda preparada y descartada gasta la
-  ventana igual, y ese error va hacia el lado seguro: repetir de menos, no de más.
+- **Si el concepto está en cooldown se cae el concepto, no la pieza.** La cifra del estado ES la
+  novedad; lo que se gasta con la repetición es la parte educativa.
+- **Se anota al preparar, no al despachar.** Una tanda preparada y descartada gasta la ventana
+  igual, y ese error va hacia el lado seguro: repetir de menos, no de más.
 
 Catorce días porque hay seis conceptos técnicos aplicables: con menos, un canal que se vacía
 seguido agota el repertorio antes de que nadie lo haya olvidado.
 
+Las cifras del día que motivó esto: `docs/historia-forense.md`.
+
 ### La noticia oficial: oficial no es relevante
 
 Sobre el suplemento se apoya un escalón más, **estrictamente aditivo**:
-`scripts/noticia_oficial.py` busca la última nota de una fuente oficial que toque un activo
-del canal. Si la encuentra, `--preparar` la deja en `<canal>/_noticia.json` y el **comando**
-la traduce y la antepone al rendir; si no la encuentra, el canal conserva su suplemento de
-estado y no se pierde nada.
+`scripts/noticia_oficial.py` busca la última nota de una fuente oficial que toque un activo del
+canal. Si la encuentra, `--preparar` la deja en `<canal>/_noticia.json` y el **comando** la
+traduce y la antepone al rendir; si no la encuentra, el canal conserva su suplemento de estado.
 
-**El núcleo del módulo es descartar, no descargar.** El 2026-09-03 la nota más fresca de la
-EIA era *"Weekly average load in ERCOT continues near record high"*: carga eléctrica en
-Texas. Oficial, del día, y sin ninguna relación con el petróleo. Un filtro de frescura sin
-filtro de relevancia la habría mandado al canal de metales y energía justo el día en que ese
-canal quedó vacío. Tres reglas salen de ahí:
+**El núcleo del módulo es descartar, no descargar.** Una nota puede ser oficial, del día, y no
+tener ninguna relación con el activo. Tres reglas salen de ahí:
 
-1. **La relevancia se decide en el TITULAR, no en el cuerpo.** La descripción de casi
-   cualquier nota trae una línea de contexto donde cabe la palabra *oil* o *inflation*:
-   buscar ahí vuelve el filtro decorativo.
-2. **En los bancos centrales la relevancia la da quién habla.** Un discurso de Lagarde mueve
-   el euro aunque el titular no nombre ningún activo, así que el vocabulario incluye a los
-   oradores del directorio.
-3. **El URL no tiene ventana.** Que un concepto vuelva a los 14 días es refuerzo; que vuelva
-   la misma noticia es un error visible desde afuera. Se comparte
+1. **La relevancia se decide en el TITULAR, no en el cuerpo.** La descripción de casi cualquier
+   nota trae una línea de contexto donde cabe la palabra *oil* o *inflation*: buscar ahí vuelve el
+   filtro decorativo.
+2. **En los bancos centrales la relevancia la da quién habla.** Un discurso de Lagarde mueve el
+   euro aunque el titular no nombre ningún activo, así que el vocabulario incluye a los oradores
+   del directorio.
+3. **El URL no tiene ventana.** Que un concepto vuelva a los 14 días es refuerzo; que vuelva la
+   misma noticia es un error visible desde afuera. Se comparte
    `data/historial_suplementos.json` con `tipo: "noticia"`.
 
 Ventana de frescura: **72 h**, con la fecha siempre a la vista en el mensaje. Es lo que hace
 honesto publicar algo de anteayer; a una semana ya no es noticia.
 
-**Las fuentes que responden, medidas el 2026-09-03:**
+**Las fuentes que responden**, medidas el 2026-09-03:
 
-| Fuente | Feed | Cadencia | Canal |
-|---|---|---|---|
-| EIA | `rss/todayinenergy.xml` | ~3/semana, 3 de 12 tocan crudo | metales y energía |
-| BCE | `rss/press.html` | ~4/semana, discursos del directorio | divisas |
-| Fed | `feeds/press_monetary.xml` | ~2/mes | divisas, índices |
+| Fuente | Feed | Canal |
+|---|---|---|
+| EIA | `rss/todayinenergy.xml` | metales y energía |
+| BCE | `rss/press.html` | divisas |
+| Fed | `feeds/press_monetary.xml` | divisas, índices |
 
-El feed general de la Fed (`press_all.xml`) **queda fuera a propósito**: sus últimas piezas
-eran sanciones y aprobaciones bancarias, que no le importan a nadie acá. Y tres fuentes no
-se pueden leer: el Tesoro de EE.UU. responde 404, la BLS y la OPEP responden 403 al bot, y
-el Banco Central de Chile devuelve HTML en la ruta de su RSS.
+El feed general de la Fed (`press_all.xml`) **queda fuera a propósito**: sus piezas son sanciones
+y aprobaciones bancarias, que no le importan a nadie acá.
 
-**El flujo relevante combinado es de una nota cada dos o tres días, y eso está bien.** Esto
-no cubre los canales todos los días ni pretende hacerlo: el piso confiable sigue siendo el
-suplemento de estado más concepto. Si algún día hace falta cobertura diaria de noticias, la
-fuente no puede ser RSS oficial, y ahí ya no sería "fuente oficial".
+**El flujo relevante combinado es de una nota cada dos o tres días, y eso está bien.** Esto no
+cubre los canales todos los días ni pretende hacerlo: el piso confiable sigue siendo el suplemento
+de estado más concepto. Si algún día hace falta cobertura diaria de noticias, la fuente no puede
+ser RSS oficial, y ahí ya no sería "fuente oficial".
 
 **El titular es un campo editorial.** Viene en inglés y `--preparar` es Python puro, así que
-`bloque_noticia(noticia, titular_es)` **lanza** con el titular vacío, mismo contrato que el
-resto del pipeline. Y ninguna cifra sale de la noticia: los precios y niveles salen del
-terminal (regla 1), siempre.
+`bloque_noticia(noticia, titular_es)` **lanza** con el titular vacío, mismo contrato que el resto
+del pipeline. Y ninguna cifra sale de la noticia: los precios y niveles salen del terminal
+(regla 1), siempre.
+
+Cadencias medidas y las fuentes que no se pueden leer: `docs/historia-forense.md`.
 
 ### El reparto entre script y comando
 
@@ -487,166 +465,138 @@ entregado no se repite.
 
 `pipeline_carrusel.py --despachar <tanda>` cierra el ciclo. Dos decisiones lo definen:
 
-**Una pieza por acción, y el texto SIEMPRE antes del adjunto.** El campo de pie del
-editor de medios **tope en 1.024 caracteres**, y `insert_text` de una línea que no cabe
-se rechaza **entera** mientras el salto de línea que la sigue sí entra. Así que el
-mensaje no llega cortado al final: llega con **renglones ausentes** y su espacio en
-blanco, y con las líneas cortas posteriores intactas porque todavía cabían. El
-2026-09-03 el canal recibió el contexto macro sin la línea del Imacec ni las dos de
-tasas, pero con el link del BCCh que iba en medio, y el despacho reportó éxito.
-
-Escribir el texto en el cuadro de conversación y adjuntar **después** no tiene ese tope.
-Medido contra el DOM real ese día con un texto de 2.016 caracteres:
-
-| Orden | Pie resultante |
-|---|---|
-| adjuntar primero, pie en el editor | **1.029** de 2.016 |
-| texto en el cuadro, adjuntar después | **2.042** de 2.016 (completo) |
-
-> **Esto revirtió el despacho por lote** (decisión del director, 2026-09-03). Antes cada
-> canal salía en UNA acción con todas sus piezas, porque el editor acepta varias imágenes
-> y cada una conserva su pie. Pero el truco del cuadro solo puede llenar el pie de **una**
-> imagen, la que el editor abre seleccionada: con dos o más, las demás se escriben dentro
-> del editor y vuelven a cortarse. Las dos cosas eran incompatibles y manda el mensaje
-> completo. Se paga con una espera de cadencia por pieza y más aperturas del menú.
-
-**El guardia compara el texto, no solo que haya algo escrito.** Esa era la falla que dejó
-pasar el mensaje mutilado: `_verificar_pie_completo` contrasta la huella sin espacios de
-lo que se quiso escribir contra lo que quedó, y aborta si faltan caracteres. Un mensaje
-al que le faltan renglones **se lee como completo**, así que nadie lo nota desde afuera:
+**Una pieza por acción, y el texto SIEMPRE antes del adjunto.** El campo de pie del editor de
+medios **tope en 1.024 caracteres**, y una línea que no cabe se rechaza **entera** mientras el
+salto de línea que la sigue sí entra. Así que el mensaje no llega cortado al final: llega con
+**renglones ausentes** y su espacio en blanco, y con las líneas cortas posteriores intactas. Un
+mensaje al que le faltan renglones **se lee como completo**, así que nadie lo nota desde afuera:
 eso lo hace peor, no menor.
 
-**Cada canal se rinde justo antes de despacharse.** Rendir todo al principio hacía que la
-última pieza llegara con el precio de hacía veinte minutos. El refresco (1-3 s de datos +
-5-15 s de render) cabe entero dentro de la espera de cadencia de 45 s, así que no cuesta
-tiempo. Si el movimiento **invalidó el texto** —el precio cruzó un soporte o una
-resistencia que el párrafo daba por vigentes, o perdió el nivel de vigencia del
-sesgo— la pieza no sale: se renombra a `.divergente` y el despacho lo informa.
-**La reanudación la manda la bitácora, no `--desde`.**
-`data/historial_despachos.json` anota **una entrada por pieza entregada** (fecha, hora,
-tanda, canal, pieza y la huella del texto), y `despachar` la consulta antes de cada canal
-para saltar lo que ya salió. Se versiona, igual que `historial_senales.json` y
-`historial_suplementos.json`: es historia de lo que el cliente recibió, y un clon nuevo sin
-ella reenviaría la tanda del día.
+Escribir el texto en el cuadro de conversación y adjuntar **después** no tiene ese tope.
 
-Dos cosas que la hacen confiable:
+> **Esto revirtió el despacho por lote** (decisión del director, 2026-09-03). El truco del cuadro
+> solo puede llenar el pie de **una** imagen, la que el editor abre seleccionada: con dos o más,
+> las demás se escriben dentro del editor y vuelven a cortarse. Las dos cosas eran incompatibles
+> y manda el mensaje completo. Se paga con una espera de cadencia por pieza.
 
-- **Se anota DENTRO del bucle de piezas**, vía el callback `al_entregar` que el sender
-  invoca tras confirmar cada entrega contra el DOM. `enviar_lote` levanta ante un fallo y
-  su `return` no ocurre, así que anotar al final perdería justamente el registro de lo que
-  **sí** salió. Si el anotado falla, la pieza ya salió y abortar no la devuelve: se avisa
-  fuerte en vez de romper el despacho.
-- **La identidad de una pieza es (tanda, canal, pieza)**, no el activo. Una tanda nueva del
-  mismo activo es contenido legítimo con niveles nuevos; la misma pieza de la misma tanda es
-  una repetición.
+**El guardia compara el texto, no solo que haya algo escrito.** Esa era la falla que dejó pasar
+el mensaje mutilado: `_verificar_pie_completo` contrasta la huella sin espacios de lo que se quiso
+escribir contra lo que quedó, y aborta si faltan caracteres.
 
-`--desde N` queda como control manual del director. **Ojo con lo que medía**: cuenta
-**canales** mientras el envío cuenta **piezas** desde el 2026-09-03, así que por sí solo
-reenviaba las primeras piezas de un canal que falló a la mitad.
+**Cada canal se rinde justo antes de despacharse.** Rendir todo al principio hacía que la última
+pieza llegara con el precio de hacía veinte minutos. El refresco (1-3 s de datos + 5-15 s de
+render) cabe entero dentro de la espera de cadencia de 45 s, así que no cuesta tiempo. Si el
+movimiento **invalidó el texto** (el precio cruzó un soporte o una resistencia que el párrafo daba
+por vigentes, o perdió el nivel de vigencia del sesgo), la pieza no sale: se renombra a
+`.divergente` y el despacho lo informa.
+
+**La reanudación la manda la bitácora, no `--desde`.** `data/historial_despachos.json` anota **una
+entrada por pieza entregada** (fecha, hora, tanda, canal, pieza y la huella del texto), y
+`despachar` la consulta antes de cada canal para saltar lo que ya salió. Se versiona: es historia
+de lo que el cliente recibió, y un clon nuevo sin ella reenviaría la tanda del día.
+
+Dos cosas la hacen confiable:
+
+- **Se anota DENTRO del bucle de piezas**, vía el callback `al_entregar` que el sender invoca tras
+  confirmar cada entrega contra el DOM. `enviar_lote` levanta ante un fallo y su `return` no
+  ocurre, así que anotar al final perdería justamente el registro de lo que **sí** salió.
+- **La identidad de una pieza es (tanda, canal, pieza)**, no el activo. Una tanda nueva del mismo
+  activo es contenido legítimo con niveles nuevos; la misma pieza de la misma tanda es una
+  repetición.
+
+`--desde N` queda como control manual del director. **Ojo con lo que mide**: cuenta **canales**
+mientras el envío cuenta **piezas**, así que por sí solo reenviaba las primeras piezas de un canal
+que falló a la mitad.
+
+Cuatro reglas que se pagaron caro:
+
+1. **La cadencia y el cupo se cuentan por pieza.** Contar un canal como un solo envío relajaría el
+   freno por la puerta de atrás.
+2. **Un lote sigue teniendo que ser homogéneo.** El menú Adjuntar entra por "Fotos y videos" o por
+   "Documento", no por ambas: un PDF de informe no viaja con las Stories.
+3. **Un solo dueño de la sesión a la vez.** El perfil de Chromium admite un proceso. Claude Code y
+   Antigravity abriéndolo a la vez crean un perfil paralelo, y ese patrón desvinculó la sesión dos
+   veces.
+4. **El barrido de payloads mide en la unidad del preparado.** El directorio de tanda se nombra
+   por **minuto** y `--preparar --grupo` opera por **canal**, así que dos corridas en el mismo
+   minuto comparten carpeta. `limpiar_payloads` recibe `solo_canales`; sin ese argumento el
+   barrido es global, que es lo correcto para `--matriz`.
+
+Las mediciones contra el DOM real: `docs/historia-forense.md`.
 
 ### Un PDF adjunto SÍ lleva su pie, pero hay que esperar la carga
 
-Medido contra el DOM real el 2026-09-04, corrigiendo una conclusión apresurada
-del mismo día.
-
-**El truco del cuadro de conversación funciona igual con documentos.** Se
-escribe el texto en el cuadro del chat, se adjunta, y el editor hereda el texto
-completo: se envió un pie de **1.222 caracteres** con un PDF de 2 MB y llegó
-entero. **No hay tope de 1.024 para el texto heredado**, ni en imágenes ni en
-documentos. El contador negativo que muestra el editor (`-197` con ese pie) no
+**El truco del cuadro de conversación funciona igual con documentos.** Se escribe el texto en el
+cuadro del chat, se adjunta, y el editor hereda el texto completo. **No hay tope de 1.024 para el
+texto heredado**, ni en imágenes ni en documentos, y el contador negativo que muestra el editor no
 impide enviar.
 
-**Lo que sí cambia es el tiempo.** El campo de pie aparece cuando el editor
-termina de procesar el archivo, y eso escala con el peso. Había una pausa fija
-de 2 s y **una sola** búsqueda del campo: con un PNG de 500 KB alcanzaba y con el
-PDF de 2 MB no. El sender abortaba con "no apareció el campo de pie de foto", y
-ese mensaje me llevó a concluir que el editor de documento imponía un tope. No
-era el tope: **era que el archivo seguía cargando**. Ahora la espera es activa y
-proporcional (`espera_confirmacion_s`).
+**Lo que sí cambia es el tiempo.** El campo de pie aparece cuando el editor termina de procesar el
+archivo, y eso escala con el peso. Había una pausa fija de 2 s y **una sola** búsqueda del campo:
+con un PNG chico alcanzaba y con un PDF de 2 MB no. El sender abortaba con "no apareció el campo
+de pie de foto", y ese mensaje llevó a concluir que el editor de documento imponía un tope. No era
+el tope: **era que el archivo seguía cargando**. Ahora la espera es activa y proporcional
+(`espera_confirmacion_s`).
 
-**El estado de entrega NO es un `data-icon`.** Una burbuja de documento entregada
-trae `['document-PDF-icon']` y ningún `msg-check`; el estado vive en el
-`aria-label` (`"... 20:08 Enviado"`). Lo lee `burbuja_entregada`, y `Pendiente`
-gana sobre cualquier otra marca de la fila.
+**El estado de entrega NO es un `data-icon`.** Una burbuja de documento entregada trae
+`['document-PDF-icon']` y ningún `msg-check`; el estado vive en el `aria-label`. Lo lee
+`burbuja_entregada`, y `Pendiente` gana sobre cualquier otra marca de la fila.
 
 > [!CAUTION]
-> **Un falso negativo duplica igual que un falso positivo miente.** Ese mismo día
-> pasaron los dos. Primero `_adjunto_confirmado` devolvió `True` sin pie apenas
-> vio `media`, el proceso cerró el navegador y la subida quedó a medias: el PDF
-> se reportó entregado y quedó **"Pendiente"**, invisible para el canal. Después,
-> con la espera corregida pero leyendo el tic donde no estaba, abortó envíos que
-> **sí** habían llegado. El primero da por entregado lo que no salió; el segundo
-> induce el reenvío manual, y así el canal de clientes terminó con dos copias del
-> mismo informe.
+> **Un falso negativo duplica igual que un falso positivo miente.** Los dos pasaron el mismo día.
+> Primero `_adjunto_confirmado` devolvió `True` sin pie apenas vio `media`, el proceso cerró el
+> navegador y la subida quedó a medias: el PDF se reportó entregado y quedó "Pendiente", invisible
+> para el canal. Después, con la espera corregida pero leyendo el tic donde no estaba, abortó
+> envíos que **sí** habían llegado. El primero da por entregado lo que no salió; el segundo induce
+> el reenvío manual, y así el canal terminó con dos copias del mismo informe.
 >
-> La confirmación exige ahora las tres cosas: que la última burbuja sea **este**
-> archivo (por nombre, cuando no hay pie), que su etiqueta diga entregada, y una
-> espera que alcance para la subida.
+> La confirmación exige ahora las tres cosas: que la última burbuja sea **este** archivo (por
+> nombre, cuando no hay pie), que su etiqueta diga entregada, y una espera que alcance para la
+> subida.
+
+Las mediciones exactas: `docs/historia-forense.md`.
 
 ### El "hasta dónde" del sesgo tiene dos gramáticas, no una
 
-El Playbook no emite señales: emite **sesgo con su vigencia**. Y ese "hasta dónde" no
-se dice igual en los dos casos que el motor distingue, porque no son la misma lectura.
-La traducción vive en un solo lugar, `bias_reader.resolver_vigencia`, y la consume el
-escáner (que ya tiene el H1 y el sesgo en la mano) para que viaje en la selección:
+El Playbook no emite señales: emite **sesgo con su vigencia**. Y ese "hasta dónde" no se dice
+igual en los dos casos que el motor distingue. La traducción vive en un solo lugar,
+`bias_reader.resolver_vigencia`, y la consume el escáner para que viaje en la selección:
 
 | `take_profit_tipo` | Gramática | Qué se publica |
 |---|---|---|
 | `TRAILING_STOP_ASYMMETRIC` | **NIVEL** | Un borde: *"el sesgo alcista sigue vigente hasta 933,44"*. Es el Chandelier, y se mueve con cada vela cerrada. |
 | `NIVEL_OPUESTO_CANAL` | **RANGO** | Dos bordes: *"sin sesgo direccional, el activo rota entre S1 y R1"*. |
 
-Decir "vigente hasta X" en un activo neutral le inventa una dirección; decir "rota
-entre S1 y R1" en uno sostenido le borra la que tiene.
+Decir "vigente hasta X" en un activo neutral le inventa una dirección; decir "rota entre S1 y R1"
+en uno sostenido le borra la que tiene.
 
-**El informe de apertura lo lleva también**, con la misma aritmética y su propia voz: un
-bloque "Hasta dónde vale esta lectura" con **una línea por activo**, no por grupo. WTI y
-Brent siguen agrupados porque su lectura es palabra por palabra la misma, pero cada uno
-tiene su borde, y un solo nivel para los dos publicaría el del vecino. Lo resuelve
-`resolver_vigencias`, que no lanza nunca: sin terminal el informe sale sin el bloque y lo
-dice en los avisos, mismo criterio que los gráficos.
+**El informe de apertura lo lleva también**, con la misma aritmética y su propia voz: un bloque
+"Hasta dónde vale esta lectura" con **una línea por activo**, no por grupo. WTI y Brent siguen
+agrupados porque su lectura es palabra por palabra la misma, pero cada uno tiene su borde, y un
+solo nivel para los dos publicaría el del vecino. Lo resuelve `resolver_vigencias`, que no lanza
+nunca: sin terminal el informe sale sin el bloque y lo dice en los avisos, mismo criterio que los
+gráficos.
 
-**Hay un tercer caso, y es el que no era obvio.** `DATOS_INCOMPLETOS` sale del motor
-con `NIVEL_OPUESTO_CANAL` y score cero, **idéntico a un rango genuino**, porque ese es
-el valor neutro de esos campos y no una lectura de canal. Publicarlo como rango
-afirmaría que el activo rota entre dos niveles cuando en realidad el modelo no lo pudo
-leer. Se distingue por la **lista de setups permitidos vacía** (criterio estructural, no
-por el texto de la etiqueta: eso sería otro contrato por nombre de los que ya costaron
-caro) y esa pieza sale **sin** bloque de vigencia. El cierre canónico de tres escenarios
-va igual, así que el mensaje nunca queda sin lectura práctica.
+**Hay un tercer caso, y es el que no era obvio.** `DATOS_INCOMPLETOS` sale del motor con
+`NIVEL_OPUESTO_CANAL` y score cero, **idéntico a un rango genuino**, porque ese es el valor neutro
+de esos campos y no una lectura de canal. Publicarlo como rango afirmaría que el activo rota entre
+dos niveles cuando en realidad el modelo no lo pudo leer. Se distingue por la **lista de setups
+permitidos vacía** (criterio estructural, no por el texto de la etiqueta: eso sería otro contrato
+por nombre) y esa pieza sale **sin** bloque de vigencia. El cierre canónico de tres escenarios va
+igual, así que el mensaje nunca queda sin lectura práctica.
 
-Dos reglas más que se decidieron mirando el resultado:
+Dos reglas más, decididas mirando el resultado:
 
-1. **Un sesgo ya invalidado lo dice, no lo esconde.** `vigente` compara el precio contra
-   el borde. Brent el 2026-09-02 llevaba sesgo +1,50 con el precio ya bajo su Chandelier,
-   y el USD/CLP estaba igual el 2026-09-03: publicar "sigue vigente" ahí dice lo
-   contrario de lo que pasa. Si se rompe **entre preparar y despachar**, la pieza además
-   no sale.
-2. **Ante direcciones contrarias se calla la vigencia, no la lectura técnica.** Si el
-   signo del score macro contradice la lectura de medias de la pieza, el bloque se omite
-   y el motivo queda en `_procedencia.vigencia_omitida`. El gate del Playbook ya bloquea
-   la mayoría de esos casos, pero "la mayoría" no alcanza: dos direcciones opuestas en el
-   mismo mensaje cuestan la credibilidad del mensaje entero.
+1. **Un sesgo ya invalidado lo dice, no lo esconde.** `vigente` compara el precio contra el borde:
+   publicar "sigue vigente" con el precio del otro lado dice lo contrario de lo que pasa. Si se
+   rompe **entre preparar y despachar**, la pieza además no sale.
+2. **Ante direcciones contrarias se calla la vigencia, no la lectura técnica.** Si el signo del
+   score macro contradice la lectura de medias de la pieza, el bloque se omite y el motivo queda
+   en `_procedencia.vigencia_omitida`. El gate del Playbook ya bloquea la mayoría de esos casos,
+   pero "la mayoría" no alcanza: dos direcciones opuestas en el mismo mensaje cuestan la
+   credibilidad del mensaje entero.
 
-Cuatro reglas que se pagaron caro:
-
-1. **La cadencia y el cupo se cuentan por pieza.** Cada pieza es su propia acción, espera
-   sus 45 s y descuenta su unidad del cupo. Contar un canal como un solo envío relajaría
-   el freno por la puerta de atrás.
-2. **Un lote sigue teniendo que ser homogéneo.** El menú Adjuntar entra por "Fotos y
-   videos" o por "Documento", no por ambas: un PDF de informe no viaja con las Stories.
-   Con una pieza por acción esto ya no es una restricción técnica, pero la validación se
-   mantiene porque mezclar tipos en un mismo canal no es una decisión editorial que
-   convenga tomar por accidente.
-3. **Un solo dueño de la sesión a la vez.** El perfil de Chromium admite un proceso. Claude
-   Code y Antigravity abriéndolo a la vez crean un perfil paralelo, y ese patrón desvinculó
-   la sesión el 2026-09-01 y el 2026-09-02.
-4. **El barrido de payloads mide en la unidad del preparado.** El directorio de tanda se
-   nombra por **minuto** y `--preparar --grupo` opera por **canal**, así que dos corridas en
-   el mismo minuto natural comparten carpeta. `limpiar_payloads` hacía `rglob` sobre la
-   tanda entera y la segunda se llevaba los payloads de la primera: pasó el 2026-09-04 con
-   doce de commodities, y el escáner reportó "barridos 12 payload(s)" sin que eso se leyera
-   como un problema. Ahora recibe `solo_canales`; sin ese argumento el barrido sigue siendo
-   global, que es lo correcto para `--matriz`.
+Los casos reales que fijaron estas reglas: `docs/historia-forense.md`.
 
 ### Dos condiciones de frescura que conviene no descubrir en vivo
 
