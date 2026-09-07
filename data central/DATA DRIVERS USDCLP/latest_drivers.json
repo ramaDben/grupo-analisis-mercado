@@ -1,5 +1,5 @@
 {
-  "timestamp_consolidacion": "2026-09-07T00:13:53.745491+00:00",
+  "timestamp_consolidacion": "2026-09-07T13:47:33.286086+00:00",
   "drivers": {
     "US_10Y_TREASURY": {
       "valor": 4.77,
@@ -16,7 +16,7 @@
     "COBRE_HG": {
       "valor": 6.6825,
       "unidad": "USD/lb",
-      "fecha_dato": "2026-09-06",
+      "fecha_dato": "2026-09-07",
       "is_stale": false
     },
     "PETROLEO_BRENT": {
@@ -40,13 +40,13 @@
     "CHILE_TPM": {
       "valor": 4.5,
       "unidad": "%",
-      "fecha_dato": "2026-09-04",
+      "fecha_dato": "2026-09-07",
       "is_stale": false
     },
     "POSICION_FORWARD_EXTRANJEROS_USD": {
-      "valor": -17154.61839,
+      "valor": -16530.97763,
       "unidad": "millones_USD",
-      "fecha_dato": "2026-09-02",
+      "fecha_dato": "2026-09-03",
       "is_stale": false
     },
     "BOJ_POLICY_RATE": {
@@ -65,15 +65,15 @@
       "is_stale": false
     },
     "JGB_10Y_YIELD": {
-      "valor": 2.966,
+      "valor": 2.91,
       "unidad": "%",
-      "fecha_dato": "2026-09-03",
+      "fecha_dato": "2026-09-04",
       "is_stale": false
     },
     "USD_JPY": {
-      "valor": 156.118,
+      "valor": 154.428,
       "unidad": "JPY",
-      "fecha_dato": "2026-09-03",
+      "fecha_dato": "2026-09-04",
       "is_stale": false
     }
   }
