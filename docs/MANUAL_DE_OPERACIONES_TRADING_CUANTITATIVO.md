@@ -429,7 +429,7 @@ Los cinco climas no son categorías teóricas. Se pueden fechar, porque el mismo
 </svg>
 </div>
 
-**Lo que lo activó** (variación en los 5 días previos al primer día): cobre -4,45 %, petróleo -3,60 %, bono a 10 años -7 pb, tasa real -9 pb, inflación esperada +2 pb.
+**Cómo venían los drivers** (variación en los 5 días previos al primer día): cobre -4,45 %, petróleo -3,60 %, bono a 10 años -7 pb, tasa real -9 pb, inflación esperada +2 pb. A la Calma no la activa ningún umbral: es donde queda el mercado cuando ningún otro clima califica, y por eso sus cifras no son un gatillo. Acá el cobre venía cayendo, pero la curva de bonos no acompañó, así que no llegó a ser Recesión.
 
 **Lo que hicieron los activos en esos 19 días hábiles**: Oro +0,52 %, USD/CLP -0,48 %, WTI -1,15 %, Nasdaq 100 +2,42 %.
 

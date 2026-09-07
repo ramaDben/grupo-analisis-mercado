@@ -318,11 +318,28 @@ def bloque_markdown() -> str:
             dibujar(ep, episodio),
             "</div>",
             "",
-            f"**Lo que lo activó** (variación en los 5 días previos al primer día): "
-            f"cobre {_pct(d.get('copper_pct_5d'))}, petróleo {_pct(d.get('oil_signed_pct_5d'))}, "
+            # La Calma es el resultado POR DEFECTO: no la activa ningún umbral,
+            # se llega a ella cuando ningún otro clima calificó. Rotularla "lo
+            # que lo activó" haría leer sus cifras como si fueran el gatillo, y
+            # en el episodio elegido el cobre viene cayendo un 4 %, que en otro
+            # contexto sería Recesión.
+            (
+                "**Cómo venían los drivers** (variación en los 5 días previos al primer día): "
+                if ep["regimen"] == "R0_CALMA_RANGO"
+                else "**Lo que lo activó** (variación en los 5 días previos al primer día): "
+            )
+            + f"cobre {_pct(d.get('copper_pct_5d'))}, petróleo {_pct(d.get('oil_signed_pct_5d'))}, "
             f"bono a 10 años {_bps(d.get('dgs10_diff_5d'))}, "
             f"tasa real {_bps(d.get('tips10y_diff_5d'))}, "
-            f"inflación esperada {_bps(d.get('breakeven_diff_5d'))}.",
+            f"inflación esperada {_bps(d.get('breakeven_diff_5d'))}."
+            + (
+                " A la Calma no la activa ningún umbral: es donde queda el mercado cuando "
+                "ningún otro clima califica, y por eso sus cifras no son un gatillo. Acá el "
+                "cobre venía cayendo, pero la curva de bonos no acompañó, así que no llegó a "
+                "ser Recesión."
+                if ep["regimen"] == "R0_CALMA_RANGO"
+                else ""
+            ),
             "",
             f"**Lo que hicieron los activos en esos {episodio['dias']} días hábiles**: "
             + ", ".join(
