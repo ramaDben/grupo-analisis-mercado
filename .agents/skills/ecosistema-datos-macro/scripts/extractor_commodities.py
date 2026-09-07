@@ -27,11 +27,17 @@ load_dotenv(BASE_DIR / ".env")
 
 OUTPUT_DIR = BASE_DIR / "data central" / "DATA ORO Y COMMODITIES" / "raw"
 OUTPUT_FILE = OUTPUT_DIR / "commodities_data.json"
+OUTPUT_FILE_HISTORICO = OUTPUT_DIR / "commodities_historico.json"
 FRED_API_KEY = os.getenv("FRED_API_KEY", "")
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), reraise=True)
-def extraer_fred_petroleo(series_id: str) -> dict:
-    """Extrae serie diaria de Petroleo WTI o Brent de la EIA via FRED API oficial."""
+def extraer_fred_petroleo(series_id: str, limite: int = 30) -> dict:
+    """Extrae serie diaria de Petroleo WTI o Brent de la EIA via FRED API oficial.
+
+    `limite` son las observaciones mas recientes. La corrida diaria pide 30 y
+    hace UPSERT; el relleno historico pide todo una sola vez (ver
+    `rellenar_historico_commodities`).
+    """
     if FRED_API_KEY and FRED_API_KEY != "tu_api_key_de_fred_aqui":
         url = "https://api.stlouisfed.org/fred/series/observations"
         params = {
@@ -39,7 +45,7 @@ def extraer_fred_petroleo(series_id: str) -> dict:
             "api_key": FRED_API_KEY,
             "file_type": "json",
             "sort_order": "desc",
-            "limit": 30
+            "limit": limite
         }
         resp = requests.get(url, params=params, timeout=15)
         resp.raise_for_status()
@@ -131,15 +137,51 @@ def extraer_oro_fallback() -> dict:
         obs[fecha] = round(float(row["Close"]), 2)
     return obs
 
-def extraer_cobre_hg() -> dict:
+def extraer_cobre_hg(periodo: str = "1mo") -> dict:
     """Extrae Cobre COMEX (HG=F) normalizado en USD/libra."""
     ticker = yf.Ticker("HG=F")
-    hist = ticker.history(period="1mo")
+    hist = ticker.history(period=periodo)
     obs = {}
     for idx, row in hist.iterrows():
         fecha = idx.strftime("%Y-%m-%d")
         obs[fecha] = round(float(row["Close"]), 4)
     return obs
+
+def rellenar_historico_commodities(limite: int = 100000) -> dict:
+    """Descarga la serie COMPLETA de petroleo y cobre a un archivo aparte.
+
+    Mismo criterio que `rellenar_historico_fred` del extractor de EE.UU.:
+    `commodities_data.json` se reescribe y se commitea en cada ingesta, asi que
+    la historia larga va a otro archivo que se escribe una sola vez.
+
+    Hace falta porque la ventana rodante de 30 observaciones dejaba estas series
+    empezando en julio de 2026, y el clasificador de regimenes se alimenta del
+    cambio a 5 dias del cobre y del petroleo: sin historia no se puede fechar
+    cuando ocurrio cada clima de mercado.
+    """
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    series = {}
+
+    for clave, sid in (("PETROLEO_WTI", "DCOILWTICO"), ("PETROLEO_BRENT", "DCOILBRENTEU")):
+        obs = extraer_fred_petroleo(sid, limite=limite)
+        fechas = sorted(obs)
+        series[clave] = {"fuente": f"FRED {sid}", "unidad": "USD/barril", "historico": obs}
+        print(f"[OK] {clave}: {len(obs)} obs, de {fechas[0]} a {fechas[-1]}")
+
+    cobre = extraer_cobre_hg(periodo="max")
+    fechas = sorted(cobre)
+    series["COBRE_COMEX"] = {"fuente": "yfinance HG=F", "unidad": "USD/libra", "historico": cobre}
+    print(f"[OK] COBRE_COMEX: {len(cobre)} obs, de {fechas[0]} a {fechas[-1]}")
+
+    resultado = {
+        "as_of": datetime.now(timezone.utc).isoformat(),
+        "commodities": series,
+    }
+    with open(OUTPUT_FILE_HISTORICO, "w", encoding="utf-8") as f:
+        json.dump(resultado, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"[OK] Historico de commodities -> {OUTPUT_FILE_HISTORICO}")
+    return resultado
+
 
 def ejecutar_extraccion_commodities() -> dict:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -254,4 +296,7 @@ def ejecutar_extraccion_commodities() -> dict:
     return resultado
 
 if __name__ == "__main__":
-    ejecutar_extraccion_commodities()
+    if "--historico" in sys.argv:
+        rellenar_historico_commodities()
+    else:
+        ejecutar_extraccion_commodities()

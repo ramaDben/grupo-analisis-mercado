@@ -543,7 +543,7 @@ def compactar_svg(texto: str) -> str:
     con un renglón. Lo cubre `tests/test_manual_diagramas.py`.
     """
     def reemplazo(m: re.Match[str]) -> str:
-        return "\n".join(l for l in m.group(0).splitlines() if l.strip())
+        return "\n".join(linea for linea in m.group(0).splitlines() if linea.strip())
 
     return re.sub(r"<svg\b.*?</svg>", reemplazo, texto, flags=re.DOTALL)
 

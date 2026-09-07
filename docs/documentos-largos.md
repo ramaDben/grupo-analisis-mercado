@@ -171,7 +171,7 @@ antes de tocar la maqueta.
 
 | Documento | Fuente del contenido | Compilador | Salida |
 |---|---|---|---|
-| Manual de Operaciones | `docs/MANUAL_DE_OPERACIONES_TRADING_CUANTITATIVO.md` | `scripts/compilar_manual_pdf.py` | PDF A4, 32 páginas |
+| Manual de Operaciones | `docs/MANUAL_DE_OPERACIONES_TRADING_CUANTITATIVO.md` | `scripts/compilar_manual_pdf.py` | PDF A4, 35 páginas |
 | Cierre semanal | `scripts/cierre_semanal_contenido.py` (texto) + `cierre_semanal_datos.py` (cifras) | `scripts/compilar_informe_cierre_semanal.py` | PDF A4, 6 páginas |
 
 **Los dos tenían el documento escrito adentro del compilador y hubo que sacarlo.**
@@ -206,6 +206,50 @@ Tres reglas del CSS que no se tocan:
 3. **El compilador cuenta las páginas y falla bajo `PAGINAS_MINIMAS`.** No bajes ese
    número para que pase: un manual al que le faltan secciones **se lee como
    completo**, y nadie lo nota desde afuera.
+
+### Los ejemplos de cada clima se derivan, no se escriben
+
+La sección 3.5 fecha cuándo ocurrió cada uno de los cinco climas, con sus cifras y un
+gráfico de dos líneas. **Nada de eso está escrito a mano**, y no podría estarlo: un
+gráfico con la serie inventada tendría aspecto institucional y números que nadie midió,
+que es el defecto de `generar_graficos_drivers.py`.
+
+La cadena tiene tres pasos y cada uno es reproducible:
+
+```bash
+# 1. una vez: la historia larga de las series (queda en su propio archivo)
+uv run python .agents/skills/ecosistema-datos-macro/scripts/extractor_usa.py --historico
+uv run python .agents/skills/ecosistema-datos-macro/scripts/extractor_commodities.py --historico
+# 2. corre el clasificador DEL MOTOR sobre esa historia
+uv run python scripts/regimenes_historicos.py
+# 3. dibuja los gráficos y reescribe la sección del manual entre sus marcas
+uv run python scripts/grafico_regimen_svg.py --escribir
+```
+
+Cuatro decisiones que conviene no revertir:
+
+1. **El relleno histórico va a archivos aparte** (`curva_fred_historico.json`,
+   `commodities_historico.json`). Los archivos de la ingesta diaria se reescriben enteros
+   y se commitean con cada corrida, así que meterles medio siglo de historia dejaría un
+   blob de megabytes por día en el repo. Mismo criterio que las series intradía
+   gitignoreadas de `DATA PRECIOS OHLC`: lo que se reescribe seguido tiene que ser
+   liviano.
+2. **La clasificación no se reimplementa.** `regimenes_historicos.py` importa
+   `evaluar_regimen_candidato` y `aplicar_histeresis` del motor. Una segunda
+   implementación de los umbrales sería un cuarto lugar donde viven.
+3. **Para clasificar el día D solo se miran datos anteriores o iguales a D.** El motor
+   calcula sus deltas sobre los últimos 5 registros *disponibles*, no sobre días de
+   calendario, así que el recorte tiene que ser por fecha. Mirar el dato de mañana para
+   clasificar el ayer es el anacronismo que el proyecto persigue en los textos, cometido
+   con números.
+4. **La elección del episodio es editorial y está declarada con su motivo** en
+   `EPISODIOS`; las cifras son medidas. Cada clima tiene decenas de episodios y se
+   publica uno por criterio de enseñanza.
+
+**El límite es la tasa real.** `DFII10` y `T10YIE` empiezan en FRED el 2003-01-02, así que
+la corrida cubre 5.951 días hábiles hasta hoy. Ahí salió además una cifra que el manual
+usa: el clima Calma es el **64,8 %** de los días, lo que respalda que "no hay operación"
+sea el resultado más frecuente del método.
 
 ### Los diagramas no llevan líneas en blanco adentro. Nunca.
 
