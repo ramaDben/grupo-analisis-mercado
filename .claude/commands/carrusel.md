@@ -163,8 +163,15 @@ El envío **no** es parte de la generación y nunca se encadena solo. Una vez qu
 director aprueba, la tanda entera se despacha canal por canal:
 
 ```bash
-uv run --extra stories python scripts/pipeline_carrusel.py --despachar data/carrusel/<tanda>
+uv run --extra stories --with MetaTrader5 python scripts/pipeline_carrusel.py --despachar data/carrusel/<tanda>
 ```
+
+**`--with MetaTrader5` no es opcional acá, aunque el despacho no lo importe al arrancar.**
+El refresco previo a cada canal lee el mercado, así que sin el paquete ninguna pieza se
+refresca: todas salen con los datos de la preparación y **el guardia de divergencia queda
+inerte**, que es justo lo que ese refresco existe para impedir. Hasta el 2026-09-07 este
+comando decía solo `--extra stories`, que declara `playwright` y nada más, así que el
+guardia nunca pudo operar por el camino documentado.
 
 **Cada pieza sale en su propia acción, y el texto va SIEMPRE antes del adjunto.** El
 campo de pie del editor de medios tope en **1.024 caracteres** y descarta entera cada
@@ -190,7 +197,7 @@ lo informa.
 Si el despacho se corta a la mitad, se retoma sin duplicar lo ya enviado:
 
 ```bash
-uv run --extra stories python scripts/pipeline_carrusel.py --despachar data/carrusel/<tanda> --desde 3
+uv run --extra stories --with MetaTrader5 python scripts/pipeline_carrusel.py --despachar data/carrusel/<tanda> --desde 3
 ```
 
 Para una pieza suelta o un canal concreto sigue estando el envío directo, que también

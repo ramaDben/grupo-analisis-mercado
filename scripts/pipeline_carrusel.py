@@ -24,11 +24,19 @@ Uso:
     uv run --with MetaTrader5 python scripts/pipeline_carrusel.py --preparar
     # ... el comando /carrusel escribe titular y parrafo en cada payload ...
     uv run --extra stories python scripts/pipeline_carrusel.py --rendir data/carrusel/<dir>
+    uv run --extra stories --with MetaTrader5 python scripts/pipeline_carrusel.py \
+        --despachar data/carrusel/<dir>
+
+`--rendir` es el unico de los tres que NO necesita MetaTrader5: trabaja sobre el
+payload en disco. `--despachar` si lo necesita, porque refresca cada canal contra
+el mercado justo antes de enviarlo; sin el paquete ese refresco no ocurre y el
+guardia de divergencia no corre para ninguna pieza.
 """
 
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import subprocess
 import sys
@@ -1400,12 +1408,31 @@ def rendir(directorio: Path) -> dict[str, Any]:
     return {"directorio": str(directorio), "imagenes": generadas}
 
 
+def falta_metatrader5() -> bool:
+    """Si el paquete no está, el refresco previo al envío no puede ocurrir.
+
+    Se pregunta por el *spec* y no con un `try: import`, porque importar MT5 tiene
+    efecto (engancha el terminal) y acá solo queremos saber si existe.
+
+    Vive aparte para que `despachar` lo consulte UNA vez por tanda. El paquete
+    ausente no es el problema de una pieza como lo es un fallo de datos: significa
+    que el guardia de divergencia no corre para **ninguna**, y repetir ese aviso
+    por activo lo disfraza de incidencia puntual.
+    """
+    return importlib.util.find_spec("MetaTrader5") is None
+
+
 def _refrescar_y_rendir(dir_grupo: Path) -> list[str]:
     """Vuelve a leer el mercado, redibuja las piezas de precio y reescribe sus textos.
 
     Solo toca las piezas de activo (`1_`, `2_`…). El contexto macro (`0_`) es la
     agenda del día: no decae por minuto y su fuente es el calendario, no una
     cotización.
+
+    Sin MetaTrader5 valida el texto editorial y no toca el mercado. Intentar el
+    refresco activo por activo solo produce el mismo `ModuleNotFoundError` repetido,
+    disfrazado de fallo de datos; las piezas salen con lo que dejó `--rendir`, que es
+    lo que el aviso de `despachar` advierte una vez por tanda.
     """
     from market_data_mcp.analisis import analizar_activo
     from story_grafico import enriquecer
@@ -1421,6 +1448,9 @@ def _refrescar_y_rendir(dir_grupo: Path) -> list[str]:
     exigir_texto_editorial([
         (p.name, json.loads(p.read_text(encoding="utf-8"))) for p in piezas
     ])
+
+    if falta_metatrader5():
+        return []
 
     catalogo = {a["ticker"]: a for a in sc.cargar_universo(solo_renderizables=False)}
     ahora = datetime.now(tz=SANTIAGO)
@@ -1516,6 +1546,21 @@ def despachar(
     tanda = directorio.name
     bitacora = cargar_bitacora()
 
+    # Se pregunta UNA vez, antes del primer canal. Sin el paquete no se refresca
+    # ninguna pieza y el guardia de divergencia no corre en toda la tanda: eso hay
+    # que decirlo como condición del despacho, no como un tropiezo por activo.
+    sin_mt5 = falta_metatrader5()
+    if sin_mt5:
+        print(
+            "\n[SIN REFRESCO] MetaTrader5 no está instalado en este entorno.\n"
+            "    Las piezas salen con los datos de la preparación y NO se comprueba\n"
+            "    si el precio invalidó su texto: ninguna se va a detener por divergente.\n"
+            "    Para despachar con el freno activo, volvé a invocar con:\n"
+            "      uv run --extra stories --with MetaTrader5 python scripts/pipeline_carrusel.py"
+            " --despachar <tanda>",
+            flush=True,
+        )
+
     for i, dir_grupo in enumerate(grupos, 1):
         if i < desde:
             print(f"[{i}/{len(grupos)}] {dir_grupo.name}: omitido (--desde {desde})", flush=True)
@@ -1549,7 +1594,12 @@ def despachar(
                         tanda, dir_grupo.name, "0_suplemento",
                         huella=huella(texto),
                     )
-                resultados.append({"grupo": dir_grupo.name, "suplemento": True, **res})
+                # `piezas` va explicito: el suplemento ES una pieza entregada, y sin
+                # el campo el resumen final imprimia "enviado  pieza(s)" sin numero
+                # justo en los canales que solo llevan suplemento.
+                resultados.append(
+                    {"grupo": dir_grupo.name, "suplemento": True, "piezas": 1, **res}
+                )
                 # La cadencia no se maneja aca: `enviar` reserva su turno y
                 # espera por su cuenta, igual que el resto de las piezas.
                 continue
@@ -1669,7 +1719,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         print("\nRESUMEN DEL DESPACHO")
         for g in res["grupos"]:
-            piezas = g.get("piezas", "")
+            piezas = g.get("piezas", 0)
             print(f"  {g['grupo']:<35} {g.get('status', ''):<10} {piezas} pieza(s)")
         return 0
 

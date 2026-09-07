@@ -105,3 +105,97 @@ def test_todo_extra_nombrado_en_pares_existe():
     extras = set((cfg.get("project", {}).get("optional-dependencies") or {}))
     usados = {extra for _, extra in PARES}
     assert usados <= extras, f"extras inexistentes en pyproject: {sorted(usados - extras)}"
+
+
+# ---------------------------------------------------------------------------
+# Un comando documentado que lee el mercado tiene que traer MetaTrader5.
+#
+# Es el mismo contrato por nombre de arriba, corrido un paso: allá son
+# `pyproject.toml` y los imports de un script; acá son el markdown que le dice a
+# un runner cómo invocar, y lo que ese código necesita en tiempo de EJECUCIÓN.
+# El test de imports no lo cubre y no puede: el repo carga MetaTrader5 de forma
+# diferida, dentro de la función, justamente para que el resto corra sin él.
+#
+# El defecto se descubrió el 2026-09-07 despachando una tanda real. El comando
+# documentado era `uv run --extra stories`, y el extra `stories` declara
+# `playwright` y nada más. Las cuatro piezas de activo avisaron `no se pudo
+# refrescar (No module named 'MetaTrader5')` y salieron con los datos de la
+# preparación. Nada se rompió a la vista: el despacho terminó con código 0 y
+# reportó las diez piezas entregadas.
+#
+# Lo que se perdió fue el freno. `--despachar` refresca cada canal contra el
+# mercado justo antes de enviarlo y detiene la pieza cuyo precio invalidó el
+# texto, renombrándola a `.divergente`. Sin el paquete ese refresco nunca ocurre,
+# así que por el camino canónico **la pieza `.divergente` no podía existir**. Un
+# guardia que no puede dispararse se lee igual que uno que nunca hizo falta.
+# ---------------------------------------------------------------------------
+
+# Modos de `pipeline_carrusel.py` que leen el mercado en tiempo de ejecución.
+# `--rendir` queda fuera a propósito: trabaja sobre el payload en disco.
+MODOS_QUE_LEEN_MERCADO = ("--preparar", "--despachar")
+
+# Markdown que le dice a un runner cómo invocar. Los dos runners tienen que
+# quedar cubiertos: `.claude/` es Claude Code y `.agents/` es Antigravity.
+DOCS_DE_COMANDOS = (
+    "CLAUDE.md",
+    ".claude/commands/carrusel.md",
+    ".agents/rules/proyecto.md",
+    ".agents/workflows/carrusel.md",
+)
+
+
+def _lineas_de_invocacion(texto: str) -> list[str]:
+    """Las líneas que invocan el pipeline del carrusel de verdad.
+
+    Una línea puede venir partida con `\\` de continuación, así que primero se
+    reúnen. Y se exige `uv run` para no confundir la prosa que nombra el script
+    (`pipeline_carrusel.py --despachar <tanda> cierra el ciclo`) con un comando.
+    """
+    plano = texto.replace("\\\n", " ")
+    return [
+        linea.strip()
+        for linea in plano.splitlines()
+        if "uv run" in linea and "pipeline_carrusel.py" in linea
+    ]
+
+
+def test_los_comandos_documentados_que_leen_el_mercado_traen_metatrader5():
+    faltantes: list[str] = []
+    revisados = 0
+
+    for rel in DOCS_DE_COMANDOS:
+        ruta = _REPO_ROOT / rel
+        if not ruta.is_file():
+            continue
+        for linea in _lineas_de_invocacion(ruta.read_text(encoding="utf-8")):
+            if not any(modo in linea for modo in MODOS_QUE_LEEN_MERCADO):
+                continue
+            revisados += 1
+            if "--with MetaTrader5" not in linea:
+                faltantes.append(f"{rel}: {linea}")
+
+    assert revisados > 0, (
+        "no se encontró ningún comando de --preparar/--despachar en la documentación. "
+        "O se movieron los archivos, o este test dejó de proteger algo: revisá "
+        "DOCS_DE_COMANDOS antes de darlo por bueno."
+    )
+    assert faltantes == [], (
+        "comandos documentados que leen el mercado sin `--with MetaTrader5`:\n  "
+        + "\n  ".join(faltantes)
+        + "\n\nSin el paquete el refresco previo al envío no ocurre, así que ninguna "
+        "pieza se compara contra el mercado y el guardia de divergencia queda inerte. "
+        "El despacho termina con código 0 igual, que es lo que lo vuelve difícil de ver."
+    )
+
+
+def test_el_pipeline_expone_la_comprobacion_de_metatrader5():
+    # El aviso de "sin refresco" se apoya en `falta_metatrader5`. Si alguien la
+    # renombra o la borra, el despacho vuelve a repetir el error por pieza y a
+    # disfrazar de incidencia puntual algo que afecta a la tanda entera.
+    ruta = _REPO_ROOT / "scripts" / "pipeline_carrusel.py"
+    arbol = ast.parse(ruta.read_text(encoding="utf-8"), filename=str(ruta))
+    funciones = {n.name for n in arbol.body if isinstance(n, ast.FunctionDef)}
+    assert "falta_metatrader5" in funciones, (
+        "scripts/pipeline_carrusel.py ya no define `falta_metatrader5`, que es lo que "
+        "hace que el despacho avise UNA vez por tanda que el freno no va a correr."
+    )
