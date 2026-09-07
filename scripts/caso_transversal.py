@@ -158,7 +158,13 @@ def indicadores(df: pd.DataFrame) -> pd.DataFrame:
     dx = 100 * (di_mas - di_menos).abs() / (di_mas + di_menos)
     d["adx14"] = dx.ewm(alpha=1 / 14, adjust=False).mean()
 
-    d["swing20_lo"] = d["low"].rolling(20).min().shift(1)
+    # El swing INCLUYE la vela de señal, igual que `ticket_engine`, que hace
+    # `df_calc["low"].iloc[-20:].min()`. Excluirla con `.shift(1)` aleja el swing
+    # y agranda el riesgo, así que la ficha publicada saldría más dura que la que
+    # el motor emite. Medido el 2026-09-07: para el caso del 11.1 las dos
+    # definiciones coinciden (el swing está bajo el mínimo de la vela), pero la
+    # divergencia estaba ahí esperando otro caso.
+    d["swing20_lo"] = d["low"].rolling(20).min()
     return d
 
 
