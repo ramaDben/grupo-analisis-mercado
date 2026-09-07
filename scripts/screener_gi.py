@@ -971,14 +971,25 @@ def _sesgos_playbook() -> tuple[dict[str, Any], list[str]]:
     return sesgos, avisos
 
 
-def _conectar_terminal() -> list[str]:
-    """Abre la conexión con MT5. Devuelve avisos, nunca lanza."""
+def _conectar_terminal() -> tuple[bool, list[str]]:
+    """Abre la conexión con MT5. Devuelve (conectó, avisos) y nunca lanza.
+
+    **El booleano existe para que el reloj pueda distinguir dos ceros.** Una tanda
+    vacía porque los gates excluyeron todo es un resultado válido; una tanda vacía
+    porque no se pudo leer el mercado es una falla, y hasta el 2026-09-06 las dos
+    salían con código 0 y el mismo aspecto. El reloj anotaba el momento como
+    salido y la pieza se perdía por el día entero, que es justamente lo que su
+    docstring dice que no puede pasar.
+
+    Se devuelve un campo y no se reconoce el texto del aviso: dos lados que se
+    hablan por el contenido de una cadena es el defecto recurrente del repo.
+    """
     try:
         from market_data_mcp import mt5_client
         mt5_client.connect()
-        return []
+        return True, []
     except Exception as exc:  # noqa: BLE001
-        return [
+        return False, [
             f"no se pudo conectar a MT5 ({exc}). Abrir MetaTrader 5 y reintentar; "
             "sin terminal no hay ningun activo que puntuar"
         ]
@@ -1050,8 +1061,12 @@ def escanear(
     sesgos, avisos_sesgo = _sesgos_playbook()
     avisos.extend(avisos_sesgo)
 
+    # `terminal_ok` en None significa "no aplica": con un analizador inyectado
+    # (los tests) no hay terminal que consultar, y eso no es una falla.
+    terminal_ok: bool | None = None
     if analizador is analizar_activo:
-        avisos.extend(_conectar_terminal())
+        terminal_ok, avisos_terminal = _conectar_terminal()
+        avisos.extend(avisos_terminal)
 
     # **Un gate apagado tiene que decirlo.** Este módulo ya denuncia el mismo
     # defecto para el calendario: "un escáner que informa 0 exclusiones cuando en
@@ -1162,6 +1177,7 @@ def escanear(
         "ranking_completo": evaluados,
         "excluidos": excluidos,
         "avisos": avisos,
+        "terminal_ok": terminal_ok,
     }
 
 

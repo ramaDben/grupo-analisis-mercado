@@ -52,9 +52,19 @@ if ($Quitar) {
     exit 0
 }
 
+# `--with MetaTrader5` no es opcional. MetaTrader5 NO es dependencia declarada
+# del proyecto (solo existe en la maquina del director y se importa perezoso), asi
+# que `uv run` pelado corre sin el. Y el escaner NO falla sin terminal: reporta el
+# aviso y devuelve una tanda VACIA. El 2026-09-06 se midio: 0 payloads y el
+# mensaje "ningun activo puntuo sobre 0: es un resultado valido, no una falla".
+# Con eso el reloj habria anotado los tres momentos del dia como salidos y nadie
+# habria recibido nada. Funcionaba solo porque MetaTrader5 estaba en el venv sin
+# declarar, que es la definicion de "funciona aca y se rompe en otro lado".
+$Argumentos = "run --with MetaTrader5 python scripts/reloj_gi.py --ejecutar"
+
 $Accion = New-ScheduledTaskAction `
     -Execute $Uv.Source `
-    -Argument "run python scripts/reloj_gi.py --ejecutar" `
+    -Argument $Argumentos `
     -WorkingDirectory $Repo
 
 # El ancla del disparador tiene que ser una hora que EXISTA.
@@ -108,7 +118,7 @@ $Config = New-ScheduledTaskSettingsSet `
     -MultipleInstances IgnoreNew
 
 Write-Host "Tarea      : $Tarea"
-Write-Host "Comando    : $($Uv.Source) run python scripts/reloj_gi.py --ejecutar"
+Write-Host "Comando    : $($Uv.Source) $Argumentos"
 Write-Host "Directorio : $Repo"
 Write-Host "Cadencia   : cada $CadaMinutos minutos, todo el dia"
 Write-Host "Limite     : 20 min por corrida, sin instancias paralelas"

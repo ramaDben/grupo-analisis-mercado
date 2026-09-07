@@ -303,3 +303,24 @@ def test_un_momento_que_salio_bien_si_queda_anotado(tmp_path):
         ruta_libro=p,
     )
     assert reloj.ya_disparo("premercado_fx", ahora, reloj.cargar_libro(p))
+
+
+# ── El comando de la tarea programada ────────────────────────────────────────
+def test_la_tarea_programada_corre_con_metatrader5():
+    """`uv run` pelado no tiene MetaTrader5: no es dependencia declarada.
+
+    Sin el flag el escaner no puede leer el mercado y la tanda sale VACIA, y hasta
+    el 2026-09-06 eso salia con codigo 0: el reloj anotaba el momento como salido
+    y la pieza se perdia por el dia entero. Funcionaba solo porque MetaTrader5
+    estaba en el venv SIN declarar, que es la definicion de "funciona aca y se
+    rompe en otro lado". Los dos tests de arriba ya cubren que un codigo distinto
+    de cero deja el momento pendiente; lo que faltaba era que el pipeline lo
+    emitiera, y que la tarea tuviera con que leer el mercado.
+    """
+    ps1 = Path(__file__).resolve().parent.parent / "scripts" / "instalar_reloj.ps1"
+    texto = ps1.read_text(encoding="utf-8", errors="replace")
+    assert "--with MetaTrader5" in texto
+    # Una sola declaracion de los argumentos: la vista previa mostraba `run
+    # python` mientras registraba `run --with MetaTrader5`, o sea que mentia
+    # sobre lo que instalaba.
+    assert texto.count("python scripts/reloj_gi.py --ejecutar") == 1
