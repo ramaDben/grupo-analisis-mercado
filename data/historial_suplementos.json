@@ -1,1 +1,23 @@
-[]
+[
+  {
+    "fecha": "2026-09-07",
+    "canal": "04_indices_bursatiles",
+    "tipo": "concepto",
+    "clave": "temporalidades",
+    "categoria": "mercado_cerrado"
+  },
+  {
+    "fecha": "2026-09-07",
+    "canal": "05_acciones_etfs",
+    "tipo": "concepto",
+    "clave": "temporalidades",
+    "categoria": "mercado_cerrado"
+  },
+  {
+    "fecha": "2026-09-07",
+    "canal": "06_criptoactivos",
+    "tipo": "concepto",
+    "clave": "soporte-resistencia",
+    "categoria": "banda_estrecha"
+  }
+]
