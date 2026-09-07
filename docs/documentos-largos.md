@@ -171,7 +171,7 @@ antes de tocar la maqueta.
 
 | Documento | Fuente del contenido | Compilador | Salida |
 |---|---|---|---|
-| Manual de Operaciones | `docs/MANUAL_DE_OPERACIONES_TRADING_CUANTITATIVO.md` | `scripts/compilar_manual_pdf.py` | PDF A4, 35 páginas |
+| Manual de Operaciones | `docs/MANUAL_DE_OPERACIONES_TRADING_CUANTITATIVO.md` | `scripts/compilar_manual_pdf.py` | PDF A4, 41 páginas |
 | Cierre semanal | `scripts/cierre_semanal_contenido.py` (texto) + `cierre_semanal_datos.py` (cifras) | `scripts/compilar_informe_cierre_semanal.py` | PDF A4, 6 páginas |
 
 **Los dos tenían el documento escrito adentro del compilador y hubo que sacarlo.**
@@ -250,6 +250,80 @@ Cuatro decisiones que conviene no revertir:
 la corrida cubre 5.951 días hábiles hasta hoy. Ahí salió además una cifra que el manual
 usa: el clima Calma es el **64,8 %** de los días, lo que respalda que "no hay operación"
 sea el resultado más frecuente del método.
+
+### El caso del Módulo 11.1 sale de una vela real, y elegirla midió el método
+
+`scripts/caso_transversal.py` recorre el método completo sobre un día real y
+escribe la sección 11.1 entre sus marcas. Todas las cifras se derivan de la serie
+H1 del terminal: entrada, stop, objetivo, relación riesgo/beneficio, lote,
+pérdida en pesos y margen.
+
+```bash
+uv run python scripts/caso_transversal.py --escribir   # reescribe la seccion
+uv run python scripts/caso_transversal.py --barrido    # rehace la medicion de abajo
+```
+
+**Elegir el caso obligó a medir el método, y ahí salió lo importante.** Se barrió
+la historia H1 de los cinco activos buscando velas que cumplieran algún setup
+dentro de un episodio de clima confirmado:
+
+| Setup | Velas que lo cumplen | Que además pasan el filtro R:R |
+|---|---|---|
+| 5.1 y 5.2 (tendencia) | 127 | **0** |
+| 5.3 (rebote en rango) | 12 | 12 |
+
+> [!IMPORTANT]
+> **Los setups de tendencia no pasan nunca el filtro de riesgo/beneficio, y es
+> aritmética, no mala suerte.** La entrada es el **máximo** de la vela de señal,
+> el stop cae en la rama de 1,5 × ATR y el primer objetivo está a 1,0 × ATR: la
+> relación queda clavada en 0,67. Medido sobre cinco activos, el riesgo en
+> múltiplos de ATR tiene mediana exactamente 1,50 y mínimo 1,37, así que nunca
+> baja del 1,0 que haría falta. En el setup 5.1 es **imposible por
+> construcción**, porque exige que la vela tenga un rango de 1,0 × ATR o más y la
+> entrada es su máximo.
+>
+> El Módulo 6.3 ya lo declara ("solo autoriza la operación cuando el stop pudo
+> apoyarse en un swing cercano"), pero implica que a veces un swing cercano
+> rescata la ficha, y medido **no ocurre**: de 127 casos, en 5 se usó la rama del
+> swing y ninguno bajó de 1,37 × ATR.
+>
+> **La salida está en el Playbook y es una decisión de método pendiente del
+> director**: en los climas direccionales el `take_profit_tipo` es
+> `TRAILING_STOP_ASYMMETRIC`, o sea que **no hay objetivo fijo** y el filtro
+> contra TP1 no es el gate que corresponde ahí. El manual lo cubre en su 6.4,
+> pero con un criterio que el lector no puede aplicar ("activos con sesgo fuerte
+> y sostenido, sobre todo el Oro") en vez del que usa el motor. Hasta que se
+> decida, el caso del 11.1 usa un rebote en rango y no un setup de tendencia.
+
+**El desempate del cobre descarta la mayoría, y eso hace el caso didáctico.** De
+los 5 rebotes del USD/CLP que cumplían el setup técnico completo, en 4 el cobre
+venía subiendo más de 1,5 %, así que el sesgo era bajista y la compra estaba
+prohibida (Módulo 3.3). Sobrevivió uno: el del 24 de enero de 2023.
+
+**No se afirma una hora de Chile, a propósito.** Las series de MT5 vienen en hora
+del servidor empaquetada como si fuera UTC y el desfase se mide contra el terminal
+en vivo. Con el terminal caído no hay conversión honesta, así que el caso nombra
+el día y deja el filtro de horario como un paso que el lector verifica en su
+plataforma. Inventar la hora sería el mismo error que inventar un precio.
+
+**Cuatro tests lo sostienen** (`tests/test_manual_contenido.py`): que la vela siga
+cumpliendo su setup, que la ficha publicada pase el filtro de R:R, que la pérdida
+quede bajo el 1 %, y que la dirección esté permitida por el cobre. Más dos de
+sincronía, que fallan si alguien edita a mano un bloque generado.
+
+### Las guías de lectura de los gráficos: la prosa se escribe, las cifras no
+
+La sección 3.5 lleva, por cada clima, tres pasos de lectura, una conclusión en una
+frase y qué significa la franja. La prosa es editorial y vive en
+`guia_de_lectura`; **las cifras las interpola `hitos` desde la serie recortada al
+episodio**.
+
+Esa división salió de un error concreto. La revisión pedagógica del 2026-09-07
+propuso las guías con la estructura correcta y **dos precios inventados**: leyó las
+etiquetas de los extremos del gráfico, que son de la ventana de contexto, y las
+escribió como si fueran del episodio. Así el crudo "arrancaba en 110" cuando el
+episodio abre en 115,26, y el Oro tenía un "soporte en 1.653" que es el borde
+izquierdo del dibujo y no el mínimo del tramo, que fue 1.625,62.
 
 ### Los diagramas no llevan líneas en blanco adentro. Nunca.
 

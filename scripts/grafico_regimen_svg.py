@@ -197,6 +197,162 @@ def _indice_de_fecha(puntos: list[tuple[str, float]], fecha: str) -> int:
     return bisect_left([f for f, _ in puntos], fecha)
 
 
+def hitos(ep: dict, episodio: dict) -> dict:
+    """Valores medidos del episodio que la guía de lectura necesita nombrar.
+
+    **Existe por un error concreto que conviene no repetir.** La revisión
+    pedagógica del 2026-09-07 propuso guías de lectura excelentes en estructura
+    y con dos precios inventados: leyó las etiquetas de los EXTREMOS del gráfico,
+    que son de la ventana de contexto, y las escribió como si fueran del
+    episodio. Así el crudo "arrancaba en 110" cuando el episodio abre en 115,26,
+    y el Oro tenía un "soporte en 1.653" que es el borde izquierdo del dibujo y
+    no el mínimo del tramo, que fue 1.625,62.
+
+    De ahí que la guía no lleve ningún número escrito a mano: los toma de acá, y
+    acá salen de la serie recortada al episodio.
+    """
+    driver_id = ep["driver"][0]
+    activo_id = ep["activo"][0]
+    inicio, fin = episodio["inicio"], episodio["fin"]
+
+    def tramo(nombre: str, dec: int) -> dict:
+        puntos = _recorte(_serie(nombre), inicio, fin)
+        if not puntos:
+            raise SystemExit(f"Sin datos de {nombre} en {inicio}..{fin}")
+        valores = [v for _, v in puntos]
+        return {
+            "abre": _numero(valores[0], dec),
+            "cierra": _numero(valores[-1], dec),
+            "minimo": _numero(min(valores), dec),
+            "maximo": _numero(max(valores), dec),
+        }
+
+    return {
+        "driver": tramo(driver_id, _decimales(driver_id)),
+        "activo": tramo(activo_id, _decimales(activo_id)),
+        "dias": episodio["dias"],
+        "unidad_driver": ep["driver"][2],
+        "unidad_activo": ep["activo"][2],
+    }
+
+
+def guia_de_lectura(ep: dict, episodio: dict, h: dict) -> list[str]:
+    """Los tres bloques que enseñan a leer el gráfico, uno por clima.
+
+    La prosa es editorial y se escribe una vez por clima; las cifras se
+    interpolan desde `hitos`. Estructura tomada de la revisión pedagógica: qué
+    mirar y en qué orden, la conclusión en una frase que el lector pueda
+    repetir, y qué significa la franja.
+    """
+    d, a = h["driver"], h["activo"]
+    dd = episodio["deltas_inicio"]
+    va = episodio["variacion_activos_pct"]
+    ud, ua = h["unidad_driver"], h["unidad_activo"]
+
+    if ep["regimen"] == "R3_ESTANFLACION_SHOCK":
+        pasos = [
+            f"**1. Empieza por el tramo verde a la izquierda de la franja.** Ahí está el "
+            f"gatillo: en los cinco días previos el petróleo subió {_pct(dd.get('oil_signed_pct_5d'))} "
+            f"y el bono a 10 años sumó {_bps(dd.get('dgs10_diff_5d'))}. Las dos cosas juntas son "
+            f"lo que define este clima, y los umbrales están en el Anexo A2.",
+            f"**2. Ahora la franja.** El crudo entra en {d['abre']} {ud} y sale en "
+            f"{d['cierra']} {ud}, tocando {d['maximo']} en el camino. El shock no se agotó "
+            f"al confirmarse el clima: siguió.",
+            f"**3. Recién ahora mira la línea gris de abajo, el Oro.** Va de {a['abre']} a "
+            f"{a['cierra']} {ua}. Fíjate en lo raro: las tasas de los bonos subieron, y por el "
+            f"Módulo 2.2 eso debería castigar al Oro. No lo castigó.",
+        ]
+        conclusion = (
+            "En Tormenta el Oro aguanta aunque las tasas suban, porque lo que lo mueve en ese "
+            "momento no es el costo de oportunidad sino la búsqueda de refugio. Por eso el "
+            "método prohíbe apostar a su baja en este clima."
+        )
+    elif ep["regimen"] == "R1_SHOCK_INFLACIONARIO":
+        pasos = [
+            f"**1. Mira la línea verde antes de la franja.** Es la inflación que el mercado "
+            f"descuenta para los próximos 10 años, leída de los bonos. En los cinco días previos "
+            f"subió {_bps(dd.get('breakeven_diff_5d'))}. Y en los mismos días la tasa real se "
+            f"movió {_bps(dd.get('tips10y_diff_5d'))}: prácticamente nada.",
+            "**2. Esa diferencia es todo el caso.** Los precios esperados subieron y lo que paga "
+            "el bono descontada la inflación no las siguió. Es exactamente la rama verde del "
+            "Módulo 2.2: la Reserva Federal todavía no había respondido.",
+            f"**3. Ahora la línea gris, el Oro.** Entra en {a['abre']} y sale en {a['cierra']} "
+            f"{ua}, con un mínimo de {a['minimo']} dentro del tramo. Venía de meses de caídas y "
+            f"acá se dio vuelta.",
+        ]
+        conclusion = (
+            "El Oro no sube porque suba la inflación: sube cuando la inflación esperada le gana "
+            "a la tasa real. Si la Reserva Federal hubiera subido su tasa más rápido, este mismo "
+            "gráfico se vería al revés."
+        )
+    elif ep["regimen"] == "R4_RECESION_VUELO_CALIDAD":
+        pasos = [
+            f"**1. El gatillo está en el cobre, la línea verde antes de la franja.** Cayó "
+            f"{_pct(dd.get('copper_pct_5d'))} en cinco días. El cobre es el termómetro de la "
+            f"industria del mundo: si las fábricas compran menos cobre, es porque esperan "
+            f"producir menos.",
+            f"**2. Dentro de la franja el cobre sigue.** De {d['abre']} a {d['cierra']} {ud}. "
+            f"No fue un día raro: fueron {h['dias']} días hábiles en la misma dirección.",
+            f"**3. Ahora la línea gris, el Nasdaq 100.** De {a['abre']} a {a['cierra']} {ua}, "
+            f"un {_pct(va.get('US100'))}. La bolsa está descontando las mismas ganancias más "
+            f"chicas que anticipa el cobre.",
+        ]
+        conclusion = (
+            f"En Recesión el cobre avisa antes que la bolsa, y a Chile le llega por el bolsillo: "
+            f"si el mundo compra menos cobre, entran menos dólares al país y el dólar sube. En "
+            f"estos días el USD/CLP hizo {_pct(va.get('USDCLP'))}."
+        )
+    elif ep["regimen"] == "R2_GOLDILOCKS_EXPANSION":
+        pasos = [
+            f"**1. El gatillo, en el cobre antes de la franja.** Subió "
+            f"{_pct(dd.get('copper_pct_5d'))} en cinco días, y esta vez con las tasas quietas: "
+            f"el bono a 10 años se movió {_bps(dd.get('dgs10_diff_5d'))}. Esa quietud es la "
+            f"condición que separa este clima de los dos anteriores.",
+            f"**2. Fíjate en que las dos líneas van al revés.** El cobre va de {d['abre']} a "
+            f"{d['cierra']} {ud} mientras el USD/CLP baja de {a['abre']} a {a['cierra']} {ua}. "
+            f"No es casualidad ni coincidencia: es el mismo hecho visto de dos lados.",
+            "**3. La cadena, en una línea.** El cobre sube, Chile lo exporta, entran más "
+            "dólares al país, y con más dólares ofrecidos el dólar vale menos pesos. Es la "
+            "verdulería del Módulo 2.4.",
+        ]
+        conclusion = (
+            "Cuando el cobre sube con las tasas tranquilas, el peso chileno se fortalece y el "
+            "dólar baja. Es el único clima donde el sesgo del USD/CLP es a la baja."
+        )
+    else:  # R0_CALMA_RANGO
+        pasos = [
+            f"**1. Acá no hay gatillo que buscar, y eso es lo que hay que ver.** A la Calma no "
+            f"la activa ningún umbral: es donde queda el mercado cuando ningún otro clima "
+            f"califica. El cobre venía cayendo {_pct(dd.get('copper_pct_5d'))}, pero la curva de "
+            f"bonos no acompañó, así que no llegó a ser Recesión.",
+            f"**2. Mira la línea gris dentro de la franja.** El USD/CLP entra en {a['abre']} y "
+            f"sale en {a['cierra']} {ua}, un {_pct(va.get('USDCLP'))} en {h['dias']} días "
+            f"hábiles. Entremedio se movió entre {a['minimo']} y {a['maximo']}.",
+            "**3. Eso es un rango, no una tendencia.** El precio va y vuelve entre dos niveles. "
+            "Perseguir una ruptura acá es comprar arriba justo antes de que el precio vuelva "
+            "al medio, y por eso este clima lo prohíbe.",
+        ]
+        conclusion = (
+            "La Calma es el clima más frecuente: son 6 de cada 10 días. No es un clima de espera "
+            "sin nada que hacer, es el único donde se opera el rebote entre soporte y "
+            "resistencia, que es el setup del Módulo 5.3."
+        )
+
+    lineas = ["**Cómo leer este gráfico, en orden:**", ""]
+    for paso in pasos:           # renglón en blanco entre pasos: sin él markdown
+        lineas += [paso, ""]     # los pega en un solo párrafo corrido
+    lineas += [
+        "",
+        f"**La conclusión, en una frase.** {conclusion}",
+        "",
+        f"**Qué es la franja sombreada.** Son los {h['dias']} días hábiles en que el clima "
+        f"estuvo confirmado por la regla de los dos días. Lo que pasa **antes** de la franja es "
+        f"lo que lo activó; lo que pasa **dentro** es lo que tenías permitido y prohibido operar.",
+        "",
+    ]
+    return lineas
+
+
 def dibujar(ep: dict, episodio: dict) -> str:
     """Devuelve el SVG del episodio, con las dos series y la franja del clima."""
     driver_id, driver_nom, driver_uni = ep["driver"]
@@ -318,30 +474,25 @@ def bloque_markdown() -> str:
             dibujar(ep, episodio),
             "</div>",
             "",
-            # La Calma es el resultado POR DEFECTO: no la activa ningún umbral,
-            # se llega a ella cuando ningún otro clima calificó. Rotularla "lo
-            # que lo activó" haría leer sus cifras como si fueran el gatillo, y
-            # en el episodio elegido el cobre viene cayendo un 4 %, que en otro
-            # contexto sería Recesión.
+        ]
+        lineas += guia_de_lectura(ep, episodio, hitos(ep, episodio))
+        # El bloque de cifras va DESPUÉS de la guía y comprimido: la guía ya
+        # nombra las que enseñan algo, y esto queda como referencia para quien
+        # quiera verificar la clasificación por su cuenta.
+        lineas += [
+            # A la Calma no la activa ningún umbral, así que rotular sus cifras
+            # "lo que lo activó" las haría leer como el gatillo que no son.
             (
-                "**Cómo venían los drivers** (variación en los 5 días previos al primer día): "
+                "**Los drivers de esos días** (variación en los 5 previos al primero): "
                 if ep["regimen"] == "R0_CALMA_RANGO"
-                else "**Lo que lo activó** (variación en los 5 días previos al primer día): "
+                else "**Lo que lo activó** (variación en los 5 días previos al primero): "
             )
             + f"cobre {_pct(d.get('copper_pct_5d'))}, petróleo {_pct(d.get('oil_signed_pct_5d'))}, "
             f"bono a 10 años {_bps(d.get('dgs10_diff_5d'))}, "
             f"tasa real {_bps(d.get('tips10y_diff_5d'))}, "
-            f"inflación esperada {_bps(d.get('breakeven_diff_5d'))}."
-            + (
-                " A la Calma no la activa ningún umbral: es donde queda el mercado cuando "
-                "ningún otro clima califica, y por eso sus cifras no son un gatillo. Acá el "
-                "cobre venía cayendo, pero la curva de bonos no acompañó, así que no llegó a "
-                "ser Recesión."
-                if ep["regimen"] == "R0_CALMA_RANGO"
-                else ""
-            ),
+            f"inflación esperada {_bps(d.get('breakeven_diff_5d'))}.",
             "",
-            f"**Lo que hicieron los activos en esos {episodio['dias']} días hábiles**: "
+            f"**Los activos en esos {episodio['dias']} días hábiles**: "
             + ", ".join(
                 f"{rotulo} {_pct(v[clave])}"
                 for clave, rotulo in (
