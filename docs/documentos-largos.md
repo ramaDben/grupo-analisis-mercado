@@ -171,7 +171,7 @@ antes de tocar la maqueta.
 
 | Documento | Fuente del contenido | Compilador | Salida |
 |---|---|---|---|
-| Manual de Operaciones | `docs/MANUAL_DE_OPERACIONES_TRADING_CUANTITATIVO.md` | `scripts/compilar_manual_pdf.py` | PDF A4, 31 páginas |
+| Manual de Operaciones | `docs/MANUAL_DE_OPERACIONES_TRADING_CUANTITATIVO.md` | `scripts/compilar_manual_pdf.py` | PDF A4, 32 páginas |
 | Cierre semanal | `scripts/cierre_semanal_contenido.py` (texto) + `cierre_semanal_datos.py` (cifras) | `scripts/compilar_informe_cierre_semanal.py` | PDF A4, 6 páginas |
 
 **Los dos tenían el documento escrito adentro del compilador y hubo que sacarlo.**
@@ -206,6 +206,29 @@ Tres reglas del CSS que no se tocan:
 3. **El compilador cuenta las páginas y falla bajo `PAGINAS_MINIMAS`.** No bajes ese
    número para que pase: un manual al que le faltan secciones **se lee como
    completo**, y nadie lo nota desde afuera.
+
+### Los diagramas no llevan líneas en blanco adentro. Nunca.
+
+Los 8 diagramas son SVG escritos a mano en el markdown, y **una línea en blanco
+adentro de un `<svg>` cierra el bloque de HTML crudo de CommonMark**. Lo que
+decide entonces si el diagrama sobrevive es qué hay en el renglón siguiente, y
+ahí está lo que engaña: si es una etiqueta que se cierra sola y ocupa la línea
+entera (`<line/>`, `<rect/>`), markdown-it abre otro bloque, el navegador ve
+marcado contiguo y el dibujo se salva **de pura suerte**. Cualquier otra cosa cae
+en un párrafo, y ese `<p>` cierra el `<svg>`: los rótulos se dibujan como texto
+corriente al costado de una tarjeta muda.
+
+Medido el 2026-09-07: **2 de los 8 diagramas partidos** (la vela H1 del módulo 1
+y el setup 5.1), con **18 de los 87 rótulos** derramados. El compilador terminaba
+en código 0 y contaba bien sus páginas; se descubrió mirando el PDF. Es el mismo
+modo de falla del `overflow: hidden` de la maqueta vieja.
+
+Lo sanea `compactar_svg` en el compilador, y no en el markdown, para que la
+fuente siga siendo legible. Lo impone `tests/test_manual_diagramas.py`.
+
+**Ojo al diagnosticarlo**: buscar `"<p"` dentro del bloque da un falso positivo
+en cada `<polygon>` y cada `<path>`. La condición se prueba con la etiqueta
+cerrada (`</?p>`).
 
 ### El cierre semanal sí usa páginas fijas, y por eso mide su alto.
 

@@ -521,11 +521,38 @@ def construir_portada() -> str:
 """
 
 
+def compactar_svg(texto: str) -> str:
+    """Quita las líneas en blanco de adentro de cada bloque `<svg>`.
+
+    En CommonMark **una línea en blanco cierra el bloque de HTML crudo**, así que
+    todo lo que venga después del primer renglón vacío deja de ser parte del SVG:
+    los `<text>` se reparsean como párrafo y el navegador los dibuja como texto
+    corriente al costado de la tarjeta, con el diagrama mudo. Es un fallo
+    silencioso, del mismo modo que el `overflow: hidden` de la maqueta vieja
+    hacía desaparecer contenido: compila, no avisa, y la pieza sale mal.
+
+    Si lo que sigue al renglón vacío es una etiqueta que se cierra sola y ocupa
+    la línea entera, markdown-it abre otro bloque de HTML y el navegador arma el
+    SVG igual: el diagrama se salva de pura suerte. Cualquier otra cosa cae en un
+    párrafo, y ese `<p>` cierra el `<svg>`. Medido el 2026-09-07: 2 de los 8
+    diagramas partidos (la vela H1 del módulo 1 y el setup 5.1), con 18 de los 87
+    rótulos derramados al costado.
+
+    Se compactan acá y no en el markdown para que la fuente siga siendo legible y
+    el defecto no vuelva la próxima vez que alguien separe dos grupos de figuras
+    con un renglón. Lo cubre `tests/test_manual_diagramas.py`.
+    """
+    def reemplazo(m: re.Match[str]) -> str:
+        return "\n".join(l for l in m.group(0).splitlines() if l.strip())
+
+    return re.sub(r"<svg\b.*?</svg>", reemplazo, texto, flags=re.DOTALL)
+
+
 def renderizar_markdown(texto: str) -> str:
     from markdown_it import MarkdownIt
 
     md = MarkdownIt("commonmark", {"html": True, "breaks": False}).enable("table")
-    html = procesar_callouts(md.render(texto))
+    html = procesar_callouts(md.render(compactar_svg(texto)))
     return procesar_fichas_activos(html)
 
 
