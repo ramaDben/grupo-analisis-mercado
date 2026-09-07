@@ -1,95 +1,47 @@
 {
   "pais": "Japón",
-  "timestamp_actualizacion": "2026-09-01T13:52:43.560091",
+  "timestamp_actualizacion": "2026-09-06T21:13:53.742957",
   "fuentes_oficiales": {
     "bonos_soberanos": "Ministerio de Finanzas de Japón (Ministry of Finance - MOF)",
     "inflacion": "Oficina de Estadísticas de Japón (Statistics Bureau / MIC - stat.go.jp)",
     "politica_monetaria": "Banco de Japón (Bank of Japan - BOJ - boj.or.jp)"
   },
   "indicadores_financieros": {
-    "jgb_10y_yield": 2.943,
-    "us_10y_yield": 4.792,
-    "yield_spread_us_jp": 1.849,
-    "yield_spread_bps": 184.9,
-    "usd_jpy_spot": 160.234,
-    "mof_fecha_registro": "2026-08-31",
+    "jgb_10y_yield": 2.966,
+    "us_10y_yield": 4.784,
+    "yield_spread_us_jp": 1.818,
+    "yield_spread_bps": 181.8,
+    "usd_jpy_spot": 156.118,
+    "mof_fecha_registro": "2026-09-03",
     "curva_jgb_mof": {
-      "1年": 1.502,
-      "2年": 1.743,
-      "3年": 1.894,
-      "4年": 2.084,
-      "5年": 2.233,
-      "6年": 2.358,
-      "7年": 2.507,
-      "8年": 2.67,
-      "9年": 2.801,
-      "10年": 2.943,
-      "15年": 3.501,
-      "20年": 3.815,
-      "25年": 4.102,
-      "30年": 4.092,
-      "40年": 4.094
+      "1年": 1.563,
+      "2年": 1.85,
+      "3年": 1.994,
+      "4年": 2.173,
+      "5年": 2.303,
+      "6年": 2.426,
+      "7年": 2.547,
+      "8年": 2.704,
+      "9年": 2.832,
+      "10年": 2.966,
+      "15年": 3.506,
+      "20年": 3.806,
+      "25年": 4.079,
+      "30年": 4.052,
+      "40年": 4.063
     },
     "historico_jgb_mof": [
       {
-        "fecha": "2026-08-10",
-        "jgb_10y": 2.815
+        "fecha": "2026-09-01",
+        "jgb_10y": 2.987
       },
       {
-        "fecha": "2026-08-12",
-        "jgb_10y": 2.856
+        "fecha": "2026-09-02",
+        "jgb_10y": 3.006
       },
       {
-        "fecha": "2026-08-13",
-        "jgb_10y": 2.873
-      },
-      {
-        "fecha": "2026-08-14",
-        "jgb_10y": 2.878
-      },
-      {
-        "fecha": "2026-08-17",
-        "jgb_10y": 2.919
-      },
-      {
-        "fecha": "2026-08-18",
-        "jgb_10y": 2.934
-      },
-      {
-        "fecha": "2026-08-19",
-        "jgb_10y": 2.894
-      },
-      {
-        "fecha": "2026-08-20",
-        "jgb_10y": 2.854
-      },
-      {
-        "fecha": "2026-08-21",
-        "jgb_10y": 2.882
-      },
-      {
-        "fecha": "2026-08-24",
-        "jgb_10y": 2.887
-      },
-      {
-        "fecha": "2026-08-25",
-        "jgb_10y": 2.897
-      },
-      {
-        "fecha": "2026-08-26",
-        "jgb_10y": 2.892
-      },
-      {
-        "fecha": "2026-08-27",
-        "jgb_10y": 2.897
-      },
-      {
-        "fecha": "2026-08-28",
-        "jgb_10y": 2.93
-      },
-      {
-        "fecha": "2026-08-31",
-        "jgb_10y": 2.943
+        "fecha": "2026-09-03",
+        "jgb_10y": 2.966
       }
     ]
   },
