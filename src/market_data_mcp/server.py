@@ -27,19 +27,23 @@ from fastmcp import FastMCP  # noqa: E402
 
 
 def _load_env(env_path: Path) -> None:
-    """Carga variables del .env propio al entorno (sin pisar las ya definidas)."""
-    if not env_path.exists():
-        return
-    for line in env_path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if line and not line.startswith("#") and "=" in line:
-            k, v = line.split("=", 1)
-            os.environ.setdefault(k.strip(), v.strip())
+    """Carga variables del .env propio al entorno (sin pisar las ya definidas).
+
+    Delega en `mt5_client.cargar_env`, que es donde vive el parseo desde el
+    2026-09-07. Tener dos copias de la misma lectura es el contrato por nombre de
+    siempre: una queda atrás y el server empieza a cargar un .env distinto del
+    que cargan los scripts.
+    """
+    from market_data_mcp.mt5_client import cargar_env
+
+    cargar_env(env_path)
 
 
 @asynccontextmanager
 async def lifespan(server: FastMCP):
-    # Cargar credenciales desde el .env propio del repo
+    # Cargar credenciales desde el .env propio del repo. `connect()` lo vuelve a
+    # hacer por su cuenta y es idempotente; se conserva acá porque el lifespan
+    # también deja disponibles las claves que no son de MT5 (MT5_COMMON_FILES).
     _load_env(_ENV_PATH)
 
     mt5_ready = False

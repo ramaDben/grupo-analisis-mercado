@@ -13,6 +13,7 @@ lo que permite mockear `get_rates` y probar el camino feliz de la tool sin MT5.
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import pandas as pd
 
@@ -34,17 +35,52 @@ TIMEFRAME_MAP: dict[str, str] = {
 }
 
 
+# .env propio del paquete (gitignored) con las credenciales MT5.
+ENV_PATH = Path(__file__).resolve().parent / ".env"
+
+
+def cargar_env(env_path: Path | None = None) -> None:
+    """Carga el .env propio al entorno, sin pisar lo que ya esté definido.
+
+    Vive acá y no en `server.py` porque **quien necesita las credenciales es
+    `connect()`**, y hasta el 2026-09-07 solo el servidor MCP cargaba el archivo.
+    Los siete scripts que llaman `connect()` directo (`extractor_precios`,
+    `screener_gi`, `serie_mt5`, `pipeline_informe`…) nunca veían esas variables,
+    así que las credenciales del .env no tenían efecto **justo en el camino de la
+    corrida automática**, que es el que las necesita: el del reloj, con el
+    terminal cerrado, donde `initialize()` sin credenciales se engancha a
+    cualquier cuenta.
+
+    `setdefault` y no asignación directa: una variable exportada en el entorno
+    manda sobre el archivo, que es lo que permite apuntar a otra cuenta en una
+    corrida puntual sin editar nada.
+    """
+    ruta = env_path or ENV_PATH
+    if not ruta.exists():
+        return
+    for line in ruta.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip())
+
+
 def connect() -> None:
     """Inicializa la conexión con MT5 usando credenciales del entorno si existen.
 
-    Lee MT5_LOGIN / MT5_PASSWORD / MT5_SERVER / MT5_PATH del entorno (cargados
-    desde el .env propio del repo en el lifespan del server). Idempotente: si el
-    terminal ya está conectado, no hace nada.
+    Lee MT5_LOGIN / MT5_PASSWORD / MT5_SERVER / MT5_PATH del entorno, cargando
+    antes el .env propio del paquete. Idempotente: si el terminal ya está
+    conectado, no hace nada.
     """
     import MetaTrader5 as mt5
 
     if mt5.terminal_info() is not None:
         return  # Ya conectado
+
+    # Antes de leer el entorno, no después: si el .env es la única fuente de las
+    # credenciales, leerlas primero deja `login` en 0 y cae al initialize() sin
+    # credenciales, que es exactamente el camino no determinista que esto evita.
+    cargar_env()
 
     # `... or 0` cubre tanto la clave ausente como la cadena vacía (p.ej. cuando
     # se copia .env.example sin rellenar): int("") lanzaría ValueError.
