@@ -111,6 +111,43 @@ El 2026-09-04, `limpiar_payloads` hacía `rglob` sobre la tanda entera y una seg
 mismo minuto se llevó los payloads de la primera: doce de commodities, con el escáner reportando
 "barridos 12 payload(s)" sin que eso se leyera como un problema.
 
+## El refresco del despacho: el freno que nunca pudo dispararse
+
+El 2026-09-07 se despachó una tanda de 10 piezas a 6 canales con el comando documentado,
+`uv run --extra stories python scripts/pipeline_carrusel.py --despachar`. Las cuatro piezas de
+activo avisaron lo mismo:
+
+```
+EURUSD: no se pudo refrescar (No module named 'MetaTrader5').
+        Sale con los datos de la preparación, que ya no son de ahora.
+```
+
+El extra `stories` declara `playwright` y nada más, y MetaTrader5 no está en las dependencias
+base. O sea que el refresco previo al envío **no podía ocurrir nunca** por el camino canónico, y
+con él quedaba inerte el guardia que detiene la pieza cuyo precio invalidó el texto: la pieza
+`.divergente` que describe el diseño era inalcanzable desde la documentación.
+
+Nada de esto se vio desde afuera. El despacho terminó con código 0, la bitácora anotó las diez
+piezas y el resumen las reportó entregadas.
+
+Las piezas salieron con precios de 11 a 14 minutos antes. Medido contra el terminal al cierre de
+la tanda, ninguna había quedado inválida:
+
+| Activo | Publicado | Al cierre | Diferencia | Estado |
+|---|---|---|---|---|
+| EURUSD | 1,16257 | 1,16275 | +0,00018 | dentro de la banda |
+| GBPUSD | 1,35351 | 1,35342 | −0,00009 | dentro de la banda |
+| WTI.spot | 92,597 | 92,848 | +0,251 | dentro de la banda |
+| XAGUSD | 65,965 | 65,981 | +0,016 | dentro de la banda |
+
+**El resultado fue correcto y el freno no tuvo nada que ver.** Fue un lunes de Labor Day, con
+índices y acciones cerrados y el mercado quieto. Con un dato de empleo en el medio, esos mismos
+14 minutos son otra cosa, y el despacho habría publicado niveles ya cruzados informando éxito.
+
+Es el mismo modo de falla del extra `informe` del 2026-09-06: funciona donde el paquete ya está
+y se rompe en otro lado. La diferencia es que aquel gritaba con un `ModuleNotFoundError` y este
+degradaba en silencio, que es peor.
+
 ## Un PDF adjunto: las mediciones
 
 Medido el 2026-09-04: se envió un pie de **1.222 caracteres** con un PDF de **2 MB** y llegó

@@ -509,6 +509,15 @@ movimiento **invalidó el texto** (el precio cruzó un soporte o una resistencia
 por vigentes, o perdió el nivel de vigencia del sesgo), la pieza no sale: se renombra a
 `.divergente` y el despacho lo informa.
 
+> [!CAUTION]
+> **El despacho se invoca con `--with MetaTrader5`, igual que el preparado.** Su refresco lee el
+> mercado: sin el paquete no se refresca ninguna pieza, el guardia de divergencia queda inerte y
+> la pieza `.divergente` no puede ocurrir, con el despacho terminando en código 0 igual. Hasta el
+> 2026-09-07 el comando documentado era `uv run --extra stories`, que declara `playwright` y nada
+> más, así que ese freno **nunca operó** por el camino canónico. Ahora el paquete ausente se avisa
+> aparte de un fallo de datos y **una vez por tanda**, porque no es el problema de una pieza. Lo
+> impide `tests/test_extras_declarados.py`; la tanda que lo destapó, `docs/historia-forense.md`.
+
 **La reanudación la manda la bitácora, no `--desde`.** `data/historial_despachos.json` anota **una
 entrada por pieza entregada** (fecha, hora, tanda, canal, pieza y la huella del texto), y
 `despachar` la consulta antes de cada canal para saltar lo que ya salió. Se versiona: es historia

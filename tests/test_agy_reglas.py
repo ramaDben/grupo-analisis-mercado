@@ -114,7 +114,13 @@ def test_un_h3_puede_sobrescribir_a_su_padre():
 # presupuesto. Con 92.000 quedan ~4.000 bytes (unas 50 líneas) para lo que
 # legítimamente haga falta agregar, y para subirlo hay que editar este número a
 # propósito: la decisión de agrandar el archivo se toma, no se acumula sola.
-PRESUPUESTO_BYTES = 92_000
+#
+# 2026-09-07: sube a 92.700 por el aviso de `--with MetaTrader5` en el despacho.
+# Entra en el criterio del mensaje de abajo: sin ese argumento no se refresca
+# ninguna pieza y el guardia de divergencia no corre, así que cambia literalmente
+# lo que sale a un grupo. El detalle forense quedó en `docs/historia-forense.md`
+# y acá solo el bloque corto, que es el reparto que este presupuesto busca.
+PRESUPUESTO_BYTES = 92_700
 
 
 def test_claude_md_no_pasa_del_presupuesto():
