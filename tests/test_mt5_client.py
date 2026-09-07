@@ -21,6 +21,7 @@ de forma perezosa dentro de la función, justamente para no exigirlo en CI.
 """
 from __future__ import annotations
 
+import os
 import sys
 import types
 
@@ -84,3 +85,107 @@ def test_un_simbolo_que_no_se_puede_seleccionar_lo_dice(mt5_falso):
 
     with pytest.raises(RuntimeError, match="Market Watch"):
         mt5_client.get_rates("SIMBOLO_RARO", "H1")
+
+
+# ---------------------------------------------------------------------------
+# El .env lo carga quien necesita las credenciales, no solo el servidor MCP.
+#
+# Hasta el 2026-09-07 el parseo vivía únicamente en `server.py`, dentro del
+# lifespan. Los siete scripts que llaman `connect()` directo (`extractor_precios`,
+# `screener_gi`, `serie_mt5`, `pipeline_informe`, `generar_graficos_sesion_asiatica`)
+# nunca cargaban ese archivo, así que las credenciales no tenían efecto **justo en
+# el camino de la corrida automática**: el del reloj, con el terminal cerrado,
+# donde `initialize()` sin credenciales se engancha a cualquier cuenta. El
+# 2026-09-06 eso devolvió la 51256 en vez de la 51492.
+#
+# Es el modo de falla más caro del repo: no rompe nada visible, produce datos de
+# otra cuenta con cara de correctos.
+# ---------------------------------------------------------------------------
+
+
+def test_cargar_env_lee_el_archivo_sin_pisar_lo_ya_definido(tmp_path, monkeypatch):
+    env = tmp_path / ".env"
+    env.write_text(
+        "# comentario\n"
+        "\n"
+        "MT5_LOGIN=51492\n"
+        "MT5_SERVER=UnServidor-Server\n"
+        "YA_DEFINIDA=del_archivo\n",
+        encoding="utf-8",
+    )
+    monkeypatch.delenv("MT5_LOGIN", raising=False)
+    monkeypatch.delenv("MT5_SERVER", raising=False)
+    # Una variable exportada manda sobre el archivo: es lo que permite apuntar a
+    # otra cuenta en una corrida puntual sin editar nada.
+    monkeypatch.setenv("YA_DEFINIDA", "del_entorno")
+
+    mt5_client.cargar_env(env)
+
+    assert os.environ["MT5_LOGIN"] == "51492"
+    assert os.environ["MT5_SERVER"] == "UnServidor-Server"
+    assert os.environ["YA_DEFINIDA"] == "del_entorno"
+
+
+def test_un_env_inexistente_no_revienta(tmp_path):
+    # En CI y en un clon nuevo el archivo no está, y `connect()` tiene que poder
+    # seguir hasta el initialize() sin credenciales.
+    mt5_client.cargar_env(tmp_path / "no_existe.env")
+
+
+def test_connect_carga_el_env_antes_de_leer_las_credenciales():
+    """Contrato de orden, y el orden ES el arreglo.
+
+    Leer `MT5_LOGIN` antes de cargar el archivo lo deja en 0 y cae al
+    `initialize()` sin credenciales, que es exactamente el camino no determinista
+    que esto viene a cerrar. El test mira el AST porque comprobarlo de verdad
+    exigiría un terminal.
+    """
+    import ast
+    import inspect
+    import textwrap
+
+    arbol = ast.parse(textwrap.dedent(inspect.getsource(mt5_client.connect)))
+
+    linea_carga = None
+    linea_login = None
+    for nodo in ast.walk(arbol):
+        if (
+            linea_carga is None
+            and isinstance(nodo, ast.Call)
+            and isinstance(nodo.func, ast.Name)
+            and nodo.func.id == "cargar_env"
+        ):
+            linea_carga = nodo.lineno
+        # La constante exacta, no el texto suelto: `MT5_LOGIN` se nombra también
+        # en el docstring, y comparar sobre la fuente cruda daba un falso rojo.
+        if (
+            linea_login is None
+            and isinstance(nodo, ast.Constant)
+            and nodo.value == "MT5_LOGIN"
+        ):
+            linea_login = nodo.lineno
+
+    assert linea_carga is not None, (
+        "connect() ya no llama a cargar_env(): los scripts que lo llaman directo se "
+        "quedan sin credenciales y initialize() se engancha a la cuenta que haya."
+    )
+    assert linea_login is not None, "connect() ya no lee MT5_LOGIN; revisá este test"
+    assert linea_carga < linea_login, (
+        "connect() lee MT5_LOGIN antes de cargar el .env, así que el archivo no "
+        "surte efecto y la conexión vuelve a ser no determinista."
+    )
+
+
+def test_el_server_no_tiene_su_propio_parseo_de_env():
+    # Dos copias de la misma lectura divergen: el server terminaría cargando un
+    # .env distinto del que cargan los scripts. Es el contrato por nombre de
+    # siempre, y acá se evita delegando.
+    from pathlib import Path
+
+    fuente = (
+        Path(__file__).resolve().parent.parent / "src" / "market_data_mcp" / "server.py"
+    ).read_text(encoding="utf-8")
+    assert "cargar_env" in fuente, "server.py tiene que delegar en mt5_client.cargar_env"
+    assert "os.environ.setdefault" not in fuente, (
+        "server.py volvió a parsear el .env por su cuenta en vez de delegar"
+    )
