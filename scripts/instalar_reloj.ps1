@@ -57,15 +57,53 @@ $Accion = New-ScheduledTaskAction `
     -Argument "run python scripts/reloj_gi.py --ejecutar" `
     -WorkingDirectory $Repo
 
+# El ancla del disparador tiene que ser una hora que EXISTA.
+#
+# La version anterior anclaba a `(Get-Date).Date`, la medianoche de hoy, para
+# que los latidos cayeran en :00/:15/:30/:45. Y el 2026-09-06 el instalador no
+# pudo registrar la tarea: Chile entro en horario de verano esa madrugada,
+# el reloj salto de las 23:59 a la 01:00 y **la medianoche de ese dia no
+# existio**. El Programador de tareas rechaza el ancla con "el valor
+# especificado representa una hora no valida".
+#
+# Es exactamente el defecto del que advierte el diseno del reloj, aplicado a su
+# propio instalador: dos veces al ano hay horas locales que no ocurren, y una
+# tarea anclada a una de ellas no se registra o no dispara nunca. Asi que el
+# ancla se corre hacia adelante en pasos de $CadaMinutos hasta dar con una hora
+# real, conservando la fase de :00/:15/:30/:45.
+$Ancla = (Get-Date).Date
+$Zona = [System.TimeZoneInfo]::Local
+$Intentos = 0
+while ($Zona.IsInvalidTime($Ancla) -and $Intentos -lt (1440 / $CadaMinutos)) {
+    $Ancla = $Ancla.AddMinutes($CadaMinutos)
+    $Intentos++
+}
+if ($Zona.IsInvalidTime($Ancla)) {
+    Write-Host "No encontre una hora de ancla valida en las proximas 24 h. Esto no deberia pasar."
+    exit 1
+}
+if ($Intentos -gt 0) {
+    Write-Host ("Aviso: la medianoche de hoy no existe en {0} (cambio de hora). " -f $Zona.Id +
+                "El ancla se corrio a {0:HH:mm}." -f $Ancla)
+}
+
 # Un solo disparador que repite indefinidamente. La ventana es todo el dia a
 # proposito: acotarla seria otro parametro que puede quedar mal cuando el
 # desfase se mueve, y el costo de un latido es un proceso que lee dos JSON.
-$Disparador = New-ScheduledTaskTrigger -Once -At (Get-Date).Date `
+$Disparador = New-ScheduledTaskTrigger -Once -At $Ancla `
     -RepetitionInterval (New-TimeSpan -Minutes $CadaMinutos)
 
+# Los dos flags de bateria van explicitos porque el Programador de tareas los
+# pone en True por defecto, y con eso el latido NO ARRANCA con el equipo
+# desenchufado y SE CORTA si lo desenchufas a mitad de corrida. Las dos cosas
+# fallan en silencio: la tarea figura "Ready", nadie ve un error, y la tanda de
+# las 09:30 simplemente no existe. El costo de un latido es un proceso que lee
+# dos JSON, asi que la bateria no es una razon para saltarselo.
 $Config = New-ScheduledTaskSettingsSet `
     -StartWhenAvailable `
     -DontStopOnIdleEnd `
+    -AllowStartIfOnBatteries `
+    -DontStopIfGoingOnBatteries `
     -ExecutionTimeLimit (New-TimeSpan -Minutes 20) `
     -MultipleInstances IgnoreNew
 

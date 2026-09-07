@@ -260,6 +260,25 @@ Cuatro decisiones lo sostienen:
 4. **Los canales de un momento se derivan del mapeo real** de activo a canal, recorriendo el
    universo del escáner. Una lista de canales por momento sería otro contrato por nombre.
 
+**El latido está instalado desde el 2026-09-06** (tarea `GI-Reloj`, cada 15 min). Dos defectos
+del instalador salieron a la luz al registrarlo, y los dos fallaban en silencio:
+
+1. **El ancla del disparador era `(Get-Date).Date`, la medianoche de hoy**, y el Programador de
+   tareas rechazó registrarlo: esa madrugada Chile entró en horario de verano, el reloj saltó de
+   las 23:59 a la 01:00 y **la medianoche del 6 de septiembre no existió**. Es el mismo defecto
+   del que advierte este diseño, dentro de su propio instalador. Ahora el ancla se corre en pasos
+   de la cadencia hasta dar con una hora real, conservando la fase de :00/:15/:30/:45.
+2. **La tarea no arrancaba con el equipo desenchufado**, y se cortaba si lo desenchufabas a mitad
+   de corrida: el Programador pone los dos flags de batería en `True` por defecto. La tarea figura
+   `Ready`, nadie ve un error, y la tanda de las 09:30 simplemente no existe.
+
+**Ojo con la primera corrida: no narra nada.** Sin desfase anterior en el libro no hubo cambio que
+contar, y anunciar uno inventado el día que se instala el reloj sería peor que callarse. Pero el
+reloj se instaló **el mismo día** en que el desfase pasó de +0 a +1, así que su primera corrida
+habría adoptado +1 en silencio y el aviso al canal nunca habría ocurrido. Se sembró
+`{"disparos": {}, "desfase": 0}` en el libro: es una afirmación verdadera (el desfase fue +0 h
+hasta el 5 de septiembre inclusive) y es lo que hace que el cambio se narre.
+
 **Anclado al mercado, con el cambio narrado** (decisión del director, 2026-09-04). La hora sigue
 al mercado y la hora chilena drifta; cuando el desfase cambia, el reloj levanta el aviso y deja
 el mensaje listo para que el director lo revise y lo mande. Se descartó anclar a hora chilena
