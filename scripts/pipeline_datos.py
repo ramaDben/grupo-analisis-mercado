@@ -253,6 +253,59 @@ def _motivo_fallback(por_activo: dict[str, str]) -> str | None:
     )
 
 
+def _cuentas_por_activo(summary: dict) -> dict[str, object]:
+    """De qué cuenta de MT5 salió cada activo, por nombre.
+
+    Se toma el peor caso igual que con la fuente: si los marcos de un activo no
+    coinciden, el activo mezcla dos cuentas y hay que mirarlo. Un `None` entre
+    los sellos gana, porque no saber vale lo mismo que estar mal.
+    """
+    salida: dict[str, object] = {}
+    for act, marcos in (summary.get("activos") or {}).items():
+        sellos = {
+            v for k, v in (marcos or {}).items()
+            if k.endswith("_cuenta")
+        }
+        if not sellos:
+            continue
+        salida[act] = None if None in sellos or len(sellos) > 1 else sellos.pop()
+    return salida
+
+
+def _motivo_cuenta(por_activo: dict[str, object]) -> str | None:
+    """El aviso cuando algún activo no salió de la cuenta que el sistema usa.
+
+    Hermano de `_motivo_fallback`, y por el mismo caso. El 2026-09-06 la cadena
+    reportó `LISTO: relojes frescos y el modelo ve` con el terminal en la cuenta
+    **51256**, y las seis series se commitearon así. `broker: MT5` era cierto y
+    no alcanzaba: **MT5 no es una sola cuenta**, y el spread, el tamaño de
+    contrato y la moneda de resultado son de la cuenta concreta.
+
+    Sin umbral de tolerancia, igual que el de yfinance: un solo activo de otra
+    cuenta ya se nombra.
+    """
+    from guardrails.cuenta import login_esperado, revisar
+
+    if not por_activo:
+        # Ningún sello. Es el estado de los datos anteriores al 2026-09-06, y no
+        # se puede distinguir de un extractor que dejó de estampar el campo, así
+        # que se nombra en vez de pasar en silencio. Se cura con una reingesta.
+        return ("los precios no dicen de qué cuenta de MT5 salieron: son de antes "
+                "del sello o el extractor dejó de estamparlo. Corre la cadena de datos")
+    v = revisar(por_activo)
+    if v.ok:
+        return None
+    quiero = login_esperado()
+    ajenos = {a: c for a, c in por_activo.items() if c != quiero}
+    detalle = ", ".join(f"{a} ({c if c is not None else 'sin sello'})"
+                        for a, c in sorted(ajenos.items()))
+    return (
+        f"{len(ajenos)} de {len(por_activo)} activos no salieron de la cuenta "
+        f"{quiero}: {detalle}. Un stop sobre otra cuenta es un stop de otro "
+        f"instrumento: revisa a que cuenta esta conectado el terminal"
+    )
+
+
 def estado_datos(data_central: Path | None = None, ahora: datetime | None = None) -> EstadoDatos:
     """Los tres relojes de la cadena en una sola respuesta.
 
@@ -289,6 +342,13 @@ def estado_datos(data_central: Path | None = None, ahora: datetime | None = None
         fallback = _motivo_fallback(por_activo)
         if fallback and r.error is None:
             r.error = fallback
+        # El de fuente se reporta primero a proposito: si un activo salio de
+        # yfinance el problema es la fuente, no la cuenta, y encadenar los dos
+        # motivos en una linea manda a revisar lo que no corresponde.
+        if r.error is None:
+            cuenta = _motivo_cuenta(_cuentas_por_activo(data))
+            if cuenta:
+                r.error = cuenta
     est.relojes.append(r)
 
     # 3. Sesgo del Playbook
