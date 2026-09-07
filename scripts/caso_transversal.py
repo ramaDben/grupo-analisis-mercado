@@ -250,6 +250,7 @@ def resolver_caso() -> dict:
         "adx": float(f["adx14"]), "rsi": float(f["rsi14"]), "swing": swing,
         "dist_atr": dist / atr, "usa_swing": usa_swing, "stop": stop, "riesgo": riesgo,
         "objetivo": objetivo, "beneficio": beneficio, "rr": rr,
+        "objetivo_atr": beneficio / atr,
         "lote_teorico": lote_teorico, "lote": lote, "perdida": perdida,
         "perdida_pct": perdida / CAPITAL * 100, "margen": margen,
         "margen_pct": margen / CAPITAL * 100,
@@ -387,10 +388,14 @@ def bloque_markdown(c: dict) -> str:
         "> [!IMPORTANT]",
         "> **Compara esta ficha con la del Módulo 4.3.** Son el mismo trabajo y terminan "
         "distinto: aquella se cayó en el campo 8 porque la relación quedó en 0,67, y esta pasa "
-        "con 2,33. La diferencia no está en el setup ni en la suerte: está en que acá **el stop "
-        "encontró un swing cercano** y el objetivo del rebote quedó lejos. Cuando el stop tiene "
-        "que irse a la distancia fija, la relación no da y la ficha se cae. Eso es el método "
-        "protegiéndote, no fallándote.",
+        f"con {_n(c['rr'])}. La diferencia está en **el objetivo, no en el stop**, y conviene "
+        "ver por qué. El stop de acá quedó cerca, a "
+        f"{_n(c['dist_atr'])} × ATR, y aun así no habría alcanzado: con el objetivo de una "
+        "operación de tendencia esta misma ficha daba 0,97 y se caía igual. Lo que la aprueba "
+        f"es que el objetivo del rebote está a {_n(c['objetivo_atr'])} × ATR, porque la media "
+        "central queda lejos por construcción cuando el precio viene de tocar la banda. En el "
+        "rebote en rango el recorrido disponible es amplio; en las de tendencia, con un "
+        "objetivo fijo, el filtro casi nunca da.",
         "",
         MARCA_FIN,
     ]

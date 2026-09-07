@@ -1300,7 +1300,7 @@ El de noticias (8.3), el del Playbook y el de riesgo/beneficio (8.5) ya quedaron
 | Volumen | 0,02 lotes · riesgo 9.500 pesos (0,95 %) | M7 |
 
 > [!IMPORTANT]
-> **Compara esta ficha con la del Módulo 4.3.** Son el mismo trabajo y terminan distinto: aquella se cayó en el campo 8 porque la relación quedó en 0,67, y esta pasa con 2,33. La diferencia no está en el setup ni en la suerte: está en que acá **el stop encontró un swing cercano** y el objetivo del rebote quedó lejos. Cuando el stop tiene que irse a la distancia fija, la relación no da y la ficha se cae. Eso es el método protegiéndote, no fallándote.
+> **Compara esta ficha con la del Módulo 4.3.** Son el mismo trabajo y terminan distinto: aquella se cayó en el campo 8 porque la relación quedó en 0,67, y esta pasa con 2,33. La diferencia está en **el objetivo, no en el stop**, y conviene ver por qué. El stop de acá quedó cerca, a 1,02 × ATR, y aun así no habría alcanzado: con el objetivo de una operación de tendencia esta misma ficha daba 0,97 y se caía igual. Lo que la aprueba es que el objetivo del rebote está a 2,39 × ATR, porque la media central queda lejos por construcción cuando el precio viene de tocar la banda. En el rebote en rango el recorrido disponible es amplio; en las de tendencia, con un objetivo fijo, el filtro casi nunca da.
 
 <!-- FIN caso-transversal -->
 ---
