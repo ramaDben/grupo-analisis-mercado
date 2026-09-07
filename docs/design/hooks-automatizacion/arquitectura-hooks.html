@@ -92,12 +92,12 @@
 
   <p class="eyebrow">Arquitectura · Hooks de automatización</p>
   <h1>El sistema inmune y la autonomía graduada</h1>
-  <p class="dek">Dos mitades ejecutan el sistema y ninguna decide sola: los hooks de la sesión y el reloj del Programador de tareas consultan el mismo módulo de guardrails. Hacia el cliente existe un único camino, y pasa por el gate. Toda otra ruta al canal está prohibida, y un test de contrato la mantiene así.</p>
+  <p class="dek">Tres mitades ejecutan el sistema y ninguna decide sola: los hooks de una sesión de Claude Code, los de una sesión de Antigravity y el reloj del Programador de tareas consultan el mismo módulo de guardrails. Hacia el cliente existe un único camino, y pasa por el gate. Toda otra ruta al canal está prohibida, y un test de contrato la mantiene así.</p>
 
   <div class="lienzo">
   <svg class="diagrama" viewBox="0 0 1280 744" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="hooks-gi-title hooks-gi-desc">
     <title id="hooks-gi-title">El sistema inmune y la autonomía graduada</title>
-    <desc id="hooks-gi-desc">Diagrama de arquitectura: los hooks de contexto y los hooks guardia de una sesión de Claude Code, junto con el reloj del Programador de tareas, consultan un módulo compartido de guardrails cuya función puede_despachar actúa como único gate hacia el sender de WhatsApp y los canales de la comunidad. Una política de autonomía alimenta el gate, el sender anota cada entrega en una bitácora, y una ruta que intenta alcanzar al cliente sin pasar por el gate se detiene antes de entrar en la zona de salida.</desc>
+    <desc id="hooks-gi-desc">Diagrama de arquitectura: los hooks de contexto y los hooks guardia de una sesión de agente, en Claude Code y en Antigravity, junto con el reloj del Programador de tareas, consultan un módulo compartido de guardrails cuya función puede_despachar actúa como único gate hacia el sender de WhatsApp y los canales de la comunidad. Una política de autonomía alimenta el gate, el sender anota cada entrega en una bitácora, y una ruta que intenta alcanzar al cliente sin pasar por el gate se detiene antes de entrar en la zona de salida.</desc>
 
     <defs>
       <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#A9A5B4"/></marker>
@@ -109,8 +109,9 @@
 
     <!-- ============ ZONAS (antes que flechas y nodos) ============ -->
     <rect x="32" y="72" width="272" height="264" rx="8" fill="rgba(245,243,247,0.02)" stroke="rgba(245,243,247,0.10)" stroke-width="0.8"/>
-    <rect x="86" y="76" width="164" height="12" rx="2" fill="#000000"/>
-    <text x="168" y="85" fill="rgba(245,243,247,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">SESIÓN CLAUDE CODE · EFÍMERA</text>
+    <rect x="72" y="76" width="192" height="12" rx="2" fill="#000000"/>
+    <text x="168" y="85" fill="rgba(245,243,247,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">SESIÓN DE AGENTE · EFÍMERA</text>
+    <text x="168" y="326" fill="rgba(245,243,247,0.34)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.10em">CLAUDE CODE · ANTIGRAVITY</text>
 
     <rect x="464" y="72" width="272" height="264" rx="8" fill="rgba(245,243,247,0.02)" stroke="rgba(245,243,247,0.10)" stroke-width="0.8"/>
     <rect x="526" y="76" width="148" height="12" rx="2" fill="#000000"/>
@@ -265,12 +266,13 @@
 
   <div class="tarjetas">
     <div class="tarjeta">
-      <p class="eyebrow">Mitad izquierda</p>
+      <p class="eyebrow">Las dos sesiones</p>
       <div class="tarjeta-cab"><span class="punto tinta"></span><h3>Trece hooks, siete eventos</h3></div>
       <ul>
         <li><strong>Contexto</strong>, no bloquean: brief operativo en <code>SessionStart</code>, decimales y nombres reales en <code>UserPromptSubmit</code>, aviso en <code>FileChanged</code> cuando la ingesta reescribe las cifras a mitad de conversación, y volcado en <code>PreCompact</code>.</li>
         <li><strong>Guardia</strong>, bloquean: <code>PreToolUse</code> sobre escritura de piezas, shell y git. <code>PostToolUse</code> corre los <code>--check</code> que ya existen en el repo.</li>
         <li><strong>Los dos caros</strong>, apagados por defecto: un verificador con herramientas en <code>Stop</code> y una revisión editorial tipo <code>prompt</code> antes de guardar texto de cliente.</li>
+        <li>Los mismos guardias corren en <strong>Antigravity</strong>, que es el runner de respaldo: se registran en el <code>hooks.json</code> de un plugin y hablan otro dialecto, así que lo que se escribe dos veces es el adaptador y nunca la decisión.</li>
         <li>Un hook solo vive mientras la sesión está abierta. Por eso la producción autónoma no puede colgar de aquí.</li>
       </ul>
     </div>
@@ -281,7 +283,7 @@
       <ul>
         <li><code>scripts/guardrails/</code> son funciones puras que devuelven un veredicto con su motivo. Nunca lanzan.</li>
         <li>El mismo motivo se lee igual en un rechazo de hook, en el registro del reloj y en un fallo de pytest.</li>
-        <li><code>puede_despachar()</code> es el único gate. Lo llaman las dos mitades, y un test de contrato falla si alguna deja de llamarlo.</li>
+        <li><code>puede_despachar()</code> es el único gate. Lo llaman las tres mitades, y un test de contrato falla si alguna deja de llamarlo. Con tres, el test tiene que enumerarlas: uno que compare dos pasaría en verde con la tercera sin guardias.</li>
         <li>La política declara ventana, canales, momentos, tipos y sub-cupo. El interruptor de corte detiene todo en el siguiente latido.</li>
       </ul>
     </div>

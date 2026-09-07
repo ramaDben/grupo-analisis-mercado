@@ -38,34 +38,94 @@ los guardrails en vez de bajarla, así que las dos cosas se diseñan juntas.
 
 ## 2. La limitación que ordena todo el diseño
 
-**Un hook solo corre mientras hay una sesión de Claude Code abierta.**
+> **Enmendado el 2026-09-06.** Esta sección afirmaba que un hook solo corre dentro de una
+> sesión de Claude Code, y de ahí deducía que el sistema tiene **dos mitades**. La premisa
+> era falsa y se midió: Antigravity también tiene hooks, y disparan en modo headless. Lo que
+> sigue es la versión corregida; el texto original quedó en el historial de git.
 
-De ahí se sigue que la producción autónoma 24/7 no puede vivir en un hook: si colgara de ahí,
+**Un hook solo corre mientras hay una sesión de un agente abierta.** Eso sigue siendo cierto
+y sigue ordenando el diseño: la producción autónoma 24/7 no puede colgar de un hook, porque
 dejaría de salir al cerrar el terminal. Vive donde ya vive, en `scripts/reloj_gi.py` bajo el
 Programador de tareas.
 
-Entonces hay **dos mitades que ejecutan el sistema**, y el riesgo obvio es que cada una
-desarrolle su propio criterio. Ese es exactamente el defecto recurrente del repo, el de los
-contratos de nombres: dos módulos que se hablan sin que nada verifique que coinciden (`TPM_CHILE`
-contra `TPM`, los `digits` del cobre declarados con tres valores distintos, `exigir_texto_editorial`
-existiendo en una ruta de render y no en la otra).
+Lo que cambia es **cuántas sesiones hay**. Son dos, no una, y la segunda no es un lujo:
 
-**La respuesta es un solo módulo compartido, y tests de contrato que fallan si alguna mitad
-deja de llamarlo.**
+**Antigravity es el runner de respaldo, no un segundo runner opcional.** Los créditos de
+Claude Code se van a agotar, y cuando eso pase la automatización tiene que seguir corriendo
+entera. La paridad ya está medida en cuatro tramos (`/estado`, `/carrusel`,
+`/informe apertura` y el despacho real al banco de pruebas), así que un guardia que solo
+exista de este lado protege justamente el modo que **no** vamos a estar usando cuando más
+falta haga.
+
+Entonces son **tres mitades**, y el nombre es malo a propósito para que se note que antes
+eran dos:
 
 ```
-┌─ SESIÓN DE CLAUDE CODE (efímera) ─┐   ┌─ PROGRAMADOR DE TAREAS (24/7) ─┐
-│  13 hooks sobre 7 eventos         │   │  reloj_gi.py · latido 15 min   │
-└──────────────┬────────────────────┘   └───────────────┬────────────────┘
-               │                                        │
-               └────────► scripts/guardrails/ ◄─────────┘
-                          funciones puras
-                                 │
-                          puede_despachar()
-                                 │ solo si ok
-                                 ▼
-                     enviar_whatsapp.py ──► los 7 canales
+┌─ SESIÓN CLAUDE CODE ─┐  ┌─ SESIÓN ANTIGRAVITY ─┐  ┌─ PROGRAMADOR (24/7) ─┐
+│ hooks en             │  │ hooks en un plugin,  │  │ reloj_gi.py          │
+│ .claude/settings.json│  │ hooks.json           │  │ latido 15 min        │
+└──────────┬───────────┘  └──────────┬───────────┘  └──────────┬───────────┘
+           │                         │                         │
+           └────────► scripts/guardrails/ ◄─────────────────────┘
+                      funciones puras
+                             │
+                      puede_despachar()
+                             │ solo si ok
+                             ▼
+                 enviar_whatsapp.py ──► los 7 canales
 ```
+
+El riesgo es el mismo de antes y ahora es mayor: que cada mitad desarrolle su propio
+criterio. Es el defecto recurrente del repo, el de los contratos de nombres (`TPM_CHILE`
+contra `TPM`, los `digits` del cobre declarados con tres valores distintos,
+`exigir_texto_editorial` existiendo en una ruta de render y no en la otra).
+
+**La respuesta sigue siendo un solo módulo compartido, y tests de contrato que fallan si
+alguna mitad deja de llamarlo.** Con tres mitades el test tiene que enumerarlas: uno que
+compare Claude Code contra el reloj pasaría en verde con Antigravity sin guardias.
+
+### 2.1 Los dos dialectos, y por qué no se escriben dos juegos de scripts
+
+Medido contra `agy 1.1.27` el 2026-09-06. Los dos runners hacen lo mismo con formas
+distintas:
+
+| | Claude Code | Antigravity |
+|---|---|---|
+| Dónde se registran | `.claude/settings.json` (versionado) | `hooks.json` **dentro de un plugin** |
+| Nombre de la herramienta | `Write`, `Edit`, `Bash`, `PowerShell` | `write_to_file`, `run_command` |
+| Dónde viene el comando | la entrada del evento | `toolCall.args.CommandLine` |
+| Cómo se niega | `hookSpecificOutput.permissionDecision` | `{"decision": "deny"}`, plano |
+| Qué pasa si el hook muere | bloquea | bloquea |
+
+Tres cosas del lado de Antigravity que costaron encontrarse y conviene no volver a
+averiguar:
+
+1. **`settings.json` no acepta una clave `hooks`.** Tampoco sirven `./.claude/hooks.json`
+   ni `~/.claude/hooks.json`, que es lo que dicen los autodocs y está desactualizado. Van en
+   un plugin, y el plugin se instala en `~/.gemini/config/plugins/<nombre>/`.
+2. **El hook corre con el directorio del plugin como cwd**, así que la ruta de su script va
+   relativa y sin comillas. El plugin tiene que ser autocontenido.
+3. **`/hooks` reportó `[]` con un hook demostrablemente cargado y bloqueando.** Es un bug de
+   listado: la verificación es conductual o no es.
+
+**Escribir dos juegos de scripts de hook sería el defecto de los contratos de nombres un
+nivel más arriba**, y el peor de todos, porque el que divergiera sería el que corre cuando
+ya no queda el otro. Lo que se escribe una sola vez es la decisión (`scripts/guardrails/`,
+funciones puras); lo que se escribe dos veces es **el adaptador**, que traduce la entrada
+del runner a los argumentos del guardia y el veredicto a la forma que ese runner entiende.
+El adaptador no decide nada, y un test de contrato compara que los dos registren el mismo
+conjunto de guardias.
+
+### 2.2 Consecuencias sobre el resto de este documento
+
+- **§7.3** movía el hook de ingesta suponiendo un solo runner. `scripts/hook_ingesta_macro.py`
+  está marcado `ambito: claude` en `CLAUDE.md`, y eso ya no corresponde: la ingesta le sirve
+  igual a Antigravity, que además es el que va a arrancar sesiones cuando no queden créditos.
+- **§8** suma un caso: cada guardia se prueba con las dos formas de entrada, no solo con la
+  de Claude Code.
+- **§9** no cambia de orden. La fase 1 entrega el módulo compartido, que es lo que las tres
+  mitades comparten; el plugin de Antigravity es trabajo de la fase 2 en adelante, cuando
+  haya guardias que registrar.
 
 ## 3. El módulo compartido
 
@@ -518,15 +578,23 @@ Tres cambios, y son reescritura, no parche:
 - Sección nueva **"El sistema inmune: los hooks"**, con los 13 y la razón de cada uno.
 - El párrafo del reloj deja de afirmar que solo prepara, y pasa a describir el gate.
 
-### 7.3 El hook de ingesta se mueve
+### 7.3 El hook de ingesta se mueve, y deja de ser de un solo runner
 
 De `scripts/hook_ingesta_macro.py` a `scripts/hooks/hook_ingesta_macro.py`, con los demás. Se
-actualizan `.claude/settings.json` y el párrafo de `CLAUDE.md`. Es barato ahora, porque ese
-trabajo todavía está sin commitear.
+actualizan `.claude/settings.json` y el párrafo de `CLAUDE.md`.
+
+**Ese párrafo está marcado `ambito: claude` y eso ya no corresponde** (ver §2). La ingesta le
+sirve igual a Antigravity, que además es el runner que va a abrir sesiones cuando no queden
+créditos: dejar el brief de datos macro de un solo lado significa que el runner de respaldo
+arranca sin saber si las cifras que va a citar son de hoy.
+
+Ya no es gratis, porque el hook se commiteó el 2026-09-06 (PR #221). El movimiento cuesta
+ahora una entrada en `.claude/settings.json`, el registro equivalente en el plugin de
+Antigravity y el ajuste de `ambito`.
 
 ## 8. Pruebas
 
-Cada módulo de `guardrails/` lleva su test unitario. Además, **diez tests de contrato**, que
+Cada módulo de `guardrails/` lleva su test unitario. Además, **once tests de contrato**, que
 son los que impiden que el sistema se desarme con el tiempo:
 
 | Test | Qué impide |
@@ -535,6 +603,7 @@ son los que impiden que el sistema se desarme con el tiempo:
 | `test_todo_despacho_pasa_por_el_gate` | una segunda ruta al sender sin freno |
 | `test_el_reloj_no_llama_al_sender_directo` | saltarse el gate desde el reloj |
 | `test_hooks_registrados_existen` | un `settings.json` que apunta a un script borrado |
+| `test_los_dos_runners_registran_los_mismos_guardias` | que Antigravity corra sin las guardias que Claude Code sí tiene |
 | `test_matchers_cubren_los_dos_shells` | un guardia que solo mira `Bash` y deja pasar PowerShell |
 | `test_ancla_usa_el_vocabulario_del_escaner` | escribir "Chile" donde el calendario dice `chile`, y dejar el anclaje inerte |
 | `test_las_dos_ventanas_en_los_tres_desfases` | que el USD/CLP se juzgue con el reloj de Nueva York |
@@ -556,20 +625,36 @@ campos que cada tipo declara, y falla si alguno pide texto que nadie va a escrib
 visiblemente**. La sesión abre igual y el guardia simplemente no corre. Es el mismo modo de
 falla silenciosa que motiva todo este diseño, aplicado al diseño mismo.
 
+**`test_los_dos_runners_registran_los_mismos_guardias`** es la versión de esa nota para el
+runner de respaldo, y falla del mismo modo callado: Antigravity abriría igual, sin guardias, y
+nadie lo notaría hasta que una pieza mala saliera por ese lado. El test compara el conjunto
+registrado en `.claude/settings.json` contra el del `hooks.json` del plugin, y **enumera las
+tres mitades**: uno que comparara solo dos pasaría en verde con la tercera desprotegida.
+
+A esto se suma un caso en cada test unitario de guardia: **se prueba con las dos formas de
+entrada**, la de Claude Code y la de Antigravity (§2.1). Probar solo una deja al adaptador del
+otro sin cobertura, y el adaptador es lo único que se escribe dos veces.
+
 ## 9. Fases de construcción
 
 Una rama y un PR por fase, en orden de retorno.
 
 | Fase | Qué entra | Por qué va ahí |
 |---|---|---|
-| **0** | Commitear el hook de ingesta pendiente | Está terminado y documentado, y bloquea el resto |
-| **1** | `guardrails/` + H5, H6, H8 | Máximo retorno: cubre las fallas que ya llegaron al cliente |
+| **0** | Commitear el hook de ingesta pendiente ✅ *hecho, PR #221* | Está terminado y documentado, y bloquea el resto |
+| **1** | `guardrails/` ✅ *PR #222* + H5, H6, H8 + el plugin de Antigravity con su adaptador | Máximo retorno: cubre las fallas que ya llegaron al cliente |
 | **2** | H3, H4 | Barato, y elimina el error de nombres de raíz |
 | **3a** | `despacho.py` + H7 + política + tests reescritos + `CLAUDE.md` | El gate. Depende de la fase 1 |
 | **3b** | Despacho autónomo **generado** (`contexto_macro`, `suplemento_canal`) en el banco de pruebas | Lo único que el reloj puede producir entero hoy |
 | **3c** | Despacho autónomo **diferido**: marca `_aprobada_para_despacho` y su huella | Da el "escribo a las 08:00 y sale a las 10:00" sin sacar al humano |
 | **4** | H9, H12, H13 | Los caros, medibles y apagables |
 | **5** | H10, H11 | Cierre |
+
+**El plugin de Antigravity entra en la fase 1, junto a los primeros guardias.** Sale del
+módulo compartido: en cuanto exista un guardia registrado de un solo lado, el runner de
+respaldo queda desprotegido, y ese es justamente el que va a estar corriendo cuando se acaben
+los créditos. Aplazarlo a una fase posterior sería aceptar una ventana en la que la protección
+depende de cuál runner abrió la sesión.
 
 La fase 3 se parte en tres porque **3b es la primera vez que algo sale al mundo sin que nadie
 lo mire**. Merece su propio PR, su propia semana de observación en el banco de pruebas y su
