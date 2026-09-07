@@ -1,0 +1,23 @@
+{
+  "_meta": {
+    "actualizado": "2026-09-06",
+    "decision": "Decision del director el 2026-09-06: la cuenta que alimenta el sistema es la 51492.",
+    "por_que_existe": "Los precios de MT5 alimentan los stops del Playbook, y un stop calculado sobre otra cuenta es un stop de otro instrumento: distinto spread, distinto tamano de contrato, distinta moneda de resultado. El repo declaraba la cuenta en tres archivos de TEXTO (CLAUDE.md, .agents/rules/proyecto.md y una nota de activos.json) y nada verificaba el terminal. Es el defecto recurrente del repo: dos lados que se hablan por nombre sin que nada compruebe que coinciden.",
+    "como_se_cambia": "Se edita este archivo y se corre la cadena de datos de nuevo. Cambiar la cuenta en el terminal sin tocar esto deja el guardia en rojo, que es el lado correcto del error.",
+    "el_caso_que_lo_motivo": "El 2026-09-06 el terminal expuso DOS cuentas segun como se conectara: el camino del repo (mt5_client.connect(), que se engancha al terminal que ya corre) daba la 51492, y un mt5.initialize() pelado en un proceso nuevo daba la 51256. La ingesta usa el primer camino, asi que los datos estaban BIEN. Pero el segundo camino es alcanzable, y connect() cae en el cuando el terminal NO esta abierto, porque el .env del repo no tiene MT5_LOGIN/MT5_PASSWORD/MT5_SERVER. O sea que el riesgo es la corrida automatica del latido con el terminal cerrado, y sin sello en el archivo nadie lo notaria."
+  },
+  "login": 51492,
+  "moneda": "CLP",
+  "titular": "Grupo Inteligencia SpA",
+  "_nota_moneda": "La cuenta esta en CLP, asi que MT5 ya devuelve pesos y no hay que convertir el resultado. Ojo: terminal_info().company dice 'MetaQuotes Ltd.' y NO es el broker.",
+  "historial": [
+    {
+      "login": 51142,
+      "hasta": "2026-08-25"
+    },
+    {
+      "login": 51492,
+      "desde": "2026-08-25"
+    }
+  ]
+}

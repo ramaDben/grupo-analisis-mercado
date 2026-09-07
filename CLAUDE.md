@@ -170,7 +170,7 @@ Nunca se dibuja un sustituto: sin terminal, el informe sale sin imágenes y lo d
 avisos. Es la diferencia con `scripts/generar_graficos_drivers.py`, que tiene las series
 escritas a mano y produce piezas de aspecto institucional a partir de números que nadie
 midió. Requiere `uv sync --extra informe` (matplotlib es opcional, mismo criterio que
-`stories`). Brent **sí** tiene ticker (`BRENT.spot`, verificado contra la cuenta 51492 el
+`stories`). Brent **sí** tiene ticker (`BRENT.spot`, verificado contra la cuenta declarada en `config/cuenta_mt5.json` el
 2026-09-02): el mapeo lo apuntaba a `None` afirmando que el broker no lo ofrecía, y
 no era cierto. Lo que Brent no tiene es `brent.jpg`, así que queda fuera del escáner
 hasta que exista la imagen, pero ya recibe niveles y gráfico. El mapeo
@@ -965,6 +965,42 @@ sesgo que **parece** fresco. Peor que fallar es fallar de forma convincente.
 (`estado_ejecucion.json`, `latest_prices_summary.json`, `macro_bias_output.json`) y
 aplica el mismo umbral de staleness del Playbook vía `bias_reader` — inventar una
 segunda regla de vencimiento sería el mismo error que tener dos fórmulas de ATR.
+
+### La cuenta de MT5 se declara en un solo lugar
+
+`config/cuenta_mt5.json` dice cuál es (**51492**, decisión del director el
+2026-09-06), y `scripts/guardrails/cuenta.py` la verifica. Antes vivía en tres
+archivos de **texto** (este, `.agents/rules/proyecto.md` y una nota de
+`config/activos.json`) y nada comprobaba el terminal.
+
+**`broker: MT5` es cierto y no alcanza: MT5 no es una sola cuenta.** El spread, el
+tamaño de contrato y la moneda de resultado son de la cuenta concreta, así que un
+stop calculado sobre otra cuenta es un stop de otro instrumento. Cada archivo de
+serie y el resumen llevan ahora el campo `cuenta`, y `--estado` vuelve el veredicto
+no utilizable si algún activo no salió de la declarada.
+
+Tres cosas que conviene no revertir:
+
+1. **El guardia lee el SELLO del archivo, no el terminal en vivo.** Lo que importa
+   no es dónde está el terminal ahora, es qué cuenta produjo los datos que el motor
+   va a usar. Y `--estado` tiene que poder correr sin MT5 abierto.
+2. **Un sello ausente no pasa.** Para un stop, "no sé de qué cuenta salió esto" vale
+   lo mismo que "salió de la equivocada". Si la ausencia fuera permiso, bastaría con
+   que el extractor dejara de estampar el campo.
+3. **El aviso de fuente se reporta antes que el de cuenta.** Un activo de yfinance
+   sale con la cuenta en `None` y los dos guardias tendrían algo que decir; manda el
+   de fuente, porque si el precio no salió de MT5 el problema no es la cuenta.
+
+> [!CAUTION]
+> **`mt5_client.connect()` no es determinista, y ahí está el riesgo de la corrida
+> automática.** El `.env` del repo **no tiene** `MT5_LOGIN` / `MT5_PASSWORD` /
+> `MT5_SERVER`, así que `connect()` se engancha al terminal que **ya está corriendo**
+> y devuelve su cuenta. Con el terminal abierto en la 51492 eso es correcto. Con el
+> terminal cerrado llama a `initialize()` sin credenciales, y eso el 2026-09-06
+> devolvió la cuenta **51256** en un proceso nuevo: el camino a la cuenta equivocada
+> existe y es alcanzable. Es exactamente el escenario del latido de las 09:30 con el
+> terminal cerrado. Llenar esas tres claves en `.env` lo volvería determinista; hasta
+> entonces, el sello y el guardia son lo que lo hace visible.
 
 **Avisa cuando los precios no vienen de MT5.** El extractor cae a yfinance si el
 terminal no le sirve un símbolo, y ese fallback es correcto pero **no es equivalente**:

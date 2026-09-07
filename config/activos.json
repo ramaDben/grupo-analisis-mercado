@@ -218,7 +218,7 @@
       ],
       "horario_mercado": "24h",
       "rotacion_diaria": false,
-      "_nota_digits": "El broker cotiza el cobre por tonelada metrica en enteros: symbol_info('COPPER').digits es 0 y su bid 14197.0 (verificado 2026-09-03, cuenta 51492). No confundir con COBRE_COMEX de commodities_data.json, que es el precio COMEX en USD/libra y va con 4 decimales: son dos series del mismo metal en dos unidades."
+      "_nota_digits": "El broker cotiza el cobre por tonelada metrica en enteros: symbol_info('COPPER').digits es 0 y su bid 14197.0 (verificado 2026-09-03, cuenta declarada en config/cuenta_mt5.json). No confundir con COBRE_COMEX de commodities_data.json, que es el precio COMEX en USD/libra y va con 4 decimales: son dos series del mismo metal en dos unidades."
     },
     {
       "ticker": "BTC/USD",

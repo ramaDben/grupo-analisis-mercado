@@ -23,6 +23,7 @@ if str(RAIZ / "scripts") not in sys.path:
     sys.path.insert(0, str(RAIZ / "scripts"))
 
 import pipeline_datos as pd_  # noqa: E402
+from guardrails import cuenta as cuenta_mt5  # noqa: E402
 
 
 def _escribir(ruta: Path, payload: dict) -> None:
@@ -34,6 +35,12 @@ def _hace(horas: float) -> str:
     return (datetime.now(timezone.utc) - timedelta(hours=horas)).isoformat()
 
 
+# La cuenta que declara config/cuenta_mt5.json. Se lee de ahi y no se escribe a
+# mano: un numero copiado en el test es otro contrato por nombre, y quedaria
+# atras el dia que el director cambie de cuenta.
+CUENTA = cuenta_mt5.login_esperado()
+
+
 @pytest.fixture
 def base(tmp_path):
     """Las tres fuentes de fecha, todas frescas."""
@@ -42,8 +49,10 @@ def base(tmp_path):
         "status_por_fuente": {"usa": "OK", "chile": "OK"},
         "errores_por_fuente": {},
     })
+    # El sello de cuenta va aunque la fixture no declare fuente: un resumen de
+    # precios sin sello es sospechoso por si mismo, y el guardia lo trata en rojo.
     _escribir(tmp_path / "DATA PRECIOS OHLC" / "latest_prices_summary.json", {
-        "as_of_utc": _hace(1), "activos": {"USDCLP": {}},
+        "as_of_utc": _hace(1), "activos": {"USDCLP": {"H1_cuenta": CUENTA}},
     })
     _escribir(tmp_path / "DATA DRIVERS USDCLP" / "macro_bias_output.json", {
         "as_of_utc": _hace(1),
@@ -195,7 +204,10 @@ def _precios_con_fuentes(base, fuentes: dict[str, str], as_of_h: float = 1.0):
     _escribir(base / "DATA PRECIOS OHLC" / "latest_prices_summary.json", {
         "as_of_utc": _hace(as_of_h),
         "activos": {
-            act: {"H1": {"close": 1.0}, "H1_fuente": f, "D1": {"close": 1.0}, "D1_fuente": f}
+            act: {
+                "H1": {"close": 1.0}, "H1_fuente": f, "H1_cuenta": CUENTA if f == "MT5" else None,
+                "D1": {"close": 1.0}, "D1_fuente": f, "D1_cuenta": CUENTA if f == "MT5" else None,
+            }
             for act, f in fuentes.items()
         },
     })
@@ -262,3 +274,71 @@ def test_un_solo_activo_en_fallback_tambien_se_nombra(base):
     assert not precios.fresco
     assert "1 de 6" in precios.error
     assert "WTI" in precios.error
+
+
+# --- El guardia de cuenta: MT5 no es una sola cuenta ---
+
+def test_una_cuenta_ajena_se_reporta_aunque_todo_venga_de_mt5(base):
+    """El caso del 2026-09-06.
+
+    La cadena reportó `LISTO: relojes frescos y el modelo ve` y las seis series
+    se commitearon. `broker: MT5` era cierto y no alcanzaba: **MT5 no es una sola
+    cuenta**, y el spread, el tamaño de contrato y la moneda de resultado son de
+    la cuenta concreta. Un stop sobre otra cuenta es un stop de otro instrumento.
+    """
+    _escribir(base / "DATA PRECIOS OHLC" / "latest_prices_summary.json", {
+        "as_of_utc": _hace(1),
+        "activos": {
+            "USDCLP": {"H1_fuente": "MT5", "H1_cuenta": CUENTA},
+            "XAUUSD": {"H1_fuente": "MT5", "H1_cuenta": 51256},
+        },
+    })
+    est = pd_.estado_datos(base)
+    precios = next(r for r in est.relojes if r.nombre == "precios")
+    assert not precios.fresco
+    # Se nombra el activo y las dos cuentas: saber que "algo esta mal" no dice
+    # que revisar, y ese fue el problema del caso de yfinance.
+    assert "XAUUSD" in precios.error and "51256" in precios.error
+    assert not est.listo
+
+
+def test_precios_sin_sello_de_cuenta_no_pasan(base):
+    """No saber de qué cuenta salió el precio vale lo mismo que saber que salió
+    de la equivocada. Es lo que hace que el sello no se pueda dejar de escribir
+    sin que nadie lo note."""
+    _escribir(base / "DATA PRECIOS OHLC" / "latest_prices_summary.json", {
+        "as_of_utc": _hace(1),
+        "activos": {"USDCLP": {"H1_fuente": "MT5"}},
+    })
+    est = pd_.estado_datos(base)
+    precios = next(r for r in est.relojes if r.nombre == "precios")
+    assert not precios.fresco
+    assert "cuenta" in precios.error.lower()
+
+
+def test_un_activo_que_mezcla_dos_cuentas_no_pasa(base):
+    """Mismo criterio que la fuente: un activo con H1 de una cuenta y D1 de otra
+    no está "medio bien", está mezclando dos instrumentos."""
+    _escribir(base / "DATA PRECIOS OHLC" / "latest_prices_summary.json", {
+        "as_of_utc": _hace(1),
+        "activos": {"USDCLP": {
+            "H1_fuente": "MT5", "H1_cuenta": CUENTA,
+            "D1_fuente": "MT5", "D1_cuenta": 51256,
+        }},
+    })
+    est = pd_.estado_datos(base)
+    assert not next(r for r in est.relojes if r.nombre == "precios").fresco
+
+
+def test_el_fallback_de_fuente_se_reporta_antes_que_la_cuenta(base):
+    """El orden importa para no mandar a revisar lo que no corresponde.
+
+    Un activo de yfinance sale con la cuenta en `None`, así que los dos guardias
+    tendrían algo que decir. El que manda es el de fuente: si el precio no salió
+    de MT5, el problema no es en qué cuenta estaba el terminal.
+    """
+    _precios_con_fuentes(base, {"USDCLP": "MT5", "XAUUSD": "YFINANCE"})
+    est = pd_.estado_datos(base)
+    precios = next(r for r in est.relojes if r.nombre == "precios")
+    assert not precios.fresco
+    assert "no vienen de MT5" in precios.error

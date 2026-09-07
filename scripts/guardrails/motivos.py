@@ -102,6 +102,13 @@ MOTIVOS: dict[str, Motivo] = {
         "acentos entre etapas. El puente va en Python con `subprocess` en binario.",
         publicable=False,
     ),
+    # --- cuenta.py --------------------------------------------------------
+    "cuenta_mt5_inesperada": Motivo(
+        "El precio salió de una cuenta de MT5 distinta a la que el sistema usa, o "
+        "no dice de cuál salió. Un stop sobre otra cuenta es un stop de otro "
+        "instrumento: distinto spread, contrato y moneda de resultado.",
+        publicable=False,
+    ),
     # --- infraestructura --------------------------------------------------
     "error_interno": Motivo(
         "El guardrail no pudo evaluar la entrada. Fail-closed: no se aprueba lo "

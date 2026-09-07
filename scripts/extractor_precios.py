@@ -148,6 +148,27 @@ def descargar_velas_mt5(tickers: list[str] | str, timeframe: str, n_bars: int = 
     return None
 
 
+def cuenta_conectada() -> int | None:
+    """El login de la cuenta a la que esta conectado el terminal, o None.
+
+    Se estampa en cada archivo para que la serie diga de que cuenta salio. El
+    2026-09-06 el terminal quedo en la 51256 y la cadena reporto `LISTO`: el
+    campo `broker: MT5` era cierto y no alcanzaba, porque MT5 no es una sola
+    cuenta. Un stop calculado sobre otra cuenta es un stop de otro instrumento.
+
+    Nunca lanza: sin terminal devuelve None, y el guardia de
+    `guardrails/cuenta.py` trata la ausencia como rojo.
+    """
+    try:
+        from market_data_mcp import mt5_client
+        mt5_client.connect()
+        import MetaTrader5 as mt5
+        info = mt5.account_info()
+        return int(info.login) if info else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def descargar_velas_yfinance(yf_symbol: str, timeframe: str, n_bars: int = 10000) -> pd.DataFrame | None:
     """Fallback a yfinance para entornos sin MT5 o terminal cerrado."""
     try:
@@ -235,6 +256,10 @@ def extraer_activo(asset_id: str, timeframe: str = "H1", n_bars: int = 10000) ->
         "timeframe": timeframe,
         "source": fuente,
         "broker": "MT5" if fuente == "MT5" else "YFINANCE",
+        # De QUE cuenta salio, no solo de que broker. `broker: MT5` es cierto y
+        # no alcanza: MT5 no es una sola cuenta, y los stops del Playbook
+        # dependen del spread y del contrato de la cuenta concreta.
+        "cuenta": cuenta_conectada() if fuente == "MT5" else None,
         "timezone": "UTC",
         "as_of_utc": datetime.now(timezone.utc).isoformat(),
         "bar_count": len(velas_list),
@@ -281,6 +306,7 @@ def ejecutar_extraccion_precios() -> dict:
                     json.dump(data, f, indent=2, ensure_ascii=False)
                 resumen["activos"][asset_id][tf] = data["snapshot_actual"]
                 resumen["activos"][asset_id][f"{tf}_fuente"] = data["source"]
+                resumen["activos"][asset_id][f"{tf}_cuenta"] = data["cuenta"]
                 print(f"[OK] Precios {asset_id} {tf} ({data['source']}) -> {archivo_out.name}")
             else:
                 print(f"[WARN] No se pudieron obtener precios para {asset_id} {tf}")
