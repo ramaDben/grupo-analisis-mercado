@@ -1089,6 +1089,10 @@ def preparar(
              + ", ".join(barridos)] if barridos else []
         ),
         "campos_por_escribir": list(CAMPOS_EDITORIALES),
+        # Si el escaner pudo leer el mercado. Viaja hasta el codigo de salida
+        # para que el reloj distinga una tanda vacia por gates (resultado
+        # valido) de una vacia por no haber terminal (falla que se reintenta).
+        "terminal_ok": resultado.get("terminal_ok"),
     }
 
 
@@ -1641,7 +1645,11 @@ def main(argv: list[str] | None = None) -> int:
             modo_matriz=args.matriz,
             forzar=args.forzar,
         )
-        nombre = res.get("nombre_sesion", res["nombre_tanda"])
+        # `dict.get(k, default)` evalua el default SIEMPRE, asi que la version
+        # anterior leia res["nombre_tanda"] incluso cuando "nombre_sesion" estaba,
+        # y reventaba con KeyError ante un resultado que solo trae el nuevo. En
+        # produccion las dos claves existen, asi que no se veia.
+        nombre = res.get("nombre_sesion") or res.get("nombre_tanda", "")
         print(f"\nSESIÓN: {nombre} ({res['hora_real']} hrs hora Chile)")
         print(f"Directorio: {res['directorio']}")
         print(f"\nPAYLOADS ({len(res['payloads'])})")
@@ -1658,6 +1666,17 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"  - {a}")
         print(f"\nFalta escribir en cada payload: {', '.join(res['campos_por_escribir'])}")
         print(f"Despues: uv run --extra stories python scripts/pipeline_carrusel.py --rendir {res['directorio']}")
+        # **Sin terminal se sale distinto de cero, y eso es lo que salva la
+        # pieza.** Una tanda vacia porque los gates excluyeron todo es un
+        # resultado valido y sale 0; una vacia porque no se pudo leer el
+        # mercado es una falla. Hasta el 2026-09-06 las dos salian 0, asi que
+        # el reloj anotaba el momento como salido y la tanda se perdia por el
+        # dia entero. Se compara con `is False` y no con `not`: `None`
+        # significa que no habia terminal que consultar (analizador inyectado).
+        if res.get("terminal_ok") is False:
+            print("\nSIN TERMINAL: no se pudo leer el mercado, asi que esto NO "
+                  "es una tanda vacia valida. Abre MetaTrader 5 y reintenta.")
+            return 2
         return 0
 
     if args.despachar:

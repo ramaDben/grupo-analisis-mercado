@@ -1303,3 +1303,67 @@ def test_las_dos_rutas_comparten_un_solo_guardia_editorial():
         assert guardia.__name__ in fuente, (
             f"{funcion.__name__} no usa {guardia.__name__}: el freno se duplicó"
         )
+
+
+# ── Sin terminal no es una tanda vacia valida ────────────────────────────────
+#
+# Medido el 2026-09-06 con MetaTrader5 fuera del venv: `--preparar` devolvio 0
+# payloads, imprimio "no se pudo conectar a MT5" y salio con **codigo 0**, junto
+# al mensaje "ningun activo puntuo sobre 0: es un resultado valido, no una falla".
+#
+# Las dos cosas son ciertas por separado y juntas pierden la pieza. El reloj juzga
+# el exito por el codigo de salida (y ya tiene tests de que un codigo distinto de
+# cero deja el momento pendiente), asi que con 0 anotaba el momento como salido y
+# la tanda se perdia por el dia entero.
+#
+# Lo que hay que distinguir son DOS ceros: vacio porque los gates excluyeron todo
+# (valido) y vacio porque no se pudo leer el mercado (falla).
+
+def _preparar_con(monkeypatch, terminal_ok, payloads=()):
+    monkeypatch.setattr(pc, "preparar", lambda *a, **k: {
+        "sesion": "asiatica", "nombre_sesion": "Sesion Asiatica",
+        "hora_chile_tanda": "22:30", "hora_real": "22:30",
+        "directorio": "/tmp/x", "payloads": list(payloads),
+        "problemas": [], "suplementos": [], "avisos": [],
+        "campos_por_escribir": list(pc.CAMPOS_EDITORIALES),
+        "terminal_ok": terminal_ok,
+    })
+    return pc.main(["--preparar"])
+
+
+def test_preparar_sin_terminal_sale_distinto_de_cero(monkeypatch, capsys):
+    assert _preparar_con(monkeypatch, terminal_ok=False) == 2
+    assert "SIN TERMINAL" in capsys.readouterr().out
+
+
+def test_una_tanda_vacia_con_terminal_si_sale_cero(monkeypatch):
+    """La otra mitad, y la que evita que esto sea solo severidad.
+
+    Un canal vaciado por los gates es un resultado valido y el momento tiene que
+    anotarse: si tambien quedara pendiente, el reloj reintentaria la misma nada
+    cada quince minutos hasta que se cierre la ventana.
+    """
+    assert _preparar_con(monkeypatch, terminal_ok=True) == 0
+
+
+def test_un_analizador_inyectado_no_cuenta_como_falla(monkeypatch):
+    """`terminal_ok` en None significa "no aplica", no "fallo".
+
+    Es el caso de los tests y de cualquier llamador que inyecte su analizador: no
+    hay terminal que consultar. Por eso se compara con `is False` y no con `not`.
+    """
+    assert _preparar_con(monkeypatch, terminal_ok=None) == 0
+
+
+def test_el_escaner_declara_si_pudo_leer_el_mercado():
+    """El hecho viaja como campo, no como texto de un aviso.
+
+    Reconocer la cadena "no se pudo conectar a MT5" desde el otro lado seria el
+    defecto recurrente del repo: dos modulos que se hablan por nombre sin que nada
+    verifique que coinciden.
+    """
+    import screener_gi
+
+    ok, avisos = screener_gi._conectar_terminal()
+    assert isinstance(ok, bool)
+    assert ok is (avisos == [])

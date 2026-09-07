@@ -7,6 +7,10 @@ dependencies = [
     "fastmcp",
     "pandas",
     "pyarrow>=25.0.1",
+    # `mt5_client.connect()` la usa para leer el .env con las credenciales de MT5.
+    # Estaba en el venv por via transitiva y sin declarar, que es como funciona
+    # aca y se rompe en un clon nuevo.
+    "python-dotenv>=1.0",
     "pyyaml>=6.0.3",
     "requests>=2.34.2",
     "tenacity>=9.1.4",

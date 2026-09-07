@@ -13,6 +13,7 @@ lo que permite mockear `get_rates` y probar el camino feliz de la tool sin MT5.
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import pandas as pd
 
@@ -34,17 +35,46 @@ TIMEFRAME_MAP: dict[str, str] = {
 }
 
 
+def _cargar_env() -> None:
+    """Carga el `.env` del repo si está, sin pisar lo que ya venga del entorno.
+
+    **Por qué vive acá y no en el llamador.** Esta función es el único lugar del
+    repo que lee las cuatro claves de MT5, y hasta el 2026-09-06 nadie cargaba el
+    `.env` en el camino de la ingesta: solo lo hacían los extractores macro, para
+    FRED y el BCCh. O sea que se podían escribir las credenciales en el `.env` y
+    quedaban **inertes**, y `connect()` caía al camino sin credenciales sin decir
+    nada. Es el mismo defecto que `destino_de_pruebas`, que existía con tests y
+    sin ningún camino del CLI que lo alcanzara.
+
+    No pisa el entorno (`override=False`, el defecto de la librería): una
+    variable puesta a mano o por el proceso padre gana sobre el archivo.
+    """
+    try:
+        from dotenv import load_dotenv
+    except ModuleNotFoundError:  # pragma: no cover - CI sin la dependencia
+        return
+    load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+
+
 def connect() -> None:
     """Inicializa la conexión con MT5 usando credenciales del entorno si existen.
 
-    Lee MT5_LOGIN / MT5_PASSWORD / MT5_SERVER / MT5_PATH del entorno (cargados
-    desde el .env propio del repo en el lifespan del server). Idempotente: si el
-    terminal ya está conectado, no hace nada.
+    Lee MT5_LOGIN / MT5_PASSWORD / MT5_SERVER / MT5_PATH, del entorno o del `.env`
+    del repo. Idempotente: si el terminal ya está conectado, no hace nada.
+
+    **Con credenciales es determinista; sin ellas depende de qué terminal esté
+    abierto.** Sin login, `initialize()` se engancha a lo que encuentre, y el
+    2026-09-06 eso devolvió la cuenta 51256 en vez de la 51492 en un proceso
+    nuevo. Importa porque el latido del reloj corre cuando nadie está mirando.
+    La cuenta que el sistema espera se declara en `config/cuenta_mt5.json` y la
+    verifica `guardrails/cuenta.py`.
     """
     import MetaTrader5 as mt5
 
     if mt5.terminal_info() is not None:
         return  # Ya conectado
+
+    _cargar_env()
 
     # `... or 0` cubre tanto la clave ausente como la cadena vacía (p.ej. cuando
     # se copia .env.example sin rellenar): int("") lanzaría ValueError.
