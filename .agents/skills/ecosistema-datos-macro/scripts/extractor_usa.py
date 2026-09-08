@@ -25,6 +25,7 @@ load_dotenv(BASE_DIR / ".env")
 
 OUTPUT_DIR = BASE_DIR / "data central" / "DATA USA" / "raw"
 OUTPUT_FILE = OUTPUT_DIR / "treasury_fed_data.json"
+OUTPUT_FILE_HISTORICO = OUTPUT_DIR / "curva_fred_historico.json"
 
 FRED_API_KEY = os.getenv("FRED_API_KEY", "")
 
@@ -49,8 +50,16 @@ def extraer_buybacks_tesoro() -> list:
     return data.get("data", [])
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), reraise=True)
-def extraer_serie_fred(series_id: str, api_key: str) -> dict:
-    """Extrae una serie de FRED usando la API oficial si hay key, o endpoint publico."""
+def extraer_serie_fred(series_id: str, api_key: str, limite: int = 30) -> dict:
+    """Extrae una serie de FRED usando la API oficial si hay key, o endpoint publico.
+
+    `limite` son las observaciones mas recientes que se piden. La corrida diaria
+    usa 30 y hace UPSERT, asi que la historia se acumula de a poco: por eso en
+    septiembre de 2026 las series de tasas empezaban en julio de ese ano, dos
+    meses, y con eso no se puede fechar cuando ocurrio cada regimen macro. El
+    relleno historico pasa un limite grande UNA vez (`--historico`) y desde ahi
+    la corrida diaria solo agrega el dia nuevo.
+    """
     if api_key and api_key != "tu_api_key_de_fred_aqui":
         url = "https://api.stlouisfed.org/fred/series/observations"
         params = {
@@ -58,7 +67,7 @@ def extraer_serie_fred(series_id: str, api_key: str) -> dict:
             "api_key": api_key,
             "file_type": "json",
             "sort_order": "desc",
-            "limit": 30
+            "limit": limite
         }
         resp = requests.get(url, params=params, timeout=15)
         resp.raise_for_status()
@@ -89,6 +98,44 @@ def extraer_serie_fred(series_id: str, api_key: str) -> dict:
         # Retornar ultimos 30 ordenados
         fechas_ordenadas = sorted(obs.keys(), reverse=True)[:30]
         return {k: obs[k] for k in fechas_ordenadas}
+
+SERIES_CURVA = ("DGS2", "DGS10", "DGS30", "DFF", "DFII10", "T10YIE")
+
+
+def rellenar_historico_fred(limite: int = 100000) -> dict:
+    """Descarga la serie COMPLETA de cada tasa a un archivo aparte.
+
+    **Va a otro archivo a proposito.** `treasury_fed_data.json` se reescribe
+    entero en cada ingesta y se commitea con ella, asi que meterle medio siglo de
+    historia dejaria un blob de megabytes por dia en el repo. Es el mismo
+    criterio con el que las series intradia de `DATA PRECIOS OHLC` estan
+    gitignoreadas: lo que se reescribe seguido tiene que ser liviano.
+
+    Este archivo, en cambio, se escribe UNA vez y no lo toca la corrida diaria.
+    Existe porque la ventana rodante de 30 observaciones acumulaba historia de a
+    poco, y en septiembre de 2026 las tasas empezaban en julio de ese mismo ano:
+    con dos meses no se puede fechar cuando ocurrio cada regimen macro, y sin eso
+    los ejemplos historicos del manual habria que inventarlos.
+
+    Se guarda compacto (sin sangria) porque lo lee codigo y no una persona.
+    """
+    resultado = {
+        "as_of": datetime.now(timezone.utc).isoformat(),
+        "fuente": "Federal Reserve Bank of St. Louis (FRED)",
+        "series": {},
+    }
+    for sid in SERIES_CURVA:
+        obs = extraer_serie_fred(sid, FRED_API_KEY, limite=limite)
+        fechas = sorted(obs)
+        resultado["series"][sid] = {"historico": obs, "obs": len(obs)}
+        print(f"[OK] {sid}: {len(obs)} observaciones, de {fechas[0]} a {fechas[-1]}")
+
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    with open(OUTPUT_FILE_HISTORICO, "w", encoding="utf-8") as f:
+        json.dump(resultado, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"[OK] Historico de la curva -> {OUTPUT_FILE_HISTORICO}")
+    return resultado
+
 
 def ejecutar_extraccion_usa() -> dict:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -160,4 +207,7 @@ def ejecutar_extraccion_usa() -> dict:
     return resultado
 
 if __name__ == "__main__":
-    ejecutar_extraccion_usa()
+    if "--historico" in sys.argv:
+        rellenar_historico_fred()
+    else:
+        ejecutar_extraccion_usa()

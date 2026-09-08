@@ -171,7 +171,7 @@ antes de tocar la maqueta.
 
 | Documento | Fuente del contenido | Compilador | Salida |
 |---|---|---|---|
-| Manual de Operaciones | `docs/MANUAL_DE_OPERACIONES_TRADING_CUANTITATIVO.md` | `scripts/compilar_manual_pdf.py` | PDF A4, 31 páginas |
+| Manual de Operaciones | `docs/MANUAL_DE_OPERACIONES_TRADING_CUANTITATIVO.md` | `scripts/compilar_manual_pdf.py` | PDF A4, 41 páginas |
 | Cierre semanal | `scripts/cierre_semanal_contenido.py` (texto) + `cierre_semanal_datos.py` (cifras) | `scripts/compilar_informe_cierre_semanal.py` | PDF A4, 6 páginas |
 
 **Los dos tenían el documento escrito adentro del compilador y hubo que sacarlo.**
@@ -206,6 +206,147 @@ Tres reglas del CSS que no se tocan:
 3. **El compilador cuenta las páginas y falla bajo `PAGINAS_MINIMAS`.** No bajes ese
    número para que pase: un manual al que le faltan secciones **se lee como
    completo**, y nadie lo nota desde afuera.
+
+### Los ejemplos de cada clima se derivan, no se escriben
+
+La sección 3.5 fecha cuándo ocurrió cada uno de los cinco climas, con sus cifras y un
+gráfico de dos líneas. **Nada de eso está escrito a mano**, y no podría estarlo: un
+gráfico con la serie inventada tendría aspecto institucional y números que nadie midió,
+que es el defecto de `generar_graficos_drivers.py`.
+
+La cadena tiene tres pasos y cada uno es reproducible:
+
+```bash
+# 1. una vez: la historia larga de las series (queda en su propio archivo)
+uv run python .agents/skills/ecosistema-datos-macro/scripts/extractor_usa.py --historico
+uv run python .agents/skills/ecosistema-datos-macro/scripts/extractor_commodities.py --historico
+# 2. corre el clasificador DEL MOTOR sobre esa historia
+uv run python scripts/regimenes_historicos.py
+# 3. dibuja los gráficos y reescribe la sección del manual entre sus marcas
+uv run python scripts/grafico_regimen_svg.py --escribir
+```
+
+Cuatro decisiones que conviene no revertir:
+
+1. **El relleno histórico va a archivos aparte** (`curva_fred_historico.json`,
+   `commodities_historico.json`). Los archivos de la ingesta diaria se reescriben enteros
+   y se commitean con cada corrida, así que meterles medio siglo de historia dejaría un
+   blob de megabytes por día en el repo. Mismo criterio que las series intradía
+   gitignoreadas de `DATA PRECIOS OHLC`: lo que se reescribe seguido tiene que ser
+   liviano.
+2. **La clasificación no se reimplementa.** `regimenes_historicos.py` importa
+   `evaluar_regimen_candidato` y `aplicar_histeresis` del motor. Una segunda
+   implementación de los umbrales sería un cuarto lugar donde viven.
+3. **Para clasificar el día D solo se miran datos anteriores o iguales a D.** El motor
+   calcula sus deltas sobre los últimos 5 registros *disponibles*, no sobre días de
+   calendario, así que el recorte tiene que ser por fecha. Mirar el dato de mañana para
+   clasificar el ayer es el anacronismo que el proyecto persigue en los textos, cometido
+   con números.
+4. **La elección del episodio es editorial y está declarada con su motivo** en
+   `EPISODIOS`; las cifras son medidas. Cada clima tiene decenas de episodios y se
+   publica uno por criterio de enseñanza.
+
+**El límite es la tasa real.** `DFII10` y `T10YIE` empiezan en FRED el 2003-01-02, así que
+la corrida cubre 5.951 días hábiles hasta hoy. Ahí salió además una cifra que el manual
+usa: el clima Calma es el **64,8 %** de los días, lo que respalda que "no hay operación"
+sea el resultado más frecuente del método.
+
+### El caso del Módulo 11.1 sale de una vela real, y elegirla midió el método
+
+`scripts/caso_transversal.py` recorre el método completo sobre un día real y
+escribe la sección 11.1 entre sus marcas. Todas las cifras se derivan de la serie
+H1 del terminal: entrada, stop, objetivo, relación riesgo/beneficio, lote,
+pérdida en pesos y margen.
+
+```bash
+uv run python scripts/caso_transversal.py --escribir   # reescribe la seccion
+uv run python scripts/caso_transversal.py --barrido    # rehace la medicion de abajo
+```
+
+**Elegir el caso obligó a medir el método, y ahí salió lo importante.** Se barrió
+la historia H1 de los cinco activos buscando velas que cumplieran algún setup
+dentro de un episodio de clima confirmado:
+
+| Setup | Velas que lo cumplen | Que además pasan el filtro R:R |
+|---|---|---|
+| 5.1 y 5.2 (tendencia) | 127 | **0** |
+| 5.3 (rebote en rango) | 12 | 12 |
+
+> [!IMPORTANT]
+> **Los setups de tendencia no pasan nunca el filtro de riesgo/beneficio, y es
+> aritmética, no mala suerte.** La entrada es el **máximo** de la vela de señal,
+> el stop cae en la rama de 1,5 × ATR y el primer objetivo está a 1,0 × ATR: la
+> relación queda clavada en 0,67. Medido sobre cinco activos, el riesgo en
+> múltiplos de ATR tiene mediana exactamente 1,50 y mínimo 1,37, así que nunca
+> baja del 1,0 que haría falta. En el setup 5.1 es **imposible por
+> construcción**, porque exige que la vela tenga un rango de 1,0 × ATR o más y la
+> entrada es su máximo.
+>
+> El Módulo 6.3 ya lo declara ("solo autoriza la operación cuando el stop pudo
+> apoyarse en un swing cercano"), pero implica que a veces un swing cercano
+> rescata la ficha, y medido **no ocurre**: de 127 casos, en 5 se usó la rama del
+> swing y ninguno bajó de 1,37 × ATR.
+>
+> **La salida está en el Playbook y es una decisión de método pendiente del
+> director**: en los climas direccionales el `take_profit_tipo` es
+> `TRAILING_STOP_ASYMMETRIC`, o sea que **no hay objetivo fijo** y el filtro
+> contra TP1 no es el gate que corresponde ahí. El manual lo cubre en su 6.4,
+> pero con un criterio que el lector no puede aplicar ("activos con sesgo fuerte
+> y sostenido, sobre todo el Oro") en vez del que usa el motor. Hasta que se
+> decida, el caso del 11.1 usa un rebote en rango y no un setup de tendencia.
+
+**El desempate del cobre descarta la mayoría, y eso hace el caso didáctico.** De
+los 5 rebotes del USD/CLP que cumplían el setup técnico completo, en 4 el cobre
+venía subiendo más de 1,5 %, así que el sesgo era bajista y la compra estaba
+prohibida (Módulo 3.3). Sobrevivió uno: el del 24 de enero de 2023.
+
+**No se afirma una hora de Chile, a propósito.** Las series de MT5 vienen en hora
+del servidor empaquetada como si fuera UTC y el desfase se mide contra el terminal
+en vivo. Con el terminal caído no hay conversión honesta, así que el caso nombra
+el día y deja el filtro de horario como un paso que el lector verifica en su
+plataforma. Inventar la hora sería el mismo error que inventar un precio.
+
+**Cuatro tests lo sostienen** (`tests/test_manual_contenido.py`): que la vela siga
+cumpliendo su setup, que la ficha publicada pase el filtro de R:R, que la pérdida
+quede bajo el 1 %, y que la dirección esté permitida por el cobre. Más dos de
+sincronía, que fallan si alguien edita a mano un bloque generado.
+
+### Las guías de lectura de los gráficos: la prosa se escribe, las cifras no
+
+La sección 3.5 lleva, por cada clima, tres pasos de lectura, una conclusión en una
+frase y qué significa la franja. La prosa es editorial y vive en
+`guia_de_lectura`; **las cifras las interpola `hitos` desde la serie recortada al
+episodio**.
+
+Esa división salió de un error concreto. La revisión pedagógica del 2026-09-07
+propuso las guías con la estructura correcta y **dos precios inventados**: leyó las
+etiquetas de los extremos del gráfico, que son de la ventana de contexto, y las
+escribió como si fueran del episodio. Así el crudo "arrancaba en 110" cuando el
+episodio abre en 115,26, y el Oro tenía un "soporte en 1.653" que es el borde
+izquierdo del dibujo y no el mínimo del tramo, que fue 1.625,62.
+
+### Los diagramas no llevan líneas en blanco adentro. Nunca.
+
+Los 8 diagramas son SVG escritos a mano en el markdown, y **una línea en blanco
+adentro de un `<svg>` cierra el bloque de HTML crudo de CommonMark**. Lo que
+decide entonces si el diagrama sobrevive es qué hay en el renglón siguiente, y
+ahí está lo que engaña: si es una etiqueta que se cierra sola y ocupa la línea
+entera (`<line/>`, `<rect/>`), markdown-it abre otro bloque, el navegador ve
+marcado contiguo y el dibujo se salva **de pura suerte**. Cualquier otra cosa cae
+en un párrafo, y ese `<p>` cierra el `<svg>`: los rótulos se dibujan como texto
+corriente al costado de una tarjeta muda.
+
+Medido el 2026-09-07: **2 de los 8 diagramas partidos** (la vela H1 del módulo 1
+y el setup 5.1), con **18 de los 87 rótulos** derramados. El compilador terminaba
+en código 0 y contaba bien sus páginas; se descubrió mirando el PDF. Es el mismo
+modo de falla del `overflow: hidden` de la maqueta vieja.
+
+Lo sanea `compactar_svg` en el compilador, y no en el markdown, para que la
+fuente siga siendo legible. Lo impone `tests/test_manual_diagramas.py`.
+
+**Ojo al diagnosticarlo**: buscar `"<p"` dentro del bloque da un falso positivo
+en cada `<polygon>` y cada `<path>`. La condición se prueba con la etiqueta
+cerrada (`</?p>`).
 
 ### El cierre semanal sí usa páginas fijas, y por eso mide su alto.
 
