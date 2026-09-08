@@ -50,6 +50,7 @@ from whatsapp_sender import (
     SesionNoIniciadaError,
     DestinatarioInvalidoError,
     EncuestaInvalidaError,
+    EncuestaFueraDeHorarioError,
 )
 
 
@@ -157,6 +158,12 @@ def construir_parser() -> argparse.ArgumentParser:
         action="store_true",
         default=False,
         help="Habilita la selección de múltiples respuestas (por defecto: respuesta única obligatoria).",
+    )
+    grupo_encuesta.add_argument(
+        "--forzar",
+        action="store_true",
+        default=False,
+        help="Omite la validación de ventana horaria y pertinencia temporal de encuestas.",
     )
     return parser
 
@@ -319,6 +326,7 @@ def main() -> int:
                 opciones=opciones,
                 permitir_multiples=permitir_multiples,
                 dry_run=args.dry_run,
+                forzar=args.forzar,
             )
             print("\n[ÉXITO] Encuesta procesada correctamente:")
             print(f"  • Destinatario : {resultado['destinatario']}")
@@ -326,6 +334,8 @@ def main() -> int:
             print(f"  • Pregunta     : {resultado['pregunta']}")
             print(f"  • Opciones ({len(resultado['opciones'])}) : {', '.join(resultado['opciones'])}")
             print(f"  • Múltiples    : {resultado['permitir_multiples']}")
+            if resultado.get("forzado"):
+                print("  • Forzado      : True (omitiendo ventana horaria)")
             return 0
         except SesionNoIniciadaError as exc:
             print(f"\n[ERROR DE SESIÓN] {exc}", file=sys.stderr)
@@ -333,6 +343,9 @@ def main() -> int:
         except DestinatarioInvalidoError as exc:
             print(f"\n[ERROR DE SEGURIDAD / DESTINATARIO] {exc}", file=sys.stderr)
             return 3
+        except EncuestaFueraDeHorarioError as exc:
+            print(f"\n[RECHAZADO POR HORARIO] {exc}\n(Para forzar el envío excepcional, incluya el flag --forzar)", file=sys.stderr)
+            return 4
         except EncuestaInvalidaError as exc:
             print(f"\n[ERROR DE VALIDACIÓN DE ENCUESTA] {exc}", file=sys.stderr)
             return 4

@@ -18,9 +18,10 @@ import sys
 import threading
 import time
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Callable
+from zoneinfo import ZoneInfo
 
 # Configurar encoding seguro para consola de Windows
 if hasattr(sys.stdout, "reconfigure"):
@@ -278,6 +279,10 @@ class EncuestaInvalidaError(WhatsAppError):
     """Se levanta cuando los datos de una encuesta no cumplen los límites de WhatsApp."""
 
 
+class EncuestaFueraDeHorarioError(WhatsAppError):
+    """Se levanta cuando una encuesta se intenta enviar fuera de la ventana horaria pertinente."""
+
+
 
 def huella(texto: str) -> str:
     """El texto sin ningún espacio ni salto de línea.
@@ -384,6 +389,113 @@ class WhatsAppConfig:
 
         # 3. Si no coincide con ningún alias configurado, devuelve el nombre tal cual
         return alias_o_nombre.strip()
+
+
+def validar_ventana_encuesta(
+    pregunta: str,
+    destinatario: str = "",
+    ahora: datetime | None = None,
+) -> tuple[bool, str]:
+    """Valida la pertinencia temporal y de horario de mercado para una encuesta.
+
+    Reglas editoriales y de trading:
+    - USD/CLP (mercado spot local 08:30-13:30 CLT): Preguntas de tendencia de la jornada
+      están permitidas únicamente hasta las 11:30 CLT (tras ello se consumió el rango principal).
+      Pasadas las 11:30 CLT se admiten preguntas de cierre ("¿A qué precio cerrará?") o apertura de mañana.
+    - Wall Street / Índices (10:30-17:00 CLT según temporada): Tendencia de hoy hasta las 14:00 CLT.
+      Tras las 14:00 CLT, preguntas orientadas al cierre o balance.
+    - Commodities / Metales (Oro, Petróleo): Sesión americana hasta las 15:00 CLT.
+    - Criptoactivos: Operativa continua 24/7 sin restricción.
+    - Fines de semana: Mercados tradicionales cerrados. Preguntas intradía se rechazan.
+
+    Detecta el activo e intención mediante análisis híbrido: texto de la pregunta primero,
+    y fallback por canal de destino.
+    """
+    tz_chile = ZoneInfo("America/Santiago")
+    if ahora is None:
+        ahora_clt = datetime.now(tz_chile)
+    else:
+        ahora_clt = ahora.astimezone(tz_chile) if ahora.tzinfo else ahora.replace(tzinfo=tz_chile)
+
+    texto_lower = pregunta.lower()
+    dest_lower = destinatario.lower()
+
+    # 1. Identificar activo
+    activo = None
+    if any(k in texto_lower for k in ["usd/clp", "usdclp", "dolar", "dólar", "peso chileno", "clp"]):
+        activo = "USD/CLP"
+    elif any(k in texto_lower for k in ["nasdaq", "sp500", "s&p", "dow", "wall street", "acciones", "etf", "indices", "índice"]):
+        activo = "INDICES"
+    elif any(k in texto_lower for k in ["oro", "xau", "cobre", "petroleo", "petróleo", "wti", "brent", "commodities", "metales"]):
+        activo = "COMMODITIES"
+    elif any(k in texto_lower for k in ["btc", "bitcoin", "eth", "ethereum", "solana", "crypto", "cripto"]):
+        activo = "CRYPTO"
+
+    if activo is None:
+        # Fallback por canal de destino
+        if any(k in dest_lower for k in ["divisas", "forex", "02_", "dólar"]):
+            activo = "USD/CLP"
+        elif any(k in dest_lower for k in ["indices", "índices", "wall street", "04_", "acciones", "05_"]):
+            activo = "INDICES"
+        elif any(k in dest_lower for k in ["commodities", "metales", "energía", "03_"]):
+            activo = "COMMODITIES"
+        elif any(k in dest_lower for k in ["cripto", "crypto", "06_"]):
+            activo = "CRYPTO"
+        else:
+            activo = "GENERAL"
+
+    if activo in ("CRYPTO", "GENERAL"):
+        return True, "Horario sin restricciones."
+
+    # 2. Identificar horizonte temporal
+    # Palabras de cierre o mañana tienen precedencia sobre 'hoy' (ej. "¿A qué precio cerrará hoy?")
+    es_cierre = any(k in texto_lower for k in ["cierre", "cerrará", "cerrara", "al cierre"])
+    es_manana = any(k in texto_lower for k in ["mañana", "manana", "abrirá", "abrira", "próxima sesión", "proxima sesion", "apertura"])
+    es_intradia = any(k in texto_lower for k in ["hoy", "del día", "del dia", "esta jornada", "intradía", "intradia", "esta sesión", "esta sesion", "tendencia"])
+
+    # Si es fin de semana (sábado=5, domingo=6)
+    if ahora_clt.weekday() >= 5:
+        if not es_manana and (es_intradia or es_cierre):
+            raise EncuestaFueraDeHorarioError(
+                f"Los mercados de {activo} están cerrados en fin de semana. "
+                f"No corresponde consultar por la tendencia o cierre intradía hoy. "
+                f"Sugerencia: reorientar a proyección semanal o de apertura."
+            )
+        return True, "Encuesta de fin de semana para apertura."
+
+    hora_float = ahora_clt.hour + ahora_clt.minute / 60.0
+    hora_str = ahora_clt.strftime("%H:%M")
+
+    # Si la pregunta es sobre el cierre o sobre mañana, está permitida
+    if es_manana:
+        return True, "Pregunta prospectiva para la próxima sesión."
+
+    if es_cierre:
+        return True, "Pregunta de cierre de sesión válida."
+
+    # Si es intradía (o general de tendencia sin calificar)
+    if es_intradia:
+        if activo == "USD/CLP" and hora_float >= 11.5:  # 11:30 CLT
+            raise EncuestaFueraDeHorarioError(
+                f"La encuesta sobre USD/CLP pregunta por la tendencia de la jornada a las {hora_str} CLT. "
+                f"El corte para tendencia intradía en USD/CLP es a las 11:30 CLT porque el mercado spot "
+                f"cierra a las 13:30 CLT y el rango ya está casi consumido. "
+                f"Sugerencia: preguntar por el nivel de cierre o por la apertura de mañana."
+            )
+        if activo == "INDICES" and hora_float >= 14.0:  # 14:00 CLT
+            raise EncuestaFueraDeHorarioError(
+                f"La encuesta sobre Índices / Wall Street pregunta por la tendencia del día a las {hora_str} CLT. "
+                f"El corte para tendencia intradía es a las 14:00 CLT. "
+                f"Sugerencia: preguntar por el balance de la jornada o el nivel de cierre."
+            )
+        if activo == "COMMODITIES" and hora_float >= 15.0:  # 15:00 CLT
+            raise EncuestaFueraDeHorarioError(
+                f"La encuesta sobre Commodities pregunta por la sesión de hoy a las {hora_str} CLT. "
+                f"El corte para tendencia americana es a las 15:00 CLT. "
+                f"Sugerencia: enfocar la encuesta hacia la sesión asiática o la apertura siguiente."
+            )
+
+    return True, "Ventana horaria válida."
 
 
 class WhatsAppSender:
@@ -1861,10 +1973,15 @@ class WhatsAppSender:
         opciones: list[str],
         permitir_multiples: bool = False,
         dry_run: bool = False,
+        forzar: bool = False,
+        ahora: datetime | None = None,
     ) -> dict[str, Any]:
         """Envía una encuesta nativa de WhatsApp Web a un grupo o contacto."""
         pregunta_valida, opciones_validas = self._validar_datos_encuesta(pregunta, opciones)
         nombre_oficial = self.config.resolver_nombre_oficial(destinatario)
+
+        if not forzar:
+            validar_ventana_encuesta(pregunta_valida, destinatario=nombre_oficial, ahora=ahora)
 
         if dry_run:
             print(f'[DRY RUN] Simulación de encuesta a: "{nombre_oficial}"')
@@ -1873,6 +1990,8 @@ class WhatsAppSender:
             for i, op in enumerate(opciones_validas, 1):
                 print(f"[DRY RUN]   {i}. {op}")
             print(f"[DRY RUN] Permitir múltiples respuestas: {permitir_multiples}")
+            if forzar:
+                print("[DRY RUN] Forzado: True (ventana horaria omitida)")
             return {
                 "status": "simulado",
                 "destinatario": nombre_oficial,
@@ -1880,6 +1999,7 @@ class WhatsAppSender:
                 "pregunta": pregunta_valida,
                 "opciones": opciones_validas,
                 "permitir_multiples": permitir_multiples,
+                "forzado": forzar,
             }
 
         try:
@@ -1931,6 +2051,7 @@ class WhatsAppSender:
                     "pregunta": pregunta_valida,
                     "opciones": opciones_validas,
                     "permitir_multiples": permitir_multiples,
+                    "forzado": forzar,
                 }
             except Exception as e:
                 if page is not None:
