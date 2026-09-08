@@ -19,5 +19,26 @@
     "tipo": "concepto",
     "clave": "soporte-resistencia",
     "categoria": "banda_estrecha"
+  },
+  {
+    "fecha": "2026-09-08",
+    "canal": "03_commodities_materias_primas",
+    "tipo": "concepto",
+    "clave": "volatilidad-atr",
+    "categoria": "recorrido_agotado"
+  },
+  {
+    "fecha": "2026-09-08",
+    "canal": "04_indices_bursatiles",
+    "tipo": "concepto",
+    "clave": "volatilidad-atr",
+    "categoria": "recorrido_agotado"
+  },
+  {
+    "fecha": "2026-09-08",
+    "canal": "05_acciones_etfs",
+    "tipo": "concepto",
+    "clave": "soporte-resistencia",
+    "categoria": "banda_estrecha"
   }
 ]
