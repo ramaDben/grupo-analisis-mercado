@@ -19,5 +19,12 @@
     "tipo": "concepto",
     "clave": "soporte-resistencia",
     "categoria": "banda_estrecha"
+  },
+  {
+    "fecha": "2026-09-08",
+    "canal": "03_commodities_materias_primas",
+    "tipo": "concepto",
+    "clave": "soporte-resistencia",
+    "categoria": "banda_estrecha"
   }
 ]
