@@ -14,6 +14,13 @@ movimiento, qué significa para el cliente y qué queda prohibido.
 Reglas de texto de cliente que este archivo cumple y que conviene no romper:
 sin guion largo como inciso, notación chilena en toda cifra escrita a mano,
 español chileno neutro, y toda sigla explicada la primera vez que aparece.
+
+Y una regla de criterio, no de forma: el borde de un canal Donchian NO es una
+resistencia. Un cierre sobre el máximo de las últimas 50 velas es la condición de
+entrada por ruptura (módulo 5.1 del manual, `ticket_engine.py:357`), así que decir
+que en la parte alta del canal "queda menos espacio arriba" contradice al motor y al
+manual a la vez, y contradice al propio bloque `prohibido` de la ficha. El canal
+define compresión y ruptura; lo que limita el recorrido son `s1` y `r1`.
 """
 
 from __future__ import annotations
@@ -157,7 +164,8 @@ CAPAS = {
         "significa": (
             "Rango de la semana entre {s1} y {r1}, con el canal de las últimas 50 horas "
             "entre {don_low} y {don_high}. El precio quedó operando en la parte alta de "
-            "ese canal, así que el espacio hacia arriba es más estrecho que hace cinco días."
+            "ese canal, y eso no es un techo: en este método un cierre sobre {don_high} "
+            "es la señal de que la subida sigue, no la de que se agota."
         ),
         "prohibido": (
             "Prohibido vender en la resistencia apostando a que ahí se frena. Y una regla "
