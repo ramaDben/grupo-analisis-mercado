@@ -322,3 +322,90 @@ def test_un_alias_largo_le_gana_a_una_sigla_corta():
     entrada = calendar._enganchar_glosario("Core PCE Price Index (MoM)", glosario)
     assert entrada["nombre_es"] == "Inflacion", "gano la sigla corta"
 
+# ── el pais del evento manda sobre el enganche ────────────────────────────────
+
+_GLOSARIO_DOS_PAISES = {
+    "CPI": {
+        "nombre_es": "Indice de precios al consumidor (IPC)",
+        "pais": "United States",
+        "tier": 1,
+        "si_sale_sobre_consenso": {"usdclp": "sube"},
+    },
+    "IPC": {
+        "nombre_es": "Indice de precios al consumidor",
+        "pais": "Chile",
+        "tier": 1,
+        "titulos_ff": ["CPI", "Core CPI"],
+        "si_sale_sobre_consenso": {"usdclp": "baja"},
+    },
+}
+
+
+def test_el_ipc_de_chile_no_engancha_la_entrada_de_eeuu():
+    """El defecto que esto cierra publicaba el signo AL REVES.
+
+    La fuente titula el IPC chileno "CPI (MoM)", igual que el de EE.UU., asi que
+    sin la regla de pais enganchaba la entrada `CPI` de EE.UU. y viajaba con su
+    mapeo direccional `usdclp: "sube"`. Para un IPC chileno alto es exactamente
+    al contrario: le quita espacio al Banco Central para bajar la tasa y eso
+    sostiene al peso.
+    """
+    chileno = calendar._enganchar_glosario(
+        "CPI (MoM) (Aug)", _GLOSARIO_DOS_PAISES, "Chile"
+    )
+    assert chileno["pais"] == "Chile"
+    assert chileno["si_sale_sobre_consenso"]["usdclp"] == "baja"
+
+
+def test_el_ipc_de_eeuu_sigue_enganchando_su_propia_entrada():
+    """La regla de pais no puede romper el enganche que ya funcionaba."""
+    gringo = calendar._enganchar_glosario(
+        "CPI (MoM) (Aug)", _GLOSARIO_DOS_PAISES, "United States"
+    )
+    assert gringo["pais"] == "United States"
+    assert gringo["si_sale_sobre_consenso"]["usdclp"] == "sube"
+
+
+def test_un_evento_de_tercer_pais_no_hereda_ningun_mapeo():
+    """El IPC de China no es el de EE.UU.: sin entrada propia queda pendiente,
+    que es preferible a heredar la direccion de otro pais."""
+    assert calendar._enganchar_glosario(
+        "CPI (MoM) (Aug)", _GLOSARIO_DOS_PAISES, "China"
+    ) is None
+
+
+def test_una_entrada_sin_pais_sigue_enganchando_cualquier_evento():
+    """El filtro solo descarta cuando los DOS paises estan declarados."""
+    glosario = {"ADP": {"nombre_es": "Empleo privado ADP"}}
+    assert calendar._enganchar_glosario("ADP Nonfarm", glosario, "Chile") is not None
+    assert calendar._enganchar_glosario("ADP Nonfarm", glosario, "") is not None
+
+
+# ── el tier propio rescata lo que la fuente subestima ─────────────────────────
+
+def test_un_evento_tier_1_sobrevive_aunque_la_fuente_lo_marque_bajo():
+    """Investing marca impacto BAJO al IPC de Chile y a la Reunion de Politica
+    Monetaria del Banco Central de Chile. Con el umbral en medium los dos
+    desaparecian: no salian en la agenda de ningun canal y el gate de blackout
+    del escaner nunca podia activarse, porque el evento que lo dispara no
+    llegaba a la lista.
+    """
+    umbral = calendar._IMPACTO_RANK_EN["medium"]
+    ev = {"impacto": "bajo", "diccionario": {"tier": 1}}
+    assert calendar._sobrevive_al_umbral(ev, umbral) is True
+
+
+def test_tier_2_y_3_siguen_obedeciendo_a_la_fuente():
+    """Solo el tier 1 rescata. Rescatar tier 2 importaba eventos enganchados por
+    alias flojos, como el NFIB calzando con la entrada del ISM."""
+    umbral = calendar._IMPACTO_RANK_EN["medium"]
+    for tier in (2, 3, None):
+        ev = {"impacto": "bajo", "diccionario": {"tier": tier}}
+        assert calendar._sobrevive_al_umbral(ev, umbral) is False, f"tier {tier}"
+
+
+def test_el_umbral_de_impacto_sigue_pasando_lo_que_ya_pasaba():
+    """Un evento sobre el umbral no necesita tier para entrar."""
+    umbral = calendar._IMPACTO_RANK_EN["medium"]
+    assert calendar._sobrevive_al_umbral({"impacto": "medio"}, umbral) is True
+    assert calendar._sobrevive_al_umbral({"impacto": "alto"}, umbral) is True

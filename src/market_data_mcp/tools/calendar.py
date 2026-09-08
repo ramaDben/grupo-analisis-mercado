@@ -193,8 +193,10 @@ def _parsear_filas(html: str) -> list[dict]:
     return eventos
 
 
-def _enganchar_glosario(nombre: str, glosario: dict) -> dict | None:
-    """Busca entrada del glosario para un nombre de evento.
+def _enganchar_glosario(
+    nombre: str, glosario: dict, pais: str = ""
+) -> dict | None:
+    """Busca entrada del glosario para un nombre de evento, del pais del evento.
 
     Gana la entrada cuya clave o alias coincide con el tramo **más largo** del
     título, y no la que aparece primero en el JSON. La versión anterior devolvía
@@ -206,18 +208,59 @@ def _enganchar_glosario(nombre: str, glosario: dict) -> dict | None:
     Un match más largo es siempre más específico, así que el criterio no puede
     empeorar un enganche que ya funcionaba: solo desempata entre varios.
 
+    **Una entrada de otro pais no engancha, y eso es lo que evita publicar el
+    signo al reves.** El IPC de Chile se titula "CPI (MoM)" igual que el de
+    EE.UU., porque la fuente publica en ingles, asi que sin este filtro
+    enganchaba la entrada `CPI` de EE.UU. y viajaba con su mapeo direccional:
+    `usdclp: "sube"`. Para un IPC chileno es exactamente al contrario, porque
+    mas inflacion local le quita espacio al Banco Central para bajar la tasa y
+    eso sostiene al peso. `clasificacion_macro.clasificar` ya tenia esta regla;
+    este modulo era la mitad que no la tenia, y las dos se hablan por el mismo
+    glosario.
+
+    Una entrada sin `pais` sigue enganchando cualquier evento, y un evento sin
+    pais sigue enganchando cualquier entrada: el filtro solo descarta cuando los
+    dos estan declarados y se contradicen.
+
     Retorna None si no hay match, y el evento queda marcado `glosario_pendiente`.
     """
     nombre_upper = nombre.upper()
+    pais_evento = str(pais or "").strip()
     mejor: dict | None = None
     mejor_largo = -1
     for key, entry in glosario.items():
         if key.startswith("_") or key.isdigit():
             continue
+        pais_entrada = str(entry.get("pais") or "").strip()
+        if pais_evento and pais_entrada and pais_evento != pais_entrada:
+            continue
         for candidato in (key, *entry.get("titulos_ff", [])):
             if candidato.upper() in nombre_upper and len(candidato) > mejor_largo:
                 mejor, mejor_largo = entry, len(candidato)
     return mejor
+
+
+def _sobrevive_al_umbral(ev: dict[str, Any], umbral: int) -> bool:
+    """Pasa el filtro de impacto, o lo pasa por ser tier 1 nuestro.
+
+    **`impacto` es la opinion de la fuente y `tier` es la nuestra, y la que
+    gobierna nuestras decisiones es la nuestra** (mismo criterio que
+    `test_el_tier_es_nuestro_y_no_el_impacto_de_investing`). Investing marca
+    impacto **bajo** al IPC de Chile y a la decision de tasas del Banco Central
+    de Chile, asi que con el umbral en `medium` los dos desaparecian del
+    calendario: no salian en la agenda de ningun canal y, lo mas grave, el gate
+    de blackout del escaner **nunca podia activarse**, porque el evento que lo
+    dispara no llegaba a la lista. Las reglas de blackout de Chile estaban
+    escritas y correctas, y aun asi inertes.
+
+    Solo rescata tier 1, que es el que reprecia todo. Tier 2 y 3 siguen
+    obedeciendo a la fuente: rescatarlos importaba eventos enganchados por
+    alias flojos (el NFIB calza con la entrada del ISM) y eso llenaria la
+    agenda de ruido.
+    """
+    if _IMPACTO_RANK_ES.get(ev.get("impacto", ""), 0) >= umbral:
+        return True
+    return (ev.get("diccionario") or {}).get("tier") == 1
 
 
 def cargar_calendario(
@@ -263,10 +306,10 @@ def cargar_calendario(
     hoy = (ahora or datetime.now(tz=_SANTIAGO)).date()
     glosario = _cargar_glosario()
 
+    # El glosario se engancha ANTES del umbral, porque el `tier` propio puede
+    # rescatar un evento que la fuente subestimo. Ver `_sobrevive_al_umbral`.
     eventos: list[dict[str, Any]] = []
     for ev in todos:
-        if _IMPACTO_RANK_ES.get(ev["impacto"], 0) < umbral:
-            continue
         if solo_hoy:
             fecha_ev = datetime.strptime(
                 ev["hora_servidor"], "%Y-%m-%d %H:%M"
@@ -274,17 +317,19 @@ def cargar_calendario(
             if fecha_ev != hoy:
                 continue
         ev = dict(ev)
-        entrada = _enganchar_glosario(ev["nombre"], glosario)
+        entrada = _enganchar_glosario(ev["nombre"], glosario, ev.get("pais", ""))
         if entrada:
             ev["diccionario"] = entrada
         else:
             ev["glosario_pendiente"] = True
+        if not _sobrevive_al_umbral(ev, umbral):
+            continue
         eventos.append(ev)
 
     resultado: dict[str, Any] = {"source": "investing"}
     if not eventos:
         resultado["eventos"] = []
-        resultado["info"] = "sin eventos de impacto medio/alto hoy"
+        resultado["info"] = "sin eventos sobre el umbral de impacto ni de tier 1 hoy"
         return resultado
 
     resultado["eventos"] = eventos
