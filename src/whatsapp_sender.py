@@ -110,15 +110,17 @@ SELECTORES_CAPTION = [
 
 # Selectores para encuestas nativas de WhatsApp Web
 SELECTORES_MENU_ENCUESTA = [
+    'button[aria-label="Encuesta"]',
+    'button[aria-label="Poll"]',
+    '[role="menuitem"][aria-label="Encuesta"]',
+    '[role="menuitem"][aria-label="Poll"]',
+    '[data-testid="attach-poll"]',
     'li div[aria-label="Encuesta"]',
     'li div[aria-label="Poll"]',
-    '[data-testid="attach-poll"]',
     'li [aria-label="Encuesta"]',
     'li [aria-label="Poll"]',
     'li span:has-text("Encuesta")',
     'li span:has-text("Poll")',
-    'span:has-text("Encuesta")',
-    'span:has-text("Poll")',
 ]
 
 SELECTORES_MODAL_ENCUESTA = [
