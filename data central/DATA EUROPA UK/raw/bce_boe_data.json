@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-09-07T13:47:21.342240+00:00",
+  "as_of": "2026-09-08T12:52:16.159610+00:00",
   "fuente_bce": "European Central Bank (ECB Data Portal API)",
   "fuente_boe": "Bank of England (IADB Statistical Database)",
   "series": {
@@ -41,7 +41,8 @@
         "2026-09-04": 2.25,
         "2026-09-05": 2.25,
         "2026-09-06": 2.25,
-        "2026-09-07": 2.25
+        "2026-09-07": 2.25,
+        "2026-09-08": 2.25
       },
       "status": "OK"
     },

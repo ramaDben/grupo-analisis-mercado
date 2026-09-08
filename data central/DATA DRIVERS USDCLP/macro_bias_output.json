@@ -1,7 +1,7 @@
 {
   "schema_version": "2.0.0",
   "config_hash": "ec1495bbd7e00abe",
-  "as_of_utc": "2026-09-07T13:48:15.580329+00:00",
+  "as_of_utc": "2026-09-08T12:56:13.445267+00:00",
   "regimen_macro_global": {
     "codigo": "R3_ESTANFLACION_SHOCK",
     "nombre": "Estanflación / Turbulencia Geopolítica",
@@ -16,15 +16,15 @@
     "tasa_real_tips10y_pct": 2.42,
     "breakeven_inflacion_10y_pct": 2.35,
     "spread_tasas_chile_fed_pct": 0.87,
-    "cobre_spot_comex": 6.6825,
-    "cobre_variacion_5d_pct": 2.7,
+    "cobre_spot_comex": 6.824,
+    "cobre_variacion_5d_pct": 4.97,
     "petroleo_shock_max_5d_pct": 9.03,
     "petroleo_shock_signed_5d_pct": 9.03
   },
   "confianza_general": {
-    "confianza_total_pct": 66.3,
-    "score_frescura_pct": 100.0,
-    "score_antiguedad_pct": 3.7,
+    "confianza_total_pct": 59.1,
+    "score_frescura_pct": 83.3,
+    "score_antiguedad_pct": 2.3,
     "score_cobertura_pct": 100.0
   },
   "activos": {
@@ -42,13 +42,13 @@
         "FADE_SUPPORT_RESISTANCE_M15"
       ],
       "parametros_riesgo": {
-        "precio_spot": 932.45,
-        "atr_h1": 2.16,
-        "atr_d1": 7.23,
+        "precio_spot": 927.6,
+        "atr_h1": 2.04,
+        "atr_d1": 7.26,
         "stop_loss_mult_intraday": 1.5,
-        "distancia_sl_h1_puntos": 3.24,
+        "distancia_sl_h1_puntos": 3.05,
         "stop_loss_mult_daily": 2.5,
-        "distancia_sl_d1_puntos": 18.08,
+        "distancia_sl_d1_puntos": 18.15,
         "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC",
         "trailing_stop_mult_atr": 3.0,
         "factor_apalancamiento": 1.0,
@@ -72,13 +72,13 @@
         "VENTA_CONTRA_TENDENCIA"
       ],
       "parametros_riesgo": {
-        "precio_spot": 4406.72,
-        "atr_h1": 16.92,
-        "atr_d1": 87.96,
+        "precio_spot": 4403.05,
+        "atr_h1": 16.2,
+        "atr_d1": 87.25,
         "stop_loss_mult_intraday": 1.5,
-        "distancia_sl_h1_puntos": 25.38,
+        "distancia_sl_h1_puntos": 24.29,
         "stop_loss_mult_daily": 2.5,
-        "distancia_sl_d1_puntos": 219.91,
+        "distancia_sl_d1_puntos": 218.12,
         "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC",
         "trailing_stop_mult_atr": 3.0,
         "factor_apalancamiento": 1.0,
@@ -103,20 +103,20 @@
         "FADE_TOP_RESISTANCE"
       ],
       "parametros_riesgo": {
-        "precio_spot": 92.562,
-        "atr_h1": 0.62,
-        "atr_d1": 3.13,
+        "precio_spot": 93.169,
+        "atr_h1": 0.61,
+        "atr_d1": 3.09,
         "stop_loss_mult_intraday": 1.5,
         "distancia_sl_h1_puntos": 0.92,
         "stop_loss_mult_daily": 2.5,
-        "distancia_sl_d1_puntos": 7.83,
+        "distancia_sl_d1_puntos": 7.72,
         "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC",
         "trailing_stop_mult_atr": 3.0,
         "factor_apalancamiento": 1.0,
         "trailing_stop_lookback": 22
       },
       "justificacion_vectores": [
-        "Rally de 5 días en crudo (+9.0%) CON respaldo del cobre (+2.7%): shock de demanda agregada (Kilian 2009)",
+        "Rally de 5 días en crudo (+9.0%) CON respaldo del cobre (+5.0%): shock de demanda agregada (Kilian 2009)",
         "Se sigue la tendencia con posición completa y trailing amplio"
       ]
     },
@@ -133,20 +133,20 @@
         "FADE_TOP_RESISTANCE"
       ],
       "parametros_riesgo": {
-        "precio_spot": 98.325,
-        "atr_h1": 0.64,
-        "atr_d1": 3.16,
+        "precio_spot": 99.092,
+        "atr_h1": 0.63,
+        "atr_d1": 3.11,
         "stop_loss_mult_intraday": 1.5,
-        "distancia_sl_h1_puntos": 0.96,
+        "distancia_sl_h1_puntos": 0.95,
         "stop_loss_mult_daily": 2.5,
-        "distancia_sl_d1_puntos": 7.89,
+        "distancia_sl_d1_puntos": 7.78,
         "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC",
         "trailing_stop_mult_atr": 3.0,
         "factor_apalancamiento": 1.0,
         "trailing_stop_lookback": 22
       },
       "justificacion_vectores": [
-        "Rally de 5 días en crudo (+9.0%) CON respaldo del cobre (+2.7%): shock de demanda agregada (Kilian 2009)",
+        "Rally de 5 días en crudo (+9.0%) CON respaldo del cobre (+5.0%): shock de demanda agregada (Kilian 2009)",
         "Se sigue la tendencia con posición completa y trailing amplio"
       ]
     },
@@ -164,13 +164,13 @@
         "COMPRA_SIN_CONFIRMACION"
       ],
       "parametros_riesgo": {
-        "precio_spot": 29615.68,
-        "atr_h1": 61.99,
-        "atr_d1": 394.98,
+        "precio_spot": 29623.17,
+        "atr_h1": 75.58,
+        "atr_d1": 391.81,
         "stop_loss_mult_intraday": 1.5,
-        "distancia_sl_h1_puntos": 92.99,
+        "distancia_sl_h1_puntos": 113.36,
         "stop_loss_mult_daily": 2.5,
-        "distancia_sl_d1_puntos": 987.46,
+        "distancia_sl_d1_puntos": 979.52,
         "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC",
         "trailing_stop_mult_atr": 3.0,
         "factor_apalancamiento": 1.0,

@@ -1,7 +1,8 @@
 {
-  "ultima_ejecucion_utc": "2026-09-07T13:47:33.289830+00:00",
+  "ultima_ejecucion_utc": "2026-09-08T12:52:26.579382+00:00",
   "hay_novedades": true,
   "novedades_detalle": [
+    "Datos actualizados en Commodities (Cobre / WTI / Brent / Oro)",
     "Datos actualizados en Japón (Banco de Japón / IPC / JGB / USD-JPY)"
   ],
   "status_por_fuente": {
@@ -14,9 +15,9 @@
   "errores_por_fuente": {},
   "hashes_canonicos": {
     "usa": "3e358c393b28a5defcd0abd65dfe1d390423549fd149e4f18d0c3e261b48e0fe",
-    "chile": "9d49ab6b70b6f0fa3e987fd9c094f018a408c69bead58877103b9ff761ddacb2",
-    "europa_uk": "0670a2fe73cef21b91cffcc21b58a28239f9a071131d92975b142c2b99d06a42",
-    "commodities": "13b69975706b42a26d648771d910c7b295940be30576d73de2f5d3f6e5a58835",
-    "japon": "5deebd0d7480e4d1a7808b6231eec78aecdca71b6fc8a64b4df54ebb93e42654"
+    "chile": "c05d5aff6d5cc901a96e811e22e7edc07d990a58d8ca36ea1249a090b0619d8a",
+    "europa_uk": "e8c2193e6de8fecb206f353f1a45a6b64aeb86d439c58100e97e139bf37cc145",
+    "commodities": "257ea9a0a7964200fcac8ba07a688d1d39a38064cce20e8c43143b20394d0bee",
+    "japon": "725ea2cd7fe35828aa3f4f3a000b17590a1562f5a04d23d741bc5231600df24f"
   }
 }
