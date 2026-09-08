@@ -307,7 +307,15 @@ def _bloque_agenda(eventos_grupo: list[dict[str, Any]], ahora: datetime) -> list
         lineas.append("━━━━━━━━━━━━━━━━━━━")
         return lineas
 
-    visibles = eventos_grupo[:MAX_EVENTOS_AGENDA]
+    # **La prioridad selecciona y el reloj exhibe.** `filtrar_eventos_para_grupo`
+    # pone los datos de Chile primero para que no se caigan del cupo de la
+    # agenda, y eso hay que conservarlo. Pero exhibir en ese orden le deja al
+    # cliente una agenda que va 08:00, 18:00, 12:00: se leia como un error,
+    # porque lo es. El corte usa la prioridad; la exhibicion, la hora.
+    visibles = sorted(
+        eventos_grupo[:MAX_EVENTOS_AGENDA],
+        key=lambda ev: str(ev.get("hora_servidor") or ""),
+    )
     nombres = _distinguir([_nombre_indicador(ev) for ev in visibles], visibles)
 
     for ev, nombre in zip(visibles, nombres):
@@ -322,6 +330,130 @@ def _bloque_agenda(eventos_grupo: list[dict[str, Any]], ahora: datetime) -> list
     if restantes > 0:
         lineas.append(f"…y {restantes} evento(s) más en el calendario completo.")
     lineas.append(f"🔗 Calendario económico: {CALENDARIO_URL}")
+    lineas.append("━━━━━━━━━━━━━━━━━━━")
+    return lineas
+
+
+def _cifra_cl(bruto: Any) -> str:
+    """'0.6%' -> '0,6%'. Notacion chilena, sin inventar decimales."""
+    return str(bruto or "").strip().replace(".", ",")
+
+
+def _eventos_chile_hoy(
+    eventos_grupo: list[dict[str, Any]],
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None, dict[str, Any] | None]:
+    """El IPC, el IPC subyacente y la Reunion de Politica Monetaria de hoy.
+
+    Se reconocen por la **fuente declarada en el glosario** y no por el texto del
+    titulo: `fuente.tipo == "ine"` es el IPC del Instituto Nacional de
+    Estadisticas y `fuente.serie == "TPM"` es la decision del Banco Central. Un
+    match por nombre seria otro contrato por nombre, y encima la fuente publica
+    los titulos en ingles.
+
+    El IPC general se distingue del subyacente porque **trae consenso**: el
+    calendario publica forecast para el titular y no para el subyacente.
+    """
+    ipc = ipc_subyacente = rpm = None
+    for ev in eventos_grupo:
+        if str(ev.get("pais") or "").strip() != "Chile":
+            continue
+        fuente = ((ev.get("diccionario") or {}).get("fuente") or {})
+        if fuente.get("tipo") == "ine":
+            if str(ev.get("forecast") or "").strip():
+                ipc = ev
+            else:
+                ipc_subyacente = ev
+        elif fuente.get("serie") == "TPM":
+            rpm = ev
+    return ipc, ipc_subyacente, rpm
+
+
+def _bloque_chile_del_dia(
+    eventos_grupo: list[dict[str, Any]], ahora: datetime
+) -> list[str]:
+    """Los datos chilenos de HOY, que mandan sobre el peso por encima del Imacec.
+
+    Existe porque el 2026-09-08 el canal de divisas iba a salir explicando la
+    trayectoria de la tasa del Banco Central a partir del Imacec del mes pasado,
+    **el mismo dia** en que el IPC salio al doble del consenso y a horas de la
+    Reunion de Politica Monetaria, sin nombrar ninguno de los dos. No era una
+    cifra falsa: era la cifra vieja ocupando el lugar de la nueva.
+
+    Un evento que todavia no ocurrio se redacta en **modo anticipacion**, que es
+    el guardrail anti anacronismos del proyecto. Y el veredicto `resultado` del
+    calendario NO se publica tal cual: para un IPC, salir sobre el consenso es
+    mas inflacion y no algo "mejor".
+
+    Ninguna cifra se escribe a mano: todas salen del calendario.
+    """
+    ipc, subyacente, rpm = _eventos_chile_hoy(eventos_grupo)
+    if not ipc and not rpm:
+        return []
+
+    lineas = ["🇨🇱 *FOCO LOCAL · INFLACIÓN Y TASA DEL BANCO CENTRAL*"]
+
+    if ipc and str(ipc.get("actual") or "").strip():
+        actual = _cifra_cl(ipc.get("actual"))
+        detalle = f"📌 El IPC de Chile subió {actual} en el mes"
+        consenso = _cifra_cl(ipc.get("forecast"))
+        if consenso:
+            detalle += f", por sobre el {consenso} que esperaba el mercado"
+        previo = _cifra_cl(ipc.get("previo"))
+        if previo:
+            detalle += f" y bastante más que el {previo} del mes anterior"
+        lineas.append(detalle + ".")
+        if subyacente and str(subyacente.get("actual") or "").strip():
+            lineas.append(
+                f"• El IPC subyacente, que deja fuera los precios más volátiles, "
+                f"marcó {_cifra_cl(subyacente.get('actual'))}: la presión no viene "
+                "solo de un producto puntual."
+            )
+        lineas.append(
+            "• *Por qué le importa al peso*: más inflación le quita espacio al "
+            "Banco Central para bajar la tasa, y una tasa local que se mantiene "
+            "alta hace más atractivo tener pesos que dólares."
+        )
+
+    if rpm:
+        hora_rpm = str(rpm.get("hora_servidor") or "")[11:16]
+        try:
+            pendiente = datetime.strptime(
+                str(rpm.get("hora_servidor")), "%Y-%m-%d %H:%M"
+            ).replace(tzinfo=ahora.tzinfo) > ahora
+        except ValueError:
+            pendiente = False
+        vigente = _cifra_cl(rpm.get("previo"))
+        esperado = _cifra_cl(rpm.get("forecast"))
+        if pendiente:
+            linea = (
+                f"🕐 *Hoy a las {hora_rpm} hrs* el Banco Central decide la Tasa de "
+                f"Política Monetaria (TPM)"
+            )
+            if vigente:
+                linea += f", hoy en {vigente}"
+            linea += "."
+            if esperado and vigente and esperado == vigente:
+                linea += (
+                    " El mercado anticipa que la mantenga, así que lo que puede "
+                    "mover al peso es el tono del comunicado más que el número."
+                )
+            elif esperado:
+                linea += f" El mercado anticipa {esperado}."
+            lineas.append(linea)
+            lineas.append(
+                "⚠️ *Mientras no se publique, conviene no anticipar la reacción*: "
+                "la lectura de niveles de hoy es previa a la decisión."
+            )
+        elif str(rpm.get("actual") or "").strip():
+            lineas.append(
+                f"✅ El Banco Central dejó la Tasa de Política Monetaria (TPM) en "
+                f"{_cifra_cl(rpm.get('actual'))} en su reunión de las {hora_rpm} hrs."
+            )
+
+    lineas.append(
+        f"🔗 Serie oficial IPC (INE) y TPM (BCCh): "
+        f"{ENLACES_INSTITUCIONALES['IMACEC_BCCH']}"
+    )
     lineas.append("━━━━━━━━━━━━━━━━━━━")
     return lineas
 
@@ -396,17 +528,37 @@ def construir_texto_contexto_macro(
         tpm_valor, tpm_fecha = _obtener_tpm_vigente()
         tpm_txt = _pct(tpm_valor, 2)
 
-        lineas.extend([
-            "🇨🇱 *FOCO LOCAL · ACTIVIDAD ECONÓMICA (IMACEC)*",
-            f"El Imacec de {mes_dato} marcó {verbo} {valor_txt} anual.{comparacion}",
-            f"• *Por qué le importa al peso*: con la Tasa de Política Monetaria (TPM) en {tpm_txt}, "
-            "una actividad más débil le da al Banco Central más razones para seguir bajándola, y una "
-            "tasa local más baja le resta atractivo al peso frente al dólar. Si la actividad sorprende "
-            "al alza, el efecto es el contrario.",
-            f"🔗 Serie oficial Imacec y TPM (BCCh, al {_etiqueta_dia(tpm_fecha)}): "
-            f"{ENLACES_INSTITUCIONALES['IMACEC_BCCH']}",
-            "━━━━━━━━━━━━━━━━━━━",
-        ])
+        # Los datos chilenos de HOY van PRIMERO y, cuando existen, el Imacec deja
+        # de explicar la trayectoria de la tasa: dos explicaciones distintas del
+        # Banco Central en el mismo mensaje se contradicen entre si. El 2026-09-08
+        # la del Imacec hablaba de mas razones para seguir bajando la tasa el mismo
+        # dia en que el IPC salio al doble del consenso, que apunta al contrario.
+        bloque_hoy = _bloque_chile_del_dia(
+            filtrar_eventos_para_grupo(grupo, eventos_grupo), ahora
+        )
+        lineas.extend(bloque_hoy)
+
+        if bloque_hoy:
+            lineas.extend([
+                "🇨🇱 *DE FONDO · ACTIVIDAD ECONÓMICA (IMACEC)*",
+                f"El Imacec de {mes_dato} marcó {verbo} {valor_txt} anual.{comparacion} "
+                "Es el termómetro de la economía y se lee junto a la inflación: una "
+                "actividad débil con precios al alza es la combinación más incómoda "
+                f"para un banco central que tiene la tasa en {tpm_txt}.",
+                "━━━━━━━━━━━━━━━━━━━",
+            ])
+        else:
+            lineas.extend([
+                "🇨🇱 *FOCO LOCAL · ACTIVIDAD ECONÓMICA (IMACEC)*",
+                f"El Imacec de {mes_dato} marcó {verbo} {valor_txt} anual.{comparacion}",
+                f"• *Por qué le importa al peso*: con la Tasa de Política Monetaria (TPM) en {tpm_txt}, "
+                "una actividad más débil le da al Banco Central más razones para seguir bajándola, y una "
+                "tasa local más baja le resta atractivo al peso frente al dólar. Si la actividad sorprende "
+                "al alza, el efecto es el contrario.",
+                f"🔗 Serie oficial Imacec y TPM (BCCh, al {_etiqueta_dia(tpm_fecha)}): "
+                f"{ENLACES_INSTITUCIONALES['IMACEC_BCCH']}",
+                "━━━━━━━━━━━━━━━━━━━",
+            ])
 
     # Curva soberana y tasas clave
     curva_info = {}
@@ -768,7 +920,8 @@ def construir_payload_story_macro(
     ahora: datetime,
 ) -> dict[str, Any]:
     """Construye el payload de contexto macro del grupo a partir de series oficiales."""
-    # FOREX & DIVISAS: la actividad chilena (Imacec) manda sobre el peso.
+    # FOREX & DIVISAS: la actividad chilena (Imacec) manda sobre el peso, SALVO
+    # que haya un dato de inflacion chilena publicado hoy.
     if grupo == "02_forex_divisas":
         barras = _obtener_historial_imacec()
         actual = barras[-1]["valor"]
@@ -778,6 +931,23 @@ def construir_payload_story_macro(
             mov = 0
         else:
             mov = 1 if actual > anterior else -1
+
+        # **Con IPC del dia, el Imacec deja de fijar la direccion de la pieza.**
+        # El 2026-09-08 esta imagen salia con la casilla "USD/CLP · Impulso
+        # comprador" y el texto "menos actividad adelanta recortes de tasa y le
+        # resta atractivo al peso", el mismo dia en que el IPC salio al doble del
+        # consenso, que apunta al contrario, y con el par cayendo. La casilla no
+        # era una cifra falsa: era la elasticidad de un dato del mes pasado
+        # presentada como la lectura de hoy.
+        #
+        # `mov = 0` neutraliza las casillas via `_direccion`, que es la
+        # maquinaria que ya existe: el Imacec aporta el fondo de actividad y la
+        # direccion del dia la fija el texto, que abre con el IPC.
+        ipc_hoy, _, rpm_hoy = _eventos_chile_hoy(eventos_grupo)
+        hay_ipc_hoy = bool(ipc_hoy and str(ipc_hoy.get("actual") or "").strip())
+        if hay_ipc_hoy:
+            mov = 0
+
         verbo = "se contrae" if actual < 0 else "avanza"
         mes_dato = _MESES_ES[_mes_numero(fecha_dato)].lower()
 
@@ -794,12 +964,25 @@ def construir_payload_story_macro(
             "esperado": "",
             "anterior": (("+" if anterior > 0 else "") + _pct(anterior, 1)) if anterior is not None else "",
             "significado": (
-                f"El Imacec mide cuánto produjo el país en el mes. La lectura de {mes_dato} "
-                "define cuánta urgencia tiene el Banco Central para seguir bajando la tasa, "
-                "y esa tasa es lo que hace más o menos atractivo al peso."
+                (
+                    f"El Imacec mide cuánto produjo el país en el mes. La lectura de {mes_dato} "
+                    "es el fondo de actividad, y hoy se lee junto al dato de inflación: precios "
+                    "al alza con actividad débil es la combinación más incómoda para el Banco "
+                    "Central, porque le pide cosas contrarias con la misma tasa."
+                )
+                if hay_ipc_hoy
+                else (
+                    f"El Imacec mide cuánto produjo el país en el mes. La lectura de {mes_dato} "
+                    "define cuánta urgencia tiene el Banco Central para seguir bajando la tasa, "
+                    "y esa tasa es lo que hace más o menos atractivo al peso."
+                )
             ),
             "activos": _bloque_activos([
-                ("USD/CLP", -1, "menos actividad adelanta recortes de tasa y le resta atractivo al peso"),
+                ("USD/CLP", -1, (
+                    "hoy la dirección la fija la inflación del día y no la actividad del mes pasado"
+                    if hay_ipc_hoy
+                    else "menos actividad adelanta recortes de tasa y le resta atractivo al peso"
+                )),
                 ("IPSA", 1, "la bolsa local refleja el consumo y la inversión internos"),
             ], mov),
             "recorrido": {"barras": barras, "niveles": []},

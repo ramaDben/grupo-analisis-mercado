@@ -484,3 +484,127 @@ def test_cada_grupo_ve_solo_los_eventos_que_le_tocan(tmp_path, monkeypatch):
     assert "Decisión de tasa de interés (TPM)" in txt, txt
     # China no está en los países de Forex & Divisas.
     assert "Caixin" not in txt, txt
+
+# --- los datos chilenos de HOY mandan sobre el Imacec del mes pasado ---------
+
+_UNIR = chr(10)
+_GUION_LARGO = chr(8212)
+_GUION_MEDIO = chr(8211)
+
+_IPC_CL = {
+    "nombre": "CPI (MoM) (Aug)", "pais": "Chile", "impacto": "bajo",
+    "hora_servidor": "2026-09-08 08:00",
+    "actual": "0.6%", "forecast": "0.3%", "previo": "0.1%",
+    "resultado": "mejor",
+    "diccionario": {"tier": 1, "pais": "Chile",
+                    "fuente": {"tipo": "ine", "serie": "IPC"}},
+}
+_IPC_CL_SUBYACENTE = {
+    "nombre": "Core CPI (MoM) (Aug)", "pais": "Chile", "impacto": "bajo",
+    "hora_servidor": "2026-09-08 08:00",
+    "actual": "0.4%", "forecast": "", "previo": "0.4%",
+    "diccionario": {"tier": 1, "pais": "Chile",
+                    "fuente": {"tipo": "ine", "serie": "IPC"}},
+}
+_RPM_CL = {
+    "nombre": "Interest Rate Decision (Sep)", "pais": "Chile", "impacto": "bajo",
+    "hora_servidor": "2026-09-08 18:00",
+    "actual": "", "forecast": "4.50%", "previo": "4.50%",
+    "diccionario": {"tier": 1, "pais": "Chile",
+                    "fuente": {"tipo": "bcch", "serie": "TPM"}},
+}
+_MANANA_IPC = datetime(2026, 9, 8, 9, 53, tzinfo=SANTIAGO)
+
+
+def test_la_reunion_del_banco_central_que_no_ocurrio_va_en_modo_anticipacion():
+    """Guardrail anti anacronismos: a las 09:53 la reunion de las 18:00 no paso."""
+    texto = _UNIR.join(cmg._bloque_chile_del_dia([_RPM_CL], _MANANA_IPC))
+    assert "Hoy a las 18:00 hrs" in texto
+    assert "dejo la Tasa" not in texto.replace("ó", "o")
+    assert "no anticipar la reacci" in texto
+
+
+def test_el_veredicto_mejor_del_calendario_no_se_publica_tal_cual():
+    """Para un IPC, salir sobre el consenso es MAS inflacion y no algo mejor.
+
+    El campo `resultado` del calendario es mecanico (actual > forecast) y
+    publicarlo literal le diria al cliente lo contrario de lo que pasa.
+    """
+    texto = _UNIR.join(cmg._bloque_chile_del_dia([_IPC_CL], _MANANA_IPC))
+    assert "mejor" not in texto.lower()
+    assert "0,6%" in texto and "0,3%" in texto, "las cifras salen del calendario"
+    assert "quita espacio al Banco Central para bajar la tasa" in texto
+
+
+def test_el_bloque_usa_notacion_chilena_y_no_inventa_cifras():
+    texto = _UNIR.join(
+        cmg._bloque_chile_del_dia([_IPC_CL, _IPC_CL_SUBYACENTE, _RPM_CL], _MANANA_IPC)
+    )
+    assert "0.6" not in texto and "4.50" not in texto, "quedo un punto decimal"
+    assert "0,4%" in texto, "falta el IPC subyacente"
+    assert "4,50%" in texto
+
+
+def test_sin_datos_chilenos_del_dia_el_bloque_no_existe():
+    """Si no hay dato local hoy, el mensaje conserva su foco en el Imacec."""
+    ajeno = {"nombre": "Nonfarm Payrolls", "pais": "United States",
+             "impacto": "alto", "hora_servidor": "2026-09-08 09:30"}
+    assert cmg._bloque_chile_del_dia([ajeno], _MANANA_IPC) == []
+
+
+def test_el_bloque_de_chile_no_lleva_guion_largo():
+    """Regla de texto de cliente: ni guion largo ni medio como inciso."""
+    texto = _UNIR.join(
+        cmg._bloque_chile_del_dia([_IPC_CL, _IPC_CL_SUBYACENTE, _RPM_CL], _MANANA_IPC)
+    )
+    assert _GUION_LARGO not in texto and _GUION_MEDIO not in texto
+
+def test_la_agenda_se_exhibe_en_orden_de_reloj_aunque_chile_tenga_prioridad():
+    """La prioridad de Chile decide QUIEN entra al cupo, no en que orden se lee.
+
+    Con la prioridad gobernando tambien la exhibicion, el canal de divisas
+    mostraba 08:00, 18:00, 12:00 y se leia como un error.
+    """
+    eventos = [
+        {"nombre": "Interest Rate Decision", "pais": "Chile", "impacto": "bajo",
+         "hora_servidor": "2026-09-08 18:00", "forecast": "4.50%"},
+        {"nombre": "CPI (MoM)", "pais": "Chile", "impacto": "bajo",
+         "hora_servidor": "2026-09-08 08:00", "actual": "0.6%", "forecast": "0.3%"},
+        {"nombre": "3-Year Note Auction", "pais": "United States",
+         "impacto": "medio", "hora_servidor": "2026-09-08 14:00"},
+    ]
+    lineas = cmg._bloque_agenda(eventos, _MANANA_IPC)
+    horas = [
+        linea.split(" ")[1]
+        for linea in lineas
+        if " · " in linea and ":" in linea.split(" ")[1]
+    ]
+    assert horas == sorted(horas), f"la agenda no va en orden de reloj: {horas}"
+
+def test_con_ipc_del_dia_la_imagen_del_imacec_no_fija_la_direccion():
+    """La casilla de USD/CLP salia "Impulso comprador" el dia del IPC caliente.
+
+    El Imacec de julio dice, correctamente y por si solo, que menos actividad
+    adelanta recortes y le resta atractivo al peso. El problema es presentar esa
+    elasticidad del mes pasado como la lectura de HOY cuando hay un dato de
+    inflacion publicado que apunta al contrario. La imagen se queda con el fondo
+    de actividad y la direccion la fija el texto, que abre con el IPC.
+    """
+    payload = cmg.construir_payload_story_macro(
+        "02_forex_divisas", [_IPC_CL], 3.0, _MANANA_IPC
+    )
+    casillas = {a["nombre"]: a for a in payload["activos"]}
+    assert casillas["USD/CLP"]["direccion"] == "lateral"
+    assert casillas["USD/CLP"]["etiqueta"] == "Sin sesgo claro"
+    assert "adelanta recortes" not in casillas["USD/CLP"]["porque"]
+    assert "se lee junto al dato de" in payload["significado"]
+
+
+def test_sin_ipc_del_dia_la_imagen_del_imacec_conserva_su_lectura():
+    """El arreglo no puede apagar la lectura del Imacec en un dia normal."""
+    payload = cmg.construir_payload_story_macro(
+        "02_forex_divisas", [], 3.0, _MANANA_IPC
+    )
+    casillas = {a["nombre"]: a for a in payload["activos"]}
+    assert "adelanta recortes" in casillas["USD/CLP"]["porque"]
+    assert "urgencia tiene el Banco Central" in payload["significado"]

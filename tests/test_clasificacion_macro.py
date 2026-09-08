@@ -304,3 +304,36 @@ def test_la_seleccion_y_el_disparo_son_preguntas_distintas():
     }
     assert cm.dato_que_manda([pmi], "05_acciones_etfs") is not None
     assert cm.puede_disparar_momento(pmi) is False
+
+def test_los_dos_enganches_del_glosario_coinciden_en_el_pais():
+    """Contrato entre `calendar._enganchar_glosario` y `clasificacion_macro.clasificar`.
+
+    Los dos resuelven la misma pregunta contra el MISMO glosario, y hasta el
+    2026-09-08 solo uno aplicaba la regla de pais: el del calendario entregaba
+    la entrada de EE.UU. para el IPC de Chile, con su `usdclp: "sube"`, mientras
+    el otro la rechazaba. Dos implementaciones de la misma regla divergen, que es
+    el defecto recurrente del repo.
+    """
+    from market_data_mcp.tools import calendar
+
+    evento = {"nombre": "CPI (MoM) (Aug)", "pais": "Chile", "impacto": "bajo"}
+    del_calendario = calendar._enganchar_glosario(
+        evento["nombre"], cm.cargar_glosario(), evento["pais"]
+    )
+    de_clasificacion = cm.clasificar(evento)
+
+    assert del_calendario is not None and de_clasificacion is not None
+    assert del_calendario["pais"] == de_clasificacion["pais"] == "Chile"
+    assert (
+        del_calendario["si_sale_sobre_consenso"]["usdclp"]
+        == de_clasificacion["si_sale_sobre_consenso"]["usdclp"]
+        == "baja"
+    ), "un IPC chileno alto sostiene al peso: usdclp baja"
+
+
+def test_el_ipc_de_chile_es_tier_1_para_sobrevivir_al_impacto_de_la_fuente():
+    """Investing marca el IPC de Chile impacto BAJO. Con tier 2 no llegaba a la
+    agenda de ningun canal ni al gate de blackout del escaner, y es el dato que
+    gobierna la Reunion de Politica Monetaria."""
+    assert cm.cargar_clasificacion()["IPC"]["tier"] == 1
+

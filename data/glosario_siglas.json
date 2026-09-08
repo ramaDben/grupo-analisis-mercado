@@ -155,7 +155,7 @@
     "nombre_es": "Índice de precios al consumidor",
     "explicacion": "Cuánto subieron los precios que paga la gente; la inflación más conocida.",
     "pais": "Chile",
-    "tier": 2,
+    "tier": 1,
     "canales": [
       "02_forex_divisas"
     ],
@@ -172,7 +172,13 @@
       "usdclp": "baja",
       "dolar": "neutro",
       "porque": "más inflación le quita espacio al Banco Central para bajar la tasa, y una tasa que se mantiene alta sostiene al peso"
-    }
+    },
+    "_nota_tier": "Tier 1 y no 2: es el dato decisivo que gobierna la Reunion de Politica Monetaria del Banco Central de Chile, misma clase que el IPC de EE.UU., que ya es tier 1. Y es lo que lo rescata del filtro de impacto: Investing lo marca impacto bajo, asi que con tier 2 no llegaba a la agenda de ningun canal ni al gate de blackout del escaner.",
+    "titulos_ff": [
+      "CPI",
+      "Core CPI",
+      "IPC de Chile"
+    ]
   },
   "CPI": {
     "nombre_es": "Índice de precios al consumidor (IPC)",
@@ -823,5 +829,29 @@
       "usdclp": "sube",
       "porque": "una fuerza laboral que crece sostiene el consumo sin forzar los sueldos"
     }
+  },
+  "IPC de China": {
+    "nombre_es": "Índice de precios al consumidor de China",
+    "explicacion": "Cuánto subieron los precios al consumidor en China; con la inflación baja, Pekín tiene más espacio para estimular su economía, y eso se siente en la demanda de cobre y de petróleo.",
+    "pais": "China",
+    "titulos_ff": [
+      "CPI"
+    ]
+  },
+  "IPP de China": {
+    "nombre_es": "Índice de precios al productor de China",
+    "explicacion": "Lo que cobran las fábricas chinas; si sigue cayendo, es señal de demanda débil en la industria, el sector que compra el cobre.",
+    "pais": "China",
+    "titulos_ff": [
+      "PPI"
+    ]
+  },
+  "Consumer Credit": {
+    "nombre_es": "Crédito al consumo de EE.UU.",
+    "explicacion": "Cuánto se endeudaron las familias estadounidenses en el mes con tarjetas y créditos; si crece rápido, el consumo se sostiene con deuda y no con ingreso.",
+    "pais": "United States",
+    "titulos_ff": [
+      "Consumer Credit"
+    ]
   }
 }
