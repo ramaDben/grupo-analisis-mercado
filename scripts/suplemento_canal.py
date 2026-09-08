@@ -121,6 +121,47 @@ NOMBRE_CANAL = {
     "06_criptoactivos": "criptomonedas",
 }
 
+ENCUESTAS_CIERRE_CANAL: dict[str, dict[str, Any]] = {
+    "02_forex_divisas": {
+        "pregunta": "¿Cómo proyectas la apertura del dólar (USD/CLP) mañana?",
+        "opciones": ["🟢 Apertura alcista", "🟡 En rango / neutral", "🔴 Corrección a la baja"],
+        "permitir_multiples": False,
+    },
+    "03_commodities_materias_primas": {
+        "pregunta": "¿Qué dirección esperas para el Oro (XAU/USD) en la sesión asiática?",
+        "opciones": ["📈 Rebote comprador", "➡️ Consolidación lateral", "📉 Presión vendedora"],
+        "permitir_multiples": False,
+    },
+    "04_indices_bursatiles": {
+        "pregunta": "Cerramos Wall Street: ¿cómo evalúas la jornada bursátil de hoy?",
+        "opciones": ["🔥 Sesión compradora sólida", "⚖️ Toma de ganancias / mixta", "⚠️ Mayor cautela"],
+        "permitir_multiples": False,
+    },
+    "05_acciones_etfs": {
+        "pregunta": "Tras el cierre de sesión: ¿qué sector ves con mayor atractivo para mañana?",
+        "opciones": ["💻 Tecnológicas y Semiconductores", "🏭 Industriales y Financieras", "🛡️ Defensivas y Renta Fija"],
+        "permitir_multiples": False,
+    },
+    "06_criptoactivos": {
+        "pregunta": "¿Logrará Bitcoin defender sus soportes durante la noche?",
+        "opciones": ["🛡️ Sí, defenderá el nivel", "⚠️ Quiebre correctivo", "➡️ Rango sin tendencia"],
+        "permitir_multiples": False,
+    },
+}
+
+
+def encuesta_cierre(canal: str) -> dict[str, Any] | None:
+    """La encuesta nativa de cierre correspondiente al canal, si tiene configurada."""
+    enc = ENCUESTAS_CIERRE_CANAL.get(canal)
+    if not enc:
+        return None
+    return {
+        "pregunta": enc["pregunta"],
+        "opciones": list(enc["opciones"]),
+        "permitir_multiples": enc.get("permitir_multiples", False),
+    }
+
+
 
 def categoria_del_motivo(motivo: str) -> dict[str, Any] | None:
     """La categoría de un motivo de exclusión, o `None` si nadie la clasificó.
@@ -333,7 +374,7 @@ _ESTADO = {
 }
 
 
-def construir_mensaje_suplemento(sup: dict[str, Any]) -> str:
+def construir_mensaje_suplemento(sup: dict[str, Any], es_cierre: bool = False) -> str:
     """El mensaje de WhatsApp del suplemento.
 
     No lleva el cierre canónico de tres escenarios porque no tiene niveles con
@@ -342,6 +383,48 @@ def construir_mensaje_suplemento(sup: dict[str, Any]) -> str:
     """
     r = sup["resumen"]
     canal = sup["canal_es"]
+
+    if es_cierre:
+        lineas = [
+            f"📊 *{canal.upper()} · Balance de Cierre de Jornada*",
+            "━━━━━━━━━━━━━━━━━━━",
+        ]
+        if r["categoria"] == "recorrido_agotado":
+            lineas.append(
+                f"Completamos la sesión con los {r['activos']} activos de {canal} "
+                "habiendo absorbido la totalidad de su rango promedio del día."
+            )
+        elif r["categoria"] == "dato_en_curso":
+            lineas.append(
+                f"Cerramos la jornada de {canal} tras asimilar el impacto de los datos macroeconómicos del día."
+            )
+        elif r["categoria"] == "mercado_cerrado":
+            lineas.append(
+                f"Jornada sin actividad operativa en {canal} debido al feriado de mercado."
+            )
+        else:
+            lineas.append(
+                f"Cerramos la jornada en {canal} con el mercado consolidando posiciones sin rupturas de rango."
+            )
+
+        if r["maximo_pct"] is not None and r["peor_activo"]:
+            veces = f"{r['maximo_pct'] / 100:.1f}".replace(".", ",")
+            detalle = (
+                f"El movimiento más amplio de la jornada lo lideró {r['peor_activo']}, con un "
+                f"desplazamiento equivalente a {veces} veces su rango habitual"
+            )
+            if r["minimo_pct"] is not None:
+                detalle += f" (el de menor variación marcó un {r['minimo_pct']}%)"
+            lineas.append(detalle + ".")
+
+        lineas += [
+            "━━━━━━━━━━━━━━━━━━━",
+            "El cierre de sesión es momento de evaluar la estructura del precio para anticipar "
+            "la apertura del siguiente ciclo sin forzar entradas innecesarias.",
+            "━━━━━━━━━━━━━━━━━━━",
+            "A continuación abrimos la encuesta de la jornada para conocer la visión de la comunidad 👇",
+        ]
+        return "\n".join(lineas)
 
     plantilla = _ESTADO.get(r["categoria"])
     estado = plantilla.format(canal=canal, n=r["activos"]) if plantilla else (
@@ -386,3 +469,4 @@ def construir_mensaje_suplemento(sup: dict[str, Any]) -> str:
         "protege la cuenta. ¿Dudas? Consulta a tu analista.",
     ]
     return "\n".join(lineas)
+

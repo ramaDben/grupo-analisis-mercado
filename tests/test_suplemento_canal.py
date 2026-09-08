@@ -464,3 +464,76 @@ def test_ningun_test_escribe_en_el_historial_real():
     )
     fuente = inspect.getsource(pc.escribir_suplementos)
     assert "registrar_suplemento(sup, ruta=ruta_historial)" in fuente
+
+
+def test_suplemento_cierre_amigable():
+    """En sesión de cierre, el suplemento presenta un balance amable y no un tono de exclusión."""
+    sup_datos = sup.suplemento("04_indices_bursatiles", [
+        {"ticker": "US100", "nombre": "Nasdaq 100", "clase": "indices", "excluido": "ATR diario consumido al 95%"}
+    ])
+    assert sup_datos is not None
+    msg_cierre = sup.construir_mensaje_suplemento(sup_datos, es_cierre=True)
+    assert "Balance de Cierre de Jornada" in msg_cierre
+    assert "hoy no hay niveles, y el motivo importa" not in msg_cierre
+    assert "no hay niveles que valga la pena mirar" not in msg_cierre
+    assert "abrimos la encuesta de la jornada" in msg_cierre
+
+
+def test_encuesta_cierre_canales_principales():
+    """Verifica que cada canal de mercado disponga de una encuesta de cierre válida."""
+    for canal in ("02_forex_divisas", "03_commodities_materias_primas", "04_indices_bursatiles", "05_acciones_etfs", "06_criptoactivos"):
+        enc = sup.encuesta_cierre(canal)
+        assert enc is not None, f"Falta encuesta de cierre para {canal}"
+        assert "pregunta" in enc and len(enc["pregunta"]) > 10
+        assert "opciones" in enc and 2 <= len(enc["opciones"]) <= 4
+        assert enc.get("permitir_multiples") is False
+
+
+def test_escribir_suplementos_en_cierre_genera_encuesta(tmp_path):
+    """En cierre, escribir_suplementos genera 0_suplemento.txt con balance y _encuesta.json."""
+    import pipeline_carrusel as pc
+
+    escritos, avisos = pc.escribir_suplementos(
+        tmp_path, FOREX_AGOTADO_CON_CLASE, grupos_activos=set(), catalogo={},
+        ruta_historial=tmp_path / "historial.json",
+        es_cierre=True,
+    )
+    assert len(escritos) == 1
+    canal = tmp_path / "02_forex_divisas"
+    assert (canal / "0_suplemento.txt").exists()
+    assert (canal / "_encuesta.json").exists()
+    contenido = (canal / "0_suplemento.txt").read_text(encoding="utf-8")
+    assert "Balance de Cierre" in contenido
+
+
+def test_despachar_suplemento_y_encuesta_cierre(tmp_path, monkeypatch):
+    """Verifica que despachar procese tanto el balance como la encuesta en un canal vacío."""
+    import json
+    import pipeline_carrusel as pc
+
+    tanda_dir = tmp_path / "2026-09-08_17-00_cierre_ny"
+    canal_dir = tanda_dir / "02_forex_divisas"
+    canal_dir.mkdir(parents=True)
+
+    (canal_dir / "0_suplemento.txt").write_text(
+        "📊 *DIVISAS · Balance de Cierre de Jornada*\nPrueba de balance.", encoding="utf-8"
+    )
+    (canal_dir / "_encuesta.json").write_text(
+        json.dumps({
+            "pregunta": "¿Cómo proyectas la apertura del dólar (USD/CLP) mañana?",
+            "opciones": ["🟢 Alcista", "🔴 Bajista"],
+            "permitir_multiples": False,
+        }),
+        encoding="utf-8",
+    )
+
+    bitacora_path = tmp_path / "historial_despachos.json"
+    bitacora_path.write_text("[]", encoding="utf-8")
+    monkeypatch.setattr("bitacora_despachos.HISTORIAL_PATH", bitacora_path)
+
+    res = pc.despachar(tanda_dir, dry_run=True)
+    grupos = res.get("grupos", [])
+    assert any(g.get("suplemento") is True for g in grupos)
+    assert any(g.get("encuesta") is True for g in grupos)
+
+

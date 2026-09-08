@@ -859,6 +859,7 @@ def escribir_suplementos(
     catalogo: dict[str, Any],
     ruta_historial: Path | None = None,
     buscar_noticia: Any = None,
+    es_cierre: bool = False,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """Escribe el suplemento de cada canal que quedo sin activos publicables.
 
@@ -877,6 +878,7 @@ def escribir_suplementos(
     from noticia_oficial import registrar_noticia
     from suplemento_canal import (
         construir_mensaje_suplemento,
+        encuesta_cierre,
         registrar_suplemento,
         suplemento,
     )
@@ -904,11 +906,17 @@ def escribir_suplementos(
         carpeta = destino / canal
         carpeta.mkdir(parents=True, exist_ok=True)
         (carpeta / "0_suplemento.txt").write_text(
-            construir_mensaje_suplemento(sup), encoding="utf-8"
+            construir_mensaje_suplemento(sup, es_cierre=es_cierre), encoding="utf-8"
         )
         (carpeta / "_suplemento.json").write_text(
             json.dumps(sup, ensure_ascii=False, indent=2), encoding="utf-8"
         )
+        if es_cierre:
+            enc = encuesta_cierre(canal)
+            if enc:
+                (carpeta / "_encuesta.json").write_text(
+                    json.dumps(enc, ensure_ascii=False, indent=2), encoding="utf-8"
+                )
         # La ventana anti repeticion se anota al PREPARAR. Una tanda preparada y
         # descartada gasta la ventana igual, y ese error va hacia el lado
         # seguro: repetir de menos, no de mas.
@@ -1073,11 +1081,13 @@ def preparar(
 
     _bajar = descargar_con_cache()
     _hist = cargar_historial()
+    es_cierre = (slug_sesion in ("cierre_ny", "tarde_ny") or n_tanda == 3 or "cierre" in slug_sesion)
     suplementos, avisos_sup = escribir_suplementos(
         destino, resultado.get("excluidos") or [], grupos_activos, catalogo,
         buscar_noticia=lambda canal: noticia_para_canal(
             canal, ahora=ahora, historial=_hist, descargar=_bajar
         ),
+        es_cierre=es_cierre,
     )
 
     return {
@@ -1580,26 +1590,58 @@ def despachar(
             # el despacho lo saltaba en silencio.
             suplemento = dir_grupo / "0_suplemento.txt"
             if suplemento.exists():
+                algo_despachado = False
                 texto = suplemento.read_text(encoding="utf-8").strip()
-                print(f"    suplemento de {len(texto)} caracteres, sin adjunto...", flush=True)
                 if ya_despachada(bitacora, tanda, dir_grupo.name, "0_suplemento"):
                     print("    suplemento ya despachado segun la bitacora: se omite", flush=True)
-                    resultados.append({"grupo": dir_grupo.name, "status": "ya_despachado"})
-                    continue
-                res = sender.enviar(
-                    dir_grupo.name, mensaje=texto, dry_run=dry_run
-                )
-                if not dry_run:
-                    anotar_despacho(
-                        tanda, dir_grupo.name, "0_suplemento",
-                        huella=huella(texto),
+                else:
+                    print(f"    suplemento de {len(texto)} caracteres, sin adjunto...", flush=True)
+                    res = sender.enviar(
+                        dir_grupo.name, mensaje=texto, dry_run=dry_run
                     )
-                # `piezas` va explicito: el suplemento ES una pieza entregada, y sin
-                # el campo el resumen final imprimia "enviado  pieza(s)" sin numero
-                # justo en los canales que solo llevan suplemento.
-                resultados.append(
-                    {"grupo": dir_grupo.name, "suplemento": True, "piezas": 1, **res}
-                )
+                    if not dry_run:
+                        anotar_despacho(
+                            tanda, dir_grupo.name, "0_suplemento",
+                            huella=huella(texto),
+                        )
+                    # `piezas` va explicito: el suplemento ES una pieza entregada, y sin
+                    # el campo el resumen final imprimia "enviado  pieza(s)" sin numero
+                    # justo en los canales que solo llevan suplemento.
+                    resultados.append(
+                        {"grupo": dir_grupo.name, "suplemento": True, "piezas": 1, **res}
+                    )
+                    algo_despachado = True
+
+                encuesta_file = dir_grupo / "_encuesta.json"
+                if encuesta_file.exists():
+                    try:
+                        datos_enc = json.loads(encuesta_file.read_text(encoding="utf-8"))
+                    except Exception as e:  # noqa: BLE001
+                        print(f"    error al leer {encuesta_file.name}: {e}", flush=True)
+                    else:
+                        if ya_despachada(bitacora, tanda, dir_grupo.name, "0_encuesta"):
+                            print("    encuesta de cierre ya despachada segun bitacora: se omite", flush=True)
+                        else:
+                            print(f"    despachando encuesta de cierre: '{datos_enc.get('pregunta')}'...", flush=True)
+                            res_enc = sender.enviar_encuesta(
+                                dir_grupo.name,
+                                pregunta=datos_enc["pregunta"],
+                                opciones=datos_enc["opciones"],
+                                permitir_multiples=datos_enc.get("permitir_multiples", False),
+                                forzar=True,
+                                dry_run=dry_run,
+                            )
+                            if not dry_run:
+                                anotar_despacho(
+                                    tanda, dir_grupo.name, "0_encuesta",
+                                    huella=huella(datos_enc["pregunta"]),
+                                )
+                            resultados.append({"grupo": dir_grupo.name, "encuesta": True, **res_enc})
+                            algo_despachado = True
+
+                if not algo_despachado:
+                    resultados.append({"grupo": dir_grupo.name, "status": "ya_despachado"})
+
                 # La cadencia no se maneja aca: `enviar` reserva su turno y
                 # espera por su cuenta, igual que el resto de las piezas.
                 continue
