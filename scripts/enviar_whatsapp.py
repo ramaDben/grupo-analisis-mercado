@@ -1,4 +1,4 @@
-﻿"""CLI de envío automatizado a WhatsApp Web.
+"""CLI de envío automatizado a WhatsApp Web.
 
 Permite enviar reportes, textos formateados y piezas multimedia (PNGs/PDFs) a los
 7 grupos temáticos oficiales de WhatsApp o contactos individuales.
@@ -28,6 +28,7 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -48,6 +49,7 @@ from whatsapp_sender import (
     WhatsAppError,
     SesionNoIniciadaError,
     DestinatarioInvalidoError,
+    EncuestaInvalidaError,
 )
 
 
@@ -132,6 +134,29 @@ def construir_parser() -> argparse.ArgumentParser:
         type=int,
         default=120,
         help="Segundos máximos de espera para escanear el QR en modo --login (por defecto: 120s).",
+    )
+
+    grupo_encuesta = parser.add_argument_group("Opciones de Encuesta Nativa de WhatsApp")
+    grupo_encuesta.add_argument(
+        "--encuesta-pregunta",
+        type=str,
+        help="Pregunta para la encuesta nativa de WhatsApp (1 a 255 caracteres).",
+    )
+    grupo_encuesta.add_argument(
+        "--encuesta-opciones",
+        nargs="+",
+        help="Lista de opciones separadas por espacio (2 a 12 opciones, 1 a 100 caracteres cada una).",
+    )
+    grupo_encuesta.add_argument(
+        "--encuesta-archivo",
+        type=Path,
+        help="Ruta a un archivo JSON con la definición de la encuesta ({pregunta, opciones, permitir_multiples}).",
+    )
+    grupo_encuesta.add_argument(
+        "--permitir-multiples",
+        action="store_true",
+        default=False,
+        help="Habilita la selección de múltiples respuestas (por defecto: respuesta única obligatoria).",
     )
     return parser
 
@@ -251,6 +276,72 @@ def main() -> int:
         except WhatsAppError as exc:
             print(f"\n[ERROR WHATSAPP] {exc}", file=sys.stderr)
             return 4
+
+    # 4.c Modo Encuesta Nativa de WhatsApp
+    if args.encuesta_pregunta or args.encuesta_archivo:
+        if args.adjunto or args.lote:
+            print("[ERROR] Una encuesta nativa no puede combinarse con --adjunto o --lote.", file=sys.stderr)
+            return 1
+
+        pregunta = args.encuesta_pregunta or ""
+        opciones = args.encuesta_opciones or []
+        permitir_multiples = args.permitir_multiples
+
+        if args.encuesta_archivo:
+            if not args.encuesta_archivo.exists():
+                print(f"[ERROR] El archivo de encuesta no existe: {args.encuesta_archivo}", file=sys.stderr)
+                return 1
+            try:
+                datos_encuesta = json.loads(args.encuesta_archivo.read_text(encoding="utf-8"))
+            except Exception as exc:
+                print(f"[ERROR] No se pudo leer el JSON de encuesta: {exc}", file=sys.stderr)
+                return 1
+
+            if not pregunta and "pregunta" in datos_encuesta:
+                pregunta = str(datos_encuesta["pregunta"])
+            if not opciones and "opciones" in datos_encuesta:
+                opciones = list(datos_encuesta["opciones"])
+            if not args.permitir_multiples and "permitir_multiples" in datos_encuesta:
+                permitir_multiples = bool(datos_encuesta["permitir_multiples"])
+
+        if not pregunta.strip() or not opciones:
+            print(
+                "[ERROR] Para enviar una encuesta debe indicar pregunta y opciones "
+                "(--encuesta-pregunta y --encuesta-opciones, o vía --encuesta-archivo).",
+                file=sys.stderr,
+            )
+            return 1
+
+        try:
+            resultado = sender.enviar_encuesta(
+                destinatario=args.destinatario,
+                pregunta=pregunta,
+                opciones=opciones,
+                permitir_multiples=permitir_multiples,
+                dry_run=args.dry_run,
+            )
+            print("\n[ÉXITO] Encuesta procesada correctamente:")
+            print(f"  • Destinatario : {resultado['destinatario']}")
+            print(f"  • Estado       : {resultado['status']}")
+            print(f"  • Pregunta     : {resultado['pregunta']}")
+            print(f"  • Opciones ({len(resultado['opciones'])}) : {', '.join(resultado['opciones'])}")
+            print(f"  • Múltiples    : {resultado['permitir_multiples']}")
+            return 0
+        except SesionNoIniciadaError as exc:
+            print(f"\n[ERROR DE SESIÓN] {exc}", file=sys.stderr)
+            return 2
+        except DestinatarioInvalidoError as exc:
+            print(f"\n[ERROR DE SEGURIDAD / DESTINATARIO] {exc}", file=sys.stderr)
+            return 3
+        except EncuestaInvalidaError as exc:
+            print(f"\n[ERROR DE VALIDACIÓN DE ENCUESTA] {exc}", file=sys.stderr)
+            return 4
+        except WhatsAppError as exc:
+            print(f"\n[ERROR WHATSAPP] {exc}", file=sys.stderr)
+            return 4
+        except Exception as exc:
+            print(f"\n[ERROR INESPERADO] {exc}", file=sys.stderr)
+            return 5
 
     cuerpo_mensaje = args.mensaje
     if args.mensaje_archivo:

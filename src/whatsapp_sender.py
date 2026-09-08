@@ -107,6 +107,61 @@ SELECTORES_CAPTION = [
     'div[contenteditable="true"][aria-label="Escribe un mensaje"]:not(footer *)',
 ]
 
+# Selectores para encuestas nativas de WhatsApp Web
+SELECTORES_MENU_ENCUESTA = [
+    'li div[aria-label="Encuesta"]',
+    'li div[aria-label="Poll"]',
+    '[data-testid="attach-poll"]',
+    'li [aria-label="Encuesta"]',
+    'li [aria-label="Poll"]',
+    'li span:has-text("Encuesta")',
+    'li span:has-text("Poll")',
+    'span:has-text("Encuesta")',
+    'span:has-text("Poll")',
+]
+
+SELECTORES_MODAL_ENCUESTA = [
+    '[data-testid="poll-creation-modal"]',
+    'div[data-animate-modal-popup="true"]',
+    'div[role="dialog"]',
+    'div[data-testid="poll-drawer"]',
+]
+
+SELECTORES_PREGUNTA_ENCUESTA = [
+    '[data-testid="poll-question-input"]',
+    'div[role="dialog"] [data-testid="poll-question-input"]',
+    'div[role="dialog"] div[contenteditable="true"][role="textbox"]',
+    'div[role="dialog"] input[placeholder*="pregunta" i]',
+    'input[placeholder="Haz una pregunta"]',
+]
+
+SELECTORES_OPCIONES_ENCUESTA = [
+    'div[role="dialog"] [data-testid^="poll-option-input-"]',
+    '[data-testid^="poll-option-input-"]',
+    'div[role="dialog"] div[contenteditable="true"][role="textbox"]',
+    'div[role="dialog"] input[placeholder*="Añade" i]',
+]
+
+SELECTORES_SWITCH_MULTIPLES = [
+    '#polls-single-option-switch',
+    '[data-testid="poll-creation-modal"] input[role="switch"]',
+    'div[role="dialog"] input[role="switch"]',
+    'div[role="dialog"] [role="switch"]',
+    'div[role="dialog"] input[type="checkbox"]',
+    'div[role="dialog"] label:has-text("Permitir varias respuestas")',
+    'div[role="dialog"] [aria-label*="varias respuestas" i]',
+]
+
+SELECTORES_ENVIAR_ENCUESTA = [
+    '[data-testid="poll-send-button"]',
+    'div[role="dialog"] [data-testid="poll-send-button"]',
+    'div[role="dialog"] [role="button"]:has(span[data-icon*="send"])',
+    'div[role="dialog"] button:has(span[data-icon*="send"])',
+    'div[role="dialog"] [aria-label="Enviar"]',
+    'div[role="dialog"] span[data-icon="wds-ic-send-filled"]',
+    'div[role="dialog"] span[data-icon="round-send-primary"]',
+]
+
 
 def _hubo_enter(stream: Any) -> bool:
     """¿Alguien presionó ENTER de verdad, o el stdin simplemente no es un teclado?
@@ -217,6 +272,11 @@ class LimiteEnviosError(WhatsAppError):
 
 class LoteInvalidoError(WhatsAppError):
     """El lote de piezas no se puede despachar en una sola acción."""
+
+
+class EncuestaInvalidaError(WhatsAppError):
+    """Se levanta cuando los datos de una encuesta no cumplen los límites de WhatsApp."""
+
 
 
 def huella(texto: str) -> str:
@@ -1174,6 +1234,58 @@ class WhatsAppSender:
             )
         return opciones.pop()
 
+    @staticmethod
+    def _validar_datos_encuesta(
+        pregunta: str, opciones: list[str]
+    ) -> tuple[str, list[str]]:
+        """Valida que la pregunta y opciones de una encuesta cumplan los límites de WhatsApp.
+
+        Límites de WhatsApp Web:
+        - Pregunta: 1 a 255 caracteres.
+        - Opciones: 2 a 12 opciones, 1 a 100 caracteres cada una, sin duplicados.
+        """
+        if not isinstance(pregunta, str):
+            raise EncuestaInvalidaError("La pregunta de la encuesta debe ser un texto.")
+        pregunta_limpia = pregunta.strip()
+        if not pregunta_limpia:
+            raise EncuestaInvalidaError("La pregunta de la encuesta no puede estar vacía.")
+        if len(pregunta_limpia) > 255:
+            raise EncuestaInvalidaError(
+                f"La pregunta excede el límite de WhatsApp (máximo 255 caracteres, tiene {len(pregunta_limpia)})."
+            )
+
+        if not isinstance(opciones, (list, tuple)):
+            raise EncuestaInvalidaError("Las opciones deben ser una lista de textos.")
+        if len(opciones) < 2:
+            raise EncuestaInvalidaError(
+                f"Una encuesta de WhatsApp requiere al menos 2 opciones (se dieron {len(opciones)})."
+            )
+        if len(opciones) > 12:
+            raise EncuestaInvalidaError(
+                f"Una encuesta de WhatsApp permite como máximo 12 opciones (se dieron {len(opciones)})."
+            )
+
+        opciones_limpias = []
+        vistas = set()
+        for i, op in enumerate(opciones, 1):
+            if not isinstance(op, str):
+                raise EncuestaInvalidaError(f"La opción {i} debe ser un texto.")
+            op_limpia = op.strip()
+            if not op_limpia:
+                raise EncuestaInvalidaError(f"La opción {i} no puede estar vacía.")
+            if len(op_limpia) > 100:
+                raise EncuestaInvalidaError(
+                    f"La opción {i} excede el límite de WhatsApp (máximo 100 caracteres, tiene {len(op_limpia)})."
+                )
+            clave = op_limpia.casefold()
+            if clave in vistas:
+                raise EncuestaInvalidaError(f"Opción duplicada en la encuesta: '{op_limpia}'.")
+            vistas.add(clave)
+            opciones_limpias.append(op_limpia)
+
+        return pregunta_limpia, opciones_limpias
+
+
     # `_miniaturas_del_lote`, `_escribir_pies_del_lote` y `_adjuntar_lote`
     # vivian aca y se eliminaron el 2026-09-03: adjuntaban primero y escribian
     # el pie dentro del editor, que es el orden que tope en 1.024 caracteres y
@@ -1632,3 +1744,204 @@ class WhatsAppSender:
                 raise e
             finally:
                 context.close()
+
+    def _crear_encuesta(
+        self,
+        page: Any,
+        pregunta: str,
+        opciones: list[str],
+        permitir_multiples: bool = False,
+    ) -> None:
+        """Abre el modal de encuesta, llena la pregunta y opciones, configura el switch y envía."""
+        self._descartar_borrador(page)
+
+        btn_adjuntar = self._primer_locator(page, SELECTORES_ADJUNTAR)
+        if btn_adjuntar is None:
+            raise EnvioMensajeError("No se encontró el botón de adjuntar para crear la encuesta.")
+        btn_adjuntar.click()
+        self._pausa_humana(0.5)
+
+        item_encuesta = self._primer_locator(page, SELECTORES_MENU_ENCUESTA)
+        if item_encuesta is None:
+            raise EnvioMensajeError("No se encontró la opción 'Encuesta' en el menú de adjuntos de WhatsApp Web.")
+        item_encuesta.click()
+        self._pausa_humana(0.8)
+
+        input_pregunta = self._primer_locator(page, SELECTORES_PREGUNTA_ENCUESTA)
+        if input_pregunta is None:
+            raise EnvioMensajeError("No se encontró el campo de pregunta en el modal de encuesta.")
+        input_pregunta.click()
+        self._pausa_humana(0.2)
+        page.keyboard.insert_text(pregunta)
+        self._pausa_humana(0.3)
+
+        for i, opcion in enumerate(opciones):
+            loc_especifico = page.locator(f'[data-testid="poll-option-input-{i}"]')
+            if hasattr(loc_especifico, "wait_for") and loc_especifico.count() == 0:
+                try:
+                    loc_especifico.wait_for(state="attached", timeout=4000)
+                except Exception:
+                    pass
+
+            input_actual = None
+            if loc_especifico.count() > 0:
+                input_actual = loc_especifico.first
+            else:
+                for sel in SELECTORES_OPCIONES_ENCUESTA:
+                    loc = page.locator(sel)
+                    if loc.count() > i:
+                        input_actual = loc.nth(i)
+                        break
+
+            if input_actual is not None:
+                input_actual.click()
+            else:
+                page.keyboard.press("Tab")
+
+            self._pausa_humana(0.2)
+            page.keyboard.insert_text(opcion)
+            self._pausa_humana(0.3)
+
+        switch = self._primer_locator(page, SELECTORES_SWITCH_MULTIPLES)
+        if switch is not None:
+            aria_checked = switch.get_attribute("aria-checked")
+            checked = (aria_checked == "true") if aria_checked is not None else False
+            if hasattr(switch, "is_checked") and aria_checked is None:
+                try:
+                    checked = switch.is_checked()
+                except Exception:
+                    pass
+
+            if not permitir_multiples and checked:
+                switch.click()
+                self._pausa_humana(0.3)
+            elif permitir_multiples and not checked:
+                switch.click()
+                self._pausa_humana(0.3)
+
+        btn_enviar = self._primer_locator(page, SELECTORES_ENVIAR_ENCUESTA)
+        if btn_enviar is None:
+            btn_enviar = self._primer_locator(page, SELECTORES_ENVIAR)
+        if btn_enviar is None:
+            raise EnvioMensajeError("No se encontró el botón de enviar en el modal de encuesta.")
+        btn_enviar.click()
+        self._pausa_humana(1.0)
+
+    def _confirmar_envio_encuesta(
+        self,
+        page: Any,
+        mensajes_antes: int,
+        pregunta: str,
+        timeout_s: float = 15.0,
+    ) -> None:
+        """Confirma que la encuesta haya aparecido en la conversación."""
+        inicio = time.time()
+        testigo_pregunta = self._testigo(pregunta)
+        while time.time() - inicio < timeout_s:
+            actuales = self._contar_mensajes(page)
+            if actuales > mensajes_antes:
+                return
+            filas = page.locator('#main div[role="row"], div[role="row"]')
+            if filas.count() > 0:
+                try:
+                    ultimo_texto = filas.last.inner_text()
+                    if testigo_pregunta and testigo_pregunta in self._normalizar(ultimo_texto):
+                        return
+                except Exception:
+                    pass
+            time.sleep(0.5)
+        raise EnvioMensajeError(
+            f"La encuesta no apareció en la conversación después de presionar enviar ({timeout_s:.0f}s de espera)."
+        )
+
+    def enviar_encuesta(
+        self,
+        destinatario: str,
+        pregunta: str,
+        opciones: list[str],
+        permitir_multiples: bool = False,
+        dry_run: bool = False,
+    ) -> dict[str, Any]:
+        """Envía una encuesta nativa de WhatsApp Web a un grupo o contacto."""
+        pregunta_valida, opciones_validas = self._validar_datos_encuesta(pregunta, opciones)
+        nombre_oficial = self.config.resolver_nombre_oficial(destinatario)
+
+        if dry_run:
+            print(f'[DRY RUN] Simulación de encuesta a: "{nombre_oficial}"')
+            print(f"[DRY RUN] Pregunta: {pregunta_valida}")
+            print(f"[DRY RUN] Opciones ({len(opciones_validas)}):")
+            for i, op in enumerate(opciones_validas, 1):
+                print(f"[DRY RUN]   {i}. {op}")
+            print(f"[DRY RUN] Permitir múltiples respuestas: {permitir_multiples}")
+            return {
+                "status": "simulado",
+                "destinatario": nombre_oficial,
+                "tipo": "encuesta",
+                "pregunta": pregunta_valida,
+                "opciones": opciones_validas,
+                "permitir_multiples": permitir_multiples,
+            }
+
+        try:
+            from playwright.sync_api import sync_playwright
+        except ImportError as err:
+            raise WhatsAppError(
+                "Playwright no está instalado. Ejecute: uv sync --extra stories"
+            ) from err
+
+        self._reservar_turno(piezas=1)
+
+        with sync_playwright() as p:
+            context = self._crear_contexto(p, headless=self.headless)
+            page = None
+            try:
+                page = context.pages[0] if context.pages else context.new_page()
+                page.goto(self.URL_WHATSAPP, wait_until="domcontentloaded")
+
+                # 1. Verificar sesión
+                self._verificar_autenticacion(page)
+
+                # 2. Abrir chat y verificar cabecera
+                self._buscar_y_abrir_chat(page, nombre_oficial)
+
+                # 3. Estado previo
+                mensajes_antes = self._contar_mensajes(page)
+
+                # 4. Crear y enviar encuesta
+                self._crear_encuesta(
+                    page,
+                    pregunta=pregunta_valida,
+                    opciones=opciones_validas,
+                    permitir_multiples=permitir_multiples,
+                )
+
+                # 5. Confirmar envío
+                self._confirmar_envio_encuesta(
+                    page,
+                    mensajes_antes=mensajes_antes,
+                    pregunta=pregunta_valida,
+                )
+                self._registrar_envio(piezas=1)
+                self._pausa_humana(1.0)
+
+                return {
+                    "status": "enviado",
+                    "destinatario": nombre_oficial,
+                    "tipo": "encuesta",
+                    "pregunta": pregunta_valida,
+                    "opciones": opciones_validas,
+                    "permitir_multiples": permitir_multiples,
+                }
+            except Exception as e:
+                if page is not None:
+                    try:
+                        debug_png = RAIZ_PROYECTO / "scratch" / f"whatsapp_error_{int(time.time())}.png"
+                        debug_png.parent.mkdir(parents=True, exist_ok=True)
+                        page.screenshot(path=str(debug_png))
+                        logger.error("Captura de error guardada en %s", debug_png)
+                    except Exception:  # noqa: BLE001
+                        pass
+                raise e
+            finally:
+                context.close()
+
