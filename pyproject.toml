@@ -41,6 +41,7 @@ dev = [
     "ty",
     "pytest",
     "numpy",  # solo usado en los tests (tests/)
+    "openpyxl",
 ]
 
 # Proyecto "virtual": no se construye/instala como paquete. market_data_mcp se
