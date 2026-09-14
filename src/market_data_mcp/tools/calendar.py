@@ -207,6 +207,19 @@ def _enganchar_glosario(nombre: str, glosario: dict) -> dict | None:
     empeorar un enganche que ya funcionaba: solo desempata entre varios.
 
     Retorna None si no hay match, y el evento queda marcado `glosario_pendiente`.
+
+    El match exige **límite de palabra**, y esa es la parte que no era obvia. Con
+    un `in` de substring puro la sigla se cuela dentro de otra palabra y el
+    evento sale publicado con el nombre de otro indicador, bajo la firma del
+    analista. Los tres casos que lo destaparon el 2026-09-14, todos camino al
+    canal: `CB` (Conference Board) calzaba dentro de "E**CB**'s Schnabel Speaks"
+    e "**ECB** President Lagarde Speaks", así que dos discursos del Banco Central
+    Europeo salían nombrados "Confianza del consumidor (The Conference Board)"; e
+    `INE` calzaba dentro de "Ch**ine**se Industrial Production", así que un dato
+    de China salía atribuido al Instituto Nacional de Estadísticas de Chile.
+
+    Se usan lookarounds y no `\b` porque hay claves que terminan en punto
+    (`EE.UU.`) o traen paréntesis, donde `\b` no se ancla donde uno espera.
     """
     nombre_upper = nombre.upper()
     mejor: dict | None = None
@@ -215,7 +228,12 @@ def _enganchar_glosario(nombre: str, glosario: dict) -> dict | None:
         if key.startswith("_") or key.isdigit():
             continue
         for candidato in (key, *entry.get("titulos_ff", [])):
-            if candidato.upper() in nombre_upper and len(candidato) > mejor_largo:
+            if len(candidato) <= mejor_largo:
+                continue
+            patron = (
+                r"(?<![A-Z0-9])" + re.escape(candidato.upper()) + r"(?![A-Z0-9])"
+            )
+            if re.search(patron, nombre_upper):
                 mejor, mejor_largo = entry, len(candidato)
     return mejor
 
