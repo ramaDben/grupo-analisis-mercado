@@ -1,3 +1,5 @@
+# punto-de-entrada: lo corre el director o el orquestador a mano para verificar que
+# endurecer el matcher del glosario no dejo indicadores sin traduccion
 """Audita el enganche del glosario de siglas: matcher viejo vs. nuevo.
 
 Existe porque `_enganchar_glosario` paso de un `in` de substring puro a exigir
