@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 import shutil
 import sys
-from datetime import datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -31,9 +31,13 @@ BCCH_DATA_PATH = RAIZ / "data central" / "DATA CHILE" / "raw" / "bcch_macro_data
 TREASURY_FED_DATA_PATH = RAIZ / "data central" / "DATA USA" / "raw" / "treasury_fed_data.json"
 
 try:
-    from market_data_mcp.curva_reader import cargar_curva_tasas
+    # `_dias_habiles_entre` viene del mismo módulo a propósito: es el cálculo de
+    # rezago que ya usa `get_curva_tasas`, y una segunda implementación acá
+    # dejaría al texto y a la imagen midiendo la antigüedad del dato distinto.
+    from market_data_mcp.curva_reader import _dias_habiles_entre, cargar_curva_tasas
 except ImportError:
     cargar_curva_tasas = None
+    _dias_habiles_entre = None
 
 # Un evento del calendario tiene que leerse IGUAL en el informe y en el mensaje de
 # cada grupo: mismo nombre en español, mismo estado y misma notación de cifras. Por
@@ -216,6 +220,16 @@ def _obtener_historial_imacec() -> list[dict[str, Any]]:
     ]
 
 
+def _obtener_historial_ipc() -> list[dict[str, Any]]:
+    """Últimas observaciones del IPC (variación mensual) desde data central/."""
+    hist = _leer_serie(BCCH_DATA_PATH, ("series", "IPC_MENSUAL_VAR"), "IPC del BCCh")
+    fechas = sorted(hist)[-7:]
+    return [
+        {"etiqueta": _MESES_ABR[_mes_numero(fch)], "valor": round(hist[fch], 1), "fecha": fch}
+        for fch in fechas
+    ]
+
+
 def _obtener_tpm_vigente() -> tuple[float, str]:
     """Tasa de Política Monetaria vigente y la fecha de esa observación."""
     hist = _leer_serie(BCCH_DATA_PATH, ("series", "TPM"), "TPM del BCCh")
@@ -377,36 +391,68 @@ def construir_texto_contexto_macro(
     # Nunca se nombra un nivel de USD/CLP acá: el precio sale del motor en tiempo
     # de ejecución (REGLA 1), y este módulo no tiene acceso al MCP.
     if grupo == "02_forex_divisas":
-        barras_imacec = _obtener_historial_imacec()
-        ultimo = barras_imacec[-1]
-        previo = barras_imacec[-2] if len(barras_imacec) >= 2 else None
+        try:
+            barras_local = _obtener_historial_ipc()
+            tipo_local = "IPC"
+        except DatosMacroNoDisponiblesError:
+            barras_local = _obtener_historial_imacec()
+            tipo_local = "IMACEC"
+
+        ultimo = barras_local[-1]
+        previo = barras_local[-2] if len(barras_local) >= 2 else None
         mes_dato = _MESES_ES[_mes_numero(ultimo["fecha"])].lower()
         valor_txt = ("+" if ultimo["valor"] > 0 else "") + _pct(ultimo["valor"], 1)
-        verbo = "una contracción de" if ultimo["valor"] < 0 else "un avance de"
-        comparacion = ""
-        if previo is not None:
-            mes_previo = _MESES_ES[_mes_numero(previo["fecha"])].lower()
-            previo_txt = ("+" if previo["valor"] > 0 else "") + _pct(previo["valor"], 1)
-            if ultimo["valor"] < previo["valor"]:
-                comparacion = f" Se desacelera frente a {mes_previo} ({previo_txt})."
-            elif ultimo["valor"] > previo["valor"]:
-                comparacion = f" Mejora frente a {mes_previo} ({previo_txt})."
-            else:
-                comparacion = f" Repite la lectura de {mes_previo} ({previo_txt})."
         tpm_valor, tpm_fecha = _obtener_tpm_vigente()
         tpm_txt = _pct(tpm_valor, 2)
 
-        lineas.extend([
-            "🇨🇱 *FOCO LOCAL · ACTIVIDAD ECONÓMICA (IMACEC)*",
-            f"El Imacec de {mes_dato} marcó {verbo} {valor_txt} anual.{comparacion}",
-            f"• *Por qué le importa al peso*: con la Tasa de Política Monetaria (TPM) en {tpm_txt}, "
-            "una actividad más débil le da al Banco Central más razones para seguir bajándola, y una "
-            "tasa local más baja le resta atractivo al peso frente al dólar. Si la actividad sorprende "
-            "al alza, el efecto es el contrario.",
-            f"🔗 Serie oficial Imacec y TPM (BCCh, al {_etiqueta_dia(tpm_fecha)}): "
-            f"{ENLACES_INSTITUCIONALES['IMACEC_BCCH']}",
-            "━━━━━━━━━━━━━━━━━━━",
-        ])
+        if tipo_local == "IPC":
+            verbo = "marcó un avance de" if ultimo["valor"] > 0 else "marcó una variación de"
+            comparacion = ""
+            if previo is not None:
+                mes_previo = _MESES_ES[_mes_numero(previo["fecha"])].lower()
+                previo_txt = ("+" if previo["valor"] > 0 else "") + _pct(previo["valor"], 1)
+                if ultimo["valor"] < previo["valor"]:
+                    comparacion = f" Se modera frente a {mes_previo} ({previo_txt})."
+                elif ultimo["valor"] > previo["valor"]:
+                    comparacion = f" Se acelera frente a {mes_previo} ({previo_txt})."
+                else:
+                    comparacion = f" Repite la lectura de {mes_previo} ({previo_txt})."
+
+            lineas.extend([
+                "🇨🇱 *FOCO LOCAL · INFLACIÓN Y POLÍTICA MONETARIA (IPC & IPOM)*",
+                f"El IPC de {mes_dato} {verbo} {valor_txt} mensual.{comparacion}",
+                f"• *Por qué le importa al peso*: con la Tasa de Política Monetaria (TPM) en {tpm_txt}, "
+                "una inflación persistente frena los recortes adicionales de tasa del Banco Central. Con el corredor "
+                "del IPoM bajo revisión, mantener una tasa de interés atractiva le otorga soporte al peso chileno "
+                "y contiene la presión alcista sobre el USD/CLP.",
+                f"🔗 Serie oficial IPC y TPM (BCCh, al {_etiqueta_dia(tpm_fecha)}): "
+                f"{ENLACES_INSTITUCIONALES['IMACEC_BCCH']}",
+                "━━━━━━━━━━━━━━━━━━━",
+            ])
+        else:
+            verbo = "una contracción de" if ultimo["valor"] < 0 else "un avance de"
+            comparacion = ""
+            if previo is not None:
+                mes_previo = _MESES_ES[_mes_numero(previo["fecha"])].lower()
+                previo_txt = ("+" if previo["valor"] > 0 else "") + _pct(previo["valor"], 1)
+                if ultimo["valor"] < previo["valor"]:
+                    comparacion = f" Se desacelera frente a {mes_previo} ({previo_txt})."
+                elif ultimo["valor"] > previo["valor"]:
+                    comparacion = f" Mejora frente a {mes_previo} ({previo_txt})."
+                else:
+                    comparacion = f" Repite la lectura de {mes_previo} ({previo_txt})."
+
+            lineas.extend([
+                "🇨🇱 *FOCO LOCAL · ACTIVIDAD ECONÓMICA (IMACEC)*",
+                f"El Imacec de {mes_dato} marcó {verbo} {valor_txt} anual.{comparacion}",
+                f"• *Por qué le importa al peso*: con la Tasa de Política Monetaria (TPM) en {tpm_txt}, "
+                "una actividad más débil le da al Banco Central más razones para seguir bajándola, y una "
+                "tasa local más baja le resta atractivo al peso frente al dólar. Si la actividad sorprende "
+                "al alza, el efecto es el contrario.",
+                f"🔗 Serie oficial Imacec y TPM (BCCh, al {_etiqueta_dia(tpm_fecha)}): "
+                f"{ENLACES_INSTITUCIONALES['IMACEC_BCCH']}",
+                "━━━━━━━━━━━━━━━━━━━",
+            ])
 
     # Curva soberana y tasas clave
     curva_info = {}
@@ -463,6 +509,25 @@ def construir_texto_contexto_macro(
         f"{interpretacion}",
         "━━━━━━━━━━━━━━━━━━━",
     ])
+
+    glosario_path = RAIZ / "data" / "glosario_siglas.json"
+    if glosario_path.exists():
+        try:
+            glosario_dict = json.loads(glosario_path.read_text(encoding="utf-8"))
+            texto_actual = "\n".join(lineas)
+            siglas_encontradas = []
+            for s, info in glosario_dict.items():
+                if isinstance(info, dict) and re.search(rf"\b{re.escape(s)}\b", texto_actual, re.IGNORECASE):
+                    exp = info.get("explicacion", "")
+                    if exp:
+                        siglas_encontradas.append((s, exp))
+            if siglas_encontradas:
+                lineas.append("🔤 *Diccionario rápido*")
+                for s, exp in siglas_encontradas:
+                    lineas.append(f"• {s}: {exp}")
+                lineas.append("━━━━━━━━━━━━━━━━━━━")
+        except Exception:
+            pass
     # Solo se promete la imagen si efectivamente se produjo, y solo se prometen los
     # niveles si el canal los lleva: un texto que anuncia algo inexistente llega
     # roto al cliente. La segunda mitad de esa regla faltaba, y el motivo se ve en
@@ -504,6 +569,35 @@ def _ultima_fecha_treasury(serie_id: str) -> str:
         TREASURY_FED_DATA_PATH, ("curva_rendimientos_yields", serie_id), f"la serie {serie_id}"
     )
     return sorted(hist)[-1]
+
+
+def _sello_frescura(fecha_iso: str) -> str:
+    """Cómo se rotula en la IMAGEN la fecha del dato, según su rezago.
+
+    "dato de cierre" se lee como el cierre de HOY. Con la serie rezagada eso le
+    dice al cliente que el bono no se movió en cuatro días, que es lo contrario de
+    lo que pasó. El 2026-09-14 la pieza salió al canal estampando "10 Sep 2026 ·
+    dato de cierre" un lunes 14: FRED no tenía el viernes 11 y el último dato
+    publicado era del jueves 10.
+
+    El texto del mensaje ya distinguía los dos casos desde `variacion_soberana`
+    (con rezago manda la variación de 5 días, con la fecha al lado) y por eso salió
+    correcto. La imagen no miraba el rezago: dos caminos para el mismo dato y solo
+    uno lo sabía, que es el defecto recurrente del repo.
+
+    El umbral son los mismos dos días hábiles que usa el texto, para que la pieza
+    no se contradiga consigo misma, y la noción de "hoy" es la de `curva_reader`
+    (UTC) por la misma razón.
+    """
+    if _dias_habiles_entre is None:
+        return "dato de cierre"
+    try:
+        rezago = _dias_habiles_entre(
+            date.fromisoformat(fecha_iso), datetime.now(timezone.utc).date()
+        )
+    except ValueError:
+        return "dato de cierre"
+    return "último dato disponible" if rezago >= 2 else "dato de cierre"
 
 
 # Cada grupo cuelga de UNA tasa soberana. `signo` es la elasticidad conocida del
@@ -732,7 +826,10 @@ def _payload_soberano(cfg: dict[str, Any]) -> dict[str, Any]:
     return {
         "plantilla": "dato_macro",
         "chip_pais": cfg["chip_pais"],
-        "fecha_hora": f"{_etiqueta_dia(ultima_fecha)} {ultima_fecha[:4]} · dato de cierre",
+        "fecha_hora": (
+            f"{_etiqueta_dia(ultima_fecha)} {ultima_fecha[:4]} · "
+            f"{_sello_frescura(ultima_fecha)}"
+        ),
         "titular": titular,
         # Sin consenso publicado no hay veredicto. Comparar contra el promedio de la
         # propia serie y rotularlo "esperado" afirma una expectativa que nadie emitió.
@@ -768,9 +865,15 @@ def construir_payload_story_macro(
     ahora: datetime,
 ) -> dict[str, Any]:
     """Construye el payload de contexto macro del grupo a partir de series oficiales."""
-    # FOREX & DIVISAS: la actividad chilena (Imacec) manda sobre el peso.
+    # FOREX & DIVISAS: la inflación chilena (IPC) manda sobre el peso y la TPM.
     if grupo == "02_forex_divisas":
-        barras = _obtener_historial_imacec()
+        try:
+            barras = _obtener_historial_ipc()
+            tipo_local = "IPC"
+        except DatosMacroNoDisponiblesError:
+            barras = _obtener_historial_imacec()
+            tipo_local = "IMACEC"
+
         actual = barras[-1]["valor"]
         anterior = barras[-2]["valor"] if len(barras) >= 2 else None
         fecha_dato = barras[-1]["fecha"]
@@ -778,33 +881,59 @@ def construir_payload_story_macro(
             mov = 0
         else:
             mov = 1 if actual > anterior else -1
-        verbo = "se contrae" if actual < 0 else "avanza"
         mes_dato = _MESES_ES[_mes_numero(fecha_dato)].lower()
 
-        return {
-            "plantilla": "dato_macro",
-            "chip_pais": "ECONOMÍA CHILE",
-            "fecha_hora": f"{_etiqueta_dia(fecha_dato)} {fecha_dato[:4]} · dato oficial",
-            "titular": f"La actividad económica de {mes_dato} {verbo} {_pct(abs(actual), 1)} anual",
-            "veredicto": "",
-            "veredicto_slug": "",
-            "indicador": "Actividad Económica (Imacec)",
-            "periodo": _periodo_desde(fecha_dato, "variación anual"),
-            "actual": ("+" if actual > 0 else "") + _pct(actual, 1),
-            "esperado": "",
-            "anterior": (("+" if anterior > 0 else "") + _pct(anterior, 1)) if anterior is not None else "",
-            "significado": (
-                f"El Imacec mide cuánto produjo el país en el mes. La lectura de {mes_dato} "
-                "define cuánta urgencia tiene el Banco Central para seguir bajando la tasa, "
-                "y esa tasa es lo que hace más o menos atractivo al peso."
-            ),
-            "activos": _bloque_activos([
-                ("USD/CLP", -1, "menos actividad adelanta recortes de tasa y le resta atractivo al peso"),
-                ("IPSA", 1, "la bolsa local refleja el consumo y la inversión internos"),
-            ], mov),
-            "recorrido": {"barras": barras, "niveles": []},
-            "sello_datos": "Banco Central de Chile · Grupo Inteligencia",
-        }
+        if tipo_local == "IPC":
+            verbo = "sube a" if actual > 0 else "cae a"
+            return {
+                "plantilla": "dato_macro",
+                "chip_pais": "INFLACIÓN CHILE",
+                "fecha_hora": f"{_etiqueta_dia(fecha_dato)} {fecha_dato[:4]} · dato oficial",
+                "titular": f"La inflación de {mes_dato} {verbo} {_pct(actual, 1)} mensual",
+                "veredicto": "",
+                "veredicto_slug": "",
+                "indicador": "Inflación Mensual (IPC Chile)",
+                "periodo": _periodo_desde(fecha_dato, "variación mensual"),
+                "actual": ("+" if actual > 0 else "") + _pct(actual, 1),
+                "esperado": "",
+                "anterior": (("+" if anterior > 0 else "") + _pct(anterior, 1)) if anterior is not None else "",
+                "significado": (
+                    f"El IPC de {mes_dato} define el margen del Banco Central de Chile para seguir bajando la TPM. "
+                    "Una inflación persistente sostiene las tasas locales y respalda al peso frente al dólar."
+                ),
+                "activos": _bloque_activos([
+                    ("USD/CLP", -1, "tasas locales firmes por inflación defienden al peso chileno frente al dólar"),
+                    ("Renta Fija / UF", 1, "los activos indexados capturan el mayor devengo por reajuste inflacionario"),
+                ], mov),
+                "recorrido": {"barras": barras, "niveles": []},
+                "sello_datos": "Instituto Nacional de Estadísticas · Banco Central de Chile · Grupo Inteligencia",
+            }
+        else:
+            verbo = "se contrae" if actual < 0 else "avanza"
+            return {
+                "plantilla": "dato_macro",
+                "chip_pais": "ECONOMÍA CHILE",
+                "fecha_hora": f"{_etiqueta_dia(fecha_dato)} {fecha_dato[:4]} · dato oficial",
+                "titular": f"La actividad económica de {mes_dato} {verbo} {_pct(abs(actual), 1)} anual",
+                "veredicto": "",
+                "veredicto_slug": "",
+                "indicador": "Actividad Económica (Imacec)",
+                "periodo": _periodo_desde(fecha_dato, "variación anual"),
+                "actual": ("+" if actual > 0 else "") + _pct(actual, 1),
+                "esperado": "",
+                "anterior": (("+" if anterior > 0 else "") + _pct(anterior, 1)) if anterior is not None else "",
+                "significado": (
+                    f"El Imacec mide cuánto produjo el país en el mes. La lectura de {mes_dato} "
+                    "define cuánta urgencia tiene el Banco Central para seguir bajando la tasa, "
+                    "y esa tasa es lo que hace más o menos atractivo al peso."
+                ),
+                "activos": _bloque_activos([
+                    ("USD/CLP", -1, "menos actividad adelanta recortes de tasa y le resta atractivo al peso"),
+                    ("IPSA", 1, "la bolsa local refleja el consumo y la inversión internos"),
+                ], mov),
+                "recorrido": {"barras": barras, "niveles": []},
+                "sello_datos": "Banco Central de Chile · Grupo Inteligencia",
+            }
 
     cfg = DRIVERS_SOBERANOS.get(grupo, DRIVER_SOBERANO_POR_DEFECTO)
     return _payload_soberano(cfg)

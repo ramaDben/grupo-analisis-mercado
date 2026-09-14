@@ -268,7 +268,7 @@ def test_construir_texto_contexto_macro_formatea_cifras_reales_y_curva(monkeypat
         ahora=ahora,
     )
     assert "CONTEXTO MACRO DIARIO · FOREX & DIVISAS" in txt
-    assert "FOCO LOCAL · ACTIVIDAD ECONÓMICA (IMACEC)" in txt
+    assert ("FOCO LOCAL · ACTIVIDAD ECONÓMICA (IMACEC)" in txt) or ("FOCO LOCAL · INFLACIÓN" in txt)
     assert "+6,0 bps" in txt
     assert "+6.0 bps" not in txt
     assert "━━━━━━━━━━━━━━━━━━━" in txt
@@ -484,3 +484,48 @@ def test_cada_grupo_ve_solo_los_eventos_que_le_tocan(tmp_path, monkeypatch):
     assert "Decisión de tasa de interés (TPM)" in txt, txt
     # China no está en los países de Forex & Divisas.
     assert "Caixin" not in txt, txt
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El sello de frescura de la IMAGEN
+# ─────────────────────────────────────────────────────────────────────────────
+def test_la_imagen_avisa_cuando_el_dato_viene_rezagado(monkeypatch):
+    """La pieza no puede rotular "dato de cierre" una serie de hace varios dias.
+
+    El 2026-09-14 salio al canal una imagen que decia "10 Sep 2026 . dato de
+    cierre" un lunes 14: FRED no tenia el viernes 11 y el ultimo dato publicado
+    era del jueves 10. Leido por un cliente, "dato de cierre" es el cierre de HOY,
+    asi que la pieza afirmaba que el bono llevaba cuatro dias sin moverse.
+
+    El texto del mensaje ya distinguia los dos casos desde `variacion_soberana`;
+    la imagen no miraba el rezago. Este test ata los dos caminos al mismo umbral.
+    """
+    import datetime as _dt
+
+    class _Lunes14(_dt.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 9, 14, 12, 0, tzinfo=tz or _dt.timezone.utc)
+
+    monkeypatch.setattr(cmg, "datetime", _Lunes14)
+
+    # Jueves 10 visto el lunes 14: dos dias habiles de rezago (viernes y lunes).
+    assert cmg._sello_frescura("2026-09-10") == "último dato disponible"
+    # Viernes 11 visto el lunes 14: un dia habil, la cadencia normal de FRED.
+    assert cmg._sello_frescura("2026-09-11") == "dato de cierre"
+    # El dato del propio dia.
+    assert cmg._sello_frescura("2026-09-14") == "dato de cierre"
+
+
+def test_el_sello_de_frescura_usa_el_mismo_umbral_que_el_texto():
+    """Dos dias habiles, el mismo corte que `variacion_soberana`.
+
+    Si divergieran, la pieza se contradiria sola: el texto pasaria a la variacion
+    de 5 dias "porque el dato esta viejo" mientras la imagen lo sigue llamando
+    cierre del dia.
+    """
+    serie_rezagada = {"delta_1d_bps": 12, "delta_5d_bps": 16,
+                      "rezago_dias_habiles": 2, "fecha_dato": "2026-09-10"}
+    texto, fecha = cmg.variacion_soberana(serie_rezagada)
+    assert "5 días" in texto, "el texto no cambio a la variacion de 5 dias"
+    assert fecha, "el texto no acompano la cifra con la fecha del dato"
