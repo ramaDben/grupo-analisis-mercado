@@ -1187,6 +1187,24 @@ def test_los_avisos_de_la_fuente_macro_no_se_descartan():
     assert ", _ = sc._contexto_macro" not in fuente
 
 
+def test_preparar_persiste_la_seleccion_para_que_publicados_hoy_la_vea():
+    """`preparar` llama a `sc.escanear` como funcion, no por su CLI.
+
+    `_publicados_hoy` lee de `sc.DIR_SALIDA` (`data/screener/`), y solo
+    `sc._guardar` escribe ahi. Sin la llamada, una segunda tanda del mismo dia
+    no veia la primera y el escaner repetia el activo: medido el 2026-09-14,
+    USD/JPY salio dos veces en menos de dos horas, en dos tandas manuales
+    corridas la misma manana.
+    """
+    import inspect
+
+    fuente = inspect.getsource(pc.preparar)
+    assert "sc._guardar(resultado)" in fuente, (
+        "preparar dejo de persistir el resultado del escaner: "
+        "'ya salio hoy' vuelve a quedar ciego entre tandas"
+    )
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # El barrido mide en la unidad del preparado, no en la de la tanda
 # ─────────────────────────────────────────────────────────────────────────────

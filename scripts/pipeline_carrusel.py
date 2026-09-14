@@ -997,6 +997,13 @@ def preparar(
         json.dumps(resultado, ensure_ascii=False, indent=2), encoding="utf-8"
     )
 
+    # `preparar` llama a `escanear` como función y no por su CLI, así que sin
+    # esto nunca se escribía en `data/screener/`: el filtro "ya salió hoy" de
+    # `_publicados_hoy` lee justo de ahí, y una segunda tanda del mismo día no
+    # veía la primera. Medido el 2026-09-14: USD/JPY salió dos veces en menos
+    # de dos horas, en dos tandas manuales del mismo día.
+    sc._guardar(resultado)
+
     # Los canales que ESTA corrida va a escribir: el pedido con `--grupo` (mas el
     # de avisos, que siempre recibe macro) o todos si es una corrida completa.
     canales_a_barrer = (
