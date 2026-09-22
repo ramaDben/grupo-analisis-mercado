@@ -117,5 +117,61 @@
     "tipo": "concepto",
     "clave": "volatilidad-atr",
     "categoria": "recorrido_agotado"
+  },
+  {
+    "fecha": "2026-09-14",
+    "canal": "02_forex_divisas",
+    "tipo": "concepto",
+    "clave": "puntos-interes",
+    "categoria": "sin_niveles_medidos"
+  },
+  {
+    "fecha": "2026-09-14",
+    "canal": "02_forex_divisas",
+    "tipo": "noticia",
+    "clave": "https://www.ecb.europa.eu//press/key/date/2026/html/ecb.sp260914_2~a3f0efbee4.en.html",
+    "fuente": "bce"
+  },
+  {
+    "fecha": "2026-09-16",
+    "canal": "02_forex_divisas",
+    "tipo": "noticia",
+    "clave": "https://www.ecb.europa.eu//press/key/date/2026/html/ecb.sp260914_1~91d3436449.en.html",
+    "fuente": "bce"
+  },
+  {
+    "fecha": "2026-09-16",
+    "canal": "04_indices_bursatiles",
+    "tipo": "concepto",
+    "clave": "riesgo",
+    "categoria": "setup_prohibido"
+  },
+  {
+    "fecha": "2026-09-21",
+    "canal": "02_forex_divisas",
+    "tipo": "concepto",
+    "clave": "riesgo",
+    "categoria": "setup_prohibido"
+  },
+  {
+    "fecha": "2026-09-21",
+    "canal": "04_indices_bursatiles",
+    "tipo": "concepto",
+    "clave": "puntos-interes",
+    "categoria": "sin_niveles_medidos"
+  },
+  {
+    "fecha": "2026-09-21",
+    "canal": "05_acciones_etfs",
+    "tipo": "concepto",
+    "clave": "volatilidad-atr",
+    "categoria": "recorrido_agotado"
+  },
+  {
+    "fecha": "2026-09-22",
+    "canal": "02_forex_divisas",
+    "tipo": "noticia",
+    "clave": "https://www.ecb.europa.eu//press/inter/date/2026/html/ecb.in260922~5f89d300ee.en.html",
+    "fuente": "bce"
   }
 ]

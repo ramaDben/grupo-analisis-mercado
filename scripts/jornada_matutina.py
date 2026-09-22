@@ -296,7 +296,12 @@ def despachar_oficial(tanda_dir: Path, confirmado: bool = False) -> bool:
 # ─────────────────────────────────────────────────────────────────────────────
 # Modo End-to-End
 # ─────────────────────────────────────────────────────────────────────────────
-def ejecutar_todo(tanda_dir: Path | None = None, confirmar_despacho: bool = False) -> int:
+def ejecutar_todo(
+    tanda_dir: Path | None = None,
+    confirmar_despacho: bool = False,
+    top: int = 1,
+    matriz: bool = True,
+) -> int:
     """Ejecuta la jornada matutina completa con todos sus gates de seguridad."""
     print("=====================================================================")
     print("🛡️  ORQUESTADOR MAESTRO DE LA JORNADA MATUTINA · GRUPO INTELIGENCIA")
@@ -316,7 +321,7 @@ def ejecutar_todo(tanda_dir: Path | None = None, confirmar_despacho: bool = Fals
     consultar_agenda()
 
     # 4. Preparar
-    tanda = tanda_dir or preparar_carrusel()
+    tanda = tanda_dir or preparar_carrusel(top=top, matriz=matriz)
 
     # 5. Auditar editorial
     editorial_ok = auditar_editorial(tanda)
@@ -358,8 +363,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--despachar", nargs="?", const="", help="despacha la tanda a los canales oficiales")
     parser.add_argument("--confirmar", action="store_true", help="autorización explícita para despacho real a clientes")
     parser.add_argument("--todo", action="store_true", help="ejecuta el pipeline completo de punta a punta")
-    parser.add_argument("--top", type=int, default=3, help="cantidad de piezas para el escáner (default: 3)")
-    parser.add_argument("--matriz", action="store_true", help="cobertura de los 5 grupos de mercado")
+    parser.add_argument("--top", type=int, default=1, help="cantidad de piezas por canal (default: 1)")
+    parser.add_argument("--matriz", action="store_true", default=True, help="cobertura de los 5 grupos de mercado (default: True)")
+    parser.add_argument("--no-matriz", dest="matriz", action="store_false", help="desactiva el modo matriz y usa top global")
 
     args = parser.parse_args(argv)
 
@@ -385,7 +391,7 @@ def main(argv: list[str] | None = None) -> int:
         tanda = resolver_ultima_tanda(args.despachar or None)
         return 0 if despachar_oficial(tanda, confirmado=args.confirmar) else 1
     elif args.todo:
-        return ejecutar_todo(confirmar_despacho=args.confirmar)
+        return ejecutar_todo(confirmar_despacho=args.confirmar, top=args.top, matriz=args.matriz)
     else:
         parser.print_help()
         return 0

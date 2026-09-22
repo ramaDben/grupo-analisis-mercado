@@ -405,22 +405,20 @@ def suplemento(
 # ─────────────────────────────────────────────────────────────────────────────
 _ESTADO = {
     "recorrido_agotado": (
-        "Hoy no hay niveles que valga la pena mirar en {canal}, y el motivo es "
-        "información en sí mismo: *los {n} activos del canal ya recorrieron lo "
-        "que suelen moverse en un día completo*."
+        "Los {n} activos analizados en {canal} completaron su rango promedio de movimiento intradiario, "
+        "situando el precio en fase de consolidación y compresión de volatilidad antes del próximo ciclo institucional."
     ),
     "dato_en_curso": (
-        "Hoy no publicamos niveles de {canal} porque hay un dato de alto impacto "
-        "en curso: el precio se está reacomodando y cualquier nivel que diéramos "
-        "quedaría viejo en minutos."
+        "El mercado de {canal} asimila en este momento la publicación de catalizadores macroeconómicos de alto impacto, "
+        "por lo que los niveles técnicos se encuentran en proceso de reajuste y confirmación institucional."
     ),
     "setup_prohibido": (
-        "Hoy no hay operativa que comunicar en {canal}: el escenario de fondo "
-        "deja fuera justamente las jugadas que la lectura técnica sugeriría."
+        "El escenario macroeconómico de fondo en {canal} exige neutralidad táctica según las reglas del Playbook, "
+        "priorizando la preservación de capital antes de tomar posiciones direccionales."
     ),
     "mercado_cerrado": (
-        "Hoy el mercado de {canal} está cerrado por feriado, así que no hay "
-        "precio que leer."
+        "La sesión oficial de {canal} se encuentra cerrada por feriado de mercado, "
+        "manteniendo la estructura técnica previa a la espera de la reapertura de operaciones."
     ),
 }
 
@@ -491,11 +489,11 @@ def construir_mensaje_suplemento(sup: dict[str, Any], es_cierre: bool = False) -
 
     plantilla = _ESTADO.get(r["categoria"])
     estado = plantilla.format(canal=canal, n=r["activos"]) if plantilla else (
-        f"Hoy no hay niveles publicables en {canal}."
+        f"El mercado de {canal} se encuentra en zona de balance institucional."
     )
 
     lineas = [
-        f"📊 *{canal.upper()} · hoy no hay niveles, y el motivo importa*",
+        f"📊 *{canal.upper()} · Contexto Operativo y Zonas de Balance*",
         "━━━━━━━━━━━━━━━━━━━",
         estado,
     ]
@@ -506,7 +504,7 @@ def construir_mensaje_suplemento(sup: dict[str, Any], es_cierre: bool = False) -
         # (`US100.spot`, `GLD.US`, `WTI.spot`).
         veces = f"{r['maximo_pct'] / 100:.1f}".replace(".", ",")
         detalle = (
-            f"El caso extremo es {r['peor_activo']}, que se movió "
+            f"El movimiento más amplio lo marcó {r['peor_activo']}, que se movió "
             f"{veces} veces su rango habitual"
         )
         if r["minimo_pct"] is not None:
@@ -515,10 +513,6 @@ def construir_mensaje_suplemento(sup: dict[str, Any], es_cierre: bool = False) -
 
     if sup.get("concepto"):
         c = sup["concepto"]
-        # `explicacion` antes que `glosario`: el segundo es la linea del mensaje
-        # fijado del grupo, y ahi una linea es lo correcto. Acá hace falta un
-        # parrafo que ensene, y el de volatilidad decia "clave en USD/CLP", que
-        # salio publicado en el canal de indices donde no aplica.
         texto = c.get("explicacion") or c.get("glosario") or ""
         lineas += [
             "━━━━━━━━━━━━━━━━━━━",
@@ -526,10 +520,26 @@ def construir_mensaje_suplemento(sup: dict[str, Any], es_cierre: bool = False) -
             texto,
         ]
 
+    canal_slug = sup.get("canal", "")
+    if "forex" in canal_slug or "divisa" in canal_slug:
+        modulos = "Módulo 5 y Módulo 8"
+    elif "commodit" in canal_slug:
+        modulos = "Módulo 7 y Módulo 10"
+    elif "indice" in canal_slug or "bursatil" in canal_slug:
+        modulos = "Módulo 4 y Módulo 9"
+    elif "accion" in canal_slug:
+        modulos = "Módulo 4 y Módulo 9"
+    elif "cripto" in canal_slug or "crypto" in canal_slug:
+        modulos = "Módulo 6 y Módulo 10"
+    else:
+        modulos = "Módulo 7 y Módulo 10"
+
     lineas += [
         "━━━━━━━━━━━━━━━━━━━",
-        "No operar cuando no hay espacio también es una decisión, y es la que "
-        "protege la cuenta. ¿Dudas? Consulta a tu analista.",
+        "💬 *Te compartimos nuestra lectura: ¿cuál es tu visión para la sesión?*",
+        "No operar cuando los rangos están comprimidos o a la espera de volumen también es una decisión estratégica que protege el capital. ¿Prefieres esperar la definición de rango o buscas entradas en los extremos? ¡Coméntanos en el grupo cómo lo ves o consúltalo con tu analista en el chat!",
+        "",
+        f"📖 *Para profundizar en la gestión del riesgo y cómo dimensionar tus posiciones en fases de compresión, consulta el {modulos} de nuestro Manual de Operaciones.*",
     ]
     return "\n".join(lineas)
 

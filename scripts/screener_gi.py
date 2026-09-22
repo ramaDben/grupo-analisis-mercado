@@ -532,13 +532,21 @@ def gate_confianza(sesgo: dict[str, Any] | None) -> str | None:
     return None
 
 
-def gate_agotamiento(d1: dict[str, Any]) -> str | None:
+def gate_agotamiento(d1: dict[str, Any], ahora_santiago: datetime | None = None) -> str | None:
     """Excluye si el activo ya consumió su recorrido diario.
 
     El plan lo trata como 0 puntos en el Factor Espacio, pero 0 puntos en un
     factor de 20 todavía deja 80 disponibles: un activo agotado puede ganar la
     tanda con técnica y catalizador. Agotado es agotado.
     """
+    if ahora_santiago and d1.get("fecha_barra"):
+        hoy_scl = ahora_santiago.date().isoformat()
+        if str(d1["fecha_barra"]) < hoy_scl:
+            # La última vela diaria de MT5 corresponde a una sesión anterior (ayer o fin de semana).
+            # Para la jornada de hoy este mercado todavía no abre o no ha registrado ticks,
+            # por lo que no puede haber consumido el ATR de hoy.
+            return None
+
     atr = d1.get("atr_14")
     rango = d1.get("rango_hoy")
     if not atr or rango is None:
@@ -729,7 +737,12 @@ def factor_catalizador(
     return 0, "sin catalizador"
 
 
-def factor_espacio(h1: dict[str, Any], d1: dict[str, Any], direccion: str) -> tuple[int, str]:
+def factor_espacio(
+    h1: dict[str, Any],
+    d1: dict[str, Any],
+    direccion: str,
+    ahora_santiago: datetime | None = None,
+) -> tuple[int, str]:
     """C ∈ [0, 20]. Espacio al objetivo medido en ATR de H1, validado contra lo
     que le queda de recorrido al día."""
     precio = h1["price"]
@@ -740,7 +753,15 @@ def factor_espacio(h1: dict[str, Any], d1: dict[str, Any], direccion: str) -> tu
 
     espacio = abs(objetivo - precio) / atr_h1
     atr_d1, rango_hoy = d1.get("atr_14"), d1.get("rango_hoy")
-    consumo = (rango_hoy / atr_d1) if (atr_d1 and rango_hoy is not None) else None
+
+    if ahora_santiago and d1.get("fecha_barra"):
+        hoy_scl = ahora_santiago.date().isoformat()
+        if str(d1["fecha_barra"]) < hoy_scl:
+            consumo = 0.0
+        else:
+            consumo = (rango_hoy / atr_d1) if (atr_d1 and rango_hoy is not None) else None
+    else:
+        consumo = (rango_hoy / atr_d1) if (atr_d1 and rango_hoy is not None) else None
 
     if consumo is None:
         return 0, f"espacio {espacio:.1f}x ATR H1, sin consumo diario medible"
@@ -800,7 +821,7 @@ def evaluar_activo(
         return {**base, "excluido": f"D1 {d1['error']}: {d1.get('message', '')}"}
 
     if not ignorar_agotamiento:
-        motivo = gate_agotamiento(d1)
+        motivo = gate_agotamiento(d1, ahora_santiago=ahora_santiago)
         if motivo:
             return {**base, "excluido": motivo}
 
@@ -845,7 +866,7 @@ def evaluar_activo(
 
     t, det_t = factor_tecnico(h1, d1, direccion)
     m, det_m = factor_catalizador(ticker, eventos, delta_ust_bps)
-    c, det_c = factor_espacio(h1, d1, direccion)
+    c, det_c = factor_espacio(h1, d1, direccion, ahora_santiago=ahora_santiago)
     f, det_f = factor_momentum(h1, direccion)
 
     return {

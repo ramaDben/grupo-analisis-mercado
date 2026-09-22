@@ -798,7 +798,7 @@ def test_un_activo_sin_ficha_de_playbook_sale_sin_vigencia_y_no_se_cae():
     assert res["vigencia"] is None
 
 
-def test_el_modo_matriz_respeta_el_tope_por_grupo():
+def test_el_modo_matriz_respeta_el_tope_por_grupo(tmp_path, monkeypatch):
     """La matriz daba UNA pieza por grupo e ignoraba `--top`, asi que un canal
     con cinco activos elegibles recibia un carrusel de una sola pieza.
 
@@ -806,6 +806,7 @@ def test_el_modo_matriz_respeta_el_tope_por_grupo():
     default de `--top`: la matriz tiene que llegar hasta ahi cuando hay con que,
     sin tocar los gates.
     """
+    monkeypatch.setattr(sc, "DIR_SALIDA", tmp_path)
     universo = sc.cargar_universo(solo_renderizables=False)
     cripto = [a for a in universo if a["categoria"] == "crypto"]
     assert len(cripto) >= 3, "el catalogo dejo de tener criptos suficientes para la prueba"

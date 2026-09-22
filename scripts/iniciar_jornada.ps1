@@ -1,4 +1,5 @@
 <#
+# punto-de-entrada: operador en consola PowerShell al iniciar la jornada matutina
 .SYNOPSIS
     Iniciador blindado de la Jornada Matutina para Grupo Inteligencia.
 .DESCRIPTION
@@ -28,8 +29,8 @@ param (
     [switch]$Despachar,
     [switch]$Confirmar,
     [switch]$Todo,
-    [int]$Top = 3,
-    [switch]$Matriz,
+    [int]$Top = 1,
+    [switch]$Matriz = $true,
     [string]$Tanda = ""
 )
 
@@ -66,6 +67,9 @@ if ($Diagnostico) {
     if ($Confirmar) { $pyArgs += "--confirmar" }
 } elseif ($Todo) {
     $pyArgs += "--todo"
+    $pyArgs += "--top"
+    $pyArgs += $Top.ToString()
+    if ($Matriz) { $pyArgs += "--matriz" }
     if ($Confirmar) { $pyArgs += "--confirmar" }
 } else {
     # Por defecto, ejecuta diagnóstico y ayuda

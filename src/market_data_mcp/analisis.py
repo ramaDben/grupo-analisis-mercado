@@ -313,6 +313,7 @@ def analizar_activo(ticker: str, timeframe: str = "H4") -> dict[str, Any]:
         # Sin él ese stop no era calculable desde la tool y había que ir al
         # snapshot del motor, que puede tener 24 h.
         resultado["atr_20"] = round(float(atr(df_closed, 20).iloc[-1]), digits)
+        resultado["fecha_barra"] = str(pd.to_datetime(df["time"].iloc[-1]).date())
 
     # Anclajes del Chandelier Exit: el extremo de las últimas N velas cerradas.
     #

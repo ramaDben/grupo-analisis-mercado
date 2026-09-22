@@ -737,9 +737,9 @@ def construir_mensaje_alerta(payload: dict[str, Any]) -> str:
     activo = payload["activo"]
     rotulo = payload.get("rotulo_activo", activo)
     ticker = rotulo.split("·")[-1].strip() if "·" in rotulo else activo
-    precio = payload["precio_actual"]
-    soporte = payload["soporte"]
-    resistencia = payload["resistencia"]
+    precio = payload.get("precio_actual") or payload.get("precio") or "--"
+    soporte = payload.get("soporte", "--")
+    resistencia = payload.get("resistencia", "--")
     vol = payload.get("vol_pct", "")
     sesgo = payload.get("sesgo", "Alcista")
     alcista = sesgo.lower() == "alcista"
@@ -1027,12 +1027,20 @@ def escribir_suplementos(
             sop_txt = fmt(float(sop_val)) if sop_val is not None else "--"
             res_txt = fmt(float(res_val)) if res_val is not None else "--"
 
-            titular_recap = f"{rotulo} consolida en zona de balance tras completar su recorrido"
-            parrafo_recap = (
-                f"El activo completó su rango habitual de la jornada. "
-                f"Soporte técnico situado en {sop_txt} y resistencia en {res_txt}. "
-                "Estructura en compresión a la espera de la apertura del próximo ciclo."
-            )
+            if es_cierre:
+                titular_recap = f"{rotulo} consolida en zona de balance tras completar su recorrido"
+                parrafo_recap = (
+                    f"El activo completó su rango habitual de la jornada. "
+                    f"Soporte técnico situado en {sop_txt} y resistencia en {res_txt}. "
+                    "Estructura en compresión a la espera de la apertura del próximo ciclo."
+                )
+            else:
+                titular_recap = f"{rotulo} define zonas de balance y niveles clave para la sesión"
+                parrafo_recap = (
+                    f"El activo inicia la jornada en rango técnico de consolidación. "
+                    f"Soporte técnico clave en {sop_txt} y resistencia en {res_txt}. "
+                    "A la espera de confirmación y flujo institucional para definir la dirección de la jornada."
+                )
 
             momento_ahora = datetime.now(tz=SANTIAGO)
             recap_payload = {
@@ -1046,6 +1054,7 @@ def escribir_suplementos(
                 "tag_riesgo": "BALANCE",
                 "tipo_pieza": "recap",
                 "precio": spot_txt,
+                "precio_actual": spot_txt,
                 "soporte": sop_txt,
                 "resistencia": res_txt,
                 "titular": titular_recap,
@@ -1072,9 +1081,9 @@ def escribir_suplementos(
                 json.dumps(recap_payload, ensure_ascii=False, indent=2),
                 encoding="utf-8"
             )
-            msg_suplemento = (carpeta / "0_suplemento.txt").read_text(encoding="utf-8")
-            (carpeta / f"1_recap_{slug_ancla}_mensaje.txt").write_text(msg_suplemento, encoding="utf-8")
-            (carpeta / "mensaje.txt").write_text(msg_suplemento, encoding="utf-8")
+            msg_alerta_recap = construir_mensaje_alerta(recap_payload)
+            (carpeta / f"1_recap_{slug_ancla}_mensaje.txt").write_text(msg_alerta_recap, encoding="utf-8")
+            (carpeta / "mensaje.txt").write_text(msg_alerta_recap, encoding="utf-8")
 
         escritos.append(sup)
         avisos.append(
@@ -1560,10 +1569,7 @@ def rendir(directorio: Path) -> dict[str, Any]:
             render_story(payload_enriquecido, PLANTILLA, destino_local_png, formato=formato)
 
         # Generar mensaje final para WhatsApp dentro de la carpeta del grupo
-        if payload.get("tipo_pieza") == "recap" and (archivo.parent / "0_suplemento.txt").exists():
-            msg_final = (archivo.parent / "0_suplemento.txt").read_text(encoding="utf-8")
-        else:
-            msg_final = construir_mensaje_alerta(payload)
+        msg_final = construir_mensaje_alerta(payload)
         (archivo.parent / "mensaje.txt").write_text(msg_final, encoding="utf-8")
         (archivo.parent / f"{archivo.stem}_mensaje.txt").write_text(msg_final, encoding="utf-8")
 
@@ -1714,10 +1720,7 @@ def _refrescar_y_rendir(dir_grupo: Path) -> list[str]:
             pieza.pop("_pendiente_editorial", None)
             render_story(enriquecer(pieza), PLANTILLA, destino_local_png, formato="horizontal")
 
-        if payload.get("tipo_pieza") == "recap" and (dir_grupo / "0_suplemento.txt").exists():
-            msg_final = (dir_grupo / "0_suplemento.txt").read_text(encoding="utf-8")
-        else:
-            msg_final = construir_mensaje_alerta(nuevo)
+        msg_final = construir_mensaje_alerta(nuevo)
         (dir_grupo / f"{archivo.stem}_mensaje.txt").write_text(msg_final, encoding="utf-8")
         (dir_grupo / "mensaje.txt").write_text(msg_final, encoding="utf-8")
         avisos.append(f"✅ {ticker} refrescado a las {ahora.strftime('%H:%M')}")
