@@ -36,7 +36,9 @@ _PAISES: dict[str, int] = {
 }
 
 _CACHE_DIR = Path(__file__).resolve().parent.parent.parent.parent / "data" / "cache"
-_CACHE_TTL = 3600  # 1 hora en segundos
+_CACHE_TTL_DEFAULT = 3600  # 1 hora en segundos fuera de sesión o fines de semana
+_CACHE_TTL_ACTIVO = 300   # 5 minutos durante la jornada bursátil activa (lunes a viernes 06:00-18:00 CLT)
+_CACHE_TTL = _CACHE_TTL_DEFAULT
 
 _IMPACTO_RANK_EN: dict[str, int] = {"low": 0, "medium": 1, "high": 2}
 _IMPACTO_RANK_ES: dict[str, int] = {"bajo": 0, "medio": 1, "alto": 2}
@@ -79,17 +81,30 @@ def _cache_path(tab: str) -> Path:
     return _CACHE_DIR / f"investing_calendar_{tab}.html"
 
 
-def _cache_valid(path: Path) -> bool:
-    return path.exists() and (time.time() - path.stat().st_mtime) < _CACHE_TTL
+def _cache_ttl(ahora: datetime | None = None) -> int:
+    """Retorna 300s en horario bursátil de Chile (06:00 a 18:00 CLT, lunes a viernes) o 3600s fuera."""
+    ahora_stgo = ahora or datetime.now(tz=_SANTIAGO)
+    if ahora_stgo.weekday() < 5 and 6 <= ahora_stgo.hour < 18:
+        return _CACHE_TTL_ACTIVO
+    return _CACHE_TTL_DEFAULT
 
 
-def _fetch_calendario(tab: str) -> str:
-    """POST getCalendarFilteredData con horas en UTC. Caché local de 1 hora.
+def _cache_valid(path: Path, ahora: datetime | None = None) -> bool:
+    ttl = _cache_ttl(ahora)
+    return path.exists() and (time.time() - path.stat().st_mtime) < ttl
+
+
+def _fetch_calendario(tab: str, ahora: datetime | None = None) -> str:
+    """POST getCalendarFilteredData con horas en UTC. Caché dinámico de 5m en mercado o 1h en reposo.
 
     Retorna el HTML de las filas, o "" ante cualquier falla sin caché de respaldo.
     """
     cached = _cache_path(tab)
-    if _cache_valid(cached):
+    try:
+        valido = _cache_valid(cached, ahora=ahora)
+    except TypeError:
+        valido = _cache_valid(cached)
+    if valido:
         try:
             return cached.read_text(encoding="utf-8")
         except Exception:  # nosec B110 — caché ilegible: se sigue al fetch remoto
@@ -266,7 +281,10 @@ def cargar_calendario(
             ),
         }
 
-    html = _fetch_calendario("thisWeek")
+    try:
+        html = _fetch_calendario("thisWeek", ahora=ahora)
+    except TypeError:
+        html = _fetch_calendario("thisWeek")
     if not html:
         return {
             "error": "NO_CALENDAR_FEEDS",

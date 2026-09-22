@@ -67,6 +67,11 @@ CATEGORIAS: dict[str, dict[str, Any]] = {
         "concepto": "volatilidad-atr",
         "publicable": True,
     },
+    "ya salio en una corrida anterior": {
+        "categoria": "recorrido_agotado",
+        "concepto": "volatilidad-atr",
+        "publicable": True,
+    },
     "blackout por": {
         "categoria": "dato_en_curso",
         "concepto": "precio-descontado",
@@ -109,6 +114,39 @@ CATEGORIAS: dict[str, dict[str, Any]] = {
         "categoria": "modelo_sin_vista",
         "concepto": None,
         "publicable": False,
+    },
+}
+
+ACTIVOS_ANCLA_CANAL: dict[str, dict[str, Any]] = {
+    "02_forex_divisas": {
+        "ticker": "USDCLP",
+        "nombre": "Dólar / Peso Chileno",
+        "rotulo": "USD/CLP",
+        "categoria": "DIVISAS",
+    },
+    "03_commodities_materias_primas": {
+        "ticker": "XAUUSD",
+        "nombre": "Oro",
+        "rotulo": "XAU/USD",
+        "categoria": "COMMODITIES",
+    },
+    "04_indices_bursatiles": {
+        "ticker": "US100.spot",
+        "nombre": "Nasdaq 100",
+        "rotulo": "US100 (Nasdaq)",
+        "categoria": "ÍNDICES",
+    },
+    "05_acciones_etfs": {
+        "ticker": "#NVDA",
+        "nombre": "NVIDIA",
+        "rotulo": "NVDA",
+        "categoria": "ACCIONES",
+    },
+    "06_criptoactivos": {
+        "ticker": "BTCUSD",
+        "nombre": "Bitcoin",
+        "rotulo": "BTC/USD",
+        "categoria": "CRIPTOMONEDAS",
     },
 }
 
@@ -341,11 +379,24 @@ def suplemento(
         resumen = {**resumen, "concepto": None}
 
     ficha = _concepto(resumen["concepto"])
+    ancla_base = ACTIVOS_ANCLA_CANAL.get(canal, {
+        "ticker": "USDCLP",
+        "nombre": "Dólar / Peso Chileno",
+        "rotulo": "USD/CLP",
+        "categoria": "DIVISAS",
+    })
+    activo_ancla = dict(ancla_base)
+    for ex in excluidos or []:
+        if ex.get("ticker") == ancla_base["ticker"]:
+            activo_ancla["nombre"] = ex.get("nombre", ancla_base["nombre"])
+            break
+
     return {
         "canal": canal,
         "canal_es": NOMBRE_CANAL.get(canal, "este mercado"),
         "resumen": resumen,
         "concepto": ({"clave": resumen["concepto"], **ficha} if ficha else None),
+        "activo_ancla": activo_ancla,
     }
 
 
@@ -375,19 +426,23 @@ _ESTADO = {
 
 
 def construir_mensaje_suplemento(sup: dict[str, Any], es_cierre: bool = False) -> str:
-    """El mensaje de WhatsApp del suplemento.
+    """El mensaje de WhatsApp del suplemento o balance de sesión.
 
-    No lleva el cierre canónico de tres escenarios porque no tiene niveles con
-    que armarlo. Cierra con el CTA al analista, que es lo que corresponde a una
-    pieza sin operativa.
+    En cierre presenta un balance en tres tiempos comentando qué pasó, qué está pasando
+    ahora y qué vigilar para la próxima apertura, anclado a un activo representativo.
     """
     r = sup["resumen"]
     canal = sup["canal_es"]
 
     if es_cierre:
+        ancla = sup.get("activo_ancla") or {}
+        rotulo_ancla = ancla.get("rotulo") or ancla.get("nombre") or canal.title()
+
         lineas = [
             f"📊 *{canal.upper()} · Balance de Cierre de Jornada*",
+            f"🎯 *Activo en foco*: *{rotulo_ancla}*",
             "━━━━━━━━━━━━━━━━━━━",
+            "1️⃣ *QUÉ PASÓ EN LA JORNADA*",
         ]
         if r["categoria"] == "recorrido_agotado":
             lineas.append(
@@ -417,13 +472,21 @@ def construir_mensaje_suplemento(sup: dict[str, Any], es_cierre: bool = False) -
                 detalle += f" (el de menor variación marcó un {r['minimo_pct']}%)"
             lineas.append(detalle + ".")
 
-        lineas += [
-            "━━━━━━━━━━━━━━━━━━━",
+        lineas.extend([
+            "",
+            "2️⃣ *QUÉ ESTÁ PASANDO AHORA*",
+            f"El cierre de sesión sitúa a {rotulo_ancla} en fase de consolidación y compresión de volatilidad. "
+            "El recorrido diario ha quedado completado, dando paso a una pausa técnica institucional "
+            "antes de la inyección de volumen del siguiente ciclo.",
+            "",
+            "3️⃣ *QUÉ VIGILAR PARA LA PRÓXIMA APERTURA*",
             "El cierre de sesión es momento de evaluar la estructura del precio para anticipar "
             "la apertura del siguiente ciclo sin forzar entradas innecesarias.",
             "━━━━━━━━━━━━━━━━━━━",
+            "💡 *En la imagen adjunta encuentras el gráfico TradingView™ en H1 con los niveles de la jornada.*",
+            "━━━━━━━━━━━━━━━━━━━",
             "A continuación abrimos la encuesta de la jornada para conocer la visión de la comunidad 👇",
-        ]
+        ])
         return "\n".join(lineas)
 
     plantilla = _ESTADO.get(r["categoria"])

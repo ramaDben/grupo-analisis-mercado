@@ -621,3 +621,35 @@ def test_ningun_ticker_se_declara_dos_veces_con_digits_distintos():
 
     conflictos = {t: sorted(v) for t, v in vistos.items() if len(v) > 1}
     assert not conflictos, f"tickers con decimales contradictorios: {conflictos}"
+
+
+def test_tolerancia_ruido_atr_proviene_de_playbook_config():
+    """La constante institucional de tolerancia anti-ruido debe coincidir con
+    donchian_band_atr_mult de playbook_config.yaml (Sección 3 del Playbook V2)."""
+    import yaml
+    from pathlib import Path
+    raiz = Path(__file__).resolve().parents[1]
+    cfg = yaml.safe_load((raiz / "config" / "playbook_config.yaml").read_text(encoding="utf-8"))
+    esperado = float(cfg["risk_parameters"]["donchian_band_atr_mult"])
+    assert levels.TOLERANCIA_RUIDO_ATR == esperado
+
+
+def test_niveles_ignoran_swings_dentro_del_radio_de_ruido_playbook():
+    """Un swing high o low que caiga a menos de 0.3 * ATR del spot se considera ruido
+    y el motor debe descartarlo, seleccionando el siguiente swing o el respaldo ATR."""
+    # Construir un DataFrame con un micro-swing a 0.1 de distancia y un swing mayor a 1.5
+    # current = 100.0, atr = 1.0 -> radio de ruido = 0.3
+    # Micro swing high en 100.1 (debe ser ignorado por estar a 0.1 < 0.3)
+    # Swing high estructural en 102.0 (debe ser seleccionado como R1)
+    h = [99.0] * 5 + [100.1] + [99.0] * 5 + [102.0] + [99.0] * 5 + [100.0]
+    l = [98.0] * 5 + [98.5] + [98.0] * 5 + [98.0] + [98.0] * 5 + [99.5]
+    c = [98.5] * (len(h) - 1) + [100.0]
+    df = pd.DataFrame({"high": h, "low": l, "close": c})
+    current = 100.0
+    atr14 = 1.0
+
+    res = levels._get_support_resistance(df, current=current, atr14=atr14, digits=2)
+    # R1 no puede ser 100.10 porque está a 0.10 (< 0.30)
+    assert res["r1"] >= current + 0.3 * atr14
+    assert res["r1"] == 102.0
+

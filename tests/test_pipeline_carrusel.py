@@ -1321,3 +1321,39 @@ def test_las_dos_rutas_comparten_un_solo_guardia_editorial():
         assert guardia.__name__ in fuente, (
             f"{funcion.__name__} no usa {guardia.__name__}: el freno se duplicó"
         )
+
+
+def test_despachar_modo_pruebas_redirige_a_banco_de_pruebas(tmp_path, monkeypatch):
+    """En modo pruebas, todo el despacho debe dirigirse al banco de pruebas interno
+    y no debe registrarse en la bitácora de despachos para no bloquear el canal real."""
+    grupo_dir = tmp_path / "02_forex_divisas"
+    grupo_dir.mkdir()
+    (grupo_dir / "1_test.png").write_bytes(b"fake_png")
+    (grupo_dir / "1_test_mensaje.txt").write_text("Mensaje test", encoding="utf-8")
+
+    llamadas_lote = []
+
+    class MockConfig:
+        destino_de_pruebas = "GI · Banco de Pruebas"
+
+    class MockSender:
+        def __init__(self, headless=True):
+            self.config = MockConfig()
+
+        def enviar_lote(self, destinatario, piezas, dry_run=False, al_entregar=None):
+            llamadas_lote.append((destinatario, len(piezas)))
+            if al_entregar:
+                for pz in piezas:
+                    al_entregar(pz)
+            return {"destinatario": destinatario, "piezas": len(piezas), "status": "enviado"}
+
+    monkeypatch.setattr("whatsapp_sender.WhatsAppSender", MockSender)
+    monkeypatch.setattr(pc, "_refrescar_y_rendir", lambda _d: [])
+
+    bitacora_anotaciones = []
+    monkeypatch.setattr("bitacora_despachos.registrar", lambda *a, **k: bitacora_anotaciones.append((a, k)))
+
+    res = pc.despachar(tmp_path, dry_run=False, pruebas=True)
+    assert len(llamadas_lote) == 1
+    assert llamadas_lote[0][0] == "GI · Banco de Pruebas"
+    assert len(bitacora_anotaciones) == 0

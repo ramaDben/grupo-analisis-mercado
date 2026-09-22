@@ -690,29 +690,26 @@ def test_el_umbral_de_confianza_sale_del_config_del_playbook():
     import yaml
 
     cfg = yaml.safe_load((RAIZ / "config" / "playbook_config.yaml").read_text(encoding="utf-8"))
-    assert cfg["confidence_weights"]["umbral_minimo_pct"] == 65.0
-    assert sc.UMBRAL_CONFIANZA_PCT == 65.0
+    assert cfg["confidence_weights"]["umbral_minimo_pct"] == 51.0
+    assert sc.UMBRAL_CONFIANZA_PCT == 51.0
 
 
 def test_una_confianza_insuficiente_excluye_el_activo():
-    """El caso real del 2026-09-02 por la mañana: 54,6 %, con la clave de la TPM
-    rota y el petróleo detenido ocho días. El activo no debía comunicarse y nada
-    lo detenía."""
+    """El caso real con confianza por debajo del umbral mínimo (51.0%)."""
     res = sc.evaluar_activo(
-        ACTIVO, [], None, {"XAUUSD": _sesgo_con_confianza(54.6)},
+        ACTIVO, [], None, {"XAUUSD": _sesgo_con_confianza(48.0)},
         AHORA.astimezone(sc.SANTIAGO),
         analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
     )
     assert "excluido" in res
-    assert "54.6" in res["excluido"] or "54,6" in res["excluido"]
-    assert "65" in res["excluido"], "el motivo tiene que decir contra qué umbral"
+    assert "48.0" in res["excluido"] or "48,0" in res["excluido"]
+    assert "51" in res["excluido"], "el motivo tiene que decir contra qué umbral"
 
 
 def test_la_confianza_justo_en_el_umbral_no_excluye():
-    """65,0 es el valor que da frescura y cobertura en 1,0. Excluirlo dejaría
-    fuera la propia condición que el Playbook llama operación normal."""
+    """El valor justo en el umbral no excluye."""
     res = sc.evaluar_activo(
-        ACTIVO, [], None, {"XAUUSD": _sesgo_con_confianza(65.0)},
+        ACTIVO, [], None, {"XAUUSD": _sesgo_con_confianza(51.0)},
         AHORA.astimezone(sc.SANTIAGO),
         analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
     )

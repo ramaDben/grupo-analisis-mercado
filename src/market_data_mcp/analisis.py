@@ -20,7 +20,9 @@ retorna `{"error": "CÓDIGO", "message": "..."}`.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
+import yaml
 
 import pandas as pd
 
@@ -32,6 +34,28 @@ from market_data_mcp.catalog import VALID_TICKERS
 # día, aunque siga habiendo movimiento real posible (cierre de Wall Street,
 # noticia, gap). 30% del ATR diario como mínimo disponible.
 PISO_ATR_RESTANTE = 0.30
+
+# Tolerancia de ruido anti-falsos quiebres leída directamente del Playbook V2
+# (config/playbook_config.yaml -> risk_parameters.donchian_band_atr_mult, default 0.3).
+# Todo nivel a menor distancia que este umbral del precio spot se considera ruido de
+# microestructura / en testeo activo y no un soporte/resistencia táctico independiente.
+BASE_DIR = Path(__file__).resolve().parents[2]
+CONFIG_PLAYBOOK_PATH = BASE_DIR / "config" / "playbook_config.yaml"
+
+
+def _cargar_tolerancia_ruido_playbook() -> float:
+    try:
+        if CONFIG_PLAYBOOK_PATH.exists():
+            cfg = yaml.safe_load(CONFIG_PLAYBOOK_PATH.read_text(encoding="utf-8"))
+            val = cfg.get("risk_parameters", {}).get("donchian_band_atr_mult")
+            if val is not None:
+                return float(val)
+    except Exception:
+        pass
+    return 0.3
+
+
+TOLERANCIA_RUIDO_ATR = _cargar_tolerancia_ruido_playbook()
 
 
 def _rsi(series: pd.Series, period: int = 14) -> float:
@@ -79,23 +103,33 @@ def _cluster(levels: list[float], threshold: float) -> list[float]:
     return clustered
 
 
-def _get_support_resistance(df: pd.DataFrame, current: float, atr14: float, digits: int) -> dict[str, float]:
-    """
-    Calcula S1, S2, R1, R2 garantizando que R1/R2 > current > S1/S2.
+def _get_support_resistance(
+    df: pd.DataFrame,
+    current: float,
+    atr14: float,
+    digits: int,
+    tolerancia_atr: float = TOLERANCIA_RUIDO_ATR,
+) -> dict[str, Any]:
+    """Calcula S1, S2, R1, R2 garantizando que R1/R2 > current > S1/S2.
+
     Usa swing highs/lows como niveles primarios y proyecciones ATR como respaldo.
+    Aplica la banda de tolerancia anti-ruido del Playbook V2 (b = tolerancia_atr * ATR)
+    para evitar que niveles hiper-pegados al spot sean catalogados como soportes o resistencias.
     """
     threshold = current * 0.0015  # 0.15% para clustering
     resistances_raw, supports_raw = _swing_levels(df)
     resistances = _cluster(resistances_raw, threshold)
     supports = _cluster(supports_raw, threshold)
 
-    above = sorted([r for r in resistances if r > current])
-    below = sorted([s for s in supports if s < current], reverse=True)
+    min_distancia = max(tolerancia_atr * atr14, threshold)
+
+    above = sorted([r for r in resistances if r >= current + min_distancia])
+    below = sorted([s for s in supports if s <= current - min_distancia], reverse=True)
 
     r1 = above[0] if len(above) > 0 else round(current + atr14, digits)
-    r2 = above[1] if len(above) > 1 else round(current + 2 * atr14, digits)
+    r2 = above[1] if len(above) > 1 else round(max(r1 + atr14, current + 2 * atr14), digits)
     s1 = below[0] if len(below) > 0 else round(current - atr14, digits)
-    s2 = below[1] if len(below) > 1 else round(current - 2 * atr14, digits)
+    s2 = below[1] if len(below) > 1 else round(min(s1 - atr14, current - 2 * atr14), digits)
 
     # De donde salio cada nivel, lado por lado. El respaldo por ATR es una red de
     # seguridad correcta (garantiza R > precio > S) pero **no es un nivel**: es el

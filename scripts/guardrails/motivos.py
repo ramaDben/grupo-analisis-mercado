@@ -109,6 +109,12 @@ MOTIVOS: dict[str, Motivo] = {
         "instrumento: distinto spread, contrato y moneda de resultado.",
         publicable=False,
     ),
+    # --- autoridades.py ---------------------------------------------------
+    "autoridad_obsoleta": Motivo(
+        "El texto menciona a una autoridad antigua u obsoleta (ej. Powell) en "
+        "lugar del presidente vigente (ej. Warsh).",
+        publicable=False,
+    ),
     # --- infraestructura --------------------------------------------------
     "error_interno": Motivo(
         "El guardrail no pudo evaluar la entrada. Fail-closed: no se aprueba lo "

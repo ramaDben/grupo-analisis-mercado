@@ -804,7 +804,13 @@ def evaluar_activo(
         if motivo:
             return {**base, "excluido": motivo}
 
-    direccion = direccion_tecnica(h1)
+    sesgo_activo = (sesgos.get(ticker) or {}).get("activo") or {}
+    sesgo_score = sesgo_activo.get("sesgo_score")
+
+    if isinstance(sesgo_score, (int, float)) and abs(sesgo_score) >= 0.3:
+        direccion = "BAJISTA" if sesgo_score < 0 else "ALCISTA"
+    else:
+        direccion = direccion_tecnica(h1)
 
     motivo = gate_blackout(ticker, eventos, ahora_santiago)
     if motivo:
@@ -856,6 +862,7 @@ def evaluar_activo(
         "soporte": h1["s1"],
         "resistencia": h1["r1"],
         "atr_h1": h1["atr_14"],
+        "atr_d1": d1.get("atr_14"),
         # Zona de aviso del gate de banda: la vela tipica cubre entre el 70% y el
         # 100% de la banda. La pieza sale, pero con los bordes estrechos para la
         # volatilidad del activo, y eso tiene que viajar en la seleccion para que

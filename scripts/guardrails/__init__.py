@@ -16,5 +16,6 @@ segunda fórmula de anacronismo serían el mismo error que tener dos fórmulas d
 """
 
 from .veredicto import Veredicto, aprueba, falla, primer_fallo
+from . import autoridades
 
-__all__ = ["Veredicto", "aprueba", "falla", "primer_fallo"]
+__all__ = ["Veredicto", "aprueba", "falla", "primer_fallo", "autoridades"]

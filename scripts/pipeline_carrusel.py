@@ -436,7 +436,24 @@ def incoherencia_del_payload(
             f"resistencia ({resistencia}): los niveles no corresponden a este precio"
         )
 
-    return None
+def acotar_niveles_intradia(
+    spot: float,
+    soporte: float,
+    resistencia: float,
+    atr_d1: float | None,
+    digits: int,
+) -> tuple[float, float]:
+    """Acota soporte y resistencia al rango intradía del ATR D1 si la amplitud excede 1.5 * ATR_D1."""
+    if not atr_d1 or atr_d1 <= 0:
+        return soporte, resistencia
+
+    rango_max = 1.5 * atr_d1
+    if (resistencia - soporte) > rango_max or (spot - soporte) > atr_d1 or (resistencia - spot) > atr_d1:
+        sop_acotado = round(spot - atr_d1, digits)
+        res_acotada = round(spot + atr_d1, digits)
+        return sop_acotado, res_acotada
+
+    return soporte, resistencia
 
 
 def construir_payload(
@@ -445,23 +462,24 @@ def construir_payload(
     ahora: datetime,
     cierres: list[float],
 ) -> dict[str, Any]:
-    """Payload de `alerta` con los datos resueltos y lo editorial en blanco.
-
-    Levanta `PayloadIncoherenteError` si las dos lecturas del terminal que se
-    juntan aca no describen el mismo instante. Se niega a construir en vez de
-    devolver algo marcado, por la misma politica de `rendir` ante un campo
-    editorial vacio: una pieza a medias que sale sin avisar llega al cliente.
-    """
+    """El payload de una pieza de alerta, listo para redactar y rendir."""
     motivo = incoherencia_del_payload(seleccion, cierres)
     if motivo is not None:
         raise PayloadIncoherenteError(f"{seleccion['ticker']}: {motivo}")
     digits = activo_catalogo["digits"]
-    imagen = activo_catalogo["imagen"]
+    imagen = activo_catalogo.get("imagen", "")
     slug = _slug_de_imagen(imagen)
     cat_real = activo_catalogo.get("categoria", seleccion["clase"])
 
     def fmt(valor: float) -> str:
         return f"{valor:,.{digits}f}".replace(",", "@").replace(".", ",").replace("@", ".")
+
+    spot_crudo = float(seleccion["precio"])
+    sop_crudo = float(seleccion["soporte"])
+    res_crudo = float(seleccion["resistencia"])
+    atr_d1 = seleccion.get("atr_d1")
+
+    sop_final, res_final = acotar_niveles_intradia(spot_crudo, sop_crudo, res_crudo, atr_d1, digits)
 
     vigencia_cruda, omitida = vigencia_publicable(
         seleccion.get("vigencia"), seleccion["direccion"]
@@ -489,9 +507,9 @@ def construir_payload(
         # pudo leer, o si su direccion contradice la lectura tecnica de la pieza.
         "vigencia": formatear_vigencia(vigencia_cruda, fmt),
         # Datos del motor
-        "precio_actual": fmt(seleccion["precio"]),
-        "soporte": fmt(seleccion["soporte"]),
-        "resistencia": fmt(seleccion["resistencia"]),
+        "precio_actual": fmt(spot_crudo),
+        "soporte": fmt(sop_final),
+        "resistencia": fmt(res_final),
         "vol_pct": f"{fmt(seleccion['impulso_adc_atr'])} {activo_catalogo['unidad']}",
         # Por que ESTA temporalidad para ESTE activo. Sin default a proposito, con
         # el mismo criterio que `unidad`: la linea es obligatoria en el mensaje, y
@@ -515,16 +533,16 @@ def construir_payload(
             "lienzo": "alto",
             "marcadores": [{
                 "indice": len(cierres) - 1,
-                "precio": seleccion["precio"],
+                "precio": spot_crudo,
                 "clase": "actual",
-                "etiqueta": fmt(seleccion["precio"]),
+                "etiqueta": fmt(spot_crudo),
                 "rol": "AHORA",
             }],
             "niveles": [
-                {"precio": seleccion["resistencia"], "clase": "resistencia",
-                 "etiqueta": fmt(seleccion["resistencia"]), "rol": "RESISTENCIA"},
-                {"precio": seleccion["soporte"], "clase": "soporte",
-                 "etiqueta": fmt(seleccion["soporte"]), "rol": "SOPORTE"},
+                {"precio": res_final, "clase": "resistencia",
+                 "etiqueta": fmt(res_final), "rol": "RESISTENCIA"},
+                {"precio": sop_final, "clase": "soporte",
+                 "etiqueta": fmt(sop_final), "rol": "SOPORTE"},
             ],
         },
         # Trazabilidad: por qué este activo y no otro. No se rinde en la pieza,
@@ -768,6 +786,7 @@ def construir_mensaje_alerta(payload: dict[str, Any]) -> str:
         f"• 🟢 Resistencia clave: {resistencia}",
         f"• 🔴 Soporte clave: {soporte}",
         f"• 💡 Volatilidad típica: {vol}",
+        "• 📐 *Fijación de objetivos*: Zonas de pivote/swings H1 acotadas por la volatilidad diaria (ATR) para garantizar objetivos alcanzables dentro de la jornada.",
     ])
 
     # La temporalidad, justificada por la volatilidad de ESE activo. Obligatoria
@@ -792,13 +811,35 @@ def construir_mensaje_alerta(payload: dict[str, Any]) -> str:
             "así que conviene esperar confirmación antes de operar los bordes."
         )
 
+    # Mapeo de módulos del Manual de Operaciones según clase o activo
+    clase_act = str(payload.get("chip_categoria", "")).lower()
+    ticker_lower = ticker.lower()
+    if "divisa" in clase_act or "forex" in clase_act or "usdclp" in ticker_lower or "eurusd" in ticker_lower:
+        modulos_manual = "Módulo 5 y Módulo 8"
+    elif "commodit" in clase_act or "wti" in ticker_lower or "oro" in ticker_lower or "xau" in ticker_lower:
+        modulos_manual = "Módulo 7 y Módulo 10"
+    elif "índice" in clase_act or "indice" in clase_act or "nasdaq" in ticker_lower or "sp500" in ticker_lower:
+        modulos_manual = "Módulo 4 y Módulo 9"
+    elif "crypto" in clase_act or "cripto" in clase_act or "btc" in ticker_lower:
+        modulos_manual = "Módulo 6 y Módulo 10"
+    else:
+        modulos_manual = "Módulo 7 y Módulo 10"
+
     lineas.extend([
         "━━━━━━━━━━━━━━━━━━━",
         f"🟢 Sobre {resistencia} → fuerza compradora",
         f"🟡 Entre {soporte} y {resistencia} → esperar confirmación",
         f"🔴 Bajo {soporte} → presión vendedora",
         "━━━━━━━━━━━━━━━━━━━",
-        "Cada imagen adjunta contiene el gráfico y análisis técnico. ¿Dudas? Consulta a tu analista.",
+        "💬 *Te compartimos nuestra lectura: ¿cuál es tu visión para la sesión?*",
+        f"¿Crees que el soporte en {soporte} aguantará la presión o estás esperando una aceleración hacia {resistencia}? ¡Coméntanos en el grupo cómo lo ves en tu gráfico!",
+        "",
+        f"📖 *Si todavía no tienes una hipótesis propia o quieres profundizar en cómo dimensionar tu posición, consulta el {modulos_manual} de nuestro Manual de Operaciones.*",
+        "",
+        "🔤 *Diccionario rápido*",
+        f"• {ticker}: Activo de referencia en seguimiento.",
+        "• ATR: Rango Medio Real, indicador que mide la volatilidad habitual del activo.",
+        f"• {TIMEFRAME_GRAFICO}: Temporalidad de velas de 1 hora." if TIMEFRAME_GRAFICO == "H1" else f"• {TIMEFRAME_GRAFICO}: Temporalidad de velas de {TIMEFRAME_GRAFICO}.",
     ])
     return "\n".join(lineas)
 
@@ -946,6 +987,94 @@ def escribir_suplementos(
                 f"{canal}: hay nota oficial de {noticia['organismo']} del "
                 f"{noticia['fecha'].date()} para anexar al rendir"
             )
+
+        # Generar payload de Recap para que el canal cuente con gráfico TradingView (16:9)
+        ancla = sup.get("activo_ancla") or {}
+        ticker_ancla = ancla.get("ticker")
+        if ticker_ancla:
+            slug_ancla = ticker_ancla.lower().replace(".", "").replace("#", "")
+            rotulo = ancla.get("rotulo", ticker_ancla)
+            nombre_act = ancla.get("nombre", rotulo)
+            cat_rotulo = ancla.get("categoria", "MERCADO")
+
+            activo_cat = catalogo.get(ticker_ancla, {})
+            digits = activo_cat.get("digits", 2)
+            fmt = lambda v: f"{v:,.{digits}f}".replace(",", "@").replace(".", ",").replace("@", ".")
+
+            # Obtener niveles reales desde exclusiones o analizador
+            spot_val = None
+            sop_val = None
+            res_val = None
+            for ex in exclusiones:
+                if ex.get("ticker") == ticker_ancla:
+                    spot_val = ex.get("precio")
+                    sop_val = ex.get("soporte")
+                    res_val = ex.get("resistencia")
+                    break
+
+            if spot_val is None:
+                try:
+                    from market_data_mcp.analisis import analizar_activo
+                    h1_res = analizar_activo(ticker_ancla, "H1")
+                    if "error" not in h1_res:
+                        spot_val = h1_res.get("price") or h1_res.get("precio")
+                        sop_val = h1_res.get("s1")
+                        res_val = h1_res.get("r1")
+                except Exception:
+                    pass
+
+            spot_txt = fmt(float(spot_val)) if spot_val is not None else "--"
+            sop_txt = fmt(float(sop_val)) if sop_val is not None else "--"
+            res_txt = fmt(float(res_val)) if res_val is not None else "--"
+
+            titular_recap = f"{rotulo} consolida en zona de balance tras completar su recorrido"
+            parrafo_recap = (
+                f"El activo completó su rango habitual de la jornada. "
+                f"Soporte técnico situado en {sop_txt} y resistencia en {res_txt}. "
+                "Estructura en compresión a la espera de la apertura del próximo ciclo."
+            )
+
+            momento_ahora = datetime.now(tz=SANTIAGO)
+            recap_payload = {
+                "activo": nombre_act,
+                "rotulo_activo": rotulo,
+                "activo_slug": slug_ancla,
+                "categoria": cat_rotulo,
+                "chip": f"{cat_rotulo} · {rotulo}",
+                "direccion": "LATERAL",
+                "sesgo": "Lateral",
+                "tag_riesgo": "BALANCE",
+                "tipo_pieza": "recap",
+                "precio": spot_txt,
+                "soporte": sop_txt,
+                "resistencia": res_txt,
+                "titular": titular_recap,
+                "parrafo": parrafo_recap,
+                "vigencia": None,
+                "vol_pct": f"1,5 {activo_cat.get('unidad', '')}".strip(),
+                "por_que_temporalidad": f"En H1 se observa el balance completo de la jornada de {rotulo}.",
+                "fecha_hora_texto": momento_ahora.strftime("%d/%m/%Y · %H:%M hrs"),
+                "_procedencia": {
+                    "ticker": ticker_ancla,
+                    "score": 0,
+                    "tipo": "recap_suplemento",
+                    "crudos": {
+                        "precio": float(spot_val) if spot_val is not None else 0.0,
+                        "soporte": float(sop_val) if sop_val is not None else 0.0,
+                        "resistencia": float(res_val) if res_val is not None else 0.0,
+                        "vigencia_nivel": None,
+                    },
+                }
+            }
+
+            archivo_recap = carpeta / f"1_recap_{slug_ancla}.json"
+            archivo_recap.write_text(
+                json.dumps(recap_payload, ensure_ascii=False, indent=2),
+                encoding="utf-8"
+            )
+            msg_suplemento = (carpeta / "0_suplemento.txt").read_text(encoding="utf-8")
+            (carpeta / f"1_recap_{slug_ancla}_mensaje.txt").write_text(msg_suplemento, encoding="utf-8")
+            (carpeta / "mensaje.txt").write_text(msg_suplemento, encoding="utf-8")
 
         escritos.append(sup)
         avisos.append(
@@ -1373,16 +1502,53 @@ def rendir(directorio: Path) -> dict[str, Any]:
         procedencia = payload.pop("_procedencia", {})
         payload.pop("_pendiente_editorial", None)
 
-        # `story_grafico.enriquecer` consume `recorrido` y lo reemplaza por `grafico`
-        payload = enriquecer(payload)
+        ticker = procedencia.get("ticker", payload.get("activo_slug"))
+        nombre = payload.get("rotulo_activo", payload.get("activo", ticker))
+        soporte_val = procedencia.get("crudos", {}).get("soporte")
+        if soporte_val is None and "soporte" in payload and payload["soporte"]:
+            try:
+                s_sop = str(payload["soporte"]).strip()
+                if "," in s_sop:
+                    s_sop = s_sop.replace(".", "").replace(",", ".")
+                soporte_val = float(s_sop)
+            except (ValueError, TypeError):
+                soporte_val = None
 
-        # Alerta de mercado es exclusivamente horizontal 16:9 guardada directamente en la carpeta del grupo
+        resistencia_val = procedencia.get("crudos", {}).get("resistencia")
+        if resistencia_val is None and "resistencia" in payload and payload["resistencia"]:
+            try:
+                s_res = str(payload["resistencia"]).strip()
+                if "," in s_res:
+                    s_res = s_res.replace(".", "").replace(",", ".")
+                resistencia_val = float(s_res)
+            except (ValueError, TypeError):
+                resistencia_val = None
+
+        # Alerta de mercado: estándar TradingView 300 DPI de alta fidelidad
         formato = "horizontal"
         destino_local_png = archivo.parent / f"{archivo.stem}.png"
-        render_story(payload, PLANTILLA, destino_local_png, formato=formato)
+
+        try:
+            from tradingview_grafico import generar_grafico_tv
+            generar_grafico_tv(
+                ticker=ticker,
+                nombre=nombre,
+                destino=destino_local_png,
+                timeframe=TIMEFRAME_GRAFICO,
+                n_velas=60,
+                soporte=soporte_val,
+                resistencia=resistencia_val,
+            )
+        except Exception:
+            # Fallback a Story render tradicional si MT5 o Chromium no están en este entorno
+            payload_enriquecido = enriquecer(json.loads(json.dumps(payload)))
+            render_story(payload_enriquecido, PLANTILLA, destino_local_png, formato=formato)
 
         # Generar mensaje final para WhatsApp dentro de la carpeta del grupo
-        msg_final = construir_mensaje_alerta(payload)
+        if payload.get("tipo_pieza") == "recap" and (archivo.parent / "0_suplemento.txt").exists():
+            msg_final = (archivo.parent / "0_suplemento.txt").read_text(encoding="utf-8")
+        else:
+            msg_final = construir_mensaje_alerta(payload)
         (archivo.parent / "mensaje.txt").write_text(msg_final, encoding="utf-8")
         (archivo.parent / f"{archivo.stem}_mensaje.txt").write_text(msg_final, encoding="utf-8")
 
@@ -1505,14 +1671,40 @@ def _refrescar_y_rendir(dir_grupo: Path) -> list[str]:
 
         archivo.write_text(json.dumps(nuevo, ensure_ascii=False, indent=2), encoding="utf-8")
 
-        pieza = json.loads(json.dumps(nuevo))
-        pieza.pop("_procedencia", None)
-        pieza.pop("_pendiente_editorial", None)
-        render_story(enriquecer(pieza), PLANTILLA, dir_grupo / f"{archivo.stem}.png",
-                     formato="horizontal")
-        (dir_grupo / f"{archivo.stem}_mensaje.txt").write_text(
-            construir_mensaje_alerta(nuevo), encoding="utf-8"
-        )
+        soporte_val = None
+        resistencia_val = None
+        try:
+            if "soporte" in nuevo and nuevo["soporte"]:
+                soporte_val = float(str(nuevo["soporte"]).replace(".", "").replace(",", "."))
+            if "resistencia" in nuevo and nuevo["resistencia"]:
+                resistencia_val = float(str(nuevo["resistencia"]).replace(".", "").replace(",", "."))
+        except (ValueError, TypeError):
+            pass
+
+        destino_local_png = dir_grupo / f"{archivo.stem}.png"
+        try:
+            from tradingview_grafico import generar_grafico_tv
+            generar_grafico_tv(
+                ticker=ticker,
+                nombre=nuevo.get("rotulo_activo", nuevo.get("activo", ticker)),
+                destino=destino_local_png,
+                timeframe=TIMEFRAME_GRAFICO,
+                n_velas=60,
+                soporte=soporte_val,
+                resistencia=resistencia_val,
+            )
+        except Exception:
+            pieza = json.loads(json.dumps(nuevo))
+            pieza.pop("_procedencia", None)
+            pieza.pop("_pendiente_editorial", None)
+            render_story(enriquecer(pieza), PLANTILLA, destino_local_png, formato="horizontal")
+
+        if payload.get("tipo_pieza") == "recap" and (dir_grupo / "0_suplemento.txt").exists():
+            msg_final = (dir_grupo / "0_suplemento.txt").read_text(encoding="utf-8")
+        else:
+            msg_final = construir_mensaje_alerta(nuevo)
+        (dir_grupo / f"{archivo.stem}_mensaje.txt").write_text(msg_final, encoding="utf-8")
+        (dir_grupo / "mensaje.txt").write_text(msg_final, encoding="utf-8")
         avisos.append(f"✅ {ticker} refrescado a las {ahora.strftime('%H:%M')}")
 
     return avisos
@@ -1523,6 +1715,7 @@ def despachar(
     desde: int = 1,
     dry_run: bool = False,
     headless: bool = True,
+    pruebas: bool = False,
 ) -> dict[str, Any]:
     """Rinde y despacha canal por canal, en orden y sin dejar envejecer las piezas.
 
@@ -1554,6 +1747,10 @@ def despachar(
         raise SystemExit(f"No hay carpetas de grupo en {directorio}")
 
     sender = WhatsAppSender(headless=headless)
+    destino_fijo = sender.config.destino_de_pruebas if pruebas else None
+    if pruebas:
+        print(f"\n[MODO PRUEBAS] Destino fijo para todos los canales: {destino_fijo}\n", flush=True)
+
     resultados: list[dict[str, Any]] = []
 
     # La bitacora es la unidad correcta para retomar. `--desde N` cuenta CANALES,
@@ -1584,7 +1781,9 @@ def despachar(
             resultados.append({"grupo": dir_grupo.name, "status": "omitido"})
             continue
 
-        print(f"\n[{i}/{len(grupos)}] {dir_grupo.name}", flush=True)
+        canal = dir_grupo.name
+        destinatario = destino_fijo if pruebas else canal
+        print(f"\n[{i}/{len(grupos)}] {canal}" + (f" -> destino: {destinatario}" if pruebas else ""), flush=True)
         for aviso in _refrescar_y_rendir(dir_grupo):
             print(f"    {aviso}", flush=True)
 
@@ -1599,23 +1798,23 @@ def despachar(
             if suplemento.exists():
                 algo_despachado = False
                 texto = suplemento.read_text(encoding="utf-8").strip()
-                if ya_despachada(bitacora, tanda, dir_grupo.name, "0_suplemento"):
+                if not pruebas and ya_despachada(bitacora, tanda, canal, "0_suplemento"):
                     print("    suplemento ya despachado segun la bitacora: se omite", flush=True)
                 else:
                     print(f"    suplemento de {len(texto)} caracteres, sin adjunto...", flush=True)
                     res = sender.enviar(
-                        dir_grupo.name, mensaje=texto, dry_run=dry_run
+                        destinatario, mensaje=texto, dry_run=dry_run
                     )
-                    if not dry_run:
+                    if not dry_run and not pruebas:
                         anotar_despacho(
-                            tanda, dir_grupo.name, "0_suplemento",
+                            tanda, canal, "0_suplemento",
                             huella=huella(texto),
                         )
                     # `piezas` va explicito: el suplemento ES una pieza entregada, y sin
                     # el campo el resumen final imprimia "enviado  pieza(s)" sin numero
                     # justo en los canales que solo llevan suplemento.
                     resultados.append(
-                        {"grupo": dir_grupo.name, "suplemento": True, "piezas": 1, **res}
+                        {"grupo": canal, "suplemento": True, "piezas": 1, **res}
                     )
                     algo_despachado = True
 
@@ -1626,42 +1825,44 @@ def despachar(
                     except Exception as e:  # noqa: BLE001
                         print(f"    error al leer {encuesta_file.name}: {e}", flush=True)
                     else:
-                        if ya_despachada(bitacora, tanda, dir_grupo.name, "0_encuesta"):
+                        if not pruebas and ya_despachada(bitacora, tanda, canal, "0_encuesta"):
                             print("    encuesta de cierre ya despachada segun bitacora: se omite", flush=True)
                         else:
                             print(f"    despachando encuesta de cierre: '{datos_enc.get('pregunta')}'...", flush=True)
                             res_enc = sender.enviar_encuesta(
-                                dir_grupo.name,
+                                destinatario,
                                 pregunta=datos_enc["pregunta"],
                                 opciones=datos_enc["opciones"],
                                 permitir_multiples=datos_enc.get("permitir_multiples", False),
                                 forzar=True,
                                 dry_run=dry_run,
                             )
-                            if not dry_run:
+                            if not dry_run and not pruebas:
                                 anotar_despacho(
-                                    tanda, dir_grupo.name, "0_encuesta",
+                                    tanda, canal, "0_encuesta",
                                     huella=huella(datos_enc["pregunta"]),
                                 )
-                            resultados.append({"grupo": dir_grupo.name, "encuesta": True, **res_enc})
+                            resultados.append({"grupo": canal, "encuesta": True, **res_enc})
                             algo_despachado = True
 
                 if not algo_despachado:
-                    resultados.append({"grupo": dir_grupo.name, "status": "ya_despachado"})
+                    resultados.append({"grupo": canal, "status": "ya_despachado"})
 
                 # La cadencia no se maneja aca: `enviar` reserva su turno y
                 # espera por su cuenta, igual que el resto de las piezas.
                 continue
 
             print("    sin piezas: se omite", flush=True)
-            resultados.append({"grupo": dir_grupo.name, "status": "vacio"})
+            resultados.append({"grupo": canal, "status": "vacio"})
             continue
 
-        canal = dir_grupo.name
-        pendientes = [
-            pz for pz in piezas
-            if not ya_despachada(bitacora, tanda, canal, Path(pz.adjunto).stem)
-        ]
+        if pruebas:
+            pendientes = piezas
+        else:
+            pendientes = [
+                pz for pz in piezas
+                if not ya_despachada(bitacora, tanda, canal, Path(pz.adjunto).stem)
+            ]
         if not pendientes:
             print("    todas sus piezas ya salieron segun la bitacora: se omite", flush=True)
             resultados.append({"grupo": canal, "status": "ya_despachado",
@@ -1674,6 +1875,8 @@ def despachar(
             )
 
         def anotar(pieza: Any, _canal: str = canal) -> None:
+            if pruebas:
+                return
             # La huella sale de la MISMA funcion que compara el guardia de entrega
             # contra el DOM. Una segunda implementacion seria otro de los relojes
             # duplicados que ya costaron caro en este repo.
@@ -1682,9 +1885,36 @@ def despachar(
                 huella=huella(pieza.mensaje or ""),
             )
 
-        print(f"    despachando {len(pendientes)} pieza(s), una por acción...", flush=True)
-        res = sender.enviar_lote(canal, pendientes, dry_run=dry_run, al_entregar=anotar)
+        print(f"    despachando {len(pendientes)} pieza(s), una por acción a '{destinatario}'...", flush=True)
+        res = sender.enviar_lote(destinatario, pendientes, dry_run=dry_run, al_entregar=anotar)
         resultados.append({"grupo": canal, **res})
+
+        # Despacho de encuesta interactiva si el canal cuenta con una generada
+        encuesta_file = dir_grupo / "_encuesta.json"
+        if encuesta_file.exists():
+            try:
+                datos_enc = json.loads(encuesta_file.read_text(encoding="utf-8"))
+            except Exception as e:  # noqa: BLE001
+                print(f"    error al leer {encuesta_file.name}: {e}", flush=True)
+            else:
+                if not pruebas and ya_despachada(bitacora, tanda, canal, "0_encuesta"):
+                    print("    encuesta de cierre ya despachada segun bitacora: se omite", flush=True)
+                else:
+                    print(f"    despachando encuesta de cierre a '{destinatario}': '{datos_enc.get('pregunta')}'...", flush=True)
+                    res_enc = sender.enviar_encuesta(
+                        destinatario,
+                        pregunta=datos_enc["pregunta"],
+                        opciones=datos_enc["opciones"],
+                        permitir_multiples=datos_enc.get("permitir_multiples", False),
+                        forzar=True,
+                        dry_run=dry_run,
+                    )
+                    if not dry_run and not pruebas:
+                        anotar_despacho(
+                            tanda, canal, "0_encuesta",
+                            huella=huella(datos_enc["pregunta"]),
+                        )
+                    resultados.append({"grupo": canal, "encuesta": True, **res_enc})
 
     return {"directorio": str(directorio), "grupos": resultados}
 
@@ -1716,6 +1946,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="incluye activos sin imagen (su pieza no se va a poder rendir)")
     parser.add_argument("--forzar", action="store_true",
                         help="ignora gate de agotamiento para evaluar activos en sesiones avanzadas")
+    parser.add_argument("--pruebas", action="store_true",
+                        help="con --despachar: envia al banco de pruebas interno (GI · Banco de Pruebas) en vez de a los canales oficiales")
     args = parser.parse_args(argv)
 
     if args.grupo:
@@ -1765,6 +1997,7 @@ def main(argv: list[str] | None = None) -> int:
             desde=args.desde,
             dry_run=args.dry_run,
             headless=args.headless,
+            pruebas=args.pruebas,
         )
         print("\nRESUMEN DEL DESPACHO")
         for g in res["grupos"]:

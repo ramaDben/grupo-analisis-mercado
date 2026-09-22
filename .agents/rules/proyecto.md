@@ -552,6 +552,11 @@ Cuatro reglas que se pagaron caro:
 
 Las mediciones contra el DOM real: `docs/historia-forense.md`.
 
+### Producción y despacho ad-hoc / extraordinario
+
+Para noticias de última hora, subastas o alertas ad-hoc, **está prohibido crear scripts `.py` de 1 solo uso**. Toda producción ad-hoc usa un manifiesto JSON con `scripts/produccion_adhoc.py` (`--generar`, `--auditar`, `--despachar` o `--todo` con `--dry-run`). Detalles: `docs/produccion-adhoc.md`.
+
+
 ### Un PDF adjunto SÍ lleva su pie, pero hay que esperar la carga
 
 **El truco del cuadro de conversación funciona igual con documentos.** Se escribe el texto en el
@@ -998,11 +1003,7 @@ Dos reglas de color que se pagaron caro:
 
 El acento es `#50C0A8`, el extremo verde del degradado del logo, medido sobre los assets.
 
-**Serie real para los gráficos.** `scripts/serie_mt5.py` trae los cierres del terminal y arma el
-bloque `recorrido` que consume `story_grafico.py`, que traduce serie e hitos al SVG del token
-`{{grafico}}`. Los marcadores se anclan por ROL, no por proximidad de precio: `actual` y `meta`
-van al extremo derecho por definición. Anclar por precio parece razonable y no lo es, porque el
-precio oscila y el cierre más parecido puede caer en cualquier punto de la serie.
+**Serie real y motor TradingView™ para los gráficos.** El estándar visual y cuantitativo de gráficos para alertas (`/carrusel` y `/story alerta`) es el motor `scripts/tradingview_grafico.py` basado en **TradingView Lightweight Charts™ v5** a **300 DPI nativos** (Retina con polyfill de canvas, 2800×1560 físico, paleta de alto contraste, velas japonesas, EMAs 20/50/200, Canal Donchian 50, ATR 14, oscilador RSI 14 con niveles 70/30, y líneas horizontales de Soporte y Resistencia). En caso de entornos sin Chromium/MT5, el pipeline mantiene fallback a la geometría SVG de `story_grafico.py`.
 
 **Todo nivel citado en el texto va trazado, y eso vale también para las Stories.** El informe ya
 lo exige para su gráfico; la pieza de Story tiene su propia mitad de la regla y estaba solo del

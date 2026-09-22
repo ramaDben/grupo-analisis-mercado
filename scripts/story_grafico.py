@@ -424,6 +424,12 @@ def construir_svg_barras(
                 f'<text class="gb-eje" x="{x + ancho / 2:.1f}" y="{EJE_Y}" '
                 f'text-anchor="middle">{b["etiqueta"]}</text>'
             )
+        if b.get("valor_etiqueta"):
+            y_val_txt = top - 10 if valor >= 0 else top + alto + 22
+            partes.append(
+                f'<text class="gb-valor" x="{x + ancho / 2:.1f}" y="{y_val_txt:.1f}" '
+                f'text-anchor="middle">{b["valor_etiqueta"]}</text>'
+            )
 
     # El cero se dibuja al final para que ninguna barra lo tape: es la referencia
     # que hace legible el signo.

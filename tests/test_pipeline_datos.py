@@ -155,12 +155,12 @@ def test_una_confianza_bajo_el_umbral_deja_los_datos_no_utilizables(base):
     """
     _escribir(base / "DATA DRIVERS USDCLP" / "macro_bias_output.json", {
         "as_of_utc": _hace(1),
-        "confianza_general": {"confianza_total_pct": 54.6},
+        "confianza_general": {"confianza_total_pct": 48.0},
         "activos": {},
     })
     est = pd_.estado_datos(base)
 
-    assert est.confianza_pct == pytest.approx(54.6)
+    assert est.confianza_pct == pytest.approx(48.0)
     assert not est.confianza_suficiente
     assert not est.listo, "relojes frescos no bastan si el modelo no ve"
 

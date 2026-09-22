@@ -183,6 +183,7 @@ ESPERA_TECHO_S = 180.0
 
 ESTADOS_ENTREGADA = ("enviado", "entregado", "leido", "leído")
 ESTADO_PENDIENTE = "pendiente"
+ESTADOS_ERROR = ("error", "falló", "fallo", "no se pudo enviar")
 
 
 def burbuja_entregada(etiquetas: list[str]) -> bool:
@@ -199,6 +200,8 @@ def burbuja_entregada(etiquetas: list[str]) -> bool:
     """
     texto = " ".join(e or "" for e in etiquetas).lower()
     if ESTADO_PENDIENTE in texto:
+        return False
+    if any(err in texto for err in ESTADOS_ERROR):
         return False
     return any(estado in texto for estado in ESTADOS_ENTREGADA)
 
@@ -1496,22 +1499,26 @@ class WhatsAppSender:
                 "() => {"
                 " const filas = Array.from(document.querySelectorAll('#main div[role=row]'));"
                 " const r = filas[filas.length - 1];"
-                " if (!r) return {texto: '', media: false};"
+                " if (!r) return {texto: '', media: false, etiquetas: [], tiene_error: false, pendiente: false};"
                 " const texto = r.innerText || '';"
                 " const media = Array.from(r.querySelectorAll('img'))"
-                "   .some(i => (i.src || '').startsWith('blob:'))"
-                "   || !!r.querySelector('audio, video')"
-                "   || /\bPDF\b|\bDOCX?\b|\bXLSX?\b|p\u00e1ginas/i.test(texto);"
+                "   .some(i => (i.src || '').startsWith('blob:') || (i.src || '').startsWith('data:image/'))"
+                "   || !!r.querySelector('audio, video, [data-icon*=\"document\"], [data-icon*=\"pdf\"], [data-testid*=\"document\"], [data-testid=\"image-thumb\"]')"
+                "   || /\\bPDF\\b|\\bDOCX?\\b|\\bXLSX?\\b|\\.pdf\\b|p\\u00e1ginas/i.test(texto);"
                 # WhatsApp pinta la burbuja al instante y sube en segundo plano;
                 # el tic es lo unico que dice que el servidor ya la recibio.
                 " const etiquetas = Array.from(r.querySelectorAll('[aria-label]'))"
                 "   .map(e => e.getAttribute('aria-label') || '');"
-                " return {texto, media, etiquetas};"
+                " const tiene_error = r.querySelector('[data-testid=\"fail-container\"], [data-icon*=\"error\"]') !== null"
+                "   || etiquetas.some(e => /error|fall\\u00f3|fallo|reintentar/i.test(e));"
+                " const pendiente = r.querySelector('[data-testid=\"media-state-pending\"], [data-testid=\"loading-spinner\"], [data-icon=\"msg-time\"]') !== null"
+                "   || etiquetas.some(e => /pendiente/i.test(e));"
+                " return {texto, media, etiquetas, tiene_error, pendiente};"
                 "}"
             )
         except Exception:  # noqa: BLE001
-            return {"texto": "", "media": False, "etiquetas": []}
-        return datos if isinstance(datos, dict) else {"texto": "", "media": False}
+            return {"texto": "", "media": False, "etiquetas": [], "tiene_error": False, "pendiente": False}
+        return datos if isinstance(datos, dict) else {"texto": "", "media": False, "etiquetas": [], "tiene_error": False, "pendiente": False}
 
     def _adjunto_confirmado(
         self, page: Any, testigo: str, nombre_archivo: str = ""
@@ -1521,7 +1528,7 @@ class WhatsAppSender:
         **El falso "enviado" del 2026-09-04.** Un PDF de 2 MB se reportó
         entregado y no llegó al canal; el director tuvo que mandarlo a mano. Con
         el pie vacío esta función devolvía `True` apenas la última burbuja tenía
-        `media`, y `media` se decide con un regex sobre el texto (`/PDF/`),
+        `media`, y `media` se decide con un regex sobre el texto (`/ PDF /`),
         que da verdadero en cuanto WhatsApp **pinta** la burbuja, antes de
         terminar la subida. Con un PNG de 500 KB la subida es instantánea y el
         hueco nunca se noto.
@@ -1539,6 +1546,15 @@ class WhatsAppSender:
         """
         burbuja = self._ultima_burbuja(page)
         if not burbuja.get("media"):
+            return False
+
+        if burbuja.get("tiene_error"):
+            raise EnvioMensajeError(
+                "WhatsApp Web reportó un error al subir o procesar el archivo adjunto "
+                f"({nombre_archivo or 'pieza multimedia'})."
+            )
+
+        if burbuja.get("pendiente"):
             return False
 
         texto = self._normalizar(str(burbuja.get("texto", "")))
@@ -1609,17 +1625,17 @@ class WhatsAppSender:
                 # suelto también aparece, y la imagen se quedó sin enviar. Se
                 # exige que la burbuja NUEVA sea el adjunto y lleve ese pie.
                 if self._adjunto_confirmado(page, testigo, nombre_archivo):
-                    self._pausa_humana(0.6)
+                    self._pausa_humana(1.5)
                     return
             elif testigo:
                 texto = self._normalizar(self._texto_ultimas_filas(page))
                 if testigo in texto:
-                    self._pausa_humana(0.6)
+                    self._pausa_humana(1.0)
                     return
             else:
                 ahora = self._contar_mensajes(page)
                 if ahora < 0 or ahora > mensajes_antes:
-                    self._pausa_humana(0.6)
+                    self._pausa_humana(1.0)
                     return
             time.sleep(0.5)
 
@@ -1836,7 +1852,7 @@ class WhatsAppSender:
                         ruta_adjunto.stat().st_size if ruta_adjunto else 0
                     ),
                 )
-                self._pausa_humana(1.0)
+                self._pausa_humana(2.5)
 
                 return {
                     "status": "enviado",

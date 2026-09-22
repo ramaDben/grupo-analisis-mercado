@@ -363,3 +363,50 @@ def test_ninguna_fila_de_la_agenda_se_lee_igual_que_otra():
     assert not repetidos, f"filas indistinguibles: {sorted(repetidos)}"
     assert len(indicadores) == len(eventos)
 
+
+def test_generar_mensaje_chat_apertura_estructura_y_compliance():
+    """Verifica que el mensaje matutino Chat-First cumpla con todas las reglas de compliance y estructura (Opción 2)."""
+    from scripts.pipeline_informe import generar_mensaje_chat_apertura, _playbook, _calendario
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    santiago = ZoneInfo("America/Santiago")
+    ahora = datetime(2026, 10, 5, 8, 0, tzinfo=santiago)
+
+    playbook, _ = _playbook()
+    eventos, _ = _calendario(ahora)
+    msg = generar_mensaje_chat_apertura(playbook, eventos, ahora)
+
+    # 1. Reglas de compliance y formato
+    assert "—" not in msg, "Prohibido uso de guión largo en mensaje WhatsApp"
+    assert "–" not in msg, "Prohibido uso de guión medio en mensaje WhatsApp"
+
+    # 2. Secciones obligatorias
+    assert "CLIMA MACRO GI" in msg
+    assert "AUDITORÍA DE DATOS MACRO" in msg
+    assert "PERMISOS DE TRADING H1" in msg
+    assert "DRIVERS MAESTROS DE CONFIRMACIÓN" in msg
+    assert "RADAR DE AGENDA Y BLACKOUTS" in msg
+    assert "Tu ejecución en MT5" in msg
+    assert "1,0% NETO" in msg
+
+    # 3. Presencia de los 5 activos del Módulo 10 y segmentación clara
+    for sym in ["USD/CLP", "ORO SPOT", "PETRÓLEO WTI", "PETRÓLEO BRENT", "NASDAQ 100"]:
+        assert sym in msg
+
+    assert "[+] AUTORIZADO" in msg
+    assert "[-] PROHIBIDO" in msg
+    assert "━━━━━━━━━━━━━━━━━━━━━━━━━━━━" in msg
+
+
+def test_generar_mensaje_chat_apertura_bloqueo_bajo_51():
+    """Verifica que bajo 51% de confianza se emita la alerta de bloqueo / datos incompletos."""
+    from scripts.pipeline_informe import generar_mensaje_chat_apertura
+    playbook_degradado = {
+        "confianza_general": {"confianza_total_pct": 45.2, "score_frescura_pct": 50.0},
+        "regimen_macro_global": {"codigo": "R0_CALMA_RANGO", "nombre": "Calma"},
+    }
+    msg = generar_mensaje_chat_apertura(playbook_degradado, [])
+    assert "ALERTA DE SEGURIDAD OPERATIVA" in msg
+    assert "DATOS INCOMPLETOS / MERCADO NO OPERABLE" in msg
+    assert "PROHIBIDO abrir nuevas posiciones" in msg
+

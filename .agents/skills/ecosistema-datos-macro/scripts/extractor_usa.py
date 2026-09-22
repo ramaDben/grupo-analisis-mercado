@@ -27,6 +27,7 @@ OUTPUT_DIR = BASE_DIR / "data central" / "DATA USA" / "raw"
 OUTPUT_FILE = OUTPUT_DIR / "treasury_fed_data.json"
 
 FRED_API_KEY = os.getenv("FRED_API_KEY", "")
+BLS_API_URL = "https://api.bls.gov/publicAPI/v2/timeseries/data"
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), reraise=True)
 def extraer_buybacks_tesoro() -> list:
@@ -74,7 +75,12 @@ def extraer_serie_fred(series_id: str, api_key: str) -> dict:
         return obs
     else:
         # Fallback a descarga de CSV publico de FRED
-        url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}"
+        hoy = datetime.now(timezone.utc).date()
+        inicio = hoy.replace(year=hoy.year - 1)
+        url = (
+            f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}"
+            f"&cosd={inicio.isoformat()}&coed={hoy.isoformat()}"
+        )
         resp = requests.get(url, timeout=15)
         resp.raise_for_status()
         lines = resp.text.strip().split("\n")
@@ -89,6 +95,59 @@ def extraer_serie_fred(series_id: str, api_key: str) -> dict:
         # Retornar ultimos 30 ordenados
         fechas_ordenadas = sorted(obs.keys(), reverse=True)[:30]
         return {k: obs[k] for k in fechas_ordenadas}
+
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), reraise=True)
+def extraer_serie_bls(series_id: str, start_year: int, end_year: int) -> dict:
+    """Extrae una serie del IPC desde la API oficial del Bureau of Labor Statistics."""
+    resp = requests.post(
+        BLS_API_URL,
+        json={"seriesid": [series_id], "startyear": str(start_year), "endyear": str(end_year)},
+        timeout=15,
+    )
+    resp.raise_for_status()
+    payload = resp.json()
+    if payload.get("status") != "REQUEST_SUCCEEDED":
+        raise RuntimeError(payload.get("message") or "BLS API no devolvio datos")
+    datos = payload.get("Results", {}).get("series", [])
+    if not datos:
+        raise RuntimeError(f"BLS no devolvio la serie {series_id}")
+    return {
+        f"{fila['year']}-{fila['period'][1:]}": float(fila["value"])
+        for fila in datos[0].get("data", [])
+        if fila.get("period", "").startswith("M")
+        and fila.get("value") not in (None, "", "-")
+    }
+
+
+def extraer_ipc_bls() -> dict:
+    """Obtiene IPC general y subyacente, incluyendo variaciones mensual e interanual."""
+    anio = datetime.now(timezone.utc).year
+    series = {
+        "CPI_GENERAL": "CUSR0000SA0",
+        "CPI_SUBYACENTE": "CUSR0000SA0L1E",
+    }
+    historicos = {
+        nombre: extraer_serie_bls(serie_id, anio - 1, anio)
+        for nombre, serie_id in series.items()
+    }
+    periodos_comunes = set(historicos["CPI_GENERAL"]) & set(historicos["CPI_SUBYACENTE"])
+    actual = max(periodos_comunes)
+    anio_actual, mes_actual = (int(p) for p in actual.split("-"))
+    anterior = f"{anio_actual - 1}-12" if mes_actual == 1 else f"{anio_actual}-{mes_actual - 1:02d}"
+    previo_anual = f"{anio_actual - 1}-{mes_actual:02d}"
+
+    salida = {"fuente": "U.S. Bureau of Labor Statistics (BLS API)", "series": historicos}
+    for nombre, historico in historicos.items():
+        if actual not in historico or anterior not in historico or previo_anual not in historico:
+            raise RuntimeError(f"faltan observaciones BLS para {nombre} ({actual})")
+        salida[nombre] = {
+            "periodo": actual,
+            "indice": historico[actual],
+            "variacion_mensual_pct": round((historico[actual] / historico[anterior] - 1) * 100, 1),
+            "variacion_interanual_pct": round((historico[actual] / historico[previo_anual] - 1) * 100, 1),
+        }
+    return salida
 
 def ejecutar_extraccion_usa() -> dict:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -115,7 +174,8 @@ def ejecutar_extraccion_usa() -> dict:
             "DFF": {"nombre": "Federal Funds Effective Rate", "unidad": "porcentaje", "historico": existente.get("curva_rendimientos_yields", {}).get("DFF", {}).get("historico", {})},
             "DFII10": {"nombre": "10-Year Treasury Inflation-Indexed Security (TIPS Real Yield)", "unidad": "porcentaje", "historico": existente.get("curva_rendimientos_yields", {}).get("DFII10", {}).get("historico", {})},
             "T10YIE": {"nombre": "10-Year Breakeven Inflation Rate", "unidad": "porcentaje", "historico": existente.get("curva_rendimientos_yields", {}).get("T10YIE", {}).get("historico", {})}
-        }
+        },
+        "inflacion_ipc": existente.get("inflacion_ipc", {}),
     }
     
     # 1. Extraer Buybacks del Tesoro
@@ -151,6 +211,14 @@ def ejecutar_extraccion_usa() -> dict:
         except Exception as e:
             print(f"[WARN] Error extrayendo serie FRED {sid}: {e}")
             resultado["curva_rendimientos_yields"][sid]["status"] = "ERROR_STALE"
+
+    try:
+        resultado["inflacion_ipc"] = extraer_ipc_bls()
+        resultado["inflacion_ipc"]["status"] = "OK"
+    except Exception as e:
+        print(f"[WARN] Error extrayendo IPC BLS: {e}")
+        resultado["inflacion_ipc"]["status"] = "ERROR_STALE"
+        resultado["inflacion_ipc"]["error"] = f"{type(e).__name__}: {e}"
             
     # Guardar
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:

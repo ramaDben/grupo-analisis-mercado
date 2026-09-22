@@ -529,3 +529,69 @@ def test_el_sello_de_frescura_usa_el_mismo_umbral_que_el_texto():
     texto, fecha = cmg.variacion_soberana(serie_rezagada)
     assert "5 días" in texto, "el texto no cambio a la variacion de 5 dias"
     assert fecha, "el texto no acompano la cifra con la fecha del dato"
+
+
+def test_cifras_whatsapp_evita_anacronismo_en_evento_pasado():
+    """Un evento de las 09:30 evaluado a las 11:00 sin cifra no puede decir 'se espera'."""
+    ev = {
+        "nombre": "NY Empire State", "pais": "United States", "hora_servidor": "2026-09-15 09:30",
+        "forecast": "14.80", "actual": "",
+    }
+    ahora = datetime(2026, 9, 15, 11, 0, tzinfo=SANTIAGO)
+    txt = cmg._cifras_para_whatsapp(ev, ahora=ahora)
+    assert "se espera" not in txt
+    assert "esperado 14,80 · pendiente de confirmación" == txt
+
+
+def test_cifras_whatsapp_mantiene_se_espera_en_evento_futuro():
+    """Un evento de las 14:00 evaluado a las 11:00 sí debe decir 'se espera'."""
+    ev = {
+        "nombre": "Bond Auction", "pais": "United States", "hora_servidor": "2026-09-15 14:00",
+        "forecast": "5.20%", "actual": "",
+    }
+    ahora = datetime(2026, 9, 15, 11, 0, tzinfo=SANTIAGO)
+    txt = cmg._cifras_para_whatsapp(ev, ahora=ahora)
+    assert "se espera 5,20%" == txt
+
+
+def test_forex_utiliza_driver_soberano_si_no_hay_evento_de_chile_hoy():
+    """En un día regular sin eventos de Chile, Forex genera el driver DGS2 y no el Imacec viejo."""
+    eventos_usa = [
+        {"nombre": "NY Empire State", "pais": "United States", "hora_servidor": "2026-09-15 09:30", "impacto": "alto"}
+    ]
+    ahora = datetime(2026, 9, 15, 11, 0, tzinfo=SANTIAGO)
+    payload = cmg.construir_payload_story_macro("02_forex_divisas", eventos_usa, 5.0, ahora)
+    assert payload["indicador"] == "Tasa Soberana EE.UU. 2Y (Expectativa Fed)"
+    assert "Actividad Económica" not in payload["indicador"]
+
+
+def test_bloque_agenda_marca_concluido_discurso_pasado_sin_cifra():
+    """Un discurso de Lagarde a las 12:00 evaluado a las 17:00 debe marcarse como Concluido con check verde."""
+    ev = {
+        "nombre": "ECB President Lagarde Speaks", "pais": "Euro Zone",
+        "hora_servidor": "2026-09-21 12:00", "actual": "", "forecast": "",
+    }
+    ahora = datetime(2026, 9, 21, 17, 0, tzinfo=SANTIAGO)
+    bloque = cmg._bloque_agenda([ev], ahora=ahora)
+    texto = "\n".join(bloque)
+    assert "✅" in texto
+    assert "Concluido" in texto
+
+
+def test_contexto_macro_comenta_discurso_lagarde():
+    """El mensaje macro debe incluir seguimiento explícito de Lagarde si su discurso ya ocurrió."""
+    ev = {
+        "nombre": "ECB President Lagarde Speaks", "pais": "Euro Zone",
+        "hora_servidor": "2026-09-21 12:00", "actual": "", "forecast": "",
+    }
+    ahora = datetime(2026, 9, 21, 17, 0, tzinfo=SANTIAGO)
+    txt = cmg.construir_texto_contexto_macro(
+        grupo="01_macro_y_apertura",
+        eventos_grupo=[ev],
+        delta_ust_bps=-1.0,
+        ahora=ahora,
+    )
+    assert "SEGUIMIENTO DE BANCOS CENTRALES" in txt
+    assert "Christine Lagarde" in txt
+
+

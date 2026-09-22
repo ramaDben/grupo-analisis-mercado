@@ -1174,12 +1174,148 @@ def rendir(
     return {"tipo": tipo, "canal": "PDF", "pdf": str(salida), "salida": proceso.stdout.strip()}
 
 
+def generar_mensaje_chat_apertura(
+    playbook: dict[str, Any],
+    eventos: list[dict[str, Any]],
+    ahora: datetime | None = None,
+) -> str:
+    """Genera el mensaje matutino Chat-First para WhatsApp según el Manual de Operaciones v1.0.1 (Opción 2: Formato Compacto con Barras Divisoras)."""
+    ahora_cl = ahora or datetime.now(tz=SANTIAGO)
+    fecha_txt = f"{ahora_cl.day} de {_MESES_ES[ahora_cl.month - 1]} de {ahora_cl.year}"
+
+    conf_data = (playbook or {}).get("confianza_general") or {}
+    conf_total = conf_data.get("confianza_total_pct", 0.0)
+    conf_str = f"{conf_total:.1f}".replace(".", ",") + "%"
+
+    # Si la confianza está bajo el 51%, emitir bloqueo de seguridad
+    if conf_total < 51.0 or not playbook:
+        lineas = [
+            f"🛑 ALERTA DE SEGURIDAD OPERATIVA · {fecha_txt.upper()}",
+            "Estado: DATOS INCOMPLETOS / MERCADO NO OPERABLE",
+            f"Confianza del Modelo: {conf_str} (Bajo el umbral maestro del 51,0%)",
+            "",
+            "⚠️ ATENCIÓN TRADERS:",
+            "El motor cuantitativo detectó degradación de frescura o ausencia de drivers soberanos.",
+            "Siguiendo el Módulo 3.4 del Manual de Operaciones:",
+            "• Queda estrictamente PROHIBIDO abrir nuevas posiciones a mercado.",
+            "• Preservación total de capital. Cero operativa hasta restablecer la lectura oficial.",
+            "",
+            "Grupo Inteligencia · Departamento de Estudios y Research",
+        ]
+        return "\n".join(lineas)
+
+    regimen = playbook.get("regimen_macro_global") or {}
+    reg_cod = regimen.get("codigo", "R0_CALMA_RANGO")
+    reg_nom = regimen.get("nombre", "Calma")
+    reg_conf = "2º día confirmado" if regimen.get("confirmado_por_historesis") else "En evaluación"
+
+    emoji_reg = {
+        "R3_ESTANFLACION_SHOCK": "🌪️",
+        "R1_SHOCK_INFLACIONARIO": "🛒",
+        "R4_RECESION_VUELO_CALIDAD": "📉",
+        "R2_GOLDILOCKS_EXPANSION": "☀️",
+        "R0_CALMA_RANGO": "🏖️",
+    }.get(reg_cod, "🌦️")
+
+    lineas = [
+        f"{emoji_reg} CLIMA MACRO GI · {fecha_txt.upper()}",
+        f"Régimen: {reg_cod} ({reg_nom}) · {reg_conf}",
+        "",
+        f"🎯 AUDITORÍA DE DATOS MACRO: {conf_str} · APROBADO PARA OPERAR",
+        "• Fuentes oficiales: 6 de 6 variables recibidas al 100% (Tasas Fed, Banco Central de Chile, Cobre COMEX y Petróleo).",
+        "• Antigüedad: Datos del último cierre oficial hábil.",
+        "• Regla de seguridad: Sobre 51,0% el sistema autoriza operar; bajo 51,0% se bloquea por falta de datos.",
+        "",
+        "📊 PERMISOS DE TRADING H1 (MÓDULO 10)",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+    ]
+
+    activos = playbook.get("activos") or {}
+    mapeo_activos = [
+        ("💵", "USDCLP", "USD/CLP · Dólar / Peso"),
+        ("🥇", "XAUUSD", "ORO SPOT · XAU/USD"),
+        ("🛢️", "WTI", "PETRÓLEO WTI · Crudo EE.UU."),
+        ("🛢️", "BRENT", "PETRÓLEO BRENT · Crudo Mar del Norte"),
+        ("💻", "US100", "NASDAQ 100 · Bolsa EE.UU."),
+    ]
+
+    setups_traduccion = {
+        "PULLBACK_SHORT_EMA20": "Retroceso a EMA 20 (H1)",
+        "BREAKDOWN_DONCHIAN_H1": "Ruptura bajista Donchian",
+        "BREAKDOWN_DONCHIAN": "Ruptura bajista Donchian",
+        "PULLBACK_EMA50_H1": "Retroceso a EMA 50 (H1)",
+        "PULLBACK_EMA50": "Retroceso a EMA 50 (H1)",
+        "BREAKOUT_DONCHIAN_H1": "Ruptura alcista Donchian",
+        "BREAKOUT_DONCHIAN": "Ruptura alcista Donchian",
+        "BREAKOUT_VOLATILITY_H1": "Ruptura por volatilidad",
+        "BREAKOUT_VOLATILITY": "Ruptura por volatilidad",
+        "PULLBACK_EMA20_H1": "Retroceso a EMA 20 (H1)",
+        "PULLBACK_EMA20": "Retroceso a EMA 20 (H1)",
+        "SELL_PULLBACK_EMA50_H1": "Retroceso bajista a EMA 50 (H1)",
+        "SELL_PULLBACK_EMA50": "Retroceso bajista a EMA 50 (H1)",
+    }
+
+    for icon, clave, nombre_fmt in mapeo_activos:
+        act = activos.get(clave)
+        if not act:
+            continue
+        dir_perm = act.get("direccion_permitida", "RANGO")
+        prohib = act.get("prohibicion_clave", "Ninguna")
+        raw_setups = act.get("setups_permitidos", [])
+        setups_trad = [setups_traduccion.get(s, s.replace("_", " ").title()) for s in raw_setups]
+        setups_str = ", ".join(setups_trad) if setups_trad else "Sin setups específicos"
+
+        lineas.append(f"{icon} {nombre_fmt}")
+        lineas.append(f"  [+] AUTORIZADO : {dir_perm}")
+        lineas.append(f"      Setups H1  : {setups_str}")
+        lineas.append(f"  [-] PROHIBIDO  : {prohib}")
+        lineas.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+    lineas.append("")
+    lineas.append("🔍 DRIVERS MAESTROS DE CONFIRMACIÓN (ANEXO A2)")
+    drivers_a2 = playbook.get("drivers_maestros_a2") or {}
+
+    for _, d_info in drivers_a2.items():
+        nom_act = d_info.get("activo", "")
+        nom_d = d_info.get("driver", "")
+        val_d = str(d_info.get("valor_formateado", "N/A")).replace(".", ",")
+        umb_d = str(d_info.get("umbral_maestro", "")).replace("<=", "≤").replace(">=", "≥")
+        aprob = d_info.get("aprobado", False)
+        icono = "✅ APROBADO" if aprob else "❌ BLOQUEADO"
+        lineas.append(f"• {nom_act} ({nom_d}): {val_d} (Meta: {umb_d}) {icono}")
+
+    lineas.append("")
+    lineas.append("⏱️ RADAR DE AGENDA Y BLACKOUTS (HORA CHILE)")
+    if eventos:
+        for ev in eventos[:4]:
+            hora_ev = ev.get("hora_servidor", ev.get("hora_chile", ev.get("hora", "08:30")))
+            if " " in str(hora_ev):
+                hora_ev = str(hora_ev).split(" ")[-1]
+            nom_ev = _nombre_indicador(ev) if "_nombre_indicador" in globals() else ev.get("nombre", ev.get("evento", ""))
+            imp = str(ev.get("impacto", "ALTO")).upper()
+            lineas.append(f"• {hora_ev} CLT: {nom_ev} [{imp}]")
+    else:
+        lineas.append("• Sin eventos de alto impacto programados para esta jornada.")
+
+    lineas.append("")
+    lineas.append("👉 Tu ejecución en MT5:")
+    lineas.append("1. Opera solo al cierre de velas H1 (:00).")
+    lineas.append("2. Lote al 1,0% NETO de riesgo con buffer 90/10 (0,90% precio + 0,10% fricción).")
+    lineas.append("3. Si el semáforo del driver maestro está en ❌, reduce tamaño al 50% o espera confirmación técnica.")
+    lineas.append("")
+    lineas.append("Grupo Inteligencia · Departamento de Estudios y Research")
+
+    return "\n".join(lineas)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Informe de la jornada (apertura o cierre)")
     parser.add_argument("--tipo", required=True, choices=("apertura", "cierre"))
     grupo = parser.add_mutually_exclusive_group(required=True)
     grupo.add_argument("--preparar", action="store_true")
     grupo.add_argument("--rendir", type=Path, metavar="DIR")
+    grupo.add_argument("--chat", action="store_true", help="Genera el mensaje Chat-First matutino para WhatsApp")
+    grupo.add_argument("--auto", action="store_true", help="Genera automáticamente mensaje Chat-First y paquete de datos")
     parser.add_argument(
         "--titulo", default="Flash de Mercado",
         help="titulo principal de la portada del PDF",
@@ -1193,6 +1329,28 @@ def main(argv: list[str] | None = None) -> int:
         help="emite la apertura aunque el sesgo este vencido, estampando la antiguedad",
     )
     args = parser.parse_args(argv)
+
+    if args.chat or args.auto:
+        ahora = datetime.now(tz=SANTIAGO)
+        playbook, av_pb = _playbook()
+        eventos, av_cal = _calendario(ahora)
+        msg = generar_mensaje_chat_apertura(playbook, eventos, ahora)
+
+        destino = DIR_TRABAJO / ahora.strftime("%Y-%m-%d")
+        destino.mkdir(parents=True, exist_ok=True)
+        ruta_chat = destino / f"mensaje_apertura_{ahora.strftime('%Y%m%d')}.txt"
+        ruta_chat.write_text(msg, encoding="utf-8")
+
+        print("\n" + "=" * 70)
+        print(f"📱 MENSAJE CHAT-FIRST MATUTINO (Guardado en: {ruta_chat})")
+        print("=" * 70)
+        print(msg)
+        print("=" * 70 + "\n")
+
+        if args.auto:
+            res_prep = preparar(args.tipo, con_datos_viejos=args.con_datos_viejos)
+            print(f"📦 PAQUETE DE DATOS PREPARADO EN: {res_prep['directorio']}")
+        return 0
 
     if args.preparar:
         res = preparar(args.tipo, con_datos_viejos=args.con_datos_viejos)

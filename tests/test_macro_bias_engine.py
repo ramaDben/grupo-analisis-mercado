@@ -686,3 +686,33 @@ def test_el_motor_usa_la_misma_regla_de_vencimiento_que_la_ingesta():
     for nombre, clave in CADENCIA_POR_DRIVER.items():
         esperado = pipeline_ingesta.esta_vencido(clave or nombre, "2026-08-25", "OK", hoy)
         assert driver_vencido(nombre, "2026-08-25", "OK", hoy) is esperado, nombre
+
+
+def test_drivers_maestros_a2_estructura_y_reglas():
+    """Verifica que el output del motor incluya la sección drivers_maestros_a2 con los 4 activos y semáforos."""
+    from scripts.macro_bias_engine import ejecutar_motor_sesgo
+    res = ejecutar_motor_sesgo(verbose=False)
+    assert "drivers_maestros_a2" in res
+    d_a2 = res["drivers_maestros_a2"]
+    for sym in ["USDCLP", "XAUUSD", "WTI_BRENT", "US100"]:
+        assert sym in d_a2, f"Falta {sym} en drivers_maestros_a2"
+        item = d_a2[sym]
+        assert "driver" in item and len(item["driver"]) > 0
+        assert "valor_formateado" in item
+        assert "umbral_maestro" in item
+        assert isinstance(item["aprobado"], bool)
+        assert item["estado_semaforo"] in ("VERDE", "ROJO")
+
+
+def test_activos_modulo10_direccion_y_prohibicion_presentes():
+    """Verifica que los 5 activos con ficha tengan direccion_permitida y prohibicion_clave del Módulo 10."""
+    from scripts.macro_bias_engine import ejecutar_motor_sesgo
+    res = ejecutar_motor_sesgo(verbose=False)
+    activos = res.get("activos", {})
+    for sym in ["USDCLP", "XAUUSD", "WTI", "BRENT", "US100"]:
+        assert sym in activos, f"Falta activo {sym}"
+        act = activos[sym]
+        assert "direccion_permitida" in act and len(act["direccion_permitida"]) > 0
+        assert "prohibicion_clave" in act and len(act["prohibicion_clave"]) > 0
+        assert "setups_permitidos" in act
+        assert "setups_prohibidos" in act

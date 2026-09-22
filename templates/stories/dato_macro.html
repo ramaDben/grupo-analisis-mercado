@@ -279,13 +279,47 @@ html, body {
 }
 .gb-barra-destacada {
   opacity: 1.0;
-  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--acento) 50%, transparent));
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--acento) 60%, transparent));
 }
 .gb-barra-pos.gb-barra-destacada {
   fill: var(--sube);
 }
 .gb-barra-neg.gb-barra-destacada {
   fill: var(--baja);
+}
+.gb-barra-azul {
+  fill: var(--acento-azul);
+  opacity: 0.85;
+}
+.gb-barra-azul.gb-barra-destacada {
+  fill: var(--acento-azul);
+  opacity: 1.0;
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--acento-azul) 60%, transparent));
+}
+.gb-barra-aviso, .gb-barra-amarillo {
+  fill: var(--aviso);
+  opacity: 0.85;
+}
+.gb-barra-aviso.gb-barra-destacada, .gb-barra-amarillo.gb-barra-destacada {
+  fill: var(--aviso);
+  opacity: 1.0;
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--aviso) 60%, transparent));
+}
+.gb-barra-verde {
+  fill: var(--sube);
+  opacity: 0.85;
+}
+.gb-barra-verde.gb-barra-destacada {
+  fill: var(--sube);
+  opacity: 1.0;
+  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--sube) 70%, transparent));
+}
+
+.gb-valor {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  fill: var(--texto-1);
 }
 
 .gb-eje {

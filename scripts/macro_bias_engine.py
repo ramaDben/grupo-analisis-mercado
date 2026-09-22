@@ -421,6 +421,8 @@ def evaluar_activos(regimen_activo: str, drivers_data: dict, precios_summary: di
             if cobre_spot is None or copper_pct_5d is None:
                 sesgo_score = 0.0
                 sesgo_etiqueta = "DATOS_INCOMPLETOS"
+                direccion_permitida = "FUERA DE MERCADO / NO OPERABLE"
+                prohibicion_clave = "Operar sin lectura de datos oficiales"
                 setups_permitidos = []
                 setups_prohibidos = []
                 tp_tipo = "NIVEL_OPUESTO_CANAL"
@@ -429,6 +431,8 @@ def evaluar_activos(regimen_activo: str, drivers_data: dict, precios_summary: di
             elif regimen_activo == "R4_RECESION_VUELO_CALIDAD":
                 sesgo_score = 1.20
                 sesgo_etiqueta = "ALCISTA USD (PESO DÉBIL POR RECESIÓN/VUELO A CALIDAD)"
+                direccion_permitida = "SOLO COMPRA"
+                prohibicion_clave = "Operar rango, apostar a la baja en USD/CLP"
                 setups_permitidos = ["BREAKOUT_DONCHIAN_H1", "PULLBACK_EMA20_H1"]
                 setups_prohibidos = ["FADE_SUPPORT_RESISTANCE_M15", "LONG_INVERTIDO", "GRID_SIN_STOP"]
                 tp_tipo = "TRAILING_STOP_ASYMMETRIC"
@@ -440,6 +444,8 @@ def evaluar_activos(regimen_activo: str, drivers_data: dict, precios_summary: di
             elif regimen_activo == "R3_ESTANFLACION_SHOCK":
                 sesgo_score = 0.80
                 sesgo_etiqueta = "ALCISTA MODERADO USD (ESTANFLACION GLOBAL)"
+                direccion_permitida = "SOLO COMPRA"
+                prohibicion_clave = "Operar rango / Ventas contra tendencia"
                 setups_permitidos = ["BREAKOUT_DONCHIAN_H1", "PULLBACK_EMA20_H1"]
                 setups_prohibidos = ["MEAN_REVERSION_RSI_H1", "FADE_SUPPORT_RESISTANCE_M15"]
                 tp_tipo = "TRAILING_STOP_ASYMMETRIC"
@@ -450,6 +456,8 @@ def evaluar_activos(regimen_activo: str, drivers_data: dict, precios_summary: di
             elif regimen_activo == "R1_SHOCK_INFLACIONARIO":
                 sesgo_score = 0.60
                 sesgo_etiqueta = "ALCISTA MODERADO USD (SHOCK INFLACION US)"
+                direccion_permitida = "SOLO COMPRA"
+                prohibicion_clave = "Vender en resistencia"
                 setups_permitidos = ["BREAKOUT_DONCHIAN_H1", "PULLBACK_EMA20_H1"]
                 setups_prohibidos = ["FADE_TOP_RESISTANCE"]
                 tp_tipo = "TRAILING_STOP_ASYMMETRIC"
@@ -460,6 +468,8 @@ def evaluar_activos(regimen_activo: str, drivers_data: dict, precios_summary: di
             elif regimen_activo == "R2_GOLDILOCKS_EXPANSION":
                 sesgo_score = -1.20
                 sesgo_etiqueta = "BAJISTA USD (PESO FUERTE POR GOLDILOCKS)"
+                direccion_permitida = "SOLO VENTA"
+                prohibicion_clave = "Perseguir rupturas al alza / Comprar rebotes"
                 setups_permitidos = ["PULLBACK_SHORT_EMA20", "BREAKDOWN_DONCHIAN_H1"]
                 setups_prohibidos = ["BREAKOUT_CHASE_LONG", "LONG_SWING_FADE"]
                 tp_tipo = "TRAILING_STOP_ASYMMETRIC"
@@ -472,6 +482,8 @@ def evaluar_activos(regimen_activo: str, drivers_data: dict, precios_summary: di
                 if copper_pct_5d <= copper_recession_pct:
                     sesgo_score = 1.00
                     sesgo_etiqueta = "ALCISTA USD (CAIDA COBRE EN R0)"
+                    direccion_permitida = "SOLO COMPRA"
+                    prohibicion_clave = "Operar rango / Ventas contra tendencia"
                     setups_permitidos = ["BREAKOUT_DONCHIAN_H1", "PULLBACK_EMA20_H1"]
                     setups_prohibidos = ["FADE_SUPPORT_RESISTANCE_M15", "LONG_INVERTIDO", "GRID_SIN_STOP"]
                     tp_tipo = "TRAILING_STOP_ASYMMETRIC"
@@ -480,6 +492,8 @@ def evaluar_activos(regimen_activo: str, drivers_data: dict, precios_summary: di
                 elif copper_pct_5d >= copper_goldilocks_pct:
                     sesgo_score = -1.00
                     sesgo_etiqueta = "BAJISTA USD (RALLY COBRE EN R0)"
+                    direccion_permitida = "SOLO VENTA"
+                    prohibicion_clave = "Perseguir rupturas al alza"
                     setups_permitidos = ["PULLBACK_SHORT_EMA20", "BREAKDOWN_DONCHIAN_H1"]
                     setups_prohibidos = ["BREAKOUT_CHASE_LONG", "LONG_SWING_FADE"]
                     tp_tipo = "TRAILING_STOP_ASYMMETRIC"
@@ -488,6 +502,8 @@ def evaluar_activos(regimen_activo: str, drivers_data: dict, precios_summary: di
                 else:
                     sesgo_score = 0.0
                     sesgo_etiqueta = "NEUTRAL / RANGO (S1 - R1)"
+                    direccion_permitida = "RANGO (COMPRA S1 / VENTA R1)"
+                    prohibicion_clave = "Perseguir rupturas tendenciales"
                     setups_permitidos = ["FADE_SUPPORT_RESISTANCE_H1", "MEAN_REVERSION_RSI_H1"]
                     setups_prohibidos = ["BREAKOUT_CHASE_LONG", "GRID_SIN_STOP"]
                     tp_tipo = "NIVEL_OPUESTO_CANAL"
@@ -502,6 +518,8 @@ def evaluar_activos(regimen_activo: str, drivers_data: dict, precios_summary: di
             if regimen_activo in ["R3_ESTANFLACION_SHOCK", "R1_SHOCK_INFLACIONARIO"] or (tips_10y is not None and tips_10y < 2.20):
                 sesgo_score = 1.80
                 sesgo_etiqueta = "FUERTE ALCISTA"
+                direccion_permitida = "SOLO COMPRA (PULLBACK EMA20 O RUPTURA)"
+                prohibicion_clave = "Vender Oro, incluso con RSI sobrecomprado en 80"
                 setups_permitidos = ["PULLBACK_EMA20_H1", "BREAKOUT_DONCHIAN_50_H1"]
                 setups_prohibidos = ["SHORT_FADE_OVERBOUGHT", "VENTA_CONTRA_TENDENCIA"]
                 tp_tipo = "TRAILING_STOP_ASYMMETRIC"
@@ -515,6 +533,8 @@ def evaluar_activos(regimen_activo: str, drivers_data: dict, precios_summary: di
             else:
                 sesgo_score = 0.40
                 sesgo_etiqueta = "ALCISTA MODERADO"
+                direccion_permitida = "COMPRA (PULLBACK EMA50 O RUPTURA)"
+                prohibicion_clave = "Venta agresiva contra tendencia"
                 setups_permitidos = ["PULLBACK_EMA50_H1", "BREAKOUT_DONCHIAN_H1"]
                 setups_prohibidos = ["SHORT_AGRESIVO"]
                 tp_tipo = "TRAILING_STOP_ASYMMETRIC"
@@ -525,20 +545,11 @@ def evaluar_activos(regimen_activo: str, drivers_data: dict, precios_summary: di
             if oil_signed is not None and (regimen_activo == "R3_ESTANFLACION_SHOCK" or oil_signed > 2.0):
                 sesgo_score = 1.50
                 sesgo_etiqueta = "ALCISTA POR SHOCK"
+                direccion_permitida = "SOLO COMPRA"
+                prohibicion_clave = "Vender en resistencia / Apostar a techos"
                 setups_prohibidos = ["FADE_TOP_RESISTANCE"]
                 tp_tipo = "TRAILING_STOP_ASYMMETRIC"
 
-                # Kilian (2009): el crudo sube por razones distintas y cada una
-                # exige un manejo distinto. La justificación anterior decía
-                # "Shock Precautorio/Demanda", juntando en una barra las dos
-                # cosas que el paper existe para separar.
-                #
-                # El cobre es el proxy de la demanda industrial global. Si sube
-                # con el crudo, el alza es demanda agregada (Kilian #2) y se
-                # sigue la tendencia con posición completa. Si el crudo se
-                # dispara solo, es demanda precautoria por temor a faltantes o
-                # un shock de oferta (Kilian #3 y #1): ahí el Playbook manda
-                # ceñir el trailing y operar al 50 %.
                 cobre_confirma = (
                     copper_pct_5d is not None
                     and copper_pct_5d >= rt["copper_goldilocks_pct_5d"]
@@ -550,12 +561,9 @@ def evaluar_activos(regimen_activo: str, drivers_data: dict, precios_summary: di
                     justificacion = [
                         f"Rally de 5 días en crudo ({oil_signed:+.1f}%) CON respaldo del cobre "
                         f"({copper_pct_5d:+.1f}%): shock de demanda agregada (Kilian 2009)",
-                        "Se sigue la tendencia con posición completa y trailing amplio",
+                        "Se sigue la tendencia con posición completa (100%) y trailing amplio",
                     ]
                 else:
-                    # `PULLBACK_EMA20_H1` y no EMA16: la media de 16 no existe en el
-                    # Playbook —que usa 20 y 50— ni la devuelve `get_asset_levels`.
-                    # Era un setup permitido que nadie podía ejecutar.
                     setups_permitidos = ["BREAKOUT_VOLATILITY_H1", "PULLBACK_EMA20_H1"]
                     trailing_mult = rp["trailing_stop_mult_precautorio"]
                     factor_apalancamiento = rp["factor_apalancamiento_precautorio"]
@@ -563,11 +571,13 @@ def evaluar_activos(regimen_activo: str, drivers_data: dict, precios_summary: di
                     justificacion = [
                         f"Rally de 5 días en crudo ({oil_signed:+.1f}%) SIN respaldo del cobre "
                         f"({cobre_txt}): shock precautorio o de oferta (Kilian 2009)",
-                        "Trailing ceñido y apalancamiento al 50 %: el alza no la sostiene la demanda real",
+                        "Trailing ceñido (2.0x ATR) y lote al 50%: el alza no la sostiene demanda real",
                     ]
             else:
                 sesgo_score = 0.0
                 sesgo_etiqueta = "NEUTRAL / CONSOLIDACIÓN"
+                direccion_permitida = "RANGO (COMPRA SOPORTE / VENTA RESISTENCIA)"
+                prohibicion_clave = "Perseguir rupturas sin rango previo"
                 setups_permitidos = ["RANGE_DONCHIAN_FADE"]
                 setups_prohibidos = ["BREAKOUT_CHASE"]
                 tp_tipo = "NIVEL_OPUESTO_CANAL"
@@ -578,6 +588,8 @@ def evaluar_activos(regimen_activo: str, drivers_data: dict, precios_summary: di
             if dgs10 is None and regimen_activo == "R0_CALMA_RANGO":
                 sesgo_score = 0.0
                 sesgo_etiqueta = "DATOS_INCOMPLETOS"
+                direccion_permitida = "FUERA DE MERCADO / NO OPERABLE"
+                prohibicion_clave = "Operar sin lectura de tasas"
                 setups_permitidos = []
                 setups_prohibidos = []
                 tp_tipo = "NIVEL_OPUESTO_CANAL"
@@ -586,6 +598,8 @@ def evaluar_activos(regimen_activo: str, drivers_data: dict, precios_summary: di
             elif (dgs10 is not None and dgs10 > 4.70) or regimen_activo in ["R3_ESTANFLACION_SHOCK", "R1_SHOCK_INFLACIONARIO"]:
                 sesgo_score = -1.20
                 sesgo_etiqueta = "BAJISTA / PRESIÓN EN MÚLTIPLOS"
+                direccion_permitida = "SOLO VENTA (PULLBACK EMA50 O RUPTURA BAJA)"
+                prohibicion_clave = "Comprar la caída / Comprar sin confirmación"
                 setups_permitidos = ["SELL_PULLBACK_EMA50_H1", "BREAKDOWN_DONCHIAN_H1"]
                 setups_prohibidos = ["BUY_THE_DIP_AGGRESSIVE", "COMPRA_SIN_CONFIRMACION"]
                 tp_tipo = "TRAILING_STOP_ASYMMETRIC"
@@ -597,6 +611,8 @@ def evaluar_activos(regimen_activo: str, drivers_data: dict, precios_summary: di
             else:
                 sesgo_score = 0.80
                 sesgo_etiqueta = "ALCISTA / EXPANSION"
+                direccion_permitida = "COMPRA (PULLBACK EMA20 O RUPTURA)"
+                prohibicion_clave = "Vender en tendencia alcista"
                 setups_permitidos = ["PULLBACK_EMA20_H1", "BREAKOUT_DONCHIAN_H1"]
                 setups_prohibidos = ["SHORT_FADE"]
                 tp_tipo = "TRAILING_STOP_ASYMMETRIC"
@@ -607,6 +623,8 @@ def evaluar_activos(regimen_activo: str, drivers_data: dict, precios_summary: di
         else:
             sesgo_score = 0.0
             sesgo_etiqueta = "NEUTRAL"
+            direccion_permitida = "RANGO"
+            prohibicion_clave = "Ninguna"
             setups_permitidos = ["RANGE_TRADING"]
             setups_prohibidos = []
             tp_tipo = "NIVEL_OPUESTO_CANAL"
@@ -618,6 +636,8 @@ def evaluar_activos(regimen_activo: str, drivers_data: dict, precios_summary: di
             "tipo": asset_cfg["tipo"],
             "sesgo_score": sesgo_score,
             "sesgo_etiqueta": sesgo_etiqueta,
+            "direccion_permitida": direccion_permitida,
+            "prohibicion_clave": prohibicion_clave,
             "setups_permitidos": setups_permitidos,
             "setups_prohibidos": setups_prohibidos,
             "parametros_riesgo": {
@@ -778,6 +798,58 @@ def ejecutar_motor_sesgo(verbose: bool = True) -> dict:
     # 5. Evaluación por activo
     activos_evaluados = evaluar_activos(regimen_activo_cod, deltas_payload, precios_summary, cfg)
 
+    # 5 bis. Evaluación de Drivers Maestros Anexo A2 (SSOT)
+    cu_aprobado = (copper_pct_5d is not None and copper_pct_5d <= 0.0) or (regimen_activo_cod in ["R3_ESTANFLACION_SHOCK", "R4_RECESION_VUELO_CALIDAD"])
+    cu_val_str = f"{copper_pct_5d:+.2f}%" if copper_pct_5d is not None else "N/A"
+
+    tips_aprobado = (tips_actual is not None and tips_actual <= 2.20) or (regimen_activo_cod in ["R3_ESTANFLACION_SHOCK", "R1_SHOCK_INFLACIONARIO"])
+    tips_val_str = f"{tips_actual:.2f}%" if tips_actual is not None else "N/A"
+
+    oil_aprobado = (oil_signed_pct is not None and oil_signed_pct >= 1.0) or (regimen_activo_cod == "R3_ESTANFLACION_SHOCK")
+    oil_val_str = f"{oil_signed_pct:+.2f}%" if oil_signed_pct is not None else "N/A"
+
+    us10y_aprobado = (dgs10_actual is not None and dgs10_actual <= 4.70) and (regimen_activo_cod not in ["R3_ESTANFLACION_SHOCK", "R1_SHOCK_INFLACIONARIO"])
+    us10y_val_str = f"{dgs10_actual:.2f}%" if dgs10_actual is not None else "N/A"
+
+    drivers_maestros_a2 = {
+        "USDCLP": {
+            "activo": "USD/CLP",
+            "driver": "Cobre COMEX/LME Δ5d",
+            "valor": copper_pct_5d,
+            "valor_formateado": cu_val_str,
+            "umbral_maestro": "Cobre Δ5d <= 0,00 % o Clima R3/R4",
+            "aprobado": cu_aprobado,
+            "estado_semaforo": "VERDE" if cu_aprobado else "ROJO"
+        },
+        "XAUUSD": {
+            "activo": "Oro (XAU/USD)",
+            "driver": "Tasa Real TIPS 10Y EE.UU.",
+            "valor": tips_actual,
+            "valor_formateado": tips_val_str,
+            "umbral_maestro": "Tasa Real <= 2,20 % o Clima R3/R1",
+            "aprobado": tips_aprobado,
+            "estado_semaforo": "VERDE" if tips_aprobado else "ROJO"
+        },
+        "WTI_BRENT": {
+            "activo": "WTI y Brent",
+            "driver": "Petróleo Físico WTI Δ5d",
+            "valor": oil_signed_pct,
+            "valor_formateado": oil_val_str,
+            "umbral_maestro": "Petróleo Δ5d >= +1,00 % o Clima R3",
+            "aprobado": oil_aprobado,
+            "estado_semaforo": "VERDE" if oil_aprobado else "ROJO"
+        },
+        "US100": {
+            "activo": "Nasdaq 100",
+            "driver": "Bono US10Y Nominal",
+            "valor": dgs10_actual,
+            "valor_formateado": us10y_val_str,
+            "umbral_maestro": "Tasa 10Y <= 4,70 % y Clima NO R3/R1",
+            "aprobado": us10y_aprobado,
+            "estado_semaforo": "VERDE" if us10y_aprobado else "ROJO"
+        }
+    }
+
     # 6. Estructura de salida
     ahora_iso = datetime.now(timezone.utc).isoformat()
     resultado_final = {
@@ -795,6 +867,7 @@ def ejecutar_motor_sesgo(verbose: bool = True) -> dict:
             "petroleo_shock_max_5d_pct": round(oil_max_pct, 2) if oil_max_pct is not None else None,
             "petroleo_shock_signed_5d_pct": round(oil_signed_pct, 2) if oil_signed_pct is not None else None
         },
+        "drivers_maestros_a2": drivers_maestros_a2,
         "confianza_general": {
             "confianza_total_pct": conf_global,
             "score_frescura_pct": f_frescura,

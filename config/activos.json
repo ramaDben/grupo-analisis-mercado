@@ -499,7 +499,8 @@
           "1H"
         ],
         "horario_mercado": "09:30-16:00 ET (convertir con scripts/hora_chile.ps1: el desfase con Chile cambia con el horario de verano)",
-        "rotacion_diaria": false
+        "rotacion_diaria": false,
+        "imagen": "assets/activos/us500.jpg"
       },
       {
         "ticker": "GLD",
@@ -596,7 +597,8 @@
             "demanda China"
           ],
           "volatilidad": "media",
-          "nota_volatilidad": "mega cap muy líquida: se mueve ordenado y se acelera en resultados o lanzamientos. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H da la lectura del día con 4H para la tendencia"
+          "nota_volatilidad": "mega cap muy líquida: se mueve ordenado y se acelera en resultados o lanzamientos. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H da la lectura del día con 4H para la tendencia",
+          "imagen": "assets/activos/tech-circuito.jpg"
         },
         {
           "ticker_mt5": "#MSFT",
@@ -610,7 +612,8 @@
             "licencias enterprise"
           ],
           "volatilidad": "media",
-          "nota_volatilidad": "de las más estables del grupo tecnológico: tramos amplios pero pausados. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H es el marco del día"
+          "nota_volatilidad": "de las más estables del grupo tecnológico: tramos amplios pero pausados. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H es el marco del día",
+          "imagen": "assets/activos/tech-circuito.jpg"
         },
         {
           "ticker_mt5": "#NVDA",
@@ -624,7 +627,8 @@
             "regulación exportación China"
           ],
           "volatilidad": "alta",
-          "nota_volatilidad": "la más movida del grupo: un titular de inteligencia artificial le mueve varios puntos porcentuales en una sesión, y en 15M eso se desdice solo. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, así que 1H sostiene la lectura y 4H la tendencia"
+          "nota_volatilidad": "la más movida del grupo: un titular de inteligencia artificial le mueve varios puntos porcentuales en una sesión, y en 15M eso se desdice solo. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, así que 1H sostiene la lectura y 4H la tendencia",
+          "imagen": "assets/activos/tech-circuito.jpg"
         },
         {
           "ticker_mt5": "#AMZN",
@@ -638,7 +642,8 @@
             "márgenes"
           ],
           "volatilidad": "media",
-          "nota_volatilidad": "reacciona a consumo y a los márgenes de su nube, con tramos amplios en resultados. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H da la lectura del día"
+          "nota_volatilidad": "reacciona a consumo y a los márgenes de su nube, con tramos amplios en resultados. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H da la lectura del día",
+          "imagen": "assets/activos/tech-circuito.jpg"
         },
         {
           "ticker_mt5": "#AMD",
@@ -653,7 +658,8 @@
             "demanda PC/servidores"
           ],
           "volatilidad": "alta",
-          "nota_volatilidad": "sigue el ciclo de semiconductores igual que NVIDIA pero con recorridos relativos más grandes. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y conviene 1H para el día y 4H para la tendencia"
+          "nota_volatilidad": "sigue el ciclo de semiconductores igual que NVIDIA pero con recorridos relativos más grandes. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y conviene 1H para el día y 4H para la tendencia",
+          "imagen": "assets/activos/tech-circuito.jpg"
         },
         {
           "ticker_mt5": "#MELI",
@@ -696,7 +702,8 @@
             "provisiones crédito"
           ],
           "volatilidad": "media",
-          "nota_volatilidad": "se mueve con las tasas y con la temporada de resultados de la banca, en tramos parejos. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H da la lectura del día"
+          "nota_volatilidad": "se mueve con las tasas y con la temporada de resultados de la banca, en tramos parejos. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H da la lectura del día",
+          "imagen": "assets/activos/us30.jpg"
         },
         {
           "ticker_mt5": "#BAC",
@@ -710,7 +717,8 @@
             "exposición tasas"
           ],
           "volatilidad": "media",
-          "nota_volatilidad": "es el banco más sensible al nivel de las tasas, y ahí se le nota el movimiento. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H es el marco del día"
+          "nota_volatilidad": "es el banco más sensible al nivel de las tasas, y ahí se le nota el movimiento. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H es el marco del día",
+          "imagen": "assets/activos/us30.jpg"
         },
         {
           "ticker_mt5": "#GS",
@@ -724,7 +732,8 @@
             "actividad M&A"
           ],
           "volatilidad": "media",
-          "nota_volatilidad": "depende del negocio de mercados y de fusiones, así que se activa cuando repunta la actividad financiera. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H da la lectura del día"
+          "nota_volatilidad": "depende del negocio de mercados y de fusiones, así que se activa cuando repunta la actividad financiera. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H da la lectura del día",
+          "imagen": "assets/activos/us30.jpg"
         },
         {
           "ticker_mt5": "#MS",
@@ -738,7 +747,8 @@
             "mercados de capital"
           ],
           "volatilidad": "media",
-          "nota_volatilidad": "drivers parecidos a Goldman Sachs, pero su negocio de gestión de patrimonios le suaviza los tramos. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H da la lectura del día"
+          "nota_volatilidad": "drivers parecidos a Goldman Sachs, pero su negocio de gestión de patrimonios le suaviza los tramos. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H da la lectura del día",
+          "imagen": "assets/activos/us30.jpg"
         }
       ]
     },
@@ -765,7 +775,8 @@
             "defensa"
           ],
           "volatilidad": "alta",
-          "nota_volatilidad": "las noticias de entregas, certificaciones o incidentes le mueven el precio de golpe, y en 15M esos saltos son puro ruido. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, así que 1H y 4H son los marcos útiles"
+          "nota_volatilidad": "las noticias de entregas, certificaciones o incidentes le mueven el precio de golpe, y en 15M esos saltos son puro ruido. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, así que 1H y 4H son los marcos útiles",
+          "imagen": "assets/activos/us30.jpg"
         },
         {
           "ticker_mt5": "#CAT",
@@ -779,7 +790,8 @@
             "demanda China"
           ],
           "volatilidad": "media",
-          "nota_volatilidad": "sigue la inversión en obra y minería, y con eso el precio del cobre, en tramos amplios pero no bruscos. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H da la lectura del día"
+          "nota_volatilidad": "sigue la inversión en obra y minería, y con eso el precio del cobre, en tramos amplios pero no bruscos. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H da la lectura del día",
+          "imagen": "assets/activos/us30.jpg"
         },
         {
           "ticker_mt5": "#GE",
@@ -793,7 +805,8 @@
             "demanda aerolíneas"
           ],
           "volatilidad": "media",
-          "nota_volatilidad": "se mueve con la demanda de aviación y con sus contratos de servicio, de forma bastante ordenada. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H es el marco del día"
+          "nota_volatilidad": "se mueve con la demanda de aviación y con sus contratos de servicio, de forma bastante ordenada. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H es el marco del día",
+          "imagen": "assets/activos/us30.jpg"
         },
         {
           "ticker_mt5": "#DE",
@@ -807,7 +820,8 @@
             "maquinaria"
           ],
           "volatilidad": "media",
-          "nota_volatilidad": "depende del ciclo agrícola y del precio de los granos, que cambia despacio. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H da la lectura del día con 4H para la tendencia"
+          "nota_volatilidad": "depende del ciclo agrícola y del precio de los granos, que cambia despacio. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H da la lectura del día con 4H para la tendencia",
+          "imagen": "assets/activos/us30.jpg"
         }
       ]
     }

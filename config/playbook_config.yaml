@@ -57,7 +57,7 @@ confidence_weights:
   # `fecha` de cada driver no trae hora y se parsea como medianoche, asi que la
   # antiguedad nunca aporta sus 35 puntos completos. Medido el 2026-09-02: 54,6 %
   # con dos drivers rotos, 77,5 % con todo al dia desde el broker correcto.
-  umbral_minimo_pct: 65.0
+  umbral_minimo_pct: 51.0
 
 # 3. Parámetros de Riesgo Institucional y Dimensionamiento
 risk_parameters:

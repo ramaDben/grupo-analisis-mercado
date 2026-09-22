@@ -22,7 +22,19 @@ for _p in (RAIZ / "scripts", RAIZ / "src"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
+import pytest
 import suplemento_canal as sup  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _aislar_historial(monkeypatch):
+    """Evita que el historial en disco contamine los tests unitarios."""
+    orig = sup.cargar_historial
+    monkeypatch.setattr(
+        sup,
+        "cargar_historial",
+        lambda ruta=None: orig(ruta) if ruta is not None else [],
+    )
 
 # Las exclusiones reales del canal de divisas de ese dia, tal como las escribio
 # el escaner en `_screener.json`.
@@ -535,5 +547,55 @@ def test_despachar_suplemento_y_encuesta_cierre(tmp_path, monkeypatch):
     grupos = res.get("grupos", [])
     assert any(g.get("suplemento") is True for g in grupos)
     assert any(g.get("encuesta") is True for g in grupos)
+
+
+def test_suplemento_asigna_activo_ancla_al_canal():
+    """Verifica que cada canal reciba su activo ancla representativo."""
+    for canal, ticker_esp in [
+        ("02_forex_divisas", "USDCLP"),
+        ("03_commodities_materias_primas", "XAUUSD"),
+        ("04_indices_bursatiles", "US100.spot"),
+        ("05_acciones_etfs", "#NVDA"),
+        ("06_criptoactivos", "BTCUSD"),
+    ]:
+        s = sup.suplemento(canal, [
+            {"ticker": ticker_esp, "nombre": "Test", "excluido": "ATR diario consumido al 95%"}
+        ])
+        assert s is not None
+        assert s.get("activo_ancla") is not None
+        assert s["activo_ancla"]["ticker"] == ticker_esp
+
+
+def test_suplemento_cierre_estructura_3_tiempos():
+    """El mensaje de cierre debe estructurarse en 3 tiempos con mención al gráfico TradingView."""
+    s = sup.suplemento("02_forex_divisas", FOREX_AGOTADO)
+    msg = sup.construir_mensaje_suplemento(s, es_cierre=True)
+    assert "1️⃣ *QUÉ PASÓ EN LA JORNADA*" in msg
+    assert "2️⃣ *QUÉ ESTÁ PASANDO AHORA*" in msg
+    assert "3️⃣ *QUÉ VIGILAR PARA LA PRÓXIMA APERTURA*" in msg
+    assert "gráfico TradingView™" in msg
+    assert "Activo en foco" in msg
+
+
+def test_escribir_suplementos_genera_recap_payload_con_activo_ancla(tmp_path):
+    """Verifica que escribir_suplementos genere el payload de recap 1_recap_...json con activo ancla."""
+    import json
+    import pipeline_carrusel as pc
+
+    escritos, avisos = pc.escribir_suplementos(
+        tmp_path, FOREX_AGOTADO_CON_CLASE, grupos_activos=set(), catalogo={},
+        ruta_historial=tmp_path / "historial.json",
+        es_cierre=True,
+    )
+    assert len(escritos) == 1
+    canal_dir = tmp_path / "02_forex_divisas"
+    recap_file = canal_dir / "1_recap_usdclp.json"
+    assert recap_file.exists()
+    datos_recap = json.loads(recap_file.read_text(encoding="utf-8"))
+    assert datos_recap["tipo_pieza"] == "recap"
+    assert datos_recap["activo"] == "Dólar / Peso Chileno"
+    assert (canal_dir / "1_recap_usdclp_mensaje.txt").exists()
+    assert (canal_dir / "mensaje.txt").exists()
+
 
 

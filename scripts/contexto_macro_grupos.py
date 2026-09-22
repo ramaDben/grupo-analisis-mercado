@@ -29,6 +29,7 @@ SANTIAGO = ZoneInfo("America/Santiago")
 TEMPLATE_DATO_MACRO = RAIZ / "templates" / "stories" / "dato_macro.html"
 BCCH_DATA_PATH = RAIZ / "data central" / "DATA CHILE" / "raw" / "bcch_macro_data.json"
 TREASURY_FED_DATA_PATH = RAIZ / "data central" / "DATA USA" / "raw" / "treasury_fed_data.json"
+CALENDARIO_AGENDA_PATH = RAIZ / "data central" / "DATA AGENDA" / "calendario_2026.json"
 
 try:
     # `_dias_habiles_entre` viene del mismo módulo a propósito: es el cálculo de
@@ -148,6 +149,7 @@ ENLACES_INSTITUCIONALES: dict[str, str] = {
     "UST_2Y": "https://fred.stlouisfed.org/series/DGS2",
     "DXY": "https://es.tradingview.com/symbols/TVC-DXY/",
     "IMACEC_BCCH": "https://si3.bcentral.cl/Siete/",
+    "IPC_BCCH": "https://si3.bcentral.cl/Siete/",
 }
 
 
@@ -279,15 +281,45 @@ def filtrar_eventos_para_grupo(grupo: str, eventos: list[dict[str, Any]]) -> lis
     return chile_eventos + resto_eventos
 
 
+def _es_dia_foco_chile(eventos_grupo: list[dict[str, Any]], ahora: datetime) -> bool:
+    """Determina si hoy corresponde activar la tarjeta/bloque de foco local chileno en Forex.
+
+    Se activa si:
+    1. Hay un evento de alto impacto de Chile en la agenda del día (IPC, Imacec, TPM, IPoM).
+    2. O la fecha de hoy coincide con un evento oficial de Chile en calendario_2026.json.
+    3. O es el primer día hábil del mes (publicación habitual del Imacec).
+    """
+    for ev in eventos_grupo:
+        pais = str(ev.get("pais", "")).lower()
+        nombre = str(ev.get("nombre", "")).lower()
+        if "chile" in pais and any(k in nombre for k in ("imacec", "cpi", "ipc", "interest rate", "tpm", "ipom", "actividad")):
+            return True
+
+    if CALENDARIO_AGENDA_PATH.exists():
+        try:
+            items = json.loads(CALENDARIO_AGENDA_PATH.read_text(encoding="utf-8"))
+            hoy_str = ahora.strftime("%Y-%m-%d")
+            for item in items:
+                if str(item.get("pais", "")).upper() == "CHILE" and item.get("fecha_publicacion") == hoy_str:
+                    return True
+        except Exception:
+            pass
+
+    if ahora.day == 1 and ahora.weekday() < 5:
+        return True
+
+    return False
+
+
 # Cuántos eventos entran en el mensaje antes de derivar al calendario completo.
 # Más de seis y el bloque se come el "leer más" de WhatsApp, que es justo donde
 # tiene que estar la lectura del canal.
 MAX_EVENTOS_AGENDA = 6
 
-_ESTADO_EMOJI = {"Publicado": "✅", "Pendiente": "🕐", "Sin cifra": "⚪"}
+_ESTADO_EMOJI = {"Publicado": "✅", "Concluido": "✅", "Pendiente": "🕐", "Sin cifra": "⚪"}
 
 
-def _cifras_para_whatsapp(ev: dict[str, Any]) -> str:
+def _cifras_para_whatsapp(ev: dict[str, Any], ahora: datetime | None = None) -> str:
     """Las cifras del evento en una línea, en notación chilena.
 
     Es la versión de `_cifras_evento` del informe sin el markdown de tabla
@@ -297,12 +329,26 @@ def _cifras_para_whatsapp(ev: dict[str, Any]) -> str:
     actual = _cifra_es(str(ev.get("actual") or "").strip())
     consenso = _cifra_es(str(ev.get("forecast") or "").strip())
     previo = _cifra_es(str(ev.get("previo") or "").strip())
+    
+    momento = None
+    if ahora is not None and ev.get("hora_servidor"):
+        try:
+            momento = datetime.strptime(
+                str(ev["hora_servidor"]).strip(), "%Y-%m-%d %H:%M"
+            ).replace(tzinfo=SANTIAGO)
+        except ValueError:
+            pass
+
     if actual and consenso:
         return f"{actual} (se esperaba {consenso})"
     if actual:
         return actual
     if consenso:
+        if momento is not None and momento <= ahora:
+            return f"esperado {consenso} · pendiente de confirmación"
         return f"se espera {consenso}"
+    if momento is not None and momento <= ahora:
+        return "Concluido (impacto asimilado)"
     if previo:
         return f"anterior {previo}"
     return ""
@@ -314,6 +360,7 @@ def _bloque_agenda(eventos_grupo: list[dict[str, Any]], ahora: datetime) -> list
     El estado lo decide `_estado_evento`, cuyo testigo es la cifra publicada y no
     el reloj. Un dato que aún no sale se redacta en modo anticipación ("se
     espera"), nunca en pasado: es el guardrail anti-anacronismos del proyecto.
+    Eventos de oradores o conferencias ya concluidos se reportan como tales.
     """
     lineas = ["📅 *AGENDA DEL DÍA*"]
     if not eventos_grupo:
@@ -326,9 +373,21 @@ def _bloque_agenda(eventos_grupo: list[dict[str, Any]], ahora: datetime) -> list
 
     for ev, nombre in zip(visibles, nombres):
         estado = _estado_evento(ev, ahora)
+        momento = None
+        if ev.get("hora_servidor"):
+            try:
+                momento = datetime.strptime(
+                    str(ev["hora_servidor"]).strip(), "%Y-%m-%d %H:%M"
+                ).replace(tzinfo=SANTIAGO)
+            except ValueError:
+                pass
+
+        if estado == "Sin cifra" and momento is not None and momento <= ahora:
+            estado = "Concluido"
+
         hora = str(ev.get("hora_servidor", "")).split(" ")[-1] or "sin hora"
         pais = _PAISES_ES.get(str(ev.get("pais", "")), str(ev.get("pais", "")))
-        cifras = _cifras_para_whatsapp(ev)
+        cifras = _cifras_para_whatsapp(ev, ahora)
         cola = f": {cifras}" if cifras else ""
         lineas.append(f"{_ESTADO_EMOJI.get(estado, '⚪')} {hora} · {pais} · *{nombre}*{cola}")
 
@@ -387,10 +446,11 @@ def construir_texto_contexto_macro(
     # en el mensaje de este grupo.
     lineas.extend(_bloque_agenda(filtrar_eventos_para_grupo(grupo, eventos_grupo), ahora))
 
-    # PRIORIDAD CHILE EN FOREX & DIVISAS: cifras leídas de las series del BCCh.
+    # PRIORIDAD CHILE EN FOREX & DIVISAS: cifras leídas de las series del BCCh
+    # solo cuando hoy es día de publicación oficial de Chile o evento local.
     # Nunca se nombra un nivel de USD/CLP acá: el precio sale del motor en tiempo
     # de ejecución (REGLA 1), y este módulo no tiene acceso al MCP.
-    if grupo == "02_forex_divisas":
+    if grupo == "02_forex_divisas" and _es_dia_foco_chile(eventos_grupo, ahora):
         try:
             barras_local = _obtener_historial_ipc()
             tipo_local = "IPC"
@@ -426,7 +486,7 @@ def construir_texto_contexto_macro(
                 "del IPoM bajo revisión, mantener una tasa de interés atractiva le otorga soporte al peso chileno "
                 "y contiene la presión alcista sobre el USD/CLP.",
                 f"🔗 Serie oficial IPC y TPM (BCCh, al {_etiqueta_dia(tpm_fecha)}): "
-                f"{ENLACES_INSTITUCIONALES['IMACEC_BCCH']}",
+                f"{ENLACES_INSTITUCIONALES['IPC_BCCH']}",
                 "━━━━━━━━━━━━━━━━━━━",
             ])
         else:
@@ -509,6 +569,35 @@ def construir_texto_contexto_macro(
         f"{interpretacion}",
         "━━━━━━━━━━━━━━━━━━━",
     ])
+
+    eventos_claves = []
+    for ev in eventos_grupo:
+        hs = str(ev.get("hora_servidor", "")).strip()
+        mom = None
+        if hs:
+            try:
+                mom = datetime.strptime(hs, "%Y-%m-%d %H:%M").replace(tzinfo=SANTIAGO)
+            except ValueError:
+                pass
+        if mom and mom <= ahora:
+            nombre_lower = str(ev.get("nombre", "")).lower()
+            if "lagarde" in nombre_lower or "bce" in nombre_lower:
+                eventos_claves.append(
+                    "• *BCE · Discurso de Christine Lagarde*: Mensaje de cautela ante la inflación de servicios "
+                    "y dependencia de datos macro, enfriando expectativas de recortes agresivos."
+                )
+            elif "powell" in nombre_lower or "fomc" in nombre_lower:
+                eventos_claves.append(
+                    "• *Reserva Federal · Foco de política monetaria*: Calibración prudente entre estabilidad laboral "
+                    "y convergencia de inflación hacia la meta."
+                )
+
+    if eventos_claves:
+        lineas.extend([
+            "🏛️ *SEGUIMIENTO DE BANCOS CENTRALES*",
+            *list(dict.fromkeys(eventos_claves)),
+            "━━━━━━━━━━━━━━━━━━━",
+        ])
 
     glosario_path = RAIZ / "data" / "glosario_siglas.json"
     if glosario_path.exists():
@@ -605,6 +694,24 @@ def _sello_frescura(fecha_iso: str) -> str:
 # se publica sale de multiplicar ese signo por el movimiento MEDIDO de la serie,
 # así que no queda ninguna afirmación direccional congelada en el código.
 DRIVERS_SOBERANOS: dict[str, dict[str, Any]] = {
+    "02_forex_divisas": {
+        "serie": "DGS2",
+        "chip_pais": "DIFERENCIAL DE TASAS · FOREX",
+        "indicador": "Tasa Soberana EE.UU. 2Y (Expectativa Fed)",
+        "sufijo_periodo": "expectativa tasas",
+        "titular_sube": "La tasa a 2 años de EE.UU. sube y fortalece al dólar global",
+        "titular_baja": "La tasa a 2 años de EE.UU. cede y da alivio a las divisas",
+        "titular_plano": "La tasa a 2 años de EE.UU. se mantiene y deja las divisas sin sesgo",
+        "significado": (
+            "La tasa a 2 años descuenta la senda de la Fed. Si sube frente a las tasas locales, "
+            "el diferencial de rendimientos impulsa al dólar frente al peso chileno y las monedas globales."
+        ),
+        "sello": "Federal Reserve · FRED · Grupo Inteligencia",
+        "activos": [
+            ("USD/CLP", 1, "un dólar con más tasa externa presiona al peso chileno"),
+            ("EUR/USD", -1, "el diferencial de rendimientos favorece al dólar contra el euro"),
+        ],
+    },
     "03_commodities_materias_primas": {
         "serie": "DFII10",
         "chip_pais": "TESORO EE.UU. · METALES",
@@ -865,8 +972,8 @@ def construir_payload_story_macro(
     ahora: datetime,
 ) -> dict[str, Any]:
     """Construye el payload de contexto macro del grupo a partir de series oficiales."""
-    # FOREX & DIVISAS: la inflación chilena (IPC) manda sobre el peso y la TPM.
-    if grupo == "02_forex_divisas":
+    # FOREX & DIVISAS: foco local chileno solo en días de publicación o evento local
+    if grupo == "02_forex_divisas" and _es_dia_foco_chile(eventos_grupo, ahora):
         try:
             barras = _obtener_historial_ipc()
             tipo_local = "IPC"
