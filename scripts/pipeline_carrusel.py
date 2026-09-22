@@ -1451,7 +1451,7 @@ def refrescar_payload(
 
 
 def exigir_texto_editorial(payloads: list[tuple[str, dict[str, Any]]]) -> None:
-    """Detiene el render si a alguna pieza le falta un campo editorial.
+    """Detiene el render si a alguna pieza le falta un campo editorial o si infringe el linter de estilo.
 
     Fuente unica del freno, y por eso recibe pares `(nombre, payload)` en vez
     de leer el disco: las dos rutas de render llegan al payload por caminos
@@ -1472,6 +1472,21 @@ def exigir_texto_editorial(payloads: list[tuple[str, dict[str, Any]]]) -> None:
             "llega al cliente, asi que el render se detiene:\n  "
             + "\n  ".join(sin_escribir)
         )
+
+    # Segundo freno: Linter editorial estricto (guiones largos, voseo, placeholders)
+    try:
+        from validador_editorial import validar_payload_editorial
+
+        errores_linter: list[str] = []
+        for nombre, payload in payloads:
+            errores_linter.extend(validar_payload_editorial(payload, identificador=nombre))
+        if errores_linter:
+            raise SystemExit(
+                "Infracción en el linter editorial (estilo, voseo, guiones largos o placeholders):\n  "
+                + "\n  ".join(errores_linter)
+            )
+    except ImportError:
+        pass
 
 
 def rendir(directorio: Path) -> dict[str, Any]:

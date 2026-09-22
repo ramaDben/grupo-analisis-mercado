@@ -441,6 +441,26 @@ def test_rendir_no_acepta_un_titular_de_solo_espacios(tmp_path):
     assert "titular" in str(exc.value)
 
 
+def test_rendir_rechaza_guion_largo_en_titular_o_parrafo(tmp_path):
+    payload = payload_de_prueba()
+    payload["titular"] = "Oro sube \u2014 nuevo máximo"
+    payload["parrafo"] = "El activo mantiene fuerza compradora sobre el soporte clave."
+    (tmp_path / "1_xagusd.json").write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    with pytest.raises(SystemExit) as exc:
+        pc.rendir(tmp_path)
+    assert "guion largo" in str(exc.value)
+
+
+def test_rendir_rechaza_voseo_en_titular_o_parrafo(tmp_path):
+    payload = payload_de_prueba()
+    payload["titular"] = "Oro en soporte clave"
+    payload["parrafo"] = "Mirá cómo reacciona en la zona de demanda para operar."
+    (tmp_path / "1_xagusd.json").write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    with pytest.raises(SystemExit) as exc:
+        pc.rendir(tmp_path)
+    assert "voseo" in str(exc.value)
+
+
 def test_rendir_falla_claro_si_el_directorio_no_tiene_payloads(tmp_path):
     """Los archivos que empiezan con guion bajo son insumos, no piezas."""
     (tmp_path / "_screener.json").write_text("{}", encoding="utf-8")
