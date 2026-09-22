@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# punto-de-entrada: script ad-hoc de mantenimiento y compilación
 # -*- coding: utf-8 -*-
 """Compila `docs/propuesta_marketing_meta_ads_leads.md` a PDF A4 Institucional.
 

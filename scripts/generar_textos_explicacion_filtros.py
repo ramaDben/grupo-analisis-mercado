@@ -1,3 +1,4 @@
+# punto-de-entrada: script ad-hoc de mantenimiento y compilación
 # -*- coding: utf-8 -*-
 """Generador y validador de textos de auditoría técnica y explicación de filtros para clientes."""
 from pathlib import Path

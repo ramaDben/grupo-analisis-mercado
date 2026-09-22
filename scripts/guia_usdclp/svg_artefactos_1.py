@@ -1,3 +1,4 @@
+# punto-de-entrada: script ad-hoc de mantenimiento y compilación
 # -*- coding: utf-8 -*-
 """Artefactos visuales vectoriales para la Guía USD/CLP (Parte 1)."""
 

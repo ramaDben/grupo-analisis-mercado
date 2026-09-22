@@ -38,7 +38,8 @@ class TradingViewRenderError(RuntimeError):
 
 
 def calcular_indicadores(df_velas: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Calcula EMAs 20/50/200, Donchian 50, ATR 14 y RSI 14 sobre la lista de velas."""
+    """Calcula EMAs 20/50/200, Bandas de Bollinger (20,2), Donchian 50, ATR 14, RSI 14 y ADX 14."""
+    import math
     n = len(df_velas)
     if n == 0:
         return []
@@ -64,7 +65,26 @@ def calcular_indicadores(df_velas: list[dict[str, Any]]) -> list[dict[str, Any]]
     ema50 = ema_series(cierres, 50)
     ema200 = ema_series(cierres, 200)
 
-    # 2. Donchian 50
+    # 2. Bandas de Bollinger (20, 2)
+    bb_upper: list[float | None] = []
+    bb_lower: list[float | None] = []
+    bb_mid: list[float | None] = []
+    periodo_bb = 20
+    for i in range(n):
+        if i < periodo_bb - 1:
+            bb_upper.append(None)
+            bb_lower.append(None)
+            bb_mid.append(None)
+        else:
+            ventana = cierres[i - periodo_bb + 1 : i + 1]
+            sma = sum(ventana) / periodo_bb
+            var = sum((x - sma) ** 2 for x in ventana) / periodo_bb
+            std = math.sqrt(var)
+            bb_mid.append(sma)
+            bb_upper.append(sma + 2.0 * std)
+            bb_lower.append(sma - 2.0 * std)
+
+    # 3. Donchian 50
     don_high: list[float | None] = []
     don_low: list[float | None] = []
     periodo_don = 50
@@ -76,7 +96,7 @@ def calcular_indicadores(df_velas: list[dict[str, Any]]) -> list[dict[str, Any]]
             don_high.append(max(altos[i - periodo_don + 1 : i + 1]))
             don_low.append(min(bajos[i - periodo_don + 1 : i + 1]))
 
-    # 3. ATR 14
+    # 4. ATR 14
     tr_list: list[float] = [altos[0] - bajos[0]]
     for i in range(1, n):
         tr = max(
@@ -96,7 +116,7 @@ def calcular_indicadores(df_velas: list[dict[str, Any]]) -> list[dict[str, Any]]
     else:
         atr14 = [None] * n
 
-    # 4. RSI 14
+    # 5. RSI 14
     rsi14: list[float | None] = [None] * 14
     if n > 14:
         gains = []
@@ -123,6 +143,53 @@ def calcular_indicadores(df_velas: list[dict[str, Any]]) -> list[dict[str, Any]]
                 rs = avg_gain / avg_loss
                 rsi14.append(100.0 - (100.0 / (1.0 + rs)))
 
+    # 6. ADX 14 (Average Directional Index)
+    adx14: list[float | None] = [None] * n
+    if n >= 28:
+        plus_dm = [0.0]
+        minus_dm = [0.0]
+        for i in range(1, n):
+            up_move = altos[i] - altos[i - 1]
+            down_move = bajos[i - 1] - bajos[i]
+            if up_move > down_move and up_move > 0:
+                plus_dm.append(up_move)
+            else:
+                plus_dm.append(0.0)
+            if down_move > up_move and down_move > 0:
+                minus_dm.append(down_move)
+            else:
+                minus_dm.append(0.0)
+
+        # Wilder's smoothing para TR, +DM, -DM
+        smooth_tr = sum(tr_list[1:15])
+        smooth_pdm = sum(plus_dm[1:15])
+        smooth_mdm = sum(minus_dm[1:15])
+
+        dx_list = []
+        pdi = (smooth_pdm / smooth_tr) * 100.0 if smooth_tr > 0 else 0.0
+        mdi = (smooth_mdm / smooth_tr) * 100.0 if smooth_tr > 0 else 0.0
+        dx = (abs(pdi - mdi) / (pdi + mdi)) * 100.0 if (pdi + mdi) > 0 else 0.0
+        dx_list.append((14, dx))
+
+        for i in range(15, n):
+            smooth_tr = smooth_tr - (smooth_tr / 14.0) + tr_list[i]
+            smooth_pdm = smooth_pdm - (smooth_pdm / 14.0) + plus_dm[i]
+            smooth_mdm = smooth_mdm - (smooth_mdm / 14.0) + minus_dm[i]
+            pdi = (smooth_pdm / smooth_tr) * 100.0 if smooth_tr > 0 else 0.0
+            mdi = (smooth_mdm / smooth_tr) * 100.0 if smooth_tr > 0 else 0.0
+            dx = (abs(pdi - mdi) / (pdi + mdi)) * 100.0 if (pdi + mdi) > 0 else 0.0
+            dx_list.append((i, dx))
+
+        if len(dx_list) >= 14:
+            first_14_dx = [d[1] for d in dx_list[:14]]
+            adx_val = sum(first_14_dx) / 14.0
+            idx_start = dx_list[13][0]
+            adx14[idx_start] = adx_val
+            for k in range(14, len(dx_list)):
+                idx_k, dx_k = dx_list[k]
+                adx_val = (adx_val * 13.0 + dx_k) / 14.0
+                adx14[idx_k] = adx_val
+
     # Combinar todo
     resultado = []
     for i, v in enumerate(df_velas):
@@ -147,10 +214,14 @@ def calcular_indicadores(df_velas: list[dict[str, Any]]) -> list[dict[str, Any]]
             "ema20": ema20[i] if i < len(ema20) else None,
             "ema50": ema50[i] if i < len(ema50) else None,
             "ema200": ema200[i] if i < len(ema200) else None,
+            "bollingerUpper": bb_upper[i] if i < len(bb_upper) else None,
+            "bollingerLower": bb_lower[i] if i < len(bb_lower) else None,
+            "bollingerMiddle": bb_mid[i] if i < len(bb_mid) else None,
             "donchianHigh": don_high[i] if i < len(don_high) else None,
             "donchianLow": don_low[i] if i < len(don_low) else None,
             "atr": atr14[i] if i < len(atr14) else None,
             "rsi": rsi14[i] if i < len(rsi14) else None,
+            "adx": adx14[i] if i < len(adx14) else None,
         }
         resultado.append(fila)
 
@@ -190,7 +261,10 @@ def construir_html_tradingview(
     e200_str = fmt_p.format(last["ema200"]) if last.get("ema200") is not None else "--"
     atr_str = f"{last['atr']:.2f}" if last.get("atr") is not None else "--"
     rsi_str = f"{last['rsi']:.1f}" if last.get("rsi") is not None else "--"
+    adx_str = f"{last['adx']:.1f}" if last.get("adx") is not None else "--"
 
+    bbu_str = fmt_p.format(last["bollingerUpper"]) if last.get("bollingerUpper") is not None else "--"
+    bbl_str = fmt_p.format(last["bollingerLower"]) if last.get("bollingerLower") is not None else "--"
     dh_str = fmt_p.format(last["donchianHigh"]) if last.get("donchianHigh") is not None else "--"
     dl_str = fmt_p.format(last["donchianLow"]) if last.get("donchianLow") is not None else "--"
 
@@ -336,7 +410,7 @@ def construir_html_tradingview(
     height: 38px;
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 16px;
     padding: 0 24px;
     background: #09121B;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -459,9 +533,14 @@ def construir_html_tradingview(
       <span style="color: #ECEFF1; font-weight: 800;">{e200_str}</span>
     </div>
     <div class="tv-legend-item">
-      <span class="tv-dot" style="background: #00E5FF;"></span>
-      <span style="color: #CBD5E1;">Donchian (50):</span>
-      <span style="color: #00E5FF; font-weight: 700;">[{dl_str}, {dh_str}]</span>
+      <span class="tv-dot" style="background: #50C0A8;"></span>
+      <span style="color: #CBD5E1;">Bollinger (20,2):</span>
+      <span style="color: #50C0A8; font-weight: 700;">[{bbl_str}, {bbu_str}]</span>
+    </div>
+    <div class="tv-legend-item">
+      <span class="tv-dot" style="background: #00E5FF; box-shadow: 0 0 6px #00E5FF;"></span>
+      <span style="color: #CBD5E1;">ADX (14):</span>
+      <span style="color: #00E5FF; font-weight: 800;">{adx_str}</span>
     </div>
     <div class="tv-legend-item">
       <span class="tv-dot" style="background: #FFD54F;"></span>
@@ -483,7 +562,7 @@ def construir_html_tradingview(
   <!-- Caption Footer -->
   <div class="tv-caption-bar">
     <span>{len(rows)} VELAS {timeframe} · MOTOR TRADINGVIEW™ · FEED MT5 GRUPO INTELIGENCIA</span>
-    <span>EMAS 20/50/200 · CANAL DONCHIAN 50 · OSCILADOR RSI 14 (70/30)</span>
+    <span>EMAS 20/50/200 · BANDAS BOLLINGER (20, 2) · OSCILADOR RSI 14 (70/30) · ADX 14</span>
   </div>
 </div>
 
@@ -590,24 +669,24 @@ def construir_html_tradingview(
   }}, 0);
   ema200.setData(rows.filter(r => r.ema200 != null).map(r => ({{ time: r.time, value: r.ema200 }})));
 
-  // Donchian Bands
-  const donHigh = chart.addSeries(LightweightCharts.LineSeries, {{
-    color: 'rgba(0, 229, 255, 0.75)',
-    lineWidth: 1.2,
+  // Bandas de Bollinger (20, 2)
+  const bbUpper = chart.addSeries(LightweightCharts.LineSeries, {{
+    color: 'rgba(80, 192, 168, 0.70)',
+    lineWidth: 1.4,
     lineStyle: LightweightCharts.LineStyle.Dashed,
     lastValueVisible: false,
     priceLineVisible: false,
   }}, 0);
-  donHigh.setData(rows.filter(r => r.donchianHigh != null).map(r => ({{ time: r.time, value: r.donchianHigh }})));
+  bbUpper.setData(rows.filter(r => r.bollingerUpper != null).map(r => ({{ time: r.time, value: r.bollingerUpper }})));
 
-  const donLow = chart.addSeries(LightweightCharts.LineSeries, {{
-    color: 'rgba(0, 229, 255, 0.75)',
-    lineWidth: 1.2,
+  const bbLower = chart.addSeries(LightweightCharts.LineSeries, {{
+    color: 'rgba(80, 192, 168, 0.70)',
+    lineWidth: 1.4,
     lineStyle: LightweightCharts.LineStyle.Dashed,
     lastValueVisible: false,
     priceLineVisible: false,
   }}, 0);
-  donLow.setData(rows.filter(r => r.donchianLow != null).map(r => ({{ time: r.time, value: r.donchianLow }})));
+  bbLower.setData(rows.filter(r => r.bollingerLower != null).map(r => ({{ time: r.time, value: r.bollingerLower }})));
 
   // Panel 1: Oscilador RSI 14
   const rsiGuide70 = chart.addSeries(LightweightCharts.LineSeries, {{

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# punto-de-entrada: script ad-hoc de mantenimiento y compilación
 # -*- coding: utf-8 -*-
 """Script de validación integral de cierre para el Manual de Operaciones GI.
 

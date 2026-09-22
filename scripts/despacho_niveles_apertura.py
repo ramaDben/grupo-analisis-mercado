@@ -1,3 +1,4 @@
+# punto-de-entrada: script ad-hoc de mantenimiento y compilación
 """Script de despacho de piezas de niveles técnicos (Apertura Wall Street) a WhatsApp.
 
 Despacha secuencialmente las Stories PNG y textos de análisis técnico a los canales

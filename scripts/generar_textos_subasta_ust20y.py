@@ -1,3 +1,4 @@
+# punto-de-entrada: script ad-hoc de mantenimiento y compilación
 # -*- coding: utf-8 -*-
 """Generador y validador de textos para la Subasta del Tesoro de EE.UU. a 20 Años (UST 20Y)."""
 from pathlib import Path

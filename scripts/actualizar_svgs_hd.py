@@ -1,3 +1,4 @@
+# punto-de-entrada: script ad-hoc de mantenimiento y compilación
 # -*- coding: utf-8 -*-
 """Actualiza los 8 diagramas SVG del manual con diseño de alta definición, tipografías legibles y velas nítidas."""
 

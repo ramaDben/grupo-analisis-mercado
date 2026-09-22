@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# punto-de-entrada: script ad-hoc de mantenimiento y compilación
 # -*- coding: utf-8 -*-
 """Compila la guía táctica desde datos versionados y auditables del repositorio.
 

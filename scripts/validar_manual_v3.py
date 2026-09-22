@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# punto-de-entrada: script ad-hoc de mantenimiento y compilación
 # -*- coding: utf-8 -*-
 """
 scripts/validar_manual_v3.py

@@ -1,3 +1,4 @@
+# punto-de-entrada: script ad-hoc de mantenimiento y compilación
 """Script de despacho de la tanda macroeconómica matinal a WhatsApp.
 
 Despacha secuencialmente las piezas de contexto macro y suplementos a los 6 canales

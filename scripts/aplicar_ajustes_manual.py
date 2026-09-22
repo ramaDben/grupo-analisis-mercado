@@ -1,3 +1,4 @@
+# punto-de-entrada: script ad-hoc de mantenimiento y compilación
 # -*- coding: utf-8 -*-
 """Aplica integralmente el Plan de Ajustes al Manual de Operaciones de Trading Cuantitativo.
 

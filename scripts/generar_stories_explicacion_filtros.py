@@ -1,3 +1,4 @@
+# punto-de-entrada: script ad-hoc de mantenimiento y compilación
 # -*- coding: utf-8 -*-
 """Generador de Stories y gráficos explicativos sobre los filtros cuantitativos aplicados."""
 from pathlib import Path

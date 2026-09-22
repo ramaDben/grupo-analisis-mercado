@@ -1,3 +1,4 @@
+# punto-de-entrada: script ad-hoc de mantenimiento y compilación
 # -*- coding: utf-8 -*-
 """Generador de artefactos y textos para la Subasta del Tesoro de EE.UU. a 20 Años (UST 20Y)."""
 import json

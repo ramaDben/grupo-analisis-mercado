@@ -1,3 +1,4 @@
+# punto-de-entrada: script ad-hoc de mantenimiento y compilación
 # -*- coding: utf-8 -*-
 """Aplica de forma limpia, determinista y de alta definición todos los ajustes editoriales al Manual de Operaciones."""
 

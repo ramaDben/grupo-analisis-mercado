@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# punto-de-entrada: script ad-hoc de mantenimiento y compilación
 # -*- coding: utf-8 -*-
 """Compila la Propuesta Ejecutiva para Gerencia a HTML y PDF Horizontal 16:9 Widescreen (16 Láminas).
 

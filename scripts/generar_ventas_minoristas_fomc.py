@@ -1,3 +1,4 @@
+# punto-de-entrada: script ad-hoc de mantenimiento y compilación
 # -*- coding: utf-8 -*-
 """Generador de imagen y textos para Ventas Minoristas EE.UU., Inflación y Decisión FOMC."""
 from pathlib import Path

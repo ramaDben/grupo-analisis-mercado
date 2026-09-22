@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# punto-de-entrada: script ad-hoc de mantenimiento y compilación
 # -*- coding: utf-8 -*-
 """
 scripts/aplicar_hotfix_v3_0_1.py

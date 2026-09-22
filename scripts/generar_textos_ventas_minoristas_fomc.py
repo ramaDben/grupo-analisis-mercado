@@ -1,3 +1,4 @@
+# punto-de-entrada: script ad-hoc de mantenimiento y compilación
 # -*- coding: utf-8 -*-
 """Generador y validador de textos para la cobertura de Ventas Minoristas, Inflación y Decisión FOMC."""
 from pathlib import Path

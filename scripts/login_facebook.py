@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# punto-de-entrada: script ad-hoc de mantenimiento y compilación
 # -*- coding: utf-8 -*-
 """Abre Google Chrome en tu pantalla para iniciar sesión en Facebook e inspeccionar Grupo Inteligencia.
 
