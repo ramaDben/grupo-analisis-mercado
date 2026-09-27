@@ -45,7 +45,7 @@ def register(mcp: FastMCP) -> None:
             ema_20, ema_50, ema_100, macd_line, macd_signal, macd_hist,
             bb_upper, bb_mid, bb_lower, donchian_50_high, donchian_50_low,
             donchian_50_mid, trend, timestamp.
-            Ojo: ema_20 es media EXPONENCIAL (el gatillo del Playbook en H1) y bb_mid
+            Ojo: ema_20 es media EXPONENCIAL (la corta de H1) y bb_mid
             es la media SIMPLE de 20 de las Bandas de Bollinger. No son lo mismo.
             Con timeframe="D1" además incluye rango_hoy (high-low de la vela diaria
             en curso) y atr_restante_14 (= atr_14 - rango_hoy, con piso del 30% del

@@ -24,7 +24,7 @@ jobs:
       - name: Install test dependencies
         # La suite corre sin MT5 ni fastmcp: el stack pesado se sustituye por un
         # stub del framework en tests/conftest.py. Las otras si hacen falta:
-        # bias_reader lee playbook_config.yaml con yaml, y la cadena
+        # scripts/agy_encargo.py lee yaml, y la cadena
         # pipeline_ingesta -> extractor_usa -> extractor_commodities llama a FRED
         # con requests, lee su API key con dotenv, reintenta con tenacity y baja
         # commodities con yfinance. Sin ellas esos modulos ni se importan.

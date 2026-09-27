@@ -453,7 +453,6 @@
   ],
   "etfs": {
     "_nota": "Fondos cotizados (grupo 'CFD ETF' del terminal). Tickers con sufijo .US, verificados con symbol_info contra la cuenta real.",
-    "_nota_playbook": "Entrar a este catálogo NO es entrar al Playbook. Estos activos tienen niveles, indicadores y especificaciones de contrato, pero no tienen ficha operativa, régimen R0-R4, sesgo score ni setups permitidos: ese conjunto sigue siendo el de bias_reader.VALID_SYMBOLS (USDCLP, XAUUSD, WTI, BRENT, US100), porque cada ficha del Playbook cita literatura académica y elasticidades medidas.",
     "_nota_bonos": "El broker no ofrece TLT ni ningún bono largo, así que la duración de deuda se lee de la curva soberana con get_curva_tasas (DGS10 / DGS30) y no como activo operable. SMH tampoco existe: SOXX.US es su equivalente.",
     "componentes": [
       {
