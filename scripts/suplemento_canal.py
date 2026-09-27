@@ -56,10 +56,9 @@ VENTANA_CONCEPTO_DIAS = 14
 # educativa esté pegada a lo que de verdad pasó, en vez de ser una cápsula
 # suelta que el ojo aprende a saltar.
 #
-# `publicable: False` es tan importante como el concepto. La confianza baja del
-# modelo y un fallo del analizador son problemas de **nuestra** tubería, no
-# lecturas de mercado: publicar "no pudimos leer el activo" no le sirve a nadie
-# y suena a excusa. Esos canales quedan sin suplemento, que es la respuesta
+# `publicable: False` es tan importante como el concepto. Un fallo del
+# analizador es un problema de **nuestra** tubería, no una lectura de mercado:
+# publicar "no pudimos leer el activo" no le sirve a nadie y suena a excusa. Esos canales quedan sin suplemento, que es la respuesta
 # honesta.
 CATEGORIAS: dict[str, dict[str, Any]] = {
     "ATR diario consumido": {
@@ -75,11 +74,6 @@ CATEGORIAS: dict[str, dict[str, Any]] = {
     "blackout por": {
         "categoria": "dato_en_curso",
         "concepto": "precio-descontado",
-        "publicable": True,
-    },
-    "el Playbook prohibe": {
-        "categoria": "setup_prohibido",
-        "concepto": "riesgo",
         "publicable": True,
     },
     "feriado de": {
@@ -103,17 +97,6 @@ CATEGORIAS: dict[str, dict[str, Any]] = {
         "categoria": "sin_niveles_medidos",
         "concepto": "puntos-interes",
         "publicable": True,
-    },
-    # Problemas nuestros, no del mercado.
-    "el snapshot no declara la confianza": {
-        "categoria": "modelo_sin_vista",
-        "concepto": None,
-        "publicable": False,
-    },
-    "la confianza del modelo": {
-        "categoria": "modelo_sin_vista",
-        "concepto": None,
-        "publicable": False,
     },
 }
 
@@ -411,10 +394,6 @@ _ESTADO = {
     "dato_en_curso": (
         "El mercado de {canal} asimila en este momento la publicación de catalizadores macroeconómicos de alto impacto, "
         "por lo que los niveles técnicos se encuentran en proceso de reajuste y confirmación institucional."
-    ),
-    "setup_prohibido": (
-        "El escenario macroeconómico de fondo en {canal} exige neutralidad táctica según las reglas del Playbook, "
-        "priorizando la preservación de capital antes de tomar posiciones direccionales."
     ),
     "mercado_cerrado": (
         "La sesión oficial de {canal} se encuentra cerrada por feriado de mercado, "

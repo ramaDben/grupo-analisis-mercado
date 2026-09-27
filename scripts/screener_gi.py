@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Escáner del universo para las tandas diarias: puntúa activos y elige el Top N.
 
-Implementa el `Score_GI` del plan de producción diaria con tres correcciones que
+Implementa el `Score_GI` del plan de producción diaria con dos correcciones que
 el plan original necesitaba para no producir resultados falsos.
 
 **1. El score topa en 100, no en 26,5.** El plan multiplica pesos
@@ -12,12 +12,7 @@ el plan original necesitaba para no producir resultados falsos.
 de un cuarto del puntaje y la escala "sobre 100" era ilegible. Los rangos de
 puntos SON la ponderación: `Score = T + M + C + F`.
 
-**2. Las prohibiciones del Playbook son gates, no puntos.** La skill cuantitativa
-§1 y el Playbook §2 son prohibitivos: en R1/R3 está prohibido abrir cortos en Oro
-"aun con RSI sobrecomprado en 80". Con scoring puro, un setup prohibido puede
-sacar 60 puntos y ganar la tanda. Acá se filtran ANTES de puntuar.
-
-**3. Los blackouts por calendario existen.** La skill §4 define ventanas de
+**2. Los blackouts por calendario existen.** Hay ventanas de
 bloqueo alrededor de los datos de alto impacto, y el Factor Catalizador del plan
 premia con +25 justo al activo que recibe el dato del día: sin el gate, el plan
 elige preferentemente lo que no debería tocar. Las tandas de media mañana y de
@@ -63,26 +58,6 @@ NY = ZoneInfo("America/New_York")
 SANTIAGO = ZoneInfo("America/Santiago")
 
 ACTIVOS_JSON = RAIZ / "config" / "activos.json"
-PLAYBOOK_CONFIG = RAIZ / "config" / "playbook_config.yaml"
-
-
-def _umbral_confianza() -> float:
-    """El piso de confianza, del YAML que el Playbook hashea.
-
-    Se lee del config y no se escribe aca para que un cambio de criterio quede
-    registrado en el `config_hash` del snapshot. El default reproduce el valor
-    real y solo aplica si el archivo falta.
-    """
-    try:
-        import yaml
-
-        cfg = yaml.safe_load(PLAYBOOK_CONFIG.read_text(encoding="utf-8")) or {}
-        return float(cfg.get("confidence_weights", {}).get("umbral_minimo_pct", 65.0))
-    except Exception:  # noqa: BLE001
-        return 65.0
-
-
-UMBRAL_CONFIANZA_PCT = _umbral_confianza()
 DIR_SALIDA = RAIZ / "data" / "screener"
 
 import agenda_mercado as agenda  # noqa: E402  (necesita RAIZ en sys.path)
@@ -123,9 +98,9 @@ TANDAS: dict[int, dict[str, Any]] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Blackouts por calendario (skill trading-cuantitativo-intermercado §4)
+# Blackouts por calendario
 # ─────────────────────────────────────────────────────────────────────────────
-# Ojo con la zona horaria: la skill nombra la zona del organismo emisor, pero
+# Ojo con la zona horaria: el organismo emisor publica en su propia zona, pero
 # `obtener_calendario_macro` YA entrega `hora_servidor` convertida a
 # America/Santiago. Volver a convertir sería un doble ajuste, que es exactamente
 # el error de ±1 h que el proyecto ya cometió una vez (issue #38). Las ventanas
@@ -181,7 +156,7 @@ _BLACKOUTS: tuple[dict[str, Any], ...] = (
         "antes_min": 15, "despues_min": 20, "alcance": "USDCLP",
     },
     # Japón no aparece en esta fuente: `obtener_calendario_macro` cubre Chile,
-    # EE.UU., China y Zona Euro. La regla queda escrita porque la skill la define
+    # EE.UU., China y Zona Euro. La regla queda escrita porque el BoJ mueve el yen
     # y el USD/JPY se cubre por pedido del director, pero hoy no se puede activar
     # desde acá. Para una decisión del BoJ hay que mirar el calendario a mano, con
     # la salveditud de que cae el día ANTERIOR en Chile (13 h de diferencia).
@@ -227,45 +202,6 @@ _PATRONES_SEGUNDO_ORDEN = (
     "inventories", "eia ", "opec", "speaks", "auction", "earnings",
     "inventarios", "discurso", "resultados",
 )
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Prohibiciones del Playbook, clasificadas por dirección
-# ─────────────────────────────────────────────────────────────────────────────
-# El snapshot del motor trae `setups_prohibidos` como vocabulario controlado
-# (SHORT_AGRESIVO, BUY_THE_DIP_AGGRESSIVE, FADE_TOP_RESISTANCE...). Un token
-# prohibido solo bloquea si apunta en la MISMA dirección que la lectura técnica:
-# que esté prohibido comprar agresivamente no impide comunicar una caída.
-#
-# El mapa es EXHAUSTIVO y se compara por igualdad, no por substring. La versión
-# anterior eran dos tuplas de fragmentos y dejó dos huecos que nadie vio: el
-# `BREAKOUT_CHASE_LONG` que el motor emite para USD/CLP en R0 (donde el Playbook
-# y la skill §4 prohíben perseguir quiebres) y el `FADE_TOP_RESISTANCE`, que
-# estaba citado acá arriba como ejemplo de lo que el gate capturaba y no
-# capturaba. Con substrings la omisión es invisible; con un mapa exhaustivo,
-# `test_todo_token_del_motor_esta_clasificado_en_el_escaner` la detecta.
-#
-# `None` significa "prohíbe una FORMA de operar, no un lado del mercado": no se
-# opone a ninguna lectura técnica y por eso no bloquea.
-_DIRECCION_PROHIBIDA: dict[str, str | None] = {
-    # Bloquean una lectura BAJISTA
-    "SHORT_AGRESIVO": "BAJISTA",
-    "VENTA_CONTRA_TENDENCIA": "BAJISTA",
-    "SHORT_FADE_OVERBOUGHT": "BAJISTA",
-    "SHORT_FADE": "BAJISTA",
-    "FADE_TOP_RESISTANCE": "BAJISTA",
-    # Bloquean una lectura ALCISTA
-    "BUY_THE_DIP_AGGRESSIVE": "ALCISTA",
-    "COMPRA_SIN_CONFIRMACION": "ALCISTA",
-    "LONG_INVERTIDO": "ALCISTA",
-    "LONG_SWING_FADE": "ALCISTA",
-    "BREAKOUT_CHASE_LONG": "ALCISTA",
-    # Sin dirección
-    "BREAKOUT_CHASE": None,
-    "GRID_SIN_STOP": None,
-    "MEAN_REVERSION_RSI_H1": None,
-    "FADE_SUPPORT_RESISTANCE_M15": None,
-}
 
 
 def _normalizar(texto: str) -> str:
@@ -468,67 +404,6 @@ def gate_blackout(
                     f"blackout por {bl['etiqueta']} "
                     f"({inicio.strftime('%H:%M')}-{fin.strftime('%H:%M')} hora Chile)"
                 )
-    return None
-
-
-def gate_playbook(direccion: str, sesgo: dict[str, Any] | None) -> str | None:
-    """Excluye si el Playbook prohíbe operar en la dirección que da la técnica.
-
-    Solo aplica a los 5 activos con ficha. El resto del catálogo no tiene régimen
-    ni setups permitidos, y no se le inventan: entrar al catálogo técnico no es
-    entrar al Playbook.
-    """
-    if not sesgo or "error" in sesgo:
-        return None
-    activo = sesgo.get("activo") or {}
-    prohibidos = activo.get("setups_prohibidos") or []
-    regimen = (sesgo.get("regimen_macro_global") or {}).get("codigo", "?")
-    for token in prohibidos:
-        clave = token.upper()
-        if clave not in _DIRECCION_PROHIBIDA:
-            # Un token sin clasificar es mas probable que sea una prohibicion real
-            # a que sea inocuo. No publicar un activo cuesta una pieza; publicar
-            # contra el Playbook cuesta el metodo. El escaner informa el motivo,
-            # asi que la exclusion queda auditada y no desaparece en silencio.
-            return f"el Playbook prohibe {token} en {regimen} (sin clasificar en el escaner)"
-        if _DIRECCION_PROHIBIDA[clave] == direccion:
-            return f"el Playbook prohibe {token} en {regimen}"
-    return None
-
-
-def gate_confianza(sesgo: dict[str, Any] | None) -> str | None:
-    """Excluye si el modelo declara que no ve lo suficiente.
-
-    El motor emite `confianza_total_pct` y hasta ahora ese número solo se imprimía
-    en su propia consola: un modelo que avisa que ve al 55 % y aun así publica es
-    peor que uno que no avisa.
-
-    **Solo alcanza a los 5 activos con ficha.** La confianza mide los drivers
-    macro que alimentan el régimen, y el régimen solo entra al sesgo de esos
-    cinco. Los otros 33 del catálogo se puntúan con técnica y calendario, sin
-    insumo macro: bloquearlos por una confianza que no usan dejaría al escáner sin
-    universo por nada. El scoping sale gratis, igual que en `gate_playbook`: un
-    activo sin entrada de sesgo pasa de largo.
-
-    Un sesgo con `error` tampoco se toca: ese caso ya lo informa
-    `_sesgos_playbook` como aviso, y fabricar acá un motivo de confianza sobre un
-    payload que no la trae sería reportar dos veces la misma falla con nombres
-    distintos.
-    """
-    if not sesgo or "error" in sesgo:
-        return None
-    conf = (sesgo.get("confianza_general") or {}).get("confianza_total_pct")
-    if conf is None:
-        # Fail-closed y consistente con `pipeline_datos.confianza_suficiente`. Un
-        # payload valido de `cargar_macro_bias` siempre trae el campo, asi que su
-        # ausencia es un esquema viejo, no una lectura buena. Dejarlo pasar seria
-        # la puerta de atras que el umbral existe para cerrar.
-        return "el snapshot no declara la confianza del modelo"
-    if float(conf) < UMBRAL_CONFIANZA_PCT:
-        return (
-            f"la confianza del modelo esta en {float(conf):.1f}% y el minimo es "
-            f"{UMBRAL_CONFIANZA_PCT:.0f}%: bajo ese piso falta un driver o esta roto"
-        )
     return None
 
 
@@ -800,7 +675,6 @@ def evaluar_activo(
     activo: dict[str, Any],
     eventos: list[dict[str, Any]],
     delta_ust_bps: float | None,
-    sesgos: dict[str, Any],
     ahora_santiago: datetime,
     analizador: Callable[[str, str], dict[str, Any]] = analizar_activo,
     ignorar_agotamiento: bool = False,
@@ -825,19 +699,9 @@ def evaluar_activo(
         if motivo:
             return {**base, "excluido": motivo}
 
-    sesgo_activo = (sesgos.get(ticker) or {}).get("activo") or {}
-    sesgo_score = sesgo_activo.get("sesgo_score")
-
-    if isinstance(sesgo_score, (int, float)) and abs(sesgo_score) >= 0.3:
-        direccion = "BAJISTA" if sesgo_score < 0 else "ALCISTA"
-    else:
-        direccion = direccion_tecnica(h1)
+    direccion = direccion_tecnica(h1)
 
     motivo = gate_blackout(ticker, eventos, ahora_santiago)
-    if motivo:
-        return {**base, "excluido": motivo}
-
-    motivo = gate_confianza(sesgos.get(ticker))
     if motivo:
         return {**base, "excluido": motivo}
 
@@ -846,23 +710,6 @@ def evaluar_activo(
     motivo = gate_banda(h1)
     if motivo:
         return {**base, "excluido": motivo}
-
-    motivo = gate_playbook(direccion, sesgos.get(ticker))
-    if motivo:
-        return {**base, "excluido": motivo}
-
-    # El "hasta donde" del sesgo se resuelve aca porque aca estan las dos piezas
-    # en la mano: el H1 con las anclas del Chandelier y el sesgo del activo.
-    # Pedirlas de nuevo en el carrusel seria un segundo viaje al terminal por
-    # datos que ya viajaron, y dos calculos del mismo nivel que pueden discrepar.
-    vigencia = None
-    try:
-        from market_data_mcp.bias_reader import resolver_vigencia
-        vigencia = resolver_vigencia(sesgos.get(ticker), h1, activo["digits"])
-    except ImportError:
-        # Mismo criterio que `_sesgos_playbook`: sin el Playbook el escaner
-        # sigue puntuando, y la pieza sale sin su "hasta donde" en vez de no salir.
-        pass
 
     t, det_t = factor_tecnico(h1, d1, direccion)
     m, det_m = factor_catalizador(ticker, eventos, delta_ust_bps)
@@ -889,9 +736,6 @@ def evaluar_activo(
         # volatilidad del activo, y eso tiene que viajar en la seleccion para que
         # el escaner lo pueda reportar sin volver a pedir el H1.
         "banda_estrecha": banda_estrecha(h1),
-        # Hasta donde sigue vigente el sesgo del Playbook, en su gramatica.
-        # `None` para los 33 activos del catalogo que no tienen ficha.
-        "vigencia": vigencia,
         # Impulso proyectado del modelo ADC+ATR: 1,5 x ATR14 de H1 tras el
         # quiebre. El nombre interno sigue al modelo cuantitativo, que es donde
         # esta definido; hacia el cliente el mismo numero se comunica como
@@ -961,42 +805,6 @@ def _contexto_macro(ahora_santiago: datetime) -> tuple[list[dict[str, Any]], flo
         avisos.append(f"curva del Tesoro no disponible ({exc.__class__.__name__})")
 
     return eventos, delta_ust, avisos
-
-
-def _sesgos_playbook() -> tuple[dict[str, Any], list[str]]:
-    """El sesgo del Playbook para los 5 activos con ficha.
-
-    Si el snapshot está viejo, el gate de prohibiciones queda ciego y hay que
-    decirlo: seguir puntuando en silencio significaría poder publicar un corto de
-    Oro en un régimen que lo prohíbe.
-    """
-    avisos: list[str] = []
-    sesgos: dict[str, Any] = {}
-    try:
-        from market_data_mcp.bias_reader import (
-            TICKER_MT5,
-            VALID_SYMBOLS,
-            cargar_macro_bias,
-        )
-    except Exception as exc:  # noqa: BLE001
-        return {}, [f"sesgo del Playbook no disponible ({exc.__class__.__name__})"]
-
-    # El Playbook nombra WTI y US100; el catálogo técnico usa el símbolo del
-    # broker (WTI.spot, US100.spot). Sin traducir, el gate no encontraría la
-    # ficha del activo que está evaluando y quedaría ciego sin avisar. La tabla
-    # vive en bias_reader, junto a VALID_SYMBOLS: es la misma pregunta.
-    for sym in sorted(VALID_SYMBOLS - {"ALL"}):
-        res = cargar_macro_bias(sym)
-        if "error" in res:
-            avisos.append(f"sesgo de {sym} no disponible ({res['error']})")
-            continue
-        sesgos[TICKER_MT5.get(sym) or sym] = res
-    if avisos:
-        avisos.append(
-            "gate de prohibiciones del Playbook parcialmente ciego: correr "
-            "pipeline_ingesta.py y despues macro_bias_engine.py"
-        )
-    return sesgos, avisos
 
 
 def _conectar_terminal() -> list[str]:
@@ -1075,8 +883,6 @@ def escanear(
     sesion_slug = info_sesion["slug"] if not tanda else f"tanda{n_tanda}"
 
     eventos, delta_ust, avisos = _contexto_macro(ahora_stgo)
-    sesgos, avisos_sesgo = _sesgos_playbook()
-    avisos.extend(avisos_sesgo)
 
     if analizador is analizar_activo:
         avisos.extend(_conectar_terminal())
@@ -1122,7 +928,7 @@ def escanear(
                 "excluido": "ya salio en una corrida anterior de hoy",
             })
             continue
-        res = evaluar_activo(activo, eventos, delta_ust, sesgos, ahora_stgo, analizador, ignorar_agotamiento=ignorar_agotamiento)
+        res = evaluar_activo(activo, eventos, delta_ust, ahora_stgo, analizador, ignorar_agotamiento=ignorar_agotamiento)
         (excluidos if "excluido" in res else evaluados).append(res)
 
     evaluados.sort(key=lambda r: (-r["score"], r["ticker"]))

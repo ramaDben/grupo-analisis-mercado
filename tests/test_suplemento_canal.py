@@ -70,7 +70,6 @@ def test_cada_gate_tiene_su_concepto():
     for motivo, concepto in (
         ("ATR diario consumido al 98%", "volatilidad-atr"),
         ("blackout por IPC de EE.UU. (08:15-09:00 hora Chile)", "precio-descontado"),
-        ("el Playbook prohibe BUY_THE_DIP_AGGRESSIVE en R3_ESTANFLACION_SHOCK", "riesgo"),
         ("feriado de NYSE", "temporalidades"),
     ):
         cat = sup.categoria_del_motivo(motivo)
@@ -79,12 +78,9 @@ def test_cada_gate_tiene_su_concepto():
 
 
 def test_un_problema_nuestro_de_datos_no_es_contenido_para_el_cliente():
-    """La confianza baja del modelo y un fallo del analizador son problemas de
-    nuestra tuberia, no lecturas de mercado. No dan suplemento: publicar "no
+    """Un fallo del analizador es un problema de nuestra tuberia, no lecturas de mercado. No dan suplemento: publicar "no
     pudimos leer el activo" no le sirve a nadie y suena a excusa."""
     for motivo in (
-        "el snapshot no declara la confianza del modelo",
-        "la confianza del modelo esta en 54.6% y el minimo es 65%: bajo ese piso falta un driver o esta roto",
         "MT5_UNAVAILABLE: el terminal no responde",
         "D1 SYMBOL_NOT_FOUND: no existe",
     ):
@@ -119,7 +115,7 @@ def test_sin_exclusiones_no_hay_resumen():
 def test_una_categoria_no_publicable_no_da_resumen():
     solo_nuestros = [
         {"ticker": "X", "nombre": "X", "excluido": "MT5_UNAVAILABLE: sin terminal"},
-        {"ticker": "Y", "nombre": "Y", "excluido": "el snapshot no declara la confianza del modelo"},
+        {"ticker": "Y", "nombre": "Y", "excluido": "D1 SYMBOL_NOT_FOUND: no existe"},
     ]
     assert sup.resumen_del_canal(solo_nuestros) is None
 
@@ -174,7 +170,7 @@ def _motivos_de_los_gates() -> list[tuple[str, str]]:
     """Todo texto que un `gate_*` del escaner puede devolver, con su funcion.
 
     Se recorre el AST y no un regex. La version anterior buscaba
-    `return f?"(feriado|ATR diario|blackout|el Playbook|el snapshot|la confianza)..."`,
+    `return f?"(feriado|ATR diario|blackout|...)..."`,
     o sea que estaba **anclada a los seis prefijos que ya existian**: un gate
     nuevo con otro prefijo no lo capturaba y entraba sin categoria en silencio,
     que es justo lo que este contrato existe para impedir. El `assert len >= 4`
@@ -227,7 +223,7 @@ def test_todo_gate_del_escaner_tiene_categoria_o_esta_declarado_no_publicable():
     motivos = _motivos_de_los_gates()
 
     gates = {nombre for nombre, _ in motivos}
-    assert len(gates) >= 5, f"se dejaron de encontrar gates: {sorted(gates)}"
+    assert len(gates) >= 4, f"se dejaron de encontrar gates: {sorted(gates)}"
 
     sin_clasificar = [
         f"{nombre}: {texto!r}"

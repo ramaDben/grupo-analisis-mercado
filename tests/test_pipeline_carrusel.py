@@ -163,18 +163,15 @@ def test_el_refresco_detiene_la_pieza_si_el_precio_y_la_serie_se_desacoplan():
     assert "no es el ultimo cierre de su propia serie" in motivo
 
 
-def test_el_refresco_corrige_un_sesgo_obsoleto_sin_ficha_del_playbook():
+def test_el_refresco_corrige_un_sesgo_obsoleto():
     """El agujero por el que paso GLD.US, y es el caso mayoritario.
 
-    Antes el sesgo solo se recalculaba `if vigencia_cruda`, y los 33 activos del
-    catalogo que no tienen ficha del Playbook llegan con `vigencia: None`. GLD se
-    preparo "Alcista" y el H1 vivo daba bajista: la direccion invertida sobrevivio
-    el refresco intacta porque esa rama nunca se ejecutaba para el.
+    GLD se preparo "Alcista" y el H1 vivo daba bajista: la direccion invertida
+    sobrevivia el refresco intacta porque esa rama no se ejecutaba para el.
     """
     from pipeline_carrusel import refrescar_payload
 
     payload = _payload_preparado()
-    assert payload["_procedencia"]["vigencia"] is None
     assert payload["sesgo"] == "Alcista"
 
     nuevo, _ = refrescar_payload(
@@ -943,253 +940,69 @@ def test_el_refresco_avisa_cuando_el_precio_invalido_el_texto():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Las dos gramaticas de vigencia
+# El chip sigue a la lectura tecnica (el Playbook V2 se retiro el 2026-09-27)
 # ─────────────────────────────────────────────────────────────────────────────
-VIGENCIA_NIVEL = {
-    "gramatica": "NIVEL", "direccion": "LARGO",
-    "nivel": 933.44, "borde_inferior": None, "borde_superior": None,
-    "multiplo_atr": 3.0, "lookback": 22, "vigente": True,
-    "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC",
-}
-
-VIGENCIA_RANGO = {
-    "gramatica": "RANGO", "direccion": None,
-    "nivel": None, "borde_inferior": 68.394, "borde_superior": 68.974,
-    "multiplo_atr": None, "lookback": None, "vigente": True,
-    "take_profit_tipo": "NIVEL_OPUESTO_CANAL",
-}
+def test_el_chip_es_la_lectura_tecnica():
+    p = pc.construir_payload({**SELECCION, "direccion": "ALCISTA"}, ACTIVO, AHORA, CIERRES)
+    assert (p["sesgo"], p["tag_riesgo"]) == ("Alcista", "ALCISTA")
+    p = pc.construir_payload({**SELECCION, "direccion": "BAJISTA"}, ACTIVO, AHORA, CIERRES)
+    assert (p["sesgo"], p["tag_riesgo"]) == ("Bajista", "BAJISTA")
 
 
-def _mensaje_con(vigencia, direccion="ALCISTA"):
-    payload = pc.construir_payload(
-        {**SELECCION, "direccion": direccion, "vigencia": vigencia},
-        ACTIVO, AHORA, CIERRES,
-    )
-    payload["titular"] = "La plata se apoya en su soporte"
-    payload["parrafo"] = "El metal sostiene el nivel."
-    return pc.construir_mensaje_alerta(payload), payload
+def test_el_payload_ya_no_lleva_vigencia_del_playbook():
+    """Ni en la pieza ni en la procedencia: un campo que nadie calcula es una
+    promesa que el mensaje podria volver a publicar."""
+    p = pc.construir_payload(SELECCION, ACTIVO, AHORA, CIERRES)
+    assert "vigencia" not in p
+    assert "vigencia" not in p["_procedencia"]
+    assert "vigencia_nivel" not in p["_procedencia"]["crudos"]
 
 
-def test_un_sesgo_sostenido_se_comunica_como_un_solo_hasta_donde():
-    """`TRAILING_STOP_ASYMMETRIC` significa posicion sostenida: la lectura vale
-    mientras el precio no pierda el Chandelier. Un nivel, no un rango."""
-    mensaje, payload = _mensaje_con(VIGENCIA_NIVEL)
-
-    assert payload["vigencia"]["gramatica"] == "NIVEL"
-    assert "vigente hasta 933,440" in mensaje
-    assert "rota entre" not in mensaje
-
-
-def test_un_activo_en_rango_se_comunica_entre_dos_bordes():
-    """`NIVEL_OPUESTO_CANAL` es score cero: no hay tendencia que sostener, hay un
-    canal. Decir "vigente hasta X" ahi afirmaria una direccion inexistente."""
-    mensaje, _ = _mensaje_con(VIGENCIA_RANGO)
-
-    assert "rota entre 68,394 y 68,974" in mensaje
-    assert "vigente hasta" not in mensaje
-
-
-def test_las_dos_gramaticas_no_producen_el_mismo_texto():
-    """El defecto que este cambio cierra: el carrusel las trataba igual. Un
-    activo sostenido y uno en rotacion salian con el mismo cierre, y el cliente
-    no tenia forma de distinguir "sigue vigente hasta X" de "no hay direccion"."""
-    sostenido, _ = _mensaje_con(VIGENCIA_NIVEL)
-    rotando, _ = _mensaje_con(VIGENCIA_RANGO)
-
-    assert sostenido != rotando
-
-
-def test_sin_vigencia_el_mensaje_no_inventa_un_hasta_donde():
-    """Fail-closed y sin perder el cierre canonico: la lectura practica de tres
-    escenarios es obligatoria en todo mensaje, con Playbook o sin el."""
-    mensaje, payload = _mensaje_con(None)
-
-    assert payload["vigencia"] is None
-    assert "vigente hasta" not in mensaje and "rota entre" not in mensaje
-    assert "🟢 Sobre" in mensaje and "🟡 Entre" in mensaje and "🔴 Bajo" in mensaje
-
-
-def test_un_sesgo_ya_invalidado_lo_dice_en_vez_de_afirmar_vigencia():
-    """Brent el 2026-09-02: sesgo +1,50 con el precio ya bajo su Chandelier.
-    Publicar "sigue vigente" ahi es afirmar lo contrario de lo que pasa."""
-    mensaje, _ = _mensaje_con({**VIGENCIA_NIVEL, "vigente": False})
-
-    assert "vigente hasta" not in mensaje
-    assert "invalid" in mensaje.lower()
-
-
-def test_una_direccion_de_playbook_contraria_a_la_tecnica_no_se_publica():
-    """Nunca dos direcciones opuestas en el mismo mensaje. La lectura tecnica
-    dice compradores y el Playbook dice corto: el mensaje callaria la vigencia
-    antes que contradecirse a si mismo en dos lineas seguidas."""
-    _, payload = _mensaje_con({**VIGENCIA_NIVEL, "direccion": "CORTO"}, direccion="ALCISTA")
-
-    assert payload["vigencia"] is None
-    assert "contradice" in payload["_procedencia"]["vigencia_omitida"].lower()
-
-
-def test_la_vigencia_viaja_cruda_en_la_procedencia():
-    """El despacho necesita el numero, no el texto: comparar "933,440" con un
-    float no se puede, y es justo lo que hay que hacer antes de que la pieza
-    salga."""
-    _, payload = _mensaje_con(VIGENCIA_NIVEL)
-
-    assert payload["_procedencia"]["crudos"]["vigencia_nivel"] == 933.44
-
-
-def test_el_precio_que_pierde_el_chandelier_invalida_la_pieza():
-    """La divergencia por S1/R1 no cubre este caso: el Chandelier no es ninguno
-    de los dos, y es el stop del propio Playbook."""
-    from pipeline_carrusel import divergencia_vigencia
-
-    motivo = divergencia_vigencia(VIGENCIA_NIVEL, precio_nuevo=932.90)
-
-    assert motivo is not None and "933,44" in motivo.replace(".", ",")
-
-
-def test_un_precio_sobre_el_chandelier_no_es_divergencia():
-    from pipeline_carrusel import divergencia_vigencia
-
-    assert divergencia_vigencia(VIGENCIA_NIVEL, precio_nuevo=936.10) is None
-    assert divergencia_vigencia(None, precio_nuevo=936.10) is None
-    assert divergencia_vigencia(VIGENCIA_RANGO, precio_nuevo=936.10) is None, (
-        "el rango ya lo cubre la divergencia por soporte y resistencia"
-    )
-
-
-def test_el_refresco_recalcula_el_nivel_con_las_anclas_de_ahora():
-    """El Chandelier se mueve con cada vela cerrada. Publicar el nivel calculado
-    veinte minutos antes es publicar un dato viejo con cara de fresco."""
+def test_si_la_lectura_da_vuelta_antes_de_despachar_la_pieza_no_sale():
+    """El titular y el parrafo se escribieron para una direccion. Si el mercado
+    la invirtio entre preparar y despachar, el texto contradice al chip nuevo."""
     from pipeline_carrusel import refrescar_payload
 
-    payload = _mensaje_con(VIGENCIA_NIVEL)[1]
-
+    payload = _payload_preparado()
+    assert payload["sesgo"] == "Alcista"
     nuevo, motivo = refrescar_payload(
         payload,
-        ahora=datetime(2026, 8, 25, 11, 30, tzinfo=pc.SANTIAGO),
-        h1={"price": 68.900, "s1": 68.500, "r1": 69.300, "atr_14": 0.050,
-            "chandelier_max": 69.000, "chandelier_min": 68.100,
-            "ema_50": 68.600},
-        digits=3,
-        cierres=cierres_para(68.900),
+        ahora=datetime(2026, 9, 2, 11, 30),
+        h1={"price": 928.00, "s1": 926.90, "r1": 938.27, "atr_14": 2.70,
+            "ema_50": 934.00},
+        digits=2,
+        cierres=cierres_para(928.00, n=3, paso=0.5),
     )
-
-    assert motivo is None
-    assert nuevo["_procedencia"]["crudos"]["vigencia_nivel"] == pytest.approx(
-        69.000 - 3.0 * 0.050, abs=0.001
-    )
-    assert "68,850" in pc.construir_mensaje_alerta(nuevo)
+    assert nuevo["sesgo"] == "Bajista"
+    assert motivo is not None and "direccion contraria" in motivo
 
 
-def test_el_refresco_detiene_la_pieza_si_el_sesgo_quedo_invalidado():
+def test_el_refresco_no_le_pone_direccion_a_un_recap():
+    """El recap es un balance sin direccion afirmada: su chip queda Lateral."""
     from pipeline_carrusel import refrescar_payload
 
-    _, motivo = refrescar_payload(
-        _mensaje_con(VIGENCIA_NIVEL)[1],
-        ahora=datetime(2026, 8, 25, 11, 30, tzinfo=pc.SANTIAGO),
-        h1={"price": 68.500, "s1": 68.400, "r1": 69.300, "atr_14": 0.050,
-            "chandelier_max": 69.000, "chandelier_min": 68.100,
-            "ema_50": 68.600},
-        digits=3,
-        cierres=cierres_para(68.500),
+    payload = _payload_preparado()
+    payload.update(tipo_pieza="recap", sesgo="Lateral", tag_riesgo="BALANCE")
+    nuevo, _ = refrescar_payload(
+        payload,
+        ahora=datetime(2026, 9, 2, 11, 30),
+        h1={"price": 936.40, "s1": 926.90, "r1": 938.27, "atr_14": 2.70,
+            "ema_50": 930.00},
+        digits=2,
+        cierres=cierres_para(936.40, n=3, paso=0.5),
     )
-
-    assert motivo is not None and "sesgo" in motivo.lower()
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# El chip refleja el Playbook, no solo la lectura tecnica
-# ─────────────────────────────────────────────────────────────────────────────
-def _payload_chip(vigencia, direccion="ALCISTA"):
-    return pc.construir_payload(
-        {**SELECCION, "direccion": direccion, "vigencia": vigencia},
-        ACTIVO, AHORA, CIERRES,
-    )
-
-
-def test_sin_ficha_del_playbook_el_chip_sigue_siendo_la_lectura_tecnica():
-    """Los 33 activos del catalogo sin ficha son la mayoria del universo: ahi la
-    lectura tecnica es lo unico que hay, y el chip la refleja como siempre."""
-    p = _payload_chip(None)
-    assert p["sesgo"] == "Alcista"
-    assert p["tag_riesgo"] == "ALCISTA"
-
-
-def test_con_sesgo_sostenido_el_chip_lo_toma_del_playbook():
-    p = _payload_chip(VIGENCIA_NIVEL)
-    assert p["sesgo"] == "Alcista"
-
-    corto = {**VIGENCIA_NIVEL, "direccion": "CORTO"}
-    p = _payload_chip(corto, direccion="BAJISTA")
-    assert p["sesgo"] == "Bajista"
-
-
-def test_un_sesgo_invalidado_deja_el_chip_neutro_y_no_alcista():
-    """El defecto que el director mando arreglar: la pieza mostraba `ALCISTA` en
-    verde junto al aviso de que el sesgo alcista quedo invalidado. Un cliente lee
-    esa contradiccion en 30 segundos.
-
-    La plantilla ya tenia el estado neutro (`tag-sesgo--lateral`, flecha y color
-    de texto), y el `body` sin clase de sesgo deja el cromo en el acento de
-    marca: no habia que inventar nada visual.
-    """
-    p = _payload_chip({**VIGENCIA_NIVEL, "vigente": False})
-    assert p["sesgo"] == "Lateral"
-    assert p["tag_riesgo"] == "LATERAL"
-
-
-def test_un_activo_en_rango_no_afirma_direccion_en_el_chip():
-    """`NIVEL_OPUESTO_CANAL` es score cero: no hay direccion que mostrar."""
-    p = _payload_chip(VIGENCIA_RANGO)
-    assert p["sesgo"] == "Lateral"
-
-
-def test_si_el_playbook_contradice_la_lectura_tecnica_el_chip_queda_neutro():
-    """El caso donde el chip mas engana. La vigencia ya se omitia por
-    contradiccion, pero el chip seguia afirmando la direccion tecnica como si
-    nada: justo cuando las dos capas discrepan es cuando no hay que afirmar."""
-    p = _payload_chip({**VIGENCIA_NIVEL, "direccion": "CORTO"}, direccion="ALCISTA")
-    assert p["vigencia"] is None, "la vigencia se sigue omitiendo"
-    assert p["sesgo"] == "Lateral", "el chip afirma una direccion que el Playbook niega"
+    assert (nuevo["sesgo"], nuevo["tag_riesgo"]) == ("Lateral", "BALANCE")
 
 
 def test_el_mensaje_lateral_no_habla_de_presion_vendedora():
-    """Con el chip neutro, el bloque de apertura no puede caer al caso bajista:
-    `alcista == False` no significa bajista, significa que no hay direccion."""
-    p = _payload_chip(VIGENCIA_RANGO)
-    p["titular"] = "La plata se mueve de lado"
-    p["parrafo"] = "Sin definicion por ahora."
-    mensaje = pc.construir_mensaje_alerta(p)
-
-    assert "Presión vendedora bajo" not in mensaje.split("━")[0]
-    assert "Fuerza compradora sobre" not in mensaje.split("━")[0]
-    # Y nombra los DOS bordes, que es lo que hay que vigilar en un rango.
-    assert "68,394" in mensaje and "68,974" in mensaje
-
-
-def test_el_refresco_recalcula_el_chip_si_el_sesgo_cambio_de_estado():
-    """Si entre preparar y despachar el precio recupera su nivel, el chip no
-    puede seguir neutro mientras el bloque dice que el sesgo esta vigente."""
-    from pipeline_carrusel import refrescar_payload
-
-    payload = _payload_chip({**VIGENCIA_NIVEL, "vigente": False})
-    payload["titular"] = "t"
-    payload["parrafo"] = "p"
-    assert payload["sesgo"] == "Lateral"
-
-    nuevo, motivo = refrescar_payload(
-        payload,
-        ahora=datetime(2026, 8, 25, 11, 30, tzinfo=pc.SANTIAGO),
-        h1={"price": 68.900, "s1": 68.500, "r1": 68.960, "atr_14": 0.050,
-            "chandelier_max": 69.000, "chandelier_min": 68.100,
-            "ema_50": 68.600},
-        digits=3,
-        cierres=cierres_para(68.900),
-    )
-
-    assert motivo is None
-    assert nuevo["vigencia"]["vigente"] is True
-    assert nuevo["sesgo"] == "Alcista", "el chip quedo neutro con el sesgo ya vigente"
+    """`alcista == False` no significa bajista: con el chip Lateral el bloque de
+    apertura nombra los dos bordes, que es lo que hay que vigilar."""
+    p = pc.construir_payload(SELECCION, ACTIVO, AHORA, CIERRES)
+    p.update(sesgo="Lateral", titular="Se mueve de lado", parrafo="Sin definicion por ahora.")
+    arriba = pc.construir_mensaje_alerta(p).split("━")[0]
+    assert "Presión vendedora bajo" not in arriba
+    assert "Fuerza compradora sobre" not in arriba
+    assert p["soporte"] in arriba and p["resistencia"] in arriba
 
 
 def test_los_avisos_de_la_fuente_macro_no_se_descartan():
