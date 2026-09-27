@@ -520,8 +520,8 @@ def _frase_tecnica(d1: dict[str, Any]) -> str:
     import screener_gi as sc
 
     if sc.direccion_tecnica(d1) == "ALCISTA":
-        return "Lectura diaria alcista: el precio está sobre su promedio de los últimos 50 días"
-    return "Lectura diaria bajista: el precio está bajo su promedio de los últimos 50 días"
+        return "Lectura diaria alcista: precio sobre su media de 50 días"
+    return "Lectura diaria bajista: precio bajo su media de 50 días"
 
 
 def leer_activos(destino: Path) -> tuple[dict[str, dict[str, Any]], list[str]]:

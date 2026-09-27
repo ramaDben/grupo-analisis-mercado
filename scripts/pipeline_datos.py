@@ -248,7 +248,7 @@ def _motivo_cuenta(por_activo: dict[str, object]) -> str | None:
     """El aviso cuando algún activo no salió de la cuenta que el sistema usa.
 
     Hermano de `_motivo_fallback`, y por el mismo caso. El 2026-09-06 la cadena
-    reportó `LISTO: relojes frescos y el modelo ve` con el terminal en la cuenta
+    reportó `LISTO: relojes frescos` con el terminal en la cuenta
     **51256**, y las seis series se commitearon así. `broker: MT5` era cierto y
     no alcanzaba: **MT5 no es una sola cuenta**, y el spread, el tamaño de
     contrato y la moneda de resultado son de la cuenta concreta.
@@ -338,7 +338,7 @@ def imprimir_estado(est: EstadoDatos) -> None:
             edad = f"{r.antiguedad_h:5.1f} h  " if r.antiguedad_h is not None else "  --    "
             print(f"  [FALLA]{r.nombre:8s} {edad}{r.error}")
     if est.listo:
-        print("\n  LISTO: relojes frescos y el modelo ve\n")
+        print("\n  LISTO: relojes frescos\n")
     else:
         print("\n  NO utilizable para publicar: revisa las líneas [FALLA] de arriba\n")
 
