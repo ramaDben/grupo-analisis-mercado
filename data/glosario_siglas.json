@@ -20,6 +20,16 @@
     "nombre_es": "Reunión de la OPEP",
     "explicacion": "Encuentro de países exportadores de petróleo para coordinar cuotas de producción y oferta de crudo; recortes de oferta impulsan al alza los precios energéticos."
   },
+  "DXY": {
+    "nombre_es": "Índice del Dólar estadounidense",
+    "explicacion": "Mide el valor del dólar frente a una canasta de divisas globales. Si sube, el dólar se fortalece a nivel mundial.",
+    "pais": "United States",
+    "tier": 1,
+    "canales": [
+      "01_macro_y_apertura",
+      "02_forex_divisas"
+    ]
+  },
   "PMI": {
     "nombre_es": "Índice de gerentes de compra",
     "explicacion": "Encuesta a empresas sobre cómo ven su negocio; sobre 50 = la economía crece, bajo 50 = se enfría.",
