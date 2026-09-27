@@ -25,9 +25,7 @@ ninguno, **eso es el resultado** y así se comunica. Una tanda de 2 piezas bien 
 mejor que una de 3 con un relleno.
 
 **Lee los avisos que imprime.** Si dice que el calendario no respondió, el gate de blackout
-no pudo verificarse y hay que decidir a mano si se publica. Si dice que el sesgo del
-Playbook está vencido, el gate de prohibiciones está parcialmente ciego para los 5 activos
-con ficha: correr `pipeline_ingesta.py` y después `macro_bias_engine.py`.
+no pudo verificarse y hay que decidir a mano si se publica.
 
 **Si un canal quedó vacío, mira si trae suplemento.** El aviso lo dice (`02_forex_divisas
 quedó vacío: se suplementa con recorrido_agotado y el concepto volatilidad-atr`) y el texto
@@ -101,24 +99,11 @@ payload, no los toques), y toda sigla explicada en voz novata.
 **No inventes cifras.** Precio, soporte, resistencia e impulso ya están en el payload y
 salieron del motor. Si necesitas un dato que no está, pídelo al MCP; nunca lo deduzcas.
 
-**El "hasta dónde" ya está escrito: no lo repitas ni lo contradigas.** Si el payload trae
-`vigencia`, el mensaje ya abre con el bloque que dice hasta qué nivel sigue vigente el
-sesgo, en la gramática que le corresponde (un nivel si es posición sostenida, dos bordes
-si el activo rota en un canal). Lee ese bloque **antes** de escribir:
-
-- `"vigente": false` significa que el sesgo del Playbook ya se rompió. El titular no puede
-  celebrar la dirección que acaba de caer.
-- Con `"gramatica": "RANGO"` no hay dirección que afirmar: el titular habla de rango,
-  compresión o falta de definición, no de tendencia.
-- `vigencia: null` es que el activo no tiene ficha en el Playbook, o que el modelo no lo
-  pudo leer. Ahí el texto se apoya solo en el score técnico, sin invocar sesgo macro.
-
-**Y mira el campo `sesgo` del payload, que es el chip de la pieza.** Cuando el Playbook
-opina, manda el Playbook: puede decir `Lateral` aunque la lectura técnica sea alcista, y en
-ese caso **el titular no puede afirmar una dirección**. Los tres casos en que sale neutro
-son sesgo invalidado, activo en rango, y contradicción entre el score macro y las medias.
-Un titular direccional junto a un chip `→ LATERAL` es la contradicción que este campo
-existe para evitar.
+**Mira el campo `sesgo` del payload, que es el chip de la pieza.** Es la lectura técnica
+(precio contra la EMA 50 de H1), la misma que usó el escáner para elegir el activo: el
+titular y el párrafo van en esa dirección. Solo los recaps salen `Lateral`, y ahí el texto
+habla de balance y rango, no de tendencia. No invoques régimen macro ni "sesgo del
+Playbook": el Playbook V2 se retiró el 2026-09-27.
 
 ## PASO 3 — Rendir las piezas y generar mensajes modulares
 
@@ -190,8 +175,8 @@ unidad. Una tanda tarda más que antes; el mensaje llega entero.
 se rendía todo primero y la última pieza llegaba con el precio de hacía veinte minutos;
 ahora el refresco cabe entero dentro de la espera de cadencia, así que no cuesta tiempo
 y el precio llega fresco. Si el movimiento **invalidó el texto** —el precio cruzó un
-soporte o una resistencia que el párrafo daba por vigentes, o perdió el nivel de
-vigencia del sesgo— esa pieza **no sale**: se renombra a `.divergente` y el despacho
+soporte o una resistencia que el párrafo daba por vigentes, o la lectura técnica dio
+vuelta y el texto quedó escrito para la dirección contraria— esa pieza **no sale**: se renombra a `.divergente` y el despacho
 lo informa.
 
 Si el despacho se corta a la mitad, se retoma sin duplicar lo ya enviado:

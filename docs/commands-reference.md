@@ -24,8 +24,8 @@ Escanea el universo, elige objetivamente qué comunicar y arma las piezas por ca
 `scripts/screener_gi.py` detecta la sesión (Asiática, Europea, Apertura Wall Street, Rotación de
 Tarde, Cierre o Fin de Semana) y puntúa cada activo con el `Score_GI` sobre 100: técnico 35 +
 catalizador macro 25 + espacio ADC/ATR 20 + momentum 20. Antes de puntuar aplica cuatro
-**gates**, que son prohibiciones y no puntos: feriado de la bolsa, blackout por calendario,
-prohibición del Playbook y agotamiento del ATR diario.
+**gates**, que son exclusiones y no puntos: feriado de la bolsa, blackout por calendario,
+agotamiento del ATR diario y banda contra vela típica.
 
 Cada canal recibe además **su propia lectura macro**: `contexto_macro_grupos.py` arma la agenda
 del día filtrada para ese canal, la curva soberana y el mecanismo que explica por qué le importa,

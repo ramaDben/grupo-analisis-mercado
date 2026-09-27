@@ -53,7 +53,7 @@ Criterio de claridad (subordinado a la regla de oro): si un cliente nuevo sin ex
 Tres cosas que conviene no volver a averiguar:
 - **Los ETF llevan sufijo `.US`, no prefijo `#`** (el `#` es de las acciones). El broker **no ofrece** `TLT` ni `SMH`: `SOXX.US` es el equivalente de SMH, y la duración de deuda se lee de la curva con `get_curva_tasas`, no como activo operable.
 - **La cripto de Dogecoin es `DOGUSD`**, no `DOGEUSD`. `ADAUSD` y `DOGUSD` cotizan con 4 decimales.
-- **Entrar al catálogo técnico no es entrar al Playbook.** Un ETF tiene niveles, indicadores y especificaciones de contrato, pero no tiene ficha operativa, régimen R0-R4, sesgo score ni setups permitidos: ese conjunto sigue siendo el de `bias_reader.VALID_SYMBOLS` (`USDCLP`, `XAUUSD`, `WTI`, `BRENT`, `US100`), porque cada ficha del Playbook cita literatura académica y elasticidades medidas.
+- **Todo el catálogo se lee con la misma vara técnica.** Hasta el 2026-09-27 cinco activos (`USDCLP`, `XAUUSD`, `WTI`, `BRENT`, `US100`) tenían además ficha en el Playbook V2, con régimen R0-R4, sesgo score y setups permitidos. El Playbook se retiró (ver *El Playbook V2 se retiró*), así que ningún activo tiene hoy una capa de sesgo encima de la técnica.
 
 El universo completo del terminal (32 pares FX, 86 acciones, 13 ETF, 6 criptos) está capturado en `calculadoras excel/Simulador GI Real.xlsx`, hoja `Datos`, que genera `scripts/simulador_gi.py` con `mt5.symbols_get()`. Es la fuente para verificar si un instrumento existe y con qué `digits`, sin abrir MT5.
 
@@ -173,9 +173,9 @@ midió. Requiere `uv sync --extra informe` (matplotlib es opcional, mismo criter
 `stories`). Brent **sí** tiene ticker (`BRENT.spot`, verificado contra la cuenta declarada en `config/cuenta_mt5.json` el
 2026-09-02): el mapeo lo apuntaba a `None` afirmando que el broker no lo ofrecía, y
 no era cierto. Lo que Brent no tiene es `brent.jpg`, así que queda fuera del escáner
-hasta que exista la imagen, pero ya recibe niveles y gráfico. El mapeo
-Playbook → ticker MT5 vive en `bias_reader.TICKER_MT5`, que es también el que usa el
-escáner.
+hasta que exista la imagen, pero ya recibe niveles y gráfico. Los activos del
+informe son los cinco base, declarados por su ticker del broker en
+`pipeline_informe.ACTIVOS_INFORME`, con nombre y decimales del catálogo.
 
 **Un PDF al día, no dos.** La skill `generar-reporte-editorial` reserva el PDF
 "estrictamente" para hitos de alta densidad y manda chat-first para piezas tácticas, por
@@ -319,19 +319,14 @@ Los rangos de puntos **son** la ponderación: `Score = T + M + C + F`. No se mul
 porque los factores ya vienen escalados a su máximo y hacerlo dejaría el techo real en 26,5 sobre
 una escala de 100.
 
-**Seis gates se aplican ANTES de puntuar, y son prohibiciones, no puntos:**
+**Cuatro gates se aplican ANTES de puntuar, y son exclusiones, no puntos:**
 
 1. **Feriado de la bolsa** del activo (`config/feriados_bolsa.json`).
 2. **Blackout por calendario** (FOMC −30/+75 min, NFP e IPC de EE.UU. −15/+30, RPM e Imacec de
    Chile, BoJ). Ojo: `obtener_calendario_macro` ya entrega la hora en America/Santiago, así que la
    ventana se compara directo; volver a convertir produce el desfase de ±1 h del issue #38.
-3. **Prohibición del Playbook** para los 5 activos con ficha, leída de `setups_prohibidos`. Solo
-   bloquea si apunta en la misma dirección que la lectura técnica: que esté prohibido comprar
-   agresivamente no impide comunicar una caída.
-4. **Agotamiento**: ATR diario consumido sobre 90%.
-5. **Confianza del modelo** (`gate_confianza`). Es uno de los dos con `publicable: False`: un
-   problema nuestro de datos no es contenido para el cliente.
-6. **Banda contra vela típica** (`gate_banda`): excluye cuando la vela típica cubre la banda entre
+3. **Agotamiento**: ATR diario consumido sobre 90%.
+4. **Banda contra vela típica** (`gate_banda`): excluye cuando la vela típica cubre la banda entre
    soporte y resistencia. **Excluye desde 1,00x y avisa entre 0,70x y 1,00x** (umbrales del
    director, 2026-09-04). La zona de aviso no detiene la pieza: viaja como `banda_estrecha` y sale
    en los avisos del escáner.
@@ -387,7 +382,6 @@ generando contenido:
 |---|---|---|
 | ATR diario consumido | `recorrido_agotado` | `volatilidad-atr` |
 | Blackout por calendario | `dato_en_curso` | `precio-descontado` |
-| Prohibición del Playbook | `setup_prohibido` | `riesgo` |
 | Feriado de bolsa | `mercado_cerrado` | `temporalidades` |
 
 **El concepto lo elige el motivo, no el azar**, así la parte educativa queda pegada a lo que de
@@ -522,7 +516,8 @@ escribir contra lo que quedó, y aborta si faltan caracteres.
 pieza llegara con el precio de hacía veinte minutos. El refresco (1-3 s de datos + 5-15 s de
 render) cabe entero dentro de la espera de cadencia de 45 s, así que no cuesta tiempo. Si el
 movimiento **invalidó el texto** (el precio cruzó un soporte o una resistencia que el párrafo daba
-por vigentes, o perdió el nivel de vigencia del sesgo), la pieza no sale: se renombra a
+por vigentes, o la lectura técnica dio vuelta y el texto quedó escrito para la dirección
+contraria), la pieza no sale: se renombra a
 `.divergente` y el despacho lo informa.
 
 > [!CAUTION]
@@ -607,54 +602,38 @@ el tope: **era que el archivo seguía cargando**. Ahora la espera es activa y pr
 
 Las mediciones exactas: `docs/historia-forense.md`.
 
-### El "hasta dónde" del sesgo tiene dos gramáticas, no una
+### El Playbook V2 se retiró (2026-09-27)
 <!-- ambito: ambos -->
 
-El Playbook no emite señales: emite **sesgo con su vigencia**. Y ese "hasta dónde" no se dice
-igual en los dos casos que el motor distingue. La traducción vive en un solo lugar,
-`bias_reader.resolver_vigencia`, y la consume el escáner para que viaje en la selección:
+El motor de sesgo (`macro_bias_engine.py`), su lector (`bias_reader`), la tool
+`get_macro_bias`, `ticket_engine`, `premarket` y su YAML de reglas (`playbook_config.yaml`) se
+borraron. Decisión del director, tras una auditoría que lo encontró deficiente y además
+**disfrazado de sano**:
 
-| `take_profit_tipo` | Gramática | Qué se publica |
-|---|---|---|
-| `TRAILING_STOP_ASYMMETRIC` | **NIVEL** | Un borde: *"el sesgo alcista sigue vigente hasta 933,44"*. Es el Chandelier, y se mueve con cada vela cerrada. |
-| `NIVEL_OPUESTO_CANAL` | **RANGO** | Dos bordes: *"sin sesgo direccional, el activo rota entre S1 y R1"*. |
+- El umbral de confianza se había bajado de 65 a 51 sin tocar el comentario que explica
+  que bajo 65 "es aritméticamente imposible" tener los datos sanos.
+- El 73 % de confianza que reportaba estaba inflado: el motor forzaba `is_stale: False` y
+  mezclaba series de yfinance y del CFD de MT5 dentro de las de FRED, sin marca de
+  procedencia.
+- Emitía sesgos incoherentes con su propio régimen (WTI "alcista por shock" en R0, por un
+  umbral escrito en el código que contradecía el del YAML), con una histéresis que
+  contaba corridas y no días.
+- `ticket_engine` no tenía consumidores y su filtro de R:R bloqueaba 362 de 363 setups.
 
-Decir "vigente hasta X" en un activo neutral le inventa una dirección; decir "rota entre S1 y R1"
-en uno sostenido le borra la que tiene.
+**Qué quedó en su lugar.** La dirección de toda pieza es la lectura técnica
+(`screener_gi.direccion_tecnica`: precio contra la EMA 50), con una sola vara para todo
+el universo. El chip de la pieza la refleja, y si entre preparar y despachar la lectura
+da vuelta, la pieza no sale: el texto quedó escrito para la dirección contraria. El
+informe de apertura se arma con la lectura técnica diaria de los cinco activos base.
 
-**El informe de apertura lo lleva también**, con la misma aritmética y su propia voz: un bloque
-"Hasta dónde vale esta lectura" con **una línea por activo**, no por grupo. WTI y Brent siguen
-agrupados porque su lectura es palabra por palabra la misma, pero cada uno tiene su borde, y un
-solo nivel para los dos publicaría el del vecino. Lo resuelve `resolver_vigencias`, que no lanza
-nunca: sin terminal el informe sale sin el bloque y lo dice en los avisos, mismo criterio que los
-gráficos.
+**Lo que no era Playbook y se conservó**, reubicado: el umbral de frescura de datos
+(`market_data_mcp.frescura`) y la banda anti-ruido de `get_asset_levels` (constante en
+`analisis.py`). La doctrina y los documentos del motor quedan en `docs/archive/playbook-v2/`
+como consulta, no como regla.
 
-**Hay un tercer caso, y es el que no era obvio.** `DATOS_INCOMPLETOS` sale del motor con
-`NIVEL_OPUESTO_CANAL` y score cero, **idéntico a un rango genuino**, porque ese es el valor neutro
-de esos campos y no una lectura de canal. Publicarlo como rango afirmaría que el activo rota entre
-dos niveles cuando en realidad el modelo no lo pudo leer. Se distingue por la **lista de setups
-permitidos vacía** (criterio estructural, no por el texto de la etiqueta: eso sería otro contrato
-por nombre) y esa pieza sale **sin** bloque de vigencia. El cierre canónico de tres escenarios va
-igual, así que el mensaje nunca queda sin lectura práctica.
-
-Dos reglas más, decididas mirando el resultado:
-
-1. **Un sesgo ya invalidado lo dice, no lo esconde.** `vigente` compara el precio contra el borde:
-   publicar "sigue vigente" con el precio del otro lado dice lo contrario de lo que pasa. Si se
-   rompe **entre preparar y despachar**, la pieza además no sale.
-2. **Ante direcciones contrarias se calla la vigencia, no la lectura técnica.** Si el signo del
-   score macro contradice la lectura de medias de la pieza, el bloque se omite y el motivo queda
-   en `_procedencia.vigencia_omitida`. El gate del Playbook ya bloquea la mayoría de esos casos,
-   pero "la mayoría" no alcanza: dos direcciones opuestas en el mismo mensaje cuestan la
-   credibilidad del mensaje entero.
-
-Los casos reales que fijaron estas reglas: `docs/historia-forense.md`.
-
-### Dos condiciones de frescura que conviene no descubrir en vivo
+### Una condición de frescura que conviene no descubrir en vivo
 <!-- ambito: ambos -->
 
-- El **informe de apertura** no se emite si `macro_bias_output.json` está vencido. La salida
-  explícita es `--con-datos-viejos`, que estampa el aviso en la primera página.
 - El escáner limita el universo a los activos con campo `imagen` en `config/activos.json`
   (`--todos` lo desactiva). Ese campo es el **interruptor del activo**: se rellena solo cuando
   el `.jpg` existe en disco, porque el renderer detiene la pieza sin él. Los prompts de las
@@ -897,13 +876,12 @@ que `mcp/mcp_config.json` frente a su `.example`.
 | **WhatsApp Web (Playwright)** | ✅ Activo | Envío directo a los 7 canales (`scripts/enviar_whatsapp.py`), con verificación de entrega contra el DOM y frenos de cadencia | Tras la aprobación del director |
 | **TrendRadar / Firecrawl / Finnhub** | ❌ No activos | Reemplazados por market-data (MT5) + WebSearch | — |
 
-**Nota**: el MCP `market-data` expone **siete** tools:
-- `get_asset_levels` — análisis técnico MT5 automático (soportes/resistencias, indicadores). Devuelve `ema_20`, `ema_50`, `ema_100`, RSI, ATR, ADX, MACD, Bollinger y el canal `donchian_50_high/low/mid`. Ojo: `ema_20` es media **exponencial** (el gatillo que manda el Playbook en H1) y `bb_mid` es la media **simple** de 20 de las Bandas de Bollinger — no son lo mismo, y confundirlas cambia el indicador.
+**Nota**: el MCP `market-data` expone **seis** tools:
+- `get_asset_levels` — análisis técnico MT5 automático (soportes/resistencias, indicadores). Devuelve `ema_20`, `ema_50`, `ema_100`, RSI, ATR, ADX, MACD, Bollinger y el canal `donchian_50_high/low/mid`. Ojo: `ema_20` es media **exponencial** (la corta de H1) y `bb_mid` es la media **simple** de 20 de las Bandas de Bollinger — no son lo mismo, y confundirlas cambia el indicador.
 - `get_chart_objects` — niveles dibujados a mano por el director en MT5 (soportes/resistencias, trendlines, canales, rectángulos) más screenshot, vía el Service `ChartObjectsExporter` (sub-proyecto A, #98).
 - `obtener_calendario_macro` — calendario económico Investing.com (Chile/EE.UU./China/Zona Euro con campo `actual` y `resultado`, issue #91; WebSearch es fallback si la fuente falla).
 - `get_symbol_spec` — especificaciones de contrato de un símbolo (trade_mode, digits, volumen mínimo/paso, tamaño de contrato) y sesiones de trading semanales en hora Chile; con `fecha` responde de forma determinista si el activo opera ese día (issue #104).
 - `get_open_positions` — operaciones abiertas en el terminal MT5 (ticket, tipo BUY/SELL, volumen, entrada, SL, TP, precio actual, resultado flotante y swap en la moneda de la cuenta).
-- `get_macro_bias` — sesgo cuantitativo del Playbook: régimen macro R0-R4, sesgo score `[-2,+2]`, SL dinámico por ATR y matriz de permisos técnicos. Solo para los 5 activos con ficha (`USDCLP`, `XAUUSD`, `WTI`, `BRENT`, `US100`); lee el snapshot que emite `scripts/macro_bias_engine.py`.
 - `get_curva_tasas` — curva soberana de EE.UU. desde `data central/`: rendimientos del Tesoro 2Y/10Y/30Y, tasa efectiva de fondos federales, tasa real TIPS 10Y (`DFII10`) y compensación por inflación (`T10YIE`), con **variación en puntos base a 1 y 5 días** y la pendiente 2s10s. La curva no es un símbolo de mercado, así que no se puede pedir con `get_asset_levels`. Cada serie informa su `frecuencia_publicacion` (`DFF` publica los siete días porque es un promedio diario; las yields solo días hábiles), y **un delta que no se puede calcular viene `null` y nunca `0`** — cero significa "no se movió", que es distinto de "no sé". La tasa real es `DFII10`: el CSV `US_TIPS_Real_Rates_ETF_*` es el precio de un ETF (~105), no una tasa.
 
 Contrato de error común: si el dato no está disponible retorna `{'error': 'CÓDIGO', 'message': '...'}` — nunca array vacío ni `None` silencioso. La antigua `get_economic_events` fue reemplazada por la tool nativa (#53); `get_market_context` (noticias Finnhub) quedó deprecada y se purgó del registro — las **noticias** se obtienen vía `WebSearch` (investing.com + fuentes oficiales: Fed, BCCh, OPEP+, EIA, BLS). Ver `docs/archive/superpowers/specs/2026-06-05-calendario-macro-nativo-mt5-design.md`.
@@ -950,36 +928,34 @@ hace el campo `sujeto` de `CONFIG_MACRO_GRUPOS`, que existe solo para él.
 <!-- ambito: ambos -->
 
 `data central/DATA PRECIOS OHLC/` lo llena `scripts/extractor_precios.py` desde MT5 y
-lo leen `macro_bias_engine.py` y `ticket_engine.py`. Las series intradía y diarias
+lo leen los compiladores de documentos largos. Las series intradía y diarias
 (`*_M15`, `*_H1`, `*_D1`) **están gitignoradas**: pesan ~5 MB cada una y se
 regeneran, así que versionarlas sumaba ~66 MB a la historia por cada ingesta sin
 aportar nada que MT5 no devuelva. Las semanales y `latest_prices_summary.json` sí se
 versionan: son livianas y sirven de referencia sin terminal.
 
-**En un clon nuevo hay que correr el extractor antes que el motor.** Ojo con esto:
-`ticket_engine.cargar_serie_h1_archivo` devuelve `None` en silencio cuando el archivo
-no está, así que sin las series el motor no falla, simplemente deja de emitir
-tickets. Si el resultado sale vacío, lo primero que hay que descartar es que falten
-las series.
+**En un clon nuevo hay que correr el extractor antes que cualquier consumidor.** Si un
+resultado sale vacío, lo primero que hay que descartar es que falten las series.
 
 ### La cadena de datos tiene un solo punto de entrada
 <!-- ambito: ambos -->
 
-`scripts/pipeline_datos.py` corre los tres pasos **en orden y aborta al primer fallo**:
+`scripts/pipeline_datos.py` corre los dos pasos **en orden y aborta al primer fallo**:
 
 ```bash
-uv run --with MetaTrader5 python scripts/pipeline_datos.py   # ingesta → precios → sesgo
+uv run --with MetaTrader5 python scripts/pipeline_datos.py   # ingesta → precios
 uv run python scripts/pipeline_datos.py --estado             # solo reporta, no ejecuta
 ```
 
 Abortar es deliberado. Saltarse un paso o invertirlos no rompe nada de forma visible,
-y ese es el problema: correr el motor sobre precios que no se actualizaron produce un
-sesgo que **parece** fresco. Peor que fallar es fallar de forma convincente.
+y ese es el problema: una lectura sobre precios que no se actualizaron **parece**
+fresca. Peor que fallar es fallar de forma convincente.
 
-`--estado` lee los **tres relojes** que antes nadie miraba juntos
-(`estado_ejecucion.json`, `latest_prices_summary.json`, `macro_bias_output.json`) y
-aplica el mismo umbral de staleness del Playbook vía `bias_reader` — inventar una
-segunda regla de vencimiento sería el mismo error que tener dos fórmulas de ATR.
+`--estado` lee los **relojes** que antes nadie miraba juntos
+(`estado_ejecucion.json`, `latest_prices_summary.json`) y aplica el umbral de
+`market_data_mcp.frescura` (`config/frescura_datos.json`), el mismo que usa
+`get_curva_tasas` — inventar una segunda regla de vencimiento sería el mismo error que
+tener dos fórmulas de ATR.
 
 ### La cuenta de MT5 se declara en un solo lugar
 
@@ -997,8 +973,8 @@ no utilizable si algún activo no salió de la declarada.
 Tres cosas que conviene no revertir:
 
 1. **El guardia lee el SELLO del archivo, no el terminal en vivo.** Lo que importa
-   no es dónde está el terminal ahora, es qué cuenta produjo los datos que el motor
-   va a usar. Y `--estado` tiene que poder correr sin MT5 abierto.
+   no es dónde está el terminal ahora, es qué cuenta produjo los datos que se van
+   a usar. Y `--estado` tiene que poder correr sin MT5 abierto.
 2. **Un sello ausente no pasa.** Para un stop, "no sé de qué cuenta salió esto" vale
    lo mismo que "salió de la equivocada". Si la ausencia fuera permiso, bastaría con
    que el extractor dejara de estampar el campo.
@@ -1023,14 +999,9 @@ son futuros (`GC=F`, `CL=F`, `NQ=F`) y no los CFD del broker. El 2026-09-02 el t
 quedó conectado a otra cuenta y cinco de seis activos salieron de yfinance mientras la
 cadena reportaba `[OK] precios` y `Datos frescos`. El campo `broker: YFINANCE` sí quedaba
 escrito en cada archivo, así que era auditable, pero nada lo decía en voz alta: costó una
-hora de diagnóstico y los stops del Playbook quedaron calculados sobre otro instrumento.
+hora de diagnóstico y los stops quedaron calculados sobre otro instrumento.
 Ahora `--estado` nombra cada activo caído y el veredicto pasa a no utilizable, sin umbral
 de tolerancia: un stop calculado sobre otra fuente de precio es un stop de otro mercado.
-
-Informa además la **confianza del modelo**, que hasta ahora solo se imprimía en
-consola del motor y no la leía nadie. **Ese número todavía no bloquea**: qué umbral
-corresponde es una decisión de método pendiente del director. Lo que sí cambia es que
-deja de estar enterrado en un JSON.
 
 ### La ingesta se engancha al arranque de sesión (Claude Code)
 <!-- ambito: claude -->
@@ -1044,8 +1015,8 @@ Son **dos hooks del mismo módulo** y esa división es la decisión de fondo:
 | `--estado` | bloqueante, solo stdlib, < 1 s | Lee `estado_ejecucion.json` e inyecta al contexto la última ingesta en hora Chile, el status por fuente, los errores y las novedades. |
 | `--refrescar` | `async`, sin bloquear | Si esa misma lectura está vencida, corre `pipeline_ingesta.py` y deja la bitácora en `data/logs/`. |
 
-**La ingesta completa tarda ~55 s medidos el 2026-09-05**, y dispara además el motor de
-sesgo y el pronóstico de inflación de Japón. Bloquear cada arranque con eso cuesta un
+**La ingesta completa tarda ~55 s medidos el 2026-09-05**, y dispara además el extractor
+de precios y el pronóstico de inflación de Japón. Bloquear cada arranque con eso cuesta un
 minuto por sesión y en un día se abren varias; pero un hook `async` **no le puede contar
 nada al modelo**, porque su salida no entra al contexto. De ahí los dos.
 
@@ -1057,7 +1028,7 @@ Cuatro reglas que lo sostienen:
    misma decisión dejarían al contexto afirmando que el dato está fresco mientras el otro
    hook lo está bajando, que es el defecto recurrente del repo.
 2. **El aviso al modelo dice que los datos van a cambiar durante la sesión.** Cuando el
-   refresco se lanza, los JSON de `data central/` y `macro_bias_output.json` cambian bajo
+   refresco se lanza, los JSON de `data central/` cambian bajo
    los pies de la conversación: citar una cifra leída antes del refresco es publicar el
    dato de anoche con fecha de hoy.
 3. **Un lock (`data/.ingesta_macro.lock`) impide dos ingestas simultáneas**, porque dos
@@ -1201,7 +1172,7 @@ igual a Claude Code y a Antigravity.
 | `/story [tipo]` | Una pieza suelta, cuando hace falta fuera de la tanda. Tipos: `alerta`, `dato_macro`, `breaking`, `calendario` — las cuatro plantillas que existen. No pregunta nada: todo va por argumento. |
 | `/encuesta [tipo] [activo]` | Encuesta de sentimiento (`posicion`, `tendencia`, `movimiento`). |
 | `/rencuesta` | Desarrolla didácticamente el tema de una encuesta y construye la malla de conceptos. |
-| `/estado` | Dashboard del sistema: sesión de WhatsApp, cupo de envíos del día, frescura del motor, MCPs. No envía nada. |
+| `/estado` | Dashboard del sistema: sesión de WhatsApp, cupo de envíos del día, frescura de los datos, MCPs. No envía nada. |
 
 ## La memoria compartida (OMEGA)
 <!-- ambito: agy -->

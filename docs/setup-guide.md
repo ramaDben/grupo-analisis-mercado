@@ -157,12 +157,11 @@ Cubren: matemática técnica (RSI, clustering, soportes/resistencias), el contra
 
 ---
 
-## Series de precios (prerrequisito del motor)
+## Series de precios
 
 Las series OHLC **no se versionan**: las regenera `scripts/extractor_precios.py`
 desde MT5 (10.000 velas por símbolo). En un clon nuevo hay que producirlas antes de
-correr el motor, o `macro_bias_engine.py` y `ticket_engine.py` trabajan sin datos de
-precio.
+usar cualquier consumidor de las series.
 
 ```bash
 # Con MetaTrader 5 abierto:

@@ -20,8 +20,8 @@ uv run python scripts/pipeline_informe.py --tipo cierre --preparar
 
 Deja en `data/informes/<fecha>_<tipo>/informe_<tipo>.md` las tablas ya resueltas: curva
 soberana de EE.UU. con su variación en puntos base y la fecha de cada dato, agenda macro del
-día en hora de Chile con los indicadores nombrados en español, y régimen macro más sesgo por
-activo del Motor GI.
+día en hora de Chile con los indicadores nombrados en español, y la lectura técnica diaria
+de los cinco activos base (precio, soporte y resistencia medidos en el terminal).
 
 La agenda trae seis columnas: **Estado**, hora, país, indicador, impacto y **Cifras**. Tres
 cosas que conviene saber antes de editarla a mano:
@@ -40,20 +40,14 @@ cosas que conviene saber antes de editarla a mano:
   esa marca la tabla mostraría dos filas idénticas con cifras distintas. La tabla garantiza
   que ninguna fila se lea igual que otra, y cita solo la palabra que las diferencia.
 
-**Si la apertura se niega a generarse, no la fuerces sin leer por qué.** El informe de
-apertura depende de `macro_bias_output.json`; si está vencido, el script se detiene y nombra
-el remedio: correr `pipeline_ingesta.py` y después `macro_bias_engine.py`. Refrescar el dato
-es siempre la primera opción.
-
-`--con-datos-viejos` existe para cuando el director decide publicar igual. En ese caso el
-informe **estampa el aviso en la primera página** diciendo que va sin el sesgo del motor y
-que ninguna cifra debe leerse como lectura suya. La decisión de publicar con datos vencidos
-es del director; que el lector lo sepa, no.
+**Lee los avisos antes de escribir.** Si MT5 no respondió, la sección 02 sale con cada
+activo marcado *"Sin datos del terminal"* y sin gráficos. No rellenes esas cifras: se corre
+de nuevo con el terminal abierto (Regla 1).
 
 ### Los gráficos salen solos
 
-`--preparar` dibuja un gráfico por activo del Playbook y lo referencia bajo su bloque en
-la sección 02. Sale del terminal, no de un archivo aparte: la serie de cierres la trae
+`--preparar` dibuja un gráfico por activo base y lo referencia bajo su bloque en la
+sección 02. Sale del terminal, no de un archivo aparte: la serie de cierres la trae
 `scripts/serie_mt5.py` y los niveles `analizar_activo`, así que si MT5 está cerrado el
 informe se emite **sin imágenes** y lo dice en los avisos, en vez de caerse o dibujar algo
 plausible.
@@ -66,27 +60,21 @@ uv sync --extra informe        # una vez
 
 Dos cosas que conviene saber antes de que llamen la atención:
 
-- **Brent no lleva gráfico.** El broker no ofrece el símbolo, así que no hay serie que
-  pedir. Como comparte lectura con el WTI, el bloque agrupado se queda con el del WTI y el
-  aviso lo dice con esas palabras.
-- **El subtítulo del gráfico es el sesgo del activo**, tomado de la misma frase que ya está
-  en el texto. Si cambia la traducción de un matiz, cambian los dos a la vez: imagen y
-  párrafo no pueden decir cosas distintas del mismo activo en la misma página.
+- **Brent sí lleva gráfico** (`BRENT.spot`, verificado contra la cuenta el 2026-09-02).
+- **El subtítulo del gráfico es la lectura diaria del activo**, la misma frase que va en
+  negrita en su bloque: imagen y párrafo no pueden decir cosas distintas del mismo activo
+  en la misma página.
 
 ## PASO 2 — Escribir el análisis
 
-El markdown trae 4 secciones marcadas con `[[ESCRIBIR]]`. Las tablas son datos; el análisis
+El markdown trae secciones marcadas con `[[ESCRIBIR]]`, una por activo en la 02. Las tablas son datos; el análisis
 es tuyo:
 
 1. **Marco de la jornada**: dos párrafos. Qué deja la sesión anterior y con qué abre esta.
-2. **Régimen y sesgo**: qué significa el régimen vigente para operar hoy. Los `setups_prohibidos`
-   de la tabla son prohibiciones, no sugerencias: nómbralas como tales. El bloque **"Hasta
-   dónde vale esta lectura"** de cada activo ya viene escrito y sale del Playbook: no lo
-   repitas ni lo contradigas, y si alguno dice *"la lectura ya no vale"*, ese activo no puede
-   aparecer en tu análisis como si su dirección siguiera en pie.
+2. **Los activos de hoy**: una entrada breve sobre qué activo manda la jornada, y por cada
+   activo las tres capas: qué pasa, qué significa para ti y qué NO hacer hoy. La dirección
+   es la de la lectura diaria que ya viene en negrita: no la contradigas.
 3. **Curva soberana**: qué dice el movimiento de tasas sobre el dólar, el oro y el Nasdaq.
-   El umbral del Playbook es explícito: sobre 4,70% en la de 10 años se comprimen los
-   múltiplos del US100.
 4. **Agenda del día**: cuál de esos eventos puede mover la jornada y por qué.
 
 Reglas que aplican íntegras: cero guiones largos, siglas explicadas una sola vez, y **cada
@@ -126,8 +114,8 @@ El PDF nunca va solo. Un mensaje corto con las 6 reglas de formato:
 ⚡ [Qué esperar]
 ━━━━━━━━━━━━━━━━━━━
 ⏱️ Temporalidad: swing de jornada (1 a 3 días)
-El informe completo va adjunto, con la curva de tasas, la agenda del día y el sesgo por
-activo.
+El informe completo va adjunto, con la curva de tasas, la agenda del día y la lectura de
+cada activo.
 ```
 
 **El pie repite lo esencial a propósito**: es lo único que el cliente ve en la notificación

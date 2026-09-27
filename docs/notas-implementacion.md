@@ -31,7 +31,7 @@ grupo-analisis-mercado/
 │   ├── agenda_mercado.json  ← ventanas de sesion, anclajes de tanda y momentos del dia
 │   ├── agenda_semanal.json · feriados_bolsa.json
 ├── scripts/               ← scripts auxiliares
-│   ├── screener_gi.py     ← Score_GI sobre el universo + gates (feriado, blackout, Playbook, ATR)
+│   ├── screener_gi.py     ← Score_GI sobre el universo + gates (feriado, blackout, ATR, banda)
 │   ├── agenda_mercado.py  ← el unico reloj: ventanas, anclajes y momentos
 │   ├── reloj_gi.py        ← el decisor del latido (solo prepara, nunca envia)
 │   ├── instalar_reloj.ps1 ← registra el latido en el Programador de tareas
@@ -54,7 +54,7 @@ grupo-analisis-mercado/
 │   ├── README.md · stop-loss.md
 ├── data/                  ← datos persistentes
 │   ├── historial_senales.json · historial_encuestas.json
-│   ├── mapa_conceptos.json · glosario_siglas.json · glosario_motor.json
+│   ├── mapa_conceptos.json · glosario_siglas.json · glosario_informe.json
 │   └── charts/ · mensajes/ · stories/  ← generados (gitignored)
 ├── mql5/                  ← Service MQL5 (ChartObjectsExporter) + archive/ (CalendarExporter, deprecado)
 └── mcp/

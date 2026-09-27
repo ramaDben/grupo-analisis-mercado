@@ -25,7 +25,7 @@ Cada carpeta contiene:
 | [`04_indices_bursatiles`](./04_indices_bursatiles/) | **GI · Índices Bursátiles** | Nasdaq 100 (US100), S&P 500 (US500), Dow Jones (US30), DAX 40 | `us100.jpg` | Apertura de Wall Street, rotación sectorial y sentimiento de riesgo. |
 | [`05_acciones_etfs`](./05_acciones_etfs/) | **GI · Acciones & ETFs** | Mega-caps (#AAPL, #MSFT, #NVDA, #MELI), Bancos, ETFs (QQQ, SPY, SOXX, IWM) | `tech-circuito.jpg` | Temporada de earnings, ciclo de semiconductores/IA y fondos cotizados. |
 | [`06_criptoactivos`](./06_criptoactivos/) | **GI · Criptoactivos & Digital Assets** | Bitcoin (BTC/USD), Ethereum (ETH/USD), Solana (SOL/USD), Altcoins | `eth.jpg` | Análisis cuantitativo sobrio en 4H/1D y flujos institucionales en ETFs spot. |
-| [`07_oportunidades_cuantitativas`](./07_oportunidades_cuantitativas/) | **GI · Oportunidades & Trading Cuantitativo** | Multiactivo (Setups VIP Playbook V2) | `us500.jpg` | Señales tácticas selectivas (máx 3/sem) con TP y SL calculados en CLP. |
+| [`07_oportunidades_cuantitativas`](./07_oportunidades_cuantitativas/) | **GI · Oportunidades & Trading Cuantitativo** | Multiactivo (Setups VIP) | `us500.jpg` | Señales tácticas selectivas (máx 3/sem) con TP y SL calculados en CLP. |
 
 ---
 
