@@ -13,7 +13,7 @@ import pytest
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BASE_DIR / ".agents" / "skills" / "ecosistema-datos-macro" / "scripts"))
-sys.path.insert(0, str(BASE_DIR / "scripts"))  # RAIZ_SCRIPTS: macro_bias_engine
+sys.path.insert(0, str(BASE_DIR / "scripts"))
 
 import agenda
 import extractor_chile
@@ -283,21 +283,6 @@ def test_el_estado_de_una_fuente_mira_todas_sus_series():
         {"A": {"status": "OK"}, "B": {"status": "OK_FALLBACK"}}
     ) == "OK_FALLBACK"
 
-
-
-def test_la_frase_del_forward_sigue_al_signo_del_dato():
-    """La justificacion decia "compradora (+...)" con el signo escrito a mano.
-
-    Funcionaba por casualidad: la serie traia un valor de relleno positivo
-    porque su codigo del BCCh no existia. Con el dato real, que es negativo, esa
-    frase salia como "(+-16866M USD)" y afirmaba que la posicion era compradora
-    cuando el BCCh publica lo contrario. Es texto que llega al informe.
-    """
-    import macro_bias_engine as mbe
-
-    fuente = Path(mbe.__file__).read_text(encoding="utf-8")
-    assert 'compradora (+{fwd_ext' not in fuente, "el sentido volvio a estar escrito a mano"
-    assert 'fwd_sentido = "vendedora" if fwd_ext < 0 else "compradora"' in fuente
 
 
 def test_stale_mide_antiguedad_y_no_solo_si_la_descarga_funciono():

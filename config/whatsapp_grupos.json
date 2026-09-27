@@ -135,7 +135,6 @@
         "vip",
         "setups",
         "07",
-        "playbook",
         "senales",
         "senal",
         "señal",
@@ -146,7 +145,7 @@
       ],
       "nombre_oficial": "Grupo Inteligencia | Señales De Trading",
       "carpeta_docs": "docs/grupos_whatsapp/07_oportunidades_cuantitativas",
-      "descripcion": "Señales tácticas selectivas con TP y SL calculados en CLP según Playbook V2.",
+      "descripcion": "Señales tácticas selectivas con TP y SL calculados en CLP.",
       "nombre_aspiracional": "GI · Oportunidades & Trading Cuantitativo"
     }
   },

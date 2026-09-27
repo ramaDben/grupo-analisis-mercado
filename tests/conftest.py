@@ -66,7 +66,7 @@ class _ToolCollector:
 
     - `@mcp.tool` (sin paréntesis): levels, calendar, chart_objects, positions,
       symbol_spec. La descripción sale del docstring.
-    - `@mcp.tool(name=..., description=...)`: macro_bias, curva_tasas. La descripción
+    - `@mcp.tool(name=..., description=...)`: curva_tasas. La descripción
       se escribe explícita para que el modelo la lea sin tener que inferirla.
 
     Antes solo soportaba la primera, así que las tools del segundo estilo no se

@@ -35,15 +35,15 @@ Cuando el usuario pida "ver agenda", "qué hay hoy", "revisar calendario" o "act
 
 ---
 
-## 3. La cadena de datos tiene TRES pasos y un solo punto de entrada
+## 3. La cadena de datos tiene DOS pasos y un solo punto de entrada
 
 > [!CAUTION]
-> **La ingesta es el paso 1 de 3, no la cadena.** Correr solo la ingesta deja los
-> precios de MT5 y el sesgo del Playbook con la antigüedad que ya tenían, y el motor
-> sobre precios que no se actualizaron produce un sesgo que **parece** fresco. Eso es
-> peor que fallar, porque falla de forma convincente.
+> **La ingesta es el paso 1 de 2, no la cadena.** Correr solo la ingesta deja los
+> precios de MT5 con la antigüedad que ya tenían, y cualquier lectura sobre precios
+> que no se actualizaron **parece** fresca. Eso es peor que fallar, porque falla de
+> forma convincente.
 
-Ejecuta **siempre** el punto de entrada único, que corre los tres pasos en orden y
+Ejecuta **siempre** el punto de entrada único, que corre los dos pasos en orden y
 **aborta al primer fallo**:
 
 ```powershell
@@ -54,7 +54,6 @@ uv run --with MetaTrader5 python scripts/pipeline_datos.py
 |---|---|---|
 | 1. ingesta | `.agents/skills/ecosistema-datos-macro/scripts/pipeline_ingesta.py` | `data central/DATA */raw` + `latest_drivers.json` |
 | 2. precios | `scripts/extractor_precios.py` | `data central/DATA PRECIOS OHLC/` |
-| 3. sesgo | `scripts/macro_bias_engine.py` | `macro_bias_output.json` |
 
 **Antes de publicar cualquier cosa, verifica el estado con el comando y no a ojo:**
 
@@ -62,16 +61,16 @@ uv run --with MetaTrader5 python scripts/pipeline_datos.py
 uv run python scripts/pipeline_datos.py --estado
 ```
 
-Lee los tres relojes juntos y aplica el umbral de vencimiento del Playbook. Si dice
+Lee los relojes juntos y aplica el umbral de vencimiento (`config/frescura_datos.json`). Si dice
 **NO utilizable**, no se publica: se arregla lo que marca `[FALLA]`.
 
 > [!IMPORTANT]
 > **Si `--estado` nombra activos caídos a `YFINANCE`, detente.** El extractor cae a
 > yfinance cuando el terminal no le sirve un símbolo, y eso **no es equivalente**: son
 > futuros (`GC=F`, `CL=F`, `NQ=F`) y no los CFD del broker. El 2026-09-02 cinco de seis
-> activos salieron de yfinance mientras la cadena reportaba datos frescos, y los stops
-> del Playbook quedaron calculados sobre otro instrumento. Sin umbral de tolerancia: un
-> stop calculado sobre otra fuente de precio es un stop de otro mercado.
+> activos salieron de yfinance mientras la cadena reportaba datos frescos, y los niveles
+> quedaron calculados sobre otro instrumento. Sin umbral de tolerancia: un nivel
+> calculado sobre otra fuente de precio es un nivel de otro mercado.
 
 Los 5 extractores nativos que consulta el paso de ingesta, como referencia:
 
@@ -81,8 +80,7 @@ Los 5 extractores nativos que consulta el paso de ingesta, como referencia:
   4. `extractor_commodities.py` (EIA + Metales)
   5. `extractor_japon.py` (MOF + MIC + BOJ)
 
-Para forzar solo la ingesta, sin la cadena (caso raro, y deja los otros dos pasos
-atrás):
+Para forzar solo la ingesta, sin la cadena (caso raro, y deja los precios atrás):
   `uv run python .agents/skills/ecosistema-datos-macro/scripts/pipeline_ingesta.py --force`
 
 ---
@@ -96,11 +94,11 @@ atrás):
 
 ## 5. Validación de Estado y Snapshot de Drivers
 - La verificación canónica es `uv run python scripts/pipeline_datos.py --estado`, que lee
-  los **tres** relojes (`estado_ejecucion.json`, `latest_prices_summary.json`,
-  `macro_bias_output.json`) y aplica un solo umbral de vencimiento. Mirar un archivo
-  suelto deja pasar justamente el caso de la cadena a medias.
-- Informa además la **confianza del modelo**. Hoy ese número **no bloquea**: qué umbral
-  corresponde es una decisión de método pendiente del director.
+  los relojes (`estado_ejecucion.json`, `latest_prices_summary.json`) y aplica un solo
+  umbral de vencimiento. Mirar un archivo suelto deja pasar justamente el caso de la
+  cadena a medias.
+- El motor de sesgo del Playbook V2 (`macro_bias_engine.py`) y su confianza se
+  retiraron el 2026-09-27: ya no son un paso de la cadena.
 - Los archivos, si hace falta inspeccionarlos:
   - `data central/DATA DRIVERS USDCLP/latest_drivers.json` (frescura `as_of`, banderas `is_stale`).
   - `data central/DATA AGENDA/estado_ejecucion.json` (`hay_novedades: bool`).

@@ -99,48 +99,6 @@ def test_el_subtitulo_largo_se_envuelve_y_no_se_corta():
     assert " ".join(lineas) == largo
 
 
-# ── El mapeo Playbook → broker ───────────────────────────────────────────────
-def test_todo_simbolo_del_playbook_declara_su_ticker():
-    """Una ficha sin entrada acá deja al informe y al escáner buscando un símbolo
-    que MT5 no conoce, sin que ninguno de los dos se entere."""
-    from market_data_mcp.bias_reader import TICKER_MT5, VALID_SYMBOLS
-
-    assert set(TICKER_MT5) == VALID_SYMBOLS - {"ALL"}
-
-
-def test_brent_si_tiene_ticker_porque_el_broker_lo_ofrece():
-    """Este test afirmaba lo contrario, y la premisa era falsa.
-
-    Decía "el broker no ofrece Brent. Es un hecho del catálogo, no un olvido", y
-    exigía `TICKER_MT5["BRENT"] is None`. El terminal lo desmintió el 2026-09-02:
-    sobre la cuenta 51492 (GrupoInteligenciaSpA-Server), `symbol_info("BRENT.spot")`
-    responde con digits=3 y bid 96,439, y `symbol_select` lo acepta.
-
-    El costo de la premisa no era teórico. Brent tiene ficha en el Playbook y ese
-    día llevaba sesgo +1,50 (ALCISTA POR SHOCK) bajo el régimen R3, pero sin
-    ticker no había niveles, ni gráfico, ni forma de decir hasta dónde seguía
-    vigente ese sesgo. El sistema opinaba de un activo que no podía medir.
-
-    Lo que sigue siendo cierto es que Brent no entra al escáner: no existe
-    `brent.jpg` y ese campo es el interruptor del activo. Eso se verifica aparte,
-    en `test_ningun_activo_declara_una_imagen_que_no_existe`.
-    """
-    from market_data_mcp.bias_reader import TICKER_MT5
-    from market_data_mcp.catalog import VALID_TICKERS
-
-    assert TICKER_MT5["BRENT"] == "BRENT.spot"
-    assert VALID_TICKERS["BRENT.spot"] == 3
-
-
-def test_los_tickers_declarados_existen_en_el_catalogo():
-    from market_data_mcp.bias_reader import TICKER_MT5
-    from market_data_mcp.catalog import VALID_TICKERS
-
-    for simbolo, ticker in TICKER_MT5.items():
-        if ticker is not None:
-            assert ticker in VALID_TICKERS, f"{simbolo} apunta a {ticker}, ausente del catálogo"
-
-
 # ── Las rutas de imagen del PDF ──────────────────────────────────────────────
 def _absolutizar():
     pytest.importorskip("markdown")

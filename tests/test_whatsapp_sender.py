@@ -56,7 +56,6 @@ def test_resolucion_alias_a_nombres_oficiales():
         ("cripto", "Grupo Inteligencia | Criptomercados"),
         ("btc", "Grupo Inteligencia | Criptomercados"),
         ("cuantitativo", "Grupo Inteligencia | Señales De Trading"),
-        ("playbook", "Grupo Inteligencia | Señales De Trading"),
     ]
 
     for alias, esperado in casos:

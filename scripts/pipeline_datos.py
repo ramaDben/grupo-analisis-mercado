@@ -1,29 +1,30 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""La cadena de datos del Playbook: un punto de entrada y un solo reloj.
+"""La cadena de datos: un punto de entrada y un solo reloj.
 
-Por qué existe. La cadena eran tres invocaciones manuales con un orden que solo
-vivía en la cabeza del director:
+Por qué existe. La cadena eran invocaciones manuales con un orden que solo vivía
+en la cabeza del director:
 
     pipeline_ingesta.py   ->  data central/DATA */raw + latest_drivers.json
     extractor_precios.py  ->  data central/DATA PRECIOS OHLC/
-    macro_bias_engine.py  ->  macro_bias_output.json
 
 Saltarse un paso o invertir el orden no rompe nada de forma visible, que es el
-problema: correr el motor sobre precios que no se actualizaron produce un sesgo
-que *parece* fresco. Y si faltan las series, `ticket_engine.cargar_serie_h1_archivo`
-devuelve `None` en silencio y el motor simplemente deja de emitir tickets.
+problema: un resultado sobre datos que no se actualizaron *parece* fresco.
 
-Y había tres archivos de fecha (`estado_ejecucion.json`, `latest_prices_summary.json`,
-`macro_bias_output.json`) que ningún consumidor miraba juntos, así que cada uno
-decidía por su cuenta si el dato servía y casi todos decidían que sí por defecto.
+Y había archivos de fecha (`estado_ejecucion.json`, `latest_prices_summary.json`)
+que ningún consumidor miraba juntos, así que cada uno decidía por su cuenta si el
+dato servía y casi todos decidían que sí por defecto.
 
 Este módulo hace dos cosas y nada más: corre la cadena en orden abortando al
-primer fallo, y lee los tres relojes en una sola respuesta.
+primer fallo, y lee los relojes en una sola respuesta.
 
-El umbral de vencimiento NO se inventa acá: sale de `bias_reader`, que ya lo lee
-de `playbook_config.yaml` y contempla el fin de semana. Dos reglas de staleness
-distintas serían el mismo error que dos fórmulas de ATR.
+El umbral de vencimiento NO se inventa acá: sale de `market_data_mcp.frescura`,
+que contempla el fin de semana y es el mismo que usa `get_curva_tasas`. Dos
+reglas de staleness distintas serían el mismo error que dos fórmulas de ATR.
+
+Hasta el 2026-09-27 la cadena tenía un tercer paso, el motor de sesgo del
+Playbook V2 (`macro_bias_engine.py`), y el estado exigía su confianza. Se retiró
+junto con el Playbook.
 
 Uso:
     uv run --with MetaTrader5 python scripts/pipeline_datos.py            # corre la cadena
@@ -53,14 +54,6 @@ if str(RAIZ / "src") not in sys.path:
 DATA_CENTRAL = RAIZ / "data central"
 INGESTA = RAIZ / ".agents" / "skills" / "ecosistema-datos-macro" / "scripts" / "pipeline_ingesta.py"
 
-# El mismo umbral que aplica el escaner, importado y no copiado: dos numeros para
-# la misma decision dejarian al estado diciendo que se puede publicar mientras el
-# escaner excluye igual.
-if str(RAIZ / "scripts") not in sys.path:
-    sys.path.insert(0, str(RAIZ / "scripts"))
-from screener_gi import UMBRAL_CONFIANZA_PCT  # noqa: E402
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Los pasos, en el único orden que produce un resultado coherente
 # ─────────────────────────────────────────────────────────────────────────────
@@ -81,7 +74,6 @@ class Resultado:
 PASOS: tuple[Paso, ...] = (
     Paso("ingesta", INGESTA, "drivers macro oficiales (FRED, BCCh, BCE, COMEX)"),
     Paso("precios", RAIZ / "scripts" / "extractor_precios.py", "series OHLC + indicadores"),
-    Paso("sesgo", RAIZ / "scripts" / "macro_bias_engine.py", "régimen, sesgo y SL del Playbook"),
 )
 
 
@@ -116,7 +108,7 @@ def ejecutar_cadena(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Los tres relojes, leídos juntos
+# Los relojes, leídos juntos
 # ─────────────────────────────────────────────────────────────────────────────
 @dataclass
 class Reloj:
@@ -139,30 +131,11 @@ class Reloj:
 @dataclass
 class EstadoDatos:
     relojes: list[Reloj] = field(default_factory=list)
-    confianza_pct: float | None = None
-
-    @property
-    def confianza_suficiente(self) -> bool:
-        """Un snapshot sin confianza declarada NO pasa.
-
-        Asumir que alcanza seria la puerta de atras que el umbral existe para
-        cerrar: bastaria con que el motor dejara de emitir el campo.
-        """
-        return self.confianza_pct is not None and self.confianza_pct >= UMBRAL_CONFIANZA_PCT
 
     @property
     def listo(self) -> bool:
-        """Relojes frescos Y modelo que ve.
-
-        Frescura y confianza son cosas distintas, pero ninguna sola alcanza para
-        publicar. El estado decia "Datos frescos" con la confianza en 54,7 % y
-        dos drivers rotos: tecnicamente cierto y operativamente inutil.
-        """
-        return (
-            bool(self.relojes)
-            and all(r.fresco for r in self.relojes)
-            and self.confianza_suficiente
-        )
+        """Todos los relojes frescos, y al menos uno leído."""
+        return bool(self.relojes) and all(r.fresco for r in self.relojes)
 
 
 def _leer(ruta: Path) -> tuple[dict | None, str | None]:
@@ -175,7 +148,7 @@ def _leer(ruta: Path) -> tuple[dict | None, str | None]:
 
 
 def _evaluar(reloj: Reloj, as_of: str | None, ahora: datetime | None) -> Reloj:
-    """Aplica el mismo umbral de staleness del Playbook, fin de semana incluido."""
+    """Aplica el umbral de frescura de `market_data_mcp.frescura`, fin de semana incluido."""
     from market_data_mcp.frescura import cargar_config_staleness, validar_staleness
 
     fresco, horas, umbral, razon = validar_staleness(
@@ -227,17 +200,16 @@ def _motivo_fallback(por_activo: dict[str, str]) -> str | None:
     Por qué existe. El 2026-09-02 el terminal quedó conectado a otra cuenta y el
     extractor cayó a yfinance en cinco de seis activos. La cadena reportó
     `[OK] precios` y `Datos frescos`, porque los archivos eran de hace minutos, y
-    los stops del Playbook quedaron calculados sobre futuros de yfinance en vez
-    de los CFD del broker. El campo `broker: YFINANCE` sí quedaba escrito en cada
+    los niveles quedaron calculados sobre futuros de yfinance en vez de los CFD
+    del broker. El campo `broker: YFINANCE` sí quedaba escrito en cada
     archivo, así que era auditable, pero **nada lo decía en voz alta**: costó una
     hora de diagnóstico.
 
     Es el mismo defecto que el `status: "OK"` regalado del extractor de
     commodities: un fallback que hace su trabajo y no se anuncia.
 
-    **Sin umbral de tolerancia.** El Playbook cubre cinco activos y un stop
-    calculado sobre otra fuente de precio es un stop de otro mercado: un solo
-    activo en fallback ya se nombra.
+    **Sin umbral de tolerancia.** Un nivel calculado sobre otra fuente de precio
+    es un nivel de otro mercado: un solo activo en fallback ya se nombra.
     """
     ajenos = {a: f for a, f in por_activo.items() if f != "MT5"}
     if not ajenos:
@@ -307,7 +279,7 @@ def _motivo_cuenta(por_activo: dict[str, object]) -> str | None:
 
 
 def estado_datos(data_central: Path | None = None, ahora: datetime | None = None) -> EstadoDatos:
-    """Los tres relojes de la cadena en una sola respuesta.
+    """Los relojes de la cadena en una sola respuesta.
 
     `data_central` se parametriza para poder testear sin tocar los datos reales.
     """
@@ -351,17 +323,6 @@ def estado_datos(data_central: Path | None = None, ahora: datetime | None = None
                 r.error = cuenta
     est.relojes.append(r)
 
-    # 3. Sesgo del Playbook
-    r = Reloj("sesgo", "régimen, sesgo y SL")
-    data, err = _leer(raiz / "DATA DRIVERS USDCLP" / "macro_bias_output.json")
-    if err:
-        r.error = err
-    else:
-        _evaluar(r, data.get("as_of_utc"), ahora)
-        conf = (data.get("confianza_general") or {}).get("confianza_total_pct")
-        est.confianza_pct = float(conf) if conf is not None else None
-    est.relojes.append(r)
-
     return est
 
 
@@ -376,18 +337,6 @@ def imprimir_estado(est: EstadoDatos) -> None:
         else:
             edad = f"{r.antiguedad_h:5.1f} h  " if r.antiguedad_h is not None else "  --    "
             print(f"  [FALLA]{r.nombre:8s} {edad}{r.error}")
-    # El umbral es el piso algebraico del §3: si frescura y cobertura valen 1,0
-    # -la condición que ese párrafo llama "operación normal"- el puntaje arrastra
-    # 0,40 + 0,25 = 0,65 antes de que la antigüedad aporte nada. Bajo eso es
-    # aritméticamente imposible que ambas sean 1,0.
-    if est.confianza_pct is None:
-        print(f"\n  [FALLA]confianza no declarada por el motor (mínimo {UMBRAL_CONFIANZA_PCT:.0f} %)")
-    elif est.confianza_suficiente:
-        print(f"\n  [OK]   confianza {est.confianza_pct:.1f} %  (mínimo {UMBRAL_CONFIANZA_PCT:.0f} %)")
-    else:
-        print(f"\n  [FALLA]confianza {est.confianza_pct:.1f} %, bajo el mínimo de "
-              f"{UMBRAL_CONFIANZA_PCT:.0f} %: falta un driver o está roto")
-
     if est.listo:
         print("\n  LISTO: relojes frescos y el modelo ve\n")
     else:
@@ -395,9 +344,9 @@ def imprimir_estado(est: EstadoDatos) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Cadena de datos del Playbook Cuantitativo.")
+    parser = argparse.ArgumentParser(description="Cadena de datos macro y precios.")
     parser.add_argument("--estado", action="store_true",
-                        help="Solo reporta la frescura de las tres fuentes; no ejecuta nada.")
+                        help="Solo reporta la frescura de las fuentes; no ejecuta nada.")
     args = parser.parse_args()
 
     if args.estado:
