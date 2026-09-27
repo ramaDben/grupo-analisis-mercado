@@ -1268,7 +1268,15 @@ def test_validar_datos_encuesta_errores(pregunta, opciones, motivo):
 
 
 def test_enviar_encuesta_dry_run():
-    """Verifica que enviar_encuesta en modo dry-run simule correctamente sin tocar el navegador."""
+    """Verifica que enviar_encuesta en modo dry-run simule correctamente sin tocar el navegador.
+
+    El reloj va fijo en un martes a mediodía: la ventana de encuestas rechaza las
+    de USD/CLP en fin de semana, y un test que lee el reloj real falla los sábados
+    y domingos sin que nada haya cambiado.
+    """
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
     from whatsapp_sender import WhatsAppSender
 
     sender = WhatsAppSender()
@@ -1278,6 +1286,7 @@ def test_enviar_encuesta_dry_run():
         opciones=["🟢 Sobre 930", "🟡 En 925-930", "🔴 Bajo 925"],
         permitir_multiples=False,
         dry_run=True,
+        ahora=datetime(2026, 9, 22, 12, 0, tzinfo=ZoneInfo("America/Santiago")),
     )
     assert res["status"] == "simulado"
     assert res["destinatario"] == "Grupo Inteligencia | Dólar & FX"

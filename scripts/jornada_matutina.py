@@ -4,7 +4,7 @@
 
 Blindaje integral del flujo end-to-end:
 1. Diagnóstico previo (MetaTrader 5, sesión de WhatsApp, Playwright).
-2. Cadena de datos macroeconómicos soberanos (ingesta -> precios -> sesgo).
+2. Cadena de datos macroeconómicos soberanos (ingesta -> precios).
 3. Verificación de vigencia y relojes (pipeline_datos --estado).
 4. Agenda macro y alertas del día.
 5. Preparación del carrusel cuantitativo (Screener GI).
@@ -54,25 +54,28 @@ DIR_CARRUSEL = RAIZ / "data" / "carrusel"
 
 
 def resolver_ultima_tanda(tanda_especifica: str | Path | None = None) -> Path:
-    """Obtiene el directorio de la tanda solicitada o la más reciente de hoy."""
+    """Obtiene el directorio de la tanda solicitada o la más reciente de HOY.
+
+    **Sin respaldo a días anteriores.** Si hoy no hay tanda, se detiene: un
+    `--despachar --confirmar` sin argumento que tomara la última tanda existente
+    mandaría a los clientes la de ayer, con fecha y niveles de ayer.
+    """
     if tanda_especifica:
         p = Path(tanda_especifica)
         if not p.is_absolute():
-            p = DIR_CARRUSEL / p
+            p = RAIZ / p if (RAIZ / p).is_dir() else DIR_CARRUSEL / p
         if not p.is_dir():
             raise FileNotFoundError(f"El directorio de tanda no existe: {p}")
         return p
 
     hoy = datetime.now(tz=SANTIAGO).strftime("%Y-%m-%d")
-    tandas_hoy = sorted([d for d in DIR_CARRUSEL.iterdir() if d.is_dir() and d.name.startswith(hoy)])
+    tandas_hoy = sorted(d for d in DIR_CARRUSEL.iterdir() if d.is_dir() and d.name.startswith(hoy))
     if tandas_hoy:
         return tandas_hoy[-1]
 
-    todas = sorted([d for d in DIR_CARRUSEL.iterdir() if d.is_dir()])
-    if todas:
-        return todas[-1]
-
-    raise FileNotFoundError(f"No hay tandas en {DIR_CARRUSEL}")
+    raise FileNotFoundError(
+        f"No hay tandas de hoy ({hoy}) en {DIR_CARRUSEL}. Prepara una o pasa la tanda explícita."
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -145,7 +148,7 @@ def diagnosticar_entorno() -> dict[str, Any]:
 # Gate 1: Cadena de Datos Macroeconómicos
 # ─────────────────────────────────────────────────────────────────────────────
 def ejecutar_cadena_datos() -> bool:
-    """Ejecuta los 3 pasos de datos macro (ingesta soberana -> precios MT5 -> sesgo) y valida el estado."""
+    """Ejecuta los pasos de datos (ingesta soberana -> precios MT5) y valida el estado."""
     print("\n📦 [Gate 1] Ejecutando cadena de datos macroeconómicos...", flush=True)
     cmd = ["uv", "run", "--with", "MetaTrader5", "python", str(SCRIPTS / "pipeline_datos.py")]
     res = subprocess.run(cmd, cwd=RAIZ, text=True, encoding="utf-8", errors="replace")

@@ -54,3 +54,25 @@ def test_despachar_oficial_se_niega_sin_confirmacion(tmp_path):
     # Sin el flag confirmado=True, debe retornar False inmediatamente para proteger la producción
     resultado = despachar_oficial(tmp_path, confirmado=False)
     assert resultado is False
+
+
+def test_sin_tanda_de_hoy_no_toma_la_de_ayer(tmp_path, monkeypatch):
+    """Un `--despachar --confirmar` sin argumento no puede mandar la tanda de ayer."""
+    import scripts.jornada_matutina as jm
+
+    (tmp_path / "2020-01-01_08-00_apertura_ny").mkdir()
+    monkeypatch.setattr(jm, "DIR_CARRUSEL", tmp_path)
+    with pytest.raises(FileNotFoundError, match="No hay tandas de hoy"):
+        jm.resolver_ultima_tanda()
+
+
+def test_con_tanda_de_hoy_toma_la_mas_reciente(tmp_path, monkeypatch):
+    import scripts.jornada_matutina as jm
+    from datetime import datetime
+
+    hoy = datetime.now(tz=jm.SANTIAGO).strftime("%Y-%m-%d")
+    for hora in ("08-00", "10-30"):
+        (tmp_path / f"{hoy}_{hora}_tanda").mkdir()
+    (tmp_path / "2020-01-01_23-59_vieja").mkdir()
+    monkeypatch.setattr(jm, "DIR_CARRUSEL", tmp_path)
+    assert jm.resolver_ultima_tanda().name == f"{hoy}_10-30_tanda"
