@@ -176,7 +176,7 @@ def _leer(ruta: Path) -> tuple[dict | None, str | None]:
 
 def _evaluar(reloj: Reloj, as_of: str | None, ahora: datetime | None) -> Reloj:
     """Aplica el mismo umbral de staleness del Playbook, fin de semana incluido."""
-    from market_data_mcp.bias_reader import cargar_config_staleness, validar_staleness
+    from market_data_mcp.frescura import cargar_config_staleness, validar_staleness
 
     fresco, horas, umbral, razon = validar_staleness(
         as_of, cargar_config_staleness(), now_dt=ahora

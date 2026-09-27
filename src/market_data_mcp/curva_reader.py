@@ -36,7 +36,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from market_data_mcp.bias_reader import cargar_config_staleness, validar_staleness
+from market_data_mcp.frescura import cargar_config_staleness, validar_staleness
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 ARCHIVO_DEFAULT = BASE_DIR / "data central" / "DATA USA" / "raw" / "treasury_fed_data.json"

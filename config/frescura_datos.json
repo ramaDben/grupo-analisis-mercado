@@ -1,0 +1,5 @@
+{
+  "_nota": "Umbral de frescura de los datos macro (lo leen pipeline_datos --estado y get_curva_tasas). Dias habiles: 24 h. Fin de semana y lunes: 80 h, que cubre desde el viernes 17:00 CLT hasta el lunes en la noche.",
+  "staleness_hours_weekday": 24.0,
+  "staleness_hours_weekend": 80.0
+}
