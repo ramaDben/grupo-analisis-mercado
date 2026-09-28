@@ -1159,5 +1159,77 @@
     "pieza": "0_encuesta",
     "activo": "",
     "huella": "¿LograráBitcoindefendersussoportesdurantelanoche?"
+  },
+  {
+    "fecha": "2026-09-28",
+    "hora": "11:10",
+    "tanda": "2026-09-28_10-39_apertura_ny",
+    "canal": "01_macro_y_apertura",
+    "pieza": "0_contexto_macro",
+    "activo": "",
+    "huella": "📊*CONTEXTOMACRODIARIO*📅28/09/2026·11:02hrshoraChile━━━━━━━━━━━━━━━━━━━📅*AGENDADELDÍA*⚪Sindatosdealtoimpactoparaestecanalenlajornada.━━━━━━━━━━━━━━━━━━━📊*VIX,elíndicedevolatilidaddeWallStreet*:16,00·+7,6%hoy_(actualizado11:02hrsChile)_🎯*Quésignifica*:máscautela:elmercadolebajaelapetitoalriesgoybuscarefugio.━━━━━━━━━━━━━━━━━━━💡Enlaimagenadjuntavaelgráficodelasúltimasruedas.Vamossiguiendoelmercadodurantelajornada."
+  },
+  {
+    "fecha": "2026-09-28",
+    "hora": "11:11",
+    "tanda": "2026-09-28_10-39_apertura_ny",
+    "canal": "02_forex_divisas",
+    "pieza": "0_contexto_macro",
+    "activo": "",
+    "huella": "📊*CONTEXTOMACRODIARIO·FOREX&DIVISAS*📅28/09/2026·11:02hrshoraChile━━━━━━━━━━━━━━━━━━━📅*AGENDADELDÍA*⚪Sindatosdealtoimpactoparaestecanalenlajornada.━━━━━━━━━━━━━━━━━━━📊*Dólarglobal(DXY)*:101,18·+0,21%hoy_(actualizado11:02hrsChile)_🎯*Quésignifica*:eldólarganafuerzafrentealeuro,lalibrayelpesochileno.━━━━━━━━━━━━━━━━━━━💡Enlaimagenadjuntavaelgráficodelasúltimasruedas.Enseguidacompartimoslosnivelesparaoperarlajornada."
+  },
+  {
+    "fecha": "2026-09-28",
+    "hora": "11:12",
+    "tanda": "2026-09-28_10-39_apertura_ny",
+    "canal": "02_forex_divisas",
+    "pieza": "1_usdclp",
+    "activo": "",
+    "huella": "🎯Activo:Dólar/PesoChileno(USDCLP)📌Nivelavigilar:974,09⚡Quéesperar:sesgocomprador;sobre974,09ganacaminoalalza━━━━━━━━━━━━━━━━━━━*Eldólarsubeconfuerzafrentealpesoyyasuperóloquesemueveenundíanormal*Precioactual:969,90━━━━━━━━━━━━━━━━━━━🟢Sobre974,09→fuerzacompradora🟡Entre956,92y974,09→rango:sirompeunbordeyvuelveaentrar,esfalsoquiebreyelobjetivopasaaserelbordecontrario🔴Bajo956,92→presiónvendedora━━━━━━━━━━━━━━━━━━━⏱️*Temporalidad*:1H·marcointradía(dentrodelajornada)💡Porqué1Hacá:semuevepocodentrodeldía,asíquemarcosmásamplios(1H/4H)danunalecturamáslimpia;en15MaparecemuchoruidoAtentosalosbordes:ahíestálaoperativadeldía."
+  },
+  {
+    "fecha": "2026-09-28",
+    "hora": "11:12",
+    "tanda": "2026-09-28_10-39_apertura_ny",
+    "canal": "02_forex_divisas",
+    "pieza": "2_gbpusd",
+    "activo": "",
+    "huella": "🎯Activo:Libra/Dólar(GBPUSD)📌Nivelavigilar:1,33735⚡Quéesperar:sesgocomprador;sobre1,33735ganacaminoalalza━━━━━━━━━━━━━━━━━━━*Lalibrasesostieneapenassobresupromediode50horas,coneldólarganandofuerza*Precioactual:1,32656━━━━━━━━━━━━━━━━━━━🟢Sobre1,33735→fuerzacompradora🟡Entre1,32270y1,33735→rango:sirompeunbordeyvuelveaentrar,esfalsoquiebreyelobjetivopasaaserelbordecontrario🔴Bajo1,32270→presiónvendedora━━━━━━━━━━━━━━━━━━━⏱️*Temporalidad*:1H·marcointradía(dentrodelajornada)💡Porqué1Hacá:lalibrareaccionafuertealasreunionesdelBancodeInglaterraydelaFed,yentrereuniónyreuniónsemueveentramosparejos:1Hdalalecturadeldíay4Hlatendenciadelasemana¿Cómolovestú?Teleemosenelgrupo."
+  },
+  {
+    "fecha": "2026-09-28",
+    "hora": "11:13",
+    "tanda": "2026-09-28_10-39_apertura_ny",
+    "canal": "03_commodities_materias_primas",
+    "pieza": "0_contexto_macro",
+    "activo": "",
+    "huella": "📊*CONTEXTOMACRODIARIO·COMMODITIES&MATERIASPRIMAS*📅28/09/2026·11:02hrshoraChile━━━━━━━━━━━━━━━━━━━📅*AGENDADELDÍA*⚪Sindatosdealtoimpactoparaestecanalenlajornada.━━━━━━━━━━━━━━━━━━━📈*Bonoa10añosdeEE.UU.*:5,22%·+4,0bpshoy_(envivo,11:02hrsChile)_🎯*Quésignifica*:manteneroroyplataseencarece:presiónalabajasobrelosmetales.━━━━━━━━━━━━━━━━━━━💡Enlaimagenadjuntavaelgráficodelasúltimasruedas.Enseguidacompartimoslosnivelesparaoperarlajornada."
+  },
+  {
+    "fecha": "2026-09-28",
+    "hora": "11:14",
+    "tanda": "2026-09-28_10-39_apertura_ny",
+    "canal": "03_commodities_materias_primas",
+    "pieza": "1_copper",
+    "activo": "",
+    "huella": "🎯Activo:CobreGradoA(COPPER)📌Nivelavigilar:14.395⚡Quéesperar:sesgovendedor;bajo14.395ganacaminoalabaja━━━━━━━━━━━━━━━━━━━*Elcobresiguebajopresiónvendedorayoperacercadesusoporte*Precioactual:14.434━━━━━━━━━━━━━━━━━━━🟢Sobre14.566→fuerzacompradora🟡Entre14.395y14.566→rango:sirompeunbordeyvuelveaentrar,esfalsoquiebreyelobjetivopasaaserelbordecontrario🔴Bajo14.395→presiónvendedora━━━━━━━━━━━━━━━━━━━⏱️*Temporalidad*:1H·marcointradía(dentrodelajornada)💡Porqué1Hacá:elcobresemueveconlademandadeChinayconlosinventarios,entramosampliosquetardanhorasenformarse:en15Melmovimientotodavíanosedistinguedelruido,asíque1Heselmarcodeldíay4HeldelatendenciaVamossiguiendolareaccióndelprecioenesosnivelesdurantelajornada."
+  },
+  {
+    "fecha": "2026-09-28",
+    "hora": "11:15",
+    "tanda": "2026-09-28_10-39_apertura_ny",
+    "canal": "03_commodities_materias_primas",
+    "pieza": "2_xauusd",
+    "activo": "",
+    "huella": "🎯Activo:Oro(XAUUSD)📌Nivelavigilar:4.124,47⚡Quéesperar:sesgovendedor;bajo4.124,47ganacaminoalabaja━━━━━━━━━━━━━━━━━━━*EloromantienelapresiónvendedoramientrassubenlastasasdeEE.UU.*Precioactual:4.141,92━━━━━━━━━━━━━━━━━━━🟢Sobre4.288,31→fuerzacompradora🟡Entre4.124,47y4.288,31→rango:sirompeunbordeyvuelveaentrar,esfalsoquiebreyelobjetivopasaaserelbordecontrario🔴Bajo4.124,47→presiónvendedora━━━━━━━━━━━━━━━━━━━⏱️*Temporalidad*:1H·marcointradía(dentrodelajornada)💡Porqué1Hacá:semuevemuchoyrápido,poresoen15Mhayseñalesvelocesperoconmásruido;1H/4HordenanmejorlatendenciadeldíaLaconfiguraciónestáclara:elpreciodecideporquéladosale."
+  },
+  {
+    "fecha": "2026-09-28",
+    "hora": "11:15",
+    "tanda": "2026-09-28_10-39_apertura_ny",
+    "canal": "03_commodities_materias_primas",
+    "pieza": "3_wtispot",
+    "activo": "",
+    "huella": "🎯Activo:PetróleoWTI(WTI.spot)📌Nivelavigilar:97,535⚡Quéesperar:sesgocomprador;sobre97,535ganacaminoalalza━━━━━━━━━━━━━━━━━━━*Elpetróleosemantienealalza,peropegadoasuresistenciayconpocorecorridohoy*Precioactual:96,891━━━━━━━━━━━━━━━━━━━🟢Sobre97,535→fuerzacompradora🟡Entre95,473y97,535→rango:sirompeunbordeyvuelveaentrar,esfalsoquiebreyelobjetivopasaaserelbordecontrario🔴Bajo95,473→presiónvendedora━━━━━━━━━━━━━━━━━━━⏱️*Temporalidad*:1H·marcointradía(dentrodelajornada)💡Porqué1Hacá:reaccionafuerteainventariosynoticiasOPEP+,asíque1H/4Hdanunalecturamásestable;en15Melruidoesalto¿Cómolovestú?Teleemosenelgrupo."
   }
 ]
