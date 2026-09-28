@@ -139,7 +139,15 @@ def formatear(valor: float, digits: int) -> str:
 
 
 def _pct(valor: Any) -> str:
+    if valor is None:
+        return "sin dato"
     return f"{float(valor):+.2f}%".replace(".", ",")
+
+
+def _nivel(fila: dict[str, Any], campo: str) -> str:
+    """Un nivel formateado, o vacío si el terminal no lo entregó."""
+    valor = fila.get(campo)
+    return "" if valor is None else formatear(valor, fila["digits"])
 
 
 # ---------------------------------------------------------------- preparar
@@ -189,23 +197,45 @@ def leer_activos(tickers: list[str]) -> tuple[dict[str, dict[str, Any]], list[st
     return salida, avisos
 
 
-def leer_curva() -> tuple[dict[str, Any], list[str]]:
+def leer_curva(ahora: datetime, vivo: dict[str, dict[str, Any]] | None = None) -> tuple[dict[str, Any], list[str]]:
+    """La curva de `data central/`, con el rendimiento del día donde lo hay.
+
+    FRED publica con días de rezago: el 2026-09-28 el archivo decía 5,18% (dato
+    del 24) mientras el 10 años cotizaba 5,27%. Un carrusel que se publica hoy no
+    puede traer la tasa de la semana pasada, así que se usa `rendimientos_en_vivo`,
+    la misma fuente que el carrusel de WhatsApp, y solo si la cotización es de hoy.
+    La variación a 5 días sigue siendo la del archivo y la ficha lo dice.
+    """
     from market_data_mcp.curva_reader import cargar_curva_tasas
 
     res = cargar_curva_tasas(serie="ALL")
     if "error" in res:
         return {}, [f"curva del Tesoro no disponible ({res['error']})"]
+    if vivo is None:
+        try:
+            from market_data_mcp.tasas_en_vivo import rendimientos_en_vivo
+
+            vivo = rendimientos_en_vivo(tuple(_TRAMOS))
+        except ImportError:
+            vivo = {}
     series = res.get("series", {})
-    return {
-        codigo: {
+    curva: dict[str, Any] = {}
+    for codigo, nombre in _TRAMOS.items():
+        if codigo not in series:
+            continue
+        fila = {
             "nombre": nombre,
             "nivel_pct": series[codigo].get("nivel_pct"),
             "delta_5d_bps": series[codigo].get("delta_5d_bps"),
             "fecha_dato": series[codigo].get("fecha_dato"),
+            "fuente": "FRED / Tesoro (archivo)",
         }
-        for codigo, nombre in _TRAMOS.items()
-        if codigo in series
-    }, []
+        cotizacion = vivo.get(codigo)
+        if cotizacion and cotizacion["momento"].astimezone(SANTIAGO).date() == ahora.date():
+            fila.update(nivel_pct=cotizacion["valor"], fecha_dato=cotizacion["fecha"],
+                        fuente=cotizacion.get("fuente", "en vivo"))
+        curva[codigo] = fila
+    return curva, []
 
 
 def leer_agenda(ahora: datetime) -> tuple[list[dict[str, Any]], list[str]]:
@@ -297,7 +327,7 @@ def armar_payload(
 def preparar(formato: str, tickers: list[str], principal: str | None) -> Path:
     ahora = datetime.now(SANTIAGO)
     activos, av1 = leer_activos(tickers)
-    curva, av2 = leer_curva()
+    curva, av2 = leer_curva(ahora)
     agenda, av3 = leer_agenda(ahora) if formato == "agenda" else ([], [])
     payload = armar_payload(formato, activos, curva, agenda, av1 + av2 + av3, ahora, principal)
     destino = DIR_TRABAJO / f"{ahora:%Y-%m-%d_%H-%M}_{formato}"
@@ -331,7 +361,9 @@ def validar_vision(vision: dict[str, Any], hoy: date, motivo_antigua: str | None
         fecha = date.fromisoformat(str(vision["fecha"]))
     except ValueError:
         return errores + [f"visión {vid}: fecha ilegible ({vision['fecha']}); va AAAA-MM-DD"]
-    if fecha > hoy:
+    # Un día de margen: una nota de Tokio o Sídney ya lleva la fecha de mañana
+    # cuando en Santiago todavía es hoy.
+    if (fecha - hoy).days > 1:
         errores.append(f"visión {vid}: fecha futura ({fecha})")
     edad = (hoy - fecha).days
     if edad > ANTIGUEDAD_MAX_DIAS and not (motivo_antigua or "").strip():
@@ -345,9 +377,59 @@ def validar_vision(vision: dict[str, Any], hoy: date, motivo_antigua: str | None
 # ---------------------------------------------------------------- validar
 
 
+def leido_en(payload: dict[str, Any]) -> datetime:
+    """La hora de lectura de los datos, en Santiago si el payload perdió la zona.
+
+    Un payload editado a mano puede quedar con `2026-09-28T12:18` sin offset, y
+    restar un datetime sin zona de uno con zona lanza TypeError en vez de avisar.
+    """
+    leido = datetime.fromisoformat(payload["datos"]["leido_en"])
+    return leido if leido.tzinfo else leido.replace(tzinfo=SANTIAGO)
+
+
 # Miles con punto solo en grupos de tres, para que el punto final de una frase
 # ("llegó a $971.") no quede pegado a la cifra.
 _PRECIO = re.compile(r"(?:US\$|\$)\s?(\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:,\d+)?)")
+
+# Toda cifra, con o sin moneda. No se exige que calce exacto (fallarían "50
+# días" o "0,24 puntos"): se usa para el freno por cercanía, más abajo.
+_NUMERO = re.compile(r"(?<![\d.,])(\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:,\d+)?)(?![\d.,]*\d)(?!\s?%)")
+
+# Qué tan cerca de un precio medido tiene que estar una cifra para leerse como
+# ese precio. 3% cubre la cifra de ayer o la de hace unas horas sin alcanzar
+# a los niveles vecinos de activos distintos.
+CERCANIA_PRECIO = 0.03
+
+
+def _a_float(cifra: str) -> float:
+    return float(cifra.replace(".", "").replace(",", "."))
+
+
+def cifras_parecidas_no_medidas(texto: str, payload: dict[str, Any], permitidas: set[str]) -> list[str]:
+    """Cifras sin `$` que se parecen a un precio medido pero no son ese precio.
+
+    `_PRECIO` solo ve lo que lleva `$`, y un nivel de índice nunca lo lleva
+    (30.379,37), ni un "USD 971". Exigir que toda cifra del texto calce fallaría
+    con "50 días" o "0,24 puntos". Así que se busca el caso que de verdad se
+    escapa: una cifra a menos de `CERCANIA_PRECIO` de un precio del terminal que
+    no coincide con ninguno. Es la cifra de ayer copiada, o un nivel redondeado.
+    """
+    referencias = [
+        float(fila[c])
+        for fila in payload["datos"]["activos"].values()
+        for c in CAMPOS_PRECIO
+        if fila.get(c) not in (None, 0)
+    ]
+    dudosas: list[str] = []
+    for cifra in _NUMERO.findall(texto):
+        if cifra in permitidas:
+            continue
+        valor = _a_float(cifra)
+        if 1900 <= valor <= 2100 and "," not in cifra and "." not in cifra:
+            continue  # un año
+        if any(abs(valor - ref) / ref <= CERCANIA_PRECIO for ref in referencias):
+            dudosas.append(cifra)
+    return dudosas
 
 
 def _textos(editorial: dict[str, Any]) -> list[tuple[str, str]]:
@@ -415,14 +497,21 @@ def validar(payload: dict[str, Any], registro: dict[str, dict[str, Any]], ahora:
 
     permitidas = cifras_permitidas(payload, usadas)
     for donde, texto in _textos(editorial):
-        for cifra in _PRECIO.findall(texto):
+        con_moneda = _PRECIO.findall(texto)
+        for cifra in con_moneda:
             if cifra not in permitidas:
                 errores.append(
                     f"{donde}: la cifra ${cifra} no sale del terminal ni de una cita registrada. "
                     "Usa la medida o declárala en `cifras_citadas` con su motivo."
                 )
+        for cifra in cifras_parecidas_no_medidas(texto, payload, permitidas):
+            if cifra not in con_moneda:
+                errores.append(
+                    f"{donde}: {cifra} se parece a un precio medido pero no es ninguno. "
+                    "Usa la cifra exacta del terminal o declárala en `cifras_citadas`."
+                )
 
-    leido = datetime.fromisoformat(payload["datos"]["leido_en"])
+    leido = leido_en(payload)
     horas = (ahora - leido).total_seconds() / 3600
     if horas > FRESCURA_MAX_HORAS and not aceptar_datos_viejos:
         errores.append(
@@ -437,8 +526,9 @@ def validar(payload: dict[str, Any], registro: dict[str, dict[str, Any]], ahora:
 
 def mapa_niveles(fila: dict[str, Any]) -> list[str]:
     """El cierre canónico de tres escenarios, armado con cifras medidas."""
-    d = fila["digits"]
-    s1, r1, r2, s2 = (formatear(fila[c], d) for c in ("s1", "r1", "r2", "s2"))
+    if any(fila.get(c) is None for c in ("s1", "r1", "r2", "s2")):
+        return ["Mapa no disponible: el terminal no entregó soporte o resistencia. No inventarlo."]
+    s1, r1, r2, s2 = (_nivel(fila, c) for c in ("s1", "r1", "r2", "s2"))
     return [
         f"🟢 Sobre **{r1}** → fuerza compradora; siguiente nivel **{r2}**",
         f"🟡 Entre **{s1}** y **{r1}** → rango: si rompe un borde y vuelve a entrar, "
@@ -466,8 +556,7 @@ def _tabla_activos(activos: dict[str, dict[str, Any]]) -> list[str]:
         "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for f in activos.values():
-        d = f["digits"]
-        n = {c: formatear(f[c], d) if f.get(c) is not None else "" for c in CAMPOS_PRECIO}
+        n = {c: _nivel(f, c) for c in CAMPOS_PRECIO}
         filas.append(
             f"| {f['nombre']} | {n['price']} | {_pct(f['change_pct'])} | {f['direccion'].capitalize()} "
             f"| {n['s2']} | {n['s1']} | {n['r1']} | {n['r2']} | {n['ema_50']} | {f.get('rsi_14', '')} |"
@@ -496,7 +585,7 @@ def construir_brief(payload: dict[str, Any], registro: dict[str, dict[str, Any]]
     editorial = payload["editorial"]
     datos = payload["datos"]
     aceptadas = editorial.get("aceptar_antiguas", {})
-    leido = datetime.fromisoformat(datos["leido_en"])
+    leido = leido_en(payload)
     principal = payload.get("activo_principal")
 
     md: list[str] = [
@@ -536,8 +625,8 @@ def construir_brief(payload: dict[str, Any], registro: dict[str, dict[str, Any]]
         md += ["", f"### Pág. {n} · Qué mirar en cada activo", "",
                "| Activo | Dirección | Nivel a vigilar |", "| --- | --- | --- |"]
         for f in datos["activos"].values():
-            nivel = f["r1"] if f["direccion"] == "ALCISTA" else f["s1"]
-            md.append(f"| {f['nombre']} | {f['direccion'].capitalize()} | {formatear(nivel, f['digits'])} |")
+            nivel = _nivel(f, "r1" if f["direccion"] == "ALCISTA" else "s1")
+            md.append(f"| {f['nombre']} | {f['direccion'].capitalize()} | {nivel} |")
         md += ["", f"- Remate: {editorial['paginas']['cierre_agenda']['remate']}", ""]
 
     md += ["### Copy del post", ""]
@@ -548,12 +637,13 @@ def construir_brief(payload: dict[str, Any], registro: dict[str, dict[str, Any]]
     md += _tabla_activos(datos["activos"])
     md += ["", "Decimales según el broker (`digits` del catálogo). La dirección es precio contra la media de 50 días.", ""]
     if datos.get("curva"):
-        md += ["| Tasa | Nivel | Cambio 5 días | Fecha del dato |", "| --- | --- | --- | --- |"]
+        md += ["| Tasa | Nivel | Cambio 5 días (archivo) | Fecha del dato | Fuente del nivel |",
+               "| --- | --- | --- | --- | --- |"]
         for c in datos["curva"].values():
             nivel = f"{c['nivel_pct']:.2f}%".replace(".", ",") if c.get("nivel_pct") is not None else ""
             delta = c.get("delta_5d_bps")
             cambio = "sin dato" if delta is None else f"{delta / 100:+.2f} puntos".replace(".", ",")
-            md.append(f"| {c['nombre']} | {nivel} | {cambio} | {c.get('fecha_dato', '')} |")
+            md.append(f"| {c['nombre']} | {nivel} | {cambio} | {c.get('fecha_dato', '')} | {c.get('fuente', '')} |")
         md.append("")
     md += ["Todo nivel citado en el texto va dibujado en el gráfico. Las series salen del terminal "
            "(`scripts/serie_mt5.py`, `scripts/tradingview_grafico.py`), nunca a mano.", ""]

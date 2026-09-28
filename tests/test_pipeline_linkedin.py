@@ -184,6 +184,77 @@ def test_datos_viejos_se_detienen_salvo_aceptados():
     assert pl.validar(p, REGISTRO, tarde, aceptar_datos_viejos=True) == []
 
 
+@pytest.mark.parametrize("texto", [
+    "El dólar está en 968,42 pesos.",      # una cifra de otra lectura, sin $
+    "Cotiza cerca de USD 969.",            # otra moneda escrita
+    "El precio llegó a US$ 971,0.",        # con espacio y un decimal
+])
+def test_cifra_sin_signo_parecida_a_un_precio_se_detiene(texto):
+    p = _completo()
+    p["editorial"]["paginas"]["lectura"]["texto"] = texto
+    assert pl.validar(p, REGISTRO, AHORA), texto
+
+
+@pytest.mark.parametrize("texto", [
+    "Mira los 50 días y los 0,24 puntos de la tasa.",
+    "La Fed está en 3,75%-4,00% y la TPM en 4,50%.",
+    "Resistencia en 974,50 y soporte en 960,90.",
+    "Pasó en 2026 y el cobre cotiza 14395 USD/t.",
+])
+def test_cifras_legitimas_sin_signo_no_frenan(texto):
+    p = _completo()
+    p["editorial"]["paginas"]["lectura"]["texto"] = texto
+    assert pl.validar(p, REGISTRO, AHORA) == []
+
+
+def test_nivel_de_indice_distinto_al_medido_se_detiene():
+    p = _completo()
+    p["datos"]["activos"]["US100.spot"] = {
+        "nombre": "Nasdaq 100", "digits": 2, "price": 30165.57, "s2": 28886.84, "s1": 28935.51,
+        "r1": 30379.37, "r2": 30724.16, "ema_50": 29604.49, "donchian_50_high": 30844.97,
+        "donchian_50_low": 27962.66, "change_pct": -0.92, "rsi_14": 61.1, "direccion": "ALCISTA",
+    }
+    p["editorial"]["paginas"]["lectura"]["texto"] = "El Nasdaq vigila 30.400,00."
+    assert any("30.400,00" in e for e in pl.validar(p, REGISTRO, AHORA))
+    p["editorial"]["paginas"]["lectura"]["texto"] = "El Nasdaq vigila 30.379,37."
+    assert pl.validar(p, REGISTRO, AHORA) == []
+
+
+def test_leido_en_sin_zona_se_lee_en_santiago():
+    p = _completo()
+    p["datos"]["leido_en"] = "2026-09-28T12:00"
+    assert pl.validar(p, REGISTRO, AHORA) == []
+
+
+def test_vision_con_fecha_de_manana_se_acepta_por_husos():
+    manana = dict(REGISTRO["reciente"], fecha="2026-09-29")
+    assert pl.validar_vision(manana, AHORA.date(), None) == []
+
+
+def test_brief_no_se_rompe_con_niveles_ausentes():
+    p = _completo()
+    p["datos"]["activos"]["USDCLP"]["s1"] = None
+    p["datos"]["activos"]["USDCLP"]["change_pct"] = None
+    brief = pl.construir_brief(p, REGISTRO)
+    assert "Mapa no disponible" in brief and "sin dato" in brief
+
+
+def test_curva_usa_la_cotizacion_de_hoy_y_no_la_de_otro_dia(monkeypatch):
+    import market_data_mcp.curva_reader as cr
+
+    monkeypatch.setattr(cr, "cargar_curva_tasas", lambda serie="ALL": {"series": {
+        "DGS10": {"nivel_pct": 5.18, "delta_5d_bps": 24, "fecha_dato": "2026-09-24"},
+        "DGS2": {"nivel_pct": 4.87, "delta_5d_bps": 20, "fecha_dato": "2026-09-24"},
+    }})
+    vivo = {
+        "DGS10": {"valor": 5.27, "fecha": "2026-09-28", "momento": AHORA, "fuente": "CNBC"},
+        "DGS2": {"valor": 4.95, "fecha": "2026-09-25", "momento": AHORA - timedelta(days=3), "fuente": "CNBC"},
+    }
+    curva, _ = pl.leer_curva(AHORA, vivo=vivo)
+    assert curva["DGS10"]["nivel_pct"] == 5.27 and curva["DGS10"]["fuente"] == "CNBC"
+    assert curva["DGS2"]["nivel_pct"] == 4.87, "una cotización de otro día no reemplaza al archivo"
+
+
 # ------------------------------------------------------------ brief
 
 
