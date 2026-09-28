@@ -3,8 +3,8 @@
 **Fecha:** 2026-09-28 · **Rama:** `feat/pieza-avisos-vision`, que parte de `feat/linkedin-pipeline` (PR #241, se mergea primero)
 **Estado:** diseño aprobado por el director. Reemplaza al spec de una pieza diaria
 (`2026-09-28-pieza-avisos-vision-design.md`, en el historial git), que ya había pasado una
-revisión de AGY; esos hallazgos siguen incorporados (sección 10). Pendiente: revisión de AGY de
-esta versión.
+revisión de AGY; esos hallazgos siguen incorporados (sección 12). Esta versión la revisó AGY y sus
+hallazgos están incorporados (sección 11).
 
 ## 1. Objetivo
 
@@ -189,17 +189,36 @@ Tres cambios:
    importadas en forma perezosa para no crear una importación circular). **Una pieza sin
    `_plantilla` se trata exactamente como hoy**, y un test lo fija: el carrusel temático no
    cambia.
-2. **El cupo se verifica por canal antes de empezar.** El sender comprueba el cupo por acción, así
-   que un carrusel podría salir hasta la lámina 2 y cortarse. Antes del primer envío de un canal,
-   el despacho compara las piezas pendientes contra el cupo restante y, si no alcanza, no envía
-   ninguna y lo informa. Un carrusel a medias es peor que ninguno.
+2. **El cupo se verifica por canal antes de empezar.** El sender comprueba el cupo por acción
+   (`_esperar_turno` dentro del bucle de `enviar_lote`), así que un carrusel podría salir hasta la
+   lámina 2 y cortarse. El sender gana un método público de solo lectura, `cupo_restante()`, que
+   lee el mismo contador que `_esperar_turno`; antes del primer envío de un canal de Avisos, el
+   despacho compara las piezas pendientes (descontando las ya anotadas en la bitácora) contra ese
+   cupo y, si no alcanza, no envía ninguna y lo informa. Un carrusel a medias es peor que ninguno.
+   El freno por acción del sender queda intacto: este se suma, no lo reemplaza.
 3. **Una divergencia frena el canal entero.** Si al refrescar el precio cruzó un nivel o la
    dirección dio vuelta (`divergencia_editorial`), o si una cifra del texto dejó de coincidir con
    la medida (`validar_cifras`), no sale **ninguna** lámina del carrusel: la portada y la lectura
    citan el mismo precio que la alerta. Para el carrusel temático sigue valiendo pieza a pieza.
 
+4. **Un refresco fallido no deja salir un carrusel viejo.** Hoy, si `analizar_activo` falla en el
+   refresco, la pieza "sale con los datos de la preparación", y una pieza sin ticker en
+   `_procedencia` "se despacha tal cual". Para una alerta suelta es un aviso aceptable; para un
+   carrusel con frescura de 2 h deja pasar precios viejos. En una tanda de Avisos: un refresco
+   fallido frena el canal si la lectura de la preparación tiene más de 2 h
+   (`validar_frescura`), y toda lámina con precio lleva `_procedencia.ticker`. Las láminas sin
+   precio (la agenda del lunes, la lectura) declaran en la tabla de refresco una función nula
+   explícita, no una ausencia: así ninguna pieza cae en el camino "tal cual" sin que alguien lo
+   haya decidido.
+
 La bitácora (`data/historial_despachos.json`), la cadencia de 45 s y la reanudación quedan como
-están.
+están. **Al reanudar un carrusel cortado a mitad**, solo salen las láminas que faltan y WhatsApp
+puede no agruparlas con las primeras; el pie de posición (*"3/4 · Nuestros datos"*) es lo que le
+conserva el contexto al lector, y por eso es obligatorio en toda lámina.
+
+**El orden de las láminas** lo da `sorted(glob("*.png"))`, que ordena como texto: vale mientras
+un carrusel tenga menos de 10 láminas (con 10, `10_` iría antes que `2_`). Hoy son 4 como
+máximo; `pipeline_avisos` rechaza armar más de 9.
 
 ### 3.8 Momentos del reloj
 
@@ -310,14 +329,40 @@ canal se deriva del mapeo real de alias a grupo. Se actualiza "El reloj de suces
 | `.agents/rules/proyecto.md`, `.agents/workflows/avisos.md` | Regenerados |
 | `tests/test_pipeline_avisos.py`, `test_pipeline_carrusel.py`, `test_reloj_gi.py`, `test_agenda_mercado.py`, `test_pipeline_linkedin.py`, `test_story_render.py` | Casos nuevos |
 
-## 9. Riesgo principal
+## 9. Entrega en dos hitos
+
+Por sugerencia de AGY, el trabajo se parte en dos PR, cada uno con su plan:
+
+| Hito | Contenido | Toca el camino al cliente |
+|---|---|---|
+| 1 | Frenos compartidos (3.1), las tres plantillas (3.2), `pipeline_avisos.py` completo con sus tests (3.3 a 3.6) | No: produce tandas y PNG en disco |
+| 2 | Despacho extendido (3.7) y `cupo_restante` del sender, momentos del reloj (3.8), comando `/avisos` (3.9), documentación | Sí |
+
+El hito 1 se puede probar entero contra el terminal (preparar, completar, rendir y mirar las
+láminas) sin que exista ningún camino de envío. El reloj va en el hito 2 para que no deje tandas
+en disco que nadie puede despachar.
+
+## 10. Riesgo principal
 
 El cambio 3.7 toca el único camino que llega al cliente. Se acota con tres cosas: una pieza sin
 `_plantilla` sigue exactamente el camino de hoy, con test; el comportamiento por canal (cupo y
 divergencia) solo se activa para las tandas con `_avisos.json`; y la prueba real termina en
 `--dry-run`.
 
-## 10. Revisión de AGY del spec anterior, vigente
+## 11. Revisión de AGY de esta versión (2026-09-28)
+
+Veredicto: aprobar con cambios. Ningún hallazgo alto.
+
+| Hallazgo | Verificado | Dónde quedó |
+|---|---|---|
+| El sender cobra el cupo por acción; el "todo o nada" necesita leer su estado antes | Sí | 3.7.2: `cupo_restante()` |
+| Al reanudar a mitad, las láminas restantes pueden no agruparse | Opinión razonable | 3.7: pie de posición obligatorio |
+| El orden por texto falla desde 10 láminas | Sí | 3.7: tope de 9 |
+| Una visión registrada con datos malos la frena `validar_cifras` | Sí | Sin cambio: el freno es la protección |
+| Partir el alcance | Coincido | 9: dos hitos |
+| (Propio, no lo vio AGY) Un refresco fallido o sin ticker deja salir la pieza con datos viejos | Sí, `_refrescar_y_rendir` | 3.7.4 |
+
+## 12. Revisión de AGY del spec anterior, vigente
 
 | Hallazgo | Dónde quedó |
 |---|---|
