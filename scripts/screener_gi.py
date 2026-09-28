@@ -58,6 +58,12 @@ NY = ZoneInfo("America/New_York")
 SANTIAGO = ZoneInfo("America/Santiago")
 
 ACTIVOS_JSON = RAIZ / "config" / "activos.json"
+COBERTURA_FIJA_JSON = RAIZ / "config" / "cobertura_fija.json"
+
+
+def cobertura_fija() -> list[str]:
+    """Los activos que se cubren siempre (`config/cobertura_fija.json`)."""
+    return list(json.loads(COBERTURA_FIJA_JSON.read_text(encoding="utf-8"))["tickers"])
 DIR_SALIDA = RAIZ / "data" / "screener"
 
 import agenda_mercado as agenda  # noqa: E402  (necesita RAIZ en sys.path)
@@ -263,7 +269,10 @@ def cargar_universo(solo_renderizables: bool = True) -> list[dict[str, Any]]:
             agregar(a, "acciones")
 
     if solo_renderizables:
-        universo = [a for a in universo if a.get("imagen")]
+        # Los de cobertura fija entran sin foto: su pieza sale con el grafico del
+        # motor TradingView, que no la usa.
+        fijos = set(cobertura_fija())
+        universo = [a for a in universo if a.get("imagen") or a["ticker"] in fijos]
     return universo
 
 
@@ -715,10 +724,16 @@ def evaluar_activo(
     ahora_santiago: datetime,
     analizador: Callable[[str, str], dict[str, Any]] = analizar_activo,
     ignorar_agotamiento: bool = False,
+    fijo: bool = False,
 ) -> dict[str, Any]:
-    """Puntúa un activo, o explica por qué queda fuera."""
+    """Puntúa un activo, o explica por qué queda fuera.
+
+    Con `fijo` (cobertura fija) los gates de agotamiento y de banda no excluyen:
+    su motivo viaja en `gates_omitidos` para que el escáner lo diga.
+    """
     ticker = activo["ticker"]
     base = {"ticker": ticker, "nombre": activo["nombre"], "clase": activo["clase"]}
+    omitidos: list[str] = []
 
     motivo = gate_feriado(ticker, ahora_santiago.date())
     if motivo:
@@ -733,7 +748,9 @@ def evaluar_activo(
 
     if not ignorar_agotamiento:
         motivo = gate_agotamiento(d1, ahora_santiago=ahora_santiago)
-        if motivo:
+        if motivo and fijo:
+            omitidos.append(motivo)
+        elif motivo:
             return {**base, "excluido": motivo}
 
     direccion = direccion_tecnica(h1)
@@ -745,7 +762,9 @@ def evaluar_activo(
     # Va antes de puntuar, como los otros: un activo cuyos niveles no aguantan una
     # hora puede puntuar alto y con scoring puro ganaria la tanda.
     motivo = gate_banda(h1)
-    if motivo:
+    if motivo and fijo:
+        omitidos.append(motivo)
+    elif motivo:
         return {**base, "excluido": motivo}
 
     sombra = _direccion_en_sombra(h1, d1, ahora_santiago)
@@ -758,6 +777,8 @@ def evaluar_activo(
     return {
         **base,
         "direccion": direccion,
+        "cobertura_fija": fijo,
+        "gates_omitidos": omitidos,
         # Fase 1: la lectura de cuatro ejes viaja al lado y nadie la consume.
         "direccion_4ejes": sombra,
         "score": t + m + c + f,
@@ -958,10 +979,12 @@ def escanear(
         hora_actual=ahora_stgo.strftime("%H:%M"),
     )
 
+    fijos = set(cobertura_fija())
     evaluados: list[dict[str, Any]] = []
     excluidos: list[dict[str, Any]] = []
     for activo in universo:
-        if activo["ticker"] in ya_usados:
+        es_fijo = activo["ticker"] in fijos
+        if activo["ticker"] in ya_usados and not es_fijo:
             excluidos.append({
                 "ticker": activo["ticker"],
                 "nombre": activo["nombre"],
@@ -969,7 +992,10 @@ def escanear(
                 "excluido": "ya salio en una corrida anterior de hoy",
             })
             continue
-        res = evaluar_activo(activo, eventos, delta_ust, ahora_stgo, analizador, ignorar_agotamiento=ignorar_agotamiento)
+        res = evaluar_activo(
+            activo, eventos, delta_ust, ahora_stgo, analizador,
+            ignorar_agotamiento=ignorar_agotamiento, fijo=es_fijo,
+        )
         (excluidos if "excluido" in res else evaluados).append(res)
 
     evaluados.sort(key=lambda r: (-r["score"], r["ticker"]))
@@ -987,16 +1013,33 @@ def escanear(
         # Los gates no se tocan. Un grupo puede quedar en cero y eso **es** el
         # resultado: el 2026-09-03 a las 12:06 forex e índices quedaron vacíos
         # porque todo su universo había consumido el recorrido del día.
+        #
+        # La cobertura fija (2026-09-28) va primero y no compite por score: los
+        # cupos que deja libres en su categoría los llena el ranking.
         categorias_orden = ["forex", "commodity", "indice", "accion", "crypto"]
         seleccion = []
         for cat_obj in categorias_orden:
+            del_grupo = {a["ticker"] for a in filtrar_por_grupo(universo, cat_obj)}
+            fijos_cat = [r for r in evaluados if r.get("cobertura_fija") and r["ticker"] in del_grupo]
             candidatos_cat = [
                 r for r in evaluados
-                if r["score"] > 0 and r["ticker"] in {a["ticker"] for a in filtrar_por_grupo(universo, cat_obj)}
+                if not r.get("cobertura_fija") and r["score"] > 0 and r["ticker"] in del_grupo
             ]
-            seleccion.extend(candidatos_cat[:top])
+            seleccion.extend(fijos_cat + candidatos_cat[:max(0, top - len(fijos_cat))])
     else:
-        seleccion = [r for r in evaluados if r["score"] > 0][:top]
+        # Fuera de la matriz la cobertura fija se suma al Top N, no le quita cupos.
+        seleccion = [r for r in evaluados if r.get("cobertura_fija")] + [
+            r for r in evaluados if not r.get("cobertura_fija") and r["score"] > 0
+        ][:top]
+
+    # Un gate saltado se dice, igual que uno apagado con --forzar.
+    for elegido in seleccion:
+        if elegido.get("cobertura_fija"):
+            motivos = elegido.get("gates_omitidos") or []
+            avisos.append(
+                f"{elegido['ticker']}: cobertura fija, sale siempre"
+                + (f" aunque {'; '.join(motivos)}" if motivos else "")
+            )
 
     # Los bordes estrechos se reportan: no excluyen, pero el operador tiene que
     # saber que esa pieza lleva niveles apretados para lo que el activo se mueve.

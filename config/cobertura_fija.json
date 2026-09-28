@@ -1,0 +1,4 @@
+{
+  "_nota": "Decision del director, 2026-09-28: estos activos se cubren SIEMPRE, con grafico y niveles, aunque les quede poco recorrido diario. El escaner los pone en la seleccion sin competir por score, salta para ellos los gates de agotamiento y de banda (y lo dice en los avisos), y no los excluye por haber salido en una corrida anterior del dia. El feriado de su bolsa y el blackout por calendario siguen aplicando: mercado cerrado no tiene niveles de hoy, y un dato en minutos invalida los que haya.",
+  "tickers": ["USDCLP", "XAUUSD", "WTI.spot", "COPPER"]
+}
