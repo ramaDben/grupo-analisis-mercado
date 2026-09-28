@@ -36,7 +36,7 @@ jobs:
         # test se hubiera roto.
         run: >-
           python -m pip install --upgrade pip
-          pytest pandas pyyaml requests python-dotenv tenacity yfinance
+          pytest pandas pyyaml requests python-dotenv tenacity yfinance openpyxl
 
       - name: Run market-data MCP tests
         run: python -m pytest tests -v
