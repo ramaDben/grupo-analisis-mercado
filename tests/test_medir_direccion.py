@@ -184,3 +184,94 @@ def test_lectura_en_t_no_cambia_si_se_altera_el_futuro():
     h1d, d1d = base
     assert h1d["price"] == float(h1["close"].iloc[i])
     assert d1d["fecha_barra"] == fecha_t.date().isoformat()
+
+
+# ── Instantes que votan, métricas y giros ───────────────────────────────────
+def test_ventana_sale_de_la_agenda_por_clase():
+    assert md.ventana_votante("forex_commodities") == (8 * 60, 16 * 60)
+    assert md.ventana_votante("indices") == (10 * 60, 16 * 60)
+    with pytest.raises(md.MedicionAbortada):
+        md.ventana_votante("clase_inventada")
+
+
+def test_giros():
+    assert md.contar_giros(["ALCISTA", "LATERAL", "ALCISTA"]) == 0
+    assert md.contar_giros(["ALCISTA", "LATERAL", "BAJISTA"]) == 1
+    assert md.contar_giros(["ALCISTA", "BAJISTA", "ALCISTA"]) == 2
+    assert md.contar_giros([]) == 0
+
+
+def test_acierta():
+    assert md.acierta("ALCISTA", 0.5) and md.acierta("BAJISTA", -0.1)
+    assert not md.acierta("ALCISTA", 0.0) and not md.acierta("BAJISTA", 0.0)
+    assert not md.acierta("LATERAL", 1.0)
+
+
+def _serie_mercado(dias: int, pendiente: float) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """H1 en hora de Santiago con tendencia lineal conocida, y su D1 derivado."""
+    h1 = serie_h1(datetime(2024, 1, 8, 5, tzinfo=timezone.utc), 24 * dias, paso=pendiente)
+    d1 = (h1.assign(fecha=h1["time"].dt.normalize())
+            .groupby("fecha").agg(open=("open", "first"), high=("high", "max"),
+                                  low=("low", "min"), close=("close", "last"),
+                                  tick_volume=("tick_volume", "sum"))
+            .reset_index().rename(columns={"fecha": "time"}))
+    return h1, d1
+
+
+def test_metrica_m_anti_fuga_da_el_valor_esperado():
+    """Serie lineal: m = (close[t+4] - close[t]) / ATR[t-1], y el modelo acierta siempre al alza."""
+    h1, d1 = _serie_mercado(260, 0.01)
+    lec = md.lecturas(h1, d1, "forex_commodities")
+    votos = lec[lec["vota"]]
+    assert len(votos) > 0
+    ind = md.indicadores(h1)
+    fila = votos.iloc[0]
+    i = int(fila.name)
+    esperado = (h1["close"].iat[i + 4] - h1["close"].iat[i]) / ind["atr_14"].iat[i - 1]
+    assert fila["m"] == pytest.approx(esperado)
+    assert (votos["ema50"] == "ALCISTA").all()
+
+
+def test_horizonte_con_hueco_no_vota():
+    """Si falta una vela dentro del horizonte, t+4 cae 5 horas después: no se mide ese m."""
+    h1, d1 = _serie_mercado(260, 0.01)
+    lec = md.lecturas(h1, d1, "forex_commodities")
+    fila = lec[lec["vota"]].iloc[5]
+    i = int(fila.name)
+    con_hueco = h1.drop(index=i + 2).reset_index(drop=True)   # la vela t+2 desaparece
+    lec2 = md.lecturas(con_hueco, d1, "forex_commodities")
+    misma = lec2[lec2["t_ny"] == fila["t_ny"]].iloc[0]
+    assert not misma["vota"]
+    assert misma["motivo"] == "horizonte_con_hueco"
+
+
+def test_indices_cortan_al_cierre_y_exigen_tres_horas():
+    h1, d1 = _serie_mercado(260, 0.01)
+    lec = md.lecturas(h1, d1, "indices")
+    en = lec[lec["en_sesion"]]
+    cierre = (en["t_ny"] + pd.Timedelta(hours=1)).dt.hour
+    assert (en.loc[cierre == 13, "h"] == 3).all() and en.loc[cierre == 13, "vota"].all()
+    assert (en.loc[cierre == 14, "motivo"] == "horizonte_corto").all()
+    assert not en.loc[cierre == 9].shape[0]            # antes de las 10:00 no está en sesión
+
+
+def test_sin_historia_d1_se_cuenta_y_no_vota():
+    h1, d1 = _serie_mercado(260, 0.01)
+    lec = md.lecturas(h1, d1, "forex_commodities")
+    sin = lec[lec["motivo"] == "sin_historia_d1"]
+    assert len(sin) > 0 and not sin["vota"].any()
+
+
+def test_ic_por_dia_agrupa_y_es_reproducible():
+    por_dia = pd.DataFrame({"a": [1.0, 0.0, 1.0, 1.0], "n": [1.0, 1.0, 1.0, 1.0]})
+    ic1 = md.ic_por_dia(por_dia, lambda s: s["a"] / s["n"])
+    ic2 = md.ic_por_dia(por_dia, lambda s: s["a"] / s["n"])
+    assert ic1 == ic2 and 0.0 <= ic1[0] <= 0.75 <= ic1[1] <= 1.0
+
+
+def test_resumir_trae_las_cuatro_condiciones():
+    h1, d1 = _serie_mercado(260, 0.01)
+    r = md.resumir(md.lecturas(h1, d1, "forex_commodities"))
+    assert r["n_votos"] > 0 and r["n_dias"] > 0
+    assert set(r) >= {"c1", "c2", "c3", "c4"}
+    assert r["c1"]["acierto_modelo"] == pytest.approx(100.0)

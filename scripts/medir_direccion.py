@@ -226,3 +226,202 @@ def dicts_en(
         "fecha_barra": h1["time"].iat[i].date().isoformat(),
     }
     return h1d, d1d
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Qué instantes votan (spec §5.5)
+# ─────────────────────────────────────────────────────────────────────────────
+def _minutos(hhmm: str) -> int:
+    h, m = (int(x) for x in str(hhmm).split(":"))
+    return h * 60 + m
+
+
+def _a_la_hora(minutos: int) -> int:
+    """Lleva una hora de la agenda a la última vela H1 cerrada a esa hora."""
+    return minutos - minutos % 60
+
+
+def ventana_votante(clase: str) -> tuple[int, int]:
+    """Minutos NY del CIERRE de vela en que un instante de esta clase vota.
+
+    Inicio: el momento del día de la clase (08:30 divisas, 10:00 índices), llevado
+    a la vela cerrada. Fin: la última tanda (pre-cierre de las 16:45), igual.
+    Ninguna hora se escribe acá: salen de `config/agenda_mercado.json`.
+    """
+    horas = [_minutos(m["hora"]) for m in agenda.momentos() if clase in m.get("clases", [])]
+    if not horas:
+        raise MedicionAbortada(f"la clase {clase!r} no tiene momento en config/agenda_mercado.json")
+    fin = max(_minutos(t["hora_ny"]) for t in agenda.tandas().values())
+    return _a_la_hora(min(horas)), _a_la_hora(fin)
+
+
+def _cierre_bolsa(clase: str) -> int | None:
+    c = cfg_medicion()["cierre_bolsa_ny"]
+    return _minutos(c["valor"]) if clase in c["clases"] else None
+
+
+def _fila_sin_lectura(i: int, t: pd.Timestamp, motivo: str) -> dict[str, Any]:
+    return {"i": i, "t_ny": t, "dia": t.date().isoformat(), "en_sesion": False, "vota": False,
+            "motivo": motivo, "h": 0, "m": float("nan"), "modelo": None, "conviccion": None,
+            "fase": None, "ema50": None, "ema50_hist": None}
+
+
+def lecturas(h1: pd.DataFrame, d1: pd.DataFrame, clase: str) -> pd.DataFrame:
+    """Una fila por instante H1 medible, en orden, con su lectura y su futuro.
+
+    El modelo encadena `previa = lectura.eje2` a lo largo de la serie; la EMA 50
+    con histéresis encadena su propio lado. La EMA 50 sin histéresis (`ema50`) es
+    la que hoy sale al cliente.
+    """
+    h1 = localizar(h1)
+    ind_h1, ind_d1 = indicadores(h1), indicadores(d1)
+    rango = rango_hoy_intradia(h1)
+    jd1 = indice_d1_cerrado(h1["time"], d1["time"])
+    minimo = int(valor("min_velas_cerradas"))
+    h_std, h_min = int(valor("horizonte_velas")), int(valor("horizonte_minimo"))
+    ini, fin = ventana_votante(clase)
+    cierre_bolsa = _cierre_bolsa(clase)
+    t_ny = h1["time_ny"]
+    close = h1["close"].to_numpy()
+    atr_prev = ind_h1["atr_14"].shift(1).to_numpy()
+
+    filas: list[dict[str, Any]] = []
+    previa_modelo: str | None = None
+    previa_ema: str | None = None
+    # Las primeras `minimo` velas H1 son la ventana de arranque y no se cuentan.
+    # Las horas ambiguas se cuentan aparte en `medir`, desde `localizar`.
+    for i in range(minimo, len(h1)):
+        if pd.isna(t_ny.iat[i]):
+            continue
+        j = int(jd1[i])
+        if j + 1 < minimo:
+            # Sin 150 días cerrados no hay marco diario (spec §6): no se mide, se cuenta.
+            filas.append(_fila_sin_lectura(i, t_ny.iat[i], "sin_historia_d1"))
+            continue
+        h1d, d1d = dicts_en(i, h1, ind_h1, rango, d1, ind_d1, j)
+        lec = dg.leer_direccion(h1d, d1d, previa_modelo, hoy=d1d["fecha_barra"])
+        previa_modelo = lec.eje2
+        ema_hist = dg.eje_dia(h1d, previa_ema)
+        previa_ema = ema_hist
+
+        cierre = t_ny.iat[i] + pd.Timedelta(hours=1)
+        minuto = cierre.hour * 60 + cierre.minute
+        en_sesion = cierre.weekday() < 5 and ini <= minuto <= fin
+        h = h_std
+        if en_sesion and cierre_bolsa is not None:
+            h = min(h_std, (cierre_bolsa - minuto) // 60)
+        motivo = None if en_sesion else "fuera_de_sesion"
+        m = float("nan")
+        if en_sesion and h < h_min:
+            motivo = "horizonte_corto"
+        elif i + h >= len(h1):
+            motivo = motivo or "sin_futuro"
+        else:
+            destino = t_ny.iat[i + h]
+            if pd.isna(destino) or destino - t_ny.iat[i] != pd.Timedelta(hours=h):
+                motivo = motivo or "horizonte_con_hueco"
+            elif atr_prev[i] > 0:
+                m = (close[i + h] - close[i]) / atr_prev[i]
+        filas.append({
+            "i": i, "t_ny": t_ny.iat[i], "dia": t_ny.iat[i].date().isoformat(),
+            "en_sesion": en_sesion, "vota": en_sesion and motivo is None and math.isfinite(m),
+            "motivo": motivo, "h": h, "m": m,
+            "modelo": lec.direccion, "conviccion": lec.conviccion, "fase": lec.fase,
+            "ema50": dg.ALCISTA if h1d["price"] >= h1d["ema_50"] else dg.BAJISTA,
+            "ema50_hist": ema_hist,
+        })
+    return pd.DataFrame(filas).set_index("i") if filas else pd.DataFrame()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Métricas (spec §5.6)
+# ─────────────────────────────────────────────────────────────────────────────
+def acierta(direccion: str, m: float) -> bool:
+    return (direccion == dg.ALCISTA and m > 0) or (direccion == dg.BAJISTA and m < 0)
+
+
+def contar_giros(direcciones) -> int:
+    """Solo ALCISTA a BAJISTA o al revés, entre lecturas direccionales consecutivas."""
+    giros, previa = 0, None
+    for d in direcciones:
+        if d == dg.LATERAL:
+            continue
+        if previa is not None and d != previa:
+            giros += 1
+        previa = d
+    return giros
+
+
+def ic_por_dia(por_dia: pd.DataFrame, f: Callable[[dict[str, float]], float]) -> tuple[float, float]:
+    """Intervalo por bootstrap agrupado por día.
+
+    `por_dia` tiene una fila por día con SUMAS (aciertos, conteos). Se remuestrean
+    días enteros, porque las velas de un mismo día no son independientes y
+    remuestrearlas sueltas achica el intervalo en falso.
+    """
+    rng = np.random.default_rng(int(valor("bootstrap_semilla")))
+    matriz = por_dia.to_numpy(dtype=float)
+    n = len(matriz)
+    if n == 0:
+        return (float("nan"), float("nan"))
+    stats = []
+    for _ in range(int(valor("bootstrap_iteraciones"))):
+        suma = matriz[rng.integers(0, n, n)].sum(axis=0)
+        v = f(dict(zip(por_dia.columns, suma)))
+        if math.isfinite(v):
+            stats.append(v)
+    if not stats:
+        return (float("nan"), float("nan"))
+    alfa = (1 - float(valor("nivel_confianza"))) / 2
+    lo, hi = np.quantile(stats, [alfa, 1 - alfa])
+    return float(lo), float(hi)
+
+
+def _div(a: float, b: float) -> float:
+    return a / b if b else float("nan")
+
+
+def resumir(lec: pd.DataFrame) -> dict[str, Any]:
+    """Las cuatro condiciones medibles de §5.7 sobre los instantes que votan, en puntos."""
+    v = lec[lec["vota"]].copy() if len(lec) else lec
+    if not len(v):
+        return {"n_votos": 0, "n_dias": 0}
+    v["hit_modelo"] = [acierta(d, m) for d, m in zip(v["modelo"], v["m"])]
+    v["hit_ema"] = [acierta(d, m) for d, m in zip(v["ema50"], v["m"])]
+    v["dir"] = v["modelo"] != dg.LATERAL
+    v["lat"] = ~v["dir"]
+    por_dia = pd.DataFrame({
+        "hm": (v["hit_modelo"] & v["dir"]).groupby(v["dia"]).sum(),
+        "he_dir": (v["hit_ema"] & v["dir"]).groupby(v["dia"]).sum(),
+        "n_dir": v["dir"].groupby(v["dia"]).sum(),
+        "he_lat": (v["hit_ema"] & v["lat"]).groupby(v["dia"]).sum(),
+        "n_lat": v["lat"].groupby(v["dia"]).sum(),
+    }).astype(float)
+    tot = por_dia.sum()
+
+    def dif_c1(s):
+        return 100 * _div(s["hm"] - s["he_dir"], s["n_dir"])
+
+    def dif_c2(s):
+        return 100 * (_div(s["he_lat"], s["n_lat"]) - _div(s["he_dir"], s["n_dir"]))
+
+    absm = v["m"].abs()
+    c4 = {}
+    for conv in ("debil", "moderada", "fuerte"):
+        sub = v[(v["conviccion"] == conv) & v["dir"]]
+        c4[conv] = 100 * float(sub["hit_modelo"].mean()) if len(sub) else None
+    return {
+        "n_votos": int(len(v)), "n_dias": int(v["dia"].nunique()),
+        "c1": {"acierto_modelo": 100 * _div(tot["hm"], tot["n_dir"]),
+               "acierto_ema50": 100 * _div(tot["he_dir"], tot["n_dir"]),
+               "diferencia": dif_c1(tot), "ic": ic_por_dia(por_dia, dif_c1)},
+        "c2": {"n_lateral": int(tot["n_lat"]),
+               "acierto_ema50_lateral": 100 * _div(tot["he_lat"], tot["n_lat"]),
+               "acierto_ema50_resto": 100 * _div(tot["he_dir"], tot["n_dir"]),
+               "diferencia": dif_c2(tot), "ic": ic_por_dia(por_dia, dif_c2),
+               "mediana_m_lateral": float(absm[v["lat"]].median()) if tot["n_lat"] else None,
+               "mediana_m_direccional": float(absm[v["dir"]].median())},
+        "c3": {"giros_modelo_100": 100 * contar_giros(v["modelo"]) / len(v),
+               "giros_ema50_100": 100 * contar_giros(v["ema50_hist"]) / len(v)},
+        "c4": c4,
+    }
