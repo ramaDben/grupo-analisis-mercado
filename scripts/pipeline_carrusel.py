@@ -216,6 +216,17 @@ def acotar_niveles_intradia(
     return soporte, resistencia
 
 
+def formatear_precio(valor: float, digits: int) -> str:
+    """Precio en notacion chilena con los decimales de `digits`.
+
+    Con `digits = 0` (el cobre) va entero y sin separador de miles: "14.417" se
+    lee como un decimal y no coincide con la etiqueta del grafico.
+    """
+    if digits == 0:
+        return f"{valor:.0f}"
+    return f"{valor:,.{digits}f}".replace(",", "@").replace(".", ",").replace("@", ".")
+
+
 def construir_payload(
     seleccion: dict[str, Any],
     activo_catalogo: dict[str, Any],
@@ -232,7 +243,7 @@ def construir_payload(
     cat_real = activo_catalogo.get("categoria", seleccion["clase"])
 
     def fmt(valor: float) -> str:
-        return f"{valor:,.{digits}f}".replace(",", "@").replace(".", ",").replace("@", ".")
+        return formatear_precio(valor, digits)
 
     spot_crudo = float(seleccion["precio"])
     sop_crudo = float(seleccion["soporte"])
@@ -731,7 +742,7 @@ def escribir_suplementos(
 
             activo_cat = catalogo.get(ticker_ancla, {})
             digits = activo_cat.get("digits", 2)
-            fmt = lambda v: f"{v:,.{digits}f}".replace(",", "@").replace(".", ",").replace("@", ".")
+            fmt = lambda v: formatear_precio(v, digits)
 
             # Obtener niveles reales desde exclusiones o analizador
             spot_val = None
@@ -1086,7 +1097,7 @@ def refrescar_payload(
     )
 
     def fmt(valor: float) -> str:
-        return f"{valor:,.{digits}f}".replace(",", "@").replace(".", ",").replace("@", ".")
+        return formatear_precio(valor, digits)
 
     nuevo["precio_actual"] = fmt(precio)
     nuevo["soporte"] = fmt(soporte)

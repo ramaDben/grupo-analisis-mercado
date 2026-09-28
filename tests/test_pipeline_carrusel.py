@@ -1282,3 +1282,20 @@ def test_el_cierre_es_estable_para_la_misma_pieza():
     msg1, _ = _msg_compacto()
     msg2, _ = _msg_compacto()
     assert msg1 == msg2
+
+
+def test_el_cobre_se_escribe_entero_y_sin_separador_de_miles():
+    """digits = 0 se escribe entero (CLAUDE.md, formato de precios): "14.417" se
+    confunde con un decimal y ademas no coincide con la etiqueta del grafico."""
+    assert pc.formatear_precio(14417.0, 0) == "14417"
+
+
+def test_con_decimales_se_mantiene_la_notacion_chilena():
+    assert pc.formatear_precio(4134.736, 2) == "4.134,74"
+    assert pc.formatear_precio(90.1814, 3) == "90,181"
+
+
+def test_un_solo_formateador_de_precios_en_el_carrusel():
+    """Tres copias de la misma formula divergen; es el defecto recurrente del repo."""
+    fuente = Path(pc.__file__).read_text(encoding="utf-8")
+    assert fuente.count('.replace("@", ".")') == 1
