@@ -275,3 +275,111 @@ def test_resumir_trae_las_cuatro_condiciones():
     assert r["n_votos"] > 0 and r["n_dias"] > 0
     assert set(r) >= {"c1", "c2", "c3", "c4"}
     assert r["c1"]["acierto_modelo"] == pytest.approx(100.0)
+
+
+# ── Regla de adopción, informe y CLI ────────────────────────────────────────
+def _resumen(n=1000, c1=(55.0, 54.0, 1.0, (-0.5, 2.5)), c2_ic=(-8.0, -2.0),
+             med=(0.4, 0.9), giros=(3.0, 5.0), c4=(50.0, 54.0, 58.0)):
+    return {
+        "n_votos": n, "n_dias": 100,
+        "c1": {"acierto_modelo": c1[0], "acierto_ema50": c1[1], "diferencia": c1[2], "ic": c1[3]},
+        "c2": {"ic": c2_ic, "mediana_m_lateral": med[0], "mediana_m_direccional": med[1], "n_lateral": 50,
+               "acierto_ema50_lateral": 48.0, "acierto_ema50_resto": 54.0, "diferencia": -6.0},
+        "c3": {"giros_modelo_100": giros[0], "giros_ema50_100": giros[1]},
+        "c4": dict(zip(("debil", "moderada", "fuerte"), c4)),
+    }
+
+
+def test_adopta_si_cumple_1_2_y_3():
+    r = md.evaluar_adopcion(_resumen(), {"XAUUSD": _resumen()})
+    assert r["adopta"] is True and r["c4"] is True and r["disidentes"] == []
+
+
+@pytest.mark.parametrize("cambio, condicion", [
+    ({"c1": (50.0, 52.0, -2.0, (-3.5, -0.5))}, "c1"),     # límite inferior bajo -1
+    ({"c2_ic": (-5.0, 0.5)}, "c2"),                       # la EMA 50 no acierta menos en LATERAL
+    ({"med": (1.0, 0.9)}, "c2"),                          # LATERAL no aparta ruido
+    ({"giros": (5.0, 5.0)}, "c3"),                        # empate no alcanza
+])
+def test_no_adopta_si_falla_una_condicion(cambio, condicion):
+    r = md.evaluar_adopcion(_resumen(**cambio), {})
+    assert r[condicion] is False and r["adopta"] is False
+
+
+def test_conviccion_solo_si_ordena():
+    assert md.evaluar_adopcion(_resumen(c4=(55.0, 54.0, 58.0)), {})["c4"] is False
+    assert md.evaluar_adopcion(_resumen(c4=(50.0, None, 58.0)), {})["c4"] is False
+
+
+def test_disidentes_y_activos_sin_voto():
+    por_activo = {
+        "XAUUSD": _resumen(c1=(50.0, 53.0, -3.0, (-5.0, -1.0))),      # 1000 votos, 3 pts bajo: disidente
+        "WTI": _resumen(c1=(52.0, 53.5, -1.5, (-3.0, 0.0))),          # 1,5 pts bajo: no alcanza
+        "BRENT": _resumen(n=300, c1=(40.0, 55.0, -15.0, (-20.0, -10.0))),  # < 500: no vota
+    }
+    r = md.evaluar_adopcion(_resumen(), por_activo)
+    assert r["disidentes"] == ["XAUUSD"]
+    assert r["sin_voto"] == ["BRENT"]
+
+
+def test_medir_carga_us100_aunque_no_se_pida(tmp_path, monkeypatch):
+    """La prueba de zona necesita el US100: se carga aunque --series no lo nombre."""
+    assert md._series_a_cargar(["XAUUSD"]) == ["XAUUSD", "US100"]
+    assert md._series_a_cargar(["US100"]) == ["US100"]
+    pedidas = []
+
+    def espia(simbolo, marco, directorio=md.DIR_SERIES):
+        pedidas.append((simbolo, marco))
+        return pd.DataFrame(columns=md.COLUMNAS), {}
+
+    def zona_que_corta(cargadas, serie_moda):
+        raise md.MedicionAbortada(f"corte del test con {sorted(cargadas)}")
+
+    monkeypatch.setattr(md, "cargar_serie", espia)
+    monkeypatch.setattr(md, "verificar_zona", zona_que_corta)
+    with pytest.raises(md.MedicionAbortada, match="US100"):
+        md.medir(["XAUUSD"], tmp_path)
+    assert ("US100", "H1") in pedidas and ("XAUUSD", "H1") in pedidas
+    assert ("US100", "D1") not in pedidas               # se carga para la prueba, no se mide
+
+
+def test_main_devuelve_2_si_aborta(monkeypatch, capsys):
+    monkeypatch.setattr(md, "medir", lambda *a, **k: (_ for _ in ()).throw(md.MedicionAbortada("x")))
+    assert md.main([]) == 2
+    assert "MEDICION ABORTADA" in capsys.readouterr().err
+
+
+def test_informe_se_escribe_en_utf8_sin_guion_largo(tmp_path):
+    resultado = {
+        "generado": "2026-09-28 10:00", "zona": {"extraccion": {}, "moda_volumen": {}},
+        "por_activo": {"XAUUSD": {**_resumen(), "descartes": {"fuera_de_sesion": 3}, "paridad_ema100_atr": 0.01,
+                                  "fuera_de_sesion": _resumen(n=40)}},
+        "total": _resumen(), "adopcion": md.evaluar_adopcion(_resumen(), {"XAUUSD": _resumen()}),
+    }
+    md_path, js_path = md.escribir_informe(resultado, tmp_path)
+    texto = md_path.read_text(encoding="utf-8")
+    assert "Adopción" in texto and "XAUUSD" in texto
+    assert "—" not in texto and "–" not in texto
+    json.loads(js_path.read_text(encoding="utf-8"))
+
+
+def test_medicion_de_punta_a_punta_sobre_series_sinteticas(tmp_path, monkeypatch):
+    """medir + escribir_informe corren con series en disco que pasan los sellos y la zona."""
+    inicio = datetime(2024, 1, 8, 5, tzinfo=timezone.utc)
+    horas = 24 * 260
+    h1 = serie_h1(inicio, horas)
+    ultima = inicio + timedelta(hours=horas - 1)
+    while ultima.astimezone(NY).weekday() >= 5:
+        ultima -= timedelta(hours=1)
+    as_of = (ultima + timedelta(minutes=20)).isoformat()
+    d1 = (h1.assign(fecha=h1["time"].dt.normalize()).groupby("fecha")
+            .agg(open=("open", "first"), high=("high", "max"), low=("low", "min"),
+                 close=("close", "last"), tick_volume=("tick_volume", "sum"))
+            .reset_index().rename(columns={"fecha": "time"}))
+    for s in ("US100", "XAUUSD"):
+        escribir_serie(tmp_path, s, "H1", h1, as_of_utc=as_of)
+        escribir_serie(tmp_path, s, "D1", d1, as_of_utc=as_of)
+    resultado = md.medir(["XAUUSD", "US100"], tmp_path)
+    assert resultado["por_activo"]["XAUUSD"]["n_votos"] > 0
+    md_path, _ = md.escribir_informe(resultado, tmp_path / "salida")
+    assert "Veredicto" in md_path.read_text(encoding="utf-8")

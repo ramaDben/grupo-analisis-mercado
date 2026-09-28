@@ -425,3 +425,200 @@ def resumir(lec: pd.DataFrame) -> dict[str, Any]:
                "giros_ema50_100": 100 * contar_giros(v["ema50_hist"]) / len(v)},
         "c4": c4,
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Regla de adopción (spec §5.7, fijada antes de ver números)
+# ─────────────────────────────────────────────────────────────────────────────
+def evaluar_adopcion(total: dict[str, Any], por_activo: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    tol = float(valor("tolerancia_acierto_pts"))
+    umbral = float(valor("umbral_disidente_pts"))
+    minimo = int(valor("min_instantes_voto"))
+    c1 = bool(total.get("c1") and total["c1"]["ic"][0] >= -tol)
+    c2d = total.get("c2") or {}
+    med_l, med_d = c2d.get("mediana_m_lateral"), c2d.get("mediana_m_direccional")
+    c2 = bool(c2d and math.isfinite(c2d["ic"][1]) and c2d["ic"][1] < 0
+              and med_l is not None and med_d is not None and med_l < med_d)
+    c3d = total.get("c3") or {}
+    c3 = bool(c3d and c3d["giros_modelo_100"] < c3d["giros_ema50_100"])
+    c4v = [(total.get("c4") or {}).get(k) for k in ("debil", "moderada", "fuerte")]
+    c4 = bool(all(x is not None for x in c4v) and c4v[0] < c4v[1] < c4v[2])
+    sin_voto = sorted(s for s, r in por_activo.items() if r.get("n_votos", 0) < minimo)
+    disidentes = sorted(
+        s for s, r in por_activo.items()
+        if r.get("n_votos", 0) >= minimo and r["c1"]["diferencia"] < -umbral
+    )
+    return {"c1": c1, "c2": c2, "c3": c3, "c4": c4, "adopta": c1 and c2 and c3,
+            "disidentes": disidentes, "sin_voto": sin_voto}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Orquestación
+# ─────────────────────────────────────────────────────────────────────────────
+def _series_a_cargar(series: list[str] | None) -> list[str]:
+    """Las series a cargar: las pedidas más la de la prueba de zona, aunque no se mida."""
+    elegidas = list(series or cfg_medicion()["series"])
+    prueba = str(valor("serie_prueba_zona"))
+    return elegidas + ([prueba] if prueba not in elegidas else [])
+
+
+def _paridad_ema100(h1: pd.DataFrame) -> float:
+    """Diferencia, en ATR de H1, entre la EMA 100 de la serie completa y la de una ventana de 300 velas.
+
+    En vivo `analizar_activo` pide 300 velas y su EMA 100 arranca con menos
+    historia. Se mide en vez de suponerla (spec §5.2).
+    """
+    completa = indicadores(h1).iloc[-2]
+    ventana = indicadores(h1.tail(300).reset_index(drop=True)).iloc[-2]
+    return abs(float(completa["ema_100"]) - float(ventana["ema_100"])) / float(completa["atr_14"])
+
+
+def medir(series: list[str] | None = None, directorio: Path = DIR_SERIES) -> dict[str, Any]:
+    medibles = list(series or cfg_medicion()["series"])
+    h1s = {s: cargar_serie(s, "H1", directorio) for s in _series_a_cargar(series)}
+    zona = verificar_zona(h1s, str(valor("serie_prueba_zona")))
+    minimo_votos = int(valor("min_instantes_voto"))
+    por_activo: dict[str, dict[str, Any]] = {}
+    lecs: list[pd.DataFrame] = []
+    for s in medibles:
+        h1, _ = h1s[s]
+        d1, _ = cargar_serie(s, "D1", directorio)
+        lec = lecturas(h1, d1, cfg_medicion()["series"][s]["clase"])
+        resumen = resumir(lec)
+        descartes = {str(k): int(v) for k, v in lec["motivo"].value_counts().items()} if len(lec) else {}
+        descartes["hora_ambigua"] = int(localizar(h1)["time_ny"].isna().sum())
+        resumen["descartes"] = descartes
+        fuera = lec[~lec["en_sesion"] & lec["m"].notna()].assign(vota=True) if len(lec) else lec
+        resumen["fuera_de_sesion"] = resumir(fuera)
+        resumen["paridad_ema100_atr"] = _paridad_ema100(h1)
+        por_activo[s] = resumen
+        if resumen["n_votos"] >= minimo_votos:
+            lecs.append(lec)
+    total = resumir(pd.concat(lecs)) if lecs else {"n_votos": 0, "n_dias": 0}
+    return {
+        "generado": datetime.now(SANTIAGO).strftime("%Y-%m-%d %H:%M"),
+        "zona": zona, "por_activo": por_activo, "total": total,
+        "adopcion": evaluar_adopcion(total, por_activo),
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Informe (spec §5.8)
+# ─────────────────────────────────────────────────────────────────────────────
+def _json(o: Any) -> Any:
+    if isinstance(o, np.integer):
+        return int(o)
+    if isinstance(o, np.floating):
+        return float(o)
+    if isinstance(o, np.bool_):
+        return bool(o)
+    return str(o)
+
+
+def _pct(x: Any) -> str:
+    return "n/d" if x is None or (isinstance(x, float) and not math.isfinite(x)) else f"{x:.1f}"
+
+
+def _ic(ic: Any) -> str:
+    return f"[{_pct(ic[0])}, {_pct(ic[1])}]" if ic else "n/d"
+
+
+def _si(ok: bool) -> str:
+    return "cumple" if ok else "no cumple"
+
+
+def escribir_informe(resultado: dict[str, Any], salida: Path) -> tuple[Path, Path]:
+    salida.mkdir(parents=True, exist_ok=True)
+    a, t = resultado["adopcion"], resultado["total"]
+    lineas = [
+        "# Medición: dirección de cuatro ejes contra la EMA 50",
+        "",
+        f"Generado {resultado['generado']} (hora Chile) por `scripts/medir_direccion.py`. "
+        "Spec: `docs/superpowers/specs/2026-09-28-direccion-4-ejes-design.md`, §5. "
+        "Umbrales fijos de `config/direccion.json`: no se ajustaron mirando este resultado.",
+        "",
+        "## Adopción",
+        "",
+        f"**Veredicto: {'se adopta' if a['adopta'] else 'no se adopta'}** (requiere 1, 2 y 3).",
+        "",
+        "| Condición | Resultado | Números |",
+        "|---|---|---|",
+    ]
+    if t.get("n_votos"):
+        lineas += [
+            f"| 1. Acierto direccional | {_si(a['c1'])} | modelo {_pct(t['c1']['acierto_modelo'])} vs EMA 50 "
+            f"{_pct(t['c1']['acierto_ema50'])}; diferencia {_pct(t['c1']['diferencia'])} pts, IC {_ic(t['c1']['ic'])} |",
+            f"| 2. LATERAL aparta ruido | {_si(a['c2'])} | EMA 50 en LATERAL {_pct(t['c2']['acierto_ema50_lateral'])} "
+            f"vs resto {_pct(t['c2']['acierto_ema50_resto'])}, IC {_ic(t['c2']['ic'])}; mediana abs(m) "
+            f"{_pct(t['c2']['mediana_m_lateral'])} vs {_pct(t['c2']['mediana_m_direccional'])} |",
+            f"| 3. Estabilidad | {_si(a['c3'])} | giros cada 100: modelo {_pct(t['c3']['giros_modelo_100'])} "
+            f"vs EMA 50 con histéresis {_pct(t['c3']['giros_ema50_100'])} |",
+            f"| 4. Convicción ordena | {_si(a['c4'])} | " + ", ".join(
+                f"{k} {_pct(v)}" for k, v in t["c4"].items()) + " |",
+        ]
+    lineas += [
+        "",
+        f"Activos disidentes (conservan la EMA 50): {', '.join(a['disidentes']) or 'ninguno'}. "
+        f"Con menos de {int(valor('min_instantes_voto'))} instantes, reportados sin voto: "
+        f"{', '.join(a['sin_voto']) or 'ninguno'}.",
+        "",
+        "## Por activo (instantes que votan)",
+        "",
+        "| Activo | Votos | Días | Modelo | EMA 50 | Dif. (IC) | Giros modelo / EMA 50 | Paridad EMA 100 (ATR) |",
+        "|---|---|---|---|---|---|---|---|",
+    ]
+    for s, r in resultado["por_activo"].items():
+        if not r.get("n_votos"):
+            lineas.append(f"| {s} | 0 | 0 | n/d | n/d | n/d | n/d | {r.get('paridad_ema100_atr', 0):.3f} |")
+            continue
+        lineas.append(
+            f"| {s} | {r['n_votos']} | {r['n_dias']} | {_pct(r['c1']['acierto_modelo'])} | "
+            f"{_pct(r['c1']['acierto_ema50'])} | {_pct(r['c1']['diferencia'])} {_ic(r['c1']['ic'])} | "
+            f"{_pct(r['c3']['giros_modelo_100'])} / {_pct(r['c3']['giros_ema50_100'])} | "
+            f"{r['paridad_ema100_atr']:.3f} |"
+        )
+    lineas += ["", "## Fuera de sesión (no vota)", "",
+               "| Activo | Instantes | Modelo | EMA 50 |", "|---|---|---|---|"]
+    for s, r in resultado["por_activo"].items():
+        f = r.get("fuera_de_sesion") or {}
+        if f.get("n_votos"):
+            lineas.append(f"| {s} | {f['n_votos']} | {_pct(f['c1']['acierto_modelo'])} | {_pct(f['c1']['acierto_ema50'])} |")
+    lineas += ["", "## Descartes", "", "| Activo | Motivo | Instantes |", "|---|---|---|"]
+    for s, r in resultado["por_activo"].items():
+        for motivo, n in sorted((r.get("descartes") or {}).items()):
+            lineas.append(f"| {s} | {motivo} | {n} |")
+    lineas += ["", "## Verificación de la zona horaria", "",
+               "Las marcas se leyeron como hora de Santiago (§5.4). Las dos pruebas pasaron; si no, "
+               "este informe no existiría.", ""]
+    for s, r in resultado["zona"]["extraccion"].items():
+        lineas.append(f"- {s}: {'aplica' if r['aplica'] else 'no aplica'}. {r['detalle']}")
+    for s, r in resultado["zona"]["moda_volumen"].items():
+        lineas.append(f"- Pico de volumen de {s}: {r['hora']}:00 NY en {len(r['horas_por_mes'])} meses.")
+    texto = "\n".join(lineas).replace("—", ",").replace("–", "-") + "\n"
+    md_path = salida / "direccion-4-ejes.md"
+    js_path = salida / "direccion-4-ejes.json"
+    md_path.write_text(texto, encoding="utf-8")
+    js_path.write_text(json.dumps(resultado, ensure_ascii=False, indent=2, default=_json), encoding="utf-8")
+    return md_path, js_path
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description="Mide la direccion de cuatro ejes contra la EMA 50.")
+    ap.add_argument("--series", nargs="*", default=None, help="simbolos a medir (por defecto, todos los del config)")
+    ap.add_argument("--salida", default=str(DIR_SALIDA))
+    args = ap.parse_args(argv)
+    try:
+        resultado = medir(args.series)
+    except MedicionAbortada as exc:
+        print(f"MEDICION ABORTADA: {exc}", file=sys.stderr)
+        return 2
+    md_path, _ = escribir_informe(resultado, Path(args.salida))
+    a = resultado["adopcion"]
+    print(f"Informe: {md_path}")
+    print(f"Veredicto: {'SE ADOPTA' if a['adopta'] else 'NO SE ADOPTA'} "
+          f"(c1={a['c1']} c2={a['c2']} c3={a['c3']} c4={a['c4']}; disidentes={a['disidentes']})")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

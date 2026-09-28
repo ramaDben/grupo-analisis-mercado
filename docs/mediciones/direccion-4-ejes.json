@@ -1,0 +1,641 @@
+{
+  "generado": "2026-09-28 08:55",
+  "zona": {
+    "extraccion": {
+      "XAUUSD": {
+        "aplica": true,
+        "ok": true,
+        "detalle": "ultima vela 05:00, extraccion 05:20 (Santiago)"
+      },
+      "WTI": {
+        "aplica": true,
+        "ok": true,
+        "detalle": "ultima vela 05:00, extraccion 05:20 (Santiago)"
+      },
+      "US100": {
+        "aplica": true,
+        "ok": true,
+        "detalle": "ultima vela 05:00, extraccion 05:21 (Santiago)"
+      },
+      "USDCLP": {
+        "aplica": false,
+        "ok": null,
+        "detalle": "ultima vela 2026-09-25 15:00, extraida 2026-09-28 05:20: mercado cerrado"
+      },
+      "COPPER": {
+        "aplica": true,
+        "ok": true,
+        "detalle": "ultima vela 05:00, extraccion 05:21 (Santiago)"
+      },
+      "USDIDX": {
+        "aplica": false,
+        "ok": null,
+        "detalle": "ultima vela 2026-09-25 16:00, extraida 2026-09-27 19:21: mercado cerrado"
+      },
+      "BRENT": {
+        "aplica": true,
+        "ok": true,
+        "detalle": "ultima vela 05:00, extraccion 05:20 (Santiago)"
+      }
+    },
+    "moda_volumen": {
+      "US100": {
+        "ok": true,
+        "hora": 10,
+        "horas_por_mes": {
+          "2024-11": 10,
+          "2024-12": 10,
+          "2025-01": 10,
+          "2025-02": 10,
+          "2025-03": 10,
+          "2025-04": 10,
+          "2025-05": 10,
+          "2025-06": 10,
+          "2025-07": 10,
+          "2025-08": 10,
+          "2025-09": 10,
+          "2025-10": 10,
+          "2025-11": 10,
+          "2025-12": 10,
+          "2026-01": 10,
+          "2026-02": 10,
+          "2026-03": 10,
+          "2026-04": 10,
+          "2026-05": 10,
+          "2026-06": 10,
+          "2026-07": 10,
+          "2026-08": 10,
+          "2026-09": 10
+        }
+      }
+    }
+  },
+  "por_activo": {
+    "XAUUSD": {
+      "n_votos": 2560,
+      "n_dias": 433,
+      "c1": {
+        "acierto_modelo": 51.39017608897127,
+        "acierto_ema50": 51.85356811862836,
+        "diferencia": -0.46339202965708987,
+        "ic": [
+          -2.57353006204709,
+          1.5132942208032798
+        ]
+      },
+      "c2": {
+        "n_lateral": 402,
+        "acierto_ema50_lateral": 47.2636815920398,
+        "acierto_ema50_resto": 51.85356811862836,
+        "diferencia": -4.589886526588555,
+        "ic": [
+          -11.734935530867602,
+          2.7818285370184235
+        ],
+        "mediana_m_lateral": 0.7591586157432351,
+        "mediana_m_direccional": 0.8641223227449002
+      },
+      "c3": {
+        "giros_modelo_100": 7.65625,
+        "giros_ema50_100": 10.78125
+      },
+      "c4": {
+        "debil": 51.43805309734514,
+        "moderada": 46.8944099378882,
+        "fuerte": 56.0655737704918
+      },
+      "descartes": {
+        "fuera_de_sesion": 5982,
+        "horizonte_con_hueco": 1308,
+        "hora_ambigua": 0
+      },
+      "fuera_de_sesion": {
+        "n_votos": 5542,
+        "n_dias": 524,
+        "c1": {
+          "acierto_modelo": 50.49019607843137,
+          "acierto_ema50": 50.70332480818415,
+          "diferencia": -0.2131287297527707,
+          "ic": [
+            -1.3731772961105,
+            0.9310828179978011
+          ]
+        },
+        "c2": {
+          "n_lateral": 850,
+          "acierto_ema50_lateral": 49.05882352941177,
+          "acierto_ema50_resto": 50.70332480818415,
+          "diferencia": -1.6445012787723812,
+          "ic": [
+            -6.5208497768082125,
+            3.080602741807272
+          ],
+          "mediana_m_lateral": 0.7110914568546426,
+          "mediana_m_direccional": 0.8051471154353975
+        },
+        "c3": {
+          "giros_modelo_100": 4.05990617105738,
+          "giros_ema50_100": 5.864308913749549
+        },
+        "c4": {
+          "debil": 48.91000558971492,
+          "moderada": 50.65703022339028,
+          "fuerte": 52.35336712527155
+        }
+      },
+      "paridad_ema100_atr": 0.0016810336264602844
+    },
+    "WTI": {
+      "n_votos": 2447,
+      "n_dias": 436,
+      "c1": {
+        "acierto_modelo": 50.280373831775705,
+        "acierto_ema50": 51.44859813084112,
+        "diferencia": -1.1682242990654206,
+        "ic": [
+          -3.5126309613722553,
+          1.2208591815543535
+        ]
+      },
+      "c2": {
+        "n_lateral": 307,
+        "acierto_ema50_lateral": 52.11726384364821,
+        "acierto_ema50_resto": 51.44859813084112,
+        "diferencia": 0.6686657128070927,
+        "ic": [
+          -7.286178311229859,
+          8.590033970936036
+        ],
+        "mediana_m_lateral": 1.119437236599329,
+        "mediana_m_direccional": 0.993033918704614
+      },
+      "c3": {
+        "giros_modelo_100": 8.868001634654679,
+        "giros_ema50_100": 12.096444626072742
+      },
+      "c4": {
+        "debil": 52.01005025125628,
+        "moderada": 46.19771863117871,
+        "fuerte": 50.476190476190474
+      },
+      "descartes": {
+        "fuera_de_sesion": 5966,
+        "horizonte_con_hueco": 1437,
+        "hora_ambigua": 0
+      },
+      "fuera_de_sesion": {
+        "n_votos": 5647,
+        "n_dias": 527,
+        "c1": {
+          "acierto_modelo": 48.96449704142012,
+          "acierto_ema50": 49.00676246830093,
+          "diferencia": -0.042265426880811495,
+          "ic": [
+            -1.463122284265742,
+            1.3714042358733936
+          ]
+        },
+        "c2": {
+          "n_lateral": 915,
+          "acierto_ema50_lateral": 50.81967213114754,
+          "acierto_ema50_resto": 49.00676246830093,
+          "diferencia": 1.8129096628466124,
+          "ic": [
+            -2.689639619939122,
+            6.343967273872072
+          ],
+          "mediana_m_lateral": 0.7276758920324071,
+          "mediana_m_direccional": 0.761770380897483
+        },
+        "c3": {
+          "giros_modelo_100": 4.515672038250399,
+          "giros_ema50_100": 6.251106782362316
+        },
+        "c4": {
+          "debil": 50.042408821034776,
+          "moderada": 47.946175637393765,
+          "fuerte": 47.81704781704782
+        }
+      },
+      "paridad_ema100_atr": 0.007628271371706561
+    },
+    "US100": {
+      "n_votos": 1792,
+      "n_dias": 451,
+      "c1": {
+        "acierto_modelo": 55.590851334180435,
+        "acierto_ema50": 55.590851334180435,
+        "diferencia": 0.0,
+        "ic": [
+          -2.1059507231317545,
+          2.0859691905514612
+        ]
+      },
+      "c2": {
+        "n_lateral": 218,
+        "acierto_ema50_lateral": 50.45871559633027,
+        "acierto_ema50_resto": 55.590851334180435,
+        "diferencia": -5.132135737850163,
+        "ic": [
+          -13.075386635921733,
+          3.1233528496510576
+        ],
+        "mediana_m_lateral": 0.9818929155254608,
+        "mediana_m_direccional": 1.0078498744148061
+      },
+      "c3": {
+        "giros_modelo_100": 9.933035714285714,
+        "giros_ema50_100": 12.5
+      },
+      "c4": {
+        "debil": 53.42465753424658,
+        "moderada": 60.58091286307054,
+        "fuerte": 53.28719723183391
+      },
+      "descartes": {
+        "fuera_de_sesion": 6649,
+        "horizonte_corto": 1345,
+        "horizonte_con_hueco": 64,
+        "hora_ambigua": 0
+      },
+      "fuera_de_sesion": {
+        "n_votos": 6488,
+        "n_dias": 566,
+        "c1": {
+          "acierto_modelo": 51.99083861874559,
+          "acierto_ema50": 51.10993657505285,
+          "diferencia": 0.8809020436927414,
+          "ic": [
+            -0.3013572611871125,
+            1.9797685076301328
+          ]
+        },
+        "c2": {
+          "n_lateral": 812,
+          "acierto_ema50_lateral": 50.98522167487685,
+          "acierto_ema50_resto": 51.10993657505285,
+          "diferencia": -0.12471490017600395,
+          "ic": [
+            -5.047707784087844,
+            4.964738069434123
+          ],
+          "mediana_m_lateral": 0.7579201916543838,
+          "mediana_m_direccional": 0.6942220360239553
+        },
+        "c3": {
+          "giros_modelo_100": 3.6066584463625153,
+          "giros_ema50_100": 5.070900123304562
+        },
+        "c4": {
+          "debil": 51.47503782148261,
+          "moderada": 51.449275362318836,
+          "fuerte": 53.87722132471728
+        }
+      },
+      "paridad_ema100_atr": 0.001580490397602875
+    },
+    "USDCLP": {
+      "n_votos": 4142,
+      "n_dias": 1104,
+      "c1": {
+        "acierto_modelo": 47.77934936350778,
+        "acierto_ema50": 47.86421499292786,
+        "diferencia": -0.08486562942008487,
+        "ic": [
+          -1.6594732531031422,
+          1.5713472164138427
+        ]
+      },
+      "c2": {
+        "n_lateral": 607,
+        "acierto_ema50_lateral": 46.787479406919275,
+        "acierto_ema50_resto": 47.86421499292786,
+        "diferencia": -1.076735586008587,
+        "ic": [
+          -6.484370863858364,
+          4.209678142662496
+        ],
+        "mediana_m_lateral": 0.8578935917842484,
+        "mediana_m_direccional": 0.8834409717876949
+      },
+      "c3": {
+        "giros_modelo_100": 6.01158860453887,
+        "giros_ema50_100": 9.343312409464026
+      },
+      "c4": {
+        "debil": 49.447236180904525,
+        "moderada": 41.7890520694259,
+        "fuerte": 49.246231155778894
+      },
+      "descartes": {
+        "horizonte_con_hueco": 4506,
+        "fuera_de_sesion": 1198,
+        "sin_futuro": 4,
+        "hora_ambigua": 0
+      },
+      "fuera_de_sesion": {
+        "n_votos": 536,
+        "n_dias": 444,
+        "c1": {
+          "acierto_modelo": 45.9954233409611,
+          "acierto_ema50": 44.8512585812357,
+          "diferencia": 1.1441647597254003,
+          "ic": [
+            -2.222345953971789,
+            4.656991293020704
+          ]
+        },
+        "c2": {
+          "n_lateral": 99,
+          "acierto_ema50_lateral": 52.52525252525253,
+          "acierto_ema50_resto": 44.8512585812357,
+          "diferencia": 7.673993944016832,
+          "ic": [
+            -2.964499637166976,
+            18.4824497907494
+          ],
+          "mediana_m_lateral": 1.173942776888485,
+          "mediana_m_direccional": 1.4420743711981534
+        },
+        "c3": {
+          "giros_modelo_100": 8.955223880597014,
+          "giros_ema50_100": 21.26865671641791
+        },
+        "c4": {
+          "debil": 47.49034749034749,
+          "moderada": 45.09803921568628,
+          "fuerte": 42.10526315789473
+        }
+      },
+      "paridad_ema100_atr": 0.004641360725022903
+    },
+    "COPPER": {
+      "n_votos": 2670,
+      "n_dias": 833,
+      "c1": {
+        "acierto_modelo": 49.55035971223021,
+        "acierto_ema50": 48.156474820143885,
+        "diferencia": 1.393884892086331,
+        "ic": [
+          -0.9253487981727916,
+          3.7118429509319273
+        ]
+      },
+      "c2": {
+        "n_lateral": 446,
+        "acierto_ema50_lateral": 46.18834080717489,
+        "acierto_ema50_resto": 48.156474820143885,
+        "diferencia": -1.9681340129689973,
+        "ic": [
+          -8.022497994209475,
+          4.330967971759955
+        ],
+        "mediana_m_lateral": 0.8037214607161716,
+        "mediana_m_direccional": 0.8425654136813397
+      },
+      "c3": {
+        "giros_modelo_100": 8.464419475655431,
+        "giros_ema50_100": 11.161048689138577
+      },
+      "c4": {
+        "debil": 50.62447960033306,
+        "moderada": 48.55595667870036,
+        "fuerte": 47.97441364605544
+      },
+      "descartes": {
+        "fuera_de_sesion": 3830,
+        "horizonte_con_hueco": 3349,
+        "sin_futuro": 1,
+        "hora_ambigua": 0
+      },
+      "fuera_de_sesion": {
+        "n_votos": 3818,
+        "n_dias": 836,
+        "c1": {
+          "acierto_modelo": 49.32833489534521,
+          "acierto_ema50": 49.17213370821618,
+          "diferencia": 0.1562011871290222,
+          "ic": [
+            -1.6854104809209212,
+            2.037042918696754
+          ]
+        },
+        "c2": {
+          "n_lateral": 617,
+          "acierto_ema50_lateral": 45.705024311183145,
+          "acierto_ema50_resto": 49.17213370821618,
+          "diferencia": -3.4671093970330356,
+          "ic": [
+            -9.35610771635284,
+            2.258140289974404
+          ],
+          "mediana_m_lateral": 0.7499814206544122,
+          "mediana_m_direccional": 0.7591091553038605
+        },
+        "c3": {
+          "giros_modelo_100": 7.4122577265584075,
+          "giros_ema50_100": 8.56469355683604
+        },
+        "c4": {
+          "debil": 49.273743016759774,
+          "moderada": 51.20320855614974,
+          "fuerte": 47.3604826546003
+        }
+      },
+      "paridad_ema100_atr": 0.003303299990086523
+    },
+    "USDIDX": {
+      "n_votos": 2437,
+      "n_dias": 493,
+      "c1": {
+        "acierto_modelo": 49.27113702623907,
+        "acierto_ema50": 48.97959183673469,
+        "diferencia": 0.2915451895043732,
+        "ic": [
+          -2.235045544149927,
+          2.7835562398902107
+        ]
+      },
+      "c2": {
+        "n_lateral": 379,
+        "acierto_ema50_lateral": 53.825857519788926,
+        "acierto_ema50_resto": 48.97959183673469,
+        "diferencia": 4.846265683054229,
+        "ic": [
+          -2.473404612574193,
+          12.36589757305403
+        ],
+        "mediana_m_lateral": 0.9559977524005876,
+        "mediana_m_direccional": 0.8878853157428697
+      },
+      "c3": {
+        "giros_modelo_100": 8.247845711940911,
+        "giros_ema50_100": 11.448502256873205
+      },
+      "c4": {
+        "debil": 49.580536912751676,
+        "moderada": 48.20295983086681,
+        "fuerte": 49.61832061068702
+      },
+      "descartes": {
+        "fuera_de_sesion": 5538,
+        "horizonte_con_hueco": 1871,
+        "sin_futuro": 4,
+        "hora_ambigua": 0
+      },
+      "fuera_de_sesion": {
+        "n_votos": 5437,
+        "n_dias": 597,
+        "c1": {
+          "acierto_modelo": 49.33392539964476,
+          "acierto_ema50": 49.46714031971581,
+          "diferencia": -0.13321492007104796,
+          "ic": [
+            -1.5326440647295339,
+            1.2534486413925383
+          ]
+        },
+        "c2": {
+          "n_lateral": 933,
+          "acierto_ema50_lateral": 52.41157556270096,
+          "acierto_ema50_resto": 49.46714031971581,
+          "diferencia": 2.944435242985155,
+          "ic": [
+            -1.4011117018039574,
+            7.284617521487902
+          ],
+          "mediana_m_lateral": 0.7831783502253652,
+          "mediana_m_direccional": 0.7343021951715942
+        },
+        "c3": {
+          "giros_modelo_100": 4.395806510943535,
+          "giros_ema50_100": 6.32701857642082
+        },
+        "c4": {
+          "debil": 50.69786535303776,
+          "moderada": 47.280701754385966,
+          "fuerte": 48.275862068965516
+        }
+      },
+      "paridad_ema100_atr": 0.007708323732655193
+    },
+    "BRENT": {
+      "n_votos": 761,
+      "n_dias": 129,
+      "c1": {
+        "acierto_modelo": 54.68277945619335,
+        "acierto_ema50": 55.58912386706949,
+        "diferencia": -0.906344410876133,
+        "ic": [
+          -4.5873740531266805,
+          2.9155582983975648
+        ]
+      },
+      "c2": {
+        "n_lateral": 99,
+        "acierto_ema50_lateral": 53.535353535353536,
+        "acierto_ema50_resto": 55.58912386706949,
+        "diferencia": -2.053770331715954,
+        "ic": [
+          -16.698063390828725,
+          11.585766428052382
+        ],
+        "mediana_m_lateral": 1.2229475898107809,
+        "mediana_m_direccional": 0.8156261957983897
+      },
+      "c3": {
+        "giros_modelo_100": 6.307490144546649,
+        "giros_ema50_100": 8.541392904073588
+      },
+      "c4": {
+        "debil": 53.76623376623376,
+        "moderada": 54.37499999999999,
+        "fuerte": 58.119658119658126
+      },
+      "descartes": {
+        "sin_historia_d1": 2169,
+        "fuera_de_sesion": 1601,
+        "horizonte_con_hueco": 391,
+        "hora_ambigua": 0
+      },
+      "fuera_de_sesion": {
+        "n_votos": 1472,
+        "n_dias": 157,
+        "c1": {
+          "acierto_modelo": 50.431372549019606,
+          "acierto_ema50": 50.745098039215684,
+          "diferencia": -0.3137254901960784,
+          "ic": [
+            -2.4390724025350488,
+            1.79601258343713
+          ]
+        },
+        "c2": {
+          "n_lateral": 197,
+          "acierto_ema50_lateral": 51.776649746192895,
+          "acierto_ema50_resto": 50.745098039215684,
+          "diferencia": 1.0315517069772073,
+          "ic": [
+            -9.29677526143474,
+            11.732666667634158
+          ],
+          "mediana_m_lateral": 0.6565283403098333,
+          "mediana_m_direccional": 0.7630860930499406
+        },
+        "c3": {
+          "giros_modelo_100": 4.076086956521739,
+          "giros_ema50_100": 5.434782608695652
+        },
+        "c4": {
+          "debil": 51.80375180375181,
+          "moderada": 52.97450424929179,
+          "fuerte": 42.35807860262008
+        }
+      },
+      "paridad_ema100_atr": 0.007463252042457791
+    }
+  },
+  "total": {
+    "n_votos": 16809,
+    "n_dias": 1182,
+    "c1": {
+      "acierto_modelo": 50.35886000975541,
+      "acierto_ema50": 50.407637098460036,
+      "diferencia": -0.048777088704619886,
+      "ic": [
+        -0.9409191950679126,
+        0.8368857321502907
+      ]
+    },
+    "c2": {
+      "n_lateral": 2458,
+      "acierto_ema50_lateral": 49.10496338486575,
+      "acierto_ema50_resto": 50.407637098460036,
+      "diferencia": -1.3026737135942879,
+      "ic": [
+        -4.121065883851391,
+        1.6056635426600803
+      ],
+      "mediana_m_lateral": 0.9012179211741813,
+      "mediana_m_direccional": 0.9000411900512667
+    },
+    "c3": {
+      "giros_modelo_100": 7.835088345529181,
+      "giros_ema50_100": 10.875126420370039
+    },
+    "c4": {
+      "debil": 50.919285434867646,
+      "moderada": 48.32775919732442,
+      "fuerte": 51.3251454427925
+    }
+  },
+  "adopcion": {
+    "c1": true,
+    "c2": false,
+    "c3": true,
+    "c4": false,
+    "adopta": false,
+    "disidentes": [],
+    "sin_voto": []
+  }
+}
