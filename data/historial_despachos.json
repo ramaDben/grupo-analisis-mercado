@@ -1231,5 +1231,86 @@
     "pieza": "3_wtispot",
     "activo": "",
     "huella": "🎯Activo:PetróleoWTI(WTI.spot)📌Nivelavigilar:97,535⚡Quéesperar:sesgocomprador;sobre97,535ganacaminoalalza━━━━━━━━━━━━━━━━━━━*Elpetróleosemantienealalza,peropegadoasuresistenciayconpocorecorridohoy*Precioactual:96,891━━━━━━━━━━━━━━━━━━━🟢Sobre97,535→fuerzacompradora🟡Entre95,473y97,535→rango:sirompeunbordeyvuelveaentrar,esfalsoquiebreyelobjetivopasaaserelbordecontrario🔴Bajo95,473→presiónvendedora━━━━━━━━━━━━━━━━━━━⏱️*Temporalidad*:1H·marcointradía(dentrodelajornada)💡Porqué1Hacá:reaccionafuerteainventariosynoticiasOPEP+,asíque1H/4Hdanunalecturamásestable;en15Melruidoesalto¿Cómolovestú?Teleemosenelgrupo."
+  },
+  {
+    "fecha": "2026-09-28",
+    "hora": "14:47",
+    "tanda": "2026-09-28_avisos_tarde_prueba",
+    "canal": "banco_de_pruebas",
+    "pieza": "1_portada",
+    "activo": "",
+    "huella": "📅*AGENDADELASEMANA*Semanadel29deseptiembreal2deoctubre🎯Loclave:elviernessaleelempleodeEE.UU.,eldatoquemáspuedemoveraldólar,aloroyalNasdaq.━━━━━━━━━━━━━━━━━━━Enestecarrusel:•1/3·Portada•2/3·Los5datosdelasemana,condíayhoradeChile•3/3·Nuestralectura:quémirarencadauno━━━━━━━━━━━━━━━━━━━Fuente:calendarioeconómicodeInvesting.com."
+  },
+  {
+    "fecha": "2026-09-28",
+    "hora": "14:47",
+    "tanda": "2026-09-28_avisos_tarde_prueba",
+    "canal": "banco_de_pruebas",
+    "pieza": "2_agenda",
+    "activo": "",
+    "huella": "2/3·*Laagenda*:los5datosdemayorimpactodelasemana,enhoradeChile."
+  },
+  {
+    "fecha": "2026-09-28",
+    "hora": "14:48",
+    "tanda": "2026-09-28_avisos_tarde_prueba",
+    "canal": "banco_de_pruebas",
+    "pieza": "3_lectura",
+    "activo": "",
+    "huella": "3/3·*Nuestralectura*:quémirarencadadato.¿Cómolovestú?Teleemosenelgrupo._Análisisinformativo.Noconstituyerecomendacióndeinversión._"
+  },
+  {
+    "fecha": "2026-09-28",
+    "hora": "14:51",
+    "tanda": "2026-09-28_avisos_tarde_prueba2",
+    "canal": "banco_de_pruebas",
+    "pieza": "1_portada",
+    "activo": "",
+    "huella": "📅*AGENDADELASEMANA*Semanadel29deseptiembreal2deoctubre🎯Loclave:elviernessaleelempleodeEE.UU.,eldatoquemáspuedemoveraldólar,aloroyalNasdaq.━━━━━━━━━━━━━━━━━━━Enestecarrusel:•1/3·Portada•2/3·Los5datosdelasemana,condíayhoradeChile•3/3·Nuestralectura:quémirarencadauno━━━━━━━━━━━━━━━━━━━Fuente:calendarioeconómicodeInvesting.com."
+  },
+  {
+    "fecha": "2026-09-28",
+    "hora": "14:52",
+    "tanda": "2026-09-28_avisos_tarde_prueba2",
+    "canal": "banco_de_pruebas",
+    "pieza": "2_agenda",
+    "activo": "",
+    "huella": "2/3·*Laagenda*:los5datosdemayorimpactodelasemana,enhoradeChile."
+  },
+  {
+    "fecha": "2026-09-28",
+    "hora": "14:53",
+    "tanda": "2026-09-28_avisos_tarde_prueba2",
+    "canal": "banco_de_pruebas",
+    "pieza": "3_lectura",
+    "activo": "",
+    "huella": "3/3·*Nuestralectura*:quémirarencadadato.¿Cómolovestú?Teleemosenelgrupo._Análisisinformativo.Noconstituyerecomendacióndeinversión._"
+  },
+  {
+    "fecha": "2026-09-28",
+    "hora": "15:30",
+    "tanda": "2026-09-28_avisos_tarde",
+    "canal": "01_macro_y_apertura",
+    "pieza": "1_portada",
+    "activo": "",
+    "huella": "📅*AGENDADELASEMANA*Semanadel29deseptiembreal2deoctubre🎯Loclave:elviernessaleelempleodeEE.UU.,eldatoquemáspuedemoveraldólar,aloroyalNasdaq.━━━━━━━━━━━━━━━━━━━Enestecarrusel:•1/3·Portada•2/3·Los5datosdelasemana,condíayhoradeChile•3/3·Nuestralectura:quémirarencadauno━━━━━━━━━━━━━━━━━━━Fuente:calendarioeconómicodeInvesting.com."
+  },
+  {
+    "fecha": "2026-09-28",
+    "hora": "15:31",
+    "tanda": "2026-09-28_avisos_tarde",
+    "canal": "01_macro_y_apertura",
+    "pieza": "2_agenda",
+    "activo": "",
+    "huella": "2/3·*Laagenda*:los5datosdemayorimpactodelasemana,enhoradeChile."
+  },
+  {
+    "fecha": "2026-09-28",
+    "hora": "15:32",
+    "tanda": "2026-09-28_avisos_tarde",
+    "canal": "01_macro_y_apertura",
+    "pieza": "3_lectura",
+    "activo": "",
+    "huella": "3/3·*Nuestralectura*:quémirarencadadato.¿Cómolovestú?Teleemosenelgrupo._Análisisinformativo.Noconstituyerecomendacióndeinversión._"
   }
 ]
