@@ -1190,3 +1190,9 @@ def test_despachar_modo_pruebas_redirige_a_banco_de_pruebas(tmp_path, monkeypatc
     assert len(llamadas_lote) == 1
     assert llamadas_lote[0][0] == "GI · Banco de Pruebas"
     assert len(bitacora_anotaciones) == 0
+
+
+def test_la_direccion_en_sombra_no_entra_al_payload():
+    """Fase 1: la lectura de cuatro ejes viaja en la seleccion y el payload la ignora."""
+    con_sombra = {**SELECCION, "direccion_4ejes": {"direccion": "LATERAL", "fase": "rango"}}
+    assert payload_de_prueba(con_sombra) == payload_de_prueba()

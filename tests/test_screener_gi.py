@@ -775,3 +775,54 @@ def test_un_indicador_fuera_del_glosario_levanta_aviso(monkeypatch):
     texto = " ".join(avisos)
     assert "glosario" in texto and "Richmond" in texto, avisos
     assert "Nonfarm Payrolls" not in texto, "el que SI esta en el glosario no se reporta"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Dirección de cuatro ejes en sombra: se calcula, no decide nada
+# ─────────────────────────────────────────────────────────────────────────────
+def _evaluar(h1=None, d1=None):
+    return sc.evaluar_activo(
+        ACTIVO, [], delta_ust_bps=None,
+        ahora_santiago=AHORA.astimezone(sc.SANTIAGO),
+        analizador=analizador_falso(h1 or h1_perfecto(), d1 or d1_con_consumo(0.30)),
+    )
+
+
+def test_la_sombra_viaja_en_el_resultado():
+    res = _evaluar()
+    assert res["direccion_4ejes"]["direccion"] in {"ALCISTA", "BAJISTA", "LATERAL"}
+    assert res["direccion_4ejes"]["fase"]
+
+
+def test_la_sombra_es_inerte(monkeypatch):
+    """Con la lectura nueva cambiada o rota, todo lo demás es idéntico."""
+    base = _evaluar()
+    monkeypatch.setattr(sc.dg, "leer_direccion", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("roto")))
+    roto = _evaluar()
+    assert roto["direccion_4ejes"] == {"error": "RuntimeError: roto"}
+    sin_sombra = lambda r: {k: v for k, v in r.items() if k != "direccion_4ejes"}  # noqa: E731
+    assert sin_sombra(roto) == sin_sombra(base)
+    assert roto["direccion"] == sc.direccion_tecnica(h1_perfecto())
+
+
+def test_avisos_de_sombra_solo_cuando_difieren_o_falla():
+    iguales = {"ticker": "A", "direccion": "ALCISTA", "direccion_4ejes": {"direccion": "ALCISTA", "fase": "tendencia_alineada"}}
+    distinto = {"ticker": "B", "direccion": "ALCISTA", "direccion_4ejes": {"direccion": "LATERAL", "fase": "rango"}}
+    fallo = {"ticker": "C", "direccion": "BAJISTA", "direccion_4ejes": {"error": "ValueError: x"}}
+    avisos = sc.avisos_de_sombra([iguales, distinto, fallo])
+    assert len(avisos) == 2
+    assert avisos[0].startswith("B:") and "LATERAL" in avisos[0] and "ALCISTA" in avisos[0]
+    assert avisos[1].startswith("C:") and "ValueError" in avisos[1]
+    assert all("—" not in a and "–" not in a for a in avisos)
+
+
+def test_escanear_reporta_la_diferencia_de_la_sombra():
+    h1 = dict(h1_perfecto(), adx_14=15.0, donchian_50_high=105.0, donchian_50_low=95.0)  # p = 0,5: rango
+
+    def fake(ticker, tf):
+        res = dict(h1 if tf == "H1" else d1_con_consumo(0.30))
+        res["ticker"] = ticker
+        return res
+
+    resultado = sc.escanear(tanda=1, top=1, solo_renderizables=True, analizador=fake)
+    assert any("sombra 4 ejes dice LATERAL" in a for a in resultado["avisos"])

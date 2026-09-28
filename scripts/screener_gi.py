@@ -61,6 +61,7 @@ ACTIVOS_JSON = RAIZ / "config" / "activos.json"
 DIR_SALIDA = RAIZ / "data" / "screener"
 
 import agenda_mercado as agenda  # noqa: E402  (necesita RAIZ en sys.path)
+import direccion_gi as dg  # noqa: E402  (fase 1: solo en sombra)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -671,6 +672,42 @@ def factor_momentum(h1: dict[str, Any], direccion: str) -> tuple[int, str]:
 # ─────────────────────────────────────────────────────────────────────────────
 # Escaneo
 # ─────────────────────────────────────────────────────────────────────────────
+def _direccion_en_sombra(
+    h1: dict[str, Any], d1: dict[str, Any], ahora_santiago: datetime
+) -> dict[str, Any]:
+    """La dirección de cuatro ejes, **en sombra**: se calcula y se guarda, no decide.
+
+    Fase 1 del spec `2026-09-28-direccion-4-ejes-design.md`: la `direccion` que
+    puntúa, pinta el chip y alimenta el guardia de divergencia sigue siendo
+    `direccion_tecnica`. Si la lectura nueva lanza, se anota y la tanda sigue:
+    la sombra nunca tumba la tanda. Se llama con `previa=None` a propósito,
+    porque el escáner no guarda estado entre corridas.
+    """
+    try:
+        lectura = dg.leer_direccion(h1, d1, hoy=ahora_santiago.date().isoformat())
+        return dg.a_dict(lectura)
+    except Exception as exc:  # noqa: BLE001
+        return {"error": f"{type(exc).__name__}: {exc}"}
+
+
+def avisos_de_sombra(evaluados: list[dict[str, Any]]) -> list[str]:
+    """Una línea por activo donde la sombra difiere de la EMA 50, o falló."""
+    avisos: list[str] = []
+    for r in evaluados:
+        sombra = r.get("direccion_4ejes") or {}
+        if "error" in sombra:
+            avisos.append(
+                f"{r['ticker']}: la direccion de 4 ejes (sombra) fallo ({sombra['error']}); "
+                "la tanda sigue con la EMA 50"
+            )
+        elif sombra.get("direccion") and sombra["direccion"] != r.get("direccion"):
+            avisos.append(
+                f"{r['ticker']}: sombra 4 ejes dice {sombra['direccion']} "
+                f"({sombra.get('fase')}) y la EMA 50 dice {r.get('direccion')}"
+            )
+    return avisos
+
+
 def evaluar_activo(
     activo: dict[str, Any],
     eventos: list[dict[str, Any]],
@@ -711,6 +748,8 @@ def evaluar_activo(
     if motivo:
         return {**base, "excluido": motivo}
 
+    sombra = _direccion_en_sombra(h1, d1, ahora_santiago)
+
     t, det_t = factor_tecnico(h1, d1, direccion)
     m, det_m = factor_catalizador(ticker, eventos, delta_ust_bps)
     c, det_c = factor_espacio(h1, d1, direccion, ahora_santiago=ahora_santiago)
@@ -719,6 +758,8 @@ def evaluar_activo(
     return {
         **base,
         "direccion": direccion,
+        # Fase 1: la lectura de cuatro ejes viaja al lado y nadie la consume.
+        "direccion_4ejes": sombra,
         "score": t + m + c + f,
         "factores": {
             "tecnico":     {"puntos": t, "max": 35, "detalle": det_t},
@@ -932,6 +973,7 @@ def escanear(
         (excluidos if "excluido" in res else evaluados).append(res)
 
     evaluados.sort(key=lambda r: (-r["score"], r["ticker"]))
+    avisos.extend(avisos_de_sombra(evaluados))
 
     if modo_matriz:
         # Cobertura total: el mejor de cada una de las 5 categorías clave, hasta
