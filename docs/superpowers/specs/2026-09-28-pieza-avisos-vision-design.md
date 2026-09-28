@@ -81,7 +81,9 @@ Se separa en tres funciones públicas que reciben datos genéricos, sin estructu
   y fecha). Si el tipo es `traduccion`, se rotula "traducción nuestra".
 - Variante `meta_precio`: dos columnas, "Meta del banco" (la cifra de la cita y su plazo) y
   "Precio hoy" (la cifra del terminal y la hora de lectura).
-- La variante se resuelve con fences sobre el campo `variante`, sin duplicar la plantilla.
+- La variante se resuelve con dos bucles `FOR` (`bloque_cita` y `bloque_meta`): el script llena
+  uno con un elemento y deja el otro vacío, y `resolver_loops` borra el bloque vacío. No se usan
+  fences porque `story_render` solo acepta cuatro fijos (`_FENCES`).
 - Los niveles citados van dibujados: el payload lleva `niveles` con `clase`, `etiqueta` y `rol`,
   armados por el script a partir de las cifras medidas.
 - Fixture: `tests/fixtures/stories/payloads/vision.json`, con las dos variantes.
@@ -133,12 +135,15 @@ está en el catálogo y que no salieron a Avisos en los últimos 14 días.
 - `_correr_preparar` recibe el script y los argumentos en vez de tener `pipeline_carrusel.py`
   escrito adentro. Un momento con `pieza` corre `pipeline_vision.py --preparar`; uno sin
   `pieza` se comporta como hoy.
-- `canales_del_momento`: un momento con `pieza` resuelve su canal con el **resolver de alias de
-  `enviar_whatsapp`** (`avisos` en `config/whatsapp_grupos.json`), no con una lista escrita.
+- `canales_del_momento`: un momento con `pieza` resuelve su canal con
+  **`pipeline_carrusel.resolver_grupo_solicitado`** (`avisos` en `config/whatsapp_grupos.json`),
+  el mismo índice de alias que usa el despacho, no con una lista escrita. No se importa nada del
+  sender: `test_el_reloj_no_puede_enviar_nada_a_whatsapp` prohíbe nombrar `enviar_whatsapp` o
+  `whatsapp_sender` en `reloj_gi.py`.
 
 **Extensión documentada del invariante 4.** El invariante dice que los canales de un momento se
 derivan del mapeo real de activo a canal. Un momento con `pieza` no tiene activos, así que su
-canal se deriva del mapeo real de alias a grupo, que es el que usa el sender. Se actualiza la
+canal se deriva del mapeo real de alias a grupo, que es el que usa el despacho. Se actualiza la
 sección "El reloj de sucesos" de `CLAUDE.md` y se regenera `.agents/rules/proyecto.md`.
 
 **Tests que lo sostienen:**
@@ -176,11 +181,12 @@ pieza (código 0, "hoy no corresponde"). La agenda del lunes no es parte de esta
   precio, así que el máximo es 2 horas y no las 24 de LinkedIn.
 
 **Los propios de la pieza:**
-- El pie nombra la dirección de la píldora (alcista o bajista).
-- El pie lleva el aviso "Análisis informativo. No constituye recomendación de inversión."
-- El pie cierra con uno de `CIERRES_ALERTA` (`pipeline_carrusel`) o `CIERRES_MACRO`
-  (`contexto_macro_grupos`), elegido por el script de forma estable por pieza y día, como en el
-  carrusel, para que el despacho no vea un texto distinto al aprobado.
+- El pie escrito nombra la dirección de la píldora (alcista o bajista); si no, se detiene.
+- **El cierre y el aviso los agrega el script**, no el comando: `pie.txt` = pie escrito + un
+  cierre de `CIERRES_ALERTA` elegido con `pipeline_carrusel.elegir_variante(CIERRES_ALERTA,
+  id_vision, fecha)` + "Análisis informativo. No constituye recomendación de inversión." Es
+  estable por pieza y día, como en el carrusel, para que el despacho no vea un texto distinto
+  al aprobado.
 
 ## 5. Errores
 
@@ -207,7 +213,7 @@ pieza (código 0, "hoy no corresponde"). La agenda del lunes no es parte de esta
   - la variante según el tipo de la cita;
   - `--refrescar` conserva la visión y el texto, y no toca el historial;
   - la frescura se detiene a los 121 minutos;
-  - un pie sin dirección, sin aviso o sin cierre se detiene.
+  - un pie sin dirección se detiene; `pie.txt` trae el cierre estable y el aviso.
 - **Reloj:**
   - `vision_avisos` no cae dentro de la tolerancia de ningún otro momento, en las tres
     configuraciones de desfase del año;
