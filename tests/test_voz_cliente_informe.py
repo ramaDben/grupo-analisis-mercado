@@ -30,93 +30,47 @@ import pipeline_informe as pi  # noqa: E402
 # `EE.UU.` no califica (tiene puntos), `PDF` tampoco (corto y sin guion bajo).
 _TOKEN_MAQUINA = re.compile(r"\b[A-Z][A-Z0-9]*_[A-Z0-9_]{3,}\b")
 
-SNAPSHOT = {
-    "regimen_macro_global": {"codigo": "R2_GOLDILOCKS_EXPANSION", "nombre": "Goldilocks"},
-    "as_of_utc": "2026-08-25T21:55:42.222379+00:00",
-    "activos": {
-        "USDCLP": {
-            "nombre": "Dólar / Peso Chileno",
-            "sesgo_etiqueta": "NEUTRAL / RANGO (912 - 925)",
-            "setups_permitidos": ["FADE_SUPPORT_RESISTANCE_M15", "MEAN_REVERSION_RSI_H1"],
-            "setups_prohibidos": ["BREAKOUT_CHASE_LONG", "GRID_SIN_STOP"],
-        },
-        "XAUUSD": {
-            "nombre": "Oro Spot",
-            "sesgo_etiqueta": "ALCISTA MODERADO",
-            "setups_permitidos": ["PULLBACK_EMA50_H1", "BREAKOUT_DONCHIAN_H1"],
-            "setups_prohibidos": ["SHORT_AGRESIVO"],
-        },
+ACTIVOS = {
+    "USDCLP": {
+        "nombre": "Dólar / Peso Chileno", "digits": 2,
+        "d1": {"price": 931.4, "s1": 925.0, "r1": 938.25, "ema_50": 928.0},
+        "grafico": "graficos/usdclp.png",
     },
+    "WTI.spot": {
+        "nombre": "Petróleo WTI", "digits": 3,
+        "d1": {"price": 88.1, "s1": 86.502, "r1": 90.25, "ema_50": 89.0},
+    },
+    "US100.spot": {"nombre": "Nasdaq 100", "digits": 2},
 }
 
 
 @pytest.fixture
 def glosario() -> dict:
-    return pi.cargar_glosario_motor()
+    return pi.cargar_glosario_informe()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # La guardia principal
 # ─────────────────────────────────────────────────────────────────────────────
-def test_la_lectura_por_activo_no_deja_pasar_ningun_token_del_motor(glosario):
-    salida = pi._lectura_por_activo(SNAPSHOT, glosario)
-    fugas = _TOKEN_MAQUINA.findall(salida)
-    assert not fugas, (
-        "tokens internos del motor en texto de cliente: "
-        + ", ".join(sorted(set(fugas)))
-        + ". Agregarlos a data/glosario_motor.json."
-    )
+def test_la_lectura_por_activo_no_deja_pasar_ningun_token_de_maquina():
+    salida = pi._lectura_por_activo(ACTIVOS)
+    assert not _TOKEN_MAQUINA.findall(salida), _TOKEN_MAQUINA.findall(salida)
 
 
-def test_el_regimen_se_explica_sin_su_codigo_interno(glosario):
-    salida = pi._bloque_regimen(SNAPSHOT["regimen_macro_global"], glosario)
-    assert "R2_GOLDILOCKS_EXPANSION" not in salida
-    assert not _TOKEN_MAQUINA.findall(salida)
-    assert "la economía crece" in salida.lower()
+def test_la_lectura_por_activo_respeta_los_decimales_y_la_direccion():
+    salida = pi._lectura_por_activo(ACTIVOS)
+    assert "931,40" in salida and "938,25" in salida, "USD/CLP va con 2 decimales"
+    assert "86,502" in salida and "90,250" in salida, "WTI va con 3 decimales"
+    assert "Lectura diaria alcista" in salida, "USD/CLP sobre su EMA 50"
+    assert "Lectura diaria bajista" in salida, "WTI bajo su EMA 50"
+    assert "![Dólar / Peso Chileno" in salida
 
 
-def test_todo_el_vocabulario_que_el_motor_puede_emitir_esta_traducido(glosario):
-    """Barrido sobre el snapshot REAL, no sobre el de prueba.
-
-    Un token que el motor emite hoy y que nadie tradujo llegaría al informe tal
-    cual. Este test lo caza en la suite en vez de en el PDF.
-    """
-    ruta = RAIZ / "data central" / "DATA DRIVERS USDCLP" / "macro_bias_output.json"
-    if not ruta.is_file():
-        pytest.skip("no hay snapshot del motor en esta máquina")
-
-    datos = json.loads(ruta.read_text(encoding="utf-8"))
-    regimenes = glosario.get("regimenes") or {}
-
-    # Se pregunta por la TRADUCCIÓN y no por la clave exacta: el glosario ya no
-    # lleva la temporalidad pegada, así que exigir la clave literal volvería a
-    # obligar a una entrada por marco.
-    sin_traducir = set()
-    for activo in datos.get("activos", {}).values():
-        for token in (activo.get("setups_permitidos") or []) + (activo.get("setups_prohibidos") or []):
-            if not pi._setup_traducible(token, glosario):
-                sin_traducir.add(token)
-
-    codigo = (datos.get("regimen_macro_global") or {}).get("codigo")
-    if codigo and codigo not in regimenes:
-        sin_traducir.add(codigo)
-
-    assert not sin_traducir, (
-        "el motor emite tokens que glosario_motor.json no traduce: "
-        + ", ".join(sorted(sin_traducir))
-    )
-
-
-def test_los_cinco_regimenes_del_playbook_tienen_traduccion(glosario):
-    """Si el mercado cambia de régimen un domingo, el informe del lunes no puede
-    salir con un código sin traducir."""
-    regimenes = glosario.get("regimenes") or {}
-    for codigo in ("R0_CALMA_RANGO", "R1_SHOCK_INFLACIONARIO", "R2_GOLDILOCKS_EXPANSION",
-                   "R3_ESTANFLACION_SHOCK", "R4_RECESION_VUELO_CALIDAD"):
-        assert codigo in regimenes, f"falta el régimen {codigo}"
-        entrada = regimenes[codigo]
-        assert entrada.get("nombre") and entrada.get("explicacion") and entrada.get("que_implica")
-        assert not _TOKEN_MAQUINA.findall(entrada["nombre"] + entrada["explicacion"])
+def test_un_activo_sin_datos_del_terminal_lo_dice_y_no_inventa_cifras():
+    salida = pi._lectura_por_activo(ACTIVOS)
+    bloque = salida.split("### Nasdaq 100")[1]
+    assert "Sin datos del terminal" in bloque
+    assert pi.MARCA_EDITORIAL in bloque, "el espacio editorial queda igual"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -217,38 +171,6 @@ def test_el_escalado_respeta_los_titulares_de_portada():
 # ─────────────────────────────────────────────────────────────────────────────
 # El glosario no puede exigir una entrada por temporalidad
 # ─────────────────────────────────────────────────────────────────────────────
-def test_un_setup_se_traduce_en_cualquier_temporalidad(glosario):
-    """El motor mira la temporalidad que necesita. Si el glosario obliga a una
-    clave por marco, el primer H4 que emita llega al cliente como token."""
-    for tf in ("M15", "H1", "H4", "D1"):
-        token = f"FADE_SUPPORT_RESISTANCE_{tf}"
-        texto = pi._traducir_setup(token, glosario)
-        assert texto != token, f"{token} quedó sin traducir"
-        assert not _TOKEN_MAQUINA.findall(texto), texto
-
-
-def test_el_periodo_de_una_media_se_expresa_en_la_unidad_de_su_temporalidad(glosario):
-    """EMA20 en 1 hora son 20 horas; en 15 minutos son 20 velas de 15 minutos.
-    La cifra es la misma, la unidad no."""
-    assert "20 horas" in pi._traducir_setup("PULLBACK_EMA20_H1", glosario)
-    assert "20 velas de 15 minutos" in pi._traducir_setup("PULLBACK_EMA20_M15", glosario)
-
-
-def test_un_setup_inventado_sigue_sin_traducirse(glosario):
-    """La tolerancia por temporalidad no puede tapar un setup que nadie escribió."""
-    assert pi._traducir_setup("SETUP_QUE_NO_EXISTE_H1", glosario) == "SETUP_QUE_NO_EXISTE_H1"
-
-
-def test_la_unidad_del_periodo_concuerda_en_genero_con_la_frase(glosario):
-    """Los textos dicen "las últimas N {periodos}": una unidad masculina deja
-    "las últimas 20 días", que se lee como un error de redacción."""
-    for tf in ("M1", "M5", "M15", "M30", "H1", "H4", "H12", "D1", "W1", "MN1"):
-        texto = pi._traducir_setup(f"PULLBACK_EMA20_{tf}", glosario)
-        assert "las últimas" in texto, texto
-        for masculino in ("días", "meses", "minutos", "segundos"):
-            assert f"últimas 20 {masculino}" not in texto, texto
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # El "hasta donde" del sesgo en el informe
 # ─────────────────────────────────────────────────────────────────────────────
@@ -283,178 +205,9 @@ _VIG_RANGO = {"gramatica": "RANGO", "direccion": None, "nivel": None,
 _DIGITS = {"WTI": 3, "BRENT": 3, "USDCLP": 2}
 
 
-def test_la_lectura_por_activo_dice_hasta_donde_vale_cada_sesgo(glosario):
-    """El informe decia el sesgo sin su borde: "lo vemos alcista" y nada mas. El
-    director pidio sesgo CON su vigencia, y el PDF de apertura es donde mas
-    sirve."""
-    salida = pi._lectura_por_activo(
-        _SNAP_CRUDO, glosario, None,
-        {"WTI": _VIG_NIVEL_WTI}, _DIGITS,
-    )
-
-    assert "Hasta dónde vale" in salida
-    assert "91,745" in salida
-
-
-def test_los_activos_agrupados_conservan_su_nivel_propio(glosario):
-    """WTI y Brent se agrupan porque su lectura es palabra por palabra la misma,
-    y eso no cambia: lo que cambia es que cada uno tiene SU nivel. Si el bloque
-    agrupado publicara uno solo, el otro saldria con el borde del vecino."""
-    salida = pi._lectura_por_activo(
-        _SNAP_CRUDO, glosario, None,
-        {"WTI": _VIG_NIVEL_WTI, "BRENT": _VIG_NIVEL_BRENT}, _DIGITS,
-    )
-
-    assert "Petróleo WTI y Petróleo Brent" in salida, "el agrupamiento se mantiene"
-    assert "91,745" in salida and "97,135" in salida
-
-
-def test_un_activo_en_rango_dice_entre_que_bordes_vale(glosario):
-    salida = pi._lectura_por_activo(
-        _SNAP_CRUDO, glosario, None, {"USDCLP": _VIG_RANGO}, _DIGITS,
-    )
-
-    assert "entre 928,90 y 936,20" in salida
-    assert "936,20" in salida
-
-
-def test_un_sesgo_invalidado_lo_dice_en_el_informe(glosario):
-    salida = pi._lectura_por_activo(
-        _SNAP_CRUDO, glosario, None,
-        {"USDCLP": {**_VIG_NIVEL_WTI, "nivel": 932.69, "vigente": False}},
-        {"USDCLP": 2},
-    )
-
-    assert "ya no vale" in salida
-    assert "932,69" in salida
-
-
-def test_sin_vigencia_el_informe_no_inventa_un_borde(glosario):
-    """Compatibilidad hacia atras y fail-closed: sin terminal MT5 no hay anclas
-    del Chandelier, y el informe sale sin el bloque en vez de no salir."""
-    salida = pi._lectura_por_activo(_SNAP_CRUDO, glosario)
-
-    assert "Hasta dónde vale" not in salida
-    assert "Petróleo WTI" in salida, "el resto de la lectura sale igual"
-
-
-def test_la_vigencia_no_filtra_tokens_del_motor_al_informe(glosario):
-    """La misma guardia de voz que el resto de la seccion: `Chandelier`,
-    `TRAILING_STOP_ASYMMETRIC` y `LARGO` son vocabulario del motor."""
-    salida = pi._lectura_por_activo(
-        _SNAP_CRUDO, glosario, None,
-        {"WTI": _VIG_NIVEL_WTI, "USDCLP": _VIG_RANGO}, _DIGITS,
-    )
-
-    assert not _TOKEN_MAQUINA.findall(salida)
-    for jerga in ("Chandelier", "LARGO", "CORTO", "trailing", "ATR"):
-        assert jerga not in salida, f"'{jerga}' es vocabulario de mesa, no de cliente"
-
-
-def test_las_cifras_de_la_vigencia_respetan_los_decimales_del_activo(glosario):
-    """El crudo va con 3 decimales y el dolar con 2, igual que en toda pieza del
-    proyecto. Y el separador decimal en Chile es la coma."""
-    salida = pi._lectura_por_activo(
-        _SNAP_CRUDO, glosario, None,
-        {"WTI": _VIG_NIVEL_WTI, "USDCLP": _VIG_RANGO}, _DIGITS,
-    )
-
-    assert "91,745" in salida and "91.745" not in salida
-    assert "928,90" in salida, "no se truncan los ceros finales"
-
-
-def test_resolver_vigencias_sin_terminal_no_lanza_y_avisa():
-    """Mismo criterio que los graficos: un informe sin este bloque sigue siendo
-    un informe, mientras que uno que se cae deja al director sin nada a las ocho
-    de la manana. Cada ausencia queda dicha en los avisos."""
-    vigencias, avisos = pi.resolver_vigencias({"activos": {}})
-
-    assert vigencias == {}
-    assert isinstance(avisos, list)
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # El parentesis de la etiqueta significa dos cosas, no una
 # ─────────────────────────────────────────────────────────────────────────────
-def test_un_parentesis_de_causa_se_traduce_y_no_se_lee_como_un_rango(glosario):
-    """El defecto que salio a la luz al agregar la vigencia, y estaba en el PDF.
-
-    `_frase_sesgo` asumia que todo parentesis de la etiqueta era un rango de
-    precios, asi que a `ALCISTA MODERADO USD (ESTANFLACION GLOBAL)` le ponia
-    delante la palabra "entre" y publicaba **"lo vemos con mas probabilidad de
-    subir, entre ESTANFLACION GLOBAL"**. Seis de las quince etiquetas del motor
-    traen la CAUSA entre parentesis, no un rango.
-    """
-    frase = pi._frase_sesgo(
-        {"sesgo_etiqueta": "ALCISTA MODERADO USD (ESTANFLACION GLOBAL)"}, glosario
-    )
-
-    assert "entre ESTANFLACION" not in frase
-    assert "ESTANFLACION" not in frase, "vocabulario de maquina en texto de cliente"
-    assert "más probabilidad de subir" in frase
-
-
-def test_un_parentesis_de_rango_sigue_diciendo_entre_que_precios(glosario):
-    """La otra mitad del contrato: `NEUTRAL / RANGO (912 - 925)` si es un rango y
-    los numeros son justo lo que el cliente necesita de ahi. Se reconoce por el
-    guion separador, no por tener digitos: `(S1 - R1)` tambien los tiene."""
-    frase = pi._frase_sesgo(
-        {"sesgo_etiqueta": "NEUTRAL / RANGO (912 - 925)"}, glosario
-    )
-
-    assert "entre 912 y 925" in frase
-
-
-def test_el_usd_de_la_etiqueta_no_llega_al_cliente(glosario):
-    """`ALCISTA USD` en la ficha del USD/CLP dice que el sesgo es del dolar, cosa
-    que el nombre del par ya dice. Repetirlo suena a sigla sin explicar."""
-    frase = pi._frase_sesgo(
-        {"sesgo_etiqueta": "BAJISTA USD (PESO FUERTE POR GOLDILOCKS)"}, glosario
-    )
-
-    assert "USD" not in frase
-    assert "GOLDILOCKS" not in frase
-
-
-def test_toda_etiqueta_de_sesgo_del_motor_sale_en_voz_de_cliente(glosario):
-    """Contrato de nombres sobre las quince etiquetas que el motor puede emitir.
-
-    El barrido de vocabulario que ya existia mira `setups` y el codigo de
-    regimen del snapshot de HOY, asi que no veia ni las etiquetas de sesgo ni las
-    catorce que hoy no estan activas. Este las saca del codigo del motor, que es
-    donde estan todas.
-    """
-    fuente = (RAIZ / "scripts" / "macro_bias_engine.py").read_text(encoding="utf-8")
-    etiquetas = set(re.findall(r'sesgo_etiqueta = "([^"]+)"', fuente))
-
-    assert len(etiquetas) >= 10, "el regex dejo de encontrar las etiquetas"
-    gritos = {}
-    for etiqueta in etiquetas:
-        if etiqueta == "DATOS_INCOMPLETOS":
-            continue          # ese caso no se publica: el activo sale sin lectura
-        frase = pi._frase_sesgo({"sesgo_etiqueta": etiqueta}, glosario)
-        restos = re.findall(r"\b[A-ZÁÉÍÓÚÑ]{4,}\b", frase)
-        if restos:
-            gritos[etiqueta] = restos
-
-    assert not gritos, (
-        "etiquetas que llegan al informe en vocabulario de maquina: "
-        + "; ".join(f"{k} -> {v}" for k, v in sorted(gritos.items()))
-        + ". Traducir el matiz en data/glosario_motor.json."
-    )
-
-
-def test_un_intensificador_no_se_confunde_con_la_direccion(glosario):
-    """`FUERTE ALCISTA` es el sesgo del Oro hoy, y el parser tomaba la primera
-    palabra como direccion: salia "Hoy lo vemos fuerte, alcista". La direccion es
-    alcista y "fuerte" es su intensidad, no otra direccion."""
-    frase = pi._frase_sesgo({"sesgo_etiqueta": "FUERTE ALCISTA"}, glosario)
-
-    assert "fuerte, alcista" not in frase
-    assert "más probabilidad de subir" in frase
-    assert frase.count(",") == 0, "una direccion con intensidad es una sola frase"
-
-
 def test_dos_eventos_distintos_de_la_fed_no_salen_como_la_misma_linea(glosario):
     """El 2026-09-03 el calendario traia "Fed Waller Speaks" y "Fed's Balance
     Sheet", y los DOS salieron al canal como la misma linea: "Reserva Federal

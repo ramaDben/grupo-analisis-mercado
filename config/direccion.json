@@ -1,0 +1,36 @@
+{
+  "_nota": "Umbrales del modelo de direccion de cuatro ejes (spec docs/superpowers/specs/2026-09-28-direccion-4-ejes-design.md). FIJOS en la fase 1: no se ajustan mirando el resultado de la medicion. Si algun dia se calibran, se ajustan con el 70 % mas antiguo de la historia y se validan con el 30 % mas reciente.",
+  "umbrales": {
+    "adx_rango": {"valor": 20, "origen": "Corte convencional de 'sin tendencia'; mismo valor que el piso del gate ADX de oportunidad (que se aplica al ADX diario; aca es el de H1)."},
+    "adx_fuerza": {"valor": 25, "origen": "Umbral de factor_momentum para 'expansion' en screener_gi.py."},
+    "p_rango_min": {"valor": 0.3, "origen": "Tercio central ampliado del canal Donchian 50 (limite inferior)."},
+    "p_rango_max": {"valor": 0.7, "origen": "Tercio central ampliado del canal Donchian 50 (limite superior)."},
+    "p_confirma_alcista": {"valor": 0.6, "origen": "Fuera de la mitad del canal por un decimo, lado alto."},
+    "p_confirma_bajista": {"valor": 0.4, "origen": "Fuera de la mitad del canal por un decimo, lado bajo."},
+    "histeresis_atr": {"valor": 0.25, "origen": "Un cuarto de la vela tipica de H1 (ATR 14)."},
+    "consumo_sin_recorrido": {"valor": 0.70, "origen": "Corte de puntuacion de factor_espacio (screener_gi.py:645-651): sobre 0,70 el espacio deja de valer los 20 puntos."}
+  },
+  "medicion": {
+    "horizonte_velas": {"valor": 4, "origen": "Spec 5.6: h = 4 velas H1."},
+    "horizonte_minimo": {"valor": 3, "origen": "Spec 5.5: con menos de 3 horas por delante el instante no vota."},
+    "min_velas_cerradas": {"valor": 150, "origen": "Minimo de analizar_activo (analisis.py:215), en D1 y en H1."},
+    "min_instantes_voto": {"valor": 500, "origen": "Spec 5.7 condicion 5: bajo 500 instantes el activo se reporta y no vota."},
+    "tolerancia_acierto_pts": {"valor": 1.0, "origen": "Spec 5.7 condicion 1: limite inferior del IC de (modelo menos EMA 50) mayor o igual a -1 punto."},
+    "umbral_disidente_pts": {"valor": 2.0, "origen": "Spec 5.7 condicion 5: un activo mas de 2 puntos bajo la EMA 50 conserva la EMA 50."},
+    "bootstrap_iteraciones": {"valor": 2000, "origen": "Remuestreos del bootstrap agrupado por dia."},
+    "bootstrap_semilla": {"valor": 20260928, "origen": "Semilla fija para que el informe sea reproducible."},
+    "nivel_confianza": {"valor": 0.95, "origen": "Spec 5.6: intervalo del 95 %."},
+    "cierre_bolsa_ny": {"valor": "16:00", "clases": ["indices"], "origen": "Cierre de la bolsa de Nueva York: el horizonte de los indices se corta ahi (spec 5.5)."},
+    "sensibilidad_hueco_horas": {"valor": 2, "origen": "Revision final de la fase 1: el veredicto principal exige un horizonte contiguo, lo que saca la tarde de metales y energia por la pausa diaria de 1 h de las 17:00 NY. La corrida de sensibilidad tolera ese hueco para mostrar si el veredicto depende de la regla."},
+    "serie_prueba_zona": {"valor": "US100", "origen": "Spec 5.4: la moda mensual de la vela de mayor volumen del US100 verifica la zona horaria."},
+    "series": {
+      "XAUUSD": {"clase": "forex_commodities"},
+      "WTI": {"clase": "forex_commodities"},
+      "US100": {"clase": "indices"},
+      "USDCLP": {"clase": "forex_commodities"},
+      "COPPER": {"clase": "forex_commodities"},
+      "USDIDX": {"clase": "forex_commodities"},
+      "BRENT": {"clase": "forex_commodities"}
+    }
+  }
+}

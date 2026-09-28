@@ -22,7 +22,19 @@ for _p in (RAIZ / "scripts", RAIZ / "src"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
+import pytest
 import suplemento_canal as sup  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _aislar_historial(monkeypatch):
+    """Evita que el historial en disco contamine los tests unitarios."""
+    orig = sup.cargar_historial
+    monkeypatch.setattr(
+        sup,
+        "cargar_historial",
+        lambda ruta=None: orig(ruta) if ruta is not None else [],
+    )
 
 # Las exclusiones reales del canal de divisas de ese dia, tal como las escribio
 # el escaner en `_screener.json`.
@@ -58,7 +70,6 @@ def test_cada_gate_tiene_su_concepto():
     for motivo, concepto in (
         ("ATR diario consumido al 98%", "volatilidad-atr"),
         ("blackout por IPC de EE.UU. (08:15-09:00 hora Chile)", "precio-descontado"),
-        ("el Playbook prohibe BUY_THE_DIP_AGGRESSIVE en R3_ESTANFLACION_SHOCK", "riesgo"),
         ("feriado de NYSE", "temporalidades"),
     ):
         cat = sup.categoria_del_motivo(motivo)
@@ -67,12 +78,9 @@ def test_cada_gate_tiene_su_concepto():
 
 
 def test_un_problema_nuestro_de_datos_no_es_contenido_para_el_cliente():
-    """La confianza baja del modelo y un fallo del analizador son problemas de
-    nuestra tuberia, no lecturas de mercado. No dan suplemento: publicar "no
+    """Un fallo del analizador es un problema de nuestra tuberia, no lecturas de mercado. No dan suplemento: publicar "no
     pudimos leer el activo" no le sirve a nadie y suena a excusa."""
     for motivo in (
-        "el snapshot no declara la confianza del modelo",
-        "la confianza del modelo esta en 54.6% y el minimo es 65%: bajo ese piso falta un driver o esta roto",
         "MT5_UNAVAILABLE: el terminal no responde",
         "D1 SYMBOL_NOT_FOUND: no existe",
     ):
@@ -107,7 +115,7 @@ def test_sin_exclusiones_no_hay_resumen():
 def test_una_categoria_no_publicable_no_da_resumen():
     solo_nuestros = [
         {"ticker": "X", "nombre": "X", "excluido": "MT5_UNAVAILABLE: sin terminal"},
-        {"ticker": "Y", "nombre": "Y", "excluido": "el snapshot no declara la confianza del modelo"},
+        {"ticker": "Y", "nombre": "Y", "excluido": "D1 SYMBOL_NOT_FOUND: no existe"},
     ]
     assert sup.resumen_del_canal(solo_nuestros) is None
 
@@ -162,7 +170,7 @@ def _motivos_de_los_gates() -> list[tuple[str, str]]:
     """Todo texto que un `gate_*` del escaner puede devolver, con su funcion.
 
     Se recorre el AST y no un regex. La version anterior buscaba
-    `return f?"(feriado|ATR diario|blackout|el Playbook|el snapshot|la confianza)..."`,
+    `return f?"(feriado|ATR diario|blackout|...)..."`,
     o sea que estaba **anclada a los seis prefijos que ya existian**: un gate
     nuevo con otro prefijo no lo capturaba y entraba sin categoria en silencio,
     que es justo lo que este contrato existe para impedir. El `assert len >= 4`
@@ -215,7 +223,7 @@ def test_todo_gate_del_escaner_tiene_categoria_o_esta_declarado_no_publicable():
     motivos = _motivos_de_los_gates()
 
     gates = {nombre for nombre, _ in motivos}
-    assert len(gates) >= 5, f"se dejaron de encontrar gates: {sorted(gates)}"
+    assert len(gates) >= 4, f"se dejaron de encontrar gates: {sorted(gates)}"
 
     sin_clasificar = [
         f"{nombre}: {texto!r}"
@@ -464,3 +472,126 @@ def test_ningun_test_escribe_en_el_historial_real():
     )
     fuente = inspect.getsource(pc.escribir_suplementos)
     assert "registrar_suplemento(sup, ruta=ruta_historial)" in fuente
+
+
+def test_suplemento_cierre_amigable():
+    """En sesión de cierre, el suplemento presenta un balance amable y no un tono de exclusión."""
+    sup_datos = sup.suplemento("04_indices_bursatiles", [
+        {"ticker": "US100", "nombre": "Nasdaq 100", "clase": "indices", "excluido": "ATR diario consumido al 95%"}
+    ])
+    assert sup_datos is not None
+    msg_cierre = sup.construir_mensaje_suplemento(sup_datos, es_cierre=True)
+    assert "Balance de Cierre de Jornada" in msg_cierre
+    assert "hoy no hay niveles, y el motivo importa" not in msg_cierre
+    assert "no hay niveles que valga la pena mirar" not in msg_cierre
+    assert "abrimos la encuesta de la jornada" in msg_cierre
+
+
+def test_encuesta_cierre_canales_principales():
+    """Verifica que cada canal de mercado disponga de una encuesta de cierre válida."""
+    for canal in ("02_forex_divisas", "03_commodities_materias_primas", "04_indices_bursatiles", "05_acciones_etfs", "06_criptoactivos"):
+        enc = sup.encuesta_cierre(canal)
+        assert enc is not None, f"Falta encuesta de cierre para {canal}"
+        assert "pregunta" in enc and len(enc["pregunta"]) > 10
+        assert "opciones" in enc and 2 <= len(enc["opciones"]) <= 4
+        assert enc.get("permitir_multiples") is False
+
+
+def test_escribir_suplementos_en_cierre_genera_encuesta(tmp_path):
+    """En cierre, escribir_suplementos genera 0_suplemento.txt con balance y _encuesta.json."""
+    import pipeline_carrusel as pc
+
+    escritos, avisos = pc.escribir_suplementos(
+        tmp_path, FOREX_AGOTADO_CON_CLASE, grupos_activos=set(), catalogo={},
+        ruta_historial=tmp_path / "historial.json",
+        es_cierre=True,
+    )
+    assert len(escritos) == 1
+    canal = tmp_path / "02_forex_divisas"
+    assert (canal / "0_suplemento.txt").exists()
+    assert (canal / "_encuesta.json").exists()
+    contenido = (canal / "0_suplemento.txt").read_text(encoding="utf-8")
+    assert "Balance de Cierre" in contenido
+
+
+def test_despachar_suplemento_y_encuesta_cierre(tmp_path, monkeypatch):
+    """Verifica que despachar procese tanto el balance como la encuesta en un canal vacío."""
+    import json
+    import pipeline_carrusel as pc
+
+    tanda_dir = tmp_path / "2026-09-08_17-00_cierre_ny"
+    canal_dir = tanda_dir / "02_forex_divisas"
+    canal_dir.mkdir(parents=True)
+
+    (canal_dir / "0_suplemento.txt").write_text(
+        "📊 *DIVISAS · Balance de Cierre de Jornada*\nPrueba de balance.", encoding="utf-8"
+    )
+    (canal_dir / "_encuesta.json").write_text(
+        json.dumps({
+            "pregunta": "¿Cómo proyectas la apertura del dólar (USD/CLP) mañana?",
+            "opciones": ["🟢 Alcista", "🔴 Bajista"],
+            "permitir_multiples": False,
+        }),
+        encoding="utf-8",
+    )
+
+    bitacora_path = tmp_path / "historial_despachos.json"
+    bitacora_path.write_text("[]", encoding="utf-8")
+    monkeypatch.setattr("bitacora_despachos.HISTORIAL_PATH", bitacora_path)
+
+    res = pc.despachar(tanda_dir, dry_run=True)
+    grupos = res.get("grupos", [])
+    assert any(g.get("suplemento") is True for g in grupos)
+    assert any(g.get("encuesta") is True for g in grupos)
+
+
+def test_suplemento_asigna_activo_ancla_al_canal():
+    """Verifica que cada canal reciba su activo ancla representativo."""
+    for canal, ticker_esp in [
+        ("02_forex_divisas", "USDCLP"),
+        ("03_commodities_materias_primas", "XAUUSD"),
+        ("04_indices_bursatiles", "US100.spot"),
+        ("05_acciones_etfs", "#NVDA"),
+        ("06_criptoactivos", "BTCUSD"),
+    ]:
+        s = sup.suplemento(canal, [
+            {"ticker": ticker_esp, "nombre": "Test", "excluido": "ATR diario consumido al 95%"}
+        ])
+        assert s is not None
+        assert s.get("activo_ancla") is not None
+        assert s["activo_ancla"]["ticker"] == ticker_esp
+
+
+def test_suplemento_cierre_estructura_3_tiempos():
+    """El mensaje de cierre debe estructurarse en 3 tiempos con mención al gráfico TradingView."""
+    s = sup.suplemento("02_forex_divisas", FOREX_AGOTADO)
+    msg = sup.construir_mensaje_suplemento(s, es_cierre=True)
+    assert "1️⃣ *QUÉ PASÓ EN LA JORNADA*" in msg
+    assert "2️⃣ *QUÉ ESTÁ PASANDO AHORA*" in msg
+    assert "3️⃣ *QUÉ VIGILAR PARA LA PRÓXIMA APERTURA*" in msg
+    assert "gráfico TradingView™" in msg
+    assert "Activo en foco" in msg
+
+
+def test_escribir_suplementos_genera_recap_payload_con_activo_ancla(tmp_path):
+    """Verifica que escribir_suplementos genere el payload de recap 1_recap_...json con activo ancla."""
+    import json
+    import pipeline_carrusel as pc
+
+    escritos, avisos = pc.escribir_suplementos(
+        tmp_path, FOREX_AGOTADO_CON_CLASE, grupos_activos=set(), catalogo={},
+        ruta_historial=tmp_path / "historial.json",
+        es_cierre=True,
+    )
+    assert len(escritos) == 1
+    canal_dir = tmp_path / "02_forex_divisas"
+    recap_file = canal_dir / "1_recap_usdclp.json"
+    assert recap_file.exists()
+    datos_recap = json.loads(recap_file.read_text(encoding="utf-8"))
+    assert datos_recap["tipo_pieza"] == "recap"
+    assert datos_recap["activo"] == "Dólar / Peso Chileno"
+    assert (canal_dir / "1_recap_usdclp_mensaje.txt").exists()
+    assert (canal_dir / "mensaje.txt").exists()
+
+
+

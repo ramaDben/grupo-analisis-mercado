@@ -35,11 +35,10 @@ Ese mapeo no lo puede dar Investing y no es su trabajo. Vive acá.
    fuente marca "alto" a las peticiones semanales de subsidio igual que a un
    FOMC.
 
-El efecto direccional está declarado de **primer orden** y es subordinado al
-régimen. El 2026-09-03 acertó en dólar y oro y falló en índices: debían subir
-por la expectativa de recortes y bajaron, porque el ISM de precios salió
-caliente y el régimen era R3 estanflación. El Playbook manda sobre el dato, y
-esa jerarquía ya existe en `macro_bias_engine`.
+El efecto direccional está declarado de **primer orden**, no como pronóstico. El
+2026-09-03 acertó en dólar y oro y falló en índices: debían subir por la
+expectativa de recortes y bajaron, porque el ISM de precios salió caliente en un
+entorno de inflación alta. El contexto del día puede pasarle por encima al dato.
 """
 
 from __future__ import annotations
@@ -196,8 +195,8 @@ def efecto_direccional(
 ) -> dict[str, Any] | None:
     """Qué le hace este dato al mercado si sale por encima del consenso.
 
-    Es de **primer orden** y subordinado al régimen del Playbook, que es quien
-    decide la dirección final. Ver el docstring del módulo.
+    Es de **primer orden**: el contexto del día puede pasarle por encima. Ver el
+    docstring del módulo.
     """
     clase = clasificar(evento, ruta)
     if clase is None:

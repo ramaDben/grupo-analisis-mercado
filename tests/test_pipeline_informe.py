@@ -1,4 +1,4 @@
-"""Contrato del informe: la regla de frescura, las tablas y el idioma.
+"""Contrato del informe: qué se emite sin terminal, las tablas y el idioma.
 
 Sin red y sin Playwright: se prueban las decisiones (cuándo NO se emite, qué dice
 una tabla sin datos, cómo se nombra un indicador), no la maqueta del PDF.
@@ -19,48 +19,37 @@ import pipeline_informe as pi  # noqa: E402
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# La regla de frescura
+# Sin terminal el informe sale y lo dice (el Playbook V2 ya no lo frena)
 # ─────────────────────────────────────────────────────────────────────────────
-def test_la_apertura_no_se_emite_sin_sesgo_del_playbook(monkeypatch):
-    """Un PDF institucional sin régimen ni sesgo se cita después como si fuera de
-    hoy. El freno es explícito y nombra el remedio."""
-    monkeypatch.setattr(pi, "_playbook", lambda: ({}, ["sesgo no disponible (STALE_DATA)"]))
-    monkeypatch.setattr(pi, "_curva", lambda: ({}, []))
-    monkeypatch.setattr(pi, "_calendario", lambda ahora: ([], []))
-
-    with pytest.raises(SystemExit) as exc:
-        pi.preparar("apertura")
-    mensaje = str(exc.value)
-    assert "NO se emite" in mensaje
-    assert "pipeline_ingesta.py" in mensaje, "el error tiene que nombrar el remedio"
-    assert "--con-datos-viejos" in mensaje, "y la salida explicita"
-
-
-def test_con_datos_viejos_si_emite_pero_estampa_el_aviso(monkeypatch, tmp_path):
-    """La decisión de publicar con datos vencidos es del director; que el lector
-    lo sepa, no."""
+def _sin_fuentes(monkeypatch, tmp_path):
     monkeypatch.setattr(pi, "DIR_TRABAJO", tmp_path)
-    monkeypatch.setattr(pi, "_playbook", lambda: ({}, ["stale"]))
     monkeypatch.setattr(pi, "_curva", lambda: ({}, []))
     monkeypatch.setattr(pi, "_calendario", lambda ahora: ([], []))
+    monkeypatch.setattr(
+        pi, "leer_activos",
+        lambda destino: ({"USDCLP": {"nombre": "Dólar / Peso Chileno", "digits": 2}},
+                         ["informe sin lectura por activo: MT5 no conectó (X)."]),
+    )
 
-    res = pi.preparar("apertura", con_datos_viejos=True)
+
+def test_la_apertura_se_emite_sin_terminal_y_lo_avisa(monkeypatch, tmp_path):
+    _sin_fuentes(monkeypatch, tmp_path)
+    res = pi.preparar("apertura")
     texto = Path(res["markdown"]).read_text(encoding="utf-8")
-    assert "Aviso de frescura" in texto
-    assert "sin el sesgo cuantitativo del Motor GI" in texto
-    assert "ninguna cifra de este documento debe leerse como lectura del motor" in texto
+    assert "## 02. Los activos de hoy" in texto
+    assert "Sin datos del terminal" in texto
+    assert any("MT5 no conectó" in a for a in res["avisos"])
+    assert "Motor GI" not in texto and "Playbook" not in texto
 
 
-def test_el_cierre_no_exige_el_playbook_porque_no_lleva_pdf(monkeypatch, tmp_path):
-    """El cierre es chat-first por criterio de canal, así que no arrastra la
-    exigencia del informe institucional."""
-    monkeypatch.setattr(pi, "DIR_TRABAJO", tmp_path)
-    monkeypatch.setattr(pi, "_playbook", lambda: ({}, ["stale"]))
-    monkeypatch.setattr(pi, "_curva", lambda: ({}, []))
-    monkeypatch.setattr(pi, "_calendario", lambda ahora: ([], []))
+def test_el_cierre_sigue_siendo_chat_first(monkeypatch, tmp_path):
+    _sin_fuentes(monkeypatch, tmp_path)
+    assert pi.preparar("cierre")["canal"].startswith("chat-first")
 
-    res = pi.preparar("cierre")
-    assert res["canal"].startswith("chat-first")
+
+def test_el_informe_cubre_los_cinco_activos_base():
+    assert pi.ACTIVOS_INFORME == ("USDCLP", "XAUUSD", "WTI.spot", "BRENT.spot", "US100.spot")
+    assert set(pi._catalogo_activos()) == set(pi.ACTIVOS_INFORME), "todos existen en el catalogo"
 
 
 def test_rendir_se_niega_si_quedan_secciones_sin_escribir(tmp_path):
@@ -103,10 +92,6 @@ def test_un_delta_nulo_se_muestra_como_sin_dato_y_nunca_como_cero():
     assert "+5 puntos base" in salida
     assert "+0 puntos base" not in salida
     assert "bps" not in salida, "bps es taquigrafia de mesa, no va a un cliente"
-
-
-def test_el_playbook_sin_activos_declara_la_ausencia():
-    assert "no disponible" in pi._tabla_playbook({})
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -362,4 +347,3 @@ def test_ninguna_fila_de_la_agenda_se_lee_igual_que_otra():
     repetidos = {n for n in indicadores if indicadores.count(n) > 1}
     assert not repetidos, f"filas indistinguibles: {sorted(repetidos)}"
     assert len(indicadores) == len(eventos)
-

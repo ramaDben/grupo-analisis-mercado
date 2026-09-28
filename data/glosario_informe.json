@@ -1,0 +1,9 @@
+{
+  "_nota": "Conceptos técnicos que sobreviven en el informe de apertura, explicados una vez en su Diccionario rápido. Solo entran los que de verdad aparecen en el documento. Hermano de glosario_siglas.json.",
+  "conceptos": {
+    "puntos base": "Un punto base es la centésima parte de un uno por ciento. Se usa para hablar de movimientos de tasas: cuando una tasa pasa de 4,70% a 4,74%, subió 4 puntos base.",
+    "tasa real": "Es lo que un bono paga descontando la inflación esperada. Cuando baja, guardar oro cuesta menos y el metal tiende a subir.",
+    "pendiente de la curva": "La diferencia entre lo que paga un bono a 10 años y uno a 2 años. Cuando se achica, el mercado espera que la economía se enfríe.",
+    "ATR": "El recorrido que un activo suele hacer en un día normal. Sirve para saber si todavía le queda espacio para moverse o si ya se movió todo lo que suele moverse."
+  }
+}

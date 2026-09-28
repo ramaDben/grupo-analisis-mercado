@@ -322,3 +322,19 @@ def test_un_alias_largo_le_gana_a_una_sigla_corta():
     entrada = calendar._enganchar_glosario("Core PCE Price Index (MoM)", glosario)
     assert entrada["nombre_es"] == "Inflacion", "gano la sigla corta"
 
+
+def test_cache_ttl_dinamico_mercado_activo():
+    """Durante la jornada de mercado (lunes a viernes 06:00-18:00 CLT), el TTL es de 300s (5m), fuera es 3600s."""
+    # Martes 10:00 (mercado activo)
+    martes_10am = datetime(2026, 9, 15, 10, 0, tzinfo=_SANTIAGO)
+    assert calendar._cache_ttl(martes_10am) == 300
+
+    # Martes 22:00 (fuera de sesión)
+    martes_22pm = datetime(2026, 9, 15, 22, 0, tzinfo=_SANTIAGO)
+    assert calendar._cache_ttl(martes_22pm) == 3600
+
+    # Domingo 12:00 (fin de semana)
+    domingo = datetime(2026, 9, 13, 12, 0, tzinfo=_SANTIAGO)
+    assert calendar._cache_ttl(domingo) == 3600
+
+

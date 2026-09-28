@@ -90,7 +90,8 @@ sys.stdout.reconfigure(encoding="utf-8")
 
 REPO = Path(__file__).resolve().parent.parent
 CARPETA = REPO / "calculadoras excel"
-DESTINO = CARPETA / "Simulador GI.xlsx"
+DESTINO = CARPETA / "Simulador GI Real.xlsx"
+DESTINO_ALIAS = CARPETA / "Simulador GI.xlsx"
 LOGO = CARPETA / "assets" / "logo_gi.png"
 
 AHORA = datetime.now(ZoneInfo("America/Santiago"))
@@ -594,5 +595,7 @@ ws.sheet_properties.pageSetUpPr.fitToPage = True
 
 CARPETA.mkdir(parents=True, exist_ok=True)
 wb.save(DESTINO)
+wb.save(DESTINO_ALIAS)
 print("generado:", DESTINO)
+print("generado alias:", DESTINO_ALIAS)
 print("ejemplo:", EJEMPLO["nombre"], "con 3 operaciones alrededor de", base)

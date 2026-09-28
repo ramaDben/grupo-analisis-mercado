@@ -144,7 +144,7 @@ def texto_estado(estado: dict | None) -> str:
     if esta_vencida(estado):
         lineas.append(
             f"Supera el umbral de {UMBRAL_HORAS} h: se lanzo un refresco en segundo plano "
-            "(~1 min). Los JSON de 'data central/' y macro_bias_output.json van a cambiar "
+            "(~1 min). Los JSON de 'data central/' van a cambiar "
             "durante esta sesion, asi que releelos antes de citar cifras macro."
         )
     else:

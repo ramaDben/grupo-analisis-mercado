@@ -1,0 +1,149 @@
+# ==============================================================================
+# PARAMS.YAML · FUENTE ÚNICA DE VERDAD (SSOT) · GRUPO INTELIGENCIA
+# Manual de Operaciones · Trading Cuantitativo Intermercado
+# Versión Interna: 3.0.1 | Edición Pública: Versión 1.0 (Octubre 2026)
+# Fecha de Snapshot: 2026-09-04 | Tipo de Cambio de Referencia: 935,60 CLP/USD
+# ==============================================================================
+
+meta:
+  version: "3.0.1"
+  public_label: "Edición Pública Inicial v1.0"
+  fecha_snapshot: "2026-09-04"
+  tipo_cambio_ref_clp: 935.60
+  unidades:
+    variaciones: "5d"
+    velas: "H1"
+  descripcion: "Parámetros maestros y umbrales cuantitativos vinculantes para trading intermercado."
+
+confianza:
+  minimo_pct: 51.0          # D1: Umbral maestro de publicación y ejecución (>= 51.0% inclusive)
+
+climas:
+  precedencia:
+    - R3_TORMENTA
+    - R1_INFLACION
+    - R4_RECESION
+    - R2_DIA_BUENO
+    - R0_CALMA
+  confirmacion_dias: 2
+  salida_dias_sin_umbral: 2
+  R3_TORMENTA:
+    petroleo_pct: 3.5
+    bond10_bps: 10.0
+    tasa_real_bps: 8.0
+  R1_INFLACION:
+    breakeven_bps: 10.0
+    curva_max_pct: 0.20
+    bond10_bps: 5.0
+  R4_RECESION:
+    cobre_pct: -2.5
+    curva_invertida_pct: 0.0
+    bond2_bps: -15.0
+    empinamiento_bps: 10.0
+  R2_DIA_BUENO:
+    cobre_pct: 1.5
+    bond10_abs_bps: 6.0
+  shock_extremo_factor: 1.5  # Aplica según dirección que define el umbral (M3.1)
+
+confirmacion_cruzada:
+  USDCLP:
+    driver: cobre_pct_5d
+    aprobacion_compra: "<= 0.00 o clima in [R3, R4]"
+  ORO:
+    driver: tasa_real_tips10y
+    aprobacion_compra: "<= 2.20 o clima in [R3, R1]"
+  WTI_BRENT:
+    driver: petroleo_pct_5d
+    aprobacion_compra: ">= +1.00 o clima in [R3]"  # D5 / HF-04: Tendencia material (+1.00%)
+  NASDAQ:
+    driver: bond10_nominal
+    aprobacion_compra: "<= 4.70 y clima not in [R3, R1]"
+
+setups:
+  ruptura:
+    donchian: 50
+    ancho_max_atr: 2.5
+    cuerpo_min_pct: 50
+    rango_min_atr: 1.0
+    rsi_compra_max: 75
+    rsi_venta_min: 25
+    expiracion_velas: 2
+    slippage_cap_atr: 0.2                          # D3 / HF-03: Regla única 0.2xATR
+  retroceso:
+    emas: [20, 50, 100]
+    adx_min: 20
+    expiracion_velas: 2
+    variante_ema: [20, 50]
+  rango:
+    bollinger: [20, 2]
+    rsi_compra_max: 35
+    rsi_venta_min: 65
+    adx_max: 20
+    expiracion_velas: 2                            # D8 / HF-07.3: Vencimiento 2 velas H1
+    solo_clima: R0_CALMA
+
+stop_objetivo:
+  atr_periodos: 14
+  swing_ventana_velas: 20
+  banda_swing_atr: [0.5, 1.5]
+  rama_b_atr: 1.5
+  tp1_atr: 1.0
+  tp2_atr: 1.5
+  rr_minimo: 1.0
+  chandelier:
+    velas: 22
+    mult_atr: 3.0
+    mult_atr_wti_sin_cobre: 2.0
+    activos: [ORO, WTI, BRENT]                     # D6: Delimitado a materias primas
+  breakeven: "precio >= entrada + 0.5 * (tp1 - entrada)"  # D7: Gatillo matemático único
+
+riesgo:
+  presupuesto_total_pct: 1.0                       # D2: Presupuesto objetivo del 1.00%
+  buffer_friccion_pct: 0.10                        # 90% precio / 10% fricción
+  redondeo_lote: down
+  paso_lote: 0.01
+  margen_max_pct_libre: 30
+  riesgo_simultaneo_global_pct: 2.5
+  coriesgo_gemelos_pct: 1.0                        # WTI + Brent (rho > 0.90)
+  max_posiciones_misma_direccion_tasa: 2           # D9: Límite direccional de tasas
+  perdida_diaria_operaciones: 2
+  perdida_semanal_pct: 4.0
+  racha_adversa:
+    perdidas: 3
+    nuevo_presupuesto_pct: 0.5
+    buffer_aplica: true
+    salir_tras_ganadas: 2
+
+spread_tope_pct_stop:
+  USDCLP: 15
+  NASDAQ: 12
+  ORO: 10
+  WTI: 10
+  BRENT: 10
+
+horarios:
+  USDCLP:
+    rueda: "09:00-14:00 CLT"
+    velas_operables_cierre: ["10:00", "11:00", "12:00", "13:00"]
+    cancelar_pendientes_al_cierre: true
+  otros:
+    referencia: "Sesion Nueva York"
+    servidor_mt5: "UTC+2 / UTC+3 segun horario de verano"
+
+blackout_minutos:                                  # M8.3
+  FED:
+    antes: 30
+    despues: 75
+    activos: [TODOS]
+  NFP:
+    antes: 15
+    despues: 30
+    activos: [ORO, WTI, BRENT, NASDAQ]
+  IPC_US:
+    antes: 15
+    despues: 30
+    activos: [ORO, WTI, BRENT, NASDAQ]
+  BCCH_IMACEC:
+    antes: 15
+    despues: 30
+    activos: [USDCLP]

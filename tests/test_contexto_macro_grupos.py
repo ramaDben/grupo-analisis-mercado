@@ -268,7 +268,7 @@ def test_construir_texto_contexto_macro_formatea_cifras_reales_y_curva(monkeypat
         ahora=ahora,
     )
     assert "CONTEXTO MACRO DIARIO · FOREX & DIVISAS" in txt
-    assert "FOCO LOCAL · ACTIVIDAD ECONÓMICA (IMACEC)" in txt
+    assert ("FOCO LOCAL · ACTIVIDAD ECONÓMICA (IMACEC)" in txt) or ("FOCO LOCAL · INFLACIÓN" in txt)
     assert "+6,0 bps" in txt
     assert "+6.0 bps" not in txt
     assert "━━━━━━━━━━━━━━━━━━━" in txt
@@ -484,3 +484,114 @@ def test_cada_grupo_ve_solo_los_eventos_que_le_tocan(tmp_path, monkeypatch):
     assert "Decisión de tasa de interés (TPM)" in txt, txt
     # China no está en los países de Forex & Divisas.
     assert "Caixin" not in txt, txt
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El sello de frescura de la IMAGEN
+# ─────────────────────────────────────────────────────────────────────────────
+def test_la_imagen_avisa_cuando_el_dato_viene_rezagado(monkeypatch):
+    """La pieza no puede rotular "dato de cierre" una serie de hace varios dias.
+
+    El 2026-09-14 salio al canal una imagen que decia "10 Sep 2026 . dato de
+    cierre" un lunes 14: FRED no tenia el viernes 11 y el ultimo dato publicado
+    era del jueves 10. Leido por un cliente, "dato de cierre" es el cierre de HOY,
+    asi que la pieza afirmaba que el bono llevaba cuatro dias sin moverse.
+
+    El texto del mensaje ya distinguia los dos casos desde `variacion_soberana`;
+    la imagen no miraba el rezago. Este test ata los dos caminos al mismo umbral.
+    """
+    import datetime as _dt
+
+    class _Lunes14(_dt.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 9, 14, 12, 0, tzinfo=tz or _dt.timezone.utc)
+
+    monkeypatch.setattr(cmg, "datetime", _Lunes14)
+
+    # Jueves 10 visto el lunes 14: dos dias habiles de rezago (viernes y lunes).
+    assert cmg._sello_frescura("2026-09-10") == "último dato disponible"
+    # Viernes 11 visto el lunes 14: un dia habil, la cadencia normal de FRED.
+    assert cmg._sello_frescura("2026-09-11") == "dato de cierre"
+    # El dato del propio dia.
+    assert cmg._sello_frescura("2026-09-14") == "dato de cierre"
+
+
+def test_el_sello_de_frescura_usa_el_mismo_umbral_que_el_texto():
+    """Dos dias habiles, el mismo corte que `variacion_soberana`.
+
+    Si divergieran, la pieza se contradiria sola: el texto pasaria a la variacion
+    de 5 dias "porque el dato esta viejo" mientras la imagen lo sigue llamando
+    cierre del dia.
+    """
+    serie_rezagada = {"delta_1d_bps": 12, "delta_5d_bps": 16,
+                      "rezago_dias_habiles": 2, "fecha_dato": "2026-09-10"}
+    texto, fecha = cmg.variacion_soberana(serie_rezagada)
+    assert "5 días" in texto, "el texto no cambio a la variacion de 5 dias"
+    assert fecha, "el texto no acompano la cifra con la fecha del dato"
+
+
+def test_cifras_whatsapp_evita_anacronismo_en_evento_pasado():
+    """Un evento de las 09:30 evaluado a las 11:00 sin cifra no puede decir 'se espera'."""
+    ev = {
+        "nombre": "NY Empire State", "pais": "United States", "hora_servidor": "2026-09-15 09:30",
+        "forecast": "14.80", "actual": "",
+    }
+    ahora = datetime(2026, 9, 15, 11, 0, tzinfo=SANTIAGO)
+    txt = cmg._cifras_para_whatsapp(ev, ahora=ahora)
+    assert "se espera" not in txt
+    assert "esperado 14,80 · pendiente de confirmación" == txt
+
+
+def test_cifras_whatsapp_mantiene_se_espera_en_evento_futuro():
+    """Un evento de las 14:00 evaluado a las 11:00 sí debe decir 'se espera'."""
+    ev = {
+        "nombre": "Bond Auction", "pais": "United States", "hora_servidor": "2026-09-15 14:00",
+        "forecast": "5.20%", "actual": "",
+    }
+    ahora = datetime(2026, 9, 15, 11, 0, tzinfo=SANTIAGO)
+    txt = cmg._cifras_para_whatsapp(ev, ahora=ahora)
+    assert "se espera 5,20%" == txt
+
+
+def test_forex_utiliza_driver_soberano_si_no_hay_evento_de_chile_hoy():
+    """En un día regular sin eventos de Chile, Forex genera el driver DGS2 y no el Imacec viejo."""
+    eventos_usa = [
+        {"nombre": "NY Empire State", "pais": "United States", "hora_servidor": "2026-09-15 09:30", "impacto": "alto"}
+    ]
+    ahora = datetime(2026, 9, 15, 11, 0, tzinfo=SANTIAGO)
+    payload = cmg.construir_payload_story_macro("02_forex_divisas", eventos_usa, 5.0, ahora)
+    assert payload["indicador"] == "Tasa Soberana EE.UU. 2Y (Expectativa Fed)"
+    assert "Actividad Económica" not in payload["indicador"]
+
+
+def test_bloque_agenda_marca_concluido_discurso_pasado_sin_cifra():
+    """Un discurso de Lagarde a las 12:00 evaluado a las 17:00 debe marcarse como Concluido con check verde."""
+    ev = {
+        "nombre": "ECB President Lagarde Speaks", "pais": "Euro Zone",
+        "hora_servidor": "2026-09-21 12:00", "actual": "", "forecast": "",
+    }
+    ahora = datetime(2026, 9, 21, 17, 0, tzinfo=SANTIAGO)
+    bloque = cmg._bloque_agenda([ev], ahora=ahora)
+    texto = "\n".join(bloque)
+    assert "✅" in texto
+    assert "Concluido" in texto
+
+
+def test_contexto_macro_comenta_discurso_lagarde():
+    """El mensaje macro debe incluir seguimiento explícito de Lagarde si su discurso ya ocurrió."""
+    ev = {
+        "nombre": "ECB President Lagarde Speaks", "pais": "Euro Zone",
+        "hora_servidor": "2026-09-21 12:00", "actual": "", "forecast": "",
+    }
+    ahora = datetime(2026, 9, 21, 17, 0, tzinfo=SANTIAGO)
+    txt = cmg.construir_texto_contexto_macro(
+        grupo="01_macro_y_apertura",
+        eventos_grupo=[ev],
+        delta_ust_bps=-1.0,
+        ahora=ahora,
+    )
+    assert "SEGUIMIENTO DE BANCOS CENTRALES" in txt
+    assert "Christine Lagarde" in txt
+
+

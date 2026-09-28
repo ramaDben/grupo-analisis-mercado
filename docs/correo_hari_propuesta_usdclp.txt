@@ -1,0 +1,28 @@
+Asunto: Propuesta de captación en Meta Ads y Guía Táctica USD/CLP
+
+Hola Hari,
+
+Te envío adjuntos la propuesta de captación calificada en Meta Ads para Post Venta y el PDF actualizado de la Guía Táctica USD/CLP.
+
+La propuesta plantea una reingeniería del embudo de captación para reducir la fricción del formulario móvil y mejorar la calidad de los leads que recibe el área comercial. El diagnóstico identifica dos problemas principales en el flujo actual: un llamado a la acción poco claro y una pregunta de texto libre que obliga a escribir desde el celular.
+
+Como alternativa, se propone un formulario nativo de Meta con selección de un toque, datos prellenados y un activo de interés definido. El flujo contempla descarga inmediata de la guía, derivación al CRM, contacto por WhatsApp e invitación a una Mesa Técnica especializada. La coordinación se organiza entre Post Venta, Marketing y Comercial, con Post Venta a cargo de los contenidos y de las mesas de análisis.
+
+El documento también incluye una comparación econométrica referencial entre el flujo actual y el modelo propuesto. Las cifras de CPL, volumen de leads, contactabilidad y conversión son simulaciones basadas en benchmarks sectoriales, no resultados garantizados. Su objetivo es dimensionar el impacto potencial de reducir la fricción antes de ejecutar un piloto controlado.
+
+La guía aborda la relación entre el dólar chileno, el cobre, el diferencial de tasas entre el Banco Central de Chile y la Reserva Federal, la lectura técnica del USD/CLP y la gestión de riesgo.
+
+En esta versión ajustamos el enfoque editorial para que el documento tenga una identidad más sobria y profesional, alineada con research y estrategia, manteniendo una explicación clara para lectores con distintos niveles de experiencia.
+
+También se actualizó el gráfico técnico H1. Ahora se renderiza sobre el motor oficial de TradingView alimentado directamente por el feed de datos institucional de Grupo Inteligencia, con velas OHLC, EMA 50, EMA 200, canal Donchian y oscilador RSI 14.
+
+Los archivos adjuntos son:
+
+- Propuesta de Captación Calificada en Meta Ads y Post Venta.
+- Guía Táctica USD/CLP: Cobre, Fed y Tasas.
+
+Quedo atento a tus comentarios para revisar el enfoque, el nivel de profundidad y cualquier ajuste que consideres necesario antes de cerrar la versión definitiva.
+
+Saludos,
+
+Grupo Inteligencia

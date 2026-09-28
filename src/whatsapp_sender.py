@@ -18,9 +18,10 @@ import sys
 import threading
 import time
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Callable
+from zoneinfo import ZoneInfo
 
 # Configurar encoding seguro para consola de Windows
 if hasattr(sys.stdout, "reconfigure"):
@@ -107,6 +108,63 @@ SELECTORES_CAPTION = [
     'div[contenteditable="true"][aria-label="Escribe un mensaje"]:not(footer *)',
 ]
 
+# Selectores para encuestas nativas de WhatsApp Web
+SELECTORES_MENU_ENCUESTA = [
+    'button[aria-label="Encuesta"]',
+    'button[aria-label="Poll"]',
+    '[role="menuitem"][aria-label="Encuesta"]',
+    '[role="menuitem"][aria-label="Poll"]',
+    '[data-testid="attach-poll"]',
+    'li div[aria-label="Encuesta"]',
+    'li div[aria-label="Poll"]',
+    'li [aria-label="Encuesta"]',
+    'li [aria-label="Poll"]',
+    'li span:has-text("Encuesta")',
+    'li span:has-text("Poll")',
+]
+
+SELECTORES_MODAL_ENCUESTA = [
+    '[data-testid="poll-creation-modal"]',
+    'div[data-animate-modal-popup="true"]',
+    'div[role="dialog"]',
+    'div[data-testid="poll-drawer"]',
+]
+
+SELECTORES_PREGUNTA_ENCUESTA = [
+    '[data-testid="poll-question-input"]',
+    'div[role="dialog"] [data-testid="poll-question-input"]',
+    'div[role="dialog"] div[contenteditable="true"][role="textbox"]',
+    'div[role="dialog"] input[placeholder*="pregunta" i]',
+    'input[placeholder="Haz una pregunta"]',
+]
+
+SELECTORES_OPCIONES_ENCUESTA = [
+    'div[role="dialog"] [data-testid^="poll-option-input-"]',
+    '[data-testid^="poll-option-input-"]',
+    'div[role="dialog"] div[contenteditable="true"][role="textbox"]',
+    'div[role="dialog"] input[placeholder*="Añade" i]',
+]
+
+SELECTORES_SWITCH_MULTIPLES = [
+    '#polls-single-option-switch',
+    '[data-testid="poll-creation-modal"] input[role="switch"]',
+    'div[role="dialog"] input[role="switch"]',
+    'div[role="dialog"] [role="switch"]',
+    'div[role="dialog"] input[type="checkbox"]',
+    'div[role="dialog"] label:has-text("Permitir varias respuestas")',
+    'div[role="dialog"] [aria-label*="varias respuestas" i]',
+]
+
+SELECTORES_ENVIAR_ENCUESTA = [
+    '[data-testid="poll-send-button"]',
+    'div[role="dialog"] [data-testid="poll-send-button"]',
+    'div[role="dialog"] [role="button"]:has(span[data-icon*="send"])',
+    'div[role="dialog"] button:has(span[data-icon*="send"])',
+    'div[role="dialog"] [aria-label="Enviar"]',
+    'div[role="dialog"] span[data-icon="wds-ic-send-filled"]',
+    'div[role="dialog"] span[data-icon="round-send-primary"]',
+]
+
 
 def _hubo_enter(stream: Any) -> bool:
     """¿Alguien presionó ENTER de verdad, o el stdin simplemente no es un teclado?
@@ -125,6 +183,7 @@ ESPERA_TECHO_S = 180.0
 
 ESTADOS_ENTREGADA = ("enviado", "entregado", "leido", "leído")
 ESTADO_PENDIENTE = "pendiente"
+ESTADOS_ERROR = ("error", "falló", "fallo", "no se pudo enviar")
 
 
 def burbuja_entregada(etiquetas: list[str]) -> bool:
@@ -141,6 +200,8 @@ def burbuja_entregada(etiquetas: list[str]) -> bool:
     """
     texto = " ".join(e or "" for e in etiquetas).lower()
     if ESTADO_PENDIENTE in texto:
+        return False
+    if any(err in texto for err in ESTADOS_ERROR):
         return False
     return any(estado in texto for estado in ESTADOS_ENTREGADA)
 
@@ -217,6 +278,15 @@ class LimiteEnviosError(WhatsAppError):
 
 class LoteInvalidoError(WhatsAppError):
     """El lote de piezas no se puede despachar en una sola acción."""
+
+
+class EncuestaInvalidaError(WhatsAppError):
+    """Se levanta cuando los datos de una encuesta no cumplen los límites de WhatsApp."""
+
+
+class EncuestaFueraDeHorarioError(WhatsAppError):
+    """Se levanta cuando una encuesta se intenta enviar fuera de la ventana horaria pertinente."""
+
 
 
 def huella(texto: str) -> str:
@@ -324,6 +394,113 @@ class WhatsAppConfig:
 
         # 3. Si no coincide con ningún alias configurado, devuelve el nombre tal cual
         return alias_o_nombre.strip()
+
+
+def validar_ventana_encuesta(
+    pregunta: str,
+    destinatario: str = "",
+    ahora: datetime | None = None,
+) -> tuple[bool, str]:
+    """Valida la pertinencia temporal y de horario de mercado para una encuesta.
+
+    Reglas editoriales y de trading:
+    - USD/CLP (mercado spot local 08:30-13:30 CLT): Preguntas de tendencia de la jornada
+      están permitidas únicamente hasta las 11:30 CLT (tras ello se consumió el rango principal).
+      Pasadas las 11:30 CLT se admiten preguntas de cierre ("¿A qué precio cerrará?") o apertura de mañana.
+    - Wall Street / Índices (10:30-17:00 CLT según temporada): Tendencia de hoy hasta las 14:00 CLT.
+      Tras las 14:00 CLT, preguntas orientadas al cierre o balance.
+    - Commodities / Metales (Oro, Petróleo): Sesión americana hasta las 15:00 CLT.
+    - Criptoactivos: Operativa continua 24/7 sin restricción.
+    - Fines de semana: Mercados tradicionales cerrados. Preguntas intradía se rechazan.
+
+    Detecta el activo e intención mediante análisis híbrido: texto de la pregunta primero,
+    y fallback por canal de destino.
+    """
+    tz_chile = ZoneInfo("America/Santiago")
+    if ahora is None:
+        ahora_clt = datetime.now(tz_chile)
+    else:
+        ahora_clt = ahora.astimezone(tz_chile) if ahora.tzinfo else ahora.replace(tzinfo=tz_chile)
+
+    texto_lower = pregunta.lower()
+    dest_lower = destinatario.lower()
+
+    # 1. Identificar activo
+    activo = None
+    if any(k in texto_lower for k in ["usd/clp", "usdclp", "dolar", "dólar", "peso chileno", "clp"]):
+        activo = "USD/CLP"
+    elif any(k in texto_lower for k in ["nasdaq", "sp500", "s&p", "dow", "wall street", "acciones", "etf", "indices", "índice"]):
+        activo = "INDICES"
+    elif any(k in texto_lower for k in ["oro", "xau", "cobre", "petroleo", "petróleo", "wti", "brent", "commodities", "metales"]):
+        activo = "COMMODITIES"
+    elif any(k in texto_lower for k in ["btc", "bitcoin", "eth", "ethereum", "solana", "crypto", "cripto"]):
+        activo = "CRYPTO"
+
+    if activo is None:
+        # Fallback por canal de destino
+        if any(k in dest_lower for k in ["divisas", "forex", "02_", "dólar"]):
+            activo = "USD/CLP"
+        elif any(k in dest_lower for k in ["indices", "índices", "wall street", "04_", "acciones", "05_"]):
+            activo = "INDICES"
+        elif any(k in dest_lower for k in ["commodities", "metales", "energía", "03_"]):
+            activo = "COMMODITIES"
+        elif any(k in dest_lower for k in ["cripto", "crypto", "06_"]):
+            activo = "CRYPTO"
+        else:
+            activo = "GENERAL"
+
+    if activo in ("CRYPTO", "GENERAL"):
+        return True, "Horario sin restricciones."
+
+    # 2. Identificar horizonte temporal
+    # Palabras de cierre o mañana tienen precedencia sobre 'hoy' (ej. "¿A qué precio cerrará hoy?")
+    es_cierre = any(k in texto_lower for k in ["cierre", "cerrará", "cerrara", "al cierre"])
+    es_manana = any(k in texto_lower for k in ["mañana", "manana", "abrirá", "abrira", "próxima sesión", "proxima sesion", "apertura"])
+    es_intradia = any(k in texto_lower for k in ["hoy", "del día", "del dia", "esta jornada", "intradía", "intradia", "esta sesión", "esta sesion", "tendencia"])
+
+    # Si es fin de semana (sábado=5, domingo=6)
+    if ahora_clt.weekday() >= 5:
+        if not es_manana and (es_intradia or es_cierre):
+            raise EncuestaFueraDeHorarioError(
+                f"Los mercados de {activo} están cerrados en fin de semana. "
+                f"No corresponde consultar por la tendencia o cierre intradía hoy. "
+                f"Sugerencia: reorientar a proyección semanal o de apertura."
+            )
+        return True, "Encuesta de fin de semana para apertura."
+
+    hora_float = ahora_clt.hour + ahora_clt.minute / 60.0
+    hora_str = ahora_clt.strftime("%H:%M")
+
+    # Si la pregunta es sobre el cierre o sobre mañana, está permitida
+    if es_manana:
+        return True, "Pregunta prospectiva para la próxima sesión."
+
+    if es_cierre:
+        return True, "Pregunta de cierre de sesión válida."
+
+    # Si es intradía (o general de tendencia sin calificar)
+    if es_intradia:
+        if activo == "USD/CLP" and hora_float >= 11.5:  # 11:30 CLT
+            raise EncuestaFueraDeHorarioError(
+                f"La encuesta sobre USD/CLP pregunta por la tendencia de la jornada a las {hora_str} CLT. "
+                f"El corte para tendencia intradía en USD/CLP es a las 11:30 CLT porque el mercado spot "
+                f"cierra a las 13:30 CLT y el rango ya está casi consumido. "
+                f"Sugerencia: preguntar por el nivel de cierre o por la apertura de mañana."
+            )
+        if activo == "INDICES" and hora_float >= 14.0:  # 14:00 CLT
+            raise EncuestaFueraDeHorarioError(
+                f"La encuesta sobre Índices / Wall Street pregunta por la tendencia del día a las {hora_str} CLT. "
+                f"El corte para tendencia intradía es a las 14:00 CLT. "
+                f"Sugerencia: preguntar por el balance de la jornada o el nivel de cierre."
+            )
+        if activo == "COMMODITIES" and hora_float >= 15.0:  # 15:00 CLT
+            raise EncuestaFueraDeHorarioError(
+                f"La encuesta sobre Commodities pregunta por la sesión de hoy a las {hora_str} CLT. "
+                f"El corte para tendencia americana es a las 15:00 CLT. "
+                f"Sugerencia: enfocar la encuesta hacia la sesión asiática o la apertura siguiente."
+            )
+
+    return True, "Ventana horaria válida."
 
 
 class WhatsAppSender:
@@ -1174,6 +1351,58 @@ class WhatsAppSender:
             )
         return opciones.pop()
 
+    @staticmethod
+    def _validar_datos_encuesta(
+        pregunta: str, opciones: list[str]
+    ) -> tuple[str, list[str]]:
+        """Valida que la pregunta y opciones de una encuesta cumplan los límites de WhatsApp.
+
+        Límites de WhatsApp Web:
+        - Pregunta: 1 a 255 caracteres.
+        - Opciones: 2 a 12 opciones, 1 a 100 caracteres cada una, sin duplicados.
+        """
+        if not isinstance(pregunta, str):
+            raise EncuestaInvalidaError("La pregunta de la encuesta debe ser un texto.")
+        pregunta_limpia = pregunta.strip()
+        if not pregunta_limpia:
+            raise EncuestaInvalidaError("La pregunta de la encuesta no puede estar vacía.")
+        if len(pregunta_limpia) > 255:
+            raise EncuestaInvalidaError(
+                f"La pregunta excede el límite de WhatsApp (máximo 255 caracteres, tiene {len(pregunta_limpia)})."
+            )
+
+        if not isinstance(opciones, (list, tuple)):
+            raise EncuestaInvalidaError("Las opciones deben ser una lista de textos.")
+        if len(opciones) < 2:
+            raise EncuestaInvalidaError(
+                f"Una encuesta de WhatsApp requiere al menos 2 opciones (se dieron {len(opciones)})."
+            )
+        if len(opciones) > 12:
+            raise EncuestaInvalidaError(
+                f"Una encuesta de WhatsApp permite como máximo 12 opciones (se dieron {len(opciones)})."
+            )
+
+        opciones_limpias = []
+        vistas = set()
+        for i, op in enumerate(opciones, 1):
+            if not isinstance(op, str):
+                raise EncuestaInvalidaError(f"La opción {i} debe ser un texto.")
+            op_limpia = op.strip()
+            if not op_limpia:
+                raise EncuestaInvalidaError(f"La opción {i} no puede estar vacía.")
+            if len(op_limpia) > 100:
+                raise EncuestaInvalidaError(
+                    f"La opción {i} excede el límite de WhatsApp (máximo 100 caracteres, tiene {len(op_limpia)})."
+                )
+            clave = op_limpia.casefold()
+            if clave in vistas:
+                raise EncuestaInvalidaError(f"Opción duplicada en la encuesta: '{op_limpia}'.")
+            vistas.add(clave)
+            opciones_limpias.append(op_limpia)
+
+        return pregunta_limpia, opciones_limpias
+
+
     # `_miniaturas_del_lote`, `_escribir_pies_del_lote` y `_adjuntar_lote`
     # vivian aca y se eliminaron el 2026-09-03: adjuntaban primero y escribian
     # el pie dentro del editor, que es el orden que tope en 1.024 caracteres y
@@ -1270,22 +1499,26 @@ class WhatsAppSender:
                 "() => {"
                 " const filas = Array.from(document.querySelectorAll('#main div[role=row]'));"
                 " const r = filas[filas.length - 1];"
-                " if (!r) return {texto: '', media: false};"
+                " if (!r) return {texto: '', media: false, etiquetas: [], tiene_error: false, pendiente: false};"
                 " const texto = r.innerText || '';"
                 " const media = Array.from(r.querySelectorAll('img'))"
-                "   .some(i => (i.src || '').startsWith('blob:'))"
-                "   || !!r.querySelector('audio, video')"
-                "   || /\bPDF\b|\bDOCX?\b|\bXLSX?\b|p\u00e1ginas/i.test(texto);"
+                "   .some(i => (i.src || '').startsWith('blob:') || (i.src || '').startsWith('data:image/'))"
+                "   || !!r.querySelector('audio, video, [data-icon*=\"document\"], [data-icon*=\"pdf\"], [data-testid*=\"document\"], [data-testid=\"image-thumb\"]')"
+                "   || /\\bPDF\\b|\\bDOCX?\\b|\\bXLSX?\\b|\\.pdf\\b|p\\u00e1ginas/i.test(texto);"
                 # WhatsApp pinta la burbuja al instante y sube en segundo plano;
                 # el tic es lo unico que dice que el servidor ya la recibio.
                 " const etiquetas = Array.from(r.querySelectorAll('[aria-label]'))"
                 "   .map(e => e.getAttribute('aria-label') || '');"
-                " return {texto, media, etiquetas};"
+                " const tiene_error = r.querySelector('[data-testid=\"fail-container\"], [data-icon*=\"error\"]') !== null"
+                "   || etiquetas.some(e => /error|fall\\u00f3|fallo|reintentar/i.test(e));"
+                " const pendiente = r.querySelector('[data-testid=\"media-state-pending\"], [data-testid=\"loading-spinner\"], [data-icon=\"msg-time\"]') !== null"
+                "   || etiquetas.some(e => /pendiente/i.test(e));"
+                " return {texto, media, etiquetas, tiene_error, pendiente};"
                 "}"
             )
         except Exception:  # noqa: BLE001
-            return {"texto": "", "media": False, "etiquetas": []}
-        return datos if isinstance(datos, dict) else {"texto": "", "media": False}
+            return {"texto": "", "media": False, "etiquetas": [], "tiene_error": False, "pendiente": False}
+        return datos if isinstance(datos, dict) else {"texto": "", "media": False, "etiquetas": [], "tiene_error": False, "pendiente": False}
 
     def _adjunto_confirmado(
         self, page: Any, testigo: str, nombre_archivo: str = ""
@@ -1295,7 +1528,7 @@ class WhatsAppSender:
         **El falso "enviado" del 2026-09-04.** Un PDF de 2 MB se reportó
         entregado y no llegó al canal; el director tuvo que mandarlo a mano. Con
         el pie vacío esta función devolvía `True` apenas la última burbuja tenía
-        `media`, y `media` se decide con un regex sobre el texto (`/PDF/`),
+        `media`, y `media` se decide con un regex sobre el texto (`/ PDF /`),
         que da verdadero en cuanto WhatsApp **pinta** la burbuja, antes de
         terminar la subida. Con un PNG de 500 KB la subida es instantánea y el
         hueco nunca se noto.
@@ -1313,6 +1546,15 @@ class WhatsAppSender:
         """
         burbuja = self._ultima_burbuja(page)
         if not burbuja.get("media"):
+            return False
+
+        if burbuja.get("tiene_error"):
+            raise EnvioMensajeError(
+                "WhatsApp Web reportó un error al subir o procesar el archivo adjunto "
+                f"({nombre_archivo or 'pieza multimedia'})."
+            )
+
+        if burbuja.get("pendiente"):
             return False
 
         texto = self._normalizar(str(burbuja.get("texto", "")))
@@ -1383,17 +1625,17 @@ class WhatsAppSender:
                 # suelto también aparece, y la imagen se quedó sin enviar. Se
                 # exige que la burbuja NUEVA sea el adjunto y lleve ese pie.
                 if self._adjunto_confirmado(page, testigo, nombre_archivo):
-                    self._pausa_humana(0.6)
+                    self._pausa_humana(1.5)
                     return
             elif testigo:
                 texto = self._normalizar(self._texto_ultimas_filas(page))
                 if testigo in texto:
-                    self._pausa_humana(0.6)
+                    self._pausa_humana(1.0)
                     return
             else:
                 ahora = self._contar_mensajes(page)
                 if ahora < 0 or ahora > mensajes_antes:
-                    self._pausa_humana(0.6)
+                    self._pausa_humana(1.0)
                     return
             time.sleep(0.5)
 
@@ -1610,7 +1852,7 @@ class WhatsAppSender:
                         ruta_adjunto.stat().st_size if ruta_adjunto else 0
                     ),
                 )
-                self._pausa_humana(1.0)
+                self._pausa_humana(2.5)
 
                 return {
                     "status": "enviado",
@@ -1632,3 +1874,213 @@ class WhatsAppSender:
                 raise e
             finally:
                 context.close()
+
+    def _crear_encuesta(
+        self,
+        page: Any,
+        pregunta: str,
+        opciones: list[str],
+        permitir_multiples: bool = False,
+    ) -> None:
+        """Abre el modal de encuesta, llena la pregunta y opciones, configura el switch y envía."""
+        self._descartar_borrador(page)
+
+        btn_adjuntar = self._primer_locator(page, SELECTORES_ADJUNTAR)
+        if btn_adjuntar is None:
+            raise EnvioMensajeError("No se encontró el botón de adjuntar para crear la encuesta.")
+        btn_adjuntar.click()
+        self._pausa_humana(0.5)
+
+        item_encuesta = self._primer_locator(page, SELECTORES_MENU_ENCUESTA)
+        if item_encuesta is None:
+            raise EnvioMensajeError("No se encontró la opción 'Encuesta' en el menú de adjuntos de WhatsApp Web.")
+        item_encuesta.click()
+        self._pausa_humana(0.8)
+
+        input_pregunta = self._primer_locator(page, SELECTORES_PREGUNTA_ENCUESTA)
+        if input_pregunta is None:
+            raise EnvioMensajeError("No se encontró el campo de pregunta en el modal de encuesta.")
+        input_pregunta.click()
+        self._pausa_humana(0.2)
+        page.keyboard.insert_text(pregunta)
+        self._pausa_humana(0.3)
+
+        for i, opcion in enumerate(opciones):
+            loc_especifico = page.locator(f'[data-testid="poll-option-input-{i}"]')
+            if hasattr(loc_especifico, "wait_for") and loc_especifico.count() == 0:
+                try:
+                    loc_especifico.wait_for(state="attached", timeout=4000)
+                except Exception:
+                    pass
+
+            input_actual = None
+            if loc_especifico.count() > 0:
+                input_actual = loc_especifico.first
+            else:
+                for sel in SELECTORES_OPCIONES_ENCUESTA:
+                    loc = page.locator(sel)
+                    if loc.count() > i:
+                        input_actual = loc.nth(i)
+                        break
+
+            if input_actual is not None:
+                input_actual.click()
+            else:
+                page.keyboard.press("Tab")
+
+            self._pausa_humana(0.2)
+            page.keyboard.insert_text(opcion)
+            self._pausa_humana(0.3)
+
+        switch = self._primer_locator(page, SELECTORES_SWITCH_MULTIPLES)
+        if switch is not None:
+            aria_checked = switch.get_attribute("aria-checked")
+            checked = (aria_checked == "true") if aria_checked is not None else False
+            if hasattr(switch, "is_checked") and aria_checked is None:
+                try:
+                    checked = switch.is_checked()
+                except Exception:
+                    pass
+
+            if not permitir_multiples and checked:
+                switch.click()
+                self._pausa_humana(0.3)
+            elif permitir_multiples and not checked:
+                switch.click()
+                self._pausa_humana(0.3)
+
+        btn_enviar = self._primer_locator(page, SELECTORES_ENVIAR_ENCUESTA)
+        if btn_enviar is None:
+            btn_enviar = self._primer_locator(page, SELECTORES_ENVIAR)
+        if btn_enviar is None:
+            raise EnvioMensajeError("No se encontró el botón de enviar en el modal de encuesta.")
+        btn_enviar.click()
+        self._pausa_humana(1.0)
+
+    def _confirmar_envio_encuesta(
+        self,
+        page: Any,
+        mensajes_antes: int,
+        pregunta: str,
+        timeout_s: float = 15.0,
+    ) -> None:
+        """Confirma que la encuesta haya aparecido en la conversación."""
+        inicio = time.time()
+        testigo_pregunta = self._testigo(pregunta)
+        while time.time() - inicio < timeout_s:
+            actuales = self._contar_mensajes(page)
+            if actuales > mensajes_antes:
+                return
+            filas = page.locator('#main div[role="row"], div[role="row"]')
+            if filas.count() > 0:
+                try:
+                    ultimo_texto = filas.last.inner_text()
+                    if testigo_pregunta and testigo_pregunta in self._normalizar(ultimo_texto):
+                        return
+                except Exception:
+                    pass
+            time.sleep(0.5)
+        raise EnvioMensajeError(
+            f"La encuesta no apareció en la conversación después de presionar enviar ({timeout_s:.0f}s de espera)."
+        )
+
+    def enviar_encuesta(
+        self,
+        destinatario: str,
+        pregunta: str,
+        opciones: list[str],
+        permitir_multiples: bool = False,
+        dry_run: bool = False,
+        forzar: bool = False,
+        ahora: datetime | None = None,
+    ) -> dict[str, Any]:
+        """Envía una encuesta nativa de WhatsApp Web a un grupo o contacto."""
+        pregunta_valida, opciones_validas = self._validar_datos_encuesta(pregunta, opciones)
+        nombre_oficial = self.config.resolver_nombre_oficial(destinatario)
+
+        if not forzar:
+            validar_ventana_encuesta(pregunta_valida, destinatario=nombre_oficial, ahora=ahora)
+
+        if dry_run:
+            print(f'[DRY RUN] Simulación de encuesta a: "{nombre_oficial}"')
+            print(f"[DRY RUN] Pregunta: {pregunta_valida}")
+            print(f"[DRY RUN] Opciones ({len(opciones_validas)}):")
+            for i, op in enumerate(opciones_validas, 1):
+                print(f"[DRY RUN]   {i}. {op}")
+            print(f"[DRY RUN] Permitir múltiples respuestas: {permitir_multiples}")
+            if forzar:
+                print("[DRY RUN] Forzado: True (ventana horaria omitida)")
+            return {
+                "status": "simulado",
+                "destinatario": nombre_oficial,
+                "tipo": "encuesta",
+                "pregunta": pregunta_valida,
+                "opciones": opciones_validas,
+                "permitir_multiples": permitir_multiples,
+                "forzado": forzar,
+            }
+
+        try:
+            from playwright.sync_api import sync_playwright
+        except ImportError as err:
+            raise WhatsAppError(
+                "Playwright no está instalado. Ejecute: uv sync --extra stories"
+            ) from err
+
+        self._reservar_turno(piezas=1)
+
+        with sync_playwright() as p:
+            context = self._crear_contexto(p, headless=self.headless)
+            page = None
+            try:
+                page = context.pages[0] if context.pages else context.new_page()
+                page.goto(self.URL_WHATSAPP, wait_until="domcontentloaded")
+
+                # 1. Verificar sesión
+                self._verificar_autenticacion(page)
+
+                # 2. Abrir chat y verificar cabecera
+                self._buscar_y_abrir_chat(page, nombre_oficial)
+
+                # 3. Estado previo
+                mensajes_antes = self._contar_mensajes(page)
+
+                # 4. Crear y enviar encuesta
+                self._crear_encuesta(
+                    page,
+                    pregunta=pregunta_valida,
+                    opciones=opciones_validas,
+                    permitir_multiples=permitir_multiples,
+                )
+
+                # 5. Confirmar envío
+                self._confirmar_envio_encuesta(
+                    page,
+                    mensajes_antes=mensajes_antes,
+                    pregunta=pregunta_valida,
+                )
+                self._registrar_envio(piezas=1)
+                self._pausa_humana(1.0)
+
+                return {
+                    "status": "enviado",
+                    "destinatario": nombre_oficial,
+                    "tipo": "encuesta",
+                    "pregunta": pregunta_valida,
+                    "opciones": opciones_validas,
+                    "permitir_multiples": permitir_multiples,
+                    "forzado": forzar,
+                }
+            except Exception as e:
+                if page is not None:
+                    try:
+                        debug_png = RAIZ_PROYECTO / "scratch" / f"whatsapp_error_{int(time.time())}.png"
+                        debug_png.parent.mkdir(parents=True, exist_ok=True)
+                        page.screenshot(path=str(debug_png))
+                        logger.error("Captura de error guardada en %s", debug_png)
+                    except Exception:  # noqa: BLE001
+                        pass
+                raise e
+            finally:
+                context.close()
+

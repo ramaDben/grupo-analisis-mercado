@@ -9,18 +9,16 @@ Existe porque la curva **no es un símbolo de mercado**: no se puede pedir con
 `get_asset_levels`. Los datos ya los ingiere
 `.agents/skills/ecosistema-datos-macro/scripts/extractor_usa.py` a
 `data central/DATA USA/raw/treasury_fed_data.json`, pero lo único publicado hacia
-afuera hasta ahora eran NIVELES (`metricas_clave` de `macro_bias_output.json`). Los
-deltas en puntos base quedaban dentro de `scripts/macro_bias_engine.py`, y solo a 5
-días.
+afuera eran NIVELES, dentro del snapshot del motor de sesgo (retirado el
+2026-09-27). Los deltas en puntos base quedaban dentro del motor, y solo a 5 días.
 
-Por qué importa: el Playbook no trata la curva como contexto sino como vector de
+Por qué importa: la curva no es contexto decorativo sino un vector de
 transmisión medido. `DFII10` (tasa real TIPS 10Y) es el driver dominante del Oro con
 elasticidad β≈-1,5, y `DGS10` es la tasa de descuento del US100 con un umbral
 explícito ("DGS10 > 4,70% comprime múltiplos P/E").
 
-**No escribe nada.** El motor de sesgo (`macro_bias_engine.py`) sigue siendo el único
-escritor de `macro_bias_output.json` (Single-Writer Pattern). Este módulo lee el dato
-crudo, así que responde aunque el motor no haya corrido y no puede alterar el sesgo.
+**No escribe nada.** Este módulo lee el dato crudo que deja la ingesta, así que
+responde apenas la ingesta corrió.
 
 Nota de fuente, para que nadie la reintroduzca mal: la tasa real 10Y es la serie
 `DFII10`. El archivo
@@ -36,7 +34,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from market_data_mcp.bias_reader import cargar_config_staleness, validar_staleness
+from market_data_mcp.frescura import cargar_config_staleness, validar_staleness
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 ARCHIVO_DEFAULT = BASE_DIR / "data central" / "DATA USA" / "raw" / "treasury_fed_data.json"

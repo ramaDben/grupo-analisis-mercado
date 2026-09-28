@@ -477,7 +477,7 @@ def ejecutar_pipeline(forzar: bool = False) -> dict:
     print(f" • Estado Guardado:  {ESTADO_FILE}")
     print("=" * 70)
 
-    # 7. Disparo aislado del Motor Cuantitativo y Precios OHLC
+    # 7. Disparo aislado de Precios OHLC y del pronóstico de Japón
     if str(BASE_DIR) not in sys.path:
         sys.path.insert(0, str(BASE_DIR))
 
@@ -487,13 +487,6 @@ def ejecutar_pipeline(forzar: bool = False) -> dict:
         ejecutar_extraccion_precios()
     except Exception as exc:
         print(f"[WARN HOOK] Extractor de precios OHLC falló de forma aislada: {exc}")
-
-    try:
-        from scripts.macro_bias_engine import ejecutar_motor_sesgo
-        print("\n[HOOK] Ejecutando Motor Cuantitativo Intermercado (Playbook V2)...")
-        ejecutar_motor_sesgo(verbose=True)
-    except Exception as exc:
-        print(f"[WARN HOOK] Motor Cuantitativo falló de forma aislada: {exc}")
 
     try:
         from scripts.pronostico_inflacion_japon import construir_pronostico_inflacion

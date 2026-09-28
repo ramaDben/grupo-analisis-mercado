@@ -241,7 +241,7 @@ def construir_grafico(
 
     titulo = f"{nombre} · marco {'diario' if timeframe == 'D1' else timeframe}"
     if subtitulo:
-        # El subtitulo llega del sesgo del Playbook y su largo no esta acotado:
+        # El subtitulo llega de afuera y su largo no esta acotado:
         # "acompañado por el buen momento de la economia" se salia del lienzo y
         # matplotlib lo recortaba a media palabra, sin avisar. Se envuelve a dos
         # lineas como maximo; mas alto de titulo se come el grafico, que es lo

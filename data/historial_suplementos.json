@@ -19,5 +19,194 @@
     "tipo": "concepto",
     "clave": "soporte-resistencia",
     "categoria": "banda_estrecha"
+  },
+  {
+    "fecha": "2026-09-08",
+    "canal": "03_commodities_materias_primas",
+    "tipo": "concepto",
+    "clave": "volatilidad-atr",
+    "categoria": "recorrido_agotado"
+  },
+  {
+    "fecha": "2026-09-08",
+    "canal": "04_indices_bursatiles",
+    "tipo": "concepto",
+    "clave": "volatilidad-atr",
+    "categoria": "recorrido_agotado"
+  },
+  {
+    "fecha": "2026-09-08",
+    "canal": "05_acciones_etfs",
+    "tipo": "concepto",
+    "clave": "soporte-resistencia",
+    "categoria": "banda_estrecha"
+  },
+  {
+    "fecha": "2026-09-09",
+    "canal": "03_commodities_materias_primas",
+    "tipo": "concepto",
+    "clave": "soporte-resistencia",
+    "categoria": "banda_estrecha"
+  },
+  {
+    "fecha": "2026-09-09",
+    "canal": "02_forex_divisas",
+    "tipo": "concepto",
+    "clave": "soporte-resistencia",
+    "categoria": "banda_estrecha"
+  },
+  {
+    "fecha": "2026-09-09",
+    "canal": "04_indices_bursatiles",
+    "tipo": "concepto",
+    "clave": "soporte-resistencia",
+    "categoria": "banda_estrecha"
+  },
+  {
+    "fecha": "2026-09-10",
+    "canal": "02_forex_divisas",
+    "tipo": "concepto",
+    "clave": "volatilidad-atr",
+    "categoria": "recorrido_agotado"
+  },
+  {
+    "fecha": "2026-09-10",
+    "canal": "02_forex_divisas",
+    "tipo": "noticia",
+    "clave": "https://www.ecb.europa.eu//press/pr/date/2026/html/ecb.mp260910~314e508016.en.html",
+    "fuente": "bce"
+  },
+  {
+    "fecha": "2026-09-11",
+    "canal": "02_forex_divisas",
+    "tipo": "noticia",
+    "clave": "https://www.ecb.europa.eu//press/press_conference/monetary-policy-statement/2026/html/ecb.is260910~6a45359cfc.en.html",
+    "fuente": "bce"
+  },
+  {
+    "fecha": "2026-09-11",
+    "canal": "03_commodities_materias_primas",
+    "tipo": "noticia",
+    "clave": "https://www.eia.gov/todayinenergy/detail.php?id=68125",
+    "fuente": "eia"
+  },
+  {
+    "fecha": "2026-09-11",
+    "canal": "02_forex_divisas",
+    "tipo": "noticia",
+    "clave": "https://www.ecb.europa.eu//press/key/date/2026/html/ecb.sp260909~59a07e6f05.en.html",
+    "fuente": "bce"
+  },
+  {
+    "fecha": "2026-09-14",
+    "canal": "02_forex_divisas",
+    "tipo": "noticia",
+    "clave": "https://www.ecb.europa.eu//press/key/date/2026/html/ecb.sp260914~0ffd556bc8.en.pdf",
+    "fuente": "bce"
+  },
+  {
+    "fecha": "2026-09-14",
+    "canal": "03_commodities_materias_primas",
+    "tipo": "concepto",
+    "clave": "riesgo",
+    "categoria": "setup_prohibido"
+  },
+  {
+    "fecha": "2026-09-14",
+    "canal": "06_criptoactivos",
+    "tipo": "concepto",
+    "clave": "volatilidad-atr",
+    "categoria": "recorrido_agotado"
+  },
+  {
+    "fecha": "2026-09-14",
+    "canal": "02_forex_divisas",
+    "tipo": "concepto",
+    "clave": "puntos-interes",
+    "categoria": "sin_niveles_medidos"
+  },
+  {
+    "fecha": "2026-09-14",
+    "canal": "02_forex_divisas",
+    "tipo": "noticia",
+    "clave": "https://www.ecb.europa.eu//press/key/date/2026/html/ecb.sp260914_2~a3f0efbee4.en.html",
+    "fuente": "bce"
+  },
+  {
+    "fecha": "2026-09-16",
+    "canal": "02_forex_divisas",
+    "tipo": "noticia",
+    "clave": "https://www.ecb.europa.eu//press/key/date/2026/html/ecb.sp260914_1~91d3436449.en.html",
+    "fuente": "bce"
+  },
+  {
+    "fecha": "2026-09-16",
+    "canal": "04_indices_bursatiles",
+    "tipo": "concepto",
+    "clave": "riesgo",
+    "categoria": "setup_prohibido"
+  },
+  {
+    "fecha": "2026-09-21",
+    "canal": "02_forex_divisas",
+    "tipo": "concepto",
+    "clave": "riesgo",
+    "categoria": "setup_prohibido"
+  },
+  {
+    "fecha": "2026-09-21",
+    "canal": "04_indices_bursatiles",
+    "tipo": "concepto",
+    "clave": "puntos-interes",
+    "categoria": "sin_niveles_medidos"
+  },
+  {
+    "fecha": "2026-09-21",
+    "canal": "05_acciones_etfs",
+    "tipo": "concepto",
+    "clave": "volatilidad-atr",
+    "categoria": "recorrido_agotado"
+  },
+  {
+    "fecha": "2026-09-22",
+    "canal": "02_forex_divisas",
+    "tipo": "noticia",
+    "clave": "https://www.ecb.europa.eu//press/inter/date/2026/html/ecb.in260922~5f89d300ee.en.html",
+    "fuente": "bce"
+  },
+  {
+    "fecha": "2026-09-22",
+    "canal": "03_commodities_materias_primas",
+    "tipo": "concepto",
+    "clave": "volatilidad-atr",
+    "categoria": "recorrido_agotado"
+  },
+  {
+    "fecha": "2026-09-22",
+    "canal": "04_indices_bursatiles",
+    "tipo": "concepto",
+    "clave": "volatilidad-atr",
+    "categoria": "recorrido_agotado"
+  },
+  {
+    "fecha": "2026-09-22",
+    "canal": "03_commodities_materias_primas",
+    "tipo": "noticia",
+    "clave": "https://www.eia.gov/todayinenergy/detail.php?id=68184",
+    "fuente": "eia"
+  },
+  {
+    "fecha": "2026-09-23",
+    "canal": "02_forex_divisas",
+    "tipo": "noticia",
+    "clave": "https://www.ecb.europa.eu//press/key/date/2026/html/ecb.sp260923_1~ac21bf46e3.en.pdf",
+    "fuente": "bce"
+  },
+  {
+    "fecha": "2026-09-24",
+    "canal": "05_acciones_etfs",
+    "tipo": "concepto",
+    "clave": "puntos-interes",
+    "categoria": "sin_niveles_medidos"
   }
 ]

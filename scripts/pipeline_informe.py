@@ -10,17 +10,14 @@ Decisión del director: la apertura sí va en PDF, porque es densa y se lee ante
 de operar; el cierre pasa a mensaje con gráfico adjunto.
 
 **Mismo reparto que el carrusel**: este script arma los DATOS del informe (curva
-del Tesoro, calendario del día, régimen y sesgo del Playbook, lotaje por riesgo)
-y deja la narrativa en blanco. El análisis lo escribe quien tiene criterio
+del Tesoro, calendario del día, lectura técnica diaria de los activos base) y
+deja la narrativa en blanco. El análisis lo escribe quien tiene criterio
 editorial, no un script.
 
-**La regla de frescura no es negociable en silencio.** El informe de apertura
-depende de `macro_bias_output.json`, que produce `macro_bias_engine.py` sobre lo
-que ingiere `pipeline_ingesta.py`. Si ese dato está viejo, el informe **no se
-emite** salvo que se pida explícitamente con `--con-datos-viejos`, y en ese caso
-la antigüedad va estampada en la portada. Un PDF institucional con datos de dos
-días hábiles atrás y sin decirlo es peor que no emitirlo: el lector lo cita como
-si fuera de hoy.
+**Sin el Playbook V2 (retirado el 2026-09-27).** El informe dependía del sesgo
+de `macro_bias_output.json` y no se emitía sin él. Ahora su columna vertebral es
+la lectura técnica diaria de cada activo base, medida en el terminal al preparar:
+sin terminal el informe sale sin esas cifras y lo dice en los avisos.
 
 Uso:
     uv run python scripts/pipeline_informe.py --tipo apertura --preparar
@@ -92,18 +89,6 @@ def _calendario(ahora: datetime) -> tuple[list[dict[str, Any]], list[str]]:
     if "error" in res:
         return [], [f"calendario no disponible ({res['error']})"]
     return res.get("eventos", []), []
-
-
-def _playbook() -> tuple[dict[str, Any], list[str]]:
-    """Régimen, sesgo y parámetros de riesgo de los 5 activos con ficha."""
-    from market_data_mcp.bias_reader import cargar_macro_bias
-
-    res = cargar_macro_bias("ALL")
-    if "error" in res:
-        return {}, [
-            f"sesgo del Playbook no disponible ({res['error']}): {res.get('message', '')}"
-        ]
-    return res, []
 
 
 def _pct_es(valor: Any) -> str:
@@ -199,22 +184,6 @@ def _fecha_es(momento: datetime) -> str:
     """La fecha en español. `strftime('%B')` devuelve el mes según el locale del
     sistema, que acá es inglés: la portada salía "25 de August de 2026"."""
     return f"{momento.day} de {_MESES_ES[momento.month - 1]} de {momento.year}"
-
-
-def _momento_snapshot(as_of_utc: str | None) -> str:
-    """La marca de tiempo del motor, en hora de Chile y legible.
-
-    El campo viene en ISO con microsegundos y en UTC
-    (`2026-08-25T21:55:42.222379+00:00`). Citado tal cual en un informe obliga al
-    lector a hacer dos conversiones mentales para saber si el dato es de hoy.
-    """
-    if not as_of_utc:
-        return "no disponible"
-    try:
-        momento = datetime.fromisoformat(as_of_utc).astimezone(SANTIAGO)
-    except (TypeError, ValueError):
-        return str(as_of_utc)
-    return f"{_fecha_es(momento)}, {momento.strftime('%H:%M')} hora de Chile"
 
 
 # Sufijos que la fuente pega al nombre del indicador. Sin traducir, la agenda de
@@ -516,451 +485,139 @@ def _tabla_calendario(
     return "\n".join(filas) + "\n\n" + pie
 
 
-def _tabla_playbook(playbook: dict[str, Any]) -> str:
-    activos = playbook.get("activos", {})
-    if not activos:
-        return "_Sesgo del Playbook no disponible en esta corrida._"
-    filas = ["| Activo | Sesgo | Score | Setups permitidos | Prohibidos |",
-             "|---|---|---|---|---|"]
-    for ticker, a in activos.items():
-        filas.append(
-            f"| {ticker} | {a.get('sesgo_etiqueta', '?')} | {a.get('sesgo_score', '?')} | "
-            f"{', '.join(a.get('setups_permitidos') or []) or '—'} | "
-            f"{', '.join(a.get('setups_prohibidos') or []) or '—'} |"
-        )
-    return "\n".join(filas)
-
-
 # ─────────────────────────────────────────────────────────────────────────────
-# El traductor del motor: ningún token interno llega al cliente
+# Los activos base: lectura técnica diaria medida en el terminal
 # ─────────────────────────────────────────────────────────────────────────────
-_GLOSARIO_MOTOR = RAIZ / "data" / "glosario_motor.json"
+# Los cinco activos base del grupo, en el orden del informe. Los nombres salen del
+# catálogo; acá solo va el ticker del broker, que es el que MT5 conoce.
+ACTIVOS_INFORME = ("USDCLP", "XAUUSD", "WTI.spot", "BRENT.spot", "US100.spot")
+
+_GLOSARIO_INFORME = RAIZ / "data" / "glosario_informe.json"
 
 
-def cargar_glosario_motor() -> dict[str, Any]:
-    """`data/glosario_motor.json`, o vacío si falta (el guard lo detecta igual)."""
+def cargar_glosario_informe() -> dict[str, Any]:
+    """`data/glosario_informe.json`, o vacío si falta."""
     try:
-        return json.loads(_GLOSARIO_MOTOR.read_text(encoding="utf-8"))
+        return json.loads(_GLOSARIO_INFORME.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return {}
 
 
-# Cómo se nombra cada marco temporal en voz de cliente, y en qué unidad cae el
-# período de un indicador medido en ese marco.
-_TF_ES = {
-    "M1": "1 minuto", "M5": "5 minutos", "M15": "15 minutos", "M30": "30 minutos",
-    "H1": "1 hora", "H4": "4 horas", "H12": "12 horas",
-    "D1": "1 día", "W1": "1 semana", "MN1": "1 mes",
-}
-# Todas femeninas a propósito: los textos dicen "las últimas N {periodos}", y
-# una unidad masculina deja "las últimas 20 días".
-_TF_PERIODOS = {
-    "M1": "velas de 1 minuto", "M5": "velas de 5 minutos",
-    "M15": "velas de 15 minutos", "M30": "velas de 30 minutos",
-    "H1": "horas", "H4": "velas de 4 horas", "H12": "velas de 12 horas",
-    "D1": "velas diarias", "W1": "velas semanales", "MN1": "velas mensuales",
-}
+def _catalogo_activos() -> dict[str, dict[str, Any]]:
+    """Nombre y decimales de cada activo base, del catálogo y no del gusto."""
+    import screener_gi as sc
+
+    universo = {a["ticker"]: a for a in sc.cargar_universo(solo_renderizables=False)}
+    return {t: universo[t] for t in ACTIVOS_INFORME if t in universo}
 
 
-def _partir_timeframe(token: str) -> tuple[str, str | None]:
-    """`FADE_SUPPORT_RESISTANCE_H1` -> `("FADE_SUPPORT_RESISTANCE", "H1")`."""
-    for tf in _TF_ES:
-        if token.endswith(f"_{tf}"):
-            return token[: -(len(tf) + 1)], tf
-    return token, None
+def _frase_tecnica(d1: dict[str, Any]) -> str:
+    """La dirección de la lectura diaria en una frase de cliente, sin punto final.
 
-
-def _traducir_setup(token: str, glosario: dict[str, Any]) -> str:
-    """Un setup del motor, en lenguaje de cliente y en cualquier temporalidad.
-
-    Las claves del glosario NO llevan marco temporal: el motor mira el que
-    necesita, y exigir una entrada por cada uno hacía que el primer `_H4` que
-    emitiera llegara al informe como token crudo. Se resuelve la clave base y el
-    marco se comunica aparte.
-
-    Si el setup no está en el glosario se devuelve tal cual, y ahí lo caza el
-    test: preferimos que falle la suite a que `FADE_TOP_RESISTANCE` llegue a un
-    documento que lee un cliente.
+    Mismo criterio que el escáner (`direccion_tecnica`: precio contra la EMA 50),
+    aplicado al marco diario. Una sola vara para las dos piezas del día.
     """
-    setups = glosario.get("setups") or {}
-    base, tf = _partir_timeframe(token)
-    texto = setups.get(base, setups.get(token))
-    if texto is None:
-        return token
-    if "{periodos}" in texto:
-        return texto.replace("{periodos}", _TF_PERIODOS.get(tf or "", "velas"))
-    if tf:
-        return f"{texto} (en {_TF_ES[tf]})"
-    return texto
+    import screener_gi as sc
+
+    if sc.direccion_tecnica(d1) == "ALCISTA":
+        return "Lectura diaria alcista: precio sobre su media de 50 días"
+    return "Lectura diaria bajista: precio bajo su media de 50 días"
 
 
-def _setup_traducible(token: str, glosario: dict[str, Any]) -> bool:
-    """¿El glosario sabe explicar este setup, en la temporalidad que sea?"""
-    return _traducir_setup(token, glosario) != token
+def leer_activos(destino: Path) -> tuple[dict[str, dict[str, Any]], list[str]]:
+    """Niveles D1 y gráfico de cada activo base, con los avisos de lo que faltó.
 
-
-# Palabras que el motor pone ANTES de la dirección y que modifican su fuerza,
-# no la reemplazan. Van acá y no en el glosario porque cambian la gramática de
-# la frase (adverbio + dirección), mientras que `matices` la continúa.
-_INTENSIFICADORES = {"FUERTE": "claramente"}
-
-
-def _frase_sesgo(a: dict[str, Any], glosario: dict[str, Any]) -> str:
-    """El sesgo de un activo en una frase de cliente, sin punto final.
-
-    Vive aparte porque la usan dos consumidores: la prosa de la seccion y el
-    subtitulo del grafico. Si cada uno la derivara por su cuenta, el dia que
-    cambie la traduccion de un matiz la imagen y el texto dirian cosas
-    distintas sobre el mismo activo, en la misma pagina.
-    """
-    sesgos = glosario.get("sesgos") or {}
-    matices_es = glosario.get("matices") or {}
-    etiqueta = str(a.get("sesgo_etiqueta", ""))
-
-    # `FUERTE ALCISTA` es intensidad + direccion, no dos direcciones. Tomar la
-    # primera palabra como direccion publicaba "Hoy lo vemos fuerte, alcista",
-    # y es el sesgo del Oro cuando el score llega a +1,80.
-    intensidad = ""
-    palabras = etiqueta.split()
-    if palabras and palabras[0] in _INTENSIFICADORES:
-        intensidad = _INTENSIFICADORES[palabras[0]] + " "
-        etiqueta = " ".join(palabras[1:])
-
-    primera = etiqueta.split()[0] if etiqueta else ""
-    direccion = sesgos.get(primera, primera.lower())
-    matiz_crudo = etiqueta[len(primera):].strip(" /").strip()
-    frase = f"Hoy lo vemos {intensidad}{direccion}"
-    if not matiz_crudo:
-        return frase
-
-    matiz = matices_es.get(matiz_crudo.upper(), "")
-    if matiz:
-        return f"{frase}, {matiz}"
-
-    # **El parentesis de la etiqueta significa dos cosas distintas**, y tratarlas
-    # igual publico "lo vemos con mas probabilidad de subir, entre ESTANFLACION
-    # GLOBAL" en el PDF de apertura:
-    #
-    #   "RANGO (912 - 925)"        -> un RANGO de precios. Se deja el numero,
-    #                                 que es lo unico que el cliente necesita.
-    #   "MODERADO USD (ESTANFLACION GLOBAL)" -> la CAUSA del sesgo. Se traduce.
-    #
-    # Se distinguen por el guion separador y no por tener digitos: "(S1 - R1)"
-    # tambien los tiene. Seis de las quince etiquetas del motor traen causa.
-    partes: list[str] = []
-    parentesis = re.search(r"\(([^)]+)\)", matiz_crudo)
-    previo = (matiz_crudo[:parentesis.start()] if parentesis else matiz_crudo).strip()
-
-    # "USD" sobra: que el sesgo sea del dolar ya lo dice el nombre del par, y
-    # repetirlo deja una sigla sin explicar en texto de cliente.
-    previo = re.sub(r"\bUSD\b", "", previo).strip(" /").strip()
-    if previo:
-        partes.append(matices_es.get(previo.upper(), previo.lower()))
-
-    if parentesis:
-        dentro = parentesis.group(1).strip()
-        if " - " in dentro:
-            partes.append("entre " + dentro.replace(" - ", " y "))
-        else:
-            partes.append(matices_es.get(dentro.upper(), dentro.lower()))
-
-    return f"{frase}, {', '.join(partes)}" if partes else frase
-
-
-def generar_graficos_activos(
-    playbook: dict[str, Any], glosario: dict[str, Any], destino: Path
-) -> tuple[dict[str, str], list[str]]:
-    """Un grafico por activo del Playbook, con la serie real del terminal.
-
-    Devuelve `{simbolo_playbook: ruta_relativa}` y los avisos de lo que no se
-    pudo dibujar. **Nunca lanza**: un informe sin graficos sigue siendo un
-    informe, mientras que uno que se cae por una imagen deja al director sin
-    nada a las ocho de la manana. Cada ausencia queda dicha en los avisos, que
-    es lo que la hace auditable en vez de invisible.
-
-    Brent SI tiene grafico desde el 2026-09-02: el mapeo lo apuntaba a `None`
-    afirmando que el broker no lo ofrecia, y el terminal lo desmintio
-    (`BRENT.spot`, digits 3). El comentario viejo decia lo contrario y quedaba
-    como coartada de una ausencia que ya no existe.
+    **Nunca lanza**: sin terminal el informe sale sin cifras por activo y lo dice,
+    en vez de dejar al director sin nada a las ocho de la mañana. Devuelve
+    `{ticker: {"nombre", "digits", "d1", "grafico"}}`; `d1` y `grafico` pueden
+    faltar, y cada ausencia queda en los avisos.
     """
     avisos: list[str] = []
-    activos = (playbook or {}).get("activos") or {}
-    if not activos:
-        return {}, avisos
+    catalogo = _catalogo_activos()
+    salida = {
+        t: {"nombre": a["nombre"], "digits": a["digits"]} for t, a in catalogo.items()
+    }
+    faltan = [t for t in ACTIVOS_INFORME if t not in catalogo]
+    if faltan:
+        avisos.append(f"activos del informe fuera del catálogo: {', '.join(faltan)}")
 
     try:
-        sys.path.insert(0, str(RAIZ / "scripts"))
-        from grafico_informe import GraficoError, construir_grafico
         from market_data_mcp import mt5_client
         from market_data_mcp.analisis import analizar_activo
-        from market_data_mcp.bias_reader import TICKER_MT5
-    except ImportError as exc:
-        return {}, [
-            f"informe sin gráficos: no se pudo importar el generador ({exc}). "
-            "Instalar con `uv sync --extra informe` y correr con `--with MetaTrader5`."
-        ]
 
-    # `analizar_activo` no abre la conexion por su cuenta: sin esto responde
-    # MT5_UNAVAILABLE y los niveles saldrian vacios sin que se note.
-    try:
+        # `analizar_activo` no abre la conexión por su cuenta: sin esto responde
+        # MT5_UNAVAILABLE y los niveles saldrían vacíos sin que se note.
         mt5_client.connect()
     except Exception as exc:  # noqa: BLE001
-        return {}, [f"informe sin gráficos: MT5 no conectó ({exc.__class__.__name__})."]
+        return salida, avisos + [
+            f"informe sin lectura por activo: MT5 no conectó ({exc.__class__.__name__})."
+        ]
 
-    salida: dict[str, str] = {}
-    for simbolo, a in activos.items():
-        ticker = TICKER_MT5.get(simbolo)
-        if not ticker:
-            avisos.append(f"{simbolo} sin gráfico: el broker no ofrece el símbolo.")
+    try:
+        from grafico_informe import GraficoError, construir_grafico
+    except ImportError as exc:
+        construir_grafico = None
+        avisos.append(
+            f"informe sin gráficos: no se pudo importar el generador ({exc}). "
+            "Instalar con `uv sync --extra informe`."
+        )
+
+    for ticker, info in salida.items():
+        d1 = analizar_activo(ticker, "D1")
+        if d1.get("error"):
+            avisos.append(f"{info['nombre']}: niveles no disponibles ({d1['error']}).")
             continue
-        niveles = analizar_activo(ticker, "D1")
-        if niveles.get("error"):
-            avisos.append(f"{simbolo}: niveles no disponibles ({niveles['error']}).")
-            niveles = {}
-        nombre = a.get("nombre", simbolo)
-        relativa = f"graficos/{simbolo.lower()}.png"
+        info["d1"] = d1
+        if construir_grafico is None:
+            continue
+        relativa = f"graficos/{ticker.lower().replace('.spot', '')}.png"
         try:
             construir_grafico(
-                ticker, nombre, destino / relativa,
+                ticker, info["nombre"], destino / relativa,
                 timeframe="D1", tema="claro",
-                subtitulo=_frase_sesgo(a, glosario),
-                niveles=niveles,
+                subtitulo=_frase_tecnica(d1),
+                niveles=d1,
             )
         except GraficoError as exc:
-            avisos.append(f"{simbolo} sin gráfico: {exc}")
+            avisos.append(f"{info['nombre']} sin gráfico: {exc}")
             continue
-        salida[simbolo] = relativa
+        info["grafico"] = relativa
     return salida, avisos
 
 
-def _digits_playbook() -> dict[str, int]:
-    """Los decimales de cada activo del Playbook, del catálogo y no del gusto.
+def _lectura_por_activo(activos: dict[str, dict[str, Any]]) -> str:
+    """Un bloque por activo: la lectura medida, el espacio editorial y el gráfico.
 
-    Sale de `catalog`, que no necesita terminal: así el formato de las cifras no
-    depende de que MT5 conteste, y un informe con datos parciales igual escribe
-    los números bien.
+    Las cifras salen del terminal (Regla 1); la prosa sigue las tres capas del
+    informe institucional: qué pasa, qué significa para ti y qué NO hacer hoy.
+    Primero se dice qué pasa y después se muestra: al revés, el cliente mira la
+    imagen sin saber qué buscar.
     """
-    try:
-        from market_data_mcp.bias_reader import TICKER_MT5
-        from market_data_mcp.catalog import VALID_TICKERS
-    except ImportError:
-        return {}
-    return {
-        simbolo: VALID_TICKERS[ticker]
-        for simbolo, ticker in TICKER_MT5.items()
-        if ticker and ticker in VALID_TICKERS
-    }
-
-
-def resolver_vigencias(playbook: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
-    """Hasta dónde vale la lectura de cada activo, con sus avisos.
-
-    El informe decía el sesgo sin su borde: "hoy lo vemos alcista" y nada más.
-    El Playbook no emite señales sino **sesgo con su vigencia**, y el PDF de
-    apertura es donde ese "hasta dónde" más sirve.
-
-    La aritmética no vive acá: la resuelve `bias_reader.resolver_vigencia`, la
-    misma que consume el escáner para las piezas del carrusel. Un segundo cálculo
-    del mismo nivel es un segundo cálculo que puede discrepar, y el informe y la
-    Story del mismo activo saldrían el mismo día con dos bordes distintos.
-
-    **Nunca lanza**, igual que `generar_graficos_activos`: un informe sin este
-    bloque sigue siendo un informe, y uno que se cae por MT5 deja al director sin
-    nada a las ocho de la mañana. Cada ausencia queda en los avisos, que es lo
-    que la hace auditable en vez de invisible.
-    """
-    avisos: list[str] = []
-    activos = (playbook or {}).get("activos") or {}
-    if not activos:
-        return {}, avisos
-
-    try:
-        from market_data_mcp import mt5_client
-        from market_data_mcp.analisis import analizar_activo
-        from market_data_mcp.bias_reader import TICKER_MT5, resolver_vigencia
-    except ImportError as exc:
-        return {}, [
-            f"informe sin el hasta dónde de cada sesgo: no se pudo importar el "
-            f"lector del Playbook ({exc})."
-        ]
-
-    # `analizar_activo` no abre la conexión por su cuenta: sin esto responde
-    # MT5_UNAVAILABLE y no habría anclas que leer.
-    try:
-        mt5_client.connect()
-    except Exception as exc:  # noqa: BLE001
-        return {}, [
-            f"informe sin el hasta dónde de cada sesgo: MT5 no conectó "
-            f"({exc.__class__.__name__})."
-        ]
-
-    digits = _digits_playbook()
-    salida: dict[str, Any] = {}
-    for simbolo, a in activos.items():
-        ticker = TICKER_MT5.get(simbolo)
-        if not ticker:
-            avisos.append(f"{simbolo} sin vigencia: no está mapeado a un símbolo del broker.")
-            continue
-        h1 = analizar_activo(ticker, "H1")
-        if h1.get("error"):
-            avisos.append(f"{simbolo} sin vigencia: niveles H1 no disponibles ({h1['error']}).")
-            continue
-        vigencia = resolver_vigencia({"activo": a}, h1, digits.get(simbolo, 2))
-        if vigencia is None:
-            avisos.append(
-                f"{simbolo} sin vigencia publicable: el modelo no tiene lectura de "
-                f"este activo hoy, o falta el ancla para calcular el borde."
-            )
-            continue
-        salida[simbolo] = vigencia
-    return salida, avisos
-
-
-def _frase_vigencia(vigencia: dict[str, Any] | None, digits: int) -> str:
-    """El borde de un activo en voz de cliente, sin punto final.
-
-    Las dos gramáticas del Playbook, traducidas: un solo borde cuando hay
-    dirección sostenida, dos cuando el activo rota en un canal. Y el caso que
-    importa comunicar y no esconder: cuando el precio ya lo perdió.
-
-    Nada de vocabulario de mesa. El nivel es un Chandelier de 22 velas por su
-    múltiplo de ATR, y eso queda en el payload para quien audite: al cliente se
-    le dice el número y qué pasa si lo pierde.
-    """
-    if not vigencia:
-        return ""
-    from grafico_informe import formatear_precio
-
-    if vigencia["gramatica"] == "RANGO":
-        inferior, superior = vigencia.get("borde_inferior"), vigencia.get("borde_superior")
-        if inferior is None or superior is None:
-            return ""
-        inf, sup = formatear_precio(inferior, digits), formatear_precio(superior, digits)
-        if not vigencia.get("vigente"):
-            return f"la lectura ya no vale, el precio salió del rango de {inf} a {sup}"
-        return f"vale mientras se mueva entre {inf} y {sup}"
-
-    if vigencia.get("nivel") is None:
-        return ""
-    nivel = formatear_precio(vigencia["nivel"], digits)
-    alcista = vigencia.get("direccion") == "LARGO"
-    if not vigencia.get("vigente"):
-        return f"la lectura ya no vale, el precio {'perdió' if alcista else 'superó'} {nivel}"
-    return f"vale mientras el precio siga {'sobre' if alcista else 'bajo'} {nivel}"
-
-
-def _lectura_por_activo(
-    playbook: dict[str, Any],
-    glosario: dict[str, Any],
-    graficos: dict[str, str] | None = None,
-    vigencias: dict[str, Any] | None = None,
-    digits: dict[str, int] | None = None,
-) -> str:
-    """El sesgo por activo en prosa, no en una matriz de cinco columnas.
-
-    Sigue el ritmo pedagógico que la skill de reporte editorial exige y que el
-    informe del Motor GI ya usa: qué pasa, qué significa para ti, y qué NO vamos
-    a hacer hoy. La versión anterior era una tabla con `setups_permitidos` y
-    `setups_prohibidos` volcados del JSON: nombres de variable del motor, en
-    inglés y en mayúsculas, que un cliente lee como ruido.
-
-    Tres decisiones de redacción que se tomaron mirando el resultado:
-
-    - **El porqué de las prohibiciones va una sola vez, al final.** Repetirlo bajo
-      cada activo lo convertía en relleno que el ojo aprende a saltar, y con eso
-      se pierde justo lo que había que comunicar.
-    - **Los activos con lectura idéntica se agrupan.** WTI y Brent salían como dos
-      bloques palabra por palabra iguales: para un cliente eso no es más
-      información, es la misma dos veces.
-    - **El matiz del sesgo se traduce.** Sin eso la frase quedaba colgando: "lo
-      vemos con más probabilidad de subir, moderado".
-    """
-    activos = playbook.get("activos", {})
     if not activos:
         return "_Lectura por activo no disponible en esta corrida._"
-
-    def descripcion(a: dict[str, Any]) -> tuple[str, list[str], list[str]]:
-        return _frase_sesgo(a, glosario) + ".", (
-            [_traducir_setup(s, glosario) for s in (a.get("setups_permitidos") or [])]
-        ), (
-            [_traducir_setup(s, glosario) for s in (a.get("setups_prohibidos") or [])]
-        )
-
-    # Agrupar los activos cuya lectura es identica palabra por palabra.
-    grupos: dict[tuple, list[tuple[str, str]]] = {}
-    for ticker, a in activos.items():
-        clave = descripcion(a)
-        clave_hash = (clave[0], tuple(clave[1]), tuple(clave[2]))
-        grupos.setdefault(clave_hash, []).append((ticker, a.get("nombre", ticker)))
+    from grafico_informe import formatear_precio
 
     bloques: list[str] = []
-    hubo_prohibiciones = False
-    graficos = graficos or {}
-    vigencias = vigencias or {}
-    digits = digits or {}
-    for (frase, permitidos, prohibidos), miembros in grupos.items():
-        nombres = [n for _, n in miembros]
-        titulo = nombres[0] if len(nombres) == 1 else " y ".join(
-            [", ".join(nombres[:-1]), nombres[-1]]
-        )
-        bloque = f"### {titulo}\n\n**{frase}**"
-        if permitidos:
-            bloque += "\n\nQué estamos mirando: " + "; ".join(
-                p[0].lower() + p[1:] for p in permitidos
-            ) + "."
-        if prohibidos:
-            hubo_prohibiciones = True
-            bloque += "\n\n**Lo que hoy no hacemos:** " + "; ".join(prohibidos) + "."
-        # El "hasta donde" va por miembro y no por grupo, igual que el grafico.
-        # WTI y Brent comparten la lectura palabra por palabra, pero cada uno
-        # tiene SU borde: un solo nivel para los dos publicaria el del vecino.
-        lineas_vigencia = []
-        for simbolo, nombre in miembros:
-            frase = _frase_vigencia(vigencias.get(simbolo), digits.get(simbolo, 2))
-            if frase:
-                lineas_vigencia.append(f"- **{nombre}**: {frase}.")
-        if lineas_vigencia:
+    for info in activos.values():
+        bloque = f"### {info['nombre']}"
+        d1 = info.get("d1")
+        if d1:
+            dg = info["digits"]
             bloque += (
-                "\n\n**Hasta dónde vale esta lectura.** Mientras el precio respete "
-                "el nivel de cada activo, seguimos viéndolo así. Si lo pierde, damos "
-                "la lectura por terminada y volvemos a leer el activo desde cero.\n\n"
-                + "\n".join(lineas_vigencia)
+                f"\n\n**{_frase_tecnica(d1)}.** Precio {formatear_precio(d1['price'], dg)} · "
+                f"soporte {formatear_precio(d1['s1'], dg)} · "
+                f"resistencia {formatear_precio(d1['r1'], dg)}."
             )
-
-        # El grafico cierra el bloque: primero se dice que pasa y despues se
-        # muestra. Al reves, el cliente mira la imagen sin saber que buscar.
-        for simbolo, nombre in miembros:
-            ruta = graficos.get(simbolo)
-            if ruta:
-                bloque += f"\n\n![{nombre}: precio de los últimos meses]({ruta})"
-        bloques.append(bloque)
-
-    texto = "\n\n".join(bloques)
-    if hubo_prohibiciones:
-        texto += (
-            "\n\n> **Sobre lo que no hacemos.** No es una opinión sobre esos activos "
-            "ni una predicción de que vayan a moverse al revés. Son jugadas que, en el "
-            "escenario de mercado de hoy, ofrecen poco a favor y mucho en contra. "
-            "Cuando el escenario cambia, la lista cambia con él."
+        else:
+            bloque += "\n\n_Sin datos del terminal para este activo en esta corrida._"
+        bloque += (
+            f"\n\n{MARCA_EDITORIAL} Qué pasa, qué significa para ti y qué NO hacer hoy. "
+            "Tres frases cortas, con la dirección clara."
         )
-    return texto
-
-
-def _bloque_regimen(regimen: dict[str, Any], glosario: dict[str, Any]) -> str:
-    """El régimen macro explicado, sin su código interno.
-
-    `R2_GOLDILOCKS_EXPANSION` es un identificador para que el motor compare
-    estados entre sí. En un informe de cliente no aporta nada y resta: parece
-    jerga que hay que descifrar antes de llegar al contenido.
-    """
-    codigo = regimen.get("codigo")
-    entrada = (glosario.get("regimenes") or {}).get(codigo)
-    if not entrada:
-        return ""
-    return (
-        f"**El escenario de fondo: {entrada['nombre'].lower()}.** "
-        f"{entrada['explicacion']} {entrada['que_implica']}"
-    )
+        if info.get("grafico"):
+            bloque += f"\n\n![{info['nombre']}: precio de los últimos meses]({info['grafico']})"
+        bloques.append(bloque)
+    return "\n\n".join(bloques)
 
 
 def _diccionario(glosario: dict[str, Any], texto: str) -> str:
@@ -981,7 +638,7 @@ def _diccionario(glosario: dict[str, Any], texto: str) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 # Paso 1: preparar
 # ─────────────────────────────────────────────────────────────────────────────
-def preparar(tipo: str, con_datos_viejos: bool = False) -> dict[str, Any]:
+def preparar(tipo: str) -> dict[str, Any]:
     """Arma el markdown del informe con los datos resueltos y la prosa en blanco."""
     ahora = datetime.now(tz=SANTIAGO)
     avisos: list[str] = []
@@ -990,27 +647,8 @@ def preparar(tipo: str, con_datos_viejos: bool = False) -> dict[str, Any]:
     avisos.extend(av)
     eventos, av = _calendario(ahora)
     avisos.extend(av)
-    playbook, av = _playbook()
-    avisos.extend(av)
-
-    # La regla de frescura: sin sesgo del Playbook, el informe de apertura pierde
-    # su columna vertebral (régimen, sesgo y riesgo por activo).
-    if tipo == "apertura" and not playbook and not con_datos_viejos:
-        raise SystemExit(
-            "El informe de apertura NO se emite: el sesgo del Playbook no esta "
-            "disponible.\n  " + "\n  ".join(avisos) + "\n\n"
-            "Un PDF institucional sin regimen ni sesgo, o con datos de dias atras y "
-            "sin decirlo, se cita despues como si fuera de hoy.\n"
-            "Remedio: correr pipeline_ingesta.py y despues macro_bias_engine.py.\n"
-            "Para emitirlo igual, con la antiguedad estampada en la portada: "
-            "--con-datos-viejos"
-        )
-
     destino = DIR_TRABAJO / f"{ahora.strftime('%Y-%m-%d')}_{tipo}"
     destino.mkdir(parents=True, exist_ok=True)
-
-    regimen = (playbook.get("regimen_macro_global") or {}) if playbook else {}
-    fecha_dato = _momento_snapshot(playbook.get("as_of_utc")) if playbook else "no disponible"
 
     encabezado = [
         f"## 01. Marco de la jornada",
@@ -1018,51 +656,20 @@ def preparar(tipo: str, con_datos_viejos: bool = False) -> dict[str, Any]:
         f"{MARCA_EDITORIAL} Dos párrafos: qué deja la sesión anterior y con qué abre esta.",
         "",
     ]
-    if not playbook or con_datos_viejos:
-        # Dos avisos distintos, porque son situaciones distintas: emitir con un
-        # snapshot viejo no es lo mismo que emitir sin sesgo. Un aviso que dijera
-        # "snapshot del no disponible" no informa nada.
-        if playbook:
-            aviso = (
-                f"> **Aviso de frescura.** El sesgo cuantitativo de este informe "
-                f"corresponde al snapshot del {fecha_dato}, no al momento de emisión. "
-                f"Los niveles y la curva llevan su propia fecha en cada tabla."
-            )
-        else:
-            aviso = (
-                "> **Aviso de frescura.** Este informe se emite **sin el sesgo "
-                "cuantitativo del Motor GI**: el snapshot estaba vencido al momento de "
-                "generarlo. Las secciones de régimen y sesgo por activo van vacías a "
-                "propósito, y ninguna cifra de este documento debe leerse como lectura "
-                "del motor."
-            )
-        encabezado.insert(0, "")
-        encabezado.insert(0, aviso)
 
-    glosario = cargar_glosario_motor()
+    glosario = cargar_glosario_informe()
 
-    # Los graficos se dibujan antes de componer el texto porque la seccion
-    # los referencia. Si el terminal no responde, `generar_graficos_activos`
-    # devuelve el diccionario vacio y sus motivos: el informe sale sin
-    # imagenes en vez de no salir.
-    graficos, av = generar_graficos_activos(playbook, glosario, destino)
-    avisos.extend(av)
-
-    # El "hasta dónde" de cada sesgo. Va aparte de los gráficos a propósito: son
-    # dos ausencias distintas y la del borde no depende de que matplotlib esté
-    # instalado. Ninguna de las dos detiene el informe.
-    vigencias, av = resolver_vigencias(playbook)
+    # Los gráficos se dibujan antes de componer el texto porque la sección los
+    # referencia. Sin terminal, `leer_activos` devuelve los bloques sin cifras y
+    # sus motivos: el informe sale incompleto y lo dice, en vez de no salir.
+    activos, av = leer_activos(destino)
     avisos.extend(av)
 
     secciones = [
         "\n".join(encabezado),
-        "## 02. El escenario de hoy\n\n"
-        + (_bloque_regimen(regimen, glosario) + "\n\n" if regimen else "")
-        + f"{MARCA_EDITORIAL} Una o dos frases sobre cómo se traduce ese escenario "
-          "en la jornada de hoy.\n\n"
-        + _lectura_por_activo(
-            playbook, glosario, graficos, vigencias, _digits_playbook()
-        ),
+        "## 02. Los activos de hoy\n\n"
+        + f"{MARCA_EDITORIAL} Una o dos frases sobre qué activo manda la jornada y por qué.\n\n"
+        + _lectura_por_activo(activos),
         "## 03. Qué están haciendo las tasas en EE.UU.\n\n"
         + f"{MARCA_EDITORIAL} Una frase de entrada: hacia dónde se movieron las tasas "
           "y por qué le importa a alguien que no opera bonos.\n\n"
@@ -1076,8 +683,7 @@ def preparar(tipo: str, con_datos_viejos: bool = False) -> dict[str, Any]:
         "## 05. De dónde salen estos datos\n\n"
         + "- Tasas de los bonos e inflación esperada: Reserva Federal de Estados Unidos (FRED).\n"
         + "- Calendario económico y consensos de mercado: Investing.com.\n"
-        + "- Precios y niveles de los activos: terminal MetaTrader 5, cuenta Grupo Inteligencia SpA.\n"
-        + (f"- Lectura cuantitativa de escenario: Motor GI, cálculo del {fecha_dato}.\n" if playbook else ""),
+        + "- Precios y niveles de los activos: terminal MetaTrader 5, cuenta Grupo Inteligencia SpA.\n",
     ]
 
     cuerpo = "\n\n".join(secciones)
@@ -1090,7 +696,7 @@ def preparar(tipo: str, con_datos_viejos: bool = False) -> dict[str, Any]:
 
     (destino / "_datos.json").write_text(
         json.dumps(
-            {"curva": curva, "eventos": eventos, "playbook": playbook, "avisos": avisos},
+            {"curva": curva, "eventos": eventos, "activos": activos, "avisos": avisos},
             ensure_ascii=False, indent=2,
         ),
         encoding="utf-8",
@@ -1102,7 +708,7 @@ def preparar(tipo: str, con_datos_viejos: bool = False) -> dict[str, Any]:
         "markdown": str(md),
         "avisos": avisos,
         "secciones_por_escribir": md.read_text(encoding="utf-8").count(MARCA_EDITORIAL),
-        "graficos": len(graficos),
+        "graficos": sum(1 for a in activos.values() if a.get("grafico")),
         "canal": "PDF institucional A4" if tipo == "apertura" else "chat-first (mensaje + grafico)",
     }
 
@@ -1152,7 +758,7 @@ def rendir(
          "--pdf", str(salida),
          "--title", titulo,
          "--tag", tag.upper(),
-         "--subtitle", "Regimen macro, curva soberana y agenda del dia para la sesion de hoy.",
+         "--subtitle", "Activos base, curva soberana y agenda del dia para la sesion de hoy.",
          "--header-left", f"{titulo.upper()} • {tag.upper()}",
          "--header-right", _fecha_es(datetime.now(tz=SANTIAGO)).upper(),
          "--date", _fecha_es(datetime.now(tz=SANTIAGO)),
@@ -1188,14 +794,10 @@ def main(argv: list[str] | None = None) -> int:
         "--tag", default="APERTURA DE NUEVA YORK",
         help="pretitulo o tag superior de la portada del PDF",
     )
-    parser.add_argument(
-        "--con-datos-viejos", action="store_true",
-        help="emite la apertura aunque el sesgo este vencido, estampando la antiguedad",
-    )
     args = parser.parse_args(argv)
 
     if args.preparar:
-        res = preparar(args.tipo, con_datos_viejos=args.con_datos_viejos)
+        res = preparar(args.tipo)
         print(f"\nINFORME DE {res['tipo'].upper()} - canal: {res['canal']}")
         print(f"Markdown: {res['markdown']}")
         print(f"Secciones por escribir: {res['secciones_por_escribir']} (marcadas {MARCA_EDITORIAL})")

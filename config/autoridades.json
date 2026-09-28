@@ -1,0 +1,24 @@
+{
+  "bancos_centrales": {
+    "FED": {
+      "institucion": "Reserva Federal de EE.UU.",
+      "vigente": "Kevin Warsh",
+      "obsoletos": ["Jerome Powell", "Powell", "Janet Yellen", "Yellen", "Ben Bernanke"]
+    },
+    "BCE": {
+      "institucion": "Banco Central Europeo",
+      "vigente": "Christine Lagarde",
+      "obsoletos": ["Mario Draghi", "Draghi"]
+    },
+    "BOJ": {
+      "institucion": "Banco de Japón",
+      "vigente": "Kazuo Ueda",
+      "obsoletos": ["Haruhiko Kuroda", "Kuroda"]
+    },
+    "BCCH": {
+      "institucion": "Banco Central de Chile",
+      "vigente": "Rosanna Costa",
+      "obsoletos": ["Mario Marcel", "Marcel"]
+    }
+  }
+}

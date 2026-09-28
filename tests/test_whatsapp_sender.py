@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from pathlib import Path
 import pytest
 from unittest.mock import MagicMock
@@ -55,7 +56,6 @@ def test_resolucion_alias_a_nombres_oficiales():
         ("cripto", "Grupo Inteligencia | Criptomercados"),
         ("btc", "Grupo Inteligencia | Criptomercados"),
         ("cuantitativo", "Grupo Inteligencia | Señales De Trading"),
-        ("playbook", "Grupo Inteligencia | Señales De Trading"),
     ]
 
     for alias, esperado in casos:
@@ -1225,3 +1225,331 @@ def test_el_cli_puede_alcanzar_el_banco_de_pruebas():
     assert config.destino_de_pruebas not in {
         g["nombre_oficial"] for g in config.grupos.values()
     }
+
+
+# ==============================================================================
+# TESTS PARA ENCUESTAS NATIVAS DE WHATSAPP
+# ==============================================================================
+
+def test_validar_datos_encuesta_exito():
+    """Valida que una encuesta bien estructurada pase la validación."""
+    from whatsapp_sender import WhatsAppSender
+
+    sender = WhatsAppSender()
+    pregunta, opciones = sender._validar_datos_encuesta(
+        pregunta="¿Qué tendencia proyectas para el USD/CLP hoy?",
+        opciones=["📈 Alcista", "📉 Bajista", "➡️ Lateral"],
+    )
+    assert pregunta == "¿Qué tendencia proyectas para el USD/CLP hoy?"
+    assert len(opciones) == 3
+
+
+@pytest.mark.parametrize(
+    "pregunta,opciones,motivo",
+    [
+        ("", ["Alcista", "Bajista"], "Pregunta vacía"),
+        ("   ", ["Alcista", "Bajista"], "Pregunta con solo espacios"),
+        ("A" * 256, ["Alcista", "Bajista"], "Pregunta excede 255 caracteres"),
+        ("¿Tendencia?", ["Solo una"], "Menos de 2 opciones"),
+        ("¿Tendencia?", [f"Opción {i}" for i in range(13)], "Más de 12 opciones"),
+        ("¿Tendencia?", ["Alcista", "Alcista"], "Opciones duplicadas"),
+        ("¿Tendencia?", ["Alcista", "alcista"], "Opciones duplicadas case-insensitive"),
+        ("¿Tendencia?", ["Alcista", " "], "Opción vacía"),
+        ("¿Tendencia?", ["Alcista", "B" * 101], "Opción excede 100 caracteres"),
+    ],
+)
+def test_validar_datos_encuesta_errores(pregunta, opciones, motivo):
+    """Verifica que cualquier incumplimiento de límites de WhatsApp lance EncuestaInvalidaError."""
+    from whatsapp_sender import WhatsAppSender, EncuestaInvalidaError
+
+    sender = WhatsAppSender()
+    with pytest.raises(EncuestaInvalidaError):
+        sender._validar_datos_encuesta(pregunta=pregunta, opciones=opciones)
+
+
+def test_enviar_encuesta_dry_run():
+    """Verifica que enviar_encuesta en modo dry-run simule correctamente sin tocar el navegador.
+
+    El reloj va fijo en un martes a mediodía: la ventana de encuestas rechaza las
+    de USD/CLP en fin de semana, y un test que lee el reloj real falla los sábados
+    y domingos sin que nada haya cambiado.
+    """
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from whatsapp_sender import WhatsAppSender
+
+    sender = WhatsAppSender()
+    res = sender.enviar_encuesta(
+        destinatario="forex",
+        pregunta="¿Cuál será el cierre?",
+        opciones=["🟢 Sobre 930", "🟡 En 925-930", "🔴 Bajo 925"],
+        permitir_multiples=False,
+        dry_run=True,
+        ahora=datetime(2026, 9, 22, 12, 0, tzinfo=ZoneInfo("America/Santiago")),
+    )
+    assert res["status"] == "simulado"
+    assert res["destinatario"] == "Grupo Inteligencia | Dólar & FX"
+    assert res["pregunta"] == "¿Cuál será el cierre?"
+    assert len(res["opciones"]) == 3
+    assert res["permitir_multiples"] is False
+
+    # Verificación directa contra el banco de pruebas
+    res_pruebas = sender.enviar_encuesta(
+        destinatario=sender.config.destino_de_pruebas,
+        pregunta="¿Prueba?",
+        opciones=["Sí", "No"],
+        dry_run=True,
+    )
+    assert res_pruebas["destinatario"] == "GI · Banco de Pruebas"
+
+
+def test_enviar_encuesta_flujo_dom_mock():
+    """Verifica el flujo DOM completo de creación y envío de encuesta nativa con mocks."""
+    from whatsapp_sender import WhatsAppSender
+
+    sender = WhatsAppSender()
+    sender.min_jitter_ms = sender.max_jitter_ms = 1
+
+    mock_page = MagicMock()
+    
+    # Mock locator responses
+    attach_btn = MagicMock()
+    attach_btn.first = attach_btn
+    attach_btn.count.return_value = 1
+
+    poll_menu_item = MagicMock()
+    poll_menu_item.first = poll_menu_item
+    poll_menu_item.count.return_value = 1
+
+    question_input = MagicMock()
+    question_input.first = question_input
+    question_input.count.return_value = 1
+
+    option_input = MagicMock()
+    option_input.first = option_input
+    option_input.count.return_value = 2  # inicialmente 2 opciones
+    
+    # Switch starts checked (default WhatsApp Web behavior: multiple answers allowed)
+    switch_multi = MagicMock()
+    switch_multi.count.return_value = 1
+    switch_multi.first = switch_multi
+    switch_multi.get_attribute.return_value = "true"  # aria-checked="true"
+    
+    send_btn = MagicMock()
+    send_btn.count.return_value = 1
+    send_btn.first = send_btn
+
+    msg_row = MagicMock()
+    msg_row.count.return_value = 1
+    msg_row.last = msg_row
+    mock_page.evaluate.return_value = "¿Cuál será la tendencia? Alcista Bajista Lateral"
+
+    def mock_locator(selector: str):
+        if any(s in selector for s in ["Adjuntar", "attach-menu-plus"]):
+            return attach_btn
+        if any(s in selector for s in ["Encuesta", "Poll", "attach-poll"]):
+            return poll_menu_item
+        if any(s in selector for s in ["Haz una pregunta", "poll-question", "pregunta"]):
+            return question_input
+        if any(s in selector for s in ["Añadir", "poll-option", "opción"]):
+            return option_input
+        if any(s in selector for s in ["switch", "Permitir varias respuestas", "checkbox"]):
+            return switch_multi
+        if any(s in selector for s in ["Enviar", "send"]):
+            return send_btn
+        if 'role="row"' in selector or "msg-container" in selector:
+            return msg_row
+        m = MagicMock()
+        m.count.return_value = 1
+        m.first = m
+        return m
+
+    mock_page.locator.side_effect = mock_locator
+
+    # Ejecutar llenado y envío
+    sender._crear_encuesta(
+        mock_page,
+        pregunta="¿Cuál será la tendencia?",
+        opciones=["📈 Alcista", "📉 Bajista", "➡️ Lateral"],
+        permitir_multiples=False,
+    )
+
+    # El switch de varias respuestas debió ser cliqueado para desactivarlo
+    switch_multi.click.assert_called_once()
+    # El botón enviar debió ser cliqueado
+    send_btn.click.assert_called()
+
+
+def test_cli_parser_acepta_argumentos_encuesta():
+    """Verifica que enviar_whatsapp.py exponga los flags de encuesta de manera consistente."""
+    import runpy
+
+    ruta = Path(__file__).resolve().parent.parent / "scripts" / "enviar_whatsapp.py"
+    modulo = runpy.run_path(str(ruta), run_name="_no_es_main_")
+    parser = modulo["construir_parser"]()
+
+    args = parser.parse_args([
+        "--pruebas",
+        "--encuesta-pregunta", "¿Qué tendencia esperan?",
+        "--encuesta-opciones", "Alcista", "Bajista", "Lateral",
+    ])
+    assert args.pruebas is True
+    assert args.encuesta_pregunta == "¿Qué tendencia esperan?"
+    assert args.encuesta_opciones == ["Alcista", "Bajista", "Lateral"]
+    assert args.permitir_multiples is False
+
+
+def test_cli_parser_acepta_archivo_encuesta(tmp_path):
+    """Verifica que enviar_whatsapp.py cargue correctamente una encuesta desde JSON."""
+    import runpy
+
+    ruta = Path(__file__).resolve().parent.parent / "scripts" / "enviar_whatsapp.py"
+    modulo = runpy.run_path(str(ruta), run_name="_no_es_main_")
+    parser = modulo["construir_parser"]()
+
+    archivo_json = tmp_path / "encuesta_test.json"
+    archivo_json.write_text(
+        json.dumps({
+            "pregunta": "¿Qué activo se moverá más?",
+            "opciones": ["Oro", "Cobre", "Petróleo"],
+            "permitir_multiples": False,
+        }),
+        encoding="utf-8",
+    )
+
+    args = parser.parse_args([
+        "--pruebas",
+        "--encuesta-archivo", str(archivo_json),
+    ])
+    assert args.pruebas is True
+    assert args.encuesta_archivo == archivo_json
+
+
+def test_validar_ventana_encuesta_usdclp_horarios():
+    """USD/CLP no permite preguntas de tendencia intradía después de las 11:30 CLT."""
+    from zoneinfo import ZoneInfo
+    from src.whatsapp_sender import validar_ventana_encuesta, EncuestaFueraDeHorarioError
+
+    tz_chile = ZoneInfo("America/Santiago")
+
+    # 09:30 CLT: permitido
+    manana = datetime(2026, 9, 8, 9, 30, tzinfo=tz_chile)
+    valido, mensaje = validar_ventana_encuesta(
+        "¿Qué tendencia proyectas para el USD/CLP hoy?",
+        destinatario="02_forex_divisas",
+        ahora=manana,
+    )
+    assert valido is True
+
+    # 12:30 CLT: rechazado para tendencia de hoy
+    tarde = datetime(2026, 9, 8, 12, 30, tzinfo=tz_chile)
+    with pytest.raises(EncuestaFueraDeHorarioError) as exc_info:
+        validar_ventana_encuesta(
+            "¿Qué tendencia proyectas para el USD/CLP hoy?",
+            destinatario="02_forex_divisas",
+            ahora=tarde,
+        )
+    assert "USD/CLP" in str(exc_info.value)
+    assert "11:30" in str(exc_info.value)
+
+    # 12:30 CLT pero orientada al cierre: permitido
+    valido_cierre, _ = validar_ventana_encuesta(
+        "¿A qué precio cerrará el USD/CLP hoy?",
+        destinatario="02_forex_divisas",
+        ahora=tarde,
+    )
+    assert valido_cierre is True
+
+    # 15:00 CLT orientada a mañana: permitido
+    tarde_cierre = datetime(2026, 9, 8, 15, 0, tzinfo=tz_chile)
+    valido_manana, _ = validar_ventana_encuesta(
+        "¿Cómo abrirá el dólar mañana?",
+        destinatario="02_forex_divisas",
+        ahora=tarde_cierre,
+    )
+    assert valido_manana is True
+
+
+def test_validar_ventana_encuesta_indices_horarios():
+    """Wall Street / Índices no permite preguntas de tendencia intradía después de las 14:00 CLT."""
+    from zoneinfo import ZoneInfo
+    from src.whatsapp_sender import validar_ventana_encuesta, EncuestaFueraDeHorarioError
+
+    tz_chile = ZoneInfo("America/Santiago")
+
+    # 11:00 CLT: permitido
+    manana = datetime(2026, 9, 8, 11, 0, tzinfo=tz_chile)
+    valido, _ = validar_ventana_encuesta(
+        "¿Qué tendencia proyectas para el Nasdaq hoy?",
+        destinatario="04_indices_bursatiles",
+        ahora=manana,
+    )
+    assert valido is True
+
+    # 15:30 CLT: rechazado para tendencia de hoy
+    tarde = datetime(2026, 9, 8, 15, 30, tzinfo=tz_chile)
+    with pytest.raises(EncuestaFueraDeHorarioError):
+        validar_ventana_encuesta(
+            "¿Qué tendencia proyectas para el Nasdaq hoy?",
+            destinatario="04_indices_bursatiles",
+            ahora=tarde,
+        )
+
+
+def test_validar_ventana_encuesta_inferencia_por_canal():
+    """Si la pregunta no nombra el activo, se infiere del canal de destino."""
+    from zoneinfo import ZoneInfo
+    from src.whatsapp_sender import validar_ventana_encuesta, EncuestaFueraDeHorarioError
+
+    tz_chile = ZoneInfo("America/Santiago")
+
+    tarde = datetime(2026, 9, 8, 12, 30, tzinfo=tz_chile)
+    # Canal forex_divisas -> se asume USD/CLP / FX local si pregunta por hoy
+    with pytest.raises(EncuestaFueraDeHorarioError):
+        validar_ventana_encuesta(
+            "¿Cuál será la tendencia del día?",
+            destinatario="02_forex_divisas",
+            ahora=tarde,
+        )
+
+
+def test_enviar_encuesta_respeta_forzar():
+    """Con forzar=True, se permite enviar aunque esté fuera de horario."""
+    from zoneinfo import ZoneInfo
+    from src.whatsapp_sender import WhatsAppSender
+
+    tz_chile = ZoneInfo("America/Santiago")
+    sender = WhatsAppSender(headless=True)
+
+    tarde = datetime(2026, 9, 8, 12, 30, tzinfo=tz_chile)
+    res = sender.enviar_encuesta(
+        destinatario="02_forex_divisas",
+        pregunta="¿Qué tendencia proyectas para el USD/CLP hoy?",
+        opciones=["Alcista", "Bajista"],
+        dry_run=True,
+        forzar=True,
+        ahora=tarde,
+    )
+    assert res["status"] == "simulado"
+    assert res["forzado"] is True
+
+
+def test_cli_parser_acepta_flag_forzar():
+    """Verifica que enviar_whatsapp.py acepte el flag --forzar."""
+    import runpy
+
+    ruta = Path(__file__).resolve().parent.parent / "scripts" / "enviar_whatsapp.py"
+    modulo = runpy.run_path(str(ruta), run_name="_no_es_main_")
+    parser = modulo["construir_parser"]()
+
+    args = parser.parse_args([
+        "--pruebas",
+        "--encuesta-pregunta", "¿Qué tendencia esperan?",
+        "--encuesta-opciones", "Alcista", "Bajista",
+        "--forzar",
+    ])
+    assert args.forzar is True
+
+
+

@@ -56,10 +56,9 @@ VENTANA_CONCEPTO_DIAS = 14
 # educativa esté pegada a lo que de verdad pasó, en vez de ser una cápsula
 # suelta que el ojo aprende a saltar.
 #
-# `publicable: False` es tan importante como el concepto. La confianza baja del
-# modelo y un fallo del analizador son problemas de **nuestra** tubería, no
-# lecturas de mercado: publicar "no pudimos leer el activo" no le sirve a nadie
-# y suena a excusa. Esos canales quedan sin suplemento, que es la respuesta
+# `publicable: False` es tan importante como el concepto. Un fallo del
+# analizador es un problema de **nuestra** tubería, no una lectura de mercado:
+# publicar "no pudimos leer el activo" no le sirve a nadie y suena a excusa. Esos canales quedan sin suplemento, que es la respuesta
 # honesta.
 CATEGORIAS: dict[str, dict[str, Any]] = {
     "ATR diario consumido": {
@@ -67,14 +66,14 @@ CATEGORIAS: dict[str, dict[str, Any]] = {
         "concepto": "volatilidad-atr",
         "publicable": True,
     },
+    "ya salio en una corrida anterior": {
+        "categoria": "recorrido_agotado",
+        "concepto": "volatilidad-atr",
+        "publicable": True,
+    },
     "blackout por": {
         "categoria": "dato_en_curso",
         "concepto": "precio-descontado",
-        "publicable": True,
-    },
-    "el Playbook prohibe": {
-        "categoria": "setup_prohibido",
-        "concepto": "riesgo",
         "publicable": True,
     },
     "feriado de": {
@@ -99,16 +98,38 @@ CATEGORIAS: dict[str, dict[str, Any]] = {
         "concepto": "puntos-interes",
         "publicable": True,
     },
-    # Problemas nuestros, no del mercado.
-    "el snapshot no declara la confianza": {
-        "categoria": "modelo_sin_vista",
-        "concepto": None,
-        "publicable": False,
+}
+
+ACTIVOS_ANCLA_CANAL: dict[str, dict[str, Any]] = {
+    "02_forex_divisas": {
+        "ticker": "USDCLP",
+        "nombre": "Dólar / Peso Chileno",
+        "rotulo": "USD/CLP",
+        "categoria": "DIVISAS",
     },
-    "la confianza del modelo": {
-        "categoria": "modelo_sin_vista",
-        "concepto": None,
-        "publicable": False,
+    "03_commodities_materias_primas": {
+        "ticker": "XAUUSD",
+        "nombre": "Oro",
+        "rotulo": "XAU/USD",
+        "categoria": "COMMODITIES",
+    },
+    "04_indices_bursatiles": {
+        "ticker": "US100.spot",
+        "nombre": "Nasdaq 100",
+        "rotulo": "US100 (Nasdaq)",
+        "categoria": "ÍNDICES",
+    },
+    "05_acciones_etfs": {
+        "ticker": "#NVDA",
+        "nombre": "NVIDIA",
+        "rotulo": "NVDA",
+        "categoria": "ACCIONES",
+    },
+    "06_criptoactivos": {
+        "ticker": "BTCUSD",
+        "nombre": "Bitcoin",
+        "rotulo": "BTC/USD",
+        "categoria": "CRIPTOMONEDAS",
     },
 }
 
@@ -120,6 +141,47 @@ NOMBRE_CANAL = {
     "05_acciones_etfs": "acciones y ETF",
     "06_criptoactivos": "criptomonedas",
 }
+
+ENCUESTAS_CIERRE_CANAL: dict[str, dict[str, Any]] = {
+    "02_forex_divisas": {
+        "pregunta": "¿Cómo proyectas la apertura del dólar (USD/CLP) mañana?",
+        "opciones": ["🟢 Apertura alcista", "🟡 En rango / neutral", "🔴 Corrección a la baja"],
+        "permitir_multiples": False,
+    },
+    "03_commodities_materias_primas": {
+        "pregunta": "¿Qué dirección esperas para el Oro (XAU/USD) en la sesión asiática?",
+        "opciones": ["📈 Rebote comprador", "➡️ Consolidación lateral", "📉 Presión vendedora"],
+        "permitir_multiples": False,
+    },
+    "04_indices_bursatiles": {
+        "pregunta": "Cerramos Wall Street: ¿cómo evalúas la jornada bursátil de hoy?",
+        "opciones": ["🔥 Sesión compradora sólida", "⚖️ Toma de ganancias / mixta", "⚠️ Mayor cautela"],
+        "permitir_multiples": False,
+    },
+    "05_acciones_etfs": {
+        "pregunta": "Tras el cierre de sesión: ¿qué sector ves con mayor atractivo para mañana?",
+        "opciones": ["💻 Tecnológicas y Semiconductores", "🏭 Industriales y Financieras", "🛡️ Defensivas y Renta Fija"],
+        "permitir_multiples": False,
+    },
+    "06_criptoactivos": {
+        "pregunta": "¿Logrará Bitcoin defender sus soportes durante la noche?",
+        "opciones": ["🛡️ Sí, defenderá el nivel", "⚠️ Quiebre correctivo", "➡️ Rango sin tendencia"],
+        "permitir_multiples": False,
+    },
+}
+
+
+def encuesta_cierre(canal: str) -> dict[str, Any] | None:
+    """La encuesta nativa de cierre correspondiente al canal, si tiene configurada."""
+    enc = ENCUESTAS_CIERRE_CANAL.get(canal)
+    if not enc:
+        return None
+    return {
+        "pregunta": enc["pregunta"],
+        "opciones": list(enc["opciones"]),
+        "permitir_multiples": enc.get("permitir_multiples", False),
+    }
+
 
 
 def categoria_del_motivo(motivo: str) -> dict[str, Any] | None:
@@ -300,11 +362,24 @@ def suplemento(
         resumen = {**resumen, "concepto": None}
 
     ficha = _concepto(resumen["concepto"])
+    ancla_base = ACTIVOS_ANCLA_CANAL.get(canal, {
+        "ticker": "USDCLP",
+        "nombre": "Dólar / Peso Chileno",
+        "rotulo": "USD/CLP",
+        "categoria": "DIVISAS",
+    })
+    activo_ancla = dict(ancla_base)
+    for ex in excluidos or []:
+        if ex.get("ticker") == ancla_base["ticker"]:
+            activo_ancla["nombre"] = ex.get("nombre", ancla_base["nombre"])
+            break
+
     return {
         "canal": canal,
         "canal_es": NOMBRE_CANAL.get(canal, "este mercado"),
         "resumen": resumen,
         "concepto": ({"clave": resumen["concepto"], **ficha} if ficha else None),
+        "activo_ancla": activo_ancla,
     }
 
 
@@ -313,43 +388,91 @@ def suplemento(
 # ─────────────────────────────────────────────────────────────────────────────
 _ESTADO = {
     "recorrido_agotado": (
-        "Hoy no hay niveles que valga la pena mirar en {canal}, y el motivo es "
-        "información en sí mismo: *los {n} activos del canal ya recorrieron lo "
-        "que suelen moverse en un día completo*."
+        "Los {n} activos analizados en {canal} completaron su rango promedio de movimiento intradiario, "
+        "situando el precio en fase de consolidación y compresión de volatilidad antes del próximo ciclo institucional."
     ),
     "dato_en_curso": (
-        "Hoy no publicamos niveles de {canal} porque hay un dato de alto impacto "
-        "en curso: el precio se está reacomodando y cualquier nivel que diéramos "
-        "quedaría viejo en minutos."
-    ),
-    "setup_prohibido": (
-        "Hoy no hay operativa que comunicar en {canal}: el escenario de fondo "
-        "deja fuera justamente las jugadas que la lectura técnica sugeriría."
+        "El mercado de {canal} asimila en este momento la publicación de catalizadores macroeconómicos de alto impacto, "
+        "por lo que los niveles técnicos se encuentran en proceso de reajuste y confirmación institucional."
     ),
     "mercado_cerrado": (
-        "Hoy el mercado de {canal} está cerrado por feriado, así que no hay "
-        "precio que leer."
+        "La sesión oficial de {canal} se encuentra cerrada por feriado de mercado, "
+        "manteniendo la estructura técnica previa a la espera de la reapertura de operaciones."
     ),
 }
 
 
-def construir_mensaje_suplemento(sup: dict[str, Any]) -> str:
-    """El mensaje de WhatsApp del suplemento.
+def construir_mensaje_suplemento(sup: dict[str, Any], es_cierre: bool = False) -> str:
+    """El mensaje de WhatsApp del suplemento o balance de sesión.
 
-    No lleva el cierre canónico de tres escenarios porque no tiene niveles con
-    que armarlo. Cierra con el CTA al analista, que es lo que corresponde a una
-    pieza sin operativa.
+    En cierre presenta un balance en tres tiempos comentando qué pasó, qué está pasando
+    ahora y qué vigilar para la próxima apertura, anclado a un activo representativo.
     """
     r = sup["resumen"]
     canal = sup["canal_es"]
 
+    if es_cierre:
+        ancla = sup.get("activo_ancla") or {}
+        rotulo_ancla = ancla.get("rotulo") or ancla.get("nombre") or canal.title()
+
+        lineas = [
+            f"📊 *{canal.upper()} · Balance de Cierre de Jornada*",
+            f"🎯 *Activo en foco*: *{rotulo_ancla}*",
+            "━━━━━━━━━━━━━━━━━━━",
+            "1️⃣ *QUÉ PASÓ EN LA JORNADA*",
+        ]
+        if r["categoria"] == "recorrido_agotado":
+            lineas.append(
+                f"Completamos la sesión con los {r['activos']} activos de {canal} "
+                "habiendo absorbido la totalidad de su rango promedio del día."
+            )
+        elif r["categoria"] == "dato_en_curso":
+            lineas.append(
+                f"Cerramos la jornada de {canal} tras asimilar el impacto de los datos macroeconómicos del día."
+            )
+        elif r["categoria"] == "mercado_cerrado":
+            lineas.append(
+                f"Jornada sin actividad operativa en {canal} debido al feriado de mercado."
+            )
+        else:
+            lineas.append(
+                f"Cerramos la jornada en {canal} con el mercado consolidando posiciones sin rupturas de rango."
+            )
+
+        if r["maximo_pct"] is not None and r["peor_activo"]:
+            veces = f"{r['maximo_pct'] / 100:.1f}".replace(".", ",")
+            detalle = (
+                f"El movimiento más amplio de la jornada lo lideró {r['peor_activo']}, con un "
+                f"desplazamiento equivalente a {veces} veces su rango habitual"
+            )
+            if r["minimo_pct"] is not None:
+                detalle += f" (el de menor variación marcó un {r['minimo_pct']}%)"
+            lineas.append(detalle + ".")
+
+        lineas.extend([
+            "",
+            "2️⃣ *QUÉ ESTÁ PASANDO AHORA*",
+            f"El cierre de sesión sitúa a {rotulo_ancla} en fase de consolidación y compresión de volatilidad. "
+            "El recorrido diario ha quedado completado, dando paso a una pausa técnica institucional "
+            "antes de la inyección de volumen del siguiente ciclo.",
+            "",
+            "3️⃣ *QUÉ VIGILAR PARA LA PRÓXIMA APERTURA*",
+            "El cierre de sesión es momento de evaluar la estructura del precio para anticipar "
+            "la apertura del siguiente ciclo sin forzar entradas innecesarias.",
+            "━━━━━━━━━━━━━━━━━━━",
+            "💡 *En la imagen adjunta encuentras el gráfico TradingView™ en H1 con los niveles de la jornada.*",
+            "━━━━━━━━━━━━━━━━━━━",
+            "A continuación abrimos la encuesta de la jornada para conocer la visión de la comunidad 👇",
+        ])
+        return "\n".join(lineas)
+
     plantilla = _ESTADO.get(r["categoria"])
     estado = plantilla.format(canal=canal, n=r["activos"]) if plantilla else (
-        f"Hoy no hay niveles publicables en {canal}."
+        f"El mercado de {canal} se encuentra en zona de balance institucional."
     )
 
     lineas = [
-        f"📊 *{canal.upper()} · hoy no hay niveles, y el motivo importa*",
+        f"📊 *{canal.upper()} · Contexto Operativo y Zonas de Balance*",
         "━━━━━━━━━━━━━━━━━━━",
         estado,
     ]
@@ -360,7 +483,7 @@ def construir_mensaje_suplemento(sup: dict[str, Any]) -> str:
         # (`US100.spot`, `GLD.US`, `WTI.spot`).
         veces = f"{r['maximo_pct'] / 100:.1f}".replace(".", ",")
         detalle = (
-            f"El caso extremo es {r['peor_activo']}, que se movió "
+            f"El movimiento más amplio lo marcó {r['peor_activo']}, que se movió "
             f"{veces} veces su rango habitual"
         )
         if r["minimo_pct"] is not None:
@@ -369,10 +492,6 @@ def construir_mensaje_suplemento(sup: dict[str, Any]) -> str:
 
     if sup.get("concepto"):
         c = sup["concepto"]
-        # `explicacion` antes que `glosario`: el segundo es la linea del mensaje
-        # fijado del grupo, y ahi una linea es lo correcto. Acá hace falta un
-        # parrafo que ensene, y el de volatilidad decia "clave en USD/CLP", que
-        # salio publicado en el canal de indices donde no aplica.
         texto = c.get("explicacion") or c.get("glosario") or ""
         lineas += [
             "━━━━━━━━━━━━━━━━━━━",
@@ -380,9 +499,26 @@ def construir_mensaje_suplemento(sup: dict[str, Any]) -> str:
             texto,
         ]
 
+    canal_slug = sup.get("canal", "")
+    if "forex" in canal_slug or "divisa" in canal_slug:
+        modulos = "Módulo 5 y Módulo 8"
+    elif "commodit" in canal_slug:
+        modulos = "Módulo 7 y Módulo 10"
+    elif "indice" in canal_slug or "bursatil" in canal_slug:
+        modulos = "Módulo 4 y Módulo 9"
+    elif "accion" in canal_slug:
+        modulos = "Módulo 4 y Módulo 9"
+    elif "cripto" in canal_slug or "crypto" in canal_slug:
+        modulos = "Módulo 6 y Módulo 10"
+    else:
+        modulos = "Módulo 7 y Módulo 10"
+
     lineas += [
         "━━━━━━━━━━━━━━━━━━━",
-        "No operar cuando no hay espacio también es una decisión, y es la que "
-        "protege la cuenta. ¿Dudas? Consulta a tu analista.",
+        "💬 *Te compartimos nuestra lectura: ¿cuál es tu visión para la sesión?*",
+        "No operar cuando los rangos están comprimidos o a la espera de volumen también es una decisión estratégica que protege el capital. ¿Prefieres esperar la definición de rango o buscas entradas en los extremos? ¡Coméntanos en el grupo cómo lo ves o consúltalo con tu analista en el chat!",
+        "",
+        f"📖 *Para profundizar en la gestión del riesgo y cómo dimensionar tus posiciones en fases de compresión, consulta el {modulos} de nuestro Manual de Operaciones.*",
     ]
     return "\n".join(lineas)
+

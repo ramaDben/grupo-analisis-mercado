@@ -43,27 +43,21 @@ Basado en el plan del día y la hora actual (hora Chile), sugiere qué correspon
 uv run python scripts/pipeline_datos.py --estado
 ```
 
-Reporta los **tres relojes** de la cadena en una sola respuesta, con el mismo umbral
-de vencimiento del Playbook (24 h en día hábil, 80 h en fin de semana):
+Reporta los **relojes** de la cadena en una sola respuesta, con el umbral de
+vencimiento de `config/frescura_datos.json` (24 h en día hábil, 80 h en fin de semana):
 
 | Reloj | Archivo | Lo produce |
 |---|---|---|
 | `ingesta` | `DATA AGENDA/estado_ejecucion.json` | `pipeline_ingesta.py` |
 | `precios` | `DATA PRECIOS OHLC/latest_prices_summary.json` | `extractor_precios.py` |
-| `sesgo` | `DATA DRIVERS USDCLP/macro_bias_output.json` | `macro_bias_engine.py` |
 
 Si alguno sale vencido o ausente, la acción es una sola:
-`uv run --with MetaTrader5 python scripts/pipeline_datos.py` (corre los tres en orden
+`uv run --with MetaTrader5 python scripts/pipeline_datos.py` (corre los dos en orden
 y aborta al primer fallo).
-
-Informa también la **confianza del modelo**. Ese número no bloquea todavía: qué umbral
-corresponde es una decisión de método pendiente. Reportarlo sí, porque el Playbook §3
-dice que la frescura "debe ser 1.0 en operación normal" y una lectura baja significa
-que el sesgo se está emitiendo con vectores faltantes.
 
 ### 7. Estado de los MCPs
 Informa el estado de cada MCP relevante:
-- ✅ **market-data**: activo — expone 7 tools: `get_asset_levels` (técnico MT5), `get_chart_objects` (marcado manual MT5), `obtener_calendario_macro` (calendario económico), `get_symbol_spec` (especificaciones/sesiones de contrato), `get_open_positions` (operaciones abiertas), `get_macro_bias` (sesgo del Playbook) y `get_curva_tasas` (curva soberana de EE.UU.). Las noticias se obtienen vía WebSearch.
+- ✅ **market-data**: activo — expone 6 tools: `get_asset_levels` (técnico MT5), `get_chart_objects` (marcado manual MT5), `obtener_calendario_macro` (calendario económico), `get_symbol_spec` (especificaciones/sesiones de contrato), `get_open_positions` (operaciones abiertas) y `get_curva_tasas` (curva soberana de EE.UU.). Las noticias se obtienen vía WebSearch.
 - ✅ **WhatsApp Web (Playwright)**: activo — `scripts/enviar_whatsapp.py`. Reportar la sesión con
   `--status` y, si existe `data/.whatsapp_envios.json`, cuántos envíos van hoy contra el cupo diario.
 - ❌ **TrendRadar / Firecrawl / Finnhub**: no activos — reemplazados por market-data (MT5) + WebSearch

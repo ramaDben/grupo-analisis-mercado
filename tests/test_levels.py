@@ -253,8 +253,8 @@ def test_camino_feliz_con_mt5_mockeado(collector, monkeypatch):
 def test_ema_20_no_es_la_banda_media_de_bollinger(collector, monkeypatch):
     """`ema_20` es media EXPONENCIAL y `bb_mid` es media SIMPLE de 20.
 
-    Es la confusión que motivó exponer el campo: el Playbook manda "EMA 20 en H1"
-    como gatillo, y quien tomara `bb_mid` por esa EMA estaría usando otro indicador.
+    Es la confusión que motivó exponer el campo: quien tomara `bb_mid` por la
+    EMA 20 de H1 estaría usando otro indicador.
     Sobre una serie con tendencia las dos medias difieren, porque la exponencial pesa
     más los datos recientes.
     """
@@ -472,10 +472,10 @@ def test_la_ruta_feliz_no_exige_conexion_viva_a_mt5(collector, monkeypatch):
 
 
 def test_d1_incluye_atr_20(collector, monkeypatch):
-    """El Playbook define el stop swing como 2.5 x ATR_20(D1), y hasta ahora
+    """El stop swing se define como 2,5 x ATR_20(D1), y hasta ahora
     `get_asset_levels` solo devolvía ATR_14: el stop swing no era calculable
-    desde la tool. ATR_20 es por definición el ATR diario (`atr_daily_period`
-    en playbook_config.yaml), así que va con D1 y no con los demás marcos."""
+    desde la tool. ATR_20 es el ATR diario, así que va con D1 y no con los
+    demás marcos."""
     from market_data_mcp import mt5_client
 
     df = _df_ohlc()
@@ -511,42 +511,18 @@ def test_d1_incluye_atr_20(collector, monkeypatch):
     assert res_var["atr_20"] != res_var["atr_14"]
 
 
-def test_h1_incluye_los_anclajes_del_chandelier(collector, monkeypatch):
-    """El Chandelier necesita el extremo de una ventana, y el MCP es el único que
-    tiene la serie: el motor lee `latest_prices_summary.json`, que trae solo la
-    última vela de cada marco.
-
-    Van los ANCLAJES y no el nivel calculado. La decisión de Kilian dejó el
-    multiplicador dependiente del activo y del régimen (3,0 con respaldo del
-    cobre, 2,0 sin él), así que hornearlo acá obligaría al MCP a conocer el sesgo
-    macro, que es la capa de arriba. La herramienta mide el mercado; el
-    multiplicador viaja en el snapshot.
-
-    Solo en H1, porque ahí lo define el Playbook — mismo criterio que `atr_20`
-    en D1.
-    """
+def test_h1_ya_no_expone_anclajes_del_chandelier(collector, monkeypatch):
+    """Los anclajes del Chandelier existían solo para la vigencia del Playbook,
+    retirado el 2026-09-27. Un campo que nadie consume es una promesa que nadie
+    verifica, así que no vuelve a entrar por costumbre."""
     from market_data_mcp import mt5_client
-    from market_data_mcp.bias_reader import cargar_config_riesgo
 
     df = _df_ohlc()
     monkeypatch.setattr(mt5_client, "get_rates", lambda ticker, tf, n_bars=300: df)
     levels.register(collector)
-
-    res_h4 = collector.tools["get_asset_levels"](ticker="XAUUSD", timeframe="H4")
-    assert "chandelier_max" not in res_h4
-    assert "chandelier_min" not in res_h4
-
     res = collector.tools["get_asset_levels"](ticker="XAUUSD", timeframe="H1")
-    assert "chandelier_max" in res
-    assert "chandelier_min" in res
-    assert res["chandelier_lookback"] == cargar_config_riesgo()["trailing_stop_lookback_period"]
-
-    # Contra el cálculo directo sobre las velas cerradas, sin la barra en formación.
-    n = res["chandelier_lookback"]
-    cerradas = df.iloc[:-1]
-    assert res["chandelier_max"] == pytest.approx(round(float(cerradas["high"].tail(n).max()), 2))
-    assert res["chandelier_min"] == pytest.approx(round(float(cerradas["low"].tail(n).min()), 2))
-    assert res["chandelier_max"] > res["chandelier_min"]
+    for campo in ("chandelier_max", "chandelier_min", "chandelier_lookback"):
+        assert campo not in res
 
 
 def test_el_catalogo_incluye_brent_que_el_broker_si_ofrece():
@@ -554,12 +530,9 @@ def test_el_catalogo_incluye_brent_que_el_broker_si_ofrece():
 
     Verificado el 2026-09-02 contra la cuenta 51492 (GrupoInteligenciaSpA-Server):
     `symbol_info("BRENT.spot")` responde con digits=3 y bid 96,439. Sin embargo
-    `bias_reader.TICKER_MT5` lo mapeaba a None con el comentario "el broker no
-    ofrece Brent", y el ticker no estaba en el catálogo técnico.
-
-    El costo no era teórico: Brent tiene ficha en el Playbook y ese día llevaba
-    sesgo +1,50 (ALCISTA POR SHOCK), pero sin ticker no había niveles, ni
-    gráfico, ni forma de decir hasta dónde seguía vigente ese sesgo.
+    el repo lo mapeaba a None con el comentario "el broker no ofrece Brent", y
+    el ticker no estaba en el catálogo técnico: sin ticker no había niveles ni
+    gráfico.
     """
     assert "BRENT.spot" in levels._VALID_TICKERS
     assert levels._VALID_TICKERS["BRENT.spot"] == 3, "cotiza con 3 decimales, igual que WTI"
@@ -621,3 +594,30 @@ def test_ningun_ticker_se_declara_dos_veces_con_digits_distintos():
 
     conflictos = {t: sorted(v) for t, v in vistos.items() if len(v) > 1}
     assert not conflictos, f"tickers con decimales contradictorios: {conflictos}"
+
+
+def test_tolerancia_ruido_atr_es_03():
+    """La banda anti-ruido vale 0,3 x ATR: un nivel más cerca del spot es un
+    nivel en testeo activo, no un soporte o resistencia independiente."""
+    assert levels.TOLERANCIA_RUIDO_ATR == 0.3
+
+
+def test_niveles_ignoran_swings_dentro_del_radio_de_ruido():
+    """Un swing high o low que caiga a menos de 0.3 * ATR del spot se considera ruido
+    y el motor debe descartarlo, seleccionando el siguiente swing o el respaldo ATR."""
+    # Construir un DataFrame con un micro-swing a 0.1 de distancia y un swing mayor a 1.5
+    # current = 100.0, atr = 1.0 -> radio de ruido = 0.3
+    # Micro swing high en 100.1 (debe ser ignorado por estar a 0.1 < 0.3)
+    # Swing high estructural en 102.0 (debe ser seleccionado como R1)
+    h = [99.0] * 5 + [100.1] + [99.0] * 5 + [102.0] + [99.0] * 5 + [100.0]
+    l = [98.0] * 5 + [98.5] + [98.0] * 5 + [98.0] + [98.0] * 5 + [99.5]
+    c = [98.5] * (len(h) - 1) + [100.0]
+    df = pd.DataFrame({"high": h, "low": l, "close": c})
+    current = 100.0
+    atr14 = 1.0
+
+    res = levels._get_support_resistance(df, current=current, atr14=atr14, digits=2)
+    # R1 no puede ser 100.10 porque está a 0.10 (< 0.30)
+    assert res["r1"] >= current + 0.3 * atr14
+    assert res["r1"] == 102.0
+

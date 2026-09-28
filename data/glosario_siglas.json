@@ -20,6 +20,16 @@
     "nombre_es": "Reunión de la OPEP",
     "explicacion": "Encuentro de países exportadores de petróleo para coordinar cuotas de producción y oferta de crudo; recortes de oferta impulsan al alza los precios energéticos."
   },
+  "DXY": {
+    "nombre_es": "Índice del Dólar estadounidense",
+    "explicacion": "Mide el valor del dólar frente a una canasta de divisas globales. Si sube, el dólar se fortalece a nivel mundial.",
+    "pais": "United States",
+    "tier": 1,
+    "canales": [
+      "01_macro_y_apertura",
+      "02_forex_divisas"
+    ]
+  },
   "PMI": {
     "nombre_es": "Índice de gerentes de compra",
     "explicacion": "Encuesta a empresas sobre cómo ven su negocio; sobre 50 = la economía crece, bajo 50 = se enfría.",
@@ -823,5 +833,49 @@
       "usdclp": "sube",
       "porque": "una fuerza laboral que crece sostiene el consumo sin forzar los sueldos"
     }
+  },
+  "IPoM": {
+    "nombre_es": "Informe de Política Monetaria",
+    "explicacion": "Documento del Banco Central de Chile que proyecta la inflación, el crecimiento y el corredor de tasas de interés.",
+    "pais": "Chile",
+    "tier": 1,
+    "canales": [
+      "01_macro_y_apertura",
+      "02_forex_divisas"
+    ],
+    "cadencia": "trimestral",
+    "puede_disparar_momento": false,
+    "fuente": {
+      "tipo": "bcch",
+      "organismo": "Banco Central de Chile"
+    }
+  },
+  "Schnabel": {
+    "nombre_es": "Banco Central Europeo (BCE), Isabel Schnabel",
+    "explicacion": "Isabel Schnabel es miembro del directorio del Banco Central Europeo (BCE). Lo que dice sobre inflación y tasas mueve al euro, y de rebote al dólar."
+  },
+  "Lagarde": {
+    "nombre_es": "Banco Central Europeo (BCE), Christine Lagarde",
+    "explicacion": "Christine Lagarde preside el Banco Central Europeo (BCE). Sus señales sobre el rumbo de las tasas en Europa suelen mover al euro frente al dólar."
+  },
+  "New Loans": {
+    "nombre_es": "Nuevos préstamos en yuanes",
+    "explicacion": "Cuánto crédito nuevo otorgaron los bancos chinos en el mes. Más crédito indica una economía que se reactiva, lo que suele apoyar al cobre y a las materias primas."
+  },
+  "Fixed Asset Investment": {
+    "nombre_es": "Inversión en activos fijos",
+    "explicacion": "Cuánto invierte China en obras, fábricas y maquinaria. Es un termómetro de la demanda de cobre y de materias primas industriales."
+  },
+  "Industrial Production": {
+    "nombre_es": "Producción industrial",
+    "explicacion": "Cuánto produjeron las fábricas respecto del año anterior. Si crece, hay más demanda de energía y metales; si cae, la actividad se está enfriando."
+  },
+  "Chinese Industrial Production YTD": {
+    "nombre_es": "Producción industrial acumulada en el año",
+    "explicacion": "La producción de las fábricas chinas sumada desde enero, comparada con el mismo tramo del año pasado. Suaviza los vaivenes de un mes puntual."
+  },
+  "NBS Press Conference": {
+    "nombre_es": "Conferencia de prensa de la Oficina Nacional de Estadísticas de China (NBS)",
+    "explicacion": "El organismo que publica las cifras oficiales de China explica los datos del mes. Ahí suelen darse las señales sobre el rumbo de la economía china."
   }
 }

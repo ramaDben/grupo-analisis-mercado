@@ -64,8 +64,8 @@ def test_el_efecto_esta_declarado_como_primer_orden_y_no_como_pronostico():
     subido por la expectativa de recortes y bajaron, porque el ISM de precios
     salio caliente y el regimen es R3 estanflacion.
 
-    El Playbook manda sobre el dato, asi que el campo tiene que decir que es
-    primer orden y que el regimen le pasa por encima.
+    El contexto puede pasarle por encima al dato, asi que el campo tiene que
+    decir que es primer orden y no un pronostico.
     """
     for clave, entrada in cm.cargar_clasificacion().items():
         efecto = entrada.get("si_sale_sobre_consenso")

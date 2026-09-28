@@ -292,8 +292,7 @@ def bollinger(
 def donchian(df: pd.DataFrame, period: int = 50) -> tuple[float, float, float]:
     """Canal de Donchian (50). Retorna (high, low, mid) del último bar.
 
-    El Playbook lo usa como gatillo de quiebre (canales de 50 períodos en H1 con
-    banda `0.3 x ATR14`) y `CLAUDE.md` lo admite como una de las dos definiciones
+    Sirve como referencia de quiebre (canales de 50 períodos en H1) y `CLAUDE.md` lo admite como una de las dos definiciones
     del ADC (Ancho Dinámico de Canal); la amplitud es `high - low`, que se deja al
     consumidor igual que con las bandas de Bollinger.
 

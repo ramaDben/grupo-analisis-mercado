@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 extractor_precios.py
-Ingesta y cálculo de indicadores técnicos OHLC para el Playbook Cuantitativo Intermercado.
+Ingesta y cálculo de indicadores técnicos OHLC de los activos base.
 Descarga velas H1 y D1 de MT5 (con fallback a yfinance) y persiste series limpias con ATR, EMA, SMA y Canales Donchian.
 """
 
@@ -73,7 +73,7 @@ ASSET_CONFIG = {
 
 
 def calcular_indicadores(df: pd.DataFrame) -> pd.DataFrame:
-    """Calcula el set exacto de indicadores requeridos por el Playbook Cuantitativo."""
+    """Calcula el set de indicadores de las series OHLC (ATR, EMA, SMA, Donchian, RSI)."""
     if len(df) == 0:
         return df
 
@@ -94,16 +94,16 @@ def calcular_indicadores(df: pd.DataFrame) -> pd.DataFrame:
     #
     # Wilder es alpha=1/n, NO span=n (que es alpha=2/(n+1)). Esto estuvo mal hasta
     # el 2026-09-02 y no era un detalle de redondeo: sobre la serie H1 real de
-    # USDCLP daba 2,1613 contra los 2,3347 del MCP, un -7,4 %. Como el Playbook
-    # define el stop en 1,5 x ATR_14(H1) y el lote en funcion de esa distancia,
-    # dos ATR eran dos lotajes distintos para la misma operacion. Es la misma
+    # USDCLP daba 2,1613 contra los 2,3347 del MCP, un -7,4 %. Como el stop se
+    # define en 1,5 x ATR_14(H1) y el lote en funcion de esa distancia, dos ATR
+    # eran dos lotajes distintos para la misma operacion. Es la misma
     # formula que ya usaba el RSI de aca abajo y la que usa mt5_client.atr.
     df["atr_14"] = tr.ewm(alpha=1.0 / 14.0, adjust=False).mean()
     df["atr_20"] = tr.ewm(alpha=1.0 / 20.0, adjust=False).mean()
 
     # EMAs institucionales
-    # ema_16 no la usa nadie y NO esta en el Playbook, que define EMA 20 y EMA 50.
-    # Su unico consumidor era el setup `PULLBACK_EMA16_H1` del motor, retirado el
+    # ema_16 no la usa nadie. Su unico consumidor era el setup `PULLBACK_EMA16_H1`
+    # del motor de sesgo (retirado entero el 2026-09-27), que ya lo habia dejado el
     # 2026-09-02 por nombrar una media que `get_asset_levels` tampoco devuelve. Se
     # conserva en el esquema para no romper archivos ya escritos; no la uses como
     # base de un setup nuevo sin subirla antes al documento.
@@ -257,7 +257,7 @@ def extraer_activo(asset_id: str, timeframe: str = "H1", n_bars: int = 10000) ->
         "source": fuente,
         "broker": "MT5" if fuente == "MT5" else "YFINANCE",
         # De QUE cuenta salio, no solo de que broker. `broker: MT5` es cierto y
-        # no alcanza: MT5 no es una sola cuenta, y los stops del Playbook
+        # no alcanza: MT5 no es una sola cuenta, y los niveles y stops
         # dependen del spread y del contrato de la cuenta concreta.
         "cuenta": cuenta_conectada() if fuente == "MT5" else None,
         "timezone": "UTC",

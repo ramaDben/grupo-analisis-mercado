@@ -106,7 +106,7 @@ def test_el_score_llega_a_100_y_no_topa_en_26_porque_no_se_multiplican_pesos():
     evento = {"nombre": "Nonfarm Payrolls", "pais": "United States", "impacto": "alto",
               "hora_servidor": "2026-08-25 23:00"}
     res = sc.evaluar_activo(
-        ACTIVO, [evento], delta_ust_bps=None, sesgos={},
+        ACTIVO, [evento], delta_ust_bps=None,
         ahora_santiago=AHORA.astimezone(sc.SANTIAGO),
         analizador=analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
     )
@@ -124,7 +124,7 @@ def test_la_suma_de_los_maximos_de_los_factores_es_100():
     evento = {"nombre": "Nonfarm Payrolls", "pais": "United States", "impacto": "alto",
               "hora_servidor": "2026-08-25 23:00"}
     res = sc.evaluar_activo(
-        ACTIVO, [evento], None, {}, AHORA.astimezone(sc.SANTIAGO),
+        ACTIVO, [evento], None, AHORA.astimezone(sc.SANTIAGO),
         analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
     )
     assert sum(f["max"] for f in res["factores"].values()) == 100
@@ -133,77 +133,24 @@ def test_la_suma_de_los_maximos_de_los_factores_es_100():
 def test_el_impulso_proyectado_es_una_vez_y_media_el_atr_de_h1():
     """Es el número que alimenta el bloque "Volatilidad típica" de la Story."""
     res = sc.evaluar_activo(
-        ACTIVO, [], None, {}, AHORA.astimezone(sc.SANTIAGO),
+        ACTIVO, [], None, AHORA.astimezone(sc.SANTIAGO),
         analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
     )
     assert res["impulso_adc_atr"] == pytest.approx(3.0)  # 1,5 x ATR 2,0
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Los gates: prohibiciones, no puntos
+# Los gates: exclusiones, no puntos
 # ─────────────────────────────────────────────────────────────────────────────
-def test_un_setup_prohibido_por_el_playbook_queda_fuera_aunque_puntue_alto():
-    """La segunda corrección al plan.
-
-    El Playbook §2 es prohibitivo: en R1/R3 no se abren cortos en Oro "aun con
-    RSI sobrecomprado en 80". Con scoring puro, ese corto puntúa alto y gana la
-    tanda. El gate va antes de puntuar.
-    """
-    h1_bajista = h1_perfecto()
-    h1_bajista.update(price=100.0, ema_20=101.0, ema_50=102.0, ema_100=103.0,
-                      rsi_14=40.0, macd_hist=-0.3, s1=96.0, r1=101.0)
-    sesgo = {
-        "regimen_macro_global": {"codigo": "R1_RIESGO_INFLACION"},
-        # `gate_confianza` corre antes y es fail-closed: un payload sin el campo
-        # queda excluido por otro motivo y este test dejaria de probar lo suyo.
-        "confianza_general": {"confianza_total_pct": 90.0},
-        "activo": {"setups_prohibidos": ["SHORT_AGRESIVO"], "setups_permitidos": []},
-    }
-    res = sc.evaluar_activo(
-        ACTIVO, [], None, {"XAUUSD": sesgo}, AHORA.astimezone(sc.SANTIAGO),
-        analizador_falso(h1_bajista, d1_con_consumo(0.30)),
-    )
-    assert "excluido" in res
-    assert "SHORT_AGRESIVO" in res["excluido"]
-    assert "R1_RIESGO_INFLACION" in res["excluido"]
-
-
-def test_una_prohibicion_de_la_direccion_contraria_no_bloquea():
-    """Que esté prohibido comprar agresivamente no impide comunicar una subida
-    bien fundada: la prohibición solo aplica si apunta al mismo lado."""
-    sesgo = {
-        "regimen_macro_global": {"codigo": "R0_CALMA_RANGO"},
-        "confianza_general": {"confianza_total_pct": 90.0},
-        "activo": {"setups_prohibidos": ["SHORT_AGRESIVO"], "setups_permitidos": []},
-    }
-    res = sc.evaluar_activo(
-        ACTIVO, [], None, {"XAUUSD": sesgo}, AHORA.astimezone(sc.SANTIAGO),
-        analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),  # alcista
-    )
-    assert "excluido" not in res
-    assert res["direccion"] == "ALCISTA"
-
-
-def test_un_activo_sin_ficha_de_playbook_no_se_bloquea_por_falta_de_sesgo():
-    """Entrar al catálogo técnico no es entrar al Playbook: un ETF no tiene
-    régimen ni setups y no se le inventan."""
-    etf = {**ACTIVO, "ticker": "QQQ.US", "nombre": "Invesco QQQ"}
-    res = sc.evaluar_activo(
-        etf, [], None, {}, AHORA.astimezone(sc.SANTIAGO),
-        analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
-    )
-    assert "excluido" not in res
-
-
 def test_el_blackout_del_calendario_excluye_al_activo():
-    """La tercera corrección: el plan ignora las ventanas de bloqueo de la skill
-    §4 y su factor catalizador premia justo al activo que recibe el dato."""
+    """La segunda corrección: el plan ignora las ventanas de bloqueo y su factor
+    catalizador premia justo al activo que recibe el dato."""
     # NFP a las 09:30 hora Chile, ventana -15/+30 -> 09:15 a 10:00.
     evento = {"nombre": "Nonfarm Payrolls", "pais": "United States", "impacto": "alto",
               "hora_servidor": "2026-08-25 09:30"}
     dentro = datetime(2026, 8, 25, 9, 40, tzinfo=sc.SANTIAGO)
     res = sc.evaluar_activo(
-        ACTIVO, [evento], None, {}, dentro,
+        ACTIVO, [evento], None, dentro,
         analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
     )
     assert "excluido" in res
@@ -218,7 +165,7 @@ def test_fuera_de_la_ventana_el_mismo_evento_no_bloquea_y_ademas_puntua():
               "hora_servidor": "2026-08-25 09:30"}
     fuera = datetime(2026, 8, 25, 11, 0, tzinfo=sc.SANTIAGO)
     res = sc.evaluar_activo(
-        ACTIVO, [evento], None, {}, fuera,
+        ACTIVO, [evento], None, fuera,
         analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
     )
     assert "excluido" not in res
@@ -231,8 +178,8 @@ def test_un_blackout_de_alcance_local_no_toca_a_los_demas_activos():
     dentro = datetime(2026, 8, 25, 8, 35, tzinfo=sc.SANTIAGO)
     analizador = analizador_falso(h1_perfecto(), d1_con_consumo(0.30))
 
-    peso = sc.evaluar_activo({**ACTIVO, "ticker": "USDCLP"}, [evento], None, {}, dentro, analizador)
-    oro = sc.evaluar_activo(ACTIVO, [evento], None, {}, dentro, analizador)
+    peso = sc.evaluar_activo({**ACTIVO, "ticker": "USDCLP"}, [evento], None, dentro, analizador)
+    oro = sc.evaluar_activo(ACTIVO, [evento], None, dentro, analizador)
 
     assert "excluido" in peso and "blackout" in peso["excluido"]
     assert "excluido" not in oro
@@ -243,7 +190,7 @@ def test_el_agotamiento_del_atr_diario_excluye_en_vez_de_dar_cero_puntos():
     disponibles: un activo sin recorrido puede ganar la tanda por técnica y
     catalizador. Agotado es agotado."""
     res = sc.evaluar_activo(
-        ACTIVO, [], None, {}, AHORA.astimezone(sc.SANTIAGO),
+        ACTIVO, [], None, AHORA.astimezone(sc.SANTIAGO),
         analizador_falso(h1_perfecto(), d1_con_consumo(0.95)),
     )
     assert "excluido" in res
@@ -255,7 +202,7 @@ def test_un_error_del_motor_excluye_con_su_codigo_y_no_revienta():
     def analizador_roto(ticker: str, timeframe: str) -> dict:
         return {"error": "MT5_UNAVAILABLE", "message": "MT5 no esta conectado."}
 
-    res = sc.evaluar_activo(ACTIVO, [], None, {}, AHORA.astimezone(sc.SANTIAGO), analizador_roto)
+    res = sc.evaluar_activo(ACTIVO, [], None, AHORA.astimezone(sc.SANTIAGO), analizador_roto)
     assert "excluido" in res
     assert "MT5_UNAVAILABLE" in res["excluido"]
 
@@ -562,246 +509,7 @@ def test_el_modo_matriz_cubre_cada_grupo_que_tenga_con_que():
 
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Vocabulario de prohibiciones: el gate tiene que conocer TODOS los tokens
-# ─────────────────────────────────────────────────────────────────────────────
-
-def _sesgo_con(prohibidos, regimen="R0_CALMA_RANGO", confianza=90.0):
-    """La confianza va en la fixture porque un payload real siempre la trae, y
-    `gate_confianza` corre antes que el del Playbook."""
-    return {
-        "regimen_macro_global": {"codigo": regimen},
-        "confianza_general": {"confianza_total_pct": confianza},
-        "activo": {"setups_prohibidos": list(prohibidos), "setups_permitidos": []},
-    }
-
-
-def test_gate_bloquea_breakout_chase_long_en_lectura_alcista():
-    """La violación que estaba viva el 2026-09-02.
-
-    En R0 el Playbook y la skill §4 coinciden: prohibido perseguir quiebres
-    tendenciales. El motor lo emitía bien (`BREAKOUT_CHASE_LONG` en USD/CLP) y el
-    vocabulario del escáner no lo reconocía, así que el gate lo dejaba pasar y la
-    tanda podía publicar el quiebre alcista que el Playbook prohíbe.
-    """
-    res = sc.evaluar_activo(
-        ACTIVO, [], None, {"XAUUSD": _sesgo_con(["BREAKOUT_CHASE_LONG"])},
-        AHORA.astimezone(sc.SANTIAGO),
-        analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),  # alcista
-    )
-    assert "excluido" in res
-    assert "BREAKOUT_CHASE_LONG" in res["excluido"]
-
-
-def test_gate_bloquea_fade_top_resistance_en_lectura_bajista():
-    """El otro hueco. Estaba citado literalmente en el comentario del módulo como
-    ejemplo del vocabulario que el gate sí capturaba, y no lo capturaba."""
-    h1_bajista = h1_perfecto()
-    h1_bajista.update(price=100.0, ema_20=101.0, ema_50=102.0, ema_100=103.0,
-                      rsi_14=40.0, macd_hist=-0.3, s1=96.0, r1=101.0)
-    res = sc.evaluar_activo(
-        ACTIVO, [], None, {"XAUUSD": _sesgo_con(["FADE_TOP_RESISTANCE"])},
-        AHORA.astimezone(sc.SANTIAGO),
-        analizador_falso(h1_bajista, d1_con_consumo(0.30)),
-    )
-    assert "excluido" in res
-    assert "FADE_TOP_RESISTANCE" in res["excluido"]
-
-
-@pytest.mark.parametrize("token", ["BREAKOUT_CHASE", "GRID_SIN_STOP",
-                                   "MEAN_REVERSION_RSI_H1", "FADE_SUPPORT_RESISTANCE_M15"])
-def test_gate_no_bloquea_tokens_sin_direccion(token):
-    """Estos prohíben una FORMA de operar, no un lado del mercado. Bloquear con
-    ellos dejaría al escáner sin universo por una prohibición que no se opone a
-    la lectura técnica."""
-    res = sc.evaluar_activo(
-        ACTIVO, [], None, {"XAUUSD": _sesgo_con([token])},
-        AHORA.astimezone(sc.SANTIAGO),
-        analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
-    )
-    assert "excluido" not in res, f"{token} no tiene dirección y no debería bloquear"
-
-
-def test_gate_bloquea_token_desconocido_en_vez_de_ignorarlo():
-    """Un token sin clasificar es más probable que sea una prohibición real a que
-    sea inocuo. No publicar un activo cuesta una pieza; publicar contra el
-    Playbook cuesta el método. Ante la duda el gate bloquea y dice por qué."""
-    res = sc.evaluar_activo(
-        ACTIVO, [], None, {"XAUUSD": _sesgo_con(["SETUP_QUE_NADIE_CLASIFICO"])},
-        AHORA.astimezone(sc.SANTIAGO),
-        analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
-    )
-    assert "excluido" in res
-    assert "SETUP_QUE_NADIE_CLASIFICO" in res["excluido"]
-
-
-def test_todo_token_del_motor_esta_clasificado_en_el_escaner():
-    """El contrato que impide repetir el error.
-
-    Si alguien agrega un `setups_prohibidos` nuevo al motor y no lo clasifica
-    acá, este test falla. Sin él, el token entra al snapshot, el gate no lo
-    reconoce y la omisión no se nota hasta que sale una pieza que no debía salir
-    — que es exactamente cómo llegamos acá, y el mismo patrón de los filtros de
-    calendario escritos en español contra una fuente en inglés.
-    """
-    import re
-
-    fuente = (RAIZ / "scripts" / "macro_bias_engine.py").read_text(encoding="utf-8")
-    emitidos = {
-        token
-        for bloque in re.findall(r"setups_prohibidos\s*=\s*\[(.*?)\]", fuente, re.S)
-        for token in re.findall(r'"([^"]+)"', bloque)
-    }
-    assert emitidos, "no se pudo leer ningún token del motor: el patrón quedó obsoleto"
-
-    sin_clasificar = sorted(emitidos - set(sc._DIRECCION_PROHIBIDA))
-    assert not sin_clasificar, (
-        f"el motor emite tokens que el gate no conoce: {sin_clasificar}. "
-        "Agrégalos a _DIRECCION_PROHIBIDA con su dirección, o None si prohíben "
-        "una forma de operar y no un lado del mercado."
-    )
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Gate 5: el modelo no comunica cuando no ve
-# ─────────────────────────────────────────────────────────────────────────────
-# El umbral es 65 % y no es una preferencia: es el piso algebraico de la norma
-# que el Playbook §3 ya escribió. Si frescura y cobertura valen 1,0 -la condición
-# que ese párrafo llama "operación normal"- el puntaje arrastra 0,40 + 0,25 =
-# 0,65 antes de que la antigüedad aporte nada. Bajo 65 % es ARITMÉTICAMENTE
-# IMPOSIBLE que ambas sean 1,0: no significa "datos algo viejos", significa que
-# falta un driver o está roto.
-#
-# 80 % habría sido un error: el techo real de la escala es ~89 %, porque el campo
-# `fecha` de cada driver no trae hora y se parsea como medianoche, así que la
-# antigüedad nunca aporta sus 35 puntos completos.
-
-def _sesgo_con_confianza(pct, prohibidos=()):
-    return {
-        "regimen_macro_global": {"codigo": "R3_ESTANFLACION_SHOCK"},
-        "confianza_general": {"confianza_total_pct": pct},
-        "activo": {"setups_prohibidos": list(prohibidos), "setups_permitidos": []},
-    }
-
-
-def test_el_umbral_de_confianza_sale_del_config_del_playbook():
-    """Hardcodearlo lo dejaría fuera del `config_hash`, así que un cambio de
-    criterio no quedaría registrado en la trazabilidad del snapshot."""
-    import yaml
-
-    cfg = yaml.safe_load((RAIZ / "config" / "playbook_config.yaml").read_text(encoding="utf-8"))
-    assert cfg["confidence_weights"]["umbral_minimo_pct"] == 65.0
-    assert sc.UMBRAL_CONFIANZA_PCT == 65.0
-
-
-def test_una_confianza_insuficiente_excluye_el_activo():
-    """El caso real del 2026-09-02 por la mañana: 54,6 %, con la clave de la TPM
-    rota y el petróleo detenido ocho días. El activo no debía comunicarse y nada
-    lo detenía."""
-    res = sc.evaluar_activo(
-        ACTIVO, [], None, {"XAUUSD": _sesgo_con_confianza(54.6)},
-        AHORA.astimezone(sc.SANTIAGO),
-        analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
-    )
-    assert "excluido" in res
-    assert "54.6" in res["excluido"] or "54,6" in res["excluido"]
-    assert "65" in res["excluido"], "el motivo tiene que decir contra qué umbral"
-
-
-def test_la_confianza_justo_en_el_umbral_no_excluye():
-    """65,0 es el valor que da frescura y cobertura en 1,0. Excluirlo dejaría
-    fuera la propia condición que el Playbook llama operación normal."""
-    res = sc.evaluar_activo(
-        ACTIVO, [], None, {"XAUUSD": _sesgo_con_confianza(65.0)},
-        AHORA.astimezone(sc.SANTIAGO),
-        analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
-    )
-    assert "excluido" not in res
-
-
-def test_el_gate_de_confianza_no_alcanza_a_los_activos_sin_ficha():
-    """La confianza mide los drivers macro que alimentan el régimen, y el régimen
-    solo entra al sesgo de los 5 activos con ficha. Los otros 33 del catálogo se
-    puntúan con técnica y calendario, sin insumo macro: bloquearlos por una
-    confianza que no usan dejaría al escáner sin universo por nada."""
-    res = sc.evaluar_activo(
-        ACTIVO, [], None, {},  # sin entrada de sesgo: no es activo del Playbook
-        AHORA.astimezone(sc.SANTIAGO),
-        analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
-    )
-    assert "excluido" not in res
-
-
-def test_un_sesgo_con_error_no_se_confunde_con_confianza_baja():
-    """`cargar_macro_bias` devuelve `{"error": ...}` cuando el snapshot está
-    vencido o ilegible. Ese caso ya lo informa `_sesgos_playbook` como aviso, y
-    fabricar acá un motivo de confianza sobre un payload que no la trae sería
-    reportar dos veces la misma falla con nombres distintos."""
-    assert sc.gate_confianza({"error": "STALE_DATA"}) is None
-    assert sc.gate_confianza(None) is None
-
-
-def test_un_payload_sin_confianza_declarada_bloquea():
-    """Fail-closed, y por consistencia con `pipeline_datos.confianza_suficiente`.
-
-    La primera versión de este gate dejaba pasar el campo ausente mientras el
-    estado lo bloqueaba: dos comportamientos para el mismo caso. Un payload
-    válido de `cargar_macro_bias` SIEMPRE trae `confianza_general`, así que su
-    ausencia es un esquema viejo o un dict armado a mano, no una lectura buena.
-    Asumir que alcanza sería la puerta de atrás que el umbral existe para cerrar.
-    """
-    motivo = sc.gate_confianza({"regimen_macro_global": {}, "activo": {}})
-    assert motivo is not None
-    assert "no declara" in motivo
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# La vigencia del sesgo viaja con la seleccion
-# ─────────────────────────────────────────────────────────────────────────────
-def test_la_seleccion_arrastra_la_vigencia_del_playbook():
-    """El escaner ya tiene las dos piezas en la mano: el H1 con las anclas del
-    Chandelier y el sesgo del activo. Resolverlo aca sale gratis y evita que el
-    carrusel vuelva a pedir los mismos datos al terminal."""
-    h1 = h1_perfecto()
-    h1.update(chandelier_max=104.5, chandelier_min=94.0, chandelier_lookback=22)
-    sesgo = {
-        "regimen_macro_global": {"codigo": "R2_GOLDILOCKS_EXPANSION"},
-        "confianza_general": {"confianza_total_pct": 90.0},
-        "activo": {
-            "sesgo_score": 1.80, "sesgo_etiqueta": "ALCISTA",
-            "setups_permitidos": ["PULLBACK_EMA20_H1"], "setups_prohibidos": [],
-            "parametros_riesgo": {
-                "take_profit_tipo": "TRAILING_STOP_ASYMMETRIC",
-                "trailing_stop_mult_atr": 3.0, "trailing_stop_lookback": 22,
-            },
-        },
-    }
-
-    res = sc.evaluar_activo(
-        ACTIVO, [], None, {"XAUUSD": sesgo},
-        AHORA.astimezone(sc.SANTIAGO),
-        analizador_falso(h1, d1_con_consumo(0.30)),
-    )
-
-    assert "excluido" not in res, res.get("excluido")
-    assert res["vigencia"]["gramatica"] == "NIVEL"
-    assert res["vigencia"]["nivel"] == pytest.approx(104.5 - 3.0 * 2.0, abs=0.01)
-
-
-def test_un_activo_sin_ficha_de_playbook_sale_sin_vigencia_y_no_se_cae():
-    """Los 33 activos del catalogo sin ficha son la mayoria del universo. Su
-    seleccion tiene que existir igual, con el campo en `None`."""
-    res = sc.evaluar_activo(
-        ACTIVO, [], None, {},
-        AHORA.astimezone(sc.SANTIAGO),
-        analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
-    )
-
-    assert "excluido" not in res
-    assert res["vigencia"] is None
-
-
-def test_el_modo_matriz_respeta_el_tope_por_grupo():
+def test_el_modo_matriz_respeta_el_tope_por_grupo(tmp_path, monkeypatch):
     """La matriz daba UNA pieza por grupo e ignoraba `--top`, asi que un canal
     con cinco activos elegibles recibia un carrusel de una sola pieza.
 
@@ -809,6 +517,7 @@ def test_el_modo_matriz_respeta_el_tope_por_grupo():
     default de `--top`: la matriz tiene que llegar hasta ahi cuando hay con que,
     sin tocar los gates.
     """
+    monkeypatch.setattr(sc, "DIR_SALIDA", tmp_path)
     universo = sc.cargar_universo(solo_renderizables=False)
     cripto = [a for a in universo if a["categoria"] == "crypto"]
     assert len(cripto) >= 3, "el catalogo dejo de tener criptos suficientes para la prueba"
@@ -951,7 +660,7 @@ def test_el_gate_de_banda_excluye_antes_de_puntuar():
     res = sc.evaluar_activo(
         {"ticker": "TEST", "nombre": "Prueba", "clase": "forex_commodities",
          "categoria": "forex", "digits": 2},
-        eventos=[], delta_ust_bps=0.0, sesgos={},
+        eventos=[], delta_ust_bps=0.0,
         ahora_santiago=datetime(2026, 9, 4, 10, 0, tzinfo=sc.SANTIAGO),
         analizador=analizador_falso(h1, d1_con_consumo(0.30)),
     )
@@ -1066,3 +775,54 @@ def test_un_indicador_fuera_del_glosario_levanta_aviso(monkeypatch):
     texto = " ".join(avisos)
     assert "glosario" in texto and "Richmond" in texto, avisos
     assert "Nonfarm Payrolls" not in texto, "el que SI esta en el glosario no se reporta"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Dirección de cuatro ejes en sombra: se calcula, no decide nada
+# ─────────────────────────────────────────────────────────────────────────────
+def _evaluar(h1=None, d1=None):
+    return sc.evaluar_activo(
+        ACTIVO, [], delta_ust_bps=None,
+        ahora_santiago=AHORA.astimezone(sc.SANTIAGO),
+        analizador=analizador_falso(h1 or h1_perfecto(), d1 or d1_con_consumo(0.30)),
+    )
+
+
+def test_la_sombra_viaja_en_el_resultado():
+    res = _evaluar()
+    assert res["direccion_4ejes"]["direccion"] in {"ALCISTA", "BAJISTA", "LATERAL"}
+    assert res["direccion_4ejes"]["fase"]
+
+
+def test_la_sombra_es_inerte(monkeypatch):
+    """Con la lectura nueva cambiada o rota, todo lo demás es idéntico."""
+    base = _evaluar()
+    monkeypatch.setattr(sc.dg, "leer_direccion", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("roto")))
+    roto = _evaluar()
+    assert roto["direccion_4ejes"] == {"error": "RuntimeError: roto"}
+    sin_sombra = lambda r: {k: v for k, v in r.items() if k != "direccion_4ejes"}  # noqa: E731
+    assert sin_sombra(roto) == sin_sombra(base)
+    assert roto["direccion"] == sc.direccion_tecnica(h1_perfecto())
+
+
+def test_avisos_de_sombra_solo_cuando_difieren_o_falla():
+    iguales = {"ticker": "A", "direccion": "ALCISTA", "direccion_4ejes": {"direccion": "ALCISTA", "fase": "tendencia_alineada"}}
+    distinto = {"ticker": "B", "direccion": "ALCISTA", "direccion_4ejes": {"direccion": "LATERAL", "fase": "rango"}}
+    fallo = {"ticker": "C", "direccion": "BAJISTA", "direccion_4ejes": {"error": "ValueError: x"}}
+    avisos = sc.avisos_de_sombra([iguales, distinto, fallo])
+    assert len(avisos) == 2
+    assert avisos[0].startswith("B:") and "LATERAL" in avisos[0] and "ALCISTA" in avisos[0]
+    assert avisos[1].startswith("C:") and "ValueError" in avisos[1]
+    assert all("—" not in a and "–" not in a for a in avisos)
+
+
+def test_escanear_reporta_la_diferencia_de_la_sombra():
+    h1 = dict(h1_perfecto(), adx_14=15.0, donchian_50_high=105.0, donchian_50_low=95.0)  # p = 0,5: rango
+
+    def fake(ticker, tf):
+        res = dict(h1 if tf == "H1" else d1_con_consumo(0.30))
+        res["ticker"] = ticker
+        return res
+
+    resultado = sc.escanear(tanda=1, top=1, solo_renderizables=True, analizador=fake)
+    assert any("sombra 4 ejes dice LATERAL" in a for a in resultado["avisos"])

@@ -126,6 +126,13 @@ Tres reglas del compilador que conviene no revertir:
 
 ### Lo que el manual afirma tiene que coincidir con el motor
 
+> [!WARNING]
+> **Pendiente desde el 2026-09-27: el manual describe un sistema retirado.** El motor de
+> sesgo, su YAML de reglas, `ticket_engine` y la tool `get_macro_bias` se borraron junto con
+> el Playbook V2 (ver CLAUDE.md, *El Playbook V2 se retiró*). Todo lo que sigue compara el
+> manual contra piezas que ya no existen, y los módulos que enseñan a operar "con el Playbook
+> de guía" necesitan una revisión editorial del director antes de volver a distribuirse.
+
 **El manual es el tercer lugar donde viven los umbrales**, después del YAML y el Playbook, y
 es el único que un miembro va a usar para arriesgar dinero. La revisión del 2026-09-04 encontró
 cinco discrepancias que ya están corregidas, y las tres primeras costaban plata:

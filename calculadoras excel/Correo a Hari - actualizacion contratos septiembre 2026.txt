@@ -1,0 +1,37 @@
+ASUNTO: Actualización de contratos y especificaciones · calculadora al 9 de septiembre
+
+Hola Hari,
+
+Te envío la calculadora de operaciones actualizada al día de hoy, generada directamente contra la cuenta real (51492 en CLP). 
+
+Hicimos una auditoría celda por celda frente a la versión del 24 de agosto para verificar si el broker había tocado contratos, márgenes o financiamiento. Te resumo lo que encontramos:
+
+
+LO QUE CONFIRMAMOS SIN CAMBIOS
+
+1. Tamaños de contrato: se mantienen exactamente iguales. Las acciones continúan en 1 papel por lote, los ETF en 1 título, el WTI en 100 barriles, el Oro en 100 onzas y las divisas en 100.000 unidades.
+
+2. Mínimos y pasos de volumen: sin variaciones. Acciones y ETF siguen en múltiplos de 0,1 lotes, y las divisas en 0,01.
+
+3. Umbrales de la cuenta: la llamada a margen sigue en 200% y el cierre forzado en 50%, tal como están configurados en el servidor real.
+
+
+LO QUE CAMBIÓ (SWAPS Y PRECIOS DE MERCADO)
+
+1. Oro (XAUUSD) · Alerta en compras:
+   El costo de mantención (swap largo) se cuadruplicó: pasó de -16 a -64 puntos por lote al día. Dejar una compra de 1 lote abierta de un día para otro pasó de costar ~$14.800 CLP a ~$59.300 CLP diarios. Conviene tenerlo muy presente al simular posiciones swing o de varios días con clientes en Oro. El swap de venta se mantuvo sin cambios en -6 puntos.
+
+2. Dólar / Yen (USDJPY) · Alivio en ventas:
+   El swap de venta (corto) bajó de -23,93 a -18,00 puntos por día (un 25% más barato mantener cortos abiertos). El swap de compra se mantiene en -2,51 puntos.
+
+3. Cotizaciones de referencia:
+   Se actualizaron los precios vigentes de la jornada en los 148 instrumentos operables (el dólar en $927,70, el WTI en $96,35, el Oro en $4.416,97, el Nasdaq en 29.450 y Bitcoin en $78.683).
+
+
+Adjunto:
+- La planilla actualizada: "Simulador GI Real.xlsx" (protegida para evitar sobreescritura accidental de fórmulas).
+- Las "Instrucciones de uso" en PDF y versión HTML autónoma para consultar en el teléfono.
+
+Cualquier duda o simulación puntual que quieras revisar, avísame.
+
+Saludos,

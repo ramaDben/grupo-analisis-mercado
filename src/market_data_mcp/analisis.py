@@ -33,6 +33,12 @@ from market_data_mcp.catalog import VALID_TICKERS
 # noticia, gap). 30% del ATR diario como mínimo disponible.
 PISO_ATR_RESTANTE = 0.30
 
+# Tolerancia de ruido anti-falsos quiebres: todo nivel a menos de 0,3 x ATR del
+# precio spot se considera ruido de microestructura (nivel en testeo activo) y no
+# un soporte/resistencia táctico independiente. Vivía en el YAML del Playbook;
+# al retirarlo (2026-09-27) quedó acá, junto a la función que la usa.
+TOLERANCIA_RUIDO_ATR = 0.3
+
 
 def _rsi(series: pd.Series, period: int = 14) -> float:
     """RSI de Wilder. Retorna el valor del último bar."""
@@ -79,23 +85,33 @@ def _cluster(levels: list[float], threshold: float) -> list[float]:
     return clustered
 
 
-def _get_support_resistance(df: pd.DataFrame, current: float, atr14: float, digits: int) -> dict[str, float]:
-    """
-    Calcula S1, S2, R1, R2 garantizando que R1/R2 > current > S1/S2.
+def _get_support_resistance(
+    df: pd.DataFrame,
+    current: float,
+    atr14: float,
+    digits: int,
+    tolerancia_atr: float = TOLERANCIA_RUIDO_ATR,
+) -> dict[str, Any]:
+    """Calcula S1, S2, R1, R2 garantizando que R1/R2 > current > S1/S2.
+
     Usa swing highs/lows como niveles primarios y proyecciones ATR como respaldo.
+    Aplica la banda de tolerancia anti-ruido (b = tolerancia_atr * ATR)
+    para evitar que niveles hiper-pegados al spot sean catalogados como soportes o resistencias.
     """
     threshold = current * 0.0015  # 0.15% para clustering
     resistances_raw, supports_raw = _swing_levels(df)
     resistances = _cluster(resistances_raw, threshold)
     supports = _cluster(supports_raw, threshold)
 
-    above = sorted([r for r in resistances if r > current])
-    below = sorted([s for s in supports if s < current], reverse=True)
+    min_distancia = max(tolerancia_atr * atr14, threshold)
+
+    above = sorted([r for r in resistances if r >= current + min_distancia])
+    below = sorted([s for s in supports if s <= current - min_distancia], reverse=True)
 
     r1 = above[0] if len(above) > 0 else round(current + atr14, digits)
-    r2 = above[1] if len(above) > 1 else round(current + 2 * atr14, digits)
+    r2 = above[1] if len(above) > 1 else round(max(r1 + atr14, current + 2 * atr14), digits)
     s1 = below[0] if len(below) > 0 else round(current - atr14, digits)
-    s2 = below[1] if len(below) > 1 else round(current - 2 * atr14, digits)
+    s2 = below[1] if len(below) > 1 else round(min(s1 - atr14, current - 2 * atr14), digits)
 
     # De donde salio cada nivel, lado por lado. El respaldo por ATR es una red de
     # seguridad correcta (garantiza R > precio > S) pero **no es un nivel**: es el
@@ -210,8 +226,8 @@ def analizar_activo(ticker: str, timeframe: str = "H4") -> dict[str, Any]:
 
     ema100_val = float(ema(close_closed, 100).iloc[-1])
     ema50_val = float(ema(close_closed, 50).iloc[-1])
-    # EMA 20: el Playbook la usa como gatillo de entrada en H1 (pullback en Oro,
-    # compras tendenciales en US100). No confundir con `bb_mid`, que es una SMA 20.
+    # EMA 20: media exponencial corta de H1. No confundir con `bb_mid`, que es
+    # una SMA 20.
     ema20_val = float(ema(close_closed, 20).iloc[-1])
     atr14_val = float(atr(df_closed, 14).iloc[-1])
     adx14_val = float(adx(df_closed, 14).iloc[-1])
@@ -274,29 +290,9 @@ def analizar_activo(ticker: str, timeframe: str = "H4") -> dict[str, Any]:
         atr_restante = max(atr14_val - rango_hoy, piso)
         resultado["rango_hoy"] = round(rango_hoy, digits)
         resultado["atr_restante_14"] = round(atr_restante, digits)
-        # ATR_20 es por definición el ATR diario del Playbook (`atr_daily_period`
-        # en playbook_config.yaml) y la base del stop swing, 2.5 x ATR_20(D1).
-        # Sin él ese stop no era calculable desde la tool y había que ir al
-        # snapshot del motor, que puede tener 24 h.
+        # ATR_20 diario: la base del stop swing (2,5 x ATR_20 D1).
         resultado["atr_20"] = round(float(atr(df_closed, 20).iloc[-1]), digits)
-
-    # Anclajes del Chandelier Exit: el extremo de las últimas N velas cerradas.
-    #
-    # Van solo en H1 porque ahí lo define el Playbook (3.0 x ATR_14(H1)), mismo
-    # criterio que `atr_20` en D1. Y van los ANCLAJES, no el nivel calculado: el
-    # múltiplo depende del activo y del régimen desde que se implementó la
-    # descomposición de Kilian (3,0 con respaldo del cobre, 2,0 sin él), así que
-    # hornearlo acá obligaría a la tool a conocer el sesgo macro. La tool mide el
-    # mercado; el múltiplo viaja en el snapshot y la aritmética vive en
-    # `bias_reader.nivel_chandelier`.
-    if timeframe.upper() == "H1":
-        from market_data_mcp.bias_reader import cargar_config_riesgo
-
-        n = int(cargar_config_riesgo()["trailing_stop_lookback_period"])
-        ventana = df_closed.tail(n)
-        resultado["chandelier_lookback"] = n
-        resultado["chandelier_max"] = round(float(ventana["high"].max()), digits)
-        resultado["chandelier_min"] = round(float(ventana["low"].min()), digits)
+        resultado["fecha_barra"] = str(pd.to_datetime(df["time"].iloc[-1]).date())
 
     resultado["timestamp"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     return resultado
