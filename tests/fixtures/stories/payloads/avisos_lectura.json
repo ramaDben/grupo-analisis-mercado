@@ -1,0 +1,25 @@
+{
+  "plantilla": "avisos_lectura",
+  "sello": "AVISOS · NUESTRA LECTURA",
+  "fecha_hora": "LUNES 28 SEP · 15:30 CLST",
+  "titulo": "Cómo leer esta semana",
+  "puntos": [
+    {
+      "icono": "🔎",
+      "titulo_punto": "El viernes manda",
+      "texto": "Se esperan 98 mil empleos, contra 162 mil del mes pasado. Un dato bajo lo esperado suele debilitar al dólar y darle aire al oro."
+    },
+    {
+      "icono": "🌡️",
+      "titulo_punto": "El miércoles, la inflación que mira la Fed",
+      "texto": "El PCE subyacente (la inflación sin alimentos ni energía) se espera en 3,4%. Si sale más alto, la Fed tiene menos espacio para bajar la tasa."
+    },
+    {
+      "icono": "🛢️",
+      "titulo_punto": "El petróleo tiene su propio dato",
+      "texto": "Los inventarios de la agencia de energía de EE.UU. (EIA) mueven al WTI: más barriles almacenados de lo previsto presionan el precio a la baja."
+    }
+  ],
+  "conclusion": "Antes de un dato fuerte el precio suele moverse poco, y después elige dirección. Planifica tus operaciones pensando en esas horas.",
+  "posicion": "3/3 · Nuestra lectura"
+}

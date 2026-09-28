@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Avisos Lectura</title>
+<style>
+  /* ════ marca.css embebido ════ */
+:root {
+
+  --fondo:          #000000;
+  --fondo-acento:   #0E2420;
+  --fondo-alt:      #0A0A0F;
+  --fondo-sube:     #123A2A;
+  --fondo-baja:     #2A1220;
+
+  --velo-inferior:  rgba(4, 18, 14, 0.95);
+
+  --acento:         #50C0A8;
+  --acento-azul:    #3C8CAA;
+  --acento-oscuro:  #143028;
+
+  --sube:           #00DC82;
+  --sube-suave:     #53C1AB;
+  --baja:           #E84040;
+  --baja-suave:     #F5A3A3;
+  --aviso:          #FFB020;
+
+  --activo-oro:    #E8B44C;
+  --activo-wti:    #E8783C;
+  --activo-us100:  #4C86E8;
+  --activo-usdclp: var(--acento);
+  --activo-bitcoin:#F7931A;
+
+  --activo-plata:  #C6CBD1;
+  --activo-meli:   #F2C14E;
+  --activo-tech-circuito: #4FB0C6;
+
+  --activo-usdjpy: #B98A4A;
+  --activo-eurusd: #6E7E96;
+  --activo-gbpusd: #9E6B4A;
+  --activo-us500:  #6BA3D8;
+  --activo-us30:   #9C7B4E;
+  --activo-iwm:    #8F9BA8;
+  --activo-eth:    #7B7FE8;
+  --activo-sol:    #C158D6;
+  --activo-ltc:    #A8B2BF;
+  --activo-ada:    #3B6FD4;
+  --activo-doge:   #D9A22B;
+
+  --font-display:   "Goldman", sans-serif;
+  --font-titular:   "Goldman", sans-serif;
+  --font-sans:      "Plus Jakarta Sans", "Segoe UI", "Noto Sans", Arial, sans-serif;
+  --font-emoji:     "Segoe UI Emoji", "Noto Color Emoji", "Apple Color Emoji";
+  --texto-1:        #F5F3F7;
+  --texto-2:        #A9A5B4;
+  --texto-3:        #6E6A7A;
+  --texto-borde:    #C9C5D4;
+  --texto-gris:     #8E8A9C;
+  --blanco:         #FFFFFF;
+
+  --filete:         var(--acento);
+  --filete-ancho:   4px;
+}
+
+body {
+  --direccion:        var(--acento);
+  --direccion-suave:  var(--texto-borde);
+  --fondo-direccion:  var(--fondo-acento);
+}
+body.sesgo-alcista, body.sesgo-compra {
+  --direccion:        var(--sube);
+  --direccion-suave:  var(--sube-suave);
+  --fondo-direccion:  var(--fondo-sube);
+}
+body.sesgo-bajista, body.sesgo-venta {
+  --direccion:        var(--baja);
+  --direccion-suave:  var(--baja-suave);
+  --fondo-direccion:  var(--fondo-baja);
+}
+
+body                { --activo: var(--acento); }
+body.activo-oro     { --activo: var(--activo-oro); }
+body.activo-wti     { --activo: var(--activo-wti); }
+body.activo-us100   { --activo: var(--activo-us100); }
+body.activo-usdclp  { --activo: var(--activo-usdclp); }
+body.activo-bitcoin { --activo: var(--activo-bitcoin); }
+body.activo-plata   { --activo: var(--activo-plata); }
+body.activo-meli    { --activo: var(--activo-meli); }
+body.activo-tech-circuito { --activo: var(--activo-tech-circuito); }
+body.activo-usdjpy  { --activo: var(--activo-usdjpy); }
+body.activo-eurusd  { --activo: var(--activo-eurusd); }
+body.activo-gbpusd  { --activo: var(--activo-gbpusd); }
+body.activo-us500   { --activo: var(--activo-us500); }
+body.activo-us30    { --activo: var(--activo-us30); }
+body.activo-iwm     { --activo: var(--activo-iwm); }
+body.activo-eth     { --activo: var(--activo-eth); }
+body.activo-sol     { --activo: var(--activo-sol); }
+body.activo-ltc     { --activo: var(--activo-ltc); }
+body.activo-ada     { --activo: var(--activo-ada); }
+body.activo-doge    { --activo: var(--activo-doge); }
+
+.story {
+  box-shadow: inset 0 0 0 var(--filete-ancho) var(--filete);
+}
+</style>
+<style>
+@font-face { font-family: "Goldman"; src: url("fonts/goldman-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Goldman"; src: url("fonts/goldman-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/plus-jakarta-sans-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/plus-jakarta-sans-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/plus-jakarta-sans-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  width: 100%; height: 100%;
+  background: var(--fondo);
+  color: var(--texto-1);
+  font-family: var(--font-sans);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.story {
+  position: relative; width: 100%; height: 100%;
+  padding: 48px 64px 36px;
+  display: flex; flex-direction: column;
+}
+
+.velo {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    radial-gradient(circle at 90% 10%, color-mix(in srgb, var(--acento) 15%, transparent) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(0,0,0,0.6) 0%, var(--velo-inferior) 100%);
+}
+
+.grilla {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0 1px, transparent 1px 96px),
+    repeating-linear-gradient(0deg,  rgba(255,255,255,0.02) 0 1px, transparent 1px 96px);
+}
+
+.contenido {
+  position: relative; z-index: 2; flex: 1; min-height: 0;
+  display: flex; flex-direction: column; justify-content: space-between;
+}
+
+.cabecera { display: flex; justify-content: space-between; align-items: flex-start; }
+
+.sello {
+  font-family: var(--font-display); font-weight: 700; font-size: 14px;
+  letter-spacing: 0.10em; text-transform: uppercase; color: var(--acento);
+  background: color-mix(in srgb, var(--fondo-acento) 85%, var(--fondo)); border: 1.5px solid var(--acento);
+  border-radius: 999px; padding: 6px 18px;
+}
+
+.fecha { font-size: 15px; font-weight: 600; color: var(--texto-2); letter-spacing: 0.05em; }
+
+.titulo {
+  font-family: var(--font-display); font-weight: 700; font-size: 38px;
+  color: var(--blanco); margin: 10px 0 0; letter-spacing: -0.01em;
+}
+
+.subtitulo {
+  font-family: var(--font-sans); font-weight: 400; font-size: 18px;
+  color: var(--texto-borde); margin: 6px 0 0;
+}
+
+
+.cuerpo { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 18px; margin-top: 18px; }
+.punto { display: flex; gap: 22px; align-items: flex-start; padding: 20px 28px; border-radius: 18px;
+  background: color-mix(in srgb, var(--fondo-acento) 75%, var(--fondo));
+  border: 1.5px solid color-mix(in srgb, var(--acento) 25%, transparent); }
+.punto-icono { font-family: var(--font-emoji); font-size: 34px; line-height: 1.2; }
+.punto-txt { display: flex; flex-direction: column; }
+.punto-titulo { font-weight: 700; font-size: 26px; color: var(--blanco); }
+.punto-texto { font-size: 22px; line-height: 1.4; color: var(--texto-borde); margin-top: 4px; }
+.conclusion { margin-top: 6px; padding: 20px 28px; border-radius: 18px; border-left: 6px solid var(--acento);
+  background: color-mix(in srgb, var(--acento) 12%, var(--fondo)); font-weight: 700; font-size: 26px; line-height: 1.35; color: var(--blanco); }
+
+.footer {
+  position: relative; z-index: 2; margin-top: 16px;
+  display: flex; justify-content: space-between; align-items: center;
+  padding-top: 12px; border-top: 1px solid color-mix(in srgb, var(--texto-1) 15%, transparent);
+}
+.footer-marca { font-family: var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: 0.08em; color: var(--acento); }
+.footer-pos { font-family: var(--font-sans); font-weight: 600; font-size: 15px; color: var(--texto-2); margin: 0; }
+</style>
+</head>
+<body>
+  <div class="story">
+    <div class="velo"></div>
+    <div class="grilla"></div>
+    <div class="contenido">
+      <div>
+        <div class="cabecera">
+          <span class="sello">{{sello}}</span>
+          <span class="fecha">{{fecha_hora}}</span>
+        </div>
+        <h1 class="titulo">{{titulo}}</h1>
+      </div>
+      <div class="cuerpo">
+        <!-- FOR:puntos -->
+        <div class="punto">
+          <span class="punto-icono">{{icono}}</span>
+          <div class="punto-txt">
+            <span class="punto-titulo">{{titulo_punto}}</span>
+            <span class="punto-texto">{{texto}}</span>
+          </div>
+        </div>
+        <!-- ENDFOR:puntos -->
+        <div class="conclusion">{{conclusion}}</div>
+      </div>
+    </div>
+    <div class="footer">
+      <span class="footer-marca">GRUPO INTELIGENCIA</span>
+      <p class="footer-pos">{{posicion}}</p>
+    </div>
+  </div>
+</body>
+</html>
