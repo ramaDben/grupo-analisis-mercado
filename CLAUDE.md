@@ -723,9 +723,18 @@ Las primeras 3-4 líneas contienen la conclusión práctica. El detalle técnico
 Cerrar cada mensaje de niveles/análisis con este bloque:
 ```text
 🟢 Sobre [resistencia] → fuerza compradora
-🟡 Entre [soporte] y [resistencia] → esperar confirmación
+🟡 Entre [soporte] y [resistencia] → rango: si rompe un borde y vuelve a entrar, es falso quiebre y el objetivo pasa a ser el borde contrario
 🔴 Bajo [soporte] → presión vendedora
 ```
+
+**La zona media también se opera** (decisión del director, 2026-09-28). Decía "esperar
+confirmación", y quien sabe operar la configuración nunca tiene que quedarse esperando: dentro del
+rango la operativa es el falso quiebre, de vuelta al borde contrario.
+
+**Y el mensaje no cierra siempre igual.** Un solo cierre repetido en cada pieza se lee como
+plantilla y mecaniza el grupo; cerrar siempre con "consulta a tu analista" suena a soporte técnico.
+El carrusel elige entre varios cierres cortos (`CIERRES_ALERTA`, `CIERRES_MACRO`), estables por
+pieza y día para que el despacho no vea un texto distinto al aprobado.
 
 ### Registro y tono — cercano, cotidiano, pedagógico y con gancho operativo (OBLIGATORIO)
 <!-- ambito: ambos -->

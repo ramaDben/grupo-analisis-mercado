@@ -88,6 +88,7 @@
      cromo de marca contra una foto de otro tono. Lo destapó el escáner al
      seleccionar XAGUSD. */
   --activo-plata:  #C6CBD1;  /* lingotes de plata: gris metálico */
+  --activo-copper: #B87333;  /* cobre: sin foto, sale por cobertura fija (2026-09-28); mas oscuro que el WTI */
   --activo-meli:   #F2C14E;  /* amarillo de la marca, sin usar su logo */
   --activo-tech-circuito: #4FB0C6;  /* circuito con luz fría: cian */
 
@@ -169,6 +170,7 @@ body.activo-us100   { --activo: var(--activo-us100); }
 body.activo-usdclp  { --activo: var(--activo-usdclp); }
 body.activo-bitcoin { --activo: var(--activo-bitcoin); }
 body.activo-plata   { --activo: var(--activo-plata); }
+body.activo-copper  { --activo: var(--activo-copper); }
 body.activo-meli    { --activo: var(--activo-meli); }
 body.activo-tech-circuito { --activo: var(--activo-tech-circuito); }
 body.activo-usdjpy  { --activo: var(--activo-usdjpy); }

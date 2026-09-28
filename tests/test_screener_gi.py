@@ -248,7 +248,8 @@ def test_el_universo_renderizable_es_un_subconjunto_del_completo():
     renderizable = sc.cargar_universo(solo_renderizables=True)
 
     assert len(renderizable) < len(completo), "hoy faltan imagenes; si no, revisar el filtro"
-    assert all(a["imagen"] for a in renderizable)
+    fijos = set(sc.cobertura_fija())
+    assert all(a["imagen"] or a["ticker"] in fijos for a in renderizable)
     tickers_completo = {a["ticker"] for a in completo}
     assert {a["ticker"] for a in renderizable} <= tickers_completo
 
@@ -490,7 +491,10 @@ def test_el_modo_matriz_cubre_cada_grupo_que_tenga_con_que():
     seleccion = resultado["seleccion"]
     assert len(seleccion) > 0
 
-    grupos_sel = [pc.obtener_grupo_whatsapp(s["clase"], s["ticker"]) for s in seleccion]
+    # La cobertura fija (2026-09-28) no cuenta contra el tope: el cobre, el oro
+    # y el WTI comparten canal y salen los tres. El tope rige para el resto.
+    grupos_sel = [pc.obtener_grupo_whatsapp(s["clase"], s["ticker"]) for s in seleccion
+                  if not s.get("cobertura_fija")]
     assert len(grupos_sel) == len(set(grupos_sel)), (
         "con --top 1 la matriz sigue siendo un activo por grupo"
     )
@@ -826,3 +830,64 @@ def test_escanear_reporta_la_diferencia_de_la_sombra():
 
     resultado = sc.escanear(tanda=1, top=1, solo_renderizables=True, analizador=fake)
     assert any("sombra 4 ejes dice LATERAL" in a for a in resultado["avisos"])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Cobertura fija (decisión del director, 2026-09-28)
+# ─────────────────────────────────────────────────────────────────────────────
+FIJOS = {"USDCLP", "XAUUSD", "WTI.spot", "COPPER"}
+
+
+def test_la_cobertura_fija_son_los_cuatro_activos_base_y_existen_en_el_catalogo():
+    assert set(sc.cobertura_fija()) == FIJOS
+    catalogo = {a["ticker"] for a in sc.cargar_universo(solo_renderizables=False)}
+    assert FIJOS <= catalogo
+
+
+def test_los_fijos_entran_al_universo_aunque_no_tengan_imagen():
+    """El cobre no tiene foto; su pieza sale con el grafico del motor."""
+    renderizable = {a["ticker"] for a in sc.cargar_universo(solo_renderizables=True)}
+    assert FIJOS <= renderizable
+
+
+@pytest.mark.parametrize("modo_matriz", [False, True])
+def test_los_fijos_salen_aunque_hayan_agotado_el_recorrido_diario(modo_matriz):
+    res = sc.escanear(
+        top=3, solo_renderizables=True, modo_matriz=modo_matriz,
+        analizador=analizador_falso(h1_perfecto(), d1_con_consumo(0.95)),
+    )
+    elegidos = {r["ticker"] for r in res["seleccion"]}
+    assert FIJOS <= elegidos
+    # El resto del universo sigue respetando el gate.
+    assert elegidos == FIJOS
+    avisos = " ".join(res["avisos"])
+    for t in FIJOS:
+        assert f"{t}: cobertura fija" in avisos
+
+
+def test_los_fijos_saltan_el_gate_de_banda():
+    """Banda mas estrecha que la vela tipica: excluye a cualquiera, no a un fijo."""
+    res = sc.escanear(
+        top=3, solo_renderizables=True,
+        analizador=analizador_falso(h1_con_banda(2.0, 3.0), d1_con_consumo(0.30)),
+    )
+    assert FIJOS <= {r["ticker"] for r in res["seleccion"]}
+
+
+def test_un_fijo_no_se_excluye_por_haber_salido_en_otra_corrida(monkeypatch):
+    monkeypatch.setattr(sc, "_publicados_hoy", lambda *a, **k: set(FIJOS))
+    res = sc.escanear(
+        top=3, solo_renderizables=True,
+        analizador=analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
+    )
+    assert FIJOS <= {r["ticker"] for r in res["seleccion"]}
+
+
+def test_un_fijo_sigue_fuera_en_feriado_de_su_bolsa(monkeypatch):
+    """Mercado cerrado no tiene niveles de hoy: la cobertura fija no inventa precio."""
+    monkeypatch.setattr(sc, "gate_feriado", lambda t, f: "feriado" if t == "USDCLP" else None)
+    res = sc.escanear(
+        top=3, solo_renderizables=True,
+        analizador=analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
+    )
+    assert "USDCLP" not in {r["ticker"] for r in res["seleccion"]}

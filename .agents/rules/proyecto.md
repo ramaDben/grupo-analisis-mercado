@@ -696,9 +696,18 @@ Las primeras 3-4 líneas contienen la conclusión práctica. El detalle técnico
 Cerrar cada mensaje de niveles/análisis con este bloque:
 ```text
 🟢 Sobre [resistencia] → fuerza compradora
-🟡 Entre [soporte] y [resistencia] → esperar confirmación
+🟡 Entre [soporte] y [resistencia] → rango: si rompe un borde y vuelve a entrar, es falso quiebre y el objetivo pasa a ser el borde contrario
 🔴 Bajo [soporte] → presión vendedora
 ```
+
+**La zona media también se opera** (decisión del director, 2026-09-28). Decía "esperar
+confirmación", y quien sabe operar la configuración nunca tiene que quedarse esperando: dentro del
+rango la operativa es el falso quiebre, de vuelta al borde contrario.
+
+**Y el mensaje no cierra siempre igual.** Un solo cierre repetido en cada pieza se lee como
+plantilla y mecaniza el grupo; cerrar siempre con "consulta a tu analista" suena a soporte técnico.
+El carrusel elige entre varios cierres cortos (`CIERRES_ALERTA`, `CIERRES_MACRO`), estables por
+pieza y día para que el despacho no vea un texto distinto al aprobado.
 
 ### Registro y tono — cercano, cotidiano, pedagógico y con gancho operativo (OBLIGATORIO)
 El propósito editorial de Grupo Inteligencia es **traducir lo complejo a un lenguaje cotidiano, cercano y comprensible para cualquier persona**, como un profesor que explica con paciencia y claridad. Los análisis transmiten confianza y claridad, generando apetito por comprender y operar el mercado. **Se permite y se busca** enfatizar la dirección, tomar postura clara y explicar los problemas macroeconómicos de forma sencilla y aplicable. Lo que sigue **prohibido** es el lenguaje extremo, catastrófico o la jerga acartonada/distante (dramatizar el movimiento, atribuir "sensaciones" al mercado, vaticinar catástrofes, tecnicismos vacíos sin traducción). En una frase: **claridad pedagógica y énfasis direccional sí, dramatización ni jerga impenetrable no**.

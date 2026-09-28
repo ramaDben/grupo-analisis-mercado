@@ -288,7 +288,7 @@ def test_cada_slug_del_universo_renderizable_tiene_token_de_color():
     marca = (RAIZ / "templates" / "stories" / "marca.css").read_text(encoding="utf-8")
     faltan = []
     for activo in sc.cargar_universo(solo_renderizables=True):
-        slug = pc._slug_de_imagen(activo["imagen"])
+        slug = pc.slug_del_activo(activo["ticker"], activo["imagen"])
         if f"body.activo-{slug}" not in marca:
             faltan.append(f"{activo['ticker']} -> activo-{slug}")
     assert not faltan, "slugs sin token de color en marca.css: " + ", ".join(faltan)
@@ -492,7 +492,8 @@ def test_el_universo_del_escaner_trae_lo_que_el_payload_consume():
             CIERRES,
         )
         assert payload["vol_pct"].endswith(activo["unidad"]), activo["ticker"]
-        assert payload["activo_imagen"], activo["ticker"]
+        # La cobertura fija sale sin foto (2026-09-28): el cobre.
+        assert payload["activo_imagen"] or activo["ticker"] in sc.cobertura_fija(), activo["ticker"]
 
 
 def test_preparar_barre_los_payloads_de_la_corrida_anterior(tmp_path):
@@ -695,7 +696,9 @@ def test_construir_mensaje_alerta_cumple_reglas_canonicas_whatsapp():
 
     # 4. Niveles y cifras
     assert "68,716" in msg
-    assert "0,661 USD" in msg
+    # La volatilidad tipica salio del texto con el formato compacto (2026-09-28);
+    # sigue en la pieza visual.
+    assert "0,661 USD" not in msg
 
 
 
@@ -1196,3 +1199,103 @@ def test_la_direccion_en_sombra_no_entra_al_payload():
     """Fase 1: la lectura de cuatro ejes viaja en la seleccion y el payload la ignora."""
     con_sombra = {**SELECCION, "direccion_4ejes": {"direccion": "LATERAL", "fase": "rango"}}
     assert payload_de_prueba(con_sombra) == payload_de_prueba()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Formato compacto (decisión del director, 2026-09-28): resumido y para actuar
+# ─────────────────────────────────────────────────────────────────────────────
+def _msg_compacto():
+    payload = payload_de_prueba()
+    payload["titular"] = "La plata sostiene su sesgo alcista sobre su promedio de 50 horas"
+    payload["parrafo"] = "PARRAFO_LARGO_QUE_YA_NO_VA_EN_EL_MENSAJE"
+    return pc.construir_mensaje_alerta(payload), payload
+
+
+def test_el_mensaje_compacto_trae_solo_lo_que_sirve_para_actuar():
+    msg, p = _msg_compacto()
+    assert p["titular"] in msg
+    assert f"Precio actual: {p['precio_actual']}" in msg
+    assert msg.splitlines()[-1] in pc.CIERRES_ALERTA
+    for linea in ("🟢 Sobre", "🟡 Entre", "🔴 Bajo", "⏱️ *Temporalidad*"):
+        assert linea in msg
+
+
+@pytest.mark.parametrize("sobra", [
+    "PARRAFO_LARGO_QUE_YA_NO_VA_EN_EL_MENSAJE",
+    "Diccionario rápido",
+    "Manual de Operaciones",
+    "Fijación de objetivos",
+    "Volatilidad típica",
+    "Coméntanos",
+])
+def test_el_mensaje_compacto_no_arrastra_los_bloques_largos(sobra):
+    msg, _ = _msg_compacto()
+    assert sobra not in msg
+
+
+def test_el_mensaje_compacto_cabe_en_un_vistazo():
+    """Tope editorial: bajo 900 caracteres aun con la nota de temporalidad."""
+    msg, _ = _msg_compacto()
+    assert len(msg) < 900, len(msg)
+
+
+def test_un_activo_sin_foto_arma_su_payload_con_el_ticker_como_slug():
+    """Cobertura fija (2026-09-28): el cobre no tiene foto y sale igual, con el
+    grafico del motor. Su slug no puede quedar vacio."""
+    activo = {k: v for k, v in ACTIVO.items() if k != "imagen"}
+    p = pc.construir_payload(SELECCION, activo, AHORA, CIERRES)
+    assert p["activo_slug"] == SELECCION["ticker"].lower().replace(".spot", "").replace("#", "")
+    assert p["activo_imagen"] == ""
+
+
+def test_preparar_no_descarta_a_un_fijo_por_no_tener_foto():
+    import inspect
+    fuente = inspect.getsource(pc.preparar)
+    assert "cobertura_fija" in fuente
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Mensaje humanizado (decisión del director, 2026-09-28)
+# ─────────────────────────────────────────────────────────────────────────────
+def test_la_zona_media_se_opera_como_falso_quiebre_y_no_se_espera():
+    """Quien sabe operar la configuracion nunca tiene que quedarse esperando."""
+    msg, p = _msg_compacto()
+    linea = next(l for l in msg.splitlines() if l.startswith("🟡"))
+    assert "falso quiebre" in linea and "borde contrario" in linea
+    assert "esperar confirmación" not in msg
+
+
+def test_el_cierre_no_es_siempre_el_mismo_ni_siempre_el_analista():
+    import screener_gi as sc
+    cierres = set()
+    for activo in sc.cargar_universo(solo_renderizables=False)[:20]:
+        p = payload_de_prueba()
+        p.update(titular="x", activo=activo["nombre"], rotulo_activo=f"X · {activo['ticker']}")
+        cierres.add(pc.construir_mensaje_alerta(p).splitlines()[-1])
+    assert len(cierres) >= 3, cierres
+    assert sum("analista" in c for c in cierres) < len(cierres)
+
+
+def test_el_cierre_es_estable_para_la_misma_pieza():
+    """Variar no es azar: rendir dos veces la misma pieza da el mismo texto, o el
+    guardia de huella del despacho veria un mensaje distinto al aprobado."""
+    msg1, _ = _msg_compacto()
+    msg2, _ = _msg_compacto()
+    assert msg1 == msg2
+
+
+def test_el_cobre_se_escribe_entero_y_sin_separador_de_miles():
+    """digits = 0 se escribe entero (CLAUDE.md, formato de precios): "14.417" se
+    confunde con un decimal y ademas no coincide con la etiqueta del grafico."""
+    assert pc.formatear_precio(14417.0, 0) == "14417"
+
+
+def test_con_decimales_se_mantiene_la_notacion_chilena():
+    assert pc.formatear_precio(4134.736, 2) == "4.134,74"
+    assert pc.formatear_precio(90.1814, 3) == "90,181"
+
+
+def test_un_solo_formateador_de_precios_en_el_carrusel():
+    """Tres copias de la misma formula divergen; es el defecto recurrente del repo."""
+    fuente = Path(pc.__file__).read_text(encoding="utf-8")
+    assert fuente.count('.replace("@", ".")') == 1

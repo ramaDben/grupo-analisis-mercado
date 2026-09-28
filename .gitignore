@@ -121,3 +121,7 @@ data/.reloj_disparos.json
 # el lock que impide dos ingestas simultaneas y su bitacora. Se regeneran solos.
 data/.ingesta_macro.lock
 data/logs/
+
+# Estado local de herramientas: la boveda de Obsidian y el ledger que recrea el plugin Pulse (retirado del repo).
+.obsidian/
+.pulse/

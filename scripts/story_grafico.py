@@ -56,7 +56,12 @@ LIENZOS = {
     # lienzo 3:1 el SVG se encogia a media columna dejando bandas laterales.
     "ancho": dict(vb_w=900, vb_h=230, x0=190, x1=880, y0=18, y1=205, label_x=174, guia_x=182),
     # 900x460 para la tarjeta lateral completa de dato_macro.html
-    "macro": dict(vb_w=900, vb_h=460, x0=180, x1=870, y0=40, y1=410, label_x=164, guia_x=172),
+    # `escala_texto` agranda las etiquetas para que se lean en un celular sin zoom
+    # (decision del director, 2026-09-28): la pieza de 1920 px se ve a ~390 px, y
+    # a esa escala un precio de 20 px queda en 4. La columna de etiquetas se
+    # ensancha en la misma proporcion para que el texto no se salga por la izquierda.
+    "macro": dict(vb_w=900, vb_h=460, x0=330, x1=870, y0=40, y1=410, label_x=312, guia_x=320,
+                  escala_texto=2.2),
 }
 
 # Cómo se comporta el SVG dentro de su caja. `meet` conserva la proporción y deja
@@ -112,7 +117,7 @@ _ALTO_CON_ROL = 34.0
 _ALTO_SIN_ROL = 19.0
 
 
-def _separar_etiquetas(marcadores: list[dict], coord_y) -> dict[int, float]:
+def _separar_etiquetas(marcadores: list[dict], coord_y, escala: float = 1.0) -> dict[int, float]:
     """Y de cada bloque de texto, ya separados para que no se pisen entre si.
 
     Todas las etiquetas se dibujan en la misma X -pegadas al eje- asi que dos
@@ -136,7 +141,7 @@ def _separar_etiquetas(marcadores: list[dict], coord_y) -> dict[int, float]:
     for i in orden:
         y = max(coord_y(marcadores[i]["precio"]), libre)
         y_texto[i] = y
-        libre = y + (_ALTO_CON_ROL if marcadores[i].get("rol") else _ALTO_SIN_ROL)
+        libre = y + escala * (_ALTO_CON_ROL if marcadores[i].get("rol") else _ALTO_SIN_ROL)
     return y_texto
 
 
@@ -220,6 +225,8 @@ def construir_svg(
     vb_w, vb_h = g["vb_w"], g["vb_h"]
     x_ini, x_fin, y_ini, y_fin = g["x0"], g["x1"], g["y0"], g["y1"]
     label_x, guia_x = g["label_x"], g["guia_x"]
+    k = g.get("escala_texto", 1.0)
+    dy_precio, dy_rol = 6 * k, 21 * k
 
     p_max, p_min = resolver_escala(serie, [float(x["precio"]) for x in niveles])
     n = len(serie)
@@ -281,18 +288,18 @@ def construir_svg(
     # separación vertical los considera juntos. Separarlos por separado dejaría
     # que un nivel y un marcador de precio parecido se pisaran igual.
     etiquetables = list(niveles) + list(marcadores)
-    y_etiqueta = _separar_etiquetas(etiquetables, coord_y)
+    y_etiqueta = _separar_etiquetas(etiquetables, coord_y, k)
 
     for j, lv in enumerate(niveles):
         yt = y_etiqueta[j]
         clase = lv.get("clase", "nivel")
         partes.append(
-            f'<text class="g-precio g-precio-{clase}" x="{label_x}" y="{yt + 6:.1f}" '
+            f'<text class="g-precio g-precio-{clase}" x="{label_x}" y="{yt + dy_precio:.1f}" '
             f'text-anchor="end">{lv["etiqueta"]}</text>'
         )
         if lv.get("rol"):
             partes.append(
-                f'<text class="g-rol" x="{label_x}" y="{yt + 21:.1f}" '
+                f'<text class="g-rol" x="{label_x}" y="{yt + dy_rol:.1f}" '
                 f'text-anchor="end">{lv["rol"]}</text>'
             )
 
@@ -308,12 +315,12 @@ def construir_svg(
             f'<circle class="g-punto g-punto-{clase}" cx="{x:.1f}" cy="{y:.1f}" r="5.5"/>'
         )
         partes.append(
-            f'<text class="g-precio g-precio-{clase}" x="{label_x}" y="{yt + 6:.1f}" '
+            f'<text class="g-precio g-precio-{clase}" x="{label_x}" y="{yt + dy_precio:.1f}" '
             f'text-anchor="end">{m["etiqueta"]}</text>'
         )
         if m.get("rol"):
             partes.append(
-                f'<text class="g-rol" x="{label_x}" y="{yt + 21:.1f}" '
+                f'<text class="g-rol" x="{label_x}" y="{yt + dy_rol:.1f}" '
                 f'text-anchor="end">{m["rol"]}</text>'
             )
 
