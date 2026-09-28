@@ -64,7 +64,7 @@ def test_con_rezago_se_publica_la_variacion_de_cinco_dias_con_su_fecha():
 def test_sin_rezago_se_publica_la_variacion_del_dia_y_sin_fecha():
     """Con el dato fresco la fecha es hoy y decirla es ruido."""
     texto, fecha = cmg.variacion_soberana(SERIE_FRESCA)
-    assert texto == "+6,0 bps"
+    assert texto == "+6,0 puntos básicos"
     assert fecha == ""
 
 
@@ -95,8 +95,8 @@ def test_el_texto_publicado_nombra_los_trece_bps_y_no_el_cero(monkeypatch):
         grupo="01_macro_y_apertura", eventos_grupo=[], delta_ust_bps=0.0,
         ahora=_AHORA, con_imagen=True, piezas_de_niveles=0,
     )
-    assert "13,0 bps en 5 días" in txt
-    assert "*0,0 bps*" not in txt
+    assert "13,0 puntos básicos en 5 días" in txt
+    assert "*0,0 puntos básicos*" not in txt
     assert "02 Sep" in txt
 
 
@@ -270,8 +270,8 @@ def test_construir_texto_contexto_macro_formatea_cifras_reales_y_curva(monkeypat
     )
     assert "CONTEXTO MACRO DIARIO · FOREX & DIVISAS" in txt
     assert ("FOCO LOCAL · ACTIVIDAD ECONÓMICA (IMACEC)" in txt) or ("FOCO LOCAL · INFLACIÓN" in txt)
-    assert "+6,0 bps" in txt
-    assert "+6.0 bps" not in txt
+    assert "+6,0 puntos básicos" in txt
+    assert "+6.0 puntos básicos" not in txt
     assert "━━━━━━━━━━━━━━━━━━━" in txt
 
 
@@ -684,11 +684,23 @@ def test_el_texto_usa_la_tasa_en_vivo_del_dia_y_no_la_de_fred(monkeypatch):
     _curva(monkeypatch, 24.0)   # FRED dice +24 en 5 dias
     _en_vivo(monkeypatch, 4.918, 4.864)
     txt = _macro_de("02_forex_divisas")
-    assert "4,92%" in txt and "+5,4 bps hoy" in txt
+    assert "4,92%" in txt and "+5,4 puntos básicos hoy" in txt
     assert "dato al" not in txt and "5 días" not in txt
     # El 1 de septiembre Chile y Nueva York estan ambos en UTC-4.
     assert "09:31" in txt, "la hora de la cotizacion va en hora Chile"
 
+
+
+def test_el_texto_de_cliente_no_usa_la_sigla_bps(monkeypatch):
+    """Toda sigla va explicada (issue #46): "bps" salio sin traducir el 2026-09-28.
+    Se escribe en palabras, con y sin cotizacion en vivo."""
+    _curva(monkeypatch, 24.0)
+    _en_vivo(monkeypatch, 4.918, 4.864)
+    vivo = _macro_de("02_forex_divisas")
+    assert "+5,4 puntos básicos hoy" in vivo and "bps" not in vivo
+    _en_vivo(monkeypatch, 4.918, 4.864, momento=datetime(2026, 8, 29, 16, 0, tzinfo=_NY))
+    fred = _macro_de("02_forex_divisas")
+    assert "+24,0 puntos básicos" in fred and "bps" not in fred
 
 def test_la_lectura_sigue_el_movimiento_en_vivo(monkeypatch):
     _curva(monkeypatch, 24.0)   # FRED sube, pero hoy baja
@@ -702,7 +714,7 @@ def test_una_cotizacion_de_otro_dia_no_se_publica_como_del_dia(monkeypatch):
     _en_vivo(monkeypatch, 4.918, 4.864, momento=datetime(2026, 8, 29, 16, 0, tzinfo=_NY))
     txt = _macro_de("02_forex_divisas")
     assert "hoy" not in txt
-    assert "24,0 bps" in txt
+    assert "24,0 puntos básicos" in txt
 
 
 def test_la_imagen_termina_en_la_cotizacion_en_vivo(tmp_path, monkeypatch):

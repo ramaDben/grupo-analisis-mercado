@@ -573,7 +573,7 @@ def _bloque_tasa_del_canal(
     vivo = _cotizacion_del_dia(serie_id, ahora)
     if vivo is not None:
         delta = vivo["delta_1d_bps"]
-        cambio = f" · {_bps(delta)} bps hoy" if delta is not None else ""
+        cambio = f" · {_bps(delta)} {UNIDAD_BPS} hoy" if delta is not None else ""
         lineas = [
             f"📈 *{rotulo}*: {_pct(vivo['valor'])}{cambio} "
             f"_(en vivo, {_hora_chile(vivo['momento'])} hrs Chile)_"
@@ -1000,6 +1000,11 @@ def _pct(valor: float, decimales: int = 2) -> str:
     return f"{valor:.{decimales}f}%".replace(".", ",")
 
 
+# En palabras y no "bps": toda sigla de texto de cliente va explicada (issue #46),
+# y en una linea de cifra no cabe la explicacion. Decision del 2026-09-28.
+UNIDAD_BPS = "puntos básicos"
+
+
 def _bps(valor: float) -> str:
     """Puntos base con signo y coma decimal.
 
@@ -1048,15 +1053,15 @@ def variacion_soberana(serie: dict[str, Any]) -> tuple[str, str] | None:
 
     if rezago is not None and rezago >= 2:
         if d5 is not None:
-            return f"{_bps(d5)} bps en 5 días", fecha
+            return f"{_bps(d5)} {UNIDAD_BPS} en 5 días", fecha
         if d1 is not None:
-            return f"{_bps(d1)} bps", fecha
+            return f"{_bps(d1)} {UNIDAD_BPS}", fecha
         return "variación no disponible", fecha
 
     if d1 is not None:
-        return f"{_bps(d1)} bps", ""
+        return f"{_bps(d1)} {UNIDAD_BPS}", ""
     if d5 is not None:
-        return f"{_bps(d5)} bps en 5 días", fecha
+        return f"{_bps(d5)} {UNIDAD_BPS} en 5 días", fecha
     return "variación no disponible", fecha
 
 
