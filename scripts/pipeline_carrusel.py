@@ -38,6 +38,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import zlib
 import subprocess
 import sys
 from collections import Counter
@@ -84,6 +85,17 @@ def _slug_de_imagen(imagen: str) -> str:
     exactamente como debe verse.
     """
     return Path(imagen).stem
+
+
+def slug_del_activo(ticker: str, imagen: str | None) -> str:
+    """El slug de la foto, o el del ticker si el activo no tiene foto.
+
+    Sin foto (cobertura fija, 2026-09-28: el cobre) se usa la regla de
+    `ruta_mensaje.ps1`: minusculas y sin `.spot`, `#` ni `/`.
+    """
+    if imagen:
+        return _slug_de_imagen(imagen)
+    return ticker.lower().replace(".spot", "").replace("#", "").replace("/", "")
 
 
 def _chip_categoria(clase_o_cat: str, nombre_activo: str) -> str:
@@ -215,8 +227,8 @@ def construir_payload(
     if motivo is not None:
         raise PayloadIncoherenteError(f"{seleccion['ticker']}: {motivo}")
     digits = activo_catalogo["digits"]
-    imagen = activo_catalogo.get("imagen", "")
-    slug = _slug_de_imagen(imagen)
+    imagen = activo_catalogo.get("imagen") or ""
+    slug = slug_del_activo(seleccion["ticker"], imagen)
     cat_real = activo_catalogo.get("categoria", seleccion["clase"])
 
     def fmt(valor: float) -> str:
@@ -463,6 +475,27 @@ def canales_con_contexto_macro(
     return canales
 
 
+# Cierres del mensaje de alerta (decision del director, 2026-09-28): desmecanizar
+# el grupo. Un solo cierre repetido en cada pieza se lee como plantilla, y cerrar
+# siempre con el analista suena a soporte tecnico. El analista queda en una sola.
+CIERRES_ALERTA: tuple[str, ...] = (
+    "¿Cómo lo ves tú? Te leemos en el grupo.",
+    "Vamos siguiendo la reacción del precio en esos niveles durante la jornada.",
+    "Atentos a los bordes: ahí está la operativa del día.",
+    "Si tienes dudas con la operativa, escríbele a tu analista.",
+    "La configuración está clara: el precio decide por qué lado sale.",
+)
+
+
+def elegir_variante(opciones: tuple[str, ...], *claves: str) -> str:
+    """Una variante estable para las mismas claves.
+
+    Variar no es azar: el despacho vuelve a rendir el texto justo antes de
+    enviarlo, y un cierre al azar cambiaria el mensaje que el director aprobo.
+    """
+    return opciones[zlib.crc32("|".join(claves).encode("utf-8")) % len(opciones)]
+
+
 def construir_mensaje_alerta(payload: dict[str, Any]) -> str:
     """Genera el mensaje de texto de alerta formateado para WhatsApp según las 6 reglas canónicas."""
     activo = payload["activo"]
@@ -479,19 +512,25 @@ def construir_mensaje_alerta(payload: dict[str, Any]) -> str:
     # **`no alcista` no significa bajista.** Las piezas de recap salen con el
     # chip en `Lateral`, y caer al caso bajista por descarte publicaba "presión
     # vendedora" sobre un activo del que justamente no se afirma dirección.
+    #
+    # Voz del director (2026-09-28): directa y de mesa, con el sesgo dicho primero
+    # y el nivel que lo hace ganar camino.
     if lateral:
         nivel_vigilar = f"{soporte} y {resistencia}"
-        accion = "Definición al salir del rango, por arriba o por abajo"
+        accion = "rango; se opera de borde a borde"
     elif alcista:
         nivel_vigilar = resistencia
-        accion = f"Fuerza compradora sobre {resistencia}"
+        accion = f"sesgo comprador; sobre {resistencia} gana camino al alza"
     else:
         nivel_vigilar = soporte
-        accion = f"Presión vendedora bajo {soporte}"
+        accion = f"sesgo vendedor; bajo {soporte} gana camino a la baja"
 
     titular = payload.get("titular", "").strip()
-    parrafo = payload.get("parrafo", "").strip()
 
+    # Formato compacto (decision del director, 2026-09-28): el mensaje es para
+    # actuar. El parrafo editorial, el diccionario, la guia del Manual y la
+    # pregunta al canal salieron: la pieza visual ya lleva el detalle, y un texto
+    # largo esconde bajo el "leer mas" justo los niveles que el cliente necesita.
     lineas = [
         f"🎯 Activo: {activo} ({ticker})",
         f"📌 Nivel a vigilar: {nivel_vigilar}",
@@ -500,18 +539,16 @@ def construir_mensaje_alerta(payload: dict[str, Any]) -> str:
     ]
     if titular:
         lineas.append(f"*{titular}*")
-        lineas.append("")
-    if parrafo:
-        lineas.append(parrafo)
-        lineas.append("━━━━━━━━━━━━━━━━━━━")
-
     lineas.extend([
-        f"📊 *Niveles técnicos ({TIMEFRAME_GRAFICO})*:",
-        f"• Precio actual: {precio}",
-        f"• 🟢 Resistencia clave: {resistencia}",
-        f"• 🔴 Soporte clave: {soporte}",
-        f"• 💡 Volatilidad típica: {vol}",
-        "• 📐 *Fijación de objetivos*: Zonas de pivote/swings H1 acotadas por la volatilidad diaria (ATR) para garantizar objetivos alcanzables dentro de la jornada.",
+        f"Precio actual: {precio}",
+        "━━━━━━━━━━━━━━━━━━━",
+        f"🟢 Sobre {resistencia} → fuerza compradora",
+        # La zona media tambien se opera (decision del director, 2026-09-28):
+        # quien sabe operar la configuracion nunca tiene que quedarse esperando.
+        f"🟡 Entre {soporte} y {resistencia} → rango: si rompe un borde y vuelve a "
+        "entrar, es falso quiebre y el objetivo pasa a ser el borde contrario",
+        f"🔴 Bajo {soporte} → presión vendedora",
+        "━━━━━━━━━━━━━━━━━━━",
     ])
 
     # La temporalidad, justificada por la volatilidad de ESE activo. Obligatoria
@@ -533,39 +570,9 @@ def construir_mensaje_alerta(payload: dict[str, Any]) -> str:
         lineas.append(
             f"⚠️ Niveles estrechos para su volatilidad: en una hora normal el "
             f"activo recorre {veces} de la distancia entre soporte y resistencia, "
-            "así que conviene esperar confirmación antes de operar los bordes."
+            "así que los bordes se rompen con facilidad: ojo con los falsos quiebres."
         )
-
-    # Mapeo de módulos del Manual de Operaciones según clase o activo
-    clase_act = str(payload.get("chip_categoria", "")).lower()
-    ticker_lower = ticker.lower()
-    if "divisa" in clase_act or "forex" in clase_act or "usdclp" in ticker_lower or "eurusd" in ticker_lower:
-        modulos_manual = "Módulo 5 y Módulo 8"
-    elif "commodit" in clase_act or "wti" in ticker_lower or "oro" in ticker_lower or "xau" in ticker_lower:
-        modulos_manual = "Módulo 7 y Módulo 10"
-    elif "índice" in clase_act or "indice" in clase_act or "nasdaq" in ticker_lower or "sp500" in ticker_lower:
-        modulos_manual = "Módulo 4 y Módulo 9"
-    elif "crypto" in clase_act or "cripto" in clase_act or "btc" in ticker_lower:
-        modulos_manual = "Módulo 6 y Módulo 10"
-    else:
-        modulos_manual = "Módulo 7 y Módulo 10"
-
-    lineas.extend([
-        "━━━━━━━━━━━━━━━━━━━",
-        f"🟢 Sobre {resistencia} → fuerza compradora",
-        f"🟡 Entre {soporte} y {resistencia} → esperar confirmación",
-        f"🔴 Bajo {soporte} → presión vendedora",
-        "━━━━━━━━━━━━━━━━━━━",
-        "💬 *Te compartimos nuestra lectura: ¿cuál es tu visión para la sesión?*",
-        f"¿Crees que el soporte en {soporte} aguantará la presión o estás esperando una aceleración hacia {resistencia}? ¡Coméntanos en el grupo cómo lo ves en tu gráfico!",
-        "",
-        f"📖 *Si todavía no tienes una hipótesis propia o quieres profundizar en cómo dimensionar tu posición, consulta el {modulos_manual} de nuestro Manual de Operaciones.*",
-        "",
-        "🔤 *Diccionario rápido*",
-        f"• {ticker}: Activo de referencia en seguimiento.",
-        "• ATR: Rango Medio Real, indicador que mide la volatilidad habitual del activo.",
-        f"• {TIMEFRAME_GRAFICO}: Temporalidad de velas de 1 hora." if TIMEFRAME_GRAFICO == "H1" else f"• {TIMEFRAME_GRAFICO}: Temporalidad de velas de {TIMEFRAME_GRAFICO}.",
-    ])
+    lineas.append(elegir_variante(CIERRES_ALERTA, ticker, payload.get("fecha_hora", "")))
     return "\n".join(lineas)
 
 
@@ -876,7 +883,8 @@ def preparar(
     problemas: list[str] = []
     for i, sel in enumerate(resultado["seleccion"], 1):
         activo = catalogo.get(sel["ticker"])
-        if not activo or not activo.get("imagen"):
+        # La cobertura fija sale sin foto: su pieza es el grafico del motor.
+        if not activo or not (activo.get("imagen") or sel.get("cobertura_fija")):
             problemas.append(
                 f"{sel['ticker']} no tiene imagen declarada: su pieza no se puede rendir"
             )
