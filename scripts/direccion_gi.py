@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import json
 import math
+from dataclasses import asdict, dataclass, field
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -141,3 +142,112 @@ def consumo_diario(d1: dict[str, Any], hoy: str | None = None) -> float | None:
     if atr is None or rango is None or atr <= 0:
         return None
     return rango / atr
+
+
+@dataclass(frozen=True)
+class LecturaDireccion:
+    direccion: str
+    conviccion: str | None
+    fase: str
+    sin_recorrido: bool
+    eje2: str
+    motivo: str
+    ejes: dict[str, Any] = field(default_factory=dict)
+
+
+def a_dict(lectura: LecturaDireccion) -> dict[str, Any]:
+    return asdict(lectura)
+
+
+_HACIA = {ALCISTA: "al alza", BAJISTA: "a la baja"}
+_SUBE = {ALCISTA: "sube", BAJISTA: "baja"}
+_TENDENCIA = {ALCISTA: "alcista", BAJISTA: "bajista"}
+_VIGILA = {ALCISTA: "el soporte", BAJISTA: "la resistencia"}
+
+
+def _motivo(direccion: str, fase: str, fondo: str | None, sin_recorrido: bool) -> str:
+    """Una línea en voz de cliente: la rama del árbol dicha en simple.
+
+    Sin guion largo, sin cifras de precio y en tuteo chileno neutro.
+    """
+    if fase == "rango":
+        texto = ("Se mueve de lado: no tiene fuerza de tendencia y está en la zona "
+                 "media de su canal de las últimas cincuenta horas.")
+    elif fase == "tendencia_alineada":
+        texto = f"La tendencia de fondo y la del día van {_HACIA[direccion]}."
+    elif fase == "correccion_con_fuerza":
+        texto = (f"Hoy {_SUBE[direccion]} con fuerza, contra la tendencia de fondo, "
+                 f"que sigue {_HACIA[fondo]}.")
+    elif fase == "correccion":
+        texto = (f"Corrige dentro de una tendencia {_TENDENCIA[direccion]}: se vigila "
+                 f"{_VIGILA[direccion]} para retomar.")
+    elif fase == "sin_ancla":
+        texto = f"Hoy {_SUBE[direccion]}, pero la tendencia de fondo todavía no define dirección."
+    else:
+        texto = (f"La lectura de la hora va {_HACIA[direccion]}, pero falta información "
+                 "para contrastarla con la tendencia de fondo.")
+    if sin_recorrido:
+        texto += " Ojo: ya recorrió buena parte de su movimiento típico del día."
+    return texto
+
+
+def _faltantes(h1: dict[str, Any], d1: dict[str, Any], p: float | None) -> list[str]:
+    """Los campos que impiden una lectura completa, con el marco de cada uno."""
+    faltan = [f"h1.{c}" for c in ("adx_14", "donchian_50_high", "donchian_50_low") if _num(h1, c) is None]
+    bordes = _num(h1, "donchian_50_high") is not None and _num(h1, "donchian_50_low") is not None
+    if p is None and bordes:
+        faltan.append("h1.donchian_50 sin ancho")
+    faltan += [f"d1.{c}" for c in ("price", "ema_50", "ema_100") if _num(d1, c) is None]
+    return faltan
+
+
+def leer_direccion(
+    h1: dict[str, Any],
+    d1: dict[str, Any],
+    previa: str | None = None,
+    *,
+    hoy: str | None = None,
+) -> LecturaDireccion:
+    """La dirección de cuatro ejes. Gana la primera rama que calce (spec §3.1).
+
+    `previa` es el `eje2` de la lectura anterior (ALCISTA o BAJISTA), nunca la
+    `direccion`, que puede ser LATERAL. La función no guarda estado.
+    `hoy` (fecha ISO de Santiago) activa la regla de `fecha_barra` del consumo.
+    """
+    if previa is not None and previa not in (ALCISTA, BAJISTA):
+        raise ValueError(f"previa tiene que ser ALCISTA o BAJISTA (el eje2), no {previa!r}")
+    u = umbrales()
+    dia = eje_dia(h1, previa)
+    p = posicion_canal(h1)
+    adx = _num(h1, "adx_14")
+    fondo = eje_fondo(d1)
+    consumo = consumo_diario(d1, hoy)
+    sin_rec = consumo is not None and consumo >= u["consumo_sin_recorrido"]
+    ejes: dict[str, Any] = {"fondo": fondo, "dia": dia, "p": p, "adx": adx, "consumo": consumo}
+
+    def lectura(direccion: str, conviccion: str | None, fase: str) -> LecturaDireccion:
+        return LecturaDireccion(
+            direccion=direccion, conviccion=conviccion, fase=fase,
+            sin_recorrido=sin_rec, eje2=dia,
+            motivo=_motivo(direccion, fase, fondo, sin_rec), ejes=ejes,
+        )
+
+    faltan = _faltantes(h1, d1, p)
+    if faltan:                                                     # rama 0
+        ejes["faltan"] = faltan
+        return lectura(dia, "debil", "datos_incompletos")
+    if adx < u["adx_rango"] and u["p_rango_min"] <= p <= u["p_rango_max"]:   # rama 1
+        return lectura(LATERAL, None, "rango")
+    if fondo == TRANSICION:                                        # rama 4
+        return lectura(dia, "debil", "sin_ancla")
+    if fondo == dia:                                               # rama 2
+        if adx >= u["adx_fuerza"]:
+            conviccion = "fuerte" if canal_confirma(dia, p) else "moderada"
+        elif adx >= u["adx_rango"]:
+            conviccion = "moderada"
+        else:
+            conviccion = "debil"
+        return lectura(dia, conviccion, "tendencia_alineada")
+    if adx >= u["adx_fuerza"]:                                     # rama 3a
+        return lectura(dia, "moderada", "correccion_con_fuerza")
+    return lectura(fondo, "debil", "correccion")                   # rama 3b
