@@ -6,10 +6,12 @@ indicador distinto:
 
 - el de avisos, del **VIX**, la volatilidad que el mercado espera para el S&P 500.
   Es el termómetro de cautela de toda la sesión, no de un activo;
-- el de divisas, del **DXY**, el dólar contra una canasta de seis monedas.
+- el de divisas, del **DXY**, el dólar contra una canasta de seis monedas;
+- el de índices, del **VXN**, la volatilidad esperada del Nasdaq 100. Es distinto
+  del VIX de avisos y se liga directo al US100.
 
 Ninguno de los dos es un símbolo del broker, así que no salen de MT5. La fuente
-es yfinance, con los tickers oficiales (`^VIX` de Cboe y `DX-Y.NYB` de ICE). Para
+es yfinance, con los tickers oficiales (`^VIX` y `^VXN` de Cboe, `DX-Y.NYB` de ICE). Para
 estas series yfinance entrega el cierre diario y la barra del día en curso, así
 que la última observación es la de hoy mientras el mercado está abierto.
 
@@ -26,6 +28,7 @@ from typing import Any
 TICKERS_YF: dict[str, str] = {
     "VIX": "^VIX",
     "DXY": "DX-Y.NYB",
+    "VXN": "^VXN",
 }
 
 

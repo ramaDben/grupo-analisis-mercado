@@ -149,7 +149,14 @@ CONFIG_MACRO_GRUPOS: dict[str, dict[str, Any]] = {
             "Cifras de empleo y manufactura modulan las expectativas de recortes de tasas de la Reserva Federal "
             "e impactan directamente en el Nasdaq 100 y S&P 500."
         ),
+        # Indices lee el VXN (2026-09-28): compartia el bono a 10 anos con
+        # metales. Si su fuente no responde cae al bono, con la lectura de tasas.
         "lectura": {
+            "sube": "más cautela con las tecnológicas: presión sobre el Nasdaq 100.",
+            "baja": "vuelve el apetito por las tecnológicas: alivio para el Nasdaq 100.",
+            "lateral": "volatilidad estable: el Nasdaq 100 se mueve por los datos del día.",
+        },
+        "lectura_respaldo": {
             "sube": "presión sobre la bolsa, sobre todo en el Nasdaq 100.",
             "baja": "alivio para la bolsa, sobre todo en el Nasdaq 100.",
             "lateral": "sin presión nueva desde las tasas sobre la bolsa.",
@@ -499,6 +506,7 @@ def _hora_chile(momento: datetime) -> str:
 ROTULOS_INDICE: dict[str, str] = {
     "VIX": "VIX, el índice de volatilidad de Wall Street",
     "DXY": "Dólar global (DXY)",
+    "VXN": "VXN, la volatilidad del Nasdaq 100",
 }
 
 
@@ -899,21 +907,24 @@ DRIVERS_SOBERANOS: dict[str, dict[str, Any]] = {
         ],
     },
     "04_indices_bursatiles": {
-        "serie": "DGS10",
-        "chip_pais": "RENTA VARIABLE EE.UU.",
-        "indicador": "Rendimiento Bono 10Y (UST 10Y)",
-        "sufijo_periodo": "tasa soberana",
-        "titular_sube": "El bono a 10 años sube y encarece el descuento de las tecnológicas",
-        "titular_baja": "El bono a 10 años cede y alivia la valoración de las tecnológicas",
-        "titular_plano": "El bono a 10 años se mantiene y deja la valoración sin presión nueva",
+        "serie": "VXN",
+        "tipo": "indice",
+        "umbral_mov": 2.0,
+        "decimales_var": 1,
+        "chip_pais": "VOLATILIDAD · NASDAQ 100",
+        "indicador": "VXN · volatilidad del Nasdaq 100",
+        "sufijo_periodo": "cautela con las tecnológicas",
+        "titular_sube": "El VXN sube: más cautela con las tecnológicas",
+        "titular_baja": "El VXN cede: vuelve el apetito por las tecnológicas",
+        "titular_plano": "El VXN se mantiene: la cautela con las tecnológicas no cambia",
         "significado": (
-            "El bono a 10 años es la tasa con que el mercado descuenta las ganancias futuras. "
-            "Si sube, las empresas que prometen crecimiento lejano valen menos hoy."
+            "El VXN mide cuánto movimiento espera el mercado en el Nasdaq 100 para el próximo "
+            "mes. Cuando sube hay más cautela con las tecnológicas; cuando baja, más apetito."
         ),
-        "sello": "U.S. Department of the Treasury · FRED · Grupo Inteligencia",
+        "sello": "Cboe · Grupo Inteligencia",
         "activos": [
-            ("Nasdaq 100", -1, "es el índice más sensible a la tasa de descuento"),
-            ("Dow Jones", 1, "pesa menos crecimiento futuro y más caja presente"),
+            ("Nasdaq 100", -1, "cae cuando crece la cautela con las tecnológicas"),
+            ("S&P 500", -1, "acompaña al Nasdaq, con menos fuerza"),
         ],
     },
     "05_acciones_etfs": {

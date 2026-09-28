@@ -36,6 +36,11 @@ def test_el_dxy_se_pide_con_el_indice_oficial_de_ice():
     assert pedidos == ["DX-Y.NYB"]
 
 
+def test_el_vxn_se_pide_con_el_indice_oficial_de_cboe():
+    pedidos = []
+    ir.serie_diaria("VXN", 15, descargar=lambda t: pedidos.append(t) or _cierres())
+    assert pedidos == ["^VXN"]
+
 def test_una_fuente_caida_devuelve_vacio_y_no_lanza():
     def cae(ticker):
         raise OSError("sin red")

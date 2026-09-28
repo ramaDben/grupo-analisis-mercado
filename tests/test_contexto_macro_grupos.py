@@ -733,9 +733,10 @@ def test_la_imagen_termina_en_la_cotizacion_en_vivo(tmp_path, monkeypatch):
 from datetime import date as _date  # noqa: E402
 
 
-def _indices(monkeypatch, vix=(15.0, 16.2), dxy=(100.97, 101.18), hoy=_date(2026, 9, 1)):
+def _indices(monkeypatch, vix=(15.0, 16.2), dxy=(100.97, 101.18), vxn=(20.0, 21.0),
+             hoy=_date(2026, 9, 1)):
     def falso(codigo, n=15, descargar=None):
-        par = {"VIX": vix, "DXY": dxy}.get(codigo)
+        par = {"VIX": vix, "DXY": dxy, "VXN": vxn}.get(codigo)
         if par is None:
             return []
         base = [(_date(2026, 8, 1 + i), par[0]) for i in range(n - 2)]
@@ -753,6 +754,38 @@ def test_los_tres_canales_del_dia_llevan_imagenes_distintas(tmp_path, monkeypatc
                    for g in ("01_macro_y_apertura", "02_forex_divisas", "03_commodities_materias_primas")]
     assert len(set(indicadores)) == 3, indicadores
     assert "VIX" in indicadores[0] and "DXY" in indicadores[1] and "10Y" in indicadores[2]
+
+
+def test_indices_no_repite_la_imagen_del_bono_de_metales(tmp_path, monkeypatch):
+    """El canal de indices compartia el bono a 10 anos con metales. Ahora cuelga
+    del VXN, la volatilidad del Nasdaq 100, que es distinta del VIX de avisos."""
+    monkeypatch.setattr(cmg, "TREASURY_FED_DATA_PATH", _escribir_treasury(
+        tmp_path, {"2026-08-27": 4.70, "2026-08-28": 4.73}))
+    _indices(monkeypatch)
+    indicadores = {g: cmg.construir_payload_story_macro(g, [], 3.0, _AHORA)["indicador"]
+                   for g in ("01_macro_y_apertura", "03_commodities_materias_primas",
+                             "04_indices_bursatiles")}
+    assert "VXN" in indicadores["04_indices_bursatiles"]
+    assert len(set(indicadores.values())) == 3, indicadores
+
+
+def test_el_texto_de_indices_lee_el_vxn_con_su_lectura(monkeypatch):
+    _curva(monkeypatch, 5.0)
+    _indices(monkeypatch, vxn=(20.0, 21.0))
+    txt = _macro_de("04_indices_bursatiles")
+    assert "VXN" in txt and "21,00" in txt and "+5,0% hoy" in txt
+    assert cmg.CONFIG_MACRO_GRUPOS["04_indices_bursatiles"]["lectura"]["sube"] in txt
+
+
+def test_indices_sin_vxn_cae_al_bono_con_la_lectura_de_tasas(tmp_path, monkeypatch):
+    monkeypatch.setattr(cmg, "TREASURY_FED_DATA_PATH", _escribir_treasury(
+        tmp_path, {"2026-08-27": 4.70, "2026-08-28": 4.73}))
+    _curva(monkeypatch, 5.0)
+    monkeypatch.setattr(cmg, "serie_diaria", lambda *a, **k: [])
+    assert "10Y" in cmg.construir_payload_story_macro("04_indices_bursatiles", [], 3.0, _AHORA)["indicador"]
+    txt = _macro_de("04_indices_bursatiles")
+    assert "VXN" not in txt
+    assert cmg.CONFIG_MACRO_GRUPOS["04_indices_bursatiles"]["lectura_respaldo"]["sube"] in txt
 
 
 def test_el_texto_de_avisos_lee_el_vix_en_porcentaje_y_con_su_lectura(monkeypatch):
