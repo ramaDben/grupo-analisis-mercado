@@ -150,62 +150,62 @@ html, body {
 .cabecera { display: flex; justify-content: space-between; align-items: flex-start; }
 
 .sello {
-  font-family: var(--font-display); font-weight: 700; font-size: 14px;
+  font-family: var(--font-display); font-weight: 700; font-size: 22px;
   letter-spacing: 0.10em; text-transform: uppercase; color: var(--acento);
   background: color-mix(in srgb, var(--fondo-acento) 85%, var(--fondo)); border: 1.5px solid var(--acento);
-  border-radius: 999px; padding: 6px 18px;
+  border-radius: 999px; padding: 10px 26px;
 }
 
-.fecha { font-size: 15px; font-weight: 600; color: var(--texto-2); letter-spacing: 0.05em; }
+.fecha { font-size: 24px; font-weight: 600; color: var(--texto-2); letter-spacing: 0.05em; }
 
 .titulo {
-  font-family: var(--font-display); font-weight: 700; font-size: 38px;
-  color: var(--blanco); margin: 10px 0 0; letter-spacing: -0.01em;
+  font-family: var(--font-display); font-weight: 700; font-size: 68px;
+  color: var(--blanco); margin: 18px 0 0; letter-spacing: -0.01em;
 }
 
 .subtitulo {
-  font-family: var(--font-sans); font-weight: 400; font-size: 18px;
-  color: var(--texto-borde); margin: 6px 0 0;
+  font-family: var(--font-sans); font-weight: 400; font-size: 30px;
+  color: var(--texto-borde); margin: 10px 0 0;
 }
 
 .tabla-eventos {
-  margin-top: 18px;
-  display: flex; flex-direction: column; gap: 10px;
+  margin-top: 28px;
+  display: flex; flex-direction: column; gap: 16px;
   flex: 1; justify-content: center;
 }
 
 .fila-evento {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 24px; border-radius: 18px;
+  padding: 20px 34px; border-radius: 22px;
   background: color-mix(in srgb, var(--fondo-acento) 75%, var(--fondo));
   border: 1.5px solid color-mix(in srgb, var(--acento) 25%, transparent);
   backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
 }
 
 .ev-num {
-  font-family: var(--font-display); font-weight: 700; font-size: 18px;
-  color: var(--acento); width: 36px;
+  font-family: var(--font-display); font-weight: 700; font-size: 34px;
+  color: var(--acento); width: 64px;
 }
 .ev-dia-hora {
-  display: flex; flex-direction: column; width: 150px;
+  display: flex; flex-direction: column; width: 250px;
 }
-.ev-dia { font-weight: 700; font-size: 14px; text-transform: uppercase; color: var(--blanco); }
-.ev-hora { font-weight: 600; font-size: 13px; color: var(--texto-2); margin-top: 2px; }
+.ev-dia { font-weight: 700; font-size: 26px; text-transform: uppercase; color: var(--blanco); }
+.ev-hora { font-weight: 600; font-size: 22px; color: var(--texto-2); margin-top: 2px; }
 
 .ev-info { flex: 1; padding: 0 24px; }
-.ev-nombre { font-weight: 700; font-size: 17px; color: var(--blanco); }
-.ev-pais { font-size: 13px; color: var(--texto-2); margin-top: 2px; }
+.ev-nombre { font-weight: 700; font-size: 31px; line-height: 1.2; color: var(--blanco); }
+.ev-pais { font-size: 20px; color: var(--texto-2); margin-top: 2px; }
 
 .ev-datos {
-  display: flex; gap: 24px; align-items: center;
+  display: flex; gap: 32px; align-items: center;
 }
-.ev-stat { display: flex; flex-direction: column; text-align: right; min-width: 90px; }
-.ev-stat-label { font-size: 11px; text-transform: uppercase; color: var(--texto-2); font-weight: 600; }
-.ev-stat-val { font-family: var(--font-display); font-weight: 700; font-size: 17px; color: var(--blanco); margin-top: 2px; }
+.ev-stat { display: flex; flex-direction: column; text-align: right; min-width: 150px; }
+.ev-stat-label { font-size: 17px; text-transform: uppercase; color: var(--texto-2); font-weight: 600; }
+.ev-stat-val { font-family: var(--font-display); font-weight: 700; font-size: 32px; color: var(--blanco); margin-top: 2px; }
 
 .tag-impacto {
-  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
-  padding: 4px 12px; border-radius: 999px;
+  font-size: 17px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+  padding: 8px 18px; border-radius: 999px;
   background: color-mix(in srgb, var(--baja) 20%, transparent); color: var(--baja); border: 1px solid var(--baja);
 }
 
@@ -214,8 +214,8 @@ html, body {
   display: flex; justify-content: space-between; align-items: center;
   padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.15);
 }
-.footer-marca { font-family: var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: 0.08em; color: var(--acento); }
-.footer-cta { font-family: var(--font-sans); font-weight: 600; font-size: 14px; color: var(--texto-2); margin: 0; }
+.footer-marca { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: 0.08em; color: var(--acento); }
+.footer-cta { font-family: var(--font-sans); font-weight: 600; font-size: 22px; color: var(--texto-2); margin: 0; }
 
 /* ══════════ FORMATO VERTICAL 9:16 (1080×1920) ══════════ */
 @media (max-aspect-ratio: 1/1) {
