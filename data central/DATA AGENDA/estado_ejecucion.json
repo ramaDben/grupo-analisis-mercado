@@ -1,7 +1,9 @@
 {
-  "ultima_ejecucion_utc": "2026-09-07T13:47:33.289830+00:00",
+  "ultima_ejecucion_utc": "2026-09-28T14:21:46.742816+00:00",
   "hay_novedades": true,
   "novedades_detalle": [
+    "Datos actualizados en Chile (Imacec / TPM / Posición Forward)",
+    "Datos actualizados en Commodities (Cobre / WTI / Brent / Oro)",
     "Datos actualizados en Japón (Banco de Japón / IPC / JGB / USD-JPY)"
   ],
   "status_por_fuente": {
@@ -13,10 +15,10 @@
   },
   "errores_por_fuente": {},
   "hashes_canonicos": {
-    "usa": "3e358c393b28a5defcd0abd65dfe1d390423549fd149e4f18d0c3e261b48e0fe",
-    "chile": "9d49ab6b70b6f0fa3e987fd9c094f018a408c69bead58877103b9ff761ddacb2",
-    "europa_uk": "0670a2fe73cef21b91cffcc21b58a28239f9a071131d92975b142c2b99d06a42",
-    "commodities": "13b69975706b42a26d648771d910c7b295940be30576d73de2f5d3f6e5a58835",
-    "japon": "5deebd0d7480e4d1a7808b6231eec78aecdca71b6fc8a64b4df54ebb93e42654"
+    "usa": "dc6dcf42d928a4aa35e8189b6343646e69c2c344d5fb0c90c9b24bf18821b2d2",
+    "chile": "0b84a3fb438c094c0f11dfae067c7e2a2e571896bf3006971e621fb7fecbec30",
+    "europa_uk": "597a7b73af495bbf906bb12e019540a4a35469c1b02f40dc343d4e8ac55f43ca",
+    "commodities": "f32a6b7ebd9099131a48ec8a60b6c0247630c8b4f0b4786b6529acd0cbd88738",
+    "japon": "b5380910ca0e338e5828f6f251985224ba99a8cd946cabdcec4a41ed98d81a1e"
   }
 }
