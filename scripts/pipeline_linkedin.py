@@ -705,7 +705,10 @@ def normalizar_markdown(texto: str) -> str:
         limpia = linea.strip()
         if lineas and limpia.startswith(_INICIO_LISTA) and not linea.startswith("    "):
             previa = lineas[-1].strip()
-            if previa and not previa.startswith(_INICIO_LISTA):
+            # También cuando cambia el tipo de lista: un "1." pegado a una lista
+            # de "-" se lee como continuación del último punto.
+            cambia_tipo = previa.startswith("- ") != limpia.startswith("- ")
+            if previa and (not previa.startswith(_INICIO_LISTA) or cambia_tipo):
                 lineas.append("")
         lineas.append(linea)
     return "\n".join(lineas)

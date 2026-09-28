@@ -299,6 +299,10 @@ def test_normalizar_separa_listas_pegadas_y_escapa_hashtags():
     assert "<li>Titular: Hola</li>" in html
     assert "<h1>" not in html
 
+    texto = "- Titular: Tres claves\n1. **Primera:** algo\n2. **Segunda:** otra"
+    html = markdown.markdown(pl.normalizar_markdown(texto), extensions=["tables", "sane_lists"])
+    assert "<ol>" in html and html.count("<li>") == 3
+
 
 # ------------------------------------------------------------ contratos
 
