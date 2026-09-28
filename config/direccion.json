@@ -21,6 +21,7 @@
     "bootstrap_semilla": {"valor": 20260928, "origen": "Semilla fija para que el informe sea reproducible."},
     "nivel_confianza": {"valor": 0.95, "origen": "Spec 5.6: intervalo del 95 %."},
     "cierre_bolsa_ny": {"valor": "16:00", "clases": ["indices"], "origen": "Cierre de la bolsa de Nueva York: el horizonte de los indices se corta ahi (spec 5.5)."},
+    "sensibilidad_hueco_horas": {"valor": 2, "origen": "Revision final de la fase 1: el veredicto principal exige un horizonte contiguo, lo que saca la tarde de metales y energia por la pausa diaria de 1 h de las 17:00 NY. La corrida de sensibilidad tolera ese hueco para mostrar si el veredicto depende de la regla."},
     "serie_prueba_zona": {"valor": "US100", "origen": "Spec 5.4: la moda mensual de la vela de mayor volumen del US100 verifica la zona horaria."},
     "series": {
       "XAUUSD": {"clase": "forex_commodities"},

@@ -383,3 +383,76 @@ def test_medicion_de_punta_a_punta_sobre_series_sinteticas(tmp_path, monkeypatch
     assert resultado["por_activo"]["XAUUSD"]["n_votos"] > 0
     md_path, _ = md.escribir_informe(resultado, tmp_path / "salida")
     assert "Veredicto" in md_path.read_text(encoding="utf-8")
+
+
+def test_el_cierre_de_t_no_entra_a_sus_propios_indicadores():
+    """Anti fuga en t mismo: alterar solo la vela t cambia price y rango_hoy, nada más."""
+    h1 = ohlc_aleatorio(400)
+    d1 = ohlc_aleatorio(200, semilla=3).assign(time=pd.date_range("2024-09-01", periods=200, freq="D"))
+    i = 300
+
+    def leer(h1x):
+        j = md.indice_d1_cerrado(h1x["time"], d1["time"])[i]
+        return md.dicts_en(i, h1x, md.indicadores(h1x), md.rango_hoy_intradia(h1x), d1, md.indicadores(d1), j)
+
+    h1b, d1b = leer(h1)
+    h1_mod = h1.copy()
+    h1_mod.loc[i, "close"] += 50.0
+    h1_mod.loc[i, "high"] += 60.0
+    h1m, d1m = leer(h1_mod)
+    assert h1m["price"] != h1b["price"] and d1m["rango_hoy"] != d1b["rango_hoy"]
+    assert {k: v for k, v in h1m.items() if k != "price"} == {k: v for k, v in h1b.items() if k != "price"}
+    assert {k: v for k, v in d1m.items() if k not in ("price", "rango_hoy")} == \
+           {k: v for k, v in d1b.items() if k not in ("price", "rango_hoy")}
+
+
+def test_tolerancia_de_hueco_acepta_una_pausa_corta():
+    """La sensibilidad: con tolerancia de 2 h, el horizonte que cruza una vela ausente sí vota."""
+    h1, d1 = _serie_mercado(260, 0.01)
+    lec = md.lecturas(h1, d1, "forex_commodities")
+    fila = lec[lec["vota"]].iloc[5]
+    i = int(fila.name)
+    con_hueco = h1.drop(index=i + 2).reset_index(drop=True)
+    estricta = md.lecturas(con_hueco, d1, "forex_commodities")
+    tolerante = md.lecturas(con_hueco, d1, "forex_commodities", tolerancia_hueco_h=2)
+    assert not estricta.loc[estricta["t_ny"] == fila["t_ny"], "vota"].iloc[0]
+    assert tolerante.loc[tolerante["t_ny"] == fila["t_ny"], "vota"].iloc[0]
+
+
+def test_el_informe_declara_donde_cae_la_muestra_y_la_sensibilidad(tmp_path):
+    base = _resumen()
+    resultado = {
+        "generado": "2026-09-28 10:00", "zona": {"extraccion": {}, "moda_volumen": {}},
+        "por_activo": {"XAUUSD": {**base, "descartes": {}, "paridad_ema100_atr": 0.01,
+                                  "fuera_de_sesion": {"n_votos": 0},
+                                  "por_hora_ny": {"09:00": {"votan": 300, "horizonte_con_hueco": 0},
+                                                  "14:00": {"votan": 10, "horizonte_con_hueco": 290}}}},
+        "total": base, "adopcion": md.evaluar_adopcion(base, {"XAUUSD": base}),
+        "sensibilidad_hueco": {"tolerancia_horas": 2, "n_votos": 1500,
+                               "adopcion": md.evaluar_adopcion(base, {})},
+    }
+    texto = md.escribir_informe(resultado, tmp_path)[0].read_text(encoding="utf-8")
+    assert "Dónde cae la muestra" in texto and "| 14:00 | 10 | 290 |" in texto
+    assert "Sensibilidad" in texto and "1500" in texto
+
+
+def test_medir_guarda_la_hora_de_la_muestra_y_la_sensibilidad(tmp_path):
+    inicio = datetime(2024, 1, 8, 5, tzinfo=timezone.utc)
+    horas = 24 * 260
+    h1 = serie_h1(inicio, horas)
+    ultima = inicio + timedelta(hours=horas - 1)
+    while ultima.astimezone(NY).weekday() >= 5:
+        ultima -= timedelta(hours=1)
+    as_of = (ultima + timedelta(minutes=20)).isoformat()
+    d1 = (h1.assign(fecha=h1["time"].dt.normalize()).groupby("fecha")
+            .agg(open=("open", "first"), high=("high", "max"), low=("low", "min"),
+                 close=("close", "last"), tick_volume=("tick_volume", "sum"))
+            .reset_index().rename(columns={"fecha": "time"}))
+    for s in ("US100", "XAUUSD"):
+        escribir_serie(tmp_path, s, "H1", h1, as_of_utc=as_of)
+        escribir_serie(tmp_path, s, "D1", d1, as_of_utc=as_of)
+    r = md.medir(["XAUUSD", "US100"], tmp_path)
+    horas_x = r["por_activo"]["XAUUSD"]["por_hora_ny"]
+    assert sum(v["votan"] for v in horas_x.values()) == r["por_activo"]["XAUUSD"]["n_votos"]
+    assert r["sensibilidad_hueco"]["tolerancia_horas"] == md.valor("sensibilidad_hueco_horas")
+    assert "adopta" in r["sensibilidad_hueco"]["adopcion"]

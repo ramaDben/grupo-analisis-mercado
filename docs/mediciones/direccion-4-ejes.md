@@ -1,6 +1,6 @@
 # Medición: dirección de cuatro ejes contra la EMA 50
 
-Generado 2026-09-28 08:55 (hora Chile) por `scripts/medir_direccion.py`. Spec: `docs/superpowers/specs/2026-09-28-direccion-4-ejes-design.md`, §5. Umbrales fijos de `config/direccion.json`: no se ajustaron mirando este resultado.
+Generado 2026-09-28 09:05 (hora Chile) por `scripts/medir_direccion.py`. Spec: `docs/superpowers/specs/2026-09-28-direccion-4-ejes-design.md`, §5. Umbrales fijos de `config/direccion.json`: no se ajustaron mirando este resultado.
 
 ## Adopción
 
@@ -26,6 +26,24 @@ Activos disidentes (conservan la EMA 50): ninguno. Con menos de 500 instantes, r
 | COPPER | 2670 | 833 | 49.6 | 48.2 | 1.4 [-0.9, 3.7] | 8.5 / 11.2 | 0.003 |
 | USDIDX | 2437 | 493 | 49.3 | 49.0 | 0.3 [-2.2, 2.8] | 8.2 / 11.4 | 0.008 |
 | BRENT | 761 | 129 | 54.7 | 55.6 | -0.9 [-4.6, 2.9] | 6.3 / 8.5 | 0.007 |
+
+## Dónde cae la muestra
+
+El horizonte de 4 velas tiene que ser contiguo. En los activos con pausa diaria (oro y petróleo a las 17:00 NY) o sesión corta (USD/CLP), eso descarta las velas de la tarde: **el veredicto describe sobre todo la mañana**. Por hora NY de cierre, sumando todos los activos:
+
+| Hora NY | Votan | Descartadas por hueco |
+|---|---|---|
+| 08:00 | 2890 | 118 |
+| 09:00 | 2955 | 161 |
+| 10:00 | 3542 | 468 |
+| 11:00 | 3056 | 945 |
+| 12:00 | 2342 | 1553 |
+| 13:00 | 1651 | 2277 |
+| 14:00 | 373 | 2827 |
+| 15:00 | 0 | 2651 |
+| 16:00 | 0 | 1926 |
+
+**Sensibilidad:** tolerando hasta 2 h de hueco en el horizonte votan 19158 instantes y el veredicto es **no se adopta** (1 cumple, 2 no cumple, 3 cumple, 4 no cumple).
 
 ## Fuera de sesión (no vota)
 

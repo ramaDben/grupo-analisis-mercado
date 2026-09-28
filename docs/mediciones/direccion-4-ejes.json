@@ -1,5 +1,5 @@
 {
-  "generado": "2026-09-28 08:55",
+  "generado": "2026-09-28 09:05",
   "zona": {
     "extraccion": {
       "XAUUSD": {
@@ -143,7 +143,45 @@
           "fuerte": 52.35336712527155
         }
       },
-      "paridad_ema100_atr": 0.0016810336264602844
+      "paridad_ema100_atr": 0.0016810336264602844,
+      "por_hora_ny": {
+        "08:00": {
+          "votan": 432,
+          "horizonte_con_hueco": 0
+        },
+        "09:00": {
+          "votan": 433,
+          "horizonte_con_hueco": 0
+        },
+        "10:00": {
+          "votan": 431,
+          "horizonte_con_hueco": 2
+        },
+        "11:00": {
+          "votan": 427,
+          "horizonte_con_hueco": 6
+        },
+        "12:00": {
+          "votan": 413,
+          "horizonte_con_hueco": 20
+        },
+        "13:00": {
+          "votan": 319,
+          "horizonte_con_hueco": 114
+        },
+        "14:00": {
+          "votan": 105,
+          "horizonte_con_hueco": 326
+        },
+        "15:00": {
+          "votan": 0,
+          "horizonte_con_hueco": 427
+        },
+        "16:00": {
+          "votan": 0,
+          "horizonte_con_hueco": 413
+        }
+      }
     },
     "WTI": {
       "n_votos": 2447,
@@ -217,7 +255,45 @@
           "fuerte": 47.81704781704782
         }
       },
-      "paridad_ema100_atr": 0.007628271371706561
+      "paridad_ema100_atr": 0.007628271371706561,
+      "por_hora_ny": {
+        "08:00": {
+          "votan": 436,
+          "horizonte_con_hueco": 0
+        },
+        "09:00": {
+          "votan": 436,
+          "horizonte_con_hueco": 0
+        },
+        "10:00": {
+          "votan": 433,
+          "horizonte_con_hueco": 3
+        },
+        "11:00": {
+          "votan": 429,
+          "horizonte_con_hueco": 7
+        },
+        "12:00": {
+          "votan": 403,
+          "horizonte_con_hueco": 33
+        },
+        "13:00": {
+          "votan": 310,
+          "horizonte_con_hueco": 126
+        },
+        "14:00": {
+          "votan": 0,
+          "horizonte_con_hueco": 434
+        },
+        "15:00": {
+          "votan": 0,
+          "horizonte_con_hueco": 430
+        },
+        "16:00": {
+          "votan": 0,
+          "horizonte_con_hueco": 404
+        }
+      }
     },
     "US100": {
       "n_votos": 1792,
@@ -292,7 +368,37 @@
           "fuerte": 53.87722132471728
         }
       },
-      "paridad_ema100_atr": 0.001580490397602875
+      "paridad_ema100_atr": 0.001580490397602875,
+      "por_hora_ny": {
+        "10:00": {
+          "votan": 451,
+          "horizonte_con_hueco": 14
+        },
+        "11:00": {
+          "votan": 447,
+          "horizonte_con_hueco": 17
+        },
+        "12:00": {
+          "votan": 447,
+          "horizonte_con_hueco": 17
+        },
+        "13:00": {
+          "votan": 447,
+          "horizonte_con_hueco": 16
+        },
+        "14:00": {
+          "votan": 0,
+          "horizonte_con_hueco": 0
+        },
+        "15:00": {
+          "votan": 0,
+          "horizonte_con_hueco": 0
+        },
+        "16:00": {
+          "votan": 0,
+          "horizonte_con_hueco": 0
+        }
+      }
     },
     "USDCLP": {
       "n_votos": 4142,
@@ -367,7 +473,45 @@
           "fuerte": 42.10526315789473
         }
       },
-      "paridad_ema100_atr": 0.004641360725022903
+      "paridad_ema100_atr": 0.004641360725022903,
+      "por_hora_ny": {
+        "08:00": {
+          "votan": 573,
+          "horizonte_con_hueco": 115
+        },
+        "09:00": {
+          "votan": 638,
+          "horizonte_con_hueco": 157
+        },
+        "10:00": {
+          "votan": 939,
+          "horizonte_con_hueco": 280
+        },
+        "11:00": {
+          "votan": 806,
+          "horizonte_con_hueco": 404
+        },
+        "12:00": {
+          "votan": 567,
+          "horizonte_con_hueco": 538
+        },
+        "13:00": {
+          "votan": 351,
+          "horizonte_con_hueco": 789
+        },
+        "14:00": {
+          "votan": 268,
+          "horizonte_con_hueco": 778
+        },
+        "15:00": {
+          "votan": 0,
+          "horizonte_con_hueco": 847
+        },
+        "16:00": {
+          "votan": 0,
+          "horizonte_con_hueco": 598
+        }
+      }
     },
     "COPPER": {
       "n_votos": 2670,
@@ -442,7 +586,41 @@
           "fuerte": 47.3604826546003
         }
       },
-      "paridad_ema100_atr": 0.003303299990086523
+      "paridad_ema100_atr": 0.003303299990086523,
+      "por_hora_ny": {
+        "08:00": {
+          "votan": 827,
+          "horizonte_con_hueco": 2
+        },
+        "09:00": {
+          "votan": 827,
+          "horizonte_con_hueco": 2
+        },
+        "10:00": {
+          "votan": 675,
+          "horizonte_con_hueco": 160
+        },
+        "11:00": {
+          "votan": 341,
+          "horizonte_con_hueco": 495
+        },
+        "12:00": {
+          "votan": 0,
+          "horizonte_con_hueco": 835
+        },
+        "13:00": {
+          "votan": 0,
+          "horizonte_con_hueco": 836
+        },
+        "14:00": {
+          "votan": 0,
+          "horizonte_con_hueco": 677
+        },
+        "15:00": {
+          "votan": 0,
+          "horizonte_con_hueco": 342
+        }
+      }
     },
     "USDIDX": {
       "n_votos": 2437,
@@ -517,7 +695,45 @@
           "fuerte": 48.275862068965516
         }
       },
-      "paridad_ema100_atr": 0.007708323732655193
+      "paridad_ema100_atr": 0.007708323732655193,
+      "por_hora_ny": {
+        "08:00": {
+          "votan": 493,
+          "horizonte_con_hueco": 1
+        },
+        "09:00": {
+          "votan": 492,
+          "horizonte_con_hueco": 2
+        },
+        "10:00": {
+          "votan": 485,
+          "horizonte_con_hueco": 8
+        },
+        "11:00": {
+          "votan": 481,
+          "horizonte_con_hueco": 12
+        },
+        "12:00": {
+          "votan": 387,
+          "horizonte_con_hueco": 106
+        },
+        "13:00": {
+          "votan": 99,
+          "horizonte_con_hueco": 392
+        },
+        "14:00": {
+          "votan": 0,
+          "horizonte_con_hueco": 484
+        },
+        "15:00": {
+          "votan": 0,
+          "horizonte_con_hueco": 480
+        },
+        "16:00": {
+          "votan": 0,
+          "horizonte_con_hueco": 386
+        }
+      }
     },
     "BRENT": {
       "n_votos": 761,
@@ -592,7 +808,45 @@
           "fuerte": 42.35807860262008
         }
       },
-      "paridad_ema100_atr": 0.007463252042457791
+      "paridad_ema100_atr": 0.007463252042457791,
+      "por_hora_ny": {
+        "08:00": {
+          "votan": 129,
+          "horizonte_con_hueco": 0
+        },
+        "09:00": {
+          "votan": 129,
+          "horizonte_con_hueco": 0
+        },
+        "10:00": {
+          "votan": 128,
+          "horizonte_con_hueco": 1
+        },
+        "11:00": {
+          "votan": 125,
+          "horizonte_con_hueco": 4
+        },
+        "12:00": {
+          "votan": 125,
+          "horizonte_con_hueco": 4
+        },
+        "13:00": {
+          "votan": 125,
+          "horizonte_con_hueco": 4
+        },
+        "14:00": {
+          "votan": 0,
+          "horizonte_con_hueco": 128
+        },
+        "15:00": {
+          "votan": 0,
+          "horizonte_con_hueco": 125
+        },
+        "16:00": {
+          "votan": 0,
+          "horizonte_con_hueco": 125
+        }
+      }
     }
   },
   "total": {
@@ -637,5 +891,18 @@
     "adopta": false,
     "disidentes": [],
     "sin_voto": []
+  },
+  "sensibilidad_hueco": {
+    "tolerancia_horas": 2,
+    "n_votos": 19158,
+    "adopcion": {
+      "c1": true,
+      "c2": false,
+      "c3": true,
+      "c4": false,
+      "adopta": false,
+      "disidentes": [],
+      "sin_voto": []
+    }
   }
 }

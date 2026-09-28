@@ -266,8 +266,13 @@ def _fila_sin_lectura(i: int, t: pd.Timestamp, motivo: str) -> dict[str, Any]:
             "fase": None, "ema50": None, "ema50_hist": None}
 
 
-def lecturas(h1: pd.DataFrame, d1: pd.DataFrame, clase: str) -> pd.DataFrame:
+def lecturas(h1: pd.DataFrame, d1: pd.DataFrame, clase: str, tolerancia_hueco_h: int = 0) -> pd.DataFrame:
     """Una fila por instante H1 medible, en orden, con su lectura y su futuro.
+
+    El horizonte son `h` velas, y por defecto tienen que ser contiguas: un hueco
+    (una vela ausente, el fin de semana, la pausa diaria) lo invalida.
+    `tolerancia_hueco_h` admite hasta esas horas de hueco, y la usa solo la
+    corrida de sensibilidad.
 
     El modelo encadena `previa = lectura.eje2` a lo largo de la serie; la EMA 50
     con histéresis encadena su propio lado. La EMA 50 sin histéresis (`ema50`) es
@@ -318,7 +323,8 @@ def lecturas(h1: pd.DataFrame, d1: pd.DataFrame, clase: str) -> pd.DataFrame:
             motivo = motivo or "sin_futuro"
         else:
             destino = t_ny.iat[i + h]
-            if pd.isna(destino) or destino - t_ny.iat[i] != pd.Timedelta(hours=h):
+            lapso = destino - t_ny.iat[i] if not pd.isna(destino) else None
+            if lapso is None or not (pd.Timedelta(hours=h) <= lapso <= pd.Timedelta(hours=h + tolerancia_hueco_h)):
                 motivo = motivo or "horizonte_con_hueco"
             elif atr_prev[i] > 0:
                 m = (close[i + h] - close[i]) / atr_prev[i]
@@ -491,6 +497,7 @@ def medir(series: list[str] | None = None, directorio: Path = DIR_SERIES) -> dic
         fuera = lec[~lec["en_sesion"] & lec["m"].notna()].assign(vota=True) if len(lec) else lec
         resumen["fuera_de_sesion"] = resumir(fuera)
         resumen["paridad_ema100_atr"] = _paridad_ema100(h1)
+        resumen["por_hora_ny"] = _por_hora(lec)
         por_activo[s] = resumen
         if resumen["n_votos"] >= minimo_votos:
             lecs.append(lec)
@@ -499,7 +506,44 @@ def medir(series: list[str] | None = None, directorio: Path = DIR_SERIES) -> dic
         "generado": datetime.now(SANTIAGO).strftime("%Y-%m-%d %H:%M"),
         "zona": zona, "por_activo": por_activo, "total": total,
         "adopcion": evaluar_adopcion(total, por_activo),
+        "sensibilidad_hueco": _sensibilidad_hueco(medibles, h1s, directorio),
     }
+
+
+def _por_hora(lec: pd.DataFrame) -> dict[str, dict[str, int]]:
+    """Por hora NY de cierre de vela, en sesion: cuantos votan y cuantos caen por hueco.
+
+    Declara donde cae la muestra: la contiguidad estricta del horizonte descarta
+    la tarde de los activos con pausa diaria, y el veredicto no puede leerse como
+    si cubriera la sesion entera sin decirlo.
+    """
+    if not len(lec):
+        return {}
+    en = lec[lec["en_sesion"]]
+    hora = (en["t_ny"] + pd.Timedelta(hours=1)).dt.strftime("%H:00")
+    tabla = pd.DataFrame({"hora": hora, "vota": en["vota"].astype(bool),
+                          "hueco": en["motivo"] == "horizonte_con_hueco"})
+    agrupado = tabla.groupby("hora").agg(votan=("vota", "sum"), horizonte_con_hueco=("hueco", "sum"))
+    return {h: {"votan": int(f.votan), "horizonte_con_hueco": int(f.horizonte_con_hueco)}
+            for h, f in agrupado.iterrows()}
+
+
+def _sensibilidad_hueco(medibles: list[str], h1s: dict[str, tuple[pd.DataFrame, dict[str, Any]]],
+                        directorio: Path) -> dict[str, Any]:
+    """El veredicto repetido tolerando huecos cortos en el horizonte. No decide nada."""
+    tol = int(valor("sensibilidad_hueco_horas"))
+    minimo_votos = int(valor("min_instantes_voto"))
+    por_activo: dict[str, dict[str, Any]] = {}
+    lecs: list[pd.DataFrame] = []
+    for s in medibles:
+        d1, _ = cargar_serie(s, "D1", directorio)
+        lec = lecturas(h1s[s][0], d1, cfg_medicion()["series"][s]["clase"], tolerancia_hueco_h=tol)
+        por_activo[s] = resumir(lec)
+        if por_activo[s]["n_votos"] >= minimo_votos:
+            lecs.append(lec)
+    total = resumir(pd.concat(lecs)) if lecs else {"n_votos": 0, "n_dias": 0}
+    return {"tolerancia_horas": tol, "n_votos": total["n_votos"],
+            "adopcion": evaluar_adopcion(total, por_activo)}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -577,6 +621,27 @@ def escribir_informe(resultado: dict[str, Any], salida: Path) -> tuple[Path, Pat
             f"{_pct(r['c3']['giros_modelo_100'])} / {_pct(r['c3']['giros_ema50_100'])} | "
             f"{r['paridad_ema100_atr']:.3f} |"
         )
+    lineas += ["", "## Dónde cae la muestra", "",
+               "El horizonte de 4 velas tiene que ser contiguo. En los activos con pausa diaria "
+               "(oro y petróleo a las 17:00 NY) o sesión corta (USD/CLP), eso descarta las velas "
+               "de la tarde: **el veredicto describe sobre todo la mañana**. Por hora NY de cierre, "
+               "sumando todos los activos:", "",
+               "| Hora NY | Votan | Descartadas por hueco |", "|---|---|---|"]
+    horas: dict[str, list[int]] = {}
+    for r in resultado["por_activo"].values():
+        for h, v in (r.get("por_hora_ny") or {}).items():
+            acum = horas.setdefault(h, [0, 0])
+            acum[0] += v["votan"]
+            acum[1] += v["horizonte_con_hueco"]
+    for h in sorted(horas):
+        lineas.append(f"| {h} | {horas[h][0]} | {horas[h][1]} |")
+    sens = resultado.get("sensibilidad_hueco")
+    if sens:
+        sa = sens["adopcion"]
+        lineas += ["", f"**Sensibilidad:** tolerando hasta {sens['tolerancia_horas']} h de hueco en el horizonte "
+                   f"votan {sens['n_votos']} instantes y el veredicto es "
+                   f"**{'se adopta' if sa['adopta'] else 'no se adopta'}** "
+                   f"(1 {_si(sa['c1'])}, 2 {_si(sa['c2'])}, 3 {_si(sa['c3'])}, 4 {_si(sa['c4'])})."]
     lineas += ["", "## Fuera de sesión (no vota)", "",
                "| Activo | Instantes | Modelo | EMA 50 |", "|---|---|---|---|"]
     for s, r in resultado["por_activo"].items():
