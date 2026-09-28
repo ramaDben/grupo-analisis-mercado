@@ -164,7 +164,7 @@ def _bps(valor: Any) -> str:
     if valor is None:
         return "no disponible"
     signo = "+" if valor > 0 else ""
-    return f"{signo}{valor:.0f} bps".replace(".", ",")
+    return f"{signo}{valor:.0f} puntos base".replace(".", ",")
 
 
 def filas_curva(curva: dict[str, Any]) -> list[dict[str, str]]:
