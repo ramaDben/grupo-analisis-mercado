@@ -1,0 +1,85 @@
+{
+  "_nota": "Registro de visiones de bancos y analistas que citan los carruseles de LinkedIn (scripts/pipeline_linkedin.py). Historia editorial: se versiona. Cada entrada se carga tras ABRIR la fuente, nunca desde un snippet de búsqueda. tipo: textual (frase exacta en español), traduccion (frase exacta traducida por nosotros), parafrasis (cifra o postura sin comillas). La fecha es la de publicación de la fuente, no la de carga.",
+  "visiones": [
+    {
+      "id": "btg-aguero-dolar-940",
+      "quien": "Juan Guillermo Agüero",
+      "institucion": "BTG Pactual Chile",
+      "activo": "USDCLP",
+      "tipo": "textual",
+      "cita": "Los inversionistas internacionales se guían por datos y por ahora están viendo un país que crece al 0,5%, muy vulnerable al precio del petróleo. (...) Eso explica que el dólar esté en $940.",
+      "fecha": "2026-09-14",
+      "fuente": "Diario Financiero",
+      "url": "https://www.linkedin.com/feed/update/urn:li:activity:7504639612892422144/",
+      "nota": "Fecha aproximada: LinkedIn la mostraba 'hace 2 semanas' el 2026-09-28. Frase transcrita de la lámina 2 del carrusel de DF; confirmar textual en la nota original."
+    },
+    {
+      "id": "bci-estudios-rango-850-970",
+      "quien": "Bci Estudios",
+      "institucion": "Bci",
+      "activo": "USDCLP",
+      "tipo": "parafrasis",
+      "cita": "Rango para el dólar entre $850 en un escenario favorable y $970 en uno adverso, con $905 como escenario base de mediano plazo.",
+      "fecha": "2026-09-16",
+      "fuente": "Chócale",
+      "url": "https://chocale.cl/2026/09/el-dolar-vuelve-a-tomar-fuerza-analistas-preven-mas-volatilidad-y-alertan-por-sus-efectos-en-combustibles/"
+    },
+    {
+      "id": "conpat-eskenazi-sobre-960",
+      "quien": "Patricio Eskenazi",
+      "institucion": "Conpat Global",
+      "activo": "USDCLP",
+      "tipo": "textual",
+      "cita": "Los niveles sobre $960 parecen difíciles de justificar.",
+      "fecha": "2026-09-16",
+      "fuente": "Chócale",
+      "url": "https://chocale.cl/2026/09/el-dolar-vuelve-a-tomar-fuerza-analistas-preven-mas-volatilidad-y-alertan-por-sus-efectos-en-combustibles/"
+    },
+    {
+      "id": "capitaria-santillan-resistencia-971",
+      "quien": "Lucas Santillán",
+      "institucion": "Capitaria",
+      "activo": "USDCLP",
+      "tipo": "textual",
+      "cita": "Si el dólar logra romper y consolidarse sobre esta zona, podríamos comenzar a mirar niveles superiores.",
+      "fecha": "2026-09-24",
+      "fuente": "BioBioChile",
+      "url": "https://www.biobiochile.cl/noticias/economia/actualidad-economica/2026/09/24/el-dolar-se-dispara-a-niveles-no-vistos-desde-2025-el-cobre-y-petroleo-ponen-presion-al-peso-chileno.shtml",
+      "nota": "La zona es la resistencia de $968-$971 que cita el mismo artículo."
+    },
+    {
+      "id": "jpm-oro-6000-4t26",
+      "quien": "J.P. Morgan Global Research",
+      "institucion": "J.P. Morgan",
+      "activo": "XAUUSD",
+      "tipo": "parafrasis",
+      "cita": "Proyecta el oro en un promedio de US$6.000 por onza para el cuarto trimestre de 2026, subiendo hacia US$6.300 a fines de 2027.",
+      "fecha": "2026-06-09",
+      "fuente": "jpmorgan.com",
+      "url": "https://www.jpmorgan.com/insights/global-research/commodities/gold-prices"
+    },
+    {
+      "id": "goldman-brent-riesgo-ormuz",
+      "quien": "Goldman Sachs",
+      "institucion": "Goldman Sachs",
+      "activo": "BRENT.spot",
+      "tipo": "parafrasis",
+      "cita": "Si el tráfico por el estrecho de Ormuz sigue limitado, el Brent promediaría US$120 en el tercer trimestre y US$115 en el cuarto trimestre de 2026.",
+      "fecha": "2026-04-09",
+      "fuente": "OilPrice.com",
+      "url": "https://oilprice.com/Latest-Energy-News/World-News/Goldman-Another-Month-of-Hormuz-Closure-Means-Over-100-Brent-Throughout-2026.html"
+    },
+    {
+      "id": "macquarie-wizman-emision-bonos",
+      "quien": "Thierry Wizman",
+      "institucion": "Macquarie Group",
+      "activo": "US100.spot",
+      "tipo": "traduccion",
+      "cita": "Creo que este año tiene más que ver con la emisión de bonos que con la inflación.",
+      "fecha": "2026-09-26",
+      "fuente": "CNBC",
+      "url": "https://www.cnbc.com/2026/09/26/10-year-treasury-yield-is-at-its-highest-in-19-years-how-we-got-here.html",
+      "nota": "Original: 'I think this year it has more to do with the bond issuance than the inflation story.'"
+    }
+  ]
+}
