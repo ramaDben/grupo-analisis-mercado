@@ -154,3 +154,75 @@ def verificar_zona(cargadas: dict[str, tuple[pd.DataFrame, dict[str, Any]]], ser
     if not moda["ok"]:
         raise MedicionAbortada(f"la hora NY del pico de volumen de {serie_moda} cambia entre meses: {moda['horas_por_mes']}")
     return {"extraccion": extraccion, "moda_volumen": {serie_moda: moda}}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Indicadores en serie y punto en el tiempo (spec §5.2 y §5.3)
+# ─────────────────────────────────────────────────────────────────────────────
+def indicadores(df: pd.DataFrame) -> pd.DataFrame:
+    """Los indicadores de `analizar_activo`, en cada fila, con las mismas funciones.
+
+    `ema`, `atr` y `adx` son recursivas (`adjust=False`): se calculan una vez
+    sobre la serie completa y se leen en la fila que corresponda, sin fuga. El
+    Donchian no tiene versión en serie en `mt5_client`, y acá se calcula con la
+    misma fórmula rodante. El valor de la fila `i` INCLUYE la vela `i`: quien lee
+    el instante `t` tiene que tomar la fila `t-1`.
+
+    Los períodos (50, 100, 14, 50) son los de `analisis.py` y no umbrales del
+    árbol; el test de paridad los ata.
+    """
+    return pd.DataFrame({
+        "ema_50": ema(df["close"], 50),
+        "ema_100": ema(df["close"], 100),
+        "atr_14": atr(df, 14),
+        "adx_14": adx(df, 14),
+        "donchian_50_high": df["high"].rolling(50).max(),
+        "donchian_50_low": df["low"].rolling(50).min(),
+    }, index=df.index)
+
+
+def rango_hoy_intradia(h1: pd.DataFrame) -> pd.Series:
+    """`max(high) - min(low)` de las velas H1 del mismo día de Santiago hasta la fila inclusive.
+
+    Es lo que la vela D1 en curso habría mostrado a esa hora. Leer la vela D1 del
+    día de `t` sería una fuga: ya contiene el día completo.
+    """
+    dia = h1["time"].dt.date
+    return h1.groupby(dia)["high"].cummax() - h1.groupby(dia)["low"].cummin()
+
+
+def indice_d1_cerrado(h1_time: pd.Series, d1_time: pd.Series) -> np.ndarray:
+    """Para cada fila H1, la posición del último D1 con fecha anterior a la de esa fila.
+
+    Se alinea por FECHA de Santiago, sin localizar la marca D1: la vela diaria
+    del cambio de horario de septiembre está marcada a una medianoche que no
+    existe, y localizarla la perdería.
+    """
+    fechas_d1 = d1_time.dt.normalize().to_numpy()
+    fechas_h1 = h1_time.dt.normalize().to_numpy()
+    return np.searchsorted(fechas_d1, fechas_h1, side="left") - 1
+
+
+def dicts_en(
+    i: int, h1: pd.DataFrame, ind_h1: pd.DataFrame, rango: pd.Series,
+    d1: pd.DataFrame, ind_d1: pd.DataFrame, j: int,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Los dicts que `analizar_activo` habría entregado al cierre de la vela H1 `i`.
+
+    Precio: cierre de `i`. Indicadores de H1: fila `i-1` (la última cerrada).
+    Indicadores de D1: fila `j`, el último día cerrado antes del día de `i`.
+    `rango_hoy`: reconstruido desde H1 hasta `i`, con `fecha_barra` = día de `i`.
+    """
+    precio = float(h1["close"].iat[i])
+    fila_h1 = ind_h1.iloc[i - 1]
+    fila_d1 = ind_d1.iloc[j]
+    h1d = {"price": precio, **{c: float(fila_h1[c]) for c in ind_h1.columns}}
+    d1d = {
+        "price": precio,
+        "ema_50": float(fila_d1["ema_50"]),
+        "ema_100": float(fila_d1["ema_100"]),
+        "atr_14": float(fila_d1["atr_14"]),
+        "rango_hoy": float(rango.iat[i]),
+        "fecha_barra": h1["time"].iat[i].date().isoformat(),
+    }
+    return h1d, d1d
