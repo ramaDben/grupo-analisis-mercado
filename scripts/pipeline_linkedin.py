@@ -685,12 +685,39 @@ li { margin: 2px 0; }
 """
 
 
+_INICIO_LISTA = ("- ", "|", "1. ", "2. ", "3. ", "4. ", "5. ", "6. ", "7. ", "8. ", "9. ")
+
+
+def normalizar_markdown(texto: str) -> str:
+    """Corrige lo que el markdown escrito a mano rompe al convertirse.
+
+    Dos defectos medidos el 2026-09-28 en el primer PDF: una lista pegada a la
+    línea anterior (`**Pág. 1**` y en la siguiente `- Titular`) sale como un solo
+    párrafo, y una línea de cita que empieza con `#` (`> #Inversiones`) sale como
+    título gigante. Un brief ilegible llega a diseño igual.
+    """
+    lineas: list[str] = []
+    for linea in texto.splitlines():
+        if linea.startswith("  - "):
+            linea = "    " + linea[2:]
+        if linea.startswith("> #"):
+            linea = "> \\#" + linea[3:]
+        limpia = linea.strip()
+        if lineas and limpia.startswith(_INICIO_LISTA) and not linea.startswith("    "):
+            previa = lineas[-1].strip()
+            if previa and not previa.startswith(_INICIO_LISTA):
+                lineas.append("")
+        lineas.append(linea)
+    return "\n".join(lineas)
+
+
 def brief_a_pdf(markdown_texto: str, destino: Path, titulo: str) -> None:
     """Markdown → HTML → PDF con el Chromium de Playwright, que dibuja tildes y emoji."""
     import markdown
     from playwright.sync_api import sync_playwright
 
-    cuerpo = markdown.markdown(markdown_texto, extensions=["tables", "sane_lists"]).replace("[ ]", "☐")
+    cuerpo = markdown.markdown(normalizar_markdown(markdown_texto),
+                               extensions=["tables", "sane_lists"]).replace("[ ]", "☐")
     html = (f"<!doctype html><html lang='es'><head><meta charset='utf-8'><style>{_CSS}</style>"
             f"</head><body>{cuerpo}</body></html>")
     pie = ("<div style='font-size:8px;width:100%;text-align:center;color:#777'>Grupo Inteligencia · "

@@ -291,6 +291,15 @@ def test_rendir_se_detiene_con_huecos(tmp_path, monkeypatch):
     assert not (tmp_path / "brief.md").exists()
 
 
+def test_normalizar_separa_listas_pegadas_y_escapa_hashtags():
+    import markdown
+
+    texto = "**Pág. 1 · Portada**\n- Titular: Hola\n- Bajada: Chao\n\n> Copy\n> #Inversiones #GI"
+    html = markdown.markdown(pl.normalizar_markdown(texto), extensions=["tables", "sane_lists"])
+    assert "<li>Titular: Hola</li>" in html
+    assert "<h1>" not in html
+
+
 # ------------------------------------------------------------ contratos
 
 
