@@ -12,6 +12,7 @@ Garantiza que cada canal temático de WhatsApp cuente con:
 from __future__ import annotations
 
 import json
+import zlib
 import shutil
 import sys
 from datetime import date, datetime, timezone
@@ -39,6 +40,21 @@ try:
 except ImportError:
     cargar_curva_tasas = None
     _dias_habiles_entre = None
+
+try:
+    # La cotizacion del dia (decision del director, 2026-09-28): FRED llega con
+    # dias de rezago y el carrusel publicaba la variacion de la semana pasada.
+    from market_data_mcp.tasas_en_vivo import rendimientos_en_vivo
+except ImportError:
+    def rendimientos_en_vivo(series=(), descargar=None):  # type: ignore[no-redef]
+        return {}
+
+try:
+    # El VIX y el DXY (2026-09-28): un indicador distinto por canal.
+    from market_data_mcp.indices_referencia import serie_diaria
+except ImportError:
+    def serie_diaria(codigo, n=15, descargar=None):  # type: ignore[no-redef]
+        return []
 
 # Un evento del calendario tiene que leerse IGUAL en el informe y en el mensaje de
 # cada grupo: mismo nombre en español, mismo estado y misma notación de cifras. Por
@@ -77,6 +93,19 @@ CONFIG_MACRO_GRUPOS: dict[str, dict[str, Any]] = {
             "trayectoria, junto con los datos de actividad y empleo, cuelga el apetito por riesgo y "
             "la rotación de flujos globales."
         ),
+        # El canal de avisos lee el VIX (2026-09-28). Si su fuente no responde,
+        # el canal cae al bono a 10 años, y ahí la lectura tiene que hablar de
+        # tasas: por eso hay dos.
+        "lectura": {
+            "sube": "más cautela: el mercado le baja el apetito al riesgo y busca refugio.",
+            "baja": "menos miedo: vuelve el apetito por riesgo a la bolsa y a las monedas emergentes.",
+            "lateral": "volatilidad estable: el mercado se mueve por los datos del día.",
+        },
+        "lectura_respaldo": {
+            "sube": "tasas al alza: el dólar gana fuerza y el mercado se vuelve más cauto con el riesgo.",
+            "baja": "tasas a la baja: el dólar cede y los activos de riesgo toman aire.",
+            "lateral": "tasas sin cambio: el mercado se mueve por los datos del día.",
+        },
     },
     "02_forex_divisas": {
         "nombre": "Forex & Divisas",
@@ -88,17 +117,27 @@ CONFIG_MACRO_GRUPOS: dict[str, dict[str, Any]] = {
             "libra y el yen; cuando ceden, lo pierde. En el plano local, el USD/CLP suma dos factores "
             "propios: la tasa del Banco Central de Chile y el precio del cobre."
         ),
+        "lectura": {
+            "sube": "el dólar gana fuerza frente al euro, la libra y el peso chileno.",
+            "baja": "el dólar pierde fuerza frente al euro, la libra y el peso chileno.",
+            "lateral": "sin empuje nuevo desde las tasas: el dólar se mueve por los datos del día.",
+        },
     },
     "03_commodities_materias_primas": {
         "nombre": "Commodities & Materias Primas",
         "paises": ("united states", "estados unidos", "china", "euro zone"),
         "patrones": ("inventories", "eia", "api", "opec", "crude", "petroleo", "copper", "cobre", "gold", "oro", "prices"),
-        "foco": "Tasas reales (TIPS 10Y), inventarios energéticos, demanda manufacturera industrial de China y tensiones geopolíticas.",
+        "foco": "Tasas del Tesoro de EE.UU., inventarios energéticos, demanda manufacturera industrial de China y tensiones geopolíticas.",
         "interpretacion": (
-            "El comportamiento de la tasa real TIPS 10Y condiciona el costo de oportunidad del Oro (XAU/USD). "
-            "Al mismo tiempo, los precios pagados en manufactura y los informes de inventarios de crudo (API/EIA) "
-            "marcan la pauta para la energía y los metales básicos."
+            "El rendimiento del bono a 10 años de EE.UU. es el costo de oportunidad del Oro (XAU/USD): "
+            "compite con un metal que no paga interés. Los informes de inventarios de crudo marcan la "
+            "pauta para la energía."
         ),
+        "lectura": {
+            "sube": "mantener oro y plata se encarece: presión a la baja sobre los metales.",
+            "baja": "mantener oro y plata se abarata: alivio para los metales.",
+            "lateral": "sin presión nueva desde las tasas sobre el oro y la plata.",
+        },
     },
     "04_indices_bursatiles": {
         "nombre": "Índices Bursátiles",
@@ -110,6 +149,11 @@ CONFIG_MACRO_GRUPOS: dict[str, dict[str, Any]] = {
             "Cifras de empleo y manufactura modulan las expectativas de recortes de tasas de la Reserva Federal "
             "e impactan directamente en el Nasdaq 100 y S&P 500."
         ),
+        "lectura": {
+            "sube": "presión sobre la bolsa, sobre todo en el Nasdaq 100.",
+            "baja": "alivio para la bolsa, sobre todo en el Nasdaq 100.",
+            "lateral": "sin presión nueva desde las tasas sobre la bolsa.",
+        },
     },
     "05_acciones_etfs": {
         "nombre": "Acciones & ETFs Internacionales",
@@ -120,6 +164,11 @@ CONFIG_MACRO_GRUPOS: dict[str, dict[str, Any]] = {
             "La rotación sectorial responde al costo del capital y las perspectivas de crecimiento económico, "
             "evaluando múltiplos en empresas tecnológicas, industriales y financieras frente a los bonos soberanos."
         ),
+        "lectura": {
+            "sube": "financiarse cuesta más: pesa sobre las tecnológicas y favorece a los bancos.",
+            "baja": "financiarse cuesta menos: da aire a las tecnológicas y a las empresas con deuda.",
+            "lateral": "sin cambio en el costo de financiarse de las empresas.",
+        },
     },
     "06_criptoactivos": {
         "nombre": "Criptoactivos & Digital Assets",
@@ -131,6 +180,11 @@ CONFIG_MACRO_GRUPOS: dict[str, dict[str, Any]] = {
             "dejar el dinero en renta fija rinde más y compite con los activos de riesgo; cuando bajan, "
             "esa competencia se afloja. A eso se suman los flujos netos hacia los ETF spot de Bitcoin y Ethereum."
         ),
+        "lectura": {
+            "sube": "menos liquidez para el riesgo: presión sobre Bitcoin y Ethereum.",
+            "baja": "más liquidez para el riesgo: alivio para Bitcoin y Ethereum.",
+            "lateral": "liquidez sin cambio para Bitcoin y Ethereum.",
+        },
     },
     "07_oportunidades_cuantitativas": {
         "nombre": "Oportunidades & Trading Cuantitativo",
@@ -252,7 +306,13 @@ def _obtener_historial_treasury(serie_id: str = "DFII10") -> list[dict[str, Any]
 
 
 def filtrar_eventos_para_grupo(grupo: str, eventos: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Filtra y ordena los eventos macroeconómicos priorizando datos locales de Chile para Forex."""
+    """Filtra y ordena los eventos macroeconómicos priorizando datos locales de Chile para Forex.
+
+    Solo pasa el impacto alto (los 3 toros de Investing), decisión del director
+    del 2026-09-28. El escáner sigue pidiendo impacto medio al calendario porque
+    los blackouts lo necesitan: este filtro es de lo que se publica.
+    """
+    eventos = [ev for ev in eventos if ev.get("impacto") == "alto"]
     cfg = CONFIG_MACRO_GRUPOS.get(grupo)
     if not cfg:
         return eventos
@@ -399,6 +459,167 @@ def _bloque_agenda(eventos_grupo: list[dict[str, Any]], ahora: datetime) -> list
     return lineas
 
 
+ROTULOS_TASA: dict[str, str] = {
+    "DGS2": "Tasa a 2 años de EE.UU.",
+    "DGS10": "Bono a 10 años de EE.UU.",
+}
+
+# Bajo 1 punto base el movimiento es ruido de cotizacion: publicarlo como alza o
+# baja le pondria direccion a algo que no se movio.
+UMBRAL_MOVIMIENTO_BPS = 1.0
+
+
+def _delta_vigente(serie: dict[str, Any]) -> float | None:
+    """El delta que `variacion_soberana` publica: 5 dias con rezago, 1 dia sin el."""
+    d1, d5 = serie.get("delta_1d_bps"), serie.get("delta_5d_bps")
+    rezago = serie.get("rezago_dias_habiles")
+    if rezago is not None and rezago >= 2:
+        return d5 if d5 is not None else d1
+    return d1 if d1 is not None else d5
+
+
+def _cotizacion_del_dia(serie_id: str, ahora: datetime) -> dict[str, Any] | None:
+    """La cotizacion en vivo de la serie, solo si es de HOY en Chile.
+
+    Una cotizacion de otro dia (fin de semana, feriado) no se publica como del dia:
+    en ese caso se vuelve a FRED, que lleva su fecha a la vista.
+    """
+    vivo = rendimientos_en_vivo((serie_id,)).get(serie_id)
+    if not vivo:
+        return None
+    if vivo["momento"].astimezone(SANTIAGO).date() != ahora.astimezone(SANTIAGO).date():
+        return None
+    return vivo
+
+
+def _hora_chile(momento: datetime) -> str:
+    return momento.astimezone(SANTIAGO).strftime("%H:%M")
+
+
+ROTULOS_INDICE: dict[str, str] = {
+    "VIX": "VIX, el índice de volatilidad de Wall Street",
+    "DXY": "Dólar global (DXY)",
+}
+
+
+def _num(valor: float, decimales: int = 2) -> str:
+    return f"{valor:,.{decimales}f}".replace(",", "@").replace(".", ",").replace("@", ".")
+
+
+def _var_pct(valor: float, decimales: int) -> str:
+    signo = "+" if valor > 0 else ""
+    return f"{signo}{valor:.{decimales}f}%".replace(".", ",")
+
+
+def _lectura_indice(driver: dict[str, Any]) -> dict[str, Any] | None:
+    """Ultimo valor del indice, su cierre previo, la variacion y hacia donde se movio."""
+    puntos = serie_diaria(driver["serie"], 15)
+    if len(puntos) < 2:
+        return None
+    (fecha, ultimo), (_, previo) = puntos[-1], puntos[-2]
+    var = (ultimo / previo - 1) * 100 if previo else 0.0
+    umbral = float(driver.get("umbral_mov", 0.0))
+    mov = 1 if var >= umbral else (-1 if var <= -umbral else 0)
+    if umbral == 0.0 and var == 0.0:
+        mov = 0
+    return {"puntos": puntos, "fecha": fecha, "ultimo": ultimo, "previo": previo,
+            "var": var, "mov": mov}
+
+
+def _bloque_tasa_del_canal(
+    grupo: str, cfg: dict[str, Any], delta_ust_bps: float | None, ahora: datetime
+) -> list[str]:
+    """La tasa que mueve al canal y lo que significa, en dos lineas.
+
+    La serie es la misma de la imagen (`DRIVERS_SOBERANOS`), asi texto e imagen
+    hablan del mismo dato. Si la curva no la trae se cae al bono a 10 años, y si
+    la curva no responde, al parametro `delta_ust_bps`. La direccion de la
+    lectura sale del movimiento MEDIDO, nunca de una frase fija.
+    """
+    curva: dict[str, Any] = {}
+    if cargar_curva_tasas:
+        try:
+            curva = cargar_curva_tasas("ALL").get("series", {}) or {}
+        except Exception:  # noqa: BLE001
+            curva = {}
+
+    driver = DRIVERS_SOBERANOS.get(grupo, DRIVER_SOBERANO_POR_DEFECTO)
+    lecturas_tasa = cfg.get("lectura_respaldo") or cfg.get("lectura") or (
+        CONFIG_MACRO_GRUPOS["01_macro_y_apertura"]["lectura_respaldo"]
+    )
+    if driver.get("tipo") == "indice":
+        indice = _lectura_indice(driver)
+        if indice is not None:
+            hoy = indice["fecha"] == ahora.astimezone(SANTIAGO).date()
+            cuando = (
+                f"hoy _(actualizado {ahora.astimezone(SANTIAGO):%H:%M} hrs Chile)_" if hoy
+                else f"en el día _(cierre del {_etiqueta_dia(indice['fecha'].isoformat())})_"
+            )
+            clave = {1: "sube", -1: "baja", 0: "lateral"}[indice["mov"]]
+            return [
+                f"📊 *{ROTULOS_INDICE.get(driver['serie'], driver['serie'])}*: "
+                f"{_num(indice['ultimo'])} · {_var_pct(indice['var'], driver.get('decimales_var', 1))} {cuando}",
+                f"🎯 *Qué significa*: {cfg['lectura'][clave]}",
+                "━━━━━━━━━━━━━━━━━━━",
+            ]
+        # Sin fuente del indice el canal no queda mudo: vuelve al bono a 10 años,
+        # con la lectura de tasas y no la del indice.
+        serie_id = "DGS10"
+    else:
+        serie_id = driver["serie"]
+    rotulo = ROTULOS_TASA.get(serie_id, serie_id)
+
+    # Primero la cotizacion del dia; FRED queda de respaldo, con su fecha.
+    vivo = _cotizacion_del_dia(serie_id, ahora)
+    if vivo is not None:
+        delta = vivo["delta_1d_bps"]
+        cambio = f" · {_bps(delta)} bps hoy" if delta is not None else ""
+        lineas = [
+            f"📈 *{rotulo}*: {_pct(vivo['valor'])}{cambio} "
+            f"_(en vivo, {_hora_chile(vivo['momento'])} hrs Chile)_"
+        ]
+    else:
+        serie = curva.get(serie_id) or {}
+        if not serie:
+            serie_id, serie = "DGS10", curva.get("DGS10") or {}
+            rotulo = ROTULOS_TASA["DGS10"]
+        if not serie and delta_ust_bps is not None:
+            serie = {"delta_1d_bps": delta_ust_bps, "rezago_dias_habiles": 1}
+
+        resultado = variacion_soberana(serie)
+        if resultado is None:
+            return []
+        texto, fecha = resultado
+        sufijo = f" _({fecha})_" if fecha else ""
+        lineas = [f"📈 *{rotulo}*: {texto}{sufijo}"]
+        delta = _delta_vigente(serie)
+
+    lecturas = lecturas_tasa
+    if delta is not None:
+        if delta >= UMBRAL_MOVIMIENTO_BPS:
+            clave = "sube"
+        elif delta <= -UMBRAL_MOVIMIENTO_BPS:
+            clave = "baja"
+        else:
+            clave = "lateral"
+        lineas.append(f"🎯 *Qué significa*: {lecturas[clave]}")
+    lineas.append("━━━━━━━━━━━━━━━━━━━")
+    return lineas
+
+
+CIERRES_MACRO: tuple[str, ...] = (
+    "¿Cómo lo ves tú? Te leemos en el grupo.",
+    "Vamos siguiendo el mercado durante la jornada.",
+    "Si tienes dudas con la lectura, escríbele a tu analista.",
+    "Seguimos atentos a lo que venga en la sesión.",
+)
+
+
+def _elegir_cierre(grupo: str, ahora: datetime) -> str:
+    clave = f"{grupo}|{ahora.astimezone(SANTIAGO):%Y-%m-%d}".encode("utf-8")
+    return CIERRES_MACRO[zlib.crc32(clave) % len(CIERRES_MACRO)]
+
+
 def construir_texto_contexto_macro(
     grupo: str,
     eventos_grupo: list[dict[str, Any]],
@@ -479,12 +700,10 @@ def construir_texto_contexto_macro(
                     comparacion = f" Repite la lectura de {mes_previo} ({previo_txt})."
 
             lineas.extend([
-                "🇨🇱 *FOCO LOCAL · INFLACIÓN Y POLÍTICA MONETARIA (IPC & IPOM)*",
+                "🇨🇱 *FOCO LOCAL · INFLACIÓN (IPC)*",
                 f"El IPC de {mes_dato} {verbo} {valor_txt} mensual.{comparacion}",
-                f"• *Por qué le importa al peso*: con la Tasa de Política Monetaria (TPM) en {tpm_txt}, "
-                "una inflación persistente frena los recortes adicionales de tasa del Banco Central. Con el corredor "
-                "del IPoM bajo revisión, mantener una tasa de interés atractiva le otorga soporte al peso chileno "
-                "y contiene la presión alcista sobre el USD/CLP.",
+                f"🎯 Con la tasa del Banco Central (TPM) en {tpm_txt}, una inflación persistente "
+                "frena los recortes y sostiene al peso frente al dólar.",
                 f"🔗 Serie oficial IPC y TPM (BCCh, al {_etiqueta_dia(tpm_fecha)}): "
                 f"{ENLACES_INSTITUCIONALES['IPC_BCCH']}",
                 "━━━━━━━━━━━━━━━━━━━",
@@ -505,99 +724,19 @@ def construir_texto_contexto_macro(
             lineas.extend([
                 "🇨🇱 *FOCO LOCAL · ACTIVIDAD ECONÓMICA (IMACEC)*",
                 f"El Imacec de {mes_dato} marcó {verbo} {valor_txt} anual.{comparacion}",
-                f"• *Por qué le importa al peso*: con la Tasa de Política Monetaria (TPM) en {tpm_txt}, "
-                "una actividad más débil le da al Banco Central más razones para seguir bajándola, y una "
-                "tasa local más baja le resta atractivo al peso frente al dólar. Si la actividad sorprende "
-                "al alza, el efecto es el contrario.",
+                f"🎯 Con la tasa del Banco Central (TPM) en {tpm_txt}, una actividad débil abre "
+                "espacio a más recortes y le resta fuerza al peso; una sorpresa al alza, lo contrario.",
                 f"🔗 Serie oficial Imacec y TPM (BCCh, al {_etiqueta_dia(tpm_fecha)}): "
                 f"{ENLACES_INSTITUCIONALES['IMACEC_BCCH']}",
                 "━━━━━━━━━━━━━━━━━━━",
             ])
 
-    # Curva soberana y tasas clave
-    curva_info = {}
-    if cargar_curva_tasas:
-        try:
-            res_curva = cargar_curva_tasas("ALL")
-            curva_info = res_curva.get("series", {})
-        except Exception:  # noqa: BLE001
-            pass
-
-    bloque_soberano = []
-    enlaces_bloque = []
-
-    # Las tres lineas siguen la MISMA regla, que vive en `variacion_soberana`.
-    # Antes cada una repetia `if delta_1d_bps is not None` con su propio `signo`
-    # calculado y sin usar (tres veces), y la del 10Y no salia de la curva sino
-    # de un parametro: cuatro copias de la misma decision, ninguna mirando el
-    # rezago. El parametro queda como respaldo por si la curva no responde.
-    dgs10 = curva_info.get("DGS10") or {}
-    if not dgs10 and delta_ust_bps is not None:
-        dgs10 = {"delta_1d_bps": delta_ust_bps, "rezago_dias_habiles": 1}
-    linea = _linea_soberana("📈 Rendimiento Bono EE.UU. 10Y (UST 10Y)", dgs10)
-    if linea:
-        bloque_soberano.append(linea)
-        enlaces_bloque.append(f"🔗 Gráfico UST 10Y (FRED): {ENLACES_INSTITUCIONALES['UST_10Y']}")
-
-    if curva_info:
-        if grupo in ("02_forex_divisas", "04_indices_bursatiles"):
-            linea = _linea_soberana(
-                "🏛️ Tasa 2 Años EE.UU. (sensible a Fed)", curva_info.get("DGS2") or {}
-            )
-            if linea:
-                bloque_soberano.append(linea)
-        if grupo == "03_commodities_materias_primas":
-            linea = _linea_soberana(
-                "🪙 Tasa Real TIPS 10Y (driver del Oro)", curva_info.get("DFII10") or {}
-            )
-            if linea:
-                bloque_soberano.append(linea)
-                enlaces_bloque.append(
-                    f"🔗 Gráfico Tasa Real TIPS 10Y (FRED): {ENLACES_INSTITUCIONALES['TIPS_10Y']}"
-                )
-
-    if bloque_soberano:
-        lineas.append("🏛️ *CURVA SOBERANA Y TASAS*")
-        lineas.extend(bloque_soberano)
-        if enlaces_bloque:
-            links_unicos = list(dict.fromkeys(enlaces_bloque))
-            lineas.extend(links_unicos)
-        lineas.append("━━━━━━━━━━━━━━━━━━━")
-
-    lineas.extend([
-        f"🧠 *¿QUÉ SIGNIFICA PARA {sujeto.upper()}?*",
-        f"{interpretacion}",
-        "━━━━━━━━━━━━━━━━━━━",
-    ])
-
-    eventos_claves = []
-    for ev in eventos_grupo:
-        hs = str(ev.get("hora_servidor", "")).strip()
-        mom = None
-        if hs:
-            try:
-                mom = datetime.strptime(hs, "%Y-%m-%d %H:%M").replace(tzinfo=SANTIAGO)
-            except ValueError:
-                pass
-        if mom and mom <= ahora:
-            nombre_lower = str(ev.get("nombre", "")).lower()
-            if "lagarde" in nombre_lower or "bce" in nombre_lower:
-                eventos_claves.append(
-                    "• *BCE · Discurso de Christine Lagarde*: Mensaje de cautela ante la inflación de servicios "
-                    "y dependencia de datos macro, enfriando expectativas de recortes agresivos."
-                )
-            elif "powell" in nombre_lower or "fomc" in nombre_lower:
-                eventos_claves.append(
-                    "• *Reserva Federal · Foco de política monetaria*: Calibración prudente entre estabilidad laboral "
-                    "y convergencia de inflación hacia la meta."
-                )
-
-    if eventos_claves:
-        lineas.extend([
-            "🏛️ *SEGUIMIENTO DE BANCOS CENTRALES*",
-            *list(dict.fromkeys(eventos_claves)),
-            "━━━━━━━━━━━━━━━━━━━",
-        ])
+    # Formato compacto (decision del director, 2026-09-28): una linea con el
+    # indicador que mueve al canal y una con lo que significa para operar. Salieron la
+    # curva en bloque, la tasa real TIPS, el "¿que significa?" generico y el
+    # seguimiento de bancos centrales, que ademas narraba un tono ("mensaje de
+    # cautela") que ninguna fuente habia medido.
+    lineas.extend(_bloque_tasa_del_canal(grupo, cfg, delta_ust_bps, ahora))
 
     glosario_path = RAIZ / "data" / "glosario_siglas.json"
     if glosario_path.exists():
@@ -626,20 +765,17 @@ def construir_texto_contexto_macro(
     # una frase con su propia condición y no hay copia que se olvide.
     anuncios = []
     if con_imagen:
-        anuncios.append(
-            "En la imagen adjunta encuentras el gráfico y el detalle de la serie oficial."
-        )
+        anuncios.append("En la imagen adjunta va el gráfico de las últimas ruedas.")
     if piezas_de_niveles > 0:
-        anuncios.append(
-            "A continuación compartimos los niveles técnicos y alertas para operar la jornada."
-        )
+        anuncios.append("Enseguida compartimos los niveles para operar la jornada.")
     if anuncios:
-        lineas.append("💡 *" + " ".join(anuncios) + "*")
+        lineas.append("💡 " + " ".join(anuncios))
     if piezas_de_niveles == 0:
-        # Sin niveles el mensaje se quedaba sin cierre. El CTA al analista es el
-        # mismo que usa el suplemento de canal vacío, por la misma razón: es lo
-        # que corresponde cuando no hay una lectura operativa que entregar.
-        lineas.append("¿Dudas? Consulta a tu analista.")
+        # Sin niveles el mensaje se quedaba sin cierre. Desde el 2026-09-28 el
+        # cierre varia (desmecanizar el grupo, decision del director): siempre el
+        # mismo se lee como plantilla. Estable por canal y dia, porque el despacho
+        # compara la huella del texto aprobado.
+        lineas.append(_elegir_cierre(grupo, ahora))
 
     return "\n".join(lineas)
 
@@ -694,39 +830,71 @@ def _sello_frescura(fecha_iso: str) -> str:
 # se publica sale de multiplicar ese signo por el movimiento MEDIDO de la serie,
 # así que no queda ninguna afirmación direccional congelada en el código.
 DRIVERS_SOBERANOS: dict[str, dict[str, Any]] = {
-    "02_forex_divisas": {
-        "serie": "DGS2",
-        "chip_pais": "DIFERENCIAL DE TASAS · FOREX",
-        "indicador": "Tasa Soberana EE.UU. 2Y (Expectativa Fed)",
-        "sufijo_periodo": "expectativa tasas",
-        "titular_sube": "La tasa a 2 años de EE.UU. sube y fortalece al dólar global",
-        "titular_baja": "La tasa a 2 años de EE.UU. cede y da alivio a las divisas",
-        "titular_plano": "La tasa a 2 años de EE.UU. se mantiene y deja las divisas sin sesgo",
+    # Un indicador distinto por canal (decision del director, 2026-09-28): los tres
+    # canales recibian la misma imagen del bono y se leia repetitivo. El VIX y el
+    # DXY no son tasas ni simbolos del broker: son `tipo: indice`, salen de
+    # `indices_referencia` y, si su fuente cae, el canal vuelve al bono a 10 años.
+    # `umbral_mov` es en porcentaje: bajo eso el movimiento es ruido.
+    "01_macro_y_apertura": {
+        "serie": "VIX",
+        "tipo": "indice",
+        "umbral_mov": 2.0,
+        "decimales_var": 1,
+        "chip_pais": "VOLATILIDAD · WALL STREET",
+        "indicador": "VIX · índice de volatilidad",
+        "sufijo_periodo": "cautela del mercado",
+        "titular_sube": "El VIX sube: el mercado se pone más cauto con el riesgo",
+        "titular_baja": "El VIX cede: vuelve el apetito por riesgo",
+        "titular_plano": "El VIX se mantiene: la cautela del mercado no cambia",
         "significado": (
-            "La tasa a 2 años descuenta la senda de la Fed. Si sube frente a las tasas locales, "
-            "el diferencial de rendimientos impulsa al dólar frente al peso chileno y las monedas globales."
+            "El VIX mide cuánto movimiento espera el mercado en la bolsa de EE.UU. para el "
+            "próximo mes. Cuando sube hay más cautela; cuando baja, más apetito por riesgo."
         ),
-        "sello": "Federal Reserve · FRED · Grupo Inteligencia",
+        "sello": "Cboe · Grupo Inteligencia",
         "activos": [
-            ("USD/CLP", 1, "un dólar con más tasa externa presiona al peso chileno"),
-            ("EUR/USD", -1, "el diferencial de rendimientos favorece al dólar contra el euro"),
+            ("Nasdaq 100", -1, "la bolsa cae cuando crece la cautela"),
+            ("Oro (XAU/USD)", 1, "se busca como refugio cuando sube la cautela"),
+        ],
+    },
+    "02_forex_divisas": {
+        "serie": "DXY",
+        "tipo": "indice",
+        "umbral_mov": 0.05,
+        "decimales_var": 2,
+        "chip_pais": "DÓLAR GLOBAL · FOREX",
+        "indicador": "Dólar global (DXY)",
+        "sufijo_periodo": "dólar contra seis monedas",
+        "titular_sube": "El dólar global se fortalece y presiona a las demás monedas",
+        "titular_baja": "El dólar global cede y da aire a las demás monedas",
+        "titular_plano": "El dólar global se mantiene sin empuje nuevo",
+        "significado": (
+            "El DXY mide al dólar contra el euro, el yen, la libra y otras tres monedas. "
+            "Si sube, el dólar gana fuerza en todo el mundo."
+        ),
+        "sello": "ICE · Grupo Inteligencia",
+        "activos": [
+            ("USD/CLP", 1, "un dólar global fuerte presiona al peso chileno"),
+            ("EUR/USD", -1, "el euro es la mitad de la canasta del DXY"),
         ],
     },
     "03_commodities_materias_primas": {
-        "serie": "DFII10",
+        # Colgaba de la tasa real TIPS (DFII10) hasta el 2026-09-28, cuando el
+        # director la saco del carrusel: el bono nominal a 10 años cuenta la misma
+        # historia del costo de oportunidad sin una sigla mas que explicar.
+        "serie": "DGS10",
         "chip_pais": "TESORO EE.UU. · METALES",
-        "indicador": "Tasa Real TIPS 10Y (EE.UU.)",
-        "sufijo_periodo": "rendimiento real",
-        "titular_sube": "La tasa real TIPS 10Y sube y encarece mantener metales sin rendimiento",
-        "titular_baja": "La tasa real TIPS 10Y cede y alivia el costo de mantener metales",
-        "titular_plano": "La tasa real TIPS 10Y se mantiene y deja al Oro sin impulso propio",
+        "indicador": "Rendimiento Bono 10Y (UST 10Y)",
+        "sufijo_periodo": "tasa soberana",
+        "titular_sube": "El bono a 10 años de EE.UU. sube y encarece mantener metales sin rendimiento",
+        "titular_baja": "El bono a 10 años de EE.UU. cede y alivia el costo de mantener metales",
+        "titular_plano": "El bono a 10 años de EE.UU. se mantiene y deja al Oro sin impulso propio",
         "significado": (
-            "La tasa real es lo que rinde un bono ya descontada la inflación. Cuando sube, "
+            "El bono a 10 años es lo que rinde prestarle al gobierno de EE.UU. Cuando sube, "
             "guardar un metal que no paga interés cuesta más caro; cuando baja, cuesta menos."
         ),
         "sello": "U.S. Department of the Treasury · FRED · Grupo Inteligencia",
         "activos": [
-            ("Oro (XAU/USD)", -1, "la tasa real es su costo de oportunidad directo"),
+            ("Oro (XAU/USD)", -1, "el bono que paga interés es su costo de oportunidad directo"),
             ("Plata (XAG/USD)", -1, "sigue al Oro con más volatilidad por su uso industrial"),
         ],
     },
@@ -915,14 +1083,35 @@ def _bloque_activos(pares: list[tuple[str, int, str]], mov: int) -> list[dict[st
     return salida
 
 
-def _payload_soberano(cfg: dict[str, Any]) -> dict[str, Any]:
+def _payload_soberano(cfg: dict[str, Any], ahora: datetime | None = None) -> dict[str, Any]:
     """Payload de contexto macro para los grupos que cuelgan de una tasa soberana."""
     serie_id = cfg["serie"]
     serie = _obtener_serie_continua_treasury(serie_id, 15)
     ultima_fecha = _ultima_fecha_treasury(serie_id)
+    anterior = serie[-2] if len(serie) >= 2 else None
+    mov = _movimiento(serie)
+    fecha_hora = f"{_etiqueta_dia(ultima_fecha)} {ultima_fecha[:4]} · {_sello_frescura(ultima_fecha)}"
+    sello = cfg["sello"]
+
+    # La cotizacion del dia cierra la serie (decision del director, 2026-09-28):
+    # sin ella la imagen terminaba en el ultimo dato de FRED, con dias de rezago.
+    vivo = _cotizacion_del_dia(serie_id, ahora) if ahora is not None else None
+    if vivo is not None and vivo["fecha"] > ultima_fecha:
+        serie = serie[1:] + [round(vivo["valor"], 2)]
+        ultima_fecha = vivo["fecha"]
+        if vivo["cierre_previo"] is not None:
+            anterior = round(vivo["cierre_previo"], 2)
+        delta = vivo["delta_1d_bps"]
+        mov = 0 if delta is None or abs(delta) < UMBRAL_MOVIMIENTO_BPS else (1 if delta > 0 else -1)
+        fecha_hora = (
+            f"{_etiqueta_dia(ultima_fecha)} {ultima_fecha[:4]} · en vivo "
+            f"{_hora_chile(vivo['momento'])} hrs Chile"
+        )
+        # Corto a proposito: el pie va en una linea y a escala de celular.
+        sello = "CNBC en vivo · FRED · Grupo Inteligencia"
+
     ultimo = serie[-1]
     promedio = round(sum(serie) / len(serie), 2)
-    mov = _movimiento(serie)
     if mov > 0:
         titular = cfg["titular_sube"]
     elif mov < 0:
@@ -933,10 +1122,7 @@ def _payload_soberano(cfg: dict[str, Any]) -> dict[str, Any]:
     return {
         "plantilla": "dato_macro",
         "chip_pais": cfg["chip_pais"],
-        "fecha_hora": (
-            f"{_etiqueta_dia(ultima_fecha)} {ultima_fecha[:4]} · "
-            f"{_sello_frescura(ultima_fecha)}"
-        ),
+        "fecha_hora": fecha_hora,
         "titular": titular,
         # Sin consenso publicado no hay veredicto. Comparar contra el promedio de la
         # propia serie y rotularlo "esperado" afirma una expectativa que nadie emitió.
@@ -946,7 +1132,7 @@ def _payload_soberano(cfg: dict[str, Any]) -> dict[str, Any]:
         "periodo": _periodo_desde(ultima_fecha, cfg["sufijo_periodo"]),
         "actual": _pct(ultimo),
         "esperado": "",
-        "anterior": _pct(serie[-2]) if len(serie) >= 2 else "",
+        "anterior": _pct(anterior) if anterior is not None else "",
         "significado": cfg["significado"],
         "activos": _bloque_activos(cfg["activos"], mov),
         "recorrido": {
@@ -961,7 +1147,7 @@ def _payload_soberano(cfg: dict[str, Any]) -> dict[str, Any]:
             ],
             "lienzo": "macro",
         },
-        "sello_datos": cfg["sello"],
+        "sello_datos": sello,
     }
 
 
@@ -1043,7 +1229,57 @@ def construir_payload_story_macro(
             }
 
     cfg = DRIVERS_SOBERANOS.get(grupo, DRIVER_SOBERANO_POR_DEFECTO)
-    return _payload_soberano(cfg)
+    if cfg.get("tipo") == "indice":
+        payload = _payload_indice(cfg, ahora)
+        if payload is not None:
+            return payload
+        cfg = DRIVER_SOBERANO_POR_DEFECTO
+    return _payload_soberano(cfg, ahora)
+
+
+def _payload_indice(cfg: dict[str, Any], ahora: datetime) -> dict[str, Any] | None:
+    """Payload de la imagen para un canal que cuelga de un indice (VIX, DXY)."""
+    indice = _lectura_indice(cfg)
+    if indice is None:
+        return None
+    serie = [round(v, 2) for _, v in indice["puntos"]]
+    fecha_iso = indice["fecha"].isoformat()
+    ahora_cl = ahora.astimezone(SANTIAGO)
+    if indice["fecha"] == ahora_cl.date():
+        fecha_hora = f"{_etiqueta_dia(fecha_iso)} {fecha_iso[:4]} · actualizado {ahora_cl:%H:%M} hrs Chile"
+    else:
+        fecha_hora = f"{_etiqueta_dia(fecha_iso)} {fecha_iso[:4]} · último cierre"
+    titular = {1: cfg["titular_sube"], -1: cfg["titular_baja"], 0: cfg["titular_plano"]}[indice["mov"]]
+    promedio = round(sum(serie) / len(serie), 2)
+    ultimo = serie[-1]
+    return {
+        "plantilla": "dato_macro",
+        "chip_pais": cfg["chip_pais"],
+        "fecha_hora": fecha_hora,
+        "titular": titular,
+        "veredicto": "",
+        "veredicto_slug": "",
+        "indicador": cfg["indicador"],
+        "periodo": _periodo_desde(fecha_iso, cfg["sufijo_periodo"]),
+        "actual": _num(ultimo),
+        "esperado": "",
+        "anterior": _num(round(indice["previo"], 2)),
+        "significado": cfg["significado"],
+        "activos": _bloque_activos(cfg["activos"], indice["mov"]),
+        "recorrido": {
+            "serie": serie,
+            "marcadores": [
+                {"indice": len(serie) - 1, "precio": ultimo, "clase": "actual",
+                 "etiqueta": _num(ultimo), "rol": "ÚLTIMO"},
+            ],
+            "niveles": [
+                {"precio": promedio, "clase": "esperado", "etiqueta": _num(promedio),
+                 "rol": "PROMEDIO 15 RUEDAS"},
+            ],
+            "lienzo": "macro",
+        },
+        "sello_datos": cfg["sello"],
+    }
 
 
 def asegurar_contexto_macro_grupo(

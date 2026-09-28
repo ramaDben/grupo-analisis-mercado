@@ -1,6 +1,7 @@
 """Tests para el módulo de cobertura macro diaria por grupo de WhatsApp."""
 from __future__ import annotations
 
+import json
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -128,11 +129,12 @@ def test_el_encabezado_del_canal_de_avisos_no_lleva_sufijo_de_canal():
     assert "CONTEXTO MACRO DIARIO ·" not in txt
 
 
-def test_el_canal_de_avisos_pregunta_que_significa_para_el_mercado():
-    """La pregunta necesita un sujeto. En un canal tematico es el tema; en el de
-    avisos, que no tiene tema, es el mercado."""
+def test_el_canal_de_avisos_lleva_su_linea_de_accion():
+    """Con el formato compacto (2026-09-28) la pregunta "¿que significa para X?"
+    salio; el canal de avisos, sin tema propio, lee la tasa para el mercado."""
     txt = _macro_de("01_macro_y_apertura")
-    assert "¿QUÉ SIGNIFICA PARA EL MERCADO?" in txt
+    assert "🎯 *Qué significa*" in txt
+    assert "¿QUÉ SIGNIFICA PARA" not in txt
 
 
 @pytest.mark.parametrize("grupo, esperado", [
@@ -144,7 +146,6 @@ def test_los_canales_tematicos_siguen_nombrandose(grupo, esperado):
     """El cambio es solo para el canal sin tema: los demas no se tocan."""
     txt = _macro_de(grupo)
     assert f"CONTEXTO MACRO DIARIO · {esperado}" in txt
-    assert f"¿QUÉ SIGNIFICA PARA {esperado}?" in txt
 
 
 def test_ninguna_fuente_del_repo_nombra_el_canal_aspiracional():
@@ -209,7 +210,7 @@ def test_sin_piezas_de_niveles_el_cierre_no_los_promete():
     """
     txt = _texto(0)
     assert PROMESA not in txt
-    assert "Consulta a tu analista" in txt
+    assert txt.splitlines()[-1] in cmg.CIERRES_MACRO
 
 
 def test_con_piezas_de_niveles_el_cierre_si_las_anuncia():
@@ -561,7 +562,8 @@ def test_forex_utiliza_driver_soberano_si_no_hay_evento_de_chile_hoy():
     ]
     ahora = datetime(2026, 9, 15, 11, 0, tzinfo=SANTIAGO)
     payload = cmg.construir_payload_story_macro("02_forex_divisas", eventos_usa, 5.0, ahora)
-    assert payload["indicador"] == "Tasa Soberana EE.UU. 2Y (Expectativa Fed)"
+    # Desde el 2026-09-28 forex cuelga del dolar global; sin su fuente, del bono.
+    assert payload["indicador"] in ("Dólar global (DXY)", "Rendimiento Bono 10Y (UST 10Y)")
     assert "Actividad Económica" not in payload["indicador"]
 
 
@@ -578,11 +580,15 @@ def test_bloque_agenda_marca_concluido_discurso_pasado_sin_cifra():
     assert "Concluido" in texto
 
 
-def test_contexto_macro_comenta_discurso_lagarde():
-    """El mensaje macro debe incluir seguimiento explícito de Lagarde si su discurso ya ocurrió."""
+def test_contexto_macro_da_por_concluido_el_discurso_de_lagarde_sin_inventarle_tono():
+    """El discurso ya ocurrido sale en la agenda como concluido, con su nombre.
+
+    Hasta el 2026-09-28 un bloque aparte le atribuia "un mensaje de cautela" que
+    ninguna fuente habia medido. El formato compacto lo saco.
+    """
     ev = {
         "nombre": "ECB President Lagarde Speaks", "pais": "Euro Zone",
-        "hora_servidor": "2026-09-21 12:00", "actual": "", "forecast": "",
+        "hora_servidor": "2026-09-21 12:00", "actual": "", "forecast": "", "impacto": "alto",
     }
     ahora = datetime(2026, 9, 21, 17, 0, tzinfo=SANTIAGO)
     txt = cmg.construir_texto_contexto_macro(
@@ -591,7 +597,186 @@ def test_contexto_macro_comenta_discurso_lagarde():
         delta_ust_bps=-1.0,
         ahora=ahora,
     )
-    assert "SEGUIMIENTO DE BANCOS CENTRALES" in txt
-    assert "Christine Lagarde" in txt
+    assert "SEGUIMIENTO DE BANCOS CENTRALES" not in txt
+    assert "cautela" not in txt
+    assert "Lagarde" in txt
+    assert "Concluido" in txt
 
 
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Formato compacto y sin TIPS (decisión del director, 2026-09-28)
+# ─────────────────────────────────────────────────────────────────────────────
+_TODOS = ("01_macro_y_apertura", "02_forex_divisas", "03_commodities_materias_primas",
+          "04_indices_bursatiles", "05_acciones_etfs", "06_criptoactivos")
+
+
+def _curva(monkeypatch, delta):
+    serie = {"delta_1d_bps": delta, "delta_5d_bps": delta, "rezago_dias_habiles": 0,
+             "fecha_dato": "2026-09-01"}
+    monkeypatch.setattr(cmg, "cargar_curva_tasas",
+                        lambda serie_id="ALL": {"series": {k: serie for k in ("DGS2", "DGS10", "DFII10")}})
+
+
+@pytest.mark.parametrize("grupo", _TODOS)
+def test_ningun_canal_publica_la_tasa_tips(grupo, monkeypatch):
+    _curva(monkeypatch, 5.0)
+    txt = _macro_de(grupo)
+    assert "TIPS" not in txt and "DFII10" not in txt
+
+
+def test_la_imagen_de_commodities_ya_no_cuelga_de_la_tasa_tips():
+    assert cmg.DRIVERS_SOBERANOS["03_commodities_materias_primas"]["serie"] == "DGS10"
+    assert "TIPS" not in json.dumps(cmg.DRIVERS_SOBERANOS, ensure_ascii=False)
+    assert "TIPS" not in json.dumps(cmg.CONFIG_MACRO_GRUPOS, ensure_ascii=False)
+
+
+@pytest.mark.parametrize("grupo", _TODOS)
+def test_el_macro_compacto_no_trae_bloques_largos(grupo, monkeypatch):
+    _curva(monkeypatch, 5.0)
+    txt = _macro_de(grupo)
+    for sobra in ("SEGUIMIENTO DE BANCOS CENTRALES", "CURVA SOBERANA Y TASAS", "¿QUÉ SIGNIFICA PARA"):
+        assert sobra not in txt
+    assert len(txt) < 900, len(txt)
+
+
+@pytest.mark.parametrize("delta, esperado", [(5.0, "sube"), (-5.0, "baja"), (0.0, "lateral")])
+def test_la_linea_de_accion_sigue_el_movimiento_medido_de_la_tasa(delta, esperado, monkeypatch):
+    _curva(monkeypatch, delta)
+    txt = _macro_de("02_forex_divisas")
+    lectura = cmg.CONFIG_MACRO_GRUPOS["02_forex_divisas"]["lectura"][esperado]
+    assert f"🎯 *Qué significa*: {lectura}" in txt
+
+
+@pytest.mark.parametrize("grupo", _TODOS)
+def test_la_agenda_publicada_solo_lleva_impacto_alto(grupo):
+    """Decision del director, 2026-09-28: al canal solo van noticias de impacto 3.
+
+    El escaner sigue pidiendo impacto medio al calendario, porque los blackouts
+    los necesita; el filtro es de lo que se PUBLICA.
+    """
+    eventos = [
+        {"nombre": "Interest Rate Decision", "pais": "United States", "impacto": "alto"},
+        {"nombre": "Crude Oil Inventories", "pais": "United States", "impacto": "medio"},
+        {"nombre": "Fed Speaks", "pais": "United States", "impacto": "bajo"},
+    ]
+    filtrados = cmg.filtrar_eventos_para_grupo(grupo, eventos)
+    assert {e["impacto"] for e in filtrados} <= {"alto"}
+    assert any(e["nombre"] == "Interest Rate Decision" for e in filtrados)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Tasas frescas del día (decisión del director, 2026-09-28)
+# ─────────────────────────────────────────────────────────────────────────────
+_NY = ZoneInfo("America/New_York")
+
+
+def _en_vivo(monkeypatch, valor, previo, momento=datetime(2026, 9, 1, 9, 31, tzinfo=_NY)):
+    def falso(series=("DGS2", "DGS10"), descargar=None):
+        return {s: {"valor": valor, "cierre_previo": previo,
+                    "delta_1d_bps": round((valor - previo) * 100, 1), "momento": momento,
+                    "fecha": momento.date().isoformat(), "fuente": "prueba"} for s in series}
+    monkeypatch.setattr(cmg, "rendimientos_en_vivo", falso)
+
+
+def test_el_texto_usa_la_tasa_en_vivo_del_dia_y_no_la_de_fred(monkeypatch):
+    _curva(monkeypatch, 24.0)   # FRED dice +24 en 5 dias
+    _en_vivo(monkeypatch, 4.918, 4.864)
+    txt = _macro_de("02_forex_divisas")
+    assert "4,92%" in txt and "+5,4 bps hoy" in txt
+    assert "dato al" not in txt and "5 días" not in txt
+    # El 1 de septiembre Chile y Nueva York estan ambos en UTC-4.
+    assert "09:31" in txt, "la hora de la cotizacion va en hora Chile"
+
+
+def test_la_lectura_sigue_el_movimiento_en_vivo(monkeypatch):
+    _curva(monkeypatch, 24.0)   # FRED sube, pero hoy baja
+    _en_vivo(monkeypatch, 4.80, 4.864)
+    txt = _macro_de("02_forex_divisas")
+    assert cmg.CONFIG_MACRO_GRUPOS["02_forex_divisas"]["lectura"]["baja"] in txt
+
+
+def test_una_cotizacion_de_otro_dia_no_se_publica_como_del_dia(monkeypatch):
+    _curva(monkeypatch, 24.0)
+    _en_vivo(monkeypatch, 4.918, 4.864, momento=datetime(2026, 8, 29, 16, 0, tzinfo=_NY))
+    txt = _macro_de("02_forex_divisas")
+    assert "hoy" not in txt
+    assert "24,0 bps" in txt
+
+
+def test_la_imagen_termina_en_la_cotizacion_en_vivo(tmp_path, monkeypatch):
+    monkeypatch.setattr(cmg, "TREASURY_FED_DATA_PATH", _escribir_treasury(
+        tmp_path, {"2026-08-27": 4.70, "2026-08-28": 4.73}))
+    _en_vivo(monkeypatch, 4.918, 4.864)
+    p = cmg.construir_payload_story_macro("04_indices_bursatiles", [], 3.0, _AHORA)
+    assert p["recorrido"]["serie"][-1] == 4.92
+    assert p["actual"] == "4,92%" and p["anterior"] == "4,86%"
+    assert "en vivo" in p["fecha_hora"] and "09:31" in p["fecha_hora"]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Un indicador distinto por canal (decisión del director, 2026-09-28)
+# ─────────────────────────────────────────────────────────────────────────────
+from datetime import date as _date  # noqa: E402
+
+
+def _indices(monkeypatch, vix=(15.0, 16.2), dxy=(100.97, 101.18), hoy=_date(2026, 9, 1)):
+    def falso(codigo, n=15, descargar=None):
+        par = {"VIX": vix, "DXY": dxy}.get(codigo)
+        if par is None:
+            return []
+        base = [(_date(2026, 8, 1 + i), par[0]) for i in range(n - 2)]
+        return base + [(_date(2026, 8, 31), par[0]), (hoy, par[1])]
+    monkeypatch.setattr(cmg, "serie_diaria", falso)
+
+
+def test_los_tres_canales_del_dia_llevan_imagenes_distintas(tmp_path, monkeypatch):
+    monkeypatch.setattr(cmg, "TREASURY_FED_DATA_PATH", _escribir_treasury(
+        tmp_path, {"2026-08-27": 4.70, "2026-08-28": 4.73}))
+    _indices(monkeypatch)
+    # Un dia sin dato chileno: si lo hay, forex antepone el Imacec o el IPC.
+    monkeypatch.setattr(cmg, "_es_dia_foco_chile", lambda *a, **k: False)
+    indicadores = [cmg.construir_payload_story_macro(g, [], 3.0, _AHORA)["indicador"]
+                   for g in ("01_macro_y_apertura", "02_forex_divisas", "03_commodities_materias_primas")]
+    assert len(set(indicadores)) == 3, indicadores
+    assert "VIX" in indicadores[0] and "DXY" in indicadores[1] and "10Y" in indicadores[2]
+
+
+def test_el_texto_de_avisos_lee_el_vix_en_porcentaje_y_con_su_lectura(monkeypatch):
+    _curva(monkeypatch, 5.0)
+    _indices(monkeypatch, vix=(15.0, 16.2))
+    txt = _macro_de("01_macro_y_apertura")
+    assert "VIX" in txt and "16,20" in txt and "+8,0% hoy" in txt
+    assert cmg.CONFIG_MACRO_GRUPOS["01_macro_y_apertura"]["lectura"]["sube"] in txt
+
+
+def test_la_imagen_del_vix_no_lleva_signo_de_porcentaje(tmp_path, monkeypatch):
+    _indices(monkeypatch, vix=(15.0, 16.2))
+    p = cmg.construir_payload_story_macro("01_macro_y_apertura", [], 3.0, _AHORA)
+    assert p["actual"] == "16,20" and p["anterior"] == "15,00"
+    assert "%" not in p["recorrido"]["marcadores"][0]["etiqueta"]
+
+
+def test_sin_fuente_del_indice_se_cae_al_bono_con_su_propia_lectura(tmp_path, monkeypatch):
+    """El VIX caido no deja al canal mudo, y la lectura no habla de volatilidad
+    cuando lo que se publica es la tasa."""
+    monkeypatch.setattr(cmg, "TREASURY_FED_DATA_PATH", _escribir_treasury(
+        tmp_path, {"2026-08-27": 4.70, "2026-08-28": 4.73}))
+    _curva(monkeypatch, 5.0)
+    monkeypatch.setattr(cmg, "serie_diaria", lambda *a, **k: [])
+    p = cmg.construir_payload_story_macro("01_macro_y_apertura", [], 3.0, _AHORA)
+    assert "10Y" in p["indicador"]
+    txt = _macro_de("01_macro_y_apertura")
+    assert "VIX" not in txt
+    assert cmg.CONFIG_MACRO_GRUPOS["01_macro_y_apertura"]["lectura_respaldo"]["sube"] in txt
+
+
+def test_el_cierre_del_macro_no_es_siempre_el_analista(monkeypatch):
+    _curva(monkeypatch, 5.0)
+    cierres = set()
+    for dia in range(1, 13):
+        ahora = datetime(2026, 9, dia, 10, 0, tzinfo=SANTIAGO)
+        txt = cmg.construir_texto_contexto_macro("01_macro_y_apertura", [], 3.0, ahora)
+        cierres.add(txt.splitlines()[-1])
+    assert len(cierres) >= 2 and not all("analista" in c for c in cierres)

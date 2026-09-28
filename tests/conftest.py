@@ -96,3 +96,30 @@ class _ToolCollector:
 @pytest.fixture
 def collector() -> _ToolCollector:
     return _ToolCollector()
+
+
+@pytest.fixture(autouse=True)
+def _sin_red_para_tasas_en_vivo(monkeypatch):
+    """Ningún test consulta la cotización en vivo del Tesoro por la red.
+
+    `contexto_macro_grupos` la pide al armar el texto y la imagen. Sin este corte
+    los tests dependerían de la hora y de la red, y cambiarían solos cada día.
+    Los tests del módulo le pasan su propio `descargar`, así que no los afecta.
+    """
+    from market_data_mcp import tasas_en_vivo
+
+    def _sin_red(url, timeout=4.0):
+        raise OSError("tests: sin red para tasas en vivo")
+
+    monkeypatch.setattr(tasas_en_vivo, "_descargar", _sin_red)
+
+
+@pytest.fixture(autouse=True)
+def _sin_red_para_indices_de_referencia(monkeypatch):
+    """Mismo corte para el VIX y el DXY: ningún test depende de yfinance."""
+    from market_data_mcp import indices_referencia
+
+    def _sin_red(ticker):
+        raise OSError("tests: sin red para indices de referencia")
+
+    monkeypatch.setattr(indices_referencia, "_descargar", _sin_red)

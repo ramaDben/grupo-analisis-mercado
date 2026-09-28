@@ -385,6 +385,54 @@ html, body {
 }
 .footer-marca { font-family: var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: 0.08em; color: var(--acento); }
 .footer-disc { font-family: var(--font-sans); font-weight: 400; font-size: 13px; color: var(--texto-3); margin: 0; }
+/* ════ Escala para celular (decisión del director, 2026-09-28) ════
+   La pieza mide 1920 px y en el chat de WhatsApp se ve a unos 390: todo sale a
+   un quinto. Con la tipografía de antes (11 a 48 px) el texto llegaba en 2 a 10
+   px y el director tuvo que hacer zoom para leer el bono a 10 años. Regla de
+   esta capa: nada que el cliente tenga que leer baja de ~24 px (unos 5 px en
+   pantalla, lo mínimo para un rótulo), y lo que no cabe grande se saca. El
+   párrafo explicativo y el "por qué" de cada activo ya viajan en el texto del
+   mensaje, en la línea "Qué significa". */
+.story { padding: 56px 72px 40px; }
+.contenido { gap: 56px; }
+.col-izq { flex: 0 0 50%; gap: 28px; }
+.chips { gap: 18px; }
+.sello, .chip-pais { font-size: 28px; padding: 10px 26px; }
+.pulso { width: 14px; height: 14px; }
+.fecha { font-size: 32px; margin-top: 18px; }
+.indicador-titulo { font-size: 80px; line-height: 1.05; margin-top: 14px; }
+.periodo { font-size: 36px; margin-top: 10px; }
+.titular { font-size: 50px; line-height: 1.2; margin-top: 22px; }
+.significado { display: none; }
+
+.tarjeta-macro { padding: 30px 38px; }
+.macro-titulo { font-size: 28px; font-weight: 700; color: var(--texto-2); text-transform: uppercase; letter-spacing: 0.06em; }
+.veredicto-tag { font-size: 30px; padding: 10px 26px; }
+.cifras-grid { gap: 56px; margin-top: 18px; padding-top: 18px; }
+.cifra-lbl { font-size: 28px; }
+.cifra-val { font-size: 72px; margin-top: 6px; }
+.cifra-col--actual .cifra-val { font-size: 140px; line-height: 1; }
+
+.tarjeta-grafico { padding: 28px; }
+.tarjeta-grafico svg { max-height: none; }
+.g-precio { font-size: 44px; }
+.g-rol { font-size: 24px; }
+.g-linea { stroke-width: 7; }
+.gb-nivel-texto, .gb-valor { font-size: 40px; }
+.gb-rol { font-size: 24px; }
+.gb-eje { font-size: 30px; }
+
+.lista-activos { gap: 20px; margin-top: 20px; }
+.item-activo { padding: 20px 26px; gap: 8px; }
+.activo-nom { font-size: 38px; }
+.activo-dir { font-size: 34px; }
+.activo-porque { display: none; }
+
+.footer { margin-top: 20px; padding-top: 16px; }
+.footer-marca { font-size: 30px; }
+.footer { gap: 40px; }
+.footer-marca { white-space: nowrap; }
+.footer-disc { font-size: 24px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 </style>
 </head>
 <body>
@@ -408,12 +456,12 @@ html, body {
 
         <div class="tarjeta-macro">
           <div class="macro-cabecera">
-            <span style="font-size:13px; font-weight:600; color:var(--texto-2); text-transform:uppercase;">Resultado Oficial</span>
+            <span class="macro-titulo">Resultado</span>
             <span class="veredicto-tag veredicto--{{veredicto_slug}}">{{veredicto}}</span>
           </div>
           <div class="cifras-grid">
             <div class="cifra-col cifra-col--actual">
-              <span class="cifra-lbl">Publicado</span>
+              <span class="cifra-lbl">Último</span>
               <span class="cifra-val">{{actual}}</span>
             </div>
             <div class="cifra-col">
