@@ -304,3 +304,15 @@ def test_la_seleccion_y_el_disparo_son_preguntas_distintas():
     }
     assert cm.dato_que_manda([pmi], "05_acciones_etfs") is not None
     assert cm.puede_disparar_momento(pmi) is False
+
+
+def test_los_datos_del_29_de_septiembre_declaran_su_efecto():
+    """El 2026-09-29 la confianza del consumidor y las vacantes (JOLTS) salieron
+    peor que lo esperado, el dólar cedió y el oro subió. Ninguna de las dos
+    estaba clasificada, así que la lectura de la agenda de Avisos no habría
+    tenido qué escribir: la reacción tiene que venir del glosario, no a mano.
+    """
+    for nombre in ("CB Consumer Confidence (Sep)", "JOLTS Job Openings (Aug)"):
+        efecto = cm.efecto_direccional({"nombre": nombre, "pais": "United States"})
+        assert efecto is not None, nombre
+        assert efecto["dolar"] == "sube" and efecto["oro"] == "baja", nombre
