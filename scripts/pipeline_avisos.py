@@ -174,6 +174,23 @@ class SinCandidatosError(RuntimeError):
     """Ningún activo disponible para el momento: no hay carrusel que preparar."""
 
 
+class VisionPedidaError(RuntimeError):
+    """La visión que pidió el director no se puede citar en esta tanda."""
+
+
+def _errores_vision_pedida(vision: dict[str, Any] | None, vid: str, activo: str, hoy: date,
+                           historial: list[dict[str, Any]]) -> list[str]:
+    """Los mismos frenos del selector, dichos en voz alta en vez de saltar la visión."""
+    if vision is None:
+        return [f"`{vid}` no está en el registro de visiones"]
+    if vision.get("activo") != activo:
+        return [f"la visión `{vid}` es de {vision.get('activo')} y el activo pedido es {activo}"]
+    if not vision_califica(vision, variante_de(vision), hoy, historial):
+        return [f"la visión `{vid}` no califica: revisa fecha (máximo {pl.ANTIGUEDAD_MAX_DIAS} días), "
+                f"campos obligatorios y uso en Avisos ({VENTANA_VISION_DIAS} días)"]
+    return []
+
+
 def variante_de(vision: dict[str, Any]) -> str:
     """Una paráfrasis con cifra de proyección es una meta; lo demás, una cita."""
     if vision.get("tipo") == "parafrasis" and pl._PRECIO.search(str(vision.get("cita", ""))):
@@ -1138,8 +1155,12 @@ def preparar(momento: str, ahora: datetime | None = None, *,
              lector_movimiento: Callable[[str, datetime, datetime], dict[str, Any]] | None = None,
              efecto_de: Callable[[dict[str, Any]], dict[str, Any] | None] | None = None,
              visiones: dict[str, dict[str, Any]] | None = None,
-             historial_ruta: Path | None = None, dir_base: Path | None = None) -> Path | None:
+             historial_ruta: Path | None = None, dir_base: Path | None = None,
+             activo_pedido: str | None = None, vision_pedida: str | None = None) -> Path | None:
     """La tanda del momento, o `None` si hoy no es día hábil.
+
+    `activo_pedido` y `vision_pedida` fijan a mano el activo y la voz de un
+    carrusel con activo (cita o balance), en vez de dejarlos al selector.
 
     Una segunda corrida del mismo momento el mismo día devuelve la tanda que ya
     existe sin escribir nada: volver a elegir quemaría otra visión. El resultado
@@ -1202,7 +1223,15 @@ def preparar(momento: str, ahora: datetime | None = None, *,
             raise LecturaFallidaError("; ".join(avisos))
         activo = None
     else:
-        if formato == "balance":
+        if activo_pedido:
+            # El director elige el activo y la voz: pasa el día en que no hubo
+            # cita en la mañana y el respaldo del balance saldría sin voz.
+            activo, vid = activo_pedido, vision_pedida
+            if vid:
+                errores = _errores_vision_pedida(visiones.get(vid), vid, activo, hoy, historial)
+                if errores:
+                    raise VisionPedidaError(errores)
+        elif formato == "balance":
             activo, vid = activo_del_balance(historial, hoy)
             gastar_vision = False
             if activo is None:
@@ -1436,6 +1465,8 @@ def main(argv: list[str] | None = None) -> int:
     modo.add_argument("--completar-vision", nargs=2, metavar=("DIR", "ID"), help="arma la voz con una visión nueva")
     parser.add_argument("--momento", choices=sorted(MOMENTOS))
     parser.add_argument("--reescribir", action="store_true", help="con --refrescar: acepta la divergencia y vacía los textos")
+    parser.add_argument("--activo", help="con --preparar: el activo del carrusel (cita o balance), elegido por el director")
+    parser.add_argument("--vision", help="con --preparar y --activo: el id de la visión que da la voz")
     args = parser.parse_args(argv)
 
     if args.preparar:
@@ -1448,8 +1479,14 @@ def main(argv: list[str] | None = None) -> int:
         # cuál de las dos pasó (issue de la revisión: dos `--preparar` del
         # mismo momento el mismo día).
         ya_existia = es_dia_habil(ahora.date()) and _tanda_existente(pc.DIR_TRABAJO, ahora.date(), args.momento) is not None
+        if args.vision and not args.activo:
+            print("ERROR: --vision necesita --activo", file=sys.stderr)
+            return 2
         try:
-            ruta = preparar(args.momento, ahora)
+            ruta = preparar(args.momento, ahora, activo_pedido=args.activo, vision_pedida=args.vision)
+        except VisionPedidaError as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 2
         except LecturaFallidaError as exc:
             print(f"FALLA DE DATOS: {exc}. El momento queda pendiente.", file=sys.stderr)
             return 1

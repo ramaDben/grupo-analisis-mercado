@@ -379,6 +379,19 @@ def _indice_alias() -> dict[str, str]:
     return indice
 
 
+def canal_cubierto(canal: str) -> bool:
+    """Si el canal recibe tandas (`cubierto` en `config/whatsapp_grupos.json`).
+
+    Por omisión sí: solo un `false` explícito lo apaga, así que un canal nuevo
+    no queda fuera sin que nadie lo decida (director, 2026-09-29).
+    """
+    try:
+        datos = json.loads(CONFIG_GRUPOS_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return True
+    return (datos.get("grupos") or {}).get(canal, {}).get("cubierto", True) is not False
+
+
 def resolver_grupo_solicitado(pedido: str) -> str:
     """El canal que pidió el director, o un error que nombra las opciones."""
     clave = str(pedido).strip().lower()

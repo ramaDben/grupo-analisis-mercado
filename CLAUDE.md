@@ -925,6 +925,14 @@ cada carpeta (`01_macro_y_apertura` … `07_oportunidades_cuantitativas`) al nom
 resuelve alias en lenguaje natural (`metales`, `oro`, `forex`, `cripto`…), y cada canal temático recibe además
 su propia lectura macro.
 
+**Solo se cubren cuatro canales** (director, 2026-09-29): Avisos, Forex, Commodities (metales) y
+Acciones. Índices, Cripto y Oportunidades llevan `cubierto: false` en `config/whatsapp_grupos.json`:
+el escáner saca sus activos del universo **antes de puntuar** (filtrarlos después le quitaría
+cupos al Top N) y el reloj no les prepara tanda. Un momento sin canales cubiertos se anota como
+disparado, porque no es una falla que reintentar. Avisos sí puede tomar un activo cripto en su
+carrusel: `pipeline_avisos.py --preparar --momento <m> --activo <ticker> --vision <id>` fija el
+activo y la voz a mano.
+
 **`01_macro_y_apertura` es el grupo de AVISOS de la comunidad**, no un canal temático aparte. Decisión del
 director el 2026-09-03: **no se crea un canal temático propio para el macro**. Ahí figuraba un nombre
 aspiracional que prometía un canal inexistente en WhatsApp, y el síntoma fue que el macro parecía no llegar

@@ -536,6 +536,37 @@ def test_el_balance_retoma_el_activo_y_la_voz_de_la_manana_sin_gastarla(tmp_path
     assert len(visiones_gastadas) == 1
 
 
+def test_el_balance_a_pedido_usa_el_activo_y_la_voz_del_director(tmp_path):
+    """El día sin cita en la mañana el respaldo saldría sin voz: el director la elige."""
+    hist = tmp_path / "hist.json"
+    hist.write_text("[]", encoding="utf-8")
+    tarde = datetime(2026, 9, 29, 15, 30, tzinfo=pa.SANTIAGO)
+    visiones = {"c": vision("c", activo="BTCUSD", fecha="2026-09-28")}
+    ruta = pa.preparar("avisos_tarde", tarde, lector=lambda t, a: lectura_falsa(t, nombre="Bitcoin"),
+                       visiones=visiones, historial_ruta=hist, dir_base=tmp_path / "carrusel",
+                       activo_pedido="BTCUSD", vision_pedida="c")
+    meta = pa.leer_meta(ruta)
+    assert meta["formato"] == "balance" and meta["activo"] == "BTCUSD" and meta["vision"] == "c"
+    assert meta["_falta_vision"] is False
+    # Es una voz nueva, no la de la mañana: se gasta.
+    assert [e["tipo"] for e in json.loads(hist.read_text(encoding="utf-8"))] == ["vision", "avisos"]
+
+
+@pytest.mark.parametrize("visiones, motivo", [
+    ({}, "no está en el registro"),
+    ({"c": vision("c", activo="XAUUSD")}, "es de XAUUSD"),
+    ({"c": vision("c", activo="BTCUSD", fecha="2026-06-01")}, "no califica"),
+])
+def test_una_voz_pedida_que_no_sirve_se_dice_y_no_escribe(tmp_path, visiones, motivo):
+    hist = tmp_path / "hist.json"
+    hist.write_text("[]", encoding="utf-8")
+    with pytest.raises(pa.VisionPedidaError, match=motivo):
+        pa.preparar("avisos_tarde", AHORA, lector=lambda t, a: lectura_falsa(t), visiones=visiones,
+                    historial_ruta=hist, dir_base=tmp_path / "carrusel",
+                    activo_pedido="BTCUSD", vision_pedida="c")
+    assert not (tmp_path / "carrusel").exists()
+
+
 def test_la_agenda_del_lunes_no_lee_el_terminal(tmp_path):
     def no_llamar(t, a):
         raise AssertionError("la agenda no tiene activo")

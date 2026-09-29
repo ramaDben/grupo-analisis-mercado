@@ -82,6 +82,18 @@
       "fuente": "CNBC",
       "url": "https://www.cnbc.com/2026/09/26/10-year-treasury-yield-is-at-its-highest-in-19-years-how-we-got-here.html",
       "nota": "Original: 'I think this year it has more to do with the bond issuance than the inflation story.'"
+    },
+    {
+      "id": "citi-sen-pagos-stablecoins",
+      "quien": "Debopama Sen",
+      "institucion": "Citi",
+      "activo": "BTCUSD",
+      "tipo": "traduccion",
+      "cita": "Nuestro objetivo es construir la próxima generación de infraestructura de pagos: fluida, interoperable y que funcione tanto con instrumentos y redes de pago tradicionales como digitales.",
+      "fecha": "2026-09-28",
+      "fuente": "The Block",
+      "url": "https://www.theblock.co/news/business/2026-09-28-citi-coinbase-stablecoin-payments-corporate-clients-417082",
+      "nota": "Jefa de Pagos de Citi, al ampliar la alianza con Coinbase para que clientes institucionales acepten pagos en stablecoins. Original: 'Our goal is to build the next generation of payments infrastructure – one that is seamless, interoperable, and operates across both traditional and digital payments instruments and networks.'"
     }
   ]
 }
