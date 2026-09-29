@@ -94,6 +94,18 @@
       "fuente": "The Block",
       "url": "https://www.theblock.co/news/business/2026-09-28-citi-coinbase-stablecoin-payments-corporate-clients-417082",
       "nota": "Jefa de Pagos de Citi, al ampliar la alianza con Coinbase para que clientes institucionales acepten pagos en stablecoins. Original: 'Our goal is to build the next generation of payments infrastructure – one that is seamless, interoperable, and operates across both traditional and digital payments instruments and networks.'"
+    },
+    {
+      "id": "johnson-ia-sin-hiperregular",
+      "quien": "Mike Johnson",
+      "institucion": "Cámara de Representantes de EE.UU.",
+      "activo": "US100.spot",
+      "tipo": "traduccion",
+      "cita": "No necesitamos una moratoria. No necesitamos lanzarnos a hiperregular esto, porque vamos a perder la carrera con China.",
+      "fecha": "2026-09-28",
+      "fuente": "Reuters vía KSL",
+      "url": "https://www.ksl.com/article/news/business/trumps-ai-meeting-with-tech-ceos-to-focus-on-finding-balance-us-house-speaker-says/51629529",
+      "nota": "Presidente de la Cámara, antes de la reunión sobre IA en la Casa Blanca del 29 de septiembre (12:30 NY) con Trump y los CEO de Nvidia, Google, Meta, Anthropic, OpenAI y Palantir; lista de asistentes en https://www.axios.com/2026/09/29/trump-ai-meeting-list-ceos-johnson. Original: 'We do not need a moratorium. We do not need to jump in and hyper-regulate this, because we'll lose the race to China.'"
     }
   ]
 }
