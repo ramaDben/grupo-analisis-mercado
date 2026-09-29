@@ -392,6 +392,12 @@ def test_el_pie_de_la_portada_lleva_cierre_y_aviso_y_es_estable(tmp_path):
     assert pa.mensaje_de(portada, meta) == msg
 
 
+def test_la_portada_de_avisos_no_cierra_con_el_analista():
+    """Director, 2026-09-29: en Avisos ese cierre se lee ordinario."""
+    assert pa.CIERRES_AVISOS and not any("analista" in c for c in pa.CIERRES_AVISOS)
+    assert set(pa.CIERRES_AVISOS) < set(pa.pc.CIERRES_ALERTA)
+
+
 def test_las_demas_laminas_llevan_solo_su_posicion(tmp_path):
     dir_canal, _ = _tanda(tmp_path)
     voz = dict(pa.leer_laminas(dir_canal))["2_voz"]
@@ -409,10 +415,56 @@ def test_rendir_escribe_png_y_mensaje_por_lamina_y_usa_el_freno_del_despacho(tmp
         salida.write_bytes(b"png")
         return salida
 
-    pngs = pa.rendir_tanda(dir_canal, AHORA, visiones, render=render_falso)
+    def grafico_falso(payload, destino):
+        destino.write_bytes(b"png")
+        return destino
+
+    pngs = pa.rendir_tanda(dir_canal, AHORA, visiones, render=render_falso, grafico=grafico_falso)
     assert [p.name for p in pngs] == ["1_portada.png", "2_voz.png", "3_datos.png", "4_lectura.png"]
     assert all((dir_canal / f"{p.stem}_mensaje.txt").exists() for p in pngs)
     assert llamadas == [4]
+
+
+def _render_que_guarda(vistos):
+    def render(tokens, plantilla, salida, formato="horizontal"):
+        vistos[salida.stem] = (tokens, story_render.build_html(tokens, plantilla))
+        salida.write_bytes(b"png")
+        return salida
+    return render
+
+
+def test_los_datos_llevan_el_grafico_tradingview_embebido(tmp_path):
+    """El estándar de gráficos de alerta es el motor TradingView, no la línea SVG."""
+    dir_canal, visiones = _tanda(tmp_path)
+    _escribir_todo(dir_canal)
+    pedidos, vistos = [], {}
+
+    def grafico_falso(payload, destino):
+        pedidos.append((payload["_procedencia"]["ticker"], destino.name))
+        destino.write_bytes(b"png")
+        return destino
+
+    pa.rendir_tanda(dir_canal, AHORA, visiones, render=_render_que_guarda(vistos), grafico=grafico_falso)
+    assert pedidos == [("USDCLP", "3_datos_grafico.png")]
+    tokens, html = vistos["3_datos"]
+    assert tokens["chart_png"].endswith("3_datos_grafico.png")
+    assert 'id="img-alerta"' in html and "<svg" not in html.split("contenedor-grafico")[-1].split("footer")[0]
+    # El payload en disco no cambia: el gráfico es de presentación.
+    assert dict(pa.leer_laminas(dir_canal))["3_datos"].get("chart_png") is None
+
+
+def test_sin_motor_tradingview_sale_el_svg_de_respaldo_y_lo_avisa(tmp_path, capsys):
+    dir_canal, visiones = _tanda(tmp_path)
+    _escribir_todo(dir_canal)
+    vistos = {}
+
+    def roto(payload, destino):
+        raise RuntimeError("Chromium no está")
+
+    pa.rendir_tanda(dir_canal, AHORA, visiones, render=_render_que_guarda(vistos), grafico=roto)
+    tokens, html = vistos["3_datos"]
+    assert not tokens.get("chart_png") and 'id="img-alerta"' not in html
+    assert "SVG de respaldo" in capsys.readouterr().err
 
 
 def test_rendir_no_llama_al_render_si_los_frenos_fallan(tmp_path, monkeypatch):

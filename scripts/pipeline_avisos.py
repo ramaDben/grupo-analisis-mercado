@@ -924,6 +924,11 @@ def _resetear_textos(payload: dict[str, Any]) -> None:
                     item[campo] = MARCA
 
 
+# Los cierres de alerta sin el del analista (director, 2026-09-29): en la
+# portada de Avisos se lee como plantilla de soporte, "ordinario".
+CIERRES_AVISOS: tuple[str, ...] = tuple(c for c in pc.CIERRES_ALERTA if "analista" not in c)
+
+
 def mensaje_de(payload: dict[str, Any], meta: dict[str, Any]) -> str:
     """El texto de la lámina. La portada lleva el pie completo; las demás, su posición.
 
@@ -934,7 +939,7 @@ def mensaje_de(payload: dict[str, Any], meta: dict[str, Any]) -> str:
         return mensaje_resultado(payload, meta)
     if payload.get("_clave") != "portada":
         return payload["posicion"]
-    cierres = {"agenda": CIERRES_AGENDA, "agenda_dia": CIERRES_DIA}.get(meta.get("formato"), pc.CIERRES_ALERTA)
+    cierres = {"agenda": CIERRES_AGENDA, "agenda_dia": CIERRES_DIA}.get(meta.get("formato"), CIERRES_AVISOS)
     cierre = pc.elegir_variante(cierres, meta.get("activo") or "agenda", meta["momento"], meta["fecha"])
     return "\n\n".join([str(payload["pie"]).strip(), cierre, AVISO_LEGAL, payload["posicion"]])
 
@@ -1038,10 +1043,52 @@ def tokens_de(payload: dict[str, Any]) -> dict[str, Any]:
     return tokens
 
 
+# El hueco del gráfico en `alerta.html` mide ~810x870. A ese ancho el encabezado
+# del motor se corta; se rinde a 1100 con la misma proporción y la plantilla lo
+# escala con object-fit: contain (medido el 2026-09-29: 810 corta, 1400 queda chico).
+GRAFICO_TV_ANCHO, GRAFICO_TV_ALTO = 1100, 1180
+
+
+def grafico_tradingview(payload: dict[str, Any], destino: Path) -> Path:
+    """El gráfico de velas del motor TradingView, con los niveles que cita la lámina."""
+    from tradingview_grafico import generar_grafico_tv
+
+    crudos = payload["_procedencia"]["crudos"]
+    return generar_grafico_tv(
+        ticker=payload["_procedencia"]["ticker"],
+        nombre=payload.get("rotulo_activo", payload.get("activo", "")),
+        destino=destino,
+        timeframe=pc.TIMEFRAME_GRAFICO,
+        n_velas=60,
+        soporte=crudos.get("soporte"),
+        resistencia=crudos.get("resistencia"),
+        ancho=GRAFICO_TV_ANCHO,
+        alto=GRAFICO_TV_ALTO,
+    )
+
+
+def _con_grafico_tv(payload: dict[str, Any], dir_canal: Path, stem: str,
+                    grafico: Callable[[dict[str, Any], Path], Path]) -> dict[str, Any]:
+    """La lámina de datos con el PNG de TradingView embebido, o la geometría SVG si falla.
+
+    Es el estándar de gráficos de alerta del proyecto; el SVG queda solo como
+    respaldo cuando no hay MT5 o Chromium, y el respaldo se dice en voz alta.
+    """
+    try:
+        png = grafico(payload, dir_canal / f"{stem}_grafico.png")
+    except Exception as exc:  # noqa: BLE001
+        print(f"AVISO: el gráfico TradingView de {stem} no se generó ({exc}); sale el SVG de respaldo.",
+              file=sys.stderr)
+        return payload
+    return {**payload, "chart_png": str(png),
+            "rotulo_grafico": f"{payload['_procedencia']['ticker'].upper()} · VELAS {pc.TIMEFRAME_GRAFICO} · ÚLTIMAS 60"}
+
+
 def rendir_tanda(dir_canal: Path, ahora: datetime | None = None,
                  visiones: dict[str, dict[str, Any]] | None = None,
                  render: Callable[..., Path] | None = None,
-                 activos_extra: dict[str, dict[str, Any]] | None = None) -> list[Path]:
+                 activos_extra: dict[str, dict[str, Any]] | None = None,
+                 grafico: Callable[[dict[str, Any], Path], Path] | None = None) -> list[Path]:
     ahora = ahora or datetime.now(SANTIAGO)
     visiones = visiones if visiones is not None else pl.cargar_visiones()
     errores = validar_tanda(dir_canal, ahora, visiones, activos_extra=activos_extra)
@@ -1056,6 +1103,8 @@ def rendir_tanda(dir_canal: Path, ahora: datetime | None = None,
     salidas: list[Path] = []
     for stem, payload in laminas:
         png = dir_canal / f"{stem}.png"
+        if payload["_plantilla"] == "avisos_datos":
+            payload = _con_grafico_tv(payload, dir_canal, stem, grafico or grafico_tradingview)
         render(tokens_de(payload), DIR_PLANTILLAS / PLANTILLAS[payload["_plantilla"]], png, formato="horizontal")
         (dir_canal / f"{stem}_mensaje.txt").write_text(mensaje_de(payload, meta), encoding="utf-8")
         salidas.append(png)
