@@ -267,3 +267,174 @@ def registrar_uso(hoy: date, momento: str, activo: str | None, vision_id: str | 
         historial.append({"fecha": hoy.isoformat(), "canal": CANAL, "tipo": "avisos",
                           "clave": activo, "momento": momento, "vision": vision_id})
     destino.write_text(json.dumps(historial, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+# ---------------------------------------------------------------- láminas
+
+CAMPOS_AVISOS = pl.CAMPOS_PRECIO + ("soporte_publicado", "resistencia_publicada")
+
+_PAISES = {"United States": "EE.UU.", "Chile": "Chile", "China": "China",
+           "Euro Zone": "Zona Euro", "Euro Area": "Zona Euro", "Zona Euro": "Zona Euro"}
+_ETIQUETA_TIPO = {"textual": "", "traduccion": "Traducción nuestra", "parafrasis": "En palabras nuestras"}
+CTA_AGENDA = ("¿Quieres seguir esta semana en detalle?", "Habla hoy con tu analista")
+
+
+def _fmt(valor: float, digits: int) -> str:
+    return pc.formatear_precio(float(valor), digits)
+
+
+def _fecha_corta(iso: str) -> str:
+    d = date.fromisoformat(iso)
+    return f"{d.day} {_MESES[d.month - 1]} {d.year}"
+
+
+def fila_medida(lectura: dict[str, Any], payload_datos: dict[str, Any]) -> dict[str, Any]:
+    """Lo que el texto puede citar: los niveles del terminal y los publicados en la alerta.
+
+    La alerta acota sus niveles (`acotar_niveles_intradia`), así que el soporte
+    que ve el cliente puede no ser el `s1` crudo: los dos cuentan como medidos.
+    """
+    niveles = {n["rol"]: n["precio"] for n in payload_datos["recorrido"]["niveles"]}
+    fila: dict[str, Any] = {"nombre": lectura["activo"]["nombre"], "digits": lectura["activo"]["digits"]}
+    fila.update({c: lectura["h1"].get(c) for c in pl.CAMPOS_PRECIO})
+    fila["soporte_publicado"] = niveles.get("SOPORTE")
+    fila["resistencia_publicada"] = niveles.get("RESISTENCIA")
+    return fila
+
+
+def lamina_portada(activo_nombre: str | None, precio: str, leido: datetime, ahora: datetime,
+                   agenda: bool, ticker: str | None = None) -> dict[str, Any]:
+    # Spec §3.7.4: toda lámina con precio lleva _procedencia.ticker; la agenda no tiene precio.
+    if not agenda and not ticker:
+        raise ValueError("la portada con precio exige el ticker de su procedencia")
+    return {
+        "_plantilla": "avisos_portada", "plantilla": "avisos_portada",
+        "sello": "AVISOS · AGENDA DE LA SEMANA" if agenda else f"AVISOS · {str(activo_nombre).upper()}",
+        "fecha_hora": fecha_hora(ahora),
+        "kicker": MARCA, "titular": MARCA, "parrafo": MARCA,
+        "claves": [{"texto": MARCA} for _ in range(3)],
+        "pie": MARCA,
+        "dato_precio": "" if agenda else f"{activo_nombre} {precio}",
+        "dato_hora": "" if agenda else f"LEÍDO {etiqueta_hora(leido)}",
+        "total_laminas": "", "posicion": "",
+        "_procedencia": {"ticker": None if agenda else ticker},
+    }
+
+
+def lamina_voz(vision: dict[str, Any], variante: str, fila: dict[str, Any], leido: datetime,
+               ahora: datetime) -> dict[str, Any]:
+    firma = f"{vision['quien']} · {vision['institucion']}"
+    fuente_fecha = f"{vision.get('fuente') or vision['institucion']} · {_fecha_corta(vision['fecha'])}"
+    if variante == "meta":
+        bloque_cita: list[dict[str, str]] = []
+        bloque_meta = [{
+            "meta": vision["meta"], "horizonte": vision["horizonte"], "firma": firma,
+            "precio_hoy": _fmt(fila["price"], fila["digits"]), "hora_precio": etiqueta_hora(leido),
+            "fuente_fecha": fuente_fecha,
+        }]
+    else:
+        tipo = vision.get("tipo", "textual")
+        cita = vision["cita"] if tipo == "parafrasis" else f"“{vision['cita']}”"
+        bloque_cita = [{"etiqueta": _ETIQUETA_TIPO.get(tipo, ""), "cita": cita, "firma": firma,
+                        "fuente_fecha": fuente_fecha}]
+        bloque_meta = []
+    return {
+        "_plantilla": "vision", "plantilla": "vision",
+        "_procedencia": {"vision": vision["id"], "ticker": vision.get("activo")},
+        "sello": "AVISOS · LA VOZ DEL BANCO", "fecha_hora": fecha_hora(ahora),
+        "titular": MARCA, "parrafo": MARCA,
+        "bloque_cita": bloque_cita, "bloque_meta": bloque_meta, "posicion": "",
+    }
+
+
+def lamina_datos(lectura: dict[str, Any], ahora: datetime) -> dict[str, Any]:
+    payload = pc.construir_payload(lectura["seleccion"], lectura["activo"], ahora, lectura["cierres"])
+    payload.update({"_plantilla": "avisos_datos", "titular": MARCA, "parrafo": MARCA})
+    return payload
+
+
+def eventos_calendario(agenda: list[dict[str, Any]], ahora: datetime, maximo: int = 6) -> list[dict[str, Any]]:
+    """Los tokens que espera `calendario.html`, que antes nadie armaba.
+
+    Solo los días hábiles de la semana de `ahora` (lunes a viernes), en orden de
+    reloj. `leer_agenda` ya entrega la hora en Santiago: no se vuelve a convertir.
+    """
+    local = ahora.astimezone(SANTIAGO)
+    lunes = local.date() - timedelta(days=local.weekday())
+    viernes = lunes + timedelta(days=4)
+    elegidos = []
+    for ev in agenda:
+        cuando = datetime.strptime(f"{ev['fecha']} {ev['hora']}", "%Y-%m-%d %H:%M").replace(tzinfo=SANTIAGO)
+        if lunes <= cuando.date() <= viernes:
+            elegidos.append((cuando, ev))
+    elegidos.sort(key=lambda par: par[0])
+    salida = []
+    for i, (cuando, ev) in enumerate(elegidos[:maximo], 1):
+        esperado = str(ev.get("consenso") or "").strip()
+        salida.append({
+            "numero": f"{i:02d}",
+            "dia": f"{_DIAS[cuando.weekday()]} {cuando.day}",
+            "hora": etiqueta_hora(cuando),
+            "evento": ev.get("nombre_es") or ev.get("evento", ""),
+            "pais": _PAISES.get(ev.get("pais", ""), ev.get("pais", "")),
+            "impacto": "Alto impacto", "impacto_slug": "alto",
+            "anterior": str(ev.get("anterior") or ""),
+            "esperado": esperado, "tiene_esperado": bool(esperado),
+        })
+    return salida
+
+
+def lamina_semana(agenda: list[dict[str, Any]], ahora: datetime) -> dict[str, Any]:
+    return {
+        "_plantilla": "avisos_agenda", "plantilla": "calendario",
+        "sello": "AVISOS · AGENDA DE LA SEMANA", "fecha_hora": fecha_hora(ahora),
+        "titular": MARCA, "parrafo": MARCA,
+        "eventos": eventos_calendario(agenda, ahora),
+        "cta": CTA_AGENDA[0], "cta_sub": CTA_AGENDA[1], "posicion": "",
+    }
+
+
+def lamina_lectura(ahora: datetime) -> dict[str, Any]:
+    return {
+        "_plantilla": "avisos_lectura", "plantilla": "avisos_lectura",
+        "sello": "AVISOS · NUESTRA LECTURA", "fecha_hora": fecha_hora(ahora),
+        "titular": MARCA, "parrafo": MARCA,
+        "puntos": [{"icono": "🔎", "titulo_punto": MARCA, "texto": MARCA} for _ in range(3)],
+        "firma": FIRMA, "aviso_legal": AVISO_LEGAL, "posicion": "",
+    }
+
+
+def armar_tanda(momento: str, formato: str, ahora: datetime, lectura: dict[str, Any] | None,
+                vision: dict[str, Any] | None, agenda: list[dict[str, Any]]) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    agenda_semana = formato == "agenda"
+    laminas: dict[str, dict[str, Any]] = {}
+    activos: dict[str, dict[str, Any]] = {}
+    direccion = None
+    if agenda_semana:
+        laminas["portada"] = lamina_portada(None, "", ahora, ahora, agenda=True)
+        laminas["semana"] = lamina_semana(agenda, ahora)
+    else:
+        datos = lamina_datos(lectura, ahora)
+        fila = fila_medida(lectura, datos)
+        activos[lectura["ticker"]] = fila
+        direccion = pc.direccion_publicada(lectura["seleccion"]["direccion"])
+        laminas["portada"] = lamina_portada(lectura["activo"]["nombre"], datos["precio_actual"],
+                                            ahora, ahora, agenda=False, ticker=lectura["ticker"])
+        if vision is not None:
+            variante = variante_de(vision)
+            laminas["voz"] = lamina_voz(vision, variante, fila, ahora, ahora)
+        laminas["datos"] = datos
+    laminas["lectura"] = lamina_lectura(ahora)
+    meta = {
+        "version": 1, "momento": momento, "formato": formato, "fecha": ahora.date().isoformat(),
+        "activo": None if agenda_semana else lectura["ticker"],
+        "vision": vision["id"] if vision else None,
+        "vision_variante": variante_de(vision) if vision else None,
+        "_falta_vision": (not agenda_semana) and vision is None,
+        "leido_en": ahora.isoformat(timespec="minutes"),
+        "direccion": direccion,
+        "activos": activos,
+        "activos_preparacion": json.loads(json.dumps(activos)),
+        "cifras_citadas": {}, "aceptar_antiguas": {},
+    }
+    return meta, laminas

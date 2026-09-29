@@ -166,3 +166,114 @@ def test_registrar_uso_anota_al_preparar(tmp_path):
     datos = json.loads(ruta.read_text(encoding="utf-8"))
     assert [e["tipo"] for e in datos] == ["vision", "avisos", "avisos"]
     assert datos[2]["momento"] == "avisos_tarde"
+
+
+# ---------------------------------------------------------------- láminas
+
+
+AHORA = datetime(2026, 9, 29, 11, 30, tzinfo=pa.SANTIAGO)
+
+
+def lectura_falsa(ticker="USDCLP", precio=936.32, digits=2, nombre="Dólar / Peso chileno"):
+    activo = {"ticker": ticker, "nombre": nombre, "clase": "forex_commodities", "categoria": "forex",
+              "digits": digits, "unidad": "CLP", "imagen": "assets/activos/usdclp.jpg", "volatilidad": "media",
+              "nota_volatilidad": "en 1H se lee el movimiento del día sin el ruido de 15M; 4H confirma la tendencia"}
+    sel = {"ticker": ticker, "nombre": nombre, "clase": "forex_commodities", "direccion": "ALCISTA", "score": 60,
+           "precio": precio, "soporte": precio - 3, "resistencia": precio + 3, "atr_h1": 1.2, "atr_d1": 6.0,
+           "impulso_adc_atr": 1.8, "banda_estrecha": None, "factores": {}}
+    h1 = {"price": precio, "s1": precio - 3, "r1": precio + 3, "s2": precio - 6, "r2": precio + 6,
+          "ema_50": precio - 1, "donchian_50_high": precio + 8, "donchian_50_low": precio - 8, "atr_14": 1.2}
+    cierres = [round(precio - (59 - i) * 0.01, 6) for i in range(60)]
+    return {"ticker": ticker, "activo": activo, "seleccion": sel, "h1": h1, "cierres": cierres}
+
+
+def test_tanda_de_cita_con_voz_tiene_cuatro_laminas_y_todas_con_titular_y_parrafo():
+    meta, laminas = pa.armar_tanda("avisos_manana", "cita", AHORA, lectura_falsa(), vision("v"), [])
+    assert list(laminas) == ["portada", "voz", "datos", "lectura"]
+    for payload in laminas.values():
+        assert "titular" in payload and "parrafo" in payload
+        assert payload["_plantilla"] in pa.PLANTILLAS
+    assert meta["activo"] == "USDCLP" and meta["vision"] == "v" and meta["_falta_vision"] is False
+    assert meta["direccion"] == "Alcista"
+
+
+def test_tanda_sin_vision_queda_marcada_y_sin_voz():
+    meta, laminas = pa.armar_tanda("avisos_manana", "cita", AHORA, lectura_falsa(), None, [])
+    assert meta["_falta_vision"] is True
+    assert "voz" not in laminas
+
+
+def test_la_portada_trae_el_precio_del_terminal_y_la_hora():
+    _, laminas = pa.armar_tanda("avisos_manana", "cita", AHORA, lectura_falsa(), None, [])
+    assert laminas["portada"]["dato_precio"].endswith("936,32")
+    assert laminas["portada"]["dato_hora"] == "LEÍDO 11:30 CLST"
+    assert laminas["portada"]["sello"] == "AVISOS · DÓLAR / PESO CHILENO"
+
+
+def test_portada_del_cobre_escribe_el_precio_como_la_alerta():
+    lec = lectura_falsa("COPPER", 14197.0, 0, "Cobre")
+    _, laminas = pa.armar_tanda("avisos_manana", "cita", AHORA, lec, None, [])
+    assert laminas["portada"]["dato_precio"].endswith(laminas["datos"]["precio_actual"])
+    assert laminas["datos"]["precio_actual"] == "14197"
+
+
+def test_portada_con_precio_sin_ticker_lanza():
+    with pytest.raises(ValueError):
+        pa.lamina_portada("Dólar / Peso chileno", "936,32", AHORA, AHORA, agenda=False, ticker=None)
+
+
+def test_portada_de_agenda_no_exige_ticker():
+    portada = pa.lamina_portada(None, "", AHORA, AHORA, agenda=True)
+    assert portada["_procedencia"] == {"ticker": None}
+
+
+def test_la_voz_meta_muestra_la_meta_y_el_precio_de_hoy():
+    v = vision("m", tipo="parafrasis", cita="Proyecta $980 a fin de año.", meta="$980", horizonte="fin de 2026")
+    _, laminas = pa.armar_tanda("avisos_mediodia", "meta", AHORA, lectura_falsa(), v, [])
+    voz = laminas["voz"]
+    assert voz["bloque_cita"] == []
+    assert voz["bloque_meta"][0]["meta"] == "$980"
+    assert voz["bloque_meta"][0]["precio_hoy"] == "936,32"
+
+
+def test_la_voz_de_una_traduccion_lo_dice():
+    _, laminas = pa.armar_tanda("avisos_manana", "cita", AHORA, lectura_falsa(), vision("t", tipo="traduccion"), [])
+    assert laminas["voz"]["bloque_cita"][0]["etiqueta"] == "Traducción nuestra"
+
+
+def test_la_fila_medida_incluye_los_niveles_publicados():
+    meta, laminas = pa.armar_tanda("avisos_manana", "cita", AHORA, lectura_falsa(), None, [])
+    fila = meta["activos"]["USDCLP"]
+    niveles = {n["rol"]: n["precio"] for n in laminas["datos"]["recorrido"]["niveles"]}
+    assert fila["soporte_publicado"] == niveles["SOPORTE"]
+    assert fila["price"] == 936.32 and fila["digits"] == 2
+
+
+AGENDA = [
+    {"fecha": "2026-10-02", "hora": "08:30", "pais": "United States", "evento": "Nonfarm Payrolls",
+     "nombre_es": "Nóminas no agrícolas", "consenso": "98K", "anterior": "162K"},
+    {"fecha": "2026-09-30", "hora": "10:30", "pais": "United States", "evento": "Crude Oil Inventories",
+     "nombre_es": "", "consenso": "", "anterior": "-1.2M"},
+    {"fecha": "2026-10-05", "hora": "09:00", "pais": "Chile", "evento": "Imacec", "nombre_es": "Imacec",
+     "consenso": "", "anterior": "0,5%"},
+]
+
+
+def test_la_agenda_arma_los_tokens_de_calendario_en_orden_y_solo_esta_semana():
+    lunes = datetime(2026, 9, 28, 15, 30, tzinfo=pa.SANTIAGO)
+    eventos = pa.eventos_calendario(AGENDA, lunes)
+    assert [e["numero"] for e in eventos] == ["01", "02"]
+    assert eventos[0]["dia"] == "MIÉRCOLES 30" and eventos[0]["evento"] == "Crude Oil Inventories"
+    assert eventos[1]["evento"] == "Nóminas no agrícolas" and eventos[1]["pais"] == "EE.UU."
+    assert eventos[1]["esperado"] == "98K" and eventos[1]["tiene_esperado"] is True
+    assert eventos[0]["tiene_esperado"] is False
+    assert eventos[0]["hora"] == "10:30 CLST" and eventos[0]["impacto_slug"] == "alto"
+
+
+def test_la_tanda_de_agenda_no_tiene_activo_ni_alerta():
+    lunes = datetime(2026, 9, 28, 15, 30, tzinfo=pa.SANTIAGO)
+    meta, laminas = pa.armar_tanda("avisos_tarde", "agenda", lunes, None, None, AGENDA)
+    assert list(laminas) == ["portada", "semana", "lectura"]
+    assert meta["activo"] is None and meta["_falta_vision"] is False
+    assert laminas["portada"]["dato_precio"] == ""
+    assert laminas["portada"]["sello"] == "AVISOS · AGENDA DE LA SEMANA"
