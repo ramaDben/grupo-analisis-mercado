@@ -439,3 +439,132 @@ def test_tokens_de_traduce_titular_y_parrafo_por_plantilla(tmp_path):
     t = pa.tokens_de(laminas["4_lectura"])
     assert "titulo" in t and "conclusion" in t
     assert not any(k.startswith("_") for k in t)
+
+
+# ---------------------------------------------------------------- preparar, refrescar, CLI
+
+
+def _preparar(tmp_path, momento="avisos_manana", ahora=AHORA, visiones=None, lector=None, agenda=None):
+    hist = tmp_path / "hist.json"
+    if not hist.exists():
+        hist.write_text("[]", encoding="utf-8")
+    return pa.preparar(
+        momento, ahora,
+        lector=lector or (lambda t, a: lectura_falsa(t)),
+        lector_agenda=lambda a: (agenda or AGENDA, []),
+        visiones=visiones if visiones is not None else {"v": vision("v")},
+        historial_ruta=hist, dir_base=tmp_path / "carrusel",
+    ), hist
+
+
+def test_feriado_no_prepara_nada(tmp_path):
+    feriado = datetime(2026, 11, 26, 10, 30, tzinfo=pa.SANTIAGO)
+    ruta, hist = _preparar(tmp_path, ahora=feriado)
+    assert ruta is None and json.loads(hist.read_text(encoding="utf-8")) == []
+
+
+def test_preparar_escribe_la_tanda_y_anota_el_historial(tmp_path):
+    ruta, hist = _preparar(tmp_path)
+    assert ruta.name == pa.CANAL and ruta.parent.name.endswith("_avisos_avisos_manana")
+    assert (ruta / "_avisos.json").exists() and (ruta / "2_voz.json").exists()
+    tipos = [e["tipo"] for e in json.loads(hist.read_text(encoding="utf-8"))]
+    assert tipos == ["vision", "avisos"]
+
+
+def test_preparar_dos_veces_el_mismo_momento_no_duplica(tmp_path):
+    primera, hist = _preparar(tmp_path)
+    antes = hist.read_text(encoding="utf-8")
+    segunda, _ = _preparar(tmp_path, ahora=AHORA + timedelta(minutes=10))
+    assert segunda == primera
+    assert hist.read_text(encoding="utf-8") == antes
+
+
+def test_sin_vision_la_tanda_sale_marcada(tmp_path):
+    ruta, _ = _preparar(tmp_path, visiones={})
+    assert pa.leer_meta(ruta)["_falta_vision"] is True
+    assert not (ruta / "2_voz.json").exists()
+
+
+def test_una_falla_de_terminal_es_falla_de_datos(tmp_path):
+    def roto(t, a):
+        raise pa.LecturaFallidaError("MT5 no conectó")
+    with pytest.raises(pa.LecturaFallidaError):
+        _preparar(tmp_path, lector=roto)
+
+
+def test_el_balance_retoma_el_activo_y_la_voz_de_la_manana_sin_gastarla(tmp_path):
+    _preparar(tmp_path, momento="avisos_manana")
+    tarde = datetime(2026, 9, 29, 15, 30, tzinfo=pa.SANTIAGO)
+    ruta, hist = _preparar(tmp_path, momento="avisos_tarde", ahora=tarde)
+    meta = pa.leer_meta(ruta)
+    assert meta["formato"] == "balance" and meta["activo"] == "USDCLP" and meta["vision"] == "v"
+    visiones_gastadas = [e for e in json.loads(hist.read_text(encoding="utf-8")) if e["tipo"] == "vision"]
+    assert len(visiones_gastadas) == 1
+
+
+def test_la_agenda_del_lunes_no_lee_el_terminal(tmp_path):
+    def no_llamar(t, a):
+        raise AssertionError("la agenda no tiene activo")
+    lunes = datetime(2026, 9, 28, 15, 30, tzinfo=pa.SANTIAGO)
+    ruta, _ = _preparar(tmp_path, momento="avisos_tarde", ahora=lunes, lector=no_llamar)
+    assert [s for s, _ in pa.leer_laminas(ruta)] == ["1_portada", "2_semana", "3_lectura"]
+
+
+def test_completar_vision_arma_la_voz_sin_cambiar_el_activo(tmp_path):
+    # El catálogo real trae más candidatos que USDCLP (p. ej. BRENT.spot, alfabéticamente
+    # antes): se marcan ya cubiertos hoy para que el único candidato libre sea USDCLP y el
+    # test no dependa del orden real del catálogo, solo de que completar_vision no lo cambie.
+    hist = tmp_path / "hist.json"
+    hist.write_text(json.dumps([
+        uso(AHORA.date().isoformat(), t) for t in ("BRENT.spot", "COPPER", "US100.spot", "WTI.spot", "XAUUSD")
+    ]), encoding="utf-8")
+    ruta, hist = _preparar(tmp_path, visiones={})
+    visiones = {"n": vision("n", fecha="2026-09-27")}
+    pa.completar_vision(ruta, "n", AHORA, visiones=visiones, historial_ruta=hist)
+    meta = pa.leer_meta(ruta)
+    assert meta["activo"] == "USDCLP" and meta["vision"] == "n" and meta["_falta_vision"] is False
+    assert [s for s, _ in pa.leer_laminas(ruta)] == ["1_portada", "2_voz", "3_datos", "4_lectura"]
+    assert any(e["tipo"] == "vision" and e["clave"] == "n" for e in json.loads(hist.read_text(encoding="utf-8")))
+
+
+def test_completar_vision_de_otro_activo_se_niega(tmp_path):
+    ruta, hist = _preparar(tmp_path, visiones={})
+    with pytest.raises(SystemExit, match="activo"):
+        pa.completar_vision(ruta, "x", AHORA, visiones={"x": vision("x", activo="XAUUSD")}, historial_ruta=hist)
+
+
+def test_refrescar_conserva_texto_y_vision_y_mueve_la_hora(tmp_path):
+    ruta, _ = _preparar(tmp_path)
+    _escribir_todo(ruta)
+    despues = AHORA + timedelta(minutes=40)
+    pa.refrescar_tanda(ruta, despues, lector=lambda t, a: lectura_falsa(t, precio=936.80))
+    meta = pa.leer_meta(ruta)
+    laminas = dict(pa.leer_laminas(ruta))
+    assert meta["leido_en"].startswith("2026-09-29T12:10") and meta["vision"] == "v"
+    assert laminas["1_portada"]["pie"].startswith("El dólar mantiene")
+    assert laminas["1_portada"]["dato_precio"].endswith("936,80")
+    assert laminas["3_datos"]["precio_actual"] == "936,80"
+    # Ruling 2 (pre-flight): el refresco de la portada conserva la procedencia.
+    assert laminas["1_portada"]["_procedencia"]["ticker"] == "USDCLP"
+
+
+def test_refrescar_con_divergencia_no_escribe_sin_reescribir(tmp_path):
+    ruta, _ = _preparar(tmp_path)
+    _escribir_todo(ruta)
+    antes = (ruta / "3_datos.json").read_text(encoding="utf-8")
+    with pytest.raises(SystemExit, match="reescribir"):
+        pa.refrescar_tanda(ruta, AHORA, lector=lambda t, a: lectura_falsa(t, precio=945.0))
+    assert (ruta / "3_datos.json").read_text(encoding="utf-8") == antes
+
+
+def test_la_tabla_de_refresco_cubre_toda_plantilla_que_se_escribe():
+    assert set(pa.REFRESCOS) == set(pa.PLANTILLAS)
+    assert pa.REFRESCOS["avisos_lectura"] is None and pa.REFRESCOS["avisos_agenda"] is None
+
+
+def test_pipeline_avisos_usa_los_tres_frenos_compartidos():
+    import inspect
+    fuente = inspect.getsource(pa.validar_tanda)
+    for freno in ("validar_textos", "validar_cifras", "validar_frescura"):
+        assert f"pl.{freno}" in fuente
+    assert "exigir_texto_editorial" in inspect.getsource(pa.rendir_tanda)

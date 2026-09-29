@@ -597,3 +597,297 @@ def rendir_tanda(dir_canal: Path, ahora: datetime | None = None,
         (dir_canal / f"{stem}_mensaje.txt").write_text(mensaje_de(payload, meta), encoding="utf-8")
         salidas.append(png)
     return salidas
+
+
+# ---------------------------------------------------------------- terminal
+
+
+class LecturaFallidaError(RuntimeError):
+    """El terminal no entregó el activo: falla de datos, el momento queda pendiente."""
+
+
+def leer_terminal(ticker: str, ahora: datetime) -> dict[str, Any]:
+    """Una lectura del activo, con la misma vara que el escáner (cobertura fija)."""
+    import screener_gi as sc
+    from market_data_mcp import mt5_client
+    from market_data_mcp.analisis import analizar_activo
+
+    try:
+        mt5_client.connect()
+    except Exception as exc:  # noqa: BLE001
+        raise LecturaFallidaError(f"MT5 no conectó ({exc.__class__.__name__})") from exc
+    catalogo = pl._catalogo()
+    if ticker not in catalogo:
+        raise LecturaFallidaError(f"{ticker} no está en el catálogo")
+    activo = catalogo[ticker]
+    sel = sc.evaluar_activo(activo, [], None, ahora, fijo=True, ignorar_agotamiento=True)
+    if "excluido" in sel:
+        raise LecturaFallidaError(f"{ticker}: {sel['excluido']}")
+    h1 = analizar_activo(ticker, "H1")
+    if "error" in h1:
+        raise LecturaFallidaError(f"{ticker}: {h1['error']}")
+    try:
+        cierres = pc._serie_para(ticker)
+    except Exception as exc:  # noqa: BLE001
+        raise LecturaFallidaError(f"{ticker}: sin serie ({exc})") from exc
+    return {"ticker": ticker, "activo": activo, "seleccion": sel, "h1": h1, "cierres": cierres}
+
+
+def _leer_agenda(ahora: datetime) -> tuple[list[dict[str, Any]], list[str]]:
+    return pl.leer_agenda(ahora)
+
+
+# ---------------------------------------------------------------- preparar
+
+
+def _tanda_existente(dir_base: Path, fecha: date, momento: str) -> Path | None:
+    for d in sorted(dir_base.glob(f"{fecha.isoformat()}_*_avisos_{momento}")):
+        canal = d / CANAL
+        if (canal / "_avisos.json").exists():
+            return canal
+    return None
+
+
+def preparar(momento: str, ahora: datetime | None = None, *,
+             lector: Callable[[str, datetime], dict[str, Any]] | None = None,
+             lector_agenda: Callable[[datetime], tuple[list[dict[str, Any]], list[str]]] | None = None,
+             visiones: dict[str, dict[str, Any]] | None = None,
+             historial_ruta: Path | None = None, dir_base: Path | None = None) -> Path | None:
+    """La tanda del momento, o `None` si hoy no corresponde.
+
+    Una segunda corrida del mismo momento el mismo día devuelve la tanda que ya
+    existe sin escribir nada: volver a elegir quemaría otra visión.
+    """
+    ahora = (ahora or datetime.now(SANTIAGO)).astimezone(SANTIAGO)
+    hoy = ahora.date()
+    formato = formato_del_momento(momento, hoy)
+    if not es_dia_habil(hoy):
+        return None
+    dir_base = dir_base or pc.DIR_TRABAJO
+    existente = _tanda_existente(dir_base, hoy, momento)
+    if existente is not None:
+        return existente
+
+    lector = lector or leer_terminal
+    visiones = visiones if visiones is not None else pl.cargar_visiones()
+    historial = cargar_historial(historial_ruta)
+
+    lectura: dict[str, Any] | None = None
+    vision: dict[str, Any] | None = None
+    agenda: list[dict[str, Any]] = []
+    gastar_vision = True
+    if formato == "agenda":
+        agenda, avisos = (lector_agenda or _leer_agenda)(ahora)
+        if avisos and not agenda:
+            raise LecturaFallidaError("; ".join(avisos))
+        activo = None
+    else:
+        if formato == "balance":
+            activo, vid = activo_del_balance(historial, hoy)
+            gastar_vision = False
+            if activo is None:
+                activo, vid = elegir("cita", hoy, {}, historial)
+        else:
+            activo, vid = elegir(formato, hoy, visiones, historial)
+        vision = visiones.get(vid) if vid else None
+        lectura = lector(activo, ahora)
+
+    meta, laminas = armar_tanda(momento, formato, ahora, lectura, vision, agenda)
+    dir_canal = dir_base / f"{ahora:%Y-%m-%d_%H-%M}_avisos_{momento}" / CANAL
+    dir_canal.mkdir(parents=True, exist_ok=True)
+    escribir_meta(dir_canal, meta)
+    escribir_laminas(dir_canal, formato, laminas)
+    registrar_uso(hoy, momento, activo, meta["vision"], gastar_vision=gastar_vision, ruta=historial_ruta)
+    return dir_canal
+
+
+# ---------------------------------------------------------------- refrescar
+
+
+def refrescar_portada(payload: dict[str, Any], lectura: dict[str, Any], ahora: datetime) -> tuple[dict[str, Any], str | None]:
+    nuevo = json.loads(json.dumps(payload))
+    precio = _fmt(lectura["h1"]["price"], lectura["activo"]["digits"])
+    nuevo["dato_precio"] = f"{lectura['activo']['nombre']} {precio}"
+    nuevo["dato_hora"] = f"LEÍDO {etiqueta_hora(ahora)}"
+    nuevo["fecha_hora"] = fecha_hora(ahora)
+    return nuevo, None
+
+
+def refrescar_voz(payload: dict[str, Any], lectura: dict[str, Any], ahora: datetime) -> tuple[dict[str, Any], str | None]:
+    nuevo = json.loads(json.dumps(payload))
+    for bloque in nuevo.get("bloque_meta", []):
+        bloque["precio_hoy"] = _fmt(lectura["h1"]["price"], lectura["activo"]["digits"])
+        bloque["hora_precio"] = etiqueta_hora(ahora)
+    nuevo["fecha_hora"] = fecha_hora(ahora)
+    return nuevo, None
+
+
+def refrescar_datos(payload: dict[str, Any], lectura: dict[str, Any], ahora: datetime) -> tuple[dict[str, Any], str | None]:
+    return pc.refrescar_payload(payload, ahora=ahora, h1=lectura["h1"],
+                                digits=lectura["activo"]["digits"], cierres=lectura["cierres"])
+
+
+# Toda `_plantilla` que este script escribe tiene entrada. `None` es una
+# decisión explícita (la lámina no lleva precio), no una ausencia: así ninguna
+# lámina cae en el camino "se despacha tal cual" sin que alguien lo haya decidido.
+REFRESCOS: dict[str, Callable[[dict[str, Any], dict[str, Any], datetime], tuple[dict[str, Any], str | None]] | None] = {
+    "avisos_portada": refrescar_portada,
+    "vision": refrescar_voz,
+    "avisos_datos": refrescar_datos,
+    "avisos_agenda": None,
+    "avisos_lectura": None,
+}
+
+
+def _aplicar_refresco(dir_canal: Path, lectura: dict[str, Any], ahora: datetime) -> tuple[dict[str, dict[str, Any]], list[str]]:
+    """Las láminas refrescadas en memoria y los motivos de divergencia. No escribe."""
+    nuevas: dict[str, dict[str, Any]] = {}
+    motivos: list[str] = []
+    for stem, payload in leer_laminas(dir_canal):
+        funcion = REFRESCOS[payload["_plantilla"]]
+        if funcion is None:
+            continue
+        nuevo, motivo = funcion(payload, lectura, ahora)
+        if motivo:
+            motivos.append(f"{stem}: {motivo}")
+        nuevas[stem] = nuevo
+    return nuevas, motivos
+
+
+def _guardar_refresco(dir_canal: Path, meta: dict[str, Any], nuevas: dict[str, dict[str, Any]],
+                      lectura: dict[str, Any], ahora: datetime) -> None:
+    for stem, payload in nuevas.items():
+        (dir_canal / f"{stem}.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    datos = next(p for p in nuevas.values() if p["_plantilla"] == "avisos_datos")
+    meta["activos"] = {lectura["ticker"]: fila_medida(lectura, datos)}
+    meta["leido_en"] = ahora.isoformat(timespec="minutes")
+    meta["direccion"] = datos.get("sesgo", meta.get("direccion"))
+    escribir_meta(dir_canal, meta)
+
+
+def refrescar_tanda(dir_canal: Path, ahora: datetime | None = None,
+                    lector: Callable[[str, datetime], dict[str, Any]] | None = None,
+                    reescribir: bool = False) -> list[str]:
+    """Relee el terminal para el mismo activo. Conserva la visión y todo el texto.
+
+    Si el precio cruzó un nivel o la lectura dio vuelta, el texto quedó escrito
+    para otro mercado: sin `reescribir` no se toca nada; con `reescribir` se
+    guardan los datos nuevos y los textos vuelven a `[[ESCRIBIR]]`.
+    """
+    ahora = (ahora or datetime.now(SANTIAGO)).astimezone(SANTIAGO)
+    meta = leer_meta(dir_canal)
+    if not meta.get("activo"):
+        meta["leido_en"] = ahora.isoformat(timespec="minutes")
+        escribir_meta(dir_canal, meta)
+        return ["agenda: sin precio que refrescar, se renovó la hora de lectura"]
+    lectura = (lector or leer_terminal)(meta["activo"], ahora)
+    nuevas, motivos = _aplicar_refresco(dir_canal, lectura, ahora)
+    if motivos and not reescribir:
+        raise SystemExit(
+            "El mercado invalidó el texto:\n  " + "\n  ".join(motivos)
+            + "\nCorre --refrescar con --reescribir y vuelve a escribir las láminas."
+        )
+    _guardar_refresco(dir_canal, meta, nuevas, lectura, ahora)
+    if motivos:
+        for stem, payload in leer_laminas(dir_canal):
+            for campo in _CAMPOS_TEXTO:
+                if campo in payload:
+                    payload[campo] = MARCA
+            (dir_canal / f"{stem}.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        return motivos + ["textos vueltos a [[ESCRIBIR]]"]
+    return [f"refrescado a las {etiqueta_hora(ahora)}"]
+
+
+# ---------------------------------------------------------------- completar visión
+
+
+def completar_vision(dir_canal: Path, vid: str, ahora: datetime | None = None,
+                     visiones: dict[str, dict[str, Any]] | None = None,
+                     historial_ruta: Path | None = None) -> None:
+    """Arma la lámina de la voz en una tanda que salió sin visión. No cambia el activo."""
+    ahora = (ahora or datetime.now(SANTIAGO)).astimezone(SANTIAGO)
+    meta = leer_meta(dir_canal)
+    if not meta.get("_falta_vision"):
+        raise SystemExit("La tanda ya tiene visión o no la necesita (agenda).")
+    visiones = visiones if visiones is not None else pl.cargar_visiones()
+    vision = visiones.get(vid)
+    if vision is None:
+        raise SystemExit(f"`{vid}` no está en el registro {pl.REGISTRO_VISIONES.name}.")
+    if vision.get("activo") != meta["activo"]:
+        raise SystemExit(f"La visión `{vid}` es de {vision.get('activo')} y el activo de la tanda es {meta['activo']}.")
+    variante = meta["formato"] if meta["formato"] in ("cita", "meta") else variante_de(vision)
+    if not vision_califica(vision, variante, ahora.date(), cargar_historial(historial_ruta)):
+        raise SystemExit(
+            f"La visión `{vid}` no sirve para la variante {variante}: revisa fecha (máximo "
+            f"{pl.ANTIGUEDAD_MAX_DIAS} días), uso en Avisos (14 días) y, si es meta, `meta` y `horizonte`."
+        )
+    laminas = {p["_clave"]: p for _, p in leer_laminas(dir_canal)}
+    fila = meta["activos"][meta["activo"]]
+    leido = datetime.fromisoformat(meta["leido_en"])
+    laminas["voz"] = lamina_voz(vision, variante, fila, leido, ahora)
+    ordenadas = {c: laminas[c] for c in SECUENCIAS[meta["formato"]] if c in laminas}
+    escribir_laminas(dir_canal, meta["formato"], ordenadas)
+    meta.update(vision=vid, vision_variante=variante, _falta_vision=False)
+    escribir_meta(dir_canal, meta)
+    registrar_uso(ahora.date(), meta["momento"], None, vid, gastar_vision=True, ruta=historial_ruta)
+
+
+# ---------------------------------------------------------------- CLI
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Carruseles de Avisos: la voz de los bancos contra nuestros datos")
+    modo = parser.add_mutually_exclusive_group(required=True)
+    modo.add_argument("--preparar", action="store_true", help="prepara la tanda del momento (--momento)")
+    modo.add_argument("--refrescar", type=Path, metavar="DIR", help="relee el terminal y conserva el texto")
+    modo.add_argument("--rendir", type=Path, metavar="DIR", help="aplica los frenos y rinde las láminas")
+    modo.add_argument("--validar", type=Path, metavar="DIR", help="informa qué falta, sin escribir")
+    modo.add_argument("--completar-vision", nargs=2, metavar=("DIR", "ID"), help="arma la voz con una visión nueva")
+    parser.add_argument("--momento", choices=sorted(MOMENTOS))
+    parser.add_argument("--reescribir", action="store_true", help="con --refrescar: acepta la divergencia y vacía los textos")
+    args = parser.parse_args(argv)
+
+    if args.preparar:
+        if not args.momento:
+            print("ERROR: --preparar necesita --momento", file=sys.stderr)
+            return 2
+        try:
+            ruta = preparar(args.momento)
+        except LecturaFallidaError as exc:
+            print(f"FALLA DE DATOS: {exc}. El momento queda pendiente.", file=sys.stderr)
+            return 1
+        except SinCandidatosError as exc:
+            print(f"Sin tanda: {exc} Es un resultado válido, no una falla.")
+            return 0
+        if ruta is None:
+            print("Hoy no corresponde: no es día hábil en la bolsa de Nueva York.")
+            return 0
+        meta = leer_meta(ruta)
+        print(f"Tanda: {ruta.parent}\nActivo: {meta['activo'] or 'agenda de la semana'} · formato {meta['formato']}")
+        if meta["_falta_vision"]:
+            print("_falta_vision: el comando busca una visión y corre --completar-vision.")
+        return 0
+    if args.refrescar:
+        try:
+            for linea in refrescar_tanda(args.refrescar, reescribir=args.reescribir):
+                print(linea)
+        except LecturaFallidaError as exc:
+            print(f"FALLA DE DATOS: {exc}", file=sys.stderr)
+            return 1
+        return 0
+    if args.rendir:
+        for png in rendir_tanda(args.rendir):
+            print(png)
+        return 0
+    if args.validar:
+        errores = validar_tanda(args.validar, datetime.now(SANTIAGO), pl.cargar_visiones())
+        print("Lista para rendir." if not errores else "\n".join(errores))
+        return 0 if not errores else 1
+    directorio, vid = args.completar_vision
+    completar_vision(Path(directorio), vid)
+    print(f"Voz armada con `{vid}`. Escribe su titular y su párrafo y corre --rendir.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
