@@ -474,15 +474,18 @@ def canales_con_contexto_macro(
        Antes se lo pasaba a `obtener_grupo_whatsapp`, que espera una *categoria*:
        ninguna rama aplicaba, caia al default y el resultado era que el canal
        pedido no recibia nada y el macro se lo llevaba entero el de avisos.
-    3. **El canal de avisos, siempre**, por decision del director del 2026-09-03.
-       Declararlo importa: el mismo resultado salia antes del default de
-       `obtener_grupo_whatsapp`, o sea que habria seguido ocurriendo aunque la
-       decision hubiera sido la contraria.
+    3. **Nunca el canal de avisos** (decision del director del 2026-09-29, que
+       revierte la del 2026-09-03 "el canal de avisos, siempre"). Avisos es de
+       `pipeline_avisos`: la agenda del dia y el resultado de cada dato. Con la
+       regla vieja, toda tanda le armaba su contexto, y como la bitacora deduplica
+       por tanda, una tanda de solo WTI reenvio a Avisos el contexto del VIX media
+       hora despues del bueno. Se descarta aca y no solo al sumar, asi ni un
+       `--grupo macro` ni una pieza mal mapeada lo vuelven a meter.
     """
     canales = {p["grupo"] for p in payloads if p.get("grupo")}
     if grupo_pedido:
         canales.add(grupo_pedido)
-    canales.add(CANAL_AVISOS)
+    canales.discard(CANAL_AVISOS)
     return canales
 
 
@@ -553,12 +556,12 @@ def construir_mensaje_alerta(payload: dict[str, Any]) -> str:
     lineas.extend([
         f"Precio actual: {precio}",
         "━━━━━━━━━━━━━━━━━━━",
-        f"🟢 Sobre {resistencia} → fuerza compradora",
+        f"⬆️ Sobre {resistencia} → fuerza compradora",
         # La zona media tambien se opera (decision del director, 2026-09-28):
         # quien sabe operar la configuracion nunca tiene que quedarse esperando.
-        f"🟡 Entre {soporte} y {resistencia} → rango: si rompe un borde y vuelve a "
+        f"↔️ Entre {soporte} y {resistencia} → rango: si rompe un borde y vuelve a "
         "entrar, es falso quiebre y el objetivo pasa a ser el borde contrario",
-        f"🔴 Bajo {soporte} → presión vendedora",
+        f"⬇️ Bajo {soporte} → presión vendedora",
         "━━━━━━━━━━━━━━━━━━━",
     ])
 
@@ -883,8 +886,8 @@ def preparar(
     # de dos horas, en dos tandas manuales del mismo día.
     sc._guardar(resultado)
 
-    # Los canales que ESTA corrida va a escribir: el pedido con `--grupo` (mas el
-    # de avisos, que siempre recibe macro) o todos si es una corrida completa.
+    # Los canales que ESTA corrida va a escribir: el pedido con `--grupo` o todos
+    # si es una corrida completa. Avisos nunca: es de `pipeline_avisos`.
     canales_a_barrer = (
         canales_con_contexto_macro([], grupo_pedido=grupo) if grupo else None
     )
@@ -919,6 +922,11 @@ def preparar(
             continue
         cat_real = activo.get("categoria", sel["clase"])
         grupo_nombre = obtener_grupo_whatsapp(cat_real, sel["ticker"])
+        if grupo_nombre == CANAL_AVISOS:
+            # Una categoria mapeada a Avisos es un error del catalogo, no una pieza:
+            # Avisos es de `pipeline_avisos` (decision del 2026-09-29).
+            problemas.append(f"{sel['ticker']}: su categoria apunta a Avisos, que no recibe alertas del carrusel")
+            continue
         grupo_dir = destino / grupo_nombre
         grupo_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1454,6 +1462,42 @@ def _refrescar_y_rendir(dir_grupo: Path) -> list[str]:
     return avisos
 
 
+def _refrescar_y_rendir_avisos(dir_grupo: Path, sin_mt5: bool) -> tuple[bool, list[str]]:
+    """Refresca y rinde una tanda de Avisos con su propio pipeline. `(sale, avisos)`.
+
+    Una tanda de Avisos es un carrusel, no piezas sueltas: la portada, la
+    lectura y el resultado citan el mismo mercado, así que si el refresco dice
+    que el texto quedó escrito para otro mercado, o si algún freno de
+    `--rendir` salta (texto sin escribir, cifra sin respaldo, datos de más de
+    2 h), **no sale ninguna lámina** (spec 3.7.3). Las láminas se rinden con su
+    plantilla (`_plantilla`), no con la de la alerta (spec 3.7.1).
+
+    Un refresco que falla no deja pasar precios viejos: el freno de frescura de
+    `rendir_tanda` detiene la tanda si la lectura de la preparación ya tiene más
+    de 2 h (spec 3.7.4).
+    """
+    import pipeline_avisos as pa
+
+    ahora = datetime.now(tz=SANTIAGO)
+    meta = pa.leer_meta(dir_grupo)
+    avisos: list[str] = []
+    lleva_mercado = bool(meta.get("activo")) or meta.get("formato") == "resultado"
+    if lleva_mercado and sin_mt5:
+        avisos.append("sin MetaTrader5 no se relee el mercado: vale la lectura de la preparación si tiene menos de 2 h")
+    else:
+        try:
+            avisos.extend(pa.refrescar_tanda(dir_grupo, ahora))
+        except pa.LecturaFallidaError as exc:
+            avisos.append(f"el refresco falló ({exc}): vale la lectura de la preparación si tiene menos de 2 h")
+        except SystemExit as exc:
+            return False, avisos + [f"⚠️ el carrusel de Avisos NO se despacha: {exc}"]
+    try:
+        pa.rendir_tanda(dir_grupo, ahora)
+    except SystemExit as exc:
+        return False, avisos + [f"⚠️ el carrusel de Avisos NO se despacha: {exc}"]
+    return True, avisos
+
+
 def despachar(
     directorio: Path,
     desde: int = 1,
@@ -1528,8 +1572,17 @@ def despachar(
         canal = dir_grupo.name
         destinatario = destino_fijo if pruebas else canal
         print(f"\n[{i}/{len(grupos)}] {canal}" + (f" -> destino: {destinatario}" if pruebas else ""), flush=True)
-        for aviso in _refrescar_y_rendir(dir_grupo):
-            print(f"    {aviso}", flush=True)
+        es_avisos = (dir_grupo / "_avisos.json").exists()
+        if es_avisos:
+            sale, avisos_canal = _refrescar_y_rendir_avisos(dir_grupo, sin_mt5)
+            for aviso in avisos_canal:
+                print(f"    {aviso}", flush=True)
+            if not sale:
+                resultados.append({"grupo": canal, "status": "frenado"})
+                continue
+        else:
+            for aviso in _refrescar_y_rendir(dir_grupo):
+                print(f"    {aviso}", flush=True)
 
         piezas = piezas_del_grupo(dir_grupo)
         if not piezas:
@@ -1617,6 +1670,16 @@ def despachar(
                 f"    {len(piezas) - len(pendientes)} pieza(s) ya despachada(s): "
                 "se retoma en la que falta", flush=True
             )
+        if es_avisos and not dry_run:
+            restante = sender.cupo_restante()
+            if len(pendientes) > restante:
+                print(
+                    f"    ⚠️ el carrusel de Avisos NO se despacha: lleva {len(pendientes)} "
+                    f"pieza(s) y al cupo de hoy le quedan {restante}. Un carrusel a medias es "
+                    "peor que ninguno.", flush=True,
+                )
+                resultados.append({"grupo": canal, "status": "sin_cupo", "piezas": len(pendientes)})
+                continue
 
         def anotar(pieza: Any, _canal: str = canal) -> None:
             if pruebas:

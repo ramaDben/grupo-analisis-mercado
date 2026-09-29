@@ -30,14 +30,16 @@ que el cupo del día no alcanza a cubrir entero no empieza.
 | Visiones | Las busca el comando cuando el reloj deja un carrusel sin visión fresca |
 | Sin visión | Sale el carrusel sin la lámina del banco |
 | Quién escribe | El reloj prepara los datos; el comando busca, escribe y rinde |
+| Decisiones de tasas (2026-09-28) | Se cubren sí o sí, con el resultado y su impacto (formato `tasas`, 3.4). Fed: reemplaza a `avisos_tarde`. BCE: reemplaza a `avisos_manana`. Banco Central de Chile: momento propio `avisos_bcch` a las 18:30 de Santiago |
 
 ## 2. El día
 
 | Momento | Hora NY | Chile (hoy) | Formato | Láminas |
 |---|---|---|---|---|
-| `avisos_manana` | 10:30 | 11:30 | `cita` | portada · voz del banco · nuestros datos · nuestra lectura |
+| `avisos_manana` | 10:30 | 11:30 | `cita`, o `tasas` el día de decisión del BCE | portada · voz del banco · nuestros datos · nuestra lectura |
 | `avisos_mediodia` | 12:30 | 13:30 | `meta` | ídem, con la voz en la variante meta contra precio |
-| `avisos_tarde` | 14:30 | 15:30 | `agenda` (lunes) o `balance` (martes a viernes) | ver 3.4 |
+| `avisos_tarde` | 14:30 | 15:30 | `agenda` (lunes), `balance` (martes a viernes) o `tasas` (día de decisión de la Fed) | ver 3.4 |
+| `avisos_bcch` | anclado a Santiago: 18:30 | 18:30 | `tasas`, solo el día de Reunión de Política Monetaria del BCCh; los demás días no produce tanda | ver 3.4 |
 
 - **10:30** queda a 30 minutos del momento de índices (10:00), fuera de la tolerancia de 20. A esa
   hora la bolsa ya abrió y los índices tienen precio del día. **14:30** va antes del cierre de la
@@ -137,6 +139,60 @@ data/carrusel/<fecha>_<hora>_avisos_<momento>/01_macro_y_apertura/
   vuelve a citar: la regla de 14 días no aplica dentro del mismo día) · nuestros datos
   releídos · nuestra lectura del día. Si la mañana no tuvo tanda, el balance toma el activo de
   mediodía; si tampoco, se elige como en 3.5 y sale sin voz.
+- `tasas` (decisión del director del 2026-09-28): la decisión de tasas de la Fed, del BCE y del
+  Banco Central de Chile se cubre sí o sí, con el resultado y su impacto. Las tres comparten
+  formato y frenos; cambia el momento en que salen (abajo).
+
+  **Fed.** Reemplaza a la agenda o al balance de ese día. La Fed publica la decisión a las 14:00 NY y
+  la conferencia del presidente empieza a las 14:30 NY, así que el momento de la tarde (14:30 NY,
+  15:30 Chile hoy) cae media hora después del resultado, con la primera reacción del mercado ya
+  medible. El ancla sigue siendo Nueva York: en noviembre, cuando cambia el desfase, el carrusel
+  sigue saliendo media hora después de la decisión aunque en Chile sean las 16:30.
+
+  **BCE.** Reemplaza al carrusel de la mañana (`cita`) de ese día. El BCE publica a las 14:15 de
+  Fráncfort y la conferencia de Lagarde empieza a las 14:45: eso es 08:15 o 09:15 NY según el
+  desfase (10:15 Chile el 29 de octubre de 2026, medido con `hora_chile.ps1`). El momento de la
+  mañana (10:30 NY) cae entre 1 h 15 y 2 h 15 después, con el resultado y la conferencia ya
+  conocidos. **No se crea un momento propio** porque la invariante del reloj lo impide: 30 minutos
+  después de la decisión (14:45 Fráncfort) cae a las 08:45 NY, a 15 minutos de `premercado_fx`
+  (08:30) y de `cripto` (09:00), y en las semanas de desfase a las 09:45 NY, a 15 minutos de
+  `apertura_indices` (10:00). Siempre dentro de la tolerancia de 20, y el decisor perdería uno de
+  los dos en silencio.
+
+  **Banco Central de Chile.** Momento propio, `avisos_bcch`, anclado a Santiago (`zona`) a las
+  18:30: el comunicado de la Reunión de Política Monetaria sale a las 18:00 hora de Chile y ningún
+  momento del día cae después. Los días sin reunión `--preparar` termina con código 0 sin escribir
+  nada ("hoy no corresponde"), el mismo contrato de los feriados. Con la tarde en 14:30 NY
+  (entre 14:30 y 16:30 Chile en el año), queda al menos dos horas de cualquier otro momento en las
+  tres configuraciones del desfase, que es lo que exige el test del reloj.
+  **A las 18:30 el mercado formal del dólar en Chile ya cerró**, así que el impacto en el USD/CLP no
+  se puede medir esa tarde: medirlo sobre cotizaciones sin mercado formado sería publicar ruido.
+  Esa lámina pasa a ser el **impacto esperado** para la apertura (hacia dónde debería abrir el
+  USD/CLP según el veredicto), rotulado como anticipación. Al día hábil siguiente, el carrusel de
+  la mañana toma el USD/CLP como activo (salta la elección de 3.5) y muestra la reacción medida
+  ya con mercado abierto.
+
+  - **Cuándo:** el día lo marca el calendario (`obtener_calendario_macro`: decisión de tasas de la
+    Fed, del BCE y la RPM del BCCh; los nombres vienen en inglés como los entrega la fuente), no
+    una lista de fechas escrita a mano.
+  - **Láminas:** portada (la decisión en una línea: sube, baja o mantiene, y la tasa nueva) · el
+    resultado (tasa decidida contra la esperada y la anterior, con veredicto en línea / más dura /
+    más suave que lo esperado) · el impacto (cuánto se movieron desde la decisión hasta la lectura
+    los activos que mueve ese banco, leído del terminal: Fed → USD/CLP, oro y US100; BCE → oro y
+    USD/CLP por el dólar global; BCCh → impacto esperado en USD/CLP, ver arriba) · nuestra lectura
+    (qué significa para el bolsillo y qué mirar en la conferencia o en la apertura).
+  - **El impacto no publica soporte ni resistencia.** Media hora o dos después de una decisión rige
+    el blackout del escáner (FOMC −30/+75 min, BoJ y RPM de Chile): los niveles tácticos son
+    ruido. Lo que se publica es el movimiento medido desde la decisión, que es justo lo que el
+    blackout no invalida.
+  - **Sin resultado no hay carrusel a medias.** Si a la hora de preparar el calendario todavía no
+    trae el valor `actual`, `--preparar` no escribe la tanda y sale con falla de datos (código 1):
+    el momento queda pendiente y el reloj reintenta en el siguiente latido, dentro de la
+    tolerancia de 20 minutos. Publicar la decisión sin el número sería inventarlo.
+  - **"Sí o sí" no salta la aprobación.** El reloj prepara y el comando escribe; el director
+    aprueba antes del envío, como todo lo demás. Lo que cambia es que ese día el formato no se
+    elige ni se omite. Si el cupo no alcanza para el carrusel entero (3.7), el despacho lo dice
+    en vez de saltarlo en silencio.
 
 ### 3.5 Elección del activo y de la visión
 
@@ -371,3 +427,106 @@ Veredicto: aprobar con cambios. Ningún hallazgo alto.
 | `validar` de LinkedIn no frena con otro payload | 3.1 |
 | La plantilla `calendario` espera tokens que nadie arma | 3.4: los arma `pipeline_avisos` |
 | Volver a preparar quemaba la visión por la regla de 14 días | 3.3 y 3.5: `--refrescar` y `--completar-vision` conservan |
+
+## 13. Cambios del 2026-09-29: la agenda del día manda en Avisos
+
+Decisiones del director del 2026-09-29, tomadas después de que una tanda de solo WTI reenviara a
+Avisos el contexto macro con el VIX. Este apartado **prevalece** sobre las secciones anteriores
+donde se contradicen.
+
+### 13.1 Por qué pasó el envío de más
+
+`pipeline_carrusel.canales_con_contexto_macro` agrega Avisos a **toda** tanda (regla 3, decisión
+del 2026-09-03), y la bitácora deduplica por `(tanda, canal, pieza)`. Una tanda nueva del mismo
+día es, para la bitácora, contenido nuevo: el contexto de Avisos salió a las 09:55 y otra vez a las
+10:05, esta segunda en el formato viejo.
+
+### 13.2 El día de Avisos
+
+| Momento | Hora | Cuándo sale | Formato |
+|---|---|---|---|
+| `avisos_agenda` | **07:45 Santiago** (`zona`) | Todo día hábil | `agenda_dia` si hay datos de alto impacto entre esa hora y las 18:30 Chile; si no, `agenda` (lo que queda de la semana) |
+| `avisos_resultado` | Por suceso, no por hora | Cuando un dato de la agenda del día ya trae `actual` | `resultado` (una pieza) o `tasas` (carrusel, decisiones de la Fed, el BCE y el BCCh, ver 3.4) |
+| `avisos_manana` | 10:30 NY | **Solo los días sin datos de alto impacto** | `cita` |
+| `avisos_mediodia` | — | **Se elimina** | — |
+| `avisos_tarde` | 14:30 NY | Todo día hábil | `balance`, o `tasas` el día de la Fed; el lunes, `balance` (la semana ya salió en la agenda) |
+| `avisos_bcch` | 18:30 Santiago | Día de RPM | `tasas` |
+
+- **Por qué 07:45 Santiago y no una hora de Nueva York.** Los datos de EE.UU. salen a las 08:30 NY,
+  que en Chile cae entre las 08:30 y las 10:30 según el desfase, y el IPC de Chile sale a las
+  08:00 Santiago. La agenda tiene que llegar antes de todos. Con desfase +0 queda a 45 minutos de
+  `premercado_fx`, fuera de la tolerancia de 20.
+- **La ventana de la jornada cierra a las 18:30 Chile**, la hora de la última noticia local (el
+  comunicado de la RPM). Un dato asiático de la noche queda fuera: le toca a la agenda del día
+  siguiente, que es cuando mueve el precio.
+- **Cupo.** Día con datos: agenda (3) + uno o dos resultados + balance (3 o 4), unos 8 envíos. Día
+  sin datos: semana (3) + cita (4) + balance (3 o 4). Antes el diseño llegaba a 12 más los
+  contextos.
+
+### 13.3 Formato `agenda_dia`: tres láminas
+
+1. **Portada** (`avisos_portada`): el dato que manda hoy, y cuántos datos hay.
+2. **La agenda** (`calendario`): solo los datos de alto impacto de la ventana, con hora Chile,
+   previo, esperado y la etiqueta de impacto. Con uno o dos eventos la plantilla agranda las
+   filas para llenar el lienzo (hecho el 2026-09-29).
+3. **Nuestra lectura** (`avisos_lectura`): por cada dato, qué mide y qué pasa con el dólar
+   (USD/CLP), el oro y el petróleo si sale sobre o bajo lo esperado, más una línea de "si sale en
+   línea".
+
+**Las reacciones salen de `data/glosario_siglas.json`** (`explicacion` y `si_sale_sobre_consenso`).
+Un dato de la agenda sin `si_sale_sobre_consenso` deja la lectura en `[[ESCRIBIR]]` y `--rendir`
+se detiene: no se publica una reacción inventada ni una a medias. Sin precios en ninguna de las
+tres láminas, así que no hay nada que refrescar al despachar (función nula explícita, 3.7.4).
+
+### 13.4 Formato `resultado`: una pieza con imagen
+
+La plantilla es `dato_macro`: resultado contra lo esperado y lo anterior, veredicto (mejor / peor /
+en línea) y el impacto en la moneda que el dato mueve, medido en el terminal desde la hora del dato
+hasta la lectura:
+
+| País del dato | Moneda que se mide |
+|---|---|
+| EE.UU. | USD/CLP (y el dólar global si su serie está fresca) |
+| Chile | USD/CLP |
+| Zona Euro | EUR/USD |
+| China | Cobre y USD/CLP |
+
+- **Sin `actual` no hay pieza.** Mismo contrato que las decisiones de tasas: código 1 y el latido
+  reintenta.
+- **Sin soporte ni resistencia.** Tras un dato rige el blackout del escáner; se publica el
+  movimiento medido, no niveles tácticos.
+- **Datos a la misma hora van en una sola pieza** (decisión del director: lo más ordenado y
+  legible). Una fila por dato y un solo bloque de impacto, porque la moneda se movió una vez por
+  los dos. El titular lleva el veredicto común; si los veredictos se contradicen, el titular dice
+  "señales mixtas" y lo que manda es el movimiento medido.
+- **El texto es el pie de la imagen** (Modo resultado, issue #93): chip del país, veredicto, una
+  línea de impacto direccional, la temporalidad y el cierre.
+- Un dato que es una decisión de tasas no usa `resultado`: sale como carrusel `tasas` (3.4).
+
+### 13.5 Lo que se retira o cambia en el carrusel temático
+
+1. **`pipeline_carrusel` deja de generar contexto macro para Avisos.** Se revierte la regla 3 de
+   `canales_con_contexto_macro`: Avisos es ahora de `pipeline_avisos`. Un test falla si una tanda del
+   carrusel escribe en `01_macro_y_apertura`.
+2. **Avisos se deduplica por día.** La agenda y cada resultado se anotan en la bitácora con su
+   fecha y su tipo (`agenda`, `resultado:<hora>`), y ninguna tanda posterior del mismo día los
+   vuelve a mandar, aunque sea otra tanda.
+3. **Los canales temáticos no llevan agenda** (hecho el 2026-09-29): abren con la imagen de su
+   driver y siguen con gráfico y niveles.
+4. **Flechas en vez de colores** en el cierre de niveles: ⬆️ sobre la resistencia, ↔️ entre los
+   bordes, ⬇️ bajo el soporte (hecho el 2026-09-29 en el mensaje de alerta). Se actualiza la
+   regla 6 de formato de `CLAUDE.md` y se regenera `.agents/rules/proyecto.md`.
+5. **El banco de pruebas va primero** en `/carrusel` y `/avisos`: el comando despacha con
+   `--pruebas`, muestra el resultado y solo después pide la aprobación para los canales reales.
+
+### 13.6 Pruebas nuevas
+
+- La tanda del carrusel no escribe en `01_macro_y_apertura`.
+- Una segunda tanda del mismo día no reenvía la agenda ni un resultado ya entregado.
+- `agenda_dia` con cero eventos cae a `agenda`; con eventos después de las 18:30, los excluye.
+- Un dato sin `si_sale_sobre_consenso` frena el rendir.
+- Dos datos con la misma `hora_servidor` producen una pieza; veredictos opuestos dan "señales
+  mixtas".
+- `resultado` sin `actual` sale con código 1.
+- `avisos_agenda` fuera de la tolerancia de todos los momentos en las tres configuraciones del
+  desfase; `avisos_mediodia` ya no existe.

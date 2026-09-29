@@ -20,6 +20,13 @@ LUNES = date(2026, 9, 28)
 MARTES = date(2026, 9, 29)
 
 
+@pytest.fixture(autouse=True)
+def _jornada_sin_datos(monkeypatch):
+    """Ningún test lee el calendario real: la mañana se prepara solo sin datos
+    fuertes (spec §13.2), y el de hoy decidiría por el test."""
+    monkeypatch.setattr(pa, "leer_jornada", lambda ahora: ([], []))
+
+
 def test_feriado_nyse_no_es_habil():
     assert pa.es_dia_habil(date(2026, 11, 26)) is False  # Acción de Gracias
 
@@ -33,7 +40,14 @@ def test_la_tarde_es_agenda_el_lunes_y_balance_el_resto():
     assert pa.formato_del_momento("avisos_tarde", LUNES) == "agenda"
     assert pa.formato_del_momento("avisos_tarde", MARTES) == "balance"
     assert pa.formato_del_momento("avisos_manana", MARTES) == "cita"
-    assert pa.formato_del_momento("avisos_mediodia", MARTES) == "meta"
+    assert pa.formato_del_momento("avisos_agenda", MARTES) == "agenda_dia"
+    assert pa.formato_del_momento("avisos_resultado", MARTES) == "resultado"
+
+
+def test_el_mediodia_ya_no_es_un_momento():
+    """Spec §13.2: con la agenda y los resultados, el carrusel de mediodía salió."""
+    with pytest.raises(SystemExit, match="avisos_agenda"):
+        pa.formato_del_momento("avisos_mediodia", MARTES)
 
 
 def test_momento_desconocido_se_detiene_nombrando_las_opciones():

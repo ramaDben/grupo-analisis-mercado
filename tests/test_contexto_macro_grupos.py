@@ -428,7 +428,7 @@ def test_el_texto_macro_incluye_la_agenda_del_grupo_con_el_estado_de_cada_dato(t
         _evento("ISM Manufacturing PMI", "United States", "2026-09-01 23:00",
                 forecast="48.5", nombre_es="PMI manufacturero del ISM"),
     ]
-    txt = cmg.construir_texto_contexto_macro("04_indices_bursatiles", eventos, 3.0, _AHORA)
+    txt = cmg.construir_texto_contexto_macro("01_macro_y_apertura", eventos, 3.0, _AHORA)
 
     assert "AGENDA DEL DÍA" in txt, txt
     assert "✅" in txt and "🕐" in txt, txt
@@ -444,7 +444,7 @@ def test_la_agenda_usa_el_nombre_en_espanol_del_glosario_y_no_el_de_la_fuente(tm
         _evento("Nonfarm Payrolls", "United States", "2026-09-01 08:30",
                 actual="145K", nombre_es="Nóminas no agrícolas (NFP)"),
     ]
-    txt = cmg.construir_texto_contexto_macro("04_indices_bursatiles", eventos, 3.0, _AHORA)
+    txt = cmg.construir_texto_contexto_macro("01_macro_y_apertura", eventos, 3.0, _AHORA)
     assert "Nóminas no agrícolas (NFP)" in txt, txt
     assert "Nonfarm Payrolls" not in txt, txt
     assert "EE.UU." in txt, txt
@@ -458,7 +458,7 @@ def test_la_agenda_convierte_las_cifras_a_notacion_chilena(tmp_path, monkeypatch
         _evento("CPI (YoY)", "United States", "2026-09-01 08:30",
                 actual="3.3%", forecast="3.1%", nombre_es="Índice de precios al consumidor (IPC)"),
     ]
-    txt = cmg.construir_texto_contexto_macro("04_indices_bursatiles", eventos, 3.0, _AHORA)
+    txt = cmg.construir_texto_contexto_macro("01_macro_y_apertura", eventos, 3.0, _AHORA)
     assert "3,3%" in txt, txt
     assert "3.3%" not in txt, txt
 
@@ -466,7 +466,7 @@ def test_la_agenda_convierte_las_cifras_a_notacion_chilena(tmp_path, monkeypatch
 def test_sin_eventos_del_dia_la_agenda_lo_dice_en_vez_de_desaparecer(tmp_path, monkeypatch):
     monkeypatch.setattr(cmg, "TREASURY_FED_DATA_PATH", _escribir_treasury(
         tmp_path, {"2026-08-27": 4.70, "2026-08-28": 4.73}))
-    txt = cmg.construir_texto_contexto_macro("04_indices_bursatiles", [], 3.0, _AHORA)
+    txt = cmg.construir_texto_contexto_macro("01_macro_y_apertura", [], 3.0, _AHORA)
     assert "AGENDA DEL DÍA" in txt, txt
     assert "Sin datos de alto impacto" in txt, txt
 
@@ -482,9 +482,11 @@ def test_cada_grupo_ve_solo_los_eventos_que_le_tocan(tmp_path, monkeypatch):
                 forecast="50.1", nombre_es="PMI manufacturero de Caixin"),
     ]
     txt = cmg.construir_texto_contexto_macro("02_forex_divisas", eventos, 3.0, _AHORA)
-    assert "Decisión de tasa de interés (TPM)" in txt, txt
-    # China no está en los países de Forex & Divisas.
-    assert "Caixin" not in txt, txt
+    # La agenda del día va solo en Avisos (decisión del director, 2026-09-29).
+    assert "AGENDA DEL DÍA" not in txt, txt
+    # El filtro por país sigue vigente, y se lee en los eventos que Forex conservaría.
+    nombres = {e["nombre"] for e in cmg.filtrar_eventos_para_grupo("02_forex_divisas", eventos)}
+    assert "Interest Rate Decision" in nombres and "Caixin Manufacturing PMI" not in nombres
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -120,8 +120,32 @@
     "nombre_es": "Encuesta de vacantes y rotación laboral",
     "explicacion": "Mide cuántos puestos de trabajo están sin cubrir en EE.UU.; muestra si el empleo está fuerte o se enfría.",
     "titulos_ff": [
-      "Job Openings"
-    ]
+      "Job Openings",
+      "JOLTS Job Openings"
+    ],
+    "pais": "United States",
+    "tier": 2,
+    "canales": [
+      "02_forex_divisas",
+      "03_commodities_materias_primas",
+      "04_indices_bursatiles"
+    ],
+    "cadencia": "mensual",
+    "puede_disparar_momento": true,
+    "fuente": {
+      "tipo": "fred",
+      "serie": "JTSJOL",
+      "organismo": "Oficina de Estadísticas Laborales de EE.UU. (BLS)"
+    },
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "más puestos de trabajo abiertos: empleo fuerte",
+      "dolar": "sube",
+      "oro": "baja",
+      "indices": "mixto",
+      "usdclp": "sube",
+      "porque": "un empleo firme aleja los recortes de tasa de la Fed"
+    }
   },
   "ADP": {
     "nombre_es": "Empleo privado ADP",
@@ -494,7 +518,33 @@
   },
   "CB": {
     "nombre_es": "Confianza del consumidor (The Conference Board)",
-    "explicacion": "Encuesta que mide el optimismo de las familias en EE.UU. sobre su economía y empleo; anticipa el consumo futuro."
+    "explicacion": "Encuesta que mide el optimismo de las familias en EE.UU. sobre su economía y empleo; anticipa el consumo futuro.",
+    "titulos_ff": [
+      "CB Consumer Confidence"
+    ],
+    "pais": "United States",
+    "tier": 3,
+    "canales": [
+      "02_forex_divisas",
+      "04_indices_bursatiles",
+      "05_acciones_etfs"
+    ],
+    "cadencia": "mensual",
+    "puede_disparar_momento": false,
+    "fuente": {
+      "tipo": "comercial",
+      "organismo": "The Conference Board",
+      "nota": "Encuesta privada sin serie oficial gratuita. El número viene de Investing y la pieza declara la fuente."
+    },
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "familias más confiadas: más consumo por delante",
+      "dolar": "sube",
+      "oro": "baja",
+      "indices": "sube",
+      "usdclp": "sube",
+      "porque": "más consumo sostiene el crecimiento y aleja los recortes de tasa de la Fed"
+    }
   },
   "Permisos de construcción": {
     "nombre_es": "Permisos de construcción",

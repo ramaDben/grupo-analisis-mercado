@@ -254,7 +254,8 @@ Cuatro decisiones lo sostienen:
 2. **Un momento que falló sigue pendiente.** MT5 puede no estar conectado en ese latido; anotar
    el disparo igual perdería la pieza por el día entero. Solo se anota si al menos una corrida
    terminó bien.
-3. **El reloj solo prepara.** Corre `pipeline_carrusel.py --preparar --grupo <canal>` y nada más.
+3. **El reloj solo prepara.** Corre `pipeline_carrusel.py --preparar --grupo <canal>`, o
+   `pipeline_avisos.py --preparar --momento <m>` para los momentos con `pieza` de Avisos, y nada más.
    Que un proceso automático pueda publicar en un canal es justamente lo que el flujo de
    aprobación prohíbe, y **hay un test que falla si alguien conecta el envío ahí**.
 4. **Los canales de un momento se derivan del mapeo real** de activo a canal, recorriendo el
@@ -302,6 +303,24 @@ dentro de la tolerancia uno del otro, en las tres configuraciones de desfase del
 pisaran, el decisor dispararía uno y perdería el otro en silencio).
 
 Calendario del desfase año por año: `docs/historia-forense.md`.
+
+### Avisos: la agenda del día y el resultado de cada dato
+<!-- ambito: ambos -->
+
+**Avisos es de `scripts/pipeline_avisos.py` y el carrusel temático no escribe ahí** (director,
+2026-09-29): una tanda de solo WTI le reenvió el contexto del VIX. Nada de VIX ni tasas en Avisos.
+
+| Momento | Hora | Qué sale |
+|---|---|---|
+| `avisos_agenda` | 07:45 Santiago | Portada, la agenda hasta las 18:30 Chile y la lectura. Sin datos fuertes, la semana |
+| `avisos_resultado` | cada latido de la jornada | Una pieza por hora de datos: resultado, veredicto y el movimiento del dólar y el oro medido en MT5 |
+| `avisos_manana` | 10:30 NY | La cita de un banco, **solo los días sin datos fuertes** |
+| `avisos_tarde` | 14:30 NY | El balance; el lunes, la semana si no salió en la mañana |
+
+La agenda se ancla a Santiago porque los datos de las 08:30 NY caen en Chile entre las 08:30 y
+las 10:30; la reacción de cada dato sale del glosario y no de la redacción; datos de la misma hora
+van en una sola pieza, y sin cifra no hay resultado.
+Comando: `/avisos`. Spec: `docs/superpowers/specs/2026-09-28-carruseles-avisos-design.md` §13.
 
 ### El `Score_GI` y sus gates
 <!-- ambito: ambos -->
@@ -702,13 +721,15 @@ Abrir cada mensaje de análisis/niveles con 3 líneas antes de cualquier detalle
 ⚡ Qué esperar: [1 línea de acción]
 ```
 
-**2. Sistema de emojis de color para escenarios**
-Usar siempre estos códigos visuales — consistentes en todos los mensajes:
-- 🟢 Escenario alcista
-- 🔴 Escenario bajista
-- 🟡 Zona de espera / confirmación
+**2. Flechas para los escenarios**
+Usar siempre estos códigos visuales, consistentes en todos los mensajes:
+- ⬆️ Escenario alcista
+- ⬇️ Escenario bajista
+- ↔️ Zona media (rango)
 - 🎯 Objetivo (TP o nivel clave)
 - ⚠️ Riesgo o advertencia
+
+**Flechas y no colores** (decisión del director, 2026-09-29; antes eran 🟢 🔴 🟡).
 
 **3. Separadores entre secciones**
 `━━━━━━━━━━━━━━━━━━━` entre cada bloque de contenido — obligatorio.
@@ -722,9 +743,9 @@ Las primeras 3-4 líneas contienen la conclusión práctica. El detalle técnico
 **6. Cierre con lectura práctica**
 Cerrar cada mensaje de niveles/análisis con este bloque:
 ```text
-🟢 Sobre [resistencia] → fuerza compradora
-🟡 Entre [soporte] y [resistencia] → rango: si rompe un borde y vuelve a entrar, es falso quiebre y el objetivo pasa a ser el borde contrario
-🔴 Bajo [soporte] → presión vendedora
+⬆️ Sobre [resistencia] → fuerza compradora
+↔️ Entre [soporte] y [resistencia] → rango: si rompe un borde y vuelve a entrar, es falso quiebre y el objetivo pasa a ser el borde contrario
+⬇️ Bajo [soporte] → presión vendedora
 ```
 
 **La zona media también se opera** (decisión del director, 2026-09-28). Decía "esperar
@@ -846,7 +867,7 @@ El repo lo ejecutan **dos** agentes: Claude Code y Antigravity. Antigravity llam
 *workflows* a lo que Claude Code llama slash commands: archivos markdown en
 `.agents/workflows/`, invocables igual con `/nombre`.
 
-**Los siete comandos están expuestos a AGY**, sin distinción: `/carrusel`, `/informe`,
+**Los ocho comandos están expuestos a AGY**, sin distinción: `/carrusel`, `/avisos`, `/informe`,
 `/story`, `/encuesta`, `/rencuesta`, `/estado` y `/linkedin`. El flujo es ejecutable igual por los dos
 runners, envío incluido, siempre después de la aprobación explícita del director.
 
@@ -917,10 +938,8 @@ un test de contrato que barre `scripts/`, `src/`, `config/`, `templates/`, `docs
 `.claude/commands/` y `.agents/`. Dejar el nombre escrito en la explicación de por qué no existe es
 exactamente de dónde se copiaba de vuelta.
 
-**Ese grupo no lleva apellido temático, y el mensaje lo refleja**: su encabezado es `CONTEXTO MACRO DIARIO`
-sin sufijo, porque su lectura macro *es* el panorama general. Y como la pregunta de cierre necesita un sujeto
-("¿qué significa para X?"), los canales temáticos usan su propio tema y este usa **el mercado**: eso es lo que
-hace el campo `sujeto` de `CONFIG_MACRO_GRUPOS`, que existe solo para él.
+**Ese grupo no lleva apellido temático** y desde el 2026-09-29 recibe la agenda del día, no el
+contexto del carrusel.
 
 > **Ojo al buscar un canal en WhatsApp Web**: en la lista de chats **todos los grupos de la comunidad se
 > muestran con el nombre de la comunidad como título**, y el nombre real del grupo aparece en la primera línea
@@ -1164,7 +1183,7 @@ El helper crea las carpetas y devuelve la ruta lista para `Write`. Si la pieza n
 `src/whatsapp_sender.py`. WhatsApp cambia su interfaz sin avisar: si un envío empieza a fallar, el primer paso es
 volver a medir esos selectores, **nunca** relajar la verificación de entrega.
 
-## Slash Commands disponibles (7)
+## Slash Commands disponibles (8)
 <!-- ambito: ambos -->
 
 El catálogo se redujo a seis. Todo lo demás se retiró cuando la producción pasó a regirse por
@@ -1172,11 +1191,12 @@ el carrusel y el informe: los siete comandos de día, las piezas sueltas que ell
 (`/apertura`, `/alerta`, `/dato_macro`, `/noticia`, `/actualizacion`, `/accion`, `/earnings`,
 `/señal`), lo educativo satélite (`/concepto`, `/pregunta`, `/respuesta`, `/curriculo`),
 `/chart`, y los internos `/ventas` y `/postventa`. Los seis que quedaron, más `/linkedin`
-(2026-09-28), están expuestos por igual a Claude Code y a Antigravity.
+(2026-09-28) y `/avisos` (2026-09-29), están expuestos por igual a Claude Code y a Antigravity.
 
 | Comando | Cuándo usarlo |
 |---------|---------------|
 | `/carrusel` | **La producción diaria.** El escáner detecta la sesión y la hora real, puntúa el universo con el `Score_GI`, elige el Top 3 y arma las piezas por canal, con su contexto macro. Acepta `--grupo <alias>` para un canal concreto y `--matriz` para cubrirlos todos. |
+| `/avisos [momento]` | El grupo de Avisos: agenda del día (07:45), resultado de cada dato fuerte, cita de la mañana los días sin datos y balance de la tarde. Pasa primero por el banco de pruebas. |
 | `/informe [apertura\|cierre]` | El informe de la jornada. Apertura en PDF institucional A4; cierre chat-first (mensaje con gráfico). |
 | `/story [tipo]` | Una pieza suelta, cuando hace falta fuera de la tanda. Tipos: `alerta`, `dato_macro`, `breaking`, `calendario` — las cuatro plantillas que existen. No pregunta nada: todo va por argumento. |
 | `/encuesta [tipo] [activo]` | Encuesta de sentimiento (`posicion`, `tendencia`, `movimiento`). |

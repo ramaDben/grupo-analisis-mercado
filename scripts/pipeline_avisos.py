@@ -16,8 +16,9 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import re
 import sys
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time as dtime, timedelta
 from pathlib import Path
 from typing import Any, Callable
 from zoneinfo import ZoneInfo
@@ -49,7 +50,23 @@ AVISO_LEGAL = "Análisis informativo. No constituye recomendación de inversión
 FIRMA = "Grupo Inteligencia · Equipo de análisis"
 
 # Momento del reloj -> formato. "tarde" se resuelve por día de la semana.
-MOMENTOS = {"avisos_manana": "cita", "avisos_mediodia": "meta", "avisos_tarde": "tarde"}
+# Spec §13 (2026-09-29): la agenda del día abre la jornada y cada dato fuerte
+# tiene su resultado; el carrusel de mediodía salió, y el de la mañana (cita)
+# solo corre los días sin datos de alto impacto.
+MOMENTOS = {
+    "avisos_agenda": "agenda_dia",
+    "avisos_resultado": "resultado",
+    "avisos_manana": "cita",
+    "avisos_tarde": "tarde",
+}
+
+# La jornada de Avisos: desde la agenda (07:45) hasta la última noticia de
+# Chile, el comunicado de la RPM de las 18:00, con media hora para su lectura.
+INICIO_JORNADA = dtime(7, 45)
+CIERRE_JORNADA = dtime(18, 30)
+
+# Formatos sin activo protagonista: no llevan dirección técnica en el pie.
+FORMATOS_SIN_ACTIVO = frozenset({"agenda", "agenda_dia", "resultado"})
 
 # clave -> (_plantilla, nombre que ve el cliente en el pie de posición)
 LAMINAS = {
@@ -57,6 +74,8 @@ LAMINAS = {
     "voz": ("vision", "La voz del banco"),
     "datos": ("avisos_datos", "Nuestros datos"),
     "semana": ("avisos_agenda", "La semana"),
+    "dia": ("avisos_agenda", "La agenda de hoy"),
+    "resultado": ("avisos_resultado", "Resultado del dato"),
     "lectura": ("avisos_lectura", "Nuestra lectura"),
 }
 
@@ -65,6 +84,8 @@ SECUENCIAS = {
     "meta": ("portada", "voz", "datos", "lectura"),
     "balance": ("portada", "voz", "datos", "lectura"),
     "agenda": ("portada", "semana", "lectura"),
+    "agenda_dia": ("portada", "dia", "lectura"),
+    "resultado": ("resultado",),
 }
 
 # _plantilla -> archivo en templates/stories/. La lámina de datos se llama
@@ -75,6 +96,7 @@ PLANTILLAS = {
     "vision": "vision.html",
     "avisos_datos": "alerta.html",
     "avisos_agenda": "calendario.html",
+    "avisos_resultado": "calendario.html",
     "avisos_lectura": "avisos_lectura.html",
 }
 
@@ -94,7 +116,13 @@ def es_dia_habil(fecha: date) -> bool:
     return fecha.isoformat() not in _cargar_feriados().get("NYSE", [])
 
 
+class HoyNoCorresponde(RuntimeError):
+    """El momento no produce tanda hoy, y es un resultado válido (código 0)."""
+
+
 def formato_del_momento(momento: str, fecha: date) -> str:
+    """El formato por momento y día. `agenda_dia` baja a `agenda` en `preparar`
+    si la jornada no trae datos: eso depende del calendario, no de la fecha."""
     if momento not in MOMENTOS:
         raise SystemExit(f"Momento desconocido: {momento}. Opciones: {', '.join(MOMENTOS)}")
     formato = MOMENTOS[momento]
@@ -242,7 +270,10 @@ def elegir(variante: str, hoy: date, visiones: dict[str, dict[str, Any]],
 
 
 def activo_del_balance(historial: list[dict[str, Any]], hoy: date) -> tuple[str | None, str | None]:
-    """El activo y la visión de la mañana; si no hubo, los del mediodía."""
+    """El activo y la visión de la mañana; si no hubo, los del mediodía.
+
+    El mediodía ya no se prepara (spec §13), pero el historial viejo lo tiene.
+    """
     usos = [e for e in _entradas(historial, "avisos") if e.get("fecha") == hoy.isoformat()]
     for momento in ("avisos_manana", "avisos_mediodia"):
         for e in reversed(usos):
@@ -336,13 +367,14 @@ def fila_medida(lectura: dict[str, Any], payload_datos: dict[str, Any]) -> dict[
 
 
 def lamina_portada(activo_nombre: str | None, precio: str, leido: datetime, ahora: datetime,
-                   agenda: bool, ticker: str | None = None) -> dict[str, Any]:
+                   agenda: bool, ticker: str | None = None,
+                   sello_agenda: str = "AVISOS · AGENDA DE LA SEMANA") -> dict[str, Any]:
     # Spec §3.7.4: toda lámina con precio lleva _procedencia.ticker; la agenda no tiene precio.
     if not agenda and not ticker:
         raise ValueError("la portada con precio exige el ticker de su procedencia")
     return {
         "_plantilla": "avisos_portada", "plantilla": "avisos_portada",
-        "sello": "AVISOS · AGENDA DE LA SEMANA" if agenda else f"AVISOS · {str(activo_nombre).upper()}",
+        "sello": sello_agenda if agenda else f"AVISOS · {str(activo_nombre).upper()}",
         "fecha_hora": fecha_hora(ahora),
         "kicker": MARCA, "titular": MARCA, "parrafo": MARCA,
         "claves": [{"texto": MARCA} for _ in range(3)],
@@ -438,13 +470,328 @@ def lamina_lectura(ahora: datetime) -> dict[str, Any]:
     }
 
 
+# ---------------------------------------------------------------- la jornada
+
+
+CIERRES_DIA: tuple[str, ...] = (
+    "Te contamos cada resultado apenas salga.",
+    "Anota las horas: antes de un dato fuerte el precio suele moverse poco.",
+    "¿Cuál de estos datos te interesa más? Te leemos en el grupo.",
+    "Planifica tus operaciones pensando en estas horas.",
+)
+
+VEREDICTOS = {"peor": ("Peor", "📉"), "mejor": ("Mejor", "📈"), "en_linea": ("En línea", "➖")}
+
+# País del dato -> monedas que se miden en el resultado (spec §13.4).
+MONEDAS_DEL_DATO: dict[str, tuple[str, ...]] = {
+    "United States": ("USDCLP", "XAUUSD"),
+    "Chile": ("USDCLP",),
+    "Euro Zone": ("EURUSD", "XAUUSD"),
+    "Euro Area": ("EURUSD", "XAUUSD"),
+    "China": ("COPPER", "USDCLP"),
+}
+ROTULOS_MONEDA = {"USDCLP": ("Dólar", "el USD/CLP"), "XAUUSD": ("Oro", "el oro"),
+                  "EURUSD": ("Euro", "el EUR/USD"), "COPPER": ("Cobre", "el cobre")}
+_PARES_CON_NOMBRE = frozenset({"USDCLP", "EURUSD"})
+TEMPORALIDAD_RESULTADO = "intradía (dentro de la jornada)"
+CALENDARIO_URL = "https://es.investing.com/economic-calendar/"
+# Minutos que el resultado espera la cifra antes de darla por ausente: la fuente
+# publica con retraso, y un discurso nunca trae cifra.
+ESPERA_CIFRA_MIN = 90
+# Datos de la misma hora van juntos: si uno ya trae cifra y el otro no, se
+# espera un rato antes de publicar el que está, para no partir la pieza.
+ESPERA_COMPANERO_MIN = 20
+
+
+def _cuando(ev: dict[str, Any]) -> datetime:
+    return datetime.strptime(f"{ev['fecha']} {ev['hora']}", "%Y-%m-%d %H:%M").replace(tzinfo=SANTIAGO)
+
+
+def leer_jornada(ahora: datetime) -> tuple[list[dict[str, Any]], list[str]]:
+    """Los datos de alto impacto de HOY entre las 07:45 y las 18:30, en hora de Chile.
+
+    Trae los que ya salieron (con `actual`) y los que faltan: la agenda mira
+    hacia adelante y el resultado hacia atrás. `cargar_calendario` entrega la
+    hora en America/Santiago y no se vuelve a convertir (issue #38).
+    """
+    from market_data_mcp.tools.calendar import cargar_calendario
+
+    res = cargar_calendario(solo_hoy=True, min_impact="high", ahora=ahora)
+    if "error" in res:
+        return [], [f"calendario no disponible ({res['error']})"]
+    hoy = ahora.astimezone(SANTIAGO).date()
+    eventos: list[dict[str, Any]] = []
+    for ev in res.get("eventos", []):
+        try:
+            cuando = datetime.strptime(ev["hora_servidor"], "%Y-%m-%d %H:%M").replace(tzinfo=SANTIAGO)
+        except (KeyError, ValueError):
+            continue
+        if cuando.date() != hoy or not (INICIO_JORNADA <= cuando.time() <= CIERRE_JORNADA):
+            continue
+        dic = ev.get("diccionario") or {}
+        eventos.append({
+            "fecha": cuando.strftime("%Y-%m-%d"), "hora": cuando.strftime("%H:%M"),
+            "pais": ev.get("pais", ""), "evento": ev.get("nombre", ""),
+            "nombre_es": dic.get("nombre_es", ""), "explicacion": dic.get("explicacion", ""),
+            "consenso": ev.get("forecast", ""), "anterior": ev.get("previo", ""),
+            "actual": ev.get("actual", ""), "resultado": ev.get("resultado", ""),
+        })
+    eventos.sort(key=_cuando)
+    return eventos, []
+
+
+def _cifra(valor: Any) -> str:
+    from pipeline_informe import _cifra_es
+
+    return _cifra_es(str(valor or "").strip())
+
+
+_FUENTE_ENTRE_PARENTESIS = re.compile(r"\s*\((?=[^)]*\s)[^)]*\)")
+
+
+def _nombre_evento(ev: dict[str, Any]) -> str:
+    """El nombre en español con su país. Un paréntesis con espacios es el nombre de
+    la fuente ("(The Conference Board)") y se quita de la fila; una sigla ("(JOLTS)")
+    se queda, porque es lo que el cliente va a volver a leer en las noticias."""
+    nombre = _FUENTE_ENTRE_PARENTESIS.sub("", ev.get("nombre_es") or ev.get("evento", "")).strip()
+    pais = _PAISES.get(ev.get("pais", ""), ev.get("pais", ""))
+    return f"{nombre} de {pais}" if pais and pais not in nombre else nombre
+
+
+def _tokens_evento(i: int, ev: dict[str, Any], dia: str, con_resultado: bool) -> dict[str, Any]:
+    esperado = _cifra(ev.get("consenso"))
+    fila = {
+        "numero": f"{i:02d}", "dia": dia, "hora": etiqueta_hora(_cuando(ev)),
+        "evento": _nombre_evento(ev),
+        "pais": _PAISES.get(ev.get("pais", ""), ev.get("pais", "")),
+        "impacto": "Alto impacto", "impacto_slug": "alto",
+        "anterior": _cifra(ev.get("anterior")),
+        "esperado": esperado, "tiene_esperado": bool(esperado),
+        "actual": "", "tiene_actual": False,
+    }
+    if con_resultado:
+        etiqueta, _ = VEREDICTOS.get(ev.get("resultado", ""), ("Publicado", "📊"))
+        fila.update(actual=_cifra(ev.get("actual")), tiene_actual=True,
+                    impacto=etiqueta, impacto_slug=ev.get("resultado") or "alto")
+    return fila
+
+
+def lamina_dia(eventos: list[dict[str, Any]], ahora: datetime) -> dict[str, Any]:
+    dia = f"HOY {ahora.astimezone(SANTIAGO).day}"
+    return {
+        "_plantilla": "avisos_agenda", "plantilla": "calendario",
+        "sello": "AVISOS · AGENDA DEL DÍA", "fecha_hora": fecha_hora(ahora),
+        "titular": MARCA, "parrafo": MARCA,
+        "eventos": [_tokens_evento(i, ev, dia, False) for i, ev in enumerate(eventos[:6], 1)],
+        "cta": "¿Quieres entender cómo operar estos datos?", "cta_sub": CTA_AGENDA[1], "posicion": "",
+    }
+
+
+_VERBO_INFINITIVO = {"sube": "subir", "baja": "bajar"}
+
+
+def frase_reaccion(efecto: dict[str, Any] | None) -> str | None:
+    """Qué hacen el dólar, el USD/CLP y el oro si el dato sale sobre lo esperado.
+
+    Sale del glosario (`si_sale_sobre_consenso`), nunca de la redacción: si el
+    dato no declara su efecto, la lectura queda por escribir y el render frena.
+    """
+    if not efecto:
+        return None
+    partes: dict[str, list[str]] = {"subir": [], "bajar": []}
+    for clave, nombre in (("dolar", "el dólar"), ("usdclp", "el USD/CLP"), ("oro", "el oro")):
+        verbo = _VERBO_INFINITIVO.get(str(efecto.get(clave, "")))
+        if verbo:
+            partes[verbo].append(nombre)
+    trozos = [f"{' y '.join(nombres)} a {verbo}" for verbo, nombres in partes.items() if nombres]
+    if not trozos:
+        return None
+    return f"Sobre lo esperado tienden {', y '.join(trozos)}. Bajo lo esperado, al revés."
+
+
+def _efecto_del_glosario(ev: dict[str, Any]) -> dict[str, Any] | None:
+    from clasificacion_macro import efecto_direccional
+
+    return efecto_direccional({"nombre": ev.get("evento", ""), "pais": ev.get("pais", "")})
+
+
+def lamina_lectura_dia(eventos: list[dict[str, Any]], ahora: datetime,
+                       efecto_de: Callable[[dict[str, Any]], dict[str, Any] | None] | None = None) -> dict[str, Any]:
+    efecto_de = efecto_de or _efecto_del_glosario
+    puntos = []
+    for ev in eventos[:3]:
+        reaccion = frase_reaccion(efecto_de(ev))
+        explicacion = str(ev.get("explicacion") or "").strip()
+        texto = f"{explicacion} {reaccion}".strip() if reaccion else MARCA
+        puntos.append({"icono": "🕐", "titulo_punto": f"{ev['hora']} · {ev.get('nombre_es') or ev.get('evento', '')}",
+                       "texto": texto})
+    lamina = lamina_lectura(ahora)
+    lamina["puntos"] = puntos
+    return lamina
+
+
+def titular_resultado(eventos: list[dict[str, Any]]) -> str:
+    """El titular sale del veredicto, no de la redacción: datos de la misma hora
+    van juntos, y si se contradicen el titular lo dice (spec §13.4)."""
+    veredictos = {ev.get("resultado") or "" for ev in eventos}
+    plural = len(eventos) > 1
+    if veredictos == {"peor"}:
+        return "Datos más débiles de lo esperado" if plural else "Dato más débil de lo esperado"
+    if veredictos == {"mejor"}:
+        return "Datos más fuertes de lo esperado" if plural else "Dato más fuerte de lo esperado"
+    if veredictos == {"en_linea"}:
+        return "Datos en línea con lo esperado" if plural else "Dato en línea con lo esperado"
+    return f"Señales mixtas en los datos de las {eventos[0]['hora']}"
+
+
+def _verbo_movimiento(desde: float, hasta: float) -> str:
+    if hasta > desde:
+        return "sube"
+    if hasta < desde:
+        return "cede"
+    return "se mantiene"
+
+
+def _trozo_movimiento(ticker: str, m: dict[str, Any]) -> str:
+    _, sujeto = ROTULOS_MONEDA.get(ticker, (ticker, ticker))
+    verbo = _verbo_movimiento(m["desde"], m["ahora"])
+    a, b = _fmt(m["desde"], m["digits"]), _fmt(m["ahora"], m["digits"])
+    return f"{sujeto} se mantiene en {b}" if verbo == "se mantiene" else f"{sujeto} {verbo} de {a} a {b}"
+
+
+def frase_movimiento(movimientos: dict[str, dict[str, Any]], hora: str) -> str:
+    """Desde las 11:00 el USD/CLP cede de 970,80 a 968,97 y el oro sube de…"""
+    trozos = [_trozo_movimiento(t, m) for t, m in movimientos.items()]
+    cuerpo = trozos[0] if len(trozos) == 1 else ", ".join(trozos[:-1]) + " y " + trozos[-1]
+    return f"Desde las {hora} {cuerpo}."
+
+
+def lamina_resultado(eventos: list[dict[str, Any]], movimientos: dict[str, dict[str, Any]],
+                     ahora: datetime) -> dict[str, Any]:
+    dia = f"HOY {ahora.astimezone(SANTIAGO).day}"
+    return {
+        "_plantilla": "avisos_resultado", "plantilla": "calendario",
+        "sello": "AVISOS · RESULTADO DEL DATO", "fecha_hora": fecha_hora(ahora),
+        "titular": titular_resultado(eventos),
+        "movimiento": frase_movimiento(movimientos, eventos[0]["hora"]),
+        "parrafo": MARCA,
+        "eventos": [_tokens_evento(i, ev, dia, True) for i, ev in enumerate(eventos[:6], 1)],
+        "cta": "¿Quieres entender cómo operar tras un dato?", "cta_sub": CTA_AGENDA[1], "posicion": "",
+        "_procedencia": {"tickers": list(movimientos)},
+    }
+
+
+def mensaje_resultado(payload: dict[str, Any], meta: dict[str, Any]) -> str:
+    """El pie de la imagen (Modo resultado, issue #93): veredicto, qué significa,
+    el movimiento medido y la temporalidad. Solo `parrafo` es editorial."""
+    sep = "━━━━━━━━━━━━━━━━━━━"
+    eventos = meta["eventos"]
+    paises = dict.fromkeys(_PAISES.get(e.get("pais", ""), e.get("pais", "")) for e in eventos)
+    lineas = [f"📊 *DATO MACRO · {' · '.join(paises).upper()}* · {meta['hora_dato']} hrs Chile", sep]
+    for ev in eventos:
+        etiqueta, emoji = VEREDICTOS.get(ev.get("resultado", ""), ("Publicado", "📊"))
+        esperado = _cifra(ev.get("consenso"))
+        cola = f" frente a {esperado} esperado" if esperado else ""
+        nombre = ev.get("nombre_es") or ev.get("evento")
+        lineas.append(f"{emoji} *{nombre}*: {_cifra(ev.get('actual'))}{cola} → *{etiqueta.upper()}*")
+    lineas += [sep, f"🎯 *Qué significa*: {str(payload.get('parrafo', '')).strip()}"]
+    for ticker, m in meta["movimientos"].items():
+        rotulo, _ = ROTULOS_MONEDA.get(ticker, (ticker, ticker))
+        flecha = {"sube": "⬆️", "cede": "⬇️"}.get(_verbo_movimiento(m["desde"], m["ahora"]), "↔️")
+        trozo = _trozo_movimiento(ticker, m)
+        # "Oro: el oro sube" repite el rótulo; el par sí se nombra, porque aclara cuál es.
+        if ticker not in _PARES_CON_NOMBRE:
+            trozo = trozo.split(" ", 2)[2]
+        lineas.append(f"{flecha} *{rotulo}*: {trozo[:1].upper()}{trozo[1:]} desde las {meta['hora_dato']}.")
+    cierre = pc.elegir_variante(pc.CIERRES_ALERTA, "resultado", meta["momento"], meta["fecha"])
+    lineas += [
+        sep,
+        f"⏱️ *Temporalidad del impacto*: {TEMPORALIDAD_RESULTADO}",
+        "⚠️ La primera reacción es rápida y a veces se revierte: los niveles de cada activo están en sus grupos.",
+        f"🔗 Calendario completo: {CALENDARIO_URL}",
+        cierre,
+        f"_{AVISO_LEGAL}_",
+    ]
+    return "\n".join(lineas)
+
+
+def leer_movimiento(ticker: str, desde: datetime, ahora: datetime) -> dict[str, Any]:
+    """Precio a la hora del dato (apertura de la vela M1) y precio actual, del terminal.
+
+    MT5 entrega la hora del SERVIDOR empaquetada como timestamp UTC: el offset
+    se mide contra el reloj en vez de suponerlo (CLAUDE.md, "Ojo con MT5").
+    """
+    import time as _time
+
+    from market_data_mcp import mt5_client
+
+    try:
+        mt5_client.connect()
+        import MetaTrader5 as mt5  # noqa: PLC0415
+    except Exception as exc:  # noqa: BLE001
+        raise LecturaFallidaError(f"MT5 no conectó ({exc.__class__.__name__})") from exc
+    info = mt5.symbol_info(ticker)
+    tick = mt5.symbol_info_tick(ticker)
+    if info is None or tick is None:
+        raise LecturaFallidaError(f"{ticker}: sin cotización en el terminal")
+    offset = round((tick.time - _time.time()) / 3600) * 3600
+    objetivo = desde.timestamp() + offset
+    velas = mt5.copy_rates_from_pos(ticker, mt5.TIMEFRAME_M1, 0, 600)
+    previas = [v for v in (velas if velas is not None else []) if v["time"] <= objetivo]
+    if not previas:
+        raise LecturaFallidaError(f"{ticker}: sin velas M1 a la hora del dato")
+    return {"desde": float(previas[-1]["open"]), "ahora": float(tick.bid), "digits": int(info.digits)}
+
+
+def monedas_de(eventos: list[dict[str, Any]]) -> list[str]:
+    tickers: list[str] = []
+    for ev in eventos:
+        for t in MONEDAS_DEL_DATO.get(ev.get("pais", ""), ("USDCLP",)):
+            if t not in tickers:
+                tickers.append(t)
+    return tickers
+
+
+def resultado_pendiente(jornada: list[dict[str, Any]], ahora: datetime,
+                        ya_hecho: Callable[[str], bool]) -> list[dict[str, Any]] | None:
+    """El grupo de datos (misma hora) que toca publicar, o `None` si no hay.
+
+    Lanza `LecturaFallidaError` (código 1: el latido reintenta) cuando la hora
+    ya pasó y la cifra todavía no llega, o cuando llegó solo la de uno de los
+    datos de esa hora y conviene esperar al otro para no partir la pieza.
+    """
+    horas = sorted({ev["hora"] for ev in jornada if _cuando(ev) <= ahora})
+    for hora in horas:
+        if ya_hecho(hora):
+            continue
+        grupo = [ev for ev in jornada if ev["hora"] == hora]
+        con_cifra = [ev for ev in grupo if str(ev.get("actual") or "").strip()]
+        minutos = (ahora - _cuando(grupo[0])).total_seconds() / 60
+        if not con_cifra:
+            if minutos < ESPERA_CIFRA_MIN:
+                raise LecturaFallidaError(f"los datos de las {hora} todavía no traen cifra")
+            continue  # un discurso o un dato sin cifra: no hay resultado que contar
+        if len(con_cifra) < len(grupo) and minutos < ESPERA_COMPANERO_MIN:
+            raise LecturaFallidaError(f"de los datos de las {hora} falta la cifra de alguno")
+        return con_cifra
+    return None
+
+
 def armar_tanda(momento: str, formato: str, ahora: datetime, lectura: dict[str, Any] | None,
-                vision: dict[str, Any] | None, agenda: list[dict[str, Any]]) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
-    agenda_semana = formato == "agenda"
+                vision: dict[str, Any] | None, agenda: list[dict[str, Any]],
+                extra: dict[str, Any] | None = None) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    extra = extra or {}
+    agenda_semana = formato in FORMATOS_SIN_ACTIVO
     laminas: dict[str, dict[str, Any]] = {}
     activos: dict[str, dict[str, Any]] = {}
     direccion = None
-    if agenda_semana:
+    if formato == "agenda_dia":
+        laminas["portada"] = lamina_portada(None, "", ahora, ahora, agenda=True,
+                                            sello_agenda="AVISOS · AGENDA DEL DÍA")
+        laminas["dia"] = lamina_dia(agenda, ahora)
+    elif formato == "resultado":
+        laminas["resultado"] = lamina_resultado(agenda, extra["movimientos"], ahora)
+    elif agenda_semana:
         laminas["portada"] = lamina_portada(None, "", ahora, ahora, agenda=True)
         laminas["semana"] = lamina_semana(agenda, ahora)
     else:
@@ -458,7 +805,10 @@ def armar_tanda(momento: str, formato: str, ahora: datetime, lectura: dict[str, 
             variante = variante_de(vision)
             laminas["voz"] = lamina_voz(vision, variante, fila, ahora, ahora)
         laminas["datos"] = datos
-    laminas["lectura"] = lamina_lectura(ahora)
+    if formato == "agenda_dia":
+        laminas["lectura"] = lamina_lectura_dia(agenda, ahora, extra.get("efecto_de"))
+    elif formato != "resultado":
+        laminas["lectura"] = lamina_lectura(ahora)
     meta = {
         "version": 1, "momento": momento, "formato": formato, "fecha": ahora.date().isoformat(),
         "activo": None if agenda_semana else lectura["ticker"],
@@ -471,6 +821,10 @@ def armar_tanda(momento: str, formato: str, ahora: datetime, lectura: dict[str, 
         "activos_preparacion": json.loads(json.dumps(activos)),
         "cifras_citadas": {}, "aceptar_antiguas": {},
     }
+    if formato == "resultado":
+        meta.update(hora_dato=agenda[0]["hora"], eventos=agenda,
+                    movimientos=extra["movimientos"],
+                    movimientos_preparacion=copy.deepcopy(extra["movimientos"]))
     return meta, laminas
 
 
@@ -559,9 +913,11 @@ def mensaje_de(payload: dict[str, Any], meta: dict[str, Any]) -> str:
     El cierre y el aviso los agrega el script, estables por tanda: el despacho
     vuelve a rendir y un texto distinto al aprobado no puede salir.
     """
+    if meta.get("formato") == "resultado":
+        return mensaje_resultado(payload, meta)
     if payload.get("_clave") != "portada":
         return payload["posicion"]
-    cierres = CIERRES_AGENDA if meta.get("formato") == "agenda" else pc.CIERRES_ALERTA
+    cierres = {"agenda": CIERRES_AGENDA, "agenda_dia": CIERRES_DIA}.get(meta.get("formato"), pc.CIERRES_ALERTA)
     cierre = pc.elegir_variante(cierres, meta.get("activo") or "agenda", meta["momento"], meta["fecha"])
     return "\n\n".join([str(payload["pie"]).strip(), cierre, AVISO_LEGAL, payload["posicion"]])
 
@@ -595,7 +951,7 @@ def validar_tanda(dir_canal: Path, ahora: datetime, visiones: dict[str, dict[str
     leido = datetime.fromisoformat(meta["leido_en"])
     errores.extend(pl.validar_frescura(leido, ahora, FRESCURA_MAX_HORAS, remedio="Corre --refrescar."))
 
-    if meta["formato"] != "agenda" and meta.get("direccion"):
+    if meta["formato"] not in FORMATOS_SIN_ACTIVO and meta.get("direccion"):
         pie = next((str(p.get("pie", "")) for _, p in laminas if p.get("_clave") == "portada"), "")
         if MARCA not in pie and meta["direccion"].lower() not in pie.lower():
             errores.append(
@@ -653,6 +1009,11 @@ def tokens_de(payload: dict[str, Any]) -> dict[str, Any]:
     elif plantilla == "avisos_agenda":
         tokens["titulo"] = tokens.pop("titular")
         tokens["subtitulo"] = tokens.pop("parrafo")
+    elif plantilla == "avisos_resultado":
+        # El párrafo es el "qué significa" del pie; en la imagen va el movimiento.
+        tokens["titulo"] = tokens.pop("titular")
+        tokens["subtitulo"] = tokens.pop("movimiento")
+        tokens.pop("parrafo", None)
     elif plantilla == "avisos_datos":
         from story_grafico import enriquecer
 
@@ -733,15 +1094,60 @@ def _tanda_existente(dir_base: Path, fecha: date, momento: str) -> Path | None:
     return None
 
 
+_Lector = Callable[[datetime], tuple[list[dict[str, Any]], list[str]]]
+
+
+def _jornada_o_falla(lector_jornada: _Lector, ahora: datetime) -> list[dict[str, Any]]:
+    jornada, avisos = lector_jornada(ahora)
+    if avisos and not jornada:
+        raise LecturaFallidaError("; ".join(avisos))
+    return jornada
+
+
+def _clave_resultado(momento: str, hora: str) -> str:
+    return f"{momento}_{hora.replace(':', '')}"
+
+
+def _preparar_resultado(momento: str, ahora: datetime, dir_base: Path, lector_jornada: _Lector,
+                        lector_movimiento: Callable[[str, datetime, datetime], dict[str, Any]]) -> Path:
+    """Una tanda por hora de datos: la misma hora es una sola pieza (spec §13.4)."""
+    hoy = ahora.date()
+    jornada = _jornada_o_falla(lector_jornada, ahora)
+    grupo = resultado_pendiente(
+        jornada, ahora,
+        ya_hecho=lambda hora: _tanda_existente(dir_base, hoy, _clave_resultado(momento, hora)) is not None,
+    )
+    if grupo is None:
+        raise HoyNoCorresponde("no hay resultados de datos pendientes de publicar.")
+    desde = _cuando(grupo[0])
+    movimientos = {t: lector_movimiento(t, desde, ahora) for t in monedas_de(grupo)}
+    meta, laminas = armar_tanda(momento, "resultado", ahora, None, None, grupo,
+                                extra={"movimientos": movimientos})
+    etiqueta = _clave_resultado(momento, grupo[0]["hora"])
+    dir_canal = dir_base / f"{ahora:%Y-%m-%d_%H-%M}_avisos_{etiqueta}" / CANAL
+    dir_canal.mkdir(parents=True, exist_ok=True)
+    escribir_laminas(dir_canal, "resultado", laminas)
+    escribir_meta(dir_canal, meta)
+    return dir_canal
+
+
 def preparar(momento: str, ahora: datetime | None = None, *,
              lector: Callable[[str, datetime], dict[str, Any]] | None = None,
-             lector_agenda: Callable[[datetime], tuple[list[dict[str, Any]], list[str]]] | None = None,
+             lector_agenda: _Lector | None = None,
+             lector_jornada: _Lector | None = None,
+             lector_movimiento: Callable[[str, datetime, datetime], dict[str, Any]] | None = None,
+             efecto_de: Callable[[dict[str, Any]], dict[str, Any] | None] | None = None,
              visiones: dict[str, dict[str, Any]] | None = None,
              historial_ruta: Path | None = None, dir_base: Path | None = None) -> Path | None:
-    """La tanda del momento, o `None` si hoy no corresponde.
+    """La tanda del momento, o `None` si hoy no es día hábil.
 
     Una segunda corrida del mismo momento el mismo día devuelve la tanda que ya
-    existe sin escribir nada: volver a elegir quemaría otra visión.
+    existe sin escribir nada: volver a elegir quemaría otra visión. El resultado
+    es la excepción: sale una tanda por cada hora de datos de la jornada.
+
+    Lanza `HoyNoCorresponde` (código 0) cuando el momento no produce nada hoy:
+    la cita de la mañana en un día con datos fuertes, o un resultado sin datos
+    pendientes.
     """
     ahora = (ahora or datetime.now(SANTIAGO)).astimezone(SANTIAGO)
     hoy = ahora.date()
@@ -749,6 +1155,10 @@ def preparar(momento: str, ahora: datetime | None = None, *,
     if not es_dia_habil(hoy):
         return None
     dir_base = dir_base or pc.DIR_TRABAJO
+    lector_jornada = lector_jornada or leer_jornada
+    if formato == "resultado":
+        return _preparar_resultado(momento, ahora, dir_base, lector_jornada,
+                                   lector_movimiento or leer_movimiento)
     existente = _tanda_existente(dir_base, hoy, momento)
     if existente is not None:
         return existente
@@ -761,7 +1171,32 @@ def preparar(momento: str, ahora: datetime | None = None, *,
     vision: dict[str, Any] | None = None
     agenda: list[dict[str, Any]] = []
     gastar_vision = True
-    if formato == "agenda":
+
+    if formato == "agenda_dia":
+        # Solo lo que falta por salir: la agenda mira hacia adelante. Sin datos
+        # fuertes en la jornada, Avisos recibe lo que queda de la semana.
+        agenda = [ev for ev in _jornada_o_falla(lector_jornada, ahora) if _cuando(ev) >= ahora]
+        if not agenda:
+            formato = "agenda"
+    elif momento == "avisos_manana":
+        # La cita de un banco solo los días sin datos fuertes (spec §13.2). Si el
+        # calendario no responde se prepara igual: la cita no depende de él.
+        jornada, _ = lector_jornada(ahora)
+        if jornada:
+            raise HoyNoCorresponde(
+                "hoy hay datos de alto impacto: Avisos lleva la agenda del día y sus "
+                "resultados, no la cita de la mañana."
+            )
+    elif formato == "agenda" and momento == "avisos_tarde":
+        # El lunes la tarde muestra la semana, salvo que ya haya salido en la
+        # mañana por falta de datos del día: entonces toca el balance.
+        manana = _tanda_existente(dir_base, hoy, "avisos_agenda")
+        if manana is not None and leer_meta(manana).get("formato") == "agenda":
+            formato = "balance"
+
+    if formato == "agenda_dia":
+        activo = None
+    elif formato == "agenda":
         agenda, avisos = (lector_agenda or _leer_agenda)(ahora)
         if avisos and not agenda:
             raise LecturaFallidaError("; ".join(avisos))
@@ -777,7 +1212,8 @@ def preparar(momento: str, ahora: datetime | None = None, *,
         vision = visiones.get(vid) if vid else None
         lectura = lector(activo, ahora)
 
-    meta, laminas = armar_tanda(momento, formato, ahora, lectura, vision, agenda)
+    meta, laminas = armar_tanda(momento, formato, ahora, lectura, vision, agenda,
+                                extra={"efecto_de": efecto_de})
     dir_canal = dir_base / f"{ahora:%Y-%m-%d_%H-%M}_avisos_{momento}" / CANAL
     dir_canal.mkdir(parents=True, exist_ok=True)
     # Las láminas primero: `_avisos.json` es la marca de que la tanda quedó
@@ -825,6 +1261,10 @@ REFRESCOS: dict[str, Callable[[dict[str, Any], dict[str, Any], datetime], tuple[
     "avisos_datos": refrescar_datos,
     "avisos_agenda": None,
     "avisos_lectura": None,
+    # El resultado sí lleva precio, pero se refresca por tanda y no por lámina:
+    # sus cifras son el movimiento de la moneda desde la hora del dato, que vive
+    # en el meta (`refrescar_resultado`).
+    "avisos_resultado": None,
 }
 
 
@@ -858,9 +1298,52 @@ def _guardar_refresco(dir_canal: Path, meta: dict[str, Any], nuevas: dict[str, d
     escribir_meta(dir_canal, meta)
 
 
+def refrescar_resultado(dir_canal: Path, ahora: datetime,
+                        lector_movimiento: Callable[[str, datetime, datetime], dict[str, Any]] | None = None,
+                        reescribir: bool = False) -> list[str]:
+    """Vuelve a medir las monedas desde la hora del dato.
+
+    El texto ("qué significa") se escribió para el movimiento de la preparación:
+    si una moneda dio vuelta desde entonces, el texto quedó escrito para otro
+    mercado y la pieza no sale sin reescribirlo.
+    """
+    meta = leer_meta(dir_canal)
+    medir = lector_movimiento or leer_movimiento
+    desde = datetime.strptime(f"{meta['fecha']} {meta['hora_dato']}", "%Y-%m-%d %H:%M").replace(tzinfo=SANTIAGO)
+    nuevos = {t: medir(t, desde, ahora) for t in meta["movimientos"]}
+    motivos = []
+    for t, m in nuevos.items():
+        antes = meta.get("movimientos_preparacion", {}).get(t)
+        if antes and _verbo_movimiento(antes["desde"], antes["ahora"]) != _verbo_movimiento(m["desde"], m["ahora"]):
+            motivos.append(
+                f"{ROTULOS_MONEDA.get(t, (t, t))[1]} dio vuelta: el texto se escribió cuando "
+                f"{_verbo_movimiento(antes['desde'], antes['ahora'])} y ahora {_verbo_movimiento(m['desde'], m['ahora'])}"
+            )
+    if motivos and not reescribir:
+        raise SystemExit(
+            "El mercado invalidó el texto:\n  " + "\n  ".join(motivos)
+            + "\nCorre --refrescar con --reescribir y vuelve a escribir el párrafo."
+        )
+    for stem, payload in leer_laminas(dir_canal):
+        payload["movimiento"] = frase_movimiento(nuevos, meta["hora_dato"])
+        payload["fecha_hora"] = fecha_hora(ahora)
+        if motivos:
+            payload["parrafo"] = MARCA
+        (dir_canal / f"{stem}.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    meta["movimientos"] = nuevos
+    meta["leido_en"] = ahora.isoformat(timespec="minutes")
+    if motivos:
+        meta["movimientos_preparacion"] = copy.deepcopy(nuevos)
+    escribir_meta(dir_canal, meta)
+    if motivos:
+        return motivos + ["párrafo vuelto a [[ESCRIBIR]]"]
+    return [f"refrescado a las {etiqueta_hora(ahora)}"]
+
+
 def refrescar_tanda(dir_canal: Path, ahora: datetime | None = None,
                     lector: Callable[[str, datetime], dict[str, Any]] | None = None,
-                    reescribir: bool = False) -> list[str]:
+                    reescribir: bool = False,
+                    lector_movimiento: Callable[[str, datetime, datetime], dict[str, Any]] | None = None) -> list[str]:
     """Relee el terminal para el mismo activo. Conserva la visión y todo el texto.
 
     Si el precio cruzó un nivel o la lectura dio vuelta, el texto quedó escrito
@@ -869,6 +1352,8 @@ def refrescar_tanda(dir_canal: Path, ahora: datetime | None = None,
     """
     ahora = (ahora or datetime.now(SANTIAGO)).astimezone(SANTIAGO)
     meta = leer_meta(dir_canal)
+    if meta.get("formato") == "resultado":
+        return refrescar_resultado(dir_canal, ahora, lector_movimiento, reescribir)
     if not meta.get("activo"):
         meta["leido_en"] = ahora.isoformat(timespec="minutes")
         escribir_meta(dir_canal, meta)
@@ -927,12 +1412,15 @@ def completar_vision(dir_canal: Path, vid: str, ahora: datetime | None = None,
 # ---------------------------------------------------------------- CLI
 
 
+_SIN_ACTIVO = {"agenda": "agenda de la semana", "agenda_dia": "agenda del día", "resultado": "resultado de los datos"}
+
+
 def _mensaje_preparar(ruta: Path, meta: dict[str, Any], ya_existia: bool) -> list[str]:
     """Las líneas que informan si la tanda es nueva o si ya estaba preparada."""
     if ya_existia:
         return [f"La tanda de este momento ya estaba preparada: {ruta.parent}"]
     lineas = [f"Tanda: {ruta.parent}",
-              f"Activo: {meta['activo'] or 'agenda de la semana'} · formato {meta['formato']}"]
+              f"Activo: {meta['activo'] or _SIN_ACTIVO.get(meta['formato'], meta['formato'])} · formato {meta['formato']}"]
     if meta["_falta_vision"]:
         lineas.append("_falta_vision: el comando busca una visión y corre --completar-vision.")
     return lineas
@@ -965,7 +1453,7 @@ def main(argv: list[str] | None = None) -> int:
         except LecturaFallidaError as exc:
             print(f"FALLA DE DATOS: {exc}. El momento queda pendiente.", file=sys.stderr)
             return 1
-        except SinCandidatosError as exc:
+        except (SinCandidatosError, HoyNoCorresponde) as exc:
             print(f"Sin tanda: {exc} Es un resultado válido, no una falla.")
             return 0
         if ruta is None:

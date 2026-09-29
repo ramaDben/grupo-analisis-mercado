@@ -673,7 +673,11 @@ def construir_texto_contexto_macro(
     # Se vuelve a filtrar acá aunque el caller ya lo haya hecho: el filtro es
     # idempotente y así ningún caller futuro puede colar un evento de otro canal
     # en el mensaje de este grupo.
-    lineas.extend(_bloque_agenda(filtrar_eventos_para_grupo(grupo, eventos_grupo), ahora))
+    # La agenda del dia va SOLO en el grupo de Avisos (decision del director,
+    # 2026-09-29): los canales tematicos abren con la imagen de su driver y sus
+    # niveles, sin repetir el calendario que ya recibio Avisos.
+    if grupo == "01_macro_y_apertura":
+        lineas.extend(_bloque_agenda(filtrar_eventos_para_grupo(grupo, eventos_grupo), ahora))
 
     # PRIORIDAD CHILE EN FOREX & DIVISAS: cifras leídas de las series del BCCh
     # solo cuando hoy es día de publicación oficial de Chile o evento local.
