@@ -573,7 +573,7 @@ html, body {
 .footer-disclaimer {
   font-family: var(--font-sans);
   font-weight: 400;
-  font-size: 13px;
+  font-size: 20px;
   color: var(--texto-2);
   margin: 0;
 }
@@ -648,7 +648,8 @@ html, body {
     <div class="footer">
       <span class="footer-marca">GRUPO INTELIGENCIA</span>
       <p class="footer-disclaimer">
-        Información con fines educativos y de análisis técnico cuantitativo. No constituye asesoría financiera.
+        <!-- IF:disclaimer_propio -->{{disclaimer}}<!-- ENDIF:disclaimer_propio -->
+        <!-- IF:disclaimer_defecto -->Información con fines educativos y de análisis técnico cuantitativo. No constituye asesoría financiera.<!-- ENDIF:disclaimer_defecto -->
       </p>
     </div>
 

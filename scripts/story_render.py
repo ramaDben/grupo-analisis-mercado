@@ -30,7 +30,10 @@ from typing import Any
 # Fences complementarios y sus condiciones de presencia (D1). El orden es fijo dentro
 # de `build_html`: primero loops, después fences, después tokens escalares, al final
 # la guardia.
-_FENCES = ("variacion", "vol", "chart_img", "chart_svg")
+# `disclaimer_propio` / `disclaimer_defecto` hacen de `{{disclaimer}}` un token
+# opcional de `alerta.html`: con el campo, el aviso del payload (el aviso legal de
+# Avisos); sin él, el texto por defecto de la plantilla (carrusel temático).
+_FENCES = ("variacion", "vol", "chart_img", "chart_svg", "disclaimer_propio", "disclaimer_defecto")
 
 # Patrones de `resolver_loops`/`_expandir_elemento` (R4, #119). Backreference `\1`
 # para anclar FOR/ENDFOR (o IF/ENDIF) a la misma clave y evitar cruces entre bloques
@@ -89,6 +92,10 @@ def _fence_presente(nombre: str, payload: dict[str, Any]) -> bool:
         return bool(payload.get("chart_png"))
     if nombre == "chart_svg":
         return not payload.get("chart_png")
+    if nombre == "disclaimer_propio":
+        return bool(str(payload.get("disclaimer") or "").strip())
+    if nombre == "disclaimer_defecto":
+        return not str(payload.get("disclaimer") or "").strip()
     raise StoryRenderError(f"Fence desconocido en build_html: {nombre!r}")
 
 

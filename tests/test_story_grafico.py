@@ -103,3 +103,41 @@ def test_un_hito_de_operacion_si_conserva_su_precio_propio():
     marcadores = [{"indice": 2, "precio": 15.0, "clase": "meta", "etiqueta": "15,00"}]
     svg = story_grafico.construir_svg(serie, marcadores)
     assert "g-punto-meta" in svg
+
+
+def _y_de(svg: str, clase: str) -> list[float]:
+    import re
+
+    return [float(y) for y in re.findall(rf'<text class="{clase}[^"]*" x="[^"]+" y="([^"]+)"', svg)]
+
+
+def test_el_rol_no_tapa_la_cola_de_la_coma_del_precio():
+    # Revisión final Hito 1: con el rol a 15 unidades bajo la línea base del
+    # precio, su trazo negro tapaba la cola de la coma y "30.524,40" se leía
+    # "30.524.40". El precio mide 26 px (coma que baja ~8 con su trazo) y el
+    # rol 17 px en mayúsculas (~14 sobre su línea base con trazo): hacen falta
+    # al menos 24 unidades entre las dos líneas base.
+    niveles = [{"precio": 12.0, "clase": "soporte", "etiqueta": "12,00", "rol": "SOPORTE"}]
+    marcadores = [{**MARCADORES[0], "rol": "AHORA"}]
+    svg = story_grafico.construir_svg(SERIE, marcadores, niveles)
+    precios, roles = _y_de(svg, "g-precio"), _y_de(svg, "g-rol")
+    assert len(precios) == len(roles) == 2
+    for y_precio, y_rol in zip(precios, roles):
+        assert y_rol - y_precio >= 24
+
+
+def test_bloques_de_etiqueta_cercanos_no_se_pisan():
+    # Resistencia, ahora y soporte casi al mismo precio: cada bloque (precio +
+    # rol) tiene que empezar debajo del rol del bloque anterior.
+    serie = [100.0, 100.2, 100.1, 100.3]
+    niveles = [
+        {"precio": 100.35, "clase": "resistencia", "etiqueta": "100,35", "rol": "RESISTENCIA"},
+        {"precio": 100.25, "clase": "soporte", "etiqueta": "100,25", "rol": "SOPORTE"},
+    ]
+    marcadores = [{"indice": 3, "precio": 100.3, "clase": "actual", "etiqueta": "100,30", "rol": "AHORA"}]
+    svg = story_grafico.construir_svg(serie, marcadores, niveles)
+    precios = sorted(_y_de(svg, "g-precio"))
+    roles = sorted(_y_de(svg, "g-rol"))
+    for rol_anterior, precio_siguiente in zip(roles, precios[1:]):
+        # el tope de las cifras del siguiente precio (~20 sobre su base) queda bajo el rol anterior
+        assert precio_siguiente - 20 > rol_anterior

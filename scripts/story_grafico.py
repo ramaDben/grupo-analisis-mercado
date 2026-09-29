@@ -111,9 +111,14 @@ def resolver_escala(serie: list[float], niveles: list[float] | None = None) -> t
 
 
 # Alto que ocupa el bloque de texto de un marcador, en unidades del viewBox: el
-# precio mas su rol debajo, o solo el precio. Sale de los offsets +6 y +21 con
+# precio mas su rol debajo, o solo el precio. Sale de los offsets +1 y +26 con
 # que se dibujan ambas lineas, mas holgura para que no se toquen.
-_ALTO_CON_ROL = 34.0
+# El rol va 25 unidades bajo la linea base del precio y no 15: a 15 su trazo
+# negro tapaba la cola de la coma y "30.524,40" se leia "30.524.40" (revision
+# final de Avisos, 2026-09-28). El precio sube 5 en vez de bajar el rol 10,
+# para que el rol de un soporte en el borde inferior (y1=370) siga dentro del
+# viewBox de 400.
+_ALTO_CON_ROL = 54.0
 _ALTO_SIN_ROL = 19.0
 
 
@@ -226,7 +231,7 @@ def construir_svg(
     x_ini, x_fin, y_ini, y_fin = g["x0"], g["x1"], g["y0"], g["y1"]
     label_x, guia_x = g["label_x"], g["guia_x"]
     k = g.get("escala_texto", 1.0)
-    dy_precio, dy_rol = 6 * k, 21 * k
+    dy_precio, dy_rol = 1 * k, 26 * k
 
     p_max, p_min = resolver_escala(serie, [float(x["precio"]) for x in niveles])
     n = len(serie)

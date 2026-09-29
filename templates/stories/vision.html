@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>Calendario Macro</title>
+<title>La voz del banco</title>
 <style>
   /* ════ marca.css embebido ════ */
 :root {
@@ -168,209 +168,71 @@ html, body {
   color: var(--texto-borde); margin: 10px 0 0;
 }
 
-.tabla-eventos {
-  margin-top: 28px;
-  display: flex; flex-direction: column; gap: 16px;
-  flex: 1; justify-content: center;
-}
 
-.fila-evento {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 34px; border-radius: 22px;
-  background: color-mix(in srgb, var(--fondo-acento) 75%, var(--fondo));
-  border: 1.5px solid color-mix(in srgb, var(--acento) 25%, transparent);
-  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-}
-
-.ev-num {
-  font-family: var(--font-display); font-weight: 700; font-size: 34px;
-  color: var(--acento); width: 64px;
-}
-.ev-dia-hora {
-  display: flex; flex-direction: column; width: 250px;
-}
-.ev-dia { font-weight: 700; font-size: 26px; text-transform: uppercase; color: var(--blanco); }
-.ev-hora { font-weight: 600; font-size: 22px; color: var(--texto-2); margin-top: 2px; }
-
-.ev-info { flex: 1; padding: 0 24px; }
-.ev-nombre { font-weight: 700; font-size: 31px; line-height: 1.2; color: var(--blanco); }
-.ev-pais { font-size: 20px; color: var(--texto-2); margin-top: 2px; }
-
-.ev-datos {
-  display: flex; gap: 32px; align-items: center;
-}
-.ev-stat { display: flex; flex-direction: column; text-align: right; min-width: 150px; }
-.ev-stat-label { font-size: 17px; text-transform: uppercase; color: var(--texto-2); font-weight: 600; }
-.ev-stat-val { font-family: var(--font-display); font-weight: 700; font-size: 32px; color: var(--blanco); margin-top: 2px; }
-
-.tag-impacto {
-  font-size: 17px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
-  padding: 8px 18px; border-radius: 999px;
-  background: color-mix(in srgb, var(--baja) 20%, transparent); color: var(--baja); border: 1px solid var(--baja);
-}
+.centro { flex: 1; display: flex; flex-direction: column; justify-content: center; max-width: 1600px; }
+.etiqueta { font-weight: 700; font-size: 18px; letter-spacing: 0.10em; text-transform: uppercase; color: var(--acento); margin: 0 0 14px; }
+.etiqueta:empty { display: none; }
+.cita { font-family: var(--font-display); font-weight: 700; font-size: 58px; line-height: 1.18; color: var(--blanco); margin: 0; }
+.firma { font-weight: 700; font-size: 28px; color: var(--texto-1); margin: 26px 0 0; }
+.fuente { font-size: 26px; color: var(--texto-2); margin: 6px 0 0; }
+.duelo { display: flex; gap: 40px; }
+.lado { flex: 1; padding: 36px 40px; border-radius: 18px; border: 1.5px solid color-mix(in srgb, var(--acento) 45%, transparent);
+  background: color-mix(in srgb, var(--fondo-acento) 80%, var(--fondo)); }
+.lado-hoy { border-color: var(--acento); }
+.rotulo { font-weight: 700; font-size: 20px; letter-spacing: 0.10em; text-transform: uppercase; color: var(--acento); margin: 0; }
+.cifra { font-family: var(--font-display); font-weight: 700; font-size: 104px; line-height: 1; color: var(--blanco); margin: 18px 0 0; }
+.detalle { font-size: 28px; color: var(--texto-borde); margin: 14px 0 0; }
+.titular { font-family: var(--font-display); font-weight: 700; font-size: 40px; color: var(--blanco); margin: 44px 0 0; }
+.remate { font-size: 34px; line-height: 1.4; color: var(--texto-borde); margin: 12px 0 0; max-width: 1400px; }
 
 .footer {
   position: relative; z-index: 2; margin-top: 16px;
   display: flex; justify-content: space-between; align-items: center;
-  padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.15);
+  padding-top: 12px; border-top: 1px solid color-mix(in srgb, var(--texto-1) 15%, transparent);
 }
 .footer-marca { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: 0.08em; color: var(--acento); }
-.footer-cta { font-family: var(--font-sans); font-weight: 600; font-size: 22px; color: var(--texto-2); margin: 0; }
-
-/* ══════════ FORMATO VERTICAL 9:16 (1080×1920) ══════════ */
-@media (max-aspect-ratio: 1/1) {
-  .story {
-    padding: 64px 48px 48px;
-  }
-
-  .sello {
-    font-size: 20px;
-    padding: 10px 24px;
-  }
-
-  .fecha {
-    font-size: 22px;
-  }
-
-  .titulo {
-    font-size: 56px;
-    line-height: 1.12;
-    margin: 20px 0 0;
-  }
-
-  .subtitulo {
-    font-size: 26px;
-    margin: 12px 0 0;
-    line-height: 1.35;
-  }
-
-  .tabla-eventos {
-    margin-top: 28px;
-    gap: 16px;
-    justify-content: space-evenly;
-  }
-
-  .fila-evento {
-    padding: 22px 28px;
-    border-radius: 24px;
-  }
-
-  .ev-num {
-    font-size: 26px;
-    width: 44px;
-  }
-
-  .ev-dia-hora {
-    width: 175px;
-  }
-
-  .ev-dia {
-    font-size: 20px;
-  }
-
-  .ev-hora {
-    font-size: 18px;
-    margin-top: 4px;
-  }
-
-  .ev-info {
-    padding: 0 24px;
-  }
-
-  .ev-nombre {
-    font-size: 24px;
-    line-height: 1.25;
-  }
-
-  .ev-pais {
-    font-size: 18px;
-    margin-top: 4px;
-  }
-
-  .ev-datos {
-    gap: 20px;
-  }
-
-  .ev-stat {
-    min-width: 95px;
-  }
-
-  .ev-stat-label {
-    font-size: 13px;
-  }
-
-  .ev-stat-val {
-    font-size: 22px;
-  }
-
-  .tag-impacto {
-    font-size: 14px;
-    padding: 6px 16px;
-  }
-
-  .footer {
-    margin-top: 24px;
-    padding-top: 18px;
-  }
-
-  .footer-marca {
-    font-size: 22px;
-  }
-
-  .footer-cta {
-    font-size: 19px;
-  }
-}
+.footer-pos { font-family: var(--font-sans); font-weight: 600; font-size: 24px; color: var(--texto-2); margin: 0; }
 </style>
 </head>
 <body>
   <div class="story">
     <div class="velo"></div>
     <div class="grilla"></div>
-
     <div class="contenido">
-      <div>
-        <div class="cabecera">
-          <span class="sello">{{sello}}</span>
-          <span class="fecha">{{fecha_hora}}</span>
-        </div>
-        <h1 class="titulo">{{titulo}}</h1>
-        <p class="subtitulo">{{subtitulo}}</p>
+      <div class="cabecera">
+        <span class="sello">{{sello}}</span>
+        <span class="fecha">{{fecha_hora}}</span>
       </div>
-
-      <div class="tabla-eventos">
-        <!-- FOR:eventos -->
-        <div class="fila-evento">
-          <span class="ev-num">{{numero}}</span>
-          <div class="ev-dia-hora">
-            <span class="ev-dia">{{dia}}</span>
-            <span class="ev-hora">{{hora}}</span>
+      <div class="centro">
+        <!-- FOR:bloque_cita -->
+        <p class="etiqueta">{{etiqueta}}</p>
+        <blockquote class="cita">{{cita}}</blockquote>
+        <p class="firma">{{firma}}</p>
+        <p class="fuente">{{fuente_fecha}}</p>
+        <!-- ENDFOR:bloque_cita -->
+        <!-- FOR:bloque_meta -->
+        <div class="duelo">
+          <div class="lado">
+            <p class="rotulo">Meta del banco</p>
+            <p class="cifra">{{meta}}</p>
+            <p class="detalle">{{horizonte}}</p>
+            <p class="detalle">{{firma}}</p>
           </div>
-          <div class="ev-info">
-            <div class="ev-nombre">{{evento}}</div>
-            <div class="ev-pais">{{pais}}</div>
-          </div>
-          <div class="ev-datos">
-            <div class="ev-stat">
-              <span class="ev-stat-label">Previo</span>
-              <span class="ev-stat-val">{{anterior}}</span>
-            </div>
-            <!-- IF:tiene_esperado -->
-            <div class="ev-stat">
-              <span class="ev-stat-label">Esperado</span>
-              <span class="ev-stat-val">{{esperado}}</span>
-            </div>
-            <!-- ENDIF:tiene_esperado -->
-            <span class="tag-impacto">{{impacto}}</span>
+          <div class="lado lado-hoy">
+            <p class="rotulo">Precio hoy</p>
+            <p class="cifra">{{precio_hoy}}</p>
+            <p class="detalle">{{hora_precio}} · MetaTrader 5</p>
           </div>
         </div>
-        <!-- ENDFOR:eventos -->
+        <p class="fuente">{{fuente_fecha}}</p>
+        <!-- ENDFOR:bloque_meta -->
+        <h2 class="titular">{{titular}}</h2>
+        <p class="remate">{{remate}}</p>
       </div>
     </div>
-
     <div class="footer">
       <span class="footer-marca">GRUPO INTELIGENCIA</span>
-      <p class="footer-cta">{{cta}} · {{cta_sub}}</p>
+      <p class="footer-pos">{{posicion}}</p>
     </div>
   </div>
 </body>

@@ -405,7 +405,16 @@ def _a_float(cifra: str) -> float:
     return float(cifra.replace(".", "").replace(",", "."))
 
 
-def cifras_parecidas_no_medidas(texto: str, payload: dict[str, Any], permitidas: set[str]) -> list[str]:
+def _referencias(activos: dict[str, dict[str, Any]], campos: tuple[str, ...]) -> list[float]:
+    return [
+        float(fila[c])
+        for fila in activos.values()
+        for c in campos
+        if fila.get(c) not in (None, 0)
+    ]
+
+
+def _parecidas(texto: str, referencias: list[float], permitidas: set[str]) -> list[str]:
     """Cifras sin `$` que se parecen a un precio medido pero no son ese precio.
 
     `_PRECIO` solo ve lo que lleva `$`, y un nivel de índice nunca lo lleva
@@ -414,12 +423,6 @@ def cifras_parecidas_no_medidas(texto: str, payload: dict[str, Any], permitidas:
     escapa: una cifra a menos de `CERCANIA_PRECIO` de un precio del terminal que
     no coincide con ninguno. Es la cifra de ayer copiada, o un nivel redondeado.
     """
-    referencias = [
-        float(fila[c])
-        for fila in payload["datos"]["activos"].values()
-        for c in CAMPOS_PRECIO
-        if fila.get(c) not in (None, 0)
-    ]
     dudosas: list[str] = []
     for cifra in _NUMERO.findall(texto):
         if cifra in permitidas:
@@ -430,6 +433,31 @@ def cifras_parecidas_no_medidas(texto: str, payload: dict[str, Any], permitidas:
         if any(abs(valor - ref) / ref <= CERCANIA_PRECIO for ref in referencias):
             dudosas.append(cifra)
     return dudosas
+
+
+def _permitidas(activos: dict[str, dict[str, Any]], visiones: list[dict[str, Any]],
+                cifras_citadas: dict[str, str], campos: tuple[str, ...]) -> set[str]:
+    permitidas: set[str] = set()
+    for fila in activos.values():
+        for campo in campos:
+            if fila.get(campo) is not None:
+                permitidas.add(formatear(fila[campo], fila["digits"]))
+    for vision in visiones:
+        permitidas.update(_PRECIO.findall(str(vision.get("cita", ""))))
+    for cifra in cifras_citadas:
+        permitidas.update(_PRECIO.findall(cifra) or [cifra.strip()])
+    return permitidas
+
+
+def cifras_parecidas_no_medidas(texto: str, payload: dict[str, Any], permitidas: set[str]) -> list[str]:
+    """Compatibilidad: la versión que recibe el payload de LinkedIn."""
+    return _parecidas(texto, _referencias(payload["datos"]["activos"], CAMPOS_PRECIO), permitidas)
+
+
+def cifras_permitidas(payload: dict[str, Any], visiones: list[dict[str, Any]]) -> set[str]:
+    """Compatibilidad: la versión que recibe el payload de LinkedIn."""
+    return _permitidas(payload["datos"]["activos"], visiones,
+                       payload["editorial"].get("cifras_citadas", {}), CAMPOS_PRECIO)
 
 
 def _textos(editorial: dict[str, Any]) -> list[tuple[str, str]]:
@@ -446,17 +474,65 @@ def _textos(editorial: dict[str, Any]) -> list[tuple[str, str]]:
     return salida
 
 
-def cifras_permitidas(payload: dict[str, Any], visiones: list[dict[str, Any]]) -> set[str]:
-    permitidas: set[str] = set()
-    for fila in payload["datos"]["activos"].values():
-        for campo in CAMPOS_PRECIO:
-            if fila.get(campo) is not None:
-                permitidas.add(formatear(fila[campo], fila["digits"]))
-    for vision in visiones:
-        permitidas.update(_PRECIO.findall(str(vision.get("cita", ""))))
-    for cifra in payload["editorial"].get("cifras_citadas", {}):
-        permitidas.update(_PRECIO.findall(cifra) or [cifra.strip()])
-    return permitidas
+def validar_textos(textos: list[tuple[str, str]]) -> list[str]:
+    """Huecos sin escribir, guion largo o medio, voseo y marcadores temporales.
+
+    Freno genérico: recibe pares `(donde, texto)` y no sabe de qué estructura
+    salieron. Lo comparten LinkedIn y los carruseles de Avisos.
+    """
+    from validador_editorial import validar_texto
+
+    errores: list[str] = []
+    for donde, texto in textos:
+        if MARCA_EDITORIAL in texto or not texto.strip():
+            errores.append(f"{donde}: sin escribir")
+            continue
+        if "–" in texto or "—" in texto:
+            errores.append(f"{donde}: guion largo o medio como inciso; reescribe con punto, coma o dos puntos")
+        errores.extend(e for e in validar_texto(texto, campo=donde) if "guion largo" not in e)
+    return errores
+
+
+def validar_cifras(
+    textos: list[tuple[str, str]],
+    activos: dict[str, dict[str, Any]],
+    visiones: list[dict[str, Any]],
+    cifras_citadas: dict[str, str],
+    campos: tuple[str, ...] = CAMPOS_PRECIO,
+) -> list[str]:
+    """Cifras con `$` sin respaldo y cifras parecidas a un precio que no son ninguno.
+
+    `activos` son filas medidas `{ticker: {digits, <campo>: valor}}`; `campos`
+    dice cuáles de sus valores cuentan como precio publicable.
+    """
+    permitidas = _permitidas(activos, visiones, cifras_citadas, campos)
+    referencias = _referencias(activos, campos)
+    errores: list[str] = []
+    for donde, texto in textos:
+        con_moneda = _PRECIO.findall(texto)
+        for cifra in con_moneda:
+            if cifra not in permitidas:
+                errores.append(
+                    f"{donde}: la cifra ${cifra} no sale del terminal ni de una cita registrada. "
+                    "Usa la medida o declárala en `cifras_citadas` con su motivo."
+                )
+        for cifra in _parecidas(texto, referencias, permitidas):
+            if cifra not in con_moneda:
+                errores.append(
+                    f"{donde}: {cifra} se parece a un precio medido pero no es ninguno. "
+                    "Usa la cifra exacta del terminal o declárala en `cifras_citadas`."
+                )
+    return errores
+
+
+def validar_frescura(leido: datetime, ahora: datetime, max_horas: float,
+                     remedio: str = "Vuelve a correr --preparar.") -> list[str]:
+    """Datos vencidos. Una hora sin zona se lee en Santiago, como `leido_en`."""
+    leido = leido if leido.tzinfo else leido.replace(tzinfo=SANTIAGO)
+    minutos = (ahora - leido).total_seconds() / 60
+    if minutos > max_horas * 60:
+        return [f"los datos se leyeron hace {minutos:.0f} min (máximo {max_horas:g} h). {remedio}"]
+    return []
 
 
 def validar(payload: dict[str, Any], registro: dict[str, dict[str, Any]], ahora: datetime,
@@ -464,20 +540,12 @@ def validar(payload: dict[str, Any], registro: dict[str, dict[str, Any]], ahora:
     """Todos los motivos por los que el brief no puede salir. Vacío = puede salir.
 
     Junta todos los errores en vez de cortar al primero: el comando corrige de una
-    vez en vez de ir descubriendo los huecos uno por uno.
+    vez en vez de ir descubriendo los huecos uno por uno. Compone los tres frenos
+    públicos, que son los mismos que usa `pipeline_avisos`.
     """
-    from validador_editorial import validar_texto
-
     editorial = payload["editorial"]
-    errores: list[str] = []
-
-    for donde, texto in _textos(editorial):
-        if MARCA_EDITORIAL in texto or not texto.strip():
-            errores.append(f"{donde}: sin escribir")
-            continue
-        if "–" in texto or "—" in texto:
-            errores.append(f"{donde}: guion largo o medio como inciso; reescribe con punto, coma o dos puntos")
-        errores.extend(e for e in validar_texto(texto, campo=donde) if "guion largo" not in e)
+    textos = _textos(editorial)
+    errores = validar_textos(textos)
 
     usadas: list[dict[str, Any]] = []
     aceptadas = editorial.get("aceptar_antiguas", {})
@@ -495,29 +563,10 @@ def validar(payload: dict[str, Any], registro: dict[str, dict[str, Any]], ahora:
         usadas.append(registro[vid])
         errores.extend(validar_vision(registro[vid], hoy, aceptadas.get(vid)))
 
-    permitidas = cifras_permitidas(payload, usadas)
-    for donde, texto in _textos(editorial):
-        con_moneda = _PRECIO.findall(texto)
-        for cifra in con_moneda:
-            if cifra not in permitidas:
-                errores.append(
-                    f"{donde}: la cifra ${cifra} no sale del terminal ni de una cita registrada. "
-                    "Usa la medida o declárala en `cifras_citadas` con su motivo."
-                )
-        for cifra in cifras_parecidas_no_medidas(texto, payload, permitidas):
-            if cifra not in con_moneda:
-                errores.append(
-                    f"{donde}: {cifra} se parece a un precio medido pero no es ninguno. "
-                    "Usa la cifra exacta del terminal o declárala en `cifras_citadas`."
-                )
-
-    leido = leido_en(payload)
-    horas = (ahora - leido).total_seconds() / 3600
-    if horas > FRESCURA_MAX_HORAS and not aceptar_datos_viejos:
-        errores.append(
-            f"los datos se leyeron hace {horas:.0f} h (máximo {FRESCURA_MAX_HORAS}). "
-            "Vuelve a correr --preparar."
-        )
+    errores.extend(validar_cifras(textos, payload["datos"]["activos"], usadas,
+                                  editorial.get("cifras_citadas", {})))
+    if not aceptar_datos_viejos:
+        errores.extend(validar_frescura(leido_en(payload), ahora, FRESCURA_MAX_HORAS))
     return errores
 
 
