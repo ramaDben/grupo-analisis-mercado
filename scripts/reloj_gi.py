@@ -46,6 +46,18 @@ import agenda_mercado as agenda  # noqa: E402
 LIBRO = RAIZ / "data" / ".reloj_disparos.json"
 CHILE = ZoneInfo("America/Santiago")
 
+# Las piezas que no reparten clases de activo: un momento con `pieza` corre su
+# propio pipeline y cae en el canal que resuelve su alias (spec de Avisos, 3.8).
+PIEZAS: dict[str, dict[str, str]] = {
+    "avisos": {"script": "pipeline_avisos.py", "canal_alias": "avisos"},
+}
+
+# El resultado de cada dato es un suceso, no una hora: el latido lo intenta en
+# cada pasada mientras dure la jornada. Termina hora y media después de las
+# 18:30, que es lo que el resultado espera la cifra de un dato tardío. No se
+# anota en el libro: `pipeline_avisos` no prepara dos veces la misma hora.
+RESULTADO = {"momento": "avisos_resultado", "desde": "07:45", "hasta": "20:00"}
+
 # Cuántos días de disparos se conservan. El libro es estado generado, no
 # historia editorial: solo tiene que responder "¿ya salió hoy?". Un archivo que
 # nada más crece termina siendo el problema.
@@ -170,9 +182,13 @@ def canales_del_momento(m: dict[str, Any]) -> list[str]:
     escáner y se pregunta por el mismo mapeo que usan las piezas. Una lista
     aparte sería otro contrato por nombre de los que ya costaron caro.
     """
-    from pipeline_carrusel import obtener_grupo_whatsapp
+    from pipeline_carrusel import obtener_grupo_whatsapp, resolver_grupo_solicitado
     from screener_gi import cargar_universo
 
+    if m.get("pieza"):
+        # Sin clases que recorrer: el canal sale del alias, el mismo índice que
+        # usa el despacho (extensión documentada del invariante 4).
+        return [resolver_grupo_solicitado(PIEZAS[m["pieza"]]["canal_alias"])]
     clases = set(m.get("clases") or [])
     canales = {
         obtener_grupo_whatsapp(a["clase"], a["ticker"])
@@ -283,12 +299,18 @@ def estado(
     }
 
 
-def _correr_preparar(canal: str) -> dict[str, Any]:
-    """Una corrida de `pipeline_carrusel.py --preparar` para un canal."""
-    cmd = [
-        sys.executable, str(RAIZ / "scripts" / "pipeline_carrusel.py"),
-        "--preparar", "--grupo", canal,
-    ]
+def _correr_preparar(canal: str, pieza: str | None = None, momento: str | None = None) -> dict[str, Any]:
+    """Una corrida de `--preparar`: el carrusel de un canal, o la pieza de un momento."""
+    if pieza:
+        cmd = [
+            sys.executable, str(RAIZ / "scripts" / PIEZAS[pieza]["script"]),
+            "--preparar", "--momento", str(momento),
+        ]
+    else:
+        cmd = [
+            sys.executable, str(RAIZ / "scripts" / "pipeline_carrusel.py"),
+            "--preparar", "--grupo", canal,
+        ]
     r = subprocess.run(cmd, cwd=str(RAIZ), capture_output=True, text=True)
     return {
         "canal": canal,
@@ -314,11 +336,13 @@ def ejecutar(
     """
     ahora = cuando or datetime.now(tz=agenda.zona_ancla())
     est = estado(ahora, ruta_libro)
-    if not est["momento"]:
-        return {**est, "corridas": [], "nota": "no hay momento vencido"}
-
     hacer = correr or _correr_preparar
-    corridas = [hacer(canal) for canal in est["canales"]]
+    sucesos = [hacer(c, "avisos", RESULTADO["momento"]) for c in _canales_del_resultado(ahora)]
+    if not est["momento"]:
+        return {**est, "corridas": sucesos, "nota": "no hay momento vencido"}
+
+    m = agenda.momento(est["momento"])
+    corridas = [hacer(canal, m.get("pieza"), m["slug"]) for canal in est["canales"]]
 
     if any(c["codigo"] == 0 for c in corridas):
         anotar_disparo(est["momento"], ahora, ruta=ruta_libro)
@@ -326,7 +350,19 @@ def ejecutar(
     else:
         nota = ("ninguna corrida termino bien: el momento sigue pendiente y el "
                 "siguiente latido lo reintenta")
-    return {**est, "corridas": corridas, "nota": nota}
+    return {**est, "corridas": corridas + sucesos, "nota": nota}
+
+
+def _canales_del_resultado(ahora: datetime) -> list[str]:
+    """Avisos, si es día hábil y la hora de Chile cae dentro de la jornada del resultado."""
+    local = ahora.astimezone(CHILE)
+    if local.weekday() >= 5:
+        return []
+    if not (RESULTADO["desde"] <= local.strftime("%H:%M") <= RESULTADO["hasta"]):
+        return []
+    from pipeline_carrusel import resolver_grupo_solicitado
+
+    return [resolver_grupo_solicitado(PIEZAS["avisos"]["canal_alias"])]
 
 
 def main() -> int:

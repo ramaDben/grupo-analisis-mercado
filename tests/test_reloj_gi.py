@@ -286,7 +286,7 @@ def test_un_momento_que_fallo_no_queda_anotado_como_disparado(tmp_path):
     p = tmp_path / "disparos.json"
     ahora = DESFASE_0.replace(hour=8, minute=32)
     res = reloj.ejecutar(
-        ahora, correr=lambda canal: {"canal": canal, "codigo": 1,
+        ahora, correr=lambda canal, *_: {"canal": canal, "codigo": 1,
                                      "salida": "", "error": "MT5 no conectado"},
         ruta_libro=p,
     )
@@ -298,8 +298,58 @@ def test_un_momento_que_salio_bien_si_queda_anotado(tmp_path):
     p = tmp_path / "disparos.json"
     ahora = DESFASE_0.replace(hour=8, minute=32)
     reloj.ejecutar(
-        ahora, correr=lambda canal: {"canal": canal, "codigo": 0,
+        ahora, correr=lambda canal, *_: {"canal": canal, "codigo": 0,
                                      "salida": "ok", "error": ""},
         ruta_libro=p,
     )
     assert reloj.ya_disparo("premercado_fx", ahora, reloj.cargar_libro(p))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Avisos: momentos con pieza y el resultado por suceso (spec §13)
+# ─────────────────────────────────────────────────────────────────────────────
+def test_los_momentos_de_avisos_caen_en_el_grupo_de_avisos():
+    for slug in ("avisos_agenda", "avisos_manana", "avisos_tarde"):
+        assert reloj.canales_del_momento(ag.momento(slug)) == ["01_macro_y_apertura"], slug
+
+
+def test_la_agenda_de_avisos_esta_anclada_a_santiago_a_las_07_45():
+    for dia in (DESFASE_0, DESFASE_1, DESFASE_2):
+        inst = reloj.instante_del_momento(ag.momento("avisos_agenda"), dia)
+        assert inst.astimezone(CL).strftime("%H:%M") == "07:45"
+
+
+def test_el_mediodia_de_avisos_ya_no_es_un_momento():
+    assert "avisos_mediodia" not in {m["slug"] for m in ag.momentos()}
+
+
+def test_toda_pieza_de_un_momento_esta_declarada():
+    for m in ag.momentos():
+        if m.get("pieza"):
+            assert m["pieza"] in reloj.PIEZAS, m["slug"]
+
+
+def test_un_momento_de_avisos_corre_pipeline_avisos_con_su_momento(tmp_path):
+    llamadas = []
+    ahora = datetime(2026, 9, 29, 10, 32, tzinfo=reloj.agenda.zona_ancla())
+    reloj.ejecutar(ahora, correr=lambda c, pieza=None, momento=None: llamadas.append((c, pieza, momento))
+                   or {"canal": c, "codigo": 0, "salida": "", "error": ""}, ruta_libro=tmp_path / "l.json")
+    assert ("01_macro_y_apertura", "avisos", "avisos_manana") in llamadas
+
+
+def test_el_resultado_se_intenta_en_cada_latido_de_la_jornada_y_no_se_anota(tmp_path):
+    llamadas = []
+    libro = tmp_path / "l.json"
+    once = datetime(2026, 9, 29, 11, 15, tzinfo=CL)
+    reloj.ejecutar(once, correr=lambda c, pieza=None, momento=None: llamadas.append(momento)
+                   or {"canal": c, "codigo": 0, "salida": "", "error": ""}, ruta_libro=libro)
+    assert "avisos_resultado" in llamadas
+    assert not reloj.ya_disparo("avisos_resultado", once, reloj.cargar_libro(libro))
+
+
+def test_fuera_de_la_jornada_el_resultado_no_se_intenta(tmp_path):
+    llamadas = []
+    noche = datetime(2026, 9, 29, 22, 30, tzinfo=CL)
+    reloj.ejecutar(noche, correr=lambda c, pieza=None, momento=None: llamadas.append(momento)
+                   or {"canal": c, "codigo": 0, "salida": "", "error": ""}, ruta_libro=tmp_path / "l.json")
+    assert "avisos_resultado" not in llamadas

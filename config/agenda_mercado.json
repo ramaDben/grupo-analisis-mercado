@@ -99,9 +99,38 @@
       "sesion": "apertura_ny",
       "clases": ["crypto"],
       "por_que": "Medido sobre 90 dias de velas H1 en BTC, ETH, SOL y LTC: el bloque 08-12 de Nueva York rinde entre 1,49x y 1,80x la mediana diaria de rango, con el maximo en 09:00-10:00 (BTC llega a 2,09x). La sesion asiatica esta plana (0,94x a 1,01x) y Europa tambien. Va a las 09:00 y no a las 10:00 para no chocar con el momento de los indices: cada momento produce su propia tanda."
+    },
+    {
+      "slug": "avisos_agenda",
+      "nombre": "Agenda del día en Avisos",
+      "hora": "07:45",
+      "zona": "America/Santiago",
+      "sesion": "europea",
+      "clases": [],
+      "pieza": "avisos",
+      "por_que": "La agenda tiene que llegar antes que cualquier dato de la jornada. Los datos de EE.UU. de las 08:30 de Nueva York caen en Chile entre las 08:30 y las 10:30 segun el desfase, y el IPC de Chile sale a las 08:00 de Santiago: por eso se ancla a Santiago y no a Nueva York."
+    },
+    {
+      "slug": "avisos_manana",
+      "nombre": "Cita de la mañana en Avisos",
+      "hora": "10:30",
+      "sesion": "apertura_ny",
+      "clases": [],
+      "pieza": "avisos",
+      "por_que": "Solo sale los dias sin datos de alto impacto: esos dias Avisos lleva la agenda y el resultado de cada dato. A las 10:30 la bolsa ya abrio y los indices tienen precio del dia, y queda a 30 minutos del momento de indices, fuera de la tolerancia."
+    },
+    {
+      "slug": "avisos_tarde",
+      "nombre": "Balance de la tarde en Avisos",
+      "hora": "14:30",
+      "sesion": "tarde_ny",
+      "clases": [],
+      "pieza": "avisos",
+      "por_que": "Va antes del cierre de la bolsa (16:00) y del informe de cierre (16:45): retoma el activo de la manana y cuenta que hizo el precio. El lunes muestra la semana, salvo que ya haya salido en la manana por falta de datos del dia."
     }
   ],
 
+  "_nota_avisos": "Los momentos con `pieza` no reparten clases de activo: preparan un carrusel del grupo de Avisos con pipeline_avisos.py. El resultado de cada dato no es un momento de reloj sino un suceso, y lo prepara el latido mientras dure la jornada (reloj_gi.RESULTADO).",
   "_nota_pendientes": "La lista existe para que ninguna clase del universo se quede fuera del reloj en silencio: un test exige que toda clase este asignada a un momento O declarada aca. Cripto estuvo pendiente hasta que se midio (2026-09-04) y quedo en la manana americana, no en el rollover asiatico que se suponia.",
   "clases_sin_momento": []
 }
