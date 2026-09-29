@@ -217,6 +217,7 @@ def elegir(variante: str, hoy: date, visiones: dict[str, dict[str, Any]],
     if not cands:
         raise SinCandidatosError("Avisos ya cubrió hoy todos los activos disponibles.")
     cobertura = coberturas(historial, hoy, VENTANA_COBERTURA_DIAS)
+    catalogo = pl._catalogo()
     mejor: dict[str, dict[str, Any]] = {}
     for v in visiones.values():
         t = v.get("activo")
@@ -225,8 +226,13 @@ def elegir(variante: str, hoy: date, visiones: dict[str, dict[str, Any]],
             if actual is None or (v["fecha"], v["id"]) > (actual["fecha"], actual["id"]):
                 mejor[t] = v
 
-    def orden(t: str) -> tuple[int, str]:
-        return (cobertura.get(t, 0), t)
+    def orden(t: str) -> tuple[int, bool, str]:
+        # Antes del orden alfabético: cobertura, y luego si el activo tiene
+        # foto (`imagen`) en el catálogo. Sin ella el escáner ni siquiera lo
+        # cubre (interruptor del activo), así que un desempate ciego podía
+        # elegir uno fuera de la rotación diaria (BRENT.spot, sin `.jpg`).
+        tiene_imagen = bool(catalogo.get(t, {}).get("imagen"))
+        return (cobertura.get(t, 0), not tiene_imagen, t)
 
     if mejor:
         t = min(mejor, key=orden)
@@ -483,6 +489,7 @@ def leer_laminas(dir_canal: Path) -> list[tuple[str, dict[str, Any]]]:
 
 _CAMPOS_TEXTO = ("kicker", "titular", "parrafo", "pie")
 _CAMPOS_ITEM = ("texto", "titulo_punto")
+_LISTAS_TEXTO = ("claves", "puntos")
 
 
 def textos_de(laminas: list[tuple[str, dict[str, Any]]]) -> list[tuple[str, str]]:
@@ -492,12 +499,30 @@ def textos_de(laminas: list[tuple[str, dict[str, Any]]]) -> list[tuple[str, str]
         for campo in _CAMPOS_TEXTO:
             if campo in payload:
                 salida.append((f"{stem}.{campo}", str(payload[campo])))
-        for lista in ("claves", "puntos"):
+        for lista in _LISTAS_TEXTO:
             for i, item in enumerate(payload.get(lista, []), 1):
                 for campo in _CAMPOS_ITEM:
                     if campo in item:
                         salida.append((f"{stem}.{lista}[{i}].{campo}", str(item[campo])))
     return salida
+
+
+def _resetear_textos(payload: dict[str, Any]) -> None:
+    """Vuelve `[[ESCRIBIR]]` todo campo que `textos_de` reporta de esta lámina.
+
+    Misma recorrida que `textos_de` (los mismos `_CAMPOS_TEXTO`/`_CAMPOS_ITEM`/
+    `_LISTAS_TEXTO`): antes solo se reseteaban los campos de nivel de lámina y
+    `claves[*].texto`/`puntos[*].texto`/`titulo_punto` quedaban con el texto
+    escrito para la dirección que el mercado ya invalidó.
+    """
+    for campo in _CAMPOS_TEXTO:
+        if campo in payload:
+            payload[campo] = MARCA
+    for lista in _LISTAS_TEXTO:
+        for item in payload.get(lista, []):
+            for campo in _CAMPOS_ITEM:
+                if campo in item:
+                    item[campo] = MARCA
 
 
 def mensaje_de(payload: dict[str, Any], meta: dict[str, Any]) -> str:
@@ -695,8 +720,12 @@ def preparar(momento: str, ahora: datetime | None = None, *,
     meta, laminas = armar_tanda(momento, formato, ahora, lectura, vision, agenda)
     dir_canal = dir_base / f"{ahora:%Y-%m-%d_%H-%M}_avisos_{momento}" / CANAL
     dir_canal.mkdir(parents=True, exist_ok=True)
-    escribir_meta(dir_canal, meta)
+    # Las láminas primero: `_avisos.json` es la marca de que la tanda quedó
+    # completa, y `_tanda_existente` solo la mira a ella. Escribirla antes
+    # dejaría una carpeta que parece preparada con las láminas todavía sin
+    # escribir si el proceso se corta entre medio.
     escribir_laminas(dir_canal, formato, laminas)
+    escribir_meta(dir_canal, meta)
     registrar_uso(hoy, momento, activo, meta["vision"], gastar_vision=gastar_vision, ruta=historial_ruta)
     return dir_canal
 
@@ -790,9 +819,7 @@ def refrescar_tanda(dir_canal: Path, ahora: datetime | None = None,
     _guardar_refresco(dir_canal, meta, nuevas, lectura, ahora)
     if motivos:
         for stem, payload in leer_laminas(dir_canal):
-            for campo in _CAMPOS_TEXTO:
-                if campo in payload:
-                    payload[campo] = MARCA
+            _resetear_textos(payload)
             (dir_canal / f"{stem}.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         return motivos + ["textos vueltos a [[ESCRIBIR]]"]
     return [f"refrescado a las {etiqueta_hora(ahora)}"]
@@ -835,6 +862,17 @@ def completar_vision(dir_canal: Path, vid: str, ahora: datetime | None = None,
 # ---------------------------------------------------------------- CLI
 
 
+def _mensaje_preparar(ruta: Path, meta: dict[str, Any], ya_existia: bool) -> list[str]:
+    """Las líneas que informan si la tanda es nueva o si ya estaba preparada."""
+    if ya_existia:
+        return [f"La tanda de este momento ya estaba preparada: {ruta.parent}"]
+    lineas = [f"Tanda: {ruta.parent}",
+              f"Activo: {meta['activo'] or 'agenda de la semana'} · formato {meta['formato']}"]
+    if meta["_falta_vision"]:
+        lineas.append("_falta_vision: el comando busca una visión y corre --completar-vision.")
+    return lineas
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Carruseles de Avisos: la voz de los bancos contra nuestros datos")
     modo = parser.add_mutually_exclusive_group(required=True)
@@ -851,8 +889,14 @@ def main(argv: list[str] | None = None) -> int:
         if not args.momento:
             print("ERROR: --preparar necesita --momento", file=sys.stderr)
             return 2
+        ahora = datetime.now(SANTIAGO)
+        # Se mira ANTES de preparar: `preparar` devuelve la misma ruta para una
+        # tanda nueva y para una ya existente, y el director necesita saber
+        # cuál de las dos pasó (issue de la revisión: dos `--preparar` del
+        # mismo momento el mismo día).
+        ya_existia = es_dia_habil(ahora.date()) and _tanda_existente(pc.DIR_TRABAJO, ahora.date(), args.momento) is not None
         try:
-            ruta = preparar(args.momento)
+            ruta = preparar(args.momento, ahora)
         except LecturaFallidaError as exc:
             print(f"FALLA DE DATOS: {exc}. El momento queda pendiente.", file=sys.stderr)
             return 1
@@ -863,9 +907,8 @@ def main(argv: list[str] | None = None) -> int:
             print("Hoy no corresponde: no es día hábil en la bolsa de Nueva York.")
             return 0
         meta = leer_meta(ruta)
-        print(f"Tanda: {ruta.parent}\nActivo: {meta['activo'] or 'agenda de la semana'} · formato {meta['formato']}")
-        if meta["_falta_vision"]:
-            print("_falta_vision: el comando busca una visión y corre --completar-vision.")
+        for linea in _mensaje_preparar(ruta, meta, ya_existia):
+            print(linea)
         return 0
     if args.refrescar:
         try:

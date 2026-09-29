@@ -139,6 +139,18 @@ def test_sin_vision_gana_el_menos_cubierto_sin_voz():
     assert pa.elegir("cita", MARTES, {}, hist, UNIVERSO) == ("XAUUSD", None)
 
 
+def test_entre_iguales_gana_el_activo_con_imagen(monkeypatch):
+    # Ruling de revisión: con cobertura igual, el desempate alfabético ciego
+    # podía elegir un activo sin `imagen` (fuera de la rotación diaria, como
+    # BRENT.spot). "SINFOTO" es alfabéticamente menor y no tiene imagen.
+    monkeypatch.setattr("screener_gi.gate_feriado", lambda t, f: None)
+    monkeypatch.setattr(pa.pl, "_catalogo", lambda: {
+        "SINFOTO": {"ticker": "SINFOTO", "imagen": None},
+        "USDCLP": {"ticker": "USDCLP", "imagen": "assets/activos/usdclp.jpg"},
+    })
+    assert pa.elegir("cita", MARTES, {}, [], ["SINFOTO", "USDCLP"]) == ("USDCLP", None)
+
+
 def test_sin_candidatos_se_informa():
     hist = [uso(MARTES.isoformat(), t) for t in UNIVERSO]
     with pytest.raises(pa.SinCandidatosError):
@@ -477,6 +489,9 @@ def test_preparar_dos_veces_el_mismo_momento_no_duplica(tmp_path):
     segunda, _ = _preparar(tmp_path, ahora=AHORA + timedelta(minutes=10))
     assert segunda == primera
     assert hist.read_text(encoding="utf-8") == antes
+    # Review Focus 1: la segunda corrida no crea una carpeta de tanda nueva.
+    carpetas = sorted(p.name for p in (tmp_path / "carrusel").iterdir())
+    assert len(carpetas) == 1
 
 
 def test_sin_vision_la_tanda_sale_marcada(tmp_path):
@@ -490,6 +505,11 @@ def test_una_falla_de_terminal_es_falla_de_datos(tmp_path):
         raise pa.LecturaFallidaError("MT5 no conectó")
     with pytest.raises(pa.LecturaFallidaError):
         _preparar(tmp_path, lector=roto)
+    # Ni la tanda ni el historial se escriben: una falla de datos no deja
+    # rastro a medio hacer.
+    dir_base = tmp_path / "carrusel"
+    assert not dir_base.exists() or not any(dir_base.iterdir())
+    assert json.loads((tmp_path / "hist.json").read_text(encoding="utf-8")) == []
 
 
 def test_el_balance_retoma_el_activo_y_la_voz_de_la_manana_sin_gastarla(tmp_path):
@@ -557,6 +577,19 @@ def test_refrescar_con_divergencia_no_escribe_sin_reescribir(tmp_path):
     assert (ruta / "3_datos.json").read_text(encoding="utf-8") == antes
 
 
+def test_refrescar_con_reescribir_vacia_tambien_el_texto_de_las_listas(tmp_path):
+    # Hallazgo de revisión: el reseteo solo tocaba los campos de nivel de
+    # lámina; `claves[*].texto` (portada) y `puntos[*].texto`/`titulo_punto`
+    # (lectura) quedaban con el texto escrito para la dirección que el
+    # mercado ya invalidó.
+    ruta, _ = _preparar(tmp_path)
+    _escribir_todo(ruta)
+    pa.refrescar_tanda(ruta, AHORA, lector=lambda t, a: lectura_falsa(t, precio=945.0), reescribir=True)
+    textos = pa.textos_de(pa.leer_laminas(ruta))
+    assert textos  # hay campos que revisar
+    assert all(valor == pa.MARCA for _, valor in textos)
+
+
 def test_la_tabla_de_refresco_cubre_toda_plantilla_que_se_escribe():
     assert set(pa.REFRESCOS) == set(pa.PLANTILLAS)
     assert pa.REFRESCOS["avisos_lectura"] is None and pa.REFRESCOS["avisos_agenda"] is None
@@ -568,3 +601,14 @@ def test_pipeline_avisos_usa_los_tres_frenos_compartidos():
     for freno in ("validar_textos", "validar_cifras", "validar_frescura"):
         assert f"pl.{freno}" in fuente
     assert "exigir_texto_editorial" in inspect.getsource(pa.rendir_tanda)
+
+
+def test_mensaje_preparar_dice_si_la_tanda_es_nueva_o_ya_existia(tmp_path):
+    ruta, _ = _preparar(tmp_path)
+    meta = pa.leer_meta(ruta)
+    nuevo = pa._mensaje_preparar(ruta, meta, ya_existia=False)
+    assert any(str(ruta.parent) in linea for linea in nuevo)
+    assert not any("ya estaba preparada" in linea for linea in nuevo)
+
+    repetido = pa._mensaje_preparar(ruta, meta, ya_existia=True)
+    assert repetido == [f"La tanda de este momento ya estaba preparada: {ruta.parent}"]
