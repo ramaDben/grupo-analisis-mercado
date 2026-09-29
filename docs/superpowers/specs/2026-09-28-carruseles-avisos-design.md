@@ -30,15 +30,16 @@ que el cupo del día no alcanza a cubrir entero no empieza.
 | Visiones | Las busca el comando cuando el reloj deja un carrusel sin visión fresca |
 | Sin visión | Sale el carrusel sin la lámina del banco |
 | Quién escribe | El reloj prepara los datos; el comando busca, escribe y rinde |
-| Decisión de tasas de la Fed (2026-09-28) | Se cubre sí o sí en el momento de la tarde: ese día `avisos_tarde` pasa al formato `tasas`, con el resultado y su impacto. Ver 3.4 |
+| Decisiones de tasas (2026-09-28) | Se cubren sí o sí, con el resultado y su impacto (formato `tasas`, 3.4). Fed: reemplaza a `avisos_tarde`. BCE: reemplaza a `avisos_manana`. Banco Central de Chile: momento propio `avisos_bcch` a las 18:30 de Santiago |
 
 ## 2. El día
 
 | Momento | Hora NY | Chile (hoy) | Formato | Láminas |
 |---|---|---|---|---|
-| `avisos_manana` | 10:30 | 11:30 | `cita` | portada · voz del banco · nuestros datos · nuestra lectura |
+| `avisos_manana` | 10:30 | 11:30 | `cita`, o `tasas` el día de decisión del BCE | portada · voz del banco · nuestros datos · nuestra lectura |
 | `avisos_mediodia` | 12:30 | 13:30 | `meta` | ídem, con la voz en la variante meta contra precio |
 | `avisos_tarde` | 14:30 | 15:30 | `agenda` (lunes), `balance` (martes a viernes) o `tasas` (día de decisión de la Fed) | ver 3.4 |
+| `avisos_bcch` | anclado a Santiago: 18:30 | 18:30 | `tasas`, solo el día de Reunión de Política Monetaria del BCCh; los demás días no produce tanda | ver 3.4 |
 
 - **10:30** queda a 30 minutos del momento de índices (10:00), fuera de la tolerancia de 20. A esa
   hora la bolsa ya abrió y los índices tienen precio del día. **14:30** va antes del cierre de la
@@ -138,23 +139,52 @@ data/carrusel/<fecha>_<hora>_avisos_<momento>/01_macro_y_apertura/
   vuelve a citar: la regla de 14 días no aplica dentro del mismo día) · nuestros datos
   releídos · nuestra lectura del día. Si la mañana no tuvo tanda, el balance toma el activo de
   mediodía; si tampoco, se elige como en 3.5 y sale sin voz.
-- `tasas` (día de decisión de la Fed, decisión del director del 2026-09-28): **reemplaza** a la
-  agenda o al balance de ese día y se cubre sí o sí. La Fed publica la decisión a las 14:00 NY y
+- `tasas` (decisión del director del 2026-09-28): la decisión de tasas de la Fed, del BCE y del
+  Banco Central de Chile se cubre sí o sí, con el resultado y su impacto. Las tres comparten
+  formato y frenos; cambia el momento en que salen (abajo).
+
+  **Fed.** Reemplaza a la agenda o al balance de ese día. La Fed publica la decisión a las 14:00 NY y
   la conferencia del presidente empieza a las 14:30 NY, así que el momento de la tarde (14:30 NY,
   15:30 Chile hoy) cae media hora después del resultado, con la primera reacción del mercado ya
   medible. El ancla sigue siendo Nueva York: en noviembre, cuando cambia el desfase, el carrusel
   sigue saliendo media hora después de la decisión aunque en Chile sean las 16:30.
-  - **Cuándo:** el día lo marca el calendario (`obtener_calendario_macro`, evento de decisión de
-    tasas de la Fed de EE.UU., en inglés como lo entrega la fuente), no una lista de fechas escrita
-    a mano.
-  - **Láminas:** portada (la decisión en una línea: sube, baja o mantiene, y el rango nuevo) · el
+
+  **BCE.** Reemplaza al carrusel de la mañana (`cita`) de ese día. El BCE publica a las 14:15 de
+  Fráncfort y la conferencia de Lagarde empieza a las 14:45: eso es 08:15 o 09:15 NY según el
+  desfase (10:15 Chile el 29 de octubre de 2026, medido con `hora_chile.ps1`). El momento de la
+  mañana (10:30 NY) cae entre 1 h 15 y 2 h 15 después, con el resultado y la conferencia ya
+  conocidos. **No se crea un momento propio** porque la invariante del reloj lo impide: 30 minutos
+  después de la decisión (14:45 Fráncfort) cae a las 08:45 NY, a 15 minutos de `premercado_fx`
+  (08:30) y de `cripto` (09:00), y en las semanas de desfase a las 09:45 NY, a 15 minutos de
+  `apertura_indices` (10:00). Siempre dentro de la tolerancia de 20, y el decisor perdería uno de
+  los dos en silencio.
+
+  **Banco Central de Chile.** Momento propio, `avisos_bcch`, anclado a Santiago (`zona`) a las
+  18:30: el comunicado de la Reunión de Política Monetaria sale a las 18:00 hora de Chile y ningún
+  momento del día cae después. Los días sin reunión `--preparar` termina con código 0 sin escribir
+  nada ("hoy no corresponde"), el mismo contrato de los feriados. Con la tarde en 14:30 NY
+  (entre 14:30 y 16:30 Chile en el año), queda al menos dos horas de cualquier otro momento en las
+  tres configuraciones del desfase, que es lo que exige el test del reloj.
+  **A las 18:30 el mercado formal del dólar en Chile ya cerró**, así que el impacto en el USD/CLP no
+  se puede medir esa tarde: medirlo sobre cotizaciones sin mercado formado sería publicar ruido.
+  Esa lámina pasa a ser el **impacto esperado** para la apertura (hacia dónde debería abrir el
+  USD/CLP según el veredicto), rotulado como anticipación. Al día hábil siguiente, el carrusel de
+  la mañana toma el USD/CLP como activo (salta la elección de 3.5) y muestra la reacción medida
+  ya con mercado abierto.
+
+  - **Cuándo:** el día lo marca el calendario (`obtener_calendario_macro`: decisión de tasas de la
+    Fed, del BCE y la RPM del BCCh; los nombres vienen en inglés como los entrega la fuente), no
+    una lista de fechas escrita a mano.
+  - **Láminas:** portada (la decisión en una línea: sube, baja o mantiene, y la tasa nueva) · el
     resultado (tasa decidida contra la esperada y la anterior, con veredicto en línea / más dura /
-    más suave que lo esperado) · el impacto (cuánto se movieron USD/CLP, oro y US100 desde las
-    14:00 NY hasta la lectura, leído del terminal) · nuestra lectura (qué significa para el
-    bolsillo y qué mirar en la conferencia).
-  - **El impacto no publica soporte ni resistencia.** A esa hora rige el blackout del escáner
-    (FOMC −30/+75 min): los niveles tácticos son ruido. Lo que se publica es el movimiento medido
-    desde la decisión, que es justo lo que el blackout no invalida.
+    más suave que lo esperado) · el impacto (cuánto se movieron desde la decisión hasta la lectura
+    los activos que mueve ese banco, leído del terminal: Fed → USD/CLP, oro y US100; BCE → oro y
+    USD/CLP por el dólar global; BCCh → impacto esperado en USD/CLP, ver arriba) · nuestra lectura
+    (qué significa para el bolsillo y qué mirar en la conferencia o en la apertura).
+  - **El impacto no publica soporte ni resistencia.** Media hora o dos después de una decisión rige
+    el blackout del escáner (FOMC −30/+75 min, BoJ y RPM de Chile): los niveles tácticos son
+    ruido. Lo que se publica es el movimiento medido desde la decisión, que es justo lo que el
+    blackout no invalida.
   - **Sin resultado no hay carrusel a medias.** Si a la hora de preparar el calendario todavía no
     trae el valor `actual`, `--preparar` no escribe la tanda y sale con falla de datos (código 1):
     el momento queda pendiente y el reloj reintenta en el siguiente latido, dentro de la
