@@ -277,3 +277,122 @@ def test_la_tanda_de_agenda_no_tiene_activo_ni_alerta():
     assert meta["activo"] is None and meta["_falta_vision"] is False
     assert laminas["portada"]["dato_precio"] == ""
     assert laminas["portada"]["sello"] == "AVISOS · AGENDA DE LA SEMANA"
+
+
+# ---------------------------------------------------------------- disco, frenos y render
+
+
+def _tanda(tmp_path, formato="cita", con_vision=True, lec=None):
+    momento = {"cita": "avisos_manana", "meta": "avisos_mediodia", "balance": "avisos_tarde"}.get(formato, "avisos_tarde")
+    v = vision("v") if con_vision else None
+    meta, laminas = pa.armar_tanda(momento, formato, AHORA, lec or lectura_falsa(), v, [])
+    dir_canal = tmp_path / "2026-09-29_11-30_avisos_x" / pa.CANAL
+    dir_canal.mkdir(parents=True)
+    pa.escribir_meta(dir_canal, meta)
+    pa.escribir_laminas(dir_canal, formato, laminas)
+    return dir_canal, {"v": v} if v else {}
+
+
+def _escribir_todo(dir_canal, pie="El dólar mantiene un sesgo alcista sobre su promedio de 50 horas."):
+    for stem, payload in pa.leer_laminas(dir_canal):
+        for campo in ("kicker", "titular", "parrafo"):
+            if campo in payload:
+                payload[campo] = "Texto de prueba suficientemente largo para el freno"
+        if "pie" in payload:
+            payload["pie"] = pie
+        for lista in ("claves", "puntos"):
+            for item in payload.get(lista, []):
+                for k in ("texto", "titulo_punto"):
+                    if k in item:
+                        item[k] = "Punto de prueba"
+        (dir_canal / f"{stem}.json").write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+
+def test_escribir_laminas_numera_y_pone_el_pie_de_posicion(tmp_path):
+    dir_canal, _ = _tanda(tmp_path)
+    stems = [s for s, _ in pa.leer_laminas(dir_canal)]
+    assert stems == ["1_portada", "2_voz", "3_datos", "4_lectura"]
+    portada = dict(pa.leer_laminas(dir_canal))["1_portada"]
+    assert portada["posicion"] == "1/4 · Portada" and portada["total_laminas"] == "4 LÁMINAS"
+
+
+def test_una_tanda_sin_escribir_no_se_rinde(tmp_path):
+    dir_canal, visiones = _tanda(tmp_path)
+    errores = pa.validar_tanda(dir_canal, AHORA, visiones)
+    assert any("sin escribir" in e for e in errores)
+
+
+def test_una_tanda_escrita_pasa_los_frenos(tmp_path):
+    dir_canal, visiones = _tanda(tmp_path)
+    _escribir_todo(dir_canal)
+    assert pa.validar_tanda(dir_canal, AHORA, visiones) == []
+
+
+def test_el_pie_sin_direccion_se_detiene(tmp_path):
+    dir_canal, visiones = _tanda(tmp_path)
+    _escribir_todo(dir_canal, pie="El dólar se mueve hoy entre dos niveles claros del día.")
+    assert any("dirección" in e for e in pa.validar_tanda(dir_canal, AHORA, visiones))
+
+
+def test_una_cifra_sin_respaldo_se_detiene(tmp_path):
+    dir_canal, visiones = _tanda(tmp_path)
+    _escribir_todo(dir_canal, pie="El dólar tiene sesgo alcista y apunta a $951,00 hoy.")
+    assert any("$951,00" in e for e in pa.validar_tanda(dir_canal, AHORA, visiones))
+
+
+def test_la_frescura_vence_a_los_121_minutos(tmp_path):
+    dir_canal, visiones = _tanda(tmp_path)
+    _escribir_todo(dir_canal)
+    assert pa.validar_tanda(dir_canal, AHORA + timedelta(minutes=119), visiones) == []
+    assert any("--refrescar" in e for e in pa.validar_tanda(dir_canal, AHORA + timedelta(minutes=121), visiones))
+
+
+def test_una_vision_que_ya_no_esta_en_el_registro_se_detiene(tmp_path):
+    dir_canal, _ = _tanda(tmp_path)
+    _escribir_todo(dir_canal)
+    assert any("registro" in e for e in pa.validar_tanda(dir_canal, AHORA, {}))
+
+
+def test_el_pie_de_la_portada_lleva_cierre_y_aviso_y_es_estable(tmp_path):
+    dir_canal, _ = _tanda(tmp_path)
+    _escribir_todo(dir_canal)
+    meta = pa.leer_meta(dir_canal)
+    portada = dict(pa.leer_laminas(dir_canal))["1_portada"]
+    msg = pa.mensaje_de(portada, meta)
+    assert msg.startswith("El dólar mantiene un sesgo alcista")
+    assert pa.AVISO_LEGAL in msg and msg.rstrip().endswith("1/4 · Portada")
+    assert any(c in msg for c in pa.pc.CIERRES_ALERTA)
+    assert pa.mensaje_de(portada, meta) == msg
+
+
+def test_las_demas_laminas_llevan_solo_su_posicion(tmp_path):
+    dir_canal, _ = _tanda(tmp_path)
+    voz = dict(pa.leer_laminas(dir_canal))["2_voz"]
+    assert pa.mensaje_de(voz, pa.leer_meta(dir_canal)) == "2/4 · La voz del banco"
+
+
+def test_rendir_escribe_png_y_mensaje_por_lamina_y_usa_el_freno_del_despacho(tmp_path, monkeypatch):
+    dir_canal, visiones = _tanda(tmp_path)
+    _escribir_todo(dir_canal)
+    llamadas = []
+    monkeypatch.setattr(pa.pc, "exigir_texto_editorial", lambda pares: llamadas.append(len(pares)))
+
+    def render_falso(tokens, plantilla, salida, formato="horizontal"):
+        assert "{{" not in json.dumps(tokens)
+        salida.write_bytes(b"png")
+        return salida
+
+    pngs = pa.rendir_tanda(dir_canal, AHORA, visiones, render=render_falso)
+    assert [p.name for p in pngs] == ["1_portada.png", "2_voz.png", "3_datos.png", "4_lectura.png"]
+    assert all((dir_canal / f"{p.stem}_mensaje.txt").exists() for p in pngs)
+    assert llamadas == [4]
+
+
+def test_tokens_de_traduce_titular_y_parrafo_por_plantilla(tmp_path):
+    dir_canal, _ = _tanda(tmp_path)
+    laminas = dict(pa.leer_laminas(dir_canal))
+    assert "bajada" in pa.tokens_de(laminas["1_portada"])
+    assert "remate" in pa.tokens_de(laminas["2_voz"])
+    t = pa.tokens_de(laminas["4_lectura"])
+    assert "titulo" in t and "conclusion" in t
+    assert not any(k.startswith("_") for k in t)

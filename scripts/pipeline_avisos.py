@@ -438,3 +438,162 @@ def armar_tanda(momento: str, formato: str, ahora: datetime, lectura: dict[str, 
         "cifras_citadas": {}, "aceptar_antiguas": {},
     }
     return meta, laminas
+
+
+# ---------------------------------------------------------------- disco
+
+
+def escribir_meta(dir_canal: Path, meta: dict[str, Any]) -> None:
+    (dir_canal / "_avisos.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def leer_meta(dir_canal: Path) -> dict[str, Any]:
+    return json.loads((dir_canal / "_avisos.json").read_text(encoding="utf-8"))
+
+
+def _archivos_de_lamina(dir_canal: Path) -> list[Path]:
+    return [p for p in dir_canal.iterdir() if p.is_file() and p.name[:1].isdigit()]
+
+
+def escribir_laminas(dir_canal: Path, formato: str, laminas: dict[str, dict[str, Any]]) -> None:
+    """Escribe las láminas numeradas desde cero. Renumerar es borrar y volver a escribir."""
+    for viejo in _archivos_de_lamina(dir_canal):
+        viejo.unlink()
+    orden = laminas_de(formato, con_voz="voz" in laminas)
+    total = f"{len(orden)} LÁMINAS"
+    for lamina in orden:
+        payload = laminas[lamina["clave"]]
+        payload["_clave"] = lamina["clave"]
+        payload["posicion"] = lamina["posicion"]
+        if lamina["clave"] == "portada":
+            payload["total_laminas"] = total
+        (dir_canal / f"{lamina['stem']}.json").write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def leer_laminas(dir_canal: Path) -> list[tuple[str, dict[str, Any]]]:
+    return [
+        (p.stem, json.loads(p.read_text(encoding="utf-8")))
+        for p in sorted(dir_canal.glob("*.json"))
+        if p.stem[:1].isdigit()
+    ]
+
+
+# ---------------------------------------------------------------- frenos
+
+_CAMPOS_TEXTO = ("kicker", "titular", "parrafo", "pie")
+_CAMPOS_ITEM = ("texto", "titulo_punto")
+
+
+def textos_de(laminas: list[tuple[str, dict[str, Any]]]) -> list[tuple[str, str]]:
+    """Todo texto editorial de las láminas. Las citas no: salen del registro."""
+    salida: list[tuple[str, str]] = []
+    for stem, payload in laminas:
+        for campo in _CAMPOS_TEXTO:
+            if campo in payload:
+                salida.append((f"{stem}.{campo}", str(payload[campo])))
+        for lista in ("claves", "puntos"):
+            for i, item in enumerate(payload.get(lista, []), 1):
+                for campo in _CAMPOS_ITEM:
+                    if campo in item:
+                        salida.append((f"{stem}.{lista}[{i}].{campo}", str(item[campo])))
+    return salida
+
+
+def mensaje_de(payload: dict[str, Any], meta: dict[str, Any]) -> str:
+    """El texto de la lámina. La portada lleva el pie completo; las demás, su posición.
+
+    El cierre y el aviso los agrega el script, estables por tanda: el despacho
+    vuelve a rendir y un texto distinto al aprobado no puede salir.
+    """
+    if payload.get("_clave") != "portada":
+        return payload["posicion"]
+    cierre = pc.elegir_variante(pc.CIERRES_ALERTA, meta.get("activo") or "agenda", meta["momento"], meta["fecha"])
+    return "\n\n".join([str(payload["pie"]).strip(), cierre, AVISO_LEGAL, payload["posicion"]])
+
+
+def validar_tanda(dir_canal: Path, ahora: datetime, visiones: dict[str, dict[str, Any]],
+                  activos_extra: dict[str, dict[str, Any]] | None = None) -> list[str]:
+    """Todos los motivos por los que el carrusel no puede rendirse. Vacío = puede."""
+    meta = leer_meta(dir_canal)
+    laminas = leer_laminas(dir_canal)
+    textos = textos_de(laminas)
+    errores = pl.validar_textos(textos)
+
+    if len(laminas) > MAX_LAMINAS:
+        errores.append(f"{len(laminas)} láminas: máximo {MAX_LAMINAS}")
+
+    usadas: list[dict[str, Any]] = []
+    vid = meta.get("vision")
+    if vid:
+        if vid not in visiones:
+            errores.append(f"visión `{vid}`: no está en el registro {pl.REGISTRO_VISIONES.name}")
+        else:
+            usadas.append(visiones[vid])
+            errores.extend(pl.validar_vision(visiones[vid], ahora.date(), meta.get("aceptar_antiguas", {}).get(vid)))
+
+    activos = dict(meta.get("activos", {}))
+    for ticker, fila in (activos_extra or {}).items():
+        activos[f"{ticker}#preparacion"] = fila
+    errores.extend(pl.validar_cifras(textos, activos, usadas, meta.get("cifras_citadas", {}), campos=CAMPOS_AVISOS))
+
+    leido = datetime.fromisoformat(meta["leido_en"])
+    errores.extend(pl.validar_frescura(leido, ahora, FRESCURA_MAX_HORAS, remedio="Corre --refrescar."))
+
+    if meta["formato"] != "agenda" and meta.get("direccion"):
+        pie = next((str(p.get("pie", "")) for _, p in laminas if p.get("_clave") == "portada"), "")
+        if MARCA not in pie and meta["direccion"].lower() not in pie.lower():
+            errores.append(
+                f"1_portada.pie: no nombra la dirección ({meta['direccion'].lower()}). "
+                "El cliente tiene que saber hacia dónde va el activo."
+            )
+    return errores
+
+
+# ---------------------------------------------------------------- render
+
+
+def tokens_de(payload: dict[str, Any]) -> dict[str, Any]:
+    """Del contrato del despacho (`titular`, `parrafo`) a los tokens de cada plantilla."""
+    tokens = {k: v for k, v in payload.items() if not k.startswith("_")}
+    tokens.pop("pie", None)
+    plantilla = payload["_plantilla"]
+    if plantilla == "avisos_portada":
+        tokens["bajada"] = tokens.pop("parrafo")
+    elif plantilla == "vision":
+        tokens["remate"] = tokens.pop("parrafo")
+    elif plantilla == "avisos_lectura":
+        tokens["titulo"] = tokens.pop("titular")
+        tokens["conclusion"] = tokens.pop("parrafo")
+    elif plantilla == "avisos_agenda":
+        tokens["titulo"] = tokens.pop("titular")
+        tokens["subtitulo"] = tokens.pop("parrafo")
+    elif plantilla == "avisos_datos":
+        from story_grafico import enriquecer
+
+        tokens = enriquecer(tokens)
+    return tokens
+
+
+def rendir_tanda(dir_canal: Path, ahora: datetime | None = None,
+                 visiones: dict[str, dict[str, Any]] | None = None,
+                 render: Callable[..., Path] | None = None,
+                 activos_extra: dict[str, dict[str, Any]] | None = None) -> list[Path]:
+    ahora = ahora or datetime.now(SANTIAGO)
+    visiones = visiones if visiones is not None else pl.cargar_visiones()
+    errores = validar_tanda(dir_canal, ahora, visiones, activos_extra=activos_extra)
+    if errores:
+        raise SystemExit("El carrusel no se rinde:\n  " + "\n  ".join(errores))
+    laminas = leer_laminas(dir_canal)
+    # El mismo freno de las dos rutas de render del carrusel (su test de contrato).
+    pc.exigir_texto_editorial(laminas)
+    if render is None:
+        from story_render import render_story as render
+    meta = leer_meta(dir_canal)
+    salidas: list[Path] = []
+    for stem, payload in laminas:
+        png = dir_canal / f"{stem}.png"
+        render(tokens_de(payload), DIR_PLANTILLAS / PLANTILLAS[payload["_plantilla"]], png, formato="horizontal")
+        (dir_canal / f"{stem}_mensaje.txt").write_text(mensaje_de(payload, meta), encoding="utf-8")
+        salidas.append(png)
+    return salidas
