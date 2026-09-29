@@ -1122,7 +1122,7 @@ git commit -m "feat(stories): portada con precio y hora de lectura, lectura con 
   - `lectura` (dict que devuelve el lector del terminal): `{"ticker", "activo": <fila de catálogo>, "seleccion": <evaluar_activo>, "h1": <analizar_activo H1>, "cierres": list[float]}`
   - `CAMPOS_AVISOS = pl.CAMPOS_PRECIO + ("soporte_publicado", "resistencia_publicada")`
   - `fila_medida(lectura, payload_datos) -> dict`
-  - `lamina_portada(activo_nombre: str | None, precio: str, leido: datetime, ahora: datetime, agenda: bool) -> dict`
+  - `lamina_portada(activo_nombre: str | None, precio: str, leido: datetime, ahora: datetime, agenda: bool, ticker: str | None = None) -> dict`
   - `lamina_voz(vision, variante, fila, leido, ahora) -> dict`
   - `lamina_datos(lectura, ahora) -> dict`
   - `lamina_semana(agenda: list[dict], ahora) -> dict` y `eventos_calendario(agenda, ahora, maximo=6) -> list[dict]`
@@ -1274,7 +1274,10 @@ def fila_medida(lectura: dict[str, Any], payload_datos: dict[str, Any]) -> dict[
 
 
 def lamina_portada(activo_nombre: str | None, precio: str, leido: datetime, ahora: datetime,
-                   agenda: bool) -> dict[str, Any]:
+                   agenda: bool, ticker: str | None = None) -> dict[str, Any]:
+    # Spec §3.7.4: toda lámina con precio lleva _procedencia.ticker; la agenda no tiene precio.
+    if not agenda and not ticker:
+        raise ValueError("la portada con precio exige el ticker de su procedencia")
     return {
         "_plantilla": "avisos_portada", "plantilla": "avisos_portada",
         "sello": "AVISOS · AGENDA DE LA SEMANA" if agenda else f"AVISOS · {str(activo_nombre).upper()}",
@@ -1285,6 +1288,7 @@ def lamina_portada(activo_nombre: str | None, precio: str, leido: datetime, ahor
         "dato_precio": "" if agenda else f"{activo_nombre} {precio}",
         "dato_hora": "" if agenda else f"LEÍDO {etiqueta_hora(leido)}",
         "total_laminas": "", "posicion": "",
+        "_procedencia": {"ticker": None if agenda else ticker},
     }
 
 
@@ -1386,7 +1390,7 @@ def armar_tanda(momento: str, formato: str, ahora: datetime, lectura: dict[str, 
         activos[lectura["ticker"]] = fila
         direccion = pc.direccion_publicada(lectura["seleccion"]["direccion"])
         laminas["portada"] = lamina_portada(lectura["activo"]["nombre"], datos["precio_actual"],
-                                            ahora, ahora, agenda=False)
+                                            ahora, ahora, agenda=False, ticker=lectura["ticker"])
         if vision is not None:
             variante = variante_de(vision)
             laminas["voz"] = lamina_voz(vision, variante, fila, ahora, ahora)
@@ -1436,7 +1440,7 @@ git commit -m "feat(avisos): armado de láminas y tokens del calendario de la se
   - `mensaje_de(payload: dict, meta: dict) -> str`
   - `validar_tanda(dir_canal, ahora, visiones: dict, activos_extra: dict | None = None) -> list[str]`
   - `tokens_de(payload) -> dict`
-  - `rendir_tanda(dir_canal, ahora=None, visiones=None, render: Callable | None = None) -> list[Path]`
+  - `rendir_tanda(dir_canal, ahora=None, visiones=None, render: Callable | None = None, activos_extra: dict | None = None) -> list[Path]` (el despacho de la Tarea 11 le pasa `activos_extra` con las cifras de preparación)
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1702,10 +1706,11 @@ def tokens_de(payload: dict[str, Any]) -> dict[str, Any]:
 
 def rendir_tanda(dir_canal: Path, ahora: datetime | None = None,
                  visiones: dict[str, dict[str, Any]] | None = None,
-                 render: Callable[..., Path] | None = None) -> list[Path]:
+                 render: Callable[..., Path] | None = None,
+                 activos_extra: dict[str, dict[str, Any]] | None = None) -> list[Path]:
     ahora = ahora or datetime.now(SANTIAGO)
     visiones = visiones if visiones is not None else pl.cargar_visiones()
-    errores = validar_tanda(dir_canal, ahora, visiones)
+    errores = validar_tanda(dir_canal, ahora, visiones, activos_extra=activos_extra)
     if errores:
         raise SystemExit("El carrusel no se rinde:\n  " + "\n  ".join(errores))
     laminas = leer_laminas(dir_canal)
@@ -2547,11 +2552,11 @@ def refrescar_para_despacho(dir_canal: Path, sin_mt5: bool, ahora: datetime | No
     errores = validar_tanda(dir_canal, ahora, visiones, activos_extra=extra)
     if errores:
         detener_canal(dir_canal, "; ".join(errores))
-    rendir_tanda(dir_canal, ahora, visiones, render=render)
+    rendir_tanda(dir_canal, ahora, visiones, render=render, activos_extra=extra)
     return avisos
 ```
 
-(`rendir_tanda` vuelve a correr `validar_tanda` sin `activos_extra`. Para que no frene lo que el despacho ya aceptó, agrega a `rendir_tanda` un parámetro `activos_extra: dict | None = None` que pasa a `validar_tanda`, y aquí llama `rendir_tanda(dir_canal, ahora, visiones, render=render, activos_extra=extra)`. Actualiza la firma en la sección Interfaces de la Tarea 7 al implementarlo.)
+(`rendir_tanda` vuelve a correr `validar_tanda`: por eso recibe el mismo `activos_extra` (firma ya definida en la Tarea 7), así no frena lo que el despacho acaba de aceptar.)
 
 - [ ] **Step 5: Run** `uv run pytest tests/test_pipeline_avisos.py tests/test_pipeline_carrusel.py tests/test_whatsapp_sender.py -v` → PASS, incluidos **todos** los tests previos del carrusel temático (pieza a pieza, bitácora, modo pruebas, contexto macro sin editorial, guardia antes de leer el mercado).
 - [ ] **Step 6: Commit** `git add scripts/pipeline_carrusel.py scripts/pipeline_avisos.py tests/ && git commit -m "feat(despacho): tandas de Avisos por plantilla, cupo y divergencia por canal"`
