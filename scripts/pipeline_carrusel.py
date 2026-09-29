@@ -1462,6 +1462,42 @@ def _refrescar_y_rendir(dir_grupo: Path) -> list[str]:
     return avisos
 
 
+def _refrescar_y_rendir_avisos(dir_grupo: Path, sin_mt5: bool) -> tuple[bool, list[str]]:
+    """Refresca y rinde una tanda de Avisos con su propio pipeline. `(sale, avisos)`.
+
+    Una tanda de Avisos es un carrusel, no piezas sueltas: la portada, la
+    lectura y el resultado citan el mismo mercado, así que si el refresco dice
+    que el texto quedó escrito para otro mercado, o si algún freno de
+    `--rendir` salta (texto sin escribir, cifra sin respaldo, datos de más de
+    2 h), **no sale ninguna lámina** (spec 3.7.3). Las láminas se rinden con su
+    plantilla (`_plantilla`), no con la de la alerta (spec 3.7.1).
+
+    Un refresco que falla no deja pasar precios viejos: el freno de frescura de
+    `rendir_tanda` detiene la tanda si la lectura de la preparación ya tiene más
+    de 2 h (spec 3.7.4).
+    """
+    import pipeline_avisos as pa
+
+    ahora = datetime.now(tz=SANTIAGO)
+    meta = pa.leer_meta(dir_grupo)
+    avisos: list[str] = []
+    lleva_mercado = bool(meta.get("activo")) or meta.get("formato") == "resultado"
+    if lleva_mercado and sin_mt5:
+        avisos.append("sin MetaTrader5 no se relee el mercado: vale la lectura de la preparación si tiene menos de 2 h")
+    else:
+        try:
+            avisos.extend(pa.refrescar_tanda(dir_grupo, ahora))
+        except pa.LecturaFallidaError as exc:
+            avisos.append(f"el refresco falló ({exc}): vale la lectura de la preparación si tiene menos de 2 h")
+        except SystemExit as exc:
+            return False, avisos + [f"⚠️ el carrusel de Avisos NO se despacha: {exc}"]
+    try:
+        pa.rendir_tanda(dir_grupo, ahora)
+    except SystemExit as exc:
+        return False, avisos + [f"⚠️ el carrusel de Avisos NO se despacha: {exc}"]
+    return True, avisos
+
+
 def despachar(
     directorio: Path,
     desde: int = 1,
@@ -1536,8 +1572,17 @@ def despachar(
         canal = dir_grupo.name
         destinatario = destino_fijo if pruebas else canal
         print(f"\n[{i}/{len(grupos)}] {canal}" + (f" -> destino: {destinatario}" if pruebas else ""), flush=True)
-        for aviso in _refrescar_y_rendir(dir_grupo):
-            print(f"    {aviso}", flush=True)
+        es_avisos = (dir_grupo / "_avisos.json").exists()
+        if es_avisos:
+            sale, avisos_canal = _refrescar_y_rendir_avisos(dir_grupo, sin_mt5)
+            for aviso in avisos_canal:
+                print(f"    {aviso}", flush=True)
+            if not sale:
+                resultados.append({"grupo": canal, "status": "frenado"})
+                continue
+        else:
+            for aviso in _refrescar_y_rendir(dir_grupo):
+                print(f"    {aviso}", flush=True)
 
         piezas = piezas_del_grupo(dir_grupo)
         if not piezas:
@@ -1625,6 +1670,16 @@ def despachar(
                 f"    {len(piezas) - len(pendientes)} pieza(s) ya despachada(s): "
                 "se retoma en la que falta", flush=True
             )
+        if es_avisos and not dry_run:
+            restante = sender.cupo_restante()
+            if len(pendientes) > restante:
+                print(
+                    f"    ⚠️ el carrusel de Avisos NO se despacha: lleva {len(pendientes)} "
+                    f"pieza(s) y al cupo de hoy le quedan {restante}. Un carrusel a medias es "
+                    "peor que ninguno.", flush=True,
+                )
+                resultados.append({"grupo": canal, "status": "sin_cupo", "piezas": len(pendientes)})
+                continue
 
         def anotar(pieza: Any, _canal: str = canal) -> None:
             if pruebas:

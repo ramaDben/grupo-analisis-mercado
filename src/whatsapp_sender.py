@@ -549,6 +549,16 @@ class WhatsAppSender:
             "ultimo_ts": float(datos.get("ultimo_ts", 0.0)),
         }
 
+    def cupo_restante(self) -> int:
+        """Envíos que quedan hoy. Solo lectura: no espera ni descuenta nada.
+
+        Lee el mismo contador que `_esperar_turno`, así las dos preguntas no
+        pueden dar respuestas distintas. Lo usa el despacho para no empezar un
+        carrusel de Avisos que el cupo no alcanza a cubrir entero: un carrusel a
+        medias es peor que ninguno (spec de Avisos, 3.7.2).
+        """
+        return max(0, self.max_envios_dia - self._leer_estado_envios()["enviados"])
+
     def _registrar_envio(self, piezas: int = 1) -> None:
         """Anota `piezas` mensajes entregados y sella la hora de la acción.
 

@@ -217,6 +217,12 @@ html, body {
 .footer-marca { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: 0.08em; color: var(--acento); }
 .footer-cta { font-family: var(--font-sans); font-weight: 600; font-size: 22px; color: var(--texto-2); margin: 0; }
 
+/* Resultado de un dato ya publicado: la columna RESULTADO resalta en el acento
+   y el tag pasa de "impacto" a veredicto. Solo el veredicto lleva color de dato. */
+.ev-stat-actual .ev-stat-val { color: var(--acento); }
+.tag-mejor { background: color-mix(in srgb, var(--sube) 20%, transparent); color: var(--sube); border-color: var(--sube); }
+.tag-en_linea { background: color-mix(in srgb, var(--texto-2) 18%, transparent); color: var(--blanco); border-color: var(--texto-2); }
+
 /* ══════════ AGENDA DEL DÍA: pocos eventos, filas grandes (horizontal) ══════════
    Con uno o dos datos la tabla estándar se pierde en el lienzo. Sin tercera fila
    las filas crecen para llenar el espacio y se leen de lejos. */
@@ -382,7 +388,13 @@ html, body {
               <span class="ev-stat-val">{{esperado}}</span>
             </div>
             <!-- ENDIF:tiene_esperado -->
-            <span class="tag-impacto">{{impacto}}</span>
+            <!-- IF:tiene_actual -->
+            <div class="ev-stat ev-stat-actual">
+              <span class="ev-stat-label">Resultado</span>
+              <span class="ev-stat-val">{{actual}}</span>
+            </div>
+            <!-- ENDIF:tiene_actual -->
+            <span class="tag-impacto tag-{{impacto_slug}}">{{impacto}}</span>
           </div>
         </div>
         <!-- ENDFOR:eventos -->
