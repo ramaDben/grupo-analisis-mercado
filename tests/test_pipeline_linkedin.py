@@ -292,7 +292,7 @@ def test_rendir_se_detiene_con_huecos(tmp_path, monkeypatch):
 
 
 def test_normalizar_separa_listas_pegadas_y_escapa_hashtags():
-    import markdown
+    markdown = pytest.importorskip("markdown")  # extra `informe`, ausente en CI
 
     texto = "**Pág. 1 · Portada**\n- Titular: Hola\n- Bajada: Chao\n\n> Copy\n> #Inversiones #GI"
     html = markdown.markdown(pl.normalizar_markdown(texto), extensions=["tables", "sane_lists"])
