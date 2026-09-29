@@ -690,9 +690,9 @@ def test_construir_mensaje_alerta_cumple_reglas_canonicas_whatsapp():
     assert "━━━━━━━━━━━━━━━━━━━" in msg
 
     # 3. Código de emojis de escenarios
-    assert "🟢 Sobre" in msg
-    assert "🟡 Entre" in msg
-    assert "🔴 Bajo" in msg
+    assert "⬆️ Sobre" in msg
+    assert "↔️ Entre" in msg
+    assert "⬇️ Bajo" in msg
 
     # 4. Niveles y cifras
     assert "68,716" in msg
@@ -1216,7 +1216,7 @@ def test_el_mensaje_compacto_trae_solo_lo_que_sirve_para_actuar():
     assert p["titular"] in msg
     assert f"Precio actual: {p['precio_actual']}" in msg
     assert msg.splitlines()[-1] in pc.CIERRES_ALERTA
-    for linea in ("🟢 Sobre", "🟡 Entre", "🔴 Bajo", "⏱️ *Temporalidad*"):
+    for linea in ("⬆️ Sobre", "↔️ Entre", "⬇️ Bajo", "⏱️ *Temporalidad*"):
         assert linea in msg
 
 
@@ -1260,7 +1260,7 @@ def test_preparar_no_descarta_a_un_fijo_por_no_tener_foto():
 def test_la_zona_media_se_opera_como_falso_quiebre_y_no_se_espera():
     """Quien sabe operar la configuracion nunca tiene que quedarse esperando."""
     msg, p = _msg_compacto()
-    linea = next(l for l in msg.splitlines() if l.startswith("🟡"))
+    linea = next(l for l in msg.splitlines() if l.startswith("↔️"))
     assert "falso quiebre" in linea and "borde contrario" in linea
     assert "esperar confirmación" not in msg
 

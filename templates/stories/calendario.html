@@ -217,6 +217,27 @@ html, body {
 .footer-marca { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: 0.08em; color: var(--acento); }
 .footer-cta { font-family: var(--font-sans); font-weight: 600; font-size: 22px; color: var(--texto-2); margin: 0; }
 
+/* ══════════ AGENDA DEL DÍA: pocos eventos, filas grandes (horizontal) ══════════
+   Con uno o dos datos la tabla estándar se pierde en el lienzo. Sin tercera fila
+   las filas crecen para llenar el espacio y se leen de lejos. */
+@media (min-aspect-ratio: 11/10) {
+  .tabla-eventos:not(:has(.fila-evento:nth-child(3))) { gap: 30px; }
+  .tabla-eventos:not(:has(.fila-evento:nth-child(3))) .fila-evento {
+    padding: 0 48px; min-height: 290px; border-radius: 30px;
+  }
+  .tabla-eventos:not(:has(.fila-evento:nth-child(3))) .ev-num { font-size: 64px; width: 110px; }
+  .tabla-eventos:not(:has(.fila-evento:nth-child(3))) .ev-dia-hora { width: 250px; }
+  .tabla-eventos:not(:has(.fila-evento:nth-child(3))) .ev-dia { font-size: 34px; }
+  .tabla-eventos:not(:has(.fila-evento:nth-child(3))) .ev-hora { font-size: 46px; color: var(--blanco); margin-top: 6px; }
+  .tabla-eventos:not(:has(.fila-evento:nth-child(3))) .ev-nombre { font-size: 40px; }
+  .tabla-eventos:not(:has(.fila-evento:nth-child(3))) .ev-pais { font-size: 26px; margin-top: 8px; }
+  .tabla-eventos:not(:has(.fila-evento:nth-child(3))) .ev-datos { gap: 36px; }
+  .tabla-eventos:not(:has(.fila-evento:nth-child(3))) .ev-stat { min-width: 235px; }
+  .tabla-eventos:not(:has(.fila-evento:nth-child(3))) .ev-stat-label { font-size: 22px; }
+  .tabla-eventos:not(:has(.fila-evento:nth-child(3))) .ev-stat-val { font-size: 54px; margin-top: 6px; }
+  .tabla-eventos:not(:has(.fila-evento:nth-child(3))) .tag-impacto { font-size: 22px; padding: 12px 24px; }
+}
+
 /* ══════════ FORMATO VERTICAL 9:16 (1080×1920) ══════════ */
 @media (max-aspect-ratio: 1/1) {
   .story {

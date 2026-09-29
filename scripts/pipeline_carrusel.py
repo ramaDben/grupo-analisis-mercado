@@ -553,12 +553,12 @@ def construir_mensaje_alerta(payload: dict[str, Any]) -> str:
     lineas.extend([
         f"Precio actual: {precio}",
         "━━━━━━━━━━━━━━━━━━━",
-        f"🟢 Sobre {resistencia} → fuerza compradora",
+        f"⬆️ Sobre {resistencia} → fuerza compradora",
         # La zona media tambien se opera (decision del director, 2026-09-28):
         # quien sabe operar la configuracion nunca tiene que quedarse esperando.
-        f"🟡 Entre {soporte} y {resistencia} → rango: si rompe un borde y vuelve a "
+        f"↔️ Entre {soporte} y {resistencia} → rango: si rompe un borde y vuelve a "
         "entrar, es falso quiebre y el objetivo pasa a ser el borde contrario",
-        f"🔴 Bajo {soporte} → presión vendedora",
+        f"⬇️ Bajo {soporte} → presión vendedora",
         "━━━━━━━━━━━━━━━━━━━",
     ])
 
