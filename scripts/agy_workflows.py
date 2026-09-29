@@ -49,6 +49,7 @@ COMANDOS = {
     "encuesta": "Ejecuta el comando encuesta de la misma forma que Claude Code.",
     "estado": "Ejecuta el comando estado de la misma forma que Claude Code.",
     "rencuesta": "Ejecuta el comando rencuesta de la misma forma que Claude Code.",
+    "avisos": "Carruseles del grupo de Avisos: agenda del día, resultado de cada dato fuerte, cita de la mañana y balance de la tarde.",
     "linkedin": "Brief de un carrusel de LinkedIn para diseño: cifras del terminal y visión de los bancos, con frenos de cifra, cita y frescura.",
 }
 
