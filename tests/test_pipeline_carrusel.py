@@ -595,25 +595,23 @@ def test_el_canal_pedido_recibe_contexto_macro_aunque_no_tenga_piezas():
     assert "04_indices_bursatiles" in canales
 
 
-def test_el_canal_de_avisos_recibe_el_macro_por_declaracion():
-    """Decisión del director el 2026-09-03: el macro vive en Avisos.
+def test_el_carrusel_tematico_no_escribe_en_avisos():
+    """Decisión del director el 2026-09-29: Avisos es de `pipeline_avisos`.
 
-    Se conserva, pero declarada. Antes el mismo resultado salía del default de
-    `obtener_grupo_whatsapp`, así que habría seguido ocurriendo aunque la decisión
-    hubiera sido la contraria.
+    Hasta ese día la regla era "el canal de avisos, siempre" (2026-09-03), y la
+    bitácora deduplica por tanda: una tanda de solo WTI reenvió a Avisos el
+    contexto del VIX media hora después del bueno. Ni un canal pedido ni una
+    pieza mal mapeada pueden meter Avisos en la corrida del carrusel.
     """
-    canales = pc.canales_con_contexto_macro([], grupo_pedido=None)
-    assert canales == {"01_macro_y_apertura"}
+    assert pc.canales_con_contexto_macro([], grupo_pedido=None) == set()
+    assert pc.CANAL_AVISOS not in pc.canales_con_contexto_macro(
+        [{"grupo": pc.CANAL_AVISOS}], grupo_pedido=pc.CANAL_AVISOS)
 
 
 def test_los_canales_con_piezas_reciben_su_contexto_macro():
     payloads = [{"grupo": "06_criptoactivos"}, {"grupo": "03_commodities_materias_primas"}]
     canales = pc.canales_con_contexto_macro(payloads, grupo_pedido=None)
-    assert canales == {
-        "01_macro_y_apertura",
-        "03_commodities_materias_primas",
-        "06_criptoactivos",
-    }
+    assert canales == {"03_commodities_materias_primas", "06_criptoactivos"}
 
 
 # ─────────────────────────────────────────────────────────────────────────────

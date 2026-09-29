@@ -474,15 +474,18 @@ def canales_con_contexto_macro(
        Antes se lo pasaba a `obtener_grupo_whatsapp`, que espera una *categoria*:
        ninguna rama aplicaba, caia al default y el resultado era que el canal
        pedido no recibia nada y el macro se lo llevaba entero el de avisos.
-    3. **El canal de avisos, siempre**, por decision del director del 2026-09-03.
-       Declararlo importa: el mismo resultado salia antes del default de
-       `obtener_grupo_whatsapp`, o sea que habria seguido ocurriendo aunque la
-       decision hubiera sido la contraria.
+    3. **Nunca el canal de avisos** (decision del director del 2026-09-29, que
+       revierte la del 2026-09-03 "el canal de avisos, siempre"). Avisos es de
+       `pipeline_avisos`: la agenda del dia y el resultado de cada dato. Con la
+       regla vieja, toda tanda le armaba su contexto, y como la bitacora deduplica
+       por tanda, una tanda de solo WTI reenvio a Avisos el contexto del VIX media
+       hora despues del bueno. Se descarta aca y no solo al sumar, asi ni un
+       `--grupo macro` ni una pieza mal mapeada lo vuelven a meter.
     """
     canales = {p["grupo"] for p in payloads if p.get("grupo")}
     if grupo_pedido:
         canales.add(grupo_pedido)
-    canales.add(CANAL_AVISOS)
+    canales.discard(CANAL_AVISOS)
     return canales
 
 
@@ -883,8 +886,8 @@ def preparar(
     # de dos horas, en dos tandas manuales del mismo día.
     sc._guardar(resultado)
 
-    # Los canales que ESTA corrida va a escribir: el pedido con `--grupo` (mas el
-    # de avisos, que siempre recibe macro) o todos si es una corrida completa.
+    # Los canales que ESTA corrida va a escribir: el pedido con `--grupo` o todos
+    # si es una corrida completa. Avisos nunca: es de `pipeline_avisos`.
     canales_a_barrer = (
         canales_con_contexto_macro([], grupo_pedido=grupo) if grupo else None
     )
@@ -919,6 +922,11 @@ def preparar(
             continue
         cat_real = activo.get("categoria", sel["clase"])
         grupo_nombre = obtener_grupo_whatsapp(cat_real, sel["ticker"])
+        if grupo_nombre == CANAL_AVISOS:
+            # Una categoria mapeada a Avisos es un error del catalogo, no una pieza:
+            # Avisos es de `pipeline_avisos` (decision del 2026-09-29).
+            problemas.append(f"{sel['ticker']}: su categoria apunta a Avisos, que no recibe alertas del carrusel")
+            continue
         grupo_dir = destino / grupo_nombre
         grupo_dir.mkdir(parents=True, exist_ok=True)
 
