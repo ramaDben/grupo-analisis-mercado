@@ -136,3 +136,134 @@ def etiqueta_hora(ahora: datetime) -> str:
 def fecha_hora(ahora: datetime) -> str:
     local = ahora.astimezone(SANTIAGO)
     return f"{_DIAS[local.weekday()]} {local.day} {_MESES[local.month - 1]} · {etiqueta_hora(local)}"
+
+
+# ---------------------------------------------------------------- elección
+
+
+class SinCandidatosError(RuntimeError):
+    """Ningún activo disponible para el momento: no hay carrusel que preparar."""
+
+
+def variante_de(vision: dict[str, Any]) -> str:
+    """Una paráfrasis con cifra de proyección es una meta; lo demás, una cita."""
+    if vision.get("tipo") == "parafrasis" and pl._PRECIO.search(str(vision.get("cita", ""))):
+        return "meta"
+    return "cita"
+
+
+def _edad_dias(entrada: dict[str, Any], hoy: date) -> int | None:
+    try:
+        return (hoy - date.fromisoformat(str(entrada.get("fecha")))).days
+    except ValueError:
+        return None
+
+
+def _entradas(historial: list[dict[str, Any]], tipo: str) -> list[dict[str, Any]]:
+    return [e for e in historial if e.get("tipo") == tipo and e.get("canal") == CANAL]
+
+
+def vision_califica(vision: dict[str, Any], variante: str, hoy: date,
+                    historial: list[dict[str, Any]]) -> bool:
+    if variante_de(vision) != variante:
+        return False
+    if variante == "meta":
+        meta = str(vision.get("meta", "")).strip()
+        if not str(vision.get("horizonte", "")).strip() or not meta:
+            return False
+        if meta not in str(vision.get("cita", "")):
+            return False  # la lámina mostraría una meta que la cita no respalda
+    if pl.validar_vision(vision, hoy, None):
+        return False
+    for e in _entradas(historial, "vision"):
+        edad = _edad_dias(e, hoy)
+        if e.get("clave") == vision.get("id") and edad is not None and edad < VENTANA_VISION_DIAS:
+            return False
+    return True
+
+
+def coberturas(historial: list[dict[str, Any]], hoy: date, dias: int) -> dict[str, int]:
+    cuenta: dict[str, int] = {}
+    for e in _entradas(historial, "avisos"):
+        edad = _edad_dias(e, hoy)
+        if edad is not None and 0 <= edad < dias:
+            cuenta[e["clave"]] = cuenta.get(e["clave"], 0) + 1
+    return cuenta
+
+
+def cubiertos_hoy(historial: list[dict[str, Any]], hoy: date) -> set[str]:
+    return {e["clave"] for e in _entradas(historial, "avisos") if e.get("fecha") == hoy.isoformat()}
+
+
+def candidatos(hoy: date, historial: list[dict[str, Any]], universo: list[str] | None = None) -> list[str]:
+    import screener_gi as sc
+
+    if universo is None:
+        from pipeline_informe import ACTIVOS_INFORME
+
+        universo = list(dict.fromkeys([*ACTIVOS_INFORME, *sc.cobertura_fija()]))
+    hechos = cubiertos_hoy(historial, hoy)
+    return [t for t in universo if t not in hechos and sc.gate_feriado(t, hoy) is None]
+
+
+def elegir(variante: str, hoy: date, visiones: dict[str, dict[str, Any]],
+           historial: list[dict[str, Any]], universo: list[str] | None = None) -> tuple[str, str | None]:
+    """El activo del carrusel y su visión (o `None`, que es `_falta_vision`).
+
+    No usa el `Score_GI`: el score mide espacio para operar en el día, y lo que
+    hace valer un carrusel de Avisos es que haya una voz de banco que contrastar.
+    """
+    cands = candidatos(hoy, historial, universo)
+    if not cands:
+        raise SinCandidatosError("Avisos ya cubrió hoy todos los activos disponibles.")
+    cobertura = coberturas(historial, hoy, VENTANA_COBERTURA_DIAS)
+    mejor: dict[str, dict[str, Any]] = {}
+    for v in visiones.values():
+        t = v.get("activo")
+        if t in cands and vision_califica(v, variante, hoy, historial):
+            actual = mejor.get(t)
+            if actual is None or (v["fecha"], v["id"]) > (actual["fecha"], actual["id"]):
+                mejor[t] = v
+
+    def orden(t: str) -> tuple[int, str]:
+        return (cobertura.get(t, 0), t)
+
+    if mejor:
+        t = min(mejor, key=orden)
+        return t, mejor[t]["id"]
+    return min(cands, key=orden), None
+
+
+def activo_del_balance(historial: list[dict[str, Any]], hoy: date) -> tuple[str | None, str | None]:
+    """El activo y la visión de la mañana; si no hubo, los del mediodía."""
+    usos = [e for e in _entradas(historial, "avisos") if e.get("fecha") == hoy.isoformat()]
+    for momento in ("avisos_manana", "avisos_mediodia"):
+        for e in reversed(usos):
+            if e.get("momento") == momento:
+                return e["clave"], e.get("vision")
+    return None, None
+
+
+def _ruta_historial(ruta: Path | None) -> Path:
+    from suplemento_canal import HISTORIAL
+
+    return ruta or HISTORIAL
+
+
+def cargar_historial(ruta: Path | None = None) -> list[dict[str, Any]]:
+    from suplemento_canal import cargar_historial as _cargar
+
+    return _cargar(_ruta_historial(ruta))
+
+
+def registrar_uso(hoy: date, momento: str, activo: str | None, vision_id: str | None,
+                  gastar_vision: bool, ruta: Path | None = None) -> None:
+    """Se anota al PREPARAR: una tanda descartada gasta la ventana, hacia el lado seguro."""
+    destino = _ruta_historial(ruta)
+    historial = cargar_historial(destino)
+    if vision_id and gastar_vision:
+        historial.append({"fecha": hoy.isoformat(), "canal": CANAL, "tipo": "vision", "clave": vision_id})
+    if activo:
+        historial.append({"fecha": hoy.isoformat(), "canal": CANAL, "tipo": "avisos",
+                          "clave": activo, "momento": momento, "vision": vision_id})
+    destino.write_text(json.dumps(historial, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

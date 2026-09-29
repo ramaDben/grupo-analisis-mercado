@@ -73,3 +73,97 @@ def test_etiqueta_hora_nombra_el_horario_chileno():
     assert pa.etiqueta_hora(verano) == "11:30 CLST"
     assert pa.etiqueta_hora(invierno) == "11:30 CLT"
     assert pa.fecha_hora(verano) == "MARTES 29 SEP · 11:30 CLST"
+
+
+# ---------------------------------------------------------------- elección
+
+
+def vision(id_, activo="USDCLP", tipo="textual", cita="El dólar se mueve por datos.", fecha="2026-09-20", **extra):
+    return {"id": id_, "quien": "Ana Pérez", "institucion": "Banco X", "activo": activo, "tipo": tipo,
+            "cita": cita, "fecha": fecha, "fuente": "Diario", "url": "https://ejemplo.cl/nota", **extra}
+
+
+def uso(fecha, activo, momento="avisos_manana", vid=None):
+    return {"fecha": fecha, "canal": pa.CANAL, "tipo": "avisos", "clave": activo, "momento": momento, "vision": vid}
+
+
+UNIVERSO = ["USDCLP", "XAUUSD", "WTI.spot"]
+
+
+def test_variante_por_tipo_y_cifra():
+    assert pa.variante_de(vision("a")) == "cita"
+    assert pa.variante_de(vision("b", tipo="traduccion")) == "cita"
+    assert pa.variante_de(vision("c", tipo="parafrasis", cita="Sin cifras, postura prudente.")) == "cita"
+    assert pa.variante_de(vision("d", tipo="parafrasis", cita="Proyecta US$6.000 al cierre.")) == "meta"
+
+
+def test_meta_exige_horizonte():
+    v = vision("m", tipo="parafrasis", cita="Proyecta US$6.000 al cierre.", meta="US$6.000")
+    assert not pa.vision_califica(v, "meta", MARTES, [])
+    assert pa.vision_califica({**v, "horizonte": "promedio del 4T 2026"}, "meta", MARTES, [])
+
+
+def test_meta_que_no_figura_en_la_cita_no_califica():
+    v = vision("m", tipo="parafrasis", cita="Proyecta US$6.000 al cierre.", meta="US$6.500", horizonte="4T 2026")
+    assert not pa.vision_califica(v, "meta", MARTES, [])
+
+
+def test_vision_vieja_o_reciente_en_avisos_no_califica():
+    assert not pa.vision_califica(vision("v", fecha="2026-08-01"), "cita", MARTES, [])
+    hist = [{"fecha": "2026-09-20", "canal": pa.CANAL, "tipo": "vision", "clave": "v"}]
+    assert not pa.vision_califica(vision("v"), "cita", MARTES, hist)
+    hist_viejo = [{"fecha": "2026-09-10", "canal": pa.CANAL, "tipo": "vision", "clave": "v"}]
+    assert pa.vision_califica(vision("v"), "cita", MARTES, hist_viejo)
+
+
+def test_candidatos_sacan_lo_cubierto_hoy_y_los_feriados(monkeypatch):
+    monkeypatch.setattr("screener_gi.gate_feriado", lambda t, f: "feriado de NYSE" if t == "WTI.spot" else None)
+    hist = [uso(MARTES.isoformat(), "USDCLP")]
+    assert pa.candidatos(MARTES, hist, UNIVERSO) == ["XAUUSD"]
+
+
+def test_primero_el_activo_con_vision_fresca():
+    visiones = {"v": vision("v", activo="XAUUSD")}
+    hist = [uso("2026-09-25", "XAUUSD"), uso("2026-09-26", "XAUUSD")]
+    assert pa.elegir("cita", MARTES, visiones, hist, UNIVERSO) == ("XAUUSD", "v")
+
+
+def test_entre_iguales_el_menos_cubierto_y_luego_alfabetico():
+    visiones = {"a": vision("a", activo="XAUUSD"), "b": vision("b", activo="USDCLP")}
+    assert pa.elegir("cita", MARTES, visiones, [uso("2026-09-25", "USDCLP")], UNIVERSO) == ("XAUUSD", "a")
+    assert pa.elegir("cita", MARTES, visiones, [], UNIVERSO) == ("USDCLP", "b")
+
+
+def test_sin_vision_gana_el_menos_cubierto_sin_voz():
+    hist = [uso("2026-09-25", "USDCLP"), uso("2026-09-26", "WTI.spot")]
+    assert pa.elegir("cita", MARTES, {}, hist, UNIVERSO) == ("XAUUSD", None)
+
+
+def test_sin_candidatos_se_informa():
+    hist = [uso(MARTES.isoformat(), t) for t in UNIVERSO]
+    with pytest.raises(pa.SinCandidatosError):
+        pa.elegir("cita", MARTES, {}, hist, UNIVERSO)
+
+
+def test_balance_retoma_la_manana():
+    hist = [uso(MARTES.isoformat(), "XAUUSD", "avisos_manana", "v"), uso(MARTES.isoformat(), "USDCLP", "avisos_mediodia")]
+    assert pa.activo_del_balance(hist, MARTES) == ("XAUUSD", "v")
+
+
+def test_balance_cae_a_mediodia():
+    hist = [uso(MARTES.isoformat(), "USDCLP", "avisos_mediodia", "m")]
+    assert pa.activo_del_balance(hist, MARTES) == ("USDCLP", "m")
+
+
+def test_balance_sin_manana_ni_mediodia_sale_sin_voz():
+    assert pa.activo_del_balance([uso("2026-09-28", "USDCLP")], MARTES) == (None, None)
+
+
+def test_registrar_uso_anota_al_preparar(tmp_path):
+    ruta = tmp_path / "hist.json"
+    ruta.write_text("[]", encoding="utf-8")
+    pa.registrar_uso(MARTES, "avisos_manana", "USDCLP", "v", gastar_vision=True, ruta=ruta)
+    pa.registrar_uso(MARTES, "avisos_tarde", "USDCLP", "v", gastar_vision=False, ruta=ruta)
+    datos = json.loads(ruta.read_text(encoding="utf-8"))
+    assert [e["tipo"] for e in datos] == ["vision", "avisos", "avisos"]
+    assert datos[2]["momento"] == "avisos_tarde"

@@ -1,5 +1,5 @@
 {
-  "_nota": "Registro de visiones de bancos y analistas que citan los carruseles de LinkedIn (scripts/pipeline_linkedin.py). Historia editorial: se versiona. Cada entrada se carga tras ABRIR la fuente, nunca desde un snippet de búsqueda. tipo: textual (frase exacta en español), traduccion (frase exacta traducida por nosotros), parafrasis (cifra o postura sin comillas). La fecha es la de publicación de la fuente, no la de carga.",
+  "_nota": "Registro de visiones de bancos y analistas que citan los carruseles de LinkedIn (scripts/pipeline_linkedin.py). Historia editorial: se versiona. Cada entrada se carga tras ABRIR la fuente, nunca desde un snippet de búsqueda. tipo: textual (frase exacta en español), traduccion (frase exacta traducida por nosotros), parafrasis (cifra o postura sin comillas). La fecha es la de publicación de la fuente, no la de carga. meta y horizonte: solo en las paráfrasis de proyección; meta es la cifra tal como figura en la cita.",
   "visiones": [
     {
       "id": "btg-aguero-dolar-940",
@@ -54,6 +54,8 @@
       "activo": "XAUUSD",
       "tipo": "parafrasis",
       "cita": "Proyecta el oro en un promedio de US$6.000 por onza para el cuarto trimestre de 2026, subiendo hacia US$6.300 a fines de 2027.",
+      "meta": "US$6.000",
+      "horizonte": "promedio del cuarto trimestre de 2026",
       "fecha": "2026-06-09",
       "fuente": "jpmorgan.com",
       "url": "https://www.jpmorgan.com/insights/global-research/commodities/gold-prices"
