@@ -57,7 +57,6 @@ def test_la_agenda_no_lleva_voz_ni_alerta():
     assert [l["clave"] for l in pa.laminas_de("agenda", con_voz=True)] == ["portada", "semana", "lectura"]
 
 
-@pytest.mark.xfail(strict=True, reason="vision.html llega en la Tarea 4")
 def test_toda_plantilla_de_lamina_existe_en_disco():
     for plantilla, archivo in pa.PLANTILLAS.items():
         assert (pa.DIR_PLANTILLAS / archivo).exists(), f"{plantilla}: falta {archivo}"

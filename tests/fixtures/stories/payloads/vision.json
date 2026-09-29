@@ -1,0 +1,17 @@
+{
+  "plantilla": "vision",
+  "sello": "AVISOS · LA VOZ DEL BANCO",
+  "fecha_hora": "MARTES 29 SEP · 11:30 CLST",
+  "posicion": "2/4 · La voz del banco",
+  "titular": "Lo que dice el banco sobre el dólar",
+  "remate": "El banco pone el foco en los datos locales. Nuestra lectura la ves en la lámina siguiente.",
+  "bloque_cita": [
+    {
+      "etiqueta": "",
+      "cita": "“Los inversionistas se guían por datos y por ahora ven un país que crece poco.”",
+      "firma": "Juan Pérez · Banco X",
+      "fuente_fecha": "Diario Financiero · 14 SEP 2026"
+    }
+  ],
+  "bloque_meta": []
+}
