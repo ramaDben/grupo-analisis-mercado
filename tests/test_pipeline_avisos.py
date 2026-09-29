@@ -43,19 +43,19 @@ def test_momento_desconocido_se_detiene_nombrando_las_opciones():
 
 def test_laminas_con_voz_numeran_sobre_cuatro():
     laminas = pa.laminas_de("cita", con_voz=True)
-    assert [l["stem"] for l in laminas] == ["1_portada", "2_voz", "3_datos", "4_lectura"]
+    assert [lam["stem"] for lam in laminas] == ["1_portada", "2_voz", "3_datos", "4_lectura"]
     assert laminas[1]["posicion"] == "2/4 · La voz del banco"
     assert laminas[2]["plantilla"] == "avisos_datos"
 
 
 def test_laminas_sin_voz_renumeran_sobre_tres():
     laminas = pa.laminas_de("meta", con_voz=False)
-    assert [l["stem"] for l in laminas] == ["1_portada", "2_datos", "3_lectura"]
+    assert [lam["stem"] for lam in laminas] == ["1_portada", "2_datos", "3_lectura"]
     assert laminas[2]["posicion"] == "3/3 · Nuestra lectura"
 
 
 def test_la_agenda_no_lleva_voz_ni_alerta():
-    assert [l["clave"] for l in pa.laminas_de("agenda", con_voz=True)] == ["portada", "semana", "lectura"]
+    assert [lam["clave"] for lam in pa.laminas_de("agenda", con_voz=True)] == ["portada", "semana", "lectura"]
 
 
 def test_toda_plantilla_de_lamina_existe_en_disco():
@@ -612,3 +612,125 @@ def test_mensaje_preparar_dice_si_la_tanda_es_nueva_o_ya_existia(tmp_path):
 
     repetido = pa._mensaje_preparar(ruta, meta, ya_existia=True)
     assert repetido == [f"La tanda de este momento ya estaba preparada: {ruta.parent}"]
+
+
+# ---------------------------------------------------------------- revisión final del Hito 1
+
+
+def test_el_balance_trae_la_vision_completada_en_la_manana(tmp_path):
+    # Hallazgo 1: `completar_vision` solo anotaba la entrada "vision" y la
+    # entrada "avisos" de la mañana seguía con `vision: None`, que es la única
+    # que lee `activo_del_balance`: el balance salía sin voz.
+    hist = tmp_path / "hist.json"
+    hist.write_text(json.dumps([
+        uso(AHORA.date().isoformat(), t) for t in ("BRENT.spot", "COPPER", "US100.spot", "WTI.spot", "XAUUSD")
+    ]), encoding="utf-8")
+    ruta, hist = _preparar(tmp_path, visiones={})
+    visiones = {"n": vision("n", fecha="2026-09-27")}
+    pa.completar_vision(ruta, "n", AHORA, visiones=visiones, historial_ruta=hist)
+    usos = [e for e in json.loads(hist.read_text(encoding="utf-8"))
+            if e["tipo"] == "avisos" and e["momento"] == "avisos_manana" and e["clave"] == "USDCLP"]
+    assert [e["vision"] for e in usos] == ["n"]
+
+    tarde = datetime(2026, 9, 29, 15, 30, tzinfo=pa.SANTIAGO)
+    ruta_tarde, _ = _preparar(tmp_path, momento="avisos_tarde", ahora=tarde, visiones=visiones)
+    meta = pa.leer_meta(ruta_tarde)
+    # La regla de 14 días no la rechaza: es la misma visión del mismo día.
+    assert meta["formato"] == "balance" and meta["activo"] == "USDCLP" and meta["vision"] == "n"
+    assert (ruta_tarde / "2_voz.json").exists()
+
+
+def test_reescribir_renueva_los_activos_de_preparacion(tmp_path):
+    # Hallazgo 2: tras `--refrescar --reescribir` los textos vuelven a
+    # escribirse contra la lectura nueva, así que la lectura de preparación
+    # también tiene que ser la nueva.
+    ruta, _ = _preparar(tmp_path)
+    _escribir_todo(ruta)
+    pa.refrescar_tanda(ruta, AHORA, lector=lambda t, a: lectura_falsa(t, precio=945.0), reescribir=True)
+    meta = pa.leer_meta(ruta)
+    assert meta["activos_preparacion"] == meta["activos"]
+    assert meta["activos_preparacion"]["USDCLP"]["price"] == 945.0
+
+
+def test_refrescar_sin_divergencia_conserva_los_activos_de_preparacion(tmp_path):
+    ruta, _ = _preparar(tmp_path)
+    _escribir_todo(ruta)
+    pa.refrescar_tanda(ruta, AHORA + timedelta(minutes=40), lector=lambda t, a: lectura_falsa(t, precio=936.80))
+    meta = pa.leer_meta(ruta)
+    assert meta["activos_preparacion"]["USDCLP"]["price"] == 936.32
+    assert meta["activos"]["USDCLP"]["price"] == 936.80
+
+
+def test_los_cierres_de_agenda_no_hablan_de_niveles_ni_precios():
+    # Hallazgo 3: la agenda cerraba con CIERRES_ALERTA, que hablan de bordes y
+    # del precio que ese carrusel no tiene.
+    import re
+    assert len(pa.CIERRES_AGENDA) >= 3
+    for cierre in pa.CIERRES_AGENDA:
+        bajo = cierre.lower()
+        for palabra in ("nivel", "borde", "precio"):
+            assert palabra not in bajo, cierre
+        assert not re.search(r"\d", cierre), cierre
+        assert "—" not in cierre and "–" not in cierre, cierre
+
+
+def test_la_agenda_cierra_con_un_cierre_de_agenda_estable(tmp_path):
+    lunes = datetime(2026, 9, 28, 15, 30, tzinfo=pa.SANTIAGO)
+    ruta, _ = _preparar(tmp_path, momento="avisos_tarde", ahora=lunes)
+    _escribir_todo(ruta)
+    meta = pa.leer_meta(ruta)
+    portada = dict(pa.leer_laminas(ruta))["1_portada"]
+    msg = pa.mensaje_de(portada, meta)
+    assert any(c in msg for c in pa.CIERRES_AGENDA)
+    assert not any(c in msg for c in pa.pc.CIERRES_ALERTA)
+    assert pa.mensaje_de(portada, meta) == msg
+
+
+@pytest.mark.parametrize("pie", [
+    "El dólar tiene sesgo alcista y cotiza en $936,32 esta mañana.",
+    "El dólar tiene sesgo alcista y cotiza en 936,32 esta mañana.",
+])
+def test_el_texto_que_cita_el_precio_actual_se_detiene(tmp_path, pie):
+    # Hallazgo 5: el despacho acepta los niveles de preparación pero no su
+    # precio, así que un texto con el spot pasaba --validar y se frenaba al
+    # primer tick.
+    dir_canal, visiones = _tanda(tmp_path)
+    _escribir_todo(dir_canal, pie=pie)
+    errores = pa.validar_tanda(dir_canal, AHORA, visiones)
+    assert any("936,32" in e and "precio actual" in e for e in errores), errores
+
+
+def test_el_texto_que_cita_el_soporte_publicado_pasa(tmp_path):
+    dir_canal, visiones = _tanda(tmp_path)
+    fila = pa.leer_meta(dir_canal)["activos"]["USDCLP"]
+    soporte = pa._fmt(fila["soporte_publicado"], fila["digits"])
+    _escribir_todo(dir_canal, pie=f"El dólar tiene sesgo alcista mientras respete ${soporte}.")
+    assert pa.validar_tanda(dir_canal, AHORA, visiones) == []
+
+
+DISCLAIMER_TEMATICO = "Información con fines educativos y de análisis técnico cuantitativo. No constituye asesoría financiera."
+
+
+def test_la_lamina_de_datos_lleva_el_aviso_legal_de_avisos():
+    # Hallazgo 6: alerta.html traía su propio aviso fijo; la lámina de datos
+    # tiene que mostrar el aviso legal literal de Avisos.
+    _, laminas = pa.armar_tanda("avisos_manana", "cita", AHORA, lectura_falsa(), None, [])
+    datos = {**laminas["datos"], "titular": "Titular", "parrafo": "Párrafo"}
+    assert datos["disclaimer"] == pa.AVISO_LEGAL
+    html = story_render.build_html(pa.tokens_de(datos), pa.DIR_PLANTILLAS / "alerta.html")
+    assert pa.AVISO_LEGAL in html and DISCLAIMER_TEMATICO not in html
+
+
+def test_la_alerta_tematica_conserva_su_aviso_por_defecto():
+    from story_grafico import enriquecer
+    fixture = json.loads((RAIZ / "tests/fixtures/stories/payloads/alerta.json").read_text(encoding="utf-8"))
+    assert "disclaimer" not in fixture
+    html = story_render.build_html(enriquecer(fixture), pa.DIR_PLANTILLAS / "alerta.html")
+    assert DISCLAIMER_TEMATICO in html
+
+
+def test_el_aviso_de_la_alerta_mide_al_menos_20px():
+    import re
+    css = (pa.DIR_PLANTILLAS / "alerta.html").read_text(encoding="utf-8")
+    regla = re.search(r"\.footer-disclaimer\s*\{([^}]*)\}", css).group(1)
+    assert int(re.search(r"font-size:\s*(\d+)px", regla).group(1)) >= 20

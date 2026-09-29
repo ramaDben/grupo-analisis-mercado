@@ -14,6 +14,7 @@ al cliente sigue siendo `pipeline_carrusel.py --despachar`.
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import sys
 from datetime import date, datetime, timedelta
@@ -275,6 +276,24 @@ def registrar_uso(hoy: date, momento: str, activo: str | None, vision_id: str | 
     destino.write_text(json.dumps(historial, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def registrar_vision_completada(hoy: date, momento: str, activo: str, vision_id: str,
+                                ruta: Path | None = None) -> None:
+    """Gasta la visión y la anota en el uso "avisos" de ese momento.
+
+    `activo_del_balance` lee la visión desde la entrada "avisos": si solo se
+    agregara la entrada "vision", el balance de la tarde saldría sin la voz que
+    el director completó en la mañana.
+    """
+    destino = _ruta_historial(ruta)
+    historial = cargar_historial(destino)
+    historial.append({"fecha": hoy.isoformat(), "canal": CANAL, "tipo": "vision", "clave": vision_id})
+    for e in historial:
+        if (e.get("tipo") == "avisos" and e.get("canal") == CANAL and e.get("fecha") == hoy.isoformat()
+                and e.get("momento") == momento and e.get("clave") == activo):
+            e["vision"] = vision_id
+    destino.write_text(json.dumps(historial, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 # ---------------------------------------------------------------- láminas
 
 CAMPOS_AVISOS = pl.CAMPOS_PRECIO + ("soporte_publicado", "resistencia_publicada")
@@ -283,6 +302,14 @@ _PAISES = {"United States": "EE.UU.", "Chile": "Chile", "China": "China",
            "Euro Zone": "Zona Euro", "Euro Area": "Zona Euro", "Zona Euro": "Zona Euro"}
 _ETIQUETA_TIPO = {"textual": "", "traduccion": "Traducción nuestra", "parafrasis": "En palabras nuestras"}
 CTA_AGENDA = ("¿Quieres seguir esta semana en detalle?", "Habla hoy con tu analista")
+# La agenda no tiene activo ni niveles: sus cierres hablan de planificar la
+# semana, no de bordes ni de precio como los de `pc.CIERRES_ALERTA`.
+CIERRES_AGENDA: tuple[str, ...] = (
+    "Anota estos datos en tu calendario y arma tu semana con tiempo.",
+    "Cada dato suma una pieza: te lo vamos contando a medida que salga.",
+    "¿Cuál de estos datos te interesa más? Te leemos en el grupo.",
+    "Planifica tu semana con la agenda a la vista y sin apuro.",
+)
 
 
 def _fmt(valor: float, digits: int) -> str:
@@ -355,7 +382,8 @@ def lamina_voz(vision: dict[str, Any], variante: str, fila: dict[str, Any], leid
 
 def lamina_datos(lectura: dict[str, Any], ahora: datetime) -> dict[str, Any]:
     payload = pc.construir_payload(lectura["seleccion"], lectura["activo"], ahora, lectura["cierres"])
-    payload.update({"_plantilla": "avisos_datos", "titular": MARCA, "parrafo": MARCA})
+    payload.update({"_plantilla": "avisos_datos", "titular": MARCA, "parrafo": MARCA,
+                    "disclaimer": AVISO_LEGAL})
     return payload
 
 
@@ -533,7 +561,8 @@ def mensaje_de(payload: dict[str, Any], meta: dict[str, Any]) -> str:
     """
     if payload.get("_clave") != "portada":
         return payload["posicion"]
-    cierre = pc.elegir_variante(pc.CIERRES_ALERTA, meta.get("activo") or "agenda", meta["momento"], meta["fecha"])
+    cierres = CIERRES_AGENDA if meta.get("formato") == "agenda" else pc.CIERRES_ALERTA
+    cierre = pc.elegir_variante(cierres, meta.get("activo") or "agenda", meta["momento"], meta["fecha"])
     return "\n\n".join([str(payload["pie"]).strip(), cierre, AVISO_LEGAL, payload["posicion"]])
 
 
@@ -561,6 +590,7 @@ def validar_tanda(dir_canal: Path, ahora: datetime, visiones: dict[str, dict[str
     for ticker, fila in (activos_extra or {}).items():
         activos[f"{ticker}#preparacion"] = fila
     errores.extend(pl.validar_cifras(textos, activos, usadas, meta.get("cifras_citadas", {}), campos=CAMPOS_AVISOS))
+    errores.extend(precio_actual_citado(textos, meta))
 
     leido = datetime.fromisoformat(meta["leido_en"])
     errores.extend(pl.validar_frescura(leido, ahora, FRESCURA_MAX_HORAS, remedio="Corre --refrescar."))
@@ -572,6 +602,36 @@ def validar_tanda(dir_canal: Path, ahora: datetime, visiones: dict[str, dict[str
                 f"1_portada.pie: no nombra la dirección ({meta['direccion'].lower()}). "
                 "El cliente tiene que saber hacia dónde va el activo."
             )
+    return errores
+
+
+def precio_actual_citado(textos: list[tuple[str, str]], meta: dict[str, Any]) -> list[str]:
+    """Texto editorial que escribe el precio actual del activo.
+
+    El despacho vuelve a leer el terminal y solo acepta los niveles de la
+    preparación, no su precio: un texto con el spot pasa acá y se frena al
+    primer tick. La cifra se reconoce igual que en `pl.validar_cifras`
+    (formateada con los `digits` del activo, con o sin `$`). Un precio que
+    coincide con un nivel publicado no se rechaza: ese número es el nivel.
+    """
+    precios: set[str] = set()
+    niveles: set[str] = set()
+    for filas in (meta.get("activos", {}), meta.get("activos_preparacion", {})):
+        for fila in filas.values():
+            if fila.get("price") is not None:
+                precios.add(_fmt(fila["price"], fila["digits"]))
+            niveles.update(_fmt(fila[c], fila["digits"]) for c in CAMPOS_AVISOS
+                           if c != "price" and fila.get(c) is not None)
+    precios -= niveles
+    errores: list[str] = []
+    for donde, texto in textos:
+        for cifra in dict.fromkeys(pl._NUMERO.findall(texto)):
+            if cifra in precios:
+                errores.append(
+                    f"{donde}: {cifra} es el precio actual. Ya va en la portada y en la lámina de datos, "
+                    "y escribirlo hace que el despacho frene al primer movimiento del mercado. "
+                    "Cita el soporte o la resistencia."
+                )
     return errores
 
 
@@ -784,13 +844,17 @@ def _aplicar_refresco(dir_canal: Path, lectura: dict[str, Any], ahora: datetime)
 
 
 def _guardar_refresco(dir_canal: Path, meta: dict[str, Any], nuevas: dict[str, dict[str, Any]],
-                      lectura: dict[str, Any], ahora: datetime) -> None:
+                      lectura: dict[str, Any], ahora: datetime, reescribir: bool = False) -> None:
     for stem, payload in nuevas.items():
         (dir_canal / f"{stem}.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     datos = next(p for p in nuevas.values() if p["_plantilla"] == "avisos_datos")
     meta["activos"] = {lectura["ticker"]: fila_medida(lectura, datos)}
     meta["leido_en"] = ahora.isoformat(timespec="minutes")
     meta["direccion"] = datos.get("sesgo", meta.get("direccion"))
+    if reescribir:
+        # Los textos vuelven a escribirse contra esta lectura: la de
+        # preparación, la que el despacho acepta como citable, pasa a ser esta.
+        meta["activos_preparacion"] = copy.deepcopy(meta["activos"])
     escribir_meta(dir_canal, meta)
 
 
@@ -816,7 +880,7 @@ def refrescar_tanda(dir_canal: Path, ahora: datetime | None = None,
             "El mercado invalidó el texto:\n  " + "\n  ".join(motivos)
             + "\nCorre --refrescar con --reescribir y vuelve a escribir las láminas."
         )
-    _guardar_refresco(dir_canal, meta, nuevas, lectura, ahora)
+    _guardar_refresco(dir_canal, meta, nuevas, lectura, ahora, reescribir=bool(motivos))
     if motivos:
         for stem, payload in leer_laminas(dir_canal):
             _resetear_textos(payload)
@@ -856,7 +920,8 @@ def completar_vision(dir_canal: Path, vid: str, ahora: datetime | None = None,
     escribir_laminas(dir_canal, meta["formato"], ordenadas)
     meta.update(vision=vid, vision_variante=variante, _falta_vision=False)
     escribir_meta(dir_canal, meta)
-    registrar_uso(ahora.date(), meta["momento"], None, vid, gastar_vision=True, ruta=historial_ruta)
+    registrar_vision_completada(date.fromisoformat(meta["fecha"]), meta["momento"], meta["activo"], vid,
+                                ruta=historial_ruta)
 
 
 # ---------------------------------------------------------------- CLI
