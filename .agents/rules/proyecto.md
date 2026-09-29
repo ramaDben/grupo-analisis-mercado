@@ -1049,14 +1049,14 @@ El helper crea las carpetas y devuelve la ruta lista para `Write`. Si la pieza n
 `src/whatsapp_sender.py`. WhatsApp cambia su interfaz sin avisar: si un envío empieza a fallar, el primer paso es
 volver a medir esos selectores, **nunca** relajar la verificación de entrega.
 
-## Slash Commands disponibles (6)
+## Slash Commands disponibles (7)
 
 El catálogo se redujo a seis. Todo lo demás se retiró cuando la producción pasó a regirse por
 el carrusel y el informe: los siete comandos de día, las piezas sueltas que ellos orquestaban
 (`/apertura`, `/alerta`, `/dato_macro`, `/noticia`, `/actualizacion`, `/accion`, `/earnings`,
 `/señal`), lo educativo satélite (`/concepto`, `/pregunta`, `/respuesta`, `/curriculo`),
-`/chart`, y los internos `/ventas` y `/postventa`. Los seis que quedan están expuestos por
-igual a Claude Code y a Antigravity.
+`/chart`, y los internos `/ventas` y `/postventa`. Los seis que quedaron, más `/linkedin`
+(2026-09-28), están expuestos por igual a Claude Code y a Antigravity.
 
 | Comando | Cuándo usarlo |
 |---------|---------------|
@@ -1066,6 +1066,7 @@ igual a Claude Code y a Antigravity.
 | `/encuesta [tipo] [activo]` | Encuesta de sentimiento (`posicion`, `tendencia`, `movimiento`). |
 | `/rencuesta` | Desarrolla didácticamente el tema de una encuesta y construye la malla de conceptos. |
 | `/estado` | Dashboard del sistema: sesión de WhatsApp, cupo de envíos del día, frescura de los datos, MCPs. No envía nada. |
+| `/linkedin <formato> <tickers>` | Brief de un carrusel de LinkedIn para diseño (`cita`, `problema_solucion`, `agenda`): cifras del terminal al lado de la visión de los bancos, registrada con fecha y URL en `data/visiones_expertos.json`. El render se detiene ante una cifra sin respaldo, una cita de más de 45 días sin motivo o datos de más de 24 h. No publica: LinkedIn es manual. |
 
 ## La memoria compartida (OMEGA)
 
