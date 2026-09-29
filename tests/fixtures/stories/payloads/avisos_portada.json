@@ -16,5 +16,8 @@
       "texto": "Petróleo"
     }
   ],
-  "posicion": "1/3 · Portada"
+  "posicion": "1/3 · Portada",
+  "dato_precio": "",
+  "dato_hora": "",
+  "total_laminas": "3 LÁMINAS"
 }

@@ -177,6 +177,13 @@ html, body {
 .clave { font-weight: 700; font-size: 32px; color: var(--blanco); padding: 16px 34px; border-radius: 999px;
   background: color-mix(in srgb, var(--fondo-acento) 80%, var(--fondo)); border: 1.5px solid color-mix(in srgb, var(--acento) 45%, transparent); }
 
+.dato { display: flex; gap: 22px; align-items: baseline; margin-top: 34px; }
+.dato-precio { font-family: var(--font-display); font-weight: 700; font-size: 48px; color: var(--blanco); }
+.dato-hora { font-size: 26px; font-weight: 600; letter-spacing: 0.06em; color: var(--texto-2); }
+.dato-precio:empty, .dato-hora:empty { display: none; }
+.footer-laminas { font-family: var(--font-sans); font-weight: 600; font-size: 26px; color: var(--texto-2); margin: 0 24px 0 auto; }
+.footer-laminas:empty { display: none; }
+
 .footer {
   position: relative; z-index: 2; margin-top: 16px;
   display: flex; justify-content: space-between; align-items: center;
@@ -204,10 +211,15 @@ html, body {
           <span class="clave">{{texto}}</span>
           <!-- ENDFOR:claves -->
         </div>
+        <div class="dato">
+          <span class="dato-precio">{{dato_precio}}</span>
+          <span class="dato-hora">{{dato_hora}}</span>
+        </div>
       </div>
     </div>
     <div class="footer">
       <span class="footer-marca">GRUPO INTELIGENCIA</span>
+      <span class="footer-laminas">{{total_laminas}}</span>
       <p class="footer-pos">{{posicion}}</p>
     </div>
   </div>

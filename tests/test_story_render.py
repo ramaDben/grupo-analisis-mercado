@@ -30,6 +30,8 @@ BREAKING_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "breaking.html"
 CALENDARIO_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "calendario.html"
 DATO_MACRO_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "dato_macro.html"
 VISION_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "vision.html"
+PORTADA_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "avisos_portada.html"
+LECTURA_TEMPLATE = _REPO_ROOT / "templates" / "stories" / "avisos_lectura.html"
 
 FIXTURE_FOR_HTML = "<!-- FOR:filas -->{{nombre}}<!-- ENDFOR:filas -->"
 
@@ -537,3 +539,32 @@ def test_vision_variante_meta_muestra_meta_y_precio_hoy():
 def test_vision_render_dimensiones(tmp_path):
     salida = story_render.render_story(_payload_vision(), VISION_TEMPLATE, tmp_path / "v.png")
     assert _png_size(salida) == (1920, 1080)
+
+
+# ---------------------------------------------------------------------------
+# avisos_portada.html / avisos_lectura.html Tests
+# ---------------------------------------------------------------------------
+
+
+def _fixture(nombre):
+    return json.loads((FIXTURES_DIR / "payloads" / f"{nombre}.json").read_text(encoding="utf-8"))
+
+
+def test_portada_muestra_precio_hora_y_laminas():
+    p = {**_fixture("avisos_portada"), "dato_precio": "USD/CLP 936,32", "dato_hora": "LEÍDO 11:28 CLST",
+         "total_laminas": "4 LÁMINAS"}
+    html = story_render.build_html(p, PORTADA_TEMPLATE)
+    for valor in ("USD/CLP 936,32", "LEÍDO 11:28 CLST", "4 LÁMINAS"):
+        assert valor in html
+    assert "{{" not in html
+
+
+def test_portada_de_agenda_sin_precio_no_deja_huerfanos():
+    html = story_render.build_html(_fixture("avisos_portada"), PORTADA_TEMPLATE)
+    assert "{{" not in html
+
+
+def test_lectura_firma_y_aviso_legal():
+    html = story_render.build_html(_fixture("avisos_lectura"), LECTURA_TEMPLATE)
+    assert "Grupo Inteligencia · Equipo de análisis" in html
+    assert "Análisis informativo. No constituye recomendación de inversión." in html
