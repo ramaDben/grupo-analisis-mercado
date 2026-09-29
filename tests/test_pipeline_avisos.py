@@ -14,6 +14,7 @@ for p in (str(RAIZ / "src"), str(RAIZ / "scripts")):
         sys.path.insert(0, p)
 
 import pipeline_avisos as pa  # noqa: E402
+import story_render  # noqa: E402
 
 LUNES = date(2026, 9, 28)
 MARTES = date(2026, 9, 29)
@@ -378,7 +379,7 @@ def test_rendir_escribe_png_y_mensaje_por_lamina_y_usa_el_freno_del_despacho(tmp
     monkeypatch.setattr(pa.pc, "exigir_texto_editorial", lambda pares: llamadas.append(len(pares)))
 
     def render_falso(tokens, plantilla, salida, formato="horizontal"):
-        assert "{{" not in json.dumps(tokens)
+        assert "{{" not in story_render.build_html(tokens, plantilla)
         salida.write_bytes(b"png")
         return salida
 
@@ -386,6 +387,48 @@ def test_rendir_escribe_png_y_mensaje_por_lamina_y_usa_el_freno_del_despacho(tmp
     assert [p.name for p in pngs] == ["1_portada.png", "2_voz.png", "3_datos.png", "4_lectura.png"]
     assert all((dir_canal / f"{p.stem}_mensaje.txt").exists() for p in pngs)
     assert llamadas == [4]
+
+
+def test_rendir_no_llama_al_render_si_los_frenos_fallan(tmp_path, monkeypatch):
+    dir_canal, visiones = _tanda(tmp_path)
+    # No se escribe nada: la tanda queda en `[[ESCRIBIR]]` y `validar_tanda` la detiene.
+    llamadas = []
+
+    def render_falso(tokens, plantilla, salida, formato="horizontal"):
+        llamadas.append(1)
+        salida.write_bytes(b"png")
+        return salida
+
+    with pytest.raises(SystemExit):
+        pa.rendir_tanda(dir_canal, AHORA, visiones, render=render_falso)
+    assert llamadas == []
+
+
+def test_una_cifra_de_activos_extra_se_acepta_solo_si_se_declara(tmp_path):
+    dir_canal, visiones = _tanda(tmp_path)
+    _escribir_todo(dir_canal, pie="El dólar tiene sesgo alcista y apunta a $951,00 hoy.")
+    assert any("$951,00" in e for e in pa.validar_tanda(dir_canal, AHORA, visiones))
+    extra = {"USDCLP": {"digits": 2, "price": 951.0}}
+    assert pa.validar_tanda(dir_canal, AHORA, visiones, activos_extra=extra) == []
+
+
+def test_reescribir_sin_voz_borra_las_laminas_viejas_y_renumera(tmp_path):
+    dir_canal, visiones = _tanda(tmp_path)
+    _escribir_todo(dir_canal)
+    for stem, _ in pa.leer_laminas(dir_canal):
+        (dir_canal / f"{stem}.png").write_bytes(b"png")
+        (dir_canal / f"{stem}_mensaje.txt").write_text("x", encoding="utf-8")
+
+    meta, laminas = pa.armar_tanda("avisos_manana", "cita", AHORA, lectura_falsa(), None, [])
+    pa.escribir_meta(dir_canal, meta)
+    pa.escribir_laminas(dir_canal, "cita", laminas)
+
+    restantes = sorted(p.name for p in dir_canal.iterdir())
+    assert restantes == ["1_portada.json", "2_datos.json", "3_lectura.json", "_avisos.json"]
+    laminas_nuevas = dict(pa.leer_laminas(dir_canal))
+    assert laminas_nuevas["1_portada"]["posicion"] == "1/3 · Portada"
+    assert laminas_nuevas["2_datos"]["posicion"] == "2/3 · Nuestros datos"
+    assert laminas_nuevas["3_lectura"]["posicion"] == "3/3 · Nuestra lectura"
 
 
 def test_tokens_de_traduce_titular_y_parrafo_por_plantilla(tmp_path):
