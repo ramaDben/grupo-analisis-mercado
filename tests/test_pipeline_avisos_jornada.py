@@ -188,7 +188,8 @@ def test_el_pie_del_resultado_lleva_veredicto_movimiento_y_temporalidad(tmp_path
     payload["parrafo"] = "Las familias están menos optimistas y eso le resta fuerza al dólar."
     texto = pa.mensaje_de(payload, pa.leer_meta(ruta))
     assert "*Confianza del consumidor*: 81,9 frente a 89,2 esperado → *PEOR*" in texto
-    assert "⬇️ *Dólar*: el USD/CLP cede de 970,80 a 968,97 desde las 11:00." in texto
+    assert "⬇️ *Dólar*: El USD/CLP cede de 970,80 a 968,97 desde las 11:00." in texto
+    assert "*Oro*: Cede de 970,80 a 968,97" in texto  # el doble de la prueba mide igual las dos
     assert "⏱️ *Temporalidad del impacto*" in texto
     assert "—" not in texto and "–" not in texto
 

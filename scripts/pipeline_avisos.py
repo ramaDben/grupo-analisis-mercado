@@ -492,6 +492,7 @@ MONEDAS_DEL_DATO: dict[str, tuple[str, ...]] = {
 }
 ROTULOS_MONEDA = {"USDCLP": ("Dólar", "el USD/CLP"), "XAUUSD": ("Oro", "el oro"),
                   "EURUSD": ("Euro", "el EUR/USD"), "COPPER": ("Cobre", "el cobre")}
+_PARES_CON_NOMBRE = frozenset({"USDCLP", "EURUSD"})
 TEMPORALIDAD_RESULTADO = "intradía (dentro de la jornada)"
 CALENDARIO_URL = "https://es.investing.com/economic-calendar/"
 # Minutos que el resultado espera la cifra antes de darla por ausente: la fuente
@@ -697,7 +698,11 @@ def mensaje_resultado(payload: dict[str, Any], meta: dict[str, Any]) -> str:
     for ticker, m in meta["movimientos"].items():
         rotulo, _ = ROTULOS_MONEDA.get(ticker, (ticker, ticker))
         flecha = {"sube": "⬆️", "cede": "⬇️"}.get(_verbo_movimiento(m["desde"], m["ahora"]), "↔️")
-        lineas.append(f"{flecha} *{rotulo}*: {_trozo_movimiento(ticker, m)} desde las {meta['hora_dato']}.")
+        trozo = _trozo_movimiento(ticker, m)
+        # "Oro: el oro sube" repite el rótulo; el par sí se nombra, porque aclara cuál es.
+        if ticker not in _PARES_CON_NOMBRE:
+            trozo = trozo.split(" ", 2)[2]
+        lineas.append(f"{flecha} *{rotulo}*: {trozo[:1].upper()}{trozo[1:]} desde las {meta['hora_dato']}.")
     cierre = pc.elegir_variante(pc.CIERRES_ALERTA, "resultado", meta["momento"], meta["fecha"])
     lineas += [
         sep,
