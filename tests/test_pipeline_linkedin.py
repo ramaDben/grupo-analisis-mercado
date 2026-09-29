@@ -321,3 +321,60 @@ def test_el_comando_documenta_todos_los_formatos():
     comando = (RAIZ / ".claude" / "commands" / "linkedin.md").read_text(encoding="utf-8")
     for formato in pl.FORMATOS:
         assert f"`{formato}`" in comando, f"el formato {formato} no está documentado en linkedin.md"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Frenos públicos (los comparte pipeline_avisos)
+# ─────────────────────────────────────────────────────────────────────────────
+ACTIVOS_FRENO = {"USDCLP": {"nombre": "Dólar", "digits": 2, "price": 936.32, "s1": 930.0, "r1": 942.5}}
+
+
+def test_validar_textos_marca_vacio_y_guion():
+    err = pl.validar_textos([("a", "[[ESCRIBIR]]"), ("b", "  "), ("c", "El dólar sube — fuerte")])
+    assert "a: sin escribir" in err
+    assert "b: sin escribir" in err
+    assert any(e.startswith("c: guion largo") for e in err)
+
+
+def test_validar_textos_texto_sano_pasa():
+    assert pl.validar_textos([("a", "El dólar mantiene su sesgo alcista sobre su promedio de 50 horas.")]) == []
+
+
+def test_validar_cifras_con_moneda_sin_respaldo():
+    err = pl.validar_cifras([("t", "El dólar va a $951,00 hoy.")], ACTIVOS_FRENO, [], {})
+    assert any("$951,00" in e for e in err)
+
+
+def test_validar_cifras_medidas_pasan():
+    texto = "El soporte está en $930,00 y el precio en $936,32."
+    assert pl.validar_cifras([("t", texto)], ACTIVOS_FRENO, [], {}) == []
+
+
+def test_validar_cifras_parecida_no_medida():
+    err = pl.validar_cifras([("t", "Cotiza cerca de 935,10.")], ACTIVOS_FRENO, [], {})
+    assert any("935,10" in e for e in err)
+
+
+def test_validar_cifras_acepta_campos_extra():
+    activos = {"USDCLP": {**ACTIVOS_FRENO["USDCLP"], "soporte_publicado": 928.4}}
+    campos = pl.CAMPOS_PRECIO + ("soporte_publicado",)
+    assert pl.validar_cifras([("t", "Soporte en $928,40.")], activos, [], {}, campos=campos) == []
+
+
+def test_validar_cifras_vision_y_citadas():
+    vision = {"cita": "El dólar llegaría a $970."}
+    assert pl.validar_cifras([("t", "El banco ve $970 al cierre.")], ACTIVOS_FRENO, [vision], {}) == []
+    citadas = {"$955": "máximo de ayer"}
+    assert pl.validar_cifras([("t", "Ayer tocó $955.")], ACTIVOS_FRENO, [], citadas) == []
+
+
+def test_validar_frescura_en_el_borde():
+    ahora = datetime(2026, 9, 29, 12, 0, tzinfo=pl.SANTIAGO)
+    assert pl.validar_frescura(ahora - timedelta(minutes=119), ahora, 2) == []
+    err = pl.validar_frescura(ahora - timedelta(minutes=121), ahora, 2, remedio="Corre --refrescar.")
+    assert err and "se leyeron hace 121 min" in err[0] and "Corre --refrescar." in err[0]
+
+
+def test_validar_frescura_acepta_hora_sin_zona():
+    ahora = datetime(2026, 9, 29, 12, 0, tzinfo=pl.SANTIAGO)
+    assert pl.validar_frescura(datetime(2026, 9, 29, 11, 30), ahora, 2) == []
