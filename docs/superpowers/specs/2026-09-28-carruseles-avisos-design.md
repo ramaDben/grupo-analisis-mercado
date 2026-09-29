@@ -30,6 +30,7 @@ que el cupo del día no alcanza a cubrir entero no empieza.
 | Visiones | Las busca el comando cuando el reloj deja un carrusel sin visión fresca |
 | Sin visión | Sale el carrusel sin la lámina del banco |
 | Quién escribe | El reloj prepara los datos; el comando busca, escribe y rinde |
+| Decisión de tasas de la Fed (2026-09-28) | Se cubre sí o sí en el momento de la tarde: ese día `avisos_tarde` pasa al formato `tasas`, con el resultado y su impacto. Ver 3.4 |
 
 ## 2. El día
 
@@ -37,7 +38,7 @@ que el cupo del día no alcanza a cubrir entero no empieza.
 |---|---|---|---|---|
 | `avisos_manana` | 10:30 | 11:30 | `cita` | portada · voz del banco · nuestros datos · nuestra lectura |
 | `avisos_mediodia` | 12:30 | 13:30 | `meta` | ídem, con la voz en la variante meta contra precio |
-| `avisos_tarde` | 14:30 | 15:30 | `agenda` (lunes) o `balance` (martes a viernes) | ver 3.4 |
+| `avisos_tarde` | 14:30 | 15:30 | `agenda` (lunes), `balance` (martes a viernes) o `tasas` (día de decisión de la Fed) | ver 3.4 |
 
 - **10:30** queda a 30 minutos del momento de índices (10:00), fuera de la tolerancia de 20. A esa
   hora la bolsa ya abrió y los índices tienen precio del día. **14:30** va antes del cierre de la
@@ -137,6 +138,31 @@ data/carrusel/<fecha>_<hora>_avisos_<momento>/01_macro_y_apertura/
   vuelve a citar: la regla de 14 días no aplica dentro del mismo día) · nuestros datos
   releídos · nuestra lectura del día. Si la mañana no tuvo tanda, el balance toma el activo de
   mediodía; si tampoco, se elige como en 3.5 y sale sin voz.
+- `tasas` (día de decisión de la Fed, decisión del director del 2026-09-28): **reemplaza** a la
+  agenda o al balance de ese día y se cubre sí o sí. La Fed publica la decisión a las 14:00 NY y
+  la conferencia del presidente empieza a las 14:30 NY, así que el momento de la tarde (14:30 NY,
+  15:30 Chile hoy) cae media hora después del resultado, con la primera reacción del mercado ya
+  medible. El ancla sigue siendo Nueva York: en noviembre, cuando cambia el desfase, el carrusel
+  sigue saliendo media hora después de la decisión aunque en Chile sean las 16:30.
+  - **Cuándo:** el día lo marca el calendario (`obtener_calendario_macro`, evento de decisión de
+    tasas de la Fed de EE.UU., en inglés como lo entrega la fuente), no una lista de fechas escrita
+    a mano.
+  - **Láminas:** portada (la decisión en una línea: sube, baja o mantiene, y el rango nuevo) · el
+    resultado (tasa decidida contra la esperada y la anterior, con veredicto en línea / más dura /
+    más suave que lo esperado) · el impacto (cuánto se movieron USD/CLP, oro y US100 desde las
+    14:00 NY hasta la lectura, leído del terminal) · nuestra lectura (qué significa para el
+    bolsillo y qué mirar en la conferencia).
+  - **El impacto no publica soporte ni resistencia.** A esa hora rige el blackout del escáner
+    (FOMC −30/+75 min): los niveles tácticos son ruido. Lo que se publica es el movimiento medido
+    desde la decisión, que es justo lo que el blackout no invalida.
+  - **Sin resultado no hay carrusel a medias.** Si a la hora de preparar el calendario todavía no
+    trae el valor `actual`, `--preparar` no escribe la tanda y sale con falla de datos (código 1):
+    el momento queda pendiente y el reloj reintenta en el siguiente latido, dentro de la
+    tolerancia de 20 minutos. Publicar la decisión sin el número sería inventarlo.
+  - **"Sí o sí" no salta la aprobación.** El reloj prepara y el comando escribe; el director
+    aprueba antes del envío, como todo lo demás. Lo que cambia es que ese día el formato no se
+    elige ni se omite. Si el cupo no alcanza para el carrusel entero (3.7), el despacho lo dice
+    en vez de saltarlo en silencio.
 
 ### 3.5 Elección del activo y de la visión
 
