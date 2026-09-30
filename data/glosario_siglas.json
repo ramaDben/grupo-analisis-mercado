@@ -149,7 +149,33 @@
   },
   "ADP": {
     "nombre_es": "Empleo privado ADP",
-    "explicacion": "Adelanto del empleo en EE.UU. (solo sector privado), suele salir antes que las nóminas oficiales."
+    "explicacion": "Adelanto del empleo en EE.UU. (solo sector privado), suele salir antes que las nóminas oficiales.",
+    "titulos_ff": [
+      "ADP Nonfarm Employment Change"
+    ],
+    "pais": "United States",
+    "tier": 2,
+    "canales": [
+      "02_forex_divisas",
+      "03_commodities_materias_primas",
+      "04_indices_bursatiles"
+    ],
+    "cadencia": "mensual",
+    "puede_disparar_momento": false,
+    "fuente": {
+      "tipo": "comercial",
+      "organismo": "ADP Research",
+      "nota": "Encuesta privada de ADP, sin serie oficial gratuita: el número viene de Investing y la pieza declara la fuente."
+    },
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "más empleos privados creados: mercado laboral firme",
+      "dolar": "sube",
+      "oro": "baja",
+      "indices": "mixto",
+      "usdclp": "sube",
+      "porque": "un empleo firme aleja los recortes de tasa de la Fed"
+    }
   },
   "PCE": {
     "nombre_es": "Gasto en consumo personal",

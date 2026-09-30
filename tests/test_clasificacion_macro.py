@@ -316,3 +316,14 @@ def test_los_datos_del_29_de_septiembre_declaran_su_efecto():
         efecto = cm.efecto_direccional({"nombre": nombre, "pais": "United States"})
         assert efecto is not None, nombre
         assert efecto["dolar"] == "sube" and efecto["oro"] == "baja", nombre
+
+
+def test_el_empleo_privado_adp_declara_su_efecto():
+    """El 2026-09-30 la agenda de Avisos trae el ADP a las 09:15 y no estaba
+    clasificado: su punto de la lectura habría salido sin escribir."""
+    ev = {"nombre": "ADP Nonfarm Employment Change (Sep)", "pais": "United States"}
+    efecto = cm.efecto_direccional(ev)
+    assert efecto is not None
+    assert efecto["dolar"] == "sube" and efecto["oro"] == "baja"
+    # Es una encuesta privada: su pieza sale cuando el número está, no por reloj.
+    assert cm.puede_disparar_momento(ev) is False

@@ -872,3 +872,24 @@ def test_el_sello_de_la_voz_lo_puede_declarar_la_vision():
 def test_la_cita_de_la_manana_conserva_sus_cuatro_laminas(tmp_path):
     dir_canal, _ = _tanda(tmp_path, formato="cita")
     assert [s for s, _ in pa.leer_laminas(dir_canal)] == ["1_portada", "2_voz", "3_datos", "4_lectura"]
+
+
+def test_un_indicador_a_la_misma_hora_es_un_solo_punto_de_la_lectura():
+    """2026-09-30: el PCE mensual y el anual a las 09:30 salían como dos puntos
+    idénticos y dejaban fuera al PIB de la misma hora."""
+    def ev(hora, evento, nombre_es):
+        return {"hora": hora, "evento": evento, "nombre_es": nombre_es, "explicacion": "Algo."}
+    eventos = [ev("09:15", "ADP", "Empleo privado ADP"),
+               ev("09:30", "Core PCE (MoM)", "Gasto en consumo personal"),
+               ev("09:30", "Core PCE (YoY)", "Gasto en consumo personal"),
+               ev("09:30", "GDP", "Producto interno bruto (PIB)")]
+    lamina = pa.lamina_lectura_dia(eventos, AHORA, efecto_de=lambda e: {"dolar": "sube"})
+    titulos = [p["titulo_punto"] for p in lamina["puntos"]]
+    assert titulos == ["09:15 · Empleo privado ADP", "09:30 · Gasto en consumo personal",
+                       "09:30 · Producto interno bruto (PIB)"]
+
+
+def test_el_inventario_de_petroleo_tiene_frase_de_reaccion():
+    """Su efecto es solo sobre el petróleo: sin nombrarlo, el punto quedaba sin escribir."""
+    frase = pa.frase_reaccion({"petroleo": "baja", "dolar": "neutro"})
+    assert frase == "Sobre lo esperado tiende el petróleo a bajar. Bajo lo esperado, al revés."

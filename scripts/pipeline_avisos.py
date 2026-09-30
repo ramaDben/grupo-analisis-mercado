@@ -625,7 +625,7 @@ _VERBO_INFINITIVO = {"sube": "subir", "baja": "bajar"}
 
 
 def frase_reaccion(efecto: dict[str, Any] | None) -> str | None:
-    """Qué hacen el dólar, el USD/CLP y el oro si el dato sale sobre lo esperado.
+    """Qué hacen el dólar, el USD/CLP, el oro y el petróleo si el dato sale sobre lo esperado.
 
     Sale del glosario (`si_sale_sobre_consenso`), nunca de la redacción: si el
     dato no declara su efecto, la lectura queda por escribir y el render frena.
@@ -633,14 +633,16 @@ def frase_reaccion(efecto: dict[str, Any] | None) -> str | None:
     if not efecto:
         return None
     partes: dict[str, list[str]] = {"subir": [], "bajar": []}
-    for clave, nombre in (("dolar", "el dólar"), ("usdclp", "el USD/CLP"), ("oro", "el oro")):
+    for clave, nombre in (("dolar", "el dólar"), ("usdclp", "el USD/CLP"), ("oro", "el oro"),
+                          ("petroleo", "el petróleo")):
         verbo = _VERBO_INFINITIVO.get(str(efecto.get(clave, "")))
         if verbo:
             partes[verbo].append(nombre)
     trozos = [f"{' y '.join(nombres)} a {verbo}" for verbo, nombres in partes.items() if nombres]
     if not trozos:
         return None
-    return f"Sobre lo esperado tienden {', y '.join(trozos)}. Bajo lo esperado, al revés."
+    verbo = "tienden" if sum(map(len, partes.values())) > 1 else "tiende"
+    return f"Sobre lo esperado {verbo} {', y '.join(trozos)}. Bajo lo esperado, al revés."
 
 
 def _efecto_del_glosario(ev: dict[str, Any]) -> dict[str, Any] | None:
@@ -652,8 +654,13 @@ def _efecto_del_glosario(ev: dict[str, Any]) -> dict[str, Any] | None:
 def lamina_lectura_dia(eventos: list[dict[str, Any]], ahora: datetime,
                        efecto_de: Callable[[dict[str, Any]], dict[str, Any] | None] | None = None) -> dict[str, Any]:
     efecto_de = efecto_de or _efecto_del_glosario
+    # Un indicador a la misma hora es un solo punto: el PCE mensual y el anual
+    # (2026-09-30) salían como dos puntos idénticos y dejaban fuera al PIB.
+    unicos: dict[tuple[str, str], dict[str, Any]] = {}
+    for ev in eventos:
+        unicos.setdefault((ev["hora"], ev.get("nombre_es") or ev.get("evento", "")), ev)
     puntos = []
-    for ev in eventos[:3]:
+    for ev in list(unicos.values())[:3]:
         reaccion = frase_reaccion(efecto_de(ev))
         explicacion = str(ev.get("explicacion") or "").strip()
         texto = f"{explicacion} {reaccion}".strip() if reaccion else MARCA
