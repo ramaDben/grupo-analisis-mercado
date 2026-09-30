@@ -91,8 +91,19 @@ def test_si_el_cupo_no_alcanza_el_carrusel_no_empieza(tmp_path, entorno, monkeyp
     _escribir(ruta, TEXTOS_AGENDA)
     envios: list = []
     monkeypatch.setattr("whatsapp_sender.WhatsAppSender", _sender(envios, cupo=2))
-    pc.despachar(ruta.parent, pruebas=True)
+    pc.despachar(ruta.parent)
     assert envios == []
+
+
+def test_el_banco_de_pruebas_no_mira_el_cupo(tmp_path, entorno, monkeypatch):
+    """Lo del banco no se descuenta del cupo, así que tampoco lo frena."""
+    ruta = preparar(tmp_path, "avisos_agenda", datetime.now(pa.SANTIAGO).replace(hour=7, minute=45),
+                    [dict(CONFIANZA, fecha=datetime.now(pa.SANTIAGO).date().isoformat())])
+    _escribir(ruta, TEXTOS_AGENDA)
+    envios: list = []
+    monkeypatch.setattr("whatsapp_sender.WhatsAppSender", _sender(envios, cupo=0))
+    pc.despachar(ruta.parent, pruebas=True)
+    assert [d for d, _ in envios] == ["GI · Banco de Pruebas"]
 
 
 def test_un_resultado_que_dio_vuelta_no_se_despacha(tmp_path, entorno, monkeypatch):

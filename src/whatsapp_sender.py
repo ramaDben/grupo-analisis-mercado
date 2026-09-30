@@ -535,19 +535,35 @@ class WhatsAppSender:
 
     @staticmethod
     def _leer_estado_envios() -> dict[str, Any]:
-        """Contador del día: {fecha, enviados, ultimo_ts}."""
+        """Contador del día: {fecha, enviados, pruebas, ultimo_ts}.
+
+        `enviados` son los mensajes a canales de clientes y es lo único que mide
+        el cupo. `pruebas` cuenta los del banco de pruebas aparte (decisión del
+        director, 2026-09-29): una tanda revisada ahí antes de salir gastaba el
+        cupo dos veces y dejaba al día real sin espacio. `ultimo_ts` es uno solo
+        para los dos, porque la cadencia es del número y no del destino.
+        """
         hoy = date.today().isoformat()
+        vacio = {"fecha": hoy, "enviados": 0, "pruebas": 0, "ultimo_ts": 0.0}
         try:
             datos = json.loads(ESTADO_ENVIOS_PATH.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            return {"fecha": hoy, "enviados": 0, "ultimo_ts": 0.0}
+            return vacio
         if datos.get("fecha") != hoy:
-            return {"fecha": hoy, "enviados": 0, "ultimo_ts": 0.0}
+            return vacio
         return {
             "fecha": hoy,
             "enviados": int(datos.get("enviados", 0)),
+            "pruebas": int(datos.get("pruebas", 0)),
             "ultimo_ts": float(datos.get("ultimo_ts", 0.0)),
         }
+
+    def _es_de_pruebas(self, nombre_oficial: str) -> bool:
+        """El destino es el banco de pruebas y no un canal de clientes."""
+        try:
+            return nombre_oficial == self.config.destino_de_pruebas
+        except WhatsAppError:
+            return False
 
     def cupo_restante(self) -> int:
         """Envíos que quedan hoy. Solo lectura: no espera ni descuenta nada.
@@ -559,14 +575,16 @@ class WhatsAppSender:
         """
         return max(0, self.max_envios_dia - self._leer_estado_envios()["enviados"])
 
-    def _registrar_envio(self, piezas: int = 1) -> None:
+    def _registrar_envio(self, piezas: int = 1, pruebas: bool = False) -> None:
         """Anota `piezas` mensajes entregados y sella la hora de la acción.
 
         Un lote es UNA acción pero N mensajes: el cupo diario mide mensajes,
         así que contarlo como uno solo relajaría el freno por la puerta de atrás.
+        Con `pruebas` se anotan en su propio contador, fuera del cupo, pero la
+        hora se sella igual.
         """
         estado = self._leer_estado_envios()
-        estado["enviados"] += piezas
+        estado["pruebas" if pruebas else "enviados"] += piezas
         estado["ultimo_ts"] = time.time()
         try:
             ESTADO_ENVIOS_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -574,7 +592,7 @@ class WhatsAppSender:
         except OSError as exc:  # noqa: BLE001
             logger.warning("No se pudo registrar el envío (%s); el freno queda ciego.", exc)
 
-    def _reservar_turno(self, piezas: int = 1) -> None:
+    def _reservar_turno(self, piezas: int = 1, pruebas: bool = False) -> None:
         """Espera el turno y **descuenta el cupo antes** de intentar el envío.
 
         El orden era: esperar turno → enviar → anotar. Si el proceso muere, lo
@@ -591,11 +609,14 @@ class WhatsAppSender:
 
         El rechazo por desborde ocurre antes de descontar, así que un lote que
         no cabe no consume nada.
-        """
-        self._esperar_turno(piezas=piezas)
-        self._registrar_envio(piezas)
 
-    def _esperar_turno(self, piezas: int = 1) -> None:
+        `pruebas` (el destino es el banco de pruebas) salta el cupo y conserva
+        la cadencia: para WhatsApp un mensaje al banco es un mensaje del número.
+        """
+        self._esperar_turno(piezas=piezas, pruebas=pruebas)
+        self._registrar_envio(piezas, pruebas=pruebas)
+
+    def _esperar_turno(self, piezas: int = 1, pruebas: bool = False) -> None:
         """Impone el cupo diario y la cadencia mínima entre acciones de envío.
 
         `piezas` son los mensajes que va a entregar esta acción. El cupo se
@@ -606,7 +627,7 @@ class WhatsAppSender:
         """
         estado = self._leer_estado_envios()
 
-        if estado["enviados"] + piezas > self.max_envios_dia:
+        if not pruebas and estado["enviados"] + piezas > self.max_envios_dia:
             detalle = (
                 f"{estado['enviados']} hechos"
                 if piezas == 1
@@ -1730,7 +1751,9 @@ class WhatsAppSender:
                     # La reserva va DENTRO del bucle: la cadencia se respeta entre
                     # piezas y el cupo se descuenta antes de cada intento, así un
                     # fallo sobrecuenta en vez de subcontar.
-                    self._reservar_turno(piezas=1)
+                    self._reservar_turno(
+                        piezas=1, pruebas=self._es_de_pruebas(nombre_oficial)
+                    )
 
                     mensajes_antes = self._contar_mensajes(page)
                     self._adjuntar_archivo(page, Path(pieza.adjunto), pieza.mensaje)
@@ -1826,7 +1849,7 @@ class WhatsAppSender:
 
         # El freno va ANTES de abrir el navegador: así la espera no deja una
         # sesión de WhatsApp Web colgando y sin actividad.
-        self._reservar_turno()
+        self._reservar_turno(pruebas=self._es_de_pruebas(nombre_oficial))
 
         with sync_playwright() as p:
             context = self._crear_contexto(p, headless=self.headless)
@@ -2037,7 +2060,7 @@ class WhatsAppSender:
                 "Playwright no está instalado. Ejecute: uv sync --extra stories"
             ) from err
 
-        self._reservar_turno(piezas=1)
+        self._reservar_turno(piezas=1, pruebas=self._es_de_pruebas(nombre_oficial))
 
         with sync_playwright() as p:
             context = self._crear_contexto(p, headless=self.headless)

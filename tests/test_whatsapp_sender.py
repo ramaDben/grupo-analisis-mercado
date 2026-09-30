@@ -857,6 +857,50 @@ def test_reservar_turno_rechaza_el_desborde_sin_descontar(tmp_path, monkeypatch)
     assert sender._leer_estado_envios()["enviados"] == 3
 
 
+def test_el_banco_de_pruebas_no_gasta_el_cupo_pero_respeta_la_cadencia(tmp_path, monkeypatch):
+    """Decision del director (2026-09-29): revisar una tanda en el banco antes
+    de mandarla gastaba el cupo dos veces. Lo del banco se cuenta aparte, fuera
+    del cupo, pero la cadencia sigue: para WhatsApp es un mensaje del numero.
+    """
+    import whatsapp_sender as ws
+
+    monkeypatch.setattr(ws, "ESTADO_ENVIOS_PATH", tmp_path / "envios.json")
+    dormido = []
+    monkeypatch.setattr(ws.time, "sleep", lambda s: dormido.append(s))
+
+    sender = WhatsAppSender()
+    sender.max_envios_dia = 3
+    sender.segundos_entre_envios = 45
+    sender._registrar_envio(3)                     # cupo real agotado
+
+    sender._reservar_turno(piezas=1, pruebas=True)  # no levanta
+
+    estado = sender._leer_estado_envios()
+    assert estado["enviados"] == 3
+    assert estado["pruebas"] == 1
+    assert dormido, "el banco de pruebas se salto la cadencia"
+    with pytest.raises(ws.LimiteEnviosError, match="cupo"):
+        sender._reservar_turno(piezas=1)
+
+
+def test_solo_el_destino_de_pruebas_se_reconoce_como_pruebas():
+    sender = WhatsAppSender()
+    banco = sender.config.destino_de_pruebas
+
+    assert sender._es_de_pruebas(banco)
+    assert not sender._es_de_pruebas(sender.config.resolver_nombre_oficial("avisos"))
+
+
+@pytest.mark.parametrize("metodo", ["enviar", "enviar_lote", "enviar_encuesta"])
+def test_toda_ruta_de_envio_le_dice_a_la_reserva_si_es_de_pruebas(metodo):
+    """Una ruta que no lo pase contaria el banco dentro del cupo, o peor, un
+    canal real fuera de el si alguien invierte el valor por defecto."""
+    import inspect
+
+    fuente = inspect.getsource(getattr(WhatsAppSender, metodo))
+    assert "_es_de_pruebas(nombre_oficial)" in fuente
+
+
 @pytest.mark.parametrize("metodo", ["enviar", "enviar_lote"])
 def test_las_dos_rutas_reservan_antes_de_pulsar_enviar(metodo):
     """El contrato de orden, leido del codigo de cada ruta.

@@ -734,7 +734,7 @@ def test_el_balance_trae_la_vision_completada_en_la_manana(tmp_path):
     meta = pa.leer_meta(ruta_tarde)
     # La regla de 14 días no la rechaza: es la misma visión del mismo día.
     assert meta["formato"] == "balance" and meta["activo"] == "USDCLP" and meta["vision"] == "n"
-    assert (ruta_tarde / "2_voz.json").exists()
+    assert (ruta_tarde / "1_voz.json").exists()
 
 
 def test_reescribir_renueva_los_activos_de_preparacion(tmp_path):
@@ -831,3 +831,44 @@ def test_el_aviso_de_la_alerta_mide_al_menos_20px():
     css = (pa.DIR_PLANTILLAS / "alerta.html").read_text(encoding="utf-8")
     regla = re.search(r"\.footer-disclaimer\s*\{([^}]*)\}", css).group(1)
     assert int(re.search(r"font-size:\s*(\d+)px", regla).group(1)) >= 20
+
+
+# ---------------------------------------------------------------- balance de una lámina
+
+
+def test_el_balance_es_una_sola_lamina_con_la_voz(tmp_path):
+    """Director, 2026-09-29: cuatro láminas se leían como spam y los niveles
+    ya salen en cada grupo. El balance es la voz y su pie."""
+    dir_canal, _ = _tanda(tmp_path, formato="balance")
+    laminas = dict(pa.leer_laminas(dir_canal))
+    assert list(laminas) == ["1_voz"]
+    voz = laminas["1_voz"]
+    assert voz["posicion"] == "" and voz["pie"] == pa.MARCA
+
+
+def test_el_pie_del_balance_es_el_mensaje_entero(tmp_path):
+    """Sin cierre, sin aviso legal (no cita niveles) y sin pie de posición."""
+    dir_canal, visiones = _tanda(tmp_path, formato="balance")
+    pie = "La reunión terminó sin anuncios concretos: menos reglas le deja espacio a las tecnológicas."
+    _escribir_todo(dir_canal, pie=pie)
+    assert pa.validar_tanda(dir_canal, AHORA, visiones) == []
+    voz = dict(pa.leer_laminas(dir_canal))["1_voz"]
+    assert pa.mensaje_de(voz, pa.leer_meta(dir_canal)) == pie
+
+
+def test_un_balance_sin_voz_no_se_rinde(tmp_path):
+    dir_canal, _ = _tanda(tmp_path, formato="balance", con_vision=False)
+    assert any("falta la voz" in e for e in pa.validar_tanda(dir_canal, AHORA, {}))
+
+
+def test_el_sello_de_la_voz_lo_puede_declarar_la_vision():
+    """Quien habla no siempre es un banco."""
+    v = dict(vision("v"), sello="AVISOS · LA VOZ DEL CONGRESO")
+    fila = pa.fila_medida(lectura_falsa(), None)
+    assert pa.lamina_voz(v, "cita", fila, AHORA, AHORA)["sello"] == "AVISOS · LA VOZ DEL CONGRESO"
+    assert pa.lamina_voz(vision("v"), "cita", fila, AHORA, AHORA)["sello"] == pa.SELLO_VOZ
+
+
+def test_la_cita_de_la_manana_conserva_sus_cuatro_laminas(tmp_path):
+    dir_canal, _ = _tanda(tmp_path, formato="cita")
+    assert [s for s, _ in pa.leer_laminas(dir_canal)] == ["1_portada", "2_voz", "3_datos", "4_lectura"]

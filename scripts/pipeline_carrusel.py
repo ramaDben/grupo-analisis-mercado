@@ -1683,7 +1683,7 @@ def despachar(
                 f"    {len(piezas) - len(pendientes)} pieza(s) ya despachada(s): "
                 "se retoma en la que falta", flush=True
             )
-        if es_avisos and not dry_run:
+        if es_avisos and not dry_run and not pruebas:
             restante = sender.cupo_restante()
             if len(pendientes) > restante:
                 print(

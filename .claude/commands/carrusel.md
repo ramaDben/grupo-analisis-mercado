@@ -230,7 +230,8 @@ del negocio. El comando impone dos frenos por su cuenta, leídos de `seguridad` 
 - **45 segundos mínimos entre envíos.** Si llamas antes, el comando **espera** y lo
   dice. Mandar siete canales en ráfaga es el patrón que marca una cuenta.
 - **Cupo de 40 envíos al día.** Superado, se detiene con `LimiteEnviosError`. El
-  contador vive en `data/.whatsapp_envios.json`.
+  contador vive en `data/.whatsapp_envios.json`. Lo que va al banco de pruebas
+  se anota aparte (`pruebas`) y no descuenta cupo, pero sí respeta los 45 s.
 
 Nunca subas esos límites para "salir del paso", y **nunca metas el envío en un bucle
 sin supervisión**. Si un envío aborta, revisa si el mensaje llegó antes de reintentar:

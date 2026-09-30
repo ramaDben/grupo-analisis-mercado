@@ -68,6 +68,12 @@ CIERRE_JORNADA = dtime(18, 30)
 # Formatos sin activo protagonista: no llevan dirección técnica en el pie.
 FORMATOS_SIN_ACTIVO = frozenset({"agenda", "agenda_dia", "resultado"})
 
+# Formatos de una lámina cuyo pie escribe el editor entero: sin cierre, sin
+# aviso legal (no citan niveles) y sin pie de posición.
+FORMATOS_PIE_LIBRE = frozenset({"balance"})
+
+SELLO_VOZ = "AVISOS · LA VOZ DEL BANCO"
+
 # clave -> (_plantilla, nombre que ve el cliente en el pie de posición)
 LAMINAS = {
     "portada": ("avisos_portada", "Portada"),
@@ -82,7 +88,9 @@ LAMINAS = {
 SECUENCIAS = {
     "cita": ("portada", "voz", "datos", "lectura"),
     "meta": ("portada", "voz", "datos", "lectura"),
-    "balance": ("portada", "voz", "datos", "lectura"),
+    # Una sola lámina (director, 2026-09-29): cuatro seguidas se leían como spam,
+    # y los niveles ya salen en cada grupo temático. La voz y su pie son la pieza.
+    "balance": ("voz",),
     "agenda": ("portada", "semana", "lectura"),
     "agenda_dia": ("portada", "dia", "lectura"),
     "resultado": ("resultado",),
@@ -145,12 +153,14 @@ def laminas_de(formato: str, con_voz: bool) -> list[dict[str, str]]:
             f"saldría antes que la `2_`. Máximo {MAX_LAMINAS}."
         )
     total = len(claves)
+    # Una pieza sola no tiene orden que conservar: "1/1" sería ruido.
+    sola = total == 1 and formato in FORMATOS_PIE_LIBRE
     return [
         {
             "clave": c,
             "stem": f"{i}_{c}",
             "plantilla": LAMINAS[c][0],
-            "posicion": f"{i}/{total} · {LAMINAS[c][1]}",
+            "posicion": "" if sola else f"{i}/{total} · {LAMINAS[c][1]}",
         }
         for i, c in enumerate(claves, 1)
     ]
@@ -369,13 +379,14 @@ def _fecha_corta(iso: str) -> str:
     return f"{d.day} {_MESES[d.month - 1]} {d.year}"
 
 
-def fila_medida(lectura: dict[str, Any], payload_datos: dict[str, Any]) -> dict[str, Any]:
+def fila_medida(lectura: dict[str, Any], payload_datos: dict[str, Any] | None) -> dict[str, Any]:
     """Lo que el texto puede citar: los niveles del terminal y los publicados en la alerta.
 
     La alerta acota sus niveles (`acotar_niveles_intradia`), así que el soporte
     que ve el cliente puede no ser el `s1` crudo: los dos cuentan como medidos.
     """
-    niveles = {n["rol"]: n["precio"] for n in payload_datos["recorrido"]["niveles"]}
+    niveles = ({n["rol"]: n["precio"] for n in payload_datos["recorrido"]["niveles"]}
+               if payload_datos else {})
     fila: dict[str, Any] = {"nombre": lectura["activo"]["nombre"], "digits": lectura["activo"]["digits"]}
     fila.update({c: lectura["h1"].get(c) for c in pl.CAMPOS_PRECIO})
     fila["soporte_publicado"] = niveles.get("SOPORTE")
@@ -404,7 +415,12 @@ def lamina_portada(activo_nombre: str | None, precio: str, leido: datetime, ahor
 
 
 def lamina_voz(vision: dict[str, Any], variante: str, fila: dict[str, Any], leido: datetime,
-               ahora: datetime) -> dict[str, Any]:
+               ahora: datetime, con_pie: bool = False) -> dict[str, Any]:
+    """La cita. `con_pie` cuando es la única lámina: su pie es el mensaje entero.
+
+    El sello dice "la voz del banco" salvo que la visión declare el suyo: quien
+    habla puede no ser un banco (el 2026-09-29 fue el presidente de la Cámara).
+    """
     firma = f"{vision['quien']} · {vision['institucion']}"
     fuente_fecha = f"{vision.get('fuente') or vision['institucion']} · {_fecha_corta(vision['fecha'])}"
     if variante == "meta":
@@ -423,9 +439,10 @@ def lamina_voz(vision: dict[str, Any], variante: str, fila: dict[str, Any], leid
     return {
         "_plantilla": "vision", "plantilla": "vision",
         "_procedencia": {"vision": vision["id"], "ticker": vision.get("activo")},
-        "sello": "AVISOS · LA VOZ DEL BANCO", "fecha_hora": fecha_hora(ahora),
+        "sello": vision.get("sello") or SELLO_VOZ, "fecha_hora": fecha_hora(ahora),
         "titular": MARCA, "parrafo": MARCA,
         "bloque_cita": bloque_cita, "bloque_meta": bloque_meta, "posicion": "",
+        **({"pie": MARCA} if con_pie else {}),
     }
 
 
@@ -820,11 +837,15 @@ def armar_tanda(momento: str, formato: str, ahora: datetime, lectura: dict[str, 
                                             ahora, ahora, agenda=False, ticker=lectura["ticker"])
         if vision is not None:
             variante = variante_de(vision)
-            laminas["voz"] = lamina_voz(vision, variante, fila, ahora, ahora)
+            laminas["voz"] = lamina_voz(vision, variante, fila, ahora, ahora,
+                                        con_pie=formato in FORMATOS_PIE_LIBRE)
         laminas["datos"] = datos
+        # La lectura sigue midiendo (la cita con meta necesita el precio y el
+        # despacho, la hora de lectura), pero solo salen las láminas del formato.
+        laminas = {c: laminas[c] for c in SECUENCIAS[formato] if c in laminas}
     if formato == "agenda_dia":
         laminas["lectura"] = lamina_lectura_dia(agenda, ahora, extra.get("efecto_de"))
-    elif formato != "resultado":
+    elif "lectura" in SECUENCIAS[formato]:
         laminas["lectura"] = lamina_lectura(ahora)
     meta = {
         "version": 1, "momento": momento, "formato": formato, "fecha": ahora.date().isoformat(),
@@ -937,6 +958,8 @@ def mensaje_de(payload: dict[str, Any], meta: dict[str, Any]) -> str:
     """
     if meta.get("formato") == "resultado":
         return mensaje_resultado(payload, meta)
+    if meta.get("formato") in FORMATOS_PIE_LIBRE:
+        return str(payload["pie"]).strip()
     if payload.get("_clave") != "portada":
         return payload["posicion"]
     cierres = {"agenda": CIERRES_AGENDA, "agenda_dia": CIERRES_DIA}.get(meta.get("formato"), CIERRES_AVISOS)
@@ -954,6 +977,8 @@ def validar_tanda(dir_canal: Path, ahora: datetime, visiones: dict[str, dict[str
 
     if len(laminas) > MAX_LAMINAS:
         errores.append(f"{len(laminas)} láminas: máximo {MAX_LAMINAS}")
+    if meta.get("_falta_vision") and "voz" in SECUENCIAS[meta["formato"]] and len(SECUENCIAS[meta["formato"]]) == 1:
+        errores.append("falta la voz: el balance es solo la cita. Corre --completar-vision.")
 
     usadas: list[dict[str, Any]] = []
     vid = meta.get("vision")
@@ -973,7 +998,9 @@ def validar_tanda(dir_canal: Path, ahora: datetime, visiones: dict[str, dict[str
     leido = datetime.fromisoformat(meta["leido_en"])
     errores.extend(pl.validar_frescura(leido, ahora, FRESCURA_MAX_HORAS, remedio="Corre --refrescar."))
 
-    if meta["formato"] not in FORMATOS_SIN_ACTIVO and meta.get("direccion"):
+    # El balance no cita niveles: su pie no tiene que nombrar la dirección.
+    if (meta["formato"] not in FORMATOS_SIN_ACTIVO | FORMATOS_PIE_LIBRE
+            and meta.get("direccion")):
         pie = next((str(p.get("pie", "")) for _, p in laminas if p.get("_clave") == "portada"), "")
         if MARCA not in pie and meta["direccion"].lower() not in pie.lower():
             errores.append(
@@ -1365,10 +1392,11 @@ def _guardar_refresco(dir_canal: Path, meta: dict[str, Any], nuevas: dict[str, d
                       lectura: dict[str, Any], ahora: datetime, reescribir: bool = False) -> None:
     for stem, payload in nuevas.items():
         (dir_canal / f"{stem}.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    datos = next(p for p in nuevas.values() if p["_plantilla"] == "avisos_datos")
+    datos = next((p for p in nuevas.values() if p["_plantilla"] == "avisos_datos"), None)
     meta["activos"] = {lectura["ticker"]: fila_medida(lectura, datos)}
     meta["leido_en"] = ahora.isoformat(timespec="minutes")
-    meta["direccion"] = datos.get("sesgo", meta.get("direccion"))
+    if datos is not None:
+        meta["direccion"] = datos.get("sesgo", meta.get("direccion"))
     if reescribir:
         # Los textos vuelven a escribirse contra esta lectura: la de
         # preparación, la que el despacho acepta como citable, pasa a ser esta.
@@ -1478,7 +1506,8 @@ def completar_vision(dir_canal: Path, vid: str, ahora: datetime | None = None,
     laminas = {p["_clave"]: p for _, p in leer_laminas(dir_canal)}
     fila = meta["activos"][meta["activo"]]
     leido = datetime.fromisoformat(meta["leido_en"])
-    laminas["voz"] = lamina_voz(vision, variante, fila, leido, ahora)
+    laminas["voz"] = lamina_voz(vision, variante, fila, leido, ahora,
+                                con_pie=meta["formato"] in FORMATOS_PIE_LIBRE)
     ordenadas = {c: laminas[c] for c in SECUENCIAS[meta["formato"]] if c in laminas}
     escribir_laminas(dir_canal, meta["formato"], ordenadas)
     meta.update(vision=vid, vision_variante=variante, _falta_vision=False)
