@@ -133,6 +133,19 @@
       "fuente": "24/7 Wall St.",
       "url": "https://247wallst.com/investing/2026/10/01/micron-blew-past-estimates-and-says-it-cant-see-when-the-memory-shortage-ends/",
       "nota": "CEO de Micron en la conferencia de resultados del 30 de septiembre: trimestre récord, margen bruto de 87 %, más del 75 % de la producción de 2027 ya comprometida y la memoria de alto ancho de banda casi agotada para 2027. Original: 'We do not have line of sight to when supply and demand will return to balance.'"
+    },
+    {
+      "id": "natixis-hodge-inflacion-suprema",
+      "quien": "Chris Hodge",
+      "institucion": "Natixis (economista jefe para EE.UU.)",
+      "sello": "AVISOS · LA VOZ DEL BANCO",
+      "activo": "USDCLP",
+      "tipo": "traduccion",
+      "cita": "Este dato no cambia el cálculo de fondo de la Fed, porque la inflación sigue siendo la preocupación suprema.",
+      "fecha": "2026-10-02",
+      "fuente": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/economy/live/september-jobs-report-live-updates-labor-market-adds-29000-124648123.html",
+      "nota": "Comentario al informe de empleo de septiembre (29.000 empleos contra 84.000 esperados, desempleo 4,2 %), publicado a las 13:50 UTC del 2 de octubre. Agrega que con salarios más bajos el dato le quita urgencia a un alza de tasas en octubre. Original: 'This data won't shift the broader decision-making calculus for the Fed as inflation remains the supreme concern.'"
     }
   ]
 }
