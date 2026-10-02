@@ -108,7 +108,9 @@
       "carpeta_docs": "docs/grupos_whatsapp/05_acciones_etfs",
       "descripcion": "Temporada de earnings, ciclo de semiconductores/IA y fondos cotizados.",
       "nombre_aspiracional": "GI · Acciones & ETFs",
-      "enlace_invitacion": "https://chat.whatsapp.com/GfeO9S7PK0uCoC3HEu1jRV"
+      "enlace_invitacion": "https://chat.whatsapp.com/GfeO9S7PK0uCoC3HEu1jRV",
+      "cubierto": false,
+      "_nota_cubierto": "Decision del director, 2026-10-01: se cubren solo Avisos, Forex y Commodities (metales); Acciones queda descontinuado. Un canal con cubierto=false no recibe tandas del carrusel ni del reloj: el escaner saca sus activos del universo."
     },
     "06_criptoactivos": {
       "alias": [
