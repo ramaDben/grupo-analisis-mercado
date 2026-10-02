@@ -272,5 +272,19 @@
     "clave": "SOXX.US",
     "momento": "avisos_manana",
     "vision": "micron-mehrotra-escasez-memoria"
+  },
+  {
+    "fecha": "2026-10-02",
+    "canal": "01_macro_y_apertura",
+    "tipo": "vision",
+    "clave": "natixis-hodge-inflacion-suprema"
+  },
+  {
+    "fecha": "2026-10-02",
+    "canal": "01_macro_y_apertura",
+    "tipo": "avisos",
+    "clave": "USDCLP",
+    "momento": "avisos_tarde",
+    "vision": "natixis-hodge-inflacion-suprema"
   }
 ]

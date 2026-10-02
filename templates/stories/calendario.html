@@ -220,6 +220,8 @@ html, body {
 /* Resultado de un dato ya publicado: la columna RESULTADO resalta en el acento
    y el tag pasa de "impacto" a veredicto. Solo el veredicto lleva color de dato. */
 .ev-stat-actual .ev-stat-val { color: var(--acento); }
+/* El cierre de una semana negativa va en rojo: es un dato, no cromo. */
+.ev-stat-cierre-peor .ev-stat-val { color: var(--baja); }
 .tag-mejor { background: color-mix(in srgb, var(--sube) 20%, transparent); color: var(--sube); border-color: var(--sube); }
 .tag-en_linea { background: color-mix(in srgb, var(--texto-2) 18%, transparent); color: var(--blanco); border-color: var(--texto-2); }
 
@@ -378,10 +380,12 @@ html, body {
             <div class="ev-pais">{{pais}}</div>
           </div>
           <div class="ev-datos">
+            <!-- IF:anterior -->
             <div class="ev-stat">
               <span class="ev-stat-label">Previo</span>
               <span class="ev-stat-val">{{anterior}}</span>
             </div>
+            <!-- ENDIF:anterior -->
             <!-- IF:tiene_esperado -->
             <div class="ev-stat">
               <span class="ev-stat-label">Esperado</span>
@@ -394,6 +398,12 @@ html, body {
               <span class="ev-stat-val">{{actual}}</span>
             </div>
             <!-- ENDIF:tiene_actual -->
+            <!-- IF:cierre -->
+            <div class="ev-stat ev-stat-actual ev-stat-cierre-{{impacto_slug}}">
+              <span class="ev-stat-label">Cierre</span>
+              <span class="ev-stat-val">{{cierre}}</span>
+            </div>
+            <!-- ENDIF:cierre -->
             <span class="tag-impacto tag-{{impacto_slug}}">{{impacto}}</span>
           </div>
         </div>
