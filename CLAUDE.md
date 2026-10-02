@@ -990,8 +990,8 @@ tener dos fórmulas de ATR.
 
 ### La cuenta de MT5 se declara en un solo lugar
 
-`config/cuenta_mt5.json` dice cuál es (**51492**, decisión del director el
-2026-09-06), y `scripts/guardrails/cuenta.py` la verifica. Antes vivía en tres
+`config/cuenta_mt5.json` dice cuál es (**51257** desde el 2026-10-02, cuando dieron de
+baja la 51492), y `scripts/guardrails/cuenta.py` la verifica. Antes vivía en tres
 archivos de **texto** (este, `.agents/rules/proyecto.md` y una nota de
 `config/activos.json`) y nada comprobaba el terminal.
 
@@ -1014,15 +1014,12 @@ Tres cosas que conviene no revertir:
    de fuente, porque si el precio no salió de MT5 el problema no es la cuenta.
 
 > [!CAUTION]
-> **`mt5_client.connect()` no es determinista, y ahí está el riesgo de la corrida
-> automática.** El `.env` del repo **no tiene** `MT5_LOGIN` / `MT5_PASSWORD` /
-> `MT5_SERVER`, así que `connect()` se engancha al terminal que **ya está corriendo**
-> y devuelve su cuenta. Con el terminal abierto en la 51492 eso es correcto. Con el
-> terminal cerrado llama a `initialize()` sin credenciales, y eso el 2026-09-06
-> devolvió la cuenta **51256** en un proceso nuevo: el camino a la cuenta equivocada
-> existe y es alcanzable. Es exactamente el escenario del latido de las 09:30 con el
-> terminal cerrado. Llenar esas tres claves en `.env` lo volvería determinista; hasta
-> entonces, el sello y el guardia son lo que lo hace visible.
+> **`mt5_client.connect()` no es determinista.** El `.env` del repo no trae `MT5_LOGIN`,
+> así que se engancha al terminal que ya corre; con el terminal cerrado, `initialize()` sin
+> credenciales devolvió el 2026-09-06 la cuenta **51256**. Y al revés: el `.env` del MCP
+> (en `src/market_data_mcp/`, gitignoreado) con un login viejo **saca al terminal de la
+> cuenta buena** cada vez que el MCP reconecta (`-6 Authorization failed`, `-10004 No IPC`).
+> Cambiar de cuenta es cambiar los dos: el config y ese `.env`.
 
 **Avisa cuando los precios no vienen de MT5.** El extractor cae a yfinance si el
 terminal no le sirve un símbolo, y ese fallback es correcto pero **no es equivalente**:
