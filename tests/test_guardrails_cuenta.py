@@ -27,7 +27,7 @@ from guardrails import cuenta  # noqa: E402
 from guardrails.motivos import MOTIVOS  # noqa: E402
 
 
-ESPERADA = 51492
+ESPERADA = 51257  # la 51492 la dieron de baja el 2026-10-02
 
 
 # ── el caso feliz ────────────────────────────────────────────────────────────
@@ -37,7 +37,7 @@ def test_la_cuenta_correcta_aprueba():
 
 def test_acepta_el_login_como_texto():
     # Un JSON puede traerlo como cadena y eso no es un problema de cuenta.
-    assert cuenta.cuenta_correcta("51492", ESPERADA).ok
+    assert cuenta.cuenta_correcta(str(ESPERADA), ESPERADA).ok
 
 
 # ── lo que tiene que frenar ──────────────────────────────────────────────────
@@ -46,7 +46,7 @@ def test_otra_cuenta_falla_y_nombra_las_dos():
     assert not v.ok
     assert v.motivo == "cuenta_mt5_inesperada"
     # Las dos cifras en el detalle: saber que "esta mal" no dice a que cambiar.
-    assert "51256" in v.detalle and "51492" in v.detalle
+    assert "51256" in v.detalle and str(ESPERADA) in v.detalle
 
 
 def test_sin_sello_falla():
@@ -62,7 +62,7 @@ def test_sin_sello_falla():
 
 def test_un_sello_que_no_es_numero_falla():
     assert not cuenta.cuenta_correcta("demo", ESPERADA).ok
-    assert not cuenta.cuenta_correcta({"login": 51492}, ESPERADA).ok
+    assert not cuenta.cuenta_correcta({"login": ESPERADA}, ESPERADA).ok
 
 
 # ── el config, y el fail-closed cuando no se puede leer ──────────────────────

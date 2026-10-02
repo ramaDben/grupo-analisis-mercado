@@ -29,6 +29,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 ORIGEN_MD = RAIZ / "docs" / "guia_tactica_usdclp_cobre_fed.md"
 SALIDA_PDF = RAIZ / "docs" / "GUIA_TACTICA_USDCLP_COBRE_FED_GI.pdf"
 
+from guardrails.cuenta import login_esperado  # noqa: E402
+
 # Importar artefactos y estilos modulares
 from guia_usdclp.svg_artefactos_1 import (
     svg_flujo_mercado,
@@ -78,7 +80,7 @@ def cargar_datos() -> dict[str, object]:
     for name, payload in required.items():
         if payload.get("source") != "MT5" or payload.get("broker") != "MT5":
             raise RuntimeError(f"{name} no proviene de MT5: {payload.get('source')}")
-        if payload.get("cuenta") != 51492:
+        if payload.get("cuenta") != login_esperado():
             raise RuntimeError(f"{name} pertenece a una cuenta distinta de la declarada")
 
     h1 = precios["snapshot_actual"]
