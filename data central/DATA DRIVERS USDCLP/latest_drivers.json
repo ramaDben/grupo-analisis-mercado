@@ -1,60 +1,60 @@
 {
-  "timestamp_consolidacion": "2026-09-28T14:21:46.741816+00:00",
+  "timestamp_consolidacion": "2026-10-02T16:20:17.456917+00:00",
   "drivers": {
     "US_10Y_TREASURY": {
-      "valor": 5.18,
+      "valor": 5.29,
       "unidad": "%",
-      "fecha_dato": "2026-09-24",
+      "fecha_dato": "2026-09-30",
       "is_stale": false
     },
     "FED_FUNDS_RATE": {
       "valor": 3.88,
       "unidad": "%",
-      "fecha_dato": "2026-09-24",
+      "fecha_dato": "2026-09-30",
       "is_stale": false
     },
     "COBRE_HG": {
-      "valor": 6.6205,
+      "valor": 6.5545,
       "unidad": "USD/lb",
-      "fecha_dato": "2026-09-28",
+      "fecha_dato": "2026-10-02",
       "is_stale": false
     },
     "PETROLEO_BRENT": {
-      "valor": 114.89,
+      "valor": 113.96,
       "unidad": "USD/bbl",
-      "fecha_dato": "2026-09-22",
+      "fecha_dato": "2026-09-29",
       "is_stale": false
     },
     "ORO_SPOT": {
-      "valor": 4261.05,
+      "valor": 4163.1,
       "unidad": "USD/oz",
-      "fecha_dato": "2026-09-25",
+      "fecha_dato": "2026-10-02",
       "is_stale": false
     },
     "CHILE_IMACEC_12M": {
-      "valor": -1.49,
+      "valor": -1.01,
       "unidad": "%",
-      "fecha_dato": "2026-07-01",
+      "fecha_dato": "2026-08-01",
       "is_stale": false
     },
     "CHILE_TPM": {
       "valor": 4.5,
       "unidad": "%",
-      "fecha_dato": "2026-09-28",
+      "fecha_dato": "2026-10-02",
       "is_stale": false
     },
     "POSICION_FORWARD_EXTRANJEROS_USD": {
-      "valor": -18508.4013,
+      "valor": -18424.54372,
       "unidad": "millones_USD",
-      "fecha_dato": "2026-09-24",
+      "fecha_dato": "2026-09-30",
       "is_stale": false
     },
     "BOJ_POLICY_RATE": {
-      "valor": 1.0,
+      "valor": 1.25,
       "unidad": "%",
       "fecha_dato": "",
       "is_stale": true,
-      "proxima_reunion": "2026-09-28",
+      "proxima_reunion": "2026-10-28",
       "vigente_desde": "",
       "fuente": "BIS, dataset WS_CBPOL (compila la decisión del BoJ)"
     },
@@ -65,15 +65,15 @@
       "is_stale": false
     },
     "JGB_10Y_YIELD": {
-      "valor": 3.071,
+      "valor": 3.092,
       "unidad": "%",
-      "fecha_dato": "2026-09-25",
+      "fecha_dato": "2026-10-01",
       "is_stale": false
     },
     "USD_JPY": {
-      "valor": 157.209,
+      "valor": 157.767,
       "unidad": "JPY",
-      "fecha_dato": "2026-09-25",
+      "fecha_dato": "2026-10-01",
       "is_stale": false
     }
   }

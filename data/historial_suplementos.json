@@ -208,5 +208,69 @@
     "tipo": "concepto",
     "clave": "puntos-interes",
     "categoria": "sin_niveles_medidos"
+  },
+  {
+    "fecha": "2026-09-29",
+    "canal": "01_macro_y_apertura",
+    "tipo": "vision",
+    "clave": "citi-sen-pagos-stablecoins"
+  },
+  {
+    "fecha": "2026-09-29",
+    "canal": "01_macro_y_apertura",
+    "tipo": "avisos",
+    "clave": "BTCUSD",
+    "momento": "avisos_tarde",
+    "vision": "citi-sen-pagos-stablecoins"
+  },
+  {
+    "fecha": "2026-09-29",
+    "canal": "01_macro_y_apertura",
+    "tipo": "vision",
+    "clave": "johnson-ia-sin-hiperregular"
+  },
+  {
+    "fecha": "2026-09-29",
+    "canal": "01_macro_y_apertura",
+    "tipo": "avisos",
+    "clave": "US100.spot",
+    "momento": "avisos_tarde",
+    "vision": "johnson-ia-sin-hiperregular"
+  },
+  {
+    "fecha": "2026-09-30",
+    "canal": "01_macro_y_apertura",
+    "tipo": "avisos",
+    "clave": "USDCLP",
+    "momento": "avisos_tarde",
+    "vision": null
+  },
+  {
+    "fecha": "2026-10-01",
+    "canal": "01_macro_y_apertura",
+    "tipo": "vision",
+    "clave": "trump-iran-volarlos-o-acuerdo"
+  },
+  {
+    "fecha": "2026-10-01",
+    "canal": "01_macro_y_apertura",
+    "tipo": "avisos",
+    "clave": "USDCLP",
+    "momento": "avisos_manana",
+    "vision": "trump-iran-volarlos-o-acuerdo"
+  },
+  {
+    "fecha": "2026-10-01",
+    "canal": "01_macro_y_apertura",
+    "tipo": "vision",
+    "clave": "micron-mehrotra-escasez-memoria"
+  },
+  {
+    "fecha": "2026-10-01",
+    "canal": "01_macro_y_apertura",
+    "tipo": "avisos",
+    "clave": "SOXX.US",
+    "momento": "avisos_manana",
+    "vision": "micron-mehrotra-escasez-memoria"
   }
 ]
