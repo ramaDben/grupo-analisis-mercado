@@ -380,14 +380,15 @@ def test_una_vision_que_ya_no_esta_en_el_registro_se_detiene(tmp_path):
     assert any("registro" in e for e in pa.validar_tanda(dir_canal, AHORA, {}))
 
 
-def test_el_pie_de_la_portada_lleva_cierre_y_aviso_y_es_estable(tmp_path):
+def test_el_pie_de_la_portada_lleva_cierre_sin_aviso_y_es_estable(tmp_path):
+    """El aviso legal ya va impreso en la última lámina: el pie no lo repite."""
     dir_canal, _ = _tanda(tmp_path)
     _escribir_todo(dir_canal)
     meta = pa.leer_meta(dir_canal)
     portada = dict(pa.leer_laminas(dir_canal))["1_portada"]
     msg = pa.mensaje_de(portada, meta)
     assert msg.startswith("El dólar mantiene un sesgo alcista")
-    assert pa.AVISO_LEGAL in msg and msg.rstrip().endswith("1/4 · Portada")
+    assert pa.AVISO_LEGAL not in msg and msg.rstrip().endswith("1/4 · Portada")
     assert any(c in msg for c in pa.pc.CIERRES_ALERTA)
     assert pa.mensaje_de(portada, meta) == msg
 

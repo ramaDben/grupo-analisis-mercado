@@ -960,8 +960,10 @@ CIERRES_AVISOS: tuple[str, ...] = tuple(c for c in pc.CIERRES_ALERTA if "analist
 def mensaje_de(payload: dict[str, Any], meta: dict[str, Any]) -> str:
     """El texto de la lámina. La portada lleva el pie completo; las demás, su posición.
 
-    El cierre y el aviso los agrega el script, estables por tanda: el despacho
-    vuelve a rendir y un texto distinto al aprobado no puede salir.
+    El cierre lo agrega el script, estable por tanda: el despacho vuelve a rendir
+    y un texto distinto al aprobado no puede salir. El aviso legal NO va en el pie
+    de la portada: la última lámina ya lo lleva impreso, y repetirlo en el mismo
+    carrusel es ruido (director, 2026-10-02).
     """
     if meta.get("formato") == "resultado":
         return mensaje_resultado(payload, meta)
@@ -971,7 +973,7 @@ def mensaje_de(payload: dict[str, Any], meta: dict[str, Any]) -> str:
         return payload["posicion"]
     cierres = {"agenda": CIERRES_AGENDA, "agenda_dia": CIERRES_DIA}.get(meta.get("formato"), CIERRES_AVISOS)
     cierre = pc.elegir_variante(cierres, meta.get("activo") or "agenda", meta["momento"], meta["fecha"])
-    return "\n\n".join([str(payload["pie"]).strip(), cierre, AVISO_LEGAL, payload["posicion"]])
+    return "\n\n".join([str(payload["pie"]).strip(), cierre, payload["posicion"]])
 
 
 def validar_tanda(dir_canal: Path, ahora: datetime, visiones: dict[str, dict[str, Any]],
