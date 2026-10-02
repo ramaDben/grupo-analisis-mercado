@@ -71,6 +71,7 @@ PLANTILLA = RAIZ / "templates" / "stories" / "alerta.html"
 VELAS_GRAFICO = 60
 TIMEFRAME_GRAFICO = "H1"
 
+
 # Los campos que este script NO puede llenar. Se escriben vacíos y `--rendir` se
 # niega a trabajar hasta que tengan texto.
 CAMPOS_EDITORIALES = ("titular", "parrafo")
@@ -1112,6 +1113,13 @@ def refrescar_payload(
     precio = float(h1["price"])
     soporte = float(h1["s1"])
     resistencia = float(h1["r1"])
+    # Niveles que fijó el director a mano (`_procedencia.niveles_fijados`): el
+    # refresco actualiza precio, volatilidad y chip, pero no los reemplaza por los
+    # del motor. Sin esto, el 977 que el director dio para el USD/CLP el
+    # 2026-10-02 habría salido como el s1 del analizador en el envío real.
+    fijados = nuevo.get("_procedencia", {}).get("niveles_fijados") or {}
+    soporte = float(fijados.get("soporte", soporte))
+    resistencia = float(fijados.get("resistencia", resistencia))
 
     motivo = divergencia_editorial(
         nuevo.get("_procedencia", {}).get("crudos", {}), precio
@@ -1245,6 +1253,19 @@ def exigir_texto_editorial(payloads: list[tuple[str, dict[str, Any]]]) -> None:
         pass
 
 
+def _nivel_publicado(texto: Any, respaldo: float | None) -> float | None:
+    """El nivel que lee el cliente ("4.143,09" o "14341") como número, o el respaldo."""
+    if texto:
+        s = str(texto).strip()
+        if "," in s:
+            s = s.replace(".", "").replace(",", ".")
+        try:
+            return float(s)
+        except ValueError:
+            pass
+    return respaldo
+
+
 def rendir(directorio: Path) -> dict[str, Any]:
     """Valida lo editorial, produce las piezas en horizontal y actualiza los mensajes modulares dentro de cada grupo."""
     from story_grafico import enriquecer
@@ -1275,25 +1296,13 @@ def rendir(directorio: Path) -> dict[str, Any]:
 
         ticker = procedencia.get("ticker", payload.get("activo_slug"))
         nombre = payload.get("rotulo_activo", payload.get("activo", ticker))
-        soporte_val = procedencia.get("crudos", {}).get("soporte")
-        if soporte_val is None and "soporte" in payload and payload["soporte"]:
-            try:
-                s_sop = str(payload["soporte"]).strip()
-                if "," in s_sop:
-                    s_sop = s_sop.replace(".", "").replace(",", ".")
-                soporte_val = float(s_sop)
-            except (ValueError, TypeError):
-                soporte_val = None
-
-        resistencia_val = procedencia.get("crudos", {}).get("resistencia")
-        if resistencia_val is None and "resistencia" in payload and payload["resistencia"]:
-            try:
-                s_res = str(payload["resistencia"]).strip()
-                if "," in s_res:
-                    s_res = s_res.replace(".", "").replace(",", ".")
-                resistencia_val = float(s_res)
-            except (ValueError, TypeError):
-                resistencia_val = None
+        # El gráfico dibuja los niveles PUBLICADOS (los del texto, ya acotados por
+        # `acotar_niveles_intradia`), no los crudos del motor: el 2026-10-02 el
+        # USD/CLP salió con 968,00/988,94 en la imagen y 970,25/991,35 en el
+        # mensaje. Los crudos quedan solo como respaldo si el payload no trae nivel.
+        crudos = procedencia.get("crudos", {})
+        soporte_val = _nivel_publicado(payload.get("soporte"), crudos.get("soporte"))
+        resistencia_val = _nivel_publicado(payload.get("resistencia"), crudos.get("resistencia"))
 
         # Alerta de mercado: estándar TradingView 300 DPI de alta fidelidad
         formato = "horizontal"
@@ -1439,15 +1448,8 @@ def _refrescar_y_rendir(dir_grupo: Path) -> list[str]:
 
         archivo.write_text(json.dumps(nuevo, ensure_ascii=False, indent=2), encoding="utf-8")
 
-        soporte_val = None
-        resistencia_val = None
-        try:
-            if "soporte" in nuevo and nuevo["soporte"]:
-                soporte_val = float(str(nuevo["soporte"]).replace(".", "").replace(",", "."))
-            if "resistencia" in nuevo and nuevo["resistencia"]:
-                resistencia_val = float(str(nuevo["resistencia"]).replace(".", "").replace(",", "."))
-        except (ValueError, TypeError):
-            pass
+        soporte_val = _nivel_publicado(nuevo.get("soporte"), None)
+        resistencia_val = _nivel_publicado(nuevo.get("resistencia"), None)
 
         destino_local_png = dir_grupo / f"{archivo.stem}.png"
         try:
