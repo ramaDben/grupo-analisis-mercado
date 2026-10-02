@@ -3,13 +3,14 @@
 """Motor de renderizado de gráficos TradingView (Lightweight Charts™ v5) en 300 DPI y Alto Contraste.
 
 Extrae velas en tiempo real desde MetaTrader 5 (o recibe un payload JSON por stdin),
-calcula indicadores técnicos de alta fidelidad (EMAs 20/50/200, Canal Donchian 50,
-ATR 14, RSI 14, y niveles de soporte/resistencia/operativa), y compila una imagen
+calcula indicadores (EMA 50/100 a la vista; ATR 14 para medir la estructura), traza
+canales de tendencia y swings mayores automáticos más las zonas de soporte y
+resistencia del mensaje, y compila una imagen
 PNG en ultra alta resolución (Retina / 300 DPI) usando Chromium headless (Playwright)
 con polyfill de devicePixelContentBoxSize y paleta luminosa de marca Grupo Inteligencia.
 
 Uso CLI directo:
-    uv run python scripts/tradingview_grafico.py --ticker USDCLP --nombre "USD/CLP" --timeframe H1 --velas 60 --out data/stories/tv_usdclp.png
+    uv run python scripts/tradingview_grafico.py --ticker USDCLP --nombre "USD/CLP" --timeframe H1 --velas 320 --out data/stories/tv_usdclp.png
 
 Uso mediante stdin con payload:
     cat alerta.json | uv run python scripts/tradingview_grafico.py --out data/stories/tv_activo.png
@@ -63,6 +64,7 @@ def calcular_indicadores(df_velas: list[dict[str, Any]]) -> list[dict[str, Any]]
 
     ema20 = ema_series(cierres, 20)
     ema50 = ema_series(cierres, 50)
+    ema100 = ema_series(cierres, 100)
     ema200 = ema_series(cierres, 200)
 
     # 2. Bandas de Bollinger (20, 2)
@@ -213,6 +215,7 @@ def calcular_indicadores(df_velas: list[dict[str, Any]]) -> list[dict[str, Any]]
             "close": float(v["close"]),
             "ema20": ema20[i] if i < len(ema20) else None,
             "ema50": ema50[i] if i < len(ema50) else None,
+            "ema100": ema100[i] if i < len(ema100) else None,
             "ema200": ema200[i] if i < len(ema200) else None,
             "bollingerUpper": bb_upper[i] if i < len(bb_upper) else None,
             "bollingerLower": bb_lower[i] if i < len(bb_lower) else None,
@@ -228,6 +231,134 @@ def calcular_indicadores(df_velas: list[dict[str, Any]]) -> list[dict[str, Any]]
     return resultado
 
 
+def _zigzag(rows: list[dict[str, Any]], umbral: float) -> list[tuple[int, float, str]]:
+    """Pivotes mayores: un giro cuenta cuando el precio retrocede `umbral` desde el extremo.
+
+    Devuelve `(indice, precio, 'H'|'L')` en orden temporal. Es el mismo criterio que
+    usa quien traza a mano: un máximo es máximo cuando el precio ya se alejó de él.
+    """
+    if not rows or umbral <= 0:
+        return []
+    pivotes: list[tuple[int, float, str]] = []
+    dir_ = 0
+    ext_i, ext_h, ext_l = 0, rows[0]["high"], rows[0]["low"]
+    ext_hi_i, ext_lo_i = 0, 0
+    for i, r in enumerate(rows):
+        if dir_ >= 0:
+            if r["high"] >= ext_h:
+                ext_h, ext_hi_i = r["high"], i
+            if dir_ == 1 and ext_h - r["low"] >= umbral:
+                pivotes.append((ext_hi_i, ext_h, "H"))
+                dir_, ext_l, ext_lo_i = -1, r["low"], i
+                continue
+        if dir_ <= 0:
+            if r["low"] <= ext_l:
+                ext_l, ext_lo_i = r["low"], i
+            if dir_ == -1 and r["high"] - ext_l >= umbral:
+                pivotes.append((ext_lo_i, ext_l, "L"))
+                dir_, ext_h, ext_hi_i = 1, r["high"], i
+                continue
+        if dir_ == 0:
+            if ext_h - r["low"] >= umbral and ext_hi_i < i:
+                pivotes.append((ext_hi_i, ext_h, "H"))
+                dir_, ext_l, ext_lo_i = -1, r["low"], i
+            elif r["high"] - ext_l >= umbral and ext_lo_i < i:
+                pivotes.append((ext_lo_i, ext_l, "L"))
+                dir_, ext_h, ext_hi_i = 1, r["high"], i
+    return pivotes
+
+
+def _canal(rows: list[dict[str, Any]], i0: int, i1: int, direccion: int,
+           proyeccion: int) -> list[list[tuple[int, float]]] | None:
+    """Canal paralelo del tramo [i0, i1]: pendiente de la regresión de cierres, y dos
+    rectas que envuelven los máximos y los mínimos del tramo.
+
+    Los bordes se toman con percentiles (97/3) y no con el extremo absoluto, para
+    que una sola mecha no ensanche el canal entero. Se descarta si la pendiente no
+    tiene la dirección del tramo: eso es un rango, no un canal.
+    """
+    n = i1 - i0 + 1
+    if n < 24:
+        return None
+    xs = list(range(i0, i1 + 1))
+    ys = [rows[i]["close"] for i in xs]
+    mx, my = sum(xs) / n, sum(ys) / n
+    var = sum((x - mx) ** 2 for x in xs)
+    if var == 0:
+        return None
+    pend = sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / var
+    if pend * direccion <= 0:
+        return None
+    res_h = sorted(rows[i]["high"] - pend * i for i in xs)
+    res_l = sorted(rows[i]["low"] - pend * i for i in xs)
+    b_sup = res_h[min(n - 1, int(n * 0.97))]
+    b_inf = res_l[max(0, int(n * 0.03))]
+    fin = i1 + proyeccion
+    return [
+        [(i0, pend * i0 + b_sup), (fin, pend * fin + b_sup)],
+        [(i0, pend * i0 + b_inf), (fin, pend * fin + b_inf)],
+    ]
+
+
+def calcular_estructura(
+    rows: list[dict[str, Any]],
+    soporte: float | None = None,
+    resistencia: float | None = None,
+    proyeccion: int = 14,
+) -> dict[str, Any]:
+    """Canales de tendencia y swings mayores de la ventana visible, calculados.
+
+    Tramos: el extremo más reciente de la ventana (máximo o mínimo absoluto) parte
+    la serie en el tramo anterior y el tramo en curso, que es como se lee la
+    referencia del director: un canal alcista hasta el techo y uno bajista desde
+    ahí. Cada tramo lleva su canal solo si tiene pendiente en su dirección.
+
+    Swings: pivotes del zigzag (umbral 3 x ATR H1) que no se pisan con el soporte ni
+    la resistencia del mensaje, hasta dos por lado del precio.
+    """
+    n = len(rows)
+    if n < 30:
+        return {"canales": [], "swings": []}
+    atrs = sorted(r["atr"] for r in rows if r.get("atr"))
+    atr = atrs[len(atrs) // 2] if atrs else (max(r["high"] for r in rows) - min(r["low"] for r in rows)) / 50
+
+    i_max = max(range(n), key=lambda i: rows[i]["high"])
+    i_min = min(range(n), key=lambda i: rows[i]["low"])
+    i_ult, i_prev = (i_max, i_min) if i_max > i_min else (i_min, i_max)
+    dir_ult = -1 if i_ult == i_max else 1          # tras un máximo, el tramo baja
+    canales: list[dict[str, Any]] = []
+    actual = _canal(rows, i_ult, n - 1, dir_ult, proyeccion)
+    if actual:
+        previo = _canal(rows, i_prev, i_ult, -dir_ult, 0)
+        if previo:
+            canales.append({"direccion": -dir_ult, "lineas": previo})
+        canales.append({"direccion": dir_ult, "lineas": actual})
+    else:
+        # El tramo en curso todavía no tiene velas para un canal propio: el precio
+        # sigue leyéndose contra el canal anterior, que se proyecta a la derecha
+        # desde el final de la serie para que se vea dónde está hoy.
+        previo = _canal(rows, i_prev, n - 1, -dir_ult, proyeccion)
+        if previo:
+            canales.append({"direccion": -dir_ult, "lineas": previo})
+        if i_prev >= 60:
+            inicial = _canal(rows, 0, i_prev, dir_ult, 0)
+            if inicial:
+                canales.insert(0, {"direccion": dir_ult, "lineas": inicial})
+
+    precio = rows[-1]["close"]
+    ocupados = [p for p in (soporte, resistencia) if p is not None]
+    arriba: list[float] = []
+    abajo: list[float] = []
+    for _, p, tipo in sorted(_zigzag(rows, 3.0 * atr), key=lambda t: -t[0]):
+        if any(abs(p - q) < 0.8 * atr for q in ocupados + arriba + abajo):
+            continue
+        if p > precio and tipo == "H" and len(arriba) < 2:
+            arriba.append(p)
+        elif p < precio and tipo == "L" and len(abajo) < 2:
+            abajo.append(p)
+    return {"canales": canales, "swings": arriba + abajo, "atr": atr}
+
+
 def construir_html_tradingview(
     rows: list[dict[str, Any]],
     simbolo: str,
@@ -238,66 +369,51 @@ def construir_html_tradingview(
     ancho: int = 1400,
     alto: int = 780,
 ) -> str:
-    """Genera el código HTML autocontenido con LightweightCharts en alta fidelidad y contraste."""
+    """HTML autocontenido del gráfico de estructura: velas, EMA 50/100, canales de
+    tendencia, zonas de soporte y resistencia y swings mayores.
+
+    Rediseño del 2026-09-30 a pedido del director, sobre su gráfico de referencia
+    de MT5: ventana de semanas y no de horas, dos medias en vez de seis
+    indicadores, y la estructura (canales y niveles) como protagonista. Se
+    conserva la paleta oscura de marca.
+    """
     if not VENDOR_JS.exists():
         raise TradingViewRenderError(f"No se encontró el vendor JS: {VENDOR_JS}")
 
     vendor_code = VENDOR_JS.read_text(encoding="utf-8")
-    payload_json = json.dumps(rows, separators=(",", ":")).replace("</", "<\\/")
+    estructura = calcular_estructura(rows, soporte, resistencia)
+    paso = 3600
+    if len(rows) > 2:
+        difs = sorted(rows[i + 1]["time"] - rows[i]["time"] for i in range(len(rows) - 1))
+        paso = difs[len(difs) // 2] or 3600
 
-    last = rows[-1]
-    chg = ((last["close"] - last["open"]) / last["open"]) * 100 if last["open"] else 0.0
-    chg_sign = "+" if chg >= 0 else ""
-    chg_class = "up" if chg >= 0 else "down"
+    def t_de(i: int) -> int:
+        return rows[i]["time"] if i < len(rows) else rows[-1]["time"] + (i - len(rows) + 1) * paso
+
+    canales_js = [
+        {"direccion": c["direccion"],
+         "lineas": [[{"time": t_de(i), "value": v} for i, v in linea] for linea in c["lineas"]]}
+        for c in estructura["canales"]
+    ]
+    zonas = [
+        {"precio": p, "rol": rol}
+        for p, rol in ((resistencia, "RESISTENCIA"), (soporte, "SOPORTE")) if p is not None
+    ]
+    datos = {
+        "rows": rows,
+        "canales": canales_js,
+        "swings": estructura["swings"],
+        "zonas": zonas,
+        "media_zona": 0.18 * estructura.get("atr", 0),
+        "digits": digits,
+    }
+    payload_json = json.dumps(datos, separators=(",", ":")).replace("</", "<\\/")
 
     fmt_p = f"{{:.{digits}f}}"
-    p_open = fmt_p.format(last["open"])
-    p_high = fmt_p.format(last["high"])
-    p_low = fmt_p.format(last["low"])
-    p_close = fmt_p.format(last["close"])
-
-    e20_str = fmt_p.format(last["ema20"]) if last.get("ema20") is not None else "--"
+    last = rows[-1]
     e50_str = fmt_p.format(last["ema50"]) if last.get("ema50") is not None else "--"
-    e200_str = fmt_p.format(last["ema200"]) if last.get("ema200") is not None else "--"
-    atr_str = f"{last['atr']:.2f}" if last.get("atr") is not None else "--"
-    rsi_str = f"{last['rsi']:.1f}" if last.get("rsi") is not None else "--"
-    adx_str = f"{last['adx']:.1f}" if last.get("adx") is not None else "--"
-
-    bbu_str = fmt_p.format(last["bollingerUpper"]) if last.get("bollingerUpper") is not None else "--"
-    bbl_str = fmt_p.format(last["bollingerLower"]) if last.get("bollingerLower") is not None else "--"
-    dh_str = fmt_p.format(last["donchianHigh"]) if last.get("donchianHigh") is not None else "--"
-    dl_str = fmt_p.format(last["donchianLow"]) if last.get("donchianLow") is not None else "--"
-
-    # Líneas de niveles
-    price_lines_js = []
-    if resistencia is not None:
-        price_lines_js.append(f"""
-        candles.createPriceLine({{
-            price: {resistencia},
-            color: '#FF334B',
-            lineWidth: 2.2,
-            lineStyle: LightweightCharts.LineStyle.Dashed,
-            axisLabelVisible: true,
-            axisLabelColor: '#FF334B',
-            axisLabelTextColor: '#FFFFFF',
-            title: 'RESISTENCIA: {fmt_p.format(resistencia)}',
-        }});
-        """)
-    if soporte is not None:
-        price_lines_js.append(f"""
-        candles.createPriceLine({{
-            price: {soporte},
-            color: '#00E676',
-            lineWidth: 2.2,
-            lineStyle: LightweightCharts.LineStyle.Dashed,
-            axisLabelVisible: true,
-            axisLabelColor: '#00E676',
-            axisLabelTextColor: '#050B10',
-            title: 'SOPORTE: {fmt_p.format(soporte)}',
-        }});
-        """)
-
-    lineas_extra = "\n".join(price_lines_js)
+    e100_str = fmt_p.format(last["ema100"]) if last.get("ema100") is not None else "--"
+    p_close = fmt_p.format(last["close"])
 
     html = f"""<!DOCTYPE html>
 <html lang="es">
@@ -305,156 +421,44 @@ def construir_html_tradingview(
 <meta charset="utf-8">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=Space+Grotesk:wght@600;700&display=swap');
-
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
   body {{
     background: #04080E;
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     color: #FFFFFF;
-    width: {ancho}px;
-    height: {alto}px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    padding: 12px;
+    width: {ancho}px; height: {alto}px; overflow: hidden;
+    display: flex; flex-direction: column; padding: 12px;
   }}
   .tv-container {{
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    height: 100%;
-    background: #070D14;
-    border: 1.5px solid rgba(80, 192, 168, 0.55);
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    display: flex; flex-direction: column; width: 100%; height: 100%;
+    background: #070D14; border: 1.5px solid rgba(80, 192, 168, 0.55);
+    border-radius: 16px; overflow: hidden;
   }}
   .tv-topbar {{
-    height: 52px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #0C1620;
-    border-bottom: 1.5px solid rgba(80, 192, 168, 0.35);
-    padding: 0 24px;
-    font-size: 14px;
-    flex-shrink: 0;
+    height: 50px; display: flex; justify-content: space-between; align-items: center;
+    background: #0C1620; border-bottom: 1.5px solid rgba(80, 192, 168, 0.35);
+    padding: 0 24px; flex-shrink: 0;
   }}
-  .tv-topbar-left {{
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }}
-  .tv-symbol {{
-    color: #FFFFFF;
-    font-weight: 800;
-    font-size: 20px;
-    letter-spacing: 0.04em;
-  }}
+  .tv-left {{ display: flex; align-items: center; gap: 14px; }}
+  .tv-symbol {{ font-weight: 800; font-size: 20px; letter-spacing: 0.04em; }}
   .tv-badge-tf {{
-    background: rgba(80, 192, 168, 0.25);
-    color: #50C0A8;
-    border: 1.5px solid #50C0A8;
-    padding: 3px 10px;
-    border-radius: 6px;
-    font-weight: 800;
-    font-size: 13px;
-    letter-spacing: 0.05em;
+    background: rgba(80, 192, 168, 0.25); color: #50C0A8; border: 1.5px solid #50C0A8;
+    padding: 3px 10px; border-radius: 6px; font-weight: 800; font-size: 13px;
   }}
-  .tv-badge-feed {{
-    background: rgba(0, 230, 118, 0.15);
-    color: #00E676;
-    border: 1.5px solid rgba(0, 230, 118, 0.5);
-    padding: 4px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 0.06em;
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
+  .tv-precio {{ font-family: 'Space Grotesk', monospace; font-size: 18px; font-weight: 700; color: #FFFFFF; }}
+  .tv-legend {{ display: flex; gap: 18px; font-family: 'Space Grotesk', monospace; font-size: 14px; color: #CBD5E1; }}
+  .tv-legend b {{ font-weight: 800; }}
+  .tv-chart-wrapper {{ position: relative; flex: 1; min-height: 0; width: 100%; background: #070D14; }}
+  #chart-container {{ width: 100%; height: 100%; display: block; }}
+  #zonas {{ position: absolute; inset: 0; pointer-events: none; z-index: 1; }}
+  .zona {{
+    position: absolute; left: 0; background: rgba(255, 213, 79, 0.30);
+    border-top: 1px solid rgba(255, 213, 79, 0.75); border-bottom: 1px solid rgba(255, 213, 79, 0.75);
   }}
-  .tv-badge-feed::before {{
-    content: "";
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #00E676;
-    box-shadow: 0 0 10px #00E676;
-  }}
-  .tv-ohlc {{
-    display: inline-flex;
-    gap: 12px;
-    font-size: 14px;
-    color: #CBD5E1;
-    margin-left: 12px;
-    font-family: 'Space Grotesk', monospace;
-  }}
-  .tv-ohlc strong {{ color: #FFFFFF; font-weight: 700; }}
-  .tv-ohlc .up {{ color: #00E676; font-weight: 800; }}
-  .tv-ohlc .down {{ color: #FF334B; font-weight: 800; }}
-
-  .tv-brand-tv {{
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: #CBD5E1;
-    font-size: 13px;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-  }}
-  .tv-brand-tv svg {{ fill: #50C0A8; filter: drop-shadow(0 0 6px rgba(80, 192, 168, 0.6)); }}
-
-  .tv-legend {{
-    height: 38px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 0 24px;
-    background: #09121B;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    font-size: 13px;
-    font-family: 'Space Grotesk', monospace;
-    flex-shrink: 0;
-  }}
-  .tv-legend-item {{
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }}
-  .tv-dot {{
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-  }}
-
-  .tv-chart-wrapper {{
-    position: relative;
-    flex: 1;
-    min-height: 0;
-    width: 100%;
-    background: #070D14;
-  }}
-  #chart-container {{
-    width: 100%;
-    height: 100%;
-    display: block;
-  }}
-
   .tv-caption-bar {{
-    height: 32px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 24px;
-    background: #050A0F;
-    border-top: 1.5px solid rgba(80, 192, 168, 0.3);
-    font-size: 12px;
-    color: #94A3B8;
-    font-family: 'Space Grotesk', monospace;
-    font-weight: 600;
-    flex-shrink: 0;
+    height: 30px; display: flex; justify-content: space-between; align-items: center;
+    padding: 0 24px; background: #050A0F; border-top: 1.5px solid rgba(80, 192, 168, 0.3);
+    font-size: 12px; color: #94A3B8; font-family: 'Space Grotesk', monospace; font-weight: 600; flex-shrink: 0;
   }}
 </style>
 <script>
@@ -465,25 +469,14 @@ def construir_html_tradingview(
     constructor(cb) {{
       super((entries, obs) => {{
         const dpr = window.devicePixelRatio || 1;
-        const patchedEntries = entries.map(e => {{
-          if (e.devicePixelContentBoxSize) {{
-            const s = e.devicePixelContentBoxSize[0];
-            const cs = e.contentBoxSize ? e.contentBoxSize[0] : s;
-            return new Proxy(e, {{
-              get(target, prop) {{
-                if (prop === 'devicePixelContentBoxSize') {{
-                  return [{{
-                    inlineSize: Math.round(cs.inlineSize * dpr),
-                    blockSize: Math.round(cs.blockSize * dpr)
-                  }}];
-                }}
-                return target[prop];
-              }}
-            }});
-          }}
-          return e;
-        }});
-        cb(patchedEntries, obs);
+        cb(entries.map(e => {{
+          if (!e.devicePixelContentBoxSize) return e;
+          const cs = e.contentBoxSize ? e.contentBoxSize[0] : e.devicePixelContentBoxSize[0];
+          return new Proxy(e, {{ get(t, p) {{
+            if (p === 'devicePixelContentBoxSize') return [{{ inlineSize: Math.round(cs.inlineSize * dpr), blockSize: Math.round(cs.blockSize * dpr) }}];
+            return t[p];
+          }} }});
+        }}), obs);
       }});
     }}
   }};
@@ -491,119 +484,56 @@ def construir_html_tradingview(
 </script>
 </head>
 <body>
-
 <div class="tv-container" data-chart-ready="false">
-  <!-- Topbar -->
   <div class="tv-topbar">
-    <div class="tv-topbar-left">
+    <div class="tv-left">
       <span class="tv-symbol">{simbolo}</span>
       <span class="tv-badge-tf">{timeframe}</span>
-      <span class="tv-badge-feed">FEED EN VIVO · METATRADER 5 OFICIAL</span>
-      <div class="tv-ohlc">
-        <span>O: <strong>{p_open}</strong></span>
-        <span>H: <strong>{p_high}</strong></span>
-        <span>L: <strong>{p_low}</strong></span>
-        <span>C: <strong class="{chg_class}">{p_close}</strong></span>
-        <span class="{chg_class}">({chg_sign}{chg:.2f}%)</span>
-      </div>
+      <span class="tv-precio">{p_close}</span>
     </div>
-    <div class="tv-brand-tv">
-      <svg width="20" height="15" viewBox="0 0 36 28">
-        <path d="M14 22H7V11H14V22ZM21 22H15V6H21V22ZM28 22H22V16H28V22Z"/>
-      </svg>
-      <span>TRADINGVIEW™ ENGINE · 300 DPI</span>
+    <div class="tv-legend">
+      <span><span style="color:#00B0FF">●</span> EMA 50 <b style="color:#00B0FF">{e50_str}</b></span>
+      <span><span style="color:#FFB300">●</span> EMA 100 <b style="color:#FFB300">{e100_str}</b></span>
     </div>
   </div>
-
-  <!-- Legend Bar -->
-  <div class="tv-legend">
-    <div class="tv-legend-item">
-      <span class="tv-dot" style="background: #00E676; box-shadow: 0 0 6px #00E676;"></span>
-      <span style="color: #CBD5E1;">EMA 20:</span>
-      <span style="color: #00E676; font-weight: 800;">{e20_str}</span>
-    </div>
-    <div class="tv-legend-item">
-      <span class="tv-dot" style="background: #00B0FF; box-shadow: 0 0 6px #00B0FF;"></span>
-      <span style="color: #CBD5E1;">EMA 50:</span>
-      <span style="color: #00B0FF; font-weight: 800;">{e50_str}</span>
-    </div>
-    <div class="tv-legend-item">
-      <span class="tv-dot" style="background: #90A4AE;"></span>
-      <span style="color: #CBD5E1;">EMA 200:</span>
-      <span style="color: #ECEFF1; font-weight: 800;">{e200_str}</span>
-    </div>
-    <div class="tv-legend-item">
-      <span class="tv-dot" style="background: #50C0A8;"></span>
-      <span style="color: #CBD5E1;">Bollinger (20,2):</span>
-      <span style="color: #50C0A8; font-weight: 700;">[{bbl_str}, {bbu_str}]</span>
-    </div>
-    <div class="tv-legend-item">
-      <span class="tv-dot" style="background: #00E5FF; box-shadow: 0 0 6px #00E5FF;"></span>
-      <span style="color: #CBD5E1;">ADX (14):</span>
-      <span style="color: #00E5FF; font-weight: 800;">{adx_str}</span>
-    </div>
-    <div class="tv-legend-item">
-      <span class="tv-dot" style="background: #FFD54F;"></span>
-      <span style="color: #CBD5E1;">ATR (14):</span>
-      <span style="color: #FFD54F; font-weight: 800;">{atr_str}</span>
-    </div>
-    <div class="tv-legend-item" style="margin-left: auto;">
-      <span class="tv-dot" style="background: #FF4081; box-shadow: 0 0 6px #FF4081;"></span>
-      <span style="color: #CBD5E1;">RSI (14):</span>
-      <span style="color: #FF80AB; font-weight: 800;">{rsi_str}</span>
-    </div>
-  </div>
-
-  <!-- Main Multi-pane Chart -->
   <div class="tv-chart-wrapper">
     <div id="chart-container"></div>
+    <div id="zonas"></div>
   </div>
-
-  <!-- Caption Footer -->
   <div class="tv-caption-bar">
-    <span>{len(rows)} VELAS {timeframe} · MOTOR TRADINGVIEW™ · FEED MT5 GRUPO INTELIGENCIA</span>
-    <span>EMAS 20/50/200 · BANDAS BOLLINGER (20, 2) · OSCILADOR RSI 14 (70/30) · ADX 14</span>
+    <span>{len(rows)} VELAS {timeframe} · FEED MT5 · GRUPO INTELIGENCIA</span>
+    <span>EMA 50 · EMA 100 · CANALES DE TENDENCIA · ZONAS DE SOPORTE Y RESISTENCIA</span>
   </div>
 </div>
 
 <script>{vendor_code}</script>
-
 <script>
 (() => {{
-  const rows = {payload_json};
+  const D = {payload_json};
+  const rows = D.rows;
   const container = document.getElementById('chart-container');
   if (!container || typeof LightweightCharts === 'undefined') return;
+  const fmt = v => v.toFixed(D.digits);
 
   const chart = LightweightCharts.createChart(container, {{
     autoSize: true,
     layout: {{
       background: {{ type: 'solid', color: '#070D14' }},
-      textColor: '#CBD5E1',
-      fontSize: 12,
-      fontFamily: "'Space Grotesk', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif",
-      panes: {{
-        enableResize: false,
-        separatorColor: 'rgba(80, 192, 168, 0.4)',
-        separatorHoverColor: 'rgba(80, 192, 168, 0.7)',
-      }},
+      textColor: '#CBD5E1', fontSize: 12,
+      fontFamily: "'Space Grotesk', 'Plus Jakarta Sans', sans-serif",
     }},
     grid: {{
-      vertLines: {{ color: 'rgba(255, 255, 255, 0.05)' }},
-      horzLines: {{ color: 'rgba(255, 255, 255, 0.05)' }},
+      vertLines: {{ color: 'rgba(255, 255, 255, 0.04)' }},
+      horzLines: {{ color: 'rgba(255, 255, 255, 0.04)' }},
     }},
     rightPriceScale: {{
       borderColor: 'rgba(80, 192, 168, 0.25)',
-      scaleMargins: {{ top: 0.10, bottom: 0.10 }},
-      autoScale: true,
-      alignLabels: true,
+      scaleMargins: {{ top: 0.06, bottom: 0.06 }},
     }},
     timeScale: {{
       borderColor: 'rgba(80, 192, 168, 0.25)',
-      timeVisible: true,
-      secondsVisible: false,
-      rightOffset: 5,
-      barSpacing: 14,
-      minBarSpacing: 6,
+      timeVisible: true, secondsVisible: false,
+      rightOffset: 2, minBarSpacing: 1,
       tickMarkFormatter: (time) => {{
         const date = new Date(time * 1000);
         const d = String(date.getUTCDate()).padStart(2, '0');
@@ -612,119 +542,80 @@ def construir_html_tradingview(
         return `${{d}} ${{m}} ${{h}}:00`;
       }},
     }},
-    crosshair: {{
-      mode: LightweightCharts.CrosshairMode.Normal,
-      vertLine: {{ color: 'rgba(80, 192, 168, 0.45)', width: 1.5, style: 2 }},
-      horzLine: {{ color: 'rgba(80, 192, 168, 0.45)', width: 1.5, style: 2 }},
-    }},
+    crosshair: {{ mode: LightweightCharts.CrosshairMode.Hidden }},
   }});
 
-  // Panel 0: Velas Japonesas
   const candles = chart.addSeries(LightweightCharts.CandlestickSeries, {{
-    upColor: '#00E676',
-    downColor: '#FF334B',
-    borderUpColor: '#00E676',
-    borderDownColor: '#FF334B',
-    wickUpColor: '#00E676',
-    wickDownColor: '#FF334B',
-    priceFormat: {{ type: 'price', precision: {digits}, minMove: {10**(-digits)} }},
-    lastValueVisible: true,
-    priceLineVisible: true,
-    priceLineColor: '#00E676',
-    priceLineWidth: 1.5,
+    upColor: '#26C6A0', downColor: '#FF4D5E',
+    borderUpColor: '#26C6A0', borderDownColor: '#FF4D5E',
+    wickUpColor: '#26C6A0', wickDownColor: '#FF4D5E',
+    priceFormat: {{ type: 'price', precision: D.digits, minMove: Math.pow(10, -D.digits) }},
+    lastValueVisible: true, priceLineVisible: true,
+    priceLineColor: '#FFFFFF', priceLineWidth: 1,
     priceLineStyle: LightweightCharts.LineStyle.Dotted,
-  }}, 0);
+  }});
+  candles.setData(rows.map(r => ({{ time: r.time, open: r.open, high: r.high, low: r.low, close: r.close }})));
 
-  candles.setData(rows.map(r => ({{
-    time: r.time, open: r.open, high: r.high, low: r.low, close: r.close
-  }})));
+  const linea = (color, ancho, datos, estilo) => {{
+    const s = chart.addSeries(LightweightCharts.LineSeries, {{
+      color, lineWidth: ancho, lineStyle: estilo ?? LightweightCharts.LineStyle.Solid,
+      lastValueVisible: false, priceLineVisible: false,
+      crosshairMarkerVisible: false, pointMarkersVisible: false,
+      autoscaleInfoProvider: () => null,
+    }});
+    s.setData(datos);
+    return s;
+  }};
 
-  {lineas_extra}
+  linea('#00B0FF', 2, rows.filter(r => r.ema50 != null).map(r => ({{ time: r.time, value: r.ema50 }})));
+  linea('#FFB300', 2, rows.filter(r => r.ema100 != null).map(r => ({{ time: r.time, value: r.ema100 }})));
 
-  // Medias Móviles
-  const ema20 = chart.addSeries(LightweightCharts.LineSeries, {{
-    color: '#00E676',
-    lineWidth: 2.2,
-    lineStyle: LightweightCharts.LineStyle.Solid,
-    lastValueVisible: false,
-    priceLineVisible: false,
-  }}, 0);
-  ema20.setData(rows.filter(r => r.ema20 != null).map(r => ({{ time: r.time, value: r.ema20 }})));
+  // Canales de tendencia: blanco, como el trazo del director sobre MT5.
+  D.canales.forEach(c => c.lineas.forEach(l => linea('rgba(236, 240, 245, 0.92)', 2.4, l)));
 
-  const ema50 = chart.addSeries(LightweightCharts.LineSeries, {{
-    color: '#00B0FF',
-    lineWidth: 2.0,
-    lineStyle: LightweightCharts.LineStyle.Solid,
-    lastValueVisible: false,
-    priceLineVisible: false,
-  }}, 0);
-  ema50.setData(rows.filter(r => r.ema50 != null).map(r => ({{ time: r.time, value: r.ema50 }})));
+  // Swings mayores: línea fina con su precio en el eje.
+  D.swings.forEach(p => candles.createPriceLine({{
+    price: p, color: 'rgba(203, 213, 225, 0.55)', lineWidth: 1,
+    lineStyle: LightweightCharts.LineStyle.Solid, axisLabelVisible: true,
+    axisLabelColor: '#334155', axisLabelTextColor: '#FFFFFF', title: '',
+  }}));
 
-  const ema200 = chart.addSeries(LightweightCharts.LineSeries, {{
-    color: '#90A4AE',
-    lineWidth: 1.8,
-    lineStyle: LightweightCharts.LineStyle.Solid,
-    lastValueVisible: false,
-    priceLineVisible: false,
-  }}, 0);
-  ema200.setData(rows.filter(r => r.ema200 != null).map(r => ({{ time: r.time, value: r.ema200 }})));
+  // Soporte y resistencia del mensaje: la zona amarilla y su precio en el eje.
+  D.zonas.forEach(z => candles.createPriceLine({{
+    price: z.precio, color: 'rgba(255, 213, 79, 0.0)', lineWidth: 1,
+    axisLabelVisible: true, axisLabelColor: '#FFD54F', axisLabelTextColor: '#050B10',
+    title: z.rol + ' ' + fmt(z.precio),
+  }}));
 
-  // Bandas de Bollinger (20, 2)
-  const bbUpper = chart.addSeries(LightweightCharts.LineSeries, {{
-    color: 'rgba(80, 192, 168, 0.70)',
-    lineWidth: 1.4,
-    lineStyle: LightweightCharts.LineStyle.Dashed,
-    lastValueVisible: false,
-    priceLineVisible: false,
-  }}, 0);
-  bbUpper.setData(rows.filter(r => r.bollingerUpper != null).map(r => ({{ time: r.time, value: r.bollingerUpper }})));
+  // Futuro en blanco para que el canal en curso se proyecte a la derecha.
+  const extra = D.canales.flatMap(c => c.lineas.flatMap(l => l.map(p => p.time)))
+    .filter(t => t > rows[rows.length - 1].time);
+  const nFuturo = extra.length ? new Set(extra).size : 0;
+  chart.timeScale().setVisibleLogicalRange({{ from: 0, to: rows.length + 12 }});
 
-  const bbLower = chart.addSeries(LightweightCharts.LineSeries, {{
-    color: 'rgba(80, 192, 168, 0.70)',
-    lineWidth: 1.4,
-    lineStyle: LightweightCharts.LineStyle.Dashed,
-    lastValueVisible: false,
-    priceLineVisible: false,
-  }}, 0);
-  bbLower.setData(rows.filter(r => r.bollingerLower != null).map(r => ({{ time: r.time, value: r.bollingerLower }})));
-
-  // Panel 1: Oscilador RSI 14
-  const rsiGuide70 = chart.addSeries(LightweightCharts.LineSeries, {{
-    color: 'rgba(255, 51, 75, 0.55)',
-    lineWidth: 1.2,
-    lineStyle: LightweightCharts.LineStyle.Dashed,
-    lastValueVisible: false,
-    priceLineVisible: false,
-  }}, 1);
-  rsiGuide70.setData(rows.map(r => ({{ time: r.time, value: 70 }})));
-
-  const rsiGuide30 = chart.addSeries(LightweightCharts.LineSeries, {{
-    color: 'rgba(0, 230, 118, 0.55)',
-    lineWidth: 1.2,
-    lineStyle: LightweightCharts.LineStyle.Dashed,
-    lastValueVisible: false,
-    priceLineVisible: false,
-  }}, 1);
-  rsiGuide30.setData(rows.map(r => ({{ time: r.time, value: 30 }})));
-
-  const rsiLine = chart.addSeries(LightweightCharts.LineSeries, {{
-    color: '#FF4081',
-    lineWidth: 2.0,
-    lastValueVisible: true,
-    priceLineVisible: false,
-    priceFormat: {{ type: 'price', precision: 1, minMove: 0.1 }},
-  }}, 1);
-  rsiLine.setData(rows.filter(r => r.rsi != null).map(r => ({{ time: r.time, value: r.rsi }})));
-
-  // Proporciones Panel 0 (Velas) vs Panel 1 (RSI)
-  const panes = chart.panes();
-  if (panes && panes.length > 1) {{
-    panes[0].setStretchFactor(3.2);
-    panes[1].setStretchFactor(1.0);
-  }}
-
-  chart.timeScale().setVisibleLogicalRange({{ from: -2, to: rows.length + 4 }});
-  document.querySelector('.tv-container').dataset.chartReady = 'true';
+  const pintarZonas = () => {{
+    const capa = document.getElementById('zonas');
+    capa.innerHTML = '';
+    const anchoPrecio = chart.priceScale('right').width();
+    const anchoGraf = container.clientWidth - anchoPrecio;
+    D.zonas.forEach(z => {{
+      const a = candles.priceToCoordinate(z.precio + D.media_zona);
+      const b = candles.priceToCoordinate(z.precio - D.media_zona);
+      if (a == null || b == null) return;
+      const alto = Math.max(10, Math.abs(b - a));
+      const centro = (a + b) / 2;
+      const div = document.createElement('div');
+      div.className = 'zona';
+      div.style.top = (centro - alto / 2) + 'px';
+      div.style.height = alto + 'px';
+      div.style.width = anchoGraf + 'px';
+      capa.appendChild(div);
+    }});
+  }};
+  requestAnimationFrame(() => requestAnimationFrame(() => {{
+    pintarZonas();
+    document.querySelector('.tv-container').dataset.chartReady = 'true';
+  }}));
 }})();
 </script>
 </body>

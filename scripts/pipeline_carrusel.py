@@ -70,7 +70,10 @@ PLANTILLA = RAIZ / "templates" / "stories" / "alerta.html"
 # historia visible detrás, sin que la línea se convierta en ruido.
 VELAS_GRAFICO = 60
 TIMEFRAME_GRAFICO = "H1"
-
+# El gráfico TradingView de la pieza muestra la estructura (canales y swings), y
+# eso pide semanas de velas y no horas: 320 H1 son unas dos semanas de FX. Las
+# 60 de `VELAS_GRAFICO` quedan para la serie del respaldo SVG (director, 2026-09-30).
+VELAS_GRAFICO_TV = 320
 
 # Los campos que este script NO puede llenar. Se escriben vacíos y `--rendir` se
 # niega a trabajar hasta que tengan texto.
@@ -1298,7 +1301,7 @@ def rendir(directorio: Path) -> dict[str, Any]:
                 nombre=nombre,
                 destino=destino_local_png,
                 timeframe=TIMEFRAME_GRAFICO,
-                n_velas=60,
+                n_velas=VELAS_GRAFICO_TV,
                 soporte=soporte_val,
                 resistencia=resistencia_val,
             )
@@ -1442,7 +1445,7 @@ def _refrescar_y_rendir(dir_grupo: Path) -> list[str]:
                 nombre=nuevo.get("rotulo_activo", nuevo.get("activo", ticker)),
                 destino=destino_local_png,
                 timeframe=TIMEFRAME_GRAFICO,
-                n_velas=60,
+                n_velas=VELAS_GRAFICO_TV,
                 soporte=soporte_val,
                 resistencia=resistencia_val,
             )
