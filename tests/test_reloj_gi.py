@@ -192,8 +192,8 @@ def test_todo_momento_llega_a_algun_canal(todos_cubiertos):
 
 
 def test_un_canal_no_cubierto_no_recibe_tanda():
-    """Director, 2026-09-29: solo Avisos, Forex, Commodities y Acciones."""
-    assert reloj.canales_del_momento(ag.momento("apertura_indices")) == ["05_acciones_etfs"]
+    """Director, 2026-10-01: solo Avisos, Forex y Commodities (Acciones salió)."""
+    assert reloj.canales_del_momento(ag.momento("apertura_indices")) == []
     assert reloj.canales_del_momento(ag.momento("cripto")) == []
 
 

@@ -1,105 +1,49 @@
 {
   "pais": "Japón",
-  "timestamp_actualizacion": "2026-09-28T11:21:46.738303",
+  "timestamp_actualizacion": "2026-10-02T13:20:17.453913",
   "fuentes_oficiales": {
     "bonos_soberanos": "Ministerio de Finanzas de Japón (Ministry of Finance - MOF)",
     "inflacion": "Oficina de Estadísticas de Japón (Statistics Bureau / MIC - stat.go.jp)",
     "politica_monetaria": "Banco de Japón (Bank of Japan - BOJ - boj.or.jp)"
   },
   "indicadores_financieros": {
-    "jgb_10y_yield": 3.071,
-    "us_10y_yield": 5.228,
-    "yield_spread_us_jp": 2.157,
-    "yield_spread_bps": 215.7,
-    "usd_jpy_spot": 157.209,
-    "mof_fecha_registro": "2026-09-25",
+    "jgb_10y_yield": 3.092,
+    "us_10y_yield": 5.269,
+    "yield_spread_us_jp": 2.177,
+    "yield_spread_bps": 217.7,
+    "usd_jpy_spot": 157.767,
+    "mof_fecha_registro": "2026-10-01",
     "curva_jgb_mof": {
-      "1年": 1.652,
-      "2年": 1.948,
-      "3年": 2.098,
-      "4年": 2.287,
-      "5年": 2.423,
-      "6年": 2.536,
-      "7年": 2.654,
-      "8年": 2.811,
-      "9年": 2.94,
-      "10年": 3.071,
-      "15年": 3.597,
-      "20年": 3.883,
-      "25年": 4.143,
-      "30年": 4.112,
-      "40年": 4.105
+      "1年": 1.668,
+      "2年": 1.939,
+      "3年": 2.077,
+      "4年": 2.274,
+      "5年": 2.407,
+      "6年": 2.534,
+      "7年": 2.657,
+      "8年": 2.82,
+      "9年": 2.952,
+      "10年": 3.092,
+      "15年": 3.62,
+      "20年": 3.91,
+      "25年": 4.154,
+      "30年": 4.122,
+      "40年": 4.125
     },
     "historico_jgb_mof": [
       {
-        "fecha": "2026-09-02",
-        "jgb_10y": 3.006
-      },
-      {
-        "fecha": "2026-09-03",
-        "jgb_10y": 2.966
-      },
-      {
-        "fecha": "2026-09-04",
-        "jgb_10y": 2.91
-      },
-      {
-        "fecha": "2026-09-07",
-        "jgb_10y": 2.935
-      },
-      {
-        "fecha": "2026-09-08",
-        "jgb_10y": 2.896
-      },
-      {
-        "fecha": "2026-09-09",
-        "jgb_10y": 2.891
-      },
-      {
-        "fecha": "2026-09-10",
-        "jgb_10y": 2.92
-      },
-      {
-        "fecha": "2026-09-11",
-        "jgb_10y": 2.987
-      },
-      {
-        "fecha": "2026-09-14",
-        "jgb_10y": 2.988
-      },
-      {
-        "fecha": "2026-09-15",
-        "jgb_10y": 3.028
-      },
-      {
-        "fecha": "2026-09-16",
-        "jgb_10y": 2.998
-      },
-      {
-        "fecha": "2026-09-17",
-        "jgb_10y": 2.993
-      },
-      {
-        "fecha": "2026-09-18",
-        "jgb_10y": 2.981
-      },
-      {
-        "fecha": "2026-09-24",
-        "jgb_10y": 3.073
-      },
-      {
-        "fecha": "2026-09-25",
-        "jgb_10y": 3.071
+        "fecha": "2026-10-01",
+        "jgb_10y": 3.092
       }
     ]
   },
   "politica_monetaria_boj": {
-    "tasa_politica_actual": 1.0,
+    "tasa_politica_actual": 1.25,
     "vigente_desde": "",
     "glosa_decision": "From 24 Sep 2026: the BOJ encourages the uncollateralized overnight call rate to remain at around 1.25 percent; From 17 Jun 2026 to 23 Sep 2026: the BOJ encourages the uncollateralized overnight call ",
     "fuente_tasa": "BIS, dataset WS_CBPOL (compila la decisión del BoJ)",
     "meta_inflacion": 2.0,
-    "proxima_reunion": "2026-09-28",
+    "proxima_reunion": "2026-10-28",
     "fuente_calendario": "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm",
     "sesgo": "Hawkish Gradual / Normalización Activa",
     "sesgo_origen": "declarado a mano"

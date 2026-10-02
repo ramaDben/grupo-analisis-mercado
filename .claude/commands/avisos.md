@@ -51,6 +51,16 @@ Escribe con Python o con la herramienta de edición, **nunca por PowerShell** (r
 `data/glosario_siglas.json`. Lo correcto es clasificarlo ahí (`si_sale_sobre_consenso`, con `pais`,
 `tier`, `fuente` y su test en `tests/test_clasificacion_macro.py`), no escribir la reacción a mano.
 
+**Un resultado se escribe sobre la reacción, no sobre el primer minuto.** Antes de escribir el
+`parrafo` de un `resultado`, mira la línea del movimiento: si dice que el activo **se mantiene**
+(el movimiento está dentro de su banda de ruido, un cuarto del ATR 14 de M15), todavía no hay
+reacción que contar. Espera hasta que el movimiento salga de la banda o pasen **15 minutos** desde
+el dato, con `--refrescar`. Si a los 15 minutos sigue estable, el párrafo lo dice ("el precio no
+reaccionó al dato") y no afirma una dirección. El 2026-09-30 el resultado de la EIA se preparó un
+minuto después del dato, con el WTI moviéndose cuatro centavos, y el freno lo detuvo dos veces
+hasta que se descartó: el freno ya tiene banda muerta, pero un texto escrito sobre ruido sigue
+siendo un texto sin reacción que narrar.
+
 Reglas de texto de cliente íntegras: tuteo chileno, sin guion largo ni medio, siglas explicadas,
 flechas ⬆️ ↔️ ⬇️ para escenarios.
 

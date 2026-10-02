@@ -311,9 +311,12 @@ def test_registro_real_es_valido_y_sin_ids_repetidos():
     datos = json.loads(pl.REGISTRO_VISIONES.read_text(encoding="utf-8"))
     ids = [v["id"] for v in datos["visiones"]]
     assert len(ids) == len(set(ids))
+    # El registro es real y crece cada día: se valida contra el día de hoy, no
+    # contra `AHORA`, o toda visión cargada después de esa fecha saldría "futura".
+    hoy = datetime.now(pl.SANTIAGO).date()
     for v in datos["visiones"]:
         assert v.get("tipo") in {"textual", "traduccion", "parafrasis"}
-        errores = [e for e in pl.validar_vision(v, AHORA.date(), "test") if "días" not in e]
+        errores = [e for e in pl.validar_vision(v, hoy, "test") if "días" not in e]
         assert errores == [], errores
 
 

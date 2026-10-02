@@ -925,8 +925,9 @@ cada carpeta (`01_macro_y_apertura` … `07_oportunidades_cuantitativas`) al nom
 resuelve alias en lenguaje natural (`metales`, `oro`, `forex`, `cripto`…), y cada canal temático recibe además
 su propia lectura macro.
 
-**Solo se cubren Avisos, Forex, Commodities y Acciones** (2026-09-29): los demás llevan
-`cubierto: false` en `config/whatsapp_grupos.json` y salen del universo antes de puntuar.
+**Solo se cubren Avisos, Forex y Commodities** (2026-10-01; Acciones salió ese día, tras
+quedar cubierto el 2026-09-29): los demás llevan `cubierto: false` en
+`config/whatsapp_grupos.json` y salen del universo antes de puntuar.
 
 **`01_macro_y_apertura` es el grupo de AVISOS de la comunidad**, no un canal temático aparte. Decisión del
 director el 2026-09-03: **no se crea un canal temático propio para el macro**. Ahí figuraba un nombre

@@ -107,6 +107,32 @@
       "fuente": "Reuters vía KSL",
       "url": "https://www.ksl.com/article/news/business/trumps-ai-meeting-with-tech-ceos-to-focus-on-finding-balance-us-house-speaker-says/51629529",
       "nota": "Presidente de la Cámara, antes de la reunión sobre IA en la Casa Blanca del 29 de septiembre (12:30 NY) con Trump y los CEO de Nvidia, Google, Meta, Anthropic, OpenAI y Palantir; lista de asistentes en https://www.axios.com/2026/09/29/trump-ai-meeting-list-ceos-johnson. Original: 'We do not need a moratorium. We do not need to jump in and hyper-regulate this, because we'll lose the race to China.'"
+    },
+    {
+      "id": "trump-iran-volarlos-o-acuerdo",
+      "quien": "Donald Trump",
+      "institucion": "Presidente de EE.UU.",
+      "sello": "AVISOS · LA VOZ DE LA CASA BLANCA",
+      "activo": "USDCLP",
+      "tipo": "traduccion",
+      "cita": "Tenemos que tomar esa decisión: o los hacemos volar o llegamos a un acuerdo.",
+      "fecha": "2026-09-30",
+      "fuente": "Gulf News",
+      "url": "https://gulfnews.com/world/mena/us-iran-war-we-blow-them-up-or-make-a-deal-trump-says-end-is-very-soon-1.500694334",
+      "nota": "Trump a periodistas en la Oficina Oval el miércoles 30 de septiembre en la noche, con las conversaciones con Irán estancadas; dijo que la guerra terminará 'muy pronto, de una forma u otra' y que EE.UU. tiene 'casi total control' del estrecho de Ormuz. Original: 'We have to make that decision: We blow them up or make a deal.'"
+    },
+    {
+      "id": "micron-mehrotra-escasez-memoria",
+      "quien": "Sanjay Mehrotra",
+      "institucion": "Micron Technology (CEO)",
+      "sello": "AVISOS · LA VOZ DE LA INDUSTRIA",
+      "activo": "SOXX.US",
+      "tipo": "traduccion",
+      "cita": "No vemos cuándo la oferta y la demanda volverán a equilibrarse.",
+      "fecha": "2026-10-01",
+      "fuente": "24/7 Wall St.",
+      "url": "https://247wallst.com/investing/2026/10/01/micron-blew-past-estimates-and-says-it-cant-see-when-the-memory-shortage-ends/",
+      "nota": "CEO de Micron en la conferencia de resultados del 30 de septiembre: trimestre récord, margen bruto de 87 %, más del 75 % de la producción de 2027 ya comprometida y la memoria de alto ancho de banda casi agotada para 2027. Original: 'We do not have line of sight to when supply and demand will return to balance.'"
     }
   ]
 }

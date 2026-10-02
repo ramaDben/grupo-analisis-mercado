@@ -232,3 +232,44 @@ def test_la_imagen_del_resultado_rinde_sin_tokens_huerfanos(tmp_path):
     html = story_render.build_html(pa.tokens_de(payload),
                                    pa.DIR_PLANTILLAS / pa.PLANTILLAS["avisos_resultado"])
     assert "{{" not in html and "RESULTADO" in html.upper() and "970,80" in html
+
+
+# ------------------------------------------- banda de ruido (2026-09-30, EIA)
+# El resultado de los inventarios de la EIA se frenó dos veces con el WTI
+# moviéndose 0,04, 0,07 y 0,00 desde las 11:30, bajo el 10 % de su vela
+# típica: sin banda muerta, un solo tick daba vuelta la dirección.
+
+
+def _wti(ahora, banda=0.18):
+    def lector(t, d, a):
+        return {"desde": 93.792, "ahora": ahora, "digits": 3, "banda": banda}
+    return lector
+
+
+def test_el_ruido_dentro_de_la_banda_no_da_vuelta_el_resultado(tmp_path):
+    ruta = preparar(tmp_path, "avisos_resultado", ONCE_10, PUBLICADOS[:1], mov=_wti(93.752))
+    stem, payload = pa.leer_laminas(ruta)[0]
+    payload["parrafo"] = "El precio casi no reaccionó al dato."
+    (ruta / f"{stem}.json").write_text(__import__("json").dumps(payload, ensure_ascii=False), encoding="utf-8")
+    pa.refrescar_tanda(ruta, ONCE_10 + timedelta(minutes=5), lector_movimiento=_wti(93.862))
+    pa.refrescar_tanda(ruta, ONCE_10 + timedelta(minutes=9), lector_movimiento=_wti(93.792))
+    lamina = pa.leer_laminas(ruta)[0][1]
+    assert lamina["parrafo"] != pa.MARCA
+    assert "93,792" in lamina["movimiento"]
+
+
+def test_una_vuelta_que_supera_la_banda_frena_el_resultado(tmp_path):
+    ruta = preparar(tmp_path, "avisos_resultado", ONCE_10, PUBLICADOS[:1], mov=_wti(93.400))
+    with pytest.raises(SystemExit, match="dio vuelta"):
+        pa.refrescar_tanda(ruta, ONCE_10 + timedelta(minutes=5), lector_movimiento=_wti(94.100))
+
+
+def test_dentro_de_la_banda_el_movimiento_se_narra_como_estable():
+    frase = pa.frase_movimiento({"WTI.spot": {"desde": 93.792, "ahora": 93.752, "digits": 3, "banda": 0.18}},
+                                "11:30")
+    assert frase == "Desde las 11:30 el WTI se mantiene cerca de 93,752."
+
+
+def test_la_banda_es_un_cuarto_del_atr_de_m15():
+    velas = [{"high": 10.8, "low": 10.0, "close": 10.4}] * 20
+    assert pa.banda_de_ruido(velas) == pytest.approx(0.2)
