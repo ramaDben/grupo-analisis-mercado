@@ -526,7 +526,8 @@ MONEDAS_DEL_DATO: dict[str, tuple[str, ...]] = {
     "China": ("COPPER", "USDCLP"),
 }
 ROTULOS_MONEDA = {"USDCLP": ("Dólar", "el USD/CLP"), "XAUUSD": ("Oro", "el oro"),
-                  "EURUSD": ("Euro", "el EUR/USD"), "COPPER": ("Cobre", "el cobre")}
+                  "EURUSD": ("Euro", "el EUR/USD"), "COPPER": ("Cobre", "el cobre"),
+                  "WTI.spot": ("Petróleo WTI", "el WTI")}
 _PARES_CON_NOMBRE = frozenset({"USDCLP", "EURUSD"})
 TEMPORALIDAD_RESULTADO = "intradía (dentro de la jornada)"
 CALENDARIO_URL = "https://es.investing.com/economic-calendar/"
@@ -686,19 +687,44 @@ def titular_resultado(eventos: list[dict[str, Any]]) -> str:
     return f"Señales mixtas en los datos de las {eventos[0]['hora']}"
 
 
-def _verbo_movimiento(desde: float, hasta: float) -> str:
-    if hasta > desde:
-        return "sube"
-    if hasta < desde:
-        return "cede"
-    return "se mantiene"
+# Fracción del ATR 14 de M15 bajo la que un movimiento es ruido y no reacción.
+# El 2026-09-30 el resultado de la EIA se frenó dos veces con el WTI moviéndose
+# 0,04, 0,07 y 0,00 desde las 11:30: sin banda muerta, un tick daba vuelta la
+# dirección y el freno saltaba con el precio quieto.
+FRACCION_BANDA_RUIDO = 0.25
+
+
+def banda_de_ruido(velas_m15: list[dict[str, Any]]) -> float:
+    """Un cuarto del ATR 14 de M15: lo que el activo se mueve solo, sin noticia."""
+    tr = []
+    for i, v in enumerate(velas_m15):
+        rango = float(v["high"]) - float(v["low"])
+        if i:
+            previo = float(velas_m15[i - 1]["close"])
+            rango = max(rango, abs(float(v["high"]) - previo), abs(float(v["low"]) - previo))
+        tr.append(rango)
+    ultimas = tr[-14:]
+    return FRACCION_BANDA_RUIDO * sum(ultimas) / len(ultimas) if ultimas else 0.0
+
+
+def _verbo_movimiento(desde: float, hasta: float, banda: float = 0.0) -> str:
+    if abs(hasta - desde) <= banda:
+        return "se mantiene"
+    return "sube" if hasta > desde else "cede"
+
+
+def _verbo(m: dict[str, Any]) -> str:
+    return _verbo_movimiento(m["desde"], m["ahora"], float(m.get("banda") or 0.0))
 
 
 def _trozo_movimiento(ticker: str, m: dict[str, Any]) -> str:
     _, sujeto = ROTULOS_MONEDA.get(ticker, (ticker, ticker))
-    verbo = _verbo_movimiento(m["desde"], m["ahora"])
+    verbo = _verbo(m)
     a, b = _fmt(m["desde"], m["digits"]), _fmt(m["ahora"], m["digits"])
-    return f"{sujeto} se mantiene en {b}" if verbo == "se mantiene" else f"{sujeto} {verbo} de {a} a {b}"
+    if verbo == "se mantiene":
+        # Dentro de la banda no se narra "sube de A a B" por centavos de ruido.
+        return f"{sujeto} se mantiene {'en' if a == b else 'cerca de'} {b}"
+    return f"{sujeto} {verbo} de {a} a {b}"
 
 
 def frase_movimiento(movimientos: dict[str, dict[str, Any]], hora: str) -> str:
@@ -739,7 +765,7 @@ def mensaje_resultado(payload: dict[str, Any], meta: dict[str, Any]) -> str:
     lineas += [sep, f"🎯 *Qué significa*: {str(payload.get('parrafo', '')).strip()}"]
     for ticker, m in meta["movimientos"].items():
         rotulo, _ = ROTULOS_MONEDA.get(ticker, (ticker, ticker))
-        flecha = {"sube": "⬆️", "cede": "⬇️"}.get(_verbo_movimiento(m["desde"], m["ahora"]), "↔️")
+        flecha = {"sube": "⬆️", "cede": "⬇️"}.get(_verbo(m), "↔️")
         trozo = _trozo_movimiento(ticker, m)
         # "Oro: el oro sube" repite el rótulo; el par sí se nombra, porque aclara cuál es.
         if ticker not in _PARES_CON_NOMBRE:
@@ -782,7 +808,10 @@ def leer_movimiento(ticker: str, desde: datetime, ahora: datetime) -> dict[str, 
     previas = [v for v in (velas if velas is not None else []) if v["time"] <= objetivo]
     if not previas:
         raise LecturaFallidaError(f"{ticker}: sin velas M1 a la hora del dato")
-    return {"desde": float(previas[-1]["open"]), "ahora": float(tick.bid), "digits": int(info.digits)}
+    m15 = mt5.copy_rates_from_pos(ticker, mt5.TIMEFRAME_M15, 1, 15)
+    banda = banda_de_ruido(list(m15)) if m15 is not None and len(m15) else 0.0
+    return {"desde": float(previas[-1]["open"]), "ahora": float(tick.bid), "digits": int(info.digits),
+            "banda": round(banda, int(info.digits) + 1)}
 
 
 def monedas_de(eventos: list[dict[str, Any]]) -> list[str]:
@@ -1430,10 +1459,16 @@ def refrescar_resultado(dir_canal: Path, ahora: datetime,
     motivos = []
     for t, m in nuevos.items():
         antes = meta.get("movimientos_preparacion", {}).get(t)
-        if antes and _verbo_movimiento(antes["desde"], antes["ahora"]) != _verbo_movimiento(m["desde"], m["ahora"]):
+        if not antes:
+            continue
+        # Dar vuelta es pasar de subir a ceder, o al revés, fuera de la banda de
+        # ruido. Salir de "se mantiene" o volver a él no invalida el texto: el
+        # movimiento nunca tuvo dirección que contradecir.
+        previo, actual = _verbo(antes), _verbo(m)
+        if {previo, actual} == {"sube", "cede"}:
             motivos.append(
                 f"{ROTULOS_MONEDA.get(t, (t, t))[1]} dio vuelta: el texto se escribió cuando "
-                f"{_verbo_movimiento(antes['desde'], antes['ahora'])} y ahora {_verbo_movimiento(m['desde'], m['ahora'])}"
+                f"{previo} y ahora {actual}"
             )
     if motivos and not reescribir:
         raise SystemExit(
