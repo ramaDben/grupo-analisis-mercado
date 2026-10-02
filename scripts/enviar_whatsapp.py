@@ -98,6 +98,14 @@ def construir_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Ruta a un archivo de texto (.txt / .md) cuyo contenido será el cuerpo del mensaje.",
     )
+    parser.add_argument(
+        "--sin-vista-previa",
+        action="store_true",
+        help=(
+            "Cierra la tarjeta del link antes de enviar un texto: con varios links, "
+            "WhatsApp arma el botón 'Ver grupo' solo para el primero."
+        ),
+    )
     envio = parser.add_mutually_exclusive_group()
     envio.add_argument(
         "-a", "--adjunto",
@@ -379,6 +387,7 @@ def main() -> int:
             mensaje=cuerpo_mensaje,
             adjunto=args.adjunto,
             dry_run=args.dry_run,
+            sin_vista_previa=args.sin_vista_previa,
         )
         print("\n[ÉXITO] Operación completada:")
         print(f"  • Destinatario : {resultado['destinatario']}")

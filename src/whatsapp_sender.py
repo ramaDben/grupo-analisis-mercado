@@ -1193,6 +1193,21 @@ class WhatsAppSender:
         self._pausa_humana(1.0)
         return True
 
+    def _esperar_y_cerrar_previsualizacion(self, page: Any, espera_s: float = 8.0) -> bool:
+        """Espera a que WhatsApp arme la tarjeta del link y la cierra.
+
+        La tarjeta no aparece al escribir: WhatsApp la arma cuando termina de
+        descargar la vista previa, así que cerrarla en el acto no encuentra nada
+        y el envío sale con el botón igual. Se sondea hasta `espera_s`.
+        """
+        limite = time.monotonic() + espera_s
+        while time.monotonic() < limite:
+            if self._cerrar_previsualizacion_enlace(page):
+                return True
+            self._pausa_humana(0.5)
+        logger.warning("no apareció tarjeta de previsualización que cerrar")
+        return False
+
     @staticmethod
     def _huella(texto: str) -> str:
         """Alias de la función de módulo `huella`, para el código de la clase."""
@@ -1816,8 +1831,15 @@ class WhatsAppSender:
         mensaje: str = "",
         adjunto: Path | str | None = None,
         dry_run: bool = False,
+        sin_vista_previa: bool = False,
     ) -> dict[str, Any]:
-        """Ejecuta el ciclo completo de envío a un grupo o contacto."""
+        """Ejecuta el ciclo completo de envío a un grupo o contacto.
+
+        `sin_vista_previa` cierra la tarjeta del primer link antes de enviar un
+        texto: con dos links, WhatsApp arma el botón "Ver grupo" solo para el
+        primero, y un mensaje para fijar con dos invitaciones mandaba a todos al
+        mismo grupo (2026-10-02).
+        """
         nombre_oficial = self.config.resolver_nombre_oficial(destinatario)
         ruta_adjunto = Path(adjunto) if adjunto else None
 
@@ -1873,6 +1895,8 @@ class WhatsAppSender:
                     self._adjuntar_archivo(page, ruta_adjunto, caption=mensaje)
                 else:
                     self._insertar_texto(page, mensaje)
+                    if sin_vista_previa:
+                        self._esperar_y_cerrar_previsualizacion(page)
 
                 # 5. Enviar y confirmar contra el DOM
                 self._clic_enviar_y_confirmar(
