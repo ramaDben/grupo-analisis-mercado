@@ -393,6 +393,18 @@ def test_el_pie_de_la_portada_lleva_cierre_sin_aviso_y_es_estable(tmp_path):
     assert pa.mensaje_de(portada, meta) == msg
 
 
+def test_la_tanda_puede_fijar_su_cierre_o_no_llevar_ninguno(tmp_path):
+    """El cierre semanal del viernes en la noche no lleva cierre (director, 2026-10-02)."""
+    dir_canal, _ = _tanda(tmp_path)
+    _escribir_todo(dir_canal)
+    meta = pa.leer_meta(dir_canal)
+    portada = dict(pa.leer_laminas(dir_canal))["1_portada"]
+    sin = pa.mensaje_de(portada, {**meta, "cierre": ""})
+    assert not any(c in sin for c in pa.pc.CIERRES_ALERTA) and "\n\n\n" not in sin
+    assert sin.rstrip().endswith("1/4 · Portada")
+    assert "Buen fin de semana." in pa.mensaje_de(portada, {**meta, "cierre": "Buen fin de semana."})
+
+
 def test_la_portada_de_avisos_no_cierra_con_el_analista():
     """Director, 2026-09-29: en Avisos ese cierre se lee ordinario."""
     assert pa.CIERRES_AVISOS and not any("analista" in c for c in pa.CIERRES_AVISOS)

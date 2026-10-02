@@ -1001,9 +1001,15 @@ def mensaje_de(payload: dict[str, Any], meta: dict[str, Any]) -> str:
         return str(payload["pie"]).strip()
     if payload.get("_clave") != "portada":
         return payload["posicion"]
-    cierres = {"agenda": CIERRES_AGENDA, "agenda_dia": CIERRES_DIA}.get(meta.get("formato"), CIERRES_AVISOS)
-    cierre = pc.elegir_variante(cierres, meta.get("activo") or "agenda", meta["momento"], meta["fecha"])
-    return "\n\n".join([str(payload["pie"]).strip(), cierre, payload["posicion"]])
+    if "cierre" in meta:
+        # La tanda fija su propio cierre, o ninguno con "". El cierre semanal del
+        # viernes en la noche no tiene agenda que anotar ni analista a quien
+        # llamar (director, 2026-10-02).
+        cierre = str(meta["cierre"]).strip()
+    else:
+        cierres = {"agenda": CIERRES_AGENDA, "agenda_dia": CIERRES_DIA}.get(meta.get("formato"), CIERRES_AVISOS)
+        cierre = pc.elegir_variante(cierres, meta.get("activo") or "agenda", meta["momento"], meta["fecha"])
+    return "\n\n".join(p for p in (str(payload["pie"]).strip(), cierre, payload["posicion"]) if p)
 
 
 def validar_tanda(dir_canal: Path, ahora: datetime, visiones: dict[str, dict[str, Any]],
