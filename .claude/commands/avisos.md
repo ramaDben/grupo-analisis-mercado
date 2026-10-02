@@ -83,3 +83,18 @@ Si pasaron minutos desde la aprobación, el refresco actualiza las cifras; si la
 la pieza no sale y hay que `--refrescar --reescribir` y volver a escribir el párrafo.
 
 **Nunca se envía nada a Avisos sin aprobación explícita del director.**
+
+## Un mensaje suelto con links (invitaciones a los grupos)
+
+Los mensajes que no son tanda (un recordatorio para unirse a Forex y a Commodities, por ejemplo) van
+por el envío directo, con el texto en un archivo escrito en UTF-8:
+
+```bash
+uv run --extra stories python scripts/enviar_whatsapp.py --grupo macro --mensaje-archivo <txt> --sin-vista-previa
+```
+
+**Con dos o más links, `--sin-vista-previa` es obligatorio.** WhatsApp Web arma la tarjeta de vista
+previa solo con el **primer** link, y su botón "Ver grupo" lleva a todos al mismo grupo (medido el
+2026-10-02: los dos botones iban a Forex). El flag cierra la tarjeta antes de enviar y cada link
+queda como texto que se abre por separado. Va en **un solo mensaje**, para que el director lo pueda
+fijar, y sin la línea `━━━` bajo el título, que se ve mal en la previsualización.
