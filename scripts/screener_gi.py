@@ -276,6 +276,25 @@ def cargar_universo(solo_renderizables: bool = True) -> list[dict[str, Any]]:
     return universo
 
 
+def solo_canales_cubiertos(universo: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[str]]:
+    """El universo sin los activos cuyo canal no se cubre, y los tickers que salieron.
+
+    Se filtra acá, antes de puntuar, y no después de elegir: un activo de un
+    canal apagado ocuparía un cupo del Top N y la tanda saldría con menos piezas.
+    El canal se resuelve con el mismo mapeo que usa el carrusel para escribir.
+    """
+    from pipeline_carrusel import canal_cubierto, obtener_grupo_whatsapp
+
+    dentro, fuera = [], []
+    for a in universo:
+        canal = obtener_grupo_whatsapp(a.get("categoria", a["clase"]), a["ticker"])
+        if canal_cubierto(canal):
+            dentro.append(a)
+        else:
+            fuera.append(a["ticker"])
+    return dentro, fuera
+
+
 def filtrar_por_grupo(universo: list[dict[str, Any]], grupo: str) -> list[dict[str, Any]]:
     """Filtra los activos del universo por grupo modular de WhatsApp o alias de categoría."""
     slug = grupo.lower().strip()
@@ -962,6 +981,12 @@ def escanear(
         )
 
     universo = cargar_universo(solo_renderizables)
+    universo, fuera = solo_canales_cubiertos(universo)
+    if fuera:
+        avisos.append(
+            f"{len(fuera)} activos fuera del universo porque su canal no se cubre "
+            "(`cubierto: false` en config/whatsapp_grupos.json)"
+        )
     if grupo:
         universo = filtrar_por_grupo(universo, grupo)
         avisos.append(f"universo filtrado exclusivamente al grupo/categoría '{grupo}' ({len(universo)} activos)")

@@ -522,6 +522,9 @@ def test_el_modo_matriz_respeta_el_tope_por_grupo(tmp_path, monkeypatch):
     sin tocar los gates.
     """
     monkeypatch.setattr(sc, "DIR_SALIDA", tmp_path)
+    # El tope se prueba con cripto aunque hoy su canal no se cubra (2026-09-29).
+    import pipeline_carrusel as pc
+    monkeypatch.setattr(pc, "canal_cubierto", lambda canal: True)
     universo = sc.cargar_universo(solo_renderizables=False)
     cripto = [a for a in universo if a["categoria"] == "crypto"]
     assert len(cripto) >= 3, "el catalogo dejo de tener criptos suficientes para la prueba"
@@ -891,3 +894,13 @@ def test_un_fijo_sigue_fuera_en_feriado_de_su_bolsa(monkeypatch):
         analizador=analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
     )
     assert "USDCLP" not in {r["ticker"] for r in res["seleccion"]}
+
+
+def test_un_canal_no_cubierto_sale_del_universo_antes_de_puntuar():
+    """Director, 2026-09-29: sin índices ni cripto. Filtrar después de elegir le
+    quitaría cupos al Top N; por eso sale del universo."""
+    universo = sc.cargar_universo(solo_renderizables=False)
+    dentro, fuera = sc.solo_canales_cubiertos(universo)
+    assert {"BTCUSD", "US100.spot"} <= set(fuera)
+    assert {"USDCLP", "XAUUSD", "COPPER"} <= {a["ticker"] for a in dentro}
+    assert len(dentro) + len(fuera) == len(universo)

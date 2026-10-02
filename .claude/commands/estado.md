@@ -59,7 +59,7 @@ y aborta al primer fallo).
 Informa el estado de cada MCP relevante:
 - ✅ **market-data**: activo — expone 6 tools: `get_asset_levels` (técnico MT5), `get_chart_objects` (marcado manual MT5), `obtener_calendario_macro` (calendario económico), `get_symbol_spec` (especificaciones/sesiones de contrato), `get_open_positions` (operaciones abiertas) y `get_curva_tasas` (curva soberana de EE.UU.). Las noticias se obtienen vía WebSearch.
 - ✅ **WhatsApp Web (Playwright)**: activo — `scripts/enviar_whatsapp.py`. Reportar la sesión con
-  `--status` y, si existe `data/.whatsapp_envios.json`, cuántos envíos van hoy contra el cupo diario.
+  `--status` y, si existe `data/.whatsapp_envios.json`, cuántos envíos van hoy contra el cupo diario (`enviados`; los del banco de pruebas van en `pruebas` y no cuentan).
 - ❌ **TrendRadar / Firecrawl / Finnhub**: no activos — reemplazados por market-data (MT5) + WebSearch
 
 ### 8. Sugerencias del sistema

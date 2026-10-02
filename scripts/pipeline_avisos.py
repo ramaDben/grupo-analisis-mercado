@@ -68,6 +68,12 @@ CIERRE_JORNADA = dtime(18, 30)
 # Formatos sin activo protagonista: no llevan dirección técnica en el pie.
 FORMATOS_SIN_ACTIVO = frozenset({"agenda", "agenda_dia", "resultado"})
 
+# Formatos de una lámina cuyo pie escribe el editor entero: sin cierre, sin
+# aviso legal (no citan niveles) y sin pie de posición.
+FORMATOS_PIE_LIBRE = frozenset({"balance"})
+
+SELLO_VOZ = "AVISOS · LA VOZ DEL BANCO"
+
 # clave -> (_plantilla, nombre que ve el cliente en el pie de posición)
 LAMINAS = {
     "portada": ("avisos_portada", "Portada"),
@@ -82,7 +88,9 @@ LAMINAS = {
 SECUENCIAS = {
     "cita": ("portada", "voz", "datos", "lectura"),
     "meta": ("portada", "voz", "datos", "lectura"),
-    "balance": ("portada", "voz", "datos", "lectura"),
+    # Una sola lámina (director, 2026-09-29): cuatro seguidas se leían como spam,
+    # y los niveles ya salen en cada grupo temático. La voz y su pie son la pieza.
+    "balance": ("voz",),
     "agenda": ("portada", "semana", "lectura"),
     "agenda_dia": ("portada", "dia", "lectura"),
     "resultado": ("resultado",),
@@ -145,12 +153,14 @@ def laminas_de(formato: str, con_voz: bool) -> list[dict[str, str]]:
             f"saldría antes que la `2_`. Máximo {MAX_LAMINAS}."
         )
     total = len(claves)
+    # Una pieza sola no tiene orden que conservar: "1/1" sería ruido.
+    sola = total == 1 and formato in FORMATOS_PIE_LIBRE
     return [
         {
             "clave": c,
             "stem": f"{i}_{c}",
             "plantilla": LAMINAS[c][0],
-            "posicion": f"{i}/{total} · {LAMINAS[c][1]}",
+            "posicion": "" if sola else f"{i}/{total} · {LAMINAS[c][1]}",
         }
         for i, c in enumerate(claves, 1)
     ]
@@ -172,6 +182,23 @@ def fecha_hora(ahora: datetime) -> str:
 
 class SinCandidatosError(RuntimeError):
     """Ningún activo disponible para el momento: no hay carrusel que preparar."""
+
+
+class VisionPedidaError(RuntimeError):
+    """La visión que pidió el director no se puede citar en esta tanda."""
+
+
+def _errores_vision_pedida(vision: dict[str, Any] | None, vid: str, activo: str, hoy: date,
+                           historial: list[dict[str, Any]]) -> list[str]:
+    """Los mismos frenos del selector, dichos en voz alta en vez de saltar la visión."""
+    if vision is None:
+        return [f"`{vid}` no está en el registro de visiones"]
+    if vision.get("activo") != activo:
+        return [f"la visión `{vid}` es de {vision.get('activo')} y el activo pedido es {activo}"]
+    if not vision_califica(vision, variante_de(vision), hoy, historial):
+        return [f"la visión `{vid}` no califica: revisa fecha (máximo {pl.ANTIGUEDAD_MAX_DIAS} días), "
+                f"campos obligatorios y uso en Avisos ({VENTANA_VISION_DIAS} días)"]
+    return []
 
 
 def variante_de(vision: dict[str, Any]) -> str:
@@ -352,13 +379,15 @@ def _fecha_corta(iso: str) -> str:
     return f"{d.day} {_MESES[d.month - 1]} {d.year}"
 
 
-def fila_medida(lectura: dict[str, Any], payload_datos: dict[str, Any]) -> dict[str, Any]:
+def fila_medida(lectura: dict[str, Any], payload_datos: dict[str, Any] | None) -> dict[str, Any]:
     """Lo que el texto puede citar: los niveles del terminal y los publicados en la alerta.
 
-    La alerta acota sus niveles (`acotar_niveles_intradia`), así que el soporte
-    que ve el cliente puede no ser el `s1` crudo: los dos cuentan como medidos.
+    El director puede fijar a mano los niveles de la alerta (`niveles_fijados`),
+    así que el soporte que ve el cliente puede no ser el `s1` crudo: los dos
+    cuentan como medidos.
     """
-    niveles = {n["rol"]: n["precio"] for n in payload_datos["recorrido"]["niveles"]}
+    niveles = ({n["rol"]: n["precio"] for n in payload_datos["recorrido"]["niveles"]}
+               if payload_datos else {})
     fila: dict[str, Any] = {"nombre": lectura["activo"]["nombre"], "digits": lectura["activo"]["digits"]}
     fila.update({c: lectura["h1"].get(c) for c in pl.CAMPOS_PRECIO})
     fila["soporte_publicado"] = niveles.get("SOPORTE")
@@ -387,7 +416,12 @@ def lamina_portada(activo_nombre: str | None, precio: str, leido: datetime, ahor
 
 
 def lamina_voz(vision: dict[str, Any], variante: str, fila: dict[str, Any], leido: datetime,
-               ahora: datetime) -> dict[str, Any]:
+               ahora: datetime, con_pie: bool = False) -> dict[str, Any]:
+    """La cita. `con_pie` cuando es la única lámina: su pie es el mensaje entero.
+
+    El sello dice "la voz del banco" salvo que la visión declare el suyo: quien
+    habla puede no ser un banco (el 2026-09-29 fue el presidente de la Cámara).
+    """
     firma = f"{vision['quien']} · {vision['institucion']}"
     fuente_fecha = f"{vision.get('fuente') or vision['institucion']} · {_fecha_corta(vision['fecha'])}"
     if variante == "meta":
@@ -406,9 +440,10 @@ def lamina_voz(vision: dict[str, Any], variante: str, fila: dict[str, Any], leid
     return {
         "_plantilla": "vision", "plantilla": "vision",
         "_procedencia": {"vision": vision["id"], "ticker": vision.get("activo")},
-        "sello": "AVISOS · LA VOZ DEL BANCO", "fecha_hora": fecha_hora(ahora),
+        "sello": vision.get("sello") or SELLO_VOZ, "fecha_hora": fecha_hora(ahora),
         "titular": MARCA, "parrafo": MARCA,
         "bloque_cita": bloque_cita, "bloque_meta": bloque_meta, "posicion": "",
+        **({"pie": MARCA} if con_pie else {}),
     }
 
 
@@ -591,7 +626,7 @@ _VERBO_INFINITIVO = {"sube": "subir", "baja": "bajar"}
 
 
 def frase_reaccion(efecto: dict[str, Any] | None) -> str | None:
-    """Qué hacen el dólar, el USD/CLP y el oro si el dato sale sobre lo esperado.
+    """Qué hacen el dólar, el USD/CLP, el oro y el petróleo si el dato sale sobre lo esperado.
 
     Sale del glosario (`si_sale_sobre_consenso`), nunca de la redacción: si el
     dato no declara su efecto, la lectura queda por escribir y el render frena.
@@ -599,14 +634,16 @@ def frase_reaccion(efecto: dict[str, Any] | None) -> str | None:
     if not efecto:
         return None
     partes: dict[str, list[str]] = {"subir": [], "bajar": []}
-    for clave, nombre in (("dolar", "el dólar"), ("usdclp", "el USD/CLP"), ("oro", "el oro")):
+    for clave, nombre in (("dolar", "el dólar"), ("usdclp", "el USD/CLP"), ("oro", "el oro"),
+                          ("petroleo", "el petróleo")):
         verbo = _VERBO_INFINITIVO.get(str(efecto.get(clave, "")))
         if verbo:
             partes[verbo].append(nombre)
     trozos = [f"{' y '.join(nombres)} a {verbo}" for verbo, nombres in partes.items() if nombres]
     if not trozos:
         return None
-    return f"Sobre lo esperado tienden {', y '.join(trozos)}. Bajo lo esperado, al revés."
+    verbo = "tienden" if sum(map(len, partes.values())) > 1 else "tiende"
+    return f"Sobre lo esperado {verbo} {', y '.join(trozos)}. Bajo lo esperado, al revés."
 
 
 def _efecto_del_glosario(ev: dict[str, Any]) -> dict[str, Any] | None:
@@ -618,8 +655,13 @@ def _efecto_del_glosario(ev: dict[str, Any]) -> dict[str, Any] | None:
 def lamina_lectura_dia(eventos: list[dict[str, Any]], ahora: datetime,
                        efecto_de: Callable[[dict[str, Any]], dict[str, Any] | None] | None = None) -> dict[str, Any]:
     efecto_de = efecto_de or _efecto_del_glosario
+    # Un indicador a la misma hora es un solo punto: el PCE mensual y el anual
+    # (2026-09-30) salían como dos puntos idénticos y dejaban fuera al PIB.
+    unicos: dict[tuple[str, str], dict[str, Any]] = {}
+    for ev in eventos:
+        unicos.setdefault((ev["hora"], ev.get("nombre_es") or ev.get("evento", "")), ev)
     puntos = []
-    for ev in eventos[:3]:
+    for ev in list(unicos.values())[:3]:
         reaccion = frase_reaccion(efecto_de(ev))
         explicacion = str(ev.get("explicacion") or "").strip()
         texto = f"{explicacion} {reaccion}".strip() if reaccion else MARCA
@@ -803,11 +845,15 @@ def armar_tanda(momento: str, formato: str, ahora: datetime, lectura: dict[str, 
                                             ahora, ahora, agenda=False, ticker=lectura["ticker"])
         if vision is not None:
             variante = variante_de(vision)
-            laminas["voz"] = lamina_voz(vision, variante, fila, ahora, ahora)
+            laminas["voz"] = lamina_voz(vision, variante, fila, ahora, ahora,
+                                        con_pie=formato in FORMATOS_PIE_LIBRE)
         laminas["datos"] = datos
+        # La lectura sigue midiendo (la cita con meta necesita el precio y el
+        # despacho, la hora de lectura), pero solo salen las láminas del formato.
+        laminas = {c: laminas[c] for c in SECUENCIAS[formato] if c in laminas}
     if formato == "agenda_dia":
         laminas["lectura"] = lamina_lectura_dia(agenda, ahora, extra.get("efecto_de"))
-    elif formato != "resultado":
+    elif "lectura" in SECUENCIAS[formato]:
         laminas["lectura"] = lamina_lectura(ahora)
     meta = {
         "version": 1, "momento": momento, "formato": formato, "fecha": ahora.date().isoformat(),
@@ -907,19 +953,28 @@ def _resetear_textos(payload: dict[str, Any]) -> None:
                     item[campo] = MARCA
 
 
+# Los cierres de alerta sin el del analista (director, 2026-09-29): en la
+# portada de Avisos se lee como plantilla de soporte, "ordinario".
+CIERRES_AVISOS: tuple[str, ...] = tuple(c for c in pc.CIERRES_ALERTA if "analista" not in c)
+
+
 def mensaje_de(payload: dict[str, Any], meta: dict[str, Any]) -> str:
     """El texto de la lámina. La portada lleva el pie completo; las demás, su posición.
 
-    El cierre y el aviso los agrega el script, estables por tanda: el despacho
-    vuelve a rendir y un texto distinto al aprobado no puede salir.
+    El cierre lo agrega el script, estable por tanda: el despacho vuelve a rendir
+    y un texto distinto al aprobado no puede salir. El aviso legal NO va en el pie
+    de la portada: la última lámina ya lo lleva impreso, y repetirlo en el mismo
+    carrusel es ruido (director, 2026-10-02).
     """
     if meta.get("formato") == "resultado":
         return mensaje_resultado(payload, meta)
+    if meta.get("formato") in FORMATOS_PIE_LIBRE:
+        return str(payload["pie"]).strip()
     if payload.get("_clave") != "portada":
         return payload["posicion"]
-    cierres = {"agenda": CIERRES_AGENDA, "agenda_dia": CIERRES_DIA}.get(meta.get("formato"), pc.CIERRES_ALERTA)
+    cierres = {"agenda": CIERRES_AGENDA, "agenda_dia": CIERRES_DIA}.get(meta.get("formato"), CIERRES_AVISOS)
     cierre = pc.elegir_variante(cierres, meta.get("activo") or "agenda", meta["momento"], meta["fecha"])
-    return "\n\n".join([str(payload["pie"]).strip(), cierre, AVISO_LEGAL, payload["posicion"]])
+    return "\n\n".join([str(payload["pie"]).strip(), cierre, payload["posicion"]])
 
 
 def validar_tanda(dir_canal: Path, ahora: datetime, visiones: dict[str, dict[str, Any]],
@@ -932,6 +987,8 @@ def validar_tanda(dir_canal: Path, ahora: datetime, visiones: dict[str, dict[str
 
     if len(laminas) > MAX_LAMINAS:
         errores.append(f"{len(laminas)} láminas: máximo {MAX_LAMINAS}")
+    if meta.get("_falta_vision") and "voz" in SECUENCIAS[meta["formato"]] and len(SECUENCIAS[meta["formato"]]) == 1:
+        errores.append("falta la voz: el balance es solo la cita. Corre --completar-vision.")
 
     usadas: list[dict[str, Any]] = []
     vid = meta.get("vision")
@@ -951,7 +1008,9 @@ def validar_tanda(dir_canal: Path, ahora: datetime, visiones: dict[str, dict[str
     leido = datetime.fromisoformat(meta["leido_en"])
     errores.extend(pl.validar_frescura(leido, ahora, FRESCURA_MAX_HORAS, remedio="Corre --refrescar."))
 
-    if meta["formato"] not in FORMATOS_SIN_ACTIVO and meta.get("direccion"):
+    # El balance no cita niveles: su pie no tiene que nombrar la dirección.
+    if (meta["formato"] not in FORMATOS_SIN_ACTIVO | FORMATOS_PIE_LIBRE
+            and meta.get("direccion")):
         pie = next((str(p.get("pie", "")) for _, p in laminas if p.get("_clave") == "portada"), "")
         if MARCA not in pie and meta["direccion"].lower() not in pie.lower():
             errores.append(
@@ -1021,10 +1080,52 @@ def tokens_de(payload: dict[str, Any]) -> dict[str, Any]:
     return tokens
 
 
+# El hueco del gráfico en `alerta.html` mide ~810x870. A ese ancho el encabezado
+# del motor se corta; se rinde a 1100 con la misma proporción y la plantilla lo
+# escala con object-fit: contain (medido el 2026-09-29: 810 corta, 1400 queda chico).
+GRAFICO_TV_ANCHO, GRAFICO_TV_ALTO = 1100, 1180
+
+
+def grafico_tradingview(payload: dict[str, Any], destino: Path) -> Path:
+    """El gráfico de velas del motor TradingView, con los niveles que cita la lámina."""
+    from tradingview_grafico import generar_grafico_tv
+
+    crudos = payload["_procedencia"]["crudos"]
+    return generar_grafico_tv(
+        ticker=payload["_procedencia"]["ticker"],
+        nombre=payload.get("rotulo_activo", payload.get("activo", "")),
+        destino=destino,
+        timeframe=pc.TIMEFRAME_GRAFICO,
+        n_velas=60,
+        soporte=crudos.get("soporte"),
+        resistencia=crudos.get("resistencia"),
+        ancho=GRAFICO_TV_ANCHO,
+        alto=GRAFICO_TV_ALTO,
+    )
+
+
+def _con_grafico_tv(payload: dict[str, Any], dir_canal: Path, stem: str,
+                    grafico: Callable[[dict[str, Any], Path], Path]) -> dict[str, Any]:
+    """La lámina de datos con el PNG de TradingView embebido, o la geometría SVG si falla.
+
+    Es el estándar de gráficos de alerta del proyecto; el SVG queda solo como
+    respaldo cuando no hay MT5 o Chromium, y el respaldo se dice en voz alta.
+    """
+    try:
+        png = grafico(payload, dir_canal / f"{stem}_grafico.png")
+    except Exception as exc:  # noqa: BLE001
+        print(f"AVISO: el gráfico TradingView de {stem} no se generó ({exc}); sale el SVG de respaldo.",
+              file=sys.stderr)
+        return payload
+    return {**payload, "chart_png": str(png),
+            "rotulo_grafico": f"{payload['_procedencia']['ticker'].upper()} · VELAS {pc.TIMEFRAME_GRAFICO} · ÚLTIMAS 60"}
+
+
 def rendir_tanda(dir_canal: Path, ahora: datetime | None = None,
                  visiones: dict[str, dict[str, Any]] | None = None,
                  render: Callable[..., Path] | None = None,
-                 activos_extra: dict[str, dict[str, Any]] | None = None) -> list[Path]:
+                 activos_extra: dict[str, dict[str, Any]] | None = None,
+                 grafico: Callable[[dict[str, Any], Path], Path] | None = None) -> list[Path]:
     ahora = ahora or datetime.now(SANTIAGO)
     visiones = visiones if visiones is not None else pl.cargar_visiones()
     errores = validar_tanda(dir_canal, ahora, visiones, activos_extra=activos_extra)
@@ -1039,6 +1140,8 @@ def rendir_tanda(dir_canal: Path, ahora: datetime | None = None,
     salidas: list[Path] = []
     for stem, payload in laminas:
         png = dir_canal / f"{stem}.png"
+        if payload["_plantilla"] == "avisos_datos":
+            payload = _con_grafico_tv(payload, dir_canal, stem, grafico or grafico_tradingview)
         render(tokens_de(payload), DIR_PLANTILLAS / PLANTILLAS[payload["_plantilla"]], png, formato="horizontal")
         (dir_canal / f"{stem}_mensaje.txt").write_text(mensaje_de(payload, meta), encoding="utf-8")
         salidas.append(png)
@@ -1138,8 +1241,12 @@ def preparar(momento: str, ahora: datetime | None = None, *,
              lector_movimiento: Callable[[str, datetime, datetime], dict[str, Any]] | None = None,
              efecto_de: Callable[[dict[str, Any]], dict[str, Any] | None] | None = None,
              visiones: dict[str, dict[str, Any]] | None = None,
-             historial_ruta: Path | None = None, dir_base: Path | None = None) -> Path | None:
+             historial_ruta: Path | None = None, dir_base: Path | None = None,
+             activo_pedido: str | None = None, vision_pedida: str | None = None) -> Path | None:
     """La tanda del momento, o `None` si hoy no es día hábil.
+
+    `activo_pedido` y `vision_pedida` fijan a mano el activo y la voz de un
+    carrusel con activo (cita o balance), en vez de dejarlos al selector.
 
     Una segunda corrida del mismo momento el mismo día devuelve la tanda que ya
     existe sin escribir nada: volver a elegir quemaría otra visión. El resultado
@@ -1202,7 +1309,15 @@ def preparar(momento: str, ahora: datetime | None = None, *,
             raise LecturaFallidaError("; ".join(avisos))
         activo = None
     else:
-        if formato == "balance":
+        if activo_pedido:
+            # El director elige el activo y la voz: pasa el día en que no hubo
+            # cita en la mañana y el respaldo del balance saldría sin voz.
+            activo, vid = activo_pedido, vision_pedida
+            if vid:
+                errores = _errores_vision_pedida(visiones.get(vid), vid, activo, hoy, historial)
+                if errores:
+                    raise VisionPedidaError(errores)
+        elif formato == "balance":
             activo, vid = activo_del_balance(historial, hoy)
             gastar_vision = False
             if activo is None:
@@ -1287,10 +1402,11 @@ def _guardar_refresco(dir_canal: Path, meta: dict[str, Any], nuevas: dict[str, d
                       lectura: dict[str, Any], ahora: datetime, reescribir: bool = False) -> None:
     for stem, payload in nuevas.items():
         (dir_canal / f"{stem}.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    datos = next(p for p in nuevas.values() if p["_plantilla"] == "avisos_datos")
+    datos = next((p for p in nuevas.values() if p["_plantilla"] == "avisos_datos"), None)
     meta["activos"] = {lectura["ticker"]: fila_medida(lectura, datos)}
     meta["leido_en"] = ahora.isoformat(timespec="minutes")
-    meta["direccion"] = datos.get("sesgo", meta.get("direccion"))
+    if datos is not None:
+        meta["direccion"] = datos.get("sesgo", meta.get("direccion"))
     if reescribir:
         # Los textos vuelven a escribirse contra esta lectura: la de
         # preparación, la que el despacho acepta como citable, pasa a ser esta.
@@ -1400,7 +1516,8 @@ def completar_vision(dir_canal: Path, vid: str, ahora: datetime | None = None,
     laminas = {p["_clave"]: p for _, p in leer_laminas(dir_canal)}
     fila = meta["activos"][meta["activo"]]
     leido = datetime.fromisoformat(meta["leido_en"])
-    laminas["voz"] = lamina_voz(vision, variante, fila, leido, ahora)
+    laminas["voz"] = lamina_voz(vision, variante, fila, leido, ahora,
+                                con_pie=meta["formato"] in FORMATOS_PIE_LIBRE)
     ordenadas = {c: laminas[c] for c in SECUENCIAS[meta["formato"]] if c in laminas}
     escribir_laminas(dir_canal, meta["formato"], ordenadas)
     meta.update(vision=vid, vision_variante=variante, _falta_vision=False)
@@ -1436,6 +1553,8 @@ def main(argv: list[str] | None = None) -> int:
     modo.add_argument("--completar-vision", nargs=2, metavar=("DIR", "ID"), help="arma la voz con una visión nueva")
     parser.add_argument("--momento", choices=sorted(MOMENTOS))
     parser.add_argument("--reescribir", action="store_true", help="con --refrescar: acepta la divergencia y vacía los textos")
+    parser.add_argument("--activo", help="con --preparar: el activo del carrusel (cita o balance), elegido por el director")
+    parser.add_argument("--vision", help="con --preparar y --activo: el id de la visión que da la voz")
     args = parser.parse_args(argv)
 
     if args.preparar:
@@ -1448,8 +1567,14 @@ def main(argv: list[str] | None = None) -> int:
         # cuál de las dos pasó (issue de la revisión: dos `--preparar` del
         # mismo momento el mismo día).
         ya_existia = es_dia_habil(ahora.date()) and _tanda_existente(pc.DIR_TRABAJO, ahora.date(), args.momento) is not None
+        if args.vision and not args.activo:
+            print("ERROR: --vision necesita --activo", file=sys.stderr)
+            return 2
         try:
-            ruta = preparar(args.momento, ahora)
+            ruta = preparar(args.momento, ahora, activo_pedido=args.activo, vision_pedida=args.vision)
+        except VisionPedidaError as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 2
         except LecturaFallidaError as exc:
             print(f"FALLA DE DATOS: {exc}. El momento queda pendiente.", file=sys.stderr)
             return 1

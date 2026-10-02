@@ -1297,3 +1297,75 @@ def test_un_solo_formateador_de_precios_en_el_carrusel():
     """Tres copias de la misma formula divergen; es el defecto recurrente del repo."""
     fuente = Path(pc.__file__).read_text(encoding="utf-8")
     assert fuente.count('.replace("@", ".")') == 1
+
+
+# ---------------------------------------------------------------- niveles del gráfico
+def test_el_nivel_publicado_se_lee_en_notacion_chilena():
+    assert pc._nivel_publicado("4.143,09", 4165.48) == 4143.09
+    assert pc._nivel_publicado("970,25", 968.0) == 970.25
+    assert pc._nivel_publicado("14341", None) == 14341.0
+
+
+def test_sin_nivel_publicado_cae_al_respaldo():
+    assert pc._nivel_publicado("", 968.0) == 968.0
+    assert pc._nivel_publicado(None, None) is None
+
+
+def test_las_dos_rutas_de_render_dibujan_el_nivel_publicado():
+    """El gráfico dibuja lo que lee el cliente, no los crudos del motor.
+
+    El 2026-10-02 `rendir` pasaba `crudos` al gráfico (968,00/988,94) mientras
+    el texto publicaba los niveles acotados (970,25/991,35).
+    """
+    import inspect
+    for fn in (pc.rendir, pc._refrescar_y_rendir):
+        fuente = inspect.getsource(fn)
+        assert "_nivel_publicado(" in fuente, fn.__name__
+
+
+def test_el_refresco_respeta_los_niveles_que_fijo_el_director():
+    """El 977 del director no puede volverse el s1 del motor al despachar (2026-10-02)."""
+    from pipeline_carrusel import refrescar_payload
+
+    payload = _payload_preparado()
+    payload["_procedencia"]["niveles_fijados"] = {"soporte": 930.00, "resistencia": 940.00}
+
+    nuevo, motivo = refrescar_payload(
+        payload,
+        ahora=datetime(2026, 9, 2, 11, 30),
+        h1={"price": 937.80, "s1": 926.90, "r1": 938.27, "atr_14": 2.70,
+            "ema_50": 930.00},
+        digits=2,
+        cierres=cierres_para(937.80, n=3, paso=0.5),
+    )
+
+    assert nuevo["soporte"] == "930,00" and nuevo["resistencia"] == "940,00"
+    assert nuevo["_procedencia"]["crudos"]["soporte"] == 930.00
+    assert nuevo["precio_actual"] == "937,80"
+
+
+def test_un_nivel_lejano_se_publica_tal_cual_y_no_se_reemplaza_por_atr():
+    """El USD/CLP del 2026-10-02: soporte a 12,68 del precio con ATR diario de 10,5.
+
+    El acotado de entonces cambió los DOS lados por precio ± ATR (970,25/991,35),
+    también la resistencia, que era el máximo real del impulso (988,94).
+    """
+    seleccion = {
+        "ticker": "USDCLP", "direccion": "ALCISTA", "clase": "forex",
+        "precio": 980.68, "soporte": 968.00, "resistencia": 988.94,
+        "impulso_adc_atr": 4.02, "atr_h1": 2.68, "atr_d1": 10.5,
+        "score": 71, "factores": {},
+    }
+    activo = {
+        "nombre": "Dólar / Peso Chileno", "digits": 2, "imagen": "dolar.jpg",
+        "categoria": "forex", "unidad": "CLP", "volatilidad": "baja",
+        "nota_volatilidad": "1H da la lectura del día",
+    }
+    p = pc.construir_payload(
+        seleccion, activo, datetime(2026, 10, 2, 10, 1),
+        cierres_para(980.68, n=3, paso=0.5),
+    )
+    assert (p["soporte"], p["resistencia"]) == ("968,00", "988,94")
+    niveles = {n["rol"]: n["precio"] for n in p["recorrido"]["niveles"]}
+    assert niveles == {"SOPORTE": 968.00, "RESISTENCIA": 988.94}
+    assert not hasattr(pc, "acotar_niveles_intradia")

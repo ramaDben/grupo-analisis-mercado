@@ -46,7 +46,7 @@ def serie_h1(inicio_utc: datetime, horas: int, *, rotulo: str = "santiago",
 
 def escribir_serie(directorio: Path, simbolo: str, marco: str, df: pd.DataFrame, **meta) -> None:
     datos = {"symbol": simbolo, "timeframe": marco, "source": "MT5", "broker": "MT5",
-             "cuenta": 51492, "timezone": "UTC", "as_of_utc": "2026-09-28T08:20:00+00:00"}
+             "cuenta": 51257, "timezone": "UTC", "as_of_utc": "2026-09-28T08:20:00+00:00"}
     datos.update(meta)
     filas = df.assign(time=df["time"].dt.strftime("%Y-%m-%dT%H:%M:%S")).to_dict("records")
     datos["rows"] = filas
@@ -60,7 +60,7 @@ def test_cargar_serie_ordena_y_tipa(tmp_path):
     cargada, meta = md.cargar_serie("XAUUSD", "H1", tmp_path)
     assert cargada["time"].is_monotonic_increasing
     assert list(cargada.index) == list(range(len(cargada)))
-    assert meta["cuenta"] == 51492 and "rows" not in meta
+    assert meta["cuenta"] == 51257 and "rows" not in meta
 
 
 @pytest.mark.parametrize("cambio", [{"source": "YFINANCE"}, {"broker": "YFINANCE"},

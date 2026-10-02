@@ -71,6 +71,7 @@ PLANTILLA = RAIZ / "templates" / "stories" / "alerta.html"
 VELAS_GRAFICO = 60
 TIMEFRAME_GRAFICO = "H1"
 
+
 # Los campos que este script NO puede llenar. Se escriben vacíos y `--rendir` se
 # niega a trabajar hasta que tengan texto.
 CAMPOS_EDITORIALES = ("titular", "parrafo")
@@ -196,26 +197,6 @@ def incoherencia_del_payload(
             f"resistencia ({resistencia}): los niveles no corresponden a este precio"
         )
 
-def acotar_niveles_intradia(
-    spot: float,
-    soporte: float,
-    resistencia: float,
-    atr_d1: float | None,
-    digits: int,
-) -> tuple[float, float]:
-    """Acota soporte y resistencia al rango intradía del ATR D1 si la amplitud excede 1.5 * ATR_D1."""
-    if not atr_d1 or atr_d1 <= 0:
-        return soporte, resistencia
-
-    rango_max = 1.5 * atr_d1
-    if (resistencia - soporte) > rango_max or (spot - soporte) > atr_d1 or (resistencia - spot) > atr_d1:
-        sop_acotado = round(spot - atr_d1, digits)
-        res_acotada = round(spot + atr_d1, digits)
-        return sop_acotado, res_acotada
-
-    return soporte, resistencia
-
-
 def formatear_precio(valor: float, digits: int) -> str:
     """Precio en notacion chilena con los decimales de `digits`.
 
@@ -248,9 +229,12 @@ def construir_payload(
     spot_crudo = float(seleccion["precio"])
     sop_crudo = float(seleccion["soporte"])
     res_crudo = float(seleccion["resistencia"])
-    atr_d1 = seleccion.get("atr_d1")
-
-    sop_final, res_final = acotar_niveles_intradia(spot_crudo, sop_crudo, res_crudo, atr_d1, digits)
+    # Se publican los niveles del motor, también cuando quedan lejos del precio.
+    # Hasta el 2026-10-02 `acotar_niveles_intradia` los cambiaba por precio ± ATR
+    # diario: distancias con nombre de soporte, que reemplazaban los dos lados
+    # aunque solo uno estuviera lejos y que el refresco del despacho volvía a
+    # pisar. Si un nivel queda lejos, lo dice el párrafo; si el director quiere
+    # otro, lo fija en `_procedencia.niveles_fijados`.
 
     sesgo_pieza = direccion_publicada(seleccion["direccion"])
 
@@ -271,8 +255,8 @@ def construir_payload(
         "tag_riesgo": sesgo_pieza.upper(),
         # Datos del motor
         "precio_actual": fmt(spot_crudo),
-        "soporte": fmt(sop_final),
-        "resistencia": fmt(res_final),
+        "soporte": fmt(sop_crudo),
+        "resistencia": fmt(res_crudo),
         "vol_pct": f"{fmt(seleccion['impulso_adc_atr'])} {activo_catalogo['unidad']}",
         # Por que ESTA temporalidad para ESTE activo. Sin default a proposito, con
         # el mismo criterio que `unidad`: la linea es obligatoria en el mensaje, y
@@ -302,10 +286,10 @@ def construir_payload(
                 "rol": "AHORA",
             }],
             "niveles": [
-                {"precio": res_final, "clase": "resistencia",
-                 "etiqueta": fmt(res_final), "rol": "RESISTENCIA"},
-                {"precio": sop_final, "clase": "soporte",
-                 "etiqueta": fmt(sop_final), "rol": "SOPORTE"},
+                {"precio": res_crudo, "clase": "resistencia",
+                 "etiqueta": fmt(res_crudo), "rol": "RESISTENCIA"},
+                {"precio": sop_crudo, "clase": "soporte",
+                 "etiqueta": fmt(sop_crudo), "rol": "SOPORTE"},
             ],
         },
         # Trazabilidad: por qué este activo y no otro. No se rinde en la pieza,
@@ -377,6 +361,19 @@ def _indice_alias() -> dict[str, str]:
         for alias in info.get("alias", []):
             indice[str(alias).strip().lower()] = slug
     return indice
+
+
+def canal_cubierto(canal: str) -> bool:
+    """Si el canal recibe tandas (`cubierto` en `config/whatsapp_grupos.json`).
+
+    Por omisión sí: solo un `false` explícito lo apaga, así que un canal nuevo
+    no queda fuera sin que nadie lo decida (director, 2026-09-29).
+    """
+    try:
+        datos = json.loads(CONFIG_GRUPOS_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return True
+    return (datos.get("grupos") or {}).get(canal, {}).get("cubierto", True) is not False
 
 
 def resolver_grupo_solicitado(pedido: str) -> str:
@@ -1099,6 +1096,13 @@ def refrescar_payload(
     precio = float(h1["price"])
     soporte = float(h1["s1"])
     resistencia = float(h1["r1"])
+    # Niveles que fijó el director a mano (`_procedencia.niveles_fijados`): el
+    # refresco actualiza precio, volatilidad y chip, pero no los reemplaza por los
+    # del motor. Sin esto, el 977 que el director dio para el USD/CLP el
+    # 2026-10-02 habría salido como el s1 del analizador en el envío real.
+    fijados = nuevo.get("_procedencia", {}).get("niveles_fijados") or {}
+    soporte = float(fijados.get("soporte", soporte))
+    resistencia = float(fijados.get("resistencia", resistencia))
 
     motivo = divergencia_editorial(
         nuevo.get("_procedencia", {}).get("crudos", {}), precio
@@ -1232,6 +1236,19 @@ def exigir_texto_editorial(payloads: list[tuple[str, dict[str, Any]]]) -> None:
         pass
 
 
+def _nivel_publicado(texto: Any, respaldo: float | None) -> float | None:
+    """El nivel que lee el cliente ("4.143,09" o "14341") como número, o el respaldo."""
+    if texto:
+        s = str(texto).strip()
+        if "," in s:
+            s = s.replace(".", "").replace(",", ".")
+        try:
+            return float(s)
+        except ValueError:
+            pass
+    return respaldo
+
+
 def rendir(directorio: Path) -> dict[str, Any]:
     """Valida lo editorial, produce las piezas en horizontal y actualiza los mensajes modulares dentro de cada grupo."""
     from story_grafico import enriquecer
@@ -1262,25 +1279,13 @@ def rendir(directorio: Path) -> dict[str, Any]:
 
         ticker = procedencia.get("ticker", payload.get("activo_slug"))
         nombre = payload.get("rotulo_activo", payload.get("activo", ticker))
-        soporte_val = procedencia.get("crudos", {}).get("soporte")
-        if soporte_val is None and "soporte" in payload and payload["soporte"]:
-            try:
-                s_sop = str(payload["soporte"]).strip()
-                if "," in s_sop:
-                    s_sop = s_sop.replace(".", "").replace(",", ".")
-                soporte_val = float(s_sop)
-            except (ValueError, TypeError):
-                soporte_val = None
-
-        resistencia_val = procedencia.get("crudos", {}).get("resistencia")
-        if resistencia_val is None and "resistencia" in payload and payload["resistencia"]:
-            try:
-                s_res = str(payload["resistencia"]).strip()
-                if "," in s_res:
-                    s_res = s_res.replace(".", "").replace(",", ".")
-                resistencia_val = float(s_res)
-            except (ValueError, TypeError):
-                resistencia_val = None
+        # El gráfico dibuja los niveles PUBLICADOS (los del texto, que el director
+        # puede fijar a mano), no los crudos del motor: el 2026-10-02 el
+        # USD/CLP salió con 968,00/988,94 en la imagen y 970,25/991,35 en el
+        # mensaje. Los crudos quedan solo como respaldo si el payload no trae nivel.
+        crudos = procedencia.get("crudos", {})
+        soporte_val = _nivel_publicado(payload.get("soporte"), crudos.get("soporte"))
+        resistencia_val = _nivel_publicado(payload.get("resistencia"), crudos.get("resistencia"))
 
         # Alerta de mercado: estándar TradingView 300 DPI de alta fidelidad
         formato = "horizontal"
@@ -1426,15 +1431,8 @@ def _refrescar_y_rendir(dir_grupo: Path) -> list[str]:
 
         archivo.write_text(json.dumps(nuevo, ensure_ascii=False, indent=2), encoding="utf-8")
 
-        soporte_val = None
-        resistencia_val = None
-        try:
-            if "soporte" in nuevo and nuevo["soporte"]:
-                soporte_val = float(str(nuevo["soporte"]).replace(".", "").replace(",", "."))
-            if "resistencia" in nuevo and nuevo["resistencia"]:
-                resistencia_val = float(str(nuevo["resistencia"]).replace(".", "").replace(",", "."))
-        except (ValueError, TypeError):
-            pass
+        soporte_val = _nivel_publicado(nuevo.get("soporte"), None)
+        resistencia_val = _nivel_publicado(nuevo.get("resistencia"), None)
 
         destino_local_png = dir_grupo / f"{archivo.stem}.png"
         try:
@@ -1670,7 +1668,7 @@ def despachar(
                 f"    {len(piezas) - len(pendientes)} pieza(s) ya despachada(s): "
                 "se retoma en la que falta", flush=True
             )
-        if es_avisos and not dry_run:
+        if es_avisos and not dry_run and not pruebas:
             restante = sender.cupo_restante()
             if len(pendientes) > restante:
                 print(

@@ -84,7 +84,9 @@
       "carpeta_docs": "docs/grupos_whatsapp/04_indices_bursatiles",
       "descripcion": "Apertura de Wall Street, rotación sectorial y sentimiento de riesgo.",
       "nombre_aspiracional": "GI · Índices Bursátiles",
-      "enlace_invitacion": "https://chat.whatsapp.com/Edy2XqE045yFwS1poF7aEH"
+      "enlace_invitacion": "https://chat.whatsapp.com/Edy2XqE045yFwS1poF7aEH",
+      "cubierto": false,
+      "_nota_cubierto": "Decision del director, 2026-09-29: se cubren solo Avisos, Forex, Commodities (metales) y Acciones. Un canal con cubierto=false no recibe tandas del carrusel ni del reloj: el escaner saca sus activos del universo."
     },
     "05_acciones_etfs": {
       "alias": [
@@ -127,7 +129,9 @@
       "carpeta_docs": "docs/grupos_whatsapp/06_criptoactivos",
       "descripcion": "Análisis cuantitativo sobrio en 4H/1D y flujos institucionales en ETFs spot.",
       "nombre_aspiracional": "GI · Criptoactivos & Digital Assets",
-      "enlace_invitacion": "https://chat.whatsapp.com/Edy2XqE045yFwS1poF7aEH"
+      "enlace_invitacion": "https://chat.whatsapp.com/Edy2XqE045yFwS1poF7aEH",
+      "cubierto": false,
+      "_nota_cubierto": "Decision del director, 2026-09-29: se cubren solo Avisos, Forex, Commodities (metales) y Acciones. Un canal con cubierto=false no recibe tandas del carrusel ni del reloj: el escaner saca sus activos del universo."
     },
     "07_oportunidades_cuantitativas": {
       "alias": [
@@ -146,7 +150,9 @@
       "nombre_oficial": "Grupo Inteligencia | Señales De Trading",
       "carpeta_docs": "docs/grupos_whatsapp/07_oportunidades_cuantitativas",
       "descripcion": "Señales tácticas selectivas con TP y SL calculados en CLP.",
-      "nombre_aspiracional": "GI · Oportunidades & Trading Cuantitativo"
+      "nombre_aspiracional": "GI · Oportunidades & Trading Cuantitativo",
+      "cubierto": false,
+      "_nota_cubierto": "Decision del director, 2026-09-29: se cubren solo Avisos, Forex, Commodities (metales) y Acciones. Un canal con cubierto=false no recibe tandas del carrusel ni del reloj: el escaner saca sus activos del universo."
     }
   },
   "seguridad": {

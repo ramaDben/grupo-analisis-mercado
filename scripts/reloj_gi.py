@@ -182,7 +182,7 @@ def canales_del_momento(m: dict[str, Any]) -> list[str]:
     escáner y se pregunta por el mismo mapeo que usan las piezas. Una lista
     aparte sería otro contrato por nombre de los que ya costaron caro.
     """
-    from pipeline_carrusel import obtener_grupo_whatsapp, resolver_grupo_solicitado
+    from pipeline_carrusel import canal_cubierto, obtener_grupo_whatsapp, resolver_grupo_solicitado
     from screener_gi import cargar_universo
 
     if m.get("pieza"):
@@ -195,7 +195,9 @@ def canales_del_momento(m: dict[str, Any]) -> list[str]:
         for a in cargar_universo(solo_renderizables=False)
         if a["clase"] in clases
     }
-    return sorted(canales)
+    # Un canal que el director dejó de cubrir no recibe tanda: sin esto el
+    # momento de cripto seguiría preparando un carrusel que nadie va a mandar.
+    return sorted(c for c in canales if canal_cubierto(c))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -342,6 +344,10 @@ def ejecutar(
         return {**est, "corridas": sucesos, "nota": "no hay momento vencido"}
 
     m = agenda.momento(est["momento"])
+    if not est["canales"]:
+        # Todos sus canales están apagados: no es una falla que reintentar.
+        anotar_disparo(est["momento"], ahora, ruta=ruta_libro)
+        return {**est, "corridas": sucesos, "nota": "el momento no tiene canales cubiertos"}
     corridas = [hacer(canal, m.get("pieza"), m["slug"]) for canal in est["canales"]]
 
     if any(c["codigo"] == 0 for c in corridas):

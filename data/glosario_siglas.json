@@ -149,7 +149,33 @@
   },
   "ADP": {
     "nombre_es": "Empleo privado ADP",
-    "explicacion": "Adelanto del empleo en EE.UU. (solo sector privado), suele salir antes que las nóminas oficiales."
+    "explicacion": "Adelanto del empleo en EE.UU. (solo sector privado), suele salir antes que las nóminas oficiales.",
+    "titulos_ff": [
+      "ADP Nonfarm Employment Change"
+    ],
+    "pais": "United States",
+    "tier": 2,
+    "canales": [
+      "02_forex_divisas",
+      "03_commodities_materias_primas",
+      "04_indices_bursatiles"
+    ],
+    "cadencia": "mensual",
+    "puede_disparar_momento": false,
+    "fuente": {
+      "tipo": "comercial",
+      "organismo": "ADP Research",
+      "nota": "Encuesta privada de ADP, sin serie oficial gratuita: el número viene de Investing y la pieza declara la fuente."
+    },
+    "si_sale_sobre_consenso": {
+      "orden": "primero",
+      "lectura": "más empleos privados creados: mercado laboral firme",
+      "dolar": "sube",
+      "oro": "baja",
+      "indices": "mixto",
+      "usdclp": "sube",
+      "porque": "un empleo firme aleja los recortes de tasa de la Fed"
+    }
   },
   "PCE": {
     "nombre_es": "Gasto en consumo personal",
@@ -931,5 +957,22 @@
   "NBS Press Conference": {
     "nombre_es": "Conferencia de prensa de la Oficina Nacional de Estadísticas de China (NBS)",
     "explicacion": "El organismo que publica las cifras oficiales de China explica los datos del mes. Ahí suelen darse las señales sobre el rumbo de la economía china."
+  },
+  "CFTC": {
+    "nombre_es": "Posiciones especulativas netas (CFTC)",
+    "explicacion": "Informe semanal del regulador de futuros de EE.UU. que muestra si los grandes inversionistas apuestan más al alza o a la baja en un activo (oro, petróleo, monedas)."
+  },
+  "Factory Orders": {
+    "nombre_es": "Pedidos de fábrica",
+    "explicacion": "Cuántos pedidos nuevos recibieron las fábricas de EE.UU. en el mes; si suben, las empresas esperan vender más y la industria se fortalece."
+  },
+  "Baker Hughes": {
+    "nombre_es": "Conteo de plataformas petroleras (Baker Hughes)",
+    "explicacion": "Cuántos equipos de perforación de petróleo están activos en EE.UU. cada semana; más plataformas anticipan más oferta de crudo, y eso tiende a presionar el precio a la baja.",
+    "titulos_ff": [
+      "Baker Hughes Oil Rig Count",
+      "U.S. Baker Hughes Oil Rig Count",
+      "Baker Hughes Total Rig Count"
+    ]
   }
 }

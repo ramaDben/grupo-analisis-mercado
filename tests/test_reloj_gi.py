@@ -22,6 +22,8 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import pytest
+
 RAIZ = Path(__file__).resolve().parent.parent
 for _p in (RAIZ / "scripts", RAIZ / "src"):
     if str(_p) not in sys.path:
@@ -166,19 +168,46 @@ def test_el_reloj_solo_prepara():
 # ─────────────────────────────────────────────────────────────────────────────
 # De momento a canales, por el mapeo real
 # ─────────────────────────────────────────────────────────────────────────────
-def test_el_momento_de_indices_cubre_indices_y_acciones():
+@pytest.fixture
+def todos_cubiertos(monkeypatch):
+    """El mapeo de activo a canal, sin la decision de que canales se cubren."""
+    import pipeline_carrusel
+
+    monkeypatch.setattr(pipeline_carrusel, "canal_cubierto", lambda canal: True)
+
+
+def test_el_momento_de_indices_cubre_indices_y_acciones(todos_cubiertos):
     canales = reloj.canales_del_momento(ag.momento("apertura_indices"))
     assert set(canales) == {"04_indices_bursatiles", "05_acciones_etfs"}
 
 
-def test_el_momento_de_cripto_cubre_solo_su_canal():
+def test_el_momento_de_cripto_cubre_solo_su_canal(todos_cubiertos):
     assert reloj.canales_del_momento(ag.momento("cripto")) == ["06_criptoactivos"]
 
 
-def test_todo_momento_llega_a_algun_canal():
+def test_todo_momento_llega_a_algun_canal(todos_cubiertos):
     """Un momento sin canal no publicaria nada: seria un disparo al vacio."""
     for m in ag.momentos():
         assert reloj.canales_del_momento(m), f"{m['slug']} no mapea a ningun canal"
+
+
+def test_un_canal_no_cubierto_no_recibe_tanda():
+    """Director, 2026-09-29: solo Avisos, Forex, Commodities y Acciones."""
+    assert reloj.canales_del_momento(ag.momento("apertura_indices")) == ["05_acciones_etfs"]
+    assert reloj.canales_del_momento(ag.momento("cripto")) == []
+
+
+def test_un_momento_sin_canales_cubiertos_se_anota_sin_correr(tmp_path, monkeypatch):
+    """No es una falla: reintentarlo cada latido no produciria nada nunca."""
+    p = tmp_path / "disparos.json"
+    ahora = DESFASE_0.replace(hour=8, minute=32)
+    monkeypatch.setattr(reloj, "canales_del_momento", lambda m: [])
+    corridas = []
+    res = reloj.ejecutar(ahora, correr=lambda *a: corridas.append(a), ruta_libro=p)
+    assert res["momento"] == "premercado_fx"
+    # El resultado por suceso corre en cada latido y no depende del momento.
+    assert [c for c in corridas if c[-1] != "avisos_resultado"] == []
+    assert reloj.ya_disparo("premercado_fx", ahora, reloj.cargar_libro(p))
 
 
 # ─────────────────────────────────────────────────────────────────────────────

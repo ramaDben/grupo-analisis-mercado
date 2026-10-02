@@ -380,16 +380,23 @@ def test_una_vision_que_ya_no_esta_en_el_registro_se_detiene(tmp_path):
     assert any("registro" in e for e in pa.validar_tanda(dir_canal, AHORA, {}))
 
 
-def test_el_pie_de_la_portada_lleva_cierre_y_aviso_y_es_estable(tmp_path):
+def test_el_pie_de_la_portada_lleva_cierre_sin_aviso_y_es_estable(tmp_path):
+    """El aviso legal ya va impreso en la última lámina: el pie no lo repite."""
     dir_canal, _ = _tanda(tmp_path)
     _escribir_todo(dir_canal)
     meta = pa.leer_meta(dir_canal)
     portada = dict(pa.leer_laminas(dir_canal))["1_portada"]
     msg = pa.mensaje_de(portada, meta)
     assert msg.startswith("El dólar mantiene un sesgo alcista")
-    assert pa.AVISO_LEGAL in msg and msg.rstrip().endswith("1/4 · Portada")
+    assert pa.AVISO_LEGAL not in msg and msg.rstrip().endswith("1/4 · Portada")
     assert any(c in msg for c in pa.pc.CIERRES_ALERTA)
     assert pa.mensaje_de(portada, meta) == msg
+
+
+def test_la_portada_de_avisos_no_cierra_con_el_analista():
+    """Director, 2026-09-29: en Avisos ese cierre se lee ordinario."""
+    assert pa.CIERRES_AVISOS and not any("analista" in c for c in pa.CIERRES_AVISOS)
+    assert set(pa.CIERRES_AVISOS) < set(pa.pc.CIERRES_ALERTA)
 
 
 def test_las_demas_laminas_llevan_solo_su_posicion(tmp_path):
@@ -409,10 +416,56 @@ def test_rendir_escribe_png_y_mensaje_por_lamina_y_usa_el_freno_del_despacho(tmp
         salida.write_bytes(b"png")
         return salida
 
-    pngs = pa.rendir_tanda(dir_canal, AHORA, visiones, render=render_falso)
+    def grafico_falso(payload, destino):
+        destino.write_bytes(b"png")
+        return destino
+
+    pngs = pa.rendir_tanda(dir_canal, AHORA, visiones, render=render_falso, grafico=grafico_falso)
     assert [p.name for p in pngs] == ["1_portada.png", "2_voz.png", "3_datos.png", "4_lectura.png"]
     assert all((dir_canal / f"{p.stem}_mensaje.txt").exists() for p in pngs)
     assert llamadas == [4]
+
+
+def _render_que_guarda(vistos):
+    def render(tokens, plantilla, salida, formato="horizontal"):
+        vistos[salida.stem] = (tokens, story_render.build_html(tokens, plantilla))
+        salida.write_bytes(b"png")
+        return salida
+    return render
+
+
+def test_los_datos_llevan_el_grafico_tradingview_embebido(tmp_path):
+    """El estándar de gráficos de alerta es el motor TradingView, no la línea SVG."""
+    dir_canal, visiones = _tanda(tmp_path)
+    _escribir_todo(dir_canal)
+    pedidos, vistos = [], {}
+
+    def grafico_falso(payload, destino):
+        pedidos.append((payload["_procedencia"]["ticker"], destino.name))
+        destino.write_bytes(b"png")
+        return destino
+
+    pa.rendir_tanda(dir_canal, AHORA, visiones, render=_render_que_guarda(vistos), grafico=grafico_falso)
+    assert pedidos == [("USDCLP", "3_datos_grafico.png")]
+    tokens, html = vistos["3_datos"]
+    assert tokens["chart_png"].endswith("3_datos_grafico.png")
+    assert 'id="img-alerta"' in html and "<svg" not in html.split("contenedor-grafico")[-1].split("footer")[0]
+    # El payload en disco no cambia: el gráfico es de presentación.
+    assert dict(pa.leer_laminas(dir_canal))["3_datos"].get("chart_png") is None
+
+
+def test_sin_motor_tradingview_sale_el_svg_de_respaldo_y_lo_avisa(tmp_path, capsys):
+    dir_canal, visiones = _tanda(tmp_path)
+    _escribir_todo(dir_canal)
+    vistos = {}
+
+    def roto(payload, destino):
+        raise RuntimeError("Chromium no está")
+
+    pa.rendir_tanda(dir_canal, AHORA, visiones, render=_render_que_guarda(vistos), grafico=roto)
+    tokens, html = vistos["3_datos"]
+    assert not tokens.get("chart_png") and 'id="img-alerta"' not in html
+    assert "SVG de respaldo" in capsys.readouterr().err
 
 
 def test_rendir_no_llama_al_render_si_los_frenos_fallan(tmp_path, monkeypatch):
@@ -536,6 +589,37 @@ def test_el_balance_retoma_el_activo_y_la_voz_de_la_manana_sin_gastarla(tmp_path
     assert len(visiones_gastadas) == 1
 
 
+def test_el_balance_a_pedido_usa_el_activo_y_la_voz_del_director(tmp_path):
+    """El día sin cita en la mañana el respaldo saldría sin voz: el director la elige."""
+    hist = tmp_path / "hist.json"
+    hist.write_text("[]", encoding="utf-8")
+    tarde = datetime(2026, 9, 29, 15, 30, tzinfo=pa.SANTIAGO)
+    visiones = {"c": vision("c", activo="BTCUSD", fecha="2026-09-28")}
+    ruta = pa.preparar("avisos_tarde", tarde, lector=lambda t, a: lectura_falsa(t, nombre="Bitcoin"),
+                       visiones=visiones, historial_ruta=hist, dir_base=tmp_path / "carrusel",
+                       activo_pedido="BTCUSD", vision_pedida="c")
+    meta = pa.leer_meta(ruta)
+    assert meta["formato"] == "balance" and meta["activo"] == "BTCUSD" and meta["vision"] == "c"
+    assert meta["_falta_vision"] is False
+    # Es una voz nueva, no la de la mañana: se gasta.
+    assert [e["tipo"] for e in json.loads(hist.read_text(encoding="utf-8"))] == ["vision", "avisos"]
+
+
+@pytest.mark.parametrize("visiones, motivo", [
+    ({}, "no está en el registro"),
+    ({"c": vision("c", activo="XAUUSD")}, "es de XAUUSD"),
+    ({"c": vision("c", activo="BTCUSD", fecha="2026-06-01")}, "no califica"),
+])
+def test_una_voz_pedida_que_no_sirve_se_dice_y_no_escribe(tmp_path, visiones, motivo):
+    hist = tmp_path / "hist.json"
+    hist.write_text("[]", encoding="utf-8")
+    with pytest.raises(pa.VisionPedidaError, match=motivo):
+        pa.preparar("avisos_tarde", AHORA, lector=lambda t, a: lectura_falsa(t), visiones=visiones,
+                    historial_ruta=hist, dir_base=tmp_path / "carrusel",
+                    activo_pedido="BTCUSD", vision_pedida="c")
+    assert not (tmp_path / "carrusel").exists()
+
+
 def test_la_agenda_del_lunes_no_lee_el_terminal(tmp_path):
     def no_llamar(t, a):
         raise AssertionError("la agenda no tiene activo")
@@ -651,7 +735,7 @@ def test_el_balance_trae_la_vision_completada_en_la_manana(tmp_path):
     meta = pa.leer_meta(ruta_tarde)
     # La regla de 14 días no la rechaza: es la misma visión del mismo día.
     assert meta["formato"] == "balance" and meta["activo"] == "USDCLP" and meta["vision"] == "n"
-    assert (ruta_tarde / "2_voz.json").exists()
+    assert (ruta_tarde / "1_voz.json").exists()
 
 
 def test_reescribir_renueva_los_activos_de_preparacion(tmp_path):
@@ -748,3 +832,65 @@ def test_el_aviso_de_la_alerta_mide_al_menos_20px():
     css = (pa.DIR_PLANTILLAS / "alerta.html").read_text(encoding="utf-8")
     regla = re.search(r"\.footer-disclaimer\s*\{([^}]*)\}", css).group(1)
     assert int(re.search(r"font-size:\s*(\d+)px", regla).group(1)) >= 20
+
+
+# ---------------------------------------------------------------- balance de una lámina
+
+
+def test_el_balance_es_una_sola_lamina_con_la_voz(tmp_path):
+    """Director, 2026-09-29: cuatro láminas se leían como spam y los niveles
+    ya salen en cada grupo. El balance es la voz y su pie."""
+    dir_canal, _ = _tanda(tmp_path, formato="balance")
+    laminas = dict(pa.leer_laminas(dir_canal))
+    assert list(laminas) == ["1_voz"]
+    voz = laminas["1_voz"]
+    assert voz["posicion"] == "" and voz["pie"] == pa.MARCA
+
+
+def test_el_pie_del_balance_es_el_mensaje_entero(tmp_path):
+    """Sin cierre, sin aviso legal (no cita niveles) y sin pie de posición."""
+    dir_canal, visiones = _tanda(tmp_path, formato="balance")
+    pie = "La reunión terminó sin anuncios concretos: menos reglas le deja espacio a las tecnológicas."
+    _escribir_todo(dir_canal, pie=pie)
+    assert pa.validar_tanda(dir_canal, AHORA, visiones) == []
+    voz = dict(pa.leer_laminas(dir_canal))["1_voz"]
+    assert pa.mensaje_de(voz, pa.leer_meta(dir_canal)) == pie
+
+
+def test_un_balance_sin_voz_no_se_rinde(tmp_path):
+    dir_canal, _ = _tanda(tmp_path, formato="balance", con_vision=False)
+    assert any("falta la voz" in e for e in pa.validar_tanda(dir_canal, AHORA, {}))
+
+
+def test_el_sello_de_la_voz_lo_puede_declarar_la_vision():
+    """Quien habla no siempre es un banco."""
+    v = dict(vision("v"), sello="AVISOS · LA VOZ DEL CONGRESO")
+    fila = pa.fila_medida(lectura_falsa(), None)
+    assert pa.lamina_voz(v, "cita", fila, AHORA, AHORA)["sello"] == "AVISOS · LA VOZ DEL CONGRESO"
+    assert pa.lamina_voz(vision("v"), "cita", fila, AHORA, AHORA)["sello"] == pa.SELLO_VOZ
+
+
+def test_la_cita_de_la_manana_conserva_sus_cuatro_laminas(tmp_path):
+    dir_canal, _ = _tanda(tmp_path, formato="cita")
+    assert [s for s, _ in pa.leer_laminas(dir_canal)] == ["1_portada", "2_voz", "3_datos", "4_lectura"]
+
+
+def test_un_indicador_a_la_misma_hora_es_un_solo_punto_de_la_lectura():
+    """2026-09-30: el PCE mensual y el anual a las 09:30 salían como dos puntos
+    idénticos y dejaban fuera al PIB de la misma hora."""
+    def ev(hora, evento, nombre_es):
+        return {"hora": hora, "evento": evento, "nombre_es": nombre_es, "explicacion": "Algo."}
+    eventos = [ev("09:15", "ADP", "Empleo privado ADP"),
+               ev("09:30", "Core PCE (MoM)", "Gasto en consumo personal"),
+               ev("09:30", "Core PCE (YoY)", "Gasto en consumo personal"),
+               ev("09:30", "GDP", "Producto interno bruto (PIB)")]
+    lamina = pa.lamina_lectura_dia(eventos, AHORA, efecto_de=lambda e: {"dolar": "sube"})
+    titulos = [p["titulo_punto"] for p in lamina["puntos"]]
+    assert titulos == ["09:15 · Empleo privado ADP", "09:30 · Gasto en consumo personal",
+                       "09:30 · Producto interno bruto (PIB)"]
+
+
+def test_el_inventario_de_petroleo_tiene_frase_de_reaccion():
+    """Su efecto es solo sobre el petróleo: sin nombrarlo, el punto quedaba sin escribir."""
+    frase = pa.frase_reaccion({"petroleo": "baja", "dolar": "neutro"})
+    assert frase == "Sobre lo esperado tiende el petróleo a bajar. Bajo lo esperado, al revés."
