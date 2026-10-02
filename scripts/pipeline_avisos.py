@@ -382,8 +382,9 @@ def _fecha_corta(iso: str) -> str:
 def fila_medida(lectura: dict[str, Any], payload_datos: dict[str, Any] | None) -> dict[str, Any]:
     """Lo que el texto puede citar: los niveles del terminal y los publicados en la alerta.
 
-    La alerta acota sus niveles (`acotar_niveles_intradia`), así que el soporte
-    que ve el cliente puede no ser el `s1` crudo: los dos cuentan como medidos.
+    El director puede fijar a mano los niveles de la alerta (`niveles_fijados`),
+    así que el soporte que ve el cliente puede no ser el `s1` crudo: los dos
+    cuentan como medidos.
     """
     niveles = ({n["rol"]: n["precio"] for n in payload_datos["recorrido"]["niveles"]}
                if payload_datos else {})

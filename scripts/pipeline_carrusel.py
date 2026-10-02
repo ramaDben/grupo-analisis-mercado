@@ -197,26 +197,6 @@ def incoherencia_del_payload(
             f"resistencia ({resistencia}): los niveles no corresponden a este precio"
         )
 
-def acotar_niveles_intradia(
-    spot: float,
-    soporte: float,
-    resistencia: float,
-    atr_d1: float | None,
-    digits: int,
-) -> tuple[float, float]:
-    """Acota soporte y resistencia al rango intradía del ATR D1 si la amplitud excede 1.5 * ATR_D1."""
-    if not atr_d1 or atr_d1 <= 0:
-        return soporte, resistencia
-
-    rango_max = 1.5 * atr_d1
-    if (resistencia - soporte) > rango_max or (spot - soporte) > atr_d1 or (resistencia - spot) > atr_d1:
-        sop_acotado = round(spot - atr_d1, digits)
-        res_acotada = round(spot + atr_d1, digits)
-        return sop_acotado, res_acotada
-
-    return soporte, resistencia
-
-
 def formatear_precio(valor: float, digits: int) -> str:
     """Precio en notacion chilena con los decimales de `digits`.
 
@@ -249,9 +229,12 @@ def construir_payload(
     spot_crudo = float(seleccion["precio"])
     sop_crudo = float(seleccion["soporte"])
     res_crudo = float(seleccion["resistencia"])
-    atr_d1 = seleccion.get("atr_d1")
-
-    sop_final, res_final = acotar_niveles_intradia(spot_crudo, sop_crudo, res_crudo, atr_d1, digits)
+    # Se publican los niveles del motor, también cuando quedan lejos del precio.
+    # Hasta el 2026-10-02 `acotar_niveles_intradia` los cambiaba por precio ± ATR
+    # diario: distancias con nombre de soporte, que reemplazaban los dos lados
+    # aunque solo uno estuviera lejos y que el refresco del despacho volvía a
+    # pisar. Si un nivel queda lejos, lo dice el párrafo; si el director quiere
+    # otro, lo fija en `_procedencia.niveles_fijados`.
 
     sesgo_pieza = direccion_publicada(seleccion["direccion"])
 
@@ -272,8 +255,8 @@ def construir_payload(
         "tag_riesgo": sesgo_pieza.upper(),
         # Datos del motor
         "precio_actual": fmt(spot_crudo),
-        "soporte": fmt(sop_final),
-        "resistencia": fmt(res_final),
+        "soporte": fmt(sop_crudo),
+        "resistencia": fmt(res_crudo),
         "vol_pct": f"{fmt(seleccion['impulso_adc_atr'])} {activo_catalogo['unidad']}",
         # Por que ESTA temporalidad para ESTE activo. Sin default a proposito, con
         # el mismo criterio que `unidad`: la linea es obligatoria en el mensaje, y
@@ -303,10 +286,10 @@ def construir_payload(
                 "rol": "AHORA",
             }],
             "niveles": [
-                {"precio": res_final, "clase": "resistencia",
-                 "etiqueta": fmt(res_final), "rol": "RESISTENCIA"},
-                {"precio": sop_final, "clase": "soporte",
-                 "etiqueta": fmt(sop_final), "rol": "SOPORTE"},
+                {"precio": res_crudo, "clase": "resistencia",
+                 "etiqueta": fmt(res_crudo), "rol": "RESISTENCIA"},
+                {"precio": sop_crudo, "clase": "soporte",
+                 "etiqueta": fmt(sop_crudo), "rol": "SOPORTE"},
             ],
         },
         # Trazabilidad: por qué este activo y no otro. No se rinde en la pieza,
@@ -1296,8 +1279,8 @@ def rendir(directorio: Path) -> dict[str, Any]:
 
         ticker = procedencia.get("ticker", payload.get("activo_slug"))
         nombre = payload.get("rotulo_activo", payload.get("activo", ticker))
-        # El gráfico dibuja los niveles PUBLICADOS (los del texto, ya acotados por
-        # `acotar_niveles_intradia`), no los crudos del motor: el 2026-10-02 el
+        # El gráfico dibuja los niveles PUBLICADOS (los del texto, que el director
+        # puede fijar a mano), no los crudos del motor: el 2026-10-02 el
         # USD/CLP salió con 968,00/988,94 en la imagen y 970,25/991,35 en el
         # mensaje. Los crudos quedan solo como respaldo si el payload no trae nivel.
         crudos = procedencia.get("crudos", {})

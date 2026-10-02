@@ -1342,3 +1342,30 @@ def test_el_refresco_respeta_los_niveles_que_fijo_el_director():
     assert nuevo["soporte"] == "930,00" and nuevo["resistencia"] == "940,00"
     assert nuevo["_procedencia"]["crudos"]["soporte"] == 930.00
     assert nuevo["precio_actual"] == "937,80"
+
+
+def test_un_nivel_lejano_se_publica_tal_cual_y_no_se_reemplaza_por_atr():
+    """El USD/CLP del 2026-10-02: soporte a 12,68 del precio con ATR diario de 10,5.
+
+    El acotado de entonces cambió los DOS lados por precio ± ATR (970,25/991,35),
+    también la resistencia, que era el máximo real del impulso (988,94).
+    """
+    seleccion = {
+        "ticker": "USDCLP", "direccion": "ALCISTA", "clase": "forex",
+        "precio": 980.68, "soporte": 968.00, "resistencia": 988.94,
+        "impulso_adc_atr": 4.02, "atr_h1": 2.68, "atr_d1": 10.5,
+        "score": 71, "factores": {},
+    }
+    activo = {
+        "nombre": "Dólar / Peso Chileno", "digits": 2, "imagen": "dolar.jpg",
+        "categoria": "forex", "unidad": "CLP", "volatilidad": "baja",
+        "nota_volatilidad": "1H da la lectura del día",
+    }
+    p = pc.construir_payload(
+        seleccion, activo, datetime(2026, 10, 2, 10, 1),
+        cierres_para(980.68, n=3, paso=0.5),
+    )
+    assert (p["soporte"], p["resistencia"]) == ("968,00", "988,94")
+    niveles = {n["rol"]: n["precio"] for n in p["recorrido"]["niveles"]}
+    assert niveles == {"SOPORTE": 968.00, "RESISTENCIA": 988.94}
+    assert not hasattr(pc, "acotar_niveles_intradia")
