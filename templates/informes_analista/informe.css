@@ -160,6 +160,8 @@ h2 {
 h2 .numero { color: var(--acento-doc); margin-right: 6pt; }
 
 p { margin-bottom: 7pt; }
+.cuerpo > ul { padding-left: 16pt; margin-bottom: 10pt; }
+.cuerpo > ul li { margin-bottom: 3pt; }
 
 .figura { margin: 6pt 0 12pt 0; break-inside: avoid; }
 .figura img { width: 100%; height: auto; display: block; border-radius: 4pt; }
