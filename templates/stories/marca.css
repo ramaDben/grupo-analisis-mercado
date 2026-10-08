@@ -116,6 +116,27 @@
   --texto-gris:     #8E8A9C;  /* gris intermedio */
   --blanco:         #FFFFFF;
 
+  /* ── Documento claro (informes del bot de analistas) ───────────────────── */
+  /* Los informes que el analista le entrega a su trader se leen e imprimen en
+     papel blanco, no en un chat oscuro. Son los tonos del evergreen GI. El
+     acento de marca (#50C0A8) sobre blanco no da contraste para texto, por eso
+     el documento tiene su propio acento oscuro. */
+  --papel:          #FFFFFF;
+  --papel-alt:      #F8FAFC;
+  --papel-linea:    #E2E8F0;
+  --tinta:          #0F172A;
+  --tinta-2:        #334155;
+  --tinta-3:        #64748B;
+  --banda-1:        #06231C;  /* inicio del degradado de la cabecera */
+  --banda-2:        #124B5E;  /* fin del degradado de la cabecera */
+  --acento-doc:     #176B61;  /* acento legible sobre papel */
+  --acento-tenue:   #E6F7F2;  /* fondo de la etiqueta "Preparado para" */
+  --sube-doc:       #047857;  /* alza legible sobre papel */
+  --sube-tenue:     #ECFDF5;
+  --baja-doc:       #B91C1C;  /* baja legible sobre papel */
+  --baja-tenue:     #FEF2F2;
+  --aviso-tenue:    #FFF7ED;
+
   /* ── Filete de la pieza ─────────────────────────────────────────────────── */
   --filete:         var(--acento);
   --filete-ancho:   4px;

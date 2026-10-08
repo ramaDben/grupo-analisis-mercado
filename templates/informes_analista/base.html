@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{titulo_documento}}</title>
+<!-- Al armar el informe, informe_html.py reemplaza estos dos enlaces por su
+     contenido: el archivo entregado no depende de nada externo. -->
+<link rel="stylesheet" href="../stories/marca.css">
+<link rel="stylesheet" href="informe.css">
+<style>{{fuentes}}</style>
+</head>
+<body>
+{{barra}}
+<main class="documento">
+  <header class="cabecera">
+    <div class="cabecera-fila">
+      <img src="{{logo}}" alt="Grupo Inteligencia">
+      <span class="departamento">Departamento de Estudio · Research &amp; Estrategia</span>
+      <span class="chip">{{chip}}</span>
+    </div>
+    <h1>{{titular}}</h1>
+    <p class="bajada">{{bajada}}</p>
+  </header>
+  <section class="franja">
+    <div><div class="franja-rotulo">Preparado para</div><div class="franja-valor trader" id="lbl-trader">{{trader}}</div></div>
+    <div><div class="franja-rotulo">Asesor asignado</div><div class="franja-valor" id="lbl-asesor">{{asesor}}</div></div>
+    <div><div class="franja-rotulo">{{rotulo_referencia}}</div><div class="franja-valor cotizacion">{{referencia}}</div></div>
+    <div><div class="franja-rotulo">Edición</div><div class="franja-valor">{{edicion}}</div></div>
+  </section>
+  <article class="cuerpo">
+{{cuerpo}}
+  </article>
+  <p class="lema">«Primero entiende. Después decide. Luego invierte.»</p>
+  <footer class="pie">
+    <p class="legal">{{aviso_legal}}</p>
+    <p class="legal">{{contacto}}</p>
+  </footer>
+</main>
+{{script}}
+</body>
+</html>
