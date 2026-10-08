@@ -28,12 +28,16 @@ CAMPOS: dict[str, tuple[str, ...]] = {
     "jornada": ("titular", "bajada", "lectura", "que_no_hacer"),
 }
 
+# El titular y la bajada también van impresos dentro de las láminas de WhatsApp,
+# que tienen el espacio medido: un titular largo se corta en la imagen.
+LARGO_MAXIMO = {"titular": 70, "bajada": 160}
+
 _HTML = re.compile(r"<\s*[a-zA-Z/!]")
 _NUMERO = re.compile(r"\d[\d.,]*\d|\d")
 
 
 def _huella(pieza: dict[str, Any]) -> str:
-    sellado = {k: pieza.get(k) for k in ("orden", "datos", "imagenes", "anidados")}
+    sellado = {k: pieza.get(k) for k in ("orden", "datos", "imagenes", "anidados", "laminas")}
     crudo = json.dumps(sellado, sort_keys=True, ensure_ascii=False)
     return hashlib.sha256(crudo.encode("utf-8")).hexdigest()
 
@@ -44,7 +48,13 @@ def nueva_pieza(
     datos: dict[str, Any],
     imagenes: dict[str, str],
     extra_campos: dict[str, list[str]] | None = None,
+    laminas: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
+    """Pieza recién preparada: todo sellado y cada campo editorial sin escribir.
+
+    `laminas` son las imágenes de WhatsApp que llevan texto adentro (la agenda
+    del día): se guardan como payload y se rinden después de validar el texto.
+    """
     anidados = {campo: [str(i) for i in ids] for campo, ids in (extra_campos or {}).items()}
     editorial: dict[str, Any] = {campo: MARCA for campo in CAMPOS[pieza]}
     for campo, ids in anidados.items():
@@ -54,6 +64,7 @@ def nueva_pieza(
         "datos": datos,
         "imagenes": imagenes,
         "anidados": anidados,
+        "laminas": laminas or {},
         "editorial": editorial,
     }
     p["huella"] = _huella(p)
@@ -111,6 +122,10 @@ def errores(pieza: dict[str, Any]) -> list[str]:
 
     pares = textos(pieza)
     errs.extend(validar_textos(pares))
+    for campo, tope in LARGO_MAXIMO.items():
+        largo = len(str(editorial.get(campo, "")))
+        if largo > tope:
+            errs.append(f"{campo}: tiene {largo} caracteres y el máximo es {tope}")
     for donde, texto in pares:
         if _HTML.search(texto):
             errs.append(f"{donde}: trae HTML; la maqueta la pone la plantilla, no el texto")

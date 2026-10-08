@@ -101,3 +101,18 @@ def test_campos_anidados_se_validan_uno_a_uno():
 
 def test_cada_pieza_tiene_campos():
     assert set(es.CAMPOS) == {"activo", "calendario", "dato", "jornada"}
+
+
+def test_titular_largo_no_cabe_en_la_lamina():
+    errs = es.errores(pieza_llena(titular="El oro " * 15))
+    assert any("titular" in e and "máximo" in e for e in errs)
+
+
+def test_no_puede_tocar_las_laminas():
+    p = es.nueva_pieza("calendario", {"alcance": "hoy"}, {"eventos": []}, {},
+                       laminas={"calendario.png": {"titular": es.MARCA}})
+    for campo in es.CAMPOS["calendario"]:
+        p["editorial"][campo] = "Texto suficientemente largo para pasar."
+    assert es.errores(p) == []
+    p["laminas"]["calendario.png"]["titular"] = "otra cosa"
+    assert any("datos" in e for e in es.errores(p))

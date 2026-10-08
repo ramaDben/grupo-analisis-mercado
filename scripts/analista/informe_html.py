@@ -124,6 +124,8 @@ def cuerpo_activo(p: dict[str, Any], dir_pedido: Path) -> str:
 def _estado(ev: dict[str, Any]) -> str:
     if ev.get("estado") == "salio":
         return '<span class="estado-salio">✅ YA SALIÓ</span>'
+    if ev.get("estado") == "pendiente":
+        return '<span class="estado-proximo">⏳ SIN CIFRA AÚN</span>'
     return '<span class="estado-proximo">🕐 PRÓXIMO</span>'
 
 
