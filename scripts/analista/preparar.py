@@ -90,6 +90,27 @@ def _curva():
     return pi._curva()
 
 
+def _drivers(ticker: str) -> list[str]:
+    """Los drivers que el catálogo declara para el activo (`config/activos.json`)."""
+    from analista import RAIZ
+
+    datos = json.loads((RAIZ / "config" / "activos.json").read_text(encoding="utf-8"))
+
+    def recorrer(nodo: Any):
+        if isinstance(nodo, dict):
+            if nodo.get("ticker_mt5") == ticker:
+                yield nodo
+            for v in nodo.values():
+                yield from recorrer(v)
+        elif isinstance(nodo, list):
+            for v in nodo:
+                yield from recorrer(v)
+
+    for activo in recorrer(datos):
+        return [str(d) for d in activo.get("drivers", [])]
+    return []
+
+
 def _cuenta() -> str | None:
     """`None` si el terminal está en la cuenta declarada; si no, el motivo."""
     from guardrails.cuenta import cuenta_correcta
@@ -115,6 +136,7 @@ class Lectores:
     movimiento: Callable[[str, datetime, datetime], dict[str, Any]] = _movimiento
     activos_jornada: Callable[[Path], tuple[dict[str, dict[str, Any]], list[str]]] = _activos_jornada
     curva: Callable[[], tuple[dict[str, Any], list[str]]] = _curva
+    drivers: Callable[[str], list[str]] = _drivers
     cuenta: Callable[[], str | None] = _cuenta
 
 
@@ -149,8 +171,9 @@ def preparar_activo(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lector
     activo = lectura["activo"]
     precio = payload["precio_actual"]
     unidad = activo.get("unidad") or ""
-    clase = payload["chip_categoria"].split("·")[0].strip()
+    clase = CLASES.get(str(activo.get("categoria") or activo.get("clase") or "").lower(), "MERCADOS")
     lec.grafico_tv(payload, dir_pedido / "grafico.png")
+    contexto, avisos_contexto = _contexto(orden.args["ticker"], ahora, lec)
     datos = {
         **_comunes(ahora, f"NOTA DE MERCADO · {clase}", "Cotización de referencia", f"{precio} {unidad}".strip()),
         "ticker": orden.args["ticker"],
@@ -161,12 +184,60 @@ def preparar_activo(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lector
         "direccion": payload["sesgo"],
         **op,
         "pie_imagen": f"{payload.get('rotulo_activo', activo['nombre'])} · velas de 1 hora · MetaTrader 5",
+        "contexto": contexto,
     }
-    avisos = []
+    avisos = list(avisos_contexto)
     if payload.get("banda_estrecha"):
         avisos.append("niveles estrechos para la volatilidad del activo: ojo con los falsos quiebres")
     pieza = es.nueva_pieza("activo", orden.args, datos, {"principal": "grafico.png"})
     return Preparada(pieza, avisos)
+
+
+CLASES = {
+    "commodity": "COMMODITIES", "forex": "DIVISAS", "crypto": "CRIPTOMONEDAS",
+    "indice": "ÍNDICES", "indices": "ÍNDICES", "acciones": "ACCIONES", "accion": "ACCIONES",
+    "etf": "ETF", "etfs": "ETF",
+}
+
+
+def _filas_curva(curva: dict[str, Any]) -> list[list[str]]:
+    import pipeline_informe as pi
+
+    series = curva.get("series", {}) if curva else {}
+
+    def puntos(v: Any) -> str:
+        # `None` es "no se pudo calcular", no "no se movió" (CLAUDE.md, get_curva_tasas).
+        return "sin dato" if v is None else f"{v:+.0f} pb"
+
+    return [
+        [pi._TRAMOS_ES.get(k, k), pi._pct_es(series[k].get("nivel_pct")),
+         puntos(series[k].get("delta_1d_bps")), puntos(series[k].get("delta_5d_bps"))]
+        for k in pi.TRAMOS_CURVA if series.get(k)
+    ]
+
+
+def _contexto(ticker: str, ahora: datetime, lec: Lectores) -> tuple[dict[str, Any], list[str]]:
+    """Lo medido del día que agy puede usar para explicar los drivers.
+
+    Sin esto, agy redactaba "debilidad del dólar global" sin un solo dato que lo
+    respaldara (prueba real del 2026-10-08): los drivers quedaban enumerados, no
+    analizados. Lo que no está acá, el texto no lo puede afirmar como hecho.
+    """
+    import pipeline_avisos as pa
+
+    avisos: list[str] = []
+    curva, av = lec.curva()
+    avisos += [f"contexto sin curva de tasas: {a}" for a in av]
+    jornada, av = lec.jornada(ahora)
+    avisos += [f"contexto sin agenda: {a}" for a in av]
+    agenda = []
+    for ev in jornada:
+        actual = pa._cifra(ev.get("actual"))
+        esperado = pa._cifra(ev.get("consenso"))
+        estado = f"salió {actual}" + (f" frente a {esperado} esperado" if esperado else "") if actual             else ("esperado " + esperado if esperado else "sin cifra aún")
+        agenda.append(f"{ev['hora']} · {pa._nombre_evento(ev)}: {estado}")
+    return {"drivers_del_activo": lec.drivers(ticker), "curva_tasas": _filas_curva(curva),
+            "agenda_hoy": agenda}, avisos
 
 
 def _estado(cuando: datetime, actual: str, ahora: datetime) -> str:
@@ -310,7 +381,6 @@ def _momento_por_hora(ahora: datetime) -> str:
 
 
 def preparar_jornada(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lectores) -> Preparada:
-    import pipeline_informe as pi
     import screener_gi as sc
     from grafico_informe import formatear_precio
 
@@ -335,16 +405,7 @@ def preparar_jornada(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lecto
         raise PreparacionFallida("; ".join(avisos) or "el terminal no entregó ningún activo de la jornada")
 
     curva, avisos_curva = lec.curva()
-    series = curva.get("series", {}) if curva else {}
-
-    def puntos(v: Any) -> str:
-        return "sin dato" if v is None else f"{v:+.0f} pb"
-
-    tabla_curva = [
-        [pi._TRAMOS_ES.get(k, k), pi._pct_es(series[k].get("nivel_pct")),
-         puntos(series[k].get("delta_1d_bps")), puntos(series[k].get("delta_5d_bps"))]
-        for k in pi.TRAMOS_CURVA if series.get(k)
-    ]
+    tabla_curva = _filas_curva(curva)
     datos = {
         **_comunes(ahora, f"INFORME DE {momento.upper()}", "Activos cubiertos", str(len(filas))),
         "momento": momento,

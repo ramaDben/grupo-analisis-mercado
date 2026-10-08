@@ -74,10 +74,15 @@ def main(argv: list[str] | None = None) -> int:
         if usuario not in config["analistas"]:
             print("ERROR: --usuario no está en config/analistas_telegram.json")
             return 2
+        try:
+            orden = od.interpretar(args.una)
+        except od.PedidoInvalido as exc:
+            # Desde Git Bash, "/activo" llega convertido en una ruta de Windows:
+            # hay que correrlo con MSYS_NO_PATHCONV=1.
+            print(f"ERROR: {exc} (recibí {args.una!r})")
+            return 2
         atendedor = bot.Atendedor(config, bot.Estado.cargar())
-        respuesta = bot.Bot(tg=None, atendedor=atendedor).procesar_uno(
-            bot.Pedido(usuario, 0, od.interpretar(args.una))
-        )
+        respuesta = bot.Bot(tg=None, atendedor=atendedor).procesar_uno(bot.Pedido(usuario, 0, orden))
         print(respuesta.texto)
         for ruta in respuesta.archivos:
             print(f"  → {ruta}")

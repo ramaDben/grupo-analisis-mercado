@@ -64,7 +64,11 @@ def test_activo_trae_los_numeros_del_payload_de_whatsapp(tmp_path):
     assert d["direccion"] == "Alcista"
     assert d["nivel_vigilar"] == "68,974"
     assert d["escenarios"][0].startswith("⬆️ Sobre 68,974")
-    assert d["chip"].startswith("NOTA DE MERCADO")
+    assert d["chip"] == "NOTA DE MERCADO · COMMODITIES"
+    ctx = d["contexto"]
+    assert ctx["drivers_del_activo"]  # XAGUSD tiene drivers en el catálogo real
+    assert ctx["curva_tasas"][0][0] == "Bono del Tesoro a 2 años"
+    assert ctx["agenda_hoy"][0].startswith("09:30") and "salió 197K" in ctx["agenda_hoy"][0]
     assert (tmp_path / "grafico.png").exists() and (tmp_path / "pieza.json").exists()
     assert set(hecha.pieza["editorial"]) == set(es.CAMPOS["activo"])
 

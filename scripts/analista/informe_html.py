@@ -118,7 +118,18 @@ def cuerpo_activo(p: dict[str, Any], dir_pedido: Path) -> str:
         f'<p class="temporalidad">⏱️ <strong>Temporalidad:</strong> {e(d["temporalidad"])}</p>',
         f'<p class="temporalidad">💡 {e(d["por_que_temporalidad"])}</p>' if d.get("por_que_temporalidad") else "",
         capa("Qué NO hacer", ed["que_no_hacer"], "no-hacer"),
+        _tabla_tasas(d.get("contexto", {}).get("curva_tasas") or [], 4),
     ])
+
+
+def _tabla_tasas(curva: list[list[str]], numero: int) -> str:
+    """Las tasas que el texto pudo citar, a la vista: una cifra citada que el lector no ve
+    le pide confiar en un número que no puede comprobar."""
+    if not curva:
+        return ""
+    return h2(numero, "Tasas de EE.UU. hoy") + tabla(
+        ["Plazo", "Rendimiento", "Cambio 1 día", "Cambio 5 días"],
+        [[e(c) for c in fila] for fila in curva], cifras={1, 2, 3})
 
 
 def _estado(ev: dict[str, Any]) -> str:
