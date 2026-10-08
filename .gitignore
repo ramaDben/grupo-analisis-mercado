@@ -127,3 +127,12 @@ data/logs/
 # Estado local de herramientas: la boveda de Obsidian y el ledger que recrea el plugin Pulse (retirado del repo).
 .obsidian/
 .pulse/
+
+# Bot de analistas (docs/bot-analistas.md). Los informes llevan nombres de
+# traders y la config los números de usuario y teléfonos del equipo; el estado es
+# generado. Se versiona config/analistas_telegram.example.json.
+data/informes_analistas/
+data/.bot_telegram_estado.json
+data/.bot_telegram_estado.tmp
+config/analistas_telegram.json
+config/service_account.json
