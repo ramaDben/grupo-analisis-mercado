@@ -265,6 +265,23 @@ def _semanal_vigente(semana: str, ticker: str) -> dict[str, Any] | None:
     return rs.vigente(semana, ticker)
 
 
+def _semanal_tematica(semana: str, tematica: str) -> dict[str, Any] | None:
+    from analista import registro_semanal as rs
+
+    return rs.vigente_tematica(semana, tematica)
+
+
+def _foco_semanal(tematica: str, ahora: datetime) -> dict[str, Any] | None:
+    """El activo de la temática con el escenario semanal más claro (`semanal.elegir`)."""
+    import screener_gi as sc
+
+    from analista import semanal as sm
+
+    clase = sm.CLASE_DE_TEMATICA[tematica]
+    universo = [a for a in sc.cargar_universo(solo_renderizables=False) if a.get("clase") == clase]
+    return sm.elegir(universo, _d1, _serie_d1)
+
+
 def _foco(ahora: datetime):
     from analista import foco as fo
 
@@ -325,6 +342,8 @@ class Lectores:
     agenda_semana: Callable[[datetime], tuple[list[dict[str, Any]], list[str]]] = _agenda_semana
     precio_vivo: Callable[[str], float] = _precio_vivo
     semanal_vigente: Callable[[str, str], dict[str, Any] | None] = _semanal_vigente
+    semanal_tematica: Callable[[str, str], dict[str, Any] | None] = _semanal_tematica
+    foco_semanal: Callable[[str, datetime], dict[str, Any] | None] = _foco_semanal
 
 
 @dataclass
@@ -712,11 +731,23 @@ def preparar_semanal(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lecto
     """
     from analista import semanal as sm
 
-    ticker = orden.args["ticker"]
+    tematica = orden.args.get("tematica")
+    seleccion = None
+    if tematica:
+        elegido = lec.foco_semanal(tematica, ahora)
+        if elegido is None:
+            raise SinEscenarioError(f"Esta semana ningún activo de {sm.NOMBRE_TEMATICA[tematica]} tiene un "
+                                    "escenario medible a favor de su tendencia diaria: no hay pieza que armar.")
+        # La pieza se arma con la MISMA lectura con que se eligió el activo.
+        ticker, d1, df = elegido["ticker"], elegido["d1"], elegido["serie"]
+        seleccion = {"tematica": tematica, "evaluados": elegido["evaluados"],
+                     "texto": f"Elegido entre {elegido['evaluados']} {sm.NOMBRE_TEMATICA[tematica]} del catálogo "
+                              "por su lectura técnica diaria (tendencia y momentum), con la misma regla para todos."}
+    else:
+        ticker = orden.args["ticker"]
+        d1, df = lec.d1(ticker), lec.serie_d1(ticker)
     activo = lec.catalogo(ticker)
     digits = int(activo["digits"])
-    d1 = lec.d1(ticker)
-    df = lec.serie_d1(ticker)
     alcista = float(d1["price"]) > float(d1["ema_50"])
     esc = sm.escenario(d1, df, digits, sm.ruptura_semana(df, digits, alcista))
     if not esc["hay_escenario"]:
@@ -763,6 +794,7 @@ def preparar_semanal(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lecto
         "simulacion_base": sm.simular(contrato, esc, sm.MONTO_BASE, contrato["vol_min"]),
         "contexto": contexto,
         "pie_imagen": f"{activo['nombre']} · velas diarias · MetaTrader 5",
+        "seleccion": seleccion,
     }
     pieza = es.nueva_pieza("semanal", orden.args, datos, {"principal": "grafico.png"})
     return Preparada(pieza, avisos)
@@ -774,14 +806,19 @@ def preparar_seguimiento(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
 
     from analista import semanal as sm
 
-    ticker = orden.args["ticker"]
-    activo = lec.catalogo(ticker)
     semana = sm.lunes_de(ahora).isoformat()
-    foto = lec.semanal_vigente(semana, ticker)
+    tematica = orden.args.get("tematica")
+    if tematica:
+        foto = lec.semanal_tematica(semana, tematica)
+        nombre, pedido = sm.NOMBRE_TEMATICA[tematica], tematica
+    else:
+        foto = lec.semanal_vigente(semana, orden.args["ticker"])
+        nombre = lec.catalogo(orden.args["ticker"])["nombre"]
+        pedido = orden.args["ticker"].lower().replace(".spot", "").replace(".us", "").lstrip("#")
     if foto is None:
-        pedido = ticker.lower().replace(".spot", "").replace(".us", "").lstrip("#")
-        raise SinPiezaSemanalError(f"Esta semana todavía no hay pieza de {activo['nombre']}: "
-                                   f"pídela con /semanal {pedido}")
+        raise SinPiezaSemanalError(f"Esta semana todavía no hay pieza de {nombre}: pídela con /semanal {pedido}")
+    ticker = foto["ticker"]
+    activo = lec.catalogo(ticker)
     base = cargar_pieza(Path(foto["dir"]))
     bd = base["datos"]
     esc, digits = bd["escenario"], int(bd["digits"])

@@ -7,6 +7,13 @@
       "contacto": "+56 9 0000 0000",
       "rol": "analista",
       "cupo_diario": 10
+    },
+    "987654321": {
+      "nombre": "Nombre Apellido",
+      "cargo": "Ejecutivo comercial",
+      "contacto": "+56 9 0000 0000",
+      "rol": "ejecutivo",
+      "cupo_diario": 5
     }
   },
   "ruta_drive": "",
@@ -17,7 +24,9 @@
     "calendario": 30,
     "dato": 30,
     "jornada": 720,
-    "oportunidad": 60
+    "oportunidad": 60,
+    "semanal": 0,
+    "seguimiento": 60
   },
   "autor": {
     "nombre": "Nombre Apellido",

@@ -334,3 +334,46 @@ def mensaje_seguimiento(pieza: dict[str, Any]) -> str:
         f"Datos al {d['datos_al']}. _{AVISO_CORTO}_",
     ]
     return "\n".join(lineas)
+
+
+# ───────────────────────────────────────────────────────────── temáticas del lunes
+
+# Las cinco plantillas que pidió el área comercial. Oro y USD/CLP son un activo;
+# índices, ETF y acciones eligen cada semana el suyo dentro de su clase.
+LOTE = ("oro", "usdclp", "indices", "etf", "acciones")
+CLASE_DE_TEMATICA = {"indices": "indices", "etf": "etfs", "acciones": "acciones"}
+NOMBRE_TEMATICA = {"indices": "índices", "etf": "ETF", "acciones": "acciones"}
+
+
+def elegir(universo: list[dict[str, Any]], leer_d1, leer_serie) -> dict[str, Any] | None:
+    """El activo de la clase con el escenario semanal más claro, o None si ninguno tiene.
+
+    Mismo orden que el foco técnico (`foco.seleccionar`): puntos técnicos más
+    momentum, y a igualdad, el más cerca de su gatillo en ATR. Pero en DIARIO y
+    sin los gates de la jornada (agotamiento, blackout): la pieza vale la semana.
+    Un activo sin escenario o con el escenario ya invalidado no compite.
+    """
+    import screener_gi as sc
+
+    candidatos = []
+    for activo in universo:
+        t = activo["ticker"]
+        try:
+            d1, df = leer_d1(t), leer_serie(t)
+            digits = int(activo["digits"])
+            alcista = float(d1["price"]) > float(d1["ema_50"])
+            esc = escenario(d1, df, digits, ruptura_semana(df, digits, alcista))
+            if not esc["hay_escenario"] or esc["estado"] == "invalidado":
+                continue
+            direccion = "ALCISTA" if alcista else "BAJISTA"
+            puntos = sc.factor_tecnico(d1, d1, direccion)[0] + sc.factor_momentum(d1, direccion)[0]
+            atr = float(d1["atr_14"]) or float("inf")
+        except Exception:  # noqa: BLE001
+            # Un activo con datos rotos se salta: no puede tumbar la elección de los demás.
+            continue
+        clave = (-puntos, abs(esc["precio"] - esc["gatillo"]) / atr, t)
+        candidatos.append((clave, {"ticker": t, "d1": d1, "serie": df}))
+    if not candidatos:
+        return None
+    _, elegido = min(candidatos, key=lambda c: c[0])
+    return {**elegido, "evaluados": len(universo)}

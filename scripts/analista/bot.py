@@ -309,14 +309,18 @@ class Atendedor:
         from analista import semanal as sm
 
         o = pedido.orden
-        ticker = o.args["ticker"]
+        tematica = o.args.get("tematica")
         semana = sm.lunes_de(ahora).isoformat()
-        previa = rs.vigente(semana, ticker, self.registro_semanal) if o.pieza == "semanal" else None
+        previa = None
+        if o.pieza == "semanal":
+            previa = (rs.vigente_tematica(semana, tematica, self.registro_semanal) if tematica
+                      else rs.vigente(semana, o.args["ticker"], self.registro_semanal))
         if previa:
             dir_pedido, pieza, avisos, reusada = Path(previa["dir"]), pr.cargar_pieza(Path(previa["dir"])), [], True
         else:
             dir_pedido, pieza, avisos, reusada = self._pieza_base(pedido, ahora)
         d = pieza["datos"]
+        ticker = d["ticker"]
         ejecutivo = self.analista(pedido.usuario)
         try:
             imagen = dir_pedido / "imagen.png"
@@ -326,11 +330,13 @@ class Atendedor:
         except Exception as exc:  # noqa: BLE001
             raise FalloPedido(f"No pude armar la imagen o el texto: {exc}") from exc
 
-        activo = ih.slug(d["nombre"])
+        # La carpeta de Drive de una temática no cambia de nombre aunque cambie su activo.
+        activo = tematica or ih.slug(d["nombre"])
         if o.pieza == "semanal":
             if not reusada:
                 esc = d["escenario"]
-                rs.anotar({"semana": semana, "ticker": ticker, "dir": str(dir_pedido), "analista": pedido.usuario,
+                rs.anotar({"semana": semana, "ticker": ticker, "tematica": tematica, "dir": str(dir_pedido),
+                           "analista": pedido.usuario,
                            "creada": ahora.isoformat(),
                            "escenario": {k: esc[k] for k in ("sesgo", "estado", "precio", "entrada", "gatillo",
                                                             "invalidacion", "recorrido", "vela")}},

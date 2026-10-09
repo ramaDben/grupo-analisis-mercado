@@ -14,6 +14,8 @@ El equipo le pide al bot las mismas piezas que el director le pide a Claude Code
 | `/dato` · `/dato ipc` | El último dato con cifra (o el pedido): veredicto y movimiento del dólar y el oro. Si todavía no sale, en modo anticipación |
 | `/jornada apertura` · `/jornada cierre` | Los cinco activos base con sus gráficos diarios y la curva de tasas |
 | `/oportunidad` | El **foco técnico del día** para ventas: el activo que el escáner elige, sin estadística. Ver abajo |
+| `/semanal oro` · `/semanal usdclp` · `/semanal indices` · `/semanal etf` · `/semanal acciones` | La **pieza semanal comercial**: imagen, texto de WhatsApp y correo para Outlook. Ver abajo |
+| `/seguimiento oro` (o la misma temática) | Cómo va ese escenario hoy: vigente, avanzando, completado o invalidado |
 
 **El informe no se personaliza.** Nadie en GI está inscrito como asesor de inversión, y un
 informe con el nombre del cliente se acerca a una recomendación personalizada. Si un pedido trae
@@ -125,6 +127,47 @@ Lo piden los ejecutivos de ventas para un prospecto. Spec:
 - **Se reusa 60 minutos, pero se vuelve a leer el activo antes**: si cambió el plan, la
   tendencia, o hay blackout o mercado cerrado, se rehace.
 - La bitácora lo anota con `"tipo": "oportunidad"`.
+
+## Pieza semanal comercial (`/semanal`) y su seguimiento (`/seguimiento`)
+
+Lo pidió el área comercial: cinco plantillas que se renuevan cada lunes (oro, USD/CLP, índices,
+ETF y acciones), cada una con **imagen** (1920×1080, se entrega como foto para reenviarla a
+WhatsApp), **texto de WhatsApp** (mensaje aparte, para copiarlo entero) y **correo para
+Outlook** (HTML con panel de edición, formato de la referencia MasQueUF).
+
+- **Visión diaria.** El escenario se arma con velas D1 (`semanal.escenario`): gatillo (resistencia
+  o soporte medidos, o la ruptura de los últimos 5 días), invalidación por Chandelier 22/3 y
+  recorrido de 1,5 ATR diario. Sin objetivo de precio: el recorrido es una distancia.
+- **Lo que mueve al activo es de esta semana.** agy recibe la agenda de lunes a viernes con sus
+  resultados, la curva con su cambio a 5 días y la variación semanal, y no puede afirmar otra cosa.
+- **Dos autores visibles.** El análisis es del director; la simulación (monto y volumen) la hace
+  el ejecutivo en el panel del correo y sale rotulada «Simulación realizada por …», con la pérdida
+  a la invalidación del mismo tamaño y al lado de lo que vale el recorrido. El panel recalcula en
+  JavaScript con la misma fórmula que `semanal.simular` (un test corre las dos).
+- **Índices, ETF y acciones** eligen su activo cada semana con `semanal.elegir`: puntos técnicos
+  más momentum en diario, y a igualdad el más cerca de su gatillo. El correo dice entre cuántos se
+  eligió.
+- **Reúso semanal**: `data/semanal/registro.json` (versionado) guarda la foto del lunes de cada
+  pieza; pedirla otra vez en la semana no redacta ni gasta cupo. El correo sí se rearma para cada
+  ejecutivo, porque lleva su nombre.
+- **Seguimiento**: compara la foto del lunes con las velas diarias cerradas desde entonces y el
+  precio de ahora. Activa y anula un **cierre** diario; el recorrido se cuenta apenas se toca; en
+  empate gana la invalidación. Si se invalidó, la pieza queda retirada en el registro y la próxima
+  `/semanal` arma la versión 2. Los cuatro estados se cuentan con el mismo peso y nunca «si
+  hubieras entrado».
+- **Prohibido en el texto**: «oportunidad», «recomendada», «aprovecha», «si hubieras»,
+  «ganarías», «garantizado» (`esquema.FRASES_PROHIBIDAS_COMERCIAL`).
+- **Drive**: `GI Semanal/<lunes>/<activo o temática>/` con la imagen, el texto y el correo; los
+  seguimientos en la misma carpeta como `seguimiento_<fecha>_<hora>.png/.txt`.
+
+El lote del lunes arma las cinco de una vez (no envía nada a ningún canal):
+
+```bash
+uv run --with MetaTrader5 --extra stories --extra informe python scripts/bot_analistas.py --semanal-lote
+```
+
+Pendiente: conectarlo al latido `GI-Reloj` del lunes, la plantilla de correo definitiva de
+marketing y la validación de cumplimiento de GI.
 
 ## Bitácora de planes
 

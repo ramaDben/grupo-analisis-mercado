@@ -75,3 +75,11 @@ def anotar_seguimiento(semana: str, ticker: str, version: int, seguimiento: dict
         if e["version"] == version:
             e.setdefault("seguimientos", []).append(seguimiento)
     _escribir(ruta, entradas)
+
+
+def vigente_tematica(semana: str, tematica: str, ruta: Path = RUTA) -> dict[str, Any] | None:
+    """La pieza vigente de una temática (índices, ETF, acciones), sea cual sea su activo."""
+    for e in reversed([e for e in _leer(ruta) if e["semana"] == semana and e.get("tematica") == tematica]):
+        if e.get("estado") == "vigente":
+            return e if (Path(e["dir"]) / "pieza.json").exists() else None
+    return None

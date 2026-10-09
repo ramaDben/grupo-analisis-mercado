@@ -120,6 +120,9 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
         "contexto_semana": _parrafos(ed["contexto_semana"], c["fondo_alt"]),
         "que_lo_mueve": _vinetas(ed["que_lo_mueve"], c["fondo_alt"]),
         "filas_escenario": _filas_escenario(esc, c),
+        # Índices, ETF y acciones: cómo se eligió el activo, a la vista del cliente.
+        "seleccion": (f'<p style="margin:10px 0 0 0;font-size:13px;line-height:19px;color:{c["texto_3"]};">'
+                      f'{ih.e(d["seleccion"]["texto"])}</p>') if d.get("seleccion") else "",
         "estado": ih.e(esc["textos"]["estado"]),
         "temporalidad": ih.e(d["temporalidad"]),
         "por_que_1d": ih.e(d["por_que_1d"]),

@@ -405,7 +405,7 @@ def _lectores_seguimiento(tmp_path, precio=4060.0, **cambios):
         return destino
 
     lec = _lectores_semanal(**{
-        "semanal_vigente": lambda s, t: {"dir": str(base_dir), "version": 1} if t == "XAUUSD" else None,
+        "semanal_vigente": lambda s, t: {"dir": str(base_dir), "version": 1, "ticker": t} if t == "XAUUSD" else None,
         "serie_d1": lambda t: _velas((4040, 4045, 4010)),
         "precio_vivo": lambda t: precio,
         "grafico_h1": grafico,
@@ -624,3 +624,81 @@ def test_un_texto_que_vende_no_se_entrega(tmp_path):
     at, _, _ = _atendedor(tmp_path, textos={**TEXTOS_SEMANAL, "whatsapp": "Una oportunidad para la semana."})
     with pytest.raises(b.FalloPedido, match="oportunidad"):
         at.atender(b.Pedido("111", 9, Orden("semanal", {"ticker": "XAUUSD"})))
+
+
+# ───────────────────────────────────────────────────────────── temáticas del lunes
+
+
+def test_indices_etf_y_acciones_se_piden_como_tematica():
+    from analista import orden as od
+
+    assert od.interpretar("/semanal etf", []) == od.Orden("semanal", {"tematica": "etf"})
+    assert od.interpretar("/semanal Índices", []) == od.Orden("semanal", {"tematica": "indices"})
+    assert od.interpretar("/seguimiento acciones", []) == od.Orden("seguimiento", {"tematica": "acciones"})
+
+
+def test_la_tematica_elige_el_escenario_mas_claro_y_salta_los_que_no_tienen():
+    df = _serie(400)
+    precio = float(df["close"].iat[-1])
+    base = {"ema_20": precio - 5, "ema_100": precio - 80, "adx_14": 30, "rsi_14": 60, "macd_hist": 1.0}
+    lecturas = {
+        # Sin estructura medible: no compite.
+        "SPY.US": {**_d1(precio, precio - 50, r1=precio + 30, s1=precio - 60, origen="atr"), **base},
+        # Con escenario, pero sin momentum (ADX bajo): menos puntos.
+        "QQQ.US": {**_d1(precio, precio - 50, r1=precio + 10, s1=precio - 60), **base, "adx_14": 10},
+        "GLD.US": {**_d1(precio, precio - 50, r1=precio + 30, s1=precio - 60), **base},
+        "IWM.US": "rompe",  # datos rotos: se salta sin tumbar a los demás
+    }
+
+    def leer_d1(t):
+        if lecturas[t] == "rompe":
+            raise RuntimeError("sin datos")
+        return lecturas[t]
+
+    universo = [{"ticker": t, "digits": 2} for t in lecturas]
+    elegido = sm.elegir(universo, leer_d1, lambda t: df)
+    assert elegido["ticker"] == "GLD.US" and elegido["evaluados"] == 4
+    assert sm.elegir(universo[:1], leer_d1, lambda t: df) is None
+
+
+def test_la_pieza_de_una_tematica_se_arma_con_la_lectura_que_la_eligio(tmp_path):
+    from analista import preparar as pr
+    from analista.orden import Orden
+
+    df = _serie(400)
+    precio = float(df["close"].iat[-1])
+    d1 = _d1(precio, precio - 50, r1=precio + 30, s1=precio - 60)
+    lec = _lectores_semanal(
+        foco_semanal=lambda tem, ahora: {"ticker": "GLD.US", "d1": d1, "serie": df, "evaluados": 5},
+        d1=lambda t: pytest.fail("no se vuelve a leer el activo elegido"),
+        catalogo=lambda t: {"ticker": t, "nombre": "ETF de oro", "categoria": "etf", "digits": 2, "unidad": "USD"},
+    )
+    pieza = pr.preparar(Orden("semanal", {"tematica": "etf"}), tmp_path, AHORA, lec).pieza
+    d = pieza["datos"]
+    assert d["ticker"] == "GLD.US" and d["chip"] == "ESCENARIO DE LA SEMANA · ETF"
+    assert "Elegido entre 5 ETF" in d["seleccion"]["texto"]
+
+    sin = _lectores_semanal(foco_semanal=lambda tem, ahora: None)
+    with pytest.raises(pr.SinEscenarioError, match="ETF"):
+        pr.preparar(Orden("semanal", {"tematica": "etf"}), tmp_path / "x", AHORA, sin)
+
+
+def test_la_tematica_se_reusa_en_la_semana_aunque_no_se_sepa_su_activo(tmp_path):
+    from analista import bot as b
+    from analista import registro_semanal as rs
+    from analista.orden import Orden
+
+    df = _serie(400)
+    precio = float(df["close"].iat[-1])
+    d1 = _d1(precio, precio - 50, r1=precio + 30, s1=precio - 60)
+    lec = _lectores_semanal(
+        foco_semanal=lambda tem, ahora: {"ticker": "GLD.US", "d1": d1, "serie": df, "evaluados": 5},
+        catalogo=lambda t: {"ticker": t, "nombre": "ETF de oro", "categoria": "etf", "digits": 2, "unidad": "USD"},
+    )
+    at, llamadas, _ = _atendedor(tmp_path, lectores=lec)
+    r = at.atender(b.Pedido("111", 9, Orden("semanal", {"tematica": "etf"})))
+    assert (tmp_path / "drive" / "GI Semanal" / "2026-10-05" / "etf").is_dir()
+    assert rs.vigente_tematica("2026-10-05", "etf", tmp_path / "registro.json")["ticker"] == "GLD.US"
+    r2 = at.atender(b.Pedido("111", 9, Orden("semanal", {"tematica": "etf"})))
+    assert len(llamadas) == 1 and "vigente de la semana" in r2.texto
+    assert "Elegido entre 5 ETF" in r.archivos[1].read_text(encoding="utf-8")
