@@ -871,6 +871,8 @@ El repo lo ejecutan **dos** agentes: Claude Code y Antigravity. Antigravity llam
 `/story`, `/encuesta`, `/rencuesta`, `/estado` y `/linkedin`. El flujo es ejecutable igual por los dos
 runners, envío incluido, siempre después de la aprobación explícita del director.
 
+El noveno, `/analista`, solo lo usa el bot interno de Telegram para redactar (`docs/bot-analistas.md`).
+
 **Cada workflow es un puntero, no una copia.** Dos runners leyendo dos carpetas
 distintas con la misma definición duplicada es el problema que ya conocemos: a la
 segunda copia una queda atrás y nadie se entera hasta que sale una pieza mal. Hay

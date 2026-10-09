@@ -510,15 +510,18 @@ def elegir_variante(opciones: tuple[str, ...], *claves: str) -> str:
     return opciones[zlib.crc32("|".join(claves).encode("utf-8")) % len(opciones)]
 
 
-def construir_mensaje_alerta(payload: dict[str, Any]) -> str:
-    """Genera el mensaje de texto de alerta formateado para WhatsApp según las 6 reglas canónicas."""
+def lectura_operativa(payload: dict[str, Any]) -> dict[str, Any]:
+    """Nivel a vigilar, qué esperar, escenarios y temporalidad de una pieza de alerta.
+
+    Es la parte del mensaje que sale de los datos y no de la redacción. La usan
+    el mensaje de WhatsApp y el informe del bot de analistas, para que las dos
+    piezas digan exactamente lo mismo sobre el mismo activo.
+    """
     activo = payload["activo"]
     rotulo = payload.get("rotulo_activo", activo)
     ticker = rotulo.split("·")[-1].strip() if "·" in rotulo else activo
-    precio = payload.get("precio_actual") or payload.get("precio") or "--"
     soporte = payload.get("soporte", "--")
     resistencia = payload.get("resistencia", "--")
-    vol = payload.get("vol_pct", "")
     sesgo = payload.get("sesgo", "Alcista")
     alcista = sesgo.lower() == "alcista"
     lateral = sesgo.lower() == "lateral"
@@ -539,6 +542,33 @@ def construir_mensaje_alerta(payload: dict[str, Any]) -> str:
         nivel_vigilar = soporte
         accion = f"sesgo vendedor; bajo {soporte} gana camino a la baja"
 
+    etiqueta, descripcion = MARCOS_CANONICOS[TIMEFRAME_GRAFICO]
+    nota = payload.get("nota_volatilidad")
+    return {
+        "ticker_visible": ticker,
+        "nivel_vigilar": nivel_vigilar,
+        "que_esperar": accion,
+        "escenarios": [
+            f"⬆️ Sobre {resistencia} → fuerza compradora",
+            # La zona media tambien se opera (decision del director, 2026-09-28):
+            # quien sabe operar la configuracion nunca tiene que quedarse esperando.
+            f"↔️ Entre {soporte} y {resistencia} → rango: si rompe un borde y vuelve a "
+            "entrar, es falso quiebre y el objetivo pasa a ser el borde contrario",
+            f"⬇️ Bajo {soporte} → presión vendedora",
+        ],
+        "temporalidad": f"{etiqueta} · marco {descripcion}",
+        "por_que_temporalidad": f"Por qué {etiqueta} acá: {nota}" if nota else "",
+    }
+
+
+def construir_mensaje_alerta(payload: dict[str, Any]) -> str:
+    """Genera el mensaje de texto de alerta formateado para WhatsApp según las 6 reglas canónicas."""
+    activo = payload["activo"]
+    precio = payload.get("precio_actual") or payload.get("precio") or "--"
+    lectura = lectura_operativa(payload)
+    ticker = lectura["ticker_visible"]
+    nivel_vigilar, accion = lectura["nivel_vigilar"], lectura["que_esperar"]
+
     titular = payload.get("titular", "").strip()
 
     # Formato compacto (decision del director, 2026-09-28): el mensaje es para
@@ -556,12 +586,7 @@ def construir_mensaje_alerta(payload: dict[str, Any]) -> str:
     lineas.extend([
         f"Precio actual: {precio}",
         "━━━━━━━━━━━━━━━━━━━",
-        f"⬆️ Sobre {resistencia} → fuerza compradora",
-        # La zona media tambien se opera (decision del director, 2026-09-28):
-        # quien sabe operar la configuracion nunca tiene que quedarse esperando.
-        f"↔️ Entre {soporte} y {resistencia} → rango: si rompe un borde y vuelve a "
-        "entrar, es falso quiebre y el objetivo pasa a ser el borde contrario",
-        f"⬇️ Bajo {soporte} → presión vendedora",
+        *lectura["escenarios"],
         "━━━━━━━━━━━━━━━━━━━",
     ])
 
@@ -569,11 +594,9 @@ def construir_mensaje_alerta(payload: dict[str, Any]) -> str:
     # desde el issue #44 y nunca implementada: el token `por_que_temporalidad`
     # existia en un solo lugar del repo, que era la propia norma, y el 2026-09-04
     # dos piezas salieron sin el bloque.
-    etiqueta, descripcion = MARCOS_CANONICOS[TIMEFRAME_GRAFICO]
-    lineas.append(f"⏱️ *Temporalidad*: {etiqueta} · marco {descripcion}")
-    nota = payload.get("nota_volatilidad")
-    if nota:
-        lineas.append(f"💡 Por qué {etiqueta} acá: {nota}")
+    lineas.append(f"⏱️ *Temporalidad*: {lectura['temporalidad']}")
+    if lectura["por_que_temporalidad"]:
+        lineas.append(f"💡 {lectura['por_que_temporalidad']}")
 
     # Los bordes estrechos se dicen. El gate de banda deja pasar la pieza entre
     # 0,70x y 1,00x, y callar que sus niveles son apretados para lo que el activo
