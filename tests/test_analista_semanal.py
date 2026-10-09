@@ -171,3 +171,50 @@ def test_el_grafico_dibuja_los_niveles_del_escenario():
     datos = json.loads(re.search(r"const D = (\{.*?\});", html, re.S).group(1).replace("<\\/", "</"))
     assert [n["rol"] for n in datos["niveles"]] == ["SE ACTIVA", "SE ANULA"]
     assert "D.niveles.forEach" in html
+
+
+# ───────────────────────────────────────────────────────────── registro
+
+
+def _entrada(dir_pedido: Path, ticker: str = "XAUUSD", semana: str = "2026-10-12") -> dict:
+    (dir_pedido / "pieza.json").parent.mkdir(parents=True, exist_ok=True)
+    (dir_pedido / "pieza.json").write_text("{}", encoding="utf-8")
+    return {"semana": semana, "ticker": ticker, "dir": str(dir_pedido), "analista": "111",
+            "creada": "2026-10-12T09:30:00-03:00",
+            "escenario": {"sesgo": "Alcista", "gatillo": 4030.0, "invalidacion": 3880.0,
+                          "recorrido": 60.0, "precio": 4000.0, "vela": "2026-10-09 00:00:00"}}
+
+
+def test_la_pieza_de_la_semana_se_reusa_por_activo(tmp_path):
+    from analista import registro_semanal as rs
+
+    ruta = tmp_path / "registro.json"
+    assert rs.vigente("2026-10-12", "XAUUSD", ruta) is None
+    rs.anotar(_entrada(tmp_path / "p1"), ruta)
+    vig = rs.vigente("2026-10-12", "XAUUSD", ruta)
+    assert vig["version"] == 1 and vig["estado"] == "vigente"
+    assert rs.vigente("2026-10-12", "USDCLP", ruta) is None
+    # La semana siguiente es otra pieza.
+    assert rs.vigente("2026-10-19", "XAUUSD", ruta) is None
+
+
+def test_una_pieza_invalidada_deja_de_entregarse_y_la_siguiente_es_version_2(tmp_path):
+    from analista import registro_semanal as rs
+
+    ruta = tmp_path / "registro.json"
+    rs.anotar(_entrada(tmp_path / "p1"), ruta)
+    rs.marcar("2026-10-12", "XAUUSD", 1, "invalidada", ruta)
+    assert rs.vigente("2026-10-12", "XAUUSD", ruta) is None
+    rs.anotar(_entrada(tmp_path / "p2"), ruta)
+    assert rs.vigente("2026-10-12", "XAUUSD", ruta)["version"] == 2
+    # El registro conserva las dos: es historia de lo que circuló.
+    assert len(json.loads(ruta.read_text(encoding="utf-8"))) == 2
+
+
+def test_una_carpeta_borrada_no_se_entrega_como_vigente(tmp_path):
+    from analista import registro_semanal as rs
+
+    ruta = tmp_path / "registro.json"
+    rs.anotar(_entrada(tmp_path / "p1"), ruta)
+    (tmp_path / "p1" / "pieza.json").unlink()
+    assert rs.vigente("2026-10-12", "XAUUSD", ruta) is None
