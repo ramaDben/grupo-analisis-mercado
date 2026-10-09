@@ -39,7 +39,7 @@ def lunes_de(ahora: datetime) -> date:
     return local - timedelta(days=local.weekday())
 
 
-def _fmt(valor: float, digits: int) -> str:
+def fmt(valor: float, digits: int) -> str:
     import pipeline_carrusel as pc
 
     return pc.formatear_precio(valor, digits)
@@ -89,8 +89,8 @@ def escenario(d1: dict[str, Any], df, digits: int, ruptura: tuple[float, int] | 
                           "escenario limpio que plantear esta semana."}
     estado = "invalidado" if anulado else ("activado" if activacion is not None else "armado")
     lado, borde = ("sobre", "bajo") if alcista else ("bajo", "sobre")
-    f = {"precio": _fmt(precio, digits), "gatillo": _fmt(gatillo, digits),
-         "invalidacion": _fmt(invalidacion, digits), "recorrido": _fmt(recorrido, digits)}
+    f = {"precio": fmt(precio, digits), "gatillo": fmt(gatillo, digits),
+         "invalidacion": fmt(invalidacion, digits), "recorrido": fmt(recorrido, digits)}
     textos = {
         "gatillo": f"El escenario {sesgo.lower()} se activa con un cierre diario {lado} {f['gatillo']}.",
         "invalidacion": f"Se anula con un cierre diario {borde} {f['invalidacion']}. Es una salida por "
@@ -160,6 +160,169 @@ def mensaje_whatsapp(pieza: dict[str, Any]) -> str:
         f"↔️ Recorrido de referencia: unos *{f['recorrido']}* (una distancia, no un objetivo)",
         f"⏱️ {d['temporalidad']}",
         "",
+        f"Datos al {d['datos_al']}. _{AVISO_CORTO}_",
+    ]
+    return "\n".join(lineas)
+
+
+# ───────────────────────────────────────────────────────────── utilidades de la pieza
+
+MONTO_BASE = 1_000_000  # pesos: el monto con que abre el panel del correo
+
+
+def colores_marca() -> dict[str, str]:
+    """Los hex de `templates/stories/marca.css` por rol (`sube`, `baja`, `aviso`...).
+
+    El correo no puede usar `var()` (Outlook no lo entiende) y el gráfico tampoco:
+    los colores se leen de la hoja para que la fuente única siga siendo una.
+    """
+    import re
+
+    from analista import RAIZ
+
+    hoja = (RAIZ / "templates" / "stories" / "marca.css").read_text(encoding="utf-8")
+    return {m.group(1): m.group(2) for m in re.finditer(r"--([\w-]+):\s*(#[0-9A-Fa-f]{6})\b", hoja)}
+
+
+DIAS = ("lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo")
+
+
+def datos_al(ahora: datetime) -> str:
+    """'jueves 08-10 · 11:00 CLST': la fecha de los datos, visible en las tres salidas."""
+    import pipeline_avisos as pa
+
+    local = ahora.astimezone(SANTIAGO)
+    return f"{DIAS[local.weekday()]} {local:%d-%m} · {pa.etiqueta_hora(local)}"
+
+
+def pct_es(valor: float) -> str:
+    return f"{valor:+.1f}".replace(".", ",") + " %"
+
+
+def variacion_semana(df, precio: float, lunes: date, digits: int) -> str:
+    """Cuánto lleva el activo desde el cierre de la semana pasada, o 'sin dato'."""
+    import pandas as pd
+
+    previas = df[pd.to_datetime(df["time"]).dt.date < lunes]
+    if previas.empty:
+        return "sin dato"
+    ref = float(previas["close"].iat[-1])
+    return f"{pct_es(100 * (precio / ref - 1))} desde el cierre de la semana pasada ({fmt(ref, digits)})"
+
+
+# ───────────────────────────────────────────────────────────── seguimiento diario
+
+ESTADOS = ("vigente", "avanzando", "completado", "invalidado")
+SELLOS = {"vigente": "VIGENTE", "avanzando": "AVANZANDO", "completado": "COMPLETADO",
+          "invalidado": "INVALIDADO"}
+
+
+def evaluar(esc: dict[str, Any], velas, precio_vivo: float) -> dict[str, Any]:
+    """El estado del escenario de la semana frente a lo que hizo el precio desde la foto.
+
+    `velas` son las velas DIARIAS cerradas posteriores a la vela de la foto, en
+    orden; `precio_vivo` es el precio de ahora (la vela del día en curso).
+    Mismas reglas que la pieza: activa y anula un CIERRE diario; el recorrido se
+    cuenta cumplido apenas el precio lo toca. Si en la misma vela cierra del otro
+    lado de la invalidación y toca el recorrido, gana la invalidación: sin datos
+    intravela no se sabe qué pasó primero, y se cuenta lo que perjudica (igual que
+    `estadistica.desenlace`). La invalidación es la de la foto: el seguimiento
+    mide el escenario que se comunicó, no uno recalculado.
+    """
+    alcista = esc["sesgo"] == "Alcista"
+    signo = 1 if alcista else -1
+    activado = esc.get("estado") == "activado"
+    entrada = float(esc["entrada"])
+    gatillo, inval, rec = float(esc["gatillo"]), float(esc["invalidacion"]), float(esc["recorrido"])
+
+    def mas_alla(valor: float, nivel: float) -> bool:
+        return (valor - nivel) * signo > 0
+
+    def objetivo() -> float:
+        return entrada + signo * rec
+
+    estado = None
+    for _, v in velas.iterrows() if hasattr(velas, "iterrows") else enumerate(velas):
+        cierre, alto, bajo = float(v["close"]), float(v["high"]), float(v["low"])
+        extremo = alto if alcista else bajo
+        if not activado:
+            if mas_alla(cierre, gatillo):
+                activado, entrada = True, gatillo
+                if mas_alla(extremo, objetivo()) or extremo == objetivo():
+                    estado = "completado"
+                    break
+            elif mas_alla(inval, cierre):
+                estado = "invalidado"
+                break
+            continue
+        if mas_alla(inval, cierre):
+            estado = "invalidado"
+            break
+        if mas_alla(extremo, objetivo()) or extremo == objetivo():
+            estado = "completado"
+            break
+    if estado is None:
+        if activado and (mas_alla(precio_vivo, objetivo()) or precio_vivo == objetivo()):
+            estado = "completado"
+        else:
+            estado = "avanzando" if activado else "vigente"
+    avance = round(100 * signo * (precio_vivo - entrada) / rec) if rec and activado else None
+    if estado == "completado":
+        avance = 100
+    return {"estado": estado, "activado": activado, "entrada": entrada, "avance_pct": avance}
+
+
+def textos_seguimiento(esc: dict[str, Any], ev: dict[str, Any], precio_vivo: float, digits: int,
+                       ticker: str, dia: str) -> dict[str, str]:
+    """Las frases fijas del estado, con sus cifras en negrita de WhatsApp.
+
+    Los cuatro estados se cuentan con el mismo peso y ninguno se vende: nunca
+    "si hubieras entrado", nunca una ganancia (criterio 11 del plan).
+    """
+    import pipeline_carrusel as pc
+
+    f = esc["fmt"]
+    alcista = esc["sesgo"] == "Alcista"
+    lado, borde = ("sobre", "bajo") if alcista else ("bajo", "sobre")
+    hoy = fmt(precio_vivo, digits)
+    avance = ev.get("avance_pct")
+    opciones = {
+        "vigente": (
+            f"El escenario sigue *VIGENTE*: el precio, en *{hoy}*, todavía no cierra {lado} *{f['gatillo']}*.",
+            f"*VIGENTE*: sin activarse aún. El precio está en *{hoy}* y la activación sigue en *{f['gatillo']}*.",
+        ),
+        "avanzando": (
+            f"El escenario está *AVANZANDO*: se activó y el precio, en *{hoy}*, lleva el *{avance} %* del recorrido de referencia.",
+            f"*AVANZANDO*: activado, con el precio en *{hoy}* y el *{avance} %* del recorrido de referencia hecho.",
+        ),
+        "completado": (
+            f"El escenario quedó *COMPLETADO*: el precio cubrió el recorrido de referencia de *{f['recorrido']}*. Hoy está en *{hoy}*.",
+            f"*COMPLETADO*: el recorrido de referencia de *{f['recorrido']}* se cumplió. El precio está en *{hoy}*.",
+        ),
+        "invalidado": (
+            f"El escenario quedó *INVALIDADO*: hubo un cierre diario {borde} *{f['invalidacion']}*. El precio está en *{hoy}*.",
+            f"*INVALIDADO*: un cierre diario {borde} *{f['invalidacion']}* anuló el escenario. Hoy el precio está en *{hoy}*.",
+        ),
+    }[ev["estado"]]
+    if ev["estado"] == "avanzando" and avance is not None and avance < 0:
+        opciones = (f"El escenario está *AVANZANDO* sin invalidarse, pero el precio, en *{hoy}*, volvió "
+                    f"{borde} el nivel de activación. La invalidación sigue en *{f['invalidacion']}*.",)
+    return {"estado": pc.elegir_variante(opciones, ticker, dia, ev["estado"]),
+            "referencia": f"Precio del lunes: *{f['precio']}* · hoy: *{hoy}*"}
+
+
+def mensaje_seguimiento(pieza: dict[str, Any]) -> str:
+    """'Te envío una actualización': estado y cifras de Python, lo de hoy de agy."""
+    d = pieza["datos"]
+    lineas = [
+        f"📊 *{d['nombre']} · {d['ticker_visible']}* · Actualización del escenario de la semana",
+        "",
+        d["textos"]["estado"],
+        d["textos"]["referencia"],
+        "",
+        f"📅 Lo de hoy: {pieza['editorial']['hoy'].strip()}",
+        "",
+        f"⏱️ {TEMPORALIDAD}",
         f"Datos al {d['datos_al']}. _{AVISO_CORTO}_",
     ]
     return "\n".join(lineas)

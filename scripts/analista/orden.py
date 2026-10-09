@@ -19,7 +19,7 @@ class PedidoInvalido(ValueError):
     """El pedido no calza con la gramática; el mensaje se le muestra al analista."""
 
 
-PIEZAS = ("activo", "calendario", "dato", "jornada", "oportunidad")
+PIEZAS = ("activo", "calendario", "dato", "jornada", "oportunidad", "semanal", "seguimiento")
 SERVICIO = ("start", "ayuda", "id", "estado")
 
 # Nombres en español que el equipo usa a diario. Los tickers del broker se
@@ -101,9 +101,9 @@ def interpretar(texto: str, universo: list[dict[str, Any]] | None = None) -> Ord
     if re.search(r"(?:^|\s)para\s+\S", cuerpo, flags=re.IGNORECASE):
         raise PedidoInvalido(PERSONALIZACION_RETIRADA)
 
-    if comando == "activo":
+    if comando in ("activo", "semanal", "seguimiento"):
         if not cuerpo:
-            raise PedidoInvalido("Falta el activo. Ejemplo: /activo oro")
+            raise PedidoInvalido(f"Falta el activo. Ejemplo: /{comando} oro")
         if universo is None:
             import screener_gi as sc
 

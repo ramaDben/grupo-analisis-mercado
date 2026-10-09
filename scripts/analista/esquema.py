@@ -29,11 +29,19 @@ CAMPOS: dict[str, tuple[str, ...]] = {
     "jornada": ("titular", "bajada", "lectura", "que_no_hacer"),
     # El foco técnico del día es la pieza de activo para un prospecto: mismos campos.
     "oportunidad": ("titular", "bajada", "lectura", "empuja_alza", "empuja_baja", "que_no_hacer"),
+    # La pieza semanal comercial: el contexto de ESTA semana, no una lista de drivers.
+    "semanal": ("titular", "bajada", "contexto_semana", "que_lo_mueve", "whatsapp"),
+    # El seguimiento diario: el estado y las cifras los escribe Python; agy solo
+    # contrasta lo de hoy con el escenario de la semana.
+    "seguimiento": ("hoy",),
 }
 
 # El titular y la bajada también van impresos dentro de las láminas de WhatsApp,
 # que tienen el espacio medido: un titular largo se corta en la imagen.
 LARGO_MAXIMO = {"titular": 70, "bajada": 160}
+# El texto de WhatsApp de la pieza semanal y la línea de «lo de hoy» van como pie de
+# una imagen: largos, se cortan en la vista previa y el cliente no los abre.
+LARGO_MAXIMO_COMERCIAL = {"whatsapp": 420, "hoy": 300}
 
 # El informe es análisis general: nadie en GI está inscrito como asesor de
 # inversión. Se prohíben FRASES y no palabras sueltas, porque "compra" o
@@ -62,6 +70,17 @@ FRASES_PROHIBIDAS_FOCO: tuple[str, ...] = (
     "no te lo pierdas", "oportunidad", "aprovecha", "asegurad", "ganancia segura",
     "acierta", "efectividad", "de las veces", "tasa de exito",
 )
+
+# La pieza semanal y su seguimiento los manda un ejecutivo a su cartera
+# (criterios de cumplimiento del plan, 2026-10-09): ni invitar, ni recomendar, ni
+# contar lo que "habría ganado" quien entró. Los cuatro estados del seguimiento se
+# informan igual, y ninguno se vende.
+FRASES_PROHIBIDAS_COMERCIAL: tuple[str, ...] = (
+    "oportunidad", "recomendad", "recomendable", "aprovecha", "no te lo pierdas",
+    "si hubieras", "hubieras entrado", "habrias ganado", "ganarias", "ganancia segura",
+    "garantiz", "asegurad", "sin riesgo",
+)
+PIEZAS_COMERCIALES = {"semanal", "seguimiento"}
 
 # El informe no nombra a la CMF (decisión del director, 2026-10-08), tampoco en
 # el texto de agy.
@@ -171,7 +190,8 @@ def errores(pieza: dict[str, Any]) -> list[str]:
 
     pares = textos(pieza)
     errs.extend(validar_textos(pares))
-    for campo, tope in LARGO_MAXIMO.items():
+    topes = {**LARGO_MAXIMO, **(LARGO_MAXIMO_COMERCIAL if tipo in PIEZAS_COMERCIALES else {})}
+    for campo, tope in topes.items():
         largo = len(str(editorial.get(campo, "")))
         if largo > tope:
             errs.append(f"{campo}: tiene {largo} caracteres y el máximo es {tope}")
@@ -189,6 +209,10 @@ def errores(pieza: dict[str, Any]) -> list[str]:
                             "el foco técnico describe un escenario")
             if "%" in texto:
                 errs.append(f"{donde}: trae un porcentaje, y el foco técnico no muestra ninguno")
+        if tipo in PIEZAS_COMERCIALES:
+            for frase in frases_prohibidas(texto, FRASES_PROHIBIDAS_COMERCIAL):
+                errs.append(f"{donde}: «{frase}» invita, recomienda o promete; la pieza comercial "
+                            "describe un escenario y lo deja medible")
         for cifra in cifras_ajenas(texto, pieza.get("datos")):
             errs.append(f"{donde}: la cifra {cifra} no está en los datos del terminal")
     return errs

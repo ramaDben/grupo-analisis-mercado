@@ -218,3 +218,237 @@ def test_una_carpeta_borrada_no_se_entrega_como_vigente(tmp_path):
     rs.anotar(_entrada(tmp_path / "p1"), ruta)
     (tmp_path / "p1" / "pieza.json").unlink()
     assert rs.vigente("2026-10-12", "XAUUSD", ruta) is None
+
+
+# ───────────────────────────────────────────────────────────── /semanal
+
+AHORA = datetime(2026, 10, 8, 11, 0, tzinfo=SCL)
+AGENDA = [
+    {"fecha": "2026-10-08", "hora": "09:30", "pais": "United States", "evento": "CPI",
+     "nombre_es": "Inflación (IPC)", "explicacion": "", "consenso": "0.3%", "anterior": "0.2%",
+     "actual": "0.4%", "resultado": "peor"},
+    {"fecha": "2026-10-09", "hora": "10:00", "pais": "United States", "evento": "Michigan",
+     "nombre_es": "Confianza del consumidor de Michigan", "explicacion": "", "consenso": "55.0",
+     "anterior": "54.2", "actual": "", "resultado": ""},
+    # De la semana siguiente: no entra.
+    {"fecha": "2026-10-14", "hora": "09:30", "pais": "United States", "evento": "PPI",
+     "nombre_es": "Precios al productor", "explicacion": "", "consenso": "", "anterior": "",
+     "actual": "", "resultado": ""},
+]
+
+
+def _lectores_semanal(**cambios):
+    from analista import preparar as pr
+
+    df = _serie(400)
+    precio = float(df["close"].iat[-1])
+    graficos = []
+
+    def grafico(ticker, nombre, digits, niveles, destino):
+        graficos.append(niveles)
+        destino.write_bytes(b"\x89PNG")
+        return destino
+
+    base = dict(
+        d1=lambda t: _d1(precio, precio - 50, r1=precio + 30, s1=precio - 60),
+        serie_d1=lambda t: df,
+        contrato=lambda t, p: dict(CONTRATO),
+        grafico_d1=grafico,
+        catalogo=lambda t: {"ticker": t, "nombre": "Oro", "categoria": "commodity", "digits": 2,
+                            "unidad": "USD", "imagen": "assets/activos/oro.jpg"},
+        agenda_semana=lambda a: (list(AGENDA), []),
+        curva=lambda: ({"series": {"DGS10": {"nivel_pct": 4.1, "delta_1d_bps": -3, "delta_5d_bps": -12}}}, []),
+        drivers=lambda t: ["Dólar global (DXY)", "Tasas reales de EE.UU."],
+        cuenta=lambda: None,
+    )
+    base.update(cambios)
+    lec = pr.Lectores(**base)
+    lec._graficos = graficos  # para inspeccionar los niveles pedidos al gráfico
+    return lec
+
+
+def test_semanal_se_pide_como_el_activo():
+    from analista import orden as od
+
+    universo = [{"ticker": "XAUUSD", "nombre": "Oro"}]
+    assert od.interpretar("/semanal oro", universo) == od.Orden("semanal", {"ticker": "XAUUSD"})
+    with pytest.raises(od.PedidoInvalido):
+        od.interpretar("/semanal", universo)
+
+
+def test_la_pieza_semanal_trae_escenario_simulacion_y_contexto_de_la_semana(tmp_path):
+    from analista import esquema as es
+    from analista import preparar as pr
+    from analista.orden import Orden
+
+    lec = _lectores_semanal()
+    hecha = pr.preparar(Orden("semanal", {"ticker": "XAUUSD"}), tmp_path, AHORA, lec)
+    d = hecha.pieza["datos"]
+    assert d["chip"] == "ESCENARIO DE LA SEMANA · COMMODITIES"
+    assert d["semana"] == "2026-10-05" and d["ticker_visible"] == "XAU/USD"
+    assert d["temporalidad"] == sm.TEMPORALIDAD and d["por_que_1d"] == sm.POR_QUE_1D
+    assert d["escenario"]["hay_escenario"] and d["escenario"]["estado"] == "armado"
+    assert d["contrato"]["clp_unidad"] == 950.0
+    assert d["simulacion_base"]["volumen"] == CONTRATO["vol_min"]
+    agenda = d["contexto"]["agenda_semana"]
+    assert len(agenda) == 2 and "salió 0,4%" in agenda[0] and "Michigan" in agenda[1]
+    assert d["contexto"]["curva_tasas"][0][3] == "-12 pb"  # el delta a 5 días
+    assert d["contexto"]["drivers_del_activo"]
+    assert "variacion_semana" in d["contexto"]
+    # El gráfico diario lleva los niveles del escenario con nombre.
+    assert [n["rol"] for n in lec._graficos[0]] == ["SE ACTIVA", "SE ANULA"]
+    assert (tmp_path / "grafico.png").exists()
+    assert set(hecha.pieza["editorial"]) == set(es.CAMPOS["semanal"])
+
+
+def test_sin_escenario_la_pieza_semanal_no_se_arma(tmp_path):
+    from analista import preparar as pr
+    from analista.orden import Orden
+
+    df = _serie(400)
+    precio = float(df["close"].iat[-1])
+    lec = _lectores_semanal(d1=lambda t: _d1(precio, precio - 50, r1=precio + 30, s1=precio - 60, origen="atr"))
+    with pytest.raises(pr.SinEscenarioError):
+        pr.preparar(Orden("semanal", {"ticker": "XAUUSD"}), tmp_path, AHORA, lec)
+
+
+def test_el_texto_semanal_no_puede_recomendar_ni_prometer(tmp_path):
+    from analista import esquema as es
+    from analista import preparar as pr
+    from analista.orden import Orden
+
+    pieza = pr.preparar(Orden("semanal", {"ticker": "XAUUSD"}), tmp_path, AHORA, _lectores_semanal()).pieza
+    pieza["editorial"] = {
+        "titular": "El oro llega a la semana con impulso",
+        "bajada": "La inflación de Estados Unidos marcó el tono.",
+        "contexto_semana": "Es una oportunidad que no se repite.",
+        "que_lo_mueve": "La acción recomendada por el equipo.",
+        "whatsapp": "Si hubieras entrado el lunes ya ganarías.",
+    }
+    errores = " ".join(es.errores(pieza))
+    assert "oportunidad" in errores and "recomendad" in errores and "si hubieras" in errores
+
+
+# ───────────────────────────────────────────────────────────── seguimiento
+
+ESC_ALZA = {"sesgo": "Alcista", "estado": "armado", "precio": 4000.0, "entrada": 4030.0,
+            "gatillo": 4030.0, "invalidacion": 3880.0, "recorrido": 60.0, "vela": "2026-10-09 00:00:00",
+            "fmt": {"precio": "4.000,00", "gatillo": "4.030,00", "invalidacion": "3.880,00", "recorrido": "60,00"}}
+
+
+def _velas(*filas):
+    return pd.DataFrame([{"time": pd.Timestamp("2026-10-12") + pd.Timedelta(days=i),
+                          "open": c, "high": h, "low": l, "close": c} for i, (c, h, l) in enumerate(filas)])
+
+
+def test_sin_cierre_sobre_el_gatillo_el_escenario_sigue_vigente():
+    ev = sm.evaluar(ESC_ALZA, _velas((4020, 4029, 4000)), 4025.0)
+    assert ev["estado"] == "vigente" and ev["avance_pct"] is None
+
+
+def test_un_cierre_sobre_el_gatillo_lo_activa_y_mide_el_avance_desde_ahi():
+    ev = sm.evaluar(ESC_ALZA, _velas((4040, 4045, 4010)), 4060.0)
+    assert ev["estado"] == "avanzando" and ev["entrada"] == 4030.0
+    assert ev["avance_pct"] == 50  # 30 de 60
+
+
+def test_tocar_el_recorrido_completa_el_escenario():
+    ev = sm.evaluar(ESC_ALZA, _velas((4040, 4045, 4010), (4080, 4095, 4050)), 4085.0)
+    assert ev["estado"] == "completado" and ev["avance_pct"] == 100
+
+
+def test_un_cierre_bajo_la_invalidacion_lo_anula_aunque_no_se_haya_activado():
+    ev = sm.evaluar(ESC_ALZA, _velas((3870, 3990, 3860)), 3875.0)
+    assert ev["estado"] == "invalidado"
+
+
+def test_empate_en_la_misma_vela_cuenta_como_invalidacion():
+    esc = {**ESC_ALZA, "estado": "activado", "entrada": 4000.0}
+    # Toca el recorrido (4.060) y cierra bajo la invalidación en la misma vela.
+    ev = sm.evaluar(esc, _velas((3870, 4070, 3860)), 3875.0)
+    assert ev["estado"] == "invalidado"
+
+
+def test_el_precio_de_ahora_puede_completar_el_escenario_activado():
+    esc = {**ESC_ALZA, "estado": "activado", "entrada": 4000.0}
+    assert sm.evaluar(esc, _velas(), 4061.0)["estado"] == "completado"
+
+
+def test_bajista_es_el_espejo():
+    esc = {"sesgo": "Bajista", "estado": "armado", "precio": 4000.0, "entrada": 3970.0, "gatillo": 3970.0,
+           "invalidacion": 4120.0, "recorrido": 60.0}
+    assert sm.evaluar(esc, _velas((3960, 3990, 3955)), 3940.0)["avance_pct"] == 50
+    assert sm.evaluar(esc, _velas((4130, 4140, 3990)), 4130.0)["estado"] == "invalidado"
+
+
+@pytest.mark.parametrize("estado", sm.ESTADOS)
+def test_los_cuatro_estados_se_cuentan_igual_y_ninguno_vende(estado):
+    ev = {"estado": estado, "avance_pct": 50 if estado == "avanzando" else None}
+    t = sm.textos_seguimiento(ESC_ALZA, ev, 4060.0, 2, "XAUUSD", "2026-10-14")
+    assert sm.SELLOS[estado] in t["estado"] and "*4.060,00*" in t["estado"]
+    plano = t["estado"].lower()
+    assert not any(f in plano for f in ("hubieras", "ganar", "ganancia", "oportunidad"))
+
+
+def _lectores_seguimiento(tmp_path, precio=4060.0, **cambios):
+    base_dir = tmp_path / "lunes"
+    base_dir.mkdir()
+    (base_dir / "pieza.json").write_text(json.dumps({
+        "datos": {"escenario": ESC_ALZA, "digits": 2, "ticker_visible": "XAU/USD", "nombre": "Oro"},
+        "editorial": {"contexto_semana": "La semana gira en torno a la inflación de EE.UU."},
+    }), encoding="utf-8")
+    graficos = []
+
+    def grafico(ticker, nombre, digits, niveles, destino):
+        graficos.append(niveles)
+        destino.write_bytes(b"\x89PNG")
+        return destino
+
+    lec = _lectores_semanal(**{
+        "semanal_vigente": lambda s, t: {"dir": str(base_dir), "version": 1} if t == "XAUUSD" else None,
+        "serie_d1": lambda t: _velas((4040, 4045, 4010)),
+        "precio_vivo": lambda t: precio,
+        "grafico_h1": grafico,
+        "jornada": lambda a: ([AGENDA[1]], []),
+        **cambios,
+    })
+    lec._graficos = graficos
+    return lec
+
+
+def test_el_seguimiento_mide_contra_la_foto_del_lunes_y_trae_lo_de_hoy(tmp_path):
+    from analista import esquema as es
+    from analista import preparar as pr
+    from analista.orden import Orden
+
+    lec = _lectores_seguimiento(tmp_path)
+    pieza = pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA, lec).pieza
+    d = pieza["datos"]
+    assert d["evaluacion"]["estado"] == "avanzando"
+    assert d["chip"] == "SEGUIMIENTO · AVANZANDO"
+    assert d["precio_lunes"] == "4.000,00" and d["precio_hoy"] == "4.060,00"
+    assert d["contexto"]["agenda_hoy"] and "Michigan" in d["contexto"]["agenda_hoy"][0]
+    assert d["contexto"]["curva_tasas"][0][2] == "-3 pb"  # el cambio de hoy, no el de la semana
+    assert d["contexto"]["contexto_lunes"].startswith("La semana gira")
+    assert set(pieza["editorial"]) == set(es.CAMPOS["seguimiento"])
+
+
+def test_sin_pieza_de_la_semana_el_seguimiento_dice_como_pedirla(tmp_path):
+    from analista import preparar as pr
+    from analista.orden import Orden
+
+    lec = _lectores_seguimiento(tmp_path, semanal_vigente=lambda s, t: None)
+    with pytest.raises(pr.SinPiezaSemanalError, match="/semanal xauusd"):
+        pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA, lec)
+
+
+def test_el_mensaje_de_seguimiento_lleva_estado_lo_de_hoy_y_aviso(tmp_path):
+    from analista import preparar as pr
+    from analista.orden import Orden
+
+    pieza = pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA,
+                        _lectores_seguimiento(tmp_path)).pieza
+    pieza["editorial"]["hoy"] = "Hoy se espera la confianza del consumidor de Michigan."
+    texto = sm.mensaje_seguimiento(pieza)
+    assert "*AVANZANDO*" in texto and "Michigan" in texto and "*4.000,00*" in texto
+    assert "no constituye recomendación" in texto.lower()

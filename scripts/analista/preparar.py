@@ -36,6 +36,14 @@ class MercadoIlegibleError(PreparacionFallida):
     """MT5 o el calendario no responden: no se sabe si hay foco o no."""
 
 
+class SinEscenarioError(PreparacionFallida):
+    """El activo no tiene esta semana un escenario medible: es una lectura, no una falla."""
+
+
+class SinPiezaSemanalError(PreparacionFallida):
+    """El seguimiento se pide sobre la pieza de la semana, y todavía no hay."""
+
+
 # ───────────────────────────────────────────────────────────── lectores reales
 
 
@@ -98,8 +106,8 @@ def _curva():
     return pi._curva()
 
 
-def _drivers(ticker: str) -> list[str]:
-    """Los drivers que el catálogo declara para el activo (`config/activos.json`)."""
+def _ficha(ticker: str) -> dict[str, Any]:
+    """La entrada del activo en `config/activos.json` (símbolo visible, drivers...), o {}."""
     from analista import RAIZ
 
     datos = json.loads((RAIZ / "config" / "activos.json").read_text(encoding="utf-8"))
@@ -114,9 +122,12 @@ def _drivers(ticker: str) -> list[str]:
             for v in nodo:
                 yield from recorrer(v)
 
-    for activo in recorrer(datos):
-        return [str(d) for d in activo.get("drivers", [])]
-    return []
+    return next(recorrer(datos), {})
+
+
+def _drivers(ticker: str) -> list[str]:
+    """Los drivers que el catálogo declara para el activo (`config/activos.json`)."""
+    return [str(d) for d in _ficha(ticker).get("drivers", [])]
 
 
 def _serie_h1(ticker: str):
@@ -128,6 +139,130 @@ def _serie_h1(ticker: str):
     except Exception as exc:  # noqa: BLE001
         raise PreparacionFallida(f"sin serie H1 de {ticker} para el plan ({exc})") from exc
     return df.iloc[:-1].reset_index(drop=True)
+
+
+def _d1(ticker: str) -> dict[str, Any]:
+    """`analizar_activo` en diario: niveles, EMA 50 y ATR 14 de la pieza semanal."""
+    from market_data_mcp import mt5_client
+    from market_data_mcp.analisis import analizar_activo
+
+    try:
+        # `analizar_activo` no abre la conexión: sin esto responde MT5_UNAVAILABLE.
+        mt5_client.connect()
+    except Exception as exc:  # noqa: BLE001
+        raise PreparacionFallida(f"MT5 no conectó ({exc.__class__.__name__})") from exc
+    d1 = analizar_activo(ticker, "D1")
+    if d1.get("error"):
+        raise PreparacionFallida(f"el terminal no entregó {ticker} en diario ({d1['error']})")
+    return d1
+
+
+def _serie_d1(ticker: str):
+    """Las últimas velas diarias cerradas: 300 de ventana para medir una ruptura, y margen."""
+    from market_data_mcp import mt5_client
+
+    try:
+        df = mt5_client.get_rates(ticker, "D1", 700)
+    except Exception as exc:  # noqa: BLE001
+        raise PreparacionFallida(f"sin serie diaria de {ticker} ({exc})") from exc
+    return df.iloc[:-1].reset_index(drop=True)
+
+
+def _contrato(ticker: str, precio: float) -> dict[str, Any]:
+    """Lo que el panel del correo necesita para simular, medido en la cuenta declarada.
+
+    Mismo cálculo que `scripts/simulador_gi.py`: `order_calc_profit` y no
+    `tick_value` (miente en los CFD de acciones), y las dos funciones son cálculos,
+    no órdenes.
+    """
+    from market_data_mcp import mt5_client
+
+    try:
+        mt5_client.connect()
+        import MetaTrader5 as mt5  # noqa: PLC0415
+
+        mt5.symbol_select(ticker, True)
+        info = mt5.symbol_info(ticker)
+        clp_unidad = mt5.order_calc_profit(mt5.ORDER_TYPE_BUY, ticker, 1.0, precio, precio + 1.0)
+        margen = mt5.order_calc_margin(mt5.ORDER_TYPE_BUY, ticker, 1.0, precio)
+        moneda = mt5.account_info().currency
+    except Exception as exc:  # noqa: BLE001
+        raise PreparacionFallida(f"no pude leer el contrato de {ticker} ({exc.__class__.__name__})") from exc
+    if not info or not clp_unidad or not margen:
+        raise PreparacionFallida(f"el terminal no calculó el contrato de {ticker}: sin él no hay simulación")
+    return {"clp_unidad": float(clp_unidad), "margen_lote": float(margen),
+            "contrato": float(info.trade_contract_size), "vol_min": float(info.volume_min),
+            "vol_paso": float(info.volume_step), "moneda": str(moneda)}
+
+
+def _grafico(ticker: str, nombre: str, niveles: list[dict[str, Any]], destino: Path,
+             timeframe: str, n_velas: int) -> Path:
+    from tradingview_grafico import generar_grafico_tv
+
+    return generar_grafico_tv(ticker=ticker, nombre=nombre, destino=destino, timeframe=timeframe,
+                              n_velas=n_velas, niveles=niveles)
+
+
+def _grafico_d1(ticker: str, nombre: str, digits: int, niveles: list[dict[str, Any]], destino: Path) -> Path:
+    """Seis meses de velas diarias con los niveles del escenario."""
+    return _grafico(ticker, nombre, niveles, destino, "D1", 120)
+
+
+def _grafico_h1(ticker: str, nombre: str, digits: int, niveles: list[dict[str, Any]], destino: Path) -> Path:
+    """La semana en velas de 1 hora: lo que hizo el precio desde la foto del lunes."""
+    return _grafico(ticker, nombre, niveles, destino, "H1", 120)
+
+
+def _agenda_semana(ahora: datetime) -> tuple[list[dict[str, Any]], list[str]]:
+    """Los datos de alto impacto de la semana en curso, con el resultado de los que ya salieron.
+
+    `pipeline_linkedin.leer_agenda` mira solo hacia adelante; la pieza semanal
+    necesita también lo que ya pasó esta semana. La hora llega en hora de Chile y
+    no se vuelve a convertir (issue #38).
+    """
+    from market_data_mcp.tools.calendar import cargar_calendario
+
+    res = cargar_calendario(solo_hoy=False, min_impact="high", ahora=ahora)
+    if "error" in res:
+        return [], [f"calendario no disponible ({res['error']})"]
+    eventos = []
+    for ev in res.get("eventos", []):
+        try:
+            cuando = datetime.strptime(ev["hora_servidor"], "%Y-%m-%d %H:%M")
+        except (KeyError, ValueError):
+            continue
+        dic = ev.get("diccionario") or {}
+        eventos.append({
+            "fecha": f"{cuando:%Y-%m-%d}", "hora": f"{cuando:%H:%M}", "pais": ev.get("pais", ""),
+            "evento": ev.get("nombre", ""), "nombre_es": dic.get("nombre_es", ""),
+            "explicacion": dic.get("explicacion", ""), "consenso": ev.get("forecast", ""),
+            "anterior": ev.get("previo", ""), "actual": ev.get("actual", ""),
+            "resultado": ev.get("resultado", ""),
+        })
+    return eventos, []
+
+
+def _precio_vivo(ticker: str) -> float:
+    from market_data_mcp import mt5_client
+
+    try:
+        mt5_client.connect()
+        import MetaTrader5 as mt5  # noqa: PLC0415
+
+        mt5.symbol_select(ticker, True)
+        tick = mt5.symbol_info_tick(ticker)
+    except Exception as exc:  # noqa: BLE001
+        raise PreparacionFallida(f"no pude leer el precio de {ticker} ({exc.__class__.__name__})") from exc
+    precio = (tick.bid if tick else 0) or 0
+    if not precio:
+        raise PreparacionFallida(f"el terminal no tiene precio de {ticker} ahora")
+    return float(precio)
+
+
+def _semanal_vigente(semana: str, ticker: str) -> dict[str, Any] | None:
+    from analista import registro_semanal as rs
+
+    return rs.vigente(semana, ticker)
 
 
 def _foco(ahora: datetime):
@@ -182,6 +317,14 @@ class Lectores:
     foco: Callable[[datetime], Any] = _foco
     catalogo: Callable[[str], dict[str, Any]] = _catalogo_de
     cierres: Callable[[str], dict[str, Any]] = _cierres
+    d1: Callable[[str], dict[str, Any]] = _d1
+    serie_d1: Callable[[str], Any] = _serie_d1
+    contrato: Callable[[str, float], dict[str, Any]] = _contrato
+    grafico_d1: Callable[..., Path] = _grafico_d1
+    grafico_h1: Callable[..., Path] = _grafico_h1
+    agenda_semana: Callable[[datetime], tuple[list[dict[str, Any]], list[str]]] = _agenda_semana
+    precio_vivo: Callable[[str], float] = _precio_vivo
+    semanal_vigente: Callable[[str, str], dict[str, Any] | None] = _semanal_vigente
 
 
 @dataclass
@@ -532,16 +675,174 @@ def preparar_jornada(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lecto
     return Preparada(pieza, list(avisos) + list(avisos_curva))
 
 
+# ───────────────────────────────────────────────────────────── semanal y seguimiento
+
+
+def _linea_evento(ev: dict[str, Any], con_dia: bool) -> str:
+    import pipeline_avisos as pa
+
+    from analista.semanal import DIAS
+
+    actual = pa._cifra(ev.get("actual"))
+    esperado = pa._cifra(ev.get("consenso"))
+    if actual:
+        estado = f"salió {actual}" + (f" frente a {esperado} esperado" if esperado else "")
+    else:
+        estado = "esperado " + esperado if esperado else "sin cifra aún"
+    dia = f"{DIAS[datetime.strptime(ev['fecha'], '%Y-%m-%d').weekday()]} " if con_dia else ""
+    return f"{dia}{ev['hora']} · {pa._nombre_evento(ev)}: {estado}"
+
+
+def _niveles_grafico(esc: dict[str, Any]) -> list[dict[str, Any]]:
+    from analista import semanal as sm
+
+    c = sm.colores_marca()
+    activa = c["sube"] if esc["sesgo"] == "Alcista" else c["baja"]
+    return [{"precio": esc["gatillo"], "rol": "SE ACTIVA", "color": activa},
+            {"precio": esc["invalidacion"], "rol": "SE ANULA", "color": c["aviso"]}]
+
+
+def preparar_semanal(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lectores) -> Preparada:
+    """El escenario de la semana en diario, con el contexto medido de ESTA semana.
+
+    Lo que mueve al activo nunca va como lista general (decisión del director,
+    2026-10-09): agy recibe la agenda de lunes a viernes con los resultados que ya
+    salieron, la curva con su cambio a 5 días y la variación de la semana, y solo
+    puede afirmar lo que está acá.
+    """
+    from analista import semanal as sm
+
+    ticker = orden.args["ticker"]
+    activo = lec.catalogo(ticker)
+    digits = int(activo["digits"])
+    d1 = lec.d1(ticker)
+    df = lec.serie_d1(ticker)
+    alcista = float(d1["price"]) > float(d1["ema_50"])
+    esc = sm.escenario(d1, df, digits, sm.ruptura_semana(df, digits, alcista))
+    if not esc["hay_escenario"]:
+        raise SinEscenarioError(f"{activo['nombre']}: {esc['motivo']}")
+    contrato = lec.contrato(ticker, esc["precio"])
+    lec.grafico_d1(ticker, activo["nombre"], digits, _niveles_grafico(esc), dir_pedido / "grafico.png")
+
+    lunes = sm.lunes_de(ahora)
+    avisos: list[str] = []
+    curva, av = lec.curva()
+    avisos += [f"contexto sin curva de tasas: {a}" for a in av]
+    eventos, av = lec.agenda_semana(ahora)
+    avisos += [f"contexto sin agenda: {a}" for a in av]
+    semana = sorted(
+        (ev for ev in eventos if 0 <= (datetime.strptime(ev["fecha"], "%Y-%m-%d").date() - lunes).days <= 4),
+        key=lambda ev: (ev["fecha"], ev["hora"]),
+    )
+    contexto = {
+        "agenda_semana": [_linea_evento(ev, con_dia=True) for ev in semana],
+        "curva_tasas": _filas_curva(curva),
+        "drivers_del_activo": lec.drivers(ticker),
+        "variacion_semana": sm.variacion_semana(df, esc["precio"], lunes, digits),
+    }
+    unidad = activo.get("unidad") or ""
+    clase = CLASES.get(str(activo.get("categoria") or activo.get("clase") or "").lower(), "MERCADOS")
+    datos = {
+        **_comunes(ahora, f"ESCENARIO DE LA SEMANA · {clase}", "Precio de referencia",
+                   f"{esc['fmt']['precio']} {unidad}".strip()),
+        "semana": lunes.isoformat(),
+        "ticker": ticker,
+        "ticker_visible": _ficha(ticker).get("ticker") or ticker,
+        "nombre": activo["nombre"],
+        "categoria": activo.get("categoria") or "",
+        "digits": digits,
+        "unidad": unidad,
+        "precio": esc["fmt"]["precio"],
+        "direccion": esc["sesgo"],
+        "temporalidad": sm.TEMPORALIDAD,
+        "por_que_1d": sm.POR_QUE_1D,
+        "datos_al": sm.datos_al(ahora),
+        "escenario": esc,
+        "contrato": contrato,
+        "monto_base": sm.MONTO_BASE,
+        "simulacion_base": sm.simular(contrato, esc, sm.MONTO_BASE, contrato["vol_min"]),
+        "contexto": contexto,
+        "pie_imagen": f"{activo['nombre']} · velas diarias · MetaTrader 5",
+    }
+    pieza = es.nueva_pieza("semanal", orden.args, datos, {"principal": "grafico.png"})
+    return Preparada(pieza, avisos)
+
+
+def preparar_seguimiento(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lectores) -> Preparada:
+    """Cómo va el escenario de la semana: contra la foto del lunes, no contra uno nuevo."""
+    import pandas as pd
+
+    from analista import semanal as sm
+
+    ticker = orden.args["ticker"]
+    activo = lec.catalogo(ticker)
+    semana = sm.lunes_de(ahora).isoformat()
+    foto = lec.semanal_vigente(semana, ticker)
+    if foto is None:
+        pedido = ticker.lower().replace(".spot", "").replace(".us", "").lstrip("#")
+        raise SinPiezaSemanalError(f"Esta semana todavía no hay pieza de {activo['nombre']}: "
+                                   f"pídela con /semanal {pedido}")
+    base = cargar_pieza(Path(foto["dir"]))
+    bd = base["datos"]
+    esc, digits = bd["escenario"], int(bd["digits"])
+    df = lec.serie_d1(ticker)
+    posteriores = df[pd.to_datetime(df["time"]) > pd.Timestamp(esc["vela"])].reset_index(drop=True)
+    precio = lec.precio_vivo(ticker)
+    ev = sm.evaluar(esc, posteriores, precio)
+    dia = ahora.astimezone(SANTIAGO).date().isoformat()
+    lec.grafico_h1(ticker, activo["nombre"], digits, _niveles_grafico(esc), dir_pedido / "grafico.png")
+
+    avisos: list[str] = []
+    curva, av = lec.curva()
+    avisos += [f"contexto sin curva de tasas: {a}" for a in av]
+    jornada, av = lec.jornada(ahora)
+    avisos += [f"contexto sin agenda: {a}" for a in av]
+    cierre_previo = float(df["close"].iat[-1]) if len(df) else None
+    contexto = {
+        "agenda_hoy": [_linea_evento(e, con_dia=False) for e in jornada],
+        # Lo de HOY: el cambio a 1 día, no el de la semana.
+        "curva_tasas": [fila[:3] for fila in _filas_curva(curva)],
+        "variacion_dia": (f"{sm.pct_es(100 * (precio / cierre_previo - 1))} frente al cierre de ayer"
+                          if cierre_previo else "sin dato"),
+        "escenario_semana": {"sesgo": esc["sesgo"], "estado_lunes": esc["estado"], **esc["fmt"]},
+        "contexto_lunes": base["editorial"].get("contexto_semana", ""),
+    }
+    hoy = sm.fmt(precio, digits)
+    datos = {
+        **_comunes(ahora, f"SEGUIMIENTO · {sm.SELLOS[ev['estado']]}", "Precio de hoy", hoy),
+        "semana": semana,
+        "version": foto["version"],
+        "ticker": ticker,
+        "ticker_visible": bd["ticker_visible"],
+        "nombre": bd["nombre"],
+        "digits": digits,
+        "precio_lunes": esc["fmt"]["precio"],
+        "precio_hoy": hoy,
+        "direccion": esc["sesgo"],
+        "evaluacion": ev,
+        "textos": sm.textos_seguimiento(esc, ev, precio, digits, ticker, dia),
+        "escenario": esc,
+        "temporalidad": sm.TEMPORALIDAD,
+        "datos_al": sm.datos_al(ahora),
+        "contexto": contexto,
+        "pie_imagen": f"{bd['nombre']} · velas de 1 hora · MetaTrader 5",
+    }
+    pieza = es.nueva_pieza("seguimiento", orden.args, datos, {"principal": "grafico.png"})
+    return Preparada(pieza, avisos)
+
+
 PREPARADORES = {
     "activo": preparar_activo,
     "calendario": preparar_calendario,
     "dato": preparar_dato,
     "jornada": preparar_jornada,
     "oportunidad": preparar_oportunidad,
+    "semanal": preparar_semanal,
+    "seguimiento": preparar_seguimiento,
 }
 
 # Piezas que leen precios del terminal: sin la cuenta declarada no salen.
-CON_TERMINAL = {"activo", "dato", "jornada", "oportunidad"}
+CON_TERMINAL = {"activo", "dato", "jornada", "oportunidad", "semanal", "seguimiento"}
 
 
 def preparar(orden: Orden, dir_pedido: Path, ahora: datetime | None = None,
