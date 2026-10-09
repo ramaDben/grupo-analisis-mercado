@@ -490,9 +490,16 @@ def test_el_correo_es_de_tablas_en_linea_y_destaca_las_cifras(tmp_path):
     f = pieza["datos"]["escenario"]["fmt"]
     for cifra in (pieza["datos"]["precio"], f["gatillo"], f["invalidacion"], f["recorrido"]):
         assert re.search(rf"<strong[^>]*>{re.escape(cifra)}", correo), cifra
-    # La línea de marca: Goldman en titulares y cifras, Jakarta en el cuerpo, escritas en cada elemento.
-    assert "font-family:'Goldman'" in correo and "font-family:'Plus Jakarta Sans'" in correo
-    assert "data:font/woff2;base64," in html[:html.index("<body")]
+    # Goldman en titulares y cifras; el cuerpo en Segoe UI, que Outlook trae de serie.
+    assert "font-family:'Goldman'" in correo and "font-family:'Segoe UI'" in correo
+    assert "Jakarta" not in html
+    # Dos versiones completas, cada una con su paleta de marca.
+    oscuro = correo[:correo.index('<template id="tema-claro">')]
+    claro = correo[correo.index('<template id="tema-claro">'):]
+    marca = sm.colores_marca()
+    assert oscuro.count('id="email-root"') == 1 and claro.count('id="email-root"') == 1
+    assert f"color:{marca['texto-1']}" in oscuro and f"color:{marca['tinta']}" not in oscuro
+    assert f"color:{marca['tinta']}" in claro and f'bgcolor="{marca["papel"]}"' in claro
     assert 'id="v-perdida"' in correo and 'id="v-recorrido"' in correo
     assert "Simulación realizada por Camila Rojas" in correo
     assert "Análisis de Benjamín" in correo and "Te lo envía" in correo

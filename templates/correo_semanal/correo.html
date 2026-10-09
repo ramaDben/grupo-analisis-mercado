@@ -3,12 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="dark">
-<meta name="supported-color-schemes" content="dark">
+<meta name="color-scheme" content="dark light">
+<meta name="supported-color-schemes" content="dark light">
 <title>{{titulo_documento}}</title>
 <style id="email-styles">
   @font-face{font-family:"Goldman";src:url("{{fuente_goldman}}") format("woff2");font-weight:700;font-style:normal;}
-  @font-face{font-family:"Plus Jakarta Sans";src:url("{{fuente_jakarta}}") format("woff2");font-weight:200 800;font-style:normal;}
   @media only screen and (max-width:680px){
     .shell{width:100% !important;}
     .pad{padding-left:20px !important;padding-right:20px !important;}
@@ -19,7 +18,7 @@
   }
 </style>
 <style id="builder-styles">
-  .email-builder{box-sizing:border-box;max-width:760px;margin:24px auto 10px;padding:26px;background:{{c_fondo_acento}};color:{{c_texto_1}};border-radius:16px;border:1px solid {{c_linea}};}
+  .email-builder{box-sizing:border-box;max-width:760px;margin:24px auto 10px;padding:26px;background:{{c_tarjeta}};color:{{c_texto_1}};border-radius:16px;border:1px solid {{c_linea}};}
   .email-builder *{box-sizing:border-box;font-family:{{f_sans}};}
   .email-builder h2{margin:0 0 8px;font-family:{{f_display}};font-weight:700;font-size:22px;line-height:28px;letter-spacing:.02em;color:{{c_texto_1}};}
   .email-builder p{margin:0 0 18px;font-size:15px;line-height:23px;font-weight:500;color:{{c_texto_2}};}
@@ -36,6 +35,9 @@
   .builder-btn.secundario{background:transparent;color:{{c_texto_1}};border:1px solid {{c_linea}};}
   #builder-status{font-size:14px;font-weight:600;color:{{c_acento}};min-height:18px;}
   .builder-note{margin-top:14px!important;margin-bottom:0!important;padding:10px 14px;background:{{c_fondo}};border-radius:10px;}
+  .builder-tema{display:inline-flex;margin-top:4px;padding:4px;background:{{c_fondo}};border:1px solid {{c_linea}};border-radius:12px;}
+  .builder-tema button{border:0;border-radius:8px;padding:9px 18px;background:transparent;color:{{c_texto_2}};font-size:15px;font-weight:700;cursor:pointer;}
+  .builder-tema button[aria-pressed="true"]{background:{{c_acento}};color:{{c_fondo}};}
   #code-box{display:none;margin-top:14px;}
   #code-box textarea{width:100%;height:200px;padding:10px;background:{{c_fondo}};color:{{c_texto_borde}};border:1px solid {{c_linea}};font:12px/1.5 Consolas,monospace;}
   @media (max-width:680px){.email-builder{margin:12px;padding:18px}.builder-grid{grid-template-columns:1fr}.builder-field.full{grid-column:auto}}
@@ -61,6 +63,12 @@
     <label class="builder-field"><span>Volumen</span>
       <input id="f-volumen" type="number" min="{{vol_min}}" step="{{vol_paso}}" value="{{vol_min}}">
       <small>Mínimo {{vol_min_es}}, en pasos de {{vol_paso_es}}.</small></label>
+    <div class="builder-field full"><span>Versión del correo</span>
+      <div class="builder-tema" role="group" aria-label="Versión del correo">
+        <button type="button" id="tema-btn-oscuro" data-tema="oscuro" aria-pressed="true">Oscura</button>
+        <button type="button" id="tema-btn-claro" data-tema="claro" aria-pressed="false">Clara</button>
+      </div>
+      <small>Se copia la versión que ves abajo. La clara se lee mejor si el cliente imprime el correo.</small></div>
   </div>
   <div class="builder-actions">
     <button class="builder-btn primario" id="copy-email" type="button">Copiar correo para Outlook</button>
@@ -71,109 +79,10 @@
   <p class="builder-note">Este panel <strong>no se copia</strong>. Solo se copia el correo de abajo.</p>
 </section>
 
-<table id="email-root" role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="{{c_fondo}}" style="width:100%;background:{{c_fondo}};font-family:{{f_sans}};">
-<tr><td align="center" style="padding:28px 10px;">
-<!--[if mso]><style>td,p,h1,li,span,strong,a{font-family:Arial,Helvetica,sans-serif !important;}</style><![endif]-->
-<table role="presentation" class="shell" width="640" cellspacing="0" cellpadding="0" border="0" bgcolor="{{c_fondo_alt}}" style="width:640px;max-width:640px;background:{{c_fondo_alt}};border:1px solid {{c_linea}};">
-
-  <tr><td bgcolor="{{c_fondo}}" style="background:{{c_fondo}};padding:24px 40px;" class="pad">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr>
-      <td valign="middle"><img src="{{logo}}" width="150" alt="Grupo Inteligencia" style="display:block;border:0;width:150px;height:auto;"></td>
-      <td valign="middle" align="right" style="font-family:{{f_sans}};font-size:14px;line-height:20px;font-weight:600;color:{{c_texto_2}};">Datos al<br><span style="color:{{c_texto_1}};">{{datos_al}}</span></td>
-    </tr></table>
-  </td></tr>
-  <tr><td bgcolor="{{c_acento}}" style="height:3px;line-height:3px;font-size:3px;background:{{c_acento}};background-image:linear-gradient(90deg,{{c_acento_azul}},{{c_acento}});">&nbsp;</td></tr>
-
-  <tr><td class="pad" bgcolor="{{c_fondo_acento}}" style="background:{{c_fondo_acento}};background-image:linear-gradient(135deg,{{c_fondo_acento}} 0%,{{c_fondo_alt}} 100%);padding:34px 40px 32px 40px;">
-    <p style="margin:0 0 14px 0;font-family:{{f_display}};font-size:15px;line-height:20px;letter-spacing:2px;text-transform:uppercase;font-weight:700;color:{{c_acento}};">{{chip}}</p>
-    <h1 class="h1" style="margin:0 0 14px 0;font-family:{{f_display}};font-size:30px;line-height:37px;font-weight:700;color:{{c_texto_1}};">{{titular}}</h1>
-    <p style="margin:0 0 24px 0;font-family:{{f_sans}};font-size:17px;line-height:26px;font-weight:500;color:{{c_texto_borde}};">{{bajada}}</p>
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="{{c_fondo}}" style="background:{{c_fondo}};border:1px solid {{c_linea}};border-radius:12px;">
-      <tr>
-        <td valign="middle" style="padding:16px 20px;">
-          <p style="margin:0 0 4px 0;font-family:{{f_sans}};font-size:15px;line-height:20px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:{{c_texto_borde}};">{{nombre}} · {{ticker_visible}}</p>
-          <p style="margin:0;font-family:{{f_sans}};font-size:15px;line-height:20px;font-weight:600;color:{{c_texto_2}};">Precio de referencia</p>
-          <p class="cifra" style="margin:2px 0 0 0;font-family:{{f_display}};font-size:30px;line-height:36px;font-weight:700;color:{{c_texto_1}};white-space:nowrap;"><strong>{{precio}}</strong> <span style="font-family:{{f_sans}};font-size:15px;font-weight:600;color:{{c_texto_2}};">{{unidad}}</span></p>
-        </td>
-        <td valign="middle" align="right" style="padding:16px 20px;">
-          <span style="display:inline-block;padding:8px 18px;border-radius:999px;background:{{c_direccion}};color:{{c_fondo}};font-family:{{f_sans}};font-size:15px;line-height:20px;font-weight:800;letter-spacing:1.5px;">{{direccion_mayus}}</span>
-        </td>
-      </tr>
-    </table>
-  </td></tr>
-
-  <tr><td class="pad" style="padding:32px 40px 0 40px;">
-    <p id="v-saludo" style="margin:0 0 12px 0;font-family:{{f_sans}};font-size:17px;line-height:26px;font-weight:700;color:{{c_texto_1}};">Hola:</p>
-    <p style="margin:0;font-family:{{f_sans}};font-size:17px;line-height:27px;font-weight:500;color:{{c_texto_borde}};">Te comparto el escenario de la semana de {{nombre}}, preparado por la Dirección de Análisis Técnico de Grupo Inteligencia. Es una lectura general, igual para todos.</p>
-    {{seleccion}}
-  </td></tr>
-
-  <tr><td class="pad" style="padding:30px 40px 0 40px;">
-    <p style="margin:0 0 8px 0;font-family:{{f_display}};font-size:15px;line-height:20px;letter-spacing:1.8px;text-transform:uppercase;font-weight:700;color:{{c_acento}};">Análisis de {{autor_nombre}}</p>
-    <p style="margin:0 0 12px 0;font-family:{{f_display}};font-size:21px;line-height:28px;font-weight:700;color:{{c_texto_1}};">Qué está pasando esta semana</p>
-    {{contexto_semana}}
-    <p style="margin:22px 0 12px 0;font-family:{{f_display}};font-size:21px;line-height:28px;font-weight:700;color:{{c_texto_1}};">Qué lo mueve esta semana</p>
-    {{que_lo_mueve}}
-  </td></tr>
-
-  <tr><td class="pad" style="padding:26px 40px 0 40px;">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid {{c_linea}};border-radius:12px;"><tr><td style="padding:6px;">
-      <img src="{{grafico}}" width="546" alt="{{pie_imagen}}" style="display:block;border:0;width:100%;max-width:546px;height:auto;border-radius:8px;">
-    </td></tr></table>
-    <p style="margin:8px 0 0 0;font-family:{{f_sans}};font-size:14px;line-height:20px;font-weight:500;color:{{c_texto_2}};">{{pie_imagen}}</p>
-  </td></tr>
-
-  <tr><td class="pad" style="padding:30px 40px 0 40px;">
-    <p style="margin:0 0 12px 0;font-family:{{f_display}};font-size:21px;line-height:28px;font-weight:700;color:{{c_texto_1}};">Escenario de la semana · <span style="color:{{c_direccion}};">{{direccion}}</span></p>
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="{{c_fondo_acento}}" style="background:{{c_fondo_acento}};border:1px solid {{c_linea}};border-radius:12px;">
-      {{filas_escenario}}
-    </table>
-    <p style="margin:16px 0 0 0;font-family:{{f_sans}};font-size:16px;line-height:24px;font-weight:500;color:{{c_texto_borde}};"><strong style="color:{{c_texto_1}};">Estado:</strong> {{estado}}</p>
-    <p style="margin:10px 0 0 0;font-family:{{f_sans}};font-size:16px;line-height:24px;font-weight:500;color:{{c_texto_borde}};">⏱️ <strong style="color:{{c_texto_1}};">{{temporalidad}}</strong></p>
-    <p style="margin:6px 0 0 0;font-family:{{f_sans}};font-size:15px;line-height:23px;font-weight:500;color:{{c_texto_2}};">💡 Por qué 1D: {{por_que_1d}}</p>
-  </td></tr>
-
-  <tr><td class="pad" style="padding:32px 40px 0 40px;">
-    <p id="v-rotulo-sim" style="margin:0 0 8px 0;font-family:{{f_display}};font-size:15px;line-height:20px;letter-spacing:1.8px;text-transform:uppercase;font-weight:700;color:{{c_acento}};">Simulación realizada por {{ejecutivo_nombre}}</p>
-    <p style="margin:0 0 14px 0;font-family:{{f_sans}};font-size:15px;line-height:22px;font-weight:500;color:{{c_texto_2}};">Con el contrato de MetaTrader 5 al {{datos_al}}. Ilustra tamaños y riesgos; no es una instrucción ni anticipa un resultado.</p>
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="{{c_fondo_acento}}" style="background:{{c_fondo_acento}};border:1px solid {{c_linea}};border-radius:12px;">
-      {{filas_simulacion}}
-    </table>
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:14px;"><tr>
-      <td class="stack" width="49%" valign="top" bgcolor="{{c_fondo_baja}}" style="padding:18px;background:{{c_fondo_baja}};border:2px solid {{c_baja}};border-radius:12px;">
-        <p style="margin:0 0 6px 0;font-family:{{f_sans}};font-size:15px;line-height:20px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:{{c_baja}};">Si se anula el escenario</p>
-        <p class="cifra" style="margin:0;font-family:{{f_display}};font-size:30px;line-height:36px;font-weight:700;color:{{c_texto_1}};"><strong id="v-perdida">{{sim_perdida}}</strong></p>
-        <p style="margin:6px 0 0 0;font-family:{{f_sans}};font-size:15px;line-height:21px;font-weight:500;color:{{c_texto_borde}};">Pérdida al cierre en {{invalidacion}}</p>
-      </td>
-      <td class="stack stack-gap" width="2%" style="font-size:0;line-height:0;">&nbsp;</td>
-      <td class="stack" width="49%" valign="top" bgcolor="{{c_fondo_sube}}" style="padding:18px;background:{{c_fondo_sube}};border:2px solid {{c_sube}};border-radius:12px;">
-        <p style="margin:0 0 6px 0;font-family:{{f_sans}};font-size:15px;line-height:20px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:{{c_sube}};">Si cubre el recorrido</p>
-        <p class="cifra" style="margin:0;font-family:{{f_display}};font-size:30px;line-height:36px;font-weight:700;color:{{c_texto_1}};"><strong id="v-recorrido">{{sim_recorrido}}</strong></p>
-        <p style="margin:6px 0 0 0;font-family:{{f_sans}};font-size:15px;line-height:21px;font-weight:500;color:{{c_texto_borde}};">Recorrido de referencia de {{recorrido}}</p>
-      </td>
-    </tr></table>
-    <p style="margin:12px 0 0 0;font-family:{{f_sans}};font-size:15px;line-height:22px;font-weight:500;color:{{c_texto_2}};">Las dos cifras se muestran juntas y del mismo tamaño a propósito: el apalancamiento amplifica igual las ganancias y las pérdidas.</p>
-  </td></tr>
-
-  <tr><td class="pad" style="padding:32px 40px 0 40px;">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-top:1px solid {{c_linea}};"><tr>
-      <td class="stack" width="50%" valign="top" style="padding:18px 10px 0 0;font-family:{{f_sans}};font-size:16px;line-height:23px;font-weight:500;color:{{c_texto_borde}};">
-        <span style="font-size:14px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:{{c_acento}};">Análisis</span><br>
-        <strong style="color:{{c_texto_1}};">{{autor_nombre}}</strong><br>{{autor_cargo}}
-      </td>
-      <td class="stack" width="50%" valign="top" style="padding:18px 0 0 0;font-family:{{f_sans}};font-size:16px;line-height:23px;font-weight:500;color:{{c_texto_borde}};">
-        <span style="font-size:14px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:{{c_acento}};">Te lo envía</span><br>
-        <strong id="v-ejecutivo" style="color:{{c_texto_1}};">{{ejecutivo_nombre}}</strong><br><span id="v-cargo">{{ejecutivo_cargo}}</span><br><span id="v-contacto">{{ejecutivo_contacto}}</span>
-      </td>
-    </tr></table>
-  </td></tr>
-
-  <tr><td class="pad" style="padding:26px 40px 32px 40px;">
-    <p style="margin:0;padding:14px 16px;background:{{c_fondo}};border-radius:10px;font-family:{{f_sans}};font-size:14px;line-height:21px;font-weight:500;color:{{c_texto_2}};">{{aviso_legal}}</p>
-  </td></tr>
-</table>
-</td></tr>
-</table>
+<div id="correo">
+{{cuerpo_oscuro}}</div>
+<template id="tema-claro">
+{{cuerpo_claro}}</template>
 
 <script id="simulador">
 function ajustarVolumen(vol, minimo, paso) {
@@ -256,9 +165,24 @@ function simular(c, e, monto, volumen) {
     catch (e) { $('code-box').style.display = 'block'; $('code-area').value = c; $('code-area').select();
       status.textContent = document.execCommand('copy') ? 'Código copiado.' : 'Selecciona el código del recuadro y cópialo.'; }
   }
+  // Las dos versiones vienen armadas desde Python con su propia paleta: cambiar de
+  // tema es cambiar el correo entero, y los datos del panel se vuelven a escribir.
+  var TEMAS = {oscuro: $('correo').innerHTML, claro: $('tema-claro').innerHTML};
+  function cambiarTema(tema){
+    $('correo').innerHTML = TEMAS[tema];
+    root = $('email-root');
+    document.body.style.background = root.getAttribute('bgcolor');
+    ['oscuro','claro'].forEach(function(t){ $('tema-btn-' + t).setAttribute('aria-pressed', String(t === tema)); });
+    try { localStorage.setItem('correo-semanal-tema', tema); } catch (e) {}
+    status.textContent = '';
+    update();
+  }
+  ['oscuro','claro'].forEach(function(t){ $('tema-btn-' + t).addEventListener('click', function(){ cambiarTema(t); }); });
   $('copy-email').addEventListener('click', copiarCorreo);
   $('copy-code').addEventListener('click', copiarCodigo);
-  update();
+  var guardado = null;
+  try { guardado = localStorage.getItem('correo-semanal-tema'); } catch (e) {}
+  if (guardado === 'claro') cambiarTema('claro'); else update();
 })();
 </script>
 </body>
