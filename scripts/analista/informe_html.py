@@ -30,6 +30,11 @@ LOGO = RAIZ / "templates" / "stories" / "assets" / "LOGO Blanco.png"
 FRASE_GENERAL = ("Análisis general de mercado, idéntico para todos sus destinatarios. "
                  "No es asesoría de inversión ni considera el perfil de quien lo lee.")
 
+# Reemplaza la estadística en el foco técnico: protege igual, sin una cifra que
+# sin su línea base insinúe una ventaja (decisión del director, 2026-10-09).
+FRASE_ESCENARIO = ("Un escenario técnico no anticipa el resultado: puede cumplirse o invalidarse, "
+                   "y por eso siempre trae su nivel de invalidación.")
+
 
 class InformeInvalido(ValueError):
     """La pieza no pasó el esquema; el mensaje lista cada problema."""
@@ -101,7 +106,15 @@ def h2(numero: int, titulo: str) -> str:
 # ───────────────────────────────────────────────────────────── cuerpos por pieza
 
 
-def cuerpo_activo(p: dict[str, Any], dir_pedido: Path) -> str:
+def cuerpo_oportunidad(p: dict[str, Any], dir_pedido: Path) -> str:
+    """El foco técnico del día: el cuerpo del activo, con su transparencia y sin estadística."""
+    s = p["datos"]["seleccion"]
+    transparencia = (f'<p class="transparencia">Elegido por el escáner de Grupo Inteligencia entre '
+                     f'{e(s["evaluados"])} activos, el {e(s["fecha"])} a las {e(s["hora"])} (hora de Chile).</p>')
+    return transparencia + "\n" + cuerpo_activo(p, dir_pedido, foco=True)
+
+
+def cuerpo_activo(p: dict[str, Any], dir_pedido: Path, foco: bool = False) -> str:
     d, ed = p["datos"], p["editorial"]
     escenarios = "".join(f"<li>{e(s)}</li>" for s in d["escenarios"])
     return "\n".join([
@@ -123,19 +136,23 @@ def cuerpo_activo(p: dict[str, Any], dir_pedido: Path) -> str:
         f'<p class="temporalidad">⏱️ <strong>Temporalidad:</strong> {e(d["temporalidad"])}</p>',
         f'<p class="temporalidad">💡 {e(d["por_que_temporalidad"])}</p>' if d.get("por_que_temporalidad") else "",
         h2(4, "Plan de escenarios") if d.get("plan") else "",
-        seccion_plan(d["plan"]) if d.get("plan") else "",
+        seccion_plan(d["plan"], con_estadistica=not foco) if d.get("plan") else "",
         capa("Qué NO hacer", ed["que_no_hacer"], "no-hacer"),
         _tabla_tasas(d.get("contexto", {}).get("curva_tasas") or [], 5 if d.get("plan") else 4),
     ])
 
 
-def seccion_plan(plan: dict[str, Any]) -> str:
-    """El plan que escribió Python: gatillo, invalidación, recorrido, historia y estado."""
+def seccion_plan(plan: dict[str, Any], con_estadistica: bool = True) -> str:
+    """El plan que escribió Python: gatillo, invalidación, recorrido, historia y estado.
+
+    Sin estadística (foco técnico) la historia se reemplaza por `FRASE_ESCENARIO`.
+    """
     if not plan.get("hay_plan"):
         return f'<div class="plan plan-vacio"><p>{e(plan.get("motivo", ""))}</p></div>'
+    historia = (("Qué dice la historia", plan["estadistica"]) if con_estadistica
+                else ("Antes de leerlo", FRASE_ESCENARIO))
     filas = [("Gatillo", plan["gatillo"]), ("Invalidación", plan["invalidacion"]),
-             ("Recorrido", plan["recorrido"]), ("Qué dice la historia", plan["estadistica"]),
-             ("Estado", plan["estado"])]
+             ("Recorrido", plan["recorrido"]), historia, ("Estado", plan["estado"])]
     cuerpo = "".join(
         f'<div class="plan-fila"><div class="plan-rotulo">{e(r)}</div><p>{e(t)}</p></div>' for r, t in filas
     )
@@ -241,6 +258,7 @@ CUERPOS = {
     "calendario": cuerpo_calendario,
     "dato": cuerpo_dato,
     "jornada": cuerpo_jornada,
+    "oportunidad": cuerpo_oportunidad,
 }
 
 

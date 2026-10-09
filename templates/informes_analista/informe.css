@@ -237,6 +237,9 @@ table.tabla {
 
 .temporalidad { font-size: 11pt; color: var(--tinta-2); margin-bottom: 10pt; }
 
+/* Foco técnico: quién lo eligió y cuándo, antes de cualquier lectura. */
+.transparencia { font-size: 10pt; color: var(--tinta-2); font-style: italic; margin: 0 0 10pt; }
+
 .bloque-activo { break-inside: avoid; margin-bottom: 14pt; }
 
 /* ── Lema y pie (evergreen GI) ────────────────────────────────────────────── */
