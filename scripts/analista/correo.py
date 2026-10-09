@@ -237,8 +237,18 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
 
     oscuro = con_tema("oscuro")
     # El panel siempre va en la versión oscura; el correo, en la que elija el ejecutivo.
-    return _rellenar(PLANTILLA, {**oscuro, "cuerpo_oscuro": _rellenar(CUERPO, oscuro),
-                                 "cuerpo_claro": _rellenar(CUERPO, con_tema("claro"))})
+    return _rellenar(PLANTILLA, {**oscuro, "cuerpo_oscuro": _compactar(_rellenar(CUERPO, oscuro)),
+                                 "cuerpo_claro": _compactar(_rellenar(CUERPO, con_tema("claro")))})
+
+
+def _compactar(html: str) -> str:
+    """Quita los saltos de línea del código entre etiquetas.
+
+    Outlook pega con el motor de Word, que convierte esos espacios en sangría.
+    Solo se quita el espacio que lleva un salto de línea: un espacio simple entre
+    etiquetas es contenido («4.196,62</strong> <span>USD»).
+    """
+    return re.sub(r">\s*\n\s*<", "><", html).strip()
 
 
 def _rellenar(plantilla: Path, tokens: dict[str, str]) -> str:

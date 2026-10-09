@@ -496,6 +496,14 @@ def test_el_correo_es_de_tablas_en_linea_y_destaca_las_cifras(tmp_path):
     # Outlook pega con el motor de Word, que vuelve sangría los espacios del código
     # delante de un elemento en línea: ninguno puede empezar un renglón indentado.
     assert not re.search(r"\n[ \t]+<(span|strong|b|a|br)\b", co.CUERPO.read_text(encoding="utf-8"))
+    # Lo que se copia va compacto: sin saltos de línea entre etiquetas que Word vuelva sangría,
+    # pero el espacio simple entre etiquetas es contenido y se conserva.
+    cuerpos = re.findall(r'<table id="email-root".*?(?=</div>|</template>)', correo, re.S)
+    assert len(cuerpos) == 2 and not any(re.search(r">\s*\n\s*<", c) for c in cuerpos)
+    assert f"{pieza['datos']['precio']}</strong> <span" in correo
+    # Word ignora el relleno y el fondo de un párrafo y el margen de una tabla.
+    assert not re.search(r'<p\b[^>]*style="[^"]*(padding|background)', correo)
+    assert not re.search(r'<table\b[^>]*style="[^"]*margin', correo)
     # Dos versiones completas, cada una con su paleta de marca.
     oscuro = correo[:correo.index('<template id="tema-claro">')]
     claro = correo[correo.index('<template id="tema-claro">'):]

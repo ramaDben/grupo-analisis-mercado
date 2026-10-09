@@ -64,7 +64,9 @@
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="{{c_tarjeta}}" style="background:{{c_tarjeta}};border:1px solid {{c_linea}};border-radius:12px;">
       {{filas_simulacion}}
     </table>
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:14px;"><tr>
+    <!-- Separador en fila de alto fijo: Word ignora el margen de una tabla. -->
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td height="14" style="height:14px;font-size:0;line-height:0;">&nbsp;</td></tr></table>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr>
       <td class="stack" width="49%" valign="top" bgcolor="{{c_fondo_baja}}" style="padding:18px;background:{{c_fondo_baja}};border:2px solid {{c_baja}};border-radius:12px;">
         <p style="margin:0 0 6px 0;font-family:{{f_sans}};font-size:15px;line-height:20px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:{{c_baja}};">Si se anula el escenario</p>
         <p class="cifra" style="margin:0;font-family:{{f_display}};font-size:30px;line-height:36px;font-weight:700;color:{{c_texto_1}};"><strong id="v-perdida">{{sim_perdida}}</strong></p>
@@ -90,7 +92,8 @@
   </td></tr>
 
   <tr><td class="pad" style="padding:26px 40px 32px 40px;">
-    <p style="margin:0;padding:14px 16px;background:{{c_fondo}};border-radius:10px;font-family:{{f_sans}};font-size:14px;line-height:21px;font-weight:500;color:{{c_texto_2}};">{{aviso_legal}}</p>
+    <!-- El fondo y el relleno van en la celda: Word ignora el relleno de un párrafo. -->
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td bgcolor="{{c_fondo}}" style="padding:14px 16px;background:{{c_fondo}};border-radius:10px;"><p style="margin:0;font-family:{{f_sans}};font-size:14px;line-height:21px;font-weight:500;color:{{c_texto_2}};">{{aviso_legal}}</p></td></tr></table>
   </td></tr>
 </table>
 </td></tr>
