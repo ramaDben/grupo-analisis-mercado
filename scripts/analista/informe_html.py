@@ -15,17 +15,20 @@ import base64
 import html
 import re
 import unicodedata
+from datetime import date
 from pathlib import Path
 from typing import Any
 
 from analista import RAIZ
+from analista import autor as au
 from analista import esquema as es
 
 DIR_PLANTILLAS = RAIZ / "templates" / "informes_analista"
 MARCA_CSS = RAIZ / "templates" / "stories" / "marca.css"
 LOGO = RAIZ / "templates" / "stories" / "assets" / "LOGO Blanco.png"
 
-AUTOR_PROVISORIO = "Benjamín Ignacio Bravo Soza"
+FRASE_GENERAL = ("Análisis general de mercado, idéntico para todos sus destinatarios. "
+                 "No es asesoría de inversión ni considera el perfil de quien lo lee.")
 
 
 class InformeInvalido(ValueError):
@@ -247,8 +250,30 @@ def _fuentes() -> str:
     return caras_de_fuente()
 
 
-def armar(pieza: dict[str, Any], dir_pedido: Path, analista: dict[str, Any]) -> str:
-    """HTML completo del informe general."""
+def bloque_firma(a: au.Autor, hoy: date) -> str:
+    """Quién firma, con la acreditación solo si sigue vigente a la fecha del pedido."""
+    foto = f'<img class="firma-foto" src="{_data_uri(a.foto)}" alt="{e(a.nombre)}">' if a.foto else ""
+    trazo = f'<img class="firma-trazo" src="{_data_uri(a.firma)}" alt="Firma">' if a.firma else ""
+    credencial = ""
+    if au.vigente(a, hoy):
+        ac = a.acreditacion
+        hasta = date.fromisoformat(ac["vigente_hasta"]).strftime("%d-%m-%Y")
+        visible = ac["url"].split("//", 1)[-1]
+        credencial = (
+            f'<p class="firma-credencial">Acreditación {e(ac["entidad"])} · Categoría {e(ac["categoria"])}'
+            f' · N° {e(ac["numero"])} · Vigente hasta el {hasta}</p>'
+            f'<p class="firma-credencial">Verificable en <a href="{e(ac["url"])}">{e(visible)}</a></p>'
+        )
+    return (
+        f'<section class="firma">{foto}<div class="firma-texto">{trazo}'
+        f'<p class="firma-nombre">{e(a.nombre)}</p>'
+        f'<p class="firma-cargo">{e(a.cargo)} · Grupo Inteligencia</p>{credencial}'
+        f'<p class="firma-general">{e(FRASE_GENERAL)}</p></div></section>'
+    )
+
+
+def armar(pieza: dict[str, Any], dir_pedido: Path, analista: dict[str, Any], autor: au.Autor, hoy: date) -> str:
+    """HTML completo del informe general, firmado por `autor` a la fecha `hoy`."""
     errs = es.errores(pieza)
     if errs:
         raise InformeInvalido("; ".join(errs))
@@ -266,12 +291,13 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, analista: dict[str, Any]) -> 
         "chip": e(d["chip"]),
         "titular": e(ed["titular"]),
         "bajada": e(ed["bajada"]),
-        "autor_nombre": e(AUTOR_PROVISORIO),
+        "autor_nombre": e(autor.nombre),
         "compartido_por": e(nombre),
         "rotulo_referencia": e(d["rotulo_referencia"]),
         "referencia": e(d["referencia"]),
         "edicion": e(d["edicion"]),
         "cuerpo": CUERPOS[tipo](pieza, dir_pedido),
+        "firma": bloque_firma(autor, hoy),
         "aviso_legal": e(AVISO_LEGAL),
         "contacto": e(f"{nombre} · {contacto}" if contacto else nombre),
     }
@@ -280,8 +306,9 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, analista: dict[str, Any]) -> 
     return re.sub(r"\{\{(\w+)\}\}", lambda m: tokens[m.group(1)], salida)
 
 
-def guardar(pieza: dict[str, Any], dir_pedido: Path, analista: dict[str, Any], nombre_base: str) -> Path:
+def guardar(pieza: dict[str, Any], dir_pedido: Path, analista: dict[str, Any], autor: au.Autor,
+            hoy: date, nombre_base: str) -> Path:
     """Escribe el informe y devuelve su ruta."""
     ruta = dir_pedido / f"{nombre_base}.html"
-    ruta.write_text(armar(pieza, dir_pedido, analista), encoding="utf-8")
+    ruta.write_text(armar(pieza, dir_pedido, analista, autor, hoy), encoding="utf-8")
     return ruta

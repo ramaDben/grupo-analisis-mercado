@@ -274,3 +274,24 @@ table.tabla {
   .franja, .dos-columnas { grid-template-columns: 1fr 1fr; }
   .cabecera-fila { flex-wrap: wrap; }
 }
+
+/* ── Firma del director (la acreditación sale solo si está vigente) ── */
+.firma {
+  display: flex;
+  gap: 14pt;
+  align-items: center;
+  margin: 22pt 0 10pt;
+  padding: 14pt 16pt;
+  border: 1px solid var(--papel-linea);
+  border-radius: 8pt;
+  background: var(--papel-alt);
+}
+.firma-foto { width: 2.5cm; height: 2.5cm; border-radius: 50%; object-fit: cover; flex: 0 0 auto; }
+.firma-trazo { height: 34pt; display: block; margin-bottom: 2pt; }
+.firma-nombre { font-weight: 700; font-size: 12pt; color: var(--tinta); margin: 0; }
+.firma-cargo { font-size: 10.5pt; color: var(--tinta-2); margin: 0 0 4pt; }
+.firma-credencial { font-size: 9.5pt; color: var(--tinta-2); margin: 0; }
+.firma-credencial a { color: var(--acento-doc); }
+.firma-general { font-size: 9.5pt; color: var(--tinta-3); margin: 6pt 0 0; }
+@media print { .firma { break-inside: avoid; } }
+@media (max-width: 560px) { .firma { flex-direction: column; text-align: center; } }

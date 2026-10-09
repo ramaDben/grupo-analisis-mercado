@@ -150,7 +150,7 @@ def test_rendir_laminas_pone_el_texto_validado(tmp_path):
     assert vistos["titulo"] == "Empleo y Fed" and vistos["subtitulo"] == "Dos citas para el dólar"
     assert (tmp_path / "calendario.png").exists()
     # La pieza completa se arma en HTML.
-    assert "Empleo y Fed" in ih.armar(pieza, tmp_path, fx.ANALISTA)
+    assert "Empleo y Fed" in ih.armar(pieza, tmp_path, fx.ANALISTA, fx.AUTOR, AHORA.date())
 
 
 def test_preparar_escribe_solo_en_la_carpeta_del_pedido(tmp_path):

@@ -74,7 +74,7 @@ def armado(tmp_path):
     }
     llamadas = []
     reloj = Reloj()
-    at = b.Atendedor(config, b.Estado.cargar(tmp_path / "estado.json"), preparar=preparar_falso,
+    at = b.Atendedor(config, b.Estado.cargar(tmp_path / "estado.json"), autor=fx.AUTOR, preparar=preparar_falso,
                      redactar=redactor(llamadas), rendir_laminas=lambda p, d: None, reloj=reloj,
                      dir_pedidos=tmp_path / "pedidos")
     bot = b.Bot(TgFalso(), at)
@@ -127,6 +127,17 @@ def test_pedido_con_para_no_gasta_agy_ni_cupo(armado):
     r, final = pedir(armado, "/activo oro para Juan Pérez")
     assert r[0].texto == od.PERSONALIZACION_RETIRADA and final is None
     assert armado.llamadas == [] and armado.bot.estado.usados(CAMILA, armado.reloj.ahora) == 0
+
+
+def test_pieza_reusada_usa_la_fecha_del_pedido(armado):
+    armado.reloj.ahora = datetime(2028, 3, 31, 23, 50, tzinfo=SCL)
+    _, primero = pedir(armado, "/activo oro")
+    assert "A-32915" in primero.archivos[0].read_text(encoding="utf-8")
+    armado.reloj.ahora = datetime(2028, 4, 1, 0, 5, tzinfo=SCL)
+    _, segundo = pedir(armado, "/activo oro")
+    assert "vigente" in segundo.texto and len(armado.llamadas) == 1
+    assert "A-32915" not in segundo.archivos[0].read_text(encoding="utf-8")
+    assert "venció" in segundo.texto
 
 
 def test_pieza_vencida_se_vuelve_a_redactar(armado):
@@ -200,4 +211,7 @@ def test_config_de_ejemplo_es_valida():
     for datos in config["analistas"].values():
         assert {"nombre", "cargo", "contacto", "cupo_diario"} <= set(datos)
     assert set(config["reuso_minutos"]) == set(es.CAMPOS)
+    from analista import autor as au
+
+    assert au.cargar(config, RAIZ).nombre
     json.dumps(config)

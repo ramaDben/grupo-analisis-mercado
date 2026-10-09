@@ -4,7 +4,7 @@ Uso:
     uv run --with MetaTrader5 --extra stories --extra informe python scripts/bot_analistas.py --escuchar
     uv run python scripts/bot_analistas.py --probar-token
     uv run --with MetaTrader5 --extra stories --extra informe python scripts/bot_analistas.py \\
-        --una "/activo oro para Juan Pérez" --usuario <id>      # un pedido, sin Telegram
+        --una "/activo oro" --usuario <id>                     # un pedido, sin Telegram
     uv run python scripts/bot_analistas.py --validar data/informes_analistas/.../pieza.json
 
 Diseño y reglas: docs/bot-analistas.md y la spec
@@ -64,7 +64,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.validar:
         return validar(args.validar)
 
+    from analista import autor as au
     from analista import bot
+
+    def autor_o_nada(config):
+        try:
+            return au.cargar(config, RAIZ)
+        except au.AutorInvalido as exc:
+            print(f"ERROR: {exc}")
+            return None
 
     if args.una:
         from analista import orden as od
@@ -81,7 +89,10 @@ def main(argv: list[str] | None = None) -> int:
             # hay que correrlo con MSYS_NO_PATHCONV=1.
             print(f"ERROR: {exc} (recibí {args.una!r})")
             return 2
-        atendedor = bot.Atendedor(config, bot.Estado.cargar())
+        autor = autor_o_nada(config)
+        if autor is None:
+            return 2
+        atendedor = bot.Atendedor(config, bot.Estado.cargar(), autor)
         respuesta = bot.Bot(tg=None, atendedor=atendedor).procesar_uno(bot.Pedido(usuario, 0, orden))
         print(respuesta.texto)
         for ruta in respuesta.archivos:
@@ -106,8 +117,11 @@ def main(argv: list[str] | None = None) -> int:
     if not config["analistas"]:
         print("ERROR: config/analistas_telegram.json no tiene analistas autorizados")
         return 2
+    autor = autor_o_nada(config)
+    if autor is None:
+        return 2
     print(f"Escuchando Telegram con {len(config['analistas'])} analista(s) autorizado(s). Ctrl+C para salir.")
-    bot.Bot(tg, bot.Atendedor(config, bot.Estado.cargar())).escuchar()
+    bot.Bot(tg, bot.Atendedor(config, bot.Estado.cargar(), autor)).escuchar()
     return 0
 
 

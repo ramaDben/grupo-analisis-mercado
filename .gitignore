@@ -136,3 +136,5 @@ data/.bot_telegram_estado.json
 data/.bot_telegram_estado.tmp
 config/analistas_telegram.json
 config/service_account.json
+# Foto y firma de quien firma el informe del bot: datos personales.
+config/autor/

@@ -26,6 +26,7 @@ from typing import Any, Callable
 from zoneinfo import ZoneInfo
 
 from analista import RAIZ
+from analista import autor as au
 from analista import esquema as es
 from analista import informe_html as ih
 from analista import orden as od
@@ -152,6 +153,7 @@ class Atendedor:
 
     config: dict[str, Any]
     estado: Estado
+    autor: au.Autor
     preparar: Callable[..., pr.Preparada] = pr.preparar
     redactar: Callable[[Path, str], Any] = _agy_real
     rendir_laminas: Callable[..., None] = pr.rendir_laminas
@@ -216,7 +218,8 @@ class Atendedor:
         arg = ih.slug(str(next(iter(pieza["orden"]["args"].values()), "") or "auto"))
         nombre_base = f"{o.pieza}_{arg}_{dir_pedido.name[:4]}"
         try:
-            ruta = ih.guardar(pieza, dir_pedido, self.analista(pedido.usuario), nombre_base)
+            ruta = ih.guardar(pieza, dir_pedido, self.analista(pedido.usuario), self.autor,
+                              ahora.date(), nombre_base)
         except ih.InformeInvalido as exc:
             raise FalloPedido(f"No pude armar el informe: {exc}") from exc
         drive = self._a_drive([ruta], ahora)
@@ -224,7 +227,7 @@ class Atendedor:
                   f"{pieza['datos']['chip']} · {pieza['datos']['edicion']}"]
         if reusada:
             lineas.append("Es la pieza vigente: no se volvió a redactar.")
-        lineas += [f"⚠️ {a}" for a in avisos]
+        lineas += [f"⚠️ {a}" for a in [*avisos, *au.avisos(self.autor, ahora.date())]]
         lineas.append(drive)
         return Respuesta(pedido.chat, "\n".join(lineas), [ruta])
 
