@@ -1,3 +1,4 @@
+# punto-de-entrada: el director lo corre a mano una vez (docs/bot-analistas.md, Puesta en marcha)
 <#
 .SYNOPSIS
   Registra el bot de analistas en el Programador de tareas: arranca al iniciar
