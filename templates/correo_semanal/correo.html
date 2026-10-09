@@ -3,41 +3,46 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light">
-<meta name="supported-color-schemes" content="light">
+<meta name="color-scheme" content="dark">
+<meta name="supported-color-schemes" content="dark">
 <title>{{titulo_documento}}</title>
 <style id="email-styles">
+  @font-face{font-family:"Goldman";src:url("{{fuente_goldman}}") format("woff2");font-weight:700;font-style:normal;}
+  @font-face{font-family:"Plus Jakarta Sans";src:url("{{fuente_jakarta}}") format("woff2");font-weight:200 800;font-style:normal;}
   @media only screen and (max-width:680px){
     .shell{width:100% !important;}
     .pad{padding-left:20px !important;padding-right:20px !important;}
-    .stack{display:block !important;width:100% !important;}
-    .h1{font-size:24px !important;line-height:30px !important;}
+    .stack{display:block !important;width:100% !important;box-sizing:border-box;}
+    .stack-gap{height:12px !important;}
+    .h1{font-size:26px !important;line-height:32px !important;}
+    .cifra{font-size:26px !important;line-height:32px !important;}
   }
-  body,td,p,a,span,div,li{font-family:Arial,Helvetica,sans-serif;}
 </style>
 <style id="builder-styles">
-  .email-builder{box-sizing:border-box;max-width:760px;margin:24px auto 10px;padding:24px;background:{{c_blanco}};color:{{c_fondo_alt}};border-radius:14px;border:1px solid {{c_texto_borde}};}
-  .email-builder *{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif;}
-  .email-builder h2{margin:0 0 6px;font-size:20px;line-height:26px;color:{{c_fondo_acento}};}
-  .email-builder p{margin:0 0 16px;font-size:13px;line-height:19px;color:{{c_texto_3}};}
-  .builder-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .email-builder{box-sizing:border-box;max-width:760px;margin:24px auto 10px;padding:26px;background:{{c_fondo_acento}};color:{{c_texto_1}};border-radius:16px;border:1px solid {{c_linea}};}
+  .email-builder *{box-sizing:border-box;font-family:{{f_sans}};}
+  .email-builder h2{margin:0 0 8px;font-family:{{f_display}};font-weight:700;font-size:22px;line-height:28px;letter-spacing:.02em;color:{{c_texto_1}};}
+  .email-builder p{margin:0 0 18px;font-size:15px;line-height:23px;font-weight:500;color:{{c_texto_2}};}
+  .email-builder p strong{color:{{c_texto_1}};}
+  .builder-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
   .builder-field.full{grid-column:1/-1;}
-  .builder-field > span{display:block;margin:0 0 6px;font-size:12px;font-weight:700;color:{{c_fondo_acento}};}
-  .builder-field input{width:100%;height:40px;padding:8px 10px;border:1px solid {{c_texto_borde}};border-radius:8px;font-size:14px;}
-  .builder-field small{display:block;margin-top:4px;font-size:11px;color:{{c_texto_3}};}
-  .builder-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;align-items:center;}
-  .builder-btn{border:0;border-radius:8px;padding:11px 16px;font-size:14px;font-weight:700;cursor:pointer;}
+  .builder-field > span{display:block;margin:0 0 6px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:{{c_acento}};}
+  .builder-field input{width:100%;height:44px;padding:8px 12px;border:1px solid {{c_linea}};border-radius:10px;background:{{c_fondo}};color:{{c_texto_1}};font-size:16px;font-weight:600;}
+  .builder-field input:focus{outline:2px solid {{c_acento}};outline-offset:1px;}
+  .builder-field small{display:block;margin-top:5px;font-size:13px;color:{{c_texto_2}};}
+  .builder-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px;align-items:center;}
+  .builder-btn{border:0;border-radius:10px;padding:12px 18px;font-size:15px;font-weight:700;cursor:pointer;}
   .builder-btn.primario{background:{{c_acento}};color:{{c_fondo}};}
-  .builder-btn.secundario{background:{{c_fondo_acento}};color:{{c_blanco}};}
-  #builder-status{font-size:12px;color:{{c_fondo_acento}};min-height:18px;}
-  .builder-note{margin-top:12px!important;padding:10px 12px;background:{{c_texto_1}};border-radius:8px;}
+  .builder-btn.secundario{background:transparent;color:{{c_texto_1}};border:1px solid {{c_linea}};}
+  #builder-status{font-size:14px;font-weight:600;color:{{c_acento}};min-height:18px;}
+  .builder-note{margin-top:14px!important;margin-bottom:0!important;padding:10px 14px;background:{{c_fondo}};border-radius:10px;}
   #code-box{display:none;margin-top:14px;}
-  #code-box textarea{width:100%;height:200px;padding:10px;font:12px/1.5 Consolas,monospace;}
-  @media (max-width:680px){.email-builder{margin:12px;padding:16px}.builder-grid{grid-template-columns:1fr}.builder-field.full{grid-column:auto}}
+  #code-box textarea{width:100%;height:200px;padding:10px;background:{{c_fondo}};color:{{c_texto_borde}};border:1px solid {{c_linea}};font:12px/1.5 Consolas,monospace;}
+  @media (max-width:680px){.email-builder{margin:12px;padding:18px}.builder-grid{grid-template-columns:1fr}.builder-field.full{grid-column:auto}}
   @media print{#email-builder{display:none !important;}}
 </style>
 </head>
-<body style="margin:0;padding:0;background:{{c_texto_1}};-webkit-text-size-adjust:100%;">
+<body style="margin:0;padding:0;background:{{c_fondo}};-webkit-text-size-adjust:100%;">
 
 <section class="email-builder" id="email-builder">
   <h2>Preparar el correo de la semana</h2>
@@ -66,96 +71,105 @@
   <p class="builder-note">Este panel <strong>no se copia</strong>. Solo se copia el correo de abajo.</p>
 </section>
 
-<table id="email-root" role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;background:{{c_texto_1}};">
+<table id="email-root" role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="{{c_fondo}}" style="width:100%;background:{{c_fondo}};font-family:{{f_sans}};">
 <tr><td align="center" style="padding:28px 10px;">
-<table role="presentation" class="shell" width="640" cellspacing="0" cellpadding="0" border="0" style="width:640px;max-width:640px;background:{{c_blanco}};border:1px solid {{c_texto_borde}};">
+<!--[if mso]><style>td,p,h1,li,span,strong,a{font-family:Arial,Helvetica,sans-serif !important;}</style><![endif]-->
+<table role="presentation" class="shell" width="640" cellspacing="0" cellpadding="0" border="0" bgcolor="{{c_fondo_alt}}" style="width:640px;max-width:640px;background:{{c_fondo_alt}};border:1px solid {{c_linea}};">
 
-  <tr><td style="background:{{c_fondo}};padding:22px 40px;" class="pad">
+  <tr><td bgcolor="{{c_fondo}}" style="background:{{c_fondo}};padding:24px 40px;" class="pad">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr>
       <td valign="middle"><img src="{{logo}}" width="150" alt="Grupo Inteligencia" style="display:block;border:0;width:150px;height:auto;"></td>
-      <td valign="middle" align="right" style="font-size:12px;line-height:18px;color:{{c_texto_banda}};">Datos al {{datos_al}}</td>
+      <td valign="middle" align="right" style="font-family:{{f_sans}};font-size:14px;line-height:20px;font-weight:600;color:{{c_texto_2}};">Datos al<br><span style="color:{{c_texto_1}};">{{datos_al}}</span></td>
     </tr></table>
   </td></tr>
-  <tr><td style="height:4px;line-height:4px;font-size:4px;background:{{c_acento}};">&nbsp;</td></tr>
+  <tr><td bgcolor="{{c_acento}}" style="height:3px;line-height:3px;font-size:3px;background:{{c_acento}};background-image:linear-gradient(90deg,{{c_acento_azul}},{{c_acento}});">&nbsp;</td></tr>
 
-  <tr><td class="pad" style="background:{{c_fondo_acento}};padding:32px 40px;">
-    <p style="margin:0 0 12px 0;font-size:11px;line-height:14px;letter-spacing:1.6px;text-transform:uppercase;font-weight:700;color:{{c_acento}};">{{chip}}</p>
-    <h1 class="h1" style="margin:0 0 12px 0;font-size:28px;line-height:34px;font-weight:700;color:{{c_blanco}};">{{titular}}</h1>
-    <p style="margin:0 0 18px 0;font-size:15px;line-height:23px;color:{{c_texto_banda}};">{{bajada}}</p>
-    <p style="margin:0;font-size:15px;line-height:22px;color:{{c_blanco}};">{{nombre}} · {{ticker_visible}} · Precio de referencia <strong>{{precio}} {{unidad}}</strong>&nbsp;&nbsp;<span style="display:inline-block;padding:3px 10px;border-radius:999px;background:{{c_direccion}};color:{{c_blanco}};font-size:12px;font-weight:700;">{{direccion_mayus}}</span></p>
+  <tr><td class="pad" bgcolor="{{c_fondo_acento}}" style="background:{{c_fondo_acento}};background-image:linear-gradient(135deg,{{c_fondo_acento}} 0%,{{c_fondo_alt}} 100%);padding:34px 40px 32px 40px;">
+    <p style="margin:0 0 14px 0;font-family:{{f_display}};font-size:15px;line-height:20px;letter-spacing:2px;text-transform:uppercase;font-weight:700;color:{{c_acento}};">{{chip}}</p>
+    <h1 class="h1" style="margin:0 0 14px 0;font-family:{{f_display}};font-size:30px;line-height:37px;font-weight:700;color:{{c_texto_1}};">{{titular}}</h1>
+    <p style="margin:0 0 24px 0;font-family:{{f_sans}};font-size:17px;line-height:26px;font-weight:500;color:{{c_texto_borde}};">{{bajada}}</p>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="{{c_fondo}}" style="background:{{c_fondo}};border:1px solid {{c_linea}};border-radius:12px;">
+      <tr>
+        <td valign="middle" style="padding:16px 20px;">
+          <p style="margin:0 0 4px 0;font-family:{{f_sans}};font-size:15px;line-height:20px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:{{c_texto_borde}};">{{nombre}} · {{ticker_visible}}</p>
+          <p style="margin:0;font-family:{{f_sans}};font-size:15px;line-height:20px;font-weight:600;color:{{c_texto_2}};">Precio de referencia</p>
+          <p class="cifra" style="margin:2px 0 0 0;font-family:{{f_display}};font-size:30px;line-height:36px;font-weight:700;color:{{c_texto_1}};white-space:nowrap;"><strong>{{precio}}</strong> <span style="font-family:{{f_sans}};font-size:15px;font-weight:600;color:{{c_texto_2}};">{{unidad}}</span></p>
+        </td>
+        <td valign="middle" align="right" style="padding:16px 20px;">
+          <span style="display:inline-block;padding:8px 18px;border-radius:999px;background:{{c_direccion}};color:{{c_fondo}};font-family:{{f_sans}};font-size:15px;line-height:20px;font-weight:800;letter-spacing:1.5px;">{{direccion_mayus}}</span>
+        </td>
+      </tr>
+    </table>
   </td></tr>
 
-  <tr><td class="pad" style="padding:28px 40px 0 40px;">
-    <p id="v-saludo" style="margin:0 0 12px 0;font-size:15px;line-height:23px;font-weight:700;color:{{c_fondo_alt}};">Hola:</p>
-    <p style="margin:0;font-size:15px;line-height:23px;color:{{c_fondo_alt}};">Te comparto el escenario de la semana de {{nombre}}, preparado por la Dirección de Análisis Técnico de Grupo Inteligencia. Es una lectura general, igual para todos.</p>
+  <tr><td class="pad" style="padding:32px 40px 0 40px;">
+    <p id="v-saludo" style="margin:0 0 12px 0;font-family:{{f_sans}};font-size:17px;line-height:26px;font-weight:700;color:{{c_texto_1}};">Hola:</p>
+    <p style="margin:0;font-family:{{f_sans}};font-size:17px;line-height:27px;font-weight:500;color:{{c_texto_borde}};">Te comparto el escenario de la semana de {{nombre}}, preparado por la Dirección de Análisis Técnico de Grupo Inteligencia. Es una lectura general, igual para todos.</p>
     {{seleccion}}
   </td></tr>
 
-  <tr><td class="pad" style="padding:26px 40px 0 40px;">
-    <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;font-weight:700;color:{{c_acento_oscuro}};">Análisis de {{autor_nombre}}</p>
-    <p style="margin:0 0 8px 0;font-size:17px;line-height:24px;font-weight:700;color:{{c_fondo_alt}};">Qué está pasando esta semana</p>
+  <tr><td class="pad" style="padding:30px 40px 0 40px;">
+    <p style="margin:0 0 8px 0;font-family:{{f_display}};font-size:15px;line-height:20px;letter-spacing:1.8px;text-transform:uppercase;font-weight:700;color:{{c_acento}};">Análisis de {{autor_nombre}}</p>
+    <p style="margin:0 0 12px 0;font-family:{{f_display}};font-size:21px;line-height:28px;font-weight:700;color:{{c_texto_1}};">Qué está pasando esta semana</p>
     {{contexto_semana}}
-    <p style="margin:18px 0 8px 0;font-size:17px;line-height:24px;font-weight:700;color:{{c_fondo_alt}};">Qué lo mueve esta semana</p>
+    <p style="margin:22px 0 12px 0;font-family:{{f_display}};font-size:21px;line-height:28px;font-weight:700;color:{{c_texto_1}};">Qué lo mueve esta semana</p>
     {{que_lo_mueve}}
   </td></tr>
 
-  <tr><td class="pad" style="padding:22px 40px 0 40px;">
-    <img src="{{grafico}}" width="560" alt="{{pie_imagen}}" style="display:block;border:0;width:100%;max-width:560px;height:auto;">
-    <p style="margin:6px 0 0 0;font-size:11px;line-height:16px;color:{{c_texto_3}};">{{pie_imagen}}</p>
+  <tr><td class="pad" style="padding:26px 40px 0 40px;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid {{c_linea}};border-radius:12px;"><tr><td style="padding:6px;">
+      <img src="{{grafico}}" width="546" alt="{{pie_imagen}}" style="display:block;border:0;width:100%;max-width:546px;height:auto;border-radius:8px;">
+    </td></tr></table>
+    <p style="margin:8px 0 0 0;font-family:{{f_sans}};font-size:14px;line-height:20px;font-weight:500;color:{{c_texto_2}};">{{pie_imagen}}</p>
   </td></tr>
 
-  <tr><td class="pad" style="padding:22px 40px 0 40px;">
-    <p style="margin:0 0 10px 0;font-size:17px;line-height:24px;font-weight:700;color:{{c_fondo_alt}};">Escenario de la semana · {{direccion}}</p>
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid {{c_texto_borde}};">
+  <tr><td class="pad" style="padding:30px 40px 0 40px;">
+    <p style="margin:0 0 12px 0;font-family:{{f_display}};font-size:21px;line-height:28px;font-weight:700;color:{{c_texto_1}};">Escenario de la semana · <span style="color:{{c_direccion}};">{{direccion}}</span></p>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="{{c_fondo_acento}}" style="background:{{c_fondo_acento}};border:1px solid {{c_linea}};border-radius:12px;">
       {{filas_escenario}}
     </table>
-    <p style="margin:12px 0 0 0;font-size:14px;line-height:21px;color:{{c_fondo_alt}};"><strong>Estado:</strong> {{estado}}</p>
-    <p style="margin:8px 0 0 0;font-size:14px;line-height:21px;color:{{c_fondo_alt}};">⏱️ <strong>{{temporalidad}}</strong></p>
-    <p style="margin:4px 0 0 0;font-size:14px;line-height:21px;color:{{c_texto_3}};">💡 Por qué 1D: {{por_que_1d}}</p>
+    <p style="margin:16px 0 0 0;font-family:{{f_sans}};font-size:16px;line-height:24px;font-weight:500;color:{{c_texto_borde}};"><strong style="color:{{c_texto_1}};">Estado:</strong> {{estado}}</p>
+    <p style="margin:10px 0 0 0;font-family:{{f_sans}};font-size:16px;line-height:24px;font-weight:500;color:{{c_texto_borde}};">⏱️ <strong style="color:{{c_texto_1}};">{{temporalidad}}</strong></p>
+    <p style="margin:6px 0 0 0;font-family:{{f_sans}};font-size:15px;line-height:23px;font-weight:500;color:{{c_texto_2}};">💡 Por qué 1D: {{por_que_1d}}</p>
   </td></tr>
 
-  <tr><td class="pad" style="padding:26px 40px 0 40px;">
-    <p id="v-rotulo-sim" style="margin:0 0 6px 0;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;font-weight:700;color:{{c_acento_oscuro}};">Simulación realizada por {{ejecutivo_nombre}}</p>
-    <p style="margin:0 0 10px 0;font-size:13px;line-height:19px;color:{{c_texto_3}};">Con el contrato de MetaTrader 5 al {{datos_al}}. Ilustra tamaños y riesgos; no es una instrucción ni anticipa un resultado.</p>
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid {{c_texto_borde}};">
-      <tr><td style="padding:9px 12px;font-size:14px;color:{{c_fondo_alt}};border-bottom:1px solid {{c_texto_borde}};">Monto de la cuenta</td><td align="right" style="padding:9px 12px;font-size:14px;border-bottom:1px solid {{c_texto_borde}};"><strong id="v-monto">{{sim_monto}}</strong></td></tr>
-      <tr><td style="padding:9px 12px;font-size:14px;color:{{c_fondo_alt}};border-bottom:1px solid {{c_texto_borde}};">Volumen</td><td align="right" style="padding:9px 12px;font-size:14px;border-bottom:1px solid {{c_texto_borde}};"><strong id="v-volumen">{{sim_volumen}}</strong></td></tr>
-      <tr><td style="padding:9px 12px;font-size:14px;color:{{c_fondo_alt}};border-bottom:1px solid {{c_texto_borde}};">Cuánto mueve cada punto de precio</td><td align="right" style="padding:9px 12px;font-size:14px;border-bottom:1px solid {{c_texto_borde}};"><strong id="v-valor-punto">{{sim_valor_punto}}</strong></td></tr>
-      <tr><td style="padding:9px 12px;font-size:14px;color:{{c_fondo_alt}};border-bottom:1px solid {{c_texto_borde}};">Garantía que pide el broker (margen)</td><td align="right" style="padding:9px 12px;font-size:14px;border-bottom:1px solid {{c_texto_borde}};"><strong id="v-margen">{{sim_margen}}</strong></td></tr>
-      <tr><td style="padding:9px 12px;font-size:14px;color:{{c_fondo_alt}};border-bottom:1px solid {{c_texto_borde}};">Exposición total</td><td align="right" style="padding:9px 12px;font-size:14px;border-bottom:1px solid {{c_texto_borde}};"><strong id="v-nocional">{{sim_nocional}}</strong></td></tr>
-      <tr><td style="padding:9px 12px;font-size:14px;color:{{c_fondo_alt}};border-bottom:1px solid {{c_texto_borde}};">Apalancamiento efectivo (exposición ÷ monto)</td><td align="right" style="padding:9px 12px;font-size:14px;border-bottom:1px solid {{c_texto_borde}};"><strong id="v-apalancamiento">{{sim_apalancamiento}}</strong></td></tr>
-      <tr><td style="padding:9px 12px;font-size:14px;color:{{c_fondo_alt}};">Si el precio se mueve 1 % en contra</td><td align="right" style="padding:9px 12px;font-size:14px;"><strong id="v-uno-pct">{{sim_uno_pct}}</strong></td></tr>
+  <tr><td class="pad" style="padding:32px 40px 0 40px;">
+    <p id="v-rotulo-sim" style="margin:0 0 8px 0;font-family:{{f_display}};font-size:15px;line-height:20px;letter-spacing:1.8px;text-transform:uppercase;font-weight:700;color:{{c_acento}};">Simulación realizada por {{ejecutivo_nombre}}</p>
+    <p style="margin:0 0 14px 0;font-family:{{f_sans}};font-size:15px;line-height:22px;font-weight:500;color:{{c_texto_2}};">Con el contrato de MetaTrader 5 al {{datos_al}}. Ilustra tamaños y riesgos; no es una instrucción ni anticipa un resultado.</p>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="{{c_fondo_acento}}" style="background:{{c_fondo_acento}};border:1px solid {{c_linea}};border-radius:12px;">
+      {{filas_simulacion}}
     </table>
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:12px;"><tr>
-      <td class="stack" width="50%" valign="top" style="padding:14px;border:2px solid {{c_baja}};">
-        <p style="margin:0 0 4px 0;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:{{c_baja}};">Si se anula el escenario</p>
-        <p style="margin:0;font-size:22px;line-height:28px;font-weight:700;color:{{c_fondo_alt}};"><strong id="v-perdida">{{sim_perdida}}</strong></p>
-        <p style="margin:4px 0 0 0;font-size:12px;line-height:17px;color:{{c_texto_3}};">Pérdida al cierre en {{invalidacion}}</p>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:14px;"><tr>
+      <td class="stack" width="49%" valign="top" bgcolor="{{c_fondo_baja}}" style="padding:18px;background:{{c_fondo_baja}};border:2px solid {{c_baja}};border-radius:12px;">
+        <p style="margin:0 0 6px 0;font-family:{{f_sans}};font-size:15px;line-height:20px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:{{c_baja}};">Si se anula el escenario</p>
+        <p class="cifra" style="margin:0;font-family:{{f_display}};font-size:30px;line-height:36px;font-weight:700;color:{{c_texto_1}};"><strong id="v-perdida">{{sim_perdida}}</strong></p>
+        <p style="margin:6px 0 0 0;font-family:{{f_sans}};font-size:15px;line-height:21px;font-weight:500;color:{{c_texto_borde}};">Pérdida al cierre en {{invalidacion}}</p>
       </td>
-      <td class="stack" width="50%" valign="top" style="padding:14px;border:2px solid {{c_sube}};">
-        <p style="margin:0 0 4px 0;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:{{c_acento_oscuro}};">Si cubre el recorrido</p>
-        <p style="margin:0;font-size:22px;line-height:28px;font-weight:700;color:{{c_fondo_alt}};"><strong id="v-recorrido">{{sim_recorrido}}</strong></p>
-        <p style="margin:4px 0 0 0;font-size:12px;line-height:17px;color:{{c_texto_3}};">Recorrido de referencia de {{recorrido}}</p>
-      </td>
-    </tr></table>
-    <p style="margin:10px 0 0 0;font-size:12px;line-height:18px;color:{{c_texto_3}};">Las dos cifras se muestran juntas y del mismo tamaño a propósito: el apalancamiento amplifica igual las ganancias y las pérdidas.</p>
-  </td></tr>
-
-  <tr><td class="pad" style="padding:26px 40px 0 40px;">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-top:1px solid {{c_texto_borde}};"><tr>
-      <td class="stack" width="50%" valign="top" style="padding:14px 10px 0 0;font-size:13px;line-height:19px;color:{{c_fondo_alt}};">
-        <span style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:{{c_texto_3}};">Análisis</span><br>
-        <strong>{{autor_nombre}}</strong><br>{{autor_cargo}}
-      </td>
-      <td class="stack" width="50%" valign="top" style="padding:14px 0 0 0;font-size:13px;line-height:19px;color:{{c_fondo_alt}};">
-        <span style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:{{c_texto_3}};">Te lo envía</span><br>
-        <strong id="v-ejecutivo">{{ejecutivo_nombre}}</strong><br><span id="v-cargo">{{ejecutivo_cargo}}</span><br><span id="v-contacto">{{ejecutivo_contacto}}</span>
+      <td class="stack stack-gap" width="2%" style="font-size:0;line-height:0;">&nbsp;</td>
+      <td class="stack" width="49%" valign="top" bgcolor="{{c_fondo_sube}}" style="padding:18px;background:{{c_fondo_sube}};border:2px solid {{c_sube}};border-radius:12px;">
+        <p style="margin:0 0 6px 0;font-family:{{f_sans}};font-size:15px;line-height:20px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:{{c_sube}};">Si cubre el recorrido</p>
+        <p class="cifra" style="margin:0;font-family:{{f_display}};font-size:30px;line-height:36px;font-weight:700;color:{{c_texto_1}};"><strong id="v-recorrido">{{sim_recorrido}}</strong></p>
+        <p style="margin:6px 0 0 0;font-family:{{f_sans}};font-size:15px;line-height:21px;font-weight:500;color:{{c_texto_borde}};">Recorrido de referencia de {{recorrido}}</p>
       </td>
     </tr></table>
+    <p style="margin:12px 0 0 0;font-family:{{f_sans}};font-size:15px;line-height:22px;font-weight:500;color:{{c_texto_2}};">Las dos cifras se muestran juntas y del mismo tamaño a propósito: el apalancamiento amplifica igual las ganancias y las pérdidas.</p>
   </td></tr>
 
-  <tr><td class="pad" style="padding:22px 40px 28px 40px;">
-    <p style="margin:0;font-size:11px;line-height:16px;color:{{c_texto_3}};">{{aviso_legal}}</p>
+  <tr><td class="pad" style="padding:32px 40px 0 40px;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-top:1px solid {{c_linea}};"><tr>
+      <td class="stack" width="50%" valign="top" style="padding:18px 10px 0 0;font-family:{{f_sans}};font-size:16px;line-height:23px;font-weight:500;color:{{c_texto_borde}};">
+        <span style="font-size:14px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:{{c_acento}};">Análisis</span><br>
+        <strong style="color:{{c_texto_1}};">{{autor_nombre}}</strong><br>{{autor_cargo}}
+      </td>
+      <td class="stack" width="50%" valign="top" style="padding:18px 0 0 0;font-family:{{f_sans}};font-size:16px;line-height:23px;font-weight:500;color:{{c_texto_borde}};">
+        <span style="font-size:14px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:{{c_acento}};">Te lo envía</span><br>
+        <strong id="v-ejecutivo" style="color:{{c_texto_1}};">{{ejecutivo_nombre}}</strong><br><span id="v-cargo">{{ejecutivo_cargo}}</span><br><span id="v-contacto">{{ejecutivo_contacto}}</span>
+      </td>
+    </tr></table>
+  </td></tr>
+
+  <tr><td class="pad" style="padding:26px 40px 32px 40px;">
+    <p style="margin:0;padding:14px 16px;background:{{c_fondo}};border-radius:10px;font-family:{{f_sans}};font-size:14px;line-height:21px;font-weight:500;color:{{c_texto_2}};">{{aviso_legal}}</p>
   </td></tr>
 </table>
 </td></tr>

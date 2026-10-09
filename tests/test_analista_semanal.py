@@ -489,7 +489,10 @@ def test_el_correo_es_de_tablas_en_linea_y_destaca_las_cifras(tmp_path):
     assert 'width="640"' in correo
     f = pieza["datos"]["escenario"]["fmt"]
     for cifra in (pieza["datos"]["precio"], f["gatillo"], f["invalidacion"], f["recorrido"]):
-        assert f"<strong>{cifra}" in correo
+        assert re.search(rf"<strong[^>]*>{re.escape(cifra)}", correo), cifra
+    # La línea de marca: Goldman en titulares y cifras, Jakarta en el cuerpo, escritas en cada elemento.
+    assert "font-family:'Goldman'" in correo and "font-family:'Plus Jakarta Sans'" in correo
+    assert "data:font/woff2;base64," in html[:html.index("<body")]
     assert 'id="v-perdida"' in correo and 'id="v-recorrido"' in correo
     assert "Simulación realizada por Camila Rojas" in correo
     assert "Análisis de Benjamín" in correo and "Te lo envía" in correo

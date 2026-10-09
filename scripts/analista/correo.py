@@ -16,6 +16,7 @@ Outlook». Tres reglas que no conviene revertir:
 """
 from __future__ import annotations
 
+import base64
 import json
 import re
 from pathlib import Path
@@ -27,13 +28,29 @@ from analista import informe_html as ih
 from analista import semanal as sm
 
 PLANTILLA = RAIZ / "templates" / "correo_semanal" / "correo.html"
-# Token de la plantilla → rol de `marca.css`. El correo es un documento claro: usa
-# los roles de papel y tinta, y las bandas oscuras solo en la cabecera.
+# Token de la plantilla → rol de `marca.css`. El correo usa la línea de marca de
+# las láminas: fondo negro, bloques en el tinte esmeralda y el texto en los roles
+# claros. El cromo va en el acento y solo la dirección y el resultado se colorean.
 ROLES = {
-    "fondo": "banda-1", "fondo_acento": "banda-2", "fondo_alt": "tinta", "acento": "acento",
-    "acento_oscuro": "acento-doc", "sube": "sube-doc", "baja": "baja-doc", "texto_1": "papel-alt",
-    "texto_3": "tinta-3", "texto_borde": "papel-linea", "texto_banda": "texto-borde", "blanco": "papel",
+    "fondo": "fondo", "fondo_alt": "fondo-alt", "fondo_acento": "fondo-acento", "acento": "acento",
+    "acento_azul": "acento-azul", "sube": "sube", "baja": "baja", "fondo_sube": "fondo-sube",
+    "fondo_baja": "fondo-baja", "texto_1": "texto-1", "texto_2": "texto-2", "texto_borde": "texto-borde",
 }
+# La familia va escrita en cada elemento: «Copiar correo» lleva solo el cuerpo y
+# el <head> con las fuentes se queda atrás. Arial es lo que verá quien no las tenga.
+F_DISPLAY = "'Goldman','Plus Jakarta Sans',Arial,Helvetica,sans-serif"
+F_SANS = "'Plus Jakarta Sans','Segoe UI',Arial,Helvetica,sans-serif"
+FUENTES = RAIZ / "templates" / "stories" / "fonts"
+
+
+def _mezclar(color: str, fondo: str, alfa: float) -> str:
+    """El hex de `color` con opacidad `alfa` sobre `fondo`: Outlook no entiende rgba()."""
+    a, b = (tuple(int(h[i:i + 2], 16) for i in (1, 3, 5)) for h in (color, fondo))
+    return "#" + "".join(f"{round(y + (x - y) * alfa):02X}" for x, y in zip(a, b))
+
+
+def _fuente(nombre: str) -> str:
+    return "data:font/woff2;base64," + base64.b64encode((FUENTES / nombre).read_bytes()).decode("ascii")
 
 
 def pesos(valor: float) -> str:
@@ -49,17 +66,37 @@ def _numero_es(valor: float, decimales: int) -> str:
     return f"{valor:,.{decimales}f}".replace(",", "@").replace(".", ",").replace("@", ".")
 
 
-def _parrafos(texto: str, color: str) -> str:
+def _parrafos(texto: str, c: dict[str, str]) -> str:
     bloques = [b.strip() for b in re.split(r"\n\s*\n", texto) if b.strip()]
-    return "".join(f'<p style="margin:0 0 10px 0;font-size:15px;line-height:23px;color:{color};">{ih.e(b)}</p>'
-                   for b in bloques)
+    return "".join(f'<p style="margin:0 0 14px 0;font-family:{F_SANS};font-size:17px;line-height:27px;'
+                   f'font-weight:500;color:{c["texto_borde"]};">{ih.e(b)}</p>' for b in bloques)
 
 
-def _vinetas(texto: str, color: str) -> str:
+def _vinetas(texto: str, c: dict[str, str]) -> str:
+    """Una fila por driver con una barra de acento: las viñetas de lista se ven distinto en cada cliente."""
     lineas = [ln.strip(" •-*\t") for ln in texto.splitlines() if ln.strip(" •-*\t")]
-    items = "".join(f'<li style="margin:0 0 6px 0;font-size:15px;line-height:22px;color:{color};">{ih.e(ln)}</li>'
-                    for ln in lineas)
-    return f'<ul style="margin:0;padding:0 0 0 20px;">{items}</ul>'
+    filas = "".join(
+        f'<tr><td width="4" bgcolor="{c["acento"]}" style="background:{c["acento"]};font-size:0;">&nbsp;</td>'
+        f'<td style="padding:4px 0 4px 14px;font-family:{F_SANS};font-size:17px;line-height:26px;'
+        f'font-weight:500;color:{c["texto_borde"]};">{ih.e(ln)}</td></tr>'
+        f'<tr><td colspan="2" style="height:10px;font-size:0;line-height:0;">&nbsp;</td></tr>'
+        for ln in lineas)
+    return f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">{filas}</table>'
+
+
+def _fila(rotulo: str, celda: str, color_rotulo: str, c: dict[str, str], ultima: bool = False,
+          alinear: str = "left", ancho: str = ' width="130"') -> str:
+    borde = "" if ultima else f'border-bottom:1px solid {c["linea"]};'
+    return (f'<tr><td{ancho} valign="top" style="padding:14px 16px;font-family:{F_SANS};font-size:15px;'
+            f'line-height:22px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;'
+            f'color:{color_rotulo};{borde}">{rotulo}</td>'
+            f'<td align="{alinear}" style="padding:14px 16px;font-family:{F_SANS};font-size:16px;line-height:24px;'
+            f'font-weight:500;color:{c["texto_borde"]};{borde}">{celda}</td></tr>')
+
+
+def _destacar(cifra: str, c: dict[str, str], id_: str = "") -> str:
+    ident = f' id="{id_}"' if id_ else ""
+    return f'<strong{ident} style="color:{c["texto_1"]};font-weight:800;">{cifra}</strong>'
 
 
 def _filas_escenario(esc: dict[str, Any], c: dict[str, str]) -> str:
@@ -67,19 +104,32 @@ def _filas_escenario(esc: dict[str, Any], c: dict[str, str]) -> str:
     alcista = esc["sesgo"] == "Alcista"
     lado, borde = ("sobre", "bajo") if alcista else ("bajo", "sobre")
     filas = [
-        ("Se activa", f"Cierre diario {lado} <strong>{ih.e(f['gatillo'])}</strong>", c["sube"] if alcista else c["baja"]),
-        ("Se anula", f"Cierre diario {borde} <strong>{ih.e(f['invalidacion'])}</strong> (salida por volatilidad)",
-         c["fondo_alt"]),
-        ("Recorrido", f"Unos <strong>{ih.e(f['recorrido'])}</strong>, 1,5 veces la volatilidad típica de un día. "
-                      "Es una distancia, no un objetivo de precio.", c["fondo_alt"]),
+        ("Se activa", f"Cierre diario {lado} {_destacar(ih.e(f['gatillo']), c)}", c["sube"] if alcista else c["baja"]),
+        ("Se anula", f"Cierre diario {borde} {_destacar(ih.e(f['invalidacion']), c)} (salida por volatilidad)",
+         c["texto_2"]),
+        ("Recorrido", f"Unos {_destacar(ih.e(f['recorrido']), c)}, 1,5 veces la volatilidad típica de un día. "
+                      "Es una distancia, no un objetivo de precio.", c["acento"]),
     ]
+    return "".join(_fila(r, celda, color, c, ultima=i == len(filas) - 1) for i, (r, celda, color) in enumerate(filas))
+
+
+def _filas_simulacion(sim_txt: dict[str, str], c: dict[str, str]) -> str:
+    filas = [
+        ("Monto de la cuenta", "v-monto", "sim_monto"),
+        ("Volumen", "v-volumen", "sim_volumen"),
+        ("Cuánto mueve cada punto de precio", "v-valor-punto", "sim_valor_punto"),
+        ("Garantía que pide el broker (margen)", "v-margen", "sim_margen"),
+        ("Exposición total", "v-nocional", "sim_nocional"),
+        ("Apalancamiento efectivo (exposición ÷ monto)", "v-apalancamiento", "sim_apalancamiento"),
+        ("Si el precio se mueve 1 % en contra", "v-uno-pct", "sim_uno_pct"),
+    ]
+    borde = f'border-bottom:1px solid {c["linea"]};'
     return "".join(
-        f'<tr><td width="110" style="padding:10px 12px;font-size:13px;font-weight:700;color:{color};'
-        f'border-bottom:1px solid {c["texto_borde"]};">{rotulo}</td>'
-        f'<td style="padding:10px 12px;font-size:14px;line-height:21px;color:{c["fondo_alt"]};'
-        f'border-bottom:1px solid {c["texto_borde"]};">{celda}</td></tr>'
-        for rotulo, celda, color in filas
-    )
+        f'<tr><td style="padding:12px 16px;font-family:{F_SANS};font-size:16px;line-height:23px;font-weight:500;'
+        f'color:{c["texto_borde"]};{"" if i == len(filas) - 1 else borde}">{rotulo}</td>'
+        f'<td align="right" style="padding:12px 16px;font-family:{F_SANS};font-size:17px;line-height:23px;'
+        f'white-space:nowrap;{"" if i == len(filas) - 1 else borde}">{_destacar(sim_txt[clave], c, id_)}</td></tr>'
+        for i, (rotulo, id_, clave) in enumerate(filas))
 
 
 def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], autor: au.Autor) -> str:
@@ -90,6 +140,8 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
     esc, contrato = d["escenario"], d["contrato"]
     paleta = sm.colores_marca()
     c = {token: paleta[rol] for token, rol in ROLES.items()}
+    # El filete del cristal de marca (acento al 35 % sobre el fondo de los bloques).
+    c["linea"] = _mezclar(c["acento"], c["fondo_alt"], 0.35)
     sim = sm.simular(contrato, esc, d["monto_base"], contrato["vol_min"])
     dec_vol = _decimales(float(contrato["vol_paso"]))
     alcista = esc["sesgo"] == "Alcista"
@@ -101,6 +153,11 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
     tokens = {
         **{f"c_{rol}": color for rol, color in c.items()},
         "c_direccion": c["sube"] if alcista else c["baja"],
+        "f_display": F_DISPLAY,
+        "f_sans": F_SANS,
+        "fuente_goldman": _fuente("goldman-700.woff2"),
+        # Los archivos de Jakarta por peso son la misma fuente variable: basta uno.
+        "fuente_jakarta": _fuente("plus-jakarta-sans-700.woff2"),
         "titulo_documento": ih.e(f"{d['nombre']} · Escenario de la semana"),
         "logo": ih._data_uri(ih.LOGO),
         "grafico": ih._data_uri(dir_pedido / pieza["imagenes"]["principal"]),
@@ -117,11 +174,12 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
         "direccion_mayus": ih.e(d["direccion"].upper()),
         "autor_nombre": ih.e(autor.nombre),
         "autor_cargo": ih.e(autor.cargo),
-        "contexto_semana": _parrafos(ed["contexto_semana"], c["fondo_alt"]),
-        "que_lo_mueve": _vinetas(ed["que_lo_mueve"], c["fondo_alt"]),
+        "contexto_semana": _parrafos(ed["contexto_semana"], c),
+        "que_lo_mueve": _vinetas(ed["que_lo_mueve"], c),
         "filas_escenario": _filas_escenario(esc, c),
         # Índices, ETF y acciones: cómo se eligió el activo, a la vista del cliente.
-        "seleccion": (f'<p style="margin:10px 0 0 0;font-size:13px;line-height:19px;color:{c["texto_3"]};">'
+        "seleccion": (f'<p style="margin:12px 0 0 0;font-family:{F_SANS};font-size:15px;line-height:22px;'
+                      f'font-weight:500;color:{c["texto_2"]};">'
                       f'{ih.e(d["seleccion"]["texto"])}</p>') if d.get("seleccion") else "",
         "estado": ih.e(esc["textos"]["estado"]),
         "temporalidad": ih.e(d["temporalidad"]),
@@ -150,6 +208,7 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
         # Dentro de <script>: "</" cerraría la etiqueta antes de tiempo.
         "datos_js": json.dumps(datos_js, ensure_ascii=False).replace("</", "<\\/"),
     }
+    tokens["filas_simulacion"] = _filas_simulacion(tokens, c)
     plantilla = PLANTILLA.read_text(encoding="utf-8")
     # Una sola pasada: un valor que contenga "{{x}}" no vuelve a expandirse.
     return re.sub(r"\{\{(\w+)\}\}", lambda m: tokens[m.group(1)], plantilla)
