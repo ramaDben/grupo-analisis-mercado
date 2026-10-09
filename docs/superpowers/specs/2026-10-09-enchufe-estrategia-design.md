@@ -124,7 +124,7 @@ Paquete `scripts/estrategia/tori/`, que implementa las 12 reglas programables de
 | `pivotes.py` | Pivotes candidatos con el extremo de mecha. Reutiliza el zigzag de `tradingview_grafico._zigzag`, que se muda acá. |
 | `lineas.py` | **Trazado:** el primer punto en el extremo visible y el segundo en el pivote que maximiza toques **sin que ninguna vela cruce la línea**, con tolerancia de toque. Encadenamiento y abanico. |
 | `calidad.py` | Toques, semanas de datos y marco. A+ = 3 toques o más y al menos 1 semana. B = 2 toques. Marca la línea "muy empinada". |
-| `lectura.py` | Línea de acción y de seguridad, ruptura por **cierre de vela**, estado (consolidación si oscila entre las dos líneas o entre horizontales sin romper), dirección, `vigilar`, `invalidacion`, `objetivo` (el horizontal mayor más cercano en la dirección), escenarios. |
+| `lectura.py` | Línea de acción y de seguridad, ruptura por **cierre de vela** (de las dos formas que ella valida, la única publicable: doctrina 2.4), estado (consolidación si oscila entre las dos líneas o entre horizontales sin romper), dirección, `vigilar`, `invalidacion`, `objetivo` (el horizontal mayor más cercano en la dirección), escenarios. |
 | `puntaje.py` | El escáner de Tori (ver abajo). |
 | `textos.py` | Redacción de escenarios y `salida`, con las reglas de texto de cliente (sin guion largo, tuteo chileno, flechas). |
 
