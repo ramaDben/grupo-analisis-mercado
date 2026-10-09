@@ -55,3 +55,22 @@ def test_foto_presente_se_usa(tmp_path):
 def test_vencida_avisa(tmp_path):
     a = au.cargar(BASE, tmp_path)
     assert any("venció" in x for x in au.avisos(a, date(2028, 4, 1)))
+
+
+@pytest.mark.parametrize("falta", ["entidad", "categoria", "numero", "vigente_hasta", "url"])
+def test_acreditacion_incompleta_no_arranca(tmp_path, falta):
+    ac = {k: v for k, v in BASE["autor"]["acreditacion"].items() if k != falta}
+    with pytest.raises(au.AutorInvalido, match=falta):
+        au.cargar({"autor": {**BASE["autor"], "acreditacion": ac}}, tmp_path)
+
+
+def test_fecha_mal_escrita_no_arranca(tmp_path):
+    ac = {**BASE["autor"]["acreditacion"], "vigente_hasta": "31-03-2028"}
+    with pytest.raises(au.AutorInvalido, match="vigente_hasta"):
+        au.cargar({"autor": {**BASE["autor"], "acreditacion": ac}}, tmp_path)
+
+
+def test_el_informe_no_nombra_a_la_cmf(tmp_path):
+    ac = {**BASE["autor"]["acreditacion"], "entidad": "CMF"}
+    with pytest.raises(au.AutorInvalido, match="CMF"):
+        au.cargar({"autor": {**BASE["autor"], "acreditacion": ac}}, tmp_path)

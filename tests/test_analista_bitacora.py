@@ -78,3 +78,43 @@ def test_no_se_activo(tmp_path):
 def test_la_bitacora_versionada_existe_y_es_una_lista():
     assert json.loads(bt.RUTA.read_text(encoding="utf-8")) == [] or isinstance(
         json.loads(bt.RUTA.read_text(encoding="utf-8")), list)
+
+
+def test_ventana_incompleta_queda_pendiente(tmp_path):
+    # Fin de semana: solo 3 velas despues de la entrega. No se puede cerrar como "no se activo".
+    ruta = tmp_path / "b.json"
+    ruta.write_text(json.dumps([_entrada(AHORA - timedelta(hours=30), 500.0)]), encoding="utf-8")
+    df = _serie([100] * 63, desde="2026-10-06 03:00:00")  # termina en 2026-10-08 17:00
+    df = df[df["time"] <= pd.Timestamp("2026-10-08 12:00:00")].reset_index(drop=True)
+    assert bt.completar(lambda t: df, AHORA, ruta) == 0
+    assert json.loads(ruta.read_text(encoding="utf-8"))[0]["desenlace"] is None
+
+
+def test_activacion_sin_horizonte_completo_queda_pendiente(tmp_path):
+    ruta = tmp_path / "b.json"
+    ruta.write_text(json.dumps([_entrada(AHORA - timedelta(hours=30), 100.4)]), encoding="utf-8")
+    # 24 velas despues de la entrega, pero la activacion llega en la vela 20.
+    df = _serie([100] * 60 + [100] * 19 + [101, 101, 101, 101, 101], desde="2026-10-05 22:00:00")
+    assert bt.completar(lambda t: df, AHORA, ruta) == 0
+
+
+def test_un_activo_que_falla_no_corta_la_corrida(tmp_path):
+    ruta = tmp_path / "b.json"
+    malo = {**_entrada(AHORA - timedelta(hours=30), 500.0), "ticker": "MALO"}
+    ruta.write_text(json.dumps([malo, _entrada(AHORA - timedelta(hours=30), 500.0)]), encoding="utf-8")
+    df = _serie([100] * 120, desde="2026-10-05 22:00:00")
+
+    def serie(t):
+        if t == "MALO":
+            raise RuntimeError("sin datos")
+        return df
+
+    assert bt.completar(serie, AHORA, ruta) == 1
+    a, b = json.loads(ruta.read_text(encoding="utf-8"))
+    assert a["desenlace"] is None and b["desenlace"] == "no_se_activo"
+
+
+def test_la_entrada_lleva_el_recorrido(tmp_path):
+    ruta = tmp_path / "b.json"
+    bt.anotar(fx.activo(tmp_path), _html(tmp_path), "d", AHORA, ruta)
+    assert json.loads(ruta.read_text(encoding="utf-8"))[0]["recorrido"] == fx.PLAN["niveles"]["recorrido"]

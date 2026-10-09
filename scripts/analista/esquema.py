@@ -44,9 +44,17 @@ FRASES_PROHIBIDAS: tuple[str, ...] = (
     "entra al mercado", "abre una posicion", "cierra tu posicion", "toma ganancias",
     "debes comprar", "debes vender", "deberias comprar", "deberias vender",
     "recomendamos", "te recomiendo", "te conviene", "senal de compra", "senal de venta",
-    "lote", "lotes", "apalanca", "de tu capital", "arriesga",
+    # Riesgo y apalancamiento solo en su forma de instrucción: "el apalancamiento
+    # amplifica las pérdidas" o "no conviene arriesgar más de lo previsto" son la
+    # advertencia natural de "Qué NO hacer" y tienen que pasar.
+    "lote", "lotes", "de tu capital", "arriesga tu", "arriesga el", "arriesga un",
+    "apalancate", "usa apalancamiento",
 )
 _PALABRA_EXACTA = {"lote", "lotes"}
+
+# El informe no nombra a la CMF (decisión del director, 2026-10-08), tampoco en
+# el texto de agy.
+_CMF = re.compile(r"\bcmf\b", re.IGNORECASE)
 
 _HTML = re.compile(r"<\s*[a-zA-Z/!]")
 _NUMERO = re.compile(r"\d[\d.,]*\d|\d")
@@ -159,6 +167,8 @@ def errores(pieza: dict[str, Any]) -> list[str]:
     for donde, texto in pares:
         if _HTML.search(texto):
             errs.append(f"{donde}: trae HTML; la maqueta la pone la plantilla, no el texto")
+        if _CMF.search(texto):
+            errs.append(f"{donde}: nombra a la CMF, y el informe no la menciona")
         for frase in frases_prohibidas(texto):
             errs.append(f"{donde}: «{frase}» es una instrucción de operar o una recomendación; "
                         "el informe es análisis general")

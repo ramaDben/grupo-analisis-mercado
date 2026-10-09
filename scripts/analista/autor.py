@@ -37,10 +37,28 @@ def _archivo(raiz: Path, valor: str | None, nombre: str, faltantes: list[str]) -
     return None
 
 
+CAMPOS_ACREDITACION = ("entidad", "categoria", "numero", "vigente_hasta", "url")
+
+
+def _validar_acreditacion(ac: dict[str, Any]) -> None:
+    """Un error acá tiene que frenar el arranque, no reventar cada pedido después."""
+    for campo in CAMPOS_ACREDITACION:
+        if not str(ac.get(campo) or "").strip():
+            raise AutorInvalido(f"la acreditación del autor no trae «{campo}»")
+    try:
+        date.fromisoformat(ac["vigente_hasta"])
+    except ValueError as exc:
+        raise AutorInvalido(f"vigente_hasta tiene que ser AAAA-MM-DD, y dice {ac['vigente_hasta']!r}") from exc
+    if any("cmf" in str(v).lower() for v in ac.values()):
+        raise AutorInvalido("el informe no nombra a la CMF: la acreditación va como figura en su certificado")
+
+
 def cargar(config: dict[str, Any], raiz: Path) -> Autor:
     datos = config.get("autor")
     if not datos or not datos.get("nombre") or not datos.get("cargo"):
         raise AutorInvalido("config/analistas_telegram.json no trae el bloque «autor» con nombre y cargo")
+    if datos.get("acreditacion"):
+        _validar_acreditacion(datos["acreditacion"])
     faltantes: list[str] = []
     return Autor(
         nombre=datos["nombre"],

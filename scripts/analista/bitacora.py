@@ -50,6 +50,7 @@ def anotar(pieza: dict[str, Any], html: Path, analista: str, ahora: datetime, ru
         "alcista": plan["sesgo"] == "Alcista",
         "gatillo": plan["niveles"]["gatillo"],
         "invalidacion": plan["niveles"]["invalidacion"],
+        "recorrido": plan["niveles"].get("recorrido"),
         "vela": plan["niveles"]["vela"],
         "estadistica": plan["estadistica"],
         "analista": analista,
@@ -60,8 +61,12 @@ def anotar(pieza: dict[str, Any], html: Path, analista: str, ahora: datetime, ru
     return True
 
 
-def _evaluar(e: dict[str, Any], df: pd.DataFrame) -> str:
-    """¿Cruzó el gatillo en las 24 velas siguientes? Si cruzó, ¿qué tocó primero?"""
+def _evaluar(e: dict[str, Any], df: pd.DataFrame) -> str | None:
+    """¿Cruzó el gatillo en las 24 velas siguientes? Si cruzó, ¿qué tocó primero?
+
+    None si la serie todavía no cubre la ventana entera: un fin de semana o una
+    activación tardía dejarían un desenlace a medias escrito para siempre.
+    """
     from analista.estadistica import HORIZONTE, desenlace, indicadores
 
     tiempos = pd.to_datetime(df["time"])
@@ -70,16 +75,28 @@ def _evaluar(e: dict[str, Any], df: pd.DataFrame) -> str:
     for i in posteriores:
         cierre = float(df["close"].iat[i])
         if (cierre > e["gatillo"]) if e["alcista"] else (cierre < e["gatillo"]):
+            if i + HORIZONTE >= len(df):
+                return None
             return "activado_" + desenlace(df, i, e["alcista"], ind)
-    return "no_se_activo"
+    return "no_se_activo" if len(posteriores) == HORIZONTE else None
 
 
 def completar(serie: Callable[[str], pd.DataFrame], ahora: datetime, ruta: Path = RUTA) -> int:
-    """Completa el desenlace de las entradas de más de 24 h. Devuelve cuántas completó."""
+    """Completa el desenlace de las entradas de más de 24 h. Devuelve cuántas completó.
+
+    Un activo que no entrega su serie queda pendiente para la próxima corrida y no
+    corta las demás.
+    """
     entradas, completadas = _leer(ruta), 0
     for e in entradas:
-        if e["desenlace"] is None and ahora - datetime.fromisoformat(e["creada"]) > ESPERA:
-            e["desenlace"] = _evaluar(e, serie(e["ticker"]))
+        if e["desenlace"] is not None or ahora - datetime.fromisoformat(e["creada"]) <= ESPERA:
+            continue
+        try:
+            resultado = _evaluar(e, serie(e["ticker"]))
+        except Exception:  # noqa: BLE001
+            continue
+        if resultado is not None:
+            e["desenlace"] = resultado
             completadas += 1
     if completadas:
         _escribir(ruta, entradas)

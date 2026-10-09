@@ -38,7 +38,7 @@ PLAN = {
     "recorrido": "Recorrido de referencia: 1,5 veces la volatilidad típica de una hora, unos 12,00.",
     "estadistica": "Desde el 2025-01-27, esta condición se dio 313 veces en Oro.",
     "estado": "Armado: el precio todavía no cruza el gatillo.",
-    "niveles": {"gatillo": 4131.0, "invalidacion": 4090.1, "vela": "2026-10-08 09:00:00"},
+    "niveles": {"gatillo": 4131.0, "invalidacion": 4090.1, "recorrido": 12.0, "vela": "2026-10-08 09:00:00"},
 }
 
 

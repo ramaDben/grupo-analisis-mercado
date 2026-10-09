@@ -24,10 +24,11 @@ def test_plan_alcista_con_ventaja():
     assert p["hay_plan"] and "cierre de vela de 1 hora sobre 4.020,00" in p["gatillo"]
     assert "4.003,00" in p["invalidacion"]  # 4030 - 3 x 9
     assert "12,00" in p["recorrido"] and "4.032" not in p["recorrido"]  # distancia, nunca precio
+    assert "27-01-2025" in p["estadistica"] and "2025-01-27" not in p["estadistica"]
     assert "42 veces" in p["estadistica"] and "64 %" in p["estadistica"] and "55 %" in p["estadistica"]
     assert "misma tendencia" in p["estadistica"] and "no ha mostrado ventaja" not in p["estadistica"]
     assert p["estado"].startswith("Armado")
-    assert p["niveles"] == {"gatillo": 4020.0, "invalidacion": 4003.0, "vela": "2026-10-08 10:00:00"}
+    assert p["niveles"] == {"gatillo": 4020.0, "invalidacion": 4003.0, "recorrido": 12.0, "vela": "2026-10-08 10:00:00"}
 
 
 def test_sin_ventaja_lo_dice():
@@ -56,9 +57,21 @@ def test_bajista_es_espejo():
     assert "bajo 3.990,00" in p["gatillo"] and "sobre 3.997,00" in p["invalidacion"]  # 3970 + 27
 
 
-def test_estado_activado_e_invalidado():
-    assert pl.armar(H1, 2, "Alcista", "Oro", None, {**VELA, "close": 4025.0})["estado"].startswith("Activado")
-    assert pl.armar(H1, 2, "Alcista", "Oro", None, {**VELA, "close": 4000.0})["estado"].startswith("Invalidado")
+def test_activacion_reciente_manda_sobre_el_r1_de_ahora():
+    # El precio ya rompio 4.015,00 hace unas velas: el R1 de ahora es la resistencia
+    # siguiente, pero el plan informa la ruptura que si ocurrio.
+    p = pl.armar(H1, 2, "Alcista", "Oro", None, {**VELA, "close": 4018.0}, activacion=4015.0)
+    assert p["estado"].startswith("Activado") and "4.015,00" in p["gatillo"]
+    assert p["niveles"]["gatillo"] == 4015.0
+
+
+def test_activacion_invalidada():
+    p = pl.armar(H1, 2, "Alcista", "Oro", None, {**VELA, "close": 4000.0}, activacion=4015.0)
+    assert p["estado"].startswith("Invalidado")
+
+
+def test_sin_activacion_esta_armado():
+    assert pl.armar(H1, 2, "Alcista", "Oro", None, VELA)["estado"].startswith("Armado")
 
 
 def test_cobre_sin_decimales():

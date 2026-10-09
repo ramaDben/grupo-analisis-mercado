@@ -127,6 +127,7 @@ def test_no_puede_tocar_las_laminas():
     "Toma ganancias en la resistencia.", "Usa 2 lotes.", "Recomendamos esperar.",
     "Señal de compra clara.", "Deberías vender ya.", "No arriesgues más del 2 % de tu capital.",
     "Compra ya antes del dato.", "Cierra tu posición antes del cierre.",
+    "Arriesga tu capital solo si confirmas.", "Apalancate para aprovechar el quiebre.",
 ])
 def test_frases_prohibidas_caen(texto):
     assert es.frases_prohibidas(texto)
@@ -139,6 +140,8 @@ def test_frases_prohibidas_caen(texto):
     "Hay presión compradora.",
     "Los vendedores dominan la sesión.",
     "La lotería no es una estrategia.",
+    "No conviene arriesgar más de lo previsto.",
+    "El apalancamiento amplifica las pérdidas.",
 ])
 def test_formas_impersonales_pasan(texto):
     assert es.frases_prohibidas(texto) == []
@@ -148,3 +151,9 @@ def test_errores_reporta_la_frase(tmp_path):
     p = fx.activo(tmp_path)
     p["editorial"]["que_no_hacer"] = "Te recomiendo no perseguir el precio."
     assert any("te recomiendo" in x for x in es.errores(p))
+
+
+def test_el_texto_no_nombra_a_la_cmf(tmp_path):
+    p = fx.activo(tmp_path)
+    p["editorial"]["lectura"] = "Este análisis está regulado por la CMF."
+    assert any("CMF" in x for x in es.errores(p))

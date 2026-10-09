@@ -78,30 +78,53 @@ def desenlace(df: pd.DataFrame, i: int, alcista: bool, ind: pd.DataFrame | None 
     return "sin_definicion"
 
 
-def eventos(df: pd.DataFrame, digits: int, alcista: bool, ind: pd.DataFrame | None = None) -> list[int]:
-    """Velas donde el cierre cruzó R1 (o S1) a favor de la EMA 50, con el nivel medido sobre swings.
+def _ruptura(df: pd.DataFrame, i: int, digits: int, alcista: bool, ind: pd.DataFrame) -> float | None:
+    """El nivel que cruzó el cierre de la vela `i`, o None.
 
-    Los niveles de la vela `i` se calculan con las 300 velas ANTERIORES, así que
-    nada posterior a `i` puede cambiarlos. Un mismo nivel cuenta una sola vez.
+    El nivel se calcula con las 300 velas ANTERIORES a `i` (misma función que los
+    niveles de hoy), así que nada posterior a `i` puede cambiarlo. Cuenta solo un
+    R1 (o S1) medido sobre swings y con el cierre a favor de la EMA 50.
     """
-    ind = indicadores(df) if ind is None else ind
     clave = "r1" if alcista else "s1"
+    previo = float(df["close"].iat[i - 1])
+    niveles = _get_support_resistance(df.iloc[i - VENTANA:i], previo, float(ind["atr14"].iat[i - 1]), digits)
+    if niveles["origen"][clave] != "swing":
+        return None
+    nivel = niveles[clave]
+    cierre = float(df["close"].iat[i])
+    media = float(ind["ema50"].iat[i])
+    cruza = (cierre > nivel >= previo) if alcista else (cierre < nivel <= previo)
+    a_favor = cierre > media if alcista else cierre < media
+    return nivel if cruza and a_favor else None
+
+
+def eventos(df: pd.DataFrame, digits: int, alcista: bool, ind: pd.DataFrame | None = None) -> list[int]:
+    """Velas con ruptura (ver `_ruptura`). Un mismo nivel cuenta una sola vez."""
+    ind = indicadores(df) if ind is None else ind
     salida: list[int] = []
     ultimo: float | None = None
     for i in range(VENTANA, len(df)):
-        previo = float(df["close"].iat[i - 1])
-        niveles = _get_support_resistance(df.iloc[i - VENTANA:i], previo, float(ind["atr14"].iat[i - 1]), digits)
-        if niveles["origen"][clave] != "swing":
-            continue
-        nivel = niveles[clave]
-        cierre = float(df["close"].iat[i])
-        media = float(ind["ema50"].iat[i])
-        cruza = (cierre > nivel >= previo) if alcista else (cierre < nivel <= previo)
-        a_favor = cierre > media if alcista else cierre < media
-        if cruza and a_favor and nivel != ultimo:
+        nivel = _ruptura(df, i, digits, alcista, ind)
+        if nivel is not None and nivel != ultimo:
             salida.append(i)
             ultimo = nivel
     return salida
+
+
+def activacion_reciente(df: pd.DataFrame, digits: int, alcista: bool,
+                        ind: pd.DataFrame | None = None) -> float | None:
+    """El nivel de la última ruptura dentro de las últimas 24 velas, o None.
+
+    El R1 de ahora no sirve para saber si el plan se activó: apenas el precio
+    rompe una resistencia, `analizar_activo` pasa a mostrar la siguiente. El
+    estado se decide con la misma definición de evento que mide la estadística.
+    """
+    ind = indicadores(df) if ind is None else ind
+    for i in range(len(df) - 1, max(VENTANA, len(df) - HORIZONTE) - 1, -1):
+        nivel = _ruptura(df, i, digits, alcista, ind)
+        if nivel is not None:
+            return nivel
+    return None
 
 
 def _pct(resultados: list[Desenlace]) -> int | None:
@@ -109,7 +132,8 @@ def _pct(resultados: list[Desenlace]) -> int | None:
 
 
 def medir(df: pd.DataFrame, digits: int, alcista: bool) -> Estadistica:
-    desde = str(df["time"].iat[0])[:10] if len(df) else ""
+    # El período empieza donde hay 300 velas previas: antes no se mide nada.
+    desde = str(df["time"].iat[min(VENTANA, len(df) - 1)])[:10] if len(df) else ""
     hasta = str(df["time"].iat[-1])[:10] if len(df) else ""
     if len(df) <= VENTANA + HORIZONTE:
         return Estadistica(0, None, None, desde, hasta)

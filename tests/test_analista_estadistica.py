@@ -85,3 +85,20 @@ def test_muestra_insuficiente():
 def test_serie_corta_no_revienta():
     r = est.medir(serie([100] * 50), 2, alcista=True)
     assert r.casos == 0 and r.pct_base is None and r.pct_condicion is None
+
+
+def test_activacion_reciente_encuentra_la_ultima_ruptura():
+    rng = np.random.default_rng(7)
+    base = list(100 + (rng.standard_normal(1200) + 0.05).cumsum())
+    df = serie(base)
+    todos = est.eventos(df, 2, alcista=True)
+    ultimo = todos[-1]
+    corte = df.iloc[: ultimo + 3].reset_index(drop=True)  # 2 velas despues de la ruptura
+    nivel = est.activacion_reciente(corte, 2, alcista=True)
+    assert nivel is not None
+    assert est.activacion_reciente(serie([100 + k * 0.01 for k in range(400)]), 2, alcista=True) is None
+
+
+def test_el_periodo_parte_donde_se_puede_medir():
+    df = serie([100 + k * 0.01 for k in range(400)])
+    assert est.medir(df, 2, alcista=True).desde == str(df["time"].iat[est.VENTANA])[:10]

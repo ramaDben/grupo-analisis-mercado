@@ -220,8 +220,10 @@ def _plan(ticker: str, lectura: dict[str, Any], sesgo: str, activo: dict[str, An
               "ll22": float(ind["ll"].iat[-1]), "atr22": float(ind["atr22"].iat[-1]),
               "vela": str(df["time"].iat[-1])}
     digits = int(activo["digits"])
-    medida = est.medir(df, digits, sesgo == "Alcista") if len(df) > est.VENTANA + est.HORIZONTE else None
-    return plan_mod.armar(lectura["h1"], digits, sesgo, activo["nombre"], medida, ultima)
+    alcista = sesgo == "Alcista"
+    medida = est.medir(df, digits, alcista) if len(df) > est.VENTANA + est.HORIZONTE else None
+    activacion = est.activacion_reciente(df, digits, alcista, ind) if len(df) > est.VENTANA else None
+    return plan_mod.armar(lectura["h1"], digits, sesgo, activo["nombre"], medida, ultima, activacion)
 
 
 CLASES = {
