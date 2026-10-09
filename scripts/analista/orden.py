@@ -1,8 +1,11 @@
 """Gramática del pedido: lo único que el analista puede pedirle al bot.
 
 El texto del usuario nunca llega a agy. Este módulo lo traduce a una `Orden` con
-campos cerrados (pieza, argumentos de una lista conocida, nombre del trader
-saneado) y rechaza todo lo demás con un motivo que el analista pueda corregir.
+campos cerrados (pieza y argumentos de una lista conocida) y rechaza todo lo
+demás con un motivo que el analista pueda corregir.
+
+El informe es general e igual para todos: ya no se personaliza por trader
+(spec 2026-10-08-informe-general-firmado-y-plan-design.md).
 """
 from __future__ import annotations
 
@@ -42,7 +45,10 @@ ALIAS: dict[str, str] = {
     "ethereum": "ETHUSD",
 }
 
-_LETRAS_NOMBRE = re.compile(r"^[^\W\d_]+(?:[ '.-][^\W\d_]+)*\.?$")
+PERSONALIZACION_RETIRADA = (
+    "Los informes ya no se personalizan: son un análisis general que puedes "
+    "compartir tal cual. Pide de nuevo sin «para …», por ejemplo /activo oro."
+)
 _BUSQUEDA_DATO = re.compile(r"^[a-z0-9 ]{2,40}$")
 
 
@@ -50,10 +56,9 @@ _BUSQUEDA_DATO = re.compile(r"^[a-z0-9 ]{2,40}$")
 class Orden:
     pieza: str
     args: dict[str, Any] = field(default_factory=dict)
-    trader: str | None = None
 
     def clave_base(self) -> str:
-        """Identidad de la pieza sin el trader: dos traders comparten el texto."""
+        """Identidad de la pieza para reusarla mientras está vigente."""
         partes = [self.pieza] + [f"{k}={self.args[k]}" for k in sorted(self.args)]
         return "|".join(partes)
 
@@ -80,15 +85,6 @@ def resolver_activo(texto: str, universo: list[dict[str, Any]]) -> str:
     raise PedidoInvalido(f"No reconozco el activo «{texto}». Prueba con el ticker, por ejemplo /activo usdclp.")
 
 
-def sanear_trader(nombre: str) -> str:
-    limpio = " ".join(nombre.split())
-    if not (2 <= len(limpio) <= 60) or not _LETRAS_NOMBRE.match(limpio):
-        raise PedidoInvalido(
-            "El nombre del trader solo puede tener letras, tildes y espacios (2 a 60 caracteres)."
-        )
-    return limpio
-
-
 def interpretar(texto: str, universo: list[dict[str, Any]] | None = None) -> Orden:
     texto = (texto or "").strip()
     if not texto.startswith("/"):
@@ -101,16 +97,13 @@ def interpretar(texto: str, universo: list[dict[str, Any]] | None = None) -> Ord
     if comando not in PIEZAS:
         raise PedidoInvalido(f"No existe el comando /{comando}. Escribe /ayuda para ver cuáles hay.")
 
-    trader = None
     cuerpo = resto.strip()
-    m = re.search(r"(?:^|\s)para\s+(.+)$", cuerpo, flags=re.IGNORECASE)
-    if m:
-        trader = sanear_trader(m.group(1))
-        cuerpo = cuerpo[: m.start()].strip()
+    if re.search(r"(?:^|\s)para\s+\S", cuerpo, flags=re.IGNORECASE):
+        raise PedidoInvalido(PERSONALIZACION_RETIRADA)
 
     if comando == "activo":
         if not cuerpo:
-            raise PedidoInvalido("Falta el activo. Ejemplo: /activo oro para Juan Pérez")
+            raise PedidoInvalido("Falta el activo. Ejemplo: /activo oro")
         if universo is None:
             import screener_gi as sc
 
@@ -132,4 +125,4 @@ def interpretar(texto: str, universo: list[dict[str, Any]] | None = None) -> Ord
             raise PedidoInvalido("La jornada es /jornada apertura o /jornada cierre.")
         args = {"momento": momento}
 
-    return Orden(pieza=comando, args=args, trader=trader)
+    return Orden(pieza=comando, args=args)

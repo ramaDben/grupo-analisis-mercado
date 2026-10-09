@@ -1,8 +1,9 @@
 # Bot de Telegram para analistas y ejecutivos
 
 El equipo le pide al bot las mismas piezas que el director le pide a Claude Code, y recibe un
-**informe HTML** listo para entregar a su trader. Diseño completo:
-`docs/superpowers/specs/2026-10-08-bot-telegram-analistas-design.md`.
+**informe HTML** general, firmado por el director, que comparte tal cual con su trader. Diseño:
+`docs/superpowers/specs/2026-10-08-bot-telegram-analistas-design.md` y
+`docs/superpowers/specs/2026-10-08-informe-general-firmado-y-plan-design.md`.
 
 ## Qué se puede pedir
 
@@ -13,9 +14,9 @@ El equipo le pide al bot las mismas piezas que el director le pide a Claude Code
 | `/dato` · `/dato ipc` | El último dato con cifra (o el pedido): veredicto y movimiento del dólar y el oro. Si todavía no sale, en modo anticipación |
 | `/jornada apertura` · `/jornada cierre` | Los cinco activos base con sus gráficos diarios y la curva de tasas |
 
-Cualquiera acepta `para Nombre Apellido`, y entonces llegan dos archivos: la versión con el nombre
-del trader y la genérica. La genérica trae una barra para escribir otro nombre y guardar esa
-versión desde el navegador, sin volver a pedirla.
+**El informe no se personaliza.** Nadie en GI está inscrito como asesor de inversión, y un
+informe con el nombre del cliente se acerca a una recomendación personalizada. Si un pedido trae
+`para Nombre`, el bot lo explica y no lo atiende (no gasta agy ni cupo).
 
 `/estado` muestra el cupo del día, `/id` el número de usuario y `/ayuda` la lista.
 
@@ -33,8 +34,8 @@ pedido → orden.py (gramática cerrada) → preparar.py (datos + gráficos, car
   puede traer HTML, guion largo ni voseo.
 - **La maqueta es nuestra**: cabecera y lema del evergreen GI, cuerpo con la legibilidad de la
   guía USD/CLP, colores de `marca.css` (sección "Documento claro").
-- **Personalizar no cuesta agy.** La pieza se reusa mientras está vigente (`reuso_minutos`; un
-  dato ya publicado vale todo el día) y la versión para otro trader solo rearma el HTML.
+- **Reusar no cuesta agy.** La pieza se reusa mientras está vigente (`reuso_minutos`; un dato ya
+  publicado vale todo el día).
 - **No toca la producción.** Trabaja en `data/informes_analistas/` y no usa los `preparar()` de
   los pipelines, que escriben en `data/carrusel/`, `data/screener/` y los historiales. Un test
   impide que el bot importe el envío a WhatsApp o la bitácora de despachos.
@@ -49,7 +50,7 @@ pedido → orden.py (gramática cerrada) → preparar.py (datos + gráficos, car
 4. `ruta_drive`: la raíz de Google Drive para escritorio (por ejemplo `G:\Mi unidad`). El bot
    crea `GI Informes/<fecha>/` adentro. `url_carpeta_drive` es opcional y va en la respuesta.
 5. Probar sin Telegram, con MT5 abierto:
-   `uv run --with MetaTrader5 --extra stories --extra informe python scripts/bot_analistas.py --una "/activo oro para Juan Pérez"`
+   `uv run --with MetaTrader5 --extra stories --extra informe python scripts/bot_analistas.py --una "/activo oro"`
 6. Dejarlo corriendo: `scripts\instalar_bot_telegram.ps1 -Instalar` (sin `-Instalar` solo muestra
    qué haría).
 

@@ -11,7 +11,7 @@
 <style>{{fuentes}}</style>
 </head>
 <body>
-{{barra}}
+<div class="barra no-imprimir"><button type="button" onclick="window.print()">Imprimir o PDF</button></div>
 <main class="documento">
   <header class="cabecera">
     <div class="cabecera-fila">
@@ -23,8 +23,8 @@
     <p class="bajada">{{bajada}}</p>
   </header>
   <section class="franja">
-    <div><div class="franja-rotulo">Preparado para</div><div class="franja-valor trader" id="lbl-trader">{{trader}}</div></div>
-    <div><div class="franja-rotulo">Asesor asignado</div><div class="franja-valor" id="lbl-asesor">{{asesor}}</div></div>
+    <div><div class="franja-rotulo">Análisis</div><div class="franja-valor">{{autor_nombre}}</div></div>
+    <div><div class="franja-rotulo">Compartido por</div><div class="franja-valor">{{compartido_por}}</div></div>
     <div><div class="franja-rotulo">{{rotulo_referencia}}</div><div class="franja-valor cotizacion">{{referencia}}</div></div>
     <div><div class="franja-rotulo">Edición</div><div class="franja-valor">{{edicion}}</div></div>
   </section>
@@ -37,6 +37,5 @@
     <p class="legal">{{contacto}}</p>
   </footer>
 </main>
-{{script}}
 </body>
 </html>

@@ -104,22 +104,29 @@ def test_pedido_invalido_responde_el_motivo(armado):
     assert "pizza" in r[0].texto and final is None
 
 
-def test_pieza_nueva_genera_generica_y_dedicada_y_copia_a_drive(armado):
-    _, final = pedir(armado, "/activo oro para María José Núñez")
-    nombres = [p.name for p in final.archivos]
-    assert nombres[0].endswith("_maria_jose_nunez.html") and len(nombres) == 2
-    assert "María José Núñez" in final.texto and "aviso de prueba" in final.texto
+def test_pieza_nueva_genera_un_html_y_copia_a_drive(armado):
+    _, final = pedir(armado, "/activo oro")
+    assert [p.name for p in final.archivos] == [final.archivos[0].name] and len(final.archivos) == 1
+    assert "aviso de prueba" in final.texto
     assert len(armado.llamadas) == 1
-    assert len(list((armado.tmp / "drive" / "GI Informes").rglob("*.html"))) == 2
+    assert len(list((armado.tmp / "drive" / "GI Informes").rglob("*.html"))) == 1
 
 
-def test_otro_trader_reusa_la_pieza_sin_agy_ni_cupo(armado):
-    pedir(armado, "/activo oro para Juan Pérez")
+def test_segundo_pedido_reusa_la_pieza_sin_agy_ni_cupo(armado):
+    pedir(armado, "/activo oro")
     armado.reloj.ahora += timedelta(minutes=10)
-    _, final = pedir(armado, "/activo oro para Ana Soto")
+    _, final = pedir(armado, "/activo oro")
     assert len(armado.llamadas) == 1
     assert "vigente" in final.texto
     assert armado.bot.estado.usados(CAMILA, armado.reloj.ahora) == 1
+
+
+def test_pedido_con_para_no_gasta_agy_ni_cupo(armado):
+    from analista import orden as od
+
+    r, final = pedir(armado, "/activo oro para Juan Pérez")
+    assert r[0].texto == od.PERSONALIZACION_RETIRADA and final is None
+    assert armado.llamadas == [] and armado.bot.estado.usados(CAMILA, armado.reloj.ahora) == 0
 
 
 def test_pieza_vencida_se_vuelve_a_redactar(armado):

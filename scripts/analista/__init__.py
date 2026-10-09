@@ -1,4 +1,4 @@
-"""Bot de Telegram para analistas: piezas a pedido en HTML, con versión por trader.
+"""Bot de Telegram para analistas: piezas a pedido en HTML, un informe general firmado.
 
 Spec: docs/superpowers/specs/2026-10-08-bot-telegram-analistas-design.md.
 

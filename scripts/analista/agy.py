@@ -1,8 +1,7 @@
 """La única llamada a agy del bot: redactar los textos de una pieza ya preparada.
 
 El prompt es fijo y solo lleva la ruta de la pieza. Nada de lo que el analista
-escribió en Telegram llega acá: el nombre del trader ni siquiera está en la
-pieza, se aplica después al armar el HTML.
+escribió en Telegram llega acá.
 """
 from __future__ import annotations
 

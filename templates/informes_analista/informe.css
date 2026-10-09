@@ -1,5 +1,5 @@
 /*
-  Informe del bot de analistas: la pieza que el analista le entrega a su trader.
+  Informe del bot de analistas: análisis general que el analista comparte tal cual.
 
   Cabecera, franja de datos, lema y pie salen del evergreen GI; el cuerpo, de la
   guía USD/CLP (estándar sin zoom: cuerpo de 11 a 13 pt y nada bajo 9,5 pt salvo
@@ -30,7 +30,7 @@ body {
   box-shadow: 0 6pt 24pt rgba(0, 0, 0, 0.10);
 }
 
-/* ── Barra de personalización (solo en la versión genérica, nunca impresa) ── */
+/* ── Barra de acciones (en pantalla, nunca impresa) ── */
 .barra {
   position: sticky;
   top: 0;
@@ -44,15 +44,6 @@ body {
   background: var(--banda-1);
   color: var(--blanco);
   font-size: 10pt;
-}
-.barra label { font-weight: 600; }
-.barra input {
-  font: inherit;
-  font-size: 10.5pt;
-  padding: 4pt 8pt;
-  border: 1px solid var(--acento);
-  border-radius: 4pt;
-  min-width: 150pt;
 }
 .barra button {
   font: inherit;
@@ -129,13 +120,6 @@ body {
   color: var(--tinta-3);
 }
 .franja-valor { font-size: 11pt; font-weight: 700; color: var(--tinta); }
-.franja-valor.trader {
-  display: inline-block;
-  background: var(--acento-tenue);
-  border-left: 2pt solid var(--acento-doc);
-  padding: 0 6pt;
-  border-radius: 3pt;
-}
 .franja-valor.cotizacion { font-family: var(--font-display); color: var(--acento-doc); }
 
 /* ── Cuerpo (guía USD/CLP) ───────────────────────────────────────────────── */

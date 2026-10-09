@@ -1,4 +1,4 @@
-"""Armado del HTML del bot de analistas: maqueta fija, texto escapado, versión por trader."""
+"""Armado del HTML del bot de analistas: maqueta fija, texto escapado, un solo informe general."""
 from __future__ import annotations
 
 import re
@@ -31,22 +31,24 @@ def test_cada_pieza_arma_un_html_autocontenido(tipo, tmp_path):
     assert pieza["editorial"]["titular"] in salida
 
 
-def test_la_generica_trae_barra_y_la_dedicada_no(tmp_path):
-    pieza = fx.activo(tmp_path)
-    generica = ih.armar(pieza, tmp_path, fx.ANALISTA)
-    dedicada = ih.armar(pieza, tmp_path, fx.ANALISTA, trader="María José Núñez")
-    assert 'class="barra no-imprimir"' in generica and "<script>" in generica
-    assert "barra" not in re.sub(r"<style>.*?</style>", "", dedicada, flags=re.S)
-    assert "<script>" not in dedicada
-    assert "María José Núñez" in dedicada
-    assert ih.TRADER_GENERICO in generica
+def test_informe_general_sin_personalizacion(tmp_path):
+    salida = ih.armar(fx.activo(tmp_path), tmp_path, fx.ANALISTA)
+    for prohibido in ("Preparado para", "Asesor asignado", "in-trader", "btn-guardar", "<script>"):
+        assert prohibido not in salida
+    assert "Compartido por" in salida and "Análisis" in salida
+    assert 'class="barra no-imprimir"' in salida and "window.print()" in salida
 
 
-def test_la_dedicada_solo_cambia_la_franja(tmp_path):
-    pieza = fx.activo(tmp_path)
-    a = ih.armar(pieza, tmp_path, fx.ANALISTA, trader="Juan Pérez")
-    b = ih.armar(pieza, tmp_path, fx.ANALISTA, trader="Ana Soto")
-    assert a.replace("Juan Pérez", "X") == b.replace("Ana Soto", "X")
+def test_contrato_sin_personalizacion_en_paquete_y_plantilla():
+    fuentes = [*(RAIZ / "scripts" / "analista").glob("*.py"),
+               RAIZ / "templates" / "informes_analista" / "base.html"]
+    for f in fuentes:
+        texto = f.read_text(encoding="utf-8")
+        # La palabra "trader" sí puede aparecer (la ayuda dice "compártelo con tu
+        # trader"); lo prohibido es el mecanismo de personalización.
+        for prohibido in (".trader", "trader=", "TRADER_GENERICO", "sanear_trader",
+                          "Preparado para", "Asesor asignado"):
+            assert prohibido not in texto, f"{f.name}: {prohibido}"
 
 
 def test_el_texto_de_agy_sale_escapado(tmp_path):
@@ -56,8 +58,8 @@ def test_el_texto_de_agy_sale_escapado(tmp_path):
     assert "El precio &amp; la media: arriba &quot;fuerte&quot;" in salida
 
 
-def test_el_nombre_del_trader_sale_escapado(tmp_path):
-    salida = ih.armar(fx.activo(tmp_path), tmp_path, fx.ANALISTA, trader="O'Higgins")
+def test_el_nombre_del_analista_sale_escapado(tmp_path):
+    salida = ih.armar(fx.activo(tmp_path), tmp_path, {**fx.ANALISTA, "nombre": "O'Higgins"})
     assert "O&#x27;Higgins" in salida
 
 
@@ -75,11 +77,10 @@ def test_sin_imagen_no_hay_informe(tmp_path):
         ih.armar(pieza, tmp_path, fx.ANALISTA)
 
 
-def test_guardar_escribe_genérica_y_dedicada(tmp_path):
-    rutas = ih.guardar(fx.activo(tmp_path), tmp_path, fx.ANALISTA, "María José Núñez", "activo_oro_0939")
-    assert [r.name for r in rutas] == ["activo_oro_0939.html", "activo_oro_0939_maria_jose_nunez.html"]
-    assert all("¿" not in r.read_text(encoding="utf-8") or True for r in rutas)
-    assert "Núñez" in rutas[1].read_text(encoding="utf-8")
+def test_guardar_escribe_un_solo_html(tmp_path):
+    ruta = ih.guardar(fx.activo(tmp_path), tmp_path, fx.ANALISTA, "activo_oro_0939")
+    assert ruta == tmp_path / "activo_oro_0939.html"
+    assert [p.name for p in tmp_path.glob("*.html")] == ["activo_oro_0939.html"]
 
 
 def _tamanos(css: str):

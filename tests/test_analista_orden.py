@@ -29,7 +29,7 @@ def leer(texto: str) -> od.Orden:
 
 def test_activo_por_alias_en_espanol():
     o = leer("/activo oro")
-    assert (o.pieza, o.args, o.trader) == ("activo", {"ticker": "XAUUSD"}, None)
+    assert (o.pieza, o.args) == ("activo", {"ticker": "XAUUSD"})
 
 
 @pytest.mark.parametrize("texto,ticker", [
@@ -47,26 +47,8 @@ def test_resuelve_ticker_del_broker(texto, ticker):
     assert leer(texto).args["ticker"] == ticker
 
 
-def test_trader_con_tildes_y_espacios():
-    o = leer("/activo oro para María José Núñez")
-    assert o.trader == "María José Núñez"
-
-
 def test_comando_con_arroba_del_bot():
     assert leer("/activo@GI_Analistas_Bot oro").args["ticker"] == "XAUUSD"
-
-
-@pytest.mark.parametrize("nombre", [
-    "Juan <script>",
-    "Juan; rm -rf",
-    "Juan {{titular}}",
-    "x",
-    "a" * 61,
-    "Juan 123",
-])
-def test_rechaza_nombres_de_trader_peligrosos_o_raros(nombre):
-    with pytest.raises(od.PedidoInvalido):
-        leer(f"/activo oro para {nombre}")
 
 
 def test_activo_desconocido_dice_cual():
@@ -98,9 +80,8 @@ def test_dato_por_defecto_es_el_ultimo():
     assert leer("/dato").args == {"busqueda": "ultimo"}
 
 
-def test_dato_con_nombre_y_trader():
-    o = leer("/dato IPC para Juan Pérez")
-    assert o.args == {"busqueda": "ipc"} and o.trader == "Juan Pérez"
+def test_dato_con_nombre():
+    assert leer("/dato IPC").args == {"busqueda": "ipc"}
 
 
 def test_dato_rechaza_simbolos():
@@ -127,10 +108,15 @@ def test_comandos_de_servicio(texto):
     assert leer(texto).pieza == texto[1:]
 
 
-def test_clave_de_reuso_ignora_al_trader():
-    a = leer("/activo oro para Juan Pérez")
-    b = leer("/activo oro")
-    assert a.clave_base() == b.clave_base()
+@pytest.mark.parametrize("texto", ["/activo oro para Juan Pérez", "/dato ipc para Ana", "/calendario hoy para Luis"])
+def test_para_trader_ya_no_se_acepta(texto):
+    with pytest.raises(od.PedidoInvalido) as exc:
+        leer(texto)
+    assert str(exc.value) == od.PERSONALIZACION_RETIRADA
+
+
+def test_orden_no_tiene_trader():
+    assert not hasattr(leer("/activo oro"), "trader")
 
 
 def test_todos_los_alias_apuntan_a_activos_del_catalogo_real():

@@ -6,8 +6,8 @@ Tres reglas lo definen (spec 2026-10-08-bot-telegram-analistas-design.md):
    de la persona (no del chat: en un grupo el chat es de todos).
 2. **agy solo redacta.** El pedido se traduce a una `Orden` cerrada, Python
    prepara los datos, agy rellena los textos y Python arma el HTML.
-3. **Personalizar no cuesta agy.** La pieza base se reusa mientras está vigente
-   y la versión para otro trader solo vuelve a armar el HTML.
+3. **Reusar no cuesta agy.** La pieza vigente se vuelve a entregar sin redactar.
+   El informe es general e igual para todos: no se personaliza por trader.
 
 No publica en ningún canal de WhatsApp ni toca la bitácora de despachos: es una
 herramienta interna del equipo, y un test lo impone.
@@ -46,8 +46,7 @@ Pide una pieza y te llega el informe en HTML, listo para entregar:
 /dato ipc         (o /dato para el último)
 /jornada apertura (o cierre)
 
-Agrega "para Nombre Apellido" y te llega también la versión con el nombre de tu trader:
-/activo usdclp para María José Núñez
+El informe es un análisis general: compártelo tal cual con tu trader.
 
 /estado muestra tu cupo del día. /id muestra tu número de usuario."""
 
@@ -173,7 +172,7 @@ class Atendedor:
         if self.estado.usados(pedido.usuario, ahora) >= cupo:
             raise FalloPedido(
                 f"Completaste tu cupo de {cupo} piezas nuevas por hoy. "
-                "Las que ya existen siguen disponibles, también con el nombre de otro trader."
+                "Las que ya existen siguen disponibles."
             )
         arg = ih.slug(str(next(iter(o.args.values()), "") or "auto"))
         dir_pedido = self.dir_pedidos / ahora.strftime("%Y-%m-%d") / f"{ahora:%H%M%S}_{o.pieza}_{arg}"
@@ -217,20 +216,17 @@ class Atendedor:
         arg = ih.slug(str(next(iter(pieza["orden"]["args"].values()), "") or "auto"))
         nombre_base = f"{o.pieza}_{arg}_{dir_pedido.name[:4]}"
         try:
-            rutas = ih.guardar(pieza, dir_pedido, self.analista(pedido.usuario), o.trader, nombre_base)
+            ruta = ih.guardar(pieza, dir_pedido, self.analista(pedido.usuario), nombre_base)
         except ih.InformeInvalido as exc:
             raise FalloPedido(f"No pude armar el informe: {exc}") from exc
-        drive = self._a_drive(rutas, ahora)
+        drive = self._a_drive([ruta], ahora)
         lineas = [f"✅ {pieza['editorial']['titular']}",
                   f"{pieza['datos']['chip']} · {pieza['datos']['edicion']}"]
         if reusada:
             lineas.append("Es la pieza vigente: no se volvió a redactar.")
-        if o.trader:
-            lineas.append(f"Va también la versión para {o.trader}.")
         lineas += [f"⚠️ {a}" for a in avisos]
         lineas.append(drive)
-        # La dedicada primero: es la que el analista vino a buscar.
-        return Respuesta(pedido.chat, "\n".join(lineas), list(reversed(rutas)))
+        return Respuesta(pedido.chat, "\n".join(lineas), [ruta])
 
 
 # ───────────────────────────────────────────────────────────── Telegram
@@ -331,7 +327,7 @@ class Bot:
 
         en_cola = self.cola.qsize() + (1 if self.ocupado.is_set() else 0)
         self.cola.put(Pedido(usuario, chat, orden))
-        _log(f"pedido {usuario}: {orden.clave_base()} trader={'sí' if orden.trader else 'no'}")
+        _log(f"pedido {usuario}: {orden.clave_base()}")
         if en_cola:
             return [Respuesta(chat, f"Recibido. Hay {en_cola} pedido(s) antes que el tuyo.")]
         return [Respuesta(chat, "Recibido. Preparo la pieza: una nueva tarda unos minutos.")]

@@ -1,11 +1,13 @@
-"""`pieza.json` → HTML autocontenido para el analista y, si se pidió, para su trader.
+"""`pieza.json` → HTML autocontenido: un análisis general, igual para todos.
 
 La maqueta es nuestra y fija: cabecera, franja, lema y pie del evergreen GI, y el
 cuerpo con la legibilidad de la guía USD/CLP. agy solo aportó los textos, que
 entran escapados: nada de lo que escribió puede convertirse en etiqueta.
 
 El archivo no depende de nada externo (estilos, fuentes, logo e imágenes van
-adentro), porque el analista lo reenvía y el trader lo abre sin conexión.
+adentro), porque el analista lo reenvía tal cual y quien lo recibe lo abre sin
+conexión. No se personaliza: nadie en GI está inscrito como asesor de inversión,
+y un informe con el nombre del cliente se acerca a una recomendación personalizada.
 """
 from __future__ import annotations
 
@@ -23,7 +25,7 @@ DIR_PLANTILLAS = RAIZ / "templates" / "informes_analista"
 MARCA_CSS = RAIZ / "templates" / "stories" / "marca.css"
 LOGO = RAIZ / "templates" / "stories" / "assets" / "LOGO Blanco.png"
 
-TRADER_GENERICO = "Inversionista"
+AUTOR_PROVISORIO = "Benjamín Ignacio Bravo Soza"
 
 
 class InformeInvalido(ValueError):
@@ -245,52 +247,8 @@ def _fuentes() -> str:
     return caras_de_fuente()
 
 
-BARRA = """<div class="barra no-imprimir">
-  <label for="in-trader">Trader</label><input id="in-trader" value="" placeholder="Nombre del trader">
-  <label for="in-asesor">Asesor</label><input id="in-asesor" value="{asesor}">
-  <button type="button" id="btn-guardar">Guardar versión del trader</button>
-  <button type="button" onclick="window.print()">Imprimir o PDF</button>
-</div>"""
-
-# Arma la versión dedicada en el navegador: copia el documento, fija los nombres,
-# quita la barra y este script, y lo descarga. No hay servidor ni red de por medio.
-SCRIPT = """<script>
-(function () {
-  var base = %s;
-  var trader = document.getElementById('in-trader');
-  var asesor = document.getElementById('in-asesor');
-  var lblT = document.getElementById('lbl-trader');
-  var lblA = document.getElementById('lbl-asesor');
-  function sync() {
-    lblT.textContent = trader.value.trim() || %s;
-    lblA.textContent = asesor.value.trim() || asesor.defaultValue;
-  }
-  trader.addEventListener('input', sync);
-  asesor.addEventListener('input', sync);
-  document.getElementById('btn-guardar').addEventListener('click', function () {
-    sync();
-    var copia = document.documentElement.cloneNode(true);
-    copia.querySelectorAll('.no-imprimir, script').forEach(function (n) { n.remove(); });
-    var html = '<!DOCTYPE html>\\n' + copia.outerHTML;
-    var nombre = (trader.value.trim() || 'trader').normalize('NFD')
-      .replace(/[\\u0300-\\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_');
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([html], {type: 'text/html;charset=utf-8'}));
-    a.download = base + '_' + nombre + '.html';
-    a.click();
-  });
-})();
-</script>"""
-
-
-def armar(
-    pieza: dict[str, Any],
-    dir_pedido: Path,
-    analista: dict[str, Any],
-    trader: str | None = None,
-    nombre_base: str = "informe",
-) -> str:
-    """HTML completo. Sin `trader` es la versión genérica, con barra para personalizar."""
+def armar(pieza: dict[str, Any], dir_pedido: Path, analista: dict[str, Any]) -> str:
+    """HTML completo del informe general."""
     errs = es.errores(pieza)
     if errs:
         raise InformeInvalido("; ".join(errs))
@@ -299,8 +257,7 @@ def armar(
 
     tipo = pieza["orden"]["pieza"]
     d, ed = pieza["datos"], pieza["editorial"]
-    generica = trader is None
-    asesor = analista["nombre"]
+    nombre = analista["nombre"]
     contacto = " · ".join(x for x in (analista.get("cargo"), analista.get("contacto")) if x)
     tokens = {
         "titulo_documento": e(ed["titular"]),
@@ -309,36 +266,22 @@ def armar(
         "chip": e(d["chip"]),
         "titular": e(ed["titular"]),
         "bajada": e(ed["bajada"]),
-        "trader": e(trader or TRADER_GENERICO),
-        "asesor": e(asesor),
+        "autor_nombre": e(AUTOR_PROVISORIO),
+        "compartido_por": e(nombre),
         "rotulo_referencia": e(d["rotulo_referencia"]),
         "referencia": e(d["referencia"]),
         "edicion": e(d["edicion"]),
         "cuerpo": CUERPOS[tipo](pieza, dir_pedido),
         "aviso_legal": e(AVISO_LEGAL),
-        "contacto": e(f"{asesor} · {contacto}" if contacto else asesor),
-        "barra": BARRA.format(asesor=e(asesor)) if generica else "",
-        "script": SCRIPT % (repr(nombre_base), repr(TRADER_GENERICO)) if generica else "",
+        "contacto": e(f"{nombre} · {contacto}" if contacto else nombre),
     }
     salida = _estilos_inline((DIR_PLANTILLAS / "base.html").read_text(encoding="utf-8"))
     # Reemplazo en una sola pasada: un valor que contenga "{{x}}" no vuelve a expandirse.
     return re.sub(r"\{\{(\w+)\}\}", lambda m: tokens[m.group(1)], salida)
 
 
-def guardar(
-    pieza: dict[str, Any],
-    dir_pedido: Path,
-    analista: dict[str, Any],
-    trader: str | None,
-    nombre_base: str,
-) -> list[Path]:
-    """Escribe la genérica y, si hay trader, la dedicada. Devuelve las rutas."""
-    rutas = []
-    generica = dir_pedido / f"{nombre_base}.html"
-    generica.write_text(armar(pieza, dir_pedido, analista, None, nombre_base), encoding="utf-8")
-    rutas.append(generica)
-    if trader:
-        dedicada = dir_pedido / f"{nombre_base}_{slug(trader)}.html"
-        dedicada.write_text(armar(pieza, dir_pedido, analista, trader, nombre_base), encoding="utf-8")
-        rutas.append(dedicada)
-    return rutas
+def guardar(pieza: dict[str, Any], dir_pedido: Path, analista: dict[str, Any], nombre_base: str) -> Path:
+    """Escribe el informe y devuelve su ruta."""
+    ruta = dir_pedido / f"{nombre_base}.html"
+    ruta.write_text(armar(pieza, dir_pedido, analista), encoding="utf-8")
+    return ruta
