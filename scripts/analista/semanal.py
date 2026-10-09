@@ -16,6 +16,7 @@ datos del terminal y agy solo redacta el contexto. Tres decisiones del director
 """
 from __future__ import annotations
 
+import math
 from datetime import date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -119,6 +120,12 @@ def _ajustar_volumen(volumen: float, minimo: float, paso: float) -> float:
     return round(minimo + pasos * paso, 8)
 
 
+def _redondear(valor: float) -> int:
+    """Mitad hacia arriba, como `Math.round` del panel: `round` de Python va al par
+    (218,5 da 218) y el correo mostraría un peso distinto del que calcula el panel."""
+    return math.floor(valor + 0.5)
+
+
 def simular(contrato: dict[str, Any], esc: dict[str, Any], monto: float, volumen: float) -> dict[str, Any]:
     """Lo que el panel del correo calcula, en pesos (la cuenta del terminal es en CLP).
 
@@ -126,19 +133,20 @@ def simular(contrato: dict[str, Any], esc: dict[str, Any], monto: float, volumen
     (`order_calc_profit`), y `margen_lote` el margen de 1 lote. El panel repite
     este cálculo en JavaScript; un test compara los dos.
     """
+    r = _redondear
     vol = _ajustar_volumen(float(volumen), float(contrato["vol_min"]), float(contrato["vol_paso"]))
     valor_punto = float(contrato["clp_unidad"]) * vol
     nocional = valor_punto * float(esc["precio"])
     monto = float(monto or 0)
     return {
         "volumen": vol,
-        "valor_punto": round(valor_punto),
-        "margen": round(float(contrato["margen_lote"]) * vol),
-        "nocional": round(nocional),
-        "apalancamiento": round(nocional / monto, 2) if monto > 0 else None,
-        "perdida_invalidacion": round(abs(float(esc["entrada"]) - float(esc["invalidacion"])) * valor_punto),
-        "valor_recorrido": round(float(esc["recorrido"]) * valor_punto),
-        "uno_pct_contra": round(0.01 * nocional),
+        "valor_punto": r(valor_punto),
+        "margen": r(float(contrato["margen_lote"]) * vol),
+        "nocional": r(nocional),
+        "apalancamiento": r(nocional / monto * 100) / 100 if monto > 0 else None,
+        "perdida_invalidacion": r(abs(float(esc["entrada"]) - float(esc["invalidacion"])) * valor_punto),
+        "valor_recorrido": r(float(esc["recorrido"]) * valor_punto),
+        "uno_pct_contra": r(0.01 * nocional),
     }
 
 

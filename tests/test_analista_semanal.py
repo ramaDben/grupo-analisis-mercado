@@ -452,3 +452,175 @@ def test_el_mensaje_de_seguimiento_lleva_estado_lo_de_hoy_y_aviso(tmp_path):
     texto = sm.mensaje_seguimiento(pieza)
     assert "*AVANZANDO*" in texto and "Michigan" in texto and "*4.000,00*" in texto
     assert "no constituye recomendación" in texto.lower()
+
+
+# ───────────────────────────────────────────────────────────── correo
+
+TEXTOS_SEMANAL = {
+    "titular": "El oro llega a la semana con la tendencia diaria a favor",
+    "bajada": "La inflación de Estados Unidos marcó el tono de los primeros días.",
+    "contexto_semana": "La inflación de Estados Unidos salió 0,4%, sobre lo esperado.\n\n"
+                       "El viernes llega la confianza del consumidor de Michigan.",
+    "que_lo_mueve": "• Tasas reales: el bono a 10 años cae 12 pb en la semana y eso sostiene al oro.\n"
+                    "• Dólar global: si se fortalece, el oro tiende a ceder.",
+    "whatsapp": "El oro empieza la semana sostenido por la baja de las tasas reales.",
+}
+
+
+def _pieza_semanal_redactada(tmp_path):
+    from analista import esquema as es
+    from analista import preparar as pr
+    from analista.orden import Orden
+
+    pieza = pr.preparar(Orden("semanal", {"ticker": "XAUUSD"}), tmp_path, AHORA, _lectores_semanal()).pieza
+    pieza["editorial"] = dict(TEXTOS_SEMANAL)
+    assert es.errores(pieza) == []
+    return pieza
+
+
+def test_el_correo_es_de_tablas_en_linea_y_destaca_las_cifras(tmp_path):
+    import analista_fixtures as fx
+    from analista import correo as co
+
+    pieza = _pieza_semanal_redactada(tmp_path)
+    html = co.armar(pieza, tmp_path, fx.ANALISTA, fx.AUTOR)
+    correo = html[html.index('<table id="email-root"'):html.index('<script id="simulador">')]
+    assert "<link" not in html and "var(--" not in correo and "{{" not in html
+    assert 'width="640"' in correo
+    f = pieza["datos"]["escenario"]["fmt"]
+    for cifra in (pieza["datos"]["precio"], f["gatillo"], f["invalidacion"], f["recorrido"]):
+        assert f"<strong>{cifra}" in correo
+    assert 'id="v-perdida"' in correo and 'id="v-recorrido"' in correo
+    assert "Simulación realizada por Camila Rojas" in correo
+    assert "Análisis de Benjamín" in correo and "Te lo envía" in correo
+    assert "no constituye" in correo.lower()
+    assert sm.TEMPORALIDAD in correo and "Por qué 1D" in correo
+    assert "data:image/png;base64," in correo  # logo y gráfico van adentro
+
+
+def test_la_simulacion_del_panel_calcula_igual_que_python(tmp_path):
+    import shutil
+    import subprocess
+
+    import analista_fixtures as fx
+    from analista import correo as co
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("sin node para correr el JavaScript del panel")
+    pieza = _pieza_semanal_redactada(tmp_path)
+    html = co.armar(pieza, tmp_path, fx.ANALISTA, fx.AUTOR)
+    js = re.search(r'<script id="simulador">(.*?)</script>', html, re.S).group(1)
+    esc, contrato = pieza["datos"]["escenario"], pieza["datos"]["contrato"]
+    for monto, volumen in ((1_000_000, 0.10), (250_000, 0.237), (0, 0.004)):
+        llamada = (f"console.log(JSON.stringify(simular({json.dumps(contrato)}, {json.dumps(esc)}, "
+                   f"{monto}, {volumen})))")
+        salida = subprocess.run([node, "-e", js + "\n" + llamada], capture_output=True, text=True, check=True)
+        assert json.loads(salida.stdout) == sm.simular(contrato, esc, monto, volumen)
+
+
+# ───────────────────────────────────────────────────────────── el bot
+
+
+class _TgFalso:
+    def __init__(self):
+        self.enviados = []
+
+    def mensaje(self, chat, texto):
+        self.enviados.append(("mensaje", texto))
+
+    def documento(self, chat, ruta):
+        self.enviados.append(("documento", Path(ruta).name))
+
+    def foto(self, chat, ruta):
+        self.enviados.append(("foto", Path(ruta).name))
+
+
+def _atendedor(tmp_path, lectores=None, textos=None):
+    import analista_fixtures as fx
+    from analista import bot as b
+    from analista import preparar as pr
+
+    llamadas = []
+    estado = {"lec": lectores or _lectores_semanal()}
+
+    def preparar(orden, dir_pedido, ahora):
+        return pr.preparar(orden, dir_pedido, ahora, estado["lec"])
+
+    def redactar(ruta, tier):
+        llamadas.append(ruta)
+        pieza = pr.cargar_pieza(ruta.parent)
+        if pieza["orden"]["pieza"] == "semanal":
+            pieza["editorial"] = dict(textos or TEXTOS_SEMANAL)
+        else:
+            pieza["editorial"] = {"hoy": "Hoy el mercado espera la confianza del consumidor de Michigan."}
+        pr.guardar_pieza(pieza, ruta.parent)
+        return type("R", (), {"codigo": "ok"})()
+
+    def imagen(pieza, dir_pedido, autor):
+        (dir_pedido / "imagen.png").write_bytes(fx.PNG)
+        return dir_pedido / "imagen.png"
+
+    config = {"analistas": {"111": {**fx.ANALISTA, "cupo_diario": 5}}, "reuso_minutos": dict(b.REUSO_MINUTOS),
+              "tier": "flash", "ruta_drive": str(tmp_path / "drive")}
+    at = b.Atendedor(config, b.Estado.cargar(tmp_path / "estado.json"), autor=fx.AUTOR, preparar=preparar,
+                     redactar=redactar, reloj=lambda: AHORA, dir_pedidos=tmp_path / "pedidos",
+                     bitacora=tmp_path / "bitacora.json", registro_semanal=tmp_path / "registro.json",
+                     rendir_imagen=imagen)
+    return at, llamadas, estado
+
+
+def test_semanal_entrega_imagen_como_foto_correo_y_el_texto_aparte(tmp_path):
+    from analista import bot as b
+    from analista.orden import Orden
+
+    at, llamadas, _ = _atendedor(tmp_path)
+    r = at.atender(b.Pedido("111", 9, Orden("semanal", {"ticker": "XAUUSD"})))
+    assert [p.suffix for p in r.archivos] == [".png", ".html"]
+    assert len(r.mensajes) == 1 and "*" in r.mensajes[0] and "Escenario de la semana" in r.mensajes[0]
+    tg = _TgFalso()
+    b.entregar(tg, r)
+    assert [t for t, _ in tg.enviados] == ["mensaje", "foto", "documento", "mensaje"]
+    # Drive: la carpeta de la semana y el activo, con las tres salidas.
+    carpeta = tmp_path / "drive" / "GI Semanal" / "2026-10-05" / "oro"
+    assert sorted(p.suffix for p in carpeta.iterdir()) == [".html", ".png", ".txt"]
+    # Segunda petición en la semana: se reusa sin redactar ni gastar cupo.
+    r2 = at.atender(b.Pedido("111", 9, Orden("semanal", {"ticker": "XAUUSD"})))
+    assert len(llamadas) == 1 and "vigente de la semana" in r2.texto
+    assert at.estado.usados("111", AHORA) == 1
+
+
+def test_un_seguimiento_invalidado_retira_la_pieza_y_la_siguiente_es_version_2(tmp_path):
+    from analista import bot as b
+    from analista import registro_semanal as rs
+    from analista.orden import Orden
+
+    registro = tmp_path / "registro.json"
+    at, _, estado = _atendedor(tmp_path)
+    at.atender(b.Pedido("111", 9, Orden("semanal", {"ticker": "XAUUSD"})))
+    vig = rs.vigente("2026-10-05", "XAUUSD", registro)
+    inval = vig["escenario"]["invalidacion"]
+    vela = pd.Timestamp(vig["escenario"]["vela"]) + pd.Timedelta(days=1)
+    caida = pd.DataFrame([{"time": vela, "open": inval, "high": inval + 1, "low": inval - 20, "close": inval - 10}])
+
+    def grafico(ticker, nombre, digits, niveles, destino):
+        destino.write_bytes(b"\x89PNG")
+        return destino
+
+    estado["lec"] = _lectores_semanal(semanal_vigente=lambda s, t: rs.vigente(s, t, registro),
+                                      serie_d1=lambda t: caida, precio_vivo=lambda t: inval - 10,
+                                      grafico_h1=grafico, jornada=lambda a: ([], []))
+    r = at.atender(b.Pedido("111", 9, Orden("seguimiento", {"ticker": "XAUUSD"})))
+    assert "*INVALIDADO*" in r.mensajes[0] and "versión 2" in r.texto
+    assert rs.vigente("2026-10-05", "XAUUSD", registro) is None
+    historia = json.loads(registro.read_text(encoding="utf-8"))[0]
+    assert historia["estado"] == "invalidada" and historia["seguimientos"][0]["estado"] == "invalidado"
+
+
+def test_un_texto_que_vende_no_se_entrega(tmp_path):
+    from analista import bot as b
+    from analista.orden import Orden
+
+    at, _, _ = _atendedor(tmp_path, textos={**TEXTOS_SEMANAL, "whatsapp": "Una oportunidad para la semana."})
+    with pytest.raises(b.FalloPedido, match="oportunidad"):
+        at.atender(b.Pedido("111", 9, Orden("semanal", {"ticker": "XAUUSD"})))

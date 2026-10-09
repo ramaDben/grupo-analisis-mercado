@@ -29,11 +29,14 @@ from zoneinfo import ZoneInfo
 from analista import RAIZ
 from analista import autor as au
 from analista import bitacora as bt
+from analista import comercial as cm
+from analista import correo as cmo
 from analista import esquema as es
 from analista import informe_html as ih
 from analista import orden as od
 from analista import pdf as pf
 from analista import preparar as pr
+from analista import registro_semanal as rs
 
 SANTIAGO = ZoneInfo("America/Santiago")
 CONFIG = RAIZ / "config" / "analistas_telegram.json"
@@ -51,6 +54,9 @@ Pide una pieza y te llega el informe en PDF, listo para entregar:
 /dato ipc         (o /dato para el último)
 /jornada apertura (o cierre)
 /oportunidad      el foco técnico del día, para compartir con un prospecto
+
+/semanal oro      el escenario de la semana: imagen, texto de WhatsApp y correo para Outlook
+/seguimiento oro  cómo va ese escenario hoy, con su texto de actualización
 
 El informe es un análisis general: compártelo tal cual con tu trader.
 
@@ -89,7 +95,10 @@ def tomar_instancia(ruta: Path = INSTANCIA) -> IO[bytes] | None:
 
 
 # El foco técnico vale menos: el precio se mueve y el plan puede cambiar de estado.
-REUSO_MINUTOS = {"activo": 30, "calendario": 30, "dato": 30, "jornada": 720, "oportunidad": 60}
+# La pieza semanal no se reusa por minutos: vale la semana y su vigencia la lleva
+# `registro_semanal` (una invalidada deja de entregarse aunque sea de hace un rato).
+REUSO_MINUTOS = {"activo": 30, "calendario": 30, "dato": 30, "jornada": 720, "oportunidad": 60,
+                 "semanal": 0, "seguimiento": 60}
 
 
 def cargar_config(ruta: Path = CONFIG) -> dict[str, Any]:
@@ -143,7 +152,7 @@ class Estado:
 
     def vigente(self, clave: str, ahora: datetime, minutos: int) -> Path | None:
         reg = self.datos["piezas"].get(clave)
-        if not reg:
+        if not reg or minutos <= 0:
             return None
         creada = datetime.fromisoformat(reg["creada"])
         mismo_dia = creada.astimezone(SANTIAGO).date() == ahora.astimezone(SANTIAGO).date()
@@ -173,6 +182,9 @@ class Respuesta:
     chat: int
     texto: str = ""
     archivos: list[Path] = field(default_factory=list)
+    # Mensajes que van después de los archivos: el texto de WhatsApp de una pieza
+    # comercial, solo, para que el ejecutivo lo copie entero.
+    mensajes: list[str] = field(default_factory=list)
 
 
 class FalloPedido(RuntimeError):
@@ -212,6 +224,8 @@ class Atendedor:
     # Lo que circula es el PDF: Drive no muestra HTML y un documento firmado no se
     # entrega editable. El HTML queda junto a la pieza como su fuente.
     a_pdf: Callable[[Path], Path] = pf.rendir
+    registro_semanal: Path = rs.RUTA
+    rendir_imagen: Callable[..., Path] = cm.rendir_imagen
 
     def analista(self, usuario: str) -> dict[str, Any]:
         return self.config["analistas"][usuario]
@@ -235,7 +249,7 @@ class Atendedor:
         dir_pedido = self.dir_pedidos / ahora.strftime("%Y-%m-%d") / f"{ahora:%H%M%S}_{o.pieza}_{arg}"
         try:
             hecha = self.preparar(o, dir_pedido, ahora)
-        except (pr.SinFocoError, pr.MercadoIlegibleError) as exc:
+        except (pr.SinFocoError, pr.MercadoIlegibleError, pr.SinEscenarioError, pr.SinPiezaSemanalError) as exc:
             # No es una falla del pedido: es la respuesta. Va tal cual, sin gastar agy ni cupo.
             raise FalloPedido(str(exc)) from exc
         except pr.PreparacionFallida as exc:
@@ -269,8 +283,97 @@ class Atendedor:
         url = self.config.get("url_carpeta_drive")
         return f"Guardado en Drive: GI Informes/{ahora:%Y-%m-%d}" + (f"\n{url}" if url else "")
 
+    def _a_drive_semanal(self, archivos: dict[Path, str], lunes: str, activo: str) -> str:
+        """`GI Semanal/<lunes>/<activo>/`: la carpeta que el ejecutivo comparte desde Drive."""
+        raiz = self.config.get("ruta_drive") or ""
+        if not raiz:
+            return "Drive no está configurado: los archivos van solo por acá."
+        relativa = f"GI Semanal/{lunes}/{activo}"
+        try:
+            destino = Path(raiz) / relativa
+            destino.mkdir(parents=True, exist_ok=True)
+            for origen, nombre in archivos.items():
+                shutil.copy2(origen, destino / nombre)
+        except OSError as exc:
+            return f"No pude copiarlo a Drive ({exc.__class__.__name__}): los archivos van solo por acá."
+        return f"Guardado en Drive: {relativa}"
+
+    def _atender_comercial(self, pedido: Pedido, ahora: datetime) -> Respuesta:
+        """La pieza semanal y su seguimiento: imagen y texto de WhatsApp, y el correo del lunes.
+
+        La semanal se reusa toda la semana desde `registro_semanal` (una sola
+        redacción por activo y semana, sin gastar cupo); el seguimiento, una hora.
+        El correo se arma para cada ejecutivo porque lleva su nombre en la
+        simulación, y armarlo no cuesta agy.
+        """
+        from analista import semanal as sm
+
+        o = pedido.orden
+        ticker = o.args["ticker"]
+        semana = sm.lunes_de(ahora).isoformat()
+        previa = rs.vigente(semana, ticker, self.registro_semanal) if o.pieza == "semanal" else None
+        if previa:
+            dir_pedido, pieza, avisos, reusada = Path(previa["dir"]), pr.cargar_pieza(Path(previa["dir"])), [], True
+        else:
+            dir_pedido, pieza, avisos, reusada = self._pieza_base(pedido, ahora)
+        d = pieza["datos"]
+        ejecutivo = self.analista(pedido.usuario)
+        try:
+            imagen = dir_pedido / "imagen.png"
+            if not (reusada and imagen.exists()):
+                imagen = self.rendir_imagen(pieza, dir_pedido, self.autor)
+            whatsapp, texto = cm.escribir_whatsapp(pieza, dir_pedido)
+        except Exception as exc:  # noqa: BLE001
+            raise FalloPedido(f"No pude armar la imagen o el texto: {exc}") from exc
+
+        activo = ih.slug(d["nombre"])
+        if o.pieza == "semanal":
+            if not reusada:
+                esc = d["escenario"]
+                rs.anotar({"semana": semana, "ticker": ticker, "dir": str(dir_pedido), "analista": pedido.usuario,
+                           "creada": ahora.isoformat(),
+                           "escenario": {k: esc[k] for k in ("sesgo", "estado", "precio", "entrada", "gatillo",
+                                                            "invalidacion", "recorrido", "vela")}},
+                          self.registro_semanal)
+            correo = cmo.guardar(pieza, dir_pedido, ejecutivo, self.autor,
+                                 f"correo_{activo}_{ih.slug(ejecutivo.get('nombre', pedido.usuario))}.html")
+            base = f"{activo}_semana_{semana}"
+            archivos = [imagen, correo]
+            drive = self._a_drive_semanal({imagen: f"{base}.png", whatsapp: f"{base}_whatsapp.txt",
+                                           correo: correo.name}, semana, activo)
+        else:
+            ev = d["evaluacion"]
+            if not reusada:
+                rs.anotar_seguimiento(semana, ticker, d["version"],
+                                      {"cuando": ahora.isoformat(), "estado": ev["estado"],
+                                       "avance_pct": ev.get("avance_pct"), "precio": d["precio_hoy"],
+                                       "pedido_por": pedido.usuario, "dir": str(dir_pedido)},
+                                      self.registro_semanal)
+                if ev["estado"] == "invalidado":
+                    # La pieza de la semana deja de entregarse; la próxima /semanal arma la versión 2.
+                    rs.marcar(semana, ticker, d["version"], "invalidada", self.registro_semanal)
+            base = f"seguimiento_{ahora:%Y-%m-%d_%H%M}"
+            archivos = [imagen]
+            drive = self._a_drive_semanal({imagen: f"{base}.png", whatsapp: f"{base}.txt"}, semana, activo)
+
+        lineas = [f"✅ {pieza['editorial'].get('titular') or d['chip']}", f"{d['chip']} · {d['edicion']}"]
+        if reusada:
+            lineas.append("Es la pieza vigente de la semana: no se volvió a redactar." if o.pieza == "semanal"
+                          else "Es el seguimiento de hace un rato: no se volvió a medir.")
+        if o.pieza == "semanal":
+            lineas.append("Abre el correo en el navegador, completa tu simulación y cópialo a Outlook.")
+        elif d["evaluacion"]["estado"] == "invalidado":
+            lineas.append("El escenario se invalidó: la pieza de la semana quedó retirada. "
+                          f"La próxima /semanal arma la versión {d['version'] + 1}.")
+        lineas += [f"⚠️ {a}" for a in [*avisos, *au.avisos(self.autor, ahora.date())]]
+        lineas.append(drive)
+        lineas.append("El texto para WhatsApp va en el mensaje siguiente.")
+        return Respuesta(pedido.chat, "\n".join(lineas), archivos, [texto])
+
     def atender(self, pedido: Pedido) -> Respuesta:
         ahora = self.reloj()
+        if pedido.orden.pieza in ("semanal", "seguimiento"):
+            return self._atender_comercial(pedido, ahora)
         dir_pedido, pieza, avisos, reusada = self._pieza_base(pedido, ahora)
         o = pedido.orden
         arg = ih.slug(str(next(iter(pieza["orden"]["args"].values()), "") or "auto"))
@@ -338,6 +441,11 @@ class Telegram:
             tipo = "application/pdf" if ruta.suffix == ".pdf" else "text/html"
             self._post("sendDocument", data={"chat_id": chat}, files={"document": (ruta.name, f, tipo)})
 
+    def foto(self, chat: int, ruta: Path) -> None:
+        # Como foto y no como documento: así se reenvía a WhatsApp con un toque.
+        with ruta.open("rb") as f:
+            self._post("sendPhoto", data={"chat_id": chat}, files={"photo": (ruta.name, f, "image/png")})
+
     def soy(self) -> dict[str, Any]:
         return self._post("getMe")
 
@@ -346,7 +454,12 @@ def entregar(tg: Any, r: Respuesta) -> None:
     if r.texto:
         tg.mensaje(r.chat, r.texto)
     for ruta in r.archivos:
-        tg.documento(r.chat, ruta)
+        if ruta.suffix.lower() == ".png":
+            tg.foto(r.chat, ruta)
+        else:
+            tg.documento(r.chat, ruta)
+    for texto in r.mensajes:
+        tg.mensaje(r.chat, texto)
 
 
 def _log(texto: str) -> None:

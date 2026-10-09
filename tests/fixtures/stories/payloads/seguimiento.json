@@ -1,0 +1,18 @@
+{
+  "plantilla": "seguimiento",
+  "chip": "SEGUIMIENTO · AVANZANDO",
+  "datos_al": "miércoles 14-10 · 11:00 CLST",
+  "activo": "Oro · XAU/USD",
+  "direccion": "alcista",
+  "sello": "AVANZANDO",
+  "precio_lunes": "4.000,00",
+  "precio_hoy": "4.060,00",
+  "avance": "50 % del recorrido de referencia",
+  "hoy": "Hoy el mercado espera la confianza del consumidor de Michigan.",
+  "gatillo": "4.030,00",
+  "invalidacion": "3.880,00",
+  "distancia": "60,00",
+  "pie_imagen": "Oro · velas de 1 hora · MetaTrader 5",
+  "firma": "Análisis: Nombre Apellido · Dirección de Análisis Técnico",
+  "aviso": "Análisis informativo. No constituye recomendación de inversión."
+}

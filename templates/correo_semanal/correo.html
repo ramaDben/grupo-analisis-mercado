@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>{{titulo_documento}}</title>
+<style id="email-styles">
+  @media only screen and (max-width:680px){
+    .shell{width:100% !important;}
+    .pad{padding-left:20px !important;padding-right:20px !important;}
+    .stack{display:block !important;width:100% !important;}
+    .h1{font-size:24px !important;line-height:30px !important;}
+  }
+  body,td,p,a,span,div,li{font-family:Arial,Helvetica,sans-serif;}
+</style>
+<style id="builder-styles">
+  .email-builder{box-sizing:border-box;max-width:760px;margin:24px auto 10px;padding:24px;background:{{c_blanco}};color:{{c_fondo_alt}};border-radius:14px;border:1px solid {{c_texto_borde}};}
+  .email-builder *{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif;}
+  .email-builder h2{margin:0 0 6px;font-size:20px;line-height:26px;color:{{c_fondo_acento}};}
+  .email-builder p{margin:0 0 16px;font-size:13px;line-height:19px;color:{{c_texto_3}};}
+  .builder-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .builder-field.full{grid-column:1/-1;}
+  .builder-field > span{display:block;margin:0 0 6px;font-size:12px;font-weight:700;color:{{c_fondo_acento}};}
+  .builder-field input{width:100%;height:40px;padding:8px 10px;border:1px solid {{c_texto_borde}};border-radius:8px;font-size:14px;}
+  .builder-field small{display:block;margin-top:4px;font-size:11px;color:{{c_texto_3}};}
+  .builder-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;align-items:center;}
+  .builder-btn{border:0;border-radius:8px;padding:11px 16px;font-size:14px;font-weight:700;cursor:pointer;}
+  .builder-btn.primario{background:{{c_acento}};color:{{c_fondo}};}
+  .builder-btn.secundario{background:{{c_fondo_acento}};color:{{c_blanco}};}
+  #builder-status{font-size:12px;color:{{c_fondo_acento}};min-height:18px;}
+  .builder-note{margin-top:12px!important;padding:10px 12px;background:{{c_texto_1}};border-radius:8px;}
+  #code-box{display:none;margin-top:14px;}
+  #code-box textarea{width:100%;height:200px;padding:10px;font:12px/1.5 Consolas,monospace;}
+  @media (max-width:680px){.email-builder{margin:12px;padding:16px}.builder-grid{grid-template-columns:1fr}.builder-field.full{grid-column:auto}}
+  @media print{#email-builder{display:none !important;}}
+</style>
+</head>
+<body style="margin:0;padding:0;background:{{c_texto_1}};-webkit-text-size-adjust:100%;">
+
+<section class="email-builder" id="email-builder">
+  <h2>Preparar el correo de la semana</h2>
+  <p>El análisis es igual para todos y no se edita. Tú completas el saludo, tus datos y la <strong>simulación</strong>: monto y volumen. Las cifras se recalculan solas con el contrato del terminal. Luego usa <strong>Copiar correo para Outlook</strong> y pégalo en un correo nuevo.</p>
+  <div class="builder-grid">
+    <label class="builder-field full"><span>Saludo al cliente</span>
+      <input id="f-saludo" type="text" value="" placeholder="Ej.: Hola, Carolina:"></label>
+    <label class="builder-field"><span>Tu nombre</span>
+      <input id="f-ejecutivo" type="text" value="{{ejecutivo_nombre}}"></label>
+    <label class="builder-field"><span>Tu cargo</span>
+      <input id="f-cargo" type="text" value="{{ejecutivo_cargo}}"></label>
+    <label class="builder-field full"><span>Tu contacto</span>
+      <input id="f-contacto" type="text" value="{{ejecutivo_contacto}}"></label>
+    <label class="builder-field"><span>Monto de la cuenta (pesos)</span>
+      <input id="f-monto" type="number" min="0" step="10000" value="{{monto_base}}"></label>
+    <label class="builder-field"><span>Volumen</span>
+      <input id="f-volumen" type="number" min="{{vol_min}}" step="{{vol_paso}}" value="{{vol_min}}">
+      <small>Mínimo {{vol_min_es}}, en pasos de {{vol_paso_es}}.</small></label>
+  </div>
+  <div class="builder-actions">
+    <button class="builder-btn primario" id="copy-email" type="button">Copiar correo para Outlook</button>
+    <button class="builder-btn secundario" id="copy-code" type="button">Copiar código</button>
+    <span id="builder-status" aria-live="polite"></span>
+  </div>
+  <div id="code-box"><textarea id="code-area" readonly aria-label="Código HTML del correo"></textarea></div>
+  <p class="builder-note">Este panel <strong>no se copia</strong>. Solo se copia el correo de abajo.</p>
+</section>
+
+<table id="email-root" role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;background:{{c_texto_1}};">
+<tr><td align="center" style="padding:28px 10px;">
+<table role="presentation" class="shell" width="640" cellspacing="0" cellpadding="0" border="0" style="width:640px;max-width:640px;background:{{c_blanco}};border:1px solid {{c_texto_borde}};">
+
+  <tr><td style="background:{{c_fondo}};padding:22px 40px;" class="pad">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr>
+      <td valign="middle"><img src="{{logo}}" width="150" alt="Grupo Inteligencia" style="display:block;border:0;width:150px;height:auto;"></td>
+      <td valign="middle" align="right" style="font-size:12px;line-height:18px;color:{{c_texto_banda}};">Datos al {{datos_al}}</td>
+    </tr></table>
+  </td></tr>
+  <tr><td style="height:4px;line-height:4px;font-size:4px;background:{{c_acento}};">&nbsp;</td></tr>
+
+  <tr><td class="pad" style="background:{{c_fondo_acento}};padding:32px 40px;">
+    <p style="margin:0 0 12px 0;font-size:11px;line-height:14px;letter-spacing:1.6px;text-transform:uppercase;font-weight:700;color:{{c_acento}};">{{chip}}</p>
+    <h1 class="h1" style="margin:0 0 12px 0;font-size:28px;line-height:34px;font-weight:700;color:{{c_blanco}};">{{titular}}</h1>
+    <p style="margin:0 0 18px 0;font-size:15px;line-height:23px;color:{{c_texto_banda}};">{{bajada}}</p>
+    <p style="margin:0;font-size:15px;line-height:22px;color:{{c_blanco}};">{{nombre}} · {{ticker_visible}} · Precio de referencia <strong>{{precio}} {{unidad}}</strong>&nbsp;&nbsp;<span style="display:inline-block;padding:3px 10px;border-radius:999px;background:{{c_direccion}};color:{{c_blanco}};font-size:12px;font-weight:700;">{{direccion_mayus}}</span></p>
+  </td></tr>
+
+  <tr><td class="pad" style="padding:28px 40px 0 40px;">
+    <p id="v-saludo" style="margin:0 0 12px 0;font-size:15px;line-height:23px;font-weight:700;color:{{c_fondo_alt}};">Hola:</p>
+    <p style="margin:0;font-size:15px;line-height:23px;color:{{c_fondo_alt}};">Te comparto el escenario de la semana de {{nombre}}, preparado por la Dirección de Análisis Técnico de Grupo Inteligencia. Es una lectura general, igual para todos.</p>
+  </td></tr>
+
+  <tr><td class="pad" style="padding:26px 40px 0 40px;">
+    <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;font-weight:700;color:{{c_acento_oscuro}};">Análisis de {{autor_nombre}}</p>
+    <p style="margin:0 0 8px 0;font-size:17px;line-height:24px;font-weight:700;color:{{c_fondo_alt}};">Qué está pasando esta semana</p>
+    {{contexto_semana}}
+    <p style="margin:18px 0 8px 0;font-size:17px;line-height:24px;font-weight:700;color:{{c_fondo_alt}};">Qué lo mueve esta semana</p>
+    {{que_lo_mueve}}
+  </td></tr>
+
+  <tr><td class="pad" style="padding:22px 40px 0 40px;">
+    <img src="{{grafico}}" width="560" alt="{{pie_imagen}}" style="display:block;border:0;width:100%;max-width:560px;height:auto;">
+    <p style="margin:6px 0 0 0;font-size:11px;line-height:16px;color:{{c_texto_3}};">{{pie_imagen}}</p>
+  </td></tr>
+
+  <tr><td class="pad" style="padding:22px 40px 0 40px;">
+    <p style="margin:0 0 10px 0;font-size:17px;line-height:24px;font-weight:700;color:{{c_fondo_alt}};">Escenario de la semana · {{direccion}}</p>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid {{c_texto_borde}};">
+      {{filas_escenario}}
+    </table>
+    <p style="margin:12px 0 0 0;font-size:14px;line-height:21px;color:{{c_fondo_alt}};"><strong>Estado:</strong> {{estado}}</p>
+    <p style="margin:8px 0 0 0;font-size:14px;line-height:21px;color:{{c_fondo_alt}};">⏱️ <strong>{{temporalidad}}</strong></p>
+    <p style="margin:4px 0 0 0;font-size:14px;line-height:21px;color:{{c_texto_3}};">💡 Por qué 1D: {{por_que_1d}}</p>
+  </td></tr>
+
+  <tr><td class="pad" style="padding:26px 40px 0 40px;">
+    <p id="v-rotulo-sim" style="margin:0 0 6px 0;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;font-weight:700;color:{{c_acento_oscuro}};">Simulación realizada por {{ejecutivo_nombre}}</p>
+    <p style="margin:0 0 10px 0;font-size:13px;line-height:19px;color:{{c_texto_3}};">Con el contrato de MetaTrader 5 al {{datos_al}}. Ilustra tamaños y riesgos; no es una instrucción ni anticipa un resultado.</p>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid {{c_texto_borde}};">
+      <tr><td style="padding:9px 12px;font-size:14px;color:{{c_fondo_alt}};border-bottom:1px solid {{c_texto_borde}};">Monto de la cuenta</td><td align="right" style="padding:9px 12px;font-size:14px;border-bottom:1px solid {{c_texto_borde}};"><strong id="v-monto">{{sim_monto}}</strong></td></tr>
+      <tr><td style="padding:9px 12px;font-size:14px;color:{{c_fondo_alt}};border-bottom:1px solid {{c_texto_borde}};">Volumen</td><td align="right" style="padding:9px 12px;font-size:14px;border-bottom:1px solid {{c_texto_borde}};"><strong id="v-volumen">{{sim_volumen}}</strong></td></tr>
+      <tr><td style="padding:9px 12px;font-size:14px;color:{{c_fondo_alt}};border-bottom:1px solid {{c_texto_borde}};">Cuánto mueve cada punto de precio</td><td align="right" style="padding:9px 12px;font-size:14px;border-bottom:1px solid {{c_texto_borde}};"><strong id="v-valor-punto">{{sim_valor_punto}}</strong></td></tr>
+      <tr><td style="padding:9px 12px;font-size:14px;color:{{c_fondo_alt}};border-bottom:1px solid {{c_texto_borde}};">Garantía que pide el broker (margen)</td><td align="right" style="padding:9px 12px;font-size:14px;border-bottom:1px solid {{c_texto_borde}};"><strong id="v-margen">{{sim_margen}}</strong></td></tr>
+      <tr><td style="padding:9px 12px;font-size:14px;color:{{c_fondo_alt}};border-bottom:1px solid {{c_texto_borde}};">Exposición total</td><td align="right" style="padding:9px 12px;font-size:14px;border-bottom:1px solid {{c_texto_borde}};"><strong id="v-nocional">{{sim_nocional}}</strong></td></tr>
+      <tr><td style="padding:9px 12px;font-size:14px;color:{{c_fondo_alt}};border-bottom:1px solid {{c_texto_borde}};">Apalancamiento efectivo (exposición ÷ monto)</td><td align="right" style="padding:9px 12px;font-size:14px;border-bottom:1px solid {{c_texto_borde}};"><strong id="v-apalancamiento">{{sim_apalancamiento}}</strong></td></tr>
+      <tr><td style="padding:9px 12px;font-size:14px;color:{{c_fondo_alt}};">Si el precio se mueve 1 % en contra</td><td align="right" style="padding:9px 12px;font-size:14px;"><strong id="v-uno-pct">{{sim_uno_pct}}</strong></td></tr>
+    </table>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:12px;"><tr>
+      <td class="stack" width="50%" valign="top" style="padding:14px;border:2px solid {{c_baja}};">
+        <p style="margin:0 0 4px 0;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:{{c_baja}};">Si se anula el escenario</p>
+        <p style="margin:0;font-size:22px;line-height:28px;font-weight:700;color:{{c_fondo_alt}};"><strong id="v-perdida">{{sim_perdida}}</strong></p>
+        <p style="margin:4px 0 0 0;font-size:12px;line-height:17px;color:{{c_texto_3}};">Pérdida al cierre en {{invalidacion}}</p>
+      </td>
+      <td class="stack" width="50%" valign="top" style="padding:14px;border:2px solid {{c_sube}};">
+        <p style="margin:0 0 4px 0;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:{{c_acento_oscuro}};">Si cubre el recorrido</p>
+        <p style="margin:0;font-size:22px;line-height:28px;font-weight:700;color:{{c_fondo_alt}};"><strong id="v-recorrido">{{sim_recorrido}}</strong></p>
+        <p style="margin:4px 0 0 0;font-size:12px;line-height:17px;color:{{c_texto_3}};">Recorrido de referencia de {{recorrido}}</p>
+      </td>
+    </tr></table>
+    <p style="margin:10px 0 0 0;font-size:12px;line-height:18px;color:{{c_texto_3}};">Las dos cifras se muestran juntas y del mismo tamaño a propósito: el apalancamiento amplifica igual las ganancias y las pérdidas.</p>
+  </td></tr>
+
+  <tr><td class="pad" style="padding:26px 40px 0 40px;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-top:1px solid {{c_texto_borde}};"><tr>
+      <td class="stack" width="50%" valign="top" style="padding:14px 10px 0 0;font-size:13px;line-height:19px;color:{{c_fondo_alt}};">
+        <span style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:{{c_texto_3}};">Análisis</span><br>
+        <strong>{{autor_nombre}}</strong><br>{{autor_cargo}}
+      </td>
+      <td class="stack" width="50%" valign="top" style="padding:14px 0 0 0;font-size:13px;line-height:19px;color:{{c_fondo_alt}};">
+        <span style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:{{c_texto_3}};">Te lo envía</span><br>
+        <strong id="v-ejecutivo">{{ejecutivo_nombre}}</strong><br><span id="v-cargo">{{ejecutivo_cargo}}</span><br><span id="v-contacto">{{ejecutivo_contacto}}</span>
+      </td>
+    </tr></table>
+  </td></tr>
+
+  <tr><td class="pad" style="padding:22px 40px 28px 40px;">
+    <p style="margin:0;font-size:11px;line-height:16px;color:{{c_texto_3}};">{{aviso_legal}}</p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+
+<script id="simulador">
+function ajustarVolumen(vol, minimo, paso) {
+  if (!(vol > minimo)) return minimo;
+  var pasos = Math.floor((vol - minimo) / paso + 1e-9);
+  return Math.round((minimo + pasos * paso) * 1e8) / 1e8;
+}
+function simular(c, e, monto, volumen) {
+  var vol = ajustarVolumen(Number(volumen), Number(c.vol_min), Number(c.vol_paso));
+  var valorPunto = Number(c.clp_unidad) * vol;
+  var nocional = valorPunto * Number(e.precio);
+  monto = Number(monto) || 0;
+  return {
+    volumen: vol,
+    valor_punto: Math.round(valorPunto),
+    margen: Math.round(Number(c.margen_lote) * vol),
+    nocional: Math.round(nocional),
+    apalancamiento: monto > 0 ? Math.round(nocional / monto * 100) / 100 : null,
+    perdida_invalidacion: Math.round(Math.abs(Number(e.entrada) - Number(e.invalidacion)) * valorPunto),
+    valor_recorrido: Math.round(Number(e.recorrido) * valorPunto),
+    uno_pct_contra: Math.round(0.01 * nocional)
+  };
+}
+</script>
+<script>
+(function(){
+  var DATOS = {{datos_js}};
+  var $ = function(id){ return document.getElementById(id); };
+  var status = $('builder-status'), root = $('email-root');
+  function pesos(n){ return '$' + Math.round(n).toLocaleString('es-CL'); }
+  function decimal(n, d){ return Number(n).toLocaleString('es-CL', {minimumFractionDigits: d, maximumFractionDigits: d}); }
+  function v(id){ return ($(id).value || '').trim(); }
+  function update(){
+    $('v-saludo').textContent = v('f-saludo') || 'Hola:';
+    var nombre = v('f-ejecutivo') || 'Ejecutivo';
+    $('v-ejecutivo').textContent = nombre;
+    $('v-rotulo-sim').textContent = 'Simulación realizada por ' + nombre;
+    $('v-cargo').textContent = v('f-cargo');
+    $('v-contacto').textContent = v('f-contacto');
+    var monto = Number(String($('f-monto').value).replace(',', '.')) || 0;
+    var s = simular(DATOS.contrato, DATOS.escenario, monto, Number(String($('f-volumen').value).replace(',', '.')));
+    $('v-monto').textContent = pesos(monto);
+    $('v-volumen').textContent = decimal(s.volumen, DATOS.decimales_volumen);
+    $('v-valor-punto').textContent = pesos(s.valor_punto);
+    $('v-margen').textContent = pesos(s.margen);
+    $('v-nocional').textContent = pesos(s.nocional);
+    $('v-apalancamiento').textContent = s.apalancamiento === null ? 'sin monto' : decimal(s.apalancamiento, 2) + ' veces';
+    $('v-uno-pct').textContent = pesos(s.uno_pct_contra);
+    $('v-perdida').textContent = '−' + pesos(s.perdida_invalidacion);
+    $('v-recorrido').textContent = '+' + pesos(s.valor_recorrido);
+    if ($('code-box').style.display === 'block') $('code-area').value = codigo();
+  }
+  ['f-saludo','f-ejecutivo','f-cargo','f-contacto','f-monto','f-volumen'].forEach(function(id){
+    $(id).addEventListener('input', update); $(id).addEventListener('change', update);
+  });
+  function codigo(){
+    return '<!doctype html>\n<html lang="es">\n<head>\n<meta charset="utf-8">\n<title>' + document.title + '</title>\n' +
+      $('email-styles').outerHTML + '\n</head>\n<body style="margin:0;padding:0;">\n' +
+      root.outerHTML.replace(/ id="(v-[a-z-]+|email-root)"/g, '') + '\n</body>\n</html>';
+  }
+  async function copiarCorreo(){
+    update();
+    try {
+      if (!(navigator.clipboard && window.ClipboardItem)) throw 0;
+      await navigator.clipboard.write([new ClipboardItem({
+        'text/html': new Blob([root.outerHTML], {type: 'text/html'}),
+        'text/plain': new Blob([root.innerText], {type: 'text/plain'})
+      })]);
+      status.textContent = 'Copiado. Pégalo en un correo nuevo de Outlook.';
+    } catch (e) {
+      var sel = window.getSelection(); sel.removeAllRanges();
+      var r = document.createRange(); r.selectNode(root); sel.addRange(r);
+      var ok = document.execCommand('copy'); sel.removeAllRanges();
+      status.textContent = ok ? 'Copiado. Pégalo en un correo nuevo de Outlook.' : 'No se pudo copiar: selecciona el correo y cópialo a mano.';
+    }
+  }
+  async function copiarCodigo(){
+    update(); var c = codigo();
+    try { await navigator.clipboard.writeText(c); status.textContent = 'Código copiado.'; }
+    catch (e) { $('code-box').style.display = 'block'; $('code-area').value = c; $('code-area').select();
+      status.textContent = document.execCommand('copy') ? 'Código copiado.' : 'Selecciona el código del recuadro y cópialo.'; }
+  }
+  $('copy-email').addEventListener('click', copiarCorreo);
+  $('copy-code').addEventListener('click', copiarCodigo);
+  update();
+})();
+</script>
+</body>
+</html>

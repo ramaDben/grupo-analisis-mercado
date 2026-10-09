@@ -111,6 +111,9 @@ def main(argv: list[str] | None = None) -> int:
         print(respuesta.texto)
         for ruta in respuesta.archivos:
             print(f"  → {ruta}")
+        for texto in respuesta.mensajes:
+            print("
+" + texto)
         return 0 if respuesta.archivos else 1
 
     token = leer_token()

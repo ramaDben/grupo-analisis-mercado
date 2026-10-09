@@ -65,3 +65,13 @@ def marcar(semana: str, ticker: str, version: int, estado: str, ruta: Path = RUT
         if e["version"] == version:
             e["estado"] = estado
     _escribir(ruta, entradas)
+
+
+def anotar_seguimiento(semana: str, ticker: str, version: int, seguimiento: dict[str, Any],
+                       ruta: Path = RUTA) -> None:
+    """Suma un seguimiento a la historia de la pieza: qué estado se le informó a quién y cuándo."""
+    entradas = _leer(ruta)
+    for e in _de(entradas, semana, ticker):
+        if e["version"] == version:
+            e.setdefault("seguimientos", []).append(seguimiento)
+    _escribir(ruta, entradas)
