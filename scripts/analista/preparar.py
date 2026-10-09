@@ -216,9 +216,7 @@ def _plan(ticker: str, lectura: dict[str, Any], sesgo: str, activo: dict[str, An
         raise PreparacionFallida("la lectura del terminal no trae el análisis H1 que necesita el plan")
     df = lec.serie_h1(ticker)
     ind = est.indicadores(df)
-    ultima = {"close": float(df["close"].iat[-1]), "hh22": float(ind["hh"].iat[-1]),
-              "ll22": float(ind["ll"].iat[-1]), "atr22": float(ind["atr22"].iat[-1]),
-              "vela": str(df["time"].iat[-1])}
+    ultima = plan_mod.ultima_vela(df, ind)
     digits = int(activo["digits"])
     alcista = sesgo == "Alcista"
     medida = est.medir(df, digits, alcista) if len(df) > est.VENTANA + est.HORIZONTE else None

@@ -45,6 +45,13 @@ def _frase_estadistica(est: Estadistica | None, nombre: str) -> str:
     return texto
 
 
+def ultima_vela(df, ind) -> dict[str, Any]:
+    """Lo que `armar` necesita de la última vela cerrada (`ind` = `estadistica.indicadores(df)`)."""
+    return {"close": float(df["close"].iat[-1]), "hh22": float(ind["hh"].iat[-1]),
+            "ll22": float(ind["ll"].iat[-1]), "atr22": float(ind["atr22"].iat[-1]),
+            "vela": str(df["time"].iat[-1])}
+
+
 def armar(h1: dict[str, Any], digits: int, sesgo: str, nombre: str,
           est: Estadistica | None, ultima_vela: dict[str, Any],
           activacion: float | None = None) -> dict[str, Any]:
