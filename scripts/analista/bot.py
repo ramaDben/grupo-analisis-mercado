@@ -31,6 +31,7 @@ from analista import bitacora as bt
 from analista import esquema as es
 from analista import informe_html as ih
 from analista import orden as od
+from analista import pdf as pf
 from analista import preparar as pr
 
 SANTIAGO = ZoneInfo("America/Santiago")
@@ -178,6 +179,9 @@ class Atendedor:
     bitacora: Path = bt.RUTA
     # El foco técnico solo se reusa si su plan sigue igual: se vuelve a leer el activo.
     vigencia: Callable[[dict[str, Any], datetime], bool] = _vigencia_real
+    # Lo que circula es el PDF: Drive no muestra HTML y un documento firmado no se
+    # entrega editable. El HTML queda junto a la pieza como su fuente.
+    a_pdf: Callable[[Path], Path] = pf.rendir
 
     def analista(self, usuario: str) -> dict[str, Any]:
         return self.config["analistas"][usuario]
@@ -251,7 +255,14 @@ class Atendedor:
         # Una pieza reusada es el mismo plan: se anota una sola vez.
         if o.pieza in ("activo", "oportunidad") and not reusada:
             bt.anotar(pieza, ruta, pedido.usuario, ahora, self.bitacora)
-        drive = self._a_drive([ruta], ahora)
+        try:
+            entregable = self.a_pdf(ruta)
+        except pf.PdfFallido as exc:
+            # La pieza no se pierde, pero Drive no recibe un archivo que no puede mostrar.
+            entregable = None
+            avisos = [*avisos, f"No pude generar el PDF ({exc}): va el HTML, ábrelo en el navegador."]
+        drive = (self._a_drive([entregable], ahora) if entregable
+                 else "El HTML no se guarda en Drive: va solo por acá.")
         lineas = [f"✅ {pieza['editorial']['titular']}",
                   f"{pieza['datos']['chip']} · {pieza['datos']['edicion']}"]
         if reusada and o.pieza == "oportunidad":
@@ -262,7 +273,7 @@ class Atendedor:
             lineas.append(COMPARTIR_FOCO)
         lineas += [f"⚠️ {a}" for a in [*avisos, *au.avisos(self.autor, ahora.date())]]
         lineas.append(drive)
-        return Respuesta(pedido.chat, "\n".join(lineas), [ruta])
+        return Respuesta(pedido.chat, "\n".join(lineas), [entregable or ruta])
 
 
 # ───────────────────────────────────────────────────────────── Telegram
@@ -294,7 +305,8 @@ class Telegram:
 
     def documento(self, chat: int, ruta: Path) -> None:
         with ruta.open("rb") as f:
-            self._post("sendDocument", data={"chat_id": chat}, files={"document": (ruta.name, f, "text/html")})
+            tipo = "application/pdf" if ruta.suffix == ".pdf" else "text/html"
+            self._post("sendDocument", data={"chat_id": chat}, files={"document": (ruta.name, f, tipo)})
 
     def soy(self) -> dict[str, Any]:
         return self._post("getMe")
