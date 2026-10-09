@@ -3,7 +3,8 @@
 Una credencial vencida impresa es peor que ninguna, así que la vigencia se
 decide con la fecha del pedido y no con la del config. Y el informe no menciona
 a la CMF (decisión del director, 2026-10-08): la acreditación se nombra tal como
-figura en el certificado, con su enlace de verificación.
+figura en el certificado. Va sin enlace: el de la CMV no reconocía el
+certificado, y un enlace que no verifica desacredita la firma.
 """
 from __future__ import annotations
 
@@ -37,7 +38,7 @@ def _archivo(raiz: Path, valor: str | None, nombre: str, faltantes: list[str]) -
     return None
 
 
-CAMPOS_ACREDITACION = ("entidad", "categoria", "numero", "vigente_hasta", "url")
+CAMPOS_ACREDITACION = ("entidad", "categoria", "numero", "vigente_hasta")
 
 
 def _validar_acreditacion(ac: dict[str, Any]) -> None:

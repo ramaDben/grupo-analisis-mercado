@@ -43,7 +43,7 @@ pedido → orden.py (gramática cerrada) → preparar.py (datos + gráficos, car
 ## Firma y acreditación
 
 El informe lo firma el director: nombre, cargo, foto, firma escaneada si existe, la acreditación
-tal como figura en el certificado (con su enlace de verificación) y la frase *"Análisis general de
+tal como figura en el certificado (sin enlace: el de la CMV no reconocía el certificado) y la frase *"Análisis general de
 mercado, idéntico para todos sus destinatarios. No es asesoría de inversión ni considera el perfil
 de quien lo lee."* El informe **no menciona a la CMF** (decisión del director).
 
@@ -54,7 +54,7 @@ de quien lo lee."* El informe **no menciona a la CMF** (decisión del director).
 - **La vigencia se decide con la fecha del pedido**, no la de creación: desde el día siguiente a
   `vigente_hasta`, la acreditación deja de imprimirse (también en una pieza reusada) y el bot avisa
   en cada respuesta que hay que renovarla.
-- Nada de fotos generadas o retocadas con IA: la foto acompaña una credencial verificable.
+- Nada de fotos generadas o retocadas con IA: la foto acompaña una credencial.
 
 ## Plan de escenarios (solo `/activo`)
 

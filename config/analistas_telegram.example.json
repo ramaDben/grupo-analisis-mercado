@@ -27,8 +27,7 @@
       "entidad": "CMV",
       "categoria": "Categoría",
       "numero": "A-00000",
-      "vigente_hasta": "2099-12-31",
-      "url": "https://ejemplo.invalid/certificado"
+      "vigente_hasta": "2099-12-31"
     }
   }
 }

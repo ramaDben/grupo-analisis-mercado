@@ -56,9 +56,11 @@ def test_contrato_sin_personalizacion_en_paquete_y_plantilla():
 
 def test_firma_con_acreditacion_vigente(tmp_path):
     html = ih.armar(fx.activo(tmp_path), tmp_path, fx.ANALISTA, fx.AUTOR, HOY)
-    assert "Benjamín Ignacio Bravo Soza" in html and "Director de Análisis Técnico" in html
+    assert "Benjamín Ignacio Bravo Soza" in html and "Dirección de Análisis Técnico" in html
     assert "Acreditación CMV" in html and "A-32915" in html and "31-03-2028" in html
-    assert 'href="https://cmvsystem.cmvchile.cl/certificados/635409A1A002"' in html
+    # El enlace de la CMV no reconoce el certificado (2026-10-08): no se imprime
+    # aunque el config lo traiga, porque un enlace que no verifica desacredita.
+    assert "cmvsystem" not in html and "Verificable" not in html
     assert ih.FRASE_GENERAL in html and "CMF" not in html
 
 

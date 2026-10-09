@@ -15,11 +15,10 @@ for p in (str(RAIZ / "src"), str(RAIZ / "scripts"), str(RAIZ / "tests")):
 from analista import autor as au  # noqa: E402
 
 BASE = {"autor": {
-    "nombre": "Benjamín Ignacio Bravo Soza", "cargo": "Director de Análisis Técnico",
+    "nombre": "Benjamín Ignacio Bravo Soza", "cargo": "Dirección de Análisis Técnico",
     "foto": "config/autor/foto.png", "firma": None,
     "acreditacion": {"entidad": "CMV", "categoria": "Operadores", "numero": "A-32915",
-                     "vigente_hasta": "2028-03-31",
-                     "url": "https://cmvsystem.cmvchile.cl/certificados/635409A1A002"},
+                     "vigente_hasta": "2028-03-31"},
 }}
 
 
@@ -57,11 +56,17 @@ def test_vencida_avisa(tmp_path):
     assert any("venció" in x for x in au.avisos(a, date(2028, 4, 1)))
 
 
-@pytest.mark.parametrize("falta", ["entidad", "categoria", "numero", "vigente_hasta", "url"])
+@pytest.mark.parametrize("falta", ["entidad", "categoria", "numero", "vigente_hasta"])
 def test_acreditacion_incompleta_no_arranca(tmp_path, falta):
     ac = {k: v for k, v in BASE["autor"]["acreditacion"].items() if k != falta}
     with pytest.raises(au.AutorInvalido, match=falta):
         au.cargar({"autor": {**BASE["autor"], "acreditacion": ac}}, tmp_path)
+
+
+def test_acreditacion_sin_enlace_carga(tmp_path):
+    # El enlace de la CMV no reconoce el certificado: la acreditación va sin él.
+    a = au.cargar(BASE, tmp_path)
+    assert "url" not in a.acreditacion and au.vigente(a, date(2026, 10, 8))
 
 
 def test_fecha_mal_escrita_no_arranca(tmp_path):

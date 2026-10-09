@@ -20,7 +20,7 @@ PNG = base64.b64decode(
 ANALISTA = {"nombre": "Camila Rojas", "cargo": "Analista de mercados", "contacto": "+56 9 1111 2222"}
 
 # Sin foto ni firma: el bloque tiene que salir completo igual.
-AUTOR = Autor("Benjamín Ignacio Bravo Soza", "Director de Análisis Técnico", None, None,
+AUTOR = Autor("Benjamín Ignacio Bravo Soza", "Dirección de Análisis Técnico", None, None,
               {"entidad": "CMV", "categoria": "Operadores", "numero": "A-32915",
                "vigente_hasta": "2028-03-31",
                "url": "https://cmvsystem.cmvchile.cl/certificados/635409A1A002"})

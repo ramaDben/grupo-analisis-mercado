@@ -273,11 +273,10 @@ def bloque_firma(a: au.Autor, hoy: date) -> str:
     if au.vigente(a, hoy):
         ac = a.acreditacion
         hasta = date.fromisoformat(ac["vigente_hasta"]).strftime("%d-%m-%Y")
-        visible = ac["url"].split("//", 1)[-1]
+        # Sin enlace aunque el config traiga uno: el de la CMV no reconocía el certificado.
         credencial = (
             f'<p class="firma-credencial">Acreditación {e(ac["entidad"])} · Categoría {e(ac["categoria"])}'
             f' · N° {e(ac["numero"])} · Vigente hasta el {hasta}</p>'
-            f'<p class="firma-credencial">Verificable en <a href="{e(ac["url"])}">{e(visible)}</a></p>'
         )
     return (
         f'<section class="firma">{foto}<div class="firma-texto">{trazo}'
