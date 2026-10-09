@@ -1,7 +1,7 @@
 # Enchufe de estrategia: toda la lectura técnica sale de una estrategia activa
 
 - **Fecha:** 2026-10-09
-- **Estado:** borrador para revisión del director
+- **Estado:** borrador con las decisiones del director del 2026-10-09 (§8)
 - **Rama:** `docs/metodologia-tendencias`
 - **Depende de:** `docs/metodologia-tendencias.md` (la doctrina de Tori) y de su verificación pendiente
 
@@ -65,7 +65,7 @@ Vive en `scripts/estrategia/contrato.py`. Son dataclasses inmutables y sin depen
 ```python
 class Estrategia(Protocol):
     nombre: str                      # "tori"
-    marcos: Marcos                   # contexto=("W1","D1"), operativo="H4", velas por marco
+    marcos: Marcos                   # contexto=("W1","D1"), operativo="H4", velas y etiqueta por marco
     def leer(self, ticker: str, velas: dict[str, DataFrame], digits: int) -> Lectura: ...
     def puntuar(self, lectura: Lectura) -> Puntaje: ...
     def divergencia(self, preparada: Lectura, actual: Lectura) -> str | None: ...
@@ -151,10 +151,12 @@ Los pesos exactos se fijan en el plan, sobre una medición del universo real.
 ## 6. Qué se borra (sin vuelta atrás)
 
 - `screener_gi`:
-  - `direccion_tecnica`, `factor_tecnico`, `factor_momentum`, `factor_espacio`.
+  - `direccion_tecnica`, `factor_tecnico`, `factor_momentum`, `factor_espacio`,
+    `factor_catalizador` y `_contexto_macro`.
   - `gate_agotamiento`, `gate_banda`, `banda_estrecha`.
   - La sombra de 4 ejes, con `direccion_gi.py` y `medir_direccion.py`.
-- `analista/estadistica.py`, el Chandelier y el backtest de 1,5 × ATR. `plan.armar` pasa a leer
+- `analista/estadistica.py`, el Chandelier y el backtest de 1,5 × ATR. La pieza del analista
+  sale sin estadística hasta que exista el backtester (§8.4). `plan.armar` pasa a leer
   la `Lectura`: el gatillo es la línea de acción, la invalidación es la de seguridad y no hay
   objetivo fijo.
 - `tradingview_grafico`:
@@ -208,21 +210,44 @@ Va un plan y un PR por fase. Ninguna fase deja el sistema con dos lecturas a la 
    - Entra el test guardián.
    - Se reescriben CLAUDE.md, `.claude/commands/*.md` y las reglas de AGY.
 
-## 8. Preguntas abiertas para el director
+## 8. Decisiones del director (2026-10-09)
 
-1. **La etiqueta del marco 4H.** `MARCOS_CANONICOS` dice "4H = swing de jornada (1-3 días)", pero
-   en el método de Tori una operación en 4H dura de una a dos semanas. ¿La etiqueta pasa a
-   depender de la estrategia (se mueve al contrato) o se cambia el texto canónico?
-2. **El factor catalizador macro**, que hoy vale 25 puntos del Score_GI por el calendario y los
-   bonos. Tori no lo usa (evita las noticias). ¿Sale del ranking, o se queda **fuera** de la
-   estrategia como desempate de infraestructura?
-3. **Los gates de agotamiento y de banda** salen, porque son de ATR. Eso hace desaparecer la
-   categoría `recorrido_agotado` del suplemento de canal vacío. ¿Conforme?
-4. **La estadística del bot de analistas**, que hoy dice "en N casos parecidos, el X % llegó".
-   ¿Se rehace con el método de Tori (ruptura y salida por la línea de seguridad, medido sobre
-   historia), o la pieza sale sin estadística mientras tanto?
-5. **El marco del carrusel.** Hoy publica H1. La v1 lo pasaría a H4, que es el marco de Tori.
-   ¿Conforme, sabiendo que las piezas se moverán más lento: una línea de 4H no cambia en el día?
+1. **La etiqueta del marco depende de la estrategia.**
+   - `Marcos` lleva, para cada marco, su etiqueta y su rango de duración. Para Tori, 4H es
+     "swing, de una a dos semanas".
+   - `MARCOS_CANONICOS` deja de ser una tabla fija de `pipeline_carrusel`: se lee de la
+     estrategia activa.
+   - Las notas `nota_volatilidad` de `config/activos.json` y su test se ajustan en la fase 2.
+2. **El catalizador macro sale del escáner.**
+   - El factor de 25 puntos y `_contexto_macro` dejan de influir en la selección.
+   - El contexto macro pasa a ser un **informe complementario** que **informa y no decide**: no
+     toca la dirección, los niveles ni el ranking.
+   - Se envía también los viernes.
+   - Es un trabajo con su propio spec y queda **fuera de este**. Lo único que este spec garantiza
+     es que la estrategia no consuma nada macro.
+3. **Los gates de agotamiento y de banda salen.** Con ellos desaparecen la categoría
+   `recorrido_agotado` del suplemento y sus motivos en el contrato de nombres.
+4. **La estadística es tarea de un backtester**, que hoy no existe:
+   - `analista/estadistica.py` es un mini-backtester amarrado al Chandelier, y se borra.
+   - El backtester es **un subproyecto aparte**, y tiene que servir para **cualquier**
+     estrategia enchufada.
+   - Hasta que exista, la pieza del analista sale **sin estadística** y no la inventa.
+   - Para que el backtester sea posible, este spec agrega la regla de "sin mirar el futuro" (ver
+     abajo).
+5. **El marco del carrusel lo decide la estrategia.** Esto se deduce de la decisión 1. Con Tori, el
+   marco operativo es 4H.
+
+**La regla que habilita el backtester.**
+- **La exigencia:** `leer()` tiene que dar **el mismo resultado** si se le pasan las velas hasta
+  un instante del pasado que si ese instante fuera "ahora". Es decir, nunca mira velas
+  posteriores a la última cerrada.
+- **Cómo se verifica:** la batería de conformidad lo comprueba recortando una serie y comparando.
+- **Lo que permite:** un backtester genérico puede reproducir la historia vela a vela y abrir y
+  cerrar operaciones solo con la `Lectura`:
+  - Se entra cuando `estado` pasa a `RUPTURA`.
+  - Se sale cuando una vela cierra al otro lado de `invalidacion`, que en Tori es la línea de
+    seguridad arrastrada.
+  - No hace falta ningún método extra por estrategia.
 
 ## 9. Riesgos
 
