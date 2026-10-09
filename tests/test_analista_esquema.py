@@ -182,3 +182,9 @@ def test_los_candados_del_foco_no_tocan_al_activo(tmp_path):
 
 def test_el_foco_deja_pasar_el_texto_legitimo(tmp_path):
     assert es.errores(fx.oportunidad(tmp_path)) == []
+
+
+def test_el_foco_no_escribe_oportunidad(tmp_path):
+    p = fx.oportunidad(tmp_path)
+    p["editorial"]["titular"] = "Una oportunidad para los compradores del oro"
+    assert any("titular" in x for x in es.errores(p))

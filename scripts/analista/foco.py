@@ -134,6 +134,9 @@ def elegible(pf: PlanFoco) -> str | None:
     if pf.velas_desde_ruptura >= VELAS_ACTIVACION:
         return "activados hace más de 2 horas"
     avance = (pf.precio - n["gatillo"]) if alcista else (n["gatillo"] - pf.precio)
+    if avance < 0:
+        # Diría "Activado: cruzó el gatillo" con el precio otra vez del otro lado.
+        return "con el precio que volvió del otro lado del gatillo"
     if avance >= AVANCE_MAXIMO * n["recorrido"]:
         return "con más de la mitad del recorrido hecho"
     return None
@@ -209,6 +212,10 @@ def _edad_tick(ticker: str) -> float | None:
     """
     import MetaTrader5 as mt5  # noqa: PLC0415
 
+    # Fuera del Market Watch, symbol_info_tick devuelve None hasta seleccionar el
+    # símbolo: el activo quedaría descartado para siempre como "sin datos".
+    for simbolo in (ticker, "BTCUSD"):
+        mt5.symbol_select(simbolo, True)
     propio, ref = mt5.symbol_info_tick(ticker), mt5.symbol_info_tick("BTCUSD")
     if propio is None or ref is None:
         return None
@@ -233,7 +240,8 @@ def plan_foco(df, h1: dict[str, Any], activo: dict[str, Any], sesgo: str) -> Pla
                        ruptura[0] if ruptura else None)
     p.pop("estadistica", None)
     velas = (len(df) - 1 - ruptura[1]) if ruptura else None
-    return PlanFoco(p, velas, float(df["close"].iat[-1]), float(h1["atr_14"]))
+    # El precio VIVO: es el que la pieza publica como cotización de referencia.
+    return PlanFoco(p, velas, float(h1["price"]), float(h1["atr_14"]))
 
 
 def _activo(ticker: str) -> dict[str, Any]:
@@ -276,7 +284,10 @@ def seleccionar(universo: list[dict[str, Any]], ahora: datetime,
         if not indice_habilitado(a, ahora):
             motivos["índice antes de la apertura de Nueva York"] += 1
             continue
-        edad = lec.edad_tick(t)
+        try:
+            edad = lec.edad_tick(t)
+        except Exception:  # noqa: BLE001
+            edad = None
         if edad is None:
             errores += 1
             leidos += 1
@@ -286,18 +297,24 @@ def seleccionar(universo: list[dict[str, Any]], ahora: datetime,
             motivos["con el mercado cerrado"] += 1
             continue
         leidos += 1
-        ev = lec.evaluar(a, eventos, delta, ahora, analizador=memo)
-        if "excluido" in ev:
-            if memo.con_error(t):
-                errores += 1
-                motivos["sin datos del terminal"] += 1
-            else:
-                motivos[_motivo_gate(str(ev["excluido"]))] += 1
+        try:
+            ev = lec.evaluar(a, eventos, delta, ahora, analizador=memo)
+            if "excluido" in ev:
+                if memo.con_error(t):
+                    errores += 1
+                    motivos["sin datos del terminal"] += 1
+                else:
+                    motivos[_motivo_gate(str(ev["excluido"]))] += 1
+                continue
+            h1, d1 = memo(t, "H1"), memo(t, "D1")
+            sesgo = "Alcista" if ev["direccion"] == "ALCISTA" else "Bajista"
+            df = lec.serie(t)
+            pf = lec.armar_plan(df, h1, a, sesgo)
+        except Exception:  # noqa: BLE001
+            # Un activo con datos rotos se salta; no puede tumbar la selección de los demás.
+            errores += 1
+            motivos["sin datos del terminal"] += 1
             continue
-        h1, d1 = memo(t, "H1"), memo(t, "D1")
-        sesgo = "Alcista" if ev["direccion"] == "ALCISTA" else "Bajista"
-        df = lec.serie(t)
-        pf = lec.armar_plan(df, h1, a, sesgo)
         motivo = elegible(pf)
         if motivo:
             motivos[motivo] += 1
@@ -311,7 +328,9 @@ def seleccionar(universo: list[dict[str, Any]], ahora: datetime,
     if not candidatos:
         return SinFoco(len(universo), dict(motivos))
     _, elegido = min(candidatos, key=lambda c: c[0])
-    return Seleccion(elegido, len(universo), ahora)
+    # "Entre N activos" es lo que se imprime al prospecto: cuenta los que compitieron,
+    # no los saltados por mercado cerrado o por ser un índice antes de la apertura.
+    return Seleccion(elegido, leidos, ahora)
 
 
 # ───────────────────────────────────────────────────────────── vigencia

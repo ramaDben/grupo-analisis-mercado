@@ -213,7 +213,7 @@ def test_plan_foco_real_no_trae_estadistica_y_cuenta_las_velas():
                        "close": c, "high": [x + 0.5 for x in c], "low": [x - 0.5 for x in c]})
     ultimo = est.eventos(df, 2, alcista=True)[-1]
     corte = df.iloc[: ultimo + 2].reset_index(drop=True)  # la ruptura es la penúltima vela
-    h1 = {"atr_14": 1.0, "r1": 999.0, "niveles_origen": {"r1": "swing"}}
+    h1 = {"atr_14": 1.0, "r1": 999.0, "price": 150.0, "niveles_origen": {"r1": "swing"}}
     r = fo.plan_foco(corte, h1, {"digits": 2, "nombre": "X"}, "Alcista")
     assert "estadistica" not in r.plan and r.velas_desde_ruptura == 1
 
@@ -269,3 +269,64 @@ def test_si_algo_revienta_no_se_reusa():
     lec = lectores_vigencia(pf(99.5))
     lec.analizador = revienta
     assert not fo.sigue_vigente(pieza_foco(), AHORA, lec)
+
+
+# ───────────────────────────────────────────────────────────── revisión final
+
+
+def test_activado_con_el_precio_de_vuelta_tras_el_gatillo_no_entra():
+    # Diría "Activado: cruzó sobre el gatillo" con el precio bajo él.
+    assert "volvió" in fo.elegible(pf(99.8, velas=0, estado="Activado: x"))
+
+
+def test_un_activo_que_revienta_no_tumba_la_seleccion():
+    univ = [activo("XAUUSD"), activo("EURUSD")]
+    evals = {"XAUUSD": evaluacion(30, 20), "EURUSD": evaluacion(10, 10)}
+    lec = lectores(evals, {"EURUSD": pf(99.5)})
+
+    def armar(df, h1, a, sesgo):
+        if a["ticker"] == "XAUUSD":
+            raise TypeError("atr_14 None")
+        return pf(99.5)
+
+    lec.armar_plan = armar
+    r = fo.seleccionar(univ, AHORA, lec)
+    assert isinstance(r, fo.Seleccion) and r.elegido.activo["ticker"] == "EURUSD"
+
+
+def test_si_todos_revientan_es_ilegible():
+    lec = lectores({"XAUUSD": evaluacion(30, 20)}, {})
+    lec.serie = lambda t: (_ for _ in ()).throw(RuntimeError("No se pudieron obtener datos"))
+    assert isinstance(fo.seleccionar([activo("XAUUSD")], AHORA, lec), fo.MercadoIlegible)
+
+
+def test_evaluados_cuenta_solo_los_que_compitieron():
+    univ = [activo("XAUUSD"), activo("USDCLP"), activo("US100.spot", "indices")]
+    antes_de_ny = datetime(2026, 10, 9, 8, 0, tzinfo=SCL)
+    r = fo.seleccionar(univ, antes_de_ny, lectores({"XAUUSD": evaluacion(30, 20)}, {"XAUUSD": pf(99.5)},
+                                                   edades={"USDCLP": 600.0}))
+    assert r.evaluados == 1
+
+
+def test_la_distancia_se_mide_con_el_precio_vivo():
+    import numpy as np
+    import pandas as pd
+
+    c = list(100 + np.zeros(400))
+    df = pd.DataFrame({"time": pd.date_range("2025-01-01", periods=400, freq="h"), "open": c,
+                       "close": c, "high": [x + 0.5 for x in c], "low": [x - 0.5 for x in c]})
+    h1 = {"atr_14": 1.0, "r1": 103.0, "price": 101.7, "niveles_origen": {"r1": "swing"}}
+    assert fo.plan_foco(df, h1, {"digits": 2, "nombre": "X"}, "Alcista").precio == 101.7
+
+
+def test_edad_tick_selecciona_los_simbolos(monkeypatch):
+    # Un símbolo fuera del Market Watch devuelve None en symbol_info_tick hasta seleccionarlo.
+    from types import SimpleNamespace
+
+    visibles = set()
+    falso = SimpleNamespace(
+        symbol_select=lambda s, v=True: visibles.add(s) or True,
+        symbol_info_tick=lambda s: SimpleNamespace(time=1000 if s == "BTCUSD" else 940) if s in visibles else None,
+    )
+    monkeypatch.setitem(sys.modules, "MetaTrader5", falso)
+    assert fo._edad_tick("XAUUSD") == 1.0

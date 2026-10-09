@@ -138,7 +138,8 @@ def cuerpo_activo(p: dict[str, Any], dir_pedido: Path, foco: bool = False) -> st
         h2(4, "Plan de escenarios") if d.get("plan") else "",
         seccion_plan(d["plan"], con_estadistica=not foco) if d.get("plan") else "",
         capa("Qué NO hacer", ed["que_no_hacer"], "no-hacer"),
-        _tabla_tasas(d.get("contexto", {}).get("curva_tasas") or [], 5 if d.get("plan") else 4),
+        # El foco no imprime la tabla de tasas: trae "%" y el prospecto no ve porcentajes.
+        "" if foco else _tabla_tasas(d.get("contexto", {}).get("curva_tasas") or [], 5 if d.get("plan") else 4),
     ])
 
 

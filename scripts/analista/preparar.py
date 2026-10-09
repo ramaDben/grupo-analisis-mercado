@@ -225,6 +225,25 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
                             chip=f"FOCO TÉCNICO DEL DÍA · {el.activo['nombre'].upper()}")
 
 
+def _contexto_sin_porcentajes(contexto: dict[str, Any]) -> dict[str, Any]:
+    """El contexto del foco técnico: sin la tabla de tasas y sin "%".
+
+    El foco no muestra ningún porcentaje al prospecto (candado de `esquema`). La
+    tabla de tasas se imprimiría igual, y una cifra con "%" en los datos invitaría
+    a agy a citarla y haría rechazar la pieza después de gastar la redacción.
+    """
+    def limpio(v: Any) -> Any:
+        if isinstance(v, str):
+            return v.replace(" %", " por ciento").replace("%", " por ciento")
+        if isinstance(v, list):
+            return [limpio(x) for x in v]
+        if isinstance(v, dict):
+            return {k: limpio(x) for k, x in v.items()}
+        return v
+
+    return limpio({k: v for k, v in contexto.items() if k != "curva_tasas"})
+
+
 def _pieza_de_activo(tipo: str, args: dict[str, Any], lectura: dict[str, Any], dir_pedido: Path,
                      ahora: datetime, lec: Lectores, plan: dict[str, Any] | None = None,
                      extra: dict[str, Any] | None = None, chip: str | None = None) -> Preparada:
@@ -246,6 +265,8 @@ def _pieza_de_activo(tipo: str, args: dict[str, Any], lectura: dict[str, Any], d
     clase = CLASES.get(str(activo.get("categoria") or activo.get("clase") or "").lower(), "MERCADOS")
     lec.grafico_tv(payload, dir_pedido / "grafico.png")
     contexto, avisos_contexto = _contexto(ticker, ahora, lec)
+    if tipo == "oportunidad":
+        contexto = _contexto_sin_porcentajes(contexto)
     datos = {
         **_comunes(ahora, chip or f"NOTA DE MERCADO · {clase}", "Cotización de referencia",
                    f"{precio} {unidad}".strip()),

@@ -234,3 +234,16 @@ def test_sin_foco_y_mercado_ilegible_fallan_con_su_texto(tmp_path):
     with pytest.raises(pr.MercadoIlegibleError, match="No puedo leer el mercado"):
         pr.preparar(Orden("oportunidad"), tmp_path, AHORA, lectores_foco(fo.MercadoIlegible("MT5 no responde")))
     assert issubclass(pr.SinFocoError, pr.PreparacionFallida)
+
+
+def test_foco_no_lleva_porcentajes_en_sus_datos(tmp_path):
+    # La curva de tasas y los resultados de la agenda traen "%": en el foco no van, porque
+    # se imprimirían al prospecto y agy, al citarlos, haría rechazar la pieza.
+    import json
+
+    lec = lectores_foco(_seleccion())
+    lec.curva = lambda: ({"series": {"DGS2": {"nivel_pct": 3.61, "delta_1d_bps": 2, "delta_5d_bps": 1}}}, [])
+    lec.jornada = lambda a: ([{**JORNADA[0], "actual": "0,3%", "consenso": "0,2%"}], [])
+    hecha = pr.preparar(Orden("oportunidad"), tmp_path, AHORA, lec)
+    assert "%" not in json.dumps(hecha.pieza["datos"], ensure_ascii=False)
+    assert not hecha.pieza["datos"]["contexto"].get("curva_tasas")

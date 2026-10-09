@@ -181,3 +181,14 @@ def test_foco_no_imprime_oportunidad_ni_porcentajes(tmp_path):
 def test_el_activo_conserva_la_estadistica(tmp_path):
     texto = _visible(ih.armar(fx.activo(tmp_path), tmp_path, fx.ANALISTA, fx.AUTOR, HOY))
     assert "Qué dice la historia" in texto and ih.FRASE_ESCENARIO not in texto
+
+
+def test_foco_no_imprime_la_tabla_de_tasas_aunque_los_datos_la_traigan(tmp_path):
+    from analista import esquema as es
+
+    base = fx.oportunidad(tmp_path)
+    datos = {**base["datos"], "contexto": {"curva_tasas": [["Bono del Tesoro a 2 años", "3,61%", "+2 pb", "+1 pb"]]}}
+    p = es.nueva_pieza("oportunidad", {"ticker": "XAUUSD"}, datos, base["imagenes"])
+    p["editorial"].update(base["editorial"])
+    texto = _visible(ih.armar(p, tmp_path, fx.ANALISTA, fx.AUTOR, HOY))
+    assert "%" not in texto and "3,61" not in texto

@@ -59,8 +59,8 @@ _PALABRA_EXACTA = {"lote", "lotes"}
 # pieza a propósito (sin su línea base, "53 %" insinúa una ventaja que no hay),
 # y un porcentaje en el texto la traería de vuelta por la puerta de atrás.
 FRASES_PROHIBIDAS_FOCO: tuple[str, ...] = (
-    "no te lo pierdas", "ultima oportunidad", "aprovecha", "asegurad", "ganancia segura",
-    "oportunidad unica", "acierta", "efectividad", "de las veces", "tasa de exito",
+    "no te lo pierdas", "oportunidad", "aprovecha", "asegurad", "ganancia segura",
+    "acierta", "efectividad", "de las veces", "tasa de exito",
 )
 
 # El informe no nombra a la CMF (decisión del director, 2026-10-08), tampoco en
