@@ -191,3 +191,59 @@ def test_no_usa_los_preparar_de_produccion():
     for prohibido in ("pc.preparar(", "pa.preparar(", "pi.preparar(", "escanear(", "registrar_uso",
                       "escribir_suplementos", "_preparar_resultado", "DIR_TRABAJO"):
         assert prohibido not in fuente, prohibido
+
+
+# ───────────────────────────────────────────────────────────── foco técnico
+
+
+def _seleccion(evaluados: int = 10):
+    from analista import foco as fo
+
+    plan = {"hay_plan": True, "sesgo": "Alcista", "gatillo": "g 68,974", "invalidacion": "i",
+            "recorrido": "r", "estado": "Armado: x",
+            "niveles": {"gatillo": 68.974, "invalidacion": 68.2, "recorrido": 0.18, "vela": "2026-10-08 10:00:00"}}
+    el = fo.Elegido({"ticker": "XAGUSD", "nombre": "Plata", "clase": "forex_commodities", "digits": 3},
+                    SELECCION, H1, {"price": 68.7}, fo.PlanFoco(plan, None, 68.716, 0.12), _serie_h1())
+    return fo.Seleccion(el, evaluados, AHORA)
+
+
+def _no_llamar(*_):
+    raise AssertionError("el foco no vuelve a leer el terminal: usa la lectura que lo eligió")
+
+
+def lectores_foco(resultado):
+    return lectores(foco=lambda ahora: resultado, catalogo=lambda t: ACTIVO, cierres=lambda t: CIERRES,
+                    terminal=_no_llamar, serie_h1=_no_llamar)
+
+
+def test_foco_usa_la_lectura_que_lo_eligio_y_no_trae_estadistica(tmp_path):
+    hecha = pr.preparar(Orden("oportunidad"), tmp_path, AHORA, lectores_foco(_seleccion()))
+    p = hecha.pieza
+    assert p["orden"]["pieza"] == "oportunidad" and p["orden"]["args"] == {"ticker": "XAGUSD"}
+    assert "estadistica" not in p["datos"]["plan"] and "68,974" in p["datos"]["plan"]["gatillo"]
+    assert p["datos"]["seleccion"]["evaluados"] == 10
+    assert p["datos"]["chip"].startswith("FOCO TÉCNICO DEL DÍA")
+    assert set(p["editorial"]) == set(es.CAMPOS["oportunidad"])
+
+
+def test_sin_foco_y_mercado_ilegible_fallan_con_su_texto(tmp_path):
+    from analista import foco as fo
+
+    with pytest.raises(pr.SinFocoError, match="configuración clara entre los 10"):
+        pr.preparar(Orden("oportunidad"), tmp_path, AHORA, lectores_foco(fo.SinFoco(10, {"lejos del gatillo": 3})))
+    with pytest.raises(pr.MercadoIlegibleError, match="No puedo leer el mercado"):
+        pr.preparar(Orden("oportunidad"), tmp_path, AHORA, lectores_foco(fo.MercadoIlegible("MT5 no responde")))
+    assert issubclass(pr.SinFocoError, pr.PreparacionFallida)
+
+
+def test_foco_no_lleva_porcentajes_en_sus_datos(tmp_path):
+    # La curva de tasas y los resultados de la agenda traen "%": en el foco no van, porque
+    # se imprimirían al prospecto y agy, al citarlos, haría rechazar la pieza.
+    import json
+
+    lec = lectores_foco(_seleccion())
+    lec.curva = lambda: ({"series": {"DGS2": {"nivel_pct": 3.61, "delta_1d_bps": 2, "delta_5d_bps": 1}}}, [])
+    lec.jornada = lambda a: ([{**JORNADA[0], "actual": "0,3%", "consenso": "0,2%"}], [])
+    hecha = pr.preparar(Orden("oportunidad"), tmp_path, AHORA, lec)
+    assert "%" not in json.dumps(hecha.pieza["datos"], ensure_ascii=False)
+    assert not hecha.pieza["datos"]["contexto"].get("curva_tasas")

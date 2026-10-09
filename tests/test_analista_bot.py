@@ -46,7 +46,7 @@ class TgFalso:
 
 def preparar_falso(orden, dir_pedido, ahora):
     dir_pedido.mkdir(parents=True, exist_ok=True)
-    pieza = fx.activo(dir_pedido)
+    pieza = fx.oportunidad(dir_pedido) if orden.pieza == "oportunidad" else fx.activo(dir_pedido)
     pieza["editorial"] = {k: es.MARCA for k in pieza["editorial"]}
     pr.guardar_pieza(pieza, dir_pedido)
     return pr.Preparada(pieza, ["aviso de prueba"])
@@ -76,7 +76,8 @@ def armado(tmp_path):
     reloj = Reloj()
     at = b.Atendedor(config, b.Estado.cargar(tmp_path / "estado.json"), autor=fx.AUTOR, preparar=preparar_falso,
                      redactar=redactor(llamadas), rendir_laminas=lambda p, d: None, reloj=reloj,
-                     dir_pedidos=tmp_path / "pedidos", bitacora=tmp_path / "bitacora.json")
+                     dir_pedidos=tmp_path / "pedidos", bitacora=tmp_path / "bitacora.json",
+                     vigencia=lambda pieza, ahora: True)
     bot = b.Bot(TgFalso(), at)
     return SimpleNamespace(bot=bot, llamadas=llamadas, reloj=reloj, tmp=tmp_path)
 
@@ -223,3 +224,56 @@ def test_config_de_ejemplo_es_valida():
 
     assert au.cargar(config, RAIZ).nombre
     json.dumps(config)
+
+
+def test_config_anterior_al_foco_recibe_su_ventana(tmp_path):
+    ruta = tmp_path / "c.json"
+    ruta.write_text(json.dumps({"reuso_minutos": {"activo": 45}}), encoding="utf-8")
+    cfg = b.cargar_config(ruta)
+    assert cfg["reuso_minutos"]["activo"] == 45 and cfg["reuso_minutos"]["oportunidad"] == 60
+
+
+# ───────────────────────────────────────────────────────────── foco técnico
+
+
+def test_foco_se_entrega_con_la_regla_de_compartir_y_sin_la_palabra_en_el_archivo(armado):
+    r, final = pedir(armado, "/oportunidad")
+    assert final is not None, [x.texto for x in r]
+    assert final.archivos, final.texto
+    nombre = final.archivos[0].name
+    assert nombre.startswith("foco-tecnico_xauusd") and "oportunidad" not in nombre
+    assert "Compártelo tal cual: es análisis general, no una instrucción." in final.texto
+
+
+@pytest.mark.parametrize("error", [pr.SinFocoError("El escáner no encontró una configuración clara entre los 10 activos."),
+                                   pr.MercadoIlegibleError("No puedo leer el mercado ahora (MT5). Prueba en unos minutos.")])
+def test_sin_foco_o_mercado_ilegible_no_gastan_agy_ni_cupo(armado, error):
+    def falla(orden, d, a):
+        raise error
+
+    armado.bot.atendedor.preparar = falla
+    _, final = pedir(armado, "/oportunidad")
+    assert final.texto == f"❌ {error}" and not final.archivos
+    assert armado.llamadas == [] and armado.bot.estado.usados(CAMILA, AHORA) == 0
+
+
+def test_foco_vigente_se_reusa_con_su_hora(armado):
+    pedir(armado, "/oportunidad")
+    armado.reloj.ahora += timedelta(minutes=20)
+    _, final = pedir(armado, "/oportunidad")
+    assert len(armado.llamadas) == 1 and "Ya está: es el foco de las 10:40." in final.texto
+
+
+def test_foco_cuyo_plan_cambio_se_rehace(armado):
+    pedir(armado, "/oportunidad")
+    armado.bot.atendedor.vigencia = lambda pieza, ahora: False
+    armado.reloj.ahora += timedelta(minutes=20)
+    pedir(armado, "/oportunidad")
+    assert len(armado.llamadas) == 2
+
+
+def test_bitacora_marca_el_tipo(armado):
+    pedir(armado, "/oportunidad")
+    pedir(armado, "/activo oro")
+    entradas = json.loads((armado.tmp / "bitacora.json").read_text(encoding="utf-8"))
+    assert [e["tipo"] for e in entradas] == ["oportunidad", "activo"]

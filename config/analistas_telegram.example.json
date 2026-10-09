@@ -16,7 +16,8 @@
     "activo": 30,
     "calendario": 30,
     "dato": 30,
-    "jornada": 720
+    "jornada": 720,
+    "oportunidad": 60
   },
   "autor": {
     "nombre": "Nombre Apellido",

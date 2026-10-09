@@ -42,6 +42,7 @@ pone el bot: tú no decides nada visual.
     escenario se activa si…", "la presión compradora"). Nunca le digas al lector que compre,
     venda, entre, cierre ni cuánto arriesgar, y no recomiendes: el informe es igual para todos y
     nadie en GI está inscrito como asesor de inversión. El bot rechaza esas frases.
+11. **Soporte y resistencia**, nunca "piso", "suelo" ni "techo" para un nivel de precio.
 
 ### Qué va en cada campo
 
@@ -56,6 +57,13 @@ pone el bot: tú no decides nada visual.
   - `que_no_hacer`: un error concreto a evitar hoy.
   - `datos.plan` (gatillo, invalidación, recorrido, estadística) lo escribió el bot y sale en su
     propia sección: no lo repitas. Si lo nombras en `lectura`, en una frase y con sus mismas cifras.
+- **Foco técnico** (`FOCO TÉCNICO DEL DÍA`): los mismos campos que la pieza de activo, pero la
+  comparte un ejecutivo con un **prospecto que recién empieza**:
+  - Más simple: frases cortas, cada término técnico explicado en la misma frase.
+  - Ni un porcentaje, ni cuánto acierta el escenario, ni invitaciones ("aprovecha", "no te lo
+    pierdas", "última oportunidad"). Describe el escenario y deja la decisión al lector. El bot
+    rechaza esas frases y cualquier `%`.
+  - No escribas la palabra "oportunidad": la pieza se llama foco técnico.
 - **Calendario**:
   - `titular` y `bajada` sobre la jornada o la semana.
   - `lectura`: qué dato domina y por qué.

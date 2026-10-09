@@ -47,6 +47,7 @@ Pide una pieza y te llega el informe en HTML, listo para entregar:
 /calendario hoy   (o semana)
 /dato ipc         (o /dato para el último)
 /jornada apertura (o cierre)
+/oportunidad      el foco técnico del día, para compartir con un prospecto
 
 El informe es un análisis general: compártelo tal cual con tu trader.
 
@@ -56,10 +57,15 @@ El informe es un análisis general: compártelo tal cual con tu trader.
 # ───────────────────────────────────────────────────────────── configuración y estado
 
 
+# El foco técnico vale menos: el precio se mueve y el plan puede cambiar de estado.
+REUSO_MINUTOS = {"activo": 30, "calendario": 30, "dato": 30, "jornada": 720, "oportunidad": 60}
+
+
 def cargar_config(ruta: Path = CONFIG) -> dict[str, Any]:
     datos = json.loads(ruta.read_text(encoding="utf-8"))
     datos.setdefault("analistas", {})
-    datos.setdefault("reuso_minutos", {"activo": 30, "calendario": 30, "dato": 30, "jornada": 720})
+    # Una pieza nueva no puede quedar con la ventana genérica porque el config es anterior a ella.
+    datos["reuso_minutos"] = {**REUSO_MINUTOS, **datos.get("reuso_minutos", {})}
     datos.setdefault("tier", "flash")
     return datos
 
@@ -142,6 +148,15 @@ class FalloPedido(RuntimeError):
     """El pedido no se pudo atender; el texto va tal cual al analista."""
 
 
+COMPARTIR_FOCO = "Compártelo tal cual: es análisis general, no una instrucción."
+
+
+def _vigencia_real(pieza: dict[str, Any], ahora: datetime) -> bool:
+    from analista import foco
+
+    return foco.sigue_vigente(pieza, ahora)
+
+
 def _agy_real(ruta_pieza: Path, tier: str):
     from analista.agy import escribir_textos
 
@@ -161,6 +176,8 @@ class Atendedor:
     reloj: Callable[[], datetime] = lambda: datetime.now(SANTIAGO)
     dir_pedidos: Path = DIR_PEDIDOS
     bitacora: Path = bt.RUTA
+    # El foco técnico solo se reusa si su plan sigue igual: se vuelve a leer el activo.
+    vigencia: Callable[[dict[str, Any], datetime], bool] = _vigencia_real
 
     def analista(self, usuario: str) -> dict[str, Any]:
         return self.config["analistas"][usuario]
@@ -170,7 +187,9 @@ class Atendedor:
         minutos = int(self.config["reuso_minutos"].get(o.pieza, 30))
         previa = self.estado.vigente(o.clave_base(), ahora, minutos)
         if previa:
-            return previa, pr.cargar_pieza(previa), [], True
+            pieza_previa = pr.cargar_pieza(previa)
+            if o.pieza != "oportunidad" or self.vigencia(pieza_previa, ahora):
+                return previa, pieza_previa, [], True
 
         cupo = int(self.analista(pedido.usuario).get("cupo_diario", 10))
         if self.estado.usados(pedido.usuario, ahora) >= cupo:
@@ -182,6 +201,9 @@ class Atendedor:
         dir_pedido = self.dir_pedidos / ahora.strftime("%Y-%m-%d") / f"{ahora:%H%M%S}_{o.pieza}_{arg}"
         try:
             hecha = self.preparar(o, dir_pedido, ahora)
+        except (pr.SinFocoError, pr.MercadoIlegibleError) as exc:
+            # No es una falla del pedido: es la respuesta. Va tal cual, sin gastar agy ni cupo.
+            raise FalloPedido(str(exc)) from exc
         except pr.PreparacionFallida as exc:
             raise FalloPedido(f"No pude leer los datos: {exc}") from exc
 
@@ -218,20 +240,26 @@ class Atendedor:
         dir_pedido, pieza, avisos, reusada = self._pieza_base(pedido, ahora)
         o = pedido.orden
         arg = ih.slug(str(next(iter(pieza["orden"]["args"].values()), "") or "auto"))
-        nombre_base = f"{o.pieza}_{arg}_{dir_pedido.name[:4]}"
+        # El archivo viaja al prospecto: su nombre tampoco dice "oportunidad".
+        prefijo = "foco-tecnico" if o.pieza == "oportunidad" else o.pieza
+        nombre_base = f"{prefijo}_{arg}_{dir_pedido.name[:4]}"
         try:
             ruta = ih.guardar(pieza, dir_pedido, self.analista(pedido.usuario), self.autor,
                               ahora.date(), nombre_base)
         except ih.InformeInvalido as exc:
             raise FalloPedido(f"No pude armar el informe: {exc}") from exc
         # Una pieza reusada es el mismo plan: se anota una sola vez.
-        if o.pieza == "activo" and not reusada:
+        if o.pieza in ("activo", "oportunidad") and not reusada:
             bt.anotar(pieza, ruta, pedido.usuario, ahora, self.bitacora)
         drive = self._a_drive([ruta], ahora)
         lineas = [f"✅ {pieza['editorial']['titular']}",
                   f"{pieza['datos']['chip']} · {pieza['datos']['edicion']}"]
-        if reusada:
+        if reusada and o.pieza == "oportunidad":
+            lineas.append(f"Ya está: es el foco de las {pieza['datos']['seleccion']['hora']}.")
+        elif reusada:
             lineas.append("Es la pieza vigente: no se volvió a redactar.")
+        if o.pieza == "oportunidad":
+            lineas.append(COMPARTIR_FOCO)
         lineas += [f"⚠️ {a}" for a in [*avisos, *au.avisos(self.autor, ahora.date())]]
         lineas.append(drive)
         return Respuesta(pedido.chat, "\n".join(lineas), [ruta])

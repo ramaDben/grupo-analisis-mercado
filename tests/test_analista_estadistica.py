@@ -102,3 +102,16 @@ def test_activacion_reciente_encuentra_la_ultima_ruptura():
 def test_el_periodo_parte_donde_se_puede_medir():
     df = serie([100 + k * 0.01 for k in range(400)])
     assert est.medir(df, 2, alcista=True).desde == str(df["time"].iat[est.VENTANA])[:10]
+
+
+def test_ultima_ruptura_trae_la_vela():
+    # El foco técnico necesita saber CUÁNDO rompió, no solo dónde: un plan
+    # activado hace 20 horas no es lo mismo que uno activado hace una.
+    rng = np.random.default_rng(7)
+    df = serie(list(100 + (rng.standard_normal(1200) + 0.05).cumsum()))
+    ultimo = est.eventos(df, 2, alcista=True)[-1]
+    corte = df.iloc[: ultimo + 3].reset_index(drop=True)
+    nivel, vela = est.ultima_ruptura(corte, 2, alcista=True)
+    assert vela == ultimo
+    assert nivel == est.activacion_reciente(corte, 2, alcista=True)
+    assert est.ultima_ruptura(serie([100 + k * 0.01 for k in range(400)]), 2, alcista=True) is None

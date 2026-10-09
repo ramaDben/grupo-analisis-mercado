@@ -124,3 +124,11 @@ def test_todos_los_alias_apuntan_a_activos_del_catalogo_real():
 
     reales = {a["ticker"] for a in sc.cargar_universo(solo_renderizables=False)}
     assert set(od.ALIAS.values()) <= reales
+
+
+
+def test_oportunidad_no_lleva_argumentos_ni_admite_personalizar():
+    assert od.interpretar("/oportunidad") == od.Orden("oportunidad", {})
+    assert od.interpretar("/oportunidad de hoy") == od.Orden("oportunidad", {})
+    with pytest.raises(od.PedidoInvalido, match="ya no se personalizan"):
+        od.interpretar("/oportunidad para Juan")

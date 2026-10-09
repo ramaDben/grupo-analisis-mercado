@@ -13,6 +13,7 @@ El equipo le pide al bot las mismas piezas que el director le pide a Claude Code
 | `/calendario hoy` · `/calendario semana` | Agenda de alto impacto en hora de Chile, con la lámina de Avisos |
 | `/dato` · `/dato ipc` | El último dato con cifra (o el pedido): veredicto y movimiento del dólar y el oro. Si todavía no sale, en modo anticipación |
 | `/jornada apertura` · `/jornada cierre` | Los cinco activos base con sus gráficos diarios y la curva de tasas |
+| `/oportunidad` | El **foco técnico del día** para ventas: el activo que el escáner elige, sin estadística. Ver abajo |
 
 **El informe no se personaliza.** Nadie en GI está inscrito como asesor de inversión, y un
 informe con el nombre del cliente se acerca a una recomendación personalizada. Si un pedido trae
@@ -87,6 +88,27 @@ estadística tarda unos 13 s por pedido de activo; no se cachea.
 **Candados de lenguaje.** `esquema.frases_prohibidas` rechaza frases de instrucción, de
 recomendación y de dimensionamiento ("es momento de comprar", "te recomiendo", "lotes", "de tu
 capital"). Son frases y no palabras sueltas: "gerentes de compra (PMI)" tiene que pasar.
+
+## Foco técnico del día (`/oportunidad`)
+
+Lo piden los ejecutivos de ventas para un prospecto. Spec:
+`docs/superpowers/specs/2026-10-09-foco-tecnico-del-dia-design.md`; pauta para el equipo:
+`docs/pauta-ventas-foco-tecnico.md`.
+
+- **Lo elige una regla** (`scripts/analista/foco.py`), entre el forex y commodities del carrusel
+  más el US100 (solo desde las 10:00 de Nueva York) y el Brent. Entra un plan armado a 1 ATR o
+  menos del gatillo, o activado en las 2 últimas velas con menos de la mitad del recorrido hecho.
+  Se ordena por técnico + momentum: **no** por el `Score_GI` entero, porque su factor de espacio
+  mide contra el R1 como objetivo (y aquí es el gatillo) y su catalizador no mira la dirección.
+- **Sin estadística**, ni en los datos que recibe agy: sin su línea base, "53 %" insinúa una
+  ventaja que no hay. En su lugar va una frase fija sin cifras. Los candados del foco rechazan
+  frases de captación, de acierto y cualquier `%`; la palabra "oportunidad" no se imprime, ni
+  siquiera en el nombre del archivo (`foco-tecnico_*`).
+- **"No hay foco" es una respuesta**, con los motivos agrupados. Distinta de "no puedo leer el
+  mercado" (MT5 o el calendario caídos): ninguna de las dos gasta agy ni cupo.
+- **Se reusa 60 minutos, pero se vuelve a leer el activo antes**: si cambió el plan, la
+  tendencia, o hay blackout o mercado cerrado, se rehace.
+- La bitácora lo anota con `"tipo": "oportunidad"`.
 
 ## Bitácora de planes
 

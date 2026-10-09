@@ -42,6 +42,14 @@ def test_informe_general_sin_personalizacion(tmp_path):
     assert 'class="barra no-imprimir"' in salida and "window.print()" in salida
 
 
+def test_quien_comparte_y_firma_es_la_misma_persona_sale_una_vez(tmp_path):
+    # El director pide su propio informe: «Análisis» y «Compartido por» dirían lo mismo.
+    director = {"nombre": " benjamín ignacio bravo soza ", "cargo": "Dirección de Análisis Técnico"}
+    salida = ih.armar(fx.activo(tmp_path), tmp_path, director, fx.AUTOR, HOY)
+    assert "Compartido por" not in salida
+    assert "Análisis</div>" in salida
+
+
 def test_contrato_sin_personalizacion_en_paquete_y_plantilla():
     fuentes = [*(RAIZ / "scripts" / "analista").glob("*.py"),
                RAIZ / "templates" / "informes_analista" / "base.html"]
@@ -150,3 +158,45 @@ def test_el_gate_de_marca_cubre_los_informes():
     hojas = {p.name for p in marca_tokens._hojas()}
     assert "base.html" in plantillas and "informe.css" in hojas
     assert marca_tokens.main(["--check"]) == 0
+
+
+# ───────────────────────────────────────────────────────────── foco técnico
+
+
+def _visible(html: str) -> str:
+    import re
+
+    sin_estilos = re.sub(r"<(style|script)\b.*?</\1>", " ", html, flags=re.S | re.I)
+    return re.sub(r"<[^>]+>", " ", sin_estilos)
+
+
+def test_foco_trae_transparencia_y_frase_fija_sin_estadistica(tmp_path):
+    html = ih.armar(fx.oportunidad(tmp_path), tmp_path, fx.ANALISTA, fx.AUTOR, HOY)
+    texto = _visible(html)
+    assert "Elegido por el escáner de Grupo Inteligencia entre 10 activos, el 09-10-2026 a las 10:40" in texto
+    assert ih.FRASE_ESCENARIO in texto
+    assert "FOCO TÉCNICO DEL DÍA · ORO" in texto
+    assert "Qué dice la historia" not in texto
+    assert "4.131,00" in texto  # el gatillo sigue estando
+
+
+def test_foco_no_imprime_oportunidad_ni_porcentajes(tmp_path):
+    texto = _visible(ih.armar(fx.oportunidad(tmp_path), tmp_path, fx.ANALISTA, fx.AUTOR, HOY))
+    assert "oportunidad" not in texto.lower()
+    assert "%" not in texto
+
+
+def test_el_activo_conserva_la_estadistica(tmp_path):
+    texto = _visible(ih.armar(fx.activo(tmp_path), tmp_path, fx.ANALISTA, fx.AUTOR, HOY))
+    assert "Qué dice la historia" in texto and ih.FRASE_ESCENARIO not in texto
+
+
+def test_foco_no_imprime_la_tabla_de_tasas_aunque_los_datos_la_traigan(tmp_path):
+    from analista import esquema as es
+
+    base = fx.oportunidad(tmp_path)
+    datos = {**base["datos"], "contexto": {"curva_tasas": [["Bono del Tesoro a 2 años", "3,61%", "+2 pb", "+1 pb"]]}}
+    p = es.nueva_pieza("oportunidad", {"ticker": "XAUUSD"}, datos, base["imagenes"])
+    p["editorial"].update(base["editorial"])
+    texto = _visible(ih.armar(p, tmp_path, fx.ANALISTA, fx.AUTOR, HOY))
+    assert "%" not in texto and "3,61" not in texto

@@ -111,6 +111,17 @@ def eventos(df: pd.DataFrame, digits: int, alcista: bool, ind: pd.DataFrame | No
     return salida
 
 
+def ultima_ruptura(df: pd.DataFrame, digits: int, alcista: bool,
+                   ind: pd.DataFrame | None = None) -> tuple[float, int] | None:
+    """El nivel y la vela de la última ruptura dentro de las últimas 24 velas, o None."""
+    ind = indicadores(df) if ind is None else ind
+    for i in range(len(df) - 1, max(VENTANA, len(df) - HORIZONTE) - 1, -1):
+        nivel = _ruptura(df, i, digits, alcista, ind)
+        if nivel is not None:
+            return nivel, i
+    return None
+
+
 def activacion_reciente(df: pd.DataFrame, digits: int, alcista: bool,
                         ind: pd.DataFrame | None = None) -> float | None:
     """El nivel de la última ruptura dentro de las últimas 24 velas, o None.
@@ -119,12 +130,8 @@ def activacion_reciente(df: pd.DataFrame, digits: int, alcista: bool,
     rompe una resistencia, `analizar_activo` pasa a mostrar la siguiente. El
     estado se decide con la misma definición de evento que mide la estadística.
     """
-    ind = indicadores(df) if ind is None else ind
-    for i in range(len(df) - 1, max(VENTANA, len(df) - HORIZONTE) - 1, -1):
-        nivel = _ruptura(df, i, digits, alcista, ind)
-        if nivel is not None:
-            return nivel
-    return None
+    hallada = ultima_ruptura(df, digits, alcista, ind)
+    return hallada[0] if hallada else None
 
 
 def _pct(resultados: list[Desenlace]) -> int | None:
