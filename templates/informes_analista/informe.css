@@ -11,6 +11,8 @@
 */
 
 @page { size: A4 portrait; margin: 12mm 0; }
+/* La cabecera oscura arranca en el borde de la hoja, sin franja blanca encima. */
+@page :first { margin-top: 0; }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -28,33 +30,6 @@ body {
   margin: 0 auto 24pt auto;
   background: var(--papel);
   box-shadow: 0 6pt 24pt rgba(0, 0, 0, 0.10);
-}
-
-/* ── Barra de acciones (en pantalla, nunca impresa) ── */
-.barra {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8pt;
-  align-items: center;
-  justify-content: center;
-  padding: 9pt 12pt;
-  background: var(--banda-1);
-  color: var(--blanco);
-  font-size: 10pt;
-}
-.barra button {
-  font: inherit;
-  font-size: 10pt;
-  font-weight: 700;
-  padding: 5pt 12pt;
-  border: 0;
-  border-radius: 4pt;
-  background: var(--acento);
-  color: var(--banda-1);
-  cursor: pointer;
 }
 
 /* ── Cabecera (evergreen GI) ──────────────────────────────────────────────── */
@@ -268,7 +243,9 @@ table.tabla {
 @media print {
   body { background: var(--papel); }
   .documento { box-shadow: none; max-width: none; margin: 0; }
-  .no-imprimir { display: none !important; }
+  /* A todo el ancho, el gráfico mide ~106 mm y no cabía bajo la lectura del día:
+     saltaba a la hoja siguiente y dejaba media primera página en blanco. */
+  .figura img { width: auto; max-width: 100%; max-height: 90mm; margin: 0 auto; }
   .cabecera, .franja, .caja, .capa, .resumen {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
@@ -285,7 +262,7 @@ table.tabla {
   display: flex;
   gap: 14pt;
   align-items: center;
-  margin: 22pt 0 10pt;
+  margin: 22pt 22pt 10pt;
   padding: 14pt 16pt;
   border: 1px solid var(--papel-linea);
   border-radius: 8pt;

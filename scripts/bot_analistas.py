@@ -1,4 +1,4 @@
-"""Bot de Telegram para analistas y ejecutivos: piezas a pedido en HTML.
+"""Bot de Telegram para analistas y ejecutivos: piezas a pedido en PDF.
 
 Uso:
     uv run --with MetaTrader5 --extra stories --extra informe python scripts/bot_analistas.py --escuchar

@@ -39,7 +39,8 @@ def test_informe_general_sin_personalizacion(tmp_path):
     for prohibido in ("Preparado para", "Asesor asignado", "in-trader", "btn-guardar", "<script>"):
         assert prohibido not in salida
     assert "Compartido por" in salida and "Análisis" in salida
-    assert 'class="barra no-imprimir"' in salida and "window.print()" in salida
+    # El producto es el PDF: un botón de imprimir quedaría impreso como texto muerto.
+    assert "barra" not in salida and "window.print()" not in salida
 
 
 def test_quien_comparte_y_firma_es_la_misma_persona_sale_una_vez(tmp_path):

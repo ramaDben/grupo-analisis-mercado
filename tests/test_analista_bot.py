@@ -65,6 +65,13 @@ def redactor(llamadas, codigo="ok"):
     return redactar
 
 
+def pdf_falso(html):
+    # Copia el HTML con sufijo .pdf: el test puede leer qué informe se imprimió.
+    destino = html.with_suffix(".pdf")
+    destino.write_bytes(html.read_bytes())
+    return destino
+
+
 @pytest.fixture
 def armado(tmp_path):
     config = {
@@ -77,7 +84,7 @@ def armado(tmp_path):
     at = b.Atendedor(config, b.Estado.cargar(tmp_path / "estado.json"), autor=fx.AUTOR, preparar=preparar_falso,
                      redactar=redactor(llamadas), rendir_laminas=lambda p, d: None, reloj=reloj,
                      dir_pedidos=tmp_path / "pedidos", bitacora=tmp_path / "bitacora.json",
-                     vigencia=lambda pieza, ahora: True)
+                     vigencia=lambda pieza, ahora: True, a_pdf=pdf_falso)
     bot = b.Bot(TgFalso(), at)
     return SimpleNamespace(bot=bot, llamadas=llamadas, reloj=reloj, tmp=tmp_path)
 
@@ -105,12 +112,46 @@ def test_pedido_invalido_responde_el_motivo(armado):
     assert "pizza" in r[0].texto and final is None
 
 
-def test_pieza_nueva_genera_un_html_y_copia_a_drive(armado):
+def test_pieza_nueva_se_entrega_en_pdf_y_solo_el_pdf_va_a_drive(armado):
     _, final = pedir(armado, "/activo oro")
-    assert [p.name for p in final.archivos] == [final.archivos[0].name] and len(final.archivos) == 1
+    assert len(final.archivos) == 1 and final.archivos[0].suffix == ".pdf"
     assert "aviso de prueba" in final.texto
     assert len(armado.llamadas) == 1
-    assert len(list((armado.tmp / "drive" / "GI Informes").rglob("*.html"))) == 1
+    en_drive = list((armado.tmp / "drive" / "GI Informes").rglob("*.*"))
+    assert [p.suffix for p in en_drive] == [".pdf"]
+    # El HTML queda como fuente junto a la pieza, pero no circula.
+    assert final.archivos[0].with_suffix(".html").exists()
+
+
+def test_pieza_reusada_tambien_sale_en_pdf(armado):
+    pedir(armado, "/activo oro")
+    armado.reloj.ahora += timedelta(minutes=10)
+    _, final = pedir(armado, "/activo oro")
+    assert "vigente" in final.texto and final.archivos[0].suffix == ".pdf"
+
+
+def test_si_el_pdf_falla_va_el_html_solo_por_telegram(armado):
+    from analista import pdf
+
+    def pdf_roto(html):
+        raise pdf.PdfFallido("Chromium no generó el PDF: TimeoutError")
+
+    armado.bot.atendedor.a_pdf = pdf_roto
+    _, final = pedir(armado, "/activo oro")
+    assert [p.suffix for p in final.archivos] == [".html"]
+    assert "No pude generar el PDF" in final.texto and "navegador" in final.texto
+    assert not (armado.tmp / "drive").exists() or not list((armado.tmp / "drive").rglob("*.*"))
+
+
+@pytest.mark.parametrize("nombre,tipo", [("informe.pdf", "application/pdf"), ("informe.html", "text/html")])
+def test_telegram_manda_el_tipo_segun_el_archivo(tmp_path, nombre, tipo):
+    ruta = tmp_path / nombre
+    ruta.write_bytes(b"x")
+    tg = b.Telegram("token")
+    enviados = []
+    tg._post = lambda metodo, **kw: enviados.append(kw["files"]["document"])
+    tg.documento(1, ruta)
+    assert enviados[0][0] == nombre and enviados[0][2] == tipo
 
 
 def test_segundo_pedido_reusa_la_pieza_sin_agy_ni_cupo(armado):
