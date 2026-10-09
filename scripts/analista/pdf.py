@@ -3,7 +3,7 @@
 Google Drive no muestra HTML, y un documento firmado no debería circular en un
 formato que se edita con el Bloc de notas sin tocar la firma (decisión del
 director, 2026-10-09). El HTML ya trae sus fuentes e imágenes en base64 y sus
-reglas de impresión (A4, cortes de página), así que el PDF sale de imprimirlo
+reglas de impresión (hoja de celular, cortes de página), así que el PDF sale de imprimirlo
 tal cual con Chromium.
 """
 from __future__ import annotations
@@ -29,7 +29,7 @@ def verificar(ruta: Path) -> Path:
 
 
 def rendir(html: Path) -> Path:
-    """Imprime el informe a un PDF A4 junto al HTML y devuelve su ruta."""
+    """Imprime el informe a un PDF de celular junto al HTML y devuelve su ruta."""
     from playwright.sync_api import sync_playwright
 
     destino = html.with_suffix(".pdf")
@@ -42,7 +42,7 @@ def rendir(html: Path) -> Path:
                 # Sin esperar las fuentes, el texto sale en la de respaldo.
                 pagina.evaluate("document.fonts.ready.then(() => true)")
                 pagina.emulate_media(media="print")
-                pagina.pdf(path=str(destino), format="A4", print_background=True,
+                pagina.pdf(path=str(destino), print_background=True,
                            prefer_css_page_size=True)
             finally:
                 navegador.close()

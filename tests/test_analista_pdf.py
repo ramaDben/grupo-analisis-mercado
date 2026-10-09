@@ -1,4 +1,4 @@
-"""El PDF que el bot entrega: sale del HTML del informe, en A4 y sin la interfaz de pantalla."""
+"""El PDF que el bot entrega: sale del HTML del informe, en páginas de celular."""
 from __future__ import annotations
 
 import sys
@@ -30,20 +30,48 @@ def _chromium_disponible() -> bool:
         return False
 
 
+def _medidas(pagina) -> tuple[int, int]:
+    return round(float(pagina.mediabox.width)), round(float(pagina.mediabox.height))
+
+
+def _destinos(pagina) -> list[str]:
+    return [str(a.get_object().get("/Dest")) for a in (pagina.get("/Annots") or [])
+            if a.get_object().get("/Dest") is not None]
+
+
 @pytest.mark.skipif(not _chromium_disponible(), reason="Chromium de Playwright no instalado")
-def test_el_informe_sale_en_pdf_a4_con_la_firma(tmp_path):
+def test_el_informe_sale_en_paginas_de_celular_con_la_firma(tmp_path):
     from pypdf import PdfReader
 
     html = ih.guardar(fx.activo(tmp_path), tmp_path, fx.ANALISTA, fx.AUTOR, HOY, "activo_oro_0939")
     salida = pdf.rendir(html)
 
     assert salida == tmp_path / "activo_oro_0939.pdf"
-    lector = PdfReader(str(salida))
-    assert len(lector.pages) >= 1
-    ancho, alto = float(lector.pages[0].mediabox.width), float(lector.pages[0].mediabox.height)
-    assert (round(ancho), round(alto)) == (595, 842)  # A4 en puntos
-    texto = " ".join(pag.extract_text() for pag in lector.pages)
+    paginas = PdfReader(str(salida)).pages
+    # 108 x 192 mm en puntos: la proporción de un teléfono en vertical.
+    verticales = [p for p in paginas if _medidas(p) == (306, 544)]
+    horizontales = [p for p in paginas if _medidas(p) == (544, 306)]
+    assert _medidas(paginas[0]) == (306, 544)
+    assert len(verticales) + len(horizontales) == len(paginas)
+    texto = " ".join(pag.extract_text() for pag in paginas)
     assert fx.AUTOR.nombre.split()[0] in texto
+
+
+@pytest.mark.skipif(not _chromium_disponible(), reason="Chromium de Playwright no instalado")
+@pytest.mark.parametrize("tipo", ["activo", "jornada"])
+def test_tocar_el_grafico_lleva_a_su_lamina_horizontal_y_vuelve(tipo, tmp_path):
+    from pypdf import PdfReader
+
+    pieza = fx.PIEZAS[tipo](tmp_path)
+    html = ih.guardar(pieza, tmp_path, fx.ANALISTA, fx.AUTOR, HOY, f"{tipo}_0939")
+    paginas = PdfReader(str(pdf.rendir(html))).pages
+
+    horizontales = [p for p in paginas if _medidas(p) == (544, 306)]
+    assert len(horizontales) == len(pieza["imagenes"])  # una lámina por gráfico, nada más
+    hacia = [d for p in paginas if _medidas(p) == (306, 544) for d in _destinos(p)]
+    vuelta = [d for p in horizontales for d in _destinos(p)]
+    assert sorted(d for d in hacia if "grafico-" in d) and len(vuelta) == len(horizontales)
+    assert all("vuelta-" in d for d in vuelta)
 
 
 def test_un_pdf_vacio_no_se_entrega(tmp_path):

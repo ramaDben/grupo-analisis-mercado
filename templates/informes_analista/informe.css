@@ -1,24 +1,30 @@
 /*
   Informe del bot de analistas: análisis general que el analista comparte tal cual.
 
-  Cabecera, franja de datos, lema y pie salen del evergreen GI; el cuerpo, de la
-  guía USD/CLP (estándar sin zoom: cuerpo de 11 a 13 pt y nada bajo 9,5 pt salvo
-  el aviso legal). Los colores son roles de `marca.css`, sección "Documento
-  claro": acá no se escribe ningún hex (`marca_tokens.py --check`).
+  Se lee en el teléfono. La hoja mide 108 x 192 mm, la proporción de una pantalla
+  en vertical: el visor la encaja a lo ancho y el cuerpo de 13 pt se ve como
+  ~16 px, sin zoom ni desplazamiento lateral. Una sola columna, y
+  ningún bloque se corta entre páginas. Nada bajo 10 pt salvo el aviso
+  legal. La vista en pantalla del HTML es la misma maqueta, a 108 mm.
 
-  Las medidas van en pt porque la pieza también se imprime: un pt es lo mismo en
-  pantalla al 100 % y en la hoja A4.
+  Los gráficos van en miniatura y, al tocarlos, saltan a su lámina apaisada al
+  final (192 x 108 mm), que con el teléfono girado ocupa la pantalla entera.
+
+  Cabecera, franja, lema y pie salen del evergreen GI. Los colores son roles de
+  `marca.css`, sección "Documento claro": acá no se escribe ningún hex
+  (`marca_tokens.py --check`).
 */
 
-@page { size: A4 portrait; margin: 12mm 0; }
+@page { size: 108mm 192mm; margin: 8mm 0; }
 /* La cabecera oscura arranca en el borde de la hoja, sin franja blanca encima. */
 @page :first { margin-top: 0; }
+@page lamina { size: 192mm 108mm; margin: 0; }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
   font-family: var(--font-sans);
-  font-size: 11.5pt;
+  font-size: 13pt;
   line-height: 1.5;
   color: var(--tinta);
   background: var(--papel-alt);
@@ -26,7 +32,7 @@ body {
 }
 
 .documento {
-  max-width: 210mm;
+  max-width: 108mm;
   margin: 0 auto 24pt auto;
   background: var(--papel);
   box-shadow: 0 6pt 24pt rgba(0, 0, 0, 0.10);
@@ -36,165 +42,185 @@ body {
 .cabecera {
   background: linear-gradient(135deg, var(--banda-1) 0%, var(--banda-2) 100%);
   color: var(--blanco);
-  padding: 18pt 22pt 16pt 22pt;
+  padding: 16pt 14pt 14pt 14pt;
 }
 .cabecera-fila {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: 12pt;
-  margin-bottom: 12pt;
+  gap: 6pt 10pt;
+  margin-bottom: 10pt;
 }
-.cabecera-fila img { height: 26pt; width: auto; display: block; }
+.cabecera-fila img { height: 22pt; width: auto; display: block; }
 .departamento {
+  order: 3;
+  flex: 1 0 100%;
   font-family: var(--font-sans);
-  font-size: 9.5pt;
+  font-size: 10pt;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.85);
 }
 .chip {
   font-family: var(--font-display);
-  font-size: 9.5pt;
+  font-size: 10pt;
   letter-spacing: 0.04em;
   color: var(--acento);
   border: 1px solid var(--acento);
   border-radius: 10pt;
-  padding: 2pt 9pt;
-  white-space: nowrap;
+  padding: 2pt 8pt;
 }
 .cabecera h1 {
   font-family: var(--font-display);
-  font-size: 22pt;
+  font-size: 21pt;
   font-weight: 700;
   line-height: 1.15;
-  margin-bottom: 4pt;
+  margin-bottom: 5pt;
 }
 .cabecera .bajada {
-  font-size: 12pt;
+  font-size: 13pt;
   font-weight: 600;
+  line-height: 1.35;
   color: var(--acento);
 }
 
-/* ── Franja de datos: Preparado para / Asesor / Cotización / Edición ──────── */
+/* ── Franja de datos: Análisis / Compartido por / Cotización / Edición, en 2 x 2 ── */
 .franja {
   display: grid;
-  grid-template-columns: 1.3fr 1.1fr 1.2fr 1.1fr;
-  gap: 10pt;
-  padding: 9pt 22pt;
+  grid-template-columns: 1fr 1fr;
+  gap: 8pt 10pt;
+  padding: 10pt 14pt;
   background: var(--papel-alt);
   border-bottom: 1px solid var(--papel-linea);
 }
-/* Sin «Compartido por» (quien comparte es quien firma) quedan tres celdas. */
-.franja:has(> :nth-child(3):last-child) { grid-template-columns: 1.3fr 1.2fr 1.1fr; }
 .franja-rotulo {
   font-family: var(--font-sans);
-  font-size: 9.5pt;
+  font-size: 10pt;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--tinta-3);
 }
-.franja-valor { font-size: 11pt; font-weight: 700; color: var(--tinta); }
+.franja-valor { font-size: 12pt; font-weight: 700; line-height: 1.3; color: var(--tinta); }
 .franja-valor.cotizacion { font-family: var(--font-display); color: var(--acento-doc); }
 
-/* ── Cuerpo (guía USD/CLP) ───────────────────────────────────────────────── */
-.cuerpo { padding: 16pt 22pt 8pt 22pt; }
+/* ── Cuerpo ─────────────────────────────────────────────────────────────── */
+.cuerpo { padding: 14pt 14pt 6pt 14pt; }
 
 .resumen {
   border-left: 3pt solid var(--acento-doc);
   background: var(--papel-alt);
-  padding: 9pt 12pt;
+  padding: 10pt 12pt;
   margin-bottom: 14pt;
-  font-size: 12pt;
+  font-size: 13.5pt;
+  line-height: 1.45;
 }
-.resumen p { margin: 1pt 0; }
+.resumen p { margin: 3pt 0; }
 
 h2 {
   font-family: var(--font-display);
-  font-size: 14pt;
+  font-size: 17pt;
+  line-height: 1.2;
   color: var(--tinta);
-  margin: 16pt 0 7pt 0;
+  margin: 14pt 0 9pt 0;
   break-after: avoid;
 }
 h2 .numero { color: var(--acento-doc); margin-right: 6pt; }
+/* Sin saltos forzados: dejaban hojas con dos líneas. El título no queda solo al pie
+   de una página y un párrafo no deja menos de tres líneas a cada lado del corte. */
+p, li { orphans: 3; widows: 3; }
 
-p { margin-bottom: 7pt; }
+p { margin-bottom: 9pt; }
 .cuerpo > ul { padding-left: 16pt; margin-bottom: 10pt; }
-.cuerpo > ul li { margin-bottom: 3pt; }
+.cuerpo > ul li { margin-bottom: 5pt; }
 
-.figura { margin: 6pt 0 12pt 0; break-inside: avoid; }
-.figura img { width: 100%; height: auto; display: block; border-radius: 4pt; }
-.figura figcaption { font-size: 9.5pt; color: var(--tinta-3); margin-top: 4pt; }
-
-.dos-columnas {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10pt;
-  margin-bottom: 12pt;
-  break-inside: avoid;
+.figura { margin: 6pt 0 14pt 0; break-inside: avoid; }
+.figura-enlace { display: block; }
+.figura img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 4pt;
+  border: 1px solid var(--papel-linea);
 }
-.caja { border-radius: 5pt; padding: 10pt 12pt; border: 1px solid var(--papel-linea); }
+.figura figcaption { font-size: 10pt; color: var(--tinta-2); margin-top: 5pt; line-height: 1.35; }
+
+/* Lo que en A4 iba lado a lado, en el teléfono va una caja debajo de la otra. */
+.dos-columnas { display: block; margin-bottom: 12pt; }
+.caja { border-radius: 6pt; padding: 10pt 12pt; border: 1px solid var(--papel-linea); margin-bottom: 10pt; break-inside: avoid; }
 .caja-alza { background: var(--sube-tenue); border-color: var(--sube-doc); }
 .caja-baja { background: var(--baja-tenue); border-color: var(--baja-doc); }
 .caja-titulo {
   font-family: var(--font-display);
-  font-size: 10.5pt;
-  letter-spacing: 0.03em;
-  margin-bottom: 5pt;
+  font-size: 12pt;
+  letter-spacing: 0.02em;
+  margin-bottom: 6pt;
 }
 .caja-alza .caja-titulo { color: var(--sube-doc); }
 .caja-baja .caja-titulo { color: var(--baja-doc); }
-.caja ul { padding-left: 14pt; }
-.caja li { margin-bottom: 3pt; }
+.caja ul { padding-left: 15pt; }
+.caja li { margin-bottom: 5pt; }
 
 .escenarios { list-style: none; margin-bottom: 12pt; }
 .escenarios li {
-  padding: 6pt 10pt;
-  border-bottom: 1px solid var(--papel-linea);
-  font-size: 11.5pt;
+  padding: 9pt 10pt;
+  margin-bottom: 7pt;
+  border-radius: 6pt;
+  background: var(--papel-alt);
+  line-height: 1.4;
+  break-inside: avoid;
 }
-.escenarios li:last-child { border-bottom: 0; }
 
 .direccion {
   display: inline-block;
   font-family: var(--font-display);
-  font-size: 10pt;
-  padding: 1pt 8pt;
-  border-radius: 9pt;
+  font-size: 11pt;
+  padding: 2pt 10pt;
+  border-radius: 10pt;
   color: var(--blanco);
   background: var(--tinta-3);
 }
 .direccion.alcista { background: var(--sube-doc); }
 .direccion.bajista { background: var(--baja-doc); }
 
-table.tabla {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 4pt 0 12pt 0;
-  font-size: 10.5pt;
+/* Tablas como tarjetas: una fila por tarjeta, cada dato con su rótulo al lado. */
+table.tabla, .tabla tbody, .tabla tr, .tabla td { display: block; width: 100%; }
+table.tabla { margin: 4pt 0 12pt 0; }
+.tabla thead { display: none; }
+.tabla tr {
+  border: 1px solid var(--papel-linea);
+  border-radius: 6pt;
+  padding: 7pt 10pt;
+  margin-bottom: 8pt;
   break-inside: avoid;
 }
-.tabla th {
-  text-align: left;
-  font-size: 9.5pt;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--tinta-3);
-  border-bottom: 1.5pt solid var(--tinta);
-  padding: 5pt 6pt;
+.tabla td {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10pt;
+  padding: 2pt 0;
+  font-size: 12pt;
 }
-.tabla td { padding: 6pt; border-bottom: 1px solid var(--papel-linea); vertical-align: top; }
-.tabla td.cifra { font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+.tabla td::before {
+  content: attr(data-rotulo);
+  font-size: 10pt;
+  color: var(--tinta-3);
+  flex: 0 0 auto;
+}
+.tabla td:first-child { display: block; font-weight: 700; font-size: 12.5pt; padding-bottom: 4pt; }
+.tabla td:first-child::before { content: none; }
+.tabla td.cifra { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .estado-salio { color: var(--sube-doc); font-weight: 700; white-space: nowrap; }
 .estado-proximo { color: var(--tinta-3); font-weight: 700; white-space: nowrap; }
 
-.explicacion { margin: 0 0 9pt 0; break-inside: avoid; }
-.explicacion strong { display: block; color: var(--tinta); }
+.explicacion { margin: 0 0 12pt 0; break-inside: avoid; }
+.explicacion strong { display: block; color: var(--tinta); margin-bottom: 3pt; }
 
 .capa {
-  border-radius: 5pt;
+  border-radius: 6pt;
   padding: 10pt 12pt;
   margin-bottom: 10pt;
   break-inside: avoid;
@@ -202,26 +228,63 @@ table.tabla {
   background: var(--papel-alt);
 }
 .capa-rotulo {
-  font-size: 9.5pt;
+  font-size: 10pt;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--acento-doc);
-  margin-bottom: 3pt;
+  margin-bottom: 4pt;
 }
 .capa.no-hacer { border-left-color: var(--baja-doc); background: var(--baja-tenue); }
 .capa.no-hacer .capa-rotulo { color: var(--baja-doc); }
 
-.temporalidad { font-size: 11pt; color: var(--tinta-2); margin-bottom: 10pt; }
+.temporalidad { font-size: 12pt; color: var(--tinta-2); margin-bottom: 10pt; }
 
 /* Foco técnico: quién lo eligió y cuándo, antes de cualquier lectura. */
-.transparencia { font-size: 10pt; color: var(--tinta-2); font-style: italic; margin: 0 0 10pt; }
+.transparencia { font-size: 11pt; color: var(--tinta-2); font-style: italic; margin: 0 0 10pt; }
 
 .bloque-activo { break-inside: avoid; margin-bottom: 14pt; }
 
+/* ── Firma del director (la acreditación sale solo si está vigente) ── */
+.firma {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8pt;
+  margin: 18pt 14pt 10pt;
+  padding: 14pt 12pt;
+  border: 1px solid var(--papel-linea);
+  border-radius: 8pt;
+  background: var(--papel-alt);
+  break-inside: avoid;
+}
+.firma-foto { width: 2.3cm; height: 2.3cm; border-radius: 50%; object-fit: cover; }
+.firma-trazo { height: 32pt; display: block; margin: 0 auto 2pt; }
+.firma-nombre { font-weight: 700; font-size: 13pt; color: var(--tinta); margin: 0; }
+.firma-cargo { font-size: 11pt; color: var(--tinta-2); margin: 0 0 4pt; }
+.firma-credencial { font-size: 10pt; color: var(--tinta-2); margin: 0; }
+.firma-credencial a { color: var(--acento-doc); }
+.firma-general { font-size: 10pt; color: var(--tinta-3); margin: 6pt 0 0; }
+
+/* ── Plan de escenarios (lo escribe Python; condicional e impersonal) ── */
+.plan { border: 1px solid var(--papel-linea); border-radius: 8pt; padding: 10pt 12pt; margin: 8pt 0 12pt; }
+.plan-fila { padding: 7pt 0; border-top: 1px solid var(--papel-linea); break-inside: avoid; }
+.plan > p + .plan-fila { border-top: 0; }
+.plan-rotulo {
+  font-weight: 700;
+  color: var(--acento-doc);
+  font-size: 10pt;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 2pt;
+}
+.plan-fila p { margin: 0; }
+.plan-vacio p { color: var(--tinta-2); margin: 0; }
+
 /* ── Lema y pie (evergreen GI) ────────────────────────────────────────────── */
 .lema {
-  margin: 16pt 22pt 0 22pt;
+  margin: 14pt 14pt 0 14pt;
   padding: 10pt 0;
   border-top: 1px solid var(--papel-linea);
   text-align: center;
@@ -231,65 +294,45 @@ table.tabla {
 }
 .pie {
   display: flex;
-  justify-content: space-between;
-  gap: 14pt;
-  padding: 10pt 22pt 14pt 22pt;
+  flex-direction: column;
+  gap: 6pt;
+  padding: 10pt 14pt 14pt 14pt;
   border-top: 1px solid var(--papel-linea);
   color: var(--tinta-3);
+  break-inside: avoid;
 }
-.pie .legal { font-size: 8pt; line-height: 1.4; }
-.pie .legal:last-child { flex: 0 0 auto; max-width: 40%; text-align: right; }
+.pie .legal { font-size: 8.5pt; line-height: 1.4; margin: 0; }
+
+/* ── Láminas: el gráfico a pantalla completa, con el teléfono girado ─────── */
+.lamina {
+  page: lamina;
+  break-before: page;
+  display: flex;
+  flex-direction: column;
+  width: 192mm;
+  height: 107.5mm;
+  padding: 4mm 6mm;
+  background: var(--papel);
+}
+.lamina-encabezado {
+  display: flex;
+  justify-content: space-between;
+  gap: 10pt;
+  font-size: 10pt;
+  color: var(--tinta-2);
+  margin-bottom: 3mm;
+}
+.lamina-encabezado a { color: var(--acento-doc); font-weight: 700; text-decoration: none; }
+.lamina img { flex: 1; min-height: 0; width: 100%; object-fit: contain; }
+
+/* El HTML es la fuente interna: en pantalla se muestra la maqueta, sin las láminas. */
+@media screen { .lamina { display: none; } }
 
 @media print {
   body { background: var(--papel); }
   .documento { box-shadow: none; max-width: none; margin: 0; }
-  /* A todo el ancho, el gráfico mide ~106 mm y no cabía bajo la lectura del día:
-     saltaba a la hoja siguiente y dejaba media primera página en blanco. */
-  .figura img { width: auto; max-width: 100%; max-height: 90mm; margin: 0 auto; }
-  .cabecera, .franja, .caja, .capa, .resumen {
+  .cabecera, .franja, .caja, .capa, .resumen, .escenarios li, .firma, .direccion {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 }
-
-@media (max-width: 600px) {
-  .franja, .dos-columnas { grid-template-columns: 1fr 1fr; }
-  .cabecera-fila { flex-wrap: wrap; }
-}
-
-/* ── Firma del director (la acreditación sale solo si está vigente) ── */
-.firma {
-  display: flex;
-  gap: 14pt;
-  align-items: center;
-  margin: 22pt 22pt 10pt;
-  padding: 14pt 16pt;
-  border: 1px solid var(--papel-linea);
-  border-radius: 8pt;
-  background: var(--papel-alt);
-}
-.firma-foto { width: 2.5cm; height: 2.5cm; border-radius: 50%; object-fit: cover; flex: 0 0 auto; }
-.firma-trazo { height: 34pt; display: block; margin-bottom: 2pt; }
-.firma-nombre { font-weight: 700; font-size: 12pt; color: var(--tinta); margin: 0; }
-.firma-cargo { font-size: 10.5pt; color: var(--tinta-2); margin: 0 0 4pt; }
-.firma-credencial { font-size: 9.5pt; color: var(--tinta-2); margin: 0; }
-.firma-credencial a { color: var(--acento-doc); }
-.firma-general { font-size: 9.5pt; color: var(--tinta-3); margin: 6pt 0 0; }
-@media print { .firma { break-inside: avoid; } }
-@media (max-width: 560px) { .firma { flex-direction: column; text-align: center; } }
-
-/* ── Plan de escenarios (lo escribe Python; condicional e impersonal) ── */
-.plan { border: 1px solid var(--papel-linea); border-radius: 8pt; padding: 12pt 14pt; margin: 8pt 0 12pt; }
-.plan-fila {
-  display: grid;
-  grid-template-columns: 9.5em 1fr;
-  gap: 10pt;
-  padding: 6pt 0;
-  border-top: 1px solid var(--papel-linea);
-}
-.plan > p + .plan-fila { border-top: 0; }
-.plan-rotulo { font-weight: 700; color: var(--tinta-2); font-size: 10.5pt; }
-.plan-fila p { margin: 0; }
-.plan-vacio p { color: var(--tinta-2); margin: 0; }
-@media print { .plan { break-inside: avoid; } }
-@media (max-width: 560px) { .plan-fila { grid-template-columns: 1fr; gap: 2pt; } }
