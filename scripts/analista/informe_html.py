@@ -305,6 +305,14 @@ def bloque_firma(a: au.Autor, hoy: date) -> str:
     )
 
 
+def _celda_compartido(nombre: str, autor: au.Autor) -> str:
+    """La celda «Compartido por», vacía si quien comparte es quien firma el análisis."""
+    if nombre.strip().casefold() == autor.nombre.strip().casefold():
+        return ""
+    return ('    <div><div class="franja-rotulo">Compartido por</div>'
+            f'<div class="franja-valor">{e(nombre)}</div></div>\n')
+
+
 def armar(pieza: dict[str, Any], dir_pedido: Path, analista: dict[str, Any], autor: au.Autor, hoy: date) -> str:
     """HTML completo del informe general, firmado por `autor` a la fecha `hoy`."""
     errs = es.errores(pieza)
@@ -325,7 +333,7 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, analista: dict[str, Any], aut
         "titular": e(ed["titular"]),
         "bajada": e(ed["bajada"]),
         "autor_nombre": e(autor.nombre),
-        "compartido_por": e(nombre),
+        "compartido_por": _celda_compartido(nombre, autor),
         "rotulo_referencia": e(d["rotulo_referencia"]),
         "referencia": e(d["referencia"]),
         "edicion": e(d["edicion"]),

@@ -111,6 +111,8 @@ body {
   background: var(--papel-alt);
   border-bottom: 1px solid var(--papel-linea);
 }
+/* Sin «Compartido por» (quien comparte es quien firma) quedan tres celdas. */
+.franja:has(> :nth-child(3):last-child) { grid-template-columns: 1.3fr 1.2fr 1.1fr; }
 .franja-rotulo {
   font-family: var(--font-sans);
   font-size: 9.5pt;

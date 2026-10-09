@@ -42,6 +42,14 @@ def test_informe_general_sin_personalizacion(tmp_path):
     assert 'class="barra no-imprimir"' in salida and "window.print()" in salida
 
 
+def test_quien_comparte_y_firma_es_la_misma_persona_sale_una_vez(tmp_path):
+    # El director pide su propio informe: «Análisis» y «Compartido por» dirían lo mismo.
+    director = {"nombre": " benjamín ignacio bravo soza ", "cargo": "Dirección de Análisis Técnico"}
+    salida = ih.armar(fx.activo(tmp_path), tmp_path, director, fx.AUTOR, HOY)
+    assert "Compartido por" not in salida
+    assert "Análisis</div>" in salida
+
+
 def test_contrato_sin_personalizacion_en_paquete_y_plantilla():
     fuentes = [*(RAIZ / "scripts" / "analista").glob("*.py"),
                RAIZ / "templates" / "informes_analista" / "base.html"]
