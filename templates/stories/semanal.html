@@ -145,13 +145,14 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: var(-
 
 .cuerpo { flex: 1; min-height: 0; display: flex; gap: 44px; margin-top: 28px; }
 .izq { width: 720px; display: flex; flex-direction: column; }
-.der { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.der { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
 
 .activo { font-weight: 700; font-size: 26px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-borde); margin: 0; }
 .titular { font-family: var(--font-display); font-weight: 700; font-size: 50px; line-height: 1.12; color: var(--blanco); margin: 12px 0 0; }
-.precio-fila { display: flex; align-items: baseline; gap: 18px; margin: 26px 0 0; }
+.precio-fila { display: flex; align-items: center; gap: 22px; margin: 26px 0 0; }
+.precio-bloque { display: flex; flex-direction: column; }
 .precio-rotulo { font-size: 22px; color: var(--texto-2); }
-.precio { font-family: var(--font-display); font-weight: 700; font-size: 64px; color: var(--blanco); }
+.precio { font-family: var(--font-display); font-weight: 700; font-size: 58px; color: var(--blanco); white-space: nowrap; }
 .pildora { font-weight: 700; font-size: 22px; letter-spacing: 0.08em; padding: 6px 18px; border-radius: 999px;
   color: var(--fondo); background: var(--direccion); }
 
@@ -165,8 +166,8 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: var(-
 .nota { font-size: 20px; color: var(--texto-2); margin: 10px 0 0; }
 .temporalidad { font-size: 22px; font-weight: 600; color: var(--texto-1); margin: auto 0 0; }
 
-.grafico { flex: 1; min-height: 0; border-radius: 16px; overflow: hidden; border: 1.5px solid color-mix(in srgb, var(--acento) 35%, transparent); }
-.grafico img { width: 100%; height: 100%; object-fit: contain; display: block; background: var(--fondo); }
+.grafico { border-radius: 16px; overflow: hidden; border: 1.5px solid color-mix(in srgb, var(--acento) 35%, transparent); }
+.grafico img { width: 100%; height: auto; display: block; background: var(--fondo); }
 .grafico-pie { font-size: 18px; color: var(--texto-3); margin: 8px 0 0; }
 
 .footer { position: relative; z-index: 2; margin-top: 16px; padding-top: 12px; display: flex; justify-content: space-between; align-items: center;
@@ -188,8 +189,10 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: var(-
           <p class="activo">{{activo}}</p>
           <h1 class="titular">{{titular}}</h1>
           <div class="precio-fila">
-            <span class="precio-rotulo">Precio de referencia</span>
-            <span class="precio">{{precio}}</span>
+            <div class="precio-bloque">
+              <span class="precio-rotulo">Precio de referencia</span>
+              <span class="precio">{{precio}}</span>
+            </div>
             <span class="pildora">{{direccion}}</span>
           </div>
           <div class="niveles">

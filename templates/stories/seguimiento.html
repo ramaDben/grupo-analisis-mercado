@@ -145,7 +145,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: var(-
 
 .cuerpo { flex: 1; min-height: 0; display: flex; gap: 44px; margin-top: 28px; }
 .izq { width: 720px; display: flex; flex-direction: column; }
-.der { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.der { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
 
 .activo { font-weight: 700; font-size: 26px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-borde); margin: 0; }
 /* Los cuatro estados llevan el mismo sello: ninguno se vende ni se dramatiza. */
@@ -160,8 +160,8 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: var(-
 .hoy { font-size: 27px; line-height: 1.4; color: var(--texto-borde); margin: 18px 0 0; }
 .niveles { font-size: 21px; color: var(--texto-2); margin: auto 0 0; }
 
-.grafico { flex: 1; min-height: 0; border-radius: 16px; overflow: hidden; border: 1.5px solid color-mix(in srgb, var(--acento) 35%, transparent); }
-.grafico img { width: 100%; height: 100%; object-fit: contain; display: block; background: var(--fondo); }
+.grafico { border-radius: 16px; overflow: hidden; border: 1.5px solid color-mix(in srgb, var(--acento) 35%, transparent); }
+.grafico img { width: 100%; height: auto; display: block; background: var(--fondo); }
 .grafico-pie { font-size: 18px; color: var(--texto-3); margin: 8px 0 0; }
 
 .footer { position: relative; z-index: 2; margin-top: 16px; padding-top: 12px; display: flex; justify-content: space-between; align-items: center;
