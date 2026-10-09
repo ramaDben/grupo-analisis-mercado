@@ -493,6 +493,9 @@ def test_el_correo_es_de_tablas_en_linea_y_destaca_las_cifras(tmp_path):
     # Goldman en titulares y cifras; el cuerpo en Segoe UI, que Outlook trae de serie.
     assert "font-family:'Goldman'" in correo and "font-family:'Segoe UI'" in correo
     assert "Jakarta" not in html
+    # Outlook pega con el motor de Word, que vuelve sangría los espacios del código
+    # delante de un elemento en línea: ninguno puede empezar un renglón indentado.
+    assert not re.search(r"\n[ \t]+<(span|strong|b|a|br)\b", co.CUERPO.read_text(encoding="utf-8"))
     # Dos versiones completas, cada una con su paleta de marca.
     oscuro = correo[:correo.index('<template id="tema-claro">')]
     claro = correo[correo.index('<template id="tema-claro">'):]

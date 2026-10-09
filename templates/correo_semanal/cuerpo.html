@@ -22,9 +22,7 @@
           <p style="margin:0;font-family:{{f_sans}};font-size:15px;line-height:20px;font-weight:600;color:{{c_texto_2}};">Precio de referencia</p>
           <p class="cifra" style="margin:2px 0 0 0;font-family:{{f_display}};font-size:30px;line-height:36px;font-weight:700;color:{{c_texto_1}};white-space:nowrap;"><strong>{{precio}}</strong> <span style="font-family:{{f_sans}};font-size:15px;font-weight:600;color:{{c_texto_2}};">{{unidad}}</span></p>
         </td>
-        <td valign="middle" align="right" style="padding:16px 20px;">
-          <span style="display:inline-block;padding:8px 18px;border-radius:999px;background:{{c_direccion}};color:{{c_sobre_direccion}};font-family:{{f_sans}};font-size:15px;line-height:20px;font-weight:800;letter-spacing:1.5px;">{{direccion_mayus}}</span>
-        </td>
+        <td valign="middle" align="right" style="padding:16px 20px;"><span style="display:inline-block;padding:8px 18px;border-radius:999px;background:{{c_direccion}};color:{{c_sobre_direccion}};font-family:{{f_sans}};font-size:15px;line-height:20px;font-weight:800;letter-spacing:1.5px;">{{direccion_mayus}}</span></td>
       </tr>
     </table>
   </td></tr>
@@ -84,14 +82,10 @@
 
   <tr><td class="pad" style="padding:32px 40px 0 40px;">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-top:1px solid {{c_linea}};"><tr>
-      <td class="stack" width="50%" valign="top" style="padding:18px 10px 0 0;font-family:{{f_sans}};font-size:16px;line-height:23px;font-weight:500;color:{{c_texto_borde}};">
-        <span style="font-size:14px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:{{c_acento}};">Análisis</span><br>
-        <strong style="color:{{c_texto_1}};">{{autor_nombre}}</strong><br>{{autor_cargo}}
-      </td>
-      <td class="stack" width="50%" valign="top" style="padding:18px 0 0 0;font-family:{{f_sans}};font-size:16px;line-height:23px;font-weight:500;color:{{c_texto_borde}};">
-        <span style="font-size:14px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:{{c_acento}};">Te lo envía</span><br>
-        <strong id="v-ejecutivo" style="color:{{c_texto_1}};">{{ejecutivo_nombre}}</strong><br><span id="v-cargo">{{ejecutivo_cargo}}</span><br><span id="v-contacto">{{ejecutivo_contacto}}</span>
-      </td>
+      <!-- Un párrafo por línea y sin texto suelto en la celda: Outlook pega con el motor
+           de Word, que conserva como sangría los espacios del código entre <br>. -->
+      <td class="stack" width="50%" valign="top" style="padding:18px 10px 0 0;"><p style="margin:0 0 4px 0;font-family:{{f_sans}};font-size:14px;line-height:20px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:{{c_acento}};">Análisis</p><p style="margin:0;font-family:{{f_sans}};font-size:16px;line-height:23px;font-weight:700;color:{{c_texto_1}};">{{autor_nombre}}</p><p style="margin:0;font-family:{{f_sans}};font-size:16px;line-height:23px;font-weight:500;color:{{c_texto_borde}};">{{autor_cargo}}</p></td>
+      <td class="stack" width="50%" valign="top" style="padding:18px 0 0 0;"><p style="margin:0 0 4px 0;font-family:{{f_sans}};font-size:14px;line-height:20px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:{{c_acento}};">Te lo envía</p><p id="v-ejecutivo" style="margin:0;font-family:{{f_sans}};font-size:16px;line-height:23px;font-weight:700;color:{{c_texto_1}};">{{ejecutivo_nombre}}</p><p id="v-cargo" style="margin:0;font-family:{{f_sans}};font-size:16px;line-height:23px;font-weight:500;color:{{c_texto_borde}};">{{ejecutivo_cargo}}</p><p id="v-contacto" style="margin:0;font-family:{{f_sans}};font-size:16px;line-height:23px;font-weight:500;color:{{c_texto_borde}};">{{ejecutivo_contacto}}</p></td>
     </tr></table>
   </td></tr>
 
