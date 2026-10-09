@@ -19,7 +19,7 @@ class PedidoInvalido(ValueError):
     """El pedido no calza con la gramática; el mensaje se le muestra al analista."""
 
 
-PIEZAS = ("activo", "calendario", "dato", "jornada", "oportunidad")
+PIEZAS = ("activo", "calendario", "dato", "jornada", "oportunidad", "semanal", "seguimiento")
 SERVICIO = ("start", "ayuda", "id", "estado")
 
 # Nombres en español que el equipo usa a diario. Los tickers del broker se
@@ -44,6 +44,10 @@ ALIAS: dict[str, str] = {
     "bitcoin": "BTCUSD",
     "ethereum": "ETHUSD",
 }
+
+# Temáticas de la pieza semanal que no son un activo sino una clase.
+TEMATICAS = {"indices": "indices", "indice": "indices", "etf": "etf", "etfs": "etf",
+             "acciones": "acciones", "accion": "acciones"}
 
 PERSONALIZACION_RETIRADA = (
     "Los informes ya no se personalizan: son un análisis general que puedes "
@@ -101,14 +105,18 @@ def interpretar(texto: str, universo: list[dict[str, Any]] | None = None) -> Ord
     if re.search(r"(?:^|\s)para\s+\S", cuerpo, flags=re.IGNORECASE):
         raise PedidoInvalido(PERSONALIZACION_RETIRADA)
 
-    if comando == "activo":
+    tematica = TEMATICAS.get(re.sub(r"\s", "", _plano(cuerpo)))
+    if comando in ("semanal", "seguimiento") and tematica:
+        # Índices, ETF y acciones: el activo de la semana lo elige una regla, no quien pide.
+        args: dict[str, Any] = {"tematica": tematica}
+    elif comando in ("activo", "semanal", "seguimiento"):
         if not cuerpo:
-            raise PedidoInvalido("Falta el activo. Ejemplo: /activo oro")
+            raise PedidoInvalido(f"Falta el activo. Ejemplo: /{comando} oro")
         if universo is None:
             import screener_gi as sc
 
             universo = sc.cargar_universo(solo_renderizables=False)
-        args: dict[str, Any] = {"ticker": resolver_activo(cuerpo, universo)}
+        args = {"ticker": resolver_activo(cuerpo, universo)}
     elif comando == "oportunidad":
         # Sin argumentos: el foco lo elige el escáner, no quien lo pide.
         args = {}

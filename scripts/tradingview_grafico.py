@@ -368,6 +368,7 @@ def construir_html_tradingview(
     resistencia: float | None = None,
     ancho: int = 1400,
     alto: int = 780,
+    niveles: list[dict[str, Any]] | None = None,
 ) -> str:
     """HTML autocontenido del gráfico de estructura: velas, EMA 50/100, canales de
     tendencia, zonas de soporte y resistencia y swings mayores.
@@ -404,6 +405,10 @@ def construir_html_tradingview(
         "canales": canales_js,
         "swings": estructura["swings"],
         "zonas": zonas,
+        # Niveles con nombre propio (el escenario de la pieza semanal): línea
+        # punteada de su color y el rótulo en el eje, ej. "SE ACTIVA 4.210,50".
+        "niveles": [{"precio": float(n["precio"]), "rol": str(n["rol"]), "color": str(n["color"])}
+                    for n in (niveles or [])],
         "media_zona": 0.18 * estructura.get("atr", 0),
         "digits": digits,
     }
@@ -587,6 +592,13 @@ def construir_html_tradingview(
     title: z.rol + ' ' + fmt(z.precio),
   }}));
 
+  D.niveles.forEach(n => candles.createPriceLine({{
+    price: n.precio, color: n.color, lineWidth: 2,
+    lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true,
+    axisLabelColor: n.color, axisLabelTextColor: '#050B10',
+    title: n.rol + ' ' + fmt(n.precio),
+  }}));
+
   // Futuro en blanco para que el canal en curso se proyecte a la derecha.
   const extra = D.canales.flatMap(c => c.lineas.flatMap(l => l.map(p => p.time)))
     .filter(t => t > rows[rows.length - 1].time);
@@ -668,6 +680,7 @@ def generar_grafico_tv(
     resistencia: float | None = None,
     ancho: int = 1400,
     alto: int = 780,
+    niveles: list[dict[str, Any]] | None = None,
 ) -> Path:
     """Función principal: obtiene datos de MT5, computa indicadores y renderiza el PNG."""
     from market_data_mcp import mt5_client
@@ -700,6 +713,7 @@ def generar_grafico_tv(
         resistencia=resistencia,
         ancho=ancho,
         alto=alto,
+        niveles=niveles,
     )
 
     return renderizar_png(html, destino, ancho=ancho, alto=alto)

@@ -7,6 +7,8 @@ Uso:
         --una "/activo oro" --usuario <id>                     # un pedido, sin Telegram
     uv run python scripts/bot_analistas.py --validar data/informes_analistas/.../pieza.json
     uv run --with MetaTrader5 python scripts/bot_analistas.py --desenlaces   # completa la bitácora de planes
+    uv run --with MetaTrader5 --extra stories --extra informe python scripts/bot_analistas.py \\
+        --semanal-lote [--usuario <id>]                       # las 5 piezas semanales del lunes
 
 Diseño y reglas: docs/bot-analistas.md y la spec
 docs/superpowers/specs/2026-10-08-bot-telegram-analistas-design.md.
@@ -52,6 +54,40 @@ def validar(ruta: Path) -> int:
     return 0
 
 
+def semanal_lote(usuario: str | None, autor_o_nada) -> int:
+    """Las cinco piezas del lunes, una tras otra, como si las pidiera el director.
+
+    No envía nada a ningún canal: arma, valida y deja cada paquete en
+    `GI Semanal/<lunes>/<temática>/` de Drive, de donde lo toma el área comercial.
+    Una temática sin escenario esa semana se informa y no detiene a las demás.
+    """
+    from analista import bot
+    from analista import orden as od
+    from analista import semanal as sm
+
+    config = bot.cargar_config()
+    directores = [u for u, a in config["analistas"].items() if a.get("rol") == "director"]
+    usuario = usuario or next(iter(directores), None)
+    if usuario not in config["analistas"]:
+        print("ERROR: falta --usuario y config/analistas_telegram.json no tiene un director")
+        return 2
+    autor = autor_o_nada(config)
+    if autor is None:
+        return 2
+    atendedor = bot.Atendedor(config, bot.Estado.cargar(), autor)
+    fallas = 0
+    for tematica in sm.LOTE:
+        orden = od.interpretar(f"/semanal {tematica}")
+        respuesta = bot.Bot(tg=None, atendedor=atendedor).procesar_uno(bot.Pedido(usuario, 0, orden))
+        print(f"── {tematica}")
+        print(respuesta.texto)
+        if not respuesta.archivos:
+            fallas += 1
+    print()
+    print(f"Lote del lunes: {len(sm.LOTE) - fallas} de {len(sm.LOTE)} piezas listas.")
+    return 0 if not fallas else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     modo = ap.add_mutually_exclusive_group(required=True)
@@ -61,6 +97,8 @@ def main(argv: list[str] | None = None) -> int:
     modo.add_argument("--validar", type=Path, metavar="PIEZA_JSON", help="valida una pieza redactada")
     modo.add_argument("--desenlaces", action="store_true",
                       help="completa el desenlace de los planes de más de 24 h en la bitácora")
+    modo.add_argument("--semanal-lote", action="store_true",
+                      help="arma las 5 piezas semanales (oro, USD/CLP, índices, ETF y acciones) y las deja en Drive")
     ap.add_argument("--usuario", help="con --una: id del analista en config/analistas_telegram.json")
     args = ap.parse_args(argv)
 
@@ -88,6 +126,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"ERROR: {exc}")
             return None
 
+    if args.semanal_lote:
+        return semanal_lote(args.usuario, autor_o_nada)
+
     if args.una:
         from analista import orden as od
 
@@ -111,6 +152,9 @@ def main(argv: list[str] | None = None) -> int:
         print(respuesta.texto)
         for ruta in respuesta.archivos:
             print(f"  → {ruta}")
+        for texto in respuesta.mensajes:
+            print()
+            print(texto)
         return 0 if respuesta.archivos else 1
 
     token = leer_token()

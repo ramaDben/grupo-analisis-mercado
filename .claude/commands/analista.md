@@ -78,6 +78,26 @@ pone el bot: tú no decides nada visual.
   - `lectura`: el panorama.
   - `por_activo.<ticker>`: 2 o 3 frases con qué pasa, qué significa y qué no hacer.
   - `que_no_hacer`: la regla del día.
+- **Escenario de la semana** (`ESCENARIO DE LA SEMANA`): material que un ejecutivo manda a su
+  cartera por correo y WhatsApp. Visión **diaria**, para toda la semana.
+  - `titular` y `bajada`: la idea de la semana con su dirección (`datos.direccion`).
+  - `contexto_semana`: 2 párrafos cortos con **qué está pasando esta semana**, bajado a lo que
+    trae `datos.contexto`: la agenda de lunes a viernes (lo que ya salió, con su cifra, y lo que
+    falta, en modo anticipación), la curva con su cambio a 5 días y `variacion_semana`. Nada general.
+  - `que_lo_mueve`: 2 o 3 puntos, uno por driver **de esta semana**, cada uno con su efecto
+    direccional sobre el activo. Analizados, no enumerados.
+  - `whatsapp`: 2 o 3 frases (máximo 420 caracteres) que abren el mensaje de WhatsApp. El bot
+    agrega debajo el precio, la activación, la invalidación y el recorrido: no los repitas.
+  - `datos.escenario` (gatillo, invalidación, recorrido) y la simulación los escribe el bot.
+  - Prohibido además: «oportunidad», «recomendada», «aprovecha», «si hubieras entrado»,
+    «ganarías», «garantizado». La pieza describe un escenario medible y no invita a nada.
+- **Seguimiento** (`SEGUIMIENTO`): la actualización diaria de ese escenario.
+  - `hoy`: una o dos frases (máximo 300 caracteres) con **lo de hoy** frente a lo general:
+    `datos.contexto.agenda_hoy` (con sus resultados), la curva a 1 día y `variacion_dia`,
+    contrastados con `contexto.escenario_semana` y `contexto.contexto_lunes`.
+  - El estado (vigente, avanzando, completado o invalidado) y sus cifras ya los escribió el bot:
+    no lo repitas ni lo califiques. Los cuatro estados se cuentan igual: nunca celebres uno ni
+    digas cuánto habría ganado alguien. Mismas frases prohibidas que la pieza semanal.
 
 ### Antes de terminar
 

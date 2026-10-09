@@ -101,7 +101,7 @@ def test_campos_anidados_se_validan_uno_a_uno():
 
 
 def test_cada_pieza_tiene_campos():
-    assert set(es.CAMPOS) == {"activo", "calendario", "dato", "jornada", "oportunidad"}
+    assert set(es.CAMPOS) == {"activo", "calendario", "dato", "jornada", "oportunidad", "semanal", "seguimiento"}
 
 
 def test_titular_largo_no_cabe_en_la_lamina():

@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>Avisos Portada</title>
+<title>Seguimiento del escenario</title>
 <style>
   /* ════ marca.css embebido ════ */
 :root {
@@ -123,122 +123,85 @@ body.activo-doge    { --activo: var(--activo-doge); }
 </style>
 <style>
 @font-face { font-family: "Goldman"; src: url("fonts/goldman-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
-@font-face { font-family: "Goldman"; src: url("fonts/goldman-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 @font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/plus-jakarta-sans-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 @font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/plus-jakarta-sans-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
 @font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/plus-jakarta-sans-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
 
 * { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--fondo); color: var(--texto-1);
+  font-family: var(--font-sans); overflow: hidden; -webkit-font-smoothing: antialiased; }
 
-html, body {
-  margin: 0; padding: 0;
-  width: 100%; height: 100%;
-  background: var(--fondo);
-  color: var(--texto-1);
-  font-family: var(--font-sans);
-  overflow: hidden;
-  -webkit-font-smoothing: antialiased;
-}
+.story { position: relative; width: 100%; height: 100%; padding: 44px 56px 30px; display: flex; flex-direction: column; }
+.velo { position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--acento) 14%, transparent) 0%, transparent 55%),
+              linear-gradient(180deg, rgba(0,0,0,0.5) 0%, var(--velo-inferior) 100%); }
+.contenido { position: relative; z-index: 2; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 
-.story {
-  position: relative; width: 100%; height: 100%;
-  padding: 48px 64px 36px;
-  display: flex; flex-direction: column;
-}
+.cabecera { display: flex; justify-content: space-between; align-items: center; }
+.chip { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: 0.10em; text-transform: uppercase;
+  color: var(--acento); border: 1.5px solid var(--acento); border-radius: 999px; padding: 10px 26px;
+  background: color-mix(in srgb, var(--fondo-acento) 85%, var(--fondo)); }
+.fecha { font-size: 24px; font-weight: 600; color: var(--texto-2); }
 
-.velo {
-  position: absolute; inset: 0; z-index: 1; pointer-events: none;
-  background:
-    radial-gradient(circle at 90% 10%, color-mix(in srgb, var(--acento) 15%, transparent) 0%, transparent 60%),
-    linear-gradient(180deg, rgba(0,0,0,0.6) 0%, var(--velo-inferior) 100%);
-}
+.cuerpo { flex: 1; min-height: 0; display: flex; gap: 44px; margin-top: 28px; }
+.izq { width: 720px; display: flex; flex-direction: column; }
+.der { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
 
-.grilla {
-  position: absolute; inset: 0; z-index: 1; pointer-events: none;
-  background-image:
-    repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0 1px, transparent 1px 96px),
-    repeating-linear-gradient(0deg,  rgba(255,255,255,0.02) 0 1px, transparent 1px 96px);
-}
+.activo { font-weight: 700; font-size: 26px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-borde); margin: 0; }
+/* Los cuatro estados llevan el mismo sello: ninguno se vende ni se dramatiza. */
+.sello { font-family: var(--font-display); font-weight: 700; font-size: 72px; letter-spacing: 0.04em; color: var(--blanco); margin: 14px 0 0;
+  padding: 10px 0; border-bottom: 4px solid var(--acento); align-self: flex-start; }
+.duelo { display: flex; gap: 22px; margin: 30px 0 0; }
+.lado { flex: 1; padding: 20px 22px; border-radius: 14px; border: 1.5px solid color-mix(in srgb, var(--acento) 40%, transparent);
+  background: color-mix(in srgb, var(--fondo-acento) 70%, var(--fondo)); }
+.rotulo { font-size: 20px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--acento); margin: 0; }
+.cifra { font-family: var(--font-display); font-weight: 700; font-size: 52px; color: var(--blanco); margin: 10px 0 0; }
+.avance { font-size: 30px; font-weight: 700; color: var(--texto-1); margin: 22px 0 0; }
+.hoy { font-size: 27px; line-height: 1.4; color: var(--texto-borde); margin: 18px 0 0; }
+.niveles { font-size: 21px; color: var(--texto-2); margin: auto 0 0; }
 
-.contenido {
-  position: relative; z-index: 2; flex: 1; min-height: 0;
-  display: flex; flex-direction: column; justify-content: space-between;
-}
+.grafico { border-radius: 16px; overflow: hidden; border: 1.5px solid color-mix(in srgb, var(--acento) 35%, transparent); }
+.grafico img { width: 100%; height: auto; display: block; background: var(--fondo); }
+.grafico-pie { font-size: 18px; color: var(--texto-3); margin: 8px 0 0; }
 
-.cabecera { display: flex; justify-content: space-between; align-items: flex-start; }
-
-.sello {
-  font-family: var(--font-display); font-weight: 700; font-size: 22px;
-  letter-spacing: 0.10em; text-transform: uppercase; color: var(--acento);
-  background: color-mix(in srgb, var(--fondo-acento) 85%, var(--fondo)); border: 1.5px solid var(--acento);
-  border-radius: 999px; padding: 10px 26px;
-}
-
-.fecha { font-size: 24px; font-weight: 600; color: var(--texto-2); letter-spacing: 0.05em; }
-
-.titulo {
-  font-family: var(--font-display); font-weight: 700; font-size: 68px;
-  color: var(--blanco); margin: 18px 0 0; letter-spacing: -0.01em;
-}
-
-.subtitulo {
-  font-family: var(--font-sans); font-weight: 400; font-size: 30px;
-  color: var(--texto-borde); margin: 10px 0 0;
-}
-
-
-.centro { flex: 1; display: flex; flex-direction: column; justify-content: center; max-width: 1800px; }
-.kicker { font-family: var(--font-display); font-weight: 700; font-size: 34px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--acento); margin: 0; }
-.titular { font-family: var(--font-display); font-weight: 700; font-size: 112px; line-height: 1.05; color: var(--blanco); margin: 18px 0 0; letter-spacing: -0.01em; }
-.bajada { font-size: 42px; line-height: 1.4; color: var(--texto-borde); margin: 28px 0 0; max-width: 1300px; }
-.claves { display: flex; gap: 16px; margin-top: 40px; flex-wrap: wrap; }
-.clave { font-weight: 700; font-size: 32px; color: var(--blanco); padding: 16px 34px; border-radius: 999px;
-  background: color-mix(in srgb, var(--fondo-acento) 80%, var(--fondo)); border: 1.5px solid color-mix(in srgb, var(--acento) 45%, transparent); }
-
-.dato { display: flex; gap: 22px; align-items: baseline; margin-top: 34px; }
-.dato-precio { font-family: var(--font-display); font-weight: 700; font-size: 48px; color: var(--blanco); }
-.dato-hora { font-size: 26px; font-weight: 600; letter-spacing: 0.06em; color: var(--texto-2); }
-.dato-precio:empty, .dato-hora:empty { display: none; }
-.footer-laminas { font-family: var(--font-sans); font-weight: 600; font-size: 26px; color: var(--texto-2); margin: 0 24px 0 auto; }
-.footer-laminas:empty { display: none; }
-
-.footer {
-  position: relative; z-index: 2; margin-top: 16px;
-  display: flex; justify-content: space-between; align-items: center;
-  padding-top: 12px; border-top: 1px solid color-mix(in srgb, var(--texto-1) 15%, transparent);
-}
+.footer { position: relative; z-index: 2; margin-top: 16px; padding-top: 12px; display: flex; justify-content: space-between; align-items: center;
+  border-top: 1px solid color-mix(in srgb, var(--texto-1) 15%, transparent); }
 .footer-marca { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: 0.08em; color: var(--acento); }
-.footer-pos { font-family: var(--font-sans); font-weight: 600; font-size: 24px; color: var(--texto-2); margin: 0; }
+.footer-texto { font-size: 19px; color: var(--texto-2); margin: 0; text-align: right; }
 </style>
 </head>
 <body>
   <div class="story">
     <div class="velo"></div>
-    <div class="grilla"></div>
     <div class="contenido">
       <div class="cabecera">
-        <span class="sello">{{sello}}</span>
-        <span class="fecha">{{fecha_hora}}</span>
+        <span class="chip">{{chip}}</span>
+        <span class="fecha">Datos al {{datos_al}}</span>
       </div>
-      <div class="centro">
-        <p class="kicker">{{kicker}}</p>
-        <h1 class="titular">{{titular}}</h1>
-        <p class="bajada">{{bajada}}</p>
-        <div class="claves">
-          <!-- FOR:claves -->
-          <span class="clave">{{texto}}</span>
-          <!-- ENDFOR:claves -->
+      <div class="cuerpo">
+        <div class="izq">
+          <p class="activo">{{activo}} · Escenario {{direccion}}</p>
+          <p class="sello">{{sello}}</p>
+          <div class="duelo">
+            <div class="lado"><p class="rotulo">Precio del lunes</p><p class="cifra">{{precio_lunes}}</p></div>
+            <div class="lado"><p class="rotulo">Precio hoy</p><p class="cifra">{{precio_hoy}}</p></div>
+          </div>
+          <p class="avance">{{avance}}</p>
+          <p class="hoy">{{hoy}}</p>
+          <p class="niveles">Se activa {{gatillo}} · Se anula {{invalidacion}} · Recorrido {{distancia}}</p>
         </div>
-        <div class="dato">
-          <span class="dato-precio">{{dato_precio}}</span>
-          <span class="dato-hora">{{dato_hora}}</span>
+        <div class="der">
+          <div class="grafico">
+            <!-- IF:chart_img --><img src="{{chart_src}}" alt="Gráfico de la semana"><!-- ENDIF:chart_img -->
+            <!-- IF:chart_svg --><!-- ENDIF:chart_svg -->
+          </div>
+          <p class="grafico-pie">{{pie_imagen}}</p>
         </div>
       </div>
     </div>
     <div class="footer">
       <span class="footer-marca">GRUPO INTELIGENCIA</span>
-      <span class="footer-laminas">{{total_laminas}}</span>
-      <p class="footer-pos">{{posicion}}</p>
+      <p class="footer-texto">{{firma}} · {{aviso}}</p>
     </div>
   </div>
 </body>

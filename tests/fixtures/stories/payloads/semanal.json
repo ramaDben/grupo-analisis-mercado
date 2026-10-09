@@ -1,0 +1,19 @@
+{
+  "plantilla": "semanal",
+  "chip": "ESCENARIO DE LA SEMANA · COMMODITIES",
+  "datos_al": "lunes 12-10 · 09:30 CLST",
+  "activo": "Oro · XAU/USD",
+  "titular": "El oro empieza la semana con la tendencia diaria a favor",
+  "precio": "4.000,00 USD",
+  "direccion": "ALCISTA",
+  "sesgo": "Alcista",
+  "lado": "sobre",
+  "borde": "bajo",
+  "gatillo": "4.030,00",
+  "invalidacion": "3.880,00",
+  "distancia": "60,00",
+  "temporalidad": "1D · posicional (días a semanas)",
+  "pie_imagen": "Oro · velas diarias · MetaTrader 5",
+  "firma": "Análisis: Nombre Apellido · Dirección de Análisis Técnico",
+  "aviso": "Análisis informativo. No constituye recomendación de inversión."
+}
