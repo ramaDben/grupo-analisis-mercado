@@ -72,6 +72,11 @@ from sincronizar_css_plantillas import (  # noqa: E402
 
 RAIZ = Path(__file__).resolve().parent.parent
 DIR_STORIES = RAIZ / "templates" / "stories"
+# Los informes HTML del bot de analistas consumen la misma paleta. Quedan bajo el
+# gate desde que nacen: una carpeta fuera de esta lista es una carpeta donde un
+# hex escrito a mano no lo ve nadie.
+DIR_INFORMES_ANALISTA = RAIZ / "templates" / "informes_analista"
+DIRS_PLANTILLAS = (DIR_STORIES, DIR_INFORMES_ANALISTA)
 HOJA = "marca.css"
 LINK = f'<link rel="stylesheet" href="{HOJA}">'
 
@@ -138,7 +143,7 @@ def _rgba_huerfanos(texto: str) -> list[str]:
 
 
 def _plantillas() -> list[Path]:
-    return sorted(p for p in DIR_STORIES.glob("*.html"))
+    return sorted(p for d in DIRS_PLANTILLAS for p in d.glob("*.html"))
 
 
 def _hojas() -> list[Path]:
@@ -148,7 +153,7 @@ def _hojas() -> list[Path]:
     archivo donde escribirlos es correcto. Cualquier otra hoja —hoy piel.css—
     debe consumir `var(--rol)` como lo hacen las plantillas.
     """
-    return sorted(p for p in DIR_STORIES.glob("*.css") if p.name != HOJA)
+    return sorted(p for d in DIRS_PLANTILLAS for p in d.glob("*.css") if p.name != HOJA)
 
 
 def _tokenizar(html: str, mapa: dict[str, str] | None = None) -> tuple[str, int, list[str]]:
