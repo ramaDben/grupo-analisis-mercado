@@ -47,6 +47,7 @@ def test_el_informe_sale_en_pdf_a4_con_la_firma(tmp_path):
 
 
 def test_un_pdf_vacio_no_se_entrega(tmp_path):
+    pytest.importorskip("pypdf")  # extra `informe`: el CI corre sin él
     vacio = tmp_path / "x.pdf"
     vacio.write_bytes(b"")
     with pytest.raises(pdf.PdfFallido):
