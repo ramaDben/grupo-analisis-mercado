@@ -26,7 +26,7 @@ informe con el nombre del cliente se acerca a una recomendación personalizada. 
 ```
 pedido → orden.py (gramática cerrada) → preparar.py (datos + gráficos, carpeta propia)
        → agy /analista (solo redacta pieza.json) → esquema.py (valida) → láminas
-       → informe_html.py (maqueta fija) → pdf.py (Chromium, A4) → Telegram + carpeta de Drive
+       → informe_html.py (maqueta fija) → pdf.py (Chromium, hoja de celular) → Telegram + carpeta de Drive
 ```
 
 - **Circula el PDF, no el HTML** (director, 2026-10-09). Google Drive no muestra HTML, en el
@@ -35,6 +35,14 @@ pedido → orden.py (gramática cerrada) → preparar.py (datos + gráficos, car
   queda en la carpeta del pedido en `data/informes_analistas/`: de ahí sale la huella de la
   bitácora y ahí se audita. Si Chromium falla, el HTML va **solo por Telegram** con el aviso, y
   Drive no recibe un archivo que no puede mostrar.
+- **El PDF se lee en el teléfono** (director, 2026-10-09). La hoja mide 108 x 192 mm, la
+  proporción de una pantalla: el visor la encaja a lo ancho y el cuerpo de 13 pt se lee sin zoom.
+  Una sola columna, las tablas como tarjetas y ningún bloque cortado entre páginas. No se fuerza
+  un salto por sección: se probó y dejaba hojas con dos líneas. El gráfico va en miniatura y al
+  **tocarlo** salta a su lámina apaisada al final del PDF (girar el teléfono la deja a pantalla
+  completa, y se amplía con los dedos sin perder nitidez); «← Volver al informe» regresa. No abre
+  la imagen fuera del PDF porque eso exige una dirección web, y el bot deja los archivos en la
+  carpeta sincronizada de Drive sin conocer la suya.
 
 - **agy solo redacta.** No recibe nada de lo que el analista escribió: recibe la ruta de la
   pieza. Datos, imágenes y láminas van sellados con una huella, y si cambian la pieza se descarta.

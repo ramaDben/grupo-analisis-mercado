@@ -65,14 +65,38 @@ def vinetas(texto: str) -> str:
     return "<ul>" + "".join(f"<li>{e(ln)}</li>" for ln in lineas) + "</ul>"
 
 
+AVISO_TOQUE = "🔍 Toca el gráfico para verlo en grande"
+
+
 def figura(dir_pedido: Path, archivo: str | None, pie: str = "") -> str:
+    """La miniatura del gráfico, enlazada a su lámina horizontal al final del informe.
+
+    En el teléfono la página mide 108 mm y el gráfico queda chico: tocarlo salta a
+    una página apaisada donde ocupa la pantalla entera. La lámina la arma `laminas`.
+    """
     if not archivo:
         return ""
     ruta = dir_pedido / archivo
     if not ruta.exists():
         raise InformeInvalido(f"falta la imagen {archivo}: la pieza no sale sin su gráfico")
-    leyenda = f"<figcaption>{e(pie)}</figcaption>" if pie else ""
-    return f'<figure class="figura"><img src="{_data_uri(ruta)}" alt="{e(pie)}">{leyenda}</figure>'
+    marca = slug(Path(archivo).stem)
+    leyenda = " · ".join(x for x in (e(pie), AVISO_TOQUE) if x)
+    return (f'<figure class="figura" id="vuelta-{marca}">'
+            f'<a class="figura-enlace" href="#grafico-{marca}"><img src="{_data_uri(ruta)}" alt="{e(pie)}"></a>'
+            f"<figcaption>{leyenda}</figcaption></figure>")
+
+
+_MINIATURA = re.compile(r'<a class="figura-enlace" href="#grafico-([\w-]+)"><img src="([^"]+)" alt="([^"]*)">')
+
+
+def laminas(cuerpo: str) -> str:
+    """Una página apaisada por gráfico del cuerpo, con el regreso a su miniatura."""
+    return "\n".join(
+        f'<section class="lamina" id="grafico-{marca}">'
+        f'<div class="lamina-encabezado"><a href="#vuelta-{marca}">← Volver al informe</a><span>{alt}</span></div>'
+        f'<img src="{src}" alt="{alt}"></section>'
+        for marca, src, alt in _MINIATURA.findall(cuerpo)
+    )
 
 
 def capa(rotulo: str, texto: str, clase: str = "") -> str:
@@ -86,13 +110,17 @@ def pildora(direccion: str) -> str:
     return f'<span class="direccion {slug(direccion)}">{e(direccion.upper())}</span>'
 
 
+CLASE_CIFRA = ' class="cifra"'
+
+
 def tabla(columnas: list[str], filas: list[list[str]], cifras: set[int] | None = None) -> str:
+    """En el teléfono cada fila es una tarjeta: el rótulo de la columna viaja en la celda."""
     cifras = cifras or set()
     cab = "".join(f"<th>{e(c)}</th>" for c in columnas)
     cuerpo = ""
     for fila in filas:
         celdas = "".join(
-            f'<td class="cifra">{c}</td>' if i in cifras else f"<td>{c}</td>"
+            f'<td data-rotulo="{e(columnas[i])}"{CLASE_CIFRA if i in cifras else ""}>{c}</td>'
             for i, c in enumerate(fila)
         )
         cuerpo += f"<tr>{celdas}</tr>"
@@ -122,10 +150,11 @@ def cuerpo_activo(p: dict[str, Any], dir_pedido: Path, foco: bool = False) -> st
         f"<p>🎯 Activo: <strong>{e(d['nombre'])} ({e(d['ticker_visible'])})</strong></p>"
         f"<p>📌 Nivel a vigilar: <strong>{e(d['nivel_vigilar'])}</strong></p>"
         f"<p>⚡ Qué esperar: {e(d['que_esperar'])}</p></div>",
+        # Portada: el resumen y el gráfico juntos, lo primero que se ve en la pantalla.
+        figura(dir_pedido, p["imagenes"].get("principal"), d.get("pie_imagen", "")),
         h2(1, "Lectura del día"),
         f"<p>{pildora(d['direccion'])}</p>",
         parrafos(ed["lectura"]),
-        figura(dir_pedido, p["imagenes"].get("principal"), d.get("pie_imagen", "")),
         h2(2, "Qué mueve al activo"),
         '<div class="dos-columnas">'
         f'<div class="caja caja-alza"><div class="caja-titulo">⬆️ Qué lo empuja al alza</div>{vinetas(ed["empuja_alza"])}</div>'
@@ -325,6 +354,7 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, analista: dict[str, Any], aut
     d, ed = pieza["datos"], pieza["editorial"]
     nombre = analista["nombre"]
     contacto = " · ".join(x for x in (analista.get("cargo"), analista.get("contacto")) if x)
+    cuerpo = CUERPOS[tipo](pieza, dir_pedido)
     tokens = {
         "titulo_documento": e(ed["titular"]),
         "fuentes": _fuentes(),
@@ -337,7 +367,8 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, analista: dict[str, Any], aut
         "rotulo_referencia": e(d["rotulo_referencia"]),
         "referencia": e(d["referencia"]),
         "edicion": e(d["edicion"]),
-        "cuerpo": CUERPOS[tipo](pieza, dir_pedido),
+        "cuerpo": cuerpo,
+        "laminas": laminas(cuerpo),
         "firma": bloque_firma(autor, hoy),
         "aviso_legal": e(AVISO_LEGAL),
         "contacto": e(f"{nombre} · {contacto}" if contacto else nombre),
