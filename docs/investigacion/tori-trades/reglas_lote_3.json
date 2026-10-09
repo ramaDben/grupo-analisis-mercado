@@ -1,0 +1,1120 @@
+{
+  "lote": 3,
+  "fichas": [
+    {"id": "Y8efWZ2M1y8", "modelo": "gemini-3.8-flash", "titulo": "How To Trade TRENDLINES (Full Guide)"},
+    {"id": "YROta7k11pE", "modelo": "gemini-2.5-flash", "titulo": "How I’m profitable with ONLY Trendlines"},
+    {"id": "ZMIDTRhLLHQ", "modelo": "AGY gemini-3.5-flash", "titulo": "This Futures Trading Setup Made Me $40,000 STEAL IT"},
+    {"id": "ZqC6Wgndpew", "modelo": "gemini-2.5-flash", "titulo": "Technicals DON'T Work In These Conditions (Do This Instead)"},
+    {"id": "bWrOP6Q9RTg", "modelo": "AGY gemini-3-flash-preview", "titulo": "How I Learned to Hold My Swing Trades Longer"},
+    {"id": "cTecm-uk8FA", "modelo": "gemini-3.7-flash", "titulo": "Everyone is trading Crude Oil, here’s why:"},
+    {"id": "eJ0_EvAql3g", "modelo": "gemini-3.7-flash", "titulo": "I Made $51,843 Day Trading this strategy..."},
+    {"id": "gokPlEnlhuE", "modelo": "gemini-3.7-flash", "titulo": "Unfortunately, trading really is this simple"},
+    {"id": "htpEDz9zCQg", "modelo": "AGY gemini-3.5-flash-lite", "titulo": "HOW TO: My Strategy to STOP Over-Trading"}
+  ],
+  "reglas": [
+    {
+      "tema": "trazado",
+      "regla": "Trazar las líneas de tendencia con la herramienta rayo (semirrecta, Ray tool) partiendo del pivote extremo, en lugar de la línea de tendencia de dos extremos.",
+      "programable": true,
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "16:59", "fuente": "dice"},
+        {"id": "gokPlEnlhuE", "minuto": "02:29", "fuente": "dice"},
+        {"id": "ZMIDTRhLLHQ", "minuto": "07:50", "fuente": "se_ve"}
+      ],
+      "nota": "La semirrecta se proyecta hacia adelante desde el ancla."
+    },
+    {
+      "tema": "trazado",
+      "regla": "Anclar la línea en los extremos de las mechas (máximos y mínimos de mecha), no en los cuerpos.",
+      "programable": true,
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "17:05", "fuente": "se_ve"},
+        {"id": "YROta7k11pE", "minuto": "01:36", "fuente": "se_ve"},
+        {"id": "ZMIDTRhLLHQ", "minuto": "04:29", "fuente": "se_ve"},
+        {"id": "cTecm-uk8FA", "minuto": "11:00", "fuente": "dice"},
+        {"id": "eJ0_EvAql3g", "minuto": "03:52", "fuente": "se_ve"},
+        {"id": "gokPlEnlhuE", "minuto": "02:34", "fuente": "se_ve"}
+      ],
+      "nota": "En la mayoría de las fichas es lo que se ve en el gráfico, no algo que ella diga."
+    },
+    {
+      "tema": "trazado",
+      "regla": "La línea debe tocar la mayor cantidad de puntos posibles sin que el precio la atraviese ni la intersecte entre los toques.",
+      "programable": true,
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "31:27", "fuente": "dice"},
+        {"id": "YROta7k11pE", "minuto": "01:40", "fuente": "dice"},
+        {"id": "gokPlEnlhuE", "minuto": "02:33", "fuente": "dice"}
+      ],
+      "nota": "Y8efWZ2M1y8 [32:15] añade que si el precio perfora la línea antes de tiempo, la línea no es válida."
+    },
+    {
+      "tema": "trazado",
+      "regla": "En tendencia alcista el Punto A es el mínimo más bajo visible y la línea conecta los mínimos de oscilación (swing lows); en tendencia bajista el Punto A es el máximo más alto visible y conecta los máximos de oscilación (swing highs).",
+      "programable": true,
+      "evidencia": [
+        {"id": "gokPlEnlhuE", "minuto": "02:33", "fuente": "dice"},
+        {"id": "gokPlEnlhuE", "minuto": "03:01", "fuente": "dice"},
+        {"id": "Y8efWZ2M1y8", "minuto": "17:03", "fuente": "dice"}
+      ],
+      "nota": "gokPlEnlhuE [04:26] arranca el análisis mensual en el dato más antiguo disponible."
+    },
+    {
+      "tema": "trazado",
+      "regla": "Una línea se puede trazar con un mínimo de 2 puntos (Punto A y Punto B).",
+      "programable": true,
+      "evidencia": [
+        {"id": "gokPlEnlhuE", "minuto": "05:26", "fuente": "dice"}
+      ],
+      "nota": "Es el mínimo para dibujarla, no para operar su ruptura (ver la regla de 3 toques). eJ0_EvAql3g también lo afirma pero la ficha no da minuto propio."
+    },
+    {
+      "tema": "trazado",
+      "regla": "Dibujar tanto líneas de tendencia alcistas como bajistas en el gráfico.",
+      "programable": true,
+      "evidencia": [
+        {"id": "YROta7k11pE", "minuto": "01:43", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "trazado",
+      "regla": "Un pivote es válido cuando el precio llega a la línea, la respeta sin perforarla y es rechazado con claridad en la dirección contraria.",
+      "programable": true,
+      "evidencia": [
+        {"id": "eJ0_EvAql3g", "minuto": "05:40", "fuente": "dice"},
+        {"id": "cTecm-uk8FA", "minuto": "11:00", "fuente": "dice"}
+      ],
+      "nota": "Ninguna ficha da una definición numérica de pivote."
+    },
+    {
+      "tema": "validez",
+      "regla": "Para operar la ruptura, la línea debe tener como mínimo 3 toques; no se toman rupturas de líneas con solo 2 toques.",
+      "programable": true,
+      "evidencia": [
+        {"id": "YROta7k11pE", "minuto": "01:08", "fuente": "dice"},
+        {"id": "ZMIDTRhLLHQ", "minuto": "04:32", "fuente": "dice"},
+        {"id": "cTecm-uk8FA", "minuto": "10:42", "fuente": "dice"}
+      ],
+      "nota": "Setup llamado «3+ touchpoint trendline break» en cTecm-uk8FA."
+    },
+    {
+      "tema": "validez",
+      "regla": "Para habilitar la entrada, la línea debe registrar exactamente 3 toques limpios antes de ser rota.",
+      "programable": true,
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "35:44", "fuente": "dice"},
+        {"id": "Y8efWZ2M1y8", "minuto": "37:41", "fuente": "dice"}
+      ],
+      "nota": "La ficha dice «exactamente 3»; choca con el «mínimo 3» de otras fichas (ver contradicciones)."
+    },
+    {
+      "tema": "validez",
+      "regla": "A más toques respetados sin perforar, mayor peso y calidad tiene la línea.",
+      "programable": true,
+      "evidencia": [
+        {"id": "ZMIDTRhLLHQ", "minuto": "04:32", "fuente": "dice"},
+        {"id": "bWrOP6Q9RTg", "minuto": "04:09", "fuente": "dice"},
+        {"id": "eJ0_EvAql3g", "minuto": "06:00", "fuente": "dice"},
+        {"id": "gokPlEnlhuE", "minuto": "02:36", "fuente": "dice"}
+      ],
+      "nota": "ZMIDTRhLLHQ: 3 toques la convierten en setup A+. eJ0_EvAql3g destaca líneas con 4 y 5 toques."
+    },
+    {
+      "tema": "validez",
+      "regla": "Las líneas de temporalidades mayores pesan más que las de temporalidades menores (una línea de 1 minuto no pesa lo mismo que una de 4h o diaria).",
+      "programable": true,
+      "evidencia": [
+        {"id": "YROta7k11pE", "minuto": "02:38", "fuente": "dice"},
+        {"id": "ZMIDTRhLLHQ", "minuto": "04:19", "fuente": "se_ve"},
+        {"id": "eJ0_EvAql3g", "minuto": "06:18", "fuente": "dice"},
+        {"id": "gokPlEnlhuE", "minuto": "04:14", "fuente": "dice"}
+      ],
+      "nota": "gokPlEnlhuE [03:45] califica de «malas/aleatorias» las líneas trazadas aisladas en un marco menor sin conexión con los mayores."
+    },
+    {
+      "tema": "validez",
+      "regla": "En gráfico de 4 horas, preferir líneas menos empinadas: cuanto más empinada la línea, más probable que el precio la cruce sin cambiar de tendencia.",
+      "programable": true,
+      "evidencia": [
+        {"id": "ZMIDTRhLLHQ", "minuto": "07:05", "fuente": "dice"},
+        {"id": "ZMIDTRhLLHQ", "minuto": "07:13", "fuente": "dice"}
+      ],
+      "nota": "Aplica a la línea de decisión inicial; la misma ficha traza después una línea más empinada para seguimiento."
+    },
+    {
+      "tema": "validez",
+      "regla": "La línea debe abarcar más de una semana de datos antes de la ruptura.",
+      "programable": true,
+      "evidencia": [
+        {"id": "cTecm-uk8FA", "minuto": "10:46", "fuente": "dice"}
+      ],
+      "nota": "Ejemplo en gráfico de 1h: toque 1 el 8 de marzo, ruptura el 27 de marzo [11:31]."
+    },
+    {
+      "tema": "validez",
+      "regla": "Una separación temporal corta o muy amplia entre toques no invalida la línea mientras capture la velocidad del movimiento.",
+      "programable": true,
+      "evidencia": [
+        {"id": "gokPlEnlhuE", "minuto": "07:12", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "validez",
+      "regla": "Un setup A+ exige a la vez: mercado en tendencia, línea con 3 o más toques, precio cerca de la línea de seguridad (riesgo bajo) y más de una semana de datos en la línea.",
+      "programable": true,
+      "evidencia": [
+        {"id": "cTecm-uk8FA", "minuto": "10:47", "fuente": "dice"}
+      ],
+      "nota": "Checklist de TradeZella."
+    },
+    {
+      "tema": "ajuste",
+      "regla": "Al bajar de temporalidad, ajustar ligeramente las anclas para que la línea pase por las mechas exactas de los pivotes que se ven en el marco menor.",
+      "programable": true,
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "33:34", "fuente": "dice"},
+        {"id": "YROta7k11pE", "minuto": "02:02", "fuente": "dice"},
+        {"id": "gokPlEnlhuE", "minuto": "09:22", "fuente": "dice"}
+      ],
+      "nota": "gokPlEnlhuE: mueve el Punto B a los nuevos mínimos cuando la línea queda desalineada (wonky)."
+    },
+    {
+      "tema": "ajuste",
+      "regla": "Para trazar una línea más empinada, el último toque (Punto B) de la línea anterior pasa a ser el Punto A de la nueva línea.",
+      "programable": true,
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "32:47", "fuente": "dice"},
+        {"id": "gokPlEnlhuE", "minuto": "06:11", "fuente": "dice"}
+      ],
+      "nota": "gokPlEnlhuE lo llama su regla general (rule of thumb)."
+    },
+    {
+      "tema": "ajuste",
+      "regla": "Para la línea más empinada de seguimiento, unir el mínimo inicial del impulso (Punto A) con el último mínimo relevante del retroceso.",
+      "programable": true,
+      "evidencia": [
+        {"id": "ZMIDTRhLLHQ", "minuto": "07:50", "fuente": "se_ve"}
+      ],
+      "nota": "Se traza cuando el precio acelera a favor y deja un retroceso o lateralización clara."
+    },
+    {
+      "tema": "ajuste",
+      "regla": "A medida que el precio acelera, trazar líneas progresivamente más empinadas, formando un abanico (fan).",
+      "programable": true,
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "32:44", "fuente": "dice"},
+        {"id": "YROta7k11pE", "minuto": "01:50", "fuente": "dice"},
+        {"id": "eJ0_EvAql3g", "minuto": "12:00", "fuente": "dice"},
+        {"id": "gokPlEnlhuE", "minuto": "06:38", "fuente": "dice"}
+      ],
+      "nota": "eJ0_EvAql3g traza una línea nueva más empinada en lugar de mover la anterior."
+    },
+    {
+      "tema": "ajuste",
+      "regla": "No borrar las líneas viejas: se mantienen en el gráfico como contexto y estructura de referencia.",
+      "programable": true,
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "32:21", "fuente": "dice"},
+        {"id": "YROta7k11pE", "minuto": "02:14", "fuente": "dice"},
+        {"id": "ZMIDTRhLLHQ", "minuto": "07:15", "fuente": "dice"},
+        {"id": "cTecm-uk8FA", "minuto": "21:00", "fuente": "dice"},
+        {"id": "eJ0_EvAql3g", "minuto": "08:45", "fuente": "dice"},
+        {"id": "gokPlEnlhuE", "minuto": "08:02", "fuente": "dice"}
+      ],
+      "nota": "ZMIDTRhLLHQ: la línea original menos empinada sigue definiendo el stop de seguridad de mediano plazo."
+    },
+    {
+      "tema": "ajuste",
+      "regla": "Eliminar las líneas secundarias o más empinadas una vez que el precio las rompió y ya no son útiles.",
+      "programable": true,
+      "evidencia": [
+        {"id": "eJ0_EvAql3g", "minuto": "15:24", "fuente": "dice"}
+      ],
+      "nota": "La línea principal se conserva mientras el precio siga dentro de su estructura."
+    },
+    {
+      "tema": "ajuste",
+      "regla": "Si tras romper el precio se extiende y luego hace una corrección profunda o consolidación, redibujar la línea original para abarcar el nuevo swing de máximos.",
+      "programable": true,
+      "evidencia": [
+        {"id": "cTecm-uk8FA", "minuto": "20:57", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "ruptura",
+      "regla": "La ruptura cuenta cuando una vela cierra con el cuerpo al otro lado de la línea.",
+      "programable": true,
+      "evidencia": [
+        {"id": "gokPlEnlhuE", "minuto": "16:23", "fuente": "dice"},
+        {"id": "ZMIDTRhLLHQ", "minuto": "04:34", "fuente": "se_ve"},
+        {"id": "eJ0_EvAql3g", "minuto": "04:23", "fuente": "se_ve"},
+        {"id": "Y8efWZ2M1y8", "minuto": "35:52", "fuente": "se_ve"}
+      ],
+      "nota": "En gokPlEnlhuE es la condición de salida de la línea de seguridad; en las demás, el gatillo de ruptura."
+    },
+    {
+      "tema": "ruptura",
+      "regla": "Una mecha que solo toca o rebota en la línea la respeta; la violación requiere el cierre de la vela perforándola.",
+      "programable": true,
+      "evidencia": [
+        {"id": "gokPlEnlhuE", "minuto": "16:18", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "ruptura",
+      "regla": "No se exige retesteo: se opera la ruptura directa de la línea.",
+      "programable": true,
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "35:52", "fuente": "dice"},
+        {"id": "ZMIDTRhLLHQ", "minuto": "04:37", "fuente": "dice"},
+        {"id": "cTecm-uk8FA", "minuto": "07:11", "fuente": "dice"},
+        {"id": "eJ0_EvAql3g", "minuto": "04:24", "fuente": "dice"}
+      ],
+      "nota": "El «Break & Retest» figura como estrategia alternativa separada (Y8efWZ2M1y8 [24:55], cTecm-uk8FA [10:41])."
+    },
+    {
+      "tema": "ruptura",
+      "regla": "Confirmar la ruptura con el cierre de la vela o con un retesteo antes de entrar, para filtrar falsas rupturas; aceptar entrar un poco más tarde a cambio de confirmación.",
+      "programable": true,
+      "evidencia": [
+        {"id": "bWrOP6Q9RTg", "minuto": "03:38", "fuente": "dice"},
+        {"id": "YROta7k11pE", "minuto": "02:55", "fuente": "dice"},
+        {"id": "YROta7k11pE", "minuto": "02:59", "fuente": "dice"}
+      ],
+      "nota": "YROta7k11pE presenta entrar sin retesteo como un error por impaciencia."
+    },
+    {
+      "tema": "ruptura",
+      "regla": "En mercados con fuerte volatilidad e impulso, no esperar el cierre de la vela de 1 hora: el precio puede alejarse tanto que se pierde el movimiento.",
+      "programable": true,
+      "evidencia": [
+        {"id": "cTecm-uk8FA", "minuto": "07:33", "fuente": "dice"}
+      ],
+      "nota": "Lo plantea como dilema (esperar cierre vs entrar en la ruptura) [07:15]."
+    },
+    {
+      "tema": "ruptura",
+      "regla": "La ruptura gana confianza si antes el precio rechazó un soporte horizontal relevante.",
+      "programable": true,
+      "evidencia": [
+        {"id": "ZMIDTRhLLHQ", "minuto": "05:13", "fuente": "dice"}
+      ],
+      "nota": "Soporte de 935.2 en el ejemplo de platino."
+    },
+    {
+      "tema": "ruptura",
+      "regla": "Entrar justo en la ruptura suele parecer una falsa ruptura y dar drawdown inmediato; la tesis sigue intacta mientras el precio no vulnere la línea de seguridad opuesta.",
+      "programable": true,
+      "evidencia": [
+        {"id": "eJ0_EvAql3g", "minuto": "04:34", "fuente": "dice"},
+        {"id": "eJ0_EvAql3g", "minuto": "04:50", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "ruptura",
+      "regla": "En condiciones de alta volatilidad, una ruptura que parece limpia puede ser falsa y la ruptura real puede ser la segunda.",
+      "programable": true,
+      "evidencia": [
+        {"id": "ZqC6Wgndpew", "minuto": "03:19", "fuente": "dice"},
+        {"id": "ZqC6Wgndpew", "minuto": "03:37", "fuente": "dice"}
+      ],
+      "nota": "No da un filtro concreto; lo usa para justificar los ajustes de temporalidad, salida y tamaño."
+    },
+    {
+      "tema": "entrada",
+      "regla": "El gatillo de entrada es la ruptura de la línea de tendencia de 3 o más toques.",
+      "programable": true,
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "35:52", "fuente": "dice"},
+        {"id": "ZMIDTRhLLHQ", "minuto": "05:27", "fuente": "dice"},
+        {"id": "cTecm-uk8FA", "minuto": "07:11", "fuente": "dice"},
+        {"id": "bWrOP6Q9RTg", "minuto": "04:03", "fuente": "dice"},
+        {"id": "eJ0_EvAql3g", "minuto": "04:23", "fuente": "dice"}
+      ],
+      "nota": "Se define como «breakout trader» (ZMIDTRhLLHQ [04:37], cTecm-uk8FA [07:11], ZqC6Wgndpew [08:57])."
+    },
+    {
+      "tema": "entrada",
+      "regla": "Entrar con orden a mercado.",
+      "programable": true,
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "36:43", "fuente": "se_ve"},
+        {"id": "ZMIDTRhLLHQ", "minuto": "10:41", "fuente": "dice"},
+        {"id": "cTecm-uk8FA", "minuto": "07:55", "fuente": "dice"},
+        {"id": "gokPlEnlhuE", "minuto": "15:24", "fuente": "se_ve"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "entrada",
+      "regla": "Inmediatamente tras la ruptura, trazar la línea de seguridad (safety line) uniendo los pivotes del nuevo impulso a favor de la operación, y luego entrar.",
+      "programable": true,
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "36:01", "fuente": "dice"},
+        {"id": "Y8efWZ2M1y8", "minuto": "37:54", "fuente": "se_ve"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "entrada",
+      "regla": "Entrar en el primer quiebre de línea de tendencia de una reversión, para capturar el movimiento más largo.",
+      "programable": true,
+      "evidencia": [
+        {"id": "bWrOP6Q9RTg", "minuto": "01:40", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "entrada",
+      "regla": "Entrar solo si el precio de ruptura está muy cerca de la línea de seguridad, para que el riesgo quede acotado.",
+      "programable": true,
+      "evidencia": [
+        {"id": "cTecm-uk8FA", "minuto": "11:10", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "entrada",
+      "regla": "Entrada en rebote («Action Line»): cuando el precio retrocede a la línea activa del marco operativo, la toca y muestra rechazo sin cerrar al otro lado, entrar a mercado a favor de la tendencia.",
+      "programable": true,
+      "evidencia": [
+        {"id": "gokPlEnlhuE", "minuto": "13:06", "fuente": "dice"},
+        {"id": "gokPlEnlhuE", "minuto": "14:41", "fuente": "dice"}
+      ],
+      "nota": "En este escenario la línea de acción y la de seguridad son la misma línea [15:56]."
+    },
+    {
+      "tema": "entrada",
+      "regla": "Definir antes de operar el criterio exacto de entrada y de salida (retesteo, ruptura, tercer toque, cierre de vela) y aplicarlo siempre igual.",
+      "programable": false,
+      "evidencia": [
+        {"id": "YROta7k11pE", "minuto": "00:39", "fuente": "dice"},
+        {"id": "YROta7k11pE", "minuto": "00:45", "fuente": "dice"}
+      ],
+      "nota": "Es una meta-regla de consistencia; YROta7k11pE [01:03] agrega no cambiar la regla de esperar el cierre."
+    },
+    {
+      "tema": "stop",
+      "regla": "La invalidación es la ruptura de la línea de seguridad: si el precio la rompe en contra, cerrar la operación de inmediato.",
+      "programable": true,
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "37:11", "fuente": "dice"},
+        {"id": "eJ0_EvAql3g", "minuto": "01:45", "fuente": "dice"},
+        {"id": "gokPlEnlhuE", "minuto": "16:22", "fuente": "dice"},
+        {"id": "cTecm-uk8FA", "minuto": "18:16", "fuente": "dice"},
+        {"id": "ZMIDTRhLLHQ", "minuto": "09:02", "fuente": "dice"}
+      ],
+      "nota": "gokPlEnlhuE y eJ0_EvAql3g [regla 4] exigen el cierre de la vela al otro lado. La safety line es la línea de tendencia actual a favor de la operación."
+    },
+    {
+      "tema": "stop",
+      "regla": "Colocar el stop al otro lado de la estructura opuesta: justo detrás de la línea de tendencia contraria (safety line) que sostiene la entrada.",
+      "programable": true,
+      "evidencia": [
+        {"id": "ZMIDTRhLLHQ", "minuto": "05:37", "fuente": "dice"},
+        {"id": "cTecm-uk8FA", "minuto": "08:00", "fuente": "dice"},
+        {"id": "cTecm-uk8FA", "minuto": "09:59", "fuente": "se_ve"}
+      ],
+      "nota": "ZMIDTRhLLHQ [06:00] lo ubica además bajo el soporte horizontal clave (935.2)."
+    },
+    {
+      "tema": "stop",
+      "regla": "No usar stops por distancia fija en puntos, porcentaje fijo ni monto monetario predeterminado; el stop sale de la estructura del gráfico.",
+      "programable": true,
+      "evidencia": [
+        {"id": "ZMIDTRhLLHQ", "minuto": "15:28", "fuente": "dice"},
+        {"id": "cTecm-uk8FA", "minuto": "08:00", "fuente": "dice"},
+        {"id": "eJ0_EvAql3g", "minuto": "01:47", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "stop",
+      "regla": "No usar soportes y resistencias horizontales para ubicar los stop loss.",
+      "programable": true,
+      "evidencia": [
+        {"id": "ZqC6Wgndpew", "minuto": "06:38", "fuente": "dice"}
+      ],
+      "nota": "Choca con ZMIDTRhLLHQ, que pone el stop bajo un soporte horizontal (ver contradicciones)."
+    },
+    {
+      "tema": "stop",
+      "regla": "No cargar orden de stop loss ni take profit en la boleta; la invalidación es manual al cierre de una vela al otro lado de la línea.",
+      "programable": true,
+      "evidencia": [
+        {"id": "gokPlEnlhuE", "minuto": "15:24", "fuente": "se_ve"}
+      ],
+      "nota": "eJ0_EvAql3g sí tenía stops de contingencia cargados (105.51 y 104.85) [19:10]."
+    },
+    {
+      "tema": "stop",
+      "regla": "Tener siempre un stop loss colocado por si la operación no resulta ser el movimiento esperado.",
+      "programable": true,
+      "evidencia": [
+        {"id": "bWrOP6Q9RTg", "minuto": "04:47", "fuente": "dice"}
+      ],
+      "nota": "Los llama «extintores»; no da ubicación técnica."
+    },
+    {
+      "tema": "salida",
+      "regla": "Mantener la posición mientras el precio respete la línea de seguridad (rebote en ella), aunque el flotante retroceda.",
+      "programable": true,
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "37:19", "fuente": "dice"},
+        {"id": "eJ0_EvAql3g", "minuto": "04:49", "fuente": "dice"},
+        {"id": "eJ0_EvAql3g", "minuto": "07:25", "fuente": "dice"},
+        {"id": "gokPlEnlhuE", "minuto": "14:01", "fuente": "dice"},
+        {"id": "gokPlEnlhuE", "minuto": "16:55", "fuente": "se_ve"}
+      ],
+      "nota": "eJ0_EvAql3g devolvió entre 15.000 y 20.000 USD de flotante sin cerrar. «The trend is your friend until the end» (gokPlEnlhuE [00:58])."
+    },
+    {
+      "tema": "salida",
+      "regla": "No salir antes de que el precio rompa la línea de seguridad: salir antes por miedo o por el monto ganado deja ir el movimiento mayor.",
+      "programable": true,
+      "evidencia": [
+        {"id": "YROta7k11pE", "minuto": "03:08", "fuente": "dice"},
+        {"id": "ZMIDTRhLLHQ", "minuto": "09:02", "fuente": "dice"}
+      ],
+      "nota": "Ambas lo derivan de operaciones propias en que salieron antes."
+    },
+    {
+      "tema": "salida",
+      "regla": "No usar objetivos de precio fijos ni ratios R:R predefinidos; la salida es dinámica, guiada por la línea de seguridad.",
+      "programable": true,
+      "evidencia": [
+        {"id": "gokPlEnlhuE", "minuto": "15:24", "fuente": "se_ve"},
+        {"id": "Y8efWZ2M1y8", "minuto": "36:33", "fuente": "dice"},
+        {"id": "eJ0_EvAql3g", "minuto": "17:28", "fuente": "dice"}
+      ],
+      "nota": "eJ0_EvAql3g: «My take profit and my stop loss is one and the same»."
+    },
+    {
+      "tema": "salida",
+      "regla": "Es válido tomar ganancias al llegar a un soporte o resistencia horizontal mayor donde el precio rechazó antes, como alternativa a esperar la ruptura de la línea de seguridad.",
+      "programable": true,
+      "evidencia": [
+        {"id": "cTecm-uk8FA", "minuto": "16:07", "fuente": "dice"},
+        {"id": "ZqC6Wgndpew", "minuto": "06:35", "fuente": "dice"},
+        {"id": "eJ0_EvAql3g", "minuto": "13:54", "fuente": "dice"}
+      ],
+      "nota": "cTecm-uk8FA lo da como una de dos salidas válidas; ZqC6Wgndpew lo aplica en alta volatilidad; eJ0_EvAql3g lo hizo con confluencia de noticias y cierre de semana."
+    },
+    {
+      "tema": "salida",
+      "regla": "Cerrar la posición antes del cierre semanal para evitar el riesgo del fin de semana.",
+      "programable": true,
+      "evidencia": [
+        {"id": "eJ0_EvAql3g", "minuto": "13:36", "fuente": "dice"},
+        {"id": "cTecm-uk8FA", "minuto": "18:41", "fuente": "se_ve"}
+      ],
+      "nota": "En cTecm-uk8FA es una de dos variantes; en la otra mantiene durante el fin de semana [20:02]."
+    },
+    {
+      "tema": "salida",
+      "regla": "Cerrar la posición completa de una vez, sin tomas parciales.",
+      "programable": true,
+      "evidencia": [
+        {"id": "eJ0_EvAql3g", "minuto": "14:45", "fuente": "se_ve"},
+        {"id": "cTecm-uk8FA", "minuto": "18:41", "fuente": "se_ve"},
+        {"id": "gokPlEnlhuE", "minuto": "17:38", "fuente": "se_ve"}
+      ],
+      "nota": "Es lo que hace en las operaciones mostradas; no lo enuncia como regla."
+    },
+    {
+      "tema": "salida",
+      "regla": "Cerrar cuando el precio deja de tener tendencia en esa dirección.",
+      "programable": true,
+      "evidencia": [
+        {"id": "bWrOP6Q9RTg", "minuto": "09:03", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "salida",
+      "regla": "En alta volatilidad, salir antes: mantener las operaciones un día o pocos días en lugar de días o semanas.",
+      "programable": true,
+      "evidencia": [
+        {"id": "ZqC6Wgndpew", "minuto": "05:47", "fuente": "dice"},
+        {"id": "ZqC6Wgndpew", "minuto": "05:51", "fuente": "dice"}
+      ],
+      "nota": "Para evitar devolver ganancias por anuncios repentinos."
+    },
+    {
+      "tema": "salida",
+      "regla": "En day trading, cerrar las operaciones antes de la noche y no mantenerlas overnight.",
+      "programable": true,
+      "evidencia": [
+        {"id": "htpEDz9zCQg", "minuto": "11:27", "fuente": "dice"},
+        {"id": "htpEDz9zCQg", "minuto": "11:30", "fuente": "dice"}
+      ],
+      "nota": "Video de su etapa de day trading (2020)."
+    },
+    {
+      "tema": "gestion",
+      "regla": "El riesgo es dinámico: con el avance a favor, el stop pasa del riesgo inicial a breakeven y luego a ganancia asegurada.",
+      "programable": true,
+      "evidencia": [
+        {"id": "eJ0_EvAql3g", "minuto": "01:44", "fuente": "dice"},
+        {"id": "cTecm-uk8FA", "minuto": "14:17", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "gestion",
+      "regla": "Subir el stop solo cuando se confirma un nuevo mínimo de oscilación (swing low) que respeta la línea de seguridad, no vela a vela.",
+      "programable": true,
+      "evidencia": [
+        {"id": "cTecm-uk8FA", "minuto": "12:48", "fuente": "dice"},
+        {"id": "cTecm-uk8FA", "minuto": "15:33", "fuente": "dice"}
+      ],
+      "nota": "En el ejemplo de 1h, entre 3 y 5 velas entre ajustes."
+    },
+    {
+      "tema": "gestion",
+      "regla": "Cuando el precio avanza con fuerza a favor creando nuevos pivotes, trazar una línea de seguimiento más empinada para reducir la devolución de beneficios.",
+      "programable": true,
+      "evidencia": [
+        {"id": "eJ0_EvAql3g", "minuto": "12:28", "fuente": "dice"},
+        {"id": "ZMIDTRhLLHQ", "minuto": "07:50", "fuente": "se_ve"}
+      ],
+      "nota": "ZMIDTRhLLHQ [08:24]: la salida técnica pasa a ser la ruptura de esa línea de seguimiento."
+    },
+    {
+      "tema": "gestion",
+      "regla": "Se puede añadir contratos solo tras un rebote confirmado en la línea de seguridad seguido de una nueva ruptura de una línea menor.",
+      "programable": true,
+      "evidencia": [
+        {"id": "eJ0_EvAql3g", "minuto": "05:40", "fuente": "dice"},
+        {"id": "eJ0_EvAql3g", "minuto": "05:52", "fuente": "se_ve"}
+      ],
+      "nota": "Pasó de 3 a 4 contratos."
+    },
+    {
+      "tema": "gestion",
+      "regla": "Con la operación abierta no ajustar ni cambiar la posición por las fluctuaciones; esperar solo la condición de salida.",
+      "programable": true,
+      "evidencia": [
+        {"id": "gokPlEnlhuE", "minuto": "17:26", "fuente": "dice"},
+        {"id": "htpEDz9zCQg", "minuto": "08:31", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "temporalidades",
+      "regla": "Hacer análisis top-down en orden estricto: mensual, semanal, diario, 4 horas y luego la temporalidad operativa.",
+      "programable": true,
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "31:07", "fuente": "dice"},
+        {"id": "YROta7k11pE", "minuto": "01:30", "fuente": "dice"},
+        {"id": "eJ0_EvAql3g", "minuto": "03:16", "fuente": "dice"},
+        {"id": "gokPlEnlhuE", "minuto": "08:38", "fuente": "dice"}
+      ],
+      "nota": "Empieza en la temporalidad más alta disponible (mensual)."
+    },
+    {
+      "tema": "temporalidades",
+      "regla": "Al bajar de temporalidad, cada línea debe conectar con las de las temporalidades superiores; no trazar líneas solo en temporalidades bajas sin conexión con las altas.",
+      "programable": true,
+      "evidencia": [
+        {"id": "YROta7k11pE", "minuto": "01:19", "fuente": "dice"},
+        {"id": "YROta7k11pE", "minuto": "01:46", "fuente": "dice"},
+        {"id": "gokPlEnlhuE", "minuto": "03:45", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "temporalidades",
+      "regla": "La temporalidad operativa y de entrada habitual es 4 horas.",
+      "programable": true,
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "34:57", "fuente": "dice"},
+        {"id": "ZMIDTRhLLHQ", "minuto": "05:54", "fuente": "dice"},
+        {"id": "ZqC6Wgndpew", "minuto": "05:08", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "temporalidades",
+      "regla": "La entrada y la gestión se ejecutan en gráfico de 1 hora.",
+      "programable": true,
+      "evidencia": [
+        {"id": "cTecm-uk8FA", "minuto": "03:29", "fuente": "dice"},
+        {"id": "eJ0_EvAql3g", "minuto": "03:31", "fuente": "dice"},
+        {"id": "gokPlEnlhuE", "minuto": "12:18", "fuente": "dice"}
+      ],
+      "nota": "Choca con 4H como marco habitual (ver contradicciones); en dos fichas se explica por la volatilidad."
+    },
+    {
+      "tema": "temporalidades",
+      "regla": "En alta volatilidad, bajar de 4 horas a 1 hora para entrar y salir más rápido y tener más oportunidades, y volver a 4 horas cuando el mercado se normalice.",
+      "programable": true,
+      "evidencia": [
+        {"id": "ZqC6Wgndpew", "minuto": "04:47", "fuente": "dice"},
+        {"id": "ZqC6Wgndpew", "minuto": "07:58", "fuente": "dice"},
+        {"id": "eJ0_EvAql3g", "minuto": "03:35", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "temporalidades",
+      "regla": "Trazar las líneas y operar en la misma temporalidad (si opera en 5 minutos, traza en 5 minutos).",
+      "programable": true,
+      "evidencia": [
+        {"id": "bWrOP6Q9RTg", "minuto": "05:39", "fuente": "dice"}
+      ],
+      "nota": "Menciona 5m, 1h y 4h [05:27]."
+    },
+    {
+      "tema": "temporalidades",
+      "regla": "Operar en 30 minutos en lugar de 5 minutos para reducir la cantidad de operaciones y las decisiones impulsivas.",
+      "programable": true,
+      "evidencia": [
+        {"id": "htpEDz9zCQg", "minuto": "04:19", "fuente": "dice"},
+        {"id": "htpEDz9zCQg", "minuto": "04:33", "fuente": "dice"}
+      ],
+      "nota": "Contexto de day trading en 2020."
+    },
+    {
+      "tema": "temporalidades",
+      "regla": "Quien opera intradía puede bajar la temporalidad operativa a 30 minutos o 5 minutos.",
+      "programable": true,
+      "evidencia": [
+        {"id": "gokPlEnlhuE", "minuto": "08:47", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "temporalidades",
+      "regla": "Las operaciones swing duran de varios días a semanas.",
+      "programable": false,
+      "evidencia": [
+        {"id": "ZMIDTRhLLHQ", "minuto": "14:26", "fuente": "dice"},
+        {"id": "ZqC6Wgndpew", "minuto": "05:08", "fuente": "dice"},
+        {"id": "eJ0_EvAql3g", "minuto": "00:04", "fuente": "dice"},
+        {"id": "gokPlEnlhuE", "minuto": "15:26", "fuente": "se_ve"}
+      ],
+      "nota": "Ejemplos: 4 días 18 h (platino), 10 días (crudo), 9-10 días (oro). Descriptivo, no una condición."
+    },
+    {
+      "tema": "sr_horizontales",
+      "regla": "Las líneas de tendencia y los soportes/resistencias horizontales son más potentes cuando coinciden.",
+      "programable": true,
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "20:39", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "sr_horizontales",
+      "regla": "Los soportes y resistencias horizontales se trazan donde el precio pivotó o rechazó con fuerza varias veces en el pasado.",
+      "programable": true,
+      "evidencia": [
+        {"id": "cTecm-uk8FA", "minuto": "16:25", "fuente": "dice"},
+        {"id": "eJ0_EvAql3g", "minuto": "14:14", "fuente": "dice"}
+      ],
+      "nota": "eJ0_EvAql3g: 86.85 había sido soporte en 4 ocasiones."
+    },
+    {
+      "tema": "sr_horizontales",
+      "regla": "Los soportes y resistencias horizontales no se usan para entrar; sirven como zonas de posible reversión y objetivo de salida.",
+      "programable": true,
+      "evidencia": [
+        {"id": "eJ0_EvAql3g", "minuto": "13:54", "fuente": "dice"},
+        {"id": "cTecm-uk8FA", "minuto": "16:07", "fuente": "dice"}
+      ],
+      "nota": "cTecm-uk8FA: la línea de tendencia da la entrada y el stop; la resistencia horizontal, el objetivo o zona de alerta."
+    },
+    {
+      "tema": "sr_horizontales",
+      "regla": "Los soportes y resistencias horizontales ayudan a identificar fases de consolidación o rango.",
+      "programable": true,
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "20:30", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "no_operar",
+      "regla": "No operar rupturas de líneas de tendencia cuando el mercado está en rango o consolidación sin tendencia ni momentum.",
+      "programable": true,
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "13:28", "fuente": "dice"},
+        {"id": "cTecm-uk8FA", "minuto": "01:34", "fuente": "dice"}
+      ],
+      "nota": "cTecm-uk8FA lo plantea como su filtro de falsas rupturas."
+    },
+    {
+      "tema": "no_operar",
+      "regla": "Dejar pasar la operación si la distancia entre la entrada y la línea de seguridad excede el riesgo permitido y ya no se puede reducir el tamaño (por ejemplo, ya en 1 micro contrato).",
+      "programable": true,
+      "evidencia": [
+        {"id": "cTecm-uk8FA", "minuto": "08:47", "fuente": "dice"},
+        {"id": "cTecm-uk8FA", "minuto": "09:10", "fuente": "dice"}
+      ],
+      "nota": "Programable si se fija el riesgo máximo por operación."
+    },
+    {
+      "tema": "no_operar",
+      "regla": "No tomar todas las rupturas: solo operar cuando el sistema propio da la señal.",
+      "programable": false,
+      "evidencia": [
+        {"id": "YROta7k11pE", "minuto": "01:03", "fuente": "dice"},
+        {"id": "bWrOP6Q9RTg", "minuto": "10:07", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "no_operar",
+      "regla": "No operar en vivo sin haber testeado la estrategia y tener datos que respalden la decisión.",
+      "programable": false,
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "43:30", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "no_operar",
+      "regla": "En condiciones de alta volatilidad por noticias, los principiantes deben reducir riesgo («risk off») y no asumir más.",
+      "programable": false,
+      "evidencia": [
+        {"id": "ZqC6Wgndpew", "minuto": "00:37", "fuente": "dice"},
+        {"id": "ZqC6Wgndpew", "minuto": "00:50", "fuente": "dice"}
+      ],
+      "nota": "Para operadores experimentados plantea adaptar la estrategia, no dejar de operar [02:03]."
+    },
+    {
+      "tema": "no_operar",
+      "regla": "Considerar el contexto político y las noticias del momento para decidir si la estrategia necesita ajustes.",
+      "programable": false,
+      "evidencia": [
+        {"id": "ZqC6Wgndpew", "minuto": "00:15", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "no_operar",
+      "regla": "Evitar abrir o mantener posición si los titulares contradicen con fuerza al precio y este amenaza la línea de seguridad, o si se acerca el fin de semana sin colchón suficiente respecto a la línea.",
+      "programable": false,
+      "evidencia": [
+        {"id": "eJ0_EvAql3g", "minuto": "09:47", "fuente": "dice"},
+        {"id": "eJ0_EvAql3g", "minuto": "13:36", "fuente": "dice"}
+      ],
+      "nota": "La parte del fin de semana sería programable; la de noticias no."
+    },
+    {
+      "tema": "no_operar",
+      "regla": "Evitar el day trading y concentrarse en el swing trading.",
+      "programable": false,
+      "evidencia": [
+        {"id": "ZMIDTRhLLHQ", "minuto": "11:58", "fuente": "dice"}
+      ],
+      "nota": "Dice que el day trading le perjudica el rendimiento anual."
+    },
+    {
+      "tema": "riesgo",
+      "regla": "No arriesgar más del 1% al 3% del capital por operación.",
+      "programable": false,
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "28:40", "fuente": "dice"}
+      ],
+      "nota": "cTecm-uk8FA [14:21] dice que arriesga típicamente entre 1% y 2%."
+    },
+    {
+      "tema": "riesgo",
+      "regla": "Si la distancia entre la entrada y la línea de seguridad es grande, reducir el número de contratos para mantener fija la pérdida monetaria.",
+      "programable": false,
+      "evidencia": [
+        {"id": "cTecm-uk8FA", "minuto": "08:44", "fuente": "dice"}
+      ],
+      "nota": "Aplicable también a CFD ajustando el lotaje [08:52]."
+    },
+    {
+      "tema": "riesgo",
+      "regla": "Definir y calcular el riesgo antes de que la operación esté activa.",
+      "programable": false,
+      "evidencia": [
+        {"id": "bWrOP6Q9RTg", "minuto": "08:35", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "riesgo",
+      "regla": "En alta volatilidad, reducir significativamente el tamaño de posición.",
+      "programable": false,
+      "evidencia": [
+        {"id": "ZqC6Wgndpew", "minuto": "06:50", "fuente": "dice"},
+        {"id": "ZqC6Wgndpew", "minuto": "07:10", "fuente": "dice"}
+      ],
+      "nota": "De 20-40 contratos de platino a 3-10 de crudo."
+    },
+    {
+      "tema": "riesgo",
+      "regla": "Con cuentas pequeñas, o para reducir la carga de las fluctuaciones, operar contratos micro o un solo contrato.",
+      "programable": false,
+      "evidencia": [
+        {"id": "gokPlEnlhuE", "minuto": "15:13", "fuente": "dice"},
+        {"id": "eJ0_EvAql3g", "minuto": "19:43", "fuente": "dice"},
+        {"id": "htpEDz9zCQg", "minuto": "07:11", "fuente": "dice"}
+      ],
+      "nota": "El micro equivale a 1/10 del contrato estándar (gokPlEnlhuE)."
+    },
+    {
+      "tema": "riesgo",
+      "regla": "El margen requerido no es el riesgo: el riesgo es la distancia hasta la invalidación.",
+      "programable": false,
+      "evidencia": [
+        {"id": "eJ0_EvAql3g", "minuto": "01:20", "fuente": "dice"}
+      ],
+      "nota": "Margen de 50.000 USD contra riesgo inicial de 13.250 USD."
+    },
+    {
+      "tema": "riesgo",
+      "regla": "El apalancamiento permite controlar posiciones mayores pero exige margen, y un movimiento en contra puede provocar una llamada de margen.",
+      "programable": false,
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "40:04", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "instrumentos",
+      "regla": "Opera principalmente futuros: petróleo crudo, oro, platino e índices.",
+      "programable": false,
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "08:27", "fuente": "dice"},
+        {"id": "YROta7k11pE", "minuto": "00:04", "fuente": "se_ve"},
+        {"id": "ZMIDTRhLLHQ", "minuto": "10:46", "fuente": "dice"},
+        {"id": "ZqC6Wgndpew", "minuto": "02:46", "fuente": "dice"},
+        {"id": "cTecm-uk8FA", "minuto": "06:21", "fuente": "dice"},
+        {"id": "eJ0_EvAql3g", "minuto": "02:11", "fuente": "dice"},
+        {"id": "gokPlEnlhuE", "minuto": "04:17", "fuente": "dice"},
+        {"id": "htpEDz9zCQg", "minuto": "02:40", "fuente": "dice"}
+      ],
+      "nota": "También cobre (HG) y Ethereum en ZMIDTRhLLHQ; Micro E-mini Dow en htpEDz9zCQg."
+    },
+    {
+      "tema": "instrumentos",
+      "regla": "El método se aplica también a acciones, cripto, índices y CFD (ajustando el lotaje).",
+      "programable": false,
+      "evidencia": [
+        {"id": "gokPlEnlhuE", "minuto": "00:22", "fuente": "se_ve"},
+        {"id": "cTecm-uk8FA", "minuto": "08:52", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "instrumentos",
+      "regla": "Verificar el mes de contrato de futuros correcto antes de ejecutar.",
+      "programable": false,
+      "evidencia": [
+        {"id": "ZMIDTRhLLHQ", "minuto": "13:11", "fuente": "dice"}
+      ],
+      "nota": "Lección de una pérdida por operar PLJ24 en lugar de PLN24."
+    },
+    {
+      "tema": "mentalidad",
+      "regla": "Aceptar que la ruptura puede fallar y tocar el stop.",
+      "programable": false,
+      "evidencia": [
+        {"id": "ZMIDTRhLLHQ", "minuto": "06:36", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "mentalidad",
+      "regla": "Ver las pérdidas como un costo del negocio para seguir en el juego a largo plazo.",
+      "programable": false,
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "27:51", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "mentalidad",
+      "regla": "No dejar que el monto en dólares de la posición afecte las decisiones: con tamaños grandes es más difícil respetar la salida de la estrategia.",
+      "programable": false,
+      "evidencia": [
+        {"id": "ZMIDTRhLLHQ", "minuto": "08:45", "fuente": "dice"},
+        {"id": "bWrOP6Q9RTg", "minuto": "06:05", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "mentalidad",
+      "regla": "Ocultar el resultado en dólares: mostrar ticks, porcentaje o pips, o quitar el panel de P&L y mirar solo el gráfico.",
+      "programable": false,
+      "evidencia": [
+        {"id": "bWrOP6Q9RTg", "minuto": "08:15", "fuente": "dice"},
+        {"id": "bWrOP6Q9RTg", "minuto": "08:32", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "mentalidad",
+      "regla": "No revisar la operación constantemente; confiar en el sistema una vez abierta.",
+      "programable": false,
+      "evidencia": [
+        {"id": "bWrOP6Q9RTg", "minuto": "10:49", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "mentalidad",
+      "regla": "Practicar aguantar algo más allá del objetivo cómodo para acostumbrarse a ver ganancias mayores.",
+      "programable": false,
+      "evidencia": [
+        {"id": "bWrOP6Q9RTg", "minuto": "07:08", "fuente": "dice"}
+      ],
+      "nota": "Ejemplo: si lo cómodo son 100 USD, intentar 120 o 150."
+    },
+    {
+      "tema": "mentalidad",
+      "regla": "Comprometerse con una estrategia y no saltar de una a otra (strategy hopping).",
+      "programable": false,
+      "evidencia": [
+        {"id": "bWrOP6Q9RTg", "minuto": "09:37", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "mentalidad",
+      "regla": "Ante condiciones extremas, los criterios de entrada de la estrategia no cambian; solo se ajustan los parámetros de gestión (temporalidad, salida y tamaño).",
+      "programable": false,
+      "evidencia": [
+        {"id": "ZqC6Wgndpew", "minuto": "09:16", "fuente": "dice"}
+      ],
+      "nota": ""
+    },
+    {
+      "tema": "mentalidad",
+      "regla": "Hacer muchas operaciones en un día (hasta nueve) es señal de sobreoperación.",
+      "programable": true,
+      "evidencia": [
+        {"id": "htpEDz9zCQg", "minuto": "03:44", "fuente": "dice"}
+      ],
+      "nota": "No fija un tope numérico explícito."
+    }
+  ],
+  "contradicciones": [
+    {
+      "descripcion": "Número de toques: una ficha exige exactamente 3 toques para habilitar la entrada; otras exigen un mínimo de 3 (3+) y valoran más toques.",
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "35:44"},
+        {"id": "ZMIDTRhLLHQ", "minuto": "04:32"},
+        {"id": "cTecm-uk8FA", "minuto": "10:42"},
+        {"id": "eJ0_EvAql3g", "minuto": "06:00"}
+      ]
+    },
+    {
+      "descripcion": "Retesteo: unas fichas operan la ruptura directa sin retesteo; otras recomiendan confirmar con retesteo o cierre y llaman impaciencia a entrar sin retesteo.",
+      "evidencia": [
+        {"id": "ZMIDTRhLLHQ", "minuto": "04:37"},
+        {"id": "cTecm-uk8FA", "minuto": "07:11"},
+        {"id": "eJ0_EvAql3g", "minuto": "04:24"},
+        {"id": "YROta7k11pE", "minuto": "02:55"},
+        {"id": "bWrOP6Q9RTg", "minuto": "03:38"}
+      ]
+    },
+    {
+      "descripcion": "Cierre de vela: se pide no cambiar la regla de esperar el cierre y la ruptura se confirma con cierre de cuerpo; en otra ficha dice que en mercados volátiles esperar el cierre de 1h hace perder el movimiento.",
+      "evidencia": [
+        {"id": "YROta7k11pE", "minuto": "01:03"},
+        {"id": "bWrOP6Q9RTg", "minuto": "03:38"},
+        {"id": "cTecm-uk8FA", "minuto": "07:33"}
+      ]
+    },
+    {
+      "descripcion": "Stop y horizontales: en una operación pone el stop bajo un soporte horizontal clave; en otro video dice que usar S/R para los stops no complementa su estrategia.",
+      "evidencia": [
+        {"id": "ZMIDTRhLLHQ", "minuto": "06:00"},
+        {"id": "ZqC6Wgndpew", "minuto": "06:38"}
+      ]
+    },
+    {
+      "descripcion": "Stop físico: en una demostración deja desactivadas las casillas de stop y take profit (invalidación manual); en otro video dice que siempre tiene stops colocados, y en otro tenía stops de contingencia cargados.",
+      "evidencia": [
+        {"id": "gokPlEnlhuE", "minuto": "15:24"},
+        {"id": "bWrOP6Q9RTg", "minuto": "04:47"},
+        {"id": "eJ0_EvAql3g", "minuto": "19:10"}
+      ]
+    },
+    {
+      "descripcion": "Riesgo por operación: recomienda arriesgar 1-3% (o 1-2%) del capital, pero en otro video dice que no usa stops por porcentaje ni monto fijo y que su riesgo es variable (arriesgó 10.000-13.000 USD en un trade).",
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "28:40"},
+        {"id": "cTecm-uk8FA", "minuto": "14:21"},
+        {"id": "ZMIDTRhLLHQ", "minuto": "15:28"},
+        {"id": "ZMIDTRhLLHQ", "minuto": "15:13"}
+      ]
+    },
+    {
+      "descripcion": "Salida: en unas fichas la salida es solo dinámica por la línea de seguridad, sin objetivos fijos; en otras toma ganancias en un S/R horizontal mayor antes de que se rompa la línea.",
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "36:33"},
+        {"id": "gokPlEnlhuE", "minuto": "15:24"},
+        {"id": "cTecm-uk8FA", "minuto": "16:07"},
+        {"id": "ZqC6Wgndpew", "minuto": "06:35"},
+        {"id": "eJ0_EvAql3g", "minuto": "13:54"}
+      ]
+    },
+    {
+      "descripcion": "Ancla de la línea más empinada: la regla general es que el último toque de la línea anterior sea el nuevo Punto A; en otra ficha se ve unir el mínimo inicial (Punto A) con el último mínimo del retroceso.",
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "32:47"},
+        {"id": "gokPlEnlhuE", "minuto": "06:11"},
+        {"id": "ZMIDTRhLLHQ", "minuto": "07:50"}
+      ]
+    },
+    {
+      "descripcion": "Gatillo de entrada: casi todas las fichas entran en la ruptura de la línea; una entra en el rebote sobre la línea a favor de la tendencia («Action Line»). Pueden ser dos setups distintos.",
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "35:52"},
+        {"id": "cTecm-uk8FA", "minuto": "07:11"},
+        {"id": "gokPlEnlhuE", "minuto": "13:06"}
+      ]
+    },
+    {
+      "descripcion": "Temporalidad operativa: 4 horas como marco habitual frente a 1 hora para entrada y gestión (y 30 minutos en su etapa de day trading). Dos fichas lo explican por la volatilidad.",
+      "evidencia": [
+        {"id": "Y8efWZ2M1y8", "minuto": "34:57"},
+        {"id": "ZMIDTRhLLHQ", "minuto": "05:54"},
+        {"id": "gokPlEnlhuE", "minuto": "12:18"},
+        {"id": "cTecm-uk8FA", "minuto": "03:29"},
+        {"id": "ZqC6Wgndpew", "minuto": "04:47"},
+        {"id": "htpEDz9zCQg", "minuto": "03:27"}
+      ]
+    },
+    {
+      "descripcion": "Day trading: dice evitarlo porque perjudica su rendimiento anual; en un video de 2020 opera day trading en 30 minutos y cierra antes de la noche.",
+      "evidencia": [
+        {"id": "ZMIDTRhLLHQ", "minuto": "11:58"},
+        {"id": "htpEDz9zCQg", "minuto": "03:27"},
+        {"id": "htpEDz9zCQg", "minuto": "11:27"}
+      ]
+    }
+  ],
+  "casos": [
+    {"id": "Y8efWZ2M1y8", "minuto": "25:31", "instrumento": "Apple (AAPL)", "temporalidad": "1M", "lineas": "Ninguna", "entrada": "Compra a mercado a ~106.00", "stop": "Arrastrado a 55.00 (arriesga 50 USD)", "salida": "Take profit en ~157.00", "resultado": "Ganadora, +50.89 USD", "leccion": "Demostración de cómo usar órdenes de take profit y stop loss en la plataforma."},
+    {"id": "Y8efWZ2M1y8", "minuto": "26:56", "instrumento": "Home Depot (HD)", "temporalidad": "1M", "lineas": "Ninguna", "entrada": "Compra a mercado a ~207.00", "stop": "Fijado para arriesgar 50 USD", "salida": "Salta el stop loss", "resultado": "Perdedora, -50 USD", "leccion": "El stop evita que una pérdida pequeña se vuelva catastrófica."},
+    {"id": "Y8efWZ2M1y8", "minuto": "30:44", "instrumento": "Futuros de platino (PL1!)", "temporalidad": "Top-down 1M a 4H; entrada 4H", "lineas": "Línea bajista y alcista mensuales; líneas más empinadas en 4H formando cuña con una bajista de 3 toques", "entrada": "Ruptura de la bajista de 3 toques en 4H; traza safety line alcista y compra a mercado", "stop": "Dinámico por la safety line alcista", "salida": "Abierta al grabar; respeta la safety line", "resultado": "Abierta en fuerte ganancia", "leccion": "La ruptura de 3 toques da la entrada y la safety line gestiona y define la salida."},
+    {"id": "Y8efWZ2M1y8", "minuto": "37:33", "instrumento": "Futuros de crudo (CL1!)", "temporalidad": "4H", "lineas": "Alcista de 3 toques y safety line bajista trazada sobre el precio tras la ruptura", "entrada": "Venta tras ruptura a la baja de la alcista de 3 toques", "stop": "Ruptura al alza de la safety line bajista", "salida": "Cierre manual cuando una vela rompe la safety line al alza", "resultado": "Ganadora, captura la caída completa", "leccion": "La safety line permite capturar el movimiento entero con un criterio de salida objetivo."},
+    {"id": "YROta7k11pE", "minuto": "00:06", "instrumento": "Futuros de platino (PLJ25)", "temporalidad": "5m", "lineas": "Líneas de tendencia alcista y bajista y horizontales de S/R", "entrada": "No se especifica", "stop": "No se especifica", "salida": "No se especifica", "resultado": "Net P&L de 30.731 USD", "leccion": "Prueba visual de rentabilidad del método."},
+    {"id": "YROta7k11pE", "minuto": "00:04", "instrumento": "Futuros de crudo (CLH25)", "temporalidad": "4H", "lineas": "Bajista y alcista formando cuña o triángulo", "entrada": "No se muestra", "stop": "No se muestra", "salida": "No se muestra", "resultado": "Sin resultado", "leccion": "Ejemplo de trazado y de cómo el precio interactúa con las líneas."},
+    {"id": "YROta7k11pE", "minuto": "03:12", "instrumento": "Futuros de platino (PLM11)", "temporalidad": "1D en pantalla", "lineas": "Bajista y horizontales, una de ellas su safety line", "entrada": "No se especifica", "stop": "No se especifica", "salida": "Salió antes de tiempo", "resultado": "Perdió un movimiento mucho mayor", "leccion": "Esperar a que se rompa la safety line antes de salir."},
+    {"id": "ZMIDTRhLLHQ", "minuto": "14:09", "instrumento": "Futuros de platino (PLV24)", "temporalidad": "4H", "lineas": "Bajista de 3 toques, soporte horizontal 935.2 y alcista de mediano plazo", "entrada": "Compra de 20 contratos a 948.605 tras la ruptura alcista de la bajista", "stop": "Bajo el soporte 935.2 y la alcista de largo plazo", "salida": "Venta manual a 988.30 por emociones", "resultado": "+39.661 USD", "leccion": "La salida fue emocional; por estrategia debía esperar la ruptura de la alcista acelerada (~974)."},
+    {"id": "ZMIDTRhLLHQ", "minuto": "12:58", "instrumento": "Futuros de platino (PLJ24)", "temporalidad": "No la menciona", "lineas": "No se muestran", "entrada": "Por error en el mes de contrato equivocado (PLJ24 en vez de PLN24)", "stop": "No se especifica", "salida": "No se especifica", "resultado": "-2.837 USD", "leccion": "Verificar el contrato correcto antes de ejecutar."},
+    {"id": "ZMIDTRhLLHQ", "minuto": "13:40", "instrumento": "Futuros de Ethereum (ETHN24)", "temporalidad": "No la menciona", "lineas": "No se muestran", "entrada": "Swing mantenido 3 a 4 semanas", "stop": "No se especifica", "salida": "No se especifica", "resultado": "+46 USD", "leccion": "La volatilidad y los retrocesos del Ethereum hicieron la gestión muy estresante."},
+    {"id": "ZqC6Wgndpew", "minuto": "02:46", "instrumento": "Futuros de crudo", "temporalidad": "1H", "lineas": "Alcistas y horizontales de S/R", "entrada": "Hipotética corta tras ruptura", "stop": "No se especifica", "salida": "No se especifica", "resultado": "Falsa ruptura: habría implicado una o dos pérdidas antes de la ruptura real", "leccion": "En alta volatilidad una ruptura limpia puede ser falsa; la estrategia se adapta en temporalidad, salida y tamaño."},
+    {"id": "bWrOP6Q9RTg", "minuto": "00:16", "instrumento": "No identificado", "temporalidad": "No identificada", "lineas": "Bajista uniendo máximos decrecientes", "entrada": "Tras romper al alza y hacer un pequeño retesteo", "stop": "No se especifica", "salida": "No se especifica", "resultado": "Tendencia alcista prolongada", "leccion": "Entrar temprano en el quiebre permite mantener la operación más tiempo."},
+    {"id": "cTecm-uk8FA", "minuto": "06:48", "instrumento": "Micro futuros de crudo (MCL)", "temporalidad": "1H", "lineas": "Bajista de 3 toques (8 al 27 de marzo) y safety line alcista por mínimos crecientes", "entrada": "Compra a mercado a 95.09 tras la ruptura de la bajista", "stop": "93.54 bajo la safety line (riesgo 155 USD); trailing a 95.97, 96.87 y 98.58 tras cada swing low", "salida": "A: cierre manual en resistencia 101.35 antes del cierre semanal. B: safety line cruzada ~101.40 tras gap del domingo", "resultado": "A: +629 USD (+4.05R)", "leccion": "No arrepentirse de cerrar en una resistencia antes del cierre semanal si el plan lo contempla."},
+    {"id": "eJ0_EvAql3g", "minuto": "02:11", "instrumento": "Futuros de crudo (CLM24)", "temporalidad": "1H", "lineas": "Bajista principal (safety line), alcista de 5 toques, bajista más empinada para trailing y soporte horizontal 86.85", "entrada": "Corto de 3 contratos tras ruptura de la alcista en 1H; +1 contrato tras rebote en la bajista y ruptura de una segunda alcista", "stop": "Riesgo inicial 13.250 USD (stops 105.51 y 104.85), gestionado por la línea bajista", "salida": "Cierre manual de los 4 contratos a 89.07 al tocar el soporte 86.85 y anunciarse un cese al fuego, jueves por la tarde", "resultado": "+51.843,20 USD (3.9R) en 10 días", "leccion": "Aguantar los retrocesos y ceder ganancias temporales mientras la safety line se respete."},
+    {"id": "gokPlEnlhuE", "minuto": "15:24", "instrumento": "Futuros de oro (GC1!)", "temporalidad": "1H tras top-down M, W, D y 4H", "lineas": "Abanico de alcistas mensuales y semanales, bajista semanal desde el máximo histórico y alcista de 4H/1H", "entrada": "Compra a mercado de 1 contrato en el rebote sobre la alcista de 1H (1 de agosto)", "stop": "Sin stop físico; cierre horario bajo la línea", "salida": "Cierre manual tras vela de 1H que cierra bajo la línea (10 de agosto)", "resultado": "+27.700 USD", "leccion": "Entrar cuando el precio valida la línea, tolerar el flotante mientras se respete y salir en cuanto cierra fuera."},
+    {"id": "htpEDz9zCQg", "minuto": "00:58", "instrumento": "Micro E-mini Dow (MYMU20)", "temporalidad": "30m", "lineas": "No se muestran", "entrada": "Largo de 1 contrato (abierto 9:00-9:30 AM)", "stop": "No se especifica", "salida": "Planea cerrar antes de la noche", "resultado": "+106 USD en pantalla", "leccion": "Operar en 30 minutos con un solo contrato evita la sobreoperación."}
+  ]
+}
