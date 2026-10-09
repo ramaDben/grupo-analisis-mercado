@@ -382,3 +382,18 @@ def test_fuera_de_la_jornada_el_resultado_no_se_intenta(tmp_path):
     reloj.ejecutar(noche, correr=lambda c, pieza=None, momento=None: llamadas.append(momento)
                    or {"canal": c, "codigo": 0, "salida": "", "error": ""}, ruta_libro=tmp_path / "l.json")
     assert "avisos_resultado" not in llamadas
+
+
+def test_el_reloj_prepara_sin_abrir_ventana_en_windows(monkeypatch):
+    """GI-Reloj corre sin consola (uvw): si el hijo no pide CREATE_NO_WINDOW,
+    Windows le abre una ventana de Python cada vez que dispara un momento."""
+    from unittest.mock import MagicMock
+
+    mock_run = MagicMock(return_value=MagicMock(returncode=0, stdout="", stderr=""))
+    monkeypatch.setattr(reloj.subprocess, "run", mock_run)
+    monkeypatch.setattr(reloj.sys, "platform", "win32")
+    monkeypatch.setattr(reloj.subprocess, "CREATE_NO_WINDOW", 0x08000000, raising=False)
+
+    reloj._correr_preparar("02_forex")
+
+    assert mock_run.call_args.kwargs.get("creationflags") == 0x08000000

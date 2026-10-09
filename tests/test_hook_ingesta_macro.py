@@ -521,3 +521,18 @@ def test_main_argumento_invalido_devuelve_codigo_dos(capsys: pytest.CaptureFixtu
 
     err = capsys.readouterr().err
     assert "uso: hook_ingesta_macro.py [--estado|--refrescar]" in err
+
+
+def test_modo_refrescar_lanza_la_ingesta_sin_ventana_en_windows(monkeypatch: pytest.MonkeyPatch):
+    """La tarea GI-Ingesta corre sin consola (uvw): si el hijo no pide
+    CREATE_NO_WINDOW, Windows le abre una ventana nueva cada hora."""
+    marca = (datetime.now(timezone.utc) - timedelta(hours=10.0)).isoformat()
+    hook.ESTADO.write_text(json.dumps({"ultima_ejecucion_utc": marca}), encoding="utf-8")
+    mock_run = MagicMock(return_value=MagicMock(returncode=0, stdout="", stderr=""))
+    monkeypatch.setattr(hook.subprocess, "run", mock_run)
+    monkeypatch.setattr(hook.sys, "platform", "win32")
+    monkeypatch.setattr(hook.subprocess, "CREATE_NO_WINDOW", 0x08000000, raising=False)
+
+    hook.modo_refrescar()
+
+    assert mock_run.call_args.kwargs.get("creationflags") == 0x08000000

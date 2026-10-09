@@ -219,6 +219,9 @@ def modo_refrescar() -> int:
         return 0
 
     anotar("ingesta lanzada")
+    # La tarea GI-Ingesta corre sin consola (uvw): sin este flag, Windows le abre
+    # al hijo una ventana nueva cada vez que la ingesta se dispara.
+    sin_ventana = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
     try:
         proc = subprocess.run(
             COMANDO,
@@ -228,6 +231,7 @@ def modo_refrescar() -> int:
             encoding="utf-8",
             errors="replace",
             timeout=600,
+            creationflags=sin_ventana,
         )
         anotar(f"ingesta terminada con codigo {proc.returncode}")
         # Solo lineas con contenido: el pipeline cierra con lineas en blanco y una

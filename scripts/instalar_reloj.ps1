@@ -52,9 +52,19 @@ if ($Quitar) {
     exit 0
 }
 
+# uvw es uv sin consola: con uv.exe el latido abre una ventana cada 15 minutos.
+# Y el reloj lee el terminal, asi que necesita MetaTrader5 en el entorno. La
+# tarea registrada ya corria asi; el instalador decia otra cosa y reinstalar la
+# habria devuelto a abrir ventanas y a quedar sin terminal.
+$Uvw = Join-Path (Split-Path -Parent $Uv.Source) "uvw.exe"
+if (-not (Test-Path $Uvw)) {
+    Write-Host "No encuentro uvw.exe junto a $($Uv.Source); sin el, el latido abriria una ventana."
+    exit 1
+}
+$Argumentos = "run --with MetaTrader5 python scripts/reloj_gi.py --ejecutar"
 $Accion = New-ScheduledTaskAction `
-    -Execute $Uv.Source `
-    -Argument "run python scripts/reloj_gi.py --ejecutar" `
+    -Execute $Uvw `
+    -Argument $Argumentos `
     -WorkingDirectory $Repo
 
 # El ancla del disparador tiene que ser una hora que EXISTA.
@@ -108,7 +118,7 @@ $Config = New-ScheduledTaskSettingsSet `
     -MultipleInstances IgnoreNew
 
 Write-Host "Tarea      : $Tarea"
-Write-Host "Comando    : $($Uv.Source) run python scripts/reloj_gi.py --ejecutar"
+Write-Host "Comando    : $Uvw $Argumentos"
 Write-Host "Directorio : $Repo"
 Write-Host "Cadencia   : cada $CadaMinutos minutos, todo el dia"
 Write-Host "Limite     : 20 min por corrida, sin instancias paralelas"
