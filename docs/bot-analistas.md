@@ -1,7 +1,7 @@
 # Bot de Telegram para analistas y ejecutivos
 
 El equipo le pide al bot las mismas piezas que el director le pide a Claude Code, y recibe un
-**informe HTML** general, firmado por el director, que comparte tal cual con su trader. Diseño:
+**informe PDF** general, firmado por el director, que comparte tal cual con su trader. Diseño:
 `docs/superpowers/specs/2026-10-08-bot-telegram-analistas-design.md` y
 `docs/superpowers/specs/2026-10-08-informe-general-firmado-y-plan-design.md`.
 
@@ -26,8 +26,15 @@ informe con el nombre del cliente se acerca a una recomendación personalizada. 
 ```
 pedido → orden.py (gramática cerrada) → preparar.py (datos + gráficos, carpeta propia)
        → agy /analista (solo redacta pieza.json) → esquema.py (valida) → láminas
-       → informe_html.py (maqueta fija) → Telegram + carpeta de Drive
+       → informe_html.py (maqueta fija) → pdf.py (Chromium, A4) → Telegram + carpeta de Drive
 ```
+
+- **Circula el PDF, no el HTML** (director, 2026-10-09). Google Drive no muestra HTML, en el
+  celular cuesta abrirlo, y un documento firmado no debe circular en un formato que se edita con
+  el Bloc de notas sin tocar la firma. El HTML se sigue armando, porque es la fuente del PDF, y
+  queda en la carpeta del pedido en `data/informes_analistas/`: de ahí sale la huella de la
+  bitácora y ahí se audita. Si Chromium falla, el HTML va **solo por Telegram** con el aviso, y
+  Drive no recibe un archivo que no puede mostrar.
 
 - **agy solo redacta.** No recibe nada de lo que el analista escribió: recibe la ruta de la
   pieza. Datos, imágenes y láminas van sellados con una huella, y si cambian la pieza se descarta.
@@ -148,6 +155,7 @@ El analista recibe el motivo, y nunca una pieza a medias ni un gráfico de otro 
 | `no uso el terminal: ...` | MT5 cerrado o en otra cuenta que la de `config/cuenta_mt5.json` |
 | `La redacción no terminó (timeout ...)` | agy no respondió en 12 minutos. No gasta cupo |
 | `El texto no pasó los controles` | agy escribió una cifra ajena, HTML o guion largo. No se entrega |
+| `No pude generar el PDF ...` | Chromium no imprimió el informe. Llega el HTML (ábrelo en el navegador) y no se copia a Drive |
 | `Drive no está configurado` | Falta `ruta_drive`; el archivo igual llega por Telegram |
 
 La bitácora está en `data/logs/bot_telegram.log` y el estado (offset, cupo y piezas vigentes) en

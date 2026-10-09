@@ -1,11 +1,11 @@
-"""Bot de Telegram del equipo: atiende pedidos de piezas y entrega el HTML.
+"""Bot de Telegram del equipo: atiende pedidos de piezas y entrega el PDF.
 
 Tres reglas lo definen (spec 2026-10-08-bot-telegram-analistas-design.md):
 
 1. **Solo atiende a quien está en `config/analistas_telegram.json`**, por el id
    de la persona (no del chat: en un grupo el chat es de todos).
 2. **agy solo redacta.** El pedido se traduce a una `Orden` cerrada, Python
-   prepara los datos, agy rellena los textos y Python arma el HTML.
+   prepara los datos, agy rellena los textos y Python arma el HTML y lo imprime a PDF.
 3. **Reusar no cuesta agy.** La pieza vigente se vuelve a entregar sin redactar.
    El informe es general e igual para todos: no se personaliza por trader.
 
@@ -42,7 +42,7 @@ LOG = RAIZ / "data" / "logs" / "bot_telegram.log"
 
 AYUDA = """Bot de análisis · Grupo Inteligencia
 
-Pide una pieza y te llega el informe en HTML, listo para entregar:
+Pide una pieza y te llega el informe en PDF, listo para entregar:
 
 /activo oro
 /calendario hoy   (o semana)
