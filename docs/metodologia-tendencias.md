@@ -54,8 +54,9 @@ La evidencia se cita como `ID [mm:ss]`, donde `ID` son los primeros caracteres d
 5. **Primero el contexto, después la entrada.** El análisis va de arriba hacia abajo: mensual,
    semanal, diario y 4H. El swing se opera en **4H**, y se baja a 1H cuando la volatilidad es
    alta.
-6. **Qué es una ruptura.** Una vela que **cierra** al otro lado de la línea. Una mecha que la
-   cruza no cuenta, y no se exige retesteo.
+6. **Qué es una ruptura.** Ella entra cuando el precio **cruza** la línea, y esperar el **cierre**
+   de la vela le parece igual de válido. El sistema publica con el cierre (ver 2.4). Una mecha que
+   cruza y vuelve no cuenta, y no se exige retesteo.
 7. **La entrada.** Va a mercado y en la dirección de la ruptura. La línea rota es la **línea de
    acción**; la opuesta, que queda a favor de la operación, es la **línea de seguridad**. El setup
    es de bajo riesgo cuando el precio está cerca de la línea de seguridad.
@@ -81,7 +82,7 @@ La evidencia se cita como `ID [mm:ss]`, donde `ID` son los primeros caracteres d
 | Se traza con la herramienta **semirrecta** (Ray de TradingView), proyectada hacia la derecha. | Firme [9] | LpXZB [03:00], PnIkS [02:51], ipUbs [03:45], qLtq7 [01:10], Y8efW [16:59], ZMIDT [07:50] |
 | El primer punto es el **extremo visible**: el mínimo más bajo para la alcista y el máximo más alto para la bajista. | Firme [8] | LpXZB [03:06], PnIkS [08:00], TuXOg [01:29], ipUbs [04:08], qLtq7 [01:42], gokPl [02:33], xRxUo [00:42] |
 | El segundo punto se elige para **tocar la mayor cantidad de pivotes sin que el precio cruce la línea**. | Firme [9] | LpXZB [03:06], PnIkS [09:03], TuXOg [01:23], Y8efW [31:27], gokPl [02:33], yHAC0* [03:38] |
-| **No intersección:** ninguna vela, ni su cuerpo ni su mecha, puede cruzar la línea entre el ancla y el precio actual. Si no se puede trazar limpia, no se traza. **[V10]** | Núcleo [13] | qLtq7 [01:33], qLtq7 [01:43], ipUbs [04:26], LpXZB [03:08], PnIkS [08:34], xMNO4 [07:50], Y8efW [32:15] |
+| **No intersección:** ninguna vela, ni su cuerpo ni su mecha, puede cruzar la línea entre el ancla y el precio actual. Si no se puede trazar limpia, no se traza. Verificado en [V10]: "if you have a trend line that is going through wicks or going through bodies, that is an incorrect trend line". | Núcleo [13] | qLtq7 [01:33], qLtq7 [01:43], ipUbs [04:26], LpXZB [03:08], PnIkS [08:34], xMNO4 [07:50], Y8efW [32:15] |
 | Si al extender la línea esta corta una vela intermedia, el segundo punto se mueve al toque limpio anterior. | Aislada [1] | qLtq7 [06:47] |
 | Una línea **nunca es horizontal**. Si al ajustarla queda plana, pasa a leerse como nivel horizontal; si se le invierte la pendiente, se elimina. | Aislada [2] | OjZ8d [03:52], OjZ8d [04:22], PnIkS [08:29] |
 | Un pivote vale cuando el precio llega, respeta la línea y se aleja con claridad. Un impulso de 1 o 2 velas sin retroceso no cuenta como toque. No da un umbral numérico. | Aislada [3] | OjZ8d [06:13], cTecm [11:00], xRxUo [03:19] |
@@ -137,24 +138,34 @@ línea: **se conserva la principal** (la de temporalidad mayor o la que sostiene
 
 | Regla | Fuerza | Evidencia |
 |---|---|---|
-| La ruptura es una **vela que cierra al otro lado** de la línea, en la temporalidad que se opera. **[V2]** | Núcleo [20] | LpXZB [03:30], W_zXs [00:58], ZMIDT [04:34], eJ0_E [04:23], xRxUo [15:43], yZfj6* [07:35], Y_Ney* [05:07], q4t71* [16:16] |
+| La ruptura se toma cuando el precio **cruza** la línea; esperar el **cierre** de la vela es una opción igual de válida. Verificado: [V1] [V2] [V3]. | Núcleo [20 + 8] | LpXZB [03:30], W_zXs [00:58], ZMIDT [04:34], eJ0_E [04:23], xRxUo [15:43], yZfj6* [07:35], Y_Ney* [05:07], q4t71* [16:16] |
 | Una **mecha** que cruza la línea, o un toque o un asomo leve, **no es ruptura**. | Firme [6] | TuXOg [14:59], gokPl [16:18], pasWN [08:50], WUv5q [05:05], G29Lb* [03:32] |
 | **No se exige retesteo:** se opera la ruptura directa. El "break and retest" es un setup aparte, no un requisito. **[V12] [V19]** | Núcleo [12] | Y8efW [35:52], ZMIDT [04:37], cTecm [07:11], PnIkS [16:43], oq8nF [01:30], E6dUU [00:08], Kffx9 [04:07], qLtq7 [28:44] |
 | La ruptura gana peso con **doble confirmación**: que a la vez se rompa un nivel horizontal, señal de que se sale de una consolidación. **[V17]** | Firme [5] | qsjLm [02:00], eQzvi [04:39], 17WoZ* [06:05], G29Lb* [05:04], ZMIDT [05:13] |
 | En crudo, los primeros intentos de salir de una consolidación suelen ser falsos y hay que pedir más confirmación. | Aislada [2] | eQzvi [13:54], PYBSQ* [04:27] |
 | Las falsas rupturas vienen de operar contra la tendencia de las temporalidades mayores. | Aislada [1] | ipUbs [00:36] |
 
-**Contradicción abierta (cierre de vela o cruce).**
-- **Los que entran al cruce:** en 8 videos entra apenas el precio cruza la línea o cuando salta
-  la alerta "Crossing" (qLtq7 [51:00], H8B5u [01:37], xMNO4 [08:05], E6dUU [00:08]).
-- **El dilema de volatilidad:** cTecm [07:33] dice que en mercados muy volátiles esperar el cierre
-  de 1H hace perder el movimiento.
-- **Doctrina: el cierre de vela**, por tres razones:
-  1. Es mayoría: 20 videos contra 8.
-  2. Es lo que ella exige para la **salida** en todos los videos.
-  3. Es lo único que el sistema puede afirmar sin mirar el tick: un mensaje publicado no puede
-     decir que una línea se rompió si la vela todavía está abierta.
-- **Pendiente de confirmar:** [V1], [V2] y [V3].
+**Cruce o cierre: lo que mostró la verificación.**
+
+El conteo de fichas inclinaba la balanza hacia el cierre de vela, por 20 videos contra 8. El video
+dice otra cosa:
+- **V1:** en qLtq7 [51:00] compra mientras la vela de 5 minutos todavía está perforando la línea.
+- **V2:** en q4t71 [16:53] la ruptura es cuando el precio "crosses".
+- **V3:** en cTecm [07:19] lo dice explícito: "You can do either one... waiting for the candle to
+  close is an option", pero en mercados rápidos esperar el cierre de 1H puede hacerte perder el
+  movimiento, y entra a mercado [07:55].
+
+Las fichas de "cierre" estaban leyendo velas que, una vez terminado el movimiento, ya se veían
+cerradas al otro lado.
+
+**Doctrina para el sistema: la lectura declara la ruptura con el cierre de la vela del marco
+operativo.** Es una de las dos formas que ella valida, así que no nos sale del método. Y es la única
+que el sistema puede publicar: una pieza no puede afirmar que una línea se rompió con la vela
+todavía abierta, porque la vela puede volver, y la regla de "sin mirar el futuro" del enchufe
+exige trabajar con velas cerradas.
+
+Lo que **no** podemos decir es que esa sea "la" regla de Tori. Ella entra al cruce. En el texto
+de cliente, la ruptura se describe como "cerró al otro lado de la línea".
 
 ### 2.5 Entrada
 
@@ -178,7 +189,7 @@ el secundario.
 |---|---|---|
 | El stop va **al otro lado de la línea de seguridad**: debajo de la alcista en un largo y encima de la bajista en un corto. | Núcleo [30] | E6dUU [05:58], Kffx9 [07:39], WUv5q [06:23], PnIkS [17:15], pasWN [07:44], qLtq7 [16:17], qsjLm [11:38], ZMIDT [05:37], rxleX [05:39] |
 | **No hay stop fijo** en puntos, en porcentaje ni en monto: el riesgo es dinámico y lo define la línea. | Núcleo [19] | E6dUU [05:54], Kffx9 [07:46], WUv5q [11:50], eQzvi [12:05], ZMIDT [15:28], cTecm [08:00], oq8nF [02:38], pasWN [01:05], H8B5u [03:06] |
-| El stop va **con margen** detrás de la línea, nunca sobre ella, para que una mecha o un testeo normal no lo active. No da el tamaño del margen. **[V9]** | Aislada [2] | pasWN [14:48], qLtq7 [17:16] |
+| El stop va **con margen** detrás de la línea, nunca sobre ella, para que una mecha o un testeo normal no lo active. Ella **no da un tamaño**: dice que la posición tiene que ser lo bastante chica para permitirse ese margen (verificado, pasWN [14:33], [15:30]). El margen numérico que use el sistema es **un parámetro nuestro**, no de ella. | Aislada [2] | pasWN [14:48], qLtq7 [17:16] |
 | **No se usan soportes o resistencias horizontales** para ubicar el stop. | Aislada [3] | pasWN [01:21], qsjLm [11:34], ZqC6W* [06:38] |
 | Un stop sobre una línea demasiado empinada puede saltarlo una vela de noticias; en ese caso conviene la línea opuesta de temporalidad mayor. | Aislada [1] | E6dUU [09:43] |
 
@@ -224,12 +235,15 @@ con los escenarios: el horizontal es el 🎯 y la línea de seguridad, el ⚠️
 | Cada línea de temporalidad menor **tiene que conectar** con las de las temporalidades mayores. | Aislada [2] | YROta* [02:38], gokPl [03:45] |
 | En **alta volatilidad** se baja de 4H a 1H para entrar y salir, y se vuelve a 4H cuando el mercado se normaliza. | Firme [5] | ZqC6W* [04:47], eJ0_E, cTecm [03:29], gokPl [12:18], rTHLR [01:58] |
 | Duración: en diario, semanas; en 4H, de una a dos semanas; en 1H, entre 8 y 10 horas. | Firme [9] | 1dQ0d, E_m8L, H8B5u, HiEDX, LpXZB, rxleX, xMNO4, oq8nF, qsjLm |
-| 1 y 5 minutos se descartan para el swing, por ruido. **[V8] [V20]** | Aislada [3] | rTHLR [01:03], xMNO4 [11:08], q4t71* [17:23] |
+| Para el **swing**, 1 y 5 minutos se descartan por ruido. En **day trading** sí opera 5 minutos, incluso con líneas de 2 toques (verificado en [V8]: xRxUo [00:47]). **[V20]** | Aislada [3] | rTHLR [01:03], xMNO4 [11:08], q4t71* [17:23] |
 
-**Contradicción resuelta (5 minutos).** En xRxUo [00:52] y qLtq7 [51:00] aparecen entradas en
-5 minutos. En el segundo es una demostración de ejecución fina dentro de una estructura de 4H.
-**Doctrina:** 4H es el marco, 1H la excepción por volatilidad, y no se baja de ahí. Pendiente de
-confirmar: [V1] y [V8].
+**Contradicción resuelta (5 minutos).** La verificación lo aclaró:
+- **xRxUo [00:47]:** es day trading real, en su evaluación de Apex.
+- **qLtq7 [51:00]:** es una demostración en replay.
+
+El método es el mismo en cualquier marco, y el marco lo define el estilo. **Doctrina:** como el
+grupo hace swing, el marco operativo es 4H, la excepción por volatilidad es 1H, y no se baja de
+ahí.
 
 ### 2.10 Soportes y resistencias horizontales
 
@@ -336,9 +350,19 @@ Hoy el sistema tiene dos motores que no se hablan:
 5. **Líneas de 2 toques.** La propuesta es dibujarlas, pero comunicar como línea principal solo la
    A+ (3 toques o más y una semana de datos). ¿De acuerdo?
 
-## 6. Verificación pendiente
+## 6. Verificación
 
-Las reglas marcadas **[V#]** se sostienen hoy por conteo de fichas. Su verificación contra el
-tramo del video está encargada en `docs/investigacion/tori-trades/verificacion_encargo.md`, y el
-resultado irá a `verificacion.md`. Si alguna no se confirma, se corrige esta doctrina antes del
-spec del subproyecto 2.
+El resultado está en `docs/investigacion/tori-trades/verificacion.md`.
+
+**Sesión 1, V1 a V10, hecha el 2026-10-09.**
+- **Cambió la doctrina:** la ruptura (V1 a V3) es cruce o cierre, según 2.4.
+- **Matizó:**
+  - Los 5 minutos son de day trading (V8).
+  - El margen del stop no tiene número (V9).
+- **Confirmó:**
+  - Las líneas de 2 toques son un setup menor (V4 a V6).
+  - El rebote es un setup aparte (V7).
+  - La no intersección (V10).
+
+**Pendiente:** V11 a V20, que es la sesión 2 del mismo encargo. Hasta que vuelvan, esas reglas se
+sostienen por conteo de fichas.
