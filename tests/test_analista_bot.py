@@ -318,3 +318,26 @@ def test_bitacora_marca_el_tipo(armado):
     pedir(armado, "/activo oro")
     entradas = json.loads((armado.tmp / "bitacora.json").read_text(encoding="utf-8"))
     assert [e["tipo"] for e in entradas] == ["oportunidad", "activo"]
+
+
+def _tomar_en_otro_proceso(ruta: Path) -> bool:
+    """El candado es por proceso: la segunda instancia tiene que ser otro proceso."""
+    import subprocess
+
+    codigo = (f"import sys; sys.path.insert(0, {str(RAIZ / 'scripts')!r}); "
+              "from pathlib import Path; from analista import bot; "
+              f"print(bot.tomar_instancia(Path({str(ruta)!r})) is not None)")
+    salida = subprocess.run([sys.executable, "-c", codigo], capture_output=True, text=True, check=True)
+    return salida.stdout.strip() == "True"
+
+
+def test_un_segundo_bot_no_arranca_mientras_el_primero_escucha(tmp_path):
+    # Un reinicio que dejó vivo al bot anterior armaba dos bots tomando los pedidos
+    # al azar, y el huérfano sin consola no podía dibujar el gráfico.
+    ruta = tmp_path / ".bot_analistas.lock"
+    primero = b.tomar_instancia(ruta)
+    assert primero is not None
+    assert _tomar_en_otro_proceso(ruta) is False
+    primero.close()
+    # Cerrado (o muerto) el primero, el candado queda libre: no hay candados huérfanos.
+    assert _tomar_en_otro_proceso(ruta) is True

@@ -134,6 +134,7 @@ data/logs/
 data/informes_analistas/
 data/.bot_telegram_estado.json
 data/.bot_telegram_estado.tmp
+data/.bot_analistas.lock
 config/analistas_telegram.json
 config/service_account.json
 # Foto y firma de quien firma el informe del bot: datos personales.
