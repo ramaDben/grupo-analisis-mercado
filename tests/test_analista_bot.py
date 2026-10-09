@@ -76,7 +76,7 @@ def armado(tmp_path):
     reloj = Reloj()
     at = b.Atendedor(config, b.Estado.cargar(tmp_path / "estado.json"), autor=fx.AUTOR, preparar=preparar_falso,
                      redactar=redactor(llamadas), rendir_laminas=lambda p, d: None, reloj=reloj,
-                     dir_pedidos=tmp_path / "pedidos")
+                     dir_pedidos=tmp_path / "pedidos", bitacora=tmp_path / "bitacora.json")
     bot = b.Bot(TgFalso(), at)
     return SimpleNamespace(bot=bot, llamadas=llamadas, reloj=reloj, tmp=tmp_path)
 
@@ -138,6 +138,14 @@ def test_pieza_reusada_usa_la_fecha_del_pedido(armado):
     assert "vigente" in segundo.texto and len(armado.llamadas) == 1
     assert "A-32915" not in segundo.archivos[0].read_text(encoding="utf-8")
     assert "venció" in segundo.texto
+
+
+def test_activo_nuevo_queda_en_la_bitacora_y_el_reusado_no(armado):
+    pedir(armado, "/activo oro")
+    armado.reloj.ahora += timedelta(minutes=5)
+    pedir(armado, "/activo oro")
+    entradas = json.loads((armado.tmp / "bitacora.json").read_text(encoding="utf-8"))
+    assert len(entradas) == 1 and entradas[0]["analista"] == CAMILA
 
 
 def test_pieza_vencida_se_vuelve_a_redactar(armado):

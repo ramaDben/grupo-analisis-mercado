@@ -6,6 +6,7 @@ Uso:
     uv run --with MetaTrader5 --extra stories --extra informe python scripts/bot_analistas.py \\
         --una "/activo oro" --usuario <id>                     # un pedido, sin Telegram
     uv run python scripts/bot_analistas.py --validar data/informes_analistas/.../pieza.json
+    uv run --with MetaTrader5 python scripts/bot_analistas.py --desenlaces   # completa la bitácora de planes
 
 Diseño y reglas: docs/bot-analistas.md y la spec
 docs/superpowers/specs/2026-10-08-bot-telegram-analistas-design.md.
@@ -58,11 +59,24 @@ def main(argv: list[str] | None = None) -> int:
     modo.add_argument("--probar-token", action="store_true", help="verifica el token contra Telegram")
     modo.add_argument("--una", metavar="PEDIDO", help="atiende un pedido sin Telegram e imprime el resultado")
     modo.add_argument("--validar", type=Path, metavar="PIEZA_JSON", help="valida una pieza redactada")
+    modo.add_argument("--desenlaces", action="store_true",
+                      help="completa el desenlace de los planes de más de 24 h en la bitácora")
     ap.add_argument("--usuario", help="con --una: id del analista en config/analistas_telegram.json")
     args = ap.parse_args(argv)
 
     if args.validar:
         return validar(args.validar)
+
+    if args.desenlaces:
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+
+        from analista import bitacora as bt
+        from analista.preparar import _serie_h1
+
+        n = bt.completar(_serie_h1, datetime.now(ZoneInfo("America/Santiago")))
+        print(f"OK: {n} plan(es) con desenlace nuevo en {bt.RUTA.relative_to(RAIZ)}")
+        return 0
 
     from analista import autor as au
     from analista import bot

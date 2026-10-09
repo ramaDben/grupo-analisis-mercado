@@ -27,6 +27,7 @@ from zoneinfo import ZoneInfo
 
 from analista import RAIZ
 from analista import autor as au
+from analista import bitacora as bt
 from analista import esquema as es
 from analista import informe_html as ih
 from analista import orden as od
@@ -159,6 +160,7 @@ class Atendedor:
     rendir_laminas: Callable[..., None] = pr.rendir_laminas
     reloj: Callable[[], datetime] = lambda: datetime.now(SANTIAGO)
     dir_pedidos: Path = DIR_PEDIDOS
+    bitacora: Path = bt.RUTA
 
     def analista(self, usuario: str) -> dict[str, Any]:
         return self.config["analistas"][usuario]
@@ -222,6 +224,9 @@ class Atendedor:
                               ahora.date(), nombre_base)
         except ih.InformeInvalido as exc:
             raise FalloPedido(f"No pude armar el informe: {exc}") from exc
+        # Una pieza reusada es el mismo plan: se anota una sola vez.
+        if o.pieza == "activo" and not reusada:
+            bt.anotar(pieza, ruta, pedido.usuario, ahora, self.bitacora)
         drive = self._a_drive([ruta], ahora)
         lineas = [f"✅ {pieza['editorial']['titular']}",
                   f"{pieza['datos']['chip']} · {pieza['datos']['edicion']}"]
