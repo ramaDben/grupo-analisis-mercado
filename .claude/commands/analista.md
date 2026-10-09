@@ -38,6 +38,10 @@ pone el bot: tú no decides nada visual.
 7. **Siglas explicadas en línea** la primera vez: "vacantes de empleo (JOLTS)".
 8. **Largos:** `titular` hasta 70 caracteres; `bajada` hasta 160. Van impresos dentro de la imagen.
 9. **Eventos futuros en modo anticipación** ("el mercado espera"), nunca en pasado.
+10. **Análisis general, nunca una instrucción.** Escribe en impersonal y condicional ("el
+    escenario se activa si…", "la presión compradora"). Nunca le digas al lector que compre,
+    venda, entre, cierre ni cuánto arriesgar, y no recomiendes: el informe es igual para todos y
+    nadie en GI está inscrito como asesor de inversión. El bot rechaza esas frases.
 
 ### Qué va en cada campo
 

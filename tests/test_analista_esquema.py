@@ -8,10 +8,11 @@ from pathlib import Path
 import pytest
 
 RAIZ = Path(__file__).resolve().parent.parent
-for p in (str(RAIZ / "src"), str(RAIZ / "scripts")):
+for p in (str(RAIZ / "src"), str(RAIZ / "scripts"), str(RAIZ / "tests")):
     if p not in sys.path:
         sys.path.insert(0, p)
 
+import analista_fixtures as fx  # noqa: E402
 from analista import esquema as es  # noqa: E402
 
 DATOS = {"precio": "4.110,65", "soporte": "4.098,20", "resistencia": "4.131,00", "fecha_hora": "08/10/2026 09:39"}
@@ -116,3 +117,34 @@ def test_no_puede_tocar_las_laminas():
     assert es.errores(p) == []
     p["laminas"]["calendario.png"]["titular"] = "otra cosa"
     assert any("datos" in e for e in es.errores(p))
+
+
+# ───────────────────────────────────────────── candados de lenguaje
+
+
+@pytest.mark.parametrize("texto", [
+    "Es momento de comprar oro.", "Te recomiendo vender.", "Abre una posición larga.",
+    "Toma ganancias en la resistencia.", "Usa 2 lotes.", "Recomendamos esperar.",
+    "Señal de compra clara.", "Deberías vender ya.", "No arriesgues más del 2 % de tu capital.",
+    "Compra ya antes del dato.", "Cierra tu posición antes del cierre.",
+])
+def test_frases_prohibidas_caen(texto):
+    assert es.frases_prohibidas(texto)
+
+
+@pytest.mark.parametrize("texto", [
+    "El índice de gerentes de compra (PMI) sube.",
+    "Si rompe un borde y vuelve a entrar, es falso quiebre.",
+    "El escenario alcista se activa sobre la resistencia.",
+    "Hay presión compradora.",
+    "Los vendedores dominan la sesión.",
+    "La lotería no es una estrategia.",
+])
+def test_formas_impersonales_pasan(texto):
+    assert es.frases_prohibidas(texto) == []
+
+
+def test_errores_reporta_la_frase(tmp_path):
+    p = fx.activo(tmp_path)
+    p["editorial"]["que_no_hacer"] = "Te recomiendo no perseguir el precio."
+    assert any("te recomiendo" in x for x in es.errores(p))

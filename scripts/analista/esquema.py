@@ -14,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import unicodedata
 from typing import Any
 
 from pipeline_linkedin import MARCA_EDITORIAL as MARCA
@@ -32,8 +33,37 @@ CAMPOS: dict[str, tuple[str, ...]] = {
 # que tienen el espacio medido: un titular largo se corta en la imagen.
 LARGO_MAXIMO = {"titular": 70, "bajada": 160}
 
+# El informe es análisis general: nadie en GI está inscrito como asesor de
+# inversión. Se prohíben FRASES y no palabras sueltas, porque "compra" o
+# "entrar" aparecen en texto legítimo ("gerentes de compra (PMI)", "vuelve a
+# entrar") y un candado que bloquea eso termina desactivado. Se comparan sin
+# tildes y en minúsculas; las que van en `_PALABRA_EXACTA` exigen borde al final
+# ("lote" no puede atrapar "lotería"), el resto también atrapa sus derivadas.
+FRASES_PROHIBIDAS: tuple[str, ...] = (
+    "compra ya", "vende ya", "es momento de comprar", "es momento de vender",
+    "entra al mercado", "abre una posicion", "cierra tu posicion", "toma ganancias",
+    "debes comprar", "debes vender", "deberias comprar", "deberias vender",
+    "recomendamos", "te recomiendo", "te conviene", "senal de compra", "senal de venta",
+    "lote", "lotes", "apalanca", "de tu capital", "arriesga",
+)
+_PALABRA_EXACTA = {"lote", "lotes"}
+
 _HTML = re.compile(r"<\s*[a-zA-Z/!]")
 _NUMERO = re.compile(r"\d[\d.,]*\d|\d")
+
+
+def _plano(texto: str) -> str:
+    t = unicodedata.normalize("NFKD", texto)
+    return "".join(c for c in t if not unicodedata.combining(c)).lower()
+
+
+def frases_prohibidas(texto: str) -> list[str]:
+    """Las frases de instrucción o recomendación que trae `texto`."""
+    plano = _plano(texto)
+    return [
+        f for f in FRASES_PROHIBIDAS
+        if re.search(rf"\b{re.escape(f)}" + (r"\b" if f in _PALABRA_EXACTA else ""), plano)
+    ]
 
 
 def _huella(pieza: dict[str, Any]) -> str:
@@ -129,6 +159,9 @@ def errores(pieza: dict[str, Any]) -> list[str]:
     for donde, texto in pares:
         if _HTML.search(texto):
             errs.append(f"{donde}: trae HTML; la maqueta la pone la plantilla, no el texto")
+        for frase in frases_prohibidas(texto):
+            errs.append(f"{donde}: «{frase}» es una instrucción de operar o una recomendación; "
+                        "el informe es análisis general")
         for cifra in cifras_ajenas(texto, pieza.get("datos")):
             errs.append(f"{donde}: la cifra {cifra} no está en los datos del terminal")
     return errs
