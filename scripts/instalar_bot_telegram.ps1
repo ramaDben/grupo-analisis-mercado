@@ -54,8 +54,14 @@ if ($Quitar) {
     exit 0
 }
 
+# Sin ventana (pedido del director): conhost --headless le da al bot una consola
+# OCULTA, y todo lo que lanza (agy, git, el render) la hereda. Con uvw solo el
+# primer proceso queda sin ventana y cada hijo de consola abre la suya. Mismo
+# metodo que la tarea GI-CalculadoraLotaje.
+$Conhost = Join-Path $env:SystemRoot "System32\conhost.exe"
 $Argumentos = "run --with MetaTrader5 --extra stories --extra informe python scripts/bot_analistas.py --escuchar"
-$Accion = New-ScheduledTaskAction -Execute $Uv.Source -Argument $Argumentos -WorkingDirectory $Repo
+$Accion = New-ScheduledTaskAction -Execute $Conhost `
+    -Argument "--headless `"$($Uv.Source)`" $Argumentos" -WorkingDirectory $Repo
 $Disparador = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 
 # Sin limite de duracion: el bot escucha todo el dia. Si muere, el Programador
@@ -72,7 +78,7 @@ $Ajustes = New-ScheduledTaskSettingsSet `
 if (-not $Instalar) {
     Write-Host "Tarea:      $Tarea"
     Write-Host "Disparador: al iniciar sesion de $env:USERNAME"
-    Write-Host "Comando:    $($Uv.Source) $Argumentos"
+    Write-Host "Comando:    $Conhost --headless `"$($Uv.Source)`" $Argumentos"
     Write-Host "Carpeta:    $Repo"
     Write-Host ""
     Write-Host "No se instalo nada. Para registrarla: scripts\instalar_bot_telegram.ps1 -Instalar"

@@ -132,12 +132,19 @@ posterior a la que se usó al preparar.
    (gitignoreado) y agregar a cada persona por su número de usuario. Quien no está, recibe su
    número al escribirle al bot y se lo pasa al director. Completar también el bloque `autor` y
    poner la foto en `config/autor/foto.png`.
-4. `ruta_drive`: la raíz de Google Drive para escritorio (por ejemplo `G:\Mi unidad`). El bot
-   crea `GI Informes/<fecha>/` adentro. `url_carpeta_drive` es opcional y va en la respuesta.
+4. `ruta_drive`: la carpeta de Google Drive para escritorio donde se entrega (por ejemplo
+   `G:\Mi unidad`). El bot crea `GI Informes/<fecha>/` adentro. Una carpeta **compartida** se
+   alcanza por `<unidad>:\.shortcut-targets-by-id\<id de la carpeta>\<nombre>`, y la cuenta de
+   esa unidad necesita permiso de Editor. `url_carpeta_drive` es opcional y va en la respuesta.
 5. Probar sin Telegram, con MT5 abierto:
    `uv run --with MetaTrader5 --extra stories --extra informe python scripts/bot_analistas.py --una "/activo oro"`
 6. Dejarlo corriendo: `scripts\instalar_bot_telegram.ps1 -Instalar` (sin `-Instalar` solo muestra
-   qué haría).
+   qué haría). La tarea corre bajo `conhost --headless`: sin ventana, y lo que el bot lanza
+   (agy, git, el render) hereda esa consola oculta.
+7. Mantener `data central` fresco: `scripts\instalar_ingesta.ps1 -Instalar`. Sin esa tarea, la
+   ingesta solo corre al abrir Claude Code, y un día sin sesión deja la curva de tasas vencida:
+   las piezas salen con el aviso «contexto sin curva de tasas». Late cada hora y solo baja datos
+   si la última ingesta tiene más de 6 h.
 
 ## Cuando algo falla
 

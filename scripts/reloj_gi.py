@@ -313,7 +313,10 @@ def _correr_preparar(canal: str, pieza: str | None = None, momento: str | None =
             sys.executable, str(RAIZ / "scripts" / "pipeline_carrusel.py"),
             "--preparar", "--grupo", canal,
         ]
-    r = subprocess.run(cmd, cwd=str(RAIZ), capture_output=True, text=True)
+    # GI-Reloj corre sin consola (uvw): sin este flag, Windows le abre al hijo una
+    # ventana de Python cada vez que dispara un momento.
+    sin_ventana = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+    r = subprocess.run(cmd, cwd=str(RAIZ), capture_output=True, text=True, creationflags=sin_ventana)
     return {
         "canal": canal,
         "codigo": r.returncode,
