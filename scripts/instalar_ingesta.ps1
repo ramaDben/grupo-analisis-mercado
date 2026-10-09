@@ -1,3 +1,4 @@
+# punto-de-entrada: el director lo corre a mano una vez (docs/bot-analistas.md, Puesta en marcha, paso 7)
 <#
 .SYNOPSIS
   Registra la ingesta macro en el Programador de tareas de Windows.
