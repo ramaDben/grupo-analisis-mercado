@@ -134,8 +134,16 @@ def main(argv: list[str] | None = None) -> int:
     autor = autor_o_nada(config)
     if autor is None:
         return 2
+    instancia = bot.tomar_instancia()
+    if instancia is None:
+        # Código 0: no es una falla, y el Programador de tareas no lo reintenta en bucle.
+        aviso = "ya hay un bot escuchando: no arranco un segundo (reinicia con instalar_bot_telegram.ps1 -Reiniciar)"
+        bot._log(aviso)
+        print(aviso)
+        return 0
     print(f"Escuchando Telegram con {len(config['analistas'])} analista(s) autorizado(s). Ctrl+C para salir.")
-    bot.Bot(tg, bot.Atendedor(config, bot.Estado.cargar(), autor)).escuchar()
+    with instancia:
+        bot.Bot(tg, bot.Atendedor(config, bot.Estado.cargar(), autor)).escuchar()
     return 0
 
 

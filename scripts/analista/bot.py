@@ -17,12 +17,13 @@ from __future__ import annotations
 import json
 import queue
 import shutil
+import sys
 import threading
 import traceback
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Callable
+from typing import IO, Any, Callable
 from zoneinfo import ZoneInfo
 
 from analista import RAIZ
@@ -39,6 +40,7 @@ CONFIG = RAIZ / "config" / "analistas_telegram.json"
 DIR_PEDIDOS = RAIZ / "data" / "informes_analistas"
 ESTADO = RAIZ / "data" / ".bot_telegram_estado.json"
 LOG = RAIZ / "data" / "logs" / "bot_telegram.log"
+INSTANCIA = RAIZ / "data" / ".bot_analistas.lock"
 
 AYUDA = """Bot de análisis · Grupo Inteligencia
 
@@ -56,6 +58,34 @@ El informe es un análisis general: compártelo tal cual con tu trader.
 
 
 # ───────────────────────────────────────────────────────────── configuración y estado
+
+
+def tomar_instancia(ruta: Path = INSTANCIA) -> IO[bytes] | None:
+    """Toma el candado de bot único; `None` si otro proceso ya lo tiene.
+
+    Dos bots con el mismo token se reparten los pedidos al azar. Pasó al reiniciar la
+    tarea: `Stop-ScheduledTask` cierra solo `conhost`, el bot viejo quedó vivo y sin
+    consola, y no podía lanzar Chromium. El candado es del sistema operativo, no de
+    antigüedad: lo suelta al morir el proceso, así que nunca queda huérfano. Quien lo
+    toma tiene que mantener el archivo abierto mientras escucha.
+    """
+    ruta.parent.mkdir(parents=True, exist_ok=True)
+    archivo = open(ruta, "a+b")  # noqa: SIM115 - vive lo que vive el proceso
+    try:
+        if sys.platform == "win32":
+            import msvcrt
+
+            archivo.seek(0)
+            msvcrt.locking(archivo.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(archivo.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        archivo.close()
+        return None
+    return archivo
+
 
 
 # El foco técnico vale menos: el precio se mueve y el plan puede cambiar de estado.

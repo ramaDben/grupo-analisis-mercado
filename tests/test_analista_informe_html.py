@@ -150,26 +150,21 @@ def test_estandar_celular_sin_zoom():
     # se leen como ~16 px. Nada bajo 10 pt salvo el aviso legal.
     css = (ih.DIR_PLANTILLAS / "informe.css").read_text(encoding="utf-8")
     assert re.search(r"@page\s*\{[^}]*size:\s*108mm 192mm", css)
-    assert re.search(r"@page lamina\s*\{[^}]*size:\s*192mm 108mm", css)
+    assert "@page lamina" not in css
     chicos = [(s, pt) for s, pt in _tamanos(css) if pt < 10 and "legal" not in s]
     assert chicos == []
     assert any(s.strip() == "body" and 12.5 <= pt <= 14 for s, pt in _tamanos(css))
 
 
 @pytest.mark.parametrize("tipo", sorted(fx.PIEZAS))
-def test_cada_grafico_es_una_miniatura_que_abre_su_lamina(tipo, tmp_path):
+def test_el_grafico_va_a_todo_el_ancho_sin_enlaces(tipo, tmp_path):
+    # Los visores de teléfono (Drive, Telegram) no siguen enlaces internos del PDF:
+    # tocarlo daba error. El gráfico va entero en la hoja y se amplía con los dedos.
     salida = ih.armar(fx.PIEZAS[tipo](tmp_path), tmp_path, fx.ANALISTA, fx.AUTOR, HOY)
-    destinos = re.findall(r'<a class="figura-enlace" href="#(grafico-[\w-]+)"', salida)
-    assert destinos, "toda pieza trae al menos un gráfico"
-    fin_del_informe = salida.index("</footer>")
-    for d in destinos:
-        lamina = salida.index(f'<section class="lamina" id="{d}">')
-        # Las láminas van al final: no cortan la lectura, la miniatura salta hasta ellas.
-        assert lamina > fin_del_informe
-        vuelta = d.replace("grafico-", "vuelta-", 1)
-        assert f'id="{vuelta}"' in salida[:fin_del_informe]
-        assert f'href="#{vuelta}"' in salida[lamina:]
-    assert "Toca el gráfico para verlo en grande" in salida
+    assert '<figure class="figura"><img ' in salida, "toda pieza trae al menos un gráfico"
+    assert 'href="#' not in salida
+    assert 'class="lamina' not in salida
+    assert "Pellizca para ampliar" in salida
 
 
 def test_las_tablas_salen_como_tarjetas_con_su_rotulo(tmp_path):

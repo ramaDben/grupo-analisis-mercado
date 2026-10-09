@@ -24,14 +24,22 @@
 .PARAMETER Quitar
   Elimina la tarea.
 
+.PARAMETER Reiniciar
+  Cierra el bot entero y lo vuelve a lanzar. Stop-ScheduledTask SOLO no alcanza:
+  cierra conhost y deja vivos uv y python. El 2026-10-09 un reinicio asi dejo dos
+  bots repartiendose los pedidos, y el huerfano, sin consola, no podia lanzar
+  Chromium: la mitad de los pedidos fallaba al dibujar el grafico.
+
 .EXAMPLE
   scripts\instalar_bot_telegram.ps1              # muestra que haria, no toca nada
   scripts\instalar_bot_telegram.ps1 -Instalar    # registra GI-BotTelegram
   scripts\instalar_bot_telegram.ps1 -Quitar      # la elimina
+  scripts\instalar_bot_telegram.ps1 -Reiniciar   # cierra el bot entero y lo relanza
 #>
 param(
     [switch]$Instalar,
-    [switch]$Quitar
+    [switch]$Quitar,
+    [switch]$Reiniciar
 )
 
 $ErrorActionPreference = "Stop"
@@ -44,7 +52,40 @@ if (-not $Uv) {
     exit 1
 }
 
+# Todo proceso del bot: conhost, uv y los dos python (el lanzador del venv y el
+# interprete real) llevan esta linea de comando.
+function Get-ProcesosBot {
+    Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'bot_analistas\.py --escuchar' }
+}
+
+function Stop-Bot {
+    if (Get-ScheduledTask -TaskName $Tarea -ErrorAction SilentlyContinue) {
+        Stop-ScheduledTask -TaskName $Tarea
+    }
+    foreach ($p in Get-ProcesosBot) {
+        try { Stop-Process -Id $p.ProcessId -Force -ErrorAction Stop } catch {}
+    }
+    Start-Sleep -Seconds 2
+    $quedan = @(Get-ProcesosBot)
+    if ($quedan.Count -gt 0) {
+        Write-Host "No pude cerrar $($quedan.Count) proceso(s) del bot: $($quedan.ProcessId -join ', ')"
+        exit 1
+    }
+}
+
+if ($Reiniciar) {
+    if (-not (Get-ScheduledTask -TaskName $Tarea -ErrorAction SilentlyContinue)) {
+        Write-Host "No existe la tarea '$Tarea'. Registrala con -Instalar."
+        exit 1
+    }
+    Stop-Bot
+    Start-ScheduledTask -TaskName $Tarea
+    Write-Host "Bot reiniciado: una sola instancia corriendo."
+    exit 0
+}
+
 if ($Quitar) {
+    Stop-Bot
     if (Get-ScheduledTask -TaskName $Tarea -ErrorAction SilentlyContinue) {
         Unregister-ScheduledTask -TaskName $Tarea -Confirm:$false
         Write-Host "Tarea '$Tarea' eliminada."
@@ -85,10 +126,11 @@ if (-not $Instalar) {
     exit 0
 }
 
+Stop-Bot
 if (Get-ScheduledTask -TaskName $Tarea -ErrorAction SilentlyContinue) {
     Unregister-ScheduledTask -TaskName $Tarea -Confirm:$false
 }
 Register-ScheduledTask -TaskName $Tarea -Action $Accion -Trigger $Disparador -Settings $Ajustes `
-    -Description "Bot de Telegram del equipo: piezas a pedido en HTML (docs/bot-analistas.md)" | Out-Null
+    -Description "Bot de Telegram del equipo: piezas a pedido en PDF (docs/bot-analistas.md)" | Out-Null
 Write-Host "Tarea '$Tarea' registrada. Arranca en el proximo inicio de sesion, o ahora con:"
 Write-Host "  Start-ScheduledTask -TaskName $Tarea"

@@ -38,11 +38,12 @@ pedido → orden.py (gramática cerrada) → preparar.py (datos + gráficos, car
 - **El PDF se lee en el teléfono** (director, 2026-10-09). La hoja mide 108 x 192 mm, la
   proporción de una pantalla: el visor la encaja a lo ancho y el cuerpo de 13 pt se lee sin zoom.
   Una sola columna, las tablas como tarjetas y ningún bloque cortado entre páginas. No se fuerza
-  un salto por sección: se probó y dejaba hojas con dos líneas. El gráfico va en miniatura y al
-  **tocarlo** salta a su lámina apaisada al final del PDF (girar el teléfono la deja a pantalla
-  completa, y se amplía con los dedos sin perder nitidez); «← Volver al informe» regresa. No abre
-  la imagen fuera del PDF porque eso exige una dirección web, y el bot deja los archivos en la
-  carpeta sincronizada de Drive sin conocer la suya.
+  un salto por sección: se probó y dejaba hojas con dos líneas. El gráfico va a todo el ancho, en
+  alta resolución, y **se amplía con los dedos** («Pellizca para ampliar»). **Sin enlaces
+  internos**: hasta el 2026-10-09 tocar el gráfico saltaba a una lámina apaisada al final, y los
+  visores de teléfono (Drive, Telegram) no siguen esos enlaces: tocarlo daba error y la lámina
+  quedaba como una hoja horizontal suelta. Se distribuye solo por la carpeta de Drive: el director
+  descartó publicar páginas web, links o envíos automáticos.
 
 - **agy solo redacta.** No recibe nada de lo que el analista escribió: recibe la ruta de la
   pieza. Datos, imágenes y láminas van sellados con una huella, y si cambian la pieza se descarta.
@@ -156,6 +157,12 @@ posterior a la que se usó al preparar.
 6. Dejarlo corriendo: `scripts\instalar_bot_telegram.ps1 -Instalar` (sin `-Instalar` solo muestra
    qué haría). La tarea corre bajo `conhost --headless`: sin ventana, y lo que el bot lanza
    (agy, git, el render) hereda esa consola oculta.
+   **Para reiniciarlo** (tras traer master o tocar `config/analistas_telegram.json`):
+   `scripts\instalar_bot_telegram.ps1 -Reiniciar`. **Nunca `Stop-ScheduledTask` solo**: cierra
+   `conhost` y deja vivos `uv` y `python`. El 2026-10-09 eso dejó dos bots repartiéndose los
+   pedidos, y el huérfano, sin consola, no podía lanzar Chromium: la mitad de los pedidos fallaba
+   al dibujar el gráfico. Ahora además el bot toma un candado (`data/.bot_analistas.lock`) y un
+   segundo no arranca mientras el primero escucha; el sistema lo suelta al morir el proceso.
 7. Mantener `data central` fresco: `scripts\instalar_ingesta.ps1 -Instalar`. Sin esa tarea, la
    ingesta solo corre al abrir Claude Code, y un día sin sesión deja la curva de tasas vencida:
    las piezas salen con el aviso «contexto sin curva de tasas». Late cada hora y solo baja datos
@@ -171,6 +178,7 @@ El analista recibe el motivo, y nunca una pieza a medias ni un gráfico de otro 
 | `La redacción no terminó (timeout ...)` | agy no respondió en 12 minutos. No gasta cupo |
 | `El texto no pasó los controles` | agy escribió una cifra ajena, HTML o guion largo. No se entrega |
 | `No pude generar el PDF ...` | Chromium no imprimió el informe. Llega el HTML (ábrelo en el navegador) y no se copia a Drive |
+| `'PlaywrightContextManager' object has no attribute '_playwright'` (en la bitácora) | Un bot huérfano sin consola: hay dos corriendo. `-Reiniciar` |
 | `Drive no está configurado` | Falta `ruta_drive`; el archivo igual llega por Telegram |
 
 La bitácora está en `data/logs/bot_telegram.log` y el estado (offset, cupo y piezas vigentes) en

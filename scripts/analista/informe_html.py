@@ -65,38 +65,23 @@ def vinetas(texto: str) -> str:
     return "<ul>" + "".join(f"<li>{e(ln)}</li>" for ln in lineas) + "</ul>"
 
 
-AVISO_TOQUE = "🔍 Toca el gráfico para verlo en grande"
+AVISO_ZOOM = "🔍 Pellizca para ampliar"
 
 
 def figura(dir_pedido: Path, archivo: str | None, pie: str = "") -> str:
-    """La miniatura del gráfico, enlazada a su lámina horizontal al final del informe.
+    """El gráfico a todo el ancho de la hoja, incrustado en alta resolución.
 
-    En el teléfono la página mide 108 mm y el gráfico queda chico: tocarlo salta a
-    una página apaisada donde ocupa la pantalla entera. La lámina la arma `laminas`.
+    Sin enlaces: los visores de teléfono (Drive, Telegram) no siguen los enlaces
+    internos de un PDF y tocarlos daba error. Se amplía con los dedos.
     """
     if not archivo:
         return ""
     ruta = dir_pedido / archivo
     if not ruta.exists():
         raise InformeInvalido(f"falta la imagen {archivo}: la pieza no sale sin su gráfico")
-    marca = slug(Path(archivo).stem)
-    leyenda = " · ".join(x for x in (e(pie), AVISO_TOQUE) if x)
-    return (f'<figure class="figura" id="vuelta-{marca}">'
-            f'<a class="figura-enlace" href="#grafico-{marca}"><img src="{_data_uri(ruta)}" alt="{e(pie)}"></a>'
+    leyenda = " · ".join(x for x in (e(pie), AVISO_ZOOM) if x)
+    return (f'<figure class="figura"><img src="{_data_uri(ruta)}" alt="{e(pie)}">'
             f"<figcaption>{leyenda}</figcaption></figure>")
-
-
-_MINIATURA = re.compile(r'<a class="figura-enlace" href="#grafico-([\w-]+)"><img src="([^"]+)" alt="([^"]*)">')
-
-
-def laminas(cuerpo: str) -> str:
-    """Una página apaisada por gráfico del cuerpo, con el regreso a su miniatura."""
-    return "\n".join(
-        f'<section class="lamina" id="grafico-{marca}">'
-        f'<div class="lamina-encabezado"><a href="#vuelta-{marca}">← Volver al informe</a><span>{alt}</span></div>'
-        f'<img src="{src}" alt="{alt}"></section>'
-        for marca, src, alt in _MINIATURA.findall(cuerpo)
-    )
 
 
 def capa(rotulo: str, texto: str, clase: str = "") -> str:
@@ -368,7 +353,6 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, analista: dict[str, Any], aut
         "referencia": e(d["referencia"]),
         "edicion": e(d["edicion"]),
         "cuerpo": cuerpo,
-        "laminas": laminas(cuerpo),
         "firma": bloque_firma(autor, hoy),
         "aviso_legal": e(AVISO_LEGAL),
         "contacto": e(f"{nombre} · {contacto}" if contacto else nombre),
