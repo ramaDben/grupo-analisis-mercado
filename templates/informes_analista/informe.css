@@ -295,3 +295,19 @@ table.tabla {
 .firma-general { font-size: 9.5pt; color: var(--tinta-3); margin: 6pt 0 0; }
 @media print { .firma { break-inside: avoid; } }
 @media (max-width: 560px) { .firma { flex-direction: column; text-align: center; } }
+
+/* ── Plan de escenarios (lo escribe Python; condicional e impersonal) ── */
+.plan { border: 1px solid var(--papel-linea); border-radius: 8pt; padding: 12pt 14pt; margin: 8pt 0 12pt; }
+.plan-fila {
+  display: grid;
+  grid-template-columns: 9.5em 1fr;
+  gap: 10pt;
+  padding: 6pt 0;
+  border-top: 1px solid var(--papel-linea);
+}
+.plan > p + .plan-fila { border-top: 0; }
+.plan-rotulo { font-weight: 700; color: var(--tinta-2); font-size: 10.5pt; }
+.plan-fila p { margin: 0; }
+.plan-vacio p { color: var(--tinta-2); margin: 0; }
+@media print { .plan { break-inside: avoid; } }
+@media (max-width: 560px) { .plan-fila { grid-template-columns: 1fr; gap: 2pt; } }

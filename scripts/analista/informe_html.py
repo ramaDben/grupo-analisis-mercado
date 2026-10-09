@@ -122,9 +122,24 @@ def cuerpo_activo(p: dict[str, Any], dir_pedido: Path) -> str:
         f'<ul class="escenarios">{escenarios}</ul>',
         f'<p class="temporalidad">⏱️ <strong>Temporalidad:</strong> {e(d["temporalidad"])}</p>',
         f'<p class="temporalidad">💡 {e(d["por_que_temporalidad"])}</p>' if d.get("por_que_temporalidad") else "",
+        h2(4, "Plan de escenarios") if d.get("plan") else "",
+        seccion_plan(d["plan"]) if d.get("plan") else "",
         capa("Qué NO hacer", ed["que_no_hacer"], "no-hacer"),
-        _tabla_tasas(d.get("contexto", {}).get("curva_tasas") or [], 4),
+        _tabla_tasas(d.get("contexto", {}).get("curva_tasas") or [], 5 if d.get("plan") else 4),
     ])
+
+
+def seccion_plan(plan: dict[str, Any]) -> str:
+    """El plan que escribió Python: gatillo, invalidación, recorrido, historia y estado."""
+    if not plan.get("hay_plan"):
+        return f'<div class="plan plan-vacio"><p>{e(plan.get("motivo", ""))}</p></div>'
+    filas = [("Gatillo", plan["gatillo"]), ("Invalidación", plan["invalidacion"]),
+             ("Recorrido", plan["recorrido"]), ("Qué dice la historia", plan["estadistica"]),
+             ("Estado", plan["estado"])]
+    cuerpo = "".join(
+        f'<div class="plan-fila"><div class="plan-rotulo">{e(r)}</div><p>{e(t)}</p></div>' for r, t in filas
+    )
+    return f'<div class="plan"><p>{pildora(plan["sesgo"])}</p>{cuerpo}</div>'
 
 
 def _tabla_tasas(curva: list[list[str]], numero: int) -> str:

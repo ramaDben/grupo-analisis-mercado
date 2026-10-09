@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import pandas as pd
 import pytest
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -38,9 +39,20 @@ def _png(destino: Path) -> Path:
     return destino
 
 
+H1 = {"price": 68.716, "s1": 68.394, "r1": 68.974, "atr_14": 0.12, "ema_50": 68.5,
+      "niveles_origen": {"s1": "swing", "r1": "swing", "s2": "atr", "r2": "atr"}}
+
+
+def _serie_h1(n: int = 400) -> pd.DataFrame:
+    cierres = [68.0 + k * 0.002 for k in range(n)]
+    return pd.DataFrame({"time": pd.date_range("2026-09-20", periods=n, freq="h"), "open": cierres,
+                         "close": cierres, "high": [c + 0.05 for c in cierres], "low": [c - 0.05 for c in cierres]})
+
+
 def lectores(**cambios) -> pr.Lectores:
     base = dict(
-        terminal=lambda t, a: {"ticker": t, "activo": ACTIVO, "seleccion": SELECCION, "cierres": CIERRES},
+        terminal=lambda t, a: {"ticker": t, "activo": ACTIVO, "seleccion": SELECCION, "cierres": CIERRES, "h1": H1},
+        serie_h1=lambda t: _serie_h1(),
         grafico_tv=lambda payload, destino: _png(destino),
         jornada=lambda a: (list(JORNADA), []),
         agenda=lambda a: (list(JORNADA), []),
@@ -71,6 +83,21 @@ def test_activo_trae_los_numeros_del_payload_de_whatsapp(tmp_path):
     assert ctx["agenda_hoy"][0].startswith("09:30") and "salió 197K" in ctx["agenda_hoy"][0]
     assert (tmp_path / "grafico.png").exists() and (tmp_path / "pieza.json").exists()
     assert set(hecha.pieza["editorial"]) == set(es.CAMPOS["activo"])
+
+
+def test_activo_trae_el_plan_sellado(tmp_path):
+    hecha = pr.preparar(Orden("activo", {"ticker": "XAGUSD"}), tmp_path, AHORA, lectores())
+    plan = hecha.pieza["datos"]["plan"]
+    assert plan["hay_plan"] and "68,974" in plan["gatillo"]
+    assert plan["niveles"]["vela"] == str(_serie_h1()["time"].iat[-1])
+    hecha.pieza["datos"]["plan"]["gatillo"] = "otra cosa"
+    assert any("cambiaron" in x for x in es.errores(hecha.pieza))
+
+
+def test_activo_sin_h1_en_la_lectura_falla_con_motivo(tmp_path):
+    sin_h1 = lambda t, a: {"ticker": t, "activo": ACTIVO, "seleccion": SELECCION, "cierres": CIERRES}  # noqa: E731
+    with pytest.raises(pr.PreparacionFallida, match="H1"):
+        pr.preparar(Orden("activo", {"ticker": "XAGUSD"}), tmp_path, AHORA, lectores(terminal=sin_h1))
 
 
 def test_activo_sin_cuenta_correcta_no_lee_el_terminal(tmp_path):

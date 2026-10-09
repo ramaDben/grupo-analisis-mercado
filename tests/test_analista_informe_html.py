@@ -81,6 +81,20 @@ def test_con_foto_va_incrustada(tmp_path):
     assert '<img class="firma-foto" src="data:image/png;base64,' in html
 
 
+def test_seccion_plan_y_sin_plan():
+    con = ih.seccion_plan({"hay_plan": True, "sesgo": "Alcista", "gatillo": "G1", "invalidacion": "I1",
+                           "recorrido": "R1", "estadistica": "E1", "estado": "S1"})
+    for x in ("Gatillo", "Invalidación", "Qué dice la historia", "G1", "I1", "R1", "E1", "S1"):
+        assert x in con
+    sin = ih.seccion_plan({"hay_plan": False, "sesgo": "Alcista", "motivo": "M1"})
+    assert "M1" in sin and "Gatillo" not in sin
+
+
+def test_el_informe_de_activo_trae_el_plan(tmp_path):
+    html = ih.armar(fx.activo(tmp_path), tmp_path, fx.ANALISTA, fx.AUTOR, HOY)
+    assert "Plan de escenarios" in html and fx.PLAN["gatillo"] in html
+
+
 def test_el_texto_de_agy_sale_escapado(tmp_path):
     pieza = fx.activo(tmp_path)
     pieza["editorial"]["lectura"] = "El precio & la media: arriba \"fuerte\""

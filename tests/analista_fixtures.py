@@ -31,6 +31,17 @@ def _imagen(dir_pedido: Path, nombre: str) -> str:
     return nombre
 
 
+PLAN = {
+    "hay_plan": True, "sesgo": "Alcista",
+    "gatillo": "El escenario alcista se activa con un cierre de vela de 1 hora sobre 4.131,00.",
+    "invalidacion": "El escenario se anula bajo 4.090,10. Es una salida por volatilidad.",
+    "recorrido": "Recorrido de referencia: 1,5 veces la volatilidad típica de una hora, unos 12,00.",
+    "estadistica": "Desde el 2025-01-27, esta condición se dio 313 veces en Oro.",
+    "estado": "Armado: el precio todavía no cruza el gatillo.",
+    "niveles": {"gatillo": 4131.0, "invalidacion": 4090.1, "vela": "2026-10-08 09:00:00"},
+}
+
+
 def activo(dir_pedido: Path) -> dict:
     datos = {
         "chip": "NOTA DE MERCADO · COMMODITIES",
@@ -50,6 +61,7 @@ def activo(dir_pedido: Path) -> dict:
         "temporalidad": "intradía · marco 1H (dentro de la jornada)",
         "por_que_temporalidad": "Por qué 1H acá: el oro se mueve lo justo para leerlo hora a hora.",
         "pie_imagen": "Oro · XAU/USD, gráfico de 1 hora con datos de MetaTrader 5",
+        "plan": dict(PLAN),
     }
     p = es.nueva_pieza("activo", {"ticker": "XAUUSD"}, datos, {"principal": _imagen(dir_pedido, "alerta.png")})
     p["editorial"].update({

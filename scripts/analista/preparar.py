@@ -111,6 +111,17 @@ def _drivers(ticker: str) -> list[str]:
     return []
 
 
+def _serie_h1(ticker: str):
+    """Las últimas 10.000 velas H1 cerradas del terminal, para la estadística del plan."""
+    from market_data_mcp import mt5_client
+
+    try:
+        df = mt5_client.get_rates(ticker, "H1", 10000)
+    except Exception as exc:  # noqa: BLE001
+        raise PreparacionFallida(f"sin serie H1 de {ticker} para el plan ({exc})") from exc
+    return df.iloc[:-1].reset_index(drop=True)
+
+
 def _cuenta() -> str | None:
     """`None` si el terminal está en la cuenta declarada; si no, el motivo."""
     from guardrails.cuenta import cuenta_correcta
@@ -138,6 +149,7 @@ class Lectores:
     curva: Callable[[], tuple[dict[str, Any], list[str]]] = _curva
     drivers: Callable[[str], list[str]] = _drivers
     cuenta: Callable[[], str | None] = _cuenta
+    serie_h1: Callable[[str], Any] = _serie_h1
 
 
 @dataclass
@@ -169,6 +181,7 @@ def preparar_activo(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lector
 
     op = pc.lectura_operativa(payload)
     activo = lectura["activo"]
+    plan = _plan(orden.args["ticker"], lectura, payload["sesgo"], activo, lec)
     precio = payload["precio_actual"]
     unidad = activo.get("unidad") or ""
     clase = CLASES.get(str(activo.get("categoria") or activo.get("clase") or "").lower(), "MERCADOS")
@@ -185,12 +198,30 @@ def preparar_activo(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lector
         **op,
         "pie_imagen": f"{payload.get('rotulo_activo', activo['nombre'])} · velas de 1 hora · MetaTrader 5",
         "contexto": contexto,
+        "plan": plan,
     }
     avisos = list(avisos_contexto)
     if payload.get("banda_estrecha"):
         avisos.append("niveles estrechos para la volatilidad del activo: ojo con los falsos quiebres")
     pieza = es.nueva_pieza("activo", orden.args, datos, {"principal": "grafico.png"})
     return Preparada(pieza, avisos)
+
+
+def _plan(ticker: str, lectura: dict[str, Any], sesgo: str, activo: dict[str, Any], lec: Lectores) -> dict[str, Any]:
+    """El plan de escenarios con su estadística: lo escribe Python y queda sellado en `datos`."""
+    from analista import estadistica as est
+    from analista import plan as plan_mod
+
+    if "h1" not in lectura:
+        raise PreparacionFallida("la lectura del terminal no trae el análisis H1 que necesita el plan")
+    df = lec.serie_h1(ticker)
+    ind = est.indicadores(df)
+    ultima = {"close": float(df["close"].iat[-1]), "hh22": float(ind["hh"].iat[-1]),
+              "ll22": float(ind["ll"].iat[-1]), "atr22": float(ind["atr22"].iat[-1]),
+              "vela": str(df["time"].iat[-1])}
+    digits = int(activo["digits"])
+    medida = est.medir(df, digits, sesgo == "Alcista") if len(df) > est.VENTANA + est.HORIZONTE else None
+    return plan_mod.armar(lectura["h1"], digits, sesgo, activo["nombre"], medida, ultima)
 
 
 CLASES = {

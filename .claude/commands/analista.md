@@ -54,6 +54,8 @@ pone el bot: tú no decides nada visual.
   - `empuja_alza` y `empuja_baja`: 2 o 3 puntos cada uno, con los drivers del día y su efecto
     (analizados, no enumerados).
   - `que_no_hacer`: un error concreto a evitar hoy.
+  - `datos.plan` (gatillo, invalidación, recorrido, estadística) lo escribió el bot y sale en su
+    propia sección: no lo repitas. Si lo nombras en `lectura`, en una frase y con sus mismas cifras.
 - **Calendario**:
   - `titular` y `bajada` sobre la jornada o la semana.
   - `lectura`: qué dato domina y por qué.
