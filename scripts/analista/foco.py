@@ -236,6 +236,12 @@ def plan_foco(df, h1: dict[str, Any], activo: dict[str, Any], sesgo: str) -> Pla
     return PlanFoco(p, velas, float(df["close"].iat[-1]), float(h1["atr_14"]))
 
 
+def _activo(ticker: str) -> dict[str, Any]:
+    import screener_gi as sc
+
+    return next(a for a in sc.cargar_universo(solo_renderizables=False) if a["ticker"] == ticker)
+
+
 @dataclass
 class LectoresFoco:
     conectar: Callable[[], list[str]] = _conectar
@@ -245,6 +251,7 @@ class LectoresFoco:
     edad_tick: Callable[[str], float | None] = _edad_tick
     serie: Callable[[str], Any] = _serie
     armar_plan: Callable[..., PlanFoco] = plan_foco
+    activo: Callable[[str], dict[str, Any]] = _activo
 
 
 # ───────────────────────────────────────────────────────────── selección
@@ -305,3 +312,45 @@ def seleccionar(universo: list[dict[str, Any]], ahora: datetime,
         return SinFoco(len(universo), dict(motivos))
     _, elegido = min(candidatos, key=lambda c: c[0])
     return Seleccion(elegido, len(universo), ahora)
+
+
+# ───────────────────────────────────────────────────────────── vigencia
+
+
+def _clase_estado(plan: dict[str, Any]) -> str:
+    return str(plan.get("estado", "")).split(":", 1)[0]
+
+
+def sigue_vigente(pieza: dict[str, Any], ahora: datetime, lec: LectoresFoco | None = None) -> bool:
+    """¿Se puede volver a entregar este foco tal cual?
+
+    La ventana de reuso sola no alcanza: un dato o un titular pueden invalidar el
+    plan a los diez minutos, y otro ejecutivo recibiría un escenario que ya no
+    existe. Se vuelve a leer el activo y, ante la menor duda, se rehace.
+    """
+    lec = lec or LectoresFoco()
+    try:
+        import screener_gi as sc
+
+        datos = pieza["datos"]
+        ticker, previo = datos["ticker"], datos["plan"]
+        if lec.conectar():
+            return False
+        eventos, _, avisos = lec.contexto_macro(ahora)
+        if calendario_caido(avisos) or sc.gate_blackout(ticker, eventos, ahora):
+            return False
+        edad = lec.edad_tick(ticker)
+        if edad is None or edad >= EDAD_TICK_MAXIMA_MIN:
+            return False
+        h1 = lec.analizador(ticker, "H1")
+        if "error" in h1:
+            return False
+        sesgo = "Alcista" if sc.direccion_tecnica(h1) == "ALCISTA" else "Bajista"
+        if sesgo != previo["sesgo"]:
+            return False
+        pf = lec.armar_plan(lec.serie(ticker), h1, lec.activo(ticker), sesgo)
+        return (elegible(pf) is None
+                and pf.plan["niveles"]["gatillo"] == previo["niveles"]["gatillo"]
+                and _clase_estado(pf.plan) == _clase_estado(previo))
+    except Exception:  # noqa: BLE001
+        return False

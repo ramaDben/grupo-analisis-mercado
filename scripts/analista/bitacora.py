@@ -46,13 +46,14 @@ def anotar(pieza: dict[str, Any], html: Path, analista: str, ahora: datetime, ru
     entradas = _leer(ruta)
     entradas.append({
         "creada": ahora.isoformat(),
+        "tipo": pieza["orden"]["pieza"],
         "ticker": pieza["datos"]["ticker"],
         "alcista": plan["sesgo"] == "Alcista",
         "gatillo": plan["niveles"]["gatillo"],
         "invalidacion": plan["niveles"]["invalidacion"],
         "recorrido": plan["niveles"].get("recorrido"),
         "vela": plan["niveles"]["vela"],
-        "estadistica": plan["estadistica"],
+        "estadistica": plan.get("estadistica"),  # el foco técnico no la trae
         "analista": analista,
         "huella_html": hashlib.sha256(html.read_bytes()).hexdigest(),
         "desenlace": None,

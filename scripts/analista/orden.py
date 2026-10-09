@@ -19,7 +19,7 @@ class PedidoInvalido(ValueError):
     """El pedido no calza con la gramática; el mensaje se le muestra al analista."""
 
 
-PIEZAS = ("activo", "calendario", "dato", "jornada")
+PIEZAS = ("activo", "calendario", "dato", "jornada", "oportunidad")
 SERVICIO = ("start", "ayuda", "id", "estado")
 
 # Nombres en español que el equipo usa a diario. Los tickers del broker se
@@ -109,6 +109,9 @@ def interpretar(texto: str, universo: list[dict[str, Any]] | None = None) -> Ord
 
             universo = sc.cargar_universo(solo_renderizables=False)
         args: dict[str, Any] = {"ticker": resolver_activo(cuerpo, universo)}
+    elif comando == "oportunidad":
+        # Sin argumentos: el foco lo elige el escáner, no quien lo pide.
+        args = {}
     elif comando == "calendario":
         alcance = _plano(cuerpo) or "hoy"
         if alcance not in ("hoy", "semana"):

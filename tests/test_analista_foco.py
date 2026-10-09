@@ -216,3 +216,56 @@ def test_plan_foco_real_no_trae_estadistica_y_cuenta_las_velas():
     h1 = {"atr_14": 1.0, "r1": 999.0, "niveles_origen": {"r1": "swing"}}
     r = fo.plan_foco(corte, h1, {"digits": 2, "nombre": "X"}, "Alcista")
     assert "estadistica" not in r.plan and r.velas_desde_ruptura == 1
+
+
+# ───────────────────────────────────────────────────────────── vigencia del reuso
+
+
+def pieza_foco(gatillo=100.0, estado="Armado: x", sesgo="Alcista"):
+    return {"datos": {"ticker": "XAUUSD", "nombre": "Oro",
+                      "plan": plan(sesgo=sesgo, gatillo=gatillo, estado=estado)}}
+
+
+def lectores_vigencia(pf_nuevo, h1=None, edad=1.0, contexto=None, conectar=()):
+    return fo.LectoresFoco(
+        conectar=lambda: list(conectar),
+        contexto_macro=lambda ahora: contexto or ([], None, []),
+        analizador=lambda t, m: h1 or {"price": 99.5, "ema_50": 98.0},
+        edad_tick=lambda t: edad,
+        serie=lambda t: None,
+        armar_plan=lambda df, h, a, s: pf_nuevo,
+        activo=lambda t: activo(t),
+    )
+
+
+def test_vigente_si_el_plan_sigue_igual():
+    assert fo.sigue_vigente(pieza_foco(), AHORA, lectores_vigencia(pf(99.5)))
+
+
+def test_no_vigente_si_cambio_el_gatillo_o_el_estado():
+    assert not fo.sigue_vigente(pieza_foco(gatillo=101.0), AHORA, lectores_vigencia(pf(99.5)))
+    assert not fo.sigue_vigente(pieza_foco(), AHORA,
+                                lectores_vigencia(pf(100.2, velas=0, estado="Activado: x")))
+
+
+def test_no_vigente_si_la_tendencia_dio_vuelta():
+    h1 = {"price": 97.0, "ema_50": 98.0}
+    assert not fo.sigue_vigente(pieza_foco(), AHORA, lectores_vigencia(pf(99.5), h1=h1))
+
+
+def test_no_vigente_con_mercado_cerrado_calendario_caido_o_blackout():
+    assert not fo.sigue_vigente(pieza_foco(), AHORA, lectores_vigencia(pf(99.5), edad=40.0))
+    caido = ([], None, ["calendario no disponible (X): blackouts sin verificar"])
+    assert not fo.sigue_vigente(pieza_foco(), AHORA, lectores_vigencia(pf(99.5), contexto=caido))
+    nfp = [{"nombre": "Nonfarm Payrolls", "pais": "United States", "impacto": "alto",
+            "hora_servidor": AHORA.strftime("%Y-%m-%d %H:%M")}]
+    assert not fo.sigue_vigente(pieza_foco(), AHORA, lectores_vigencia(pf(99.5), contexto=(nfp, None, [])))
+
+
+def test_si_algo_revienta_no_se_reusa():
+    def revienta(t, m):
+        raise RuntimeError("MT5")
+
+    lec = lectores_vigencia(pf(99.5))
+    lec.analizador = revienta
+    assert not fo.sigue_vigente(pieza_foco(), AHORA, lec)
