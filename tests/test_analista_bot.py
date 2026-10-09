@@ -223,3 +223,10 @@ def test_config_de_ejemplo_es_valida():
 
     assert au.cargar(config, RAIZ).nombre
     json.dumps(config)
+
+
+def test_config_anterior_al_foco_recibe_su_ventana(tmp_path):
+    ruta = tmp_path / "c.json"
+    ruta.write_text(json.dumps({"reuso_minutos": {"activo": 45}}), encoding="utf-8")
+    cfg = b.cargar_config(ruta)
+    assert cfg["reuso_minutos"]["activo"] == 45 and cfg["reuso_minutos"]["oportunidad"] == 60

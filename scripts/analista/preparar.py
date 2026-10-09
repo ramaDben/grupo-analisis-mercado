@@ -28,6 +28,14 @@ class PreparacionFallida(RuntimeError):
     """El dato no está; el mensaje se le muestra al analista tal cual."""
 
 
+class SinFocoError(PreparacionFallida):
+    """Ningún activo tiene hoy una configuración clara: es una lectura, no una falla."""
+
+
+class MercadoIlegibleError(PreparacionFallida):
+    """MT5 o el calendario no responden: no se sabe si hay foco o no."""
+
+
 # ───────────────────────────────────────────────────────────── lectores reales
 
 
@@ -122,6 +130,27 @@ def _serie_h1(ticker: str):
     return df.iloc[:-1].reset_index(drop=True)
 
 
+def _foco(ahora: datetime):
+    from analista import foco as fo
+
+    return fo.seleccionar(fo.universo_ventas(), ahora)
+
+
+def _catalogo_de(ticker: str) -> dict[str, Any]:
+    import pipeline_linkedin as pl
+
+    return pl._catalogo()[ticker]
+
+
+def _cierres(ticker: str) -> dict[str, Any]:
+    import pipeline_carrusel as pc
+
+    try:
+        return pc._serie_para(ticker)
+    except Exception as exc:  # noqa: BLE001
+        raise PreparacionFallida(f"{ticker}: sin serie para el gráfico ({exc})") from exc
+
+
 def _cuenta() -> str | None:
     """`None` si el terminal está en la cuenta declarada; si no, el motivo."""
     from guardrails.cuenta import cuenta_correcta
@@ -150,6 +179,9 @@ class Lectores:
     drivers: Callable[[str], list[str]] = _drivers
     cuenta: Callable[[], str | None] = _cuenta
     serie_h1: Callable[[str], Any] = _serie_h1
+    foco: Callable[[datetime], Any] = _foco
+    catalogo: Callable[[str], dict[str, Any]] = _catalogo_de
+    cierres: Callable[[str], dict[str, Any]] = _cierres
 
 
 @dataclass
@@ -169,9 +201,35 @@ def _comunes(ahora: datetime, chip: str, rotulo_referencia: str, referencia: str
 
 
 def preparar_activo(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lectores) -> Preparada:
+    lectura = lec.terminal(orden.args["ticker"], ahora)
+    return _pieza_de_activo("activo", orden.args, lectura, dir_pedido, ahora, lec)
+
+
+def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lectores) -> Preparada:
+    """El foco técnico del día, armado con la MISMA lectura con que se eligió."""
+    from analista import foco as fo
+    import pipeline_avisos as pa
+
+    r = lec.foco(ahora)
+    if isinstance(r, fo.SinFoco):
+        raise SinFocoError(r.texto())
+    if isinstance(r, fo.MercadoIlegible):
+        raise MercadoIlegibleError(r.texto())
+    el = r.elegido
+    ticker = el.activo["ticker"]
+    lectura = {"ticker": ticker, "activo": lec.catalogo(ticker), "seleccion": el.evaluacion,
+               "h1": el.h1, "cierres": lec.cierres(ticker)}
+    extra = {"seleccion": {"evaluados": r.evaluados, "hora": pa.fecha_hora(r.ahora)}}
+    return _pieza_de_activo("oportunidad", {"ticker": ticker}, lectura, dir_pedido, ahora, lec,
+                            plan=el.plan_foco.plan, extra=extra,
+                            chip=f"FOCO TÉCNICO DEL DÍA · {el.activo['nombre'].upper()}")
+
+
+def _pieza_de_activo(tipo: str, args: dict[str, Any], lectura: dict[str, Any], dir_pedido: Path,
+                     ahora: datetime, lec: Lectores, plan: dict[str, Any] | None = None,
+                     extra: dict[str, Any] | None = None, chip: str | None = None) -> Preparada:
     import pipeline_carrusel as pc
 
-    lectura = lec.terminal(orden.args["ticker"], ahora)
     try:
         payload = pc.construir_payload(lectura["seleccion"], lectura["activo"], ahora, lectura["cierres"])
     except pc.PayloadIncoherenteError as exc:
@@ -181,15 +239,17 @@ def preparar_activo(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lector
 
     op = pc.lectura_operativa(payload)
     activo = lectura["activo"]
-    plan = _plan(orden.args["ticker"], lectura, payload["sesgo"], activo, lec)
+    ticker = args["ticker"]
+    plan = plan if plan is not None else _plan(ticker, lectura, payload["sesgo"], activo, lec)
     precio = payload["precio_actual"]
     unidad = activo.get("unidad") or ""
     clase = CLASES.get(str(activo.get("categoria") or activo.get("clase") or "").lower(), "MERCADOS")
     lec.grafico_tv(payload, dir_pedido / "grafico.png")
-    contexto, avisos_contexto = _contexto(orden.args["ticker"], ahora, lec)
+    contexto, avisos_contexto = _contexto(ticker, ahora, lec)
     datos = {
-        **_comunes(ahora, f"NOTA DE MERCADO · {clase}", "Cotización de referencia", f"{precio} {unidad}".strip()),
-        "ticker": orden.args["ticker"],
+        **_comunes(ahora, chip or f"NOTA DE MERCADO · {clase}", "Cotización de referencia",
+                   f"{precio} {unidad}".strip()),
+        "ticker": ticker,
         "nombre": activo["nombre"],
         "precio": precio,
         "soporte": payload["soporte"],
@@ -199,11 +259,12 @@ def preparar_activo(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lector
         "pie_imagen": f"{payload.get('rotulo_activo', activo['nombre'])} · velas de 1 hora · MetaTrader 5",
         "contexto": contexto,
         "plan": plan,
+        **(extra or {}),
     }
     avisos = list(avisos_contexto)
     if payload.get("banda_estrecha"):
         avisos.append("niveles estrechos para la volatilidad del activo: ojo con los falsos quiebres")
-    pieza = es.nueva_pieza("activo", orden.args, datos, {"principal": "grafico.png"})
+    pieza = es.nueva_pieza(tipo, args, datos, {"principal": "grafico.png"})
     return Preparada(pieza, avisos)
 
 
@@ -455,10 +516,11 @@ PREPARADORES = {
     "calendario": preparar_calendario,
     "dato": preparar_dato,
     "jornada": preparar_jornada,
+    "oportunidad": preparar_oportunidad,
 }
 
 # Piezas que leen precios del terminal: sin la cuenta declarada no salen.
-CON_TERMINAL = {"activo", "dato", "jornada"}
+CON_TERMINAL = {"activo", "dato", "jornada", "oportunidad"}
 
 
 def preparar(orden: Orden, dir_pedido: Path, ahora: datetime | None = None,

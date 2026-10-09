@@ -27,6 +27,8 @@ CAMPOS: dict[str, tuple[str, ...]] = {
     "calendario": ("titular", "bajada", "lectura"),
     "dato": ("titular", "bajada", "que_paso", "que_significa", "que_no_hacer", "impacto"),
     "jornada": ("titular", "bajada", "lectura", "que_no_hacer"),
+    # El foco técnico del día es la pieza de activo para un prospecto: mismos campos.
+    "oportunidad": ("titular", "bajada", "lectura", "empuja_alza", "empuja_baja", "que_no_hacer"),
 }
 
 # El titular y la bajada también van impresos dentro de las láminas de WhatsApp,

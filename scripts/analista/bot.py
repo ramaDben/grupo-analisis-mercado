@@ -56,10 +56,15 @@ El informe es un análisis general: compártelo tal cual con tu trader.
 # ───────────────────────────────────────────────────────────── configuración y estado
 
 
+# El foco técnico vale menos: el precio se mueve y el plan puede cambiar de estado.
+REUSO_MINUTOS = {"activo": 30, "calendario": 30, "dato": 30, "jornada": 720, "oportunidad": 60}
+
+
 def cargar_config(ruta: Path = CONFIG) -> dict[str, Any]:
     datos = json.loads(ruta.read_text(encoding="utf-8"))
     datos.setdefault("analistas", {})
-    datos.setdefault("reuso_minutos", {"activo": 30, "calendario": 30, "dato": 30, "jornada": 720})
+    # Una pieza nueva no puede quedar con la ventana genérica porque el config es anterior a ella.
+    datos["reuso_minutos"] = {**REUSO_MINUTOS, **datos.get("reuso_minutos", {})}
     datos.setdefault("tier", "flash")
     return datos
 
