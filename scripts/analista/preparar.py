@@ -208,7 +208,6 @@ def preparar_activo(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lector
 def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lectores) -> Preparada:
     """El foco técnico del día, armado con la MISMA lectura con que se eligió."""
     from analista import foco as fo
-    import pipeline_avisos as pa
 
     r = lec.foco(ahora)
     if isinstance(r, fo.SinFoco):
@@ -219,7 +218,8 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
     ticker = el.activo["ticker"]
     lectura = {"ticker": ticker, "activo": lec.catalogo(ticker), "seleccion": el.evaluacion,
                "h1": el.h1, "cierres": lec.cierres(ticker)}
-    extra = {"seleccion": {"evaluados": r.evaluados, "hora": pa.fecha_hora(r.ahora)}}
+    cuando = r.ahora.astimezone(SANTIAGO)
+    extra = {"seleccion": {"evaluados": r.evaluados, "fecha": f"{cuando:%d-%m-%Y}", "hora": f"{cuando:%H:%M}"}}
     return _pieza_de_activo("oportunidad", {"ticker": ticker}, lectura, dir_pedido, ahora, lec,
                             plan=el.plan_foco.plan, extra=extra,
                             chip=f"FOCO TÉCNICO DEL DÍA · {el.activo['nombre'].upper()}")

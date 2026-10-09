@@ -54,6 +54,15 @@ FRASES_PROHIBIDAS: tuple[str, ...] = (
 )
 _PALABRA_EXACTA = {"lote", "lotes"}
 
+# El foco técnico del día lo comparte ventas con un prospecto: además no puede
+# empujar a entrar ni hablar de cuánto acierta. La estadística se sacó de la
+# pieza a propósito (sin su línea base, "53 %" insinúa una ventaja que no hay),
+# y un porcentaje en el texto la traería de vuelta por la puerta de atrás.
+FRASES_PROHIBIDAS_FOCO: tuple[str, ...] = (
+    "no te lo pierdas", "ultima oportunidad", "aprovecha", "asegurad", "ganancia segura",
+    "oportunidad unica", "acierta", "efectividad", "de las veces", "tasa de exito",
+)
+
 # El informe no nombra a la CMF (decisión del director, 2026-10-08), tampoco en
 # el texto de agy.
 _CMF = re.compile(r"\bcmf\b", re.IGNORECASE)
@@ -67,11 +76,11 @@ def _plano(texto: str) -> str:
     return "".join(c for c in t if not unicodedata.combining(c)).lower()
 
 
-def frases_prohibidas(texto: str) -> list[str]:
+def frases_prohibidas(texto: str, frases: tuple[str, ...] = FRASES_PROHIBIDAS) -> list[str]:
     """Las frases de instrucción o recomendación que trae `texto`."""
     plano = _plano(texto)
     return [
-        f for f in FRASES_PROHIBIDAS
+        f for f in frases
         if re.search(rf"\b{re.escape(f)}" + (r"\b" if f in _PALABRA_EXACTA else ""), plano)
     ]
 
@@ -174,6 +183,12 @@ def errores(pieza: dict[str, Any]) -> list[str]:
         for frase in frases_prohibidas(texto):
             errs.append(f"{donde}: «{frase}» es una instrucción de operar o una recomendación; "
                         "el informe es análisis general")
+        if tipo == "oportunidad":
+            for frase in frases_prohibidas(texto, FRASES_PROHIBIDAS_FOCO):
+                errs.append(f"{donde}: «{frase}» empuja a entrar o habla de cuánto acierta; "
+                            "el foco técnico describe un escenario")
+            if "%" in texto:
+                errs.append(f"{donde}: trae un porcentaje, y el foco técnico no muestra ninguno")
         for cifra in cifras_ajenas(texto, pieza.get("datos")):
             errs.append(f"{donde}: la cifra {cifra} no está en los datos del terminal")
     return errs

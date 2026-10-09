@@ -157,3 +157,28 @@ def test_el_texto_no_nombra_a_la_cmf(tmp_path):
     p = fx.activo(tmp_path)
     p["editorial"]["lectura"] = "Este análisis está regulado por la CMF."
     assert any("CMF" in x for x in es.errores(p))
+
+
+# ───────────────────────────────────────────────────────────── foco técnico
+
+
+@pytest.mark.parametrize("frase", [
+    "No te lo pierdas: el oro está listo.", "Es la última oportunidad de la semana.",
+    "Aprovecha el impulso.", "Una ganancia asegurada.", "Es una ganancia segura.",
+    "Una oportunidad única.", "Esta condición acierta casi siempre.", "Tiene buena efectividad.",
+    "Se cumplió la mitad de las veces.", "Su tasa de éxito es alta.", "Sube un 2% en el día.",
+])
+def test_el_foco_bloquea_captacion_y_estadistica(tmp_path, frase):
+    p = fx.oportunidad(tmp_path)
+    p["editorial"]["lectura"] = frase
+    assert any("lectura" in x for x in es.errores(p))
+
+
+def test_los_candados_del_foco_no_tocan_al_activo(tmp_path):
+    p = fx.activo(tmp_path)
+    p["editorial"]["lectura"] = "El mercado aprovecha el dato para tomar posiciones defensivas."
+    assert es.errores(p) == []
+
+
+def test_el_foco_deja_pasar_el_texto_legitimo(tmp_path):
+    assert es.errores(fx.oportunidad(tmp_path)) == []

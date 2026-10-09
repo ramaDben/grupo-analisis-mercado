@@ -75,6 +75,17 @@ def activo(dir_pedido: Path) -> dict:
     return p
 
 
+def oportunidad(dir_pedido: Path) -> dict:
+    """El foco técnico del día: la pieza de activo para un prospecto, sin estadística."""
+    base = activo(dir_pedido)
+    datos = {**base["datos"], "chip": "FOCO TÉCNICO DEL DÍA · ORO",
+             "plan": {k: v for k, v in PLAN.items() if k != "estadistica"},
+             "seleccion": {"evaluados": 10, "fecha": "09-10-2026", "hora": "10:40"}}
+    p = es.nueva_pieza("oportunidad", {"ticker": "XAUUSD"}, datos, base["imagenes"])
+    p["editorial"].update(base["editorial"])
+    return p
+
+
 def calendario(dir_pedido: Path) -> dict:
     eventos = [
         {"id": "1", "hora": "09:30", "pais": "EE.UU.", "evento": "Peticiones de subsidio por desempleo",
