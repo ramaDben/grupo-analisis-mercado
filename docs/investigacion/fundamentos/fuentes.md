@@ -19,20 +19,34 @@ fuente, pero no se pudo leer lo que se le atribuye), **no verificada**, **no enc
 ---
 
 ### F1. Teoría de Dow
-- Estado: **verificada parcial**
+- Estado: **verificada vía Murphy** (originales no leídos)
 - Hamilton, W. P. (1922). *The Stock Market Barometer: A Study of Its Forecast Value Based on
   Charles H. Dow's Theory of the Price Movement*. Nueva York: Harper & Brothers. Existe en
   https://archive.org/details/stockmarketbarom00hami (abierto).
 - Rhea, R. (1932). *The Dow Theory: An Explanation of Its Development and an Attempt to Define Its
   Usefulness as an Aid in Speculation*. Nueva York: Barron's. Confirmado por catálogo
   (https://libcat.library.tamu.edu/Record/in00000054987). La URL de archive.org que dio AGY da 404.
-- Lo que falta: no se leyó en ninguno de los dos libros la definición de máximos y mínimos
-  crecientes, la presunción de vigencia ni las "líneas". Un librero describe el libro de Rhea con
-  teoremas sobre identificación de tendencia, señales, volumen y rangos de negociación (fuente
-  secundaria). **No citar texto de Dow hasta leer el capítulo.**
+- Los originales no se leyeron. **La Teoría de Dow se cita a través de Murphy** (ver F3, misma
+  edición), que en la p. 50 nombra como fuentes a Nelson (1903, *El ABC de la especulación con
+  valores*), a Hamilton (1922) y a Rhea (1932, Barron's). Lo verificado en Murphy:
+  - Premisa del análisis técnico (cap. 1, p. 29): "una tendencia en movimiento es más probable
+    que continúe que retroceda."
+  - Definición (p. 51): "una tendencia ascendente sigue un patrón de picos y valles cada vez más
+    altos. La situación opuesta, con picos y valles cada vez más bajos, define una tendencia
+    descendente."
+  - Tres tendencias (pp. 51-52): primaria de más de un año, secundaria de tres semanas a tres
+    meses, menor de menos de tres semanas.
+  - Vigencia (p. 54): "Se presume que una tendencia está en vigor hasta que da señales definitivas
+    de que ha retrocedido."
+  - **Solo cierres** (p. 56, cotejada con la imagen): "Dow no consideraba válidas las penetraciones
+    intradía." Respalda que el sistema publique la ruptura con el cierre de la vela, aunque Tori
+    entre al cruce (verificación V1-V3).
+  - "Líneas" (p. 57): patrones horizontales, "consolidaciones", hoy "rectángulos".
+  - Crítica (p. 57): "la Teoría de Dow pierde de un 20 al 25 por ciento de un movimiento antes de
+    generar una señal". Es el costo de esperar la confirmación.
 
 ### F2. Edwards y Magee
-- Estado: **verificada parcial**
+- Estado: **verificada vía Murphy** (originales no leídos)
 - Edwards, R. D. y Magee, J. (1948). *Technical Analysis of Stock Trends*. Springfield, MA: Stock
   Trend Service. La edición en archive.org es la de 1991 (International Technical Analysis
   Publishers, ISBN 1880408007), de acceso restringido y sin texto descargable:
@@ -41,13 +55,46 @@ fuente, pero no se pudo leer lo que se le atribuye), **no verificada**, **no enc
   del 3 %" que AGY le atribuye no está verificada** (la tradición la asocia más a Murphy).
 
 ### F3. Murphy
-- Estado: **no verificada**
-- Murphy, J. J. (1999). *Technical Analysis of the Financial Markets*. New York Institute of
-  Finance. La URL de archive.org que dio AGY da 404, y las búsquedas solo devolvieron resúmenes de
-  terceros y PDF de procedencia dudosa.
-- Lo que falta: número y título del capítulo; los dos puntos más el tercero; la importancia por
-  longitud, toques y ángulo; los filtros de penetración (3 %, dos días); la inversión de roles; el
-  abanico. **Es la fuente más útil para la doctrina y hay que leerla en el libro.**
+- Estado: **verificada** (libro leído, 2026-10-09)
+- Murphy, J. J. (1999). *Technical Analysis of the Financial Markets*. Nueva York: New York
+  Institute of Finance. Edición en español: *Análisis técnico de los mercados financieros*,
+  trad. Carlos Ganzinelli, Barcelona: Gestión 2000, 1.ª ed. mayo de 2000, ISBN 84-8088-442-8.
+  **Las páginas citadas son de la edición en español.** Copia del director, escaneada; el PDF no se
+  versiona.
+- Lectura: dos subagentes transcribieron los capítulos 1, 2 y 4. Se cotejaron contra la imagen las
+  pp. 56, 94 y 101, que coincidían palabra por palabra.
+
+| # | Regla | Pág. | Cita literal | ¿Coincide? |
+|---|---|---|---|---|
+| M1 | Tendencia = picos y valles | 75 | "Una tendencia ascendente se definiría como una serie de picos y valles sucesivamente más altos." | Sí |
+| M2 | No operar en lateral | 76-78 | "cuando el mercado se mueve lateralmente, la tercera opción —mantenerse fuera del mercado— es generalmente la más sensata." Los precios están en lateral "una tercera parte del tiempo, en una estimación conservadora" (pp. 76-77). | Sí |
+| M3 | Inversión de roles | 85 | "un nivel de resistencia se transforma en un nivel de apoyo y el apoyo se transforma en resistencia." Exige penetración "por una cantidad significativa". | Sí |
+| M4 | Fuerza de un nivel horizontal | 86 | "la cantidad de tiempo que se ha pasado allí, el volumen y la cercanía en el tiempo de la transacción." | **Parcial: pesa lo reciente, no lo antiguo** |
+| M5 | Dos puntos trazan, tres validan | 94 | "se necesitan dos puntos para trazar la línea de tendencia y un tercero para transformarla en una línea de tendencia válida." Distingue la línea "orientativa" (2 puntos) de la "válida" (3). | Sí |
+| M6 | Importancia por duración y toques | 94-96 | "el tiempo que se ha mantenido intacta y el número de veces que se ha puesto a prueba." | Sí |
+| M7 | Filtros de penetración | 97-98 | "un cierre más allá de la línea de tendencia es más significativo que una simple penetración intradía." Menciona el 3 % (1 % en plazos cortos) y la regla de dos días: "La violación de un solo día no cuenta." | Sí |
+| M8 | Ajuste de la línea | 104 | "A veces las líneas de tendencia se deben ajustar para que se acomoden a una tendencia que se enlentece o se acelera." | Sí |
+| M9 | La línea rota cambia de papel | 98 | "una línea de tendencia al alza (una línea de apoyo) generalmente se transformará en una línea de resistencia una vez que haya quedado definitivamente rota." | Sí |
+| M10 | Principio del abanico | 101 | "la rotura de la tercera línea es la señal válida del cambio de tendencia." | Sí (la edición dice "principio abanico") |
+| M12 | Inclinación | 103 | "la mayoría de las líneas de tendencia al alza tiende a aproximarse a una inclinación media de 45 grados." Una línea demasiado inclinada "no se sostendrá". | Sí (es una referencia, no una regla dura) |
+| M13 | Línea de canal | 108, 112 | "La línea de canal se puede usar para realizar beneficios a corto plazo." "la línea de tendencia básica es, de largo, la más importante y la más confiable." | Sí |
+
+Otras reglas del capítulo que sirven a la doctrina:
+- **Trazado sobre la mecha** (p. 96): "Las líneas de tendencia en los gráficos de barras deberían
+  trazarse por encima o por debajo del alcance de los precios de todo el día." Coincide con la
+  regla de Tori de anclar en la mecha.
+- **Salida por ruptura** (p. 94): "la violación de la línea de tendencia indica un cambio en la
+  tendencia que aconseja la liquidación de todas las posiciones mantenidas en la dirección de la
+  tendencia previa." Coincide con la salida de Tori.
+- **Penetración intradía pequeña** (p. 97): "A veces es preferible ignorar esa pequeña infracción,
+  especialmente si los movimientos posteriores del mercado demuestran que la línea original sigue
+  siendo válida."
+- **Romper una línea muy empinada suele ser solo un ajuste** (p. 103): "puede ser simplemente una
+  reacción para volver a una inclinación más sostenible." Respalda que las líneas empinadas sirvan
+  solo de seguimiento.
+- **Objetivo de medición tras la ruptura** (p. 100). Tori no lo usa, porque no pone objetivo: va a
+  "lo que no se adopta".
+- **Líneas internas** (p. 117): "su trazado es muy subjetivo". Respalda anclar siempre en los extremos.
 
 ### F4. Osler
 - Estado: **verificada** (PDF leído, pp. 53-54)
@@ -99,7 +146,7 @@ fuente, pero no se pudo leer lo que se le atribuye), **no verificada**, **no enc
   recuperar las pérdidas en 6 a 12 meses. **Falta leerlo directamente** (403 al bajarlo).
 
 ### F8. Brock, Lakonishok y LeBaron (1992)
-- Estado: **verificada parcial**
+- Estado: **verificada vía Murphy** (originales no leídos)
 - Brock, W., Lakonishok, J. y LeBaron, B. (1992). Simple Technical Trading Rules and the
   Stochastic Properties of Stock Returns. *The Journal of Finance*, 47(5), 1731-1764.
   https://www.jstor.org/stable/2328994
@@ -149,9 +196,9 @@ fuente, pero no se pudo leer lo que se le atribuye), **no verificada**, **no enc
 
 | F | Estado | Para la doctrina |
 |---|---|---|
-| F1 Dow | verificada parcial | Existen los libros; falta leer el pasaje |
-| F2 Edwards y Magee | verificada parcial | Existe; la regla del 3 % no está verificada |
-| F3 Murphy | no verificada | La más útil; hay que leer el libro |
+| F1 Dow | **verificada vía Murphy** | Picos y valles, vigencia, solo cierres, líneas |
+| F2 Edwards y Magee | verificada parcial | Existe; el 3 % está en Murphy (p. 97), no se verificó en E&M |
+| F3 Murphy | **verificada** | 12 de 13 reglas confirmadas con página; la fuerza de un nivel la da lo reciente |
 | F4 Osler | **verificada** | Respalda el rebote en horizontales, no la ruptura |
 | F5 Moskowitz et al. | verificada parcial | Referencia correcta; releer el abstract |
 | F6 AQR | **verificada** | Modo de falla: reversiones bruscas y falta de tendencia |
