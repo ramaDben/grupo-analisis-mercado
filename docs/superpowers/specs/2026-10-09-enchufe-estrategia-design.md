@@ -66,6 +66,7 @@ Vive en `scripts/estrategia/contrato.py`. Son dataclasses inmutables y sin depen
 class Estrategia(Protocol):
     nombre: str                      # "tori"
     marcos: Marcos                   # contexto=("W1","D1"), operativo="H4", velas y etiqueta por marco
+    procedencia: Procedencia         # de dónde sale cada regla (ver "Bloque de procedencia")
     def leer(self, ticker: str, velas: dict[str, DataFrame], digits: int) -> Lectura: ...
     def puntuar(self, lectura: Lectura) -> Puntaje: ...
     def divergencia(self, preparada: Lectura, actual: Lectura) -> str | None: ...
@@ -102,6 +103,53 @@ class Puntaje:
     desglose: dict[str, float]
     excluido: str | None             # motivo técnico de exclusión, en texto de motivo
 ```
+
+### Bloque de procedencia
+
+Ninguna estrategia se enchufa sin decir **de dónde sale cada regla**. Es el Gate 0 de admisión de
+Genesis (un pilar académico y uno institucional) adaptado a nuestro caso. Una estrategia de
+traders no siempre tiene paper, y el bloque obliga a declarar ese hueco en vez de esconderlo.
+
+```python
+@dataclass(frozen=True)
+class Fundamento:
+    regla: str                       # la regla, en una frase ("la ruptura se publica con el cierre")
+    origen: tuple[str, ...]          # quién la usa: "Tori Trades, qLtq7 [51:00]", ...
+    canonico: tuple[str, ...]        # teoría clásica: "F3 p. 56" (fila de fuentes.md + página)
+    empirico: tuple[str, ...]        # evidencia medida: "F4", "F6", ...
+    no_probado: str                  # lo que la evidencia no cubre; "" solo si empirico la cubre
+
+@dataclass(frozen=True)
+class Procedencia:
+    fuente_doctrina: str             # "docs/metodologia-tendencias.md"
+    fuente_citas: str                # "docs/investigacion/fundamentos/fuentes.md"
+    fundamentos: tuple[Fundamento, ...]
+    modos_de_falla: tuple[str, ...]  # cuándo pierde el método (AQR: reversiones bruscas, lateral)
+```
+
+**Qué exige la batería de conformidad:**
+- **Cada regla tiene origen.** Ningún `Fundamento` puede ir con `origen` vacío.
+- **Cada regla tiene respaldo o confiesa que no lo tiene.** Tiene que traer al menos un
+  `canonico` o un `empirico`. Si `empirico` está vacío, `no_probado` no puede estarlo.
+- **El método declara cómo falla.** `modos_de_falla` no puede ir vacío.
+- **Toda cita apunta a una fuente verificada.** Cada entrada de `canonico` y de `empirico` empieza
+  con el id de una fila de `fuente_citas` (`F1`, `F3`...). El test comprueba que esa fila existe y
+  que su estado es "verificada" o "verificada vía". Una fila "no verificada", "parcial" o "no
+  encontrada" no sirve de respaldo. Así nadie puede agregar una referencia de memoria.
+
+**Para qué sirve más allá del test:**
+- **Le da la fuente a la pieza.** `Lectura.conceptos` puede apuntar a un `Fundamento`, y el texto
+  educativo puede decir "según la Teoría de Dow..." con la cita exacta.
+- **Le dice al backtester qué medir.** Lo que está en `no_probado` es justamente lo que conviene
+  medir primero.
+- **Prepara la salida a Genesis.** Es la misma ficha que su roadmap prevé para admitir estrategias
+  de traders (A.2).
+
+Para Tori, los fundamentos son la tabla de §7 de `metodologia-tendencias.md`, uno por cada una de
+las diez reglas más los horizontales. La parte diagonal declara en `no_probado` que no tiene
+evidencia académica propia. Hoy Moskowitz et al. (F5) y Brock et al. (F8) figuran solo como
+"verificada parcial". Hasta releerlos, quedan fuera de `empirico`, y las reglas 5 y 6 se sostienen
+con su pilar canónico.
 
 **Por qué `valor_actual`:** una línea diagonal **cambia de precio con cada vela**. El número que se
 publica es el valor de la línea en la última vela cerrada. El despacho tiene que volver a pedir
@@ -193,7 +241,9 @@ Va un plan y un PR por fase. Ninguna fase deja el sistema con dos lecturas a la 
      rango.
    - Una corrida sobre los 5 activos base reales que devuelva las líneas en PNG para que el
      director las mire.
-   - **Requisito previo:** la verificación [V#] de la doctrina tiene que haber vuelto.
+   - La `Procedencia` de Tori, con la batería que la valida contra `fuentes.md`.
+   - **Requisito previo, cumplido el 2026-10-09:** volvió la verificación [V1]-[V20] de la
+     doctrina, y los fundamentos se verificaron contra Murphy y los papers.
 2. **Escáner, carrusel y despacho.**
    - El escáner ordena con `puntuar`.
    - La pieza toma dirección, niveles y escenarios de la `Lectura`.

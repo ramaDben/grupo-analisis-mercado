@@ -199,3 +199,175 @@ En la pantalla de TradingView (gráfico de futuros de Petróleo Crudo / NYMEX), 
 
 ---
 
+## V11 · Y_Ney-Fp5T4 [12:48]
+
+- **Pregunta:** ¿Qué dice sobre salir en un soporte o resistencia horizontal frente a esperar el cruce de la línea de seguridad?
+- **Modelo:** AGY gemini-robotics-er-2-preview
+
+Respuesta: Tori Trades explica que la mayoría de sus salidas de este año se han basado en niveles de soporte y resistencia (niveles horizontales o clave) en lugar de esperar a que se rompa la línea de seguridad (safety line). Comenta que esto se debe a factores psicológicos: al operar con posiciones más grandes y ver ganancias de montos altos en dólares (como $24,000 o $30,000), se siente más inclinada a tomar ganancias de inmediato. No obstante, reconoce que, como trader de líneas de tendencia que utiliza líneas de acción y de seguridad, sus ventas estratégicas ideales deberían ocurrir cuando sostiene la operación por completo y espera a que se cruce la línea de seguridad.
+
+Cita: 
+- [12:49] "One thing that I want to start talking about this year because this is something that I've noticed, is that most of my exits, if not all, were based on a level of support and resistance."
+- [13:23] "Whereas you guys know that I am a trendline trader, I have action lines and safety lines, and my strategic sells when I can hold the trade out for its entirety, wait for the safety line to get crossed."
+- [13:33] "You can see here in almost all of the trades this year, the exits were based on support and resistance or a horizontal level here or a key level, not based on a safety line getting broken. So you can already see this is kind of one of the things I was struggling with this year specifically, psychologically, is the bigger dollar amounts."
+
+Se ve: En la pantalla se observa la plataforma de registro de operaciones TradeZella y la gráfica de TradingView correspondiente al contrato PLN24 (Platino, abril de 2024) en una temporalidad de 4 horas (4h). El gráfico muestra una línea de tendencia bajista de color azul con dos puntos de contacto y la posterior ruptura al alza. Se identifican dos puntos de entrada (círculo verde) y salida (círculo rojo con el número '1' indicando el cierre). A la izquierda se detalla un panel con el "Net P&L" de $24,276.00, de tipo "LONG", operando 20 contratos con el "Playbook" marcado como "2 Touchpoint Break".
+
+Seguridad: alta
+
+---
+
+## V12 · YROta7k11pE [02:55]
+
+- **Pregunta:** ¿Exige un retesteo de la línea rota antes de entrar? ¿O el cierre de la vela?
+- **Modelo:** AGY gemini-robotics-er-2-preview
+
+Respuesta: Ella exige esperar a que se produzca una ruptura ("break") y un retesteo ("retest") antes de entrar al mercado para tener confirmación, criticando a los operadores que se apresuran y entran sin estos elementos. No menciona el cierre de la vela en este tramo del video.
+
+Cita: 
+- "A trader who rushes into trades because they're too eager, they don't want to miss the move, they'll enter without a break, they'll enter without a retest, and go outside of their trading rules just to get in early." [02:50]
+- "Become "okay" with entering slightly later, but with confirmation." [03:00]
+
+Se ve: Durante el tramo de 02:50 a 03:05, la imagen alterna entre la presentadora hablando ante su micrófono en un estudio decorado con luces de neón y plantas, y pantallas negras con texto en blanco y violeta que dicen "Patience is crucial" [02:47] y "Become “okay” with entering slightly later" [02:59]. Hacia el final del tramo analizado [03:13], se muestra un plano de su computadora portátil donde se observa la plataforma TradingView en la temporalidad de 1 hora ("1h") para el contrato "Platinum Futures" (PL1!), con velas japonesas, líneas de soporte y resistencia dibujadas en rojo y amarillo, mientras ella señala un punto específico de ruptura en la pantalla con su dedo.
+
+Seguridad: alta
+
+---
+
+## V13 · qsjLmbVNlCc [14:43]
+
+- **Pregunta:** Cuando el precio rompe una línea, ¿la borra del gráfico o la conserva? ¿Qué hace con la línea siguiente?
+- **Modelo:** AGY gemini-robotics-er-2-preview
+
+Respuesta: Cuando el precio rompe una línea de tendencia (la cruza), ella la borra del gráfico. Con la siguiente línea de tendencia, la reajusta o rota para conectarla con el nuevo máximo (pico más alto) que ha alcanzado el precio.
+
+Cita: 
+- "So what I do is delete this downward trend line that's already been crossed." [14:43-14:45]
+- "I'm going to rotate this one to this new high." [14:47-14:49]
+
+Se ve: 
+En la pantalla de TradingView, en el gráfico de futuros de petróleo crudo ligero ("Light Crude Oil Futures") en la temporalidad de 4 horas (4h), se observan velas japonesas rojas y verdes, líneas de tendencia verdes (alcistas) y rojas (bajistas), y líneas de soporte/resistencia horizontales amarillas. A las [14:44], la presentadora hace clic sobre la línea de tendencia roja que ya ha sido cruzada/rota por las velas y la elimina del gráfico. Inmediatamente después, selecciona la otra línea de tendencia descendente roja y arrastra su extremo para ajustarla y alinearla con el nuevo máximo de precio en la parte superior del gráfico.
+
+Seguridad: alta
+
+---
+
+## V14 · E6dUUVdzMLE [03:13]
+
+- **Pregunta:** ¿Qué dice sobre una línea con 3 toques concentrados en una sola semana frente a toques separados por semanas o meses?
+- **Modelo:** AGY gemini-robotics-er-2-preview
+
+Respuesta: Ella explica que una línea de tendencia cuyos tres puntos de contacto ocurren dentro de una sola semana tiene menos datos de respaldo (es decir, menos velas, barras o días). Por el contrario, prefiere disponer de semanas o incluso meses de datos, afirmando que los puntos de contacto distribuidos a lo largo de un mes, varias semanas o varios meses tienen mucho más peso ("holds so much more weight") que aquellos concentrados en tan solo una semana de datos.
+
+Cita: "When I say that it doesn't have that much data behind it, it just means that I don't have that many candles, that many bars, that many days behind this trendline. So I did get three touch points, but those three touch points were all within a week. I usually like to see weeks' worth of data, I mean, if not more, months' worth of data. The touchpoints that you get on a trendline over the span of a month, a few weeks, a few months, it holds so much more weight than just simply a week's worth of data with the three touchpoints." [03:18 - 03:43]
+
+Se ve: La pantalla muestra el editor de notas de la plataforma TradeZella titulado "Second Trade of the Year: 3 Touch-point Breakout". El texto detalla los apartados de "Setup Details" ("Trendline Break", "Position Size", "Profit"), las valoraciones con estrellas ("Rating") y los puntos clave ("Key Takeaways"). A la izquierda, se observan métricas financieras de la operación, como el riesgo de la operación ("Trade Risk": -$15,115.90) y el multiplicador R realizado ("Realized R-Multiple": 1.90R). En la toma de cámara, se ve a la presentadora con cabello oscuro, auriculares negros de diadema y una camiseta negra de cuello redondo, hablando frente a un micrófono Shure SM7B montado sobre un brazo articulado Røde.
+
+Seguridad: alta
+
+---
+
+## V15 · OjZ8djwrm4I [06:03]
+
+- **Pregunta:** ¿Qué dice sobre trazar o mover el ancla de una línea mientras la vela todavía está abierta?
+- **Modelo:** AGY gemini-robotics-er-2-preview
+
+Respuesta: Ella explica que bajo ninguna circunstancia se debe trazar, dibujar o mover el punto de anclaje de una línea de tendencia sobre una vela que todavía está abierta. En su lugar, se debe esperar a que la vela cierre por completo para confirmar si se ha establecido un nuevo máximo o mínimo válido, ya que una vela abierta puede fluctuar y violar la línea inmediatamente antes de su cierre.
+
+Cita: 
+- [06:00] "We do not want to move a line or draw a line on an open candle. That doesn't make sense because the candle could violate the line immediately within the same candle, so it's not valid. We want a clear, closed, valid pullback or high or low to be presented before we adjust the trendline."
+- [06:47] "What I'm not going to do is take this trendline and take this point B and put it on the open candle. No, no. What I'm going to do is keep my line where it was. I'm going to wait for this candle to close and give me a clear newer high."
+
+Se ve: El gráfico muestra la plataforma de TradingView analizando los futuros de petróleo crudo ligero (CL1!, Light Crude Oil Futures) en una temporalidad diaria ("D"). Se observan velas japonesas rojas y verdes, junto con varias líneas de tendencia de soporte de color verde (ascendentes) y una línea de tendencia de resistencia de color rojo (descendente). Tori Trades aparece en un recuadro circular en la esquina inferior derecha con micrófono y auriculares. Activa la herramienta de reproducción ("Replay") para demostrar de forma práctica cómo una vela verde en desarrollo cruza la línea roja de resistencia y explica por qué no se debe reajustar la línea a dicho punto hasta que la vela haya cerrado.
+
+Seguridad: alta
+
+---
+
+## V16 · xRxUo3_9XRA [05:38]
+
+- **Pregunta:** ¿Qué dice sobre las líneas muy empinadas o trazadas con datos muy recientes?
+- **Modelo:** AGY gemini-robotics-er-2-preview
+
+Respuesta: Respecto a las líneas trazadas con datos muy recientes, Tori Trades menciona que no les tiene mucha confianza y les otorga una calificación muy baja (1 de 4). Explica que esto se debe a que no se cuenta con un "punto B" claro en el pasado que proporcione datos históricos con los cuales trabajar, sino que simplemente se está utilizando la información de precios más reciente y "fresca". El tramo de video no hace mención explícita sobre líneas "muy empinadas".
+
+Cita: 
+[05:28] "I don't have a lot of confidence in this trendline. One, because the touchpoint that we drew on here is using the most recent data that we have, very very fresh. It's we don't have a very clear point B from the past that's giving us previous data to work with. We are simply just using what price has given us very recently to use this point B... I'm going to give this one a very low rating. I'm going to say one out of four for the trendline here."
+
+Se ve: El gráfico de TradingView para futuros de oro ("Gold Futures - 1h - COMEX") en una temporalidad de 1 hora. En el gráfico se observan líneas de tendencia rojas descendentes y tres líneas de tendencia verdes ascendentes de largo plazo. El cursor interactúa señalando los puntos de contacto de la línea verde inferior. En la esquina inferior izquierda aparece brevemente una notificación de noticia de Reuters. En la esquina superior derecha se muestra la cámara de la presentadora hablando frente a un micrófono.
+
+Seguridad: alta
+
+---
+
+## V17 · qsjLmbVNlCc [02:00]
+
+- **Pregunta:** ¿Qué es la doble confirmación con el rango horizontal? ¿Es obligatoria para entrar?
+- **Modelo:** AGY gemini-robotics-er-2-preview
+
+Respuesta: La doble confirmación consiste en esperar a que se rompan tanto la línea de tendencia (trendline) como los niveles de soporte y resistencia horizontales (los "techos" y "suelos") antes de tomar una posición. Esto sirve para evitar quedar atrapado en la consolidación lateral ("chop"). Respecto a si es obligatoria para entrar, el tramo analizado no indica explícitamente que sea un requisito obligatorio en el 100% de las operaciones, sino que es una herramienta que ella utiliza para tener mayor seguridad, evitar pérdidas seguidas y sentirse mucho más confiada en su posición.
+
+Cita: 
+[02:14] "And that is where double confirmation comes into play when I mark up the ceilings and the floors or the support and resistance, and wait for both of those things to be broken. So now not only am I waiting for the trendline to get broken, but I'm also waiting for support and resistance to be broken. So if I wait for both of those things, it's double confirmation, helps me feel much more confident about my position."
+
+Se ve: Un gráfico en pantalla completa de TradingView correspondiente al NQ1! (NASDAQ 100 E-mini Futures, temporalidad de 4 horas). En él se observa una línea de tendencia alcista dibujada en color verde con un trazo continuo. El gráfico muestra velas japonesas verdes y rojas. Alrededor de las 02:34 el video regresa a la toma de estudio donde se ve a Tori frente a su micrófono y portátil, con auriculares grandes, explicando directamente a la cámara.
+
+Seguridad: alta
+
+---
+
+## V18 · qLtq73bTPBA [12:00]
+
+- **Pregunta:** ¿Cómo define la Action Line y la Safety Line una vez que una línea se rompe?
+- **Modelo:** AGY gemini-robotics-er-2-preview
+
+Respuesta: Tori Trades define la "Action Line" (línea de acción) como aquella línea de tendencia que ha sido rota por el precio, lo cual actúa como el disparador o señal para tomar la decisión de realizar una operación (trade). Por otro lado, define la "Safety Line" (línea de seguridad) como la línea opuesta a la "Action Line". Esta línea es la que mantiene seguro al trader, representando la gestión de riesgo o stop loss, e indicando cuánto tiempo se debe permanecer en la operación.
+
+Cita: 
+- [11:35]: "An action line is the line that was broken. This triggers our decision to place a trade."
+- [12:30]: "The safety line is the opposite line to the action line. This line keeps us safe. This line tells us how long to stay in our trade."
+
+Se ve: En la interfaz de TradingView se muestra un gráfico de velas japonesas con fechas en el eje horizontal que van desde finales de 2020 hasta principios de 2021. Se aprecian dos líneas de tendencia dibujadas: una línea alcista de color verde ("Upward Line") y una línea bajista de color rojo ("Downward Line"). Cuando una vela rompe la línea verde hacia abajo, se añade una etiqueta de texto que dice "Action Line" sobre la línea verde rota y otra que indica "Break". Acto seguido, la línea roja opuesta se etiqueta como "Safety Line". En la esquina inferior izquierda aparece un recuadro con la cámara de la presentadora explicando los conceptos en lenguaje de señas y gesticulando de forma dinámica.
+
+Seguridad: alta
+
+---
+
+## V19 · G29LbG1Xkvw [02:46]
+
+- **Pregunta:** ¿Qué exige para dar por buena una ruptura: cierre de vela con cuerpo completo, retesteo, o ambas cosas?
+- **Modelo:** AGY gemini-robotics-er-2-preview
+
+Respuesta: Ella no exige ambas cosas simultáneamente de forma obligatoria; las presenta como herramientas o confirmaciones adicionales individuales de su "caja de herramientas" que se pueden implementar por separado. Explica que se puede empezar aplicando algo tan simple como el "rompimiento y retesteo" (break and retest) para evitar falsas rupturas, o bien utilizar la opción de esperar al cierre de la vela (waiting for the candle close) por encima o debajo del nivel para confirmar la intención del movimiento.
+
+Cita: 
+- [02:35]: "So the first thing is a break and retest."
+- [03:00]: "You could start just implementing something as simple as that, and that right there alone in itself will help you avoid fakeouts."
+- [03:05]: "Now the next thing is waiting for the candle close."
+
+Se ve: 
+- En [02:42] - [02:45]: Un gráfico animado sobre fondo negro que muestra una línea de tendencia verde alcista. Las velas (rojas y verdes) rompen hacia abajo con una vela roja larga, luego suben a retestear la línea con una vela verde (tocándola desde abajo) y finalmente continúan descendiendo con fuerza.
+- En [03:11] - [03:21]: Un gráfico animado sobre fondo negro que muestra una línea de tendencia verde bajista. Se observa una vela verde que rompe con fuerza hacia arriba y cierra su cuerpo completamente por encima de dicha línea, validando la ruptura sin necesidad de mechas largas que indiquen un rechazo.
+
+Seguridad: alta
+
+---
+
+## V20 · q4t71xxbDsY [17:23]
+
+- **Pregunta:** ¿Dice que no baja a temporalidades menores que 4H para entrar antes? ¿Qué temporalidad usa para entrar y salir?
+- **Modelo:** AGY gemini-robotics-er-2-preview
+
+Respuesta: Sí, afirma explícitamente que nunca baja a una temporalidad menor para buscar una entrada más rápida (anticipada). Para sus ejecuciones, tanto de entrada como de salida y gestión de operaciones, utiliza exclusivamente la temporalidad de 4 horas (4H).
+
+Cita: 
+[17:20] "...do I go lower in time frames for a sooner entry? And the answer is no."
+[17:47] "But one thing that I will say is I do not ever go to a lower timeframe to look for a sooner entry."
+[18:01] "...then stop at the 4-hour timeframe and that's where I do all of my trade execution, my entries and my exits..."
+
+Se ve: La plataforma TradeZella con la pestaña de "Tracking" del activo "PLJ25" configurado en temporalidad de 4 horas (se lee "PLJ25, 4h" en la parte superior izquierda del gráfico). El gráfico muestra velas japonesas de 4 horas con líneas de tendencia de color verde y rosa, líneas de soporte y resistencia horizontales de color amarillo y verde, y una línea horizontal roja que indica el "Stop Loss". El panel de estadísticas a la izquierda muestra un P&L neto de $34,721.00 en posición larga (LONG).
+
+Seguridad: alta
+
+---
+

@@ -27,11 +27,13 @@ ese margen; el número exacto no.
 Las fichas marcadas con `*` en la evidencia son de `gemini-2.5-flash` o `flash-lite`. Esos modelos
 leen peor el gráfico, así que esas fichas pesan menos como evidencia.
 
-**Lo que todavía no está verificado.** Las fichas son lo que leyó un modelo, no el video. Las
-reglas que deciden algo programable o resuelven una contradicción llevan una marca **[V#]**, que
-remite al encargo de verificación (`docs/investigacion/tori-trades/verificacion_encargo.md`).
-Hasta que esa verificación vuelva, esas reglas se sostienen por conteo y no por el tramo del
-video.
+**Lo verificado contra el video.** Las fichas son lo que leyó un modelo, no el video. Las reglas
+que deciden algo programable o resuelven una contradicción llevan una marca **[V#]**. Esa marca
+remite a una de las 20 consultas sobre el tramo exacto del video, todas hechas (§6). El resto de
+las reglas se sostiene por el conteo de fichas.
+
+**Lo que dice la teoría clásica.** Cada regla del método tiene su respaldo en Murphy y en la
+Teoría de Dow, o la declaración honesta de que no lo tiene, en §7.
 
 La evidencia se cita como `ID [mm:ss]`, donde `ID` son los primeros caracteres del video.
 
@@ -56,7 +58,7 @@ La evidencia se cita como `ID [mm:ss]`, donde `ID` son los primeros caracteres d
    alta.
 6. **Qué es una ruptura.** Ella entra cuando el precio **cruza** la línea, y esperar el **cierre**
    de la vela le parece igual de válido. El sistema publica con el cierre (ver 2.4). Una mecha que
-   cruza y vuelve no cuenta, y no se exige retesteo.
+   cruza y vuelve no cuenta. El retesteo es otra confirmación posible, no un requisito.
 7. **La entrada.** Va a mercado y en la dirección de la ruptura. La línea rota es la **línea de
    acción**; la opuesta, que queda a favor de la operación, es la **línea de seguridad**. El setup
    es de bajo riesgo cuando el precio está cerca de la línea de seguridad.
@@ -86,7 +88,7 @@ La evidencia se cita como `ID [mm:ss]`, donde `ID` son los primeros caracteres d
 | Si al extender la línea esta corta una vela intermedia, el segundo punto se mueve al toque limpio anterior. | Aislada [1] | qLtq7 [06:47] |
 | Una línea **nunca es horizontal**. Si al ajustarla queda plana, pasa a leerse como nivel horizontal; si se le invierte la pendiente, se elimina. | Aislada [2] | OjZ8d [03:52], OjZ8d [04:22], PnIkS [08:29] |
 | Un pivote vale cuando el precio llega, respeta la línea y se aleja con claridad. Un impulso de 1 o 2 velas sin retroceso no cuenta como toque. No da un umbral numérico. | Aislada [3] | OjZ8d [06:13], cTecm [11:00], xRxUo [03:19] |
-| No se traza ni se mueve un ancla sobre una **vela abierta**. **[V15]** | Aislada [1] | OjZ8d [06:03] |
+| No se traza ni se mueve un ancla sobre una **vela abierta**: "We do not want to move a line or draw a line on an open candle" [06:00]. Se espera el cierre y un máximo o mínimo nuevo y claro. **[V15] verificado** | Aislada [1] | OjZ8d [06:03] |
 | La línea se traza "a ojo", con grosor, sin exigir precisión al centavo. Implica una tolerancia de toque. | Aislada [1] | Kffx9 [14:40] |
 
 **Contradicción resuelta (mecha o cuerpo).** En 6 videos se ven líneas que tocan cuerpos además
@@ -101,9 +103,10 @@ toques de cuerpo se leen como la tolerancia de la regla anterior.
 | Con **3 toques o más** la línea es A+ (setup "3 Touchpoint Break"), y más toques le dan más peso. | Núcleo [22] | E6dUU [02:28], Kffx9 [03:44], qLtq7 [27:48], oq8nF [02:48], qsjLm [12:44], xRxUo [00:58], ZMIDT [04:32], cTecm [10:42] |
 | Con **2 toques** la línea se puede operar, pero es un setup de menor calidad ("2 Touchpoint Break"). **[V4] [V5] [V6]** | Firme [9] | xRxUo [00:52], Y_Ney* [05:27], Rz92U* [04:03], SQeaH* [05:47], E_m8L [02:23], oq8nF [01:30], qsjLm [12:44] |
 | La línea tiene que abarcar **al menos una semana de datos**. | Núcleo [14] | 5xiHa [02:01], H8B5u [02:27], cTecm [10:46], oq8nF [04:01], 17WoZ* [04:43], lR9pp* [07:31], yZfj6* [05:54] |
-| Tres toques concentrados en una sola semana restan peso: los toques separados por semanas o meses pesan mucho más. **[V14]** | Aislada [1] | E6dUU [03:13] |
+| Tres toques concentrados en una sola semana restan peso: los toques separados por semanas o meses "hold so much more weight". **[V14] verificado** | Aislada [1] | E6dUU [03:13] |
+| Una línea cuyo segundo punto es **muy reciente**, sin un Punto B claro en el pasado, merece poca confianza: la califica "one out of four". **[V16] verificado** | Aislada [1] | xRxUo [05:28] |
 | Una línea de **temporalidad mayor pesa más**, y su ruptura también. Una línea trazada solo en temporalidad baja, sin conexión con las mayores, es mala. | Núcleo [12] | ZMIDT [04:19], eJ0_E [06:18], gokPl [04:14], OjZ8d [01:28], ipUbs [00:48], Kffx9 [12:01] |
-| Para la línea de decisión se prefieren **pendientes moderadas**: una línea muy empinada tiende a cruzarse sin que cambie la tendencia. **[V16]** | Firme [5] | ZMIDT [07:05], xRxUo [05:38], xMNO4 [07:33], WUv5q [09:55], 17WoZ* [06:44] |
+| Para la línea de decisión se prefieren **pendientes moderadas**: una línea muy empinada tiende a cruzarse sin que cambie la tendencia. La verificación mostró que xRxUo [05:38] **no habla de pendiente** sino de datos recientes (fila anterior), así que se quitó de la evidencia. La regla la sostiene Murphy (p. 103, §7). | Firme [4] | ZMIDT [07:05], xMNO4 [07:33], WUv5q [09:55], 17WoZ* [06:44] |
 
 **Contradicción resuelta (2 toques o 3).**
 - **Lo que choca:** Kffx9 [05:51] dice que no opera rupturas de 2 toques, mientras que 9 videos las
@@ -111,7 +114,8 @@ toques de cuerpo se leen como la tolerancia de la regla anterior.
 - **Doctrina:** la línea de 3 toques o más con una semana de datos es la que se comunica como
   **línea principal**. La de 2 toques se dibuja y se usa como contexto, pero no se presenta como
   señal.
-- **Pendiente de confirmar:** [V4] a [V6].
+- **Verificado:** [V4] a [V6]. En V11 se ve además una operación real suya de +$24.276 en
+  platino con el setup "2 Touchpoint Break" (Y_Ney [12:48]): el setup de 2 toques lo opera.
 
 **Contradicción resuelta (líneas empinadas).** Las líneas empinadas no se contradicen con la
 regla anterior porque cumplen **otro papel**. La línea de decisión, cuya ruptura da la entrada,
@@ -125,7 +129,7 @@ arrastrar el stop (ver 2.3 y 2.7).
 | **Encadenar:** el último toque (Punto B) de una línea es el primer punto (Punto A) de la siguiente. Vale también al bajar de temporalidad. | Firme [9] | ipUbs [05:14], qLtq7 [04:26], PnIkS [10:01], TuXOg [03:53], Y8efW [32:47], gokPl [06:11], yHAC0* [04:10] |
 | Cuando el precio acelera y deja un retroceso claro, se traza una línea **más empinada** sin borrar la anterior (abanico). | Núcleo [15] | Y8efW [32:44], eJ0_E [12:00], ipUbs [07:23], qLtq7 [46:20], E6dUU [05:08], Kffx9 [14:31], 5xiHa [01:04], OjZ8d [09:54] |
 | Las líneas principales y las de temporalidad mayor **no se borran**: quedan como estructura de referencia. | Núcleo [15] | Y8efW [32:21], ZMIDT [07:15], cTecm [21:00], eJ0_E [08:45], LpXZB [04:44], PnIkS [10:58], qLtq7 [04:30], pasWN [04:54] |
-| Las líneas **secundarias** que el precio ya rompió se borran. **[V13]** | Firme [6] | eJ0_E [15:24], qsjLm [14:43], xMNO4 [07:33], xRxUo [07:55], rxleX [08:23], 17WoZ* [07:04] |
+| Las líneas **secundarias** que el precio ya rompió se borran, y la siguiente se rota al nuevo extremo: "delete this downward trend line that's already been crossed... rotate this one to this new high" [14:43]. **[V13] verificado** | Firme [6] | eJ0_E [15:24], qsjLm [14:43], xMNO4 [07:33], xRxUo [07:55], rxleX [08:23], 17WoZ* [07:04] |
 | Ante una penetración sin ruptura limpia, primero se mueve el Punto B al nuevo extremo cerrado, antes de trazar otra línea. | Aislada [3] | OjZ8d [02:22], PnIkS [26:55], xRxUo [10:06] |
 | Al bajar de temporalidad, las anclas se reajustan al extremo exacto de la mecha que muestra el marco menor. | Firme [5] | ipUbs [06:44], qLtq7 [44:00], Y8efW [33:34], gokPl [09:22], PnIkS [12:34] |
 | Tras romperse una línea alcista se traza una bajista nueva, desde el máximo absoluto hasta el siguiente máximo menor, para la tendencia nueva. | Aislada [3] | LpXZB [03:52], 17WoZ* [06:37], Y_Ney* [04:08] |
@@ -140,8 +144,8 @@ línea: **se conserva la principal** (la de temporalidad mayor o la que sostiene
 |---|---|---|
 | La ruptura se toma cuando el precio **cruza** la línea; esperar el **cierre** de la vela es una opción igual de válida. Verificado: [V1] [V2] [V3]. | Núcleo [20 + 8] | LpXZB [03:30], W_zXs [00:58], ZMIDT [04:34], eJ0_E [04:23], xRxUo [15:43], yZfj6* [07:35], Y_Ney* [05:07], q4t71* [16:16] |
 | Una **mecha** que cruza la línea, o un toque o un asomo leve, **no es ruptura**. | Firme [6] | TuXOg [14:59], gokPl [16:18], pasWN [08:50], WUv5q [05:05], G29Lb* [03:32] |
-| **No se exige retesteo:** se opera la ruptura directa. El "break and retest" es un setup aparte, no un requisito. **[V12] [V19]** | Núcleo [12] | Y8efW [35:52], ZMIDT [04:37], cTecm [07:11], PnIkS [16:43], oq8nF [01:30], E6dUU [00:08], Kffx9 [04:07], qLtq7 [28:44] |
-| La ruptura gana peso con **doble confirmación**: que a la vez se rompa un nivel horizontal, señal de que se sale de una consolidación. **[V17]** | Firme [5] | qsjLm [02:00], eQzvi [04:39], 17WoZ* [06:05], G29Lb* [05:04], ZMIDT [05:13] |
+| **El retesteo no es obligatorio:** se opera la ruptura directa. El "break and retest" y el cierre de la vela son dos herramientas de confirmación que se pueden usar por separado (G29Lb [02:35]-[03:05]). Lo que critica es entrar **sin ninguna** confirmación: "they'll enter without a break, they'll enter without a retest" (YROta [02:50]). Como el sistema publica con el cierre, ya cumple. **[V12] [V19] verificado** | Núcleo [12] | Y8efW [35:52], ZMIDT [04:37], cTecm [07:11], PnIkS [16:43], oq8nF [01:30], E6dUU [00:08], Kffx9 [04:07], qLtq7 [28:44] |
+| La ruptura gana peso con **doble confirmación**: que a la vez se rompa un nivel horizontal, señal de que se sale de una consolidación. Es una herramienta para ganar confianza y evitar el "chop", **no un requisito** (qsjLm [02:14]). **[V17] verificado** | Firme [5] | qsjLm [02:00], eQzvi [04:39], 17WoZ* [06:05], G29Lb* [05:04], ZMIDT [05:13] |
 | En crudo, los primeros intentos de salir de una consolidación suelen ser falsos y hay que pedir más confirmación. | Aislada [2] | eQzvi [13:54], PYBSQ* [04:27] |
 | Las falsas rupturas vienen de operar contra la tendencia de las temporalidades mayores. | Aislada [1] | ipUbs [00:36] |
 
@@ -172,7 +176,7 @@ de cliente, la ruptura se describe como "cerró al otro lado de la línea".
 | Regla | Fuerza | Evidencia |
 |---|---|---|
 | La entrada va **en la dirección de la ruptura**: si rompe una bajista, largo; si rompe una alcista, corto. | Núcleo [28] | E6dUU [05:32], Kffx9 [07:34], WUv5q [04:59], PnIkS [16:18], ZMIDT [05:27], cTecm [07:11], xMNO4 [08:17], 5xiHa [00:49] |
-| La línea rota es la **línea de acción**; la opuesta, que queda sosteniendo la operación, es la **línea de seguridad**, y tiene que estar trazada al entrar. **[V18]** | Firme [9] | l0Ino* [03:10], qLtq7 [12:00], PnIkS [17:06], WoY_t* [07:17], Y8efW [36:01], 5xiHa [00:39], E_m8L [02:37] |
+| La línea rota es la **línea de acción**; la opuesta, que queda sosteniendo la operación, es la **línea de seguridad**, y tiene que estar trazada al entrar. "An action line is the line that was broken" [11:35]; "The safety line is the opposite line... This line tells us how long to stay in our trade" [12:30]. **[V18] verificado** | Firme [9] | l0Ino* [03:10], qLtq7 [12:00], PnIkS [17:06], WoY_t* [07:17], Y8efW [36:01], 5xiHa [00:39], E_m8L [02:37] |
 | La orden es **a mercado**. | Firme [9] | Y8efW [36:43], ZMIDT [10:41], cTecm [07:55], gokPl [15:24], oq8nF [01:30], qLtq7 [51:05], rxleX [05:30] |
 | El setup es de **bajo riesgo** cuando, en la ruptura, el precio está **cerca de la línea de seguridad**; si está lejos, el riesgo es alto y se pasa. No da un umbral de distancia. | Núcleo [12] | 5xiHa [04:23], H8B5u [01:51], xRxUo [04:32], yZfj6* [06:13], lR9pp* [07:12], kBmtk* [08:21], cTecm [11:10], TuXOg [10:42], oq8nF [07:03] |
 | **Setup secundario de rebote:** a favor de la tendencia, se entra cuando el precio toca la línea y la rechaza sin cerrar al otro lado. **[V7]** | Firme [7] | gokPl [13:06], TuXOg [10:42], q4t71* [21:12], qLtq7 [30:50], rTHLR [01:58], yHAC0* [08:02] |
@@ -220,9 +224,12 @@ broker o se cierra a mano es ejecución de cada operador y no entra en lo que co
 | Se cierra la **posición completa** de una vez, sin parciales. | Firme [5] | cTecm [18:41], eJ0_E [14:45], gokPl [17:38], H8B5u [04:37], E6dUU [13:53] |
 | Una línea de tendencia de temporalidad mayor también sirve de objetivo. | Aislada [2] | l0Ino* [00:50], yZfj6* [11:29] |
 
-**Contradicción resuelta (línea de seguridad o nivel horizontal).** Y_Ney* [12:48] dice que
-cerrar en el horizontal es discrecional y no la salida óptima, y en 5xiHa [02:46] reconoce que
-cerrar ahí le dejó ganancia sobre la mesa. **Doctrina:** la salida es la línea de seguridad, y el
+**Contradicción resuelta (línea de seguridad o nivel horizontal).** La verificación V11 (Y_Ney
+[12:49]-[13:33]) la deja clara: en la práctica, "most of my exits, if not all, were based on a
+level of support and resistance", y lo atribuye a la presión psicológica de los montos grandes.
+Pero la salida que ella considera la del método es la otra: "my strategic sells when I can hold
+the trade out for its entirety, wait for the safety line to get crossed". En 5xiHa [02:46]
+reconoce que cerrar en el horizontal le dejó ganancia sobre la mesa. **Doctrina:** la salida es la línea de seguridad, y el
 horizontal mayor se comunica como **objetivo probable** del movimiento. En las piezas esto encaja
 con los escenarios: el horizontal es el 🎯 y la línea de seguridad, el ⚠️.
 
@@ -235,7 +242,8 @@ con los escenarios: el horizontal es el 🎯 y la línea de seguridad, el ⚠️
 | Cada línea de temporalidad menor **tiene que conectar** con las de las temporalidades mayores. | Aislada [2] | YROta* [02:38], gokPl [03:45] |
 | En **alta volatilidad** se baja de 4H a 1H para entrar y salir, y se vuelve a 4H cuando el mercado se normaliza. | Firme [5] | ZqC6W* [04:47], eJ0_E, cTecm [03:29], gokPl [12:18], rTHLR [01:58] |
 | Duración: en diario, semanas; en 4H, de una a dos semanas; en 1H, entre 8 y 10 horas. | Firme [9] | 1dQ0d, E_m8L, H8B5u, HiEDX, LpXZB, rxleX, xMNO4, oq8nF, qsjLm |
-| Para el **swing**, 1 y 5 minutos se descartan por ruido. En **day trading** sí opera 5 minutos, incluso con líneas de 2 toques (verificado en [V8]: xRxUo [00:47]). **[V20]** | Aislada [3] | rTHLR [01:03], xMNO4 [11:08], q4t71* [17:23] |
+| Para el **swing**, 1 y 5 minutos se descartan por ruido. En **day trading** sí opera 5 minutos, incluso con líneas de 2 toques (verificado en [V8]: xRxUo [00:47]). | Aislada [3] | rTHLR [01:03], xMNO4 [11:08], q4t71* [17:23] |
+| **Nunca baja de temporalidad para entrar antes:** "I do not ever go to a lower timeframe to look for a sooner entry"; entrada, salida y gestión van en 4H. **[V20] verificado** | Aislada [1] | q4t71 [17:47], [18:01] |
 
 **Contradicción resuelta (5 minutos).** La verificación lo aclaró:
 - **xRxUo [00:47]:** es day trading real, en su evaluación de Apex.
@@ -244,6 +252,11 @@ con los escenarios: el horizontal es el 🎯 y la línea de seguridad, el ⚠️
 El método es el mismo en cualquier marco, y el marco lo define el estilo. **Doctrina:** como el
 grupo hace swing, el marco operativo es 4H, la excepción por volatilidad es 1H, y no se baja de
 ahí.
+
+**V20 matiza la excepción de 1H.** Ella nunca baja de temporalidad para **adelantar** una
+entrada. La bajada a 1H de la fila de alta volatilidad es otra cosa: cambia el marco operativo
+completo mientras dura el régimen. No es buscar una entrada más fina. El spec del enchufe deja esa
+bajada fuera de la v1 porque ella no da un umbral de volatilidad.
 
 ### 2.10 Soportes y resistencias horizontales
 
@@ -320,7 +333,9 @@ Hoy el sistema tiene dos motores que no se hablan:
 3. **Segundo punto:** el pivote posterior que maximiza los toques sin que ninguna vela cruce la
    línea, con una tolerancia de toque a definir (por ejemplo, una fracción del ATR).
 4. **Calidad:** número de toques, semanas de datos entre el primer y el último toque, y
-   temporalidad. Es **A+** con 3 toques o más y al menos una semana; con 2 toques, **B**.
+   temporalidad. Es **A+** con 3 toques o más y al menos una semana; con 2 toques, **B**. Una línea
+   cuyo segundo punto es muy reciente baja de calidad (V16), con un umbral a calibrar. Las anclas
+   solo se ponen en velas cerradas (V15), que es la regla de "sin mirar el futuro" del enchufe.
 5. **Pendiente:** la línea no puede ser horizontal y se marca la que sea "muy empinada", con un
    umbral a calibrar.
 6. **Ruptura:** el cierre de la vela al otro lado de la línea. La mecha no cuenta.
@@ -364,5 +379,59 @@ El resultado está en `docs/investigacion/tori-trades/verificacion.md`.
   - El rebote es un setup aparte (V7).
   - La no intersección (V10).
 
-**Pendiente:** V11 a V20, que es la sesión 2 del mismo encargo. Hasta que vuelvan, esas reglas se
-sostienen por conteo de fichas.
+**Sesión 2, V11 a V20, hecha el 2026-10-09.**
+- **Cambió la doctrina:**
+  - El retesteo es una confirmación opcional, como el cierre. Lo que ella critica es entrar sin
+    ninguna confirmación (V12, V19).
+  - xRxUo [05:38] no respaldaba la regla de las líneas empinadas, sino una regla nueva: el Punto B
+    muy reciente da poca confianza (V16).
+- **Matizó:**
+  - En la práctica, ella sale casi siempre en horizontales. La salida del método es la línea de
+    seguridad (V11).
+  - No baja de temporalidad para adelantar una entrada (V20).
+- **Confirmó:**
+  - Borrar la secundaria rota y rotar la siguiente (V13).
+  - Los toques repartidos en semanas pesan más (V14).
+  - No anclar sobre una vela abierta (V15).
+  - La doble confirmación es opcional (V17).
+  - Las definiciones de acción y seguridad (V18).
+
+---
+
+## 7. Fundamentos citables
+
+Cada regla del método va con su **pilar canónico** (la teoría clásica que la formula) y su
+**pilar empírico** (la evidencia medida). Cuando no hay evidencia, se dice. Es la disciplina de
+admisión del proyecto Genesis aplicada a nuestra doctrina, y es lo que permite escribir en una
+pieza "según la Teoría de Dow..." sin inventar nada.
+
+Fuentes, con su estado de verificación y sus citas literales:
+`docs/investigacion/fundamentos/fuentes.md`. Las páginas de Murphy son de la edición en español
+(*Análisis técnico de los mercados financieros*, Gestión 2000, 2000). La Teoría de Dow se cita a
+través de Murphy, cap. 2.
+
+| Regla (§1) | Pilar canónico | Pilar empírico | Lo que no está probado |
+|---|---|---|---|
+| 1. Precio y líneas, sin indicadores | Premisa del análisis técnico: "Los precios se mueven por tendencias" (Murphy p. 28). | Lo, Mamaysky y Wang (2000): los patrones gráficos "may have some practical value". | Que las líneas diagonales en sí predigan algo (ver abajo). |
+| 2. Ancla en la mecha, sin cruzar velas | Trazar "por encima o por debajo del alcance de los precios de todo el día" (Murphy p. 96). Las líneas internas son "muy subjetivas" (p. 117). | No hay. | Es una convención de trazado. |
+| 3. 3 toques = A+; 2 = setup menor | "se necesitan dos puntos para trazar la línea de tendencia y un tercero para transformarla en una línea de tendencia válida" (Murphy p. 94). La importancia la dan "el tiempo que se ha mantenido intacta y el número de veces que se ha puesto a prueba" (p. 94). | No hay para diagonales. | Que una A+ rinda más que una de 2 toques. Lo medirá el backtester. |
+| 4. Encadenar y abanico | Las líneas "se deben ajustar para que se acomoden a una tendencia que se enlentece o se acelera" (Murphy p. 104). | No hay. | Ojo con el nombre: el "principio abanico" de Murphy (p. 101) son líneas cada vez **más planas**, y la rotura de la tercera anuncia el **giro**. El abanico de Tori son líneas **más empinadas** cuando el precio acelera. En Murphy, eso es el ajuste de la p. 104. |
+| 5. Top-down, 4H operativo | Dow: tres tendencias, primaria de más de un año, secundaria de 3 semanas a 3 meses, menor de menos de 3 semanas (Murphy pp. 51-52). Líneas distintas para grados distintos (pp. 105-106). | Momentum de series de tiempo a 12 meses (Moskowitz, Ooi y Pedersen 2012; Hurst, Ooi y Pedersen 2017). | Que 4H sea el marco óptimo. La evidencia es de horizonte mensual, no intradía. |
+| 6. La ruptura se publica con el cierre | "Dow no consideraba válidas las penetraciones intradía" (Murphy p. 56). "un cierre más allá de la línea de tendencia es más significativo que una simple penetración intradía" (p. 97). | Brock, Lakonishok y LeBaron (1992): la ruptura de rango **horizontal** tiene poder predictivo, aunque las ganancias quizás no cubran los costos (según Osler 2000, p. 54). | La ruptura de una diagonal. Costo conocido de esperar: Dow "pierde de un 20 al 25 por ciento de un movimiento antes de generar una señal" (p. 57). |
+| 7. Entrar a favor de la ruptura | "Se presume que una tendencia está en vigor hasta que da señales definitivas de que ha retrocedido" (Murphy p. 54). "una tendencia en movimiento es más probable que continúe que retroceda" (p. 29). | Hurst, Ooi y Pedersen (2017): el seguimiento de tendencia fue rentable en una muestra de 1880 a 2016. | Que la ruptura de **una línea** sea el mejor disparador. |
+| 8. Stop tras la línea de seguridad | La línea "proporciona un límite de apoyo por debajo del mercado" (Murphy p. 94). | No hay. | El margen del stop. Es parámetro nuestro (§2.6). |
+| 9. Salida al cerrar al otro lado | "la violación de la línea de tendencia indica un cambio en la tendencia que aconseja la liquidación de todas las posiciones" (Murphy p. 94). | No hay específica. | Que salir por la línea rinda más que salir en el horizontal. Es lo que V11 deja abierto. |
+| 10. No operar en consolidación | "cuando el mercado se mueve lateralmente, la tercera opción —mantenerse fuera del mercado— es generalmente la más sensata" (Murphy p. 78). Los precios están en lateral "una tercera parte del tiempo" (pp. 76-77). Las "líneas" de Dow son consolidaciones (p. 57). | **AQR:** las peores rachas del seguimiento de tendencia "tend to be associated with periods of sharp reversals across multiple markets or prolonged periods in which many markets exhibit a lack of clear trends" (Hurst, Ooi y Pedersen 2017). | Una definición numérica de consolidación. Ni Tori ni Murphy la dan. |
+| Horizontales (§2.10) | Inversión de roles: "un nivel de resistencia se transforma en un nivel de apoyo" tras una penetración "significativa" (Murphy p. 85). La fuerza la dan el tiempo, el volumen y lo **reciente** (p. 86). | **Osler (2000):** los soportes y resistencias publicados predicen dónde se **interrumpe** la tendencia intradía en divisas, y su efecto dura al menos cinco días hábiles. | Osler no examina si el precio sigue al romper el nivel. Respalda el horizontal como **objetivo** (🎯), que es justamente su papel en la doctrina. |
+
+**Lo que hay que decir siempre: la parte diagonal no tiene evidencia académica propia.** No se
+encontró ningún estudio que pruebe rupturas de líneas de tendencia diagonales. Ver la fila F11 de
+`fuentes.md`. El método se apoya en dos cosas: la tradición (Dow y Murphy) y la evidencia general
+del seguimiento de tendencia (AQR) y de los niveles horizontales (Osler). El backtester será la
+primera medición de la parte diagonal. Hasta entonces:
+- **En las piezas de cliente:** se puede enseñar con la fuente ("según la Teoría de Dow, una
+  tendencia alcista son picos y valles cada vez más altos"). Nunca se dice que el método "está
+  probado" ni se da una tasa de acierto.
+- **Una diferencia de vocabulario:** la edición en español de Murphy dice "apoyo". En las piezas
+  se dice "soporte" (regla de terminología del proyecto). En las citas textuales se respeta el
+  libro.
