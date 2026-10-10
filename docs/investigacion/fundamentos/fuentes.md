@@ -46,7 +46,7 @@ fuente, pero no se pudo leer lo que se le atribuye), **no verificada**, **no enc
     generar una señal". Es el costo de esperar la confirmación.
 
 ### F2. Edwards y Magee
-- Estado: **verificada vía Murphy** (originales no leídos)
+- Estado: **verificada parcial** (existe el libro; su contenido no se leyó)
 - Edwards, R. D. y Magee, J. (1948). *Technical Analysis of Stock Trends*. Springfield, MA: Stock
   Trend Service. La edición en archive.org es la de 1991 (International Technical Analysis
   Publishers, ISBN 1880408007), de acceso restringido y sin texto descargable:
