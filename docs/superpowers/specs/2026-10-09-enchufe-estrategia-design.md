@@ -67,8 +67,9 @@ class Estrategia(Protocol):
     nombre: str                      # "tori"
     marcos: Marcos                   # contexto=("W1","D1"), operativo="H4", velas y etiqueta por marco
     procedencia: Procedencia         # de dónde sale cada regla (ver "Bloque de procedencia")
-    def leer(self, ticker: str, velas: dict[str, DataFrame], digits: int) -> Lectura: ...
-    def puntuar(self, lectura: Lectura) -> Puntaje: ...
+    def leer(self, ticker: str, velas: dict[str, DataFrame], digits: int,
+             en_curso: VelaEnCurso | None = None) -> Lectura: ...   # velas = solo cerradas
+    def puntuar(self, lectura: Lectura, horizonte: Literal["sesion", "semana"]) -> Puntaje: ...
     def divergencia(self, preparada: Lectura, actual: Lectura) -> str | None: ...
 
 @dataclass(frozen=True)
@@ -77,8 +78,9 @@ class Lectura:
     marco: str                       # el marco operativo de esta lectura
     precio: float
     direccion: Literal["ALCISTA", "BAJISTA", "LATERAL"]
-    estado: Literal["TENDENCIA", "RUPTURA", "RANGO"]
+    estado: Literal["TENDENCIA", "PRUEBA", "RUPTURA", "RANGO"]
     lineas: tuple[Linea, ...]        # todo lo que se dibuja
+    en_prueba: Prueba | None         # solo con estado "PRUEBA" (ver "La vela abierta")
     vigilar: Referencia              # el nivel que el cliente tiene que mirar hoy
     invalidacion: Referencia | None  # dónde la lectura deja de valer
     objetivo: Referencia | None      # el 🎯 probable (horizontal mayor)
@@ -96,6 +98,12 @@ class Linea:
     toques: int
     calidad: str                     # "A+", "B" o "" si no aplica
     valor_actual: float              # el precio de la línea en la última vela cerrada
+
+@dataclass(frozen=True)
+class Prueba:
+    linea: Linea                     # la línea que el precio vivo está perforando
+    valor_ahora: float               # el valor de la línea en la vela abierta
+    cierre_vela: datetime            # cuándo cierra la vela del marco operativo (America/Santiago)
 
 @dataclass(frozen=True)
 class Puntaje:
@@ -157,6 +165,44 @@ la `Lectura` para saber dónde está hoy, en vez de comparar contra un número c
 reemplaza al guardia de divergencia actual, que compara contra el soporte y la resistencia
 horizontales.
 
+### La vela abierta: el estado `PRUEBA`
+
+**El caso:** la vela del marco operativo todavía no cerró, pero el precio vivo ya está al otro
+lado de una línea vigente.
+
+- **Sin este estado, la pieza se contradice.** La lectura de velas cerradas diría "la tendencia
+  sigue mientras esté sobre la línea" mientras el precio que muestra la misma pieza ya está debajo.
+- **Callarlo tampoco sirve.** Tori entra al cruce (doctrina 2.4), así que quien siga el método
+  puede estar ya adentro.
+
+**Cómo se calcula:**
+- **Las velas cerradas siguen mandando.** Líneas, toques, calidad, dirección y el estado
+  `RUPTURA` salen solo de velas cerradas, como exige la regla de "sin mirar el futuro".
+- **El precio vivo solo pone un aviso encima.** `leer()` recibe la vela en curso, si existe, por
+  separado de las cerradas. Si su último precio está al otro lado de una línea de acción vigente,
+  el estado pasa a `PRUEBA` y `en_prueba` dice qué línea es, cuánto vale en la vela abierta y a
+  qué hora cierra esa vela. Una mecha que ya volvió no lo activa: cuenta el precio vivo, no el
+  extremo de la vela.
+- **No cambia nada estructural.** `PRUEBA` no mueve ninguna línea ni ninguna ancla (doctrina
+  2.1, V15).
+- **El backtester no lo ve.** Reproduce la historia en el cierre de cada vela, así que nunca hay
+  vela abierta y nunca aparece `PRUEBA`. La regla de "sin mirar el futuro" queda intacta.
+
+**Cómo se comunica:** siempre como condición, nunca como hecho. La pieza dice cuándo cierra la
+vela y qué pasa en cada caso: "si la vela de 4 horas cierra bajo X, la línea se considera rota;
+si vuelve a cerrar sobre ella, fue solo una mecha y la tendencia sigue". Los tres escenarios se
+ordenan alrededor de ese cierre.
+
+**Qué hace cada producto:**
+- **Las piezas del día** (carrusel, Avisos, `/story`): se publican con `PRUEBA`, porque viven
+  pocas horas.
+- **El informe semanal:** **no se genera con una línea A+ en `PRUEBA`.** Espera el cierre de esa
+  vela, que en 4H tarda como máximo 4 horas, y sale con la lectura confirmada. Un informe que se lee
+  durante días no puede quedar condicionado a algo que se resuelve en pocas horas.
+- **El despacho:** `divergencia()` devuelve motivo si la pieza se preparó en `PRUEBA` y la vela
+  cerró antes de enviarla, en cualquiera de los dos sentidos. El texto se escribió para una
+  condición que ya se resolvió, así que la pieza no sale.
+
 **Por qué el contrato no queda con la forma de Tori.** Una estrategia que solo use horizontales
 devuelve líneas de `tipo="horizontal"` y deja vacías `seguridad` y `seguimiento`. Para probarlo,
 la batería de conformidad corre también contra una **estrategia de juguete** que vive en
@@ -183,18 +229,55 @@ queda **fuera de la v1**, porque Tori no da un umbral y ponerle uno sería inven
 y cercano al precio, según la doctrina §2.10. Hace lo mismo que `_get_support_resistance`, pero
 ahora es **parte de Tori**: la otra estrategia trae los suyos.
 
-**El escáner de Tori** puntúa sobre 100, en este orden de prioridad:
+**El escáner de Tori** puntúa sobre 100, y el orden depende del `horizonte` de la pieza. El
+carrusel vive horas y el informe del lunes vive la semana, así que premian cosas distintas.
+
+**Horizonte `"sesion"`** (carrusel, Avisos, `/story`):
 1. La ruptura **reciente** de una línea A+ con el precio cerca de la línea de seguridad, que es el
-   setup de bajo riesgo.
+   setup de bajo riesgo. Con la vela abierta, entra acá como `PRUEBA`.
 2. El precio a punto de tocar una línea A+ sin romperla todavía.
 3. La tendencia vigente sin evento.
 4. El rango.
 
-El rango no se excluye, porque el criterio "sin canales vacíos" del director exige publicar algo,
-y la pieza de rango enseña a esperar la ruptura. Lo que sí se excluye es el activo que no tiene
-ninguna línea trazable: sin estructura no hay lectura.
+**Horizonte `"semana"`** (el análisis semanal del lunes; decisión del director, 2026-10-09):
+1. **El precio cerca de una línea A+ que todavía no se rompe** (por ejemplo, a menos de un ATR
+   diario). La semana casi seguro la pone a prueba, y la pieza deja un nivel concreto que vigilar
+   con dos escenarios: si cierra al otro lado en 4H, se rompe; si rebota, la tendencia sigue.
+   Enseña a mirar la línea y no a perseguir el precio.
+2. **Ruptura confirmada el viernes o el fin de semana, con el precio todavía cerca de la línea de
+   seguridad.** El setup en 4H dura de una a dos semanas (doctrina 2.9), así que le alcanza la
+   semana.
+3. **Tendencia vigente con una línea A+ larga y confluencia de temporalidad mayor.** Es la lectura
+   más estable: no envejece durante la semana.
+4. **Rango con los bordes bien marcados.** Solo si no hay nada mejor, como pieza educativa sobre
+   esperar la ruptura.
 
-Los pesos exactos se fijan en el plan, sobre una medición del universo real.
+**Lo que suma dentro de cada situación, en los dos horizontes** (todo de la doctrina):
+- **Calidad de la línea:** 3 toques o más, varias semanas de datos entre toques (V14), y un
+  segundo punto que no sea demasiado reciente (V16).
+- **Confluencia de temporalidades:** que la línea de 4H calce con una de D1 o W1, o vaya a favor
+  de su secuencia (doctrina 2.9). En `"semana"` pesa más que en `"sesion"`.
+- **Doble confirmación disponible:** un horizontal cerca de la línea, para que la ruptura rompa
+  los dos a la vez (doctrina 2.4, V17).
+- **Espacio hasta el objetivo:** la distancia al horizontal mayor (🎯) bastante mayor que la
+  distancia a la línea de seguridad (⚠️). No es un take profit fijo: mide si el movimiento vale
+  la pena.
+
+**Lo que resta o excluye:**
+- **El precio lejos de la línea de seguridad** resta mucho en los dos horizontes, porque Tori pasa
+  esa operación (doctrina 2.5). En `"semana"` también resta la ruptura vieja que ya recorrió.
+- **Una línea muy empinada o de solo 2 toques** se puede dibujar, pero no puntúa como línea
+  principal.
+- **En `"semana"`, una línea A+ en `PRUEBA`** no puntúa: el informe espera el cierre (ver "La
+  vela abierta").
+- **Un activo sin ninguna línea trazable** se excluye: sin estructura no hay lectura.
+- **Nada macro.** La agenda va en el informe complementario de los viernes (§8.2) y no mueve el
+  ranking.
+
+El rango no se excluye en `"sesion"`, porque el criterio "sin canales vacíos" del director exige
+publicar algo y la pieza de rango enseña a esperar la ruptura.
+
+Los pesos exactos y el umbral de "cerca" se fijan en el plan, sobre una medición del universo real.
 
 ## 6. Qué se borra (sin vuelta atrás)
 
@@ -238,14 +321,15 @@ Va un plan y un PR por fase. Ninguna fase deja el sistema con dos lecturas a la 
    - El paquete `scripts/estrategia/`, el registro, `config/estrategia.json` y la batería de
      conformidad, con la estrategia de juguete.
    - Tests de Tori sobre velas sintéticas: trazado, no intersección, toques, ruptura por cierre,
-     rango.
+     rango, `PRUEBA` con vela en curso (y su ausencia sin ella), y el orden de `puntuar` en los dos
+     horizontes.
    - Una corrida sobre los 5 activos base reales que devuelva las líneas en PNG para que el
      director las mire.
    - La `Procedencia` de Tori, con la batería que la valida contra `fuentes.md`.
    - **Requisito previo, cumplido el 2026-10-09:** volvió la verificación [V1]-[V20] de la
      doctrina, y los fundamentos se verificaron contra Murphy y los papers.
 2. **Escáner, carrusel y despacho.**
-   - El escáner ordena con `puntuar`.
+   - El escáner ordena con `puntuar(lectura, "sesion")`.
    - La pieza toma dirección, niveles y escenarios de la `Lectura`.
    - El gráfico dibuja las líneas.
    - El despacho usa `divergencia`.
@@ -254,6 +338,8 @@ Va un plan y un PR por fase. Ninguna fase deja el sistema con dos lecturas a la 
 3. **Informe, Avisos, analista, LinkedIn, cierre semanal y `/story`.**
    - Pasan a la `Lectura`.
    - El plan del analista se queda sin Chandelier.
+   - El análisis semanal del lunes elige con `puntuar(lectura, "semana")` y espera el cierre de
+     la vela si hay una línea A+ en `PRUEBA`.
    - Se agrega la tool `get_lectura`.
 4. **Purga y documentación.**
    - Se borra el resto de la §6.
@@ -286,6 +372,15 @@ Va un plan y un PR por fase. Ninguna fase deja el sistema con dos lecturas a la 
      abajo).
 5. **El marco del carrusel lo decide la estrategia.** Esto se deduce de la decisión 1. Con Tori, el
    marco operativo es 4H.
+6. **La vela abierta se comunica como `PRUEBA`, no como ruptura.** Las piezas del día la publican
+   como condición; el informe semanal espera el cierre de esa vela (§4, "La vela abierta").
+7. **El escáner puntúa por horizonte.** El lunes premia primero el precio cerca de una línea A+
+   todavía sin romper, y después la ruptura confirmada con el precio cerca de la línea de
+   seguridad (§5).
+8. **La alta volatilidad queda fuera de la v1.** Tori la reconoce en parte por las noticias, y la
+   estrategia no consume nada macro (decisión 2). Si se agrega después, entra como parámetro
+   declarado nuestro (por ejemplo, el ATR en percentil alto), con su `no_probado` en la
+   procedencia, y el backtester mide si bajar a 1H mejora el resultado.
 
 **La regla que habilita el backtester.**
 - **La exigencia:** `leer()` tiene que dar **el mismo resultado** si se le pasan las velas hasta
