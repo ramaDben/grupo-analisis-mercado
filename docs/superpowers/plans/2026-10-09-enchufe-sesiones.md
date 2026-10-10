@@ -15,24 +15,22 @@ flowchart TD
     S2["S2 · Tori: trazado y calidad<br/>pivotes, líneas, toques, abanico"]
     S3["S3 · Tori: lectura, puntaje y textos<br/>PRUEBA, horizontes, PNG de 5 activos"]
     G1{{"Gate del director<br/>¿las líneas se parecen a las de Tori?"}}
-    S4["S4 · Escáner y carrusel<br/>puntuar 'sesion', payload y texto"]
+    S4["S4 · Referencia semanal, escáner y carrusel<br/>guardar el lunes, seguir() a diario"]
     S5["S5 · Gráfico y despacho<br/>dibuja Lectura.lineas, divergencia"]
     S6["S6 · Informe, Avisos y /story<br/>+ tool get_lectura"]
-    S7["S7 · Analista y semanal del lunes<br/>sin Chandelier, puntuar 'semana'"]
+    S7["S7 · Analista y pieza semanal<br/>sin Chandelier, desde la referencia"]
     S8["S8 · Purga y documentación<br/>test guardián, CLAUDE.md, AGY"]
-    BT["Backtester<br/>(subproyecto, spec propio)"]
     MAC["Informe macro de los viernes<br/>(subproyecto, spec propio)"]
 
     S0 --> S1 --> S2 --> S3 --> G1
     G1 -- aprueba --> S4 --> S5 --> S6 --> S7 --> S8
     G1 -- corrige --> S2
-    S1 -. contrato estable .-> BT
     S0 -. independiente .-> MAC
 
     classDef gate fill:#fff3cd,stroke:#b58b00
     classDef aparte fill:#eef,stroke:#669,stroke-dasharray: 4 3
     class G1 gate
-    class BT,MAC aparte
+    class MAC aparte
 ```
 
 | Fase del spec | Sesiones | Plan que la guía |
@@ -66,7 +64,7 @@ de la fase 3 escrito hoy describiría funciones que todavía no existen.
   - Aprobación del director del spec.
   - PR y merge de esa rama.
   - El plan de la fase 1 con la skill `writing-plans`, partido en S1, S2 y S3.
-- **Sale:** `docs/superpowers/plans/2026-10-xx-enchufe-fase-1.md` en master.
+- **Sale:** `docs/superpowers/plans/2026-10-09-enchufe-fase-1.md` en master.
 - **Arranque:** "Lee el spec del enchufe y este mapa de sesiones. El director aprobó el spec:
   abre el PR de `docs/metodologia-tendencias` y escribe el plan de la fase 1 (S1 a S3)."
 
@@ -84,7 +82,7 @@ de la fase 3 escrito hoy describiría funciones que todavía no existen.
     - la procedencia validada contra las filas verificadas de `fuentes.md`.
   - La estrategia de juguete en `tests/`, que pasa la batería.
 - **No toca:** ningún pipeline existente.
-- **Sale:** un contrato estable. Desde acá puede empezar el backtester en paralelo.
+- **Sale:** un contrato estable.
 - **Arranque:** "Ejecuta la sesión S1 del plan de la fase 1 del enchufe."
 
 ## S2 · Tori: trazado y calidad
@@ -133,11 +131,18 @@ de la fase 3 escrito hoy describiría funciones que todavía no existen.
 - **Por qué este gate es el más importante:** después de él, todo lo que sale al cliente depende
   de este trazado.
 
-## S4 · Escáner y carrusel
+## S4 · Referencia semanal, escáner y carrusel
 
 - **Entra:** la fase 1 aprobada y el plan de la fase 2.
 - **Hace:**
-  - El escáner ordena con `puntuar(lectura, "sesion")`.
+  - **La referencia semanal** (decisión del director, 2026-10-10; spec §4): el lunes el escáner
+    elige con `puntuar(leer(...), "semana")` y guarda la `Lectura` de cada activo elegido en
+    `data/referencias_semanales/<AAAA-Www>/<ticker>.json`.
+  - Las diarias solo cubren los activos con referencia. El escáner diario ordena con
+    `puntuar(seguir(referencia, ...), "sesion")`, con velas pedidas con `extra=60`.
+  - Una ruptura por cierre de una línea de la referencia la reemplaza por la `leer()` de ese
+    cierre, fija hasta el lunes siguiente.
+  - Qué pasa si el lunes no corrió: se decide al escribir el plan de la fase 2 (spec §9).
   - Salen los factores y los gates de agotamiento y banda, y el catalizador macro.
   - `pipeline_carrusel` toma dirección, niveles y escenarios de la `Lectura`.
   - `MARCOS_CANONICOS` se lee de la estrategia.
@@ -172,8 +177,8 @@ de la fase 3 escrito hoy describiría funciones que todavía no existen.
   - `plan.armar` lee la `Lectura`: el gatillo es la línea de acción, la invalidación es la de
     seguridad y no hay objetivo fijo.
   - Se borran `analista/estadistica.py` y el Chandelier. La pieza sale sin estadística.
-  - El análisis semanal del lunes elige con `puntuar(lectura, "semana")` y espera el cierre si
-    hay una línea A+ en `PRUEBA`.
+  - La pieza del análisis semanal del lunes se publica desde la referencia que guarda S4, y espera
+    el cierre si hay una línea A+ en `PRUEBA`.
   - LinkedIn y el cierre semanal pasan a la `Lectura`.
 - **Arranque:** "Ejecuta la sesión S7 del plan de la fase 3 del enchufe."
 
@@ -193,14 +198,7 @@ de la fase 3 escrito hoy describiría funciones que todavía no existen.
 
 ## Trabajos aparte, con spec propio
 
-- **Backtester agnóstico a la estrategia.**
-  - Puede empezar cuando S1 está en master: solo necesita el contrato.
-  - Reproduce la historia vela a vela con `leer()`:
-    - entra cuando `estado` pasa a `RUPTURA`;
-    - sale cuando una vela cierra al otro lado de `invalidacion`.
-  - Lo primero que mide es lo que la procedencia declara `no_probado`, empezando por la parte
-    diagonal.
-  - Copia la disciplina de Genesis: ledger de ensayos y validación fuera de muestra.
+- **No habrá backtester** (decisión del director, 2026-10-10).
 - **Informe macro complementario de los viernes.**
   - Independiente del enchufe: puede ir en cualquier momento.
   - Informa y no decide: la estrategia no consume nada macro.

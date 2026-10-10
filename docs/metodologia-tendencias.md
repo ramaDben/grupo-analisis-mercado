@@ -414,7 +414,7 @@ través de Murphy, cap. 2.
 |---|---|---|---|
 | 1. Precio y líneas, sin indicadores | Premisa del análisis técnico: "Los precios se mueven por tendencias" (Murphy p. 28). | Lo, Mamaysky y Wang (2000): los patrones gráficos "may have some practical value". | Que las líneas diagonales en sí predigan algo (ver abajo). |
 | 2. Ancla en la mecha, sin cruzar velas | Trazar "por encima o por debajo del alcance de los precios de todo el día" (Murphy p. 96). Las líneas internas son "muy subjetivas" (p. 117). | No hay. | Es una convención de trazado. |
-| 3. 3 toques = A+; 2 = setup menor | "se necesitan dos puntos para trazar la línea de tendencia y un tercero para transformarla en una línea de tendencia válida" (Murphy p. 94). La importancia la dan "el tiempo que se ha mantenido intacta y el número de veces que se ha puesto a prueba" (p. 94). | No hay para diagonales. | Que una A+ rinda más que una de 2 toques. Lo medirá el backtester. |
+| 3. 3 toques = A+; 2 = setup menor | "se necesitan dos puntos para trazar la línea de tendencia y un tercero para transformarla en una línea de tendencia válida" (Murphy p. 94). La importancia la dan "el tiempo que se ha mantenido intacta y el número de veces que se ha puesto a prueba" (p. 94). | No hay para diagonales. | Que una A+ rinda más que una de 2 toques. |
 | 4. Encadenar y abanico | Las líneas "se deben ajustar para que se acomoden a una tendencia que se enlentece o se acelera" (Murphy p. 104). | No hay. | Ojo con el nombre: el "principio abanico" de Murphy (p. 101) son líneas cada vez **más planas**, y la rotura de la tercera anuncia el **giro**. El abanico de Tori son líneas **más empinadas** cuando el precio acelera. En Murphy, eso es el ajuste de la p. 104. |
 | 5. Top-down, 4H operativo | Dow: tres tendencias, primaria de más de un año, secundaria de 3 semanas a 3 meses, menor de menos de 3 semanas (Murphy pp. 51-52). Líneas distintas para grados distintos (pp. 105-106). | Momentum de series de tiempo a 12 meses (Moskowitz, Ooi y Pedersen 2012; Hurst, Ooi y Pedersen 2017). | Que 4H sea el marco óptimo. La evidencia es de horizonte mensual, no intradía. |
 | 6. La ruptura se publica con el cierre | "Dow no consideraba válidas las penetraciones intradía" (Murphy p. 56). "un cierre más allá de la línea de tendencia es más significativo que una simple penetración intradía" (p. 97). | Brock, Lakonishok y LeBaron (1992): la ruptura de rango **horizontal** tiene poder predictivo, aunque las ganancias quizás no cubran los costos (según Osler 2000, p. 54). | La ruptura de una diagonal. Costo conocido de esperar: Dow "pierde de un 20 al 25 por ciento de un movimiento antes de generar una señal" (p. 57). |
@@ -427,8 +427,8 @@ través de Murphy, cap. 2.
 **Lo que hay que decir siempre: la parte diagonal no tiene evidencia académica propia.** No se
 encontró ningún estudio que pruebe rupturas de líneas de tendencia diagonales. Ver la fila F11 de
 `fuentes.md`. El método se apoya en dos cosas: la tradición (Dow y Murphy) y la evidencia general
-del seguimiento de tendencia (AQR) y de los niveles horizontales (Osler). El backtester será la
-primera medición de la parte diagonal. Hasta entonces:
+del seguimiento de tendencia (AQR) y de los niveles horizontales (Osler). No habrá backtesting
+(decisión del director, 2026-10-10), así que la parte diagonal queda sin medir. Por eso:
 - **En las piezas de cliente:** se puede enseñar con la fuente ("según la Teoría de Dow, una
   tendencia alcista son picos y valles cada vez más altos"). Nunca se dice que el método "está
   probado" ni se da una tasa de acierto.
