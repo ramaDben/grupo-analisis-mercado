@@ -2983,6 +2983,25 @@ Run: `uv run pytest tests/test_estrategia_conformidad.py tests/test_estrategia_r
 Expected: PASS. Si `verificar_procedencia` falla para Tori, el mensaje dice qué fundamento y qué
 cita: corregir la cita contra `fuentes.md`, nunca agregar una fila nueva sin verificarla.
 
+- [ ] **Step 6b: Cerrar los huecos de la batería que dejó la revisión final de S1**
+
+La revisión de la rama S1 (2026-10-10) encontró reglas del contrato que la batería todavía no
+exige. Se cierran acá, cuando Tori entra a `FABRICAS`, y cada una lleva su variante negativa del
+juguete en `tests/test_estrategia_conformidad.py`, como las demás verificaciones:
+- **M1:** `leer()` fija `Lectura.vela` en el timestamp de la última vela cerrada del marco
+  operativo. Hoy una variante con `vela=0` pasa todas las verificaciones de `leer()`.
+- **M2:** `seguir()` detecta la ruptura: con velas nuevas que cierran al otro lado de una línea de
+  la referencia, el estado es `RUPTURA`; con la vela en curso al otro lado, `PRUEBA`.
+- **M3:** `divergencia()` da motivo cuando la referencia estaba en `PRUEBA` y esa vela ya cerró
+  (spec §4). El juguete también tiene que cumplirlo.
+- **M4:** `lectura_a_dict(lectura)` de una lectura de la estrategia pasa por `json.dumps` sin
+  error. Un `np.int64` o un `np.bool_` en `metricas`, `vela` o `puntos` hoy lo rompen.
+- **M5:** tras `lectura_de_dict`, `Prueba.cierre_vela` y `VelaEnCurso.cierre` vuelven con un
+  offset fijo (UTC-03:00) y no con `America/Santiago`. Para la referencia semanal de la fase 2
+  hay que reconstruir la zona.
+
+Si alguna exige cambiar `contrato.py`, el cambio va en este mismo commit, con su test.
+
 - [ ] **Step 7: Commit**
 
 ```bash
