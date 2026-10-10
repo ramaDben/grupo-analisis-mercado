@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import random
 import sys
+from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 from typing import Callable
@@ -89,6 +90,7 @@ def verificar_prueba_solo_con_vela_en_curso(fabrica: Fabrica) -> None:
     e = fabrica()
     op = e.marcos.operativo
     velas = velas_de(e)
+    hubo_prueba = False
     for k in CORTES:
         recorte = recortar(velas, k)
         sin = e.leer(TICKER, recorte, 2)
@@ -102,7 +104,12 @@ def verificar_prueba_solo_con_vela_en_curso(fabrica: Fabrica) -> None:
             assert estructurales(con) == estructurales(sin), "la vela abierta movió una línea"
             assert con.direccion == sin.direccion, "la vela abierta cambió la dirección"
             if con.estado == "PRUEBA":
+                hubo_prueba = True
                 assert con.en_prueba.cierre_vela == cierre
+    assert hubo_prueba, (
+        "con la vela abierta fuera de todo el rango la estrategia nunca entró en PRUEBA: "
+        "no se verificó nada de la rama PRUEBA"
+    )
 
 
 def verificar_procedencia(fabrica: Fabrica) -> None:
@@ -120,8 +127,19 @@ def verificar_marco_y_puntaje(fabrica: Fabrica) -> None:
 
 def verificar_divergencia_propia(fabrica: Fabrica) -> None:
     e = fabrica()
-    lectura = e.leer(TICKER, velas_de(e), 2)
+    velas = velas_de(e)
+    lectura = e.leer(TICKER, velas, 2)
     assert e.divergencia(lectura, lectura) is None, "una lectura diverge de sí misma"
+    opuesta = {"ALCISTA": "BAJISTA", "BAJISTA": "ALCISTA"}
+    for k in CORTES:
+        base = e.leer(TICKER, recortar(velas, k), 2)
+        if base.direccion in opuesta:
+            motivo = e.divergencia(base, replace(base, direccion=opuesta[base.direccion]))
+            assert isinstance(motivo, str) and motivo, (
+                "divergencia() no detecta una lectura de dirección opuesta"
+            )
+            return
+    raise AssertionError("ningún corte dio una lectura no lateral: no se pudo probar divergencia()")
 
 
 def verificar_seguir_misma_lectura(fabrica: Fabrica) -> None:
@@ -161,6 +179,9 @@ def verificar_seguir_anclas_fijas(fabrica: Fabrica) -> None:
     e = fabrica()
     velas = velas_de(e)
     ref = e.leer(TICKER, recortar(velas, 33), 2)
+    assert e.leer(TICKER, velas, 2).lineas != ref.lineas, (
+        "precondición: con velas nuevas, leer() tendría que trazar anclas distintas; sin eso la prueba no mide nada"
+    )
     hoy = e.seguir(ref, velas, 2)
     assert sorted(x.puntos for x in hoy.lineas) == sorted(x.puntos for x in ref.lineas), (
         "seguir() volvió a trazar: las anclas no son las de la referencia"
