@@ -13,7 +13,7 @@ for p in (str(RAIZ / "src"), str(RAIZ / "scripts")):
         sys.path.insert(0, p)
 
 import velas_sinteticas as vs  # noqa: E402
-from estrategia.tori.lineas import seguimiento, trazar  # noqa: E402
+from estrategia.tori.lineas import _recorrer, seguimiento, trazar  # noqa: E402
 from estrategia.tori.parametros import PARAMETROS as P  # noqa: E402
 from estrategia.tori.pivotes import serie_de  # noqa: E402
 
@@ -148,3 +148,55 @@ def test_la_separacion_de_toques_debe_superar_a_la_tolerancia():
         replace(P, separacion_toque_atr=P.tolerancia_toque_atr)
     with pytest.raises(ValueError):
         replace(P, separacion_toque_atr=P.tolerancia_toque_atr / 2)
+
+
+# _recorrer directo: con velas sintéticas la mecha que perfora suele ser ella misma un pivote
+# del zigzag, y `trazar` la elegiría como B aunque _recorrer descartara la línea original.
+def test_la_mecha_que_perfora_despues_de_b_mueve_el_punto_b():
+    df = vs.desde_vertices(ALCISTA, 12)
+    base = trazar(serie_de(df), "alcista", P)
+    assert base.i_b == 24
+    df.loc[60, "low"] = base.valor(60) - 4.0  # perfora más que la tolerancia y cierra adentro
+    s = serie_de(df)
+    t = _recorrer(s, "alcista", 0, 24, P)
+    assert t is not None and t.vigente, "una mecha no es ruptura: la línea no desaparece"
+    assert t.i_a == 0 and t.i_b == 60 and t.p_b == s.lows[60]
+    _respeta(s, t, P.tolerancia_toque_atr * s.atr)
+
+
+def test_la_mecha_bajista_despues_de_b_mueve_el_punto_b():
+    df = vs.desde_vertices(BAJISTA_ROTA[:-1], 12)
+    s0 = serie_de(df)
+    base = trazar(s0, "bajista", P)
+    assert base is not None and base.i_a == 0
+    j = len(df) - 2
+    df.loc[j, "high"] = base.valor(j) + 4.0
+    s = serie_de(df)
+    t = _recorrer(s, "bajista", 0, base.i_b, P)
+    assert t is not None and t.vigente
+    assert t.i_b == j and t.p_b == s.highs[j]
+    _respeta(s, t, P.tolerancia_toque_atr * s.atr)
+
+
+def test_la_mecha_que_deja_a_b_sin_pendiente_deja_sin_linea():
+    df = vs.desde_vertices(ALCISTA, 12)
+    base = trazar(serie_de(df), "alcista", P)
+    # El low de la vela 60 queda por debajo de A: con ese B la pendiente se invierte.
+    df.loc[60, "low"] = base.p_a - 1.0
+    assert _recorrer(serie_de(df), "alcista", 0, 24, P) is None
+
+
+def test_la_vela_que_perfora_y_cierra_afuera_sigue_siendo_ruptura():
+    df = vs.desde_vertices(ALCISTA, 12)
+    base = trazar(serie_de(df), "alcista", P)
+    k = 60
+    df.loc[k, ["low", "close"]] = base.valor(k) - 4.0
+    t = _recorrer(serie_de(df), "alcista", 0, 24, P)
+    assert t is not None and not t.vigente and t.i_ruptura == k
+
+
+def test_la_mecha_que_perfora_antes_de_b_sigue_invalidando():
+    df = vs.desde_vertices(ALCISTA, 12)
+    base = trazar(serie_de(df), "alcista", P)
+    df.loc[12, "low"] = base.valor(12) - 4.0  # antes de B (24)
+    assert _recorrer(serie_de(df), "alcista", 0, 24, P) is None

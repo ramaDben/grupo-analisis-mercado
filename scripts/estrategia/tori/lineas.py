@@ -53,15 +53,21 @@ def trazar(s: Serie, sentido: Sentido, p: Parametros, ancla: int | None = None) 
                   if t == tipo and i > ancla]
     mejor: Trazo | None = None
     for b in candidatos:
-        pendiente = (extremos[b] - extremos[ancla]) / (b - ancla)
-        if (pendiente <= 0) if alcista else (pendiente >= 0):
-            continue  # pendiente invertida: se elimina (OjZ8d [04:22])
-        if abs(pendiente) < p.pendiente_min_atr * s.atr:
-            continue  # plana: se lee como horizontal, no como línea (OjZ8d [03:52])
+        if not _es_diagonal(s, sentido, ancla, b, p):
+            continue
         trazo = _recorrer(s, sentido, ancla, b, p)
         if trazo is not None and (mejor is None or _orden(trazo) > _orden(mejor)):
             mejor = trazo
     return mejor
+
+
+def _es_diagonal(s: Serie, sentido: Sentido, a: int, b: int, p: Parametros) -> bool:
+    alcista = sentido == "alcista"
+    extremos = s.lows if alcista else s.highs
+    pendiente = (extremos[b] - extremos[a]) / (b - a)
+    if (pendiente <= 0) if alcista else (pendiente >= 0):
+        return False  # pendiente invertida: se elimina (OjZ8d [04:22])
+    return abs(pendiente) >= p.pendiente_min_atr * s.atr  # plana: se lee como horizontal (OjZ8d [03:52])
 
 
 def _orden(t: Trazo) -> tuple[int, float]:
@@ -86,7 +92,11 @@ def _recorrer(s: Serie, sentido: Sentido, a: int, b: int, p: Parametros) -> Traz
             if i > b and cierre < -tol:
                 ruptura = i  # cerró afuera por más que un asomo: ruptura por cierre (doctrina 2.4)
                 break
-            return None  # cruza y vuelve, o cruza antes de B: la línea no se traza (V10)
+            if i > b:
+                # Una mecha después de B no es ruptura (2.4): el Punto B se mueve a esa vela
+                # y la línea se redibuja desde A (2.3, V10).
+                return _recorrer(s, sentido, a, i, p) if _es_diagonal(s, sentido, a, i, p) else None
+            return None  # cruza antes de B: la línea no se traza (V10)
         if holgura <= tol:
             if episodio is None or holgura < episodio[1]:
                 episodio = (i, holgura)  # el extremo del toque, no la primera vela que entra
