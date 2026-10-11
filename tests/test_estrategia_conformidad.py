@@ -19,7 +19,7 @@ import estrategia_juguete  # noqa: E402
 from estrategia import tori  # noqa: E402
 
 FABRICAS = {"juguete": estrategia_juguete.crear, "tori": tori.crear}
-CON_SEGUIR = {"juguete"}  # S3-6 agrega "tori" cuando Tori implementa seguir()
+CON_SEGUIR = {"juguete", "tori"}
 
 VERIFICACIONES = (
     conf.verificar_sin_futuro, conf.verificar_escenarios,

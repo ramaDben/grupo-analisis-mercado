@@ -6,7 +6,7 @@ encima (spec §4, "La vela abierta"); lo agrega la Task S3-2.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import pandas as pd
 
@@ -286,3 +286,137 @@ def divergencia(preparada: Lectura, actual: Lectura) -> str | None:
                 (preparada.precio - antes.precio) * (actual.precio - ahora.precio) < 0:
             return f"el precio cruzó la {ahora.etiqueta}, que hoy está en {ahora.precio}"
     return None
+
+
+def _valorador(velas: dict[str, pd.DataFrame], marcos: Marcos, ticker: str):
+    """Valor de una línea fija en cualquier vela de su marco, contado en velas desde sus anclas.
+
+    Usa todas las velas recibidas y no la ventana de `leer()`: las anclas del lunes tienen
+    que seguir dentro aunque la ventana haya avanzado.
+    """
+    indices = {m: {int(ts): i for i, ts in enumerate(velas[m]["time"])} for m in marcos.todos}
+
+    def valor(linea: Linea, i: float) -> float:
+        if linea.tipo == "horizontal":
+            return linea.puntos[0][1]
+        (t1, p1), (t2, p2) = linea.puntos
+        try:
+            i1, i2 = indices[linea.marco][t1], indices[linea.marco][t2]
+        except KeyError:
+            raise ValueError(
+                f"{ticker}: las anclas de una línea {linea.rol} de {linea.marco} ya no caben en la "
+                "ventana de velas; hay que pedir velas desde la referencia"
+            ) from None
+        return p1 + (p2 - p1) / (i2 - i1) * (i - i1)
+
+    return valor, indices
+
+
+def seguir(ticker: str, referencia: Lectura, velas: dict[str, pd.DataFrame], digits: int,
+           en_curso: VelaEnCurso | None, marcos: Marcos, p: Parametros) -> Lectura:
+    """La lectura de hoy contra la referencia del lunes, sin volver a trazar (spec §4).
+
+    Las anclas no se mueven: una diagonal avanza por su pendiente y un horizontal vale lo
+    mismo toda la semana. Una línea que cerró al otro lado por más que la tolerancia deja el
+    estado en RUPTURA; el consumidor reemplaza entonces la referencia por la `leer()` de ese
+    cierre (decisión del director, 2026-10-10).
+    """
+    exigir_velas(velas, marcos)
+    if referencia.estado == "PRUEBA":
+        raise ValueError(f"{ticker}: una referencia no puede quedar en PRUEBA; se guarda con la vela cerrada")
+    op = marcos.operativo
+    s = serie_de(velas[op].reset_index(drop=True))
+    if s.atr <= 0:
+        raise ValueError(f"{ticker}: las velas de {op} no tienen rango (ATR 0); no hay nada que leer")
+    valor, indices = _valorador(velas, marcos, ticker)
+    if referencia.vela not in indices[op]:
+        raise ValueError(f"{ticker}: la vela de la referencia ya no cabe en la ventana de {op}")
+    i_ref = indices[op][referencia.vela]
+    ultimo = len(s) - 1
+    tol = p.tolerancia_toque_atr * s.atr
+    lineas = [replace(x, valor_actual=round(valor(x, len(indices[x.marco]) - 1), digits))
+              for x in referencia.lineas]
+
+    def sostiene(x: Linea) -> bool:
+        return x.marco == op and x.rol in ("accion", "seguridad", "rango")
+
+    ruptura: tuple[int, Linea] | None = None
+    for x in lineas:
+        if not sostiene(x):
+            continue
+        lado = s.closes[i_ref] - valor(x, i_ref)
+        for i in range(i_ref + 1, len(s)):
+            ahora = s.closes[i] - valor(x, i)
+            if lado * ahora < 0 and abs(ahora) > tol:
+                if ruptura is None or i < ruptura[0]:
+                    ruptura = (i, x)
+                break
+
+    # El rebote se vuelve a medir con la última vela de hoy: dura una vela (hueco 13).
+    estado = "TENDENCIA" if referencia.estado == "REBOTE" else referencia.estado
+    direccion = referencia.direccion
+    avisos = list(referencia.avisos)
+    objetivo = referencia.objetivo
+    if ruptura is not None:
+        i, rota = ruptura
+        estado = "RUPTURA"
+        direccion = "ALCISTA" if s.closes[i] > valor(rota, i) else "BAJISTA"
+        if direccion != referencia.direccion:
+            objetivo = None  # el objetivo del lunes era para la otra dirección
+        sube = direccion == "ALCISTA"
+        nuevas = []
+        for x in lineas:
+            if x is rota:
+                nuevas.append(replace(x, rol="accion"))
+            elif sostiene(x) and x.tipo == "diagonal":
+                # La opuesta queda a favor de la operación: bajo el precio en una compra (V18).
+                a_favor = x.valor_actual < s.closes[ultimo] if sube else x.valor_actual > s.closes[ultimo]
+                nuevas.append(replace(x, rol="seguridad" if a_favor else "contexto"))
+            else:
+                nuevas.append(x)
+        lineas = nuevas
+        avisos.append(f"la línea {textos.sentido(rota)} del análisis semanal se rompió por cierre: "
+                      "la lectura de este cierre pasa a ser la nueva referencia")
+
+    accion = next((x for x in lineas if x.rol == "accion" and x.marco == op), None)
+    seguridad = next((x for x in lineas if x.rol == "seguridad" and x.marco == op), None)
+    rango = [x for x in lineas if x.rol == "rango"]
+    linea_seguimiento = next((x for x in lineas if x.rol == "seguimiento"), None)
+    cierre = s.closes[-1]
+    precio = en_curso.precio if en_curso is not None else cierre
+    if estado == "TENDENCIA" and seguridad is not None and \
+            _rebote(s, valor(seguridad, ultimo), textos.sentido(seguridad), tol):
+        estado = "REBOTE"
+    vivas = [(x, valor(x, len(s))) for x in lineas
+             if sostiene(x) and not (estado == "RUPTURA" and x.rol == "accion")]
+    prueba = _prueba(vivas, cierre, en_curso, tol, digits)
+    vigilar = _vigilar(prueba, estado, accion, seguridad, rango, precio)
+    invalidacion = (Referencia(seguridad.valor_actual, f"línea {textos.sentido(seguridad)} de seguridad", seguridad)
+                    if seguridad is not None else None)
+
+    atr_d1 = serie_de(velas["D1"]).atr if "D1" in marcos.todos else 0.0
+    atr_d1 = atr_d1 if atr_d1 > 0 else s.atr
+    fijas = ("confluencia", "contra_secuencia", "doble_confirmacion", "semanas_principal")
+    metricas = {k: v for k, v in referencia.metricas.items() if k in fijas}
+    metricas.update({"atr": s.atr, "atr_d1": atr_d1,
+                     "dist_vigilar_atr_d1": abs(precio - vigilar.precio) / atr_d1})
+    if seguridad is not None:
+        metricas["dist_seguridad_atr_d1"] = abs(precio - seguridad.valor_actual) / atr_d1
+    if accion is not None:
+        metricas["dist_accion_atr_d1"] = abs(precio - accion.valor_actual) / atr_d1
+    if objetivo is not None:
+        metricas["dist_objetivo_atr_d1"] = abs(precio - objetivo.precio) / atr_d1
+    if ruptura is not None:
+        metricas["velas_desde_ruptura"] = float(ultimo - ruptura[0])
+
+    final = "PRUEBA" if prueba is not None else estado
+    return Lectura(
+        ticker=ticker, marco=op, precio=precio, direccion=direccion, estado=final,
+        lineas=tuple(lineas), en_prueba=prueba, vigilar=vigilar, invalidacion=invalidacion,
+        objetivo=objetivo,
+        escenarios=textos.escenarios(final, direccion, op, digits, precio, vigilar, invalidacion,
+                                     objetivo, prueba, rango),
+        salida=textos.salida(final, op, invalidacion, digits, linea_seguimiento),
+        conceptos=textos.conceptos(final), avisos=tuple(avisos), metricas=metricas,
+        vela=s.times[-1],
+    )
