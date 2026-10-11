@@ -12,6 +12,7 @@
       "unidad": "CLP",
       "volatilidad": "baja",
       "nota_volatilidad": "se mueve poco dentro del día, así que marcos más amplios (1H/4H) dan una lectura más limpia; en 15M aparece mucho ruido",
+      "notas_marco": {"H4": "el dólar en Chile se mueve en tramos de varios días: en 4H se ven las líneas que esos tramos respetan, sin el ruido de cada hora."},
       "drivers": [
         "cobre",
         "Dollar Index",
@@ -36,6 +37,7 @@
       "unidad": "JPY",
       "volatilidad": "media",
       "nota_volatilidad": "se mueve por decisiones de tasas más que por el minuto a minuto: en 4H y 1D se ve la tendencia de fondo, y 1H es el marco donde esa tendencia se opera dentro del día sin comerse el ruido de 15M",
+      "notas_marco": {"H4": "el yen se mueve por diferencias de tasas que tardan días en reflejarse: en 4H se ve la tendencia completa y sus líneas."},
       "drivers": [
         "diferencial de tasas Fed vs BoJ",
         "decisiones BoJ",
@@ -61,6 +63,7 @@
       "unidad": "USD",
       "volatilidad": "media",
       "nota_volatilidad": "se mueve por decisiones de tasas y datos de inflación más que por el minuto a minuto: 4H y 1D ordenan la tendencia, y 1H da la lectura del día sin el ruido de 15M",
+      "notas_marco": {"H4": "el euro avanza en tramos de varios días entre datos y reuniones de bancos centrales: en 4H esos tramos dibujan líneas claras."},
       "drivers": [
         "diferencial de tasas BCE vs Fed",
         "decisiones del BCE",
@@ -86,6 +89,7 @@
       "unidad": "USD",
       "volatilidad": "media",
       "nota_volatilidad": "la libra reacciona fuerte a las reuniones del Banco de Inglaterra y de la Fed, y entre reunión y reunión se mueve en tramos parejos: 1H da la lectura del día y 4H la tendencia de la semana",
+      "notas_marco": {"H4": "la libra hace movimientos amplios entre reuniones del Banco de Inglaterra: en 4H se leen las líneas sin que cada hora las ensucie."},
       "drivers": [
         "diferencial de tasas BoE vs Fed",
         "inflación UK",
@@ -109,6 +113,7 @@
       "unidad": "USD",
       "volatilidad": "alta",
       "nota_volatilidad": "se mueve mucho y rápido, por eso en 15M hay señales veloces pero con más ruido; 1H/4H ordenan mejor la tendencia del día",
+      "notas_marco": {"H4": "el oro se mueve mucho dentro del día, pero sus tramos duran días: en 4H las líneas de tendencia se ven limpias."},
       "drivers": [
         "Dollar Index",
         "tasas reales",
@@ -134,6 +139,7 @@
       "unidad": "USD",
       "volatilidad": "alta",
       "nota_volatilidad": "se mueve mucho y rápido, con menos liquidez que el oro, por eso en 15M hay señales veloces pero con más ruido; 1H/4H ordenan mejor la tendencia del día",
+      "notas_marco": {"H4": "la plata se mueve rápido y con saltos: en 4H esos saltos se ordenan y las líneas de tendencia se pueden trazar."},
       "drivers": [
         "Dollar Index",
         "tasas reales",
@@ -159,6 +165,7 @@
       "unidad": "USD",
       "volatilidad": "alta",
       "nota_volatilidad": "reacciona fuerte a inventarios y noticias OPEP+, así que 1H/4H dan una lectura más estable; en 15M el ruido es alto",
+      "notas_marco": {"H4": "el petróleo reacciona fuerte a cada noticia, pero sus tendencias duran semanas: en 4H se separa la noticia de la tendencia."},
       "drivers": [
         "inventarios EIA",
         "decisiones OPEP+",
@@ -205,6 +212,7 @@
       "unidad": "USD/t",
       "volatilidad": "media",
       "nota_volatilidad": "el cobre se mueve con la demanda de China y con los inventarios, en tramos amplios que tardan horas en formarse: en 15M el movimiento todavía no se distingue del ruido, así que 1H es el marco del día y 4H el de la tendencia",
+      "notas_marco": {"H4": "el cobre avanza en tramos amplios que tardan días: en 4H se ven las líneas que esos tramos respetan."},
       "drivers": [
         "demanda industrial China",
         "inventarios LME/SHFE",

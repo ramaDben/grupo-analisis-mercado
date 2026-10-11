@@ -244,6 +244,10 @@ def cargar_universo(solo_renderizables: bool = True) -> list[dict[str, Any]]:
             # generador del mensaje nunca los vio y la linea obligatoria no existia.
             "volatilidad": a.get("volatilidad"),
             "nota_volatilidad": a.get("nota_volatilidad"),
+            # La justificación del marco que decide la estrategia activa (spec §8.1),
+            # por marco: {"H4": "..."}. `nota_volatilidad` sigue para las piezas de
+            # 1H de Avisos y el analista hasta S6/S7.
+            "notas_marco": a.get("notas_marco") or {},
         })
 
     for a in data.get("forex_commodities", []):

@@ -862,3 +862,18 @@ def test_un_blackout_excluye_aunque_haya_referencia(tmp_path, monkeypatch):
     monkeypatch.setattr(sc, "gate_blackout", lambda t, e, a: "blackout por NFP" if t == "EURUSD" else None)
     res = _escanear(tmp_path, _Est({}), monkeypatch)
     assert res["excluidos"][0]["excluido"] == "blackout por NFP"
+
+
+def test_todo_activo_cubierto_justifica_el_marco_operativo_de_la_estrategia():
+    """Con el enchufe el marco lo decide la estrategia (spec §8.1): la nota tiene que
+    justificar ese marco, en `notas_marco`, para cada activo que el carrusel publica."""
+    from estrategia import registro
+
+    op = registro.activa().marcos.operativo
+    corto = {"H1": "1H", "H4": "4H", "D1": "1D"}[op]
+    universo, _ = sc.solo_canales_cubiertos(sc.cargar_universo(True))
+    for a in universo:
+        nota = (a.get("notas_marco") or {}).get(op, "")
+        assert nota, f"{a['ticker']} no trae notas_marco.{op}"
+        assert corto in nota, f"{a['ticker']}: la nota de {op} no nombra {corto}"
+        assert "—" not in nota and "–" not in nota

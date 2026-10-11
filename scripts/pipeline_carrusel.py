@@ -117,11 +117,11 @@ def _chip_categoria(clase_o_cat: str, nombre_activo: str) -> str:
     return f"{cat} · {nombre_activo.upper()}"
 
 
-def _serie_para(ticker: str) -> dict[str, Any]:
-    """Serie real de cierres desde el terminal, como bloque `recorrido`."""
+def _serie_para(ticker: str, marco: str = TIMEFRAME_GRAFICO) -> list[float]:
+    """Serie real de cierres desde el terminal, en el marco de la pieza."""
     from serie_mt5 import obtener_serie
 
-    cierres, _tiempos = obtener_serie(ticker, TIMEFRAME_GRAFICO, VELAS_GRAFICO)
+    cierres, _tiempos = obtener_serie(ticker, marco, VELAS_GRAFICO)
     return cierres
 
 
@@ -174,10 +174,14 @@ def incoherencia_del_payload(
         return "la serie del grafico vino vacia: la pieza no tendria recorrido que dibujar"
 
     precio = float(seleccion["precio"])
-    soporte = float(seleccion["soporte"])
-    resistencia = float(seleccion["resistencia"])
+    # Con la `Lectura` un lado puede venir vacío (no hay nivel sobre el precio): se
+    # verifica el lado que existe y no se inventa el otro.
+    soporte = seleccion.get("soporte")
+    resistencia = seleccion.get("resistencia")
     ultimo = float(cierres[-1])
-    atr = float(seleccion.get("atr_h1") or 0.0)
+    # La escala: el ATR de H1 del camino viejo, o la volatilidad típica del marco
+    # operativo de la estrategia.
+    atr = float(seleccion.get("atr_h1") or seleccion.get("volatilidad_tipica") or 0.0)
 
     if atr <= 0:
         return (
@@ -194,7 +198,8 @@ def incoherencia_del_payload(
             "leyeron momentos distintos del mercado"
         )
 
-    if not soporte < precio < resistencia:
+    if (soporte is not None and not float(soporte) < precio) or \
+            (resistencia is not None and not precio < float(resistencia)):
         return (
             f"el precio ({precio}) no cae entre el soporte ({soporte}) y la "
             f"resistencia ({resistencia}): los niveles no corresponden a este precio"
@@ -211,6 +216,144 @@ def formatear_precio(valor: float, digits: int) -> str:
     return f"{valor:,.{digits}f}".replace(",", "@").replace(".", ",").replace("@", ".")
 
 
+ETIQUETA_CORTA = {"M15": "15M", "H1": "1H", "H4": "4H", "D1": "1D", "W1": "1S"}
+
+
+def _estrategia():
+    from estrategia import registro
+
+    return registro.activa()
+
+
+def marco_operativo() -> str:
+    """El marco de la pieza lo decide la estrategia activa (spec §8.5)."""
+    return _estrategia().marcos.operativo
+
+
+def temporalidad_de(marco: str) -> str:
+    """La temporalidad que se publica, con la etiqueta que declara la estrategia (spec §8.1)."""
+    etiqueta = _estrategia().marcos.etiquetas[marco]
+    return f"{ETIQUETA_CORTA.get(marco, marco)} · marco {etiqueta.nombre} ({etiqueta.duracion})"
+
+
+def niveles_publicados(lectura) -> tuple[float | None, float | None]:
+    """El soporte y la resistencia de la pieza: lo más cercano a cada lado del precio.
+
+    Salen solo de la lectura (lo que vigila, lo que la invalida, el objetivo y las líneas
+    que dibuja). Si un lado no tiene nada, queda vacío: inventar un nivel sería publicar
+    una distancia con nombre de soporte, el defecto de `acotar_niveles` (2026-10-02).
+    """
+    candidatos = [r.precio for r in (lectura.vigilar, lectura.invalidacion, lectura.objetivo) if r]
+    candidatos += [x.valor_actual for x in lectura.lineas
+                   if x.marco == lectura.marco or x.tipo == "horizontal"]
+    abajo = [c for c in candidatos if c < lectura.precio]
+    arriba = [c for c in candidatos if c > lectura.precio]
+    return (max(abajo) if abajo else None, min(arriba) if arriba else None)
+
+
+def _sesgo_de(direccion: str) -> str:
+    """El chip de la pieza: sin dirección afirmada, `Lateral` (nunca bajista por descarte)."""
+    return {"ALCISTA": "Alcista", "BAJISTA": "Bajista"}.get(direccion, "Lateral")
+
+
+def construir_payload_lectura(
+    seleccion: dict[str, Any],
+    activo_catalogo: dict[str, Any],
+    ahora: datetime,
+    cierres: list[float],
+) -> dict[str, Any]:
+    """El payload de una pieza de alerta desde la `Lectura` de la estrategia (spec §7 fase 2).
+
+    Dirección, niveles, escenarios y salida salen de la lectura; el comando escribe solo
+    `titular` y `parrafo`. La lectura viaja entera en el payload porque el mensaje y el
+    refresco del despacho la necesitan, y el despacho la compara con la de ese momento.
+    """
+    from estrategia.contrato import lectura_de_dict
+
+    lectura = lectura_de_dict(seleccion["lectura"])
+    soporte, resistencia = niveles_publicados(lectura)
+    motivo = incoherencia_del_payload(
+        {"precio": lectura.precio, "soporte": soporte, "resistencia": resistencia,
+         "volatilidad_tipica": seleccion["volatilidad_tipica"]},
+        cierres,
+    )
+    if motivo is not None:
+        raise PayloadIncoherenteError(f"{seleccion['ticker']}: {motivo}")
+    digits = activo_catalogo["digits"]
+    marco = seleccion["marco"]
+    imagen = activo_catalogo.get("imagen") or ""
+    cat_real = activo_catalogo.get("categoria", seleccion["clase"])
+
+    def fmt(valor: float | None) -> str:
+        return "--" if valor is None else formatear_precio(valor, digits)
+
+    sesgo = _sesgo_de(lectura.direccion)
+    rol_invalida = "soporte" if lectura.direccion == "ALCISTA" else "resistencia"
+    niveles = [
+        {"precio": r.precio, "clase": clase, "etiqueta": fmt(r.precio), "rol": rol}
+        for r, clase, rol in (
+            (lectura.objetivo, "meta", "OBJETIVO"),
+            (lectura.vigilar, "nivel", "VIGILAR"),
+            (lectura.invalidacion, rol_invalida, "INVALIDA"),
+        )
+        if r is not None
+    ]
+    return {
+        "plantilla": "alerta",
+        # Editorial: lo llena el comando, no el script.
+        "titular": "",
+        "parrafo": "",
+        "activo": activo_catalogo["nombre"],
+        "activo_slug": slug_del_activo(seleccion["ticker"], imagen),
+        "activo_imagen": imagen,
+        "rotulo_activo": f"{activo_catalogo['nombre'].upper()} · {seleccion['ticker']}",
+        "chip_categoria": _chip_categoria(cat_real, activo_catalogo["nombre"]),
+        "fecha_hora": ahora.strftime("%d %b %Y · %H:%M").upper(),
+        "sesgo": sesgo,
+        "tag_riesgo": sesgo.upper(),
+        "precio_actual": fmt(lectura.precio),
+        "soporte": fmt(soporte),
+        "resistencia": fmt(resistencia),
+        # La vela típica del marco operativo: describe cuánto se mueve el activo, no
+        # hacia dónde va.
+        "vol_pct": f"{fmt(seleccion['volatilidad_tipica'])} {activo_catalogo['unidad']}",
+        # La justificación del marco de la estrategia, sin default: sin ella la línea
+        # obligatoria de temporalidad no se puede escribir.
+        "nota_volatilidad": activo_catalogo["notas_marco"][marco],
+        "volatilidad": activo_catalogo.get("volatilidad"),
+        "marco": marco,
+        "digits": digits,
+        "lectura": seleccion["lectura"],
+        # Un fijo que la estrategia habría excluido sale igual y lo dice (2026-10-11).
+        "aviso_lectura": "; ".join(seleccion.get("gates_omitidos") or []),
+        "rotulo_grafico": f"{seleccion['ticker']} · VELAS {ETIQUETA_CORTA.get(marco, marco)}",
+        "sello_datos": f"DATOS REALES · METATRADER 5 · {ahora.strftime('%d %b %H:%M').upper()}",
+        "fuente": "MT5 · GRUPO INTELIGENCIA",
+        "chart_png": None,
+        "recorrido": {
+            "serie": cierres,
+            "lienzo": "alto",
+            "marcadores": [{
+                "indice": len(cierres) - 1, "precio": lectura.precio, "clase": "actual",
+                "etiqueta": fmt(lectura.precio), "rol": "AHORA",
+            }],
+            "niveles": niveles,
+        },
+        "_procedencia": {
+            "score": seleccion["score"],
+            "puntaje": seleccion["puntaje"],
+            "ticker": seleccion["ticker"],
+            "estrategia": _estrategia().nombre,
+            "crudos": {"precio": lectura.precio, "soporte": soporte, "resistencia": resistencia},
+        },
+        "_pendiente_editorial": list(CAMPOS_EDITORIALES),
+    }
+
+
+# ── Transitorio hasta S6/S7 del enchufe ────────────────────────────────────────
+# `construir_payload`, `refrescar_payload`, `divergencia_editorial`,
+# `MARCOS_CANONICOS` y `TIMEFRAME_GRAFICO` los usan todavía `pipeline_avisos` y
+# `analista`. El carrusel ya sale de la `Lectura` (`construir_payload_lectura`).
 def construir_payload(
     seleccion: dict[str, Any],
     activo_catalogo: dict[str, Any],
@@ -517,6 +660,8 @@ def lectura_operativa(payload: dict[str, Any]) -> dict[str, Any]:
     el mensaje de WhatsApp y el informe del bot de analistas, para que las dos
     piezas digan exactamente lo mismo sobre el mismo activo.
     """
+    if "lectura" in payload:
+        return _lectura_operativa_estrategia(payload)
     activo = payload["activo"]
     rotulo = payload.get("rotulo_activo", activo)
     ticker = rotulo.split("·")[-1].strip() if "·" in rotulo else activo
@@ -561,6 +706,30 @@ def lectura_operativa(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _lectura_operativa_estrategia(payload: dict[str, Any]) -> dict[str, Any]:
+    """La parte del mensaje que sale de la `Lectura`: nada se redacta acá."""
+    from estrategia.contrato import lectura_de_dict
+
+    lectura = lectura_de_dict(payload["lectura"])
+    digits = payload["digits"]
+    rotulo = payload.get("rotulo_activo", payload["activo"])
+    a_favor = {"ALCISTA": "⬆️", "BAJISTA": "⬇️"}.get(lectura.direccion, "↔️")
+    if lectura.estado == "PRUEBA":
+        a_favor = "↔️"  # la condición se resuelve al cierre de la vela: manda la espera (spec §4)
+    principal = next(e for e in lectura.escenarios if e.flecha == a_favor)
+    corto = ETIQUETA_CORTA.get(lectura.marco, lectura.marco)
+    nota = payload.get("nota_volatilidad")
+    return {
+        "ticker_visible": rotulo.split("·")[-1].strip() if "·" in rotulo else payload["activo"],
+        "nivel_vigilar": f"{formatear_precio(lectura.vigilar.precio, digits)} ({lectura.vigilar.etiqueta})",
+        "que_esperar": principal.texto,
+        "escenarios": [f"{e.flecha} {e.texto}" for e in lectura.escenarios],
+        "salida": lectura.salida,
+        "temporalidad": temporalidad_de(lectura.marco),
+        "por_que_temporalidad": f"Por qué {corto} acá: {nota}" if nota else "",
+    }
+
+
 def construir_mensaje_alerta(payload: dict[str, Any]) -> str:
     """Genera el mensaje de texto de alerta formateado para WhatsApp según las 6 reglas canónicas."""
     activo = payload["activo"]
@@ -587,8 +756,14 @@ def construir_mensaje_alerta(payload: dict[str, Any]) -> str:
         f"Precio actual: {precio}",
         "━━━━━━━━━━━━━━━━━━━",
         *lectura["escenarios"],
-        "━━━━━━━━━━━━━━━━━━━",
     ])
+    # La regla de salida de la estrategia y, si un fijo salió pese a una exclusión,
+    # el motivo. Solo las piezas que salen de la `Lectura` los traen.
+    if lectura.get("salida"):
+        lineas.append(f"⚠️ {lectura['salida']}")
+    if payload.get("aviso_lectura"):
+        lineas.append(f"⚠️ Ojo, {payload['aviso_lectura']}.")
+    lineas.append("━━━━━━━━━━━━━━━━━━━")
 
     # La temporalidad, justificada por la volatilidad de ESE activo. Obligatoria
     # desde el issue #44 y nunca implementada: el token `por_que_temporalidad`
@@ -867,26 +1042,19 @@ def preparar(
     solo_renderizables: bool = True,
     grupo: str | None = None,
     modo_matriz: bool = False,
-    forzar: bool = False,
 ) -> dict[str, Any]:
-    """Corre el escáner y deja los payloads listos organizados por grupo de WhatsApp."""
+    """Corre el escáner y deja los payloads listos organizados por grupo de WhatsApp.
+
+    Las piezas salen de la `Lectura` de la estrategia activa, comparada contra la
+    referencia semanal (enchufe de estrategia, fase 2). `--forzar` salió con el gate de
+    agotamiento: la estrategia no mide recorrido diario (spec §8.3).
+    """
     resultado = sc.escanear(
         tanda=tanda,
         top=top,
         solo_renderizables=solo_renderizables,
         grupo=grupo,
         modo_matriz=modo_matriz,
-        # Pedir un canal acota el universo y **nada más**. Antes esto también
-        # apagaba el gate de agotamiento, sin decirlo: dos cosas sin relación
-        # metidas en la misma bandera. El 2026-09-03 el canal de forex salió con
-        # tres piezas cuyo recorrido diario estaba consumido al 93 %, 290 % y
-        # 115 %, y el escáner no reportó ninguna exclusión porque no las hubo.
-        #
-        # El manual del comando ya exigía lo contrario: "una tanda de 2 piezas
-        # bien elegidas es mejor que una de 3 con un relleno". Apagar un gate
-        # para llenar cupos es el relleno. Ahora solo `--forzar` lo apaga, y el
-        # escáner lo anuncia en sus avisos.
-        ignorar_agotamiento=forzar,
     )
     ahora = datetime.now(tz=SANTIAGO)
     n_tanda = resultado["tanda"]
@@ -932,14 +1100,20 @@ def preparar(
                 "la volatilidad quedaria sin moneda"
             )
             continue
+        if not (activo.get("notas_marco") or {}).get(sel["marco"]):
+            problemas.append(
+                f"{sel['ticker']} no declara `notas_marco.{sel['marco']}` en config/activos.json: "
+                "la línea de temporalidad quedaría sin justificar"
+            )
+            continue
         try:
-            cierres = _serie_para(sel["ticker"])
+            cierres = _serie_para(sel["ticker"], sel["marco"])
         except Exception as exc:  # noqa: BLE001
             problemas.append(f"{sel['ticker']}: no se pudo traer la serie ({exc})")
             continue
 
         try:
-            payload = construir_payload(sel, activo, ahora, cierres)
+            payload = construir_payload_lectura(sel, activo, ahora, cierres)
         except PayloadIncoherenteError as exc:
             problemas.append(str(exc))
             continue
@@ -1323,7 +1497,9 @@ def rendir(directorio: Path) -> dict[str, Any]:
                 ticker=ticker,
                 nombre=nombre,
                 destino=destino_local_png,
-                timeframe=TIMEFRAME_GRAFICO,
+                # El marco de la pieza (el operativo de la estrategia): la imagen y la
+                # línea de temporalidad tienen que decir lo mismo.
+                timeframe=payload.get("marco", TIMEFRAME_GRAFICO),
                 n_velas=VELAS_GRAFICO_TV,
                 soporte=soporte_val,
                 resistencia=resistencia_val,
@@ -1368,7 +1544,7 @@ def rendir(directorio: Path) -> dict[str, Any]:
         # Derivada del marco real de las piezas, no escrita a mano. La constante
         # que habia aca decia "intradía" pase lo que pase, y era el tercer lugar
         # del repo donde vivia la misma tabla de etiquetas.
-        f"⏱️ Temporalidad: {MARCOS_CANONICOS[TIMEFRAME_GRAFICO][1]}",
+        f"⏱️ Temporalidad: {temporalidad_de(marco_operativo())}",
         "━━━━━━━━━━━━━━━━━━━",
         "Cada imagen y mensaje detallado han sido modularizados en su carpeta de grupo correspondiente.",
     ])
@@ -1775,8 +1951,6 @@ def main(argv: list[str] | None = None) -> int:
                         help="cobertura total: selecciona el Top 1 de cada uno de los 5 grupos de mercado")
     parser.add_argument("--todos", action="store_true",
                         help="incluye activos sin imagen (su pieza no se va a poder rendir)")
-    parser.add_argument("--forzar", action="store_true",
-                        help="ignora gate de agotamiento para evaluar activos en sesiones avanzadas")
     parser.add_argument("--pruebas", action="store_true",
                         help="con --despachar: envia al banco de pruebas interno (GI · Banco de Pruebas) en vez de a los canales oficiales")
     args = parser.parse_args(argv)
@@ -1801,7 +1975,6 @@ def main(argv: list[str] | None = None) -> int:
             solo_renderizables=not args.todos,
             grupo=args.grupo,
             modo_matriz=args.matriz,
-            forzar=args.forzar,
         )
         nombre = res.get("nombre_sesion", res["nombre_tanda"])
         print(f"\nSESIÓN: {nombre} ({res['hora_real']} hrs hora Chile)")
