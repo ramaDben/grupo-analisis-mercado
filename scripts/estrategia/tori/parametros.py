@@ -25,5 +25,10 @@ class Parametros:
     lejos_atr_d1: float = 2.0  # precio lejos de la línea de seguridad (doctrina 2.5)
     tope_adicionales: float = 24.0  # lo que suma dentro de una banda de situación
 
+    def __post_init__(self) -> None:
+        # La histéresis de toques supone que alejarse exige más que tocar.
+        if self.separacion_toque_atr <= self.tolerancia_toque_atr:
+            raise ValueError("separacion_toque_atr debe ser mayor que tolerancia_toque_atr")
+
 
 PARAMETROS = Parametros()

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 from estrategia.tori.lineas import Trazo
 from estrategia.tori.parametros import Parametros
@@ -12,7 +13,7 @@ DIAS_HABILES = 5
 
 @dataclass(frozen=True)
 class Calidad:
-    calidad: str  # "A+" o "B"
+    calidad: Literal["A+", "B"]
     semanas: float  # del primer al último toque, en semanas de velas del marco
     punto_b_reciente: bool  # V16
     empinada: bool

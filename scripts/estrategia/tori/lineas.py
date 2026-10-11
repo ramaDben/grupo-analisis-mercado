@@ -21,7 +21,7 @@ class Trazo:
     p_a: float
     i_b: int
     p_b: float
-    toques: tuple[int, ...]  # índices de las velas que tocan, A incluido
+    toques: tuple[int, ...]  # extremo de cada toque (la vela de menor holgura del episodio), A incluido
     i_ruptura: int | None  # primera vela que cerró al otro lado
 
     @property
@@ -76,7 +76,7 @@ def _recorrer(s: Serie, sentido: Sentido, a: int, b: int, p: Parametros) -> Traz
     tol = p.tolerancia_toque_atr * s.atr
     lejos = p.separacion_toque_atr * s.atr
     toques: list[int] = []
-    alejado = True
+    episodio: tuple[int, float] | None = None  # (vela, holgura) del extremo del toque en curso
     ruptura = None
     for i in range(a, len(s)):
         linea = extremos[a] + pendiente * (i - a)
@@ -88,11 +88,14 @@ def _recorrer(s: Serie, sentido: Sentido, a: int, b: int, p: Parametros) -> Traz
                 break
             return None  # cruza y vuelve, o cruza antes de B: la línea no se traza (V10)
         if holgura <= tol:
-            if alejado:
-                toques.append(i)
-                alejado = False
+            if episodio is None or holgura < episodio[1]:
+                episodio = (i, holgura)  # el extremo del toque, no la primera vela que entra
         elif holgura >= lejos:
-            alejado = True
+            if episodio is not None:
+                toques.append(episodio[0])
+                episodio = None
+    if episodio is not None:
+        toques.append(episodio[0])
     if len(toques) < 2:
         return None  # A y B son el mismo toque: no hay línea
     return Trazo(sentido, a, extremos[a], b, extremos[b], tuple(toques), ruptura)

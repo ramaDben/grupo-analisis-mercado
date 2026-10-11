@@ -117,3 +117,34 @@ def test_la_secundaria_rota_se_borra():
     cand = trazar(s, "alcista", P, ancla=principal.toques[-1])
     assert cand is not None and not cand.vigente
     assert seguimiento(s, principal, P) is None
+
+
+def test_el_toque_se_anota_en_el_extremo_y_no_en_la_primera_vela():
+    s = serie_de(vs.desde_vertices(ACELERA, 12))
+    principal = trazar(s, "alcista", P)
+    assert principal is not None
+    assert principal.i_b in principal.toques
+    assert principal.toques == (0, 24, 48)  # los mínimos reales, no la vela de entrada (23, 47)
+
+
+def test_un_toque_partido_en_dos_velas_ancla_el_seguimiento_en_el_extremo():
+    df = vs.desde_vertices(ACELERA, 12)
+    s0 = serie_de(df)
+    base = trazar(s0, "alcista", P)
+    # Último toque en dos velas: la 47 entra sobre la línea y la 48 la perfora dentro de la tolerancia.
+    df.loc[47, "low"] = base.valor(47) + 0.2 * s0.atr
+    df.loc[48, "low"] = base.valor(48) - 0.2 * s0.atr
+    s = serie_de(df)
+    principal = trazar(s, "alcista", P)
+    assert principal is not None and principal.toques[-1] == 48
+    seg = seguimiento(s, principal, P)
+    assert seg is not None
+    assert seg.i_a == 48
+
+
+def test_la_separacion_de_toques_debe_superar_a_la_tolerancia():
+    import pytest
+    with pytest.raises(ValueError):
+        replace(P, separacion_toque_atr=P.tolerancia_toque_atr)
+    with pytest.raises(ValueError):
+        replace(P, separacion_toque_atr=P.tolerancia_toque_atr / 2)
