@@ -42,6 +42,17 @@ def test_la_hora_de_cierre_respeta_el_cambio_de_horario_de_chile():
     assert despues.strftime("%H:%M") == "10:00"
 
 
+def test_la_hora_de_cierre_respeta_la_vuelta_al_horario_de_invierno_en_abril():
+    # Chile vuelve de UTC-3 a UTC-4 el domingo 2027-04-04 a las 03:00 UTC (zoneinfo: el reloj
+    # pasa de 00:00 a 23:00 del sábado). Servidor en UTC+3: la vela de 4H que abre a las
+    # 12:00 del servidor abre 09:00 UTC y cierra 13:00 UTC.
+    # Sábado 3: 13:00 UTC - 3 h = 10:00 en Chile. Lunes 5: 13:00 UTC - 4 h = 09:00 en Chile.
+    antes = cierre_santiago(_ts(2027, 4, 3, 12, 0), "H4", 3 * 3600)  # Chile en UTC-3
+    despues = cierre_santiago(_ts(2027, 4, 5, 12, 0), "H4", 3 * 3600)  # Chile en UTC-4
+    assert antes.strftime("%H:%M") == "10:00"
+    assert despues.strftime("%H:%M") == "09:00"
+
+
 def test_la_revision_registra_la_falla_de_un_activo_y_sigue(tmp_path, monkeypatch, capsys):
     import json
 
