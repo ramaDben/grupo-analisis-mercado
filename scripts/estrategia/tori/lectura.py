@@ -16,12 +16,13 @@ from estrategia.tori.calidad import calificar
 from estrategia.tori.horizontales import Horizontal, bordes_rango, detectar
 from estrategia.tori.lineas import Trazo, seguimiento, trazar
 from estrategia.tori.parametros import Parametros
-from estrategia.tori.pivotes import Serie, serie_de
+from estrategia.tori.pivotes import Serie, inicio_tras_salto, serie_de
 
 
 AVISO_RANGO = "sin línea diagonal vigente: se lee como rango entre el máximo y el mínimo de la última semana"
 AVISO_CONTRA = "la lectura va contra la secuencia de los marcos mayores: es donde nacen las falsas rupturas"
 AVISO_SIN_SEGURIDAD = "la ruptura no tiene línea de seguridad trazable: el riesgo no se puede medir"
+AVISO_SALTO = "las velas de {marco} traen un salto de datos: se leen solo desde el salto"
 AVISO_EMPINADA = ("la línea de seguridad es muy empinada: una vela de noticias puede cruzarla sin que "
                   "cambie la tendencia")
 
@@ -36,8 +37,14 @@ class _Estructura:
     velas_desde_ruptura: int | None
 
 
-def _serie(velas: dict[str, pd.DataFrame], marco: str, marcos: Marcos) -> Serie:
-    return serie_de(velas[marco].tail(marcos.velas[marco]).reset_index(drop=True))
+def _ventana(velas: dict[str, pd.DataFrame], marco: str, marcos: Marcos, p: Parametros) -> pd.DataFrame:
+    """Las velas que se leen: la ventana del marco, desde el último salto de datos si lo hay."""
+    df = velas[marco].tail(marcos.velas[marco]).reset_index(drop=True)
+    return df.iloc[inicio_tras_salto(df, p.salto_max_rango):].reset_index(drop=True)
+
+
+def _serie(velas: dict[str, pd.DataFrame], marco: str, marcos: Marcos, p: Parametros) -> Serie:
+    return serie_de(_ventana(velas, marco, marcos, p))
 
 
 def _peso(t: Trazo, s: Serie, p: Parametros) -> tuple[bool, int, float]:
@@ -96,7 +103,7 @@ def _contexto(velas, marcos: Marcos, direccion: str, p: Parametros,
     lineas: list[Linea] = []
     votos: list[float] = []
     for marco in marcos.contexto:
-        sc = _serie(velas, marco, marcos)
+        sc = _serie(velas, marco, marcos, p)
         if sc.atr <= 0:
             continue
         vigentes = [t for t in (trazar(sc, "alcista", p), trazar(sc, "bajista", p))
@@ -112,7 +119,7 @@ def _contexto(velas, marcos: Marcos, direccion: str, p: Parametros,
 def _horizontales(velas, marcos: Marcos, p: Parametros) -> list[tuple[Horizontal, Serie, str]]:
     salida = []
     for marco in (marcos.operativo, *marcos.contexto):
-        sm = _serie(velas, marco, marcos)
+        sm = _serie(velas, marco, marcos, p)
         salida += [(h, sm, marco) for h in detectar(sm, p)]
     return salida
 
@@ -189,11 +196,12 @@ def leer(ticker: str, velas: dict[str, pd.DataFrame], digits: int,
          en_curso: VelaEnCurso | None, marcos: Marcos, p: Parametros) -> Lectura:
     exigir_velas(velas, marcos)
     op = marcos.operativo
-    s = _serie(velas, op, marcos)
+    s = _serie(velas, op, marcos, p)
     if s.atr <= 0:
         raise ValueError(f"{ticker}: las velas de {op} no tienen rango (ATR 0); no hay nada que leer")
     e = _estructura(s, trazar(s, "alcista", p), trazar(s, "bajista", p), p)
-    avisos: list[str] = []
+    avisos: list[str] = [AVISO_SALTO.format(marco=m) for m in marcos.todos
+                         if inicio_tras_salto(velas[m].tail(marcos.velas[m]), p.salto_max_rango)]
     siguiente = len(s)  # índice de la vela abierta
 
     accion = _linea(e.accion, s, "accion", op, p, digits) if e.accion else None
@@ -250,7 +258,7 @@ def leer(ticker: str, velas: dict[str, pd.DataFrame], digits: int,
     if seguridad is not None and seguridad.empinada:
         avisos.append(AVISO_EMPINADA)
 
-    atr_d1 = _serie(velas, "D1", marcos).atr if "D1" in marcos.todos else 0.0
+    atr_d1 = _serie(velas, "D1", marcos, p).atr if "D1" in marcos.todos else 0.0
     atr_d1 = atr_d1 if atr_d1 > 0 else s.atr
     metricas = {"atr": s.atr, "atr_d1": atr_d1, "confluencia": a_favor,
                 "dist_vigilar_atr_d1": abs(precio - vigilar.precio) / atr_d1}
@@ -348,7 +356,7 @@ def seguir(ticker: str, referencia: Lectura, velas: dict[str, pd.DataFrame], dig
     op = marcos.operativo
     s = serie_de(velas[op].reset_index(drop=True))
     # Índices y anclas sobre todas las velas; el ATR sobre la misma ventana que leer().
-    atr = _serie(velas, op, marcos).atr
+    atr = _serie(velas, op, marcos, p).atr
     if atr <= 0:
         raise ValueError(f"{ticker}: las velas de {op} no tienen rango (ATR 0); no hay nada que leer")
     valor, indices = _valorador(velas, marcos, ticker)
@@ -457,7 +465,7 @@ def seguir(ticker: str, referencia: Lectura, velas: dict[str, pd.DataFrame], dig
     invalidacion = (Referencia(seguridad.valor_actual, f"línea {textos.sentido(seguridad)} de seguridad", seguridad)
                     if seguridad is not None else None)
 
-    atr_d1 = _serie(velas, "D1", marcos).atr if "D1" in marcos.todos else 0.0
+    atr_d1 = _serie(velas, "D1", marcos, p).atr if "D1" in marcos.todos else 0.0
     atr_d1 = atr_d1 if atr_d1 > 0 else atr
     fijas = ("confluencia", "contra_secuencia", "doble_confirmacion", "semanas_principal")
     metricas = {k: v for k, v in referencia.metricas.items() if k in fijas}

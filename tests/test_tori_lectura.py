@@ -68,6 +68,19 @@ def test_la_ruptura_caduca_despues_de_una_semana_de_velas():
     assert leer(corta).estado == "RUPTURA"
 
 
+def test_un_salto_de_serie_corta_la_lectura_y_avisa():
+    # Gate del director (2026-10-11, COPPER): la serie salta de un nivel a otro sin velas en
+    # el medio. Ninguna línea se ancla antes del salto, y la lectura lo avisa.
+    antes = vs.desde_vertices([60, 50, 56, 52], 12)
+    despues = vs.desde_vertices([130, *ALCISTA], 12, t0=int(antes["time"].iloc[-1]) + 4 * 3600)
+    h4 = pd.concat([antes, despues], ignore_index=True)
+    lec = leer(h4)
+    salto = int(despues["time"].iloc[0])
+    assert any("salto" in a for a in lec.avisos)
+    assert all(ts >= salto for x in lec.lineas if x.marco == "H4" for ts, _ in x.puntos)
+    assert (lec.estado, lec.direccion) == ("TENDENCIA", "ALCISTA")
+
+
 def test_ruptura_por_cierre_de_la_bajista():
     lec = leer(rota())
     assert (lec.estado, lec.direccion) == ("RUPTURA", "ALCISTA")

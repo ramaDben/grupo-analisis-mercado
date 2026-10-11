@@ -48,6 +48,24 @@ def serie_de(df: pd.DataFrame, periodo_atr: int = 14) -> Serie:
     return Serie(filas, times, highs, lows, closes, _atr(highs, lows, closes, periodo_atr))
 
 
+def inicio_tras_salto(df: pd.DataFrame, factor: float) -> int:
+    """Primera vela después del último salto de la serie; 0 si no hay ninguno.
+
+    Un salto es un hueco entre el cierre anterior y la apertura de más de `factor` veces
+    el rango mediano de las velas: no es un movimiento del mercado sino un cambio de nivel
+    de los datos (COPPER, gate del director del 2026-10-11). Una línea anclada antes del
+    salto mediría la pendiente a través de él.
+    """
+    if len(df) < 2:
+        return 0
+    mediana = float((df["high"] - df["low"]).median())
+    if mediana <= 0:
+        return 0
+    huecos = (df["open"] - df["close"].shift()).abs().to_numpy()
+    saltos = [i for i in range(1, len(df)) if huecos[i] > factor * mediana]
+    return saltos[-1] if saltos else 0
+
+
 def zigzag(rows: list[dict[str, Any]], umbral: float) -> list[tuple[int, float, str]]:
     """Pivotes mayores: un giro cuenta cuando el precio retrocede `umbral` desde el extremo.
 
