@@ -119,6 +119,21 @@ def test_romper_la_linea_del_lunes_y_volver_a_cerrar_adentro_es_ruptura_falsa():
     assert any("fue falsa" in a and "nueva referencia" in a for a in hoy.avisos)
 
 
+def test_volver_hasta_la_linea_dentro_de_la_tolerancia_es_retesteo_y_no_ruptura_falsa():
+    # El precio rompe la alcista del lunes y vuelve a cerrar justo bajo ella, a menos de la
+    # tolerancia: es el retesteo que la pieza describe, y la ruptura se mantiene.
+    ref = tl.leer(LUNES)
+    roto = extender(LUNES, [119, 100], 4)
+    linea = _rol(seguir(ref, roto), "accion")  # la línea rota, ya con su valor del último cierre
+    tol = P.tolerancia_toque_atr * seguir(ref, roto).metricas["atr"]
+    cierre = linea.valor_actual - tol / 2
+    h4 = pd.concat([roto.iloc[:-1], roto.iloc[-1:].assign(close=cierre, low=cierre - 0.1)],
+                   ignore_index=True)
+    hoy = seguir(ref, h4)
+    assert (hoy.estado, hoy.direccion) == ("RUPTURA", "BAJISTA")
+    assert not any("fue falsa" in a for a in hoy.avisos)
+
+
 def test_seguir_mide_el_atr_en_la_misma_ventana_que_leer():
     # Con una ventana operativa de 14 velas, la primera vela de la ventana no tiene cierre
     # previo para leer(); la vela anterior, fuera de la ventana, cierra lejos (un hueco).

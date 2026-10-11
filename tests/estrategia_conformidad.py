@@ -341,7 +341,10 @@ def verificar_seguir_ruptura_falsa(fabrica: Fabrica) -> None:
     """Un cierre al otro lado de una línea y otro de vuelta no es RUPTURA (hueco 5).
 
     "La ruptura deja de serlo cuando el precio vuelve a cerrar adentro": la vela de vuelta
-    cierra en el último cierre de la referencia, del lado en que estaba el precio.
+    cierra en el último cierre de la referencia, del lado en que estaba el precio. Volver
+    dentro de la tolerancia es un retesteo y no una ruptura falsa, y la batería no conoce la
+    tolerancia de cada estrategia: solo cuentan las líneas a más de dos rangos de vela del
+    último cierre, donde la vuelta queda fuera de cualquier tolerancia razonable.
     """
     e = fabrica()
     op = e.marcos.operativo
@@ -352,7 +355,10 @@ def verificar_seguir_ruptura_falsa(fabrica: Fabrica) -> None:
         if ref.estado == "RUPTURA":
             continue  # una referencia en RUPTURA ya lo es sin cruzar nada: no mide la vuelta
         previo = float(velas[op]["close"].iloc[-1])
-        lineas = [x for x in ref.lineas if x.marco == op and x.rol in SOSTIENEN]
+        df = velas[op].tail(14)
+        margen = 2 * float((df["high"] - df["low"]).mean())
+        lineas = [x for x in ref.lineas if x.marco == op and x.rol in SOSTIENEN
+                  and abs(previo - x.valor_actual) > margen]
         for precio in extremos(velas, op):
             if not any((previo - x.valor_actual) * (precio - x.valor_actual) < 0 for x in lineas):
                 continue

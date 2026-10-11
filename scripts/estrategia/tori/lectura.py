@@ -377,15 +377,12 @@ def seguir(ticker: str, referencia: Lectura, velas: dict[str, pd.DataFrame], dig
     def volvio(x: Linea, i: int) -> bool:
         """Tras romper en la vela i, el precio volvió a cerrar adentro (hueco 5).
 
-        Vuelve si un cierre posterior cruza de regreso por más que la tolerancia, o si el
-        último cierre ya no queda afuera por más que la tolerancia.
+        Vuelve solo si un cierre posterior cruza de regreso por más que la tolerancia. Un
+        último cierre afuera pero dentro de la tolerancia es un retesteo: la ruptura sigue.
         """
         afuera = s.closes[i] - valor(x, i)
-        if any(afuera * (s.closes[j] - valor(x, j)) < 0 and abs(s.closes[j] - valor(x, j)) > tol
-               for j in range(i + 1, len(s))):
-            return True
-        final = s.closes[ultimo] - valor(x, ultimo)
-        return not (afuera * final > 0 and abs(final) > tol)
+        return any(afuera * (s.closes[j] - valor(x, j)) < 0 and abs(s.closes[j] - valor(x, j)) > tol
+                   for j in range(i + 1, len(s)))
 
     def falsa() -> Lectura:
         nueva = leer(ticker, velas, digits, en_curso, marcos, p)
