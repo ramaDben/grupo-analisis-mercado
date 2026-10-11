@@ -1567,6 +1567,96 @@ def falta_metatrader5() -> bool:
     return importlib.util.find_spec("MetaTrader5") is None
 
 
+def _marcar_divergente(dir_grupo: Path, archivo: Path) -> None:
+    """La pieza no sale: su payload y su imagen quedan renombrados para que se vea por qué."""
+    archivo.rename(archivo.with_suffix(".json.divergente"))
+    png = dir_grupo / f"{archivo.stem}.png"
+    if png.exists():
+        png.rename(png.with_suffix(".png.divergente"))
+
+
+def lectura_para_despacho(estrategia, ticker: str, digits: int, lector, ahora: datetime,
+                          base: Path | None = None):
+    """La lectura de ahora para la pieza que va a salir: contra la referencia, como el escáner.
+
+    No guarda reemplazos: eso es del escáner. Si el activo no tiene referencia (una pieza
+    hecha con `--todos`, o la semana se borró), lee de nuevo.
+    """
+    import referencia_semanal as rs
+
+    base = base or rs.DIR
+    try:
+        diaria = rs.lectura_del_dia(estrategia, ticker, digits, rs.semana_de(ahora), lector, base=base)
+        return diaria.lectura, diaria.velas
+    except rs.SinReferencia:
+        velas, en_curso = lector(ticker, estrategia.marcos, rs.EXTRA)
+        return estrategia.leer(ticker, velas, digits, en_curso), velas
+
+
+def refrescar_payload_lectura(
+    payload: dict[str, Any],
+    ahora: datetime,
+    actual,
+    digits: int,
+    cierres: list[float],
+    volatilidad: float,
+    divergencia,
+) -> tuple[dict[str, Any], str | None]:
+    """Vuelve a atar la pieza al mercado de ahora con la lectura nueva (spec §4, `divergencia`).
+
+    Se toca lo que es dato, nunca lo editorial. Si la estrategia dice que el texto ya no
+    vale (la dirección o el estado cambiaron, el precio cruzó lo que se vigilaba, o la
+    vela en prueba ya cerró), la pieza no sale. Una diagonal se mueve con cada vela, así
+    que los niveles se recalculan aunque el precio no se haya movido.
+    """
+    from estrategia.contrato import lectura_a_dict, lectura_de_dict
+
+    motivo = divergencia(lectura_de_dict(payload["lectura"]), actual)
+    nuevo = json.loads(json.dumps(payload))          # copia honda
+    soporte, resistencia = niveles_publicados(actual)
+    # Los niveles que fijó el director a mano pisan los de la estrategia (spec §3).
+    fijados = nuevo.get("_procedencia", {}).get("niveles_fijados") or {}
+    if fijados.get("soporte") is not None:
+        soporte = float(fijados["soporte"])
+    if fijados.get("resistencia") is not None:
+        resistencia = float(fijados["resistencia"])
+
+    def fmt(valor: float | None) -> str:
+        return "--" if valor is None else formatear_precio(valor, digits)
+
+    sesgo = _sesgo_de(actual.direccion)
+    unidad = str(nuevo.get("vol_pct", "")).split(" ")[-1]
+    nuevo.update({
+        "lectura": lectura_a_dict(actual),
+        "precio_actual": fmt(actual.precio),
+        "soporte": fmt(soporte),
+        "resistencia": fmt(resistencia),
+        "vol_pct": f"{fmt(volatilidad)} {unidad}".strip(),
+        "sesgo": sesgo,
+        "tag_riesgo": sesgo.upper(),
+        "fecha_hora": ahora.strftime("%d %b %Y · %H:%M").upper(),
+        "sello_datos": f"DATOS REALES · METATRADER 5 · {ahora.strftime('%d %b %H:%M').upper()}",
+    })
+    nuevo.setdefault("_procedencia", {})["crudos"] = {
+        "precio": actual.precio, "soporte": soporte, "resistencia": resistencia,
+    }
+    # Después de la divergencia, para no tapar un motivo de mercado con uno de datos.
+    if motivo is None:
+        motivo = incoherencia_del_payload(
+            {"precio": actual.precio, "soporte": soporte, "resistencia": resistencia,
+             "volatilidad_tipica": volatilidad},
+            cierres,
+        )
+    recorrido = nuevo.get("recorrido", {})
+    recorrido["serie"] = cierres
+    recorrido["marcadores"] = [{
+        "indice": max(len(cierres) - 1, 0), "precio": actual.precio, "clase": "actual",
+        "etiqueta": fmt(actual.precio), "rol": "AHORA",
+    }]
+    nuevo["recorrido"] = recorrido
+    return nuevo, motivo
+
+
 def _refrescar_y_rendir(dir_grupo: Path) -> list[str]:
     """Vuelve a leer el mercado, redibuja las piezas de precio y reescribe sus textos.
 
@@ -1579,7 +1669,6 @@ def _refrescar_y_rendir(dir_grupo: Path) -> list[str]:
     disfrazado de fallo de datos; las piezas salen con lo que dejó `--rendir`, que es
     lo que el aviso de `despachar` advierte una vez por tanda.
     """
-    from market_data_mcp.analisis import analizar_activo
     from story_grafico import enriquecer
     from story_render import render_story
 
@@ -1597,22 +1686,36 @@ def _refrescar_y_rendir(dir_grupo: Path) -> list[str]:
     if falta_metatrader5():
         return []
 
+    from estrategia.fuente import atr, velas_mt5
+
     catalogo = {a["ticker"]: a for a in sc.cargar_universo(solo_renderizables=False)}
     ahora = datetime.now(tz=SANTIAGO)
     avisos: list[str] = []
+    estrategia = None
 
     for archivo in piezas:
 
         payload = json.loads(archivo.read_text(encoding="utf-8"))
         ticker = payload.get("_procedencia", {}).get("ticker")
+        # Una pieza preparada antes del enchufe no trae la lectura: su refresco sería el
+        # de la EMA 50 y `s1`/`r1`, otra lectura del mismo activo. No sale.
+        if "lectura" not in payload:
+            avisos.append(
+                f"⚠️ {ticker or archivo.stem} NO se despacha: la pieza se preparó antes del "
+                "enchufe de estrategia y no trae la lectura; hay que prepararla de nuevo"
+            )
+            _marcar_divergente(dir_grupo, archivo)
+            continue
         activo = catalogo.get(ticker)
         if not ticker or not activo:
             avisos.append(f"{archivo.stem}: sin ticker en la procedencia, se despacha tal cual")
             continue
 
         try:
-            h1 = analizar_activo(ticker, "H1")
-            cierres = _serie_para(ticker)
+            estrategia = estrategia or _estrategia()
+            actual, velas = lectura_para_despacho(estrategia, ticker, activo["digits"], velas_mt5, ahora)
+            cierres = _serie_para(ticker, payload["marco"])
+            volatilidad = round(atr(velas[payload["marco"]]), activo["digits"])
         except Exception as exc:  # noqa: BLE001
             avisos.append(
                 f"{ticker}: no se pudo refrescar ({exc}). Sale con los datos de la "
@@ -1620,15 +1723,12 @@ def _refrescar_y_rendir(dir_grupo: Path) -> list[str]:
             )
             continue
 
-        nuevo, motivo = refrescar_payload(
-            payload, ahora=ahora, h1=h1, digits=activo["digits"], cierres=cierres
+        nuevo, motivo = refrescar_payload_lectura(
+            payload, ahora, actual, activo["digits"], cierres, volatilidad, estrategia.divergencia,
         )
         if motivo:
             avisos.append(f"⚠️ {ticker} NO se despacha: {motivo}")
-            archivo.rename(archivo.with_suffix(".json.divergente"))
-            png = dir_grupo / f"{archivo.stem}.png"
-            if png.exists():
-                png.rename(png.with_suffix(".png.divergente"))
+            _marcar_divergente(dir_grupo, archivo)
             continue
 
         archivo.write_text(json.dumps(nuevo, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -1643,7 +1743,7 @@ def _refrescar_y_rendir(dir_grupo: Path) -> list[str]:
                 ticker=ticker,
                 nombre=nuevo.get("rotulo_activo", nuevo.get("activo", ticker)),
                 destino=destino_local_png,
-                timeframe=TIMEFRAME_GRAFICO,
+                timeframe=nuevo["marco"],
                 n_velas=VELAS_GRAFICO_TV,
                 soporte=soporte_val,
                 resistencia=resistencia_val,

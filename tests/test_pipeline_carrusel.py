@@ -1512,3 +1512,112 @@ def test_preparar_avisa_si_falta_la_nota_del_marco(tmp_path, monkeypatch):
     res = _preparar_simulado(tmp_path, monkeypatch, [sel])
     assert res["payloads"] == []
     assert any("notas_marco.D1" in p for p in res["problemas"])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fase 2 del enchufe: el despacho vuelve a pedir la Lectura (decisión del 2026-10-11)
+# ─────────────────────────────────────────────────────────────────────────────
+MEDIA_HORA = datetime(2026, 10, 12, 11, 30, tzinfo=pc.SANTIAGO)
+
+
+def _payload_listo():
+    p = _payload_lectura()
+    p["titular"], p["parrafo"] = "t", "p"
+    p.pop("_pendiente_editorial")
+    return p
+
+
+def test_el_refresco_mueve_el_precio_y_los_niveles_sin_tocar_lo_editorial():
+    from dataclasses import replace
+
+    actual = replace(_lectura_alcista(), precio=4130.0)
+    nuevo, motivo = pc.refrescar_payload_lectura(_payload_listo(), MEDIA_HORA, actual, 2,
+                                                 [4129.0, 4130.0], 19.0, lambda a, b: None)
+    assert motivo is None
+    assert nuevo["precio_actual"] == "4.130,00" and nuevo["vol_pct"] == "19,00 USD"
+    assert nuevo["lectura"]["precio"] == 4130.0
+    assert nuevo["titular"] == "t" and nuevo["parrafo"] == "p"
+    assert nuevo["fecha_hora"].endswith("11:30")
+
+
+def test_el_refresco_respeta_los_niveles_fijados_por_el_director():
+    p = _payload_listo()
+    p["_procedencia"]["niveles_fijados"] = {"soporte": 4090.0}
+    nuevo, _ = pc.refrescar_payload_lectura(p, MEDIA_HORA, _lectura_alcista(), 2,
+                                            [4119.0, 4120.0], 18.5, lambda a, b: None)
+    assert nuevo["soporte"] == "4.090,00" and nuevo["resistencia"] == "4.200,00"
+
+
+def test_la_divergencia_de_la_estrategia_frena_la_pieza():
+    vista = []
+
+    def divergencia(preparada, actual):
+        vista.append((preparada.precio, actual.precio))
+        return "la dirección cambió de alcista a bajista"
+
+    _, motivo = pc.refrescar_payload_lectura(_payload_listo(), MEDIA_HORA, _lectura_alcista(), 2,
+                                             [4119.0, 4120.0], 18.5, divergencia)
+    assert motivo == "la dirección cambió de alcista a bajista"
+    assert vista == [(4120.0, 4120.0)]  # compara la preparada contra la de ahora
+
+
+def test_un_refresco_desacoplado_de_su_serie_no_sale():
+    _, motivo = pc.refrescar_payload_lectura(_payload_listo(), MEDIA_HORA, _lectura_alcista(), 2,
+                                             [4000.0, 4010.0], 18.5, lambda a, b: None)
+    assert motivo is not None and "ultimo cierre" in motivo
+
+
+def test_un_payload_sin_lectura_no_se_despacha(tmp_path, monkeypatch):
+    viejo = {"plantilla": "alerta", "titular": "El oro sigue firme",
+             "parrafo": "El oro se mantiene sobre su soporte de la semana.", "activo": "Oro",
+             "_procedencia": {"ticker": "XAUUSD"}}
+    (tmp_path / "1_xauusd.json").write_text(json.dumps(viejo), encoding="utf-8")
+    monkeypatch.setattr(pc, "falta_metatrader5", lambda: False)
+    avisos = pc._refrescar_y_rendir(tmp_path)
+    assert (tmp_path / "1_xauusd.json.divergente").exists()
+    assert any("antes del enchufe" in a for a in avisos)
+
+
+def test_sin_referencia_el_despacho_lee_de_nuevo(tmp_path):
+    from estrategia.contrato import Etiqueta, Marcos
+
+    lec = _lectura_alcista()
+
+    class Est:
+        marcos = Marcos(("D1",), "H4", {"D1": 5, "H4": 5},
+                        {"D1": Etiqueta("p", "d"), "H4": Etiqueta("s", "u")})
+
+        def leer(self, ticker, velas, digits, en_curso=None):
+            return lec
+
+    def lector(ticker, marcos, extra):
+        return {"H4": "v"}, None
+
+    lectura, velas = pc.lectura_para_despacho(Est(), "XAUUSD", 2, lector, LUNES, base=tmp_path)
+    assert lectura == lec and velas == {"H4": "v"}
+
+
+def test_con_referencia_el_despacho_sigue_la_de_la_semana_y_no_guarda(tmp_path):
+    import referencia_semanal as rs
+    from estrategia.contrato import Etiqueta, Marcos
+
+    ref = _lectura_alcista()
+    rs.guardar(ref, "2026-W42", "semanal", LUNES, base=tmp_path)
+
+    class Est:
+        marcos = Marcos(("D1",), "H4", {"D1": 5, "H4": 5},
+                        {"D1": Etiqueta("p", "d"), "H4": Etiqueta("s", "u")})
+
+        def seguir(self, referencia, velas, digits, en_curso=None):
+            from dataclasses import replace
+            return replace(referencia, estado="RUPTURA",
+                           lineas=tuple(replace(x, rol="accion") for x in referencia.lineas))
+
+        def leer(self, ticker, velas, digits, en_curso=None):
+            return ref
+
+    lectura, _ = pc.lectura_para_despacho(Est(), "XAUUSD", 2, lambda t, m, e: ({"H4": "v"}, None),
+                                          LUNES, base=tmp_path)
+    assert lectura.estado == "RUPTURA"
+    guardada = json.loads(rs.ruta("2026-W42", "XAUUSD", tmp_path).read_text(encoding="utf-8"))
+    assert guardada["motivo"] == "semanal"  # el reemplazo lo guarda el escáner, no el despacho
