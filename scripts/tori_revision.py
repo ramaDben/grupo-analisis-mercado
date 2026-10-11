@@ -1,6 +1,7 @@
 """Corre Tori sobre activos reales y deja un PNG por activo para el gate del director.
 
-    uv run --extra informe --with MetaTrader5 python scripts/tori_revision.py
+    uv run --extra stories --with MetaTrader5 python scripts/tori_revision.py
+    uv run --extra informe --with MetaTrader5 python scripts/tori_revision.py --motor matplotlib
     uv run --extra informe --with MetaTrader5 python scripts/tori_revision.py --tickers XAUUSD USDCLP
 
 Salida: data/charts/tori/<YYYY-MM-DD_HH-MM>/<slug>.png, más resumen.json con la
@@ -103,12 +104,156 @@ def dibujar(destino: Path, lectura, velas, marcos) -> list[dict]:
     return no_dibujadas
 
 
+COLOR_TV = {"accion": "#FF4D5E", "seguridad": "#26C6A0", "seguimiento": "#9BE7C4",
+            "contexto": "#B39DDB", "objetivo": "#FFB300", "rango": "#CBD5E1"}
+
+
+def _panel_tv(df, lineas, marco: str, ticker: str) -> tuple[dict, list[dict]]:
+    """Velas y líneas de un marco para Lightweight Charts, contadas en velas como en TradingView.
+
+    Una diagonal lleva un punto por vela desde su ancla hasta la proyección: el eje de
+    TradingView no reserva espacio a los fines de semana, así que la recta tiene que ser
+    recta en velas y no en tiempo.
+    """
+    no_dibujadas: list[dict] = []
+    tiempos = [int(t) for t in df["time"]]
+    indice = {t: i for i, t in enumerate(tiempos)}
+    difs = sorted(b - a for a, b in zip(tiempos, tiempos[1:]))
+    paso = difs[len(difs) // 2] if difs else 3600
+    fin = len(tiempos) - 1 + PROYECCION
+
+    def t_de(i: int) -> int:
+        return tiempos[i] if i < len(tiempos) else tiempos[-1] + (i - len(tiempos) + 1) * paso
+
+    salida = []
+    for x in lineas:
+        dato = {"rol": x.rol, "tipo": x.tipo, "color": COLOR_TV[x.rol],
+                "discontinua": x.rol in ("contexto", "objetivo", "rango"),
+                "titulo": f"{x.rol} {x.calidad} ({x.toques} toques)".replace("  ", " ")}
+        if x.tipo == "diagonal":
+            (t1, p1), (t2, p2) = x.puntos
+            if t1 not in indice or t2 not in indice:
+                motivo = "ancla fuera de la ventana de velas dibujada"
+                print(f"{ticker} {marco}: {motivo}, diagonal {x.rol} no se dibuja")
+                no_dibujadas.append({"marco": marco, "rol": x.rol, "motivo": motivo})
+                continue
+            i1, i2 = indice[t1], indice[t2]
+            pend = (p2 - p1) / (i2 - i1)
+            dato["puntos"] = [{"time": t_de(i), "value": p1 + pend * (i - i1)} for i in range(i1, fin + 1)]
+        else:
+            dato["precio"] = x.puntos[0][1]
+            dato["titulo"] = f"{x.rol} {x.valor_actual}"
+        salida.append(dato)
+    velas = [{"time": t, "open": float(o), "high": float(h), "low": float(lo), "close": float(c)}
+             for t, o, h, lo, c in zip(tiempos, df["open"], df["high"], df["low"], df["close"])]
+    futuro = [{"time": t_de(i)} for i in range(len(tiempos), fin + 1)]
+    return {"marco": marco, "velas": velas, "futuro": futuro, "lineas": salida}, no_dibujadas
+
+
+def html_tv(lectura, velas, marcos, digits: int) -> tuple[str, list[dict]]:
+    """El mismo contenido que `dibujar`, con el motor de TradingView (Lightweight Charts)."""
+    from tradingview_grafico import VENDOR_JS
+
+    op = marcos.operativo
+    orden = (op, *reversed(marcos.contexto))
+    paneles, no_dibujadas = [], []
+    for marco in orden:
+        panel, faltan = _panel_tv(velas[marco].reset_index(drop=True),
+                                  [x for x in lectura.lineas if x.marco == marco], marco, lectura.ticker)
+        panel["titulo"] = (f"{lectura.ticker} · {op} · {lectura.estado} · {lectura.direccion} · "
+                           f"vigilar {lectura.vigilar.precio}" if marco == op
+                           else f"{lectura.ticker} · {marco} · contexto")
+        paneles.append(panel)
+        no_dibujadas += faltan
+    for x in lectura.lineas:
+        if x.marco not in orden:
+            motivo = "marco sin panel"
+            print(f"{lectura.ticker} {x.marco}: {motivo}, línea {x.rol} no se dibuja")
+            no_dibujadas.append({"marco": x.marco, "rol": x.rol, "motivo": motivo})
+    datos = json.dumps({"paneles": paneles, "digits": digits}, separators=(",", ":")).replace("</", "<\\/")
+    alturas = " ".join(["3fr", *(["2fr"] * (len(orden) - 1))])
+    html = f"""<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><style>
+* {{ box-sizing: border-box; margin: 0; padding: 0; }}
+body {{ background: #04080E; color: #FFFFFF; width: {ANCHO_TV}px; height: {ALTO_TV}px; overflow: hidden;
+       font-family: 'Segoe UI', Roboto, sans-serif; padding: 10px; }}
+.tv-container {{ display: grid; grid-template-rows: {alturas}; gap: 10px; width: 100%; height: 100%; }}
+.panel {{ display: flex; flex-direction: column; background: #070D14; border: 1px solid rgba(80,192,168,.45);
+          border-radius: 10px; overflow: hidden; min-height: 0; }}
+.titulo {{ display: flex; gap: 18px; align-items: center; padding: 6px 14px; background: #0C1620;
+           font-size: 14px; font-weight: 700; flex-shrink: 0; flex-wrap: wrap; }}
+.leyenda {{ font-size: 12px; font-weight: 600; color: #CBD5E1; }}
+.grafico {{ flex: 1; min-height: 0; }}
+</style><script>{VENDOR_JS.read_text(encoding="utf-8")}</script></head>
+<body><div class="tv-container" data-chart-ready="false"></div>
+<script>
+(() => {{
+  const D = {datos};
+  const raiz = document.querySelector('.tv-container');
+  const fmt = v => v.toFixed(D.digits);
+  D.paneles.forEach(p => {{
+    const panel = document.createElement('div'); panel.className = 'panel';
+    const titulo = document.createElement('div'); titulo.className = 'titulo';
+    titulo.innerHTML = '<span>' + p.titulo + '</span>' + p.lineas.map(l =>
+      '<span class="leyenda" style="color:' + l.color + '">● ' + l.titulo + '</span>').join('');
+    const caja = document.createElement('div'); caja.className = 'grafico';
+    panel.append(titulo, caja); raiz.appendChild(panel);
+    const diario = p.marco !== 'H4' && p.marco !== 'H1';
+    const chart = LightweightCharts.createChart(caja, {{
+      autoSize: true,
+      layout: {{ background: {{ type: 'solid', color: '#070D14' }}, textColor: '#CBD5E1', fontSize: 11 }},
+      grid: {{ vertLines: {{ color: 'rgba(255,255,255,.04)' }}, horzLines: {{ color: 'rgba(255,255,255,.04)' }} }},
+      rightPriceScale: {{ borderColor: 'rgba(80,192,168,.25)', scaleMargins: {{ top: .06, bottom: .06 }} }},
+      timeScale: {{ borderColor: 'rgba(80,192,168,.25)', timeVisible: !diario, secondsVisible: false }},
+      crosshair: {{ mode: LightweightCharts.CrosshairMode.Hidden }},
+    }});
+    const velas = chart.addSeries(LightweightCharts.CandlestickSeries, {{
+      upColor: '#26C6A0', downColor: '#FF4D5E', borderUpColor: '#26C6A0', borderDownColor: '#FF4D5E',
+      wickUpColor: '#26C6A0', wickDownColor: '#FF4D5E',
+      priceFormat: {{ type: 'price', precision: D.digits, minMove: Math.pow(10, -D.digits) }},
+    }});
+    velas.setData([...p.velas, ...p.futuro]);
+    p.lineas.forEach(l => {{
+      const estilo = l.discontinua ? LightweightCharts.LineStyle.Dashed : LightweightCharts.LineStyle.Solid;
+      if (l.tipo === 'diagonal') {{
+        const s = chart.addSeries(LightweightCharts.LineSeries, {{
+          color: l.color, lineWidth: 2, lineStyle: estilo, lastValueVisible: false, priceLineVisible: false,
+          crosshairMarkerVisible: false, autoscaleInfoProvider: () => null,
+        }});
+        s.setData(l.puntos);
+      }} else {{
+        velas.createPriceLine({{ price: l.precio, color: l.color, lineWidth: 1, lineStyle: estilo,
+                                axisLabelVisible: true, title: l.rol + ' ' + fmt(l.precio) }});
+      }}
+    }});
+    chart.timeScale().fitContent();
+  }});
+  requestAnimationFrame(() => requestAnimationFrame(() => {{ raiz.dataset.chartReady = 'true'; }}));
+}})();
+</script></body></html>
+"""
+    return html, no_dibujadas
+
+
+ANCHO_TV, ALTO_TV = 1600, 1500
+
+
+def dibujar_tv(destino: Path, lectura, velas, marcos, digits: int) -> list[dict]:
+    from tradingview_grafico import renderizar_png
+
+    html, no_dibujadas = html_tv(lectura, velas, marcos, digits)
+    renderizar_png(html, destino, ancho=ANCHO_TV, alto=ALTO_TV)
+    return no_dibujadas
+
+
 def main(argv: list[str] | None = None) -> int:
     from market_data_mcp.catalog import VALID_TICKERS
     from pipeline_informe import ACTIVOS_INFORME
 
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--tickers", nargs="*", default=list(ACTIVOS_INFORME))
+    ap.add_argument("--motor", choices=("tv", "matplotlib"), default="tv",
+                    help="tv: Lightweight Charts, como TradingView (extra stories); matplotlib: extra informe")
     args = ap.parse_args(argv)
 
     estrategia = registro.activa()
@@ -124,7 +269,9 @@ def main(argv: list[str] | None = None) -> int:
             velas, en_curso = velas_mt5(ticker, estrategia.marcos)
             lectura = estrategia.leer(ticker, velas, VALID_TICKERS[ticker], en_curso)
             sesion, semana = estrategia.puntuar(lectura, "sesion"), estrategia.puntuar(lectura, "semana")
-            no_dibujadas = dibujar(carpeta / f"{_slug(ticker)}.png", lectura, velas, estrategia.marcos)
+            png = carpeta / f"{_slug(ticker)}.png"
+            no_dibujadas = (dibujar_tv(png, lectura, velas, estrategia.marcos, VALID_TICKERS[ticker])
+                            if args.motor == "tv" else dibujar(png, lectura, velas, estrategia.marcos))
             resumen.append({
                 "ticker": ticker, "estado": lectura.estado, "direccion": lectura.direccion,
                 "precio": lectura.precio, "vigilar": lectura.vigilar.precio,
