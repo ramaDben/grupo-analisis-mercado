@@ -3,17 +3,21 @@
 Cada situación tiene una banda de 25 puntos y lo que suma dentro de ella tiene
 tope `tope_adicionales` (24), así el orden de situaciones del spec no se invierte
 por los adicionales. Solo la resta por precio lejos de la seguridad baja de banda.
+Las bandas, los umbrales y los pesos son parámetros nuestros (parametros.py).
 Nada macro: la agenda no mueve el ranking (spec §8.2).
 """
 from __future__ import annotations
 
 from estrategia.contrato import Lectura, Linea, Puntaje
-from estrategia.tori.parametros import Parametros
+from estrategia.tori.parametros import PARAMETROS, Parametros
 
-BANDAS = {
-    "sesion": {"ruptura": 75.0, "a_punto": 50.0, "tendencia": 25.0, "rango": 0.0},
-    "semana": {"a_punto": 75.0, "ruptura": 50.0, "tendencia": 25.0, "rango": 0.0},
-}
+
+def bandas(p: Parametros) -> dict[str, dict[str, float]]:
+    """El piso de cada situación por horizonte, leído de los parámetros."""
+    return {"sesion": dict(p.bandas_sesion), "semana": dict(p.bandas_semana)}
+
+
+BANDAS = bandas(PARAMETROS)
 SIN_ESTRUCTURA = "sin líneas trazables: no hay estructura que leer"
 PRUEBA_SEMANAL = "una línea A+ está en prueba: el análisis semanal espera el cierre de la vela"
 CONTRA_SECUENCIA = "va contra la secuencia de los marcos mayores: es donde nacen las falsas rupturas"
@@ -67,21 +71,22 @@ def puntuar(lectura: Lectura, horizonte: str, p: Parametros) -> Puntaje:
         return Puntaje(0.0, {}, CONTRA_SECUENCIA)  # ipUbs [00:36], [01:11]; director, 2026-10-10
     m = lectura.metricas
     sit = situacion(lectura, p)
-    base = BANDAS[horizonte][sit]
+    base = bandas(p)[horizonte][sit]
     principal = _rol(lectura, "accion") if sit == "ruptura" else _rol(lectura, "seguridad")
     suma: dict[str, float] = {}
-    if principal is not None and principal.toques >= 4:
-        suma["calidad_toques"] = 5.0
-    if m.get("semanas_principal", 0.0) >= 3.0:
-        suma["calidad_semanas"] = 5.0
-    suma["confluencia"] = m.get("confluencia", 0.0) * (10.0 if horizonte == "semana" else 5.0)
-    suma["doble_confirmacion"] = 5.0 * m.get("doble_confirmacion", 0.0)
+    if principal is not None and principal.toques >= p.toques_calidad:
+        suma["calidad_toques"] = p.peso_calidad
+    if m.get("semanas_principal", 0.0) >= p.semanas_calidad:
+        suma["calidad_semanas"] = p.peso_calidad
+    peso_confluencia = p.peso_confluencia_semana if horizonte == "semana" else p.peso_confluencia_sesion
+    suma["confluencia"] = m.get("confluencia", 0.0) * peso_confluencia
+    suma["doble_confirmacion"] = p.peso_doble_confirmacion * m.get("doble_confirmacion", 0.0)
     seg, obj = m.get("dist_seguridad_atr_d1"), m.get("dist_objetivo_atr_d1")
-    if seg is not None and obj is not None and obj >= 2.0 * seg:
-        suma["espacio"] = 5.0
+    if seg is not None and obj is not None and obj >= p.espacio_factor * seg:
+        suma["espacio"] = p.peso_espacio
     adicionales = min(sum(suma.values()), p.tope_adicionales)
     restas: dict[str, float] = {}
     if seg is not None and seg > p.lejos_atr_d1:
-        restas["lejos_de_seguridad"] = -30.0  # Tori pasa esa operación (doctrina 2.5)
+        restas["lejos_de_seguridad"] = -p.resta_lejos  # Tori pasa esa operación (doctrina 2.5)
     puntos = max(0.0, min(100.0, base + adicionales + sum(restas.values())))
     return Puntaje(puntos, {"base": base, **suma, "adicionales": adicionales, **restas}, None)
