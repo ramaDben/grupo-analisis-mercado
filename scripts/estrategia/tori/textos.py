@@ -21,9 +21,20 @@ def _p(valor: float, digits: int) -> str:
 
 
 def sentido(linea: Linea) -> str:
+    """Pendiente de la línea leída de sus precios, que vienen redondeados a los digits.
+
+    Con pocos decimales una línea poco inclinada puede redondear sus dos anclas al mismo
+    precio: entonces la pendiente se lee contra el valor de hoy, que está más lejos. Si
+    también empata, a esa precisión la línea es horizontal.
+    """
     if linea.tipo == "horizontal":
         return "horizontal"
-    return "alcista" if linea.puntos[1][1] > linea.puntos[0][1] else "bajista"
+    (_, a), (_, b) = linea.puntos
+    if a == b:
+        b = linea.valor_actual
+    if a == b:
+        return "horizontal"
+    return "alcista" if b > a else "bajista"
 
 
 def borde(arriba: bool) -> str:

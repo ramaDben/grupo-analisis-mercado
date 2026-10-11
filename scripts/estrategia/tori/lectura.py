@@ -447,8 +447,10 @@ def seguir(ticker: str, referencia: Lectura, velas: dict[str, pd.DataFrame], dig
     linea_seguimiento = next((x for x in lineas if x.rol == "seguimiento"), None)
     cierre = s.closes[-1]
     precio = en_curso.precio if en_curso is not None else cierre
+    # En TENDENCIA la seguridad es la línea principal: su sentido es la dirección, sin
+    # depender de unas anclas que con pocos decimales pueden redondear al mismo precio.
     if estado == "TENDENCIA" and seguridad is not None and \
-            _rebote(s, valor(seguridad, ultimo), textos.sentido(seguridad), tol):
+            _rebote(s, valor(seguridad, ultimo), "alcista" if direccion == "ALCISTA" else "bajista", tol):
         estado = "REBOTE"
     vivas = [(x, valor(x, len(s))) for x in lineas
              if sostiene(x) and not (estado == "RUPTURA" and x.rol == "accion")]

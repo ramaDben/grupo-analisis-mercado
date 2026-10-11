@@ -64,3 +64,17 @@ def test_la_ruptura_de_un_borde_horizontal_nombra_el_borde_y_no_una_linea_diagon
     assert any("resistencia del rango" in t for t in textos), textos
     # El aviso de rango del lunes ya no describe la lectura de hoy.
     assert not any("se lee como rango" in a for a in lec.avisos), lec.avisos
+
+
+def test_el_sentido_no_depende_de_que_las_anclas_redondeadas_empaten():
+    # Con digits 0 una línea poco inclinada puede redondear sus dos anclas al mismo precio:
+    # eso no la vuelve bajista. La pendiente se lee entonces contra el valor de hoy.
+    from estrategia.contrato import Linea
+    from estrategia.tori.textos import sentido
+
+    def linea(valor_actual):
+        return Linea("seguridad", "diagonal", ((0, 100.0), (14400, 100.0)), "H4", 3, "A+", valor_actual)
+
+    assert sentido(linea(101.0)) == "alcista"
+    assert sentido(linea(99.0)) == "bajista"
+    assert sentido(linea(100.0)) == "horizontal"
