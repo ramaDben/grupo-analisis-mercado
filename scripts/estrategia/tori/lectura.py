@@ -324,7 +324,9 @@ def seguir(ticker: str, referencia: Lectura, velas: dict[str, pd.DataFrame], dig
     En una referencia en RUPTURA, la línea rota ya no sostiene nada: volver a cerrar al
     otro lado de ella no es otra ruptura, es la ruptura falsa ("la ruptura deja de serlo
     cuando el precio vuelve a cerrar adentro", hueco 5). La referencia caduca y se
-    devuelve la `leer()` de hoy.
+    devuelve la `leer()` de hoy. La ruptura falsa gana sobre la ruptura de otra línea sin
+    importar cuál ocurrió primero, y entrega anclas nuevas (`leer()`) en vez de reasignar
+    roles: el consumidor reemplaza la referencia en los dos casos.
     """
     exigir_velas(velas, marcos)
     if referencia.estado == "PRUEBA":

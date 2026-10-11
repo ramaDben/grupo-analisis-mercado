@@ -261,6 +261,27 @@ def verificar_seguir_sin_futuro(fabrica: Fabrica) -> None:
             assert limpia.vela == int(recorte[op]["time"].iloc[-1])
 
 
+def referencia_caducada(ref, velas: dict[str, pd.DataFrame], op: str) -> bool:
+    """Una RUPTURA cuyo precio volvió a cerrar al otro lado de la línea rota (ruptura falsa).
+
+    Cambio de signo simple, sin tolerancia: la batería no conoce la de cada estrategia.
+    """
+    accion = next((x for x in ref.lineas if x.rol == "accion" and x.marco == op), None)
+    if ref.estado != "RUPTURA" or accion is None:
+        return False
+    tiempos = [int(t) for t in velas[op]["time"]]
+    cierres = [float(c) for c in velas[op]["close"]]
+    if len(accion.puntos) == 1:
+        valor = lambda i: accion.puntos[0][1]  # noqa: E731
+    else:
+        (t1, p1), (t2, p2) = accion.puntos
+        i1, i2 = tiempos.index(t1), tiempos.index(t2)
+        valor = lambda i: p1 + (p2 - p1) / (i2 - i1) * (i - i1)  # noqa: E731
+    i_ref = tiempos.index(ref.vela)
+    lado = cierres[i_ref] - valor(i_ref)
+    return any(lado * (cierres[i] - valor(i)) < 0 for i in range(i_ref + 1, len(cierres)))
+
+
 def verificar_seguir_anclas_fijas(fabrica: Fabrica) -> None:
     """Con velas nuevas, las anclas siguen siendo las del lunes (OjZ8d [01:07])."""
     e = fabrica()
@@ -268,9 +289,9 @@ def verificar_seguir_anclas_fijas(fabrica: Fabrica) -> None:
     for semilla in SEMILLAS:
         velas = velas_de(e, semilla)
         ref = e.leer(TICKER, recortar(velas, 33), 2)
-        # Una referencia en RUPTURA puede caducar: volver a cerrar al otro lado de la línea
-        # rota es la ruptura falsa, y la estrategia puede devolver una referencia nueva.
-        if ref.estado == "RUPTURA":
+        # Una RUPTURA caduca si el precio volvió a cerrar al otro lado de la línea rota: es la
+        # ruptura falsa, y la estrategia puede devolver una referencia nueva. Solo esa se exime.
+        if referencia_caducada(ref, velas, e.marcos.operativo):
             continue
         medidas += 1
         assert e.leer(TICKER, velas, 2).lineas != ref.lineas, (
@@ -280,7 +301,7 @@ def verificar_seguir_anclas_fijas(fabrica: Fabrica) -> None:
         assert sorted(x.puntos for x in hoy.lineas) == sorted(x.puntos for x in ref.lineas), (
             "seguir() volvió a trazar: las anclas no son las de la referencia"
         )
-    assert medidas, "todas las referencias quedaron en RUPTURA: no se probó que las anclas no se muevan"
+    assert medidas, "todas las referencias caducaron: no se probó que las anclas no se muevan"
 
 
 SOSTIENEN = ("accion", "seguridad", "rango")  # las líneas cuyo cierre al otro lado es ruptura
@@ -290,7 +311,8 @@ def verificar_seguir_ruptura_y_prueba(fabrica: Fabrica) -> None:
     """Contra las líneas de la referencia: un cierre al otro lado es RUPTURA; el precio vivo, PRUEBA."""
     e = fabrica()
     op = e.marcos.operativo
-    hubo_cruce = False  # basta con una semilla: una referencia en RUPTURA puede no tener qué cruzar
+    # Se cuenta entre semillas: sin la acción rota de una RUPTURA, una semilla puede no tener qué cruzar.
+    hubo_cruce = False
     for semilla in SEMILLAS:
         velas = velas_de(e, semilla)
         ref = e.leer(TICKER, velas, 2)

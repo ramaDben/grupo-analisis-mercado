@@ -86,3 +86,22 @@ def test_volver_a_cerrar_al_otro_lado_de_la_linea_rota_es_ruptura_falsa():
     nueva = tl.leer(h4)
     assert (hoy.estado, hoy.direccion, hoy.lineas) == (nueva.estado, nueva.direccion, nueva.lineas)
     assert any("fue falsa" in a and "nueva referencia" in a for a in hoy.avisos)
+
+
+def test_una_ruptura_que_se_sostiene_conserva_sus_anclas():
+    # El precio sigue sobre la bajista rota: la referencia no caduca y no se vuelve a trazar.
+    ref = tl.leer(tl.rota())
+    hoy = seguir(ref, extender(tl.rota(), [118, 125]))
+    assert hoy.estado == "RUPTURA"
+    assert sorted(x.puntos for x in hoy.lineas) == sorted(x.puntos for x in ref.lineas)
+
+
+def test_la_bateria_solo_exime_las_anclas_de_la_ruptura_que_caduco():
+    # verificar_seguir_anclas_fijas mide una RUPTURA vigente: solo salta la que volvió.
+    import estrategia_conformidad as conf
+
+    ref = tl.leer(tl.rota())
+    sigue = tl.velas(extender(tl.rota(), [118, 125]))
+    vuelve = tl.velas(extender(tl.rota(), [118, 100]))
+    assert not conf.referencia_caducada(ref, sigue, tl.MARCOS.operativo)
+    assert conf.referencia_caducada(ref, vuelve, tl.MARCOS.operativo)
