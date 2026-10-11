@@ -105,3 +105,15 @@ def test_la_bateria_solo_exime_las_anclas_de_la_ruptura_que_caduco():
     vuelve = tl.velas(extender(tl.rota(), [118, 100]))
     assert not conf.referencia_caducada(ref, sigue, tl.MARCOS.operativo)
     assert conf.referencia_caducada(ref, vuelve, tl.MARCOS.operativo)
+
+
+def test_romper_la_linea_del_lunes_y_volver_a_cerrar_adentro_es_ruptura_falsa():
+    # El precio cierra bajo la alcista del lunes (110) y vuelve a cerrar sobre ella (126):
+    # la ruptura dejó de serlo (hueco 5) y la referencia caduca, igual que con la línea rota.
+    ref = tl.leer(LUNES)
+    h4 = extender(LUNES, [119, 110, 126], 4)
+    hoy = seguir(ref, h4)
+    nueva = tl.leer(h4)
+    assert hoy.estado != "RUPTURA"
+    assert (hoy.estado, hoy.direccion, hoy.lineas) == (nueva.estado, nueva.direccion, nueva.lineas)
+    assert any("fue falsa" in a and "nueva referencia" in a for a in hoy.avisos)

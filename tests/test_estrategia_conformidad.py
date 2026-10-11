@@ -31,6 +31,7 @@ VERIFICACIONES = (
 VERIFICACIONES_SEGUIR = (
     conf.verificar_seguir_misma_lectura, conf.verificar_seguir_sin_futuro,
     conf.verificar_seguir_anclas_fijas, conf.verificar_seguir_ruptura_y_prueba,
+    conf.verificar_seguir_ruptura_falsa,
 )
 
 
@@ -131,6 +132,18 @@ class SeguirSinPrueba(estrategia_juguete.Juguete):
         return super().seguir(referencia, velas, digits, None)
 
 
+class SeguirRupturaSinVuelta(estrategia_juguete.Juguete):
+    """Cuenta como ruptura cualquier cierre afuera, aunque el precio haya vuelto."""
+
+    def seguir(self, referencia, velas, digits, en_curso=None):
+        hoy = super().seguir(referencia, velas, digits, en_curso)
+        techo, piso = referencia.lineas
+        despues = velas["H4"][velas["H4"]["time"] > referencia.vela]["close"]
+        if ((despues > techo.valor_actual) | (despues < piso.valor_actual)).any():
+            return replace(hoy, estado="RUPTURA", en_prueba=None)
+        return hoy
+
+
 class ProcedenciaNoVerificada(estrategia_juguete.Juguete):
     procedencia = replace(
         estrategia_juguete.Juguete.procedencia,
@@ -152,6 +165,7 @@ MUTANTES = (
     (DivergenciaSoloDireccion, conf.verificar_divergencia_prueba_cerrada),
     (SeguirSinRuptura, conf.verificar_seguir_ruptura_y_prueba),
     (SeguirSinPrueba, conf.verificar_seguir_ruptura_y_prueba),
+    (SeguirRupturaSinVuelta, conf.verificar_seguir_ruptura_falsa),
 )
 
 

@@ -62,10 +62,9 @@ class Juguete:
             raise ValueError("una referencia no puede quedar en PRUEBA")
         techo, piso = referencia.lineas
         df = velas["H4"]
-        despues = df[df["time"] > referencia.vela]
-        rompio = bool(((despues["close"] > techo.valor_actual)
-                       | (despues["close"] < piso.valor_actual)).any())
         cierre = float(df["close"].iloc[-1])
+        # La ruptura dura mientras el último cierre siga afuera: si volvió, fue falsa.
+        rompio = int(df["time"].iloc[-1]) > referencia.vela and             not piso.valor_actual <= cierre <= techo.valor_actual
         estado, prueba = ("RUPTURA" if rompio else referencia.estado), None
         if en_curso is not None and not rompio and \
                 not piso.valor_actual <= en_curso.precio <= techo.valor_actual:

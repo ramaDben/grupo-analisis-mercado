@@ -335,3 +335,32 @@ def verificar_seguir_ruptura_y_prueba(fabrica: Fabrica) -> None:
                 f"la vela en curso está al otro lado de una línea de la referencia y seguir() dice {viva.estado}"
             )
     assert hubo_cruce, "ningún precio extremo cruza una línea de la referencia: no se probó la ruptura"
+
+
+def verificar_seguir_ruptura_falsa(fabrica: Fabrica) -> None:
+    """Un cierre al otro lado de una línea y otro de vuelta no es RUPTURA (hueco 5).
+
+    "La ruptura deja de serlo cuando el precio vuelve a cerrar adentro": la vela de vuelta
+    cierra en el último cierre de la referencia, del lado en que estaba el precio.
+    """
+    e = fabrica()
+    op = e.marcos.operativo
+    medidas = 0
+    for semilla in SEMILLAS:
+        velas = velas_de(e, semilla)
+        ref = e.leer(TICKER, velas, 2)
+        if ref.estado == "RUPTURA":
+            continue  # una referencia en RUPTURA ya lo es sin cruzar nada: no mide la vuelta
+        previo = float(velas[op]["close"].iloc[-1])
+        lineas = [x for x in ref.lineas if x.marco == op and x.rol in SOSTIENEN]
+        for precio in extremos(velas, op):
+            if not any((previo - x.valor_actual) * (precio - x.valor_actual) < 0 for x in lineas):
+                continue
+            medidas += 1
+            ida_y_vuelta = cerrar_vela(cerrar_vela(velas, op, precio), op, previo)
+            hoy = e.seguir(ref, ida_y_vuelta, 2)
+            assert hoy.estado != "RUPTURA", (
+                "el precio cerró al otro lado de una línea de la referencia y volvió a cerrar "
+                "adentro, y seguir() todavía dice RUPTURA"
+            )
+    assert medidas, "ningún precio extremo cruza una línea de la referencia: no se probó la vuelta"
