@@ -7,15 +7,20 @@ Es historia de lo que el cliente leyó, así que se versiona igual que
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
-from estrategia.contrato import SCL, Lectura, lectura_a_dict, lectura_de_dict
+import pandas as pd
+
+from estrategia.contrato import SCL, Lectura, Marcos, VelaEnCurso, lectura_a_dict, lectura_de_dict
 
 RAIZ = Path(__file__).resolve().parent.parent
 DIR = RAIZ / "data" / "referencias_semanales"
 MANIFIESTO = "_semana.json"
+EXTRA = 60  # velas de más para que las anclas del lunes sigan dentro (sesiones.md, S4)
+Lector = Callable[[str, Marcos, int], tuple[dict[str, pd.DataFrame], VelaEnCurso | None]]
 
 
 def semana_de(momento: datetime) -> str:
@@ -77,3 +82,43 @@ def debe_reemplazar(referencia: Lectura, actual: Lectura) -> bool:
     if firma(referencia) != firma(actual):
         return True
     return actual.estado == "RUPTURA" and referencia.estado != "RUPTURA"
+
+
+class SinReferencia(LookupError):
+    """El activo no tiene referencia esta semana: no sale en las diarias (spec §4)."""
+
+
+@dataclass(frozen=True)
+class Diaria:
+    lectura: Lectura  # la que se publica hoy
+    reemplazo: Lectura | None  # la nueva referencia, si la del lunes caducó
+    avisos: tuple[str, ...]
+    velas: dict[str, pd.DataFrame]
+
+
+def lectura_del_dia(estrategia, ticker: str, digits: int, semana: str, lector: Lector,
+                    base: Path = DIR) -> Diaria:
+    """La lectura de hoy contra la referencia de la semana, y su reemplazo si caducó.
+
+    No guarda nada: quien publica decide si persiste el reemplazo (el escáner sí, el
+    despacho no). La nueva referencia se lee sin vela en curso, porque una referencia
+    nunca queda en PRUEBA.
+    """
+    referencia = cargar(semana, ticker, base)
+    if referencia is None:
+        raise SinReferencia(f"{ticker} no tiene referencia en {semana}")
+    velas, en_curso = lector(ticker, estrategia.marcos, EXTRA)
+    try:
+        actual = estrategia.seguir(referencia, velas, digits, en_curso)
+    except ValueError as exc:
+        actual = estrategia.leer(ticker, velas, digits, en_curso)
+        nueva = estrategia.leer(ticker, velas, digits, None)
+        return Diaria(actual, nueva, (
+            f"{ticker}: la referencia de la semana no se pudo seguir ({exc}); se leyó de nuevo "
+            "y esa lectura pasa a ser la nueva referencia",), velas)
+    if debe_reemplazar(referencia, actual):
+        nueva = estrategia.leer(ticker, velas, digits, None)
+        return Diaria(actual, nueva, (
+            f"{ticker}: la lectura de la semana cambió de estructura ({referencia.estado.lower()} a "
+            f"{actual.estado.lower()}); la lectura de este cierre pasa a ser la nueva referencia",), velas)
+    return Diaria(actual, None, (), velas)

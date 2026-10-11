@@ -68,3 +68,13 @@ def test_la_revision_registra_la_falla_de_un_activo_y_sigue(tmp_path, monkeypatc
     resumen = json.loads(next(tmp_path.rglob("resumen.json")).read_text(encoding="utf-8"))
     assert [r["ticker"] for r in resumen] == ["USDCLP", "NO_EXISTE"]
     assert "MT5 sin datos" in resumen[0]["error"] and "catalogo" in resumen[1]["error"]
+
+
+def test_el_atr_es_el_promedio_del_rango_verdadero():
+    import pandas as pd
+    from estrategia.fuente import atr
+    df = pd.DataFrame({"time": [1, 2, 3], "open": [10, 11, 12], "high": [11, 13, 13],
+                       "low": [9, 10, 11], "close": [10, 12, 12]})
+    # Rangos verdaderos: 2, max(3, |13-10|, |10-10|)=3, max(2, |13-12|, |11-12|)=2
+    assert atr(df, n=3) == (2 + 3 + 2) / 3
+    assert atr(df, n=2) == (3 + 2) / 2

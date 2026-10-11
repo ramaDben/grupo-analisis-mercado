@@ -44,6 +44,18 @@ def _epoch(columna: pd.Series) -> pd.Series:
     return (columna - pd.Timestamp("1970-01-01")) // pd.Timedelta(seconds=1)
 
 
+def atr(df: pd.DataFrame, n: int = 14) -> float:
+    """El rango verdadero promedio de las últimas `n` velas: cuánto se mueve una vela típica.
+
+    Es un dato de infraestructura para la pieza ("volatilidad típica"), no una decisión de
+    la estrategia.
+    """
+    previo = df["close"].shift(1)
+    rango = pd.concat([df["high"] - df["low"], (df["high"] - previo).abs(),
+                       (df["low"] - previo).abs()], axis=1).max(axis=1)
+    return float(rango.tail(n).mean())
+
+
 def velas_mt5(ticker: str, marcos: Marcos,
               extra: int = 0) -> tuple[dict[str, pd.DataFrame], VelaEnCurso | None]:
     """Velas cerradas por marco y la vela en curso del operativo, si el mercado cotiza.
