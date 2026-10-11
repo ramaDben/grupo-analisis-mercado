@@ -57,8 +57,9 @@ def _estructura(s: Serie, alc: Trazo | None, baj: Trazo | None, p: Parametros) -
     vigentes = [t for t in (alc, baj) if t is not None and t.vigente]
     reciente = max(rotas, key=lambda t: t.i_ruptura, default=None)
     desde = None if reciente is None else ultimo - reciente.i_ruptura
-    # Sin límite de velas: la ruptura dura mientras el cierre siga afuera (huecos, punto 5).
-    if reciente is not None and _sigue_afuera(s, reciente):
+    # La ruptura dura mientras el cierre siga afuera y caduca a las `velas_ruptura_max` velas:
+    # después se lee la estructura actual (gate del director, 2026-10-11, sobre el hueco 5).
+    if reciente is not None and desde <= p.velas_ruptura_max and _sigue_afuera(s, reciente):
         direccion = "BAJISTA" if reciente.sentido == "alcista" else "ALCISTA"
         opuesta = next((t for t in vigentes if t.sentido != reciente.sentido), None)
         return _Estructura("RUPTURA", direccion, reciente, opuesta, (), desde)

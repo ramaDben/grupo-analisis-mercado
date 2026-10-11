@@ -56,6 +56,18 @@ def test_tendencia_alcista_con_la_linea_de_seguridad_a_mas():
     assert lec.precio > seguridad.valor_actual
 
 
+def test_la_ruptura_caduca_despues_de_una_semana_de_velas():
+    # Gate del director (2026-10-11, USDJPY): una ruptura de hace más de `velas_ruptura_max`
+    # velas deja de ser el estado y se lee la estructura actual.
+    df = rota()
+    lateral = vs.desde_vertices([118, 119.5] * 6 + [118], 6, t0=int(df["time"].iloc[-1]) + 4 * 3600)
+    h4 = pd.concat([df, lateral], ignore_index=True)
+    assert len(lateral) > P.velas_ruptura_max
+    assert leer(h4).estado != "RUPTURA"
+    corta = pd.concat([df, lateral.iloc[:P.velas_ruptura_max - 8]], ignore_index=True)
+    assert leer(corta).estado == "RUPTURA"
+
+
 def test_ruptura_por_cierre_de_la_bajista():
     lec = leer(rota())
     assert (lec.estado, lec.direccion) == ("RUPTURA", "ALCISTA")

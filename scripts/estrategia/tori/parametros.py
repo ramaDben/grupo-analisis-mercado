@@ -21,6 +21,7 @@ class Parametros:
     tolerancia_horizontal_atr: float = 0.5  # el horizontal es una zona (qsjLm [08:52])
     horizontal_max_atr: float = 8.0  # "solo los cercanos" (qsjLm [03:27])
     velas_rango: int = 30  # bordes del rango sin diagonales: una semana de 4H
+    velas_ruptura_max: int = 30  # la ruptura caduca a la semana de 4H (gate del director, 2026-10-11)
     cerca_atr_d1: float = 1.0  # spec §5: "a menos de un ATR diario"
     lejos_atr_d1: float = 2.0  # precio lejos de la línea de seguridad (doctrina 2.5)
     tope_adicionales: float = 24.0  # lo que suma dentro de una banda de situación
