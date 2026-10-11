@@ -2030,12 +2030,15 @@ git commit -m "feat(tori): horizontales cercanos con toques y bordes del rango"
 
 **Lo que S2 le deja a S3** (revisión final de la rama S2, 2026-10-11):
 
-- **Pregunta al director antes de S3-1.** `_recorrer` aplica la no intersección (V10) a toda la
-  línea, así que una mecha que perfora más de la tolerancia DESPUÉS de B borra la línea entera y
-  `trazar` elige otra o devuelve `None`. La doctrina 2.4 dice que una mecha no es ruptura y la 2.3
-  que ante una penetración se mueve el Punto B. Justo en la prueba de la línea (lo que S3 lee como
-  `REBOTE` o `PRUEBA`) la línea desaparece. Decidir si después de B la mecha que perfora mueve B
-  (o se tolera) en vez de descartar la línea.
+- **Decidido por el director (2026-10-11): la mecha que perfora después de B mueve el Punto B.**
+  Hoy `_recorrer` aplica la no intersección (V10) a toda la línea, así que una mecha que perfora
+  más de la tolerancia DESPUÉS de B borra la línea entera y `trazar` elige otra o devuelve `None`,
+  justo en la prueba que S3 lee como `REBOTE` o `PRUEBA`. La doctrina 2.4 dice que una mecha no
+  es ruptura y la 2.3 que ante una penetración se mueve el Punto B. Criterio del director: el
+  cliente tiene que recibir un mensaje claro y coherente, sin una línea que aparece y desaparece.
+  S3 cambia `_recorrer` para que, después de B, la mecha que perfora y cierra dentro mueva B a esa
+  vela (redibujando desde A) en vez de descartar la línea; el cierre al otro lado sigue siendo
+  ruptura. Necesita su test: la línea sobrevive a la mecha, con B en la vela de la mecha.
 - **Marcos que no son 24 h y marcos D1/W1.** `velas_por_semana` usa la mediana de pasos: una
   acción en H4 (2 velas por día) da 30 velas por semana cuando son 10. `velas_rango=30` y
   `velas_punto_b_reciente=6` son cantidades fijas de velas y cambian de sentido en D1/W1 (en W1,
