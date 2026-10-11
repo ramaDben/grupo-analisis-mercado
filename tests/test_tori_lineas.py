@@ -42,12 +42,15 @@ def test_la_alcista_se_ancla_en_el_minimo_y_junta_los_tres_toques():
 
 def test_ninguna_vela_cruza_la_linea_elegida_ni_con_una_mecha_suelta():
     df = vs.desde_vertices(ALCISTA, 12)
-    df.loc[60, "low"] = df.loc[60, "low"] - 4.0  # una mecha que perfora y vuelve
+    # La mecha cae en la vela del tercer toque de la línea limpia (48) y la perfora de
+    # verdad: esa línea (0 a 24) debe descartarse y la elegida ya no es la limpia.
+    df.loc[48, "low"] = df.loc[48, "low"] - 4.0
     s = serie_de(df)
     t = trazar(s, "alcista", P)
-    if t is not None:
-        _respeta(s, t, P.tolerancia_toque_atr * s.atr)
-        assert t.vigente, "una mecha no es ruptura"
+    assert t is not None
+    assert t.i_b != 24, "la línea limpia cruzada por la mecha no se descartó"
+    _respeta(s, t, P.tolerancia_toque_atr * s.atr)
+    assert t.vigente, "una mecha no es ruptura"
 
 
 def test_el_cierre_al_otro_lado_es_ruptura():
