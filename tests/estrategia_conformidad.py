@@ -6,6 +6,7 @@ para detectar una estrategia que guarda memoria entre lecturas.
 """
 from __future__ import annotations
 
+import json
 import random
 import sys
 from dataclasses import replace
@@ -21,13 +22,16 @@ for p in (str(RAIZ / "src"), str(RAIZ / "scripts")):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from estrategia.contrato import FLECHAS, Estrategia, Puntaje, VelaEnCurso  # noqa: E402
+from estrategia.contrato import (  # noqa: E402
+    FLECHAS, Estrategia, Puntaje, VelaEnCurso, lectura_a_dict,
+)
 from estrategia.procedencia import validar  # noqa: E402
 
 Fabrica = Callable[[], Estrategia]
 PASO = {"H1": 3600, "H4": 4 * 3600, "D1": 86400, "W1": 7 * 86400}
 T0 = 1_735_689_600  # 2025-01-01 00:00 UTC; las velas son sintéticas
 CORTES = (0, 5, 17, 33)
+SEMILLAS = (11, 3)
 SCL = ZoneInfo("America/Santiago")
 TICKER = "SINTETICO"
 
@@ -58,6 +62,27 @@ def velas_de(estrategia: Estrategia, semilla: int = 11, extra: int = 40) -> dict
 
 def recortar(velas: dict[str, pd.DataFrame], k: int) -> dict[str, pd.DataFrame]:
     return {m: df.iloc[: len(df) - k].reset_index(drop=True) for m, df in velas.items()}
+
+
+def vela_en_curso(velas: dict[str, pd.DataFrame], op: str, precio: float) -> VelaEnCurso:
+    """La vela que sigue a la última cerrada del marco operativo, con su último precio."""
+    apertura = int(velas[op]["time"].iloc[-1]) + PASO[op]
+    return VelaEnCurso(apertura, precio, datetime.fromtimestamp(apertura + PASO[op], tz=SCL))
+
+
+def extremos(velas: dict[str, pd.DataFrame], op: str) -> tuple[float, float]:
+    """Un precio sobre todo el rango y otro bajo todo el rango: cruzan cualquier línea."""
+    df = velas[op]
+    return float(df["high"].max()) * 1.5, float(df["low"].min()) * 0.5
+
+
+def cerrar_vela(velas: dict[str, pd.DataFrame], op: str, cierre: float) -> dict[str, pd.DataFrame]:
+    """Las mismas velas con una vela más del marco operativo, ya cerrada en `cierre`."""
+    df = velas[op]
+    previo = float(df["close"].iloc[-1])
+    fila = {"time": int(df["time"].iloc[-1]) + PASO[op], "open": previo, "close": cierre,
+            "high": max(previo, cierre), "low": min(previo, cierre)}
+    return {**velas, op: pd.concat([df, pd.DataFrame([fila])], ignore_index=True)}
 
 
 def verificar_sin_futuro(fabrica: Fabrica) -> None:
@@ -131,15 +156,68 @@ def verificar_divergencia_propia(fabrica: Fabrica) -> None:
     lectura = e.leer(TICKER, velas, 2)
     assert e.divergencia(lectura, lectura) is None, "una lectura diverge de sí misma"
     opuesta = {"ALCISTA": "BAJISTA", "BAJISTA": "ALCISTA"}
-    for k in CORTES:
-        base = e.leer(TICKER, recortar(velas, k), 2)
-        if base.direccion in opuesta:
-            motivo = e.divergencia(base, replace(base, direccion=opuesta[base.direccion]))
-            assert isinstance(motivo, str) and motivo, (
-                "divergencia() no detecta una lectura de dirección opuesta"
-            )
-            return
+    # Una estrategia de líneas puede leer lateral toda una serie: se prueba con otra semilla.
+    for semilla in SEMILLAS:
+        for k in CORTES:
+            base = e.leer(TICKER, recortar(velas_de(e, semilla), k), 2)
+            if base.direccion in opuesta:
+                motivo = e.divergencia(base, replace(base, direccion=opuesta[base.direccion]))
+                assert isinstance(motivo, str) and motivo, (
+                    "divergencia() no detecta una lectura de dirección opuesta"
+                )
+                return
     raise AssertionError("ningún corte dio una lectura no lateral: no se pudo probar divergencia()")
+
+
+def verificar_vela_cerrada(fabrica: Fabrica) -> None:
+    """`Lectura.vela` es la última vela cerrada del marco operativo."""
+    e = fabrica()
+    op = e.marcos.operativo
+    velas = velas_de(e)
+    for k in CORTES:
+        recorte = recortar(velas, k)
+        assert e.leer(TICKER, recorte, 2).vela == int(recorte[op]["time"].iloc[-1]), (
+            f"recortando {k} velas, `vela` no es la última vela cerrada de {op}"
+        )
+
+
+def verificar_json_plano(fabrica: Fabrica) -> None:
+    """La lectura se guarda como referencia semanal: tiene que pasar por json.dumps."""
+    e = fabrica()
+    op = e.marcos.operativo
+    velas = velas_de(e)
+    for k in CORTES:
+        recorte = recortar(velas, k)
+        for en_curso in (None, *(vela_en_curso(recorte, op, x) for x in extremos(recorte, op))):
+            lectura = e.leer(TICKER, recorte, 2, en_curso)
+            try:
+                json.dumps(lectura_a_dict(lectura))
+            except TypeError as error:
+                raise AssertionError(f"la lectura no pasa a JSON plano: {error}") from None
+
+
+def verificar_divergencia_prueba_cerrada(fabrica: Fabrica) -> None:
+    """Preparada en PRUEBA y con esa vela ya cerrada, la pieza no sale (spec §4)."""
+    e = fabrica()
+    op = e.marcos.operativo
+    velas = velas_de(e)
+    hubo_prueba = False
+    for k in CORTES:
+        recorte = recortar(velas, k)
+        previo = float(recorte[op]["close"].iloc[-1])
+        for precio in extremos(recorte, op):
+            preparada = e.leer(TICKER, recorte, 2, vela_en_curso(recorte, op, precio))
+            if preparada.estado != "PRUEBA":
+                continue
+            hubo_prueba = True
+            # La vela cierra afuera o vuelve: en los dos sentidos el texto ya no vale.
+            for cierre in (precio, previo):
+                actual = e.leer(TICKER, cerrar_vela(recorte, op, cierre), 2)
+                motivo = e.divergencia(preparada, actual)
+                assert isinstance(motivo, str) and motivo, (
+                    "divergencia() deja salir una pieza preparada en PRUEBA cuando esa vela ya cerró"
+                )
+    assert hubo_prueba, "ninguna vela abierta dio PRUEBA: no se pudo probar divergencia()"
 
 
 def verificar_seguir_misma_lectura(fabrica: Fabrica) -> None:
@@ -186,3 +264,30 @@ def verificar_seguir_anclas_fijas(fabrica: Fabrica) -> None:
     assert sorted(x.puntos for x in hoy.lineas) == sorted(x.puntos for x in ref.lineas), (
         "seguir() volvió a trazar: las anclas no son las de la referencia"
     )
+
+
+SOSTIENEN = ("accion", "seguridad", "rango")  # las líneas cuyo cierre al otro lado es ruptura
+
+
+def verificar_seguir_ruptura_y_prueba(fabrica: Fabrica) -> None:
+    """Contra las líneas de la referencia: un cierre al otro lado es RUPTURA; el precio vivo, PRUEBA."""
+    e = fabrica()
+    op = e.marcos.operativo
+    velas = velas_de(e)
+    ref = e.leer(TICKER, velas, 2)
+    previo = float(velas[op]["close"].iloc[-1])
+    lineas = [x for x in ref.lineas if x.marco == op and x.rol in SOSTIENEN]
+    hubo_cruce = False
+    for precio in extremos(velas, op):
+        if not any((previo - x.valor_actual) * (precio - x.valor_actual) < 0 for x in lineas):
+            continue
+        hubo_cruce = True
+        rota = e.seguir(ref, cerrar_vela(velas, op, precio), 2)
+        assert rota.estado == "RUPTURA", (
+            f"una vela cerró al otro lado de una línea de la referencia y seguir() dice {rota.estado}"
+        )
+        viva = e.seguir(ref, velas, 2, vela_en_curso(velas, op, precio))
+        assert viva.estado == "PRUEBA", (
+            f"la vela en curso está al otro lado de una línea de la referencia y seguir() dice {viva.estado}"
+        )
+    assert hubo_cruce, "ningún precio extremo cruza una línea de la referencia: no se probó la ruptura"

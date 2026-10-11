@@ -79,6 +79,10 @@ class Juguete:
         return Puntaje(50.0, {"base": 50.0}, None)
 
     def divergencia(self, preparada, actual):
+        if preparada.estado == "PRUEBA" and (
+            actual.en_prueba is None or actual.en_prueba.cierre_vela != preparada.en_prueba.cierre_vela
+        ):
+            return "la vela que estaba en prueba ya cerró"
         return None if preparada.direccion == actual.direccion else "cambió la dirección"
 
 

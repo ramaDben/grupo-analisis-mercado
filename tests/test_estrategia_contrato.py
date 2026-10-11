@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import sys
 from dataclasses import replace
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -106,3 +106,18 @@ def test_la_lectura_sobrevive_ida_y_vuelta_por_json():
     lectura = _lectura(estado="PRUEBA", en_prueba=prueba, vela=1_760_000_000, metricas={"atr": 1.5})
     texto = json.dumps(lectura_a_dict(lectura), ensure_ascii=False)
     assert lectura_de_dict(json.loads(texto)) == lectura
+
+
+def test_la_hora_de_cierre_queda_en_santiago():
+    """Un offset fijo se convierte al mismo instante en America/Santiago."""
+    fija = datetime(2026, 10, 9, 13, 0, tzinfo=timezone(timedelta(hours=-3)))
+    for momento in (Prueba(LINEA, 105.2, fija).cierre_vela, VelaEnCurso(10, 100.0, fija).cierre):
+        assert momento == fija and momento.tzinfo == SCL
+
+
+def test_tras_json_la_hora_de_cierre_vuelve_en_santiago():
+    """isoformat guarda el offset y no la zona: al leer se reconstruye America/Santiago."""
+    prueba = Prueba(LINEA, 105.2, datetime(2026, 10, 9, 13, 0, tzinfo=SCL))
+    lectura = _lectura(estado="PRUEBA", en_prueba=prueba)
+    vuelta = lectura_de_dict(json.loads(json.dumps(lectura_a_dict(lectura))))
+    assert vuelta.en_prueba.cierre_vela.tzinfo == SCL

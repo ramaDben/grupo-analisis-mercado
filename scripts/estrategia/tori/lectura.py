@@ -267,3 +267,22 @@ def leer(ticker: str, velas: dict[str, pd.DataFrame], digits: int,
         conceptos=textos.conceptos(estado), avisos=tuple(avisos), metricas=metricas,
         vela=s.times[-1],
     )
+
+
+def divergencia(preparada: Lectura, actual: Lectura) -> str | None:
+    """Motivo por el que el texto preparado ya no vale, o None (spec §4)."""
+    if preparada.estado == "PRUEBA" and (
+        actual.estado != "PRUEBA" or actual.en_prueba.cierre_vela != preparada.en_prueba.cierre_vela
+    ):
+        return "la vela que estaba en prueba ya cerró: el texto se escribió para una condición que se resolvió"
+    if actual.direccion != preparada.direccion:
+        return f"la dirección cambió de {preparada.direccion.lower()} a {actual.direccion.lower()}"
+    # Entre TENDENCIA y REBOTE la estructura es la misma: el texto sigue valiendo (hueco 13).
+    if actual.estado != preparada.estado and {actual.estado, preparada.estado} != {"TENDENCIA", "REBOTE"}:
+        return f"el estado cambió de {preparada.estado.lower()} a {actual.estado.lower()}"
+    for campo in ("vigilar", "invalidacion"):
+        antes, ahora = getattr(preparada, campo), getattr(actual, campo)
+        if antes is not None and ahora is not None and \
+                (preparada.precio - antes.precio) * (actual.precio - ahora.precio) < 0:
+            return f"el precio cruzó la {ahora.etiqueta}, que hoy está en {ahora.precio}"
+    return None

@@ -34,3 +34,8 @@ def test_una_config_sin_activa_falla_con_mensaje(tmp_path):
     ruta.write_text(json.dumps({"_meta": "x"}), encoding="utf-8")
     with pytest.raises(ValueError, match="activa"):
         registro.nombre_activo(ruta)
+
+
+def test_la_activa_es_tori_y_carga():
+    e = registro.activa()
+    assert e.nombre == "tori" and e.marcos.operativo == "H4"
