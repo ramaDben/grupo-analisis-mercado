@@ -26,6 +26,24 @@ def sentido(linea: Linea) -> str:
     return "alcista" if linea.puntos[1][1] > linea.puntos[0][1] else "bajista"
 
 
+def borde(arriba: bool) -> str:
+    """El borde horizontal de un rango, en la terminología de niveles (soporte/resistencia)."""
+    return "resistencia del rango" if arriba else "soporte del rango"
+
+
+def rota(linea: Linea | None, sube: bool) -> str:
+    """Cómo se nombra la línea que el precio cruzó al romper, según la línea misma.
+
+    Un borde horizontal es la resistencia o el soporte del rango (nunca una "línea
+    bajista"); una diagonal se nombra por su pendiente.
+    """
+    if linea is None:
+        return f"la línea {'bajista' if sube else 'alcista'}"
+    if linea.tipo == "horizontal":
+        return f"{'la' if sube else 'el'} {borde(sube)}"
+    return f"la línea {sentido(linea)}"
+
+
 def conceptos(estado: str) -> tuple[str, ...]:
     return {
         "TENDENCIA": ("linea-de-tendencia", "linea-de-seguridad"),
@@ -70,9 +88,9 @@ def escenarios(estado: str, direccion: str, marco: str, digits: int, precio: flo
     x = _p(vigilar.precio, digits)
     z = f" con objetivo en {_p(objetivo.precio, digits)}" if objetivo else ""
     if estado == "RUPTURA":
-        rota = "bajista" if sube else "alcista"
+        cruzada = rota(vigilar.linea, sube)
         primero = Escenario("⬆️" if sube else "⬇️", f"{a_favor.capitalize()} {x}",
-                            f"{LA_VELA.get(marco, marco).capitalize()} ya cerró {a_favor} la línea {rota}: mientras siga {a_favor} {x}, la ruptura sigue vigente{z}.")
+                            f"{LA_VELA.get(marco, marco).capitalize()} ya cerró {a_favor} {cruzada}: mientras siga {a_favor} {x}, la ruptura sigue vigente{z}.")
         medio = Escenario("↔️", f"Vuelta a {x}",
                           f"Si el precio vuelve a {x} y la respeta, es un retesteo y la ruptura se confirma.")
         if invalidacion is not None:

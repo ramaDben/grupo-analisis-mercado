@@ -19,6 +19,13 @@ from estrategia.tori.parametros import Parametros
 from estrategia.tori.pivotes import Serie, serie_de
 
 
+AVISO_RANGO = "sin línea diagonal vigente: se lee como rango entre el máximo y el mínimo de la última semana"
+AVISO_CONTRA = "la lectura va contra la secuencia de los marcos mayores: es donde nacen las falsas rupturas"
+AVISO_SIN_SEGURIDAD = "la ruptura no tiene línea de seguridad trazable: el riesgo no se puede medir"
+AVISO_EMPINADA = ("la línea de seguridad es muy empinada: una vela de noticias puede cruzarla sin que "
+                  "cambie la tendencia")
+
+
 @dataclass(frozen=True)
 class _Estructura:
     estado: str
@@ -167,6 +174,9 @@ def _vigilar(prueba, estado, accion, seguridad, rango, precio) -> Referencia:
         return Referencia(seguridad.valor_actual, f"línea {textos.sentido(seguridad)} de seguridad", seguridad)
     if estado in ("RUPTURA", "TENDENCIA"):
         x = accion if accion is not None else seguridad
+        if x.tipo == "horizontal":
+            # Un borde de rango que el precio dejó atrás: abajo era la resistencia.
+            return Referencia(x.valor_actual, textos.borde(x.valor_actual < precio), x)
         return Referencia(x.valor_actual, f"línea {textos.sentido(x)}", x)
     cercana = min(rango, key=lambda x: abs(x.valor_actual - precio))
     techo = max(x.valor_actual for x in rango)
@@ -208,13 +218,13 @@ def leer(ticker: str, velas: dict[str, pd.DataFrame], digits: int,
             x = _horizontal(h, s, "rango", op, digits)
             rango.append(x)
             vivas.append((x, x.valor_actual))
-        avisos.append("sin línea diagonal vigente: se lee como rango entre el máximo y el mínimo de la última semana")
+        avisos.append(AVISO_RANGO)
     lineas += rango
 
     contexto, a_favor, contra = _contexto(velas, marcos, e.direccion, p, digits)
     lineas += contexto
     if contra:
-        avisos.append("la lectura va contra la secuencia de los marcos mayores: es donde nacen las falsas rupturas")
+        avisos.append(AVISO_CONTRA)
 
     cierre = s.closes[-1]
     precio = en_curso.precio if en_curso is not None else cierre
@@ -235,9 +245,9 @@ def leer(ticker: str, velas: dict[str, pd.DataFrame], digits: int,
                     if seguridad is not None else None)
     objetivo = Referencia(objetivo_linea.valor_actual, "objetivo", objetivo_linea) if objetivo_linea else None
     if e.estado == "RUPTURA" and seguridad is None:
-        avisos.append("la ruptura no tiene línea de seguridad trazable: el riesgo no se puede medir")
+        avisos.append(AVISO_SIN_SEGURIDAD)
     if seguridad is not None and seguridad.empinada:
-        avisos.append("la línea de seguridad es muy empinada: una vela de noticias puede cruzarla sin que cambie la tendencia")
+        avisos.append(AVISO_EMPINADA)
 
     atr_d1 = _serie(velas, "D1", marcos).atr if "D1" in marcos.todos else 0.0
     atr_d1 = atr_d1 if atr_d1 > 0 else s.atr
@@ -417,12 +427,21 @@ def seguir(ticker: str, referencia: Lectura, velas: dict[str, pd.DataFrame], dig
             else:
                 nuevas.append(x)
         lineas = nuevas
-        avisos.append(f"la línea {textos.sentido(rota)} del análisis semanal se rompió por cierre: "
+        # Los avisos del lunes que describen un estado que ya no rige se caen: el de rango,
+        # el de la seguridad (se vuelve a medir abajo) y el de la secuencia si la dirección dio
+        # vuelta, porque se midió para la otra dirección.
+        avisos = [a for a in avisos if a == AVISO_CONTRA and direccion == referencia.direccion]
+        avisos.append(f"{textos.rota(rota, sube)} del análisis semanal se rompió por cierre: "
                       "la lectura de este cierre pasa a ser la nueva referencia")
 
     accion = next((x for x in lineas if x.rol == "accion" and x.marco == op), None)
     seguridad = next((x for x in lineas if x.rol == "seguridad" and x.marco == op), None)
     rango = [x for x in lineas if x.rol == "rango"]
+    if ruptura is not None:
+        if seguridad is None:
+            avisos.append(AVISO_SIN_SEGURIDAD)
+        elif seguridad.empinada:
+            avisos.append(AVISO_EMPINADA)
     linea_seguimiento = next((x for x in lineas if x.rol == "seguimiento"), None)
     cierre = s.closes[-1]
     precio = en_curso.precio if en_curso is not None else cierre
