@@ -78,3 +78,15 @@ def test_el_sentido_no_depende_de_que_las_anclas_redondeadas_empaten():
     assert sentido(linea(101.0)) == "alcista"
     assert sentido(linea(99.0)) == "bajista"
     assert sentido(linea(100.0)) == "horizontal"
+
+
+def test_en_rango_se_opera_el_falso_quiebre():
+    # Decisión del director (2026-09-28), confirmada en el gate del PR #258: la zona media se
+    # opera con el falso quiebre, de vuelta al borde contrario; nunca "no hay operación".
+    lec = CASOS["rango"]()
+    assert lec.estado == "RANGO"
+    medio = next(e for e in lec.escenarios if e.flecha == "↔️")
+    assert "falso quiebre" in medio.texto and "borde contrario" in medio.texto, medio.texto
+    assert "no hay operación" not in medio.texto
+    assert "falso quiebre" in lec.salida and "no hay posición" not in lec.salida, lec.salida
+    assert "falso-quiebre" in lec.conceptos

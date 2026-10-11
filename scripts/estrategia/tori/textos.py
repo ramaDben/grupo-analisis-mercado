@@ -61,7 +61,7 @@ def conceptos(estado: str) -> tuple[str, ...]:
         "REBOTE": ("linea-de-tendencia", "linea-de-seguridad", "rebote"),
         "RUPTURA": ("linea-de-tendencia", "ruptura-por-cierre", "linea-de-seguridad"),
         "PRUEBA": ("linea-de-tendencia", "ruptura-por-cierre"),
-        "RANGO": ("rango",),
+        "RANGO": ("rango", "falso-quiebre"),
     }[estado]
 
 
@@ -69,7 +69,8 @@ def salida(estado: str, marco: str, invalidacion: Referencia | None, digits: int
            seguimiento: Linea | None = None) -> str:
     """La regla de salida de Tori (doctrina 2.8): vela que cierra al otro lado de la línea."""
     if estado == "RANGO":
-        return "Dentro del rango no hay posición que gestionar: se espera la ruptura."
+        return ("Dentro del rango se opera el falso quiebre: la posición se cierra si el precio "
+                "vuelve a cerrar fuera del borde que había roto.")
     if invalidacion is None:
         return "Todavía no hay línea de seguridad trazada, así que no hay salida que medir."
     texto = (f"La posición se cierra cuando {VELA.get(marco, marco)} cierra al otro lado de la "
@@ -92,7 +93,7 @@ def escenarios(estado: str, direccion: str, marco: str, digits: int, precio: flo
         piso = min(x.valor_actual for x in rango)
         t, b = _p(techo, digits), _p(piso, digits)
         return (Escenario("⬆️", f"Cierre sobre {t}", f"Si {vela} cierra sobre {t}, el precio sale del rango hacia arriba."),
-                Escenario("↔️", f"Entre {b} y {t}", "Dentro del rango no hay operación: se espera que una vela cierre fuera de uno de los bordes."),
+                Escenario("↔️", f"Entre {b} y {t}", "Si rompe un borde y vuelve a entrar, es falso quiebre y el objetivo pasa a ser el borde contrario."),
                 Escenario("⬇️", f"Cierre bajo {b}", f"Si {vela} cierra bajo {b}, el precio sale del rango hacia abajo."))
     sube = direccion == "ALCISTA"
     a_favor, en_contra = ("sobre", "bajo") if sube else ("bajo", "sobre")

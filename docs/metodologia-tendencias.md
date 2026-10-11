@@ -278,6 +278,11 @@ bajada fuera de la v1 porque ella no da un umbral de volatilidad.
 | No se opera un setup que no cumpla al 100 % los criterios. La frecuencia baja (1 a 3 operaciones al mes) es parte del método. | Firme [6] | g_SG1 [26:47], g_SG1 [27:18], OuwJO* [19:08], lg0pb [02:14], YROta* [01:03] |
 | Si con el tamaño mínimo el stop detrás de la línea igual excede el riesgo permitido, se deja pasar la operación. | Aislada [2] | cTecm [08:47], pasWN [08:18] |
 
+**Lo que el sistema hace distinto (decisión del director, 2026-09-28, confirmada el 2026-10-11).**
+Dentro del rango el sistema no dice "no se opera": la zona media se opera con el falso quiebre. Si
+el precio rompe un borde y vuelve a entrar, el objetivo pasa a ser el borde contrario. No es
+doctrina de Tori y la procedencia lo declara así.
+
 ---
 
 ## 3. Lo que no se adopta

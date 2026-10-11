@@ -47,10 +47,16 @@ PROCEDENCIA = Procedencia(
                    ("Tori Trades, LpXZB [04:45]", "Tori Trades, Y_Ney [12:49] (V11)"),
                    ("F3 p. 94",), (),
                    "Que salir por la línea rinda más que salir en el horizontal (V11)."),
-        Fundamento("En consolidación no se opera",
+        Fundamento("En consolidación no se opera la tendencia: no hay línea que romper",
                    ("Tori Trades, E6dUU [02:52]", "Tori Trades, qLtq7 [41:13]"),
                    ("F3 p. 78", "F3 pp. 76-77"), ("F6",),
                    "Una definición numérica de consolidación: la nuestra es parámetro."),
+        Fundamento("Dentro del rango se opera el falso quiebre, de vuelta al borde contrario",
+                   ("Decisión del director, 2026-09-28; confirmada en el gate del 2026-10-11",),
+                   ("F3 p. 85", "F3 p. 86"), ("F4",),
+                   "No es de Tori, que en rango no opera (doctrina 2.11), y Murphy aconseja quedarse "
+                   "fuera (p. 78). Osler respalda que el borde frena el precio, no que el falso "
+                   "quiebre rinda."),
         Fundamento("Los horizontales son objetivo, doble confirmación y borde del rango",
                    ("Tori Trades, qsjLm [10:30]", "Tori Trades, qsjLm [02:00] (V17)"),
                    ("F3 p. 85", "F3 p. 86"), ("F4",),
