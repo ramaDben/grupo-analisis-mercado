@@ -1,0 +1,4 @@
+{
+  "_meta": "El enchufe de estrategia: toda la lectura técnica sale de la estrategia nombrada en 'activa'. Spec: docs/superpowers/specs/2026-10-09-enchufe-estrategia-design.md. Para conectar otra, se escribe su paquete, pasa la batería de conformidad y se registra en scripts/estrategia/registro.py.",
+  "activa": "tori"
+}
