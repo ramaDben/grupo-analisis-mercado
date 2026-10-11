@@ -320,6 +320,11 @@ def seguir(ticker: str, referencia: Lectura, velas: dict[str, pd.DataFrame], dig
     mismo toda la semana. Una línea que cerró al otro lado por más que la tolerancia deja el
     estado en RUPTURA; el consumidor reemplaza entonces la referencia por la `leer()` de ese
     cierre (decisión del director, 2026-10-10).
+
+    En una referencia en RUPTURA, la línea rota ya no sostiene nada: volver a cerrar al
+    otro lado de ella no es otra ruptura, es la ruptura falsa ("la ruptura deja de serlo
+    cuando el precio vuelve a cerrar adentro", hueco 5). La referencia caduca y se
+    devuelve la `leer()` de hoy.
     """
     exigir_velas(velas, marcos)
     if referencia.estado == "PRUEBA":
@@ -337,20 +342,32 @@ def seguir(ticker: str, referencia: Lectura, velas: dict[str, pd.DataFrame], dig
     lineas = [replace(x, valor_actual=round(valor(x, len(indices[x.marco]) - 1), digits))
               for x in referencia.lineas]
 
-    def sostiene(x: Linea) -> bool:
-        return x.marco == op and x.rol in ("accion", "seguridad", "rango")
+    rota_ref = (next((x for x in lineas if x.rol == "accion" and x.marco == op), None)
+                if referencia.estado == "RUPTURA" else None)
 
-    ruptura: tuple[int, Linea] | None = None
-    for x in lineas:
-        if not sostiene(x):
-            continue
+    def sostiene(x: Linea) -> bool:
+        return x.marco == op and x.rol in ("accion", "seguridad", "rango") and x is not rota_ref
+
+    def cruce(x: Linea) -> int | None:
+        """Primera vela posterior a la referencia que cierra al otro lado por más que la tolerancia."""
         lado = s.closes[i_ref] - valor(x, i_ref)
         for i in range(i_ref + 1, len(s)):
             ahora = s.closes[i] - valor(x, i)
             if lado * ahora < 0 and abs(ahora) > tol:
-                if ruptura is None or i < ruptura[0]:
-                    ruptura = (i, x)
-                break
+                return i
+        return None
+
+    if rota_ref is not None and cruce(rota_ref) is not None:
+        nueva = leer(ticker, velas, digits, en_curso, marcos, p)
+        return replace(nueva, avisos=nueva.avisos + (
+            "la ruptura del análisis semanal fue falsa: el precio volvió a cerrar al otro lado de "
+            "la línea rota y la lectura de este cierre pasa a ser la nueva referencia",))
+
+    ruptura: tuple[int, Linea] | None = None
+    for x in lineas:
+        i = cruce(x) if sostiene(x) else None
+        if i is not None and (ruptura is None or i < ruptura[0]):
+            ruptura = (i, x)
 
     # El rebote se vuelve a medir con la última vela de hoy: dura una vela (hueco 13).
     estado = "TENDENCIA" if referencia.estado == "REBOTE" else referencia.estado
@@ -368,7 +385,7 @@ def seguir(ticker: str, referencia: Lectura, velas: dict[str, pd.DataFrame], dig
         for x in lineas:
             if x is rota:
                 nuevas.append(replace(x, rol="accion"))
-            elif sostiene(x) and x.tipo == "diagonal":
+            elif (sostiene(x) or x is rota_ref) and x.tipo == "diagonal":
                 # La opuesta queda a favor de la operación: bajo el precio en una compra (V18).
                 a_favor = x.valor_actual < s.closes[ultimo] if sube else x.valor_actual > s.closes[ultimo]
                 nuevas.append(replace(x, rol="seguridad" if a_favor else "contexto"))

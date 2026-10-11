@@ -75,3 +75,14 @@ def test_una_referencia_en_prueba_no_se_sigue():
     ref = tl.leer(LUNES, tl._vela(LUNES, 90.0))
     with pytest.raises(ValueError, match="PRUEBA"):
         seguir(ref, LUNES)
+
+
+def test_volver_a_cerrar_al_otro_lado_de_la_linea_rota_es_ruptura_falsa():
+    # El lunes la bajista estaba rota al alza; hoy el precio vuelve a cerrar bajo ella.
+    ref = tl.leer(tl.rota())
+    assert ref.estado == "RUPTURA"
+    h4 = extender(tl.rota(), [118, 100])
+    hoy = seguir(ref, h4)
+    nueva = tl.leer(h4)
+    assert (hoy.estado, hoy.direccion, hoy.lineas) == (nueva.estado, nueva.direccion, nueva.lineas)
+    assert any("fue falsa" in a and "nueva referencia" in a for a in hoy.avisos)
