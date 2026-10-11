@@ -48,7 +48,7 @@ def leer(h4, en_curso=None):
 
 
 def test_tendencia_alcista_con_la_linea_de_seguridad_a_mas():
-    lec = leer(vs.desde_vertices(ALCISTA, 12))
+    lec = leer(vs.desde_vertices([130, *ALCISTA], 12))
     assert (lec.estado, lec.direccion) == ("TENDENCIA", "ALCISTA")
     seguridad = next(x for x in lec.lineas if x.rol == "seguridad")
     assert seguridad.calidad == "A+" and seguridad.tipo == "diagonal"

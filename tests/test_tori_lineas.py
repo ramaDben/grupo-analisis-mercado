@@ -35,9 +35,9 @@ def _respeta(s, t, tol):
 
 
 def test_la_alcista_se_ancla_en_el_minimo_y_junta_los_tres_toques():
-    s = serie_de(vs.desde_vertices(ALCISTA, 12))
+    s = serie_de(vs.desde_vertices([130, *ALCISTA], 12))  # el tramo previo confirma el mínimo
     t = trazar(s, "alcista", P)
-    assert t is not None and t.i_a == 0 and abs(t.p_a - 99.8) < 1e-9
+    assert t is not None and t.i_a == 12 and abs(t.p_a - 99.8) < 1e-9
     assert len(t.toques) >= 3 and t.vigente
     assert abs(t.pendiente - 0.25) < 1e-9
     _respeta(s, t, P.tolerancia_toque_atr * s.atr)
@@ -57,11 +57,11 @@ def test_ninguna_vela_cruza_la_linea_elegida_ni_con_una_mecha_suelta():
 
 
 def test_el_cierre_al_otro_lado_es_ruptura():
-    df = vs.desde_vertices(BAJISTA_ROTA, 12)
+    df = vs.desde_vertices([100, *BAJISTA_ROTA], 12)
     subida = vs.desde_vertices([100, 118], 6, t0=int(df["time"].iloc[-1]) + 4 * 3600)
     s = serie_de(pd.concat([df, subida], ignore_index=True))
     t = trazar(s, "bajista", P)
-    assert t is not None and t.i_a == 0 and t.i_ruptura is not None
+    assert t is not None and t.i_a == 12 and t.i_ruptura is not None
     assert s.closes[t.i_ruptura] > t.valor(t.i_ruptura)
     _respeta(s, t, P.tolerancia_toque_atr * s.atr)
 
@@ -120,11 +120,11 @@ def test_la_secundaria_rota_se_borra():
 
 
 def test_el_toque_se_anota_en_el_extremo_y_no_en_la_primera_vela():
-    s = serie_de(vs.desde_vertices(ACELERA, 12))
+    s = serie_de(vs.desde_vertices([120, *ACELERA], 12))
     principal = trazar(s, "alcista", P)
     assert principal is not None
     assert principal.i_b in principal.toques
-    assert principal.toques == (0, 24, 48)  # los mínimos reales, no la vela de entrada (23, 47)
+    assert principal.toques == (12, 36, 60)  # los mínimos reales, no la vela de entrada (35, 59)
 
 
 def test_un_toque_partido_en_dos_velas_ancla_el_seguimiento_en_el_extremo():
@@ -154,7 +154,7 @@ def test_la_separacion_de_toques_debe_superar_a_la_tolerancia():
 # del zigzag, y `trazar` la elegiría como B aunque _recorrer descartara la línea original.
 def test_la_mecha_que_perfora_despues_de_b_mueve_el_punto_b():
     df = vs.desde_vertices(ALCISTA, 12)
-    base = trazar(serie_de(df), "alcista", P)
+    base = trazar(serie_de(df), "alcista", P, ancla=0)
     assert base.i_b == 24
     df.loc[60, "low"] = base.valor(60) - 4.0  # perfora más que la tolerancia y cierra adentro
     s = serie_de(df)
@@ -167,7 +167,7 @@ def test_la_mecha_que_perfora_despues_de_b_mueve_el_punto_b():
 def test_la_mecha_bajista_despues_de_b_mueve_el_punto_b():
     df = vs.desde_vertices(BAJISTA_ROTA[:-1], 12)
     s0 = serie_de(df)
-    base = trazar(s0, "bajista", P)
+    base = trazar(s0, "bajista", P, ancla=0)
     assert base is not None and base.i_a == 0
     j = len(df) - 2
     df.loc[j, "high"] = base.valor(j) + 4.0
@@ -180,7 +180,7 @@ def test_la_mecha_bajista_despues_de_b_mueve_el_punto_b():
 
 def test_la_mecha_que_deja_a_b_sin_pendiente_deja_sin_linea():
     df = vs.desde_vertices(ALCISTA, 12)
-    base = trazar(serie_de(df), "alcista", P)
+    base = trazar(serie_de(df), "alcista", P, ancla=0)
     # El low de la vela 60 queda por debajo de A: con ese B la pendiente se invierte.
     df.loc[60, "low"] = base.p_a - 1.0
     assert _recorrer(serie_de(df), "alcista", 0, 24, P) is None
@@ -188,7 +188,7 @@ def test_la_mecha_que_deja_a_b_sin_pendiente_deja_sin_linea():
 
 def test_la_vela_que_perfora_y_cierra_afuera_sigue_siendo_ruptura():
     df = vs.desde_vertices(ALCISTA, 12)
-    base = trazar(serie_de(df), "alcista", P)
+    base = trazar(serie_de(df), "alcista", P, ancla=0)
     k = 60
     df.loc[k, ["low", "close"]] = base.valor(k) - 4.0
     t = _recorrer(serie_de(df), "alcista", 0, 24, P)
@@ -197,6 +197,44 @@ def test_la_vela_que_perfora_y_cierra_afuera_sigue_siendo_ruptura():
 
 def test_la_mecha_que_perfora_antes_de_b_sigue_invalidando():
     df = vs.desde_vertices(ALCISTA, 12)
-    base = trazar(serie_de(df), "alcista", P)
+    base = trazar(serie_de(df), "alcista", P, ancla=0)
     df.loc[12, "low"] = base.valor(12) - 4.0  # antes de B (24)
     assert _recorrer(serie_de(df), "alcista", 0, 24, P) is None
+
+
+# Gate del director (2026-10-11) sobre los PNG de S3: USDCLP con alcista evidente y sin
+# ninguna diagonal, USDJPY con una ruptura de ~155 velas, WTI con el ancla en el borde.
+
+def test_el_doble_piso_pasa_el_ancla_al_segundo_minimo():
+    # Mínimos 100 y 100,2 casi iguales: desde el primero la línea es plana (o el segundo la
+    # cruza). Encadenar (doctrina 2.3): la diagonal arranca en el segundo piso.
+    s = serie_de(vs.desde_vertices([130, 100, 112, 100.2, 116, 108.5, 124, 116.5, 130, 125], 12))
+    t = trazar(s, "alcista", P)
+    assert t is not None and t.vigente
+    assert abs(t.p_a - 100.0) < 1e-9 and t.i_a in (35, 36)
+    assert len(t.toques) >= 3
+    _respeta(s, t, P.tolerancia_toque_atr * s.atr)
+
+
+def test_la_linea_rota_rota_al_extremo_posterior_a_la_ruptura():
+    # La alcista 100-106-112 se rompe; después el precio arma otra alcista 104-110-116.
+    s = serie_de(vs.desde_vertices([130, 100, 112, 106, 118, 112, 124, 104, 116, 110, 122, 116, 126],
+                                   12))
+    t = trazar(s, "alcista", P)
+    assert t is not None and t.vigente, "la estructura nueva reemplaza a la línea rota (V13)"
+    assert abs(t.p_a - 103.8) < 1e-9
+    _respeta(s, t, P.tolerancia_toque_atr * s.atr)
+
+
+def test_la_linea_rota_sin_estructura_nueva_se_conserva():
+    s = serie_de(vs.desde_vertices([130, 100, 112, 106, 118, 112, 124, 103], 12))
+    t = trazar(s, "alcista", P)
+    assert t is not None and not t.vigente and abs(t.p_a - 99.8) < 1e-9
+
+
+def test_el_ancla_no_cae_en_el_borde_de_la_ventana():
+    # El mínimo es la primera vela: no se ve de dónde venía el precio, así que no es un
+    # extremo visible (gate del director, WTI).
+    s = serie_de(vs.desde_vertices([100, 112, 106, 118, 112, 124, 119], 12))
+    t = trazar(s, "alcista", P)
+    assert t is None or t.i_a > 1

@@ -37,22 +37,61 @@ class Trazo:
 
 
 def trazar(s: Serie, sentido: Sentido, p: Parametros, ancla: int | None = None) -> Trazo | None:
-    """La mejor línea desde `ancla` (por defecto, el extremo de la ventana).
+    """La mejor línea desde `ancla` (por defecto, el extremo visible de la ventana).
 
     El segundo punto es el pivote que junta más toques sin que ninguna vela cruce
     la línea; a igualdad de toques, la más ceñida al precio.
+
+    Sin `ancla`, el primer punto es el extremo visible (regla 2). Si desde ahí no se
+    puede trazar una diagonal limpia, o la que sale ya está rota, el ancla pasa al
+    extremo de lo que queda a la derecha: encadenar (doctrina 2.3) y rotar la línea
+    rota al extremo nuevo (V13). Un doble piso deja así la diagonal en el segundo
+    piso, y una estructura nueva reemplaza a la ruptura vieja. Si ninguna ancla da
+    una línea vigente, se devuelve la última rota (la ruptura más reciente).
+    """
+    if len(s) < 3:
+        return None
+    tipo = "L" if sentido == "alcista" else "H"
+    pivotes = [i for i, _, t in zigzag(list(s.filas), p.zigzag_atr * s.atr) if t == tipo]
+    if ancla is not None:
+        return _desde(s, sentido, p, ancla, pivotes)
+    rota: Trazo | None = None
+    a = _extremo(s, sentido, p, pivotes, desde=0)
+    while a is not None:
+        t = _desde(s, sentido, p, a, pivotes)
+        if t is not None and t.vigente:
+            return t
+        if t is not None:
+            rota = t
+        a = _extremo(s, sentido, p, pivotes, desde=a + 1 if t is None else t.i_ruptura)
+    return rota
+
+
+def _extremo(s: Serie, sentido: Sentido, p: Parametros, pivotes: list[int], desde: int) -> int | None:
+    """El extremo visible desde la vela `desde`: el pivote más extremo confirmado a la izquierda.
+
+    Confirmado quiere decir que antes de él el precio estuvo a un giro de zigzag de
+    distancia. El mínimo de la primera vela de la ventana no lo está: no se ve de
+    dónde venía el precio, y el extremo real puede estar afuera (gate, WTI).
     """
     alcista = sentido == "alcista"
     extremos = s.lows if alcista else s.highs
-    if len(s) < 3:
+    giro = p.zigzag_atr * s.atr
+
+    def confirmado(i: int) -> bool:
+        if alcista:
+            return i > 0 and max(s.highs[:i]) - s.lows[i] >= giro
+        return i > 0 and s.highs[i] - min(s.lows[:i]) >= giro
+
+    candidatos = [i for i in pivotes if i >= desde and confirmado(i)]
+    if not candidatos:
         return None
-    if ancla is None:
-        ancla = extremos.index(min(extremos) if alcista else max(extremos))
-    tipo = "L" if alcista else "H"
-    candidatos = [i for i, _, t in zigzag(list(s.filas), p.zigzag_atr * s.atr)
-                  if t == tipo and i > ancla]
+    return min(candidatos, key=lambda i: (extremos[i], i)) if alcista else         min(candidatos, key=lambda i: (-extremos[i], i))
+
+
+def _desde(s: Serie, sentido: Sentido, p: Parametros, ancla: int, pivotes: list[int]) -> Trazo | None:
     mejor: Trazo | None = None
-    for b in candidatos:
+    for b in (i for i in pivotes if i > ancla):
         if not _es_diagonal(s, sentido, ancla, b, p):
             continue
         trazo = _recorrer(s, sentido, ancla, b, p)

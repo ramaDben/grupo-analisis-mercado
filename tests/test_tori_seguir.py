@@ -67,8 +67,11 @@ def test_tocar_la_linea_del_lunes_y_cerrar_a_favor_es_rebote():
 
 def test_una_referencia_que_ya_no_cabe_falla_con_mensaje():
     ref = tl.leer(LUNES)
+    # Se recorta hasta dejar afuera el ancla más antigua de la referencia.
+    primera = min(ts for x in ref.lineas if x.marco == "H4" for ts, _ in x.puntos)
+    corte = int((LUNES["time"] <= primera).sum())
     with pytest.raises(ValueError, match="ventana"):
-        seguir(ref, LUNES.iloc[5:].reset_index(drop=True))
+        seguir(ref, LUNES.iloc[corte:].reset_index(drop=True))
 
 
 def test_una_referencia_en_prueba_no_se_sigue():

@@ -322,9 +322,12 @@ def verificar_seguir_ruptura_y_prueba(fabrica: Fabrica) -> None:
         # nueva. Por eso no cuenta entre las líneas que sostienen.
         lineas = [x for x in ref.lineas if x.marco == op and x.rol in SOSTIENEN
                   and not (ref.estado == "RUPTURA" and x.rol == "accion")]
+        rotas = [x for x in ref.lineas if x.marco == op and ref.estado == "RUPTURA" and x.rol == "accion"]
         for precio in extremos(velas, op):
             if not any((previo - x.valor_actual) * (precio - x.valor_actual) < 0 for x in lineas):
                 continue
+            if any((previo - x.valor_actual) * (precio - x.valor_actual) < 0 for x in rotas):
+                continue  # también vuelve a cruzar la línea rota: es la ruptura falsa, no se mide acá
             hubo_cruce = True
             rota = e.seguir(ref, cerrar_vela(velas, op, precio), 2)
             assert rota.estado == "RUPTURA", (
