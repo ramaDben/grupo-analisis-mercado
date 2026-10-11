@@ -117,3 +117,18 @@ def test_romper_la_linea_del_lunes_y_volver_a_cerrar_adentro_es_ruptura_falsa():
     assert hoy.estado != "RUPTURA"
     assert (hoy.estado, hoy.direccion, hoy.lineas) == (nueva.estado, nueva.direccion, nueva.lineas)
     assert any("fue falsa" in a and "nueva referencia" in a for a in hoy.avisos)
+
+
+def test_seguir_mide_el_atr_en_la_misma_ventana_que_leer():
+    # Con una ventana operativa de 14 velas, la primera vela de la ventana no tiene cierre
+    # previo para leer(); la vela anterior, fuera de la ventana, cierra lejos (un hueco).
+    # seguir() tiene que medir el ATR sobre esa misma ventana y no sobre todas las velas.
+    from estrategia.contrato import Marcos
+
+    marcos = Marcos(("W1", "D1"), "H4", {"W1": 3, "D1": 5, "H4": 14}, tl.MARCOS.etiquetas)
+    h4 = LUNES.copy()
+    h4.loc[len(h4) - 15, "close"] = 50.0
+    ref = tl.lt.leer("XAUUSD", tl.velas(h4), 2, None, marcos, P)
+    hoy = _seguir("XAUUSD", ref, tl.velas(h4), 2, None, marcos, P)
+    assert hoy.metricas["atr"] == ref.metricas["atr"]
+    assert hoy.metricas["atr_d1"] == ref.metricas["atr_d1"]

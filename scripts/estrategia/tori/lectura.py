@@ -346,14 +346,16 @@ def seguir(ticker: str, referencia: Lectura, velas: dict[str, pd.DataFrame], dig
         raise ValueError(f"{ticker}: una referencia no puede quedar en PRUEBA; se guarda con la vela cerrada")
     op = marcos.operativo
     s = serie_de(velas[op].reset_index(drop=True))
-    if s.atr <= 0:
+    # Índices y anclas sobre todas las velas; el ATR sobre la misma ventana que leer().
+    atr = _serie(velas, op, marcos).atr
+    if atr <= 0:
         raise ValueError(f"{ticker}: las velas de {op} no tienen rango (ATR 0); no hay nada que leer")
     valor, indices = _valorador(velas, marcos, ticker)
     if referencia.vela not in indices[op]:
         raise ValueError(f"{ticker}: la vela de la referencia ya no cabe en la ventana de {op}")
     i_ref = indices[op][referencia.vela]
     ultimo = len(s) - 1
-    tol = p.tolerancia_toque_atr * s.atr
+    tol = p.tolerancia_toque_atr * atr
     lineas = [replace(x, valor_actual=round(valor(x, len(indices[x.marco]) - 1), digits))
               for x in referencia.lineas]
 
@@ -455,11 +457,11 @@ def seguir(ticker: str, referencia: Lectura, velas: dict[str, pd.DataFrame], dig
     invalidacion = (Referencia(seguridad.valor_actual, f"línea {textos.sentido(seguridad)} de seguridad", seguridad)
                     if seguridad is not None else None)
 
-    atr_d1 = serie_de(velas["D1"]).atr if "D1" in marcos.todos else 0.0
-    atr_d1 = atr_d1 if atr_d1 > 0 else s.atr
+    atr_d1 = _serie(velas, "D1", marcos).atr if "D1" in marcos.todos else 0.0
+    atr_d1 = atr_d1 if atr_d1 > 0 else atr
     fijas = ("confluencia", "contra_secuencia", "doble_confirmacion", "semanas_principal")
     metricas = {k: v for k, v in referencia.metricas.items() if k in fijas}
-    metricas.update({"atr": s.atr, "atr_d1": atr_d1,
+    metricas.update({"atr": atr, "atr_d1": atr_d1,
                      "dist_vigilar_atr_d1": abs(precio - vigilar.precio) / atr_d1})
     if seguridad is not None:
         metricas["dist_seguridad_atr_d1"] = abs(precio - seguridad.valor_actual) / atr_d1
