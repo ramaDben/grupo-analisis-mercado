@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 import pandas as pd
@@ -87,5 +88,32 @@ def test_el_abanico_arranca_en_el_ultimo_toque_y_es_mas_empinado():
 
 
 def test_sin_aceleracion_no_hay_linea_de_seguimiento():
-    s = serie_de(vs.desde_vertices(ALCISTA, 12))
-    assert seguimiento(s, trazar(s, "alcista", P), P) is None
+    # Una principal ya empinada (su Punto B se subió a mano: con velas reales una candidata
+    # menos empinada cruzaría la principal) frente a la candidata de ACELERA (0,32).
+    s = serie_de(vs.desde_vertices(ACELERA, 12))
+    real = trazar(s, "alcista", P)
+    principal = replace(real, p_b=real.p_a + 0.5 * (real.i_b - real.i_a))
+    cand = trazar(s, "alcista", P, ancla=principal.toques[-1])
+    assert cand is not None and cand.vigente
+    assert abs(cand.pendiente) <= abs(principal.pendiente)  # la causa es la pendiente
+    assert seguimiento(s, principal, P) is None
+
+
+def test_la_principal_rota_no_tiene_seguimiento():
+    s = serie_de(vs.desde_vertices(ACELERA, 12))
+    principal = replace(trazar(s, "alcista", P), i_ruptura=100)  # ruptura marcada a mano
+    assert not principal.vigente
+    cand = trazar(s, "alcista", P, ancla=principal.toques[-1])
+    assert cand is not None and cand.vigente  # sin la guarda sí habría línea
+    assert seguimiento(s, principal, P) is None
+
+
+def test_la_secundaria_rota_se_borra():
+    df = vs.desde_vertices(ACELERA, 12)
+    caida = vs.desde_vertices([124, 119], 4, t0=int(df["time"].iloc[-1]) + 4 * 3600)
+    s = serie_de(pd.concat([df, caida], ignore_index=True))
+    principal = trazar(s, "alcista", P)
+    assert principal is not None and principal.vigente  # cae bajo la de seguimiento, no bajo la principal
+    cand = trazar(s, "alcista", P, ancla=principal.toques[-1])
+    assert cand is not None and not cand.vigente
+    assert seguimiento(s, principal, P) is None
