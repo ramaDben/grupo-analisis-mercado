@@ -135,7 +135,19 @@ def _objetivo(horizontales, direccion: str, precio: float, tol: float, digits: i
 
 def _prueba(vivas: list[tuple[Linea, float]], cierre: float, en_curso: VelaEnCurso | None,
             tol: float, digits: int) -> Prueba | None:
-    """Lo completa la Task S3-2."""
+    """El precio vivo al otro lado de una línea vigente, por más que la tolerancia.
+
+    Cuenta el precio vivo y no el extremo de la vela: una mecha que ya volvió no
+    activa la prueba (spec §4). El orden de `vivas` (acción, seguridad, rango) es
+    la prioridad.
+    """
+    if en_curso is None:
+        return None
+    for linea, valor_ahora in vivas:
+        antes = cierre - linea.valor_actual
+        ahora = en_curso.precio - valor_ahora
+        if antes * ahora < 0 and abs(ahora) > tol:
+            return Prueba(linea, round(valor_ahora, digits), en_curso.cierre)
     return None
 
 

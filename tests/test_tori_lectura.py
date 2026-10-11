@@ -13,7 +13,10 @@ for p in (str(RAIZ / "src"), str(RAIZ / "scripts")):
         sys.path.insert(0, p)
 
 import velas_sinteticas as vs  # noqa: E402
-from estrategia.contrato import Etiqueta, Marcos  # noqa: E402
+from datetime import datetime  # noqa: E402
+from zoneinfo import ZoneInfo  # noqa: E402
+
+from estrategia.contrato import Etiqueta, Marcos, VelaEnCurso  # noqa: E402
 from estrategia.tori import lectura as lt  # noqa: E402
 from estrategia.tori.parametros import PARAMETROS as P  # noqa: E402
 
@@ -92,3 +95,41 @@ def test_velas_sin_rango_fallan_con_mensaje():
 def test_con_pocas_velas_lee_lo_que_hay():
     lec = leer(vs.desde_vertices([100, 104, 101], 10))
     assert lec.estado in ("RANGO", "TENDENCIA")
+
+
+CIERRE = datetime(2026, 10, 9, 13, 0, tzinfo=ZoneInfo("America/Santiago"))
+
+
+def _vela(h4, precio):
+    return VelaEnCurso(int(h4["time"].iloc[-1]) + 4 * 3600, precio, CIERRE)
+
+
+def test_el_precio_vivo_bajo_la_seguridad_es_prueba_y_no_ruptura():
+    h4 = vs.desde_vertices(ALCISTA, 12)
+    base = leer(h4)
+    seguridad = next(x for x in base.lineas if x.rol == "seguridad")
+    lec = leer(h4, _vela(h4, seguridad.valor_actual - 5))
+    assert lec.estado == "PRUEBA" and lec.direccion == "ALCISTA"
+    assert lec.en_prueba.linea == seguridad and lec.en_prueba.cierre_vela == CIERRE
+    assert any("13:00" in e.texto for e in lec.escenarios)
+
+
+def test_un_precio_vivo_dentro_de_la_tolerancia_es_toque_no_prueba():
+    h4 = vs.desde_vertices(ALCISTA, 12)
+    seguridad = next(x for x in leer(h4).lineas if x.rol == "seguridad")
+    lec = leer(h4, _vela(h4, seguridad.valor_actual + 0.25))  # la línea sube 0,25 en la vela abierta
+    assert lec.estado == "TENDENCIA"
+
+
+def test_la_vela_abierta_no_mueve_ninguna_linea():
+    h4 = vs.desde_vertices(ALCISTA, 12)
+    base = leer(h4)
+    lec = leer(h4, _vela(h4, 90.0))
+    sin_objetivo = lambda l: [x for x in l.lineas if x.rol != "objetivo"]  # noqa: E731
+    assert sin_objetivo(lec) == sin_objetivo(base)
+
+
+def test_en_rango_salir_del_borde_en_vivo_es_prueba():
+    h4 = vs.desde_vertices(RANGO, 10)
+    lec = leer(h4, _vela(h4, 125.0))
+    assert lec.estado == "PRUEBA" and lec.en_prueba.linea.rol == "rango"
