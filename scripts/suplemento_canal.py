@@ -98,6 +98,15 @@ CATEGORIAS: dict[str, dict[str, Any]] = {
         "concepto": "puntos-interes",
         "publicable": True,
     },
+    # Exclusiones de la estrategia activa (enchufe, fase 2). No se publican como
+    # suplemento: son motivos técnicos y no una lectura para el cliente, y la
+    # cobertura fija ya garantiza una pieza por canal cubierto. Las tres categorías
+    # de arriba que vienen del agotamiento y la banda salen con esos gates (S6/S7).
+    "sin líneas trazables": {"categoria": "sin_estructura", "concepto": None, "publicable": False},
+    "va contra la secuencia": {"categoria": "contra_secuencia", "concepto": None, "publicable": False},
+    "está en prueba": {"categoria": "en_prueba", "concepto": None, "publicable": False},
+    # Un activo que no se pudo leer es un problema nuestro de datos, no contenido.
+    "no se pudo leer": {"categoria": "sin_datos", "concepto": None, "publicable": False},
 }
 
 ACTIVOS_ANCLA_CANAL: dict[str, dict[str, Any]] = {

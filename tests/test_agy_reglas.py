@@ -118,7 +118,7 @@ def test_un_h3_puede_sobrescribir_a_su_padre():
 # 2026-09-07: sube a 92.700 por el aviso de `--with MetaTrader5` en el despacho.
 # 2026-09-16: sube a 93.200 por la sección de Producción y despacho ad-hoc sistematizado
 # (`produccion_adhoc.py` y `docs/produccion-adhoc.md`).
-PRESUPUESTO_BYTES = 93_200
+PRESUPUESTO_BYTES = 93_400
 
 
 def test_claude_md_no_pasa_del_presupuesto():

@@ -325,6 +325,9 @@ Comando: `/avisos`. Spec: `docs/superpowers/specs/2026-09-28-carruseles-avisos-d
 ### El `Score_GI` y sus gates
 <!-- ambito: ambos -->
 
+> **El carrusel ya no usa este puntaje** (2026-10-11): ordena con la estrategia activa contra la
+> referencia semanal (`scripts/referencia_semanal.py`). Esto queda para Avisos y el analista hasta S6/S7.
+
 `scripts/screener_gi.py` puntúa cada activo del catálogo sobre 100:
 
 | Factor | Tope | De dónde sale |

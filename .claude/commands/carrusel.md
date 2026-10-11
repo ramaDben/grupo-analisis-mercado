@@ -16,7 +16,15 @@ uv run --with MetaTrader5 python scripts/pipeline_carrusel.py --preparar --grupo
 uv run --with MetaTrader5 python scripts/pipeline_carrusel.py --preparar --matriz
 ```
 
-Esto corre `scripts/screener_gi.py`, que detecta dinámicamente la sesión de mercado (Asiática, Europea, Apertura Wall Street, Rotación de Tarde o Cierre), puntúa el universo con el `Score_GI` (técnico 35 + catalizador 25 + espacio 20 + momentum 20 = 100), aplica los gates, excluye activos ya publicados en corridas previas de hoy y deja los payloads con **todos los datos resueltos**.
+Esto corre `scripts/screener_gi.py`, que detecta dinámicamente la sesión de mercado (Asiática, Europea, Apertura Wall Street, Rotación de Tarde o Cierre), ordena los activos con **el puntaje de la estrategia activa** (`config/estrategia.json`, hoy Tori), aplica los gates de feriado y blackout, excluye activos ya publicados en corridas previas de hoy y deja los payloads con **todos los datos resueltos**.
+
+**Las diarias cubren solo los activos del análisis semanal.** El lunes la estrategia elige y
+fija una referencia por activo en `data/referencias_semanales/<AAAA-Www>/`, y cada diaria se
+compara contra esa referencia (enchufe de estrategia, fase 2). Si la semana todavía no tiene
+análisis, la primera corrida lo hace sola y lo dice en los avisos. Si una línea de la
+referencia se rompe por cierre, el aviso dice que esa lectura pasa a ser la nueva referencia.
+Los cuatro activos de cobertura fija salen siempre: si la estrategia los habría excluido, el
+aviso y la pieza lo dicen.
 
 **No elijas los activos por tu cuenta ni negocies con el escáner.** La razón de que exista
 es que la selección sea objetiva y auditable: si el resultado no te gusta, se discute el
@@ -55,11 +63,8 @@ sobre el último mes, las fuentes oficiales que responden (EIA, BCE y política 
 la Fed) producen una nota relevante cada dos o tres días. El piso confiable del canal vacío
 sigue siendo el suplemento de estado más concepto.
 
-**Y si dice que el gate de agotamiento está DESACTIVADO, la tanda no está verificada.** Ese
-gate excluye lo que ya consumió su recorrido del día y solo se apaga con `--forzar`.
-`--grupo` acota el universo y **nada más**: hasta el 2026-09-03 también lo apagaba en
-silencio, y el canal de forex salió con tres piezas al 93 %, 290 % y 115 % de su rango
-diario. Un canal en cero es una respuesta legítima, sobre todo a media jornada.
+**`--forzar` ya no existe.** Salió con los gates de agotamiento y de banda (spec del enchufe,
+§8.3): la estrategia no mide recorrido diario. `--grupo` acota el universo y nada más.
 
 **Si la preparación aborta con `DatosMacroNoDisponiblesError`, es a propósito.** Significa que
 falta la serie oficial que alimenta el contexto macro de ese grupo (Imacec o TPM del BCCh, o una
@@ -87,23 +92,26 @@ Cada payload `.json` dentro de su subcarpeta tiene `titular` y `parrafo` marcado
 
 - **`titular`**: qué está pasando con ese activo y hacia dónde va. Toma postura direccional:
   un titular que no dice la dirección está incompleto (regla de oro del proyecto).
-- **`parrafo`**: 2 o 3 frases. Traduce a voz novata lo que dice el factor técnico del score
-  (está en `_procedencia.factores`), y si el factor Espacio salió bajo, **dilo**: que el
-  recorrido diario esté casi agotado es información que el cliente necesita, no un defecto
-  que se esconde.
+- **`parrafo`**: 2 o 3 frases. Traduce a voz novata la `lectura` del payload: su `estado`
+  (tendencia, rebote, prueba, ruptura o rango), la línea que se vigila y la que invalida. Si
+  el estado es `PRUEBA`, el párrafo habla en condicional hasta el cierre de la vela, nunca
+  como ruptura hecha. El párrafo **no puede contradecir** los escenarios ni la salida de la
+  lectura, que el mensaje ya trae escritos y no se reescriben.
 
 Reglas de redacción que aplican íntegras: cero guiones largos ni medios, tono profesional
 con gancho pero sin dramatizar, decimales según `digits` (ya vienen formateados en el
 payload, no los toques), y toda sigla explicada en voz novata.
 
-**No inventes cifras.** Precio, soporte, resistencia e impulso ya están en el payload y
-salieron del motor. Si necesitas un dato que no está, pídelo al MCP; nunca lo deduzcas.
+**No inventes cifras.** Precio, niveles, volatilidad típica y el valor de cada línea ya están
+en el payload y salieron de la estrategia. Si necesitas un dato que no está, pídelo al MCP;
+nunca lo deduzcas. Una línea diagonal cambia de precio con cada vela: cita el valor que trae
+el payload, que el despacho vuelve a calcular antes de enviar.
 
-**Mira el campo `sesgo` del payload, que es el chip de la pieza.** Es la lectura técnica
-(precio contra la EMA 50 de H1), la misma que usó el escáner para elegir el activo: el
-titular y el párrafo van en esa dirección. Solo los recaps salen `Lateral`, y ahí el texto
-habla de balance y rango, no de tendencia. No invoques régimen macro ni "sesgo del
-Playbook": el Playbook V2 se retiró el 2026-09-27.
+**Mira el campo `sesgo` del payload, que es el chip de la pieza.** Sale de la dirección de la
+`lectura` de la estrategia activa, la misma que usó el escáner para elegir el activo: el
+titular y el párrafo van en esa dirección. Si el sesgo es `Lateral` (rango), el texto habla
+del rango y de sus bordes, no de tendencia. No uses la EMA 50 ni ningún indicador por tu
+cuenta para afirmar dirección: la lectura técnica tiene un solo dueño.
 
 ## PASO 3 — Rendir las piezas y generar mensajes modulares
 
@@ -131,7 +139,7 @@ Esto ejecuta el renderizado automático y produce:
 2️⃣ *[Activo]* → [titular o dirección]
 3️⃣ *[Activo]* → [titular o dirección]
 ━━━━━━━━━━━━━━━━━━━
-⏱️ Temporalidad: intradía (dentro de la jornada)
+⏱️ Temporalidad: 4H · marco swing (de una a dos semanas)
 ━━━━━━━━━━━━━━━━━━━
 Cada imagen y mensaje detallado han sido modularizados en su canal correspondiente.
 ```
@@ -174,10 +182,11 @@ unidad. Una tanda tarda más que antes; el mensaje llega entero.
 **Y cada canal se rinde justo antes de despacharse, no al principio de la tanda.** Antes
 se rendía todo primero y la última pieza llegaba con el precio de hacía veinte minutos;
 ahora el refresco cabe entero dentro de la espera de cadencia, así que no cuesta tiempo
-y el precio llega fresco. Si el movimiento **invalidó el texto** —el precio cruzó un
-soporte o una resistencia que el párrafo daba por vigentes, o la lectura técnica dio
-vuelta y el texto quedó escrito para la dirección contraria— esa pieza **no sale**: se renombra a `.divergente` y el despacho
-lo informa.
+y el precio llega fresco. El refresco vuelve a pedir la lectura de la estrategia contra la
+referencia de la semana, y si el movimiento **invalidó el texto** (cambió la dirección o el
+estado, el precio cruzó la línea que se vigilaba o la que invalida, o la vela que estaba en
+prueba ya cerró) esa pieza **no sale**: se renombra a `.divergente` y el despacho lo
+informa. Una pieza preparada antes del enchufe, sin `lectura` en el payload, tampoco sale.
 
 Si el despacho se corta a la mitad, se retoma sin duplicar lo ya enviado:
 

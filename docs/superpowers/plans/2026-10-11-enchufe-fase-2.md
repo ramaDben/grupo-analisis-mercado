@@ -1469,6 +1469,15 @@ git commit -m "feat(enchufe): el despacho vuelve a pedir la Lectura y frena con 
 
 ### Task S4-6: Suplementos, contrato de motivos, comando y documentación
 
+> **Ajuste al ejecutar (2026-10-11):** las categorías `recorrido_agotado`, `banda_estrecha` y
+> `sin_niveles_medidos` **no** se borran en S4. Las emiten `gate_agotamiento` y `gate_banda`,
+> que siguen vivos para Avisos y el analista, y el contrato
+> `test_todo_gate_del_escaner_tiene_categoria_o_esta_declarado_no_publicable` lee esos gates del
+> código. Se borran junto con los gates en S6/S7. En S4 entran solo los motivos de la estrategia
+> (`sin líneas trazables`, `va contra la secuencia`, `está en prueba`, `no se pudo leer`) como
+> no publicables, con `concepto: None`. El techo de `CLAUDE.md` en `tests/test_agy_reglas.py`
+> sube de 93.200 a 93.400 bytes por la nota de la sección del `Score_GI`.
+
 **Files:**
 - Modify: `scripts/suplemento_canal.py`, `tests/test_suplemento_canal.py`, `tests/test_guardrails_contrato.py` (si fija los motivos de los gates)
 - Modify: `.claude/commands/carrusel.md`, `CLAUDE.md`, `.agents/rules/proyecto.md` (regenerado)

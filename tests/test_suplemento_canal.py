@@ -236,6 +236,21 @@ def test_todo_gate_del_escaner_tiene_categoria_o_esta_declarado_no_publicable():
     )
 
 
+def test_todo_motivo_de_la_estrategia_tiene_categoria_y_no_se_publica():
+    """Desde el enchufe (fase 2) el escáner también excluye por motivos de la estrategia.
+
+    No se publican como suplemento: son motivos técnicos, no una lectura para el
+    cliente, y la cobertura fija ya garantiza una pieza por canal cubierto.
+    """
+    sys.path.insert(0, str(RAIZ / "scripts"))
+    from estrategia.tori import puntaje
+
+    for motivo in (puntaje.SIN_ESTRUCTURA, puntaje.CONTRA_SECUENCIA, puntaje.PRUEBA_SEMANAL,
+                   "no se pudo leer: MT5 no entregó velas"):
+        cat = sup.categoria_del_motivo(motivo)
+        assert cat is not None and cat["publicable"] is False, motivo
+
+
 def test_todo_concepto_referido_existe_en_el_mapa_de_conceptos():
     """El defecto recurrente: dos modulos que se hablan por nombre. Un concepto
     mal escrito deja el suplemento sin su parte educativa, en silencio."""
