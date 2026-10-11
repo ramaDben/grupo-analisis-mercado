@@ -12,7 +12,7 @@ for p in (str(RAIZ / "src"), str(RAIZ / "scripts")):
         sys.path.insert(0, p)
 
 import velas_sinteticas as vs  # noqa: E402
-from estrategia.tori.lineas import trazar  # noqa: E402
+from estrategia.tori.lineas import seguimiento, trazar  # noqa: E402
 from estrategia.tori.parametros import PARAMETROS as P  # noqa: E402
 from estrategia.tori.pivotes import serie_de  # noqa: E402
 
@@ -20,6 +20,8 @@ from estrategia.tori.pivotes import serie_de  # noqa: E402
 ALCISTA = [100, 112, 106, 118, 112, 124, 119]
 # Espejo: máximos 124, 118 y 112 alineados, y un tramo final que rompe hacia arriba.
 BAJISTA_ROTA = [124, 112, 118, 106, 112, 100]
+# Mínimos 100-104-108 alineados, después 116-124 más empinados.
+ACELERA = [100, 112, 104, 116, 108, 128, 116, 136, 124]
 
 
 def _respeta(s, t, tol):
@@ -72,3 +74,18 @@ def test_una_linea_plana_no_es_diagonal():
     s = serie_de(vs.desde_vertices([100, 110, 100, 110, 100, 110], 10))
     assert trazar(s, "alcista", P) is None
     assert trazar(s, "bajista", P) is None
+
+
+def test_el_abanico_arranca_en_el_ultimo_toque_y_es_mas_empinado():
+    s = serie_de(vs.desde_vertices(ACELERA, 12))
+    principal = trazar(s, "alcista", P)
+    assert principal is not None
+    seg = seguimiento(s, principal, P)
+    assert seg is not None
+    assert seg.i_a == principal.toques[-1]  # encadenar: el último toque es el nuevo Punto A
+    assert seg.pendiente > principal.pendiente and seg.vigente
+
+
+def test_sin_aceleracion_no_hay_linea_de_seguimiento():
+    s = serie_de(vs.desde_vertices(ALCISTA, 12))
+    assert seguimiento(s, trazar(s, "alcista", P), P) is None

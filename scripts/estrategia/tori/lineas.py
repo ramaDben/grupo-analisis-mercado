@@ -99,5 +99,14 @@ def _recorrer(s: Serie, sentido: Sentido, a: int, b: int, p: Parametros) -> Traz
 
 
 def seguimiento(s: Serie, principal: Trazo, p: Parametros) -> Trazo | None:
-    """Abanico y encadenamiento: lo implementa la Task S2-4."""
-    return None
+    """Abanico y encadenamiento (doctrina §2.3, reglas 9 y 10).
+
+    Desde el último toque de la principal se busca una línea más empinada. Si ya
+    está rota, no se devuelve: la secundaria rota se borra (V13).
+    """
+    if not principal.vigente:
+        return None
+    t = trazar(s, principal.sentido, p, ancla=principal.toques[-1])
+    if t is None or not t.vigente or abs(t.pendiente) <= abs(principal.pendiente):
+        return None
+    return t
