@@ -3,6 +3,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 RAIZ = Path(__file__).resolve().parent.parent
 for p in (str(RAIZ / "src"), str(RAIZ / "scripts")):
     if p not in sys.path:
@@ -21,6 +23,7 @@ def test_zigzag_marca_los_giros_mayores_en_orden():
 
 
 def test_el_grafico_usa_el_mismo_zigzag():
+    pytest.importorskip("PIL")  # extra `stories`: el CI corre sin él
     import tradingview_grafico
 
     assert tradingview_grafico._zigzag is zigzag
