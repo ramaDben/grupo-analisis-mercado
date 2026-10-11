@@ -231,41 +231,8 @@ def calcular_indicadores(df_velas: list[dict[str, Any]]) -> list[dict[str, Any]]
     return resultado
 
 
-def _zigzag(rows: list[dict[str, Any]], umbral: float) -> list[tuple[int, float, str]]:
-    """Pivotes mayores: un giro cuenta cuando el precio retrocede `umbral` desde el extremo.
-
-    Devuelve `(indice, precio, 'H'|'L')` en orden temporal. Es el mismo criterio que
-    usa quien traza a mano: un máximo es máximo cuando el precio ya se alejó de él.
-    """
-    if not rows or umbral <= 0:
-        return []
-    pivotes: list[tuple[int, float, str]] = []
-    dir_ = 0
-    ext_i, ext_h, ext_l = 0, rows[0]["high"], rows[0]["low"]
-    ext_hi_i, ext_lo_i = 0, 0
-    for i, r in enumerate(rows):
-        if dir_ >= 0:
-            if r["high"] >= ext_h:
-                ext_h, ext_hi_i = r["high"], i
-            if dir_ == 1 and ext_h - r["low"] >= umbral:
-                pivotes.append((ext_hi_i, ext_h, "H"))
-                dir_, ext_l, ext_lo_i = -1, r["low"], i
-                continue
-        if dir_ <= 0:
-            if r["low"] <= ext_l:
-                ext_l, ext_lo_i = r["low"], i
-            if dir_ == -1 and r["high"] - ext_l >= umbral:
-                pivotes.append((ext_lo_i, ext_l, "L"))
-                dir_, ext_h, ext_hi_i = 1, r["high"], i
-                continue
-        if dir_ == 0:
-            if ext_h - r["low"] >= umbral and ext_hi_i < i:
-                pivotes.append((ext_hi_i, ext_h, "H"))
-                dir_, ext_l, ext_lo_i = -1, r["low"], i
-            elif r["high"] - ext_l >= umbral and ext_lo_i < i:
-                pivotes.append((ext_lo_i, ext_l, "L"))
-                dir_, ext_h, ext_hi_i = 1, r["high"], i
-    return pivotes
+# El zigzag se mudó a la estrategia (enchufe S2): los pivotes son parte de Tori.
+from estrategia.tori.pivotes import zigzag as _zigzag  # noqa: E402
 
 
 def _canal(rows: list[dict[str, Any]], i0: int, i1: int, direccion: int,
