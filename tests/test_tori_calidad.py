@@ -20,7 +20,7 @@ ALCISTA = [100, 112, 106, 118, 112, 124, 119]
 
 
 def test_tres_toques_en_mas_de_una_semana_es_a_mas():
-    s = serie_de(vs.desde_vertices(ALCISTA, 12))  # 4H: unas 47 velas entre toques; la semana son 30
+    s = serie_de(vs.desde_vertices([130, *ALCISTA], 12))  # 4H: unas 47 velas entre toques; la semana son 30
     t = trazar(s, "alcista", P)
     assert t is not None
     c = calificar(t, s, P)
@@ -38,7 +38,7 @@ def test_tres_toques_en_menos_de_una_semana_es_b():
 def test_dos_toques_es_b():
     # 18 velas por tramo: 2 toques, mas de una semana y Punto B lejos del final,
     # asi que la unica causa posible de B es el segundo toque que falta.
-    s = serie_de(vs.desde_vertices([100, 112, 106, 124, 120], 18))
+    s = serie_de(vs.desde_vertices([130, 100, 112, 106, 124, 120], 18))
     t = trazar(s, "alcista", P)
     assert t is not None
     c = calificar(t, s, P)

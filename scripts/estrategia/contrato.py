@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from typing import Any, Literal, Protocol
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 
@@ -21,11 +22,19 @@ Horizonte = Literal["sesion", "semana"]
 FLECHAS = ("⬆️", "↔️", "⬇️")
 CALIDADES = ("A+", "B", "")
 COLUMNAS_VELAS = ("time", "open", "high", "low", "close")
+SCL = ZoneInfo("America/Santiago")
 
 
-def _exigir_zona(momento: datetime, campo: str) -> None:
+def _en_santiago(objeto: Any, campo: str) -> None:
+    """Exige zona horaria y deja el mismo instante en America/Santiago.
+
+    `isoformat` guarda el offset y no la zona: sin esto, una hora leída de JSON queda con
+    un offset fijo (UTC-03:00) y deja de seguir el horario de verano.
+    """
+    momento: datetime = getattr(objeto, campo)
     if momento.tzinfo is None:
         raise ValueError(f"`{campo}` tiene que venir con zona horaria (America/Santiago)")
+    object.__setattr__(objeto, campo, momento.astimezone(SCL))
 
 
 @dataclass(frozen=True)
@@ -105,7 +114,7 @@ class VelaEnCurso:
     cierre: datetime  # cuándo cierra, en America/Santiago
 
     def __post_init__(self) -> None:
-        _exigir_zona(self.cierre, "cierre")
+        _en_santiago(self, "cierre")
 
 
 @dataclass(frozen=True)
@@ -115,7 +124,7 @@ class Prueba:
     cierre_vela: datetime  # cuándo cierra la vela del marco operativo (America/Santiago)
 
     def __post_init__(self) -> None:
-        _exigir_zona(self.cierre_vela, "cierre_vela")
+        _en_santiago(self, "cierre_vela")
 
 
 @dataclass(frozen=True)

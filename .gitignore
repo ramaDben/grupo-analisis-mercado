@@ -15,6 +15,7 @@ venv/
 
 # Datos generados (grandes binarios o efímeros)
 data/charts/*.png
+data/charts/tori/
 data/mensajes/
 # Salida del escaner de tandas: un JSON por corrida, con el ranking y el motivo
 # de cada exclusion. Es evidencia de una jornada, no fuente: se regenera corriendo

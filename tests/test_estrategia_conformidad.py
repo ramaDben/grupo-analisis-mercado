@@ -1,24 +1,37 @@
 """Toda estrategia registrable pasa la batería de conformidad (spec §4)."""
 from __future__ import annotations
 
+import sys
 from dataclasses import replace
+from pathlib import Path
 
+import numpy as np
 import pytest
 
-import estrategia_conformidad as conf
-import estrategia_juguete
+RAIZ = Path(__file__).resolve().parent.parent
+for p in (str(RAIZ / "src"), str(RAIZ / "scripts")):
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
-FABRICAS = {"juguete": estrategia_juguete.crear}
-CON_SEGUIR = {"juguete"}  # S3-6 agrega "tori" cuando Tori implementa seguir()
+import estrategia_conformidad as conf  # noqa: E402
+import estrategia_juguete  # noqa: E402
+
+from estrategia import tori  # noqa: E402
+
+FABRICAS = {"juguete": estrategia_juguete.crear, "tori": tori.crear}
+CON_SEGUIR = {"juguete", "tori"}
 
 VERIFICACIONES = (
     conf.verificar_sin_futuro, conf.verificar_escenarios,
     conf.verificar_prueba_solo_con_vela_en_curso, conf.verificar_procedencia,
     conf.verificar_marco_y_puntaje, conf.verificar_divergencia_propia,
+    conf.verificar_vela_cerrada, conf.verificar_json_plano,
+    conf.verificar_divergencia_prueba_cerrada,
 )
 VERIFICACIONES_SEGUIR = (
     conf.verificar_seguir_misma_lectura, conf.verificar_seguir_sin_futuro,
-    conf.verificar_seguir_anclas_fijas,
+    conf.verificar_seguir_anclas_fijas, conf.verificar_seguir_ruptura_y_prueba,
+    conf.verificar_seguir_ruptura_falsa,
 )
 
 
@@ -92,6 +105,45 @@ class DivergenciaNunca(estrategia_juguete.Juguete):
         return None
 
 
+class VelaCero(estrategia_juguete.Juguete):
+    def leer(self, ticker, velas, digits, en_curso=None):
+        return replace(super().leer(ticker, velas, digits, en_curso), vela=0)
+
+
+class VelaNumpy(estrategia_juguete.Juguete):
+    def leer(self, ticker, velas, digits, en_curso=None):
+        lectura = super().leer(ticker, velas, digits, en_curso)
+        return replace(lectura, vela=np.int64(lectura.vela))
+
+
+class DivergenciaSoloDireccion(estrategia_juguete.Juguete):
+    def divergencia(self, preparada, actual):
+        return None if preparada.direccion == actual.direccion else "cambió la dirección"
+
+
+class SeguirSinRuptura(estrategia_juguete.Juguete):
+    def seguir(self, referencia, velas, digits, en_curso=None):
+        hoy = super().seguir(referencia, velas, digits, en_curso)
+        return replace(hoy, estado=referencia.estado) if hoy.estado == "RUPTURA" else hoy
+
+
+class SeguirSinPrueba(estrategia_juguete.Juguete):
+    def seguir(self, referencia, velas, digits, en_curso=None):
+        return super().seguir(referencia, velas, digits, None)
+
+
+class SeguirRupturaSinVuelta(estrategia_juguete.Juguete):
+    """Cuenta como ruptura cualquier cierre afuera, aunque el precio haya vuelto."""
+
+    def seguir(self, referencia, velas, digits, en_curso=None):
+        hoy = super().seguir(referencia, velas, digits, en_curso)
+        techo, piso = referencia.lineas
+        despues = velas["H4"][velas["H4"]["time"] > referencia.vela]["close"]
+        if ((despues > techo.valor_actual) | (despues < piso.valor_actual)).any():
+            return replace(hoy, estado="RUPTURA", en_prueba=None)
+        return hoy
+
+
 class ProcedenciaNoVerificada(estrategia_juguete.Juguete):
     procedencia = replace(
         estrategia_juguete.Juguete.procedencia,
@@ -108,6 +160,12 @@ MUTANTES = (
     (PuntuarSinPuntaje, conf.verificar_marco_y_puntaje),
     (DivergenciaNunca, conf.verificar_divergencia_propia),
     (ProcedenciaNoVerificada, conf.verificar_procedencia),
+    (VelaCero, conf.verificar_vela_cerrada),
+    (VelaNumpy, conf.verificar_json_plano),
+    (DivergenciaSoloDireccion, conf.verificar_divergencia_prueba_cerrada),
+    (SeguirSinRuptura, conf.verificar_seguir_ruptura_y_prueba),
+    (SeguirSinPrueba, conf.verificar_seguir_ruptura_y_prueba),
+    (SeguirRupturaSinVuelta, conf.verificar_seguir_ruptura_falsa),
 )
 
 
