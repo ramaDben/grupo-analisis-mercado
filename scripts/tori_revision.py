@@ -1,0 +1,116 @@
+"""Corre Tori sobre activos reales y deja un PNG por activo para el gate del director.
+
+    uv run --extra informe --with MetaTrader5 python scripts/tori_revision.py
+    uv run --extra informe --with MetaTrader5 python scripts/tori_revision.py --tickers XAUUSD USDCLP
+
+Salida: data/charts/tori/<YYYY-MM-DD_HH-MM>/<slug>.png, más resumen.json con la
+lectura, las métricas y el puntaje de cada activo en los dos horizontes. Es la
+medición del universo real con que el director decide los umbrales (spec §5).
+No envía nada ni lo consume ningún pipeline.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from datetime import datetime
+from pathlib import Path
+from zoneinfo import ZoneInfo
+
+RAIZ = Path(__file__).resolve().parent.parent
+for p in (str(RAIZ / "src"), str(RAIZ / "scripts")):
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+from estrategia import registro  # noqa: E402
+from estrategia.fuente import velas_mt5  # noqa: E402
+
+COLOR = {"accion": "#d62728", "seguridad": "#2ca02c", "seguimiento": "#98df8a",
+         "contexto": "#9467bd", "objetivo": "#ff7f0e", "rango": "#7f7f7f"}
+PROYECCION = 14  # la semirrecta, proyectada a la derecha (doctrina 2.1)
+
+
+def _slug(ticker: str) -> str:
+    return ticker.lower().replace(".spot", "").replace("#", "").replace("/", "")
+
+
+def _panel(ax, df, lineas, titulo):
+    indice = {int(t): i for i, t in enumerate(df["time"])}
+    for i, fila in enumerate(df.itertuples()):
+        color = "#2ca02c" if fila.close >= fila.open else "#d62728"
+        ax.vlines(i, fila.low, fila.high, color=color, linewidth=0.6)
+        ax.vlines(i, min(fila.open, fila.close), max(fila.open, fila.close), color=color, linewidth=2.5)
+    fin = len(df) - 1 + PROYECCION
+    for x in lineas:
+        estilo = "--" if x.rol in ("contexto", "objetivo", "rango") else "-"
+        if x.tipo == "diagonal":
+            (t1, p1), (t2, p2) = x.puntos
+            if t1 not in indice or t2 not in indice:
+                continue
+            i1, i2 = indice[t1], indice[t2]
+            pend = (p2 - p1) / (i2 - i1)
+            ax.plot([i1, fin], [p1, p1 + pend * (fin - i1)], estilo, color=COLOR[x.rol], linewidth=1.4,
+                    label=f"{x.rol} {x.calidad} ({x.toques} toques)")
+        else:
+            ax.hlines(x.puntos[0][1], 0, fin, linestyles="dashed", colors=COLOR[x.rol], linewidth=1.0,
+                      label=f"{x.rol} {x.valor_actual}")
+    ax.set_title(titulo)
+    ax.set_xlim(0, fin)
+    ax.legend(loc="upper left", fontsize=7)
+
+
+def dibujar(destino: Path, lectura, velas, marcos) -> None:
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    op = marcos.operativo
+    fig, (ax_op, ax_d1) = plt.subplots(2, 1, figsize=(16, 11), gridspec_kw={"height_ratios": (3, 2)})
+    _panel(ax_op, velas[op], [x for x in lectura.lineas if x.marco == op],
+           f"{lectura.ticker} {op} · {lectura.estado} · {lectura.direccion} · vigilar {lectura.vigilar.precio}")
+    _panel(ax_d1, velas["D1"].tail(120).reset_index(drop=True),
+           [x for x in lectura.lineas if x.marco == "D1"], f"{lectura.ticker} D1 · contexto")
+    fig.tight_layout()
+    fig.savefig(destino, dpi=110)
+    plt.close(fig)
+
+
+def main(argv: list[str] | None = None) -> int:
+    from market_data_mcp.catalog import VALID_TICKERS
+    from pipeline_informe import ACTIVOS_INFORME
+
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--tickers", nargs="*", default=list(ACTIVOS_INFORME))
+    args = ap.parse_args(argv)
+
+    estrategia = registro.activa()
+    sello = datetime.now(ZoneInfo("America/Santiago")).strftime("%Y-%m-%d_%H-%M")
+    carpeta = RAIZ / "data" / "charts" / "tori" / sello
+    carpeta.mkdir(parents=True, exist_ok=True)
+    resumen = []
+    for ticker in args.tickers:
+        velas, en_curso = velas_mt5(ticker, estrategia.marcos)
+        lectura = estrategia.leer(ticker, velas, VALID_TICKERS.get(ticker, 2), en_curso)
+        sesion, semana = estrategia.puntuar(lectura, "sesion"), estrategia.puntuar(lectura, "semana")
+        dibujar(carpeta / f"{_slug(ticker)}.png", lectura, velas, estrategia.marcos)
+        resumen.append({
+            "ticker": ticker, "estado": lectura.estado, "direccion": lectura.direccion,
+            "precio": lectura.precio, "vigilar": lectura.vigilar.precio,
+            "invalidacion": lectura.invalidacion.precio if lectura.invalidacion else None,
+            "objetivo": lectura.objetivo.precio if lectura.objetivo else None,
+            "metricas": lectura.metricas, "avisos": list(lectura.avisos),
+            "sesion": {"puntos": sesion.puntos, "excluido": sesion.excluido, "desglose": sesion.desglose},
+            "semana": {"puntos": semana.puntos, "excluido": semana.excluido, "desglose": semana.desglose},
+            "escenarios": [f"{e.flecha} {e.texto}" for e in lectura.escenarios],
+        })
+        print(f"{ticker:12} {lectura.estado:9} {lectura.direccion:8} "
+              f"sesion={sesion.puntos:5.1f} semana={semana.puntos:5.1f} "
+              f"dist_seg={lectura.metricas.get('dist_seguridad_atr_d1', float('nan')):.2f}")
+    (carpeta / "resumen.json").write_text(json.dumps(resumen, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"PNG y resumen en {carpeta}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
