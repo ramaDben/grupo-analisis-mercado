@@ -34,7 +34,7 @@ def _slug(ticker: str) -> str:
     return ticker.lower().replace(".spot", "").replace("#", "").replace("/", "")
 
 
-def _panel(ax, df, lineas, titulo):
+def _panel(ax, df, lineas, titulo, ticker=""):
     indice = {int(t): i for i, t in enumerate(df["time"])}
     for i, fila in enumerate(df.itertuples()):
         color = "#2ca02c" if fila.close >= fila.open else "#d62728"
@@ -46,6 +46,7 @@ def _panel(ax, df, lineas, titulo):
         if x.tipo == "diagonal":
             (t1, p1), (t2, p2) = x.puntos
             if t1 not in indice or t2 not in indice:
+                print(f"{ticker} {x.marco}: ancla fuera de ventana, diagonal {x.rol} no se dibuja")
                 continue
             i1, i2 = indice[t1], indice[t2]
             pend = (p2 - p1) / (i2 - i1)
@@ -56,7 +57,11 @@ def _panel(ax, df, lineas, titulo):
                       label=f"{x.rol} {x.valor_actual}")
     ax.set_title(titulo)
     ax.set_xlim(0, fin)
-    ax.legend(loc="upper left", fontsize=7)
+    minimo, maximo = float(df["low"].min()), float(df["high"].max())
+    margen = (maximo - minimo) * 0.08 or abs(maximo) * 0.01
+    ax.set_ylim(minimo - margen, maximo + margen)  # la proyeccion no aplasta las velas
+    if ax.get_legend_handles_labels()[0]:
+        ax.legend(loc="upper left", fontsize=7)
 
 
 def dibujar(destino: Path, lectura, velas, marcos) -> None:
@@ -68,9 +73,9 @@ def dibujar(destino: Path, lectura, velas, marcos) -> None:
     op = marcos.operativo
     fig, (ax_op, ax_d1) = plt.subplots(2, 1, figsize=(16, 11), gridspec_kw={"height_ratios": (3, 2)})
     _panel(ax_op, velas[op], [x for x in lectura.lineas if x.marco == op],
-           f"{lectura.ticker} {op} · {lectura.estado} · {lectura.direccion} · vigilar {lectura.vigilar.precio}")
+           f"{lectura.ticker} {op} · {lectura.estado} · {lectura.direccion} · vigilar {lectura.vigilar.precio}", lectura.ticker)
     _panel(ax_d1, velas["D1"].tail(120).reset_index(drop=True),
-           [x for x in lectura.lineas if x.marco == "D1"], f"{lectura.ticker} D1 · contexto")
+           [x for x in lectura.lineas if x.marco == "D1"], f"{lectura.ticker} D1 · contexto", lectura.ticker)
     fig.tight_layout()
     fig.savefig(destino, dpi=110)
     plt.close(fig)
@@ -85,30 +90,42 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     estrategia = registro.activa()
-    sello = datetime.now(ZoneInfo("America/Santiago")).strftime("%Y-%m-%d_%H-%M")
+    sello = datetime.now(ZoneInfo("America/Santiago")).strftime("%Y-%m-%d_%H-%M-%S")
     carpeta = RAIZ / "data" / "charts" / "tori" / sello
-    carpeta.mkdir(parents=True, exist_ok=True)
-    resumen = []
+    carpeta.mkdir(parents=True)  # sin exist_ok: una corrida nunca pisa a otra
+    resumen: list[dict] = []
+    fallas = 0
     for ticker in args.tickers:
-        velas, en_curso = velas_mt5(ticker, estrategia.marcos)
-        lectura = estrategia.leer(ticker, velas, VALID_TICKERS.get(ticker, 2), en_curso)
-        sesion, semana = estrategia.puntuar(lectura, "sesion"), estrategia.puntuar(lectura, "semana")
-        dibujar(carpeta / f"{_slug(ticker)}.png", lectura, velas, estrategia.marcos)
-        resumen.append({
-            "ticker": ticker, "estado": lectura.estado, "direccion": lectura.direccion,
-            "precio": lectura.precio, "vigilar": lectura.vigilar.precio,
-            "invalidacion": lectura.invalidacion.precio if lectura.invalidacion else None,
-            "objetivo": lectura.objetivo.precio if lectura.objetivo else None,
-            "metricas": lectura.metricas, "avisos": list(lectura.avisos),
-            "sesion": {"puntos": sesion.puntos, "excluido": sesion.excluido, "desglose": sesion.desglose},
-            "semana": {"puntos": semana.puntos, "excluido": semana.excluido, "desglose": semana.desglose},
-            "escenarios": [f"{e.flecha} {e.texto}" for e in lectura.escenarios],
-        })
-        print(f"{ticker:12} {lectura.estado:9} {lectura.direccion:8} "
-              f"sesion={sesion.puntos:5.1f} semana={semana.puntos:5.1f} "
-              f"dist_seg={lectura.metricas.get('dist_seguridad_atr_d1', float('nan')):.2f}")
-    (carpeta / "resumen.json").write_text(json.dumps(resumen, ensure_ascii=False, indent=2), encoding="utf-8")
+        try:
+            if ticker not in VALID_TICKERS:
+                raise KeyError(f"{ticker} no esta en el catalogo: no se adivinan los decimales")
+            velas, en_curso = velas_mt5(ticker, estrategia.marcos)
+            lectura = estrategia.leer(ticker, velas, VALID_TICKERS[ticker], en_curso)
+            sesion, semana = estrategia.puntuar(lectura, "sesion"), estrategia.puntuar(lectura, "semana")
+            dibujar(carpeta / f"{_slug(ticker)}.png", lectura, velas, estrategia.marcos)
+            resumen.append({
+                "ticker": ticker, "estado": lectura.estado, "direccion": lectura.direccion,
+                "precio": lectura.precio, "vigilar": lectura.vigilar.precio,
+                "invalidacion": lectura.invalidacion.precio if lectura.invalidacion else None,
+                "objetivo": lectura.objetivo.precio if lectura.objetivo else None,
+                "metricas": lectura.metricas, "avisos": list(lectura.avisos),
+                "sesion": {"puntos": sesion.puntos, "excluido": sesion.excluido, "desglose": sesion.desglose},
+                "semana": {"puntos": semana.puntos, "excluido": semana.excluido, "desglose": semana.desglose},
+                "escenarios": [f"{e.flecha} {e.texto}" for e in lectura.escenarios],
+            })
+            print(f"{ticker:12} {lectura.estado:9} {lectura.direccion:8} "
+                  f"sesion={sesion.puntos:5.1f} semana={semana.puntos:5.1f} "
+                  f"dist_seg={lectura.metricas.get('dist_seguridad_atr_d1', float('nan')):.2f}")
+        except Exception as exc:  # una falla no inventa velas ni detiene al resto
+            fallas += 1
+            resumen.append({"ticker": ticker, "error": f"{type(exc).__name__}: {exc}"})
+            print(f"{ticker:12} ERROR {type(exc).__name__}: {exc}")
+        (carpeta / "resumen.json").write_text(json.dumps(resumen, ensure_ascii=False, indent=2),
+                                              encoding="utf-8")
     print(f"PNG y resumen en {carpeta}")
+    if fallas:
+        print(f"{fallas} activo(s) fallaron")
+        return 1
     return 0
 
 

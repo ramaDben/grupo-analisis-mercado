@@ -40,3 +40,20 @@ def test_la_hora_de_cierre_respeta_el_cambio_de_horario_de_chile():
     despues = cierre_santiago(_ts(2026, 9, 7, 12, 0), "H4", 3 * 3600)  # Chile en UTC-3
     assert antes.strftime("%H:%M") == "09:00"
     assert despues.strftime("%H:%M") == "10:00"
+
+
+def test_la_revision_registra_la_falla_de_un_activo_y_sigue(tmp_path, monkeypatch, capsys):
+    import json
+
+    import tori_revision
+
+    def sin_datos(ticker, marcos, extra=0):
+        raise RuntimeError("MT5 sin datos")
+
+    monkeypatch.setattr(tori_revision, "RAIZ", tmp_path)
+    monkeypatch.setattr(tori_revision, "velas_mt5", sin_datos)
+    code = tori_revision.main(["--tickers", "USDCLP", "NO_EXISTE"])
+    assert code == 1
+    resumen = json.loads(next(tmp_path.rglob("resumen.json")).read_text(encoding="utf-8"))
+    assert [r["ticker"] for r in resumen] == ["USDCLP", "NO_EXISTE"]
+    assert "MT5 sin datos" in resumen[0]["error"] and "catalogo" in resumen[1]["error"]
