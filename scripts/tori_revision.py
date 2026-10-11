@@ -34,7 +34,9 @@ def _slug(ticker: str) -> str:
     return ticker.lower().replace(".spot", "").replace("#", "").replace("/", "")
 
 
-def _panel(ax, df, lineas, titulo, ticker=""):
+def _panel(ax, df, lineas, titulo, ticker="") -> list[dict]:
+    """Dibuja velas y líneas; devuelve las líneas que no se pudieron dibujar y por qué."""
+    no_dibujadas: list[dict] = []
     indice = {int(t): i for i, t in enumerate(df["time"])}
     for i, fila in enumerate(df.itertuples()):
         color = "#2ca02c" if fila.close >= fila.open else "#d62728"
@@ -46,7 +48,9 @@ def _panel(ax, df, lineas, titulo, ticker=""):
         if x.tipo == "diagonal":
             (t1, p1), (t2, p2) = x.puntos
             if t1 not in indice or t2 not in indice:
-                print(f"{ticker} {x.marco}: ancla fuera de ventana, diagonal {x.rol} no se dibuja")
+                motivo = "ancla fuera de la ventana de velas dibujada"
+                print(f"{ticker} {x.marco}: {motivo}, diagonal {x.rol} no se dibuja")
+                no_dibujadas.append({"marco": x.marco, "rol": x.rol, "motivo": motivo})
                 continue
             i1, i2 = indice[t1], indice[t2]
             pend = (p2 - p1) / (i2 - i1)
@@ -62,23 +66,41 @@ def _panel(ax, df, lineas, titulo, ticker=""):
     ax.set_ylim(minimo - margen, maximo + margen)  # la proyeccion no aplasta las velas
     if ax.get_legend_handles_labels()[0]:
         ax.legend(loc="upper left", fontsize=7)
+    return no_dibujadas
 
 
-def dibujar(destino: Path, lectura, velas, marcos) -> None:
+def dibujar(destino: Path, lectura, velas, marcos) -> list[dict]:
+    """Un panel por marco: el operativo y los de contexto del menor al mayor (D1, W1).
+
+    Cada panel muestra todas las velas que recibió la lectura de ese marco, así las anclas
+    viejas de una diagonal de contexto quedan dentro. Devuelve las líneas que no se pudieron
+    dibujar, para el resumen.
+    """
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
     op = marcos.operativo
-    fig, (ax_op, ax_d1) = plt.subplots(2, 1, figsize=(16, 11), gridspec_kw={"height_ratios": (3, 2)})
-    _panel(ax_op, velas[op], [x for x in lectura.lineas if x.marco == op],
-           f"{lectura.ticker} {op} · {lectura.estado} · {lectura.direccion} · vigilar {lectura.vigilar.precio}", lectura.ticker)
-    _panel(ax_d1, velas["D1"].tail(120).reset_index(drop=True),
-           [x for x in lectura.lineas if x.marco == "D1"], f"{lectura.ticker} D1 · contexto", lectura.ticker)
+    orden = (op, *reversed(marcos.contexto))
+    fig, ejes = plt.subplots(len(orden), 1, figsize=(16, 5.5 * len(orden)),
+                             gridspec_kw={"height_ratios": (3, *([2] * (len(orden) - 1)))})
+    ejes = ejes if len(orden) > 1 else [ejes]
+    no_dibujadas: list[dict] = []
+    for ax, marco in zip(ejes, orden):
+        titulo = (f"{lectura.ticker} {op} · {lectura.estado} · {lectura.direccion} · "
+                  f"vigilar {lectura.vigilar.precio}" if marco == op else f"{lectura.ticker} {marco} · contexto")
+        no_dibujadas += _panel(ax, velas[marco].reset_index(drop=True),
+                               [x for x in lectura.lineas if x.marco == marco], titulo, lectura.ticker)
+    for x in lectura.lineas:
+        if x.marco not in orden:
+            motivo = "marco sin panel"
+            print(f"{lectura.ticker} {x.marco}: {motivo}, línea {x.rol} no se dibuja")
+            no_dibujadas.append({"marco": x.marco, "rol": x.rol, "motivo": motivo})
     fig.tight_layout()
     fig.savefig(destino, dpi=110)
     plt.close(fig)
+    return no_dibujadas
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -102,13 +124,14 @@ def main(argv: list[str] | None = None) -> int:
             velas, en_curso = velas_mt5(ticker, estrategia.marcos)
             lectura = estrategia.leer(ticker, velas, VALID_TICKERS[ticker], en_curso)
             sesion, semana = estrategia.puntuar(lectura, "sesion"), estrategia.puntuar(lectura, "semana")
-            dibujar(carpeta / f"{_slug(ticker)}.png", lectura, velas, estrategia.marcos)
+            no_dibujadas = dibujar(carpeta / f"{_slug(ticker)}.png", lectura, velas, estrategia.marcos)
             resumen.append({
                 "ticker": ticker, "estado": lectura.estado, "direccion": lectura.direccion,
                 "precio": lectura.precio, "vigilar": lectura.vigilar.precio,
                 "invalidacion": lectura.invalidacion.precio if lectura.invalidacion else None,
                 "objetivo": lectura.objetivo.precio if lectura.objetivo else None,
                 "metricas": lectura.metricas, "avisos": list(lectura.avisos),
+                "lineas_no_dibujadas": no_dibujadas,
                 "sesion": {"puntos": sesion.puntos, "excluido": sesion.excluido, "desglose": sesion.desglose},
                 "semana": {"puntos": semana.puntos, "excluido": semana.excluido, "desglose": semana.desglose},
                 "escenarios": [f"{e.flecha} {e.texto}" for e in lectura.escenarios],
