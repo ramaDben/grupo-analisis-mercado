@@ -119,7 +119,7 @@ def _en_prueba(prueba: Prueba, precio: float, marco: str, digits: int) -> tuple[
     rompe = Escenario("⬇️" if abajo else "⬆️", f"Cierre {'bajo' if abajo else 'sobre'} {x} a las {hora}",
                       f"Si {la_vela} cierra {'bajo' if abajo else 'sobre'} {x} a las {hora}, la línea se considera rota y la lectura pasa a {'bajista' if abajo else 'alcista'}.")
     espera = Escenario("↔️", f"Hasta las {hora}",
-                       f"Hasta el cierre de las {hora} (hora de Chile) es una prueba, no una ruptura: la vela todavía puede volver.")
+                       f"Con la línea en {x}, hasta el cierre de las {hora} (hora de Chile) es una prueba, no una ruptura: la vela todavía puede volver.")
     vuelve = Escenario("⬆️" if abajo else "⬇️", f"Cierre {'sobre' if abajo else 'bajo'} {x}",
                        f"Si vuelve a cerrar {'sobre' if abajo else 'bajo'} {x}, fue solo una mecha y la lectura no cambia.")
     return (vuelve, espera, rompe) if abajo else (rompe, espera, vuelve)
