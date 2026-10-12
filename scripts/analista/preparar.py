@@ -40,6 +40,14 @@ class SinSemanaError(PreparacionFallida):
     """La semana no tiene análisis semanal: el bot no corre el escáner (spec §5)."""
 
 
+class SinFotoError(PreparacionFallida):
+    """La semana no tiene foto todavía."""
+
+
+class FueraDeLaFotoError(PreparacionFallida):
+    """El activo no está en la foto de esta semana."""
+
+
 class EsperaVelaError(PreparacionFallida):
     """Una línea A+ está en prueba: la foto espera el cierre de esa vela (spec §5)."""
 
@@ -212,6 +220,12 @@ def _velas(ticker, marcos, extra=0):
     return velas_mt5(ticker, marcos, extra)
 
 
+def _lectura_del_dia(estrategia, ticker, digits, semana, lector, base=None):
+    import referencia_semanal as rs
+
+    return rs.lectura_del_dia(estrategia, ticker, digits, semana, lector, base=base or rs.DIR)
+
+
 @dataclass
 class Lectores:
     contrato: Callable[[str, float], dict[str, Any]] = _contrato
@@ -225,6 +239,8 @@ class Lectores:
     cuenta: Callable[[], str | None] = _cuenta
     catalogo: Callable[[str], dict[str, Any]] = _catalogo_de
     base_referencias: Path | None = None
+    registro: Path | None = None
+    lectura_del_dia: Callable[..., Any] = _lectura_del_dia
 
 
 @dataclass
@@ -336,6 +352,54 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
                            {a["ticker"]: a["grafico"] for a in activos},
                            extra_campos={"titulares": tickers, "contexto": tickers})
     return Preparada(pieza, avisos)
+
+
+def preparar_seguimiento(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lectores) -> Preparada:
+    """El avance de un activo contra la foto: la simulación y la lectura de hoy, por separado."""
+    import referencia_semanal as rs
+    from estrategia.contrato import lectura_de_dict
+
+    from analista import registro_semanal as rg
+    from analista import seguimiento as sg
+
+    semana = rs.semana_de(ahora)
+    foto = rg.foto(semana, lec.registro or rg.RUTA)  # un registro corrupto levanta ValueError: no es "sin foto"
+    if foto is None:
+        raise SinFotoError("Esta semana todavía no hay análisis publicado: pide primero /oportunidad.")
+    pieza_foto = cargar_pieza(Path(foto["dir"]))
+    activos = {a["ticker"]: a for a in pieza_foto["datos"]["activos"]}
+    ticker = orden.args["ticker"]
+    if ticker not in activos:
+        nombres = ", ".join(a["nombre"] for a in activos.values())
+        raise FueraDeLaFotoError(f"Ese activo no está en el análisis de esta semana. Los de esta semana: {nombres}.")
+    a = activos[ticker]
+    esc = a["escenario"]
+    if esc["motivo"]:
+        raise PreparacionFallida(f"{a['nombre']} no tiene simulación esta semana: {esc['motivo']}.")
+    referencia_foto = lectura_de_dict(a["lectura"])
+    base = lec.base_referencias or rs.DIR
+    estrategia = lec.estrategia()
+    try:
+        diaria = lec.lectura_del_dia(estrategia, ticker, a["digits"], semana, lec.velas, base=base)
+    except rs.SinReferencia as exc:
+        raise PreparacionFallida(f"{ticker}: {exc}") from exc
+    vigente = rs.cargar(semana, ticker, base)
+    reemplazada = diaria.reemplazo is not None or (vigente is not None
+                                                   and rs.firma(vigente) != rs.firma(referencia_foto))
+    h4 = diaria.velas[referencia_foto.marco]
+    posteriores = h4[h4["time"] > referencia_foto.vela].to_dict("records") if len(h4) else []
+    precio = diaria.lectura.precio
+    ev = sg.evaluar(esc, posteriores, precio)
+    lectura_hoy = sg.texto_lectura(diaria.lectura, reemplazada, a["digits"])
+    hoy = fecha_corta(ahora)
+    texto = sg.mensaje(a["nombre"], hoy, a["foto"]["fecha"], esc, ev, precio, diaria.lectura, reemplazada,
+                       a["digits"])
+    lec.grafico_lectura(ticker, a["nombre"], diaria.lectura, dir_pedido / "grafico.png")
+    datos = {"semana": semana, "ticker": ticker, "nombre": a["nombre"], "evaluacion": ev, "precio_vivo": precio,
+             "lectura_hoy": lectura_hoy, "reemplazada": reemplazada, "whatsapp": texto,
+             "edicion": f"{hoy} · {ahora.astimezone(SANTIAGO):%H:%M}", "activo": a}
+    pieza = es.nueva_pieza("seguimiento", {"ticker": ticker}, datos, {"principal": "grafico.png"})
+    return Preparada(pieza, list(diaria.avisos))
 
 
 def _contexto_sin_porcentajes(contexto: dict[str, Any]) -> dict[str, Any]:
@@ -657,10 +721,11 @@ PREPARADORES = {
     "dato": preparar_dato,
     "jornada": preparar_jornada,
     "oportunidad": preparar_oportunidad,
+    "seguimiento": preparar_seguimiento,
 }
 
 # Piezas que leen precios del terminal: sin la cuenta declarada no salen.
-CON_TERMINAL = {"activo", "dato", "jornada", "oportunidad"}
+CON_TERMINAL = {"activo", "dato", "jornada", "oportunidad", "seguimiento"}
 
 
 def preparar(orden: Orden, dir_pedido: Path, ahora: datetime | None = None,

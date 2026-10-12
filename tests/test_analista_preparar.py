@@ -8,6 +8,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
+import pandas as pd
 import pytest
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -16,6 +17,7 @@ for p in (str(RAIZ / "src"), str(RAIZ / "scripts"), str(RAIZ / "tests")):
         sys.path.insert(0, p)
 
 import analista_fixtures as fx  # noqa: E402
+from analista import registro_semanal as rg  # noqa: E402
 from analista import esquema as es  # noqa: E402
 from analista import informe_html as ih  # noqa: E402
 from analista import preparar as pr  # noqa: E402
@@ -185,3 +187,57 @@ def test_la_foto_no_toca_los_directorios_de_produccion(tmp_path, monkeypatch):
     antes = {p: p.stat().st_mtime for p in (RAIZ / "data").glob("carrusel/**/*") if p.is_file()}
     pr.preparar(Orden("oportunidad"), tmp_path / "p", AHORA_LUNES, _lectores(base))
     assert {p: p.stat().st_mtime for p in (RAIZ / "data").glob("carrusel/**/*") if p.is_file()} == antes
+
+
+# ───────────────────────────────────────────────────────────── seguimiento
+
+
+def _foto(tmp_path, base, activos):
+    """Una foto ya armada en el registro, como la deja /oportunidad."""
+    d = tmp_path / "foto"
+    d.mkdir()
+    p = es.nueva_pieza("oportunidad", {"semana": SEMANA}, {"semana": SEMANA, "activos": activos}, {},
+                       extra_campos={"titulares": [a["ticker"] for a in activos],
+                                     "contexto": [a["ticker"] for a in activos]})
+    pr.guardar_pieza(p, d)
+    rg.anotar_foto(SEMANA, d, AHORA_LUNES, [a["ticker"] for a in activos], tmp_path / "registro.json")
+
+
+def _lectores_seg(tmp_path, base, velas, precio):
+    def lector(ticker, marcos, extra=0):
+        return {"H4": velas}, None
+    lec = _lectores(base, registro=tmp_path / "registro.json", velas=lector)
+    lec.lectura_del_dia = lambda est, t, d, sem, lector, base=None: rs.Diaria(
+        fx.lectura(precio=precio), None, (), {"H4": velas}, fx.lectura())
+    return lec
+
+
+def test_seguimiento_de_un_activo_fuera_de_la_foto_lista_los_que_si(tmp_path):
+    base = tmp_path / "ref"
+    _sembrar(base, [fx.lectura()], {"XAUUSD": 90.0})
+    _foto(tmp_path, base, [fx.activo_semanal()])
+    with pytest.raises(pr.FueraDeLaFotoError, match="Oro"):
+        pr.preparar(Orden("seguimiento", {"ticker": "USDCLP"}), tmp_path / "s", AHORA_LUNES,
+                    _lectores_seg(tmp_path, base, pd.DataFrame(), 4000.0))
+
+
+def test_seguimiento_sin_foto_de_la_semana(tmp_path):
+    with pytest.raises(pr.SinFotoError, match="/oportunidad"):
+        pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD"}), tmp_path / "s", AHORA_LUNES,
+                    _lectores_seg(tmp_path, tmp_path / "ref", pd.DataFrame(), 4000.0))
+
+
+def test_seguimiento_informa_simulacion_y_lectura_por_separado(tmp_path):
+    base = tmp_path / "ref"
+    _sembrar(base, [fx.lectura()], {"XAUUSD": 90.0})
+    oro = fx.activo_semanal()
+    _foto(tmp_path, base, [oro])
+    foto_vela = oro["lectura"]["vela"]
+    velas = pd.DataFrame([{"time": foto_vela, "open": 1, "high": 4300, "low": 3000, "close": 1},  # anterior: no cuenta
+                          {"time": foto_vela + 14400, "open": 4180, "high": 4190, "low": 4150, "close": 4160}])
+    hecha = pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD"}), tmp_path / "s",
+                        datetime(2026, 10, 14, 11, 0, tzinfo=SCL), _lectores_seg(tmp_path, base, velas, 4124.0))
+    d = hecha.pieza["datos"]
+    assert d["evaluacion"]["estado"] == "en_curso"
+    assert "Simulación de la semana" in d["whatsapp"] and "Lectura técnica hoy" in d["whatsapp"]
+    assert "$" not in d["whatsapp"]
