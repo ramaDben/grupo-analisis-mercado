@@ -1014,6 +1014,25 @@ def evaluar_con_estrategia(activo: dict[str, Any], estrategia, diaria: rs.Diaria
     }
 
 
+def seleccion_fija(activo: dict[str, Any], ahora_stgo: datetime, lector=None, estrategia=None,
+                   base: Path | None = None) -> dict[str, Any]:
+    """La entrada de selección de un activo que sale sí o sí (Avisos, el recap del canal).
+
+    Misma lectura que la diaria (contra la referencia de la semana si la tiene) y mismo
+    formato que el escáner, con la cobertura fija: si la estrategia lo habría excluido,
+    el motivo viaja en `gates_omitidos`. No guarda reemplazos de referencia.
+    """
+    estrategia = estrategia or registro.activa()
+    base = base or rs.DIR
+    if lector is None:
+        from estrategia.fuente import velas_mt5 as lector
+    referencia = rs.cargar(rs.semana_de(ahora_stgo), activo["ticker"], base)
+    lectura, velas = rs.lectura_actual(estrategia, activo["ticker"], activo["digits"], lector,
+                                       ahora_stgo, base=base, referencia=referencia)
+    return evaluar_con_estrategia(activo, estrategia, rs.Diaria(lectura, None, (), velas, referencia),
+                                  fijo=True)
+
+
 def escanear(
     tanda: int | None = None,
     top: int = 3,

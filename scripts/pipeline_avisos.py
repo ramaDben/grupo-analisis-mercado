@@ -354,7 +354,11 @@ def registrar_vision_completada(hoy: date, momento: str, activo: str, vision_id:
 
 # ---------------------------------------------------------------- láminas
 
-CAMPOS_AVISOS = pl.CAMPOS_PRECIO + ("soporte_publicado", "resistencia_publicada")
+# Lo que el texto de Avisos puede citar: el precio y los niveles de la lectura de la
+# estrategia (enchufe, fase 3), más los publicados en la lámina de datos, que el director
+# puede fijar a mano. Ya no los de `get_asset_levels` (s1, r1, EMA 50, Donchian).
+CAMPOS_LECTURA = ("price", "vigilar", "invalidacion", "objetivo")
+CAMPOS_AVISOS = CAMPOS_LECTURA + ("soporte_publicado", "resistencia_publicada")
 
 _PAISES = {"United States": "EE.UU.", "Chile": "Chile", "China": "China",
            "Euro Zone": "Zona Euro", "Euro Area": "Zona Euro", "Zona Euro": "Zona Euro"}
@@ -386,12 +390,11 @@ def fila_medida(lectura: dict[str, Any], payload_datos: dict[str, Any] | None) -
     así que el soporte que ve el cliente puede no ser el `s1` crudo: los dos
     cuentan como medidos.
     """
-    niveles = ({n["rol"]: n["precio"] for n in payload_datos["recorrido"]["niveles"]}
-               if payload_datos else {})
+    crudos = (payload_datos or {}).get("_procedencia", {}).get("crudos", {})
     fila: dict[str, Any] = {"nombre": lectura["activo"]["nombre"], "digits": lectura["activo"]["digits"]}
-    fila.update({c: lectura["h1"].get(c) for c in pl.CAMPOS_PRECIO})
-    fila["soporte_publicado"] = niveles.get("SOPORTE")
-    fila["resistencia_publicada"] = niveles.get("RESISTENCIA")
+    fila.update({c: lectura["precios"].get(c) for c in CAMPOS_LECTURA})
+    fila["soporte_publicado"] = crudos.get("soporte")
+    fila["resistencia_publicada"] = crudos.get("resistencia")
     return fila
 
 
@@ -448,7 +451,7 @@ def lamina_voz(vision: dict[str, Any], variante: str, fila: dict[str, Any], leid
 
 
 def lamina_datos(lectura: dict[str, Any], ahora: datetime) -> dict[str, Any]:
-    payload = pc.construir_payload(lectura["seleccion"], lectura["activo"], ahora, lectura["cierres"])
+    payload = pc.construir_payload_lectura(lectura["seleccion"], lectura["activo"], ahora, lectura["cierres"])
     payload.update({"_plantilla": "avisos_datos", "titular": MARCA, "parrafo": MARCA,
                     "disclaimer": AVISO_LEGAL})
     return payload
@@ -869,7 +872,7 @@ def armar_tanda(momento: str, formato: str, ahora: datetime, lectura: dict[str, 
         datos = lamina_datos(lectura, ahora)
         fila = fila_medida(lectura, datos)
         activos[lectura["ticker"]] = fila
-        direccion = pc.direccion_publicada(lectura["seleccion"]["direccion"])
+        direccion = pc._sesgo_de(lectura["seleccion"]["direccion"])
         laminas["portada"] = lamina_portada(lectura["activo"]["nombre"], datos["precio_actual"],
                                             ahora, ahora, agenda=False, ticker=lectura["ticker"])
         if vision is not None:
@@ -1119,6 +1122,8 @@ def tokens_de(payload: dict[str, Any]) -> dict[str, Any]:
 # del motor se corta; se rinde a 1100 con la misma proporción y la plantilla lo
 # escala con object-fit: contain (medido el 2026-09-29: 810 corta, 1400 queda chico).
 GRAFICO_TV_ANCHO, GRAFICO_TV_ALTO = 1100, 1180
+# Una semana y media de velas de 4 horas: las anclas de las líneas tienen que caer adentro.
+VELAS_GRAFICO = 180
 
 
 def grafico_tradingview(payload: dict[str, Any], destino: Path) -> Path:
@@ -1130,12 +1135,13 @@ def grafico_tradingview(payload: dict[str, Any], destino: Path) -> Path:
         ticker=payload["_procedencia"]["ticker"],
         nombre=payload.get("rotulo_activo", payload.get("activo", "")),
         destino=destino,
-        timeframe=pc.TIMEFRAME_GRAFICO,
-        n_velas=60,
+        timeframe=payload.get("marco", pc.TIMEFRAME_GRAFICO),
+        n_velas=VELAS_GRAFICO,
         soporte=crudos.get("soporte"),
         resistencia=crudos.get("resistencia"),
         ancho=GRAFICO_TV_ANCHO,
         alto=GRAFICO_TV_ALTO,
+        lineas=pc.lineas_de(payload),
     )
 
 
@@ -1153,7 +1159,8 @@ def _con_grafico_tv(payload: dict[str, Any], dir_canal: Path, stem: str,
               file=sys.stderr)
         return payload
     return {**payload, "chart_png": str(png),
-            "rotulo_grafico": f"{payload['_procedencia']['ticker'].upper()} · VELAS {pc.TIMEFRAME_GRAFICO} · ÚLTIMAS 60"}
+            "rotulo_grafico": f"{payload['_procedencia']['ticker'].upper()} · VELAS "
+                              f"{pc.ETIQUETA_CORTA.get(payload.get('marco', ''), payload.get('marco', ''))}"}
 
 
 def rendir_tanda(dir_canal: Path, ahora: datetime | None = None,
@@ -1191,30 +1198,31 @@ class LecturaFallidaError(RuntimeError):
 
 
 def leer_terminal(ticker: str, ahora: datetime) -> dict[str, Any]:
-    """Una lectura del activo, con la misma vara que el escáner (cobertura fija)."""
-    import screener_gi as sc
-    from market_data_mcp import mt5_client
-    from market_data_mcp.analisis import analizar_activo
+    """La lectura del activo con la estrategia activa, igual que el carrusel (cobertura fija).
 
-    try:
-        mt5_client.connect()
-    except Exception as exc:  # noqa: BLE001
-        raise LecturaFallidaError(f"MT5 no conectó ({exc.__class__.__name__})") from exc
+    Contra la referencia de la semana si el activo la tiene. Un fijo que la estrategia
+    habría excluido sale igual y lleva el motivo, como en el escáner.
+    """
+    import screener_gi as sc
+    from estrategia.contrato import lectura_de_dict
+
     catalogo = pl._catalogo()
     if ticker not in catalogo:
         raise LecturaFallidaError(f"{ticker} no está en el catálogo")
     activo = catalogo[ticker]
-    sel = sc.evaluar_activo(activo, [], None, ahora, fijo=True, ignorar_agotamiento=True)
-    if "excluido" in sel:
-        raise LecturaFallidaError(f"{ticker}: {sel['excluido']}")
-    h1 = analizar_activo(ticker, "H1")
-    if "error" in h1:
-        raise LecturaFallidaError(f"{ticker}: {h1['error']}")
     try:
-        cierres = pc._serie_para(ticker)
+        sel = sc.seleccion_fija(activo, ahora)
+    except Exception as exc:  # noqa: BLE001
+        raise LecturaFallidaError(f"{ticker}: sin lectura ({exc.__class__.__name__}: {exc})") from exc
+    lectura = lectura_de_dict(sel["lectura"])
+    try:
+        cierres = pc._serie_para(ticker, sel["marco"])
     except Exception as exc:  # noqa: BLE001
         raise LecturaFallidaError(f"{ticker}: sin serie ({exc})") from exc
-    return {"ticker": ticker, "activo": activo, "seleccion": sel, "h1": h1, "cierres": cierres}
+    precios = {"price": lectura.precio, "vigilar": lectura.vigilar.precio,
+               "invalidacion": lectura.invalidacion.precio if lectura.invalidacion else None,
+               "objetivo": lectura.objetivo.precio if lectura.objetivo else None}
+    return {"ticker": ticker, "activo": activo, "seleccion": sel, "precios": precios, "cierres": cierres}
 
 
 def _leer_agenda(ahora: datetime) -> tuple[list[dict[str, Any]], list[str]]:
@@ -1381,7 +1389,7 @@ def preparar(momento: str, ahora: datetime | None = None, *,
 
 def refrescar_portada(payload: dict[str, Any], lectura: dict[str, Any], ahora: datetime) -> tuple[dict[str, Any], str | None]:
     nuevo = json.loads(json.dumps(payload))
-    precio = _fmt(lectura["h1"]["price"], lectura["activo"]["digits"])
+    precio = _fmt(lectura["precios"]["price"], lectura["activo"]["digits"])
     nuevo["dato_precio"] = f"{lectura['activo']['nombre']} {precio}"
     nuevo["dato_hora"] = f"LEÍDO {etiqueta_hora(ahora)}"
     nuevo["fecha_hora"] = fecha_hora(ahora)
@@ -1391,15 +1399,20 @@ def refrescar_portada(payload: dict[str, Any], lectura: dict[str, Any], ahora: d
 def refrescar_voz(payload: dict[str, Any], lectura: dict[str, Any], ahora: datetime) -> tuple[dict[str, Any], str | None]:
     nuevo = json.loads(json.dumps(payload))
     for bloque in nuevo.get("bloque_meta", []):
-        bloque["precio_hoy"] = _fmt(lectura["h1"]["price"], lectura["activo"]["digits"])
+        bloque["precio_hoy"] = _fmt(lectura["precios"]["price"], lectura["activo"]["digits"])
         bloque["hora_precio"] = etiqueta_hora(ahora)
     nuevo["fecha_hora"] = fecha_hora(ahora)
     return nuevo, None
 
 
 def refrescar_datos(payload: dict[str, Any], lectura: dict[str, Any], ahora: datetime) -> tuple[dict[str, Any], str | None]:
-    return pc.refrescar_payload(payload, ahora=ahora, h1=lectura["h1"],
-                                digits=lectura["activo"]["digits"], cierres=lectura["cierres"])
+    from estrategia import registro
+    from estrategia.contrato import lectura_de_dict
+
+    sel = lectura["seleccion"]
+    return pc.refrescar_payload_lectura(
+        payload, ahora, lectura_de_dict(sel["lectura"]), lectura["activo"]["digits"],
+        lectura["cierres"], sel["volatilidad_tipica"], registro.activa().divergencia)
 
 
 # Toda `_plantilla` que este script escribe tiene entrada. `None` es una

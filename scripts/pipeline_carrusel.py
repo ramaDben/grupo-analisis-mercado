@@ -125,16 +125,6 @@ def _serie_para(ticker: str, marco: str = TIMEFRAME_GRAFICO) -> list[float]:
     return cierres
 
 
-def direccion_publicada(direccion_tecnica: str) -> str:
-    """La dirección que muestra el chip de la pieza: `Alcista` o `Bajista`.
-
-    Sale de la lectura técnica, que es la misma que usó el escáner para elegir el
-    activo. Hasta el 2026-09-27 el chip lo mandaba el Playbook V2 en los 5 activos
-    con ficha; al retirarlo queda una sola vara para todo el universo.
-    """
-    return "Alcista" if direccion_tecnica == "ALCISTA" else "Bajista"
-
-
 class PayloadIncoherenteError(ValueError):
     """El payload no describe un solo instante del mercado."""
 
@@ -362,9 +352,8 @@ def construir_payload_lectura(
 
 
 # ── Transitorio hasta S6/S7 del enchufe ────────────────────────────────────────
-# `construir_payload`, `refrescar_payload`, `divergencia_editorial`,
-# `MARCOS_CANONICOS` y `TIMEFRAME_GRAFICO` los usan todavía `pipeline_avisos` y
-# `analista`. El carrusel ya sale de la `Lectura` (`construir_payload_lectura`).
+# `construir_payload`, `MARCOS_CANONICOS` y `TIMEFRAME_GRAFICO` los usa todavía el
+# `analista` (S7). El carrusel y Avisos ya salen de la `Lectura` (`construir_payload_lectura`).
 def construir_payload(
     seleccion: dict[str, Any],
     activo_catalogo: dict[str, Any],
@@ -393,7 +382,7 @@ def construir_payload(
     # pisar. Si un nivel queda lejos, lo dice el párrafo; si el director quiere
     # otro, lo fija en `_procedencia.niveles_fijados`.
 
-    sesgo_pieza = direccion_publicada(seleccion["direccion"])
+    sesgo_pieza = _sesgo_de(seleccion["direccion"])
 
     return {
         "plantilla": "alerta",
@@ -407,7 +396,6 @@ def construir_payload(
         "rotulo_activo": f"{activo_catalogo['nombre'].upper()} · {seleccion['ticker']}",
         "chip_categoria": _chip_categoria(cat_real, activo_catalogo["nombre"]),
         "fecha_hora": ahora.strftime("%d %b %Y · %H:%M").upper(),
-        # El chip sigue a la lectura tecnica. Ver `direccion_publicada`.
         "sesgo": sesgo_pieza,
         "tag_riesgo": sesgo_pieza.upper(),
         # Datos del motor
@@ -858,6 +846,15 @@ def limpiar_payloads(
 # ─────────────────────────────────────────────────────────────────────────────
 # Paso 1: preparar
 # ─────────────────────────────────────────────────────────────────────────────
+def _seleccion_y_serie(ticker: str) -> tuple[dict[str, Any], list[float]] | None:
+    """La selección y la serie de un activo fijo, leídas del terminal (recap del canal)."""
+    catalogo = {a["ticker"]: a for a in sc.cargar_universo(solo_renderizables=False)}
+    if ticker not in catalogo:
+        return None
+    sel = sc.seleccion_fija(catalogo[ticker], datetime.now(tz=SANTIAGO))
+    return sel, _serie_para(ticker, sel["marco"])
+
+
 def escribir_suplementos(
     destino: Path,
     excluidos: list[dict[str, Any]],
@@ -866,6 +863,7 @@ def escribir_suplementos(
     ruta_historial: Path | None = None,
     buscar_noticia: Any = None,
     es_cierre: bool = False,
+    seleccion_de: Any = None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """Escribe el suplemento de cada canal que quedo sin activos publicables.
 
@@ -953,100 +951,33 @@ def escribir_suplementos(
                 f"{noticia['fecha'].date()} para anexar al rendir"
             )
 
-        # Generar payload de Recap para que el canal cuente con gráfico TradingView (16:9)
+        # El recap: la pieza del activo ancla del canal, desde la lectura de la estrategia
+        # (enchufe, fase 3), para que el balance tenga su gráfico. Antes salía con los
+        # niveles de `get_asset_levels` y un texto escrito de antemano que daba al activo
+        # por lateral. Su titular y párrafo los escribe el comando, como en cualquier pieza.
         ancla = sup.get("activo_ancla") or {}
         ticker_ancla = ancla.get("ticker")
         if ticker_ancla:
-            slug_ancla = ticker_ancla.lower().replace(".", "").replace("#", "")
-            rotulo = ancla.get("rotulo", ticker_ancla)
-            nombre_act = ancla.get("nombre", rotulo)
-            cat_rotulo = ancla.get("categoria", "MERCADO")
-
-            activo_cat = catalogo.get(ticker_ancla, {})
-            digits = activo_cat.get("digits", 2)
-            fmt = lambda v: formatear_precio(v, digits)
-
-            # Obtener niveles reales desde exclusiones o analizador
-            spot_val = None
-            sop_val = None
-            res_val = None
-            for ex in exclusiones:
-                if ex.get("ticker") == ticker_ancla:
-                    spot_val = ex.get("precio")
-                    sop_val = ex.get("soporte")
-                    res_val = ex.get("resistencia")
-                    break
-
-            if spot_val is None:
-                try:
-                    from market_data_mcp.analisis import analizar_activo
-                    h1_res = analizar_activo(ticker_ancla, "H1")
-                    if "error" not in h1_res:
-                        spot_val = h1_res.get("price") or h1_res.get("precio")
-                        sop_val = h1_res.get("s1")
-                        res_val = h1_res.get("r1")
-                except Exception:
-                    pass
-
-            spot_txt = fmt(float(spot_val)) if spot_val is not None else "--"
-            sop_txt = fmt(float(sop_val)) if sop_val is not None else "--"
-            res_txt = fmt(float(res_val)) if res_val is not None else "--"
-
-            if es_cierre:
-                titular_recap = f"{rotulo} consolida en zona de balance tras completar su recorrido"
-                parrafo_recap = (
-                    f"El activo completó su rango habitual de la jornada. "
-                    f"Soporte técnico situado en {sop_txt} y resistencia en {res_txt}. "
-                    "Estructura en compresión a la espera de la apertura del próximo ciclo."
-                )
+            obtener = seleccion_de or _seleccion_y_serie
+            try:
+                leido = obtener(ticker_ancla)
+            except Exception as exc:  # noqa: BLE001 - sin recap el canal conserva su texto
+                leido = None
+                avisos.append(f"{canal}: el recap de {ticker_ancla} no se armó ({exc.__class__.__name__}: {exc})")
+            activo_cat = catalogo.get(ticker_ancla)
+            if leido is None or activo_cat is None:
+                avisos.append(f"{canal}: sin recap de {ticker_ancla}; el canal sale con su suplemento de texto")
             else:
-                titular_recap = f"{rotulo} define zonas de balance y niveles clave para la sesión"
-                parrafo_recap = (
-                    f"El activo inicia la jornada en rango técnico de consolidación. "
-                    f"Soporte técnico clave en {sop_txt} y resistencia en {res_txt}. "
-                    "A la espera de confirmación y flujo institucional para definir la dirección de la jornada."
-                )
-
-            momento_ahora = datetime.now(tz=SANTIAGO)
-            recap_payload = {
-                "activo": nombre_act,
-                "rotulo_activo": rotulo,
-                "activo_slug": slug_ancla,
-                "categoria": cat_rotulo,
-                "chip": f"{cat_rotulo} · {rotulo}",
-                "direccion": "LATERAL",
-                "sesgo": "Lateral",
-                "tag_riesgo": "BALANCE",
-                "tipo_pieza": "recap",
-                "precio": spot_txt,
-                "precio_actual": spot_txt,
-                "soporte": sop_txt,
-                "resistencia": res_txt,
-                "titular": titular_recap,
-                "parrafo": parrafo_recap,
-                "vol_pct": f"1,5 {activo_cat.get('unidad', '')}".strip(),
-                "por_que_temporalidad": f"En H1 se observa el balance completo de la jornada de {rotulo}.",
-                "fecha_hora_texto": momento_ahora.strftime("%d/%m/%Y · %H:%M hrs"),
-                "_procedencia": {
-                    "ticker": ticker_ancla,
-                    "score": 0,
-                    "tipo": "recap_suplemento",
-                    "crudos": {
-                        "precio": float(spot_val) if spot_val is not None else 0.0,
-                        "soporte": float(sop_val) if sop_val is not None else 0.0,
-                        "resistencia": float(res_val) if res_val is not None else 0.0,
-                    },
-                }
-            }
-
-            archivo_recap = carpeta / f"1_recap_{slug_ancla}.json"
-            archivo_recap.write_text(
-                json.dumps(recap_payload, ensure_ascii=False, indent=2),
-                encoding="utf-8"
-            )
-            msg_alerta_recap = construir_mensaje_alerta(recap_payload)
-            (carpeta / f"1_recap_{slug_ancla}_mensaje.txt").write_text(msg_alerta_recap, encoding="utf-8")
-            (carpeta / "mensaje.txt").write_text(msg_alerta_recap, encoding="utf-8")
+                sel, cierres = leido
+                try:
+                    recap = construir_payload_lectura(sel, activo_cat, datetime.now(tz=SANTIAGO), cierres)
+                except (PayloadIncoherenteError, KeyError) as exc:
+                    avisos.append(f"{canal}: sin recap de {ticker_ancla} ({exc})")
+                else:
+                    recap["tipo_pieza"] = "recap"
+                    slug_ancla = ticker_ancla.lower().replace(".", "").replace("#", "")
+                    (carpeta / f"1_recap_{slug_ancla}.json").write_text(
+                        json.dumps(recap, ensure_ascii=False, indent=2), encoding="utf-8")
 
         escritos.append(sup)
         avisos.append(
@@ -1260,162 +1191,6 @@ def piezas_del_grupo(dir_grupo: Path) -> list[Any]:
         piezas.append(Pieza(adjunto=png, mensaje=txt.read_text(encoding="utf-8").strip()))
 
     return piezas
-
-
-def divergencia_editorial(crudos: dict[str, Any], precio_nuevo: float) -> str | None:
-    """Motivo por el que el texto ya no describe el mercado, o `None`.
-
-    Que el precio se mueva entre que se preparó la pieza y que sale es normal y
-    no invalida nada. Lo que sí la invalida es que **cruce un nivel que el texto
-    da por vigente**: un párrafo que dice "se apoya en el soporte" publicado
-    cuando el soporte ya se perforó es peor que no publicar.
-    """
-    try:
-        p0 = float(crudos["precio"])
-        soporte = float(crudos["soporte"])
-        resistencia = float(crudos["resistencia"])
-    except (KeyError, TypeError, ValueError):
-        return (
-            "no se pudo comparar contra los precios de preparación: el payload no "
-            "trae `_procedencia.crudos`. Se prepara de nuevo antes de despachar."
-        )
-
-    niveles = (
-        ("el soporte", "perforó", soporte),
-        ("la resistencia", "quebró", resistencia),
-    )
-    for nombre, verbo, nivel in niveles:
-        antes = p0 - nivel
-        ahora = precio_nuevo - nivel
-        if antes * ahora < 0:
-            return (
-                f"el precio {verbo} {nombre} de {nivel:g}: pasó de {p0:g} a "
-                f"{precio_nuevo:g} y el texto quedó describiendo otro mercado"
-            )
-
-    return None
-
-
-def refrescar_payload(
-    payload: dict[str, Any],
-    ahora: datetime,
-    h1: dict[str, Any],
-    digits: int,
-    cierres: dict[str, Any] | list[float],
-) -> tuple[dict[str, Any], str | None]:
-    """Vuelve a atar el payload al mercado de ahora, justo antes de rendirlo.
-
-    Es lo que evita que la última pieza de una tanda llegue con el precio de
-    hace veinte minutos: se refrescan las cifras y el sello de procedencia, y se
-    devuelve el motivo si el movimiento invalidó el texto que ya está escrito.
-
-    **Se toca lo que es dato, nunca lo editorial**: titular y párrafo son
-    criterio de quien los escribió.
-    """
-    nuevo = json.loads(json.dumps(payload))          # copia honda
-
-    precio = float(h1["price"])
-    soporte = float(h1["s1"])
-    resistencia = float(h1["r1"])
-    # Niveles que fijó el director a mano (`_procedencia.niveles_fijados`): el
-    # refresco actualiza precio, volatilidad y chip, pero no los reemplaza por los
-    # del motor. Sin esto, el 977 que el director dio para el USD/CLP el
-    # 2026-10-02 habría salido como el s1 del analizador en el envío real.
-    fijados = nuevo.get("_procedencia", {}).get("niveles_fijados") or {}
-    soporte = float(fijados.get("soporte", soporte))
-    resistencia = float(fijados.get("resistencia", resistencia))
-
-    motivo = divergencia_editorial(
-        nuevo.get("_procedencia", {}).get("crudos", {}), precio
-    )
-
-    def fmt(valor: float) -> str:
-        return formatear_precio(valor, digits)
-
-    nuevo["precio_actual"] = fmt(precio)
-    nuevo["soporte"] = fmt(soporte)
-    nuevo["resistencia"] = fmt(resistencia)
-    nuevo["impulso_adc_atr_valor"] = round(1.5 * float(h1["atr_14"]), digits)
-
-    unidad = str(nuevo.get("vol_pct", "")).split(" ")[-1]
-    nuevo["vol_pct"] = f"{fmt(nuevo['impulso_adc_atr_valor'])} {unidad}".strip()
-
-    nuevo["fecha_hora"] = ahora.strftime("%d %b %Y · %H:%M").upper()
-    nuevo["sello_datos"] = (
-        f"DATOS REALES · METATRADER 5 · {ahora.strftime('%d %b %H:%M').upper()}"
-    )
-
-    # El chip sigue a la lectura de ahora, y se lee del mercado, no del propio
-    # payload: re-derivarlo del string `nuevo["sesgo"]` seria circular. Sale de
-    # `direccion_tecnica`, **la misma funcion que uso el escaner** para elegir el
-    # activo. Usar `h1["trend"]` habria parecido equivalente y no lo es: `trend`
-    # compara contra la EMA 100 y `direccion_tecnica` contra la EMA 50.
-    if "ema_50" not in h1:
-        return nuevo, motivo or (
-            "el analizador no devolvio la EMA 50 de H1, asi que la direccion de "
-            "la pieza no se puede confirmar contra el mercado de ahora"
-        )
-    tecnica = sc.direccion_tecnica(h1)
-    sesgo_preparado = str(payload.get("sesgo", ""))
-    if payload.get("tipo_pieza") == "recap":
-        # El recap es un balance de la jornada sin direccion afirmada: su chip
-        # queda en Lateral aunque las medias de ahora apunten a un lado.
-        nuevo["sesgo"], nuevo["tag_riesgo"] = "Lateral", "BALANCE"
-    else:
-        nuevo["sesgo"] = direccion_publicada(tecnica)
-        nuevo["tag_riesgo"] = nuevo["sesgo"].upper()
-    # Si la lectura dio vuelta entre preparar y despachar, el titular y el
-    # parrafo quedaron escritos para la direccion contraria: un parrafo alcista
-    # bajo un chip bajista se contradice solo. La pieza no sale.
-    if motivo is None and sesgo_preparado in ("Alcista", "Bajista") and sesgo_preparado != nuevo["sesgo"]:
-        motivo = (
-            f"la lectura tecnica paso de {sesgo_preparado} a {nuevo['sesgo']} y el "
-            "texto quedo escrito para la direccion contraria"
-        )
-
-    nuevo["_procedencia"].setdefault("crudos", {})
-    nuevo["_procedencia"]["crudos"] = {
-        "precio": precio, "soporte": soporte, "resistencia": resistencia,
-    }
-
-    # El gráfico se redibuja con la serie nueva y sus niveles al día.
-    serie = cierres if isinstance(cierres, list) else cierres.get("serie", [])
-
-    # El refresco vuelve a juntar las mismas dos lecturas del terminal que junta
-    # `construir_payload`, y con el mismo acoplamiento ciego: indice de una fuente
-    # y precio de la otra. Si llegan desacopladas la pieza no sale, que es lo que
-    # ya hace ante una divergencia de precio. Se comprueba **despues** de las otras
-    # divergencias para no tapar un motivo de mercado con uno de datos: que el
-    # precio haya perforado el soporte le interesa mas al director.
-    if motivo is None:
-        motivo = incoherencia_del_payload(
-            {
-                "ticker": nuevo.get("_procedencia", {}).get("ticker", nuevo.get("activo", "?")),
-                "precio": precio,
-                "soporte": soporte,
-                "resistencia": resistencia,
-                "atr_h1": h1.get("atr_14"),
-            },
-            serie,
-        )
-    recorrido = nuevo.get("recorrido", {})
-    recorrido["serie"] = serie
-    recorrido["marcadores"] = [{
-        "indice": max(len(serie) - 1, 0),
-        "precio": precio,
-        "clase": "actual",
-        "etiqueta": fmt(precio),
-        "rol": "AHORA",
-    }]
-    recorrido["niveles"] = [
-        {"precio": resistencia, "clase": "resistencia",
-         "etiqueta": fmt(resistencia), "rol": "RESISTENCIA"},
-        {"precio": soporte, "clase": "soporte",
-         "etiqueta": fmt(soporte), "rol": "SOPORTE"},
-    ]
-    nuevo["recorrido"] = recorrido
-
-    return nuevo, motivo
 
 
 def exigir_texto_editorial(payloads: list[tuple[str, dict[str, Any]]]) -> None:
