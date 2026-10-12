@@ -90,7 +90,7 @@
     var sec = document.querySelector('.activo[data-ticker="' + d.ticker + '"]');
     var panel = sec.querySelector('.panel');
     var actual = null;
-    if (panel && d.contrato) panel.querySelectorAll('input[type=number]').forEach(function(i){
+    if (panel && !d.motivo && d.contrato) panel.querySelectorAll('input[type=number]').forEach(function(i){
       i.addEventListener('input', function(){ actual = estado(panel, d); });
     });
     sec.querySelector('.copiar-wa').addEventListener('click', function(){
@@ -112,8 +112,9 @@
       var cont = document.createElement('div');
       cont.innerHTML = t.innerHTML;
       var s = d._sim(), celda = cont.querySelector('.sim-correo');
-      if (celda) celda.textContent = s ? lineaSim(d, s) : '';
-      if (celda && !s) celda.parentNode.parentNode.removeChild(celda.parentNode);
+      if (celda && d.motivo) celda.textContent = 'Sin simulación esta semana: ' + d.motivo;
+      else if (celda) celda.textContent = s ? lineaSim(d, s) : '';
+      if (celda && !s && !d.motivo) celda.parentNode.parentNode.removeChild(celda.parentNode);
       partes.push('<tr><td style="padding:0 0 16px 0">' + cont.innerHTML + '</td></tr>');
     });
     if (!partes.length) return null;

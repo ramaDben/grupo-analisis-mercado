@@ -91,3 +91,34 @@ def test_un_texto_invalido_no_arma_la_pieza(tmp_path):
 def test_el_nombre_del_archivo_no_dice_oportunidad(tmp_path):
     ruta = oh.guardar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
     assert ruta.name == "analisis-semanal_2026-W42_camila-rojas.html"
+
+
+def test_un_activo_sin_simulacion_igual_entra_al_correo(tmp_path):
+    p = _pieza(tmp_path)
+    p["datos"]["activos"][0]["escenario"]["motivo"] = "la lectura no trae nivel de invalidación"
+    p["huella"] = es._huella(p)
+    html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    bloque = html.split('data-ticker="XAUUSD"')[1].split('data-ticker="COPPER"')[0]
+    assert 'name="incluir"' in bloque and 'name="perdida"' not in bloque
+    datos = json.loads(re.search(r'<script id="datos" type="application/json">(.*?)</script>', html, re.S).group(1))
+    assert datos["activos"][0]["motivo"] == "la lectura no trae nivel de invalidación"
+    assert "Sin simulación esta semana: " in html
+
+
+def test_sin_contrato_y_sin_motivo_se_trata_como_sin_simulacion(tmp_path):
+    p = _pieza(tmp_path)
+    p["datos"]["activos"][0]["contrato"] = None
+    p["huella"] = es._huella(p)
+    html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    bloque = html.split('data-ticker="XAUUSD"')[1].split('data-ticker="COPPER"')[0]
+    assert "no hay datos de contrato de la cuenta para simular este activo" in bloque
+    assert 'name="perdida"' not in bloque and 'name="incluir"' in bloque
+
+
+def test_el_json_escapa_cierre_de_script_y_la_pagina_no_trae_guiones_largos(tmp_path):
+    p = _pieza(tmp_path)
+    ejecutivo = {**EJECUTIVO, "cargo": "Ejecutiva </script> comercial"}
+    html = oh.armar(p, tmp_path, ejecutivo, fx.AUTOR, HOY)
+    crudo = re.search(r'<script id="datos" type="application/json">(.*?)</script>', html, re.S).group(1)
+    assert json.loads(crudo)["cargo"] == "Ejecutiva </script> comercial"
+    assert "—" not in html and "–" not in html and "oportunidad" not in html.lower()

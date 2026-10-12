@@ -32,10 +32,21 @@ def _filas_niveles(a: dict[str, Any]) -> str:
     return "".join(f'<tr><th>{ih.e(r)}</th><td class="cifra">{ih.e(v)}</td></tr>' for r, v in cm._niveles(a))
 
 
+MOTIVO_SIN_CONTRATO = "no hay datos de contrato de la cuenta para simular este activo"
+
+
+def _motivo(a: dict[str, Any]) -> str | None:
+    """Por qué el activo no se simula (None si se simula). Sin contrato no hay con qué calcular."""
+    return a["escenario"]["motivo"] or (None if a["contrato"] else MOTIVO_SIN_CONTRATO)
+
+
 def _panel(a: dict[str, Any], ejecutivo: str) -> str:
     esc, f = a["escenario"], a["fmt"]
-    if esc["motivo"]:
-        return f'<div class="panel sin-simulacion"><p>Sin simulación esta semana: {ih.e(esc["motivo"])}</p></div>'
+    motivo = _motivo(a)
+    if motivo:
+        return ('<div class="panel sin-simulacion"><p>Sin simulación esta semana: '
+                f'{ih.e(motivo)}</p>'
+                '<label><input type="checkbox" name="incluir" checked> Incluir en el correo</label></div>')
     lejos = (f'<p class="nota">El objetivo está a {str(esc["dias_objetivo"]).replace(".", ",")} días de '
              'movimiento típico (ATR diario).</p>' if esc.get("dias_objetivo") else "")
     return (
@@ -114,7 +125,7 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
         correos.append(f'<template class="correo-activo" data-ticker="{ih.e(t)}">'
                        f'{_bloque_correo(a, ed["titulares"][t], ed["contexto"][t], dir_pedido)}</template>')
         datos_js.append({"ticker": t, "digits": a["digits"], "escenario": a["escenario"], "contrato": a["contrato"],
-                         "fmt": a["fmt"], "whatsapp": cm.texto_whatsapp_base(a, ed["titulares"][t], ed["contexto"][t])})
+                         "fmt": a["fmt"], "motivo": _motivo(a), "whatsapp": cm.texto_whatsapp_base(a, ed["titulares"][t], ed["contexto"][t])})
     tokens = {
         "titulo": ih.e(ed["titular"]), "logo": ih._data_uri(ih.LOGO), "semana": ih.e(d["semana"]),
         "edicion": ih.e(d["edicion"]), "titular": ih.e(ed["titular"]), "bajada": ih.e(ed["bajada"]),
