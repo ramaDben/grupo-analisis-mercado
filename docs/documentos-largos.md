@@ -179,13 +179,17 @@ antes de tocar la maqueta.
 | Documento | Fuente del contenido | Compilador | Salida |
 |---|---|---|---|
 | Manual de Operaciones | `docs/MANUAL_DE_OPERACIONES_TRADING_CUANTITATIVO.md` | `scripts/compilar_manual_pdf.py` | PDF A4, 31 páginas |
-| Cierre semanal | `scripts/cierre_semanal_contenido.py` (texto) + `cierre_semanal_datos.py` (cifras) | `scripts/compilar_informe_cierre_semanal.py` | PDF A4, 6 páginas |
+| Cierre semanal | `data/informes/<fecha>_cierre/editorial.json` (texto de la semana) + `cierre_semanal_datos.py` (cifras y lectura) | `scripts/compilar_informe_cierre_semanal.py` | PDF A4, 6 páginas |
 
 **Los dos tenían el documento escrito adentro del compilador y hubo que sacarlo.**
 El manual llegó a tener tres versiones distintas conviviendo (el markdown, un PDF
 truncado en disco, y un cuarto documento dentro del script). El cierre semanal
 tenía las rutas clavadas a una fecha, así que correrlo una semana después
-regeneraba el informe anterior.
+regeneraba el informe anterior. Y después de parametrizar las rutas siguió
+trayendo el **texto** de la semana del 11 de septiembre dentro de
+`cierre_semanal_contenido.py`: desde el 2026-10-12 ese texto se escribe cada semana
+en el `editorial.json` que deja `--preparar`, y `--rendir` no compila con un campo
+vacío, un guion largo o probabilidades que no sumen 100.
 
 Si necesitas cambiar un texto, cambia la fuente. **Nunca escribas contenido dentro
 del compilador**: a la segunda copia una queda atrás y nadie se entera hasta que
@@ -259,9 +263,12 @@ Dos cosas que no son negociables aunque el kit no las mencione:
 # Manual: 31 paginas, y falla si perdio secciones
 uv run --extra stories --with markdown-it-py --with pypdf python scripts/compilar_manual_pdf.py
 
-# Cierre semanal: 6 paginas, informa el alto de cada una y aborta si desborda
-uv run --extra informe --extra stories --with MetaTrader5 --with pypdf \
-    python scripts/compilar_informe_cierre_semanal.py
+# Cierre semanal, en dos pasos: preparar deja editorial.json con los campos vacios;
+# rendir se detiene si falta alguno, informa el alto de cada pagina y aborta si desborda
+uv run --extra informe --extra stories --with MetaTrader5 \
+    python scripts/compilar_informe_cierre_semanal.py --preparar
+uv run --extra informe --extra stories --with pypdf \
+    python scripts/compilar_informe_cierre_semanal.py --rendir data/informes/<fecha>_cierre
 
 # La suite completa
 uv run pytest -q

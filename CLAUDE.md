@@ -156,8 +156,10 @@ de ejecución queda estampada con fidelidad en los payloads y en el mensaje índ
 el escáner excluye activos publicados en corridas previas de hoy para evitar redundancia.
 
 **El informe de apertura lleva un gráfico por activo.** `scripts/grafico_informe.py`
-dibuja la serie real del terminal (cierres de `serie_mt5.py`, niveles de `analizar_activo`)
-con sus medias de 50 y 100 días en formato banner institucional de **7.2 × 2.82 pulgadas a 300 DPI**, trazando obligatoriamente como líneas horizontales todo nivel de soporte/resistencia o Fibo mencionado en el texto, y el pipeline lo referencia bajo el bloque de cada activo.
+dibuja la serie real del terminal (cierres de `serie_mt5.py`) en formato banner institucional
+de **7.2 × 2.82 pulgadas a 300 DPI**, trazando como líneas horizontales los niveles de la
+`Lectura` que nombra el texto, y el pipeline lo referencia bajo el bloque de cada activo.
+**Sin medias ni pivotes crudos** (director, 2026-10-12): serían una segunda lectura técnica.
 Nunca se dibuja un sustituto: sin terminal, el informe sale sin imágenes y lo dice en los
 avisos. Es la diferencia con `scripts/generar_graficos_drivers.py`, que tiene las series
 escritas a mano y produce piezas de aspecto institucional a partir de números que nadie
@@ -1087,7 +1089,7 @@ Dos reglas de color que se pagaron caro:
 
 El acento es `#50C0A8`, el extremo verde del degradado del logo, medido sobre los assets.
 
-**Serie real y motor TradingView™ para los gráficos.** El estándar visual y cuantitativo de gráficos para alertas (`/carrusel` y `/story alerta`) es el motor `scripts/tradingview_grafico.py` basado en **TradingView Lightweight Charts™ v5** a **300 DPI nativos** (Retina con polyfill de canvas, 2800×1560 físico, velas japonesas, las líneas de la `Lectura` y las zonas de soporte y resistencia del mensaje). Sin medias ni estructura propia: una segunda lectura en la imagen contradice al texto. Solo las piezas ad-hoc y el CLI, que no traen lectura, dibujan EMA 50/100. En caso de entornos sin Chromium/MT5, el pipeline mantiene fallback a la geometría SVG de `story_grafico.py`.
+**Serie real y motor TradingView™ para los gráficos.** El estándar visual y cuantitativo de gráficos para alertas (`/carrusel` y `/story alerta`) es el motor `scripts/tradingview_grafico.py` basado en **TradingView Lightweight Charts™ v5** a **300 DPI nativos** (Retina con polyfill de canvas, 2800×1560 físico, velas japonesas, las líneas de la `Lectura` y las zonas de soporte y resistencia del mensaje). Sin medias ni estructura propia: una segunda lectura en la imagen contradice al texto. Las piezas ad-hoc y el CLI, que no traen lectura, la leen del activo y la dibujan en su marco; si un horizontal de la lectura cae en el precio de una zona, se funden en una sola etiqueta. En caso de entornos sin Chromium/MT5, el pipeline mantiene fallback a la geometría SVG de `story_grafico.py`.
 
 **Todo nivel citado en el texto va trazado, y eso vale también para las Stories.** El informe ya
 lo exige para su gráfico; la pieza de Story tiene su propia mitad de la regla y estaba solo del

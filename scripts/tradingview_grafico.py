@@ -8,8 +8,13 @@ zonas de soporte y resistencia del mensaje, y compila una imagen
 PNG en ultra alta resolución (Retina / 300 DPI) usando Chromium headless (Playwright)
 con polyfill de devicePixelContentBoxSize y paleta luminosa de marca Grupo Inteligencia.
 
+Sin líneas explícitas (las piezas ad-hoc y el CLI) el motor lee la lectura del activo
+y dibuja esa, en su marco. **Nunca dibuja medias** (director, 2026-10-12): hasta esa
+fecha las piezas sin lectura salían con EMA 50/100, una segunda lectura técnica al
+lado de la que publica el texto.
+
 Uso CLI directo:
-    uv run python scripts/tradingview_grafico.py --ticker USDCLP --nombre "USD/CLP" --timeframe H1 --velas 320 --out data/stories/tv_usdclp.png
+    uv run --with MetaTrader5 python scripts/tradingview_grafico.py --ticker USDCLP --nombre "USD/CLP" --out data/stories/tv_usdclp.png
 
 Uso mediante stdin con payload:
     cat alerta.json | uv run python scripts/tradingview_grafico.py --out data/stories/tv_activo.png
@@ -37,19 +42,6 @@ class TradingViewRenderError(RuntimeError):
     """Error accionable en el renderizado de TradingView."""
 
 
-def _ema(valores: list[float], span: int) -> list[float | None]:
-    if len(valores) < span:
-        return [None] * len(valores)
-    k = 2.0 / (span + 1.0)
-    res: list[float | None] = [None] * (span - 1)
-    prom = sum(valores[:span]) / span
-    res.append(prom)
-    for v in valores[span:]:
-        prom = v * k + prom * (1.0 - k)
-        res.append(prom)
-    return res
-
-
 def _epoch(t: Any) -> int:
     if isinstance(t, str):
         return int(datetime.fromisoformat(t.replace("Z", "+00:00")).replace(tzinfo=timezone.utc).timestamp())
@@ -59,16 +51,15 @@ def _epoch(t: Any) -> int:
 
 
 def calcular_indicadores(df_velas: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Las velas con lo que el gráfico muestra: EMA 50/100 y el ATR 14 que da alto a las zonas.
+    """Las velas con el ATR 14, que da alto a las zonas de soporte y resistencia.
 
-    Las medias solo se dibujan sin lectura: las piezas ad-hoc (`produccion_adhoc`) y el CLI.
-    Toda pieza de producción trae las líneas de la estrategia desde S7. Bollinger, Donchian, RSI, ADX y las EMA 20/200 se calculaban y
-    no se mostraban: se borraron con el enchufe (spec §6).
+    No hay indicadores de dirección: la dirección la dibujan las líneas de la lectura.
+    Bollinger, Donchian, RSI, ADX y las EMA 20/200 se borraron con el enchufe (spec §6),
+    y las EMA 50/100 el 2026-10-12, cuando también las piezas ad-hoc pasaron a la lectura.
     """
     if not df_velas:
         return []
     cierres = [float(v["close"]) for v in df_velas]
-    ema50, ema100 = _ema(cierres, 50), _ema(cierres, 100)
     rangos = []
     for i, v in enumerate(df_velas):
         alto, bajo = float(v["high"]), float(v["low"])
@@ -83,7 +74,7 @@ def calcular_indicadores(df_velas: list[dict[str, Any]]) -> list[dict[str, Any]]
             atr14[i] = atr
     return [{"time": _epoch(v["time"]), "open": float(v["open"]), "high": float(v["high"]),
              "low": float(v["low"]), "close": float(v["close"]),
-             "ema50": ema50[i], "ema100": ema100[i], "atr": atr14[i]}
+             "atr": atr14[i]}
             for i, v in enumerate(df_velas)]
 
 
@@ -154,16 +145,15 @@ def construir_html_tradingview(
 
     Con `lineas` dibuja la lectura de la estrategia y nada más: ni medias ni estructura
     propia, porque una segunda lectura en la imagen contradice al texto. Sin `lineas`
-    (las piezas ad-hoc y el CLI) quedan las EMA 50/100 y las zonas. Se conserva
-    la paleta oscura de marca del rediseño del 2026-09-30.
+    quedan las velas y las zonas. Se conserva la paleta oscura de marca del rediseño
+    del 2026-09-30.
     """
     if not VENDOR_JS.exists():
         raise TradingViewRenderError(f"No se encontró el vendor JS: {VENDOR_JS}")
 
     vendor_code = VENDOR_JS.read_text(encoding="utf-8")
     # Con la lectura se dibujan sus líneas del marco del gráfico y los horizontales de
-    # cualquier marco (el objetivo sale de D1 o W1). Sin lectura (ad-hoc y CLI) quedan las
-    # medias y las zonas.
+    # cualquier marco (el objetivo sale de D1 o W1). Sin lectura quedan solo las zonas.
     tiempos = [int(r["time"]) for r in rows]
     con_lectura = lineas is not None
     dibujables = [x for x in (lineas or ()) if x.marco == timeframe or x.tipo == "horizontal"]
@@ -174,10 +164,22 @@ def construir_html_tradingview(
         {"precio": p, "rol": rol}
         for p, rol in ((resistencia, "RESISTENCIA"), (soporte, "SOPORTE")) if p is not None
     ]
+    # Un horizontal de la lectura en el mismo precio que una zona (el objetivo suele ser
+    # el soporte o la resistencia publicados) se funde con ella: dos etiquetas en el mismo
+    # precio se apilan y empujan a las demás sobre el eje (medido el 2026-10-12 en el oro
+    # y el USD/CLP). La leyenda lo sigue nombrando.
+    tolerancia = 0.5 * 10 ** -digits
+    en_eje = []
+    for serie in series:
+        zona = next((z for z in zonas if serie["tipo"] == "horizontal"
+                     and abs(z["precio"] - serie["precio"]) <= tolerancia), None)
+        if zona is None:
+            en_eje.append(serie)
+        else:
+            zona["rol"] += " · " + NOMBRE_ROL[serie["rol"]].upper()
     datos = {
         "rows": rows,
-        "lineas": series,
-        "medias": not con_lectura,
+        "lineas": en_eje,
         "zonas": zonas,
         "media_zona": 0.18 * atr,
         "digits": digits,
@@ -186,17 +188,14 @@ def construir_html_tradingview(
 
     fmt_p = f"{{:.{digits}f}}"
     last = rows[-1]
-    e50_str = fmt_p.format(last["ema50"]) if last.get("ema50") is not None else "--"
-    e100_str = fmt_p.format(last["ema100"]) if last.get("ema100") is not None else "--"
     p_close = fmt_p.format(last["close"])
     if con_lectura:
         leyenda = "".join(
             f'<span><span style="color:{d["color"]}">●</span> {d["titulo"]}</span>' for d in series)
         pie = "LÍNEAS DE TENDENCIA · ZONAS DE SOPORTE Y RESISTENCIA"
     else:
-        leyenda = (f'<span><span style="color:#00B0FF">●</span> EMA 50 <b style="color:#00B0FF">{e50_str}</b></span>'
-                   f'<span><span style="color:#FFB300">●</span> EMA 100 <b style="color:#FFB300">{e100_str}</b></span>')
-        pie = "EMA 50 · EMA 100 · ZONAS DE SOPORTE Y RESISTENCIA"
+        leyenda = ""
+        pie = "ZONAS DE SOPORTE Y RESISTENCIA"
 
     html = f"""<!DOCTYPE html>
 <html lang="es">
@@ -347,11 +346,6 @@ def construir_html_tradingview(
     return s;
   }};
 
-  if (D.medias) {{
-    linea('#00B0FF', 2, rows.filter(r => r.ema50 != null).map(r => ({{ time: r.time, value: r.ema50 }})));
-    linea('#FFB300', 2, rows.filter(r => r.ema100 != null).map(r => ({{ time: r.time, value: r.ema100 }})));
-  }}
-
   // Las líneas de la lectura: diagonales proyectadas a la derecha y horizontales en el eje.
   D.lineas.forEach(l => {{
     const estilo = l.discontinua ? LightweightCharts.LineStyle.Dashed : LightweightCharts.LineStyle.Solid;
@@ -441,11 +435,28 @@ def renderizar_png(
     return destino
 
 
+MARCO_SIN_LECTURA = "H1"
+
+
+def leer_lectura(ticker: str, digits: int):
+    """La `Lectura` de la estrategia activa para un ticker, la misma que publica el carrusel."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    import referencia_semanal as rs
+    from estrategia import registro
+    from estrategia.fuente import velas_mt5
+
+    lectura, _ = rs.lectura_actual(registro.activa(), ticker, digits, velas_mt5,
+                                   datetime.now(tz=ZoneInfo("America/Santiago")))
+    return lectura
+
+
 def generar_grafico_tv(
     ticker: str,
     nombre: str,
     destino: Path,
-    timeframe: str = "H1",
+    timeframe: str | None = None,
     n_velas: int = 60,
     digits: int | None = None,
     soporte: float | None = None,
@@ -456,8 +467,11 @@ def generar_grafico_tv(
 ) -> Path:
     """Función principal: obtiene datos de MT5, computa indicadores y renderiza el PNG.
 
-    Con `lineas` (las de la `Lectura`) el gráfico dibuja la lectura de la estrategia y no
-    las medias. Las anclas tienen que caer dentro de las `n_velas` dibujadas.
+    Con `lineas` (las de la `Lectura`) el gráfico dibuja esas. Sin ellas (piezas ad-hoc
+    y el CLI) lee la lectura del activo y dibuja sus líneas, en su marco si no se pidió
+    otro, con su soporte y resistencia si no vienen dados, y con velas suficientes para
+    que las anclas caigan adentro. Si la estrategia no puede leer el activo, el gráfico
+    sale con velas y zonas, y lo avisa: nunca con medias como sustituto.
     """
     from market_data_mcp import mt5_client
     from market_data_mcp.catalog import VALID_TICKERS
@@ -465,9 +479,25 @@ def generar_grafico_tv(
     if digits is None:
         digits = VALID_TICKERS.get(ticker, 2)
 
+    if lineas is None:
+        import pipeline_carrusel as pc
+
+        try:
+            lectura = leer_lectura(ticker, digits)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[AVISO] {ticker}: gráfico sin la lectura de la estrategia ({exc}). "
+                  "Sale con velas y zonas.", file=sys.stderr)
+        else:
+            lineas = lectura.lineas
+            timeframe = timeframe or lectura.marco
+            if soporte is None and resistencia is None:
+                soporte, resistencia = pc.niveles_publicados(lectura)
+            n_velas = max(n_velas, pc.VELAS_GRAFICO_TV)
+    timeframe = timeframe or MARCO_SIN_LECTURA
+
     mt5_client.connect()
-    # Velas extra para que la EMA 100 esté estable en la ventana dibujada
-    n_total = max(n_velas + 220, 260)
+    # Velas extra para que el ATR 14 de las zonas ya esté formado en la ventana dibujada
+    n_total = n_velas + 20
     df = mt5_client.get_rates(ticker, timeframe, n_total)
     if df is None or len(df) < 20:
         raise TradingViewRenderError(
@@ -499,7 +529,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--ticker", default="")
     parser.add_argument("--nombre", default="")
-    parser.add_argument("--timeframe", default="H1")
+    parser.add_argument("--timeframe", default=None,
+                        help="por defecto, el marco de la lectura del activo")
     parser.add_argument("--velas", type=int, default=60)
     parser.add_argument("--soporte", type=float, default=None)
     parser.add_argument("--resistencia", type=float, default=None)

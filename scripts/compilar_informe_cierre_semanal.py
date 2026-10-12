@@ -11,22 +11,32 @@ la semana anterior, y producir el de hoy obligaba a duplicar el archivo.
 Reparto de responsabilidades, el mismo de la capacitación en PPTX:
 
 - `cierre_semanal_datos.py`   → los números, leídos del terminal AL CIERRE
-- `cierre_semanal_contenido.py` → el juicio editorial de la semana
+- `cierre_semanal_contenido.py` → lo fijo y el contrato del texto de la semana
+- `editorial.json`            → el juicio editorial de la semana, uno por cierre
 - `cierre_semanal_estilo.py`  → la hoja de estilos, sin cambios de diseño
 - este archivo                → la maqueta que los junta
 
 **El diseño no cambió**: el ejemplar del 28 de agosto ya salió al canal con este
 aspecto y el estándar está aprobado. Lo que cambió es de dónde sale el contenido.
 
+**Dos pasos desde el 2026-10-12**, como el carrusel y el informe diario: el texto de
+la semana ya no vive en un módulo de Python sino en el `editorial.json` que deja
+`--preparar`, y `--rendir` no compila si queda un campo vacío.
+
 Uso:
-    uv run --extra informe --extra stories --with MetaTrader5 --with pypdf \\
-        python scripts/compilar_informe_cierre_semanal.py
+    uv run --extra informe --extra stories --with MetaTrader5 \\
+        python scripts/compilar_informe_cierre_semanal.py --preparar
+    # escribir data/informes/<fecha>_cierre/editorial.json
+    uv run --extra informe --extra stories --with pypdf \\
+        python scripts/compilar_informe_cierre_semanal.py --rendir data/informes/<fecha>_cierre
 """
 
 from __future__ import annotations
 
+import argparse
 import base64
 import html
+import json
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -41,11 +51,14 @@ for p in (str(RAIZ / "src"), str(RAIZ / "scripts")):
 if sys.platform == "win32":
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        # Los errores del editorial nombran campos con tilde ("vacío"): sin esto
+        # llegan a la consola como "vac?o".
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     except Exception:
         pass
 
 import cierre_semanal_contenido as C  # noqa: E402
-from cierre_semanal_datos import ACTIVOS, DatosError, leer_lectura, reunir  # noqa: E402
+from cierre_semanal_datos import DatosError, reunir  # noqa: E402
 from cierre_semanal_estilo import hoja_de_estilos  # noqa: E402
 
 SANTIAGO = ZoneInfo("America/Santiago")
@@ -114,7 +127,7 @@ def bloque_pie(pagina: int) -> str:
     )
 
 
-def bloque_tarjeta_portada(a: dict[str, Any]) -> str:
+def bloque_tarjeta_portada(a: dict[str, Any], ed: dict[str, Any]) -> str:
     """Una tarjeta del snapshot semanal.
 
     El color lo decide el signo del dato y nada más: es la convención que el
@@ -122,7 +135,7 @@ def bloque_tarjeta_portada(a: dict[str, Any]) -> str:
     """
     color = "#4ADE80" if a["sube"] else "#F87171"
     flecha = "▲" if a["sube"] else "▼"
-    nota = C.NOTAS_PORTADA.get(a["slug"], "")
+    nota = ed["notas_portada"][a["slug"]]
     return (
         '<div class="cover-card">'
         f'<div class="cover-card-header"><span>{a["emoji"]} {e(a["rotulo"])}</span>'
@@ -133,8 +146,9 @@ def bloque_tarjeta_portada(a: dict[str, Any]) -> str:
     )
 
 
-def pagina_portada(datos: dict[str, Any]) -> str:
-    tarjetas = "".join(bloque_tarjeta_portada(a) for a in datos["activos"])
+def pagina_portada(datos: dict[str, Any], ed: dict[str, Any]) -> str:
+    portada = ed["portada"]
+    tarjetas = "".join(bloque_tarjeta_portada(a, ed) for a in datos["activos"])
     return f"""
 <div class="a4-page cover-page">
     <div class="cover-bg-glow"></div>
@@ -149,13 +163,13 @@ def pagina_portada(datos: dict[str, Any]) -> str:
 
         <div class="cover-hero">
             <div class="cover-kicker">{e(C.KICKER)}</div>
-            <h1 class="cover-title">{e(C.TITULO)} <span>{e(C.TITULO_ACENTO)}</span></h1>
-            <p class="cover-subtitle">{e(C.BAJADA)}</p>
+            <h1 class="cover-title">{e(portada["titulo"])} <span>{e(portada["titulo_acento"])}</span></h1>
+            <p class="cover-subtitle">{e(portada["bajada"])}</p>
         </div>
 
         <div style="background: rgba(11, 35, 29, 0.8); border: 1px solid rgba(80, 192, 168, 0.35); border-radius: 10px; padding: 14px 18px; margin-bottom: 14px;">
             <div style="font-family:'Goldman',sans-serif; font-size:12px; font-weight:700; color:#50C0A8; letter-spacing:0.06em; margin-bottom:6px;">01. RESUMEN EJECUTIVO DE LA SEMANA</div>
-            <p style="font-size:10px; line-height:1.55; color:#E2E8F0; text-align:justify;">{e(C.RESUMEN_EJECUTIVO)}</p>
+            <p style="font-size:10px; line-height:1.55; color:#E2E8F0; text-align:justify;">{e(portada["resumen_ejecutivo"])}</p>
         </div>
 
         <div>
@@ -171,10 +185,10 @@ def pagina_portada(datos: dict[str, Any]) -> str:
 </div>"""
 
 
-def bloque_tabla_curva(datos: dict[str, Any]) -> str:
+def bloque_tabla_curva(datos: dict[str, Any], ed: dict[str, Any]) -> str:
     filas = []
     for f in datos["filas_curva"]:
-        diag = C.DIAGNOSTICO_CURVA.get(f["codigo"], "")
+        diag = ed["curva"]["diagnostico"][f["codigo"]]
         filas.append(
             "<tr>"
             f'<td><strong>{e(f["nombre"])}</strong></td>'
@@ -228,14 +242,15 @@ def bloque_ficha(a: dict[str, Any], capas: dict[str, str], img: str) -> str:
 
 
 def pagina_contenido(
-    pagina: int, datos: dict[str, Any], fichas: dict[str, str], titulos: list[str]
+    pagina: int, datos: dict[str, Any], fichas: dict[str, str], titulos: list[str],
+    ed: dict[str, Any],
 ) -> str:
     slugs = C.PAGINAS_ACTIVOS[pagina]
     cuerpo = []
     if pagina == 2:
         cuerpo.append('<div class="section-title">02. Curva Soberana de EE.UU. y Transmisión de Tasas</div>')
-        cuerpo.append(f'<p class="body-p">{e(C.INTRO_CURVA)}</p>')
-        cuerpo.append(bloque_tabla_curva(datos))
+        cuerpo.append(f'<p class="body-p">{e(ed["curva"]["intro"])}</p>')
+        cuerpo.append(bloque_tabla_curva(datos, ed))
         cuerpo.append(f'<p class="body-p" style="font-size:8.5px; color:#64748B;">{e(C.NOTA_CURVA_REZAGO)}</p>')
     if titulos:
         cuerpo.append(f'<div class="section-title">{e(titulos.pop(0))}</div>')
@@ -250,13 +265,13 @@ def pagina_contenido(
 </div>"""
 
 
-def pagina_escenarios(datos: dict[str, Any]) -> str:
+def pagina_escenarios(datos: dict[str, Any], ed: dict[str, Any]) -> str:
     tarjetas = []
-    for esc in C.ESCENARIOS:
+    for (clase, emoji, rotulo), esc in zip(C.ESCENARIOS_FIJOS, ed["escenarios"]):
         vinetas = "".join(f"<li>{e(b)}</li>" for b in esc["bullets"])
         tarjetas.append(
-            f'<div class="scenario-card scenario-{esc["clase"]}">'
-            f'<div class="scenario-title">{esc["emoji"]} {e(esc["titulo"])} '
+            f'<div class="scenario-card scenario-{clase}">'
+            f'<div class="scenario-title">{emoji} {e(rotulo)} · {e(esc["titulo"].upper())} '
             f'· PROBABILIDAD {esc["prob"]}%</div>'
             f'<ul class="scenario-bullets">{vinetas}</ul></div>'
         )
@@ -268,7 +283,7 @@ def pagina_escenarios(datos: dict[str, Any]) -> str:
         f'<td>{e(r["fuente"])}</td>'
         f'<td>{e(r["impacto"])}</td>'
         "</tr>"
-        for r in C.RADAR
+        for r in ed["radar"]
     )
 
     return f"""
@@ -289,7 +304,7 @@ def pagina_escenarios(datos: dict[str, Any]) -> str:
             <tbody>{filas}</tbody>
         </table>
 
-        <div class="highlight-box">{e(C.AVISO_HORARIO)}</div>
+        <div class="highlight-box">{e(ed["aviso_horario"])}</div>
 
         <div style="background:#04100D; color:#C1E5E4; border-radius:8px; padding:12px 16px; border:1px solid rgba(80,192,168,0.25); margin-top:8px;">
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.12); padding-bottom:6px; margin-bottom:8px;">
@@ -303,12 +318,15 @@ def pagina_escenarios(datos: dict[str, Any]) -> str:
 </div>"""
 
 
-def construir_html(datos: dict[str, Any], graficos: Path) -> str:
+def construir_html(datos: dict[str, Any], graficos: Path, ed: dict[str, Any]) -> str:
+    """Junta datos y editorial. Exige el editorial completo antes de dibujar nada."""
+    C.exigir_editorial(ed, datos)
     por_slug = {a["slug"]: a for a in datos["activos"]}
     fichas: dict[str, str] = {}
     for a in datos["activos"]:
-        lectura = leer_lectura(a["ticker"])
-        capas = C.capas_de(a["slug"], a, lectura)
+        if not a.get("lectura"):
+            raise DatosError(f"{a['ticker']}: el preparado no guardó su lectura. Volver a --preparar.")
+        capas = C.capas_de(a["slug"], a, a["lectura"], ed)
         fichas[a["slug"]] = bloque_ficha(a, capas, imagen_embebida(graficos / f"{a['slug']}.png"))
 
     faltan = set(por_slug) - set(fichas)
@@ -316,10 +334,10 @@ def construir_html(datos: dict[str, Any], graficos: Path) -> str:
         raise DatosError(f"sin ficha para: {sorted(faltan)}")
 
     titulos = ["03. Análisis Técnico y Transmisión por Activo"]
-    paginas = [pagina_portada(datos)]
+    paginas = [pagina_portada(datos, ed)]
     for n in (2, 3, 4, 5):
-        paginas.append(pagina_contenido(n, datos, fichas, titulos))
-    paginas.append(pagina_escenarios(datos))
+        paginas.append(pagina_contenido(n, datos, fichas, titulos, ed))
+    paginas.append(pagina_escenarios(datos, ed))
 
     css = hoja_de_estilos(caras_de_fuente())
     return (
@@ -364,19 +382,71 @@ def _medir_desbordes(pagina: Any) -> list[dict[str, Any]]:
         })"""
     )
 
-def compilar(fecha: str | None = None) -> Path:
-    from playwright.sync_api import sync_playwright
-    from pypdf import PdfReader
+DATOS_JSON = "_datos_semanal.json"
+EDITORIAL_JSON = "editorial.json"
 
+
+def preparar(fecha: str | None = None) -> Path:
+    """Paso 1: lee el terminal, dibuja los gráficos y deja el editorial por escribir.
+
+    Un `editorial.json` que ya existe **no se pisa**: volver a preparar refresca
+    cifras y gráficos, y borrar el texto ya escrito sería perder el trabajo editorial
+    por un refresco de datos. Si hay activos o series nuevas, sus claves se agregan
+    vacías.
+    """
     hoy = fecha or datetime.now(tz=SANTIAGO).strftime("%Y-%m-%d")
     carpeta = RAIZ / "data" / "informes" / f"{hoy}_cierre"
-    graficos = carpeta / "graficos"
-    salida = carpeta / f"informe_cierre_semanal_{hoy.replace('-', '')}_GI.pdf"
+    datos = reunir(destino_graficos=carpeta / "graficos")
+    carpeta.mkdir(parents=True, exist_ok=True)
+    (carpeta / DATOS_JSON).write_text(json.dumps(datos, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    print(f"Fecha    : {hoy}")
-    datos = reunir(destino_graficos=graficos)
-    html_doc = construir_html(datos, graficos)
+    ruta_ed = carpeta / EDITORIAL_JSON
+    ed = completar_editorial(
+        json.loads(ruta_ed.read_text(encoding="utf-8")) if ruta_ed.exists() else None, datos
+    )
+    ruta_ed.write_text(json.dumps(ed, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    pendientes = C.problemas_editorial(ed, datos)
+    print(f"Carpeta  : {carpeta.relative_to(RAIZ)}")
+    print(f"Editorial: {ruta_ed.relative_to(RAIZ)} ({len(pendientes)} pendiente(s))")
+    return carpeta
+
+
+def completar_editorial(ed: dict[str, Any] | None, datos: dict[str, Any]) -> dict[str, Any]:
+    """La plantilla si no hay editorial; si lo hay, el mismo con las claves nuevas vacías."""
+    plantilla = C.plantilla_editorial(datos)
+    if ed is None:
+        return plantilla
+    for seccion in ("notas_portada", "activos"):
+        for clave, vacio in plantilla[seccion].items():
+            ed.setdefault(seccion, {}).setdefault(clave, vacio)
+    diag = ed.setdefault("curva", {}).setdefault("diagnostico", {})
+    for codigo, vacio in plantilla["curva"]["diagnostico"].items():
+        diag.setdefault(codigo, vacio)
+    return ed
+
+
+def rendir(carpeta: Path) -> Path:
+    """Paso 2: compila el PDF. Se detiene si el editorial tiene huecos."""
+    carpeta = carpeta.resolve()
+    ruta_datos = carpeta / DATOS_JSON
+    ruta_ed = carpeta / EDITORIAL_JSON
+    if not ruta_datos.is_file() or not ruta_ed.is_file():
+        raise DatosError(
+            f"No encuentro {DATOS_JSON} o {EDITORIAL_JSON} en {carpeta}. Correr antes --preparar."
+        )
+    datos = json.loads(ruta_datos.read_text(encoding="utf-8"))
+    ed = json.loads(ruta_ed.read_text(encoding="utf-8"))
+    graficos = carpeta / "graficos"
+    salida = carpeta / f"informe_cierre_semanal_{datos['fecha_corta'].replace('-', '')}_GI.pdf"
+
+    # Se arma el HTML antes de importar Playwright: un editorial incompleto se
+    # rechaza aunque el navegador no esté instalado.
+    html_doc = construir_html(datos, graficos, ed)
     print(f"HTML     : {len(html_doc) / 1024:.1f} KB")
+
+    from playwright.sync_api import sync_playwright
+    from pypdf import PdfReader
 
     with sync_playwright() as pw:
         navegador = pw.chromium.launch()
@@ -390,7 +460,6 @@ def compilar(fecha: str | None = None) -> Path:
         )
         navegador.close()
 
-    carpeta.mkdir(parents=True, exist_ok=True)
     salida.write_bytes(pdf)
 
     paginas = len(PdfReader(salida).pages)
@@ -399,7 +468,7 @@ def compilar(fecha: str | None = None) -> Path:
     print(f"Paginas  : {paginas}")
 
     # Las paginas son fijas y con `overflow: hidden`: si salen mas o menos de
-    # cinco, algo desbordo o se recorto, y un informe recortado se lee como
+    # las esperadas, algo desbordo o se recorto, y un informe recortado se lee como
     # completo. Es el mismo control que el compilador del manual.
     # Tolerancia de 2 px: el redondeo de subpixeles del layout no es un desborde.
     pasadas = [m for m in medidas if m["contenido"] > m["util"] + 2]
@@ -423,9 +492,23 @@ def compilar(fecha: str | None = None) -> Path:
     return salida
 
 
-if __name__ == "__main__":
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Informe de cierre semanal en dos pasos")
+    paso = parser.add_mutually_exclusive_group(required=True)
+    paso.add_argument("--preparar", action="store_true", help="lee el terminal y deja editorial.json")
+    paso.add_argument("--rendir", type=Path, metavar="DIR", help="compila el PDF de esa carpeta")
+    parser.add_argument("--fecha", help="AAAA-MM-DD de la carpeta (por defecto, hoy en Chile)")
+    args = parser.parse_args(argv)
     try:
-        compilar()
-    except (DatosError, KeyError) as exc:
+        if args.preparar:
+            preparar(args.fecha)
+        else:
+            rendir(args.rendir)
+    except (DatosError, KeyError, ValueError) as exc:
         print(f"[ERROR] {exc}", file=sys.stderr)
-        raise SystemExit(1) from exc
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
