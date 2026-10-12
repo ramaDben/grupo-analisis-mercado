@@ -44,7 +44,7 @@ Criterio de claridad (subordinado a la regla de oro): si un cliente nuevo sin ex
 - **WTI (Petróleo)**: drivers → inventarios EIA, decisiones OPEP+, demanda China, geopolítica
 - **US100 (Nasdaq 100)**: drivers → tasas Fed, earnings tech, rendimientos Treasury
 - **USD/JPY (Dólar / Yen japonés)**: cobertura por pedido externo, **fuera de la rotación diaria** de 2-3 activos (se cubre cuando el director lo pide). drivers → diferencial de tasas Fed vs BoJ, decisiones del BoJ, rendimientos Treasury, intervención del Ministerio de Finanzas de Japón, precios de energía, aversión al riesgo
-- **Acciones (rotación por análisis previo)**: además de los 4 activos base, la rotación diaria puede incluir 1-2 acciones del catálogo elegidas por análisis previo. Las elige el `Score_GI` del escáner como a cualquier otro activo del universo.
+- **Acciones (rotación por análisis previo)**: además de los 4 activos base, la rotación diaria puede incluir 1-2 acciones del catálogo elegidas por análisis previo. Las elige el ranking de la estrategia activa, como a cualquier otro activo del universo.
 
 ### El catálogo técnico es más amplio que la rotación diaria
 <!-- ambito: ambos -->
@@ -71,10 +71,9 @@ El universo completo del terminal (32 pares FX, 86 acciones, 13 ETF, 6 criptos) 
 
 ### 2. Niveles técnicos del día
 <!-- ambito: ambos -->
-- Enviar niveles en temporalidades 4H, 1H o 15M
 - Cubrir 2 o 3 activos por día (rotar entre USD/CLP, Oro, WTI, US100)
-- Indicar: soportes, resistencias, zona de interés y posible sesgo
-- La temporalidad se elige por activo según su volatilidad (nunca se asume 4H fijo). Los niveles se presentan como **lectura/marco temporal**, no como señal de operativa.
+- Dirección, niveles y escenarios salen de la **lectura de la estrategia activa** (`get_lectura`): lo que se vigila, lo que la invalida y el objetivo. Nunca se calculan aparte.
+- El marco lo decide la estrategia (con Tori, 4H). Los niveles se presentan como **lectura/marco temporal**, no como señal de operativa.
 
 ### 3. Drivers del activo
 <!-- ambito: ambos -->
@@ -83,25 +82,18 @@ El universo completo del terminal (32 pares FX, 86 acciones, 13 ETF, 6 criptos) 
 
 ## Reglas de temporalidad
 <!-- ambito: ambos -->
-Cada análisis indica explícitamente su temporalidad con un rango cuantificado (prohibido usar "corto" sin número — issue #44):
-- **15M** → scalper (minutos a 1-2 h) — alta rotación, movimientos rápidos del día
-- **1H** → intradía (dentro de la jornada) — movimientos del día, confirmar entradas finas
-- **4H** → swing de jornada (1-3 días) — tendencia del día y operativas de varias horas
-- **1D** → posicional (días a semanas) — lectura general del activo
+Cada análisis indica explícitamente su temporalidad con un rango cuantificado (prohibido usar "corto" sin número, issue #44).
 
-**La fuente única de las 4 etiquetas es `pipeline_carrusel.MARCOS_CANONICOS`**, y un test de contrato la compara contra la tabla de `.claude/commands/story.md`. Hasta el 2026-09-04 este párrafo declaraba fuente única a `.claude/commands/apertura.md`, **que ya no existe**: ese comando se retiró y la tabla quedó viviendo solo en markdown, en dos copias, justo antes de que el código necesitara una tercera.
+**El marco y su etiqueta los decide la estrategia activa.** Viven en sus `Marcos` (`config/estrategia.json`): con Tori el operativo es **4H, "swing, de una a dos semanas"**, con 1D ("posicional, de semanas") y 1S de contexto. `pipeline_carrusel.temporalidad_de` los escribe y `guardrails.nombres.marco_canonico` valida contra ellos. Hasta S8 del enchufe había una tabla de cuatro marcos (15M, 1H, 4H, 1D) en el código y otra en `story.md`: se borraron las dos.
 
-**Justificar la temporalidad por la volatilidad del activo (OBLIGATORIO)**: cada activo tiene `volatilidad` y `nota_volatilidad` en `config/activos.json`, y el mensaje de niveles cierra con `⏱️ *Temporalidad*` más la línea `💡 Por qué [TF] acá: …`, que explica en lenguaje novato por qué ese marco encaja con lo que ese activo se mueve.
+**Justificar la temporalidad (OBLIGATORIO)**: el mensaje cierra con `⏱️ *Temporalidad*` más `💡 Por qué [TF] acá: …`, que explica en lenguaje novato por qué ese marco encaja con lo que ese activo se mueve. La nota sale de `notas_marco.<marco>` en `config/activos.json`; sin ella el payload no se construye y `--preparar` excluye al activo. `nota_volatilidad`, la nota de cuando el carrusel publicaba 1H, se borró en S8.
 
-**Esto estuvo declarado y sin implementar desde el issue #44.** El 2026-09-04 se descubrió que el token `por_que_temporalidad` existía en **un solo lugar del repo: este archivo**, y que dos piezas habían salido sin el bloque. Faltaban tres cosas a la vez: los campos no estaban en las 14 acciones, `cargar_universo` no los copiaba (así que el generador nunca los veía) y el mensaje no emitía la línea.
+Dos reglas que imponen tests, y que salieron de notas que se contradecían publicadas (2026-09-04):
 
-Tres reglas que salieron de arreglarlo, y que imponen tests:
+1. **Toda nota nombra el marco que justifica.** *"Por qué 1H acá: … 4H da la lectura más limpia"* se contradice sola.
+2. **Toda nota habla de marcos, no de drivers.** Describir lo que mueve al activo promete una justificación y entrega otra cosa.
 
-1. **Toda nota nombra el marco que el carrusel publica.** Nueve notas recomendaban otro marco o ninguno, y publicadas se contradecían solas: *"Por qué 1H acá: … 4H da la lectura más limpia"*. Pueden (y deben) nombrar el marco más amplio, pero tienen que explicar también el que sale.
-2. **Toda nota habla de marcos, no de drivers.** Tres notas (GBP/USD, cobre, bitcoin) eran descripciones de lo que mueve al activo, sin nombrar ninguna temporalidad: la línea prometía una justificación y entregaba otra cosa.
-3. **El carrusel publica H1 y eso no se toca acá.** La selección de marco por activo es otro trabajo; lo que corresponde es que el texto justifique el marco que de verdad sale. Prometer selección por activo sin implementarla sería repetir el defecto de esta sección.
-
-Ejemplo obligatorio: "Niveles en 15M, marco scalper (minutos a 1-2 h)"
+Ejemplo: "⏱️ *Temporalidad*: 4H · marco swing (de una a dos semanas)"
 
 ## Fecha y hora actual — regla canónica (OBLIGATORIO)
 <!-- ambito: ambos -->
@@ -322,98 +314,71 @@ las 10:30; la reacción de cada dato sale del glosario y no de la redacción; da
 van en una sola pieza, y sin cifra no hay resultado.
 Comando: `/avisos`. Spec: `docs/superpowers/specs/2026-09-28-carruseles-avisos-design.md` §13.
 
-### El `Score_GI` y sus gates
+### El ranking de la estrategia y sus gates
 <!-- ambito: ambos -->
 
-> **El carrusel ya no usa este puntaje** (2026-10-11): ordena con la estrategia activa contra la
-> referencia semanal (`scripts/referencia_semanal.py`). Esto queda para Avisos y el analista hasta S6/S7.
+**El escáner es de la estrategia** (spec `docs/superpowers/specs/2026-10-09-enchufe-estrategia-design.md`).
+El lunes, el análisis semanal elige con `puntuar(leer(...), "semana")` y fija una **referencia**
+por activo en `data/referencias_semanales/<AAAA-Www>/`. Las diarias cubren solo esos activos y los
+ordenan con `puntuar(seguir(...), "sesion")`. Sin semanal, la primera diaria la corre, y una
+semanal incompleta no cierra la semana (director, 2026-10-11). Una ruptura por cierre o un cambio
+de estructura reemplaza la referencia por la lectura de ese cierre.
 
-`scripts/screener_gi.py` puntúa cada activo del catálogo sobre 100:
+La **cobertura fija** (`config/cobertura_fija.json`: USD/CLP, oro, WTI y cobre) sale siempre,
+también si la estrategia la habría excluido, y la pieza dice el motivo (director, 2026-10-11).
 
-| Factor | Tope | De dónde sale |
-|---|---|---|
-| Técnico (quiebre) | 35 | `ema_20`, `ema_50/100`, `s1/r1` de `get_asset_levels` |
-| Catalizador macro | 25 | `obtener_calendario_macro` (impacto **alto**) + `get_curva_tasas` |
-| Espacio ADC+ATR | 20 | `atr_14` de H1 contra `rango_hoy` / `atr_restante_14` de D1 |
-| Momentum | 20 | `adx_14`, `rsi_14`, `macd_hist` |
-
-Los rangos de puntos **son** la ponderación: `Score = T + M + C + F`. No se multiplican por pesos,
-porque los factores ya vienen escalados a su máximo y hacerlo dejaría el techo real en 26,5 sobre
-una escala de 100.
-
-**Cuatro gates se aplican ANTES de puntuar, y son exclusiones, no puntos:**
+**Dos gates de infraestructura se aplican antes de leer, y son exclusiones, no puntos:**
 
 1. **Feriado de la bolsa** del activo (`config/feriados_bolsa.json`).
 2. **Blackout por calendario** (FOMC −30/+75 min, NFP e IPC de EE.UU. −15/+30, RPM e Imacec de
    Chile, BoJ). Ojo: `obtener_calendario_macro` ya entrega la hora en America/Santiago, así que la
    ventana se compara directo; volver a convertir produce el desfase de ±1 h del issue #38.
-3. **Agotamiento**: ATR diario consumido sobre 90%.
-4. **Banda contra vela típica** (`gate_banda`): excluye cuando la vela típica cubre la banda entre
-   soporte y resistencia. **Excluye desde 1,00x y avisa entre 0,70x y 1,00x** (umbrales del
-   director, 2026-09-04). La zona de aviso no detiene la pieza: viaja como `banda_estrecha` y sale
-   en los avisos del escáner.
 
-**Tener recorrido disponible no dice nada sobre si los bordes se sostienen**, y por eso el gate de
-agotamiento no cubría al de banda: son dos preguntas distintas. Publicar niveles que la vela
-típica se come de una es entregar ruido con forma de estructura, y el cierre canónico de la pieza
-los presenta como si el precio fuera a respetarlos. La "vela típica" es `1,5 × ATR(H1)`, **la
-misma cifra** que la pieza publica como "Volatilidad típica": juzgar con otro número dejaría al
-gate midiendo distinto de lo que el cliente lee.
+Las demás exclusiones son de la estrategia: sin líneas trazables, contra la secuencia de los marcos
+mayores, o una línea A+ en prueba en el análisis semanal. Nada macro mueve el ranking (spec §8.2).
 
-**El respaldo por ATR se trata aparte, y esa es la parte que no era obvia.**
-`_get_support_resistance` cae a `precio ± ATR` cuando no encuentra swings del lado que necesita.
-Es una red de seguridad correcta, pero ese borde **no es un nivel**: es una distancia calculada
-con nombre de soporte. Y cuando ambos lados caen, la banda vale **2 ATR exactos por
-construcción**, así que el ratio da siempre 0,75 y no mide nada: un gate que no lo distinguiera
-avisaría siempre y siempre por la misma razón artificial. Por eso `analizar_activo` declara
-`niveles_origen` por lado (`swing` o `atr`) y el gate le da su propio motivo. Los cuatro lados
-caen por separado: se puede tener una resistencia real con un soporte sintético.
-
-Un setup prohibido puede puntuar alto, y con scoring puro ganaría la tanda. Por eso el filtro va
-antes.
+**El `Score_GI` se borró en S8**: sus cuatro factores (técnico por EMA 50, catalizador, espacio
+ADC+ATR y momentum) y los gates de agotamiento del ATR y de banda contra vela típica. Lo impide
+`tests/test_guardian_estrategia.py`: fuera de `scripts/estrategia/` falla `direccion_tecnica`,
+`ema_50` dentro de una comparación, `analizar_activo`, `get_asset_levels` o
+`_get_support_resistance`.
 
 **El escáner informa el motivo de cada exclusión y arrastra sus avisos.** Si el calendario no
 respondió, dice que no pudo verificar blackouts en vez de reportar cero exclusiones. Un escáner
 que descarta en silencio no es auditable.
 
-**`--forzar` salió en S4** con el gate de agotamiento del carrusel. **`--grupo` acota el universo
-y nada más**. Un canal sin candidatos devuelve **"ningún activo puntuó
+**`--grupo` acota el universo y nada más**. Un canal sin candidatos devuelve **"ningún activo puntuó
 sobre 0: no hay tanda que publicar. Es un resultado válido, no una falla"**, que es la respuesta
 correcta y la que el manual del comando ya exigía.
-
-Las cifras medidas que fijaron los umbrales: `docs/historia-forense.md`.
 
 ### Un canal vacío se suplementa con el motivo por el que quedó vacío
 <!-- ambito: ambos -->
 
-**El motivo ya es contenido**: que los activos de un canal hayan consumido su recorrido del día
-es una lectura de mercado, no un premio de consuelo, y explica algo que el cliente necesita
-entender, que no operar también es una decisión.
-
-Y hay una razón **estructural** para que esto haga falta: el recorrido disponible es
-`ATR − rango_hoy`, una función que **solo baja** con el día. Por construcción, un sistema cuyo
-criterio de selección exige espacio tiene su mejor momento al abrir y se apaga solo. **El gate
-está bien y lo que falta es otro eje de contenido para la tarde.**
+**El motivo ya es contenido**: que los activos de un canal estén en la ventana de un dato fuerte,
+o con la bolsa cerrada, es una lectura de mercado y no un premio de consuelo, y explica algo que el
+cliente necesita entender: que no operar también es una decisión. Nació con el gate de ATR agotado,
+que vaciaba los canales por la tarde y se borró en S8; con la cobertura fija, un canal cubierto
+casi nunca queda vacío.
 
 `scripts/suplemento_canal.py` lo resuelve leyendo las exclusiones que el escáner ya escribió, no
 generando contenido:
 
 | Motivo del gate | Categoría | Concepto que enseña |
 |---|---|---|
-| ATR diario consumido | `recorrido_agotado` | `volatilidad-atr` |
 | Blackout por calendario | `dato_en_curso` | `precio-descontado` |
 | Feriado de bolsa | `mercado_cerrado` | `temporalidades` |
 
 **El concepto lo elige el motivo, no el azar**, así la parte educativa queda pegada a lo que de
 verdad pasó en vez de ser una cápsula suelta. Hay contrato de nombres: todo motivo que el escáner
-pueda emitir tiene categoría, o está declarado `publicable: False`.
+pueda emitir tiene categoría, o está declarado `publicable: False`. "Ya salió en una corrida
+anterior" es uno: el canal ya tuvo su pieza, y decir que agotó su rango sería inventar el motivo.
 
 Cuatro reglas lo mantienen del lado del contenido y no del relleno:
 
 1. **Solo cubre canales VACÍOS.** Un suplemento junto a piezas de activo sería exactamente el
    relleno que el manual prohíbe. Su valor está en aparecer cuando no hay nada más.
-2. **Un problema nuestro de datos no es contenido.** La confianza baja del modelo o un fallo del
-   analizador dejan al canal **sin** suplemento: publicar "no pudimos leer el activo" no le sirve
+2. **Un problema nuestro de datos no es contenido.** Un fallo de lectura o una exclusión de la
+   estrategia dejan al canal **sin** suplemento: publicar "no pudimos leer el activo" no le sirve
    a nadie y suena a excusa.
 3. **No promete niveles.** El cierre canónico de tres escenarios necesita soporte y resistencia;
    sin ellos, prometerlos sería inventarlos. Cierra con el CTA al analista.
@@ -431,8 +396,8 @@ que el cliente ya leyó, no un archivo generado. Tres decisiones que conviene no
 - **Se anota al preparar, no al despachar.** Una tanda preparada y descartada gasta la ventana
   igual, y ese error va hacia el lado seguro: repetir de menos, no de más.
 
-Catorce días porque hay seis conceptos técnicos aplicables: con menos, un canal que se vacía
-seguido agota el repertorio antes de que nadie lo haya olvidado.
+Catorce días se fijaron con seis conceptos en juego: con menos, un canal que se vaciaba seguido
+agotaba el repertorio antes de que nadie lo hubiera olvidado.
 
 Las cifras del día que motivó esto: `docs/historia-forense.md`.
 
@@ -640,11 +605,12 @@ borraron. Decisión del director, tras una auditoría que lo encontró deficient
   contaba corridas y no días.
 - `ticket_engine` no tenía consumidores y su filtro de R:R bloqueaba 362 de 363 setups.
 
-**Qué quedó en su lugar.** La dirección de toda pieza es la lectura técnica
-(`screener_gi.direccion_tecnica`: precio contra la EMA 50), con una sola vara para todo
-el universo. El chip de la pieza la refleja, y si entre preparar y despachar la lectura
-da vuelta, la pieza no sale: el texto quedó escrito para la dirección contraria. El
-informe de apertura se arma con la lectura técnica diaria de los cinco activos base.
+**Qué quedó en su lugar.** La dirección de toda pieza sale de la lectura de la estrategia
+activa, con una sola vara para todo el universo (hasta S4 fue el precio contra la EMA 50,
+`direccion_tecnica`, borrada en S8). El chip de la pieza la refleja, y si entre preparar y
+despachar la lectura cambia de dirección o se rompe una línea que el texto daba por vigente, la
+pieza no sale (`divergencia`). El informe de apertura se arma con la lectura de los cinco
+activos base.
 
 **Lo que no era Playbook y se conservó**, reubicado: el umbral de frescura de datos
 (`market_data_mcp.frescura`) y la banda anti-ruido de `get_asset_levels` (constante en
@@ -693,16 +659,16 @@ prohíbe congelar precios.
 
 ## Indicadores técnicos
 <!-- ambito: ambos -->
-Un aviso = un indicador. NUNCA mezclar múltiples señales técnicas al mismo tiempo:
-- **ADC (Ancho Dinámico de Canal)** → medir la amplitud del canal operativo (Donchian 50 / distancia entre Bandas de Bollinger: Superior - Inferior) para evaluar compresión de volatilidad vs. fases de expansión
-- **Modelo ADC + ATR** → modelo cuantitativo estándar para proyectar recorridos:
-  1. *Amplitud de canal (ADC)*: define los límites y la zona de compresión/rango del precio
-  2. *Impulso intradía proyectado*: se calcula como $1.5 \times \text{ATR}_{14}(\text{H1})$ tras la ruptura o rebote de un nivel clave
-  3. *Validación de volatilidad diaria*: se contrasta con el ATR restante diario ($\text{ATR}_{14}\text{ D1} - \text{Rango Hoy}$) para asegurar que el movimiento quepa dentro del espacio disponible de la sesión sin forzar la lectura
-- **ATR** → recalcar su uso en USD/CLP como indicador de volatilidad y recorridos proyectados
-- **RSI** → avisar cuando esté sobrecomprado o sobrevendido
-- **MACD** → avisar cruces relevantes
-- **Medias móviles** → avisar cruces y niveles de soporte/resistencia dinámicos (ej: cruce o rebote en EMA 50 y EMA 100)
+**La lectura de las piezas no usa indicadores.** Sale de la estrategia activa (Tori: líneas
+diagonales y precio, `docs/metodologia-tendencias.md`), y las piezas nombran solo lo que la
+`Lectura` trae: líneas, niveles horizontales, estado y escenarios. La "Volatilidad típica" de la
+pieza es el ATR del marco operativo: describe cuánto se mueve el activo, no hacia dónde va.
+
+Hasta S8 esta sección fijaba avisos de RSI, MACD y medias y el modelo ADC + ATR (impulso de
+1,5 × ATR de H1). Se borraron con la lectura vieja (spec §6). `get_asset_levels` sigue
+devolviendo esos indicadores como dato crudo, para auditoría y para AGY, y ninguna pieza decide
+con ellos. Un aviso educativo sobre un indicador, si el director lo pide, sigue la regla de
+siempre: un indicador por aviso.
 
 ## Formato visual de mensajes WhatsApp
 <!-- ambito: ambos -->
@@ -742,16 +708,17 @@ Usar *negrita* ÚNICAMENTE en: título de sección, niveles clave y conclusión.
 Las primeras 3-4 líneas contienen la conclusión práctica. El detalle técnico va después, para quien quiera profundizar.
 
 **6. Cierre con lectura práctica**
-Cerrar cada mensaje de niveles/análisis con este bloque:
+Cerrar cada mensaje de niveles/análisis con los tres escenarios de la lectura, uno por flecha,
+tal como los escribe la estrategia (`Lectura.escenarios`). Con Tori, en tendencia:
 ```text
-⬆️ Sobre [resistencia] → fuerza compradora
-↔️ Entre [soporte] y [resistencia] → rango: si rompe un borde y vuelve a entrar, es falso quiebre y el objetivo pasa a ser el borde contrario
-⬇️ Bajo [soporte] → presión vendedora
+⬆️ Mientras el precio cierre sobre [línea], la tendencia alcista sigue.
+↔️ Si el precio vuelve a [línea] y la respeta, la línea suma un toque y gana fuerza.
+⬇️ Si una vela de 4 horas cierra bajo [línea], la línea alcista se rompe y la tendencia deja de valer.
 ```
-
-**La zona media también se opera** (decisión del director, 2026-09-28). Decía "esperar
-confirmación", y quien sabe operar la configuración nunca tiene que quedarse esperando: dentro del
-rango la operativa es el falso quiebre, de vuelta al borde contrario.
+El comando no los redacta, y el despacho los vuelve a armar justo antes de enviar. En `RANGO` la
+zona media sigue siendo el falso quiebre de vuelta al borde contrario (director, 2026-09-28: quien
+sabe operar la configuración nunca tiene que quedarse esperando). Hasta S8 el cierre era fijo
+(`Sobre [resistencia] → fuerza compradora`).
 
 **Y el mensaje no cierra siempre igual.** Un solo cierre repetido en cada pieza se lee como
 plantilla y mecaniza el grupo; cerrar siempre con "consulta a tu analista" suena a soporte técnico.
@@ -773,7 +740,7 @@ El propósito editorial de Grupo Inteligencia es **traducir lo complejo a un len
 Reglas:
 - Traducir siempre lo macro a la vida cotidiana: explicar por qué un dato de inflación, tasas o petróleo afecta el bolsillo o la decisión de inversión de forma simple.
 - Enfatizar con dirección, sin dramatizar: hablar con claridad de **sesgo, tendencia, fuerza, freno, rebote, piso y techo**, nombrando hacia dónde se inclina la mayor probabilidad.
-- Tomar postura pedagógica: cada análisis nombra el escenario más probable (`🟢 sobre X → …`, `🔴 bajo Y → …`) sin rodeos ni ambigüedades, pero sin prometer certezas mágicas.
+- Tomar postura pedagógica: cada análisis nombra el escenario más probable (`⬆️ sobre X → …`, `⬇️ bajo Y → …`) sin rodeos ni ambigüedades, pero sin prometer certezas mágicas.
 - Si aparece un concepto técnico o sigla, **siempre** se explica en lenguaje simple (Regla de oro: si hay duda entre complicar o simplificar, siempre simplificar). Profesional = accesible y claro.
 
 ### Prohibido el guion largo como inciso (OBLIGATORIO en texto de cliente)
@@ -904,13 +871,14 @@ que `mcp/mcp_config.json` frente a su `.example`.
 
 | MCP | Estado | Propósito | Usado en |
 |-----|--------|-----------|----------|
-| **market-data** | ✅ Activo | Análisis técnico MT5 (`get_asset_levels`) + niveles dibujados a mano por el director en MT5 (`get_chart_objects`) + calendario económico Investing.com (`obtener_calendario_macro`) + especificaciones de contrato y sesiones (`get_symbol_spec`) + operaciones abiertas del terminal (`get_open_positions`). Noticias vía WebSearch. | Comandos de datos de mercado y operativas |
+| **market-data** | ✅ Activo | La lectura de la estrategia (`get_lectura`) + dato técnico crudo de MT5 (`get_asset_levels`) + niveles dibujados a mano por el director en MT5 (`get_chart_objects`) + calendario económico Investing.com (`obtener_calendario_macro`) + especificaciones de contrato y sesiones (`get_symbol_spec`) + operaciones abiertas del terminal (`get_open_positions`). Noticias vía WebSearch. | Comandos de datos de mercado y operativas |
 | **WebSearch (investing.com + fuentes oficiales)** | ✅ Activo | Calendario económico y noticias relevantes | Contexto macro de cada canal y piezas de dato macro |
 | **WhatsApp Web (Playwright)** | ✅ Activo | Envío directo a los 7 canales (`scripts/enviar_whatsapp.py`), con verificación de entrega contra el DOM y frenos de cadencia | Tras la aprobación del director |
 | **TrendRadar / Firecrawl / Finnhub** | ❌ No activos | Reemplazados por market-data (MT5) + WebSearch | — |
 
-**Nota**: el MCP `market-data` expone **seis** tools:
-- `get_asset_levels` — análisis técnico MT5 automático (soportes/resistencias, indicadores). Devuelve `ema_20`, `ema_50`, `ema_100`, RSI, ATR, ADX, MACD, Bollinger y el canal `donchian_50_high/low/mid`. Ojo: `ema_20` es media **exponencial** (la corta de H1) y `bb_mid` es la media **simple** de 20 de las Bandas de Bollinger — no son lo mismo, y confundirlas cambia el indicador.
+**Nota**: el MCP `market-data` expone **siete** tools:
+- `get_lectura` — la `Lectura` de la estrategia activa contra la referencia de la semana: dirección, estado, líneas, lo que se vigila, lo que invalida, el objetivo, los tres escenarios y la regla de salida. **Es la única fuente para afirmar dirección o niveles en una pieza.**
+- `get_asset_levels` — dato técnico crudo de MT5 (pivotes e indicadores), para auditoría y para AGY: ninguna pieza decide con ella. Devuelve `ema_20`, `ema_50`, `ema_100`, RSI, ATR, ADX, MACD, Bollinger y el canal `donchian_50_high/low/mid`. Ojo: `ema_20` es media **exponencial** (la corta de H1) y `bb_mid` es la media **simple** de 20 de las Bandas de Bollinger — no son lo mismo, y confundirlas cambia el indicador.
 - `get_chart_objects` — niveles dibujados a mano por el director en MT5 (soportes/resistencias, trendlines, canales, rectángulos) más screenshot, vía el Service `ChartObjectsExporter` (sub-proyecto A, #98).
 - `obtener_calendario_macro` — calendario económico Investing.com (Chile/EE.UU./China/Zona Euro con campo `actual` y `resultado`, issue #91; WebSearch es fallback si la fuente falla).
 - `get_symbol_spec` — especificaciones de contrato de un símbolo (trade_mode, digits, volumen mínimo/paso, tamaño de contrato) y sesiones de trading semanales en hora Chile; con `fecha` responde de forma determinista si el activo opera ese día (issue #104).
@@ -1119,7 +1087,7 @@ Dos reglas de color que se pagaron caro:
 
 El acento es `#50C0A8`, el extremo verde del degradado del logo, medido sobre los assets.
 
-**Serie real y motor TradingView™ para los gráficos.** El estándar visual y cuantitativo de gráficos para alertas (`/carrusel` y `/story alerta`) es el motor `scripts/tradingview_grafico.py` basado en **TradingView Lightweight Charts™ v5** a **300 DPI nativos** (Retina con polyfill de canvas, 2800×1560 físico, paleta de alto contraste, velas japonesas, EMAs 20/50/200, Canal Donchian 50, ATR 14, oscilador RSI 14 con niveles 70/30, y líneas horizontales de Soporte y Resistencia). En caso de entornos sin Chromium/MT5, el pipeline mantiene fallback a la geometría SVG de `story_grafico.py`.
+**Serie real y motor TradingView™ para los gráficos.** El estándar visual y cuantitativo de gráficos para alertas (`/carrusel` y `/story alerta`) es el motor `scripts/tradingview_grafico.py` basado en **TradingView Lightweight Charts™ v5** a **300 DPI nativos** (Retina con polyfill de canvas, 2800×1560 físico, velas japonesas, las líneas de la `Lectura` y las zonas de soporte y resistencia del mensaje). Sin medias ni estructura propia: una segunda lectura en la imagen contradice al texto. Solo las piezas ad-hoc y el CLI, que no traen lectura, dibujan EMA 50/100. En caso de entornos sin Chromium/MT5, el pipeline mantiene fallback a la geometría SVG de `story_grafico.py`.
 
 **Todo nivel citado en el texto va trazado, y eso vale también para las Stories.** El informe ya
 lo exige para su gráfico; la pieza de Story tiene su propia mitad de la regla y estaba solo del
@@ -1199,7 +1167,7 @@ el carrusel y el informe: los siete comandos de día, las piezas sueltas que ell
 
 | Comando | Cuándo usarlo |
 |---------|---------------|
-| `/carrusel` | **La producción diaria.** El escáner detecta la sesión y la hora real, puntúa el universo con el `Score_GI`, elige el Top 3 y arma las piezas por canal, con su contexto macro. Acepta `--grupo <alias>` para un canal concreto y `--matriz` para cubrirlos todos. |
+| `/carrusel` | **La producción diaria.** El escáner detecta la sesión y la hora real, ordena los activos de la semana con la estrategia activa (la cobertura fija sale siempre), elige el Top 3 y arma las piezas por canal, con su contexto macro. Acepta `--grupo <alias>` para un canal concreto y `--matriz` para cubrirlos todos. |
 | `/avisos [momento]` | El grupo de Avisos: agenda del día (07:45), resultado de cada dato fuerte, cita de la mañana los días sin datos y balance de la tarde. Pasa primero por el banco de pruebas. |
 | `/informe [apertura\|cierre]` | El informe de la jornada. Apertura en PDF institucional A4; cierre chat-first (mensaje con gráfico). |
 | `/story [tipo]` | Una pieza suelta, cuando hace falta fuera de la tanda. Tipos: `alerta`, `dato_macro`, `breaking`, `calendario` — las cuatro plantillas que existen. No pregunta nada: todo va por argumento. |

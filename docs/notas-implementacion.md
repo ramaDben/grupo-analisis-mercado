@@ -31,7 +31,7 @@ grupo-analisis-mercado/
 │   ├── agenda_mercado.json  ← ventanas de sesion, anclajes de tanda y momentos del dia
 │   ├── agenda_semanal.json · feriados_bolsa.json
 ├── scripts/               ← scripts auxiliares
-│   ├── screener_gi.py     ← Score_GI sobre el universo + gates (feriado, blackout, ATR, banda)
+│   ├── screener_gi.py     ← ranking de la estrategia activa + gates (feriado, blackout)
 │   ├── agenda_mercado.py  ← el unico reloj: ventanas, anclajes y momentos
 │   ├── reloj_gi.py        ← el decisor del latido (solo prepara, nunca envia)
 │   ├── instalar_reloj.ps1 ← registra el latido en el Programador de tareas

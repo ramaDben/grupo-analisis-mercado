@@ -61,8 +61,8 @@ def _epoch(t: Any) -> int:
 def calcular_indicadores(df_velas: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Las velas con lo que el gráfico muestra: EMA 50/100 y el ATR 14 que da alto a las zonas.
 
-    Las medias solo se dibujan en las piezas que todavía no salen de la estrategia (Avisos y
-    el analista, hasta S6/S7). Bollinger, Donchian, RSI, ADX y las EMA 20/200 se calculaban y
+    Las medias solo se dibujan sin lectura: las piezas ad-hoc (`produccion_adhoc`) y el CLI.
+    Toda pieza de producción trae las líneas de la estrategia desde S7. Bollinger, Donchian, RSI, ADX y las EMA 20/200 se calculaban y
     no se mostraban: se borraron con el enchufe (spec §6).
     """
     if not df_velas:
@@ -154,7 +154,7 @@ def construir_html_tradingview(
 
     Con `lineas` dibuja la lectura de la estrategia y nada más: ni medias ni estructura
     propia, porque una segunda lectura en la imagen contradice al texto. Sin `lineas`
-    (Avisos y el analista hasta S6/S7) quedan las EMA 50/100 y las zonas. Se conserva
+    (las piezas ad-hoc y el CLI) quedan las EMA 50/100 y las zonas. Se conserva
     la paleta oscura de marca del rediseño del 2026-09-30.
     """
     if not VENDOR_JS.exists():
@@ -162,8 +162,8 @@ def construir_html_tradingview(
 
     vendor_code = VENDOR_JS.read_text(encoding="utf-8")
     # Con la lectura se dibujan sus líneas del marco del gráfico y los horizontales de
-    # cualquier marco (el objetivo sale de D1 o W1). Sin lectura (Avisos y el analista,
-    # hasta S6/S7) quedan las medias y las zonas.
+    # cualquier marco (el objetivo sale de D1 o W1). Sin lectura (ad-hoc y CLI) quedan las
+    # medias y las zonas.
     tiempos = [int(r["time"]) for r in rows]
     con_lectura = lineas is not None
     dibujables = [x for x in (lineas or ()) if x.marco == timeframe or x.tipo == "horizontal"]

@@ -54,9 +54,11 @@ guardián impide que un pipeline los use para decidir.
   estrategia activa, no contra una tabla propia.
 - Se borra la tabla de cuatro etiquetas de `.claude/commands/story.md`: el marco lo dice la
   estrategia y la tabla ya solo la usaban las piezas del analista, que salieron en S7.
-- **Las notas de volatilidad nombran el marco que se publica.** Con Tori es 4H y 12 de las 37
-  notas de `config/activos.json` no lo nombraban: la línea "Por qué 4H acá" habría explicado
-  otro marco. Se reescriben y el test pasa a leer el marco de `marco_operativo()`.
+- **Las notas que se publican son las de `notas_marco`.** Al empezar parecía que 12 de las 37
+  `nota_volatilidad` había que reescribirlas porque no nombraban 4H. Al medir resultó que ya no
+  las leía nadie: desde S4 el payload toma `notas_marco.<marco>`, y las ocho que existen nombran
+  su marco. Se borró `nota_volatilidad` del catálogo y del escáner, y los tests pasan a exigir
+  `notas_marco` del marco operativo en todo activo publicable de un canal cubierto.
 
 ### S8-4 · Test guardián
 `tests/test_guardian_estrategia.py` lee la fuente de `scripts/` (salvo `scripts/estrategia/`) y
