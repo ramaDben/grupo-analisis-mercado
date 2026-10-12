@@ -32,12 +32,8 @@ def _filas_niveles(a: dict[str, Any]) -> str:
     return "".join(f'<tr><th>{ih.e(r)}</th><td class="cifra">{ih.e(v)}</td></tr>' for r, v in cm._niveles(a))
 
 
-MOTIVO_SIN_CONTRATO = "no hay datos de contrato de la cuenta para simular este activo"
-
-
-def _motivo(a: dict[str, Any]) -> str | None:
-    """Por qué el activo no se simula (None si se simula). Sin contrato no hay con qué calcular."""
-    return a["escenario"]["motivo"] or (None if a["contrato"] else MOTIVO_SIN_CONTRATO)
+MOTIVO_SIN_CONTRATO = op.MOTIVO_SIN_CONTRATO
+_motivo = op.motivo_sin_simulacion
 
 
 def _panel(a: dict[str, Any], ejecutivo: str) -> str:

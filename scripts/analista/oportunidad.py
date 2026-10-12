@@ -92,6 +92,15 @@ def escenario(lectura: Lectura, digits: int) -> Escenario:
     return Escenario(lectura.ticker, lectura.estado, direccion, entrada, stop, objetivo, pendiente, dias, None)
 
 
+MOTIVO_SIN_CONTRATO = "no hay datos de contrato de la cuenta para simular este activo"
+
+
+def motivo_sin_simulacion(activo: dict[str, Any]) -> str | None:
+    """Por qué un activo de la foto no se simula (None si se simula). Lo usan el panel y el
+    seguimiento: sin contrato no hay con qué calcular."""
+    return activo["escenario"]["motivo"] or (None if activo.get("contrato") else MOTIVO_SIN_CONTRATO)
+
+
 def _pesos(valor: float) -> int:
     """Mitad hacia arriba, como `Math.round` del panel: `round` de Python va al par."""
     return math.floor(valor + 0.5)

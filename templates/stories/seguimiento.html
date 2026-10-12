@@ -148,7 +148,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: var(-
 .der { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
 
 .activo { font-weight: 700; font-size: 26px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-borde); margin: 0; }
-/* Los cuatro estados llevan el mismo sello: ninguno se vende ni se dramatiza. */
+/* Los cinco estados llevan el mismo sello: ninguno se vende ni se dramatiza. */
 .sello { font-family: var(--font-display); font-weight: 700; font-size: 72px; letter-spacing: 0.04em; color: var(--blanco); margin: 14px 0 0;
   padding: 10px 0; border-bottom: 4px solid var(--acento); align-self: flex-start; }
 .duelo { display: flex; gap: 22px; margin: 30px 0 0; }
@@ -188,7 +188,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: var(-
           </div>
           <p class="avance">{{avance}}</p>
           <p class="hoy">{{lectura_hoy}}</p>
-          <p class="niveles">{{rotulo_1}} {{valor_1}} · {{rotulo_2}} {{valor_2}} · {{rotulo_3}} {{valor_3}}</p>
+          <p class="niveles">{{niveles}}</p>
         </div>
         <div class="der">
           <div class="grafico">

@@ -12,10 +12,5 @@
   "firma": "Análisis: Nombre Apellido · Dirección de Análisis Técnico",
   "aviso": "Análisis técnico general, igual para todos sus destinatarios. No es una instrucción de inversión: un escenario puede cumplirse o invalidarse.",
   "lectura_hoy": "La lectura del lunes sigue en pie.",
-  "rotulo_1": "Entrada",
-  "valor_1": "4.000,00",
-  "rotulo_2": "Stop",
-  "valor_2": "3.950,00",
-  "rotulo_3": "Objetivo 1:3",
-  "valor_3": "4.150,00"
+  "niveles": "Entrada 4.000,00 · Stop 3.950,00 · Objetivo 1:3 4.150,00"
 }

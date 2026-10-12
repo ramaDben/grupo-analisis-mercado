@@ -61,3 +61,16 @@ def test_la_lamina_en_contra_no_lleva_avance_negativo(tmp_path):
     p = cm.payload_seguimiento(fx.activo_semanal(), {"estado": "en_curso", "avance_pct": -12}, 4190.0,
                                "La lectura del lunes sigue en pie.", "lunes 12/10", fx.AUTOR, tmp_path / "g.png")
     assert "-" not in p["avance"] and "en contra" in p["avance"]
+
+
+def test_la_lamina_de_seguimiento_sin_simulacion(tmp_path):
+    from analista import oportunidad as op
+
+    a = fx.activo_semanal()
+    a["escenario"] = op.escenario(fx.lectura(invalidacion=None), 2).a_dict()
+    p = cm.payload_seguimiento(a, {"estado": "sin_simulacion", "avance_pct": None,
+                                   "motivo": "la lectura no trae nivel de invalidación"},
+                               4190.0, "La lectura del lunes sigue en pie.", "lunes 12/10", fx.AUTOR,
+                               tmp_path / "g.png")
+    assert p["sello"] == "SIN SIMULACIÓN" and p["direccion"] == "bajista"
+    assert "no tiene simulación" in p["avance"] and p["niveles"] == ""

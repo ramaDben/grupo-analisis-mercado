@@ -196,3 +196,24 @@ def test_seguimiento_informa_simulacion_y_lectura_por_separado(tmp_path):
     assert d["evaluacion"]["estado"] == "en_curso"
     assert "Simulación de la semana" in d["whatsapp"] and "Lectura técnica hoy" in d["whatsapp"]
     assert "$" not in d["whatsapp"]
+
+
+def test_seguimiento_sin_simulacion_entrega_la_lectura_de_hoy(tmp_path):
+    """Un activo de la foto sin simulación es un estado válido, no una falla de datos."""
+    from analista import oportunidad as op
+
+    base = tmp_path / "ref"
+    _sembrar(base, [fx.lectura()], {"XAUUSD": 90.0})
+    oro = fx.activo_semanal()
+    oro["escenario"] = op.escenario(fx.lectura(invalidacion=None), 2).a_dict()
+    oro["contrato"] = None
+    _foto(tmp_path, base, [oro])
+    hecha = pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD"}), tmp_path / "s",
+                        datetime(2026, 10, 14, 11, 0, tzinfo=SCL),
+                        _lectores_seg(tmp_path, base, pd.DataFrame(columns=["time", "high", "low"]), 4124.0))
+    d = hecha.pieza["datos"]
+    assert d["evaluacion"]["estado"] == "sin_simulacion"
+    assert ("Esta semana este activo no tiene simulación: la lectura no trae nivel de invalidación."
+            in d["whatsapp"])
+    assert "Lectura técnica hoy" in d["whatsapp"] and "No pude leer" not in d["whatsapp"]
+    assert "Stop" not in d["whatsapp"]

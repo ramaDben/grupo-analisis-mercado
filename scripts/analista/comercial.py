@@ -14,7 +14,7 @@ AVISO_PIEZA = ("Análisis técnico general, igual para todos sus destinatarios. 
                "de inversión: un escenario puede cumplirse o invalidarse.")
 SEPARADOR = "━━━━━━━━━━━━━━━━━━━"
 SELLOS = {"entrada_pendiente": "ENTRADA PENDIENTE", "en_curso": "EN CURSO",
-          "objetivo": "OBJETIVO 1:3 ALCANZADO", "stop": "STOP TOCADO"}
+          "objetivo": "OBJETIVO 1:3 ALCANZADO", "stop": "STOP TOCADO", "sin_simulacion": "SIN SIMULACIÓN"}
 
 
 def nombre_lamina(ticker: str) -> str:
@@ -70,18 +70,23 @@ def payload_seguimiento(activo: dict[str, Any], ev: dict[str, Any], precio_vivo:
     from analista.seguimiento import _fmt, paso_la_entrada
 
     f, esc, d = activo["fmt"], activo["escenario"], activo["digits"]
-    avance = {"en_curso": _avance(ev.get("avance_pct")),
-              "entrada_pendiente": ("El precio salió del rango: la entrada sigue pendiente"
-                                    if paso_la_entrada(esc, precio_vivo) else "El precio no llega a la entrada"),
-              "objetivo": "Objetivo 1:3 alcanzado", "stop": "Stop tocado"}[ev["estado"]]
+    estado = ev["estado"]
+    if estado == "entrada_pendiente":
+        avance = ("El precio salió del rango: la entrada sigue pendiente" if paso_la_entrada(esc, precio_vivo)
+                  else "El precio no llega a la entrada")
+    else:
+        avance = {"en_curso": _avance(ev.get("avance_pct")),
+                  "objetivo": "Objetivo 1:3 alcanzado", "stop": "Stop tocado",
+                  "sin_simulacion": "Esta semana este activo no tiene simulación"}[estado]
+    sin = estado == "sin_simulacion"
+    niveles = "" if sin else f"Entrada {f['entrada']} · Stop {f['stop']} · Objetivo 1:3 {f['objetivo']}"
     return {
         "chip": f"SEGUIMIENTO · {SELLOS[ev['estado']]}", "datos_al": datos_al,
         "activo": f"{activo['nombre']} · {activo['ticker_visible']}",
-        "direccion": esc["direccion"].lower(), "sello": SELLOS[ev["estado"]],
+        "direccion": (activo["lectura"]["direccion"] if sin else esc["direccion"]).lower(),
+        "sello": SELLOS[ev["estado"]],
         "precio_lunes": f["precio"], "precio_hoy": _fmt(precio_vivo, d), "avance": avance,
-        "lectura_hoy": lectura_hoy,
-        "rotulo_1": "Entrada", "valor_1": f["entrada"], "rotulo_2": "Stop", "valor_2": f["stop"],
-        "rotulo_3": "Objetivo 1:3", "valor_3": f["objetivo"],
+        "lectura_hoy": lectura_hoy, "niveles": niveles,
         "pie_imagen": f"{activo['nombre']} · velas de 4 horas · MetaTrader 5",
         "firma": firma(autor), "aviso": AVISO_PIEZA, "chart_png": str(chart),
     }

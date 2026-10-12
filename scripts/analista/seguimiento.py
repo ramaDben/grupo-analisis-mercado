@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-ESTADOS = ("entrada_pendiente", "en_curso", "objetivo", "stop")
+ESTADOS = ("entrada_pendiente", "en_curso", "objetivo", "stop", "sin_simulacion")
 SEPARADOR = "━━━━━━━━━━━━━━━━━━━"
 
 
@@ -62,6 +62,8 @@ def paso_la_entrada(esc: dict[str, Any], precio: float) -> bool:
 def texto_simulacion(esc: dict[str, Any], ev: dict[str, Any], precio_vivo: float, digits: int) -> str:
     f = lambda x: _fmt(x, digits)  # noqa: E731
     estado = ev["estado"]
+    if estado == "sin_simulacion":
+        return f"Esta semana este activo no tiene simulación: {ev['motivo']}."
     if estado == "entrada_pendiente":
         if paso_la_entrada(esc, precio_vivo):
             return (f"El precio salió del rango y va en {f(precio_vivo)}: la simulación se activa si "
@@ -96,13 +98,17 @@ def mensaje(nombre: str, fecha_hoy: str, fecha_foto: str, esc: dict[str, Any], e
     from analista.comercial import AVISO_PIEZA
 
     f = lambda x: _fmt(x, digits)  # noqa: E731
+    if ev["estado"] == "sin_simulacion":
+        simulacion = ["🎯 *Simulación de la semana*", texto_simulacion(esc, ev, precio_vivo, digits)]
+    else:
+        simulacion = [f"🎯 *Simulación de la semana* (precios del {fecha_foto})",
+                      texto_simulacion(esc, ev, precio_vivo, digits),
+                      f"Entrada {f(esc['entrada'])} · Stop {f(esc['stop'])} · Objetivo 1:3 {f(esc['objetivo'])}"]
     return "\n".join([
         f"📊 *{nombre}* · actualización del {fecha_hoy}",
         "Te envío una actualización del análisis de la semana.",
         SEPARADOR,
-        f"🎯 *Simulación de la semana* (precios del {fecha_foto})",
-        texto_simulacion(esc, ev, precio_vivo, digits),
-        f"Entrada {f(esc['entrada'])} · Stop {f(esc['stop'])} · Objetivo 1:3 {f(esc['objetivo'])}",
+        *simulacion,
         SEPARADOR,
         "📈 *Lectura técnica hoy*",
         texto_lectura(actual, reemplazada, digits),

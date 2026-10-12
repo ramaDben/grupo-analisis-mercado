@@ -281,6 +281,7 @@ def preparar_seguimiento(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
     import referencia_semanal as rs
     from estrategia.contrato import lectura_de_dict
 
+    from analista import oportunidad as op
     from analista import registro_semanal as rg
     from analista import seguimiento as sg
 
@@ -296,8 +297,9 @@ def preparar_seguimiento(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
         raise FueraDeLaFotoError(f"Ese activo no está en el análisis de esta semana. Los de esta semana: {nombres}.")
     a = activos[ticker]
     esc = a["escenario"]
-    if esc["motivo"]:
-        raise PreparacionFallida(f"{a['nombre']} no tiene simulación esta semana: {esc['motivo']}.")
+    # Sin simulación es un estado válido (el activo va igual al correo con su motivo): se
+    # entrega la lectura de hoy y la simulación dice por qué no la hay.
+    motivo = op.motivo_sin_simulacion(a)
     referencia_foto = lectura_de_dict(a["lectura"])
     base = lec.base_referencias or rs.DIR
     estrategia = lec.estrategia()
@@ -311,7 +313,8 @@ def preparar_seguimiento(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
     h4 = diaria.velas[referencia_foto.marco]
     posteriores = h4[h4["time"] > referencia_foto.vela].to_dict("records") if len(h4) else []
     precio = diaria.lectura.precio
-    ev = sg.evaluar(esc, posteriores, precio)
+    ev = ({"estado": "sin_simulacion", "avance_pct": None, "motivo": motivo} if motivo
+          else sg.evaluar(esc, posteriores, precio))
     lectura_hoy = sg.texto_lectura(diaria.lectura, reemplazada, a["digits"])
     hoy = fecha_corta(ahora)
     texto = sg.mensaje(a["nombre"], hoy, a["foto"]["fecha"], esc, ev, precio, diaria.lectura, reemplazada,
