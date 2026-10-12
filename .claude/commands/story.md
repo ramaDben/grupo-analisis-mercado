@@ -297,15 +297,8 @@ de una a dos semanas"). Si llega una temporalidad en la invocación, se ignora y
 Si el activo no está en el catálogo, **detente y dilo**, nombrando lo que recibiste. No elijas
 por el director.
 
-Las etiquetas canónicas de temporalidad del repo (las usan todavía las piezas del analista,
-hasta S7 del enchufe; la de `alerta` sale de la estrategia, en `lectura.marco`):
-
-| | |
-|---|---|
-| `15M` | scalper (minutos a 1-2 h) |
-| `1H` | intradía (dentro de la jornada) |
-| `4H` | swing de jornada (1-3 días) |
-| `1D` | posicional (días a semanas) |
+La etiqueta de temporalidad sale de la estrategia (`lectura.marco` y su etiqueta en los
+`Marcos` de la estrategia), no de una tabla: no hay otra lista de marcos que mantener.
 
 ---
 

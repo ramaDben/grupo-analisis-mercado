@@ -279,7 +279,7 @@ def test_el_pipeline_escribe_la_noticia_en_su_json_y_la_registra(tmp_path):
 
     excluidos = [{
         "ticker": "WTI", "nombre": "Petróleo WTI", "clase": "commodities",
-        "excluido": "ATR diario consumido al 140%",
+        "excluido": "blackout por FOMC / decisión de la Fed (14:30-16:15 hora Chile)",
     }]
     pc.escribir_suplementos(
         tmp_path, excluidos, set(), {}, ruta_historial=historial,
@@ -303,7 +303,7 @@ def test_sin_noticia_el_canal_conserva_su_suplemento_de_estado(tmp_path):
 
     excluidos = [{
         "ticker": "WTI", "nombre": "Petróleo WTI", "clase": "commodities",
-        "excluido": "ATR diario consumido al 140%",
+        "excluido": "blackout por FOMC / decisión de la Fed (14:30-16:15 hora Chile)",
     }]
     pc.escribir_suplementos(
         tmp_path, excluidos, set(), {},

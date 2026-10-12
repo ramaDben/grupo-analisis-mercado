@@ -10,8 +10,8 @@ los ordenan con `puntuar(seguir(...), "sesion")`. Lo que queda acá es
 infraestructura: universo, canales cubiertos, cobertura fija, feriado, blackout por
 calendario, matriz por canal y la bitácora de lo publicado hoy.
 
-`evaluar_activo` y sus factores (el `Score_GI` viejo) siguen vivos solo porque
-`pipeline_avisos` y `analista/foco` todavía los usan; se borran en S6/S7.
+El `Score_GI` (sus cuatro factores y los gates de agotamiento y de banda) se borró en
+S8: el puntaje y las exclusiones técnicas son de la estrategia.
 
 Uso:
     uv run --with MetaTrader5 python scripts/screener_gi.py
@@ -28,7 +28,7 @@ import sys
 import unicodedata
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 from zoneinfo import ZoneInfo
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -42,7 +42,6 @@ if sys.platform == "win32":
     except Exception:
         pass
 
-from market_data_mcp.analisis import analizar_activo  # noqa: E402
 from market_data_mcp.tools.symbol_spec import _TICKER_EXCHANGE, _cargar_feriados  # noqa: E402
 
 NY = ZoneInfo("America/New_York")
@@ -170,41 +169,6 @@ _BLACKOUTS: tuple[dict[str, Any], ...] = (
 )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Qué activo "recibe" el dato de cada país
-# ─────────────────────────────────────────────────────────────────────────────
-# Primera aproximación deliberada, por país del evento. El mecanismo fino es
-# `config/drivers.json`, que mapea activo -> drivers con su elasticidad, y usarlo
-# acá exigiría invertir ese mapa y resolver sinónimos de nombres de indicador.
-# Queda como mejora; mientras tanto, el país ya separa lo que importa: un Imacec
-# no le habla al Nasdaq y un NFP no le habla al peso chileno del mismo modo.
-# Las claves van en inglés y con el nombre EXACTO que publica la fuente
-# ("United States", "Euro Zone"), por lo mismo que los patrones de blackout. Los
-# alias en español quedan como respaldo de locale.
-_RECEPTORES_POR_PAIS: dict[str, tuple[str, ...]] = {
-    "united states": ("US100.spot", "US500.spot", "US30.spot", "XAUUSD", "XAGUSD",
-                      "WTI.spot", "USDIDX", "QQQ.US", "SPY.US", "IWM.US", "SOXX.US",
-                      "GLD.US"),
-    "estados unidos": ("US100.spot", "US500.spot", "US30.spot", "XAUUSD", "XAGUSD",
-                       "WTI.spot", "USDIDX", "QQQ.US", "SPY.US", "IWM.US", "SOXX.US",
-                       "GLD.US"),
-    "chile": ("USDCLP",),
-    "china": ("COPPER", "WTI.spot"),
-    "euro zone": ("EURUSD", "GER40.spot"),
-    "zona euro": ("EURUSD", "GER40.spot"),
-    "japan": ("USDJPY",),
-    "united kingdom": ("GBPUSD",),
-}
-
-# Eventos de segundo orden que puntúan menos (el +15 del plan). También en
-# inglés: "Crude Oil Inventories", "FOMC Member Barkin Speaks", "2-Year Note
-# Auction" son los nombres reales observados en la fuente.
-_PATRONES_SEGUNDO_ORDEN = (
-    "inventories", "eia ", "opec", "speaks", "auction", "earnings",
-    "inventarios", "discurso", "resultados",
-)
-
-
 def _normalizar(texto: str) -> str:
     """Minúsculas sin tildes, para comparar nombres de evento de forma estable."""
     sin_tilde = unicodedata.normalize("NFKD", texto)
@@ -239,14 +203,9 @@ def cargar_universo(solo_renderizables: bool = True) -> list[dict[str, Any]]:
             # que uno ausente. `preparar()` excluye al activo si falta.
             "unidad": a.get("unidad"),
             "imagen": a.get("imagen"),
-            # Con que se justifica la temporalidad de la pieza. Estaban en el
-            # catalogo desde el issue #44 y `agregar()` no los copiaba, asi que el
-            # generador del mensaje nunca los vio y la linea obligatoria no existia.
             "volatilidad": a.get("volatilidad"),
-            "nota_volatilidad": a.get("nota_volatilidad"),
-            # La justificación del marco que decide la estrategia activa (spec §8.1),
-            # por marco: {"H4": "..."}. `nota_volatilidad` sigue para las piezas de
-            # 1H de Avisos y el analista hasta S6/S7.
+            # Con qué se justifica la temporalidad de la pieza (issue #44), por marco:
+            # {"H4": "..."}. El marco lo decide la estrategia activa (spec §8.1).
             "notas_marco": a.get("notas_marco") or {},
         })
 
@@ -434,363 +393,9 @@ def gate_blackout(
     return None
 
 
-def gate_agotamiento(d1: dict[str, Any], ahora_santiago: datetime | None = None) -> str | None:
-    """Excluye si el activo ya consumió su recorrido diario.
-
-    El plan lo trata como 0 puntos en el Factor Espacio, pero 0 puntos en un
-    factor de 20 todavía deja 80 disponibles: un activo agotado puede ganar la
-    tanda con técnica y catalizador. Agotado es agotado.
-    """
-    if ahora_santiago and d1.get("fecha_barra"):
-        hoy_scl = ahora_santiago.date().isoformat()
-        if str(d1["fecha_barra"]) < hoy_scl:
-            # La última vela diaria de MT5 corresponde a una sesión anterior (ayer o fin de semana).
-            # Para la jornada de hoy este mercado todavía no abre o no ha registrado ticks,
-            # por lo que no puede haber consumido el ATR de hoy.
-            return None
-
-    atr = d1.get("atr_14")
-    rango = d1.get("rango_hoy")
-    if not atr or rango is None:
-        return None
-    consumo = rango / atr
-    if consumo > 0.90:
-        return f"ATR diario consumido al {consumo:.0%}"
-    return None
-
-
-# Cuanto de la banda entre soporte y resistencia puede cubrir una vela tipica.
-# Umbrales fijados por el director el 2026-09-04, con las mediciones de esa tanda
-# a la vista: excluye desde 1,00x y avisa entre 0,70x y 1,00x.
-UMBRAL_BANDA_EXCLUYE = 1.00
-UMBRAL_BANDA_AVISA = 0.70
-
-
-def _banda_y_vela(h1: dict[str, Any]) -> tuple[float, float] | None:
-    """La banda soporte-resistencia y la vela tipica, o `None` si no se pueden leer.
-
-    La vela tipica es `1,5 x ATR(H1)`, que es **la misma cifra** que la pieza le
-    publica al cliente como "Volatilidad tipica". Usar otra medida aca dejaria al
-    gate juzgando con un numero distinto del que el cliente lee.
-    """
-    try:
-        banda = float(h1["r1"]) - float(h1["s1"])
-        vela = 1.5 * float(h1["atr_14"])
-    except (KeyError, TypeError, ValueError):
-        return None
-    if banda <= 0 or vela <= 0:
-        return None
-    return banda, vela
-
-
-def gate_banda(h1: dict[str, Any]) -> str | None:
-    """Excluye si los niveles no aguantan una hora, o si no son niveles.
-
-    Un activo cuya vela tipica cubre la banda entera entre soporte y resistencia
-    no tiene niveles operables: el precio cruza los dos bordes dentro de una hora
-    normal. Publicarlos es entregar ruido con forma de estructura, y el cierre
-    canonico de la pieza ("sobre X fuerza compradora, bajo Y presion vendedora")
-    los presenta como si el precio fuera a respetarlos.
-
-    El 2026-09-04 esto se aplico a mano cuatro veces: Litecoin cubria 3,2 veces su
-    banda, Dogecoin 1,8 y el S&P 500 1,03. Ninguna de las tres la ataja el gate de
-    agotamiento, porque tener recorrido disponible no dice nada sobre si los
-    bordes se sostienen.
-
-    **El respaldo por ATR se trata aparte y no por el ratio.** Cuando un lado sale
-    de `current ± ATR` en vez de un swing medido, ese borde no es un nivel: es una
-    banda de volatilidad con nombre de soporte. Y cuando ambos lados son
-    sinteticos la banda vale 2 ATR **exactos por construccion**, con lo que el
-    ratio da siempre 0,75 y no mide nada: avisar ahi seria avisar siempre y
-    siempre por la misma razon artificial.
-    """
-    origen = h1.get("niveles_origen")
-    if origen:
-        # Se miran solo los dos bordes que la pieza publica.
-        sinteticos = [lado for lado in ("s1", "r1") if origen.get(lado) == "atr"]
-        if sinteticos:
-            cuales = " y ".join(
-                "el soporte" if lado == "s1" else "la resistencia"
-                for lado in sinteticos
-            )
-            # El prefijo tiene que ser ESTABLE: `suplemento_canal` mapea el motivo
-            # a su categoria por prefijo, y arrancar con "el soporte" o "la
-            # resistencia" segun el lado daba dos prefijos para un mismo motivo.
-            return (
-                f"niveles de respaldo por ATR: {cuales} no sale de un swing "
-                "medido, asi que no hay estructura que publicar"
-            )
-
-    medida = _banda_y_vela(h1)
-    if medida is None:
-        return None
-    banda, vela = medida
-    ratio = vela / banda
-    if ratio >= UMBRAL_BANDA_EXCLUYE:
-        return (
-            f"la vela tipica cubre la banda entre soporte y resistencia "
-            # El motivo lo lee el cliente a traves del suplemento de canal, asi
-            # que la cifra va en notacion chilena.
-            f"{f'{ratio:.2f}'.replace('.', ',')} veces"
-        )
-    return None
-
-
-def banda_estrecha(h1: dict[str, Any]) -> float | None:
-    """El ratio vela/banda cuando cae en la zona de aviso, o `None`.
-
-    Zona de aviso: la vela cubre entre el 70% y el 100% de la banda. La pieza
-    sale, porque los bordes todavia se distinguen del ruido, pero el operador
-    tiene que saber que son estrechos para la volatilidad de ese activo.
-
-    Devuelve `None` cuando algun lado es respaldo por ATR: eso ya lo excluye
-    `gate_banda`, y el ratio de ese caso es artificial.
-    """
-    origen = h1.get("niveles_origen")
-    if origen and any(origen.get(lado) == "atr" for lado in ("s1", "r1")):
-        return None
-    medida = _banda_y_vela(h1)
-    if medida is None:
-        return None
-    banda, vela = medida
-    ratio = vela / banda
-    if UMBRAL_BANDA_AVISA <= ratio < UMBRAL_BANDA_EXCLUYE:
-        return round(ratio, 4)
-    return None
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Los 4 factores del Score_GI
-# ─────────────────────────────────────────────────────────────────────────────
-def direccion_tecnica(h1: dict[str, Any]) -> str:
-    """ALCISTA o BAJISTA según el precio contra la EMA 50 de H1.
-
-    La EMA 50 y no la 100 porque la tanda es intradía y la 100 reacciona
-    demasiado lento para una lectura de la jornada. Nunca devuelve LATERAL: la
-    pieza tiene que nombrar una dirección (regla de oro del proyecto), y para eso
-    el empate exacto se resuelve del lado del precio.
-    """
-    return "ALCISTA" if h1["price"] >= h1["ema_50"] else "BAJISTA"
-
-
-def factor_tecnico(h1: dict[str, Any], d1: dict[str, Any], direccion: str) -> tuple[int, str]:
-    """T ∈ [0, 35]. Quiebre de EMA 20 con estructura detrás, rebote en EMA
-    diaria, o quiebre de nivel horizontal."""
-    precio, alcista = h1["price"], direccion == "ALCISTA"
-
-    cruza_ema20 = precio > h1["ema_20"] if alcista else precio < h1["ema_20"]
-    estructura = (
-        precio > h1["ema_50"] and precio > h1["ema_100"]
-        if alcista else
-        precio < h1["ema_50"] and precio < h1["ema_100"]
-    )
-    if cruza_ema20 and estructura:
-        return 35, "quiebre de EMA 20 en H1 con EMA 50/100 detrás"
-
-    # Rebote en EMA diaria: el precio está a menos de medio ATR de H1 de la EMA.
-    margen = 0.5 * h1["atr_14"]
-    for etiqueta, nivel in (("EMA 50 diaria", d1.get("ema_50")), ("EMA 100 diaria", d1.get("ema_100"))):
-        if nivel and abs(precio - nivel) <= margen:
-            return 25, f"rebote en {etiqueta}"
-
-    if alcista and precio > h1["r1"]:
-        return 15, "quiebre de resistencia R1"
-    if not alcista and precio < h1["s1"]:
-        return 15, "quiebre de soporte S1"
-
-    return 0, "sin gatillo tecnico"
-
-
-def factor_catalizador(
-    ticker: str,
-    eventos: list[dict[str, Any]],
-    delta_ust_bps: float | None,
-) -> tuple[int, str]:
-    """M ∈ [0, 25]. Receptor del dato del día, movimiento de la curva, o evento
-    de segundo orden.
-
-    El +25 exige impacto **alto**, no cualquier dato del día. El plan enumera
-    "IPC, NFP, CB", que son de impacto alto, y en una jornada normal hay nueve
-    eventos de impacto medio o más: si cualquiera diera el máximo, todo activo
-    estadounidense sacaría 25 y el factor dejaría de discriminar entre ellos.
-    Los de impacto medio caen al +15 junto con inventarios y discursos.
-    """
-    def es_receptor(ev: dict[str, Any]) -> bool:
-        pais = _normalizar(ev.get("pais", ""))
-        receptores = next(
-            (v for k, v in _RECEPTORES_POR_PAIS.items() if k in pais or pais in k), ()
-        )
-        return ticker in receptores
-
-    for ev in eventos:
-        if _normalizar(ev.get("impacto", "")) == "alto" and es_receptor(ev):
-            return 25, f"recibe el dato de alto impacto: {ev.get('nombre', '?')}"
-
-    if delta_ust_bps is not None and abs(delta_ust_bps) >= 3.0:
-        return 20, f"la UST 10Y se movio {delta_ust_bps:+.1f} bps"
-
-    for ev in eventos:
-        nombre = ev.get("nombre", "?")
-        if es_receptor(ev):
-            return 15, f"recibe un dato de impacto medio: {nombre}"
-        if any(p in _normalizar(nombre) for p in _PATRONES_SEGUNDO_ORDEN):
-            return 15, f"evento de segundo orden: {nombre}"
-
-    return 0, "sin catalizador"
-
-
-def factor_espacio(
-    h1: dict[str, Any],
-    d1: dict[str, Any],
-    direccion: str,
-    ahora_santiago: datetime | None = None,
-) -> tuple[int, str]:
-    """C ∈ [0, 20]. Espacio al objetivo medido en ATR de H1, validado contra lo
-    que le queda de recorrido al día."""
-    precio = h1["price"]
-    objetivo = h1["r1"] if direccion == "ALCISTA" else h1["s1"]
-    atr_h1 = h1["atr_14"]
-    if not atr_h1:
-        return 0, "sin ATR de H1"
-
-    espacio = abs(objetivo - precio) / atr_h1
-    atr_d1, rango_hoy = d1.get("atr_14"), d1.get("rango_hoy")
-
-    if ahora_santiago and d1.get("fecha_barra"):
-        hoy_scl = ahora_santiago.date().isoformat()
-        if str(d1["fecha_barra"]) < hoy_scl:
-            consumo = 0.0
-        else:
-            consumo = (rango_hoy / atr_d1) if (atr_d1 and rango_hoy is not None) else None
-    else:
-        consumo = (rango_hoy / atr_d1) if (atr_d1 and rango_hoy is not None) else None
-
-    if consumo is None:
-        return 0, f"espacio {espacio:.1f}x ATR H1, sin consumo diario medible"
-    # P0: Piso operativo para evitar falsos positivos a primera hora (reloj vs mercado).
-    # Si el consumo es < 15%, la sesión apenas comienza y no se otorga el bonus completo de 20 puntos.
-    if espacio >= 1.5 and 0.15 <= consumo < 0.70:
-        return 20, f"espacio {espacio:.1f}x ATR H1 y ATR diario al {consumo:.0%}"
-    if espacio >= 1.5 and consumo < 0.15:
-        return 10, f"espacio {espacio:.1f}x ATR H1 (sesión inicial, consumo al {consumo:.0%})"
-    if espacio >= 1.0 and 0.70 <= consumo <= 0.85:
-        return 10, f"espacio {espacio:.1f}x ATR H1 y ATR diario al {consumo:.0%}"
-    return 0, f"espacio {espacio:.1f}x ATR H1 y ATR diario al {consumo:.0%}"
-
-
-def factor_momentum(h1: dict[str, Any], direccion: str) -> tuple[int, str]:
-    """F ∈ [0, 20]. ADX con RSI en zona de expansión, o ADX naciente con MACD a
-    favor."""
-    adx, rsi = h1["adx_14"], h1["rsi_14"]
-    alcista = direccion == "ALCISTA"
-
-    zona_sana = (50 <= rsi <= 68) if alcista else (32 <= rsi <= 50)
-    if adx > 25 and zona_sana:
-        return 20, f"ADX {adx:.0f} con RSI {rsi:.0f} en zona de expansion"
-
-    macd_favor = h1["macd_hist"] > 0 if alcista else h1["macd_hist"] < 0
-    if 20 <= adx <= 25 and macd_favor:
-        return 10, f"ADX {adx:.0f} con MACD a favor"
-
-    return 0, f"ADX {adx:.0f} y RSI {rsi:.0f} sin expansion"
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Escaneo
 # ─────────────────────────────────────────────────────────────────────────────
-
-# ── Transitorio hasta S6/S7 del enchufe ────────────────────────────────────────
-# `evaluar_activo`, sus factores y los gates de agotamiento y banda ya no deciden el
-# carrusel: los usan todavía `pipeline_avisos` y `analista/foco`. Se borran cuando
-# esos consumidores pasen a la `Lectura` (spec §6, §7 fase 3).
-def evaluar_activo(
-    activo: dict[str, Any],
-    eventos: list[dict[str, Any]],
-    delta_ust_bps: float | None,
-    ahora_santiago: datetime,
-    analizador: Callable[[str, str], dict[str, Any]] = analizar_activo,
-    ignorar_agotamiento: bool = False,
-    fijo: bool = False,
-) -> dict[str, Any]:
-    """Puntúa un activo, o explica por qué queda fuera.
-
-    Con `fijo` (cobertura fija) los gates de agotamiento y de banda no excluyen:
-    su motivo viaja en `gates_omitidos` para que el escáner lo diga.
-    """
-    ticker = activo["ticker"]
-    base = {"ticker": ticker, "nombre": activo["nombre"], "clase": activo["clase"]}
-    omitidos: list[str] = []
-
-    motivo = gate_feriado(ticker, ahora_santiago.date())
-    if motivo:
-        return {**base, "excluido": motivo}
-
-    h1 = analizador(ticker, "H1")
-    if "error" in h1:
-        return {**base, "excluido": f"{h1['error']}: {h1.get('message', '')}"}
-    d1 = analizador(ticker, "D1")
-    if "error" in d1:
-        return {**base, "excluido": f"D1 {d1['error']}: {d1.get('message', '')}"}
-
-    if not ignorar_agotamiento:
-        motivo = gate_agotamiento(d1, ahora_santiago=ahora_santiago)
-        if motivo and fijo:
-            omitidos.append(motivo)
-        elif motivo:
-            return {**base, "excluido": motivo}
-
-    direccion = direccion_tecnica(h1)
-
-    motivo = gate_blackout(ticker, eventos, ahora_santiago)
-    if motivo:
-        return {**base, "excluido": motivo}
-
-    # Va antes de puntuar, como los otros: un activo cuyos niveles no aguantan una
-    # hora puede puntuar alto y con scoring puro ganaria la tanda.
-    motivo = gate_banda(h1)
-    if motivo and fijo:
-        omitidos.append(motivo)
-    elif motivo:
-        return {**base, "excluido": motivo}
-
-    t, det_t = factor_tecnico(h1, d1, direccion)
-    m, det_m = factor_catalizador(ticker, eventos, delta_ust_bps)
-    c, det_c = factor_espacio(h1, d1, direccion, ahora_santiago=ahora_santiago)
-    f, det_f = factor_momentum(h1, direccion)
-
-    return {
-        **base,
-        "direccion": direccion,
-        "cobertura_fija": fijo,
-        "gates_omitidos": omitidos,
-        "score": t + m + c + f,
-        "factores": {
-            "tecnico":     {"puntos": t, "max": 35, "detalle": det_t},
-            "catalizador": {"puntos": m, "max": 25, "detalle": det_m},
-            "espacio":     {"puntos": c, "max": 20, "detalle": det_c},
-            "momentum":    {"puntos": f, "max": 20, "detalle": det_f},
-        },
-        "precio": h1["price"],
-        "soporte": h1["s1"],
-        "resistencia": h1["r1"],
-        "atr_h1": h1["atr_14"],
-        "atr_d1": d1.get("atr_14"),
-        # Zona de aviso del gate de banda: la vela tipica cubre entre el 70% y el
-        # 100% de la banda. La pieza sale, pero con los bordes estrechos para la
-        # volatilidad del activo, y eso tiene que viajar en la seleccion para que
-        # el escaner lo pueda reportar sin volver a pedir el H1.
-        "banda_estrecha": banda_estrecha(h1),
-        # Impulso proyectado del modelo ADC+ATR: 1,5 x ATR14 de H1 tras el
-        # quiebre. El nombre interno sigue al modelo cuantitativo, que es donde
-        # esta definido; hacia el cliente el mismo numero se comunica como
-        # "Volatilidad tipica", sin la palabra proyectado y sin sumarlo al
-        # precio. La pieza de alerta no lleva firma acreditada, asi que afirmar
-        # un recorrido futuro la convertiria en una recomendacion de inversion
-        # sin quien la respalde. El ATR es un promedio de rangos PASADOS:
-        # describe cuanto se mueve el instrumento, no hacia donde va.
-        "impulso_adc_atr": round(1.5 * h1["atr_14"], activo["digits"]),
-    }
-
 
 def _contexto_macro(ahora_santiago: datetime) -> tuple[list[dict[str, Any]], float | None, list[str]]:
     """Calendario del día y variación diaria de la UST 10Y, con sus avisos.
@@ -810,7 +415,7 @@ def _contexto_macro(ahora_santiago: datetime) -> tuple[list[dict[str, Any]], flo
         if "error" in cal:
             avisos.append(
                 f"calendario no disponible ({cal['error']}): no se pudieron verificar "
-                "blackouts ni el factor catalizador"
+                "blackouts"
             )
         else:
             eventos = cal.get("eventos", [])
@@ -986,7 +591,7 @@ def evaluar_con_estrategia(activo: dict[str, Any], estrategia, diaria: rs.Diaria
     """La entrada del ranking diario: la lectura de hoy y su puntaje de sesión.
 
     Un fijo excluido por la estrategia sale igual y lleva el motivo en
-    `gates_omitidos` (director, 2026-10-11), igual que antes con agotamiento y banda.
+    `gates_omitidos` (director, 2026-10-11).
     """
     base = {"ticker": activo["ticker"], "nombre": activo["nombre"], "clase": activo["clase"]}
     lectura = diaria.lectura

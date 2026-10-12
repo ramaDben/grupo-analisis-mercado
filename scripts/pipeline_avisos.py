@@ -1135,7 +1135,7 @@ def grafico_tradingview(payload: dict[str, Any], destino: Path) -> Path:
         ticker=payload["_procedencia"]["ticker"],
         nombre=payload.get("rotulo_activo", payload.get("activo", "")),
         destino=destino,
-        timeframe=payload.get("marco", pc.TIMEFRAME_GRAFICO),
+        timeframe=payload["marco"],
         n_velas=VELAS_GRAFICO,
         soporte=crudos.get("soporte"),
         resistencia=crudos.get("resistencia"),

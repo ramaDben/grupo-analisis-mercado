@@ -5,8 +5,8 @@ Verifica los contratos de nomenclatura entre subsistemas:
   templates/stories/*.html) con separadores POSIX y Windows.
 - Validación de tickers contra catalog.load_valid_tickers, sugiriendo el sufijo
   exacto del broker (ej. US100.spot ante US100).
-- Validación de temporalidades canónicas contra pipeline_carrusel.MARCOS_CANONICOS
-  sin duplicar tablas literales en los tests.
+- Validación de temporalidades contra los marcos de la estrategia activa, sin
+  duplicar tablas literales en los tests.
 - Resolución de alias de canales oficiales en lenguaje natural según
   config/whatsapp_grupos.json con insensibilidad a mayúsculas y tildes.
 """
@@ -159,10 +159,11 @@ def test_ticker_valido_error_interno_falla_catalogo():
 # ---------------------------------------------------------------------------
 
 
-def test_marco_canonico_verifica_contra_import_real():
-    """Verifica cada etiqueta canónica contra el import real de pipeline_carrusel."""
-    etiquetas_canonicas = [e for e, _ in pipeline_carrusel.MARCOS_CANONICOS.values()]
-    assert len(etiquetas_canonicas) == 4
+def test_marco_canonico_verifica_contra_los_marcos_de_la_estrategia():
+    """Cada marco de la estrategia activa pasa con su etiqueta corta."""
+    marcos = pipeline_carrusel._estrategia().marcos.todos
+    etiquetas_canonicas = [pipeline_carrusel.ETIQUETA_CORTA.get(m, m) for m in marcos]
+    assert "4H" in etiquetas_canonicas
 
     for etiqueta in etiquetas_canonicas:
         v = marco_canonico(etiqueta)

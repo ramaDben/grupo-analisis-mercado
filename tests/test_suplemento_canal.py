@@ -1,10 +1,10 @@
 """El suplemento de un canal que quedo sin activos publicables.
 
-**El motivo por el que un canal queda vacio ya es contenido.** El 2026-09-03 a
-las 12:11 el canal de divisas quedo en cero porque sus cuatro activos habian
-consumido su recorrido del dia, con el USD/JPY al 290%. Eso es una lectura de
-mercado, no un premio de consuelo, y explica algo que el cliente necesita
-entender: que no operar tambien es una decision.
+**El motivo por el que un canal queda vacio ya es contenido.** Un canal que se
+queda sin piezas porque todos sus activos estan en la ventana de un dato fuerte
+explica algo que el cliente necesita entender: que no operar tambien es una
+decision. Desde S8 del enchufe solo lo disparan el blackout y el feriado; nacio
+con el gate de ATR agotado, que se borro.
 
 El manual del comando prohibe el relleno ("una tanda de 2 piezas bien elegidas
 es mejor que una de 3 con un relleno"), asi que el suplemento tiene que ganarse
@@ -36,39 +36,40 @@ def _aislar_historial(monkeypatch):
         lambda ruta=None: orig(ruta) if ruta is not None else [],
     )
 
-# Las exclusiones reales del canal de divisas de ese dia, tal como las escribio
-# el escaner en `_screener.json`.
-FOREX_AGOTADO_CON_CLASE = [
-    {"ticker": "USDCLP", "nombre": "Dólar / Peso Chileno", "clase": "forex",
-     "excluido": "ATR diario consumido al 93%"},
-    {"ticker": "EURUSD", "nombre": "Euro / Dólar", "clase": "forex",
-     "excluido": "ATR diario consumido al 123%"},
+BLACKOUT = "blackout por IPC de EE.UU. (08:15-09:00 hora Chile)"
+
+FOREX_EN_DATO_CON_CLASE = [
+    {"ticker": "USDCLP", "nombre": "Dólar / Peso Chileno", "clase": "forex", "excluido": BLACKOUT},
+    {"ticker": "EURUSD", "nombre": "Euro / Dólar", "clase": "forex", "excluido": BLACKOUT},
 ]
 
-FOREX_AGOTADO = [
-    {"ticker": "USDCLP", "nombre": "Dólar / Peso Chileno", "excluido": "ATR diario consumido al 93%"},
-    {"ticker": "USDJPY", "nombre": "Dólar / Yen Japonés", "excluido": "ATR diario consumido al 290%"},
-    {"ticker": "EURUSD", "nombre": "Euro / Dólar", "excluido": "ATR diario consumido al 93%"},
-    {"ticker": "GBPUSD", "nombre": "Libra / Dólar", "excluido": "ATR diario consumido al 123%"},
+FOREX_EN_DATO = [
+    {"ticker": "USDCLP", "nombre": "Dólar / Peso Chileno", "excluido": BLACKOUT},
+    {"ticker": "USDJPY", "nombre": "Dólar / Yen Japonés", "excluido": BLACKOUT},
+    {"ticker": "EURUSD", "nombre": "Euro / Dólar", "excluido": BLACKOUT},
+    {"ticker": "GBPUSD", "nombre": "Libra / Dólar", "excluido": BLACKOUT},
 ]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # El motivo se traduce a una categoria y a un concepto
 # ─────────────────────────────────────────────────────────────────────────────
-def test_el_recorrido_agotado_ensena_volatilidad():
-    """El concepto lo elige el MOTIVO, no el azar. Si todo el canal gasto su
-    rango del dia, el concepto que lo explica es la volatilidad."""
-    cat = sup.categoria_del_motivo("ATR diario consumido al 93%")
-    assert cat is not None
-    assert cat["categoria"] == "recorrido_agotado"
-    assert cat["concepto"] == "volatilidad-atr"
-    assert cat["publicable"] is True
+def test_un_activo_ya_publicado_no_es_contenido_para_el_cliente():
+    """Hasta S8 "ya salio en una corrida anterior" caia en la categoria del ATR
+    agotado, y el suplemento le habria dicho al cliente que el canal gasto su rango
+    del dia cuando lo que paso es que su pieza ya habia salido."""
+    cat = sup.categoria_del_motivo("ya salio en una corrida anterior de hoy")
+    assert cat == {"categoria": "ya_publicado", "concepto": None, "publicable": False}
+
+
+def test_los_motivos_de_los_gates_borrados_ya_no_tienen_categoria():
+    for motivo in ("ATR diario consumido al 93%", "la vela tipica cubre la banda",
+                   "niveles de respaldo por ATR"):
+        assert sup.categoria_del_motivo(motivo) is None, motivo
 
 
 def test_cada_gate_tiene_su_concepto():
     for motivo, concepto in (
-        ("ATR diario consumido al 98%", "volatilidad-atr"),
         ("blackout por IPC de EE.UU. (08:15-09:00 hora Chile)", "precio-descontado"),
         ("feriado de NYSE", "temporalidades"),
     ):
@@ -97,15 +98,14 @@ def test_un_motivo_desconocido_no_se_inventa_una_categoria():
 # ─────────────────────────────────────────────────────────────────────────────
 # El resumen del canal, con las cifras medidas
 # ─────────────────────────────────────────────────────────────────────────────
-def test_el_resumen_toma_la_categoria_dominante_y_sus_cifras():
-    r = sup.resumen_del_canal(FOREX_AGOTADO)
+def test_el_resumen_toma_la_categoria_dominante():
+    feriado = {"ticker": "#NVDA", "nombre": "NVIDIA", "excluido": "feriado de NYSE"}
+    r = sup.resumen_del_canal([*FOREX_EN_DATO, feriado])
 
     assert r is not None
-    assert r["categoria"] == "recorrido_agotado"
+    assert r["categoria"] == "dato_en_curso"
     assert r["activos"] == 4
-    assert r["minimo_pct"] == 93, "el que menos consumio"
-    assert r["maximo_pct"] == 290, "el que mas, que es el dato que engancha"
-    assert r["peor_activo"] == "Dólar / Yen Japonés"
+    assert r["concepto"] == "precio-descontado"
 
 
 def test_sin_exclusiones_no_hay_resumen():
@@ -123,25 +123,21 @@ def test_una_categoria_no_publicable_no_da_resumen():
 # ─────────────────────────────────────────────────────────────────────────────
 # El mensaje
 # ─────────────────────────────────────────────────────────────────────────────
-def test_el_mensaje_dice_el_motivo_con_su_cifra_y_ensena_el_concepto():
-    s = sup.suplemento("02_forex_divisas", FOREX_AGOTADO)
+def test_el_mensaje_dice_el_motivo_y_ensena_el_concepto():
+    s = sup.suplemento("02_forex_divisas", FOREX_EN_DATO)
     assert s is not None
 
     mensaje = sup.construir_mensaje_suplemento(s)
 
-    # El 290% se comunica como "2,9 veces su rango habitual": para un cliente
-    # eso es mucho mas claro que un porcentaje sobre una metrica que no conoce.
-    assert "2,9 veces" in mensaje, f"falta la cifra que engancha: {mensaje}"
-    assert "290%" not in mensaje, "salio el porcentaje crudo en vez de la traduccion"
-    assert "Dólar / Yen" in mensaje
-    assert "Volatilidad" in mensaje, "no ensena el concepto"
+    assert "catalizadores macroeconómicos" in mensaje, f"no dice el motivo: {mensaje}"
+    assert "📚" in mensaje, "no ensena el concepto"
     assert "analista" in mensaje.lower(), "sin cierre con CTA"
 
 
 def test_el_mensaje_no_promete_niveles_que_no_tiene():
     """El cierre canonico de tres escenarios necesita soporte y resistencia, y
     este mensaje no los tiene. Prometerlos seria inventarlos."""
-    s = sup.suplemento("02_forex_divisas", FOREX_AGOTADO)
+    s = sup.suplemento("02_forex_divisas", FOREX_EN_DATO)
     mensaje = sup.construir_mensaje_suplemento(s)
 
     assert "Nivel a vigilar" not in mensaje
@@ -150,12 +146,11 @@ def test_el_mensaje_no_promete_niveles_que_no_tiene():
 
 
 def test_el_mensaje_no_usa_jerga_sin_traducir():
-    """`ATR` es el nombre del indicador, no algo que el cliente tenga que saber.
-    El motivo del escaner lo dice asi porque es log interno."""
-    s = sup.suplemento("02_forex_divisas", FOREX_AGOTADO)
+    """El motivo del escaner es log interno: no se copia al mensaje."""
+    s = sup.suplemento("02_forex_divisas", FOREX_EN_DATO)
     mensaje = sup.construir_mensaje_suplemento(s)
 
-    assert "ATR diario consumido" not in mensaje, "se filtro el texto del log"
+    assert "blackout" not in mensaje.lower(), "se filtro el texto del log"
     assert "—" not in mensaje and "–" not in mensaje, "guion largo prohibido"
 
 
@@ -223,7 +218,7 @@ def test_todo_gate_del_escaner_tiene_categoria_o_esta_declarado_no_publicable():
     motivos = _motivos_de_los_gates()
 
     gates = {nombre for nombre, _ in motivos}
-    assert len(gates) >= 4, f"se dejaron de encontrar gates: {sorted(gates)}"
+    assert gates >= {"gate_feriado", "gate_blackout"}, f"se dejaron de encontrar gates: {sorted(gates)}"
 
     sin_clasificar = [
         f"{nombre}: {texto!r}"
@@ -295,7 +290,7 @@ def test_todo_concepto_del_suplemento_trae_su_explicacion_larga():
 def test_la_negrita_es_la_de_whatsapp_y_no_la_de_markdown():
     """WhatsApp usa *un asterisco*, no **dos**. Con dos, el cliente ve los
     asteriscos literales en el mensaje."""
-    s = sup.suplemento("02_forex_divisas", FOREX_AGOTADO)
+    s = sup.suplemento("02_forex_divisas", FOREX_EN_DATO)
     mensaje = sup.construir_mensaje_suplemento(s)
 
     assert "**" not in mensaje, f"negrita de markdown en el mensaje: {mensaje}"
@@ -332,7 +327,7 @@ def test_el_suplemento_se_escribe_con_su_json_de_procedencia(tmp_path):
     # La ruta del historial va aparte: sin esto el test escribia en el historial
     # REAL y gastaba la ventana anti repeticion de produccion. Paso de verdad.
     escritos, avisos = pc.escribir_suplementos(
-        tmp_path, FOREX_AGOTADO_CON_CLASE, grupos_activos=set(), catalogo={},
+        tmp_path, FOREX_EN_DATO_CON_CLASE, grupos_activos=set(), catalogo={},
         ruta_historial=tmp_path / "historial.json",
     )
 
@@ -340,7 +335,7 @@ def test_el_suplemento_se_escribe_con_su_json_de_procedencia(tmp_path):
     canal = tmp_path / "02_forex_divisas"
     assert (canal / "0_suplemento.txt").exists()
     assert (canal / "_suplemento.json").exists()
-    assert any("se suplementa con recorrido_agotado" in a for a in avisos)
+    assert any("se suplementa con dato_en_curso" in a for a in avisos)
 
 
 def test_un_canal_con_piezas_no_recibe_suplemento(tmp_path):
@@ -349,7 +344,7 @@ def test_un_canal_con_piezas_no_recibe_suplemento(tmp_path):
     import pipeline_carrusel as pc
 
     escritos, _ = pc.escribir_suplementos(
-        tmp_path, FOREX_AGOTADO_CON_CLASE,
+        tmp_path, FOREX_EN_DATO_CON_CLASE,
         grupos_activos={"02_forex_divisas"}, catalogo={},
         ruta_historial=tmp_path / "historial.json",
     )
@@ -369,9 +364,6 @@ def test_un_concepto_recien_usado_no_se_repite_en_el_mismo_canal():
     """El riesgo real de lo que ya esta en produccion: hoy tres canales
     recibieron el MISMO concepto porque los tres se vaciaron por el mismo
     motivo. Si manana pasa igual, lo reciben otra vez.
-
-    Y va a pasar seguido: el recorrido disponible solo baja con el dia, asi que
-    las tardes vacias no son la excepcion.
     """
     historial = [{"fecha": "2026-08-28", "canal": "02_forex_divisas",
                   "tipo": "concepto", "clave": "volatilidad-atr"}]
@@ -395,33 +387,29 @@ def test_pasada_la_ventana_el_concepto_vuelve_a_estar_disponible():
 
 
 def test_el_estado_se_publica_igual_y_solo_se_cae_el_concepto():
-    """La cifra del estado ES la novedad: hoy el USD/JPY al 290% y manana otra.
-    Lo que se gasta con la repeticion es la parte educativa, no el estado.
-
-    Por eso la pieza sale igual, sin el bloque del concepto, en vez de no salir.
-    """
+    """El estado ES la novedad; lo que se gasta con la repeticion es la parte
+    educativa. Por eso la pieza sale igual, sin el bloque del concepto."""
     historial = [{"fecha": "2026-09-01", "canal": "02_forex_divisas",
-                  "tipo": "concepto", "clave": "volatilidad-atr"}]
+                  "tipo": "concepto", "clave": "precio-descontado"}]
 
-    s = sup.suplemento("02_forex_divisas", FOREX_AGOTADO, hoy=HOY, historial=historial)
+    s = sup.suplemento("02_forex_divisas", FOREX_EN_DATO, hoy=HOY, historial=historial)
 
     assert s is not None, "el estado no deberia perderse por un concepto repetido"
     assert s["concepto"] is None
-    assert s["resumen"]["maximo_pct"] == 290
 
     mensaje = sup.construir_mensaje_suplemento(s)
-    assert "2,9 veces" in mensaje, "el estado tiene que seguir ahi"
+    assert "catalizadores macroeconómicos" in mensaje, "el estado tiene que seguir ahi"
     assert "📚" not in mensaje, "el bloque del concepto no se cayo"
 
 
 def test_sin_historial_nada_esta_en_cooldown():
-    s = sup.suplemento("02_forex_divisas", FOREX_AGOTADO, hoy=HOY, historial=[])
+    s = sup.suplemento("02_forex_divisas", FOREX_EN_DATO, hoy=HOY, historial=[])
     assert s["concepto"] is not None
 
 
 def test_registrar_deja_la_entrada_con_su_fecha_y_canal(tmp_path):
     ruta = tmp_path / "historial_suplementos.json"
-    s = sup.suplemento("02_forex_divisas", FOREX_AGOTADO, hoy=HOY, historial=[])
+    s = sup.suplemento("02_forex_divisas", FOREX_EN_DATO, hoy=HOY, historial=[])
 
     sup.registrar_suplemento(s, HOY, ruta=ruta)
     historial = sup.cargar_historial(ruta)
@@ -429,9 +417,9 @@ def test_registrar_deja_la_entrada_con_su_fecha_y_canal(tmp_path):
     assert len(historial) == 1
     assert historial[0]["canal"] == "02_forex_divisas"
     assert historial[0]["fecha"] == "2026-09-03"
-    assert historial[0]["clave"] == "volatilidad-atr"
+    assert historial[0]["clave"] == "precio-descontado"
     # Y registrar de nuevo lo pone en cooldown.
-    assert sup.concepto_en_cooldown("02_forex_divisas", "volatilidad-atr", HOY, historial)
+    assert sup.concepto_en_cooldown("02_forex_divisas", "precio-descontado", HOY, historial)
 
 
 def test_un_suplemento_sin_concepto_no_ensucia_el_historial(tmp_path):
@@ -439,8 +427,8 @@ def test_un_suplemento_sin_concepto_no_ensucia_el_historial(tmp_path):
     anotarlo de nuevo extenderia la ventana sola, indefinidamente."""
     ruta = tmp_path / "h.json"
     historial = [{"fecha": "2026-09-01", "canal": "02_forex_divisas",
-                  "tipo": "concepto", "clave": "volatilidad-atr"}]
-    s = sup.suplemento("02_forex_divisas", FOREX_AGOTADO, hoy=HOY, historial=historial)
+                  "tipo": "concepto", "clave": "precio-descontado"}]
+    s = sup.suplemento("02_forex_divisas", FOREX_EN_DATO, hoy=HOY, historial=historial)
 
     sup.registrar_suplemento(s, HOY, ruta=ruta)
     assert sup.cargar_historial(ruta) == []
@@ -492,7 +480,7 @@ def test_ningun_test_escribe_en_el_historial_real():
 def test_suplemento_cierre_amigable():
     """En sesión de cierre, el suplemento presenta un balance amable y no un tono de exclusión."""
     sup_datos = sup.suplemento("04_indices_bursatiles", [
-        {"ticker": "US100", "nombre": "Nasdaq 100", "clase": "indices", "excluido": "ATR diario consumido al 95%"}
+        {"ticker": "US100", "nombre": "Nasdaq 100", "clase": "indices", "excluido": BLACKOUT}
     ])
     assert sup_datos is not None
     msg_cierre = sup.construir_mensaje_suplemento(sup_datos, es_cierre=True)
@@ -517,7 +505,7 @@ def test_escribir_suplementos_en_cierre_genera_encuesta(tmp_path):
     import pipeline_carrusel as pc
 
     escritos, avisos = pc.escribir_suplementos(
-        tmp_path, FOREX_AGOTADO_CON_CLASE, grupos_activos=set(), catalogo={},
+        tmp_path, FOREX_EN_DATO_CON_CLASE, grupos_activos=set(), catalogo={},
         ruta_historial=tmp_path / "historial.json",
         es_cierre=True,
     )
@@ -570,7 +558,7 @@ def test_suplemento_asigna_activo_ancla_al_canal():
         ("06_criptoactivos", "BTCUSD"),
     ]:
         s = sup.suplemento(canal, [
-            {"ticker": ticker_esp, "nombre": "Test", "excluido": "ATR diario consumido al 95%"}
+            {"ticker": ticker_esp, "nombre": "Test", "excluido": BLACKOUT}
         ])
         assert s is not None
         assert s.get("activo_ancla") is not None
@@ -579,7 +567,7 @@ def test_suplemento_asigna_activo_ancla_al_canal():
 
 def test_suplemento_cierre_estructura_3_tiempos():
     """El mensaje de cierre debe estructurarse en 3 tiempos con mención al gráfico TradingView."""
-    s = sup.suplemento("02_forex_divisas", FOREX_AGOTADO)
+    s = sup.suplemento("02_forex_divisas", FOREX_EN_DATO)
     msg = sup.construir_mensaje_suplemento(s, es_cierre=True)
     assert "1️⃣ *QUÉ PASÓ EN LA JORNADA*" in msg
     assert "2️⃣ *QUÉ ESTÁ PASANDO AHORA*" in msg
@@ -602,7 +590,7 @@ def test_escribir_suplementos_genera_el_recap_desde_la_lectura_del_ancla(tmp_pat
         return None  # sin terminal: el canal queda con su suplemento de texto
 
     escritos, avisos = pc.escribir_suplementos(
-        tmp_path, FOREX_AGOTADO_CON_CLASE, grupos_activos=set(), catalogo={},
+        tmp_path, FOREX_EN_DATO_CON_CLASE, grupos_activos=set(), catalogo={},
         ruta_historial=tmp_path / "historial.json",
         es_cierre=True, seleccion_de=seleccion,
     )
@@ -621,7 +609,7 @@ def test_con_terminal_el_recap_es_una_pieza_de_la_lectura_con_texto_por_escribir
     usdclp = {**ORO, "ticker": "USDCLP", "nombre": "Dólar / Peso Chileno", "categoria": "forex"}
     sel = {**_sel(_lectura_alcista()), "ticker": "USDCLP"}
     pc.escribir_suplementos(
-        tmp_path, FOREX_AGOTADO_CON_CLASE, grupos_activos=set(), catalogo={"USDCLP": usdclp},
+        tmp_path, FOREX_EN_DATO_CON_CLASE, grupos_activos=set(), catalogo={"USDCLP": usdclp},
         ruta_historial=tmp_path / "historial.json", es_cierre=True,
         seleccion_de=lambda t: (sel, [4119.0, 4120.0]),
     )

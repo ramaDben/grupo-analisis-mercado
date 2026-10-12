@@ -27,8 +27,7 @@ SELECCION = {
     "ticker": "XAGUSD", "nombre": "Plata", "clase": "forex_commodities",
     "direccion": "ALCISTA", "score": 70,
     "precio": 68.716, "soporte": 68.394, "resistencia": 68.974,
-    "atr_h1": 0.441, "impulso_adc_atr": 0.661,
-    "factores": {"tecnico": {"puntos": 35, "max": 35, "detalle": "quiebre"}},
+    "volatilidad_tipica": 0.441,
 }
 
 ACTIVO = {
@@ -57,12 +56,17 @@ def cierres_para(precio: float, n: int = 60, paso: float = 0.01) -> list[float]:
 CIERRES = cierres_para(SELECCION["precio"])
 
 
-def payload_de_prueba(seleccion=None, activo=None, cierres=None) -> dict:
-    sel = seleccion or SELECCION
-    return pc.construir_payload(
-        sel, activo or ACTIVO, AHORA,
-        cierres if cierres is not None else cierres_para(sel["precio"]),
+def payload_de_prueba(activo=None, lectura=None, **extra) -> dict:
+    """Una pieza de alerta del oro, armada desde la lectura como en producción."""
+    return pc.construir_payload_lectura(
+        _sel(lectura or _lectura_alcista(), **extra), activo or ORO, AHORA, [4119.0, 4120.0],
     )
+
+
+def _lectura_bajista():
+    from dataclasses import replace
+
+    return replace(_lectura_alcista(), direccion="BAJISTA")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -75,8 +79,7 @@ GLD = {
     "ticker": "GLD.US", "nombre": "SPDR Gold Shares", "clase": "etfs",
     "direccion": "ALCISTA", "score": 100,
     "precio": 410.37, "soporte": 409.72, "resistencia": 424.45,
-    "atr_h1": 2.61, "impulso_adc_atr": 3.92,
-    "factores": {},
+    "volatilidad_tipica": 2.61,
 }
 GLD_ACTIVO = {
     "ticker": "GLD.US", "nombre": "SPDR Gold Shares", "clase": "etfs",
@@ -99,12 +102,11 @@ def test_un_precio_que_no_es_el_ultimo_cierre_de_su_serie_no_se_publica():
     assert "1.93" in motivo          # veces el ATR de H1
 
 
-def test_construir_payload_se_niega_ante_el_caso_gld():
+def test_construir_payload_se_niega_ante_un_precio_que_no_es_el_de_su_serie():
     """No alcanza con detectarlo: el payload no puede llegar a existir."""
     with pytest.raises(pc.PayloadIncoherenteError) as exc:
-        pc.construir_payload(GLD, GLD_ACTIVO, AHORA, cierres_para(405.32))
-    assert "GLD.US" in str(exc.value)
-
+        pc.construir_payload_lectura(_sel(_lectura_alcista()), ORO, AHORA, [4000.0, 4001.0])
+    assert "XAUUSD" in str(exc.value)
 
 def test_el_desfase_de_un_tick_pasa():
     """El unico payload sano de disco con desfase no nulo: USD/JPY, un tick.
@@ -113,7 +115,7 @@ def test_el_desfase_de_un_tick_pasa():
     desfase sobre un ATR de 0,304, o sea 0,0033 ATR, 75 veces por debajo del tope.
     """
     sel = {**SELECCION, "precio": 163.731, "soporte": 163.400,
-           "resistencia": 164.100, "atr_h1": 0.304}
+           "resistencia": 164.100, "volatilidad_tipica": 0.304}
     serie = cierres_para(163.730)
     assert pc.incoherencia_del_payload(sel, serie) is None
 
@@ -136,10 +138,10 @@ def test_un_soporte_sobre_el_precio_no_se_publica():
 
 def test_sin_atr_el_desfase_no_se_puede_juzgar_y_la_pieza_no_sale():
     """Fail-closed. Sin la escala del activo, "5 de diferencia" no significa nada:
-    son cuatro ATR en el oro y un tick en el Nasdaq."""
-    sel = {k: v for k, v in SELECCION.items() if k != "atr_h1"}
+    son cuatro velas en el oro y un tick en el Nasdaq."""
+    sel = {k: v for k, v in SELECCION.items() if k != "volatilidad_tipica"}
     motivo = pc.incoherencia_del_payload(sel, cierres_para(SELECCION["precio"]))
-    assert motivo is not None and "ATR de H1" in motivo
+    assert motivo is not None and "vela tipica" in motivo
 
 
 def test_una_serie_vacia_no_se_publica():
@@ -161,7 +163,8 @@ def test_ningun_payload_de_disco_es_incoherente():
         datos = json.loads(Path(ruta).read_text(encoding="utf-8"))
         crudos = (datos.get("_procedencia") or {}).get("crudos")
         serie = (datos.get("recorrido") or {}).get("serie")
-        if not crudos or not serie:
+        # Los payloads de antes del enchufe medían con 1,5 x ATR de H1 y ya no se producen.
+        if not crudos or not serie or "lectura" not in datos:
             continue
         vol = datos.get("vol_pct") or ""
         cifra = re.match(r"^([\d.]*\d)(?:,(\d+))?", str(vol))
@@ -174,7 +177,7 @@ def test_ningun_payload_de_disco_es_incoherente():
             "precio": crudos["precio"],
             "soporte": crudos["soporte"],
             "resistencia": crudos["resistencia"],
-            "atr_h1": valor / 1.5,          # vol_pct = 1,5 x ATR de H1
+            "volatilidad_tipica": valor,    # vol_pct = la vela típica del marco
         }
         assert pc.incoherencia_del_payload(sel, serie) is None, ruta
         revisados += 1
@@ -199,11 +202,8 @@ def test_el_slug_es_el_nombre_del_archivo_de_imagen(imagen, slug):
 def test_un_etf_que_replica_un_indice_hereda_su_identidad_visual():
     """`GLD.US` usa `oro.jpg`, así que su pieza sale dorada como la del Oro. No es
     un accidente: a la vista del cliente no son dos activos distintos."""
-    gld = {**ACTIVO, "ticker": "GLD.US", "nombre": "SPDR Gold Shares",
-           "digits": 2, "imagen": "assets/activos/oro.jpg"}
-    payload = payload_de_prueba({**SELECCION, "ticker": "GLD.US"}, gld)
-    assert payload["activo_slug"] == "oro"
-
+    gld = {**ORO, "ticker": "GLD.US", "nombre": "SPDR Gold Shares"}
+    assert payload_de_prueba(gld, ticker="GLD.US")["activo_slug"] == "oro"
 
 def test_cada_slug_del_universo_renderizable_tiene_token_de_color():
     """Si un activo tiene imagen pero no token, su pieza sale con cromo de marca
@@ -226,21 +226,12 @@ def test_los_precios_respetan_los_decimales_del_catalogo_en_notacion_chilena():
     """La regla de decimales del proyecto: se respeta `digits` y nunca se truncan
     ceros. La notación es la chilena: punto para miles, coma para decimales."""
     payload = payload_de_prueba()
-    assert payload["precio_actual"] == "68,716"     # 3 digits
-    assert payload["soporte"] == "68,394"
-    assert payload["resistencia"] == "68,974"
+    assert payload["precio_actual"] == "4.120,00", "no se truncan ceros al final"
+    assert payload["soporte"] == "4.080,00"
+    assert payload["resistencia"] == "4.200,00"
 
-    us100 = {**ACTIVO, "ticker": "US100.spot", "nombre": "Nasdaq 100", "digits": 2,
-             "unidad": "puntos", "imagen": "assets/activos/us100.jpg"}
-    grande = payload_de_prueba(
-        {**SELECCION, "ticker": "US100.spot", "precio": 29225.28,
-         "soporte": 29000.5, "resistencia": 29400.0},
-        us100,
-    )
-    assert grande["precio_actual"] == "29.225,28"
-    assert grande["soporte"] == "29.000,50", "no se truncan ceros al final"
-    assert grande["resistencia"] == "29.400,00"
-
+    tres = payload_de_prueba({**ORO, "digits": 3})
+    assert tres["precio_actual"] == "4.120,000"
 
 def test_los_campos_editoriales_nacen_vacios_y_marcados():
     """Un script no tiene criterio editorial: el titular y el párrafo los escribe
@@ -255,31 +246,12 @@ def test_la_volatilidad_sale_en_la_moneda_en_que_cotiza_el_activo():
     """`vol_pct` alimenta el bloque "Volatilidad típica" de la Story.
 
     Decía "pts" para todos, y puntos solo es correcto para un índice: el Oro se
-    mueve en dólares, el USD/CLP en pesos y el USD/JPY en yenes. Una distancia
-    de precio sin su unidad no se puede leer, y con la unidad equivocada se lee
-    mal, que es peor.
-
-    Se usa el código de moneda y no el símbolo a propósito: en Chile `$` es
-    ambiguo entre peso y dólar, y esta cifra aparece justo al lado de dos
-    precios en una pieza que ve el cliente.
+    mueve en dólares, el USD/CLP en pesos y el USD/JPY en yenes. Se usa el código
+    de moneda y no el símbolo: en Chile `$` es ambiguo entre peso y dólar.
     """
-    plata = payload_de_prueba()                       # XAGUSD, cotiza en dólares
-    assert plata["vol_pct"] == "0,661 USD"
-
-    clp = payload_de_prueba(
-        {**SELECCION, "ticker": "USDCLP"},
-        {**ACTIVO, "ticker": "USDCLP", "nombre": "Dólar / Peso Chileno",
-         "digits": 2, "unidad": "CLP", "imagen": "assets/activos/usdclp.jpg"},
-    )
-    assert clp["vol_pct"] == "0,66 CLP"
-
-    indice = payload_de_prueba(
-        {**SELECCION, "ticker": "US100.spot"},
-        {**ACTIVO, "ticker": "US100.spot", "nombre": "Nasdaq 100",
-         "digits": 2, "unidad": "puntos", "imagen": "assets/activos/us100.jpg"},
-    )
-    assert indice["vol_pct"] == "0,66 puntos"
-
+    assert payload_de_prueba()["vol_pct"] == "18,50 USD"
+    assert payload_de_prueba({**ORO, "unidad": "CLP"})["vol_pct"] == "18,50 CLP"
+    assert payload_de_prueba({**ORO, "unidad": "puntos"})["vol_pct"] == "18,50 puntos"
 
 def test_la_volatilidad_no_afirma_un_recorrido_futuro():
     """El rótulo del bloque no puede sugerir a qué precio va a llegar el activo.
@@ -311,32 +283,25 @@ def test_la_volatilidad_no_afirma_un_recorrido_futuro():
 def test_el_recorrido_pide_lienzo_alto_y_ancla_el_ahora_al_ultimo_cierre():
     """El marcador `actual` va al extremo derecho por definición de su rol, no
     por parecido de precio."""
-    payload = payload_de_prueba()
-    rec = payload["recorrido"]
+    rec = payload_de_prueba()["recorrido"]
     assert rec["lienzo"] == "alto"
-    assert len(rec["serie"]) == pc.VELAS_GRAFICO
-    assert rec["marcadores"][0]["indice"] == pc.VELAS_GRAFICO - 1
+    assert rec["marcadores"][0]["indice"] == len(rec["serie"]) - 1
     assert rec["marcadores"][0]["rol"] == "AHORA"
-    roles = {n["rol"] for n in rec["niveles"]}
-    assert roles == {"RESISTENCIA", "SOPORTE"}
-
+    assert {n["rol"] for n in rec["niveles"]} == {"OBJETIVO", "VIGILAR", "INVALIDA"}
 
 def test_la_direccion_bajista_cambia_sesgo_y_tag_pero_no_el_color_del_activo():
     """Identidad del activo y dirección de mercado son roles de color distintos:
-    si se colapsaran, una pieza plateada bajista se leería como alcista."""
-    payload = payload_de_prueba({**SELECCION, "direccion": "BAJISTA"})
-    assert payload["sesgo"] == "Bajista"
-    assert payload["tag_riesgo"] == "BAJISTA"
-    assert payload["activo_slug"] == "plata", "el slug no depende de la direccion"
+    si se colapsaran, una pieza dorada bajista se leería como alcista."""
+    payload = payload_de_prueba(lectura=_lectura_bajista())
+    assert (payload["sesgo"], payload["tag_riesgo"]) == ("Bajista", "BAJISTA")
+    assert payload["activo_slug"] == "oro", "el slug no depende de la direccion"
 
-
-def test_la_procedencia_del_score_viaja_con_el_payload():
+def test_la_procedencia_del_puntaje_viaja_con_el_payload():
     """Deja auditable por qué este activo y no otro, al lado de la pieza que
     produjo. No se rinde: las claves con guion bajo se quitan antes del render."""
     payload = payload_de_prueba()
-    assert payload["_procedencia"]["score"] == 70
-    assert payload["_procedencia"]["ticker"] == "XAGUSD"
-
+    assert payload["_procedencia"]["score"] == 60.0
+    assert payload["_procedencia"]["ticker"] == "XAUUSD"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # El freno editorial
@@ -344,7 +309,7 @@ def test_la_procedencia_del_score_viaja_con_el_payload():
 def test_rendir_se_niega_si_falta_el_texto_editorial(tmp_path):
     """Misma razón que el fail-fast de imagen: una pieza a medias que sale sin
     avisar llega al cliente."""
-    (tmp_path / "1_xagusd.json").write_text(
+    (tmp_path / "1_xauusd.json").write_text(
         json.dumps(payload_de_prueba(), ensure_ascii=False), encoding="utf-8"
     )
     with pytest.raises(SystemExit) as exc:
@@ -357,7 +322,7 @@ def test_rendir_no_acepta_un_titular_de_solo_espacios(tmp_path):
     payload = payload_de_prueba()
     payload["titular"] = "   "
     payload["parrafo"] = "texto real"
-    (tmp_path / "1_xagusd.json").write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    (tmp_path / "1_xauusd.json").write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
     with pytest.raises(SystemExit) as exc:
         pc.rendir(tmp_path)
     assert "titular" in str(exc.value)
@@ -367,7 +332,7 @@ def test_rendir_rechaza_guion_largo_en_titular_o_parrafo(tmp_path):
     payload = payload_de_prueba()
     payload["titular"] = "Oro sube \u2014 nuevo máximo"
     payload["parrafo"] = "El activo mantiene fuerza compradora sobre el soporte clave."
-    (tmp_path / "1_xagusd.json").write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    (tmp_path / "1_xauusd.json").write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
     with pytest.raises(SystemExit) as exc:
         pc.rendir(tmp_path)
     assert "guion largo" in str(exc.value)
@@ -377,7 +342,7 @@ def test_rendir_rechaza_voseo_en_titular_o_parrafo(tmp_path):
     payload = payload_de_prueba()
     payload["titular"] = "Oro en soporte clave"
     payload["parrafo"] = "Mirá cómo reacciona en la zona de demanda para operar."
-    (tmp_path / "1_xagusd.json").write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    (tmp_path / "1_xauusd.json").write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
     with pytest.raises(SystemExit) as exc:
         pc.rendir(tmp_path)
     assert "voseo" in str(exc.value)
@@ -392,34 +357,25 @@ def test_rendir_falla_claro_si_el_directorio_no_tiene_payloads(tmp_path):
 
 
 def test_el_universo_del_escaner_trae_lo_que_el_payload_consume():
-    """Contrato entre `cargar_universo` y `construir_payload`, contra el catalogo REAL.
+    """Contrato entre `cargar_universo` y `construir_payload_lectura`, contra el catalogo REAL.
 
     `cargar_universo` no pasa el activo del catalogo tal cual: lo PROYECTA a un
     puñado de campos. Un campo nuevo en config/activos.json no llega solo al
-    pipeline, hay que agregarlo tambien a esa proyeccion.
-
-    Los demas tests de este archivo arman el activo a mano con un dict de
-    prueba, asi que no pueden ver esa divergencia: verifican el fixture, no la
-    proyeccion. Cuando se agrego `unidad` al catalogo, el fixture se actualizo
-    y la proyeccion no, y el carrusel reventaba con KeyError en la primera
-    tanda real con todos los tests en verde.
-
-    Por eso este test usa el universo de verdad y no un dict inventado.
+    pipeline, hay que agregarlo tambien a esa proyeccion. Cuando se agrego
+    `unidad` al catalogo, el fixture se actualizo y la proyeccion no, y el
+    carrusel reventaba con KeyError en la primera tanda real con todos los tests
+    en verde. Por eso este test usa el universo de verdad.
     """
     universo = sc.cargar_universo(solo_renderizables=True)
-    assert universo, "el catalogo debe tener activos renderizables"
-
-    for activo in universo:
-        payload = pc.construir_payload(
-            {**SELECCION, "ticker": activo["ticker"]},
-            activo,
-            datetime(2026, 8, 26, 9, 15),
-            CIERRES,
-        )
+    con_nota = [a for a in universo if pc.marco_operativo() in a["notas_marco"]]
+    assert {a["ticker"] for a in con_nota} >= set(sc.cobertura_fija()), (
+        "un activo de cobertura fija sin la nota de su marco no puede publicarse"
+    )
+    for activo in con_nota:
+        payload = payload_de_prueba(activo, ticker=activo["ticker"])
         assert payload["vol_pct"].endswith(activo["unidad"]), activo["ticker"]
         # La cobertura fija sale sin foto (2026-09-28): el cobre.
         assert payload["activo_imagen"] or activo["ticker"] in sc.cobertura_fija(), activo["ticker"]
-
 
 def test_preparar_barre_los_payloads_de_la_corrida_anterior(tmp_path):
     """Dos corridas de la misma tanda no pueden acumular piezas.
@@ -542,66 +498,40 @@ def test_los_canales_con_piezas_reciben_su_contexto_macro():
 # ─────────────────────────────────────────────────────────────────────────────
 # La temporalidad, justificada por la volatilidad del activo
 # ─────────────────────────────────────────────────────────────────────────────
-def test_el_mensaje_justifica_la_temporalidad_con_la_volatilidad_del_activo():
+def test_el_mensaje_justifica_la_temporalidad_con_la_nota_de_su_marco():
     """`CLAUDE.md` la declara OBLIGATORIA desde el issue #44 y nunca se implemento:
     el token `por_que_temporalidad` existia en un solo lugar del repo, que era la
     propia norma. El 2026-09-04 dos piezas salieron sin el bloque.
     """
     msg = pc.construir_mensaje_alerta(payload_de_prueba())
     assert "⏱️ *Temporalidad*" in msg
-    assert "Por qué 1H acá" in msg
-    # La justificacion es la del activo, no una frase generica.
-    assert "los movimientos se desdicen solos" in msg
+    assert "Por qué 4H acá" in msg
+    # La justificacion es la del activo en ese marco, no una frase generica.
+    assert ORO["notas_marco"]["H4"] in msg
 
-
-def test_la_temporalidad_usa_la_etiqueta_canonica_de_su_marco():
-    """Cuatro etiquetas y ni una mas: prohibido decir "corto" sin numero."""
+def test_la_temporalidad_usa_la_etiqueta_que_declara_la_estrategia():
+    """Prohibido decir "corto" sin numero: la etiqueta trae su duración."""
     msg = pc.construir_mensaje_alerta(payload_de_prueba())
-    assert "1H · marco intradía (dentro de la jornada)" in msg
+    assert "4H · marco swing (de una a dos semanas)" in msg
 
-
-def test_las_cuatro_etiquetas_canonicas_calzan_con_las_documentadas():
-    """El contrato que evita el tercer reloj.
-
-    Las etiquetas vivian SOLO en markdown (`CLAUDE.md` y `.claude/commands/story.md`)
-    y ahora tambien en codigo, que es lo que las publica. Tres copias de la misma
-    tabla divergen: la de `apertura.md` que `CLAUDE.md` todavia nombra como fuente
-    unica ni existe, porque ese comando se retiro.
-    """
+def test_la_temporalidad_la_declara_la_estrategia_y_no_una_tabla_aparte():
+    """Hasta S8 vivía una tabla de cuatro marcos en el código y otra en story.md,
+    con un test que las comparaba. El marco de la pieza lo decide la estrategia y
+    sus etiquetas viven en `Marcos.etiquetas`: una tercera copia volvería a divergir."""
+    assert not hasattr(pc, "MARCOS_CANONICOS")
     tabla = (RAIZ / ".claude" / "commands" / "story.md").read_text(encoding="utf-8")
-    filas = dict(re.findall(r"\|\s*`(15M|1H|4H|1D)`\s*\|\s*([^|]+?)\s*\|", tabla))
-    assert len(filas) == 4, f"la tabla de story.md cambio de forma: {filas}"
-    for marco, (etiqueta, descripcion) in pc.MARCOS_CANONICOS.items():
-        assert filas[etiqueta] == descripcion, (
-            f"{marco}: el codigo dice {descripcion!r} y story.md dice {filas[etiqueta]!r}"
-        )
+    assert not re.search(r"\|\s*`(15M|1H|4H|1D)`\s*\|", tabla), "volvió la tabla de cuatro marcos"
 
-
-def test_sin_nota_de_volatilidad_el_payload_no_se_construye():
+def test_sin_la_nota_de_su_marco_el_payload_no_se_construye():
     """Fail-closed, igual que con `unidad`: la linea es obligatoria, asi que un
     activo sin su nota no puede producir una pieza a medias en silencio."""
-    activo = {k: v for k, v in ACTIVO.items() if k != "nota_volatilidad"}
     with pytest.raises(KeyError):
-        pc.construir_payload(SELECCION, activo, AHORA, CIERRES)
-
-
-def test_una_banda_estrecha_se_estampa_en_el_mensaje():
-    """Zona de aviso del gate de banda: la pieza sale, pero diciendo que sus
-    bordes son estrechos para lo que ese activo se mueve."""
-    sel = {**SELECCION, "banda_estrecha": 0.80}
-    msg = pc.construir_mensaje_alerta(payload_de_prueba(seleccion=sel))
-    assert "niveles estrechos" in msg.lower()
-
-
-def test_sin_banda_estrecha_no_se_estampa_nada():
-    msg = pc.construir_mensaje_alerta(payload_de_prueba())
-    assert "estrechos" not in msg.lower()
-
+        payload_de_prueba({**ORO, "notas_marco": {}})
 
 def test_construir_mensaje_alerta_cumple_reglas_canonicas_whatsapp():
     payload = payload_de_prueba()
-    payload["titular"] = "Quiebre alcista sobre 68,97"
-    payload["parrafo"] = "La plata consolida fuerza compradora tras cruzar la resistencia técnica."
+    payload["titular"] = "El oro sigue sobre su línea"
+    payload["parrafo"] = "El oro mantiene la tendencia sobre su línea de seguridad."
     msg = pc.construir_mensaje_alerta(payload)
 
     # 1. Resumen al inicio
@@ -612,17 +542,15 @@ def test_construir_mensaje_alerta_cumple_reglas_canonicas_whatsapp():
     # 2. Separadores
     assert "━━━━━━━━━━━━━━━━━━━" in msg
 
-    # 3. Código de emojis de escenarios
-    assert "⬆️ Sobre" in msg
-    assert "↔️ Entre" in msg
-    assert "⬇️ Bajo" in msg
+    # 3. Flechas de escenarios
+    for flecha in ("⬆️ ", "↔️ ", "⬇️ "):
+        assert flecha in msg
 
     # 4. Niveles y cifras
-    assert "68,716" in msg
+    assert "4.120,00" in msg
     # La volatilidad tipica salio del texto con el formato compacto (2026-09-28);
     # sigue en la pieza visual.
-    assert "0,661 USD" not in msg
-
+    assert "18,50 USD" not in msg
 
 # ---------------------------------------------------------------------------
 # El destino que pide el director se resuelve contra el config, o falla fuerte
@@ -720,33 +648,12 @@ def test_el_payload_preparado_guarda_los_precios_crudos():
     """Sin los números sin formatear, el corte por divergencia es imposible.
 
     El payload solo lleva precios ya en notación chilena ('936,32'), que sirven
-    para dibujar pero no para comparar.
+    para dibujar pero no para comparar. Y son los de la lectura tal cual: el
+    acotado a precio ± ATR del 2026-10-02 se retiró.
     """
-    from pipeline_carrusel import construir_payload
-
-    seleccion = {
-        "ticker": "USDCLP", "direccion": "ALCISTA", "clase": "forex",
-        "precio": 936.32, "soporte": 926.90, "resistencia": 938.27,
-        "impulso_adc_atr": 4.02, "atr_h1": 2.68, "score": 71, "factores": {},
-    }
-    activo = {
-        "nombre": "Dólar / Peso Chileno", "digits": 2, "imagen": "dolar.jpg",
-        "categoria": "forex", "unidad": "CLP", "volatilidad": "baja",
-        "nota_volatilidad": (
-            "se mueve poco dentro del día, así que marcos más amplios (1H/4H) dan "
-            "una lectura más limpia; en 15M aparece mucho ruido"
-        ),
-    }
-    payload = construir_payload(
-        seleccion, activo, datetime(2026, 9, 2, 10, 0),
-        cierres_para(seleccion["precio"], n=3, paso=0.5),
-    )
-
-    crudos = payload["_procedencia"]["crudos"]
-    assert crudos["precio"] == 936.32
-    assert crudos["soporte"] == 926.90
-    assert crudos["resistencia"] == 938.27
-
+    crudos = payload_de_prueba()["_procedencia"]["crudos"]
+    assert crudos == {"precio": 4120.0, "soporte": 4080.0, "resistencia": 4200.0}
+    assert not hasattr(pc, "acotar_niveles_intradia")
 
 def _payload_preparado():
     from pipeline_carrusel import construir_payload
@@ -776,31 +683,18 @@ def _payload_preparado():
 # El chip sigue a la lectura tecnica (el Playbook V2 se retiro el 2026-09-27)
 # ─────────────────────────────────────────────────────────────────────────────
 def test_el_chip_es_la_lectura_tecnica():
-    p = pc.construir_payload({**SELECCION, "direccion": "ALCISTA"}, ACTIVO, AHORA, CIERRES)
+    p = payload_de_prueba()
     assert (p["sesgo"], p["tag_riesgo"]) == ("Alcista", "ALCISTA")
-    p = pc.construir_payload({**SELECCION, "direccion": "BAJISTA"}, ACTIVO, AHORA, CIERRES)
+    p = payload_de_prueba(lectura=_lectura_bajista())
     assert (p["sesgo"], p["tag_riesgo"]) == ("Bajista", "BAJISTA")
-
 
 def test_el_payload_ya_no_lleva_vigencia_del_playbook():
     """Ni en la pieza ni en la procedencia: un campo que nadie calcula es una
     promesa que el mensaje podria volver a publicar."""
-    p = pc.construir_payload(SELECCION, ACTIVO, AHORA, CIERRES)
+    p = payload_de_prueba()
     assert "vigencia" not in p
     assert "vigencia" not in p["_procedencia"]
     assert "vigencia_nivel" not in p["_procedencia"]["crudos"]
-
-
-def test_el_mensaje_lateral_no_habla_de_presion_vendedora():
-    """`alcista == False` no significa bajista: con el chip Lateral el bloque de
-    apertura nombra los dos bordes, que es lo que hay que vigilar."""
-    p = pc.construir_payload(SELECCION, ACTIVO, AHORA, CIERRES)
-    p.update(sesgo="Lateral", titular="Se mueve de lado", parrafo="Sin definicion por ahora.")
-    arriba = pc.construir_mensaje_alerta(p).split("━")[0]
-    assert "Presión vendedora bajo" not in arriba
-    assert "Fuerza compradora sobre" not in arriba
-    assert p["soporte"] in arriba and p["resistencia"] in arriba
-
 
 def test_los_avisos_de_la_fuente_macro_no_se_descartan():
     """`preparar` recogia los avisos de `_contexto_macro` en un `_`.
@@ -907,7 +801,7 @@ def test_preparar_acota_el_barrido_al_canal_pedido():
 # ─────────────────────────────────────────────────────────────────────────────
 def test_el_despacho_se_niega_a_rendir_una_pieza_sin_editorial(tmp_path):
     """El camino que llega al cliente necesita el mismo freno que `rendir`."""
-    (tmp_path / "1_xagusd.json").write_text(
+    (tmp_path / "1_xauusd.json").write_text(
         json.dumps(payload_de_prueba(), ensure_ascii=False), encoding="utf-8"
     )
     with pytest.raises(SystemExit) as exc:
@@ -922,13 +816,13 @@ def test_el_freno_editorial_del_despacho_actua_antes_de_leer_el_mercado(tmp_path
     def no_llamar(*_a, **_k):
         raise AssertionError("se leyó el mercado antes de validar lo editorial")
 
-    monkeypatch.setattr("market_data_mcp.analisis.analizar_activo", no_llamar)
-    (tmp_path / "1_xagusd.json").write_text(
+    monkeypatch.setattr(pc, "refrescar_payload_lectura", no_llamar)
+    monkeypatch.setattr(pc, "lectura_para_despacho", no_llamar)
+    (tmp_path / "1_xauusd.json").write_text(
         json.dumps(payload_de_prueba(), ensure_ascii=False), encoding="utf-8"
     )
     with pytest.raises(SystemExit):
         pc._refrescar_y_rendir(tmp_path)
-
 
 def test_el_contexto_macro_no_necesita_editorial(tmp_path):
     """`0_contexto_macro` no tiene titular ni párrafo por diseño: su texto lo
@@ -983,16 +877,10 @@ def test_despachar_modo_pruebas_redirige_a_banco_de_pruebas(tmp_path, monkeypatc
     bitacora_anotaciones = []
     monkeypatch.setattr("bitacora_despachos.registrar", lambda *a, **k: bitacora_anotaciones.append((a, k)))
 
-    res = pc.despachar(tmp_path, dry_run=False, pruebas=True)
+    pc.despachar(tmp_path, dry_run=False, pruebas=True)
     assert len(llamadas_lote) == 1
     assert llamadas_lote[0][0] == "GI · Banco de Pruebas"
     assert len(bitacora_anotaciones) == 0
-
-
-def test_la_direccion_en_sombra_no_entra_al_payload():
-    """Fase 1: la lectura de cuatro ejes viaja en la seleccion y el payload la ignora."""
-    con_sombra = {**SELECCION, "direccion_4ejes": {"direccion": "LATERAL", "fase": "rango"}}
-    assert payload_de_prueba(con_sombra) == payload_de_prueba()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1000,7 +888,7 @@ def test_la_direccion_en_sombra_no_entra_al_payload():
 # ─────────────────────────────────────────────────────────────────────────────
 def _msg_compacto():
     payload = payload_de_prueba()
-    payload["titular"] = "La plata sostiene su sesgo alcista sobre su promedio de 50 horas"
+    payload["titular"] = "El oro sigue sobre su línea de seguridad"
     payload["parrafo"] = "PARRAFO_LARGO_QUE_YA_NO_VA_EN_EL_MENSAJE"
     return pc.construir_mensaje_alerta(payload), payload
 
@@ -1010,7 +898,7 @@ def test_el_mensaje_compacto_trae_solo_lo_que_sirve_para_actuar():
     assert p["titular"] in msg
     assert f"Precio actual: {p['precio_actual']}" in msg
     assert msg.splitlines()[-1] in pc.CIERRES_ALERTA
-    for linea in ("⬆️ Sobre", "↔️ Entre", "⬇️ Bajo", "⏱️ *Temporalidad*"):
+    for linea in ("⬆️ ", "↔️ ", "⬇️ ", "⏱️ *Temporalidad*"):
         assert linea in msg
 
 
@@ -1036,11 +924,9 @@ def test_el_mensaje_compacto_cabe_en_un_vistazo():
 def test_un_activo_sin_foto_arma_su_payload_con_el_ticker_como_slug():
     """Cobertura fija (2026-09-28): el cobre no tiene foto y sale igual, con el
     grafico del motor. Su slug no puede quedar vacio."""
-    activo = {k: v for k, v in ACTIVO.items() if k != "imagen"}
-    p = pc.construir_payload(SELECCION, activo, AHORA, CIERRES)
-    assert p["activo_slug"] == SELECCION["ticker"].lower().replace(".spot", "").replace("#", "")
+    p = payload_de_prueba({k: v for k, v in ORO.items() if k != "imagen"})
+    assert p["activo_slug"] == "xauusd"
     assert p["activo_imagen"] == ""
-
 
 def test_preparar_no_descarta_a_un_fijo_por_no_tener_foto():
     import inspect
@@ -1051,14 +937,6 @@ def test_preparar_no_descarta_a_un_fijo_por_no_tener_foto():
 # ─────────────────────────────────────────────────────────────────────────────
 # Mensaje humanizado (decisión del director, 2026-09-28)
 # ─────────────────────────────────────────────────────────────────────────────
-def test_la_zona_media_se_opera_como_falso_quiebre_y_no_se_espera():
-    """Quien sabe operar la configuracion nunca tiene que quedarse esperando."""
-    msg, p = _msg_compacto()
-    linea = next(l for l in msg.splitlines() if l.startswith("↔️"))
-    assert "falso quiebre" in linea and "borde contrario" in linea
-    assert "esperar confirmación" not in msg
-
-
 def test_el_cierre_no_es_siempre_el_mismo_ni_siempre_el_analista():
     import screener_gi as sc
     cierres = set()
@@ -1117,33 +995,6 @@ def test_las_dos_rutas_de_render_dibujan_el_nivel_publicado():
     for fn in (pc.rendir, pc._refrescar_y_rendir):
         fuente = inspect.getsource(fn)
         assert "_nivel_publicado(" in fuente, fn.__name__
-
-
-def test_un_nivel_lejano_se_publica_tal_cual_y_no_se_reemplaza_por_atr():
-    """El USD/CLP del 2026-10-02: soporte a 12,68 del precio con ATR diario de 10,5.
-
-    El acotado de entonces cambió los DOS lados por precio ± ATR (970,25/991,35),
-    también la resistencia, que era el máximo real del impulso (988,94).
-    """
-    seleccion = {
-        "ticker": "USDCLP", "direccion": "ALCISTA", "clase": "forex",
-        "precio": 980.68, "soporte": 968.00, "resistencia": 988.94,
-        "impulso_adc_atr": 4.02, "atr_h1": 2.68, "atr_d1": 10.5,
-        "score": 71, "factores": {},
-    }
-    activo = {
-        "nombre": "Dólar / Peso Chileno", "digits": 2, "imagen": "dolar.jpg",
-        "categoria": "forex", "unidad": "CLP", "volatilidad": "baja",
-        "nota_volatilidad": "1H da la lectura del día",
-    }
-    p = pc.construir_payload(
-        seleccion, activo, datetime(2026, 10, 2, 10, 1),
-        cierres_para(980.68, n=3, paso=0.5),
-    )
-    assert (p["soporte"], p["resistencia"]) == ("968,00", "988,94")
-    niveles = {n["rol"]: n["precio"] for n in p["recorrido"]["niveles"]}
-    assert niveles == {"SOPORTE": 968.00, "RESISTENCIA": 988.94}
-    assert not hasattr(pc, "acotar_niveles_intradia")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
