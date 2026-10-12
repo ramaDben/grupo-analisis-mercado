@@ -280,6 +280,7 @@ def test_el_grafico_del_seguimiento_traza_la_simulacion_y_la_linea_de_hoy(tmp_pa
 
 def test_el_grafico_real_pide_velas_suficientes_para_las_diagonales(tmp_path, monkeypatch):
     """Con 60 velas el ancla de la línea de seguridad del oro quedaba fuera y no se dibujaba."""
+    pytest.importorskip("PIL")  # extra `stories`: el CI corre sin él
     import pipeline_carrusel as pc
     import tradingview_grafico as tg
 
