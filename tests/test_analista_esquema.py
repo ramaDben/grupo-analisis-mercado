@@ -101,7 +101,7 @@ def test_campos_anidados_se_validan_uno_a_uno():
 
 
 def test_cada_pieza_tiene_campos():
-    assert set(es.CAMPOS) == {"activo", "calendario", "dato", "jornada", "oportunidad"}
+    assert set(es.CAMPOS) == {"activo", "calendario", "dato", "jornada", "oportunidad", "seguimiento"}
 
 
 def test_titular_largo_no_cabe_en_la_lamina():
@@ -188,3 +188,20 @@ def test_el_foco_no_escribe_oportunidad(tmp_path):
     p = fx.oportunidad(tmp_path)
     p["editorial"]["titular"] = "Una oportunidad para los compradores del oro"
     assert any("titular" in x for x in es.errores(p))
+
+
+def test_oportunidad_exige_titular_por_activo_de_hasta_70():
+    p = es.nueva_pieza("oportunidad", {}, {"activos": []}, {},
+                       extra_campos={"titulares": ["XAUUSD"], "contexto": ["XAUUSD"]})
+    p["editorial"] = {"titular": "La semana técnica", "bajada": "Seis activos con su lectura.",
+                      "titulares": {"XAUUSD": "x" * 71}, "contexto": {"XAUUSD": "Texto."}}
+    assert any("titulares.XAUUSD" in e and "70" in e for e in es.errores(p))
+
+
+def test_oportunidad_rechaza_la_palabra_oportunidad_y_porcentajes():
+    p = es.nueva_pieza("oportunidad", {}, {"activos": []}, {},
+                       extra_campos={"titulares": ["XAUUSD"], "contexto": ["XAUUSD"]})
+    p["editorial"] = {"titular": "Una oportunidad en el oro", "bajada": "Sube 2 %",
+                      "titulares": {"XAUUSD": "Oro"}, "contexto": {"XAUUSD": "Texto."}}
+    errs = es.errores(p)
+    assert any("oportunidad" in e for e in errs) and any("porcentaje" in e for e in errs)

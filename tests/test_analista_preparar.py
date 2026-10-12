@@ -1,9 +1,11 @@
 """Preparación de las piezas del bot: datos del terminal en la carpeta del pedido."""
 from __future__ import annotations
 
+import json
 import sys
 from datetime import datetime
 from pathlib import Path
+from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -19,6 +21,7 @@ from analista import informe_html as ih  # noqa: E402
 from analista import preparar as pr  # noqa: E402
 from analista.orden import Orden  # noqa: E402
 from estrategia.contrato import lectura_a_dict  # noqa: E402
+import referencia_semanal as rs  # noqa: E402
 from test_pipeline_carrusel import ORO, _lectura_alcista, _sel  # noqa: E402
 
 SCL = ZoneInfo("America/Santiago")
@@ -63,101 +66,6 @@ def lectores(**cambios) -> pr.Lectores:
     return pr.Lectores(**base)
 
 
-def test_activo_trae_los_numeros_del_payload_de_whatsapp(tmp_path):
-    hecha = pr.preparar(Orden("activo", {"ticker": "XAUUSD"}), tmp_path, AHORA, lectores())
-    d = hecha.pieza["datos"]
-    assert d["precio"] == "4.120,00" and d["soporte"] == "4.080,00" and d["resistencia"] == "4.200,00"
-    assert d["direccion"] == "Alcista"
-    assert d["nivel_vigilar"] == "4.080,00 (línea alcista de seguridad)"
-    assert d["escenarios"][0].startswith("⬆️ Mientras el precio cierre sobre 4.080,00")
-    assert d["chip"] == "NOTA DE MERCADO · COMMODITIES"
-    assert "velas de 4 horas" in d["pie_imagen"] and d["lectura"]["ticker"] == "XAUUSD"
-    ctx = d["contexto"]
-    assert ctx["drivers_del_activo"]  # XAUUSD tiene drivers en el catálogo real
-    assert ctx["curva_tasas"][0][0] == "Bono del Tesoro a 2 años"
-    assert ctx["agenda_hoy"][0].startswith("09:30") and "salió 197K" in ctx["agenda_hoy"][0]
-    assert (tmp_path / "grafico.png").exists() and (tmp_path / "pieza.json").exists()
-    assert set(hecha.pieza["editorial"]) == set(es.CAMPOS["activo"])
-
-
-def test_activo_trae_el_plan_sellado_desde_la_lectura(tmp_path):
-    hecha = pr.preparar(Orden("activo", {"ticker": "XAUUSD"}), tmp_path, AHORA, lectores())
-    plan = hecha.pieza["datos"]["plan"]
-    assert plan["hay_plan"] and "4.080,00" in plan["invalidacion"]
-    assert "estadistica" not in plan and "recorrido" not in plan
-    assert plan["niveles"]["vela"] == 200
-    hecha.pieza["datos"]["plan"]["gatillo"] = "otra cosa"
-    assert any("cambiaron" in x for x in es.errores(hecha.pieza))
-
-
-def test_activo_sin_lectura_de_la_estrategia_falla_con_motivo(tmp_path):
-    sin = lambda t, a: {"ticker": t, "activo": ACTIVO, "seleccion": {**SELECCION, "lectura": None},  # noqa: E731
-                        "cierres": CIERRES}
-    with pytest.raises(pr.PreparacionFallida):
-        pr.preparar(Orden("activo", {"ticker": "XAUUSD"}), tmp_path, AHORA, lectores(terminal=sin))
-
-
-def test_activo_sin_cuenta_correcta_no_lee_el_terminal(tmp_path):
-    def no_llamar(*_):
-        raise AssertionError("leyó el terminal con la cuenta equivocada")
-
-    with pytest.raises(pr.PreparacionFallida, match="51492"):
-        pr.preparar(Orden("activo", {"ticker": "XAUUSD"}), tmp_path, AHORA,
-                    lectores(cuenta=lambda: "el dato salió de la cuenta 51492", terminal=no_llamar))
-
-
-def test_calendario_hoy(tmp_path):
-    hecha = pr.preparar(Orden("calendario", {"alcance": "hoy"}), tmp_path, AHORA, lectores())
-    eventos = hecha.pieza["datos"]["eventos"]
-    assert [e["estado"] for e in eventos] == ["salio", "proximo"]
-    assert eventos[0]["actual"] == "197K"
-    assert set(hecha.pieza["editorial"]["explicaciones"]) == {"01", "02"}
-    assert "calendario.png" in hecha.pieza["laminas"]
-
-
-def test_calendario_sin_datos_sugiere_la_semana(tmp_path):
-    with pytest.raises(pr.PreparacionFallida, match="semana"):
-        pr.preparar(Orden("calendario", {"alcance": "hoy"}), tmp_path, AHORA, lectores(jornada=lambda a: ([], [])))
-
-
-def test_calendario_semana(tmp_path):
-    hecha = pr.preparar(Orden("calendario", {"alcance": "semana"}), tmp_path, AHORA, lectores())
-    assert len(hecha.pieza["datos"]["eventos"]) == 2
-
-
-def test_dato_ultimo_con_resultado_y_movimiento(tmp_path):
-    hecha = pr.preparar(Orden("dato", {"busqueda": "ultimo"}), tmp_path, AHORA, lectores())
-    d = hecha.pieza["datos"]
-    assert d["modo"] == "resultado"
-    assert d["eventos"][0]["veredicto"] == "MEJOR"
-    assert d["movimientos"] and d["movimientos"][0]["desde"] == "951,20"
-    assert d["referencia"] == "197K"
-
-
-def test_dato_por_nombre_que_no_salio_es_anticipacion(tmp_path):
-    hecha = pr.preparar(Orden("dato", {"busqueda": "minutas"}), tmp_path, AHORA, lectores())
-    assert hecha.pieza["datos"]["modo"] == "anticipacion"
-    assert hecha.pieza["datos"]["movimientos"] == []
-
-
-def test_dato_desconocido(tmp_path):
-    with pytest.raises(pr.PreparacionFallida, match="pib"):
-        pr.preparar(Orden("dato", {"busqueda": "pib"}), tmp_path, AHORA, lectores())
-
-
-def test_jornada(tmp_path):
-    def activos(destino):
-        _png((destino / "graficos").mkdir(parents=True, exist_ok=True) or destino / "graficos" / "usdclp.png")
-        return lectores().activos_jornada(destino)
-
-    hecha = pr.preparar(Orden("jornada", {"momento": None}), tmp_path, AHORA, lectores(activos_jornada=activos))
-    d = hecha.pieza["datos"]
-    assert d["momento"] == "apertura" and d["activos"][0]["precio"] == "4.120,00"
-    assert d["activos"][0]["direccion"] == "Alcista" and d["activos"][0]["soporte"] == "4.080,00"
-    assert d["curva"] == [["Bono del Tesoro a 2 años", "3,61%", "+2 pb", "sin dato"]]
-    assert hecha.pieza["imagenes"] == {"USDCLP": "graficos/usdclp.png"}
-
-
 def test_rendir_laminas_pone_el_texto_validado(tmp_path):
     hecha = pr.preparar(Orden("calendario", {"alcance": "hoy"}), tmp_path, AHORA, lectores())
     pieza = hecha.pieza
@@ -190,56 +98,90 @@ def test_no_usa_los_preparar_de_produccion():
         assert prohibido not in fuente, prohibido
 
 
-# ───────────────────────────────────────────────────────────── foco técnico
+# ───────────────────────────────────────────────────────────── la foto semanal
+
+SEMANA = "2026-W42"
+AHORA_LUNES = datetime(2026, 10, 12, 9, 30, tzinfo=SCL)
 
 
-def _seleccion(evaluados: int = 10):
-    from analista import foco as fo
-    from analista import plan as plan_mod
+class EstrategiaFalsa:
+    nombre = "tori"
 
-    plan = plan_mod.armar(_lectura_alcista(), 2, "Oro")
-    el = fo.Elegido({"ticker": "XAUUSD", "nombre": "Oro", "clase": "forex_commodities", "digits": 2},
-                    SELECCION, plan)
-    return fo.Seleccion(el, evaluados, AHORA)
+    class marcos:
+        operativo = "H4"
+        etiquetas = {"H4": SimpleNamespace(nombre="swing", duracion="de una a dos semanas")}
 
 
-def _no_llamar(*_):
-    raise AssertionError("el foco no vuelve a leer el terminal: usa la lectura que lo eligió")
+def _sembrar(base, lecturas, puntajes):
+    for lec in lecturas:
+        rs.guardar(lec, SEMANA, "semanal", AHORA_LUNES, base=base)
+    rs.guardar_manifiesto(SEMANA, {"semana": SEMANA, "elegidos": [l.ticker for l in lecturas],
+                                   "puntajes": puntajes, "excluidos": []}, base=base)
 
 
-def lectores_foco(resultado):
-    return lectores(foco=lambda ahora: resultado, catalogo=lambda t: ACTIVO, cierres=lambda t, m=None: CIERRES,
-                    terminal=_no_llamar)
+def _grafico_falso(ticker, nombre, lectura, destino):
+    destino.write_bytes(fx.PNG)
+    return destino
 
 
-def test_foco_usa_la_lectura_que_lo_eligio_y_no_trae_estadistica(tmp_path):
-    hecha = pr.preparar(Orden("oportunidad"), tmp_path, AHORA, lectores_foco(_seleccion()))
-    p = hecha.pieza
-    assert p["orden"]["pieza"] == "oportunidad" and p["orden"]["args"] == {"ticker": "XAUUSD"}
-    assert "estadistica" not in p["datos"]["plan"] and "4.080,00" in p["datos"]["plan"]["invalidacion"]
-    assert p["datos"]["seleccion"]["evaluados"] == 10
-    assert p["datos"]["chip"].startswith("FOCO TÉCNICO DEL DÍA")
-    assert set(p["editorial"]) == set(es.CAMPOS["oportunidad"])
+def _lectores(base, filas_estado=None, **kw):
+    def estado(_est, semana, _lector, _ahora, _digits, base=base):
+        if filas_estado is not None:
+            return filas_estado
+        return [{"ticker": t, "espera_hasta": None} for t in rs.manifiesto(semana, base)["elegidos"]]
+    por_defecto = dict(
+        base_referencias=base, estado_semanal=estado, estrategia=lambda: EstrategiaFalsa(),
+        contrato=lambda t, p: {"clp_unidad": 950.0, "vol_min": 0.01, "vol_paso": 0.01},
+        grafico_lectura=_grafico_falso,
+        catalogo=lambda t: {"ticker": t, "nombre": {"XAUUSD": "Oro", "COPPER": "Cobre"}[t],
+                            "digits": {"XAUUSD": 2, "COPPER": 0}[t], "unidad": "USD"},
+        drivers=lambda t: ["Dollar Index"], agenda=lambda a: ([], []), curva=lambda: ({}, []),
+        cuenta=lambda: None)
+    return pr.Lectores(**{**por_defecto, **kw})
 
 
-def test_sin_foco_y_mercado_ilegible_fallan_con_su_texto(tmp_path):
-    from analista import foco as fo
-
-    with pytest.raises(pr.SinFocoError, match="configuración clara entre los 10"):
-        pr.preparar(Orden("oportunidad"), tmp_path, AHORA, lectores_foco(fo.SinFoco(10, {"lejos del gatillo": 3})))
-    with pytest.raises(pr.MercadoIlegibleError, match="No puedo leer el mercado"):
-        pr.preparar(Orden("oportunidad"), tmp_path, AHORA, lectores_foco(fo.MercadoIlegible("MT5 no responde")))
-    assert issubclass(pr.SinFocoError, pr.PreparacionFallida)
+def test_sin_analisis_semanal_no_hay_pieza(tmp_path):
+    with pytest.raises(pr.SinSemanaError, match="análisis semanal"):
+        pr.preparar(Orden("oportunidad"), tmp_path / "p", AHORA_LUNES, _lectores(tmp_path / "ref"))
 
 
-def test_foco_no_lleva_porcentajes_en_sus_datos(tmp_path):
-    # La curva de tasas y los resultados de la agenda traen "%": en el foco no van, porque
-    # se imprimirían al prospecto y agy, al citarlos, haría rechazar la pieza.
-    import json
+def test_con_una_linea_a_mas_en_prueba_espera_el_cierre(tmp_path):
+    base = tmp_path / "ref"
+    _sembrar(base, [fx.lectura()], {"XAUUSD": 90.0})
+    filas = [{"ticker": "XAUUSD", "espera_hasta": datetime(2026, 10, 12, 13, 0, tzinfo=SCL)}]
+    with pytest.raises(pr.EsperaVelaError, match="13:00"):
+        pr.preparar(Orden("oportunidad"), tmp_path / "p", AHORA_LUNES, _lectores(base, filas))
 
-    lec = lectores_foco(_seleccion())
-    lec.curva = lambda: ({"series": {"DGS2": {"nivel_pct": 3.61, "delta_1d_bps": 2, "delta_5d_bps": 1}}}, [])
-    lec.jornada = lambda a: ([{**JORNADA[0], "actual": "0,3%", "consenso": "0,2%"}], [])
-    hecha = pr.preparar(Orden("oportunidad"), tmp_path, AHORA, lec)
-    assert "%" not in json.dumps(hecha.pieza["datos"], ensure_ascii=False)
-    assert not hecha.pieza["datos"]["contexto"].get("curva_tasas")
+
+def test_la_foto_trae_los_activos_en_orden_de_puntaje(tmp_path):
+    base = tmp_path / "ref"
+    cobre = fx.lectura(ticker="COPPER", estado="RANGO", direccion="LATERAL", precio=14500.0,
+                       rango=(14567.0, 14206.0), atr=85.86)
+    _sembrar(base, [cobre, fx.lectura()], {"XAUUSD": 90.0, "COPPER": 5.0})
+    hecha = pr.preparar(Orden("oportunidad"), tmp_path / "p", AHORA_LUNES, _lectores(base))
+    activos = hecha.pieza["datos"]["activos"]
+    assert [a["ticker"] for a in activos] == ["XAUUSD", "COPPER"]
+    oro = activos[0]
+    assert oro["escenario"]["objetivo"] == 4150.0 and oro["fmt"]["objetivo"] == "4.150,00"
+    assert oro["contrato"]["clp_unidad"] == 950.0
+    assert oro["temporalidad"] == "4H · swing (de una a dos semanas)"
+    assert (tmp_path / "p" / oro["grafico"]).exists()
+    assert hecha.pieza["anidados"] == {"titulares": ["XAUUSD", "COPPER"], "contexto": ["XAUUSD", "COPPER"]}
+    assert hecha.pieza["datos"]["curva"] == []
+
+
+def test_la_curva_va_sin_porcentajes(tmp_path):
+    base = tmp_path / "ref"
+    _sembrar(base, [fx.lectura()], {"XAUUSD": 90.0})
+    curva = ({"series": {"DGS2": {"nivel_pct": 3.61, "delta_1d_bps": 2, "delta_5d_bps": None}}}, [])
+    hecha = pr.preparar(Orden("oportunidad"), tmp_path / "p", AHORA_LUNES, _lectores(base, curva=lambda: curva))
+    filas = hecha.pieza["datos"]["curva"]
+    assert filas and "%" not in json.dumps(filas, ensure_ascii=False)
+
+
+def test_la_foto_no_toca_los_directorios_de_produccion(tmp_path, monkeypatch):
+    base = tmp_path / "ref"
+    _sembrar(base, [fx.lectura()], {"XAUUSD": 90.0})
+    antes = {p: p.stat().st_mtime for p in (RAIZ / "data").glob("carrusel/**/*") if p.is_file()}
+    pr.preparar(Orden("oportunidad"), tmp_path / "p", AHORA_LUNES, _lectores(base))
+    assert {p: p.stat().st_mtime for p in (RAIZ / "data").glob("carrusel/**/*") if p.is_file()} == antes

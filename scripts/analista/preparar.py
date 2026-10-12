@@ -36,6 +36,14 @@ class MercadoIlegibleError(PreparacionFallida):
     """MT5 o el calendario no responden: no se sabe si hay foco o no."""
 
 
+class SinSemanaError(PreparacionFallida):
+    """La semana no tiene análisis semanal: el bot no corre el escáner (spec §5)."""
+
+
+class EsperaVelaError(PreparacionFallida):
+    """Una línea A+ está en prueba: la foto espera el cierre de esa vela (spec §5)."""
+
+
 # ───────────────────────────────────────────────────────────── lectores reales
 
 
@@ -157,20 +165,66 @@ def _cuenta() -> str | None:
     return None if veredicto.ok else veredicto.detalle
 
 
+def _contrato(ticker: str, precio: float) -> dict[str, Any]:
+    """Lo que el panel necesita para simular, medido en la cuenta declarada.
+
+    `order_calc_profit` y no `tick_value` (miente en los CFD de acciones). Son cálculos, no órdenes.
+    """
+    from market_data_mcp import mt5_client
+
+    try:
+        mt5_client.connect()
+        import MetaTrader5 as mt5  # noqa: PLC0415
+
+        mt5.symbol_select(ticker, True)
+        info = mt5.symbol_info(ticker)
+        clp_unidad = mt5.order_calc_profit(mt5.ORDER_TYPE_BUY, ticker, 1.0, precio, precio + 1.0)
+    except Exception as exc:  # noqa: BLE001
+        raise PreparacionFallida(f"no pude leer el contrato de {ticker} ({exc.__class__.__name__})") from exc
+    if not info or not clp_unidad:
+        raise PreparacionFallida(f"el terminal no calculó el contrato de {ticker}: sin él no hay simulación")
+    return {"clp_unidad": float(clp_unidad), "vol_min": float(info.volume_min),
+            "vol_paso": float(info.volume_step)}
+
+
+def _grafico_lectura(ticker: str, nombre: str, lectura, destino: Path) -> Path:
+    from tradingview_grafico import generar_grafico_tv
+
+    return generar_grafico_tv(ticker=ticker, nombre=nombre, destino=destino, timeframe=lectura.marco,
+                              lineas=lectura.lineas)
+
+
+def _estrategia():
+    from estrategia import registro
+
+    return registro.activa()
+
+
+def _estado_semanal(estrategia, semana, lector, ahora, digits, base=None):
+    import referencia_semanal as rs
+
+    return rs.estado_semanal(estrategia, semana, lector, ahora, digits, base=base or rs.DIR)
+
+
+def _velas(ticker, marcos, extra=0):
+    from estrategia.fuente import velas_mt5
+
+    return velas_mt5(ticker, marcos, extra)
+
+
 @dataclass
 class Lectores:
-    terminal: Callable[[str, datetime], dict[str, Any]] = _terminal
-    grafico_tv: Callable[[dict[str, Any], Path], Path] = _grafico_tv
-    jornada: Callable[[datetime], tuple[list[dict[str, Any]], list[str]]] = _jornada
+    contrato: Callable[[str, float], dict[str, Any]] = _contrato
+    grafico_lectura: Callable[..., Path] = _grafico_lectura
+    estrategia: Callable[[], Any] = _estrategia
+    estado_semanal: Callable[..., list[dict[str, Any]]] = _estado_semanal
+    velas: Callable[..., Any] = _velas
     agenda: Callable[[datetime], tuple[list[dict[str, Any]], list[str]]] = _agenda
-    movimiento: Callable[[str, datetime, datetime], dict[str, Any]] = _movimiento
-    activos_jornada: Callable[[Path], tuple[dict[str, dict[str, Any]], list[str]]] = _activos_jornada
     curva: Callable[[], tuple[dict[str, Any], list[str]]] = _curva
     drivers: Callable[[str], list[str]] = _drivers
     cuenta: Callable[[], str | None] = _cuenta
-    foco: Callable[[datetime], Any] = _foco
     catalogo: Callable[[str], dict[str, Any]] = _catalogo_de
-    cierres: Callable[..., list[float]] = _cierres
+    base_referencias: Path | None = None
 
 
 @dataclass
@@ -194,24 +248,94 @@ def preparar_activo(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lector
     return _pieza_de_activo("activo", orden.args, lectura, dir_pedido, ahora, lec)
 
 
-def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lectores) -> Preparada:
-    """El foco técnico del día, armado con la MISMA lectura con que se eligió."""
-    from analista import foco as fo
+DIAS = ("lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo")
 
-    r = lec.foco(ahora)
-    if isinstance(r, fo.SinFoco):
-        raise SinFocoError(r.texto())
-    if isinstance(r, fo.MercadoIlegible):
-        raise MercadoIlegibleError(r.texto())
-    el = r.elegido
-    ticker = el.activo["ticker"]
-    lectura = {"ticker": ticker, "activo": lec.catalogo(ticker), "seleccion": el.seleccion,
-               "cierres": lec.cierres(ticker, el.seleccion["marco"])}
-    cuando = r.ahora.astimezone(SANTIAGO)
-    extra = {"seleccion": {"evaluados": r.evaluados, "fecha": f"{cuando:%d-%m-%Y}", "hora": f"{cuando:%H:%M}"}}
-    return _pieza_de_activo("oportunidad", {"ticker": ticker}, lectura, dir_pedido, ahora, lec,
-                            plan=el.plan, extra=extra,
-                            chip=f"FOCO TÉCNICO DEL DÍA · {el.activo['nombre'].upper()}")
+
+def fecha_corta(momento: datetime) -> str:
+    m = momento.astimezone(SANTIAGO)
+    return f"{DIAS[m.weekday()]} {m:%d-%m}"
+
+
+def _entrada_activo(ticker: str, referencia, guardada: datetime, puntaje: float, dir_pedido: Path,
+                    lec: Lectores, estrategia) -> dict[str, Any]:
+    import pipeline_carrusel as pc
+    from estrategia.contrato import lectura_a_dict
+
+    from analista import oportunidad as op
+
+    cat = lec.catalogo(ticker)
+    d = int(cat["digits"])
+    f = lambda x: pc.formatear_precio(x, d) if x is not None else ""  # noqa: E731
+    esc = op.escenario(referencia, d)
+    sup = inf = None
+    if referencia.estado == "RANGO":
+        sup, inf = op.bordes_rango(referencia)
+    grafico = f"grafico_{ticker.lower().replace('.', '_')}.png"
+    lec.grafico_lectura(ticker, cat["nombre"], referencia, dir_pedido / grafico)
+    etiqueta = estrategia.marcos.etiquetas[referencia.marco]
+    return {
+        "ticker": ticker, "nombre": cat["nombre"], "ticker_visible": cat.get("ticker_visible", ticker),
+        "digits": d, "unidad": cat.get("unidad") or "", "puntaje": puntaje,
+        "foto": {"guardada": guardada.isoformat(), "fecha": fecha_corta(guardada), "precio": referencia.precio},
+        "lectura": lectura_a_dict(referencia), "escenario": esc.a_dict(),
+        "fmt": {"precio": f(referencia.precio), "vigilar": f(referencia.vigilar.precio),
+                "invalidacion": f(referencia.invalidacion.precio if referencia.invalidacion else None),
+                "objetivo_tori": f(referencia.objetivo.precio if referencia.objetivo else None),
+                "entrada": f(esc.entrada), "stop": f(esc.stop), "objetivo": f(esc.objetivo),
+                "borde_superior": f(sup), "borde_inferior": f(inf)},
+        "contrato": lec.contrato(ticker, referencia.precio) if esc.simulable else None,
+        "temporalidad": f"{pc.ETIQUETA_CORTA.get(referencia.marco, referencia.marco)} · "
+                        f"{etiqueta.nombre} ({etiqueta.duracion})",
+        "grafico": grafico,
+    }
+
+
+def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lectores) -> Preparada:
+    """La foto de la semana: los elegidos del análisis semanal, con su referencia del lunes."""
+    import referencia_semanal as rs
+
+    base = lec.base_referencias or rs.DIR
+    semana = rs.semana_de(ahora)
+    manifiesto = rs.manifiesto(semana, base)
+    if manifiesto is None:
+        raise SinSemanaError(f"La semana {semana} todavía no tiene análisis semanal: la pieza sale "
+                             "cuando el escáner la fije.")
+    estrategia = lec.estrategia()
+    digits = {t: int(lec.catalogo(t)["digits"]) for t in manifiesto["elegidos"]}
+    esperas = [f["espera_hasta"] for f in lec.estado_semanal(estrategia, semana, lec.velas, ahora, digits,
+                                                             base=base) if f.get("espera_hasta")]
+    if esperas:
+        hora = max(esperas).astimezone(SANTIAGO)
+        raise EsperaVelaError(f"Una línea clave está en prueba: se publica al cierre de la vela de las "
+                              f"{hora:%H:%M}.")
+    puntajes = manifiesto.get("puntajes", {})
+    orden_tickers = sorted(manifiesto["elegidos"], key=lambda t: (-float(puntajes.get(t, 0)), t))
+    activos, avisos = [], []
+    for ticker in orden_tickers:
+        referencia = rs.cargar(semana, ticker, base)
+        if referencia is None:
+            avisos.append(f"{ticker} no tiene referencia en {semana}: queda fuera")
+            continue
+        guardada = datetime.fromisoformat(
+            json.loads(rs.ruta(semana, ticker, base).read_text(encoding="utf-8"))["guardada"])
+        activos.append(_entrada_activo(ticker, referencia, guardada, float(puntajes.get(ticker, 0)),
+                                       dir_pedido, lec, estrategia))
+    agenda, av = lec.agenda(ahora)
+    avisos += [f"contexto sin agenda: {a}" for a in av]
+    curva, av = lec.curva()
+    avisos += [f"contexto sin curva de tasas: {a}" for a in av]
+    sin_pct = _contexto_sin_porcentajes({"curva": _filas_curva(curva)})
+    datos = {"semana": semana, "chip": "ANÁLISIS TÉCNICO DE LA SEMANA",
+             "edicion": fecha_corta(ahora) + f" · {ahora.astimezone(SANTIAGO):%H:%M}",
+             "activos": activos, "drivers": {a["ticker"]: lec.drivers(a["ticker"]) for a in activos},
+             "agenda_semana": [f"{ev.get('hora', '')} · {ev.get('nombre_es') or ev.get('evento', '')}"
+                               for ev in agenda],
+             "curva": sin_pct["curva"]}
+    tickers = [a["ticker"] for a in activos]
+    pieza = es.nueva_pieza("oportunidad", {"semana": semana}, datos,
+                           {a["ticker"]: a["grafico"] for a in activos},
+                           extra_campos={"titulares": tickers, "contexto": tickers})
+    return Preparada(pieza, avisos)
 
 
 def _contexto_sin_porcentajes(contexto: dict[str, Any]) -> dict[str, Any]:

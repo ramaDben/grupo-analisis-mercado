@@ -27,13 +27,16 @@ CAMPOS: dict[str, tuple[str, ...]] = {
     "calendario": ("titular", "bajada", "lectura"),
     "dato": ("titular", "bajada", "que_paso", "que_significa", "que_no_hacer", "impacto"),
     "jornada": ("titular", "bajada", "lectura", "que_no_hacer"),
-    # El foco técnico del día es la pieza de activo para un prospecto: mismos campos.
-    "oportunidad": ("titular", "bajada", "lectura", "empuja_alza", "empuja_baja", "que_no_hacer"),
+    # La pieza semanal: portada y, anidados, un titular y un contexto por activo.
+    "oportunidad": ("titular", "bajada"),
+    # El seguimiento no pasa por agy, pero su `pieza.json` usa el mismo sello.
+    "seguimiento": (),
 }
 
 # El titular y la bajada también van impresos dentro de las láminas de WhatsApp,
 # que tienen el espacio medido: un titular largo se corta en la imagen.
 LARGO_MAXIMO = {"titular": 70, "bajada": 160}
+LARGO_MAXIMO_ANIDADO = {"titulares": 70}
 
 # El informe es análisis general: nadie en GI está inscrito como asesor de
 # inversión. Se prohíben FRASES y no palabras sueltas, porque "compra" o
@@ -54,7 +57,7 @@ FRASES_PROHIBIDAS: tuple[str, ...] = (
 )
 _PALABRA_EXACTA = {"lote", "lotes"}
 
-# El foco técnico del día lo comparte ventas con un prospecto: además no puede
+# La pieza semanal la comparte ventas con un prospecto: además no puede
 # empujar a entrar ni hablar de cuánto acierta. La estadística se sacó de la
 # pieza a propósito (sin su línea base, "53 %" insinúa una ventaja que no hay),
 # y un porcentaje en el texto la traería de vuelta por la puerta de atrás.
@@ -175,6 +178,10 @@ def errores(pieza: dict[str, Any]) -> list[str]:
         largo = len(str(editorial.get(campo, "")))
         if largo > tope:
             errs.append(f"{campo}: tiene {largo} caracteres y el máximo es {tope}")
+    for campo, tope in LARGO_MAXIMO_ANIDADO.items():
+        for clave, texto in (editorial.get(campo) or {}).items():
+            if len(str(texto)) > tope:
+                errs.append(f"{campo}.{clave}: tiene {len(str(texto))} caracteres y el máximo es {tope}")
     for donde, texto in pares:
         if _HTML.search(texto):
             errs.append(f"{donde}: trae HTML; la maqueta la pone la plantilla, no el texto")
@@ -186,9 +193,9 @@ def errores(pieza: dict[str, Any]) -> list[str]:
         if tipo == "oportunidad":
             for frase in frases_prohibidas(texto, FRASES_PROHIBIDAS_FOCO):
                 errs.append(f"{donde}: «{frase}» empuja a entrar o habla de cuánto acierta; "
-                            "el foco técnico describe un escenario")
+                            "la pieza semanal describe un escenario")
             if "%" in texto:
-                errs.append(f"{donde}: trae un porcentaje, y el foco técnico no muestra ninguno")
+                errs.append(f"{donde}: trae un porcentaje, y la pieza semanal no muestra ninguno")
         for cifra in cifras_ajenas(texto, pieza.get("datos")):
             errs.append(f"{donde}: la cifra {cifra} no está en los datos del terminal")
     return errs
