@@ -204,7 +204,8 @@ class Atendedor:
 
     def _preparar(self, orden: od.Orden, dir_pedido: Path, ahora: datetime) -> pr.Preparada:
         try:
-            return self.preparar(orden, dir_pedido, ahora)
+            # El registro del bot y no el real: con uno inyectado, preparar miraba otro archivo.
+            return self.preparar(orden, dir_pedido, ahora, registro=self.registro)
         except (pr.SinSemanaError, pr.EsperaVelaError, pr.SinFotoError, pr.FueraDeLaFotoError) as exc:
             raise FalloPedido(str(exc)) from exc  # es la respuesta, no una falla
         except pr.PreparacionFallida as exc:

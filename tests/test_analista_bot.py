@@ -61,8 +61,9 @@ class Armado:
         self.bot = b.Bot(TgFalso(), self.atendedor)
         self.estado = self.atendedor.estado
 
-    def preparar_falso(self, orden, dir_pedido, ahora):
+    def preparar_falso(self, orden, dir_pedido, ahora, **kw):
         self.preparaciones += 1
+        self.kwargs = kw
         dir_pedido.mkdir(parents=True, exist_ok=True)
         if orden.pieza == "oportunidad":
             pieza = fx.pieza_oportunidad(dir_pedido)
@@ -198,14 +199,14 @@ def test_oportunidad_solo_va_a_drive_el_html(armado):
 
 
 def test_oportunidad_sin_semana_responde_claro_y_no_gasta_cupo(armado):
-    armado.atendedor.preparar = lambda o, d, a: (_ for _ in ()).throw(
+    armado.atendedor.preparar = lambda o, d, a, **kw: (_ for _ in ()).throw(
         pr.SinSemanaError("La semana 2026-W42 todavía no tiene análisis semanal"))
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
     assert r.texto.startswith("❌ La semana") and armado.estado.usados(CAMILA, AHORA) == 0
 
 
 def test_oportunidad_en_espera_da_la_hora_del_cierre(armado):
-    armado.atendedor.preparar = lambda o, d, a: (_ for _ in ()).throw(
+    armado.atendedor.preparar = lambda o, d, a, **kw: (_ for _ in ()).throw(
         pr.EsperaVelaError("se publica al cierre de la vela de las 13:00"))
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
     assert "13:00" in r.texto and armado.llamadas == []
@@ -234,7 +235,7 @@ def test_texto_invalido_de_agy_no_sale(armado):
 
 
 def test_datos_que_no_estan_no_gastan_agy(armado):
-    def sin_datos(orden, d, a):
+    def sin_datos(orden, d, a, **kw):
         raise pr.PreparacionFallida("el terminal no entregó XAUUSD")
 
     armado.atendedor.preparar = sin_datos
@@ -257,6 +258,13 @@ def test_seguimiento_entrega_lamina_y_texto_sin_agy(armado):
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
     assert armado.llamadas == [] and "Te envío una actualización" in r.texto
     assert r.archivos[0].suffix == ".png"
+
+
+@pytest.mark.parametrize("orden", [od.Orden("oportunidad"), od.Orden("seguimiento", {"ticker": "XAUUSD"})])
+def test_preparar_usa_el_registro_del_bot(armado, orden):
+    """Con un registro inyectado, preparar no puede mirar el real (`rg.RUTA`)."""
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, orden))
+    assert armado.kwargs == {"registro": armado.registro}
 
 
 def test_seguimiento_se_reusa_30_minutos(armado):
@@ -283,7 +291,7 @@ def test_seguimiento_queda_anotado_en_la_foto_de_la_semana(armado):
 @pytest.mark.parametrize("error", [pr.SinFotoError("Esta semana todavía no hay análisis publicado."),
                                    pr.FueraDeLaFotoError("Ese activo no está en el análisis de esta semana.")])
 def test_seguimiento_sin_foto_o_fuera_de_ella_no_gasta_cupo(armado, error):
-    def falla(orden, d, a):
+    def falla(orden, d, a, **kw):
         raise error
 
     armado.atendedor.preparar = falla
@@ -292,7 +300,7 @@ def test_seguimiento_sin_foto_o_fuera_de_ella_no_gasta_cupo(armado, error):
 
 
 def test_mt5_caido_en_seguimiento_lo_dice(armado):
-    armado.atendedor.preparar = lambda o, d, a: (_ for _ in ()).throw(
+    armado.atendedor.preparar = lambda o, d, a, **kw: (_ for _ in ()).throw(
         pr.PreparacionFallida("no uso el terminal: MT5 no conectó"))
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
     assert "MT5" in r.texto

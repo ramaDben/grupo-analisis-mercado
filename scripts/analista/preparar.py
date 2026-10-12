@@ -10,7 +10,7 @@ Cada lector se puede reemplazar (`Lectores`), así los tests corren sin MT5.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
@@ -362,10 +362,16 @@ CON_TERMINAL = {"oportunidad", "seguimiento"}
 
 
 def preparar(orden: Orden, dir_pedido: Path, ahora: datetime | None = None,
-             lectores: Lectores | None = None) -> Preparada:
-    """Escribe `pieza.json` y las imágenes sin texto en `dir_pedido`."""
+             lectores: Lectores | None = None, registro: Path | None = None) -> Preparada:
+    """Escribe `pieza.json` y las imágenes sin texto en `dir_pedido`.
+
+    `registro` es el registro semanal del bot: una sola fuente para los dos (antes cada uno
+    tenía la suya, y con un registro inyectado el seguimiento miraba el real).
+    """
     ahora = ahora or datetime.now(SANTIAGO)
     lec = lectores or Lectores()
+    if registro is not None:
+        lec = replace(lec, registro=registro)
     dir_pedido.mkdir(parents=True, exist_ok=True)
     if orden.pieza in CON_TERMINAL:
         problema = lec.cuenta()

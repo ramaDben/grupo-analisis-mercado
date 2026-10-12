@@ -146,6 +146,17 @@ def _lectores_seg(tmp_path, base, velas, precio):
     return lec
 
 
+def test_seguimiento_lee_la_foto_del_registro_que_se_le_pasa(tmp_path):
+    base = tmp_path / "ref"
+    _sembrar(base, [fx.lectura()], {"XAUUSD": 90.0})
+    _foto(tmp_path, base, [fx.activo_semanal()])
+    lec = _lectores_seg(tmp_path, base, pd.DataFrame(columns=["time", "high", "low"]), 4124.0)
+    lec.registro = None  # sin registro en los lectores, manda el que pasa el bot
+    hecha = pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD"}), tmp_path / "s", AHORA_LUNES, lec,
+                        registro=tmp_path / "registro.json")
+    assert hecha.pieza["datos"]["ticker"] == "XAUUSD"
+
+
 def test_seguimiento_de_un_activo_fuera_de_la_foto_lista_los_que_si(tmp_path):
     base = tmp_path / "ref"
     _sembrar(base, [fx.lectura()], {"XAUUSD": 90.0})
