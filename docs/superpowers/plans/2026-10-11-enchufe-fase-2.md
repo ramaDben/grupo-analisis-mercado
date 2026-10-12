@@ -1476,7 +1476,7 @@ git commit -m "feat(enchufe): el despacho vuelve a pedir la Lectura y frena con 
 > código. Se borran junto con los gates en S6/S7. En S4 entran solo los motivos de la estrategia
 > (`sin líneas trazables`, `va contra la secuencia`, `está en prueba`, `no se pudo leer`) como
 > no publicables, con `concepto: None`. El techo de `CLAUDE.md` en `tests/test_agy_reglas.py`
-> sube de 93.200 a 93.400 bytes por la nota de la sección del `Score_GI`.
+> no cambia: la nota de la sección del `Score_GI` entra al reemplazar el párrafo de `--forzar`.
 
 **Files:**
 - Modify: `scripts/suplemento_canal.py`, `tests/test_suplemento_canal.py`, `tests/test_guardrails_contrato.py` (si fija los motivos de los gates)

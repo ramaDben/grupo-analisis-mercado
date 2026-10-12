@@ -376,10 +376,8 @@ antes.
 respondió, dice que no pudo verificar blackouts en vez de reportar cero exclusiones. Un escáner
 que descarta en silencio no es auditable.
 
-**Y un gate apagado también lo dice.** El de agotamiento es el único que se puede desactivar, y
-solo con `--forzar`: el escáner entonces estampa el aviso de que el espacio proyectado no está
-verificado. **`--grupo` acota el universo y nada más**, y hasta el 2026-09-03 también apagaba ese
-gate sin decirlo. Con el gate encendido, un canal sin candidatos devuelve **"ningún activo puntuó
+**`--forzar` salió en S4** con el gate de agotamiento del carrusel. **`--grupo` acota el universo
+y nada más**. Un canal sin candidatos devuelve **"ningún activo puntuó
 sobre 0: no hay tanda que publicar. Es un resultado válido, no una falla"**, que es la respuesta
 correcta y la que el manual del comando ya exigía.
 
