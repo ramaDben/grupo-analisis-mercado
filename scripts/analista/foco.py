@@ -5,17 +5,18 @@ como asesor de inversión. Por eso lo elige una regla y no una persona, es el
 mismo para todos los que lo piden a la misma hora, y algunos días no hay: el bot
 lo dice en vez de rellenar. Spec: docs/superpowers/specs/2026-10-09-foco-tecnico-del-dia-design.md
 
-Tres decisiones que no conviene revertir:
+La regla es la de la estrategia activa (enchufe de estrategia, S7): el puntaje de
+sesión de `estrategia.puntuar`, y solo entra un activo en las dos primeras situaciones
+del horizonte sesión (ruptura reciente con la línea de seguridad cerca, o a punto de
+tocar una línea A+ o recién rebotado en ella). Antes ordenaba con técnico + momentum del
+`Score_GI` y armaba el plan con el Chandelier: dos lecturas que no eran la publicada.
 
-1. **No usa el `Score_GI` entero.** `factor_espacio` mide la distancia AL R1
-   como objetivo y da 0 puntos cerca de él, pero en el plan el R1 es el gatillo:
-   con el puntaje tal cual, el activo a punto de activarse saldría último. Y
-   `factor_catalizador` suma puntos por un movimiento de tasas sin mirar hacia
-   dónde empuja. El orden es técnico + momentum.
-2. **Sin calendario no hay foco.** Sin él no se puede verificar que no venga un
+Dos decisiones que no conviene revertir:
+
+1. **Sin calendario no hay foco.** Sin él no se puede verificar que no venga un
    dato fuerte, y entregar a ciegas a minutos del empleo es lo que el gate evita.
-3. **Una sola lectura del terminal por pedido.** Elegir con una y armar la pieza
-   con otra puede encontrar el precio del otro lado de la EMA 50.
+2. **Una sola lectura por pedido.** El elegido trae la selección con que se eligió,
+   y la pieza se arma con ella: leer otra vez podría encontrar otro estado.
 """
 from __future__ import annotations
 
@@ -27,11 +28,10 @@ from typing import Any, Callable
 AGREGADOS = ("US100.spot", "BRENT.spot")
 CLASE_BASE = "forex_commodities"
 CLASES_INDICE = {"indices"}
-DISTANCIA_ARMADO_ATR = 1.0
-VELAS_ACTIVACION = 2  # la ruptura en una de las 2 últimas velas cerradas
-AVANCE_MAXIMO = 0.5  # fracción del recorrido típico ya hecha desde el gatillo
+# El piso de la situación "a punto" del horizonte sesión (estrategia/tori/parametros.py,
+# bandas_sesion): solo entran la ruptura reciente y el "a punto" (spec §5).
+FOCO_PUNTOS_MIN = 50.0
 EDAD_TICK_MAXIMA_MIN = 15.0
-VELAS_SERIE = 400  # alcanza para los 300 de los niveles más las 24 de la activación
 
 _AVISO_CALENDARIO = "calendario no disponible"
 
@@ -40,21 +40,10 @@ _AVISO_CALENDARIO = "calendario no disponible"
 
 
 @dataclass(frozen=True)
-class PlanFoco:
-    plan: dict[str, Any]
-    velas_desde_ruptura: int | None  # 0 = la última vela cerrada; None = sin ruptura
-    precio: float
-    atr14: float
-
-
-@dataclass(frozen=True)
 class Elegido:
     activo: dict[str, Any]
-    evaluacion: dict[str, Any]
-    h1: dict[str, Any]
-    d1: dict[str, Any]
-    plan_foco: PlanFoco
-    serie: Any
+    seleccion: dict[str, Any]  # la entrada del escáner: lectura, puntaje, marco, volatilidad
+    plan: dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -118,65 +107,31 @@ def calendario_caido(avisos: list[str]) -> bool:
     return any(a.startswith(_AVISO_CALENDARIO) for a in avisos)
 
 
-def elegible(pf: PlanFoco) -> str | None:
-    """None si el plan sirve para hoy; si no, el motivo en palabras del ejecutivo."""
-    p = pf.plan
-    if not p.get("hay_plan"):
-        return "sin estructura a favor de la tendencia"
-    n = p["niveles"]
-    alcista = p["sesgo"] == "Alcista"
-    if pf.velas_desde_ruptura is None:
-        if abs(pf.precio - n["gatillo"]) > DISTANCIA_ARMADO_ATR * pf.atr14:
-            return "lejos del gatillo"
-        return None
-    if str(p.get("estado", "")).startswith("Invalidado"):
-        return "con el plan invalidado"
-    if pf.velas_desde_ruptura >= VELAS_ACTIVACION:
-        return "activados hace más de 2 horas"
-    avance = (pf.precio - n["gatillo"]) if alcista else (n["gatillo"] - pf.precio)
-    if avance < 0:
-        # Diría "Activado: cruzó el gatillo" con el precio otra vez del otro lado.
-        return "con el precio que volvió del otro lado del gatillo"
-    if avance >= AVANCE_MAXIMO * n["recorrido"]:
-        return "con más de la mitad del recorrido hecho"
+def elegible(seleccion: dict[str, Any], plan: dict[str, Any]) -> str | None:
+    """None si el activo sirve como foco hoy; si no, el motivo en palabras del ejecutivo."""
+    if not plan.get("hay_plan"):
+        return "sin una tendencia con línea de seguridad"
+    if seleccion["score"] < FOCO_PUNTOS_MIN:
+        return "sin una ruptura reciente ni un precio a punto de tocar su línea"
     return None
-
-
-def _distancia(pf: PlanFoco) -> float:
-    return abs(pf.precio - pf.plan["niveles"]["gatillo"]) / pf.atr14 if pf.atr14 else float("inf")
 
 
 def _motivo_gate(texto: str) -> str:
     t = texto.lower()
     if t.startswith("feriado"):
         return "en feriado de su bolsa"
-    if t.startswith("atr diario"):
-        return "sin recorrido en el día"
     if t.startswith("blackout"):
         return "por un dato económico fuerte"
-    if t.startswith(("niveles de respaldo", "la vela tipica")):
-        return "con niveles muy estrechos o sin estructura"
+    if "secuencia" in t:
+        return "contra la tendencia de los marcos mayores"
+    if "trazables" in t:
+        return "sin estructura de tendencia"
+    if "en prueba" in t:
+        return "con una línea en prueba"
     return "sin datos del terminal"
 
 
 # ───────────────────────────────────────────────────────────── lectura
-
-
-class AnalizadorMemo:
-    """`analizar_activo` con memoria por pedido: una lectura por (ticker, marco)."""
-
-    def __init__(self, analizador: Callable[[str, str], dict[str, Any]]):
-        self._analizador = analizador
-        self._lecturas: dict[tuple[str, str], dict[str, Any]] = {}
-
-    def __call__(self, ticker: str, marco: str) -> dict[str, Any]:
-        clave = (ticker, marco)
-        if clave not in self._lecturas:
-            self._lecturas[clave] = self._analizador(ticker, marco)
-        return self._lecturas[clave]
-
-    def con_error(self, ticker: str) -> bool:
-        return any("error" in v for (t, _), v in self._lecturas.items() if t == ticker)
 
 
 def _conectar() -> list[str]:
@@ -191,16 +146,16 @@ def _contexto_macro(ahora: datetime):
     return sc._contexto_macro(ahora)
 
 
-def _analizador(ticker: str, marco: str) -> dict[str, Any]:
-    from market_data_mcp.analisis import analizar_activo
-
-    return analizar_activo(ticker, marco)
-
-
-def _evaluar(activo, eventos, delta, ahora, analizador):
+def _seleccion(activo: dict[str, Any], ahora: datetime) -> dict[str, Any]:
     import screener_gi as sc
 
-    return sc.evaluar_activo(activo, eventos, delta, ahora, analizador=analizador)
+    return sc.seleccion_fija(activo, ahora, fijo=False)
+
+
+def _gate(ticker: str, eventos: list[dict[str, Any]], ahora: datetime) -> str | None:
+    import screener_gi as sc
+
+    return sc.gate_feriado(ticker, ahora.date()) or sc.gate_blackout(ticker, eventos, ahora)
 
 
 def _edad_tick(ticker: str) -> float | None:
@@ -222,44 +177,35 @@ def _edad_tick(ticker: str) -> float | None:
     return max(0, max(ref.time, propio.time) - propio.time) / 60
 
 
-def _serie(ticker: str):
-    from market_data_mcp import mt5_client
-
-    return mt5_client.get_rates(ticker, "H1", VELAS_SERIE).iloc[:-1].reset_index(drop=True)
-
-
-def plan_foco(df, h1: dict[str, Any], activo: dict[str, Any], sesgo: str) -> PlanFoco:
-    """El plan del `/activo`, sin estadística: el foco no la muestra y no la mide."""
-    from analista import estadistica as est
-    from analista import plan as plan_mod
-
-    ind = est.indicadores(df)
-    digits = int(activo["digits"])
-    ruptura = est.ultima_ruptura(df, digits, sesgo == "Alcista", ind) if len(df) > est.VENTANA else None
-    p = plan_mod.armar(h1, digits, sesgo, activo["nombre"], None, plan_mod.ultima_vela(df, ind),
-                       ruptura[0] if ruptura else None)
-    p.pop("estadistica", None)
-    velas = (len(df) - 1 - ruptura[1]) if ruptura else None
-    # El precio VIVO: es el que la pieza publica como cotización de referencia.
-    return PlanFoco(p, velas, float(h1["price"]), float(h1["atr_14"]))
-
-
 def _activo(ticker: str) -> dict[str, Any]:
     import screener_gi as sc
 
     return next(a for a in sc.cargar_universo(solo_renderizables=False) if a["ticker"] == ticker)
 
 
+def _divergencia(preparada, actual) -> str | None:
+    from estrategia import registro
+
+    return registro.activa().divergencia(preparada, actual)
+
+
+def plan_de(seleccion: dict[str, Any], activo: dict[str, Any]) -> dict[str, Any]:
+    """El plan del foco, desde la lectura con que se eligió."""
+    from analista import plan as plan_mod
+    from estrategia.contrato import lectura_de_dict
+
+    return plan_mod.armar(lectura_de_dict(seleccion["lectura"]), int(activo["digits"]), activo["nombre"])
+
+
 @dataclass
 class LectoresFoco:
     conectar: Callable[[], list[str]] = _conectar
     contexto_macro: Callable[[datetime], tuple[list[dict[str, Any]], float | None, list[str]]] = _contexto_macro
-    analizador: Callable[[str, str], dict[str, Any]] = _analizador
-    evaluar: Callable[..., dict[str, Any]] = _evaluar
+    seleccion: Callable[[dict[str, Any], datetime], dict[str, Any]] = _seleccion
+    gate: Callable[[str, list[dict[str, Any]], datetime], str | None] = _gate
     edad_tick: Callable[[str], float | None] = _edad_tick
-    serie: Callable[[str], Any] = _serie
-    armar_plan: Callable[..., PlanFoco] = plan_foco
     activo: Callable[[str], dict[str, Any]] = _activo
+    divergencia: Callable[[Any, Any], str | None] = _divergencia
 
 
 # ───────────────────────────────────────────────────────────── selección
@@ -270,12 +216,11 @@ def seleccionar(universo: list[dict[str, Any]], ahora: datetime,
     lec = lec or LectoresFoco()
     if lec.conectar():
         return MercadoIlegible("MetaTrader 5 no responde")
-    eventos, delta, avisos = lec.contexto_macro(ahora)
+    eventos, _delta, avisos = lec.contexto_macro(ahora)
     if calendario_caido(avisos):
         return MercadoIlegible("el calendario económico no responde y sin él no se puede "
                                "verificar que no venga un dato fuerte")
 
-    memo = AnalizadorMemo(lec.analizador)
     motivos: Counter[str] = Counter()
     candidatos: list[tuple[tuple, Elegido]] = []
     leidos = errores = 0
@@ -297,31 +242,26 @@ def seleccionar(universo: list[dict[str, Any]], ahora: datetime,
             motivos["con el mercado cerrado"] += 1
             continue
         leidos += 1
+        gate = lec.gate(t, eventos, ahora)
+        if gate:
+            motivos[_motivo_gate(gate)] += 1
+            continue
         try:
-            ev = lec.evaluar(a, eventos, delta, ahora, analizador=memo)
-            if "excluido" in ev:
-                if memo.con_error(t):
-                    errores += 1
-                    motivos["sin datos del terminal"] += 1
-                else:
-                    motivos[_motivo_gate(str(ev["excluido"]))] += 1
+            sel = lec.seleccion(a, ahora)
+            if "excluido" in sel:
+                motivos[_motivo_gate(str(sel["excluido"]))] += 1
                 continue
-            h1, d1 = memo(t, "H1"), memo(t, "D1")
-            sesgo = "Alcista" if ev["direccion"] == "ALCISTA" else "Bajista"
-            df = lec.serie(t)
-            pf = lec.armar_plan(df, h1, a, sesgo)
+            plan = plan_de(sel, a)
         except Exception:  # noqa: BLE001
             # Un activo con datos rotos se salta; no puede tumbar la selección de los demás.
             errores += 1
             motivos["sin datos del terminal"] += 1
             continue
-        motivo = elegible(pf)
+        motivo = elegible(sel, plan)
         if motivo:
             motivos[motivo] += 1
             continue
-        puntos = ev["factores"]["tecnico"]["puntos"] + ev["factores"]["momentum"]["puntos"]
-        clave = (-puntos, _distancia(pf), t)
-        candidatos.append((clave, Elegido(a, ev, h1, d1, pf, df)))
+        candidatos.append(((-sel["score"], t), Elegido(a, sel, plan)))
 
     if leidos and errores == leidos:
         return MercadoIlegible("el terminal no entregó datos de ningún activo")
@@ -345,31 +285,31 @@ def sigue_vigente(pieza: dict[str, Any], ahora: datetime, lec: LectoresFoco | No
 
     La ventana de reuso sola no alcanza: un dato o un titular pueden invalidar el
     plan a los diez minutos, y otro ejecutivo recibiría un escenario que ya no
-    existe. Se vuelve a leer el activo y, ante la menor duda, se rehace.
+    existe. Se vuelve a leer el activo con la estrategia y, ante la menor duda, se rehace.
     """
     lec = lec or LectoresFoco()
     try:
-        import screener_gi as sc
+        from estrategia.contrato import lectura_de_dict
 
         datos = pieza["datos"]
         ticker, previo = datos["ticker"], datos["plan"]
         if lec.conectar():
             return False
         eventos, _, avisos = lec.contexto_macro(ahora)
-        if calendario_caido(avisos) or sc.gate_blackout(ticker, eventos, ahora):
+        if calendario_caido(avisos) or lec.gate(ticker, eventos, ahora):
             return False
         edad = lec.edad_tick(ticker)
         if edad is None or edad >= EDAD_TICK_MAXIMA_MIN:
             return False
-        h1 = lec.analizador(ticker, "H1")
-        if "error" in h1:
+        activo = lec.activo(ticker)
+        sel = lec.seleccion(activo, ahora)
+        if "excluido" in sel:
             return False
-        sesgo = "Alcista" if sc.direccion_tecnica(h1) == "ALCISTA" else "Bajista"
-        if sesgo != previo["sesgo"]:
+        if lec.divergencia(lectura_de_dict(datos["lectura"]), lectura_de_dict(sel["lectura"])):
             return False
-        pf = lec.armar_plan(lec.serie(ticker), h1, lec.activo(ticker), sesgo)
-        return (elegible(pf) is None
-                and pf.plan["niveles"]["gatillo"] == previo["niveles"]["gatillo"]
-                and _clase_estado(pf.plan) == _clase_estado(previo))
+        plan = plan_de(sel, activo)
+        return (elegible(sel, plan) is None
+                and plan["niveles"]["gatillo"] == previo["niveles"]["gatillo"]
+                and _clase_estado(plan) == _clase_estado(previo))
     except Exception:  # noqa: BLE001
         return False

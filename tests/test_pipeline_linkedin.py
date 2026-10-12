@@ -20,16 +20,26 @@ import pipeline_linkedin as pl  # noqa: E402
 
 AHORA = datetime(2026, 9, 28, 12, 0, tzinfo=pl.SANTIAGO)
 
-USDCLP = {
-    "nombre": "USD/CLP", "digits": 2, "price": 971.03, "s2": 949.6, "s1": 960.9,
-    "r1": 974.5, "r2": 977.3, "ema_50": 933.97, "donchian_50_high": 969.7,
-    "donchian_50_low": 905.3, "change_pct": 1.12, "rsi_14": 63.8, "direccion": "ALCISTA",
-}
-COBRE = {
-    "nombre": "Cobre", "digits": 0, "price": 14395, "s2": 13903, "s1": 14089,
-    "r1": 14508, "r2": 14838, "ema_50": 14167, "donchian_50_high": 14838,
-    "donchian_50_low": 13358, "change_pct": -0.5, "rsi_14": 58.9, "direccion": "ALCISTA",
-}
+from estrategia.contrato import Escenario, Lectura, Linea, Referencia  # noqa: E402
+
+
+def _lectura(ticker, precio, vigilar, invalidacion, objetivo, direccion="ALCISTA", estado="TENDENCIA"):
+    """Una `Lectura` real de la estrategia, como la que devuelve `rs.lectura_actual`."""
+    lin = Linea("seguridad", "diagonal", ((100, vigilar - 1), (200, vigilar)), "H4", 3, "A+", vigilar)
+    ref = Referencia(vigilar, f"línea {direccion.lower()} de seguridad", lin)
+    inv = Referencia(invalidacion, "invalida la lectura") if invalidacion is not None else None
+    obj = Referencia(objetivo, "objetivo") if objetivo is not None else None
+    esc = tuple(Escenario(f, "c", "t") for f in ("⬆️", "↔️", "⬇️"))
+    return Lectura(
+        ticker=ticker, marco="H4", precio=precio, direccion=direccion, estado=estado,
+        lineas=(lin,), en_prueba=None, vigilar=ref, invalidacion=inv, objetivo=obj,
+        escenarios=esc, salida="s", conceptos=(), avisos=(), metricas={}, vela=200)
+
+
+# Soporte 960,90 (invalida) y resistencia 974,50 (vigilar); objetivo 977,30.
+USDCLP = pl.fila_de_lectura("USD/CLP", 2, _lectura("USDCLP", 971.03, 974.5, 960.9, 977.3))
+# Soporte 14089 (vigilar) y resistencia 14508 (objetivo).
+COBRE = pl.fila_de_lectura("Cobre", 0, _lectura("COPPER", 14395, 14089, 13903, 14508))
 
 REGISTRO = {
     "reciente": {"id": "reciente", "quien": "Ana", "institucion": "Banco X", "tipo": "textual",
@@ -209,11 +219,8 @@ def test_cifras_legitimas_sin_signo_no_frenan(texto):
 
 def test_nivel_de_indice_distinto_al_medido_se_detiene():
     p = _completo()
-    p["datos"]["activos"]["US100.spot"] = {
-        "nombre": "Nasdaq 100", "digits": 2, "price": 30165.57, "s2": 28886.84, "s1": 28935.51,
-        "r1": 30379.37, "r2": 30724.16, "ema_50": 29604.49, "donchian_50_high": 30844.97,
-        "donchian_50_low": 27962.66, "change_pct": -0.92, "rsi_14": 61.1, "direccion": "ALCISTA",
-    }
+    p["datos"]["activos"]["US100.spot"] = pl.fila_de_lectura(
+        "Nasdaq 100", 2, _lectura("US100.spot", 30165.57, 30379.37, 29604.49, 30724.16))
     p["editorial"]["paginas"]["lectura"]["texto"] = "El Nasdaq vigila 30.400,00."
     assert any("30.400,00" in e for e in pl.validar(p, REGISTRO, AHORA))
     p["editorial"]["paginas"]["lectura"]["texto"] = "El Nasdaq vigila 30.379,37."
@@ -233,8 +240,8 @@ def test_vision_con_fecha_de_manana_se_acepta_por_husos():
 
 def test_brief_no_se_rompe_con_niveles_ausentes():
     p = _completo()
-    p["datos"]["activos"]["USDCLP"]["s1"] = None
-    p["datos"]["activos"]["USDCLP"]["change_pct"] = None
+    p["datos"]["activos"]["USDCLP"]["soporte"] = None
+    p["datos"]["activos"]["USDCLP"]["objetivo"] = None
     brief = pl.construir_brief(p, REGISTRO)
     assert "Mapa no disponible" in brief and "sin dato" in brief
 
@@ -255,13 +262,102 @@ def test_curva_usa_la_cotizacion_de_hoy_y_no_la_de_otro_dia(monkeypatch):
     assert curva["DGS2"]["nivel_pct"] == 4.87, "una cotización de otro día no reemplaza al archivo"
 
 
+# ------------------------------------------------------------ lectura de la estrategia
+
+
+def test_fila_sale_de_la_lectura_de_la_estrategia():
+    assert USDCLP["price"] == 971.03
+    assert USDCLP["vigilar"] == 974.5 and USDCLP["invalidacion"] == 960.9
+    assert USDCLP["objetivo"] == 977.3
+    assert (USDCLP["soporte"], USDCLP["resistencia"]) == (960.9, 974.5)
+    assert USDCLP["direccion"] == "ALCISTA" and USDCLP["estado"] == "TENDENCIA"
+    assert USDCLP["lectura"]["vigilar"]["precio"] == 974.5
+    # Nada de la lectura vieja de `analizar_activo`: ni s1/r1, ni media, ni RSI.
+    for viejo in ("s1", "r1", "s2", "r2", "ema_50", "donchian_50_high", "rsi_14", "change_pct"):
+        assert viejo not in USDCLP
+
+
+def test_fila_sin_invalidacion_ni_objetivo_los_deja_vacios():
+    fila = pl.fila_de_lectura("Oro", 2, _lectura("XAUUSD", 4000.0, 3990.0, None, None, "LATERAL", "RANGO"))
+    assert fila["invalidacion"] is None and fila["objetivo"] is None
+    assert fila["direccion"] == "LATERAL"
+
+
+def test_campos_precio_son_los_de_la_lectura():
+    assert pl.CAMPOS_PRECIO == ("price", "vigilar", "invalidacion", "objetivo", "soporte", "resistencia")
+
+
+def _parchar_lectura(monkeypatch, catalogo, falsa):
+    import referencia_semanal as rs
+    from estrategia import registro
+    from market_data_mcp import mt5_client
+
+    monkeypatch.setattr(pl, "_catalogo", lambda: catalogo)
+    monkeypatch.setattr(mt5_client, "connect", lambda *a, **k: None)
+    monkeypatch.setattr(registro, "activa", lambda: "tori")
+    monkeypatch.setattr(rs, "lectura_actual", falsa)
+
+
+def test_leer_activos_lee_con_la_estrategia_activa(monkeypatch):
+    llamadas = []
+
+    def falsa(estrategia, ticker, digits, lector, ahora, base=None, referencia=None):
+        llamadas.append((estrategia, ticker, digits))
+        return _lectura(ticker, 971.03, 974.5, 960.9, 977.3), None
+
+    _parchar_lectura(monkeypatch, {"USDCLP": {"nombre": "USD/CLP", "digits": 2}}, falsa)
+    activos, avisos = pl.leer_activos(["USDCLP"])
+    assert llamadas == [("tori", "USDCLP", 2)]
+    assert activos["USDCLP"]["vigilar"] == 974.5 and avisos == []
+
+
+def test_leer_activos_avisa_el_activo_sin_lectura(monkeypatch):
+    def falsa(estrategia, ticker, digits, lector, ahora, base=None, referencia=None):
+        if ticker == "COPPER":
+            raise RuntimeError("sin velas")
+        return _lectura(ticker, 971.03, 974.5, 960.9, 977.3), None
+
+    _parchar_lectura(monkeypatch, {"USDCLP": {"nombre": "USD/CLP", "digits": 2},
+                                   "COPPER": {"nombre": "Cobre", "digits": 0}}, falsa)
+    activos, avisos = pl.leer_activos(["USDCLP", "COPPER"])
+    assert set(activos) == {"USDCLP"}
+    assert any("Cobre" in a for a in avisos)
+
+
+def test_el_modulo_no_decide_con_la_media_ni_con_s1_r1():
+    fuente = (RAIZ / "scripts" / "pipeline_linkedin.py").read_text(encoding="utf-8")
+    assert "direccion_tecnica" not in fuente
+    assert "analizar_activo" not in fuente
+
+
+def test_mapa_de_niveles_usa_soporte_y_resistencia_de_la_lectura():
+    mapa = " ".join(pl.mapa_niveles(USDCLP))
+    assert "974,50" in mapa and "960,90" in mapa
+    assert "—" not in mapa and "–" not in mapa
+
+
+def test_agenda_nombra_el_nivel_a_vigilar_de_la_lectura():
+    bajista = pl.fila_de_lectura("Oro", 2, _lectura("XAUUSD", 4000.0, 4012.5, 4030.0, 3950.0, "BAJISTA"))
+    p = pl.armar_payload("agenda", {"XAUUSD": bajista}, {}, [], [], AHORA, None)
+    p["editorial"]["paginas"]["contexto"]["vision"] = "reciente"
+    brief = pl.construir_brief(p, REGISTRO)
+    assert "| Oro | Bajista | 4.012,50 |" in brief
+
+
+def test_ficha_trae_las_columnas_de_la_lectura():
+    brief = pl.construir_brief(_completo(), REGISTRO)
+    assert "A vigilar" in brief and "Invalida" in brief and "Objetivo" in brief
+    assert "977,30" in brief and "Tendencia" in brief
+    assert "RSI" not in brief and "Media 50" not in brief
+
+
 # ------------------------------------------------------------ brief
 
 
 def test_brief_trae_mapa_de_niveles_medido_y_fuentes():
     brief = pl.construir_brief(_completo(), REGISTRO)
     assert "974,50" in brief and "960,90" in brief
-    assert "🟢" in brief and "🟡" in brief and "🔴" in brief
+    assert "⬆️" in brief and "↔️" in brief and "⬇️" in brief
     assert "https://ejemplo.cl/nota" in brief
     assert "12:00" in brief
 
@@ -329,7 +425,7 @@ def test_el_comando_documenta_todos_los_formatos():
 # ─────────────────────────────────────────────────────────────────────────────
 # Frenos públicos (los comparte pipeline_avisos)
 # ─────────────────────────────────────────────────────────────────────────────
-ACTIVOS_FRENO = {"USDCLP": {"nombre": "Dólar", "digits": 2, "price": 936.32, "s1": 930.0, "r1": 942.5}}
+ACTIVOS_FRENO = {"USDCLP": {"nombre": "Dólar", "digits": 2, "price": 936.32, "soporte": 930.0, "resistencia": 942.5}}
 
 
 def test_validar_textos_marca_vacio_y_guion():

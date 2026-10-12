@@ -134,10 +134,22 @@ def leer_activos() -> list[dict[str, Any]]:
         mt5.shutdown()
 
 
-def leer_niveles(ticker: str) -> dict[str, Any]:
-    """Soportes, resistencias e indicadores de H1, para el gráfico y el texto."""
-    from market_data_mcp.analisis import analizar_activo
-    return analizar_activo(ticker, "H1")
+def leer_lectura(ticker: str):
+    """La `Lectura` de la estrategia activa, para el gráfico y la capa "qué significa".
+
+    Es la misma lectura que publican el carrusel y el informe (enchufe de estrategia,
+    spec §6): dirección y niveles no se vuelven a decidir acá con medias ni con s1/r1.
+    """
+    import referencia_semanal as rs
+    from estrategia import registro
+    from estrategia.fuente import velas_mt5
+
+    digits = next((a["digits"] for a in ACTIVOS if a["ticker"] == ticker), None)
+    if digits is None:
+        raise DatosError(f"{ticker}: no está en los activos del cierre semanal")
+    lectura, _ = rs.lectura_actual(registro.activa(), ticker, digits, velas_mt5,
+                                   datetime.now(tz=SANTIAGO))
+    return lectura
 
 
 def leer_curva() -> dict[str, Any]:
@@ -204,7 +216,8 @@ def generar_graficos(activos: list[dict[str, Any]], destino: Path) -> dict[str, 
     viernes le ofrece al cliente una operativa que ya no existe. Y va **dentro
     de la imagen**, así que no se arregla editando texto.
     """
-    from grafico_informe import GraficoError, construir_grafico
+    import grafico_informe
+    import pipeline_informe as pi
 
     destino.mkdir(parents=True, exist_ok=True)
     rutas: dict[str, Path] = {}
@@ -214,13 +227,16 @@ def generar_graficos(activos: list[dict[str, Any]], destino: Path) -> dict[str, 
             f"{a['var_txt']} en cinco sesiones"
         )
         try:
-            niveles = leer_niveles(a["ticker"])
+            lectura = leer_lectura(a["ticker"])
         except Exception as exc:  # noqa: BLE001
-            raise DatosError(f"{a['ticker']}: sin niveles para el gráfico ({exc})") from exc
-        ruta = construir_grafico(
+            raise DatosError(f"{a['ticker']}: sin lectura para el gráfico ({exc})") from exc
+        # Se trazan los niveles de la lectura y no las medias: dos lecturas en la misma
+        # imagen se contradicen a la vista del cliente.
+        ruta = grafico_informe.construir_grafico(
             a["ticker"], a["nombre"], destino / f"{a['slug']}.png",
             timeframe="D1", tema="claro", subtitulo=sub,
-            niveles=niveles, digits=a["digits"],
+            niveles={"price": lectura.precio}, digits=a["digits"],
+            horizontales=pi._horizontales(lectura), medias=False,
         )
         rutas[a["slug"]] = ruta
         print(f"  [OK] {a['slug']:8} {sub}")

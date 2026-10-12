@@ -6,7 +6,6 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-import pandas as pd
 import pytest
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -19,7 +18,8 @@ from analista import esquema as es  # noqa: E402
 from analista import informe_html as ih  # noqa: E402
 from analista import preparar as pr  # noqa: E402
 from analista.orden import Orden  # noqa: E402
-from test_pipeline_carrusel import ACTIVO, CIERRES, SELECCION  # noqa: E402
+from estrategia.contrato import lectura_a_dict  # noqa: E402
+from test_pipeline_carrusel import ORO, _lectura_alcista, _sel  # noqa: E402
 
 SCL = ZoneInfo("America/Santiago")
 AHORA = datetime(2026, 10, 8, 11, 0, tzinfo=SCL)
@@ -39,27 +39,21 @@ def _png(destino: Path) -> Path:
     return destino
 
 
-H1 = {"price": 68.716, "s1": 68.394, "r1": 68.974, "atr_14": 0.12, "ema_50": 68.5,
-      "niveles_origen": {"s1": "swing", "r1": "swing", "s2": "atr", "r2": "atr"}}
-
-
-def _serie_h1(n: int = 400) -> pd.DataFrame:
-    cierres = [68.0 + k * 0.002 for k in range(n)]
-    return pd.DataFrame({"time": pd.date_range("2026-09-20", periods=n, freq="h"), "open": cierres,
-                         "close": cierres, "high": [c + 0.05 for c in cierres], "low": [c - 0.05 for c in cierres]})
+ACTIVO = {**ORO, "clase": "forex_commodities"}
+SELECCION = _sel(_lectura_alcista())
+CIERRES = [4119.0, 4120.0]
 
 
 def lectores(**cambios) -> pr.Lectores:
     base = dict(
-        terminal=lambda t, a: {"ticker": t, "activo": ACTIVO, "seleccion": SELECCION, "cierres": CIERRES, "h1": H1},
-        serie_h1=lambda t: _serie_h1(),
+        terminal=lambda t, a: {"ticker": t, "activo": ACTIVO, "seleccion": SELECCION, "cierres": CIERRES},
         grafico_tv=lambda payload, destino: _png(destino),
         jornada=lambda a: (list(JORNADA), []),
         agenda=lambda a: (list(JORNADA), []),
         movimiento=lambda t, d, a: {"desde": 951.2, "ahora": 952.1, "digits": 2, "banda": 0.1},
         activos_jornada=lambda destino: ({
             "USDCLP": {"nombre": "Dólar / Peso Chileno", "digits": 2,
-                       "d1": {"price": 951.2, "s1": 945.0, "r1": 958.4, "ema_50": 960.0},
+                       "lectura": lectura_a_dict(_lectura_alcista()),
                        "grafico": "graficos/usdclp.png"},
         }, []),
         curva=lambda: ({"series": {"DGS2": {"nivel_pct": 3.61, "delta_1d_bps": 2, "delta_5d_bps": None}}}, []),
@@ -70,34 +64,37 @@ def lectores(**cambios) -> pr.Lectores:
 
 
 def test_activo_trae_los_numeros_del_payload_de_whatsapp(tmp_path):
-    hecha = pr.preparar(Orden("activo", {"ticker": "XAGUSD"}), tmp_path, AHORA, lectores())
+    hecha = pr.preparar(Orden("activo", {"ticker": "XAUUSD"}), tmp_path, AHORA, lectores())
     d = hecha.pieza["datos"]
-    assert d["precio"] == "68,716" and d["soporte"] == "68,394" and d["resistencia"] == "68,974"
+    assert d["precio"] == "4.120,00" and d["soporte"] == "4.080,00" and d["resistencia"] == "4.200,00"
     assert d["direccion"] == "Alcista"
-    assert d["nivel_vigilar"] == "68,974"
-    assert d["escenarios"][0].startswith("⬆️ Sobre 68,974")
+    assert d["nivel_vigilar"] == "4.080,00 (línea alcista de seguridad)"
+    assert d["escenarios"][0].startswith("⬆️ Mientras el precio cierre sobre 4.080,00")
     assert d["chip"] == "NOTA DE MERCADO · COMMODITIES"
+    assert "velas de 4 horas" in d["pie_imagen"] and d["lectura"]["ticker"] == "XAUUSD"
     ctx = d["contexto"]
-    assert ctx["drivers_del_activo"]  # XAGUSD tiene drivers en el catálogo real
+    assert ctx["drivers_del_activo"]  # XAUUSD tiene drivers en el catálogo real
     assert ctx["curva_tasas"][0][0] == "Bono del Tesoro a 2 años"
     assert ctx["agenda_hoy"][0].startswith("09:30") and "salió 197K" in ctx["agenda_hoy"][0]
     assert (tmp_path / "grafico.png").exists() and (tmp_path / "pieza.json").exists()
     assert set(hecha.pieza["editorial"]) == set(es.CAMPOS["activo"])
 
 
-def test_activo_trae_el_plan_sellado(tmp_path):
-    hecha = pr.preparar(Orden("activo", {"ticker": "XAGUSD"}), tmp_path, AHORA, lectores())
+def test_activo_trae_el_plan_sellado_desde_la_lectura(tmp_path):
+    hecha = pr.preparar(Orden("activo", {"ticker": "XAUUSD"}), tmp_path, AHORA, lectores())
     plan = hecha.pieza["datos"]["plan"]
-    assert plan["hay_plan"] and "68,974" in plan["gatillo"]
-    assert plan["niveles"]["vela"] == str(_serie_h1()["time"].iat[-1])
+    assert plan["hay_plan"] and "4.080,00" in plan["invalidacion"]
+    assert "estadistica" not in plan and "recorrido" not in plan
+    assert plan["niveles"]["vela"] == 200
     hecha.pieza["datos"]["plan"]["gatillo"] = "otra cosa"
     assert any("cambiaron" in x for x in es.errores(hecha.pieza))
 
 
-def test_activo_sin_h1_en_la_lectura_falla_con_motivo(tmp_path):
-    sin_h1 = lambda t, a: {"ticker": t, "activo": ACTIVO, "seleccion": SELECCION, "cierres": CIERRES}  # noqa: E731
-    with pytest.raises(pr.PreparacionFallida, match="H1"):
-        pr.preparar(Orden("activo", {"ticker": "XAGUSD"}), tmp_path, AHORA, lectores(terminal=sin_h1))
+def test_activo_sin_lectura_de_la_estrategia_falla_con_motivo(tmp_path):
+    sin = lambda t, a: {"ticker": t, "activo": ACTIVO, "seleccion": {**SELECCION, "lectura": None},  # noqa: E731
+                        "cierres": CIERRES}
+    with pytest.raises(pr.PreparacionFallida):
+        pr.preparar(Orden("activo", {"ticker": "XAUUSD"}), tmp_path, AHORA, lectores(terminal=sin))
 
 
 def test_activo_sin_cuenta_correcta_no_lee_el_terminal(tmp_path):
@@ -105,7 +102,7 @@ def test_activo_sin_cuenta_correcta_no_lee_el_terminal(tmp_path):
         raise AssertionError("leyó el terminal con la cuenta equivocada")
 
     with pytest.raises(pr.PreparacionFallida, match="51492"):
-        pr.preparar(Orden("activo", {"ticker": "XAGUSD"}), tmp_path, AHORA,
+        pr.preparar(Orden("activo", {"ticker": "XAUUSD"}), tmp_path, AHORA,
                     lectores(cuenta=lambda: "el dato salió de la cuenta 51492", terminal=no_llamar))
 
 
@@ -155,8 +152,8 @@ def test_jornada(tmp_path):
 
     hecha = pr.preparar(Orden("jornada", {"momento": None}), tmp_path, AHORA, lectores(activos_jornada=activos))
     d = hecha.pieza["datos"]
-    assert d["momento"] == "apertura" and d["activos"][0]["precio"] == "951,20"
-    assert d["activos"][0]["direccion"] == "Bajista"
+    assert d["momento"] == "apertura" and d["activos"][0]["precio"] == "4.120,00"
+    assert d["activos"][0]["direccion"] == "Alcista" and d["activos"][0]["soporte"] == "4.080,00"
     assert d["curva"] == [["Bono del Tesoro a 2 años", "3,61%", "+2 pb", "sin dato"]]
     assert hecha.pieza["imagenes"] == {"USDCLP": "graficos/usdclp.png"}
 
@@ -182,7 +179,7 @@ def test_rendir_laminas_pone_el_texto_validado(tmp_path):
 
 def test_preparar_escribe_solo_en_la_carpeta_del_pedido(tmp_path):
     pedido = tmp_path / "pedido"
-    pr.preparar(Orden("activo", {"ticker": "XAGUSD"}), pedido, AHORA, lectores())
+    pr.preparar(Orden("activo", {"ticker": "XAUUSD"}), pedido, AHORA, lectores())
     assert {p.relative_to(tmp_path).parts[0] for p in tmp_path.rglob("*")} == {"pedido"}
 
 
@@ -198,12 +195,11 @@ def test_no_usa_los_preparar_de_produccion():
 
 def _seleccion(evaluados: int = 10):
     from analista import foco as fo
+    from analista import plan as plan_mod
 
-    plan = {"hay_plan": True, "sesgo": "Alcista", "gatillo": "g 68,974", "invalidacion": "i",
-            "recorrido": "r", "estado": "Armado: x",
-            "niveles": {"gatillo": 68.974, "invalidacion": 68.2, "recorrido": 0.18, "vela": "2026-10-08 10:00:00"}}
-    el = fo.Elegido({"ticker": "XAGUSD", "nombre": "Plata", "clase": "forex_commodities", "digits": 3},
-                    SELECCION, H1, {"price": 68.7}, fo.PlanFoco(plan, None, 68.716, 0.12), _serie_h1())
+    plan = plan_mod.armar(_lectura_alcista(), 2, "Oro")
+    el = fo.Elegido({"ticker": "XAUUSD", "nombre": "Oro", "clase": "forex_commodities", "digits": 2},
+                    SELECCION, plan)
     return fo.Seleccion(el, evaluados, AHORA)
 
 
@@ -212,15 +208,15 @@ def _no_llamar(*_):
 
 
 def lectores_foco(resultado):
-    return lectores(foco=lambda ahora: resultado, catalogo=lambda t: ACTIVO, cierres=lambda t: CIERRES,
-                    terminal=_no_llamar, serie_h1=_no_llamar)
+    return lectores(foco=lambda ahora: resultado, catalogo=lambda t: ACTIVO, cierres=lambda t, m=None: CIERRES,
+                    terminal=_no_llamar)
 
 
 def test_foco_usa_la_lectura_que_lo_eligio_y_no_trae_estadistica(tmp_path):
     hecha = pr.preparar(Orden("oportunidad"), tmp_path, AHORA, lectores_foco(_seleccion()))
     p = hecha.pieza
-    assert p["orden"]["pieza"] == "oportunidad" and p["orden"]["args"] == {"ticker": "XAGUSD"}
-    assert "estadistica" not in p["datos"]["plan"] and "68,974" in p["datos"]["plan"]["gatillo"]
+    assert p["orden"]["pieza"] == "oportunidad" and p["orden"]["args"] == {"ticker": "XAUUSD"}
+    assert "estadistica" not in p["datos"]["plan"] and "4.080,00" in p["datos"]["plan"]["invalidacion"]
     assert p["datos"]["seleccion"]["evaluados"] == 10
     assert p["datos"]["chip"].startswith("FOCO TÉCNICO DEL DÍA")
     assert set(p["editorial"]) == set(es.CAMPOS["oportunidad"])

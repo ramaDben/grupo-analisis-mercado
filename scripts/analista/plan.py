@@ -1,20 +1,23 @@
 """El plan de escenarios del informe de activo, escrito por Python y no por agy.
 
-Es lo que el informe trae y WhatsApp no: la condición, dónde se anula y qué tan
-seguido funcionó antes, siempre contra una hora cualquiera con la misma
-tendencia. Habla en condicional e impersonal: describe un escenario, no le dice
-a nadie qué hacer, porque el informe es general y nadie en GI está inscrito como
-asesor de inversión.
+Sale de la `Lectura` de la estrategia activa (enchufe de estrategia, S7): el gatillo es lo
+que la estrategia vigila, con su escenario a favor tal cual; la invalidación es su línea de
+seguridad; la salida es su regla. Habla en condicional e impersonal: describe un
+escenario, no le dice a nadie qué hacer, porque el informe es general y nadie en GI está
+inscrito como asesor de inversión.
 
-Sin objetivo de precio, a propósito: medido en septiembre, ningún objetivo fijo
-tuvo expectativa positiva y la salida del director es el Chandelier. El
-recorrido se da como distancia, nunca sumado al precio.
+Sin estadística, sin objetivo fijo y sin recorrido (spec §8.4): no habrá backtesting, y
+ninguna pieza da una tasa de acierto. El Chandelier y su medición se borraron.
 """
 from __future__ import annotations
 
 from typing import Any
 
-from analista.estadistica import CHANDELIER_K, MULT_RECORRIDO, VENTAJA_MINIMA, Estadistica
+ESTADO = {
+    "TENDENCIA": "Armado: el precio todavía no cruza el gatillo.",
+    "REBOTE": "Armado: la última vela tocó la línea de seguridad y cerró a favor.",
+    "RUPTURA": "Activado: una vela cerró al otro lado de la línea que se vigilaba.",
+}
 
 
 def _fmt(valor: float, digits: int) -> str:
@@ -23,77 +26,38 @@ def _fmt(valor: float, digits: int) -> str:
     return pc.formatear_precio(valor, digits)
 
 
-def _fecha(iso: str) -> str:
-    """AAAA-MM-DD a la notación chilena DD-MM-AAAA."""
-    a, m, d = iso[:10].split("-")
-    return f"{d}-{m}-{a}"
-
-
-def _frase_estadistica(est: Estadistica | None, nombre: str) -> str:
-    if est is None or est.pct_base is None:
-        return "Sin historia suficiente del activo para medir esta condición."
-    if est.pct_condicion is None:
-        return f"Muestra insuficiente para una estadística ({est.casos} casos desde el {_fecha(est.desde)})."
-    texto = (
-        f"Desde el {_fecha(est.desde)}, esta condición se dio {est.casos} veces en {nombre}. El precio "
-        f"recorrió 1,5 veces la volatilidad típica de una hora antes de tocar la invalidación en el "
-        f"{est.pct_condicion} % de los casos. Desde una hora cualquiera del mismo período con la "
-        f"misma tendencia, la misma regla se cumplió en el {est.pct_base} %."
-    )
-    if est.pct_condicion - est.pct_base < VENTAJA_MINIMA:
-        texto += " En este activo la condición no ha mostrado ventaja frente a una hora cualquiera."
-    return texto
-
-
-def ultima_vela(df, ind) -> dict[str, Any]:
-    """Lo que `armar` necesita de la última vela cerrada (`ind` = `estadistica.indicadores(df)`)."""
-    return {"close": float(df["close"].iat[-1]), "hh22": float(ind["hh"].iat[-1]),
-            "ll22": float(ind["ll"].iat[-1]), "atr22": float(ind["atr22"].iat[-1]),
-            "vela": str(df["time"].iat[-1])}
-
-
-def armar(h1: dict[str, Any], digits: int, sesgo: str, nombre: str,
-          est: Estadistica | None, ultima_vela: dict[str, Any],
-          activacion: float | None = None) -> dict[str, Any]:
-    """Plan a favor del sesgo. `ultima_vela` trae close, hh22, ll22, atr22 y vela (su hora).
-
-    `activacion` es el nivel de una ruptura ocurrida en las últimas 24 velas
-    (`estadistica.activacion_reciente`). Cuando existe, ESE es el gatillo: el R1
-    de ahora ya es la resistencia siguiente, y mostrarla diría "armado" justo
-    después del evento que la estadística mide.
-    """
-    alcista = sesgo == "Alcista"
-    clave = "r1" if alcista else "s1"
-    if activacion is None and h1.get("niveles_origen", {}).get(clave) != "swing":
-        return {
-            "hay_plan": False, "sesgo": sesgo,
-            "motivo": "Hoy el activo no tiene una estructura de precio medible a favor de su "
-                      "tendencia: sin ese nivel no hay plan que proponer.",
-        }
-    gatillo = float(activacion) if activacion is not None else float(h1[clave])
-    k_atr = CHANDELIER_K * float(ultima_vela["atr22"])
-    invalidacion = float(ultima_vela["hh22"]) - k_atr if alcista else float(ultima_vela["ll22"]) + k_atr
-    recorrido = MULT_RECORRIDO * float(h1["atr_14"])
-    lado, borde = ("sobre", "bajo") if alcista else ("bajo", "sobre")
-    cierre = float(ultima_vela["close"])
-    anulado = cierre < invalidacion if alcista else cierre > invalidacion
-    if activacion is None:
-        estado = "Armado: el precio todavía no cruza el gatillo."
-    elif anulado:
-        estado = "Invalidado: tras activarse, el último cierre de 1 hora quedó del otro lado de la invalidación."
+def armar(lectura, digits: int, nombre: str) -> dict[str, Any]:
+    """El plan a favor de la dirección de la lectura, o el motivo por el que no hay plan."""
+    sesgo = {"ALCISTA": "Alcista", "BAJISTA": "Bajista"}.get(lectura.direccion, "Lateral")
+    if lectura.estado == "RANGO" or lectura.direccion == "LATERAL":
+        return {"hay_plan": False, "sesgo": sesgo,
+                "motivo": f"Hoy {nombre} se mueve en rango, sin una tendencia que seguir: el escenario "
+                          "es esperar que el precio salga por uno de los bordes."}
+    if lectura.invalidacion is None:
+        return {"hay_plan": False, "sesgo": sesgo,
+                "motivo": f"Hoy {nombre} no tiene una línea de seguridad trazable: sin ella no se puede "
+                          "decir dónde se anula el escenario, y no hay plan que proponer."}
+    flecha = "⬆️" if lectura.direccion == "ALCISTA" else "⬇️"
+    a_favor = next(e for e in lectura.escenarios if e.flecha == flecha)
+    lado = "bajo" if lectura.direccion == "ALCISTA" else "sobre"
+    inv = lectura.invalidacion
+    if lectura.estado == "PRUEBA":
+        hora = lectura.en_prueba.cierre_vela.strftime("%H:%M")
+        estado = (f"En prueba: el precio está al otro lado de una línea y se resuelve con el cierre de "
+                  f"la vela de las {hora} (hora de Chile).")
+    elif lectura.estado == "TENDENCIA" and lectura.vigilar.precio == inv.precio:
+        # Lo que se vigila es la propia línea de seguridad: no hay gatillo pendiente, la
+        # tendencia sigue mientras la respete.
+        estado = "Vigente: la tendencia sigue mientras el precio respete su línea de seguridad."
     else:
-        estado = f"Activado: un cierre de 1 hora de las últimas 24 cruzó {lado} el gatillo."
+        estado = ESTADO[lectura.estado]
     return {
         "hay_plan": True,
         "sesgo": sesgo,
-        "gatillo": f"El escenario {sesgo.lower()} se activa con un cierre de vela de 1 hora "
-                   f"{lado} {_fmt(gatillo, digits)}.",
-        "invalidacion": f"El escenario se anula {borde} {_fmt(invalidacion, digits)}. Es una salida por "
-                        "volatilidad, que se ajusta a favor a medida que el precio avanza.",
-        "recorrido": f"Recorrido de referencia: 1,5 veces la volatilidad típica de una hora, unos "
-                     f"{_fmt(recorrido, digits)}. Es una distancia, no un objetivo de precio.",
-        "estadistica": _frase_estadistica(est, nombre),
+        "gatillo": a_favor.texto,
+        "invalidacion": f"El escenario se anula con un cierre {lado} {_fmt(inv.precio, digits)}, "
+                        f"la {inv.etiqueta}.",
+        "salida": lectura.salida,
         "estado": estado,
-        "niveles": {"gatillo": gatillo, "invalidacion": round(invalidacion, digits),
-                    "recorrido": round(recorrido, digits), "vela": str(ultima_vela["vela"])},
+        "niveles": {"gatillo": lectura.vigilar.precio, "invalidacion": inv.precio, "vela": lectura.vela},
     }

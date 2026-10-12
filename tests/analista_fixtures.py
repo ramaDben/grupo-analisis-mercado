@@ -33,12 +33,11 @@ def _imagen(dir_pedido: Path, nombre: str) -> str:
 
 PLAN = {
     "hay_plan": True, "sesgo": "Alcista",
-    "gatillo": "El escenario alcista se activa con un cierre de vela de 1 hora sobre 4.131,00.",
-    "invalidacion": "El escenario se anula bajo 4.090,10. Es una salida por volatilidad.",
-    "recorrido": "Recorrido de referencia: 1,5 veces la volatilidad típica de una hora, unos 12,00.",
-    "estadistica": "Desde el 2025-01-27, esta condición se dio 313 veces en Oro.",
+    "gatillo": "Si una vela de 4 horas cierra sobre 4.131,00, se rompe la línea bajista del retroceso y la tendencia retoma.",
+    "invalidacion": "El escenario se anula con un cierre bajo 4.090,10, la línea alcista de seguridad.",
+    "salida": "La posición se cierra cuando una vela de 4 horas cierra al otro lado de la línea de seguridad, hoy en 4.090,10. No hay objetivo fijo.",
     "estado": "Armado: el precio todavía no cruza el gatillo.",
-    "niveles": {"gatillo": 4131.0, "invalidacion": 4090.1, "recorrido": 12.0, "vela": "2026-10-08 09:00:00"},
+    "niveles": {"gatillo": 4131.0, "invalidacion": 4090.1, "vela": 1791734400},
 }
 
 
@@ -79,7 +78,7 @@ def oportunidad(dir_pedido: Path) -> dict:
     """El foco técnico del día: la pieza de activo para un prospecto, sin estadística."""
     base = activo(dir_pedido)
     datos = {**base["datos"], "chip": "FOCO TÉCNICO DEL DÍA · ORO",
-             "plan": {k: v for k, v in PLAN.items() if k != "estadistica"},
+             "plan": dict(PLAN),
              "seleccion": {"evaluados": 10, "fecha": "09-10-2026", "hora": "10:40"}}
     p = es.nueva_pieza("oportunidad", {"ticker": "XAUUSD"}, datos, base["imagenes"])
     p["editorial"].update(base["editorial"])

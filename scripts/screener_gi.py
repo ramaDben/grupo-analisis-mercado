@@ -1015,12 +1015,13 @@ def evaluar_con_estrategia(activo: dict[str, Any], estrategia, diaria: rs.Diaria
 
 
 def seleccion_fija(activo: dict[str, Any], ahora_stgo: datetime, lector=None, estrategia=None,
-                   base: Path | None = None) -> dict[str, Any]:
+                   base: Path | None = None, fijo: bool = True) -> dict[str, Any]:
     """La entrada de selección de un activo que sale sí o sí (Avisos, el recap del canal).
 
     Misma lectura que la diaria (contra la referencia de la semana si la tiene) y mismo
     formato que el escáner, con la cobertura fija: si la estrategia lo habría excluido,
-    el motivo viaja en `gates_omitidos`. No guarda reemplazos de referencia.
+    el motivo viaja en `gates_omitidos`. Con `fijo=False` (el foco técnico) la exclusión
+    se respeta y vuelve `{"excluido": motivo}`. No guarda reemplazos de referencia.
     """
     estrategia = estrategia or registro.activa()
     base = base or rs.DIR
@@ -1030,7 +1031,7 @@ def seleccion_fija(activo: dict[str, Any], ahora_stgo: datetime, lector=None, es
     lectura, velas = rs.lectura_actual(estrategia, activo["ticker"], activo["digits"], lector,
                                        ahora_stgo, base=base, referencia=referencia)
     return evaluar_con_estrategia(activo, estrategia, rs.Diaria(lectura, None, (), velas, referencia),
-                                  fijo=True)
+                                  fijo=fijo)
 
 
 def escanear(
@@ -1251,7 +1252,29 @@ def main(argv: list[str] | None = None) -> int:
         "--semanal", action="store_true",
         help="corre el análisis semanal si la semana no lo tiene, y termina",
     )
+    parser.add_argument(
+        "--estado-semanal", action="store_true",
+        help="lista los activos del análisis semanal y si la pieza tiene que esperar un cierre de vela",
+    )
     args = parser.parse_args(argv)
+
+    if args.estado_semanal:
+        from estrategia.fuente import velas_mt5
+
+        ahora_stgo = datetime.now(tz=SANTIAGO)
+        semana = rs.semana_de(ahora_stgo)
+        digitos = {a["ticker"]: a["digits"] for a in cargar_universo(False)}
+        filas = rs.estado_semanal(registro.activa(), semana, velas_mt5, ahora_stgo, digitos)
+        if not filas:
+            print(f"La semana {semana} todavía no tiene análisis semanal (--semanal lo corre).")
+            return 0
+        print(f"ANÁLISIS SEMANAL {semana}")
+        for f in filas:
+            lec = f["lectura"]
+            espera = (f"espera el cierre de las {f['espera_hasta']:%H:%M}" if f["espera_hasta"]
+                      else "puede publicarse")
+            print(f"  {f['ticker']:10} {lec.estado:9} {lec.direccion:8} {espera}")
+        return 0
 
     if args.semanal:
         ahora_stgo = datetime.now(tz=SANTIAGO)

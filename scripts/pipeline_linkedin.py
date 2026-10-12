@@ -60,8 +60,10 @@ FRESCURA_MAX_HORAS = 24
 DIAS_AGENDA = 7
 
 # Los campos de nivel que el texto puede citar. Son los mismos que la ficha
-# publica, así que cualquier cifra del texto se puede encontrar en la ficha.
-CAMPOS_PRECIO = ("price", "s2", "s1", "r1", "r2", "ema_50", "donchian_50_high", "donchian_50_low")
+# publica, así que cualquier cifra del texto se puede encontrar en la ficha. Salen
+# todos de la `Lectura` de la estrategia activa (enchufe, spec §6): ni la media de
+# 50 ni los s1/r1 de `analisis` vuelven a decidir dirección o niveles.
+CAMPOS_PRECIO = ("price", "vigilar", "invalidacion", "objetivo", "soporte", "resistencia")
 
 # Un formato es la estructura de una referencia de LinkedIn: qué páginas tiene y
 # qué campos escribe el comando en cada una. `vision` es el id de una entrada del
@@ -138,12 +140,6 @@ def formatear(valor: float, digits: int) -> str:
     return formatear_precio(float(valor), int(digits))
 
 
-def _pct(valor: Any) -> str:
-    if valor is None:
-        return "sin dato"
-    return f"{float(valor):+.2f}%".replace(".", ",")
-
-
 def _nivel(fila: dict[str, Any], campo: str) -> str:
     """Un nivel formateado, o vacío si el terminal no lo entregó."""
     valor = fila.get(campo)
@@ -159,9 +155,34 @@ def _catalogo() -> dict[str, dict[str, Any]]:
     return {a["ticker"]: a for a in sc.cargar_universo(solo_renderizables=False)}
 
 
+def fila_de_lectura(nombre: str, digits: int, lectura) -> dict[str, Any]:
+    """La fila de un activo en el payload, armada solo con la `Lectura` de la estrategia.
+
+    Soporte y resistencia son los de `pipeline_carrusel.niveles_publicados`, los mismos
+    que publica el carrusel: dos definiciones del mismo soporte divergen.
+    """
+    import pipeline_carrusel as pc
+    from estrategia.contrato import lectura_a_dict
+
+    soporte, resistencia = pc.niveles_publicados(lectura)
+    return {
+        "nombre": nombre,
+        "digits": digits,
+        "price": lectura.precio,
+        "vigilar": lectura.vigilar.precio,
+        "invalidacion": lectura.invalidacion.precio if lectura.invalidacion else None,
+        "objetivo": lectura.objetivo.precio if lectura.objetivo else None,
+        "soporte": soporte,
+        "resistencia": resistencia,
+        "direccion": lectura.direccion,
+        "estado": lectura.estado,
+        "lectura": lectura_a_dict(lectura),
+    }
+
+
 def leer_activos(tickers: list[str]) -> tuple[dict[str, dict[str, Any]], list[str]]:
-    """Lectura diaria de cada activo, con los avisos de lo que no se pudo leer."""
-    import screener_gi as sc
+    """Lectura de la estrategia activa por activo, con los avisos de lo que no se pudo leer."""
+    import referencia_semanal as rs
 
     catalogo = _catalogo()
     avisos: list[str] = []
@@ -169,8 +190,9 @@ def leer_activos(tickers: list[str]) -> tuple[dict[str, dict[str, Any]], list[st
     if fuera:
         raise SystemExit(f"Tickers fuera del catálogo: {', '.join(fuera)}")
 
+    from estrategia import registro
+    from estrategia.fuente import velas_mt5
     from market_data_mcp import mt5_client
-    from market_data_mcp.analisis import analizar_activo
 
     try:
         mt5_client.connect()
@@ -180,18 +202,17 @@ def leer_activos(tickers: list[str]) -> tuple[dict[str, dict[str, Any]], list[st
             "y un carrusel sin cifras medidas no se prepara."
         ) from exc
 
+    estrategia = registro.activa()
+    ahora = datetime.now(SANTIAGO)
     salida: dict[str, dict[str, Any]] = {}
     for ticker in tickers:
-        d1 = analizar_activo(ticker, "D1")
-        if d1.get("error"):
-            avisos.append(f"{catalogo[ticker]['nombre']}: sin lectura ({d1['error']}).")
+        nombre, digits = catalogo[ticker]["nombre"], catalogo[ticker]["digits"]
+        try:
+            lectura, _ = rs.lectura_actual(estrategia, ticker, digits, velas_mt5, ahora)
+        except Exception as exc:  # noqa: BLE001 - un activo sin datos no tumba la tanda
+            avisos.append(f"{nombre}: sin lectura ({exc.__class__.__name__}: {exc}).")
             continue
-        fila = {"nombre": catalogo[ticker]["nombre"], "digits": catalogo[ticker]["digits"]}
-        fila.update({c: d1.get(c) for c in CAMPOS_PRECIO})
-        fila["change_pct"] = d1.get("change_pct")
-        fila["rsi_14"] = d1.get("rsi_14")
-        fila["direccion"] = sc.direccion_tecnica(d1)
-        salida[ticker] = fila
+        salida[ticker] = fila_de_lectura(nombre, digits, lectura)
     if not salida:
         raise SystemExit("Ningún activo se pudo leer del terminal: no hay carrusel que preparar.")
     return salida, avisos
@@ -574,15 +595,15 @@ def validar(payload: dict[str, Any], registro: dict[str, dict[str, Any]], ahora:
 
 
 def mapa_niveles(fila: dict[str, Any]) -> list[str]:
-    """El cierre canónico de tres escenarios, armado con cifras medidas."""
-    if any(fila.get(c) is None for c in ("s1", "r1", "r2", "s2")):
-        return ["Mapa no disponible: el terminal no entregó soporte o resistencia. No inventarlo."]
-    s1, r1, r2, s2 = (_nivel(fila, c) for c in ("s1", "r1", "r2", "s2"))
+    """El cierre canónico de tres escenarios, con el soporte y la resistencia de la lectura."""
+    if fila.get("soporte") is None or fila.get("resistencia") is None:
+        return ["Mapa no disponible: la lectura no tiene soporte o resistencia a los dos lados. No inventarlo."]
+    soporte, resistencia = _nivel(fila, "soporte"), _nivel(fila, "resistencia")
     return [
-        f"🟢 Sobre **{r1}** → fuerza compradora; siguiente nivel **{r2}**",
-        f"🟡 Entre **{s1}** y **{r1}** → rango: si rompe un borde y vuelve a entrar, "
+        f"⬆️ Sobre **{resistencia}** → fuerza compradora",
+        f"↔️ Entre **{soporte}** y **{resistencia}** → rango: si rompe un borde y vuelve a entrar, "
         "el objetivo pasa a ser el borde contrario",
-        f"🔴 Bajo **{s1}** → presión vendedora; siguiente nivel **{s2}**",
+        f"⬇️ Bajo **{soporte}** → presión vendedora",
     ]
 
 
@@ -600,15 +621,18 @@ def _bloque_vision(vision: dict[str, Any], motivo: str | None) -> list[str]:
 
 
 def _tabla_activos(activos: dict[str, dict[str, Any]]) -> list[str]:
+    import pipeline_carrusel as pc
+
     filas = [
-        "| Activo | Precio | Var. día | Dirección | S2 | S1 | R1 | R2 | Media 50 días | RSI 14 |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| Activo | Precio | Dirección | Estado | A vigilar | Invalida | Objetivo | Soporte | Resistencia |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for f in activos.values():
-        n = {c: _nivel(f, c) for c in CAMPOS_PRECIO}
+        n = {c: _nivel(f, c) or "sin dato" for c in CAMPOS_PRECIO}
+        estado = pc.ESTADO_VISIBLE.get(f.get("estado", ""), "sin dato")
         filas.append(
-            f"| {f['nombre']} | {n['price']} | {_pct(f['change_pct'])} | {f['direccion'].capitalize()} "
-            f"| {n['s2']} | {n['s1']} | {n['r1']} | {n['r2']} | {n['ema_50']} | {f.get('rsi_14', '')} |"
+            f"| {f['nombre']} | {n['price']} | {pc._sesgo_de(f['direccion'])} | {estado} "
+            f"| {n['vigilar']} | {n['invalidacion']} | {n['objetivo']} | {n['soporte']} | {n['resistencia']} |"
         )
     return filas
 
@@ -674,8 +698,7 @@ def construir_brief(payload: dict[str, Any], registro: dict[str, dict[str, Any]]
         md += ["", f"### Pág. {n} · Qué mirar en cada activo", "",
                "| Activo | Dirección | Nivel a vigilar |", "| --- | --- | --- |"]
         for f in datos["activos"].values():
-            nivel = _nivel(f, "r1" if f["direccion"] == "ALCISTA" else "s1")
-            md.append(f"| {f['nombre']} | {f['direccion'].capitalize()} | {nivel} |")
+            md.append(f"| {f['nombre']} | {f['direccion'].capitalize()} | {_nivel(f, 'vigilar')} |")
         md += ["", f"- Remate: {editorial['paginas']['cierre_agenda']['remate']}", ""]
 
     md += ["### Copy del post", ""]
@@ -684,7 +707,7 @@ def construir_brief(payload: dict[str, Any], registro: dict[str, dict[str, Any]]
 
     md += ["---", "", "## Ficha de datos para diseño", ""]
     md += _tabla_activos(datos["activos"])
-    md += ["", "Decimales según el broker (`digits` del catálogo). La dirección es precio contra la media de 50 días.", ""]
+    md += ["", "Decimales según el broker (`digits` del catálogo). La dirección, el estado y los niveles salen de la lectura de la estrategia activa, no de una media móvil.", ""]
     if datos.get("curva"):
         md += ["| Tasa | Nivel | Cambio 5 días (archivo) | Fecha del dato | Fuente del nivel |",
                "| --- | --- | --- | --- | --- |"]
