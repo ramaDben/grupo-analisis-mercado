@@ -82,6 +82,7 @@
 {{activos}}
 <section class="correo"><h2>Correo para tu cliente</h2>
   <p>Así le llega a tu cliente. Marca los activos que quieres incluir, completa la simulación arriba y copia el correo: se pega en Outlook con el formato.</p>
+  <label class="cliente">Tu nombre (quien realiza la simulación)<input type="text" id="ejecutivo" value="{{ejecutivo}}"></label>
   <label class="cliente">Nombre de tu cliente (opcional, sale en el saludo)<input type="text" id="cliente" placeholder="Ej: Juan"></label>
   <button type="button" id="copiar-correo">Copiar correo para Outlook</button> <span id="estado"></span>
   <div id="vista-correo"></div></section>
@@ -96,6 +97,7 @@
 (function(){
   var DATOS = JSON.parse(document.getElementById('datos').textContent);
   function pesos(n){ return '$' + Math.round(n).toLocaleString('es-CL'); }
+  function nombreEj(){ return document.getElementById('ejecutivo').value.trim() || DATOS.ejecutivo; }
   function num(v){ var x = parseFloat(v); return isNaN(x) ? null : x; }
   function coma(n){ return String(n).replace('.', ','); }
   function estado(panel, d){
@@ -111,7 +113,7 @@
   function lineaSim(d, s){
     if (!s) return '';
     var f = d.fmt;
-    var t = '🧮 Simulación de ' + DATOS.ejecutivo + ' (objetivo 1:3): con una pérdida aceptable de ' + pesos(s.perdida) +
+    var t = '🧮 Simulación de ' + nombreEj() + ' (objetivo 1:3): con una pérdida aceptable de ' + pesos(s.perdida) +
             ', el volumen es ' + coma(s.volumen) + ' y el objetivo daría ' + pesos(s.ganancia) +
             '. Entrada ' + f.entrada + ' · Stop ' + f.stop + ' · Objetivo ' + f.objetivo + '.' +
             (d.condicion ? ' ' + d.condicion : '');
@@ -161,7 +163,9 @@
     });
     if (!partes.length) return null;
     var nombre = document.getElementById('cliente').value.trim().replace(/[<>&"]/g, '');
+    var yo = nombreEj();
     return document.getElementById('correo-marco').innerHTML.replace('<!--ACTIVOS-->', partes.join(''))
+      .split(DATOS.ejecutivo.replace(/&/g, '&amp;')).join(yo.replace(/[<>&"]/g, ''))
       .replace('<span class="cliente-nombre"></span>', nombre ? ' ' + nombre : '');
   }
   function vista(){
@@ -187,6 +191,10 @@
     }
   }
   document.getElementById('cliente').addEventListener('input', vista);
+  document.getElementById('ejecutivo').addEventListener('input', function(){
+    document.querySelectorAll('.autor-sim').forEach(function(p){ p.textContent = 'Simulación realizada por ' + nombreEj(); });
+    vista();
+  });
   document.getElementById('copiar-correo').addEventListener('click', copiarCorreo);
   vista();
 })();
