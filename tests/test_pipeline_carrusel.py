@@ -1369,3 +1369,308 @@ def test_un_nivel_lejano_se_publica_tal_cual_y_no_se_reemplaza_por_atr():
     niveles = {n["rol"]: n["precio"] for n in p["recorrido"]["niveles"]}
     assert niveles == {"SOPORTE": 968.00, "RESISTENCIA": 988.94}
     assert not hasattr(pc, "acotar_niveles_intradia")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fase 2 del enchufe: la pieza sale de la Lectura (spec §7 fase 2)
+# ─────────────────────────────────────────────────────────────────────────────
+from estrategia.contrato import (  # noqa: E402
+    Escenario, Lectura, Linea, Referencia, lectura_a_dict,
+)
+
+LUNES = datetime(2026, 10, 12, 11, 0, tzinfo=pc.SANTIAGO)
+
+
+def _lectura_alcista(objetivo=True):
+    seg = Linea("seguridad", "diagonal", ((100, 4000.0), (200, 4050.0)), "H4", 3, "A+", 4080.0)
+    obj = Referencia(4200.0, "resistencia de D1") if objetivo else None
+    esc = (
+        Escenario("⬆️", "Sobre 4.080,00",
+                  "Mientras el precio cierre sobre 4.080,00, la tendencia alcista sigue."),
+        Escenario("↔️", "Vuelta a 4.080,00",
+                  "Si el precio vuelve a 4.080,00 y la respeta, la línea suma un toque."),
+        Escenario("⬇️", "Cierre bajo 4.080,00",
+                  "Si una vela de 4 horas cierra bajo 4.080,00, la línea alcista se rompe."),
+    )
+    ref = Referencia(4080.0, "línea alcista de seguridad", seg)
+    return Lectura(
+        ticker="XAUUSD", marco="H4", precio=4120.0, direccion="ALCISTA", estado="TENDENCIA",
+        lineas=(seg,), en_prueba=None, vigilar=ref, invalidacion=ref, objetivo=obj, escenarios=esc,
+        salida=("La posición se cierra cuando una vela de 4 horas cierra al otro lado de la línea "
+                "de seguridad, hoy en 4.080,00. No hay objetivo fijo."),
+        conceptos=(), avisos=(), metricas={}, vela=200,
+    )
+
+
+def _sel(lectura, **extra):
+    return {"ticker": lectura.ticker, "nombre": "Oro", "clase": "forex_commodities",
+            "cobertura_fija": True, "gates_omitidos": [], "score": 60.0,
+            "puntaje": {"desglose": {"base": 50.0}, "excluido": None},
+            "direccion": lectura.direccion, "estado": lectura.estado, "precio": lectura.precio,
+            "marco": "H4", "volatilidad_tipica": 18.5, "lectura": lectura_a_dict(lectura), **extra}
+
+
+ORO = {"ticker": "XAUUSD", "nombre": "Oro", "digits": 2, "unidad": "USD", "categoria": "commodity",
+       "clase": "forex_commodities", "imagen": "assets/activos/oro.jpg",
+       "notas_marco": {"H4": "el oro hace tramos de varios días: en 4H se ven las líneas que esos tramos respetan."},
+       "nota_volatilidad": "nota vieja de 1H"}
+
+
+def _payload_lectura(lectura=None, **extra):
+    return pc.construir_payload_lectura(_sel(lectura or _lectura_alcista(), **extra), ORO, LUNES,
+                                        [4119.0, 4120.0])
+
+
+def test_los_niveles_publicados_son_los_mas_cercanos_a_cada_lado():
+    assert pc.niveles_publicados(_lectura_alcista()) == (4080.0, 4200.0)
+
+
+def test_sin_nivel_sobre_el_precio_la_resistencia_sale_vacia():
+    lec = _lectura_alcista(objetivo=False)
+    assert pc.niveles_publicados(lec) == (4080.0, None)
+    payload = _payload_lectura(lec)
+    assert payload["resistencia"] == "--" and payload["soporte"] == "4.080,00"
+
+
+def test_el_payload_lleva_la_lectura_el_marco_y_la_nota_del_marco():
+    p = _payload_lectura()
+    assert p["lectura"]["ticker"] == "XAUUSD" and p["marco"] == "H4" and p["digits"] == 2
+    assert p["sesgo"] == "Alcista" and p["vol_pct"] == "18,50 USD"
+    assert p["nota_volatilidad"] == ORO["notas_marco"]["H4"]
+    assert p["_procedencia"]["puntaje"]["desglose"] == {"base": 50.0}
+    assert "factores" not in p["_procedencia"]
+
+
+def test_el_mensaje_sale_de_la_lectura():
+    p = _payload_lectura()
+    p["titular"] = "El oro sigue sobre su línea"
+    msg = pc.construir_mensaje_alerta(p)
+    assert "📌 Nivel a vigilar: 4.080,00 (línea alcista de seguridad)" in msg
+    assert "⬆️ Mientras el precio cierre sobre 4.080,00, la tendencia alcista sigue." in msg
+    assert "⏱️ *Temporalidad*: 4H · marco swing (de una a dos semanas)" in msg
+    assert "💡 Por qué 4H acá:" in msg
+    assert "No hay objetivo fijo." in msg
+    assert "falso quiebre" not in msg
+    assert "—" not in msg and "–" not in msg
+
+
+def test_el_mensaje_dice_el_motivo_de_un_fijo_excluido():
+    p = _payload_lectura(gates_omitidos=[
+        "va contra la secuencia de los marcos mayores: es donde nacen las falsas rupturas"])
+    assert "⚠️ Ojo, va contra la secuencia de los marcos mayores" in pc.construir_mensaje_alerta(p)
+
+
+def test_la_temporalidad_sale_de_la_estrategia_activa():
+    assert pc.marco_operativo() == "H4"
+    assert pc.temporalidad_de("H4") == "4H · marco swing (de una a dos semanas)"
+
+
+def test_un_payload_incoherente_con_su_serie_no_se_arma():
+    with pytest.raises(pc.PayloadIncoherenteError):
+        pc.construir_payload_lectura(_sel(_lectura_alcista()), ORO, LUNES, [4000.0, 4010.0])
+
+
+def test_sin_nota_del_marco_el_payload_lectura_no_se_construye():
+    sin_nota = {k: v for k, v in ORO.items() if k != "notas_marco"}
+    with pytest.raises(KeyError):
+        pc.construir_payload_lectura(_sel(_lectura_alcista()), sin_nota, LUNES, [4119.0, 4120.0])
+
+
+def _preparar_simulado(tmp_path, monkeypatch, seleccion):
+    """`preparar` de punta a punta con el escáner, la serie y lo macro simulados."""
+    import contexto_macro_grupos as cmg
+    import noticia_oficial
+    import suplemento_canal
+
+    resultado = {"tanda": 1, "sesion_slug": "apertura_ny", "nombre_tanda": "Apertura",
+                 "nombre_sesion": "Apertura", "foco": "", "hora_chile_tanda": "11:00",
+                 "generado": "2026-10-12 11:00", "seleccion": seleccion, "excluidos": [],
+                 "avisos": []}
+    monkeypatch.setattr(pc, "DIR_TRABAJO", tmp_path)
+    monkeypatch.setattr(sc, "escanear", lambda **kw: resultado)
+    monkeypatch.setattr(sc, "_guardar", lambda r: tmp_path / "screener.json")
+    monkeypatch.setattr(sc, "_contexto_macro", lambda ahora: ([], None, []))
+    monkeypatch.setattr(pc, "_serie_para", lambda ticker, marco="H1": [4119.0, 4120.0])
+    monkeypatch.setattr(cmg, "asegurar_contexto_macro_grupo", lambda **kw: None)
+    monkeypatch.setattr(pc, "escribir_suplementos", lambda *a, **k: ([], []))
+    monkeypatch.setattr(noticia_oficial, "descargar_con_cache", lambda *a, **k: None)
+    monkeypatch.setattr(suplemento_canal, "cargar_historial", lambda *a, **k: [])
+    return pc.preparar(modo_matriz=True)
+
+
+def test_preparar_arma_la_pieza_desde_la_lectura(tmp_path, monkeypatch):
+    res = _preparar_simulado(tmp_path, monkeypatch, [_sel(_lectura_alcista())])
+    assert res["problemas"] == []
+    payload = json.loads(Path(res["payloads"][0]["archivo"]).read_text(encoding="utf-8"))
+    assert payload["lectura"]["ticker"] == "XAUUSD" and payload["marco"] == "H4"
+    mensaje = Path(res["payloads"][0]["archivo"]).with_name("1_xauusd_mensaje.txt").read_text(encoding="utf-8")
+    assert "4H · marco swing" in mensaje
+
+
+def test_preparar_avisa_si_falta_la_nota_del_marco(tmp_path, monkeypatch):
+    sel = _sel(_lectura_alcista(), ticker="XAUUSD", marco="D1")
+    res = _preparar_simulado(tmp_path, monkeypatch, [sel])
+    assert res["payloads"] == []
+    assert any("notas_marco.D1" in p for p in res["problemas"])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fase 2 del enchufe: el despacho vuelve a pedir la Lectura (decisión del 2026-10-11)
+# ─────────────────────────────────────────────────────────────────────────────
+MEDIA_HORA = datetime(2026, 10, 12, 11, 30, tzinfo=pc.SANTIAGO)
+
+
+def _payload_listo():
+    p = _payload_lectura()
+    p["titular"], p["parrafo"] = "t", "p"
+    p.pop("_pendiente_editorial")
+    return p
+
+
+def test_el_refresco_mueve_el_precio_y_los_niveles_sin_tocar_lo_editorial():
+    from dataclasses import replace
+
+    actual = replace(_lectura_alcista(), precio=4130.0)
+    nuevo, motivo = pc.refrescar_payload_lectura(_payload_listo(), MEDIA_HORA, actual, 2,
+                                                 [4129.0, 4130.0], 19.0, lambda a, b: None)
+    assert motivo is None
+    assert nuevo["precio_actual"] == "4.130,00" and nuevo["vol_pct"] == "19,00 USD"
+    assert nuevo["lectura"]["precio"] == 4130.0
+    assert nuevo["titular"] == "t" and nuevo["parrafo"] == "p"
+    assert nuevo["fecha_hora"].endswith("11:30")
+
+
+def test_el_refresco_respeta_los_niveles_fijados_por_el_director():
+    p = _payload_listo()
+    p["_procedencia"]["niveles_fijados"] = {"soporte": 4090.0}
+    nuevo, _ = pc.refrescar_payload_lectura(p, MEDIA_HORA, _lectura_alcista(), 2,
+                                            [4119.0, 4120.0], 18.5, lambda a, b: None)
+    assert nuevo["soporte"] == "4.090,00" and nuevo["resistencia"] == "4.200,00"
+
+
+def test_la_divergencia_de_la_estrategia_frena_la_pieza():
+    vista = []
+
+    def divergencia(preparada, actual):
+        vista.append((preparada.precio, actual.precio))
+        return "la dirección cambió de alcista a bajista"
+
+    _, motivo = pc.refrescar_payload_lectura(_payload_listo(), MEDIA_HORA, _lectura_alcista(), 2,
+                                             [4119.0, 4120.0], 18.5, divergencia)
+    assert motivo == "la dirección cambió de alcista a bajista"
+    assert vista == [(4120.0, 4120.0)]  # compara la preparada contra la de ahora
+
+
+def test_un_refresco_desacoplado_de_su_serie_no_sale():
+    _, motivo = pc.refrescar_payload_lectura(_payload_listo(), MEDIA_HORA, _lectura_alcista(), 2,
+                                             [4000.0, 4010.0], 18.5, lambda a, b: None)
+    assert motivo is not None and "ultimo cierre" in motivo
+
+
+def test_un_payload_sin_lectura_no_se_despacha(tmp_path, monkeypatch):
+    viejo = {"plantilla": "alerta", "titular": "El oro sigue firme",
+             "parrafo": "El oro se mantiene sobre su soporte de la semana.", "activo": "Oro",
+             "_procedencia": {"ticker": "XAUUSD"}}
+    (tmp_path / "1_xauusd.json").write_text(json.dumps(viejo), encoding="utf-8")
+    monkeypatch.setattr(pc, "falta_metatrader5", lambda: False)
+    avisos = pc._refrescar_y_rendir(tmp_path)
+    assert (tmp_path / "1_xauusd.json.divergente").exists()
+    assert any("antes del enchufe" in a for a in avisos)
+
+
+def test_sin_referencia_el_despacho_lee_de_nuevo(tmp_path):
+    from estrategia.contrato import Etiqueta, Marcos
+
+    lec = _lectura_alcista()
+
+    class Est:
+        marcos = Marcos(("D1",), "H4", {"D1": 5, "H4": 5},
+                        {"D1": Etiqueta("p", "d"), "H4": Etiqueta("s", "u")})
+
+        def leer(self, ticker, velas, digits, en_curso=None):
+            return lec
+
+    def lector(ticker, marcos, extra):
+        return {"H4": "v"}, None
+
+    lectura, velas = pc.lectura_para_despacho(Est(), "XAUUSD", 2, lector, LUNES, base=tmp_path)
+    assert lectura == lec and velas == {"H4": "v"}
+
+
+def test_con_referencia_el_despacho_sigue_la_de_la_semana_y_no_guarda(tmp_path):
+    import referencia_semanal as rs
+    from estrategia.contrato import Etiqueta, Marcos
+
+    ref = _lectura_alcista()
+    rs.guardar(ref, "2026-W42", "semanal", LUNES, base=tmp_path)
+
+    class Est:
+        marcos = Marcos(("D1",), "H4", {"D1": 5, "H4": 5},
+                        {"D1": Etiqueta("p", "d"), "H4": Etiqueta("s", "u")})
+
+        def seguir(self, referencia, velas, digits, en_curso=None):
+            from dataclasses import replace
+            return replace(referencia, estado="RUPTURA",
+                           lineas=tuple(replace(x, rol="accion") for x in referencia.lineas))
+
+        def leer(self, ticker, velas, digits, en_curso=None):
+            return ref
+
+    lectura, _ = pc.lectura_para_despacho(Est(), "XAUUSD", 2, lambda t, m, e: ({"H4": "v"}, None),
+                                          LUNES, base=tmp_path)
+    assert lectura.estado == "RUPTURA"
+    guardada = json.loads(rs.ruta("2026-W42", "XAUUSD", tmp_path).read_text(encoding="utf-8"))
+    assert guardada["motivo"] == "semanal"  # el reemplazo lo guarda el escáner, no el despacho
+
+
+def test_que_esperar_es_corto_y_no_repite_el_escenario():
+    """Lo que se ve sobre el pliegue: estado, dirección y la condición, sin repetir el escenario."""
+    op = pc.lectura_operativa(_payload_lectura())
+    assert op["que_esperar"] == "Tendencia alcista: sobre 4.080,00"
+    assert op["que_esperar"] not in " ".join(op["escenarios"])
+
+
+def test_que_esperar_en_rango_y_en_prueba():
+    from dataclasses import replace
+
+    rango = replace(_lectura_alcista(), estado="RANGO", direccion="LATERAL", escenarios=(
+        Escenario("⬆️", "Cierre sobre 4.200,00", "a"), Escenario("↔️", "Entre 4.080,00 y 4.200,00", "b"),
+        Escenario("⬇️", "Cierre bajo 4.080,00", "c")))
+    p = _payload_lectura()
+    p["lectura"] = lectura_a_dict(rango)
+    assert pc.lectura_operativa(p)["que_esperar"] == "Rango: entre 4.080,00 y 4.200,00"
+
+
+def test_el_despacho_sigue_la_referencia_con_que_se_preparo_la_pieza(tmp_path):
+    """Un día de ruptura el escáner guarda una referencia nueva; la pieza de la mañana se
+    escribió contra la vieja y el despacho tiene que releerla igual, o se contradice."""
+    import referencia_semanal as rs
+    from estrategia.contrato import Etiqueta, Marcos
+
+    vieja = _lectura_alcista()
+    nueva = replace_lectura(vieja, estado="RANGO", direccion="LATERAL")
+    rs.guardar(nueva, "2026-W42", "ruptura", LUNES, base=tmp_path)
+    vistas = []
+
+    class Est:
+        marcos = Marcos(("D1",), "H4", {"D1": 5, "H4": 5},
+                        {"D1": Etiqueta("p", "d"), "H4": Etiqueta("s", "u")})
+
+        def seguir(self, referencia, velas, digits, en_curso=None):
+            vistas.append(referencia.estado)
+            return referencia
+
+    lectura, _ = pc.lectura_para_despacho(Est(), "XAUUSD", 2, lambda t, m, e: ({"H4": "v"}, None),
+                                          LUNES, base=tmp_path, referencia=vieja)
+    assert vistas == ["TENDENCIA"] and lectura == vieja
+
+
+def test_la_pieza_guarda_la_referencia_de_su_lectura():
+    p = _payload_lectura(referencia=lectura_a_dict(_lectura_alcista()))
+    assert p["_procedencia"]["referencia"]["ticker"] == "XAUUSD"
+
+
+def replace_lectura(lectura, **cambios):
+    from dataclasses import replace
+
+    return replace(lectura, **cambios)

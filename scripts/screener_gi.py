@@ -1,32 +1,23 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""Escáner del universo para las tandas diarias: puntúa activos y elige el Top N.
+"""Escáner del universo para las tandas diarias: ordena con la estrategia activa y elige.
 
-Implementa el `Score_GI` del plan de producción diaria con dos correcciones que
-el plan original necesitaba para no producir resultados falsos.
+**El escáner es de la estrategia** (enchufe de estrategia, spec
+`docs/superpowers/specs/2026-10-09-enchufe-estrategia-design.md`, §5 y §7 fase 2).
+El lunes, el análisis semanal elige con `puntuar(leer(...), "semana")` y fija una
+referencia por activo (`referencia_semanal`). Las diarias cubren solo esos activos y
+los ordenan con `puntuar(seguir(...), "sesion")`. Lo que queda acá es
+infraestructura: universo, canales cubiertos, cobertura fija, feriado, blackout por
+calendario, matriz por canal y la bitácora de lo publicado hoy.
 
-**1. El score topa en 100, no en 26,5.** El plan multiplica pesos
-(0,35 / 0,25 / 0,20 / 0,20) por factores que YA vienen escalados a su máximo
-(T∈[0,35], M∈[0,25], C∈[0,20], F∈[0,20], que suman 100). Ese producto da
-0,35×35 + 0,25×25 + 0,20×20 + 0,20×20 = 26,5, así que ningún activo podía pasar
-de un cuarto del puntaje y la escala "sobre 100" era ilegible. Los rangos de
-puntos SON la ponderación: `Score = T + M + C + F`.
-
-**2. Los blackouts por calendario existen.** Hay ventanas de
-bloqueo alrededor de los datos de alto impacto, y el Factor Catalizador del plan
-premia con +25 justo al activo que recibe el dato del día: sin el gate, el plan
-elige preferentemente lo que no debería tocar. Las tandas de media mañana y de
-media tarde caen dentro de esas ventanas con frecuencia.
-
-Los indicadores salen de `market_data_mcp.analisis.analizar_activo`, la misma
-función que alimenta la tool `get_asset_levels`. No se recalculan acá: el repo ya
-tiene dos tuberías con la misma materia prima y distinta profundidad, y esta
-habría sido la tercera.
+`evaluar_activo` y sus factores (el `Score_GI` viejo) siguen vivos solo porque
+`pipeline_avisos` y `analista/foco` todavía los usan; se borran en S6/S7.
 
 Uso:
     uv run --with MetaTrader5 python scripts/screener_gi.py
     uv run --with MetaTrader5 python scripts/screener_gi.py --tanda 2 --top 3
     uv run --with MetaTrader5 python scripts/screener_gi.py --todos --json
+    uv run --with MetaTrader5 python scripts/screener_gi.py --semanal
 """
 
 from __future__ import annotations
@@ -67,7 +58,10 @@ def cobertura_fija() -> list[str]:
 DIR_SALIDA = RAIZ / "data" / "screener"
 
 import agenda_mercado as agenda  # noqa: E402  (necesita RAIZ en sys.path)
-import direccion_gi as dg  # noqa: E402  (fase 1: solo en sombra)
+import referencia_semanal as rs  # noqa: E402
+from estrategia import registro  # noqa: E402
+from estrategia.contrato import lectura_a_dict  # noqa: E402
+from estrategia.fuente import atr  # noqa: E402
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -250,6 +244,10 @@ def cargar_universo(solo_renderizables: bool = True) -> list[dict[str, Any]]:
             # generador del mensaje nunca los vio y la linea obligatoria no existia.
             "volatilidad": a.get("volatilidad"),
             "nota_volatilidad": a.get("nota_volatilidad"),
+            # La justificación del marco que decide la estrategia activa (spec §8.1),
+            # por marco: {"H4": "..."}. `nota_volatilidad` sigue para las piezas de
+            # 1H de Avisos y el analista hasta S6/S7.
+            "notas_marco": a.get("notas_marco") or {},
         })
 
     for a in data.get("forex_commodities", []):
@@ -700,42 +698,11 @@ def factor_momentum(h1: dict[str, Any], direccion: str) -> tuple[int, str]:
 # ─────────────────────────────────────────────────────────────────────────────
 # Escaneo
 # ─────────────────────────────────────────────────────────────────────────────
-def _direccion_en_sombra(
-    h1: dict[str, Any], d1: dict[str, Any], ahora_santiago: datetime
-) -> dict[str, Any]:
-    """La dirección de cuatro ejes, **en sombra**: se calcula y se guarda, no decide.
 
-    Fase 1 del spec `2026-09-28-direccion-4-ejes-design.md`: la `direccion` que
-    puntúa, pinta el chip y alimenta el guardia de divergencia sigue siendo
-    `direccion_tecnica`. Si la lectura nueva lanza, se anota y la tanda sigue:
-    la sombra nunca tumba la tanda. Se llama con `previa=None` a propósito,
-    porque el escáner no guarda estado entre corridas.
-    """
-    try:
-        lectura = dg.leer_direccion(h1, d1, hoy=ahora_santiago.date().isoformat())
-        return dg.a_dict(lectura)
-    except Exception as exc:  # noqa: BLE001
-        return {"error": f"{type(exc).__name__}: {exc}"}
-
-
-def avisos_de_sombra(evaluados: list[dict[str, Any]]) -> list[str]:
-    """Una línea por activo donde la sombra difiere de la EMA 50, o falló."""
-    avisos: list[str] = []
-    for r in evaluados:
-        sombra = r.get("direccion_4ejes") or {}
-        if "error" in sombra:
-            avisos.append(
-                f"{r['ticker']}: la direccion de 4 ejes (sombra) fallo ({sombra['error']}); "
-                "la tanda sigue con la EMA 50"
-            )
-        elif sombra.get("direccion") and sombra["direccion"] != r.get("direccion"):
-            avisos.append(
-                f"{r['ticker']}: sombra 4 ejes dice {sombra['direccion']} "
-                f"({sombra.get('fase')}) y la EMA 50 dice {r.get('direccion')}"
-            )
-    return avisos
-
-
+# ── Transitorio hasta S6/S7 del enchufe ────────────────────────────────────────
+# `evaluar_activo`, sus factores y los gates de agotamiento y banda ya no deciden el
+# carrusel: los usan todavía `pipeline_avisos` y `analista/foco`. Se borran cuando
+# esos consumidores pasen a la `Lectura` (spec §6, §7 fase 3).
 def evaluar_activo(
     activo: dict[str, Any],
     eventos: list[dict[str, Any]],
@@ -786,8 +753,6 @@ def evaluar_activo(
     elif motivo:
         return {**base, "excluido": motivo}
 
-    sombra = _direccion_en_sombra(h1, d1, ahora_santiago)
-
     t, det_t = factor_tecnico(h1, d1, direccion)
     m, det_m = factor_catalizador(ticker, eventos, delta_ust_bps)
     c, det_c = factor_espacio(h1, d1, direccion, ahora_santiago=ahora_santiago)
@@ -798,8 +763,6 @@ def evaluar_activo(
         "direccion": direccion,
         "cobertura_fija": fijo,
         "gates_omitidos": omitidos,
-        # Fase 1: la lectura de cuatro ejes viaja al lado y nadie la consume.
-        "direccion_4ejes": sombra,
         "score": t + m + c + f,
         "factores": {
             "tecnico":     {"puntos": t, "max": 35, "detalle": det_t},
@@ -935,146 +898,235 @@ def _publicados_hoy(
     return usados
 
 
+CATEGORIAS = ["forex", "commodity", "indice", "accion", "crypto"]
+
+
+def seleccionar_por_categoria(universo: list[dict[str, Any]], evaluados: list[dict[str, Any]],
+                              top: int) -> list[dict[str, Any]]:
+    """Por categoría: los fijos primero y sin competir; los cupos que dejan, por puntaje.
+
+    La matriz reparte antes de profundizar: ningún canal con candidatos queda fuera,
+    y cada uno llega hasta `top` piezas (el tope editorial es 3). La cobertura fija
+    (2026-09-28) no compite por puntaje.
+    """
+    seleccion: list[dict[str, Any]] = []
+    for cat in CATEGORIAS:
+        del_grupo = {a["ticker"] for a in filtrar_por_grupo(universo, cat)}
+        fijos = [r for r in evaluados if r.get("cobertura_fija") and r["ticker"] in del_grupo]
+        resto = [r for r in evaluados
+                 if not r.get("cobertura_fija") and r["score"] > 0 and r["ticker"] in del_grupo]
+        seleccion.extend(fijos + resto[:max(0, top - len(fijos))])
+    return seleccion
+
+
+def correr_semanal(estrategia, universo: list[dict[str, Any]], ahora_stgo: datetime, lector,
+                   top: int = 3, base: Path | None = None) -> dict[str, Any]:
+    """El análisis semanal: elige con `puntuar(leer(...), "semana")` y fija las referencias.
+
+    Sin feriado ni blackout: son gates del día, y la referencia vale la semana. La
+    cobertura fija recibe referencia aunque la estrategia la excluya (director,
+    2026-10-11). Las referencias se leen sin vela en curso: nunca quedan en PRUEBA.
+    """
+    base = base or rs.DIR
+    semana = rs.semana_de(ahora_stgo)
+    fijos = set(cobertura_fija())
+    evaluados: list[dict[str, Any]] = []
+    excluidos: list[dict[str, Any]] = []
+    avisos: list[str] = []
+    lecturas: dict[str, Any] = {}
+    fallidos: list[str] = []
+    for activo in universo:
+        ticker = activo["ticker"]
+        es_fijo = ticker in fijos
+        try:
+            velas, _ = lector(ticker, estrategia.marcos, 0)
+            lectura = estrategia.leer(ticker, velas, activo["digits"], None)
+            p = estrategia.puntuar(lectura, "semana")
+        except Exception as exc:  # noqa: BLE001 - un activo roto no tumba la semana
+            excluidos.append({"ticker": ticker, "excluido": f"no se pudo leer: {exc}"})
+            if es_fijo:
+                fallidos.append(ticker)
+            continue
+        if p.excluido and not es_fijo:
+            excluidos.append({"ticker": ticker, "excluido": p.excluido})
+            continue
+        if p.excluido:
+            avisos.append(f"{ticker}: cobertura fija, queda en la semana aunque {p.excluido}")
+        lecturas[ticker] = lectura
+        evaluados.append({"ticker": ticker, "score": p.puntos, "cobertura_fija": es_fijo})
+    evaluados.sort(key=lambda r: (-r["score"], r["ticker"]))
+    elegidos = [r["ticker"] for r in seleccionar_por_categoria(universo, evaluados, top)]
+    for ticker in elegidos:
+        rs.guardar(lecturas[ticker], semana, "semanal", ahora_stgo, base=base)
+    # Sin el manifiesto la semana queda abierta y la próxima corrida la reintenta. Cerrarla
+    # con MT5 caído dejaría cinco días sin piezas, o un fijo sin referencia toda la semana.
+    completa = bool(elegidos) and not fallidos
+    if not completa:
+        avisos.append(
+            f"el análisis semanal de {semana} quedó incompleto ("
+            + (f"no se pudo leer {', '.join(fallidos)}" if fallidos else "ningún activo elegido")
+            + "): no se cierra la semana y se reintenta en la próxima corrida"
+        )
+        return {"semana": semana, "elegidos": elegidos, "excluidos": excluidos,
+                "avisos": avisos, "completa": False}
+    rs.guardar_manifiesto(semana, {
+        "semana": semana,
+        "estrategia": estrategia.nombre,
+        "generado": ahora_stgo.strftime("%Y-%m-%d %H:%M"),
+        "elegidos": elegidos,
+        "puntajes": {r["ticker"]: r["score"] for r in evaluados},
+        "excluidos": excluidos,
+    }, base=base)
+    return {"semana": semana, "elegidos": elegidos, "excluidos": excluidos, "avisos": avisos,
+            "completa": True}
+
+
+def evaluar_con_estrategia(activo: dict[str, Any], estrategia, diaria: rs.Diaria,
+                           fijo: bool) -> dict[str, Any]:
+    """La entrada del ranking diario: la lectura de hoy y su puntaje de sesión.
+
+    Un fijo excluido por la estrategia sale igual y lleva el motivo en
+    `gates_omitidos` (director, 2026-10-11), igual que antes con agotamiento y banda.
+    """
+    base = {"ticker": activo["ticker"], "nombre": activo["nombre"], "clase": activo["clase"]}
+    lectura = diaria.lectura
+    p = estrategia.puntuar(lectura, "sesion")
+    if p.excluido and not fijo:
+        return {**base, "excluido": p.excluido}
+    op = estrategia.marcos.operativo
+    return {
+        **base,
+        "cobertura_fija": fijo,
+        "gates_omitidos": [p.excluido] if p.excluido else [],
+        "score": p.puntos,
+        "puntaje": {"desglose": p.desglose, "excluido": p.excluido},
+        "direccion": lectura.direccion,
+        "estado": lectura.estado,
+        "precio": lectura.precio,
+        "marco": op,
+        # La "volatilidad típica" de la pieza: el ATR 14 del marco operativo. Es un
+        # dato, no una decisión, y se mide sobre las mismas velas que leyó la estrategia.
+        "volatilidad_tipica": round(atr(diaria.velas[op]), activo["digits"]),
+        "lectura": lectura_a_dict(lectura),
+        # La referencia contra la que se leyó: el despacho la vuelve a seguir, así un día de
+        # ruptura la pieza no se contradice con la referencia nueva que se guardó después.
+        "referencia": lectura_a_dict(diaria.referencia) if diaria.referencia else None,
+    }
+
+
 def escanear(
     tanda: int | None = None,
     top: int = 3,
     solo_renderizables: bool = True,
     ahora_ny: datetime | None = None,
-    analizador: Callable[[str, str], dict[str, Any]] = analizar_activo,
     grupo: str | None = None,
     modo_matriz: bool = False,
-    ignorar_agotamiento: bool = False,
+    estrategia=None,
+    lector=None,
+    base_referencias: Path | None = None,
 ) -> dict[str, Any]:
-    """Recorre el universo, aplica gates, puntúa y elige el Top N de la sesión/tanda o matriz por grupos."""
+    """Ordena los activos de la semana con la estrategia activa y elige la tanda.
+
+    Las diarias cubren solo los activos con referencia semanal (spec §4) y los ordenan
+    con `puntuar(seguir(...), "sesion")`. Si la semana no tiene análisis, lo corre la
+    primera diaria (director, 2026-10-11): sin eso ningún canal tendría pieza. Una
+    ruptura por cierre deja guardada la lectura de ese cierre como nueva referencia.
+    """
     ahora_ny = ahora_ny or datetime.now(tz=NY)
     ahora_stgo = ahora_ny.astimezone(SANTIAGO)
+    estrategia = estrategia or registro.activa()
+    base = base_referencias or rs.DIR
+    if lector is None:
+        from estrategia.fuente import velas_mt5 as lector
 
     info_sesion = detectar_sesion(ahora_ny)
     n_tanda = tanda or info_sesion["tanda"]
-    nombre_sesion = (
-        TANDAS[tanda]["nombre"]
-        if tanda and tanda in TANDAS
-        else info_sesion["nombre"]
-    )
-    foco_sesion = (
-        TANDAS[tanda]["foco"]
-        if tanda and tanda in TANDAS
-        else info_sesion["foco"]
-    )
+    nombre_sesion = TANDAS[tanda]["nombre"] if tanda and tanda in TANDAS else info_sesion["nombre"]
+    foco_sesion = TANDAS[tanda]["foco"] if tanda and tanda in TANDAS else info_sesion["foco"]
     sesion_slug = info_sesion["slug"] if not tanda else f"tanda{n_tanda}"
 
-    eventos, delta_ust, avisos = _contexto_macro(ahora_stgo)
+    # El calendario queda solo para el blackout, que es infraestructura: la estrategia
+    # no consume nada macro (spec §8.2).
+    eventos, _delta_ust, avisos = _contexto_macro(ahora_stgo)
 
-    if analizador is analizar_activo:
-        avisos.extend(_conectar_terminal())
-
-    # **Un gate apagado tiene que decirlo.** Este módulo ya denuncia el mismo
-    # defecto para el calendario: "un escáner que informa 0 exclusiones cuando en
-    # realidad no pudo mirar es peor que uno que falla". El de agotamiento se
-    # apagaba con `--grupo` y en silencio, y el 2026-09-03 eso habría publicado
-    # el USD/JPY con el 290 % de su rango diario consumido.
-    if ignorar_agotamiento:
-        avisos.append(
-            "gate de agotamiento DESACTIVADO por --forzar: pueden entrar activos "
-            "que ya consumieron su recorrido del día, así que el espacio proyectado "
-            "no está verificado"
-        )
-
-    universo = cargar_universo(solo_renderizables)
-    universo, fuera = solo_canales_cubiertos(universo)
+    universo_cubierto, fuera = solo_canales_cubiertos(cargar_universo(solo_renderizables))
     if fuera:
         avisos.append(
             f"{len(fuera)} activos fuera del universo porque su canal no se cubre "
             "(`cubierto: false` en config/whatsapp_grupos.json)"
         )
+
+    semana = rs.semana_de(ahora_stgo)
+    manifiesto = rs.manifiesto(semana, base=base)
+    if manifiesto is None:
+        # La semana se elige siempre igual, la pida quien la pida: con el universo
+        # renderizable y el tope editorial. Un `--todos` o `--top 1` de una corrida
+        # puntual no puede decidir los cinco días.
+        renderizable, _ = solo_canales_cubiertos(cargar_universo(True))
+        sem = correr_semanal(estrategia, renderizable, ahora_stgo, lector, top=3, base=base)
+        avisos.append(
+            f"no había análisis semanal de {semana}: se corrió ahora, con la primera diaria, "
+            f"y fijó {len(sem['elegidos'])} activos"
+        )
+        avisos.extend(sem["avisos"])
+        manifiesto = rs.manifiesto(semana, base=base) or {"elegidos": sem["elegidos"]}
+    de_la_semana = set(manifiesto["elegidos"])
+
+    universo = universo_cubierto
     if grupo:
         universo = filtrar_por_grupo(universo, grupo)
         avisos.append(f"universo filtrado exclusivamente al grupo/categoría '{grupo}' ({len(universo)} activos)")
-
-    if solo_renderizables and not grupo:
-        avisos.append(
-            f"universo limitado a {len(universo)} activos con imagen en disco. "
-            "Los prompts de las que faltan estan en "
-            "docs/design/stories-gi/imagenes-por-activo.md; --todos ignora el filtro"
-        )
+    sin_referencia = [a for a in universo if a["ticker"] not in de_la_semana]
+    if sin_referencia:
+        avisos.append(f"{len(sin_referencia)} activos sin referencia esta semana: no salen en las diarias")
+    universo = [a for a in universo if a["ticker"] in de_la_semana]
 
     ya_usados = _publicados_hoy(
-        ahora_stgo.date().isoformat(),
-        tanda=tanda,
-        hora_actual=ahora_stgo.strftime("%H:%M"),
+        ahora_stgo.date().isoformat(), tanda=tanda, hora_actual=ahora_stgo.strftime("%H:%M"),
     )
-
     fijos = set(cobertura_fija())
     evaluados: list[dict[str, Any]] = []
     excluidos: list[dict[str, Any]] = []
     for activo in universo:
-        es_fijo = activo["ticker"] in fijos
-        if activo["ticker"] in ya_usados and not es_fijo:
-            excluidos.append({
-                "ticker": activo["ticker"],
-                "nombre": activo["nombre"],
-                "clase": activo["clase"],
-                "excluido": "ya salio en una corrida anterior de hoy",
-            })
+        ticker = activo["ticker"]
+        base_ex = {"ticker": ticker, "nombre": activo["nombre"], "clase": activo["clase"]}
+        es_fijo = ticker in fijos
+        if ticker in ya_usados and not es_fijo:
+            excluidos.append({**base_ex, "excluido": "ya salio en una corrida anterior de hoy"})
             continue
-        res = evaluar_activo(
-            activo, eventos, delta_ust, ahora_stgo, analizador,
-            ignorar_agotamiento=ignorar_agotamiento, fijo=es_fijo,
-        )
+        # Mercado cerrado no tiene niveles de hoy, y un dato en minutos invalida los
+        # que haya: estos dos aplican también a la cobertura fija.
+        motivo = gate_feriado(ticker, ahora_stgo.date()) or gate_blackout(ticker, eventos, ahora_stgo)
+        if motivo:
+            excluidos.append({**base_ex, "excluido": motivo})
+            continue
+        try:
+            diaria = rs.lectura_del_dia(estrategia, ticker, activo["digits"], semana, lector, base=base)
+            res = evaluar_con_estrategia(activo, estrategia, diaria, es_fijo)
+            if diaria.reemplazo is not None:
+                rs.guardar(diaria.reemplazo, semana, "ruptura", ahora_stgo, base=base)
+        except Exception as exc:  # noqa: BLE001 - un activo roto no tumba la tanda
+            excluidos.append({**base_ex, "excluido": f"no se pudo leer: {exc}"})
+            continue
+        avisos.extend(diaria.avisos)
         (excluidos if "excluido" in res else evaluados).append(res)
 
     evaluados.sort(key=lambda r: (-r["score"], r["ticker"]))
-    avisos.extend(avisos_de_sombra(evaluados))
-
     if modo_matriz:
-        # Cobertura total: el mejor de cada una de las 5 categorías clave, hasta
-        # `top` por categoría.
-        #
-        # Antes tomaba el Top 1 fijo e ignoraba `--top`, así que un canal con
-        # cinco activos elegibles recibía un carrusel de una sola pieza. El tope
-        # editorial del proyecto son 3 piezas de activo por canal y es el default
-        # de `--top`: la matriz llega hasta ahí cuando hay con qué.
-        #
-        # Los gates no se tocan. Un grupo puede quedar en cero y eso **es** el
-        # resultado: el 2026-09-03 a las 12:06 forex e índices quedaron vacíos
-        # porque todo su universo había consumido el recorrido del día.
-        #
-        # La cobertura fija (2026-09-28) va primero y no compite por score: los
-        # cupos que deja libres en su categoría los llena el ranking.
-        categorias_orden = ["forex", "commodity", "indice", "accion", "crypto"]
-        seleccion = []
-        for cat_obj in categorias_orden:
-            del_grupo = {a["ticker"] for a in filtrar_por_grupo(universo, cat_obj)}
-            fijos_cat = [r for r in evaluados if r.get("cobertura_fija") and r["ticker"] in del_grupo]
-            candidatos_cat = [
-                r for r in evaluados
-                if not r.get("cobertura_fija") and r["score"] > 0 and r["ticker"] in del_grupo
-            ]
-            seleccion.extend(fijos_cat + candidatos_cat[:max(0, top - len(fijos_cat))])
+        seleccion = seleccionar_por_categoria(universo, evaluados, top)
     else:
         # Fuera de la matriz la cobertura fija se suma al Top N, no le quita cupos.
         seleccion = [r for r in evaluados if r.get("cobertura_fija")] + [
             r for r in evaluados if not r.get("cobertura_fija") and r["score"] > 0
         ][:top]
 
-    # Un gate saltado se dice, igual que uno apagado con --forzar.
+    # Una exclusión saltada se dice, igual que antes un gate saltado.
     for elegido in seleccion:
         if elegido.get("cobertura_fija"):
             motivos = elegido.get("gates_omitidos") or []
             avisos.append(
                 f"{elegido['ticker']}: cobertura fija, sale siempre"
                 + (f" aunque {'; '.join(motivos)}" if motivos else "")
-            )
-
-    # Los bordes estrechos se reportan: no excluyen, pero el operador tiene que
-    # saber que esa pieza lleva niveles apretados para lo que el activo se mueve.
-    for elegido in seleccion:
-        ratio = elegido.get("banda_estrecha")
-        if ratio:
-            avisos.append(
-                f"{elegido['ticker']}: niveles estrechos para su volatilidad, la vela "
-                f"tipica cubre {f'{ratio:.2f}'.replace('.', ',')} de la banda entre "
-                "soporte y resistencia"
             )
 
     if not seleccion:
@@ -1099,7 +1151,8 @@ def escanear(
         "hora_chile_tanda": hora_chile_de_tanda(n_tanda, ahora_ny),
         "hora_real_chile": ahora_stgo.strftime("%H:%M"),
         "generado": ahora_stgo.strftime("%Y-%m-%d %H:%M"),
-        "delta_ust_10y_bps": delta_ust,
+        "estrategia": estrategia.nombre,
+        "semana": semana,
         "eventos_del_dia": len(eventos),
         "score_maximo_posible": 100,
         "seleccion": seleccion,
@@ -1126,18 +1179,17 @@ def _imprimir(resultado: dict[str, Any]) -> None:
     hora_real = r.get("hora_real_chile", r["generado"].split(" ")[-1])
     print(f"\nSESIÓN: {nombre} ({hora_real} hrs hora Chile)")
     print(f"Foco: {r['foco']}")
-    linea = f"Generado {r['generado']} - eventos del dia: {r['eventos_del_dia']}"
-    if r["delta_ust_10y_bps"] is not None:
-        linea += f" - UST 10Y {r['delta_ust_10y_bps']:+.1f} bps"
-    print(linea)
+    print(f"Generado {r['generado']} - estrategia {r['estrategia']} - semana {r['semana']} "
+          f"- eventos del dia: {r['eventos_del_dia']}")
 
     print(f"\nSELECCION (score sobre {r['score_maximo_posible']})")
     if not r["seleccion"]:
         print("  (vacia)")
     for i, s in enumerate(r["seleccion"], 1):
-        print(f"  {i}. {s['nombre']} ({s['ticker']}) - {s['direccion']} - {s['score']}/100")
-        for n, f in s["factores"].items():
-            print(f"       {n:12s} {f['puntos']:>2}/{f['max']:<2} {f['detalle']}")
+        print(f"  {i}. {s['nombre']} ({s['ticker']}) - {s['direccion']} - {s['estado']} "
+              f"- {s['score']:.0f}/100")
+        for motivo in s.get("gates_omitidos") or []:
+            print(f"       cobertura fija aunque {motivo}")
 
     if r["excluidos"]:
         print(f"\nEXCLUIDOS ({len(r['excluidos'])})")
@@ -1176,7 +1228,24 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--json", action="store_true", help="emite solo JSON, sin reporte legible")
     parser.add_argument("--sin-guardar", action="store_true", help="no escribe en data/screener/")
+    parser.add_argument(
+        "--semanal", action="store_true",
+        help="corre el análisis semanal si la semana no lo tiene, y termina",
+    )
     args = parser.parse_args(argv)
+
+    if args.semanal:
+        ahora_stgo = datetime.now(tz=SANTIAGO)
+        semana = rs.semana_de(ahora_stgo)
+        if rs.manifiesto(semana) is not None:
+            print(f"La semana {semana} ya tiene análisis semanal: no se rehace.")
+            return 0
+        from estrategia.fuente import velas_mt5
+
+        universo, _ = solo_canales_cubiertos(cargar_universo(True))
+        res = correr_semanal(registro.activa(), universo, ahora_stgo, velas_mt5, top=3)
+        print(json.dumps(res, ensure_ascii=False, indent=2))
+        return 0
 
     resultado = escanear(
         tanda=args.tanda,

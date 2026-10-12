@@ -464,142 +464,6 @@ def test_filtrar_por_grupo_acota_correctamente_el_universo():
     assert any(a["ticker"] == "ETHUSD" for a in crypto)
 
 
-def test_el_modo_matriz_cubre_cada_grupo_que_tenga_con_que():
-    """Modo matriz: cobertura de TODOS los grupos, hasta `top` piezas cada uno.
-
-    El test anterior exigía que ningún grupo se repitiera, porque la matriz
-    tomaba el Top 1 fijo. Ese contrato se cambió el 2026-09-03: con un solo
-    activo por canal el carrusel de un grupo con cinco elegibles quedaba en una
-    pieza. Lo que sí se conserva, porque es el propósito de este modo, es que
-    **ningún grupo con candidatos quede fuera**: la matriz reparte antes de
-    profundizar, y es lo que la distingue de un Top N global.
-    """
-    import pipeline_carrusel as pc
-
-    def fake_analizador(ticker, tf):
-        res = dict(h1_perfecto() if tf == "H1" else d1_con_consumo(0.30))
-        res["ticker"] = ticker
-        return res
-
-    resultado = sc.escanear(
-        tanda=1,
-        top=1,
-        solo_renderizables=True,
-        analizador=fake_analizador,
-        modo_matriz=True,
-    )
-    seleccion = resultado["seleccion"]
-    assert len(seleccion) > 0
-
-    # La cobertura fija (2026-09-28) no cuenta contra el tope: el cobre, el oro
-    # y el WTI comparten canal y salen los tres. El tope rige para el resto.
-    grupos_sel = [pc.obtener_grupo_whatsapp(s["clase"], s["ticker"]) for s in seleccion
-                  if not s.get("cobertura_fija")]
-    assert len(grupos_sel) == len(set(grupos_sel)), (
-        "con --top 1 la matriz sigue siendo un activo por grupo"
-    )
-
-    # Con el tope por defecto, un grupo puede repetirse: eso es lo que se busca.
-    amplio = sc.escanear(
-        tanda=1, top=3, solo_renderizables=True,
-        analizador=fake_analizador, modo_matriz=True,
-    )["seleccion"]
-    grupos_amplio = {pc.obtener_grupo_whatsapp(s["clase"], s["ticker"]) for s in amplio}
-    assert len(amplio) >= len(seleccion), "subir el tope no puede dar menos piezas"
-    assert grupos_amplio >= set(grupos_sel), (
-        "al subir el tope se perdió la cobertura de algún grupo, que es justo lo "
-        "que este modo existe para garantizar"
-    )
-
-
-
-def test_el_modo_matriz_respeta_el_tope_por_grupo(tmp_path, monkeypatch):
-    """La matriz daba UNA pieza por grupo e ignoraba `--top`, asi que un canal
-    con cinco activos elegibles recibia un carrusel de una sola pieza.
-
-    El tope editorial del proyecto es de 3 piezas de activo por canal, y es el
-    default de `--top`: la matriz tiene que llegar hasta ahi cuando hay con que,
-    sin tocar los gates.
-    """
-    monkeypatch.setattr(sc, "DIR_SALIDA", tmp_path)
-    # El tope se prueba con cripto aunque hoy su canal no se cubra (2026-09-29).
-    import pipeline_carrusel as pc
-    monkeypatch.setattr(pc, "canal_cubierto", lambda canal: True)
-    universo = sc.cargar_universo(solo_renderizables=False)
-    cripto = [a for a in universo if a["categoria"] == "crypto"]
-    assert len(cripto) >= 3, "el catalogo dejo de tener criptos suficientes para la prueba"
-
-    h1 = h1_perfecto()
-    d1 = d1_con_consumo(0.30)
-
-    def escanear_con(top):
-        res = sc.escanear(
-            top=top, solo_renderizables=False, modo_matriz=True,
-            analizador=analizador_falso(h1, d1),
-        )
-        return [s["ticker"] for s in res["seleccion"]
-                if s["ticker"] in {a["ticker"] for a in cripto}]
-
-    con_uno = escanear_con(1)
-    con_tres = escanear_con(3)
-
-    assert len(con_uno) == 1, f"con --top 1 la matriz dio {con_uno}"
-    assert len(con_tres) == 3, (
-        f"con --top 3 la matriz sigue dando {len(con_tres)} pieza(s) de cripto: {con_tres}"
-    )
-    assert con_tres[0] == con_uno[0], "el mejor del grupo cambio al subir el tope"
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# El gate de agotamiento no se apaga en silencio
-# ─────────────────────────────────────────────────────────────────────────────
-def test_un_gate_apagado_lo_dice_en_los_avisos():
-    """Un gate inerte que no se anuncia es peor que no tenerlo.
-
-    `--grupo` apagaba el de agotamiento sin decirlo, y el 2026-09-03 eso habria
-    publicado el USD/JPY con el 290% de su rango diario consumido y EUR/USD con
-    el 93%. El escaner informaba "0 exclusiones" cuando en realidad no habia
-    mirado, que es exactamente el defecto que su propio modulo denuncia para el
-    calendario.
-    """
-    res = sc.escanear(
-        top=3, solo_renderizables=False, ignorar_agotamiento=True,
-        analizador=analizador_falso(h1_perfecto(), d1_con_consumo(0.95)),
-    )
-    avisos = " ".join(res["avisos"]).lower()
-
-    assert "agotamiento" in avisos, f"el gate apagado no aparece en los avisos: {res['avisos']}"
-    assert "forzar" in avisos, "el aviso no dice como se apago"
-
-
-def test_con_el_gate_encendido_no_hay_aviso_que_dar():
-    """El aviso es de excepcion: en la corrida normal no ensucia la salida."""
-    res = sc.escanear(
-        top=3, solo_renderizables=False,
-        analizador=analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
-    )
-    assert not any("agotamiento" in a.lower() for a in res["avisos"])
-
-
-def test_pedir_un_grupo_ya_no_apaga_el_gate_de_agotamiento():
-    """La decision del director: `--grupo` acotaba el universo Y apagaba el gate,
-    dos cosas sin relacion. Ahora solo `--forzar` lo apaga, y lo dice.
-
-    El manual del comando ya exigia esto: "una tanda de 2 piezas bien elegidas es
-    mejor que una de 3 con un relleno". Apagar un gate para llenar cupos es
-    justamente el relleno.
-    """
-    import inspect
-
-    import pipeline_carrusel as pc
-
-    fuente = inspect.getsource(pc.preparar)
-    assert "ignorar_agotamiento=forzar," in fuente or "ignorar_agotamiento=forzar\n" in fuente, (
-        "preparar sigue apagando el gate cuando se pide un grupo"
-    )
-    assert "grupo is not None" not in fuente.split("ignorar_agotamiento")[1][:80]
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # El gate de banda contra vela tipica
 # ─────────────────────────────────────────────────────────────────────────────
@@ -673,34 +537,6 @@ def test_el_gate_de_banda_excluye_antes_de_puntuar():
     )
     assert "excluido" in res
     assert "score" not in res
-
-
-def test_la_zona_de_aviso_llega_a_los_avisos_del_escaner():
-    """Un aviso que se calcula y no se publica no sirve de nada.
-
-    La zona de 0,70x a 1,00x no excluye: la pieza sale. Lo que no puede pasar es
-    que salga sin que nadie sepa que sus bordes son estrechos para lo que ese
-    activo se mueve.
-    """
-    res = sc.escanear(
-        top=3, solo_renderizables=False,
-        analizador=analizador_falso(
-            h1_con_banda(banda=41.20, vela=33.00), d1_con_consumo(0.30)
-        ),
-    )
-    avisos = " ".join(res["avisos"]).lower()
-    assert "estrechos para su volatilidad" in avisos, res["avisos"]
-    assert "0,80" in avisos, res["avisos"]
-
-
-def test_una_banda_holgada_no_genera_aviso():
-    res = sc.escanear(
-        top=3, solo_renderizables=False,
-        analizador=analizador_falso(
-            h1_con_banda(banda=60.00, vela=33.00), d1_con_consumo(0.30)
-        ),
-    )
-    assert not any("estrechos" in a for a in res["avisos"]), res["avisos"]
 
 
 def test_todo_activo_del_universo_trae_su_nota_de_volatilidad():
@@ -785,57 +621,6 @@ def test_un_indicador_fuera_del_glosario_levanta_aviso(monkeypatch):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Dirección de cuatro ejes en sombra: se calcula, no decide nada
-# ─────────────────────────────────────────────────────────────────────────────
-def _evaluar(h1=None, d1=None):
-    return sc.evaluar_activo(
-        ACTIVO, [], delta_ust_bps=None,
-        ahora_santiago=AHORA.astimezone(sc.SANTIAGO),
-        analizador=analizador_falso(h1 or h1_perfecto(), d1 or d1_con_consumo(0.30)),
-    )
-
-
-def test_la_sombra_viaja_en_el_resultado():
-    res = _evaluar()
-    assert res["direccion_4ejes"]["direccion"] in {"ALCISTA", "BAJISTA", "LATERAL"}
-    assert res["direccion_4ejes"]["fase"]
-
-
-def test_la_sombra_es_inerte(monkeypatch):
-    """Con la lectura nueva cambiada o rota, todo lo demás es idéntico."""
-    base = _evaluar()
-    monkeypatch.setattr(sc.dg, "leer_direccion", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("roto")))
-    roto = _evaluar()
-    assert roto["direccion_4ejes"] == {"error": "RuntimeError: roto"}
-    sin_sombra = lambda r: {k: v for k, v in r.items() if k != "direccion_4ejes"}  # noqa: E731
-    assert sin_sombra(roto) == sin_sombra(base)
-    assert roto["direccion"] == sc.direccion_tecnica(h1_perfecto())
-
-
-def test_avisos_de_sombra_solo_cuando_difieren_o_falla():
-    iguales = {"ticker": "A", "direccion": "ALCISTA", "direccion_4ejes": {"direccion": "ALCISTA", "fase": "tendencia_alineada"}}
-    distinto = {"ticker": "B", "direccion": "ALCISTA", "direccion_4ejes": {"direccion": "LATERAL", "fase": "rango"}}
-    fallo = {"ticker": "C", "direccion": "BAJISTA", "direccion_4ejes": {"error": "ValueError: x"}}
-    avisos = sc.avisos_de_sombra([iguales, distinto, fallo])
-    assert len(avisos) == 2
-    assert avisos[0].startswith("B:") and "LATERAL" in avisos[0] and "ALCISTA" in avisos[0]
-    assert avisos[1].startswith("C:") and "ValueError" in avisos[1]
-    assert all("—" not in a and "–" not in a for a in avisos)
-
-
-def test_escanear_reporta_la_diferencia_de_la_sombra():
-    h1 = dict(h1_perfecto(), adx_14=15.0, donchian_50_high=105.0, donchian_50_low=95.0)  # p = 0,5: rango
-
-    def fake(ticker, tf):
-        res = dict(h1 if tf == "H1" else d1_con_consumo(0.30))
-        res["ticker"] = ticker
-        return res
-
-    resultado = sc.escanear(tanda=1, top=1, solo_renderizables=True, analizador=fake)
-    assert any("sombra 4 ejes dice LATERAL" in a for a in resultado["avisos"])
-
-
-# ─────────────────────────────────────────────────────────────────────────────
 # Cobertura fija (decisión del director, 2026-09-28)
 # ─────────────────────────────────────────────────────────────────────────────
 FIJOS = {"USDCLP", "XAUUSD", "WTI.spot", "COPPER"}
@@ -853,49 +638,6 @@ def test_los_fijos_entran_al_universo_aunque_no_tengan_imagen():
     assert FIJOS <= renderizable
 
 
-@pytest.mark.parametrize("modo_matriz", [False, True])
-def test_los_fijos_salen_aunque_hayan_agotado_el_recorrido_diario(modo_matriz):
-    res = sc.escanear(
-        top=3, solo_renderizables=True, modo_matriz=modo_matriz,
-        analizador=analizador_falso(h1_perfecto(), d1_con_consumo(0.95)),
-    )
-    elegidos = {r["ticker"] for r in res["seleccion"]}
-    assert FIJOS <= elegidos
-    # El resto del universo sigue respetando el gate.
-    assert elegidos == FIJOS
-    avisos = " ".join(res["avisos"])
-    for t in FIJOS:
-        assert f"{t}: cobertura fija" in avisos
-
-
-def test_los_fijos_saltan_el_gate_de_banda():
-    """Banda mas estrecha que la vela tipica: excluye a cualquiera, no a un fijo."""
-    res = sc.escanear(
-        top=3, solo_renderizables=True,
-        analizador=analizador_falso(h1_con_banda(2.0, 3.0), d1_con_consumo(0.30)),
-    )
-    assert FIJOS <= {r["ticker"] for r in res["seleccion"]}
-
-
-def test_un_fijo_no_se_excluye_por_haber_salido_en_otra_corrida(monkeypatch):
-    monkeypatch.setattr(sc, "_publicados_hoy", lambda *a, **k: set(FIJOS))
-    res = sc.escanear(
-        top=3, solo_renderizables=True,
-        analizador=analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
-    )
-    assert FIJOS <= {r["ticker"] for r in res["seleccion"]}
-
-
-def test_un_fijo_sigue_fuera_en_feriado_de_su_bolsa(monkeypatch):
-    """Mercado cerrado no tiene niveles de hoy: la cobertura fija no inventa precio."""
-    monkeypatch.setattr(sc, "gate_feriado", lambda t, f: "feriado" if t == "USDCLP" else None)
-    res = sc.escanear(
-        top=3, solo_renderizables=True,
-        analizador=analizador_falso(h1_perfecto(), d1_con_consumo(0.30)),
-    )
-    assert "USDCLP" not in {r["ticker"] for r in res["seleccion"]}
-
-
 def test_un_canal_no_cubierto_sale_del_universo_antes_de_puntuar():
     """Director, 2026-09-29: sin índices ni cripto. Filtrar después de elegir le
     quitaría cupos al Top N; por eso sale del universo."""
@@ -904,3 +646,295 @@ def test_un_canal_no_cubierto_sale_del_universo_antes_de_puntuar():
     assert {"BTCUSD", "US100.spot"} <= set(fuera)
     assert {"USDCLP", "XAUUSD", "COPPER"} <= {a["ticker"] for a in dentro}
     assert len(dentro) + len(fuera) == len(universo)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fase 2 del enchufe: el escáner es de la estrategia (spec §4, §5, §7)
+# ─────────────────────────────────────────────────────────────────────────────
+from dataclasses import replace as _replace  # noqa: E402
+
+import pandas as pd  # noqa: E402
+
+import referencia_semanal as rs  # noqa: E402
+from estrategia.contrato import (  # noqa: E402
+    SCL, Escenario, Etiqueta, Lectura, Linea, Marcos, Puntaje, Referencia,
+)
+
+NY_LUNES = datetime(2026, 10, 12, 10, 0, tzinfo=NY)  # lunes 12-10, 11:00 en Santiago
+
+
+def _lec(ticker, estado="TENDENCIA", direccion="ALCISTA"):
+    lin = Linea("seguridad", "diagonal", ((100, 10.0), (200, 11.0)), "H4", 3, "A+", 11.5)
+    esc = tuple(Escenario(f, "c", "t") for f in ("⬆️", "↔️", "⬇️"))
+    ref = Referencia(11.5, "línea alcista de seguridad", lin)
+    return Lectura(ticker=ticker, marco="H4", precio=12.0, direccion=direccion, estado=estado,
+                   lineas=(lin,), en_prueba=None, vigilar=ref, invalidacion=ref, objetivo=None,
+                   escenarios=esc, salida="s", conceptos=(), avisos=(), metricas={}, vela=200)
+
+
+class _Est:
+    """Puntúa por tabla; `excluir` simula las exclusiones de Tori y `ruptura` una ruptura."""
+
+    nombre = "falsa"
+    marcos = Marcos(("D1",), "H4", {"D1": 5, "H4": 5},
+                    {"D1": Etiqueta("p", "d"), "H4": Etiqueta("swing", "de una a dos semanas")})
+
+    def __init__(self, puntos, excluir=None, ruptura=()):
+        self.puntos, self.excluir, self.ruptura = puntos, excluir or {}, set(ruptura)
+        self.lecturas = {"leer": 0, "seguir": 0}
+
+    def leer(self, ticker, velas, digits, en_curso=None):
+        self.lecturas["leer"] += 1
+        return _lec(ticker)
+
+    def seguir(self, referencia, velas, digits, en_curso=None):
+        self.lecturas["seguir"] += 1
+        if referencia.ticker in self.ruptura:
+            return _replace(referencia, estado="RUPTURA",
+                            lineas=tuple(_replace(x, rol="accion") for x in referencia.lineas))
+        return referencia
+
+    def puntuar(self, lectura, horizonte):
+        motivo = self.excluir.get(lectura.ticker)
+        return Puntaje(0.0 if motivo else self.puntos.get(lectura.ticker, 10.0), {}, motivo)
+
+    def divergencia(self, preparada, actual):
+        return None
+
+
+def _velas():
+    return pd.DataFrame({"time": [1, 2, 3], "open": [1.0, 1.1, 1.2], "high": [1.2, 1.3, 1.3],
+                         "low": [0.9, 1.0, 1.1], "close": [1.1, 1.2, 1.2]})
+
+
+def _lector(ticker, marcos, extra):
+    return {m: _velas() for m in marcos.todos}, None
+
+
+def _escanear(tmp_path, est, monkeypatch, **kw):
+    monkeypatch.setattr(sc, "_contexto_macro", lambda ahora: ([], None, []))
+    monkeypatch.setattr(sc, "DIR_SALIDA", tmp_path / "screener")
+    return sc.escanear(ahora_ny=kw.pop("ahora_ny", NY_LUNES), estrategia=est, lector=_lector,
+                       base_referencias=tmp_path / "refs", **kw)
+
+
+def _fijar(tmp_path, *tickers):
+    rs.guardar_manifiesto("2026-W42", {"elegidos": list(tickers)}, base=tmp_path / "refs")
+    for t in tickers:
+        rs.guardar(_lec(t), "2026-W42", "semanal", NY_LUNES, base=tmp_path / "refs")
+
+
+def test_sin_semanal_la_primera_diaria_la_corre_y_lo_dice(tmp_path, monkeypatch):
+    res = _escanear(tmp_path, _Est({}), monkeypatch, modo_matriz=True)
+    man = rs.manifiesto("2026-W42", base=tmp_path / "refs")
+    assert man is not None and set(sc.cobertura_fija()) <= set(man["elegidos"])
+    assert any("análisis semanal" in a for a in res["avisos"])
+    assert res["semana"] == "2026-W42" and res["estrategia"] == "falsa"
+
+
+def test_la_semanal_corre_una_vez_aunque_la_primera_diaria_pida_un_canal(tmp_path, monkeypatch):
+    est = _Est({})
+    _escanear(tmp_path, est, monkeypatch, grupo="forex")
+    elegidos = rs.manifiesto("2026-W42", base=tmp_path / "refs")["elegidos"]
+    assert "XAUUSD" in elegidos  # commodities también quedó fijado
+    leidas = est.lecturas["leer"]
+    _escanear(tmp_path, est, monkeypatch, grupo="commodities")
+    assert est.lecturas["leer"] == leidas  # la segunda corrida no volvió a correr la semanal
+
+
+def test_la_semanal_elige_por_categoria_los_fijos_y_los_mejores(tmp_path):
+    universo = sc.solo_canales_cubiertos(sc.cargar_universo(True))[0]
+    puntos = {a["ticker"]: 50.0 for a in universo}
+    puntos["GBPUSD"] = 0.0
+    res = sc.correr_semanal(_Est(puntos), universo, NY_LUNES.astimezone(SCL), _lector,
+                            top=3, base=tmp_path)
+    assert "GBPUSD" not in res["elegidos"]
+    for fijo in sc.cobertura_fija():
+        assert fijo in res["elegidos"]
+        assert rs.cargar("2026-W42", fijo, base=tmp_path) is not None
+
+
+def test_la_semanal_guarda_un_fijo_excluido_y_lo_dice(tmp_path):
+    universo = sc.solo_canales_cubiertos(sc.cargar_universo(True))[0]
+    res = sc.correr_semanal(_Est({}, excluir={"COPPER": "sin líneas trazables"}), universo,
+                            NY_LUNES.astimezone(SCL), _lector, top=3, base=tmp_path)
+    assert "COPPER" in res["elegidos"]
+    assert any("COPPER" in a and "sin líneas trazables" in a for a in res["avisos"])
+
+
+def test_las_diarias_solo_cubren_los_activos_de_la_semana(tmp_path, monkeypatch):
+    _fijar(tmp_path, "USDCLP")
+    res = _escanear(tmp_path, _Est({}), monkeypatch, modo_matriz=True)
+    assert [s["ticker"] for s in res["ranking_completo"]] == ["USDCLP"]
+    assert any("sin referencia esta semana" in a for a in res["avisos"])
+
+
+def test_la_diaria_ordena_con_el_puntaje_de_sesion(tmp_path, monkeypatch):
+    _fijar(tmp_path, "EURUSD", "GBPUSD")
+    res = _escanear(tmp_path, _Est({"EURUSD": 30.0, "GBPUSD": 80.0}), monkeypatch)
+    assert [s["ticker"] for s in res["ranking_completo"]] == ["GBPUSD", "EURUSD"]
+    elegido = res["ranking_completo"][0]
+    assert elegido["score"] == 80.0 and elegido["lectura"]["ticker"] == "GBPUSD"
+    assert elegido["marco"] == "H4" and elegido["volatilidad_tipica"] > 0
+    assert "factores" not in elegido
+
+
+def test_una_ruptura_reemplaza_la_referencia_y_la_siguiente_diaria_la_usa(tmp_path, monkeypatch):
+    _fijar(tmp_path, "EURUSD")
+    est = _Est({}, ruptura={"EURUSD"})
+    res = _escanear(tmp_path, est, monkeypatch)
+    assert res["ranking_completo"][0]["estado"] == "RUPTURA"
+    guardada = json.loads(rs.ruta("2026-W42", "EURUSD", tmp_path / "refs").read_text(encoding="utf-8"))
+    assert guardada["motivo"] == "ruptura"
+    assert any("nueva referencia" in a for a in res["avisos"])
+    # La diaria siguiente sigue la referencia nueva: sin ruptura nueva, no hay reemplazo.
+    est.ruptura.clear()
+    siguiente = _escanear(tmp_path, est, monkeypatch, ahora_ny=datetime(2026, 10, 13, 10, 0, tzinfo=NY))
+    assert siguiente["ranking_completo"][0]["estado"] == "TENDENCIA"
+    assert not any("nueva referencia" in a for a in siguiente["avisos"])
+
+
+def test_un_no_fijo_excluido_por_la_estrategia_queda_fuera_con_su_motivo(tmp_path, monkeypatch):
+    _fijar(tmp_path, "EURUSD")
+    res = _escanear(tmp_path, _Est({}, excluir={"EURUSD": "va contra la secuencia"}), monkeypatch)
+    assert res["excluidos"][0]["excluido"] == "va contra la secuencia"
+
+
+def test_un_fijo_excluido_por_la_estrategia_sale_igual_y_lo_dice(tmp_path, monkeypatch):
+    _fijar(tmp_path, "USDCLP")
+    res = _escanear(tmp_path, _Est({}, excluir={"USDCLP": "sin líneas trazables"}), monkeypatch,
+                    modo_matriz=True)
+    elegido = next(s for s in res["seleccion"] if s["ticker"] == "USDCLP")
+    assert elegido["gates_omitidos"] == ["sin líneas trazables"]
+    assert any("USDCLP: cobertura fija, sale siempre aunque sin líneas trazables" in a
+               for a in res["avisos"])
+
+
+def test_un_error_de_datos_excluye_con_su_motivo_y_no_revienta(tmp_path, monkeypatch):
+    _fijar(tmp_path, "EURUSD")
+
+    def lector_roto(ticker, marcos, extra):
+        raise RuntimeError("MT5 no entregó velas")
+
+    monkeypatch.setattr(sc, "_contexto_macro", lambda ahora: ([], None, []))
+    monkeypatch.setattr(sc, "DIR_SALIDA", tmp_path / "screener")
+    res = sc.escanear(ahora_ny=NY_LUNES, estrategia=_Est({}), lector=lector_roto,
+                      base_referencias=tmp_path / "refs")
+    assert "MT5 no entregó velas" in res["excluidos"][0]["excluido"]
+
+
+def test_el_modo_matriz_respeta_el_tope_por_grupo(tmp_path, monkeypatch):
+    """La matriz llega hasta `top` piezas por canal cuando hay con qué."""
+    _fijar(tmp_path, "USDJPY", "EURUSD", "GBPUSD")
+    puntos = {"USDJPY": 70.0, "EURUSD": 60.0, "GBPUSD": 50.0}
+    con_uno = [s["ticker"] for s in _escanear(tmp_path, _Est(puntos), monkeypatch, top=1,
+                                              modo_matriz=True)["seleccion"]]
+    con_tres = [s["ticker"] for s in _escanear(tmp_path, _Est(puntos), monkeypatch, top=3,
+                                               modo_matriz=True)["seleccion"]]
+    assert con_uno == ["USDJPY"]
+    assert con_tres == ["USDJPY", "EURUSD", "GBPUSD"]
+
+
+def test_el_modo_matriz_cubre_cada_canal_con_su_fijo(tmp_path, monkeypatch):
+    _fijar(tmp_path, "USDCLP", "XAUUSD", "EURUSD")
+    sel = _escanear(tmp_path, _Est({"EURUSD": 90.0}), monkeypatch, top=1, modo_matriz=True)["seleccion"]
+    assert [s["ticker"] for s in sel] == ["USDCLP", "XAUUSD"]  # el fijo llena el cupo del canal
+
+
+def test_un_fijo_no_se_excluye_por_haber_salido_en_otra_corrida(tmp_path, monkeypatch):
+    _fijar(tmp_path, *FIJOS, "EURUSD")
+    monkeypatch.setattr(sc, "_publicados_hoy", lambda *a, **k: set(FIJOS) | {"EURUSD"})
+    res = _escanear(tmp_path, _Est({}), monkeypatch)
+    elegidos = {r["ticker"] for r in res["seleccion"]}
+    assert FIJOS <= elegidos and "EURUSD" not in elegidos
+
+
+def test_un_fijo_sigue_fuera_en_feriado_de_su_bolsa(tmp_path, monkeypatch):
+    """Mercado cerrado no tiene niveles de hoy: la cobertura fija no inventa precio."""
+    _fijar(tmp_path, *FIJOS)
+    monkeypatch.setattr(sc, "gate_feriado", lambda t, f: "feriado" if t == "USDCLP" else None)
+    res = _escanear(tmp_path, _Est({}), monkeypatch)
+    assert "USDCLP" not in {r["ticker"] for r in res["seleccion"]}
+
+
+def test_un_blackout_excluye_aunque_haya_referencia(tmp_path, monkeypatch):
+    _fijar(tmp_path, "EURUSD")
+    monkeypatch.setattr(sc, "gate_blackout", lambda t, e, a: "blackout por NFP" if t == "EURUSD" else None)
+    res = _escanear(tmp_path, _Est({}), monkeypatch)
+    assert res["excluidos"][0]["excluido"] == "blackout por NFP"
+
+
+def test_todo_activo_cubierto_justifica_el_marco_operativo_de_la_estrategia():
+    """Con el enchufe el marco lo decide la estrategia (spec §8.1): la nota tiene que
+    justificar ese marco, en `notas_marco`, para cada activo que el carrusel publica."""
+    from estrategia import registro
+
+    op = registro.activa().marcos.operativo
+    corto = {"H1": "1H", "H4": "4H", "D1": "1D"}[op]
+    universo, _ = sc.solo_canales_cubiertos(sc.cargar_universo(True))
+    for a in universo:
+        nota = (a.get("notas_marco") or {}).get(op, "")
+        assert nota, f"{a['ticker']} no trae notas_marco.{op}"
+        assert corto in nota, f"{a['ticker']}: la nota de {op} no nombra {corto}"
+        assert "—" not in nota and "–" not in nota
+
+
+def test_una_semanal_sin_datos_no_cierra_la_semana(tmp_path, monkeypatch):
+    """Con MT5 caído la semanal no puede dejar escrito un manifiesto vacío: la semana entera
+    quedaría sin piezas y nadie la reintentaría."""
+    def lector_roto(ticker, marcos, extra):
+        raise RuntimeError("MT5 no responde")
+
+    monkeypatch.setattr(sc, "_contexto_macro", lambda ahora: ([], None, []))
+    monkeypatch.setattr(sc, "DIR_SALIDA", tmp_path / "screener")
+    res = sc.escanear(ahora_ny=NY_LUNES, estrategia=_Est({}), lector=lector_roto,
+                      base_referencias=tmp_path / "refs")
+    assert rs.manifiesto("2026-W42", base=tmp_path / "refs") is None
+    assert any("se reintenta" in a for a in res["avisos"])
+
+
+def test_si_falla_un_fijo_la_semana_queda_abierta(tmp_path):
+    universo = sc.solo_canales_cubiertos(sc.cargar_universo(True))[0]
+
+    def lector(ticker, marcos, extra):
+        if ticker == "USDCLP":
+            raise RuntimeError("sin velas")
+        return _lector(ticker, marcos, extra)
+
+    res = sc.correr_semanal(_Est({}), universo, NY_LUNES.astimezone(SCL), lector, base=tmp_path)
+    assert rs.manifiesto("2026-W42", base=tmp_path) is None
+    assert not res["completa"]
+
+
+def test_la_semanal_no_hereda_el_todos_ni_el_top_de_quien_llega_primero(tmp_path, monkeypatch):
+    vistos = []
+    real = sc.correr_semanal
+
+    def espia(est, universo, ahora, lector, top=3, base=None):
+        vistos.append((len(universo), top))
+        return real(est, universo, ahora, lector, top=top, base=base)
+
+    monkeypatch.setattr(sc, "correr_semanal", espia)
+    _escanear(tmp_path, _Est({}), monkeypatch, top=1, solo_renderizables=False)
+    cubierto = len(sc.solo_canales_cubiertos(sc.cargar_universo(True))[0])
+    assert vistos == [(cubierto, 3)]
+
+
+def test_un_error_al_puntuar_un_activo_no_tumba_la_tanda(tmp_path, monkeypatch):
+    _fijar(tmp_path, "EURUSD", "GBPUSD")
+
+    class Rota(_Est):
+        def puntuar(self, lectura, horizonte):
+            if lectura.ticker == "EURUSD":
+                raise RuntimeError("roto")
+            return super().puntuar(lectura, horizonte)
+
+    res = _escanear(tmp_path, Rota({}), monkeypatch)
+    assert [s["ticker"] for s in res["ranking_completo"]] == ["GBPUSD"]
+    assert "roto" in res["excluidos"][0]["excluido"]
+
+
+def test_la_seleccion_lleva_la_referencia_contra_la_que_se_leyo(tmp_path, monkeypatch):
+    _fijar(tmp_path, "EURUSD")
+    res = _escanear(tmp_path, _Est({}), monkeypatch)
+    assert res["ranking_completo"][0]["referencia"]["ticker"] == "EURUSD"

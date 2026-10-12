@@ -68,3 +68,28 @@ def test_la_revision_registra_la_falla_de_un_activo_y_sigue(tmp_path, monkeypatc
     resumen = json.loads(next(tmp_path.rglob("resumen.json")).read_text(encoding="utf-8"))
     assert [r["ticker"] for r in resumen] == ["USDCLP", "NO_EXISTE"]
     assert "MT5 sin datos" in resumen[0]["error"] and "catalogo" in resumen[1]["error"]
+
+
+def test_el_atr_es_el_promedio_del_rango_verdadero():
+    import pandas as pd
+    from estrategia.fuente import atr
+    df = pd.DataFrame({"time": [1, 2, 3], "open": [10, 11, 12], "high": [11, 13, 13],
+                       "low": [9, 10, 11], "close": [10, 12, 12]})
+    # Rangos verdaderos: 2, max(3, |13-10|, |10-10|)=3, max(2, |13-12|, |11-12|)=2
+    assert atr(df, n=3) == (2 + 3 + 2) / 3
+    assert atr(df, n=2) == (3 + 2) / 2
+
+
+def test_fuera_de_horario_la_vela_en_curso_tampoco_cuenta_como_cerrada():
+    """Revisión de S4: con el mercado sin cotizar, la vela diaria o semanal que todavía no
+    terminó se pasaba como cerrada, y una referencia semanal quedaba anclada en ella."""
+    from estrategia.fuente import partir_velas
+
+    D1 = 86400
+    df = pd.DataFrame({"time": [0, D1, 2 * D1], "open": [1.0] * 3, "high": [1.0] * 3,
+                       "low": [1.0] * 3, "close": [1.0] * 3})
+    ahora = 2 * D1 + 3600  # la tercera vela diaria lleva una hora
+    cerradas, abierta = partir_velas(df, "D1", ahora, cotizando=False)
+    assert list(cerradas["time"]) == [0, D1] and abierta is None
+    cerradas, abierta = partir_velas(df, "D1", ahora, cotizando=True)
+    assert list(cerradas["time"]) == [0, D1] and int(abierta["time"]) == 2 * D1
