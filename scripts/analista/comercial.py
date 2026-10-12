@@ -57,13 +57,22 @@ def payload_semanal(activo: dict[str, Any], titular: str, datos_al: str, autor, 
     }
 
 
+def _avance(pct: int | None) -> str:
+    if pct is None:
+        return ""
+    if pct < 0:
+        return f"{-pct} % del camino en contra, sin tocar el stop"
+    return f"{pct} % del camino al objetivo 1:3"
+
+
 def payload_seguimiento(activo: dict[str, Any], ev: dict[str, Any], precio_vivo: float, lectura_hoy: str,
                         datos_al: str, autor, chart: Path) -> dict[str, Any]:
-    from analista.seguimiento import _fmt
+    from analista.seguimiento import _fmt, paso_la_entrada
 
     f, esc, d = activo["fmt"], activo["escenario"], activo["digits"]
-    avance = {"en_curso": f"{ev['avance_pct']} % del camino al objetivo 1:3" if ev.get("avance_pct") is not None else "",
-              "entrada_pendiente": "El precio no llega a la entrada",
+    avance = {"en_curso": _avance(ev.get("avance_pct")),
+              "entrada_pendiente": ("El precio salió del rango: la entrada sigue pendiente"
+                                    if paso_la_entrada(esc, precio_vivo) else "El precio no llega a la entrada"),
               "objetivo": "Objetivo 1:3 alcanzado", "stop": "Stop tocado"}[ev["estado"]]
     return {
         "chip": f"SEGUIMIENTO · {SELLOS[ev['estado']]}", "datos_al": datos_al,

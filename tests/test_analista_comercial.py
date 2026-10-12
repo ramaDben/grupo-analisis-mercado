@@ -48,3 +48,16 @@ def test_la_lamina_de_seguimiento_no_lleva_pesos(tmp_path):
                                tmp_path / "g.png")
     assert p["sello"] == "EN CURSO" and "$" not in json.dumps(p, ensure_ascii=False)
     assert "recorrido" not in p
+
+
+def test_la_lamina_de_entrada_pendiente_fuera_del_rango_no_dice_que_no_llega(tmp_path):
+    p = cm.payload_seguimiento(fx.activo_semanal(rango=True), {"estado": "entrada_pendiente", "avance_pct": None},
+                               14593.0, "La lectura del lunes sigue en pie.", "lunes 12/10", fx.AUTOR,
+                               tmp_path / "g.png")
+    assert "no llega" not in p["avance"] and "rango" in p["avance"]
+
+
+def test_la_lamina_en_contra_no_lleva_avance_negativo(tmp_path):
+    p = cm.payload_seguimiento(fx.activo_semanal(), {"estado": "en_curso", "avance_pct": -12}, 4190.0,
+                               "La lectura del lunes sigue en pie.", "lunes 12/10", fx.AUTOR, tmp_path / "g.png")
+    assert "-" not in p["avance"] and "en contra" in p["avance"]

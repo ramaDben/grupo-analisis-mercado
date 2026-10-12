@@ -55,6 +55,34 @@ def test_rango_que_toca_el_borde_queda_en_curso():
     assert ev["estado"] == "en_curso" and ev["avance_pct"] == 33
 
 
+def test_la_vela_que_activa_la_entrada_no_cuenta_el_objetivo():
+    """Dentro de la vela no se sabe qué tocó primero: se cuenta lo prudente (M2 de la revisión)."""
+    pendiente_alza = {**ALZA, "entrada_pendiente": True}
+    ev = sg.evaluar(pendiente_alza, [v(4160, 3990)], 4100.0)
+    assert ev["estado"] == "en_curso"
+
+
+def test_con_entrada_pendiente_no_hay_stop_ni_objetivo():
+    """El cobre de la W41: la vela que cruzó el borde llegó también al stop. Es una ruptura del
+    rango, no el falso quiebre que se simula: la entrada sigue pendiente, nunca «tocó el stop»."""
+    velas = [v(14557, 14537), v(14668, 14544), v(14666, 14595), v(14622, 14587)]
+    ev = sg.evaluar(RANGO, velas, 14593.0)
+    assert ev["estado"] == "entrada_pendiente"
+    texto = sg.texto_simulacion(RANGO, ev, 14593.0, 0)
+    assert "stop" not in texto and "objetivo" not in texto
+    assert "14593" in texto and "14567" in texto and "todavía no llega" not in texto
+
+
+def test_la_entrada_pendiente_se_activa_cuando_el_precio_vuelve_al_borde():
+    ev = sg.evaluar(RANGO, [v(14668, 14544), v(14600, 14550)], 14550.0)
+    assert ev["estado"] == "en_curso"
+
+
+def test_el_precio_vivo_que_cruza_la_entrada_la_activa():
+    ev = sg.evaluar(RANGO, [v(14550, 14500, cierre=14540)], 14580.0)
+    assert ev["estado"] == "en_curso"
+
+
 def test_el_mensaje_no_habla_en_pesos_ni_de_lo_que_se_habria_ganado():
     ev = sg.evaluar(ALZA, [v(4040, 3990)], 4075.0)
     texto = sg.mensaje("Oro", "miércoles 14-10", "lunes 12-10", ALZA, ev, 4075.0, fx.lectura(), False, 2)

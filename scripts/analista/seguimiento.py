@@ -23,17 +23,27 @@ def evaluar(esc: dict[str, Any], velas: list[dict[str, Any]], precio_vivo: float
 
     Si una misma vela toca el stop y el objetivo, cuenta stop: sin datos dentro de la vela
     no se sabe qué pasó primero, y se cuenta lo prudente.
+
+    Con la entrada pendiente (el falso quiebre del rango) la entrada se activa en una vela que
+    pasa por su precio **sin llegar al stop**. Una vela que cruza el borde y sigue hasta el stop
+    es una ruptura del rango, no el falso quiebre que se simula: la entrada sigue pendiente y
+    nunca se informa «stop tocado» de una entrada que no se activó (prueba real de la W41,
+    cobre). En la vela que activa tampoco cuenta el objetivo: dentro de ella no se sabe qué
+    tocó primero. El precio vivo se mide como un tramo desde el último cierre.
     """
     alcista = esc["direccion"] == "ALCISTA"
     entrada, stop, obj = float(esc["entrada"]), float(esc["stop"]), float(esc["objetivo"])
     activa = not esc.get("entrada_pendiente")
-    tramos = [(float(x["high"]), float(x["low"])) for x in velas] + [(precio_vivo, precio_vivo)]
+    previo = float(velas[-1]["close"]) if velas else precio_vivo
+    tramos = [(float(x["high"]), float(x["low"])) for x in velas]
+    tramos.append((max(previo, precio_vivo), min(previo, precio_vivo)))
     for alto, bajo in tramos:
+        toca_stop = (bajo <= stop) if alcista else (alto >= stop)
         if not activa:
-            if not (bajo <= entrada if alcista else alto >= entrada):
-                continue
-            activa = True
-        if (bajo <= stop) if alcista else (alto >= stop):
+            if bajo <= entrada <= alto and not toca_stop:
+                activa = True
+            continue
+        if toca_stop:
             return {"estado": "stop", "avance_pct": None}
         if (alto >= obj) if alcista else (bajo <= obj):
             return {"estado": "objetivo", "avance_pct": 100}
@@ -43,10 +53,19 @@ def evaluar(esc: dict[str, Any], velas: list[dict[str, Any]], precio_vivo: float
     return {"estado": "en_curso", "avance_pct": int(avance + 0.5) if avance >= 0 else -int(-avance + 0.5)}
 
 
+def paso_la_entrada(esc: dict[str, Any], precio: float) -> bool:
+    """Con la entrada pendiente, si el precio está del lado del stop (fuera del rango)."""
+    entrada = float(esc["entrada"])
+    return precio < entrada if esc["direccion"] == "ALCISTA" else precio > entrada
+
+
 def texto_simulacion(esc: dict[str, Any], ev: dict[str, Any], precio_vivo: float, digits: int) -> str:
     f = lambda x: _fmt(x, digits)  # noqa: E731
     estado = ev["estado"]
     if estado == "entrada_pendiente":
+        if paso_la_entrada(esc, precio_vivo):
+            return (f"El precio salió del rango y va en {f(precio_vivo)}: la simulación se activa si "
+                    f"vuelve a la entrada de {f(esc['entrada'])}.")
         return f"El precio todavía no llega a la entrada de {f(esc['entrada'])}: va en {f(precio_vivo)}."
     if estado == "stop":
         return f"El precio tocó el stop de {f(esc['stop'])}."
