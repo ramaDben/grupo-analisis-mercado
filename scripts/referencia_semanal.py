@@ -152,3 +152,28 @@ def lectura_actual(estrategia, ticker: str, digits: int, lector, ahora: datetime
     except SinReferencia:
         velas, en_curso = lector(ticker, estrategia.marcos, EXTRA)
         return estrategia.leer(ticker, velas, digits, en_curso), velas
+
+
+def estado_semanal(estrategia, semana: str, lector, ahora: datetime, digits: dict[str, int],
+                   base: Path = DIR) -> list[dict[str, Any]]:
+    """Los activos del análisis semanal, con su referencia y si la pieza tiene que esperar.
+
+    Spec §4, "La vela abierta": el informe semanal no se genera con una línea A+ en
+    `PRUEBA`; espera el cierre de esa vela (en 4H, como máximo 4 horas). `espera_hasta` es
+    la hora de ese cierre en Santiago, o None si la pieza puede salir ya.
+    """
+    datos = manifiesto(semana, base)
+    if datos is None:
+        return []
+    filas: list[dict[str, Any]] = []
+    for ticker in datos["elegidos"]:
+        referencia = cargar(semana, ticker, base)
+        if referencia is None:
+            continue
+        lectura, _ = lectura_actual(estrategia, ticker, digits[ticker], lector, ahora, base=base,
+                                    referencia=referencia)
+        espera = (lectura.estado == "PRUEBA" and lectura.en_prueba is not None
+                  and lectura.en_prueba.linea.calidad == "A+")
+        filas.append({"ticker": ticker, "referencia": referencia, "lectura": lectura,
+                      "espera_hasta": lectura.en_prueba.cierre_vela if espera else None})
+    return filas

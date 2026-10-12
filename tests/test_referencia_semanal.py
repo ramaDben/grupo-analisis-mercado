@@ -198,3 +198,32 @@ def test_lectura_actual_sigue_la_referencia_o_lee_de_nuevo(tmp_path):
     rs.guardar(ref, "2026-W42", "semanal", momento, base=tmp_path)
     con_ref, _ = rs.lectura_actual(est, "XAUUSD", 2, _lector([]), momento, base=tmp_path)
     assert con_ref.precio == 13.0  # con referencia: seguir()
+
+
+def test_estado_semanal_dice_que_activo_espera_el_cierre_por_una_linea_a_mas_en_prueba(tmp_path):
+    """Spec §4, "La vela abierta": la pieza semanal no sale con una línea A+ en PRUEBA."""
+    from estrategia.contrato import Prueba
+
+    momento = datetime(2026, 10, 12, 9, tzinfo=SCL)
+    ref = _lectura()
+    for t in ("XAUUSD", "USDCLP"):
+        rs.guardar(replace(ref, ticker=t), "2026-W42", "semanal", momento, base=tmp_path)
+    rs.guardar_manifiesto("2026-W42", {"elegidos": ["XAUUSD", "USDCLP"]}, base=tmp_path)
+    cierre = datetime(2026, 10, 12, 13, 0, tzinfo=SCL)
+
+    class Est(_Falsa):
+        def seguir(self, referencia, velas, digits, en_curso=None):
+            if referencia.ticker == "XAUUSD":
+                return replace(referencia, estado="PRUEBA", en_prueba=Prueba(_linea(), 11.6, cierre))
+            return referencia
+
+    filas = rs.estado_semanal(Est(None, None), "2026-W42", _lector([]), momento,
+                              digits={"XAUUSD": 2, "USDCLP": 2}, base=tmp_path)
+    por = {f["ticker"]: f for f in filas}
+    assert por["XAUUSD"]["espera_hasta"] == cierre and por["USDCLP"]["espera_hasta"] is None
+    assert por["USDCLP"]["referencia"].ticker == "USDCLP"
+
+
+def test_sin_analisis_semanal_no_hay_estado(tmp_path):
+    assert rs.estado_semanal(_Falsa(None, None), "2026-W42", _lector([]),
+                             datetime(2026, 10, 12, 9, tzinfo=SCL), digits={}, base=tmp_path) == []
