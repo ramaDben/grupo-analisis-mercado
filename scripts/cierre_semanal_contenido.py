@@ -101,6 +101,10 @@ NOTA_CURVA_REZAGO = (
 # Las tres capas por activo
 # ─────────────────────────────────────────────────────────────────────────────
 # `{}` recibe los números del módulo de datos. Nada de esto se escribe a mano.
+# La capa "qué significa" no vive acá: la arma `capas_de` desde la `Lectura` de la
+# estrategia activa (enchufe, spec §6), así que dirección y niveles son los mismos
+# que publican el carrusel y el informe. Por eso tampoco se afirman acá medias
+# móviles, fuerza de tendencia ni canales: serían una segunda lectura técnica.
 CAPAS = {
     "usdclp": {
         "pasando": (
@@ -108,11 +112,6 @@ CAPAS = {
             "global: en la misma semana el yen se apreció con fuerza frente al billete "
             "verde. El impulso vino del lado local, con el cobre cediendo terreno y "
             "quitándole soporte al peso."
-        ),
-        "significa": (
-            "Zona entre {s1} y {r1}, con el precio sobre sus promedios de 20 y 50 horas "
-            "y una fuerza de tendencia alta. Es de los pocos activos de la semana con "
-            "una estructura alcista clara."
         ),
         "prohibido": (
             "Prohibido apostar a una baja rápida del dólar: con el cobre débil y la "
@@ -128,11 +127,6 @@ CAPAS = {
             "tasa para una caída grande en el precio, así que el resto lo explica la "
             "fortaleza selectiva del dólar frente al oro."
         ),
-        "significa": (
-            "Soporte en {s1} y resistencia en {r1}. La fuerza de tendencia es moderada "
-            "y la tendencia de corto plazo pasó a bajista, así que el rebote hacia el "
-            "promedio de 20 horas es la zona a vigilar antes de sumar."
-        ),
         "prohibido": (
             "Prohibido vender en corto persiguiendo la caída: el nivel de la tasa real "
             "sigue siendo bajo en términos históricos, y un indicador en zona baja no "
@@ -146,15 +140,10 @@ CAPAS = {
             "confirma, el alza de la energía sigue siendo un tema de oferta y no de "
             "una economía global que se recalienta."
         ),
-        "significa": (
-            "Resistencia en {r1} y soporte en {s1}. Sirve sobre todo como termómetro "
-            "de demanda industrial, y esta semana no dio la confirmación que el modelo "
-            "exige."
-        ),
         "prohibido": (
             "Prohibido leer esta caída como el inicio de una tendencia bajista sin "
             "confirmación adicional, y prohibido usar el cobre como argumento de "
-            "demanda mientras siga por debajo de su promedio de 50 horas."
+            "demanda mientras no confirme."
         ),
     },
     "wti": {
@@ -165,12 +154,6 @@ CAPAS = {
             "flojo (una caída de apenas 0,39 millones de barriles contra 1,40 "
             "esperados), así que el impulso no vino de un faltante real de crudo sino "
             "de la atención puesta en la oferta, con la OPEP en la agenda de la semana."
-        ),
-        "significa": (
-            "Rango de la semana entre {s1} y {r1}, con el canal de las últimas 50 "
-            "horas entre {don_low} y {don_high}. El precio quedó cerca de la parte "
-            "alta de ese canal, así que el espacio hacia arriba es más estrecho que "
-            "hace cinco días."
         ),
         "prohibido": (
             "Prohibido vender en la resistencia apostando a que ahí se frena solo. Y "
@@ -185,11 +168,6 @@ CAPAS = {
             "señal de que el movimiento es global y no un problema local de Estados "
             "Unidos."
         ),
-        "significa": (
-            "Soporte en {s1} y resistencia en {r1}. La fuerza de tendencia es "
-            "moderada, coherente con un ajuste rápido de precio más que con un cambio "
-            "de tendencia consolidado."
-        ),
         "prohibido": (
             "Prohibido vender en resistencia. Y prohibido operar energía sin stop de "
             "protección: el fin de semana concentra el riesgo de titulares en este "
@@ -202,11 +180,6 @@ CAPAS = {
             "inflación subyacente algo más caliente de lo esperado (0,3 % contra "
             "0,2 %) fue un freno, pero no alcanzó para gatillar una caída, porque el "
             "dato general vino en línea."
-        ),
-        "significa": (
-            "Soporte en {s1} y resistencia en {r1}, con el precio pegado a sus "
-            "promedios de 20 y 50 horas. Es un activo en pausa, a la espera de la "
-            "decisión de la Fed del miércoles próximo."
         ),
         "prohibido": (
             "Prohibido comprar cada caída sin confirmación. Con el bono a diez años "
@@ -222,11 +195,6 @@ CAPAS = {
             "tasas de Estados Unidos subían. El bono japonés a diez años trepó a "
             "2,92 % y el mercado empezó a posicionarse de cara a la reunión del Banco "
             "de Japón del miércoles próximo."
-        ),
-        "significa": (
-            "Soporte en {s1} y resistencia en {r1}. La fuerza de tendencia es alta y "
-            "el precio quedó cerca del piso de su canal de las últimas 50 horas, la "
-            "estructura más definida de los siete activos."
         ),
         "prohibido": (
             "Prohibido perseguir compras esperando un rebote automático. Con una "
@@ -345,29 +313,61 @@ PAGINAS_ACTIVOS = {
 }
 
 
-def capas_de(slug: str, activo: dict[str, Any], niveles: dict[str, Any]) -> dict[str, str]:
+def significa_de(lectura, digits: int) -> str:
+    """La capa "qué significa para ti", escrita solo con la lectura de la estrategia.
+
+    Frase técnica, nivel a vigilar con su etiqueta y, si la hay, la invalidación: bajo
+    ella si la lectura es alcista, sobre ella si es bajista. En rango se nombran el
+    soporte y la resistencia que publica el carrusel.
+    """
+    import pipeline_carrusel as pc
+    import pipeline_informe as pi
+
+    def p(valor: float) -> str:
+        return pc.formatear_precio(float(valor), digits)
+
+    marco = pi.MARCO_LEGIBLE.get(lectura.marco, lectura.marco)
+    frases = [f"{pi._frase_tecnica(lectura)}."]
+    frases.append(f"El nivel a vigilar es {p(lectura.vigilar.precio)} ({lectura.vigilar.etiqueta}).")
+    if lectura.estado == "RANGO":
+        soporte, resistencia = pc.niveles_publicados(lectura)
+        if soporte is not None and resistencia is not None:
+            frases.append(f"El rango tiene soporte en {p(soporte)} y resistencia en {p(resistencia)}.")
+        elif soporte is not None:
+            frases.append(f"El soporte del rango está en {p(soporte)}.")
+        elif resistencia is not None:
+            frases.append(f"La resistencia del rango está en {p(resistencia)}.")
+    lado = {"ALCISTA": "bajo", "BAJISTA": "sobre"}.get(lectura.direccion)
+    if lectura.invalidacion is not None and lado:
+        frases.append(
+            f"La lectura deja de valer con un cierre de {marco} {lado} {p(lectura.invalidacion.precio)}."
+        )
+    return " ".join(frases)
+
+
+def capas_de(slug: str, activo: dict[str, Any], lectura) -> dict[str, str]:
     """Rellena las tres capas de un activo con sus cifras reales.
 
-    Lanza si falta una clave, con la misma política del resto del pipeline: una
-    ficha a medias que sale sin avisar llega al cliente.
+    "Qué pasa" y "qué NO hacer" son editoriales con las cifras de la semana; "qué
+    significa" sale entera de la `Lectura` (acepta el objeto o su dict). Lanza si falta
+    el texto editorial, con la misma política del resto del pipeline: una ficha a medias
+    que sale sin avisar llega al cliente.
     """
-    from grafico_informe import formatear_precio
+    if isinstance(lectura, dict):
+        from estrategia.contrato import lectura_de_dict
 
-    dg = activo["digits"]
-    def n(clave: str) -> str:
-        valor = niveles.get(clave)
-        if not isinstance(valor, (int, float)):
-            raise KeyError(f"{slug}: falta el nivel '{clave}' para redactar la ficha")
-        return formatear_precio(float(valor), dg)
-
+        lectura = lectura_de_dict(lectura)
     contexto = {
         "previo": activo["previo_txt"],
         "actual": activo["actual_txt"],
         "var": activo["var_txt"],
-        "s1": n("s1"), "s2": n("s2"), "r1": n("r1"), "r2": n("r2"),
-        "don_low": n("donchian_50_low"), "don_high": n("donchian_50_high"),
     }
     plantilla = CAPAS.get(slug)
     if plantilla is None:
         raise KeyError(f"{slug}: no hay texto editorial en CAPAS")
-    return {k: v.format(**contexto) for k, v in plantilla.items()}
+    capas = {k: v.format(**contexto) for k, v in plantilla.items()}
+    return {
+        "pasando": capas["pasando"],
+        "significa": significa_de(lectura, activo["digits"]),
+        "prohibido": capas["prohibido"],
+    }

@@ -45,7 +45,7 @@ if sys.platform == "win32":
         pass
 
 import cierre_semanal_contenido as C  # noqa: E402
-from cierre_semanal_datos import ACTIVOS, DatosError, leer_niveles, reunir  # noqa: E402
+from cierre_semanal_datos import ACTIVOS, DatosError, leer_lectura, reunir  # noqa: E402
 from cierre_semanal_estilo import hoja_de_estilos  # noqa: E402
 
 SANTIAGO = ZoneInfo("America/Santiago")
@@ -307,8 +307,8 @@ def construir_html(datos: dict[str, Any], graficos: Path) -> str:
     por_slug = {a["slug"]: a for a in datos["activos"]}
     fichas: dict[str, str] = {}
     for a in datos["activos"]:
-        niveles = leer_niveles(a["ticker"])
-        capas = C.capas_de(a["slug"], a, niveles)
+        lectura = leer_lectura(a["ticker"])
+        capas = C.capas_de(a["slug"], a, lectura)
         fichas[a["slug"]] = bloque_ficha(a, capas, imagen_embebida(graficos / f"{a['slug']}.png"))
 
     faltan = set(por_slug) - set(fichas)
