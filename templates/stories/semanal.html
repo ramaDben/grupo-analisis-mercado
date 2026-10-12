@@ -196,16 +196,16 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: var(-
             <span class="pildora">{{direccion}}</span>
           </div>
           <div class="niveles">
-            <div class="nivel nivel-activa"><span class="nivel-rotulo">Se activa · cierre diario {{lado}}</span><span class="nivel-valor">{{gatillo}}</span></div>
-            <div class="nivel nivel-anula"><span class="nivel-rotulo">Se anula · cierre diario {{borde}}</span><span class="nivel-valor">{{invalidacion}}</span></div>
-            <div class="nivel"><span class="nivel-rotulo">Recorrido de referencia</span><span class="nivel-valor">{{distancia}}</span></div>
+            <div class="nivel nivel-activa"><span class="nivel-rotulo">{{rotulo_1}}</span><span class="nivel-valor">{{valor_1}}</span></div>
+            <div class="nivel nivel-anula"><span class="nivel-rotulo">{{rotulo_2}}</span><span class="nivel-valor">{{valor_2}}</span></div>
+            <div class="nivel"><span class="nivel-rotulo">{{rotulo_3}}</span><span class="nivel-valor">{{valor_3}}</span></div>
           </div>
-          <p class="nota">El recorrido es una distancia, no un objetivo de precio.</p>
+          <p class="nota">{{frase_lectura}}</p>
           <p class="temporalidad">⏱️ {{temporalidad}}</p>
         </div>
         <div class="der">
           <div class="grafico">
-            <!-- IF:chart_img --><img src="{{chart_src}}" alt="Gráfico diario"><!-- ENDIF:chart_img -->
+            <!-- IF:chart_img --><img src="{{chart_src}}" alt="Gráfico de 4 horas"><!-- ENDIF:chart_img -->
             <!-- IF:chart_svg --><!-- ENDIF:chart_svg -->
           </div>
           <p class="grafico-pie">{{pie_imagen}}</p>

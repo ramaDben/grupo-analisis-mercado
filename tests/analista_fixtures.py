@@ -197,3 +197,30 @@ def lectura(ticker: str = "XAUUSD", estado: str = "TENDENCIA", direccion: str = 
                    escenarios=_ESCENARIOS,
                    salida="La posición se cierra con un cierre de 4 horas al otro lado de la línea de seguridad.",
                    conceptos=(), avisos=(), metricas={"atr": atr, "atr_d1": atr_d1}, vela=vela)
+
+
+def activo_semanal(rango: bool = False) -> dict:
+    """Una entrada de `datos.activos` como la deja `preparar_oportunidad`."""
+    from estrategia.contrato import lectura_a_dict
+
+    from analista import oportunidad as op
+
+    if rango:
+        lec = lectura(ticker="COPPER", estado="RANGO", direccion="LATERAL", precio=14500.0,
+                      rango=(14567.0, 14206.0), atr=85.86)
+        fmt = {"precio": "14500", "vigilar": "14567", "invalidacion": "", "objetivo_tori": "",
+               "entrada": "14567", "stop": "14610", "objetivo": "14438",
+               "borde_superior": "14567", "borde_inferior": "14206"}
+        nombre, visible, digits, unidad = "Cobre", "COPPER", 0, "USD/t"
+    else:
+        lec = lectura(direccion="BAJISTA", precio=4186.17, invalidacion=4227.32, objetivo=4149.96)
+        fmt = {"precio": "4.186,17", "vigilar": "4.227,32", "invalidacion": "4.227,32",
+               "objetivo_tori": "4.149,96", "entrada": "4.186,17", "stop": "4.227,32",
+               "objetivo": "4.062,72", "borde_superior": "", "borde_inferior": ""}
+        nombre, visible, digits, unidad = "Oro", "XAU/USD", 2, "USD"
+    return {"ticker": lec.ticker, "nombre": nombre, "ticker_visible": visible, "digits": digits,
+            "unidad": unidad, "puntaje": 90.0,
+            "foto": {"guardada": "2026-10-12T09:05:00-03:00", "fecha": "lunes 12-10", "precio": lec.precio},
+            "lectura": lectura_a_dict(lec), "escenario": op.escenario(lec, digits).a_dict(), "fmt": fmt,
+            "contrato": {"clp_unidad": 950.0, "vol_min": 0.01, "vol_paso": 0.01},
+            "temporalidad": "4H · swing (de una a dos semanas)", "grafico": f"grafico_{lec.ticker.lower()}.png"}
