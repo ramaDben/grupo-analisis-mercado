@@ -53,3 +53,51 @@
 
 ### Task S6-6: Suite, verificación real y PR
 - `uv run pytest` verde salvo los 4 conocidos; `--preparar` real de Avisos y del informe con MT5; PR apilado sobre S5.
+
+## Sesión S7 (detallada al empezar S7, con S6 en la rama)
+
+Rama `feat/enchufe-s7-analista`, apilada sobre S6. Hallazgo al empezar: S6 dejó roto al
+analista (su `_terminal` usa `pipeline_avisos.leer_terminal`, que ya devuelve la lectura, pero
+`_pieza_de_activo` seguía en `construir_payload` y el plan exigía `h1`; `preparar_jornada` leía
+`d1` del informe). Los tests no lo vieron porque inyectan lecturas falsas. S7 lo resuelve.
+
+### Task S7-1: El plan sale de la `Lectura` y se borra la estadística
+- `analista/plan.armar(lectura, digits, nombre)`: `hay_plan` falso en `RANGO` o sin línea de
+  seguridad; gatillo = el nivel que se vigila, con el escenario a favor de la estrategia como
+  texto; invalidación = la línea de seguridad; salida = `lectura.salida`; sin objetivo, sin
+  recorrido y sin estadística (spec §8.4). `estado` = Armado (TENDENCIA, REBOTE), En prueba
+  (PRUEBA, hasta el cierre de la vela) o Activado (RUPTURA).
+- Se borran `analista/estadistica.py`, su test, el Chandelier y `bitacora.completar`/`_evaluar`
+  (medían el desenlace con el Chandelier: una tasa de acierto, que el director descartó). La
+  bitácora sigue anotando lo publicado.
+- `informe_html.seccion_plan` muestra gatillo, invalidación, salida y estado.
+
+### Task S7-2: El foco técnico elige con la estrategia
+- `foco.seleccionar`: por activo, gates de índice, tick vivo, feriado y blackout; lectura con
+  `lectura_actual`; `estrategia.puntuar(lectura, "sesion")`. Excluido → motivo. Elegible si el
+  puntaje está en las dos primeras situaciones del horizonte sesión (ruptura reciente o a punto,
+  `FOCO_PUNTOS_MIN = 50`). Gana el mayor puntaje; empate por ticker.
+- `sigue_vigente` vuelve a leer y usa `estrategia.divergencia` contra la lectura guardada.
+
+### Task S7-3: Las piezas del analista
+- `_pieza_de_activo` usa `construir_payload_lectura` y `lectura_operativa` (camino de la
+  lectura); el pie de imagen dice el marco de la lectura; el gráfico se pide con sus líneas.
+- `preparar_jornada` lee `lectura` de `pipeline_informe.leer_activos`.
+
+### Task S7-4: LinkedIn (delegada)
+- `pipeline_linkedin` lee con `lectura_actual`; `CAMPOS_PRECIO` pasa a los niveles de la lectura
+  (`price`, `vigilar`, `invalidacion`, `objetivo`, `soporte`, `resistencia`); `direccion` sale de
+  la lectura; `mapa_niveles` y la tabla de activos se rehacen con esos campos.
+
+### Task S7-5: Cierre semanal (delegada)
+- `cierre_semanal_datos.leer_lectura` reemplaza a `leer_niveles`; el gráfico traza los niveles
+  de la lectura sin medias; la capa "qué significa" se genera desde la lectura; se quitan de las
+  capas editoriales las frases que afirman medias, fuerza de tendencia o canal de 50 horas.
+
+### Task S7-6: Datos del análisis semanal del lunes
+- `referencia_semanal.estado_semanal(estrategia, semana, lector, ahora)`: los activos de
+  `_semana.json` con su referencia, y para cada uno si hay que esperar el cierre de la vela
+  (lectura en `PRUEBA` sobre una línea A+), con la hora de ese cierre (spec §4 "La vela
+  abierta"). CLI `screener_gi.py --estado-semanal`.
+- **La pieza de publicación del lunes no existe y su formato no está en el spec**: se pregunta
+  al director al cerrar todas las fases.
