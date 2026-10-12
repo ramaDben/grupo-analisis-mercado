@@ -150,3 +150,34 @@ def test_seguir_mide_el_atr_en_la_misma_ventana_que_leer():
     hoy = _seguir("XAUUSD", ref, tl.velas(h4), 2, None, marcos, P)
     assert hoy.metricas["atr"] == ref.metricas["atr"]
     assert hoy.metricas["atr_d1"] == ref.metricas["atr_d1"]
+
+
+# El objetivo va más allá del nivel que se vigila (director, 2026-10-11, caso WTI).
+def test_el_objetivo_se_busca_mas_alla_del_gatillo():
+    from estrategia.tori.lectura import base_objetivo
+    assert base_objetivo("BAJISTA", 91.254, 91.096) == 91.096  # más allá del gatillo bajo el precio
+    assert base_objetivo("BAJISTA", 91.254, 94.117) == 91.254  # lo que se vigila está del otro lado
+    assert base_objetivo("ALCISTA", 100.0, 103.0) == 103.0
+
+
+def test_un_objetivo_que_el_precio_ya_paso_no_sigue_vigente():
+    from estrategia.tori.lectura import objetivo_vigente
+    assert not objetivo_vigente(91.49, "BAJISTA", 91.096, 0.3)  # el caso WTI: sobre el gatillo
+    assert objetivo_vigente(88.336, "BAJISTA", 91.096, 0.3)
+    assert not objetivo_vigente(101.0, "ALCISTA", 100.9, 0.3)  # dentro de la tolerancia
+
+
+def test_la_diaria_cambia_un_objetivo_ya_pasado_por_el_siguiente_o_ninguno():
+    from dataclasses import replace
+
+    from estrategia.contrato import Linea, Referencia
+    ref = tl.leer(LUNES)
+    pasado = Linea("objetivo", "horizontal", ((int(LUNES["time"].iloc[0]), ref.precio - 5.0),), "D1",
+                   2, "", ref.precio - 5.0)
+    ref = replace(ref, objetivo=Referencia(pasado.valor_actual, "objetivo", pasado),
+                  lineas=tuple(x for x in ref.lineas if x.rol != "objetivo") + (pasado,))
+    hoy = seguir(ref, LUNES)
+    if hoy.objetivo is not None:
+        assert hoy.objetivo.precio > max(hoy.precio, hoy.vigilar.precio)
+    assert sum(x.rol == "objetivo" for x in hoy.lineas) <= 1
+    assert all("%.2f" % (ref.precio - 5.0) not in e.texto.replace(".", ",") for e in hoy.escenarios)

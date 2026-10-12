@@ -69,8 +69,12 @@ def guardar_manifiesto(semana: str, datos: dict[str, Any], base: Path = DIR) -> 
 
 
 def firma(lectura: Lectura) -> tuple:
-    """La estructura de la lectura: qué línea cumple qué papel y dónde está anclada."""
-    return tuple(sorted((x.rol, x.tipo, x.marco, x.puntos) for x in lectura.lineas))
+    """La estructura de la lectura: qué línea cumple qué papel y dónde está anclada.
+
+    El objetivo no es estructura: la diaria lo cambia cuando el precio ya lo pasó, y eso no
+    termina la tesis.
+    """
+    return tuple(sorted((x.rol, x.tipo, x.marco, x.puntos) for x in lectura.lineas if x.rol != "objetivo"))
 
 
 def debe_reemplazar(referencia: Lectura, actual: Lectura) -> bool:

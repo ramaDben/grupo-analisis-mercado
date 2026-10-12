@@ -124,6 +124,21 @@ def _horizontales(velas, marcos: Marcos, p: Parametros) -> list[tuple[Horizontal
     return salida
 
 
+def base_objetivo(direccion: str, precio: float, vigilar: float) -> float:
+    """Desde dónde se busca el objetivo: más allá del precio y del nivel que se vigila.
+
+    Un objetivo entre el precio y la línea que gatilla se cumpliría antes de la señal que lo
+    nombra ("si cierra bajo 91,096, retoma con objetivo en 91,490"): decisión del director,
+    2026-10-11, sobre la tanda real del WTI.
+    """
+    return max(precio, vigilar) if direccion == "ALCISTA" else min(precio, vigilar)
+
+
+def objetivo_vigente(objetivo: float, direccion: str, base: float, tol: float) -> bool:
+    """El objetivo sigue por delante: más allá de la base por más que la tolerancia."""
+    return objetivo > base + tol if direccion == "ALCISTA" else objetivo < base - tol
+
+
 def _objetivo(horizontales, direccion: str, precio: float, tol: float, digits: int,
               operativo: str) -> Linea | None:
     """El horizontal MAYOR más cercano en la dirección (doctrina 2.8, V11).
@@ -244,12 +259,13 @@ def leer(ticker: str, velas: dict[str, pd.DataFrame], digits: int,
     base = "REBOTE" if rebote else e.estado
     estado = "PRUEBA" if prueba is not None else base
 
+    vigilar = _vigilar(prueba, base, accion, seguridad, rango, precio)
     horizontales = _horizontales(velas, marcos, p)
-    objetivo_linea = _objetivo(horizontales, e.direccion, precio, tol, digits, op)
+    objetivo_linea = _objetivo(horizontales, e.direccion, base_objetivo(e.direccion, precio, vigilar.precio),
+                               tol, digits, op)
     if objetivo_linea is not None:
         lineas.append(objetivo_linea)
 
-    vigilar = _vigilar(prueba, base, accion, seguridad, rango, precio)
     invalidacion = (Referencia(seguridad.valor_actual, f"línea {textos.sentido(seguridad)} de seguridad", seguridad)
                     if seguridad is not None else None)
     objetivo = Referencia(objetivo_linea.valor_actual, "objetivo", objetivo_linea) if objetivo_linea else None
@@ -464,10 +480,19 @@ def seguir(ticker: str, referencia: Lectura, velas: dict[str, pd.DataFrame], dig
     vigilar = _vigilar(prueba, estado, accion, seguridad, rango, precio)
     invalidacion = (Referencia(seguridad.valor_actual, f"línea {textos.sentido(seguridad)} de seguridad", seguridad)
                     if seguridad is not None else None)
+    # Un objetivo del lunes que el precio ya pasó (o que quedó antes del gatillo) deja de
+    # nombrarse: se toma el siguiente horizontal mayor en la dirección, o ninguno
+    # (director, 2026-10-11). No es volver a trazar: las líneas de la tesis no se tocan.
+    if objetivo is not None and direccion != "LATERAL":
+        desde = base_objetivo(direccion, precio, vigilar.precio)
+        if not objetivo_vigente(objetivo.precio, direccion, desde, tol):
+            nueva = _objetivo(_horizontales(velas, marcos, p), direccion, desde, tol, digits, op)
+            lineas = [x for x in lineas if x.rol != "objetivo"] + ([nueva] if nueva else [])
+            objetivo = Referencia(nueva.valor_actual, "objetivo", nueva) if nueva else None
 
     atr_d1 = _serie(velas, "D1", marcos, p).atr if "D1" in marcos.todos else 0.0
     atr_d1 = atr_d1 if atr_d1 > 0 else atr
-    fijas = ("confluencia", "contra_secuencia", "doble_confirmacion", "semanas_principal")
+    fijas =("confluencia", "contra_secuencia", "doble_confirmacion", "semanas_principal")
     metricas = {k: v for k, v in referencia.metricas.items() if k in fijas}
     metricas.update({"atr": atr, "atr_d1": atr_d1,
                      "dist_vigilar_atr_d1": abs(precio - vigilar.precio) / atr_d1})

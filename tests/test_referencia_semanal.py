@@ -1,7 +1,10 @@
 """La referencia semanal: guardar, leer y cuándo reemplazarla (spec §4)."""
 from __future__ import annotations
 
+import json
 import sys
+from dataclasses import replace
+from datetime import datetime
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -9,12 +12,8 @@ for _p in (str(RAIZ / "src"), str(RAIZ / "scripts")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-import json
-from dataclasses import replace
-from datetime import datetime
-
-from estrategia.contrato import SCL, Escenario, Lectura, Linea, Referencia  # noqa: E402
 import referencia_semanal as rs  # noqa: E402
+from estrategia.contrato import SCL, Escenario, Lectura, Linea, Referencia  # noqa: E402
 
 
 def _linea(rol="seguridad", puntos=((100, 10.0), (200, 11.0))):
@@ -172,3 +171,10 @@ def test_si_seguir_no_puede_evaluar_se_lee_de_nuevo_y_se_avisa(tmp_path):
     assert d.lectura == nueva and d.reemplazo == nueva
     assert est.llamadas[-2:] == [("leer", "vela-en-curso"), ("leer", None)]
     assert "anclas" in d.avisos[0]
+
+
+def test_cambiar_el_objetivo_no_es_cambiar_la_estructura():
+    ref = _lectura()
+    obj = Linea(rol="objetivo", tipo="horizontal", puntos=((300, 14.0),), marco="D1", toques=2,
+                calidad="", valor_actual=14.0)
+    assert not rs.debe_reemplazar(ref, replace(ref, lineas=ref.lineas + (obj,)))
