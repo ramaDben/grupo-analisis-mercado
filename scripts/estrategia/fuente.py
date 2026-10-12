@@ -34,6 +34,18 @@ def separar_vela_abierta(df: pd.DataFrame, marco: str,
     return df.reset_index(drop=True), None
 
 
+def partir_velas(df: pd.DataFrame, marco: str, ahora_servidor: int,
+                 cotizando: bool) -> tuple[pd.DataFrame, pd.Series | None]:
+    """Las velas cerradas y, si el mercado cotiza, la vela en curso.
+
+    Una vela cuyo período no terminó nunca cuenta como cerrada, cotice o no el mercado:
+    fuera de horario la vela diaria o semanal en curso sigue abierta, y anclar una
+    referencia en ella sería mirar el futuro.
+    """
+    cerradas, abierta = separar_vela_abierta(df, marco, ahora_servidor)
+    return cerradas, abierta if cotizando else None
+
+
 def cierre_santiago(apertura_servidor: int, marco: str, offset: int) -> datetime:
     utc = apertura_servidor + DURACION[marco] - offset
     return datetime.fromtimestamp(utc, tz=timezone.utc).astimezone(SANTIAGO)
@@ -82,10 +94,7 @@ def velas_mt5(ticker: str, marcos: Marcos,
         n = marcos.velas[marco] + extra
         df = mt5_client.get_rates(ticker, marco, n + 1)[list(COLUMNAS_VELAS)].copy()
         df["time"] = _epoch(df["time"]).astype("int64")
-        if not cotizando:
-            velas[marco] = df.tail(n).reset_index(drop=True)
-            continue
-        cerradas, abierta = separar_vela_abierta(df, marco, ahora_servidor)
+        cerradas, abierta = partir_velas(df, marco, ahora_servidor, cotizando)
         velas[marco] = cerradas.tail(n).reset_index(drop=True)
         if marco == marcos.operativo and abierta is not None:
             en_curso = VelaEnCurso(int(abierta["time"]), float(abierta["close"]),
