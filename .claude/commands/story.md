@@ -37,7 +37,7 @@ Tipos válidos, que son las cuatro plantillas que existen en `templates/stories/
 
 | tipo | qué es | necesita |
 |---|---|---|
-| `alerta` | niveles del día de un activo | activo + temporalidad |
+| `alerta` | la lectura del día de un activo | activo |
 | `dato_macro` | un dato económico que ya publicó | el evento |
 | `breaking` | noticia urgente, 100% editorial | el titular y su cifra |
 | `calendario` | 3 a 6 eventos macro de la semana | nada (los trae el motor) |
@@ -286,13 +286,19 @@ activo sin color propio en `alerta`/`recomendacion`).
 
 ---
 
-## PASO 1 — Activo y temporalidad (de los argumentos, no de una pregunta)
+## PASO 1 — Activo (del argumento, no de una pregunta)
 
-`alerta` cubre **un solo activo por corrida**. El activo y la temporalidad vienen en la
-invocación (`/story alerta USDCLP 1H`); el activo se normaliza contra `config/activos.json`
-en cualquier formato (ticker, nombre, `#TICKER`).
+`alerta` cubre **un solo activo por corrida**. El activo viene en la invocación
+(`/story alerta USDCLP`); se normaliza contra `config/activos.json` en cualquier formato
+(ticker, nombre, `#TICKER`). **La temporalidad ya no es un argumento**: el marco lo decide la
+estrategia activa (enchufe de estrategia, `config/estrategia.json`; con Tori, 4 horas, "swing,
+de una a dos semanas"). Si llega una temporalidad en la invocación, se ignora y se dice.
 
-Temporalidades válidas, con las etiquetas canónicas del repo:
+Si el activo no está en el catálogo, **detente y dilo**, nombrando lo que recibiste. No elijas
+por el director.
+
+Las etiquetas canónicas de temporalidad del repo (las usan todavía las piezas del analista,
+hasta S7 del enchufe; la de `alerta` sale de la estrategia, en `lectura.marco`):
 
 | | |
 |---|---|
@@ -301,23 +307,28 @@ Temporalidades válidas, con las etiquetas canónicas del repo:
 | `4H` | swing de jornada (1-3 días) |
 | `1D` | posicional (días a semanas) |
 
-Si el activo no está en el catálogo o falta la temporalidad, **detente y dilo**, nombrando lo
-que recibiste. No elijas por el director.
-
 ---
 
-## PASO 2 — Niveles y precio (del motor, o no hay pieza)
+## PASO 2 — La lectura de la estrategia (o no hay pieza)
 
 Llama **una sola vez**:
 ```
-mcp__market-data__get_asset_levels({"ticker": "[TICKER_MT5]", "timeframe": "[M15|H1|H4|D1]"})
+mcp__market-data__get_lectura({"ticker": "[TICKER_MT5]"})
 ```
 
-- Con éxito: toma `price` y deriva **un soporte y una resistencia**, los más próximos al precio.
+Es la misma lectura que publica el carrusel: dirección, estado, líneas, el nivel que se
+vigila, el que invalida, el objetivo, los tres escenarios y la regla de salida. **No uses
+`get_asset_levels` para afirmar dirección ni niveles**: queda como dato crudo para auditoría,
+y una pieza que calcula su propia lectura contradice a las demás (spec del enchufe, §6).
+
+- Con éxito: `lectura.precio` es el precio; el **soporte y la resistencia** de la pieza son los
+  niveles de la lectura más cercanos bajo y sobre el precio (entre `vigilar`, `invalidacion`,
+  `objetivo` y el `valor_actual` de sus líneas). Si un lado no tiene nivel, va `--`: no se
+  inventa.
 - Si la respuesta trae `"error"`, **detente y reporta el código exacto**:
 
 ```
-❌ El motor no entregó niveles para [ACTIVO]: [CÓDIGO] — [mensaje].
+❌ La estrategia no entregó la lectura de [ACTIVO]: [CÓDIGO] — [mensaje].
    No genero la pieza. Revisa que MT5 esté abierto y vuelve a pedirla.
 ```
 
@@ -329,7 +340,8 @@ posible, y el error del motor es una respuesta, no un obstáculo que rodear.
 usan, y si no, se omiten. Tampoco se preguntan.
 
 Formatea `precio_actual`/`soporte`/`resistencia` según `digits` de `config/activos.json`, con
-**coma decimal y punto de miles** (`2.318,40`, nunca `2318.4`).
+**coma decimal y punto de miles** (`2.318,40`, nunca `2318.4`). Una línea diagonal cambia de
+precio con cada vela: el número que se publica es su `valor_actual`.
 
 ---
 
@@ -346,7 +358,9 @@ fuentes oficiales: Fed, BCCh, BCE, OPEP+, EIA, BLS, geopolítica, earnings tech)
   **No abortar ni exigir noticia** — es un camino válido y esperado.
 
 En ambos casos, **dirección explícita obligatoria** (regla de oro del repo): el titular y el
-párrafo deben dejar claro el sesgo (`Alcista`/`Bajista`/`Lateral`). Registro profesional: énfasis
+párrafo deben dejar claro el sesgo, que es `lectura.direccion` (`ALCISTA` → `Alcista`,
+`BAJISTA` → `Bajista`, `LATERAL` → `Lateral`). El párrafo no contradice el `estado` de la
+lectura: en `PRUEBA` habla en condicional hasta el cierre de la vela, nunca como ruptura hecha. Registro profesional: énfasis
 direccional sí, dramatización no (ver "Registro y tono" de `CLAUDE.md`).
 
 Límites visuales del layout: `titular` ≤ ~70 caracteres, `parrafo` ≤ ~280 caracteres. Ajusta la
@@ -400,12 +414,12 @@ de Chile (regla canónica de `CLAUDE.md`, nunca `WebSearch` para la hora):
   "soporte": "[soporte con digits]",
   "resistencia": "[resistencia con digits]",
   "vol_pct": "[impulso proyectado en puntos, ej. '150,69 pts' para Impulso ADC/ATR]",
-  "rotulo_grafico": "[TICKER · CIERRES H1 · ÚLTIMAS 60 VELAS]",
+  "rotulo_grafico": "[TICKER · VELAS 4H]",
   "chart_png": "[ruta o null]",
   "fuente": "[COMEX/INVESTING/MT5 · GRUPO INTELIGENCIA]",
   "sesgo": "Alcista|Bajista|Lateral",
   "recorrido": {
-    "serie": "[array de 60 cierres H1 reales]",
+    "serie": "[array de 60 cierres reales del marco de la lectura]",
     "marcadores": [ { "indice": 59, "precio": "[spot]", "clase": "actual", "etiqueta": "[spot con digits]", "rol": "AHORA" } ],
     "niveles": [
       { "precio": "[resistencia]", "clase": "resistencia", "etiqueta": "[resistencia con digits]", "rol": "RESISTENCIA" },
