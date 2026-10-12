@@ -1,0 +1,188 @@
+{
+  "ticker": "XAUUSD",
+  "semana": "2026-W41",
+  "motivo": "semanal",
+  "guardada": "2026-10-11T20:59-03:00",
+  "lectura": {
+    "ticker": "XAUUSD",
+    "marco": "H4",
+    "precio": 4186.17,
+    "direccion": "BAJISTA",
+    "estado": "TENDENCIA",
+    "lineas": [
+      {
+        "rol": "seguridad",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1788422400,
+            4510.54
+          ],
+          [
+            1790020800,
+            4375.84
+          ]
+        ],
+        "marco": "H4",
+        "toques": 4,
+        "calidad": "A+",
+        "valor_actual": 4227.32,
+        "empinada": false
+      },
+      {
+        "rol": "contexto",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1769299200,
+            5597.5
+          ],
+          [
+            1787443200,
+            4696.44
+          ]
+        ],
+        "marco": "W1",
+        "toques": 3,
+        "calidad": "A+",
+        "valor_actual": 4516.23,
+        "empinada": false
+      },
+      {
+        "rol": "contexto",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1782691200,
+            3943.47
+          ],
+          [
+            1791331200,
+            4066.22
+          ]
+        ],
+        "marco": "D1",
+        "toques": 4,
+        "calidad": "B",
+        "valor_actual": 4069.07,
+        "empinada": false
+      },
+      {
+        "rol": "objetivo",
+        "tipo": "horizontal",
+        "puntos": [
+          [
+            1781740800,
+            4149.96
+          ]
+        ],
+        "marco": "D1",
+        "toques": 3,
+        "calidad": "",
+        "valor_actual": 4149.96,
+        "empinada": false
+      }
+    ],
+    "en_prueba": null,
+    "vigilar": {
+      "precio": 4227.32,
+      "etiqueta": "línea bajista",
+      "linea": {
+        "rol": "seguridad",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1788422400,
+            4510.54
+          ],
+          [
+            1790020800,
+            4375.84
+          ]
+        ],
+        "marco": "H4",
+        "toques": 4,
+        "calidad": "A+",
+        "valor_actual": 4227.32,
+        "empinada": false
+      }
+    },
+    "invalidacion": {
+      "precio": 4227.32,
+      "etiqueta": "línea bajista de seguridad",
+      "linea": {
+        "rol": "seguridad",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1788422400,
+            4510.54
+          ],
+          [
+            1790020800,
+            4375.84
+          ]
+        ],
+        "marco": "H4",
+        "toques": 4,
+        "calidad": "A+",
+        "valor_actual": 4227.32,
+        "empinada": false
+      }
+    },
+    "objetivo": {
+      "precio": 4149.96,
+      "etiqueta": "objetivo",
+      "linea": {
+        "rol": "objetivo",
+        "tipo": "horizontal",
+        "puntos": [
+          [
+            1781740800,
+            4149.96
+          ]
+        ],
+        "marco": "D1",
+        "toques": 3,
+        "calidad": "",
+        "valor_actual": 4149.96,
+        "empinada": false
+      }
+    },
+    "escenarios": [
+      {
+        "flecha": "⬆️",
+        "condicion": "Cierre sobre 4.227,32",
+        "texto": "Si una vela de 4 horas cierra sobre 4.227,32, la línea bajista se rompe y la tendencia deja de valer."
+      },
+      {
+        "flecha": "↔️",
+        "condicion": "Vuelta a 4.227,32",
+        "texto": "Si el precio vuelve a 4.227,32 y la respeta, la línea suma un toque y gana fuerza."
+      },
+      {
+        "flecha": "⬇️",
+        "condicion": "Bajo 4.227,32",
+        "texto": "Mientras el precio cierre bajo 4.227,32, la tendencia bajista sigue con objetivo en 4.149,96."
+      }
+    ],
+    "salida": "La posición se cierra cuando una vela de 4 horas cierra al otro lado de la línea de seguridad, hoy en 4.227,32. No hay objetivo fijo.",
+    "conceptos": [
+      "linea-de-tendencia",
+      "linea-de-seguridad"
+    ],
+    "avisos": [],
+    "metricas": {
+      "atr": 25.002142857142776,
+      "atr_d1": 68.4835714285715,
+      "confluencia": 0.5,
+      "dist_vigilar_atr_d1": 0.6008740365259597,
+      "dist_seguridad_atr_d1": 0.6008740365259597,
+      "semanas_principal": 2.7666666666666666,
+      "dist_objetivo_atr_d1": 0.5287399480584499,
+      "doble_confirmacion": 1.0,
+      "contra_secuencia": 0.0
+    },
+    "vela": 1791734400
+  }
+}

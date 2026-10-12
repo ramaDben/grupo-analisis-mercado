@@ -286,5 +286,57 @@
     "clave": "USDCLP",
     "momento": "avisos_tarde",
     "vision": "natixis-hodge-inflacion-suprema"
+  },
+  {
+    "fecha": "2026-10-06",
+    "canal": "01_macro_y_apertura",
+    "tipo": "vision",
+    "clave": "macquarie-wizman-emision-bonos"
+  },
+  {
+    "fecha": "2026-10-06",
+    "canal": "01_macro_y_apertura",
+    "tipo": "avisos",
+    "clave": "US100.spot",
+    "momento": "avisos_manana",
+    "vision": "macquarie-wizman-emision-bonos"
+  },
+  {
+    "fecha": "2026-10-07",
+    "canal": "01_macro_y_apertura",
+    "tipo": "avisos",
+    "clave": "COPPER",
+    "momento": "avisos_tarde",
+    "vision": null
+  },
+  {
+    "fecha": "2026-10-08",
+    "canal": "01_macro_y_apertura",
+    "tipo": "avisos",
+    "clave": "WTI.spot",
+    "momento": "avisos_tarde",
+    "vision": null
+  },
+  {
+    "fecha": "2026-10-09",
+    "canal": "01_macro_y_apertura",
+    "tipo": "vision",
+    "clave": "capitaria-santillan-resistencia-971"
+  },
+  {
+    "fecha": "2026-10-09",
+    "canal": "01_macro_y_apertura",
+    "tipo": "avisos",
+    "clave": "USDCLP",
+    "momento": "avisos_manana",
+    "vision": "capitaria-santillan-resistencia-971"
+  },
+  {
+    "fecha": "2026-10-09",
+    "canal": "01_macro_y_apertura",
+    "tipo": "avisos",
+    "clave": "USDCLP",
+    "momento": "avisos_tarde",
+    "vision": "capitaria-santillan-resistencia-971"
   }
 ]

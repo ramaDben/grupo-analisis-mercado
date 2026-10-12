@@ -1,0 +1,149 @@
+{
+  "ticker": "USDJPY",
+  "semana": "2026-W41",
+  "motivo": "semanal",
+  "guardada": "2026-10-11T20:59-03:00",
+  "lectura": {
+    "ticker": "USDJPY",
+    "marco": "H4",
+    "precio": 158.283,
+    "direccion": "LATERAL",
+    "estado": "RANGO",
+    "lineas": [
+      {
+        "rol": "rango",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1788811200,
+            152.869
+          ],
+          [
+            1789113600,
+            153.221
+          ]
+        ],
+        "marco": "H4",
+        "toques": 3,
+        "calidad": "B",
+        "valor_actual": 155.35,
+        "empinada": false
+      },
+      {
+        "rol": "rango",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1790251200,
+            159.018
+          ],
+          [
+            1791518400,
+            158.4
+          ]
+        ],
+        "marco": "H4",
+        "toques": 3,
+        "calidad": "B",
+        "valor_actual": 158.363,
+        "empinada": false
+      },
+      {
+        "rol": "contexto",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1788912000,
+            152.92
+          ],
+          [
+            1791417600,
+            157.505
+          ]
+        ],
+        "marco": "D1",
+        "toques": 2,
+        "calidad": "B",
+        "valor_actual": 157.688,
+        "empinada": false
+      },
+      {
+        "rol": "contexto",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1788220800,
+            160.374
+          ],
+          [
+            1791504000,
+            158.41
+          ]
+        ],
+        "marco": "D1",
+        "toques": 3,
+        "calidad": "B",
+        "valor_actual": 158.41,
+        "empinada": false
+      }
+    ],
+    "en_prueba": null,
+    "vigilar": {
+      "precio": 158.363,
+      "etiqueta": "resistencia del rango",
+      "linea": {
+        "rol": "rango",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1790251200,
+            159.018
+          ],
+          [
+            1791518400,
+            158.4
+          ]
+        ],
+        "marco": "H4",
+        "toques": 3,
+        "calidad": "B",
+        "valor_actual": 158.363,
+        "empinada": false
+      }
+    },
+    "invalidacion": null,
+    "objetivo": null,
+    "escenarios": [
+      {
+        "flecha": "⬆️",
+        "condicion": "Cierre sobre 158,363",
+        "texto": "Si una vela de 4 horas cierra sobre 158,363, el precio sale del rango hacia arriba."
+      },
+      {
+        "flecha": "↔️",
+        "condicion": "Entre 155,350 y 158,363",
+        "texto": "Si rompe un borde y vuelve a entrar, es falso quiebre y el objetivo pasa a ser el borde contrario."
+      },
+      {
+        "flecha": "⬇️",
+        "condicion": "Cierre bajo 155,350",
+        "texto": "Si una vela de 4 horas cierra bajo 155,350, el precio sale del rango hacia abajo."
+      }
+    ],
+    "salida": "Dentro del rango se opera el falso quiebre: la posición se cierra si el precio vuelve a cerrar fuera del borde que había roto.",
+    "conceptos": [
+      "rango",
+      "falso-quiebre"
+    ],
+    "avisos": [],
+    "metricas": {
+      "atr": 0.29564285714285177,
+      "atr_d1": 0.9918571428571406,
+      "confluencia": 0.0,
+      "dist_vigilar_atr_d1": 0.08065677660954758,
+      "doble_confirmacion": 1.0,
+      "contra_secuencia": 0.0
+    },
+    "vela": 1791734400
+  }
+}
