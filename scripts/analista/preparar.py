@@ -366,11 +366,11 @@ def preparar_seguimiento(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
 
 
 def _contexto_sin_porcentajes(contexto: dict[str, Any]) -> dict[str, Any]:
-    """El contexto de la pieza semanal: sin la tabla de tasas y sin "%".
+    """El contexto de la pieza semanal sin "%".
 
-    La pieza no muestra ningún porcentaje al prospecto (candado de `esquema`). La
-    tabla de tasas se imprimiría igual, y una cifra con "%" en los datos invitaría
-    a agy a citarla y haría rechazar la pieza después de gastar la redacción.
+    La pieza no muestra ningún porcentaje al prospecto (candado de `esquema`), y una
+    cifra con "%" en los datos invitaría a agy a citarla y haría rechazar la pieza
+    después de gastar la redacción.
     """
     def limpio(v: Any) -> Any:
         if isinstance(v, str):
@@ -381,7 +381,7 @@ def _contexto_sin_porcentajes(contexto: dict[str, Any]) -> dict[str, Any]:
             return {k: limpio(x) for k, x in v.items()}
         return v
 
-    return limpio({k: v for k, v in contexto.items() if k != "curva_tasas"})
+    return limpio(contexto)
 
 
 def _filas_curva(curva: dict[str, Any]) -> list[list[str]]:

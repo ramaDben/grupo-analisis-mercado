@@ -18,16 +18,20 @@ DATOS = {"precio": "4.110,65", "soporte": "4.098,20", "resistencia": "4.131,00",
 
 
 def pieza_llena(**editorial) -> dict:
-    p = es.nueva_pieza("activo", {"ticker": "XAUUSD"}, dict(DATOS), {"principal": "alerta.png"})
-    for campo in es.CAMPOS["activo"]:
-        p["editorial"][campo] = "El oro mantiene presión compradora mientras siga sobre 4.110,65."
+    """La pieza semanal con un activo; `bajada` hace de campo de texto libre en las pruebas."""
+    p = es.nueva_pieza("oportunidad", {"semana": "2026-W42"}, dict(DATOS), {"principal": "alerta.png"},
+                       extra_campos={"titulares": ["XAUUSD"], "contexto": ["XAUUSD"]})
+    p["editorial"] = {"titular": "El oro mantiene presión compradora",
+                      "bajada": "El oro mantiene presión compradora mientras siga sobre 4.110,65.",
+                      "titulares": {"XAUUSD": "El oro sigue sobre 4.110,65"},
+                      "contexto": {"XAUUSD": "El oro mantiene presión compradora mientras siga sobre 4.110,65."}}
     p["editorial"].update(editorial)
     return p
 
 
 def test_pieza_nueva_trae_todos_los_campos_sin_escribir():
-    p = es.nueva_pieza("activo", {"ticker": "XAUUSD"}, DATOS, {})
-    assert set(p["editorial"]) == set(es.CAMPOS["activo"])
+    p = es.nueva_pieza("oportunidad", {"semana": "2026-W42"}, DATOS, {})
+    assert set(p["editorial"]) == set(es.CAMPOS["oportunidad"])
     assert all(v == es.MARCA for v in p["editorial"].values())
     assert es.errores(p)  # sin escribir no pasa
 
@@ -43,30 +47,30 @@ def test_campo_sin_escribir():
 
 @pytest.mark.parametrize("texto", ["sube fuerte — ojo", "sube fuerte – ojo"])
 def test_guion_largo_o_medio(texto):
-    assert es.errores(pieza_llena(lectura=texto))
+    assert es.errores(pieza_llena(bajada=texto))
 
 
 def test_voseo():
-    assert es.errores(pieza_llena(lectura="Si tenés posición, cuidado."))
+    assert es.errores(pieza_llena(bajada="Si tenés posición, cuidado."))
 
 
 @pytest.mark.parametrize("texto", ["<b>alza</b>", "ver <img src=x onerror=alert(1)>", "<!-- x -->"])
 def test_rechaza_html(texto):
-    errs = es.errores(pieza_llena(lectura=texto))
+    errs = es.errores(pieza_llena(bajada=texto))
     assert any("HTML" in e for e in errs)
 
 
 def test_rechaza_cifra_que_no_esta_en_los_datos():
-    errs = es.errores(pieza_llena(lectura="El objetivo es 4.200,00."))
+    errs = es.errores(pieza_llena(bajada="El objetivo es 4.200,00."))
     assert any("4.200,00" in e for e in errs)
 
 
 def test_acepta_cifra_de_los_datos_aunque_cambie_el_formato():
-    assert es.errores(pieza_llena(lectura="Sobre 4110,65 sigue arriba.")) == []
+    assert es.errores(pieza_llena(bajada="Sobre 4110,65 sigue arriba.")) == []
 
 
 def test_acepta_numeros_chicos_sin_decimales():
-    assert es.errores(pieza_llena(lectura="Mira las 2 zonas y los 3 escenarios en 15 minutos.")) == []
+    assert es.errores(pieza_llena(bajada="Mira las 2 zonas y los 3 escenarios en 15 minutos.")) == []
 
 
 def test_no_puede_agregar_ni_quitar_campos():
@@ -91,16 +95,18 @@ def test_no_puede_tocar_las_imagenes():
 
 
 def test_campos_anidados_se_validan_uno_a_uno():
-    p = es.nueva_pieza("calendario", {"alcance": "hoy"}, {"eventos": []}, {}, extra_campos={"explicaciones": ["1", "2"]})
-    for campo in es.CAMPOS["calendario"]:
+    p = es.nueva_pieza("oportunidad", {"semana": "2026-W42"}, {"activos": []}, {},
+                       extra_campos={"contexto": ["1", "2"]})
+    for campo in es.CAMPOS["oportunidad"]:
         p["editorial"][campo] = "Texto suficientemente largo para pasar."
-    p["editorial"]["explicaciones"] = {"1": "Explica el dato uno con calma.", "2": es.MARCA}
+    p["editorial"]["contexto"] = {"1": "Explica el activo uno con calma.", "2": es.MARCA}
     errs = es.errores(p)
-    assert len(errs) == 1 and "explicaciones.2" in errs[0]
+    assert len(errs) == 1 and "contexto.2" in errs[0]
 
 
 def test_cada_pieza_tiene_campos():
-    assert set(es.CAMPOS) == {"activo", "calendario", "dato", "jornada", "oportunidad", "seguimiento"}
+    """Solo las dos piezas que existen: las retiradas no dejan campos muertos."""
+    assert set(es.CAMPOS) == {"oportunidad", "seguimiento"}
 
 
 def test_titular_largo_no_cabe_en_la_lamina():
@@ -109,12 +115,12 @@ def test_titular_largo_no_cabe_en_la_lamina():
 
 
 def test_no_puede_tocar_las_laminas():
-    p = es.nueva_pieza("calendario", {"alcance": "hoy"}, {"eventos": []}, {},
-                       laminas={"calendario.png": {"titular": es.MARCA}})
-    for campo in es.CAMPOS["calendario"]:
+    p = es.nueva_pieza("oportunidad", {"semana": "2026-W42"}, {"activos": []}, {},
+                       laminas={"lamina.png": {"titular": es.MARCA}})
+    for campo in es.CAMPOS["oportunidad"]:
         p["editorial"][campo] = "Texto suficientemente largo para pasar."
     assert es.errores(p) == []
-    p["laminas"]["calendario.png"]["titular"] = "otra cosa"
+    p["laminas"]["lamina.png"]["titular"] = "otra cosa"
     assert any("datos" in e for e in es.errores(p))
 
 
@@ -147,16 +153,16 @@ def test_formas_impersonales_pasan(texto):
 
 
 def test_errores_reporta_la_frase():
-    errs = es.errores(pieza_llena(que_no_hacer="Te recomiendo no perseguir el precio."))
+    errs = es.errores(pieza_llena(bajada="Te recomiendo no perseguir el precio."))
     assert any("te recomiendo" in x for x in errs)
 
 
 def test_el_texto_no_nombra_a_la_cmf():
-    errs = es.errores(pieza_llena(lectura="Este análisis está regulado por la CMF."))
+    errs = es.errores(pieza_llena(bajada="Este análisis está regulado por la CMF."))
     assert any("CMF" in x for x in errs)
 
 
-# ───────────────────────────────────────────────────────────── foco técnico
+# ───────────────────────────────────────────────────────────── pieza semanal
 
 
 @pytest.mark.parametrize("frase", [
@@ -165,22 +171,21 @@ def test_el_texto_no_nombra_a_la_cmf():
     "Una oportunidad única.", "Esta condición acierta casi siempre.", "Tiene buena efectividad.",
     "Se cumplió la mitad de las veces.", "Su tasa de éxito es alta.", "Sube un 2% en el día.",
 ])
-def test_el_foco_bloquea_captacion_y_estadistica(tmp_path, frase):
+def test_la_semanal_bloquea_captacion_y_estadistica(tmp_path, frase):
     p = fx.pieza_oportunidad(tmp_path)
     p["editorial"]["contexto"]["XAUUSD"] = frase
     assert any("contexto.XAUUSD" in x for x in es.errores(p))
 
 
-def test_los_candados_del_foco_no_tocan_al_activo():
-    p = pieza_llena(lectura="El mercado aprovecha el dato para tomar posiciones defensivas.")
-    assert es.errores(p) == []
+def test_la_semanal_usa_sus_frases_prohibidas():
+    assert "oportunidad" in es.FRASES_PROHIBIDAS_SEMANAL
 
 
-def test_el_foco_deja_pasar_el_texto_legitimo(tmp_path):
+def test_la_semanal_deja_pasar_el_texto_legitimo(tmp_path):
     assert es.errores(fx.pieza_oportunidad(tmp_path)) == []
 
 
-def test_el_foco_no_escribe_oportunidad(tmp_path):
+def test_la_semanal_no_escribe_oportunidad(tmp_path):
     p = fx.pieza_oportunidad(tmp_path)
     p["editorial"]["titular"] = "Una oportunidad para los compradores del oro"
     assert any("titular" in x for x in es.errores(p))

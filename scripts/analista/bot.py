@@ -210,7 +210,9 @@ class Atendedor:
                 pr.FotoVaciaError) as exc:
             raise FalloPedido(str(exc)) from exc  # es la respuesta, no una falla
         except pr.PreparacionFallida as exc:
-            raise FalloPedido(f"No pude leer los datos: {exc}") from exc
+            extra = (" La pieza de la semana sigue disponible con /oportunidad."
+                     if orden.pieza == "seguimiento" else "")
+            raise FalloPedido(f"No pude leer los datos: {exc}.{extra}".replace("..", ".")) from exc
 
     def _redactar_y_validar(self, dir_pedido: Path) -> dict[str, Any]:
         res = self.redactar(dir_pedido / "pieza.json", self.config["tier"])
@@ -238,9 +240,13 @@ class Atendedor:
 
     def atender(self, pedido: Pedido) -> Respuesta:
         ahora = self.reloj()
-        if pedido.orden.pieza == "oportunidad":
-            return self._oportunidad(pedido, ahora)
-        return self._seguimiento(pedido, ahora)
+        try:
+            if pedido.orden.pieza == "oportunidad":
+                return self._oportunidad(pedido, ahora)
+            return self._seguimiento(pedido, ahora)
+        except rg.RegistroDanado as exc:
+            raise FalloPedido("El registro semanal está dañado y no sigo para no pisarlo: "
+                              "avisa al director.") from exc
 
     def _oportunidad(self, pedido: Pedido, ahora: datetime) -> Respuesta:
         import referencia_semanal as rs
@@ -276,6 +282,8 @@ class Atendedor:
                   f"Semana {pieza['datos']['semana']} · foto del {pieza['datos']['edicion']}"]
         if reusada:
             lineas.append("Ya está: es la foto de esta semana. Para ver cómo va un activo, usa /seguimiento <activo>.")
+        elif ahora.astimezone(SANTIAGO).weekday() > 0:  # spec §5: a mitad de semana, la remisión
+            lineas.append("Los niveles son los de la foto de la semana. Para ver cómo va un activo hoy, usa /seguimiento <activo>.")
         lineas.append("Ábrelo en el navegador: marca los activos, escribe la pérdida aceptable y copia el correo.")
         lineas += [f"⚠️ {a}" for a in [*avisos, *au.avisos(self.autor, ahora.date())]]
         lineas.append(self._a_drive([ruta], ahora))

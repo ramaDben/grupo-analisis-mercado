@@ -20,13 +20,9 @@ from typing import Any
 from pipeline_linkedin import MARCA_EDITORIAL as MARCA
 from pipeline_linkedin import validar_textos
 
-# Campos de texto plano por pieza. Los que dependen de los datos (una explicación
-# por evento, una lectura por activo) se declaran al preparar, en `anidados`.
+# Campos de texto plano por pieza. Los que dependen de los datos (un titular y un
+# contexto por activo) se declaran al preparar, en `anidados`.
 CAMPOS: dict[str, tuple[str, ...]] = {
-    "activo": ("titular", "bajada", "lectura", "empuja_alza", "empuja_baja", "que_no_hacer"),
-    "calendario": ("titular", "bajada", "lectura"),
-    "dato": ("titular", "bajada", "que_paso", "que_significa", "que_no_hacer", "impacto"),
-    "jornada": ("titular", "bajada", "lectura", "que_no_hacer"),
     # La pieza semanal: portada y, anidados, un titular y un contexto por activo.
     "oportunidad": ("titular", "bajada"),
     # El seguimiento no pasa por agy, pero su `pieza.json` usa el mismo sello.
@@ -61,7 +57,7 @@ _PALABRA_EXACTA = {"lote", "lotes"}
 # empujar a entrar ni hablar de cuánto acierta. La estadística se sacó de la
 # pieza a propósito (sin su línea base, "53 %" insinúa una ventaja que no hay),
 # y un porcentaje en el texto la traería de vuelta por la puerta de atrás.
-FRASES_PROHIBIDAS_FOCO: tuple[str, ...] = (
+FRASES_PROHIBIDAS_SEMANAL: tuple[str, ...] = (
     "no te lo pierdas", "oportunidad", "aprovecha", "asegurad", "ganancia segura",
     "acierta", "efectividad", "de las veces", "tasa de exito",
 )
@@ -191,7 +187,7 @@ def errores(pieza: dict[str, Any]) -> list[str]:
             errs.append(f"{donde}: «{frase}» es una instrucción de operar o una recomendación; "
                         "el informe es análisis general")
         if tipo == "oportunidad":
-            for frase in frases_prohibidas(texto, FRASES_PROHIBIDAS_FOCO):
+            for frase in frases_prohibidas(texto, FRASES_PROHIBIDAS_SEMANAL):
                 errs.append(f"{donde}: «{frase}» empuja a entrar o habla de cuánto acierta; "
                             "la pieza semanal describe un escenario")
             if "%" in texto:

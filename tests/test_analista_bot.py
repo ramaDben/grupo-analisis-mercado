@@ -313,6 +313,18 @@ def test_mt5_caido_en_seguimiento_lo_dice(armado):
         pr.PreparacionFallida("no uso el terminal: MT5 no conectó"))
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
     assert "MT5" in r.texto
+    assert "sigue disponible con /oportunidad" in r.texto  # spec §8
+
+
+def test_el_primer_pedido_a_mitad_de_semana_remite_a_seguimiento(armado):
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))  # jueves
+    assert "/seguimiento" in r.texto
+
+
+def test_un_registro_danado_se_dice_claro(armado):
+    armado.registro.write_text("{no es json", encoding="utf-8")
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
+    assert "registro semanal está dañado" in r.texto and "inesperado" not in r.texto
 
 
 def test_la_ayuda_nombra_solo_los_dos_comandos():
