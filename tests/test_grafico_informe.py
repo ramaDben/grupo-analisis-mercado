@@ -1,12 +1,7 @@
-"""Guardias del gráfico del informe: aritmética, formato y rutas de imagen.
+"""Guardias del gráfico del informe: formato, rutas de imagen y qué se traza.
 
-Tres cosas se verifican acá, y las tres se eligieron porque fallan en silencio.
-
-**La media.** Se calcula a mano en vez de con pandas para no arrastrar la
-dependencia al script. Una EMA mal implementada no lanza ninguna excepción:
-dibuja una curva de aspecto razonable con la pendiente equivocada, y el cliente
-lee la señal al revés. El test la contrasta contra `ewm(adjust=False)`, que es
-la definición de referencia.
+Se eligieron porque fallan en silencio. (Hasta el 2026-10-12 también se verificaba
+la EMA calculada a mano; el banner ya no dibuja medias y la función se borró.)
 
 **Los decimales.** La regla del proyecto los toma del catálogo. Un WTI escrito a
 2 decimales en vez de 3 no se ve mal: se ve normal, y es otro precio.
@@ -33,22 +28,6 @@ for sub in ("scripts", "src", ".agents/skills/generar-reporte-editorial/scripts"
         sys.path.insert(0, ruta)
 
 import grafico_informe as gi  # noqa: E402
-
-
-# ── La media ─────────────────────────────────────────────────────────────────
-def test_ema_coincide_con_la_definicion_de_referencia():
-    pd = pytest.importorskip("pandas")
-    serie = [10.0, 11.0, 10.5, 12.0, 13.5, 13.0, 12.5, 14.0, 15.0, 14.5]
-    esperado = pd.Series(serie).ewm(span=5, adjust=False).mean().tolist()
-    obtenido = gi._ema(serie, 5)
-    assert len(obtenido) == len(serie)
-    for a, b in zip(obtenido, esperado):
-        assert a == pytest.approx(b, rel=1e-12)
-
-
-def test_ema_de_una_serie_plana_es_la_misma_constante():
-    """Sin esto, un error de signo en el recurrente pasa desapercibido."""
-    assert gi._ema([7.0] * 30, 10) == pytest.approx([7.0] * 30)
 
 
 # ── Los decimales ────────────────────────────────────────────────────────────
@@ -133,14 +112,21 @@ def test_una_ruta_rota_se_deja_rota(tmp_path):
     assert _absolutizar()(html, tmp_path) == html
 
 
-def test_con_la_lectura_se_trazan_sus_niveles_y_no_los_de_get_asset_levels():
-    """Enchufe, fase 3: el banner traza lo que nombra el texto (la lectura), no s1/r1."""
-    lineas = gi.lineas_de_nivel({"s1": 900.0, "r1": 950.0},
-                                [(925.0, "Nivel a vigilar", "nivel"), (910.0, "Invalida la lectura", "soporte")])
+def test_con_la_lectura_se_trazan_sus_niveles():
+    """Enchufe, fase 3: el banner traza lo que nombra el texto (la lectura)."""
+    lineas = gi.lineas_de_nivel(
+        [(925.0, "Nivel a vigilar", "nivel"), (910.0, "Invalida la lectura", "soporte")])
     rotulos = [r for _, _, _, r in lineas]
     assert rotulos == ["Nivel a vigilar", "Invalida la lectura"]
 
 
-def test_sin_lectura_quedan_los_niveles_crudos():
-    lineas = gi.lineas_de_nivel({"s1": 900.0, "r1": 950.0}, None)
-    assert [r for _, _, _, r in lineas] == ["Resistencia R1", "Soporte S1"]
+def test_sin_lectura_no_hay_horizontales():
+    """Director 2026-10-12: sin lectura no caen los pivotes crudos (R1, S1, Fibo)."""
+    assert gi.lineas_de_nivel(None) == []
+
+
+def test_el_banner_ya_no_sabe_dibujar_medias():
+    import inspect
+
+    assert "medias" not in inspect.signature(gi.construir_grafico).parameters
+    assert not hasattr(gi, "_ema") and not hasattr(gi, "EMA_LARGA")

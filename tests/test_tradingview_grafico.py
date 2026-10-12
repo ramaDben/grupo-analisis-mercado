@@ -21,7 +21,7 @@ TIEMPOS = [1_000_000 + i * H4 for i in range(40)]
 
 def _rows():
     return [{"time": t, "open": 10.0 + i * 0.1, "high": 10.5 + i * 0.1, "low": 9.5 + i * 0.1,
-             "close": 10.2 + i * 0.1, "ema50": None, "ema100": None}
+             "close": 10.2 + i * 0.1}
             for i, t in enumerate(TIEMPOS)]
 
 
@@ -60,6 +60,116 @@ def test_las_lineas_de_otro_marco_solo_entran_si_son_horizontales():
     contexto_d1 = Linea("contexto", "diagonal", ((TIEMPOS[0], 9.0), (TIEMPOS[2], 9.4)), "D1", 2, "B", 10.0)
     html = tg.construir_html_tradingview(_rows(), "ORO", "H4", lineas=(SEGURIDAD, contexto_d1, OBJETIVO))
     assert "Línea de contexto" not in html
+
+
+def test_sin_lineas_tampoco_hay_medias():
+    """Decisión del director 2026-10-12: ninguna imagen trae una segunda lectura técnica."""
+    html = tg.construir_html_tradingview(_rows(), "ORO", "H4")
+    assert "EMA" not in html and "ema50" not in html
+
+
+def _datos(html: str) -> dict:
+    import json
+
+    inicio = html.index("const D = ") + len("const D = ")
+    return json.loads(html[inicio:html.index("\n", inicio)].rstrip(";"))
+
+
+def test_un_horizontal_en_el_precio_de_una_zona_se_funde_con_ella():
+    """2026-10-12: el objetivo del oro y el soporte en 4149,96 pintaban dos etiquetas
+    apiladas que empujaban a las demás sobre el eje."""
+    objetivo = Linea("objetivo", "horizontal", ((TIEMPOS[0], 12.5),), "D1", 2, "", 12.5)
+    html = tg.construir_html_tradingview(_rows(), "ORO", "H4", lineas=(SEGURIDAD, objetivo),
+                                         soporte=12.5, resistencia=14.0)
+    d = _datos(html)
+    assert [x["rol"] for x in d["lineas"]] == ["seguridad"]
+    assert [z["rol"] for z in d["zonas"]] == ["RESISTENCIA", "SOPORTE · OBJETIVO"]
+    assert "Objetivo" in html  # la leyenda lo sigue nombrando
+
+
+def test_un_horizontal_lejos_de_las_zonas_se_dibuja_aparte():
+    html = tg.construir_html_tradingview(_rows(), "ORO", "H4", lineas=(SEGURIDAD, OBJETIVO),
+                                         soporte=12.5, resistencia=14.0)
+    assert [x["rol"] for x in _datos(html)["lineas"]] == ["seguridad", "objetivo"]
+
+
+def test_las_velas_ya_no_traen_medias():
+    velas = [{"time": t, "open": 1.0, "high": 1.2, "low": 0.9, "close": 1.1} for t in TIEMPOS]
+    assert all(set(r) == {"time", "open", "high", "low", "close", "atr"}
+               for r in tg.calcular_indicadores(velas))
+
+
+class _Df:
+    def __init__(self, n):
+        self.filas = [{"time": TIEMPOS[0] + i * H4, "open": 10.0, "high": 10.5, "low": 9.5,
+                       "close": 10.2} for i in range(n)]
+
+    def __len__(self):
+        return len(self.filas)
+
+    def to_dict(self, orient):
+        return self.filas
+
+
+def _sin_terminal(monkeypatch, vistos):
+    from market_data_mcp import mt5_client
+
+    monkeypatch.setattr(mt5_client, "connect", lambda: None)
+
+    def rates(ticker, tf, n):
+        vistos["rates"] = (tf, n)
+        return _Df(n)
+
+    monkeypatch.setattr(mt5_client, "get_rates", rates)
+    monkeypatch.setattr(tg, "renderizar_png", lambda html, destino, **kw: destino)
+
+    def html(rows, simbolo, timeframe, **kw):
+        vistos["html"] = {"timeframe": timeframe, **kw}
+        return ""
+
+    monkeypatch.setattr(tg, "construir_html_tradingview", html)
+
+
+def test_sin_lineas_el_grafico_lee_la_lectura_del_activo(monkeypatch, tmp_path):
+    """Las piezas ad-hoc y el CLI dibujan la misma lectura que el carrusel."""
+    import pipeline_carrusel as pc
+
+    from test_cierre_semanal_datos import _lectura
+
+    lect = _lectura("XAUUSD", 4100.0, 4050.0, 4000.0, 4200.0)
+    monkeypatch.setattr(tg, "leer_lectura", lambda ticker, digits: lect)
+    vistos: dict = {}
+    _sin_terminal(monkeypatch, vistos)
+    tg.generar_grafico_tv("XAUUSD", "Oro", tmp_path / "g.png", timeframe=None, n_velas=60, digits=2)
+    assert vistos["html"]["timeframe"] == "H4"
+    assert vistos["html"]["lineas"] == lect.lineas
+    assert (vistos["html"]["soporte"], vistos["html"]["resistencia"]) == pc.niveles_publicados(lect)
+    assert vistos["rates"][1] >= pc.VELAS_GRAFICO_TV  # las anclas tienen que caer adentro
+
+
+def test_niveles_explicitos_ganan_a_los_de_la_lectura(monkeypatch, tmp_path):
+    from test_cierre_semanal_datos import _lectura
+
+    lect = _lectura("XAUUSD", 4100.0, 4050.0, 4000.0, 4200.0)
+    monkeypatch.setattr(tg, "leer_lectura", lambda ticker, digits: lect)
+    vistos: dict = {}
+    _sin_terminal(monkeypatch, vistos)
+    tg.generar_grafico_tv("XAUUSD", "Oro", tmp_path / "g.png", timeframe="H1",
+                          digits=2, soporte=4010.0, resistencia=4150.0)
+    assert vistos["html"]["timeframe"] == "H1"
+    assert (vistos["html"]["soporte"], vistos["html"]["resistencia"]) == (4010.0, 4150.0)
+
+
+def test_sin_lectura_sale_sin_lineas_y_lo_avisa(monkeypatch, tmp_path, capsys):
+    def falla(ticker, digits):
+        raise RuntimeError("la estrategia no cubre este activo")
+
+    monkeypatch.setattr(tg, "leer_lectura", falla)
+    vistos: dict = {}
+    _sin_terminal(monkeypatch, vistos)
+    tg.generar_grafico_tv("MELI", "MercadoLibre", tmp_path / "g.png", timeframe=None, digits=2)
+    assert vistos["html"]["lineas"] is None and vistos["html"]["timeframe"] == "H1"
+    assert "sin la lectura" in capsys.readouterr().err
 
 
 def test_el_canal_de_regresion_ya_no_existe():

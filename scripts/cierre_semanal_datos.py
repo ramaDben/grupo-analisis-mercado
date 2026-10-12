@@ -236,12 +236,14 @@ def generar_graficos(activos: list[dict[str, Any]], destino: Path) -> dict[str, 
 
         a["lectura"] = lectura_a_dict(lectura)
         # Se trazan los niveles de la lectura y no las medias: dos lecturas en la misma
-        # imagen se contradicen a la vista del cliente.
+        # imagen se contradicen a la vista del cliente. El globo "Ahora" lleva el mismo
+        # precio que el subtítulo: con el de la lectura (cierre de su última vela) la
+        # imagen mostraba dos precios distintos para el mismo instante.
         ruta = grafico_informe.construir_grafico(
             a["ticker"], a["nombre"], destino / f"{a['slug']}.png",
             timeframe="D1", tema="claro", subtitulo=sub,
-            niveles={"price": lectura.precio}, digits=a["digits"],
-            horizontales=pi._horizontales(lectura), medias=False,
+            niveles={"price": a["actual"]}, digits=a["digits"],
+            horizontales=pi._horizontales(lectura),
         )
         rutas[a["slug"]] = ruta
         print(f"  [OK] {a['slug']:8} {sub}")

@@ -100,7 +100,9 @@ def generar_artefactos(manifiesto: dict[str, Any], base_dir: Path | None = None)
 
             ticker = story_cfg.get("ticker") or payload.get("ticker") or story_cfg.get("activo") or ""
             nombre = story_cfg.get("nombre") or payload.get("nombre") or ticker
-            timeframe = story_cfg.get("timeframe", "H1")
+            # Sin timeframe, el del marco de la lectura: las líneas de la estrategia
+            # son de ese marco y en otro no se dibujan.
+            timeframe = story_cfg.get("timeframe")
             velas = int(story_cfg.get("velas", 60))
             soporte = story_cfg.get("soporte", payload.get("soporte"))
             resistencia = story_cfg.get("resistencia", payload.get("resistencia"))

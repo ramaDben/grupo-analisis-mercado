@@ -599,7 +599,6 @@ def leer_activos(destino: Path) -> tuple[dict[str, dict[str, Any]], list[str]]:
                 subtitulo=_frase_tecnica(lectura),
                 niveles={"price": lectura.precio},
                 horizontales=_horizontales(lectura),
-                medias=False,
             )
         except GraficoError as exc:
             avisos.append(f"{info['nombre']} sin gráfico: {exc}")

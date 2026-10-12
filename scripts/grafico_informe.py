@@ -14,12 +14,11 @@ lector no audita una pendiente: la cree. Acá cada punto sale de
 `serie_mt5.obtener_serie`, que lee el terminal, y si el terminal no responde el
 script se detiene en vez de dibujar algo plausible.
 
-── El calentamiento de las medias ───────────────────────────────────────────
-Se piden más velas de las que se dibujan. Una EMA de 100 calculada sobre 100
-velas arranca pegada al primer cierre y tarda decenas de barras en valer algo;
-si se dibujara desde el borde izquierdo, el cliente vería una curva que sube
-porque el indicador se está estabilizando, no porque el precio se mueva. Se
-calcula sobre toda la ventana traída y se recorta al final.
+── Solo la lectura, nunca otra ──────────────────────────────────────────────
+Las horizontales del banner son las de la `Lectura` de la estrategia, que son
+las que nombra el texto. Hasta el 2026-10-12 el motor dibujaba además las EMA
+50 y 100 y, sin lectura, los pivotes crudos (R1, S1, Fibo 50 %): dos lecturas
+técnicas en la misma imagen, que el cliente no tiene cómo reconciliar.
 
 ── Escala del lienzo ────────────────────────────────────────────────────────
 7,2 × 2,5 pulgadas a 300 DPI, que es la calibración del motor editorial de la
@@ -30,7 +29,6 @@ vacías arriba y abajo.
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 import textwrap
 from pathlib import Path
@@ -64,8 +62,7 @@ TEMAS: dict[str, dict[str, str]] = {
         "fondo": "#FFFFFF",
         "texto": "#0D0D1A",
         "precio": "#0D0D1A",
-        "ema_corta": "#E76F51",
-        "ema_larga": "#53C1AB",
+        "acento": "#53C1AB",
         "resistencia": "#E76F51",
         "soporte": "#3E91AF",
         "grilla": "#E9ECEF",
@@ -77,8 +74,7 @@ TEMAS: dict[str, dict[str, str]] = {
         "fondo": "#12121F",
         "texto": "#F5F3F7",
         "precio": "#FFFFFF",
-        "ema_corta": "#E76F51",
-        "ema_larga": "#53C1AB",
+        "acento": "#53C1AB",
         "resistencia": "#E76F51",
         "soporte": "#3E91AF",
         "grilla": "#2A2A3C",
@@ -92,8 +88,6 @@ VELAS_DIBUJADAS = 90
 # Caracteres que entran en una linea de subtitulo a 9,5 pt sobre 7,2 pulgadas.
 # Medido sobre el caso que se cortaba (Nasdaq, 88 caracteres), no estimado.
 ANCHO_SUBTITULO = 78
-EMA_CORTA = 50
-EMA_LARGA = 100
 
 
 def formatear_precio(valor: float, digits: int) -> str:
@@ -114,43 +108,18 @@ def formatear_precio(valor: float, digits: int) -> str:
     return f"{valor:,.{digits}f}".replace(",", "@").replace(".", ",").replace("@", ".")
 
 
-def _ema(valores: list[float], span: int) -> list[float]:
-    """EMA sin pandas: el mismo recurrente que usa `ewm(adjust=False)`."""
-    k = 2.0 / (span + 1.0)
-    salida: list[float] = []
-    prom = valores[0]
-    for v in valores:
-        prom = v * k + prom * (1.0 - k)
-        salida.append(prom)
-    return salida
+_COLOR_ROL = {"soporte": "soporte", "resistencia": "resistencia", "nivel": "acento"}
 
 
-_COLOR_ROL = {"soporte": "soporte", "resistencia": "resistencia", "nivel": "ema_larga"}
-
-
-def lineas_de_nivel(niveles: dict[str, Any], horizontales: list[tuple[float, str, str]] | None
+def lineas_de_nivel(horizontales: list[tuple[float, str, str]] | None
                     ) -> list[tuple[float, str, str, str]]:
     """Las horizontales del banner: (precio, clave de color del tema, estilo, rótulo).
 
-    Con la lectura se trazan sus niveles, que son los que nombra el texto. Sin ella quedan
-    los niveles crudos (`r1`, `s1`...), para el uso por CLI.
+    Son los niveles de la lectura, que son los que nombra el texto. Sin lectura no hay
+    horizontales: los pivotes crudos serían una segunda lectura en la imagen.
     """
-    if horizontales is not None:
-        return [(float(p), _COLOR_ROL.get(rol, "ema_larga"), "--" if rol == "nivel" else ":", rotulo)
-                for p, rotulo, rol in horizontales]
-    salida = []
-    for clave, color, estilo, rotulo in (
-        ("r2", "resistencia", "--", "Resistencia R2"),
-        ("r1", "resistencia", ":", "Resistencia R1"),
-        ("fibo_50", "ema_larga", "-.", "Fibo 50%"),
-        ("nivel_tactico", "ema_larga", "-.", "Nivel Clave"),
-        ("s1", "soporte", ":", "Soporte S1"),
-        ("s2", "soporte", "--", "Soporte S2"),
-    ):
-        nivel = niveles.get(clave)
-        if isinstance(nivel, (int, float)):
-            salida.append((float(nivel), color, estilo, rotulo))
-    return salida
+    return [(float(p), _COLOR_ROL.get(rol, "acento"), "--" if rol == "nivel" else ":", rotulo)
+            for p, rotulo, rol in horizontales or ()]
 
 
 def construir_grafico(
@@ -164,13 +133,11 @@ def construir_grafico(
     niveles: dict[str, Any] | None = None,
     digits: int | None = None,
     horizontales: list[tuple[float, str, str]] | None = None,
-    medias: bool = True,
 ) -> Path:
     """Dibuja el activo y devuelve la ruta del PNG. Lanza `GraficoError` si no hay datos.
 
-    Con `horizontales` (los niveles que nombra la lectura de la estrategia) se trazan esos
-    y no los de `niveles`; con `medias=False` no se dibujan las EMA, que serían una segunda
-    lectura en la imagen (enchufe de estrategia, fase 3).
+    `horizontales` son los niveles que nombra la lectura de la estrategia; `niveles` solo
+    aporta `price`, el precio del globo "Ahora".
     """
     if tema not in TEMAS:
         raise GraficoError(f"Tema '{tema}' desconocido. Opciones: {sorted(TEMAS)}")
@@ -189,8 +156,7 @@ def construir_grafico(
 
     from serie_mt5 import SerieError, obtener_serie
 
-    # Se traen las velas dibujadas más el calentamiento de la media larga.
-    n_total = VELAS_DIBUJADAS + EMA_LARGA * 3
+    n_total = VELAS_DIBUJADAS
     try:
         cierres, tiempos = obtener_serie(ticker, timeframe, n_total)
     except SerieError as exc:
@@ -203,9 +169,6 @@ def construir_grafico(
     if digits is None:
         from market_data_mcp.catalog import VALID_TICKERS
         digits = VALID_TICKERS.get(ticker, 2)
-
-    ema_c = _ema(cierres, EMA_CORTA)
-    ema_l = _ema(cierres, EMA_LARGA)
 
     corte = max(0, len(cierres) - VELAS_DIBUJADAS)
     x = list(tiempos[corte:]) if tiempos else list(range(len(cierres) - corte))
@@ -223,35 +186,22 @@ def construir_grafico(
     ax.plot(x, y, color=c["precio"], linewidth=2.0,
             label=f"{nombre} · cierre {timeframe}", zorder=5)
 
-    # Una media solo se dibuja si tuvo espacio real para estabilizarse. Dibujar
-    # una EMA 100 sobre 40 velas es mostrar el transitorio del indicador.
-    for span, color, estilo, etiqueta in (
-        (EMA_CORTA, c["ema_corta"], "--", f"Media de {EMA_CORTA} días"),
-        (EMA_LARGA, c["ema_larga"], "-", f"Media de {EMA_LARGA} días"),
-    ):
-        if medias and corte >= span:
-            serie = (ema_c if span == EMA_CORTA else ema_l)[corte:]
-            ax.plot(
-                x, serie, color=color, linewidth=1.6, linestyle=estilo,
-                label=f"{etiqueta} ({formatear_precio(serie[-1], digits)})", zorder=4,
-            )
-
     niveles = niveles or {}
-    for nivel, clave_color, estilo, rotulo in lineas_de_nivel(niveles, horizontales):
+    for nivel, clave_color, estilo, rotulo in lineas_de_nivel(horizontales):
         ax.axhline(
             nivel, color=c[clave_color], linestyle=estilo, linewidth=1.2, alpha=0.95,
             zorder=3, label=f"{rotulo} {formatear_precio(nivel, digits)}",
         )
 
     actual = float(niveles.get("price") or y[-1])
-    ax.scatter([x[-1]], [y[-1]], s=26, color=c["ema_larga"], zorder=7,
+    ax.scatter([x[-1]], [y[-1]], s=26, color=c["acento"], zorder=7,
                edgecolors=c["fondo"], linewidths=0.8)
     ax.annotate(
         f"Ahora: {formatear_precio(actual, digits)}",
         xy=(x[-1], y[-1]), xytext=(-6, 14), textcoords="offset points",
         fontsize=7.5, fontweight="bold", color=c["texto"], ha="right",
         bbox=dict(boxstyle="round,pad=0.28", fc=c["globo_fondo"],
-                  ec=c["ema_larga"], lw=0.9),
+                  ec=c["acento"], lw=0.9),
         zorder=8,
     )
 
@@ -297,15 +247,23 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--tema", default="claro", choices=sorted(TEMAS))
     p.add_argument("--subtitulo", default="")
     p.add_argument("--out", required=True)
-    p.add_argument("--niveles", default="", help="JSON con price/s1/r1 (opcional)")
     a = p.parse_args(argv)
 
-    niveles = json.loads(a.niveles) if a.niveles else None
+    # Mismos niveles que el informe: los de la lectura de la estrategia activa.
+    import pipeline_informe as pi
+    from market_data_mcp.catalog import VALID_TICKERS
+    from tradingview_grafico import leer_lectura
+
+    try:
+        lectura = leer_lectura(a.ticker, VALID_TICKERS.get(a.ticker, 2))
+    except Exception as exc:  # noqa: BLE001
+        print(f"[ERROR] {a.ticker}: sin la lectura de la estrategia ({exc})", file=sys.stderr)
+        return 1
     try:
         ruta = construir_grafico(
             a.ticker, a.nombre or a.ticker, Path(a.out),
             timeframe=a.timeframe, tema=a.tema, subtitulo=a.subtitulo,
-            niveles=niveles,
+            niveles={"price": lectura.precio}, horizontales=pi._horizontales(lectura),
         )
     except GraficoError as exc:
         print(f"[ERROR] {exc}", file=sys.stderr)

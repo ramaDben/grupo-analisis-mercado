@@ -130,9 +130,9 @@ def test_el_grafico_traza_la_lectura_y_no_las_medias(monkeypatch, tmp_path):
         return destino
 
     monkeypatch.setattr(gi, "construir_grafico", falso)
-    activo = {**ACTIVO, "nombre": "Dólar", "unidad": ""}
+    activo = {**ACTIVO, "nombre": "Dólar", "unidad": "", "actual": 931.55}
     csd.generar_graficos([activo], tmp_path)
-    assert vistos["medias"] is False
-    assert vistos["niveles"] == {"price": 931.4}
+    assert "medias" not in vistos
+    assert vistos["niveles"] == {"price": 931.55}  # el del subtítulo, no el de la lectura
     assert (925.0, "Nivel a vigilar", "nivel") in vistos["horizontales"]
     assert vistos["subtitulo"].startswith("Cerró la semana en 931,40")
