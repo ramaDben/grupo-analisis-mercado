@@ -288,7 +288,7 @@ class Atendedor:
         except oh.InformeInvalido as exc:
             raise FalloPedido(f"No pude armar la pieza: {exc}") from exc
         lineas = [f"✅ {pieza['editorial']['titular']}",
-                  f"Semana {pieza['datos']['semana']} · foto del {pieza['datos']['edicion']}"]
+                  f"{cm.semana_visible(pieza['datos']['semana']).capitalize()} · foto del {pieza['datos']['edicion']}"]
         if reusada:
             lineas.append("Ya está: es la foto de esta semana. Para ver cómo va un activo, usa /seguimiento <activo>.")
         elif ahora.astimezone(SANTIAGO).weekday() > 0:  # spec §5: a mitad de semana, la remisión

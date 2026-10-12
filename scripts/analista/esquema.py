@@ -75,6 +75,9 @@ def _plano(texto: str) -> str:
     return "".join(c for c in t if not unicodedata.combining(c)).lower()
 
 
+_INVITA = re.compile(r"\bopera(r|rlo|rla|rse|ble|bles)\b")
+
+
 def frases_prohibidas(texto: str, frases: tuple[str, ...] = FRASES_PROHIBIDAS) -> list[str]:
     """Las frases de instrucción o recomendación que trae `texto`."""
     plano = _plano(texto)
@@ -194,4 +197,11 @@ def errores(pieza: dict[str, Any]) -> list[str]:
                 errs.append(f"{donde}: trae un porcentaje, y la pieza semanal no muestra ninguno")
         for cifra in cifras_ajenas(texto, pieza.get("datos")):
             errs.append(f"{donde}: la cifra {cifra} no está en los datos del terminal")
+    if tipo == "oportunidad":
+        # La gerencia pidió que la narrativa invite SIEMPRE a operar el escenario (2026-10-12):
+        # el contexto de cada activo cierra con esa invitación, en condicional y sin instrucción.
+        for clave, texto in (editorial.get("contexto") or {}).items():
+            if isinstance(texto, str) and texto != MARCA and not _INVITA.search(_plano(texto)):
+                errs.append(f"contexto.{clave}: no invita a operar el escenario; cierra con una frase como "
+                            "«el escenario se puede operar si el precio se mantiene sobre la línea»")
     return errs

@@ -92,14 +92,34 @@ def test_un_activo_sin_simulacion_igual_entra_al_correo(tmp_path):
     assert "Sin simulación esta semana: " in html
 
 
-def test_sin_contrato_y_sin_motivo_se_trata_como_sin_simulacion(tmp_path):
+def test_sin_contrato_el_cliente_ve_los_niveles_y_el_ejecutivo_el_aviso(tmp_path):
+    """Sin contrato falta el volumen, no la simulación: el correo lleva los niveles sin montos."""
     p = _pieza(tmp_path)
     p["datos"]["activos"][0]["contrato"] = None
     p["huella"] = es._huella(p)
     html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
     bloque = html.split('data-ticker="XAUUSD"')[1].split('data-ticker="COPPER"')[0]
-    assert "no tenemos los datos de la cuenta para calcular el tamaño de la operación" in bloque
+    assert "No tenemos los datos de la cuenta para calcular el tamaño de la operación" in bloque
     assert 'name="perdida"' not in bloque and 'name="incluir"' in bloque
+    correo = re.search(r'<template class="correo-activo" data-ticker="XAUUSD">(.*?)</template>', html, re.S).group(1)
+    assert "Sin simulación" not in correo and "Simulación realizada por Camila Rojas" in correo
+    assert "sim-perdida" not in correo
+
+
+def test_una_simulacion_condicional_dice_cuando_se_activa(tmp_path):
+    p = _pieza(tmp_path)
+    p["datos"]["activos"][0]["escenario"].update(entrada_pendiente=True, condicion="quiebre")
+    p["huella"] = es._huella(p)
+    html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    correo = re.search(r'<template class="correo-activo" data-ticker="XAUUSD">(.*?)</template>', html, re.S).group(1)
+    assert "Se activa si una vela de 4 horas cierra bajo 4.186,17." in correo
+
+
+def test_la_semana_se_lee_con_fechas_y_no_con_la_etiqueta_iso(tmp_path):
+    html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    assert "semana del 12 al 16 de octubre" in html.lower()
+    visible = re.sub(r'(src|href)="data:[^"]*"|<style>.*?</style>', "", html.split('<script id="datos"')[0], flags=re.S)
+    assert "W42" not in visible
 
 
 def test_el_json_escapa_cierre_de_script_y_la_pagina_no_trae_guiones_largos(tmp_path):

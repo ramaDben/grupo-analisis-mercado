@@ -13,8 +13,26 @@ from typing import Any, Callable
 AVISO_PIEZA = ("Análisis técnico general, igual para todos sus destinatarios. No es una instrucción "
                "de inversión: un escenario puede cumplirse o invalidarse.")
 SEPARADOR = "━━━━━━━━━━━━━━━━━━━"
+MESES = ("enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre",
+         "noviembre", "diciembre")
+
+
+def semana_visible(semana: str) -> str:
+    """«2026-W42» como lo lee una persona: «semana del 12 al 16 de octubre».
+
+    La etiqueta ISO confunde (director, 2026-10-12): queda solo para archivos y el registro.
+    """
+    from datetime import date
+
+    anio, num = semana.split("-W")
+    lunes = date.fromisocalendar(int(anio), int(num), 1)
+    viernes = date.fromisocalendar(int(anio), int(num), 5)
+    if lunes.month == viernes.month:
+        return f"semana del {lunes.day} al {viernes.day} de {MESES[viernes.month - 1]}"
+    return f"semana del {lunes.day} de {MESES[lunes.month - 1]} al {viernes.day} de {MESES[viernes.month - 1]}"
 SELLOS = {"entrada_pendiente": "ENTRADA PENDIENTE", "en_curso": "EN CURSO",
           "objetivo": "OBJETIVO 1:3 ALCANZADO", "stop": "STOP TOCADO", "rango_roto": "RANGO ROTO",
+          "descartada": "SIMULACIÓN DESCARTADA",
           "sin_simulacion": "SIN SIMULACIÓN"}
 
 
@@ -86,13 +104,19 @@ def payload_seguimiento(activo: dict[str, Any], ev: dict[str, Any], precio_vivo:
 
     f, esc, d = activo["fmt"], activo["escenario"], activo["digits"]
     estado = ev["estado"]
-    if estado == "entrada_pendiente":
+    if estado == "entrada_pendiente" and esc.get("condicion") == "quiebre":
+        avance = (f"Se activa con un cierre de vela 4H {'sobre' if esc['direccion'] == 'ALCISTA' else 'bajo'} "
+                  f"{f['entrada']}")
+    elif estado == "entrada_pendiente" and esc.get("condicion") == "retesteo" and esc.get("estado") != "RANGO":
+        avance = f"Se activa si el precio vuelve a {f['entrada']}"
+    elif estado == "entrada_pendiente":
         avance = ("El precio salió del rango: la entrada sigue pendiente" if paso_la_entrada(esc, precio_vivo)
                   else "El precio no llega a la entrada")
     else:
         avance = {"en_curso": _avance(ev.get("avance_pct")),
                   "objetivo": "Objetivo 1:3 alcanzado", "stop": "Stop tocado",
                   "rango_roto": "El precio rompió el rango: simulación descartada",
+                  "descartada": "El precio rompió el nivel sin activar la entrada: simulación descartada",
                   "sin_simulacion": "Esta semana este activo no tiene simulación"}[estado]
     sin = estado == "sin_simulacion"
     niveles = "" if sin else f"Entrada {f['entrada']} · Stop {f['stop']} · Objetivo 1:3 {f['objetivo']}"

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-ESTADOS = ("entrada_pendiente", "en_curso", "objetivo", "stop", "rango_roto", "sin_simulacion")
+ESTADOS = ("entrada_pendiente", "en_curso", "objetivo", "stop", "rango_roto", "descartada", "sin_simulacion")
 SEPARADOR = "━━━━━━━━━━━━━━━━━━━"
 
 
@@ -16,6 +16,10 @@ def _fmt(valor: float, digits: int) -> str:
     import pipeline_carrusel as pc
 
     return pc.formatear_precio(valor, digits)
+
+
+def _retesteo_fuera_de_rango(esc: dict[str, Any]) -> bool:
+    return esc.get("condicion") == "retesteo" and esc.get("estado") != "RANGO"
 
 
 def evaluar(esc: dict[str, Any], velas: list[dict[str, Any]], precio_vivo: float) -> dict[str, Any]:
@@ -31,18 +35,28 @@ def evaluar(esc: dict[str, Any], velas: list[dict[str, Any]], precio_vivo: float
     precio que ya no vale (director, 2026-10-12, tras la prueba real de la W41, cobre). En la
     vela que activa tampoco cuenta el objetivo: dentro de ella no se sabe qué tocó primero. El
     precio vivo se mide como un tramo desde el último cierre.
+
+    La entrada por quiebre (`condicion == "quiebre"`) se activa con el CIERRE de una vela 4H al
+    otro lado del nivel, y antes de eso el stop no cuenta: el precio viene justamente de ese
+    lado. El tramo vivo no activa, porque todavía no cerró. Un retesteo que no es de rango y se
+    rompe sin activar queda «descartada».
     """
     alcista = esc["direccion"] == "ALCISTA"
     entrada, stop, obj = float(esc["entrada"]), float(esc["stop"]), float(esc["objetivo"])
     activa = not esc.get("entrada_pendiente")
+    quiebre = esc.get("condicion") == "quiebre"
+    roto = "descartada" if _retesteo_fuera_de_rango(esc) else "rango_roto"
     previo = float(velas[-1]["close"]) if velas else precio_vivo
-    tramos = [(float(x["high"]), float(x["low"])) for x in velas]
-    tramos.append((max(previo, precio_vivo), min(previo, precio_vivo)))
-    for alto, bajo in tramos:
+    tramos = [(float(x["high"]), float(x["low"]), float(x["close"])) for x in velas]
+    tramos.append((max(previo, precio_vivo), min(previo, precio_vivo), None))
+    for alto, bajo, cierre in tramos:
         toca_stop = (bajo <= stop) if alcista else (alto >= stop)
         if not activa:
+            if quiebre:
+                activa = cierre is not None and ((cierre > entrada) if alcista else (cierre < entrada))
+                continue
             if toca_stop:
-                return {"estado": "rango_roto", "avance_pct": None}
+                return {"estado": roto, "avance_pct": None}
             if bajo <= entrada <= alto:
                 activa = True
             continue
@@ -67,6 +81,15 @@ def texto_simulacion(esc: dict[str, Any], ev: dict[str, Any], precio_vivo: float
     estado = ev["estado"]
     if estado == "sin_simulacion":
         return f"Esta semana este activo no tiene simulación: {ev['motivo']}."
+    if estado == "entrada_pendiente" and esc.get("condicion") == "quiebre":
+        return (f"La simulación se activa si una vela de 4 horas cierra "
+                f"{'sobre' if esc['direccion'] == 'ALCISTA' else 'bajo'} {f(esc['entrada'])}: "
+                f"el precio va en {f(precio_vivo)}.")
+    if estado == "entrada_pendiente" and _retesteo_fuera_de_rango(esc):
+        return f"La simulación se activa si el precio vuelve a {f(esc['entrada'])}: va en {f(precio_vivo)}."
+    if estado == "descartada":
+        return (f"El precio rompió {f(esc['entrada'])} sin activar la entrada y va en {f(precio_vivo)}: "
+                "la simulación de esta semana queda descartada.")
     if estado == "entrada_pendiente":
         if paso_la_entrada(esc, precio_vivo):
             return (f"El precio salió del rango y va en {f(precio_vivo)}: la simulación se activa si "

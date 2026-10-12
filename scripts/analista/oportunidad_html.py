@@ -45,12 +45,18 @@ def _panel(a: dict[str, Any], ejecutivo: str) -> str:
                 '<label><input type="checkbox" name="incluir" checked> Incluir en el correo</label></div>')
     lejos = (f'<p class="nota">El objetivo está a {str(esc["dias_objetivo"]).replace(".", ",")} días de '
              'movimiento típico (ATR diario).</p>' if esc.get("dias_objetivo") else "")
-    return (
-        '<div class="panel">'
+    condicion = op.texto_condicion(esc, f["entrada"])
+    cond = f'<p class="condicion">{ih.e(condicion)}</p>' if condicion else ""
+    cabeza = (
         '<h4>Objetivo de la simulación (1:3)</h4>'
         f'<p class="niveles-sim">Entrada {ih.e(f["entrada"])} · Stop {ih.e(f["stop"])} · '
-        f'Objetivo {ih.e(f["objetivo"])}</p>{lejos}'
-        '<label><input type="checkbox" name="incluir" checked> Incluir en el correo</label>'
+        f'Objetivo {ih.e(f["objetivo"])}</p>{cond}{lejos}'
+        '<label><input type="checkbox" name="incluir" checked> Incluir en el correo</label>')
+    if op.sin_contrato(a):  # nota interna del ejecutivo: el cliente igual ve los niveles
+        return (f'<div class="panel">{cabeza}<p class="nota">{ih.e(MOTIVO_SIN_CONTRATO.capitalize())}: el correo '
+                'lleva los niveles, sin los montos.</p></div>')
+    return (
+        '<div class="panel">' + cabeza +
         '<label>Pérdida aceptable (CLP)<input type="number" name="perdida" min="0" step="1000"></label>'
         '<label>Capital (opcional)<input type="number" name="capital" min="0" step="10000"></label>'
         '<div class="resultado"><div class="perdida"><span>Pérdida si toca el stop</span>'
@@ -135,6 +141,7 @@ def _simulacion_correo(a: dict[str, Any], ejecutivo: str, c: dict[str, str]) -> 
         return _tabla(f'<tr><td bgcolor="{c["fondo"]}" style="padding:14px 16px;background:{c["fondo"]};'
                       f'border:1px solid {c["linea"]};border-radius:12px;">{celda}</td></tr>')
     f = a["fmt"]
+    condicion = op.texto_condicion(a["escenario"], f["entrada"])
     fuerte = lambda x: f'<strong style="color:{c["texto_1"]};">{ih.e(x)}</strong>'  # noqa: E731
     cuadros = _tabla(
         '<tr>'
@@ -142,17 +149,19 @@ def _simulacion_correo(a: dict[str, Any], ejecutivo: str, c: dict[str, str]) -> 
         + '<td class="stack stack-gap" width="2%" style="font-size:0;line-height:0;">&nbsp;</td>'
         + _cuadro("fondo_sube", "sube", "Si llega al objetivo", f"Ganancia al llegar a {ih.e(f['objetivo'])}",
                   "sim-ganancia", c)
-        + '</tr>')
+        + '</tr>').replace("<table ", '<table class="sim-montos" ', 1)
     return (
         '<table class="sim-bloque" role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">'
         '<tr><td style="padding:0;">'
         + _rotulo(f"Simulación realizada por {ih.e(ejecutivo)}", c)
         + _p(f'Objetivo 1:3 · Entrada {fuerte(f["entrada"])} · Stop {fuerte(f["stop"])} · '
              f'Objetivo {fuerte(f["objetivo"])}', c, tam=15)
-        + cuadros
-        + _p("", c, tam=15, margen="12px 0 0 0", clase="sim-volumen")
+        + (_p(f'<strong style="color:{c["texto_1"]};">{ih.e(condicion)}</strong>', c, tam=15) if condicion else "")
+        + ("" if op.sin_contrato(a) else cuadros)
+        + _p("", c, tam=15, margen="12px 0 0 0", clase="sim-volumen sim-montos")
         + _p("Las dos cifras se muestran juntas y del mismo tamaño a propósito: el apalancamiento amplifica "
-             "igual las ganancias y las pérdidas.", c, tam=14, color="texto_2", margen="6px 0 0 0")
+             "igual las ganancias y las pérdidas.", c, tam=14, color="texto_2", margen="6px 0 0 0",
+             clase="sim-montos")
         + '</td></tr></table>'
     )
 
@@ -226,8 +235,8 @@ def _marco_correo(d: dict[str, Any], ed: dict[str, Any], ejecutivo: dict[str, An
         + _tabla(f'<tr><td valign="middle"><img src="{ih._data_uri(ih.LOGO)}" width="150" alt="Grupo Inteligencia" '
                  'style="display:block;border:0;width:150px;height:auto;"></td>'
                  f'<td valign="middle" align="right" style="font-family:{F_SANS};font-size:14px;line-height:20px;'
-                 f'font-weight:600;color:{c["texto_2"]};">Semana<br><span style="color:{c["texto_1"]};">'
-                 f'{ih.e(d["semana"])}</span></td></tr>')
+                 f'font-weight:600;color:{c["texto_2"]};">Análisis de la<br><span style="color:{c["texto_1"]};">'
+                 f'{ih.e(cm.semana_visible(d["semana"]))}</span></td></tr>')
         + '</td></tr>'
         f'<tr><td bgcolor="{c["acento"]}" style="height:3px;line-height:3px;font-size:3px;background:{c["acento"]};'
         f'background-image:linear-gradient(90deg,{c["acento_azul"]},{c["acento"]});">&nbsp;</td></tr>')
@@ -299,11 +308,12 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
         correos.append(f'<template class="correo-activo" data-ticker="{ih.e(t)}">'
                        f'{_bloque_correo(a, ed["titulares"][t], ed["contexto"][t], dir_pedido, nombre_ej, c)}</template>')
         datos_js.append({"ticker": t, "digits": a["digits"], "escenario": a["escenario"], "contrato": a["contrato"],
-                         "fmt": a["fmt"], "motivo": _motivo(a), "whatsapp": cm.texto_whatsapp_base(a, ed["titulares"][t], ed["contexto"][t])})
+                         "fmt": a["fmt"], "motivo": _motivo(a),
+                         "condicion": op.texto_condicion(a["escenario"], a["fmt"]["entrada"]), "whatsapp": cm.texto_whatsapp_base(a, ed["titulares"][t], ed["contexto"][t])})
     tokens = {
         "marco": _marco_correo(d, ed, ejecutivo, autor, c),
         "raiz": "".join(f"--{k.replace('_', '-')}:{v};" for k, v in c.items()),
-        "titulo": ih.e(ed["titular"]), "logo": ih._data_uri(ih.LOGO), "semana": ih.e(d["semana"]),
+        "titulo": ih.e(ed["titular"]), "logo": ih._data_uri(ih.LOGO), "semana": ih.e(cm.semana_visible(d["semana"]).capitalize()),
         "edicion": ih.e(d["edicion"]), "titular": ih.e(ed["titular"]), "bajada": ih.e(ed["bajada"]),
         "activos": "".join(bloques), "correos": "".join(correos), "firma": ih.bloque_firma(autor, hoy),
         "aviso": ih.e(cm.AVISO_PIEZA), "ejecutivo": ih.e(nombre_ej),

@@ -42,6 +42,7 @@
   table.niveles tr:last-child th,table.niveles tr:last-child td{border-bottom:0}
   .escenarios{list-style:none;padding:0;margin:8px 0}
   .escenarios li{padding:4px 0;color:var(--texto-borde)}
+  .condicion{color:var(--texto-1);font-weight:700}
   .temporalidad,.firma-analisis,.nota,.autor-sim{color:var(--texto-2);font-size:13px}
   .panel{background:var(--tarjeta);border:1px solid var(--linea);border-radius:12px;padding:18px;align-self:start}
   .panel h4{margin:0 0 6px;color:var(--acento);text-transform:uppercase;letter-spacing:1.5px;font-size:14px}
@@ -72,7 +73,7 @@
 </style></head>
 <body><main>
 <div class="banda"><img src="{{logo}}" alt="Grupo Inteligencia">
-  <p class="semana">Semana<strong>{{semana}} · {{edicion}}</strong></p></div>
+  <p class="semana">{{semana}}<strong>Foto del {{edicion}}</strong></p></div>
 <div class="filete"></div>
 <header class="portada"><p class="chip">Análisis técnico de la semana</p>
   <h1>{{titular}}</h1><p>{{bajada}}</p></header>
@@ -109,7 +110,8 @@
     var f = d.fmt;
     var t = '🧮 Simulación de ' + DATOS.ejecutivo + ' (objetivo 1:3): con una pérdida aceptable de ' + pesos(s.perdida) +
             ', el volumen es ' + coma(s.volumen) + ' y el objetivo daría ' + pesos(s.ganancia) +
-            '. Entrada ' + f.entrada + ' · Stop ' + f.stop + ' · Objetivo ' + f.objetivo + '.';
+            '. Entrada ' + f.entrada + ' · Stop ' + f.stop + ' · Objetivo ' + f.objetivo + '.' +
+            (d.condicion ? ' ' + d.condicion : '');
     if (s.bajo_minimo) t += ' La pérdida mínima con el volumen más chico es ' + pesos(s.perdida) + '.';
     return t;
   }
@@ -141,7 +143,8 @@
       var cont = document.createElement('tbody');
       cont.innerHTML = t.innerHTML;
       var s = d._sim(), bloque = cont.querySelector('.sim-bloque');
-      if (bloque && !s) bloque.parentNode.removeChild(bloque);
+      // Sin montos escritos, el correo lleva igual los niveles y la condición: solo salen los cuadros.
+      if (bloque && !s) bloque.querySelectorAll('.sim-montos').forEach(function(x){ x.parentNode.removeChild(x); });
       else if (bloque){
         cont.querySelector('.sim-perdida').textContent = '−' + pesos(s.perdida);
         cont.querySelector('.sim-ganancia').textContent = '+' + pesos(s.ganancia);

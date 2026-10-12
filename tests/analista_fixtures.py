@@ -134,7 +134,8 @@ def pieza_oportunidad(dir_pedido: Path, laminas: bool = False, wti: bool = False
                        extra_campos={"titulares": tickers, "contexto": tickers})
     p["editorial"] = {"titular": "La semana técnica en seis activos", "bajada": "Lectura de cada activo.",
                       "titulares": {t: f"Titular de {t}" for t in tickers},
-                      "contexto": {t: f"Contexto de {t}." for t in tickers}}
+                      "contexto": {t: f"Contexto de {t}. El escenario se puede operar mientras la lectura siga en pie."
+                                   for t in tickers}}
     return p
 
 

@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Callable
 from zoneinfo import ZoneInfo
 
+from analista import comercial as cm
 from analista import esquema as es
 from analista.orden import Orden
 
@@ -278,7 +279,7 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
     semana = rs.semana_de(ahora)
     manifiesto = rs.manifiesto(semana, base)
     if manifiesto is None:
-        raise SinSemanaError(f"La semana {semana} todavía no tiene análisis semanal: la pieza sale "
+        raise SinSemanaError(f"La {cm.semana_visible(semana)} todavía no tiene análisis semanal: la pieza sale "
                              "cuando el escáner la fije.")
     estrategia = lec.estrategia()
     digits = {t: int(lec.catalogo(t)["digits"]) for t in manifiesto["elegidos"]}
@@ -303,7 +304,7 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
         referencia = rs.cargar(semana, ticker, base)
         if referencia is None:
             fuera.append(ticker)
-            avisos.append(f"{ticker} no tiene análisis guardado en {semana}: queda fuera de la foto. Cuando "
+            avisos.append(f"{ticker} no tiene análisis guardado en la {cm.semana_visible(semana)}: queda fuera de la foto. Cuando "
                           "lo tenga, pide /oportunidad de nuevo y la foto se rehace con él.")
             continue
         guardada = datetime.fromisoformat(
@@ -311,7 +312,7 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
         activos.append(_entrada_activo(ticker, referencia, guardada, float(puntajes.get(ticker, 0)),
                                        dir_pedido, lec, estrategia))
     if not activos:
-        raise FotoVaciaError(f"La semana {semana} no tiene ningún activo con su referencia guardada: no armo "
+        raise FotoVaciaError(f"La {cm.semana_visible(semana)} no tiene ningún activo con su referencia guardada: no armo "
                              "una foto vacía. Avisa al director para que revise el análisis semanal.")
     agenda, av = lec.agenda(ahora)
     avisos += [f"contexto sin agenda: {a}" for a in av]
