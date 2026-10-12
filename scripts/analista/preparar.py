@@ -58,10 +58,11 @@ def _grafico_tv(payload: dict[str, Any], destino: Path) -> Path:
         ticker=payload["_procedencia"]["ticker"],
         nombre=payload.get("rotulo_activo", payload["activo"]),
         destino=destino,
-        timeframe=pc.TIMEFRAME_GRAFICO,
+        timeframe=payload.get("marco", pc.TIMEFRAME_GRAFICO),
         n_velas=pc.VELAS_GRAFICO_TV,
         soporte=pc._nivel_publicado(payload.get("soporte"), crudos.get("soporte")),
         resistencia=pc._nivel_publicado(payload.get("resistencia"), crudos.get("resistencia")),
+        lineas=pc.lineas_de(payload),
     )
 
 
@@ -119,17 +120,6 @@ def _drivers(ticker: str) -> list[str]:
     return []
 
 
-def _serie_h1(ticker: str):
-    """Las últimas 10.000 velas H1 cerradas del terminal, para la estadística del plan."""
-    from market_data_mcp import mt5_client
-
-    try:
-        df = mt5_client.get_rates(ticker, "H1", 10000)
-    except Exception as exc:  # noqa: BLE001
-        raise PreparacionFallida(f"sin serie H1 de {ticker} para el plan ({exc})") from exc
-    return df.iloc[:-1].reset_index(drop=True)
-
-
 def _foco(ahora: datetime):
     from analista import foco as fo
 
@@ -142,11 +132,11 @@ def _catalogo_de(ticker: str) -> dict[str, Any]:
     return pl._catalogo()[ticker]
 
 
-def _cierres(ticker: str) -> dict[str, Any]:
+def _cierres(ticker: str, marco: str | None = None) -> list[float]:
     import pipeline_carrusel as pc
 
     try:
-        return pc._serie_para(ticker)
+        return pc._serie_para(ticker, marco or pc.marco_operativo())
     except Exception as exc:  # noqa: BLE001
         raise PreparacionFallida(f"{ticker}: sin serie para el gráfico ({exc})") from exc
 
@@ -178,10 +168,9 @@ class Lectores:
     curva: Callable[[], tuple[dict[str, Any], list[str]]] = _curva
     drivers: Callable[[str], list[str]] = _drivers
     cuenta: Callable[[], str | None] = _cuenta
-    serie_h1: Callable[[str], Any] = _serie_h1
     foco: Callable[[datetime], Any] = _foco
     catalogo: Callable[[str], dict[str, Any]] = _catalogo_de
-    cierres: Callable[[str], dict[str, Any]] = _cierres
+    cierres: Callable[..., list[float]] = _cierres
 
 
 @dataclass
@@ -216,12 +205,12 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
         raise MercadoIlegibleError(r.texto())
     el = r.elegido
     ticker = el.activo["ticker"]
-    lectura = {"ticker": ticker, "activo": lec.catalogo(ticker), "seleccion": el.evaluacion,
-               "h1": el.h1, "cierres": lec.cierres(ticker)}
+    lectura = {"ticker": ticker, "activo": lec.catalogo(ticker), "seleccion": el.seleccion,
+               "cierres": lec.cierres(ticker, el.seleccion["marco"])}
     cuando = r.ahora.astimezone(SANTIAGO)
     extra = {"seleccion": {"evaluados": r.evaluados, "fecha": f"{cuando:%d-%m-%Y}", "hora": f"{cuando:%H:%M}"}}
     return _pieza_de_activo("oportunidad", {"ticker": ticker}, lectura, dir_pedido, ahora, lec,
-                            plan=el.plan_foco.plan, extra=extra,
+                            plan=el.plan, extra=extra,
                             chip=f"FOCO TÉCNICO DEL DÍA · {el.activo['nombre'].upper()}")
 
 
@@ -249,8 +238,10 @@ def _pieza_de_activo(tipo: str, args: dict[str, Any], lectura: dict[str, Any], d
                      extra: dict[str, Any] | None = None, chip: str | None = None) -> Preparada:
     import pipeline_carrusel as pc
 
+    if not (lectura.get("seleccion") or {}).get("lectura"):
+        raise PreparacionFallida("la lectura del terminal no trae la lectura de la estrategia que necesita la pieza")
     try:
-        payload = pc.construir_payload(lectura["seleccion"], lectura["activo"], ahora, lectura["cierres"])
+        payload = pc.construir_payload_lectura(lectura["seleccion"], lectura["activo"], ahora, lectura["cierres"])
     except pc.PayloadIncoherenteError as exc:
         raise PreparacionFallida(f"los datos del terminal no son coherentes ahora ({exc}); prueba en unos minutos") from exc
     except KeyError as exc:
@@ -277,33 +268,35 @@ def _pieza_de_activo(tipo: str, args: dict[str, Any], lectura: dict[str, Any], d
         "resistencia": payload["resistencia"],
         "direccion": payload["sesgo"],
         **op,
-        "pie_imagen": f"{payload.get('rotulo_activo', activo['nombre'])} · velas de 1 hora · MetaTrader 5",
+        "pie_imagen": f"{payload.get('rotulo_activo', activo['nombre'])} · velas de "
+                      f"{MARCO_LEGIBLE.get(payload['marco'], payload['marco'])} · MetaTrader 5",
+        # La lectura con que se armó: el foco la compara al reusar la pieza (`sigue_vigente`).
+        "lectura": lectura["seleccion"]["lectura"],
         "contexto": contexto,
         "plan": plan,
         **(extra or {}),
     }
     avisos = list(avisos_contexto)
-    if payload.get("banda_estrecha"):
-        avisos.append("niveles estrechos para la volatilidad del activo: ojo con los falsos quiebres")
+    if payload.get("aviso_lectura"):
+        avisos.append(f"la estrategia habría excluido el activo: {payload['aviso_lectura']}")
     pieza = es.nueva_pieza(tipo, args, datos, {"principal": "grafico.png"})
     return Preparada(pieza, avisos)
 
 
-def _plan(ticker: str, lectura: dict[str, Any], sesgo: str, activo: dict[str, Any], lec: Lectores) -> dict[str, Any]:
-    """El plan de escenarios con su estadística: lo escribe Python y queda sellado en `datos`."""
-    from analista import estadistica as est
-    from analista import plan as plan_mod
+MARCO_LEGIBLE = {"H1": "1 hora", "H4": "4 horas", "D1": "1 día", "W1": "1 semana"}
 
-    if "h1" not in lectura:
-        raise PreparacionFallida("la lectura del terminal no trae el análisis H1 que necesita el plan")
-    df = lec.serie_h1(ticker)
-    ind = est.indicadores(df)
-    ultima = plan_mod.ultima_vela(df, ind)
-    digits = int(activo["digits"])
-    alcista = sesgo == "Alcista"
-    medida = est.medir(df, digits, alcista) if len(df) > est.VENTANA + est.HORIZONTE else None
-    activacion = est.activacion_reciente(df, digits, alcista, ind) if len(df) > est.VENTANA else None
-    return plan_mod.armar(lectura["h1"], digits, sesgo, activo["nombre"], medida, ultima, activacion)
+
+def _plan(ticker: str, lectura: dict[str, Any], sesgo: str, activo: dict[str, Any], lec: Lectores) -> dict[str, Any]:
+    """El plan de escenarios desde la lectura de la estrategia: lo escribe Python y queda sellado.
+
+    Sin estadística ni Chandelier (enchufe de estrategia, S7; spec §8.4).
+    """
+    from analista import plan as plan_mod
+    from estrategia.contrato import lectura_de_dict
+
+    if "lectura" not in lectura.get("seleccion", {}):
+        raise PreparacionFallida("la lectura del terminal no trae la lectura de la estrategia que necesita el plan")
+    return plan_mod.armar(lectura_de_dict(lectura["seleccion"]["lectura"]), int(activo["digits"]), activo["nombre"])
 
 
 CLASES = {
@@ -494,23 +487,25 @@ def _momento_por_hora(ahora: datetime) -> str:
 
 
 def preparar_jornada(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lectores) -> Preparada:
-    import screener_gi as sc
+    import pipeline_carrusel as pc
+    from estrategia.contrato import lectura_de_dict
     from grafico_informe import formatear_precio
 
     momento = orden.args.get("momento") or _momento_por_hora(ahora)
     activos, avisos = lec.activos_jornada(dir_pedido)
     filas, imagenes = [], {}
     for ticker, info in activos.items():
-        d1 = info.get("d1")
-        if not d1 or not info.get("grafico"):
+        if not info.get("lectura") or not info.get("grafico"):
             continue
+        lectura = lectura_de_dict(info["lectura"])
         dg = info["digits"]
+        soporte, resistencia = pc.niveles_publicados(lectura)
         filas.append({
             "ticker": ticker, "nombre": info["nombre"],
-            "precio": formatear_precio(d1["price"], dg),
-            "soporte": formatear_precio(d1["s1"], dg),
-            "resistencia": formatear_precio(d1["r1"], dg),
-            "direccion": "Alcista" if sc.direccion_tecnica(d1) == "ALCISTA" else "Bajista",
+            "precio": formatear_precio(lectura.precio, dg),
+            "soporte": formatear_precio(soporte, dg) if soporte is not None else "--",
+            "resistencia": formatear_precio(resistencia, dg) if resistencia is not None else "--",
+            "direccion": pc._sesgo_de(lectura.direccion),
             "pie_imagen": f"{info['nombre']}: precio de los últimos meses, gráfico diario",
         })
         imagenes[ticker] = info["grafico"]

@@ -94,9 +94,10 @@ def test_con_foto_va_incrustada(tmp_path):
 
 def test_seccion_plan_y_sin_plan():
     con = ih.seccion_plan({"hay_plan": True, "sesgo": "Alcista", "gatillo": "G1", "invalidacion": "I1",
-                           "recorrido": "R1", "estadistica": "E1", "estado": "S1"})
-    for x in ("Gatillo", "Invalidación", "Qué dice la historia", "G1", "I1", "R1", "E1", "S1"):
+                           "salida": "X1", "estado": "S1"})
+    for x in ("Gatillo", "Invalidación", "Salida", "G1", "I1", "X1", "S1"):
         assert x in con
+    assert "Qué dice la historia" not in con  # sin estadística (spec §8.4)
     sin = ih.seccion_plan({"hay_plan": False, "sesgo": "Alcista", "motivo": "M1"})
     assert "M1" in sin and "Gatillo" not in sin
 
@@ -209,9 +210,9 @@ def test_foco_no_imprime_oportunidad_ni_porcentajes(tmp_path):
     assert "%" not in texto
 
 
-def test_el_activo_conserva_la_estadistica(tmp_path):
+def test_el_activo_ya_no_trae_estadistica(tmp_path):
     texto = _visible(ih.armar(fx.activo(tmp_path), tmp_path, fx.ANALISTA, fx.AUTOR, HOY))
-    assert "Qué dice la historia" in texto and ih.FRASE_ESCENARIO not in texto
+    assert "Qué dice la historia" not in texto and ih.FRASE_ESCENARIO in texto
 
 
 def test_foco_no_imprime_la_tabla_de_tasas_aunque_los_datos_la_traigan(tmp_path):

@@ -150,24 +150,23 @@ def cuerpo_activo(p: dict[str, Any], dir_pedido: Path, foco: bool = False) -> st
         f'<p class="temporalidad">⏱️ <strong>Temporalidad:</strong> {e(d["temporalidad"])}</p>',
         f'<p class="temporalidad">💡 {e(d["por_que_temporalidad"])}</p>' if d.get("por_que_temporalidad") else "",
         h2(4, "Plan de escenarios") if d.get("plan") else "",
-        seccion_plan(d["plan"], con_estadistica=not foco) if d.get("plan") else "",
+        seccion_plan(d["plan"]) if d.get("plan") else "",
         capa("Qué NO hacer", ed["que_no_hacer"], "no-hacer"),
         # El foco no imprime la tabla de tasas: trae "%" y el prospecto no ve porcentajes.
         "" if foco else _tabla_tasas(d.get("contexto", {}).get("curva_tasas") or [], 5 if d.get("plan") else 4),
     ])
 
 
-def seccion_plan(plan: dict[str, Any], con_estadistica: bool = True) -> str:
-    """El plan que escribió Python: gatillo, invalidación, recorrido, historia y estado.
+def seccion_plan(plan: dict[str, Any]) -> str:
+    """El plan que escribió Python desde la lectura: gatillo, invalidación, salida y estado.
 
-    Sin estadística (foco técnico) la historia se reemplaza por `FRASE_ESCENARIO`.
+    Sin estadística: no hay tasa de acierto que mostrar (spec §8.4). `FRASE_ESCENARIO`
+    recuerda que es un escenario y no una recomendación.
     """
     if not plan.get("hay_plan"):
         return f'<div class="plan plan-vacio"><p>{e(plan.get("motivo", ""))}</p></div>'
-    historia = (("Qué dice la historia", plan["estadistica"]) if con_estadistica
-                else ("Antes de leerlo", FRASE_ESCENARIO))
     filas = [("Gatillo", plan["gatillo"]), ("Invalidación", plan["invalidacion"]),
-             ("Recorrido", plan["recorrido"]), historia, ("Estado", plan["estado"])]
+             ("Salida", plan["salida"]), ("Antes de leerlo", FRASE_ESCENARIO), ("Estado", plan["estado"])]
     cuerpo = "".join(
         f'<div class="plan-fila"><div class="plan-rotulo">{e(r)}</div><p>{e(t)}</p></div>' for r, t in filas
     )
