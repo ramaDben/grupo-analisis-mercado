@@ -57,8 +57,8 @@ def _panel(a: dict[str, Any], ejecutivo: str) -> str:
                 'lleva los niveles, sin los montos.</p></div>')
     return (
         '<div class="panel">' + cabeza +
-        '<label>Pérdida aceptable (CLP)<input type="number" name="perdida" min="0" step="1000"></label>'
-        '<label>Capital (opcional)<input type="number" name="capital" min="0" step="10000"></label>'
+        '<label>Pérdida aceptable (CLP)<input type="number" name="perdida" min="0" step="1000" value="100000"></label>'
+        '<label>Capital<input type="number" name="capital" min="0" step="10000" value="2000000"></label>'
         '<div class="resultado"><div class="perdida"><span>Pérdida si toca el stop</span>'
         '<strong data-r="perdida">Escribe la pérdida aceptable</strong></div>'
         '<div class="ganancia"><span>Ganancia si llega al objetivo</span><strong data-r="ganancia"></strong></div>'
@@ -248,7 +248,7 @@ def _marco_correo(d: dict[str, Any], ed: dict[str, Any], ejecutivo: dict[str, An
           f'font-weight:700;color:{c["texto_1"]};">{ih.e(ed["titular"])}</h1>'
         + _p(ih.e(ed["bajada"]), c, tam=17, margen="0") + '</td></tr>'
         '<tr><td class="pad" style="padding:30px 40px 30px 40px;">'
-        + _p("Hola:", c, tam=17, peso=700, color="texto_1")
+        + _p('Hola<span class="cliente-nombre"></span>:', c, tam=17, peso=700, color="texto_1")
         + _p("Te comparto el análisis técnico de la semana, preparado por la Dirección de Análisis Técnico de "
              "Grupo Inteligencia. Es una lectura general, igual para todos.", c, tam=17, margen="0")
         + '</td></tr>')

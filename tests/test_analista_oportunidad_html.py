@@ -159,3 +159,12 @@ def test_en_el_correo_un_activo_sin_simulacion_muestra_el_motivo_sin_cuadros(tmp
     bloque = re.search(r'<template class="correo-activo" data-ticker="XAUUSD">(.*?)</template>', html, re.S).group(1)
     assert "el precio no muestra una dirección clara" in bloque
     assert "sim-perdida" not in bloque
+
+
+def test_los_cuadros_parten_con_capital_y_perdida_por_defecto_y_el_saludo_admite_nombre(tmp_path):
+    """El comercial no tiene que escribir nada: 2 millones de capital, 100.000 de pérdida y nombre opcional."""
+    html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    bloque = html.split('data-ticker="XAUUSD"')[1].split('data-ticker="COPPER"')[0]
+    assert 'name="perdida" min="0" step="1000" value="100000"' in bloque
+    assert 'name="capital" min="0" step="10000" value="2000000"' in bloque
+    assert 'id="cliente"' in html and 'Hola<span class="cliente-nombre"></span>:' in html
