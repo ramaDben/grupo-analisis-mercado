@@ -318,9 +318,9 @@ def preparar_seguimiento(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
 
 
 def _contexto_sin_porcentajes(contexto: dict[str, Any]) -> dict[str, Any]:
-    """El contexto del foco técnico: sin la tabla de tasas y sin "%".
+    """El contexto de la pieza semanal: sin la tabla de tasas y sin "%".
 
-    El foco no muestra ningún porcentaje al prospecto (candado de `esquema`). La
+    La pieza no muestra ningún porcentaje al prospecto (candado de `esquema`). La
     tabla de tasas se imprimiría igual, y una cifra con "%" en los datos invitaría
     a agy a citarla y haría rechazar la pieza después de gastar la redacción.
     """

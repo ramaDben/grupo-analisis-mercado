@@ -1,9 +1,7 @@
 # Bot de Telegram para analistas y ejecutivos
 
-El equipo le pide al bot las mismas piezas que el director le pide a Claude Code, y recibe un
-**informe PDF** general, firmado por el director, que comparte tal cual con su trader. Diseño:
-`docs/superpowers/specs/2026-10-08-bot-telegram-analistas-design.md` y
-`docs/superpowers/specs/2026-10-08-informe-general-firmado-y-plan-design.md`.
+El equipo le pide al bot el análisis técnico de la semana y el seguimiento de un activo. Diseño:
+`docs/superpowers/specs/2026-10-12-oportunidad-semanal-design.md`.
 
 ## Qué se puede pedir
 
@@ -27,35 +25,26 @@ informe con el nombre del cliente se acerca a una recomendación personalizada. 
 ## Cómo funciona
 
 ```
-pedido → orden.py (gramática cerrada) → preparar.py (datos + gráficos, carpeta propia)
-       → agy /analista (solo redacta pieza.json) → esquema.py (valida) → láminas
-       → informe_html.py (maqueta fija) → pdf.py (Chromium, hoja de celular) → Telegram + carpeta de Drive
+/oportunidad:  pedido → orden.py → preparar.py (foto semanal de los 6 activos, gráficos)
+               → agy /analista (solo redacta pieza.json, una vez por semana) → esquema.py (valida)
+               → láminas PNG → oportunidad_html.py (HTML con panel) → Telegram + carpeta de Drive
+/seguimiento:  pedido → orden.py → preparar.py (simulación y lectura de hoy) → lámina PNG
+               + texto de WhatsApp en el mensaje (sin agy)
 ```
 
-- **Circula el PDF, no el HTML** (director, 2026-10-09). Google Drive no muestra HTML, en el
-  celular cuesta abrirlo, y un documento firmado no debe circular en un formato que se edita con
-  el Bloc de notas sin tocar la firma. El HTML se sigue armando, porque es la fuente del PDF, y
-  queda en la carpeta del pedido en `data/informes_analistas/`: de ahí sale la huella de la
-  bitácora y ahí se audita. Si Chromium falla, el HTML va **solo por Telegram** con el aviso, y
-  Drive no recibe un archivo que no puede mostrar.
-- **El PDF se lee en el teléfono** (director, 2026-10-09). La hoja mide 108 x 192 mm, la
-  proporción de una pantalla: el visor la encaja a lo ancho y el cuerpo de 13 pt se lee sin zoom.
-  Una sola columna, las tablas como tarjetas y ningún bloque cortado entre páginas. No se fuerza
-  un salto por sección: se probó y dejaba hojas con dos líneas. El gráfico va a todo el ancho, en
-  alta resolución, y **se amplía con los dedos** («Pellizca para ampliar»). **Sin enlaces
-  internos**: hasta el 2026-10-09 tocar el gráfico saltaba a una lámina apaisada al final, y los
-  visores de teléfono (Drive, Telegram) no siguen esos enlaces: tocarlo daba error y la lámina
-  quedaba como una hoja horizontal suelta. Se distribuye solo por la carpeta de Drive: el director
-  descartó publicar páginas web, links o envíos automáticos.
-
+- **La pieza semanal es un HTML** (herramienta interna con panel): el ejecutivo marca los activos,
+  escribe la pérdida aceptable y copia el correo. Lleva seis activos y una lámina PNG por activo.
+- **La foto de la semana se arma una sola vez** (`registro.json`, clave = semana ISO). Quien
+  pide `/oportunidad` después recibe la misma foto, con su nombre en el archivo, sin gastar agy
+  ni cupo. Una foto de la semana anterior no se reusa.
+- **`/seguimiento` no usa agy** y se reusa 30 minutos (`reuso_minutos`). Solo acepta activos de la
+  foto de la semana; sin foto o con el activo fuera de ella, lo dice.
 - **agy solo redacta.** No recibe nada de lo que el analista escribió: recibe la ruta de la
   pieza. Datos, imágenes y láminas van sellados con una huella, y si cambian la pieza se descarta.
 - **Toda cifra del texto tiene que estar en los datos del terminal** (Regla 1). El texto tampoco
-  puede traer HTML, guion largo ni voseo.
-- **La maqueta es nuestra**: cabecera y lema del evergreen GI, cuerpo con la legibilidad de la
-  guía USD/CLP, colores de `marca.css` (sección "Documento claro").
-- **Reusar no cuesta agy.** La pieza se reusa mientras está vigente (`reuso_minutos`; un dato ya
-  publicado vale todo el día).
+  puede traer HTML, guion largo, voseo, «oportunidad» ni `%`.
+- **Candados de lenguaje.** `esquema.frases_prohibidas` rechaza frases de instrucción, de
+  recomendación y de dimensionamiento ("es momento de comprar", "te recomiendo", "lotes").
 - **No toca la producción.** Trabaja en `data/informes_analistas/` y no usa los `preparar()` de
   los pipelines, que escriben en `data/carrusel/`, `data/screener/` y los historiales. Un test
   impide que el bot importe el envío a WhatsApp o la bitácora de despachos.
@@ -75,73 +64,6 @@ de quien lo lee."* El informe **no menciona a la CMF** (decisión del director).
   `vigente_hasta`, la acreditación deja de imprimirse (también en una pieza reusada) y el bot avisa
   en cada respuesta que hay que renovarla.
 - Nada de fotos generadas o retocadas con IA: la foto acompaña una credencial.
-
-## Plan de escenarios (solo `/activo`)
-
-Es lo que el informe trae y WhatsApp no. Lo escribe Python (`scripts/analista/plan.py`), queda
-sellado en `datos.plan` y agy no lo redacta ni lo repite.
-
-| Fila | Qué dice | De dónde sale |
-|---|---|---|
-| Gatillo | Cierre de vela de 1 hora sobre R1 (o bajo S1), a favor del sesgo | `analizar_activo` H1 |
-| Invalidación | Chandelier de 22 velas y 3 ATR, que se arrastra a favor | serie H1 |
-| Recorrido | 1,5 veces la volatilidad típica de una hora, **como distancia** | ATR 14 H1 |
-| Qué dice la historia | Cuántas veces se dio la condición y qué porcentaje recorrió antes de invalidarse, contra una hora cualquiera **con la misma tendencia** | `estadistica.py` sobre 10.000 velas H1 |
-| Estado | Armado, activado o invalidado según el último cierre | serie H1 |
-
-Tres decisiones que no conviene revertir:
-
-1. **Sin objetivo de precio.** En septiembre se midió que ningún objetivo fijo tenía expectativa
-   positiva; la salida del director es el Chandelier.
-2. **La línea base es de la misma tendencia, no de todas las horas.** Contra todas las horas, el
-   oro mostraba 53 % contra 33 %: veinte puntos de ventaja que eran solo el filtro de tendencia.
-   Contra las horas sobre la EMA 50 la base es 49 %, y el informe dice que no hay ventaja (menos de
-   5 puntos). Con menos de 30 casos no publica porcentaje.
-3. **Los niveles históricos salen de la misma función que los de hoy** (`_get_support_resistance`
-   con las 300 velas anteriores, sin mirar el futuro). Medir la estadística con otra definición de
-   resistencia mediría otra cosa.
-
-Si R1 o S1 son de respaldo ATR (no salen de swings), no hay plan y el informe lo dice. La
-estadística tarda unos 13 s por pedido de activo; no se cachea.
-
-**Candados de lenguaje.** `esquema.frases_prohibidas` rechaza frases de instrucción, de
-recomendación y de dimensionamiento ("es momento de comprar", "te recomiendo", "lotes", "de tu
-capital"). Son frases y no palabras sueltas: "gerentes de compra (PMI)" tiene que pasar.
-
-## Foco técnico del día (`/oportunidad`)
-
-Lo piden los ejecutivos de ventas para un prospecto. Spec:
-`docs/superpowers/specs/2026-10-09-foco-tecnico-del-dia-design.md`; pauta para el equipo:
-`docs/pauta-ventas-foco-tecnico.md`.
-
-- **Lo elige una regla** (`scripts/analista/foco.py`), entre el forex y commodities del carrusel
-  más el US100 (solo desde las 10:00 de Nueva York) y el Brent. Entra un plan armado a 1 ATR o
-  menos del gatillo, o activado en las 2 últimas velas con menos de la mitad del recorrido hecho.
-  Se ordena por técnico + momentum: **no** por el `Score_GI` entero, porque su factor de espacio
-  mide contra el R1 como objetivo (y aquí es el gatillo) y su catalizador no mira la dirección.
-- **Sin estadística**, ni en los datos que recibe agy: sin su línea base, "53 %" insinúa una
-  ventaja que no hay. En su lugar va una frase fija sin cifras. Los candados del foco rechazan
-  frases de captación, de acierto y cualquier `%`; la palabra "oportunidad" no se imprime, ni
-  siquiera en el nombre del archivo (`foco-tecnico_*`).
-- **"No hay foco" es una respuesta**, con los motivos agrupados. Distinta de "no puedo leer el
-  mercado" (MT5 o el calendario caídos): ninguna de las dos gasta agy ni cupo.
-- **Se reusa 60 minutos, pero se vuelve a leer el activo antes**: si cambió el plan, la
-  tendencia, o hay blackout o mercado cerrado, se rehace.
-- La bitácora lo anota con `"tipo": "oportunidad"`.
-
-## Bitácora de planes
-
-`data/bitacora_planes_analistas.json` se versiona: es historia de lo que el equipo recibió. Una
-entrada por informe de activo con plan (una pieza reusada no se re-anota), con los niveles, la
-estadística publicada, quién lo pidió y la huella del HTML.
-
-```bash
-uv run --with MetaTrader5 python scripts/bot_analistas.py --desenlaces
-```
-
-completa el desenlace de los planes de más de 24 h (`activado_recorrido`,
-`activado_invalidacion`, `activado_sin_definicion`, `no_se_activo`), medido desde la vela
-posterior a la que se usó al preparar.
 
 ## Puesta en marcha
 
@@ -180,7 +102,6 @@ El analista recibe el motivo, y nunca una pieza a medias ni un gráfico de otro 
 | `no uso el terminal: ...` | MT5 cerrado o en otra cuenta que la de `config/cuenta_mt5.json` |
 | `La redacción no terminó (timeout ...)` | agy no respondió en 12 minutos. No gasta cupo |
 | `El texto no pasó los controles` | agy escribió una cifra ajena, HTML o guion largo. No se entrega |
-| `No pude generar el PDF ...` | Chromium no imprimió el informe. Llega el HTML (ábrelo en el navegador) y no se copia a Drive |
 | `'PlaywrightContextManager' object has no attribute '_playwright'` (en la bitácora) | Un bot huérfano sin consola: hay dos corriendo. `-Reiniciar` |
 | `Drive no está configurado` | Falta `ruta_drive`; el archivo igual llega por Telegram |
 
