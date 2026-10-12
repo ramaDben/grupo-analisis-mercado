@@ -58,7 +58,7 @@ def _grafico_tv(payload: dict[str, Any], destino: Path) -> Path:
         ticker=payload["_procedencia"]["ticker"],
         nombre=payload.get("rotulo_activo", payload["activo"]),
         destino=destino,
-        timeframe=payload.get("marco", pc.TIMEFRAME_GRAFICO),
+        timeframe=payload["marco"],
         n_velas=pc.VELAS_GRAFICO_TV,
         soporte=pc._nivel_publicado(payload.get("soporte"), crudos.get("soporte")),
         resistencia=pc._nivel_publicado(payload.get("resistencia"), crudos.get("resistencia")),

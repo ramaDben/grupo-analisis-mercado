@@ -297,15 +297,8 @@ de una a dos semanas"). Si llega una temporalidad en la invocación, se ignora y
 Si el activo no está en el catálogo, **detente y dilo**, nombrando lo que recibiste. No elijas
 por el director.
 
-Las etiquetas canónicas de temporalidad del repo (las usan todavía las piezas del analista,
-hasta S7 del enchufe; la de `alerta` sale de la estrategia, en `lectura.marco`):
-
-| | |
-|---|---|
-| `15M` | scalper (minutos a 1-2 h) |
-| `1H` | intradía (dentro de la jornada) |
-| `4H` | swing de jornada (1-3 días) |
-| `1D` | posicional (días a semanas) |
+La etiqueta de temporalidad sale de la estrategia (`lectura.marco` y su etiqueta en los
+`Marcos` de la estrategia), no de una tabla: no hay otra lista de marcos que mantener.
 
 ---
 
@@ -413,7 +406,7 @@ de Chile (regla canónica de `CLAUDE.md`, nunca `WebSearch` para la hora):
   "variacion": { "pct": "[valor]", "direccion": "alcista|bajista" },
   "soporte": "[soporte con digits]",
   "resistencia": "[resistencia con digits]",
-  "vol_pct": "[impulso proyectado en puntos, ej. '150,69 pts' para Impulso ADC/ATR]",
+  "vol_pct": "[vela típica del marco con su unidad, ej. '18,50 USD']",
   "rotulo_grafico": "[TICKER · VELAS 4H]",
   "chart_png": "[ruta o null]",
   "fuente": "[COMEX/INVESTING/MT5 · GRUPO INTELIGENCIA]",
@@ -432,7 +425,7 @@ de Chile (regla canónica de `CLAUDE.md`, nunca `WebSearch` para la hora):
 
 **Geometría y Proporción del Gráfico:**
 - Usar siempre `"lienzo": "alto"` en el bloque `recorrido` de `alerta` para maximizar la altura vertical del gráfico y la legibilidad de las etiquetas de precios (`22px`).
-- El campo `vol_pct` alimenta la columna **`Impulso ADC/ATR`** en la tarjeta de estadísticas de la Story.
+- El campo `vol_pct` alimenta la columna **`Volatilidad típica`** de la tarjeta de estadísticas: la vela típica (ATR) del marco de la lectura, que describe cuánto se mueve el activo y no hacia dónde va.
 
 Si el director omitió variación/vol en el PASO 2, **omite esas claves por completo** del JSON
 (no las dejes en `null` ni vacías) — así el template no deja hueco visual (CB-4).

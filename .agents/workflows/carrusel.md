@@ -1,6 +1,6 @@
 # /carrusel
 
-Carrusel responsivo de alertas de mercado: el escáner detecta la sesión activa, elige el Top 3 con el Score_GI, y el comando escribe el texto y rinde las Stories.
+Carrusel responsivo de alertas de mercado: el escáner detecta la sesión activa, ordena los activos de la semana con la estrategia activa, elige el Top 3, y el comando escribe el texto y rinde las Stories.
 
 ## Cómo ejecutar este comando
 

@@ -44,7 +44,7 @@ LIMITE_CARACTERES = 12_000
 # a mano — el --check lo marcaría como desactualizado.
 COMANDOS = {
     "story": "Genera una Story de marca GI a partir de una plantilla (dato_macro, alerta, quote, breaking, encuesta, edu, flash, postventa, operacion).",
-    "carrusel": "Carrusel responsivo de alertas de mercado: el escáner detecta la sesión activa, elige el Top 3 con el Score_GI, y el comando escribe el texto y rinde las Stories.",
+    "carrusel": "Carrusel responsivo de alertas de mercado: el escáner detecta la sesión activa, ordena los activos de la semana con la estrategia activa, elige el Top 3, y el comando escribe el texto y rinde las Stories.",
     "informe": "Informe de la jornada: PDF institucional en la apertura, mensaje con gráfico al cierre.",
     "encuesta": "Ejecuta el comando encuesta de la misma forma que Claude Code.",
     "estado": "Ejecuta el comando estado de la misma forma que Claude Code.",

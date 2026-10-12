@@ -36,9 +36,9 @@ mejor que una de 3 con un relleno.
 no pudo verificarse y hay que decidir a mano si se publica.
 
 **Si un canal quedó vacío, mira si trae suplemento.** El aviso lo dice (`02_forex_divisas
-quedó vacío: se suplementa con recorrido_agotado y el concepto volatilidad-atr`) y el texto
-ya está escrito en `<canal>/0_suplemento.txt`. **No lo reescribas**: sale de las cifras que
-el escáner midió, y el concepto lo elige el motivo. Si el aviso dice que quedó vacío **sin**
+quedó vacío: se suplementa con dato_en_curso y el concepto precio-descontado`) y el texto
+ya está escrito en `<canal>/0_suplemento.txt`. **No lo reescribas**: sale del motivo que el
+escáner escribió (blackout o feriado), y el concepto lo elige ese motivo. Si el aviso dice que quedó vacío **sin**
 suplemento, es porque el motivo era un problema nuestro de datos y no una lectura de
 mercado; ese canal no recibe nada, y así corresponde.
 
@@ -63,8 +63,9 @@ sobre el último mes, las fuentes oficiales que responden (EIA, BCE y política 
 la Fed) producen una nota relevante cada dos o tres días. El piso confiable del canal vacío
 sigue siendo el suplemento de estado más concepto.
 
-**`--forzar` ya no existe.** Salió con los gates de agotamiento y de banda (spec del enchufe,
-§8.3): la estrategia no mide recorrido diario. `--grupo` acota el universo y nada más.
+**`--forzar` ya no existe.** Salió con los gates de agotamiento y de banda, borrados en S8 junto
+con el `Score_GI` (spec del enchufe, §6 y §8.3): la estrategia no mide recorrido diario.
+`--grupo` acota el universo y nada más.
 
 **Si la preparación aborta con `DatosMacroNoDisponiblesError`, es a propósito.** Significa que
 falta la serie oficial que alimenta el contexto macro de ese grupo (Imacec o TPM del BCCh, o una

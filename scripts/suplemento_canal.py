@@ -14,13 +14,10 @@ elegidas es mejor que una de 3 con un relleno"*. Un suplemento genérico sería
 exactamente ese relleno. El que sale de acá se apoya en cifras que el escáner ya
 midió y escribió, así que se gana el lugar en vez de ocuparlo.
 
-**Y hay una razón estructural para que esto haga falta.** El recorrido disponible
-es `ATR − rango_hoy`: una función que **solo baja** a medida que avanza el día.
-Por construcción, un sistema cuyo criterio de selección exige espacio disponible
-tiene su mejor momento al abrir y se apaga solo. A las 10:24 de ese día el canal
-de divisas tenía cuatro activos entre 93 % y 290 %; a las 12:11 había quince
-excluidos en todo el universo. No es un defecto del gate: es la métrica haciendo
-lo que mide. La tarde necesita otro eje de contenido, y este es el primero.
+**Desde S8 del enchufe solo lo disparan el blackout y el feriado.** Nació con el
+gate de agotamiento del ATR, que vaciaba los canales por la tarde, y ese gate se
+borró: el ranking y las exclusiones técnicas son de la estrategia, y la cobertura
+fija garantiza una pieza en cada canal cubierto.
 
 **Lo que NO hace:** no promete niveles. El cierre canónico de tres escenarios
 necesita soporte y resistencia, y este mensaje no los tiene; prometerlos sería
@@ -30,7 +27,6 @@ inventarlos. Cierra con el CTA al analista.
 from __future__ import annotations
 
 import json
-import re
 from collections import Counter
 from datetime import date, datetime
 from pathlib import Path
@@ -61,16 +57,10 @@ VENTANA_CONCEPTO_DIAS = 14
 # publicar "no pudimos leer el activo" no le sirve a nadie y suena a excusa. Esos canales quedan sin suplemento, que es la respuesta
 # honesta.
 CATEGORIAS: dict[str, dict[str, Any]] = {
-    "ATR diario consumido": {
-        "categoria": "recorrido_agotado",
-        "concepto": "volatilidad-atr",
-        "publicable": True,
-    },
-    "ya salio en una corrida anterior": {
-        "categoria": "recorrido_agotado",
-        "concepto": "volatilidad-atr",
-        "publicable": True,
-    },
+    # El activo ya se publicó hoy: el canal tuvo su pieza, y decirle al cliente que
+    # el mercado agotó su rango sería inventar el motivo. Hasta S8 caía en la
+    # categoría del ATR consumido, que salió con ese gate.
+    "ya salio en una corrida anterior": {"categoria": "ya_publicado", "concepto": None, "publicable": False},
     "blackout por": {
         "categoria": "dato_en_curso",
         "concepto": "precio-descontado",
@@ -81,27 +71,9 @@ CATEGORIAS: dict[str, dict[str, Any]] = {
         "concepto": "temporalidades",
         "publicable": True,
     },
-    # La vela tipica cubre la banda entre soporte y resistencia: los bordes no
-    # aguantan una hora. El concepto no es la volatilidad (ese lo tiene el
-    # recorrido agotado) sino que un nivel solo significa algo si el precio no lo
-    # cruza a cada rato.
-    "la vela tipica cubre la banda": {
-        "categoria": "banda_estrecha",
-        "concepto": "soporte-resistencia",
-        "publicable": True,
-    },
-    # Un borde que sale de `precio ± ATR` no es un nivel: es una distancia
-    # calculada. La leccion es que un punto de interes es donde el precio de
-    # verdad reacciono, no donde una formula dice.
-    "niveles de respaldo por ATR": {
-        "categoria": "sin_niveles_medidos",
-        "concepto": "puntos-interes",
-        "publicable": True,
-    },
     # Exclusiones de la estrategia activa (enchufe, fase 2). No se publican como
     # suplemento: son motivos técnicos y no una lectura para el cliente, y la
-    # cobertura fija ya garantiza una pieza por canal cubierto. Las tres categorías
-    # de arriba que vienen del agotamiento y la banda salen con esos gates (S6/S7).
+    # cobertura fija ya garantiza una pieza por canal cubierto.
     "sin líneas trazables": {"categoria": "sin_estructura", "concepto": None, "publicable": False},
     "va contra la secuencia": {"categoria": "contra_secuencia", "concepto": None, "publicable": False},
     "está en prueba": {"categoria": "en_prueba", "concepto": None, "publicable": False},
@@ -210,18 +182,6 @@ def categoria_del_motivo(motivo: str) -> dict[str, Any] | None:
     return None
 
 
-def _pct(motivo: str) -> int | None:
-    """El porcentaje que trae el motivo de agotamiento, si lo trae.
-
-    Sí, esto lee un número de un mensaje que escribimos nosotros, y ese
-    acoplamiento es el que el contrato de arriba protege. La alternativa era que
-    los gates devolvieran datos estructurados, que es mejor pero cambia la firma
-    de los cinco: queda para su propio cambio.
-    """
-    m = re.search(r"(\d+)\s*%", motivo or "")
-    return int(m.group(1)) if m else None
-
-
 def resumen_del_canal(excluidos: list[dict[str, Any]]) -> dict[str, Any] | None:
     """La categoría dominante del canal y sus cifras, o `None` si no hay qué decir.
 
@@ -241,24 +201,12 @@ def resumen_del_canal(excluidos: list[dict[str, Any]]) -> dict[str, Any] | None:
     dominante = conteo.most_common(1)[0][0]
     delgrupo = [(cat, ex) for cat, ex in clasificados if cat["categoria"] == dominante]
 
-    porcentajes = [(_pct(str(ex.get("excluido"))), ex) for _, ex in delgrupo]
-    con_pct = [(p, ex) for p, ex in porcentajes if p is not None]
-
-    resumen: dict[str, Any] = {
+    return {
         "categoria": dominante,
         "concepto": delgrupo[0][0]["concepto"],
         "activos": len(delgrupo),
         "tickers": [ex.get("ticker") for _, ex in delgrupo],
-        "minimo_pct": None,
-        "maximo_pct": None,
-        "peor_activo": None,
     }
-    if con_pct:
-        con_pct.sort(key=lambda x: x[0])
-        resumen["minimo_pct"] = con_pct[0][0]
-        resumen["maximo_pct"] = con_pct[-1][0]
-        resumen["peor_activo"] = con_pct[-1][1].get("nombre")
-    return resumen
 
 
 def _concepto(clave: str | None) -> dict[str, Any] | None:
@@ -299,8 +247,7 @@ def concepto_en_cooldown(
 
     El riesgo que cierra es real y estaba en producción: el 2026-09-03 tres
     canales recibieron el **mismo** concepto porque los tres se vaciaron por el
-    mismo motivo. Y va a pasar seguido, porque el recorrido disponible solo baja
-    con el día y las tardes vacías no son la excepción.
+    mismo motivo.
     """
     if not clave:
         return False
@@ -396,10 +343,6 @@ def suplemento(
 # El mensaje
 # ─────────────────────────────────────────────────────────────────────────────
 _ESTADO = {
-    "recorrido_agotado": (
-        "Los {n} activos analizados en {canal} completaron su rango promedio de movimiento intradiario, "
-        "situando el precio en fase de consolidación y compresión de volatilidad antes del próximo ciclo institucional."
-    ),
     "dato_en_curso": (
         "El mercado de {canal} asimila en este momento la publicación de catalizadores macroeconómicos de alto impacto, "
         "por lo que los niveles técnicos se encuentran en proceso de reajuste y confirmación institucional."
@@ -430,12 +373,7 @@ def construir_mensaje_suplemento(sup: dict[str, Any], es_cierre: bool = False) -
             "━━━━━━━━━━━━━━━━━━━",
             "1️⃣ *QUÉ PASÓ EN LA JORNADA*",
         ]
-        if r["categoria"] == "recorrido_agotado":
-            lineas.append(
-                f"Completamos la sesión con los {r['activos']} activos de {canal} "
-                "habiendo absorbido la totalidad de su rango promedio del día."
-            )
-        elif r["categoria"] == "dato_en_curso":
+        if r["categoria"] == "dato_en_curso":
             lineas.append(
                 f"Cerramos la jornada de {canal} tras asimilar el impacto de los datos macroeconómicos del día."
             )
@@ -448,28 +386,17 @@ def construir_mensaje_suplemento(sup: dict[str, Any], es_cierre: bool = False) -
                 f"Cerramos la jornada en {canal} con el mercado consolidando posiciones sin rupturas de rango."
             )
 
-        if r["maximo_pct"] is not None and r["peor_activo"]:
-            veces = f"{r['maximo_pct'] / 100:.1f}".replace(".", ",")
-            detalle = (
-                f"El movimiento más amplio de la jornada lo lideró {r['peor_activo']}, con un "
-                f"desplazamiento equivalente a {veces} veces su rango habitual"
-            )
-            if r["minimo_pct"] is not None:
-                detalle += f" (el de menor variación marcó un {r['minimo_pct']}%)"
-            lineas.append(detalle + ".")
-
         lineas.extend([
             "",
             "2️⃣ *QUÉ ESTÁ PASANDO AHORA*",
-            f"El cierre de sesión sitúa a {rotulo_ancla} en fase de consolidación y compresión de volatilidad. "
-            "El recorrido diario ha quedado completado, dando paso a una pausa técnica institucional "
-            "antes de la inyección de volumen del siguiente ciclo.",
+            f"El cierre de sesión deja a {rotulo_ancla} con su estructura a la vista: "
+            "las líneas que importan para la próxima apertura están en el gráfico.",
             "",
             "3️⃣ *QUÉ VIGILAR PARA LA PRÓXIMA APERTURA*",
             "El cierre de sesión es momento de evaluar la estructura del precio para anticipar "
             "la apertura del siguiente ciclo sin forzar entradas innecesarias.",
             "━━━━━━━━━━━━━━━━━━━",
-            "💡 *En la imagen adjunta encuentras el gráfico TradingView™ en H1 con los niveles de la jornada.*",
+            "💡 *En la imagen adjunta encuentras el gráfico TradingView™ con los niveles de la jornada.*",
             "━━━━━━━━━━━━━━━━━━━",
             "A continuación abrimos la encuesta de la jornada para conocer la visión de la comunidad 👇",
         ])
@@ -485,19 +412,6 @@ def construir_mensaje_suplemento(sup: dict[str, Any], es_cierre: bool = False) -
         "━━━━━━━━━━━━━━━━━━━",
         estado,
     ]
-
-    if r["maximo_pct"] is not None and r["peor_activo"]:
-        # La coma se aplica SOLO al numero. Un `replace` sobre la frase entera
-        # corrompe cualquier nombre con punto, y el catalogo tiene varios
-        # (`US100.spot`, `GLD.US`, `WTI.spot`).
-        veces = f"{r['maximo_pct'] / 100:.1f}".replace(".", ",")
-        detalle = (
-            f"El movimiento más amplio lo marcó {r['peor_activo']}, que se movió "
-            f"{veces} veces su rango habitual"
-        )
-        if r["minimo_pct"] is not None:
-            detalle += f". El que menos, un {r['minimo_pct']}%"
-        lineas.append(detalle + ".")
 
     if sup.get("concepto"):
         c = sup["concepto"]

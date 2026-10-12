@@ -236,11 +236,11 @@ def ticker_valido(ticker: str) -> Veredicto:
 
 
 def marco_canonico(etiqueta: str) -> Veredicto:
-    """Verifica que la etiqueta de temporalidad corresponda a una de las cuatro canónicas.
+    """Verifica que la etiqueta de temporalidad sea la de un marco de la estrategia activa.
 
-    La fuente única de verdad es `pipeline_carrusel.MARCOS_CANONICOS`. No se copian
-    las etiquetas en este módulo para evitar mantener tablas duplicadas que
-    inevitablemente divergen con el tiempo.
+    La fuente única son los `Marcos` de la estrategia (con Tori: 1S, 1D y 4H), con la
+    etiqueta corta de `pipeline_carrusel.ETIQUETA_CORTA`. Hasta S8 del enchufe se
+    validaba contra una tabla de cuatro marcos (15M, 1H, 4H, 1D) que ya no publicaba nadie.
     """
     if not isinstance(etiqueta, str) or not etiqueta.strip():
         return falla(
@@ -255,14 +255,15 @@ def marco_canonico(etiqueta: str) -> Veredicto:
         if pipeline_carrusel is None:
             return falla(
                 "error_interno",
-                "No se pudo importar pipeline_carrusel para verificar MARCOS_CANONICOS.",
+                "No se pudo importar pipeline_carrusel para verificar los marcos de la estrategia.",
                 ubicacion=etiqueta_limpia,
             )
-        etiquetas_validas = {val[0] for val in pipeline_carrusel.MARCOS_CANONICOS.values()}
+        marcos = pipeline_carrusel._estrategia().marcos.todos
+        etiquetas_validas = {pipeline_carrusel.ETIQUETA_CORTA.get(m, m) for m in marcos}
     except Exception as e:
         return falla(
             "error_interno",
-            f"Error al obtener MARCOS_CANONICOS de pipeline_carrusel: {e}",
+            f"Error al obtener los marcos de la estrategia activa: {e}",
             ubicacion=etiqueta_limpia,
         )
 
@@ -272,7 +273,7 @@ def marco_canonico(etiqueta: str) -> Veredicto:
     opciones = ", ".join(sorted(etiquetas_validas))
     return falla(
         "marco_no_canonico",
-        f"La temporalidad '{etiqueta_limpia}' no es una de las cuatro etiquetas canónicas ({opciones}).",
+        f"La temporalidad '{etiqueta_limpia}' no es un marco de la estrategia activa ({opciones}).",
         ubicacion=etiqueta_limpia,
     )
 

@@ -11,7 +11,6 @@
       "digits": 2,
       "unidad": "CLP",
       "volatilidad": "baja",
-      "nota_volatilidad": "se mueve poco dentro del día, así que marcos más amplios (1H/4H) dan una lectura más limpia; en 15M aparece mucho ruido",
       "notas_marco": {"H4": "el dólar en Chile se mueve en tramos de varios días: en 4H se ven las líneas que esos tramos respetan, sin el ruido de cada hora."},
       "drivers": [
         "cobre",
@@ -36,7 +35,6 @@
       "digits": 3,
       "unidad": "JPY",
       "volatilidad": "media",
-      "nota_volatilidad": "se mueve por decisiones de tasas más que por el minuto a minuto: en 4H y 1D se ve la tendencia de fondo, y 1H es el marco donde esa tendencia se opera dentro del día sin comerse el ruido de 15M",
       "notas_marco": {"H4": "el yen se mueve por diferencias de tasas que tardan días en reflejarse: en 4H se ve la tendencia completa y sus líneas."},
       "drivers": [
         "diferencial de tasas Fed vs BoJ",
@@ -62,7 +60,6 @@
       "digits": 5,
       "unidad": "USD",
       "volatilidad": "media",
-      "nota_volatilidad": "se mueve por decisiones de tasas y datos de inflación más que por el minuto a minuto: 4H y 1D ordenan la tendencia, y 1H da la lectura del día sin el ruido de 15M",
       "notas_marco": {"H4": "el euro avanza en tramos de varios días entre datos y reuniones de bancos centrales: en 4H esos tramos dibujan líneas claras."},
       "drivers": [
         "diferencial de tasas BCE vs Fed",
@@ -88,7 +85,6 @@
       "digits": 5,
       "unidad": "USD",
       "volatilidad": "media",
-      "nota_volatilidad": "la libra reacciona fuerte a las reuniones del Banco de Inglaterra y de la Fed, y entre reunión y reunión se mueve en tramos parejos: 1H da la lectura del día y 4H la tendencia de la semana",
       "notas_marco": {"H4": "la libra hace movimientos amplios entre reuniones del Banco de Inglaterra: en 4H se leen las líneas sin que cada hora las ensucie."},
       "drivers": [
         "diferencial de tasas BoE vs Fed",
@@ -112,7 +108,6 @@
       "digits": 2,
       "unidad": "USD",
       "volatilidad": "alta",
-      "nota_volatilidad": "se mueve mucho y rápido, por eso en 15M hay señales veloces pero con más ruido; 1H/4H ordenan mejor la tendencia del día",
       "notas_marco": {"H4": "el oro se mueve mucho dentro del día, pero sus tramos duran días: en 4H las líneas de tendencia se ven limpias."},
       "drivers": [
         "Dollar Index",
@@ -138,7 +133,6 @@
       "digits": 3,
       "unidad": "USD",
       "volatilidad": "alta",
-      "nota_volatilidad": "se mueve mucho y rápido, con menos liquidez que el oro, por eso en 15M hay señales veloces pero con más ruido; 1H/4H ordenan mejor la tendencia del día",
       "notas_marco": {"H4": "la plata se mueve rápido y con saltos: en 4H esos saltos se ordenan y las líneas de tendencia se pueden trazar."},
       "drivers": [
         "Dollar Index",
@@ -164,7 +158,6 @@
       "digits": 3,
       "unidad": "USD",
       "volatilidad": "alta",
-      "nota_volatilidad": "reacciona fuerte a inventarios y noticias OPEP+, así que 1H/4H dan una lectura más estable; en 15M el ruido es alto",
       "notas_marco": {"H4": "el petróleo reacciona fuerte a cada noticia, pero sus tendencias duran semanas: en 4H se separa la noticia de la tendencia."},
       "drivers": [
         "inventarios EIA",
@@ -188,7 +181,6 @@
       "digits": 3,
       "unidad": "USD",
       "volatilidad": "alta",
-      "nota_volatilidad": "referencia europea del crudo: se mueve con OPEP+, Medio Oriente y fletes, así que 1H/4H dan lectura más estable que 15M",
       "drivers": [
         "decisiones OPEP+",
         "geopolítica de Medio Oriente",
@@ -211,7 +203,6 @@
       "digits": 0,
       "unidad": "USD/t",
       "volatilidad": "media",
-      "nota_volatilidad": "el cobre se mueve con la demanda de China y con los inventarios, en tramos amplios que tardan horas en formarse: en 15M el movimiento todavía no se distingue del ruido, así que 1H es el marco del día y 4H el de la tendencia",
       "notas_marco": {"H4": "el cobre avanza en tramos amplios que tardan días: en 4H se ven las líneas que esos tramos respetan."},
       "drivers": [
         "demanda industrial China",
@@ -236,7 +227,6 @@
       "digits": 2,
       "unidad": "USD",
       "volatilidad": "alta",
-      "nota_volatilidad": "cotiza las 24 horas y hace su mayor recorrido en la mañana de Nueva York, donde llega a moverse el doble de su hora promedio: en 15M esos tramos se desdicen solos, así que 1H es el marco del día y 4H el de la tendencia",
       "drivers": [
         "flujos ETFs de BTC",
         "tasas Fed",
@@ -260,7 +250,6 @@
       "digits": 2,
       "unidad": "USD",
       "volatilidad": "alta",
-      "nota_volatilidad": "se mueve amplio y a toda hora, incluso el fin de semana; 1H y 4H ordenan la tendencia, y en 15M el ruido manda por sobre la dirección",
       "drivers": [
         "flujos de ETFs de Ethereum",
         "actividad y comisiones de la red",
@@ -284,7 +273,6 @@
       "digits": 2,
       "unidad": "USD",
       "volatilidad": "alta",
-      "nota_volatilidad": "de las más volátiles del catálogo: hace recorridos grandes en pocas horas, así que en 15M los movimientos se desdicen solos. 1H es el marco donde ese golpe se ve entero, y 4H el que ordena la tendencia",
       "drivers": [
         "flujos de ETFs de Solana",
         "actividad de la red Solana",
@@ -307,7 +295,6 @@
       "digits": 2,
       "unidad": "USD",
       "volatilidad": "alta",
-      "nota_volatilidad": "sigue de cerca a Bitcoin y amplifica sus movimientos; 4H muestra la tendencia y 1H sirve para afinar, pero en 15M casi todo es ruido",
       "drivers": [
         "correlación con Bitcoin",
         "apetito por riesgo cripto",
@@ -329,7 +316,6 @@
       "digits": 4,
       "unidad": "USD",
       "volatilidad": "alta",
-      "nota_volatilidad": "cotiza en centavos con 4 decimales, así que un movimiento que en pantalla parece mínimo es porcentualmente grande: en 15M eso se lee como ruido constante, y 1H es el marco donde el tramo se distingue",
       "drivers": [
         "correlación con Bitcoin",
         "desarrollo del ecosistema Cardano",
@@ -351,7 +337,6 @@
       "digits": 4,
       "unidad": "USD",
       "volatilidad": "alta",
-      "nota_volatilidad": "el más impredecible del catálogo: reacciona a menciones en redes sociales y no a fundamentos, así que ningún marco lo vuelve ordenado. 1H es el menos ruidoso de los cortos y aun así conviene esperar confirmación antes de operar sus bordes",
       "drivers": [
         "menciones en redes sociales y sentimiento de retail",
         "correlación con Bitcoin",
@@ -376,7 +361,6 @@
       "digits": 2,
       "unidad": "puntos",
       "volatilidad": "media",
-      "nota_volatilidad": "tiene movimientos amplios cuando hay datos o earnings; 1H/4H equilibran señal y ruido para la lectura del día",
       "drivers": [
         "tasas Fed",
         "earnings tecnológicos",
@@ -406,7 +390,6 @@
       "digits": 2,
       "unidad": "puntos",
       "volatilidad": "media",
-      "nota_volatilidad": "al promediar 500 empresas se mueve de forma más contenida; 1H/4H dan una lectura clara de la tendencia del día",
       "drivers": [
         "tasas Fed",
         "earnings agregados",
@@ -437,7 +420,6 @@
       "digits": 2,
       "unidad": "puntos",
       "volatilidad": "media",
-      "nota_volatilidad": "se mueve de forma más pausada que el Nasdaq; 1H/4H dan una lectura ordenada de la tendencia del día",
       "drivers": [
         "datos macro EE.UU.",
         "earnings industriales",
@@ -471,7 +453,6 @@
         "digits": 2,
         "unidad": "USD",
         "volatilidad": "media",
-        "nota_volatilidad": "replica al Nasdaq 100, así que se mueve parecido al US100 pero solo en horario de bolsa; 1H y 4H equilibran señal y ruido para la lectura del día",
         "drivers": [
           "tasas Fed",
           "earnings tecnológicos",
@@ -494,7 +475,6 @@
         "digits": 2,
         "unidad": "USD",
         "volatilidad": "media",
-        "nota_volatilidad": "al replicar 500 empresas se mueve de forma más contenida que un ETF de un solo sector; 1H y 4H dan una lectura clara de la tendencia del día",
         "drivers": [
           "tasas Fed",
           "earnings agregados del S&P 500",
@@ -517,7 +497,6 @@
         "digits": 2,
         "unidad": "USD",
         "volatilidad": "media",
-        "nota_volatilidad": "sigue al oro pero cotiza solo en horario de bolsa, así que abre con el salto que el oro spot ya hizo durante la noche: en 15M esa apertura es un hueco y no una tendencia, y 1H es el primer marco donde el día se lee completo",
         "drivers": [
           "tasa real TIPS 10Y",
           "Dollar Index",
@@ -541,7 +520,6 @@
         "digits": 2,
         "unidad": "USD",
         "volatilidad": "media",
-        "nota_volatilidad": "las empresas pequeñas dependen más del crédito, así que reacciona fuerte a las tasas y se mueve más que el SPY; 1H y 4H son el marco útil",
         "drivers": [
           "tasas Fed",
           "crédito bancario y pendiente de la curva 2s10s",
@@ -564,7 +542,6 @@
         "digits": 2,
         "unidad": "USD",
         "volatilidad": "alta",
-        "nota_volatilidad": "el sector de chips es el más volátil de la bolsa estadounidense y un earnings de NVIDIA lo mueve entero; 4H para la tendencia y 1H para el día, porque en 15M el ruido domina",
         "drivers": [
           "demanda de chips para inteligencia artificial",
           "earnings de semiconductores",
@@ -604,7 +581,6 @@
             "demanda China"
           ],
           "volatilidad": "media",
-          "nota_volatilidad": "mega cap muy líquida: se mueve ordenado y se acelera en resultados o lanzamientos. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H da la lectura del día con 4H para la tendencia",
           "imagen": "assets/activos/tech-circuito.jpg"
         },
         {
@@ -619,7 +595,6 @@
             "licencias enterprise"
           ],
           "volatilidad": "media",
-          "nota_volatilidad": "de las más estables del grupo tecnológico: tramos amplios pero pausados. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H es el marco del día",
           "imagen": "assets/activos/tech-circuito.jpg"
         },
         {
@@ -634,7 +609,6 @@
             "regulación exportación China"
           ],
           "volatilidad": "alta",
-          "nota_volatilidad": "la más movida del grupo: un titular de inteligencia artificial le mueve varios puntos porcentuales en una sesión, y en 15M eso se desdice solo. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, así que 1H sostiene la lectura y 4H la tendencia",
           "imagen": "assets/activos/tech-circuito.jpg"
         },
         {
@@ -649,7 +623,6 @@
             "márgenes"
           ],
           "volatilidad": "media",
-          "nota_volatilidad": "reacciona a consumo y a los márgenes de su nube, con tramos amplios en resultados. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H da la lectura del día",
           "imagen": "assets/activos/tech-circuito.jpg"
         },
         {
@@ -665,7 +638,6 @@
             "demanda PC/servidores"
           ],
           "volatilidad": "alta",
-          "nota_volatilidad": "sigue el ciclo de semiconductores igual que NVIDIA pero con recorridos relativos más grandes. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y conviene 1H para el día y 4H para la tendencia",
           "imagen": "assets/activos/tech-circuito.jpg"
         },
         {
@@ -681,8 +653,7 @@
             "consumo en la región"
           ],
           "imagen": "assets/activos/meli.jpg",
-          "volatilidad": "alta",
-          "nota_volatilidad": "tiene menos volumen que las mega caps, así que un mismo flujo de órdenes le produce saltos más amplios. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y en 1H el tramo se distingue del ruido de 15M"
+          "volatilidad": "alta"
         }
       ]
     },
@@ -709,7 +680,6 @@
             "provisiones crédito"
           ],
           "volatilidad": "media",
-          "nota_volatilidad": "se mueve con las tasas y con la temporada de resultados de la banca, en tramos parejos. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H da la lectura del día",
           "imagen": "assets/activos/us30.jpg"
         },
         {
@@ -724,7 +694,6 @@
             "exposición tasas"
           ],
           "volatilidad": "media",
-          "nota_volatilidad": "es el banco más sensible al nivel de las tasas, y ahí se le nota el movimiento. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H es el marco del día",
           "imagen": "assets/activos/us30.jpg"
         },
         {
@@ -739,7 +708,6 @@
             "actividad M&A"
           ],
           "volatilidad": "media",
-          "nota_volatilidad": "depende del negocio de mercados y de fusiones, así que se activa cuando repunta la actividad financiera. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H da la lectura del día",
           "imagen": "assets/activos/us30.jpg"
         },
         {
@@ -754,7 +722,6 @@
             "mercados de capital"
           ],
           "volatilidad": "media",
-          "nota_volatilidad": "drivers parecidos a Goldman Sachs, pero su negocio de gestión de patrimonios le suaviza los tramos. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H da la lectura del día",
           "imagen": "assets/activos/us30.jpg"
         }
       ]
@@ -782,7 +749,6 @@
             "defensa"
           ],
           "volatilidad": "alta",
-          "nota_volatilidad": "las noticias de entregas, certificaciones o incidentes le mueven el precio de golpe, y en 15M esos saltos son puro ruido. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, así que 1H y 4H son los marcos útiles",
           "imagen": "assets/activos/us30.jpg"
         },
         {
@@ -797,7 +763,6 @@
             "demanda China"
           ],
           "volatilidad": "media",
-          "nota_volatilidad": "sigue la inversión en obra y minería, y con eso el precio del cobre, en tramos amplios pero no bruscos. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H da la lectura del día",
           "imagen": "assets/activos/us30.jpg"
         },
         {
@@ -812,7 +777,6 @@
             "demanda aerolíneas"
           ],
           "volatilidad": "media",
-          "nota_volatilidad": "se mueve con la demanda de aviación y con sus contratos de servicio, de forma bastante ordenada. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H es el marco del día",
           "imagen": "assets/activos/us30.jpg"
         },
         {
@@ -827,7 +791,6 @@
             "maquinaria"
           ],
           "volatilidad": "media",
-          "nota_volatilidad": "depende del ciclo agrícola y del precio de los granos, que cambia despacio. cotiza solo en horario de bolsa, así que su rango del día recién se forma tras la apertura, y 1H da la lectura del día con 4H para la tendencia",
           "imagen": "assets/activos/us30.jpg"
         }
       ]

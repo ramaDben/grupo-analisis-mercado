@@ -65,7 +65,7 @@ def test_proyecto_md_lleva_lo_de_ambos_y_lo_de_agy_pero_no_lo_de_claude():
     texto = PROYECTO.read_text(encoding="utf-8")
 
     # `ambos`: justo lo que el fork había perdido.
-    for regla in ("historial_despachos", "gate_banda", "suplemento", "noticia_oficial"):
+    for regla in ("historial_despachos", "test_guardian_estrategia", "suplemento", "noticia_oficial"):
         assert regla in texto, f"falta una regla de ámbito ambos: {regla}"
 
     # `agy`: vive en el CLAUDE.md global del director, que AGY no lee.

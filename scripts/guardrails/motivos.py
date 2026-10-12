@@ -77,8 +77,8 @@ MOTIVOS: dict[str, Motivo] = {
         publicable=False,
     ),
     "marco_no_canonico": Motivo(
-        "La temporalidad no es una de las cuatro etiquetas canónicas de "
-        "`pipeline_carrusel.MARCOS_CANONICOS`.",
+        "La temporalidad no es un marco de la estrategia activa "
+        "(`Marcos` de `config/estrategia.json`).",
         publicable=False,
     ),
     "alias_de_canal_desconocido": Motivo(
