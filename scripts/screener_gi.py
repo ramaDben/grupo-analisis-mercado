@@ -934,16 +934,19 @@ def correr_semanal(estrategia, universo: list[dict[str, Any]], ahora_stgo: datet
     excluidos: list[dict[str, Any]] = []
     avisos: list[str] = []
     lecturas: dict[str, Any] = {}
+    fallidos: list[str] = []
     for activo in universo:
         ticker = activo["ticker"]
+        es_fijo = ticker in fijos
         try:
             velas, _ = lector(ticker, estrategia.marcos, 0)
             lectura = estrategia.leer(ticker, velas, activo["digits"], None)
+            p = estrategia.puntuar(lectura, "semana")
         except Exception as exc:  # noqa: BLE001 - un activo roto no tumba la semana
             excluidos.append({"ticker": ticker, "excluido": f"no se pudo leer: {exc}"})
+            if es_fijo:
+                fallidos.append(ticker)
             continue
-        p = estrategia.puntuar(lectura, "semana")
-        es_fijo = ticker in fijos
         if p.excluido and not es_fijo:
             excluidos.append({"ticker": ticker, "excluido": p.excluido})
             continue
@@ -955,6 +958,17 @@ def correr_semanal(estrategia, universo: list[dict[str, Any]], ahora_stgo: datet
     elegidos = [r["ticker"] for r in seleccionar_por_categoria(universo, evaluados, top)]
     for ticker in elegidos:
         rs.guardar(lecturas[ticker], semana, "semanal", ahora_stgo, base=base)
+    # Sin el manifiesto la semana queda abierta y la próxima corrida la reintenta. Cerrarla
+    # con MT5 caído dejaría cinco días sin piezas, o un fijo sin referencia toda la semana.
+    completa = bool(elegidos) and not fallidos
+    if not completa:
+        avisos.append(
+            f"el análisis semanal de {semana} quedó incompleto ("
+            + (f"no se pudo leer {', '.join(fallidos)}" if fallidos else "ningún activo elegido")
+            + "): no se cierra la semana y se reintenta en la próxima corrida"
+        )
+        return {"semana": semana, "elegidos": elegidos, "excluidos": excluidos,
+                "avisos": avisos, "completa": False}
     rs.guardar_manifiesto(semana, {
         "semana": semana,
         "estrategia": estrategia.nombre,
@@ -963,7 +977,8 @@ def correr_semanal(estrategia, universo: list[dict[str, Any]], ahora_stgo: datet
         "puntajes": {r["ticker"]: r["score"] for r in evaluados},
         "excluidos": excluidos,
     }, base=base)
-    return {"semana": semana, "elegidos": elegidos, "excluidos": excluidos, "avisos": avisos}
+    return {"semana": semana, "elegidos": elegidos, "excluidos": excluidos, "avisos": avisos,
+            "completa": True}
 
 
 def evaluar_con_estrategia(activo: dict[str, Any], estrategia, diaria: rs.Diaria,
@@ -1039,14 +1054,20 @@ def escanear(
         )
 
     semana = rs.semana_de(ahora_stgo)
-    if rs.manifiesto(semana, base=base) is None:
-        sem = correr_semanal(estrategia, universo_cubierto, ahora_stgo, lector, top=top, base=base)
+    manifiesto = rs.manifiesto(semana, base=base)
+    if manifiesto is None:
+        # La semana se elige siempre igual, la pida quien la pida: con el universo
+        # renderizable y el tope editorial. Un `--todos` o `--top 1` de una corrida
+        # puntual no puede decidir los cinco días.
+        renderizable, _ = solo_canales_cubiertos(cargar_universo(True))
+        sem = correr_semanal(estrategia, renderizable, ahora_stgo, lector, top=3, base=base)
         avisos.append(
             f"no había análisis semanal de {semana}: se corrió ahora, con la primera diaria, "
             f"y fijó {len(sem['elegidos'])} activos"
         )
         avisos.extend(sem["avisos"])
-    de_la_semana = set(rs.manifiesto(semana, base=base)["elegidos"])
+        manifiesto = rs.manifiesto(semana, base=base) or {"elegidos": sem["elegidos"]}
+    de_la_semana = set(manifiesto["elegidos"])
 
     universo = universo_cubierto
     if grupo:
@@ -1078,13 +1099,13 @@ def escanear(
             continue
         try:
             diaria = rs.lectura_del_dia(estrategia, ticker, activo["digits"], semana, lector, base=base)
+            res = evaluar_con_estrategia(activo, estrategia, diaria, es_fijo)
+            if diaria.reemplazo is not None:
+                rs.guardar(diaria.reemplazo, semana, "ruptura", ahora_stgo, base=base)
         except Exception as exc:  # noqa: BLE001 - un activo roto no tumba la tanda
             excluidos.append({**base_ex, "excluido": f"no se pudo leer: {exc}"})
             continue
         avisos.extend(diaria.avisos)
-        if diaria.reemplazo is not None:
-            rs.guardar(diaria.reemplazo, semana, "ruptura", ahora_stgo, base=base)
-        res = evaluar_con_estrategia(activo, estrategia, diaria, es_fijo)
         (excluidos if "excluido" in res else evaluados).append(res)
 
     evaluados.sort(key=lambda r: (-r["score"], r["ticker"]))
@@ -1218,8 +1239,8 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         from estrategia.fuente import velas_mt5
 
-        universo, _ = solo_canales_cubiertos(cargar_universo(not args.todos))
-        res = correr_semanal(registro.activa(), universo, ahora_stgo, velas_mt5, top=args.top)
+        universo, _ = solo_canales_cubiertos(cargar_universo(True))
+        res = correr_semanal(registro.activa(), universo, ahora_stgo, velas_mt5, top=3)
         print(json.dumps(res, ensure_ascii=False, indent=2))
         return 0
 

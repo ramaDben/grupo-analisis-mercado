@@ -877,3 +877,58 @@ def test_todo_activo_cubierto_justifica_el_marco_operativo_de_la_estrategia():
         assert nota, f"{a['ticker']} no trae notas_marco.{op}"
         assert corto in nota, f"{a['ticker']}: la nota de {op} no nombra {corto}"
         assert "—" not in nota and "–" not in nota
+
+
+def test_una_semanal_sin_datos_no_cierra_la_semana(tmp_path, monkeypatch):
+    """Con MT5 caído la semanal no puede dejar escrito un manifiesto vacío: la semana entera
+    quedaría sin piezas y nadie la reintentaría."""
+    def lector_roto(ticker, marcos, extra):
+        raise RuntimeError("MT5 no responde")
+
+    monkeypatch.setattr(sc, "_contexto_macro", lambda ahora: ([], None, []))
+    monkeypatch.setattr(sc, "DIR_SALIDA", tmp_path / "screener")
+    res = sc.escanear(ahora_ny=NY_LUNES, estrategia=_Est({}), lector=lector_roto,
+                      base_referencias=tmp_path / "refs")
+    assert rs.manifiesto("2026-W42", base=tmp_path / "refs") is None
+    assert any("se reintenta" in a for a in res["avisos"])
+
+
+def test_si_falla_un_fijo_la_semana_queda_abierta(tmp_path):
+    universo = sc.solo_canales_cubiertos(sc.cargar_universo(True))[0]
+
+    def lector(ticker, marcos, extra):
+        if ticker == "USDCLP":
+            raise RuntimeError("sin velas")
+        return _lector(ticker, marcos, extra)
+
+    res = sc.correr_semanal(_Est({}), universo, NY_LUNES.astimezone(SCL), lector, base=tmp_path)
+    assert rs.manifiesto("2026-W42", base=tmp_path) is None
+    assert not res["completa"]
+
+
+def test_la_semanal_no_hereda_el_todos_ni_el_top_de_quien_llega_primero(tmp_path, monkeypatch):
+    vistos = []
+    real = sc.correr_semanal
+
+    def espia(est, universo, ahora, lector, top=3, base=None):
+        vistos.append((len(universo), top))
+        return real(est, universo, ahora, lector, top=top, base=base)
+
+    monkeypatch.setattr(sc, "correr_semanal", espia)
+    _escanear(tmp_path, _Est({}), monkeypatch, top=1, solo_renderizables=False)
+    cubierto = len(sc.solo_canales_cubiertos(sc.cargar_universo(True))[0])
+    assert vistos == [(cubierto, 3)]
+
+
+def test_un_error_al_puntuar_un_activo_no_tumba_la_tanda(tmp_path, monkeypatch):
+    _fijar(tmp_path, "EURUSD", "GBPUSD")
+
+    class Rota(_Est):
+        def puntuar(self, lectura, horizonte):
+            if lectura.ticker == "EURUSD":
+                raise RuntimeError("roto")
+            return super().puntuar(lectura, horizonte)
+
+    res = _escanear(tmp_path, Rota({}), monkeypatch)
+    assert [s["ticker"] for s in res["ranking_completo"]] == ["GBPUSD"]
+    assert "roto" in res["excluidos"][0]["excluido"]
