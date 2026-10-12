@@ -1,6 +1,9 @@
 """El escenario de la simulación semanal, sacado solo de la `Lectura` de la estrategia."""
 from __future__ import annotations
 
+import json
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -78,3 +81,56 @@ def test_a_dict_es_serializable_y_completo():
     d = op.escenario(fx.lectura(), 2).a_dict()
     assert set(d) == {"ticker", "estado", "direccion", "entrada", "stop", "objetivo",
                       "entrada_pendiente", "dias_objetivo", "motivo"}
+
+
+CONTRATO = {"clp_unidad": 950.0, "vol_min": 0.01, "vol_paso": 0.01}
+ESC = {"entrada": 4000.0, "stop": 3950.0, "objetivo": 4150.0}
+
+
+def test_simular_redondea_el_volumen_hacia_abajo_y_recalcula_la_perdida():
+    s = op.simular(CONTRATO, ESC, 100_000)
+    # 100.000 / (50 × 950) = 2,105… → 2,10
+    assert s["volumen"] == 2.1 and s["perdida"] == 99_750 and s["ganancia"] == 299_250
+    assert s["bajo_minimo"] is False and s["perdida_pct"] is None
+
+
+def test_simular_bajo_el_minimo_muestra_la_perdida_del_volumen_minimo():
+    s = op.simular(CONTRATO, ESC, 100)
+    assert s["volumen"] == 0.01 and s["bajo_minimo"] is True and s["perdida"] == 475
+
+
+def test_simular_con_capital_da_los_porcentajes():
+    s = op.simular(CONTRATO, ESC, 100_000, capital=5_000_000)
+    assert s["perdida_pct"] == 2.0 and s["ganancia_pct"] == 5.99
+
+
+@pytest.mark.parametrize("perdida", [None, 0, -5])
+def test_simular_sin_perdida_aceptable_no_calcula(perdida):
+    assert op.simular(CONTRATO, ESC, perdida) is None
+
+
+def test_mitad_hacia_arriba_como_math_round():
+    c = {"clp_unidad": 1.0, "vol_min": 1.0, "vol_paso": 1.0}
+    s = op.simular(c, {"entrada": 10.0, "stop": 9.5, "objetivo": 11.5}, 0.5)
+    assert s["perdida"] == 1  # round() de Python daría 0
+
+
+CASOS_JS = [
+    (CONTRATO, ESC, 100_000, None),
+    (CONTRATO, ESC, 100, None),
+    (CONTRATO, ESC, 100_000, 5_000_000),
+    ({"clp_unidad": 6.83, "vol_min": 0.1, "vol_paso": 0.1}, {"entrada": 14567.0, "stop": 14610.0,
+                                                             "objetivo": 14438.0}, 37_777, 1_234_567),
+    (CONTRATO, ESC, 0, None),
+]
+
+
+@pytest.mark.parametrize("c,e,perdida,capital", CASOS_JS)
+def test_el_js_del_panel_simula_igual_que_python(c, e, perdida, capital):
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("sin node para correr el JavaScript del panel")
+    js = op.SIMULADOR_JS.read_text(encoding="utf-8")
+    llamada = f"console.log(JSON.stringify(simular({json.dumps(c)}, {json.dumps(e)}, {json.dumps(perdida)}, {json.dumps(capital)})));"
+    salida = subprocess.run([node, "-e", js + "\n" + llamada], capture_output=True, text=True, check=True)
+    assert json.loads(salida.stdout) == op.simular(c, e, perdida, capital)

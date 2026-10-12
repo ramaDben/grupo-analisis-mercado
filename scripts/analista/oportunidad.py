@@ -88,3 +88,37 @@ def escenario(lectura: Lectura, digits: int) -> Escenario:
     objetivo = _redondeo(entrada + signo * MULTIPLO * riesgo, digits)
     dias = round(abs(objetivo - lectura.precio) / atr_d1, 1) if atr_d1 else None
     return Escenario(lectura.ticker, lectura.estado, direccion, entrada, stop, objetivo, pendiente, dias, None)
+
+
+def _pesos(valor: float) -> int:
+    """Mitad hacia arriba, como `Math.round` del panel: `round` de Python va al par."""
+    return math.floor(valor + 0.5)
+
+
+def _volumen(crudo: float, minimo: float, paso: float) -> tuple[float, bool]:
+    if crudo < minimo:
+        return minimo, True
+    pasos = math.floor((crudo - minimo) / paso + 1e-9)
+    return math.floor((minimo + pasos * paso) * 1e8 + 0.5) / 1e8, False
+
+
+def _pct(valor: float, capital: float | None) -> float | None:
+    return math.floor(valor / capital * 10000 + 0.5) / 100 if capital and capital > 0 else None
+
+
+def simular(contrato: dict[str, Any], esc: dict[str, Any], perdida: float | None,
+            capital: float | None = None) -> dict[str, Any] | None:
+    """Lo que el panel calcula: volumen para la pérdida aceptable, y la ganancia 1:3.
+
+    `contrato["clp_unidad"]` son los pesos que mueve 1,0 de precio con 1 lote
+    (`order_calc_profit`). El panel repite este cálculo en `simulador.js`, y un test los compara.
+    """
+    if perdida is None or perdida <= 0:
+        return None
+    riesgo = abs(float(esc["entrada"]) - float(esc["stop"]))
+    clp = float(contrato["clp_unidad"])
+    vol, bajo = _volumen(perdida / (riesgo * clp), float(contrato["vol_min"]), float(contrato["vol_paso"]))
+    p = _pesos(riesgo * clp * vol)
+    g = MULTIPLO * p
+    return {"volumen": vol, "perdida": p, "ganancia": g, "bajo_minimo": bajo,
+            "perdida_pct": _pct(p, capital), "ganancia_pct": _pct(g, capital)}
