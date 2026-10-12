@@ -9,6 +9,9 @@ for _p in (str(RAIZ / "src"), str(RAIZ / "scripts")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
+import pytest  # noqa: E402
+
+pytest.importorskip("PIL")  # extra `stories`: el CI corre sin él
 import tradingview_grafico as tg  # noqa: E402
 from estrategia.contrato import Linea  # noqa: E402
 
