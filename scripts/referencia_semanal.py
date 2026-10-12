@@ -128,3 +128,27 @@ def lectura_del_dia(estrategia, ticker: str, digits: int, semana: str, lector: L
             f"{actual.estado.lower()}); la lectura de este cierre pasa a ser la nueva referencia",), velas,
             referencia)
     return Diaria(actual, None, (), velas, referencia)
+
+
+def lectura_actual(estrategia, ticker: str, digits: int, lector, ahora: datetime,
+                 base: Path | None = None, referencia=None):
+    """La lectura del día de un activo: contra la referencia de la semana, como el escáner.
+
+    La usan el despacho, el informe, Avisos y la tool `get_lectura`. Con `referencia` (la
+    que guardó la pieza al prepararse) se sigue esa; si no, la de la semana; y si el activo
+    no tiene, se lee de nuevo. No guarda reemplazos: eso es solo del escáner.
+    """
+    base = base or DIR
+    if referencia is not None:
+        # La pieza se escribió contra esta referencia: se vuelve a seguir la misma.
+        velas, en_curso = lector(ticker, estrategia.marcos, EXTRA)
+        try:
+            return estrategia.seguir(referencia, velas, digits, en_curso), velas
+        except ValueError:
+            return estrategia.leer(ticker, velas, digits, en_curso), velas
+    try:
+        diaria = lectura_del_dia(estrategia, ticker, digits, semana_de(ahora), lector, base=base)
+        return diaria.lectura, diaria.velas
+    except SinReferencia:
+        velas, en_curso = lector(ticker, estrategia.marcos, EXTRA)
+        return estrategia.leer(ticker, velas, digits, en_curso), velas

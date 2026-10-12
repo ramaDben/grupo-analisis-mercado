@@ -187,3 +187,14 @@ def test_la_diaria_dice_contra_que_referencia_se_leyo(tmp_path):
     d = rs.lectura_del_dia(_Falsa(rota, replace(ref, vela=300)), "XAUUSD", 2, "2026-W42",
                            _lector([]), base=tmp_path)
     assert d.referencia == ref  # la del lunes, no el reemplazo
+
+
+def test_lectura_actual_sigue_la_referencia_o_lee_de_nuevo(tmp_path):
+    ref = _lectura()
+    est = _Falsa(replace(ref, precio=13.0), replace(ref, precio=14.0))
+    momento = datetime(2026, 10, 12, 9, tzinfo=SCL)
+    sin_ref, _ = rs.lectura_actual(est, "XAUUSD", 2, _lector([]), momento, base=tmp_path)
+    assert sin_ref.precio == 14.0  # sin referencia: leer()
+    rs.guardar(ref, "2026-W42", "semanal", momento, base=tmp_path)
+    con_ref, _ = rs.lectura_actual(est, "XAUUSD", 2, _lector([]), momento, base=tmp_path)
+    assert con_ref.precio == 13.0  # con referencia: seguir()

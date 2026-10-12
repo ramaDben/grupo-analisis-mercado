@@ -1597,29 +1597,11 @@ def _marcar_divergente(dir_grupo: Path, archivo: Path) -> None:
         png.rename(png.with_suffix(".png.divergente"))
 
 
-def lectura_para_despacho(estrategia, ticker: str, digits: int, lector, ahora: datetime,
-                          base: Path | None = None, referencia=None):
-    """La lectura de ahora para la pieza que va a salir: contra la referencia, como el escáner.
-
-    No guarda reemplazos: eso es del escáner. Si el activo no tiene referencia (una pieza
-    hecha con `--todos`, o la semana se borró), lee de nuevo.
-    """
+def lectura_para_despacho(*args, **kwargs):
+    """La lectura de ahora para la pieza que va a salir (vive en `referencia_semanal`)."""
     import referencia_semanal as rs
 
-    base = base or rs.DIR
-    if referencia is not None:
-        # La pieza se escribió contra esta referencia: se vuelve a seguir la misma.
-        velas, en_curso = lector(ticker, estrategia.marcos, rs.EXTRA)
-        try:
-            return estrategia.seguir(referencia, velas, digits, en_curso), velas
-        except ValueError:
-            return estrategia.leer(ticker, velas, digits, en_curso), velas
-    try:
-        diaria = rs.lectura_del_dia(estrategia, ticker, digits, rs.semana_de(ahora), lector, base=base)
-        return diaria.lectura, diaria.velas
-    except rs.SinReferencia:
-        velas, en_curso = lector(ticker, estrategia.marcos, rs.EXTRA)
-        return estrategia.leer(ticker, velas, digits, en_curso), velas
+    return rs.lectura_actual(*args, **kwargs)
 
 
 def refrescar_payload_lectura(
