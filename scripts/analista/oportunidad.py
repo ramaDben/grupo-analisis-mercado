@@ -61,6 +61,8 @@ def escenario(lectura: Lectura, digits: int) -> Escenario:
     atr_d1 = float(lectura.metricas.get("atr_d1") or 0.0)
     if lectura.estado == "PRUEBA":
         return _sin(lectura, "el precio está en prueba sobre una línea: se espera el cierre de la vela")
+    if atr <= 0:
+        return _sin(lectura, "la lectura no trae ATR del marco operativo")
     if lectura.estado == "RANGO":
         superior, inferior = bordes_rango(lectura)
         arriba = abs(lectura.vigilar.precio - superior) <= abs(lectura.vigilar.precio - inferior)
@@ -117,6 +119,8 @@ def simular(contrato: dict[str, Any], esc: dict[str, Any], perdida: float | None
         return None
     riesgo = abs(float(esc["entrada"]) - float(esc["stop"]))
     clp = float(contrato["clp_unidad"])
+    if riesgo <= 0 or clp <= 0:
+        return None
     vol, bajo = _volumen(perdida / (riesgo * clp), float(contrato["vol_min"]), float(contrato["vol_paso"]))
     p = _pesos(riesgo * clp * vol)
     g = MULTIPLO * p

@@ -8,6 +8,7 @@ function simular(c, e, perdida, capital) {
   if (perdida === null || perdida === undefined || !(perdida > 0)) return null;
   var riesgo = Math.abs(Number(e.entrada) - Number(e.stop));
   var clp = Number(c.clp_unidad), minimo = Number(c.vol_min), paso = Number(c.vol_paso);
+  if (!(riesgo > 0) || !(clp > 0)) return null;
   var crudo = perdida / (riesgo * clp);
   var bajo = crudo < minimo;
   var vol = bajo ? minimo

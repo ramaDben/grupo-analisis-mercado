@@ -122,6 +122,8 @@ CASOS_JS = [
     ({"clp_unidad": 6.83, "vol_min": 0.1, "vol_paso": 0.1}, {"entrada": 14567.0, "stop": 14610.0,
                                                              "objetivo": 14438.0}, 37_777, 1_234_567),
     (CONTRATO, ESC, 0, None),
+    (CONTRATO, {"entrada": 4000.0, "stop": 4000.0, "objetivo": 4000.0}, 100_000, None),
+    ({"clp_unidad": 0.0, "vol_min": 0.01, "vol_paso": 0.01}, ESC, 100_000, None),
 ]
 
 
@@ -134,3 +136,22 @@ def test_el_js_del_panel_simula_igual_que_python(c, e, perdida, capital):
     llamada = f"console.log(JSON.stringify(simular({json.dumps(c)}, {json.dumps(e)}, {json.dumps(perdida)}, {json.dumps(capital)})));"
     salida = subprocess.run([node, "-e", js + "\n" + llamada], capture_output=True, text=True, check=True)
     assert json.loads(salida.stdout) == op.simular(c, e, perdida, capital)
+
+
+def test_sin_atr_tendencia_no_simula():
+    e = op.escenario(fx.lectura(atr=0.0), 2)
+    assert not e.simulable and "ATR del marco operativo" in e.motivo
+
+
+def test_sin_atr_rango_no_simula():
+    e = op.escenario(fx.lectura(ticker="COPPER", estado="RANGO", direccion="LATERAL", precio=14500.0,
+                                rango=(14567.0, 14206.0), atr=0.0), 0)
+    assert not e.simulable and "ATR del marco operativo" in e.motivo
+
+
+def test_simular_con_entrada_igual_a_stop_devuelve_none():
+    assert op.simular(CONTRATO, {"entrada": 4000.0, "stop": 4000.0, "objetivo": 4000.0}, 100_000) is None
+
+
+def test_simular_con_contrato_sin_valor_devuelve_none():
+    assert op.simular({"clp_unidad": 0.0, "vol_min": 0.01, "vol_paso": 0.01}, ESC, 100_000) is None
