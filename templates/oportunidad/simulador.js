@@ -1,4 +1,4 @@
-// La simulación del panel. Es la MISMA que `analista.oportunidad.simular`: un test corre este
+// La simulación del panel. Es la MISMA que `simular` de Python (módulo del análisis semanal): un test corre este
 // archivo con node y compara. Si cambias una, cambia la otra.
 var MULTIPLO = 3;
 function _pct(valor, capital) {
