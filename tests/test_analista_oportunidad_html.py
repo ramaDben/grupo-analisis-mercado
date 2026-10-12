@@ -116,3 +116,26 @@ def test_la_lamina_de_un_ticker_con_punto_se_puede_descargar(tmp_path):
     html = oh.armar(fx.pieza_oportunidad(tmp_path, laminas=True, wti=True), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
     bloque = html.split('data-ticker="WTI.spot"')[1].split("</section>")[0]
     assert 'download="lamina_wti_spot.png"' in bloque
+
+
+def test_el_correo_lleva_la_maqueta_del_prototipo(tmp_path):
+    """Logo de GI arriba, cuadros rojo y verde del mismo tamaño y las dos firmas (director, 2026-10-12)."""
+    html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    marco = re.search(r'<template id="correo-marco">(.*?)</template>', html, re.S).group(1)
+    assert 'alt="Grupo Inteligencia"' in marco and "<!--ACTIVOS-->" in marco
+    assert "Te lo envía" in marco and "Camila Rojas" in marco
+    c = oh.paleta()
+    bloque = re.search(r'<template class="correo-activo" data-ticker="XAUUSD">(.*?)</template>', html, re.S).group(1)
+    assert f'border:2px solid {c["baja"]}' in bloque and f'border:2px solid {c["sube"]}' in bloque
+    assert 'class="sim-perdida"' in bloque and 'class="sim-ganancia"' in bloque
+    assert "var(" not in marco + bloque and "rgba(" not in marco + bloque
+
+
+def test_en_el_correo_un_activo_sin_simulacion_muestra_el_motivo_sin_cuadros(tmp_path):
+    p = _pieza(tmp_path)
+    p["datos"]["activos"][0]["escenario"]["motivo"] = "el precio no muestra una dirección clara"
+    p["huella"] = es._huella(p)
+    html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    bloque = re.search(r'<template class="correo-activo" data-ticker="XAUUSD">(.*?)</template>', html, re.S).group(1)
+    assert "el precio no muestra una dirección clara" in bloque
+    assert "sim-perdida" not in bloque

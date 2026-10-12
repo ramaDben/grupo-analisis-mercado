@@ -76,7 +76,9 @@ def _lectores(base, filas_estado=None, **kw):
         catalogo=lambda t: {"ticker": t, "nombre": {"XAUUSD": "Oro", "COPPER": "Cobre"}[t],
                             "digits": {"XAUUSD": 2, "COPPER": 0}[t], "unidad": "USD"},
         drivers=lambda t: ["Dollar Index"], agenda=lambda a: ([], []), curva=lambda: ({}, []),
-        cuenta=lambda: None)
+        cuenta=lambda: None,
+        # Nunca el registro real: con una foto de la semana en disco, el test la reusaría.
+        registro=base.parent / "registro.json")
     return pr.Lectores(**{**por_defecto, **kw})
 
 

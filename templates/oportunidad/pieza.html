@@ -2,41 +2,67 @@
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{{titulo}}</title>
 <style>{{fuentes}}</style>
+<style id="correo-estilos">
+  @media only screen and (max-width:680px){
+    .shell{width:100% !important;}
+    .pad{padding-left:20px !important;padding-right:20px !important;}
+    .stack{display:block !important;width:100% !important;box-sizing:border-box;}
+    .stack-gap{height:12px !important;}
+    .h1{font-size:26px !important;line-height:32px !important;}
+  }
+</style>
 <style>
-  :root{--fondo:#0b1118;--tarjeta:#16202b;--texto-1:#ffffff;--texto-2:#d6dde6;--texto-3:#9aa4b2;--acento:#50C0A8;--sube:#2ecc71;--baja:#e74c3c;--linea:#26323f;}
+  /* Los colores salen de marca.css (los inyecta Python): la página y el correo usan los mismos. */
+  :root{ {{raiz}} }
   *{box-sizing:border-box}
   body{margin:0;background:var(--fondo);color:var(--texto-1);font:500 15px/1.5 "Segoe UI",Arial,sans-serif}
-  main{max-width:1100px;margin:0 auto;padding:24px}
-  .portada .chip{color:var(--acento);font-weight:700;letter-spacing:1.5px;font-size:13px}
-  h1{font-size:30px;line-height:1.25;margin:8px 0}
-  .activo{background:var(--tarjeta);border:1px solid var(--linea);border-radius:16px;padding:20px;margin:20px 0;display:grid;grid-template-columns:3fr 2fr;gap:20px}
+  main{max-width:1100px;margin:0 auto;padding:0 24px 24px}
+  .banda{display:flex;align-items:center;justify-content:space-between;padding:22px 0}
+  .banda img{width:170px;height:auto;display:block}
+  .banda .semana{text-align:right;color:var(--texto-2);font-weight:600;font-size:14px}
+  .banda .semana strong{display:block;color:var(--texto-1);font-size:16px}
+  .filete{height:3px;background:linear-gradient(90deg,var(--acento-azul),var(--acento));margin:0 -24px}
+  .portada{background:linear-gradient(135deg,var(--tarjeta) 0%,var(--fondo-alt) 100%);border:1px solid var(--linea);border-radius:16px;padding:28px 32px;margin:24px 0}
+  .portada .chip{color:var(--acento);font-weight:700;letter-spacing:1.8px;font-size:14px;margin:0;text-transform:uppercase}
+  h1{font-size:30px;line-height:1.25;margin:10px 0}
+  .portada p{color:var(--texto-borde);font-size:17px}
+  .activo{background:var(--fondo-alt);border:1px solid var(--linea);border-radius:16px;padding:22px;margin:20px 0;display:grid;grid-template-columns:3fr 2fr;gap:22px}
   .activo header,.activo .acciones{grid-column:1/-1}
   .activo header{display:flex;align-items:center;justify-content:space-between;gap:12px}
   .activo h2{margin:0;font-size:22px}
   .activo h3{margin:0 0 10px;font-size:19px}
-  .direccion{padding:6px 14px;border-radius:999px;font-weight:800;font-size:13px;letter-spacing:1.5px;background:var(--linea)}
+  .direccion{padding:6px 16px;border-radius:999px;font-weight:800;font-size:13px;letter-spacing:1.5px;background:var(--texto-2);color:var(--fondo)}
   .direccion.alcista{background:var(--sube);color:var(--fondo)}
-  .direccion.bajista{background:var(--baja);color:var(--texto-1)}
-  .analisis img{width:100%;border-radius:10px}
-  table.niveles{width:100%;border-collapse:collapse;margin:8px 0}
-  table.niveles th{text-align:left;color:var(--texto-3);font-weight:600;padding:5px 0}
-  table.niveles td{text-align:right;font-weight:700;padding:5px 0}
+  .direccion.bajista{background:var(--baja);color:var(--fondo)}
+  .analisis img{width:100%;border-radius:10px;border:1px solid var(--linea)}
+  .analisis p{color:var(--texto-borde)}
+  table.niveles{width:100%;border-collapse:collapse;margin:10px 0;background:var(--tarjeta);border-radius:12px;overflow:hidden}
+  table.niveles th{text-align:left;color:var(--texto-borde);font-weight:700;padding:10px 14px;border-bottom:1px solid var(--linea)}
+  table.niveles td{text-align:right;font-weight:800;padding:10px 14px;border-bottom:1px solid var(--linea)}
+  table.niveles tr:last-child th,table.niveles tr:last-child td{border-bottom:0}
   .escenarios{list-style:none;padding:0;margin:8px 0}
-  .escenarios li{padding:4px 0;color:var(--texto-2)}
-  .temporalidad,.firma-analisis,.nota,.autor-sim{color:var(--texto-3);font-size:13px}
-  .panel{background:var(--fondo);border-radius:12px;padding:16px;align-self:start}
-  .panel h4{margin:0 0 6px;color:var(--acento)}
+  .escenarios li{padding:4px 0;color:var(--texto-borde)}
+  .temporalidad,.firma-analisis,.nota,.autor-sim{color:var(--texto-2);font-size:13px}
+  .panel{background:var(--tarjeta);border:1px solid var(--linea);border-radius:12px;padding:18px;align-self:start}
+  .panel h4{margin:0 0 6px;color:var(--acento);text-transform:uppercase;letter-spacing:1.5px;font-size:14px}
   .panel label{display:block;margin:10px 0}
-  .panel input[type=number]{display:block;width:100%;height:40px;font-size:16px;margin-top:4px;padding:0 8px}
+  .panel input[type=number]{display:block;width:100%;height:42px;font-size:16px;margin-top:4px;padding:0 10px;border:1px solid var(--linea);border-radius:10px;background:var(--fondo);color:var(--texto-1)}
+  .panel.sin-simulacion{background:var(--fondo)}
   .resultado{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
-  .resultado .perdida,.resultado .ganancia{background:var(--tarjeta);border-radius:10px;padding:10px;min-height:70px}
-  .resultado span{display:block;font-size:12px;color:var(--texto-3)}
-  .resultado strong{display:block;font-size:20px}
-  .resultado .perdida strong{color:var(--baja)}
-  .resultado .ganancia strong{color:var(--sube)}
-  .resultado p{grid-column:1/-1;margin:0;color:var(--texto-2)}
-  button,a.descargar{background:var(--acento);color:var(--fondo);border:0;border-radius:8px;padding:10px 16px;font:700 14px "Segoe UI",Arial,sans-serif;cursor:pointer;text-decoration:none;display:inline-block;margin-right:8px}
-  .correo{background:var(--tarjeta);border:1px solid var(--linea);border-radius:16px;padding:20px;margin:20px 0}
+  .resultado .perdida,.resultado .ganancia{border-radius:12px;padding:12px;min-height:84px;border:2px solid}
+  .resultado .perdida{background:var(--fondo-baja);border-color:var(--baja)}
+  .resultado .ganancia{background:var(--fondo-sube);border-color:var(--sube)}
+  .resultado span{display:block;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.8px}
+  .resultado .perdida span{color:var(--baja)}
+  .resultado .ganancia span{color:var(--sube)}
+  .resultado strong{display:block;font-size:20px;color:var(--texto-1)}
+  .resultado p{grid-column:1/-1;margin:0;color:var(--texto-borde)}
+  button,a.descargar{background:var(--acento);color:var(--fondo);border:0;border-radius:10px;padding:11px 18px;font:700 14px "Segoe UI",Arial,sans-serif;cursor:pointer;text-decoration:none;display:inline-block;margin-right:8px}
+  .correo{background:var(--fondo-alt);border:1px solid var(--linea);border-radius:16px;padding:22px;margin:20px 0}
+  .correo h2{margin:0 0 6px}
+  .correo > p{color:var(--texto-2)}
+  #estado{color:var(--acento);font-weight:600}
+  #vista-correo{margin-top:16px}
   .firma{display:flex;gap:16px;align-items:center;margin:20px 0}
   .firma img{max-height:80px}
   .firma p{margin:2px 0}
@@ -45,14 +71,17 @@
   @media (max-width:800px){.activo{grid-template-columns:1fr}}
 </style></head>
 <body><main>
-<header class="portada"><img src="{{logo}}" alt="Grupo Inteligencia" height="40">
-  <p class="chip">ANÁLISIS TÉCNICO DE LA SEMANA · {{semana}} · {{edicion}}</p>
+<div class="banda"><img src="{{logo}}" alt="Grupo Inteligencia">
+  <p class="semana">Semana<strong>{{semana}} · {{edicion}}</strong></p></div>
+<div class="filete"></div>
+<header class="portada"><p class="chip">Análisis técnico de la semana</p>
   <h1>{{titular}}</h1><p>{{bajada}}</p></header>
 {{activos}}
 <section class="correo"><h2>Correo para tu cliente</h2>
-  <p>Marca los activos que quieres incluir y copia el correo: se pega en Outlook con el formato.</p>
+  <p>Así le llega a tu cliente. Marca los activos que quieres incluir, completa la simulación arriba y copia el correo: se pega en Outlook con el formato.</p>
   <button type="button" id="copiar-correo">Copiar correo para Outlook</button> <span id="estado"></span>
   <div id="vista-correo"></div></section>
+<template id="correo-marco">{{marco}}</template>
 {{correos}}
 {{firma}}
 <p class="aviso">{{aviso}}</p>
@@ -62,7 +91,6 @@
 <script>
 (function(){
   var DATOS = JSON.parse(document.getElementById('datos').textContent);
-  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function pesos(n){ return '$' + Math.round(n).toLocaleString('es-CL'); }
   function num(v){ var x = parseFloat(v); return isNaN(x) ? null : x; }
   function coma(n){ return String(n).replace('.', ','); }
@@ -91,51 +119,52 @@
     var panel = sec.querySelector('.panel');
     var actual = null;
     if (panel && !d.motivo && d.contrato) panel.querySelectorAll('input[type=number]').forEach(function(i){
-      i.addEventListener('input', function(){ actual = estado(panel, d); });
+      i.addEventListener('input', function(){ actual = estado(panel, d); vista(); });
     });
+    var marca = panel && panel.querySelector('[name=incluir]');
+    if (marca) marca.addEventListener('change', vista);
     sec.querySelector('.copiar-wa').addEventListener('click', function(){
       var texto = d.whatsapp + (actual ? '\n' + lineaSim(d, actual) : '');
       navigator.clipboard.writeText(texto).then(function(){ estadoEl.textContent = 'Texto de WhatsApp copiado.'; });
     });
     d._sim = function(){ return actual; };
-    d._marcado = function(){ var c = panel && panel.querySelector('[name=incluir]'); return !!(c && c.checked); };
+    d._marcado = function(){ return !!(marca && marca.checked); };
   });
 
-  // El correo: tablas de 640 px con estilos en línea y colores sólidos (Outlook clásico no
-  // entiende rgba ni CSS externo). Se arma con los activos marcados y se copia como text/html.
-  var FUENTE = "Segoe UI,Arial,Helvetica,sans-serif";
+  // El correo: la maqueta del prototipo, en tablas de 640 px con estilos en línea y colores sólidos
+  // (Outlook clásico no entiende rgba ni CSS externo). Los activos marcados entran en el marco.
   function armarCorreo(){
     var partes = [];
     DATOS.activos.forEach(function(d){
       if (!d._marcado()) return;
       var t = document.querySelector('template.correo-activo[data-ticker="' + d.ticker + '"]');
-      var cont = document.createElement('div');
+      var cont = document.createElement('tbody');
       cont.innerHTML = t.innerHTML;
-      var s = d._sim(), celda = cont.querySelector('.sim-correo');
-      if (celda && d.motivo) celda.textContent = 'Sin simulación esta semana: ' + d.motivo;
-      else if (celda) celda.textContent = s ? lineaSim(d, s) : '';
-      if (celda && !s && !d.motivo) celda.parentNode.parentNode.removeChild(celda.parentNode);
-      partes.push('<tr><td style="padding:0 0 16px 0">' + cont.innerHTML + '</td></tr>');
+      var s = d._sim(), bloque = cont.querySelector('.sim-bloque');
+      if (bloque && !s) bloque.parentNode.removeChild(bloque);
+      else if (bloque){
+        cont.querySelector('.sim-perdida').textContent = '−' + pesos(s.perdida);
+        cont.querySelector('.sim-ganancia').textContent = '+' + pesos(s.ganancia);
+        cont.querySelector('.sim-volumen').textContent = 'Volumen ' + coma(s.volumen) +
+          (s.bajo_minimo ? ': es el mínimo que permite el broker.' : '.');
+      }
+      partes.push(cont.innerHTML);
     });
     if (!partes.length) return null;
-    var pie = '<tr><td style="padding:12px 24px;color:#d6dde6;font:500 14px/21px ' + FUENTE + '">' +
-      esc(DATOS.autor) + '<br>' + esc(DATOS.aviso) + '</td></tr>' +
-      '<tr><td style="padding:0 24px 18px;color:#ffffff;font:700 14px/21px ' + FUENTE + '">' +
-      esc(DATOS.ejecutivo) + '<br><span style="font-weight:500;color:#9aa4b2">' + esc(DATOS.cargo) + ' · ' + esc(DATOS.contacto) + '</span></td></tr>';
-    return '<table id="correo-root" role="presentation" width="640" cellpadding="0" cellspacing="0" border="0" bgcolor="#0b1118" style="width:640px;background:#0b1118;font-family:' + FUENTE + '">' +
-      '<tr><td style="padding:18px 24px;color:#ffffff;font:700 22px/28px ' + FUENTE + '">' + esc(DATOS.titular) + '</td></tr>' +
-      partes.join('') + pie + '</table>';
+    return document.getElementById('correo-marco').innerHTML.replace('<!--ACTIVOS-->', partes.join(''));
+  }
+  function vista(){
+    var html = armarCorreo();
+    document.getElementById('vista-correo').innerHTML = html || '<p>Marca al menos un activo.</p>';
+    return html;
   }
   async function copiarCorreo(){
-    var html = armarCorreo();
-    if (!html){ estadoEl.textContent = 'Marca al menos un activo.'; return; }
-    var vista = document.getElementById('vista-correo');
-    vista.innerHTML = html;
+    if (!vista()){ estadoEl.textContent = 'Marca al menos un activo.'; return; }
     var root = document.getElementById('correo-root');
     try {
       if (!(navigator.clipboard && window.ClipboardItem)) throw 0;
       await navigator.clipboard.write([new ClipboardItem({
-        'text/html': new Blob([root.outerHTML], {type: 'text/html'}),
+        'text/html': new Blob([document.getElementById('correo-estilos').outerHTML + root.outerHTML], {type: 'text/html'}),
         'text/plain': new Blob([root.innerText], {type: 'text/plain'})
       })]);
       estadoEl.textContent = 'Copiado. Pégalo en un correo nuevo de Outlook.';
@@ -147,6 +176,7 @@
     }
   }
   document.getElementById('copiar-correo').addEventListener('click', copiarCorreo);
+  vista();
 })();
 </script>
 </body></html>
