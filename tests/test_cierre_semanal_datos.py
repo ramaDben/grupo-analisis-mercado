@@ -48,10 +48,12 @@ def _lectura(ticker, precio, vigilar, invalidacion, objetivo, direccion="ALCISTA
 
 ACTIVO = {"ticker": "USDCLP", "slug": "usdclp", "digits": 2,
           "previo_txt": "925,00", "actual_txt": "931,40", "var_txt": "+0,69%"}
+FICHA = {"pasando": "Subió de {previo} a {actual} ({var}).", "prohibido": "Prohibido perseguir."}
+ED = {"activos": {"usdclp": FICHA, "wti": FICHA}}
 
 
 def test_significa_sale_de_la_lectura_alcista():
-    capas = C.capas_de("usdclp", ACTIVO, _lectura("USDCLP", 931.4, 925.0, 920.5, 938.25))
+    capas = C.capas_de("usdclp", ACTIVO, _lectura("USDCLP", 931.4, 925.0, 920.5, 938.25), ED)
     sig = capas["significa"]
     assert "Lectura de 4 horas: tendencia alcista" in sig
     assert "925,00" in sig and "línea alcista de seguridad" in sig
@@ -60,33 +62,38 @@ def test_significa_sale_de_la_lectura_alcista():
 
 def test_significa_bajista_invalida_por_arriba():
     activo = {**ACTIVO, "slug": "wti", "digits": 3}
-    capas = C.capas_de("wti", activo, _lectura("WTI.spot", 88.1, 90.25, 91.5, 86.502, "BAJISTA"))
+    capas = C.capas_de("wti", activo, _lectura("WTI.spot", 88.1, 90.25, 91.5, 86.502, "BAJISTA"), ED)
     assert "cierre de 4 horas sobre 91,500" in capas["significa"]
 
 
 def test_significa_sin_invalidacion_omite_la_frase():
-    capas = C.capas_de("usdclp", ACTIVO, _lectura("USDCLP", 931.4, 925.0, None, None))
+    capas = C.capas_de("usdclp", ACTIVO, _lectura("USDCLP", 931.4, 925.0, None, None), ED)
     assert "deja de valer" not in capas["significa"]
 
 
 def test_significa_en_rango_nombra_soporte_y_resistencia():
     lect = _lectura("USDCLP", 931.4, 925.0, None, 938.25, "LATERAL", "RANGO")
-    sig = C.capas_de("usdclp", ACTIVO, lect)["significa"]
+    sig = C.capas_de("usdclp", ACTIVO, lect, ED)["significa"]
     assert "925,00" in sig and "938,25" in sig
     assert "soporte" in sig.lower() and "resistencia" in sig.lower()
 
 
-def test_ninguna_capa_trae_otra_lectura_tecnica_ni_guion_largo():
-    lect = _lectura("USDCLP", 931.4, 925.0, 920.5, 938.25)
-    for slug in C.CAPAS:
-        assert "significa" not in C.CAPAS[slug], f"{slug}: la capa significa sale de la lectura"
-        capas = C.capas_de(slug, ACTIVO, lect)
-        for texto in capas.values():
-            bajo = texto.lower()
-            assert "promedio" not in bajo and "fuerza de tendencia" not in bajo
-            assert "canal de las últimas 50" not in bajo
-            assert "—" not in texto and "–" not in texto
-            assert "{" not in texto
+def test_las_capas_interpolan_las_cifras_del_terminal():
+    capas = C.capas_de("usdclp", ACTIVO, _lectura("USDCLP", 931.4, 925.0, 920.5, 938.25), ED)
+    assert capas["pasando"] == "Subió de 925,00 a 931,40 (+0,69%)."
+
+
+def test_una_ficha_sin_texto_no_se_rinde():
+    with pytest.raises(KeyError, match="usdclp"):
+        C.capas_de("usdclp", ACTIVO, _lectura("USDCLP", 931.4, 925.0, 920.5, 938.25),
+                   {"activos": {"usdclp": {"pasando": "", "prohibido": "x"}}})
+
+
+def test_el_modulo_no_trae_texto_de_una_semana():
+    """La narrativa de la semana vive en editorial.json, no en el módulo (2026-10-12)."""
+    for nombre in ("CAPAS", "TITULO", "BAJADA", "RESUMEN_EJECUTIVO", "NOTAS_PORTADA",
+                   "INTRO_CURVA", "DIAGNOSTICO_CURVA", "ESCENARIOS", "RADAR", "AVISO_HORARIO"):
+        assert not hasattr(C, nombre), f"{nombre} volvió a cierre_semanal_contenido"
 
 
 def test_leer_lectura_usa_la_estrategia_con_los_digits_del_catalogo(monkeypatch):

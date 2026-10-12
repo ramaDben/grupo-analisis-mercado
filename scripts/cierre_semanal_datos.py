@@ -230,6 +230,11 @@ def generar_graficos(activos: list[dict[str, Any]], destino: Path) -> dict[str, 
             lectura = leer_lectura(a["ticker"])
         except Exception as exc:  # noqa: BLE001
             raise DatosError(f"{a['ticker']}: sin lectura para el gráfico ({exc})") from exc
+        # La ficha se escribe contra esta misma lectura, así que viaja con el activo:
+        # volver a leerla al rendir podría darle al texto otra dirección que la imagen.
+        from estrategia.contrato import lectura_a_dict
+
+        a["lectura"] = lectura_a_dict(lectura)
         # Se trazan los niveles de la lectura y no las medias: dos lecturas en la misma
         # imagen se contradicen a la vista del cliente.
         ruta = grafico_informe.construir_grafico(
