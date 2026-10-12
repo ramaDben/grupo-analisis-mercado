@@ -10,6 +10,7 @@ Cada lector se puede reemplazar (`Lectores`), así los tests corren sin MT5.
 from __future__ import annotations
 
 import json
+import shutil
 from dataclasses import dataclass, field, replace
 from datetime import datetime
 from pathlib import Path
@@ -263,8 +264,15 @@ def _entrada_activo(ticker: str, referencia, guardada: datetime, puntaje: float,
 
 
 def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lectores) -> Preparada:
-    """La foto de la semana: los elegidos del análisis semanal, con su referencia del lunes."""
+    """La foto de la semana: los elegidos del análisis semanal, con su referencia del lunes.
+
+    Un elegido sin referencia queda fuera y se anota en `datos["fuera"]`. Si la semana ya tenía
+    foto (se rehace porque apareció la referencia que faltaba), los activos que ya estaban se
+    copian tal cual: sus clientes ya recibieron esos precios, y /seguimiento mide contra ellos.
+    """
     import referencia_semanal as rs
+
+    from analista import registro_semanal as rg
 
     base = lec.base_referencias or rs.DIR
     semana = rs.semana_de(ahora)
@@ -282,11 +290,21 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
                               f"{hora:%H:%M}.")
     puntajes = manifiesto.get("puntajes", {})
     orden_tickers = sorted(manifiesto["elegidos"], key=lambda t: (-float(puntajes.get(t, 0)), t))
-    activos, avisos = [], []
+    previa = rg.foto(semana, lec.registro or rg.RUTA)
+    ya_estaban = ({a["ticker"]: (a, Path(previa["dir"])) for a in cargar_pieza(Path(previa["dir"]))["datos"]["activos"]}
+                  if previa else {})
+    activos, avisos, fuera = [], [], []
     for ticker in orden_tickers:
+        if ticker in ya_estaban:
+            a, dir_previo = ya_estaban[ticker]
+            shutil.copy2(dir_previo / a["grafico"], dir_pedido / a["grafico"])
+            activos.append(a)
+            continue
         referencia = rs.cargar(semana, ticker, base)
         if referencia is None:
-            avisos.append(f"{ticker} no tiene referencia en {semana}: queda fuera")
+            fuera.append(ticker)
+            avisos.append(f"{ticker} no tiene análisis guardado en {semana}: queda fuera de la foto. Cuando "
+                          "lo tenga, pide /oportunidad de nuevo y la foto se rehace con él.")
             continue
         guardada = datetime.fromisoformat(
             json.loads(rs.ruta(semana, ticker, base).read_text(encoding="utf-8"))["guardada"])
@@ -305,12 +323,21 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
              "activos": activos, "drivers": {a["ticker"]: lec.drivers(a["ticker"]) for a in activos},
              "agenda_semana": [f"{ev.get('hora', '')} · {ev.get('nombre_es') or ev.get('evento', '')}"
                                for ev in agenda],
-             "curva": sin_pct["curva"]}
+             "curva": sin_pct["curva"], "fuera": fuera}
     tickers = [a["ticker"] for a in activos]
     pieza = es.nueva_pieza("oportunidad", {"semana": semana}, datos,
                            {a["ticker"]: a["grafico"] for a in activos},
                            extra_campos={"titulares": tickers, "contexto": tickers})
     return Preparada(pieza, avisos)
+
+
+def fuera_con_referencia(pieza: dict[str, Any], base: Path | None = None) -> list[str]:
+    """Los activos que quedaron fuera de la foto y que ya tienen su referencia: con alguno,
+    /oportunidad rehace la foto en vez de reusarla."""
+    import referencia_semanal as rs
+
+    semana = pieza["datos"]["semana"]
+    return [t for t in pieza["datos"].get("fuera", []) if rs.cargar(semana, t, base or rs.DIR) is not None]
 
 
 def preparar_seguimiento(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lectores) -> Preparada:

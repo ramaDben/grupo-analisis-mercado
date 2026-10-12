@@ -192,6 +192,7 @@ class Atendedor:
     reloj: Callable[[], datetime] = lambda: datetime.now(SANTIAGO)
     dir_pedidos: Path = DIR_PEDIDOS
     registro: Path = rg.RUTA
+    fuera_con_referencia: Callable[[dict[str, Any]], list[str]] = pr.fuera_con_referencia
 
     def analista(self, usuario: str) -> dict[str, Any]:
         return self.config["analistas"][usuario]
@@ -253,10 +254,15 @@ class Atendedor:
 
         semana = rs.semana_de(ahora)
         previa = rg.foto(semana, self.registro)  # un registro corrupto levanta: no es "sin foto"
-        reusada = previa is not None
+        pieza = pr.cargar_pieza(Path(previa["dir"])) if previa else None
+        # Una foto a la que le faltaba un activo se rehace cuando aparece su referencia
+        # (director, 2026-10-12): los que ya estaban conservan sus precios.
+        recuperados = self.fuera_con_referencia(pieza) if pieza else []
+        reusada = pieza is not None and not recuperados
         if reusada:
-            dir_pedido, avisos = Path(previa["dir"]), []
-            pieza = pr.cargar_pieza(dir_pedido)
+            dir_pedido = Path(previa["dir"])
+            avisos = [f"{t} sigue sin análisis guardado esta semana: queda fuera de la foto. Cuando lo tenga, "
+                      "pide /oportunidad de nuevo y la foto se rehace con él." for t in pieza["datos"].get("fuera", [])]
         else:
             self._exigir_cupo(pedido.usuario, ahora)
             dir_pedido = self.dir_pedidos / ahora.strftime("%Y-%m-%d") / f"{ahora:%H%M%S}_semanal_{semana}"
@@ -274,6 +280,9 @@ class Atendedor:
             self.estado.consumir(pedido.usuario, ahora)
             self.estado.guardar()
             avisos = hecha.avisos
+            if recuperados:
+                avisos = [f"Rehíce la foto de la semana para sumar {', '.join(recuperados)}: los demás activos "
+                          "conservan sus precios.", *avisos]
         try:
             ruta = oh.guardar(pieza, dir_pedido, self.analista(pedido.usuario), self.autor, ahora.date())
         except oh.InformeInvalido as exc:

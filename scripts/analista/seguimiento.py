@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-ESTADOS = ("entrada_pendiente", "en_curso", "objetivo", "stop", "sin_simulacion")
+ESTADOS = ("entrada_pendiente", "en_curso", "objetivo", "stop", "rango_roto", "sin_simulacion")
 SEPARADOR = "━━━━━━━━━━━━━━━━━━━"
 
 
@@ -26,10 +26,11 @@ def evaluar(esc: dict[str, Any], velas: list[dict[str, Any]], precio_vivo: float
 
     Con la entrada pendiente (el falso quiebre del rango) la entrada se activa en una vela que
     pasa por su precio **sin llegar al stop**. Una vela que cruza el borde y sigue hasta el stop
-    es una ruptura del rango, no el falso quiebre que se simula: la entrada sigue pendiente y
-    nunca se informa «stop tocado» de una entrada que no se activó (prueba real de la W41,
-    cobre). En la vela que activa tampoco cuenta el objetivo: dentro de ella no se sabe qué
-    tocó primero. El precio vivo se mide como un tramo desde el último cierre.
+    es una ruptura del rango, no el falso quiebre que se simula: la simulación queda descartada
+    («rango_roto»), nunca «stop tocado» de una entrada que no se activó ni «pendiente» de un
+    precio que ya no vale (director, 2026-10-12, tras la prueba real de la W41, cobre). En la
+    vela que activa tampoco cuenta el objetivo: dentro de ella no se sabe qué tocó primero. El
+    precio vivo se mide como un tramo desde el último cierre.
     """
     alcista = esc["direccion"] == "ALCISTA"
     entrada, stop, obj = float(esc["entrada"]), float(esc["stop"]), float(esc["objetivo"])
@@ -40,7 +41,9 @@ def evaluar(esc: dict[str, Any], velas: list[dict[str, Any]], precio_vivo: float
     for alto, bajo in tramos:
         toca_stop = (bajo <= stop) if alcista else (alto >= stop)
         if not activa:
-            if bajo <= entrada <= alto and not toca_stop:
+            if toca_stop:
+                return {"estado": "rango_roto", "avance_pct": None}
+            if bajo <= entrada <= alto:
                 activa = True
             continue
         if toca_stop:
@@ -69,6 +72,9 @@ def texto_simulacion(esc: dict[str, Any], ev: dict[str, Any], precio_vivo: float
             return (f"El precio salió del rango y va en {f(precio_vivo)}: la simulación se activa si "
                     f"vuelve a la entrada de {f(esc['entrada'])}.")
         return f"El precio todavía no llega a la entrada de {f(esc['entrada'])}: va en {f(precio_vivo)}."
+    if estado == "rango_roto":
+        return (f"El precio rompió el rango y va en {f(precio_vivo)}: la simulación de esta semana "
+                "queda descartada.")
     if estado == "stop":
         return f"El precio tocó el stop de {f(esc['stop'])}."
     if estado == "objetivo":

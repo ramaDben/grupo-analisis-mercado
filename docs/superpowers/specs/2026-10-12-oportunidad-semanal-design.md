@@ -93,8 +93,13 @@ Los activos son los `elegidos` de `_semana.json`, en **orden de puntaje**.
 | PRUEBA sobre línea A+ | sin simulación hasta el cierre de la vela (§5) | | |
 | PRUEBA sin A+, o sin invalidación | sin simulación, con el motivo | | |
 
+**El motivo lo lee el cliente** en el correo («Sin simulación esta semana: …») y en
+`/seguimiento`, así que va en su idioma, uno por uno, sin jerga interna (nada de ATR, contrato
+ni invalidación). Decisión del director, 2026-10-12. El activo sin simulación sigue entrando al
+correo con su análisis y `/seguimiento` le entrega igual la lectura de hoy.
+
 - **Riesgo** = |entrada − stop|. Si es menor que **0,25 × ATR 4H** (la `tolerancia_toque_atr`
-  de Tori), no hay simulación: "el precio está sobre la línea". El 0,5 × ATR del rango es la
+  de Tori), no hay simulación: "el precio está pegado al nivel clave". El 0,5 × ATR del rango es la
   `tolerancia_horizontal_atr` de Tori. Los dos se leen de `scripts/estrategia/tori/parametros.py`,
   no se escriben de nuevo.
 - En RANGO la simulación va en el **falso quiebre** (decisión del 2026-09-28: quien sabe operar la
@@ -152,7 +157,12 @@ que sí están. Informa **dos cosas por separado y con el mismo peso**:
    - *entrada pendiente* (rango: el precio todavía no llegó al borde);
    - *en curso*, con el % del recorrido hacia el objetivo 1:3;
    - *objetivo 1:3 alcanzado*;
-   - *stop tocado*.
+   - *stop tocado*;
+   - *rango roto* (solo en rango): la vela que cruza el borde llega hasta el stop sin que la
+     entrada se haya activado. Es una ruptura, no el falso quiebre que se simula, así que la
+     simulación queda **descartada** y no vuelve a activarse. No se informa «stop tocado» de una
+     entrada que nunca se activó ni «pendiente» de un precio que ya no vale (director,
+     2026-10-12, tras la prueba real de la W41 con el cobre).
 
    Si una misma vela tocó el stop y el objetivo, cuenta **stop** (el lado prudente). Se informa en
    precio y en %, **nunca en pesos**, porque los pesos dependen del volumen de cada ejecutivo. Y

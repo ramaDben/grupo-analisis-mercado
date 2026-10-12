@@ -110,7 +110,8 @@ def activo_semanal(rango: bool = False, ticker: str | None = None) -> dict:
             "grafico": f"grafico_{lec.ticker.lower().replace('.', '_')}.png"}
 
 
-def pieza_oportunidad(dir_pedido: Path, laminas: bool = False, wti: bool = False) -> dict:
+def pieza_oportunidad(dir_pedido: Path, laminas: bool = False, wti: bool = False,
+                      fuera: list[str] | None = None) -> dict:
     """La pieza semanal con su texto ya escrito: dos activos (uno con tendencia y uno en rango).
 
     Escribe los gráficos en `dir_pedido`; con `laminas=True` también las láminas, que en el
@@ -127,7 +128,8 @@ def pieza_oportunidad(dir_pedido: Path, laminas: bool = False, wti: bool = False
     tickers = [a["ticker"] for a in activos]
     p = es.nueva_pieza("oportunidad", {"semana": "2026-W42"},
                        {"semana": "2026-W42", "chip": "ANÁLISIS TÉCNICO DE LA SEMANA", "edicion": "lunes 12-10 · 09:30",
-                        "activos": activos, "drivers": {}, "agenda_semana": []},
+                        "activos": activos, "drivers": {}, "agenda_semana": [],
+                        **({"fuera": fuera} if fuera is not None else {})},
                        {a["ticker"]: a["grafico"] for a in activos},
                        extra_campos={"titulares": tickers, "contexto": tickers})
     p["editorial"] = {"titular": "La semana técnica en seis activos", "bajada": "Lectura de cada activo.",

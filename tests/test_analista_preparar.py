@@ -120,6 +120,38 @@ def test_una_foto_sin_activos_no_se_arma(tmp_path):
     assert not (tmp_path / "p" / "pieza.json").exists()
 
 
+def test_un_elegido_sin_referencia_queda_fuera_y_se_anota(tmp_path):
+    base = tmp_path / "ref"
+    rs.guardar(fx.lectura(), SEMANA, "semanal", AHORA_LUNES, base=base)
+    rs.guardar_manifiesto(SEMANA, {"semana": SEMANA, "elegidos": ["XAUUSD", "COPPER"],
+                                   "puntajes": {"XAUUSD": 90.0, "COPPER": 5.0}, "excluidos": []}, base=base)
+    hecha = pr.preparar(Orden("oportunidad"), tmp_path / "p", AHORA_LUNES, _lectores(base))
+    assert [a["ticker"] for a in hecha.pieza["datos"]["activos"]] == ["XAUUSD"]
+    assert hecha.pieza["datos"]["fuera"] == ["COPPER"]
+    assert any("COPPER" in a and "pide /oportunidad de nuevo" in a for a in hecha.avisos)
+    assert pr.fuera_con_referencia(hecha.pieza, base) == []
+
+
+def test_rehacer_la_foto_suma_el_que_faltaba_y_conserva_los_precios_de_los_demas(tmp_path):
+    """Los clientes ya recibieron los precios del oro: aunque su referencia cambie a mitad de
+    semana, la foto rehecha los conserva y /seguimiento sigue midiendo contra ellos."""
+    base, registro = tmp_path / "ref", tmp_path / "registro.json"
+    rs.guardar(fx.lectura(), SEMANA, "semanal", AHORA_LUNES, base=base)
+    rs.guardar_manifiesto(SEMANA, {"semana": SEMANA, "elegidos": ["XAUUSD", "COPPER"],
+                                   "puntajes": {"XAUUSD": 90.0, "COPPER": 5.0}, "excluidos": []}, base=base)
+    primera = pr.preparar(Orden("oportunidad"), tmp_path / "p1", AHORA_LUNES, _lectores(base), registro=registro)
+    rg.anotar_foto(SEMANA, tmp_path / "p1", AHORA_LUNES, ["XAUUSD"], registro)
+    rs.guardar(fx.lectura(precio=4100.0), SEMANA, "ruptura", AHORA_LUNES, base=base)
+    rs.guardar(fx.lectura(ticker="COPPER", estado="RANGO", direccion="LATERAL", precio=14500.0,
+                          rango=(14567.0, 14206.0), atr=85.86), SEMANA, "semanal", AHORA_LUNES, base=base)
+    assert pr.fuera_con_referencia(primera.pieza, base) == ["COPPER"]
+    rehecha = pr.preparar(Orden("oportunidad"), tmp_path / "p2", AHORA_LUNES, _lectores(base), registro=registro)
+    activos = {a["ticker"]: a for a in rehecha.pieza["datos"]["activos"]}
+    assert set(activos) == {"XAUUSD", "COPPER"} and rehecha.pieza["datos"]["fuera"] == []
+    assert activos["XAUUSD"] == pr.cargar_pieza(tmp_path / "p1")["datos"]["activos"][0]
+    assert (tmp_path / "p2" / activos["XAUUSD"]["grafico"]).exists()
+
+
 def test_la_curva_va_sin_porcentajes(tmp_path):
     base = tmp_path / "ref"
     _sembrar(base, [fx.lectura()], {"XAUUSD": 90.0})
@@ -217,7 +249,7 @@ def test_seguimiento_sin_simulacion_entrega_la_lectura_de_hoy(tmp_path):
                         _lectores_seg(tmp_path, base, pd.DataFrame(columns=["time", "high", "low"]), 4124.0))
     d = hecha.pieza["datos"]
     assert d["evaluacion"]["estado"] == "sin_simulacion"
-    assert ("Esta semana este activo no tiene simulación: la lectura no trae nivel de invalidación."
+    assert ("Esta semana este activo no tiene simulación: el gráfico no marca un nivel claro donde el análisis dejaría de valer, y sin ese nivel no hay dónde poner el stop."
             in d["whatsapp"])
     assert "Lectura técnica hoy" in d["whatsapp"] and "No pude leer" not in d["whatsapp"]
     assert "Stop" not in d["whatsapp"]

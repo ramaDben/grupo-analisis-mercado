@@ -37,6 +37,11 @@ informe con el nombre del cliente se acerca a una recomendación personalizada. 
 - **La foto de la semana se arma una sola vez** (`registro.json`, clave = semana ISO). Quien
   pide `/oportunidad` después recibe la misma foto, con su nombre en el archivo, sin gastar agy
   ni cupo. Una foto de la semana anterior no se reusa.
+- **Un elegido sin análisis guardado queda fuera de la foto, y el analista lo sabe.** El aviso se
+  repite cada vez que alguien reusa la foto. Cuando aparece su referencia, el siguiente
+  `/oportunidad` **rehace** la foto para sumarlo, y los activos que ya estaban se copian tal cual:
+  sus clientes ya recibieron esos precios y `/seguimiento` mide contra ellos (director,
+  2026-10-12).
 - **`/seguimiento` no usa agy** y se reusa 30 minutos (`reuso_minutos`). Solo acepta activos de la
   foto de la semana; sin foto o con el activo fuera de ella, lo dice.
 - **agy solo redacta.** No recibe nada de lo que el analista escribió: recibe la ruta de la

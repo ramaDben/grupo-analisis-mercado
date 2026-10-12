@@ -70,7 +70,7 @@ def test_la_lamina_de_seguimiento_sin_simulacion(tmp_path):
     a = fx.activo_semanal()
     a["escenario"] = op.escenario(fx.lectura(invalidacion=None), 2).a_dict()
     p = cm.payload_seguimiento(a, {"estado": "sin_simulacion", "avance_pct": None,
-                                   "motivo": "la lectura no trae nivel de invalidación"},
+                                   "motivo": "el gráfico no marca un nivel claro donde el análisis dejaría de valer, y sin ese nivel no hay dónde poner el stop"},
                                4190.0, "La lectura del lunes sigue en pie.", "lunes 12/10", fx.AUTOR,
                                tmp_path / "g.png")
     assert p["sello"] == "SIN SIMULACIÓN" and p["direccion"] == "bajista"

@@ -53,6 +53,7 @@ class Armado:
     def __init__(self, tmp_path, config):
         self.llamadas, self.reloj, self.tmp = [], Reloj(), tmp_path
         self.preparaciones = 0
+        self.fuera: list[str] = []
         self.registro = tmp_path / "registro.json"
         self.atendedor = b.Atendedor(
             config, b.Estado.cargar(tmp_path / "estado.json"), autor=fx.AUTOR, preparar=self.preparar_falso,
@@ -66,7 +67,7 @@ class Armado:
         self.kwargs = kw
         dir_pedido.mkdir(parents=True, exist_ok=True)
         if orden.pieza == "oportunidad":
-            pieza = fx.pieza_oportunidad(dir_pedido)
+            pieza = fx.pieza_oportunidad(dir_pedido, fuera=list(self.fuera))
             pieza["editorial"] = {k: ({t: es.MARCA for t in v} if isinstance(v, dict) else es.MARCA)
                                   for k, v in pieza["editorial"].items()}
         else:
@@ -164,6 +165,29 @@ def test_oportunidad_arma_la_foto_una_sola_vez_por_semana(armado):
     assert "Ya está" in r2.texto
     # El cupo se gasta al armar la foto, no al reusarla.
     assert armado.estado.usados(CAMILA, AHORA) == 1 and armado.estado.usados(OTRO, AHORA) == 0
+
+
+def test_la_foto_reusada_avisa_los_activos_que_quedaron_fuera(armado):
+    armado.fuera = ["COPPER"]
+    armado.atendedor.fuera_con_referencia = lambda pieza: []
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
+    r = armado.bot.procesar_uno(b.Pedido(OTRO, 2, od.Orden("oportunidad")))
+    assert armado.preparaciones == 1
+    assert "COPPER sigue sin análisis guardado" in r.texto and "pide /oportunidad de nuevo" in r.texto
+
+
+def test_la_foto_se_rehace_cuando_aparece_el_activo_que_faltaba(armado):
+    armado.fuera = ["COPPER"]
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
+    armado.fuera = []
+    armado.atendedor.fuera_con_referencia = lambda pieza: list(pieza["datos"].get("fuera", []))
+    r = armado.bot.procesar_uno(b.Pedido(OTRO, 2, od.Orden("oportunidad")))
+    assert armado.preparaciones == 2 and len(armado.llamadas) == 2
+    assert "Rehíce la foto de la semana para sumar COPPER" in r.texto
+    assert len(json.loads(armado.registro.read_text(encoding="utf-8"))) == 2
+    # Ya completa: el tercero la reusa.
+    r3 = armado.bot.procesar_uno(b.Pedido(CAMILA, 3, od.Orden("oportunidad")))
+    assert armado.preparaciones == 2 and "Ya está" in r3.texto
 
 
 def test_oportunidad_rinde_las_laminas_antes_del_html(armado):

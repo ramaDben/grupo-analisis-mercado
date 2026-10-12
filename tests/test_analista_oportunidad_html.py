@@ -49,11 +49,11 @@ def test_los_datos_incrustados_traen_contrato_y_escenario(tmp_path):
 
 def test_un_activo_sin_simulacion_muestra_el_motivo_y_no_tiene_inputs(tmp_path):
     p = _pieza(tmp_path)
-    p["datos"]["activos"][0]["escenario"]["motivo"] = "la lectura no trae nivel de invalidación"
+    p["datos"]["activos"][0]["escenario"]["motivo"] = "el gráfico no marca un nivel claro donde el análisis dejaría de valer, y sin ese nivel no hay dónde poner el stop"
     p["datos"]["activos"][0]["contrato"] = None
     p["huella"] = es._huella(p)
     html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
-    assert "Sin simulación esta semana: la lectura no trae nivel de invalidación" in html
+    assert "Sin simulación esta semana: el gráfico no marca un nivel claro donde el análisis dejaría de valer, y sin ese nivel no hay dónde poner el stop" in html
     bloque = html.split('data-ticker="XAUUSD"')[1].split('data-ticker="COPPER"')[0]
     assert 'name="perdida"' not in bloque
 
@@ -82,13 +82,13 @@ def test_el_nombre_del_archivo_no_dice_oportunidad(tmp_path):
 
 def test_un_activo_sin_simulacion_igual_entra_al_correo(tmp_path):
     p = _pieza(tmp_path)
-    p["datos"]["activos"][0]["escenario"]["motivo"] = "la lectura no trae nivel de invalidación"
+    p["datos"]["activos"][0]["escenario"]["motivo"] = "el gráfico no marca un nivel claro donde el análisis dejaría de valer, y sin ese nivel no hay dónde poner el stop"
     p["huella"] = es._huella(p)
     html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
     bloque = html.split('data-ticker="XAUUSD"')[1].split('data-ticker="COPPER"')[0]
     assert 'name="incluir"' in bloque and 'name="perdida"' not in bloque
     datos = json.loads(re.search(r'<script id="datos" type="application/json">(.*?)</script>', html, re.S).group(1))
-    assert datos["activos"][0]["motivo"] == "la lectura no trae nivel de invalidación"
+    assert datos["activos"][0]["motivo"] == "el gráfico no marca un nivel claro donde el análisis dejaría de valer, y sin ese nivel no hay dónde poner el stop"
     assert "Sin simulación esta semana: " in html
 
 
@@ -98,7 +98,7 @@ def test_sin_contrato_y_sin_motivo_se_trata_como_sin_simulacion(tmp_path):
     p["huella"] = es._huella(p)
     html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
     bloque = html.split('data-ticker="XAUUSD"')[1].split('data-ticker="COPPER"')[0]
-    assert "no hay datos de contrato de la cuenta para simular este activo" in bloque
+    assert "no tenemos los datos de la cuenta para calcular el tamaño de la operación" in bloque
     assert 'name="perdida"' not in bloque and 'name="incluir"' in bloque
 
 

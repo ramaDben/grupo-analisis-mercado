@@ -59,22 +59,22 @@ def test_rango_con_bordes_diagonales_se_identifica_por_valor_actual():
 
 def test_prueba_no_simula():
     e = op.escenario(fx.lectura(estado="PRUEBA"), 2)
-    assert not e.simulable and "prueba" in e.motivo
+    assert not e.simulable and "probando una línea clave" in e.motivo
 
 
 def test_sin_invalidacion_no_simula():
     e = op.escenario(fx.lectura(invalidacion=None), 2)
-    assert not e.simulable and "invalidación" in e.motivo
+    assert not e.simulable and "dejaría de valer" in e.motivo
 
 
 def test_riesgo_bajo_un_cuarto_de_atr_no_simula():
     e = op.escenario(fx.lectura(precio=4000.0, invalidacion=3996.0, atr=20.0), 2)  # 4 < 5
-    assert not e.simulable and "sobre la línea" in e.motivo
+    assert not e.simulable and "pegado al nivel clave" in e.motivo
 
 
 def test_precio_del_otro_lado_de_la_invalidacion_no_simula():
     e = op.escenario(fx.lectura(precio=3940.0, invalidacion=3950.0), 2)
-    assert not e.simulable and "otro lado" in e.motivo
+    assert not e.simulable and "ya pasó el nivel" in e.motivo
 
 
 def test_a_dict_es_serializable_y_completo():
@@ -140,13 +140,13 @@ def test_el_js_del_panel_simula_igual_que_python(c, e, perdida, capital):
 
 def test_sin_atr_tendencia_no_simula():
     e = op.escenario(fx.lectura(atr=0.0), 2)
-    assert not e.simulable and "ATR del marco operativo" in e.motivo
+    assert not e.simulable and "cuánto se mueve el activo" in e.motivo
 
 
 def test_sin_atr_rango_no_simula():
     e = op.escenario(fx.lectura(ticker="COPPER", estado="RANGO", direccion="LATERAL", precio=14500.0,
                                 rango=(14567.0, 14206.0), atr=0.0), 0)
-    assert not e.simulable and "ATR del marco operativo" in e.motivo
+    assert not e.simulable and "cuánto se mueve el activo" in e.motivo
 
 
 def test_simular_con_entrada_igual_a_stop_devuelve_none():

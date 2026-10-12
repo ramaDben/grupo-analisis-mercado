@@ -62,20 +62,34 @@ def test_la_vela_que_activa_la_entrada_no_cuenta_el_objetivo():
     assert ev["estado"] == "en_curso"
 
 
-def test_con_entrada_pendiente_no_hay_stop_ni_objetivo():
+def test_el_rango_roto_descarta_la_simulacion():
     """El cobre de la W41: la vela que cruzó el borde llegó también al stop. Es una ruptura del
-    rango, no el falso quiebre que se simula: la entrada sigue pendiente, nunca «tocó el stop»."""
+    rango, no el falso quiebre que se simula: la simulación queda descartada, nunca «tocó el
+    stop» ni «pendiente» de un precio que ya no vale (director, 2026-10-12)."""
     velas = [v(14557, 14537), v(14668, 14544), v(14666, 14595), v(14622, 14587)]
     ev = sg.evaluar(RANGO, velas, 14593.0)
-    assert ev["estado"] == "entrada_pendiente"
+    assert ev == {"estado": "rango_roto", "avance_pct": None}
     texto = sg.texto_simulacion(RANGO, ev, 14593.0, 0)
-    assert "stop" not in texto and "objetivo" not in texto
-    assert "14593" in texto and "14567" in texto and "todavía no llega" not in texto
+    assert "stop" not in texto and "objetivo" not in texto and "pendiente" not in texto
+    assert "rompió el rango" in texto and "descartada" in texto and "14593" in texto
 
 
-def test_la_entrada_pendiente_se_activa_cuando_el_precio_vuelve_al_borde():
+def test_el_rango_roto_no_se_reactiva_si_el_precio_vuelve_al_borde():
     ev = sg.evaluar(RANGO, [v(14668, 14544), v(14600, 14550)], 14550.0)
-    assert ev["estado"] == "en_curso"
+    assert ev["estado"] == "rango_roto"
+
+
+def test_el_precio_vivo_que_rompe_el_rango_lo_descarta():
+    assert sg.evaluar(RANGO, [v(14550, 14500, cierre=14540)], 14615.0)["estado"] == "rango_roto"
+
+
+def test_el_rango_roto_tiene_sello_y_mensaje():
+    from analista.comercial import SELLOS
+
+    ev = {"estado": "rango_roto", "avance_pct": None}
+    assert SELLOS["rango_roto"] == "RANGO ROTO"
+    texto = sg.mensaje("Cobre", "miércoles 14/10", "12/10", RANGO, ev, 14620.0, fx.lectura(), False, 0)
+    assert "descartada" in texto and "—" not in texto and "–" not in texto
 
 
 def test_el_precio_vivo_que_cruza_la_entrada_la_activa():

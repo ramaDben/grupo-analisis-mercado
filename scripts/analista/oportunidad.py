@@ -41,6 +41,8 @@ class Escenario:
 
 
 def _sin(lectura: Lectura, motivo: str) -> Escenario:
+    """El motivo lo lee el cliente (correo y /seguimiento): en su idioma, sin jerga interna
+    (director, 2026-10-12). Cierra una frase que empieza con «Sin simulación esta semana:»."""
     return Escenario(lectura.ticker, lectura.estado, "", None, None, None, False, None, motivo)
 
 
@@ -60,9 +62,9 @@ def escenario(lectura: Lectura, digits: int) -> Escenario:
     atr = float(lectura.metricas.get("atr") or 0.0)
     atr_d1 = float(lectura.metricas.get("atr_d1") or 0.0)
     if lectura.estado == "PRUEBA":
-        return _sin(lectura, "el precio está en prueba sobre una línea: se espera el cierre de la vela")
+        return _sin(lectura, "el precio está probando una línea clave y hay que esperar el cierre de la vela para saber si la respeta o la rompe")
     if atr <= 0:
-        return _sin(lectura, "la lectura no trae ATR del marco operativo")
+        return _sin(lectura, "no se pudo medir cuánto se mueve el activo para dejar el stop con margen")
     if lectura.estado == "RANGO":
         superior, inferior = bordes_rango(lectura)
         arriba = abs(lectura.vigilar.precio - superior) <= abs(lectura.vigilar.precio - inferior)
@@ -72,27 +74,27 @@ def escenario(lectura: Lectura, digits: int) -> Escenario:
         direccion, pendiente = ("BAJISTA" if arriba else "ALCISTA"), True
     elif lectura.estado in SIMULAN:
         if lectura.invalidacion is None:
-            return _sin(lectura, "la lectura no trae nivel de invalidación")
+            return _sin(lectura, "el gráfico no marca un nivel claro donde el análisis dejaría de valer, y sin ese nivel no hay dónde poner el stop")
         if lectura.direccion not in ("ALCISTA", "BAJISTA"):
-            return _sin(lectura, "la lectura no tiene dirección")
+            return _sin(lectura, "el precio no muestra una dirección clara")
         entrada, stop = lectura.precio, lectura.invalidacion.precio
         signo = 1 if lectura.direccion == "ALCISTA" else -1
         direccion, pendiente = lectura.direccion, False
         if (entrada - stop) * signo <= 0:
-            return _sin(lectura, "el precio ya está del otro lado de la invalidación")
+            return _sin(lectura, "el precio ya pasó el nivel donde el análisis deja de valer")
     else:
-        return _sin(lectura, f"estado {lectura.estado} sin simulación")
+        return _sin(lectura, "el precio está en una situación que no permite fijar una entrada y un stop con claridad")
 
     entrada, stop = _redondeo(entrada, digits), _redondeo(stop, digits)
     riesgo = abs(entrada - stop)
     if riesgo < PARAMETROS.tolerancia_toque_atr * atr:
-        return _sin(lectura, "el precio está sobre la línea: el riesgo es menor que el ruido de una vela")
+        return _sin(lectura, "el precio está pegado al nivel clave y el stop quedaría dentro del movimiento normal de una vela")
     objetivo = _redondeo(entrada + signo * MULTIPLO * riesgo, digits)
     dias = round(abs(objetivo - lectura.precio) / atr_d1, 1) if atr_d1 else None
     return Escenario(lectura.ticker, lectura.estado, direccion, entrada, stop, objetivo, pendiente, dias, None)
 
 
-MOTIVO_SIN_CONTRATO = "no hay datos de contrato de la cuenta para simular este activo"
+MOTIVO_SIN_CONTRATO = "no tenemos los datos de la cuenta para calcular el tamaño de la operación en este activo"
 
 
 def motivo_sin_simulacion(activo: dict[str, Any]) -> str | None:

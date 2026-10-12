@@ -14,7 +14,8 @@ AVISO_PIEZA = ("Análisis técnico general, igual para todos sus destinatarios. 
                "de inversión: un escenario puede cumplirse o invalidarse.")
 SEPARADOR = "━━━━━━━━━━━━━━━━━━━"
 SELLOS = {"entrada_pendiente": "ENTRADA PENDIENTE", "en_curso": "EN CURSO",
-          "objetivo": "OBJETIVO 1:3 ALCANZADO", "stop": "STOP TOCADO", "sin_simulacion": "SIN SIMULACIÓN"}
+          "objetivo": "OBJETIVO 1:3 ALCANZADO", "stop": "STOP TOCADO", "rango_roto": "RANGO ROTO",
+          "sin_simulacion": "SIN SIMULACIÓN"}
 
 
 def nombre_lamina(ticker: str) -> str:
@@ -91,6 +92,7 @@ def payload_seguimiento(activo: dict[str, Any], ev: dict[str, Any], precio_vivo:
     else:
         avance = {"en_curso": _avance(ev.get("avance_pct")),
                   "objetivo": "Objetivo 1:3 alcanzado", "stop": "Stop tocado",
+                  "rango_roto": "El precio rompió el rango: simulación descartada",
                   "sin_simulacion": "Esta semana este activo no tiene simulación"}[estado]
     sin = estado == "sin_simulacion"
     niveles = "" if sin else f"Entrada {f['entrada']} · Stop {f['stop']} · Objetivo 1:3 {f['objetivo']}"
