@@ -131,3 +131,16 @@ def test_una_ruta_rota_se_deja_rota(tmp_path):
     el hueco de la revisión visual, que es donde se detecta."""
     html = '<img src="graficos/no_existe.png">'
     assert _absolutizar()(html, tmp_path) == html
+
+
+def test_con_la_lectura_se_trazan_sus_niveles_y_no_los_de_get_asset_levels():
+    """Enchufe, fase 3: el banner traza lo que nombra el texto (la lectura), no s1/r1."""
+    lineas = gi.lineas_de_nivel({"s1": 900.0, "r1": 950.0},
+                                [(925.0, "Nivel a vigilar", "nivel"), (910.0, "Invalida la lectura", "soporte")])
+    rotulos = [r for _, _, _, r in lineas]
+    assert rotulos == ["Nivel a vigilar", "Invalida la lectura"]
+
+
+def test_sin_lectura_quedan_los_niveles_crudos():
+    lineas = gi.lineas_de_nivel({"s1": 900.0, "r1": 950.0}, None)
+    assert [r for _, _, _, r in lineas] == ["Resistencia R1", "Soporte S1"]

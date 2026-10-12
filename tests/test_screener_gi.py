@@ -938,3 +938,11 @@ def test_la_seleccion_lleva_la_referencia_contra_la_que_se_leyo(tmp_path, monkey
     _fijar(tmp_path, "EURUSD")
     res = _escanear(tmp_path, _Est({}), monkeypatch)
     assert res["ranking_completo"][0]["referencia"]["ticker"] == "EURUSD"
+
+
+def test_seleccion_fija_arma_la_entrada_de_un_activo_con_su_lectura(tmp_path):
+    activo = next(a for a in sc.cargar_universo(True) if a["ticker"] == "XAUUSD")
+    sel = sc.seleccion_fija(activo, NY_LUNES.astimezone(SCL), lector=_lector, estrategia=_Est({}),
+                            base=tmp_path)
+    assert sel["ticker"] == "XAUUSD" and sel["cobertura_fija"] is True
+    assert sel["lectura"]["ticker"] == "XAUUSD" and sel["marco"] == "H4"

@@ -588,25 +588,43 @@ def test_suplemento_cierre_estructura_3_tiempos():
     assert "Activo en foco" in msg
 
 
-def test_escribir_suplementos_genera_recap_payload_con_activo_ancla(tmp_path):
-    """Verifica que escribir_suplementos genere el payload de recap 1_recap_...json con activo ancla."""
+def test_escribir_suplementos_genera_el_recap_desde_la_lectura_del_ancla(tmp_path):
+    """El recap del canal vacío es una pieza de la estrategia (enchufe, fase 3): sus niveles
+    salen de la lectura del activo ancla, no de `get_asset_levels`, y su texto lo escribe el
+    comando como el de cualquier pieza."""
     import json
     import pipeline_carrusel as pc
+
+    vistos = []
+
+    def seleccion(ticker):
+        vistos.append(ticker)
+        return None  # sin terminal: el canal queda con su suplemento de texto
 
     escritos, avisos = pc.escribir_suplementos(
         tmp_path, FOREX_AGOTADO_CON_CLASE, grupos_activos=set(), catalogo={},
         ruta_historial=tmp_path / "historial.json",
-        es_cierre=True,
+        es_cierre=True, seleccion_de=seleccion,
     )
-    assert len(escritos) == 1
+    assert len(escritos) == 1 and vistos == ["USDCLP"]
     canal_dir = tmp_path / "02_forex_divisas"
-    recap_file = canal_dir / "1_recap_usdclp.json"
-    assert recap_file.exists()
-    datos_recap = json.loads(recap_file.read_text(encoding="utf-8"))
-    assert datos_recap["tipo_pieza"] == "recap"
-    assert datos_recap["activo"] == "Dólar / Peso Chileno"
-    assert (canal_dir / "1_recap_usdclp_mensaje.txt").exists()
-    assert (canal_dir / "mensaje.txt").exists()
+    assert not list(canal_dir.glob("1_recap_*.json"))
+    assert any("recap" in a and "USDCLP" in a for a in avisos)
 
 
+def test_con_terminal_el_recap_es_una_pieza_de_la_lectura_con_texto_por_escribir(tmp_path):
+    import json
+    import pipeline_carrusel as pc
+    sys.path.insert(0, str(RAIZ / "tests"))
+    from test_pipeline_carrusel import ORO, _lectura_alcista, _sel
 
+    usdclp = {**ORO, "ticker": "USDCLP", "nombre": "Dólar / Peso Chileno", "categoria": "forex"}
+    sel = {**_sel(_lectura_alcista()), "ticker": "USDCLP"}
+    pc.escribir_suplementos(
+        tmp_path, FOREX_AGOTADO_CON_CLASE, grupos_activos=set(), catalogo={"USDCLP": usdclp},
+        ruta_historial=tmp_path / "historial.json", es_cierre=True,
+        seleccion_de=lambda t: (sel, [4119.0, 4120.0]),
+    )
+    payload = json.loads((tmp_path / "02_forex_divisas" / "1_recap_usdclp.json").read_text(encoding="utf-8"))
+    assert payload["tipo_pieza"] == "recap" and "lectura" in payload
+    assert payload["titular"] == "" and payload["_pendiente_editorial"] == ["titular", "parrafo"]

@@ -146,81 +146,6 @@ def test_una_serie_vacia_no_se_publica():
     assert pc.incoherencia_del_payload(SELECCION, []) is not None
 
 
-def test_el_refresco_detiene_la_pieza_si_el_precio_y_la_serie_se_desacoplan():
-    """El refresco vuelve a juntar las dos lecturas, con el mismo acoplamiento
-    ciego. Si llegan desacopladas, la pieza se renombra a `.divergente`."""
-    from pipeline_carrusel import refrescar_payload
-
-    _, motivo = refrescar_payload(
-        _payload_preparado(),
-        ahora=datetime(2026, 9, 2, 11, 30),
-        h1={"price": 937.80, "s1": 926.90, "r1": 938.27, "atr_14": 2.70,
-            "ema_50": 930.00},
-        digits=2,
-        cierres=cierres_para(930.00, n=3, paso=0.5),
-    )
-    assert motivo is not None
-    assert "no es el ultimo cierre de su propia serie" in motivo
-
-
-def test_el_refresco_corrige_un_sesgo_obsoleto():
-    """El agujero por el que paso GLD.US, y es el caso mayoritario.
-
-    GLD se preparo "Alcista" y el H1 vivo daba bajista: la direccion invertida
-    sobrevivia el refresco intacta porque esa rama no se ejecutaba para el.
-    """
-    from pipeline_carrusel import refrescar_payload
-
-    payload = _payload_preparado()
-    assert payload["sesgo"] == "Alcista"
-
-    nuevo, _ = refrescar_payload(
-        payload,
-        ahora=datetime(2026, 9, 2, 11, 30),
-        # El precio quedo BAJO su EMA 50: la lectura de ahora es bajista.
-        h1={"price": 928.00, "s1": 926.90, "r1": 938.27, "atr_14": 2.70,
-            "ema_50": 934.00},
-        digits=2,
-        cierres=cierres_para(928.00, n=3, paso=0.5),
-    )
-    assert nuevo["sesgo"] == "Bajista"
-    assert nuevo["tag_riesgo"] == "BAJISTA"
-
-
-def test_el_refresco_no_deriva_la_direccion_del_propio_payload():
-    """Era circular: `tecnica` se leia del string `nuevo["sesgo"]`, asi que un
-    sesgo que venia mal se confirmaba a si mismo. Ahora sale del mercado."""
-    from pipeline_carrusel import refrescar_payload
-
-    payload = _payload_preparado()
-    payload["sesgo"] = "Bajista"          # el payload afirma lo contrario
-    payload["tag_riesgo"] = "BAJISTA"
-
-    nuevo, _ = refrescar_payload(
-        payload,
-        ahora=datetime(2026, 9, 2, 11, 30),
-        h1={"price": 937.80, "s1": 926.90, "r1": 938.27, "atr_14": 2.70,
-            "ema_50": 930.00},          # precio SOBRE la EMA 50: alcista
-        digits=2,
-        cierres=cierres_para(937.80, n=3, paso=0.5),
-    )
-    assert nuevo["sesgo"] == "Alcista"
-
-
-def test_sin_ema50_el_refresco_no_confirma_la_direccion_y_detiene_la_pieza():
-    """Fail-closed: sin la media no hay con que contrastar el sesgo escrito."""
-    from pipeline_carrusel import refrescar_payload
-
-    _, motivo = refrescar_payload(
-        _payload_preparado(),
-        ahora=datetime(2026, 9, 2, 11, 30),
-        h1={"price": 937.80, "s1": 926.90, "r1": 938.27, "atr_14": 2.70},
-        digits=2,
-        cierres=cierres_para(937.80, n=3, paso=0.5),
-    )
-    assert motivo is not None and "EMA 50" in motivo
-
-
 def test_ningun_payload_de_disco_es_incoherente():
     """Contrato contra los payloads reales que quedaron en `data/carrusel/`.
 
@@ -699,8 +624,6 @@ def test_construir_mensaje_alerta_cumple_reglas_canonicas_whatsapp():
     assert "0,661 USD" not in msg
 
 
-
-
 # ---------------------------------------------------------------------------
 # El destino que pide el director se resuelve contra el config, o falla fuerte
 # ---------------------------------------------------------------------------
@@ -793,44 +716,6 @@ def test_una_pieza_sin_su_mensaje_aborta_en_vez_de_salir_muda(tmp_path):
         piezas_del_grupo(d)
 
 
-def test_divergencia_detecta_que_el_precio_perforo_el_soporte():
-    """El texto dice 'se apoya en el soporte' y el precio ya lo perforó."""
-    from pipeline_carrusel import divergencia_editorial
-
-    crudos = {"precio": 936.32, "soporte": 926.90, "resistencia": 938.27}
-    motivo = divergencia_editorial(crudos, precio_nuevo=924.10)
-
-    assert motivo is not None
-    assert "soporte" in motivo.lower()
-
-
-def test_divergencia_detecta_que_el_precio_quebro_la_resistencia():
-    from pipeline_carrusel import divergencia_editorial
-
-    crudos = {"precio": 936.32, "soporte": 926.90, "resistencia": 938.27}
-    motivo = divergencia_editorial(crudos, precio_nuevo=941.00)
-
-    assert motivo is not None
-    assert "resistencia" in motivo.lower()
-
-
-def test_sin_cruzar_ningun_nivel_no_hay_divergencia():
-    """Que el precio se mueva es normal: solo importa si invalida el texto."""
-    from pipeline_carrusel import divergencia_editorial
-
-    crudos = {"precio": 936.32, "soporte": 926.90, "resistencia": 938.27}
-    assert divergencia_editorial(crudos, precio_nuevo=937.80) is None
-
-
-def test_sin_precios_crudos_no_se_puede_juzgar_y_se_avisa():
-    """Un payload viejo sin `_crudos` no permite comparar: no se finge que sí."""
-    from pipeline_carrusel import divergencia_editorial
-
-    motivo = divergencia_editorial({}, precio_nuevo=100.0)
-    assert motivo is not None
-    assert "no se pudo" in motivo.lower()
-
-
 def test_el_payload_preparado_guarda_los_precios_crudos():
     """Sin los números sin formatear, el corte por divergencia es imposible.
 
@@ -887,59 +772,6 @@ def _payload_preparado():
     return p
 
 
-def test_el_refresco_actualiza_las_cifras_y_el_sello_de_datos():
-    """La pieza se rinde justo antes de salir: su sello no puede mentir la hora."""
-    from pipeline_carrusel import refrescar_payload
-
-    payload = _payload_preparado()
-    sello_viejo = payload["sello_datos"]
-
-    nuevo, motivo = refrescar_payload(
-        payload,
-        ahora=datetime(2026, 9, 2, 11, 30),
-        h1={"price": 937.80, "s1": 926.90, "r1": 938.27, "atr_14": 2.70,
-            "ema_50": 930.00},
-        digits=2,
-        cierres=cierres_para(937.80, n=3, paso=0.5),
-    )
-
-    assert motivo is None
-    assert nuevo["precio_actual"] == "937,80"
-    assert nuevo["_procedencia"]["crudos"]["precio"] == 937.80
-    assert nuevo["sello_datos"] != sello_viejo
-    assert "11:30" in nuevo["sello_datos"]
-
-
-def test_el_refresco_conserva_el_texto_editorial():
-    """El refresco toca las cifras, no el criterio de quien escribió."""
-    from pipeline_carrusel import refrescar_payload
-
-    nuevo, _ = refrescar_payload(
-        _payload_preparado(),
-        ahora=datetime(2026, 9, 2, 11, 30),
-        h1={"price": 937.80, "s1": 926.90, "r1": 938.27, "atr_14": 2.70,
-            "ema_50": 930.00},
-        digits=2,
-        cierres=cierres_para(937.80, n=3, paso=0.5),
-    )
-    assert nuevo["titular"] == "Dólar consolida sobre $935"
-    assert nuevo["parrafo"] == "La cotización presiona la resistencia."
-
-
-def test_el_refresco_avisa_cuando_el_precio_invalido_el_texto():
-    from pipeline_carrusel import refrescar_payload
-
-    _, motivo = refrescar_payload(
-        _payload_preparado(),
-        ahora=datetime(2026, 9, 2, 11, 30),
-        h1={"price": 924.10, "s1": 926.90, "r1": 938.27, "atr_14": 2.70,
-            "ema_50": 930.00},
-        digits=2,
-        cierres=cierres_para(924.10, n=3, paso=0.5),
-    )
-    assert motivo is not None and "soporte" in motivo.lower()
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # El chip sigue a la lectura tecnica (el Playbook V2 se retiro el 2026-09-27)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -957,42 +789,6 @@ def test_el_payload_ya_no_lleva_vigencia_del_playbook():
     assert "vigencia" not in p
     assert "vigencia" not in p["_procedencia"]
     assert "vigencia_nivel" not in p["_procedencia"]["crudos"]
-
-
-def test_si_la_lectura_da_vuelta_antes_de_despachar_la_pieza_no_sale():
-    """El titular y el parrafo se escribieron para una direccion. Si el mercado
-    la invirtio entre preparar y despachar, el texto contradice al chip nuevo."""
-    from pipeline_carrusel import refrescar_payload
-
-    payload = _payload_preparado()
-    assert payload["sesgo"] == "Alcista"
-    nuevo, motivo = refrescar_payload(
-        payload,
-        ahora=datetime(2026, 9, 2, 11, 30),
-        h1={"price": 928.00, "s1": 926.90, "r1": 938.27, "atr_14": 2.70,
-            "ema_50": 934.00},
-        digits=2,
-        cierres=cierres_para(928.00, n=3, paso=0.5),
-    )
-    assert nuevo["sesgo"] == "Bajista"
-    assert motivo is not None and "direccion contraria" in motivo
-
-
-def test_el_refresco_no_le_pone_direccion_a_un_recap():
-    """El recap es un balance sin direccion afirmada: su chip queda Lateral."""
-    from pipeline_carrusel import refrescar_payload
-
-    payload = _payload_preparado()
-    payload.update(tipo_pieza="recap", sesgo="Lateral", tag_riesgo="BALANCE")
-    nuevo, _ = refrescar_payload(
-        payload,
-        ahora=datetime(2026, 9, 2, 11, 30),
-        h1={"price": 936.40, "s1": 926.90, "r1": 938.27, "atr_14": 2.70,
-            "ema_50": 930.00},
-        digits=2,
-        cierres=cierres_para(936.40, n=3, paso=0.5),
-    )
-    assert (nuevo["sesgo"], nuevo["tag_riesgo"]) == ("Lateral", "BALANCE")
 
 
 def test_el_mensaje_lateral_no_habla_de_presion_vendedora():
@@ -1321,27 +1117,6 @@ def test_las_dos_rutas_de_render_dibujan_el_nivel_publicado():
     for fn in (pc.rendir, pc._refrescar_y_rendir):
         fuente = inspect.getsource(fn)
         assert "_nivel_publicado(" in fuente, fn.__name__
-
-
-def test_el_refresco_respeta_los_niveles_que_fijo_el_director():
-    """El 977 del director no puede volverse el s1 del motor al despachar (2026-10-02)."""
-    from pipeline_carrusel import refrescar_payload
-
-    payload = _payload_preparado()
-    payload["_procedencia"]["niveles_fijados"] = {"soporte": 930.00, "resistencia": 940.00}
-
-    nuevo, motivo = refrescar_payload(
-        payload,
-        ahora=datetime(2026, 9, 2, 11, 30),
-        h1={"price": 937.80, "s1": 926.90, "r1": 938.27, "atr_14": 2.70,
-            "ema_50": 930.00},
-        digits=2,
-        cierres=cierres_para(937.80, n=3, paso=0.5),
-    )
-
-    assert nuevo["soporte"] == "930,00" and nuevo["resistencia"] == "940,00"
-    assert nuevo["_procedencia"]["crudos"]["soporte"] == 930.00
-    assert nuevo["precio_actual"] == "937,80"
 
 
 def test_un_nivel_lejano_se_publica_tal_cual_y_no_se_reemplaza_por_atr():

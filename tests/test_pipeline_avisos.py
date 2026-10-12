@@ -201,17 +201,38 @@ def test_registrar_uso_anota_al_preparar(tmp_path):
 AHORA = datetime(2026, 9, 29, 11, 30, tzinfo=pa.SANTIAGO)
 
 
-def lectura_falsa(ticker="USDCLP", precio=936.32, digits=2, nombre="Dólar / Peso chileno"):
+def lectura_falsa(ticker="USDCLP", precio=936.32, digits=2, nombre="Dólar / Peso chileno", base=None):
+    """La lectura de Avisos con una `Lectura` de verdad (enchufe, fase 3).
+
+    Los niveles se anclan en `base` (por defecto, el precio): una tendencia alcista con la
+    línea de seguridad 3 abajo y la línea del retroceso 3 arriba, que es la que se vigila.
+    Con `base` fija y otro `precio` se simula el mercado que se movió después de preparar.
+    """
+    from estrategia.contrato import Escenario, Lectura, Linea, Referencia, lectura_a_dict
+
+    base = precio if base is None else base
+    seg = Linea("seguridad", "diagonal", ((100, base - 4), (200, base - 3)), "H4", 3, "A+", base - 3)
+    acc = Linea("accion", "diagonal", ((150, base + 4), (250, base + 3)), "H4", 2, "B", base + 3)
+    vig = Referencia(base + 3, "línea bajista", acc)
+    inv = Referencia(base - 3, "línea alcista de seguridad", seg)
+    esc = (Escenario("⬆️", "c", "Si cierra sobre la línea del retroceso, la tendencia alcista retoma."),
+           Escenario("↔️", "c", "Mientras siga entre las dos líneas, la tendencia sigue en pie."),
+           Escenario("⬇️", "c", "Si cierra bajo la línea de seguridad, la tendencia deja de valer."))
+    lec = Lectura(ticker=ticker, marco="H4", precio=precio, direccion="ALCISTA", estado="TENDENCIA",
+                  lineas=(seg, acc), en_prueba=None, vigilar=vig, invalidacion=inv, objetivo=None,
+                  escenarios=esc, salida="La posición se cierra con un cierre bajo la línea de seguridad.",
+                  conceptos=(), avisos=(), metricas={}, vela=250)
     activo = {"ticker": ticker, "nombre": nombre, "clase": "forex_commodities", "categoria": "forex",
               "digits": digits, "unidad": "CLP", "imagen": "assets/activos/usdclp.jpg", "volatilidad": "media",
-              "nota_volatilidad": "en 1H se lee el movimiento del día sin el ruido de 15M; 4H confirma la tendencia"}
-    sel = {"ticker": ticker, "nombre": nombre, "clase": "forex_commodities", "direccion": "ALCISTA", "score": 60,
-           "precio": precio, "soporte": precio - 3, "resistencia": precio + 3, "atr_h1": 1.2, "atr_d1": 6.0,
-           "impulso_adc_atr": 1.8, "banda_estrecha": None, "factores": {}}
-    h1 = {"price": precio, "s1": precio - 3, "r1": precio + 3, "s2": precio - 6, "r2": precio + 6,
-          "ema_50": precio - 1, "donchian_50_high": precio + 8, "donchian_50_low": precio - 8, "atr_14": 1.2}
+              "nota_volatilidad": "en 1H se lee el movimiento del día sin el ruido de 15M; 4H confirma la tendencia",
+              "notas_marco": {"H4": "en 4H se ven las líneas que el precio respeta"}}
+    sel = {"ticker": ticker, "nombre": nombre, "clase": "forex_commodities", "cobertura_fija": True,
+           "gates_omitidos": [], "score": 60.0, "puntaje": {"desglose": {}, "excluido": None},
+           "direccion": "ALCISTA", "estado": "TENDENCIA", "precio": precio, "marco": "H4",
+           "volatilidad_tipica": 1.2, "lectura": lectura_a_dict(lec), "referencia": None}
+    precios = {"price": precio, "vigilar": base + 3, "invalidacion": base - 3, "objetivo": None}
     cierres = [round(precio - (59 - i) * 0.01, 6) for i in range(60)]
-    return {"ticker": ticker, "activo": activo, "seleccion": sel, "h1": h1, "cierres": cierres}
+    return {"ticker": ticker, "activo": activo, "seleccion": sel, "precios": precios, "cierres": cierres}
 
 
 def test_tanda_de_cita_con_voz_tiene_cuatro_laminas_y_todas_con_titular_y_parrafo():
@@ -271,8 +292,8 @@ def test_la_voz_de_una_traduccion_lo_dice():
 def test_la_fila_medida_incluye_los_niveles_publicados():
     meta, laminas = pa.armar_tanda("avisos_manana", "cita", AHORA, lectura_falsa(), None, [])
     fila = meta["activos"]["USDCLP"]
-    niveles = {n["rol"]: n["precio"] for n in laminas["datos"]["recorrido"]["niveles"]}
-    assert fila["soporte_publicado"] == niveles["SOPORTE"]
+    assert fila["soporte_publicado"] == laminas["datos"]["_procedencia"]["crudos"]["soporte"]
+    assert fila["vigilar"] == 939.32 and fila["invalidacion"] == 933.32
     assert fila["price"] == 936.32 and fila["digits"] == 2
 
 
@@ -667,7 +688,7 @@ def test_refrescar_conserva_texto_y_vision_y_mueve_la_hora(tmp_path):
     ruta, _ = _preparar(tmp_path)
     _escribir_todo(ruta)
     despues = AHORA + timedelta(minutes=40)
-    pa.refrescar_tanda(ruta, despues, lector=lambda t, a: lectura_falsa(t, precio=936.80))
+    pa.refrescar_tanda(ruta, despues, lector=lambda t, a: lectura_falsa(t, precio=936.80, base=936.32))
     meta = pa.leer_meta(ruta)
     laminas = dict(pa.leer_laminas(ruta))
     assert meta["leido_en"].startswith("2026-09-29T12:10") and meta["vision"] == "v"
@@ -683,7 +704,7 @@ def test_refrescar_con_divergencia_no_escribe_sin_reescribir(tmp_path):
     _escribir_todo(ruta)
     antes = (ruta / "3_datos.json").read_text(encoding="utf-8")
     with pytest.raises(SystemExit, match="reescribir"):
-        pa.refrescar_tanda(ruta, AHORA, lector=lambda t, a: lectura_falsa(t, precio=945.0))
+        pa.refrescar_tanda(ruta, AHORA, lector=lambda t, a: lectura_falsa(t, precio=945.0, base=936.32))
     assert (ruta / "3_datos.json").read_text(encoding="utf-8") == antes
 
 
@@ -694,7 +715,7 @@ def test_refrescar_con_reescribir_vacia_tambien_el_texto_de_las_listas(tmp_path)
     # mercado ya invalidó.
     ruta, _ = _preparar(tmp_path)
     _escribir_todo(ruta)
-    pa.refrescar_tanda(ruta, AHORA, lector=lambda t, a: lectura_falsa(t, precio=945.0), reescribir=True)
+    pa.refrescar_tanda(ruta, AHORA, lector=lambda t, a: lectura_falsa(t, precio=945.0, base=936.32), reescribir=True)
     textos = pa.textos_de(pa.leer_laminas(ruta))
     assert textos  # hay campos que revisar
     assert all(valor == pa.MARCA for _, valor in textos)
@@ -756,7 +777,7 @@ def test_reescribir_renueva_los_activos_de_preparacion(tmp_path):
     # también tiene que ser la nueva.
     ruta, _ = _preparar(tmp_path)
     _escribir_todo(ruta)
-    pa.refrescar_tanda(ruta, AHORA, lector=lambda t, a: lectura_falsa(t, precio=945.0), reescribir=True)
+    pa.refrescar_tanda(ruta, AHORA, lector=lambda t, a: lectura_falsa(t, precio=945.0, base=936.32), reescribir=True)
     meta = pa.leer_meta(ruta)
     assert meta["activos_preparacion"] == meta["activos"]
     assert meta["activos_preparacion"]["USDCLP"]["price"] == 945.0
@@ -765,7 +786,7 @@ def test_reescribir_renueva_los_activos_de_preparacion(tmp_path):
 def test_refrescar_sin_divergencia_conserva_los_activos_de_preparacion(tmp_path):
     ruta, _ = _preparar(tmp_path)
     _escribir_todo(ruta)
-    pa.refrescar_tanda(ruta, AHORA + timedelta(minutes=40), lector=lambda t, a: lectura_falsa(t, precio=936.80))
+    pa.refrescar_tanda(ruta, AHORA + timedelta(minutes=40), lector=lambda t, a: lectura_falsa(t, precio=936.80, base=936.32))
     meta = pa.leer_meta(ruta)
     assert meta["activos_preparacion"]["USDCLP"]["price"] == 936.32
     assert meta["activos"]["USDCLP"]["price"] == 936.80

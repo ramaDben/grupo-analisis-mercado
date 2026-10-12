@@ -125,6 +125,34 @@ def _ema(valores: list[float], span: int) -> list[float]:
     return salida
 
 
+_COLOR_ROL = {"soporte": "soporte", "resistencia": "resistencia", "nivel": "ema_larga"}
+
+
+def lineas_de_nivel(niveles: dict[str, Any], horizontales: list[tuple[float, str, str]] | None
+                    ) -> list[tuple[float, str, str, str]]:
+    """Las horizontales del banner: (precio, clave de color del tema, estilo, rótulo).
+
+    Con la lectura se trazan sus niveles, que son los que nombra el texto. Sin ella quedan
+    los niveles crudos (`r1`, `s1`...), para el uso por CLI.
+    """
+    if horizontales is not None:
+        return [(float(p), _COLOR_ROL.get(rol, "ema_larga"), "--" if rol == "nivel" else ":", rotulo)
+                for p, rotulo, rol in horizontales]
+    salida = []
+    for clave, color, estilo, rotulo in (
+        ("r2", "resistencia", "--", "Resistencia R2"),
+        ("r1", "resistencia", ":", "Resistencia R1"),
+        ("fibo_50", "ema_larga", "-.", "Fibo 50%"),
+        ("nivel_tactico", "ema_larga", "-.", "Nivel Clave"),
+        ("s1", "soporte", ":", "Soporte S1"),
+        ("s2", "soporte", "--", "Soporte S2"),
+    ):
+        nivel = niveles.get(clave)
+        if isinstance(nivel, (int, float)):
+            salida.append((float(nivel), color, estilo, rotulo))
+    return salida
+
+
 def construir_grafico(
     ticker: str,
     nombre: str,
@@ -135,8 +163,15 @@ def construir_grafico(
     subtitulo: str = "",
     niveles: dict[str, Any] | None = None,
     digits: int | None = None,
+    horizontales: list[tuple[float, str, str]] | None = None,
+    medias: bool = True,
 ) -> Path:
-    """Dibuja el activo y devuelve la ruta del PNG. Lanza `GraficoError` si no hay datos."""
+    """Dibuja el activo y devuelve la ruta del PNG. Lanza `GraficoError` si no hay datos.
+
+    Con `horizontales` (los niveles que nombra la lectura de la estrategia) se trazan esos
+    y no los de `niveles`; con `medias=False` no se dibujan las EMA, que serían una segunda
+    lectura en la imagen (enchufe de estrategia, fase 3).
+    """
     if tema not in TEMAS:
         raise GraficoError(f"Tema '{tema}' desconocido. Opciones: {sorted(TEMAS)}")
     c = TEMAS[tema]
@@ -194,7 +229,7 @@ def construir_grafico(
         (EMA_CORTA, c["ema_corta"], "--", f"Media de {EMA_CORTA} días"),
         (EMA_LARGA, c["ema_larga"], "-", f"Media de {EMA_LARGA} días"),
     ):
-        if corte >= span:
+        if medias and corte >= span:
             serie = (ema_c if span == EMA_CORTA else ema_l)[corte:]
             ax.plot(
                 x, serie, color=color, linewidth=1.6, linestyle=estilo,
@@ -202,20 +237,10 @@ def construir_grafico(
             )
 
     niveles = niveles or {}
-    for clave, color, estilo, rotulo in (
-        ("r2", c["resistencia"], "--", "Resistencia R2"),
-        ("r1", c["resistencia"], ":", "Resistencia R1"),
-        ("fibo_50", c["ema_larga"], "-.", "Fibo 50%"),
-        ("nivel_tactico", c["ema_larga"], "-.", "Nivel Clave"),
-        ("s1", c["soporte"], ":", "Soporte S1"),
-        ("s2", c["soporte"], "--", "Soporte S2"),
-    ):
-        nivel = niveles.get(clave)
-        if not isinstance(nivel, (int, float)):
-            continue
+    for nivel, clave_color, estilo, rotulo in lineas_de_nivel(niveles, horizontales):
         ax.axhline(
-            float(nivel), color=color, linestyle=estilo, linewidth=1.2, alpha=0.95,
-            zorder=3, label=f"{rotulo} {formatear_precio(float(nivel), digits)}",
+            nivel, color=c[clave_color], linestyle=estilo, linewidth=1.2, alpha=0.95,
+            zorder=3, label=f"{rotulo} {formatear_precio(nivel, digits)}",
         )
 
     actual = float(niveles.get("price") or y[-1])

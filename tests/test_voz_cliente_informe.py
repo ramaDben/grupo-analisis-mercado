@@ -30,15 +30,29 @@ import pipeline_informe as pi  # noqa: E402
 # `EE.UU.` no califica (tiene puntos), `PDF` tampoco (corto y sin guion bajo).
 _TOKEN_MAQUINA = re.compile(r"\b[A-Z][A-Z0-9]*_[A-Z0-9_]{3,}\b")
 
+from estrategia.contrato import Escenario, Lectura, Linea, Referencia, lectura_a_dict  # noqa: E402
+
+
+def _lectura(ticker, precio, vigilar, objetivo, direccion):
+    lin = Linea("seguridad", "diagonal", ((100, vigilar - 1), (200, vigilar)), "H4", 3, "A+", vigilar)
+    ref = Referencia(vigilar, f"línea {direccion.lower()} de seguridad", lin)
+    obj = Referencia(objetivo, "objetivo") if objetivo else None
+    esc = tuple(Escenario(f, "c", "t") for f in ("⬆️", "↔️", "⬇️"))
+    return lectura_a_dict(Lectura(
+        ticker=ticker, marco="H4", precio=precio, direccion=direccion, estado="TENDENCIA",
+        lineas=(lin,), en_prueba=None, vigilar=ref, invalidacion=ref, objetivo=obj, escenarios=esc,
+        salida="s", conceptos=(), avisos=(), metricas={}, vela=200))
+
+
 ACTIVOS = {
     "USDCLP": {
         "nombre": "Dólar / Peso Chileno", "digits": 2,
-        "d1": {"price": 931.4, "s1": 925.0, "r1": 938.25, "ema_50": 928.0},
+        "lectura": _lectura("USDCLP", 931.4, 925.0, 938.25, "ALCISTA"),
         "grafico": "graficos/usdclp.png",
     },
     "WTI.spot": {
         "nombre": "Petróleo WTI", "digits": 3,
-        "d1": {"price": 88.1, "s1": 86.502, "r1": 90.25, "ema_50": 89.0},
+        "lectura": _lectura("WTI.spot", 88.1, 90.25, 86.502, "BAJISTA"),
     },
     "US100.spot": {"nombre": "Nasdaq 100", "digits": 2},
 }
@@ -61,8 +75,9 @@ def test_la_lectura_por_activo_respeta_los_decimales_y_la_direccion():
     salida = pi._lectura_por_activo(ACTIVOS)
     assert "931,40" in salida and "938,25" in salida, "USD/CLP va con 2 decimales"
     assert "86,502" in salida and "90,250" in salida, "WTI va con 3 decimales"
-    assert "Lectura diaria alcista" in salida, "USD/CLP sobre su EMA 50"
-    assert "Lectura diaria bajista" in salida, "WTI bajo su EMA 50"
+    assert "Lectura de 4 horas: tendencia alcista" in salida, "la dirección sale de la lectura"
+    assert "Lectura de 4 horas: tendencia bajista" in salida
+    assert "media de 50" not in salida, "la EMA 50 ya no dirige (enchufe)"
     assert "![Dólar / Peso Chileno" in salida
 
 

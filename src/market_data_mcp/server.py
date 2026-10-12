@@ -68,7 +68,10 @@ mcp = FastMCP(
     name="market-data",
     instructions=(
         "Capa de datos confiable para Grupo de Análisis de Mercado. "
-        "Tools: get_asset_levels (técnico MT5 auto), get_chart_objects (niveles "
+        "Tools: get_lectura (la lectura técnica con que se publica: dirección, estado, "
+        "líneas, nivel a vigilar, invalidación, objetivo, escenarios y salida, de la "
+        "estrategia activa contra la referencia semanal; usarla para afirmar dirección o "
+        "niveles), get_asset_levels (dato técnico crudo de MT5, para auditoría), get_chart_objects (niveles "
         "dibujados a mano por el director en MT5: soportes/resistencias, trendlines, "
         "canales, rectángulos, retrocesos de Fibonacci con el precio de cada nivel "
         "+ screenshot, vía Service ChartObjectsExporter), "
@@ -97,7 +100,7 @@ mcp = FastMCP(
     mask_error_details=False,
 )
 
-from market_data_mcp.tools import levels, calendar, chart_objects, positions, symbol_spec, curva_tasas  # noqa: E402
+from market_data_mcp.tools import levels, calendar, chart_objects, positions, symbol_spec, curva_tasas, lectura  # noqa: E402
 
 levels.register(mcp)
 calendar.register(mcp)
@@ -105,6 +108,7 @@ chart_objects.register(mcp)
 positions.register(mcp)
 symbol_spec.register(mcp)
 curva_tasas.register(mcp)
+lectura.register(mcp)
 
 
 if __name__ == "__main__":
