@@ -13,11 +13,7 @@
   "url_carpeta_drive": "",
   "tier": "flash",
   "reuso_minutos": {
-    "activo": 30,
-    "calendario": 30,
-    "dato": 30,
-    "jornada": 720,
-    "oportunidad": 60
+    "seguimiento": 30
   },
   "autor": {
     "nombre": "Nombre Apellido",

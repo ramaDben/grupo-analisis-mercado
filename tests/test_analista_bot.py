@@ -18,11 +18,14 @@ for p in (str(RAIZ / "src"), str(RAIZ / "scripts"), str(RAIZ / "tests")):
 import analista_fixtures as fx  # noqa: E402
 from analista import bot as b  # noqa: E402
 from analista import esquema as es  # noqa: E402
+from analista import orden as od  # noqa: E402
 from analista import preparar as pr  # noqa: E402
+from analista import registro_semanal as rg  # noqa: E402
 
 SCL = ZoneInfo("America/Santiago")
 AHORA = datetime(2026, 10, 8, 11, 0, tzinfo=SCL)
 CAMILA = "111"
+OTRO = "222"
 
 
 class Reloj:
@@ -44,12 +47,36 @@ class TgFalso:
         self.documentos.append((chat, Path(ruta).name))
 
 
-def preparar_falso(orden, dir_pedido, ahora):
-    dir_pedido.mkdir(parents=True, exist_ok=True)
-    pieza = fx.oportunidad(dir_pedido) if orden.pieza == "oportunidad" else fx.activo(dir_pedido)
-    pieza["editorial"] = {k: es.MARCA for k in pieza["editorial"]}
-    pr.guardar_pieza(pieza, dir_pedido)
-    return pr.Preparada(pieza, ["aviso de prueba"])
+class Armado:
+    """Lo que las pruebas necesitan del bot: sus piezas y los contadores de lo que hizo."""
+
+    def __init__(self, tmp_path, config):
+        self.llamadas, self.reloj, self.tmp = [], Reloj(), tmp_path
+        self.preparaciones = 0
+        self.registro = tmp_path / "registro.json"
+        self.atendedor = b.Atendedor(
+            config, b.Estado.cargar(tmp_path / "estado.json"), autor=fx.AUTOR, preparar=self.preparar_falso,
+            redactar=redactor(self.llamadas), rendir_lamina=self.rendir_falso, reloj=self.reloj,
+            dir_pedidos=tmp_path / "pedidos", registro=self.registro)
+        self.bot = b.Bot(TgFalso(), self.atendedor)
+        self.estado = self.atendedor.estado
+
+    def preparar_falso(self, orden, dir_pedido, ahora):
+        self.preparaciones += 1
+        dir_pedido.mkdir(parents=True, exist_ok=True)
+        if orden.pieza == "oportunidad":
+            pieza = fx.pieza_oportunidad(dir_pedido)
+            pieza["editorial"] = {k: ({t: es.MARCA for t in v} if isinstance(v, dict) else es.MARCA)
+                                  for k, v in pieza["editorial"].items()}
+        else:
+            pieza = fx.pieza_seguimiento(dir_pedido)
+        pr.guardar_pieza(pieza, dir_pedido)
+        return pr.Preparada(pieza, ["aviso de prueba"])
+
+    @staticmethod
+    def rendir_falso(payload, plantilla, destino):
+        destino.write_bytes(fx.PNG)
+        return destino
 
 
 def redactor(llamadas, codigo="ok"):
@@ -59,34 +86,22 @@ def redactor(llamadas, codigo="ok"):
             return SimpleNamespace(codigo=codigo, detalle="algo")
         dir_pedido = ruta.parent
         pieza = pr.cargar_pieza(dir_pedido)
-        pieza["editorial"].update(fx.activo(dir_pedido)["editorial"])
+        pieza["editorial"].update(fx.pieza_oportunidad(dir_pedido)["editorial"])
         pr.guardar_pieza(pieza, dir_pedido)
         return SimpleNamespace(codigo="ok", detalle="")
     return redactar
 
 
-def pdf_falso(html):
-    # Copia el HTML con sufijo .pdf: el test puede leer qué informe se imprimió.
-    destino = html.with_suffix(".pdf")
-    destino.write_bytes(html.read_bytes())
-    return destino
-
-
 @pytest.fixture
 def armado(tmp_path):
     config = {
-        "analistas": {CAMILA: {**fx.ANALISTA, "cupo_diario": 2}},
-        "reuso_minutos": {"activo": 30}, "tier": "flash",
+        "analistas": {CAMILA: {**fx.ANALISTA, "cupo_diario": 2},
+                      OTRO: {"nombre": "Pedro Soto", "cargo": "Ejecutivo comercial", "contacto": "+56 9 3333 4444",
+                             "cupo_diario": 2}},
+        "reuso_minutos": {"seguimiento": 30}, "tier": "flash",
         "ruta_drive": str(tmp_path / "drive"),
     }
-    llamadas = []
-    reloj = Reloj()
-    at = b.Atendedor(config, b.Estado.cargar(tmp_path / "estado.json"), autor=fx.AUTOR, preparar=preparar_falso,
-                     redactar=redactor(llamadas), rendir_laminas=lambda p, d: None, reloj=reloj,
-                     dir_pedidos=tmp_path / "pedidos", bitacora=tmp_path / "bitacora.json",
-                     vigencia=lambda pieza, ahora: True, a_pdf=pdf_falso)
-    bot = b.Bot(TgFalso(), at)
-    return SimpleNamespace(bot=bot, llamadas=llamadas, reloj=reloj, tmp=tmp_path)
+    return Armado(tmp_path, config)
 
 
 def update(texto, usuario=CAMILA, chat=500):
@@ -101,49 +116,31 @@ def pedir(a, texto, usuario=CAMILA):
 
 
 def test_desconocido_recibe_su_id_una_sola_vez(armado):
-    r1 = armado.bot.recibir(update("/activo oro", usuario="999"))
-    r2 = armado.bot.recibir(update("/activo oro", usuario="999"))
+    r1 = armado.bot.recibir(update("/seguimiento oro", usuario="999"))
+    r2 = armado.bot.recibir(update("/seguimiento oro", usuario="999"))
     assert "999" in r1[0].texto and r2 == []
     assert armado.bot.cola.empty()
 
 
 def test_pedido_invalido_responde_el_motivo(armado):
-    r, final = pedir(armado, "/activo pizza")
+    r, final = pedir(armado, "/seguimiento pizza")
     assert "pizza" in r[0].texto and final is None
 
 
-def test_pieza_nueva_se_entrega_en_pdf_y_solo_el_pdf_va_a_drive(armado):
-    _, final = pedir(armado, "/activo oro")
-    assert len(final.archivos) == 1 and final.archivos[0].suffix == ".pdf"
-    assert "aviso de prueba" in final.texto
-    assert len(armado.llamadas) == 1
-    en_drive = list((armado.tmp / "drive" / "GI Informes").rglob("*.*"))
-    assert [p.suffix for p in en_drive] == [".pdf"]
-    # El HTML queda como fuente junto a la pieza, pero no circula.
-    assert final.archivos[0].with_suffix(".html").exists()
+def test_pedido_con_para_no_gasta_agy_ni_cupo(armado):
+    r, final = pedir(armado, "/oportunidad para Juan Pérez")
+    assert r[0].texto == od.PERSONALIZACION_RETIRADA and final is None
+    assert armado.llamadas == [] and armado.estado.usados(CAMILA, armado.reloj.ahora) == 0
 
 
-def test_pieza_reusada_tambien_sale_en_pdf(armado):
-    pedir(armado, "/activo oro")
-    armado.reloj.ahora += timedelta(minutes=10)
-    _, final = pedir(armado, "/activo oro")
-    assert "vigente" in final.texto and final.archivos[0].suffix == ".pdf"
+@pytest.mark.parametrize("retirado", ["/activo oro", "/calendario hoy", "/dato ipc", "/jornada apertura"])
+def test_los_comandos_retirados_responden_con_la_ayuda(armado, retirado):
+    r, final = pedir(armado, retirado)
+    assert r[0].texto == b.AYUDA and final is None
 
 
-def test_si_el_pdf_falla_va_el_html_solo_por_telegram(armado):
-    from analista import pdf
-
-    def pdf_roto(html):
-        raise pdf.PdfFallido("Chromium no generó el PDF: TimeoutError")
-
-    armado.bot.atendedor.a_pdf = pdf_roto
-    _, final = pedir(armado, "/activo oro")
-    assert [p.suffix for p in final.archivos] == [".html"]
-    assert "No pude generar el PDF" in final.texto and "navegador" in final.texto
-    assert not (armado.tmp / "drive").exists() or not list((armado.tmp / "drive").rglob("*.*"))
-
-
-@pytest.mark.parametrize("nombre,tipo", [("informe.pdf", "application/pdf"), ("informe.html", "text/html")])
+@pytest.mark.parametrize("nombre,tipo", [("a.pdf", "application/pdf"), ("a.html", "text/html"),
+                                         ("a.png", "image/png")])
 def test_telegram_manda_el_tipo_segun_el_archivo(tmp_path, nombre, tipo):
     ruta = tmp_path / nombre
     ruta.write_bytes(b"x")
@@ -154,95 +151,150 @@ def test_telegram_manda_el_tipo_segun_el_archivo(tmp_path, nombre, tipo):
     assert enviados[0][0] == nombre and enviados[0][2] == tipo
 
 
-def test_segundo_pedido_reusa_la_pieza_sin_agy_ni_cupo(armado):
-    pedir(armado, "/activo oro")
-    armado.reloj.ahora += timedelta(minutes=10)
-    _, final = pedir(armado, "/activo oro")
-    assert len(armado.llamadas) == 1
-    assert "vigente" in final.texto
-    assert armado.bot.estado.usados(CAMILA, armado.reloj.ahora) == 1
+# ───────────────────────────────────────────────────────────── /oportunidad
 
 
-def test_pedido_con_para_no_gasta_agy_ni_cupo(armado):
-    from analista import orden as od
-
-    r, final = pedir(armado, "/activo oro para Juan Pérez")
-    assert r[0].texto == od.PERSONALIZACION_RETIRADA and final is None
-    assert armado.llamadas == [] and armado.bot.estado.usados(CAMILA, armado.reloj.ahora) == 0
-
-
-def test_pieza_reusada_usa_la_fecha_del_pedido(armado):
-    armado.reloj.ahora = datetime(2028, 3, 31, 23, 50, tzinfo=SCL)
-    _, primero = pedir(armado, "/activo oro")
-    assert "A-32915" in primero.archivos[0].read_text(encoding="utf-8")
-    armado.reloj.ahora = datetime(2028, 4, 1, 0, 5, tzinfo=SCL)
-    _, segundo = pedir(armado, "/activo oro")
-    assert "vigente" in segundo.texto and len(armado.llamadas) == 1
-    assert "A-32915" not in segundo.archivos[0].read_text(encoding="utf-8")
-    assert "venció" in segundo.texto
+def test_oportunidad_arma_la_foto_una_sola_vez_por_semana(armado):
+    r1 = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
+    r2 = armado.bot.procesar_uno(b.Pedido(OTRO, 2, od.Orden("oportunidad")))
+    assert len(armado.llamadas) == 1  # AGY una sola vez
+    assert r1.archivos[0].name.startswith("analisis-semanal_")
+    assert r2.archivos[0].name.endswith("_pedro-soto.html")  # el HTML lleva al ejecutivo que lo pidió
+    assert "Ya está" in r2.texto
+    # El cupo se gasta al armar la foto, no al reusarla.
+    assert armado.estado.usados(CAMILA, AHORA) == 1 and armado.estado.usados(OTRO, AHORA) == 0
 
 
-def test_activo_nuevo_queda_en_la_bitacora_y_el_reusado_no(armado):
-    pedir(armado, "/activo oro")
-    armado.reloj.ahora += timedelta(minutes=5)
-    pedir(armado, "/activo oro")
-    entradas = json.loads((armado.tmp / "bitacora.json").read_text(encoding="utf-8"))
-    assert len(entradas) == 1 and entradas[0]["analista"] == CAMILA
+def test_oportunidad_rinde_las_laminas_antes_del_html(armado):
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
+    html = r.archivos[0].read_text(encoding="utf-8")
+    assert html.count("Descargar lámina") >= 2
+    assert (r.archivos[0].parent / "lamina_xauusd.png").exists()
 
 
-def test_pieza_vencida_se_vuelve_a_redactar(armado):
-    pedir(armado, "/activo oro")
-    armado.reloj.ahora += timedelta(minutes=31)
-    pedir(armado, "/activo oro")
-    assert len(armado.llamadas) == 2
+def test_oportunidad_solo_va_a_drive_el_html(armado):
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
+    en_drive = list((armado.tmp / "drive" / "GI Informes").rglob("*.*"))
+    assert [p.suffix for p in en_drive] == [".html"]
 
 
-def test_cupo_diario(armado):
-    pedir(armado, "/activo oro")
-    pedir(armado, "/activo usdclp")
-    _, final = pedir(armado, "/activo wti")
-    assert "cupo" in final.texto and not final.archivos
-    assert len(armado.llamadas) == 2
+def test_oportunidad_sin_semana_responde_claro_y_no_gasta_cupo(armado):
+    armado.atendedor.preparar = lambda o, d, a: (_ for _ in ()).throw(
+        pr.SinSemanaError("La semana 2026-W42 todavía no tiene análisis semanal"))
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
+    assert r.texto.startswith("❌ La semana") and armado.estado.usados(CAMILA, AHORA) == 0
 
 
-def test_agy_falla_no_gasta_cupo_ni_entrega(armado):
-    armado.bot.atendedor.redactar = redactor(armado.llamadas, codigo="timeout")
-    _, final = pedir(armado, "/activo oro")
-    assert "timeout" in final.texto and not final.archivos
-    assert armado.bot.estado.usados(CAMILA, AHORA) == 0
+def test_oportunidad_en_espera_da_la_hora_del_cierre(armado):
+    armado.atendedor.preparar = lambda o, d, a: (_ for _ in ()).throw(
+        pr.EsperaVelaError("se publica al cierre de la vela de las 13:00"))
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
+    assert "13:00" in r.texto and armado.llamadas == []
+
+
+def test_agy_sin_responder_no_gasta_cupo(armado):
+    armado.atendedor.redactar = redactor([], codigo="timeout")
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
+    assert "No gasté tu cupo" in r.texto and not r.archivos
+    assert armado.estado.usados(CAMILA, AHORA) == 0
+    assert not armado.registro.exists()  # sin foto anotada, el próximo pedido vuelve a intentar
 
 
 def test_texto_invalido_de_agy_no_sale(armado):
     def redactar_mal(ruta, tier):
         pieza = pr.cargar_pieza(ruta.parent)
-        pieza["editorial"].update(fx.activo(ruta.parent)["editorial"])
-        pieza["editorial"]["lectura"] = "El objetivo es 4.500,00 — <b>seguro</b>"
+        pieza["editorial"].update(fx.pieza_oportunidad(ruta.parent)["editorial"])
+        pieza["editorial"]["contexto"]["XAUUSD"] = "El objetivo es 9.999,00, una oportunidad con 3 %"
         pr.guardar_pieza(pieza, ruta.parent)
         return SimpleNamespace(codigo="ok", detalle="")
 
-    armado.bot.atendedor.redactar = redactar_mal
-    _, final = pedir(armado, "/activo oro")
-    assert "controles" in final.texto and not final.archivos
+    armado.atendedor.redactar = redactar_mal
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
+    assert "controles" in r.texto and not r.archivos
+    assert armado.estado.usados(CAMILA, AHORA) == 0
 
 
 def test_datos_que_no_estan_no_gastan_agy(armado):
     def sin_datos(orden, d, a):
         raise pr.PreparacionFallida("el terminal no entregó XAUUSD")
 
-    armado.bot.atendedor.preparar = sin_datos
-    _, final = pedir(armado, "/activo oro")
-    assert "XAUUSD" in final.texto and armado.llamadas == []
+    armado.atendedor.preparar = sin_datos
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
+    assert "XAUUSD" in r.texto and armado.llamadas == []
+
+
+def test_cupo_diario(armado):
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "COPPER"})))
+    assert "cupo" in r.texto and not r.archivos
+    assert armado.preparaciones == 2
+
+
+# ───────────────────────────────────────────────────────────── /seguimiento
+
+
+def test_seguimiento_entrega_lamina_y_texto_sin_agy(armado):
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
+    assert armado.llamadas == [] and "Te envío una actualización" in r.texto
+    assert r.archivos[0].suffix == ".png"
+
+
+def test_seguimiento_se_reusa_30_minutos(armado):
+    o = od.Orden("seguimiento", {"ticker": "XAUUSD"})
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, o))
+    armado.reloj.ahora += timedelta(minutes=20)
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, o))
+    assert armado.preparaciones == 1
+    armado.reloj.ahora += timedelta(minutes=15)
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, o))
+    assert armado.preparaciones == 2
+
+
+def test_seguimiento_queda_anotado_en_la_foto_de_la_semana(armado):
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
+    armado.bot.procesar_uno(b.Pedido(OTRO, 2, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
+    import referencia_semanal as rs
+
+    semana = rs.semana_de(AHORA)
+    seg = rg.foto(semana, armado.registro)["seguimientos"]
+    assert [(s["ticker"], s["estado"], s["ejecutivo"]) for s in seg] == [("XAUUSD", "en_curso", OTRO)]
+
+
+@pytest.mark.parametrize("error", [pr.SinFotoError("Esta semana todavía no hay análisis publicado."),
+                                   pr.FueraDeLaFotoError("Ese activo no está en el análisis de esta semana.")])
+def test_seguimiento_sin_foto_o_fuera_de_ella_no_gasta_cupo(armado, error):
+    def falla(orden, d, a):
+        raise error
+
+    armado.atendedor.preparar = falla
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
+    assert r.texto == f"❌ {error}" and armado.estado.usados(CAMILA, AHORA) == 0
+
+
+def test_mt5_caido_en_seguimiento_lo_dice(armado):
+    armado.atendedor.preparar = lambda o, d, a: (_ for _ in ()).throw(
+        pr.PreparacionFallida("no uso el terminal: MT5 no conectó"))
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
+    assert "MT5" in r.texto
+
+
+def test_la_ayuda_nombra_solo_los_dos_comandos():
+    assert "/oportunidad" in b.AYUDA and "/seguimiento" in b.AYUDA
+    for retirado in ("/activo", "/calendario", "/dato", "/jornada"):
+        assert retirado not in b.AYUDA
+    assert "—" not in b.AYUDA and "–" not in b.AYUDA
 
 
 def test_estado_muestra_el_cupo(armado):
-    pedir(armado, "/activo oro")
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
     r, _ = pedir(armado, "/estado")
     assert "1 de 2" in r[0].texto
 
 
 def test_cola_avisa_la_posicion(armado):
-    armado.bot.recibir(update("/activo oro"))
-    r = armado.bot.recibir(update("/activo wti"))
+    armado.bot.recibir(update("/seguimiento oro"))
+    r = armado.bot.recibir(update("/seguimiento wti"))
     assert "1 pedido" in r[0].texto
 
 
@@ -260,64 +312,19 @@ def test_config_de_ejemplo_es_valida():
     config = b.cargar_config(RAIZ / "config" / "analistas_telegram.example.json")
     for datos in config["analistas"].values():
         assert {"nombre", "cargo", "contacto", "cupo_diario"} <= set(datos)
-    assert set(config["reuso_minutos"]) == set(es.CAMPOS)
+    assert set(config["reuso_minutos"]) == {"seguimiento"}
     from analista import autor as au
 
     assert au.cargar(config, RAIZ).nombre
     json.dumps(config)
 
 
-def test_config_anterior_al_foco_recibe_su_ventana(tmp_path):
+def test_config_anterior_recibe_su_ventana(tmp_path):
     ruta = tmp_path / "c.json"
     ruta.write_text(json.dumps({"reuso_minutos": {"activo": 45}}), encoding="utf-8")
-    cfg = b.cargar_config(ruta)
-    assert cfg["reuso_minutos"]["activo"] == 45 and cfg["reuso_minutos"]["oportunidad"] == 60
-
-
-# ───────────────────────────────────────────────────────────── foco técnico
-
-
-def test_foco_se_entrega_con_la_regla_de_compartir_y_sin_la_palabra_en_el_archivo(armado):
-    r, final = pedir(armado, "/oportunidad")
-    assert final is not None, [x.texto for x in r]
-    assert final.archivos, final.texto
-    nombre = final.archivos[0].name
-    assert nombre.startswith("foco-tecnico_xauusd") and "oportunidad" not in nombre
-    assert "Compártelo tal cual: es análisis general, no una instrucción." in final.texto
-
-
-@pytest.mark.parametrize("error", [pr.SinFocoError("El escáner no encontró una configuración clara entre los 10 activos."),
-                                   pr.MercadoIlegibleError("No puedo leer el mercado ahora (MT5). Prueba en unos minutos.")])
-def test_sin_foco_o_mercado_ilegible_no_gastan_agy_ni_cupo(armado, error):
-    def falla(orden, d, a):
-        raise error
-
-    armado.bot.atendedor.preparar = falla
-    _, final = pedir(armado, "/oportunidad")
-    assert final.texto == f"❌ {error}" and not final.archivos
-    assert armado.llamadas == [] and armado.bot.estado.usados(CAMILA, AHORA) == 0
-
-
-def test_foco_vigente_se_reusa_con_su_hora(armado):
-    pedir(armado, "/oportunidad")
-    armado.reloj.ahora += timedelta(minutes=20)
-    _, final = pedir(armado, "/oportunidad")
-    assert len(armado.llamadas) == 1 and "Ya está: es el foco de las 10:40." in final.texto
-
-
-def test_foco_cuyo_plan_cambio_se_rehace(armado):
-    pedir(armado, "/oportunidad")
-    armado.bot.atendedor.vigencia = lambda pieza, ahora: False
-    armado.reloj.ahora += timedelta(minutes=20)
-    pedir(armado, "/oportunidad")
-    assert len(armado.llamadas) == 2
-
-
-def test_bitacora_marca_el_tipo(armado):
-    pedir(armado, "/oportunidad")
-    pedir(armado, "/activo oro")
-    entradas = json.loads((armado.tmp / "bitacora.json").read_text(encoding="utf-8"))
-    assert [e["tipo"] for e in entradas] == ["oportunidad", "activo"]
+    assert b.cargar_config(ruta)["reuso_minutos"]["seguimiento"] == 30
+    ruta.write_text(json.dumps({"reuso_minutos": {"seguimiento": 45}}), encoding="utf-8")
+    assert b.cargar_config(ruta)["reuso_minutos"]["seguimiento"] == 45
 
 
 def _tomar_en_otro_proceso(ruta: Path) -> bool:

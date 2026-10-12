@@ -9,11 +9,14 @@ El equipo le pide al bot las mismas piezas que el director le pide a Claude Code
 
 | Comando | Pieza |
 |---|---|
-| `/activo oro` | Niveles, dirección, drivers, escenarios y el gráfico TradingView del carrusel |
-| `/calendario hoy` · `/calendario semana` | Agenda de alto impacto en hora de Chile, con la lámina de Avisos |
-| `/dato` · `/dato ipc` | El último dato con cifra (o el pedido): veredicto y movimiento del dólar y el oro. Si todavía no sale, en modo anticipación |
-| `/jornada apertura` · `/jornada cierre` | Los cinco activos base con sus gráficos diarios y la curva de tasas |
-| `/oportunidad` | El **foco técnico del día** para ventas: el activo que el escáner elige, sin estadística. Ver abajo |
+| `/oportunidad` | El análisis técnico de la semana, con los 6 activos y el panel de simulación del ejecutivo |
+| `/seguimiento oro` | Cómo va un activo de la foto de la semana: la simulación y la lectura de hoy |
+
+La pieza semanal sale en HTML (herramienta interna con panel); `/seguimiento` entrega lámina PNG y
+el texto de WhatsApp en el mensaje. Los comandos `/activo`, `/calendario`, `/dato` y `/jornada`
+se retiraron el 2026-10-12 (spec `docs/superpowers/specs/2026-10-12-oportunidad-semanal-design.md`)
+y responden con la ayuda. `foco.py`, `plan.py`, `bitacora.py` y `pdf.py` se borraron;
+`data/bitacora_planes_analistas.json` queda como historia versionada.
 
 **El informe no se personaliza.** Nadie en GI está inscrito como asesor de inversión, y un
 informe con el nombre del cliente se acerca a una recomendación personalizada. Si un pedido trae
@@ -153,7 +156,7 @@ posterior a la que se usó al preparar.
    alcanza por `<unidad>:\.shortcut-targets-by-id\<id de la carpeta>\<nombre>`, y la cuenta de
    esa unidad necesita permiso de Editor. `url_carpeta_drive` es opcional y va en la respuesta.
 5. Probar sin Telegram, con MT5 abierto:
-   `uv run --with MetaTrader5 --extra stories --extra informe python scripts/bot_analistas.py --una "/activo oro"`
+   `uv run --with MetaTrader5 --extra stories --extra informe python scripts/bot_analistas.py --una "/seguimiento oro"`
 6. Dejarlo corriendo: `scripts\instalar_bot_telegram.ps1 -Instalar` (sin `-Instalar` solo muestra
    qué haría). La tarea corre bajo `conhost --headless`: sin ventana, y lo que el bot lanza
    (agy, git, el render) hereda esa consola oculta.

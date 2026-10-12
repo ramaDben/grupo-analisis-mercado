@@ -31,127 +31,6 @@ def _imagen(dir_pedido: Path, nombre: str) -> str:
     return nombre
 
 
-PLAN = {
-    "hay_plan": True, "sesgo": "Alcista",
-    "gatillo": "Si una vela de 4 horas cierra sobre 4.131,00, se rompe la línea bajista del retroceso y la tendencia retoma.",
-    "invalidacion": "El escenario se anula con un cierre bajo 4.090,10, la línea alcista de seguridad.",
-    "salida": "La posición se cierra cuando una vela de 4 horas cierra al otro lado de la línea de seguridad, hoy en 4.090,10. No hay objetivo fijo.",
-    "estado": "Armado: el precio todavía no cruza el gatillo.",
-    "niveles": {"gatillo": 4131.0, "invalidacion": 4090.1, "vela": 1791734400},
-}
-
-
-def activo(dir_pedido: Path) -> dict:
-    datos = {
-        "chip": "NOTA DE MERCADO · COMMODITIES",
-        "rotulo_referencia": "Cotización de referencia",
-        "referencia": "4.110,65 USD",
-        "edicion": "08/10/2026 · 09:39 hrs Chile",
-        "nombre": "Oro", "ticker_visible": "XAU/USD", "ticker": "XAUUSD",
-        "precio": "4.110,65", "soporte": "4.098,20", "resistencia": "4.131,00",
-        "direccion": "Alcista",
-        "nivel_vigilar": "4.131,00",
-        "que_esperar": "sesgo comprador; sobre 4.131,00 gana camino al alza",
-        "escenarios": [
-            "⬆️ Sobre 4.131,00 → fuerza compradora",
-            "↔️ Entre 4.098,20 y 4.131,00 → rango",
-            "⬇️ Bajo 4.098,20 → presión vendedora",
-        ],
-        "temporalidad": "intradía · marco 1H (dentro de la jornada)",
-        "por_que_temporalidad": "Por qué 1H acá: el oro se mueve lo justo para leerlo hora a hora.",
-        "pie_imagen": "Oro · XAU/USD, gráfico de 1 hora con datos de MetaTrader 5",
-        "plan": dict(PLAN),
-    }
-    p = es.nueva_pieza("activo", {"ticker": "XAUUSD"}, datos, {"principal": _imagen(dir_pedido, "alerta.png")})
-    p["editorial"].update({
-        "titular": "El oro sostiene el impulso comprador",
-        "bajada": "La tendencia de corto plazo sigue al alza mientras respete el soporte",
-        "lectura": "El oro cotiza sobre su media de 50 horas.\n\nMientras no pierda 4.098,20, el sesgo sigue comprador.",
-        "empuja_alza": "• Dólar global más débil\n• Búsqueda de refugio",
-        "empuja_baja": "• Rendimientos del Tesoro al alza\n• Toma de utilidades",
-        "que_no_hacer": "No compres en la resistencia sin confirmación: espera el quiebre.",
-    })
-    return p
-
-
-def oportunidad(dir_pedido: Path) -> dict:
-    """El foco técnico del día: la pieza de activo para un prospecto, sin estadística."""
-    base = activo(dir_pedido)
-    datos = {**base["datos"], "chip": "FOCO TÉCNICO DEL DÍA · ORO",
-             "plan": dict(PLAN),
-             "seleccion": {"evaluados": 10, "fecha": "09-10-2026", "hora": "10:40"}}
-    p = es.nueva_pieza("oportunidad", {"ticker": "XAUUSD"}, datos, base["imagenes"])
-    p["editorial"].update(base["editorial"])
-    return p
-
-
-def calendario(dir_pedido: Path) -> dict:
-    eventos = [
-        {"id": "1", "hora": "09:30", "pais": "EE.UU.", "evento": "Peticiones de subsidio por desempleo",
-         "anterior": "199K", "esperado": "200K", "actual": "197K", "estado": "salio"},
-        {"id": "2", "hora": "14:00", "pais": "EE.UU.", "evento": "Minutas de la Fed",
-         "anterior": "", "esperado": "", "actual": "", "estado": "proximo"},
-    ]
-    datos = {
-        "chip": "CALENDARIO ECONÓMICO", "rotulo_referencia": "Datos de alto impacto", "referencia": "2",
-        "edicion": "08/10/2026 · 09:39 hrs Chile", "alcance": "hoy", "eventos": eventos,
-    }
-    p = es.nueva_pieza("calendario", {"alcance": "hoy"}, datos, {"principal": _imagen(dir_pedido, "calendario.png")},
-                       extra_campos={"explicaciones": ["1", "2"]})
-    p["editorial"].update({
-        "titular": "Jornada marcada por el empleo y la Fed",
-        "bajada": "Dos citas que mueven al dólar",
-        "lectura": "El mercado mira el empleo en la mañana y las minutas en la tarde.",
-        "explicaciones": {"1": "Cuántas personas pidieron seguro de cesantía.", "2": "El acta de la última reunión de la Fed."},
-    })
-    return p
-
-
-def dato(dir_pedido: Path) -> dict:
-    datos = {
-        "chip": "DATO MACRO · EE.UU.", "rotulo_referencia": "Resultado", "referencia": "197K",
-        "edicion": "08/10/2026 · 09:39 hrs Chile", "modo": "resultado",
-        "resumen": "Peticiones de subsidio por desempleo: 197K frente a 200K esperado. MEJOR de lo esperado.",
-        "eventos": [{"id": "1", "hora": "09:30", "evento": "Peticiones de subsidio por desempleo",
-                     "actual": "197K", "esperado": "200K", "anterior": "199K", "veredicto": "MEJOR"}],
-        "movimientos": [{"nombre": "USD/CLP", "desde": "951,20", "ahora": "952,10", "lectura": "sube"}],
-        "temporalidad": "intradía · marco 1H (dentro de la jornada)",
-    }
-    p = es.nueva_pieza("dato", {"busqueda": "ultimo"}, datos, {"principal": _imagen(dir_pedido, "dato.png")})
-    p["editorial"].update({
-        "titular": "Menos despidos de lo esperado",
-        "bajada": "El empleo sigue firme y eso sostiene al dólar",
-        "que_paso": "Las peticiones bajaron a 197K.",
-        "que_significa": "Un mercado laboral firme le da espacio a la Fed para no apurar recortes.",
-        "que_no_hacer": "No persigas el primer movimiento: espera que el precio se asiente.",
-        "impacto": "• USD/CLP: presión al alza\n• Oro: freno de corto plazo",
-    })
-    return p
-
-
-def jornada(dir_pedido: Path) -> dict:
-    activos = [{"ticker": "USDCLP", "nombre": "Dólar / Peso Chileno", "precio": "951,20", "soporte": "945,00",
-                "resistencia": "958,40", "direccion": "Bajista", "pie_imagen": "USD/CLP diario"}]
-    datos = {
-        "chip": "INFORME DE APERTURA", "rotulo_referencia": "Activos cubiertos", "referencia": "1",
-        "edicion": "08/10/2026 · 09:39 hrs Chile", "momento": "apertura", "activos": activos,
-        "curva": [["2 años", "3,61 %", "+2 pb", "-5 pb"]],
-    }
-    p = es.nueva_pieza("jornada", {"momento": "apertura"}, datos, {"USDCLP": _imagen(dir_pedido, "usdclp.png")},
-                       extra_campos={"por_activo": ["USDCLP"]})
-    p["editorial"].update({
-        "titular": "Apertura con el dólar a la defensiva",
-        "bajada": "El peso gana terreno con el cobre firme",
-        "lectura": "El día parte con el dólar global débil.",
-        "por_activo": {"USDCLP": "Bajo 958,40 el sesgo es vendedor."},
-        "que_no_hacer": "No operes en los 15 minutos previos a un dato fuerte.",
-    })
-    return p
-
-
-PIEZAS = {"activo": activo, "calendario": calendario, "dato": dato, "jornada": jornada}
-
-
 from datetime import datetime as _dt  # noqa: E402
 from zoneinfo import ZoneInfo as _Zi  # noqa: E402
 
@@ -224,3 +103,38 @@ def activo_semanal(rango: bool = False) -> dict:
             "lectura": lectura_a_dict(lec), "escenario": op.escenario(lec, digits).a_dict(), "fmt": fmt,
             "contrato": {"clp_unidad": 950.0, "vol_min": 0.01, "vol_paso": 0.01},
             "temporalidad": "4H · swing (de una a dos semanas)", "grafico": f"grafico_{lec.ticker.lower()}.png"}
+
+
+def pieza_oportunidad(dir_pedido: Path, laminas: bool = False) -> dict:
+    """La pieza semanal con su texto ya escrito: dos activos (uno con tendencia y uno en rango).
+
+    Escribe los gráficos en `dir_pedido`; con `laminas=True` también las láminas, que en el
+    bot se rinden antes del HTML (así el botón «Descargar lámina» aparece).
+    """
+    activos = [activo_semanal(), activo_semanal(rango=True)]
+    for a in activos:
+        _imagen(dir_pedido, a["grafico"])
+        if laminas:
+            _imagen(dir_pedido, f"lamina_{a['ticker'].lower().replace('.', '_')}.png")
+    tickers = [a["ticker"] for a in activos]
+    p = es.nueva_pieza("oportunidad", {"semana": "2026-W42"},
+                       {"semana": "2026-W42", "chip": "ANÁLISIS TÉCNICO DE LA SEMANA", "edicion": "lunes 12-10 · 09:30",
+                        "activos": activos, "drivers": {}, "agenda_semana": []},
+                       {a["ticker"]: a["grafico"] for a in activos},
+                       extra_campos={"titulares": tickers, "contexto": tickers})
+    p["editorial"] = {"titular": "La semana técnica en seis activos", "bajada": "Lectura de cada activo.",
+                      "titulares": {t: f"Titular de {t}" for t in tickers},
+                      "contexto": {t: f"Contexto de {t}." for t in tickers}}
+    return p
+
+
+def pieza_seguimiento(dir_pedido: Path) -> dict:
+    """Un seguimiento del oro como lo deja `preparar_seguimiento`, con el texto de WhatsApp."""
+    a = activo_semanal()
+    _imagen(dir_pedido, "grafico.png")
+    datos = {"semana": "2026-W42", "ticker": a["ticker"], "nombre": a["nombre"],
+             "evaluacion": {"estado": "en_curso", "avance_pct": 40},
+             "precio_vivo": 4150.0, "lectura_hoy": "La lectura de hoy sigue igual.", "reemplazada": False,
+             "whatsapp": "Te envío una actualización del oro: va en curso.",
+             "edicion": "miércoles 14-10 · 11:00", "activo": a}
+    return es.nueva_pieza("seguimiento", {"ticker": a["ticker"]}, datos, {"principal": "grafico.png"})

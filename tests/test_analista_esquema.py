@@ -1,7 +1,6 @@
 """Contrato de la pieza que agy rellena: solo textos, sin tocar datos ni maqueta."""
 from __future__ import annotations
 
-import copy
 import sys
 from pathlib import Path
 
@@ -19,7 +18,7 @@ DATOS = {"precio": "4.110,65", "soporte": "4.098,20", "resistencia": "4.131,00",
 
 
 def pieza_llena(**editorial) -> dict:
-    p = es.nueva_pieza("activo", {"ticker": "XAUUSD"}, DATOS, {"principal": "alerta.png"})
+    p = es.nueva_pieza("activo", {"ticker": "XAUUSD"}, dict(DATOS), {"principal": "alerta.png"})
     for campo in es.CAMPOS["activo"]:
         p["editorial"][campo] = "El oro mantiene presión compradora mientras siga sobre 4.110,65."
     p["editorial"].update(editorial)
@@ -147,16 +146,14 @@ def test_formas_impersonales_pasan(texto):
     assert es.frases_prohibidas(texto) == []
 
 
-def test_errores_reporta_la_frase(tmp_path):
-    p = fx.activo(tmp_path)
-    p["editorial"]["que_no_hacer"] = "Te recomiendo no perseguir el precio."
-    assert any("te recomiendo" in x for x in es.errores(p))
+def test_errores_reporta_la_frase():
+    errs = es.errores(pieza_llena(que_no_hacer="Te recomiendo no perseguir el precio."))
+    assert any("te recomiendo" in x for x in errs)
 
 
-def test_el_texto_no_nombra_a_la_cmf(tmp_path):
-    p = fx.activo(tmp_path)
-    p["editorial"]["lectura"] = "Este análisis está regulado por la CMF."
-    assert any("CMF" in x for x in es.errores(p))
+def test_el_texto_no_nombra_a_la_cmf():
+    errs = es.errores(pieza_llena(lectura="Este análisis está regulado por la CMF."))
+    assert any("CMF" in x for x in errs)
 
 
 # ───────────────────────────────────────────────────────────── foco técnico
@@ -169,23 +166,22 @@ def test_el_texto_no_nombra_a_la_cmf(tmp_path):
     "Se cumplió la mitad de las veces.", "Su tasa de éxito es alta.", "Sube un 2% en el día.",
 ])
 def test_el_foco_bloquea_captacion_y_estadistica(tmp_path, frase):
-    p = fx.oportunidad(tmp_path)
-    p["editorial"]["lectura"] = frase
-    assert any("lectura" in x for x in es.errores(p))
+    p = fx.pieza_oportunidad(tmp_path)
+    p["editorial"]["contexto"]["XAUUSD"] = frase
+    assert any("contexto.XAUUSD" in x for x in es.errores(p))
 
 
-def test_los_candados_del_foco_no_tocan_al_activo(tmp_path):
-    p = fx.activo(tmp_path)
-    p["editorial"]["lectura"] = "El mercado aprovecha el dato para tomar posiciones defensivas."
+def test_los_candados_del_foco_no_tocan_al_activo():
+    p = pieza_llena(lectura="El mercado aprovecha el dato para tomar posiciones defensivas.")
     assert es.errores(p) == []
 
 
 def test_el_foco_deja_pasar_el_texto_legitimo(tmp_path):
-    assert es.errores(fx.oportunidad(tmp_path)) == []
+    assert es.errores(fx.pieza_oportunidad(tmp_path)) == []
 
 
 def test_el_foco_no_escribe_oportunidad(tmp_path):
-    p = fx.oportunidad(tmp_path)
+    p = fx.pieza_oportunidad(tmp_path)
     p["editorial"]["titular"] = "Una oportunidad para los compradores del oro"
     assert any("titular" in x for x in es.errores(p))
 

@@ -19,78 +19,12 @@ for p in (str(RAIZ / "src"), str(RAIZ / "scripts"), str(RAIZ / "tests")):
 import analista_fixtures as fx  # noqa: E402
 from analista import registro_semanal as rg  # noqa: E402
 from analista import esquema as es  # noqa: E402
-from analista import informe_html as ih  # noqa: E402
 from analista import preparar as pr  # noqa: E402
 from analista.orden import Orden  # noqa: E402
-from estrategia.contrato import lectura_a_dict  # noqa: E402
 import referencia_semanal as rs  # noqa: E402
-from test_pipeline_carrusel import ORO, _lectura_alcista, _sel  # noqa: E402
 
 SCL = ZoneInfo("America/Santiago")
 AHORA = datetime(2026, 10, 8, 11, 0, tzinfo=SCL)
-
-JORNADA = [
-    {"fecha": "2026-10-08", "hora": "09:30", "pais": "United States", "evento": "Initial Jobless Claims",
-     "nombre_es": "Peticiones de subsidio por desempleo", "explicacion": "", "consenso": "200K",
-     "anterior": "199K", "actual": "197K", "resultado": "mejor"},
-    {"fecha": "2026-10-08", "hora": "14:00", "pais": "United States", "evento": "FOMC Minutes",
-     "nombre_es": "Minutas de la Fed", "explicacion": "", "consenso": "", "anterior": "",
-     "actual": "", "resultado": ""},
-]
-
-
-def _png(destino: Path) -> Path:
-    destino.write_bytes(fx.PNG)
-    return destino
-
-
-ACTIVO = {**ORO, "clase": "forex_commodities"}
-SELECCION = _sel(_lectura_alcista())
-CIERRES = [4119.0, 4120.0]
-
-
-def lectores(**cambios) -> pr.Lectores:
-    base = dict(
-        terminal=lambda t, a: {"ticker": t, "activo": ACTIVO, "seleccion": SELECCION, "cierres": CIERRES},
-        grafico_tv=lambda payload, destino: _png(destino),
-        jornada=lambda a: (list(JORNADA), []),
-        agenda=lambda a: (list(JORNADA), []),
-        movimiento=lambda t, d, a: {"desde": 951.2, "ahora": 952.1, "digits": 2, "banda": 0.1},
-        activos_jornada=lambda destino: ({
-            "USDCLP": {"nombre": "Dólar / Peso Chileno", "digits": 2,
-                       "lectura": lectura_a_dict(_lectura_alcista()),
-                       "grafico": "graficos/usdclp.png"},
-        }, []),
-        curva=lambda: ({"series": {"DGS2": {"nivel_pct": 3.61, "delta_1d_bps": 2, "delta_5d_bps": None}}}, []),
-        cuenta=lambda: None,
-    )
-    base.update(cambios)
-    return pr.Lectores(**base)
-
-
-def test_rendir_laminas_pone_el_texto_validado(tmp_path):
-    hecha = pr.preparar(Orden("calendario", {"alcance": "hoy"}), tmp_path, AHORA, lectores())
-    pieza = hecha.pieza
-    pieza["editorial"].update({"titular": "Empleo y Fed", "bajada": "Dos citas para el dólar",
-                               "lectura": "Texto de lectura suficiente.",
-                               "explicaciones": {"01": "Explicación uno larga.", "02": "Explicación dos larga."}})
-    vistos = {}
-
-    def render(tokens, plantilla, destino, formato):
-        vistos.update(tokens)
-        return _png(destino)
-
-    pr.rendir_laminas(pieza, tmp_path, render=render)
-    assert vistos["titulo"] == "Empleo y Fed" and vistos["subtitulo"] == "Dos citas para el dólar"
-    assert (tmp_path / "calendario.png").exists()
-    # La pieza completa se arma en HTML.
-    assert "Empleo y Fed" in ih.armar(pieza, tmp_path, fx.ANALISTA, fx.AUTOR, AHORA.date())
-
-
-def test_preparar_escribe_solo_en_la_carpeta_del_pedido(tmp_path):
-    pedido = tmp_path / "pedido"
-    pr.preparar(Orden("activo", {"ticker": "XAUUSD"}), pedido, AHORA, lectores())
-    assert {p.relative_to(tmp_path).parts[0] for p in tmp_path.rglob("*")} == {"pedido"}
 
 
 def test_no_usa_los_preparar_de_produccion():

@@ -48,36 +48,15 @@ pone el bot: tú no decides nada visual.
 
 `datos.chip` dice qué pieza es.
 
-- **Activo** (`NOTA DE MERCADO`):
-  - `titular`: la idea principal con la dirección.
-  - `bajada`: qué la sostiene.
-  - `lectura`: 2 párrafos cortos con qué pasa y qué significa para quien opera.
-  - `empuja_alza` y `empuja_baja`: 2 o 3 puntos cada uno, con los drivers del día y su efecto
-    (analizados, no enumerados).
-  - `que_no_hacer`: un error concreto a evitar hoy.
-  - `datos.plan` (gatillo, invalidación, recorrido, estadística) lo escribió el bot y sale en su
-    propia sección: no lo repitas. Si lo nombras en `lectura`, en una frase y con sus mismas cifras.
-- **Foco técnico** (`FOCO TÉCNICO DEL DÍA`): los mismos campos que la pieza de activo, pero la
-  comparte un ejecutivo con un **prospecto que recién empieza**:
-  - Más simple: frases cortas, cada término técnico explicado en la misma frase.
-  - Ni un porcentaje, ni cuánto acierta el escenario, ni invitaciones ("aprovecha", "no te lo
-    pierdas", "última oportunidad"). Describe el escenario y deja la decisión al lector. El bot
-    rechaza esas frases y cualquier `%`.
-  - No escribas la palabra "oportunidad": la pieza se llama foco técnico.
-- **Calendario**:
-  - `titular` y `bajada` sobre la jornada o la semana.
-  - `lectura`: qué dato domina y por qué.
-  - `explicaciones.<id>`: por cada evento, qué mide en lenguaje novato y qué mueve.
-- **Dato** (`DATO MACRO`):
-  - `datos.modo` dice si el dato ya salió (`resultado`) o no (`anticipacion`).
-  - `que_paso`: el hecho, o qué se espera.
-  - `que_significa`: el impacto en la vida cotidiana y en el mercado.
-  - `que_no_hacer`.
-  - `impacto`: un punto por activo afectado.
-- **Jornada** (`INFORME DE APERTURA` o `CIERRE`):
-  - `lectura`: el panorama.
-  - `por_activo.<ticker>`: 2 o 3 frases con qué pasa, qué significa y qué no hacer.
-  - `que_no_hacer`: la regla del día.
+- **Análisis técnico de la semana**:
+  - `titular` (≤ 70) y `bajada` (≤ 160) sobre la semana de los seis activos.
+  - `titulares.<ticker>` (≤ 70): la idea del activo con su dirección, sacada de
+    `datos.activos[i].lectura`.
+  - `contexto.<ticker>`: 2 o 3 frases con los drivers de la semana (`datos.drivers.<ticker>`,
+    `datos.agenda_semana`), como mecanismo condicional si no hay un hecho medido. Sin `%`, sin la
+    palabra "oportunidad", sin repetir los niveles (los pone la maqueta).
+  - Los niveles, el escenario 1:3 y la simulación los escribió Python: no los repitas ni los
+    comentes.
 
 ### Antes de terminar
 

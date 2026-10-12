@@ -24,20 +24,7 @@ EJECUTIVO = {"nombre": "Camila Rojas", "cargo": "Ejecutiva comercial", "contacto
 
 
 def _pieza(tmp_path):
-    activos = [fx.activo_semanal(), fx.activo_semanal(rango=True)]
-    for a in activos:
-        (tmp_path / a["grafico"]).write_bytes(fx.PNG)
-        (tmp_path / f"lamina_{a['ticker'].lower()}.png").write_bytes(fx.PNG)
-    tickers = [a["ticker"] for a in activos]
-    p = es.nueva_pieza("oportunidad", {"semana": "2026-W42"},
-                       {"semana": "2026-W42", "chip": "ANÁLISIS TÉCNICO DE LA SEMANA", "edicion": "lunes 12-10 · 09:30",
-                        "activos": activos, "drivers": {}, "agenda_semana": []},
-                       {a["ticker"]: a["grafico"] for a in activos},
-                       extra_campos={"titulares": tickers, "contexto": tickers})
-    p["editorial"] = {"titular": "La semana técnica en seis activos", "bajada": "Lectura de cada activo.",
-                      "titulares": {t: f"Titular de {t}" for t in tickers},
-                      "contexto": {t: f"Contexto de {t}." for t in tickers}}
-    return p
+    return fx.pieza_oportunidad(tmp_path, laminas=True)
 
 
 def test_el_analisis_va_firmado_y_la_simulacion_rotulada(tmp_path):
