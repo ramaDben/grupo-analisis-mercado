@@ -511,27 +511,48 @@ def _catalogo_activos() -> dict[str, dict[str, Any]]:
     return {t: universo[t] for t in ACTIVOS_INFORME if t in universo}
 
 
-def _frase_tecnica(d1: dict[str, Any]) -> str:
-    """La dirección de la lectura diaria en una frase de cliente, sin punto final.
+MARCO_LEGIBLE = {"H1": "1 hora", "H4": "4 horas", "D1": "1 día", "W1": "1 semana"}
 
-    Mismo criterio que el escáner (`direccion_tecnica`: precio contra la EMA 50),
-    aplicado al marco diario. Una sola vara para las dos piezas del día.
+
+def _frase_tecnica(lectura) -> str:
+    """La lectura de la estrategia en una frase de cliente, sin punto final.
+
+    Es la misma lectura que publica el carrusel (enchufe de estrategia, fase 3): el estado
+    y la dirección de la estrategia activa, no una media móvil.
     """
-    import screener_gi as sc
+    import pipeline_carrusel as pc
 
-    if sc.direccion_tecnica(d1) == "ALCISTA":
-        return "Lectura diaria alcista: precio sobre su media de 50 días"
-    return "Lectura diaria bajista: precio bajo su media de 50 días"
+    estado = pc.ESTADO_VISIBLE[lectura.estado].lower()
+    if lectura.estado not in ("RANGO", "PRUEBA") and lectura.direccion != "LATERAL":
+        estado = f"{estado} {lectura.direccion.lower()}"
+    return f"Lectura de {MARCO_LEGIBLE.get(lectura.marco, lectura.marco)}: {estado}"
+
+
+def _horizontales(lectura) -> list[tuple[float, str, str]]:
+    """Los niveles que nombra el texto, para trazarlos en el gráfico (regla del informe)."""
+    vistos: set[float] = set()
+    salida: list[tuple[float, str, str]] = []
+    invalida = "soporte" if lectura.direccion == "ALCISTA" else "resistencia"
+    for ref, rotulo, rol in ((lectura.vigilar, "Nivel a vigilar", "nivel"),
+                             (lectura.invalidacion, "Invalida la lectura", invalida),
+                             (lectura.objetivo, "Objetivo", "nivel")):
+        if ref is not None and ref.precio not in vistos:
+            vistos.add(ref.precio)
+            salida.append((ref.precio, rotulo, rol))
+    return salida
 
 
 def leer_activos(destino: Path) -> tuple[dict[str, dict[str, Any]], list[str]]:
-    """Niveles D1 y gráfico de cada activo base, con los avisos de lo que faltó.
+    """La lectura del día y el gráfico de cada activo base, con los avisos de lo que faltó.
 
     **Nunca lanza**: sin terminal el informe sale sin cifras por activo y lo dice,
     en vez de dejar al director sin nada a las ocho de la mañana. Devuelve
-    `{ticker: {"nombre", "digits", "d1", "grafico"}}`; `d1` y `grafico` pueden
+    `{ticker: {"nombre", "digits", "lectura", "grafico"}}`; `lectura` y `grafico` pueden
     faltar, y cada ausencia queda en los avisos.
     """
+    import referencia_semanal as rs
+    from estrategia.contrato import lectura_a_dict
+
     avisos: list[str] = []
     catalogo = _catalogo_activos()
     salida = {
@@ -542,15 +563,13 @@ def leer_activos(destino: Path) -> tuple[dict[str, dict[str, Any]], list[str]]:
         avisos.append(f"activos del informe fuera del catálogo: {', '.join(faltan)}")
 
     try:
-        from market_data_mcp import mt5_client
-        from market_data_mcp.analisis import analizar_activo
+        from estrategia import registro
+        from estrategia.fuente import velas_mt5
 
-        # `analizar_activo` no abre la conexión por su cuenta: sin esto responde
-        # MT5_UNAVAILABLE y los niveles saldrían vacíos sin que se note.
-        mt5_client.connect()
+        estrategia = registro.activa()
     except Exception as exc:  # noqa: BLE001
         return salida, avisos + [
-            f"informe sin lectura por activo: MT5 no conectó ({exc.__class__.__name__})."
+            f"informe sin lectura por activo: la estrategia no cargó ({exc.__class__.__name__})."
         ]
 
     try:
@@ -562,12 +581,14 @@ def leer_activos(destino: Path) -> tuple[dict[str, dict[str, Any]], list[str]]:
             "Instalar con `uv sync --extra informe`."
         )
 
+    ahora = datetime.now(tz=SANTIAGO)
     for ticker, info in salida.items():
-        d1 = analizar_activo(ticker, "D1")
-        if d1.get("error"):
-            avisos.append(f"{info['nombre']}: niveles no disponibles ({d1['error']}).")
+        try:
+            lectura, _ = rs.lectura_actual(estrategia, ticker, info["digits"], velas_mt5, ahora)
+        except Exception as exc:  # noqa: BLE001 - un activo sin datos no tumba el informe
+            avisos.append(f"{info['nombre']}: lectura no disponible ({exc.__class__.__name__}: {exc}).")
             continue
-        info["d1"] = d1
+        info["lectura"] = lectura_a_dict(lectura)
         if construir_grafico is None:
             continue
         relativa = f"graficos/{ticker.lower().replace('.spot', '')}.png"
@@ -575,8 +596,10 @@ def leer_activos(destino: Path) -> tuple[dict[str, dict[str, Any]], list[str]]:
             construir_grafico(
                 ticker, info["nombre"], destino / relativa,
                 timeframe="D1", tema="claro",
-                subtitulo=_frase_tecnica(d1),
-                niveles=d1,
+                subtitulo=_frase_tecnica(lectura),
+                niveles={"price": lectura.precio},
+                horizontales=_horizontales(lectura),
+                medias=False,
             )
         except GraficoError as exc:
             avisos.append(f"{info['nombre']} sin gráfico: {exc}")
@@ -588,26 +611,32 @@ def leer_activos(destino: Path) -> tuple[dict[str, dict[str, Any]], list[str]]:
 def _lectura_por_activo(activos: dict[str, dict[str, Any]]) -> str:
     """Un bloque por activo: la lectura medida, el espacio editorial y el gráfico.
 
-    Las cifras salen del terminal (Regla 1); la prosa sigue las tres capas del
-    informe institucional: qué pasa, qué significa para ti y qué NO hacer hoy.
+    Las cifras salen de la estrategia y del terminal (Regla 1); la prosa sigue las tres
+    capas del informe institucional: qué pasa, qué significa para ti y qué NO hacer hoy.
     Primero se dice qué pasa y después se muestra: al revés, el cliente mira la
     imagen sin saber qué buscar.
     """
     if not activos:
         return "_Lectura por activo no disponible en esta corrida._"
+    import pipeline_carrusel as pc
+    from estrategia.contrato import lectura_de_dict
     from grafico_informe import formatear_precio
 
     bloques: list[str] = []
     for info in activos.values():
         bloque = f"### {info['nombre']}"
-        d1 = info.get("d1")
-        if d1:
+        if info.get("lectura"):
+            lectura = lectura_de_dict(info["lectura"])
             dg = info["digits"]
-            bloque += (
-                f"\n\n**{_frase_tecnica(d1)}.** Precio {formatear_precio(d1['price'], dg)} · "
-                f"soporte {formatear_precio(d1['s1'], dg)} · "
-                f"resistencia {formatear_precio(d1['r1'], dg)}."
-            )
+            soporte, resistencia = pc.niveles_publicados(lectura)
+            partes = [f"Precio {formatear_precio(lectura.precio, dg)}",
+                      f"nivel a vigilar {formatear_precio(lectura.vigilar.precio, dg)} "
+                      f"({lectura.vigilar.etiqueta})"]
+            if soporte is not None:
+                partes.append(f"soporte {formatear_precio(soporte, dg)}")
+            if resistencia is not None:
+                partes.append(f"resistencia {formatear_precio(resistencia, dg)}")
+            bloque += f"\n\n**{_frase_tecnica(lectura)}.** " + " · ".join(partes) + "."
         else:
             bloque += "\n\n_Sin datos del terminal para este activo en esta corrida._"
         bloque += (
