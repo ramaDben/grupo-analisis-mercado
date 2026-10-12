@@ -706,6 +706,10 @@ def lectura_operativa(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+ESTADO_VISIBLE = {"TENDENCIA": "Tendencia", "REBOTE": "Rebote", "RUPTURA": "Ruptura",
+                  "PRUEBA": "En prueba", "RANGO": "Rango"}
+
+
 def _lectura_operativa_estrategia(payload: dict[str, Any]) -> dict[str, Any]:
     """La parte del mensaje que sale de la `Lectura`: nada se redacta acá."""
     from estrategia.contrato import lectura_de_dict
@@ -717,12 +721,18 @@ def _lectura_operativa_estrategia(payload: dict[str, Any]) -> dict[str, Any]:
     if lectura.estado == "PRUEBA":
         a_favor = "↔️"  # la condición se resuelve al cierre de la vela: manda la espera (spec §4)
     principal = next(e for e in lectura.escenarios if e.flecha == a_favor)
+    # Sobre el pliegue va lo esencial en una línea: el estado, la dirección y la condición
+    # del escenario principal. Repetir el escenario entero lo haría leer dos veces.
+    estado = ESTADO_VISIBLE[lectura.estado]
+    if lectura.estado not in ("RANGO", "PRUEBA") and lectura.direccion != "LATERAL":
+        estado = f"{estado} {lectura.direccion.lower()}"
+    condicion = principal.condicion[:1].lower() + principal.condicion[1:]
     corto = ETIQUETA_CORTA.get(lectura.marco, lectura.marco)
     nota = payload.get("nota_volatilidad")
     return {
         "ticker_visible": rotulo.split("·")[-1].strip() if "·" in rotulo else payload["activo"],
         "nivel_vigilar": f"{formatear_precio(lectura.vigilar.precio, digits)} ({lectura.vigilar.etiqueta})",
-        "que_esperar": principal.texto,
+        "que_esperar": f"{estado}: {condicion}",
         "escenarios": [f"{e.flecha} {e.texto}" for e in lectura.escenarios],
         "salida": lectura.salida,
         "temporalidad": temporalidad_de(lectura.marco),

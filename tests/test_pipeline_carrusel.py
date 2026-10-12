@@ -1621,3 +1621,21 @@ def test_con_referencia_el_despacho_sigue_la_de_la_semana_y_no_guarda(tmp_path):
     assert lectura.estado == "RUPTURA"
     guardada = json.loads(rs.ruta("2026-W42", "XAUUSD", tmp_path).read_text(encoding="utf-8"))
     assert guardada["motivo"] == "semanal"  # el reemplazo lo guarda el escáner, no el despacho
+
+
+def test_que_esperar_es_corto_y_no_repite_el_escenario():
+    """Lo que se ve sobre el pliegue: estado, dirección y la condición, sin repetir el escenario."""
+    op = pc.lectura_operativa(_payload_lectura())
+    assert op["que_esperar"] == "Tendencia alcista: sobre 4.080,00"
+    assert op["que_esperar"] not in " ".join(op["escenarios"])
+
+
+def test_que_esperar_en_rango_y_en_prueba():
+    from dataclasses import replace
+
+    rango = replace(_lectura_alcista(), estado="RANGO", direccion="LATERAL", escenarios=(
+        Escenario("⬆️", "Cierre sobre 4.200,00", "a"), Escenario("↔️", "Entre 4.080,00 y 4.200,00", "b"),
+        Escenario("⬇️", "Cierre bajo 4.080,00", "c")))
+    p = _payload_lectura()
+    p["lectura"] = lectura_a_dict(rango)
+    assert pc.lectura_operativa(p)["que_esperar"] == "Rango: entre 4.080,00 y 4.200,00"
