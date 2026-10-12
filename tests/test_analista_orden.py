@@ -27,75 +27,48 @@ def leer(texto: str) -> od.Orden:
     return od.interpretar(texto, universo=UNIVERSO)
 
 
-def test_activo_por_alias_en_espanol():
-    o = leer("/activo oro")
-    assert (o.pieza, o.args) == ("activo", {"ticker": "XAUUSD"})
+def test_oportunidad_no_lleva_argumentos():
+    assert od.interpretar("/oportunidad") == od.Orden("oportunidad", {})
+
+
+def test_seguimiento_resuelve_el_activo():
+    universo = [{"ticker": "XAUUSD", "nombre": "Oro"}]
+    assert od.interpretar("/seguimiento oro", universo) == od.Orden("seguimiento", {"ticker": "XAUUSD"})
+    assert od.interpretar("/seguimiento xau", universo).args == {"ticker": "XAUUSD"}
+
+
+def test_seguimiento_sin_activo_explica_como_pedirlo():
+    with pytest.raises(od.PedidoInvalido, match="/seguimiento oro"):
+        od.interpretar("/seguimiento", [])
+
+
+@pytest.mark.parametrize("cmd", ["/activo oro", "/calendario hoy", "/dato ipc", "/jornada apertura"])
+def test_los_comandos_retirados_responden_con_la_ayuda(cmd):
+    assert od.interpretar(cmd, []).pieza == "ayuda"
 
 
 @pytest.mark.parametrize("texto,ticker", [
-    ("/activo USD/CLP", "USDCLP"),
-    ("/activo usdclp", "USDCLP"),
-    ("/activo dólar", "USDCLP"),
-    ("/activo wti", "WTI.spot"),
-    ("/activo petróleo", "WTI.spot"),
-    ("/activo nasdaq", "US100.spot"),
-    ("/activo us100", "US100.spot"),
-    ("/activo aapl", "#AAPL"),
-    ("/activo Cobre", "COPPER"),
+    ("/seguimiento USD/CLP", "USDCLP"),
+    ("/seguimiento usdclp", "USDCLP"),
+    ("/seguimiento dólar", "USDCLP"),
+    ("/seguimiento wti", "WTI.spot"),
+    ("/seguimiento petróleo", "WTI.spot"),
+    ("/seguimiento nasdaq", "US100.spot"),
+    ("/seguimiento us100", "US100.spot"),
+    ("/seguimiento aapl", "#AAPL"),
+    ("/seguimiento Cobre", "COPPER"),
 ])
 def test_resuelve_ticker_del_broker(texto, ticker):
     assert leer(texto).args["ticker"] == ticker
 
 
 def test_comando_con_arroba_del_bot():
-    assert leer("/activo@GI_Analistas_Bot oro").args["ticker"] == "XAUUSD"
+    assert leer("/seguimiento@GI_Analistas_Bot oro").args["ticker"] == "XAUUSD"
 
 
 def test_activo_desconocido_dice_cual():
     with pytest.raises(od.PedidoInvalido, match="pizza"):
-        leer("/activo pizza")
-
-
-def test_activo_sin_argumento():
-    with pytest.raises(od.PedidoInvalido):
-        leer("/activo")
-
-
-@pytest.mark.parametrize("texto,alcance", [
-    ("/calendario", "hoy"),
-    ("/calendario hoy", "hoy"),
-    ("/calendario semana", "semana"),
-])
-def test_calendario(texto, alcance):
-    o = leer(texto)
-    assert (o.pieza, o.args) == ("calendario", {"alcance": alcance})
-
-
-def test_calendario_alcance_invalido():
-    with pytest.raises(od.PedidoInvalido):
-        leer("/calendario mes")
-
-
-def test_dato_por_defecto_es_el_ultimo():
-    assert leer("/dato").args == {"busqueda": "ultimo"}
-
-
-def test_dato_con_nombre():
-    assert leer("/dato IPC").args == {"busqueda": "ipc"}
-
-
-def test_dato_rechaza_simbolos():
-    with pytest.raises(od.PedidoInvalido):
-        leer("/dato ipc; borrar")
-
-
-@pytest.mark.parametrize("texto,momento", [
-    ("/jornada", None),
-    ("/jornada apertura", "apertura"),
-    ("/jornada cierre", "cierre"),
-])
-def test_jornada(texto, momento):
-    assert leer(texto).args == {"momento": momento}
+        leer("/seguimiento pizza")
 
 
 def test_comando_desconocido():
@@ -108,7 +81,7 @@ def test_comandos_de_servicio(texto):
     assert leer(texto).pieza == texto[1:]
 
 
-@pytest.mark.parametrize("texto", ["/activo oro para Juan Pérez", "/dato ipc para Ana", "/calendario hoy para Luis"])
+@pytest.mark.parametrize("texto", ["/seguimiento oro para Juan Pérez", "/oportunidad para Ana"])
 def test_para_trader_ya_no_se_acepta(texto):
     with pytest.raises(od.PedidoInvalido) as exc:
         leer(texto)
@@ -116,7 +89,7 @@ def test_para_trader_ya_no_se_acepta(texto):
 
 
 def test_orden_no_tiene_trader():
-    assert not hasattr(leer("/activo oro"), "trader")
+    assert not hasattr(leer("/seguimiento oro"), "trader")
 
 
 def test_todos_los_alias_apuntan_a_activos_del_catalogo_real():

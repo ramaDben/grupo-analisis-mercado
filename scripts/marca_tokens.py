@@ -72,11 +72,9 @@ from sincronizar_css_plantillas import (  # noqa: E402
 
 RAIZ = Path(__file__).resolve().parent.parent
 DIR_STORIES = RAIZ / "templates" / "stories"
-# Los informes HTML del bot de analistas consumen la misma paleta. Quedan bajo el
-# gate desde que nacen: una carpeta fuera de esta lista es una carpeta donde un
-# hex escrito a mano no lo ve nadie.
-DIR_INFORMES_ANALISTA = RAIZ / "templates" / "informes_analista"
-DIRS_PLANTILLAS = (DIR_STORIES, DIR_INFORMES_ANALISTA)
+# Los informes HTML del bot de analistas se retiraron el 2026-10-12 (spec oportunidad-semanal):
+# la pieza semanal vive en templates/oportunidad/ y lleva estilos de correo en línea.
+DIRS_PLANTILLAS = (DIR_STORIES,)
 HOJA = "marca.css"
 LINK = f'<link rel="stylesheet" href="{HOJA}">'
 

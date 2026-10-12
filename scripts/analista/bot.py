@@ -1,13 +1,13 @@
-"""Bot de Telegram del equipo: atiende pedidos de piezas y entrega el PDF.
+"""Bot de Telegram del equipo: entrega la pieza semanal y el seguimiento de un activo.
 
-Tres reglas lo definen (spec 2026-10-08-bot-telegram-analistas-design.md):
+Tres reglas lo definen (spec 2026-10-12-oportunidad-semanal-design.md):
 
 1. **Solo atiende a quien está en `config/analistas_telegram.json`**, por el id
    de la persona (no del chat: en un grupo el chat es de todos).
-2. **agy solo redacta.** El pedido se traduce a una `Orden` cerrada, Python
-   prepara los datos, agy rellena los textos y Python arma el HTML y lo imprime a PDF.
-3. **Reusar no cuesta agy.** La pieza vigente se vuelve a entregar sin redactar.
-   El informe es general e igual para todos: no se personaliza por trader.
+2. **agy solo redacta.** `/oportunidad` arma la foto de la semana: Python prepara los datos,
+   agy rellena los textos una sola vez por semana y Python arma el HTML (herramienta interna
+   con panel de simulación). `/seguimiento` no usa agy: lámina PNG y texto de WhatsApp.
+3. **Reusar no cuesta agy.** La foto vale toda la semana y el seguimiento 30 minutos.
 
 No publica en ningún canal de WhatsApp ni toca la bitácora de despachos: es una
 herramienta interna del equipo, y un test lo impone.
@@ -28,12 +28,13 @@ from zoneinfo import ZoneInfo
 
 from analista import RAIZ
 from analista import autor as au
-from analista import bitacora as bt
+from analista import comercial as cm
 from analista import esquema as es
 from analista import informe_html as ih
+from analista import oportunidad_html as oh
 from analista import orden as od
-from analista import pdf as pf
 from analista import preparar as pr
+from analista import registro_semanal as rg
 
 SANTIAGO = ZoneInfo("America/Santiago")
 CONFIG = RAIZ / "config" / "analistas_telegram.json"
@@ -44,15 +45,8 @@ INSTANCIA = RAIZ / "data" / ".bot_analistas.lock"
 
 AYUDA = """Bot de análisis · Grupo Inteligencia
 
-Pide una pieza y te llega el informe en PDF, listo para entregar:
-
-/activo oro
-/calendario hoy   (o semana)
-/dato ipc         (o /dato para el último)
-/jornada apertura (o cierre)
-/oportunidad      el foco técnico del día, para compartir con un prospecto
-
-El informe es un análisis general: compártelo tal cual con tu trader.
+/oportunidad          el análisis técnico de la semana, con los 6 activos y tu panel de simulación
+/seguimiento oro      cómo va un activo de la semana: la simulación y la lectura de hoy
 
 /estado muestra tu cupo del día. /id muestra tu número de usuario."""
 
@@ -88,8 +82,8 @@ def tomar_instancia(ruta: Path = INSTANCIA) -> IO[bytes] | None:
 
 
 
-# El foco técnico vale menos: el precio se mueve y el plan puede cambiar de estado.
-REUSO_MINUTOS = {"activo": 30, "calendario": 30, "dato": 30, "jornada": 720, "oportunidad": 60}
+# La foto semanal se reusa por semana (registro); el seguimiento vale menos: el precio se mueve.
+REUSO_MINUTOS = {"seguimiento": 30}
 
 
 def cargar_config(ruta: Path = CONFIG) -> dict[str, Any]:
@@ -179,15 +173,6 @@ class FalloPedido(RuntimeError):
     """El pedido no se pudo atender; el texto va tal cual al analista."""
 
 
-COMPARTIR_FOCO = "Compártelo tal cual: es análisis general, no una instrucción."
-
-
-def _vigencia_real(pieza: dict[str, Any], ahora: datetime) -> bool:
-    from analista import foco
-
-    return foco.sigue_vigente(pieza, ahora)
-
-
 def _agy_real(ruta_pieza: Path, tier: str):
     from analista.agy import escribir_textos
 
@@ -203,44 +188,34 @@ class Atendedor:
     autor: au.Autor
     preparar: Callable[..., pr.Preparada] = pr.preparar
     redactar: Callable[[Path, str], Any] = _agy_real
-    rendir_laminas: Callable[..., None] = pr.rendir_laminas
+    rendir_lamina: Callable[..., Path] = cm.rendir
     reloj: Callable[[], datetime] = lambda: datetime.now(SANTIAGO)
     dir_pedidos: Path = DIR_PEDIDOS
-    bitacora: Path = bt.RUTA
-    # El foco técnico solo se reusa si su plan sigue igual: se vuelve a leer el activo.
-    vigencia: Callable[[dict[str, Any], datetime], bool] = _vigencia_real
-    # Lo que circula es el PDF: Drive no muestra HTML y un documento firmado no se
-    # entrega editable. El HTML queda junto a la pieza como su fuente.
-    a_pdf: Callable[[Path], Path] = pf.rendir
+    registro: Path = rg.RUTA
+    fuera_con_referencia: Callable[[dict[str, Any]], list[str]] = pr.fuera_con_referencia
 
     def analista(self, usuario: str) -> dict[str, Any]:
         return self.config["analistas"][usuario]
 
-    def _pieza_base(self, pedido: Pedido, ahora: datetime) -> tuple[Path, dict[str, Any], list[str], bool]:
-        o = pedido.orden
-        minutos = int(self.config["reuso_minutos"].get(o.pieza, 30))
-        previa = self.estado.vigente(o.clave_base(), ahora, minutos)
-        if previa:
-            pieza_previa = pr.cargar_pieza(previa)
-            if o.pieza != "oportunidad" or self.vigencia(pieza_previa, ahora):
-                return previa, pieza_previa, [], True
+    def _exigir_cupo(self, usuario: str, ahora: datetime) -> None:
+        cupo = int(self.analista(usuario).get("cupo_diario", 10))
+        if self.estado.usados(usuario, ahora) >= cupo:
+            raise FalloPedido(f"Completaste tu cupo de {cupo} piezas nuevas por hoy. "
+                              "Las que ya existen siguen disponibles.")
 
-        cupo = int(self.analista(pedido.usuario).get("cupo_diario", 10))
-        if self.estado.usados(pedido.usuario, ahora) >= cupo:
-            raise FalloPedido(
-                f"Completaste tu cupo de {cupo} piezas nuevas por hoy. "
-                "Las que ya existen siguen disponibles."
-            )
-        arg = ih.slug(str(next(iter(o.args.values()), "") or "auto"))
-        dir_pedido = self.dir_pedidos / ahora.strftime("%Y-%m-%d") / f"{ahora:%H%M%S}_{o.pieza}_{arg}"
+    def _preparar(self, orden: od.Orden, dir_pedido: Path, ahora: datetime) -> pr.Preparada:
         try:
-            hecha = self.preparar(o, dir_pedido, ahora)
-        except (pr.SinFocoError, pr.MercadoIlegibleError) as exc:
-            # No es una falla del pedido: es la respuesta. Va tal cual, sin gastar agy ni cupo.
-            raise FalloPedido(str(exc)) from exc
+            # El registro del bot y no el real: con uno inyectado, preparar miraba otro archivo.
+            return self.preparar(orden, dir_pedido, ahora, registro=self.registro)
+        except (pr.SinSemanaError, pr.EsperaVelaError, pr.SinFotoError, pr.FueraDeLaFotoError,
+                pr.FotoVaciaError) as exc:
+            raise FalloPedido(str(exc)) from exc  # es la respuesta, no una falla
         except pr.PreparacionFallida as exc:
-            raise FalloPedido(f"No pude leer los datos: {exc}") from exc
+            extra = (" La pieza de la semana sigue disponible con /oportunidad."
+                     if orden.pieza == "seguimiento" else "")
+            raise FalloPedido(f"No pude leer los datos: {exc}.{extra}".replace("..", ".")) from exc
 
+    def _redactar_y_validar(self, dir_pedido: Path) -> dict[str, Any]:
         res = self.redactar(dir_pedido / "pieza.json", self.config["tier"])
         if getattr(res, "codigo", "ok") != "ok":
             raise FalloPedido(f"La redacción no terminó ({res.codigo}: {res.detalle}). No gasté tu cupo.")
@@ -248,12 +223,7 @@ class Atendedor:
         errores = es.errores(pieza)
         if errores:
             raise FalloPedido("El texto no pasó los controles y no lo entrego así:\n• " + "\n• ".join(errores[:6]))
-        self.rendir_laminas(pieza, dir_pedido)
-        fija = o.pieza == "dato" and pieza["datos"].get("modo") == "resultado"
-        self.estado.registrar_pieza(o.clave_base(), dir_pedido, ahora, fija)
-        self.estado.consumir(pedido.usuario, ahora)
-        self.estado.guardar()
-        return dir_pedido, pieza, hecha.avisos, False
+        return pieza
 
     def _a_drive(self, rutas: list[Path], ahora: datetime) -> str:
         destino_raiz = self.config.get("ruta_drive") or ""
@@ -271,39 +241,89 @@ class Atendedor:
 
     def atender(self, pedido: Pedido) -> Respuesta:
         ahora = self.reloj()
-        dir_pedido, pieza, avisos, reusada = self._pieza_base(pedido, ahora)
-        o = pedido.orden
-        arg = ih.slug(str(next(iter(pieza["orden"]["args"].values()), "") or "auto"))
-        # El archivo viaja al prospecto: su nombre tampoco dice "oportunidad".
-        prefijo = "foco-tecnico" if o.pieza == "oportunidad" else o.pieza
-        nombre_base = f"{prefijo}_{arg}_{dir_pedido.name[:4]}"
         try:
-            ruta = ih.guardar(pieza, dir_pedido, self.analista(pedido.usuario), self.autor,
-                              ahora.date(), nombre_base)
-        except ih.InformeInvalido as exc:
-            raise FalloPedido(f"No pude armar el informe: {exc}") from exc
-        # Una pieza reusada es el mismo plan: se anota una sola vez.
-        if o.pieza in ("activo", "oportunidad") and not reusada:
-            bt.anotar(pieza, ruta, pedido.usuario, ahora, self.bitacora)
+            if pedido.orden.pieza == "oportunidad":
+                return self._oportunidad(pedido, ahora)
+            return self._seguimiento(pedido, ahora)
+        except rg.RegistroDanado as exc:
+            raise FalloPedido("El registro semanal está dañado y no sigo para no pisarlo: "
+                              "avisa al director.") from exc
+
+    def _oportunidad(self, pedido: Pedido, ahora: datetime) -> Respuesta:
+        import referencia_semanal as rs
+
+        semana = rs.semana_de(ahora)
+        previa = rg.foto(semana, self.registro)  # un registro corrupto levanta: no es "sin foto"
+        pieza = pr.cargar_pieza(Path(previa["dir"])) if previa else None
+        # Una foto a la que le faltaba un activo se rehace cuando aparece su referencia
+        # (director, 2026-10-12): los que ya estaban conservan sus precios.
+        recuperados = self.fuera_con_referencia(pieza) if pieza else []
+        reusada = pieza is not None and not recuperados
+        if reusada:
+            dir_pedido = Path(previa["dir"])
+            avisos = [f"{t} sigue sin análisis guardado esta semana: queda fuera de la foto. Cuando lo tenga, "
+                      "pide /oportunidad de nuevo y la foto se rehace con él." for t in pieza["datos"].get("fuera", [])]
+        else:
+            self._exigir_cupo(pedido.usuario, ahora)
+            dir_pedido = self.dir_pedidos / ahora.strftime("%Y-%m-%d") / f"{ahora:%H%M%S}_semanal_{semana}"
+            hecha = self._preparar(pedido.orden, dir_pedido, ahora)
+            pieza = self._redactar_y_validar(dir_pedido)
+            # Las láminas se rinden antes del HTML: sin ellas no hay botón «Descargar lámina».
+            for a in pieza["datos"]["activos"]:
+                t = a["ticker"]
+                self.rendir_lamina(
+                    cm.payload_semanal(a, pieza["editorial"]["titulares"][t], pieza["datos"]["edicion"],
+                                       self.autor, dir_pedido / a["grafico"]),
+                    "semanal", dir_pedido / cm.nombre_lamina(t))
+            rg.anotar_foto(semana, dir_pedido, ahora, [a["ticker"] for a in pieza["datos"]["activos"]],
+                           self.registro)
+            self.estado.consumir(pedido.usuario, ahora)
+            self.estado.guardar()
+            avisos = hecha.avisos
+            if recuperados:
+                avisos = [f"Rehíce la foto de la semana para sumar {', '.join(recuperados)}: los demás activos "
+                          "conservan sus precios.", *avisos]
         try:
-            entregable = self.a_pdf(ruta)
-        except pf.PdfFallido as exc:
-            # La pieza no se pierde, pero Drive no recibe un archivo que no puede mostrar.
-            entregable = None
-            avisos = [*avisos, f"No pude generar el PDF ({exc}): va el HTML, ábrelo en el navegador."]
-        drive = (self._a_drive([entregable], ahora) if entregable
-                 else "El HTML no se guarda en Drive: va solo por acá.")
+            ruta = oh.guardar(pieza, dir_pedido, self.analista(pedido.usuario), self.autor, ahora.date())
+        except oh.InformeInvalido as exc:
+            raise FalloPedido(f"No pude armar la pieza: {exc}") from exc
         lineas = [f"✅ {pieza['editorial']['titular']}",
-                  f"{pieza['datos']['chip']} · {pieza['datos']['edicion']}"]
-        if reusada and o.pieza == "oportunidad":
-            lineas.append(f"Ya está: es el foco de las {pieza['datos']['seleccion']['hora']}.")
-        elif reusada:
-            lineas.append("Es la pieza vigente: no se volvió a redactar.")
-        if o.pieza == "oportunidad":
-            lineas.append(COMPARTIR_FOCO)
+                  f"Semana {pieza['datos']['semana']} · foto del {pieza['datos']['edicion']}"]
+        if reusada:
+            lineas.append("Ya está: es la foto de esta semana. Para ver cómo va un activo, usa /seguimiento <activo>.")
+        elif ahora.astimezone(SANTIAGO).weekday() > 0:  # spec §5: a mitad de semana, la remisión
+            lineas.append("Los niveles son los de la foto de la semana. Para ver cómo va un activo hoy, usa /seguimiento <activo>.")
+        lineas.append("Ábrelo en el navegador: marca los activos, escribe la pérdida aceptable y copia el correo.")
         lineas += [f"⚠️ {a}" for a in [*avisos, *au.avisos(self.autor, ahora.date())]]
-        lineas.append(drive)
-        return Respuesta(pedido.chat, "\n".join(lineas), [entregable or ruta])
+        lineas.append(self._a_drive([ruta], ahora))
+        return Respuesta(pedido.chat, "\n".join(lineas), [ruta])
+
+    def _seguimiento(self, pedido: Pedido, ahora: datetime) -> Respuesta:
+        import referencia_semanal as rs
+
+        o = pedido.orden
+        minutos = int(self.config["reuso_minutos"].get("seguimiento", 30))
+        dir_pedido = self.estado.vigente(o.clave_base(), ahora, minutos)
+        if dir_pedido is None:
+            self._exigir_cupo(pedido.usuario, ahora)
+            dir_pedido = (self.dir_pedidos / ahora.strftime("%Y-%m-%d")
+                          / f"{ahora:%H%M%S}_seguimiento_{ih.slug(o.args['ticker'])}")
+            self._preparar(o, dir_pedido, ahora)
+            d = pr.cargar_pieza(dir_pedido)["datos"]
+            self.rendir_lamina(
+                cm.payload_seguimiento(d["activo"], d["evaluacion"], d["precio_vivo"], d["lectura_hoy"],
+                                       d["edicion"], self.autor, dir_pedido / "grafico.png"),
+                "seguimiento", dir_pedido / "lamina.png")
+            semana = rs.semana_de(ahora)
+            if rg.foto(semana, self.registro) is not None:
+                rg.anotar_seguimiento(semana, o.args["ticker"],
+                                      {"estado": d["evaluacion"]["estado"], "ejecutivo": pedido.usuario,
+                                       "cuando": ahora.isoformat()}, self.registro)
+            self.estado.registrar_pieza(o.clave_base(), dir_pedido, ahora, fija=False)
+            self.estado.consumir(pedido.usuario, ahora)
+            self.estado.guardar()
+        pieza = pr.cargar_pieza(dir_pedido)
+        return Respuesta(pedido.chat, pieza["datos"]["whatsapp"], [dir_pedido / "lamina.png"])
 
 
 # ───────────────────────────────────────────────────────────── Telegram
@@ -335,7 +355,7 @@ class Telegram:
 
     def documento(self, chat: int, ruta: Path) -> None:
         with ruta.open("rb") as f:
-            tipo = "application/pdf" if ruta.suffix == ".pdf" else "text/html"
+            tipo = {".pdf": "application/pdf", ".png": "image/png"}.get(ruta.suffix, "text/html")
             self._post("sendDocument", data={"chat_id": chat}, files={"document": (ruta.name, f, tipo)})
 
     def soy(self) -> dict[str, Any]:

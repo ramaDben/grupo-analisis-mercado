@@ -112,3 +112,17 @@ def test_mostrar_una_media_no_es_decidir():
     """El extractor la calcula y los manuales la muestran: eso es dato, no lectura."""
     for codigo in ('fila = {"ema50": r.get("ema_50")}', 'df["ema_50"] = close.ewm(span=50).mean()'):
         assert decisiones_tecnicas(codigo) == [], codigo
+
+
+def test_el_bot_de_analistas_no_trae_el_metodo_viejo():
+    """La pieza semanal del #254 decidía con la EMA 50 D1 y salía con el Chandelier (spec
+    oportunidad-semanal §3). Ninguna de las dos puede volver al bot."""
+    hallazgos = []
+    archivos = sorted((SCRIPTS / "analista").glob("*.py"))
+    assert archivos, "el guardián no encontró scripts/analista"
+    for ruta in archivos:
+        texto = ruta.read_text(encoding="utf-8").lower()
+        for prohibido in ("chandelier", "ema_50", "ema50", "ema 50"):
+            if prohibido in texto:
+                hallazgos.append(f"{ruta.name}: {prohibido}")
+    assert hallazgos == []

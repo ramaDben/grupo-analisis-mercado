@@ -1,15 +1,14 @@
-"""Bot de Telegram para analistas y ejecutivos: piezas a pedido en PDF.
+"""Bot de Telegram para analistas y ejecutivos: la pieza semanal (HTML) y el seguimiento de un activo.
 
 Uso:
     uv run --with MetaTrader5 --extra stories --extra informe python scripts/bot_analistas.py --escuchar
     uv run python scripts/bot_analistas.py --probar-token
     uv run --with MetaTrader5 --extra stories --extra informe python scripts/bot_analistas.py \\
-        --una "/activo oro" --usuario <id>                     # un pedido, sin Telegram
+        --una "/seguimiento oro" --usuario <id>                     # un pedido, sin Telegram
     uv run python scripts/bot_analistas.py --validar data/informes_analistas/.../pieza.json
-    uv run --with MetaTrader5 python scripts/bot_analistas.py --desenlaces   # completa la bitácora de planes
 
 Diseño y reglas: docs/bot-analistas.md y la spec
-docs/superpowers/specs/2026-10-08-bot-telegram-analistas-design.md.
+docs/superpowers/specs/2026-10-12-oportunidad-semanal-design.md.
 """
 from __future__ import annotations
 
@@ -86,7 +85,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             orden = od.interpretar(args.una)
         except od.PedidoInvalido as exc:
-            # Desde Git Bash, "/activo" llega convertido en una ruta de Windows:
+            # Desde Git Bash, "/seguimiento" llega convertido en una ruta de Windows:
             # hay que correrlo con MSYS_NO_PATHCONV=1.
             print(f"ERROR: {exc} (recibí {args.una!r})")
             return 2

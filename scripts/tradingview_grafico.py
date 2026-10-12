@@ -139,6 +139,7 @@ def construir_html_tradingview(
     ancho: int = 1400,
     alto: int = 780,
     lineas=None,
+    niveles=None,
 ) -> str:
     """HTML autocontenido del gráfico: velas, las líneas de la lectura y las zonas de
     soporte y resistencia del mensaje.
@@ -164,19 +165,28 @@ def construir_html_tradingview(
         {"precio": p, "rol": rol}
         for p, rol in ((resistencia, "RESISTENCIA"), (soporte, "SOPORTE")) if p is not None
     ]
+    tolerancia = 0.5 * 10 ** -digits
+    # Los niveles que cita el texto de la pieza, cada uno con su precio en el eje. Dos con el
+    # mismo precio son una sola etiqueta con los dos nombres.
+    for precio, nombre in niveles or ():
+        zona = next((z for z in zonas if abs(z["precio"] - precio) <= tolerancia), None)
+        if zona is None:
+            zonas.append({"precio": precio, "rol": nombre})
+        elif nombre not in zona["rol"]:
+            zona["rol"] += " · " + nombre
     # Un horizontal de la lectura en el mismo precio que una zona (el objetivo suele ser
     # el soporte o la resistencia publicados) se funde con ella: dos etiquetas en el mismo
     # precio se apilan y empujan a las demás sobre el eje (medido el 2026-10-12 en el oro
     # y el USD/CLP). La leyenda lo sigue nombrando.
-    tolerancia = 0.5 * 10 ** -digits
     en_eje = []
     for serie in series:
         zona = next((z for z in zonas if serie["tipo"] == "horizontal"
                      and abs(z["precio"] - serie["precio"]) <= tolerancia), None)
+        nombre = NOMBRE_ROL[serie["rol"]].upper()
         if zona is None:
             en_eje.append(serie)
-        else:
-            zona["rol"] += " · " + NOMBRE_ROL[serie["rol"]].upper()
+        elif nombre not in zona["rol"] and not (serie["rol"] == "rango" and "RANGO" in zona["rol"]):
+            zona["rol"] += " · " + nombre
     datos = {
         "rows": rows,
         "lineas": en_eje,
@@ -464,6 +474,7 @@ def generar_grafico_tv(
     ancho: int = 1400,
     alto: int = 780,
     lineas=None,
+    niveles=None,
 ) -> Path:
     """Función principal: obtiene datos de MT5, computa indicadores y renderiza el PNG.
 
@@ -472,6 +483,9 @@ def generar_grafico_tv(
     otro, con su soporte y resistencia si no vienen dados, y con velas suficientes para
     que las anclas caigan adentro. Si la estrategia no puede leer el activo, el gráfico
     sale con velas y zonas, y lo avisa: nunca con medias como sustituto.
+
+    `niveles` son (precio, nombre) que cita el texto de la pieza: van al eje con su precio, y
+    los que coinciden se funden en una etiqueta.
     """
     from market_data_mcp import mt5_client
     from market_data_mcp.catalog import VALID_TICKERS
@@ -520,6 +534,7 @@ def generar_grafico_tv(
         ancho=ancho,
         alto=alto,
         lineas=lineas,
+        niveles=niveles,
     )
 
     return renderizar_png(html, destino, ancho=ancho, alto=alto)

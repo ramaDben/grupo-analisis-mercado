@@ -1,0 +1,32 @@
+{
+  "plantilla": "semanal",
+  "chip": "ANÁLISIS TÉCNICO DE LA SEMANA",
+  "datos_al": "lunes 12-10 · 09:30 CLST",
+  "activo": "Oro · XAU/USD",
+  "titular": "El oro empieza la semana con la tendencia a favor",
+  "precio": "4.000,00 USD",
+  "direccion": "ALCISTA",
+  "temporalidad": "4H · swing (de una a dos semanas)",
+  "pie_imagen": "Oro · velas de 4 horas · MetaTrader 5",
+  "firma": "Análisis: Nombre Apellido · Dirección de Análisis Técnico",
+  "aviso": "Análisis técnico general, igual para todos sus destinatarios. No es una instrucción de inversión: un escenario puede cumplirse o invalidarse.",
+  "frase_lectura": "Mientras el precio cierre sobre la línea, la tendencia alcista sigue.",
+  "sesgo_slug": "alcista",
+  "niveles": [
+    {
+      "rotulo": "Nivel a vigilar",
+      "valor": "3.950,00",
+      "clase": "nivel-activa"
+    },
+    {
+      "rotulo": "Invalidación",
+      "valor": "3.880,00",
+      "clase": "nivel-anula"
+    },
+    {
+      "rotulo": "Objetivo técnico",
+      "valor": "4.100,00",
+      "clase": ""
+    }
+  ]
+}

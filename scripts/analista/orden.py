@@ -19,7 +19,9 @@ class PedidoInvalido(ValueError):
     """El pedido no calza con la gramática; el mensaje se le muestra al analista."""
 
 
-PIEZAS = ("activo", "calendario", "dato", "jornada", "oportunidad")
+PIEZAS = ("oportunidad", "seguimiento")
+# Retirados el 2026-10-12 (spec oportunidad-semanal §2): responden con la ayuda.
+RETIRADOS = ("activo", "calendario", "dato", "jornada")
 SERVICIO = ("start", "ayuda", "id", "estado")
 
 # Nombres en español que el equipo usa a diario. Los tickers del broker se
@@ -29,6 +31,7 @@ ALIAS: dict[str, str] = {
     "dolar": "USDCLP",
     "peso": "USDCLP",
     "oro": "XAUUSD",
+    "xau": "XAUUSD",
     "plata": "XAGUSD",
     "petroleo": "WTI.spot",
     "wti": "WTI.spot",
@@ -47,9 +50,8 @@ ALIAS: dict[str, str] = {
 
 PERSONALIZACION_RETIRADA = (
     "Los informes ya no se personalizan: son un análisis general que puedes "
-    "compartir tal cual. Pide de nuevo sin «para …», por ejemplo /activo oro."
+    "compartir tal cual. Pide de nuevo sin «para …», por ejemplo /seguimiento oro."
 )
-_BUSQUEDA_DATO = re.compile(r"^[a-z0-9 ]{2,40}$")
 
 
 @dataclass(frozen=True)
@@ -82,7 +84,7 @@ def resolver_activo(texto: str, universo: list[dict[str, Any]]) -> str:
         formas = _formas(activo["ticker"]) | {re.sub(r"[\s/&]", "", _plano(activo.get("nombre", "")))}
         if clave in {re.sub(r"[\s/]", "", f) for f in formas}:
             return activo["ticker"]
-    raise PedidoInvalido(f"No reconozco el activo «{texto}». Prueba con el ticker, por ejemplo /activo usdclp.")
+    raise PedidoInvalido(f"No reconozco el activo «{texto}». Prueba con el ticker, por ejemplo /seguimiento usdclp.")
 
 
 def interpretar(texto: str, universo: list[dict[str, Any]] | None = None) -> Orden:
@@ -92,8 +94,8 @@ def interpretar(texto: str, universo: list[dict[str, Any]] | None = None) -> Ord
 
     cabeza, _, resto = texto.partition(" ")
     comando = cabeza[1:].split("@", 1)[0].lower()
-    if comando in SERVICIO:
-        return Orden(pieza=comando)
+    if comando in SERVICIO or comando in RETIRADOS:
+        return Orden(pieza="ayuda" if comando in RETIRADOS else comando)
     if comando not in PIEZAS:
         raise PedidoInvalido(f"No existe el comando /{comando}. Escribe /ayuda para ver cuáles hay.")
 
@@ -101,31 +103,16 @@ def interpretar(texto: str, universo: list[dict[str, Any]] | None = None) -> Ord
     if re.search(r"(?:^|\s)para\s+\S", cuerpo, flags=re.IGNORECASE):
         raise PedidoInvalido(PERSONALIZACION_RETIRADA)
 
-    if comando == "activo":
+    if comando == "seguimiento":
         if not cuerpo:
-            raise PedidoInvalido("Falta el activo. Ejemplo: /activo oro")
+            raise PedidoInvalido("Falta el activo. Ejemplo: /seguimiento oro")
         if universo is None:
             import screener_gi as sc
 
             universo = sc.cargar_universo(solo_renderizables=False)
         args: dict[str, Any] = {"ticker": resolver_activo(cuerpo, universo)}
-    elif comando == "oportunidad":
-        # Sin argumentos: el foco lo elige el escáner, no quien lo pide.
-        args = {}
-    elif comando == "calendario":
-        alcance = _plano(cuerpo) or "hoy"
-        if alcance not in ("hoy", "semana"):
-            raise PedidoInvalido("El calendario es /calendario hoy o /calendario semana.")
-        args = {"alcance": alcance}
-    elif comando == "dato":
-        busqueda = _plano(cuerpo) or "ultimo"
-        if not _BUSQUEDA_DATO.match(busqueda):
-            raise PedidoInvalido("Nombra el dato con letras y números, por ejemplo /dato ipc.")
-        args = {"busqueda": busqueda}
     else:
-        momento = _plano(cuerpo) or None
-        if momento not in (None, "apertura", "cierre"):
-            raise PedidoInvalido("La jornada es /jornada apertura o /jornada cierre.")
-        args = {"momento": momento}
+        # /oportunidad no lleva argumentos: la foto la fija el análisis semanal.
+        args = {}
 
     return Orden(pieza=comando, args=args)
