@@ -104,49 +104,21 @@ def dibujar(destino: Path, lectura, velas, marcos) -> list[dict]:
     return no_dibujadas
 
 
-COLOR_TV = {"accion": "#FF4D5E", "seguridad": "#26C6A0", "seguimiento": "#9BE7C4",
-            "contexto": "#B39DDB", "objetivo": "#FFB300", "rango": "#CBD5E1"}
-
-
 def _panel_tv(df, lineas, marco: str, ticker: str) -> tuple[dict, list[dict]]:
-    """Velas y líneas de un marco para Lightweight Charts, contadas en velas como en TradingView.
+    """Velas y líneas de un marco para Lightweight Charts, con la misma función que la pieza."""
+    from tradingview_grafico import series_de_lineas
 
-    Una diagonal lleva un punto por vela desde su ancla hasta la proyección: el eje de
-    TradingView no reserva espacio a los fines de semana, así que la recta tiene que ser
-    recta en velas y no en tiempo.
-    """
-    no_dibujadas: list[dict] = []
     tiempos = [int(t) for t in df["time"]]
-    indice = {t: i for i, t in enumerate(tiempos)}
+    salida, no_dibujadas = series_de_lineas(lineas, tiempos, PROYECCION)
+    for d in no_dibujadas:
+        print(f"{ticker} {marco}: {d['motivo']}, diagonal {d['rol']} no se dibuja")
+    for dato in salida:
+        dato["titulo"] = dato["titulo"] + (f" {dato['precio']}" if dato["tipo"] == "horizontal" else "")
     difs = sorted(b - a for a, b in zip(tiempos, tiempos[1:]))
     paso = difs[len(difs) // 2] if difs else 3600
-    fin = len(tiempos) - 1 + PROYECCION
-
-    def t_de(i: int) -> int:
-        return tiempos[i] if i < len(tiempos) else tiempos[-1] + (i - len(tiempos) + 1) * paso
-
-    salida = []
-    for x in lineas:
-        dato = {"rol": x.rol, "tipo": x.tipo, "color": COLOR_TV[x.rol],
-                "discontinua": x.rol in ("contexto", "objetivo", "rango"),
-                "titulo": f"{x.rol} {x.calidad} ({x.toques} toques)".replace("  ", " ")}
-        if x.tipo == "diagonal":
-            (t1, p1), (t2, p2) = x.puntos
-            if t1 not in indice or t2 not in indice:
-                motivo = "ancla fuera de la ventana de velas dibujada"
-                print(f"{ticker} {marco}: {motivo}, diagonal {x.rol} no se dibuja")
-                no_dibujadas.append({"marco": marco, "rol": x.rol, "motivo": motivo})
-                continue
-            i1, i2 = indice[t1], indice[t2]
-            pend = (p2 - p1) / (i2 - i1)
-            dato["puntos"] = [{"time": t_de(i), "value": p1 + pend * (i - i1)} for i in range(i1, fin + 1)]
-        else:
-            dato["precio"] = x.puntos[0][1]
-            dato["titulo"] = f"{x.rol} {x.valor_actual}"
-        salida.append(dato)
     velas = [{"time": t, "open": float(o), "high": float(h), "low": float(lo), "close": float(c)}
              for t, o, h, lo, c in zip(tiempos, df["open"], df["high"], df["low"], df["close"])]
-    futuro = [{"time": t_de(i)} for i in range(len(tiempos), fin + 1)]
+    futuro = [{"time": tiempos[-1] + k * paso} for k in range(1, PROYECCION + 1)]
     return {"marco": marco, "velas": velas, "futuro": futuro, "lineas": salida}, no_dibujadas
 
 
