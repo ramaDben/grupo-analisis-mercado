@@ -223,7 +223,8 @@ DIAS = ("lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "doming
 
 def fecha_corta(momento: datetime) -> str:
     m = momento.astimezone(SANTIAGO)
-    return f"{DIAS[m.weekday()]} {m:%d-%m}"
+    # Con barra: el guion entre día y mes se ve como guion medio en la tipografía de la lámina.
+    return f"{DIAS[m.weekday()]} {m:%d/%m}"
 
 
 def _entrada_activo(ticker: str, referencia, guardada: datetime, puntaje: float, dir_pedido: Path,

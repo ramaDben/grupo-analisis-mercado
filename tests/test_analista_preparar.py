@@ -256,3 +256,8 @@ def test_el_grafico_real_pide_velas_suficientes_para_las_diagonales(tmp_path, mo
     pr._grafico_lectura("XAUUSD", "Oro", fx.lectura(), tmp_path / "g.png", digits=2, niveles=[(1.0, "X")])
     assert pedido["n_velas"] >= pc.VELAS_GRAFICO_TV and pedido["digits"] == 2
     assert pedido["niveles"] == [(1.0, "X")]
+
+
+def test_la_fecha_corta_no_lleva_guion():
+    """En la lámina, «11-10» con Plus Jakarta Sans se ve como un guion medio (prueba real, W41)."""
+    assert pr.fecha_corta(datetime(2026, 10, 11, 12, 0, tzinfo=SCL)) == "domingo 11/10"
