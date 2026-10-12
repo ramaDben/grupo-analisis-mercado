@@ -109,3 +109,10 @@ def test_el_json_escapa_cierre_de_script_y_la_pagina_no_trae_guiones_largos(tmp_
     crudo = re.search(r'<script id="datos" type="application/json">(.*?)</script>', html, re.S).group(1)
     assert json.loads(crudo)["cargo"] == "Ejecutiva </script> comercial"
     assert "—" not in html and "–" not in html and "oportunidad" not in html.lower()
+
+
+def test_la_lamina_de_un_ticker_con_punto_se_puede_descargar(tmp_path):
+    """El WTI (`WTI.spot`) sale todas las semanas: su lámina se rinde como `lamina_wti_spot.png`."""
+    html = oh.armar(fx.pieza_oportunidad(tmp_path, laminas=True, wti=True), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    bloque = html.split('data-ticker="WTI.spot"')[1].split("</section>")[0]
+    assert 'download="lamina_wti_spot.png"' in bloque

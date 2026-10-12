@@ -17,6 +17,14 @@ SELLOS = {"entrada_pendiente": "ENTRADA PENDIENTE", "en_curso": "EN CURSO",
           "objetivo": "OBJETIVO 1:3 ALCANZADO", "stop": "STOP TOCADO"}
 
 
+def nombre_lamina(ticker: str) -> str:
+    """El archivo de la lámina semanal de un activo. Lo usan el bot al rendirla y el HTML al
+    enlazarla: con dos fórmulas, la de `WTI.spot` se rendía y el botón no la encontraba."""
+    from analista.informe_html import slug
+
+    return f"lamina_{slug(ticker)}.png"
+
+
 def firma(autor) -> str:
     return f"Análisis: {autor.nombre} · {autor.cargo}"
 

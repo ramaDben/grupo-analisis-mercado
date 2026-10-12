@@ -260,7 +260,7 @@ class Atendedor:
                 self.rendir_lamina(
                     cm.payload_semanal(a, pieza["editorial"]["titulares"][t], pieza["datos"]["edicion"],
                                        self.autor, dir_pedido / a["grafico"]),
-                    "semanal", dir_pedido / f"lamina_{t.lower().replace('.', '_')}.png")
+                    "semanal", dir_pedido / cm.nombre_lamina(t))
             rg.anotar_foto(semana, dir_pedido, ahora, [a["ticker"] for a in pieza["datos"]["activos"]],
                            self.registro)
             self.estado.consumir(pedido.usuario, ahora)

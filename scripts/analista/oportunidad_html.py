@@ -105,7 +105,7 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
         t = a["ticker"]
         lec = a["lectura"]
         escenarios = "".join(f"<li>{ih.e(x['flecha'])} {ih.e(x['texto'])}</li>" for x in lec["escenarios"])
-        lamina = dir_pedido / f"lamina_{t.lower()}.png"
+        lamina = dir_pedido / cm.nombre_lamina(t)
         bloques.append(
             f'<section class="activo" data-ticker="{ih.e(t)}">'
             f'<header><h2>{ih.e(a["nombre"])} · {ih.e(a["ticker_visible"])}</h2>'

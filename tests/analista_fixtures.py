@@ -78,8 +78,11 @@ def lectura(ticker: str = "XAUUSD", estado: str = "TENDENCIA", direccion: str = 
                    conceptos=(), avisos=(), metricas={"atr": atr, "atr_d1": atr_d1}, vela=vela)
 
 
-def activo_semanal(rango: bool = False) -> dict:
-    """Una entrada de `datos.activos` como la deja `preparar_oportunidad`."""
+def activo_semanal(rango: bool = False, ticker: str | None = None) -> dict:
+    """Una entrada de `datos.activos` como la deja `preparar_oportunidad`.
+
+    `ticker` cambia solo el símbolo (para probar los que llevan punto, como `WTI.spot`).
+    """
     from estrategia.contrato import lectura_a_dict
 
     from analista import oportunidad as op
@@ -92,7 +95,8 @@ def activo_semanal(rango: bool = False) -> dict:
                "borde_superior": "14567", "borde_inferior": "14206"}
         nombre, visible, digits, unidad = "Cobre", "COPPER", 0, "USD/t"
     else:
-        lec = lectura(direccion="BAJISTA", precio=4186.17, invalidacion=4227.32, objetivo=4149.96)
+        lec = lectura(ticker=ticker or "XAUUSD", direccion="BAJISTA", precio=4186.17, invalidacion=4227.32,
+                      objetivo=4149.96)
         fmt = {"precio": "4.186,17", "vigilar": "4.227,32", "invalidacion": "4.227,32",
                "objetivo_tori": "4.149,96", "entrada": "4.186,17", "stop": "4.227,32",
                "objetivo": "4.062,72", "borde_superior": "", "borde_inferior": ""}
@@ -102,20 +106,24 @@ def activo_semanal(rango: bool = False) -> dict:
             "foto": {"guardada": "2026-10-12T09:05:00-03:00", "fecha": "lunes 12-10", "precio": lec.precio},
             "lectura": lectura_a_dict(lec), "escenario": op.escenario(lec, digits).a_dict(), "fmt": fmt,
             "contrato": {"clp_unidad": 950.0, "vol_min": 0.01, "vol_paso": 0.01},
-            "temporalidad": "4H · swing (de una a dos semanas)", "grafico": f"grafico_{lec.ticker.lower()}.png"}
+            "temporalidad": "4H · swing (de una a dos semanas)",
+            "grafico": f"grafico_{lec.ticker.lower().replace('.', '_')}.png"}
 
 
-def pieza_oportunidad(dir_pedido: Path, laminas: bool = False) -> dict:
+def pieza_oportunidad(dir_pedido: Path, laminas: bool = False, wti: bool = False) -> dict:
     """La pieza semanal con su texto ya escrito: dos activos (uno con tendencia y uno en rango).
 
     Escribe los gráficos en `dir_pedido`; con `laminas=True` también las láminas, que en el
     bot se rinden antes del HTML (así el botón «Descargar lámina» aparece).
     """
     activos = [activo_semanal(), activo_semanal(rango=True)]
+    if wti:  # el WTI sale todas las semanas (cobertura fija) y su ticker lleva punto
+        activos.append(activo_semanal(ticker="WTI.spot"))
     for a in activos:
         _imagen(dir_pedido, a["grafico"])
         if laminas:
-            _imagen(dir_pedido, f"lamina_{a['ticker'].lower().replace('.', '_')}.png")
+            _imagen(dir_pedido, {"WTI.spot": "lamina_wti_spot.png"}.get(a["ticker"],
+                                                                         f"lamina_{a['ticker'].lower()}.png"))
     tickers = [a["ticker"] for a in activos]
     p = es.nueva_pieza("oportunidad", {"semana": "2026-W42"},
                        {"semana": "2026-W42", "chip": "ANÁLISIS TÉCNICO DE LA SEMANA", "edicion": "lunes 12-10 · 09:30",

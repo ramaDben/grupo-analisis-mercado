@@ -172,6 +172,25 @@ def test_oportunidad_rinde_las_laminas_antes_del_html(armado):
     assert (r.archivos[0].parent / "lamina_xauusd.png").exists()
 
 
+def test_la_lamina_del_wti_aparece_en_el_html(armado):
+    def con_wti(orden, dir_pedido, ahora, **kw):
+        dir_pedido.mkdir(parents=True, exist_ok=True)
+        pieza = fx.pieza_oportunidad(dir_pedido, wti=True)
+        pr.guardar_pieza(pieza, dir_pedido)
+        return pr.Preparada(pieza, [])
+
+    def redactar(ruta, tier):
+        pieza = pr.cargar_pieza(ruta.parent)
+        pieza["editorial"] = fx.pieza_oportunidad(ruta.parent, wti=True)["editorial"]
+        pr.guardar_pieza(pieza, ruta.parent)
+        return SimpleNamespace(codigo="ok", detalle="")
+
+    armado.atendedor.preparar, armado.atendedor.redactar = con_wti, redactar
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
+    html = r.archivos[0].read_text(encoding="utf-8")
+    assert 'download="lamina_wti_spot.png"' in html
+
+
 def test_oportunidad_solo_va_a_drive_el_html(armado):
     armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
     en_drive = list((armado.tmp / "drive" / "GI Informes").rglob("*.*"))
