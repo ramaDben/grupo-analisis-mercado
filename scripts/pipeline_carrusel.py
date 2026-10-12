@@ -1409,6 +1409,7 @@ def despachar(
     dry_run: bool = False,
     headless: bool = True,
     pruebas: bool = False,
+    grupo: str | None = None,
 ) -> dict[str, Any]:
     """Rinde y despacha canal por canal, en orden y sin dejar envejecer las piezas.
 
@@ -1436,8 +1437,10 @@ def despachar(
     from bitacora_despachos import ya_despachada
 
     grupos = sorted(d for d in directorio.iterdir() if d.is_dir())
+    if grupo:
+        grupos = [d for d in grupos if d.name == grupo]
     if not grupos:
-        raise SystemExit(f"No hay carpetas de grupo en {directorio}")
+        raise SystemExit(f"No hay carpetas de grupo en {directorio}" + (f" para el canal {grupo}" if grupo else ""))
 
     sender = WhatsAppSender(headless=headless)
     destino_fijo = sender.config.destino_de_pruebas if pruebas else None
@@ -1707,6 +1710,7 @@ def main(argv: list[str] | None = None) -> int:
             dry_run=args.dry_run,
             headless=args.headless,
             pruebas=args.pruebas,
+            grupo=args.grupo,
         )
         print("\nRESUMEN DEL DESPACHO")
         for g in res["grupos"]:
