@@ -212,6 +212,15 @@ def test_oportunidad_en_espera_da_la_hora_del_cierre(armado):
     assert "13:00" in r.texto and armado.llamadas == []
 
 
+def test_foto_vacia_responde_claro_y_no_queda_anotada(armado):
+    armado.atendedor.preparar = lambda o, d, a, **kw: (_ for _ in ()).throw(
+        pr.FotoVaciaError("La semana 2026-W42 no tiene ningún activo con su referencia guardada."))
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
+    assert r.texto.startswith("❌ La semana") and "No pude leer" not in r.texto
+    assert armado.llamadas == [] and armado.estado.usados(CAMILA, AHORA) == 0
+    assert not armado.registro.exists()
+
+
 def test_agy_sin_responder_no_gasta_cupo(armado):
     armado.atendedor.redactar = redactor([], codigo="timeout")
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))

@@ -38,6 +38,10 @@ class FueraDeLaFotoError(PreparacionFallida):
     """El activo no está en la foto de esta semana."""
 
 
+class FotoVaciaError(PreparacionFallida):
+    """Ningún elegido de la semana tiene referencia: una foto vacía quedaría congelada toda la semana."""
+
+
 class EsperaVelaError(PreparacionFallida):
     """Una línea A+ está en prueba: la foto espera el cierre de esa vela (spec §5)."""
 
@@ -251,6 +255,9 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
             json.loads(rs.ruta(semana, ticker, base).read_text(encoding="utf-8"))["guardada"])
         activos.append(_entrada_activo(ticker, referencia, guardada, float(puntajes.get(ticker, 0)),
                                        dir_pedido, lec, estrategia))
+    if not activos:
+        raise FotoVaciaError(f"La semana {semana} no tiene ningún activo con su referencia guardada: no armo "
+                             "una foto vacía. Avisa al director para que revise el análisis semanal.")
     agenda, av = lec.agenda(ahora)
     avisos += [f"contexto sin agenda: {a}" for a in av]
     curva, av = lec.curva()

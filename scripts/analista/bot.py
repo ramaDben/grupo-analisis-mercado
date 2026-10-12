@@ -206,7 +206,8 @@ class Atendedor:
         try:
             # El registro del bot y no el real: con uno inyectado, preparar miraba otro archivo.
             return self.preparar(orden, dir_pedido, ahora, registro=self.registro)
-        except (pr.SinSemanaError, pr.EsperaVelaError, pr.SinFotoError, pr.FueraDeLaFotoError) as exc:
+        except (pr.SinSemanaError, pr.EsperaVelaError, pr.SinFotoError, pr.FueraDeLaFotoError,
+                pr.FotoVaciaError) as exc:
             raise FalloPedido(str(exc)) from exc  # es la respuesta, no una falla
         except pr.PreparacionFallida as exc:
             raise FalloPedido(f"No pude leer los datos: {exc}") from exc

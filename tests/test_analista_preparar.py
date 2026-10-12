@@ -106,6 +106,16 @@ def test_la_foto_trae_los_activos_en_orden_de_puntaje(tmp_path):
     assert hecha.pieza["datos"]["curva"] == []
 
 
+def test_una_foto_sin_activos_no_se_arma(tmp_path):
+    """Sin ninguna referencia guardada, la foto quedaría vacía y congelada toda la semana."""
+    base = tmp_path / "ref"
+    rs.guardar_manifiesto(SEMANA, {"semana": SEMANA, "elegidos": ["XAUUSD"], "puntajes": {"XAUUSD": 90.0},
+                                   "excluidos": []}, base=base)
+    with pytest.raises(pr.FotoVaciaError, match="ningún activo"):
+        pr.preparar(Orden("oportunidad"), tmp_path / "p", AHORA_LUNES, _lectores(base))
+    assert not (tmp_path / "p" / "pieza.json").exists()
+
+
 def test_la_curva_va_sin_porcentajes(tmp_path):
     base = tmp_path / "ref"
     _sembrar(base, [fx.lectura()], {"XAUUSD": 90.0})
