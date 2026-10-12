@@ -87,6 +87,18 @@ def test_un_horizontal_en_el_precio_de_una_zona_se_funde_con_ella():
     assert "Objetivo" in html  # la leyenda lo sigue nombrando
 
 
+def test_los_niveles_citados_van_en_el_eje_y_se_funden_si_coinciden():
+    """Todo nivel que cita el texto de la lámina va trazado con su precio (oro W41: el 4.227,32
+    del texto no estaba en el gráfico). Dos con el mismo precio son una etiqueta."""
+    html = tg.construir_html_tradingview(_rows(), "ORO", "H4", lineas=(SEGURIDAD, OBJETIVO),
+                                         niveles=[(12.9, "NIVEL A VIGILAR"), (12.9, "INVALIDACIÓN"),
+                                                  (15.0, "OBJETIVO")])
+    d = _datos(html)
+    assert [x["rol"] for x in d["lineas"]] == ["seguridad"]
+    assert [(z["precio"], z["rol"]) for z in d["zonas"]] == [(12.9, "NIVEL A VIGILAR · INVALIDACIÓN"),
+                                                              (15.0, "OBJETIVO")]
+
+
 def test_un_horizontal_lejos_de_las_zonas_se_dibuja_aparte():
     html = tg.construir_html_tradingview(_rows(), "ORO", "H4", lineas=(SEGURIDAD, OBJETIVO),
                                          soporte=12.5, resistencia=14.0)

@@ -29,15 +29,30 @@ def firma(autor) -> str:
     return f"Análisis: {autor.nombre} · {autor.cargo}"
 
 
+def _fundir(filas: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """Dos filas con el mismo precio son una sola, con las dos etiquetas: repetir la cifra en dos
+    filas se lee como dos niveles (mismo criterio que las etiquetas del gráfico)."""
+    salida: list[tuple[str, str]] = []
+    for rotulo, valor in filas:
+        i = next((k for k, (_, v) in enumerate(salida) if valor and v == valor), None)
+        if i is None:
+            salida.append((rotulo, valor))
+        else:
+            salida[i] = (f"{salida[i][0]} · {rotulo}", valor)
+    return salida
+
+
 def _niveles(activo: dict[str, Any]) -> list[tuple[str, str]]:
-    """Los tres niveles del análisis: los de la lectura, nunca los de la simulación."""
+    """Los niveles del análisis: los de la lectura, nunca los de la simulación."""
     f, lec = activo["fmt"], activo["lectura"]
     if lec["estado"] == "RANGO":
-        vig = "Resistencia" if f["vigilar"] == f["borde_superior"] else "Soporte"
-        return [("Resistencia del rango", f["borde_superior"]), ("Soporte del rango", f["borde_inferior"]),
-                (f"{vig} que se vigila", f["vigilar"])]
-    return [("Nivel a vigilar", f["vigilar"]), ("Invalidación", f["invalidacion"] or "sin nivel"),
-            ("Objetivo técnico", f["objetivo_tori"] or "sin nivel")]
+        return _fundir([("Resistencia del rango", f["borde_superior"]), ("Soporte del rango", f["borde_inferior"]),
+                        ("Nivel a vigilar", f["vigilar"])])
+    return _fundir([("Nivel a vigilar", f["vigilar"]), ("Invalidación", f["invalidacion"] or "sin nivel"),
+                    ("Objetivo técnico", f["objetivo_tori"] or "sin nivel")])
+
+
+CLASES_NIVEL = ("nivel-activa", "nivel-anula", "")
 
 
 def payload_semanal(activo: dict[str, Any], titular: str, datos_al: str, autor, chart: Path) -> dict[str, Any]:
@@ -49,8 +64,7 @@ def payload_semanal(activo: dict[str, Any], titular: str, datos_al: str, autor, 
         "precio": f"{activo['fmt']['precio']} {activo['unidad']}".strip(),
         "direccion": lec["direccion"], "sesgo_slug": lec["direccion"].lower(),
         "frase_lectura": lec["escenarios"][0]["texto"],
-        **{f"rotulo_{i}": r for i, (r, _) in enumerate(niveles, 1)},
-        **{f"valor_{i}": v for i, (_, v) in enumerate(niveles, 1)},
+        "niveles": [{"rotulo": r, "valor": v, "clase": CLASES_NIVEL[i]} for i, (r, v) in enumerate(niveles)],
         "temporalidad": activo["temporalidad"],
         "pie_imagen": f"{activo['nombre']} · velas de 4 horas · MetaTrader 5",
         "firma": firma(autor), "aviso": AVISO_PIEZA, "chart_png": str(chart),

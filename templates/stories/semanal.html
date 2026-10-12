@@ -196,9 +196,9 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: var(-
             <span class="pildora">{{direccion}}</span>
           </div>
           <div class="niveles">
-            <div class="nivel nivel-activa"><span class="nivel-rotulo">{{rotulo_1}}</span><span class="nivel-valor">{{valor_1}}</span></div>
-            <div class="nivel nivel-anula"><span class="nivel-rotulo">{{rotulo_2}}</span><span class="nivel-valor">{{valor_2}}</span></div>
-            <div class="nivel"><span class="nivel-rotulo">{{rotulo_3}}</span><span class="nivel-valor">{{valor_3}}</span></div>
+            <!-- FOR:niveles -->
+            <div class="nivel {{clase}}"><span class="nivel-rotulo">{{rotulo}}</span><span class="nivel-valor">{{valor}}</span></div>
+            <!-- ENDFOR:niveles -->
           </div>
           <p class="nota">{{frase_lectura}}</p>
           <p class="temporalidad">⏱️ {{temporalidad}}</p>

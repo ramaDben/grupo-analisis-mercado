@@ -55,7 +55,11 @@ def _sembrar(base, lecturas, puntajes):
                                    "puntajes": puntajes, "excluidos": []}, base=base)
 
 
-def _grafico_falso(ticker, nombre, lectura, destino):
+GRAFICOS: list[dict] = []
+
+
+def _grafico_falso(ticker, nombre, lectura, destino, **kw):
+    GRAFICOS.append({"ticker": ticker, "destino": destino, **kw})
     destino.write_bytes(fx.PNG)
     return destino
 
@@ -217,3 +221,38 @@ def test_seguimiento_sin_simulacion_entrega_la_lectura_de_hoy(tmp_path):
             in d["whatsapp"])
     assert "Lectura técnica hoy" in d["whatsapp"] and "No pude leer" not in d["whatsapp"]
     assert "Stop" not in d["whatsapp"]
+
+
+def test_el_grafico_semanal_traza_los_niveles_de_la_lamina(tmp_path):
+    GRAFICOS.clear()
+    base = tmp_path / "ref"
+    _sembrar(base, [fx.lectura(direccion="BAJISTA", precio=4186.17, invalidacion=4227.32, objetivo=4149.96)],
+             {"XAUUSD": 90.0})
+    pr.preparar(Orden("oportunidad"), tmp_path / "p", AHORA_LUNES, _lectores(base))
+    precios = [p for p, _ in GRAFICOS[-1]["niveles"]]
+    assert 4227.32 in precios and 4149.96 in precios and GRAFICOS[-1]["digits"] == 2
+
+
+def test_el_grafico_del_seguimiento_traza_la_simulacion_y_la_linea_de_hoy(tmp_path):
+    GRAFICOS.clear()
+    base = tmp_path / "ref"
+    _sembrar(base, [fx.lectura()], {"XAUUSD": 90.0})
+    oro = fx.activo_semanal()
+    _foto(tmp_path, base, [oro])
+    pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD"}), tmp_path / "s", datetime(2026, 10, 14, 11, 0, tzinfo=SCL),
+                _lectores_seg(tmp_path, base, pd.DataFrame(columns=["time", "high", "low"]), 4124.0))
+    precios = {p for p, _ in GRAFICOS[-1]["niveles"]}
+    esc = oro["escenario"]
+    assert {esc["entrada"], esc["stop"], esc["objetivo"], fx.lectura().vigilar.precio} <= precios
+
+
+def test_el_grafico_real_pide_velas_suficientes_para_las_diagonales(tmp_path, monkeypatch):
+    """Con 60 velas el ancla de la línea de seguridad del oro quedaba fuera y no se dibujaba."""
+    import pipeline_carrusel as pc
+    import tradingview_grafico as tg
+
+    pedido = {}
+    monkeypatch.setattr(tg, "generar_grafico_tv", lambda **kw: pedido.update(kw) or kw["destino"])
+    pr._grafico_lectura("XAUUSD", "Oro", fx.lectura(), tmp_path / "g.png", digits=2, niveles=[(1.0, "X")])
+    assert pedido["n_velas"] >= pc.VELAS_GRAFICO_TV and pedido["digits"] == 2
+    assert pedido["niveles"] == [(1.0, "X")]

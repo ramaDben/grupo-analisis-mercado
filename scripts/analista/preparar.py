@@ -126,11 +126,46 @@ def _contrato(ticker: str, precio: float) -> dict[str, Any]:
             "vol_paso": float(info.volume_step)}
 
 
-def _grafico_lectura(ticker: str, nombre: str, lectura, destino: Path) -> Path:
+def _grafico_lectura(ticker: str, nombre: str, lectura, destino: Path, digits: int | None = None,
+                     niveles: list[tuple[float, str]] | None = None) -> Path:
+    """El gráfico de la lámina: las líneas de la lectura y cada nivel que cita su texto.
+
+    Con las velas del carrusel y no 60: con menos, el ancla de una diagonal cae fuera de la
+    ventana y la línea no se dibuja (la de seguridad del oro, W41).
+    """
+    import pipeline_carrusel as pc
     from tradingview_grafico import generar_grafico_tv
 
     return generar_grafico_tv(ticker=ticker, nombre=nombre, destino=destino, timeframe=lectura.marco,
-                              lineas=lectura.lineas)
+                              n_velas=pc.VELAS_GRAFICO_TV, digits=digits, lineas=lectura.lineas,
+                              niveles=niveles)
+
+
+def niveles_lamina_semanal(lectura) -> list[tuple[float, str]]:
+    """Los niveles que nombra la lámina semanal (`comercial._niveles`), en precio, para trazarlos."""
+    from analista import oportunidad as op
+
+    if lectura.estado == "RANGO":
+        sup, inf = op.bordes_rango(lectura)
+        filas = [(sup, "RESISTENCIA DEL RANGO"), (inf, "SOPORTE DEL RANGO"), (lectura.vigilar.precio, "NIVEL A VIGILAR")]
+    else:
+        filas = [(lectura.vigilar.precio, "NIVEL A VIGILAR")]
+        if lectura.invalidacion:
+            filas.append((lectura.invalidacion.precio, "INVALIDACIÓN"))
+        if lectura.objetivo:
+            filas.append((lectura.objetivo.precio, "OBJETIVO TÉCNICO"))
+    return filas
+
+
+def niveles_lamina_seguimiento(esc: dict[str, Any], simula: bool, hoy) -> list[tuple[float, str]]:
+    """Los niveles que nombra el seguimiento: la simulación (si la hay) y la línea de hoy."""
+    filas = ([(esc["entrada"], "ENTRADA"), (esc["stop"], "STOP"), (esc["objetivo"], "OBJETIVO 1:3")]
+             if simula else [])
+    if hoy.estado == "PRUEBA" and hoy.en_prueba is not None:
+        filas.append((hoy.en_prueba.valor_ahora, hoy.vigilar.etiqueta.upper()))
+    else:
+        filas.append((hoy.vigilar.precio, hoy.vigilar.etiqueta.upper()))
+    return filas
 
 
 def _estrategia():
@@ -206,7 +241,8 @@ def _entrada_activo(ticker: str, referencia, guardada: datetime, puntaje: float,
     if referencia.estado == "RANGO":
         sup, inf = op.bordes_rango(referencia)
     grafico = f"grafico_{ticker.lower().replace('.', '_')}.png"
-    lec.grafico_lectura(ticker, cat["nombre"], referencia, dir_pedido / grafico)
+    lec.grafico_lectura(ticker, cat["nombre"], referencia, dir_pedido / grafico, digits=d,
+                        niveles=niveles_lamina_semanal(referencia))
     etiqueta = estrategia.marcos.etiquetas[referencia.marco]
     return {
         "ticker": ticker, "nombre": cat["nombre"], "ticker_visible": cat.get("ticker_visible", ticker),
@@ -319,7 +355,8 @@ def preparar_seguimiento(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
     hoy = fecha_corta(ahora)
     texto = sg.mensaje(a["nombre"], hoy, a["foto"]["fecha"], esc, ev, precio, diaria.lectura, reemplazada,
                        a["digits"])
-    lec.grafico_lectura(ticker, a["nombre"], diaria.lectura, dir_pedido / "grafico.png")
+    lec.grafico_lectura(ticker, a["nombre"], diaria.lectura, dir_pedido / "grafico.png", digits=a["digits"],
+                        niveles=niveles_lamina_seguimiento(esc, not motivo, diaria.lectura))
     datos = {"semana": semana, "ticker": ticker, "nombre": a["nombre"], "evaluacion": ev, "precio_vivo": precio,
              "lectura_hoy": lectura_hoy, "reemplazada": reemplazada, "whatsapp": texto,
              "edicion": f"{hoy} · {ahora.astimezone(SANTIAGO):%H:%M}", "activo": a}
