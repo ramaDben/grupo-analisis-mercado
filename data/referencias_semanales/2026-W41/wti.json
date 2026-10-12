@@ -1,0 +1,227 @@
+{
+  "ticker": "WTI.spot",
+  "semana": "2026-W41",
+  "motivo": "semanal",
+  "guardada": "2026-10-11T20:59-03:00",
+  "lectura": {
+    "ticker": "WTI.spot",
+    "marco": "H4",
+    "precio": 92.838,
+    "direccion": "BAJISTA",
+    "estado": "TENDENCIA",
+    "lineas": [
+      {
+        "rol": "accion",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1791273600,
+            88.336
+          ],
+          [
+            1791374400,
+            89.256
+          ]
+        ],
+        "marco": "H4",
+        "toques": 2,
+        "calidad": "B",
+        "valor_actual": 91.096,
+        "empinada": false
+      },
+      {
+        "rol": "seguridad",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1789718400,
+            102.511
+          ],
+          [
+            1790568000,
+            99.276
+          ]
+        ],
+        "marco": "H4",
+        "toques": 3,
+        "calidad": "A+",
+        "valor_actual": 94.117,
+        "empinada": false
+      },
+      {
+        "rol": "contexto",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1765670400,
+            54.819
+          ],
+          [
+            1782604800,
+            67.349
+          ]
+        ],
+        "marco": "W1",
+        "toques": 2,
+        "calidad": "B",
+        "valor_actual": 73.614,
+        "empinada": false
+      },
+      {
+        "rol": "contexto",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1782950400,
+            67.349
+          ],
+          [
+            1791244800,
+            88.336
+          ]
+        ],
+        "marco": "D1",
+        "toques": 4,
+        "calidad": "B",
+        "valor_actual": 89.104,
+        "empinada": false
+      },
+      {
+        "rol": "contexto",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1772928000,
+            119.429
+          ],
+          [
+            1789430400,
+            106.686
+          ]
+        ],
+        "marco": "D1",
+        "toques": 3,
+        "calidad": "A+",
+        "valor_actual": 105.044,
+        "empinada": false
+      },
+      {
+        "rol": "objetivo",
+        "tipo": "horizontal",
+        "puntos": [
+          [
+            1773360000,
+            91.49
+          ]
+        ],
+        "marco": "D1",
+        "toques": 8,
+        "calidad": "",
+        "valor_actual": 91.49,
+        "empinada": false
+      }
+    ],
+    "en_prueba": null,
+    "vigilar": {
+      "precio": 91.096,
+      "etiqueta": "línea alcista",
+      "linea": {
+        "rol": "accion",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1791273600,
+            88.336
+          ],
+          [
+            1791374400,
+            89.256
+          ]
+        ],
+        "marco": "H4",
+        "toques": 2,
+        "calidad": "B",
+        "valor_actual": 91.096,
+        "empinada": false
+      }
+    },
+    "invalidacion": {
+      "precio": 94.117,
+      "etiqueta": "línea bajista de seguridad",
+      "linea": {
+        "rol": "seguridad",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1789718400,
+            102.511
+          ],
+          [
+            1790568000,
+            99.276
+          ]
+        ],
+        "marco": "H4",
+        "toques": 3,
+        "calidad": "A+",
+        "valor_actual": 94.117,
+        "empinada": false
+      }
+    },
+    "objetivo": {
+      "precio": 91.49,
+      "etiqueta": "objetivo",
+      "linea": {
+        "rol": "objetivo",
+        "tipo": "horizontal",
+        "puntos": [
+          [
+            1773360000,
+            91.49
+          ]
+        ],
+        "marco": "D1",
+        "toques": 8,
+        "calidad": "",
+        "valor_actual": 91.49,
+        "empinada": false
+      }
+    },
+    "escenarios": [
+      {
+        "flecha": "⬆️",
+        "condicion": "Cierre sobre 94,117",
+        "texto": "Si una vela de 4 horas cierra sobre 94,117, la línea bajista se rompe y la tendencia deja de valer."
+      },
+      {
+        "flecha": "↔️",
+        "condicion": "Entre 91,096 y 94,117",
+        "texto": "Mientras el precio siga entre las dos líneas, la tendencia bajista sigue en pie, pero todavía no hay ruptura que operar."
+      },
+      {
+        "flecha": "⬇️",
+        "condicion": "Cierre bajo 91,096",
+        "texto": "Si una vela de 4 horas cierra bajo 91,096, se rompe la línea alcista del retroceso y la tendencia retoma con objetivo en 91,490."
+      }
+    ],
+    "salida": "La posición se cierra cuando una vela de 4 horas cierra al otro lado de la línea de seguridad, hoy en 94,117. No hay objetivo fijo.",
+    "conceptos": [
+      "linea-de-tendencia",
+      "linea-de-seguridad"
+    ],
+    "avisos": [],
+    "metricas": {
+      "atr": 1.2494285714285678,
+      "atr_d1": 3.625999999999997,
+      "confluencia": 0.5,
+      "dist_vigilar_atr_d1": 0.48041919470490674,
+      "dist_seguridad_atr_d1": 0.3527302813017131,
+      "semanas_principal": 1.2666666666666666,
+      "dist_accion_atr_d1": 0.48041919470490674,
+      "dist_objetivo_atr_d1": 0.3717595146166575,
+      "doble_confirmacion": 1.0,
+      "contra_secuencia": 0.0
+    },
+    "vela": 1791734400
+  }
+}

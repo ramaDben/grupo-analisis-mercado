@@ -1,8 +1,54 @@
 {
-  "as_of": "2026-10-02T16:19:47.194835+00:00",
+  "as_of": "2026-10-12T16:19:10.564826+00:00",
   "fuente_tesoro": "U.S. Department of the Treasury (Fiscal Data API)",
   "fuente_fed": "Federal Reserve Bank of St. Louis (FRED)",
   "buybacks_operaciones": [
+    {
+      "operation_date": "2026-10-08",
+      "operation_start_time_est": "01:40 PM",
+      "operation_close_time_est": "02:00 PM",
+      "settlement_date": "2026-10-09",
+      "preliminary_ann_pdf": "BBPA_20261008174000.pdf",
+      "preliminary_ann_xml": "BBPA_20261008174000.xml",
+      "final_ann_pdf": "BBA_20261008174000.pdf",
+      "final_ann_xml": "BBA_20261008174000.xml",
+      "results_pdf": "BBR_20261008174000.pdf",
+      "results_xml": "BBR_20261008174000.xml",
+      "special_ann_pdf": "null",
+      "operation_type": "Liquidity Support",
+      "security_type": "Nominal Coupons",
+      "maturity_bucket": "20Y to 30Y",
+      "nbr_issues_accepted": "10",
+      "total_par_amt_offered": "14886000000.00",
+      "par_amt_per_offer": "1000000.00",
+      "max_par_amt_redeemed": "6000000000",
+      "max_nbr_offers": "9",
+      "nbr_issues_eligible": "34",
+      "total_par_amt_accepted": "6000000000.00"
+    },
+    {
+      "operation_date": "2026-10-06",
+      "operation_start_time_est": "01:40 PM",
+      "operation_close_time_est": "02:00 PM",
+      "settlement_date": "2026-10-07",
+      "preliminary_ann_pdf": "BBPA_20261006174000.pdf",
+      "preliminary_ann_xml": "BBPA_20261006174000.xml",
+      "final_ann_pdf": "BBA_20261006174000.pdf",
+      "final_ann_xml": "BBA_20261006174000.xml",
+      "results_pdf": "BBR_20261006174000.pdf",
+      "results_xml": "BBR_20261006174000.xml",
+      "special_ann_pdf": "null",
+      "operation_type": "Liquidity Support",
+      "security_type": "Nominal Coupons",
+      "maturity_bucket": "2Y to 3Y",
+      "nbr_issues_accepted": "12",
+      "total_par_amt_offered": "14763000000.00",
+      "par_amt_per_offer": "1000000.00",
+      "max_par_amt_redeemed": "4000000000",
+      "max_nbr_offers": "9",
+      "nbr_issues_eligible": "33",
+      "total_par_amt_accepted": "1327000000.00"
+    },
     {
       "operation_date": "2026-10-01",
       "operation_start_time_est": "01:40 PM",
@@ -416,52 +462,6 @@
       "max_nbr_offers": "9",
       "nbr_issues_eligible": "32",
       "total_par_amt_accepted": "2295000000.00"
-    },
-    {
-      "operation_date": "2026-07-01",
-      "operation_start_time_est": "01:40 PM",
-      "operation_close_time_est": "02:00 PM",
-      "settlement_date": "2026-07-02",
-      "preliminary_ann_pdf": "BBPA_20260701174000.pdf",
-      "preliminary_ann_xml": "BBPA_20260701174000.xml",
-      "final_ann_pdf": "BBA_20260701174000.pdf",
-      "final_ann_xml": "BBA_20260701174000.xml",
-      "results_pdf": "BBR_20260701174000.pdf",
-      "results_xml": "BBR_20260701174000.xml",
-      "special_ann_pdf": "null",
-      "operation_type": "Liquidity Support",
-      "security_type": "Nominal Coupons",
-      "maturity_bucket": "10Y to 20Y",
-      "nbr_issues_accepted": "2",
-      "total_par_amt_offered": "15724000000.00",
-      "par_amt_per_offer": "1000000.00",
-      "max_par_amt_redeemed": "2000000000",
-      "max_nbr_offers": "9",
-      "nbr_issues_eligible": "38",
-      "total_par_amt_accepted": "2000000000.00"
-    },
-    {
-      "operation_date": "2026-06-25",
-      "operation_start_time_est": "01:40 PM",
-      "operation_close_time_est": "02:00 PM",
-      "settlement_date": "2026-06-26",
-      "preliminary_ann_pdf": "BBPA_20260625174000.pdf",
-      "preliminary_ann_xml": "BBPA_20260625174000.xml",
-      "final_ann_pdf": "BBA_20260625174000.pdf",
-      "final_ann_xml": "BBA_20260625174000.xml",
-      "results_pdf": "BBR_20260625174000.pdf",
-      "results_xml": "BBR_20260625174000.xml",
-      "special_ann_pdf": "null",
-      "operation_type": "Liquidity Support",
-      "security_type": "Nominal Coupons",
-      "maturity_bucket": "20Y to 30Y",
-      "nbr_issues_accepted": "3",
-      "total_par_amt_offered": "21320000000.00",
-      "par_amt_per_offer": "1000000.00",
-      "max_par_amt_redeemed": "2000000000",
-      "max_nbr_offers": "9",
-      "nbr_issues_eligible": "35",
-      "total_par_amt_accepted": "2000000000.00"
     }
   ],
   "curva_rendimientos_yields": {
@@ -528,7 +528,13 @@
         "2026-09-25": 4.81,
         "2026-09-28": 4.92,
         "2026-09-29": 4.89,
-        "2026-09-30": 4.88
+        "2026-09-30": 4.88,
+        "2026-10-01": 4.78,
+        "2026-10-02": 4.83,
+        "2026-10-05": 4.84,
+        "2026-10-07": 4.77,
+        "2026-10-06": 4.79,
+        "2026-10-08": 4.75
       },
       "status": "OK"
     },
@@ -595,7 +601,13 @@
         "2026-09-25": 5.17,
         "2026-09-28": 5.24,
         "2026-09-29": 5.26,
-        "2026-09-30": 5.29
+        "2026-09-30": 5.29,
+        "2026-10-01": 5.24,
+        "2026-10-02": 5.28,
+        "2026-10-05": 5.31,
+        "2026-10-07": 5.28,
+        "2026-10-06": 5.27,
+        "2026-10-08": 5.22
       },
       "status": "OK"
     },
@@ -662,7 +674,13 @@
         "2026-09-25": 5.49,
         "2026-09-28": 5.56,
         "2026-09-29": 5.59,
-        "2026-09-30": 5.64
+        "2026-09-30": 5.64,
+        "2026-10-01": 5.61,
+        "2026-10-02": 5.63,
+        "2026-10-05": 5.66,
+        "2026-10-07": 5.67,
+        "2026-10-06": 5.64,
+        "2026-10-08": 5.6
       },
       "status": "OK"
     },
@@ -742,7 +760,15 @@
         "2026-09-27": 3.88,
         "2026-09-26": 3.88,
         "2026-09-29": 3.88,
-        "2026-09-30": 3.88
+        "2026-09-30": 3.88,
+        "2026-10-01": 3.88,
+        "2026-10-02": 3.88,
+        "2026-10-05": 3.88,
+        "2026-10-04": 3.88,
+        "2026-10-03": 3.88,
+        "2026-10-07": 3.88,
+        "2026-10-06": 3.88,
+        "2026-10-08": 3.88
       },
       "status": "OK"
     },
@@ -808,7 +834,13 @@
         "2026-09-25": 2.83,
         "2026-09-28": 2.9,
         "2026-09-29": 2.91,
-        "2026-09-30": 2.93
+        "2026-09-30": 2.93,
+        "2026-10-01": 2.88,
+        "2026-10-02": 2.92,
+        "2026-10-05": 2.95,
+        "2026-10-07": 2.92,
+        "2026-10-06": 2.91,
+        "2026-10-08": 2.87
       },
       "status": "OK"
     },
@@ -874,7 +906,13 @@
         "2026-09-28": 2.34,
         "2026-09-29": 2.35,
         "2026-09-30": 2.36,
-        "2026-10-01": 2.36
+        "2026-10-01": 2.36,
+        "2026-10-02": 2.36,
+        "2026-10-05": 2.36,
+        "2026-10-06": 2.36,
+        "2026-10-07": 2.36,
+        "2026-10-08": 2.35,
+        "2026-10-09": 2.33
       },
       "status": "OK"
     }

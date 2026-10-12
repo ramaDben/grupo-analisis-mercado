@@ -1,0 +1,130 @@
+{
+  "ticker": "EURUSD",
+  "semana": "2026-W41",
+  "motivo": "semanal",
+  "guardada": "2026-10-11T20:59-03:00",
+  "lectura": {
+    "ticker": "EURUSD",
+    "marco": "H4",
+    "precio": 1.11946,
+    "direccion": "LATERAL",
+    "estado": "RANGO",
+    "lineas": [
+      {
+        "rol": "rango",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1791158400,
+            1.116
+          ],
+          [
+            1791446400,
+            1.11706
+          ]
+        ],
+        "marco": "H4",
+        "toques": 3,
+        "calidad": "B",
+        "valor_actual": 1.11754,
+        "empinada": false
+      },
+      {
+        "rol": "rango",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1788940800,
+            1.16531
+          ],
+          [
+            1789128000,
+            1.16141
+          ]
+        ],
+        "marco": "H4",
+        "toques": 2,
+        "calidad": "B",
+        "valor_actual": 1.12361,
+        "empinada": false
+      },
+      {
+        "rol": "contexto",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1770681600,
+            1.19274
+          ],
+          [
+            1776384000,
+            1.1848
+          ]
+        ],
+        "marco": "D1",
+        "toques": 3,
+        "calidad": "A+",
+        "valor_actual": 1.16391,
+        "empinada": false
+      }
+    ],
+    "en_prueba": null,
+    "vigilar": {
+      "precio": 1.11754,
+      "etiqueta": "soporte del rango",
+      "linea": {
+        "rol": "rango",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1791158400,
+            1.116
+          ],
+          [
+            1791446400,
+            1.11706
+          ]
+        ],
+        "marco": "H4",
+        "toques": 3,
+        "calidad": "B",
+        "valor_actual": 1.11754,
+        "empinada": false
+      }
+    },
+    "invalidacion": null,
+    "objetivo": null,
+    "escenarios": [
+      {
+        "flecha": "⬆️",
+        "condicion": "Cierre sobre 1,12361",
+        "texto": "Si una vela de 4 horas cierra sobre 1,12361, el precio sale del rango hacia arriba."
+      },
+      {
+        "flecha": "↔️",
+        "condicion": "Entre 1,11754 y 1,12361",
+        "texto": "Si rompe un borde y vuelve a entrar, es falso quiebre y el objetivo pasa a ser el borde contrario."
+      },
+      {
+        "flecha": "⬇️",
+        "condicion": "Cierre bajo 1,11754",
+        "texto": "Si una vela de 4 horas cierra bajo 1,11754, el precio sale del rango hacia abajo."
+      }
+    ],
+    "salida": "Dentro del rango se opera el falso quiebre: la posición se cierra si el precio vuelve a cerrar fuera del borde que había roto.",
+    "conceptos": [
+      "rango",
+      "falso-quiebre"
+    ],
+    "avisos": [],
+    "metricas": {
+      "atr": 0.002105714285714298,
+      "atr_d1": 0.006142857142857132,
+      "confluencia": 0.0,
+      "dist_vigilar_atr_d1": 0.31255813953487155,
+      "doble_confirmacion": 1.0,
+      "contra_secuencia": 0.0
+    },
+    "vela": 1791734400
+  }
+}

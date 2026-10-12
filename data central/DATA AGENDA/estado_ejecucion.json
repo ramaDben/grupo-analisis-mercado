@@ -1,7 +1,8 @@
 {
-  "ultima_ejecucion_utc": "2026-10-02T16:20:17.459960+00:00",
+  "ultima_ejecucion_utc": "2026-10-12T16:19:36.576054+00:00",
   "hay_novedades": true,
   "novedades_detalle": [
+    "Datos actualizados en Europa/UK (Tasas BCE / Bank Rate)",
     "Datos actualizados en Commodities (Cobre / WTI / Brent / Oro)",
     "Datos actualizados en Japón (Banco de Japón / IPC / JGB / USD-JPY)"
   ],
@@ -14,10 +15,10 @@
   },
   "errores_por_fuente": {},
   "hashes_canonicos": {
-    "usa": "8485ddc56740a0661b196240a80969d0e5f84d591e1ee75f39446337bb77857e",
-    "chile": "68f611e1e85a3e2a4a04775e29f8f18b96ae5c11b3863edd5acb0179cb359f40",
-    "europa_uk": "3faec805a26d5b81ed209a84ff2a14f91c959a6f660f3884d39cd6969a7e67df",
-    "commodities": "35a1657a1f3aea4fedd088dbcf7f4b9209c99bc84ca7d67da3035e34086a6abf",
-    "japon": "2d19853e482c821a6be5ba8dde25df067d6eed1217d71bcd5f91ac5680e8accb"
+    "usa": "3b7f2012373379bd92945a9e2d714a5bd13e1dca9d62e1c5598d231d794c2da9",
+    "chile": "27338320afb54ceeb3cf2f73aa1d5f3f142ed9b3053bb09a532c23c7a201ff23",
+    "europa_uk": "dccff237981a999e8191d079b52d9f35b2a513943debc0b720f7f61e61afd77d",
+    "commodities": "5262fe86287df478adb25d0ecc85a4b17f6d970e7135bbe71c5c8a2c5c94c84d",
+    "japon": "8f000c7beaae2dc57ab214c63319972fab3ba4c6fc0c6cee297ebfd907788211"
   }
 }
