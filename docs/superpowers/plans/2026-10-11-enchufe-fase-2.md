@@ -1594,6 +1594,13 @@ Tests: una línea diagonal con anclas en la ventana produce una serie de línea 
 
 ### Task S5-2: Purga de lo que solo usaban el carrusel y el gráfico
 
+> **Ejecutada el 2026-10-11** (rama `feat/enchufe-s5-grafico`, apilada sobre S4 porque el merge
+> de S4 queda en manos del director). `series_de_lineas` vive en `tradingview_grafico` y la usa
+> también `tori_revision`. Con `lineas` el gráfico no dibuja medias; sin ellas (Avisos y el
+> analista) quedan las EMA 50/100 y las zonas, sin canal. `calcular_indicadores` del gráfico
+> queda en EMA 50/100 y ATR 14. Los ajustes visuales (etiquetas superpuestas) quedan para el
+> final de todas las fases, por pedido del director.
+
 - Borrar `tradingview_grafico._canal` y `calcular_estructura` y los indicadores que el gráfico ya no muestra (spec §6), con sus tests.
 - `rendir` y `_refrescar_y_rendir` pasan `lineas=lectura.lineas` y dejan de pasar `soporte`/`resistencia`.
 - Verificación: `--despachar <tanda> --dry-run` y una tanda real al banco de pruebas con aprobación del director.

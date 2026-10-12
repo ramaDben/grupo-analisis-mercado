@@ -251,6 +251,16 @@ def niveles_publicados(lectura) -> tuple[float | None, float | None]:
     return (max(abajo) if abajo else None, min(arriba) if arriba else None)
 
 
+def lineas_de(payload: dict[str, Any]):
+    """Las líneas de la lectura que el gráfico dibuja, o None si la pieza no viene de la
+    estrategia (Avisos y el analista, hasta S6/S7)."""
+    if "lectura" not in payload:
+        return None
+    from estrategia.contrato import lectura_de_dict
+
+    return lectura_de_dict(payload["lectura"]).lineas
+
+
 def _sesgo_de(direccion: str) -> str:
     """El chip de la pieza: sin dirección afirmada, `Lateral` (nunca bajista por descarte)."""
     return {"ALCISTA": "Alcista", "BAJISTA": "Bajista"}.get(direccion, "Lateral")
@@ -1514,6 +1524,7 @@ def rendir(directorio: Path) -> dict[str, Any]:
                 n_velas=VELAS_GRAFICO_TV,
                 soporte=soporte_val,
                 resistencia=resistencia_val,
+                lineas=lineas_de(payload),
             )
         except Exception:
             # Fallback a Story render tradicional si MT5 o Chromium no están en este entorno
@@ -1770,6 +1781,7 @@ def _refrescar_y_rendir(dir_grupo: Path) -> list[str]:
                 n_velas=VELAS_GRAFICO_TV,
                 soporte=soporte_val,
                 resistencia=resistencia_val,
+                lineas=lineas_de(nuevo),
             )
         except Exception:
             pieza = json.loads(json.dumps(nuevo))

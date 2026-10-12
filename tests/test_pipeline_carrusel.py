@@ -1674,3 +1674,16 @@ def replace_lectura(lectura, **cambios):
     from dataclasses import replace
 
     return replace(lectura, **cambios)
+
+
+def test_las_lineas_del_grafico_salen_de_la_lectura_del_payload():
+    lineas = pc.lineas_de(_payload_lectura())
+    assert [x.rol for x in lineas] == ["seguridad"]
+    assert pc.lineas_de({"activo": "Oro"}) is None  # un payload sin lectura (Avisos) no trae
+
+
+def test_las_dos_rutas_de_render_pasan_las_lineas_al_grafico():
+    """S5: el gráfico dibuja `Lectura.lineas` tanto al rendir como al refrescar antes de enviar."""
+    import inspect
+    for fn in (pc.rendir, pc._refrescar_y_rendir):
+        assert "lineas=lineas_de(" in inspect.getsource(fn), fn.__name__

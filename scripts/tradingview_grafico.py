@@ -3,9 +3,8 @@
 """Motor de renderizado de gráficos TradingView (Lightweight Charts™ v5) en 300 DPI y Alto Contraste.
 
 Extrae velas en tiempo real desde MetaTrader 5 (o recibe un payload JSON por stdin),
-calcula indicadores (EMA 50/100 a la vista; ATR 14 para medir la estructura), traza
-canales de tendencia y swings mayores automáticos más las zonas de soporte y
-resistencia del mensaje, y compila una imagen
+dibuja las líneas de la `Lectura` de la estrategia activa (enchufe, fase 2) más las
+zonas de soporte y resistencia del mensaje, y compila una imagen
 PNG en ultra alta resolución (Retina / 300 DPI) usando Chromium headless (Playwright)
 con polyfill de devicePixelContentBoxSize y paleta luminosa de marca Grupo Inteligencia.
 
@@ -38,292 +37,105 @@ class TradingViewRenderError(RuntimeError):
     """Error accionable en el renderizado de TradingView."""
 
 
-def calcular_indicadores(df_velas: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Calcula EMAs 20/50/200, Bandas de Bollinger (20,2), Donchian 50, ATR 14, RSI 14 y ADX 14."""
-    import math
-    n = len(df_velas)
-    if n == 0:
-        return []
-
-    cierres = [float(v["close"]) for v in df_velas]
-    altos = [float(v["high"]) for v in df_velas]
-    bajos = [float(v["low"]) for v in df_velas]
-
-    # 1. EMAs
-    def ema_series(valores: list[float], span: int) -> list[float | None]:
-        if len(valores) < span:
-            return [None] * len(valores)
-        k = 2.0 / (span + 1.0)
-        res: list[float | None] = [None] * (span - 1)
-        prom = sum(valores[:span]) / span
+def _ema(valores: list[float], span: int) -> list[float | None]:
+    if len(valores) < span:
+        return [None] * len(valores)
+    k = 2.0 / (span + 1.0)
+    res: list[float | None] = [None] * (span - 1)
+    prom = sum(valores[:span]) / span
+    res.append(prom)
+    for v in valores[span:]:
+        prom = v * k + prom * (1.0 - k)
         res.append(prom)
-        for v in valores[span:]:
-            prom = v * k + prom * (1.0 - k)
-            res.append(prom)
-        return res
+    return res
 
-    ema20 = ema_series(cierres, 20)
-    ema50 = ema_series(cierres, 50)
-    ema100 = ema_series(cierres, 100)
-    ema200 = ema_series(cierres, 200)
 
-    # 2. Bandas de Bollinger (20, 2)
-    bb_upper: list[float | None] = []
-    bb_lower: list[float | None] = []
-    bb_mid: list[float | None] = []
-    periodo_bb = 20
-    for i in range(n):
-        if i < periodo_bb - 1:
-            bb_upper.append(None)
-            bb_lower.append(None)
-            bb_mid.append(None)
-        else:
-            ventana = cierres[i - periodo_bb + 1 : i + 1]
-            sma = sum(ventana) / periodo_bb
-            var = sum((x - sma) ** 2 for x in ventana) / periodo_bb
-            std = math.sqrt(var)
-            bb_mid.append(sma)
-            bb_upper.append(sma + 2.0 * std)
-            bb_lower.append(sma - 2.0 * std)
+def _epoch(t: Any) -> int:
+    if isinstance(t, str):
+        return int(datetime.fromisoformat(t.replace("Z", "+00:00")).replace(tzinfo=timezone.utc).timestamp())
+    if isinstance(t, (int, float)):
+        return int(t)
+    return int(t.timestamp())
 
-    # 3. Donchian 50
-    don_high: list[float | None] = []
-    don_low: list[float | None] = []
-    periodo_don = 50
-    for i in range(n):
-        if i < periodo_don - 1:
-            don_high.append(None)
-            don_low.append(None)
-        else:
-            don_high.append(max(altos[i - periodo_don + 1 : i + 1]))
-            don_low.append(min(bajos[i - periodo_don + 1 : i + 1]))
 
-    # 4. ATR 14
-    tr_list: list[float] = [altos[0] - bajos[0]]
-    for i in range(1, n):
-        tr = max(
-            altos[i] - bajos[i],
-            abs(altos[i] - cierres[i - 1]),
-            abs(bajos[i] - cierres[i - 1]),
-        )
-        tr_list.append(tr)
+def calcular_indicadores(df_velas: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Las velas con lo que el gráfico muestra: EMA 50/100 y el ATR 14 que da alto a las zonas.
 
-    atr14: list[float | None] = [None] * 13
-    if len(tr_list) >= 14:
-        val = sum(tr_list[:14]) / 14.0
-        atr14.append(val)
-        for tr in tr_list[14:]:
-            val = (val * 13.0 + tr) / 14.0
-            atr14.append(val)
-    else:
-        atr14 = [None] * n
-
-    # 5. RSI 14
-    rsi14: list[float | None] = [None] * 14
-    if n > 14:
-        gains = []
-        losses = []
-        for i in range(1, n):
-            delta = cierres[i] - cierres[i - 1]
-            gains.append(max(0.0, delta))
-            losses.append(max(0.0, -delta))
-
-        avg_gain = sum(gains[:14]) / 14.0
-        avg_loss = sum(losses[:14]) / 14.0
-        if avg_loss == 0:
-            rsi14.append(100.0)
-        else:
-            rs = avg_gain / avg_loss
-            rsi14.append(100.0 - (100.0 / (1.0 + rs)))
-
-        for i in range(14, len(gains)):
-            avg_gain = (avg_gain * 13.0 + gains[i]) / 14.0
-            avg_loss = (avg_loss * 13.0 + losses[i]) / 14.0
-            if avg_loss == 0:
-                rsi14.append(100.0)
-            else:
-                rs = avg_gain / avg_loss
-                rsi14.append(100.0 - (100.0 / (1.0 + rs)))
-
-    # 6. ADX 14 (Average Directional Index)
-    adx14: list[float | None] = [None] * n
-    if n >= 28:
-        plus_dm = [0.0]
-        minus_dm = [0.0]
-        for i in range(1, n):
-            up_move = altos[i] - altos[i - 1]
-            down_move = bajos[i - 1] - bajos[i]
-            if up_move > down_move and up_move > 0:
-                plus_dm.append(up_move)
-            else:
-                plus_dm.append(0.0)
-            if down_move > up_move and down_move > 0:
-                minus_dm.append(down_move)
-            else:
-                minus_dm.append(0.0)
-
-        # Wilder's smoothing para TR, +DM, -DM
-        smooth_tr = sum(tr_list[1:15])
-        smooth_pdm = sum(plus_dm[1:15])
-        smooth_mdm = sum(minus_dm[1:15])
-
-        dx_list = []
-        pdi = (smooth_pdm / smooth_tr) * 100.0 if smooth_tr > 0 else 0.0
-        mdi = (smooth_mdm / smooth_tr) * 100.0 if smooth_tr > 0 else 0.0
-        dx = (abs(pdi - mdi) / (pdi + mdi)) * 100.0 if (pdi + mdi) > 0 else 0.0
-        dx_list.append((14, dx))
-
-        for i in range(15, n):
-            smooth_tr = smooth_tr - (smooth_tr / 14.0) + tr_list[i]
-            smooth_pdm = smooth_pdm - (smooth_pdm / 14.0) + plus_dm[i]
-            smooth_mdm = smooth_mdm - (smooth_mdm / 14.0) + minus_dm[i]
-            pdi = (smooth_pdm / smooth_tr) * 100.0 if smooth_tr > 0 else 0.0
-            mdi = (smooth_mdm / smooth_tr) * 100.0 if smooth_tr > 0 else 0.0
-            dx = (abs(pdi - mdi) / (pdi + mdi)) * 100.0 if (pdi + mdi) > 0 else 0.0
-            dx_list.append((i, dx))
-
-        if len(dx_list) >= 14:
-            first_14_dx = [d[1] for d in dx_list[:14]]
-            adx_val = sum(first_14_dx) / 14.0
-            idx_start = dx_list[13][0]
-            adx14[idx_start] = adx_val
-            for k in range(14, len(dx_list)):
-                idx_k, dx_k = dx_list[k]
-                adx_val = (adx_val * 13.0 + dx_k) / 14.0
-                adx14[idx_k] = adx_val
-
-    # Combinar todo
-    resultado = []
+    Las medias solo se dibujan en las piezas que todavía no salen de la estrategia (Avisos y
+    el analista, hasta S6/S7). Bollinger, Donchian, RSI, ADX y las EMA 20/200 se calculaban y
+    no se mostraban: se borraron con el enchufe (spec §6).
+    """
+    if not df_velas:
+        return []
+    cierres = [float(v["close"]) for v in df_velas]
+    ema50, ema100 = _ema(cierres, 50), _ema(cierres, 100)
+    rangos = []
     for i, v in enumerate(df_velas):
-        t = v["time"]
-        if isinstance(t, str):
-            ts = int(
-                datetime.fromisoformat(t.replace("Z", "+00:00"))
-                .replace(tzinfo=timezone.utc)
-                .timestamp()
-            )
-        elif isinstance(t, (int, float)):
-            ts = int(t)
-        else:
-            ts = int(t.timestamp())
+        alto, bajo = float(v["high"]), float(v["low"])
+        previo = cierres[i - 1] if i else cierres[0]
+        rangos.append(max(alto - bajo, abs(alto - previo), abs(bajo - previo)))
+    atr14: list[float | None] = [None] * len(rangos)
+    if len(rangos) >= 14:
+        atr = sum(rangos[:14]) / 14
+        atr14[13] = atr
+        for i in range(14, len(rangos)):
+            atr = (atr * 13 + rangos[i]) / 14
+            atr14[i] = atr
+    return [{"time": _epoch(v["time"]), "open": float(v["open"]), "high": float(v["high"]),
+             "low": float(v["low"]), "close": float(v["close"]),
+             "ema50": ema50[i], "ema100": ema100[i], "atr": atr14[i]}
+            for i, v in enumerate(df_velas)]
 
-        fila = {
-            "time": ts,
-            "open": float(v["open"]),
-            "high": float(v["high"]),
-            "low": float(v["low"]),
-            "close": float(v["close"]),
-            "ema20": ema20[i] if i < len(ema20) else None,
-            "ema50": ema50[i] if i < len(ema50) else None,
-            "ema100": ema100[i] if i < len(ema100) else None,
-            "ema200": ema200[i] if i < len(ema200) else None,
-            "bollingerUpper": bb_upper[i] if i < len(bb_upper) else None,
-            "bollingerLower": bb_lower[i] if i < len(bb_lower) else None,
-            "bollingerMiddle": bb_mid[i] if i < len(bb_mid) else None,
-            "donchianHigh": don_high[i] if i < len(don_high) else None,
-            "donchianLow": don_low[i] if i < len(don_low) else None,
-            "atr": atr14[i] if i < len(atr14) else None,
-            "rsi": rsi14[i] if i < len(rsi14) else None,
-            "adx": adx14[i] if i < len(adx14) else None,
+
+# Las líneas de la `Lectura` de la estrategia activa (enchufe, fase 2, S5). El gráfico ya
+# no calcula estructura propia: el canal de regresión y los swings del zigzag se borraron
+# (spec §6), porque dibujaban una lectura que el texto no conocía.
+COLOR_ROL = {"accion": "#FF4D5E", "seguridad": "#26C6A0", "seguimiento": "#9BE7C4",
+             "contexto": "#B39DDB", "objetivo": "#FFB300", "rango": "#CBD5E1"}
+NOMBRE_ROL = {"accion": "Línea de acción", "seguridad": "Línea de seguridad",
+              "seguimiento": "Línea de seguimiento", "contexto": "Línea de contexto",
+              "objetivo": "Objetivo", "rango": "Borde del rango"}
+PROYECCION = 14  # velas de semirrecta a la derecha (doctrina 2.1)
+
+
+def series_de_lineas(lineas, tiempos: list[int], proyeccion: int = PROYECCION
+                     ) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
+    """Las líneas de una lectura como series de Lightweight Charts, contadas en velas.
+
+    Una diagonal lleva un punto por vela desde su primer ancla hasta la proyección: el eje
+    de TradingView no reserva espacio a los fines de semana, así que la recta tiene que ser
+    recta en velas y no en tiempo. Una diagonal con un ancla fuera de la ventana no se
+    puede dibujar sin inventar su posición: se omite y se devuelve con el motivo.
+    """
+    indice = {int(t): i for i, t in enumerate(tiempos)}
+    difs = sorted(b - a for a, b in zip(tiempos, tiempos[1:]))
+    paso = difs[len(difs) // 2] if difs else 3600
+    fin = len(tiempos) - 1 + proyeccion
+
+    def t_de(i: int) -> int:
+        return tiempos[i] if i < len(tiempos) else tiempos[-1] + (i - len(tiempos) + 1) * paso
+
+    series: list[dict[str, Any]] = []
+    omitidas: list[dict[str, str]] = []
+    for x in lineas:
+        dato: dict[str, Any] = {
+            "rol": x.rol, "tipo": x.tipo, "color": COLOR_ROL[x.rol],
+            "discontinua": x.rol in ("contexto", "objetivo", "rango"),
+            "titulo": NOMBRE_ROL[x.rol] + (f" {x.calidad}" if x.calidad else ""),
         }
-        resultado.append(fila)
-
-    return resultado
-
-
-# El zigzag se mudó a la estrategia (enchufe S2): los pivotes son parte de Tori.
-from estrategia.tori.pivotes import zigzag as _zigzag  # noqa: E402
-
-
-def _canal(rows: list[dict[str, Any]], i0: int, i1: int, direccion: int,
-           proyeccion: int) -> list[list[tuple[int, float]]] | None:
-    """Canal paralelo del tramo [i0, i1]: pendiente de la regresión de cierres, y dos
-    rectas que envuelven los máximos y los mínimos del tramo.
-
-    Los bordes se toman con percentiles (97/3) y no con el extremo absoluto, para
-    que una sola mecha no ensanche el canal entero. Se descarta si la pendiente no
-    tiene la dirección del tramo: eso es un rango, no un canal.
-    """
-    n = i1 - i0 + 1
-    if n < 24:
-        return None
-    xs = list(range(i0, i1 + 1))
-    ys = [rows[i]["close"] for i in xs]
-    mx, my = sum(xs) / n, sum(ys) / n
-    var = sum((x - mx) ** 2 for x in xs)
-    if var == 0:
-        return None
-    pend = sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / var
-    if pend * direccion <= 0:
-        return None
-    res_h = sorted(rows[i]["high"] - pend * i for i in xs)
-    res_l = sorted(rows[i]["low"] - pend * i for i in xs)
-    b_sup = res_h[min(n - 1, int(n * 0.97))]
-    b_inf = res_l[max(0, int(n * 0.03))]
-    fin = i1 + proyeccion
-    return [
-        [(i0, pend * i0 + b_sup), (fin, pend * fin + b_sup)],
-        [(i0, pend * i0 + b_inf), (fin, pend * fin + b_inf)],
-    ]
-
-
-def calcular_estructura(
-    rows: list[dict[str, Any]],
-    soporte: float | None = None,
-    resistencia: float | None = None,
-    proyeccion: int = 14,
-) -> dict[str, Any]:
-    """Canales de tendencia y swings mayores de la ventana visible, calculados.
-
-    Tramos: el extremo más reciente de la ventana (máximo o mínimo absoluto) parte
-    la serie en el tramo anterior y el tramo en curso, que es como se lee la
-    referencia del director: un canal alcista hasta el techo y uno bajista desde
-    ahí. Cada tramo lleva su canal solo si tiene pendiente en su dirección.
-
-    Swings: pivotes del zigzag (umbral 3 x ATR H1) que no se pisan con el soporte ni
-    la resistencia del mensaje, hasta dos por lado del precio.
-    """
-    n = len(rows)
-    if n < 30:
-        return {"canales": [], "swings": []}
-    atrs = sorted(r["atr"] for r in rows if r.get("atr"))
-    atr = atrs[len(atrs) // 2] if atrs else (max(r["high"] for r in rows) - min(r["low"] for r in rows)) / 50
-
-    i_max = max(range(n), key=lambda i: rows[i]["high"])
-    i_min = min(range(n), key=lambda i: rows[i]["low"])
-    i_ult, i_prev = (i_max, i_min) if i_max > i_min else (i_min, i_max)
-    dir_ult = -1 if i_ult == i_max else 1          # tras un máximo, el tramo baja
-    canales: list[dict[str, Any]] = []
-    actual = _canal(rows, i_ult, n - 1, dir_ult, proyeccion)
-    if actual:
-        previo = _canal(rows, i_prev, i_ult, -dir_ult, 0)
-        if previo:
-            canales.append({"direccion": -dir_ult, "lineas": previo})
-        canales.append({"direccion": dir_ult, "lineas": actual})
-    else:
-        # El tramo en curso todavía no tiene velas para un canal propio: el precio
-        # sigue leyéndose contra el canal anterior, que se proyecta a la derecha
-        # desde el final de la serie para que se vea dónde está hoy.
-        previo = _canal(rows, i_prev, n - 1, -dir_ult, proyeccion)
-        if previo:
-            canales.append({"direccion": -dir_ult, "lineas": previo})
-        if i_prev >= 60:
-            inicial = _canal(rows, 0, i_prev, dir_ult, 0)
-            if inicial:
-                canales.insert(0, {"direccion": dir_ult, "lineas": inicial})
-
-    precio = rows[-1]["close"]
-    ocupados = [p for p in (soporte, resistencia) if p is not None]
-    arriba: list[float] = []
-    abajo: list[float] = []
-    for _, p, tipo in sorted(_zigzag(rows, 3.0 * atr), key=lambda t: -t[0]):
-        if any(abs(p - q) < 0.8 * atr for q in ocupados + arriba + abajo):
-            continue
-        if p > precio and tipo == "H" and len(arriba) < 2:
-            arriba.append(p)
-        elif p < precio and tipo == "L" and len(abajo) < 2:
-            abajo.append(p)
-    return {"canales": canales, "swings": arriba + abajo, "atr": atr}
+        if x.tipo == "diagonal":
+            (t1, p1), (t2, p2) = x.puntos
+            if t1 not in indice or t2 not in indice:
+                omitidas.append({"marco": x.marco, "rol": x.rol,
+                                 "motivo": "ancla fuera de la ventana de velas dibujada"})
+                continue
+            i1, i2 = indice[t1], indice[t2]
+            pend = (p2 - p1) / (i2 - i1)
+            dato["puntos"] = [{"time": t_de(i), "value": p1 + pend * (i - i1)} for i in range(i1, fin + 1)]
+        else:
+            dato["precio"] = x.puntos[0][1]
+        series.append(dato)
+    return series, omitidas
 
 
 def construir_html_tradingview(
@@ -335,43 +147,39 @@ def construir_html_tradingview(
     resistencia: float | None = None,
     ancho: int = 1400,
     alto: int = 780,
+    lineas=None,
 ) -> str:
-    """HTML autocontenido del gráfico de estructura: velas, EMA 50/100, canales de
-    tendencia, zonas de soporte y resistencia y swings mayores.
+    """HTML autocontenido del gráfico: velas, las líneas de la lectura y las zonas de
+    soporte y resistencia del mensaje.
 
-    Rediseño del 2026-09-30 a pedido del director, sobre su gráfico de referencia
-    de MT5: ventana de semanas y no de horas, dos medias en vez de seis
-    indicadores, y la estructura (canales y niveles) como protagonista. Se
-    conserva la paleta oscura de marca.
+    Con `lineas` dibuja la lectura de la estrategia y nada más: ni medias ni estructura
+    propia, porque una segunda lectura en la imagen contradice al texto. Sin `lineas`
+    (Avisos y el analista hasta S6/S7) quedan las EMA 50/100 y las zonas. Se conserva
+    la paleta oscura de marca del rediseño del 2026-09-30.
     """
     if not VENDOR_JS.exists():
         raise TradingViewRenderError(f"No se encontró el vendor JS: {VENDOR_JS}")
 
     vendor_code = VENDOR_JS.read_text(encoding="utf-8")
-    estructura = calcular_estructura(rows, soporte, resistencia)
-    paso = 3600
-    if len(rows) > 2:
-        difs = sorted(rows[i + 1]["time"] - rows[i]["time"] for i in range(len(rows) - 1))
-        paso = difs[len(difs) // 2] or 3600
-
-    def t_de(i: int) -> int:
-        return rows[i]["time"] if i < len(rows) else rows[-1]["time"] + (i - len(rows) + 1) * paso
-
-    canales_js = [
-        {"direccion": c["direccion"],
-         "lineas": [[{"time": t_de(i), "value": v} for i, v in linea] for linea in c["lineas"]]}
-        for c in estructura["canales"]
-    ]
+    # Con la lectura se dibujan sus líneas del marco del gráfico y los horizontales de
+    # cualquier marco (el objetivo sale de D1 o W1). Sin lectura (Avisos y el analista,
+    # hasta S6/S7) quedan las medias y las zonas.
+    tiempos = [int(r["time"]) for r in rows]
+    con_lectura = lineas is not None
+    dibujables = [x for x in (lineas or ()) if x.marco == timeframe or x.tipo == "horizontal"]
+    series, _omitidas = series_de_lineas(dibujables, tiempos)
+    atrs = sorted(r["atr"] for r in rows if r.get("atr"))
+    atr = atrs[len(atrs) // 2] if atrs else (max(r["high"] for r in rows) - min(r["low"] for r in rows)) / 50
     zonas = [
         {"precio": p, "rol": rol}
         for p, rol in ((resistencia, "RESISTENCIA"), (soporte, "SOPORTE")) if p is not None
     ]
     datos = {
         "rows": rows,
-        "canales": canales_js,
-        "swings": estructura["swings"],
+        "lineas": series,
+        "medias": not con_lectura,
         "zonas": zonas,
-        "media_zona": 0.18 * estructura.get("atr", 0),
+        "media_zona": 0.18 * atr,
         "digits": digits,
     }
     payload_json = json.dumps(datos, separators=(",", ":")).replace("</", "<\\/")
@@ -381,6 +189,14 @@ def construir_html_tradingview(
     e50_str = fmt_p.format(last["ema50"]) if last.get("ema50") is not None else "--"
     e100_str = fmt_p.format(last["ema100"]) if last.get("ema100") is not None else "--"
     p_close = fmt_p.format(last["close"])
+    if con_lectura:
+        leyenda = "".join(
+            f'<span><span style="color:{d["color"]}">●</span> {d["titulo"]}</span>' for d in series)
+        pie = "LÍNEAS DE TENDENCIA · ZONAS DE SOPORTE Y RESISTENCIA"
+    else:
+        leyenda = (f'<span><span style="color:#00B0FF">●</span> EMA 50 <b style="color:#00B0FF">{e50_str}</b></span>'
+                   f'<span><span style="color:#FFB300">●</span> EMA 100 <b style="color:#FFB300">{e100_str}</b></span>')
+        pie = "EMA 50 · EMA 100 · ZONAS DE SOPORTE Y RESISTENCIA"
 
     html = f"""<!DOCTYPE html>
 <html lang="es">
@@ -458,10 +274,7 @@ def construir_html_tradingview(
       <span class="tv-badge-tf">{timeframe}</span>
       <span class="tv-precio">{p_close}</span>
     </div>
-    <div class="tv-legend">
-      <span><span style="color:#00B0FF">●</span> EMA 50 <b style="color:#00B0FF">{e50_str}</b></span>
-      <span><span style="color:#FFB300">●</span> EMA 100 <b style="color:#FFB300">{e100_str}</b></span>
-    </div>
+    <div class="tv-legend">{leyenda}</div>
   </div>
   <div class="tv-chart-wrapper">
     <div id="chart-container"></div>
@@ -469,7 +282,7 @@ def construir_html_tradingview(
   </div>
   <div class="tv-caption-bar">
     <span>{len(rows)} VELAS {timeframe} · FEED MT5 · GRUPO INTELIGENCIA</span>
-    <span>EMA 50 · EMA 100 · CANALES DE TENDENCIA · ZONAS DE SOPORTE Y RESISTENCIA</span>
+    <span>{pie}</span>
   </div>
 </div>
 
@@ -534,18 +347,21 @@ def construir_html_tradingview(
     return s;
   }};
 
-  linea('#00B0FF', 2, rows.filter(r => r.ema50 != null).map(r => ({{ time: r.time, value: r.ema50 }})));
-  linea('#FFB300', 2, rows.filter(r => r.ema100 != null).map(r => ({{ time: r.time, value: r.ema100 }})));
+  if (D.medias) {{
+    linea('#00B0FF', 2, rows.filter(r => r.ema50 != null).map(r => ({{ time: r.time, value: r.ema50 }})));
+    linea('#FFB300', 2, rows.filter(r => r.ema100 != null).map(r => ({{ time: r.time, value: r.ema100 }})));
+  }}
 
-  // Canales de tendencia: blanco, como el trazo del director sobre MT5.
-  D.canales.forEach(c => c.lineas.forEach(l => linea('rgba(236, 240, 245, 0.92)', 2.4, l)));
-
-  // Swings mayores: línea fina con su precio en el eje.
-  D.swings.forEach(p => candles.createPriceLine({{
-    price: p, color: 'rgba(203, 213, 225, 0.55)', lineWidth: 1,
-    lineStyle: LightweightCharts.LineStyle.Solid, axisLabelVisible: true,
-    axisLabelColor: '#334155', axisLabelTextColor: '#FFFFFF', title: '',
-  }}));
+  // Las líneas de la lectura: diagonales proyectadas a la derecha y horizontales en el eje.
+  D.lineas.forEach(l => {{
+    const estilo = l.discontinua ? LightweightCharts.LineStyle.Dashed : LightweightCharts.LineStyle.Solid;
+    if (l.tipo === 'diagonal') {{
+      linea(l.color, 2.4, l.puntos, estilo);
+    }} else {{
+      candles.createPriceLine({{ price: l.precio, color: l.color, lineWidth: 1, lineStyle: estilo,
+                                axisLabelVisible: true, title: l.titulo + ' ' + fmt(l.precio) }});
+    }}
+  }});
 
   // Soporte y resistencia del mensaje: la zona amarilla y su precio en el eje.
   D.zonas.forEach(z => candles.createPriceLine({{
@@ -554,10 +370,11 @@ def construir_html_tradingview(
     title: z.rol + ' ' + fmt(z.precio),
   }}));
 
-  // Futuro en blanco para que el canal en curso se proyecte a la derecha.
-  const extra = D.canales.flatMap(c => c.lineas.flatMap(l => l.map(p => p.time)))
-    .filter(t => t > rows[rows.length - 1].time);
-  const nFuturo = extra.length ? new Set(extra).size : 0;
+  // Futuro en blanco para que las diagonales se proyecten a la derecha.
+  const ultimo = rows[rows.length - 1].time;
+  const futuro = [...new Set(D.lineas.flatMap(l => (l.puntos || []).map(p => p.time)))]
+    .filter(t => t > ultimo).sort((a, b) => a - b).map(t => ({{ time: t }}));
+  if (futuro.length) candles.setData([...candles.data(), ...futuro]);
   chart.timeScale().setVisibleLogicalRange({{ from: 0, to: rows.length + 12 }});
 
   const pintarZonas = () => {{
@@ -635,8 +452,13 @@ def generar_grafico_tv(
     resistencia: float | None = None,
     ancho: int = 1400,
     alto: int = 780,
+    lineas=None,
 ) -> Path:
-    """Función principal: obtiene datos de MT5, computa indicadores y renderiza el PNG."""
+    """Función principal: obtiene datos de MT5, computa indicadores y renderiza el PNG.
+
+    Con `lineas` (las de la `Lectura`) el gráfico dibuja la lectura de la estrategia y no
+    las medias. Las anclas tienen que caer dentro de las `n_velas` dibujadas.
+    """
     from market_data_mcp import mt5_client
     from market_data_mcp.catalog import VALID_TICKERS
 
@@ -644,7 +466,7 @@ def generar_grafico_tv(
         digits = VALID_TICKERS.get(ticker, 2)
 
     mt5_client.connect()
-    # Traemos velas extra para estabilización de EMA 200 y Donchian 50
+    # Velas extra para que la EMA 100 esté estable en la ventana dibujada
     n_total = max(n_velas + 220, 260)
     df = mt5_client.get_rates(ticker, timeframe, n_total)
     if df is None or len(df) < 20:
@@ -667,6 +489,7 @@ def generar_grafico_tv(
         resistencia=resistencia,
         ancho=ancho,
         alto=alto,
+        lineas=lineas,
     )
 
     return renderizar_png(html, destino, ancho=ancho, alto=alto)

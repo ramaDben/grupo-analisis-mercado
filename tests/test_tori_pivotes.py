@@ -22,15 +22,9 @@ def test_zigzag_marca_los_giros_mayores_en_orden():
     assert [round(p, 1) for _, p, _ in giros] == [99.8, 112.2, 105.8]
 
 
-def test_el_grafico_usa_el_mismo_zigzag():
+def test_el_grafico_no_tiene_zigzag_propio():
+    """Desde S5 el gráfico dibuja las líneas de la lectura: los pivotes son solo de Tori."""
     pytest.importorskip("PIL")  # extra `stories`: el CI corre sin él
     import tradingview_grafico
 
-    assert tradingview_grafico._zigzag is zigzag
-
-
-def test_serie_de_calcula_el_atr_como_media_simple_del_rango_verdadero():
-    df = vs.desde_vertices([100, 112], 12)  # cada vela sube 1 y tiene 0,2 de mecha a cada lado
-    s = serie_de(df)
-    assert len(s) == 12
-    assert abs(s.atr - 1.4) < 1e-9
+    assert not hasattr(tradingview_grafico, "_zigzag")
