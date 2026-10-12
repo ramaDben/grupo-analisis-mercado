@@ -58,7 +58,7 @@ if sys.platform == "win32":
         pass
 
 import cierre_semanal_contenido as C  # noqa: E402
-from cierre_semanal_datos import ACTIVOS, DatosError, leer_lectura, reunir  # noqa: E402
+from cierre_semanal_datos import DatosError, reunir  # noqa: E402
 from cierre_semanal_estilo import hoja_de_estilos  # noqa: E402
 
 SANTIAGO = ZoneInfo("America/Santiago")
