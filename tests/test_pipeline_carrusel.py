@@ -1639,3 +1639,38 @@ def test_que_esperar_en_rango_y_en_prueba():
     p = _payload_lectura()
     p["lectura"] = lectura_a_dict(rango)
     assert pc.lectura_operativa(p)["que_esperar"] == "Rango: entre 4.080,00 y 4.200,00"
+
+
+def test_el_despacho_sigue_la_referencia_con_que_se_preparo_la_pieza(tmp_path):
+    """Un día de ruptura el escáner guarda una referencia nueva; la pieza de la mañana se
+    escribió contra la vieja y el despacho tiene que releerla igual, o se contradice."""
+    import referencia_semanal as rs
+    from estrategia.contrato import Etiqueta, Marcos
+
+    vieja = _lectura_alcista()
+    nueva = replace_lectura(vieja, estado="RANGO", direccion="LATERAL")
+    rs.guardar(nueva, "2026-W42", "ruptura", LUNES, base=tmp_path)
+    vistas = []
+
+    class Est:
+        marcos = Marcos(("D1",), "H4", {"D1": 5, "H4": 5},
+                        {"D1": Etiqueta("p", "d"), "H4": Etiqueta("s", "u")})
+
+        def seguir(self, referencia, velas, digits, en_curso=None):
+            vistas.append(referencia.estado)
+            return referencia
+
+    lectura, _ = pc.lectura_para_despacho(Est(), "XAUUSD", 2, lambda t, m, e: ({"H4": "v"}, None),
+                                          LUNES, base=tmp_path, referencia=vieja)
+    assert vistas == ["TENDENCIA"] and lectura == vieja
+
+
+def test_la_pieza_guarda_la_referencia_de_su_lectura():
+    p = _payload_lectura(referencia=lectura_a_dict(_lectura_alcista()))
+    assert p["_procedencia"]["referencia"]["ticker"] == "XAUUSD"
+
+
+def replace_lectura(lectura, **cambios):
+    from dataclasses import replace
+
+    return replace(lectura, **cambios)

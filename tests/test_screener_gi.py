@@ -932,3 +932,9 @@ def test_un_error_al_puntuar_un_activo_no_tumba_la_tanda(tmp_path, monkeypatch):
     res = _escanear(tmp_path, Rota({}), monkeypatch)
     assert [s["ticker"] for s in res["ranking_completo"]] == ["GBPUSD"]
     assert "roto" in res["excluidos"][0]["excluido"]
+
+
+def test_la_seleccion_lleva_la_referencia_contra_la_que_se_leyo(tmp_path, monkeypatch):
+    _fijar(tmp_path, "EURUSD")
+    res = _escanear(tmp_path, _Est({}), monkeypatch)
+    assert res["ranking_completo"][0]["referencia"]["ticker"] == "EURUSD"

@@ -1008,6 +1008,9 @@ def evaluar_con_estrategia(activo: dict[str, Any], estrategia, diaria: rs.Diaria
         # dato, no una decisión, y se mide sobre las mismas velas que leyó la estrategia.
         "volatilidad_tipica": round(atr(diaria.velas[op]), activo["digits"]),
         "lectura": lectura_a_dict(lectura),
+        # La referencia contra la que se leyó: el despacho la vuelve a seguir, así un día de
+        # ruptura la pieza no se contradice con la referencia nueva que se guardó después.
+        "referencia": lectura_a_dict(diaria.referencia) if diaria.referencia else None,
     }
 
 

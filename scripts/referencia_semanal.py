@@ -98,6 +98,7 @@ class Diaria:
     reemplazo: Lectura | None  # la nueva referencia, si la del lunes caducó
     avisos: tuple[str, ...]
     velas: dict[str, pd.DataFrame]
+    referencia: Lectura | None = None  # contra la que se leyó: el despacho vuelve a seguir esa
 
 
 def lectura_del_dia(estrategia, ticker: str, digits: int, semana: str, lector: Lector,
@@ -119,10 +120,11 @@ def lectura_del_dia(estrategia, ticker: str, digits: int, semana: str, lector: L
         nueva = estrategia.leer(ticker, velas, digits, None)
         return Diaria(actual, nueva, (
             f"{ticker}: la referencia de la semana no se pudo seguir ({exc}); se leyó de nuevo "
-            "y esa lectura pasa a ser la nueva referencia",), velas)
+            "y esa lectura pasa a ser la nueva referencia",), velas, nueva)
     if debe_reemplazar(referencia, actual):
         nueva = estrategia.leer(ticker, velas, digits, None)
         return Diaria(actual, nueva, (
             f"{ticker}: la lectura de la semana cambió de estructura ({referencia.estado.lower()} a "
-            f"{actual.estado.lower()}); la lectura de este cierre pasa a ser la nueva referencia",), velas)
-    return Diaria(actual, None, (), velas)
+            f"{actual.estado.lower()}); la lectura de este cierre pasa a ser la nueva referencia",), velas,
+            referencia)
+    return Diaria(actual, None, (), velas, referencia)

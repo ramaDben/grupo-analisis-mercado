@@ -345,6 +345,7 @@ def construir_payload_lectura(
             "ticker": seleccion["ticker"],
             "estrategia": _estrategia().nombre,
             "crudos": {"precio": lectura.precio, "soporte": soporte, "resistencia": resistencia},
+            "referencia": seleccion.get("referencia"),
         },
         "_pendiente_editorial": list(CAMPOS_EDITORIALES),
     }
@@ -1586,7 +1587,7 @@ def _marcar_divergente(dir_grupo: Path, archivo: Path) -> None:
 
 
 def lectura_para_despacho(estrategia, ticker: str, digits: int, lector, ahora: datetime,
-                          base: Path | None = None):
+                          base: Path | None = None, referencia=None):
     """La lectura de ahora para la pieza que va a salir: contra la referencia, como el escáner.
 
     No guarda reemplazos: eso es del escáner. Si el activo no tiene referencia (una pieza
@@ -1595,6 +1596,13 @@ def lectura_para_despacho(estrategia, ticker: str, digits: int, lector, ahora: d
     import referencia_semanal as rs
 
     base = base or rs.DIR
+    if referencia is not None:
+        # La pieza se escribió contra esta referencia: se vuelve a seguir la misma.
+        velas, en_curso = lector(ticker, estrategia.marcos, rs.EXTRA)
+        try:
+            return estrategia.seguir(referencia, velas, digits, en_curso), velas
+        except ValueError:
+            return estrategia.leer(ticker, velas, digits, en_curso), velas
     try:
         diaria = rs.lectura_del_dia(estrategia, ticker, digits, rs.semana_de(ahora), lector, base=base)
         return diaria.lectura, diaria.velas
@@ -1696,6 +1704,7 @@ def _refrescar_y_rendir(dir_grupo: Path) -> list[str]:
     if falta_metatrader5():
         return []
 
+    from estrategia.contrato import lectura_de_dict
     from estrategia.fuente import atr, velas_mt5
 
     catalogo = {a["ticker"]: a for a in sc.cargar_universo(solo_renderizables=False)}
@@ -1723,7 +1732,11 @@ def _refrescar_y_rendir(dir_grupo: Path) -> list[str]:
 
         try:
             estrategia = estrategia or _estrategia()
-            actual, velas = lectura_para_despacho(estrategia, ticker, activo["digits"], velas_mt5, ahora)
+            ref = payload.get("_procedencia", {}).get("referencia")
+            actual, velas = lectura_para_despacho(
+                estrategia, ticker, activo["digits"], velas_mt5, ahora,
+                referencia=lectura_de_dict(ref) if ref else None,
+            )
             cierres = _serie_para(ticker, payload["marco"])
             volatilidad = round(atr(velas[payload["marco"]]), activo["digits"])
         except Exception as exc:  # noqa: BLE001

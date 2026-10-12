@@ -178,3 +178,12 @@ def test_cambiar_el_objetivo_no_es_cambiar_la_estructura():
     obj = Linea(rol="objetivo", tipo="horizontal", puntos=((300, 14.0),), marco="D1", toques=2,
                 calidad="", valor_actual=14.0)
     assert not rs.debe_reemplazar(ref, replace(ref, lineas=ref.lineas + (obj,)))
+
+
+def test_la_diaria_dice_contra_que_referencia_se_leyo(tmp_path):
+    ref = _lectura()
+    rs.guardar(ref, "2026-W42", "semanal", datetime(2026, 10, 12, 9, tzinfo=SCL), base=tmp_path)
+    rota = replace(ref, estado="RUPTURA", lineas=(replace(ref.lineas[0], rol="accion"),))
+    d = rs.lectura_del_dia(_Falsa(rota, replace(ref, vela=300)), "XAUUSD", 2, "2026-W42",
+                           _lector([]), base=tmp_path)
+    assert d.referencia == ref  # la del lunes, no el reemplazo
