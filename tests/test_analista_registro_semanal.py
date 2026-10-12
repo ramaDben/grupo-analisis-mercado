@@ -56,3 +56,13 @@ def test_los_seguimientos_quedan_en_la_historia_de_la_foto(tmp_path):
     rg.anotar_seguimiento("2026-W42", "XAUUSD", {"estado": "en_curso", "ejecutivo": "111"}, ruta)
     assert rg.foto("2026-W42", ruta)["seguimientos"] == [
         {"ticker": "XAUUSD", "estado": "en_curso", "ejecutivo": "111"}]
+
+
+def test_un_registro_corrupto_no_se_sobrescribe(tmp_path):
+    import pytest
+
+    ruta = tmp_path / "registro.json"
+    ruta.write_text("{no es json", encoding="utf-8")
+    with pytest.raises(ValueError):
+        rg.anotar_foto("2026-W42", _pieza(tmp_path, "a"), datetime(2026, 10, 12, 9, 0, tzinfo=SCL), ["XAUUSD"], ruta)
+    assert ruta.read_text(encoding="utf-8") == "{no es json"

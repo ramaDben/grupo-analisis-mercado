@@ -21,10 +21,16 @@ RUTA = RAIZ / "data" / "semanal" / "registro.json"
 
 
 def _leer(ruta: Path) -> list[dict[str, Any]]:
+    """Solo un archivo ausente es un registro vacío. Un JSON corrupto levanta: si se
+    tratara como vacío, la próxima escritura borraría toda la historia."""
     try:
-        return json.loads(ruta.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+        texto = ruta.read_text(encoding="utf-8")
+    except FileNotFoundError:
         return []
+    try:
+        return json.loads(texto)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"registro semanal corrupto, no se sobrescribe: {ruta}") from e
 
 
 def _escribir(ruta: Path, entradas: list[dict[str, Any]]) -> None:
