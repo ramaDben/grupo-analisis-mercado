@@ -150,3 +150,50 @@ def jornada(dir_pedido: Path) -> dict:
 
 
 PIEZAS = {"activo": activo, "calendario": calendario, "dato": dato, "jornada": jornada}
+
+
+from datetime import datetime as _dt  # noqa: E402
+from zoneinfo import ZoneInfo as _Zi  # noqa: E402
+
+from estrategia.contrato import Escenario as _Esc  # noqa: E402
+from estrategia.contrato import Lectura, Linea, Prueba, Referencia  # noqa: E402
+
+_ESCENARIOS = (
+    _Esc("⬆️", "c", "Mientras el precio cierre sobre la línea, la tendencia alcista sigue."),
+    _Esc("↔️", "c", "Si el precio vuelve a la línea y la respeta, la línea gana fuerza."),
+    _Esc("⬇️", "c", "Si una vela de 4 horas cierra bajo la línea, la tendencia deja de valer."),
+)
+
+
+def _linea(rol: str, valor: float, tipo: str = "diagonal", calidad: str = "A+") -> Linea:
+    puntos = ((1790000000, valor - 1.0), (1790500000, valor)) if tipo == "diagonal" else ((1790000000, valor),)
+    return Linea(rol, tipo, puntos, "H4", 3, calidad, valor)
+
+
+def lectura(ticker: str = "XAUUSD", estado: str = "TENDENCIA", direccion: str = "ALCISTA",
+            precio: float = 4000.0, invalidacion: float | None = 3950.0, objetivo: float | None = 4100.0,
+            atr: float = 20.0, atr_d1: float = 50.0, rango: tuple[float, float] | None = None,
+            vigilar: float | None = None, tipo_rango: str = "horizontal", calidad_prueba: str = "A+",
+            vela: int = 1790600000) -> Lectura:
+    """Una `Lectura` mínima y válida para probar el escenario sin MT5."""
+    en_prueba = None
+    if estado == "RANGO":
+        sup, inf = rango
+        l_sup, l_inf = _linea("rango", sup, tipo_rango, ""), _linea("rango", inf, tipo_rango, "")
+        arriba = vigilar is None or vigilar == sup
+        vig = Referencia(sup if arriba else inf, "resistencia del rango" if arriba else "soporte del rango",
+                         l_sup if arriba else l_inf)
+        lineas, inv, obj = (l_sup, l_inf), None, None
+    else:
+        seg = _linea("seguridad", invalidacion if invalidacion is not None else precio, calidad=calidad_prueba)
+        lineas = (seg,)
+        vig = Referencia(vigilar if vigilar is not None else seg.valor_actual, "línea de seguridad", seg)
+        inv = Referencia(invalidacion, "línea de seguridad", seg) if invalidacion is not None else None
+        obj = Referencia(objetivo, "resistencia diaria") if objetivo is not None else None
+        if estado == "PRUEBA":
+            en_prueba = Prueba(seg, seg.valor_actual, _dt(2026, 10, 12, 13, 0, tzinfo=_Zi("America/Santiago")))
+    return Lectura(ticker=ticker, marco="H4", precio=precio, direccion=direccion, estado=estado,
+                   lineas=lineas, en_prueba=en_prueba, vigilar=vig, invalidacion=inv, objetivo=obj,
+                   escenarios=_ESCENARIOS,
+                   salida="La posición se cierra con un cierre de 4 horas al otro lado de la línea de seguridad.",
+                   conceptos=(), avisos=(), metricas={"atr": atr, "atr_d1": atr_d1}, vela=vela)
