@@ -119,6 +119,11 @@ def _dato(ev: dict[str, Any]) -> str:
     return f"el dato {nombre} {PAISES.get(ev.get('pais', ''), 'de ' + str(ev.get('pais', '')))}"
 
 
+def _cierra(frase: str) -> str:
+    """Cierra la frase con punto, sin duplicar el de una sigla como «EE.UU.»."""
+    return frase if frase.endswith(".") else frase + "."
+
+
 def _cuando_txt(cuando: datetime, ahora: datetime) -> str:
     hora = f"{cuando:%H:%M} (hora de Chile)"
     dias = (cuando.date() - ahora.date()).days
@@ -146,33 +151,19 @@ def _opuesto(verbo: str) -> str:
     return "bajar" if verbo == "subir" else "subir"
 
 
-def _reaccion(ctx: dict[str, Any], nombre: str, esc: dict[str, Any] | None, vivo: bool, fmt_stop: str) -> str:
-    """Los dos caminos, con el mismo peso. Con la simulación viva, dice cuál va a favor y cuál al stop."""
+def _reaccion(ctx: dict[str, Any], nombre: str) -> str:
+    """Los dos caminos del dato con el mismo peso y sin precios: operable de los dos lados con CFD."""
     el = _el(ctx["clave"], nombre)
     sobre = "subir" if ctx["verbo"] == "sube" else "bajar"
-    bajo = _opuesto(sobre)
-    if not (vivo and esc):
-        return f"Si sale sobre lo esperado, {el} tiende a {sobre}; si sale bajo lo esperado, tiende a {bajo}."
-    alcista = esc["direccion"] == "ALCISTA"
-    favor, accion = ("subir" if alcista else "bajar"), ("compra" if alcista else "venta")
-
-    def efecto(verbo: str) -> str:
-        return (f"lo que iría a favor de la {accion}" if verbo == favor
-                else f"lo que lo acercaría al stop de {fmt_stop}")
-
-    return (f"Si sale sobre lo esperado, {el} tiende a {sobre}, {efecto(sobre)}; si sale bajo lo esperado, "
-            f"tiende a {bajo}, {efecto(bajo)}. Son los dos caminos, y el stop del lunes es el límite en ambos.")
+    return (f"Si sale sobre lo esperado, {el} tiende a {sobre}; si sale bajo lo esperado, tiende a "
+            f"{_opuesto(sobre)}. Ese movimiento se puede operar de los dos lados con CFD.")
 
 
 def redactar(ctx: dict[str, Any], nombre: str, esc: dict[str, Any] | None, estado_sim: str,
              ahora: datetime, digits: int, variante: int = 0) -> dict[str, Any]:
     """Los textos del bloque macro: apertura, reacción, si quita la invitación, cierre y aviso al ejecutivo."""
-    from analista.seguimiento import _fmt
-
     ahora = ahora.astimezone(SANTIAGO)
     ev, cuando, estado = ctx["evento"], ctx["cuando"], ctx["estado"]
-    vivo = estado_sim == "en_curso"
-    stop = _fmt(float(esc["stop"]), digits) if esc and "stop" in esc else ""
     dato = _dato(ev)
     salida = {"apertura": "", "reaccion": "", "quita_espacio": False, "cierre": None, "aparte": ""}
 
@@ -188,19 +179,23 @@ def redactar(ctx: dict[str, Any], nombre: str, esc: dict[str, Any] | None, estad
             sobre = "subir" if ctx["verbo"] == "sube" else "bajar"
             verbo = sobre if lado == "sobre" else _opuesto(sobre)
             texto += f" Con un dato así, {_el(ctx['clave'], nombre)} tiende a {verbo}."
-        salida["apertura"] = texto
+        salida["apertura"] = f"ya salió el dato que movía {_el(ctx['clave'], nombre)}."
+        salida["reaccion"] = "⏰ " + texto[0].upper() + texto[1:]
         return salida
 
     salida["quita_espacio"] = estado in ("ventana", "pendiente") or (
         estado == "proximo" and cuando - ahora <= timedelta(hours=HORAS_SIN_INVITAR))
+    el = _el(ctx["clave"], nombre)
+    hora = f"{cuando:%H:%M} (hora de Chile)"
     if estado == "ventana":
-        salida["apertura"] = (f"en unos minutos ({cuando:%H:%M}) se publica {dato}, y mientras el mercado lo "
-                              f"absorbe el precio suele moverse a saltos. Te dejo cómo va {_el(ctx['clave'], nombre)}.")
+        salida["apertura"] = f"en unos minutos sale un dato que puede mover {el}."
+        salida["reaccion"] = (f"⏰ A las {hora} se publica {_cierra(dato)} Mientras el mercado lo absorbe, el precio "
+                              "suele moverse a saltos.")
         salida["cierre"] = CIERRE_VENTANA
     else:
-        salida["apertura"] = (f"{_cuando_txt(cuando, ahora)} se publica {dato}, y quería contarte cómo se "
-                              f"cruza con {_el(ctx['clave'], nombre)}.")
-        salida["reaccion"] = _reaccion(ctx, nombre, esc, vivo, stop)
+        dia = _cuando_txt(cuando, ahora).split(" a las ")[0]
+        salida["apertura"] = f"{dia} hay un dato que puede mover {el}."
+        salida["reaccion"] = f"⏰ A las {hora} se publica {_cierra(dato)} " + _reaccion(ctx, nombre)
         if estado == "pendiente":
             salida["cierre"] = CIERRES_PENDIENTE[variante % len(CIERRES_PENDIENTE)]
     if estado in ("pendiente", "ventana"):

@@ -291,7 +291,7 @@ def test_cupo_diario(armado):
 
 def test_seguimiento_entrega_lamina_y_texto_sin_agy(armado):
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
-    assert armado.llamadas == [] and r.texto.startswith("Hola, ") and "simulación de Oro" in r.texto
+    assert armado.llamadas == [] and r.texto.startswith("Hola, ") and "El plan de Oro" in r.texto
     assert "[[SALUDO]]" not in r.texto
     assert r.archivos[0].suffix == ".png"
 
@@ -380,7 +380,7 @@ def _dato_hoy(hora="2026-10-08 15:00"):
 def test_con_un_dato_pendiente_el_seguimiento_lo_usa_y_avisa_aparte_al_ejecutivo(armado):
     armado.eventos = [_dato_hoy()]
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"}, "Hari")))
-    assert r.texto.startswith("Hola Hari, hoy a las 15:00 (hora de Chile) se publica el dato")
+    assert r.texto.startswith("Hola Hari, hoy hay un dato que puede mover el oro.") and "⏰ A las 15:00 (hora de Chile)" in r.texto
     assert "espacio para tomar posición" not in r.texto
     assert "/seguimiento oro" in r.aparte and r.aparte not in r.texto  # el aviso no se reenvía al cliente
     tg = TgFalso()
@@ -404,7 +404,7 @@ def test_si_el_calendario_falla_el_seguimiento_sale_igual(armado):
 
     armado.atendedor.calendario = roto
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
-    assert r.texto.startswith("Hola, ") and "simulación de Oro" in r.texto and r.aparte == ""
+    assert r.texto.startswith("Hola, ") and "El plan de Oro" in r.texto and r.aparte == ""
 
 
 def test_el_menu_de_telegram_solo_ofrece_comandos_que_existen():

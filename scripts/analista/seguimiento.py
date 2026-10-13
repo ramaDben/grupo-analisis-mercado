@@ -129,14 +129,14 @@ AVANCE_POCO, AVANCE_MUCHO = 10, 70
 # Varias formas de abrir y de cerrar: un solo texto repetido cada día se lee como plantilla. Se elige
 # una por día y activo (estable), como los cierres del carrusel, para que no cambie entre reenvíos.
 ABRIR = (
-    "te cuento cómo va la simulación de {n}",
-    "te actualizo la simulación de {n}",
-    "quería contarte cómo viene la simulación de {n}",
+    "te cuento cómo va {n} esta semana.",
+    "te actualizo cómo viene {n} esta semana.",
+    "quería contarte cómo viene {n} esta semana.",
 )
 CERRAR = (
-    "En la lámina lo ves sobre el gráfico. Si quieres, lo vemos juntos.",
-    "Te dejo la lámina con los niveles dibujados. Cualquier duda, me avisas.",
-    "La lámina muestra todo sobre el gráfico de hoy. Cuando quieras, lo conversamos.",
+    "El detalle va en la lámina, sobre el gráfico.",
+    "Te dejo la lámina con el detalle. Si quieres, lo vemos juntos.",
+    "En la lámina lo ves todo. Cuando quieras, lo conversamos.",
 )
 
 
@@ -176,92 +176,40 @@ def _variante_n(fecha_hoy: str, nombre: str) -> int:
     return zlib.crc32(f"{fecha_hoy}|{nombre}".encode()) >> 16
 
 
-def _titular(ev: dict[str, Any]) -> str:
-    """Lo que le pasó a la simulación, en pocas palabras: va en la primera línea."""
+def _plan(nombre: str, esc: dict[str, Any], ev: dict[str, Any]) -> str:
+    """El plan en una o dos frases y sin precios (director, 2026-10-13): de qué lado se opera con CFD,
+    cómo va, y qué pasa si se invalida: nos cambiamos de lado. Las cifras van solo en la lámina."""
     estado = ev["estado"]
+    if estado == "sin_simulacion":
+        return f"Esta semana {nombre} no tiene un plan definido. Te dejo la lectura de hoy."
+    alcista = esc["direccion"] == "ALCISTA"
+    lado, otro = ("al alza", "a la baja") if alcista else ("a la baja", "al alza")
+    cambio = f"Si el plan se invalida, nos cambiamos de lado y operamos {otro}."
+    if estado == "entrada_pendiente":
+        return (f"El plan de {nombre} es operar {lado} con CFD y se activa cuando el precio confirme la "
+                f"entrada. {cambio}")
     if estado == "en_curso":
         pct = ev["avance_pct"]
-        return ("va en contra por ahora, sin tocar el stop" if pct < 0
-                else "sigue en curso" if pct < AVANCE_POCO else "va a favor")
-    return {"entrada_pendiente": "todavía espera su entrada", "objetivo": "llegó a su objetivo",
-            "stop": "tocó su stop", "rango_roto": "quedó descartada", "descartada": "quedó descartada",
-            "sin_simulacion": "esta semana no tiene"}[estado]
-
-
-def _hoy(esc: dict[str, Any], ev: dict[str, Any], precio_vivo: float, digits: int,
-         con_espacio: bool = True) -> str:
-    """Dónde está el precio hoy frente a la simulación, y si todavía queda espacio para tomar posición.
-
-    Solo dice «hay espacio» cuando es cierto: con la entrada pendiente o con poco recorrido hecho. Con
-    el precio en contra, con el objetivo cumplido o con el stop tocado, no lo dice. Con un dato fuerte
-    por salir (`con_espacio=False`) tampoco: no se invita a tomar posición justo antes de la noticia.
-    """
-    f = lambda x: _fmt(x, digits)  # noqa: E731
-    estado, stop = ev["estado"], f(esc["stop"]) if "stop" in esc else ""
-    limite = f"con el stop en {stop} como límite"
-    if estado == "en_curso":
-        pct, p = ev["avance_pct"], f(precio_vivo)
-        if pct < 0:
-            return (f"Hoy el precio va en {p}, en contra de la entrada, pero sin tocar el stop: mientras "
-                    "eso no pase, la simulación sigue vigente.")
-        if not con_espacio:
-            return (f"Hoy el precio va en {p} y se ha movido muy poco a favor." if pct < AVANCE_POCO
-                    else f"Hoy el precio va en {p}: ya recorrió un {pct} % del camino al objetivo.")
-        if pct < AVANCE_POCO:
-            return (f"Hoy el precio va en {p} y se ha movido muy poco a favor. Todavía queda casi todo el "
-                    f"recorrido hasta el objetivo, así que aún hay espacio para tomar posición en esa "
-                    f"dirección, {limite}.")
-        if pct < AVANCE_MUCHO:
-            return (f"Hoy el precio va en {p}: ya recorrió un {pct} % del camino al objetivo y todavía "
-                    f"queda espacio para tomar posición en esa dirección, {limite}.")
-        return (f"Hoy el precio va en {p}: ya recorrió un {pct} % del camino al objetivo, así que queda "
-                "poco espacio para tomar posición en esa dirección.")
-    if estado == "entrada_pendiente" and not con_espacio:
-        return texto_simulacion(esc, ev, precio_vivo, digits)
-    if estado == "entrada_pendiente":
-        return (texto_simulacion(esc, ev, precio_vivo, digits) + " Como todavía no se activa, aún hay "
-                f"espacio para tomar posición en esa dirección cuando se dé esa condición, {limite}.")
+        como = ("hoy va en contra, pero sigue vigente" if pct < 0
+                else "ya lleva buena parte del camino hecho" if pct >= AVANCE_MUCHO else "hoy va a favor")
+        return f"El plan de {nombre} es operar {lado} con CFD y {como}. {cambio}"
     if estado == "objetivo":
-        return (f"El precio llegó al objetivo de {f(esc['objetivo'])}: la simulación de esta semana se da "
-                "por cumplida.")
+        return (f"El plan de {nombre} llegó a su objetivo. Con CFD se opera de los dos lados, así que ahora "
+                "miramos el siguiente movimiento.")
     if estado == "stop":
-        return (f"El precio tocó el stop de {stop}: la simulación de esta semana se da por cerrada. Para "
-                "eso está el stop: limitar la pérdida cuando el escenario no se da.")
-    return texto_simulacion(esc, ev, precio_vivo, digits)  # descartada, rango roto o sin simulación
-
-
-def _cifras(esc: dict[str, Any], ev: dict[str, Any], digits: int) -> str:
-    """Entrada, stop y objetivo con el mismo peso y explicados; solo mientras la simulación vive."""
-    if ev["estado"] not in ("entrada_pendiente", "en_curso"):
-        return ""
-    f = lambda x: _fmt(x, digits)  # noqa: E731
-    return (f"Las cifras de la simulación no cambian desde el lunes: entrada en {f(esc['entrada'])}, "
-            f"stop en {f(esc['stop'])} (si el precio llega ahí, se da por fallida) y objetivo en "
-            f"{f(esc['objetivo'])} (si llega ahí, se da por cumplida).")
+        return (f"El plan de {nombre} se invalidó, y ahí nos cambiamos de lado: miramos la lectura de hoy "
+                f"para operar {otro}.")
+    return (f"El plan de {nombre} se descartó antes de activarse. Ahora miramos hacia dónde sale el precio: "
+            "con CFD se puede operar cualquiera de los dos lados.")
 
 
 def _armar(nombre: str, fecha_hoy: str, esc: dict[str, Any], ev: dict[str, Any], precio_vivo: float,
            lectura_hoy: str, digits: int, macro: dict[str, Any] | None = None) -> str:
-    """El texto con la marca del saludo. `macro` (ver `macro_seguimiento.redactar`) lo abre con el dato."""
-    sin = ev["estado"] == "sin_simulacion"
+    """El texto corto con la marca del saludo: gancho, dato (si hay), plan y cierre. Sin precios."""
     macro = macro or {}
+    apertura = macro.get("apertura") or _variante(ABRIR, fecha_hoy, nombre).format(n=nombre)
     cierre = macro.get("cierre") or _variante(CERRAR, fecha_hoy, nombre, 8)
-    if sin:
-        primera = (f"{MARCA_SALUDO} te cuento cómo va {nombre}: esta semana no tiene simulación, "
-                   "y te dejo la lectura de hoy.")
-        detalle = texto_simulacion(esc, ev, precio_vivo, digits)
-    else:
-        accion = "una compra" if esc["direccion"] == "ALCISTA" else "una venta"
-        sentido = "alcista" if esc["direccion"] == "ALCISTA" else "bajista"
-        apertura = _variante(ABRIR, fecha_hoy, nombre).format(n=nombre)
-        primera = f"{MARCA_SALUDO} {apertura}: {_titular(ev)}."
-        con_direccion = ev["estado"] not in ("rango_roto", "descartada")
-        hoy = _hoy(esc, ev, precio_vivo, digits, con_espacio=not macro.get("quita_espacio"))
-        detalle = " ".join(x for x in ((f"Es {accion}, porque la tendencia es {sentido}." if con_direccion else ""),
-                                       hoy) if x)
-    if macro.get("apertura"):
-        primera = f"{MARCA_SALUDO} {macro['apertura']}" + (f" {macro['reaccion']}" if macro.get("reaccion") else "")
-    partes = [primera, detalle, _cifras(esc, ev, digits), lectura_hoy, cierre]
+    partes = [f"{MARCA_SALUDO} {apertura}", macro.get("reaccion") or "", _plan(nombre, esc, ev), cierre]
     return "\n\n".join(p for p in partes if p)
 
 

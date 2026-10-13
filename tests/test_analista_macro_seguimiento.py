@@ -102,24 +102,18 @@ def _texto(ahora, ev=None, alcista=False, estado_sim="en_curso", digits=2, ticke
     return mac.redactar(ctx, "Oro", esc, estado_sim, ahora, digits)
 
 
-def test_el_dato_pendiente_da_los_dos_caminos_con_el_mismo_peso_en_una_venta():
+def test_el_dato_pendiente_da_los_dos_caminos_sin_precios_y_operables_de_los_dos_lados():
     m = _texto(a(7))
-    assert m["apertura"].startswith("hoy a las 09:30 (hora de Chile) se publica el dato Índice de precios al "
-                                    "consumidor (IPC) de EE.UU.")
-    assert ("Si sale sobre lo esperado, el oro tiende a bajar, lo que iría a favor de la venta; si sale bajo lo "
-            "esperado, tiende a subir, lo que lo acercaría al stop de 3.950,00.") in m["reaccion"]
-    assert "Son los dos caminos, y el stop del lunes es el límite en ambos." in m["reaccion"]
+    assert m["apertura"] == "hoy hay un dato que puede mover el oro."
+    assert m["reaccion"].startswith("⏰ A las 09:30 (hora de Chile) se publica el dato Índice de precios al "
+                                    "consumidor (IPC) de EE.UU. Si sale sobre lo esperado")
+    assert ("Si sale sobre lo esperado, el oro tiende a bajar; si sale bajo lo esperado, tiende a subir. "
+            "Ese movimiento se puede operar de los dos lados con CFD.") in m["reaccion"]
+    assert ".." not in m["reaccion"] and not any(c.isdigit() for c in m["apertura"])
 
 
-def test_en_una_compra_los_caminos_se_dan_vuelta():
-    m = _texto(a(7), alcista=True)
-    assert "tiende a bajar, lo que lo acercaría al stop" in m["reaccion"]
-    assert "tiende a subir, lo que iría a favor de la compra" in m["reaccion"]
-
-
-def test_sin_simulacion_viva_solo_da_la_reaccion_sin_atarla_a_stop_ni_objetivo():
-    m = _texto(a(7), estado_sim="entrada_pendiente")
-    assert "stop" not in m["reaccion"] and "Si sale sobre lo esperado, el oro tiende a bajar" in m["reaccion"]
+def test_en_una_compra_el_dato_dice_lo_mismo_porque_no_ata_la_reaccion_a_un_lado():
+    assert _texto(a(7), alcista=True)["reaccion"] == _texto(a(7))["reaccion"]
 
 
 def test_con_un_dato_por_salir_se_quita_la_invitacion_a_tomar_posicion():
@@ -131,13 +125,13 @@ def test_con_un_dato_por_salir_se_quita_la_invitacion_a_tomar_posicion():
 
 def test_en_la_ventana_no_hay_reaccion_y_si_cautela_factual():
     m = _texto(a(9, 10))
-    assert "en unos minutos (09:30)" in m["apertura"] and "a saltos" in m["apertura"]
-    assert m["reaccion"] == "" and m["cierre"] == mac.CIERRE_VENTANA
+    assert m["apertura"] == "en unos minutos sale un dato que puede mover el oro."
+    assert "a saltos" in m["reaccion"] and "CFD" not in m["reaccion"] and m["cierre"] == mac.CIERRE_VENTANA
 
 
 def test_el_dia_de_un_dato_lejano_se_dice_con_el_dia_de_la_semana():
     m = _texto(AHORA, evento(hora="2026-10-16 09:30"))
-    assert m["apertura"].startswith("el viernes a las 09:30 (hora de Chile)")
+    assert m["apertura"].startswith("el viernes hay un dato") and "A las 09:30 (hora de Chile)" in m["reaccion"]
 
 
 @pytest.mark.parametrize("actual,lado,verbo", [("0.4%", "sobre lo esperado", "bajar"),
@@ -145,10 +139,11 @@ def test_el_dia_de_un_dato_lejano_se_dice_con_el_dia_de_la_semana():
                                                ("0.2%", "en línea con lo esperado", None)])
 def test_el_dato_publicado_dice_el_resultado_y_la_tendencia_del_glosario(actual, lado, verbo):
     m = _texto(a(10), evento(actual=actual))
-    assert m["apertura"].startswith("ya se publicó el dato Índice de precios al consumidor (IPC) de EE.UU.: ")
-    assert f"{actual.replace('.', ',').replace('%', ' %')} frente a 0,2 % esperado, es decir, {lado}." in m["apertura"]
-    assert (f"tiende a {verbo}" in m["apertura"]) == (verbo is not None)
-    assert m["reaccion"] == "" and not m["quita_espacio"] and m["aparte"] == ""
+    assert m["apertura"] == "ya salió el dato que movía el oro."
+    assert m["reaccion"].startswith("⏰ Ya se publicó el dato Índice de precios al consumidor (IPC) de EE.UU.: ")
+    assert f"{actual.replace('.', ',').replace('%', ' %')} frente a 0,2 % esperado, es decir, {lado}." in m["reaccion"]
+    assert (f"tiende a {verbo}" in m["reaccion"]) == (verbo is not None)
+    assert not m["quita_espacio"] and m["aparte"] == ""
 
 
 def test_el_aviso_al_ejecutivo_dice_que_volver_a_pedir():
@@ -177,25 +172,25 @@ def _datos():
     return pieza["datos"]
 
 
-def test_con_un_dato_pendiente_el_mensaje_abre_con_el_dato_y_no_invita_a_tomar_posicion(tmp_path):
+def test_con_un_dato_pendiente_el_mensaje_abre_con_el_dato_y_sigue_corto(tmp_path):
     datos = fx.pieza_seguimiento(tmp_path)["datos"]
     ctx = mac.contexto(datos["ticker"], a(7), [evento()])
     texto, aparte = sg.redactar(datos, "Hari", ctx, a(7))
-    primera = texto.split("\n\n")[0]
-    assert primera.startswith("Hola Hari, hoy a las 09:30 (hora de Chile) se publica el dato")
-    assert "espacio para tomar posición" not in texto and "Las cifras de la simulación" in texto
-    assert "La lectura" in texto or "lectura" in texto.lower()
-    assert texto.rstrip().endswith(mac.CIERRES_PENDIENTE[0]) or texto.rstrip().endswith(mac.CIERRES_PENDIENTE[1])
+    partes = texto.split("\n\n")
+    assert len(partes) == 4 and partes[0] == "Hola Hari, hoy hay un dato que puede mover el oro."
+    assert partes[1].startswith("⏰ A las 09:30") and "CFD" in partes[2] and "cambiamos de lado" in partes[2]
+    assert partes[3] in mac.CIERRES_PENDIENTE
     assert "/seguimiento oro" in aparte
 
 
-def test_sin_dato_el_mensaje_es_el_de_siempre_y_conserva_la_invitacion(tmp_path):
+def test_sin_dato_el_mensaje_es_corto_y_dice_el_plan(tmp_path):
     datos = fx.pieza_seguimiento(tmp_path)["datos"]
     texto, aparte = sg.redactar(datos, "", None, a(7))
-    assert texto.startswith("Hola, ") and "todavía queda espacio para tomar posición" in texto and aparte == ""
+    assert texto.startswith("Hola, ") and "operar" in texto and "con CFD" in texto and aparte == ""
+    assert len(texto.split("\n\n")) == 3
 
 
 def test_el_mensaje_se_arma_desde_los_datos_y_no_desde_el_texto_guardado(tmp_path):
     datos = dict(fx.pieza_seguimiento(tmp_path)["datos"], whatsapp="TEXTO DE UNA VERSION ANTERIOR")
     texto, _ = sg.redactar(datos, "")
-    assert "VERSION ANTERIOR" not in texto and "simulación de Oro" in texto
+    assert "VERSION ANTERIOR" not in texto and "El plan de Oro" in texto
