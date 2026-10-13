@@ -247,20 +247,20 @@ def _marco_correo(d: dict[str, Any], ed: dict[str, Any], ejecutivo: dict[str, An
         + '</td></tr>'
         f'<tr><td bgcolor="{c["acento"]}" style="height:3px;line-height:3px;font-size:3px;background:{c["acento"]};'
         f'background-image:linear-gradient(90deg,{c["acento_azul"]},{c["acento"]});">&nbsp;</td></tr>')
+    # El correo parte con el nombre de la persona y la voz de quien lo envía; el título de la semana
+    # baja a una tarjeta compacta. Un afiche con titular grande antes del saludo se lee como campaña masiva.
     portada = (
+        '<tr><td class="pad" style="padding:30px 40px 22px 40px;">'
+        + _p('<span class="saludo-cliente">Estimado(a):</span>', c, tam=18, peso=700, color="texto_1", margen="0 0 12px 0")
+        + _p("Te escribo para compartirte el análisis técnico de esta semana, preparado por la Dirección de "
+             "Análisis Técnico de Grupo Inteligencia: los escenarios clave de cada activo, con sus niveles y "
+             "fechas, para que los tengas en el radar al evaluar tus próximas operaciones.", c, tam=17, margen="0")
+        + '</td></tr>'
         f'<tr><td class="pad" bgcolor="{c["tarjeta"]}" style="background:{c["tarjeta"]};'
-        f'background-image:linear-gradient(135deg,{c["tarjeta"]} 0%,{c["fondo_alt"]} 100%);padding:34px 40px 32px 40px;">'
-        + _rotulo("Análisis técnico de la semana", c, margen="0 0 14px 0")
-        + f'<h1 class="h1" style="margin:0 0 14px 0;font-family:{F_DISPLAY};font-size:30px;line-height:37px;'
-          f'font-weight:700;color:{c["texto_1"]};"><!--TITULO--></h1>'
-        + _p("Análisis semanal preparado por la Dirección de Análisis Técnico de Grupo Inteligencia.",
-             c, tam=17, margen="0") + '</td></tr>'
-        '<tr><td class="pad" style="padding:30px 40px 30px 40px;">'
-        + _p('Hola<span class="cliente-nombre"></span>:', c, tam=17, peso=700, color="texto_1")
-        + _p("Te comparto el análisis técnico de esta semana con los escenarios clave que preparamos en la mesa, "
-             "para que tengas en el radar los activos con mayor movimiento y puedas evaluar tus próximas "
-             "operaciones.", c, tam=17, margen="0")
-        + '</td></tr>')
+        f'background-image:linear-gradient(135deg,{c["tarjeta"]} 0%,{c["fondo_alt"]} 100%);padding:22px 40px 24px 40px;">'
+        + _rotulo("Análisis técnico de la semana", c, margen="0 0 8px 0")
+        + f'<h1 class="h1" style="margin:0;font-family:{F_DISPLAY};font-size:24px;line-height:31px;'
+          f'font-weight:700;color:{c["texto_1"]};"><!--TITULO--></h1></td></tr>')
     firmas = (
         '<tr><td class="pad" style="padding:6px 40px 0 40px;">'
         + _tabla('<tr>' + _firma_correo("Análisis", [autor.nombre, autor.cargo], c)

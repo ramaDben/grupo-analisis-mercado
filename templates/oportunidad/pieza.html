@@ -83,7 +83,7 @@
 <section class="correo"><h2>Correo para tu cliente</h2>
   <p>Así le llega a tu cliente. Marca los activos que quieres incluir, completa la simulación arriba y copia el correo: se pega en Outlook con el formato.</p>
   <label class="cliente">Tu nombre (quien realiza la simulación)<input type="text" id="ejecutivo" value="{{ejecutivo}}" placeholder="Escribe tu nombre"></label>
-  <label class="cliente">Nombre de tu cliente (opcional, sale en el saludo)<input type="text" id="cliente" placeholder="Ej: Juan"></label>
+  <label class="cliente">Saludo al cliente (tú decides cómo dirigirte a esa persona)<input type="text" id="cliente" placeholder="Ej.: Estimado Sr. Pérez:"></label>
   <button type="button" id="copiar-correo">Copiar correo para Outlook</button> <span id="estado"></span>
   <div id="vista-correo"></div></section>
 <template id="correo-marco">{{marco}}</template>
@@ -173,12 +173,13 @@
       partes.push(cont.innerHTML);
     });
     if (!partes.length) return null;
-    var nombre = document.getElementById('cliente').value.trim().replace(/[<>&"]/g, '');
+    var saludo = document.getElementById('cliente').value.trim().replace(/[<>&"]/g, '');
+    if (saludo && !/[:,.;]$/.test(saludo)) saludo += ':';
     var yo = nombreEj(), n = partes.length;
     var titulo = (n === 1 ? 'El activo' : 'Los ' + n + ' activos') + ' con escenarios clave para operar esta semana';
     return document.getElementById('correo-marco').innerHTML.replace('<!--ACTIVOS-->', partes.join(''))
       .split(DATOS.ejecutivo.replace(/&/g, '&amp;')).join(yo.replace(/[<>&"]/g, ''))
-      .replace('<!--TITULO-->', titulo).replace('<span class="cliente-nombre"></span>', nombre ? ' ' + nombre : '');
+      .replace('<!--TITULO-->', titulo).replace('<span class="saludo-cliente">Estimado(a):</span>', saludo || 'Estimado(a):');
   }
   function vista(){
     var html = armarCorreo();

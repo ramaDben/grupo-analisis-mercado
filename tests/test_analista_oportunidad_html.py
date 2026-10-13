@@ -161,13 +161,21 @@ def test_en_el_correo_un_activo_sin_simulacion_muestra_el_motivo_sin_cuadros(tmp
     assert "sim-perdida" not in bloque
 
 
-def test_los_cuadros_parten_con_capital_y_perdida_por_defecto_y_el_saludo_admite_nombre(tmp_path):
+def test_los_cuadros_parten_con_capital_y_perdida_por_defecto_y_el_saludo_es_editable(tmp_path):
     """El comercial no tiene que escribir nada: 2 millones de capital, 100.000 de pérdida y nombre opcional."""
     html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
     bloque = html.split('data-ticker="XAUUSD"')[1].split('data-ticker="COPPER"')[0]
     assert 'name="perdida" min="0" step="1000" value="100000"' in bloque
     assert 'name="capital" min="0" step="10000" value="2000000"' in bloque
-    assert 'id="cliente"' in html and 'Hola<span class="cliente-nombre"></span>:' in html
+    assert 'id="cliente"' in html and 'class="saludo-cliente">Estimado(a):</span>' in html
+
+
+def test_el_correo_parte_con_el_saludo_a_la_persona_antes_del_titulo(tmp_path):
+    """Gerencia: un correo que abre con afiche y titular se lee como spam; debe partir con el nombre."""
+    html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    correo = html.split('id="correo-root"')[1]
+    assert correo.index('class="saludo-cliente"') < correo.index("<!--TITULO-->")
+    assert "Te escribo para compartirte" in correo
 
 
 def test_el_titulo_del_correo_cuenta_los_activos_incluidos_y_no_dice_igual_para_todos(tmp_path):
@@ -184,8 +192,8 @@ def test_el_titulo_del_correo_cuenta_los_activos_incluidos_y_no_dice_igual_para_
         assert "Los 2 activos con escenarios clave para operar esta semana" in v.inner_text()
         pg.locator("[name=incluir]").first.uncheck()
         assert "El activo con escenarios clave para operar esta semana" in v.inner_text()
-        pg.fill("#cliente", "Juan")
-        assert "Hola Juan:" in v.inner_text()
+        pg.fill("#cliente", "Estimado Sr. Pérez")
+        assert "Estimado Sr. Pérez:" in v.inner_text()
         b.close()
 
 
