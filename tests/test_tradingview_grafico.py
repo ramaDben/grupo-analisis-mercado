@@ -187,3 +187,12 @@ def test_sin_lectura_sale_sin_lineas_y_lo_avisa(monkeypatch, tmp_path, capsys):
 def test_el_canal_de_regresion_ya_no_existe():
     """Spec §6: el gráfico dibuja `Lectura.lineas`; el canal calculado aparte se borra."""
     assert not hasattr(tg, "_canal") and not hasattr(tg, "calcular_estructura")
+
+
+def test_la_ventana_enmarca_a_la_diagonal_y_no_muestra_todas_las_velas():
+    tiempos = list(range(0, 320 * 14400, 14400))
+    corta = {"tipo": "diagonal", "puntos": [{"time": tiempos[295], "value": 1.0}]}
+    assert tg.ventana_visible([corta], tiempos) == tg.VENTANA_MIN
+    larga = {"tipo": "diagonal", "puntos": [{"time": tiempos[100], "value": 1.0}]}
+    assert tg.ventana_visible([larga], tiempos) == 320
+    assert tg.ventana_visible([], tiempos) == tg.VENTANA_SIN_DIAGONAL
