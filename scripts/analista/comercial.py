@@ -67,11 +67,17 @@ def _niveles(activo: dict[str, Any]) -> list[tuple[str, str]]:
     if lec["estado"] == "RANGO":
         return _fundir([("Resistencia del rango", f["borde_superior"]), ("Soporte del rango", f["borde_inferior"]),
                         ("Nivel a vigilar", f["vigilar"])])
-    return _fundir([("Nivel a vigilar", f["vigilar"]), ("Invalidación", f["invalidacion"] or "sin nivel"),
-                    ("Objetivo técnico", f["objetivo_tori"] or "sin nivel")])
+    # Rótulos en lenguaje de cliente: la invalidación dice qué hacer ("se anula si cierra bajo X"), y un
+    # nivel que la lectura no trae no se muestra: «sin nivel» no le sirve a nadie para decidir.
+    anula = {"ALCISTA": "Se anula si cierra bajo", "BAJISTA": "Se anula si cierra sobre"}.get(
+        lec["direccion"].upper(), "Se anula en")
+    filas = [("Nivel a vigilar", f["vigilar"]), (anula, f["invalidacion"]), ("Objetivo", f["objetivo_tori"])]
+    return _fundir([(r, v) for r, v in filas if v])
 
 
-CLASES_NIVEL = ("nivel-activa", "nivel-anula", "")
+def _clase_nivel(rotulo: str) -> str:
+    """La clase sale del rótulo y no de la posición: una fila que falta no corre los colores."""
+    return "nivel-anula" if "anula" in rotulo else "nivel-activa" if "vigilar" in rotulo else ""
 
 
 def payload_semanal(activo: dict[str, Any], titular: str, datos_al: str, autor, chart: Path) -> dict[str, Any]:
@@ -83,7 +89,7 @@ def payload_semanal(activo: dict[str, Any], titular: str, datos_al: str, autor, 
         "precio": f"{activo['fmt']['precio']} {activo['unidad']}".strip(),
         "direccion": lec["direccion"], "sesgo_slug": lec["direccion"].lower(),
         "frase_lectura": lec["escenarios"][0]["texto"],
-        "niveles": [{"rotulo": r, "valor": v, "clase": CLASES_NIVEL[i]} for i, (r, v) in enumerate(niveles)],
+        "niveles": [{"rotulo": r, "valor": v, "clase": _clase_nivel(r)} for r, v in niveles],
         "temporalidad": activo["temporalidad"],
         "pie_imagen": f"{activo['nombre']} · velas de 4 horas · MetaTrader 5",
         "firma": firma(autor), "aviso": AVISO_PIEZA, "chart_png": str(chart),
