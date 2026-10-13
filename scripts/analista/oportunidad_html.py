@@ -245,12 +245,14 @@ def _marco_correo(d: dict[str, Any], ed: dict[str, Any], ejecutivo: dict[str, An
         f'background-image:linear-gradient(135deg,{c["tarjeta"]} 0%,{c["fondo_alt"]} 100%);padding:34px 40px 32px 40px;">'
         + _rotulo("Análisis técnico de la semana", c, margen="0 0 14px 0")
         + f'<h1 class="h1" style="margin:0 0 14px 0;font-family:{F_DISPLAY};font-size:30px;line-height:37px;'
-          f'font-weight:700;color:{c["texto_1"]};">{ih.e(ed["titular"])}</h1>'
-        + _p(ih.e(ed["bajada"]), c, tam=17, margen="0") + '</td></tr>'
+          f'font-weight:700;color:{c["texto_1"]};"><!--TITULO--></h1>'
+        + _p("Análisis semanal preparado por la Dirección de Análisis Técnico de Grupo Inteligencia.",
+             c, tam=17, margen="0") + '</td></tr>'
         '<tr><td class="pad" style="padding:30px 40px 30px 40px;">'
         + _p('Hola<span class="cliente-nombre"></span>:', c, tam=17, peso=700, color="texto_1")
-        + _p("Te comparto el análisis técnico de la semana, preparado por la Dirección de Análisis Técnico de "
-             "Grupo Inteligencia. Es una lectura general, igual para todos.", c, tam=17, margen="0")
+        + _p("Te comparto el análisis técnico de esta semana con los escenarios clave que preparamos en la mesa, "
+             "para que tengas en el radar los activos con mayor movimiento y puedas evaluar tus próximas "
+             "operaciones.", c, tam=17, margen="0")
         + '</td></tr>')
     firmas = (
         '<tr><td class="pad" style="padding:6px 40px 0 40px;">'

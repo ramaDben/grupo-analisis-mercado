@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 # Fijo y no editable (spec §7). Sin «recomendación» ni «oportunidad».
-AVISO_PIEZA = ("Análisis técnico general, igual para todos sus destinatarios. No es una instrucción "
+AVISO_PIEZA = ("Análisis técnico de carácter informativo. No es una instrucción "
                "de inversión: un escenario puede cumplirse o invalidarse.")
 SEPARADOR = "━━━━━━━━━━━━━━━━━━━"
 MESES = ("enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre",

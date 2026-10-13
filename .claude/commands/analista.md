@@ -47,7 +47,7 @@ pone el bot: tú no decides nada visual.
     operar mientras el precio se mantenga sobre la línea de tendencia, y la simulación de abajo
     muestra con qué riesgo"; "si el precio confirma la ruptura, el escenario bajista queda para
     operarlo"). Lo que sigue prohibido es la instrucción personal: nunca "compra", "vende",
-    "entra ya", "te recomiendo" ni cuánto arriesgar, porque el informe es igual para todos y
+    "entra ya", "te recomiendo" ni cuánto arriesgar, porque
     nadie en GI está inscrito como asesor de inversión. El bot rechaza esas frases, y también un
     contexto que no invite a operar.
 11. **Soporte y resistencia**, nunca "piso", "suelo" ni "techo" para un nivel de precio.

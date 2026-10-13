@@ -163,10 +163,11 @@
     });
     if (!partes.length) return null;
     var nombre = document.getElementById('cliente').value.trim().replace(/[<>&"]/g, '');
-    var yo = nombreEj();
+    var yo = nombreEj(), n = partes.length;
+    var titulo = (n === 1 ? 'El activo' : 'Los ' + n + ' activos') + ' con escenarios clave para operar esta semana';
     return document.getElementById('correo-marco').innerHTML.replace('<!--ACTIVOS-->', partes.join(''))
       .split(DATOS.ejecutivo.replace(/&/g, '&amp;')).join(yo.replace(/[<>&"]/g, ''))
-      .replace('<span class="cliente-nombre"></span>', nombre ? ' ' + nombre : '');
+      .replace('<!--TITULO-->', titulo).replace('<span class="cliente-nombre"></span>', nombre ? ' ' + nombre : '');
   }
   function vista(){
     var html = armarCorreo();

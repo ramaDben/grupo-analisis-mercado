@@ -168,3 +168,22 @@ def test_los_cuadros_parten_con_capital_y_perdida_por_defecto_y_el_saludo_admite
     assert 'name="perdida" min="0" step="1000" value="100000"' in bloque
     assert 'name="capital" min="0" step="10000" value="2000000"' in bloque
     assert 'id="cliente"' in html and 'Hola<span class="cliente-nombre"></span>:' in html
+
+
+def test_el_titulo_del_correo_cuenta_los_activos_incluidos_y_no_dice_igual_para_todos(tmp_path):
+    from playwright.sync_api import sync_playwright
+    html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    assert "igual para todos" not in html and "lectura general" not in html
+    ruta = tmp_path / "p.html"
+    ruta.write_text(html, encoding="utf-8")
+    with sync_playwright() as p:
+        b = p.chromium.launch()
+        pg = b.new_page()
+        pg.goto(ruta.as_uri())
+        v = pg.locator("#vista-correo")
+        assert "Los 2 activos con escenarios clave para operar esta semana" in v.inner_text()
+        pg.locator("[name=incluir]").first.uncheck()
+        assert "El activo con escenarios clave para operar esta semana" in v.inner_text()
+        pg.fill("#cliente", "Juan")
+        assert "Hola Juan:" in v.inner_text()
+        b.close()
