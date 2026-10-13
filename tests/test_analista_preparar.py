@@ -232,8 +232,10 @@ def test_seguimiento_informa_simulacion_y_lectura_por_separado(tmp_path):
                         datetime(2026, 10, 14, 11, 0, tzinfo=SCL), _lectores_seg(tmp_path, base, velas, 4124.0))
     d = hecha.pieza["datos"]
     assert d["evaluacion"]["estado"] == "en_curso"
-    assert "Simulación de la semana" in d["whatsapp"] and "Lectura técnica hoy" in d["whatsapp"]
-    assert "$" not in d["whatsapp"]
+    # La simulación (precios fijos del lunes) y la lectura de hoy, en párrafos separados.
+    assert "simulación de Oro" in d["whatsapp"] and "La lectura de la semana cambió" in d["whatsapp"]
+    assert "Las cifras de la simulación no cambian desde el lunes" in d["whatsapp"]
+    assert "$" not in d["whatsapp"] and "instrucción de inversión" not in d["whatsapp"]
 
 
 def test_seguimiento_sin_simulacion_entrega_la_lectura_de_hoy(tmp_path):
@@ -253,8 +255,9 @@ def test_seguimiento_sin_simulacion_entrega_la_lectura_de_hoy(tmp_path):
     assert d["evaluacion"]["estado"] == "sin_simulacion"
     assert ("Esta semana este activo no tiene simulación: no se pudo medir cuánto se mueve el activo"
             in d["whatsapp"])
-    assert "Lectura técnica hoy" in d["whatsapp"] and "No pude leer" not in d["whatsapp"]
-    assert "Stop" not in d["whatsapp"]
+    assert "ahora se vigila" in d["whatsapp"] or "sigue en pie" in d["whatsapp"]
+    assert "No pude leer" not in d["whatsapp"]
+    assert "Stop" not in d["whatsapp"] and "Las cifras de la simulación" not in d["whatsapp"]
 
 
 def test_el_grafico_semanal_traza_los_niveles_de_la_lamina(tmp_path):

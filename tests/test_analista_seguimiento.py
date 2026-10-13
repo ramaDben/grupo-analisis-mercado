@@ -102,7 +102,7 @@ def test_el_mensaje_no_habla_en_pesos_ni_de_lo_que_se_habria_ganado():
     texto = sg.mensaje("Oro", "miércoles 14-10", "lunes 12-10", ALZA, ev, 4075.0, fx.lectura(), False, 2)
     assert "$" not in texto and "CLP" not in texto and "ganarías" not in texto and "hubieras" not in texto
     assert "—" not in texto and "–" not in texto
-    assert texto.startswith("[[SALUDO]] te cuento cómo va Oro")
+    assert texto.startswith("[[SALUDO]] ") and "simulación de Oro" in texto.splitlines()[0]
     assert "4.075,00" in texto and "50 %" in texto
 
 
@@ -135,27 +135,67 @@ def _mensaje(esc, velas, precio, estado=None):
     return sg.mensaje("Oro", "miércoles 14-10", "lunes 12-10", esc, ev, precio, fx.lectura(), False, 2)
 
 
-def test_cada_estado_abre_distinto_y_dice_el_estado_en_las_dos_primeras_lineas():
-    aperturas = {}
+def test_cada_estado_dice_el_suyo_en_la_primera_linea():
+    titulares = {}
     for nombre, (esc, velas, precio) in ESTADOS_EJEMPLO.items():
         t = _mensaje(esc, velas, precio)
-        aperturas[nombre] = t.splitlines()[0]
-        assert t.startswith("[[SALUDO]] te cuento cómo va Oro: ")
-    aperturas["sin_simulacion"] = _mensaje(ALZA, [], 4000.0, "sin_simulacion").splitlines()[0]
-    assert len(set(aperturas.values())) == len(aperturas)
+        assert t.startswith("[[SALUDO]] ") and "simulación de Oro: " in t.splitlines()[0]
+        titulares[nombre] = t.splitlines()[0].split(": ", 1)[1]
+    titulares["sin"] = _mensaje(ALZA, [], 4000.0, "sin_simulacion").splitlines()[0].split(": ", 1)[1]
+    assert len(set(titulares.values())) == len(titulares)
 
 
-def test_en_todos_los_estados_se_cumple_el_cumplimiento_y_las_dos_cosas_pesan_igual():
+def test_el_mensaje_cumple_las_reglas_en_todos_los_estados():
     casos = [_mensaje(*c) for c in ESTADOS_EJEMPLO.values()] + [_mensaje(ALZA, [], 4000.0, "sin_simulacion")]
     for t in casos:
         bajo = t.lower()
         assert "$" not in t and "clp" not in bajo and "—" not in t and "–" not in t
         for prohibido in ("hubieras", "ganarías", "recomend", "oportunidad", "cartera"):
             assert prohibido not in bajo
-        assert "Lectura técnica hoy" in t and "Si quieres, lo conversamos." in t
-        assert t.rstrip().endswith("un escenario puede cumplirse o invalidarse.")
-    # Con simulación, stop y objetivo salen juntos y con el mismo formato.
-    assert "Stop 3.950,00 · Objetivo 1:3 4.150,00" in casos[1]
+        # Sin aviso legal ni encabezados de boletín (gerencia, 2026-10-13): es una conversación.
+        assert "instrucción de inversión" not in bajo and "━" not in t and "*" not in t
+        assert "Lectura técnica hoy" not in t and "1:3" not in t
+        assert "La lectura del lunes sigue en pie" in t and "lámina" in bajo
+
+
+def test_dice_la_direccion_y_pesa_igual_el_stop_y_el_objetivo():
+    alza = _mensaje(*ESTADOS_EJEMPLO["en_curso_a_favor"])
+    assert "Es una compra, porque la tendencia es alcista." in alza
+    baja = sg.mensaje("Cobre", "miércoles 14/10", "12/10", dict(RANGO, entrada_pendiente=False), {"estado": "en_curso", "avance_pct": 3},
+                      14500.0, fx.lectura(), False, 0)
+    assert "Es una venta, porque la tendencia es bajista." in baja
+    # La misma frase trae stop y objetivo, cada uno con lo que significa.
+    assert ("stop en 3.950,00 (si el precio llega ahí, se da por fallida) y objetivo en 4.150,00 "
+            "(si llega ahí, se da por cumplida)") in alza
+
+
+def test_solo_dice_que_hay_espacio_cuando_es_cierto():
+    con = ("entrada_pendiente", "en_curso_a_favor")
+    for nombre, (esc, velas, precio) in ESTADOS_EJEMPLO.items():
+        t = _mensaje(esc, velas, precio)
+        assert ("aún hay espacio para tomar posición" in t or "todavía queda espacio para tomar posición" in t)             == (nombre in con), nombre
+    poco = _mensaje(ALZA, [v(4010, 3995)], 4005.0)
+    assert "muy poco a favor" in poco and "casi todo el recorrido" in poco
+    mucho = _mensaje(ALZA, [v(4120, 3995)], 4120.0)
+    assert "queda poco espacio" in mucho
+
+
+def test_el_stop_y_el_objetivo_se_dan_por_cerrados_sin_dramatizar():
+    assert "se da por cerrada" in _mensaje(*ESTADOS_EJEMPLO["stop"]) and "limitar la pérdida" in _mensaje(*ESTADOS_EJEMPLO["stop"])
+    assert "se da por cumplida" in _mensaje(*ESTADOS_EJEMPLO["objetivo"])
+
+
+def test_la_apertura_y_el_cierre_varian_entre_dias_pero_son_estables_el_mismo_dia():
+    esc, velas, precio = ESTADOS_EJEMPLO["en_curso_a_favor"]
+    ev = sg.evaluar(esc, velas, precio)
+
+    def dia(fecha):
+        return sg.mensaje("Oro", fecha, "12/10", esc, ev, precio, fx.lectura(), False, 2)
+
+    assert dia("martes 13/10") == dia("martes 13/10")
+    dias = [f"día {n}" for n in range(12)]
+    assert len({dia(d).splitlines()[0] for d in dias}) > 1
+    assert len({dia(d).splitlines()[-1] for d in dias}) > 1
 
 
 def test_saludo_de_usa_lo_que_escribio_el_ejecutivo():
@@ -163,10 +203,13 @@ def test_saludo_de_usa_lo_que_escribio_el_ejecutivo():
     assert sg.saludo_de("Juan") == "Hola Juan,"
     assert sg.saludo_de("Estimado Sr. Pérez") == "Estimado Sr. Pérez,"
     assert sg.saludo_de("Estimada Camila:") == "Estimada Camila:"
+    # Un nombre escrito todo en minúscula se capitaliza.
+    assert sg.saludo_de("hari") == "Hola Hari," and sg.saludo_de("juan pérez") == "Hola Juan Pérez,"
+    assert sg.saludo_de("estimado sr. pérez") == "Estimado Sr. Pérez,"
 
 
 def test_con_saludo_no_deja_la_marca_y_respeta_piezas_viejas_sin_ella():
     t = _mensaje(*ESTADOS_EJEMPLO["en_curso_a_favor"])
-    assert sg.con_saludo(t, "Juan").startswith("Hola Juan, te cuento cómo va Oro")
+    assert sg.con_saludo(t, "Juan").startswith("Hola Juan, ") and "simulación de Oro" in sg.con_saludo(t, "Juan")
     assert sg.MARCA_SALUDO not in sg.con_saludo(t)
     assert sg.con_saludo("Texto viejo sin marca", "Juan") == "Texto viejo sin marca"

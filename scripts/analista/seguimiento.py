@@ -123,17 +123,34 @@ def texto_lectura(actual, reemplazada: bool, digits: int) -> str:
 
 MARCA_SALUDO = "[[SALUDO]]"
 SALUDO_POR_DEFECTO = "Hola,"
-CIERRE = "Si quieres, lo conversamos."
+# Poco avance: casi todo el recorrido sigue por delante. Mucho avance: queda poco.
+AVANCE_POCO, AVANCE_MUCHO = 10, 70
+
+# Varias formas de abrir y de cerrar: un solo texto repetido cada día se lee como plantilla. Se elige
+# una por día y activo (estable), como los cierres del carrusel, para que no cambie entre reenvíos.
+ABRIR = (
+    "te cuento cómo va la simulación de {n}",
+    "te actualizo la simulación de {n}",
+    "quería contarte cómo viene la simulación de {n}",
+)
+CERRAR = (
+    "En la lámina lo ves sobre el gráfico. Si quieres, lo vemos juntos.",
+    "Te dejo la lámina con los niveles dibujados. Cualquier duda, me avisas.",
+    "La lámina muestra todo sobre el gráfico de hoy. Cuando quieras, lo conversamos.",
+)
 
 
 def saludo_de(texto: str) -> str:
     """Cómo abre el mensaje: lo que el ejecutivo escribió, o un saludo neutro.
 
     «Estimado Sr. Pérez» se usa tal cual (con su puntuación); un nombre suelto queda «Hola Juan,».
+    Un nombre escrito todo en minúscula («hari») se capitaliza: a mano nadie lo deja así.
     """
-    texto = (texto or "").strip()
+    texto = " ".join((texto or "").split())
     if not texto:
         return SALUDO_POR_DEFECTO
+    if texto == texto.lower():
+        texto = texto.title()
     if not texto.lower().startswith(("estimad", "apreciad")):
         texto = f"Hola {texto}"
     return texto if texto[-1] in ":,;." else texto + ","
@@ -147,49 +164,91 @@ def con_saludo(whatsapp: str, saludo: str = "") -> str:
     return whatsapp.replace(MARCA_SALUDO, saludo_de(saludo))
 
 
-def _arranque(nombre: str, esc: dict[str, Any], ev: dict[str, Any]) -> str:
-    """La primera línea: dice el estado, para que dos mensajes de dos días no abran igual."""
+def _variante(opciones: tuple[str, ...], fecha_hoy: str, nombre: str, salto: int = 0) -> str:
+    import zlib
+
+    return opciones[(zlib.crc32(f"{fecha_hoy}|{nombre}".encode()) >> salto) % len(opciones)]
+
+
+def _titular(ev: dict[str, Any]) -> str:
+    """Lo que le pasó a la simulación, en pocas palabras: va en la primera línea."""
     estado = ev["estado"]
-    cabeza = f"te cuento cómo va {nombre}"
-    if estado == "sin_simulacion":
-        return f"{cabeza}: esta semana no tiene simulación, y te dejo la lectura de hoy."
-    frase = {
-        "entrada_pendiente": "todavía espera su entrada",
-        "objetivo": "llegó a su objetivo",
-        "stop": "tocó su stop",
-        "rango_roto": "quedó descartada",
-        "descartada": "quedó descartada",
-    }.get(estado)
     if estado == "en_curso":
-        frase = "avanza a favor" if ev["avance_pct"] >= 0 else "va en contra por ahora, sin tocar el stop"
-    return f"{cabeza}: la simulación de esta semana {frase}."
+        pct = ev["avance_pct"]
+        return ("va en contra por ahora, sin tocar el stop" if pct < 0
+                else "sigue en curso" if pct < AVANCE_POCO else "va a favor")
+    return {"entrada_pendiente": "todavía espera su entrada", "objetivo": "llegó a su objetivo",
+            "stop": "tocó su stop", "rango_roto": "quedó descartada", "descartada": "quedó descartada",
+            "sin_simulacion": "esta semana no tiene"}[estado]
+
+
+def _hoy(esc: dict[str, Any], ev: dict[str, Any], precio_vivo: float, digits: int) -> str:
+    """Dónde está el precio hoy frente a la simulación, y si todavía queda espacio para tomar posición.
+
+    Solo dice «hay espacio» cuando es cierto: con la entrada pendiente o con poco recorrido hecho. Con
+    el precio en contra, con el objetivo cumplido o con el stop tocado, no lo dice.
+    """
+    f = lambda x: _fmt(x, digits)  # noqa: E731
+    estado, stop = ev["estado"], f(esc["stop"]) if "stop" in esc else ""
+    limite = f"con el stop en {stop} como límite"
+    if estado == "en_curso":
+        pct, p = ev["avance_pct"], f(precio_vivo)
+        if pct < 0:
+            return (f"Hoy el precio va en {p}, en contra de la entrada, pero sin tocar el stop: mientras "
+                    "eso no pase, la simulación sigue vigente.")
+        if pct < AVANCE_POCO:
+            return (f"Hoy el precio va en {p} y se ha movido muy poco a favor. Todavía queda casi todo el "
+                    f"recorrido hasta el objetivo, así que aún hay espacio para tomar posición en esa "
+                    f"dirección, {limite}.")
+        if pct < AVANCE_MUCHO:
+            return (f"Hoy el precio va en {p}: ya recorrió un {pct} % del camino al objetivo y todavía "
+                    f"queda espacio para tomar posición en esa dirección, {limite}.")
+        return (f"Hoy el precio va en {p}: ya recorrió un {pct} % del camino al objetivo, así que queda "
+                "poco espacio para tomar posición en esa dirección.")
+    if estado == "entrada_pendiente":
+        return (texto_simulacion(esc, ev, precio_vivo, digits) + " Como todavía no se activa, aún hay "
+                f"espacio para tomar posición en esa dirección cuando se dé esa condición, {limite}.")
+    if estado == "objetivo":
+        return (f"El precio llegó al objetivo de {f(esc['objetivo'])}: la simulación de esta semana se da "
+                "por cumplida.")
+    if estado == "stop":
+        return (f"El precio tocó el stop de {stop}: la simulación de esta semana se da por cerrada. Para "
+                "eso está el stop: limitar la pérdida cuando el escenario no se da.")
+    return texto_simulacion(esc, ev, precio_vivo, digits)  # descartada, rango roto o sin simulación
+
+
+def _cifras(esc: dict[str, Any], ev: dict[str, Any], digits: int) -> str:
+    """Entrada, stop y objetivo con el mismo peso y explicados; solo mientras la simulación vive."""
+    if ev["estado"] not in ("entrada_pendiente", "en_curso"):
+        return ""
+    f = lambda x: _fmt(x, digits)  # noqa: E731
+    return (f"Las cifras de la simulación no cambian desde el lunes: entrada en {f(esc['entrada'])}, "
+            f"stop en {f(esc['stop'])} (si el precio llega ahí, se da por fallida) y objetivo en "
+            f"{f(esc['objetivo'])} (si llega ahí, se da por cumplida).")
 
 
 def mensaje(nombre: str, fecha_hoy: str, fecha_foto: str, esc: dict[str, Any], ev: dict[str, Any],
             precio_vivo: float, actual, reemplazada: bool, digits: int) -> str:
-    """El texto de WhatsApp del seguimiento, escrito como quien retoma una conversación.
+    """El texto de WhatsApp del seguimiento: una persona que retoma la conversación con su cliente.
 
-    Abre con la marca del saludo (`con_saludo` la reemplaza al responder), dice el estado en las
-    dos primeras líneas y después informa por separado, con el mismo peso, la simulación fijada el
-    lunes y la lectura de hoy.
+    Abre con la marca del saludo (`con_saludo` la reemplaza al responder) y el estado en la primera
+    línea; después, en párrafos y sin encabezados, la simulación fijada el lunes (con su dirección,
+    el espacio que queda y las cifras) y la lectura de hoy, que se informan por separado y con el
+    mismo peso. Sin aviso legal (gerencia, 2026-10-13): lo lleva la lámina.
     """
-    from analista.comercial import AVISO_PIEZA
-
-    f = lambda x: _fmt(x, digits)  # noqa: E731
     sin = ev["estado"] == "sin_simulacion"
-    simulacion = [] if sin else [
-        f"🎯 *Simulación de la semana* (precios del {fecha_foto})",
-        f"Entrada {f(esc['entrada'])} · Stop {f(esc['stop'])} · Objetivo 1:3 {f(esc['objetivo'])}",
-        SEPARADOR]
-    return "\n".join([
-        f"{MARCA_SALUDO} {_arranque(nombre, esc, ev)}",
-        texto_simulacion(esc, ev, precio_vivo, digits),
-        SEPARADOR,
-        *simulacion,
-        f"📈 *Lectura técnica hoy* ({fecha_hoy})",
-        texto_lectura(actual, reemplazada, digits),
-        SEPARADOR,
-        CIERRE,
-        SEPARADOR,
-        AVISO_PIEZA,
-    ])
+    apertura = _variante(ABRIR, fecha_hoy, nombre).format(n=nombre)
+    if sin:
+        primera = (f"{MARCA_SALUDO} te cuento cómo va {nombre}: esta semana no tiene simulación, "
+                   "y te dejo la lectura de hoy.")
+        detalle = texto_simulacion(esc, ev, precio_vivo, digits)
+    else:
+        accion = "una compra" if esc["direccion"] == "ALCISTA" else "una venta"
+        sentido = "alcista" if esc["direccion"] == "ALCISTA" else "bajista"
+        primera = f"{MARCA_SALUDO} {apertura}: {_titular(ev)}."
+        con_direccion = ev["estado"] not in ("rango_roto", "descartada")
+        detalle = " ".join(x for x in ((f"Es {accion}, porque la tendencia es {sentido}." if con_direccion else ""),
+                                       _hoy(esc, ev, precio_vivo, digits)) if x)
+    partes = [primera, detalle, _cifras(esc, ev, digits), texto_lectura(actual, reemplazada, digits),
+              _variante(CERRAR, fecha_hoy, nombre, 8)]
+    return "\n\n".join(p for p in partes if p)
