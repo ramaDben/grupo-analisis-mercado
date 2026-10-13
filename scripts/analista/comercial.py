@@ -1,7 +1,7 @@
 """Lo que sale de la pieza semanal hacia el cliente: láminas y textos de WhatsApp.
 
 Las láminas y el texto base llevan el ANÁLISIS (lo que firma el director). La simulación
-1:3 del ejecutivo no va en la lámina: la agrega el panel al texto de WhatsApp, con el
+del ejecutivo no va en la lámina: la agrega el panel al texto de WhatsApp, con el
 nombre de quien la hizo (spec §1 y §5).
 """
 from __future__ import annotations
@@ -12,6 +12,10 @@ from typing import Any, Callable
 # Fijo y no editable (spec §7). Sin «recomendación» ni «oportunidad».
 AVISO_PIEZA = ("Análisis técnico de carácter informativo. No es una instrucción "
                "de inversión: un escenario puede cumplirse o invalidarse.")
+# La lámina de seguimiento lleva el aviso en una sola línea corta (director, 2026-10-13: la veía sucia).
+AVISO_SEGUIMIENTO = "Análisis técnico informativo. No es una instrucción de inversión."
+INVITACION_ACTIVA = "¿Te interesa operar este escenario? Conversémoslo, con el stop como límite."
+INVITACION_CERRADA = "Si quieres, vemos juntos cómo sigue."
 SEPARADOR = "━━━━━━━━━━━━━━━━━━━"
 MESES = ("enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre",
          "noviembre", "diciembre")
@@ -31,7 +35,7 @@ def semana_visible(semana: str) -> str:
         return f"semana del {lunes.day} al {viernes.day} de {MESES[viernes.month - 1]}"
     return f"semana del {lunes.day} de {MESES[lunes.month - 1]} al {viernes.day} de {MESES[viernes.month - 1]}"
 SELLOS = {"entrada_pendiente": "ENTRADA PENDIENTE", "en_curso": "EN CURSO",
-          "objetivo": "OBJETIVO 1:3 ALCANZADO", "stop": "STOP TOCADO", "rango_roto": "RANGO ROTO",
+          "objetivo": "OBJETIVO ALCANZADO", "stop": "STOP TOCADO", "rango_roto": "RANGO ROTO",
           "descartada": "SIMULACIÓN DESCARTADA",
           "sin_simulacion": "SIN SIMULACIÓN"}
 
@@ -101,7 +105,7 @@ def _avance(pct: int | None) -> str:
         return ""
     if pct < 0:
         return f"{-pct} % del camino en contra, sin tocar el stop"
-    return f"{pct} % del camino al objetivo 1:3"
+    return f"{pct} % del camino al objetivo"
 
 
 def payload_seguimiento(activo: dict[str, Any], ev: dict[str, Any], precio_vivo: float, lectura_hoy: str,
@@ -120,21 +124,25 @@ def payload_seguimiento(activo: dict[str, Any], ev: dict[str, Any], precio_vivo:
                   else "El precio no llega a la entrada")
     else:
         avance = {"en_curso": _avance(ev.get("avance_pct")),
-                  "objetivo": "Objetivo 1:3 alcanzado", "stop": "Stop tocado",
+                  "objetivo": "Objetivo alcanzado", "stop": "Stop tocado",
                   "rango_roto": "El precio rompió el rango: simulación descartada",
                   "descartada": "El precio rompió el nivel sin activar la entrada: simulación descartada",
                   "sin_simulacion": "Esta semana este activo no tiene simulación"}[estado]
     sin = estado == "sin_simulacion"
-    niveles = "" if sin else f"Entrada {f['entrada']} · Stop {f['stop']} · Objetivo 1:3 {f['objetivo']}"
+    niveles = "" if sin else f"Entrada {f['entrada']} · Stop {f['stop']} · Objetivo {f['objetivo']}"
+    viva = estado in ("entrada_pendiente", "en_curso")
     return {
-        "chip": f"SEGUIMIENTO · {SELLOS[ev['estado']]}", "datos_al": datos_al,
+        "chip": "SEGUIMIENTO DE LA SEMANA", "datos_al": datos_al,
         "activo": f"{activo['nombre']} · {activo['ticker_visible']}",
         "direccion": (activo["lectura"]["direccion"] if sin else esc["direccion"]).lower(),
         "sello": SELLOS[ev["estado"]],
         "precio_lunes": f["precio"], "precio_hoy": _fmt(precio_vivo, d), "avance": avance,
         "lectura_hoy": lectura_hoy, "niveles": niveles,
+        "entrada": "" if sin else f["entrada"], "stop": "" if sin else f["stop"],
+        "objetivo": "" if sin else f["objetivo"],
+        "invitacion": INVITACION_ACTIVA if viva else INVITACION_CERRADA,
         "pie_imagen": f"{activo['nombre']} · velas de 4 horas · MetaTrader 5",
-        "firma": firma(autor), "aviso": AVISO_PIEZA, "chart_png": str(chart),
+        "firma": firma(autor), "aviso": AVISO_SEGUIMIENTO, "chart_png": str(chart),
     }
 
 

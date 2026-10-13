@@ -113,9 +113,10 @@ def _el(clave: str, nombre: str) -> str:
 
 
 def _dato(ev: dict[str, Any]) -> str:
-    """«el dato "X" de EE.UU.»: sin artículo del nombre, que cambia de género de un dato a otro."""
+    """«el dato X de EE.UU.»: sin artículo del nombre, que cambia de género de un dato a otro. Sin
+    comillas angulares: nadie las escribe a mano en WhatsApp y delatan texto armado (director, 2026-10-13)."""
     nombre = (ev.get("diccionario") or {}).get("nombre_es") or ev.get("nombre", "")
-    return f"el dato «{nombre}» {PAISES.get(ev.get('pais', ''), 'de ' + str(ev.get('pais', '')))}"
+    return f"el dato {nombre} {PAISES.get(ev.get('pais', ''), 'de ' + str(ev.get('pais', '')))}"
 
 
 def _cuando_txt(cuando: datetime, ahora: datetime) -> str:

@@ -87,7 +87,7 @@ def resolver_activo(texto: str, universo: list[dict[str, Any]]) -> str:
         formas = _formas(activo["ticker"]) | {re.sub(r"[\s/&]", "", _plano(activo.get("nombre", "")))}
         if clave in {re.sub(r"[\s/]", "", f) for f in formas}:
             return activo["ticker"]
-    raise PedidoInvalido(f"No encontré el activo «{texto}». Prueba con: oro, dolar, cobre, petroleo, brent, nasdaq o bitcoin.")
+    raise PedidoInvalido(f"No encontré el activo '{texto}'. Prueba con: oro, dolar, cobre, petroleo, brent, nasdaq o bitcoin.")
 
 
 SALUDO_MAX = 60

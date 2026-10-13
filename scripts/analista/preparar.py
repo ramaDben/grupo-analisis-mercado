@@ -161,13 +161,26 @@ def niveles_lamina_semanal(lectura) -> list[tuple[float, str]]:
 
 def niveles_lamina_seguimiento(esc: dict[str, Any], simula: bool, hoy) -> list[tuple[float, str]]:
     """Los niveles que nombra el seguimiento: la simulación (si la hay) y la línea de hoy."""
-    filas = ([(esc["entrada"], "ENTRADA"), (esc["stop"], "STOP"), (esc["objetivo"], "OBJETIVO 1:3")]
+    filas = ([(esc["entrada"], "ENTRADA"), (esc["stop"], "STOP"), (esc["objetivo"], "OBJETIVO")]
              if simula else [])
     if hoy.estado == "PRUEBA" and hoy.en_prueba is not None:
         filas.append((hoy.en_prueba.valor_ahora, hoy.vigilar.etiqueta.upper()))
     else:
         filas.append((hoy.vigilar.precio, hoy.vigilar.etiqueta.upper()))
     return filas
+
+
+def _sin_segundo_objetivo(lectura, simula: bool):
+    """Con simulación, el gráfico muestra un solo objetivo: el de la simulación.
+
+    La línea de objetivo técnico de la lectura quedaba a pocos puntos del objetivo de la simulación y
+    el cliente veía dos metas distintas y etiquetas apiladas (director, 2026-10-13: «no la veo limpia»).
+    """
+    if not simula:
+        return lectura
+    from dataclasses import replace
+
+    return replace(lectura, lineas=tuple(x for x in lectura.lineas if x.rol != "objetivo"))
 
 
 def _estrategia():
@@ -384,7 +397,8 @@ def preparar_seguimiento(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
     hoy = fecha_corta(ahora)
     texto = sg.mensaje(a["nombre"], hoy, a["foto"]["fecha"], esc, ev, precio, diaria.lectura, reemplazada,
                        a["digits"])
-    lec.grafico_lectura(ticker, a["nombre"], diaria.lectura, dir_pedido / "grafico.png", digits=a["digits"],
+    lec.grafico_lectura(ticker, a["nombre"], _sin_segundo_objetivo(diaria.lectura, not motivo),
+                        dir_pedido / "grafico.png", digits=a["digits"],
                         niveles=niveles_lamina_seguimiento(esc, not motivo, diaria.lectura))
     datos = {"semana": semana, "ticker": ticker, "nombre": a["nombre"], "evaluacion": ev, "precio_vivo": precio,
              "lectura_hoy": lectura_hoy, "reemplazada": reemplazada, "whatsapp": texto,

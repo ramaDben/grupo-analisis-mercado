@@ -104,8 +104,8 @@ def _texto(ahora, ev=None, alcista=False, estado_sim="en_curso", digits=2, ticke
 
 def test_el_dato_pendiente_da_los_dos_caminos_con_el_mismo_peso_en_una_venta():
     m = _texto(a(7))
-    assert m["apertura"].startswith("hoy a las 09:30 (hora de Chile) se publica el dato «Índice de precios al "
-                                    "consumidor (IPC)» de EE.UU.")
+    assert m["apertura"].startswith("hoy a las 09:30 (hora de Chile) se publica el dato Índice de precios al "
+                                    "consumidor (IPC) de EE.UU.")
     assert ("Si sale sobre lo esperado, el oro tiende a bajar, lo que iría a favor de la venta; si sale bajo lo "
             "esperado, tiende a subir, lo que lo acercaría al stop de 3.950,00.") in m["reaccion"]
     assert "Son los dos caminos, y el stop del lunes es el límite en ambos." in m["reaccion"]
@@ -145,7 +145,7 @@ def test_el_dia_de_un_dato_lejano_se_dice_con_el_dia_de_la_semana():
                                                ("0.2%", "en línea con lo esperado", None)])
 def test_el_dato_publicado_dice_el_resultado_y_la_tendencia_del_glosario(actual, lado, verbo):
     m = _texto(a(10), evento(actual=actual))
-    assert m["apertura"].startswith("ya se publicó el dato «Índice de precios al consumidor (IPC)» de EE.UU.: ")
+    assert m["apertura"].startswith("ya se publicó el dato Índice de precios al consumidor (IPC) de EE.UU.: ")
     assert f"{actual.replace('.', ',').replace('%', ' %')} frente a 0,2 % esperado, es decir, {lado}." in m["apertura"]
     assert (f"tiende a {verbo}" in m["apertura"]) == (verbo is not None)
     assert m["reaccion"] == "" and not m["quita_espacio"] and m["aparte"] == ""
@@ -162,6 +162,7 @@ def test_nada_de_lo_que_se_dice_promete_ni_recomienda():
         m = _texto(ahora, ev)
         todo = " ".join(m[k] or "" for k in ("apertura", "reaccion", "cierre", "aparte")).lower()
         assert "$" not in todo and "—" not in todo and "–" not in todo
+        assert "«" not in todo and "»" not in todo  # nadie las escribe a mano (director, 2026-10-13)
         for prohibido in ("recomend", "oportunidad", "cartera", "hubieras", "ganarías", "aprovecha", "seguro"):
             assert prohibido not in todo
 

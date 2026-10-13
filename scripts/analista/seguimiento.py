@@ -101,7 +101,7 @@ def texto_simulacion(esc: dict[str, Any], ev: dict[str, Any], precio_vivo: float
     if estado == "stop":
         return f"El precio tocó el stop de {f(esc['stop'])}."
     if estado == "objetivo":
-        return f"El precio alcanzó el objetivo 1:3 de {f(esc['objetivo'])}."
+        return f"El precio alcanzó el objetivo de {f(esc['objetivo'])}."
     pct = ev["avance_pct"]
     if pct >= 0:
         return f"En curso: el precio va en {f(precio_vivo)}, un {pct} % del recorrido hacia el objetivo."
