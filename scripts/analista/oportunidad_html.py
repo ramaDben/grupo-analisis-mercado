@@ -199,9 +199,9 @@ def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: P
           f'{ih.e(lec["direccion"].upper())}</span></td></tr>',
         estilo=f'background:{c["fondo"]};border:1px solid {c["linea"]};border-radius:12px;', fondo=c["fondo"])
     grafico = _tabla(
-        f'<tr><td style="padding:6px;"><img src="{ih._data_uri(dir_pedido / a["grafico"])}" width="546" height="{_alto_png(dir_pedido / a["grafico"], 546)}" '
-        f'alt="Gráfico de {ih.e(a["nombre"])}" style="display:block;border:0;width:546px;max-width:100%;'
-        f'height:auto;border-radius:8px;"></td></tr>', estilo=f'border:1px solid {c["linea"]};border-radius:12px;')
+        f'<tr><td style="padding:0;"><img src="{ih._data_uri(dir_pedido / a["grafico"])}" width="558" height="{_alto_png(dir_pedido / a["grafico"], 558)}" '
+        f'alt="Gráfico de {ih.e(a["nombre"])}" style="display:block;border:0;width:558px;max-width:100%;'
+        f'height:auto;border-radius:11px;"></td></tr>', estilo=f'border:1px solid {c["linea"]};border-radius:12px;')
     return (
         f'<tr><td class="pad" style="padding:30px 40px 0 40px;border-top:1px solid {c["linea"]};">'
         + _rotulo(f'{ih.e(a["nombre"])} · {ih.e(a["ticker_visible"])}', c)
@@ -264,7 +264,7 @@ def _marco_correo(d: dict[str, Any], ed: dict[str, Any], ejecutivo: dict[str, An
     firmas = (
         '<tr><td class="pad" style="padding:6px 40px 0 40px;">'
         + _tabla('<tr>' + _firma_correo("Análisis", [autor.nombre, autor.cargo], c)
-                 + _firma_correo("Te lo envía", [ejecutivo["nombre"], ejecutivo.get("cargo", ""),
+                 + _firma_correo("Te lo envía", [ejecutivo["nombre"], CARGO_SIMULA,
                                                  ejecutivo.get("contacto", "")], c) + '</tr>',
                  estilo=f'border-top:1px solid {c["linea"]};')
         + '</td></tr>'
@@ -286,6 +286,7 @@ def _marco_correo(d: dict[str, Any], ed: dict[str, Any], ejecutivo: dict[str, An
 
 
 PENDIENTE = "[Tu nombre]"
+CARGO_SIMULA = "Departamento de Inversiones"
 
 
 def _norma(nombre: str) -> str:

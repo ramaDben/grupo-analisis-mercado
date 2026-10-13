@@ -213,4 +213,4 @@ def test_el_autor_nunca_firma_la_simulacion(tmp_path):
 def test_el_grafico_del_correo_es_una_imagen_con_ancho_y_alto(tmp_path):
     html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
     correo = re.search(r'<template class="correo-activo" data-ticker="XAUUSD">(.*?)</template>', html, re.S).group(1)
-    assert re.search(r'<img src="data:image/png;base64,[^"]+" width="546" height="\d+"', correo)
+    assert re.search(r'<img src="data:image/png;base64,[^"]+" width="558" height="\d+"', correo)
