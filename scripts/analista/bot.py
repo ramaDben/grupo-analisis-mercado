@@ -35,6 +35,7 @@ from analista import oportunidad_html as oh
 from analista import orden as od
 from analista import preparar as pr
 from analista import registro_semanal as rg
+from analista import seguimiento as sg
 
 SANTIAGO = ZoneInfo("America/Santiago")
 CONFIG = RAIZ / "config" / "analistas_telegram.json"
@@ -45,10 +46,24 @@ INSTANCIA = RAIZ / "data" / ".bot_analistas.lock"
 
 AYUDA = """Bot de análisis · Grupo Inteligencia
 
-/oportunidad          el análisis técnico de la semana, con los 6 activos y tu panel de simulación
-/seguimiento oro      cómo va un activo de la semana: la simulación y la lectura de hoy
+1) El análisis de la semana, para abrir en tu navegador:
+/oportunidad
 
-/estado muestra tu cupo del día. /id muestra tu número de usuario."""
+2) Cómo va un activo, con lámina y texto listos para WhatsApp:
+/seguimiento oro
+Con el nombre de tu cliente:
+/seguimiento oro Juan
+
+Activos: oro, dolar, cobre, petroleo, brent, nasdaq, bitcoin
+Tus pedidos de hoy: /estado"""
+
+# El menú que Telegram muestra al tocar «/»: los ejecutivos no tienen que recordar nada.
+MENU = [
+    ("oportunidad", "El análisis de la semana"),
+    ("seguimiento", "Cómo va un activo (ej: /seguimiento oro)"),
+    ("estado", "Tus pedidos de hoy"),
+    ("ayuda", "Cómo se usa"),
+]
 
 
 # ───────────────────────────────────────────────────────────── configuración y estado
@@ -323,7 +338,8 @@ class Atendedor:
             self.estado.consumir(pedido.usuario, ahora)
             self.estado.guardar()
         pieza = pr.cargar_pieza(dir_pedido)
-        return Respuesta(pedido.chat, pieza["datos"]["whatsapp"], [dir_pedido / "lamina.png"])
+        texto = sg.con_saludo(pieza["datos"]["whatsapp"], o.saludo)
+        return Respuesta(pedido.chat, texto, [dir_pedido / "lamina.png"])
 
 
 # ───────────────────────────────────────────────────────────── Telegram
@@ -360,6 +376,9 @@ class Telegram:
 
     def soy(self) -> dict[str, Any]:
         return self._post("getMe")
+
+    def registrar_menu(self) -> None:
+        self._post("setMyCommands", json={"commands": [{"command": c, "description": d} for c, d in MENU]})
 
 
 def entregar(tg: Any, r: Respuesta) -> None:
@@ -454,6 +473,11 @@ class Bot:
     def escuchar(self) -> None:
         threading.Thread(target=self.trabajador, daemon=True).start()
         import time
+
+        try:
+            self.tg.registrar_menu()
+        except Exception:  # noqa: BLE001  el menú es comodidad: nunca impide arrancar
+            _log(f"no se pudo registrar el menú: {traceback.format_exc()}")
 
         while True:
             try:

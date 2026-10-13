@@ -102,7 +102,7 @@ def test_el_mensaje_no_habla_en_pesos_ni_de_lo_que_se_habria_ganado():
     texto = sg.mensaje("Oro", "miércoles 14-10", "lunes 12-10", ALZA, ev, 4075.0, fx.lectura(), False, 2)
     assert "$" not in texto and "CLP" not in texto and "ganarías" not in texto and "hubieras" not in texto
     assert "—" not in texto and "–" not in texto
-    assert "te envío una actualización" in texto.lower()
+    assert texto.startswith("[[SALUDO]] te cuento cómo va Oro")
     assert "4.075,00" in texto and "50 %" in texto
 
 
@@ -114,3 +114,59 @@ def test_la_lectura_reemplazada_se_dice():
 def test_la_lectura_en_prueba_da_la_hora_del_cierre():
     texto = sg.texto_lectura(fx.lectura(estado="PRUEBA"), False, 2)
     assert "13:00" in texto
+
+
+# ───────────────────────────────────────────── el mensaje personal, estado por estado
+
+PENDIENTE = dict(ALZA, entrada_pendiente=True, entrada=4000.0)
+ESTADOS_EJEMPLO = {
+    "entrada_pendiente": (PENDIENTE, [v(3990, 3960)], 3975.0),
+    "en_curso_a_favor": (ALZA, [v(4040, 3990)], 4075.0),
+    "en_curso_en_contra": (ALZA, [v(4010, 3970)], 3975.0),
+    "objetivo": (ALZA, [v(4040, 3990), v(4151, 4100)], 4120.0),
+    "stop": (ALZA, [v(4040, 3990), v(4000, 3949)], 3960.0),
+    "rango_roto": (RANGO, [v(14557, 14537), v(14668, 14544), v(14666, 14595)], 14593.0),
+}
+
+
+def _mensaje(esc, velas, precio, estado=None):
+    ev = ({"estado": "sin_simulacion", "avance_pct": None, "motivo": "no hay línea trazable"}
+          if estado == "sin_simulacion" else sg.evaluar(esc, velas, precio))
+    return sg.mensaje("Oro", "miércoles 14-10", "lunes 12-10", esc, ev, precio, fx.lectura(), False, 2)
+
+
+def test_cada_estado_abre_distinto_y_dice_el_estado_en_las_dos_primeras_lineas():
+    aperturas = {}
+    for nombre, (esc, velas, precio) in ESTADOS_EJEMPLO.items():
+        t = _mensaje(esc, velas, precio)
+        aperturas[nombre] = t.splitlines()[0]
+        assert t.startswith("[[SALUDO]] te cuento cómo va Oro: ")
+    aperturas["sin_simulacion"] = _mensaje(ALZA, [], 4000.0, "sin_simulacion").splitlines()[0]
+    assert len(set(aperturas.values())) == len(aperturas)
+
+
+def test_en_todos_los_estados_se_cumple_el_cumplimiento_y_las_dos_cosas_pesan_igual():
+    casos = [_mensaje(*c) for c in ESTADOS_EJEMPLO.values()] + [_mensaje(ALZA, [], 4000.0, "sin_simulacion")]
+    for t in casos:
+        bajo = t.lower()
+        assert "$" not in t and "clp" not in bajo and "—" not in t and "–" not in t
+        for prohibido in ("hubieras", "ganarías", "recomend", "oportunidad", "cartera"):
+            assert prohibido not in bajo
+        assert "Lectura técnica hoy" in t and "Si quieres, lo conversamos." in t
+        assert t.rstrip().endswith("un escenario puede cumplirse o invalidarse.")
+    # Con simulación, stop y objetivo salen juntos y con el mismo formato.
+    assert "Stop 3.950,00 · Objetivo 1:3 4.150,00" in casos[1]
+
+
+def test_saludo_de_usa_lo_que_escribio_el_ejecutivo():
+    assert sg.saludo_de("") == "Hola,"
+    assert sg.saludo_de("Juan") == "Hola Juan,"
+    assert sg.saludo_de("Estimado Sr. Pérez") == "Estimado Sr. Pérez,"
+    assert sg.saludo_de("Estimada Camila:") == "Estimada Camila:"
+
+
+def test_con_saludo_no_deja_la_marca_y_respeta_piezas_viejas_sin_ella():
+    t = _mensaje(*ESTADOS_EJEMPLO["en_curso_a_favor"])
+    assert sg.con_saludo(t, "Juan").startswith("Hola Juan, te cuento cómo va Oro")
+    assert sg.MARCA_SALUDO not in sg.con_saludo(t)
+    assert sg.con_saludo("Texto viejo sin marca", "Juan") == "Texto viejo sin marca"

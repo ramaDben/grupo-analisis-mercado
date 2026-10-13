@@ -289,8 +289,18 @@ def test_cupo_diario(armado):
 
 def test_seguimiento_entrega_lamina_y_texto_sin_agy(armado):
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
-    assert armado.llamadas == [] and "Te envío una actualización" in r.texto
+    assert armado.llamadas == [] and r.texto.startswith("Hola, te cuento cómo va el oro")
+    assert "[[SALUDO]]" not in r.texto
     assert r.archivos[0].suffix == ".png"
+
+
+def test_el_saludo_se_aplica_al_responder_y_no_se_hereda_entre_ejecutivos(armado):
+    """La pieza se reusa 30 minutos entre ejecutivos: cada uno recibe SU saludo."""
+    a = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"}, "Juan")))
+    c = armado.bot.procesar_uno(b.Pedido(OTRO, 2, od.Orden("seguimiento", {"ticker": "XAUUSD"}, "Estimado Sr. Pérez")))
+    d = armado.bot.procesar_uno(b.Pedido(OTRO, 2, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
+    assert a.texto.startswith("Hola Juan, te cuento") and c.texto.startswith("Estimado Sr. Pérez, te cuento")
+    assert d.texto.startswith("Hola, te cuento") and armado.llamadas == []
 
 
 @pytest.mark.parametrize("orden", [od.Orden("oportunidad"), od.Orden("seguimiento", {"ticker": "XAUUSD"})])
@@ -356,6 +366,20 @@ def test_la_ayuda_nombra_solo_los_dos_comandos():
     for retirado in ("/activo", "/calendario", "/dato", "/jornada"):
         assert retirado not in b.AYUDA
     assert "—" not in b.AYUDA and "–" not in b.AYUDA
+
+
+def test_el_menu_de_telegram_solo_ofrece_comandos_que_existen():
+    import analista.orden as od_
+    conocidos = set(od_.PIEZAS) | set(od_.SERVICIO)
+    for comando, descripcion in b.MENU:
+        assert comando in conocidos and 3 <= len(descripcion) <= 256
+        assert "—" not in descripcion and "–" not in descripcion
+    assert {"oportunidad", "seguimiento"} <= {c for c, _ in b.MENU}
+
+
+def test_la_ayuda_es_corta_y_trae_ejemplos_para_copiar():
+    assert len(b.AYUDA.splitlines()) <= 14
+    assert "/seguimiento oro" in b.AYUDA and "/seguimiento oro Juan" in b.AYUDA
 
 
 def test_estado_muestra_el_cupo(armado):

@@ -121,26 +121,75 @@ def texto_lectura(actual, reemplazada: bool, digits: int) -> str:
             f"{actual.direccion.lower()}, con {actual.vigilar.etiqueta} en {f(actual.vigilar.precio)}.")
 
 
+MARCA_SALUDO = "[[SALUDO]]"
+SALUDO_POR_DEFECTO = "Hola,"
+CIERRE = "Si quieres, lo conversamos."
+
+
+def saludo_de(texto: str) -> str:
+    """Cómo abre el mensaje: lo que el ejecutivo escribió, o un saludo neutro.
+
+    «Estimado Sr. Pérez» se usa tal cual (con su puntuación); un nombre suelto queda «Hola Juan,».
+    """
+    texto = (texto or "").strip()
+    if not texto:
+        return SALUDO_POR_DEFECTO
+    if not texto.lower().startswith(("estimad", "apreciad")):
+        texto = f"Hola {texto}"
+    return texto if texto[-1] in ":,;." else texto + ","
+
+
+def con_saludo(whatsapp: str, saludo: str = "") -> str:
+    """Pone el saludo del ejecutivo donde la pieza guardada dejó la marca.
+
+    La pieza se reusa entre ejecutivos, así que el saludo no se guarda con ella.
+    """
+    return whatsapp.replace(MARCA_SALUDO, saludo_de(saludo))
+
+
+def _arranque(nombre: str, esc: dict[str, Any], ev: dict[str, Any]) -> str:
+    """La primera línea: dice el estado, para que dos mensajes de dos días no abran igual."""
+    estado = ev["estado"]
+    cabeza = f"te cuento cómo va {nombre}"
+    if estado == "sin_simulacion":
+        return f"{cabeza}: esta semana no tiene simulación, y te dejo la lectura de hoy."
+    frase = {
+        "entrada_pendiente": "todavía espera su entrada",
+        "objetivo": "llegó a su objetivo",
+        "stop": "tocó su stop",
+        "rango_roto": "quedó descartada",
+        "descartada": "quedó descartada",
+    }.get(estado)
+    if estado == "en_curso":
+        frase = "avanza a favor" if ev["avance_pct"] >= 0 else "va en contra por ahora, sin tocar el stop"
+    return f"{cabeza}: la simulación de esta semana {frase}."
+
+
 def mensaje(nombre: str, fecha_hoy: str, fecha_foto: str, esc: dict[str, Any], ev: dict[str, Any],
             precio_vivo: float, actual, reemplazada: bool, digits: int) -> str:
-    """El texto de WhatsApp del seguimiento: las dos cosas, con el mismo peso."""
+    """El texto de WhatsApp del seguimiento, escrito como quien retoma una conversación.
+
+    Abre con la marca del saludo (`con_saludo` la reemplaza al responder), dice el estado en las
+    dos primeras líneas y después informa por separado, con el mismo peso, la simulación fijada el
+    lunes y la lectura de hoy.
+    """
     from analista.comercial import AVISO_PIEZA
 
     f = lambda x: _fmt(x, digits)  # noqa: E731
-    if ev["estado"] == "sin_simulacion":
-        simulacion = ["🎯 *Simulación de la semana*", texto_simulacion(esc, ev, precio_vivo, digits)]
-    else:
-        simulacion = [f"🎯 *Simulación de la semana* (precios del {fecha_foto})",
-                      texto_simulacion(esc, ev, precio_vivo, digits),
-                      f"Entrada {f(esc['entrada'])} · Stop {f(esc['stop'])} · Objetivo 1:3 {f(esc['objetivo'])}"]
+    sin = ev["estado"] == "sin_simulacion"
+    simulacion = [] if sin else [
+        f"🎯 *Simulación de la semana* (precios del {fecha_foto})",
+        f"Entrada {f(esc['entrada'])} · Stop {f(esc['stop'])} · Objetivo 1:3 {f(esc['objetivo'])}",
+        SEPARADOR]
     return "\n".join([
-        f"📊 *{nombre}* · actualización del {fecha_hoy}",
-        "Te envío una actualización del análisis de la semana.",
+        f"{MARCA_SALUDO} {_arranque(nombre, esc, ev)}",
+        texto_simulacion(esc, ev, precio_vivo, digits),
         SEPARADOR,
         *simulacion,
-        SEPARADOR,
-        "📈 *Lectura técnica hoy*",
+        f"📈 *Lectura técnica hoy* ({fecha_hoy})",
         texto_lectura(actual, reemplazada, digits),
+        SEPARADOR,
+        CIERRE,
         SEPARADOR,
         AVISO_PIEZA,
     ])

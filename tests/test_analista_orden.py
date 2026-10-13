@@ -37,6 +37,22 @@ def test_seguimiento_resuelve_el_activo():
     assert od.interpretar("/seguimiento xau", universo).args == {"ticker": "XAUUSD"}
 
 
+def test_lo_que_sigue_al_activo_es_el_saludo_al_cliente():
+    universo = [{"ticker": "USDCLP", "nombre": "USD/CLP"}]
+    o = od.interpretar("/seguimiento oro Juan", universo)
+    assert o.args == {"ticker": "XAUUSD"} and o.saludo == "Juan"
+    assert od.interpretar("/seguimiento oro Estimado Sr. Pérez", universo).saludo == "Estimado Sr. Pérez"
+    assert od.interpretar("/seguimiento oro", universo).saludo == ""
+    # El saludo no cambia la identidad de la pieza que se reusa.
+    assert o.clave_base() == od.interpretar("/seguimiento oro", universo).clave_base()
+
+
+def test_el_saludo_no_admite_guion_largo_ni_textos_largos():
+    assert od.interpretar("/seguimiento oro Juan — hola", []).saludo == "Juan hola"
+    with pytest.raises(od.PedidoInvalido, match="muy largo"):
+        od.interpretar("/seguimiento oro " + "x" * 80, [])
+
+
 def test_seguimiento_sin_activo_explica_como_pedirlo():
     with pytest.raises(od.PedidoInvalido, match="/seguimiento oro"):
         od.interpretar("/seguimiento", [])
