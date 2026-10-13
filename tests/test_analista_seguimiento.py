@@ -173,7 +173,7 @@ def test_cada_estado_cuenta_lo_que_paso_sin_dramatizar():
     stop = _mensaje(*ESTADOS_EJEMPLO["stop"])
     assert "se invalidó, y ahí nos cambiamos de lado" in stop and "operar a la baja" in stop
     assert "se descartó antes de activarse" in _mensaje(*ESTADOS_EJEMPLO["rango_roto"])
-    assert "no tiene un plan definido" in _mensaje(ALZA, [], 4000.0, "sin_simulacion")
+    assert "no hay un plan definido" in _mensaje(ALZA, [], 4000.0, "sin_simulacion")
 
 
 def test_la_apertura_y_el_cierre_varian_entre_dias_pero_son_estables_el_mismo_dia():
@@ -204,3 +204,16 @@ def test_con_saludo_no_deja_la_marca_y_respeta_piezas_viejas_sin_ella():
     assert sg.con_saludo(t, "Juan").startswith("Hola Juan, ") and "Oro" in sg.con_saludo(t, "Juan")
     assert sg.MARCA_SALUDO not in sg.con_saludo(t)
     assert sg.con_saludo("Texto viejo sin marca", "Juan") == "Texto viejo sin marca"
+
+
+def test_el_seguimiento_se_ata_al_mensaje_del_dia_de_la_foto():
+    """Sin dato macro lo hace la apertura; con dato macro, el plan. Nunca las dos (se repetiría)."""
+    sin = _mensaje(*ESTADOS_EJEMPLO["en_curso_a_favor"])
+    assert "te compartí el lunes" in sin.split("\n\n")[0] and "Con sesgo" not in sin.split("\n\n")[0]
+    con = sg._armar("Oro", "mié", ALZA, {"estado": "en_curso", "avance_pct": 40}, 4075.0, "", 2,
+                    {"apertura": "hoy hay un dato que puede mover el oro."}, "lunes", "bajista")
+    assert "El lunes te compartí el análisis de Oro (sesgo bajista): el plan es operar" in con
+    assert con.count("te compartí") == 1
+    # La foto de otro día se nombra con su día, no con «lunes».
+    assert "te compartí el miércoles" in sg._armar("Oro", "jue", ALZA, {"estado": "en_curso", "avance_pct": 40},
+                                                     4075.0, "", 2, None, "miércoles")

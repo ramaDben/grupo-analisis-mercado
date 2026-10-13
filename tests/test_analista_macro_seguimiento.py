@@ -193,4 +193,4 @@ def test_sin_dato_el_mensaje_es_corto_y_dice_el_plan(tmp_path):
 def test_el_mensaje_se_arma_desde_los_datos_y_no_desde_el_texto_guardado(tmp_path):
     datos = dict(fx.pieza_seguimiento(tmp_path)["datos"], whatsapp="TEXTO DE UNA VERSION ANTERIOR")
     texto, _ = sg.redactar(datos, "")
-    assert "VERSION ANTERIOR" not in texto and "El plan de Oro" in texto
+    assert "VERSION ANTERIOR" not in texto and "te compartí el lunes" in texto

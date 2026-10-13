@@ -291,7 +291,7 @@ def test_cupo_diario(armado):
 
 def test_seguimiento_entrega_lamina_y_texto_sin_agy(armado):
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
-    assert armado.llamadas == [] and r.texto.startswith("Hola, ") and "El plan de Oro" in r.texto
+    assert armado.llamadas == [] and r.texto.startswith("Hola, ") and "te compartí el lunes" in r.texto
     assert "[[SALUDO]]" not in r.texto
     assert r.archivos[0].suffix == ".png"
 
@@ -404,7 +404,7 @@ def test_si_el_calendario_falla_el_seguimiento_sale_igual(armado):
 
     armado.atendedor.calendario = roto
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
-    assert r.texto.startswith("Hola, ") and "El plan de Oro" in r.texto and r.aparte == ""
+    assert r.texto.startswith("Hola, ") and "te compartí el lunes" in r.texto and r.aparte == ""
 
 
 def test_el_menu_de_telegram_solo_ofrece_comandos_que_existen():
