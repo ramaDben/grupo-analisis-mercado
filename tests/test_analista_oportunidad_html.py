@@ -187,3 +187,30 @@ def test_el_titulo_del_correo_cuenta_los_activos_incluidos_y_no_dice_igual_para_
         pg.fill("#cliente", "Juan")
         assert "Hola Juan:" in v.inner_text()
         b.close()
+
+
+def test_el_autor_nunca_firma_la_simulacion(tmp_path):
+    """Si pide el propio autor, la simulación queda con un campo por completar y no con su nombre."""
+    from playwright.sync_api import sync_playwright
+    director = {"nombre": fx.AUTOR.nombre, "cargo": fx.AUTOR.cargo, "contacto": ""}
+    html = oh.armar(_pieza(tmp_path), tmp_path, director, fx.AUTOR, HOY)
+    assert "Simulación realizada por [Tu nombre]" in html
+    assert "Simulación realizada por " + fx.AUTOR.nombre not in html
+    ruta = tmp_path / "p.html"
+    ruta.write_text(html, encoding="utf-8")
+    with sync_playwright() as p:
+        b = p.chromium.launch()
+        pg = b.new_page()
+        pg.goto(ruta.as_uri())
+        pg.fill("#ejecutivo", fx.AUTOR.nombre.upper())  # escribir el nombre del autor no sirve
+        pg.click("#copiar-correo")
+        assert "Escribe tu nombre" in pg.locator("#estado").inner_text()
+        pg.fill("#ejecutivo", "Pedro Soto")
+        assert "Pedro Soto" in pg.locator("#vista-correo").inner_text()
+        b.close()
+
+
+def test_el_grafico_del_correo_es_una_imagen_con_ancho_y_alto(tmp_path):
+    html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    correo = re.search(r'<template class="correo-activo" data-ticker="XAUUSD">(.*?)</template>', html, re.S).group(1)
+    assert re.search(r'<img src="data:image/png;base64,[^"]+" width="546" height="\d+"', correo)

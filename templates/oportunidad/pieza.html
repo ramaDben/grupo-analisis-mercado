@@ -82,7 +82,7 @@
 {{activos}}
 <section class="correo"><h2>Correo para tu cliente</h2>
   <p>Así le llega a tu cliente. Marca los activos que quieres incluir, completa la simulación arriba y copia el correo: se pega en Outlook con el formato.</p>
-  <label class="cliente">Tu nombre (quien realiza la simulación)<input type="text" id="ejecutivo" value="{{ejecutivo}}"></label>
+  <label class="cliente">Tu nombre (quien realiza la simulación)<input type="text" id="ejecutivo" value="{{ejecutivo}}" placeholder="Escribe tu nombre"></label>
   <label class="cliente">Nombre de tu cliente (opcional, sale en el saludo)<input type="text" id="cliente" placeholder="Ej: Juan"></label>
   <button type="button" id="copiar-correo">Copiar correo para Outlook</button> <span id="estado"></span>
   <div id="vista-correo"></div></section>
@@ -97,7 +97,17 @@
 (function(){
   var DATOS = JSON.parse(document.getElementById('datos').textContent);
   function pesos(n){ return '$' + Math.round(n).toLocaleString('es-CL'); }
-  function nombreEj(){ return document.getElementById('ejecutivo').value.trim() || DATOS.ejecutivo; }
+  function mismaPersona(a, b){ return a.toLowerCase().split(/\s+/).join(' ') === b.toLowerCase().split(/\s+/).join(' '); }
+  // Quien firma el análisis no firma la simulación: ese nombre vale como campo vacío.
+  function nombreEj(){
+    var v = document.getElementById('ejecutivo').value.trim();
+    return (!v || mismaPersona(v, DATOS.autor_nombre)) ? DATOS.ejecutivo : v;
+  }
+  function sinNombre(){
+    var ok = nombreEj() !== '[Tu nombre]';
+    if (!ok) estadoEl.textContent = 'Escribe tu nombre arriba: es quien realiza la simulación.';
+    return !ok;
+  }
   function num(v){ var x = parseFloat(v); return isNaN(x) ? null : x; }
   function coma(n){ return String(n).replace('.', ','); }
   function estado(panel, d){
@@ -134,6 +144,7 @@
     var marca = panel && panel.querySelector('[name=incluir]');
     if (marca) marca.addEventListener('change', vista);
     sec.querySelector('.copiar-wa').addEventListener('click', function(){
+      if (sinNombre()) return;
       var texto = d.whatsapp + (actual ? '\n' + lineaSim(d, actual) : '');
       navigator.clipboard.writeText(texto).then(function(){ estadoEl.textContent = 'Texto de WhatsApp copiado.'; });
     });
@@ -175,6 +186,7 @@
     return html;
   }
   async function copiarCorreo(){
+    if (sinNombre()) return;
     if (!vista()){ estadoEl.textContent = 'Marca al menos un activo.'; return; }
     var root = document.getElementById('correo-root');
     try {

@@ -166,6 +166,13 @@ def _simulacion_correo(a: dict[str, Any], ejecutivo: str, c: dict[str, str]) -> 
     )
 
 
+def _alto_png(ruta: Path, ancho: int) -> int:
+    """Alto proporcional al ancho de impresión, leído del encabezado del PNG (Outlook lo pide)."""
+    cab = ruta.read_bytes()[:24]
+    w, h = int.from_bytes(cab[16:20], "big"), int.from_bytes(cab[20:24], "big")
+    return round(ancho * h / w) if w and h else ancho * 9 // 16
+
+
 def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: Path, ejecutivo: str,
                    c: dict[str, str]) -> str:
     """El bloque del activo en el correo: una fila de la tabla de 640 px, estilos en línea."""
@@ -192,7 +199,7 @@ def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: P
           f'{ih.e(lec["direccion"].upper())}</span></td></tr>',
         estilo=f'background:{c["fondo"]};border:1px solid {c["linea"]};border-radius:12px;', fondo=c["fondo"])
     grafico = _tabla(
-        f'<tr><td style="padding:6px;"><img src="{ih._data_uri(dir_pedido / a["grafico"])}" width="546" '
+        f'<tr><td style="padding:6px;"><img src="{ih._data_uri(dir_pedido / a["grafico"])}" width="546" height="{_alto_png(dir_pedido / a["grafico"], 546)}" '
         f'alt="Gráfico de {ih.e(a["nombre"])}" style="display:block;border:0;width:100%;max-width:546px;'
         f'height:auto;border-radius:8px;"></td></tr>', estilo=f'border:1px solid {c["linea"]};border-radius:12px;')
     return (
@@ -278,11 +285,27 @@ def _marco_correo(d: dict[str, Any], ed: dict[str, Any], ejecutivo: dict[str, An
     )
 
 
+PENDIENTE = "[Tu nombre]"
+
+
+def _norma(nombre: str) -> str:
+    return " ".join(nombre.lower().split())
+
+
+def es_el_autor(nombre: str, autor) -> bool:
+    return _norma(nombre) == _norma(autor.nombre)
+
+
 def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], autor, hoy: date) -> str:
     errs = es.errores(pieza)
     if errs:
         raise InformeInvalido("; ".join(errs))
     d, ed = pieza["datos"], pieza["editorial"]
+    # El autor firma el análisis y jamás la simulación: si quien pide es el propio autor (el director
+    # probando), la simulación queda a nombre de un campo que el comercial completa, con su nombre.
+    pendiente = es_el_autor(ejecutivo["nombre"], autor)
+    if pendiente:
+        ejecutivo = {"nombre": PENDIENTE, "cargo": "", "contacto": ""}
     nombre_ej = ejecutivo["nombre"]
     c = paleta()
     bloques, correos, datos_js = [], [], []
@@ -318,9 +341,9 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
         "titulo": ih.e(ed["titular"]), "logo": ih._data_uri(ih.LOGO), "semana": ih.e(cm.semana_visible(d["semana"]).capitalize()),
         "edicion": ih.e(d["edicion"]), "titular": ih.e(ed["titular"]), "bajada": ih.e(ed["bajada"]),
         "activos": "".join(bloques), "correos": "".join(correos), "firma": ih.bloque_firma(autor, hoy),
-        "aviso": ih.e(cm.AVISO_PIEZA), "ejecutivo": ih.e(nombre_ej),
+        "aviso": ih.e(cm.AVISO_PIEZA), "ejecutivo": "" if pendiente else ih.e(nombre_ej),
         "fuentes": ih._fuentes(),
-        "datos": json.dumps({"ejecutivo": nombre_ej, "cargo": ejecutivo.get("cargo", ""),
+        "datos": json.dumps({"ejecutivo": nombre_ej, "pendiente": pendiente, "autor_nombre": autor.nombre, "cargo": ejecutivo.get("cargo", ""),
                              "contacto": ejecutivo.get("contacto", ""), "autor": cm.firma(autor),
                              "aviso": cm.AVISO_PIEZA, "titular": ed["titular"], "activos": datos_js},
                             ensure_ascii=False).replace("</", "<\\/"),
