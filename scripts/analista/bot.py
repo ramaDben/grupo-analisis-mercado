@@ -31,6 +31,7 @@ from analista import autor as au
 from analista import comercial as cm
 from analista import esquema as es
 from analista import informe_html as ih
+from analista import macro_seguimiento as mac
 from analista import oportunidad_html as oh
 from analista import orden as od
 from analista import preparar as pr
@@ -182,6 +183,7 @@ class Respuesta:
     chat: int
     texto: str = ""
     archivos: list[Path] = field(default_factory=list)
+    aparte: str = ""  # un aviso para el ejecutivo, en otro mensaje: no se reenvía al cliente
 
 
 class FalloPedido(RuntimeError):
@@ -208,6 +210,7 @@ class Atendedor:
     dir_pedidos: Path = DIR_PEDIDOS
     registro: Path = rg.RUTA
     fuera_con_referencia: Callable[[dict[str, Any]], list[str]] = pr.fuera_con_referencia
+    calendario: Callable[[datetime], list[dict[str, Any]]] = mac.eventos_de_la_semana
 
     def analista(self, usuario: str) -> dict[str, Any]:
         return self.config["analistas"][usuario]
@@ -338,8 +341,19 @@ class Atendedor:
             self.estado.consumir(pedido.usuario, ahora)
             self.estado.guardar()
         pieza = pr.cargar_pieza(dir_pedido)
-        texto = sg.con_saludo(pieza["datos"]["whatsapp"], o.saludo)
-        return Respuesta(pedido.chat, texto, [dir_pedido / "lamina.png"])
+        datos = pieza["datos"]
+        # El texto se arma ahora y no al preparar: la pieza se reusa 30 minutos y puede venir de una
+        # versión anterior del bot; así sale siempre al día, con el saludo de quien pide y el dato macro.
+        try:
+            eventos = self.calendario(ahora)
+        except Exception:  # noqa: BLE001  el calendario es un extra
+            eventos = []
+        ctx = mac.contexto(datos["ticker"], ahora, eventos)
+        try:
+            texto, aparte = sg.redactar(datos, o.saludo, ctx, ahora)
+        except (KeyError, TypeError, ValueError):  # pieza vieja sin todos los datos
+            texto, aparte = sg.con_saludo(datos["whatsapp"], o.saludo), ""
+        return Respuesta(pedido.chat, texto, [dir_pedido / "lamina.png"], aparte)
 
 
 # ───────────────────────────────────────────────────────────── Telegram
@@ -386,6 +400,8 @@ def entregar(tg: Any, r: Respuesta) -> None:
         tg.mensaje(r.chat, r.texto)
     for ruta in r.archivos:
         tg.documento(r.chat, ruta)
+    if r.aparte:
+        tg.mensaje(r.chat, r.aparte)
 
 
 def _log(texto: str) -> None:
