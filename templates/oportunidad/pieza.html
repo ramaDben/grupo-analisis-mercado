@@ -189,19 +189,23 @@
     if (sinNombre()) return;
     if (!vista()){ estadoEl.textContent = 'Marca al menos un activo.'; return; }
     var root = document.getElementById('correo-root');
-    try {
-      if (!(navigator.clipboard && window.ClipboardItem)) throw 0;
-      await navigator.clipboard.write([new ClipboardItem({
-        'text/html': new Blob([document.getElementById('correo-estilos').outerHTML + root.outerHTML], {type: 'text/html'}),
-        'text/plain': new Blob([root.innerText], {type: 'text/plain'})
-      })]);
-      estadoEl.textContent = 'Copiado. Pégalo en un correo nuevo de Outlook.';
-    } catch (err) {
-      var sel = window.getSelection(); sel.removeAllRanges();
-      var r = document.createRange(); r.selectNode(root); sel.addRange(r);
-      var ok = document.execCommand('copy'); sel.removeAllRanges();
-      estadoEl.textContent = ok ? 'Copiado. Pégalo en un correo nuevo de Outlook.' : 'No se pudo copiar: selecciona el correo y cópialo a mano.';
+    // Copiar la selección real del correo ya dibujado (como un Ctrl+C a mano): Outlook pega los gráficos
+    // dentro del cuerpo. Un `ClipboardItem` con el HTML como texto los convertía en adjuntos.
+    var sel = window.getSelection(); sel.removeAllRanges();
+    var r = document.createRange(); r.selectNode(root); sel.addRange(r);
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
+    sel.removeAllRanges();
+    if (!ok){
+      try {
+        await navigator.clipboard.write([new ClipboardItem({
+          'text/html': new Blob([document.getElementById('correo-estilos').outerHTML + root.outerHTML], {type: 'text/html'}),
+          'text/plain': new Blob([root.innerText], {type: 'text/plain'})
+        })]);
+        ok = true;
+      } catch (err) { ok = false; }
     }
+    estadoEl.textContent = ok ? 'Copiado. Pégalo en un correo nuevo de Outlook.' : 'No se pudo copiar: selecciona el correo y cópialo a mano.';
   }
   document.getElementById('cliente').addEventListener('input', vista);
   document.getElementById('ejecutivo').addEventListener('input', function(){
