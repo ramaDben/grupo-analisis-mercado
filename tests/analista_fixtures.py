@@ -134,7 +134,8 @@ def pieza_oportunidad(dir_pedido: Path, laminas: bool = False, wti: bool = False
                        extra_campos={"titulares": tickers, "contexto": tickers})
     p["editorial"] = {"titular": "La semana técnica en seis activos", "bajada": "Lectura de cada activo.",
                       "titulares": {t: f"Titular de {t}" for t in tickers},
-                      "contexto": {t: f"Contexto de {t}." for t in tickers}}
+                      "contexto": {t: f"Contexto de {t}. El escenario se puede operar mientras la lectura siga en pie."
+                                   for t in tickers}}
     return p
 
 
@@ -145,6 +146,6 @@ def pieza_seguimiento(dir_pedido: Path) -> dict:
     datos = {"semana": "2026-W42", "ticker": a["ticker"], "nombre": a["nombre"],
              "evaluacion": {"estado": "en_curso", "avance_pct": 40},
              "precio_vivo": 4150.0, "lectura_hoy": "La lectura de hoy sigue igual.", "reemplazada": False,
-             "whatsapp": "Te envío una actualización del oro: va en curso.",
+             "whatsapp": "[[SALUDO]] te cuento cómo va el oro: la simulación de esta semana avanza a favor.",
              "edicion": "miércoles 14-10 · 11:00", "activo": a}
     return es.nueva_pieza("seguimiento", {"ticker": a["ticker"]}, datos, {"principal": "grafico.png"})

@@ -31,10 +31,12 @@ from analista import autor as au
 from analista import comercial as cm
 from analista import esquema as es
 from analista import informe_html as ih
+from analista import macro_seguimiento as mac
 from analista import oportunidad_html as oh
 from analista import orden as od
 from analista import preparar as pr
 from analista import registro_semanal as rg
+from analista import seguimiento as sg
 
 SANTIAGO = ZoneInfo("America/Santiago")
 CONFIG = RAIZ / "config" / "analistas_telegram.json"
@@ -45,10 +47,24 @@ INSTANCIA = RAIZ / "data" / ".bot_analistas.lock"
 
 AYUDA = """Bot de análisis · Grupo Inteligencia
 
-/oportunidad          el análisis técnico de la semana, con los 6 activos y tu panel de simulación
-/seguimiento oro      cómo va un activo de la semana: la simulación y la lectura de hoy
+1) El análisis de la semana, para abrir en tu navegador:
+/oportunidad
 
-/estado muestra tu cupo del día. /id muestra tu número de usuario."""
+2) Cómo va un activo, con lámina y texto listos para WhatsApp:
+/seguimiento oro
+Con el nombre de tu cliente:
+/seguimiento oro Juan
+
+Activos: oro, dolar, cobre, petroleo, brent, nasdaq, bitcoin
+Tus pedidos de hoy: /estado"""
+
+# El menú que Telegram muestra al tocar «/»: los ejecutivos no tienen que recordar nada.
+MENU = [
+    ("oportunidad", "El análisis de la semana"),
+    ("seguimiento", "Cómo va un activo (ej: /seguimiento oro)"),
+    ("estado", "Tus pedidos de hoy"),
+    ("ayuda", "Cómo se usa"),
+]
 
 
 # ───────────────────────────────────────────────────────────── configuración y estado
@@ -167,6 +183,7 @@ class Respuesta:
     chat: int
     texto: str = ""
     archivos: list[Path] = field(default_factory=list)
+    aparte: str = ""  # un aviso para el ejecutivo, en otro mensaje: no se reenvía al cliente
 
 
 class FalloPedido(RuntimeError):
@@ -193,6 +210,7 @@ class Atendedor:
     dir_pedidos: Path = DIR_PEDIDOS
     registro: Path = rg.RUTA
     fuera_con_referencia: Callable[[dict[str, Any]], list[str]] = pr.fuera_con_referencia
+    calendario: Callable[[datetime], list[dict[str, Any]]] = mac.eventos_de_la_semana
 
     def analista(self, usuario: str) -> dict[str, Any]:
         return self.config["analistas"][usuario]
@@ -288,7 +306,7 @@ class Atendedor:
         except oh.InformeInvalido as exc:
             raise FalloPedido(f"No pude armar la pieza: {exc}") from exc
         lineas = [f"✅ {pieza['editorial']['titular']}",
-                  f"Semana {pieza['datos']['semana']} · foto del {pieza['datos']['edicion']}"]
+                  f"{cm.semana_visible(pieza['datos']['semana']).capitalize()} · foto del {pieza['datos']['edicion']}"]
         if reusada:
             lineas.append("Ya está: es la foto de esta semana. Para ver cómo va un activo, usa /seguimiento <activo>.")
         elif ahora.astimezone(SANTIAGO).weekday() > 0:  # spec §5: a mitad de semana, la remisión
@@ -323,7 +341,19 @@ class Atendedor:
             self.estado.consumir(pedido.usuario, ahora)
             self.estado.guardar()
         pieza = pr.cargar_pieza(dir_pedido)
-        return Respuesta(pedido.chat, pieza["datos"]["whatsapp"], [dir_pedido / "lamina.png"])
+        datos = pieza["datos"]
+        # El texto se arma ahora y no al preparar: la pieza se reusa 30 minutos y puede venir de una
+        # versión anterior del bot; así sale siempre al día, con el saludo de quien pide y el dato macro.
+        try:
+            eventos = self.calendario(ahora)
+        except Exception:  # noqa: BLE001  el calendario es un extra
+            eventos = []
+        ctx = mac.contexto(datos["ticker"], ahora, eventos)
+        try:
+            texto, aparte = sg.redactar(datos, o.saludo, ctx, ahora)
+        except (KeyError, TypeError, ValueError):  # pieza vieja sin todos los datos
+            texto, aparte = sg.con_saludo(datos["whatsapp"], o.saludo), ""
+        return Respuesta(pedido.chat, texto, [dir_pedido / "lamina.png"], aparte)
 
 
 # ───────────────────────────────────────────────────────────── Telegram
@@ -361,12 +391,17 @@ class Telegram:
     def soy(self) -> dict[str, Any]:
         return self._post("getMe")
 
+    def registrar_menu(self) -> None:
+        self._post("setMyCommands", json={"commands": [{"command": c, "description": d} for c, d in MENU]})
+
 
 def entregar(tg: Any, r: Respuesta) -> None:
     if r.texto:
         tg.mensaje(r.chat, r.texto)
     for ruta in r.archivos:
         tg.documento(r.chat, ruta)
+    if r.aparte:
+        tg.mensaje(r.chat, r.aparte)
 
 
 def _log(texto: str) -> None:
@@ -454,6 +489,11 @@ class Bot:
     def escuchar(self) -> None:
         threading.Thread(target=self.trabajador, daemon=True).start()
         import time
+
+        try:
+            self.tg.registrar_menu()
+        except Exception:  # noqa: BLE001  el menú es comodidad: nunca impide arrancar
+            _log(f"no se pudo registrar el menú: {traceback.format_exc()}")
 
         while True:
             try:

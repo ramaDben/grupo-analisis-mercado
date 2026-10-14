@@ -76,7 +76,9 @@ def _lectores(base, filas_estado=None, **kw):
         catalogo=lambda t: {"ticker": t, "nombre": {"XAUUSD": "Oro", "COPPER": "Cobre"}[t],
                             "digits": {"XAUUSD": 2, "COPPER": 0}[t], "unidad": "USD"},
         drivers=lambda t: ["Dollar Index"], agenda=lambda a: ([], []), curva=lambda: ({}, []),
-        cuenta=lambda: None)
+        cuenta=lambda: None,
+        # Nunca el registro real: con una foto de la semana en disco, el test la reusaría.
+        registro=base.parent / "registro.json")
     return pr.Lectores(**{**por_defecto, **kw})
 
 
@@ -230,18 +232,20 @@ def test_seguimiento_informa_simulacion_y_lectura_por_separado(tmp_path):
                         datetime(2026, 10, 14, 11, 0, tzinfo=SCL), _lectores_seg(tmp_path, base, velas, 4124.0))
     d = hecha.pieza["datos"]
     assert d["evaluacion"]["estado"] == "en_curso"
-    assert "Simulación de la semana" in d["whatsapp"] and "Lectura técnica hoy" in d["whatsapp"]
-    assert "$" not in d["whatsapp"]
+    # La simulación (precios fijos del lunes) y la lectura de hoy, en párrafos separados.
+    assert "CFD" in d["whatsapp"] and "La lectura de la semana cambió" in d["lectura_hoy"]
+    assert not any(c.isdigit() for c in d["whatsapp"])  # el texto no lleva precios
+    assert "$" not in d["whatsapp"] and "instrucción de inversión" not in d["whatsapp"]
 
 
 def test_seguimiento_sin_simulacion_entrega_la_lectura_de_hoy(tmp_path):
-    """Un activo de la foto sin simulación es un estado válido, no una falla de datos."""
+    """Un activo de la foto sin simulación (solo sin volatilidad medida) es un estado válido."""
     from analista import oportunidad as op
 
     base = tmp_path / "ref"
     _sembrar(base, [fx.lectura()], {"XAUUSD": 90.0})
     oro = fx.activo_semanal()
-    oro["escenario"] = op.escenario(fx.lectura(invalidacion=None), 2).a_dict()
+    oro["escenario"] = op.escenario(fx.lectura(atr=0.0), 2).a_dict()
     oro["contrato"] = None
     _foto(tmp_path, base, [oro])
     hecha = pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD"}), tmp_path / "s",
@@ -249,10 +253,10 @@ def test_seguimiento_sin_simulacion_entrega_la_lectura_de_hoy(tmp_path):
                         _lectores_seg(tmp_path, base, pd.DataFrame(columns=["time", "high", "low"]), 4124.0))
     d = hecha.pieza["datos"]
     assert d["evaluacion"]["estado"] == "sin_simulacion"
-    assert ("Esta semana este activo no tiene simulación: el gráfico no marca un nivel claro donde el análisis dejaría de valer, y sin ese nivel no hay dónde poner el stop."
-            in d["whatsapp"])
-    assert "Lectura técnica hoy" in d["whatsapp"] and "No pude leer" not in d["whatsapp"]
-    assert "Stop" not in d["whatsapp"]
+    assert "plan definido" in d["whatsapp"]
+    assert "ahora se vigila" in d["lectura_hoy"] or "sigue en pie" in d["lectura_hoy"]
+    assert "No pude leer" not in d["whatsapp"]
+    assert "Stop" not in d["whatsapp"] and "Las cifras de la simulación" not in d["whatsapp"]
 
 
 def test_el_grafico_semanal_traza_los_niveles_de_la_lamina(tmp_path):

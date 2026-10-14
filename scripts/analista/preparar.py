@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Callable
 from zoneinfo import ZoneInfo
 
+from analista import comercial as cm
 from analista import esquema as es
 from analista.orden import Orden
 
@@ -160,13 +161,26 @@ def niveles_lamina_semanal(lectura) -> list[tuple[float, str]]:
 
 def niveles_lamina_seguimiento(esc: dict[str, Any], simula: bool, hoy) -> list[tuple[float, str]]:
     """Los niveles que nombra el seguimiento: la simulación (si la hay) y la línea de hoy."""
-    filas = ([(esc["entrada"], "ENTRADA"), (esc["stop"], "STOP"), (esc["objetivo"], "OBJETIVO 1:3")]
+    filas = ([(esc["entrada"], "ENTRADA"), (esc["stop"], "STOP"), (esc["objetivo"], "OBJETIVO")]
              if simula else [])
     if hoy.estado == "PRUEBA" and hoy.en_prueba is not None:
         filas.append((hoy.en_prueba.valor_ahora, hoy.vigilar.etiqueta.upper()))
     else:
         filas.append((hoy.vigilar.precio, hoy.vigilar.etiqueta.upper()))
     return filas
+
+
+def _sin_segundo_objetivo(lectura, simula: bool):
+    """Con simulación, el gráfico muestra un solo objetivo: el de la simulación.
+
+    La línea de objetivo técnico de la lectura quedaba a pocos puntos del objetivo de la simulación y
+    el cliente veía dos metas distintas y etiquetas apiladas (director, 2026-10-13: «no la veo limpia»).
+    """
+    if not simula:
+        return lectura
+    from dataclasses import replace
+
+    return replace(lectura, lineas=tuple(x for x in lectura.lineas if x.rol != "objetivo"))
 
 
 def _estrategia():
@@ -278,7 +292,7 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
     semana = rs.semana_de(ahora)
     manifiesto = rs.manifiesto(semana, base)
     if manifiesto is None:
-        raise SinSemanaError(f"La semana {semana} todavía no tiene análisis semanal: la pieza sale "
+        raise SinSemanaError(f"La {cm.semana_visible(semana)} todavía no tiene análisis semanal: la pieza sale "
                              "cuando el escáner la fije.")
     estrategia = lec.estrategia()
     digits = {t: int(lec.catalogo(t)["digits"]) for t in manifiesto["elegidos"]}
@@ -303,7 +317,7 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
         referencia = rs.cargar(semana, ticker, base)
         if referencia is None:
             fuera.append(ticker)
-            avisos.append(f"{ticker} no tiene análisis guardado en {semana}: queda fuera de la foto. Cuando "
+            avisos.append(f"{ticker} no tiene análisis guardado en la {cm.semana_visible(semana)}: queda fuera de la foto. Cuando "
                           "lo tenga, pide /oportunidad de nuevo y la foto se rehace con él.")
             continue
         guardada = datetime.fromisoformat(
@@ -311,7 +325,7 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
         activos.append(_entrada_activo(ticker, referencia, guardada, float(puntajes.get(ticker, 0)),
                                        dir_pedido, lec, estrategia))
     if not activos:
-        raise FotoVaciaError(f"La semana {semana} no tiene ningún activo con su referencia guardada: no armo "
+        raise FotoVaciaError(f"La {cm.semana_visible(semana)} no tiene ningún activo con su referencia guardada: no armo "
                              "una foto vacía. Avisa al director para que revise el análisis semanal.")
     agenda, av = lec.agenda(ahora)
     avisos += [f"contexto sin agenda: {a}" for a in av]
@@ -383,7 +397,8 @@ def preparar_seguimiento(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
     hoy = fecha_corta(ahora)
     texto = sg.mensaje(a["nombre"], hoy, a["foto"]["fecha"], esc, ev, precio, diaria.lectura, reemplazada,
                        a["digits"])
-    lec.grafico_lectura(ticker, a["nombre"], diaria.lectura, dir_pedido / "grafico.png", digits=a["digits"],
+    lec.grafico_lectura(ticker, a["nombre"], _sin_segundo_objetivo(diaria.lectura, not motivo),
+                        dir_pedido / "grafico.png", digits=a["digits"],
                         niveles=niveles_lamina_seguimiento(esc, not motivo, diaria.lectura))
     datos = {"semana": semana, "ticker": ticker, "nombre": a["nombre"], "evaluacion": ev, "precio_vivo": precio,
              "lectura_hoy": lectura_hoy, "reemplazada": reemplazada, "whatsapp": texto,

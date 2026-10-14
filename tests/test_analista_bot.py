@@ -54,11 +54,13 @@ class Armado:
         self.llamadas, self.reloj, self.tmp = [], Reloj(), tmp_path
         self.preparaciones = 0
         self.fuera: list[str] = []
+        self.eventos: list[dict] = []  # el calendario falso: vacío salvo que la prueba lo llene
         self.registro = tmp_path / "registro.json"
         self.atendedor = b.Atendedor(
             config, b.Estado.cargar(tmp_path / "estado.json"), autor=fx.AUTOR, preparar=self.preparar_falso,
             redactar=redactor(self.llamadas), rendir_lamina=self.rendir_falso, reloj=self.reloj,
-            dir_pedidos=tmp_path / "pedidos", registro=self.registro)
+            dir_pedidos=tmp_path / "pedidos", registro=self.registro,
+            calendario=lambda ahora: self.eventos)
         self.bot = b.Bot(TgFalso(), self.atendedor)
         self.estado = self.atendedor.estado
 
@@ -289,8 +291,18 @@ def test_cupo_diario(armado):
 
 def test_seguimiento_entrega_lamina_y_texto_sin_agy(armado):
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
-    assert armado.llamadas == [] and "Te envío una actualización" in r.texto
+    assert armado.llamadas == [] and r.texto.startswith("Hola, ") and "lunes" in r.texto and "CFD" in r.texto
+    assert "[[SALUDO]]" not in r.texto
     assert r.archivos[0].suffix == ".png"
+
+
+def test_el_saludo_se_aplica_al_responder_y_no_se_hereda_entre_ejecutivos(armado):
+    """La pieza se reusa 30 minutos entre ejecutivos: cada uno recibe SU saludo."""
+    a = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"}, "Juan")))
+    c = armado.bot.procesar_uno(b.Pedido(OTRO, 2, od.Orden("seguimiento", {"ticker": "XAUUSD"}, "Estimado Sr. Pérez")))
+    d = armado.bot.procesar_uno(b.Pedido(OTRO, 2, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
+    assert a.texto.startswith("Hola Juan, ") and c.texto.startswith("Estimado Sr. Pérez, ")
+    assert d.texto.startswith("Hola, ") and armado.llamadas == []
 
 
 @pytest.mark.parametrize("orden", [od.Orden("oportunidad"), od.Orden("seguimiento", {"ticker": "XAUUSD"})])
@@ -356,6 +368,57 @@ def test_la_ayuda_nombra_solo_los_dos_comandos():
     for retirado in ("/activo", "/calendario", "/dato", "/jornada"):
         assert retirado not in b.AYUDA
     assert "—" not in b.AYUDA and "–" not in b.AYUDA
+
+
+def _dato_hoy(hora="2026-10-08 15:00"):
+    return {"nombre": "CPI (MoM) (Sep)", "pais": "United States", "impacto": "alto", "hora_servidor": hora,
+            "forecast": "0.2%", "previo": "0.3%", "actual": "", "fuente": "investing",
+            "diccionario": {"nombre_es": "Índice de precios al consumidor (IPC)", "tier": 1,
+                            "si_sale_sobre_consenso": {"oro": "baja", "usdclp": "sube"}}}
+
+
+def test_con_un_dato_pendiente_el_seguimiento_lo_usa_y_avisa_aparte_al_ejecutivo(armado):
+    armado.eventos = [_dato_hoy()]
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"}, "Hari")))
+    assert r.texto.startswith("Hola Hari, ") and "a las 15:00" in r.texto and "suele mover el oro" in r.texto
+    assert "espacio para tomar posición" not in r.texto
+    assert "/seguimiento oro" in r.aparte and r.aparte not in r.texto  # el aviso no se reenvía al cliente
+    tg = TgFalso()
+    b.entregar(tg, r)
+    assert [m[1] for m in tg.mensajes] == [r.texto, r.aparte] and tg.documentos
+
+
+def test_el_dato_macro_se_evalua_al_responder_y_no_queda_guardado_con_la_pieza(armado):
+    o = od.Orden("seguimiento", {"ticker": "XAUUSD"})
+    armado.eventos = [_dato_hoy()]
+    con = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, o))
+    armado.eventos = []  # el dato salió de la agenda: la pieza reusada ya no lo menciona
+    sin = armado.bot.procesar_uno(b.Pedido(OTRO, 2, o))
+    assert "a las 15:00" in con.texto and "a las 15:00" not in sin.texto
+    assert sin.aparte == "" and armado.preparaciones == 1
+
+
+def test_si_el_calendario_falla_el_seguimiento_sale_igual(armado):
+    def roto(ahora):
+        raise OSError("sin red")
+
+    armado.atendedor.calendario = roto
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
+    assert r.texto.startswith("Hola, ") and "lunes" in r.texto and "CFD" in r.texto and r.aparte == ""
+
+
+def test_el_menu_de_telegram_solo_ofrece_comandos_que_existen():
+    import analista.orden as od_
+    conocidos = set(od_.PIEZAS) | set(od_.SERVICIO)
+    for comando, descripcion in b.MENU:
+        assert comando in conocidos and 3 <= len(descripcion) <= 256
+        assert "—" not in descripcion and "–" not in descripcion
+    assert {"oportunidad", "seguimiento"} <= {c for c, _ in b.MENU}
+
+
+def test_la_ayuda_es_corta_y_trae_ejemplos_para_copiar():
+    assert len(b.AYUDA.splitlines()) <= 14
+    assert "/seguimiento oro" in b.AYUDA and "/seguimiento oro Juan" in b.AYUDA
 
 
 def test_estado_muestra_el_cupo(armado):

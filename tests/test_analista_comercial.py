@@ -81,8 +81,8 @@ def test_dos_niveles_con_el_mismo_precio_se_funden_en_una_fila(tmp_path):
     """Oro W41: «Nivel a vigilar» e «Invalidación» eran el mismo 4.227,32; cobre: la resistencia
     del rango era también la que se vigila."""
     oro = cm.payload_semanal(fx.activo_semanal(), "t", "lunes 12/10", fx.AUTOR, tmp_path / "g.png")["niveles"]
-    assert [(n["rotulo"], n["valor"]) for n in oro] == [("Nivel a vigilar · Invalidación", "4.227,32"),
-                                                         ("Objetivo técnico", "4.149,96")]
+    assert [(n["rotulo"], n["valor"]) for n in oro] == [("Nivel a vigilar · Se anula si cierra sobre", "4.227,32"),
+                                                         ("Objetivo", "4.149,96")]
     cobre = cm.payload_semanal(fx.activo_semanal(rango=True), "t", "lunes 12/10", fx.AUTOR,
                                tmp_path / "g.png")["niveles"]
     assert [(n["rotulo"], n["valor"]) for n in cobre] == [("Resistencia del rango · Nivel a vigilar", "14567"),

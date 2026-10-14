@@ -40,10 +40,16 @@ pone el bot: tú no decides nada visual.
 7. **Siglas explicadas en línea** la primera vez: "vacantes de empleo (JOLTS)".
 8. **Largos:** `titular` hasta 70 caracteres; `bajada` hasta 160. Van impresos dentro de la imagen.
 9. **Eventos futuros en modo anticipación** ("el mercado espera"), nunca en pasado.
-10. **Análisis general, nunca una instrucción.** Escribe en impersonal y condicional ("el
-    escenario se activa si…", "la presión compradora"). Nunca le digas al lector que compre,
-    venda, entre, cierre ni cuánto arriesgar, y no recomiendes: el informe es igual para todos y
-    nadie en GI está inscrito como asesor de inversión. El bot rechaza esas frases.
+10. **Invita a operar el escenario, sin dar una instrucción.** La gerencia pidió que la pieza
+    semanal invite siempre a operar el supuesto (2026-10-12): es material para que el área
+    comercial venda. Cada `contexto.<ticker>` cierra con una frase que invita a operar el
+    escenario de la semana, en condicional y atada a la lectura ("el escenario alcista se puede
+    operar mientras el precio se mantenga sobre la línea de tendencia, y la simulación de abajo
+    muestra con qué riesgo"; "si el precio confirma la ruptura, el escenario bajista queda para
+    operarlo"). Lo que sigue prohibido es la instrucción personal: nunca "compra", "vende",
+    "entra ya", "te recomiendo" ni cuánto arriesgar, porque
+    nadie en GI está inscrito como asesor de inversión. El bot rechaza esas frases, y también un
+    contexto que no invite a operar.
 11. **Soporte y resistencia**, nunca "piso", "suelo" ni "techo" para un nivel de precio.
 
 ### Qué va en cada campo
@@ -56,8 +62,11 @@ pone el bot: tú no decides nada visual.
   - `titulares.<ticker>` (≤ 70): la idea del activo con su dirección, sacada de
     `datos.activos[i].lectura`.
   - `contexto.<ticker>`: 2 o 3 frases con los drivers de la semana (`datos.drivers.<ticker>`,
-    `datos.agenda_semana`), como mecanismo condicional si no hay un hecho medido. Sin `%`, sin la
-    palabra "oportunidad", sin repetir los niveles (los pone la maqueta).
+    `datos.agenda_semana`), como mecanismo condicional si no hay un hecho medido, y **una frase
+    final que invita a operar el escenario** (regla 10, con alguna forma de "operar"). Sin `%`,
+    sin la palabra "oportunidad", sin repetir los niveles (los pone la maqueta).
+  - `titular` y `bajada` también empujan a la acción: nombran la dirección y que hay escenarios
+    para operar en la semana, sin prometer resultados.
   - Los niveles, el escenario 1:3 y la simulación los escribió Python: no los repitas ni los
     comentes.
 

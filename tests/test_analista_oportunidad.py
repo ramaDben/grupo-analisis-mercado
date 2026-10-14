@@ -57,30 +57,47 @@ def test_rango_con_bordes_diagonales_se_identifica_por_valor_actual():
     assert e.direccion == "ALCISTA" and e.entrada == 155.35
 
 
-def test_prueba_no_simula():
-    e = op.escenario(fx.lectura(estado="PRUEBA"), 2)
-    assert not e.simulable and "probando una línea clave" in e.motivo
+# Nunca sale sin simulación por una lectura incómoda: sale condicionada al nivel a vigilar
+# (director, 2026-10-12). El stop queda media volatilidad 4H al otro lado del nivel.
+
+def test_en_prueba_la_simulacion_es_el_retesteo_del_nivel():
+    e = op.escenario(fx.lectura(estado="PRUEBA"), 2)  # precio 4000 sobre la línea en 3950
+    assert e.simulable and e.entrada_pendiente and e.condicion == "retesteo"
+    assert (e.direccion, e.entrada, e.stop, e.objetivo) == ("ALCISTA", 3950.0, 3940.0, 3980.0)
 
 
-def test_sin_invalidacion_no_simula():
-    e = op.escenario(fx.lectura(invalidacion=None), 2)
-    assert not e.simulable and "dejaría de valer" in e.motivo
+def test_sin_invalidacion_la_simulacion_espera_el_quiebre():
+    e = op.escenario(fx.lectura(invalidacion=None), 2)  # el nivel a vigilar queda en el precio
+    assert e.simulable and e.condicion == "quiebre"
+    assert (e.entrada, e.stop, e.objetivo) == (4000.0, 3990.0, 4030.0)
 
 
-def test_riesgo_bajo_un_cuarto_de_atr_no_simula():
+def test_pegado_al_nivel_la_simulacion_es_el_retesteo_con_stop_con_margen():
     e = op.escenario(fx.lectura(precio=4000.0, invalidacion=3996.0, atr=20.0), 2)  # 4 < 5
-    assert not e.simulable and "pegado al nivel clave" in e.motivo
+    assert e.simulable and e.condicion == "retesteo"
+    assert (e.entrada, e.stop, e.objetivo) == (3996.0, 3986.0, 4026.0)
 
 
-def test_precio_del_otro_lado_de_la_invalidacion_no_simula():
+def test_del_otro_lado_de_la_invalidacion_espera_el_cierre_sobre_el_nivel():
     e = op.escenario(fx.lectura(precio=3940.0, invalidacion=3950.0), 2)
-    assert not e.simulable and "ya pasó el nivel" in e.motivo
+    assert e.simulable and e.condicion == "quiebre" and e.direccion == "ALCISTA"
+    assert op.texto_condicion(e.a_dict(), "3.950,00") == "Se activa si una vela de 4 horas cierra sobre 3.950,00."
+
+
+def test_sin_volatilidad_medida_no_hay_niveles():
+    e = op.escenario(fx.lectura(atr=0.0), 2)
+    assert not e.simulable and "cuánto se mueve" in e.motivo
+
+
+def test_la_entrada_a_precio_de_hoy_no_lleva_condicion():
+    e = op.escenario(fx.lectura(), 2)
+    assert e.condicion is None and op.texto_condicion(e.a_dict(), "4.000,00") is None
 
 
 def test_a_dict_es_serializable_y_completo():
     d = op.escenario(fx.lectura(), 2).a_dict()
     assert set(d) == {"ticker", "estado", "direccion", "entrada", "stop", "objetivo",
-                      "entrada_pendiente", "dias_objetivo", "motivo"}
+                      "entrada_pendiente", "dias_objetivo", "motivo", "condicion"}
 
 
 CONTRATO = {"clp_unidad": 950.0, "vol_min": 0.01, "vol_paso": 0.01}
