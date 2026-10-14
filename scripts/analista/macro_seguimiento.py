@@ -8,11 +8,12 @@ del lado de la información:
    si `data/glosario_siglas.json` declara qué le hace (`si_sale_sobre_consenso`). Sin efecto
    declarado (cobre, Brent, cripto, USD/JPY) no hay párrafo macro: callarse es más honesto que
    inventar una correlación.
-2. **La reacción es condicional y simétrica.** «Si sale sobre lo esperado… si sale bajo lo esperado…»,
-   con el mismo peso para el camino al objetivo y el camino al stop. Jamás un pronóstico del dato.
-3. **Con un dato pendiente no se invita a tomar posición.** El mensaje quita la frase de «aún hay
-   espacio» y deja una cautela factual: entrar justo antes de un dato fuerte es la lectura que el
-   proyecto no quiere sugerir.
+2. **El resultado se dice con el mismo peso en los dos sentidos**, atado al plan cuando está vivo
+   («sobre lo esperado juega a favor, y lo contrario si sale bajo»). Jamás un pronóstico del dato.
+3. **Se dice como se habla.** Un solo párrafo con su pregunta, «el dato del IPC de EE.UU. (índice de
+   precios al consumidor)» y no el nombre institucional con sigla, sin viñetas ni precios, y con dos
+   redacciones por momento: el mensaje que se lee como armado por un bot no sirve para conversar
+   (gerencia, 2026-10-13).
 
 Si el calendario no responde, no hay párrafo macro y el seguimiento sale como siempre.
 """
@@ -37,14 +38,7 @@ DIAS = ("lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "doming
 
 MINUTOS_VENTANA = 30        # faltando tan poco, el precio ya se mueve a saltos
 HORAS_PUBLICADO = 3         # un dato de hace más de esto ya no es noticia
-HORAS_SIN_INVITAR = 24      # un dato a menos de un día quita la invitación a tomar posición
 DIAS_HORIZONTE = 7
-
-CIERRES_PENDIENTE = (
-    "¿Lo vemos juntos cuando salga el dato?",
-    "Cuando salga el dato, lo revisamos juntos si quieres.",
-)
-CIERRE_VENTANA = "Lo revisamos con calma cuando pase."
 
 
 def eventos_de_la_semana(ahora: datetime) -> list[dict[str, Any]]:
@@ -113,22 +107,25 @@ def _el(clave: str, nombre: str) -> str:
 
 
 def _dato(ev: dict[str, Any]) -> str:
-    """«el dato X de EE.UU.»: sin artículo del nombre, que cambia de género de un dato a otro. Sin
-    comillas angulares: nadie las escribe a mano en WhatsApp y delatan texto armado (director, 2026-10-13)."""
+    """El dato como se dice en voz alta: «el dato del IPC de EE.UU. (índice de precios al consumidor)».
+
+    La sigla va primero y su nombre completo entre paréntesis, una sola vez: el nombre institucional
+    entero con sigla es lo que ningún ejecutivo escribe en un chat (gerencia, 2026-10-13). «El dato
+    del» evita el género de la sigla.
+    """
+    import re
+
     nombre = (ev.get("diccionario") or {}).get("nombre_es") or ev.get("nombre", "")
-    return f"el dato {nombre} {PAISES.get(ev.get('pais', ''), 'de ' + str(ev.get('pais', '')))}"
-
-
-def _cierra(frase: str) -> str:
-    """Cierra la frase con punto, sin duplicar el de una sigla como «EE.UU.»."""
-    return frase if frase.endswith(".") else frase + "."
+    pais = PAISES.get(ev.get("pais", ""), "de " + str(ev.get("pais", "")))
+    m = re.search(r"\(([^)]+)\)\s*$", nombre)
+    base = re.sub(r"\s*\([^)]*\)\s*$", "", nombre).strip()
+    base = base[:1].lower() + base[1:]
+    return f"el dato del {m.group(1)} {pais} ({base})" if m else f"el dato de {base} {pais}"
 
 
 def _cuando_txt(cuando: datetime, ahora: datetime) -> str:
-    hora = f"{cuando:%H:%M} (hora de Chile)"
     dias = (cuando.date() - ahora.date()).days
-    return f"hoy a las {hora}" if dias == 0 else f"mañana a las {hora}" if dias == 1 \
-        else f"el {DIAS[cuando.weekday()]} a las {hora}"
+    return "hoy" if dias == 0 else "mañana" if dias == 1 else f"el {DIAS[cuando.weekday()]}"
 
 
 def _num(texto: Any) -> float | None:
@@ -151,53 +148,114 @@ def _opuesto(verbo: str) -> str:
     return "bajar" if verbo == "subir" else "subir"
 
 
-def _reaccion(ctx: dict[str, Any], nombre: str) -> str:
-    """Los dos caminos del dato con el mismo peso y sin precios: operable de los dos lados con CFD."""
-    el = _el(ctx["clave"], nombre)
+def _plan_vivo(esc: dict[str, Any] | None, estado_sim: str) -> dict[str, str] | None:
+    """Con la simulación viva, las palabras del plan; sin ella (cerrada, descartada, sin plan), None."""
+    if not esc or estado_sim not in ("entrada_pendiente", "en_curso"):
+        return None
+    return {"accion": "compra" if esc["direccion"] == "ALCISTA" else "venta",
+            "estado": "todavía en espera" if estado_sim == "entrada_pendiente" else "en curso",
+            "alcista": esc["direccion"] == "ALCISTA"}
+
+
+def _efectos(ctx: dict[str, Any], plan: dict[str, Any] | None) -> dict[str, str]:
+    """Qué hace el dato con el activo y, si hay plan vivo, con él. Cada resultado nombrado con su lado."""
     sobre = "subir" if ctx["verbo"] == "sube" else "bajar"
-    return (f"Si sale sobre lo esperado, {el} tiende a {sobre}; si sale bajo lo esperado, tiende a "
-            f"{_opuesto(sobre)}. Ese movimiento se puede operar de los dos lados con CFD.")
+    ef = {"v1": sobre, "v2": _opuesto(sobre)}
+    if plan:
+        favorece = (ctx["verbo"] == "sube") == plan["alcista"]
+        ef["sobre"], ef["bajo"] = ("a favor", "en contra") if favorece else ("en contra", "a favor")
+    return ef
+
+
+# Cada mensaje es un solo párrafo que cierra con una pregunta concreta: tres bloques apilados con un
+# cierre genérico delatan al bot. Una variante por día y activo (estable), elegida por `variante`.
+CON_PLAN = {
+    "pendiente": (
+        "{cuando} a las {hora} sale {dato} y suele mover {el}. Con la {accion} del {dia} {estado}, si sale "
+        "sobre lo esperado juega {sobre}, y lo contrario si sale bajo. Con CFD se puede operar "
+        "cualquiera de los dos movimientos. ¿Lo miramos juntos cuando salga?",
+        "te escribo porque {cuando} a las {hora} se conoce {dato}, que suele mover {el}. Para la {accion} del "
+        "{dia}, un resultado sobre lo esperado juega {sobre} y uno bajo lo esperado, {bajo}; con CFD se opera "
+        "hacia ambos lados. ¿Hablamos cuando salga?",
+    ),
+    "proximo": (
+        "{cuando} a las {hora} sale {dato} y suele mover {el}. Para la {accion} del {dia} {estado}, un "
+        "resultado sobre lo esperado juega {sobre} y uno bajo lo esperado, {bajo}. Con CFD se puede operar "
+        "cualquiera de los dos movimientos. ¿Lo vemos antes?",
+        "te aviso que {cuando} a las {hora} se conoce {dato}, que suele mover {el}. Con la {accion} del {dia} "
+        "{estado}, sobre lo esperado juega {sobre} y bajo lo esperado, {bajo}, y con CFD se opera hacia ambos "
+        "lados. ¿Lo conversamos?",
+    ),
+}
+SIN_PLAN = {
+    "pendiente": (
+        "{cuando} a las {hora} sale {dato} y suele mover {el}: si sale sobre lo esperado tiende a {v1}, y lo "
+        "contrario si sale bajo. Con CFD se puede operar cualquiera de los dos movimientos. ¿Lo miramos "
+        "juntos cuando salga?",
+        "te escribo porque {cuando} a las {hora} se conoce {dato}, que suele mover {el}. Sobre lo esperado "
+        "tiende a {v1}; bajo lo esperado, a {v2}, y con CFD se opera hacia ambos lados. ¿Hablamos cuando salga?",
+    ),
+    "proximo": (
+        "{cuando} a las {hora} sale {dato} y suele mover {el}: sobre lo esperado tiende a {v1}, y bajo lo "
+        "esperado, a {v2}. Con CFD se puede operar cualquiera de los dos movimientos. ¿Lo vemos antes?",
+        "te aviso que {cuando} a las {hora} se conoce {dato}, que suele mover {el}. Sobre lo esperado tiende "
+        "a {v1} y bajo lo esperado, a {v2}; con CFD se opera hacia ambos lados. ¿Lo conversamos?",
+    ),
+}
+VENTANA = (
+    "en unos minutos, a las {hora}, sale {dato}, y mientras el mercado lo absorbe el precio suele moverse a "
+    "saltos. {coletilla} y lo revisamos con calma apenas pase. ¿Te parece?",
+    "a las {hora} sale {dato}, y en ese rato el precio puede moverse a saltos. {coletilla}; cuando pase lo "
+    "miramos con calma. ¿Hablamos?",
+)
+PUBLICADO = (
+    "ya salió {dato}: {cifras}{comparacion}.{efecto} ¿Te cuento cómo queda la lectura?",
+    "salió {dato} y {cifras}{comparacion}.{efecto} ¿Lo revisamos en la lámina?",
+)
+
+
+def _publicado(ctx: dict[str, Any], nombre: str, plan: dict[str, Any] | None, dia: str, variante: int) -> str:
+    ev = ctx["evento"]
+    actual, previsto = str(ev.get("actual") or "").strip(), str(ev.get("forecast") or "").strip()
+    a, p = _num(actual), _num(previsto)
+    lado = None if a is None or p is None else ("sobre" if a > p else "bajo" if a < p else "linea")
+    comparacion = {"sobre": ", sobre lo esperado", "bajo": ", bajo lo esperado",
+                   "linea": ", en línea con lo esperado", None: ""}[lado]
+    cifras = f"{_cifra(actual)} frente a {_cifra(previsto)} esperado" if previsto else _cifra(actual)
+    efecto = ""
+    if lado in ("sobre", "bajo"):
+        sobre = "subir" if ctx["verbo"] == "sube" else "bajar"
+        verbo = sobre if lado == "sobre" else _opuesto(sobre)
+        efecto = f" Con un dato así, {_el(ctx['clave'], nombre)} tiende a {verbo}"
+        if plan:
+            sube_activo = verbo == "subir"
+            efecto += f", lo que juega {'a favor' if sube_activo == plan['alcista'] else 'en contra'} de la " \
+                      f"{plan['accion']} del {dia}"
+        efecto += "."
+    plantilla = PUBLICADO[variante % len(PUBLICADO)]
+    return plantilla.format(dato=_dato(ev), cifras=cifras, comparacion=comparacion, efecto=efecto)
 
 
 def redactar(ctx: dict[str, Any], nombre: str, esc: dict[str, Any] | None, estado_sim: str,
-             ahora: datetime, digits: int, variante: int = 0) -> dict[str, Any]:
-    """Los textos del bloque macro: apertura, reacción, si quita la invitación, cierre y aviso al ejecutivo."""
+             ahora: datetime, digits: int, variante: int = 0, dia: str = "lunes") -> dict[str, Any]:
+    """El cuerpo del mensaje cuando hay dato macro (un párrafo con su pregunta) y el aviso al ejecutivo."""
     ahora = ahora.astimezone(SANTIAGO)
     ev, cuando, estado = ctx["evento"], ctx["cuando"], ctx["estado"]
-    dato = _dato(ev)
-    salida = {"apertura": "", "reaccion": "", "quita_espacio": False, "cierre": None, "aparte": ""}
+    el, plan = _el(ctx["clave"], nombre), _plan_vivo(esc, estado_sim)
+    base = {"dato": _dato(ev), "hora": f"{cuando:%H:%M}", "el": el, "dia": dia,
+            "cuando": _cuando_txt(cuando, ahora), **_efectos(ctx, plan), **(plan or {})}
+    salida = {"cuerpo": "", "aparte": ""}
 
     if estado == "publicado":
-        actual, previsto = str(ev.get("actual") or "").strip(), str(ev.get("forecast") or "").strip()
-        a, p = _num(actual), _num(previsto)
-        lado = None if a is None or p is None else ("sobre" if a > p else "bajo" if a < p else "linea")
-        comparacion = {"sobre": "sobre lo esperado", "bajo": "bajo lo esperado",
-                       "linea": "en línea con lo esperado", None: ""}[lado]
-        cifras = f"{_cifra(actual)} frente a {_cifra(previsto)} esperado" if previsto else _cifra(actual)
-        texto = f"ya se publicó {dato}: {cifras}" + (f", es decir, {comparacion}." if comparacion else ".")
-        if lado in ("sobre", "bajo"):
-            sobre = "subir" if ctx["verbo"] == "sube" else "bajar"
-            verbo = sobre if lado == "sobre" else _opuesto(sobre)
-            texto += f" Con un dato así, {_el(ctx['clave'], nombre)} tiende a {verbo}."
-        salida["apertura"] = f"ya salió el dato que movía {_el(ctx['clave'], nombre)}."
-        salida["reaccion"] = "⏰ " + texto[0].upper() + texto[1:]
+        salida["cuerpo"] = _publicado(ctx, nombre, plan, dia, variante)
         return salida
-
-    salida["quita_espacio"] = estado in ("ventana", "pendiente") or (
-        estado == "proximo" and cuando - ahora <= timedelta(hours=HORAS_SIN_INVITAR))
-    el = _el(ctx["clave"], nombre)
-    hora = f"{cuando:%H:%M} (hora de Chile)"
     if estado == "ventana":
-        salida["apertura"] = f"en unos minutos sale un dato que puede mover {el}."
-        salida["reaccion"] = (f"⏰ A las {hora} se publica {_cierra(dato)} Mientras el mercado lo absorbe, el precio "
-                              "suele moverse a saltos.")
-        salida["cierre"] = CIERRE_VENTANA
+        coletilla = (f"Te dejo cómo va la {plan['accion']} del {dia}" if plan else f"Te dejo cómo va {el}")
+        salida["cuerpo"] = VENTANA[variante % len(VENTANA)].format(coletilla=coletilla, **base)
     else:
-        dia = _cuando_txt(cuando, ahora).split(" a las ")[0]
-        salida["apertura"] = f"{dia} hay un dato que puede mover {el}."
-        salida["reaccion"] = f"⏰ A las {hora} se publica {_cierra(dato)} " + _reaccion(ctx, nombre)
-        if estado == "pendiente":
-            salida["cierre"] = CIERRES_PENDIENTE[variante % len(CIERRES_PENDIENTE)]
+        clave = "pendiente" if estado == "pendiente" else "proximo"
+        opciones = (CON_PLAN if plan else SIN_PLAN)[clave]
+        salida["cuerpo"] = opciones[variante % len(opciones)].format(**base)
     if estado in ("pendiente", "ventana"):
         alias = ALIAS_DEL_BOT.get(ctx["ticker"], ctx["ticker"].lower())
         salida["aparte"] = (f"Tip: cuando salga el dato ({cuando:%H:%M}), vuelve a pedir /seguimiento {alias} "

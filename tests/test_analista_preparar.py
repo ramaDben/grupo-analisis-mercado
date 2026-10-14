@@ -233,8 +233,8 @@ def test_seguimiento_informa_simulacion_y_lectura_por_separado(tmp_path):
     d = hecha.pieza["datos"]
     assert d["evaluacion"]["estado"] == "en_curso"
     # La simulación (precios fijos del lunes) y la lectura de hoy, en párrafos separados.
-    assert "plan es operar" in d["whatsapp"] and "La lectura de la semana cambió" in d["lectura_hoy"]
-    assert not any(c.isdigit() for c in d["whatsapp"].split("\n\n", 1)[1])  # el texto no lleva precios
+    assert "CFD" in d["whatsapp"] and "La lectura de la semana cambió" in d["lectura_hoy"]
+    assert not any(c.isdigit() for c in d["whatsapp"])  # el texto no lleva precios
     assert "$" not in d["whatsapp"] and "instrucción de inversión" not in d["whatsapp"]
 
 
@@ -253,7 +253,7 @@ def test_seguimiento_sin_simulacion_entrega_la_lectura_de_hoy(tmp_path):
                         _lectores_seg(tmp_path, base, pd.DataFrame(columns=["time", "high", "low"]), 4124.0))
     d = hecha.pieza["datos"]
     assert d["evaluacion"]["estado"] == "sin_simulacion"
-    assert "no hay un plan definido" in d["whatsapp"]
+    assert "plan definido" in d["whatsapp"]
     assert "ahora se vigila" in d["lectura_hoy"] or "sigue en pie" in d["lectura_hoy"]
     assert "No pude leer" not in d["whatsapp"]
     assert "Stop" not in d["whatsapp"] and "Las cifras de la simulación" not in d["whatsapp"]

@@ -126,19 +126,6 @@ SALUDO_POR_DEFECTO = "Hola,"
 # Poco avance: casi todo el recorrido sigue por delante. Mucho avance: queda poco.
 AVANCE_POCO, AVANCE_MUCHO = 10, 70
 
-# Varias formas de abrir y de cerrar: un solo texto repetido cada día se lee como plantilla. Se elige
-# una por día y activo (estable), como los cierres del carrusel, para que no cambie entre reenvíos.
-ABRIR = (
-    "te actualizo el análisis de {n} que te compartí el {dia}.",
-    "quería contarte cómo viene el análisis de {n} que te compartí el {dia}.",
-    "te cuento cómo va lo que te compartí el {dia} sobre {n}.",
-)
-CERRAR = (
-    "El detalle va en la lámina, sobre el gráfico.",
-    "Te dejo la lámina con el detalle. Si quieres, lo vemos juntos.",
-    "En la lámina lo ves todo. Cuando quieras, lo conversamos.",
-)
-
 
 def saludo_de(texto: str) -> str:
     """Cómo abre el mensaje: lo que el ejecutivo escribió, o un saludo neutro.
@@ -176,56 +163,108 @@ def _variante_n(fecha_hoy: str, nombre: str) -> int:
     return zlib.crc32(f"{fecha_hoy}|{nombre}".encode()) >> 16
 
 
-def _enlace(nombre: str, dia: str, sesgo: str) -> str:
-    """Lo que ata el seguimiento al mensaje del día de la foto: qué se compartió y con qué sesgo."""
-    return f"El {dia} te compartí el análisis de {nombre}" + (f" (sesgo {sesgo})" if sesgo else "")
+# Cada mensaje es un solo párrafo que cierra con una pregunta concreta, y hay tres redacciones por estado:
+# tres bloques apilados, el mismo cierre genérico y una sola forma delatan al bot (gerencia, 2026-10-13).
+# Se elige una por día y activo (estable el mismo día) para que no cambie entre reenvíos. Reglas de cada
+# texto: «CFD» una vez, sin precios (van en la lámina), el stop como límite y el otro lado solo se «revisa».
+PLANTILLAS = {
+    "entrada_pendiente": (
+        "{el} todavía no confirma la entrada de la {accion} que vimos el {dia}. Sigue en espera, y con CFD se "
+        "puede operar hacia cualquiera de los dos lados si cambia la lectura. Te dejé la lámina, ¿la revisamos?",
+        "la {accion} {del} que te compartí el {dia} aún espera su entrada: el precio no llega a donde la "
+        "lectura la activa. Con CFD se puede operar al alza o a la baja, así que sigo atento a cómo se mueve. "
+        "¿Lo vemos en la lámina?",
+        "te escribo por {el}: la {accion} del {dia} todavía no se activa, así que por ahora no hay entrada. Si "
+        "cambia la lectura, con CFD también se opera el otro lado. ¿Te muestro la lámina?",
+    ),
+    "a_favor": (
+        "{el} va a favor de la {accion} que te compartí el {dia}. Mientras el stop no se toque sigue vigente, "
+        "y si se toca se revisa el otro lado, que con CFD también se opera. Está todo en la lámina, ¿la vemos?",
+        "te cuento que la {accion} {del} del {dia} viene a favor y sigue dentro del plan. Si llegara al stop se "
+        "revisa el otro lado, ya que con CFD se opera en los dos sentidos. ¿Alcanzaste a ver la lámina?",
+        "{el} se ha movido a favor de la {accion} del {dia}. El stop sigue como límite y, si se toca, miramos "
+        "el otro lado: con CFD se puede operar hacia ambos. Te dejo la lámina, ¿conversamos?",
+    ),
+    "en_contra": (
+        "{el} viene en contra de la {accion} del {dia}, pero sin tocar el stop, así que sigue en pie. Si lo "
+        "toca, se revisa el otro lado, que con CFD también se opera. ¿Te cuento cómo lo estoy viendo?",
+        "la {accion} {del} que vimos el {dia} está pasando por un tramo en contra, todavía dentro del stop. Si "
+        "se invalida, se revisa el otro lado; con CFD se opera en ambos sentidos. ¿La revisamos en la lámina?",
+        "te aviso que {el} se movió en contra de la {accion} del {dia}, aunque sin llegar al stop. Si lo toca "
+        "miramos el otro lado, que con CFD también se puede operar. ¿Hablamos?",
+    ),
+    "avance_mucho": (
+        "{el} ya recorrió buena parte del camino de la {accion} que te compartí el {dia}. Queda poco para el "
+        "objetivo, y con CFD se puede operar en ambos sentidos cuando eso se cumpla. Te dejo la lámina, ¿la vemos?",
+        "la {accion} {del} del {dia} va muy avanzada hacia su objetivo. Con el stop como límite, vamos viendo "
+        "el siguiente paso, y con CFD se puede operar hacia los dos lados. ¿Lo conversamos?",
+        "{el} lleva casi todo el recorrido de la {accion} del {dia}. Falta poco para el objetivo y después se "
+        "revisa hacia dónde sigue, con CFD en cualquiera de los dos lados. ¿Te muestro la lámina?",
+    ),
+    "objetivo": (
+        "{el} llegó al objetivo de la {accion} que te compartí el {dia}. Con CFD se opera hacia los dos lados, "
+        "así que ahora revisamos el siguiente movimiento. ¿Lo conversamos?",
+        "se cumplió la {accion} {del} del {dia}: el precio llegó al objetivo. Cerrado ese plan, miramos qué "
+        "sigue, y con CFD se puede operar al alza o a la baja. ¿La revisamos en la lámina?",
+        "te cuento que {el} alcanzó el objetivo de la {accion} del {dia}. Ahora toca ver el siguiente tramo, de "
+        "cualquiera de los dos lados con CFD. ¿Lo vemos juntos?",
+    ),
+    "stop": (
+        "{el} tocó el stop de la {accion} del {dia} y ese plan quedó cerrado, que es justo para lo que está el "
+        "stop. Hoy reviso si la lectura apunta al otro lado, y con CFD se puede operar hacia allá también. ¿Lo vemos?",
+        "la {accion} {del} que te compartí el {dia} llegó al stop y quedó invalidada. Ahora se revisa el otro "
+        "lado, sin apuro: con CFD se puede operar en ambos sentidos. ¿Te muestro la lámina?",
+        "te cuento que {el} llegó al stop de la {accion} del {dia}. El stop hizo su trabajo, que es limitar el "
+        "riesgo, y ahora miramos la lectura de hoy hacia el otro lado con CFD. ¿Conversamos?",
+    ),
+    "descartada": (
+        "la {accion} {del} que vimos el {dia} se descartó antes de activarse: el precio salió del nivel sin dar "
+        "la entrada. Ahora miramos hacia dónde sigue, y con CFD se puede operar cualquiera de los dos lados. ¿Lo vemos?",
+        "te aviso que {el} rompió el nivel sin activar la {accion} del {dia}, así que ese plan quedó descartado. "
+        "Con CFD se opera en ambos sentidos, y hoy revisamos qué lectura queda. ¿Te muestro la lámina?",
+        "la {accion} del {dia} sobre {el} no llegó a activarse y quedó descartada. Seguimos mirando el precio "
+        "para ver hacia dónde define, que con CFD se puede operar hacia ambos lados. ¿La revisamos?",
+    ),
+    "sin_simulacion": (
+        "{el} no tiene un plan definido esta semana, pero te dejo cómo viene la lectura de hoy en la lámina. "
+        "Con CFD se opera tanto al alza como a la baja. ¿La vemos?",
+        "te escribo por {el}: esta semana no quedó con un plan definido. Igual te dejé la lectura de hoy en la "
+        "lámina, ¿la revisamos?",
+        "sobre {el}: no tiene un plan definido esta semana, pero la lectura de hoy está en la lámina. Con CFD "
+        "se opera hacia los dos lados, ¿la miramos juntos?",
+    ),
+}
+ARTICULOS = {"Oro": "el oro", "Cobre": "el cobre", "Petróleo": "el petróleo", "Bitcoin": "Bitcoin",
+             "Plata": "la plata"}
 
 
-def _con(cabeza: str, frase: str) -> str:
-    """Une la cabecera (el enlace o el sesgo) con la frase; sin cabecera, la frase abre con mayúscula."""
-    return f"{cabeza} {frase}" if cabeza else frase[0].upper() + frase[1:]
+def _activo_con_articulo(nombre: str) -> tuple[str, str]:
+    """(«el oro», «del oro»): el artículo cambia según el activo y «de el» no existe."""
+    el = ARTICULOS.get(nombre, f"el {nombre}")
+    return el, el.replace("el ", "del ", 1) if el.startswith("el ") else f"de {el}"
 
 
-def _plan(nombre: str, esc: dict[str, Any], ev: dict[str, Any], dia: str = "lunes", sesgo: str = "",
-          con_enlace: bool = True) -> str:
-    """El plan en una o dos frases y sin precios (director, 2026-10-13): enlaza con el análisis que se
-    mandó el día de la foto, dice de qué lado se opera con CFD, cómo va y que, si se invalida, nos
-    cambiamos de lado. Las cifras van solo en la lámina."""
+def _estado_de_texto(ev: dict[str, Any]) -> str:
     estado = ev["estado"]
-    # Sin dato macro, el enlace con el mensaje del día de la foto ya lo hizo la apertura.
-    cabeza = (f"{_enlace(nombre, dia, sesgo)}:" if con_enlace else f"Con sesgo {sesgo}," if sesgo else "")
-    if estado == "sin_simulacion":
-        return _con(cabeza, f"esta semana no hay un plan definido. Te dejo la lectura de hoy.")
-    alcista = esc["direccion"] == "ALCISTA"
-    lado, otro = ("al alza", "a la baja") if alcista else ("a la baja", "al alza")
-    cambio = f"Si el plan se invalida, nos cambiamos de lado y operamos {otro}."
-    if estado == "entrada_pendiente":
-        return _con(cabeza, f"el plan es operar {lado} con CFD y se activa cuando el precio confirme la "
-                    f"entrada. {cambio}")
     if estado == "en_curso":
         pct = ev["avance_pct"]
-        como = ("hoy va en contra, pero sigue vigente" if pct < 0
-                else "ya lleva buena parte del camino hecho" if pct >= AVANCE_MUCHO else "hoy va a favor")
-        return _con(cabeza, f"el plan es operar {lado} con CFD y {como}. {cambio}")
-    if estado == "objetivo":
-        return _con(cabeza, "el plan llegó a su objetivo. Con CFD se opera de los dos lados, así que ahora "
-                    "miramos el siguiente movimiento.")
-    if estado == "stop":
-        return _con(cabeza, f"el plan se invalidó, y ahí nos cambiamos de lado. Miramos la lectura de hoy "
-                    f"para operar {otro}.")
-    return _con(cabeza, "el plan se descartó antes de activarse. Ahora miramos hacia dónde sale el precio, "
-                "y con CFD se puede operar cualquiera de los dos lados.")
+        return "en_contra" if pct < 0 else "avance_mucho" if pct >= AVANCE_MUCHO else "a_favor"
+    return "descartada" if estado == "rango_roto" else estado
 
 
 def _armar(nombre: str, fecha_hoy: str, esc: dict[str, Any], ev: dict[str, Any], precio_vivo: float,
-           lectura_hoy: str, digits: int, macro: dict[str, Any] | None = None, dia: str = "lunes",
-           sesgo: str = "") -> str:
-    """El texto corto con la marca del saludo: gancho, dato (si hay), plan y cierre. Sin precios."""
+           lectura_hoy: str, digits: int, macro: dict[str, Any] | None = None, dia: str = "lunes") -> str:
+    """El mensaje con la marca del saludo: un párrafo corto y sin precios que cierra con una pregunta.
+
+    Con dato macro (`macro_seguimiento.redactar`) el cuerpo es el del dato; sin él, el del estado.
+    """
     macro = macro or {}
-    apertura = macro.get("apertura") or _variante(ABRIR, fecha_hoy, nombre).format(n=nombre, dia=dia)
-    cierre = macro.get("cierre") or _variante(CERRAR, fecha_hoy, nombre, 8)
-    partes = [f"{MARCA_SALUDO} {apertura}", macro.get("reaccion") or "", _plan(nombre, esc, ev, dia, sesgo, bool(macro.get("apertura"))), cierre]
-    return "\n\n".join(p for p in partes if p)
+    if macro.get("cuerpo"):
+        return f"{MARCA_SALUDO} {macro['cuerpo']}"
+    el, del_ = _activo_con_articulo(nombre)
+    accion = "compra" if esc.get("direccion") == "ALCISTA" else "venta"
+    plantilla = _variante(PLANTILLAS[_estado_de_texto(ev)], fecha_hoy, nombre)
+    return f"{MARCA_SALUDO} " + plantilla.format(el=el, **{"del": del_}, accion=accion, dia=dia)
 
 
 def mensaje(nombre: str, fecha_hoy: str, fecha_foto: str, esc: dict[str, Any], ev: dict[str, Any],
@@ -253,17 +292,17 @@ def redactar(datos: dict[str, Any], saludo: str = "", ctx_macro: dict[str, Any] 
     activo = datos["activo"]
     fecha_hoy = str(datos["edicion"]).split(" · ")[0]
     esc, ev, digits = activo["escenario"], datos["evaluacion"], activo["digits"]
+    dia = str((activo.get("foto") or {}).get("fecha") or "lunes").split()[0]
     macro: dict[str, Any] = {}
     if ctx_macro is not None and ahora is not None:
         try:
             from analista import macro_seguimiento as mac
 
             macro = mac.redactar(ctx_macro, datos["nombre"], None if ev["estado"] == "sin_simulacion" else esc,
-                                 ev["estado"], ahora, digits, variante=_variante_n(fecha_hoy, datos["nombre"]))
+                                 ev["estado"], ahora, digits, variante=_variante_n(fecha_hoy, datos["nombre"]),
+                                 dia=dia)
         except Exception:  # noqa: BLE001  el dato macro es un extra: sin él, el seguimiento sale igual
             macro = {}
-    dia = str((activo.get("foto") or {}).get("fecha") or "lunes").split()[0]
-    sesgo = str((activo.get("lectura") or {}).get("direccion") or "").lower()
     texto = _armar(datos["nombre"], fecha_hoy, esc, ev, float(datos["precio_vivo"]), datos["lectura_hoy"],
-                   digits, macro, dia, sesgo)
+                   digits, macro, dia)
     return con_saludo(texto, saludo), macro.get("aparte", "")
