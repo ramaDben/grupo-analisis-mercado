@@ -97,6 +97,84 @@ def test_el_precio_vivo_que_cruza_la_entrada_la_activa():
     assert ev["estado"] == "en_curso"
 
 
+def test_vela_viva_cobre_activa_en_el_tramo_vivo_sin_contar_objetivo():
+    """Caso real COPPER W42: la vela H4 en formación toca la entrada sin llegar al stop.
+
+    (a) activa en el tramo vivo y el objetivo NO cuenta en la vela que activa -> en_curso.
+    """
+    cobre = {"direccion": "BAJISTA", "entrada": 14668.0, "stop": 14709.0, "objetivo": 14545.0,
+             "entrada_pendiente": True}
+    velas = [v(14643.0, 14580.0, cierre=14600.0)]
+    ev = sg.evaluar(cobre, velas, 14525.0, vela_viva={"high": 14678.0, "low": 14482.0})
+    assert ev["estado"] == "en_curso"
+
+
+def test_vela_viva_cobre_que_toca_stop_es_rango_roto():
+    """(b) misma vela_viva pero high 14715 (supera el stop) -> rango_roto."""
+    cobre = {"direccion": "BAJISTA", "entrada": 14668.0, "stop": 14709.0, "objetivo": 14545.0,
+             "entrada_pendiente": True}
+    velas = [v(14643.0, 14580.0, cierre=14600.0)]
+    ev = sg.evaluar(cobre, velas, 14525.0, vela_viva={"high": 14715.0, "low": 14482.0})
+    assert ev["estado"] == "rango_roto"
+
+
+def test_sin_vela_viva_cobre_mantiene_entrada_pendiente():
+    """(c) sin vela_viva -> entrada_pendiente como antes."""
+    cobre = {"direccion": "BAJISTA", "entrada": 14668.0, "stop": 14709.0, "objetivo": 14545.0,
+             "entrada_pendiente": True}
+    velas = [v(14643.0, 14580.0, cierre=14600.0)]
+    ev = sg.evaluar(cobre, velas, 14525.0)
+    assert ev["estado"] == "entrada_pendiente"
+
+
+def test_tolerancia_activa_venta_cobre_con_toque_incompleto():
+    """(a) venta entrada 14668/stop 14709/obj 14545, una vela cerrada high 14643 low 14600,
+    precio_vivo 14610, tolerancia 28.4 -> estado 'en_curso'."""
+    assert sg.TOLERANCIA_ATR == 0.35
+    cobre = {"direccion": "BAJISTA", "entrada": 14668.0, "stop": 14709.0, "objetivo": 14545.0,
+             "entrada_pendiente": True}
+    velas = [v(14643.0, 14600.0)]
+    ev = sg.evaluar(cobre, velas, 14610.0, tolerancia=28.4)
+    assert ev["estado"] == "en_curso"
+
+
+def test_tolerancia_cero_mantiene_venta_cobre_pendiente():
+    """(b) mismo caso tolerancia 0.0 -> 'entrada_pendiente'."""
+    cobre = {"direccion": "BAJISTA", "entrada": 14668.0, "stop": 14709.0, "objetivo": 14545.0,
+             "entrada_pendiente": True}
+    velas = [v(14643.0, 14600.0)]
+    ev = sg.evaluar(cobre, velas, 14610.0, tolerancia=0.0)
+    assert ev["estado"] == "entrada_pendiente"
+
+
+def test_tolerancia_con_vela_que_toca_stop_descarta_rango():
+    """(c) vela con high 14643 pero tambien high >= 14709 (toca stop), tolerancia 28.4 -> 'rango_roto'."""
+    cobre = {"direccion": "BAJISTA", "entrada": 14668.0, "stop": 14709.0, "objetivo": 14545.0,
+             "entrada_pendiente": True}
+    velas = [v(14710.0, 14600.0)]
+    ev = sg.evaluar(cobre, velas, 14610.0, tolerancia=28.4)
+    assert ev["estado"] == "rango_roto"
+
+
+def test_tolerancia_alcista_simetrico_activa_con_low_por_encima():
+    """(d) alcista simetrico con entrada cuyo low queda 25 pts por encima, tolerancia 28.4 -> activa."""
+    alcista = {"direccion": "ALCISTA", "entrada": 4000.0, "stop": 3950.0, "objetivo": 4150.0,
+               "entrada_pendiente": True}
+    velas = [v(4060.0, 4025.0)]
+    ev = sg.evaluar(alcista, velas, 4030.0, tolerancia=28.4)
+    assert ev["estado"] == "en_curso"
+    assert sg.evaluar(alcista, velas, 4030.0, tolerancia=0.0)["estado"] == "entrada_pendiente"
+
+
+def test_modo_quiebre_con_vela_viva_no_activa_sin_cierre():
+    """En modo quiebre el tramo vivo no cambia (no activa: exige CIERRE)."""
+    quiebre = {"direccion": "ALCISTA", "entrada": 4000.0, "stop": 3950.0, "objetivo": 4150.0,
+               "condicion": "quiebre", "entrada_pendiente": True}
+    velas = [v(3980.0, 3960.0, cierre=3970.0)]
+    ev = sg.evaluar(quiebre, velas, 3990.0, vela_viva={"high": 4050.0, "low": 3965.0})
+    assert ev["estado"] == "entrada_pendiente"
+
+
 def test_el_mensaje_no_habla_en_pesos_ni_de_lo_que_se_habria_ganado():
     ev = sg.evaluar(ALZA, [v(4040, 3990)], 4075.0)
     texto = sg.mensaje("Oro", "miércoles 14-10", "lunes 12-10", ALZA, ev, 4075.0, fx.lectura(), False, 2)

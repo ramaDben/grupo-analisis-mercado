@@ -390,9 +390,33 @@ def preparar_seguimiento(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
                                                    and rs.firma(vigente) != rs.firma(referencia_foto))
     h4 = diaria.velas[referencia_foto.marco]
     posteriores = h4[h4["time"] > referencia_foto.vela].to_dict("records") if len(h4) else []
+    ultima_cerrada = posteriores[-1]["time"] if posteriores else (int(h4.iloc[-1]["time"]) if len(h4) else int(referencia_foto.vela))
+    vela_viva = None
+    if len(h4):
+        mas_nuevas = h4[h4["time"] > ultima_cerrada]
+        if len(mas_nuevas):
+            v_fila = mas_nuevas.iloc[-1]
+            vela_viva = {"high": float(v_fila["high"]), "low": float(v_fila["low"])}
+    if vela_viva is None:
+        try:
+            from market_data_mcp import mt5_client
+
+            mt5_client.connect()
+            import MetaTrader5 as mt5  # noqa: PLC0415
+
+            mt5.symbol_select(ticker, True)
+            rates = mt5.copy_rates_from_pos(ticker, mt5.TIMEFRAME_H4, 0, 1)
+            if rates is not None and len(rates) > 0:
+                r = rates[0]
+                if int(r["time"]) > ultima_cerrada:
+                    vela_viva = {"high": float(r["high"]), "low": float(r["low"])}
+        except Exception:  # noqa: BLE001
+            vela_viva = None
     precio = diaria.lectura.precio
+    atr = float(referencia_foto.metricas.get("atr") or 0.0)
+    tolerancia = sg.TOLERANCIA_ATR * atr
     ev = ({"estado": "sin_simulacion", "avance_pct": None, "motivo": motivo} if motivo
-          else sg.evaluar(esc, posteriores, precio))
+          else sg.evaluar(esc, posteriores, precio, vela_viva=vela_viva, tolerancia=tolerancia))
     lectura_hoy = sg.texto_lectura(diaria.lectura, reemplazada, a["digits"])
     hoy = fecha_corta(ahora)
     texto = sg.mensaje(a["nombre"], hoy, a["foto"]["fecha"], esc, ev, precio, diaria.lectura, reemplazada,

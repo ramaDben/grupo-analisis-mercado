@@ -10,6 +10,7 @@ from typing import Any
 
 ESTADOS = ("entrada_pendiente", "en_curso", "objetivo", "stop", "rango_roto", "descartada", "sin_simulacion")
 SEPARADOR = "━━━━━━━━━━━━━━━━━━━"
+TOLERANCIA_ATR = 0.35  # 0,35 x ATR H4, medida con el cobre W42: 25 pts = 0,31 ATR
 
 
 def _fmt(valor: float, digits: int) -> str:
@@ -22,7 +23,8 @@ def _retesteo_fuera_de_rango(esc: dict[str, Any]) -> bool:
     return esc.get("condicion") == "retesteo" and esc.get("estado") != "RANGO"
 
 
-def evaluar(esc: dict[str, Any], velas: list[dict[str, Any]], precio_vivo: float) -> dict[str, Any]:
+def evaluar(esc: dict[str, Any], velas: list[dict[str, Any]], precio_vivo: float,
+            vela_viva: dict[str, Any] | None = None, tolerancia: float = 0.0) -> dict[str, Any]:
     """Recorre las velas 4H cerradas desde la foto y termina en el precio vivo.
 
     Si una misma vela toca el stop y el objetivo, cuenta stop: sin datos dentro de la vela
@@ -34,7 +36,9 @@ def evaluar(esc: dict[str, Any], velas: list[dict[str, Any]], precio_vivo: float
     («rango_roto»), nunca «stop tocado» de una entrada que no se activó ni «pendiente» de un
     precio que ya no vale (director, 2026-10-12, tras la prueba real de la W41, cobre). En la
     vela que activa tampoco cuenta el objetivo: dentro de ella no se sabe qué tocó primero. El
-    precio vivo se mide como un tramo desde el último cierre.
+    precio vivo se mide como un tramo desde el último cierre. Si se pasa `vela_viva` ({high, low}),
+    el tramo vivo final incorpora los extremos ocurridos en la vela 4H en formación.
+    Se admite una `tolerancia` de toque (puntos de precio) para activar sin alterar el stop.
 
     La entrada por quiebre (`condicion == "quiebre"`) se activa con el CIERRE de una vela 4H al
     otro lado del nivel, y antes de eso el stop no cuenta: el precio viene justamente de ese
@@ -48,7 +52,11 @@ def evaluar(esc: dict[str, Any], velas: list[dict[str, Any]], precio_vivo: float
     roto = "descartada" if _retesteo_fuera_de_rango(esc) else "rango_roto"
     previo = float(velas[-1]["close"]) if velas else precio_vivo
     tramos = [(float(x["high"]), float(x["low"]), float(x["close"])) for x in velas]
-    tramos.append((max(previo, precio_vivo), min(previo, precio_vivo), None))
+    if vela_viva and "high" in vela_viva and "low" in vela_viva:
+        tramos.append((max(previo, precio_vivo, float(vela_viva["high"])),
+                       min(previo, precio_vivo, float(vela_viva["low"])), None))
+    else:
+        tramos.append((max(previo, precio_vivo), min(previo, precio_vivo), None))
     for alto, bajo, cierre in tramos:
         toca_stop = (bajo <= stop) if alcista else (alto >= stop)
         if not activa:
@@ -57,7 +65,7 @@ def evaluar(esc: dict[str, Any], velas: list[dict[str, Any]], precio_vivo: float
                 continue
             if toca_stop:
                 return {"estado": roto, "avance_pct": None}
-            if bajo <= entrada <= alto:
+            if bajo - tolerancia <= entrada <= alto + tolerancia:
                 activa = True
             continue
         if toca_stop:
