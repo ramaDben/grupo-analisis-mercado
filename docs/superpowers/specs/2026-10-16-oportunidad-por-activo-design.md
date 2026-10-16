@@ -105,7 +105,7 @@ rebotaría casi todo. Python valida (`esquema.py`):
 - Sin ninguna fuente válida, la pieza sale con el análisis propio y avisa «sin voces de bancos o
   prensa atingentes esta vez». No se rellena ni se inventa.
 - Los candados actuales siguen: sin guion largo, sin voseo, sin HTML, sin instrucción personal
-  y sin `%`. **El cierre que invitaba a operar el escenario se retira** (ver sección 12): por
+  y sin `%`. **El cierre que invitaba a operar el escenario se retira** (ver sección 11): por
   regulación la pieza no invita a operar, invita a revisar la plataforma.
 
 ## 8. Salida
@@ -140,7 +140,7 @@ Python desde la `postura`, la caducidad anticipada (invalidación rota antes del
 el terminal caído se entrega con el aviso), el candado por activo, y que el bot siga sin importar el
 envío a WhatsApp.
 
-## 12. Cierre regulatorio: invitar a revisar la plataforma, no a operar (director, 2026-10-16)
+## 11. Cierre regulatorio: invitar a revisar la plataforma, no a operar (director, 2026-10-16)
 
 Por temas de regulación, ninguna pieza de `/oportunidad` invita a operar. Su propósito comercial es
 que el ejecutivo tenga un motivo para **sentarse con su cliente a revisar la plataforma MT5**:
@@ -166,7 +166,7 @@ mirar los gráficos juntos, revisar la lectura y las estrategias. Esto **reempla
 - **Panel de simulación (resuelto, 2026-10-16):** se mantiene y se rotula «ejemplo ilustrativo
   para revisar en MT5». Contrato de prueba: el panel sin ese rótulo falla.
 
-## 13. Puntos abiertos: resueltos el 2026-10-16
+## 12. Puntos abiertos: resueltos el 2026-10-16
 
 1. Lista de `config/fuentes_prestigio.json`: sección 7 (entidad y medio separados).
 2. Nombre de símbolos fuera del catálogo: sección 3 (`description` de MT5).
