@@ -119,10 +119,20 @@ class Agenda:
     estado: str  # "ok" | "vacia" | "sin_calendario"
     eventos: list[dict[str, Any]] = field(default_factory=list)
     avisos: list[str] = field(default_factory=list)
+    # Ventana parcial: hay datos pero alguna pestaña falló o llegó vieja. `cubierto_hasta` es el último día
+    # del que el cliente tiene constancia (el del último dato mostrado); nunca se declara cobertura más allá.
+    parcial: bool = False
+    cubierto_hasta: str = ""
 
     def a_dict(self) -> dict[str, Any]:
         return {"desde": self.desde, "hasta": self.hasta, "estado": self.estado,
-                "eventos": [dict(e) for e in self.eventos], "url": URL_CALENDARIO}
+                "eventos": [dict(e) for e in self.eventos], "url": URL_CALENDARIO,
+                "parcial": self.parcial, "cubierto_hasta": self.cubierto_hasta or self.hasta}
+
+
+def hasta_cubierto(agenda: dict[str, Any]) -> str:
+    """El último día que la agenda sellada puede afirmar: las piezas anteriores no traen los campos nuevos."""
+    return (agenda.get("cubierto_hasta") if agenda.get("parcial") else None) or agenda["hasta"]
 
 
 def leer_ventana(ahora: datetime, ticker: str, nombre: str, cargar: Callable[..., dict[str, Any]] | None = None,
@@ -166,7 +176,9 @@ def leer_ventana(ahora: datetime, ticker: str, nombre: str, cargar: Callable[...
     eventos = [f for _, f in filas]
     distinguir(eventos)
     estado = "ok" if eventos else ("sin_calendario" if fallidas else "vacia")
-    return Agenda(dia_corto(ahora), dia_corto(limite), estado, eventos, avisos)
+    parcial = bool(eventos) and fallidas > 0
+    cubierto = dia_corto(filas[-1][0]) if parcial else dia_corto(limite)
+    return Agenda(dia_corto(ahora), dia_corto(limite), estado, eventos, avisos, parcial, cubierto)
 
 
 def payload_lamina(agenda: dict[str, Any]) -> dict[str, Any]:
@@ -181,7 +193,7 @@ def payload_lamina(agenda: dict[str, Any]) -> dict[str, Any]:
     return {
         "plantilla": "calendario",
         "sello": "CALENDARIO ECONÓMICO · GI",
-        "fecha_hora": f"DEL {agenda['desde'].upper()} AL {agenda['hasta'].upper()}",
+        "fecha_hora": f"DEL {agenda['desde'].upper()} AL {hasta_cubierto(agenda).upper()}",
         "titulo": "Los días clave de este análisis",
         "subtitulo": "Datos de alto impacto de los próximos 7 días, en hora de Chile. Fuente: calendario de Investing.com.",
         "eventos": [{"numero": f"{i:02d}", "dia": e["dia"].upper(), "hora": e["hora"], "evento": e["evento"],

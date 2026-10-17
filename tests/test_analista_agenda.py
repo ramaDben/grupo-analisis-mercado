@@ -91,6 +91,21 @@ def test_con_una_semana_caida_y_datos_en_la_otra_sale_con_aviso():
     assert a.estado == "ok" and a.avisos
 
 
+def test_una_ventana_parcial_se_marca_y_declara_hasta_donde_cubre():
+    caido = {"error": "NO_CALENDAR_FEEDS", "message": "x"}
+    a = ag.leer_ventana(SABADO, "XAUUSD", "Oro", cargar=cargador({"thisWeek": caido,
+                                                                 "nextWeek": [ev("2026-10-21 09:30")]}))
+    d = a.a_dict()
+    assert d["estado"] == "ok" and d["parcial"] is True and d["cubierto_hasta"] == "miércoles 21/10"
+    assert d["hasta"] == "sábado 24/10"  # la ventana pedida no cambia
+
+
+def test_una_ventana_completa_no_es_parcial():
+    a = ag.leer_ventana(SABADO, "XAUUSD", "Oro", cargar=cargador({"thisWeek": [], "nextWeek": [ev("2026-10-21 09:30")]}))
+    d = a.a_dict()
+    assert d["parcial"] is False and d["cubierto_hasta"] == d["hasta"]
+
+
 def test_dia_corto_es_el_formato_de_preparar():
     assert ag.dia_corto(SABADO) == pr.fecha_corta(SABADO) == "sábado 17/10"
 

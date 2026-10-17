@@ -102,7 +102,10 @@ def _agenda_ficha(d: dict[str, Any], dias_clave: str, dir_pedido: Path | None, i
         lista = d.get("agenda_semana") or []
         return ('<p class="rotulo-chico">Agenda de la semana</p><ul>' + "".join(f"<li>{ih.e(x)}</li>" for x in lista)
                 + '</ul>') if lista else ""
-    cuerpo = f'<p class="rotulo-chico">Días clave del {ih.e(agenda["desde"])} al {ih.e(agenda["hasta"])}</p>'
+    cuerpo = f'<p class="rotulo-chico">Días clave del {ih.e(agenda["desde"])} al {ih.e(ag.hasta_cubierto(agenda))}</p>'
+    if agenda.get("parcial"):
+        cuerpo += ('<p class="nota">El calendario respondió a medias: revisa el resto de los días en el '
+                   f'{_enlace_calendario("calendario de Investing.com")}.</p>')
     if agenda["estado"] == "sin_calendario":
         return cuerpo + ('<p class="nota">No pude leer el calendario económico para esta ventana: revisa los días '
                          f'clave en el {_enlace_calendario("calendario de Investing.com")} antes de enviar el correo.</p>')
@@ -112,7 +115,7 @@ def _agenda_ficha(d: dict[str, Any], dias_clave: str, dir_pedido: Path | None, i
         cuerpo += f'<p>{ih.e(dias_clave)}</p>'
     if imagen and dir_pedido is not None and (dir_pedido / imagen).exists():
         cuerpo += (f'<img class="calendario-img" src="{ih._data_uri(dir_pedido / imagen)}" '
-                   f'alt="Calendario económico del {ih.e(agenda["desde"])} al {ih.e(agenda["hasta"])}">')
+                   f'alt="Calendario económico del {ih.e(agenda["desde"])} al {ih.e(ag.hasta_cubierto(agenda))}">')
     filas = "".join(
         f'<tr><td>{ih.e(e["dia"])}<br>{ih.e(e["hora"])}</td><td>{ih.e(e["evento"])} · {ih.e(e["pais"])}</td>'
         f'<td>{ih.e(e["anterior"] or "sin dato")}</td><td>{ih.e(e["esperado"] or "sin dato")}</td>'
@@ -273,6 +276,24 @@ def _simulacion_correo(a: dict[str, Any], ejecutivo: str, c: dict[str, str]) -> 
     )
 
 
+TIPS_EXPLICADO = ", medida en bonos del Tesoro que se ajustan por inflación (TIPS)"
+
+
+def _cambio_correo(h: dict[str, Any]) -> str:
+    """El cambio en texto de cliente: «puntos base» y no «pb»; sin cifra no hay cláusula (no se escribe «sin dato»)."""
+    if h.get("sentido") not in ("estable", "subió", "bajó"):
+        return ""
+    return ", " + re.sub(r" pb\b", " puntos base", _cambio(h))
+
+
+def _fecha_hechos(hechos: list[dict[str, Any]]) -> str:
+    """La fecha del dato más reciente, con la que los hechos mismos se fechan: «viernes 09/10»."""
+    def clave(h: dict[str, Any]) -> tuple[int, int]:
+        m = re.search(r"(\d{2})/(\d{2})", h.get("fecha", ""))
+        return (int(m.group(2)), int(m.group(1))) if m else (0, 0)
+    return max(hechos, key=clave)["fecha"]
+
+
 def _hechos_correo(hechos: list[dict[str, Any]], c: dict[str, str]) -> str:
     if not hechos:
         return ""
@@ -282,9 +303,9 @@ def _hechos_correo(hechos: list[dict[str, Any]], c: dict[str, str]) -> str:
         if h.get("efecto"):
             efecto = h["efecto"][:1].upper() + h["efecto"][1:]
             cola = f" {ih.e(efecto)}" + (f", {ih.e(h['con_la_lectura'])}" if h.get("con_la_lectura") else "") + "."
-        lineas.append(_p(f'<strong style="color:{c["texto_1"]};">{ih.e(h["driver"])}:</strong> {ih.e(h["nivel"])} al '
-                         f'{ih.e(h["fecha"])}, {ih.e(_cambio(h))}.{cola}', c, tam=15, margen="0 0 6px 0"))
-    return _rotulo("Lo que pasa hoy", c, margen="10px 0 8px 0") + "".join(lineas)
+        lineas.append(_p(f'<strong style="color:{c["texto_1"]};">{ih.e(h["driver"].replace(" (TIPS)", TIPS_EXPLICADO))}:'
+                         f'</strong> {ih.e(h["nivel"])} al {ih.e(h["fecha"])}{ih.e(_cambio_correo(h))}.{cola}', c, tam=15, margen="0 0 6px 0"))
+    return _rotulo(f"Los drivers al {ih.e(_fecha_hechos(hechos))}", c, margen="10px 0 8px 0") + "".join(lineas)
 
 
 def _dias_clave_correo(d: dict[str, Any], dias_clave: str, dir_pedido: Path, imagen: str, c: dict[str, str]) -> str:
@@ -292,7 +313,7 @@ def _dias_clave_correo(d: dict[str, Any], dias_clave: str, dir_pedido: Path, ima
     agenda = d.get("agenda")
     if not agenda or agenda["estado"] == "sin_calendario":
         return ""
-    cuerpo = _rotulo(f'Días clave hasta el {ih.e(agenda["hasta"])}', c, margen="14px 0 8px 0")
+    cuerpo = _rotulo(f'Días clave hasta el {ih.e(ag.hasta_cubierto(agenda))}', c, margen="14px 0 8px 0")
     if not agenda["eventos"]:
         return cuerpo + _p(ih.e(ag.texto_vacia(agenda)), c, tam=15)
     if dias_clave:
@@ -301,7 +322,7 @@ def _dias_clave_correo(d: dict[str, Any], dias_clave: str, dir_pedido: Path, ima
     if ruta is not None and ruta.exists():
         cuerpo += _tabla(
             f'<tr><td style="padding:0;"><img src="{ih._data_uri(ruta)}" width="558" height="{_alto_png(ruta, 558)}" '
-            f'alt="Calendario económico del {ih.e(agenda["desde"])} al {ih.e(agenda["hasta"])}" '
+            f'alt="Calendario económico del {ih.e(agenda["desde"])} al {ih.e(ag.hasta_cubierto(agenda))}" '
             'style="display:block;border:0;width:558px;max-width:100%;height:auto;border-radius:11px;"></td></tr>',
             estilo=f'border:1px solid {c["linea"]};border-radius:12px;') + _separador(8)
     return cuerpo + _p(f'<a href="{ih.e(ag.URL_CALENDARIO)}" style="color:{c["acento"]};">Ver el calendario '

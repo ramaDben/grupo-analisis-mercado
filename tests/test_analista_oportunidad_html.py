@@ -316,6 +316,22 @@ def test_la_ficha_trae_la_tabla_de_hechos(tmp_path):
     assert "bajó 14 pb en 5 sesiones" in h  # las tasas no repiten la unidad
 
 
+def test_el_correo_no_imprime_pb_ni_tips_sin_explicar_ni_sin_dato(tmp_path):
+    p = fx.pieza_oportunidad(tmp_path, laminas=True)
+    p["datos"]["hechos"][1]["sentido"] = "sin_dato"
+    p["huella"] = es._huella(p)
+    correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+    assert " pb" not in correo and "sin dato" not in correo
+    assert "bonos del Tesoro que se ajustan por inflación (TIPS)" in correo
+    assert "Dollar Index (DXY):" in correo
+
+
+def test_el_correo_dice_puntos_base_y_fecha_los_drivers(tmp_path):
+    correo = _correo(_html(tmp_path))
+    assert "bajó 14 puntos base en 5 sesiones" in correo and " pb" not in correo
+    assert "Los drivers al viernes 09/10" in correo and "Lo que pasa hoy" not in correo
+
+
 def test_la_ficha_trae_los_dias_clave_con_imagen_tabla_y_enlace(tmp_path):
     h = _html(tmp_path)
     assert "Días clave del lunes 12/10 al lunes 19/10" in h
@@ -336,9 +352,23 @@ def test_sin_calendario_avisa_al_ejecutivo_y_el_correo_lo_omite(tmp_path):
     assert "No pude leer" not in _correo(h) and "Días clave" not in _correo(h)
 
 
+def _parcial(tmp_path):
+    p = fx.pieza_oportunidad(tmp_path, laminas=True)
+    p["datos"]["agenda"].update(parcial=True, cubierto_hasta="miércoles 14/10")
+    p["huella"] = es._huella(p)
+    return oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+
+
+def test_una_agenda_parcial_avisa_en_la_ficha_y_el_correo_no_declara_mas_de_lo_cubierto(tmp_path):
+    h = _parcial(tmp_path)
+    assert "El calendario respondió a medias" in h
+    correo = _correo(h)
+    assert "Días clave hasta el miércoles 14/10" in correo and "hasta el lunes 19/10" not in correo
+
+
 def test_el_correo_lleva_hechos_dias_clave_imagen_y_bancos_con_enlace(tmp_path):
     correo = _correo(_html(tmp_path))
-    assert "Lo que pasa hoy" in correo and "101,560" in correo and "Juega a favor del alza del oro" in correo
+    assert "Los drivers al" in correo and "101,560" in correo and "Juega a favor del alza del oro" in correo
     assert "Días clave hasta el lunes 19/10" in correo and "El día clave es el miércoles 14/10" in correo
     assert len(re.findall(r'<img src="data:image/png;base64,[^"]+" width="558" height="\d+"', correo)) == 2
     assert "Qué dicen los bancos" in correo and "Goldman Sachs" in correo and "14/10/2026" in correo
