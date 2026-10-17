@@ -1,20 +1,20 @@
 # Bot de Telegram para analistas y ejecutivos
 
-El equipo le pide al bot el análisis técnico de la semana y el seguimiento de un activo. Diseño:
-`docs/superpowers/specs/2026-10-12-oportunidad-semanal-design.md`.
+El equipo le pide al bot el análisis de un activo del terminal y su seguimiento. Diseño:
+`docs/superpowers/specs/2026-10-16-oportunidad-por-activo-design.md` (reemplaza a la foto semanal
+de seis activos del spec `2026-10-12-oportunidad-semanal-design.md`).
 
 ## Qué se puede pedir
 
 | Comando | Pieza |
 |---|---|
-| `/oportunidad` | El análisis técnico de la semana, con los 6 activos y el panel de simulación del ejecutivo |
-| `/seguimiento oro` | Cómo va un activo de la foto de la semana: la simulación y la lectura de hoy |
+| `/oportunidad <activo>` | El análisis de un activo: técnico (estrategia activa), fundamental (drivers, agenda, curva) y las voces de bancos y prensa, con el panel de simulación del ejecutivo |
+| `/seguimiento <activo>` | Cómo va el análisis vigente de ese activo: la simulación y la lectura de hoy |
 
-La pieza semanal sale en HTML (herramienta interna con panel); `/seguimiento` entrega lámina PNG y
-el texto de WhatsApp en el mensaje. Los comandos `/activo`, `/calendario`, `/dato` y `/jornada`
-se retiraron el 2026-10-12 (spec `docs/superpowers/specs/2026-10-12-oportunidad-semanal-design.md`)
-y responden con la ayuda. `foco.py`, `plan.py`, `bitacora.py` y `pdf.py` se borraron;
-`data/bitacora_planes_analistas.json` queda como historia versionada.
+El análisis sale en HTML (herramienta interna con panel); `/seguimiento` entrega lámina PNG y el
+texto de WhatsApp en el mensaje. Los comandos `/activo`, `/calendario`, `/dato` y `/jornada` se
+retiraron el 2026-10-12 y responden con la ayuda. `foco.py`, `plan.py`, `bitacora.py` y `pdf.py` se
+borraron; `data/bitacora_planes_analistas.json` queda como historia versionada.
 
 **El informe no se personaliza.** Nadie en GI está inscrito como asesor de inversión, y un
 informe con el nombre del cliente se acerca a una recomendación personalizada. Si un pedido trae
@@ -25,29 +25,87 @@ informe con el nombre del cliente se acerca a una recomendación personalizada. 
 ## Cómo funciona
 
 ```
-/oportunidad:  pedido → orden.py → preparar.py (foto semanal de los 6 activos, gráficos)
-               → agy /analista (solo redacta pieza.json, una vez por semana) → esquema.py (valida)
-               → láminas PNG → oportunidad_html.py (HTML con panel) → Telegram + carpeta de Drive
-/seguimiento:  pedido → orden.py → preparar.py (simulación y lectura de hoy) → lámina PNG
-               + texto de WhatsApp en el mensaje (sin agy)
+/oportunidad <activo>:
+   pedido -> orden.py -> registro_semanal (¿hay uno vigente?)
+      si lo hay -> vigencia.verificar (¿la lectura se rompió?) -> si sigue vigente, se reusa (sin agy)
+      si no     -> preparar.py (lectura, drivers, agenda, curva, gráficos)
+                -> agy /analista (redacta pieza.json y busca las fuentes)
+                -> fuentes.depurar + esquema.py (validan) -> lámina PNG -> oportunidad_html.py
+                -> Telegram + carpeta de Drive -> registro_semanal
+/seguimiento <activo>:
+   pedido -> orden.py -> preparar.py (simulación y lectura de hoy, contra el análisis vigente)
+      -> lámina PNG + texto de WhatsApp en el mensaje (sin agy)
 ```
 
-- **La pieza semanal es un HTML** (herramienta interna con panel): el ejecutivo marca los activos,
-  escribe la pérdida aceptable y copia el correo. Lleva seis activos y una lámina PNG por activo.
-- **La foto de la semana se arma una sola vez** (`registro.json`, clave = semana ISO). Quien
-  pide `/oportunidad` después recibe la misma foto, con su nombre en el archivo, sin gastar agy
-  ni cupo. Una foto de la semana anterior no se reusa.
-- **Un elegido sin análisis guardado queda fuera de la foto, y el analista lo sabe.** El aviso se
-  repite cada vez que alguien reusa la foto. Cuando aparece su referencia, el siguiente
-  `/oportunidad` **rehace** la foto para sumarlo, y los activos que ya estaban se copian tal cual:
-  sus clientes ya recibieron esos precios y `/seguimiento` mide contra ellos (director,
-  2026-10-12).
-- **`/seguimiento` no usa agy** y se reusa 30 minutos (`reuso_minutos`). Solo acepta activos de la
-  foto de la semana; sin foto o con el activo fuera de ella, lo dice.
+### Qué lleva el análisis
+
+- **Técnico:** la lectura de la estrategia activa (dirección, líneas, invalidación, objetivo).
+- **Fundamental:** drivers del activo, agenda macro y curva de tasas.
+- **Voces:** bancos y prensa citados con entidad, medio, fecha y enlace.
+- **Panel de simulación** para que el ejecutivo trabaje con su cliente.
+
+### Símbolos
+
+Vale cualquier símbolo del terminal MT5 (`simbolos.py`). Los activos del catálogo
+(`config/activos.json`) aportan nombre y `digits`; uno fuera del catálogo se acepta con el
+`description` que trae MT5, sin traducirlo, y con un marco genérico. Si el terminal no responde,
+el bot lo dice en lugar de afirmar que el símbolo no existe.
+
+### Vigencia y reúso
+
+- Un análisis vale **7 días corridos** (`registro_semanal.VIGENCIA`), queda **a nombre de quien lo
+  generó** y cualquiera que pida ese activo lo recibe **sin gastar agy ni cupo**.
+- **Caducidad anticipada** (`vigencia.py`): al reusarlo, Python vuelve a seguir su referencia contra
+  el mercado de hoy. Caduca antes de los 7 días si la estructura de la lectura cambió, si el precio
+  tocó la invalidación o si alcanzó el objetivo técnico. Entonces se rehace.
+- El análisis caducado **queda en `data/semanal/registro.json`** con su motivo y fecha
+  (`caducada`). El registro se versiona; las entradas del formato antiguo (una por semana) se
+  conservan como historia de solo lectura.
+- Con el terminal caído no se rehace: se entrega el vigente con el aviso «No pude verificar si
+  sigue vigente».
+
+### Fuentes de prestigio
+
+- `config/fuentes_prestigio.json` es una **lista cerrada que edita el director**: entidades
+  (bancos de inversión, Chile, organismos), medios con sus dominios y `frescura_dias` (14).
+- agy busca en la web y entrega las fuentes; Python las valida (`fuentes.py`) y descarta las que
+  fallan: entidad en la lista, postura alcista, bajista o neutral, medio en la lista, URL `https`
+  del dominio de ese medio y con ruta de artículo (no portada), fecha dentro de 14 días, URL que
+  responde a un GET (una respuesta 401, 403 o 429 queda «sin verificar», no descartada) y sin
+  URL repetida. Se entrega solo lo que pasa, y cada descarte llega al analista con su motivo.
+- **Cifras de terceros:** la regla 1 sigue (toda cifra del texto sale de los datos del terminal),
+  con una excepción: la cifra que aparece en la tesis de una fuente validada y se atribuye a esa
+  entidad en la misma frase («Goldman Sachs ve el oro en 4.800»).
+
+### Invitación comercial
+
+Por regulación (director, 2026-10-16) la pieza **no invita a operar**: invita a **revisar la
+plataforma MT5 con el cliente**. El bloque se titula «Para revisar con tu cliente en MT5», el mensaje
+breve para el cliente propone mirar el gráfico y los escenarios en MT5, y el panel de simulación
+lleva el rótulo «Ejemplo ilustrativo para revisar en MT5». `esquema.py` rechaza un texto que
+invite a operar.
+
+### Seguimiento
+
+`/seguimiento <activo>` mide contra el **análisis vigente de ese activo** y lo anota en su
+entrada del registro. Sin análisis vigente responde «pide primero /oportunidad <activo>». No usa
+agy y se reusa 30 minutos (`reuso_minutos`).
+
+### Candado por activo y timeout
+
+- Mientras se genera el análisis de un activo, otro pedido del mismo activo no entra a la cola: el
+  bot responde que ya se está generando y que lo pida de nuevo en unos minutos (`generando` en
+  `bot.py`). Así dos personas no gastan agy dos veces por lo mismo.
+- agy tiene **25 minutos** de timeout (`agy.TIMEOUT`). Un encargo con búsqueda web de 3 a 5
+  fuentes se midió en 424 s y 652 s el 2026-10-16; el techo deja el doble más la validación.
+
+### Reglas que se mantienen
+
 - **agy solo redacta.** No recibe nada de lo que el analista escribió: recibe la ruta de la
   pieza. Datos, imágenes y láminas van sellados con una huella, y si cambian la pieza se descarta.
-- **Toda cifra del texto tiene que estar en los datos del terminal** (Regla 1). El texto tampoco
-  puede traer HTML, guion largo, voseo, «oportunidad» ni `%`.
+- **Toda cifra del texto tiene que estar en los datos del terminal** (Regla 1), salvo la
+  excepción de terceros atribuidos. El texto tampoco puede traer HTML, guion largo, voseo,
+  «oportunidad» ni `%`.
 - **Candados de lenguaje.** `esquema.frases_prohibidas` rechaza frases de instrucción, de
   recomendación y de dimensionamiento ("es momento de comprar", "te recomiendo", "lotes").
 - **No toca la producción.** Trabaja en `data/informes_analistas/` y no usa los `preparar()` de
@@ -105,7 +163,7 @@ El analista recibe el motivo, y nunca una pieza a medias ni un gráfico de otro 
 | Mensaje | Qué pasó |
 |---|---|
 | `no uso el terminal: ...` | MT5 cerrado o en otra cuenta que la de `config/cuenta_mt5.json` |
-| `La redacción no terminó (timeout ...)` | agy no respondió en 12 minutos. No gasta cupo |
+| `La redacción no terminó (timeout ...)` | agy no respondió en 25 minutos. No gasta cupo |
 | `El texto no pasó los controles` | agy escribió una cifra ajena, HTML o guion largo. No se entrega |
 | `'PlaywrightContextManager' object has no attribute '_playwright'` (en la bitácora) | Un bot huérfano sin consola: hay dos corriendo. `-Reiniciar` |
 | `Drive no está configurado` | Falta `ruta_drive`; el archivo igual llega por Telegram |
