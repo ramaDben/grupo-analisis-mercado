@@ -53,3 +53,18 @@ def test_la_tesis_no_lleva_porcentaje_guion_largo_ni_oportunidad():
     linea = next(x for x in TEXTO.splitlines() if x.strip().startswith("- `tesis`"))
     bajo = linea.lower()
     assert "`%`" in linea and "guion largo" in bajo and "oportunidad" in bajo
+
+
+def test_manda_citar_los_hechos_del_dia_y_ya_no_el_mecanismo_condicional():
+    assert "datos.hechos" in TEXTO and "con_la_lectura" in TEXTO and "en_curso" in TEXTO
+    assert "como mecanismo condicional si no hay un hecho medido" not in TEXTO
+
+
+def test_explica_los_dias_clave():
+    assert "dias_clave" in TEXTO and "datos.agenda" in TEXTO and "420" in TEXTO
+
+
+def test_exige_un_banco_y_explica_el_segundo_intento():
+    bajo = TEXTO.lower()
+    assert "al menos una de un banco" in bajo and "fuentes_intento_1.json" in TEXTO
+    assert "lista vacía" not in bajo  # ya no se permite entregar fuentes vacías
