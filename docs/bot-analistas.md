@@ -28,9 +28,10 @@ informe con el nombre del cliente se acerca a una recomendación personalizada. 
 /oportunidad <activo>:
    pedido -> orden.py -> registro_semanal (¿hay uno vigente?)
       si lo hay -> vigencia.verificar (¿la lectura se rompió?) -> si sigue vigente, se reusa (sin agy)
-      si no     -> preparar.py (lectura, drivers, agenda, curva, gráficos)
-                -> agy /analista (redacta pieza.json y busca las fuentes)
-                -> fuentes.depurar + esquema.py (validan) -> lámina PNG -> oportunidad_html.py
+      si no     -> preparar.py (lectura, hechos del día, agenda de 7 días + calendario PNG, curva, gráficos)
+                -> agy /analista (redacta pieza.json citando los hechos y busca los bancos)
+                -> fuentes.depurar + esquema.py (validan) -> sin banco: segundo intento solo de fuentes
+                -> lámina PNG -> oportunidad_html.py
                 -> Telegram + carpeta de Drive -> registro_semanal
 /seguimiento <activo>:
    pedido -> orden.py -> preparar.py (simulación y lectura de hoy, contra el análisis vigente)
@@ -40,9 +41,20 @@ informe con el nombre del cliente se acerca a una recomendación personalizada. 
 ### Qué lleva el análisis
 
 - **Técnico:** la lectura de la estrategia activa (dirección, líneas, invalidación, objetivo).
-- **Fundamental:** drivers del activo, agenda macro y curva de tasas.
-- **Voces:** bancos y prensa citados con entidad, medio, fecha y enlace.
+- **Lo que pasa hoy** (`hechos.py`): el estado real de los drivers medibles del activo (Dollar Index
+  de MT5 `USDIDX`, tasa real, bono a 10 años y tasa de la Fed de la curva, cobre y petróleo de MT5), con
+  su fecha, su cambio en 5 sesiones, su efecto sobre el activo y si acompaña nuestra lectura. Qué se mide
+  y con qué signo lo dice `config/drivers.json`.
+- **Días clave** (`agenda.py`): los datos de alto impacto de los 7 días de vigencia (las pestañas
+  `thisWeek` y `nextWeek` de Investing.com), con la lámina del calendario. Sin datos, la ficha dice la
+  ventana completa con sus fechas; con el calendario caído, se avisa al ejecutivo y el correo omite el
+  bloque.
+- **Voces:** 2 o 3 bancos y prensa con entidad, medio, fecha y enlace. **Sin al menos un banco vigente el
+  análisis no sale.**
 - **Panel de simulación** para que el ejecutivo trabaje con su cliente.
+
+El correo que copia el ejecutivo lleva todo eso: lo que pasa hoy, los días clave con la imagen del
+calendario y lo que dicen los bancos con el enlace a cada nota.
 
 ### Símbolos
 
@@ -77,6 +89,12 @@ el bot lo dice en lugar de afirmar que el símbolo no existe.
 - **Cifras de terceros:** la regla 1 sigue (toda cifra del texto sale de los datos del terminal),
   con una excepción: la cifra que aparece en la tesis de una fuente validada y se atribuye a esa
   entidad en la misma frase («Goldman Sachs ve el oro en 4.800»).
+- **Un banco o nada** (spec 2026-10-17 §5). `cuentan_como_banco` de la lista dice qué grupos cumplen
+  (hoy los bancos de inversión y los de Chile; los organismos suman pero no cumplen). `--validar` falla
+  sin banco, así que agy sigue buscando. Si igual no llega, el bot hace **un segundo intento solo de
+  fuentes** (reabre `fuentes`, deja `fuentes_intento_1.json` con lo válido y lo descartado) y, si tampoco,
+  responde que no encontró ninguna voz de banco, sin gastar cupo ni registrar el análisis.
+- Cada llamada a agy deja `agy_salida_<n>.json` (código, segundos y respuesta) en la carpeta del pedido.
 
 ### Invitación comercial
 
@@ -101,8 +119,9 @@ agy y se reusa 30 minutos (`reuso_minutos`).
 - Mientras se genera el análisis de un activo, otro pedido del mismo activo no entra a la cola: el
   bot responde que ya se está generando y que lo pida de nuevo en unos minutos (`generando` en
   `bot.py`). Así dos personas no gastan agy dos veces por lo mismo.
-- agy tiene **25 minutos** de timeout (`agy.TIMEOUT`). Un encargo con búsqueda web de 3 a 5
-  fuentes se midió en 424 s y 652 s el 2026-10-16; el techo deja el doble más la validación.
+- agy tiene **25 minutos** para redactar (`agy.TIMEOUT`) y **15** para el segundo intento de fuentes
+  (`agy.TIMEOUT_REINTENTO`). Un encargo con búsqueda web de 3 a 5 fuentes se midió en 424 s y 652 s el
+  2026-10-16; los hechos del día no suman búsquedas porque los mide Python.
 
 ### Reglas que se mantienen
 
@@ -172,6 +191,7 @@ El analista recibe el motivo, y nunca una pieza a medias ni un gráfico de otro 
 | `El texto no pasó los controles` | agy escribió una cifra ajena, HTML o guion largo. No se entrega |
 | `'PlaywrightContextManager' object has no attribute '_playwright'` (en la bitácora) | Un bot huérfano sin consola: hay dos corriendo. `-Reiniciar` |
 | `Drive no está configurado` | Falta `ruta_drive`; el archivo igual llega por Telegram |
+| `No encontré ninguna voz de banco…` | Dos búsquedas seguidas no trajeron un banco con nota de los últimos 14 días. No se gastó cupo; se puede volver a pedir. La carpeta del pedido guarda `fuentes_intento_1.json` y las salidas de agy para ver qué se descartó |
 
 La bitácora está en `data/logs/bot_telegram.log` y el estado (offset, cupo y piezas vigentes) en
 `data/.bot_telegram_estado.json`.
