@@ -110,32 +110,36 @@ def activo_semanal(rango: bool = False, ticker: str | None = None) -> dict:
             "grafico": f"grafico_{lec.ticker.lower().replace('.', '_')}.png"}
 
 
-def pieza_oportunidad(dir_pedido: Path, laminas: bool = False, wti: bool = False,
-                      fuera: list[str] | None = None) -> dict:
-    """La pieza semanal con su texto ya escrito: dos activos (uno con tendencia y uno en rango).
+FUENTES_EJEMPLO = [{
+    "entidad": "Goldman Sachs", "medio": "Reuters", "fecha": "2026-10-14",
+    "url": "https://www.reuters.com/markets/commodities/oro-goldman-2026-10-14/",
+    "postura": "alcista", "tesis": "Goldman Sachs ve el oro en 4.800 dólares por la demanda de bancos centrales.",
+    "verificacion": "ok"}]
 
-    Escribe los gráficos en `dir_pedido`; con `laminas=True` también las láminas, que en el
-    bot se rinden antes del HTML (así el botón «Descargar lámina» aparece).
+
+def pieza_oportunidad(dir_pedido: Path, laminas: bool = False, wti: bool = False, rango: bool = False,
+                      fuentes: list | None = None) -> dict:
+    """El análisis de un activo con su texto ya escrito (por defecto el oro; `rango` es el cobre).
+
+    Escribe el gráfico en `dir_pedido`; con `laminas=True` también la lámina, que en el bot se
+    rinde antes del HTML (así el botón «Descargar lámina» aparece).
     """
-    activos = [activo_semanal(), activo_semanal(rango=True)]
-    if wti:  # el WTI sale todas las semanas (cobertura fija) y su ticker lleva punto
-        activos.append(activo_semanal(ticker="WTI.spot"))
-    for a in activos:
-        _imagen(dir_pedido, a["grafico"])
-        if laminas:
-            _imagen(dir_pedido, {"WTI.spot": "lamina_wti_spot.png"}.get(a["ticker"],
-                                                                         f"lamina_{a['ticker'].lower()}.png"))
-    tickers = [a["ticker"] for a in activos]
-    p = es.nueva_pieza("oportunidad", {"semana": "2026-W42"},
-                       {"semana": "2026-W42", "chip": "ANÁLISIS TÉCNICO DE LA SEMANA", "edicion": "lunes 12-10 · 09:30",
-                        "activos": activos, "drivers": {}, "agenda_semana": [],
-                        **({"fuera": fuera} if fuera is not None else {})},
-                       {a["ticker"]: a["grafico"] for a in activos},
-                       extra_campos={"titulares": tickers, "contexto": tickers})
-    p["editorial"] = {"titular": "La semana técnica en seis activos", "bajada": "Lectura de cada activo.",
-                      "titulares": {t: f"Titular de {t}" for t in tickers},
-                      "contexto": {t: f"Contexto de {t}. El escenario se puede operar mientras la lectura siga en pie."
-                                   for t in tickers}}
+    a = activo_semanal(rango=rango, ticker="WTI.spot" if wti else None)
+    _imagen(dir_pedido, a["grafico"])
+    if laminas:
+        _imagen(dir_pedido, {"WTI.spot": "lamina_wti_spot.png"}.get(a["ticker"], f"lamina_{a['ticker'].lower()}.png"))
+    t = a["ticker"]
+    p = es.nueva_pieza("oportunidad", {"ticker": t},
+                       {"ticker": t, "chip": "ANÁLISIS TÉCNICO Y FUNDAMENTAL", "edicion": "lunes 12/10 · 09:30",
+                        "vigencia": {"desde": "lunes 12/10", "hasta": "lunes 19/10"},
+                        "activos": [a], "drivers": {t: ["Dollar Index"]}, "agenda_semana": [], "curva": [],
+                        "fundamental": {"fuera_catalogo": False, "sin_drivers": False, "referencia": "semanal"}},
+                       {t: a["grafico"]}, extra_campos={"titulares": [t], "contexto": [t]})
+    p["editorial"] = {"titular": f"{a['nombre']}: lectura técnica y fundamental",
+                      "bajada": "Lectura de nuestros sistemas, drivers y voces de bancos.",
+                      "titulares": {t: f"Titular de {t}"},
+                      "contexto": {t: f"Contexto de {t}. La lectura se mantiene mientras el precio respete la línea."},
+                      "fuentes": [dict(f) for f in (FUENTES_EJEMPLO if fuentes is None else fuentes)]}
     return p
 
 

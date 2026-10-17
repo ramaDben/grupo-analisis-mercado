@@ -20,11 +20,14 @@ from typing import Any
 from pipeline_linkedin import MARCA_EDITORIAL as MARCA
 from pipeline_linkedin import validar_textos
 
+from analista import fuentes as fu
+
 # Campos de texto plano por pieza. Los que dependen de los datos (un titular y un
 # contexto por activo) se declaran al preparar, en `anidados`.
 CAMPOS: dict[str, tuple[str, ...]] = {
-    # La pieza semanal: portada y, anidados, un titular y un contexto por activo.
-    "oportunidad": ("titular", "bajada"),
+    # El análisis de un activo: portada, un titular y un contexto anidados por activo, y las voces
+    # de bancos y prensa que agy encontró en la web (lista de objetos, ver `fuentes.py`).
+    "oportunidad": ("titular", "bajada", "fuentes"),
     # El seguimiento no pasa por agy, pero su `pieza.json` usa el mismo sello.
     "seguimiento": (),
 }
@@ -75,7 +78,9 @@ def _plano(texto: str) -> str:
     return "".join(c for c in t if not unicodedata.combining(c)).lower()
 
 
-_INVITA = re.compile(r"\bopera(r|rlo|rla|rse|ble|bles)\b")
+# La pieza no invita a operar: por regulación invita a revisar la plataforma (director, 2026-10-16).
+# Reemplaza la regla del 2026-10-12, que exigía invitar a operar el escenario.
+_OPERAR = re.compile(r"\bopera(s|r|rlo|rla|rse|ble|bles|mos)?\b|\boperes\b")
 
 
 def frases_prohibidas(texto: str, frases: tuple[str, ...] = FRASES_PROHIBIDAS) -> list[str]:
@@ -127,6 +132,9 @@ def textos(pieza: dict[str, Any]) -> list[tuple[str, str]]:
     for campo, valor in pieza.get("editorial", {}).items():
         if isinstance(valor, dict):
             salida.extend((f"{campo}.{k}", str(v)) for k, v in valor.items())
+        elif isinstance(valor, list):  # `fuentes`: solo la tesis es texto de agy; lo demás lo valida `fuentes.py`
+            salida.extend((f"{campo}.{i}.tesis", str(f.get("tesis", ""))) for i, f in enumerate(valor)
+                          if isinstance(f, dict))
         else:
             salida.append((campo, str(valor)))
     return salida
@@ -140,13 +148,23 @@ def _significativo(token: str) -> bool:
     return any(c in token for c in ".,") or len(token) >= 3
 
 
-def cifras_ajenas(texto: str, datos: Any) -> list[str]:
+def cifras_ajenas(texto: str, datos: Any, fuentes: list[dict[str, Any]] | tuple = ()) -> list[str]:
+    """Las cifras del texto que no están en `datos`.
+
+    Única excepción (spec 2026-10-16 §7): la cifra de un tercero que aparece en la `tesis` de una
+    fuente validada y se atribuye a ella en la misma frase («Goldman Sachs ve el oro en 4.800»).
+    """
     volcado = json.dumps(datos, ensure_ascii=False)
     permitidas = {_plano_numero(t) for t in _NUMERO.findall(volcado)}
-    return [
-        t for t in _NUMERO.findall(texto)
-        if _significativo(t) and _plano_numero(t) not in permitidas
-    ]
+    ajenas: list[str] = []
+    for frase in re.split(r"(?<=[.!?])\s+|\n+", texto):
+        plano = _plano(frase)
+        de_terceros = {_plano_numero(t) for f in fuentes if _plano(f["entidad"]) in plano
+                       for t in _NUMERO.findall(f["tesis"])}
+        ajenas += [t for t in _NUMERO.findall(frase)
+                   if _significativo(t) and _plano_numero(t) not in permitidas
+                   and _plano_numero(t) not in de_terceros]
+    return ajenas
 
 
 def errores(pieza: dict[str, Any]) -> list[str]:
@@ -170,6 +188,19 @@ def errores(pieza: dict[str, Any]) -> list[str]:
         valor = editorial.get(campo)
         if not isinstance(valor, dict) or set(valor) != set(ids):
             errs.append(f"{campo}: tiene que traer exactamente {', '.join(ids) or 'ningún elemento'}")
+
+    fuentes = editorial.get("fuentes") if tipo == "oportunidad" else None
+    if tipo == "oportunidad" and fuentes != MARCA:
+        if not isinstance(fuentes, list):
+            errs.append("fuentes: tiene que ser una lista (vacía si no hay voces atingentes)")
+            fuentes = []
+        else:
+            for i, f in enumerate(fuentes):
+                if not isinstance(f, dict) or any(not isinstance(f.get(c), str) or not f[c].strip() for c in fu.CAMPOS):
+                    errs.append(f"fuentes.{i}: le faltan campos ({', '.join(fu.CAMPOS)})")
+                elif f["postura"] not in fu.POSTURAS:
+                    errs.append(f"fuentes.{i}: la postura {f['postura']!r} no es alcista, bajista ni neutral")
+    fuentes_ok = [f for f in (fuentes or []) if isinstance(f, dict) and all(isinstance(f.get(c), str) for c in fu.CAMPOS)]
 
     pares = textos(pieza)
     errs.extend(validar_textos(pares))
@@ -195,13 +226,12 @@ def errores(pieza: dict[str, Any]) -> list[str]:
                             "la pieza semanal describe un escenario")
             if "%" in texto:
                 errs.append(f"{donde}: trae un porcentaje, y la pieza semanal no muestra ninguno")
-        for cifra in cifras_ajenas(texto, pieza.get("datos")):
-            errs.append(f"{donde}: la cifra {cifra} no está en los datos del terminal")
+        if not donde.endswith(".tesis"):  # la cifra de la tesis es del tercero citado
+            for cifra in cifras_ajenas(texto, pieza.get("datos"), fuentes_ok):
+                errs.append(f"{donde}: la cifra {cifra} no está en los datos del terminal")
     if tipo == "oportunidad":
-        # La gerencia pidió que la narrativa invite SIEMPRE a operar el escenario (2026-10-12):
-        # el contexto de cada activo cierra con esa invitación, en condicional y sin instrucción.
-        for clave, texto in (editorial.get("contexto") or {}).items():
-            if isinstance(texto, str) and texto != MARCA and not _INVITA.search(_plano(texto)):
-                errs.append(f"contexto.{clave}: no invita a operar el escenario; cierra con una frase como "
-                            "«el escenario se puede operar si el precio se mantiene sobre la línea»")
+        for donde, texto in pares:
+            if _OPERAR.search(_plano(texto)):
+                errs.append(f"{donde}: invita a operar; por regulación la pieza invita a revisar la plataforma, "
+                            "no a operar")
     return errs

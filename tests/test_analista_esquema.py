@@ -25,7 +25,8 @@ def pieza_llena(**editorial) -> dict:
                       "bajada": "El oro mantiene presión compradora mientras siga sobre 4.110,65.",
                       "titulares": {"XAUUSD": "El oro sigue sobre 4.110,65"},
                       "contexto": {"XAUUSD": "El oro mantiene presión compradora mientras siga sobre 4.110,65, "
-                                             "y el escenario se puede operar con su simulación."}}
+                                             "y la simulación está en la plataforma."}}
+    p["editorial"]["fuentes"] = []
     p["editorial"].update(editorial)
     return p
 
@@ -100,7 +101,8 @@ def test_campos_anidados_se_validan_uno_a_uno():
                        extra_campos={"contexto": ["1", "2"]})
     for campo in es.CAMPOS["oportunidad"]:
         p["editorial"][campo] = "Texto suficientemente largo para pasar."
-    p["editorial"]["contexto"] = {"1": "Explica el activo uno con calma y lo deja para operarlo.", "2": es.MARCA}
+    p["editorial"]["fuentes"] = []
+    p["editorial"]["contexto"] = {"1": "Explica el activo uno con calma y lo deja a la vista.", "2": es.MARCA}
     errs = es.errores(p)
     assert len(errs) == 1 and "contexto.2" in errs[0]
 
@@ -120,6 +122,7 @@ def test_no_puede_tocar_las_laminas():
                        laminas={"lamina.png": {"titular": es.MARCA}})
     for campo in es.CAMPOS["oportunidad"]:
         p["editorial"][campo] = "Texto suficientemente largo para pasar."
+    p["editorial"]["fuentes"] = []
     assert es.errores(p) == []
     p["laminas"]["lamina.png"]["titular"] = "otra cosa"
     assert any("datos" in e for e in es.errores(p))
@@ -209,14 +212,62 @@ def test_oportunidad_rechaza_la_palabra_oportunidad_y_porcentajes():
     assert any("oportunidad" in e for e in errs) and any("porcentaje" in e for e in errs)
 
 
-def test_el_contexto_semanal_tiene_que_invitar_a_operar():
-    """La gerencia pidió que la pieza invite siempre a operar el escenario (2026-10-12)."""
-    p = pieza_llena(contexto={"XAUUSD": "El oro mantiene presión compradora mientras siga sobre 4.110,65."})
-    assert any("no invita a operar" in x for x in es.errores(p))
+def test_el_contexto_no_puede_invitar_a_operar(tmp_path):
+    p = fx.pieza_oportunidad(tmp_path)
+    for frase in ("El escenario se puede operar si el precio respeta la línea.", "Conviene operarlo con stop.",
+                  "Es un nivel operable.", "Opera el rebote."):
+        p["editorial"]["contexto"]["XAUUSD"] = f"Contexto. {frase}"
+        errs = es.errores(p)
+        assert any("invita a operar" in e for e in errs), frase
 
 
-@pytest.mark.parametrize("frase", ["el escenario alcista se puede operar mientras siga sobre la línea",
-                                   "si confirma la ruptura, el escenario queda para operarlo",
-                                   "es un escenario operable con su simulación"])
-def test_la_invitacion_a_operar_pasa(frase):
-    assert es.errores(pieza_llena(contexto={"XAUUSD": f"El oro mantiene presión compradora. {frase.capitalize()}."})) == []
+def test_el_contexto_sin_invitacion_pasa(tmp_path):
+    assert es.errores(fx.pieza_oportunidad(tmp_path)) == []
+
+
+def test_las_fuentes_se_exigen_como_lista(tmp_path):
+    p = fx.pieza_oportunidad(tmp_path)
+    p["editorial"]["fuentes"] = "texto suelto"
+    assert any("fuentes" in e for e in es.errores(p))
+    p["editorial"]["fuentes"] = es.MARCA
+    assert any("sin escribir" in e.lower() or "fuentes" in e for e in es.errores(p))
+    p["editorial"]["fuentes"] = []  # sin voces es válido: se avisa, no se rellena
+    assert es.errores(p) == []
+
+
+def test_una_fuente_con_postura_o_campos_rotos_se_rechaza(tmp_path):
+    p = fx.pieza_oportunidad(tmp_path)
+    p["editorial"]["fuentes"] = [{**fx.FUENTES_EJEMPLO[0], "postura": "muy alcista"}]
+    assert any("fuentes.0" in e for e in es.errores(p))
+    p["editorial"]["fuentes"] = [{"entidad": "UBS"}]
+    assert any("fuentes.0" in e for e in es.errores(p))
+
+
+def test_la_tesis_de_una_fuente_pasa_por_los_mismos_candados_de_texto(tmp_path):
+    p = fx.pieza_oportunidad(tmp_path)
+    p["editorial"]["fuentes"][0]["tesis"] = "Goldman — ve el oro alcista."
+    assert any("fuentes.0.tesis" in e for e in es.errores(p))
+
+
+def test_una_cifra_de_tercero_atribuida_en_la_misma_frase_pasa(tmp_path):
+    p = fx.pieza_oportunidad(tmp_path)
+    p["editorial"]["contexto"]["XAUUSD"] = "Contexto. Goldman Sachs ve el oro en 4.800 dólares, y nuestra lectura es distinta."
+    assert es.errores(p) == []
+
+
+def test_una_cifra_de_tercero_sin_atribucion_se_rechaza(tmp_path):
+    p = fx.pieza_oportunidad(tmp_path)
+    p["editorial"]["contexto"]["XAUUSD"] = "Contexto. El oro llegaría a 4.800 dólares."
+    assert any("4.800" in e for e in es.errores(p))
+
+
+def test_la_cifra_atribuida_a_otra_entidad_se_rechaza(tmp_path):
+    p = fx.pieza_oportunidad(tmp_path)
+    p["editorial"]["contexto"]["XAUUSD"] = "Contexto. UBS ve el oro en 4.800 dólares."
+    assert any("4.800" in e for e in es.errores(p))
+
+
+def test_una_cifra_inventada_nunca_pasa_aunque_se_atribuya(tmp_path):
+    p = fx.pieza_oportunidad(tmp_path)
+    p["editorial"]["contexto"]["XAUUSD"] = "Contexto. Goldman Sachs ve el oro en 9.999 dólares."
+    assert any("9.999" in e for e in es.errores(p))
