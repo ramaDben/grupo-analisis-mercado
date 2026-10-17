@@ -35,7 +35,11 @@ CAMPOS: dict[str, tuple[str, ...]] = {
 # El titular y la bajada también van impresos dentro de las láminas de WhatsApp,
 # que tienen el espacio medido: un titular largo se corta en la imagen.
 LARGO_MAXIMO = {"titular": 70, "bajada": 160}
-LARGO_MAXIMO_ANIDADO = {"titulares": 70}
+LARGO_MAXIMO_ANIDADO = {"titulares": 70, "dias_clave": 420}
+# El contexto nombra el estado real de al menos dos drivers medidos (o del único que haya), con su
+# cifra tal como viene en `datos.hechos` (spec 2026-10-17 §5). La corrida del oro del 17/10 pasaba
+# todos los controles sin una sola cifra: el validador prohibía inventar, pero no exigía citar.
+MINIMO_HECHOS = 2
 
 # El informe es análisis general: nadie en GI está inscrito como asesor de
 # inversión. Se prohíben FRASES y no palabras sueltas, porque "compra" o
@@ -173,6 +177,45 @@ def cifras_ajenas(texto: str, datos: Any, fuentes: list[dict[str, Any]] | tuple 
     return ajenas
 
 
+def hechos_citados(texto: str, hechos: list[dict[str, Any]]) -> list[str]:
+    """Los `id` de los hechos medidos cuya cifra (nivel o cambio) aparece en el texto.
+
+    Solo cuentan las cifras significativas del propio hecho: citar el precio del activo u otra cifra
+    de `datos` no cumple, y "14 pb" (dos dígitos) no alcanza a distinguirse de una fecha.
+    """
+    del_texto = {_plano_numero(t) for t in _NUMERO.findall(texto) if _significativo(t)}
+    citados: list[str] = []
+    for h in hechos:
+        propias = {_plano_numero(t) for campo in ("nivel", "cambio_1d", "cambio_5d")
+                   for t in _NUMERO.findall(str(h.get(campo) or "")) if _significativo(t)}
+        if propias & del_texto:
+            citados.append(str(h.get("id")))
+    return citados
+
+
+def _errores_de_desarrollo(pieza: dict[str, Any]) -> list[str]:
+    """El contexto cita los hechos del día y los días clave nombran un día de la agenda."""
+    datos = pieza.get("datos") or {}
+    editorial = pieza.get("editorial") or {}
+    errs: list[str] = []
+    hechos = [h for h in datos.get("hechos") or [] if isinstance(h, dict)]
+    exigidos = min(MINIMO_HECHOS, len(hechos))
+    contexto = editorial.get("contexto")
+    for t, texto in (contexto.items() if isinstance(contexto, dict) else []):
+        if exigidos and texto != MARCA and len(hechos_citados(str(texto), hechos)) < exigidos:
+            ejemplos = ", ".join(f"{h.get('driver')} {h.get('nivel')}" for h in hechos[:4])
+            errs.append(f"contexto.{t}: tiene que nombrar el estado de hoy de al menos {exigidos} de los drivers "
+                        f"medidos (datos.hechos), citando su cifra tal como viene: {ejemplos}")
+    agenda = datos.get("agenda") if isinstance(datos.get("agenda"), dict) else {}
+    dias = [str(e["dia"]) for e in agenda.get("eventos") or [] if isinstance(e, dict) and e.get("dia")]
+    dias_clave = editorial.get("dias_clave")
+    for t, texto in (dias_clave.items() if isinstance(dias_clave, dict) else []):
+        if dias and texto != MARCA and not any(d in str(texto) for d in dias):
+            errs.append(f"dias_clave.{t}: tiene que nombrar al menos un día de la agenda tal como viene en "
+                        f"datos.agenda ({', '.join(dict.fromkeys(dias[:4]))})")
+    return errs
+
+
 def errores(pieza: dict[str, Any]) -> list[str]:
     """Todo lo que impide armar el HTML; lista vacía si la pieza puede salir."""
     errs: list[str] = []
@@ -219,6 +262,8 @@ def errores(pieza: dict[str, Any]) -> list[str]:
                 errs.append(f"{campo}.{clave}: tiene {len(str(texto))} caracteres y el máximo es {tope}")
     for donde, texto in pares:
         errs.extend(_errores_de_texto(donde, texto, tipo, pieza.get("datos"), fuentes_ok))
+    if tipo == "oportunidad":
+        errs.extend(_errores_de_desarrollo(pieza))
     return errs
 
 

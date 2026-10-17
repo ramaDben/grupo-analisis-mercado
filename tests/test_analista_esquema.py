@@ -330,3 +330,81 @@ def test_la_entidad_como_palabra_completa_atribuye_la_cifra(tmp_path):
     p = fx.pieza_oportunidad(tmp_path, fuentes=[ubs])
     p["editorial"]["contexto"]["XAUUSD"] = "Contexto. UBS ve el oro en 4.800 dólares."
     assert es.errores(p) == []
+
+
+# ───────────────────────────────────────────── desarrollo del texto (spec 2026-10-17 §5)
+
+HECHOS = [
+    {"id": "dxy", "driver": "Dollar Index (DXY)", "fecha": "viernes 16/10", "nivel": "101,560",
+     "cambio_1d": "0,193", "cambio_5d": "0,288", "unidad_cambio": "puntos", "sentido": "bajó"},
+    {"id": "tasa_real", "driver": "Tasa real a 10 años de EE.UU. (TIPS)", "fecha": "jueves 15/10",
+     "nivel": "2,78 por ciento", "cambio_1d": "6 pb", "cambio_5d": "14 pb", "unidad_cambio": "puntos base",
+     "sentido": "bajó"},
+]
+EVENTO = {"dia": "miércoles 21/10", "hora": "09:30 CLST", "evento": "IPC", "esperado": "0,3 por ciento"}
+
+
+def pieza_desarrollada(contexto, hechos=HECHOS, eventos=(), dias=None):
+    datos = {**DATOS, "hechos": hechos,
+             "agenda": {"desde": "sábado 17/10", "hasta": "sábado 24/10", "estado": "ok" if eventos else "vacia",
+                        "eventos": list(eventos)}}
+    extra = {"titulares": ["XAUUSD"], "contexto": ["XAUUSD"], **({"dias_clave": ["XAUUSD"]} if eventos else {})}
+    p = es.nueva_pieza("oportunidad", {"ticker": "XAUUSD"}, datos, {}, extra_campos=extra)
+    p["editorial"] = {"titular": "El oro mantiene presión compradora", "bajada": "Lectura de nuestros sistemas.",
+                      "titulares": {"XAUUSD": "El oro sigue firme"}, "contexto": {"XAUUSD": contexto},
+                      "fuentes": []}
+    if eventos:
+        p["editorial"]["dias_clave"] = {"XAUUSD": dias}
+    return p
+
+
+CITA_LOS_DOS = ("El Dollar Index (DXY) cerró el viernes 16/10 en 101,560, y la tasa real a 10 años quedó en "
+                "2,78 por ciento. La lectura sigue mientras el precio respete la línea.")
+
+
+def test_un_contexto_que_cita_dos_hechos_pasa():
+    assert es.errores(pieza_desarrollada(CITA_LOS_DOS)) == []
+
+
+def test_un_contexto_generico_no_pasa():
+    errs = es.errores(pieza_desarrollada("El oro responde a las tasas reales y al dólar global."))
+    assert any("contexto.XAUUSD" in e and "datos.hechos" in e and "101,560" in e for e in errs)
+
+
+def test_citar_uno_de_dos_no_alcanza():
+    errs = es.errores(pieza_desarrollada("El Dollar Index cerró en 101,560. La lectura sigue."))
+    assert any("contexto.XAUUSD" in e for e in errs)
+
+
+def test_con_un_solo_hecho_basta_citarlo():
+    assert es.errores(pieza_desarrollada("El Dollar Index cerró en 101,560.", hechos=HECHOS[:1])) == []
+
+
+def test_un_cambio_tambien_cuenta_como_cita():
+    texto = "El Dollar Index bajó 0,288 puntos en cinco sesiones y la tasa real está en 2,78 por ciento."
+    assert es.hechos_citados(texto, HECHOS) == ["dxy", "tasa_real"]
+
+
+def test_sin_hechos_no_se_exige_nada():
+    """Una pieza anterior al 2026-10-17 se rearma al reusarla: no puede caer por esta regla."""
+    assert es.errores(pieza_desarrollada("Texto sin cifras.", hechos=[])) == []
+    assert es.errores(pieza_llena()) == []
+
+
+def test_dias_clave_nombra_un_dia_de_la_agenda():
+    ok = pieza_desarrollada(CITA_LOS_DOS, eventos=[EVENTO],
+                            dias="El miércoles 21/10 a las 09:30 se conoce el IPC de EE.UU. (índice de precios al consumidor).")
+    assert es.errores(ok) == []
+    mal = pieza_desarrollada(CITA_LOS_DOS, eventos=[EVENTO], dias="Esta semana viene el IPC de EE.UU.")
+    assert any("dias_clave.XAUUSD" in e and "miércoles 21/10" in e for e in es.errores(mal))
+
+
+def test_dias_clave_tiene_tope_de_largo():
+    largo = "El miércoles 21/10 se conoce el IPC. " + "Más contexto sin cifras. " * 20
+    errs = es.errores(pieza_desarrollada(CITA_LOS_DOS, eventos=[EVENTO], dias=largo))
+    assert any("dias_clave.XAUUSD" in e and "420" in e for e in errs)
+
+
+def test_dias_clave_pasa_por_los_candados_de_texto():
+    p = pieza_desarrollada(CITA_LOS_DOS, eventos=[EVENTO], dias="El miércoles 21/10 sale el IPC — ojo.")
+    assert es.errores(p)
