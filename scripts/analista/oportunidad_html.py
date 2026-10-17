@@ -7,11 +7,12 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
 from analista import RAIZ
+from analista import agenda as ag
 from analista import comercial as cm
 from analista import esquema as es
 from analista import fuentes as fu
@@ -61,17 +62,77 @@ def _seccion_voces(fuentes: list[dict[str, Any]], direccion: str) -> str:
     return _seccion("Voces de bancos y prensa", f'<ul class="voces">{"".join(items)}</ul>{nota}')
 
 
-def _seccion_fundamental(d: dict[str, Any], a: dict[str, Any], contexto: str) -> str:
+def _cambio(h: dict[str, Any]) -> str:
+    """«bajó 0,288 puntos en 5 sesiones»; las tasas ya traen «pb» y no repiten la unidad."""
+    if h.get("sentido") == "estable":
+        return "estable en 5 sesiones"
+    if h.get("sentido") not in ("subió", "bajó"):
+        return "sin dato a 5 sesiones"
+    unidad = "" if str(h["cambio_5d"]).endswith(" pb") else f" {h['unidad_cambio']}"
+    return f"{h['sentido']} {h['cambio_5d']}{unidad} en 5 sesiones"
+
+
+def _efecto_hecho(h: dict[str, Any]) -> str:
+    partes = [h.get("efecto") or "sin efecto atribuido"]
+    if h.get("con_la_lectura"):
+        partes.append(h["con_la_lectura"])
+    if h.get("proxima_decision"):
+        partes.append(f"próxima decisión: {h['proxima_decision']}")
+    return " · ".join(partes)
+
+
+def _tabla_hechos(hechos: list[dict[str, Any]]) -> str:
+    if not hechos:
+        return ""
+    filas = "".join(
+        f'<tr><th>{ih.e(h["driver"])}</th><td>{ih.e(h["nivel"])}<br><span class="nota">{ih.e(h["fecha"])} · '
+        f'{ih.e(h["fuente"])}</span></td><td>{ih.e(_cambio(h))}</td><td>{ih.e(_efecto_hecho(h))}</td></tr>'
+        for h in hechos)
+    return ('<p class="rotulo-chico">Lo que pasa hoy con sus drivers</p><table class="hechos"><tr><th>Driver</th>'
+            f'<th>Dato</th><th>Cambio</th><th>Qué hace con el activo</th></tr>{filas}</table>')
+
+
+def _enlace_calendario(texto: str) -> str:
+    return f'<a href="{ih.e(ag.URL_CALENDARIO)}" target="_blank" rel="noopener noreferrer">{ih.e(texto)}</a>'
+
+
+def _agenda_ficha(d: dict[str, Any], dias_clave: str, dir_pedido: Path | None, imagen: str) -> str:
+    agenda = d.get("agenda")
+    if agenda is None:  # pieza anterior al 2026-10-17: la agenda venía en texto
+        lista = d.get("agenda_semana") or []
+        return ('<p class="rotulo-chico">Agenda de la semana</p><ul>' + "".join(f"<li>{ih.e(x)}</li>" for x in lista)
+                + '</ul>') if lista else ""
+    cuerpo = f'<p class="rotulo-chico">Días clave del {ih.e(agenda["desde"])} al {ih.e(agenda["hasta"])}</p>'
+    if agenda["estado"] == "sin_calendario":
+        return cuerpo + ('<p class="nota">No pude leer el calendario económico para esta ventana: revisa los días '
+                         f'clave en el {_enlace_calendario("calendario de Investing.com")} antes de enviar el correo.</p>')
+    if not agenda["eventos"]:
+        return cuerpo + f'<p>{ih.e(ag.texto_vacia(agenda))}</p>'
+    if dias_clave:
+        cuerpo += f'<p>{ih.e(dias_clave)}</p>'
+    if imagen and dir_pedido is not None and (dir_pedido / imagen).exists():
+        cuerpo += (f'<img class="calendario-img" src="{ih._data_uri(dir_pedido / imagen)}" '
+                   f'alt="Calendario económico del {ih.e(agenda["desde"])} al {ih.e(agenda["hasta"])}">')
+    filas = "".join(
+        f'<tr><td>{ih.e(e["dia"])}<br>{ih.e(e["hora"])}</td><td>{ih.e(e["evento"])} · {ih.e(e["pais"])}</td>'
+        f'<td>{ih.e(e["anterior"] or "sin dato")}</td><td>{ih.e(e["esperado"] or "sin dato")}</td>'
+        f'<td>{ih.e(e["efecto"] or "sin efecto declarado")}</td></tr>' for e in agenda["eventos"])
+    return (cuerpo + '<table class="agenda"><tr><th>Cuándo</th><th>Dato</th><th>Previo</th><th>Esperado</th>'
+            f'<th>Qué hace con el activo</th></tr>{filas}</table>'
+            f'<p class="nota">Fuente: {_enlace_calendario("calendario completo de Investing.com")}.</p>')
+
+
+def _seccion_fundamental(d: dict[str, Any], a: dict[str, Any], contexto: str, dias_clave: str = "",
+                         dir_pedido: Path | None = None, imagen: str = "") -> str:
     t = a["ticker"]
     drivers = d["drivers"].get(t, [])
-    cuerpo = f'<p>{ih.e(contexto)}</p>'
+    cuerpo = f'<p>{ih.e(contexto)}</p>' + _tabla_hechos(d.get("hechos") or [])
     if drivers:
         cuerpo += '<p class="rotulo-chico">Drivers del activo</p><ul>' + "".join(f"<li>{ih.e(x)}</li>" for x in drivers) + '</ul>'
-    if d["agenda_semana"]:
-        cuerpo += '<p class="rotulo-chico">Agenda de la semana</p><ul>' + "".join(f"<li>{ih.e(x)}</li>" for x in d["agenda_semana"]) + '</ul>'
     if d["curva"]:
         filas = "".join("<tr>" + "".join(f"<td>{ih.e(c)}</td>" for c in fila) + "</tr>" for fila in d["curva"])
         cuerpo += f'<p class="rotulo-chico">Curva de tasas de EE.UU.</p><table class="curva">{filas}</table>'
+    cuerpo += _agenda_ficha(d, dias_clave, dir_pedido, imagen)
     if d["fundamental"]["sin_drivers"]:
         cuerpo += '<p class="nota">Este activo no tiene drivers declarados en el catálogo de la casa.</p>'
     return _seccion("Fundamental", cuerpo)
@@ -212,6 +273,66 @@ def _simulacion_correo(a: dict[str, Any], ejecutivo: str, c: dict[str, str]) -> 
     )
 
 
+def _hechos_correo(hechos: list[dict[str, Any]], c: dict[str, str]) -> str:
+    if not hechos:
+        return ""
+    lineas = []
+    for h in hechos:
+        cola = ""
+        if h.get("efecto"):
+            efecto = h["efecto"][:1].upper() + h["efecto"][1:]
+            cola = f" {ih.e(efecto)}" + (f", {ih.e(h['con_la_lectura'])}" if h.get("con_la_lectura") else "") + "."
+        lineas.append(_p(f'<strong style="color:{c["texto_1"]};">{ih.e(h["driver"])}:</strong> {ih.e(h["nivel"])} al '
+                         f'{ih.e(h["fecha"])}, {ih.e(_cambio(h))}.{cola}', c, tam=15, margen="0 0 6px 0"))
+    return _rotulo("Lo que pasa hoy", c, margen="10px 0 8px 0") + "".join(lineas)
+
+
+def _dias_clave_correo(d: dict[str, Any], dias_clave: str, dir_pedido: Path, imagen: str, c: dict[str, str]) -> str:
+    """Sin calendario el bloque no va: «no pude leer» no es texto de cliente."""
+    agenda = d.get("agenda")
+    if not agenda or agenda["estado"] == "sin_calendario":
+        return ""
+    cuerpo = _rotulo(f'Días clave hasta el {ih.e(agenda["hasta"])}', c, margen="14px 0 8px 0")
+    if not agenda["eventos"]:
+        return cuerpo + _p(ih.e(ag.texto_vacia(agenda)), c, tam=15)
+    if dias_clave:
+        cuerpo += _p(ih.e(dias_clave), c, tam=15)
+    ruta = dir_pedido / imagen if imagen else None
+    if ruta is not None and ruta.exists():
+        cuerpo += _tabla(
+            f'<tr><td style="padding:0;"><img src="{ih._data_uri(ruta)}" width="558" height="{_alto_png(ruta, 558)}" '
+            f'alt="Calendario económico del {ih.e(agenda["desde"])} al {ih.e(agenda["hasta"])}" '
+            'style="display:block;border:0;width:558px;max-width:100%;height:auto;border-radius:11px;"></td></tr>',
+            estilo=f'border:1px solid {c["linea"]};border-radius:12px;') + _separador(8)
+    return cuerpo + _p(f'<a href="{ih.e(ag.URL_CALENDARIO)}" style="color:{c["acento"]};">Ver el calendario '
+                       'económico completo</a>', c, tam=14)
+
+
+def _fecha_es(iso: str) -> str:
+    try:
+        return datetime.strptime(iso, "%Y-%m-%d").strftime("%d/%m/%Y")
+    except ValueError:
+        return iso
+
+
+def _voces_correo(fuentes: list[dict[str, Any]], direccion: str, c: dict[str, str]) -> str:
+    if not fuentes:
+        return ""
+    items, hay_discrepancia = [], False
+    for f in fuentes:
+        discrepa = fu.discrepa(f, direccion)
+        hay_discrepancia |= discrepa
+        marca = (f' <span style="color:{c["baja"]};font-weight:700;">(ve distinto que nuestra lectura)</span>'
+                 if discrepa else "")
+        items.append(_p(f'<strong style="color:{c["texto_1"]};">{ih.e(f["entidad"])}</strong> · {ih.e(f["medio"])} · '
+                        f'{ih.e(_fecha_es(f["fecha"]))}{marca}<br>{ih.e(f["tesis"])} '
+                        f'<a href="{ih.e(f["url"])}" style="color:{c["acento"]};">Ver nota</a>', c, tam=15,
+                        margen="0 0 10px 0"))
+    nota = (_p("Cuando un banco ve distinto, lo decimos: la lectura que manda es la nuestra.", c, tam=14,
+               color="texto_2") if hay_discrepancia else "")
+    return _rotulo("Qué dicen los bancos", c, margen="14px 0 8px 0") + "".join(items) + nota
+
+
 def _alto_png(ruta: Path, ancho: int) -> int:
     """Alto proporcional al ancho de impresión, leído del encabezado del PNG (Outlook lo pide)."""
     cab = ruta.read_bytes()[:24]
@@ -220,7 +341,8 @@ def _alto_png(ruta: Path, ancho: int) -> int:
 
 
 def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: Path, ejecutivo: str,
-                   c: dict[str, str]) -> str:
+                   c: dict[str, str], d: dict[str, Any] | None = None, dias_clave: str = "",
+                   fuentes: list[dict[str, Any]] | tuple = (), imagen_calendario: str = "") -> str:
     """El bloque del activo en el correo: una fila de la tabla de 640 px, estilos en línea."""
     lec, f = a["lectura"], a["fmt"]
     color_dir = _color_direccion(lec["direccion"], c)
@@ -255,6 +377,9 @@ def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: P
           f'color:{c["texto_1"]};">{ih.e(titular)}</p>'
         + precio + _separador() + grafico + _separador()
         + _p(ih.e(contexto), c)
+        + _hechos_correo((d or {}).get("hechos") or [], c)
+        + _dias_clave_correo(d or {}, dias_clave, dir_pedido, imagen_calendario, c)
+        + _voces_correo(list(fuentes), lec["direccion"], c)
         + _rotulo(f'Escenario del análisis · <span style="color:{color_dir};">'
                   f'{ih.e(lec["direccion"].capitalize())}</span>', c, margen="10px 0 8px 0")
         + _tabla(filas, estilo=f'background:{c["tarjeta"]};border:1px solid {c["linea"]};border-radius:12px;',
@@ -367,6 +492,8 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
         lec = a["lectura"]
         escenarios = "".join(f"<li>{ih.e(x['flecha'])} {ih.e(x['texto'])}</li>" for x in lec["escenarios"])
         lamina = dir_pedido / cm.nombre_lamina(t)
+        dias = (ed.get("dias_clave") or {}).get(t, "")
+        imagen_cal = (pieza.get("imagenes") or {}).get("calendario", "")
         bloques.append(
             f'<section class="activo" data-ticker="{ih.e(t)}">'
             f'<header><h2>{ih.e(a["nombre"])} · {ih.e(a["ticker_visible"])}</h2>'
@@ -378,7 +505,7 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
                        f'<p class="salida">{ih.e(lec["salida"])}</p>'
                        f'<p class="temporalidad">⏱️ {ih.e(a["temporalidad"])} · Foto del {ih.e(a["foto"]["fecha"])}, '
                        f'precio {ih.e(a["fmt"]["precio"])}</p>')
-            + _seccion_fundamental(d, a, ed["contexto"][t])
+            + _seccion_fundamental(d, a, ed["contexto"][t], dias, dir_pedido, imagen_cal)
             + _seccion_voces(ed["fuentes"], lec["direccion"])
             + f'<p class="firma-analisis">Análisis: {ih.e(autor.nombre)} · {ih.e(autor.cargo)}</p></div>'
             f'{_panel(a, nombre_ej)}{_bloque_revision()}'
@@ -387,7 +514,7 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
                if lamina.exists() else "")
             + '</div></section>')
         correos.append(f'<template class="correo-activo" data-ticker="{ih.e(t)}">'
-                       f'{_bloque_correo(a, ed["titulares"][t], ed["contexto"][t], dir_pedido, nombre_ej, c)}</template>')
+                       f'{_bloque_correo(a, ed["titulares"][t], ed["contexto"][t], dir_pedido, nombre_ej, c, d=d, dias_clave=dias, fuentes=ed["fuentes"], imagen_calendario=imagen_cal)}</template>')
         datos_js.append({"ticker": t, "digits": a["digits"], "escenario": a["escenario"], "contrato": a["contrato"],
                          "fmt": a["fmt"], "motivo": _motivo(a),
                          "condicion": op.texto_condicion(a["escenario"], a["fmt"]["entrada"]), "whatsapp": cm.texto_whatsapp_base(a, ed["titulares"][t], ed["contexto"][t])})

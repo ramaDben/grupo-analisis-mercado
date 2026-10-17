@@ -300,3 +300,55 @@ def test_la_ficha_no_habla_de_la_semana_con_vigencia_de_7_dias(tmp_path):
     p["datos"]["activos"][0]["escenario"]["motivo"] = "sin nivel claro"
     p["huella"] = es._huella(p)
     assert "Sin simulación esta semana" not in oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+
+
+# ───────────────────────────────────────────── texto concreto (spec 2026-10-17 §6)
+
+
+def _correo(html):
+    return re.search(r'<template class="correo-activo" data-ticker="XAUUSD">(.*?)</template>', html, re.S).group(1)
+
+
+def test_la_ficha_trae_la_tabla_de_hechos(tmp_path):
+    h = _html(tmp_path)
+    assert "Lo que pasa hoy con sus drivers" in h and "101,560" in h and "viernes 09/10" in h
+    assert "bajó 0,288 puntos en 5 sesiones" in h and "va en contra de nuestra lectura" in h
+    assert "bajó 14 pb en 5 sesiones" in h  # las tasas no repiten la unidad
+
+
+def test_la_ficha_trae_los_dias_clave_con_imagen_tabla_y_enlace(tmp_path):
+    h = _html(tmp_path)
+    assert "Días clave del lunes 12/10 al lunes 19/10" in h
+    assert "El día clave es el miércoles 14/10" in h and 'alt="Calendario económico del lunes 12/10' in h
+    assert "Índice de precios al consumidor (IPC)" in h and "el oro tiende a bajar" in h
+    assert 'href="https://es.investing.com/economic-calendar/"' in h
+
+
+def test_una_ventana_vacia_dice_sus_fechas_en_la_ficha_y_en_el_correo(tmp_path):
+    h = _html(tmp_path, agenda="vacia")
+    frase = "Sin datos de alto impacto entre el lunes 12/10 y el lunes 19/10"
+    assert h.count(frase) >= 2 and frase in _correo(h)  # en la ficha y en el correo
+
+
+def test_sin_calendario_avisa_al_ejecutivo_y_el_correo_lo_omite(tmp_path):
+    h = _html(tmp_path, agenda="sin_calendario")
+    assert "No pude leer el calendario económico" in h
+    assert "No pude leer" not in _correo(h) and "Días clave" not in _correo(h)
+
+
+def test_el_correo_lleva_hechos_dias_clave_imagen_y_bancos_con_enlace(tmp_path):
+    correo = _correo(_html(tmp_path))
+    assert "Lo que pasa hoy" in correo and "101,560" in correo and "Juega a favor del alza del oro" in correo
+    assert "Días clave hasta el lunes 19/10" in correo and "El día clave es el miércoles 14/10" in correo
+    assert len(re.findall(r'<img src="data:image/png;base64,[^"]+" width="558" height="\d+"', correo)) == 2
+    assert "Qué dicen los bancos" in correo and "Goldman Sachs" in correo and "14/10/2026" in correo
+    assert 'href="https://www.reuters.com/markets/commodities/oro-goldman-2026-10-14/"' in correo
+    assert "ve distinto que nuestra lectura" in correo  # Goldman alcista contra nuestra lectura bajista
+    assert "var(" not in correo and "rgba(" not in correo and "—" not in correo
+
+
+def test_una_pieza_anterior_se_rearma_sin_los_bloques_nuevos(tmp_path):
+    """Un análisis creado antes del 2026-10-17 se reusa hasta 7 días: no puede romperse."""
+    h = oh.armar(fx.pieza_oportunidad(tmp_path, laminas=True, legado=True, fuentes=[]), tmp_path, EJECUTIVO,
+                 fx.AUTOR, HOY)
+    assert "Lo que pasa hoy" not in h and "Días clave" not in h and "Qué dicen los bancos" not in h

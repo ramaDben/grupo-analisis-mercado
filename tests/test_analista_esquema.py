@@ -250,7 +250,7 @@ def test_la_tesis_de_una_fuente_pasa_por_los_mismos_candados_de_texto(tmp_path):
 
 
 def test_una_cifra_de_tercero_atribuida_en_la_misma_frase_pasa(tmp_path):
-    p = fx.pieza_oportunidad(tmp_path)
+    p = fx.pieza_oportunidad(tmp_path, hechos=False)
     p["editorial"]["contexto"]["XAUUSD"] = "Contexto. Goldman Sachs ve el oro en 4.800 dólares, y nuestra lectura es distinta."
     assert es.errores(p) == []
 
@@ -292,7 +292,7 @@ def test_el_texto_no_invita_a_comprar_ni_vender(tmp_path, frase):
     "Hay presión compradora y los vendedores retroceden.",
 ])
 def test_las_palabras_vecinas_de_comprar_no_se_bloquean(tmp_path, frase):
-    p = fx.pieza_oportunidad(tmp_path)
+    p = fx.pieza_oportunidad(tmp_path, hechos=False)
     p["editorial"]["contexto"]["XAUUSD"] = f"Contexto. {frase}"
     assert es.errores(p) == [], frase
 
@@ -327,7 +327,7 @@ def test_la_entidad_dentro_de_otra_palabra_no_atribuye_la_cifra(tmp_path):
 
 def test_la_entidad_como_palabra_completa_atribuye_la_cifra(tmp_path):
     ubs = {**fx.FUENTES_EJEMPLO[0], "entidad": "UBS", "tesis": "UBS ve el oro en 4.800 dólares."}
-    p = fx.pieza_oportunidad(tmp_path, fuentes=[ubs])
+    p = fx.pieza_oportunidad(tmp_path, fuentes=[ubs], hechos=False)
     p["editorial"]["contexto"]["XAUUSD"] = "Contexto. UBS ve el oro en 4.800 dólares."
     assert es.errores(p) == []
 
