@@ -60,7 +60,20 @@ def vigente(ticker: str, ahora: datetime, ruta: Path = RUTA) -> dict[str, Any] |
         return None
     if datetime.fromisoformat(e["vence"]) <= ahora:
         return None
-    return e if (Path(e["dir"]) / "pieza.json").exists() else None
+    return e if _completo(Path(e["dir"])) else None
+
+
+def _completo(dir_pedido: Path) -> bool:
+    """`pieza.json` y las imágenes que declara (el gráfico que la ficha incrusta) siguen en disco.
+
+    Sin el gráfico, la ficha falla en cada pedido durante los 7 días: mejor rehacer el análisis.
+    """
+    try:
+        pieza = json.loads((dir_pedido / "pieza.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    imagenes = pieza.get("imagenes") if isinstance(pieza, dict) else None
+    return all((dir_pedido / str(n)).exists() for n in (imagenes or {}).values())
 
 
 def anotar(ticker: str, dir_pedido: Path, creada: datetime, direccion: str,

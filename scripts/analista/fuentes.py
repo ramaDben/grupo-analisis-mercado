@@ -61,7 +61,25 @@ def verificar_url(url: str, timeout: int = 10) -> str:
         return "muerta"
     if r.status_code in (401, 403, 429):
         return "sin_verificar"
-    return "ok" if r.status_code < 400 else "muerta"
+    if r.status_code >= 400:
+        return "muerta"
+    # La redirección se revalida: un soft-404 que lleva a la portada, o a otro dominio, responde 200
+    # pero ya no es el artículo citado.
+    destino = getattr(r, "url", None) or url
+    if not _del_dominio(_host(destino), _dominios_de(url)) or not _con_ruta_de_articulo(destino):
+        return "muerta"
+    return "ok"
+
+
+def _dominios_de(url: str) -> list[str]:
+    """Los dominios de la lista cerrada que cubren la URL citada; si ninguno, su propio host."""
+    host = _host(url)
+    try:
+        medios = cargar_lista()["medios"].values()
+    except (OSError, ValueError, KeyError):
+        medios = []
+    propios = [d for dominios in medios for d in dominios if _del_dominio(host, [d])]
+    return propios or [host]
 
 
 def _motivo_de_descarte(f: Any, hoy: date, lista: dict[str, Any], verificar: Callable[[str], str]

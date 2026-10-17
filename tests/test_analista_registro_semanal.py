@@ -114,3 +114,16 @@ def test_un_registro_corrupto_no_se_sobrescribe(tmp_path):
     with pytest.raises(rg.RegistroDanado):
         rg.anotar("XAUUSD", _pieza(tmp_path), CREADA, "ALCISTA", CAMILA, ruta)
     assert ruta.read_text(encoding="utf-8") == "{no es json"
+
+
+def test_sin_el_grafico_en_disco_el_analisis_no_esta_vigente(tmp_path):
+    """La ficha necesita el PNG del gráfico: sin él fallaría en cada pedido por 7 días. Se rehace."""
+    ruta = tmp_path / "registro.json"
+    d = tmp_path / "a"
+    d.mkdir()
+    (d / "pieza.json").write_text(json.dumps({"imagenes": {"XAUUSD": "grafico_xauusd.png"}}), encoding="utf-8")
+    (d / "grafico_xauusd.png").write_bytes(b"png")
+    rg.anotar("XAUUSD", d, CREADA, "ALCISTA", CAMILA, ruta)
+    assert rg.vigente("XAUUSD", CREADA + timedelta(days=1), ruta) is not None
+    (d / "grafico_xauusd.png").unlink()
+    assert rg.vigente("XAUUSD", CREADA + timedelta(days=1), ruta) is None

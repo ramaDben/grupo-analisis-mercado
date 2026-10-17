@@ -109,3 +109,34 @@ def test_la_discrepancia_la_calcula_python():
     assert fu.discrepa(_f(postura="bajista"), "BAJISTA") is False
     assert fu.discrepa(_f(postura="neutral"), "LATERAL") is False
     assert fu.discrepa(_f(postura="alcista"), "LATERAL") is True
+
+
+# ───────────────────────────────────────────── la redirección se revalida (fix final)
+
+ARTICULO = "https://www.reuters.com/markets/commodities/oro-goldman-2026-10-14/"
+
+
+def _get_que_termina_en(destino, status=200):
+    from types import SimpleNamespace
+
+    def get(url, **kw):
+        return SimpleNamespace(status_code=status, url=destino, close=lambda: None)
+    return get
+
+
+def test_una_redireccion_a_la_portada_cuenta_como_muerta(monkeypatch):
+    import requests
+    monkeypatch.setattr(requests, "get", _get_que_termina_en("https://www.reuters.com/"))
+    assert fu.verificar_url(ARTICULO) == "muerta"
+
+
+def test_una_redireccion_a_otro_dominio_cuenta_como_muerta(monkeypatch):
+    import requests
+    monkeypatch.setattr(requests, "get", _get_que_termina_en("https://spam.example.com/markets/nota"))
+    assert fu.verificar_url(ARTICULO) == "muerta"
+
+
+def test_una_redireccion_a_otro_articulo_del_medio_pasa(monkeypatch):
+    import requests
+    monkeypatch.setattr(requests, "get", _get_que_termina_en("https://www.reuters.com/markets/oro-nota-final/"))
+    assert fu.verificar_url(ARTICULO) == "ok"
