@@ -71,11 +71,19 @@
   .firma p{margin:2px 0}
   .firma-credencial,.firma-general,.aviso{color:var(--texto-2);font-size:13px}
   .firma-foto{border-radius:50%}
+  .seccion{margin:22px 0 8px;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:var(--acento)}
+  .voces{list-style:none;margin:0;padding:0}.voces li{margin:0 0 12px;padding:10px 12px;border:1px solid var(--linea);border-radius:10px}
+  .marca-discrepa{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;background:var(--fondo-baja);color:var(--baja);font-size:12px;font-weight:700}
+  .marca-sin-verificar{margin-left:6px;color:var(--texto-2);font-size:12px}
+  .revision-mt5{margin:18px 0 0;padding:14px 16px;border:2px solid var(--acento);border-radius:12px}
+  .rotulo-ilustrativo,.rotulo-chico{margin:0 0 6px;color:var(--texto-2);font-size:13px;font-weight:700}
+  .sin-voces,.nota{color:var(--texto-2)}
+  .voces a{color:var(--acento)}
   @media (max-width:800px){.activo{grid-template-columns:1fr}}
 </style></head>
 <body><main>
 <div class="banda"><img src="{{logo}}" alt="Grupo Inteligencia">
-  <p class="semana">{{semana}}<strong>Foto del {{edicion}}</strong></p></div>
+  <p class="semana">{{semana}}<strong>Análisis del {{edicion}}</strong></p></div>
 <div class="filete"></div>
 <header class="portada"><p class="chip">Análisis técnico de la semana</p>
   <h1>{{titular}}</h1><p>{{bajada}}</p></header>
@@ -176,7 +184,7 @@
     var saludo = document.getElementById('cliente').value.trim().replace(/[<>&"]/g, '');
     if (saludo && !/[:,.;]$/.test(saludo)) saludo += ':';
     var yo = nombreEj(), n = partes.length;
-    var titulo = (n === 1 ? 'El activo' : 'Los ' + n + ' activos') + ' con escenarios clave para operar esta semana';
+    var titulo = (n === 1 ? 'El activo' : 'Los ' + n + ' activos') + ' con escenarios clave para revisar en MT5 esta semana';
     return document.getElementById('correo-marco').innerHTML.replace('<!--ACTIVOS-->', partes.join(''))
       .split(DATOS.ejecutivo.replace(/&/g, '&amp;')).join(yo.replace(/[<>&"]/g, ''))
       .replace('<!--TITULO-->', titulo).replace('<span class="saludo-cliente">Estimado(a):</span>', saludo || 'Estimado(a):');

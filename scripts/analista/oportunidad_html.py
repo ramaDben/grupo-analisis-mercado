@@ -14,6 +14,7 @@ from typing import Any
 from analista import RAIZ
 from analista import comercial as cm
 from analista import esquema as es
+from analista import fuentes as fu
 from analista import informe_html as ih
 from analista import oportunidad as op
 
@@ -32,6 +33,50 @@ def _filas_niveles(a: dict[str, Any]) -> str:
     return "".join(f'<tr><th>{ih.e(r)}</th><td class="cifra">{ih.e(v)}</td></tr>' for r, v in cm._niveles(a))
 
 
+def _seccion(titulo: str, cuerpo: str) -> str:
+    return f'<h4 class="seccion">{ih.e(titulo)}</h4>{cuerpo}'
+
+
+def _bloque_revision() -> str:
+    puntos = "".join(f"<li>{ih.e(p)}</li>" for p in cm.REVISION_MT5_PUNTOS)
+    return f'<div class="revision-mt5"><h4>{ih.e(cm.REVISION_MT5_TITULO)}</h4><ul>{puntos}</ul></div>'
+
+
+def _seccion_voces(fuentes: list[dict[str, Any]], direccion: str) -> str:
+    if not fuentes:
+        return _seccion("Voces de bancos y prensa",
+                        '<p class="sin-voces">Sin voces de bancos o prensa atingentes esta vez.</p>')
+    items, hay_discrepancia = [], False
+    for f in fuentes:
+        discrepa = fu.discrepa(f, direccion)
+        hay_discrepancia |= discrepa
+        marcas = ((' <span class="marca-discrepa">Discrepa de nuestra lectura</span>' if discrepa else "")
+                  + (' <span class="marca-sin-verificar">enlace sin verificar</span>'
+                     if f.get("verificacion") == "sin_verificar" else ""))
+        items.append(f'<li><strong>{ih.e(f["entidad"])}</strong> · {ih.e(f["medio"])} · {ih.e(f["fecha"])}{marcas}'
+                     f'<br>{ih.e(f["tesis"])} <a href="{ih.e(f["url"])}" target="_blank" rel="noopener noreferrer">'
+                     'Ver nota</a></li>')
+    nota = ('<p class="nota">Estas voces ven distinto que nuestra lectura: la nuestra es la que manda.</p>'
+            if hay_discrepancia else "")
+    return _seccion("Voces de bancos y prensa", f'<ul class="voces">{"".join(items)}</ul>{nota}')
+
+
+def _seccion_fundamental(d: dict[str, Any], a: dict[str, Any], contexto: str) -> str:
+    t = a["ticker"]
+    drivers = d["drivers"].get(t, [])
+    cuerpo = f'<p>{ih.e(contexto)}</p>'
+    if drivers:
+        cuerpo += '<p class="rotulo-chico">Drivers del activo</p><ul>' + "".join(f"<li>{ih.e(x)}</li>" for x in drivers) + '</ul>'
+    if d["agenda_semana"]:
+        cuerpo += '<p class="rotulo-chico">Agenda de la semana</p><ul>' + "".join(f"<li>{ih.e(x)}</li>" for x in d["agenda_semana"]) + '</ul>'
+    if d["curva"]:
+        filas = "".join("<tr>" + "".join(f"<td>{ih.e(c)}</td>" for c in fila) + "</tr>" for fila in d["curva"])
+        cuerpo += f'<p class="rotulo-chico">Curva de tasas de EE.UU.</p><table class="curva">{filas}</table>'
+    if d["fundamental"]["sin_drivers"]:
+        cuerpo += '<p class="nota">Este activo no tiene drivers declarados en el catálogo de la casa.</p>'
+    return _seccion("Fundamental", cuerpo)
+
+
 MOTIVO_SIN_CONTRATO = op.MOTIVO_SIN_CONTRATO
 _motivo = op.motivo_sin_simulacion
 
@@ -48,7 +93,7 @@ def _panel(a: dict[str, Any], ejecutivo: str) -> str:
     condicion = op.texto_condicion(esc, f["entrada"])
     cond = f'<p class="condicion">{ih.e(condicion)}</p>' if condicion else ""
     cabeza = (
-        '<h4>Objetivo de la simulación (1:3)</h4>'
+        f'<p class="rotulo-ilustrativo">{ih.e(cm.ROTULO_ILUSTRATIVO)}</p><h4>Objetivo de la simulación (1:3)</h4>'
         f'<p class="niveles-sim">Entrada {ih.e(f["entrada"])} · Stop {ih.e(f["stop"])} · '
         f'Objetivo {ih.e(f["objetivo"])}</p>{cond}{lejos}'
         '<label><input type="checkbox" name="incluir" checked> Incluir en el correo</label>')
@@ -154,6 +199,7 @@ def _simulacion_correo(a: dict[str, Any], ejecutivo: str, c: dict[str, str]) -> 
         '<table class="sim-bloque" role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">'
         '<tr><td style="padding:0;">'
         + _rotulo(f"Simulación realizada por {ih.e(ejecutivo)}", c)
+        + _p(ih.e(cm.ROTULO_ILUSTRATIVO), c, tam=14, color="texto_2", margen="0 0 8px 0")
         + _p(f'Objetivo 1:3 · Entrada {fuerte(f["entrada"])} · Stop {fuerte(f["stop"])} · '
              f'Objetivo {fuerte(f["objetivo"])}', c, tam=15)
         + (_p(f'<strong style="color:{c["texto_1"]};">{ih.e(condicion)}</strong>', c, tam=15) if condicion else "")
@@ -242,8 +288,8 @@ def _marco_correo(d: dict[str, Any], ed: dict[str, Any], ejecutivo: dict[str, An
         + _tabla(f'<tr><td valign="middle"><img src="{ih._data_uri(ih.LOGO)}" width="150" alt="Grupo Inteligencia" '
                  'style="display:block;border:0;width:150px;height:auto;"></td>'
                  f'<td valign="middle" align="right" style="font-family:{F_SANS};font-size:14px;line-height:20px;'
-                 f'font-weight:600;color:{c["texto_2"]};">Análisis de la<br><span style="color:{c["texto_1"]};">'
-                 f'{ih.e(cm.semana_visible(d["semana"]))}</span></td></tr>')
+                 f'font-weight:600;color:{c["texto_2"]};">Análisis del<br><span style="color:{c["texto_1"]};">'
+                 f'{ih.e(d["vigencia"]["desde"])}</span></td></tr>')
         + '</td></tr>'
         f'<tr><td bgcolor="{c["acento"]}" style="height:3px;line-height:3px;font-size:3px;background:{c["acento"]};'
         f'background-image:linear-gradient(90deg,{c["acento_azul"]},{c["acento"]});">&nbsp;</td></tr>')
@@ -252,15 +298,21 @@ def _marco_correo(d: dict[str, Any], ed: dict[str, Any], ejecutivo: dict[str, An
     portada = (
         '<tr><td class="pad" style="padding:30px 40px 22px 40px;">'
         + _p('<span class="saludo-cliente">Estimado(a):</span>', c, tam=18, peso=700, color="texto_1", margen="0 0 12px 0")
-        + _p("Te escribo para compartirte el análisis técnico de esta semana, preparado por la Dirección de "
-             "Análisis Técnico de Grupo Inteligencia: los escenarios clave de cada activo, con sus niveles y "
-             "fechas, para que los tengas en el radar al evaluar tus próximas operaciones.", c, tam=17, margen="0")
+        + _p("Te escribo para compartirte el análisis técnico y fundamental de esta semana, preparado por la "
+             "Dirección de Análisis Técnico de Grupo Inteligencia: la lectura del activo, sus niveles, lo que "
+             "puede mover su precio y qué dicen los bancos. Me gustaría revisarlo contigo en la plataforma MT5.",
+             c, tam=17, margen="0")
         + '</td></tr>'
         f'<tr><td class="pad" bgcolor="{c["tarjeta"]}" style="background:{c["tarjeta"]};'
         f'background-image:linear-gradient(135deg,{c["tarjeta"]} 0%,{c["fondo_alt"]} 100%);padding:22px 40px 24px 40px;">'
         + _rotulo("Análisis técnico de la semana", c, margen="0 0 8px 0")
         + f'<h1 class="h1" style="margin:0;font-family:{F_DISPLAY};font-size:24px;line-height:31px;'
           f'font-weight:700;color:{c["texto_1"]};"><!--TITULO--></h1></td></tr>')
+    revision = (
+        '<tr><td class="pad" style="padding:6px 40px 0 40px;">'
+        + _rotulo(ih.e(cm.REVISION_MT5_TITULO), c)
+        + "".join(_p("• " + ih.e(p), c, margen="0 0 6px 0") for p in cm.REVISION_MT5_PUNTOS)
+        + '</td></tr>')
     firmas = (
         '<tr><td class="pad" style="padding:6px 40px 0 40px;">'
         + _tabla('<tr>' + _firma_correo("Análisis", [autor.nombre, autor.cargo], c)
@@ -280,7 +332,7 @@ def _marco_correo(d: dict[str, Any], ed: dict[str, Any], ejecutivo: dict[str, An
         f'<table role="presentation" class="shell" width="640" cellspacing="0" cellpadding="0" border="0" '
         f'bgcolor="{c["fondo_alt"]}" style="width:640px;max-width:640px;background:{c["fondo_alt"]};'
         f'border:1px solid {c["linea"]};">'
-        + cabecera + portada + '<!--ACTIVOS-->' + firmas
+        + cabecera + portada + '<!--ACTIVOS-->' + revision + firmas
         + '</table></td></tr></table>'
     )
 
@@ -320,13 +372,16 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
             f'<header><h2>{ih.e(a["nombre"])} · {ih.e(a["ticker_visible"])}</h2>'
             f'{ih.pildora(lec["direccion"].capitalize())}</header>'
             f'<div class="analisis"><h3>{ih.e(ed["titulares"][t])}</h3>'
-            f'<img src="{ih._data_uri(dir_pedido / a["grafico"])}" alt="Gráfico de {ih.e(a["nombre"])}">'
-            f'<p>{ih.e(ed["contexto"][t])}</p><table class="niveles">{_filas_niveles(a)}</table>'
-            f'<ul class="escenarios">{escenarios}</ul><p class="salida">{ih.e(lec["salida"])}</p>'
-            f'<p class="temporalidad">⏱️ {ih.e(a["temporalidad"])} · Foto del {ih.e(a["foto"]["fecha"])}, '
-            f'precio {ih.e(a["fmt"]["precio"])}</p>'
-            f'<p class="firma-analisis">Análisis: {ih.e(autor.nombre)} · {ih.e(autor.cargo)}</p></div>'
-            f'{_panel(a, nombre_ej)}'
+            + _seccion("Lectura técnica",
+                       f'<img src="{ih._data_uri(dir_pedido / a["grafico"])}" alt="Gráfico de {ih.e(a["nombre"])}">'
+                       f'<table class="niveles">{_filas_niveles(a)}</table><ul class="escenarios">{escenarios}</ul>'
+                       f'<p class="salida">{ih.e(lec["salida"])}</p>'
+                       f'<p class="temporalidad">⏱️ {ih.e(a["temporalidad"])} · Foto del {ih.e(a["foto"]["fecha"])}, '
+                       f'precio {ih.e(a["fmt"]["precio"])}</p>')
+            + _seccion_fundamental(d, a, ed["contexto"][t])
+            + _seccion_voces(ed["fuentes"], lec["direccion"])
+            + f'<p class="firma-analisis">Análisis: {ih.e(autor.nombre)} · {ih.e(autor.cargo)}</p></div>'
+            f'{_panel(a, nombre_ej)}{_bloque_revision()}'
             '<div class="acciones"><button type="button" class="copiar-wa">Copiar texto de WhatsApp</button>'
             + (f'<a class="descargar" download="{ih.e(lamina.name)}" href="{ih._data_uri(lamina)}">Descargar lámina</a>'
                if lamina.exists() else "")
@@ -339,7 +394,7 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
     tokens = {
         "marco": _marco_correo(d, ed, ejecutivo, autor, c),
         "raiz": "".join(f"--{k.replace('_', '-')}:{v};" for k, v in c.items()),
-        "titulo": ih.e(ed["titular"]), "logo": ih._data_uri(ih.LOGO), "semana": ih.e(cm.semana_visible(d["semana"]).capitalize()),
+        "titulo": ih.e(ed["titular"]), "logo": ih._data_uri(ih.LOGO), "semana": ih.e(f"Vigente hasta el {d['vigencia']['hasta']}"),
         "edicion": ih.e(d["edicion"]), "titular": ih.e(ed["titular"]), "bajada": ih.e(ed["bajada"]),
         "activos": "".join(bloques), "correos": "".join(correos), "firma": ih.bloque_firma(autor, hoy),
         "aviso": ih.e(cm.AVISO_PIEZA), "ejecutivo": "" if pendiente else ih.e(nombre_ej),
@@ -354,6 +409,6 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
 
 
 def guardar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], autor, hoy: date) -> Path:
-    ruta = dir_pedido / f"analisis-semanal_{pieza['datos']['semana']}_{_slug(ejecutivo['nombre'])}.html"
+    ruta = dir_pedido / f"analisis_{_slug(pieza['datos']['ticker'])}_{_slug(ejecutivo['nombre'])}.html"
     ruta.write_text(armar(pieza, dir_pedido, ejecutivo, autor, hoy), encoding="utf-8")
     return ruta

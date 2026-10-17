@@ -87,3 +87,16 @@ def test_dos_niveles_con_el_mismo_precio_se_funden_en_una_fila(tmp_path):
                                tmp_path / "g.png")["niveles"]
     assert [(n["rotulo"], n["valor"]) for n in cobre] == [("Resistencia del rango · Nivel a vigilar", "14567"),
                                                            ("Soporte del rango", "14206")]
+
+
+def test_el_texto_de_acompanamiento_invita_a_revisar_mt5_y_no_a_operar():
+    t = cm.texto_acompanamiento("Oro", "Juan")
+    assert t.startswith("Hola Juan, ") and "MT5" in t
+    for malo in ("operar", "oportunidad", "—", "–", "compra", "vende"):
+        assert malo not in t.lower()
+
+
+def test_el_texto_de_whatsapp_cierra_invitando_a_revisar_mt5():
+    from analista_fixtures import activo_semanal
+    t = cm.texto_whatsapp_base(activo_semanal(), "Titular", "Contexto.")
+    assert "MT5" in t and "operar" not in t.lower()
