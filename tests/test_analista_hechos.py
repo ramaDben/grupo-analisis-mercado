@@ -107,3 +107,32 @@ def test_el_cobre_del_dolar_usa_los_digitos_del_simbolo():
     c = next(h for h in hechos if h["id"] == "cobre")
     assert c["nivel"] == "14197" and c["cambio_5d"] == "353" and c["sentido"] == "bajó"
     assert c["efecto"] == "juega a favor del alza del USD/CLP" and c["con_la_lectura"] == "acompaña nuestra lectura"
+
+
+def test_con_el_terminal_caido_el_dxy_sale_del_respaldo():
+    def cae(simbolo, n):
+        raise RuntimeError("MT5 cerrado")
+
+    hechos, avisos = hc.medir("XAUUSD", "Oro", "BAJISTA", CURVA, [DECISION], cae, HOY, respaldo_dxy=lambda n: DXY)
+    dxy = hechos[0]
+    assert dxy["id"] == "dxy" and "yfinance" in dxy["fuente"] and dxy["nivel"] == "101,560"
+    assert not any("Dollar Index" in a for a in avisos)
+
+
+def test_con_pocos_puntos_en_mt5_el_dxy_sale_del_respaldo():
+    corta = serie(101.9, 101.8, 101.7)
+    hechos, _ = medir_oro({"USDIDX": corta}, respaldo_dxy=lambda n: DXY)
+    assert "yfinance" in hechos[0]["fuente"] and hechos[0]["nivel"] == "101,560"
+
+
+def test_sin_respaldo_y_con_el_terminal_caido_el_dxy_se_avisa():
+    def cae(simbolo, n):
+        raise RuntimeError("MT5 cerrado")
+
+    hechos, avisos = hc.medir("XAUUSD", "Oro", "BAJISTA", CURVA, [], cae, HOY)
+    assert "dxy" not in [h["id"] for h in hechos] and any("Dollar Index" in a for a in avisos)
+
+
+def test_la_fed_sin_decision_en_la_ventana_no_trae_proxima_decision():
+    hechos, _ = hc.medir("XAUUSD", "Oro", "BAJISTA", CURVA, [], lector({"USDIDX": DXY}), HOY)
+    assert next(h for h in hechos if h["id"] == "fed")["proxima_decision"] is None

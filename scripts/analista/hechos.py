@@ -100,7 +100,7 @@ def _de_curva(medible: str, curva: dict[str, Any] | None, eventos: list[dict[str
          "sentido": _sentido(medible, d5, None), "sentido_1d": _sentido(medible, d1, None), "fuente": FUENTE_CURVA}
     if medible == "fed":
         decision = next((e for e in eventos or [] if _DECISION_FED.search(str(e.get("fuente_nombre", "")))), None)
-        h["proxima_decision"] = f"{decision['dia']} {decision['hora']}" if decision else ""
+        h["proxima_decision"] = f"{decision['dia']} {decision['hora']}" if decision else None
     return h
 
 
@@ -133,8 +133,14 @@ def medir(ticker: str, nombre: str, direccion: str, curva: dict[str, Any] | None
         try:
             if medible in SIMBOLOS:
                 simbolo = SIMBOLOS[medible][0]
-                puntos, fuente = leer_d1(simbolo, SESIONES + 2), f"MT5 ({simbolo})"
-                if not puntos and medible == "dxy" and respaldo_dxy is not None:
+                fuente = f"MT5 ({simbolo})"
+                try:
+                    puntos = leer_d1(simbolo, SESIONES + 2)
+                except Exception:  # noqa: BLE001  con el terminal caído, el DXY todavía tiene respaldo
+                    if medible != "dxy" or respaldo_dxy is None:
+                        raise
+                    puntos = []
+                if len(puntos) < SESIONES + 1 and medible == "dxy" and respaldo_dxy is not None:
                     puntos, fuente = respaldo_dxy(SESIONES + 2), "ICE (DX-Y.NYB) vía yfinance"
                 h = _de_serie(medible, puntos, fuente, hoy)
             else:
