@@ -154,3 +154,43 @@ _POSTURA_DE_LA_LECTURA = {"ALCISTA": "alcista", "BAJISTA": "bajista", "LATERAL":
 def discrepa(fuente: dict[str, Any], direccion: str) -> bool:
     """La fuente ve distinto que nuestra lectura (alcista/bajista/lateral contra su postura)."""
     return _POSTURA_DE_LA_LECTURA.get(direccion.upper(), "neutral") != fuente["postura"]
+
+
+# ───────────────────────────────────────────── mínimo de un banco (spec 2026-10-17 §5)
+
+INTENTO = "fuentes_intento_1.json"
+
+
+def _nombres_banco(lista: dict[str, Any]) -> set[str]:
+    grupos = lista.get("cuentan_como_banco") or ["bancos_de_inversion"]
+    return {e for g in grupos for e in lista["entidades"].get(g, [])}
+
+
+def bancos(fuentes: Any, lista: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    """Las fuentes cuya entidad cuenta como banco (`cuentan_como_banco` de la lista cerrada)."""
+    nombres = _nombres_banco(lista or cargar_lista())
+    return [f for f in (fuentes if isinstance(fuentes, list) else [])
+            if isinstance(f, dict) and f.get("entidad") in nombres]
+
+
+def falta_banco(pieza: dict[str, Any], lista: dict[str, Any] | None = None) -> list[str]:
+    """El error de `--validar` cuando `fuentes` no trae ningún banco; vacío si lo trae o si aún no es lista."""
+    fuentes = (pieza.get("editorial") or {}).get("fuentes")
+    if not isinstance(fuentes, list):
+        return []  # `esquema.errores` ya dice que falta la lista
+    lista = lista or cargar_lista()
+    if bancos(fuentes, lista):
+        return []
+    return [f"fuentes: falta al menos una voz de banco ({', '.join(sorted(_nombres_banco(lista)))}) con su nota "
+            f"de los últimos {lista.get('frescura_dias', 14)} días; los organismos suman, pero no la reemplazan"]
+
+
+def guardar_intento(dir_pedido: Path, validas: list[dict[str, Any]], descartes: list[str], crudas: Any) -> Path:
+    """Lo que dejó el primer intento, para que el segundo no repita URLs caídas (spec 2026-10-17 §5)."""
+    urls_validas = {f.get("url") for f in validas if isinstance(f, dict)}
+    descartadas = [f["url"] for f in (crudas if isinstance(crudas, list) else [])
+                   if isinstance(f, dict) and isinstance(f.get("url"), str) and f["url"] not in urls_validas]
+    ruta = Path(dir_pedido) / INTENTO
+    ruta.write_text(json.dumps({"validas": list(validas), "descartadas": descartadas, "motivos": list(descartes)},
+                               ensure_ascii=False, indent=2), encoding="utf-8")
+    return ruta

@@ -1,6 +1,7 @@
 {
-  "_nota": "Lista cerrada. La edita el director. `entidad` es quien opina; `medio` es dónde se publicó. Un banco puede ser medio de sí mismo (su sitio) o publicarse en un medio de prensa.",
+  "_nota": "Lista cerrada. La edita el director. `entidad` es quien opina; `medio` es dónde se publicó. Un banco puede ser medio de sí mismo (su sitio) o publicarse en un medio de prensa. `cuentan_como_banco`: los grupos de `entidades` que cumplen el mínimo de una voz de banco por análisis (spec 2026-10-17 §5); los organismos suman, pero no lo cumplen.",
   "frescura_dias": 14,
+  "cuentan_como_banco": ["bancos_de_inversion", "chile"],
   "entidades": {
     "bancos_de_inversion": ["Goldman Sachs", "JPMorgan", "Morgan Stanley", "Bank of America", "Citi", "UBS", "Barclays", "Standard Chartered", "Jefferies", "Deutsche Bank", "HSBC", "ING", "Commerzbank"],
     "chile": ["Banco Central de Chile", "Cochilco", "Banchile", "BCI Estudios", "Santander Chile", "Itaú Chile"],

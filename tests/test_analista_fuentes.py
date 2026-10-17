@@ -1,6 +1,7 @@
 """Validación de las fuentes que agy cita: lista cerrada, dominio, frescura, URL y discrepancia."""
 from __future__ import annotations
 
+import json
 import sys
 from datetime import date
 from pathlib import Path
@@ -140,3 +141,33 @@ def test_una_redireccion_a_otro_articulo_del_medio_pasa(monkeypatch):
     import requests
     monkeypatch.setattr(requests, "get", _get_que_termina_en("https://www.reuters.com/markets/oro-nota-final/"))
     assert fu.verificar_url(ARTICULO) == "ok"
+
+
+# ───────────────────────────────────────────── bancos obligatorios (spec 2026-10-17 §5)
+
+
+def test_la_lista_declara_que_grupos_cuentan_como_banco():
+    assert fu.cargar_lista()["cuentan_como_banco"] == ["bancos_de_inversion", "chile"]
+
+
+def test_cuentan_los_bancos_de_inversion_y_los_de_chile_y_no_los_organismos():
+    fuentes = [{"entidad": "JPMorgan"}, {"entidad": "World Gold Council"}, {"entidad": "Banchile"}, "basura"]
+    assert [f["entidad"] for f in fu.bancos(fuentes)] == ["JPMorgan", "Banchile"]
+
+
+def test_falta_banco_lo_dice_y_calla_si_hay_uno():
+    sin = {"editorial": {"fuentes": [{"entidad": "Fed"}]}}
+    con = {"editorial": {"fuentes": [{"entidad": "Fed"}, {"entidad": "UBS"}]}}
+    errs = fu.falta_banco(sin)
+    assert errs and "falta al menos una voz de banco" in errs[0] and "14 días" in errs[0]
+    assert fu.falta_banco(con) == []
+    assert fu.falta_banco({"editorial": {"fuentes": "[[ESCRIBIR]]"}}) == []  # eso lo dice esquema.errores
+
+
+def test_el_intento_guarda_las_validas_y_las_urls_descartadas(tmp_path):
+    valida = {"entidad": "Fed", "url": "https://www.federalreserve.gov/newsevents/x.htm"}
+    crudas = [valida, {"entidad": "Un Blog", "url": "https://blog.example.com/nota"}, "basura"]
+    ruta = fu.guardar_intento(tmp_path, [valida], ["Un Blog: la entidad no está en la lista"], crudas)
+    datos = json.loads(ruta.read_text(encoding="utf-8"))
+    assert ruta.name == fu.INTENTO and datos["validas"] == [valida]
+    assert datos["descartadas"] == ["https://blog.example.com/nota"] and datos["motivos"]
