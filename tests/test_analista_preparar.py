@@ -34,7 +34,7 @@ def test_no_usa_los_preparar_de_produccion():
         assert prohibido not in fuente, prohibido
 
 
-# ───────────────────────────────────────────────────────────── la foto semanal
+# ───────────────────────────────────────────────────────────── el análisis de un activo
 
 SEMANA = "2026-W42"
 AHORA_LUNES = datetime(2026, 10, 12, 9, 30, tzinfo=SCL)
@@ -64,111 +64,58 @@ def _grafico_falso(ticker, nombre, lectura, destino, **kw):
     return destino
 
 
-def _lectores(base, filas_estado=None, **kw):
-    def estado(_est, semana, _lector, _ahora, _digits, base=base):
-        if filas_estado is not None:
-            return filas_estado
-        return [{"ticker": t, "espera_hasta": None} for t in rs.manifiesto(semana, base)["elegidos"]]
+def _lectores(base, **kw):
     por_defecto = dict(
-        base_referencias=base, estado_semanal=estado, estrategia=lambda: EstrategiaFalsa(),
+        base_referencias=base, estrategia=lambda: EstrategiaFalsa(),
+        referencia=lambda est, t, d, semana, ahora, b: (fx.lectura(ticker=t), AHORA_LUNES, "semanal"),
         contrato=lambda t, p: {"clp_unidad": 950.0, "vol_min": 0.01, "vol_paso": 0.01},
         grafico_lectura=_grafico_falso,
         catalogo=lambda t: {"ticker": t, "nombre": {"XAUUSD": "Oro", "COPPER": "Cobre"}[t],
                             "digits": {"XAUUSD": 2, "COPPER": 0}[t], "unidad": "USD"},
         drivers=lambda t: ["Dollar Index"], agenda=lambda a: ([], []), curva=lambda: ({}, []),
-        cuenta=lambda: None,
-        # Nunca el registro real: con una foto de la semana en disco, el test la reusaría.
-        registro=base.parent / "registro.json")
+        cuenta=lambda: None, registro=base.parent / "registro_no_usado.json")
     return pr.Lectores(**{**por_defecto, **kw})
 
 
-def test_sin_analisis_semanal_no_hay_pieza(tmp_path):
-    with pytest.raises(pr.SinSemanaError, match="análisis semanal"):
-        pr.preparar(Orden("oportunidad"), tmp_path / "p", AHORA_LUNES, _lectores(tmp_path / "ref"))
+def test_el_analisis_trae_un_solo_activo_con_su_vigencia(tmp_path):
+    hecha = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES,
+                        _lectores(tmp_path / "ref"))
+    d = hecha.pieza["datos"]
+    assert [a["ticker"] for a in d["activos"]] == ["XAUUSD"] and hecha.pieza["orden"]["args"] == {"ticker": "XAUUSD"}
+    assert d["vigencia"] == {"desde": "lunes 12/10", "hasta": "lunes 19/10"}
+    assert d["fundamental"] == {"fuera_catalogo": False, "sin_drivers": False, "referencia": "semanal"}
+    assert set(hecha.pieza["editorial"]) == {"titular", "bajada", "titulares", "contexto", "fuentes"}
 
 
-def test_con_una_linea_a_mas_en_prueba_espera_el_cierre(tmp_path):
+def test_sin_referencia_semanal_se_lee_de_nuevo_y_se_anota_como_propia(tmp_path):
+    lec = _lectores(tmp_path / "ref", referencia=lambda est, t, d, s, a, b: (fx.lectura(ticker=t), a, "propia"))
+    hecha = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES, lec)
+    assert hecha.pieza["datos"]["fundamental"]["referencia"] == "propia"
+
+
+def test_un_simbolo_fuera_del_catalogo_usa_el_nombre_del_terminal_y_lo_avisa(tmp_path):
+    fuera = {"ticker": "TGT.US", "nombre": "Target Corp", "ticker_visible": "TGT.US", "digits": 2,
+             "unidad": "", "notas_marco": {}, "fuera_catalogo": True}
+    lec = _lectores(tmp_path / "ref", catalogo=lambda t: fuera, drivers=lambda t: [])
+    hecha = pr.preparar(Orden("oportunidad", {"ticker": "TGT.US"}), tmp_path / "p", AHORA_LUNES, lec)
+    d = hecha.pieza["datos"]
+    assert d["activos"][0]["nombre"] == "Target Corp"
+    assert d["fundamental"]["fuera_catalogo"] is True and d["fundamental"]["sin_drivers"] is True
+    assert any("fuera del catálogo" in a for a in hecha.avisos)
+
+
+def test_el_analisis_no_escribe_en_las_referencias_semanales(tmp_path):
     base = tmp_path / "ref"
-    _sembrar(base, [fx.lectura()], {"XAUUSD": 90.0})
-    filas = [{"ticker": "XAUUSD", "espera_hasta": datetime(2026, 10, 12, 13, 0, tzinfo=SCL)}]
-    with pytest.raises(pr.EsperaVelaError, match="13:00"):
-        pr.preparar(Orden("oportunidad"), tmp_path / "p", AHORA_LUNES, _lectores(base, filas))
-
-
-def test_la_foto_trae_los_activos_en_orden_de_puntaje(tmp_path):
-    base = tmp_path / "ref"
-    cobre = fx.lectura(ticker="COPPER", estado="RANGO", direccion="LATERAL", precio=14500.0,
-                       rango=(14567.0, 14206.0), atr=85.86)
-    _sembrar(base, [cobre, fx.lectura()], {"XAUUSD": 90.0, "COPPER": 5.0})
-    hecha = pr.preparar(Orden("oportunidad"), tmp_path / "p", AHORA_LUNES, _lectores(base))
-    activos = hecha.pieza["datos"]["activos"]
-    assert [a["ticker"] for a in activos] == ["XAUUSD", "COPPER"]
-    oro = activos[0]
-    assert oro["escenario"]["objetivo"] == 4150.0 and oro["fmt"]["objetivo"] == "4.150,00"
-    assert oro["contrato"]["clp_unidad"] == 950.0
-    assert oro["temporalidad"] == "4H · swing (de una a dos semanas)"
-    assert (tmp_path / "p" / oro["grafico"]).exists()
-    assert hecha.pieza["anidados"] == {"titulares": ["XAUUSD", "COPPER"], "contexto": ["XAUUSD", "COPPER"]}
-    assert hecha.pieza["datos"]["curva"] == []
-
-
-def test_una_foto_sin_activos_no_se_arma(tmp_path):
-    """Sin ninguna referencia guardada, la foto quedaría vacía y congelada toda la semana."""
-    base = tmp_path / "ref"
-    rs.guardar_manifiesto(SEMANA, {"semana": SEMANA, "elegidos": ["XAUUSD"], "puntajes": {"XAUUSD": 90.0},
-                                   "excluidos": []}, base=base)
-    with pytest.raises(pr.FotoVaciaError, match="ningún activo"):
-        pr.preparar(Orden("oportunidad"), tmp_path / "p", AHORA_LUNES, _lectores(base))
-    assert not (tmp_path / "p" / "pieza.json").exists()
-
-
-def test_un_elegido_sin_referencia_queda_fuera_y_se_anota(tmp_path):
-    base = tmp_path / "ref"
-    rs.guardar(fx.lectura(), SEMANA, "semanal", AHORA_LUNES, base=base)
-    rs.guardar_manifiesto(SEMANA, {"semana": SEMANA, "elegidos": ["XAUUSD", "COPPER"],
-                                   "puntajes": {"XAUUSD": 90.0, "COPPER": 5.0}, "excluidos": []}, base=base)
-    hecha = pr.preparar(Orden("oportunidad"), tmp_path / "p", AHORA_LUNES, _lectores(base))
-    assert [a["ticker"] for a in hecha.pieza["datos"]["activos"]] == ["XAUUSD"]
-    assert hecha.pieza["datos"]["fuera"] == ["COPPER"]
-    assert any("COPPER" in a and "pide /oportunidad de nuevo" in a for a in hecha.avisos)
-    assert pr.fuera_con_referencia(hecha.pieza, base) == []
-
-
-def test_rehacer_la_foto_suma_el_que_faltaba_y_conserva_los_precios_de_los_demas(tmp_path):
-    """Los clientes ya recibieron los precios del oro: aunque su referencia cambie a mitad de
-    semana, la foto rehecha los conserva y /seguimiento sigue midiendo contra ellos."""
-    base, registro = tmp_path / "ref", tmp_path / "registro.json"
-    rs.guardar(fx.lectura(), SEMANA, "semanal", AHORA_LUNES, base=base)
-    rs.guardar_manifiesto(SEMANA, {"semana": SEMANA, "elegidos": ["XAUUSD", "COPPER"],
-                                   "puntajes": {"XAUUSD": 90.0, "COPPER": 5.0}, "excluidos": []}, base=base)
-    primera = pr.preparar(Orden("oportunidad"), tmp_path / "p1", AHORA_LUNES, _lectores(base), registro=registro)
-    rg.anotar_foto(SEMANA, tmp_path / "p1", AHORA_LUNES, ["XAUUSD"], registro)
-    rs.guardar(fx.lectura(precio=4100.0), SEMANA, "ruptura", AHORA_LUNES, base=base)
-    rs.guardar(fx.lectura(ticker="COPPER", estado="RANGO", direccion="LATERAL", precio=14500.0,
-                          rango=(14567.0, 14206.0), atr=85.86), SEMANA, "semanal", AHORA_LUNES, base=base)
-    assert pr.fuera_con_referencia(primera.pieza, base) == ["COPPER"]
-    rehecha = pr.preparar(Orden("oportunidad"), tmp_path / "p2", AHORA_LUNES, _lectores(base), registro=registro)
-    activos = {a["ticker"]: a for a in rehecha.pieza["datos"]["activos"]}
-    assert set(activos) == {"XAUUSD", "COPPER"} and rehecha.pieza["datos"]["fuera"] == []
-    assert activos["XAUUSD"] == pr.cargar_pieza(tmp_path / "p1")["datos"]["activos"][0]
-    assert (tmp_path / "p2" / activos["XAUUSD"]["grafico"]).exists()
+    pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES, _lectores(base))
+    assert not base.exists()
 
 
 def test_la_curva_va_sin_porcentajes(tmp_path):
-    base = tmp_path / "ref"
-    _sembrar(base, [fx.lectura()], {"XAUUSD": 90.0})
-    curva = ({"series": {"DGS2": {"nivel_pct": 3.61, "delta_1d_bps": 2, "delta_5d_bps": None}}}, [])
-    hecha = pr.preparar(Orden("oportunidad"), tmp_path / "p", AHORA_LUNES, _lectores(base, curva=lambda: curva))
+    curva = {"series": {"DGS2": {"nivel_pct": 3.61, "delta_1d_bps": 2, "delta_5d_bps": None}}}
+    hecha = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES,
+                        _lectores(tmp_path / "ref", curva=lambda: (curva, [])))
     filas = hecha.pieza["datos"]["curva"]
     assert filas and "%" not in json.dumps(filas, ensure_ascii=False)
-
-
-def test_la_foto_no_toca_los_directorios_de_produccion(tmp_path, monkeypatch):
-    base = tmp_path / "ref"
-    _sembrar(base, [fx.lectura()], {"XAUUSD": 90.0})
-    antes = {p: p.stat().st_mtime for p in (RAIZ / "data").glob("carrusel/**/*") if p.is_file()}
-    pr.preparar(Orden("oportunidad"), tmp_path / "p", AHORA_LUNES, _lectores(base))
-    assert {p: p.stat().st_mtime for p in (RAIZ / "data").glob("carrusel/**/*") if p.is_file()} == antes
 
 
 # ───────────────────────────────────────────────────────────── seguimiento
@@ -259,12 +206,11 @@ def test_seguimiento_sin_simulacion_entrega_la_lectura_de_hoy(tmp_path):
     assert "Stop" not in d["whatsapp"] and "Las cifras de la simulación" not in d["whatsapp"]
 
 
-def test_el_grafico_semanal_traza_los_niveles_de_la_lamina(tmp_path):
+def test_el_grafico_del_analisis_traza_los_niveles_de_la_lamina(tmp_path):
     GRAFICOS.clear()
-    base = tmp_path / "ref"
-    _sembrar(base, [fx.lectura(direccion="BAJISTA", precio=4186.17, invalidacion=4227.32, objetivo=4149.96)],
-             {"XAUUSD": 90.0})
-    pr.preparar(Orden("oportunidad"), tmp_path / "p", AHORA_LUNES, _lectores(base))
+    lectura = fx.lectura(direccion="BAJISTA", precio=4186.17, invalidacion=4227.32, objetivo=4149.96)
+    lec = _lectores(tmp_path / "ref", referencia=lambda est, t, d, s, a, b: (lectura, a, "semanal"))
+    pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES, lec)
     precios = [p for p, _ in GRAFICOS[-1]["niveles"]]
     assert 4227.32 in precios and 4149.96 in precios and GRAFICOS[-1]["digits"] == 2
 
