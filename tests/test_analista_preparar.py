@@ -66,7 +66,10 @@ def _lectores(base, **kw):
         catalogo=lambda t: {"ticker": t, "nombre": {"XAUUSD": "Oro", "COPPER": "Cobre"}[t],
                             "digits": {"XAUUSD": 2, "COPPER": 0}[t], "unidad": "USD"},
         drivers=lambda t: ["Dollar Index"], agenda=lambda a: ([], []), curva=lambda: ({}, []),
-        cuenta=lambda: None, registro=base.parent / "registro_no_usado.json")
+        cuenta=lambda: None, registro=base.parent / "registro_no_usado.json",
+        # La referencia semanal se verifica contra el mercado de hoy: por defecto, sigue igual.
+        lectura_actual=lambda est, t, d, lector, ahora, referencia=None: (
+            referencia or fx.lectura(ticker=t), {"H4": pd.DataFrame(columns=["time", "high", "low"])}))
     return pr.Lectores(**{**por_defecto, **kw})
 
 
@@ -84,6 +87,31 @@ def test_sin_referencia_semanal_se_lee_de_nuevo_y_se_anota_como_propia(tmp_path)
     lec = _lectores(tmp_path / "ref", referencia=lambda est, t, d, s, a, b: (fx.lectura(ticker=t), a, "propia"))
     hecha = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES, lec)
     assert hecha.pieza["datos"]["fundamental"]["referencia"] == "propia"
+
+
+def test_una_referencia_semanal_ya_caducable_se_reemplaza_por_una_lectura_propia(tmp_path):
+    """La referencia del lunes con el objetivo ya alcanzado no puede ser la base de un análisis nuevo:
+    el siguiente pedido lo caducaría y lo rehace sobre la misma referencia, en bucle."""
+    vacias = pd.DataFrame(columns=["time", "high", "low"])
+    propia = fx.lectura(precio=4120.0, invalidacion=4050.0, objetivo=4200.0)
+    lec = _lectores(tmp_path / "ref",
+                    lectura_actual=lambda est, t, d, lector, ahora, referencia=None: (fx.lectura(precio=4120.0),
+                                                                                     {"H4": vacias}),
+                    propia=lambda est, t, d, ahora: (propia, ahora))
+    hecha = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA, lec)
+    d = hecha.pieza["datos"]
+    assert d["fundamental"]["referencia"] == "propia"
+    assert d["activos"][0]["lectura"]["precio"] == 4120.0
+    assert any("objetivo" in a and "semanal" in a for a in hecha.avisos)
+
+
+def test_una_referencia_semanal_vigente_se_usa_sin_aviso(tmp_path):
+    def propia(*a):
+        raise AssertionError("no tenía que leer de nuevo")
+    hecha = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA,
+                        _lectores(tmp_path / "ref", propia=propia))
+    assert hecha.pieza["datos"]["fundamental"]["referencia"] == "semanal"
+    assert not any("semanal" in a for a in hecha.avisos)
 
 
 def test_un_simbolo_fuera_del_catalogo_usa_el_nombre_del_terminal_y_lo_avisa(tmp_path):

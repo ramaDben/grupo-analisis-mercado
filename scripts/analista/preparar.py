@@ -201,8 +201,16 @@ def _referencia(estrategia, ticker, digits, semana, ahora, base):
     if guardada is not None:
         crudo = json.loads(rs.ruta(semana, ticker, base).read_text(encoding="utf-8"))
         return guardada, datetime.fromisoformat(crudo["guardada"]), "semanal"
+    lectura, momento = _propia(estrategia, ticker, digits, ahora)
+    return lectura, momento, "propia"
+
+
+def _propia(estrategia, ticker, digits, ahora):
+    """Lectura nueva sin vela en curso (nunca queda en PRUEBA), fechada ahora."""
+    import referencia_semanal as rs
+
     velas, _ = _velas(ticker, estrategia.marcos, rs.EXTRA)
-    return estrategia.leer(ticker, velas, digits, None), ahora, "propia"
+    return estrategia.leer(ticker, velas, digits, None), ahora
 
 
 def _lectura_actual(estrategia, ticker, digits, lector, ahora, referencia=None):
@@ -225,6 +233,7 @@ class Lectores:
     base_referencias: Path | None = None
     registro: Path | None = None
     referencia: Callable[..., tuple[Any, datetime, str]] = _referencia
+    propia: Callable[..., tuple[Any, datetime]] = _propia
     lectura_actual: Callable[..., tuple[Any, dict[str, Any]]] = _lectura_actual
 
 
@@ -281,6 +290,18 @@ def _entrada_activo(ticker: str, referencia, guardada: datetime, puntaje: float,
     }
 
 
+def _caducidad_de_la_semanal(referencia, estrategia, ticker, digits, ahora, lec: Lectores) -> str | None:
+    """Si la referencia semanal ya cumple una condición de caducidad, el motivo; si no o si el terminal
+    no responde, None (la semanal es la que circuló, y sin terminal no hay lectura propia que valga)."""
+    from analista import vigencia as vg
+
+    try:
+        actual, velas = lec.lectura_actual(estrategia, ticker, digits, lec.velas, ahora, referencia=referencia)
+    except Exception:  # noqa: BLE001  verificación extra: sin ella se usa la semanal, como antes
+        return None
+    return vg.motivo_caducidad(referencia, actual, velas[referencia.marco])
+
+
 def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lectores) -> Preparada:
     """El análisis de UN activo: la lectura de nuestros sistemas, sus drivers y la agenda.
 
@@ -295,8 +316,16 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
     digits = int(cat["digits"])
     base = lec.base_referencias or rs.DIR
     referencia, guardada, origen = lec.referencia(estrategia, ticker, digits, rs.semana_de(ahora), ahora, base)
-    activo = _entrada_activo(ticker, referencia, guardada, 0.0, dir_pedido, lec, estrategia)
     avisos: list[str] = []
+    if origen == "semanal":
+        motivo = _caducidad_de_la_semanal(referencia, estrategia, ticker, digits, ahora, lec)
+        if motivo:
+            # Un análisis creado sobre una referencia ya caducable lo caducaría el pedido siguiente y se
+            # rehace sobre la misma referencia, gastando agy y cupo en cada pedido.
+            referencia, guardada = lec.propia(estrategia, ticker, digits, ahora)
+            origen = "propia"
+            avisos.append(f"La referencia semanal de {ticker} ya no vale ({motivo}): usé una lectura nueva de hoy.")
+    activo = _entrada_activo(ticker, referencia, guardada, 0.0, dir_pedido, lec, estrategia)
     if cat.get("fuera_catalogo"):
         avisos.append(f"{ticker} no está en el catálogo (activo fuera del catálogo): usé el nombre del terminal y "
                       "un marco genérico, sin drivers declarados.")
