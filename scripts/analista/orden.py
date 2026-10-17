@@ -93,16 +93,27 @@ def resolver_activo(texto: str, universo: list[dict[str, Any]]) -> str:
 SALUDO_MAX = 60
 
 
-def _activo_y_saludo(cuerpo: str, universo: list[dict[str, Any]]) -> tuple[str, str]:
-    """El activo es el prefijo más largo que se resuelve; lo que sigue es el saludo al cliente."""
+_SIMBOLO = re.compile(r"^[A-Za-z#][A-Za-z0-9#._]{1,19}$")
+
+
+def _activo_y_saludo(cuerpo: str, universo: list[dict[str, Any]]) -> tuple[dict[str, Any], str]:
+    """El activo es el prefijo más largo que se resuelve en el catálogo; lo que sigue es el saludo.
+
+    Un activo que el catálogo no conoce no se rechaza acá: el terminal manda (spec 2026-10-16 §3).
+    La primera palabra pasa como símbolo `libre` y el bot la canoniza contra MT5 al atender, para
+    no tocar el terminal desde el hilo que escucha Telegram.
+    """
     palabras = cuerpo.split()
     for n in range(len(palabras), 0, -1):
         try:
             ticker = resolver_activo(" ".join(palabras[:n]), universo)
         except PedidoInvalido:
             continue
-        return ticker, _limpiar_saludo(" ".join(palabras[n:]))
-    return resolver_activo(cuerpo, universo), ""  # no resolvió: levanta el error de siempre
+        return {"ticker": ticker}, _limpiar_saludo(" ".join(palabras[n:]))
+    if _SIMBOLO.match(palabras[0]):
+        return {"ticker": palabras[0], "libre": True}, _limpiar_saludo(" ".join(palabras[1:]))
+    resolver_activo(cuerpo, universo)  # levanta el error de siempre
+    raise PedidoInvalido(f"No encontré el activo '{cuerpo}'.")  # inalcanzable
 
 
 def _limpiar_saludo(texto: str) -> str:
@@ -129,17 +140,11 @@ def interpretar(texto: str, universo: list[dict[str, Any]] | None = None) -> Ord
     if re.search(r"(?:^|\s)para\s+\S", cuerpo, flags=re.IGNORECASE):
         raise PedidoInvalido(PERSONALIZACION_RETIRADA)
 
-    if comando == "seguimiento":
-        if not cuerpo:
-            raise PedidoInvalido("Falta el activo. Escribe por ejemplo: /seguimiento oro")
-        if universo is None:
-            import screener_gi as sc
+    if not cuerpo:
+        raise PedidoInvalido(f"Falta el activo. Escribe por ejemplo: /{comando} oro")
+    if universo is None:
+        import screener_gi as sc
 
-            universo = sc.cargar_universo(solo_renderizables=False)
-        ticker, saludo = _activo_y_saludo(cuerpo, universo)
-        return Orden(pieza=comando, args={"ticker": ticker}, saludo=saludo)
-    else:
-        # /oportunidad no lleva argumentos: la foto la fija el análisis semanal.
-        args = {}
-
-    return Orden(pieza=comando, args=args)
+        universo = sc.cargar_universo(solo_renderizables=False)
+    args, saludo = _activo_y_saludo(cuerpo, universo)
+    return Orden(pieza=comando, args=args, saludo=saludo)
