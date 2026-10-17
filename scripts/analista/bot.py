@@ -221,6 +221,18 @@ def _guardar_salida_agy(dir_pedido: Path, res: Any, intento: int) -> None:
         pass
 
 
+def _agenda_pasada(pieza: dict[str, Any], ahora: datetime) -> str | None:
+    """Motivo de caducidad si algún dato de la agenda sellada ya quedó en el pasado (fecha de Chile).
+
+    La agenda va redactada en modo anticipación («sale el miércoles»): pasado el día, reusarla anuncia como
+    pendiente lo que ya salió. Una pieza anterior a la agenda estructurada, o con la ventana vacía o sin
+    calendario, no tiene eventos y conserva la regla simple de los 7 días.
+    """
+    hoy = ahora.astimezone(SANTIAGO).date().isoformat()
+    eventos = ((pieza.get("datos") or {}).get("agenda") or {}).get("eventos") or []
+    return "ya pasó uno de los días clave de su agenda" if any(e.get("fecha", hoy) < hoy for e in eventos) else None
+
+
 @dataclass
 class Atendedor:
     """Convierte un pedido en archivos. Todo lo externo se inyecta."""
@@ -346,7 +358,9 @@ class Atendedor:
         previa = rg.vigente(ticker, ahora, self.registro)  # un registro corrupto levanta: no es "sin análisis"
         avisos: list[str] = []
         if previa is not None:
-            motivo, aviso = self.verificar_vigencia(pr.cargar_pieza(Path(previa["dir"])), ahora)
+            pieza_previa = pr.cargar_pieza(Path(previa["dir"]))
+            motivo, aviso = self.verificar_vigencia(pieza_previa, ahora)
+            motivo = motivo or _agenda_pasada(pieza_previa, ahora)
             if motivo:
                 rg.caducar(ticker, motivo, ahora, self.registro)
                 avisos.append(f"El análisis anterior de {ticker} caducó ({motivo}): rehíce uno con la lectura de hoy.")

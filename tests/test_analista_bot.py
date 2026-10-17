@@ -210,6 +210,18 @@ def test_a_los_6_dias_se_reusa(armado):
     assert armado.preparaciones == 1
 
 
+def test_pasado_un_dia_clave_de_su_agenda_el_analisis_no_se_reusa(armado):
+    """Su agenda se redactó en modo anticipación: con un dato ya pasado diría «pendiente» lo que ya salió."""
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))  # su único día clave es el 14/10
+    armado.reloj.ahora = AHORA + timedelta(days=6)  # 14/10: el día clave es hoy, aún no pasó
+    armado.bot.procesar_uno(b.Pedido(OTRO, 2, ORO))
+    assert armado.preparaciones == 1
+    armado.reloj.ahora = AHORA + timedelta(days=6, hours=23)  # 15/10 10:00: el registro sigue vigente, el dato no
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 3, ORO))
+    assert armado.preparaciones == 2 and "caducó" in r.aparte and "días clave" in r.aparte
+    assert "Ya existía" not in r.aparte
+
+
 def test_una_lectura_rota_caduca_el_analisis_y_se_rehace_con_el_motivo(armado):
     armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
     armado.caduca = "el precio tocó la invalidación"
