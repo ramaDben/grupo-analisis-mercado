@@ -19,6 +19,7 @@ for p in (str(RAIZ / "src"), str(RAIZ / "scripts"), str(RAIZ / "tests")):
 import analista_fixtures as fx  # noqa: E402
 from analista import registro_semanal as rg  # noqa: E402
 from analista import esquema as es  # noqa: E402
+from analista import agenda as ag  # noqa: E402
 from analista import preparar as pr  # noqa: E402
 from analista.orden import Orden  # noqa: E402
 import referencia_semanal as rs  # noqa: E402
@@ -57,6 +58,25 @@ def _grafico_falso(ticker, nombre, lectura, destino, **kw):
     return destino
 
 
+CALENDARIOS: list[dict] = []
+
+
+def _calendario_falso(payload, destino):
+    CALENDARIOS.append(payload)
+    destino.write_bytes(fx.PNG)
+    return destino
+
+
+EVENTO = {"fecha": "2026-10-14", "dia": "miércoles 14/10", "hora": "09:30 CLST", "evento": "IPC",
+          "fuente_nombre": "CPI (MoM) (Sep)", "pais": "EE.UU.", "anterior": "0,4%", "esperado": "0,3%",
+          "explicacion": "", "efecto": "Si sale sobre lo esperado, el oro tiende a bajar; si sale bajo lo esperado, lo contrario.",
+          "mueve_al_activo": True}
+HECHO = {"id": "dxy", "driver": "Dollar Index (DXY)", "fecha": "viernes 09/10", "en_curso": False, "nivel": "101,560",
+         "cambio_1d": "0,193", "cambio_5d": "0,288", "unidad_cambio": "puntos", "sentido": "bajó",
+         "sentido_1d": "bajó", "fuente": "MT5 (USDIDX)", "efecto": "juega a favor del alza del oro",
+         "con_la_lectura": "va en contra de nuestra lectura"}
+
+
 def _lectores(base, **kw):
     por_defecto = dict(
         base_referencias=base, estrategia=lambda: EstrategiaFalsa(),
@@ -65,7 +85,9 @@ def _lectores(base, **kw):
         grafico_lectura=_grafico_falso,
         catalogo=lambda t: {"ticker": t, "nombre": {"XAUUSD": "Oro", "COPPER": "Cobre"}[t],
                             "digits": {"XAUUSD": 2, "COPPER": 0}[t], "unidad": "USD"},
-        drivers=lambda t: ["Dollar Index"], agenda=lambda a: ([], []), curva=lambda: ({}, []),
+        drivers=lambda t: ["Dollar Index"], agenda=lambda ahora, t, n: ag.Agenda("lunes 12/10", "lunes 19/10", "vacia"),
+        hechos=lambda t, n, direccion, curva, eventos, ahora: ([], []),
+        rendir_calendario=_calendario_falso, curva=lambda: ({}, []),
         cuenta=lambda: None, registro=base.parent / "registro_no_usado.json",
         # La referencia semanal se verifica contra el mercado de hoy: por defecto, sigue igual.
         lectura_actual=lambda est, t, d, lector, ahora, referencia=None: (
@@ -137,6 +159,66 @@ def test_la_curva_va_sin_porcentajes(tmp_path):
                         _lectores(tmp_path / "ref", curva=lambda: (curva, [])))
     filas = hecha.pieza["datos"]["curva"]
     assert filas and "%" not in json.dumps(filas, ensure_ascii=False)
+
+
+def _con_agenda(estado, eventos=()):
+    return lambda ahora, t, n: ag.Agenda("lunes 12/10", "lunes 19/10", estado, [dict(e) for e in eventos],
+                                         ["el calendario no respondió (X)"] if estado == "sin_calendario" else [])
+
+
+def test_con_eventos_rinde_el_calendario_y_pide_dias_clave(tmp_path):
+    CALENDARIOS.clear()
+    lec = _lectores(tmp_path / "ref", agenda=_con_agenda("ok", [EVENTO]))
+    p = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES, lec).pieza
+    assert p["imagenes"]["calendario"] == "calendario_xauusd.png" and (tmp_path / "p" / "calendario_xauusd.png").exists()
+    assert p["anidados"]["dias_clave"] == ["XAUUSD"] and p["editorial"]["dias_clave"] == {"XAUUSD": es.MARCA}
+    assert "%" not in json.dumps(p["datos"]["agenda"], ensure_ascii=False)
+    assert p["datos"]["agenda"]["eventos"][0]["esperado"] == "0,3 por ciento"
+    assert CALENDARIOS[-1]["eventos"][0]["dia"] == "MIÉRCOLES 14/10" and "agenda_semana" not in p["datos"]
+
+
+def test_la_ventana_vacia_avisa_sus_fechas_y_no_pide_dias_clave(tmp_path):
+    hecha = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES,
+                        _lectores(tmp_path / "ref"))
+    assert "dias_clave" not in hecha.pieza["anidados"] and "calendario" not in hecha.pieza["imagenes"]
+    assert any("lunes 12/10" in a and "lunes 19/10" in a for a in hecha.avisos)
+
+
+def test_sin_calendario_avisa_con_el_enlace(tmp_path):
+    lec = _lectores(tmp_path / "ref", agenda=_con_agenda("sin_calendario"))
+    hecha = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES, lec)
+    assert any("investing.com/economic-calendar" in a for a in hecha.avisos)
+    assert any("no respondió" in a for a in hecha.avisos)
+
+
+def test_los_hechos_se_miden_con_la_direccion_y_la_agenda_y_quedan_sellados(tmp_path):
+    llamadas = []
+
+    def hechos(t, n, direccion, curva, eventos, ahora):
+        llamadas.append((t, n, direccion, eventos))
+        return [dict(HECHO)], ["sin dato de Tasa real"]
+
+    lec = _lectores(tmp_path / "ref", agenda=_con_agenda("ok", [EVENTO]), hechos=hechos)
+    hecha = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES, lec)
+    assert hecha.pieza["datos"]["hechos"] == [HECHO]
+    assert llamadas[0][:3] == ("XAUUSD", "Oro", "ALCISTA") and llamadas[0][3][0]["dia"] == "miércoles 14/10"
+    assert any("Tasa real" in a for a in hecha.avisos)
+
+
+def test_sin_ningun_hecho_se_avisa(tmp_path):
+    hecha = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES,
+                        _lectores(tmp_path / "ref"))
+    assert hecha.pieza["datos"]["hechos"] == [] and any("No medí ningún driver" in a for a in hecha.avisos)
+
+
+def test_si_el_calendario_no_rinde_la_pieza_sale_con_la_tabla(tmp_path):
+    def roto(payload, destino):
+        raise RuntimeError("sin chromium")
+
+    lec = _lectores(tmp_path / "ref", agenda=_con_agenda("ok", [EVENTO]), rendir_calendario=roto)
+    hecha = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES, lec)
+    assert "calendario" not in hecha.pieza["imagenes"] and hecha.pieza["datos"]["agenda"]["eventos"]
+    assert any("imagen del calendario" in a for a in hecha.avisos)
 
 
 # ───────────────────────────────────────────────────────────── seguimiento

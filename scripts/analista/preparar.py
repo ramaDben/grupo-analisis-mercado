@@ -34,10 +34,31 @@ class SinAnalisisError(PreparacionFallida):
 # ───────────────────────────────────────────────────────────── lectores reales
 
 
-def _agenda(ahora: datetime):
-    import pipeline_linkedin as pl
+def _agenda(ahora: datetime, ticker: str, nombre: str):
+    """Los datos de alto impacto de los 7 días de vigencia (spec 2026-10-17 §3)."""
+    from analista import agenda as ag
 
-    return pl.leer_agenda(ahora)
+    return ag.leer_ventana(ahora, ticker, nombre)
+
+
+def _hechos(ticker: str, nombre: str, direccion: str, curva: dict[str, Any], eventos: list[dict[str, Any]],
+            ahora: datetime) -> tuple[list[dict[str, Any]], list[str]]:
+    """Los drivers del día medidos en el terminal y la curva (spec 2026-10-17 §2)."""
+    from market_data_mcp.indices_referencia import serie_diaria
+
+    from analista import hechos as hc
+
+    return hc.medir(ticker, nombre, direccion, curva, eventos, hc.leer_d1_mt5, ahora.astimezone(SANTIAGO).date(),
+                    respaldo_dxy=lambda n: serie_diaria("DXY", n))
+
+
+def _rendir_calendario(payload: dict[str, Any], destino: Path) -> Path:
+    """La lámina del calendario con la plantilla `calendario` de Stories (1920×1080)."""
+    import pipeline_avisos as pa
+    from story_render import render_story
+
+    render_story(payload, pa.DIR_PLANTILLAS / "calendario.html", destino, formato="horizontal")
+    return destino
 
 
 def _curva():
@@ -225,7 +246,9 @@ class Lectores:
     grafico_lectura: Callable[..., Path] = _grafico_lectura
     estrategia: Callable[[], Any] = _estrategia
     velas: Callable[..., Any] = _velas
-    agenda: Callable[[datetime], tuple[list[dict[str, Any]], list[str]]] = _agenda
+    agenda: Callable[[datetime, str, str], Any] = _agenda
+    hechos: Callable[..., tuple[list[dict[str, Any]], list[str]]] = _hechos
+    rendir_calendario: Callable[[dict[str, Any], Path], Path] = _rendir_calendario
     curva: Callable[[], tuple[dict[str, Any], list[str]]] = _curva
     drivers: Callable[[str], list[str]] = _drivers
     cuenta: Callable[[], str | None] = _cuenta
@@ -329,22 +352,43 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
     if cat.get("fuera_catalogo"):
         avisos.append(f"{ticker} no está en el catálogo (activo fuera del catálogo): usé el nombre del terminal y "
                       "un marco genérico, sin drivers declarados.")
-    agenda, av = lec.agenda(ahora)
-    avisos += [f"contexto sin agenda: {a}" for a in av]
+    from analista import agenda as ag
+
+    nombre = activo["nombre"]
+    agenda = lec.agenda(ahora, ticker, nombre)
+    avisos += [f"agenda: {a}" for a in agenda.avisos]
+    if agenda.estado == "sin_calendario":
+        avisos.append(f"No pude leer el calendario económico: revisa los días clave en {ag.URL_CALENDARIO} "
+                      "antes de enviar el correo.")
+    elif agenda.estado == "vacia":
+        avisos.append(ag.texto_vacia(agenda.a_dict()) + " La ficha muestra la ventana completa.")
     curva, av = lec.curva()
     avisos += [f"contexto sin curva de tasas: {a}" for a in av]
+    hechos, av = lec.hechos(ticker, nombre, referencia.direccion, curva, agenda.eventos, ahora)
+    avisos += [f"drivers del día: {a}" for a in av]
+    if not hechos:
+        avisos.append("No medí ningún driver del día: el contexto sale sin cifras propias.")
     drivers = lec.drivers(ticker)
-    sin_pct = _contexto_sin_porcentajes({"curva": _filas_curva(curva)})
+    # Sin "%": la pieza no muestra porcentajes y una cifra con "%" en los datos invitaría a agy a citarla.
+    limpio = _contexto_sin_porcentajes({"curva": _filas_curva(curva), "agenda": agenda.a_dict(), "hechos": hechos})
+    imagenes = {ticker: activo["grafico"]}
+    extra = {"titulares": [ticker], "contexto": [ticker]}
+    if limpio["agenda"]["eventos"]:
+        extra["dias_clave"] = [ticker]
+        nombre_cal = f"calendario_{ticker.lower().replace('.', '_')}.png"
+        try:
+            lec.rendir_calendario(ag.payload_lamina(limpio["agenda"]), dir_pedido / nombre_cal)
+            imagenes["calendario"] = nombre_cal
+        except Exception as exc:  # noqa: BLE001  la tabla de la ficha sigue: la imagen es un extra
+            avisos.append(f"No pude rendir la imagen del calendario ({exc.__class__.__name__}): la ficha lleva la tabla.")
     datos = {"ticker": ticker, "chip": "ANÁLISIS TÉCNICO Y FUNDAMENTAL",
              "edicion": fecha_corta(ahora) + f" · {ahora.astimezone(SANTIAGO):%H:%M}",
              "vigencia": {"desde": fecha_corta(ahora), "hasta": fecha_corta(ahora + rg.VIGENCIA)},
-             "activos": [activo], "drivers": {ticker: drivers},
-             "agenda_semana": [f"{ev.get('hora', '')} · {ev.get('nombre_es') or ev.get('evento', '')}" for ev in agenda],
-             "curva": sin_pct["curva"],
+             "activos": [activo], "drivers": {ticker: drivers}, "hechos": limpio["hechos"],
+             "agenda": limpio["agenda"], "curva": limpio["curva"],
              "fundamental": {"fuera_catalogo": bool(cat.get("fuera_catalogo")), "sin_drivers": not drivers,
                              "referencia": origen}}
-    pieza = es.nueva_pieza("oportunidad", {"ticker": ticker}, datos, {ticker: activo["grafico"]},
-                           extra_campos={"titulares": [ticker], "contexto": [ticker]})
+    pieza = es.nueva_pieza("oportunidad", {"ticker": ticker}, datos, imagenes, extra_campos=extra)
     return Preparada(pieza, avisos)
 
 
