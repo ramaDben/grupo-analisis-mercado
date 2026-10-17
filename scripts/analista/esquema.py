@@ -199,10 +199,13 @@ def _errores_de_desarrollo(pieza: dict[str, Any]) -> list[str]:
     editorial = pieza.get("editorial") or {}
     errs: list[str] = []
     hechos = [h for h in datos.get("hechos") or [] if isinstance(h, dict)]
-    exigidos = min(MINIMO_HECHOS, len(hechos))
+    # Un hecho sin cifra significativa propia (todo de un dígito) no se puede citar: no cuenta.
+    citables = [h for h in hechos if any(_significativo(t) for campo in ("nivel", "cambio_1d", "cambio_5d")
+                                         for t in _NUMERO.findall(str(h.get(campo) or "")))]
+    exigidos = min(MINIMO_HECHOS, len(citables))
     contexto = editorial.get("contexto")
     for t, texto in (contexto.items() if isinstance(contexto, dict) else []):
-        if exigidos and texto != MARCA and len(hechos_citados(str(texto), hechos)) < exigidos:
+        if exigidos and texto != MARCA and len(hechos_citados(str(texto), citables)) < exigidos:
             ejemplos = ", ".join(f"{h.get('driver')} {h.get('nivel')}" for h in hechos[:4])
             errs.append(f"contexto.{t}: tiene que nombrar el estado de hoy de al menos {exigidos} de los drivers "
                         f"medidos (datos.hechos), citando su cifra tal como viene: {ejemplos}")
@@ -210,7 +213,7 @@ def _errores_de_desarrollo(pieza: dict[str, Any]) -> list[str]:
     dias = [str(e["dia"]) for e in agenda.get("eventos") or [] if isinstance(e, dict) and e.get("dia")]
     dias_clave = editorial.get("dias_clave")
     for t, texto in (dias_clave.items() if isinstance(dias_clave, dict) else []):
-        if dias and texto != MARCA and not any(d in str(texto) for d in dias):
+        if dias and texto != MARCA and not any(_plano(d) in _plano(str(texto)) for d in dias):
             errs.append(f"dias_clave.{t}: tiene que nombrar al menos un día de la agenda tal como viene en "
                         f"datos.agenda ({', '.join(dict.fromkeys(dias[:4]))})")
     return errs

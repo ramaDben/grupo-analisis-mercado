@@ -407,4 +407,28 @@ def test_dias_clave_tiene_tope_de_largo():
 
 def test_dias_clave_pasa_por_los_candados_de_texto():
     p = pieza_desarrollada(CITA_LOS_DOS, eventos=[EVENTO], dias="El miércoles 21/10 sale el IPC — ojo.")
-    assert es.errores(p)
+    assert any("dias_clave.XAUUSD" in e and "guion largo" in e for e in es.errores(p))
+
+
+def test_hechos_sin_cifra_significativa_no_vuelven_imposible_la_pieza():
+    chicos = [{"id": "a", "driver": "A", "nivel": "5 por ciento", "cambio_1d": "6 pb", "cambio_5d": "3 pb"},
+              {"id": "b", "driver": "B", "nivel": "2 por ciento", "cambio_1d": "1 pb", "cambio_5d": "4 pb"}]
+    assert es.errores(pieza_desarrollada("Texto sin cifras de esos drivers.", hechos=chicos)) == []
+
+
+def test_un_hecho_citable_se_exige_aunque_otro_no_lo_sea():
+    mixtos = [HECHOS[0], {"id": "b", "driver": "B", "nivel": "2 por ciento", "cambio_1d": "1 pb"}]
+    assert es.errores(pieza_desarrollada("Texto sin cifras.", hechos=mixtos))
+    assert es.errores(pieza_desarrollada("El Dollar Index cerró en 101,560.", hechos=mixtos)) == []
+
+
+def test_el_dia_se_reconoce_sin_importar_mayusculas():
+    p = pieza_desarrollada(CITA_LOS_DOS, eventos=[EVENTO], dias="Miércoles 21/10 se conoce el IPC.")
+    assert es.errores(p) == []
+
+
+def test_agenda_sin_eventos_no_exige_dias_clave():
+    p = pieza_desarrollada(CITA_LOS_DOS)
+    assert "dias_clave" not in p["editorial"]
+    assert es.errores(p) == []
+
