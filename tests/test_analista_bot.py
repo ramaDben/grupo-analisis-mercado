@@ -20,12 +20,14 @@ from analista import bot as b  # noqa: E402
 from analista import esquema as es  # noqa: E402
 from analista import orden as od  # noqa: E402
 from analista import preparar as pr  # noqa: E402
+from analista import simbolos as sm  # noqa: E402
 from analista import registro_semanal as rg  # noqa: E402
 
 SCL = ZoneInfo("America/Santiago")
 AHORA = datetime(2026, 10, 8, 11, 0, tzinfo=SCL)
 CAMILA = "111"
 OTRO = "222"
+ORO = od.Orden("oportunidad", {"ticker": "XAUUSD"})
 
 
 class Reloj:
@@ -53,14 +55,18 @@ class Armado:
     def __init__(self, tmp_path, config):
         self.llamadas, self.reloj, self.tmp = [], Reloj(), tmp_path
         self.preparaciones = 0
-        self.fuera: list[str] = []
+        self.caduca: str | None = None
+        self.aviso_vigencia: str | None = None
         self.eventos: list[dict] = []  # el calendario falso: vacío salvo que la prueba lo llene
         self.registro = tmp_path / "registro.json"
         self.atendedor = b.Atendedor(
             config, b.Estado.cargar(tmp_path / "estado.json"), autor=fx.AUTOR, preparar=self.preparar_falso,
             redactar=redactor(self.llamadas), rendir_lamina=self.rendir_falso, reloj=self.reloj,
             dir_pedidos=tmp_path / "pedidos", registro=self.registro,
-            calendario=lambda ahora: self.eventos)
+            calendario=lambda ahora: self.eventos,
+            verificar_vigencia=lambda pieza, ahora: (self.caduca, self.aviso_vigencia),
+            simbolo=lambda t: {"ticker": "XAUUSD", "descripcion": "Gold", "digits": 2} if t.lower() == "xauusd" else None,
+            verificar_url=lambda url: "ok")
         self.bot = b.Bot(TgFalso(), self.atendedor)
         self.estado = self.atendedor.estado
 
@@ -69,7 +75,7 @@ class Armado:
         self.kwargs = kw
         dir_pedido.mkdir(parents=True, exist_ok=True)
         if orden.pieza == "oportunidad":
-            pieza = fx.pieza_oportunidad(dir_pedido, fuera=list(self.fuera))
+            pieza = fx.pieza_oportunidad(dir_pedido)
             pieza["editorial"] = {k: ({t: es.MARCA for t in v} if isinstance(v, dict) else es.MARCA)
                                   for k, v in pieza["editorial"].items()}
         else:
@@ -127,8 +133,13 @@ def test_desconocido_recibe_su_id_una_sola_vez(armado):
 
 
 def test_pedido_invalido_responde_el_motivo(armado):
+    r, final = pedir(armado, "/seguimiento")
+    assert r[0].texto and final is None and armado.bot.cola.empty()
+
+
+def test_un_activo_desconocido_se_resuelve_en_el_trabajador(armado):
     r, final = pedir(armado, "/seguimiento pizza")
-    assert "pizza" in r[0].texto and final is None
+    assert "Recibido" in r[0].texto and "pizza" in final.texto and armado.llamadas == []
 
 
 def test_pedido_con_para_no_gasta_agy_ni_cupo(armado):
@@ -158,98 +169,136 @@ def test_telegram_manda_el_tipo_segun_el_archivo(tmp_path, nombre, tipo):
 # ───────────────────────────────────────────────────────────── /oportunidad
 
 
-def test_oportunidad_arma_la_foto_una_sola_vez_por_semana(armado):
-    r1 = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
-    r2 = armado.bot.procesar_uno(b.Pedido(OTRO, 2, od.Orden("oportunidad")))
-    assert len(armado.llamadas) == 1  # AGY una sola vez
-    assert r1.archivos[0].name.startswith("analisis-semanal_")
+def test_oportunidad_se_arma_una_vez_y_el_segundo_ejecutivo_lo_reusa(armado):
+    r1 = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    r2 = armado.bot.procesar_uno(b.Pedido(OTRO, 2, ORO))
+    assert len(armado.llamadas) == 1 and armado.preparaciones == 1  # agy una sola vez
+    assert r1.archivos[0].name.startswith("analisis_xauusd_")
     assert r2.archivos[0].name.endswith("_pedro-soto.html")  # el HTML lleva al ejecutivo que lo pidió
-    assert "Ya está" in r2.texto
-    # El cupo se gasta al armar la foto, no al reusarla.
+    assert "Camila Rojas" in r2.aparte and "Ya existía" in r2.aparte
     assert armado.estado.usados(CAMILA, AHORA) == 1 and armado.estado.usados(OTRO, AHORA) == 0
 
 
-def test_la_foto_reusada_avisa_los_activos_que_quedaron_fuera(armado):
-    armado.fuera = ["COPPER"]
-    armado.atendedor.fuera_con_referencia = lambda pieza: []
-    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
-    r = armado.bot.procesar_uno(b.Pedido(OTRO, 2, od.Orden("oportunidad")))
-    assert armado.preparaciones == 1
-    assert "COPPER sigue sin análisis guardado" in r.texto and "pide /oportunidad de nuevo" in r.texto
+def test_el_analisis_queda_a_nombre_de_quien_lo_genero_y_anota_el_reuso(armado):
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    armado.bot.procesar_uno(b.Pedido(OTRO, 2, ORO))
+    e = rg.vigente("XAUUSD", AHORA, armado.registro)
+    assert e["creado_por"] == {"nombre": "Camila Rojas", "id": CAMILA}
+    assert [x["nombre"] for x in e["reusos"]] == ["Pedro Soto"]
 
 
-def test_la_foto_se_rehace_cuando_aparece_el_activo_que_faltaba(armado):
-    armado.fuera = ["COPPER"]
-    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
-    armado.fuera = []
-    armado.atendedor.fuera_con_referencia = lambda pieza: list(pieza["datos"].get("fuera", []))
-    r = armado.bot.procesar_uno(b.Pedido(OTRO, 2, od.Orden("oportunidad")))
+def test_a_los_8_dias_se_rehace(armado):
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    armado.reloj.ahora += timedelta(days=8)
+    armado.bot.procesar_uno(b.Pedido(OTRO, 2, ORO))
     assert armado.preparaciones == 2 and len(armado.llamadas) == 2
-    assert "Rehíce la foto de la semana para sumar COPPER" in r.texto
-    assert len(json.loads(armado.registro.read_text(encoding="utf-8"))) == 2
-    # Ya completa: el tercero la reusa.
-    r3 = armado.bot.procesar_uno(b.Pedido(CAMILA, 3, od.Orden("oportunidad")))
-    assert armado.preparaciones == 2 and "Ya está" in r3.texto
 
 
-def test_oportunidad_rinde_las_laminas_antes_del_html(armado):
-    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
-    html = r.archivos[0].read_text(encoding="utf-8")
-    assert html.count("Descargar lámina") >= 2
-    assert (r.archivos[0].parent / "lamina_xauusd.png").exists()
+def test_a_los_6_dias_se_reusa(armado):
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    armado.reloj.ahora += timedelta(days=6)
+    armado.bot.procesar_uno(b.Pedido(OTRO, 2, ORO))
+    assert armado.preparaciones == 1
 
 
-def test_la_lamina_del_wti_aparece_en_el_html(armado):
-    def con_wti(orden, dir_pedido, ahora, **kw):
-        dir_pedido.mkdir(parents=True, exist_ok=True)
-        pieza = fx.pieza_oportunidad(dir_pedido, wti=True)
-        pr.guardar_pieza(pieza, dir_pedido)
-        return pr.Preparada(pieza, [])
+def test_una_lectura_rota_caduca_el_analisis_y_se_rehace_con_el_motivo(armado):
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    armado.caduca = "el precio tocó la invalidación"
+    r = armado.bot.procesar_uno(b.Pedido(OTRO, 2, ORO))
+    assert armado.preparaciones == 2 and "caducó" in r.aparte and "invalidación" in r.aparte
+    assert json.loads(armado.registro.read_text(encoding="utf-8"))[0]["caducada"]["motivo"]
 
+
+def test_con_el_terminal_caido_se_entrega_el_vigente_con_aviso(armado):
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    armado.aviso_vigencia = "No pude verificar si sigue vigente (el terminal no respondió): te lo entrego tal cual."
+    r = armado.bot.procesar_uno(b.Pedido(OTRO, 2, ORO))
+    assert armado.preparaciones == 1 and "No pude verificar si sigue vigente" in r.aparte
+
+
+def test_el_texto_reenviable_invita_a_revisar_mt5_con_el_saludo(armado):
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad", {"ticker": "XAUUSD"}, "Juan")))
+    assert r.texto.startswith("Hola Juan, ") and "MT5" in r.texto and "operar" not in r.texto.lower()
+
+
+def test_las_fuentes_malas_se_descartan_y_se_avisan_sin_botar_la_pieza(armado):
     def redactar(ruta, tier):
         pieza = pr.cargar_pieza(ruta.parent)
-        pieza["editorial"] = fx.pieza_oportunidad(ruta.parent, wti=True)["editorial"]
+        pieza["editorial"].update(fx.pieza_oportunidad(ruta.parent)["editorial"])
+        buena = {**fx.FUENTES_EJEMPLO[0], "fecha": "2026-10-06"}  # la del ejemplo es posterior al reloj del test
+        pieza["editorial"]["fuentes"] = [buena, {**buena, "entidad": "Un Blog",
+                                                 "url": "https://www.reuters.com/otra/nota-larga"}]
         pr.guardar_pieza(pieza, ruta.parent)
         return SimpleNamespace(codigo="ok", detalle="")
 
-    armado.atendedor.preparar, armado.atendedor.redactar = con_wti, redactar
-    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
-    html = r.archivos[0].read_text(encoding="utf-8")
-    assert 'download="lamina_wti_spot.png"' in html
+    armado.atendedor.redactar = redactar
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert "Un Blog" in r.aparte and r.archivos
+    assert len(pr.cargar_pieza(next((armado.tmp / "pedidos").rglob("pieza.json")).parent)["editorial"]["fuentes"]) == 1
+
+
+def test_sin_voces_validas_la_pieza_sale_y_lo_dice(armado):
+    def redactar(ruta, tier):
+        pieza = pr.cargar_pieza(ruta.parent)
+        pieza["editorial"].update(fx.pieza_oportunidad(ruta.parent)["editorial"])
+        pieza["editorial"]["fuentes"] = "no sé"
+        pr.guardar_pieza(pieza, ruta.parent)
+        return SimpleNamespace(codigo="ok", detalle="")
+
+    armado.atendedor.redactar = redactar
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert r.archivos and "Sin voces" in r.aparte
+
+
+def test_un_simbolo_libre_se_canoniza_contra_el_terminal(armado):
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad", {"ticker": "xauusd", "libre": True})))
+    assert rg.vigente("XAUUSD", AHORA, armado.registro) is not None
+
+
+def test_un_simbolo_que_no_existe_no_gasta_cupo_ni_agy(armado):
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad", {"ticker": "orro", "libre": True})))
+    assert "orro" in r.texto and armado.llamadas == [] and armado.estado.usados(CAMILA, AHORA) == 0
+
+
+def test_un_terminal_caido_al_confirmar_el_simbolo_se_dice_y_no_gasta_cupo(armado):
+    def caido(texto):
+        raise sm.TerminalNoDisponible("MT5 no respondió")
+
+    armado.atendedor.simbolo = caido
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad", {"ticker": "xauusd", "libre": True})))
+    assert "No pude consultar el terminal" in r.texto and armado.estado.usados(CAMILA, AHORA) == 0
+
+
+def test_el_mismo_activo_pedido_dos_veces_a_la_vez_dice_que_ya_se_esta_generando(armado):
+    r1 = armado.bot.recibir(update("/oportunidad oro"))
+    r2 = armado.bot.recibir(update("/oportunidad oro", usuario=OTRO))
+    assert "Armando el análisis" in r1[0].texto and "ya se está generando" in r2[0].texto.lower()
+    assert armado.bot.cola.qsize() == 1
+    armado.bot.procesar_uno(armado.bot.cola.get())  # al terminar, el candado se suelta
+    assert "ya se está generando" not in armado.bot.recibir(update("/oportunidad oro"))[0].texto.lower()
 
 
 def test_oportunidad_solo_va_a_drive_el_html(armado):
-    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
-    en_drive = list((armado.tmp / "drive" / "GI Informes").rglob("*.*"))
-    assert [p.suffix for p in en_drive] == [".html"]
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert [p.suffix for p in (armado.tmp / "drive" / "GI Informes").rglob("*.*")] == [".html"]
 
 
-def test_oportunidad_sin_semana_responde_claro_y_no_gasta_cupo(armado):
+def test_oportunidad_rinde_la_lamina_antes_del_html(armado):
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert "Descargar lámina" in r.archivos[0].read_text(encoding="utf-8")
+    assert (r.archivos[0].parent / "lamina_xauusd.png").exists()
+
+
+def test_oportunidad_sin_analisis_de_datos_no_gasta_agy(armado):
     armado.atendedor.preparar = lambda o, d, a, **kw: (_ for _ in ()).throw(
-        pr.SinSemanaError("La semana 2026-W42 todavía no tiene análisis semanal"))
-    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
-    assert r.texto.startswith("❌ La semana") and armado.estado.usados(CAMILA, AHORA) == 0
-
-
-def test_oportunidad_en_espera_da_la_hora_del_cierre(armado):
-    armado.atendedor.preparar = lambda o, d, a, **kw: (_ for _ in ()).throw(
-        pr.EsperaVelaError("se publica al cierre de la vela de las 13:00"))
-    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
-    assert "13:00" in r.texto and armado.llamadas == []
-
-
-def test_foto_vacia_responde_claro_y_no_queda_anotada(armado):
-    armado.atendedor.preparar = lambda o, d, a, **kw: (_ for _ in ()).throw(
-        pr.FotoVaciaError("La semana 2026-W42 no tiene ningún activo con su referencia guardada."))
-    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
-    assert r.texto.startswith("❌ La semana") and "No pude leer" not in r.texto
-    assert armado.llamadas == [] and armado.estado.usados(CAMILA, AHORA) == 0
-    assert not armado.registro.exists()
+        pr.PreparacionFallida("el terminal no entregó XAUUSD"))
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert "XAUUSD" in r.texto and armado.llamadas == []
 
 
 def test_agy_sin_responder_no_gasta_cupo(armado):
     armado.atendedor.redactar = redactor([], codigo="timeout")
-    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
     assert "No gasté tu cupo" in r.texto and not r.archivos
     assert armado.estado.usados(CAMILA, AHORA) == 0
     assert not armado.registro.exists()  # sin foto anotada, el próximo pedido vuelve a intentar
@@ -264,22 +313,13 @@ def test_texto_invalido_de_agy_no_sale(armado):
         return SimpleNamespace(codigo="ok", detalle="")
 
     armado.atendedor.redactar = redactar_mal
-    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
     assert "controles" in r.texto and not r.archivos
     assert armado.estado.usados(CAMILA, AHORA) == 0
 
 
-def test_datos_que_no_estan_no_gastan_agy(armado):
-    def sin_datos(orden, d, a, **kw):
-        raise pr.PreparacionFallida("el terminal no entregó XAUUSD")
-
-    armado.atendedor.preparar = sin_datos
-    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
-    assert "XAUUSD" in r.texto and armado.llamadas == []
-
-
 def test_cupo_diario(armado):
-    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
     armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "COPPER"})))
     assert "cupo" in r.texto and not r.archivos
@@ -305,7 +345,7 @@ def test_el_saludo_se_aplica_al_responder_y_no_se_hereda_entre_ejecutivos(armado
     assert d.texto.startswith("Hola, ") and armado.llamadas == []
 
 
-@pytest.mark.parametrize("orden", [od.Orden("oportunidad"), od.Orden("seguimiento", {"ticker": "XAUUSD"})])
+@pytest.mark.parametrize("orden", [ORO, od.Orden("seguimiento", {"ticker": "XAUUSD"})])
 def test_preparar_usa_el_registro_del_bot(armado, orden):
     """Con un registro inyectado, preparar no puede mirar el real (`rg.RUTA`)."""
     armado.bot.procesar_uno(b.Pedido(CAMILA, 1, orden))
@@ -323,19 +363,16 @@ def test_seguimiento_se_reusa_30_minutos(armado):
     assert armado.preparaciones == 2
 
 
-def test_seguimiento_queda_anotado_en_la_foto_de_la_semana(armado):
-    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
+def test_seguimiento_queda_anotado_en_el_analisis_vigente(armado):
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
     armado.bot.procesar_uno(b.Pedido(OTRO, 2, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
-    import referencia_semanal as rs
-
-    semana = rs.semana_de(AHORA)
-    seg = rg.foto(semana, armado.registro)["seguimientos"]
+    seg = rg.vigente("XAUUSD", AHORA, armado.registro)["seguimientos"]
     assert [(s["ticker"], s["estado"], s["ejecutivo"]) for s in seg] == [("XAUUSD", "en_curso", OTRO)]
 
 
-@pytest.mark.parametrize("error", [pr.SinFotoError("Esta semana todavía no hay análisis publicado."),
-                                   pr.FueraDeLaFotoError("Ese activo no está en el análisis de esta semana.")])
-def test_seguimiento_sin_foto_o_fuera_de_ella_no_gasta_cupo(armado, error):
+def test_seguimiento_sin_analisis_no_gasta_cupo(armado):
+    error = pr.SinAnalisisError("No hay un análisis vigente de XAUUSD: pide primero /oportunidad XAUUSD.")
+
     def falla(orden, d, a, **kw):
         raise error
 
@@ -352,19 +389,14 @@ def test_mt5_caido_en_seguimiento_lo_dice(armado):
     assert "sigue disponible con /oportunidad" in r.texto  # spec §8
 
 
-def test_el_primer_pedido_a_mitad_de_semana_remite_a_seguimiento(armado):
-    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))  # jueves
-    assert "/seguimiento" in r.texto
-
-
 def test_un_registro_danado_se_dice_claro(armado):
     armado.registro.write_text("{no es json", encoding="utf-8")
-    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
-    assert "registro semanal está dañado" in r.texto and "inesperado" not in r.texto
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert "registro de análisis está dañado" in r.texto and "inesperado" not in r.texto
 
 
 def test_la_ayuda_nombra_solo_los_dos_comandos():
-    assert "/oportunidad" in b.AYUDA and "/seguimiento" in b.AYUDA
+    assert "/oportunidad oro" in b.AYUDA and "/seguimiento oro" in b.AYUDA
     for retirado in ("/activo", "/calendario", "/dato", "/jornada"):
         assert retirado not in b.AYUDA
     assert "—" not in b.AYUDA and "–" not in b.AYUDA
@@ -422,7 +454,7 @@ def test_la_ayuda_es_corta_y_trae_ejemplos_para_copiar():
 
 
 def test_estado_muestra_el_cupo(armado):
-    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("oportunidad")))
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
     r, _ = pedir(armado, "/estado")
     assert "1 de 2" in r[0].texto
 

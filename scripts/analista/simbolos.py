@@ -33,8 +33,10 @@ def buscar(texto: str, mt5: Any = None) -> dict[str, Any] | None:
         simbolos = mt5.symbols_get()
     except Exception as exc:  # noqa: BLE001
         raise TerminalNoDisponible(f"MT5 no respondió ({exc.__class__.__name__})") from exc
+    if simbolos is None:  # `symbols_get()` devuelve None cuando falla: es terminal caído, no «no existe»
+        raise TerminalNoDisponible("MT5 no entregó la lista de símbolos")
     quiero = texto.strip().lower()
-    for s in simbolos or ():
+    for s in simbolos:
         if s.name.lower() == quiero:
             return {"ticker": s.name, "descripcion": limpiar(s.description or s.name), "digits": int(s.digits)}
     return None

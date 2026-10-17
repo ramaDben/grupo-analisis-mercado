@@ -48,3 +48,12 @@ def test_sin_terminal_se_dice():
 
     with pytest.raises(sm.TerminalNoDisponible):
         sm.buscar("oro", mt5=Roto())
+
+
+def test_un_listado_none_es_terminal_caido_y_no_simbolo_inexistente():
+    class SinListado:
+        def symbols_get(self):
+            return None
+
+    with pytest.raises(sm.TerminalNoDisponible):
+        sm.buscar("oro", mt5=SinListado())
