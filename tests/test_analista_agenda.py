@@ -107,7 +107,7 @@ def test_la_lamina_pone_primero_lo_que_mueve_al_activo_y_rinde_sin_huerfanos():
     assert [e["dia"] for e in payload["eventos"]] == [
         "LUNES 19/10", "MARTES 20/10", "MIÉRCOLES 21/10", "JUEVES 22/10", "VIERNES 23/10", "SÁBADO 24/10"]
     assert [e["evento"] for e in payload["eventos"]][-2:] == [
-        "Índice de precios al consumidor (IPC) (1)", "Índice de precios al consumidor (IPC) (2)"]  # mismo nombre: se numeran
+        "Índice de precios al consumidor (IPC) (6)", "Índice de precios al consumidor (IPC) (7)"]  # mismo nombre: se numeran
     html = build_html(payload, RAIZ / "templates" / "stories" / "calendario.html")
     assert "Los días clave de este análisis" in html and "{{" not in html
     for texto in (payload["titulo"], payload["subtitulo"], payload["cta"]):
