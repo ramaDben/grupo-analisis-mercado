@@ -61,8 +61,9 @@ el bot lo dice en lugar de afirmar que el símbolo no existe.
 - El análisis caducado **queda en `data/semanal/registro.json`** con su motivo y fecha
   (`caducada`). El registro se versiona; las entradas del formato antiguo (una por semana) se
   conservan como historia de solo lectura.
-- Con el terminal caído no se rehace: se entrega el vigente con el aviso «No pude verificar si
-  sigue vigente».
+- Si ya hay un análisis vigente y falla la verificación de vigencia (terminal caído), no se rehace:
+  se entrega el vigente con el aviso «No pude verificar si sigue vigente». Sin análisis vigente y
+  con el terminal caído, el pedido falla (ver «Cuando algo falla»).
 
 ### Fuentes de prestigio
 
@@ -79,11 +80,15 @@ el bot lo dice en lugar de afirmar que el símbolo no existe.
 
 ### Invitación comercial
 
-Por regulación (director, 2026-10-16) la pieza **no invita a operar**: invita a **revisar la
+Por regulación (director, 2026-10-16) la pieza de `/oportunidad` (ficha y texto reenviable) **no invita a operar**: invita a **revisar la
 plataforma MT5 con el cliente**. El bloque se titula «Para revisar con tu cliente en MT5», el mensaje
 breve para el cliente propone mirar el gráfico y los escenarios en MT5, y el panel de simulación
 lleva el rótulo «Ejemplo ilustrativo para revisar en MT5». `esquema.py` rechaza un texto que
 invite a operar.
+
+**Pendiente:** la lámina de `/seguimiento` todavía lleva `comercial.INVITACION_ACTIVA`
+(«¿Te interesa operar este escenario?…»). El plan la dejó fuera de alcance y queda pendiente de
+decisión del director.
 
 ### Seguimiento
 
