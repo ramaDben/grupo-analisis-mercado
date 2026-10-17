@@ -54,7 +54,7 @@ def test_un_activo_sin_simulacion_muestra_el_motivo_y_no_tiene_inputs(tmp_path):
     p["datos"]["activos"][0]["contrato"] = None
     p["huella"] = es._huella(p)
     html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
-    assert "Sin simulación esta semana: el gráfico no marca un nivel claro donde el análisis dejaría de valer, y sin ese nivel no hay dónde poner el stop" in html
+    assert "Sin simulación en este análisis: el gráfico no marca un nivel claro donde el análisis dejaría de valer, y sin ese nivel no hay dónde poner el stop" in html
     bloque = html.split('data-ticker="XAUUSD"')[1].split("</section>")[0]
     assert 'name="perdida"' not in bloque
 
@@ -88,7 +88,7 @@ def test_un_activo_sin_simulacion_igual_entra_al_correo(tmp_path):
     assert 'name="incluir"' in bloque and 'name="perdida"' not in bloque
     datos = json.loads(re.search(r'<script id="datos" type="application/json">(.*?)</script>', html, re.S).group(1))
     assert datos["activos"][0]["motivo"] == "el gráfico no marca un nivel claro donde el análisis dejaría de valer, y sin ese nivel no hay dónde poner el stop"
-    assert "Sin simulación esta semana: " in html
+    assert "Sin simulación en este análisis: " in html
 
 
 def test_sin_contrato_el_cliente_ve_los_niveles_y_el_ejecutivo_el_aviso(tmp_path):
@@ -184,7 +184,7 @@ def test_el_titulo_del_correo_cuenta_los_activos_incluidos_y_no_dice_igual_para_
         pg = b.new_page()
         pg.goto(ruta.as_uri())
         v = pg.locator("#vista-correo")
-        assert "El activo con escenarios clave para revisar en MT5 esta semana" in v.inner_text()
+        assert "El activo con escenarios clave para revisar en MT5" in v.inner_text()
         pg.locator("[name=incluir]").first.uncheck()
         assert "Marca al menos un activo" in v.inner_text()
         pg.locator("[name=incluir]").first.check()
@@ -287,3 +287,16 @@ def test_el_archivo_lleva_el_activo_y_el_ejecutivo(tmp_path):
 
 def test_la_cabecera_muestra_hasta_cuando_vale(tmp_path):
     assert "lunes 19/10" in _html(tmp_path)
+
+
+def test_la_ficha_no_habla_de_la_semana_con_vigencia_de_7_dias(tmp_path):
+    """La vigencia es de 7 días corridos, no de una semana calendario: los rótulos hablan del análisis."""
+    p = _pieza(tmp_path)
+    html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    for viejo in ("Escenario de la semana", "Análisis técnico de la semana", "Sin simulación esta semana",
+                  "de esta semana", "en MT5 esta semana"):
+        assert viejo not in html, viejo
+    assert "Escenario del análisis" in html and "Análisis técnico vigente" in html
+    p["datos"]["activos"][0]["escenario"]["motivo"] = "sin nivel claro"
+    p["huella"] = es._huella(p)
+    assert "Sin simulación esta semana" not in oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)

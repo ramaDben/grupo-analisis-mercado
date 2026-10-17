@@ -85,7 +85,7 @@ def _panel(a: dict[str, Any], ejecutivo: str) -> str:
     esc, f = a["escenario"], a["fmt"]
     motivo = _motivo(a)
     if motivo:
-        return ('<div class="panel sin-simulacion"><p>Sin simulación esta semana: '
+        return ('<div class="panel sin-simulacion"><p>Sin simulación en este análisis: '
                 f'{ih.e(motivo)}</p>'
                 '<label><input type="checkbox" name="incluir" checked> Incluir en el correo</label></div>')
     lejos = (f'<p class="nota">El objetivo está a {str(esc["dias_objetivo"]).replace(".", ",")} días de '
@@ -181,7 +181,7 @@ def _simulacion_correo(a: dict[str, Any], ejecutivo: str, c: dict[str, str]) -> 
     """La simulación del ejecutivo: cuadro rojo (stop) y verde (objetivo) del mismo tamaño."""
     motivo = _motivo(a)
     if motivo:
-        celda = _p(f'<strong style="color:{c["texto_1"]};">Sin simulación esta semana:</strong> {ih.e(motivo)}',
+        celda = _p(f'<strong style="color:{c["texto_1"]};">Sin simulación en este análisis:</strong> {ih.e(motivo)}',
                    c, tam=15, margen="0")
         return _tabla(f'<tr><td bgcolor="{c["fondo"]}" style="padding:14px 16px;background:{c["fondo"]};'
                       f'border:1px solid {c["linea"]};border-radius:12px;">{celda}</td></tr>')
@@ -255,7 +255,7 @@ def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: P
           f'color:{c["texto_1"]};">{ih.e(titular)}</p>'
         + precio + _separador() + grafico + _separador()
         + _p(ih.e(contexto), c)
-        + _rotulo(f'Escenario de la semana · <span style="color:{color_dir};">'
+        + _rotulo(f'Escenario del análisis · <span style="color:{color_dir};">'
                   f'{ih.e(lec["direccion"].capitalize())}</span>', c, margen="10px 0 8px 0")
         + _tabla(filas, estilo=f'background:{c["tarjeta"]};border:1px solid {c["linea"]};border-radius:12px;',
                  fondo=c["tarjeta"])
@@ -298,14 +298,14 @@ def _marco_correo(d: dict[str, Any], ed: dict[str, Any], ejecutivo: dict[str, An
     portada = (
         '<tr><td class="pad" style="padding:30px 40px 22px 40px;">'
         + _p('<span class="saludo-cliente">Estimado(a):</span>', c, tam=18, peso=700, color="texto_1", margen="0 0 12px 0")
-        + _p("Te escribo para compartirte el análisis técnico y fundamental de esta semana, preparado por la "
+        + _p("Te escribo para compartirte el análisis técnico y fundamental vigente, preparado por la "
              "Dirección de Análisis Técnico de Grupo Inteligencia: la lectura del activo, sus niveles, lo que "
              "puede mover su precio y qué dicen los bancos. Me gustaría revisarlo contigo en la plataforma MT5.",
              c, tam=17, margen="0")
         + '</td></tr>'
         f'<tr><td class="pad" bgcolor="{c["tarjeta"]}" style="background:{c["tarjeta"]};'
         f'background-image:linear-gradient(135deg,{c["tarjeta"]} 0%,{c["fondo_alt"]} 100%);padding:22px 40px 24px 40px;">'
-        + _rotulo("Análisis técnico de la semana", c, margen="0 0 8px 0")
+        + _rotulo("Análisis técnico vigente", c, margen="0 0 8px 0")
         + f'<h1 class="h1" style="margin:0;font-family:{F_DISPLAY};font-size:24px;line-height:31px;'
           f'font-weight:700;color:{c["texto_1"]};"><!--TITULO--></h1></td></tr>')
     revision = (

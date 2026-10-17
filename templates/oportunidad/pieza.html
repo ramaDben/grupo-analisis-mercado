@@ -85,7 +85,7 @@
 <div class="banda"><img src="{{logo}}" alt="Grupo Inteligencia">
   <p class="semana">{{semana}}<strong>Análisis del {{edicion}}</strong></p></div>
 <div class="filete"></div>
-<header class="portada"><p class="chip">Análisis técnico de la semana</p>
+<header class="portada"><p class="chip">Análisis técnico vigente</p>
   <h1>{{titular}}</h1><p>{{bajada}}</p></header>
 {{activos}}
 <section class="correo"><h2>Correo para tu cliente</h2>
@@ -184,7 +184,7 @@
     var saludo = document.getElementById('cliente').value.trim().replace(/[<>&"]/g, '');
     if (saludo && !/[:,.;]$/.test(saludo)) saludo += ':';
     var yo = nombreEj(), n = partes.length;
-    var titulo = (n === 1 ? 'El activo' : 'Los ' + n + ' activos') + ' con escenarios clave para revisar en MT5 esta semana';
+    var titulo = (n === 1 ? 'El activo' : 'Los ' + n + ' activos') + ' con escenarios clave para revisar en MT5';
     return document.getElementById('correo-marco').innerHTML.replace('<!--ACTIVOS-->', partes.join(''))
       .split(DATOS.ejecutivo.replace(/&/g, '&amp;')).join(yo.replace(/[<>&"]/g, ''))
       .replace('<!--TITULO-->', titulo).replace('<span class="saludo-cliente">Estimado(a):</span>', saludo || 'Estimado(a):');

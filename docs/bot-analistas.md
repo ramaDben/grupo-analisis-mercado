@@ -86,9 +86,9 @@ breve para el cliente propone mirar el gráfico y los escenarios en MT5, y el pa
 lleva el rótulo «Ejemplo ilustrativo para revisar en MT5». `esquema.py` rechaza un texto que
 invite a operar.
 
-**Pendiente:** la lámina de `/seguimiento` todavía lleva `comercial.INVITACION_ACTIVA`
-(«¿Te interesa operar este escenario?…»). El plan la dejó fuera de alcance y queda pendiente de
-decisión del director.
+**Decidido por el director (2026-10-17): se mantiene tal como está.** La lámina de `/seguimiento`
+lleva `comercial.INVITACION_ACTIVA` («¿Te interesa operar este escenario?…»), y esa invitación
+queda fuera de la regla de `/oportunidad`.
 
 ### Seguimiento
 
