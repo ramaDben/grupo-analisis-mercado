@@ -338,3 +338,38 @@ def test_cache_ttl_dinamico_mercado_activo():
     assert calendar._cache_ttl(domingo) == 3600
 
 
+
+
+# ── pestañas (spec 2026-10-17 §3) ─────────────────────────────────────────────
+
+def test_por_defecto_pide_solo_la_semana_en_curso(monkeypatch):
+    pedidas = []
+    monkeypatch.setattr(calendar, "_fetch_calendario", lambda tab: pedidas.append(tab) or _fila())
+    monkeypatch.setattr(calendar, "_cargar_glosario", lambda: _GLOSARIO_TEST)
+    calendar.cargar_calendario(solo_hoy=False, min_impact="low")
+    assert pedidas == ["thisWeek"]
+
+
+def test_dos_pestanas_se_juntan_sin_repetir_eventos(monkeypatch):
+    def fetch(tab):
+        comun = _fila(row_id=1)  # la misma fila en las dos pestañas
+        extra = _fila(row_id=2, nombre="Nonfarm Payrolls", pais="United States", divisa="USD", dias_offset=3)
+        return comun + (extra if tab == "nextWeek" else "")
+
+    monkeypatch.setattr(calendar, "_fetch_calendario", fetch)
+    monkeypatch.setattr(calendar, "_cargar_glosario", lambda: _GLOSARIO_TEST)
+    res = calendar.cargar_calendario(solo_hoy=False, min_impact="low", pestanas=("thisWeek", "nextWeek"))
+    assert sorted(e["nombre"] for e in res["eventos"]) == ["Core CPI (MoM) (May)", "Nonfarm Payrolls"]
+
+
+def test_una_pestana_caida_no_tumba_la_otra(monkeypatch):
+    monkeypatch.setattr(calendar, "_fetch_calendario", lambda tab: "" if tab == "thisWeek" else _fila())
+    monkeypatch.setattr(calendar, "_cargar_glosario", lambda: _GLOSARIO_TEST)
+    res = calendar.cargar_calendario(solo_hoy=False, min_impact="low", pestanas=("thisWeek", "nextWeek"))
+    assert "error" not in res and len(res["eventos"]) == 1
+
+
+def test_todas_las_pestanas_caidas_es_error(monkeypatch):
+    monkeypatch.setattr(calendar, "_fetch_calendario", lambda tab: "")
+    res = calendar.cargar_calendario(solo_hoy=False, pestanas=("thisWeek", "nextWeek"))
+    assert res["error"] == "NO_CALENDAR_FEEDS"
