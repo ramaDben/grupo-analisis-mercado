@@ -325,35 +325,22 @@ def preparar_seguimiento(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
     from estrategia.contrato import lectura_de_dict
 
     from analista import oportunidad as op
-    from analista import registro_semanal as rg
     from analista import seguimiento as sg
 
-    semana = rs.semana_de(ahora)
-    foto = rg.foto(semana, lec.registro or rg.RUTA)  # un registro corrupto levanta ValueError: no es "sin foto"
-    if foto is None:
-        raise SinFotoError("Esta semana todavía no hay análisis publicado: pide primero /oportunidad.")
-    pieza_foto = cargar_pieza(Path(foto["dir"]))
-    activos = {a["ticker"]: a for a in pieza_foto["datos"]["activos"]}
     ticker = orden.args["ticker"]
-    if ticker not in activos:
-        nombres = ", ".join(a["nombre"] for a in activos.values())
-        raise FueraDeLaFotoError(f"Ese activo no está en el análisis de esta semana. Los de esta semana: {nombres}.")
-    a = activos[ticker]
+    vig = rg.vigente(ticker, ahora, lec.registro or rg.RUTA)  # un registro corrupto levanta: no es "sin análisis"
+    if vig is None:
+        raise SinAnalisisError(f"No hay un análisis vigente de {ticker}: pide primero /oportunidad {ticker}.")
+    a = cargar_pieza(Path(vig["dir"]))["datos"]["activos"][0]
     esc = a["escenario"]
     # Sin simulación es un estado válido (el activo va igual al correo con su motivo): se
     # entrega la lectura de hoy y la simulación dice por qué no la hay.
     motivo = op.motivo_sin_simulacion(a)
     referencia_foto = lectura_de_dict(a["lectura"])
-    base = lec.base_referencias or rs.DIR
     estrategia = lec.estrategia()
-    try:
-        diaria = lec.lectura_del_dia(estrategia, ticker, a["digits"], semana, lec.velas, base=base)
-    except rs.SinReferencia as exc:
-        raise PreparacionFallida(f"{ticker}: {exc}") from exc
-    vigente = rs.cargar(semana, ticker, base)
-    reemplazada = diaria.reemplazo is not None or (vigente is not None
-                                                   and rs.firma(vigente) != rs.firma(referencia_foto))
-    h4 = diaria.velas[referencia_foto.marco]
+    lectura, velas = lec.lectura_actual(estrategia, ticker, a["digits"], lec.velas, ahora, referencia=referencia_foto)
+    reemplazada = rs.debe_reemplazar(referencia_foto, lectura)
+    h4 = velas[referencia_foto.marco]
     posteriores = h4[h4["time"] > referencia_foto.vela].to_dict("records") if len(h4) else []
     ultima_cerrada = posteriores[-1]["time"] if posteriores else (int(h4.iloc[-1]["time"]) if len(h4) else int(referencia_foto.vela))
     vela_viva = None
@@ -377,23 +364,23 @@ def preparar_seguimiento(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
                     vela_viva = {"high": float(r["high"]), "low": float(r["low"])}
         except Exception:  # noqa: BLE001
             vela_viva = None
-    precio = diaria.lectura.precio
+    precio = lectura.precio
     atr = float(referencia_foto.metricas.get("atr") or 0.0)
     tolerancia = sg.TOLERANCIA_ATR * atr
     ev = ({"estado": "sin_simulacion", "avance_pct": None, "motivo": motivo} if motivo
           else sg.evaluar(esc, posteriores, precio, vela_viva=vela_viva, tolerancia=tolerancia))
-    lectura_hoy = sg.texto_lectura(diaria.lectura, reemplazada, a["digits"])
+    lectura_hoy = sg.texto_lectura(lectura, reemplazada, a["digits"])
     hoy = fecha_corta(ahora)
-    texto = sg.mensaje(a["nombre"], hoy, a["foto"]["fecha"], esc, ev, precio, diaria.lectura, reemplazada,
+    texto = sg.mensaje(a["nombre"], hoy, a["foto"]["fecha"], esc, ev, precio, lectura, reemplazada,
                        a["digits"])
-    lec.grafico_lectura(ticker, a["nombre"], _sin_segundo_objetivo(diaria.lectura, not motivo),
+    lec.grafico_lectura(ticker, a["nombre"], _sin_segundo_objetivo(lectura, not motivo),
                         dir_pedido / "grafico.png", digits=a["digits"],
-                        niveles=niveles_lamina_seguimiento(esc, not motivo, diaria.lectura))
-    datos = {"semana": semana, "ticker": ticker, "nombre": a["nombre"], "evaluacion": ev, "precio_vivo": precio,
+                        niveles=niveles_lamina_seguimiento(esc, not motivo, lectura))
+    datos = {"semana": rs.semana_de(ahora), "ticker": ticker, "nombre": a["nombre"], "evaluacion": ev, "precio_vivo": precio,
              "lectura_hoy": lectura_hoy, "reemplazada": reemplazada, "whatsapp": texto,
              "edicion": f"{hoy} · {ahora.astimezone(SANTIAGO):%H:%M}", "activo": a}
     pieza = es.nueva_pieza("seguimiento", {"ticker": ticker}, datos, {"principal": "grafico.png"})
-    return Preparada(pieza, list(diaria.avisos))
+    return Preparada(pieza, [])
 
 
 def _contexto_sin_porcentajes(contexto: dict[str, Any]) -> dict[str, Any]:

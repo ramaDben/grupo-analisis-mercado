@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
@@ -46,13 +46,6 @@ class EstrategiaFalsa:
     class marcos:
         operativo = "H4"
         etiquetas = {"H4": SimpleNamespace(nombre="swing", duracion="de una a dos semanas")}
-
-
-def _sembrar(base, lecturas, puntajes):
-    for lec in lecturas:
-        rs.guardar(lec, SEMANA, "semanal", AHORA_LUNES, base=base)
-    rs.guardar_manifiesto(SEMANA, {"semana": SEMANA, "elegidos": [l.ticker for l in lecturas],
-                                   "puntajes": puntajes, "excluidos": []}, base=base)
 
 
 GRAFICOS: list[dict] = []
@@ -121,62 +114,65 @@ def test_la_curva_va_sin_porcentajes(tmp_path):
 # ───────────────────────────────────────────────────────────── seguimiento
 
 
-def _foto(tmp_path, base, activos):
-    """Una foto ya armada en el registro, como la deja /oportunidad."""
+def _foto(tmp_path, activos):
+    """Un análisis vigente en el registro, como lo deja /oportunidad."""
     d = tmp_path / "foto"
     d.mkdir()
-    p = es.nueva_pieza("oportunidad", {"semana": SEMANA}, {"semana": SEMANA, "activos": activos}, {},
-                       extra_campos={"titulares": [a["ticker"] for a in activos],
-                                     "contexto": [a["ticker"] for a in activos]})
+    a = activos[0]
+    p = es.nueva_pieza("oportunidad", {"ticker": a["ticker"]}, {"ticker": a["ticker"], "activos": activos}, {},
+                       extra_campos={"titulares": [a["ticker"]], "contexto": [a["ticker"]]})
     pr.guardar_pieza(p, d)
-    rg.anotar_foto(SEMANA, d, AHORA_LUNES, [a["ticker"] for a in activos], tmp_path / "registro.json")
+    rg.anotar(a["ticker"], d, AHORA_LUNES, "BAJISTA", {"nombre": "Camila Rojas", "id": "111"},
+              tmp_path / "registro.json")
 
 
-def _lectores_seg(tmp_path, base, velas, precio):
+def _lectores_seg(tmp_path, velas, precio, hoy=None):
     def lector(ticker, marcos, extra=0):
         return {"H4": velas}, None
-    lec = _lectores(base, registro=tmp_path / "registro.json", velas=lector)
-    lec.lectura_del_dia = lambda est, t, d, sem, lector, base=None: rs.Diaria(
-        fx.lectura(precio=precio), None, (), {"H4": velas}, fx.lectura())
+    lec = _lectores(tmp_path / "ref", registro=tmp_path / "registro.json", velas=lector)
+    lec.lectura_actual = lambda est, t, d, lector, ahora, referencia=None: (hoy or fx.lectura(precio=precio),
+                                                                           {"H4": velas})
     return lec
 
 
-def test_seguimiento_lee_la_foto_del_registro_que_se_le_pasa(tmp_path):
-    base = tmp_path / "ref"
-    _sembrar(base, [fx.lectura()], {"XAUUSD": 90.0})
-    _foto(tmp_path, base, [fx.activo_semanal()])
-    lec = _lectores_seg(tmp_path, base, pd.DataFrame(columns=["time", "high", "low"]), 4124.0)
+def test_seguimiento_lee_el_analisis_del_registro_que_se_le_pasa(tmp_path):
+    _foto(tmp_path, [fx.activo_semanal()])
+    lec = _lectores_seg(tmp_path, pd.DataFrame(columns=["time", "high", "low"]), 4124.0)
     lec.registro = None  # sin registro en los lectores, manda el que pasa el bot
     hecha = pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD"}), tmp_path / "s", AHORA_LUNES, lec,
                         registro=tmp_path / "registro.json")
     assert hecha.pieza["datos"]["ticker"] == "XAUUSD"
 
 
-def test_seguimiento_de_un_activo_fuera_de_la_foto_lista_los_que_si(tmp_path):
-    base = tmp_path / "ref"
-    _sembrar(base, [fx.lectura()], {"XAUUSD": 90.0})
-    _foto(tmp_path, base, [fx.activo_semanal()])
-    with pytest.raises(pr.FueraDeLaFotoError, match="Oro"):
-        pr.preparar(Orden("seguimiento", {"ticker": "USDCLP"}), tmp_path / "s", AHORA_LUNES,
-                    _lectores_seg(tmp_path, base, pd.DataFrame(), 4000.0))
-
-
-def test_seguimiento_sin_foto_de_la_semana(tmp_path):
-    with pytest.raises(pr.SinFotoError, match="/oportunidad"):
+def test_seguimiento_sin_analisis_vigente_dice_que_pida_oportunidad(tmp_path):
+    with pytest.raises(pr.SinAnalisisError, match=r"/oportunidad XAUUSD"):
         pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD"}), tmp_path / "s", AHORA_LUNES,
-                    _lectores_seg(tmp_path, tmp_path / "ref", pd.DataFrame(), 4000.0))
+                    _lectores_seg(tmp_path, pd.DataFrame(), 4000.0))
+
+
+def test_seguimiento_de_otro_activo_no_usa_el_analisis_de_uno_vigente(tmp_path):
+    _foto(tmp_path, [fx.activo_semanal()])
+    with pytest.raises(pr.SinAnalisisError, match="USDCLP"):
+        pr.preparar(Orden("seguimiento", {"ticker": "USDCLP"}), tmp_path / "s", AHORA_LUNES,
+                    _lectores_seg(tmp_path, pd.DataFrame(), 4000.0))
+
+
+def test_seguimiento_con_el_analisis_vencido_pide_uno_nuevo(tmp_path):
+    _foto(tmp_path, [fx.activo_semanal()])
+    with pytest.raises(pr.SinAnalisisError):
+        pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD"}), tmp_path / "s",
+                    AHORA_LUNES + rg.VIGENCIA + timedelta(minutes=1), _lectores_seg(tmp_path, pd.DataFrame(), 4000.0))
 
 
 def test_seguimiento_informa_simulacion_y_lectura_por_separado(tmp_path):
-    base = tmp_path / "ref"
-    _sembrar(base, [fx.lectura()], {"XAUUSD": 90.0})
     oro = fx.activo_semanal()
-    _foto(tmp_path, base, [oro])
+    _foto(tmp_path, [oro])
     foto_vela = oro["lectura"]["vela"]
     velas = pd.DataFrame([{"time": foto_vela, "open": 1, "high": 4300, "low": 3000, "close": 1},  # anterior: no cuenta
                           {"time": foto_vela + 14400, "open": 4180, "high": 4190, "low": 4150, "close": 4160}])
     hecha = pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD"}), tmp_path / "s",
-                        datetime(2026, 10, 14, 11, 0, tzinfo=SCL), _lectores_seg(tmp_path, base, velas, 4124.0))
+                        datetime(2026, 10, 14, 11, 0, tzinfo=SCL), _lectores_seg(tmp_path, velas, 4124.0,
+                                                           hoy=fx.lectura(precio=4124.0, invalidacion=4300.0)))
     d = hecha.pieza["datos"]
     assert d["evaluacion"]["estado"] == "en_curso"
     # La simulación (precios fijos del lunes) y la lectura de hoy, en párrafos separados.
@@ -189,21 +185,33 @@ def test_seguimiento_sin_simulacion_entrega_la_lectura_de_hoy(tmp_path):
     """Un activo de la foto sin simulación (solo sin volatilidad medida) es un estado válido."""
     from analista import oportunidad as op
 
-    base = tmp_path / "ref"
-    _sembrar(base, [fx.lectura()], {"XAUUSD": 90.0})
     oro = fx.activo_semanal()
     oro["escenario"] = op.escenario(fx.lectura(atr=0.0), 2).a_dict()
     oro["contrato"] = None
-    _foto(tmp_path, base, [oro])
+    _foto(tmp_path, [oro])
     hecha = pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD"}), tmp_path / "s",
                         datetime(2026, 10, 14, 11, 0, tzinfo=SCL),
-                        _lectores_seg(tmp_path, base, pd.DataFrame(columns=["time", "high", "low"]), 4124.0))
+                        _lectores_seg(tmp_path, pd.DataFrame(columns=["time", "high", "low"]), 4124.0))
     d = hecha.pieza["datos"]
     assert d["evaluacion"]["estado"] == "sin_simulacion"
     assert "plan definido" in d["whatsapp"]
     assert "ahora se vigila" in d["lectura_hoy"] or "sigue en pie" in d["lectura_hoy"]
     assert "No pude leer" not in d["whatsapp"]
     assert "Stop" not in d["whatsapp"] and "Las cifras de la simulación" not in d["whatsapp"]
+
+
+def test_preparar_no_toca_los_directorios_de_produccion(tmp_path):
+    """Ni el análisis ni el seguimiento escriben en data/carrusel/ (verificado por mtime)."""
+    def huella():
+        d = RAIZ / "data" / "carrusel"
+        return sorted((str(f), f.stat().st_mtime_ns) for f in d.rglob("*")) if d.exists() else []
+
+    antes = huella()
+    pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES, _lectores(tmp_path / "ref"))
+    _foto(tmp_path, [fx.activo_semanal()])
+    pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD"}), tmp_path / "s", AHORA_LUNES,
+                _lectores_seg(tmp_path, pd.DataFrame(columns=["time", "high", "low"]), 4124.0))
+    assert huella() == antes
 
 
 def test_el_grafico_del_analisis_traza_los_niveles_de_la_lamina(tmp_path):
@@ -217,12 +225,10 @@ def test_el_grafico_del_analisis_traza_los_niveles_de_la_lamina(tmp_path):
 
 def test_el_grafico_del_seguimiento_traza_la_simulacion_y_la_linea_de_hoy(tmp_path):
     GRAFICOS.clear()
-    base = tmp_path / "ref"
-    _sembrar(base, [fx.lectura()], {"XAUUSD": 90.0})
     oro = fx.activo_semanal()
-    _foto(tmp_path, base, [oro])
+    _foto(tmp_path, [oro])
     pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD"}), tmp_path / "s", datetime(2026, 10, 14, 11, 0, tzinfo=SCL),
-                _lectores_seg(tmp_path, base, pd.DataFrame(columns=["time", "high", "low"]), 4124.0))
+                _lectores_seg(tmp_path, pd.DataFrame(columns=["time", "high", "low"]), 4124.0))
     precios = {p for p, _ in GRAFICOS[-1]["niveles"]}
     esc = oro["escenario"]
     assert {esc["entrada"], esc["stop"], esc["objetivo"], fx.lectura().vigilar.precio} <= precios
