@@ -11,9 +11,9 @@ from analista import RAIZ
 
 DIR_PEDIDOS = RAIZ / "data" / "informes_analistas"
 
-# Un encargo real de agy tarda de 5 a 7 minutos (medido el 2026-09-06). Redactar
-# una pieza es menos trabajo, pero el techo deja margen para la validación.
-TIMEOUT = "12m"
+# Un encargo real de agy tarda de 5 a 7 minutos (medido el 2026-09-06). Con búsqueda web de 3 a 5
+# fuentes medimos 424 s y 652 s el 2026-10-16; el techo deja el doble más la validación.
+TIMEOUT = "25m"
 
 
 class RutaFueraDePedidos(ValueError):
