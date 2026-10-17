@@ -173,6 +173,7 @@ def test_con_eventos_rinde_el_calendario_y_pide_dias_clave(tmp_path):
     assert p["imagenes"]["calendario"] == "calendario_xauusd.png" and (tmp_path / "p" / "calendario_xauusd.png").exists()
     assert p["anidados"]["dias_clave"] == ["XAUUSD"] and p["editorial"]["dias_clave"] == {"XAUUSD": es.MARCA}
     assert "%" not in json.dumps(p["datos"]["agenda"], ensure_ascii=False)
+    assert "%" not in json.dumps(CALENDARIOS[-1], ensure_ascii=False)
     assert p["datos"]["agenda"]["eventos"][0]["esperado"] == "0,3 por ciento"
     assert CALENDARIOS[-1]["eventos"][0]["dia"] == "MIÉRCOLES 14/10" and "agenda_semana" not in p["datos"]
 

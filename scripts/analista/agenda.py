@@ -75,6 +75,32 @@ def _efecto(ev: dict[str, Any], ticker: str, nombre: str) -> str:
             f"{'subir' if verbo == 'sube' else 'bajar'}; si sale bajo lo esperado, lo contrario.")
 
 
+CALIFICADORES = (("manufactur", "manufacturero"), ("services", "servicios"), ("composite", "compuesto"))
+
+
+def _calificador(fuente_nombre: str) -> str:
+    bajo = fuente_nombre.lower()
+    return next((es for clave, es in CALIFICADORES if clave in bajo), "")
+
+
+def distinguir(filas: list[dict[str, Any]]) -> None:
+    """Dos datos con la misma etiqueta del glosario (los PMI manufacturero y de servicios) se leen como
+    una fila repetida con cifras distintas: se les agrega un calificador, y si no basta, la hora o un número."""
+    cuenta: dict[str, int] = {}
+    for f in filas:
+        cuenta[f["evento"]] = cuenta.get(f["evento"], 0) + 1
+    repetidos = {e for e, n in cuenta.items() if n > 1}
+    for f in filas:
+        if f["evento"] in repetidos and (q := _calificador(f["fuente_nombre"])):
+            f["evento"] = f"{f['evento']} ({q})"
+    for etiqueta in {f["evento"] for f in filas}:
+        grupo = [f for f in filas if f["evento"] == etiqueta]
+        if len(grupo) < 2:
+            continue
+        for n, f in enumerate(grupo, 1):
+            f["evento"] = f"{etiqueta} ({n})"
+
+
 def fila(ev: dict[str, Any], ticker: str, nombre: str) -> dict[str, Any]:
     cuando = _cuando(ev)
     dic = ev.get("diccionario") or {}
@@ -138,6 +164,7 @@ def leer_ventana(ahora: datetime, ticker: str, nombre: str, cargar: Callable[...
             filas.append((cuando, fila(ev, ticker, nombre)))
     filas.sort(key=lambda par: par[0])
     eventos = [f for _, f in filas]
+    distinguir(eventos)
     estado = "ok" if eventos else ("sin_calendario" if fallidas else "vacia")
     return Agenda(dia_corto(ahora), dia_corto(limite), estado, eventos, avisos)
 

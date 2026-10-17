@@ -106,8 +106,28 @@ def test_la_lamina_pone_primero_lo_que_mueve_al_activo_y_rinde_sin_huerfanos():
     # otros (E23); después van en orden de calendario.
     assert [e["dia"] for e in payload["eventos"]] == [
         "LUNES 19/10", "MARTES 20/10", "MIÉRCOLES 21/10", "JUEVES 22/10", "VIERNES 23/10", "SÁBADO 24/10"]
-    assert [e["evento"] for e in payload["eventos"]][-2:] == ["Índice de precios al consumidor (IPC)"] * 2
+    assert [e["evento"] for e in payload["eventos"]][-2:] == [
+        "Índice de precios al consumidor (IPC) (1)", "Índice de precios al consumidor (IPC) (2)"]  # mismo nombre: se numeran
     html = build_html(payload, RAIZ / "templates" / "stories" / "calendario.html")
     assert "Los días clave de este análisis" in html and "{{" not in html
     for texto in (payload["titulo"], payload["subtitulo"], payload["cta"]):
         assert "—" not in texto and "oportunidad" not in texto.lower() and "operar" not in texto.lower()
+
+
+def test_dos_datos_con_el_mismo_nombre_del_glosario_se_distinguen():
+    pmi = {"nombre_es": "Índice de gerentes de compra", "explicacion": "Mide la actividad."}
+    manu = {**ev("2026-10-23 10:45", nombre="S&P Global Manufacturing PMI (Oct)"), "diccionario": pmi}
+    serv = {**ev("2026-10-23 10:45", nombre="S&P Global Services PMI (Oct)"), "diccionario": pmi}
+    a = ag.leer_ventana(SABADO, "XAUUSD", "Oro", cargar=cargador({"thisWeek": [], "nextWeek": [manu, serv]}))
+    assert [e["evento"] for e in a.eventos] == ["Índice de gerentes de compra (manufacturero)",
+                                                "Índice de gerentes de compra (servicios)"]
+    sin = {**ev("2026-10-23 10:45", nombre="Otro A"), "diccionario": pmi}
+    con = {**ev("2026-10-23 10:45", nombre="Otro B"), "diccionario": pmi}
+    b = ag.leer_ventana(SABADO, "XAUUSD", "Oro", cargar=cargador({"thisWeek": [], "nextWeek": [sin, con]}))
+    etiquetas = [e["evento"] for e in b.eventos]
+    assert len(set(etiquetas)) == 2 and all(e.startswith("Índice de gerentes de compra") for e in etiquetas)
+
+
+def test_un_dato_solo_conserva_su_nombre_simple():
+    a = ag.leer_ventana(SABADO, "XAUUSD", "Oro", cargar=cargador({"thisWeek": [], "nextWeek": [ev("2026-10-21 09:30")]}))
+    assert a.eventos[0]["evento"] == "Índice de precios al consumidor (IPC)"
