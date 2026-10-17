@@ -18,6 +18,7 @@ for p in (str(RAIZ / "src"), str(RAIZ / "scripts"), str(RAIZ / "tests")):
 import analista_fixtures as fx  # noqa: E402
 from analista import bot as b  # noqa: E402
 from analista import esquema as es  # noqa: E402
+from analista import fuentes as fu  # noqa: E402
 from analista import orden as od  # noqa: E402
 from analista import preparar as pr  # noqa: E402
 from analista import simbolos as sm  # noqa: E402
@@ -59,9 +60,10 @@ class Armado:
         self.aviso_vigencia: str | None = None
         self.eventos: list[dict] = []  # el calendario falso: vacío salvo que la prueba lo llene
         self.registro = tmp_path / "registro.json"
+        self.reintentos: list = []
         self.atendedor = b.Atendedor(
             config, b.Estado.cargar(tmp_path / "estado.json"), autor=fx.AUTOR, preparar=self.preparar_falso,
-            redactar=redactor(self.llamadas), rendir_lamina=self.rendir_falso, reloj=self.reloj,
+            redactar=redactor(self.llamadas), redactar_fuentes=self.redactar_fuentes_falso, rendir_lamina=self.rendir_falso, reloj=self.reloj,
             dir_pedidos=tmp_path / "pedidos", registro=self.registro,
             calendario=lambda ahora: self.eventos,
             verificar_vigencia=lambda pieza, ahora: (self.caduca, self.aviso_vigencia),
@@ -69,6 +71,11 @@ class Armado:
             verificar_url=lambda url: "ok")
         self.bot = b.Bot(TgFalso(), self.atendedor)
         self.estado = self.atendedor.estado
+
+    def redactar_fuentes_falso(self, ruta, tier):
+        """Por defecto el segundo intento no escribe nada: cada prueba que lo usa lo reemplaza."""
+        self.reintentos.append(ruta)
+        return SimpleNamespace(codigo="ok", detalle="")
 
     def preparar_falso(self, orden, dir_pedido, ahora, **kw):
         self.preparaciones += 1
@@ -97,6 +104,8 @@ def redactor(llamadas, codigo="ok"):
         dir_pedido = ruta.parent
         pieza = pr.cargar_pieza(dir_pedido)
         pieza["editorial"].update(fx.pieza_oportunidad(dir_pedido)["editorial"])
+        # La fuente del ejemplo es posterior al reloj de estas pruebas: con su fecha, depurar la descarta.
+        pieza["editorial"]["fuentes"] = [{**fx.FUENTES_EJEMPLO[0], "fecha": "2026-10-06"}]
         pr.guardar_pieza(pieza, dir_pedido)
         return SimpleNamespace(codigo="ok", detalle="")
     return redactar
@@ -237,7 +246,7 @@ def test_las_fuentes_malas_se_descartan_y_se_avisan_sin_botar_la_pieza(armado):
     assert len(pr.cargar_pieza(next((armado.tmp / "pedidos").rglob("pieza.json")).parent)["editorial"]["fuentes"]) == 1
 
 
-def test_sin_voces_validas_la_pieza_sale_y_lo_dice(armado):
+def test_sin_voces_validas_ni_en_el_reintento_no_sale_ni_gasta_cupo(armado):
     def redactar(ruta, tier):
         pieza = pr.cargar_pieza(ruta.parent)
         pieza["editorial"].update(fx.pieza_oportunidad(ruta.parent)["editorial"])
@@ -247,7 +256,9 @@ def test_sin_voces_validas_la_pieza_sale_y_lo_dice(armado):
 
     armado.atendedor.redactar = redactar
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
-    assert r.archivos and "Sin voces" in r.aparte
+    assert not r.archivos and "ninguna voz de banco" in r.texto and "No gasté tu cupo" in r.texto
+    assert armado.estado.usados(CAMILA, AHORA) == 0 and rg.vigente("XAUUSD", AHORA, armado.registro) is None
+    assert len(armado.reintentos) == 1
 
 
 def test_un_simbolo_libre_se_canoniza_contra_el_terminal(armado):
@@ -554,3 +565,59 @@ def test_el_reuso_propio_no_se_anota(armado):
     assert rg.vigente("XAUUSD", AHORA, armado.registro)["reusos"] == []
     armado.bot.procesar_uno(b.Pedido(OTRO, 2, ORO))
     assert [x["id"] for x in rg.vigente("XAUUSD", AHORA, armado.registro)["reusos"]] == [OTRO]
+
+
+# ───────────────────────────────────────────── un banco o nada (spec 2026-10-17 §5)
+
+BANCO = {**fx.FUENTES_EJEMPLO[0], "fecha": "2026-10-06"}
+WGC = {"entidad": "World Gold Council", "medio": "World Gold Council", "fecha": "2026-10-06",
+       "url": "https://www.gold.org/goldhub/research/demanda-octubre", "postura": "alcista",
+       "tesis": "World Gold Council ve demanda firme de los bancos centrales.", "verificacion": "ok"}
+
+
+def test_con_banco_al_primer_intento_no_hay_reintento(armado):
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert r.archivos and armado.reintentos == [] and "segundo intento" not in r.aparte
+    carpeta = next((armado.tmp / "pedidos").rglob("pieza.json")).parent
+    assert (carpeta / "agy_salida_1.json").exists() and not (carpeta / fu.INTENTO).exists()
+
+
+def test_sin_banco_el_reintento_solo_reabre_las_fuentes_y_la_pieza_sale(armado):
+    vistos = []
+
+    def fuentes_falso(ruta, tier):
+        pieza = pr.cargar_pieza(ruta.parent)
+        vistos.append(json.loads(json.dumps(pieza["editorial"])))
+        pieza["editorial"]["fuentes"] = [WGC, BANCO]
+        pr.guardar_pieza(pieza, ruta.parent)
+        return SimpleNamespace(codigo="ok", detalle="", respuesta="OK", segundos=61.0)
+
+    armado.atendedor.redactar = _redactor_con_fuentes([WGC])
+    armado.atendedor.redactar_fuentes = fuentes_falso
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert r.archivos and "segundo intento" in r.aparte
+    assert vistos[0]["fuentes"] == es.MARCA and vistos[0]["contexto"]["XAUUSD"] != es.MARCA
+    carpeta = next((armado.tmp / "pedidos").rglob("pieza.json")).parent
+    intento = json.loads((carpeta / fu.INTENTO).read_text(encoding="utf-8"))
+    assert [f["entidad"] for f in intento["validas"]] == ["World Gold Council"]
+    salida = json.loads((carpeta / "agy_salida_2.json").read_text(encoding="utf-8"))
+    assert salida["segundos"] == 61.0 and salida["respuesta"] == "OK"
+    assert [f["entidad"] for f in pr.cargar_pieza(carpeta)["editorial"]["fuentes"]] == ["World Gold Council", "Goldman Sachs"]
+
+
+def test_sin_banco_en_dos_intentos_dice_los_descartes(armado):
+    roto = {**BANCO, "url": "https://blog.example.com/oro"}  # dominio que no es de Reuters
+    armado.atendedor.redactar = _redactor_con_fuentes([WGC, roto])
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert "ninguna voz de banco" in r.texto and "Goldman Sachs: el dominio" in r.texto
+    assert armado.estado.usados(CAMILA, AHORA) == 0
+
+
+def test_validar_exige_una_voz_de_banco(tmp_path, capsys):
+    import bot_analistas
+
+    pr.guardar_pieza(fx.pieza_oportunidad(tmp_path, fuentes=[WGC]), tmp_path)
+    assert bot_analistas.validar(tmp_path / "pieza.json") == 1
+    assert "voz de banco" in capsys.readouterr().out
+    pr.guardar_pieza(fx.pieza_oportunidad(tmp_path), tmp_path)
+    assert bot_analistas.validar(tmp_path / "pieza.json") == 0

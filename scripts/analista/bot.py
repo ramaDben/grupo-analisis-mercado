@@ -198,6 +198,29 @@ def _agy_real(ruta_pieza: Path, tier: str):
     return escribir_textos(ruta_pieza, tier)
 
 
+def _agy_fuentes_real(ruta_pieza: Path, tier: str):
+    """El segundo intento: solo `fuentes` sigue por escribir, con un techo menor (spec 2026-10-17 §5)."""
+    from analista.agy import TIMEOUT_REINTENTO, escribir_textos
+
+    return escribir_textos(ruta_pieza, tier, TIMEOUT_REINTENTO)
+
+
+SIN_BANCO = ("No encontré ninguna voz de banco con su nota vigente (de los últimos {dias} días) sobre {nombre}, "
+             "ni en un segundo intento, y sin ella el análisis no sale. No gasté tu cupo: vuelve a pedirlo más "
+             "tarde, cada pedido hace una búsqueda nueva.")
+
+
+def _guardar_salida_agy(dir_pedido: Path, res: Any, intento: int) -> None:
+    """Lo que respondió agy, para auditar si buscó (spec 2026-10-17 §5.4). Nunca bota el pedido."""
+    datos = {"intento": intento, "codigo": getattr(res, "codigo", "ok"), "segundos": getattr(res, "segundos", None),
+             "respuesta": str(getattr(res, "respuesta", "") or "")[:20000]}
+    try:
+        (dir_pedido / f"agy_salida_{intento}.json").write_text(json.dumps(datos, ensure_ascii=False, indent=2),
+                                                                encoding="utf-8")
+    except OSError:
+        pass
+
+
 @dataclass
 class Atendedor:
     """Convierte un pedido en archivos. Todo lo externo se inyecta."""
@@ -207,6 +230,7 @@ class Atendedor:
     autor: au.Autor
     preparar: Callable[..., pr.Preparada] = pr.preparar
     redactar: Callable[[Path, str], Any] = _agy_real
+    redactar_fuentes: Callable[[Path, str], Any] = _agy_fuentes_real
     rendir_lamina: Callable[..., Path] = cm.rendir
     reloj: Callable[[], datetime] = lambda: datetime.now(SANTIAGO)
     dir_pedidos: Path = DIR_PEDIDOS
@@ -250,11 +274,15 @@ class Atendedor:
                               "por ejemplo oro, dolar, cobre o AAPL.US.")
         return od.Orden(orden.pieza, {"ticker": info["ticker"]}, orden.saludo)
 
-    def _redactar_y_validar(self, dir_pedido: Path, hoy) -> tuple[dict[str, Any], list[str]]:
-        res = self.redactar(dir_pedido / "pieza.json", self.config["tier"])
+    def _redactar_y_validar(self, dir_pedido: Path, hoy, redactar: Callable[[Path, str], Any] | None = None,
+                            intento: int = 1) -> tuple[dict[str, Any], list[str], list[Any]]:
+        res = (redactar or self.redactar)(dir_pedido / "pieza.json", self.config["tier"])
+        _guardar_salida_agy(dir_pedido, res, intento)
         if getattr(res, "codigo", "ok") != "ok":
             raise FalloPedido(f"La redacción no terminó ({res.codigo}: {res.detalle}). No gasté tu cupo.")
         pieza = pr.cargar_pieza(dir_pedido)
+        crudas = pieza["editorial"].get("fuentes")
+        crudas = list(crudas) if isinstance(crudas, list) else []
         pieza, descartes = fu.depurar_pieza(pieza, hoy, verificar=self.verificar_url)
         # Una tesis con un defecto de texto descarta solo esa voz, no la pieza (spec §9).
         pieza, rotas = es.descartar_tesis_rotas(pieza)
@@ -263,7 +291,27 @@ class Atendedor:
         errores = es.errores(pieza)
         if errores:
             raise FalloPedido("El texto no pasó los controles y no lo entrego así:\n• " + "\n• ".join(errores[:6]))
-        return pieza, descartes
+        return pieza, descartes, crudas
+
+    def _con_banco(self, dir_pedido: Path, hoy) -> tuple[dict[str, Any], list[str], bool]:
+        """La pieza con al menos una voz de banco válida; si el primer intento no la trae, un segundo solo de fuentes.
+
+        Spec 2026-10-17 §5: un análisis sin banco vigente no se publica. El segundo intento reabre
+        solo `fuentes` (los demás textos ya pasaron los controles) y deja escrito qué se descartó.
+        """
+        pieza, descartes, crudas = self._redactar_y_validar(dir_pedido, hoy)
+        if fu.bancos(pieza["editorial"]["fuentes"]):
+            return pieza, descartes, False
+        fu.guardar_intento(dir_pedido, pieza["editorial"]["fuentes"], descartes, crudas)
+        pieza["editorial"]["fuentes"] = es.MARCA
+        pr.guardar_pieza(pieza, dir_pedido)
+        pieza, descartes2, _ = self._redactar_y_validar(dir_pedido, hoy, self.redactar_fuentes, intento=2)
+        if fu.bancos(pieza["editorial"]["fuentes"]):
+            return pieza, descartes + descartes2, True
+        motivos = [*descartes, *descartes2][:4]
+        texto = SIN_BANCO.format(dias=fu.cargar_lista().get("frescura_dias", 14),
+                                 nombre=pieza["datos"]["activos"][0]["nombre"])
+        raise FalloPedido(texto + ("\nLo que descarté:\n• " + "\n• ".join(motivos) if motivos else ""))
 
     def _a_drive(self, rutas: list[Path], ahora: datetime) -> str:
         destino_raiz = self.config.get("ruta_drive") or ""
@@ -314,7 +362,7 @@ class Atendedor:
             self._exigir_cupo(pedido.usuario, ahora)
             dir_pedido = self.dir_pedidos / ahora.strftime("%Y-%m-%d") / f"{ahora:%H%M%S}_oportunidad_{ih.slug(ticker)}"
             hecha = self._preparar(pedido.orden, dir_pedido, ahora)
-            pieza, descartes = self._redactar_y_validar(dir_pedido, ahora.date())
+            pieza, descartes, reintento = self._con_banco(dir_pedido, ahora.date())
             a = pieza["datos"]["activos"][0]
             # La lámina se rinde antes del HTML: sin ella no hay botón «Descargar lámina».
             self.rendir_lamina(
@@ -325,8 +373,8 @@ class Atendedor:
             self.estado.consumir(pedido.usuario, ahora)
             self.estado.guardar()
             avisos += [*hecha.avisos, *[f"Descarté una fuente: {d}" for d in descartes]]
-            if not pieza["editorial"]["fuentes"]:
-                avisos.append("Sin voces de bancos o prensa atingentes esta vez: el análisis sale con nuestra lectura.")
+            if reintento:
+                avisos.append("La primera búsqueda no trajo ninguna voz de banco: hice un segundo intento y ese sí la trajo.")
         try:
             ruta = oh.guardar(pieza, dir_pedido, ejecutivo, self.autor, ahora.date())
         except oh.InformeInvalido as exc:
