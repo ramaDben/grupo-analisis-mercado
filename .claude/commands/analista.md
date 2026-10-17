@@ -39,8 +39,13 @@ y la pone el bot: tú no decides nada visual.
 8. **Largos:** `titular` hasta 70 caracteres; `bajada` hasta 160; `titulares.<ticker>` hasta 70.
 9. **Eventos futuros en modo anticipación** ("el mercado espera"), nunca en pasado.
 10. **Nunca invites a operar.** Por regulación, nadie en GI está inscrito como asesor de inversión.
-    No escribas "opera", "operar", "operable", "compra", "vende", "entra" ni "aprovecha", ni "oportunidad" ni "recomendación", ni ninguna
-    instrucción personal ni cuánto arriesgar. El bot rechaza esas formas. El cierre comercial
+    No escribas "opera", "operar", "operable", "comprar", "vender", "entrar", "aprovechar", "se puede comprar"
+    ni "conviene vender", ni "oportunidad" ni "recomendación", ni ninguna instrucción personal ni cuánto
+    arriesgar. El bot rechaza las formas de "operar", el infinitivo "comprar", "vender" o "entrar" (también
+    "comprarlo" o "venderlo"), "aprovechar" y sus formas, "puede/conviene comprar o vender", "oportunidad"
+    y las frases de recomendación. No rechaza "compra", "vende" o "entra" sueltos porque aparecen en texto
+    legítimo ("gerentes de compra", "entra en vigor"), pero tampoco los uses para empujar a operar: un
+    "el mercado vende el dólar" o "el precio entra en zona" se lee como instrucción. El cierre comercial
     (revisar la plataforma MT5 con el cliente) lo agrega el bot; tú no lo escribes.
 11. **Soporte y resistencia**, nunca "piso", "suelo" ni "techo" para un nivel de precio.
 
@@ -63,7 +68,7 @@ y la pone el bot: tú no decides nada visual.
   - `fecha`: AAAA-MM-DD, de los últimos 14 días.
   - `url`: https y de un artículo concreto (no una portada), del dominio del `medio`.
   - `postura`: `alcista`, `bajista` o `neutral`, la de la entidad frente al activo.
-  - `tesis`: una frase en español con lo que la entidad sostiene.
+  - `tesis`: una frase en español con lo que la entidad sostiene. Sin `%`, sin guion largo ni medio, sin la palabra "oportunidad" y sin "comprar", "vender" ni "recomienda": pasa por los mismos controles que el resto del texto, y la fuente cuya tesis no los pasa se descarta.
   No inventes URLs ni fuentes: el bot abre cada URL y descarta lo que no responde. Si no encuentras nada
   atingente, deja `fuentes` como lista vacía `[]`. No rellenes.
 

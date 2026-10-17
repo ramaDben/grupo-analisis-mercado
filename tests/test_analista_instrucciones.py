@@ -39,3 +39,17 @@ def test_enumera_las_entidades_de_la_lista_cerrada():
     lista = fu.cargar_lista()
     assert all(e in TEXTO for e in ("Goldman Sachs", "Banco Central de Chile", "Fed"))
     assert len(lista["medios"]) > 10  # la lista real vive en config/fuentes_prestigio.json
+
+
+def test_la_regla_de_no_operar_dice_lo_que_el_bot_rechaza_de_verdad():
+    """El bot rechaza `opera*`, el infinitivo de comprar/vender/entrar y «puede/conviene + verbo»;
+    no rechaza "compra" ni "vende" sueltos, así que la regla no puede decir que rechaza "esas formas"."""
+    assert "El bot rechaza esas formas" not in TEXTO
+    for forma in ('"comprar"', '"vender"', '"entrar"', '"aprovechar"', '"se puede comprar"'):
+        assert forma in TEXTO, forma
+
+
+def test_la_tesis_no_lleva_porcentaje_guion_largo_ni_oportunidad():
+    linea = next(x for x in TEXTO.splitlines() if x.strip().startswith("- `tesis`"))
+    bajo = linea.lower()
+    assert "`%`" in linea and "guion largo" in bajo and "oportunidad" in bajo

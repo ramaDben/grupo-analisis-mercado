@@ -256,6 +256,9 @@ class Atendedor:
             raise FalloPedido(f"La redacción no terminó ({res.codigo}: {res.detalle}). No gasté tu cupo.")
         pieza = pr.cargar_pieza(dir_pedido)
         pieza, descartes = fu.depurar_pieza(pieza, hoy, verificar=self.verificar_url)
+        # Una tesis con un defecto de texto descarta solo esa voz, no la pieza (spec §9).
+        pieza, rotas = es.descartar_tesis_rotas(pieza)
+        descartes += rotas
         pr.guardar_pieza(pieza, dir_pedido)
         errores = es.errores(pieza)
         if errores:
@@ -305,7 +308,8 @@ class Atendedor:
         reusada = previa is not None
         if reusada:
             dir_pedido, pieza = Path(previa["dir"]), pr.cargar_pieza(Path(previa["dir"]))
-            rg.anotar_reuso(ticker, quien, ahora, self.registro)
+            if (previa.get("creado_por") or {}).get("id") != pedido.usuario:  # el reúso propio no cuenta
+                rg.anotar_reuso(ticker, quien, ahora, self.registro)
         else:
             self._exigir_cupo(pedido.usuario, ahora)
             dir_pedido = self.dir_pedidos / ahora.strftime("%Y-%m-%d") / f"{ahora:%H%M%S}_oportunidad_{ih.slug(ticker)}"

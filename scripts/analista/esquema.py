@@ -81,6 +81,11 @@ def _plano(texto: str) -> str:
 # La pieza no invita a operar: por regulación invita a revisar la plataforma (director, 2026-10-16).
 # Reemplaza la regla del 2026-10-12, que exigía invitar a operar el escenario.
 _OPERAR = re.compile(r"\bopera(s|r|rlo|rla|rse|ble|bles|mos)?\b|\boperes\b")
+# Tampoco invita a comprar, vender ni entrar (fix final 2026-10-17). Acotado al infinitivo, sus
+# formas con objeto y «puede/conviene + verbo»: "gerentes de compra", "presión compradora", "los
+# vendedores" o "entra en vigor" son texto legítimo y no caen.
+_INVITACION = re.compile(r"\b(comprar|comprarlo|comprarla|vender|venderlo|venderla|entrar|aprovech\w*)\b"
+                         r"|\b(puede|pueden|conviene)\s+(comprar|vender)")
 
 
 def frases_prohibidas(texto: str, frases: tuple[str, ...] = FRASES_PROHIBIDAS) -> list[str]:
@@ -159,7 +164,8 @@ def cifras_ajenas(texto: str, datos: Any, fuentes: list[dict[str, Any]] | tuple 
     ajenas: list[str] = []
     for frase in re.split(r"(?<=[.!?])\s+|\n+", texto):
         plano = _plano(frase)
-        de_terceros = {_plano_numero(t) for f in fuentes if _plano(f["entidad"]) in plano
+        de_terceros = {_plano_numero(t) for f in fuentes
+                       if re.search(rf"\b{re.escape(_plano(f['entidad']))}\b", plano)
                        for t in _NUMERO.findall(f["tesis"])}
         ajenas += [t for t in _NUMERO.findall(frase)
                    if _significativo(t) and _plano_numero(t) not in permitidas
@@ -203,7 +209,6 @@ def errores(pieza: dict[str, Any]) -> list[str]:
     fuentes_ok = [f for f in (fuentes or []) if isinstance(f, dict) and all(isinstance(f.get(c), str) for c in fu.CAMPOS)]
 
     pares = textos(pieza)
-    errs.extend(validar_textos(pares))
     for campo, tope in LARGO_MAXIMO.items():
         largo = len(str(editorial.get(campo, "")))
         if largo > tope:
@@ -213,25 +218,64 @@ def errores(pieza: dict[str, Any]) -> list[str]:
             if len(str(texto)) > tope:
                 errs.append(f"{campo}.{clave}: tiene {len(str(texto))} caracteres y el máximo es {tope}")
     for donde, texto in pares:
-        if _HTML.search(texto):
-            errs.append(f"{donde}: trae HTML; la maqueta la pone la plantilla, no el texto")
-        if _CMF.search(texto):
-            errs.append(f"{donde}: nombra a la CMF, y el informe no la menciona")
-        for frase in frases_prohibidas(texto):
-            errs.append(f"{donde}: «{frase}» es una instrucción de operar o una recomendación; "
-                        "el informe es análisis general")
-        if tipo == "oportunidad":
-            for frase in frases_prohibidas(texto, FRASES_PROHIBIDAS_SEMANAL):
-                errs.append(f"{donde}: «{frase}» empuja a entrar o habla de cuánto acierta; "
-                            "la pieza semanal describe un escenario")
-            if "%" in texto:
-                errs.append(f"{donde}: trae un porcentaje, y la pieza semanal no muestra ninguno")
-        if not donde.endswith(".tesis"):  # la cifra de la tesis es del tercero citado
-            for cifra in cifras_ajenas(texto, pieza.get("datos"), fuentes_ok):
-                errs.append(f"{donde}: la cifra {cifra} no está en los datos del terminal")
-    if tipo == "oportunidad":
-        for donde, texto in pares:
-            if _OPERAR.search(_plano(texto)):
-                errs.append(f"{donde}: invita a operar; por regulación la pieza invita a revisar la plataforma, "
-                            "no a operar")
+        errs.extend(_errores_de_texto(donde, texto, tipo, pieza.get("datos"), fuentes_ok))
     return errs
+
+
+def _errores_de_texto(donde: str, texto: str, tipo: str, datos: Any,
+                      fuentes: list[dict[str, Any]] | tuple = ()) -> list[str]:
+    """Los controles de texto de un campo. La `tesis` de una fuente no pasa por el de cifras:
+    la cifra es del tercero citado."""
+    errs = list(validar_textos([(donde, texto)]))
+    if _HTML.search(texto):
+        errs.append(f"{donde}: trae HTML; la maqueta la pone la plantilla, no el texto")
+    if _CMF.search(texto):
+        errs.append(f"{donde}: nombra a la CMF, y el informe no la menciona")
+    for frase in frases_prohibidas(texto):
+        errs.append(f"{donde}: «{frase}» es una instrucción de operar o una recomendación; "
+                    "el informe es análisis general")
+    if tipo == "oportunidad":
+        for frase in frases_prohibidas(texto, FRASES_PROHIBIDAS_SEMANAL):
+            errs.append(f"{donde}: «{frase}» empuja a entrar o habla de cuánto acierta; "
+                        "la pieza semanal describe un escenario")
+        if "%" in texto:
+            errs.append(f"{donde}: trae un porcentaje, y la pieza semanal no muestra ninguno")
+        plano = _plano(texto)
+        if _OPERAR.search(plano):
+            errs.append(f"{donde}: invita a operar; por regulación la pieza invita a revisar la plataforma, "
+                        "no a operar")
+        m = _INVITACION.search(plano)
+        if m:
+            errs.append(f"{donde}: «{m.group(0)}» invita a comprar, vender o entrar; la pieza describe "
+                        "un escenario, no invita a operar")
+    if not donde.endswith(".tesis"):
+        for cifra in cifras_ajenas(texto, datos, fuentes):
+            errs.append(f"{donde}: la cifra {cifra} no está en los datos del terminal")
+    return errs
+
+
+def errores_tesis(tesis: str) -> list[str]:
+    """Los controles de texto que rompe la `tesis` de una fuente (los mismos del resto de la pieza)."""
+    return _errores_de_texto("fuentes.tesis", tesis, "oportunidad", None)
+
+
+def descartar_tesis_rotas(pieza: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    """Saca de `editorial.fuentes` las voces cuya tesis rompe un control de texto, con su motivo.
+
+    Un defecto en la paráfrasis de una sola fuente no bota la pieza entera (spec 2026-10-16 §9):
+    esa voz se descarta y el análisis sigue, igual que una fuente que no pasa `fuentes.depurar`.
+    """
+    fuentes = pieza.get("editorial", {}).get("fuentes")
+    if not isinstance(fuentes, list):
+        return pieza, []
+    quedan: list[Any] = []
+    descartes: list[str] = []
+    for f in fuentes:
+        errs = errores_tesis(str(f.get("tesis", ""))) if isinstance(f, dict) else []
+        if errs:
+            motivo = errs[0].split(": ", 1)[-1]
+            descartes.append(f"{f.get('entidad', 'una fuente')}: la tesis no pasó los controles de texto ({motivo})")
+        else:
+            quedan.append(f)
+    pieza["editorial"]["fuentes"] = quedan
+    return pieza, descartes

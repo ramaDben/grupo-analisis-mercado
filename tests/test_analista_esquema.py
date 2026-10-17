@@ -271,3 +271,62 @@ def test_una_cifra_inventada_nunca_pasa_aunque_se_atribuya(tmp_path):
     p = fx.pieza_oportunidad(tmp_path)
     p["editorial"]["contexto"]["XAUUSD"] = "Contexto. Goldman Sachs ve el oro en 9.999 dólares."
     assert any("9.999" in e for e in es.errores(p))
+
+
+# ───────────────────────────────────────────── invitación a comprar o vender (fix final)
+
+
+@pytest.mark.parametrize("frase", [
+    "El oro se puede comprar en la caída.", "Conviene vender el rebote.", "Pueden vender en la resistencia.",
+    "Es buen momento para comprarlo.", "Hay que aprovechar el quiebre.", "Es mejor entrar tras el cierre.",
+    "Lo ideal es venderlo en la resistencia.",
+])
+def test_el_texto_no_invita_a_comprar_ni_vender(tmp_path, frase):
+    p = fx.pieza_oportunidad(tmp_path)
+    p["editorial"]["contexto"]["XAUUSD"] = f"Contexto. {frase}"
+    assert any("contexto.XAUUSD" in e and "invita" in e for e in es.errores(p)), frase
+
+
+@pytest.mark.parametrize("frase", [
+    "El índice de gerentes de compra (PMI) sube.", "La nueva norma entra en vigor el lunes.",
+    "Hay presión compradora y los vendedores retroceden.",
+])
+def test_las_palabras_vecinas_de_comprar_no_se_bloquean(tmp_path, frase):
+    p = fx.pieza_oportunidad(tmp_path)
+    p["editorial"]["contexto"]["XAUUSD"] = f"Contexto. {frase}"
+    assert es.errores(p) == [], frase
+
+
+def test_la_tesis_que_recomienda_comprar_se_detecta():
+    assert es.errores_tesis("Goldman Sachs recomienda comprar oro por la demanda de bancos centrales.")
+
+
+def test_la_tesis_limpia_no_tiene_errores():
+    assert es.errores_tesis(fx.FUENTES_EJEMPLO[0]["tesis"]) == []
+
+
+def test_una_tesis_rota_descarta_solo_su_fuente(tmp_path):
+    p = fx.pieza_oportunidad(tmp_path)
+    rota = {**fx.FUENTES_EJEMPLO[0], "entidad": "UBS", "tesis": "UBS ve un alza de 5% en el oro."}
+    p["editorial"]["fuentes"] = [dict(fx.FUENTES_EJEMPLO[0]), rota]
+    p, descartes = es.descartar_tesis_rotas(p)
+    assert [f["entidad"] for f in p["editorial"]["fuentes"]] == ["Goldman Sachs"]
+    assert len(descartes) == 1 and descartes[0].startswith("UBS: ")
+    assert es.errores(p) == []
+
+
+# ───────────────────────────────────────────── atribución por palabra completa (fix final)
+
+
+def test_la_entidad_dentro_de_otra_palabra_no_atribuye_la_cifra(tmp_path):
+    ubs = {**fx.FUENTES_EJEMPLO[0], "entidad": "UBS", "tesis": "UBS ve el oro en 4.800 dólares."}
+    p = fx.pieza_oportunidad(tmp_path, fuentes=[ubs])
+    p["editorial"]["contexto"]["XAUUSD"] = "Contexto. Los subsidios llevarían el oro a 4.800 dólares."
+    assert any("4.800" in e for e in es.errores(p))
+
+
+def test_la_entidad_como_palabra_completa_atribuye_la_cifra(tmp_path):
+    ubs = {**fx.FUENTES_EJEMPLO[0], "entidad": "UBS", "tesis": "UBS ve el oro en 4.800 dólares."}
+    p = fx.pieza_oportunidad(tmp_path, fuentes=[ubs])
+    p["editorial"]["contexto"]["XAUUSD"] = "Contexto. UBS ve el oro en 4.800 dólares."
+    assert es.errores(p) == []

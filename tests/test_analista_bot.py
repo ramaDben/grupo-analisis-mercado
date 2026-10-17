@@ -515,3 +515,42 @@ def test_un_segundo_bot_no_arranca_mientras_el_primero_escucha(tmp_path):
     primero.close()
     # Cerrado (o muerto) el primero, el candado queda libre: no hay candados huérfanos.
     assert _tomar_en_otro_proceso(ruta) is True
+
+
+# ───────────────────────────────────────────── fix final de la rama
+
+
+def _redactor_con_fuentes(fuentes):
+    def redactar(ruta, tier):
+        pieza = pr.cargar_pieza(ruta.parent)
+        pieza["editorial"].update(fx.pieza_oportunidad(ruta.parent)["editorial"])
+        pieza["editorial"]["fuentes"] = fuentes
+        pr.guardar_pieza(pieza, ruta.parent)
+        return SimpleNamespace(codigo="ok", detalle="")
+    return redactar
+
+
+def test_una_tesis_con_porcentaje_descarta_solo_esa_fuente_y_la_pieza_sale(armado):
+    buena = {**fx.FUENTES_EJEMPLO[0], "fecha": "2026-10-06"}
+    rota = {**buena, "entidad": "UBS", "url": "https://www.reuters.com/markets/otra-nota-ubs/",
+            "tesis": "UBS ve un alza de 5% en el oro."}
+    armado.atendedor.redactar = _redactor_con_fuentes([buena, rota])
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert r.archivos and "Descarté una fuente: UBS" in r.aparte
+    fuentes = pr.cargar_pieza(next((armado.tmp / "pedidos").rglob("pieza.json")).parent)["editorial"]["fuentes"]
+    assert [f["entidad"] for f in fuentes] == ["Goldman Sachs"]
+
+
+def test_una_tesis_limpia_sigue_en_la_pieza(armado):
+    buena = {**fx.FUENTES_EJEMPLO[0], "fecha": "2026-10-06"}
+    armado.atendedor.redactar = _redactor_con_fuentes([buena])
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert r.archivos and "Descarté" not in r.aparte
+
+
+def test_el_reuso_propio_no_se_anota(armado):
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert rg.vigente("XAUUSD", AHORA, armado.registro)["reusos"] == []
+    armado.bot.procesar_uno(b.Pedido(OTRO, 2, ORO))
+    assert [x["id"] for x in rg.vigente("XAUUSD", AHORA, armado.registro)["reusos"]] == [OTRO]
