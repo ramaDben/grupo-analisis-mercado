@@ -145,3 +145,6 @@ config/autor/
 .playwright-mcp/
 # PDFs generados del informe evergreen (traen nombre de cliente)
 data/informes_evergreen/
+
+# Estado generado del agendador de la alerta semanal (spec 2026-10-18)
+data/semanal/avisos_semana.json
