@@ -33,6 +33,7 @@ from analista import esquema as es
 from analista import fuentes as fu
 from analista import informe_html as ih
 from analista import macro_seguimiento as mac
+from analista import imagenes_publicas as ip
 from analista import oportunidad_html as oh
 from analista import orden as od
 from analista import preparar as pr
@@ -251,6 +252,7 @@ class Atendedor:
     verificar_vigencia: Callable[[dict[str, Any], datetime], tuple[str | None, str | None]] = vg.verificar
     simbolo: Callable[[str], dict[str, Any] | None] = sm.buscar
     verificar_url: Callable[[str], str] = fu.verificar_url
+    publicar_imagen: Callable[[Path], str] | None = ip.publicar  # None: el correo lleva las imágenes embebidas
 
     def analista(self, usuario: str) -> dict[str, Any]:
         return self.config["analistas"][usuario]
@@ -390,7 +392,12 @@ class Atendedor:
             if reintento:
                 avisos.append("La primera búsqueda no trajo ninguna voz de banco: hice un segundo intento y ese sí la trajo.")
         try:
-            ruta = oh.guardar(pieza, dir_pedido, ejecutivo, self.autor, ahora.date())
+            try:
+                ruta = oh.guardar(pieza, dir_pedido, ejecutivo, self.autor, ahora.date(), self.publicar_imagen)
+            except ip.ImagenNoPublicada as exc:
+                # Sin URL pública el correo se arma igual, pero Gmail no mostraría sus imágenes: se avisa.
+                avisos.append(f"No pude publicar las imágenes del correo ({exc}): en Gmail se verá sin imágenes.")
+                ruta = oh.guardar(pieza, dir_pedido, ejecutivo, self.autor, ahora.date())
         except oh.InformeInvalido as exc:
             raise FalloPedido(f"No pude armar la pieza: {exc}") from exc
         entrada = rg.vigente(ticker, ahora, self.registro) or {}

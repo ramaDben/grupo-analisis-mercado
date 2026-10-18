@@ -161,6 +161,15 @@ def _grafico_lectura(ticker: str, nombre: str, lectura, destino: Path, digits: i
                               niveles=niveles)
 
 
+def _grafico_dolar(destino: Path) -> Path:
+    """El Dollar Index del terminal en 4H, para el correo de un activo que el dólar mueve."""
+    import pipeline_carrusel as pc
+    from tradingview_grafico import generar_grafico_tv
+
+    return generar_grafico_tv(ticker="USDIDX", nombre="Dollar Index", destino=destino, timeframe="H4",
+                              n_velas=pc.VELAS_GRAFICO_TV)
+
+
 def niveles_lamina_semanal(lectura) -> list[tuple[float, str]]:
     """Los niveles que nombra la lámina semanal (`comercial._niveles`), en precio, para trazarlos."""
     from analista import oportunidad as op
@@ -244,6 +253,7 @@ def _lectura_actual(estrategia, ticker, digits, lector, ahora, referencia=None):
 class Lectores:
     contrato: Callable[[str, float], dict[str, Any]] = _contrato
     grafico_lectura: Callable[..., Path] = _grafico_lectura
+    grafico_dolar: Callable[[Path], Path] = _grafico_dolar
     estrategia: Callable[[], Any] = _estrategia
     velas: Callable[..., Any] = _velas
     agenda: Callable[[datetime, str, str], Any] = _agenda
@@ -269,6 +279,7 @@ class Preparada:
 # ───────────────────────────────────────────────────────────── piezas
 
 
+NOMBRE_GRAFICO_DOLAR = "grafico_usdidx.png"
 DIAS = ("lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo")
 
 
@@ -381,6 +392,12 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
             imagenes["calendario"] = nombre_cal
         except Exception as exc:  # noqa: BLE001  la tabla de la ficha sigue: la imagen es un extra
             avisos.append(f"No pude rendir la imagen del calendario ({exc.__class__.__name__}): la ficha lleva la tabla.")
+    if any(h.get("id") == "dxy" for h in hechos):  # solo si el dólar es uno de los drivers medidos
+        try:
+            lec.grafico_dolar(dir_pedido / NOMBRE_GRAFICO_DOLAR)
+            imagenes["dolar"] = NOMBRE_GRAFICO_DOLAR
+        except Exception as exc:  # noqa: BLE001  el gráfico es un extra: la tabla de drivers sigue
+            avisos.append(f"No pude dibujar el gráfico del dólar ({exc.__class__.__name__}): el correo sale sin él.")
     datos = {"ticker": ticker, "chip": "ANÁLISIS TÉCNICO Y FUNDAMENTAL",
              "edicion": fecha_corta(ahora) + f" · {ahora.astimezone(SANTIAGO):%H:%M}",
              "vigencia": {"desde": fecha_corta(ahora), "hasta": fecha_corta(ahora + rg.VIGENCIA)},

@@ -144,7 +144,7 @@ def agenda_ejemplo(estado: str = "ok") -> dict:
 
 def pieza_oportunidad(dir_pedido: Path, laminas: bool = False, wti: bool = False, rango: bool = False,
                       fuentes: list | None = None, agenda: str = "ok", hechos: bool = True,
-                      legado: bool = False) -> dict:
+                      legado: bool = False, dolar: bool = False) -> dict:
     """El análisis de un activo con su texto ya escrito (por defecto el oro; `rango` es el cobre).
 
     Escribe el gráfico en `dir_pedido`; con `laminas=True` también la lámina, que en el bot se
@@ -180,6 +180,10 @@ def pieza_oportunidad(dir_pedido: Path, laminas: bool = False, wti: bool = False
                                        "respete la línea." if datos.get("hechos") else
                                        f"Contexto de {t}. La lectura se mantiene mientras el precio respete la línea.")},
                       "fuentes": [dict(f) for f in (FUENTES_EJEMPLO if fuentes is None else fuentes)]}
+    if dolar:
+        imagenes["dolar"] = _imagen(dir_pedido, "grafico_usdidx.png")
+        p["imagenes"] = imagenes
+        p["huella"] = es._huella(p)
     if "dias_clave" in extra:
         p["editorial"]["dias_clave"] = {t: "El día clave es el miércoles 14/10, cuando se conoce el IPC de EE.UU. "
                                            "(índice de precios al consumidor)."}

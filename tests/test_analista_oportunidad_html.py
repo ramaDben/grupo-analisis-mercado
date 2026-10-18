@@ -134,16 +134,100 @@ def test_la_lamina_de_un_ticker_con_punto_se_puede_descargar(tmp_path):
 
 
 def test_el_correo_lleva_la_maqueta_del_prototipo(tmp_path):
-    """Logo de GI arriba, cuadros rojo y verde del mismo tamaño y las dos firmas (director, 2026-10-12)."""
+    """Logo de GI arriba, cuadros rojo y verde del mismo tamaño y la firma del ejecutivo (director, 2026-10-18)."""
     html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
     marco = re.search(r'<template id="correo-marco">(.*?)</template>', html, re.S).group(1)
-    assert 'alt="Grupo Inteligencia"' in marco and "<!--ACTIVOS-->" in marco
-    assert "Te lo envía" in marco and "Camila Rojas" in marco
-    c = oh.paleta()
+    assert 'alt="Grupo Inteligencia"' in marco and "<!--ACTIVOS-->" in marco and "<!--WA-->" in marco
+    assert "Camila Rojas" in marco and "Departamento de Inversiones · GI" in marco
+    c = oh.paleta_correo(oh.paleta())
     bloque = re.search(r'<template class="correo-activo" data-ticker="XAUUSD">(.*?)</template>', html, re.S).group(1)
     assert f'border:2px solid {c["baja"]}' in bloque and f'border:2px solid {c["sube"]}' in bloque
     assert 'class="sim-perdida"' in bloque and 'class="sim-ganancia"' in bloque
     assert "var(" not in marco + bloque and "rgba(" not in marco + bloque
+
+
+def test_la_firma_lleva_al_ejecutivo_en_grande_y_debajo_al_analista(tmp_path):
+    """El ejecutivo es quien le escribe al cliente; el analista firma el análisis, sin segundo nombre."""
+    html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    marco = re.search(r'<template id="correo-marco">(.*?)</template>', html, re.S).group(1)
+    firma = marco[marco.index("<!--WA-->"):]
+    assert 'font-size:26px' in firma and firma.index("Camila Rojas") < firma.index("Benjamín Bravo Soza")
+    assert "Benjamín Ignacio" not in firma and "Dirección de Análisis Técnico · GI" in firma
+    assert "Te lo envía" not in marco
+
+
+def test_el_analisis_va_rotulado_con_su_autor_como_la_simulacion_con_el_ejecutivo(tmp_path):
+    correo = _correo(_html(tmp_path))
+    assert "Análisis realizado por Benjamín Bravo Soza" in correo and "Benjamín Ignacio" not in correo
+    assert correo.index("Análisis realizado por") < correo.index("Simulación realizada por Camila Rojas")
+
+
+def test_el_cuerpo_es_claro_y_solo_la_apertura_del_activo_es_oscura(tmp_path):
+    """Outlook invierte los fondos oscuros: el cuerpo va sobre blanco y la apertura del activo es el único bloque oscuro."""
+    html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    c = oh.paleta_correo(oh.paleta())
+    marco = re.search(r'<template id="correo-marco">(.*?)</template>', html, re.S).group(1)
+    assert f'bgcolor="{c["fondo_alt"]}"' in marco and c["fondo_alt"] == "#FFFFFF"
+    bloque = re.search(r'<template class="correo-activo" data-ticker="XAUUSD">(.*?)</template>', html, re.S).group(1)
+    assert bloque.count(f'bgcolor="{c["hero"]}"') == 1
+    assert "Precio de referencia" in bloque and "Escenario del análisis" not in bloque
+
+
+def test_la_ficha_del_correo_no_lleva_el_boton_si_no_hay_numero(tmp_path):
+    from playwright.sync_api import sync_playwright
+    html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    ruta = tmp_path / "p.html"
+    ruta.write_text(html, encoding="utf-8")
+    with sync_playwright() as p:
+        b = p.chromium.launch()
+        pg = b.new_page()
+        pg.goto(ruta.as_uri())
+        v = pg.locator("#vista-correo")
+        assert v.locator("a[href^='https://wa.me/']").count() == 0
+        pg.fill("#whatsapp", "+56 9 8765 4321")
+        enlace = v.locator("a[href^='https://wa.me/']")
+        assert enlace.count() == 1
+        href = enlace.get_attribute("href")
+        assert href.startswith("https://wa.me/56987654321?text=") and "Oro" in __import__("urllib.parse").parse.unquote(href)
+        pg.fill("#whatsapp", "987654321")  # un móvil chileno sin el 56 también sirve
+        assert v.locator("a[href^='https://wa.me/56987654321']").count() == 1
+        pg.fill("#whatsapp", "12345")  # no es un número: sin botón y con aviso
+        assert v.locator("a[href^='https://wa.me/']").count() == 0
+        assert "no parece válido" in pg.locator("#estado").inner_text()
+        pg.fill("#whatsapp", "")
+        assert v.locator("a[href^='https://wa.me/']").count() == 0
+        b.close()
+
+
+def test_el_grafico_del_dolar_sale_solo_si_el_dolar_es_un_driver_medido(tmp_path):
+    con = _correo(oh.armar(fx.pieza_oportunidad(tmp_path, dolar=True), tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+    assert "Gráfico del Dollar Index (DXY)" in con
+    assert len(re.findall(r'<img src="data:image/png;base64,[^"]+" width="558"', con)) == 3  # oro, dólar y calendario
+    (tmp_path / "sin").mkdir()
+    sin = _correo(oh.armar(fx.pieza_oportunidad(tmp_path / "sin"), tmp_path / "sin", EJECUTIVO, fx.AUTOR, HOY))
+    assert "Gráfico del Dollar Index" not in sin
+
+
+def test_con_publicador_el_correo_lleva_urls_y_ninguna_imagen_embebida(tmp_path):
+    pedidas: list[str] = []
+
+    def publicar(ruta):
+        pedidas.append(ruta.name)
+        return f"https://ejemplo.test/correos/{ruta.name}"
+
+    html = oh.armar(fx.pieza_oportunidad(tmp_path, dolar=True), tmp_path, EJECUTIVO, fx.AUTOR, HOY, publicar)
+    correo = _correo(html)
+    assert "data:image" not in correo
+    assert len(re.findall(r'<img src="https://ejemplo\.test/correos/[^"]+"', correo)) == 3  # oro, dólar y calendario
+    assert "grafico_usdidx.png" in pedidas and "grafico_xauusd.png" in pedidas
+    # La página que ve el ejecutivo conserva sus imágenes embebidas: se abre sin red.
+    assert "data:image" in html.split('id="correo-root"')[0]
+
+
+def test_los_drivers_del_correo_van_en_tabla(tmp_path):
+    correo = _correo(_html(tmp_path))
+    assert "Efecto en el activo" in correo and "<th " in correo
+    assert "Dollar Index (DXY)" in correo and "101,560" in correo
 
 
 def test_en_el_correo_un_activo_sin_simulacion_muestra_el_motivo_sin_cuadros(tmp_path):
@@ -296,7 +380,7 @@ def test_la_ficha_no_habla_de_la_semana_con_vigencia_de_7_dias(tmp_path):
     for viejo in ("Escenario de la semana", "Análisis técnico de la semana", "Sin simulación esta semana",
                   "de esta semana", "en MT5 esta semana"):
         assert viejo not in html, viejo
-    assert "Escenario del análisis" in html and "Análisis técnico vigente" in html
+    assert "Los tres escenarios" in html and "Análisis técnico vigente" in html
     p["datos"]["activos"][0]["escenario"]["motivo"] = "sin nivel claro"
     p["huella"] = es._huella(p)
     assert "Sin simulación esta semana" not in oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
@@ -323,7 +407,7 @@ def test_el_correo_no_imprime_pb_ni_tips_sin_explicar_ni_sin_dato(tmp_path):
     correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
     assert " pb" not in correo and "sin dato" not in correo
     assert "bonos del Tesoro que se ajustan por inflación (TIPS)" in correo
-    assert "Dollar Index (DXY):" in correo
+    assert "Dollar Index (DXY)" in correo
 
 
 def test_el_correo_dice_puntos_base_y_fecha_los_drivers(tmp_path):

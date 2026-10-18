@@ -58,6 +58,11 @@ def _grafico_falso(ticker, nombre, lectura, destino, **kw):
     return destino
 
 
+def _dolar_falso(destino):
+    destino.write_bytes(fx.PNG)
+    return destino
+
+
 CALENDARIOS: list[dict] = []
 
 
@@ -82,7 +87,7 @@ def _lectores(base, **kw):
         base_referencias=base, estrategia=lambda: EstrategiaFalsa(),
         referencia=lambda est, t, d, semana, ahora, b: (fx.lectura(ticker=t), AHORA_LUNES, "semanal"),
         contrato=lambda t, p: {"clp_unidad": 950.0, "vol_min": 0.01, "vol_paso": 0.01},
-        grafico_lectura=_grafico_falso,
+        grafico_lectura=_grafico_falso, grafico_dolar=_dolar_falso,
         catalogo=lambda t: {"ticker": t, "nombre": {"XAUUSD": "Oro", "COPPER": "Cobre"}[t],
                             "digits": {"XAUUSD": 2, "COPPER": 0}[t], "unidad": "USD"},
         drivers=lambda t: ["Dollar Index"], agenda=lambda ahora, t, n: ag.Agenda("lunes 12/10", "lunes 19/10", "vacia"),
@@ -204,6 +209,25 @@ def test_los_hechos_se_miden_con_la_direccion_y_la_agenda_y_quedan_sellados(tmp_
     assert hecha.pieza["datos"]["hechos"] == [HECHO]
     assert llamadas[0][:3] == ("XAUUSD", "Oro", "ALCISTA") and llamadas[0][3][0]["dia"] == "miércoles 14/10"
     assert any("Tasa real" in a for a in hecha.avisos)
+
+
+def test_el_grafico_del_dolar_se_dibuja_solo_si_el_dolar_es_un_driver_medido(tmp_path):
+    con = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "con", AHORA_LUNES,
+                      _lectores(tmp_path / "ref", hechos=lambda *a: ([dict(HECHO)], [])))
+    assert con.pieza["imagenes"]["dolar"] == "grafico_usdidx.png" and (tmp_path / "con" / "grafico_usdidx.png").exists()
+    sin_dxy = dict(HECHO, id="tasa_real")
+    sin = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "sin", AHORA_LUNES,
+                      _lectores(tmp_path / "ref", hechos=lambda *a: ([sin_dxy], [])))
+    assert "dolar" not in sin.pieza["imagenes"]
+
+
+def test_si_el_grafico_del_dolar_falla_la_pieza_sale_sin_el_y_se_avisa(tmp_path):
+    def roto(destino):
+        raise RuntimeError("sin terminal")
+
+    hecha = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES,
+                        _lectores(tmp_path / "ref", hechos=lambda *a: ([dict(HECHO)], []), grafico_dolar=roto))
+    assert "dolar" not in hecha.pieza["imagenes"] and any("gráfico del dólar" in a for a in hecha.avisos)
 
 
 def test_sin_ningun_hecho_se_avisa(tmp_path):

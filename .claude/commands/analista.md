@@ -90,8 +90,12 @@ y la pone el bot: tú no decides nada visual.
   Chile, Cochilco, Banchile, BCI Estudios, Santander Chile, Itaú Chile). Los organismos suman, pero no
   reemplazan al banco. Búscalas en la web. Cada elemento es un objeto con estos campos de texto:
   - `entidad`: quién opina. **Solo** de la lista cerrada: Goldman Sachs, JPMorgan, Morgan Stanley, Bank of America, Citi, UBS, Barclays, Standard Chartered, Jefferies, Deutsche Bank, HSBC, ING, Commerzbank, Banco Central de Chile, Cochilco, Banchile, BCI Estudios, Santander Chile, Itaú Chile, Fed, BCE, EIA, OPEP, FMI, BIS, World Gold Council, Agencia Internacional de Energía.
-  - `medio`: dónde se publicó. Reuters, Bloomberg, Financial Times, WSJ, CNBC, MarketWatch, Kitco, FXStreet,
-    Diario Financiero, La Tercera, o el nombre de la propia entidad si es su sitio. Investing.com no vale.
+  - `medio`: dónde se publicó. **Prefiere siempre una nota en español** (el cliente la abre y la lee):
+    Bloomberg Línea, Diario Financiero, La Tercera, Emol, Ámbito, Expansión, Cinco Días, El Economista,
+    Infobae, Europa Press, o la página en español de la propia entidad (Banchile, Santander Chile, BCI
+    Estudios, Banco Central de Chile, Cochilco). Si no hay en español, solo vale un medio muy conocido en
+    inglés: Reuters, Bloomberg, Financial Times, WSJ, CNBC o MarketWatch, o el sitio de la propia entidad.
+    Antes de citar una nota en inglés, busca si hay una versión en español. Investing.com no vale.
   - `fecha`: AAAA-MM-DD, de los últimos 14 días.
   - `url`: https y de un artículo concreto (no una portada), del dominio del `medio`.
   - `postura`: `alcista`, `bajista` o `neutral`, la de la entidad frente al activo.

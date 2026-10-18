@@ -94,10 +94,12 @@
 <section class="correo"><h2>Correo para tu cliente</h2>
   <p>Así le llega a tu cliente. Marca los activos que quieres incluir, completa la simulación arriba y copia el correo: se pega en Outlook con el formato.</p>
   <label class="cliente">Tu nombre (quien realiza la simulación)<input type="text" id="ejecutivo" value="{{ejecutivo}}" placeholder="Escribe tu nombre"></label>
+  <label class="cliente">Tu WhatsApp (el botón al final del correo le abre un chat contigo; vacío, el correo sale sin botón)<input type="tel" id="whatsapp" placeholder="Ej.: +56 9 1234 5678"></label>
   <label class="cliente">Saludo al cliente (tú decides cómo dirigirte a esa persona)<input type="text" id="cliente" placeholder="Ej.: Estimado Sr. Pérez:"></label>
   <button type="button" id="copiar-correo">Copiar correo para Outlook</button> <span id="estado"></span>
   <div id="vista-correo"></div></section>
 <template id="correo-marco">{{marco}}</template>
+<template id="correo-wa">{{boton_wa}}</template>
 {{correos}}
 {{firma}}
 <p class="aviso">{{aviso}}</p>
@@ -118,6 +120,12 @@
     var ok = nombreEj() !== '[Tu nombre]';
     if (!ok) estadoEl.textContent = 'Escribe tu nombre arriba: es quien realiza la simulación.';
     return !ok;
+  }
+  // El número del ejecutivo como lo pide wa.me: solo dígitos y con el 56 delante si es un móvil chileno de 9.
+  function numeroWa(){
+    var d = document.getElementById('whatsapp').value.replace(/\D/g, '').replace(/^0+/, '');
+    if (d.length === 9 && d.charAt(0) === '9') d = '56' + d;
+    return (d.length >= 10 && d.length <= 15) ? d : null;
   }
   function num(v){ var x = parseFloat(v); return isNaN(x) ? null : x; }
   function coma(n){ return String(n).replace('.', ','); }
@@ -188,12 +196,21 @@
     if (saludo && !/[:,.;]$/.test(saludo)) saludo += ':';
     var yo = nombreEj(), n = partes.length;
     var titulo = (n === 1 ? 'El activo' : 'Los ' + n + ' activos') + ' con escenarios clave para revisar en MT5';
-    return document.getElementById('correo-marco').innerHTML.replace('<!--ACTIVOS-->', partes.join(''))
+    var wa = numeroWa(), botonWa = '';
+    if (wa){
+      var nombres = DATOS.activos.filter(function(d){ return d._marcado(); }).map(function(d){ return d.nombre; });
+      var texto = 'Hola ' + yo.replace(/[<>&"]/g, '') + ', recibí tu análisis de ' + nombres.join(' y ') +
+                  ' y me gustaría revisarlo contigo.';
+      botonWa = document.getElementById('correo-wa').innerHTML.replace('%%WA%%', 'https://wa.me/' + wa + '?text=' + encodeURIComponent(texto));
+    }
+    return document.getElementById('correo-marco').innerHTML.replace('<!--ACTIVOS-->', partes.join('')).replace('<!--WA-->', botonWa)
       .split(DATOS.ejecutivo.replace(/&/g, '&amp;')).join(yo.replace(/[<>&"]/g, ''))
       .replace('<!--TITULO-->', titulo).replace('<span class="saludo-cliente">Estimado(a):</span>', saludo || 'Estimado(a):');
   }
   function vista(){
     var html = armarCorreo();
+    var crudo = document.getElementById('whatsapp').value.trim();
+    if (crudo && !numeroWa()) estadoEl.textContent = 'Ese número de WhatsApp no parece válido: el correo sale sin botón.';
     document.getElementById('vista-correo').innerHTML = html || '<p>Marca al menos un activo.</p>';
     return html;
   }
@@ -220,6 +237,7 @@
     estadoEl.textContent = ok ? 'Copiado. Pégalo en un correo nuevo de Outlook.' : 'No se pudo copiar: selecciona el correo y cópialo a mano.';
   }
   document.getElementById('cliente').addEventListener('input', vista);
+  document.getElementById('whatsapp').addEventListener('input', vista);
   document.getElementById('ejecutivo').addEventListener('input', function(){
     document.querySelectorAll('.autor-sim').forEach(function(p){ p.textContent = 'Simulación realizada por ' + nombreEj(); });
     vista();

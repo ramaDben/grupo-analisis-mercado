@@ -68,7 +68,7 @@ class Armado:
             calendario=lambda ahora: self.eventos,
             verificar_vigencia=lambda pieza, ahora: (self.caduca, self.aviso_vigencia),
             simbolo=lambda t: {"ticker": "XAUUSD", "descripcion": "Gold", "digits": 2} if t.lower() == "xauusd" else None,
-            verificar_url=lambda url: "ok")
+            verificar_url=lambda url: "ok", publicar_imagen=None)
         self.bot = b.Bot(TgFalso(), self.atendedor)
         self.estado = self.atendedor.estado
 
