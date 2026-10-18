@@ -81,6 +81,13 @@ def test_semana_tranquila_sin_dato_fuerte(eventos):
     assert t["tranquila"] and t["tipo"] is None and t["titular"] == "Semana tranquila"
 
 
+def test_las_series_semanales_solo_mandan_si_no_hay_nada_mas():
+    reclamos = ev("Initial Jobless Claims", "2026-10-22 09:30")
+    assert sm.tema_de_la_semana([reclamos, PMI])["tipo"] == "actividad"
+    assert sm.tema_de_la_semana([CRUDO, PMI])["tipo"] == "actividad"
+    assert sm.tema_de_la_semana([reclamos])["tipo"] == "empleo"
+
+
 # ───────────────────────────────────────────── el mapa
 
 
@@ -126,6 +133,12 @@ def test_el_efecto_de_un_dato_chileno_con_entrada_estadounidense_no_se_afirma():
     # «CPI» en Chile engancha con la entrada de EE.UU. (dólar sube): esa lectura no vale para un dato chileno.
     chile = ev("CPI (MoM) (Sep)", pais="Chile")
     assert "mueve:" not in sm.armar_mapa([chile], LUNES)
+
+
+def test_el_efecto_de_un_dato_de_china_o_la_zona_euro_no_se_afirma():
+    # Las entradas del glosario (PIB, PMI) describen a EE.UU.: aplicarlas a otro país sería inventar el efecto.
+    for pais in ("China", "Euro Zone"):
+        assert "mueve:" not in sm.armar_mapa([ev("GDP (QoQ) (Q3)", pais=pais)], LUNES)
 
 
 def test_mapa_de_semana_tranquila():

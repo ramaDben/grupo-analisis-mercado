@@ -180,6 +180,39 @@ de quien lo lee."* El informe **no menciona a la CMF** (decisión del director).
    las piezas salen con el aviso «contexto sin curva de tasas». Late cada hora y solo baja datos
    si la última ingesta tiene más de 6 h.
 
+## La alerta de la semana (spec 2026-10-18)
+
+El bot le avisa al ejecutivo de qué trata la semana, sin que lo pida. Es **material interno**: no pasa
+por la aprobación de WhatsApp ni por `reloj_gi.py`, y un test impide que `avisos_semana.py` toque el
+envío.
+
+| Aviso | Cuándo (Santiago) | Qué trae |
+|---|---|---|
+| **Mapa** | lunes 07:45 a 08:15 | El tema («Semana de inflación», «Semana tranquila»…), hasta 5 datos fuertes con día y hora CLT/CLST, una línea para conversar y el aviso de riesgo. Teclado «Útil» / «No me sirve» |
+| **Víspera** | 16:00 a 16:30 del día hábil anterior a un dato de tier 1 | 5 líneas: cuándo sale, qué suele hacer, qué conversar, qué no decir y el aviso. Botón que pide el `/oportunidad` del activo más afectado |
+
+- **Todo sale de lo que ya existe, sin IA.** Eventos del calendario (`agenda.ventana_cruda`, hora ya en
+  Santiago), efecto del glosario (`si_sale_sobre_consenso`, solo de EE.UU. o de Chile con entrada
+  chilena) y la guía de `config/guia_eventos.json`, que edita el director. Antes de abrirla a todos los
+  ejecutivos conviene que la revise cumplimiento.
+- **El tema** lo decide el dato de menor tier; en empate, tasas > inflación > empleo > actividad >
+  petróleo. Las series que se repiten cada semana (subsidios por desempleo, inventarios de crudo) solo
+  mandan si no hay otra cosa.
+- **Modo prueba:** `avisos_semana.modo` en `config/analistas_telegram.json`. `prueba` (por defecto) manda
+  solo al rol `director`; `todos` abre a los registrados. La primera semana va en prueba.
+- **Tope de 2 por ejecutivo por día**; ganan los de menor tier. Un envío que falló sigue pendiente. Un
+  calendario caído no manda nada: avisa una vez al director y reintenta en el siguiente latido.
+- **Medición** (decide a las 3 semanas si se suman la reacción y el cierre del viernes): el estado
+  `data/semanal/avisos_semana.json` (gitignoreado) guarda por aviso los clics del botón, el voto y si el
+  ejecutivo pidió después `/oportunidad` del mismo activo dentro de 24 h (el pedido del propio botón no
+  cuenta ahí). Se lee a mano, sin identificar a nadie:
+
+```powershell
+uv run python -c "from datetime import date; from analista import avisos_semana as a; print(a.resumen_interaccion(date(2026,10,19), date(2026,11,6), a.Estado()))"
+```
+
+(con `PYTHONPATH=scripts`).
+
 ## Cuando algo falla
 
 El analista recibe el motivo, y nunca una pieza a medias ni un gráfico de otro día.

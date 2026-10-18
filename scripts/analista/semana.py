@@ -38,6 +38,8 @@ PATRONES = {
 }
 TIER_ALTO = 2          # tier 1 y 2 del glosario pueden ser el tema; el 3 es contexto
 MAXIMO_MAPA = 5
+# Series que salen todas las semanas: son contexto del calendario, no el tema. Solo mandan si no hay otra cosa.
+SEMANALES = r"JOBLESS CLAIMS|UNEMPLOYMENT CLAIMS|CRUDE OIL INVENTORIES"
 
 ACTIVOS = {"dolar": ("dólar", "el dólar", "tiende"), "oro": ("oro", "el oro", "tiende"),
            "indices": ("índices", "los índices", "tienden"), "usdclp": ("USD/CLP", "el USD/CLP", "tiende"),
@@ -77,15 +79,17 @@ def tipo_de_evento(ev: dict[str, Any]) -> str | None:
 
 
 def _efectos(ev: dict[str, Any]) -> dict[str, str]:
-    """Qué hace el dato con cada activo, según el glosario. Vacío si no lo declara.
+    """Qué hace el dato con cada activo, según el glosario. Vacío si no lo declara o no aplica al país.
 
-    «CPI» en Chile engancha con la entrada de EE.UU. (el dólar sube): esa lectura no vale para un dato
-    chileno. Las entradas chilenas del glosario se reconocen porque declaran neutro al dólar global.
+    Las entradas del glosario describen datos de EE.UU., salvo las chilenas, que declaran neutro al dólar
+    global. «CPI» en Chile engancha con la entrada de EE.UU. (el dólar sube) y el PIB de China con la
+    estadounidense: esa lectura no vale para ellos, y afirmarla sería inventar el efecto.
     """
     efecto = {k: v for k, v in (_dic(ev).get("si_sale_sobre_consenso") or {}).items() if k in ACTIVOS}
-    if ev.get("pais") == "Chile" and efecto.get("dolar") != "neutro":
-        return {}
-    return efecto
+    pais = ev.get("pais")
+    if pais == "United States" or (pais == "Chile" and efecto.get("dolar") == "neutro"):
+        return efecto
+    return {}
 
 
 def _fuerte(ev: dict[str, Any]) -> bool:
@@ -94,7 +98,8 @@ def _fuerte(ev: dict[str, Any]) -> bool:
 
 def _clave_de_tema(ev: dict[str, Any]) -> tuple:
     cuando = ag._cuando(ev)
-    return (_tier(ev), TIPOS.index(tipo_de_evento(ev)), cuando.timestamp() if cuando else float("inf"))
+    semanal = bool(re.search(SEMANALES, str(ev.get("nombre", "")).upper()))
+    return (semanal, _tier(ev), TIPOS.index(tipo_de_evento(ev)), cuando.timestamp() if cuando else float("inf"))
 
 
 def tema_de_la_semana(eventos: list[dict[str, Any]]) -> dict[str, Any]:
