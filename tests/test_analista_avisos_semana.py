@@ -327,3 +327,78 @@ def test_si_el_mapa_si_salio_no_hay_aviso_de_mapa_perdido(estado):
     ahora[0] = a(19, 8, 20)
     ag_.latido()
     assert [e for e in envios.enviados if e[1].startswith("director")] == []
+
+
+# ───────────────────────────────────────────── feriados de Chile (menor 9)
+
+
+def test_contrato_feriados_chile_archivo_real():
+    ruta = Path(__file__).resolve().parent.parent / "config" / "feriados_chile.json"
+    assert ruta.exists(), "Falta crear config/feriados_chile.json"
+    import json
+    datos = json.loads(ruta.read_text(encoding="utf-8"))
+    assert "_meta" in datos
+    meta = datos["_meta"]
+    assert meta.get("fuente") == "https://www.feriados.cl/"
+    assert "actualizado" in meta
+    assert "proceso_actualizacion" in meta
+    assert "feriados" in datos
+    fechas = datos["feriados"]
+    assert isinstance(fechas, list) and len(fechas) > 0
+    # Todas las fechas deben cumplir formato ISO YYYY-MM-DD
+    fechas_dt = [date.fromisoformat(f) for f in fechas]
+    # Feriados oficiales confirmados del último trimestre 2026 en Chile (sin inventar)
+    assert date(2026, 10, 12) in fechas_dt   # Encuentro de Dos Mundos (Lunes)
+    assert date(2026, 10, 31) in fechas_dt   # Iglesias Evangélicas y Protestantes (Sábado)
+    assert date(2026, 11, 1) in fechas_dt    # Todos los Santos (Domingo)
+    assert date(2026, 12, 8) in fechas_dt    # Inmaculada Concepción (Martes)
+    assert date(2026, 12, 25) in fechas_dt   # Navidad (Viernes)
+    cargados = av.feriados_chile(ruta)
+    assert isinstance(cargados, frozenset)
+    assert date(2026, 12, 8) in cargados
+
+
+def test_feriados_chile_archivo_temporal_y_fallback(tmp_path):
+    f_json = tmp_path / "feriados.json"
+    f_json.write_text('{"_meta": {}, "feriados": ["2026-12-08", "invalido"]}', encoding="utf-8")
+    assert av.feriados_chile(f_json) == frozenset({date(2026, 12, 8)})
+    assert av.feriados_chile(tmp_path / "inexistente.json") == frozenset()
+
+
+def test_habil_anterior_salta_feriados_y_fines_de_semana():
+    feriados = frozenset({date(2026, 10, 12), date(2026, 12, 8)})
+    # Martes 8 dic es feriado: el día hábil anterior al miércoles 9 dic es el lunes 7 dic
+    assert av._habil_anterior(date(2026, 12, 9), feriados=feriados) == date(2026, 12, 7)
+    # Lunes 12 oct es feriado: el día hábil anterior al martes 13 oct salta lunes, dom y sáb, cayendo en viernes 9 oct
+    assert av._habil_anterior(date(2026, 10, 13), feriados=feriados) == date(2026, 10, 9)
+
+
+def test_la_ventana_de_vispera_no_abre_en_feriado():
+    feriados = frozenset({date(2026, 12, 8)})
+    martes_feriado_1615 = datetime(2026, 12, 8, 16, 15, tzinfo=SCL)
+    assert av.hay_ventana(martes_feriado_1615, feriados=feriados) is False
+
+
+def test_el_mapa_del_lunes_si_abre_en_feriado():
+    # La spec manda que el mapa sale el lunes 07:45 para orientar la semana, aunque sea feriado
+    feriados = frozenset({date(2026, 10, 12)})
+    lunes_feriado_0745 = datetime(2026, 10, 12, 7, 45, tzinfo=SCL)
+    assert av.hay_ventana(lunes_feriado_0745, feriados=feriados) is True
+    avisos = av.que_toca(lunes_feriado_0745, [CPI], av.Estado(Path("x")), "1", feriados=feriados)
+    assert [x.tipo for x in avisos] == ["mapa"]
+
+
+def test_la_vispera_se_adelanta_al_dia_habil_anterior_cuando_hay_feriado(estado):
+    feriados = frozenset({date(2026, 12, 8)})
+    cpi_miercoles = ev("CPI (MoM) (Nov)", "2026-12-09 09:30")
+    lunes_1600 = datetime(2026, 12, 7, 16, 0, tzinfo=SCL)
+    martes_feriado_1600 = datetime(2026, 12, 8, 16, 0, tzinfo=SCL)
+
+    # El lunes a las 16:00 se genera la víspera del dato del miércoles porque el martes es feriado
+    avisos_lunes = av.que_toca(lunes_1600, [cpi_miercoles], estado, "1", feriados=feriados)
+    assert [x.tipo for x in avisos_lunes] == ["vispera"]
+
+    # El martes a las 16:00 (feriado) no se genera ningún aviso
+    avisos_martes = av.que_toca(martes_feriado_1600, [cpi_miercoles], estado, "1", feriados=feriados)
+    assert avisos_martes == []
+

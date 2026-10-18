@@ -21,6 +21,7 @@ Cinco decisiones lo sostienen:
 from __future__ import annotations
 
 import hashlib
+import json
 import threading
 import traceback
 from dataclasses import dataclass
@@ -34,6 +35,7 @@ from analista import registro_semanal as rg
 from analista import semana as sm
 
 RUTA = RAIZ / "data" / "semanal" / "avisos_semana.json"
+RUTA_FERIADOS_CHILE = RAIZ / "config" / "feriados_chile.json"
 TOPE_DIARIO = 2
 TIER_VISPERA = 1
 MAPA = (7 * 60 + 45, 8 * 60 + 15)        # minutos desde la medianoche, [desde, hasta)
@@ -41,6 +43,28 @@ VISPERA = (16 * 60, 16 * 60 + 30)
 HORAS_OPORTUNIDAD = 24
 PLAZO_MAPA_PERDIDO = 105   # minutos tras cerrar la ventana del mapa en que aún se avisa al director
 TIPOS = ("mapa", "vispera")
+
+
+def feriados_chile(ruta: Path = RUTA_FERIADOS_CHILE) -> frozenset[date]:
+    """Carga los feriados oficiales de Chile desde el archivo de configuración.
+
+    Devuelve un conjunto inmutable de fechas. Si el archivo no existe o está dañado,
+    devuelve un frozenset vacío para no interrumpir el agendador.
+    """
+    if not ruta.exists():
+        return frozenset()
+    try:
+        datos = json.loads(ruta.read_text(encoding="utf-8"))
+    except Exception:
+        return frozenset()
+    fechas = datos.get("feriados") or datos.get("chile") or []
+    resultado = set()
+    for f in fechas:
+        try:
+            resultado.add(date.fromisoformat(f))
+        except (ValueError, TypeError):
+            continue
+    return frozenset(resultado)
 
 
 @dataclass(frozen=True)
@@ -63,18 +87,22 @@ def _en_ventana(ahora: datetime, ventana: tuple[int, int]) -> bool:
     return ventana[0] <= minuto < ventana[1]
 
 
-def hay_ventana(ahora: datetime) -> bool:
+def hay_ventana(ahora: datetime, feriados: frozenset[date] | None = None) -> bool:
     """¿Alguna ventana está abierta? Fuera de ellas no se gasta una lectura del calendario."""
     ahora = ahora.astimezone(ag.SANTIAGO)
-    return (ahora.weekday() == 0 and _en_ventana(ahora, MAPA)) or (
-        ahora.weekday() < 5 and _en_ventana(ahora, VISPERA))
+    feriados = feriados if feriados is not None else feriados_chile()
+    mapa_abierto = ahora.weekday() == 0 and _en_ventana(ahora, MAPA)
+    vispera_abierta = ahora.weekday() < 5 and ahora.date() not in feriados and _en_ventana(ahora, VISPERA)
+    return mapa_abierto or vispera_abierta
 
 
-def _habil_anterior(dia: date) -> date:
+def _habil_anterior(dia: date, feriados: frozenset[date] | None = None) -> date:
+    feriados = feriados if feriados is not None else feriados_chile()
     previo = dia - timedelta(days=1)
-    while previo.weekday() >= 5:
+    while previo.weekday() >= 5 or previo in feriados:
         previo -= timedelta(days=1)
     return previo
+
 
 
 # ───────────────────────────────────────────────────────────── estado en disco
@@ -182,17 +210,19 @@ def resumen_interaccion(desde: date, hasta: date, estado: Estado) -> dict[str, d
 # ───────────────────────────────────────────────────────────── qué toca
 
 
-def _avisos_posibles(ahora: datetime, eventos: list[dict[str, Any]]) -> list[Aviso]:
+def _avisos_posibles(ahora: datetime, eventos: list[dict[str, Any]],
+                     feriados: frozenset[date] | None = None) -> list[Aviso]:
+    feriados = feriados if feriados is not None else feriados_chile()
     fecha = ahora.date().isoformat()
     avisos: list[Aviso] = []
     if ahora.weekday() == 0 and _en_ventana(ahora, MAPA):
         avisos.append(Aviso("mapa", fecha, "mapa", 0, sm.armar_mapa(eventos, ahora), None, _id("mapa", fecha, "mapa")))
-    if ahora.weekday() < 5 and _en_ventana(ahora, VISPERA):
+    if ahora.weekday() < 5 and ahora.date() not in feriados and _en_ventana(ahora, VISPERA):
         vistos: set[tuple] = set()
         del_tema = [e for e in eventos if sm.tipo_de_evento(e) and sm._tier(e) <= TIER_VISPERA and ag._cuando(e)]
         for ev in sorted(del_tema, key=sm._clave_de_tema):
             cuando = ag._cuando(ev)
-            if cuando <= ahora or _habil_anterior(cuando.date()) != ahora.date():
+            if cuando <= ahora or _habil_anterior(cuando.date(), feriados=feriados) != ahora.date():
                 continue
             if sm.momento(ev) in vistos:   # un informe es una sola víspera: no se gasta el cupo en dos
                 continue
@@ -204,10 +234,11 @@ def _avisos_posibles(ahora: datetime, eventos: list[dict[str, Any]]) -> list[Avi
     return avisos
 
 
-def que_toca(ahora: datetime, eventos: list[dict[str, Any]], estado: Estado, ejecutivo: str) -> list[Aviso]:
+def que_toca(ahora: datetime, eventos: list[dict[str, Any]], estado: Estado, ejecutivo: str,
+             feriados: frozenset[date] | None = None) -> list[Aviso]:
     """Los avisos que le corresponden ahora a este ejecutivo: sin repetir y con el tope diario."""
     ahora = ahora.astimezone(ag.SANTIAGO)
-    pendientes = [a for a in _avisos_posibles(ahora, eventos) if not estado.enviado(ejecutivo, a)]
+    pendientes = [a for a in _avisos_posibles(ahora, eventos, feriados=feriados) if not estado.enviado(ejecutivo, a)]
     cupo = max(TOPE_DIARIO - estado.enviados_hoy(ejecutivo, ahora.date()), 0)
     return pendientes[:cupo]   # el mapa va primero (tier 0), luego los de menor tier
 
@@ -238,9 +269,11 @@ class Agendador:
     def __init__(self, config: dict[str, Any], estado: Estado, enviar: Callable[[str, Aviso], int | None],
                  avisar_director: Callable[[str, str], None], reloj: Callable[[], datetime],
                  leer: Callable[[datetime], tuple[str, list[dict[str, Any]]]] = leer_eventos,
-                 log: Callable[[str], None] = lambda texto: None):
+                 log: Callable[[str], None] = lambda texto: None,
+                 feriados: frozenset[date] | None = None):
         self.config, self.estado, self.enviar = config, estado, enviar
         self.avisar_director, self.reloj, self.leer, self.log = avisar_director, reloj, leer, log
+        self.feriados = feriados
         self._hechos: set[tuple[str, str]] = set()   # enviados en este proceso, anotados o no
 
     def _calendario_caido(self, ahora: datetime) -> None:
@@ -290,14 +323,15 @@ class Agendador:
     def latido(self) -> None:
         ahora = self.reloj().astimezone(ag.SANTIAGO)
         self._mapa_perdido(ahora)
-        if not hay_ventana(ahora):
+        fer = self.feriados if self.feriados is not None else feriados_chile()
+        if not hay_ventana(ahora, feriados=fer):
             return
         situacion, eventos = self.leer(ahora)
         if situacion == "sin_calendario":
             self._calendario_caido(ahora)
             return
         for ejecutivo in destinatarios(self.config):
-            for aviso in que_toca(ahora, eventos, self.estado, ejecutivo):
+            for aviso in que_toca(ahora, eventos, self.estado, ejecutivo, feriados=fer):
                 if (ejecutivo, aviso.id) in self._hechos:
                     continue   # salió pero no se pudo anotar: reenviarlo cada minuto sería peor que perder el registro
                 try:
@@ -310,3 +344,4 @@ class Agendador:
                     self.estado.anotar_envio(ejecutivo, aviso, ahora, message_id)
                 except Exception:  # noqa: BLE001  no debe cortar a los ejecutivos que faltan
                     self.log(f"aviso {aviso.tipo} a {ejecutivo} salió pero no se anotó: {traceback.format_exc()}")
+
