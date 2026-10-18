@@ -187,6 +187,49 @@ def test_semana_sin_eventos_fuertes_si_se_envia_cuando_el_calendario_respondio(e
     assert len(envios.enviados) == 2
 
 
+def test_leer_eventos_distingue_ok_parcial_sin_calendario_y_vacia():
+    def cargar_ok(solo_hoy=False, min_impact="low", ahora=None, pestanas=("thisWeek",)):
+        if "nextWeek" in pestanas:
+            return {"eventos": []}
+        return {"eventos": [CPI]}
+    assert av.leer_eventos(LUNES_0745, cargar_ok) == ("ok", [CPI])
+
+    def cargar_parcial(solo_hoy=False, min_impact="low", ahora=None, pestanas=("thisWeek",)):
+        if "nextWeek" in pestanas:
+            return {"error": "NO_CALENDAR_FEEDS"}
+        return {"eventos": [CPI]}
+    sit, evs = av.leer_eventos(LUNES_0745, cargar_parcial)
+    assert sit == "parcial" and evs == [CPI]
+
+    def cargar_caido(solo_hoy=False, min_impact="low", ahora=None, pestanas=("thisWeek",)):
+        return {"error": "NO_CALENDAR_FEEDS"}
+    assert av.leer_eventos(LUNES_0745, cargar_caido) == ("sin_calendario", [])
+
+    def cargar_vacio(solo_hoy=False, min_impact="low", ahora=None, pestanas=("thisWeek",)):
+        return {"eventos": []}
+    assert av.leer_eventos(LUNES_0745, cargar_vacio) == ("vacia", [])
+
+
+def test_que_toca_mapa_con_parcial_advierte_cobertura_y_vispera_no_cambia(estado):
+    avisos_parcial = av.que_toca(LUNES_0745, [CPI], estado, "1", parcial=True)
+    assert len(avisos_parcial) == 1
+    assert "El calendario llegó incompleto: lo que ves llega hasta miércoles 21/10; puede faltar algún dato posterior." in avisos_parcial[0].texto
+
+    avisos_normal = av.que_toca(LUNES_0745, [CPI], estado, "1", parcial=False)
+    assert "El calendario llegó incompleto" not in avisos_normal[0].texto
+
+    vispera = av.que_toca(MARTES_1600, [CPI], estado, "1", parcial=True)[0]
+    assert "El calendario llegó incompleto" not in vispera.texto
+
+
+def test_el_agendador_trata_parcial_como_ok_sin_alertar_al_director_y_agrega_advertencia(estado):
+    envios, ahora = Envios(), [LUNES_0745]
+    ag_ = agendador(estado, envios, ahora, lambda t: ("parcial", [CPI]))
+    ag_.latido()
+    assert [e for e in envios.enviados if e[1].startswith("director")] == []
+    assert sorted(e for e in envios.enviados if e[1] == "mapa") == [("10", "mapa"), ("20", "mapa")]
+
+
 # ───────────────────────────────────────────── interacción (tarea 5b)
 
 

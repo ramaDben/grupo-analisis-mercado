@@ -211,12 +211,17 @@ def resumen_interaccion(desde: date, hasta: date, estado: Estado) -> dict[str, d
 
 
 def _avisos_posibles(ahora: datetime, eventos: list[dict[str, Any]],
-                     feriados: frozenset[date] | None = None) -> list[Aviso]:
+                     feriados: frozenset[date] | None = None,
+                     parcial: bool = False) -> list[Aviso]:
     feriados = feriados if feriados is not None else feriados_chile()
     fecha = ahora.date().isoformat()
     avisos: list[Aviso] = []
     if ahora.weekday() == 0 and _en_ventana(ahora, MAPA):
-        avisos.append(Aviso("mapa", fecha, "mapa", 0, sm.armar_mapa(eventos, ahora), None, _id("mapa", fecha, "mapa")))
+        cubierto_hasta = None
+        if parcial and eventos:
+            fechas = [ag._cuando(e) for e in eventos if ag._cuando(e)]
+            cubierto_hasta = max(fechas) if fechas else None
+        avisos.append(Aviso("mapa", fecha, "mapa", 0, sm.armar_mapa(eventos, ahora, cubierto_hasta=cubierto_hasta), None, _id("mapa", fecha, "mapa")))
     if ahora.weekday() < 5 and ahora.date() not in feriados and _en_ventana(ahora, VISPERA):
         vistos: set[tuple] = set()
         del_tema = [e for e in eventos if sm.tipo_de_evento(e) and sm._tier(e) <= TIER_VISPERA and ag._cuando(e)]
@@ -235,20 +240,21 @@ def _avisos_posibles(ahora: datetime, eventos: list[dict[str, Any]],
 
 
 def que_toca(ahora: datetime, eventos: list[dict[str, Any]], estado: Estado, ejecutivo: str,
-             feriados: frozenset[date] | None = None) -> list[Aviso]:
+             feriados: frozenset[date] | None = None,
+             parcial: bool = False) -> list[Aviso]:
     """Los avisos que le corresponden ahora a este ejecutivo: sin repetir y con el tope diario."""
     ahora = ahora.astimezone(ag.SANTIAGO)
-    pendientes = [a for a in _avisos_posibles(ahora, eventos, feriados=feriados) if not estado.enviado(ejecutivo, a)]
+    pendientes = [a for a in _avisos_posibles(ahora, eventos, feriados=feriados, parcial=parcial) if not estado.enviado(ejecutivo, a)]
     cupo = max(TOPE_DIARIO - estado.enviados_hoy(ejecutivo, ahora.date()), 0)
     return pendientes[:cupo]   # el mapa va primero (tier 0), luego los de menor tier
 
 
 def leer_eventos(ahora: datetime, cargar: Callable[..., dict[str, Any]] | None = None) -> tuple[str, list[dict[str, Any]]]:
-    """`("ok"|"vacia"|"sin_calendario", eventos)`: la misma distinción que `agenda.py`."""
+    """`("ok"|"parcial"|"vacia"|"sin_calendario", eventos)`: la misma distinción que `agenda.py`."""
     altos, _avisos, fallidas, _limite = ag.ventana_cruda(ahora, cargar)
     eventos = [ev for _, ev in altos]
     if eventos:
-        return "ok", eventos
+        return ("parcial" if fallidas > 0 else "ok"), eventos
     return ("sin_calendario" if fallidas else "vacia"), []
 
 
@@ -331,7 +337,7 @@ class Agendador:
             self._calendario_caido(ahora)
             return
         for ejecutivo in destinatarios(self.config):
-            for aviso in que_toca(ahora, eventos, self.estado, ejecutivo, feriados=fer):
+            for aviso in que_toca(ahora, eventos, self.estado, ejecutivo, feriados=fer, parcial=(situacion == "parcial")):
                 if (ejecutivo, aviso.id) in self._hechos:
                     continue   # salió pero no se pudo anotar: reenviarlo cada minuto sería peor que perder el registro
                 try:

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from analista import RAIZ
@@ -165,7 +165,8 @@ def _elegidos(eventos: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(unicos[:MAXIMO_MAPA], key=lambda e: ag._cuando(e))
 
 
-def armar_mapa(eventos: list[dict[str, Any]], ahora: datetime) -> str:
+def armar_mapa(eventos: list[dict[str, Any]], ahora: datetime,
+               cubierto_hasta: datetime | date | str | None = None) -> str:
     """El mensaje del lunes: el tema, los datos fuertes con su hora de Chile y una línea para conversar."""
     ahora = ahora.astimezone(ag.SANTIAGO)
     tema = tema_de_la_semana(eventos)
@@ -178,7 +179,11 @@ def armar_mapa(eventos: list[dict[str, Any]], ahora: datetime) -> str:
         cuerpo = ["Lo que viene, en hora de Chile:", *[_linea(e) for e in _elegidos(eventos)], "",
                   f"💬 Qué conversar: {guia()[tema['tipo']]['conversar']}"]
     desde, hasta = ag.dia_corto(ahora), ag.dia_corto(ahora + timedelta(days=ag.VENTANA_DIAS))
-    return "\n".join([f"📅 {tema['titular']}", f"Del {desde} al {hasta}.", "", *cuerpo, "", AVISO_RIESGO])
+    encabezado = [f"📅 {tema['titular']}", f"Del {desde} al {hasta}."]
+    if cubierto_hasta is not None:
+        dia = ag.dia_corto(cubierto_hasta) if isinstance(cubierto_hasta, (date, datetime)) else str(cubierto_hasta)
+        encabezado.append(f"El calendario llegó incompleto: lo que ves llega hasta {dia}; puede faltar algún dato posterior.")
+    return "\n".join([*encabezado, "", *cuerpo, "", AVISO_RIESGO])
 
 
 def _frase_de_efecto(ev: dict[str, Any]) -> str:

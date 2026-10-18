@@ -147,6 +147,12 @@ def test_mapa_de_semana_tranquila():
     assert sm.AVISO_RIESGO in texto
 
 
+def test_mapa_con_calendario_incompleto_advierte_cobertura_parcial():
+    texto = sm.armar_mapa([FOMC, CPI], LUNES, cubierto_hasta=datetime(2026, 10, 22, 9, 30, tzinfo=SCL))
+    assert "Del lunes 19/10 al lunes 26/10." in texto
+    assert "El calendario llegó incompleto: lo que ves llega hasta jueves 22/10; puede faltar algún dato posterior." in texto
+
+
 # ───────────────────────────────────────────── la víspera
 
 
@@ -175,6 +181,7 @@ def test_el_activo_mas_afectado():
 
 @pytest.mark.parametrize("texto", [
     sm.armar_mapa([FOMC, CPI, NFP, PMI, CRUDO], LUNES), sm.armar_mapa([], LUNES),
+    sm.armar_mapa([FOMC, CPI], LUNES, cubierto_hasta=datetime(2026, 10, 22, 9, 30, tzinfo=SCL)),
     sm.armar_vispera(FOMC, datetime(2026, 10, 20, 16, 0, tzinfo=SCL)),
     sm.armar_vispera(CRUDO, datetime(2026, 10, 20, 16, 0, tzinfo=SCL)),
 ])
