@@ -32,7 +32,7 @@ semana es "tranquila" y el mapa lo dice en una línea.
 
 Fuera del MVP, con medición de por medio: la **reacción** (veredicto contra consenso y movimiento medido
 en MT5 tras el dato), el cierre del viernes y el banner en el correo. Se decide después de 3 semanas
-midiendo cuántos ejecutivos abren la pieza.
+midiendo la interacción (Telegram no informa lecturas): clics del botón de la víspera, votos Útil / No me sirve bajo el mapa y pedidos de `/oportunidad` del mismo activo en 24 h.
 
 ## Datos y reglas
 
@@ -94,4 +94,4 @@ deja fuera del tema de la semana y lo declara.
 
 ## Fuera de alcance
 
-Avisos a clientes, la pieza de reacción, medición de aperturas, el banner del correo.
+Avisos a clientes, la pieza de reacción, el banner del correo. (La medición de interacción sí entra: Tarea 5b del plan.)

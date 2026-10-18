@@ -60,6 +60,23 @@ fijos). Heredocs de Bash colapsan barras invertidas: usa Write/Edit para código
 - Test: el hilo no se arranca en los tests existentes (flag inyectable); una víspera genera el pedido
   correcto.
 
+## Tarea 5b: medir la interacción (para decidir a las 3 semanas)
+
+Telegram no informa si alguien leyó un mensaje, así que se mide lo que sí se puede: interacción.
+
+- Cada aviso enviado guarda en `data/semanal/avisos_semana.json`: `ejecutivo`, `tipo`, `fecha`, `evento`,
+  `activo` (el de la víspera), `clics_boton` (cuántas veces tocó el botón) y `oportunidad_24h` (si ese
+  ejecutivo pidió `/oportunidad` del mismo activo dentro de 24 h del aviso).
+- El mapa del lunes lleva un teclado en línea con "Útil" y "No me sirve"; cada toque se anota con la hora.
+  El aviso se edita para quitar el teclado tras el primer toque (un voto por ejecutivo y aviso).
+- `resumen_interaccion(desde, hasta) -> dict`: por tipo de aviso, enviados, clics, votos útil/no útil y
+  pedidos de `/oportunidad` posteriores, sin identificar al ejecutivo en el resumen. Se corre a mano a las
+  3 semanas y su salida alimenta la decisión abierta 2.
+- Tests: un clic se anota una vez y una sola vez por voto; `oportunidad_24h` solo cuenta el mismo activo y
+  dentro de la ventana; el resumen suma bien con dos ejecutivos y dos semanas; reiniciar el bot no pierde
+  los registros.
+- No es contenido para clientes ni se envía fuera de Telegram.
+
 ## Tarea 6: verificación y cierre
 
 - Corre `uv run pytest -q -k "analista or semana or glosario"` y la suite completa.
@@ -71,4 +88,4 @@ fijos). Heredocs de Bash colapsan barras invertidas: usa Write/Edit para código
 ## Decisiones abiertas del director (no bloquean construir)
 
 1. ¿Cumplimiento revisa `config/guia_eventos.json` antes de abrir a todos los ejecutivos?
-2. Después de 3 semanas: ¿se suma la pieza de reacción y el cierre del viernes?
+2. Después de 3 semanas: ¿se suma la pieza de reacción y el cierre del viernes? Se decide con el resumen de la Tarea 5b.
