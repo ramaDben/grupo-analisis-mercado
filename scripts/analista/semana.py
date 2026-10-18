@@ -36,6 +36,13 @@ PATRONES = {
     "actividad": r"\bPMI\b|\bISM\b|\bGDP\b|IMACEC|GROSS DOMESTIC",
     "petroleo": r"CRUDE OIL INVENTORIES|\bOPEC\b",
 }
+# Actas y discursos enganchan con la entrada del banco central (la sigla está en el título) pero no
+# deciden nada ni tienen consenso: anunciarlos como decisión de tasas sería falso.
+NO_ES_DATO = r"MINUTES|SPEAKS|SPEECH|TESTIFIES"
+# El glosario describe a EE.UU. y a Chile: el tier de un dato de otro país no se presta.
+PAISES_DEL_TEMA = ("United States", "Chile")
+# Entre datos del mismo tipo y día, el que da el nombre al informe (el de empleo es Nóminas, no la tasa).
+PRINCIPALES = r"PAYROLLS|INTEREST RATE DECISION|\bCPI\b|\bPCE\b|\bGDP\b|\bPMI\b|IMACEC"
 TIER_ALTO = 2          # tier 1 y 2 del glosario pueden ser el tema; el 3 es contexto
 MAXIMO_MAPA = 5
 # Series que salen todas las semanas: son contexto del calendario, no el tema. Solo mandan si no hay otra cosa.
@@ -72,9 +79,11 @@ def _tier(ev: dict[str, Any]) -> int:
 
 def tipo_de_evento(ev: dict[str, Any]) -> str | None:
     """El tipo de la guía al que pertenece el evento; None si el glosario no lo conoce o no es del tema."""
-    if not _dic(ev).get("tier"):
+    if not _dic(ev).get("tier") or ev.get("pais") not in PAISES_DEL_TEMA:
         return None
     nombre = str(ev.get("nombre", "")).upper()
+    if re.search(NO_ES_DATO, nombre):
+        return None
     return next((t for t in TIPOS if re.search(PATRONES[t], nombre)), None)
 
 
@@ -99,7 +108,9 @@ def _fuerte(ev: dict[str, Any]) -> bool:
 def _clave_de_tema(ev: dict[str, Any]) -> tuple:
     cuando = ag._cuando(ev)
     semanal = bool(re.search(SEMANALES, str(ev.get("nombre", "")).upper()))
-    return (semanal, _tier(ev), TIPOS.index(tipo_de_evento(ev)), cuando.timestamp() if cuando else float("inf"))
+    principal = not re.search(PRINCIPALES, str(ev.get("nombre", "")).upper())
+    return (semanal, _tier(ev), TIPOS.index(tipo_de_evento(ev)), principal,
+            cuando.timestamp() if cuando else float("inf"))
 
 
 def tema_de_la_semana(eventos: list[dict[str, Any]]) -> dict[str, Any]:
@@ -138,17 +149,20 @@ def _linea(ev: dict[str, Any]) -> str:
     return f"• {_cuando_txt(ev)} · {_nombre(ev)}" + (f" · mueve: {', '.join(activos)}" if activos else "")
 
 
+def momento(ev: dict[str, Any]) -> tuple:
+    """Un informe es un solo lugar: Nóminas, tasa de desempleo y salarios salen juntos y cuentan una vez."""
+    return (tipo_de_evento(ev), ev.get("pais"), ag._cuando(ev).date())
+
+
 def _elegidos(eventos: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Hasta cinco datos fuertes, sin repetir el mismo dato del mismo día, en orden de reloj."""
+    """Hasta cinco datos fuertes, uno por tipo, país y día, en orden de reloj."""
     vistos: set[tuple] = set()
     unicos = []
-    for ev in sorted((e for e in eventos if _fuerte(e) and ag._cuando(e)), key=lambda e: ag._cuando(e)):
-        clave = (_nombre(ev), ag._cuando(ev).date())
-        if clave not in vistos:
-            vistos.add(clave)
+    for ev in sorted((e for e in eventos if _fuerte(e) and ag._cuando(e)), key=_clave_de_tema):
+        if momento(ev) not in vistos:
+            vistos.add(momento(ev))
             unicos.append(ev)
-    mejores = sorted(unicos, key=_clave_de_tema)[:MAXIMO_MAPA]
-    return sorted(mejores, key=lambda e: ag._cuando(e))
+    return sorted(unicos[:MAXIMO_MAPA], key=lambda e: ag._cuando(e))
 
 
 def armar_mapa(eventos: list[dict[str, Any]], ahora: datetime) -> str:
@@ -156,8 +170,8 @@ def armar_mapa(eventos: list[dict[str, Any]], ahora: datetime) -> str:
     ahora = ahora.astimezone(ag.SANTIAGO)
     tema = tema_de_la_semana(eventos)
     if tema["tranquila"]:
-        cuerpo = ["No hay datos de alto impacto en el calendario de EE.UU., Chile, China y la Zona Euro "
-                  "para los próximos 7 días.", "",
+        cuerpo = ["Ningún dato de los próximos 7 días marca la semana con claridad (calendario de EE.UU., "
+                  "Chile, China y la Zona Euro).", "",
                   "💬 Qué conversar: es una buena semana para ponerte al día con tus clientes y revisar cómo "
                   "viene su cartera."]
     else:
@@ -187,7 +201,9 @@ def armar_vispera(ev: dict[str, Any], ahora: datetime) -> str:
     ahora = ahora.astimezone(ag.SANTIAGO)
     cuando = ag._cuando(ev)
     dia = "Mañana" if (cuando.date() - ahora.date()).days == 1 else f"El {ag.dia_corto(cuando)}"
-    lineas = [f"📍 {dia} a las {ag._hora(cuando)} sale {_nombre(ev)}.", _frase_de_efecto(ev),
+    nombre = _nombre(ev)
+    lineas = [f"📍 {dia} a las {ag._hora(cuando)} sale {nombre}{'' if nombre.endswith('.') else '.'}",
+              _frase_de_efecto(ev),
               f"💬 Qué conversar: {guia()[tipo]['conversar']}", f"🚫 Qué no decir: {guia()[tipo]['no_decir']}",
               AVISO_RIESGO]
     return "\n".join(x for x in lineas if x)

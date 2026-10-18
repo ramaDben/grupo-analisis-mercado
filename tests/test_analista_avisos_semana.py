@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import ast
 import sys
+import threading
 from datetime import date, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -113,6 +114,7 @@ class Envios:
     def __init__(self, falla=False):
         self.enviados, self.falla = [], falla
         self.n = 0
+        self.avisos_director: list[str] = []
 
     def __call__(self, chat, aviso):
         if self.falla:
@@ -122,6 +124,7 @@ class Envios:
         return 100 + self.n
 
     def director(self, chat, texto):
+        self.avisos_director.append(texto)
         self.enviados.append((chat, "director:" + texto[:20]))
 
 
@@ -261,3 +264,66 @@ def test_el_agendador_no_importa_el_envio_de_whatsapp():
         elif isinstance(nodo, ast.ImportFrom):
             importados |= {nodo.module or ""} | {n.name for n in nodo.names}
     assert not any("whatsapp" in i.lower() for i in importados), importados
+
+
+# ───────────────────────────────────────────── revisión final
+
+
+def test_el_informe_de_empleo_es_una_sola_vispera(estado):
+    trio = [ev("Nonfarm Payrolls (Oct)", "2026-11-06 10:30"), ev("Unemployment Rate (Oct)", "2026-11-06 10:30"),
+            ev("Average Hourly Earnings (MoM) (Oct)", "2026-11-06 10:30")]
+    assert len(av.que_toca(datetime(2026, 11, 5, 16, 5, tzinfo=SCL), trio, estado, "1")) == 1
+
+
+def test_el_ipc_de_chile_y_el_cpi_de_eeuu_el_mismo_dia_no_se_pisan(estado):
+    chile = ev("CPI (MoM) (Sep)", "2026-10-21 08:00", pais="Chile")
+    assert len(av.que_toca(MARTES_1600, [CPI, chile], estado, "1")) == 2
+
+
+def test_un_envio_confirmado_que_no_se_pudo_anotar_no_se_reenvia(tmp_path):
+    class EstadoQueFalla(av.Estado):
+        fallar = True
+
+        def anotar_envio(self, *a, **k):
+            if self.fallar:
+                raise PermissionError("disco")
+            return super().anotar_envio(*a, **k)
+
+    estado = EstadoQueFalla(tmp_path / "x.json")
+    envios, ahora = Envios(), [LUNES_0745]
+    ag_ = agendador(estado, envios, ahora, lambda t: ("ok", [CPI]))
+    ag_.latido()
+    ag_.latido()
+    assert sorted(envios.enviados) == [("10", "mapa"), ("20", "mapa")]   # una copia cada uno, no una por latido
+
+
+def test_leer_el_estado_espera_a_quien_lo_esta_escribiendo(estado):
+    # En Windows `replace` sobre un archivo abierto para lectura falla: lecturas y escrituras comparten candado.
+    estado.anotar_envio("1", av.que_toca(LUNES_0745, [CPI], estado, "1")[0], LUNES_0745, 1)
+    resultado = []
+    with estado.lock:
+        hilo = threading.Thread(target=lambda: resultado.append(estado.datos))
+        hilo.start()
+        hilo.join(0.3)
+        assert hilo.is_alive()
+    hilo.join(2)
+    assert resultado
+
+
+def test_si_el_bot_estaba_apagado_en_la_ventana_del_mapa_el_director_se_entera_una_vez(estado):
+    envios, ahora = Envios(), [a(19, 8, 20)]
+    ag_ = agendador(estado, envios, ahora, lambda t: ("ok", [CPI]))
+    ag_.latido()
+    ag_.latido()
+    assert [e for e in envios.enviados if e[1] == "mapa"] == []
+    assert len([e for e in envios.enviados if e[1].startswith("director")]) == 1
+    assert "no salió" in envios.avisos_director[0]
+
+
+def test_si_el_mapa_si_salio_no_hay_aviso_de_mapa_perdido(estado):
+    envios, ahora = Envios(), [LUNES_0745]
+    ag_ = agendador(estado, envios, ahora, lambda t: ("ok", [CPI]))
+    ag_.latido()
+    ahora[0] = a(19, 8, 20)
+    ag_.latido()
+    assert [e for e in envios.enviados if e[1].startswith("director")] == []

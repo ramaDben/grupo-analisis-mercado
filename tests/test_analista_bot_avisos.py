@@ -99,7 +99,7 @@ def test_la_vispera_lleva_el_boton_del_activo(con_avisos):
     a = aviso("vispera", activo="USDCLP")
     con_avisos.bot.enviar_aviso(CAMILA, a)
     boton = con_avisos.bot.tg.con_teclado[0][2]["inline_keyboard"][0][0]
-    assert boton["callback_data"] == f"sw:ped:{a.id}" and "dolar" in boton["text"]
+    assert boton["callback_data"] == f"sw:ped:{a.id}" and "dólar" in boton["text"]
 
 
 def test_la_vispera_sin_activo_va_sin_botones(con_avisos):
@@ -195,3 +195,14 @@ def test_el_polling_atiende_los_callbacks(con_avisos):
     con_avisos.bot.avisos.anotar_envio(CAMILA, a, LUNES, 901)
     con_avisos.bot.atender_update(callback(f"sw:util:{a.id}"))
     assert con_avisos.bot.avisos.registro(CAMILA, a.id)["votos"]
+
+
+def test_un_registro_de_avisos_danado_no_bota_el_pedido_de_oportunidad(con_avisos, tmp_path):
+    con_avisos.bot.avisos.ruta.write_text("{corrupto", encoding="utf-8")
+    respuestas = con_avisos.bot.recibir(update("/oportunidad oro"))
+    assert "Recibido" in respuestas[0].texto and con_avisos.bot.cola.qsize() == 1
+
+
+def test_el_boton_dice_petroleo_con_tilde(con_avisos):
+    con_avisos.bot.enviar_aviso(CAMILA, aviso("vispera", activo="WTI.spot"))
+    assert "petróleo" in con_avisos.bot.tg.con_teclado[0][2]["inline_keyboard"][0][0]["text"]

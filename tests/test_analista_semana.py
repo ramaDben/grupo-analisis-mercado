@@ -183,3 +183,31 @@ def test_ningun_texto_trae_guion_largo_ni_palabras_de_asesoria(texto):
     # «Índice de gerentes de compra» es el nombre del PMI, no una orden.
     limpio = texto.replace("gerentes de compra", "gerentes")
     assert not PROHIBIDAS.search(limpio), PROHIBIDAS.search(limpio).group(0)
+
+
+# ───────────────────────────────────────────── revisión final (rondas de hallazgos)
+
+
+@pytest.mark.parametrize("nombre,pais", [("FOMC Meeting Minutes", "United States"), ("FOMC Member Waller Speaks", "United States"),
+                                         ("Monetary Policy Meeting Minutes", "Chile"),
+                                         ("CPI (YoY) (Sep)", "Euro Zone"), ("GDP (QoQ) (Q3)", "China"),
+                                         ("Unemployment Rate (Sep)", "Euro Zone")])
+def test_actas_discursos_y_otros_paises_no_son_tema(nombre, pais):
+    assert sm.tipo_de_evento(ev(nombre, pais=pais)) is None
+
+
+def test_la_semana_con_solo_datos_de_otros_paises_o_actas_es_tranquila_sin_afirmar_de_mas():
+    texto = sm.armar_mapa([ev("FOMC Meeting Minutes"), ev("CPI (YoY) (Sep)", pais="Euro Zone")], LUNES)
+    assert texto.splitlines()[0] == "📅 Semana tranquila"
+    assert "No hay datos de alto impacto" not in texto   # hay datos altos: solo ninguno marca la semana
+
+
+def test_el_informe_de_empleo_ocupa_un_solo_lugar_en_el_mapa():
+    trio = [ev("Nonfarm Payrolls (Oct)", "2026-11-06 10:30"), ev("Unemployment Rate (Oct)", "2026-11-06 10:30"),
+            ev("Average Hourly Earnings (MoM) (Oct)", "2026-11-06 10:30")]
+    lineas = [x for x in sm.armar_mapa(trio, datetime(2026, 11, 2, 7, 45, tzinfo=SCL)).splitlines() if x.startswith("• ")]
+    assert len(lineas) == 1 and "Nóminas no agrícolas" in lineas[0]
+
+
+def test_la_vispera_no_termina_en_doble_punto():
+    assert ".." not in sm.armar_vispera(CPI, datetime(2026, 10, 21, 16, 0, tzinfo=SCL))

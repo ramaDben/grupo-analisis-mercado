@@ -571,7 +571,10 @@ class Bot:
             return [Respuesta(chat, f"Piezas nuevas hoy: {usados} de {cupo}. En cola: {self.cola.qsize()}.")]
 
         if orden.pieza == "oportunidad" and self.avisos is not None:
-            self.avisos.marcar_oportunidad(usuario, orden.args["ticker"], self.atendedor.reloj())
+            try:
+                self.avisos.marcar_oportunidad(usuario, orden.args["ticker"], self.atendedor.reloj())
+            except Exception:  # noqa: BLE001  la medición es un extra: nunca bota el pedido del ejecutivo
+                _log(f"no pude anotar la oportunidad en la medición: {traceback.format_exc()}")
         return self._encolar(usuario, chat, orden)
 
     def _encolar(self, usuario: str, chat: int, orden: od.Orden) -> list[Respuesta]:
@@ -603,6 +606,7 @@ class Bot:
                                             {"text": "👎 No me sirve", "callback_data": f"sw:no:{aviso.id}"}]]}
         elif aviso.activo:
             alias = mac.ALIAS_DEL_BOT.get(aviso.activo, aviso.activo.lower())
+            alias = {"dolar": "dólar", "petroleo": "petróleo"}.get(alias, alias)   # lo que lee el ejecutivo
             teclado = {"inline_keyboard": [[{"text": f"📊 Ver análisis de {alias}",
                                              "callback_data": f"sw:ped:{aviso.id}"}]]}
         else:

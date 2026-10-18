@@ -39,6 +39,7 @@ TIER_VISPERA = 1
 MAPA = (7 * 60 + 45, 8 * 60 + 15)        # minutos desde la medianoche, [desde, hasta)
 VISPERA = (16 * 60, 16 * 60 + 30)
 HORAS_OPORTUNIDAD = 24
+PLAZO_MAPA_PERDIDO = 105   # minutos tras cerrar la ventana del mapa en que aún se avisa al director
 TIPOS = ("mapa", "vispera")
 
 
@@ -89,12 +90,15 @@ class Estado:
 
     @property
     def datos(self) -> dict[str, Any]:
-        # Un archivo corrupto levanta `RegistroDanado`: no se trata como vacío para no pisar la historia.
-        datos = rg._leer(self.ruta) if self.ruta.exists() else {}
-        datos = datos if isinstance(datos, dict) else {}
-        datos.setdefault("enviados", [])
-        datos.setdefault("alertas", [])
-        return datos
+        # Bajo el mismo candado que las escrituras: en Windows `replace` sobre un archivo abierto para
+        # leer falla, así que una lectura concurrente haría perder un envío, un voto o un clic.
+        with self.lock:
+            # Un archivo corrupto levanta `RegistroDanado`: no se trata como vacío para no pisar la historia.
+            datos = rg._leer(self.ruta) if self.ruta.exists() else {}
+            datos = datos if isinstance(datos, dict) else {}
+            datos.setdefault("enviados", [])
+            datos.setdefault("alertas", [])
+            return datos
 
     def _mutar(self, cambio: Callable[[dict[str, Any]], Any]) -> Any:
         with self.lock:
@@ -108,6 +112,10 @@ class Estado:
 
     def enviado(self, ejecutivo: str, aviso: Aviso) -> bool:
         return self.registro(ejecutivo, aviso.id) is not None
+
+    def mapa_enviado(self, ejecutivo: str, fecha: date) -> bool:
+        return any(r["ejecutivo"] == ejecutivo and r["fecha"] == fecha.isoformat() and r["tipo"] == "mapa"
+                   for r in self.datos["enviados"])
 
     def enviados_hoy(self, ejecutivo: str, fecha: date) -> int:
         return sum(1 for r in self.datos["enviados"] if r["ejecutivo"] == ejecutivo and r["fecha"] == fecha.isoformat())
@@ -180,16 +188,17 @@ def _avisos_posibles(ahora: datetime, eventos: list[dict[str, Any]]) -> list[Avi
     if ahora.weekday() == 0 and _en_ventana(ahora, MAPA):
         avisos.append(Aviso("mapa", fecha, "mapa", 0, sm.armar_mapa(eventos, ahora), None, _id("mapa", fecha, "mapa")))
     if ahora.weekday() < 5 and _en_ventana(ahora, VISPERA):
-        vistos: set[str] = set()
+        vistos: set[tuple] = set()
         del_tema = [e for e in eventos if sm.tipo_de_evento(e) and sm._tier(e) <= TIER_VISPERA and ag._cuando(e)]
         for ev in sorted(del_tema, key=sm._clave_de_tema):
             cuando = ag._cuando(ev)
             if cuando <= ahora or _habil_anterior(cuando.date()) != ahora.date():
                 continue
-            clave = f"{ev['diccionario'].get('nombre_es')}|{cuando.date().isoformat()}"
-            if clave in vistos:
+            if sm.momento(ev) in vistos:   # un informe es una sola víspera: no se gasta el cupo en dos
                 continue
-            vistos.add(clave)
+            vistos.add(sm.momento(ev))
+            tipo, pais, dia = sm.momento(ev)
+            clave = f"{tipo}|{pais}|{dia.isoformat()}"
             avisos.append(Aviso("vispera", fecha, clave, sm._tier(ev), sm.armar_vispera(ev, ahora),
                                 sm.activo_mas_afectado(ev), _id("vispera", fecha, clave)))
     return avisos
@@ -232,6 +241,7 @@ class Agendador:
                  log: Callable[[str], None] = lambda texto: None):
         self.config, self.estado, self.enviar = config, estado, enviar
         self.avisar_director, self.reloj, self.leer, self.log = avisar_director, reloj, leer, log
+        self._hechos: set[tuple[str, str]] = set()   # enviados en este proceso, anotados o no
 
     def _calendario_caido(self, ahora: datetime) -> None:
         clave = f"{ahora.date().isoformat()}|{'mapa' if ahora.weekday() == 0 and _en_ventana(ahora, MAPA) else 'vispera'}"
@@ -250,8 +260,36 @@ class Agendador:
         if enviado:
             self.estado.anotar_alerta_director(clave)
 
+    def _mapa_perdido(self, ahora: datetime) -> None:
+        """El lunes pasada la ventana sin que el mapa saliera (bot apagado): se le dice al director, una vez.
+
+        Si el calendario estaba caído ya se avisó por esa vía. La ventana no se reabre: mandar tarde un mapa
+        que nadie pidió es decisión del director."""
+        minuto = ahora.hour * 60 + ahora.minute
+        dia = ahora.date()
+        if not (ahora.weekday() == 0 and MAPA[1] <= minuto < MAPA[1] + PLAZO_MAPA_PERDIDO):
+            return
+        clave = f"{dia.isoformat()}|mapa_perdido"
+        if self.estado.director_avisado(clave) or self.estado.director_avisado(f"{dia.isoformat()}|mapa"):
+            return
+        if all(self.estado.mapa_enviado(e, dia) for e in destinatarios(self.config)):
+            return
+        directores = [i for i, a in self.config.get("analistas", {}).items() if a.get("rol") == "director"]
+        texto = ("El mapa de la semana no salió en su ventana (de 07:45 a 08:15), probablemente porque el bot "
+                 "estaba apagado. Los ejecutivos no lo recibieron esta semana.")
+        enviado = False
+        for d in directores:
+            try:
+                self.avisar_director(d, texto)
+                enviado = True
+            except Exception:  # noqa: BLE001
+                self.log(f"no pude avisar al director {d}: {traceback.format_exc()}")
+        if enviado:
+            self.estado.anotar_alerta_director(clave)
+
     def latido(self) -> None:
         ahora = self.reloj().astimezone(ag.SANTIAGO)
+        self._mapa_perdido(ahora)
         if not hay_ventana(ahora):
             return
         situacion, eventos = self.leer(ahora)
@@ -260,9 +298,15 @@ class Agendador:
             return
         for ejecutivo in destinatarios(self.config):
             for aviso in que_toca(ahora, eventos, self.estado, ejecutivo):
+                if (ejecutivo, aviso.id) in self._hechos:
+                    continue   # salió pero no se pudo anotar: reenviarlo cada minuto sería peor que perder el registro
                 try:
                     message_id = self.enviar(ejecutivo, aviso)
                 except Exception:  # noqa: BLE001  un envío caído sigue pendiente: no se anota
                     self.log(f"aviso {aviso.tipo} a {ejecutivo} falló: {traceback.format_exc()}")
                     continue
-                self.estado.anotar_envio(ejecutivo, aviso, ahora, message_id)
+                self._hechos.add((ejecutivo, aviso.id))
+                try:
+                    self.estado.anotar_envio(ejecutivo, aviso, ahora, message_id)
+                except Exception:  # noqa: BLE001  no debe cortar a los ejecutivos que faltan
+                    self.log(f"aviso {aviso.tipo} a {ejecutivo} salió pero no se anotó: {traceback.format_exc()}")
