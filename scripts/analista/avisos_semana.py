@@ -1,8 +1,8 @@
 """El agendador interno de la alerta de la semana: qué le toca a cada ejecutivo y cuándo.
 
 Material interno del bot de Telegram (spec 2026-10-18-alerta-semana-ejecutivos). No es del reloj de
-sucesos (`reloj_gi.py` solo prepara y jamás envía) ni va a WhatsApp: **este módulo no importa nada de
-`enviar_whatsapp`**, y un test lo impone. Lo mueve un hilo del bot que late cada minuto y decide con la
+sucesos (`reloj_gi.py` solo prepara y jamás envía) ni va a WhatsApp: **este módulo no importa nada del
+envío a WhatsApp**, y un test lo impone. Lo mueve un hilo del bot que late cada minuto y decide con la
 hora de Santiago.
 
 Cinco decisiones lo sostienen:

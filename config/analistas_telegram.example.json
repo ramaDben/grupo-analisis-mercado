@@ -12,6 +12,9 @@
   "ruta_drive": "",
   "url_carpeta_drive": "",
   "tier": "flash",
+  "avisos_semana": {
+    "modo": "prueba"
+  },
   "reuso_minutos": {
     "seguimiento": 30
   },

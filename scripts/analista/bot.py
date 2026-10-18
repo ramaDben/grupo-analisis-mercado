@@ -28,6 +28,7 @@ from zoneinfo import ZoneInfo
 
 from analista import RAIZ
 from analista import autor as au
+from analista import avisos_semana as av
 from analista import comercial as cm
 from analista import esquema as es
 from analista import fuentes as fu
@@ -476,6 +477,19 @@ class Telegram:
         # y Telegram descartaba la respuesta entera.
         self._post("sendMessage", json={"chat_id": chat, "text": texto[:4000]})
 
+    def mensaje_con_teclado(self, chat: int, texto: str, teclado: dict[str, Any]) -> int:
+        """Un mensaje con botones en línea; devuelve su id para poder quitarle el teclado después."""
+        res = self._post("sendMessage", json={"chat_id": chat, "text": texto[:4000], "reply_markup": teclado})
+        return int(res["message_id"])
+
+    def quitar_teclado(self, chat: int, message_id: int) -> None:
+        self._post("editMessageReplyMarkup",
+                   json={"chat_id": chat, "message_id": message_id, "reply_markup": {"inline_keyboard": []}})
+
+    def responder_callback(self, id_: str, texto: str = "") -> None:
+        """Telegram deja el botón girando hasta que se responde el toque."""
+        self._post("answerCallbackQuery", json={"callback_query_id": id_, "text": texto})
+
     def documento(self, chat: int, ruta: Path) -> None:
         with ruta.open("rb") as f:
             tipo = {".pdf": "application/pdf", ".png": "image/png"}.get(ruta.suffix, "text/html")
@@ -511,6 +525,9 @@ class Bot:
     ocupado: threading.Event = field(default_factory=threading.Event)
     generando: set[str] = field(default_factory=set)
     candado: threading.Lock = field(default_factory=threading.Lock, repr=False)
+    avisos: av.Estado | None = None        # la alerta semanal: sin él, el bot no mide ni agenda nada
+    agendador: Any = None
+    parar: threading.Event = field(default_factory=threading.Event, repr=False)
 
     @property
     def config(self) -> dict[str, Any]:
@@ -553,6 +570,11 @@ class Bot:
             usados = self.estado.usados(usuario, self.atendedor.reloj())
             return [Respuesta(chat, f"Piezas nuevas hoy: {usados} de {cupo}. En cola: {self.cola.qsize()}.")]
 
+        if orden.pieza == "oportunidad" and self.avisos is not None:
+            self.avisos.marcar_oportunidad(usuario, orden.args["ticker"], self.atendedor.reloj())
+        return self._encolar(usuario, chat, orden)
+
+    def _encolar(self, usuario: str, chat: int, orden: od.Orden) -> list[Respuesta]:
         if orden.pieza == "oportunidad":
             clave = orden.clave_base().lower()
             with self.candado:
@@ -570,6 +592,92 @@ class Bot:
             return [Respuesta(chat, f"Recibido. Armando el análisis de {orden.args['ticker']}: si ya hay uno "
                                     "vigente te lo entrego al tiro; si no, tarda unos minutos.")]
         return [Respuesta(chat, "Recibido. Preparo la pieza: una nueva tarda unos minutos.")]
+
+    # ───────────────────────────────────────── la alerta semanal (spec 2026-10-18)
+
+    def enviar_aviso(self, ejecutivo: str, aviso: av.Aviso) -> int | None:
+        """Manda el aviso por Telegram con su teclado y devuelve el id del mensaje (None si va sin botones)."""
+        chat = int(ejecutivo)
+        if aviso.tipo == "mapa":
+            teclado = {"inline_keyboard": [[{"text": "👍 Útil", "callback_data": f"sw:util:{aviso.id}"},
+                                            {"text": "👎 No me sirve", "callback_data": f"sw:no:{aviso.id}"}]]}
+        elif aviso.activo:
+            alias = mac.ALIAS_DEL_BOT.get(aviso.activo, aviso.activo.lower())
+            teclado = {"inline_keyboard": [[{"text": f"📊 Ver análisis de {alias}",
+                                             "callback_data": f"sw:ped:{aviso.id}"}]]}
+        else:
+            self.tg.mensaje(chat, aviso.texto)
+            return None
+        return self.tg.mensaje_con_teclado(chat, aviso.texto, teclado)
+
+    def activar_avisos(self, reloj: Callable[[], datetime] | None = None) -> None:
+        """Enciende la alerta semanal: el estado en disco y el agendador que lo alimenta."""
+        self.avisos = av.Estado()
+        self.agendador = av.Agendador(self.config, self.avisos, self.enviar_aviso,
+                                      lambda chat, texto: self.tg.mensaje(int(chat), texto),
+                                      reloj or self.atendedor.reloj, log=_log)
+
+    def iniciar_avisos(self, pausa: float = 60.0) -> threading.Thread | None:
+        """El hilo que late cada minuto. Un error del latido se registra y nunca tumba el polling."""
+        if self.agendador is None:
+            return None
+
+        def latir() -> None:
+            while True:
+                try:
+                    self.agendador.latido()
+                except Exception:  # noqa: BLE001
+                    _log(f"avisos de la semana: {traceback.format_exc()}")
+                if self.parar.wait(pausa):
+                    return
+
+        hilo = threading.Thread(target=latir, daemon=True)
+        hilo.start()
+        return hilo
+
+    def recibir_callback(self, update: dict[str, Any]) -> list[Respuesta]:
+        """Los toques de los botones de la alerta: voto Útil / No me sirve y el pedido de la víspera."""
+        cb = update.get("callback_query") or {}
+        usuario = str((cb.get("from") or {}).get("id", ""))
+        msg = cb.get("message") or {}
+        chat, message_id = (msg.get("chat") or {}).get("id"), msg.get("message_id")
+        partes = str(cb.get("data", "")).split(":")
+        if (self.avisos is None or usuario not in self.config["analistas"] or len(partes) != 3
+                or partes[0] != "sw" or partes[1] not in ("util", "no", "ped") or not chat):
+            return []
+        _, accion, id_ = partes
+        ahora = self.atendedor.reloj()
+        registro = self.avisos.registro(usuario, id_)
+        if registro is None:
+            return []
+        if accion == "ped":
+            if not registro.get("activo"):
+                return []
+            self.avisos.anotar_clic(usuario, id_, ahora)
+            self._responder_callback(cb.get("id"), "Armando el análisis")
+            # El pedido del botón no pasa por `recibir`: ya cuenta como clic y no como pedido propio.
+            return self._encolar(usuario, chat, od.Orden("oportunidad", {"ticker": registro["activo"]}))
+        if self.avisos.anotar_voto(usuario, id_, "util" if accion == "util" else "no_sirve", ahora):
+            self._responder_callback(cb.get("id"), "¡Gracias!")
+            try:
+                self.tg.quitar_teclado(chat, message_id)
+            except Exception:  # noqa: BLE001  el teclado que queda no daña: el voto ya está anotado
+                _log(f"no pude quitar el teclado: {traceback.format_exc()}")
+        else:
+            self._responder_callback(cb.get("id"), "Ya votaste este aviso")
+        return []
+
+    def _responder_callback(self, id_: str | None, texto: str) -> None:
+        try:
+            self.tg.responder_callback(id_, texto)
+        except Exception:  # noqa: BLE001
+            _log(f"no pude responder el callback: {traceback.format_exc()}")
+
+    def atender_update(self, update: dict[str, Any]) -> None:
+        """Un mensaje o el toque de un botón; lo que haya que contestar se entrega acá."""
+        respuestas = self.recibir_callback(update) if "callback_query" in update else self.recibir(update)
+        for r in respuestas:
+            entregar(self.tg, r)
 
     def procesar_uno(self, pedido: Pedido) -> Respuesta:
         self.ocupado.set()
@@ -597,6 +705,7 @@ class Bot:
 
     def escuchar(self) -> None:
         threading.Thread(target=self.trabajador, daemon=True).start()
+        self.iniciar_avisos()
         import time
 
         try:
@@ -610,8 +719,7 @@ class Bot:
                     with self.estado.lock:
                         self.estado.datos["offset"] = update["update_id"] + 1
                     self.estado.guardar()
-                    for r in self.recibir(update):
-                        entregar(self.tg, r)
+                    self.atender_update(update)
             except Exception:  # noqa: BLE001
                 _log(f"polling: {traceback.format_exc()}")
                 time.sleep(5)
