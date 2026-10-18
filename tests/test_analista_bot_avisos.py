@@ -137,11 +137,39 @@ def test_un_callback_de_alguien_no_autorizado_se_ignora(con_avisos):
     con_avisos.bot.avisos.anotar_envio(CAMILA, a, LUNES, 901)
     assert con_avisos.bot.recibir_callback(callback(f"sw:util:{a.id}", usuario="999")) == []
     assert con_avisos.bot.avisos.registro(CAMILA, a.id)["votos"] == []
+    assert con_avisos.bot.tg.callbacks == [("cb1", "")]
 
 
 def test_un_callback_ajeno_o_viejo_no_rompe(con_avisos):
     assert con_avisos.bot.recibir_callback(callback("otra:cosa")) == []
+    assert con_avisos.bot.tg.callbacks == []
     assert con_avisos.bot.recibir_callback(callback("sw:util:inexistente")) == []
+    assert con_avisos.bot.tg.callbacks == [("cb1", "Ese aviso ya no está disponible")]
+
+
+def test_un_callback_ped_sin_activo_responde_vacio(con_avisos):
+    a = aviso("vispera", fecha="2026-10-20", activo=None)
+    con_avisos.bot.avisos.anotar_envio(CAMILA, a, MARTES, 901)
+    assert con_avisos.bot.recibir_callback(callback(f"sw:ped:{a.id}")) == []
+    assert con_avisos.bot.tg.callbacks == [("cb1", "")]
+    assert con_avisos.bot.cola.qsize() == 0
+
+
+def test_un_callback_con_avisos_desactivados_responde_vacio(con_avisos):
+    con_avisos.bot.avisos = None
+    assert con_avisos.bot.recibir_callback(callback("sw:util:inexistente")) == []
+    assert con_avisos.bot.tg.callbacks == [("cb1", "")]
+
+
+def test_un_callback_sw_malformado_responde_vacio(con_avisos):
+    assert con_avisos.bot.recibir_callback(callback("sw:invalido")) == []
+    assert con_avisos.bot.tg.callbacks == [("cb1", "")]
+
+
+def test_un_callback_sin_id_o_prefijo_ajeno_no_responde(con_avisos):
+    sin_id = {"update_id": 2, "callback_query": {"from": {"id": int(CAMILA)}, "data": "sw:util:123"}}
+    assert con_avisos.bot.recibir_callback(sin_id) == []
+    assert con_avisos.bot.tg.callbacks == []
 
 
 # ───────────────────────────────────────────── el botón de la víspera

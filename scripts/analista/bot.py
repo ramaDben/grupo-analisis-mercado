@@ -640,36 +640,59 @@ class Bot:
         return hilo
 
     def recibir_callback(self, update: dict[str, Any]) -> list[Respuesta]:
-        """Los toques de los botones de la alerta: voto Útil / No me sirve y el pedido de la víspera."""
+        """Los toques de los botones de la alerta: voto Útil / No me sirve y el pedido de la víspera.
+
+        Garantiza que todo callback_query con id y prefijo 'sw:' se responda exactamente una vez
+        para que Telegram no deje el botón girando (Menor 13). Callbacks de otro prefijo no se tocan.
+        """
         cb = update.get("callback_query") or {}
+        cb_id = cb.get("id")
+        data = str(cb.get("data") or "")
+        if not cb_id or not data.startswith("sw:"):
+            return []
+        texto_cb, respuestas = self._procesar_callback_sw(cb)
+        self._responder_callback(cb_id, texto_cb)
+        return respuestas
+
+    def _procesar_callback_sw(self, cb: dict[str, Any]) -> tuple[str, list[Respuesta]]:
+        """Procesa la lógica de negocio del callback 'sw:' y devuelve (texto_a_responder, respuestas)."""
         usuario = str((cb.get("from") or {}).get("id", ""))
+        if self.avisos is None or usuario not in self.config["analistas"]:
+            return "", []
+
         msg = cb.get("message") or {}
         chat, message_id = (msg.get("chat") or {}).get("id"), msg.get("message_id")
+        if not chat:
+            return "", []
+
         partes = str(cb.get("data", "")).split(":")
-        if (self.avisos is None or usuario not in self.config["analistas"] or len(partes) != 3
-                or partes[0] != "sw" or partes[1] not in ("util", "no", "ped") or not chat):
-            return []
+        if len(partes) != 3 or partes[0] != "sw" or partes[1] not in ("util", "no", "ped"):
+            return "", []
+
         _, accion, id_ = partes
-        ahora = self.atendedor.reloj()
         registro = self.avisos.registro(usuario, id_)
         if registro is None:
-            return []
+            return "Ese aviso ya no está disponible", []
+
+        ahora = self.atendedor.reloj()
         if accion == "ped":
             if not registro.get("activo"):
-                return []
+                return "", []
             self.avisos.anotar_clic(usuario, id_, ahora)
-            self._responder_callback(cb.get("id"), "Armando el análisis")
             # El pedido del botón no pasa por `recibir`: ya cuenta como clic y no como pedido propio.
-            return self._encolar(usuario, chat, od.Orden("oportunidad", {"ticker": registro["activo"]}))
-        if self.avisos.anotar_voto(usuario, id_, "util" if accion == "util" else "no_sirve", ahora):
-            self._responder_callback(cb.get("id"), "¡Gracias!")
+            return "Armando el análisis", self._encolar(
+                usuario, chat, od.Orden("oportunidad", {"ticker": registro["activo"]})
+            )
+
+        voto = "util" if accion == "util" else "no_sirve"
+        if self.avisos.anotar_voto(usuario, id_, voto, ahora):
             try:
                 self.tg.quitar_teclado(chat, message_id)
             except Exception:  # noqa: BLE001  el teclado que queda no daña: el voto ya está anotado
                 _log(f"no pude quitar el teclado: {traceback.format_exc()}")
-        else:
-            self._responder_callback(cb.get("id"), "Ya votaste este aviso")
-        return []
+            return "¡Gracias!", []
+
+        return "Ya votaste este aviso", []
 
     def _responder_callback(self, id_: str | None, texto: str) -> None:
         try:
