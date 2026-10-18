@@ -256,6 +256,36 @@ def test_los_clics_del_boton_se_cuentan_todos(estado):
     assert estado.registro("1", vispera.id)["clics_boton"] == 2
 
 
+def test_dos_clics_a_2_s_cuentan_uno_y_a_6_s_cuentan_dos(estado):
+    from datetime import timedelta
+    _, vispera = _enviar_mapa_y_vispera(estado)
+    t0 = a(20, 16, 5)
+    # Primer clic: cuenta y devuelve True
+    assert estado.anotar_clic("1", vispera.id, t0) is True
+    # Segundo clic a 2 segundos: rebote ignorado, devuelve False
+    assert estado.anotar_clic("1", vispera.id, t0 + timedelta(seconds=2)) is False
+    assert estado.registro("1", vispera.id)["clics_boton"] == 1
+    # Tercer clic a 6 segundos del primero: cuenta y devuelve True
+    assert estado.anotar_clic("1", vispera.id, t0 + timedelta(seconds=6)) is True
+    assert estado.registro("1", vispera.id)["clics_boton"] == 2
+
+
+def test_anotar_clic_con_registro_antiguo_sin_ultimo_clic_no_rompe(estado):
+    _, vispera = _enviar_mapa_y_vispera(estado)
+    # Simular registro previo en disco sin la clave opcional "ultimo_clic"
+    with estado.lock:
+        reg = estado.registro("1", vispera.id)
+        reg.pop("ultimo_clic", None)
+        import analista.registro_semanal as rg
+        rg._escribir(estado.ruta, estado.datos)
+
+    t0 = a(20, 16, 5)
+    assert estado.anotar_clic("1", vispera.id, t0) is True
+    assert estado.registro("1", vispera.id)["clics_boton"] == 1
+    assert estado.registro("1", vispera.id)["ultimo_clic"] == t0.isoformat()
+
+
+
 def test_oportunidad_24h_solo_cuenta_el_mismo_activo_y_dentro_de_la_ventana(estado):
     _, vispera = _enviar_mapa_y_vispera(estado)
     assert vispera.activo == "USDCLP"

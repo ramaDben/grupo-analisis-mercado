@@ -43,6 +43,8 @@ VISPERA = (16 * 60, 16 * 60 + 30)
 HORAS_OPORTUNIDAD = 24
 PLAZO_MAPA_PERDIDO = 105   # minutos tras cerrar la ventana del mapa en que aún se avisa al director
 TIPOS = ("mapa", "vispera")
+CLIC_REBOTE = 5            # segundos: toques repetidos del botón dentro de esta ventana se consideran rebote
+
 
 
 def feriados_chile(ruta: Path = RUTA_FERIADOS_CHILE) -> frozenset[date]:
@@ -151,7 +153,8 @@ class Estado:
     def anotar_envio(self, ejecutivo: str, aviso: Aviso, cuando: datetime, message_id: int | None) -> None:
         reg = {"id": aviso.id, "ejecutivo": ejecutivo, "tipo": aviso.tipo, "fecha": aviso.fecha,
                "evento": aviso.evento, "activo": aviso.activo, "cuando": cuando.isoformat(),
-               "message_id": message_id, "clics_boton": 0, "votos": [], "oportunidad_24h": False}
+               "message_id": message_id, "clics_boton": 0, "votos": [], "oportunidad_24h": False,
+               "ultimo_clic": None}
         self._mutar(lambda d: d["enviados"].append(reg))
 
     def anotar_clic(self, ejecutivo: str, id_: str, cuando: datetime) -> bool:
@@ -159,9 +162,15 @@ class Estado:
             reg = next((r for r in d["enviados"] if r["ejecutivo"] == ejecutivo and r["id"] == id_), None)
             if reg is None:
                 return False
+            previo = reg.get("ultimo_clic")
+            if previo is not None:
+                dt = cuando - datetime.fromisoformat(previo)
+                if timedelta(0) <= dt < timedelta(seconds=CLIC_REBOTE):
+                    return False
             reg["clics_boton"] += 1
+            reg["ultimo_clic"] = cuando.isoformat()
             return True
-        return self._mutar(cambio)
+        return bool(self._mutar(cambio))
 
     def anotar_voto(self, ejecutivo: str, id_: str, voto: str, cuando: datetime) -> bool:
         """Un voto por ejecutivo y aviso: el segundo toque no cuenta. False si no se anotó."""

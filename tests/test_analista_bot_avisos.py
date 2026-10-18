@@ -203,6 +203,26 @@ def test_el_boton_respeta_el_candado_de_un_solo_analisis_por_activo(con_avisos):
     assert "Ya se está generando" in segunda[0].texto and con_avisos.bot.cola.qsize() == 1
 
 
+def test_el_doble_toque_del_boton_responde_al_usuario_y_no_infla_clics(con_avisos):
+    a = aviso("vispera", fecha="2026-10-20", activo="USDCLP")
+    con_avisos.bot.avisos.anotar_envio(CAMILA, a, MARTES, 901)
+
+    # Primer toque: se encola y cuenta 1 clic
+    resp1 = con_avisos.bot.recibir_callback(callback(f"sw:ped:{a.id}"))
+    assert "Recibido" in resp1[0].texto
+    assert con_avisos.bot.cola.qsize() == 1
+
+    # Segundo toque inmediato (mismo segundo): bot responde informando que ya se genera
+    resp2 = con_avisos.bot.recibir_callback(callback(f"sw:ped:{a.id}"))
+    assert "Ya se está generando" in resp2[0].texto
+    assert con_avisos.bot.cola.qsize() == 1
+
+    # La medición solo cuenta 1 clic
+    reg = con_avisos.bot.avisos.registro(CAMILA, a.id)
+    assert reg["clics_boton"] == 1
+
+
+
 # ───────────────────────────────────────────── Telegram real (sin red)
 
 
