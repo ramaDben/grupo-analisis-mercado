@@ -135,9 +135,14 @@ def hasta_cubierto(agenda: dict[str, Any]) -> str:
     return (agenda.get("cubierto_hasta") if agenda.get("parcial") else None) or agenda["hasta"]
 
 
-def leer_ventana(ahora: datetime, ticker: str, nombre: str, cargar: Callable[..., dict[str, Any]] | None = None,
-                 dias: int = VENTANA_DIAS) -> Agenda:
-    """Los datos de alto impacto entre `ahora` y `ahora + dias`, de las dos pestañas que la cubren."""
+def ventana_cruda(ahora: datetime, cargar: Callable[..., dict[str, Any]] | None = None,
+                  dias: int = VENTANA_DIAS) -> tuple[list[tuple[datetime, dict[str, Any]]], list[str], int, datetime]:
+    """Los eventos de alto impacto entre `ahora` y `ahora + dias`, tal como los entrega el calendario.
+
+    Devuelve `(eventos con su hora, avisos, pestañas fallidas, límite)`. Es la lectura que comparten
+    `leer_ventana` (filas para la lámina) y el aviso semanal de los ejecutivos, que necesita el
+    `diccionario` completo del glosario (`tier`) y no la fila ya redactada.
+    """
     if cargar is None:
         from market_data_mcp.tools.calendar import cargar_calendario as cargar
     ahora = ahora.astimezone(SANTIAGO)
@@ -167,12 +172,21 @@ def leer_ventana(ahora: datetime, ticker: str, nombre: str, cargar: Callable[...
             fallidas += 1
             continue
         crudos += eventos
-    filas = []
+    altos = []
     for ev in crudos:
         cuando = _cuando(ev)
         if ev.get("impacto") == "alto" and cuando and ahora <= cuando <= limite:
-            filas.append((cuando, fila(ev, ticker, nombre)))
-    filas.sort(key=lambda par: par[0])
+            altos.append((cuando, ev))
+    altos.sort(key=lambda par: par[0])
+    return altos, avisos, fallidas, limite
+
+
+def leer_ventana(ahora: datetime, ticker: str, nombre: str, cargar: Callable[..., dict[str, Any]] | None = None,
+                 dias: int = VENTANA_DIAS) -> Agenda:
+    """Los datos de alto impacto entre `ahora` y `ahora + dias`, de las dos pestañas que la cubren."""
+    ahora = ahora.astimezone(SANTIAGO)
+    altos, avisos, fallidas, limite = ventana_cruda(ahora, cargar, dias)
+    filas = [(cuando, fila(ev, ticker, nombre)) for cuando, ev in altos]
     eventos = [f for _, f in filas]
     distinguir(eventos)
     estado = "ok" if eventos else ("sin_calendario" if fallidas else "vacia")
