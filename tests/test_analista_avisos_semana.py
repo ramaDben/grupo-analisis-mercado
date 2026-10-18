@@ -187,6 +187,101 @@ def test_semana_sin_eventos_fuertes_si_se_envia_cuando_el_calendario_respondio(e
     assert len(envios.enviados) == 2
 
 
+# ───────────────────────────────────────────── cache de lecturas (menor 17)
+
+
+class LectorContador:
+    def __init__(self, respuesta: tuple[str, list] = ("ok", [CPI])):
+        self.llamadas = 0
+        self.respuesta = respuesta
+
+    def __call__(self, ahora: datetime) -> tuple[str, list]:
+        self.llamadas += 1
+        return self.respuesta
+
+
+def test_la_cache_del_agendador_evita_releer_en_cada_latido(estado):
+    envios = Envios()
+    lector = LectorContador(("ok", [CPI]))
+    ahora = [LUNES_0745]
+    ag_ = agendador(estado, envios, ahora, lector)
+
+    # 3 latidos en 3 minutos -> 1 lectura
+    ag_.latido()
+    ahora[0] = a(19, 7, 46)
+    ag_.latido()
+    ahora[0] = a(19, 7, 47)
+    ag_.latido()
+    assert lector.llamadas == 1
+
+    # a los 11 minutos (07:45 + 11 min = 07:56, ventana del mapa abierta) -> 2
+    ahora[0] = a(19, 7, 56)
+    ag_.latido()
+    assert lector.llamadas == 2
+
+
+def test_los_envios_fallidos_se_reintentan_cada_minuto_usando_la_cache(estado):
+    envios = Envios(falla=True)
+    lector = LectorContador(("ok", [CPI]))
+    ahora = [LUNES_0745]
+    ag_ = agendador(estado, envios, ahora, lector)
+
+    # Latido 1: Telegram falla, envio no se anota
+    ag_.latido()
+    assert lector.llamadas == 1
+    assert envios.enviados == []
+
+    # Latido 2: Telegram vuelve, reintenta y envia usando eventos de la cache sin llamar al lector
+    ahora[0] = a(19, 7, 46)
+    envios.falla = False
+    ag_.latido()
+    assert lector.llamadas == 1
+    assert len(envios.enviados) == 2
+
+
+def test_la_caida_del_calendario_no_se_cachea_y_se_reintenta_en_cada_latido(estado):
+    envios = Envios()
+    lector = LectorContador(("sin_calendario", []))
+    ahora = [LUNES_0745]
+    ag_ = agendador(estado, envios, ahora, lector)
+
+    ag_.latido()
+    assert lector.llamadas == 1
+
+    ahora[0] = a(19, 7, 46)
+    ag_.latido()
+    assert lector.llamadas == 2
+
+    ahora[0] = a(19, 7, 47)
+    ag_.latido()
+    assert lector.llamadas == 3
+
+
+def test_la_lectura_vacia_si_se_cachea(estado):
+    lector = LectorContador(("vacia", []))
+    ahora = [LUNES_0745]
+    ag_ = agendador(estado, Envios(), ahora, lector)
+
+    ag_.latido()
+    ahora[0] = a(19, 7, 46)
+    ag_.latido()
+    assert lector.llamadas == 1
+
+
+def test_el_cambio_de_dia_invalida_la_cache_del_agendador(estado):
+    lector = LectorContador(("ok", [CPI]))
+    ahora = [LUNES_0745]
+    ag_ = agendador(estado, Envios(), ahora, lector)
+
+    # Lectura inicial en dia 19
+    ag_._leer_con_cache(datetime(2026, 10, 19, 23, 58, tzinfo=SCL))
+    assert lector.llamadas == 1
+
+    # 4 minutos despues cronologicamente (< 10 min TTL), pero en dia 20: la cache se invalida
+    ag_._leer_con_cache(datetime(2026, 10, 20, 0, 2, tzinfo=SCL))
+    assert lector.llamadas == 2
+
+
 def test_leer_eventos_distingue_ok_parcial_sin_calendario_y_vacia():
     def cargar_ok(solo_hoy=False, min_impact="low", ahora=None, pestanas=("thisWeek",)):
         if "nextWeek" in pestanas:

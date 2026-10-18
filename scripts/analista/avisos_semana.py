@@ -42,6 +42,7 @@ MAPA = (7 * 60 + 45, 8 * 60 + 15)        # minutos desde la medianoche, [desde, 
 VISPERA = (16 * 60, 16 * 60 + 30)
 HORAS_OPORTUNIDAD = 24
 PLAZO_MAPA_PERDIDO = 105   # minutos tras cerrar la ventana del mapa en que aún se avisa al director
+LECTURA_TTL = timedelta(minutes=10)
 TIPOS = ("mapa", "vispera")
 CLIC_REBOTE = 5            # segundos: toques repetidos del botón dentro de esta ventana se consideran rebote
 
@@ -290,6 +291,22 @@ class Agendador:
         self.avisar_director, self.reloj, self.leer, self.log = avisar_director, reloj, leer, log
         self.feriados = feriados
         self._hechos: set[tuple[str, str]] = set()   # enviados en este proceso, anotados o no
+        self._cache_lectura: tuple[str, list[dict[str, Any]]] | None = None
+        self._cache_cuando: datetime | None = None
+
+    def _leer_con_cache(self, ahora: datetime) -> tuple[str, list[dict[str, Any]]]:
+        if (self._cache_cuando is not None and self._cache_lectura is not None
+                and self._cache_cuando.date() == ahora.date()
+                and timedelta(0) <= ahora - self._cache_cuando < LECTURA_TTL):
+            return self._cache_lectura
+        situacion, eventos = self.leer(ahora)
+        if situacion != "sin_calendario":
+            self._cache_cuando = ahora
+            self._cache_lectura = (situacion, eventos)
+        else:
+            self._cache_cuando = None
+            self._cache_lectura = None
+        return situacion, eventos
 
     def _calendario_caido(self, ahora: datetime) -> None:
         clave = f"{ahora.date().isoformat()}|{'mapa' if ahora.weekday() == 0 and _en_ventana(ahora, MAPA) else 'vispera'}"
@@ -341,7 +358,7 @@ class Agendador:
         fer = self.feriados if self.feriados is not None else feriados_chile()
         if not hay_ventana(ahora, feriados=fer):
             return
-        situacion, eventos = self.leer(ahora)
+        situacion, eventos = self._leer_con_cache(ahora)
         if situacion == "sin_calendario":
             self._calendario_caido(ahora)
             return
