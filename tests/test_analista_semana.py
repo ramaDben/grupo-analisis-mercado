@@ -218,3 +218,70 @@ def test_el_informe_de_empleo_ocupa_un_solo_lugar_en_el_mapa():
 
 def test_la_vispera_no_termina_en_doble_punto():
     assert ".." not in sm.armar_vispera(CPI, datetime(2026, 10, 21, 16, 0, tzinfo=SCL))
+
+
+# ───────────────────────────────────────────── menor 16: siglas explicadas (ADP, EIA)
+
+
+def test_adp_y_eia_explican_su_sigla():
+    adp_ev = ev("ADP Nonfarm Employment Change (Sep)", "2026-10-21 09:15")
+    nom_adp = sm._nombre(adp_ev)
+    assert nom_adp == "Empleo privado de EE.UU. (informe de la empresa ADP)"
+    mapa_adp = sm.armar_mapa([adp_ev], LUNES)
+    assert "Empleo privado de EE.UU. (informe de la empresa ADP)" in mapa_adp
+    vispera_adp = sm.armar_vispera(adp_ev, datetime(2026, 10, 20, 16, 0, tzinfo=SCL))
+    assert "Empleo privado de EE.UU. (informe de la empresa ADP)" in vispera_adp
+
+    crudo_ev = ev("Crude Oil Inventories", "2026-10-21 12:30")
+    nom_crudo = sm._nombre(crudo_ev)
+    assert nom_crudo == "Inventarios de petróleo crudo de EE.UU. (informe de la agencia de energía EIA)"
+    mapa_crudo = sm.armar_mapa([crudo_ev], LUNES)
+    assert "Inventarios de petróleo crudo de EE.UU. (informe de la agencia de energía EIA)" in mapa_crudo
+    vispera_crudo = sm.armar_vispera(crudo_ev, datetime(2026, 10, 20, 16, 0, tzinfo=SCL))
+    assert "Inventarios de petróleo crudo de EE.UU. (informe de la agencia de energía EIA)" in vispera_crudo
+
+
+def test_contrato_glosario_todas_las_siglas_explicadas():
+    """Toda sigla de 3+ letras mayúsculas en eventos tier<=2 de EE.UU./Chile debe tener explicación."""
+    excluidas = {"CLT", "CLST", "CFD", "FED"}
+    patrones_conocidos = {
+        "IPC": "precios al consumidor",
+        "IPP": "precios al productor",
+        "PIB": "producto interno bruto",
+    }
+
+    fallas = []
+    for key, entrada in GLOSARIO.items():
+        if key.startswith("_"):
+            continue
+        tier = sm._tier({"diccionario": entrada})
+        if tier > sm.TIER_ALTO:
+            continue
+        pais = entrada.get("pais")
+        if pais not in sm.PAISES_DEL_TEMA:
+            continue
+
+        ev_candidato = {"nombre": key, "pais": pais, "diccionario": entrada}
+        if sm.tipo_de_evento(ev_candidato) is None:
+            for c in entrada.get("titulos_ff", []):
+                ev_alt = {"nombre": c, "pais": pais, "diccionario": entrada}
+                if sm.tipo_de_evento(ev_alt) is not None:
+                    ev_candidato = ev_alt
+                    break
+            else:
+                continue
+
+        nombre = sm._nombre(ev_candidato)
+        siglas = [s for s in re.findall(r"\b[A-Z]{3,}\b", nombre) if s not in excluidas]
+        for s in siglas:
+            # 1. ¿Está dentro de paréntesis con texto explicativo adicional?
+            m_paren = re.search(rf"\(([^)]*\b{s}\b[^)]*)\)", nombre)
+            if m_paren and len(m_paren.group(1).strip().split()) > 1:
+                continue
+            # 2. ¿Es una sigla en paréntesis precedida por su desarrollo en español?
+            if s in patrones_conocidos and patrones_conocidos[s] in nombre.lower() and f"({s})" in nombre:
+                continue
+            fallas.append((key, nombre, s))
+
+    assert not fallas, f"Eventos con siglas sin explicar: {fallas}"
+

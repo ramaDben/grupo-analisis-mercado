@@ -55,7 +55,12 @@ ACTIVOS = {"dolar": ("dólar", "el dólar", "tiende"), "oro": ("oro", "el oro", 
 # el que más miran nuestros clientes; luego oro e índices.
 ACTIVO_DEL_BOTON = (("petroleo", "WTI.spot"), ("usdclp", "USDCLP"), ("oro", "XAUUSD"), ("indices", "US100.spot"))
 # Nombres que el glosario trae sin su sigla explicada o sin decir qué decide.
-NOMBRES = {"Comité de mercado abierto de la Fed": "Decisión de tasas de la Reserva Federal (Fed) de EE.UU."}
+NOMBRES = {
+    "Comité de mercado abierto de la Fed": "Decisión de tasas de la Reserva Federal (Fed) de EE.UU.",
+    "Empleo privado ADP": "Empleo privado de EE.UU. (informe de la empresa ADP)",
+    "Inventarios de petróleo crudo (EIA)": "Inventarios de petróleo crudo de EE.UU. (informe de la agencia de energía EIA)",
+}
+
 
 
 def guia() -> dict[str, dict[str, Any]]:
