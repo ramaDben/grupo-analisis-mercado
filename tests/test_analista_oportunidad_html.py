@@ -174,6 +174,7 @@ def test_el_cuerpo_es_claro_y_solo_la_apertura_del_activo_es_oscura(tmp_path):
 
 
 def test_la_ficha_del_correo_no_lleva_el_boton_si_no_hay_numero(tmp_path):
+    pytest.importorskip("playwright.sync_api")
     from playwright.sync_api import sync_playwright
     html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
     ruta = tmp_path / "p.html"
@@ -258,6 +259,7 @@ def test_el_correo_parte_con_el_saludo_a_la_persona_antes_del_titulo(tmp_path):
 
 
 def test_el_titulo_del_correo_cuenta_los_activos_incluidos_y_no_dice_igual_para_todos(tmp_path):
+    pytest.importorskip("playwright.sync_api")
     from playwright.sync_api import sync_playwright
     html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
     assert "igual para todos" not in html and "lectura general" not in html
@@ -279,6 +281,7 @@ def test_el_titulo_del_correo_cuenta_los_activos_incluidos_y_no_dice_igual_para_
 
 def test_el_autor_nunca_firma_la_simulacion(tmp_path):
     """Si pide el propio autor, la simulación queda con un campo por completar y no con su nombre."""
+    pytest.importorskip("playwright.sync_api")
     from playwright.sync_api import sync_playwright
     director = {"nombre": fx.AUTOR.nombre, "cargo": fx.AUTOR.cargo, "contacto": ""}
     html = oh.armar(_pieza(tmp_path), tmp_path, director, fx.AUTOR, HOY)
