@@ -257,6 +257,7 @@ def cargar_calendario(
     solo_hoy: bool = True,
     min_impact: str = "medium",
     ahora: datetime | None = None,
+    pestanas: tuple[str, ...] = ("thisWeek",),
 ) -> dict[str, Any]:
     """Calendario económico de Investing.com, como función y no solo como tool.
 
@@ -271,6 +272,10 @@ def cargar_calendario(
 
     `ahora` se inyecta para poder testear el filtro `solo_hoy` sin depender del
     reloj de la máquina.
+
+    `pestanas` elige qué semanas de Investing.com se piden (`thisWeek`, `nextWeek`). La semana va
+    de domingo a sábado: un análisis de 7 días creado un sábado vive entero en `nextWeek`
+    (spec 2026-10-17 §3). Una pestaña caída no tumba las otras; el error es solo si caen todas.
     """
     if min_impact not in _IMPACTO_RANK_EN:
         return {
@@ -281,11 +286,21 @@ def cargar_calendario(
             ),
         }
 
-    try:
-        html = _fetch_calendario("thisWeek", ahora=ahora)
-    except TypeError:
-        html = _fetch_calendario("thisWeek")
-    if not html:
+    todos: list[dict] = []
+    vistos: set[tuple[str, str, str]] = set()
+    respondio = False
+    for tab in pestanas:
+        try:
+            html = _fetch_calendario(tab, ahora=ahora)
+        except TypeError:
+            html = _fetch_calendario(tab)
+        respondio = respondio or bool(html)
+        for ev in _parsear_filas(html) if html else []:
+            clave = (ev["hora_servidor"], ev["pais"], ev["nombre"])
+            if clave not in vistos:
+                vistos.add(clave)
+                todos.append(ev)
+    if not respondio:
         return {
             "error": "NO_CALENDAR_FEEDS",
             "message": (
@@ -293,8 +308,6 @@ def cargar_calendario(
                 "Usar WebSearch investing.com como fallback."
             ),
         }
-
-    todos = _parsear_filas(html)
     umbral = _IMPACTO_RANK_EN[min_impact]
     hoy = (ahora or datetime.now(tz=_SANTIAGO)).date()
     glosario = _cargar_glosario()

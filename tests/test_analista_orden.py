@@ -27,14 +27,26 @@ def leer(texto: str) -> od.Orden:
     return od.interpretar(texto, universo=UNIVERSO)
 
 
-def test_oportunidad_no_lleva_argumentos():
-    assert od.interpretar("/oportunidad") == od.Orden("oportunidad", {})
-
-
 def test_seguimiento_resuelve_el_activo():
     universo = [{"ticker": "XAUUSD", "nombre": "Oro"}]
     assert od.interpretar("/seguimiento oro", universo) == od.Orden("seguimiento", {"ticker": "XAUUSD"})
     assert od.interpretar("/seguimiento xau", universo).args == {"ticker": "XAUUSD"}
+
+
+def test_lo_que_sigue_al_activo_es_el_saludo_al_cliente():
+    universo = [{"ticker": "USDCLP", "nombre": "USD/CLP"}]
+    o = od.interpretar("/seguimiento oro Juan", universo)
+    assert o.args == {"ticker": "XAUUSD"} and o.saludo == "Juan"
+    assert od.interpretar("/seguimiento oro Estimado Sr. Pérez", universo).saludo == "Estimado Sr. Pérez"
+    assert od.interpretar("/seguimiento oro", universo).saludo == ""
+    # El saludo no cambia la identidad de la pieza que se reusa.
+    assert o.clave_base() == od.interpretar("/seguimiento oro", universo).clave_base()
+
+
+def test_el_saludo_no_admite_guion_largo_ni_textos_largos():
+    assert od.interpretar("/seguimiento oro Juan — hola", []).saludo == "Juan hola"
+    with pytest.raises(od.PedidoInvalido, match="muy largo"):
+        od.interpretar("/seguimiento oro " + "x" * 80, [])
 
 
 def test_seguimiento_sin_activo_explica_como_pedirlo():
@@ -66,9 +78,8 @@ def test_comando_con_arroba_del_bot():
     assert leer("/seguimiento@GI_Analistas_Bot oro").args["ticker"] == "XAUUSD"
 
 
-def test_activo_desconocido_dice_cual():
-    with pytest.raises(od.PedidoInvalido, match="pizza"):
-        leer("/seguimiento pizza")
+def test_activo_desconocido_queda_libre_para_el_terminal():
+    assert leer("/seguimiento pizza").args == {"ticker": "pizza", "libre": True}
 
 
 def test_comando_desconocido():
@@ -99,9 +110,29 @@ def test_todos_los_alias_apuntan_a_activos_del_catalogo_real():
     assert set(od.ALIAS.values()) <= reales
 
 
+UNIVERSO_MINIMO = [{"ticker": "XAUUSD", "nombre": "Oro"}, {"ticker": "USDCLP", "nombre": "Dólar"}]
 
-def test_oportunidad_no_lleva_argumentos_ni_admite_personalizar():
-    assert od.interpretar("/oportunidad") == od.Orden("oportunidad", {})
-    assert od.interpretar("/oportunidad de hoy") == od.Orden("oportunidad", {})
-    with pytest.raises(od.PedidoInvalido, match="ya no se personalizan"):
-        od.interpretar("/oportunidad para Juan")
+
+def test_oportunidad_exige_activo():
+    with pytest.raises(od.PedidoInvalido, match="Falta el activo"):
+        od.interpretar("/oportunidad", UNIVERSO_MINIMO)
+
+
+def test_oportunidad_resuelve_activo_y_saludo():
+    assert od.interpretar("/oportunidad oro Juan", UNIVERSO_MINIMO) == od.Orden(
+        "oportunidad", {"ticker": "XAUUSD"}, "Juan")
+
+
+def test_oportunidad_con_un_simbolo_que_no_esta_en_el_catalogo_queda_para_el_terminal():
+    o = od.interpretar("/oportunidad TGT.US Ana", UNIVERSO_MINIMO)
+    assert o.args == {"ticker": "TGT.US", "libre": True} and o.saludo == "Ana"
+
+
+def test_seguimiento_tambien_deja_los_simbolos_libres_para_el_terminal():
+    o = od.interpretar("/seguimiento TGT.US", UNIVERSO_MINIMO)
+    assert o.args == {"ticker": "TGT.US", "libre": True}
+
+
+def test_oportunidad_rechaza_lo_que_no_parece_un_simbolo():
+    with pytest.raises(od.PedidoInvalido):
+        od.interpretar("/oportunidad ¿¿??", UNIVERSO_MINIMO)

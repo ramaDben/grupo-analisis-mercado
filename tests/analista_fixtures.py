@@ -110,31 +110,83 @@ def activo_semanal(rango: bool = False, ticker: str | None = None) -> dict:
             "grafico": f"grafico_{lec.ticker.lower().replace('.', '_')}.png"}
 
 
-def pieza_oportunidad(dir_pedido: Path, laminas: bool = False, wti: bool = False,
-                      fuera: list[str] | None = None) -> dict:
-    """La pieza semanal con su texto ya escrito: dos activos (uno con tendencia y uno en rango).
+FUENTES_EJEMPLO = [{
+    "entidad": "Goldman Sachs", "medio": "Reuters", "fecha": "2026-10-14",
+    "url": "https://www.reuters.com/markets/commodities/oro-goldman-2026-10-14/",
+    "postura": "alcista", "tesis": "Goldman Sachs ve el oro en 4.800 dólares por la demanda de bancos centrales.",
+    "verificacion": "ok"}]
 
-    Escribe los gráficos en `dir_pedido`; con `laminas=True` también las láminas, que en el
-    bot se rinden antes del HTML (así el botón «Descargar lámina» aparece).
+
+HECHOS_EJEMPLO = [
+    {"id": "dxy", "driver": "Dollar Index (DXY)", "fecha": "viernes 09/10", "en_curso": False, "nivel": "101,560",
+     "cambio_1d": "0,193", "cambio_5d": "0,288", "unidad_cambio": "puntos", "sentido": "bajó", "sentido_1d": "bajó",
+     "fuente": "MT5 (USDIDX)", "efecto": "juega a favor del alza del oro",
+     "con_la_lectura": "va en contra de nuestra lectura"},
+    {"id": "tasa_real", "driver": "Tasa real a 10 años de EE.UU. (TIPS)", "fecha": "jueves 08/10", "en_curso": False,
+     "nivel": "2,78 por ciento", "cambio_1d": "6 pb", "cambio_5d": "14 pb", "unidad_cambio": "puntos base",
+     "sentido": "bajó", "sentido_1d": "bajó", "fuente": "FRED (Reserva Federal de St. Louis)",
+     "efecto": "juega a favor del alza del oro", "con_la_lectura": "va en contra de nuestra lectura"},
+]
+
+EVENTO_EJEMPLO = {
+    "fecha": "2026-10-14", "dia": "miércoles 14/10", "hora": "09:30 CLST",
+    "evento": "Índice de precios al consumidor (IPC)", "fuente_nombre": "CPI (MoM) (Sep)", "pais": "EE.UU.",
+    "anterior": "0,4 por ciento", "esperado": "0,3 por ciento", "explicacion": "Mide la inflación.",
+    "efecto": "Si sale sobre lo esperado, el oro tiende a bajar; si sale bajo lo esperado, lo contrario.",
+    "mueve_al_activo": True}
+
+
+def agenda_ejemplo(estado: str = "ok") -> dict:
+    return {"desde": "lunes 12/10", "hasta": "lunes 19/10", "estado": estado,
+            "eventos": [dict(EVENTO_EJEMPLO)] if estado == "ok" else [],
+            "url": "https://es.investing.com/economic-calendar/"}
+
+
+def pieza_oportunidad(dir_pedido: Path, laminas: bool = False, wti: bool = False, rango: bool = False,
+                      fuentes: list | None = None, agenda: str = "ok", hechos: bool = True,
+                      legado: bool = False, dolar: bool = False) -> dict:
+    """El análisis de un activo con su texto ya escrito (por defecto el oro; `rango` es el cobre).
+
+    Escribe el gráfico en `dir_pedido`; con `laminas=True` también la lámina, que en el bot se
+    rinde antes del HTML (así el botón «Descargar lámina» aparece). Por defecto trae los hechos
+    del día y una agenda con un evento (spec 2026-10-17); `agenda` puede ser `vacia` o
+    `sin_calendario`, y `legado=True` arma una pieza anterior a ese spec (`agenda_semana`, sin hechos).
     """
-    activos = [activo_semanal(), activo_semanal(rango=True)]
-    if wti:  # el WTI sale todas las semanas (cobertura fija) y su ticker lleva punto
-        activos.append(activo_semanal(ticker="WTI.spot"))
-    for a in activos:
-        _imagen(dir_pedido, a["grafico"])
-        if laminas:
-            _imagen(dir_pedido, {"WTI.spot": "lamina_wti_spot.png"}.get(a["ticker"],
-                                                                         f"lamina_{a['ticker'].lower()}.png"))
-    tickers = [a["ticker"] for a in activos]
-    p = es.nueva_pieza("oportunidad", {"semana": "2026-W42"},
-                       {"semana": "2026-W42", "chip": "ANÁLISIS TÉCNICO DE LA SEMANA", "edicion": "lunes 12-10 · 09:30",
-                        "activos": activos, "drivers": {}, "agenda_semana": [],
-                        **({"fuera": fuera} if fuera is not None else {})},
-                       {a["ticker"]: a["grafico"] for a in activos},
-                       extra_campos={"titulares": tickers, "contexto": tickers})
-    p["editorial"] = {"titular": "La semana técnica en seis activos", "bajada": "Lectura de cada activo.",
-                      "titulares": {t: f"Titular de {t}" for t in tickers},
-                      "contexto": {t: f"Contexto de {t}." for t in tickers}}
+    a = activo_semanal(rango=rango, ticker="WTI.spot" if wti else None)
+    _imagen(dir_pedido, a["grafico"])
+    if laminas:
+        _imagen(dir_pedido, {"WTI.spot": "lamina_wti_spot.png"}.get(a["ticker"], f"lamina_{a['ticker'].lower()}.png"))
+    t = a["ticker"]
+    datos = {"ticker": t, "chip": "ANÁLISIS TÉCNICO Y FUNDAMENTAL", "edicion": "lunes 12/10 · 09:30",
+             "vigencia": {"desde": "lunes 12/10", "hasta": "lunes 19/10"},
+             "activos": [a], "drivers": {t: ["Dollar Index"]}, "curva": [],
+             "fundamental": {"fuera_catalogo": False, "sin_drivers": False, "referencia": "semanal"}}
+    imagenes = {t: a["grafico"]}
+    extra = {"titulares": [t], "contexto": [t]}
+    if legado:
+        datos["agenda_semana"] = []
+    else:
+        datos["hechos"] = [dict(h) for h in HECHOS_EJEMPLO] if hechos else []
+        datos["agenda"] = agenda_ejemplo(agenda)
+        if agenda == "ok":
+            imagenes["calendario"] = _imagen(dir_pedido, f"calendario_{t.lower().replace('.', '_')}.png")
+            extra["dias_clave"] = [t]
+    p = es.nueva_pieza("oportunidad", {"ticker": t}, datos, imagenes, extra_campos=extra)
+    p["editorial"] = {"titular": f"{a['nombre']}: lectura técnica y fundamental",
+                      "bajada": "Lectura de nuestros sistemas, drivers y voces de bancos.",
+                      "titulares": {t: f"Titular de {t}"},
+                      "contexto": {t: (f"Contexto de {t}. El Dollar Index (DXY) cerró en 101,560 y la tasa real a "
+                                       "10 años quedó en 2,78 por ciento. La lectura se mantiene mientras el precio "
+                                       "respete la línea." if datos.get("hechos") else
+                                       f"Contexto de {t}. La lectura se mantiene mientras el precio respete la línea.")},
+                      "fuentes": [dict(f) for f in (FUENTES_EJEMPLO if fuentes is None else fuentes)]}
+    if dolar:
+        imagenes["dolar"] = _imagen(dir_pedido, "grafico_usdidx.png")
+        p["imagenes"] = imagenes
+        p["huella"] = es._huella(p)
+    if "dias_clave" in extra:
+        p["editorial"]["dias_clave"] = {t: "El día clave es el miércoles 14/10, cuando se conoce el IPC de EE.UU. "
+                                           "(índice de precios al consumidor)."}
     return p
 
 
@@ -145,6 +197,6 @@ def pieza_seguimiento(dir_pedido: Path) -> dict:
     datos = {"semana": "2026-W42", "ticker": a["ticker"], "nombre": a["nombre"],
              "evaluacion": {"estado": "en_curso", "avance_pct": 40},
              "precio_vivo": 4150.0, "lectura_hoy": "La lectura de hoy sigue igual.", "reemplazada": False,
-             "whatsapp": "Te envío una actualización del oro: va en curso.",
+             "whatsapp": "[[SALUDO]] te cuento cómo va el oro: la simulación de esta semana avanza a favor.",
              "edicion": "miércoles 14-10 · 11:00", "activo": a}
     return es.nueva_pieza("seguimiento", {"ticker": a["ticker"]}, datos, {"principal": "grafico.png"})

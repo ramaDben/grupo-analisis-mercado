@@ -58,6 +58,9 @@ PERSONALIZACION_RETIRADA = (
 class Orden:
     pieza: str
     args: dict[str, Any] = field(default_factory=dict)
+    # Cómo se dirige el ejecutivo a su cliente en el texto de WhatsApp. No entra en `clave_base`: la
+    # pieza se reusa entre ejecutivos y el saludo se aplica al responder, no al preparar.
+    saludo: str = ""
 
     def clave_base(self) -> str:
         """Identidad de la pieza para reusarla mientras está vigente."""
@@ -84,35 +87,64 @@ def resolver_activo(texto: str, universo: list[dict[str, Any]]) -> str:
         formas = _formas(activo["ticker"]) | {re.sub(r"[\s/&]", "", _plano(activo.get("nombre", "")))}
         if clave in {re.sub(r"[\s/]", "", f) for f in formas}:
             return activo["ticker"]
-    raise PedidoInvalido(f"No reconozco el activo «{texto}». Prueba con el ticker, por ejemplo /seguimiento usdclp.")
+    raise PedidoInvalido(f"No encontré el activo '{texto}'. Prueba con: oro, dolar, cobre, petroleo, brent, nasdaq o bitcoin.")
+
+
+SALUDO_MAX = 60
+
+
+_SIMBOLO = re.compile(r"^[A-Za-z#][A-Za-z0-9#._]{1,19}$")
+
+
+def _activo_y_saludo(cuerpo: str, universo: list[dict[str, Any]]) -> tuple[dict[str, Any], str]:
+    """El activo es el prefijo más largo que se resuelve en el catálogo; lo que sigue es el saludo.
+
+    Un activo que el catálogo no conoce no se rechaza acá: el terminal manda (spec 2026-10-16 §3).
+    La primera palabra pasa como símbolo `libre` y el bot la canoniza contra MT5 al atender, para
+    no tocar el terminal desde el hilo que escucha Telegram.
+    """
+    palabras = cuerpo.split()
+    for n in range(len(palabras), 0, -1):
+        try:
+            ticker = resolver_activo(" ".join(palabras[:n]), universo)
+        except PedidoInvalido:
+            continue
+        return {"ticker": ticker}, _limpiar_saludo(" ".join(palabras[n:]))
+    if _SIMBOLO.match(palabras[0]):
+        return {"ticker": palabras[0], "libre": True}, _limpiar_saludo(" ".join(palabras[1:]))
+    resolver_activo(cuerpo, universo)  # levanta el error de siempre
+    raise PedidoInvalido(f"No encontré el activo '{cuerpo}'.")  # inalcanzable
+
+
+def _limpiar_saludo(texto: str) -> str:
+    """Una línea corta y sin guiones largos: es texto de cliente (CLAUDE.md)."""
+    limpio = " ".join(texto.replace("—", " ").replace("–", " ").split())
+    if len(limpio) > SALUDO_MAX:
+        raise PedidoInvalido(f"El saludo es muy largo (máximo {SALUDO_MAX} letras). Ejemplo: /seguimiento oro Juan")
+    return limpio
 
 
 def interpretar(texto: str, universo: list[dict[str, Any]] | None = None) -> Orden:
     texto = (texto or "").strip()
     if not texto.startswith("/"):
-        raise PedidoInvalido("Los pedidos empiezan con un comando. Escribe /ayuda para ver cuáles hay.")
+        raise PedidoInvalido("Escribe un comando, por ejemplo /seguimiento oro. Si no sabes cuál, escribe /ayuda.")
 
     cabeza, _, resto = texto.partition(" ")
     comando = cabeza[1:].split("@", 1)[0].lower()
     if comando in SERVICIO or comando in RETIRADOS:
         return Orden(pieza="ayuda" if comando in RETIRADOS else comando)
     if comando not in PIEZAS:
-        raise PedidoInvalido(f"No existe el comando /{comando}. Escribe /ayuda para ver cuáles hay.")
+        raise PedidoInvalido(f"Ese comando no existe. Escribe /ayuda y te muestro los que sí.")
 
     cuerpo = resto.strip()
     if re.search(r"(?:^|\s)para\s+\S", cuerpo, flags=re.IGNORECASE):
         raise PedidoInvalido(PERSONALIZACION_RETIRADA)
 
-    if comando == "seguimiento":
-        if not cuerpo:
-            raise PedidoInvalido("Falta el activo. Ejemplo: /seguimiento oro")
-        if universo is None:
-            import screener_gi as sc
+    if not cuerpo:
+        raise PedidoInvalido(f"Falta el activo. Escribe por ejemplo: /{comando} oro")
+    if universo is None:
+        import screener_gi as sc
 
-            universo = sc.cargar_universo(solo_renderizables=False)
-        args: dict[str, Any] = {"ticker": resolver_activo(cuerpo, universo)}
-    else:
-        # /oportunidad no lleva argumentos: la foto la fija el análisis semanal.
-        args = {}
-
-    return Orden(pieza=comando, args=args)
+        universo = sc.cargar_universo(solo_renderizables=False)
+    args, saludo = _activo_y_saludo(cuerpo, universo)
+    return Orden(pieza=comando, args=args, saludo=saludo)

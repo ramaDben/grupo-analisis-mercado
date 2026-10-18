@@ -31,6 +31,9 @@ class Escenario:
     entrada_pendiente: bool  # rango: el precio todavía tiene que llegar al borde
     dias_objetivo: float | None  # a cuántos ATR D1 del precio está el objetivo
     motivo: str | None  # por qué no hay simulación; None si la hay
+    # Cómo se activa una entrada pendiente: "retesteo" (el precio vuelve al nivel y lo respeta,
+    # como el borde del rango) o "quiebre" (una vela 4H cierra al otro lado del nivel).
+    condicion: str | None = None
 
     @property
     def simulable(self) -> bool:
@@ -58,11 +61,33 @@ def _redondeo(valor: float, digits: int) -> float:
     return math.floor(valor * 10 ** digits + 0.5) / 10 ** digits
 
 
+def _condicional(lectura: Lectura, atr: float, digits: int) -> Escenario:
+    """La simulación cuando no hay una entrada a precio de hoy: se activa en el nivel a vigilar.
+
+    La pieza es para que el ejecutivo invite a operar, así que nunca sale sin simulación por
+    una lectura incómoda (director, 2026-10-12): sale condicionada. Si el precio ya está del
+    lado de la dirección, la entrada es el retesteo del nivel; si no, el quiebre con cierre de
+    vela 4H. El stop queda media volatilidad 4H al otro lado: el horizontal es una zona.
+    """
+    nivel = lectura.vigilar.precio
+    if lectura.direccion in ("ALCISTA", "BAJISTA"):
+        direccion = lectura.direccion
+    else:  # sin dirección: el quiebre del nivel hacia donde no está el precio
+        direccion = "ALCISTA" if lectura.precio < nivel else "BAJISTA"
+    signo = 1 if direccion == "ALCISTA" else -1
+    condicion = "retesteo" if (lectura.precio - nivel) * signo > 0 else "quiebre"
+    entrada = _redondeo(nivel, digits)
+    stop = _redondeo(nivel - signo * PARAMETROS.tolerancia_horizontal_atr * atr, digits)
+    objetivo = _redondeo(entrada + signo * MULTIPLO * abs(entrada - stop), digits)
+    atr_d1 = float(lectura.metricas.get("atr_d1") or 0.0)
+    dias = round(abs(objetivo - lectura.precio) / atr_d1, 1) if atr_d1 else None
+    return Escenario(lectura.ticker, lectura.estado, direccion, entrada, stop, objetivo, True, dias, None,
+                     condicion)
+
+
 def escenario(lectura: Lectura, digits: int) -> Escenario:
     atr = float(lectura.metricas.get("atr") or 0.0)
     atr_d1 = float(lectura.metricas.get("atr_d1") or 0.0)
-    if lectura.estado == "PRUEBA":
-        return _sin(lectura, "el precio está probando una línea clave y hay que esperar el cierre de la vela para saber si la respeta o la rompe")
     if atr <= 0:
         return _sin(lectura, "no se pudo medir cuánto se mueve el activo para dejar el stop con margen")
     if lectura.estado == "RANGO":
@@ -71,36 +96,52 @@ def escenario(lectura: Lectura, digits: int) -> Escenario:
         entrada = superior if arriba else inferior
         signo = -1 if arriba else 1  # falso quiebre: desde el borde hacia adentro
         stop = entrada - signo * PARAMETROS.tolerancia_horizontal_atr * atr
-        direccion, pendiente = ("BAJISTA" if arriba else "ALCISTA"), True
-    elif lectura.estado in SIMULAN:
-        if lectura.invalidacion is None:
-            return _sin(lectura, "el gráfico no marca un nivel claro donde el análisis dejaría de valer, y sin ese nivel no hay dónde poner el stop")
-        if lectura.direccion not in ("ALCISTA", "BAJISTA"):
-            return _sin(lectura, "el precio no muestra una dirección clara")
+        direccion, pendiente, condicion = ("BAJISTA" if arriba else "ALCISTA"), True, "retesteo"
+    elif (lectura.estado in SIMULAN and lectura.invalidacion is not None
+          and lectura.direccion in ("ALCISTA", "BAJISTA")):
         entrada, stop = lectura.precio, lectura.invalidacion.precio
         signo = 1 if lectura.direccion == "ALCISTA" else -1
-        direccion, pendiente = lectura.direccion, False
-        if (entrada - stop) * signo <= 0:
-            return _sin(lectura, "el precio ya pasó el nivel donde el análisis deja de valer")
-    else:
-        return _sin(lectura, "el precio está en una situación que no permite fijar una entrada y un stop con claridad")
+        direccion, pendiente, condicion = lectura.direccion, False, None
+        if (entrada - stop) * signo <= 0:  # el precio ya pasó la invalidación
+            return _condicional(lectura, atr, digits)
+    else:  # en prueba, sin invalidación, sin dirección u otro estado
+        return _condicional(lectura, atr, digits)
 
     entrada, stop = _redondeo(entrada, digits), _redondeo(stop, digits)
     riesgo = abs(entrada - stop)
-    if riesgo < PARAMETROS.tolerancia_toque_atr * atr:
-        return _sin(lectura, "el precio está pegado al nivel clave y el stop quedaría dentro del movimiento normal de una vela")
+    if riesgo < PARAMETROS.tolerancia_toque_atr * atr:  # pegado al nivel: el stop quedaría en el ruido
+        return _condicional(lectura, atr, digits)
     objetivo = _redondeo(entrada + signo * MULTIPLO * riesgo, digits)
     dias = round(abs(objetivo - lectura.precio) / atr_d1, 1) if atr_d1 else None
-    return Escenario(lectura.ticker, lectura.estado, direccion, entrada, stop, objetivo, pendiente, dias, None)
+    return Escenario(lectura.ticker, lectura.estado, direccion, entrada, stop, objetivo, pendiente, dias, None,
+                     condicion)
+
+
+def texto_condicion(esc: dict[str, Any], entrada: str) -> str | None:
+    """Cuándo se activa la simulación, en el idioma del cliente (None si entra a precio de hoy)."""
+    if not esc.get("entrada_pendiente"):
+        return None
+    alcista = esc["direccion"] == "ALCISTA"
+    if esc.get("condicion") == "quiebre":
+        return f"Se activa si una vela de 4 horas cierra {'sobre' if alcista else 'bajo'} {entrada}."
+    if esc.get("estado") == "RANGO" or esc.get("condicion") is None:
+        return f"Se activa si el precio llega a {entrada}, el borde del rango, y lo respeta."
+    return f"Se activa si el precio vuelve a {entrada} y lo respeta."
 
 
 MOTIVO_SIN_CONTRATO = "no tenemos los datos de la cuenta para calcular el tamaño de la operación en este activo"
 
 
 def motivo_sin_simulacion(activo: dict[str, Any]) -> str | None:
-    """Por qué un activo de la foto no se simula (None si se simula). Lo usan el panel y el
-    seguimiento: sin contrato no hay con qué calcular."""
-    return activo["escenario"]["motivo"] or (None if activo.get("contrato") else MOTIVO_SIN_CONTRATO)
+    """Por qué un activo de la foto no tiene niveles de simulación (None si los tiene).
+
+    Solo pasa sin volatilidad medida. Sin contrato los niveles existen igual: lo que falta es
+    el volumen, y eso lo ve el ejecutivo en su panel (`sin_contrato`), no el cliente."""
+    return activo["escenario"]["motivo"]
+
+
+def sin_contrato(activo: dict[str, Any]) -> bool:
+    return not activo.get("contrato")
 
 
 def _pesos(valor: float) -> int:

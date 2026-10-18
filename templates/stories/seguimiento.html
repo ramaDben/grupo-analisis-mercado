@@ -157,8 +157,16 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: var(-
 .rotulo { font-size: 20px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--acento); margin: 0; }
 .cifra { font-family: var(--font-display); font-weight: 700; font-size: 52px; color: var(--blanco); margin: 10px 0 0; }
 .avance { font-size: 30px; font-weight: 700; color: var(--texto-1); margin: 22px 0 0; }
-.hoy { font-size: 27px; line-height: 1.4; color: var(--texto-borde); margin: 18px 0 0; }
-.niveles { font-size: 21px; color: var(--texto-2); margin: auto 0 0; }
+.hoy { font-size: 27px; line-height: 1.4; color: var(--texto-borde); margin: 14px 0 0; }
+.niveles { display: flex; gap: 14px; margin: 30px 0 0; }
+.nivel { flex: 1; padding: 14px 18px; border-radius: 12px; background: color-mix(in srgb, var(--fondo-acento) 55%, var(--fondo));
+  border: 1px solid color-mix(in srgb, var(--texto-1) 14%, transparent); }
+.nivel:has(.nv:empty) { display: none; }
+.nr { font-size: 18px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-2); margin: 0; }
+.nv { font-family: var(--font-display); font-weight: 700; font-size: 30px; color: var(--blanco); margin: 6px 0 0; }
+.nivel.stop .nr { color: var(--baja-suave); }
+.nivel.obj .nr { color: var(--sube-suave); }
+.invitacion { font-size: 26px; font-weight: 700; color: var(--acento); margin: auto 0 0; }
 
 .grafico { border-radius: 16px; overflow: hidden; border: 1.5px solid color-mix(in srgb, var(--acento) 35%, transparent); }
 .grafico img { width: 100%; height: auto; display: block; background: var(--fondo); }
@@ -188,7 +196,12 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: var(-
           </div>
           <p class="avance">{{avance}}</p>
           <p class="hoy">{{lectura_hoy}}</p>
-          <p class="niveles">{{niveles}}</p>
+          <div class="niveles">
+            <div class="nivel"><p class="nr">Entrada</p><p class="nv">{{entrada}}</p></div>
+            <div class="nivel stop"><p class="nr">Stop</p><p class="nv">{{stop}}</p></div>
+            <div class="nivel obj"><p class="nr">Objetivo</p><p class="nv">{{objetivo}}</p></div>
+          </div>
+          <p class="invitacion">{{invitacion}}</p>
         </div>
         <div class="der">
           <div class="grafico">

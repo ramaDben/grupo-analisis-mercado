@@ -81,9 +81,22 @@ def test_dos_niveles_con_el_mismo_precio_se_funden_en_una_fila(tmp_path):
     """Oro W41: «Nivel a vigilar» e «Invalidación» eran el mismo 4.227,32; cobre: la resistencia
     del rango era también la que se vigila."""
     oro = cm.payload_semanal(fx.activo_semanal(), "t", "lunes 12/10", fx.AUTOR, tmp_path / "g.png")["niveles"]
-    assert [(n["rotulo"], n["valor"]) for n in oro] == [("Nivel a vigilar · Invalidación", "4.227,32"),
-                                                         ("Objetivo técnico", "4.149,96")]
+    assert [(n["rotulo"], n["valor"]) for n in oro] == [("Nivel a vigilar · Se anula si cierra sobre", "4.227,32"),
+                                                         ("Objetivo", "4.149,96")]
     cobre = cm.payload_semanal(fx.activo_semanal(rango=True), "t", "lunes 12/10", fx.AUTOR,
                                tmp_path / "g.png")["niveles"]
     assert [(n["rotulo"], n["valor"]) for n in cobre] == [("Resistencia del rango · Nivel a vigilar", "14567"),
                                                            ("Soporte del rango", "14206")]
+
+
+def test_el_texto_de_acompanamiento_invita_a_revisar_mt5_y_no_a_operar():
+    t = cm.texto_acompanamiento("Oro", "Juan")
+    assert t.startswith("Hola Juan, ") and "MT5" in t
+    for malo in ("operar", "oportunidad", "—", "–", "compra", "vende"):
+        assert malo not in t.lower()
+
+
+def test_el_texto_de_whatsapp_cierra_invitando_a_revisar_mt5():
+    from analista_fixtures import activo_semanal
+    t = cm.texto_whatsapp_base(activo_semanal(), "Titular", "Contexto.")
+    assert "MT5" in t and "operar" not in t.lower()

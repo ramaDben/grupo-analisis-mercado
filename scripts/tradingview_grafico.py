@@ -87,6 +87,25 @@ NOMBRE_ROL = {"accion": "Línea de acción", "seguridad": "Línea de seguridad",
               "seguimiento": "Línea de seguimiento", "contexto": "Línea de contexto",
               "objetivo": "Objetivo", "rango": "Borde del rango"}
 PROYECCION = 14  # velas de semirrecta a la derecha (doctrina 2.1)
+VENTANA_MIN = 90  # velas visibles como mínimo: con menos, la diagonal no tiene contexto
+VENTANA_SIN_DIAGONAL = 160  # sin diagonal que enmarcar, un tramo reciente en vez de dos meses
+HOLGURA_ANCLA = 3  # la ventana mide el tramo de la diagonal por este factor
+
+
+def ventana_visible(series: list[dict[str, Any]], tiempos: list[int]) -> int:
+    """Cuántas velas se ven: las que enmarcan a la diagonal más antigua, con aire a la izquierda.
+
+    La lectura se pide con muchas velas para que todas las anclas caigan adentro, pero mostrar
+    todas aplasta la línea: una diagonal de tres días sobre dos meses de velas es un trazo de
+    veinte pixeles (el EUR/USD de W42). Se muestra el tramo de la diagonal por `HOLGURA_ANCLA`,
+    con un mínimo, y nunca más de lo que hay.
+    """
+    n = len(tiempos)
+    primeros = [tiempos.index(int(x["puntos"][0]["time"])) for x in series
+                if x["tipo"] == "diagonal" and int(x["puntos"][0]["time"]) in tiempos]
+    if not primeros:
+        return min(n, VENTANA_SIN_DIAGONAL)
+    return min(n, max(VENTANA_MIN, (n - min(primeros)) * HOLGURA_ANCLA))
 
 
 def series_de_lineas(lineas, tiempos: list[int], proyeccion: int = PROYECCION
@@ -193,6 +212,7 @@ def construir_html_tradingview(
         "zonas": zonas,
         "media_zona": 0.18 * atr,
         "digits": digits,
+        "desde": len(rows) - ventana_visible(series, tiempos),
     }
     payload_json = json.dumps(datos, separators=(",", ":")).replace("</", "<\\/")
 
@@ -290,7 +310,7 @@ def construir_html_tradingview(
     <div id="zonas"></div>
   </div>
   <div class="tv-caption-bar">
-    <span>{len(rows)} VELAS {timeframe} · FEED MT5 · GRUPO INTELIGENCIA</span>
+    <span>{len(rows) - datos["desde"]} VELAS {timeframe} · FEED MT5 · GRUPO INTELIGENCIA</span>
     <span>{pie}</span>
   </div>
 </div>
@@ -341,6 +361,21 @@ def construir_html_tradingview(
     priceFormat: {{ type: 'price', precision: D.digits, minMove: Math.pow(10, -D.digits) }},
     lastValueVisible: true, priceLineVisible: true,
     priceLineColor: '#FFFFFF', priceLineWidth: 1,
+    // El eje abarca también cada nivel y línea dibujados: una línea fuera de las velas
+    // visibles (el objetivo del EUR/USD) quedaba sin verse.
+    autoscaleInfoProvider: (original) => {{
+      const r = original();
+      if (!r) return r;
+      const m = D.media_zona;
+      const extra = [
+        ...D.lineas.filter(l => l.tipo !== 'diagonal').map(l => l.precio),
+        ...D.zonas.flatMap(z => [z.precio - m, z.precio + m]),
+        ...D.lineas.filter(l => l.tipo === 'diagonal').flatMap(l => l.puntos.map(p => p.value)),
+      ];
+      r.priceRange.minValue = Math.min(r.priceRange.minValue, ...extra);
+      r.priceRange.maxValue = Math.max(r.priceRange.maxValue, ...extra);
+      return r;
+    }},
     priceLineStyle: LightweightCharts.LineStyle.Dotted,
   }});
   candles.setData(rows.map(r => ({{ time: r.time, open: r.open, high: r.high, low: r.low, close: r.close }})));
@@ -360,7 +395,7 @@ def construir_html_tradingview(
   D.lineas.forEach(l => {{
     const estilo = l.discontinua ? LightweightCharts.LineStyle.Dashed : LightweightCharts.LineStyle.Solid;
     if (l.tipo === 'diagonal') {{
-      linea(l.color, 2.4, l.puntos, estilo);
+      linea(l.color, 3.2, l.puntos, estilo);
     }} else {{
       candles.createPriceLine({{ price: l.precio, color: l.color, lineWidth: 1, lineStyle: estilo,
                                 axisLabelVisible: true, title: l.titulo + ' ' + fmt(l.precio) }});
@@ -379,7 +414,7 @@ def construir_html_tradingview(
   const futuro = [...new Set(D.lineas.flatMap(l => (l.puntos || []).map(p => p.time)))]
     .filter(t => t > ultimo).sort((a, b) => a - b).map(t => ({{ time: t }}));
   if (futuro.length) candles.setData([...candles.data(), ...futuro]);
-  chart.timeScale().setVisibleLogicalRange({{ from: 0, to: rows.length + 12 }});
+  chart.timeScale().setVisibleLogicalRange({{ from: D.desde, to: rows.length + 12 }});
 
   const pintarZonas = () => {{
     const capa = document.getElementById('zonas');

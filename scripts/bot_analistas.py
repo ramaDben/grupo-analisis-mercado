@@ -40,9 +40,15 @@ def leer_token() -> str | None:
 
 def validar(ruta: Path) -> int:
     from analista import esquema as es
+    from analista import fuentes as fu
     from analista.preparar import cargar_pieza
 
-    errores = es.errores(cargar_pieza(ruta.parent))
+    pieza = cargar_pieza(ruta.parent)
+    errores = es.errores(pieza)
+    # El mínimo de un banco va acá y en el bot, no en `esquema.errores`: así una pieza anterior sin
+    # bancos se sigue rearmando al reusarla (spec 2026-10-17 §5).
+    if pieza.get("orden", {}).get("pieza") == "oportunidad":
+        errores += fu.falta_banco(pieza)
     if errores:
         for e in errores:
             print(f"ERROR: {e}")
