@@ -155,6 +155,9 @@ def interpretar(texto: str, universo: list[dict[str, Any]] | None = None) -> Ord
     if re.search(r"(?:^|\s)para\s+\S", cuerpo, flags=re.IGNORECASE):
         raise PedidoInvalido(PERSONALIZACION_RETIRADA)
 
+    entrada = None
+    if comando == "seguimiento":
+        cuerpo, entrada = _extraer_entrada(cuerpo)
     if not cuerpo:
         raise PedidoInvalido(f"Falta el activo. Escribe por ejemplo: /{comando} oro")
     if universo is None:
@@ -162,4 +165,24 @@ def interpretar(texto: str, universo: list[dict[str, Any]] | None = None) -> Ord
 
         universo = sc.cargar_universo(solo_renderizables=False)
     args, saludo = _activo_y_saludo(cuerpo, universo)
+    if entrada is not None:
+        args["entrada"] = entrada
     return Orden(pieza=comando, args=args, saludo=saludo)
+
+
+_ENTRADA = re.compile(r"(?:^|\s)entrada\s*[=:]\s*(\S+)", flags=re.IGNORECASE)
+
+
+def _extraer_entrada(cuerpo: str) -> tuple[str, float | None]:
+    """El precio al que entró el ejecutivo (`entrada=4062.5`), sacado del pedido antes de leer el saludo.
+
+    Solo dígitos con un separador decimal (punto o coma), sin separador de miles: «4.062» sería
+    ambiguo entre 4062 y 4,062.
+    """
+    m = _ENTRADA.search(cuerpo)
+    if m is None:
+        return cuerpo, None
+    valor = m.group(1).replace(",", ".")
+    if not re.fullmatch(r"\d+(?:\.\d+)?", valor) or float(valor) <= 0:
+        raise PedidoInvalido("La entrada va como número, sin separador de miles. Ejemplo: /seguimiento oro entrada=4062.5")
+    return (cuerpo[:m.start()] + " " + cuerpo[m.end():]).strip(), float(valor)

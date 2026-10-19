@@ -9,6 +9,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Callable
 
+from analista import RAIZ
+
+LOGO_LAMINA = RAIZ / "templates" / "stories" / "assets" / "LOGO Blanco.png"  # la lámina es de fondo negro
+
 # Fijo y no editable (spec §7). Sin «recomendación» ni «oportunidad».
 AVISO_PIEZA = ("Análisis técnico de carácter informativo. No es una instrucción "
                "de inversión: un escenario puede cumplirse o invalidarse.")
@@ -118,8 +122,43 @@ def _avance(pct: int | None) -> str:
     return f"{pct} % del camino al objetivo"
 
 
+def _bloque_hoy(hoy: dict[str, Any] | None, dia: str) -> dict[str, str]:
+    """Los textos de la oportunidad de hoy en la lámina. Vacíos si hoy no hay niveles: la plantilla los oculta."""
+    if not hoy:
+        return {"hoy_titulo": "", "hoy_niveles": "", "hoy_medidas": "", "hoy_condicion": "", "aviso_invalida": ""}
+    if hoy.get("cambia_direccion"):
+        aviso = f"La lectura de hoy cambió de lado: queda invalidado lo enviado el {dia}."
+    elif hoy.get("invalida"):
+        aviso = f"El plan del {dia} cerró en su stop: esta es la lectura de hoy."
+    else:
+        aviso = ""
+    return {"hoy_titulo": f"Oportunidad de hoy · Escenario {hoy['direccion'].lower()}",
+            "hoy_niveles": f"Entrada {hoy['entrada']} · Stop {hoy['stop']} · Objetivo {hoy['objetivo']}",
+            "hoy_medidas": " · ".join(x for x in (f"ATR 4H {hoy['atr']}" if hoy["atr"] else "",
+                                                  f"Ratio {hoy['ratio']}", f"Plazo {hoy['plazo']}") if x),
+            "hoy_condicion": hoy.get("condicion") or "", "aviso_invalida": aviso}
+
+
+def _bloque_entrada_real(esc: dict[str, Any], ev: dict[str, Any], real: float | None, precio_vivo: float,
+                         digits: int) -> tuple[str, str]:
+    """(texto de la entrada real, avance medido desde ella). Con entrada real el avance sale de SU precio:
+    medirlo contra el del lunes diría «va perdiendo» de una operación que entró mejor."""
+    if real is None or ev["estado"] not in ("en_curso", "objetivo", "stop"):
+        return "", ""
+    from analista.seguimiento import _fmt
+
+    margen = abs(real - float(esc["stop"]))
+    texto = f"Tu entrada {_fmt(real, digits)} · margen al stop {_fmt(margen, digits)}"
+    if ev["estado"] != "en_curso":
+        return texto, ""
+    obj = float(esc["objetivo"])
+    pct = int((precio_vivo - real) / (obj - real) * 100 + (0.5 if (precio_vivo - real) / (obj - real) >= 0 else -0.5))
+    return texto, _avance(pct)
+
+
 def payload_seguimiento(activo: dict[str, Any], ev: dict[str, Any], precio_vivo: float, lectura_hoy: str,
-                        datos_al: str, autor, chart: Path) -> dict[str, Any]:
+                        datos_al: str, autor, chart: Path, hoy: dict[str, Any] | None = None,
+                        entrada_real: float | None = None) -> dict[str, Any]:
     from analista.seguimiento import _fmt, paso_la_entrada
 
     f, esc, d = activo["fmt"], activo["escenario"], activo["digits"]
@@ -141,12 +180,15 @@ def payload_seguimiento(activo: dict[str, Any], ev: dict[str, Any], precio_vivo:
     sin = estado == "sin_simulacion"
     niveles = "" if sin else f"Entrada {f['entrada']} · Stop {f['stop']} · Objetivo {f['objetivo']}"
     viva = estado in ("entrada_pendiente", "en_curso")
+    txt_real, avance_real = ("", "") if sin else _bloque_entrada_real(esc, ev, entrada_real, precio_vivo, d)
+    dia = str((activo.get("foto") or {}).get("fecha") or "lunes").split()[0]
     return {
+        **_bloque_hoy(hoy, dia), "entrada_real": txt_real, "logo_src": LOGO_LAMINA.resolve().as_uri(),
         "chip": "SEGUIMIENTO DE LA SEMANA", "datos_al": datos_al,
         "activo": f"{activo['nombre']} · {activo['ticker_visible']}",
         "direccion": (activo["lectura"]["direccion"] if sin else esc["direccion"]).lower(),
         "sello": SELLOS[ev["estado"]],
-        "precio_lunes": f["precio"], "precio_hoy": _fmt(precio_vivo, d), "avance": avance,
+        "precio_lunes": f["precio"], "precio_hoy": _fmt(precio_vivo, d), "avance": avance_real or avance,
         "lectura_hoy": lectura_hoy, "niveles": niveles,
         "entrada": "" if sin else f["entrada"], "stop": "" if sin else f["stop"],
         "objetivo": "" if sin else f["objetivo"],

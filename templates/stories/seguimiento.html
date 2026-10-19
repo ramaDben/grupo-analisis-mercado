@@ -166,7 +166,29 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: var(-
 .nv { font-family: var(--font-display); font-weight: 700; font-size: 30px; color: var(--blanco); margin: 6px 0 0; }
 .nivel.stop .nr { color: var(--baja-suave); }
 .nivel.obj .nr { color: var(--sube-suave); }
-.invitacion { font-size: 26px; font-weight: 700; color: var(--acento); margin: auto 0 0; }
+.entrada-real { font-size: 24px; font-weight: 700; color: var(--acento); margin: 12px 0 0; }
+.entrada-real:empty, .op-hoy p:empty { display: none; }
+.op-hoy { margin: 22px 0 0; padding: 16px 20px; border-radius: 12px; border: 1.5px solid color-mix(in srgb, var(--acento) 40%, transparent);
+  background: color-mix(in srgb, var(--fondo-acento) 55%, var(--fondo)); }
+.op-hoy:has(.op-titulo:empty) { display: none; }
+.op-titulo { font-size: 19px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--acento); margin: 0; }
+.op-aviso { font-size: 22px; font-weight: 700; color: var(--texto-1); margin: 8px 0 0; }
+.op-niveles { font-family: var(--font-display); font-weight: 700; font-size: 28px; color: var(--blanco); margin: 8px 0 0; }
+.op-medidas { font-size: 21px; color: var(--texto-borde); margin: 6px 0 0; }
+.op-cond { font-size: 20px; color: var(--texto-2); margin: 6px 0 0; }
+.logo { height: 64px; width: auto; display: block; margin-left: 24px; }
+.cabecera .fecha { margin-left: auto; }
+/* Con la oportunidad de hoy la columna izquierda lleva más: cifras y márgenes más compactos. */
+.sello { font-size: 56px; margin-top: 6px; padding: 6px 0; }
+.duelo { margin-top: 18px; }
+.lado { padding: 12px 18px; }
+.cifra { font-size: 40px; margin-top: 4px; }
+.avance { font-size: 26px; margin-top: 14px; }
+.hoy { font-size: 23px; margin-top: 8px; }
+.niveles { margin-top: 18px; }
+.nv { font-size: 26px; }
+.invitacion { font-size: 23px; margin-top: 16px; }
+.invitacion { font-size: 23px; font-weight: 700; color: var(--acento); margin: auto 0 0; }
 
 .grafico { border-radius: 16px; overflow: hidden; border: 1.5px solid color-mix(in srgb, var(--acento) 35%, transparent); }
 .grafico img { width: 100%; height: auto; display: block; background: var(--fondo); }
@@ -185,6 +207,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: var(-
       <div class="cabecera">
         <span class="chip">{{chip}}</span>
         <span class="fecha">Datos al {{datos_al}}</span>
+        <img class="logo" src="{{logo_src}}" alt="Grupo Inteligencia">
       </div>
       <div class="cuerpo">
         <div class="izq">
@@ -196,6 +219,14 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: var(-
           </div>
           <p class="avance">{{avance}}</p>
           <p class="hoy">{{lectura_hoy}}</p>
+          <p class="entrada-real">{{entrada_real}}</p>
+          <div class="op-hoy">
+            <p class="op-titulo">{{hoy_titulo}}</p>
+            <p class="op-aviso">{{aviso_invalida}}</p>
+            <p class="op-niveles">{{hoy_niveles}}</p>
+            <p class="op-medidas">{{hoy_medidas}}</p>
+            <p class="op-cond">{{hoy_condicion}}</p>
+          </div>
           <div class="niveles">
             <div class="nivel"><p class="nr">Entrada</p><p class="nv">{{entrada}}</p></div>
             <div class="nivel stop"><p class="nr">Stop</p><p class="nv">{{stop}}</p></div>

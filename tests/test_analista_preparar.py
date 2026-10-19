@@ -418,3 +418,23 @@ def test_si_la_direccion_es_la_misma_o_no_hay_historia_no_hay_anterior(tmp_path)
     sin = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p2", AHORA_LUNES,
                       _lectores(tmp_path / "ref2", registro=tmp_path / "vacio.json"))
     assert "anterior" not in sin.pieza["datos"]
+
+
+def test_seguimiento_comunica_la_oportunidad_de_hoy_e_invalida_la_del_lunes(tmp_path):
+    oro = fx.activo_semanal()  # la foto del lunes es BAJISTA
+    _foto(tmp_path, [oro])
+    hoy = fx.lectura(precio=4124.0, direccion="ALCISTA", invalidacion=4060.0)
+    hecha = pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD"}), tmp_path / "s",
+                        datetime(2026, 10, 14, 11, 0, tzinfo=SCL),
+                        _lectores_seg(tmp_path, pd.DataFrame(columns=["time", "high", "low"]), 4124.0, hoy=hoy))
+    d = hecha.pieza["datos"]
+    assert d["oportunidad_hoy"]["cambia_direccion"] and d["oportunidad_hoy"]["ratio"] == "1:3"
+    assert "invalidada" in d["whatsapp"] and "oportunidad de hoy es una compra" in d["whatsapp"]
+
+
+def test_seguimiento_con_entrada_real_fuera_del_stop_lo_dice(tmp_path):
+    _foto(tmp_path, [fx.activo_semanal()])
+    with pytest.raises(pr.SinAnalisisError, match="stop"):
+        pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD", "entrada": 9999.0}), tmp_path / "s",
+                    datetime(2026, 10, 14, 11, 0, tzinfo=SCL),
+                    _lectores_seg(tmp_path, pd.DataFrame(columns=["time", "high", "low"]), 4124.0))

@@ -60,6 +60,8 @@ Dura 7 días: si ya hay uno vigente, te llega al tiro. El primero de un activo d
 2) /seguimiento oro
 Cómo va el activo hoy: lámina y texto listos para WhatsApp.
 Con tu cliente: /seguimiento oro Juan
+Si ya entraste: /seguimiento oro Juan entrada=4062.5 (mide el avance desde tu precio).
+Incluye la oportunidad de hoy; si la lectura cambió de lado, avisa que lo anterior queda invalidado.
 Antes debe existir el /oportunidad de ese activo. Dura 30 minutos.
 
 Activos: oro, dolar, cobre, petroleo, brent, nasdaq, bitcoin o el símbolo exacto de MT5.
@@ -436,7 +438,8 @@ class Atendedor:
             d = pr.cargar_pieza(dir_pedido)["datos"]
             self.rendir_lamina(
                 cm.payload_seguimiento(d["activo"], d["evaluacion"], d["precio_vivo"], d["lectura_hoy"],
-                                       d["edicion"], self.autor, dir_pedido / "grafico.png"),
+                                       d["edicion"], self.autor, dir_pedido / "grafico.png",
+                                       d.get("oportunidad_hoy"), d.get("entrada_real")),
                 "seguimiento", dir_pedido / "lamina.png")
             if rg.vigente(o.args["ticker"], ahora, self.registro) is not None:
                 rg.anotar_seguimiento(o.args["ticker"],

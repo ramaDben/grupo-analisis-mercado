@@ -129,6 +129,44 @@ def texto_lectura(actual, reemplazada: bool, digits: int) -> str:
             f"{actual.direccion.lower()}, con {actual.vigilar.etiqueta} en {f(actual.vigilar.precio)}.")
 
 
+def plazo_esperado(ticker: str) -> str:
+    """El horizonte que se rotula en la lámina (gerencia, 2026-10-19): FX, materias primas, índices y
+    cripto suelen cumplirse en 1 o 2 días; acciones y ETF, hasta una semana. Es un rótulo: lo que mide
+    la simulación sigue siendo la foto semanal."""
+    return "hasta 1 semana" if ticker.startswith("#") or ticker.upper().endswith(".US") else "1 a 2 días"
+
+
+def validar_entrada_real(esc: dict[str, Any], real: float) -> None:
+    """La entrada real tiene que caer entre el stop y el objetivo de la simulación: fuera de ahí el
+    stop ya no limita el riesgo que el ejecutivo dice haber tomado (levanta con el motivo)."""
+    stop, obj = float(esc["stop"]), float(esc["objetivo"])
+    if not min(stop, obj) < real < max(stop, obj):
+        raise ValueError("el precio de entrada no queda entre el stop y el objetivo de la simulación")
+
+
+def oportunidad_de_hoy(esc_hoy: dict[str, Any] | None, esc_foto: dict[str, Any] | None, ev: dict[str, Any],
+                       atr: float, digits: int, ticker: str) -> dict[str, Any] | None:
+    """La oportunidad de la lectura de HOY, medida por sí sola e independiente de la foto del lunes.
+
+    `esc_hoy` es `oportunidad.escenario` sobre la lectura actual. Si hoy no hay niveles (sin ATR) no hay
+    oportunidad que comunicar. `invalida` marca que lo enviado antes ya no vale: la dirección de hoy es
+    la contraria a la de la foto, o el plan de la foto ya cerró en su stop.
+    """
+    if not esc_hoy or esc_hoy.get("motivo") or esc_hoy.get("entrada") is None:
+        return None
+    f = lambda x: _fmt(x, digits)  # noqa: E731
+    import analista.oportunidad as op
+
+    foto_dir = (esc_foto or {}).get("direccion") or ""
+    contraria = bool(foto_dir) and foto_dir != esc_hoy["direccion"]
+    return {
+        "direccion": esc_hoy["direccion"], "entrada": f(esc_hoy["entrada"]), "stop": f(esc_hoy["stop"]),
+        "objetivo": f(esc_hoy["objetivo"]), "atr": f(atr) if atr else "", "ratio": f"1:{op.MULTIPLO}",
+        "plazo": plazo_esperado(ticker), "condicion": op.texto_condicion(esc_hoy, f(esc_hoy["entrada"])) or "",
+        "invalida": contraria or ev.get("estado") == "stop", "cambia_direccion": contraria,
+    }
+
+
 MARCA_SALUDO = "[[SALUDO]]"
 SALUDO_POR_DEFECTO = "Hola,"
 # Poco avance: casi todo el recorrido sigue por delante. Mucho avance: queda poco.
@@ -260,23 +298,48 @@ def _estado_de_texto(ev: dict[str, Any]) -> str:
     return "descartada" if estado == "rango_roto" else estado
 
 
+def texto_oportunidad_hoy(nombre: str, esc: dict[str, Any], hoy: dict[str, Any] | None, dia: str) -> str:
+    """El párrafo de la oportunidad de hoy, aparte del estado de la del lunes y sin precios (van en la lámina).
+
+    Si la lectura cambió de lado, lo dice sin rodeos: lo enviado antes queda invalidado.
+    """
+    if not hoy:
+        return ""
+    el, del_ = _activo_con_articulo(nombre)
+    accion_hoy = "compra" if hoy["direccion"] == "ALCISTA" else "venta"
+    if hoy.get("cambia_direccion"):
+        accion_foto = "compra" if esc.get("direccion") == "ALCISTA" else "venta"
+        return (f"Ojo: la lectura de hoy cambió de lado, así que la {accion_foto} {del_} del {dia} queda "
+                f"invalidada. La oportunidad de hoy es una {accion_hoy}, con su stop y su objetivo en la lámina.")
+    if hoy.get("invalida"):
+        return (f"El plan del {dia} ya cerró en su stop. La oportunidad de hoy es una {accion_hoy} {del_}, con "
+                f"su stop y su objetivo en la lámina.")
+    return (f"Además, la lectura de hoy deja una oportunidad de {accion_hoy} {del_} con su stop y su objetivo "
+            f"en la lámina. Se mide por sí sola, sin depender de lo que te envié el {dia}.")
+
+
 def _armar(nombre: str, fecha_hoy: str, esc: dict[str, Any], ev: dict[str, Any], precio_vivo: float,
-           lectura_hoy: str, digits: int, macro: dict[str, Any] | None = None, dia: str = "lunes") -> str:
+           lectura_hoy: str, digits: int, macro: dict[str, Any] | None = None, dia: str = "lunes",
+           hoy: dict[str, Any] | None = None) -> str:
     """El mensaje con la marca del saludo: un párrafo corto y sin precios que cierra con una pregunta.
 
-    Con dato macro (`macro_seguimiento.redactar`) el cuerpo es el del dato; sin él, el del estado.
+    Con dato macro (`macro_seguimiento.redactar`) el cuerpo es el del dato; sin él, el del estado. La
+    oportunidad de hoy va en un párrafo aparte, siempre que la lectura de hoy tenga niveles.
     """
     macro = macro or {}
     if macro.get("cuerpo"):
-        return f"{MARCA_SALUDO} {macro['cuerpo']}"
-    el, del_ = _activo_con_articulo(nombre)
-    accion = "compra" if esc.get("direccion") == "ALCISTA" else "venta"
-    plantilla = _variante(PLANTILLAS[_estado_de_texto(ev)], fecha_hoy, nombre)
-    return f"{MARCA_SALUDO} " + plantilla.format(el=el, **{"del": del_}, accion=accion, dia=dia)
+        cuerpo = f"{MARCA_SALUDO} {macro['cuerpo']}"
+    else:
+        el, del_ = _activo_con_articulo(nombre)
+        accion = "compra" if esc.get("direccion") == "ALCISTA" else "venta"
+        plantilla = _variante(PLANTILLAS[_estado_de_texto(ev)], fecha_hoy, nombre)
+        cuerpo = f"{MARCA_SALUDO} " + plantilla.format(el=el, **{"del": del_}, accion=accion, dia=dia)
+    extra = texto_oportunidad_hoy(nombre, esc, hoy, dia)
+    return f"{cuerpo}\n\n{extra}" if extra else cuerpo
 
 
 def mensaje(nombre: str, fecha_hoy: str, fecha_foto: str, esc: dict[str, Any], ev: dict[str, Any],
-            precio_vivo: float, actual, reemplazada: bool, digits: int) -> str:
+            precio_vivo: float, actual, reemplazada: bool, digits: int, hoy: dict[str, Any] | None = None) -> str:
     """El texto de WhatsApp del seguimiento: una persona que retoma la conversación con su cliente.
 
     Abre con la marca del saludo (`con_saludo` la reemplaza al responder) y el estado en la primera
@@ -285,7 +348,7 @@ def mensaje(nombre: str, fecha_hoy: str, fecha_foto: str, esc: dict[str, Any], e
     mismo peso. Sin aviso legal (gerencia, 2026-10-13): lo lleva la lámina.
     """
     return _armar(nombre, fecha_hoy, esc, ev, precio_vivo, texto_lectura(actual, reemplazada, digits), digits,
-                  dia=(fecha_foto.split() or ["lunes"])[0])
+                  dia=(fecha_foto.split() or ["lunes"])[0], hoy=hoy)
 
 
 def redactar(datos: dict[str, Any], saludo: str = "", ctx_macro: dict[str, Any] | None = None,
@@ -312,5 +375,5 @@ def redactar(datos: dict[str, Any], saludo: str = "", ctx_macro: dict[str, Any] 
         except Exception:  # noqa: BLE001  el dato macro es un extra: sin él, el seguimiento sale igual
             macro = {}
     texto = _armar(datos["nombre"], fecha_hoy, esc, ev, float(datos["precio_vivo"]), datos["lectura_hoy"],
-                   digits, macro, dia)
+                   digits, macro, dia, datos.get("oportunidad_hoy"))
     return con_saludo(texto, saludo), macro.get("aparte", "")
