@@ -604,9 +604,21 @@ def _nombre_firma(nombre: str) -> str:
     return " ".join([partes[0], *partes[-2:]]) if len(partes) > 3 else nombre
 
 
+def _bordes_rango(a: dict[str, Any]) -> tuple[str, str] | None:
+    """(soporte, resistencia) del rango si la lectura es lateral y los trae; en rango no hay línea de
+    seguridad ni objetivo, y un titular armado con ellos saldría con los huecos vacíos."""
+    f = a["fmt"]
+    if a["lectura"]["direccion"] == "LATERAL" and f.get("borde_inferior") and f.get("borde_superior"):
+        return f["borde_inferior"], f["borde_superior"]
+    return None
+
+
 def titular_base(a: dict[str, Any]) -> str:
     """Fórmula base Alt. 3: foco en claridad direccional, nivel de control y escaneo rápido."""
     lec, f = a["lectura"], a["fmt"]
+    rango = _bordes_rango(a)
+    if rango:
+        return f"{_articulo_sujeto(a['nombre'])} en {f['precio']}: se mueve en rango entre {rango[0]} y {rango[1]}"
     return (
         f"{_articulo_sujeto(a['nombre'])} en {f['precio']}: la línea de seguridad en {f['invalidacion']} "
         f"marca el pulso {lec['direccion'].lower()} hacia {f['objetivo_tori']}"
@@ -643,6 +655,8 @@ def _formatear_precio_banco(valor: float, digits: int) -> str:
 
 def titular_variante(a: dict[str, Any], fuentes: list[dict[str, Any]]) -> str:
     """Alt. 2 (choque de bancos) si hay exactamente 1 a favor y 1 en contra con un precio inequívoco."""
+    if _bordes_rango(a):
+        return titular_base(a)
     direccion = a["lectura"]["direccion"]
     if hasattr(fu, "seleccionar_bancos_correo"):
         bancos_sel = fu.seleccionar_bancos_correo(fuentes, direccion)
@@ -694,7 +708,11 @@ def preheader_sugerido(a: dict[str, Any], fuentes: list[dict[str, Any]] | None =
     """Texto descriptivo para la bandeja de entrada: lectura técnica, bancos y agenda."""
     lec, f = a["lectura"], a["fmt"]
     temp = a.get("temporalidad", "4H").split()[0]
-    base = f"Sesgo {lec['direccion'].lower()} en {temp} condicionado a la línea de {f['invalidacion']}."
+    rango = _bordes_rango(a)
+    if rango:
+        base = f"Sesgo lateral en {temp}: el precio se mueve entre {rango[0]} y {rango[1]}."
+    else:
+        base = f"Sesgo {lec['direccion'].lower()} en {temp} condicionado a la línea de {f['invalidacion']}."
 
     if hasattr(fu, "seleccionar_bancos_correo"):
         bancos_sel = fu.seleccionar_bancos_correo(fuentes or [], lec["direccion"])
@@ -775,6 +793,10 @@ def _hero_activo(a: dict[str, Any], titular: str, c: dict[str, str], bajada: str
         ("Línea de seguridad", f.get("invalidacion") or "sin nivel", "Invalida el sesgo"),
         ("Objetivo técnico", f.get("objetivo_tori") or "sin nivel", "Proyección técnica", "#50C0A8"),
     ]
+    rango = _bordes_rango(a)
+    if rango:  # en rango no hay línea de seguridad ni objetivo: se muestran los bordes
+        cifras_datos[2:] = [("Soporte del rango", rango[0], "Borde inferior"),
+                            ("Resistencia del rango", rango[1], "Borde superior", "#50C0A8")]
 
     celdas = []
     for i, c_item in enumerate(cifras_datos):
@@ -811,6 +833,22 @@ _MOTIVO_CAMBIO = {
 }
 
 
+def _lo_que_ve_hoy(a: dict[str, Any]) -> str:
+    """La lectura de hoy en una frase, con los niveles ya formateados de la pieza (nunca cifras nuevas)."""
+    f, direccion = a["fmt"], a["lectura"]["direccion"]
+    if direccion == "LATERAL":
+        sup, inf = f.get("borde_superior"), f.get("borde_inferior")
+        if sup and inf:
+            return f" Hoy el precio se mueve en un rango entre {inf} y {sup}, sin una tendencia que lo guíe."
+        return ""
+    inv, obj = f.get("invalidacion"), f.get("objetivo_tori")
+    if inv and obj:
+        lado = "sobre" if direccion == "BAJISTA" else "bajo"
+        return (f" Hoy la tendencia es {direccion.lower()}: se anula si cierra {lado} {inv} "
+                f"y el objetivo técnico es {obj}.")
+    return ""
+
+
 def _continuidad_correo(a: dict[str, Any], d: dict[str, Any] | None, c: dict[str, str]) -> str:
     """Cuando la lectura cambió de dirección desde el análisis anterior, lo cuenta bajo el titular.
 
@@ -826,6 +864,7 @@ def _continuidad_correo(a: dict[str, Any], d: dict[str, Any] | None, c: dict[str
              f"y hoy es {hoy.lower()}.")
     motivo = _MOTIVO_CAMBIO.get(ant.get("motivo") or "")
     texto += f" El cambio ocurrió porque {motivo}." if motivo else         " La lectura anterior cumplió su vigencia y se rehízo con el mercado de hoy."
+    texto += _lo_que_ve_hoy(a)
     return (
         f'<tr><td class="pad" style="padding:20px 40px 0 40px;">'
         f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="{c["fondo"]}" '

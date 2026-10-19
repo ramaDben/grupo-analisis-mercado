@@ -714,3 +714,48 @@ def test_si_la_direccion_no_cambio_no_aparece_la_linea(tmp_path):
     assert "Cambio de lectura:" not in _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
     assert "Cambio de lectura:" not in _correo(oh.armar(fx.pieza_oportunidad(tmp_path, laminas=True, dolar=True),
                                                         tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+
+
+def test_el_cambio_de_lectura_dice_lo_que_ve_hoy_en_un_rango(tmp_path):
+    p = fx.pieza_oportunidad(tmp_path, laminas=True, dolar=True)
+    a = p["datos"]["activos"][0]
+    a["lectura"]["direccion"] = "LATERAL"
+    a["fmt"].update(borde_superior="4.195,31", borde_inferior="4.138,40")
+    p["datos"]["anterior"] = {"direccion": "BAJISTA", "fecha": "17/10", "motivo": ""}
+    p["huella"] = es._huella(p)
+    correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+    assert "el 17/10 era bajista y hoy es lateral" in correo
+    assert "Hoy el precio se mueve en un rango entre 4.138,40 y 4.195,31, sin una tendencia que lo guíe." in correo
+
+
+def test_el_cambio_de_lectura_a_tendencia_dice_el_nivel_que_la_anula_y_el_objetivo(tmp_path):
+    a = fx.pieza_oportunidad(tmp_path, laminas=True, dolar=True)["datos"]["activos"][0]
+    previa = "LATERAL" if a["lectura"]["direccion"] != "LATERAL" else "BAJISTA"
+    correo = _con_anterior(tmp_path, direccion=previa)
+    f = a["fmt"]
+    assert f"Hoy la tendencia es {a['lectura']['direccion'].lower()}: se anula si cierra" in correo
+    assert f["invalidacion"] in correo and f["objetivo_tori"] in correo
+
+
+def _activo_en_rango(tmp_path):
+    p = fx.pieza_oportunidad(tmp_path, laminas=True, dolar=True)
+    a = p["datos"]["activos"][0]
+    a["lectura"]["direccion"] = "LATERAL"
+    a["fmt"].update(invalidacion="", objetivo_tori="", borde_superior="4.195,31", borde_inferior="4.138,40")
+    return p, a
+
+
+def test_un_activo_en_rango_no_arma_titular_ni_preheader_con_huecos(tmp_path):
+    p, a = _activo_en_rango(tmp_path)
+    assert oh.titular_base(a).endswith("se mueve en rango entre 4.138,40 y 4.195,31")
+    assert oh.titular_correo(a, p["editorial"]["fuentes"], variante=True) == oh.titular_base(a)
+    pre = oh.preheader_sugerido(a, p["editorial"]["fuentes"], p["datos"])
+    assert pre.startswith("Sesgo lateral") and "4.138,40" in pre and "línea de ." not in pre
+
+
+def test_en_rango_la_tira_de_cifras_muestra_los_bordes_y_no_sin_nivel(tmp_path):
+    p, a = _activo_en_rango(tmp_path)
+    p["huella"] = es._huella(p)
+    correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+    assert "Soporte del rango" in correo and "Resistencia del rango" in correo
+    assert "sin nivel" not in correo
