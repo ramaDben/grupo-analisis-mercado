@@ -20,6 +20,7 @@ from analista import informe_html as ih
 from analista import oportunidad as op
 
 PLANTILLA = RAIZ / "templates" / "oportunidad" / "pieza.html"
+LOGO_CLARO = RAIZ / "templates" / "stories" / "assets" / "LOGO NEGRO.png"  # el de la cabecera blanca del correo
 
 
 class InformeInvalido(ValueError):
@@ -699,8 +700,8 @@ def titular_correo(a: dict[str, Any], fuentes: list[dict[str, Any]] | None = Non
 
 
 def asunto_sugerido(a: dict[str, Any], fuentes: list[dict[str, Any]] | None = None, variante: bool = False) -> str:
-    """Función pura y exportada: devuelve el titular sugerido como asunto."""
-    return titular_correo(a, fuentes, variante)
+    """Función pura y exportada: el titular sugerido como asunto, con la fórmula de seguimiento."""
+    return f"Seguimiento de nuestra llamada: {titular_correo(a, fuentes, variante)}"
 
 
 def preheader_sugerido(a: dict[str, Any], fuentes: list[dict[str, Any]] | None = None,
@@ -914,10 +915,10 @@ def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: P
         f'style="background:{c["fondo"]};border:1px solid {c["linea"]};border-radius:10px;margin:20px 0 24px 0;">'
         f'<tr><td style="padding:20px 24px;">'
         f'<p style="margin:0 0 8px 0;font-family:{F_SANS};font-size:16px;line-height:22px;font-weight:800;color:{c["texto_1"]};">'
-        '¿Revisamos este análisis juntos en la plataforma MT5?</p>'
+        '¿Lo repasamos juntos en la plataforma MT5?</p>'
         f'<p style="margin:0;font-family:{F_SANS};font-size:14px;line-height:21px;color:{c["texto_borde"]};">'
-        'Podemos mirar en conjunto el gráfico en tiempo real, comprobar el comportamiento del precio frente a la línea de seguridad '
-        'y revisar la plataforma con tu cuenta de inversión.</p>'
+        'Si te quedó alguna duda de nuestra llamada, agendemos unos minutos para mirar el gráfico en tiempo real, '
+        'ver cómo se comporta el precio frente a la línea de seguridad y revisar la plataforma con tu cuenta de inversión.</p>'
         f'</td></tr></table>'
     )
 
@@ -955,7 +956,7 @@ def _boton_whatsapp(c: dict[str, str]) -> str:
         + _tabla(f'<tr><td align="center" bgcolor="{c["marca"]}" style="background:{c["marca"]};border-radius:8px;">'
                  f'<a href="{WA_MARCA}" style="display:block;padding:16px 20px;font-family:{F_SANS};font-size:17px;'
                  f'line-height:24px;font-weight:700;text-decoration:none;color:#06201A;">'
-                 'Escríbeme por WhatsApp para revisar este análisis →</a></td></tr>')
+                 'Escríbeme por WhatsApp para retomar nuestra conversación →</a></td></tr>')
         + '</td></tr>'
     )
 
@@ -1007,35 +1008,44 @@ def _marco_correo(d: dict[str, Any], ed: dict[str, Any], ejecutivo: dict[str, An
         f'</td></tr></table></td></tr></table>'
     )
 
+    # La apertura sigue el prototipo de Más que UF: filete de color, cabecera blanca con el logo y la
+    # fecha, banda oscura con la pregunta del seguimiento y, debajo, el saludo y el texto del ejecutivo.
+    fecha = ih.e(d.get("edicion", d["vigencia"]["desde"]))
     cabecera = (
-        f'<tr><td class="pad" bgcolor="{c["hero"]}" style="background:{c["hero"]};padding:22px 40px;'
-        f'border-bottom:1px solid #1A282B;">'
-        + _tabla(f'<tr><td valign="middle" align="left">'
-                 f'<table role="presentation" cellspacing="0" cellpadding="0" border="0">'
-                 f'<tr><td valign="middle" style="padding-right:12px;">'
-                 f'<img src="{ih._data_uri(ih.LOGO)}" width="190" alt="Grupo Inteligencia" '
-                 f'style="display:block;border:0;width:190px;height:auto;"></td></tr></table></td>'
-                 f'<td valign="middle" align="right" style="font-family:{F_SANS};font-size:12px;line-height:16px;'
-                 f'font-weight:600;color:{c["hero_rotulo"]};">Edición técnica<br>'
-                 f'<span style="color:{c["blanco"]};font-weight:700;">{ih.e(d.get("edicion", d["vigencia"]["desde"]))}</span></td></tr>')
-        + '</td></tr>'
-        f'<tr><td bgcolor="{c["marca"]}" height="3" style="height:3px;line-height:3px;font-size:3px;'
+        f'<tr><td bgcolor="{c["marca"]}" height="4" style="height:4px;line-height:4px;font-size:4px;'
         f'background:{c["marca"]};background-image:linear-gradient(90deg,{c["acento_azul"]},{c["marca"]});">&nbsp;</td></tr>'
+        f'<tr><td class="pad" bgcolor="{c["fondo_alt"]}" style="background:{c["fondo_alt"]};padding:22px 40px 18px 40px;">'
+        + _tabla(f'<tr><td valign="middle" align="left">'
+                 f'<img src="{ih._data_uri(LOGO_CLARO)}" width="96" height="96" alt="Grupo Inteligencia" '
+                 f'style="display:block;border:0;width:96px;height:96px;"></td>'
+                 f'<td valign="middle" align="right" style="font-family:{F_SANS};font-size:12px;line-height:18px;'
+                 f'color:{c["texto_2"]};">Santiago, {fecha}</td></tr>')
+        + '</td></tr>'
     )
 
     portada = (
-        '<tr><td class="pad" style="padding:30px 40px 22px 40px;">'
-        + _p('<span class="saludo-cliente">Estimado(a):</span>', c, tam=18, peso=700, color="texto_1", margen="0 0 12px 0")
-        + _p("Te escribo para compartirte el análisis técnico y fundamental vigente, preparado por la "
-             "Dirección de Análisis Técnico de Grupo Inteligencia: la lectura del activo, sus niveles, lo que "
-             "puede mover su precio y qué dicen los bancos. Me gustaría revisarlo contigo en la plataforma MT5.",
-             c, tam=17, margen="0")
+        f'<tr><td bgcolor="{c["hero"]}" style="background:{c["hero"]};">'
+        + _tabla(
+            f'<tr><td class="pad stack" valign="middle" style="padding:40px 16px 40px 40px;">'
+            f'<p style="margin:0 0 14px 0;font-family:{F_SANS};font-size:11px;line-height:14px;letter-spacing:1.8px;'
+            f'text-transform:uppercase;font-weight:700;color:#50C0A8;">Seguimiento de nuestra llamada&nbsp;&nbsp;·&nbsp;&nbsp;Análisis técnico</p>'
+            f'<h1 class="h1" style="margin:0 0 14px 0;font-family:{F_DISPLAY};font-size:28px;line-height:35px;'
+            f'font-weight:700;color:{c["blanco"]};"><!--TITULO--></h1>'
+            f'<p style="margin:0;font-family:{F_SANS};font-size:15px;line-height:24px;color:{c["hero_texto_2"]};">'
+            'Hace unos días conversamos por teléfono y te hice llegar información de Grupo Inteligencia. '
+            'Aquí te comparto el análisis técnico y fundamental vigente, para que lo tengas a mano.</p></td>'
+            f'<td class="hide-m" width="130" valign="middle" align="center" style="padding:30px 36px 30px 0;">'
+            f'<img src="{ih._data_uri(ih.LOGO)}" width="94" height="94" alt="" '
+            f'style="display:block;border:0;width:94px;height:94px;"></td></tr>')
         + '</td></tr>'
-        f'<tr><td class="pad" bgcolor="{c["tarjeta"]}" style="background:{c["tarjeta"]};'
-        f'border-left:4px solid {c["marca"]};padding:18px 40px 20px 36px;">'
-        + _rotulo("Análisis técnico vigente", c, margen="0 0 8px 0")
-        + f'<h1 class="h1" style="margin:0;font-family:{F_DISPLAY};font-size:22px;line-height:29px;'
-          f'font-weight:700;color:{c["texto_1"]};"><!--TITULO--></h1></td></tr>'
+        '<tr><td class="pad" style="padding:34px 40px 30px 40px;">'
+        + _p('<span class="saludo-cliente">Estimado(a):</span>', c, tam=16, peso=600, color="texto_1", margen="0 0 12px 0")
+        + _p("Quisiera saber si pudiste revisar la información que te envié y si te surgieron preguntas. "
+             "A continuación te comparto el análisis técnico de la Dirección de Análisis Técnico de Grupo "
+             "Inteligencia: hacia dónde se inclina el activo, los niveles que vigilamos, lo que puede mover "
+             "su precio y qué dicen los bancos.",
+             c, tam=15, margen="0")
+        + '</td></tr>'
     )
 
     cierre = (
@@ -1143,7 +1153,7 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
     marco = _marco_correo(d, ed, ejecutivo, autor, c)
     if publicar is not None:
         imgs = (pieza.get("imagenes") or {})
-        rutas = [ih.LOGO, *(dir_pedido / a["grafico"] for a in d["activos"]),
+        rutas = [ih.LOGO, LOGO_CLARO, *(dir_pedido / a["grafico"] for a in d["activos"]),
                  *(dir_pedido / imgs[k] for k in ("calendario", "dolar") if imgs.get(k))]
         marco = _enlazar_imagenes(marco, rutas, publicar)
         correos = [_enlazar_imagenes(x, rutas, publicar) for x in correos]

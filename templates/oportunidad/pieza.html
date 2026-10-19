@@ -8,7 +8,8 @@
     .pad{padding-left:20px !important;padding-right:20px !important;}
     .stack{display:block !important;width:100% !important;box-sizing:border-box;}
     .stack-gap{height:12px !important;}
-    .h1{font-size:26px !important;line-height:32px !important;}
+    .h1{font-size:24px !important;line-height:30px !important;}
+    .hide-m{display:none !important;}
   }
 </style>
 <style>
@@ -82,21 +83,82 @@
   table.hechos th,table.hechos td,table.agenda th,table.agenda td,table.curva td{padding:8px 10px;border-bottom:1px solid var(--linea);text-align:left;vertical-align:top}
   .calendario-img{display:block;width:100%;border-radius:12px;margin:8px 0}
   @media (max-width:800px){.activo{grid-template-columns:1fr}}
+  /* Página clara, como el prototipo de Más que UF: tarjeta de edición blanca arriba y el correo debajo.
+     Los roles se reescriben con los del correo (claros); la apertura y la banda siguen oscuras. */
+  :root{--fondo:#F3F6F5;--fondo-alt:#FFFFFF;--tarjeta:#F3F6F5;--acento:#2F8F7A;--sube:#1F8F5F;--baja:#C93434;
+    --fondo-sube:#E3F6EE;--fondo-baja:#FDECEC;--texto-1:#0B1517;--texto-2:#6B7779;--texto-borde:#1D2528;--linea:#DFE6E4;}
+  body{background:var(--fondo)}
+  main{max-width:820px;padding:0 16px 32px}
+  .banda{background:#0B1214;margin:0 -16px;padding:18px 28px;border-top:4px solid var(--acento)}
+  .banda .semana{color:#B7C6C8}
+  .banda .semana strong{color:#fff}
+  .filete{display:none}
+  .editor{background:#fff;border:1px solid var(--linea);border-radius:14px;padding:24px;margin:24px 0;box-shadow:0 10px 30px rgba(11,18,20,.08)}
+  .editor h2{margin:0 0 6px;font-size:22px;color:#0B1214}
+  .editor > p{margin:0 0 18px;font-size:13px;line-height:19px;color:var(--texto-2)}
+  .editor .rejilla{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .editor .cliente{margin:0}
+  .editor .cliente.completo{grid-column:1/-1}
+  .editor .cliente span{display:block;margin:0 0 6px;font-size:12px;font-weight:700;color:#0B1214}
+  .editor .cliente input{width:100%;height:42px;margin:0;padding:9px 11px;border:1px solid #CBD6D3;border-radius:8px;background:#fff;color:var(--texto-1);font-size:14px}
+  .editor .cliente input:focus{outline:0;border-color:var(--acento);box-shadow:0 0 0 3px rgba(47,143,122,.18)}
+  .editor .acciones-editor{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;align-items:center}
+  .editor button{margin:0;border-radius:8px;padding:11px 16px;font:700 14px "Segoe UI",Arial,sans-serif}
+  .editor button.primario{background:#0B1214;color:#fff}
+  .editor button.verde{background:var(--acento);color:#fff}
+  .editor button.suave{background:#E3F6EE;color:#0B3B30}
+  .editor button.neutro{background:#EEF2F1;color:#3A4648}
+  .editor #estado{font-size:12px;color:var(--acento)}
+  .editor .nota-editor{margin:14px 0 0;padding:10px 12px;background:#F3F6F5;border-radius:8px;font-size:13px;color:#4C5A5C}
+  #caja-codigo{display:none;margin-top:14px}
+  #caja-codigo textarea{width:100%;height:220px;padding:12px;border:1px solid #CBD6D3;border-radius:8px;font:12px/1.5 Consolas,Menlo,monospace;color:#0B1517;background:#FBFCFC;resize:vertical}
+  .simulaciones h3.rotulo-seccion{margin:26px 0 10px;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:var(--acento)}
+  .activo{background:#fff;box-shadow:0 6px 18px rgba(11,18,20,.06);grid-template-columns:1fr}
+  .activo .analisis{display:none}
+  body.con-analisis .activo .analisis{display:block}
+  body.con-analisis .activo{grid-template-columns:3fr 2fr}
+  .activo .direccion{color:#fff}
+  .activo .panel{background:#F3F6F5}
+  .activo .panel input[type=number]{background:#fff}
+  button,a.descargar{color:#fff}
+  .correo-vista{margin:26px 0 8px}
+  .correo-vista > h3{margin:0 0 12px;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:var(--acento)}
+  #vista-correo{margin-top:0}
+  @media (max-width:680px){.editor{padding:16px}.editor .rejilla{grid-template-columns:1fr}.editor .cliente.completo{grid-column:auto}.editor button{width:100%}body.con-analisis .activo{grid-template-columns:1fr}}
+  @media print{
+    @page{size:Letter;margin:0}
+    body{background:#F4F7F6 !important}
+    *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}
+    .editor,.simulaciones,.banda,.firma,.aviso,.correo-vista > h3{display:none !important}
+    main{max-width:none;padding:0}
+  }
 </style></head>
 <body><main>
 <div class="banda"><img src="{{logo}}" alt="Grupo Inteligencia">
   <p class="semana">{{semana}}<strong>Análisis del {{edicion}}</strong></p></div>
 <div class="filete"></div>
-<header class="portada"><p class="chip">Análisis técnico vigente</p>
-  <h1>{{titular}}</h1><p>{{bajada}}</p></header>
-{{activos}}
-<section class="correo"><h2>Correo para tu cliente</h2>
-  <p>Así le llega a tu cliente. Marca los activos que quieres incluir, completa la simulación arriba y copia el correo: se pega en Outlook con el formato.</p>
-  <label class="cliente">Tu nombre (quien realiza la simulación)<input type="text" id="ejecutivo" value="{{ejecutivo}}" placeholder="Escribe tu nombre"></label>
-  <label class="cliente">Tu WhatsApp (el botón al final del correo le abre un chat contigo; vacío, el correo sale sin botón)<input type="tel" id="whatsapp" placeholder="Ej.: +56 9 1234 5678"></label>
-  <label class="cliente">Saludo al cliente (tú decides cómo dirigirte a esa persona)<input type="text" id="cliente" placeholder="Ej.: Estimado Sr. Pérez:"></label>
-  <button type="button" id="copiar-correo">Copiar correo para Outlook</button> <span id="estado"></span>
-  <div id="vista-correo"></div></section>
+<section class="editor" id="editor"><h2>Preparar correo para tu cliente</h2>
+  <p>Completa tus datos y la simulación de cada activo; la vista del correo se actualiza sola. Luego usa <strong>Copiar correo para Outlook</strong> y pégalo en un correo nuevo, o <strong>Copiar código HTML</strong> si necesitas el código fuente.</p>
+  <div class="rejilla">
+    <label class="cliente completo"><span>Saludo al cliente (tú decides cómo dirigirte a esa persona)</span><input type="text" id="cliente" placeholder="Ej.: Estimado Sr. Pérez:"></label>
+    <label class="cliente"><span>Tu nombre (quien realiza la simulación)</span><input type="text" id="ejecutivo" value="{{ejecutivo}}" placeholder="Escribe tu nombre"></label>
+    <label class="cliente"><span>Tu WhatsApp (el botón del correo abre un chat contigo; vacío, sale sin botón)</span><input type="tel" id="whatsapp" placeholder="Ej.: +56 9 1234 5678"></label>
+  </div>
+  <div class="acciones-editor">
+    <button type="button" class="primario" id="copiar-correo">Copiar correo para Outlook</button>
+    <button type="button" class="verde" id="copiar-codigo">Copiar código HTML</button>
+    <button type="button" class="suave" id="ver-codigo">Ver código</button>
+    <button type="button" class="suave" id="ver-analisis">Ver análisis completo</button>
+    <button type="button" class="neutro" id="exportar-pdf">Exportar PDF</button>
+    <button type="button" class="neutro" id="restablecer">Restablecer</button>
+    <span id="estado" aria-live="polite"></span>
+  </div>
+  <div id="caja-codigo"><textarea id="area-codigo" readonly aria-label="Código HTML del correo"></textarea></div>
+  <p class="nota-editor">Este panel <strong>no se copia ni se exporta</strong>. Solo se copia el correo que aparece más abajo.</p>
+</section>
+<section class="simulaciones"><h3 class="rotulo-seccion">Simulación por activo</h3>
+{{activos}}</section>
+<section class="correo-vista"><h3>Vista del correo</h3><div id="vista-correo"></div></section>
 <template id="correo-marco">{{marco}}</template>
 <template id="correo-wa">{{boton_wa}}</template>
 {{correos}}
@@ -194,12 +256,12 @@
     var saludo = document.getElementById('cliente').value.trim().replace(/[<>&"]/g, '');
     if (saludo && !/[:,.;]$/.test(saludo)) saludo += ':';
     var yo = nombreEj(), n = partes.length;
-    var titulo = (n === 1 ? 'El activo' : 'Los ' + n + ' activos') + ' con escenarios clave para revisar en MT5';
+    var titulo = '¿Pudiste revisar la información que te envié?';
     var wa = numeroWa(), botonWa = '';
     if (wa){
       var nombres = DATOS.activos.filter(function(d){ return d._marcado(); }).map(function(d){ return d.nombre; });
-      var texto = 'Hola ' + yo.replace(/[<>&"]/g, '') + ', recibí tu análisis de ' + nombres.join(' y ') +
-                  ' y me gustaría revisarlo contigo.';
+      var texto = 'Hola ' + yo.replace(/[<>&"]/g, '') + ', revisé el análisis de ' + nombres.join(' y ') +
+                  ' que me enviaste tras nuestra llamada y me gustaría comentarlo contigo.';
       botonWa = document.getElementById('correo-wa').innerHTML.replace('%%WA%%', 'https://wa.me/' + wa + '?text=' + encodeURIComponent(texto));
     }
     var html = document.getElementById('correo-marco').innerHTML.replace('<!--ACTIVOS-->', partes.join('')).replace('<!--WA-->', botonWa)
@@ -253,6 +315,29 @@
     vista();
   });
   document.getElementById('copiar-correo').addEventListener('click', copiarCorreo);
+  function avisar(m){ estadoEl.textContent = m; }
+  function htmlCorreo(){ return document.getElementById('correo-estilos').outerHTML + document.getElementById('correo-root').outerHTML; }
+  document.getElementById('copiar-codigo').addEventListener('click', function(){
+    if (sinNombre()) return;
+    if (!vista()){ avisar('Marca al menos un activo.'); return; }
+    navigator.clipboard.writeText(htmlCorreo()).then(function(){ avisar('Código HTML copiado.'); },
+      function(){ avisar('No se pudo copiar: usa Ver código y cópialo a mano.'); });
+  });
+  document.getElementById('ver-codigo').addEventListener('click', function(){
+    var caja = document.getElementById('caja-codigo'), abre = caja.style.display !== 'block';
+    if (abre){ if (!vista()){ avisar('Marca al menos un activo.'); return; } document.getElementById('area-codigo').value = htmlCorreo(); }
+    caja.style.display = abre ? 'block' : 'none';
+    this.textContent = abre ? 'Ocultar código' : 'Ver código';
+  });
+  document.getElementById('ver-analisis').addEventListener('click', function(){
+    var on = document.body.classList.toggle('con-analisis');
+    this.textContent = on ? 'Ocultar análisis completo' : 'Ver análisis completo';
+  });
+  document.getElementById('exportar-pdf').addEventListener('click', function(){ if (vista()) window.print(); });
+  document.getElementById('restablecer').addEventListener('click', function(){
+    document.getElementById('cliente').value = ''; document.getElementById('whatsapp').value = '';
+    document.getElementById('ejecutivo').value = ''; avisar(''); vista();
+  });
   vista();
 })();
 </script>

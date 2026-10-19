@@ -263,12 +263,13 @@ def test_los_cuadros_parten_con_capital_y_perdida_por_defecto_y_el_saludo_es_edi
     assert 'id="cliente"' in html and 'class="saludo-cliente">Estimado(a):</span>' in html
 
 
-def test_el_correo_parte_con_el_saludo_a_la_persona_antes_del_titulo(tmp_path):
-    """Gerencia: un correo que abre con afiche y titular se lee como spam; debe partir con el nombre."""
+def test_el_correo_abre_como_el_de_mas_que_uf_con_la_pregunta_y_luego_el_saludo(tmp_path):
+    """Director, 2026-10-19: la apertura sigue a Más que UF (cabecera, banda con la pregunta, saludo y texto)."""
     html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
     correo = html.split('id="correo-root"')[1]
-    assert correo.index('class="saludo-cliente"') < correo.index("<!--TITULO-->")
-    assert "Te escribo para compartirte" in correo
+    assert correo.index("<!--TITULO-->") < correo.index('class="saludo-cliente"') < correo.index("<!--ACTIVOS-->")
+    assert "Hace unos días conversamos por teléfono" in correo
+    assert "Quisiera saber si pudiste revisar la información que te envié" in correo
 
 
 def test_el_titulo_del_correo_cuenta_los_activos_incluidos_y_no_dice_igual_para_todos(tmp_path):
@@ -283,7 +284,7 @@ def test_el_titulo_del_correo_cuenta_los_activos_incluidos_y_no_dice_igual_para_
         pg = b.new_page()
         pg.goto(ruta.as_uri())
         v = pg.locator("#vista-correo")
-        assert "El activo con escenarios clave para revisar en MT5" in v.inner_text()
+        assert "¿Pudiste revisar la información que te envié?" in v.inner_text()
         pg.locator("[name=incluir]").first.uncheck()
         assert "Marca al menos un activo" in v.inner_text()
         pg.locator("[name=incluir]").first.check()
@@ -395,7 +396,7 @@ def test_la_ficha_no_habla_de_la_semana_con_vigencia_de_7_dias(tmp_path):
     for viejo in ("Escenario de la semana", "Análisis técnico de la semana", "Sin simulación esta semana",
                   "de esta semana", "en MT5 esta semana"):
         assert viejo not in html, viejo
-    assert "Los tres escenarios" in html and "Análisis técnico vigente" in html
+    assert "Los tres escenarios" in html and "Seguimiento de nuestra llamada" in html
     p["datos"]["activos"][0]["escenario"]["motivo"] = "sin nivel claro"
     p["huella"] = es._huella(p)
     assert "Sin simulación esta semana" not in oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
@@ -656,7 +657,7 @@ def test_preheader_oculto_y_asunto_sugerido(tmp_path):
     d = p["datos"]
 
     asunto = oh.asunto_sugerido(a, ed.get("fuentes"))
-    assert asunto == oh.titular_base(a)
+    assert asunto == f"Seguimiento de nuestra llamada: {oh.titular_base(a)}"
     assert "El oro en" in asunto
 
     preheader = oh.preheader_sugerido(a, ed.get("fuentes"), d)
