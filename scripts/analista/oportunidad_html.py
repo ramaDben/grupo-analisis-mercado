@@ -803,6 +803,39 @@ def _hero_activo(a: dict[str, Any], titular: str, c: dict[str, str], bajada: str
     )
 
 
+_MOTIVO_CAMBIO = {
+    "la estructura de la lectura cambió: una línea se rompió por cierre":
+        "una línea de la lectura anterior se rompió por cierre",
+    "el precio tocó la invalidación": "el precio tocó el nivel que invalidaba la lectura anterior",
+    "el precio alcanzó el objetivo técnico": "el precio alcanzó el objetivo técnico de la lectura anterior",
+}
+
+
+def _continuidad_correo(a: dict[str, Any], d: dict[str, Any] | None, c: dict[str, str]) -> str:
+    """Cuando la lectura cambió de dirección desde el análisis anterior, lo cuenta bajo el titular.
+
+    Sin esto, un cliente que leyó el informe bajista recibe uno lateral sin explicación y parece una
+    contradicción. La dirección de antes viene del registro (`datos.anterior`, solo si cambió); el
+    motivo, de la caducidad que la estrategia ya anotó: no se inventa ninguna causa.
+    """
+    ant = (d or {}).get("anterior")
+    hoy = a["lectura"]["direccion"]
+    if not ant or ant.get("direccion") == hoy:
+        return ""
+    texto = (f"Actualizamos la lectura: el {ant['fecha']} era {str(ant['direccion']).lower()} "
+             f"y hoy es {hoy.lower()}.")
+    motivo = _MOTIVO_CAMBIO.get(ant.get("motivo") or "")
+    texto += f" El cambio ocurrió porque {motivo}." if motivo else         " La lectura anterior cumplió su vigencia y se rehízo con el mercado de hoy."
+    return (
+        f'<tr><td class="pad" style="padding:20px 40px 0 40px;">'
+        f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="{c["fondo"]}" '
+        f'style="background:{c["fondo"]};border:1px solid {c["linea"]};border-left:3px solid #50C0A8;border-radius:6px;">'
+        f'<tr><td style="padding:10px 14px;font-family:{F_SANS};font-size:14px;line-height:21px;color:{c["texto_1"]};">'
+        f'<strong style="color:{c["acento"]};">Cambio de lectura:</strong> {ih.e(texto)}'
+        f'</td></tr></table></td></tr>'
+    )
+
+
 def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: Path, ejecutivo: str,
                    c: dict[str, str], d: dict[str, Any] | None = None, dias_clave: str = "",
                    fuentes: list[dict[str, Any]] | tuple = (), imagen_calendario: str = "",
@@ -851,6 +884,7 @@ def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: P
 
     return (
         _hero_activo(a, titular, c, bajada=bajada, autor=autor, d=d)
+        + _continuidad_correo(a, d, c)
         + '<tr><td class="pad" style="padding:28px 40px 0 40px;">'
         + (_rotulo(ih.e(_titulo_analisis(a["nombre"])), c, margen="0 0 14px 0")
            if autor is not None else "")
