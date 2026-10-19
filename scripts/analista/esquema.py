@@ -209,6 +209,21 @@ def _errores_de_desarrollo(pieza: dict[str, Any]) -> list[str]:
             ejemplos = ", ".join(f"{h.get('driver')} {h.get('nivel')}" for h in hechos[:4])
             errs.append(f"contexto.{t}: tiene que nombrar el estado de hoy de al menos {exigidos} de los drivers "
                         f"medidos (datos.hechos), citando su cifra tal como viene: {ejemplos}")
+    # El correo muestra solo 2 drivers (director, 2026-10-19): el texto no puede nombrar un tercero que la
+    # tabla no tiene. Los 2 los elige la maqueta con una regla determinista; el import va adentro porque
+    # oportunidad_html importa este módulo.
+    if len(citables) > MINIMO_HECHOS:
+        from analista import oportunidad_html as oh
+        elegidos = oh.seleccionar_drivers_correo(hechos)[0]
+        ids_ok = {str(h.get("id")) for h in elegidos}
+        nombres = " y ".join(str(h.get("driver")) for h in elegidos)
+        for t, texto in (contexto.items() if isinstance(contexto, dict) else []):
+            if texto == MARCA:
+                continue
+            de_mas = [i for i in hechos_citados(str(texto), citables) if i not in ids_ok]
+            if de_mas:
+                errs.append(f"contexto.{t}: el correo muestra solo 2 drivers ({nombres}); quita la cifra de "
+                            f"{', '.join(de_mas)} y deja el resto del texto")
     agenda = datos.get("agenda") if isinstance(datos.get("agenda"), dict) else {}
     dias = [str(e["dia"]) for e in agenda.get("eventos") or [] if isinstance(e, dict) and e.get("dia")]
     dias_clave = editorial.get("dias_clave")

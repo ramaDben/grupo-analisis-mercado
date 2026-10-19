@@ -600,6 +600,7 @@ def test_drivers_correo_exactamente_dos_y_sintesis(tmp_path):
     """Verifica que la tabla de drivers incluye exactamente 2 factores y el recuadro de síntesis de dominancia."""
     p = fx.pieza_oportunidad(tmp_path, laminas=True, dolar=True)
     p["datos"]["hechos"].append({
+        "id": "wti",
         "driver": "Petróleo WTI",
         "nivel": "72,50 USD/barril",
         "fecha": "viernes 09/10",
@@ -610,6 +611,9 @@ def test_drivers_correo_exactamente_dos_y_sintesis(tmp_path):
         "efecto": "presiona a la baja los costos energéticos",
         "con_la_lectura": "a favor de nuestra lectura",
     })
+    # El texto cita solo los 2 drivers que la tabla muestra (regla del director: solo 2 drivers).
+    p["editorial"]["contexto"]["XAUUSD"] = p["editorial"]["contexto"]["XAUUSD"].replace(
+        "la tasa real a 10 años quedó en 2,78 por ciento", "el petróleo WTI quedó en 72,50 USD/barril")
     p["huella"] = es._huella(p)
     html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
     correo = _correo(html)
@@ -666,3 +670,17 @@ def test_preheader_oculto_y_asunto_sugerido(tmp_path):
     assert "Asunto sugerido:" in html
     assert "Preheader:" in html
 
+
+
+def test_el_contexto_no_puede_citar_un_tercer_driver(tmp_path):
+    """Con 3 hechos citables, el texto que nombra el tercero se rechaza y dice cuáles son los 2 válidos."""
+    p = fx.pieza_oportunidad(tmp_path, laminas=True, dolar=True)
+    p["datos"]["hechos"].append({
+        "id": "wti", "driver": "Petróleo WTI", "nivel": "72,50 USD/barril", "fecha": "viernes 09/10",
+        "fuente": "MT5", "cambio_5d": "-1,20", "sentido": "bajó", "unidad_cambio": "USD",
+        "efecto": "presiona a la baja los costos energéticos", "con_la_lectura": "a favor de nuestra lectura",
+    })
+    p["editorial"]["contexto"]["XAUUSD"] += " El petróleo WTI quedó en 72,50 USD/barril."
+    p["huella"] = es._huella(p)
+    errs = es._errores_de_desarrollo(p)
+    assert any("solo 2 drivers" in e and "tasa_real" in e for e in errs)

@@ -68,7 +68,9 @@ y la pone el bot: tú no decides nada visual.
   palabra "oportunidad".
 - `titulares.<ticker>`: la idea del activo con su dirección.
 - `contexto.<ticker>`: de 3 a 5 frases, en este orden.
-  1. Una frase por cada hecho de `datos.hechos`, con su cifra tal como viene (`nivel` o `cambio_5d`),
+  1. Una frase por cada uno de **solo 2** hechos de `datos.hechos` (el correo muestra 2 drivers: si hay uno a
+     favor y otro en contra de nuestra lectura, uno de cada lado; si no, los dos de movimiento más reciente; si
+     eliges otro par, el bot lo rechaza y te dice cuáles), con su cifra tal como viene (`nivel` o `cambio_5d`),
      su fecha y su efecto. Ejemplo: «El Dollar Index (DXY) cerró el viernes 16/10 en 101,560, 0,288
      puntos bajo su nivel de cinco sesiones antes, y eso juega a favor del alza del oro.» Si `efecto` es
      `null`, describe el dato sin atribuirle dirección sobre el activo. Si `con_la_lectura` dice que va
