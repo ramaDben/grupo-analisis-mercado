@@ -768,3 +768,141 @@ def test_en_rango_la_tira_de_cifras_muestra_los_bordes_y_no_sin_nivel(tmp_path):
     correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
     assert "Soporte del rango" in correo and "Resistencia del rango" in correo
     assert "sin nivel" not in correo
+
+
+# ───────────────────────────────────────────── tests contrato: textos editables correo (2026-10-19)
+
+
+def _extraer_texto_marcador(fragmento: str, nombre_ed: str) -> str:
+    """Extrae el contenido de texto plano del elemento con data-ed='nombre_ed'."""
+    patron = rf'<([a-zA-Z0-9]+)\b[^>]*\bdata-ed=["\']{re.escape(nombre_ed)}["\'][^>]*>(.*?)</\1>'
+    m = re.search(patron, fragmento, re.S)
+    if not m:
+        raise AssertionError(f"No se encontró la etiqueta con data-ed='{nombre_ed}'")
+    contenido = m.group(2)
+    import html as html_mod
+    return html_mod.unescape(re.sub(r'<[^>]+>', '', contenido)).strip()
+
+
+def test_el_json_de_datos_trae_textos_editables_de_intro_cierre_y_activos(tmp_path):
+    """(1) El JSON de #datos trae 'editable' con intro, cierre y, por activo, titular y contexto no vacíos."""
+    html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    crudo = re.search(r'<script id="datos" type="application/json">(.*?)</script>', html, re.S).group(1)
+    datos = json.loads(crudo)
+    assert "editable" in datos, "El JSON de #datos no incluye la clave 'editable'"
+    editable = datos["editable"]
+    assert isinstance(editable.get("intro"), str) and editable["intro"].strip()
+    assert isinstance(editable.get("cierre"), str) and editable["cierre"].strip()
+    assert "activos" in editable and isinstance(editable["activos"], dict)
+
+    p = _pieza(tmp_path)
+    for a in p["datos"]["activos"]:
+        t = a["ticker"]
+        assert t in editable["activos"], f"Falta el activo {t} en editable['activos']"
+        act_ed = editable["activos"][t]
+        assert isinstance(act_ed.get("titular"), str) and act_ed["titular"].strip()
+        assert isinstance(act_ed.get("contexto"), str) and act_ed["contexto"].strip()
+
+
+def test_cada_clave_editable_tiene_su_marcador_data_ed_en_el_html(tmp_path):
+    """(2) Cada clave editable tiene su marcador data-ed en el HTML (intro y cierre al menos una vez, titular y contexto una vez por activo)."""
+    p = _pieza(tmp_path)
+    html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+
+    intros = re.findall(r'\bdata-ed=["\']intro["\']', html)
+    cierres = re.findall(r'\bdata-ed=["\']cierre["\']', html)
+    assert len(intros) >= 1, f"Se esperaba al menos un marcador data-ed='intro', se encontraron {len(intros)}"
+    assert len(cierres) >= 1, f"Se esperaba al menos un marcador data-ed='cierre', se encontraron {len(cierres)}"
+
+    for a in p["datos"]["activos"]:
+        t = a["ticker"]
+        match = re.search(rf'<template class="correo-activo" data-ticker="{re.escape(t)}">(.*?)</template>', html, re.S)
+        assert match is not None, f"No se encontró el template para el activo {t}"
+        bloque = match.group(1)
+        titulares = re.findall(r'\bdata-ed=["\']titular["\']', bloque)
+        contextos = re.findall(r'\bdata-ed=["\']contexto["\']', bloque)
+        assert len(titulares) == 1, f"El activo {t} debe tener exactamente un data-ed='titular', tiene {len(titulares)}"
+        assert len(contextos) == 1, f"El activo {t} debe tener exactamente un data-ed='contexto', tiene {len(contextos)}"
+
+
+def test_el_texto_por_defecto_del_marcador_coincide_con_datos_editable(tmp_path):
+    """(3) El texto por defecto del marcador coincide con DATOS.editable."""
+    p = _pieza(tmp_path)
+    html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    crudo = re.search(r'<script id="datos" type="application/json">(.*?)</script>', html, re.S).group(1)
+    datos = json.loads(crudo)
+    assert "editable" in datos, "Falta la clave 'editable' en #datos"
+    editable = datos["editable"]
+
+    texto_intro = _extraer_texto_marcador(html, "intro")
+    assert texto_intro == editable["intro"], (
+        f"El texto por defecto de data-ed='intro' no coincide con editable['intro']:\n"
+        f"HTML: {texto_intro!r}\nJSON: {editable['intro']!r}"
+    )
+
+    for a in p["datos"]["activos"]:
+        t = a["ticker"]
+        match = re.search(rf'<template class="correo-activo" data-ticker="{re.escape(t)}">(.*?)</template>', html, re.S)
+        assert match is not None, f"No se encontró el template para el activo {t}"
+        bloque = match.group(1)
+
+        texto_cierre = _extraer_texto_marcador(bloque, "cierre")
+        assert texto_cierre == editable["cierre"], (
+            f"El texto de cierre en {t} no coincide con editable['cierre']:\n"
+            f"HTML: {texto_cierre!r}\nJSON: {editable['cierre']!r}"
+        )
+
+        act_ed = editable["activos"][t]
+        texto_titular = _extraer_texto_marcador(bloque, "titular")
+        assert texto_titular == act_ed["titular"], (
+            f"El titular en {t} no coincide con editable['activos'][{t}]['titular']:\n"
+            f"HTML: {texto_titular!r}\nJSON: {act_ed['titular']!r}"
+        )
+
+        texto_contexto = _extraer_texto_marcador(bloque, "contexto")
+        assert texto_contexto == act_ed["contexto"], (
+            f"El contexto en {t} no coincide con editable['activos'][{t}]['contexto']:\n"
+            f"HTML: {texto_contexto!r}\nJSON: {act_ed['contexto']!r}"
+        )
+
+
+def test_la_plantilla_pieza_html_contiene_el_interruptor_y_el_codigo_con_textContent():
+    """(4) La plantilla pieza.html contiene el interruptor y el código que usa textContent (no innerHTML) para insertar texto propio."""
+    plantilla = oh.PLANTILLA.read_text(encoding="utf-8")
+
+    patron_interruptor = re.compile(r'<input[^>]*type="radio"[^>]*name="modo-redaccion"', re.I)
+    assert patron_interruptor.search(plantilla), (
+        "La plantilla templates/oportunidad/pieza.html debe contener un interruptor (checkbox o radio) "
+        "para que el ejecutivo pueda redactar él mismo los textos."
+    )
+
+    bloques = re.findall(r'<script\b[^>]*>(.*?)</script>', plantilla, re.S)
+    assert bloques, "La plantilla debe contener un bloque de script"
+    script = "\n".join(bloques)
+
+    assert "data-ed" in script, "El script de pieza.html debe buscar o manipular los marcadores data-ed"
+    assert "textContent" in script, "El script debe usar textContent para insertar textos"
+    assert re.search(r'\btextContent\s*=', script), (
+        "El script debe asignar el texto propio a los elementos usando textContent"
+    )
+    assert not re.search(r'data-ed[^;]+innerHTML\s*=', script), (
+        "El script no debe usar innerHTML para insertar texto propio en los marcadores data-ed"
+    )
+
+
+def test_el_texto_de_los_marcadores_no_contiene_guion_largo_ni_medio(tmp_path):
+    """(5) El texto de los marcadores no contiene el guion largo ni el medio."""
+    import html as html_mod
+    p = _pieza(tmp_path)
+    html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+
+    marcadores = re.findall(r'<[a-zA-Z0-9]+\b[^>]*\bdata-ed=["\'](\w+)["\'][^>]*>(.*?)</[a-zA-Z0-9]+>', html, re.S)
+    assert len(marcadores) >= 4, (
+        f"Se esperaban marcadores data-ed en el HTML (intro, cierre, titular, contexto), se encontraron {len(marcadores)}"
+    )
+
+    for nombre_ed, contenido in marcadores:
+        texto = html_mod.unescape(re.sub(r'<[^>]+>', '', contenido)).strip()
+        assert "—" not in texto, f"El marcador data-ed='{nombre_ed}' contiene guion largo (—): {texto!r}"
+        assert "–" not in texto, f"El marcador data-ed='{nombre_ed}' contiene guion medio (–): {texto!r}"
+

@@ -219,9 +219,10 @@ def _color_direccion(direccion: str, c: dict[str, str]) -> str:
 
 
 def _p(texto: str, c: dict[str, str], tam: int = 16, peso: int = 500, color: str = "texto_borde",
-       margen: str = "0 0 12px 0", clase: str = "") -> str:
+       margen: str = "0 0 12px 0", clase: str = "", data_ed: str = "") -> str:
     cl = f' class="{clase}"' if clase else ""
-    return (f'<p{cl} style="margin:{margen};font-family:{F_SANS};font-size:{tam}px;line-height:{round(tam * 1.5)}px;'
+    ed = f' data-ed="{data_ed}"' if data_ed else ""
+    return (f'<p{cl}{ed} style="margin:{margen};font-family:{F_SANS};font-size:{tam}px;line-height:{round(tam * 1.5)}px;'
             f'font-weight:{peso};color:{c[color]};">{texto}</p>')
 
 
@@ -711,7 +712,7 @@ def _hero_activo(a: dict[str, Any], titular: str, c: dict[str, str], bajada: str
     )
 
     titular_bloque = (
-        f'<h1 class="hero-title" style="margin:0 0 14px 0;font-family:{F_SANS};font-size:25px;line-height:32px;'
+        f'<h1 class="hero-title" data-ed="titular" style="margin:0 0 14px 0;font-family:{F_SANS};font-size:25px;line-height:32px;'
         f'font-weight:800;letter-spacing:-0.3px;color:{c["blanco"]};">'
         f'{ih.e(titular_final)}</h1>'
     )
@@ -869,9 +870,8 @@ def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: P
         f'<tr><td style="padding:20px 24px;">'
         f'<p style="margin:0 0 8px 0;font-family:{F_SANS};font-size:16px;line-height:22px;font-weight:800;color:{c["texto_1"]};">'
         '¿Lo miramos juntos?</p>'
-        f'<p style="margin:0;font-family:{F_SANS};font-size:14px;line-height:21px;color:{c["texto_borde"]};">'
-        'Si quieres contrastar estos niveles con el gráfico en tiempo real o comentar los datos de la semana, '
-        'lo vemos juntos en unos minutos.</p>'
+        f'<p data-ed="cierre" style="margin:0;font-family:{F_SANS};font-size:14px;line-height:21px;color:{c["texto_borde"]};">'
+        f'{ih.e(TEXTO_CIERRE)}</p>'
         f'</td></tr></table>'
     )
 
@@ -882,7 +882,7 @@ def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: P
         + (_rotulo(ih.e(_titulo_analisis(a["nombre"])), c, margen="0 0 14px 0")
            if autor is not None else "")
         + grafico + _separador()
-        + _p(ih.e(contexto), c)
+        + _p(ih.e(contexto), c, data_ed="contexto")
         + pull_quote
         + _hechos_correo((d or {}).get("hechos") or [], c)
         + _grafico_dolar_correo(ruta_dolar, c)
@@ -898,6 +898,13 @@ def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: P
         + _separador(26) + '</td></tr>'
     )
 
+
+# Los textos de IA que el ejecutivo puede reemplazar en la página (marcadores `data-ed` del correo).
+TEXTO_INTRO = ("Para continuar nuestra conversación, te comparto el mapa de trabajo que preparamos en Grupo "
+               "Inteligencia: hacia dónde se inclina el activo, los niveles que vigilamos, los dos factores "
+               "que lo mueven hoy y qué dice la banca.")
+TEXTO_CIERRE = ("Si quieres contrastar estos niveles con el gráfico en tiempo real o comentar los datos de la "
+                "semana, lo vemos juntos en unos minutos.")
 
 WA_MARCA = "%%WA%%"  # lo reemplaza la página por el enlace de WhatsApp del ejecutivo
 
@@ -993,10 +1000,7 @@ def _marco_correo(d: dict[str, Any], ed: dict[str, Any], ejecutivo: dict[str, An
         + '</td></tr>'
         '<tr><td class="pad" style="padding:34px 40px 30px 40px;">'
         + _p('<span class="saludo-cliente">Estimado(a):</span>', c, tam=16, peso=600, color="texto_1", margen="0 0 12px 0")
-        + _p("Para continuar nuestra conversación, te comparto el mapa de trabajo que preparamos en Grupo "
-             "Inteligencia: hacia dónde se inclina el activo, los niveles que vigilamos, los dos factores "
-             "que lo mueven hoy y qué dice la banca.",
-             c, tam=15, margen="0")
+        + _p(ih.e(TEXTO_INTRO), c, tam=15, margen="0", data_ed="intro")
         + '</td></tr>'
     )
 
@@ -1069,6 +1073,7 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
     c0 = paleta()
     c = paleta_correo(c0)
     bloques, correos, datos_js = [], [], []
+    editable_activos: dict[str, dict[str, str]] = {}  # los textos de IA que el ejecutivo puede reemplazar
     for a in d["activos"]:
         t = a["ticker"]
         lec = a["lectura"]
@@ -1097,6 +1102,7 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
                if lamina.exists() else "")
             + '</div></section>')
         titular_act = titular_correo(a, ed.get("fuentes"))
+        editable_activos[t] = {"titular": titular_act or titular_base(a), "contexto": ed["contexto"][t]}
         correos.append(f'<template class="correo-activo" data-ticker="{ih.e(t)}">'
                        f'{_bloque_correo(a, titular_act, ed["contexto"][t], dir_pedido, nombre_ej, c, d=d, dias_clave=dias, fuentes=ed["fuentes"], imagen_calendario=imagen_cal, imagen_dolar=imagen_dolar, autor=autor, bajada=ed.get("bajada", ""))}</template>')
         datos_js.append({"ticker": t, "nombre": a["nombre"], "digits": a["digits"], "escenario": a["escenario"], "contrato": a["contrato"],
@@ -1120,7 +1126,8 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
         "fuentes": ih._fuentes(),
         "datos": json.dumps({"ejecutivo": nombre_ej, "pendiente": pendiente, "autor_nombre": autor.nombre, "cargo": ejecutivo.get("cargo", ""),
                              "contacto": ejecutivo.get("contacto", ""), "autor": cm.firma(autor),
-                             "aviso": cm.AVISO_PIEZA, "titular": ed["titular"], "activos": datos_js},
+                             "aviso": cm.AVISO_PIEZA, "titular": ed["titular"], "activos": datos_js,
+                             "editable": {"intro": TEXTO_INTRO, "cierre": TEXTO_CIERRE, "activos": editable_activos}},
                             ensure_ascii=False).replace("</", "<\\/"),
         "simulador": op.SIMULADOR_JS.read_text(encoding="utf-8").strip(),
     }

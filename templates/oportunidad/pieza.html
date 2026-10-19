@@ -102,6 +102,19 @@
   .editor .cliente span{display:block;margin:0 0 6px;font-size:12px;font-weight:700;color:#0B1214}
   .editor .cliente input{width:100%;height:42px;margin:0;padding:9px 11px;border:1px solid #CBD6D3;border-radius:8px;background:#fff;color:var(--texto-1);font-size:14px}
   .editor .cliente input:focus{outline:0;border-color:var(--acento);box-shadow:0 0 0 3px rgba(47,143,122,.18)}
+  .editor .cliente textarea{width:100%;min-height:72px;margin:0;padding:9px 11px;border:1px solid #CBD6D3;border-radius:8px;background:#fff;color:var(--texto-1);font:500 14px/1.4 "Segoe UI",Arial,sans-serif;resize:vertical}
+  .editor .cliente textarea:focus{outline:0;border-color:var(--acento);box-shadow:0 0 0 3px rgba(47,143,122,.18)}
+  .editor .tarjeta-redaccion{background:#F9FBFA;border:1px solid var(--linea);border-radius:12px;padding:16px;margin:16px 0}
+  .editor .tarjeta-redaccion h3{margin:0 0 10px;font-size:16px;color:#0B1214}
+  .editor .interruptor-redaccion{display:flex;gap:18px;margin-bottom:12px}
+  .editor .interruptor-redaccion label{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:#0B1214;cursor:pointer}
+  .editor .interruptor-redaccion input[type=radio]{accent-color:var(--acento);margin:0;cursor:pointer}
+  .editor .campo-edicion{margin-top:10px}
+  .editor .cabecera-campo{display:flex;align-items:center;justify-content:space-between;margin:0 0 6px}
+  .editor .cabecera-campo span{margin:0;font-size:12px;font-weight:700;color:#0B1214}
+  .editor button.btn-volver-ia{padding:3px 9px;font-size:11px;font-weight:700;border-radius:6px;cursor:pointer;margin:0;width:auto}
+  .editor .activo-edicion{margin-top:14px;padding-top:12px;border-top:1px dashed #CBD6D3}
+  .editor .activo-edicion h4{margin:0 0 8px;font-size:13px;letter-spacing:1.2px;text-transform:uppercase;color:var(--acento)}
   .editor .acciones-editor{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;align-items:center}
   .editor button{margin:0;border-radius:8px;padding:11px 16px;font:700 14px "Segoe UI",Arial,sans-serif}
   .editor button.primario{background:#0B1214;color:#fff}
@@ -124,12 +137,12 @@
   .correo-vista{margin:26px 0 8px}
   .correo-vista > h3{margin:0 0 12px;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:var(--acento)}
   #vista-correo{margin-top:0}
-  @media (max-width:680px){.editor{padding:16px}.editor .rejilla{grid-template-columns:1fr}.editor .cliente.completo{grid-column:auto}.editor button{width:100%}body.con-analisis .activo{grid-template-columns:1fr}}
+  @media (max-width:680px){.editor{padding:16px}.editor .rejilla{grid-template-columns:1fr}.editor .cliente.completo{grid-column:auto}.editor button{width:100%}.editor button.btn-volver-ia{width:auto}.editor .interruptor-redaccion{flex-direction:column;gap:8px}body.con-analisis .activo{grid-template-columns:1fr}}
   @media print{
     @page{size:Letter;margin:0}
     body{background:#F4F7F6 !important}
     *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}
-    .editor,.simulaciones,.banda,.firma,.aviso,.correo-vista > h3{display:none !important}
+    .editor,.simulaciones,.banda,.firma,.aviso,.correo-vista > h3,.tarjeta-redaccion{display:none !important}
     main{max-width:none;padding:0}
   }
 </style></head>
@@ -143,6 +156,14 @@
     <label class="cliente completo"><span>Saludo al cliente (tú decides cómo dirigirte a esa persona)</span><input type="text" id="cliente" placeholder="Ej.: Estimado Sr. Pérez:"></label>
     <label class="cliente"><span>Tu nombre (quien realiza la simulación)</span><input type="text" id="ejecutivo" value="{{ejecutivo}}" placeholder="Escribe tu nombre"></label>
     <label class="cliente"><span>Tu WhatsApp (el botón del correo abre un chat contigo; vacío, sale sin botón)</span><input type="tel" id="whatsapp" placeholder="Ej.: +56 9 1234 5678"></label>
+  </div>
+  <div class="tarjeta-redaccion" id="tarjeta-redaccion">
+    <h3>Redacción del correo</h3>
+    <div class="interruptor-redaccion" role="radiogroup" aria-label="Modo de redacción">
+      <label><input type="radio" name="modo-redaccion" value="ia" checked> Usar el texto de IA</label>
+      <label><input type="radio" name="modo-redaccion" value="propio"> Redactar el mío</label>
+    </div>
+    <div id="campos-redaccion" style="display:none"></div>
   </div>
   <div class="acciones-editor">
     <button type="button" class="primario" id="copiar-correo">Copiar correo para Outlook</button>
@@ -232,6 +253,94 @@
     d._marcado = function(){ return !!(marca && marca.checked); };
   });
 
+  // Redacción del correo: el texto de IA o el que escribe el ejecutivo. Solo los textos marcados con
+  // `data-ed` se pueden reemplazar; niveles, escenarios, gráficos y simulación salen siempre del terminal.
+  var ED = DATOS.editable || {intro: '', cierre: '', activos: {}};
+  var CLAVE_ED = 'gi_correo_redaccion:' + DATOS.titular;
+  var propios = {}, modoPropio = false;
+  var CAMPOS = [{id: 'intro', rotulo: 'Introducción', area: true, ia: ED.intro},
+                {id: 'cierre', rotulo: 'Cierre (se usa en todos los activos)', area: true, ia: ED.cierre}];
+  DATOS.activos.forEach(function(d){
+    var e = ED.activos[d.ticker];
+    if (!e) return;
+    CAMPOS.push({id: 'titular|' + d.ticker, rotulo: 'Titular', area: false, ia: e.titular, activo: d.nombre});
+    CAMPOS.push({id: 'contexto|' + d.ticker, rotulo: 'Comentario', area: true, ia: e.contexto, activo: d.nombre});
+  });
+  // El guion largo y el medio delatan texto de máquina en un mensaje firmado por una persona.
+  function sinGuion(t){ return t.replace(/\s*[\u2014\u2013]\s*/g, ', '); }
+  function guardarEd(){
+    try { localStorage.setItem(CLAVE_ED, JSON.stringify({modo: modoPropio, propios: propios})); } catch (err) {}
+  }
+  function cargarEd(){
+    try {
+      var g = JSON.parse(localStorage.getItem(CLAVE_ED) || 'null');
+      if (g && g.propios){ propios = g.propios; modoPropio = !!g.modo; }
+    } catch (err) {}
+  }
+  function construirCampos(){
+    var caja = document.getElementById('campos-redaccion');
+    caja.innerHTML = '';
+    var activoActual = null;
+    CAMPOS.forEach(function(c){
+      var padre = caja;
+      if (c.activo){
+        if (c.activo !== activoActual){
+          activoActual = c.activo;
+          var bloque = document.createElement('div'); bloque.className = 'activo-edicion';
+          var h = document.createElement('h4'); h.textContent = c.activo; bloque.appendChild(h);
+          caja.appendChild(bloque);
+        }
+        padre = caja.lastChild;
+      }
+      var lab = document.createElement('label'); lab.className = 'cliente completo campo-edicion';
+      var cab = document.createElement('div'); cab.className = 'cabecera-campo';
+      var sp = document.createElement('span'); sp.textContent = c.rotulo; cab.appendChild(sp);
+      var volver = document.createElement('button'); volver.type = 'button';
+      volver.className = 'neutro btn-volver-ia'; volver.textContent = 'Volver al de IA';
+      cab.appendChild(volver); lab.appendChild(cab);
+      var campo = document.createElement(c.area ? 'textarea' : 'input');
+      if (!c.area) campo.type = 'text';
+      campo.value = (c.id in propios) ? propios[c.id] : c.ia;
+      lab.appendChild(campo); padre.appendChild(lab);
+      function marca(){ volver.style.display = (c.id in propios) ? '' : 'none'; }
+      marca();
+      campo.addEventListener('input', function(){
+        if (campo.value === c.ia) delete propios[c.id]; else propios[c.id] = campo.value;
+        marca(); guardarEd(); vista();
+      });
+      volver.addEventListener('click', function(){
+        delete propios[c.id]; campo.value = c.ia; marca(); guardarEd(); vista();
+      });
+    });
+  }
+  function mostrarModo(){
+    document.querySelector('input[name=modo-redaccion][value=' + (modoPropio ? 'propio' : 'ia') + ']').checked = true;
+    document.getElementById('campos-redaccion').style.display = modoPropio ? 'block' : 'none';
+  }
+  // Pisa los textos de IA del correo ya dibujado. Un campo vacío no borra nada: queda el de IA.
+  function aplicarPropios(raiz){
+    if (!modoPropio) return;
+    function poner(nodo, id){
+      var v = propios[id];
+      if (nodo && v && v.trim()) nodo.textContent = sinGuion(v.trim());
+    }
+    poner(raiz.querySelector('[data-ed=intro]'), 'intro');
+    raiz.querySelectorAll('[data-ed=cierre]').forEach(function(n){ poner(n, 'cierre'); });
+    var marcados = DATOS.activos.filter(function(d){ return d._marcado(); });
+    var titulares = raiz.querySelectorAll('[data-ed=titular]'), contextos = raiz.querySelectorAll('[data-ed=contexto]');
+    marcados.forEach(function(d, i){
+      poner(titulares[i], 'titular|' + d.ticker);
+      poner(contextos[i], 'contexto|' + d.ticker);
+    });
+  }
+  cargarEd(); construirCampos(); mostrarModo();
+  document.querySelectorAll('input[name=modo-redaccion]').forEach(function(r){
+    r.addEventListener('change', function(){
+      if (!r.checked) return;
+      modoPropio = r.value === 'propio'; mostrarModo(); guardarEd(); vista();
+    });
+  });
+
   // El correo: la maqueta del prototipo, en tablas de 640 px con estilos en línea y colores sólidos
   // (Outlook clásico no entiende rgba ni CSS externo). Los activos marcados entran en el marco.
   function armarCorreo(){
@@ -283,7 +392,9 @@
     var html = armarCorreo();
     var crudo = document.getElementById('whatsapp').value.trim();
     if (crudo && !numeroWa()) estadoEl.textContent = 'Ese número de WhatsApp no parece válido: el correo sale sin botón.';
-    document.getElementById('vista-correo').innerHTML = html || '<p>Marca al menos un activo.</p>';
+    var caja = document.getElementById('vista-correo');
+    caja.innerHTML = html || '<p>Marca al menos un activo.</p>';
+    if (html) aplicarPropios(caja);
     return html;
   }
   async function copiarCorreo(){
@@ -336,7 +447,8 @@
   document.getElementById('exportar-pdf').addEventListener('click', function(){ if (vista()) window.print(); });
   document.getElementById('restablecer').addEventListener('click', function(){
     document.getElementById('cliente').value = ''; document.getElementById('whatsapp').value = '';
-    document.getElementById('ejecutivo').value = ''; avisar(''); vista();
+    document.getElementById('ejecutivo').value = ''; avisar('');
+    propios = {}; modoPropio = false; guardarEd(); construirCampos(); mostrarModo(); vista();
   });
   vista();
 })();
