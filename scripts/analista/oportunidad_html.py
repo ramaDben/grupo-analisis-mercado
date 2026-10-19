@@ -240,13 +240,14 @@ def _separador(alto: int = 14) -> str:
     return _tabla(f'<tr><td height="{alto}" style="height:{alto}px;font-size:0;line-height:0;">&nbsp;</td></tr>')
 
 
-def _cuadro(fondo: str, borde: str, rotulo: str, pie: str, clase: str, c: dict[str, str]) -> str:
+def _cuadro(fondo: str, borde: str, rotulo: str, pie: str, clase: str, c: dict[str, str],
+            valor: str = "Sin calcular") -> str:
     return (f'<td class="stack" width="49%" valign="top" bgcolor="{c[fondo]}" style="padding:18px;'
             f'background:{c[fondo]};border:2px solid {c[borde]};border-radius:12px;">'
             f'<p style="margin:0 0 6px 0;font-family:{F_SANS};font-size:14px;line-height:20px;font-weight:800;'
             f'text-transform:uppercase;letter-spacing:1px;color:{c[borde]};">{rotulo}</p>'
             f'<p style="margin:0;font-family:{F_DISPLAY};font-size:28px;line-height:34px;font-weight:700;'
-            f'color:{c["texto_1"]};"><strong class="{clase}">Sin calcular</strong></p>'
+            f'color:{c["texto_1"]};"><strong class="{clase}">{valor}</strong></p>'
             f'<p style="margin:6px 0 0 0;font-family:{F_SANS};font-size:14px;line-height:20px;font-weight:500;'
             f'color:{c["texto_borde"]};">{pie}</p></td>')
 
@@ -262,25 +263,38 @@ def _simulacion_correo(a: dict[str, Any], ejecutivo: str, c: dict[str, str]) -> 
     f = a["fmt"]
     condicion = op.texto_condicion(a["escenario"], f["entrada"])
     fuerte = lambda x: f'<strong style="color:{c["texto_1"]};">{ih.e(x)}</strong>'  # noqa: E731
+
+    contrato = a.get("contrato")
+    s = op.simular(contrato, a["escenario"], 100000, 2000000) if contrato else None
+
+    if s:
+        perdida_str = f"−${s['perdida']:,}".replace(",", ".")
+        ganancia_str = f"+${s['ganancia']:,}".replace(",", ".")
+        volumen_str = f"Volumen {str(s['volumen']).replace('.', ',')}{': es el mínimo que permite el broker.' if s['bajo_minimo'] else '.'}"
+    else:
+        perdida_str = "Sin calcular"
+        ganancia_str = "Sin calcular"
+        volumen_str = ""
+
     cuadros = _tabla(
         '<tr>'
-        + _cuadro("fondo_baja", "baja", "Si toca el stop", f"Pérdida al llegar a {ih.e(f['stop'])}", "sim-perdida", c)
+        + _cuadro("fondo_baja", "baja", "Si toca el stop", f"Pérdida al llegar a {ih.e(f['stop'])}", "sim-perdida", c, perdida_str)
         + '<td class="stack stack-gap" width="2%" style="font-size:0;line-height:0;">&nbsp;</td>'
         + _cuadro("fondo_sube", "sube", "Si llega al objetivo", f"Ganancia al llegar a {ih.e(f['objetivo'])}",
-                  "sim-ganancia", c)
+                  "sim-ganancia", c, ganancia_str)
         + '</tr>').replace("<table ", '<table class="sim-montos" ', 1)
     return (
         '<table class="sim-bloque" role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">'
         '<tr><td style="padding:0;">'
-        + _rotulo(f"Simulación realizada por {ih.e(ejecutivo)}", c)
-        + _p(ih.e(cm.ROTULO_ILUSTRATIVO), c, tam=14, color="texto_2", margen="0 0 8px 0")
+        + _rotulo(f"Simulación realizada por {ih.e(ejecutivo)}", c, margen="0 0 4px 0")
+        + _p(ih.e(cm.ROTULO_ILUSTRATIVO), c, tam=13, color="texto_2", margen="0 0 10px 0")
         + _p(f'Objetivo 1:3 · Entrada {fuerte(f["entrada"])} · Stop {fuerte(f["stop"])} · '
-             f'Objetivo {fuerte(f["objetivo"])}', c, tam=15)
-        + (_p(f'<strong style="color:{c["texto_1"]};">{ih.e(condicion)}</strong>', c, tam=15) if condicion else "")
+             f'Objetivo {fuerte(f["objetivo"])}', c, tam=14, margen="0 0 16px 0")
+        + (_p(f'<strong style="color:{c["texto_1"]};">{ih.e(condicion)}</strong>', c, tam=14, margen="0 0 12px 0") if condicion else "")
         + ("" if op.sin_contrato(a) else cuadros)
-        + _p("", c, tam=15, margen="12px 0 0 0", clase="sim-volumen sim-montos")
+        + _p(volumen_str, c, tam=13, peso=700, margen="14px 0 4px 0", clase="sim-volumen sim-montos")
         + _p("Las dos cifras se muestran juntas y del mismo tamaño a propósito: el apalancamiento amplifica "
-             "igual las ganancias y las pérdidas.", c, tam=14, color="texto_2", margen="6px 0 0 0",
+             "igual las ganancias y las pérdidas.", c, tam=12, color="texto_2", margen="0",
              clase="sim-montos")
         + '</td></tr></table>'
     )
@@ -312,30 +326,131 @@ def _celda_hecho(texto: str, c: dict[str, str], ultima: bool, peso: int = 500, c
             f'font-weight:{peso};color:{c[color]};">{texto}{extra}</td>')
 
 
+def _sintesis_dominancia(seleccionados: list[dict[str, Any]]) -> str:
+    if not seleccionados:
+        return ""
+
+    def clave_fecha(h: dict[str, Any]) -> tuple[int, int]:
+        m = re.search(r"(\d{2})/(\d{2})", h.get("fecha", ""))
+        return (int(m.group(2)), int(m.group(1))) if m else (0, 0)
+
+    h_dom = max(seleccionados, key=lambda h: (clave_fecha(h), 1 if h.get("sentido") in ("subió", "bajó") else 0))
+    sentido = h_dom.get("sentido", "")
+    driver_raw = h_dom.get("driver", "")
+
+    if "dollar index" in driver_raw.lower() or "dxy" in driver_raw.lower():
+        mov = "el retroceso" if sentido == "bajó" else ("el avance" if sentido == "subió" else "el nivel")
+        contra = "contra nuestra lectura técnica bajista" if "contra" in (h_dom.get("con_la_lectura") or "") else "a favor de nuestra lectura técnica"
+        efecto_fuerza = "alcista" if "alza" in (h_dom.get("efecto") or "") else "bajista"
+        return f"Hoy domina {mov} del Dollar Index (DXY) en el mercado cambiario, cuya debilidad ejerce la mayor fuerza {efecto_fuerza} inmediata {contra}."
+
+    driver = driver_raw.replace(" (TIPS)", "").strip()
+    mov = "el retroceso" if sentido == "bajó" else ("el avance" if sentido == "subió" else "la evolución")
+    art = "del" if any(w in driver.lower() for w in ("dólar", "dollar", "bono", "petróleo", "cobre", "oro")) else "de la"
+    efecto = h_dom.get("efecto", "")
+    con_lec = h_dom.get("con_la_lectura", "")
+
+    partes = [f"Hoy domina {mov} {art} {driver}"]
+    if efecto:
+        partes.append(f"que {efecto}")
+    if con_lec:
+        partes.append(f"y {con_lec}")
+
+    return " ".join(partes).rstrip(".") + "."
+
+
+def seleccionar_drivers_correo(hechos: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], str]:
+    """Selecciona deterministamente los dos drivers más representativos para el correo.
+
+    Criterio:
+    1. Si hay 2 o menos hechos, se usan los que existan.
+    2. Si hay hechos a favor y en contra de nuestra lectura, selecciona exactamente 1 de cada grupo,
+       priorizando aquellos con movimiento efectivo (subió/bajó) y mayor inmediatez temporal.
+    3. Si todos los hechos apuntan al mismo lado, selecciona los 2 con mayor desplazamiento o
+       efecto activo (descarta los estáticos o sin efecto atribuido; si no hay con postura clara,
+       usa los dos primeros con efecto no neutro).
+    4. Genera una síntesis de dominancia determinista dictaminando cuál factor domina hoy en el
+       mercado por inmediatez temporal y peso de mercado, describiendo su efecto sin inventar cifras.
+    """
+    if not hechos:
+        return [], ""
+    if len(hechos) <= 2:
+        sel = list(hechos)
+        return sel, _sintesis_dominancia(sel)
+
+    def clave_fecha(h: dict[str, Any]) -> tuple[int, int]:
+        m = re.search(r"(\d{2})/(\d{2})", h.get("fecha", ""))
+        return (int(m.group(2)), int(m.group(1))) if m else (0, 0)
+
+    def es_dinamico(h: dict[str, Any]) -> bool:
+        return h.get("sentido") in ("subió", "bajó")
+
+    a_favor = [h for h in hechos if "a favor" in (h.get("con_la_lectura") or "").lower()]
+    en_contra = [h for h in hechos if "en contra" in (h.get("con_la_lectura") or "").lower()]
+
+    if a_favor and en_contra:
+        mejor_favor = max(a_favor, key=lambda h: (1 if es_dinamico(h) else 0, clave_fecha(h)))
+        mejor_contra = max(en_contra, key=lambda h: (1 if es_dinamico(h) else 0, clave_fecha(h)))
+        if clave_fecha(mejor_contra) > clave_fecha(mejor_favor):
+            seleccionados = [mejor_contra, mejor_favor]
+        else:
+            seleccionados = [mejor_favor, mejor_contra]
+    else:
+        dinamicos = [h for h in hechos if es_dinamico(h) and h.get("efecto")]
+        if len(dinamicos) >= 2:
+            dinamicos.sort(key=clave_fecha, reverse=True)
+            seleccionados = dinamicos[:2]
+        else:
+            con_efecto = [h for h in hechos if h.get("efecto")]
+            if len(con_efecto) >= 2:
+                seleccionados = con_efecto[:2]
+            else:
+                seleccionados = hechos[:2]
+
+    return seleccionados, _sintesis_dominancia(seleccionados)
+
+
 def _hechos_correo(hechos: list[dict[str, Any]], c: dict[str, str]) -> str:
     """Los drivers del día en tabla: factor, dato, cambio y efecto sobre el activo."""
     if not hechos:
         return ""
+    seleccionados, sintesis = seleccionar_drivers_correo(hechos)
+    if not seleccionados:
+        return ""
+
     cab = "".join(
         f'<th align="left" style="padding:6px 8px;border-bottom:2px solid {c["marca"]};font-family:{F_SANS};'
         f'font-size:12px;line-height:16px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;'
         f'color:{c["texto_2"]};">{t}</th>' for t in ("Factor", "Hoy", "Cambio", "Efecto en el activo"))
     filas = []
-    for i, h in enumerate(hechos):
-        ultima = i == len(hechos) - 1
+    for i, h in enumerate(seleccionados):
+        ultima = i == len(seleccionados) - 1
         efecto = ""
         if h.get("efecto"):
             efecto = ih.e(h["efecto"][:1].upper() + h["efecto"][1:])
             if h.get("con_la_lectura"):
-                efecto += (f'<br><span style="color:{c["texto_2"]};font-weight:500;">{ih.e(h["con_la_lectura"])}</span>')
+                efecto += f'<br><span style="color:{c["texto_2"]};font-weight:500;">{ih.e(h["con_la_lectura"])}</span>'
         cambio = _cambio_correo(h).lstrip(", ") or "sin cambio medido"
         filas.append('<tr>'
                      + _celda_hecho(ih.e(h["driver"].replace(" (TIPS)", TIPS_EXPLICADO)), c, ultima, 700, "texto_1", "34%")
                      + _celda_hecho(ih.e(h["nivel"]), c, ultima, 700, "texto_1", "16%")
                      + _celda_hecho(ih.e(cambio), c, ultima, ancho="20%")
                      + _celda_hecho(efecto or "sin efecto atribuido", c, ultima, color="texto_1", ancho="30%") + '</tr>')
-    return (_rotulo(f"Los drivers al {ih.e(_fecha_hechos(hechos))}", c, margen="10px 0 8px 0")
-            + _tabla(f'<tr>{cab}</tr>' + "".join(filas)) + _separador(8))
+
+    sintesis_html = ""
+    if sintesis:
+        sintesis_html = (
+            f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="{c["fondo"]}" '
+            f'style="background:{c["fondo"]};border:1px solid {c["linea"]};border-left:3px solid #50C0A8;border-radius:6px;margin:10px 0 14px 0;">'
+            f'<tr><td style="padding:10px 14px;font-family:{F_SANS};font-size:13px;line-height:19px;color:{c["texto_1"]};">'
+            f'<strong style="color:{c["acento"]};">Síntesis de dominancia:</strong> {ih.e(sintesis)}'
+            f'</td></tr></table>'
+        )
+
+    return (_rotulo(f"Los drivers al {ih.e(_fecha_hechos(seleccionados))}", c, margen="10px 0 8px 0")
+            + _tabla(f'<tr>{cab}</tr>' + "".join(filas))
+            + sintesis_html
+            + _separador(8))
 
 
 def _grafico_dolar_correo(ruta: Path | None, c: dict[str, str]) -> str:
@@ -377,22 +492,74 @@ def _fecha_es(iso: str) -> str:
         return iso
 
 
+_FLECHAS_DIR = {
+    "ALCISTA": ("⬆️", "⬇️"),
+    "BAJISTA": ("⬇️", "⬆️"),
+    "LATERAL": ("↔️", "↔️"),
+}
+
+
+def _seleccionar_bancos_correo(fuentes: list[dict[str, Any]], direccion: str) -> list[dict[str, Any]]:
+    """Selecciona hasta un banco a favor y uno en contra de la lista cerrada de prestigio."""
+    bancos = fu.bancos(fuentes) if hasattr(fu, "bancos") else [
+        f for f in fuentes if isinstance(f, dict) and f.get("entidad")
+    ]
+    a_favor = [b for b in bancos if not fu.discrepa(b, direccion)]
+    en_contra = [b for b in bancos if fu.discrepa(b, direccion)]
+    a_favor.sort(key=lambda b: b.get("fecha", ""), reverse=True)
+    en_contra.sort(key=lambda b: b.get("fecha", ""), reverse=True)
+    seleccionados = []
+    if a_favor:
+        seleccionados.append(a_favor[0])
+    if en_contra:
+        seleccionados.append(en_contra[0])
+    return seleccionados
+
+
 def _voces_correo(fuentes: list[dict[str, Any]], direccion: str, c: dict[str, str]) -> str:
+    """Las voces bancarias seleccionadas (hasta 1 a favor y 1 en contra) con flechas y sin semáforos."""
     if not fuentes:
         return ""
-    items, hay_discrepancia = [], False
-    for f in fuentes:
+    if hasattr(fu, "seleccionar_bancos_correo"):
+        bancos_sel = fu.seleccionar_bancos_correo(fuentes, direccion)
+    else:
+        bancos_sel = _seleccionar_bancos_correo(fuentes, direccion)
+
+    if not bancos_sel:
+        return ""
+
+    flechas = _FLECHAS_DIR.get(direccion.upper(), ("⬇️", "⬆️"))
+    tarjetas = []
+    for f in bancos_sel:
         discrepa = fu.discrepa(f, direccion)
-        hay_discrepancia |= discrepa
-        marca = (f' <span style="color:{c["baja"]};font-weight:700;">(ve distinto que nuestra lectura)</span>'
-                 if discrepa else "")
-        items.append(_p(f'<strong style="color:{c["texto_1"]};">{ih.e(f["entidad"])}</strong> · {ih.e(f["medio"])} · '
-                        f'{ih.e(_fecha_es(f["fecha"]))}{marca}<br>{ih.e(f["tesis"])} '
-                        f'<a href="{ih.e(f["url"])}" style="color:{c["acento"]};">Ver nota</a>', c, tam=15,
-                        margen="0 0 10px 0"))
-    nota = (_p("Cuando un banco ve distinto, lo decimos: la lectura que manda es la nuestra.", c, tam=14,
-               color="texto_2") if hay_discrepancia else "")
-    return _rotulo("Qué dicen los bancos", c, margen="14px 0 8px 0") + "".join(items) + nota
+        color_etiqueta = "#6B7779" if discrepa else "#2F8F7A"
+        flecha = flechas[1] if discrepa else flechas[0]
+        texto_postura = f"{flecha} {'En contra' if discrepa else 'A favor'} de nuestra lectura"
+
+        tarjetas.append(
+            f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#F8FAFC" '
+            f'style="background:#F8FAFC;border:1px solid #DFE6E4;border-radius:6px;margin:0 0 10px 0;">'
+            f'<tr><td style="padding:12px 14px;">'
+            f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">'
+            f'<tr><td align="left" style="font-family:{F_SANS};font-size:13px;font-weight:700;color:{c["texto_1"]};">'
+            f'{ih.e(f["entidad"])} · {ih.e(f["medio"])} · {ih.e(_fecha_es(f["fecha"]))}'
+            f'</td>'
+            f'<td align="right" style="font-family:{F_SANS};font-size:12px;font-weight:700;color:{color_etiqueta};">'
+            f'{texto_postura}'
+            f'</td></tr></table>'
+            f'<p style="margin:6px 0 6px 0;font-family:{F_SANS};font-size:14px;line-height:20px;color:{c["texto_borde"]};">'
+            f'{ih.e(f["tesis"])}</p>'
+            f'<p style="margin:0;font-family:{F_SANS};font-size:12px;font-weight:600;">'
+            f'<a href="{ih.e(f["url"])}" target="_blank" rel="noopener noreferrer" style="color:{c["acento"]};text-decoration:underline;">'
+            f'Ver nota completa en {ih.e(f["medio"])} →</a></p>'
+            f'</td></tr></table>'
+        )
+
+    intro = _p("Contrastamos nuestro mapa técnico con las proyecciones públicas de la banca global. "
+               "Cuando una entidad ve distinto que nuestra lectura, lo transparentamos para ofrecer una perspectiva completa e informada.",
+               c, tam=15, margen="0 0 14px 0")
+
+    return _rotulo("Qué dicen los bancos", c, margen="14px 0 8px 0") + intro + "".join(tarjetas) + _separador(8)
 
 
 def _alto_png(ruta: Path, ancho: int) -> int:
@@ -402,59 +569,294 @@ def _alto_png(ruta: Path, ancho: int) -> int:
     return round(ancho * h / w) if w and h else ancho * 9 // 16
 
 
-def _hero_activo(a: dict[str, Any], titular: str, c: dict[str, str]) -> str:
-    """La apertura oscura del activo: dirección, titular y las cifras que se leen de un vistazo.
+_ARTICULO_ACTIVO = {"oro": "del", "dólar": "del", "euro": "del", "petróleo": "del", "cobre": "del",
+                    "nasdaq": "del", "dow": "del", "libra": "de la", "plata": "de la"}
 
-    Las cifras son el precio y los niveles de la lectura (nunca los de la simulación).
-    """
+_SUJETO_MAP = {
+    "oro": "El oro", "plata": "La plata", "petróleo": "El petróleo",
+    "cobre": "El cobre", "dólar": "El dólar", "euro": "El euro",
+    "nasdaq": "El Nasdaq", "dow": "El Dow", "libra": "La libra",
+}
+
+
+def _articulo_sujeto(nombre: str) -> str:
+    """«El oro», «La plata»: retorna el sujeto con artículo determinado según _ARTICULO_ACTIVO."""
+    primero = nombre.split()[0].lower() if nombre.split() else ""
+    if primero in _SUJETO_MAP:
+        return _SUJETO_MAP[primero]
+    art = _ARTICULO_ACTIVO.get(primero)
+    if art == "del":
+        return f"El {nombre}"
+    if art == "de la":
+        return f"La {nombre}"
+    return nombre
+
+
+def _titulo_analisis(nombre: str) -> str:
+    """«Análisis técnico del oro»: el artículo sale del primer término del nombre; sin artículo, «de»."""
+    primero = nombre.split()[0].lower() if nombre.split() else ""
+    return f"Análisis técnico {_ARTICULO_ACTIVO.get(primero, 'de')} {nombre}"
+
+
+def _nombre_firma(nombre: str) -> str:
+    """«Benjamín Ignacio Bravo Soza» firma como «Benjamín Bravo Soza»: nombre y dos apellidos."""
+    partes = nombre.split()
+    return " ".join([partes[0], *partes[-2:]]) if len(partes) > 3 else nombre
+
+
+def titular_base(a: dict[str, Any]) -> str:
+    """Fórmula base Alt. 3: foco en claridad direccional, nivel de control y escaneo rápido."""
     lec, f = a["lectura"], a["fmt"]
-    color_dir = _color_direccion(lec["direccion"], c)
-    cifras = [("Precio de referencia", f["precio"])] + [(r, v) for r, v in cm._niveles(a)][:3]
-    ancho = f"{100 // len(cifras)}%"
-    celdas = "".join(
-        f'<td width="{ancho}" valign="top" style="padding:0 {0 if i == len(cifras) - 1 else 8}px 0 0;">'
-        + _tabla(f'<tr><td bgcolor="{c["hero_tarjeta"]}" style="padding:11px 12px;background:{c["hero_tarjeta"]};'
-                 f'border:1px solid {c["hero_linea"]};border-radius:8px;">'
-                 f'<p style="margin:0;font-family:{F_SANS};font-size:11px;line-height:15px;font-weight:700;'
-                 f'letter-spacing:.5px;text-transform:uppercase;color:{c["hero_rotulo"]};">{ih.e(r)}</p>'
-                 f'<p style="margin:3px 0 0 0;font-family:{F_DISPLAY};font-size:20px;line-height:26px;font-weight:700;'
-                 f'white-space:nowrap;color:{c["marca"] if i == 1 and "Objetivo" in r else c["blanco"]};">'
-                 f'{ih.e(v)}</p></td></tr>') + '</td>'
-        for i, (r, v) in enumerate(cifras))
     return (
-        f'<tr><td class="pad" bgcolor="{c["hero"]}" style="padding:26px 40px 28px 40px;background:{c["hero"]};">'
-        f'<span style="display:inline-block;padding:5px 12px;border-radius:4px;background:{color_dir};'
-        f'color:{c["blanco"]};font-family:{F_SANS};font-size:12px;line-height:16px;font-weight:800;'
-        f'letter-spacing:1.6px;">{ih.e(a["nombre"].upper())} · {ih.e(lec["direccion"].upper())}</span>'
-        f'<p style="margin:12px 0 6px 0;font-family:{F_DISPLAY};font-size:24px;line-height:31px;font-weight:700;'
-        f'color:{c["blanco"]};">{ih.e(titular)}</p>'
-        f'<p style="margin:0 0 18px 0;font-family:{F_SANS};font-size:14px;line-height:21px;font-weight:500;'
-        f'color:{c["hero_texto_2"]};">{ih.e(a["ticker_visible"])} · {ih.e(a["temporalidad"])}</p>'
-        + _tabla(f'<tr>{celdas}</tr>') + '</td></tr>')
+        f"{_articulo_sujeto(a['nombre'])} en {f['precio']}: la línea de seguridad en {f['invalidacion']} "
+        f"marca el pulso {lec['direccion'].lower()} hacia {f['objetivo_tori']}"
+    )
+
+
+_NUMERO = re.compile(r"\b\d+(?:[.,]\d+)*\b")
+
+
+def _parsear_precio(s: str) -> float:
+    s = s.strip()
+    if "." in s and "," in s:
+        s = s.replace(".", "").replace(",", ".")
+    elif "." in s:
+        partes = s.split(".")
+        if len(partes) == 2 and len(partes[1]) == 3:
+            s = s.replace(".", "")
+    elif "," in s:
+        partes = s.split(",")
+        if len(partes) == 2 and len(partes[1]) != 3:
+            s = s.replace(",", ".")
+    return float(s)
+
+
+def _formatear_precio_banco(valor: float, digits: int) -> str:
+    if valor == int(valor):
+        return f"{int(valor):,}".replace(",", ".")
+    try:
+        from pipeline_carrusel import formatear_precio
+        return formatear_precio(valor, digits)
+    except Exception:
+        return f"{valor:,.{digits}f}".replace(",", "@").replace(".", ",").replace("@", ".")
+
+
+def titular_variante(a: dict[str, Any], fuentes: list[dict[str, Any]]) -> str:
+    """Alt. 2 (choque de bancos) si hay exactamente 1 a favor y 1 en contra con un precio inequívoco."""
+    direccion = a["lectura"]["direccion"]
+    if hasattr(fu, "seleccionar_bancos_correo"):
+        bancos_sel = fu.seleccionar_bancos_correo(fuentes, direccion)
+    else:
+        bancos_sel = _seleccionar_bancos_correo(fuentes, direccion)
+
+    a_favor = [b for b in bancos_sel if not fu.discrepa(b, direccion)]
+    en_contra = [b for b in bancos_sel if fu.discrepa(b, direccion)]
+    if len(a_favor) != 1 or len(en_contra) != 1:
+        return titular_base(a)
+
+    b_favor, b_contra = a_favor[0], en_contra[0]
+    nums_favor = _NUMERO.findall(b_favor.get("tesis", ""))
+    nums_contra = _NUMERO.findall(b_contra.get("tesis", ""))
+    if len(nums_favor) != 1 or len(nums_contra) != 1:
+        return titular_base(a)
+
+    try:
+        val_favor = _parsear_precio(nums_favor[0])
+        val_contra = _parsear_precio(nums_contra[0])
+        digits = a.get("digits", 2)
+        precio_favor = _formatear_precio_banco(val_favor, digits)
+        precio_contra = _formatear_precio_banco(val_contra, digits)
+    except (ValueError, TypeError):
+        return titular_base(a)
+
+    primero = a["nombre"].split()[0].lower() if a["nombre"].split() else ""
+    art_nom = _ARTICULO_ACTIVO.get(primero, "de")
+    return (
+        f"Entre los {precio_favor} de {b_favor['entidad']} y los {precio_contra} de {b_contra['entidad']}: "
+        f"el gráfico {art_nom} {a['nombre'].lower()} fija su frontera en {a['fmt']['invalidacion']}"
+    )
+
+
+def titular_correo(a: dict[str, Any], fuentes: list[dict[str, Any]] | None = None, variante: bool = False) -> str:
+    """El titular editorial del correo: variante si se pide y califica, o base."""
+    if variante and fuentes:
+        return titular_variante(a, fuentes)
+    return titular_base(a)
+
+
+def asunto_sugerido(a: dict[str, Any], fuentes: list[dict[str, Any]] | None = None, variante: bool = False) -> str:
+    """Función pura y exportada: devuelve el titular sugerido como asunto."""
+    return titular_correo(a, fuentes, variante)
+
+
+def preheader_sugerido(a: dict[str, Any], fuentes: list[dict[str, Any]] | None = None,
+                       d: dict[str, Any] | None = None) -> str:
+    """Texto descriptivo para la bandeja de entrada: lectura técnica, bancos y agenda."""
+    lec, f = a["lectura"], a["fmt"]
+    temp = a.get("temporalidad", "4H").split()[0]
+    base = f"Sesgo {lec['direccion'].lower()} en {temp} condicionado a la línea de {f['invalidacion']}."
+
+    if hasattr(fu, "seleccionar_bancos_correo"):
+        bancos_sel = fu.seleccionar_bancos_correo(fuentes or [], lec["direccion"])
+    else:
+        bancos_sel = _seleccionar_bancos_correo(fuentes or [], lec["direccion"])
+
+    bancos_txt = ""
+    if len(bancos_sel) >= 2:
+        bancos_txt = f" Qué proyectan {bancos_sel[0]['entidad']} y {bancos_sel[1]['entidad']}"
+    elif len(bancos_sel) == 1:
+        bancos_txt = f" Qué proyecta {bancos_sel[0]['entidad']}"
+
+    eventos = ((d or {}).get("agenda") or {}).get("eventos") or []
+    paises = []
+    for ev in eventos:
+        pais = ev.get("pais", "")
+        if pais and pais not in paises:
+            paises.append(pais)
+
+    if paises:
+        p_str = " y ".join(paises[:2])
+        cierre = f", y qué vigila la mesa antes de los datos de {p_str}."
+    else:
+        cierre = ", y qué vigila la mesa antes de los próximos datos macroeconómicos."
+
+    if bancos_txt:
+        return f"{base}{bancos_txt}{cierre}"
+    return f"{base}{cierre.lstrip(',')}"
+
+
+def _hero_activo(a: dict[str, Any], titular: str, c: dict[str, str], bajada: str = "", autor=None,
+                 d: dict[str, Any] | None = None) -> str:
+    """La apertura oscura del activo: kicker, titular, bajada, firma y snapshot de 4 cifras."""
+    lec, f = a["lectura"], a["fmt"]
+    titular_final = titular or titular_base(a)
+
+    kicker = (
+        f'<p style="margin:0 0 10px 0;font-family:{F_SANS};font-size:12px;line-height:16px;font-weight:700;'
+        f'letter-spacing:1.8px;text-transform:uppercase;color:#50C0A8;">'
+        f'ANÁLISIS TÉCNICO Y FUNDAMENTAL · {ih.e(a["nombre"].upper())} ({ih.e(a["ticker_visible"])})'
+        f'</p>'
+    )
+
+    titular_bloque = (
+        f'<h1 class="hero-title" style="margin:0 0 14px 0;font-family:{F_SANS};font-size:25px;line-height:32px;'
+        f'font-weight:800;letter-spacing:-0.3px;color:{c["blanco"]};">'
+        f'{ih.e(titular_final)}</h1>'
+    )
+
+    bajada_bloque = (
+        f'<p style="margin:0 0 20px 0;font-family:{F_SANS};font-size:15px;line-height:23px;font-weight:400;'
+        f'color:{c["hero_texto_2"]};">{ih.e(bajada)}</p>' if bajada else ""
+    )
+
+    nombre_autor = _nombre_firma(autor.nombre) if autor else "Benjamín Bravo Soza"
+    cargo_autor = autor.cargo if autor else "Dirección de Análisis Técnico"
+    vigencia_txt = (
+        f"Vigencia del análisis: {d['vigencia']['desde']} al {d['vigencia']['hasta']} · Hora oficial de Chile"
+        if d and "vigencia" in d else ""
+    )
+    firma_hero = (
+        f'<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 22px 0;">'
+        f'<tr><td style="border-left:2px solid #50C0A8;padding-left:10px;">'
+        f'<p style="margin:0;font-family:{F_SANS};font-size:12px;line-height:17px;font-weight:600;color:{c["hero_rotulo"]};">'
+        f'Realizado por {ih.e(nombre_autor)} · {ih.e(cargo_autor)} GI</p>'
+        + (f'<p style="margin:1px 0 0 0;font-family:{F_SANS};font-size:12px;line-height:16px;color:#50C0A8;font-weight:600;">'
+           f'{ih.e(vigencia_txt)}</p>' if vigencia_txt else "")
+        + '</td></tr></table>'
+    )
+
+    dir_nombre = lec["direccion"].upper()
+    color_dir = c["baja"] if dir_nombre == "BAJISTA" else (c["sube"] if dir_nombre == "ALCISTA" else c["hero_rotulo"])
+    temp_corta = a.get("temporalidad", "4H").split()[0]
+
+    cifras_datos = [
+        ("Precio de referencia", f["precio"], "Precio de foto"),
+        ("Sesgo técnico", dir_nombre, f"{temp_corta} · swing", color_dir),
+        ("Línea de seguridad", f.get("invalidacion") or "sin nivel", "Invalida el sesgo"),
+        ("Objetivo técnico", f.get("objetivo_tori") or "sin nivel", "Proyección técnica", "#50C0A8"),
+    ]
+
+    celdas = []
+    for i, c_item in enumerate(cifras_datos):
+        rotulo, valor, sub = c_item[0], c_item[1], c_item[2]
+        col_val = c_item[3] if len(c_item) > 3 else c["blanco"]
+        pad_r = 0 if i == len(cifras_datos) - 1 else 6
+        celdas.append(
+            f'<td class="stack-col" width="25%" valign="top" style="padding-right:{pad_r}px;">'
+            f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#101C1F" '
+            f'style="background:#101C1F;border:1px solid #24383C;border-radius:6px;">'
+            f'<tr><td style="padding:10px 10px 9px 10px;">'
+            f'<p style="margin:0;font-family:{F_SANS};font-size:10px;line-height:14px;font-weight:700;'
+            f'letter-spacing:0.6px;text-transform:uppercase;color:{c["hero_rotulo"]};">{ih.e(rotulo)}</p>'
+            f'<p class="hero-cifra" style="margin:3px 0 0 0;font-family:{F_SANS};font-size:17px;line-height:22px;'
+            f'font-weight:800;color:{col_val};white-space:nowrap;">{ih.e(valor)}</p>'
+            f'<p style="margin:2px 0 0 0;font-family:{F_SANS};font-size:10px;line-height:13px;color:{c["hero_rotulo"]};">{ih.e(sub)}</p>'
+            f'</td></tr></table></td>'
+        )
+
+    snapshot_tabla = _tabla(f'<tr>{"".join(celdas)}</tr>')
+
+    return (
+        f'<tr><td class="pad-hero" bgcolor="{c["hero"]}" style="padding:26px 36px 26px 36px;background:{c["hero"]};">'
+        f'{kicker}{titular_bloque}{bajada_bloque}{firma_hero}{snapshot_tabla}'
+        f'</td></tr>'
+    )
 
 
 def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: Path, ejecutivo: str,
                    c: dict[str, str], d: dict[str, Any] | None = None, dias_clave: str = "",
                    fuentes: list[dict[str, Any]] | tuple = (), imagen_calendario: str = "",
-                   imagen_dolar: str = "", autor=None) -> str:
-    """El bloque del activo en el correo: apertura oscura y, debajo, el cuerpo claro en una tabla de 640 px."""
+                   imagen_dolar: str = "", autor=None, bajada: str = "") -> str:
+    """El bloque del activo en el correo: apertura oscura y cuerpo claro."""
     lec = a["lectura"]
     color_dir = _color_direccion(lec["direccion"], c)
+    grafico = _tabla(
+        f'<tr><td style="padding:0;background:#000000;">'
+        f'<img src="{ih._data_uri(dir_pedido / a["grafico"])}" width="558" height="{_alto_png(dir_pedido / a["grafico"], 558)}" '
+        f'alt="Gráfico de {ih.e(a["nombre"])}" style="display:block;border:0;width:558px;max-width:100%;'
+        f'height:auto;border-radius:8px;"></td></tr>',
+        estilo=f'border:1px solid {c["linea"]};border-radius:8px;overflow:hidden;')
+
+    salida = lec.get("salida", "")
+    pull_quote = ""
+    if salida:
+        pull_quote = (
+            f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="{c["fondo"]}" '
+            f'style="background:{c["fondo"]};border-left:4px solid #50C0A8;border-radius:0 8px 8px 0;margin:0 0 24px 0;">'
+            f'<tr><td style="padding:16px 20px;">'
+            f'<p style="margin:0 0 6px 0;font-family:Georgia,\'Times New Roman\',serif;font-size:16px;line-height:24px;'
+            f'font-style:italic;color:{c["texto_1"]};font-weight:600;">'
+            f'«{ih.e(salida)}»</p>'
+            f'<p style="margin:0;font-family:{F_SANS};font-size:12px;line-height:16px;font-weight:700;'
+            f'letter-spacing:0.8px;text-transform:uppercase;color:{c["acento"]};">'
+            'Dirección de Análisis Técnico · Grupo Inteligencia</p>'
+            f'</td></tr></table>'
+        )
+
     escenarios = "".join(_p(f'{ih.e(x["flecha"])} {ih.e(x["texto"])}', c, margen="0 0 8px 0")
                          for x in lec["escenarios"])
-    grafico = _tabla(
-        f'<tr><td style="padding:0;"><img src="{ih._data_uri(dir_pedido / a["grafico"])}" width="558" height="{_alto_png(dir_pedido / a["grafico"], 558)}" '
-        f'alt="Gráfico de {ih.e(a["nombre"])}" style="display:block;border:0;width:558px;max-width:100%;'
-        f'height:auto;border-radius:11px;"></td></tr>', estilo=f'border:1px solid {c["linea"]};border-radius:12px;')
     ruta_dolar = dir_pedido / imagen_dolar if imagen_dolar else None
+
+    cierre_consultivo = (
+        f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="{c["fondo"]}" '
+        f'style="background:{c["fondo"]};border:1px solid {c["linea"]};border-radius:10px;margin:20px 0 24px 0;">'
+        f'<tr><td style="padding:20px 24px;">'
+        f'<p style="margin:0 0 8px 0;font-family:{F_SANS};font-size:16px;line-height:22px;font-weight:800;color:{c["texto_1"]};">'
+        '¿Revisamos este análisis juntos en la plataforma MT5?</p>'
+        f'<p style="margin:0;font-family:{F_SANS};font-size:14px;line-height:21px;color:{c["texto_borde"]};">'
+        'Podemos mirar en conjunto el gráfico en tiempo real, comprobar el comportamiento del precio frente a la línea de seguridad '
+        'y revisar la plataforma con tu cuenta de inversión.</p>'
+        f'</td></tr></table>'
+    )
+
     return (
-        _hero_activo(a, titular, c)
-        + '<tr><td class="pad" style="padding:22px 40px 0 40px;">'
-        + (_rotulo(f"Análisis realizado por {ih.e(_nombre_firma(autor.nombre))}", c, margen="0 0 2px 0")
-           + _p(f"{ih.e(autor.cargo)} · GI", c, tam=13, color="texto_2", margen="0 0 14px 0")
+        _hero_activo(a, titular, c, bajada=bajada, autor=autor, d=d)
+        + '<tr><td class="pad" style="padding:28px 40px 0 40px;">'
+        + (_rotulo(ih.e(_titulo_analisis(a["nombre"])), c, margen="0 0 14px 0")
            if autor is not None else "")
         + grafico + _separador()
         + _p(ih.e(contexto), c)
+        + pull_quote
         + _hechos_correo((d or {}).get("hechos") or [], c)
         + _grafico_dolar_correo(ruta_dolar, c)
         + _dias_clave_correo(d or {}, dias_clave, dir_pedido, imagen_calendario, c)
@@ -465,14 +867,9 @@ def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: P
         + _p(f'⏱️ <strong style="color:{c["texto_1"]};">{ih.e(a["temporalidad"])}</strong>', c, tam=15,
              margen="4px 0 18px 0")
         + _simulacion_correo(a, ejecutivo, c)
+        + cierre_consultivo
         + _separador(26) + '</td></tr>'
     )
-
-
-def _nombre_firma(nombre: str) -> str:
-    """«Benjamín Ignacio Bravo Soza» firma como «Benjamín Bravo Soza»: nombre y dos apellidos."""
-    partes = nombre.split()
-    return " ".join([partes[0], *partes[-2:]]) if len(partes) > 3 else nombre
 
 
 WA_MARCA = "%%WA%%"  # lo reemplaza la página por el enlace de WhatsApp del ejecutivo
@@ -486,11 +883,12 @@ def _boton_whatsapp(c: dict[str, str]) -> str:
                  f'<a href="{WA_MARCA}" style="display:block;padding:16px 20px;font-family:{F_SANS};font-size:17px;'
                  f'line-height:24px;font-weight:700;text-decoration:none;color:#06201A;">'
                  'Escríbeme por WhatsApp para revisar este análisis →</a></td></tr>')
-        + '</td></tr>')
+        + '</td></tr>'
+    )
 
 
 def _firma_correo(ejecutivo: dict[str, Any], autor, c: dict[str, str]) -> str:
-    """El ejecutivo, en grande: quien le escribe al cliente. Debajo, quien firma el análisis."""
+    """El ejecutivo comercial en grande: quien le escribe al cliente."""
     rol = " · ".join(x for x in (CARGO_SIMULA, "GI") if x)
     contacto = ejecutivo.get("contacto", "")
     return (
@@ -501,34 +899,57 @@ def _firma_correo(ejecutivo: dict[str, Any], autor, c: dict[str, str]) -> str:
         f'color:{c["texto_2"]};">{ih.e(rol)}</p>'
         + (f'<p style="margin:2px 0 0 0;font-family:{F_SANS};font-size:13px;line-height:20px;font-weight:500;'
            f'color:{c["texto_2"]};">{ih.e(contacto)}</p>' if contacto else "")
-        + _tabla(f'<tr><td style="padding:12px 0 0 0;border-top:1px solid {c["linea"]};">'
-                 f'<p style="margin:0;font-family:{F_SANS};font-size:13px;line-height:20px;font-weight:700;'
-                 f'color:{c["texto_1"]};">{ih.e(_nombre_firma(autor.nombre))}</p>'
-                 f'<p style="margin:0;font-family:{F_SANS};font-size:13px;line-height:20px;font-weight:500;'
-                 f'color:{c["texto_2"]};">{ih.e(autor.cargo)} · GI</p></td></tr>',
-                 estilo="margin-top:14px;")
-        + '</td></tr>')
+        + '</td></tr>'
+    )
 
 
 def _marco_correo(d: dict[str, Any], ed: dict[str, Any], ejecutivo: dict[str, Any], autor,
-                  c: dict[str, str]) -> str:
-    """El correo sin los activos: cabecera con logo, saludo, botón de WhatsApp, firma y aviso.
+                  c: dict[str, str], asunto: str = "", preheader: str = "") -> str:
+    """El marco del correo: preheader oculto, ficha de control, cabecera con logo, cierre y aviso."""
+    if not asunto and d.get("activos"):
+        asunto = asunto_sugerido(d["activos"][0], ed.get("fuentes"))
+    if not preheader and d.get("activos"):
+        preheader = preheader_sugerido(d["activos"][0], ed.get("fuentes"), d)
 
-    Los activos marcados entran en el lugar de `<!--ACTIVOS-->` al armar el correo, y el botón de
-    WhatsApp en el de `<!--WA-->` (solo si el ejecutivo escribió su número).
-    """
+    preheader_oculto = (
+        f'<div style="display:none;font-size:1px;color:#EEF2F1;line-height:1px;max-height:0px;'
+        f'max-width:0px;opacity:0;overflow:hidden;mso-hide:all;">'
+        f'{ih.e(preheader)}'
+        f'&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;'
+        f'&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;'
+        f'&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;'
+        f'</div>'
+    )
+
+    ficha_control = (
+        f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#101D20" '
+        f'style="background:#101D20;border-bottom:1px solid #24383C;">'
+        f'<tr><td align="center" style="padding:14px 16px;">'
+        f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:640px;">'
+        f'<tr><td style="font-family:{F_SANS};font-size:12px;line-height:18px;color:#B7C6C8;">'
+        f'<p style="margin:0 0 4px 0;"><strong style="color:#50C0A8;text-transform:uppercase;letter-spacing:0.8px;">'
+        f'Asunto sugerido:</strong> {ih.e(asunto)}</p>'
+        f'<p style="margin:0;"><strong style="color:#50C0A8;text-transform:uppercase;letter-spacing:0.8px;">'
+        f'Preheader:</strong> {ih.e(preheader)}</p>'
+        f'</td></tr></table></td></tr></table>'
+    )
+
     cabecera = (
-        f'<tr><td class="pad" bgcolor="{c["hero"]}" style="background:{c["hero"]};padding:22px 40px;">'
-        + _tabla(f'<tr><td valign="middle"><img src="{ih._data_uri(ih.LOGO)}" width="190" alt="Grupo Inteligencia" '
-                 'style="display:block;border:0;width:190px;height:auto;"></td>'
-                 f'<td valign="middle" align="right" style="font-family:{F_SANS};font-size:14px;line-height:20px;'
-                 f'font-weight:600;color:{c["hero_texto_2"]};">Análisis del<br><span style="color:{c["blanco"]};">'
-                 f'{ih.e(d["vigencia"]["desde"])}</span></td></tr>')
+        f'<tr><td class="pad" bgcolor="{c["hero"]}" style="background:{c["hero"]};padding:22px 40px;'
+        f'border-bottom:1px solid #1A282B;">'
+        + _tabla(f'<tr><td valign="middle" align="left">'
+                 f'<table role="presentation" cellspacing="0" cellpadding="0" border="0">'
+                 f'<tr><td valign="middle" style="padding-right:12px;">'
+                 f'<img src="{ih._data_uri(ih.LOGO)}" width="190" alt="Grupo Inteligencia" '
+                 f'style="display:block;border:0;width:190px;height:auto;"></td></tr></table></td>'
+                 f'<td valign="middle" align="right" style="font-family:{F_SANS};font-size:12px;line-height:16px;'
+                 f'font-weight:600;color:{c["hero_rotulo"]};">Edición técnica<br>'
+                 f'<span style="color:{c["blanco"]};font-weight:700;">{ih.e(d.get("edicion", d["vigencia"]["desde"]))}</span></td></tr>')
         + '</td></tr>'
-        f'<tr><td bgcolor="{c["marca"]}" style="height:3px;line-height:3px;font-size:3px;background:{c["marca"]};'
-        f'background-image:linear-gradient(90deg,{c["acento_azul"]},{c["marca"]});">&nbsp;</td></tr>')
-    # El correo parte con el nombre de la persona y la voz de quien lo envía; el título de la semana
-    # baja a una tarjeta compacta. Un afiche con titular grande antes del saludo se lee como campaña masiva.
+        f'<tr><td bgcolor="{c["marca"]}" height="3" style="height:3px;line-height:3px;font-size:3px;'
+        f'background:{c["marca"]};background-image:linear-gradient(90deg,{c["acento_azul"]},{c["marca"]});">&nbsp;</td></tr>'
+    )
+
     portada = (
         '<tr><td class="pad" style="padding:30px 40px 22px 40px;">'
         + _p('<span class="saludo-cliente">Estimado(a):</span>', c, tam=18, peso=700, color="texto_1", margen="0 0 12px 0")
@@ -541,23 +962,39 @@ def _marco_correo(d: dict[str, Any], ed: dict[str, Any], ejecutivo: dict[str, An
         f'border-left:4px solid {c["marca"]};padding:18px 40px 20px 36px;">'
         + _rotulo("Análisis técnico vigente", c, margen="0 0 8px 0")
         + f'<h1 class="h1" style="margin:0;font-family:{F_DISPLAY};font-size:22px;line-height:29px;'
-          f'font-weight:700;color:{c["texto_1"]};"><!--TITULO--></h1></td></tr>')
+          f'font-weight:700;color:{c["texto_1"]};"><!--TITULO--></h1></td></tr>'
+    )
+
     cierre = (
         '<!--WA-->' + _firma_correo(ejecutivo, autor, c)
-        + '<tr><td class="pad" style="padding:20px 40px 32px 40px;">'
-        # El fondo y el relleno van en la celda: Word ignora el relleno de un párrafo.
-        + _tabla(f'<tr><td bgcolor="{c["fondo"]}" style="padding:14px 16px;background:{c["fondo"]};border-radius:10px;">'
-                 + _p(ih.e(cm.AVISO_PIEZA), c, tam=14, color="texto_2", margen="0") + '</td></tr>')
-        + '</td></tr>')
+        + f'<tr><td class="pad" bgcolor="{c["fondo_alt"]}" style="background:{c["fondo_alt"]};padding:0 40px 32px 40px;">'
+        + _tabla(f'<tr><td bgcolor="{c["fondo"]}" style="padding:14px 18px;background:{c["fondo"]};border-radius:8px;">'
+                 + _p(ih.e(cm.AVISO_PIEZA), c, tam=12, color="texto_2", margen="0 0 6px 0")
+                 + _p("Análisis general de mercado, idéntico para todos sus destinatarios. No es asesoría de inversión "
+                      "ni considera el perfil de quien lo lee. Prohibida su reproducción total o parcial sin autorización de Grupo Inteligencia.",
+                      c, tam=11, color="hero_rotulo", margen="0")
+                 + '</td></tr>')
+        + '</td></tr>'
+    )
+
     return (
-        f'<table id="correo-root" role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" '
+        preheader_oculto + ficha_control
+        + f'<table id="correo-root" role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" '
         f'bgcolor="{c["fondo_alt"]}" style="width:100%;background:{c["fondo_alt"]};font-family:{F_SANS};">'
         '<tr><td align="center" style="padding:28px 10px;">'
+        '<!--[if (gte mso 9)|(IE)]>'
+        '<table role="presentation" width="640" align="center" cellpadding="0" cellspacing="0" border="0">'
+        '<tr><td>'
+        '<![endif]-->'
         f'<table role="presentation" class="shell" width="640" cellspacing="0" cellpadding="0" border="0" '
         f'bgcolor="{c["fondo_alt"]}" style="width:640px;max-width:640px;background:{c["fondo_alt"]};'
         f'border:1px solid {c["linea"]};">'
         + cabecera + portada + '<!--ACTIVOS-->' + cierre
-        + '</table></td></tr></table>'
+        + '</table>'
+        '<!--[if (gte mso 9)|(IE)]>'
+        '</td></tr></table>'
+        '<![endif]-->'
+        '</td></tr></table>'
     )
 
 
@@ -624,8 +1061,9 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
             + (f'<a class="descargar" download="{ih.e(lamina.name)}" href="{ih._data_uri(lamina)}">Descargar lámina</a>'
                if lamina.exists() else "")
             + '</div></section>')
+        titular_act = titular_correo(a, ed.get("fuentes"))
         correos.append(f'<template class="correo-activo" data-ticker="{ih.e(t)}">'
-                       f'{_bloque_correo(a, ed["titulares"][t], ed["contexto"][t], dir_pedido, nombre_ej, c, d=d, dias_clave=dias, fuentes=ed["fuentes"], imagen_calendario=imagen_cal, imagen_dolar=imagen_dolar, autor=autor)}</template>')
+                       f'{_bloque_correo(a, titular_act, ed["contexto"][t], dir_pedido, nombre_ej, c, d=d, dias_clave=dias, fuentes=ed["fuentes"], imagen_calendario=imagen_cal, imagen_dolar=imagen_dolar, autor=autor, bajada=ed.get("bajada", ""))}</template>')
         datos_js.append({"ticker": t, "nombre": a["nombre"], "digits": a["digits"], "escenario": a["escenario"], "contrato": a["contrato"],
                          "fmt": a["fmt"], "motivo": _motivo(a),
                          "condicion": op.texto_condicion(a["escenario"], a["fmt"]["entrada"]), "whatsapp": cm.texto_whatsapp_base(a, ed["titulares"][t], ed["contexto"][t])})

@@ -173,6 +173,36 @@ def bancos(fuentes: Any, lista: dict[str, Any] | None = None) -> list[dict[str, 
             if isinstance(f, dict) and f.get("entidad") in nombres]
 
 
+def seleccionar_bancos_correo(
+    fuentes: list[dict[str, Any]],
+    direccion: str,
+    lista: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """Selecciona a lo sumo 1 banco a favor y 1 en contra para el correo editorial.
+
+    - Filtra únicamente entidades bancarias calificadas usando bancos(fuentes, lista).
+    - Separa en dos grupos: a_favor (no discrepan) y en_contra (discrepan).
+    - Ordena cada grupo por fecha descendente (la nota más reciente primero).
+    - Toma a lo sumo 1 de a_favor y a lo sumo 1 de en_contra.
+    - Si existen ambos, retorna [banco_a_favor, banco_en_contra].
+    - Si solo existe uno (sea a favor o en contra), retorna [banco_unico].
+    - Si no hay ninguno, retorna [].
+    """
+    bs = bancos(fuentes, lista)
+    a_favor = [b for b in bs if not discrepa(b, direccion)]
+    en_contra = [b for b in bs if discrepa(b, direccion)]
+
+    a_favor_ordenados = sorted(a_favor, key=lambda b: str(b.get("fecha", "")), reverse=True)
+    en_contra_ordenados = sorted(en_contra, key=lambda b: str(b.get("fecha", "")), reverse=True)
+
+    salida: list[dict[str, Any]] = []
+    if a_favor_ordenados:
+        salida.append(a_favor_ordenados[0])
+    if en_contra_ordenados:
+        salida.append(en_contra_ordenados[0])
+    return salida
+
+
 def falta_banco(pieza: dict[str, Any], lista: dict[str, Any] | None = None) -> list[str]:
     """El error de `--validar` cuando `fuentes` no trae ningún banco; vacío si lo trae o si aún no es lista."""
     fuentes = (pieza.get("editorial") or {}).get("fuentes")

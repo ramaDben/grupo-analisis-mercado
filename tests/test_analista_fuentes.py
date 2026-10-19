@@ -171,3 +171,45 @@ def test_el_intento_guarda_las_validas_y_las_urls_descartadas(tmp_path):
     datos = json.loads(ruta.read_text(encoding="utf-8"))
     assert ruta.name == fu.INTENTO and datos["validas"] == [valida]
     assert datos["descartadas"] == ["https://blog.example.com/nota"] and datos["motivos"]
+
+
+# ───────────────────────────────────────────── bancos correo: a lo sumo 1 y 1 (2026-10-19)
+
+
+def test_seleccionar_bancos_correo_uno_a_favor_y_uno_en_contra():
+    """Con varios bancos y organismos, toma exactamente 1 a favor y 1 en contra, priorizando el más reciente."""
+    fuentes = [
+        {"entidad": "World Gold Council", "fecha": "2026-10-15", "postura": "alcista"},
+        {"entidad": "UBS", "fecha": "2026-10-13", "postura": "bajista"},
+        {"entidad": "JPMorgan", "fecha": "2026-10-11", "postura": "bajista"},
+        {"entidad": "Goldman Sachs", "fecha": "2026-10-14", "postura": "alcista"},
+        {"entidad": "Morgan Stanley", "fecha": "2026-10-10", "postura": "alcista"},
+    ]
+    # Para dirección BAJISTA: UBS y JPMorgan son a favor (UBS más reciente); Goldman y Morgan son en contra (Goldman más reciente).
+    sel = fu.seleccionar_bancos_correo(fuentes, "BAJISTA")
+    assert len(sel) == 2
+    assert sel[0]["entidad"] == "UBS"
+    assert sel[1]["entidad"] == "Goldman Sachs"
+
+
+def test_seleccionar_bancos_correo_banco_unico():
+    """Si solo hay bancos de una postura (o uno solo), retorna una lista con ese único banco sin tarjetas vacías."""
+    solo_alcista = [
+        {"entidad": "Goldman Sachs", "fecha": "2026-10-14", "postura": "alcista"},
+        {"entidad": "World Gold Council", "fecha": "2026-10-15", "postura": "alcista"},
+    ]
+    sel_bajista = fu.seleccionar_bancos_correo(solo_alcista, "BAJISTA")
+    assert len(sel_bajista) == 1
+    assert sel_bajista[0]["entidad"] == "Goldman Sachs"
+
+    sel_alcista = fu.seleccionar_bancos_correo(solo_alcista, "ALCISTA")
+    assert len(sel_alcista) == 1
+    assert sel_alcista[0]["entidad"] == "Goldman Sachs"
+
+
+def test_seleccionar_bancos_correo_sin_bancos():
+    """Sin bancos calificados (solo organismos o vacía), retorna lista vacía."""
+    organismos = [{"entidad": "World Gold Council", "fecha": "2026-10-15", "postura": "alcista"}]
+    assert fu.seleccionar_bancos_correo(organismos, "BAJISTA") == []
+    assert fu.seleccionar_bancos_correo([], "BAJISTA") == []
+

@@ -202,9 +202,20 @@
                   ' y me gustaría revisarlo contigo.';
       botonWa = document.getElementById('correo-wa').innerHTML.replace('%%WA%%', 'https://wa.me/' + wa + '?text=' + encodeURIComponent(texto));
     }
-    return document.getElementById('correo-marco').innerHTML.replace('<!--ACTIVOS-->', partes.join('')).replace('<!--WA-->', botonWa)
+    var html = document.getElementById('correo-marco').innerHTML.replace('<!--ACTIVOS-->', partes.join('')).replace('<!--WA-->', botonWa)
       .split(DATOS.ejecutivo.replace(/&/g, '&amp;')).join(yo.replace(/[<>&"]/g, ''))
-      .replace('<!--TITULO-->', titulo).replace('<span class="saludo-cliente">Estimado(a):</span>', saludo || 'Estimado(a):');
+      .replace('<!--TITULO-->', titulo);
+
+    if (saludo){
+      if (/^estimad/i.test(saludo)){
+        html = html.replace(/Estimado\(a\)\s+<span class="saludo-cliente"[^>]*>\[Nombre del cliente\]<\/span>:/g,
+                            '<span class="saludo-cliente" style="color:#50C0A8;border-bottom:1px dashed #50C0A8;">' + saludo + '</span>');
+      } else {
+        html = html.replace(/\[Nombre del cliente\]/g, saludo.replace(/[:;]+$/, ''));
+      }
+      html = html.replace('<span class="saludo-cliente">Estimado(a):</span>', saludo);
+    }
+    return html;
   }
   function vista(){
     var html = armarCorreo();

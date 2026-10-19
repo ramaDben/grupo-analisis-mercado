@@ -147,19 +147,32 @@ def test_el_correo_lleva_la_maqueta_del_prototipo(tmp_path):
 
 
 def test_la_firma_lleva_al_ejecutivo_en_grande_y_debajo_al_analista(tmp_path):
-    """El ejecutivo es quien le escribe al cliente; el analista firma el análisis, sin segundo nombre."""
+    """El ejecutivo firma en grande al pie; Benjamín firma en cabecera hero (Decisión 5)."""
     html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
     marco = re.search(r'<template id="correo-marco">(.*?)</template>', html, re.S).group(1)
     firma = marco[marco.index("<!--WA-->"):]
-    assert 'font-size:26px' in firma and firma.index("Camila Rojas") < firma.index("Benjamín Bravo Soza")
-    assert "Benjamín Ignacio" not in firma and "Dirección de Análisis Técnico · GI" in firma
+    assert 'font-size:26px' in firma
+    assert "Camila Rojas" in firma
+    assert "Departamento de Inversiones · GI" in firma
+    assert "Benjamín Bravo Soza" not in firma
+    assert "Benjamín Ignacio" not in firma
     assert "Te lo envía" not in marco
+    correo = _correo(html)
+    assert "Realizado por Benjamín Bravo Soza · Dirección de Análisis Técnico GI" in correo
 
 
 def test_el_analisis_va_rotulado_con_su_autor_como_la_simulacion_con_el_ejecutivo(tmp_path):
     correo = _correo(_html(tmp_path))
-    assert "Análisis realizado por Benjamín Bravo Soza" in correo and "Benjamín Ignacio" not in correo
-    assert correo.index("Análisis realizado por") < correo.index("Simulación realizada por Camila Rojas")
+    assert "Análisis técnico del Oro" in correo
+    assert "Realizado por Benjamín Bravo Soza · Dirección de Análisis Técnico GI" in correo
+    assert "Benjamín Ignacio" not in correo
+    assert correo.index("Análisis técnico del Oro") < correo.index("Simulación realizada por Camila Rojas")
+
+
+def test_el_titulo_del_analisis_lleva_el_articulo_del_activo():
+    assert oh._titulo_analisis("Oro") == "Análisis técnico del Oro"
+    assert oh._titulo_analisis("Plata") == "Análisis técnico de la Plata"
+    assert oh._titulo_analisis("Bitcoin") == "Análisis técnico de Bitcoin"
 
 
 def test_el_cuerpo_es_claro_y_solo_la_apertura_del_activo_es_oscura(tmp_path):
@@ -468,3 +481,206 @@ def test_una_pieza_anterior_se_rearma_sin_los_bloques_nuevos(tmp_path):
     h = oh.armar(fx.pieza_oportunidad(tmp_path, laminas=True, legado=True, fuentes=[]), tmp_path, EJECUTIVO,
                  fx.AUTOR, HOY)
     assert "Lo que pasa hoy" not in h and "Días clave" not in h and "Qué dicen los bancos" not in h
+
+
+# ───────────────────────────────────────────── tests exhaustivos correo editorial (2026-10-19)
+
+
+def test_titular_base_armado_por_codigo(tmp_path):
+    """Valida fórmula Alt. 3 con cifras de pieza.json y artículo del activo."""
+    p = _pieza(tmp_path)
+    a = p["datos"]["activos"][0]
+    tit = oh.titular_base(a)
+    assert tit == f"{oh._articulo_sujeto(a['nombre'])} en {a['fmt']['precio']}: la línea de seguridad en {a['fmt']['invalidacion']} marca el pulso {a['lectura']['direccion'].lower()} hacia {a['fmt']['objetivo_tori']}"
+    assert tit == "El oro en 4.186,17: la línea de seguridad en 4.227,32 marca el pulso bajista hacia 4.149,96"
+
+    a_alcista = dict(a, nombre="Plata", lectura=dict(a["lectura"], direccion="ALCISTA"))
+    tit_alcista = oh.titular_base(a_alcista)
+    assert tit_alcista == "La plata en 4.186,17: la línea de seguridad en 4.227,32 marca el pulso alcista hacia 4.149,96"
+
+    html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    correo = _correo(html)
+    assert tit in correo
+
+
+def test_titular_variante_choque_de_bancos(tmp_path):
+    """Valida fórmula Alt. 2 (choque de bancos) con exactamente 1 a favor y 1 en contra con un precio inequívoco."""
+    p = _pieza(tmp_path)
+    a = p["datos"]["activos"][0]
+
+    fuentes_exito = [
+        {"entidad": "UBS", "medio": "Bloomberg", "fecha": "2026-10-14", "postura": "bajista",
+         "url": "https://www.bloomberg.com/markets/oro-ubs-2026", "tesis": "Ve caída hacia 3.900"},
+        {"entidad": "Goldman Sachs", "medio": "Reuters", "fecha": "2026-10-14", "postura": "alcista",
+         "url": "https://www.reuters.com/markets/commodities/oro-goldman-2026-10-14/", "tesis": "Proyecta avance a 4.300"},
+    ]
+    tit_var = oh.titular_variante(a, fuentes_exito)
+    assert tit_var == "Entre los 3.900 de UBS y los 4.300 de Goldman Sachs: el gráfico del oro fija su frontera en 4.227,32"
+
+    fuentes_decimales = [
+        {"entidad": "UBS", "medio": "Bloomberg", "fecha": "2026-10-14", "postura": "bajista",
+         "url": "https://www.bloomberg.com/markets/oro-ubs-2026", "tesis": "Ve caída hacia 3.950,50"},
+        {"entidad": "Goldman Sachs", "medio": "Reuters", "fecha": "2026-10-14", "postura": "alcista",
+         "url": "https://www.reuters.com/markets/commodities/oro-goldman-2026-10-14/", "tesis": "Proyecta avance a 4.250,50"},
+    ]
+    tit_dec = oh.titular_variante(a, fuentes_decimales)
+    assert "Entre los 3.950,50 de UBS y los 4.250,50 de Goldman Sachs:" in tit_dec
+
+    fuentes_sin_num = [
+        {"entidad": "UBS", "medio": "Bloomberg", "fecha": "2026-10-14", "postura": "bajista",
+         "url": "https://www.bloomberg.com/markets/oro-ubs-2026", "tesis": "Ve retroceso en el activo sin fijar meta"},
+        {"entidad": "Goldman Sachs", "medio": "Reuters", "fecha": "2026-10-14", "postura": "alcista",
+         "url": "https://www.reuters.com/markets/commodities/oro-goldman-2026-10-14/", "tesis": "Proyecta avance a 4.300"},
+    ]
+    assert oh.titular_variante(a, fuentes_sin_num) == oh.titular_base(a)
+
+    fuentes_mult_num = [
+        {"entidad": "UBS", "medio": "Bloomberg", "fecha": "2026-10-14", "postura": "bajista",
+         "url": "https://www.bloomberg.com/markets/oro-ubs-2026", "tesis": "Ve rango entre 3.800 y 3.900"},
+        {"entidad": "Goldman Sachs", "medio": "Reuters", "fecha": "2026-10-14", "postura": "alcista",
+         "url": "https://www.reuters.com/markets/commodities/oro-goldman-2026-10-14/", "tesis": "Proyecta avance a 4.300"},
+    ]
+    assert oh.titular_variante(a, fuentes_mult_num) == oh.titular_base(a)
+
+    fuentes_un_banco = [fuentes_exito[0]]
+    assert oh.titular_variante(a, fuentes_un_banco) == oh.titular_base(a)
+
+    assert oh.titular_correo(a, fuentes_exito, variante=True) == tit_var
+    assert oh.titular_correo(a, fuentes_exito, variante=False) == oh.titular_base(a)
+
+
+def test_bancos_correo_uno_a_favor_y_uno_en_contra(tmp_path):
+    """Verifica que con 3 fuentes (incluyendo World Gold Council), el correo toma solo 1 a favor y 1 en contra."""
+    fuentes_tres = [
+        {"entidad": "World Gold Council", "medio": "Reuters", "fecha": "2026-10-15",
+         "url": "https://www.reuters.com/markets/wgc-oro-2026", "postura": "alcista",
+         "tesis": "Demanda institucional récord sostiene el mercado físico."},
+        {"entidad": "Goldman Sachs", "medio": "Reuters", "fecha": "2026-10-14",
+         "url": "https://www.reuters.com/markets/commodities/oro-goldman-2026-10-14/",
+         "postura": "alcista", "tesis": "Goldman Sachs proyecta avance hacia 4.300."},
+        {"entidad": "UBS", "medio": "Bloomberg", "fecha": "2026-10-13",
+         "url": "https://www.bloomberg.com/markets/oro-ubs-2026",
+         "postura": "bajista", "tesis": "UBS anticipa consolidación bajista hacia 3.900."},
+    ]
+    p = fx.pieza_oportunidad(tmp_path, laminas=True, fuentes=fuentes_tres)
+    html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    correo = _correo(html)
+
+    assert "World Gold Council" not in correo
+    assert "Goldman Sachs" in correo
+    assert "UBS" in correo
+
+    assert "⬇️ A favor de nuestra lectura" in correo
+    assert "⬆️ En contra de nuestra lectura" in correo
+
+    assert "#FF0000" not in correo and "#ff0000" not in correo
+    assert "#00FF00" not in correo and "#00ff00" not in correo
+
+
+def test_banco_unico_sin_tarjeta_vacia_ni_aviso(tmp_path):
+    """Verifica que con un solo banco calificado, se renderiza únicamente esa tarjeta al 100% sin tarjetas vacías ni aviso."""
+    fuentes_unica = [
+        {"entidad": "Goldman Sachs", "medio": "Reuters", "fecha": "2026-10-14",
+         "url": "https://www.reuters.com/markets/commodities/oro-goldman-2026-10-14/",
+         "postura": "alcista", "tesis": "Goldman Sachs proyecta avance hacia 4.300."}
+    ]
+    p = fx.pieza_oportunidad(tmp_path, laminas=True, fuentes=fuentes_unica)
+    html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    correo = _correo(html)
+
+    assert "Goldman Sachs" in correo
+    assert 'width="100%"' in correo
+    assert "tarjeta vacía" not in correo.lower()
+    assert "falta" not in correo.lower()
+    assert "sin banco" not in correo.lower()
+    assert "sin contraparte" not in correo.lower()
+
+
+def test_drivers_correo_exactamente_dos_y_sintesis(tmp_path):
+    """Verifica que la tabla de drivers incluye exactamente 2 factores y el recuadro de síntesis de dominancia."""
+    p = fx.pieza_oportunidad(tmp_path, laminas=True, dolar=True)
+    p["datos"]["hechos"].append({
+        "id": "wti",
+        "driver": "Petróleo WTI",
+        "nivel": "72,50 USD/barril",
+        "fecha": "viernes 09/10",
+        "fuente": "MT5",
+        "cambio_5d": "-1,20",
+        "sentido": "bajó",
+        "unidad_cambio": "USD",
+        "efecto": "presiona a la baja los costos energéticos",
+        "con_la_lectura": "a favor de nuestra lectura",
+    })
+    # El texto cita solo los 2 drivers que la tabla muestra (regla del director: solo 2 drivers).
+    p["editorial"]["contexto"]["XAUUSD"] = p["editorial"]["contexto"]["XAUUSD"].replace(
+        "la tasa real a 10 años quedó en 2,78 por ciento", "el petróleo WTI quedó en 72,50 USD/barril")
+    p["huella"] = es._huella(p)
+    html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    correo = _correo(html)
+
+    seleccionados, sintesis = oh.seleccionar_drivers_correo(p["datos"]["hechos"])
+    assert len(seleccionados) == 2
+    assert "Síntesis de dominancia:" in correo
+    assert sintesis in correo
+
+
+def test_saludo_con_marcador_editable(tmp_path):
+    """Verifica el saludo editable y el marcador [Nombre del cliente] en la pieza."""
+    html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    assert 'id="cliente"' in html
+    assert 'class="saludo-cliente"' in html
+    assert "Nombre del cliente" in html
+    correo_html = html.split('id="correo-root"')[1]
+    assert '<span class="saludo-cliente">Estimado(a):</span>' in correo_html
+
+    pytest.importorskip("playwright.sync_api")
+    from playwright.sync_api import sync_playwright
+    ruta = tmp_path / "p.html"
+    ruta.write_text(html, encoding="utf-8")
+    with sync_playwright() as p:
+        b = p.chromium.launch()
+        pg = b.new_page()
+        pg.goto(ruta.as_uri())
+        v = pg.locator("#vista-correo")
+        assert "Estimado(a):" in v.inner_text()
+        pg.fill("#cliente", "Estimado Carlos")
+        assert "Estimado Carlos:" in v.inner_text()
+        b.close()
+
+
+def test_preheader_oculto_y_asunto_sugerido(tmp_path):
+    """Verifica asunto_sugerido, preheader_sugerido y el bloque preheader oculto en el HTML."""
+    p = _pieza(tmp_path)
+    a = p["datos"]["activos"][0]
+    ed = p["editorial"]
+    d = p["datos"]
+
+    asunto = oh.asunto_sugerido(a, ed.get("fuentes"))
+    assert asunto == oh.titular_base(a)
+    assert "El oro en" in asunto
+
+    preheader = oh.preheader_sugerido(a, ed.get("fuentes"), d)
+    assert f"Sesgo {a['lectura']['direccion'].lower()} en 4H condicionado a la línea de {a['fmt']['invalidacion']}." in preheader
+    assert "Qué proyecta Goldman Sachs" in preheader
+
+    html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    assert 'display:none;font-size:1px;color:#EEF2F1;line-height:1px;' in html
+    assert '&zwnj;&nbsp;' in html
+    assert preheader in html
+    assert "Asunto sugerido:" in html
+    assert "Preheader:" in html
+
+
+
+def test_el_contexto_no_puede_citar_un_tercer_driver(tmp_path):
+    """Con 3 hechos citables, el texto que nombra el tercero se rechaza y dice cuáles son los 2 válidos."""
+    p = fx.pieza_oportunidad(tmp_path, laminas=True, dolar=True)
+    p["datos"]["hechos"].append({
+        "id": "wti", "driver": "Petróleo WTI", "nivel": "72,50 USD/barril", "fecha": "viernes 09/10",
+        "fuente": "MT5", "cambio_5d": "-1,20", "sentido": "bajó", "unidad_cambio": "USD",
+        "efecto": "presiona a la baja los costos energéticos", "con_la_lectura": "a favor de nuestra lectura",
+    })
+    p["editorial"]["contexto"]["XAUUSD"] += " El petróleo WTI quedó en 72,50 USD/barril."
+    p["huella"] = es._huella(p)
+    errs = es._errores_de_desarrollo(p)
+    assert any("solo 2 drivers" in e and "tasa_real" in e for e in errs)
