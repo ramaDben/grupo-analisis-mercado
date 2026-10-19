@@ -392,10 +392,8 @@ def seleccionar_drivers_correo(hechos: list[dict[str, Any]]) -> tuple[list[dict[
     if a_favor and en_contra:
         mejor_favor = max(a_favor, key=lambda h: (1 if es_dinamico(h) else 0, clave_fecha(h)))
         mejor_contra = max(en_contra, key=lambda h: (1 if es_dinamico(h) else 0, clave_fecha(h)))
-        if clave_fecha(mejor_contra) > clave_fecha(mejor_favor):
-            seleccionados = [mejor_contra, mejor_favor]
-        else:
-            seleccionados = [mejor_favor, mejor_contra]
+        # 1 y 1, siempre en este orden: primero el que respalda la lectura y después el que la tensiona.
+        seleccionados = [mejor_favor, mejor_contra]
     else:
         dinamicos = [h for h in hechos if es_dinamico(h) and h.get("efecto")]
         if len(dinamicos) >= 2:
@@ -444,11 +442,11 @@ def _hechos_correo(hechos: list[dict[str, Any]], c: dict[str, str]) -> str:
             f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="{c["fondo"]}" '
             f'style="background:{c["fondo"]};border:1px solid {c["linea"]};border-left:3px solid #50C0A8;border-radius:6px;margin:10px 0 14px 0;">'
             f'<tr><td style="padding:10px 14px;font-family:{F_SANS};font-size:13px;line-height:19px;color:{c["texto_1"]};">'
-            f'<strong style="color:{c["acento"]};">Síntesis de dominancia:</strong> {ih.e(sintesis)}'
+            f'<strong style="color:{c["acento"]};">Qué pesa más hoy:</strong> {ih.e(sintesis)}'
             f'</td></tr></table>'
         )
 
-    return (_rotulo(f"Los drivers al {ih.e(_fecha_hechos(seleccionados))}", c, margen="10px 0 8px 0")
+    return (_rotulo(f"Lo que mueve el precio al {ih.e(_fecha_hechos(seleccionados))}", c, margen="10px 0 8px 0")
             + _tabla(f'<tr>{cab}</tr>' + "".join(filas))
             + sintesis_html
             + _separador(8))
@@ -500,42 +498,19 @@ _FLECHAS_DIR = {
 }
 
 
-def _seleccionar_bancos_correo(fuentes: list[dict[str, Any]], direccion: str) -> list[dict[str, Any]]:
-    """Selecciona hasta un banco a favor y uno en contra de la lista cerrada de prestigio."""
-    bancos = fu.bancos(fuentes) if hasattr(fu, "bancos") else [
-        f for f in fuentes if isinstance(f, dict) and f.get("entidad")
-    ]
-    a_favor = [b for b in bancos if not fu.discrepa(b, direccion)]
-    en_contra = [b for b in bancos if fu.discrepa(b, direccion)]
-    a_favor.sort(key=lambda b: b.get("fecha", ""), reverse=True)
-    en_contra.sort(key=lambda b: b.get("fecha", ""), reverse=True)
-    seleccionados = []
-    if a_favor:
-        seleccionados.append(a_favor[0])
-    if en_contra:
-        seleccionados.append(en_contra[0])
-    return seleccionados
-
-
 def _voces_correo(fuentes: list[dict[str, Any]], direccion: str, c: dict[str, str]) -> str:
     """Las voces bancarias seleccionadas (hasta 1 a favor y 1 en contra) con flechas y sin semáforos."""
     if not fuentes:
         return ""
-    if hasattr(fu, "seleccionar_bancos_correo"):
-        bancos_sel = fu.seleccionar_bancos_correo(fuentes, direccion)
-    else:
-        bancos_sel = _seleccionar_bancos_correo(fuentes, direccion)
-
+    bancos_sel = fu.seleccionar_bancos_correo(fuentes, direccion)
     if not bancos_sel:
         return ""
 
-    flechas = _FLECHAS_DIR.get(direccion.upper(), ("⬇️", "⬆️"))
+    flecha = _FLECHAS_DIR.get(direccion.upper(), ("⬇️", "⬆️"))[0]
     tarjetas = []
     for f in bancos_sel:
-        discrepa = fu.discrepa(f, direccion)
-        color_etiqueta = "#6B7779" if discrepa else "#2F8F7A"
-        flecha = flechas[1] if discrepa else flechas[0]
-        texto_postura = f"{flecha} {'En contra' if discrepa else 'A favor'} de nuestra lectura"
+        color_etiqueta = "#2F8F7A"
+        texto_postura = f"{flecha} Coincide con nuestra lectura {direccion.lower()}"
 
         tarjetas.append(
             f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#F8FAFC" '
@@ -556,11 +531,11 @@ def _voces_correo(fuentes: list[dict[str, Any]], direccion: str, c: dict[str, st
             f'</td></tr></table>'
         )
 
-    intro = _p("Contrastamos nuestro mapa técnico con las proyecciones públicas de la banca global. "
-               "Cuando una entidad ve distinto que nuestra lectura, lo transparentamos para ofrecer una perspectiva completa e informada.",
+    intro = _p("Contrastamos nuestra lectura con lo que publica la banca. Esta nota coincide con nuestro "
+               "escenario y le suma una confirmación externa.",
                c, tam=15, margen="0 0 14px 0")
 
-    return _rotulo("Qué dicen los bancos", c, margen="14px 0 8px 0") + intro + "".join(tarjetas) + _separador(8)
+    return _rotulo("Qué dice la banca", c, margen="14px 0 8px 0") + intro + "".join(tarjetas) + _separador(8)
 
 
 def _alto_png(ruta: Path, ancho: int) -> int:
@@ -621,8 +596,8 @@ def titular_base(a: dict[str, Any]) -> str:
     if rango:
         return f"{_articulo_sujeto(a['nombre'])} en {f['precio']}: se mueve en rango entre {rango[0]} y {rango[1]}"
     return (
-        f"{_articulo_sujeto(a['nombre'])} en {f['precio']}: la línea de seguridad en {f['invalidacion']} "
-        f"marca el pulso {lec['direccion'].lower()} hacia {f['objetivo_tori']}"
+        f"{_articulo_sujeto(a['nombre'])} en {f['precio']}: el nivel {f['invalidacion']} define la lectura "
+        f"{lec['direccion'].lower()} hacia {f['objetivo_tori']}"
     )
 
 
@@ -659,15 +634,12 @@ def titular_variante(a: dict[str, Any], fuentes: list[dict[str, Any]]) -> str:
     if _bordes_rango(a):
         return titular_base(a)
     direccion = a["lectura"]["direccion"]
-    if hasattr(fu, "seleccionar_bancos_correo"):
-        bancos_sel = fu.seleccionar_bancos_correo(fuentes, direccion)
-    else:
-        bancos_sel = _seleccionar_bancos_correo(fuentes, direccion)
-
-    a_favor = [b for b in bancos_sel if not fu.discrepa(b, direccion)]
-    en_contra = [b for b in bancos_sel if fu.discrepa(b, direccion)]
-    if len(a_favor) != 1 or len(en_contra) != 1:
+    bancos_sel = fu.seleccionar_bancos_correo(fuentes, direccion)
+    en_contra = [b for b in fu.bancos(fuentes) if fu.discrepa(b, direccion)]
+    a_favor = bancos_sel
+    if len(a_favor) != 1 or len(en_contra) < 1:
         return titular_base(a)
+    en_contra = [max(en_contra, key=lambda b: str(b.get("fecha", "")))]
 
     b_favor, b_contra = a_favor[0], en_contra[0]
     nums_favor = _NUMERO.findall(b_favor.get("tesis", ""))
@@ -700,48 +672,29 @@ def titular_correo(a: dict[str, Any], fuentes: list[dict[str, Any]] | None = Non
 
 
 def asunto_sugerido(a: dict[str, Any], fuentes: list[dict[str, Any]] | None = None, variante: bool = False) -> str:
-    """Función pura y exportada: el titular sugerido como asunto, con la fórmula de seguimiento."""
-    return f"Seguimiento de nuestra llamada: {titular_correo(a, fuentes, variante)}"
+    """Función pura y exportada: el asunto, con una sola cifra (el precio) para que se lea entero en el celular.
+
+    El titular completo carga tres cifras y en la bandeja de entrada se corta: el asunto promete lo que
+    el correo entrega (el nivel que define la lectura) y deja la curiosidad abierta.
+    """
+    if variante or _bordes_rango(a):
+        return titular_correo(a, fuentes, variante)
+    return f"{_articulo_sujeto(a['nombre'])} en {a['fmt']['precio']}: el nivel clave que vigila la mesa"
 
 
 def preheader_sugerido(a: dict[str, Any], fuentes: list[dict[str, Any]] | None = None,
                        d: dict[str, Any] | None = None) -> str:
-    """Texto descriptivo para la bandeja de entrada: lectura técnica, bancos y agenda."""
-    lec, f = a["lectura"], a["fmt"]
+    """El texto que se lee junto al asunto: nuestra lectura, el respaldo de un banco y los dos factores del día."""
+    lec = a["lectura"]
     temp = a.get("temporalidad", "4H").split()[0]
     rango = _bordes_rango(a)
     if rango:
-        base = f"Sesgo lateral en {temp}: el precio se mueve entre {rango[0]} y {rango[1]}."
+        base = f"Nuestra lectura en {temp}: el precio se mueve entre {rango[0]} y {rango[1]}"
     else:
-        base = f"Sesgo {lec['direccion'].lower()} en {temp} condicionado a la línea de {f['invalidacion']}."
-
-    if hasattr(fu, "seleccionar_bancos_correo"):
-        bancos_sel = fu.seleccionar_bancos_correo(fuentes or [], lec["direccion"])
-    else:
-        bancos_sel = _seleccionar_bancos_correo(fuentes or [], lec["direccion"])
-
-    bancos_txt = ""
-    if len(bancos_sel) >= 2:
-        bancos_txt = f" Qué proyectan {bancos_sel[0]['entidad']} y {bancos_sel[1]['entidad']}"
-    elif len(bancos_sel) == 1:
-        bancos_txt = f" Qué proyecta {bancos_sel[0]['entidad']}"
-
-    eventos = ((d or {}).get("agenda") or {}).get("eventos") or []
-    paises = []
-    for ev in eventos:
-        pais = ev.get("pais", "")
-        if pais and pais not in paises:
-            paises.append(pais)
-
-    if paises:
-        p_str = " y ".join(paises[:2])
-        cierre = f", y qué vigila la mesa antes de los datos de {p_str}."
-    else:
-        cierre = ", y qué vigila la mesa antes de los próximos datos macroeconómicos."
-
-    if bancos_txt:
-        return f"{base}{bancos_txt}{cierre}"
-    return f"{base}{cierre.lstrip(',')}"
+        base = f"Nuestra lectura {lec['direccion'].lower()} en {temp}"
+    bancos_sel = fu.seleccionar_bancos_correo(fuentes or [], lec["direccion"])
+    respaldo = f", el respaldo de {bancos_sel[0]['entidad']}" if bancos_sel else ""
+    return f"{base}{respaldo} y los dos factores que mueven la sesión de hoy."
 
 
 def _hero_activo(a: dict[str, Any], titular: str, c: dict[str, str], bajada: str = "", autor=None,
@@ -915,10 +868,10 @@ def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: P
         f'style="background:{c["fondo"]};border:1px solid {c["linea"]};border-radius:10px;margin:20px 0 24px 0;">'
         f'<tr><td style="padding:20px 24px;">'
         f'<p style="margin:0 0 8px 0;font-family:{F_SANS};font-size:16px;line-height:22px;font-weight:800;color:{c["texto_1"]};">'
-        '¿Lo repasamos juntos en la plataforma MT5?</p>'
+        '¿Lo miramos juntos?</p>'
         f'<p style="margin:0;font-family:{F_SANS};font-size:14px;line-height:21px;color:{c["texto_borde"]};">'
-        'Si te quedó alguna duda de nuestra llamada, agendemos unos minutos para mirar el gráfico en tiempo real, '
-        'ver cómo se comporta el precio frente a la línea de seguridad y revisar la plataforma con tu cuenta de inversión.</p>'
+        'Si quieres contrastar estos niveles con el gráfico en tiempo real o comentar los datos de la semana, '
+        'lo vemos juntos en unos minutos.</p>'
         f'</td></tr></table>'
     )
 
@@ -956,7 +909,7 @@ def _boton_whatsapp(c: dict[str, str]) -> str:
         + _tabla(f'<tr><td align="center" bgcolor="{c["marca"]}" style="background:{c["marca"]};border-radius:8px;">'
                  f'<a href="{WA_MARCA}" style="display:block;padding:16px 20px;font-family:{F_SANS};font-size:17px;'
                  f'line-height:24px;font-weight:700;text-decoration:none;color:#06201A;">'
-                 'Escríbeme por WhatsApp para retomar nuestra conversación →</a></td></tr>')
+                 'Comentar el gráfico por WhatsApp →</a></td></tr>')
         + '</td></tr>'
     )
 
@@ -1028,22 +981,21 @@ def _marco_correo(d: dict[str, Any], ed: dict[str, Any], ejecutivo: dict[str, An
         + _tabla(
             f'<tr><td class="pad stack" valign="middle" style="padding:40px 16px 40px 40px;">'
             f'<p style="margin:0 0 14px 0;font-family:{F_SANS};font-size:11px;line-height:14px;letter-spacing:1.8px;'
-            f'text-transform:uppercase;font-weight:700;color:#50C0A8;">Seguimiento de nuestra llamada&nbsp;&nbsp;·&nbsp;&nbsp;Análisis técnico</p>'
+            f'text-transform:uppercase;font-weight:700;color:#50C0A8;">Seguimiento de nuestra llamada&nbsp;&nbsp;·&nbsp;&nbsp;Lectura de mercado</p>'
             f'<h1 class="h1" style="margin:0 0 14px 0;font-family:{F_DISPLAY};font-size:28px;line-height:35px;'
             f'font-weight:700;color:{c["blanco"]};"><!--TITULO--></h1>'
             f'<p style="margin:0;font-family:{F_SANS};font-size:15px;line-height:24px;color:{c["hero_texto_2"]};">'
-            'Hace unos días conversamos por teléfono y te hice llegar información de Grupo Inteligencia. '
-            'Aquí te comparto el análisis técnico y fundamental vigente, para que lo tengas a mano.</p></td>'
+            'En línea con lo que conversamos por teléfono, te preparé esta lectura para que sigas el mercado '
+            'con criterio técnico y sepas qué está mirando nuestra mesa.</p></td>'
             f'<td class="hide-m" width="130" valign="middle" align="center" style="padding:30px 36px 30px 0;">'
             f'<img src="{ih._data_uri(ih.LOGO)}" width="94" height="94" alt="" '
             f'style="display:block;border:0;width:94px;height:94px;"></td></tr>')
         + '</td></tr>'
         '<tr><td class="pad" style="padding:34px 40px 30px 40px;">'
         + _p('<span class="saludo-cliente">Estimado(a):</span>', c, tam=16, peso=600, color="texto_1", margen="0 0 12px 0")
-        + _p("Quisiera saber si pudiste revisar la información que te envié y si te surgieron preguntas. "
-             "A continuación te comparto el análisis técnico de la Dirección de Análisis Técnico de Grupo "
-             "Inteligencia: hacia dónde se inclina el activo, los niveles que vigilamos, lo que puede mover "
-             "su precio y qué dicen los bancos.",
+        + _p("Para continuar nuestra conversación, te comparto el mapa de trabajo que preparamos en Grupo "
+             "Inteligencia: hacia dónde se inclina el activo, los niveles que vigilamos, los dos factores "
+             "que lo mueven hoy y qué dice la banca.",
              c, tam=15, margen="0")
         + '</td></tr>'
     )

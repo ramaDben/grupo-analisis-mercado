@@ -176,35 +176,35 @@ def test_el_intento_guarda_las_validas_y_las_urls_descartadas(tmp_path):
 # ───────────────────────────────────────────── bancos correo: a lo sumo 1 y 1 (2026-10-19)
 
 
-def test_seleccionar_bancos_correo_uno_a_favor_y_uno_en_contra():
-    """Con varios bancos y organismos, toma exactamente 1 a favor y 1 en contra, priorizando el más reciente."""
+def test_seleccionar_bancos_correo_solo_uno_y_a_favor():
+    """Director, 2026-10-19: un solo banco, el más reciente que respalda la lectura; el que discrepa no sale."""
     fuentes = [
-        {"entidad": "World Gold Council", "fecha": "2026-10-15", "postura": "alcista"},
+        {"entidad": "World Gold Council", "fecha": "2026-10-15", "postura": "bajista"},
         {"entidad": "UBS", "fecha": "2026-10-13", "postura": "bajista"},
         {"entidad": "JPMorgan", "fecha": "2026-10-11", "postura": "bajista"},
         {"entidad": "Goldman Sachs", "fecha": "2026-10-14", "postura": "alcista"},
-        {"entidad": "Morgan Stanley", "fecha": "2026-10-10", "postura": "alcista"},
     ]
-    # Para dirección BAJISTA: UBS y JPMorgan son a favor (UBS más reciente); Goldman y Morgan son en contra (Goldman más reciente).
     sel = fu.seleccionar_bancos_correo(fuentes, "BAJISTA")
-    assert len(sel) == 2
-    assert sel[0]["entidad"] == "UBS"
-    assert sel[1]["entidad"] == "Goldman Sachs"
+    assert [b["entidad"] for b in sel] == ["UBS"]
 
 
-def test_seleccionar_bancos_correo_banco_unico():
-    """Si solo hay bancos de una postura (o uno solo), retorna una lista con ese único banco sin tarjetas vacías."""
+def test_seleccionar_bancos_correo_sin_banco_a_favor_no_rellena():
+    """Si ningún banco coincide con la lectura, el bloque no sale: no se rellena con uno que contradice."""
     solo_alcista = [
         {"entidad": "Goldman Sachs", "fecha": "2026-10-14", "postura": "alcista"},
-        {"entidad": "World Gold Council", "fecha": "2026-10-15", "postura": "alcista"},
+        {"entidad": "World Gold Council", "fecha": "2026-10-15", "postura": "bajista"},
     ]
-    sel_bajista = fu.seleccionar_bancos_correo(solo_alcista, "BAJISTA")
-    assert len(sel_bajista) == 1
-    assert sel_bajista[0]["entidad"] == "Goldman Sachs"
+    assert fu.seleccionar_bancos_correo(solo_alcista, "BAJISTA") == []
+    assert [b["entidad"] for b in fu.seleccionar_bancos_correo(solo_alcista, "ALCISTA")] == ["Goldman Sachs"]
 
-    sel_alcista = fu.seleccionar_bancos_correo(solo_alcista, "ALCISTA")
-    assert len(sel_alcista) == 1
-    assert sel_alcista[0]["entidad"] == "Goldman Sachs"
+
+def test_falta_banco_exige_que_alguno_respalde_la_lectura():
+    pieza = {"datos": {"activos": [{"lectura": {"direccion": "BAJISTA"}}]},
+             "editorial": {"fuentes": [{"entidad": "Goldman Sachs", "postura": "alcista"}]}}
+    errs = fu.falta_banco(pieza)
+    assert errs and "ningún banco respalda nuestra lectura bajista" in errs[0]
+    pieza["editorial"]["fuentes"].append({"entidad": "UBS", "postura": "bajista"})
+    assert fu.falta_banco(pieza) == []
 
 
 def test_seleccionar_bancos_correo_sin_bancos():
