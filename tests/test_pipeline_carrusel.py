@@ -1022,8 +1022,9 @@ def _lectura_alcista(objetivo=True):
     return Lectura(
         ticker="XAUUSD", marco="H4", precio=4120.0, direccion="ALCISTA", estado="TENDENCIA",
         lineas=(seg,), en_prueba=None, vigilar=ref, invalidacion=ref, objetivo=obj, escenarios=esc,
-        salida=("La posición se cierra cuando una vela de 4 horas cierra al otro lado de la línea "
-                "de seguridad, hoy en 4.080,00. No hay objetivo fijo."),
+        salida=("En compras, sal si una vela de 4 horas cierra bajo la línea de seguridad (la que "
+                "protege tu operación), hoy en 4.080,00. Mientras no pase, mantén la posición y "
+                "deja correr la ganancia."),
         conceptos=(), avisos=(), metricas={}, vela=200,
     )
 
@@ -1075,7 +1076,8 @@ def test_el_mensaje_sale_de_la_lectura():
     assert "⬆️ Mientras el precio cierre sobre 4.080,00, la tendencia alcista sigue." in msg
     assert "⏱️ *Temporalidad*: 4H · marco swing (de una a dos semanas)" in msg
     assert "💡 Por qué 4H acá:" in msg
-    assert "No hay objetivo fijo." in msg
+    assert "En compras, sal si una vela de 4 horas cierra bajo la línea de seguridad" in msg
+    assert "al otro lado" not in msg and "No hay objetivo fijo" not in msg
     assert "falso quiebre" not in msg
     assert "—" not in msg and "–" not in msg
 

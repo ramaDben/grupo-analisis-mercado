@@ -65,19 +65,36 @@ def conceptos(estado: str) -> tuple[str, ...]:
     }[estado]
 
 
-def salida(estado: str, marco: str, invalidacion: Referencia | None, digits: int,
-           seguimiento: Linea | None = None) -> str:
-    """La regla de salida de Tori (doctrina 2.8): vela que cierra al otro lado de la línea."""
-    if estado == "RANGO":
-        return ("Dentro del rango se opera el falso quiebre: la posición se cierra si el precio "
-                "vuelve a cerrar fuera del borde que había roto.")
+def salida(estado: str, direccion: str, marco: str, invalidacion: Referencia | None, digits: int,
+           seguimiento: Linea | None = None, objetivo: Referencia | None = None) -> str:
+    """La regla de salida de Tori (doctrina 2.8): vela que cierra contra la línea de seguridad.
+
+    Nombra la operación y el sentido ("En compras, sal si cierra bajo"), porque "al otro lado"
+    obligaba al cliente a deducir de qué lado estaba el riesgo. La falta de objetivo fijo se dice
+    en positivo: se sale por la vela y no por un precio, así que la ganancia corre mientras la
+    línea aguante. PRUEBA no lleva texto propio: se lee con la dirección de la lectura.
+    """
+    if estado == "RANGO" or direccion not in ("ALCISTA", "BAJISTA"):
+        return ("En rango se opera el falso quiebre hacia el borde opuesto: sal si "
+                f"{VELA.get(marco, marco)} vuelve a cerrar fuera del rango, porque ahí el quiebre "
+                "no era falso.")
     if invalidacion is None:
-        return "Todavía no hay línea de seguridad trazada, así que no hay salida que medir."
-    texto = (f"La posición se cierra cuando {VELA.get(marco, marco)} cierra al otro lado de la "
-             f"línea de seguridad, hoy en {_p(invalidacion.precio, digits)}. No hay objetivo fijo.")
+        return ("Todavía no hay línea de seguridad trazada, así que no hay salida que medir: "
+                "conviene esperar a que se trace antes de entrar.")
+    sube = direccion == "ALCISTA"
+    operacion = "compras" if sube else "ventas"
+    contra = "bajo" if sube else "sobre"
+    por = " por ruptura" if estado == "RUPTURA" else ""
+    texto = (f"En {operacion}{por}, sal si {VELA.get(marco, marco)} cierra {contra} la línea de "
+             f"seguridad (la que protege tu operación), hoy en {_p(invalidacion.precio, digits)}. ")
+    if objetivo is not None:
+        texto += (f"Mientras no pase, mantén la posición; el objetivo en {_p(objetivo.precio, digits)} "
+                  "es una referencia, no una orden de salida.")
+    else:
+        texto += "Mientras no pase, mantén la posición y deja correr la ganancia."
     if seguimiento is not None:
-        texto += (f" Como el precio aceleró, también vale cerrar cuando una vela cierre al otro lado "
-                  f"de la línea de seguimiento, hoy en {_p(seguimiento.valor_actual, digits)}.")
+        texto += (f" Como el precio aceleró, también puedes asegurar ganancia si esa vela cierra "
+                  f"{contra} la línea de seguimiento, hoy en {_p(seguimiento.valor_actual, digits)}.")
     return texto
 
 
