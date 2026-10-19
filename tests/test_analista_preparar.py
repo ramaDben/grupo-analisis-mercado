@@ -385,3 +385,36 @@ def test_el_grafico_real_pide_velas_suficientes_para_las_diagonales(tmp_path, mo
 def test_la_fecha_corta_no_lleva_guion():
     """En la lámina, «11-10» con Plus Jakarta Sans se ve como un guion medio (prueba real, W41)."""
     assert pr.fecha_corta(datetime(2026, 10, 11, 12, 0, tzinfo=SCL)) == "domingo 11/10"
+
+
+def _registro_con(tmp_path, direccion, motivo=None):
+    ruta = tmp_path / "registro.json"
+    d = tmp_path / "previo"
+    d.mkdir()
+    (d / "pieza.json").write_text("{}", encoding="utf-8")
+    rg.anotar("XAUUSD", d, AHORA_LUNES - timedelta(days=9), direccion, {"nombre": "Camila", "id": "1"}, ruta)
+    if motivo:
+        rg.caducar("XAUUSD", motivo, AHORA_LUNES - timedelta(days=3), ruta)
+    return ruta
+
+
+def test_si_la_lectura_cambio_de_direccion_la_pieza_lleva_la_anterior(tmp_path):
+    hoy = fx.lectura(ticker="XAUUSD").direccion
+    previa = "ALCISTA" if hoy != "ALCISTA" else "BAJISTA"
+    ruta = _registro_con(tmp_path, previa, "el precio tocó la invalidación")
+    hecha = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES,
+                        _lectores(tmp_path / "ref", registro=ruta))
+    ant = hecha.pieza["datos"]["anterior"]
+    assert ant["direccion"] == previa and ant["motivo"] == "el precio tocó la invalidación"
+    assert ant["fecha"] == pr.fecha_corta(AHORA_LUNES - timedelta(days=9))
+
+
+def test_si_la_direccion_es_la_misma_o_no_hay_historia_no_hay_anterior(tmp_path):
+    hoy = fx.lectura(ticker="XAUUSD").direccion
+    ruta = _registro_con(tmp_path, hoy)
+    igual = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p1", AHORA_LUNES,
+                        _lectores(tmp_path / "ref", registro=ruta))
+    assert "anterior" not in igual.pieza["datos"]
+    sin = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p2", AHORA_LUNES,
+                      _lectores(tmp_path / "ref2", registro=tmp_path / "vacio.json"))
+    assert "anterior" not in sin.pieza["datos"]

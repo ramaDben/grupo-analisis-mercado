@@ -684,3 +684,78 @@ def test_el_contexto_no_puede_citar_un_tercer_driver(tmp_path):
     p["huella"] = es._huella(p)
     errs = es._errores_de_desarrollo(p)
     assert any("solo 2 drivers" in e and "tasa_real" in e for e in errs)
+
+
+def _con_anterior(tmp_path, direccion="ALCISTA", motivo=""):
+    p = fx.pieza_oportunidad(tmp_path, laminas=True, dolar=True)
+    p["datos"]["anterior"] = {"direccion": direccion, "fecha": "17/10", "motivo": motivo}
+    p["huella"] = es._huella(p)
+    return _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+
+
+def test_si_la_lectura_cambio_el_correo_cuenta_de_donde_venimos_y_por_que(tmp_path):
+    correo = _con_anterior(tmp_path, motivo="el precio tocó la invalidación")
+    assert "Cambio de lectura:" in correo
+    assert "el 17/10 era alcista" in correo
+    assert "el precio tocó el nivel que invalidaba la lectura anterior" in correo
+    assert correo.index("Cambio de lectura:") < correo.index("Los drivers al")
+
+
+def test_sin_motivo_de_caducidad_dice_que_la_lectura_anterior_cumplio_su_vigencia(tmp_path):
+    correo = _con_anterior(tmp_path)
+    assert "cumplió su vigencia" in correo
+
+
+def test_si_la_direccion_no_cambio_no_aparece_la_linea(tmp_path):
+    p = fx.pieza_oportunidad(tmp_path, laminas=True, dolar=True)
+    hoy = p["datos"]["activos"][0]["lectura"]["direccion"]
+    p["datos"]["anterior"] = {"direccion": hoy, "fecha": "17/10", "motivo": ""}
+    p["huella"] = es._huella(p)
+    assert "Cambio de lectura:" not in _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+    assert "Cambio de lectura:" not in _correo(oh.armar(fx.pieza_oportunidad(tmp_path, laminas=True, dolar=True),
+                                                        tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+
+
+def test_el_cambio_de_lectura_dice_lo_que_ve_hoy_en_un_rango(tmp_path):
+    p = fx.pieza_oportunidad(tmp_path, laminas=True, dolar=True)
+    a = p["datos"]["activos"][0]
+    a["lectura"]["direccion"] = "LATERAL"
+    a["fmt"].update(borde_superior="4.195,31", borde_inferior="4.138,40")
+    p["datos"]["anterior"] = {"direccion": "BAJISTA", "fecha": "17/10", "motivo": ""}
+    p["huella"] = es._huella(p)
+    correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+    assert "el 17/10 era bajista y hoy es lateral" in correo
+    assert "Hoy el precio se mueve en un rango entre 4.138,40 y 4.195,31, sin una tendencia que lo guíe." in correo
+
+
+def test_el_cambio_de_lectura_a_tendencia_dice_el_nivel_que_la_anula_y_el_objetivo(tmp_path):
+    a = fx.pieza_oportunidad(tmp_path, laminas=True, dolar=True)["datos"]["activos"][0]
+    previa = "LATERAL" if a["lectura"]["direccion"] != "LATERAL" else "BAJISTA"
+    correo = _con_anterior(tmp_path, direccion=previa)
+    f = a["fmt"]
+    assert f"Hoy la tendencia es {a['lectura']['direccion'].lower()}: se anula si cierra" in correo
+    assert f["invalidacion"] in correo and f["objetivo_tori"] in correo
+
+
+def _activo_en_rango(tmp_path):
+    p = fx.pieza_oportunidad(tmp_path, laminas=True, dolar=True)
+    a = p["datos"]["activos"][0]
+    a["lectura"]["direccion"] = "LATERAL"
+    a["fmt"].update(invalidacion="", objetivo_tori="", borde_superior="4.195,31", borde_inferior="4.138,40")
+    return p, a
+
+
+def test_un_activo_en_rango_no_arma_titular_ni_preheader_con_huecos(tmp_path):
+    p, a = _activo_en_rango(tmp_path)
+    assert oh.titular_base(a).endswith("se mueve en rango entre 4.138,40 y 4.195,31")
+    assert oh.titular_correo(a, p["editorial"]["fuentes"], variante=True) == oh.titular_base(a)
+    pre = oh.preheader_sugerido(a, p["editorial"]["fuentes"], p["datos"])
+    assert pre.startswith("Sesgo lateral") and "4.138,40" in pre and "línea de ." not in pre
+
+
+def test_en_rango_la_tira_de_cifras_muestra_los_bordes_y_no_sin_nivel(tmp_path):
+    p, a = _activo_en_rango(tmp_path)
+    p["huella"] = es._huella(p)
+    correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+    assert "Soporte del rango" in correo and "Resistencia del rango" in correo
+    assert "sin nivel" not in correo

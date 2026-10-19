@@ -127,3 +127,17 @@ def test_sin_el_grafico_en_disco_el_analisis_no_esta_vigente(tmp_path):
     assert rg.vigente("XAUUSD", CREADA + timedelta(days=1), ruta) is not None
     (d / "grafico_xauusd.png").unlink()
     assert rg.vigente("XAUUSD", CREADA + timedelta(days=1), ruta) is None
+
+
+def test_anterior_devuelve_la_direccion_y_el_motivo_aunque_el_analisis_ya_no_valga(tmp_path):
+    ruta, _ = _anotar(tmp_path)
+    rg.caducar("XAUUSD", "el precio tocó la invalidación", CREADA + timedelta(days=2), ruta)
+    previa = rg.anterior("XAUUSD", ruta)
+    assert previa == {"direccion": "ALCISTA", "creada": CREADA, "motivo": "el precio tocó la invalidación"}
+
+
+def test_anterior_sin_caducidad_no_trae_motivo_y_sin_historia_es_none(tmp_path):
+    ruta, _ = _anotar(tmp_path)
+    assert rg.anterior("XAUUSD", ruta)["motivo"] == ""
+    assert rg.anterior("WTI", ruta) is None
+    assert rg.anterior("XAUUSD", tmp_path / "no_existe.json") is None

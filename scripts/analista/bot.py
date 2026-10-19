@@ -50,17 +50,20 @@ ESTADO = RAIZ / "data" / ".bot_telegram_estado.json"
 LOG = RAIZ / "data" / "logs" / "bot_telegram.log"
 INSTANCIA = RAIZ / "data" / ".bot_analistas.lock"
 
-AYUDA = """Bot de análisis · Grupo Inteligencia
+AYUDA = """📚 Bot de análisis · Grupo Inteligencia
 
-1) Análisis completo de un activo (técnico, fundamental y voces de bancos), para abrir en tu navegador:
-/oportunidad oro
-Con el nombre de tu cliente: /oportunidad oro Juan
-Vale 7 días: si ya existe uno vigente, te lo entrego al tiro.
+1) /oportunidad oro
+El análisis completo del activo (técnico, fundamental y qué dicen los bancos), en un archivo que abres en tu navegador.
+Con tu cliente: /oportunidad oro Juan
+Dura 7 días: si ya hay uno vigente, te llega al tiro. El primero de un activo demora unos minutos.
 
-2) Cómo va un activo, con lámina y texto listos para WhatsApp:
-/seguimiento oro (con nombre: /seguimiento oro Juan)
-Activos: oro, dolar, cobre, petroleo, brent, nasdaq, bitcoin o el símbolo exacto de MT5
-Tus pedidos de hoy: /estado"""
+2) /seguimiento oro
+Cómo va el activo hoy: lámina y texto listos para WhatsApp.
+Con tu cliente: /seguimiento oro Juan
+Antes debe existir el /oportunidad de ese activo. Dura 30 minutos.
+
+Activos: oro, dolar, cobre, petroleo, brent, nasdaq, bitcoin o el símbolo exacto de MT5.
+Tus pedidos y cupo de hoy: /estado"""
 
 # El menú que Telegram muestra al tocar «/»: los ejecutivos no tienen que recordar nada.
 MENU = [

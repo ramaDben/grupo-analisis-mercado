@@ -53,6 +53,19 @@ def _ultima(entradas: list[dict[str, Any]], ticker: str) -> dict[str, Any] | Non
     return next((e for e in reversed(entradas) if e.get("ticker") == ticker), None)
 
 
+def anterior(ticker: str, ruta: Path = RUTA) -> dict[str, Any] | None:
+    """La lectura del análisis previo del activo, vigente o no, para contar el cambio de lectura.
+
+    Devuelve `direccion`, `creada` (datetime) y `motivo` (por qué caducó antes de los 7 días, o "" si
+    simplemente venció). Sin análisis previo o sin dirección anotada, None.
+    """
+    e = _ultima(_leer(ruta), ticker)
+    if e is None or not e.get("direccion"):
+        return None
+    return {"direccion": e["direccion"], "creada": datetime.fromisoformat(e["creada"]),
+            "motivo": (e.get("caducada") or {}).get("motivo", "")}
+
+
 def vigente(ticker: str, ahora: datetime, ruta: Path = RUTA) -> dict[str, Any] | None:
     """El análisis vigente del activo, si existe, no caducó, no venció y su carpeta sigue en disco."""
     e = _ultima(_leer(ruta), ticker)

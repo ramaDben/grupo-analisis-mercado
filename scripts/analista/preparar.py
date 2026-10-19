@@ -405,6 +405,11 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
              "agenda": limpio["agenda"], "curva": limpio["curva"],
              "fundamental": {"fuera_catalogo": bool(cat.get("fuera_catalogo")), "sin_drivers": not drivers,
                              "referencia": origen}}
+    previa = rg.anterior(ticker, lec.registro or rg.RUTA)
+    if previa and previa["direccion"] != activo["lectura"]["direccion"]:
+        # Solo si la lectura cambió de dirección: el correo lo cuenta para que no parezca una contradicción.
+        datos["anterior"] = {"direccion": previa["direccion"], "fecha": fecha_corta(previa["creada"]),
+                             "motivo": previa["motivo"]}
     pieza = es.nueva_pieza("oportunidad", {"ticker": ticker}, datos, imagenes, extra_campos=extra)
     return Preparada(pieza, avisos)
 
