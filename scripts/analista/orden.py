@@ -20,6 +20,9 @@ class PedidoInvalido(ValueError):
 
 
 PIEZAS = ("oportunidad", "seguimiento")
+# Solo el director (config `admins`): rehace el análisis de un activo, o de todos los vigentes.
+RECREAR = "recrear"
+TODAS = "todas"
 # Retirados el 2026-10-12 (spec oportunidad-semanal §2): responden con la ayuda.
 RETIRADOS = ("activo", "calendario", "dato", "jornada")
 SERVICIO = ("start", "ayuda", "id", "estado")
@@ -133,6 +136,18 @@ def interpretar(texto: str, universo: list[dict[str, Any]] | None = None) -> Ord
     comando = cabeza[1:].split("@", 1)[0].lower()
     if comando in SERVICIO or comando in RETIRADOS:
         return Orden(pieza="ayuda" if comando in RETIRADOS else comando)
+    if comando == RECREAR:
+        cuerpo = resto.strip()
+        if not cuerpo:
+            raise PedidoInvalido("Falta el activo. Escribe por ejemplo: /recrear oro, o /recrear todas")
+        if _plano(cuerpo) in (TODAS, "todos"):
+            return Orden(pieza=RECREAR, args={"ticker": TODAS})
+        if universo is None:
+            import screener_gi as sc
+
+            universo = sc.cargar_universo(solo_renderizables=False)
+        args, _ = _activo_y_saludo(cuerpo, universo)
+        return Orden(pieza=RECREAR, args=args)
     if comando not in PIEZAS:
         raise PedidoInvalido(f"Ese comando no existe. Escribe /ayuda y te muestro los que sí.")
 

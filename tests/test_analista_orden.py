@@ -136,3 +136,11 @@ def test_seguimiento_tambien_deja_los_simbolos_libres_para_el_terminal():
 def test_oportunidad_rechaza_lo_que_no_parece_un_simbolo():
     with pytest.raises(od.PedidoInvalido):
         od.interpretar("/oportunidad ¿¿??", UNIVERSO_MINIMO)
+
+
+def test_recrear_un_activo_o_todas():
+    uni = [{"ticker": "XAUUSD", "nombre": "Oro"}]
+    assert od.interpretar("/recrear oro", uni) == od.Orden("recrear", {"ticker": "XAUUSD"})
+    assert od.interpretar("/recrear Todas", uni) == od.Orden("recrear", {"ticker": "todas"})
+    with pytest.raises(od.PedidoInvalido):
+        od.interpretar("/recrear", uni)

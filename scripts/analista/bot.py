@@ -65,6 +65,8 @@ Antes debe existir el /oportunidad de ese activo. Dura 30 minutos.
 Activos: oro, dolar, cobre, petroleo, brent, nasdaq, bitcoin o el símbolo exacto de MT5.
 Tus pedidos y cupo de hoy: /estado"""
 
+SIN_COMANDO = "Ese comando no existe. Escribe /ayuda y te muestro los que sí."
+
 # El menú que Telegram muestra al tocar «/»: los ejecutivos no tienen que recordar nada.
 MENU = [
     ("oportunidad", "Análisis de un activo (ej: /oportunidad oro)"),
@@ -183,6 +185,7 @@ class Pedido:
     usuario: str
     chat: int
     orden: od.Orden
+    forzar: bool = False  # /recrear del director: ignora el análisis vigente y no gasta cupo
 
 
 @dataclass
@@ -363,6 +366,9 @@ class Atendedor:
         quien = {"nombre": ejecutivo["nombre"], "id": pedido.usuario}
         previa = rg.vigente(ticker, ahora, self.registro)  # un registro corrupto levanta: no es "sin análisis"
         avisos: list[str] = []
+        if pedido.forzar and previa is not None:
+            rg.caducar(ticker, "recreado por el director", ahora, self.registro)
+            previa = None
         if previa is not None:
             pieza_previa = pr.cargar_pieza(Path(previa["dir"]))
             motivo, aviso = self.verificar_vigencia(pieza_previa, ahora)
@@ -379,7 +385,8 @@ class Atendedor:
             if (previa.get("creado_por") or {}).get("id") != pedido.usuario:  # el reúso propio no cuenta
                 rg.anotar_reuso(ticker, quien, ahora, self.registro)
         else:
-            self._exigir_cupo(pedido.usuario, ahora)
+            if not pedido.forzar:
+                self._exigir_cupo(pedido.usuario, ahora)
             dir_pedido = self.dir_pedidos / ahora.strftime("%Y-%m-%d") / f"{ahora:%H%M%S}_oportunidad_{ih.slug(ticker)}"
             hecha = self._preparar(pedido.orden, dir_pedido, ahora)
             pieza, descartes, reintento = self._con_banco(dir_pedido, ahora.date())
@@ -390,7 +397,8 @@ class Atendedor:
                                    self.autor, dir_pedido / a["grafico"]),
                 "semanal", dir_pedido / cm.nombre_lamina(ticker))
             rg.anotar(ticker, dir_pedido, ahora, a["lectura"]["direccion"], quien, self.registro)
-            self.estado.consumir(pedido.usuario, ahora)
+            if not pedido.forzar:
+                self.estado.consumir(pedido.usuario, ahora)
             self.estado.guardar()
             avisos += [*hecha.avisos, *[f"Descarté una fuente: {d}" for d in descartes]]
             if reintento:
@@ -527,6 +535,7 @@ class Bot:
     cola: "queue.Queue[Pedido]" = field(default_factory=queue.Queue)
     ocupado: threading.Event = field(default_factory=threading.Event)
     generando: set[str] = field(default_factory=set)
+    por_confirmar: set[str] = field(default_factory=set)  # directores con un /recrear todas esperando el «sí»
     candado: threading.Lock = field(default_factory=threading.Lock, repr=False)
     avisos: av.Estado | None = None        # la alerta semanal: sin él, el bot no mide ni agenda nada
     agendador: Any = None
@@ -559,10 +568,23 @@ class Bot:
             return [Respuesta(chat, f"No estás autorizado para usar este bot. Tu número de usuario es {usuario}: "
                                     "pásaselo al director para que te dé acceso.")]
 
+        if usuario in self.por_confirmar:
+            self.por_confirmar.discard(usuario)
+            if od._plano(texto).strip(" .!") in ("si", "sip", "dale", "ok"):
+                return self._recrear_todas(usuario, chat)
+            return [Respuesta(chat, "Listo, no recreé nada.")]
+
         try:
             orden = od.interpretar(texto)
         except od.PedidoInvalido as exc:
+            if texto.lower().startswith("/recrear") and usuario not in self._admins():
+                return [Respuesta(chat, SIN_COMANDO)]
             return [Respuesta(chat, str(exc))]
+
+        if orden.pieza == od.RECREAR:
+            if usuario not in self._admins():
+                return [Respuesta(chat, SIN_COMANDO)]  # para el ejecutivo el comando no existe
+            return self._recrear(usuario, chat, orden)
 
         if orden.pieza in ("start", "ayuda"):
             return [Respuesta(chat, AYUDA)]
@@ -580,7 +602,36 @@ class Bot:
                 _log(f"no pude anotar la oportunidad en la medición: {traceback.format_exc()}")
         return self._encolar(usuario, chat, orden)
 
-    def _encolar(self, usuario: str, chat: int, orden: od.Orden) -> list[Respuesta]:
+    def _admins(self) -> set[str]:
+        return {str(x) for x in self.config.get("admins", [])}
+
+    def _recrear(self, usuario: str, chat: int, orden: od.Orden) -> list[Respuesta]:
+        ticker = orden.args["ticker"]
+        if ticker == od.TODAS:
+            vigentes = rg.vigentes(self.atendedor.reloj(), self.atendedor.registro)
+            if not vigentes:
+                return [Respuesta(chat, "No hay análisis vigentes que recrear.")]
+            self.por_confirmar.add(usuario)
+            return [Respuesta(chat, f"Voy a rehacer {len(vigentes)} análisis ({', '.join(vigentes)}) y reemplazan "
+                                    "lo que reciben los ejecutivos desde ahora. Gasta agy y tarda unos minutos por "
+                                    "activo. Responde «sí» para empezar.")]
+        return self._encolar(usuario, chat, od.Orden("oportunidad", {"ticker": ticker}), forzar=True)
+
+    def _recrear_todas(self, usuario: str, chat: int) -> list[Respuesta]:
+        vigentes = rg.vigentes(self.atendedor.reloj(), self.atendedor.registro)
+        if not vigentes:
+            return [Respuesta(chat, "No hay análisis vigentes que recrear.")]
+        respuestas = [Respuesta(chat, f"Empiezo a rehacer {len(vigentes)} análisis. Cada uno te llega cuando termina.")]
+        for t in vigentes:
+            orden = od.Orden("oportunidad", {"ticker": t})
+            with self.candado:
+                ocupada = orden.clave_base().lower() in self.generando
+            r = self._encolar(usuario, chat, orden, forzar=True)
+            if ocupada:  # ya venía armándose: se avisa; los «Recibido» sobran con el aviso de arriba
+                respuestas += r
+        return respuestas
+
+    def _encolar(self, usuario: str, chat: int, orden: od.Orden, forzar: bool = False) -> list[Respuesta]:
         if orden.pieza == "oportunidad":
             clave = orden.clave_base().lower()
             with self.candado:
@@ -590,7 +641,7 @@ class Bot:
                 self.generando.add(clave)
 
         en_cola = self.cola.qsize() + (1 if self.ocupado.is_set() else 0)
-        self.cola.put(Pedido(usuario, chat, orden))
+        self.cola.put(Pedido(usuario, chat, orden, forzar))
         _log(f"pedido {usuario}: {orden.clave_base()}")
         if en_cola:
             return [Respuesta(chat, f"Recibido. Hay {en_cola} pedido(s) antes que el tuyo.")]

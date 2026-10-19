@@ -76,6 +76,12 @@ def vigente(ticker: str, ahora: datetime, ruta: Path = RUTA) -> dict[str, Any] |
     return e if _completo(Path(e["dir"])) else None
 
 
+def vigentes(ahora: datetime, ruta: Path = RUTA) -> list[str]:
+    """Los activos que hoy tienen un análisis vigente, en el orden en que aparecen en el registro."""
+    tickers = list(dict.fromkeys(e["ticker"] for e in _leer(ruta) if e.get("ticker")))
+    return [t for t in tickers if vigente(t, ahora, ruta) is not None]
+
+
 def _completo(dir_pedido: Path) -> bool:
     """`pieza.json` y las imágenes que declara (el gráfico que la ficha incrusta) siguen en disco.
 
