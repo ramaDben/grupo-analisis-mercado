@@ -852,9 +852,7 @@ def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: P
     return (
         _hero_activo(a, titular, c, bajada=bajada, autor=autor, d=d)
         + '<tr><td class="pad" style="padding:28px 40px 0 40px;">'
-        + (_rotulo(ih.e(_titulo_analisis(a["nombre"])), c, margen="0 0 2px 0")
-           + _p(f"Realizado por {ih.e(_nombre_firma(autor.nombre))} · {ih.e(autor.cargo)} GI", c, tam=13,
-                color="texto_2", margen="0 0 14px 0")
+        + (_rotulo(ih.e(_titulo_analisis(a["nombre"])), c, margen="0 0 14px 0")
            if autor is not None else "")
         + grafico + _separador()
         + _p(ih.e(contexto), c)
