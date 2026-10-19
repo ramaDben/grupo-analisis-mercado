@@ -135,7 +135,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     print(f"Escuchando Telegram con {len(config['analistas'])} analista(s) autorizado(s). Ctrl+C para salir.")
     with instancia:
-        bot.Bot(tg, bot.Atendedor(config, bot.Estado.cargar(), autor)).escuchar()
+        el_bot = bot.Bot(tg, bot.Atendedor(config, bot.Estado.cargar(), autor))
+        el_bot.activar_avisos()  # la alerta de la semana: modo prueba (solo el director) hasta que el config diga «todos»
+        el_bot.escuchar()
     return 0
 
 

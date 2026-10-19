@@ -1,0 +1,572 @@
+"""El agendador interno del bot: qué toca y cuándo, sin repetir, con tope, y qué mide de la interacción."""
+from __future__ import annotations
+
+import ast
+import sys
+import threading
+from datetime import date, datetime
+from pathlib import Path
+from zoneinfo import ZoneInfo
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+
+from analista import avisos_semana as av  # noqa: E402
+from market_data_mcp.tools.calendar import _cargar_glosario, _enganchar_glosario  # noqa: E402
+
+SCL = ZoneInfo("America/Santiago")
+GLOSARIO = _cargar_glosario()
+
+
+def a(dia, h, m=0):
+    return datetime(2026, 10, dia, h, m, tzinfo=SCL)
+
+
+def ev(nombre, hora, pais="United States"):
+    e = {"nombre": nombre, "pais": pais, "impacto": "alto", "hora_servidor": hora, "forecast": "", "previo": "",
+         "actual": ""}
+    e["diccionario"] = _enganchar_glosario(nombre, GLOSARIO)
+    return e
+
+
+CPI = ev("CPI (MoM) (Sep)", "2026-10-21 09:30")          # miércoles
+NFP = ev("Nonfarm Payrolls (Sep)", "2026-10-21 09:30")    # miércoles, mismo día
+FOMC = ev("Fed Interest Rate Decision", "2026-10-21 15:00")
+PMI = ev("ISM Manufacturing PMI (Sep)", "2026-10-21 11:00")  # tier 2: no tiene víspera
+LUNES_0745 = a(19, 7, 45)
+MARTES_1600 = a(20, 16, 0)
+
+
+@pytest.fixture
+def estado(tmp_path):
+    return av.Estado(tmp_path / "avisos_semana.json")
+
+
+# ───────────────────────────────────────────── ventanas
+
+
+@pytest.mark.parametrize("ahora,tipos", [
+    (a(19, 7, 44), []), (a(19, 7, 45), ["mapa"]), (a(19, 8, 14), ["mapa"]), (a(19, 8, 15), []),
+    (a(20, 7, 45), []),                    # el martes no hay mapa
+    (a(20, 15, 59), []), (MARTES_1600, ["vispera"]), (a(20, 16, 29), ["vispera"]), (a(20, 16, 30), []),
+    (a(21, 16, 0), []),                    # el miércoles el dato ya salió: no hay víspera de nada
+])
+def test_ventanas(estado, ahora, tipos):
+    assert [x.tipo for x in av.que_toca(ahora, [CPI], estado, "1")] == tipos
+
+
+def test_la_vispera_de_un_dato_del_lunes_sale_el_viernes_a_las_16():
+    lunes = ev("CPI (MoM) (Sep)", "2026-10-26 09:30")
+    assert [x.tipo for x in av.que_toca(a(23, 16, 0), [lunes], av.Estado(Path("x")), "1")] == ["vispera"]
+    assert av.que_toca(a(25, 16, 0), [lunes], av.Estado(Path("x")), "1") == []   # domingo: no es día hábil
+
+
+def test_solo_tier_uno_tiene_vispera(estado):
+    assert av.que_toca(MARTES_1600, [PMI], estado, "1") == []
+
+
+def test_la_vispera_no_repite_el_mismo_dato_del_mismo_dia(estado):
+    fomc2 = ev("FOMC Statement", "2026-10-21 15:00")
+    avisos = av.que_toca(MARTES_1600, [FOMC, fomc2], estado, "1")
+    assert len(avisos) == 1
+
+
+# ───────────────────────────────────────────── una vez, y tras reinicio
+
+
+def test_un_aviso_enviado_no_se_repite_ni_tras_reiniciar(estado, tmp_path):
+    aviso = av.que_toca(LUNES_0745, [CPI], estado, "1")[0]
+    estado.anotar_envio("1", aviso, LUNES_0745, 77)
+    assert av.que_toca(a(19, 8, 0), [CPI], estado, "1") == []
+    reiniciado = av.Estado(tmp_path / "avisos_semana.json")
+    assert av.que_toca(a(19, 8, 0), [CPI], reiniciado, "1") == []
+
+
+def test_el_envio_a_un_ejecutivo_no_marca_a_otro(estado):
+    aviso = av.que_toca(LUNES_0745, [CPI], estado, "1")[0]
+    estado.anotar_envio("1", aviso, LUNES_0745, 1)
+    assert len(av.que_toca(LUNES_0745, [CPI], estado, "2")) == 1
+
+
+def test_tope_de_dos_por_ejecutivo_por_dia_y_gana_el_mayor_tier(estado):
+    # Martes 16:00: víspera de CPI (tier 1), NFP (tier 1) y FOMC (tier 1) del miércoles; mapa no aplica.
+    avisos = av.que_toca(MARTES_1600, [FOMC, CPI, NFP], estado, "1")
+    assert len(avisos) == 2
+    estado.anotar_envio("1", avisos[0], MARTES_1600, 1)
+    estado.anotar_envio("1", avisos[1], MARTES_1600, 2)
+    assert av.que_toca(a(20, 16, 10), [FOMC, CPI, NFP], estado, "1") == []   # el resto queda en el mapa
+
+
+def test_el_mapa_cuenta_para_el_tope(estado):
+    mapa = av.que_toca(LUNES_0745, [CPI], estado, "1")[0]
+    estado.anotar_envio("1", mapa, LUNES_0745, 1)
+    # Ese mismo lunes a las 16:00 hay víspera del martes: es el segundo aviso, cabe.
+    martes = ev("CPI (MoM) (Sep)", "2026-10-20 09:30")
+    assert len(av.que_toca(a(19, 16, 0), [martes], estado, "1")) == 1
+
+
+# ───────────────────────────────────────────── el agendador
+
+
+class Envios:
+    def __init__(self, falla=False):
+        self.enviados, self.falla = [], falla
+        self.n = 0
+        self.avisos_director: list[str] = []
+
+    def __call__(self, chat, aviso):
+        if self.falla:
+            raise RuntimeError("Telegram caído")
+        self.enviados.append((chat, aviso.tipo))
+        self.n += 1
+        return 100 + self.n
+
+    def director(self, chat, texto):
+        self.avisos_director.append(texto)
+        self.enviados.append((chat, "director:" + texto[:20]))
+
+
+CONFIG = {"analistas": {"10": {"nombre": "Dora", "rol": "director"}, "20": {"nombre": "Eli", "rol": "analista"}}}
+
+
+def agendador(estado, envios, ahora, leer, modo="todos"):
+    cfg = {**CONFIG, "avisos_semana": {"modo": modo}}
+    return av.Agendador(cfg, estado, envios, envios.director, lambda: ahora[0], leer)
+
+
+def test_el_agendador_dispara_una_vez_y_anota_solo_lo_confirmado(estado):
+    envios, ahora = Envios(), [LUNES_0745]
+    ag_ = agendador(estado, envios, ahora, lambda t: ("ok", [CPI]))
+    ag_.latido()
+    ag_.latido()
+    assert sorted(envios.enviados) == [("10", "mapa"), ("20", "mapa")]
+
+
+def test_un_envio_que_falla_sigue_pendiente_y_sale_en_el_siguiente_latido(estado):
+    envios, ahora = Envios(falla=True), [LUNES_0745]
+    ag_ = agendador(estado, envios, ahora, lambda t: ("ok", [CPI]))
+    ag_.latido()
+    assert envios.enviados == [] and estado.datos["enviados"] == []
+    envios.falla = False
+    ag_.latido()
+    assert len(envios.enviados) == 2
+
+
+def test_modo_prueba_manda_solo_al_director(estado):
+    envios, ahora = Envios(), [LUNES_0745]
+    agendador(estado, envios, ahora, lambda t: ("ok", [CPI]), modo="prueba").latido()
+    assert envios.enviados == [("10", "mapa")]
+
+
+def test_fuera_de_ventana_ni_siquiera_lee_el_calendario(estado):
+    llamadas = []
+    envios, ahora = Envios(), [a(21, 12, 0)]
+    agendador(estado, envios, ahora, lambda t: llamadas.append(t) or ("ok", [])).latido()
+    assert llamadas == [] and envios.enviados == []
+
+
+def test_calendario_caido_no_envia_avisa_al_director_una_vez_y_reintenta(estado):
+    envios, ahora = Envios(), [LUNES_0745]
+    estado_cal = ["sin_calendario"]
+    ag_ = agendador(estado, envios, ahora, lambda t: (estado_cal[0], [CPI] if estado_cal[0] == "ok" else []))
+    ag_.latido()
+    ag_.latido()
+    assert [e for e in envios.enviados if not e[1].startswith("director")] == []
+    assert len([e for e in envios.enviados if e[1].startswith("director")]) == 1
+    estado_cal[0] = "ok"
+    ahora[0] = a(19, 8, 0)
+    ag_.latido()
+    assert sorted(e for e in envios.enviados if e[1] == "mapa") == [("10", "mapa"), ("20", "mapa")]
+
+
+def test_semana_sin_eventos_fuertes_si_se_envia_cuando_el_calendario_respondio(estado):
+    envios, ahora = Envios(), [LUNES_0745]
+    agendador(estado, envios, ahora, lambda t: ("vacia", [])).latido()
+    assert len(envios.enviados) == 2
+
+
+# ───────────────────────────────────────────── cache de lecturas (menor 17)
+
+
+class LectorContador:
+    def __init__(self, respuesta: tuple[str, list] = ("ok", [CPI])):
+        self.llamadas = 0
+        self.respuesta = respuesta
+
+    def __call__(self, ahora: datetime) -> tuple[str, list]:
+        self.llamadas += 1
+        return self.respuesta
+
+
+def test_la_cache_del_agendador_evita_releer_en_cada_latido(estado):
+    envios = Envios()
+    lector = LectorContador(("ok", [CPI]))
+    ahora = [LUNES_0745]
+    ag_ = agendador(estado, envios, ahora, lector)
+
+    # 3 latidos en 3 minutos -> 1 lectura
+    ag_.latido()
+    ahora[0] = a(19, 7, 46)
+    ag_.latido()
+    ahora[0] = a(19, 7, 47)
+    ag_.latido()
+    assert lector.llamadas == 1
+
+    # a los 11 minutos (07:45 + 11 min = 07:56, ventana del mapa abierta) -> 2
+    ahora[0] = a(19, 7, 56)
+    ag_.latido()
+    assert lector.llamadas == 2
+
+
+def test_los_envios_fallidos_se_reintentan_cada_minuto_usando_la_cache(estado):
+    envios = Envios(falla=True)
+    lector = LectorContador(("ok", [CPI]))
+    ahora = [LUNES_0745]
+    ag_ = agendador(estado, envios, ahora, lector)
+
+    # Latido 1: Telegram falla, envio no se anota
+    ag_.latido()
+    assert lector.llamadas == 1
+    assert envios.enviados == []
+
+    # Latido 2: Telegram vuelve, reintenta y envia usando eventos de la cache sin llamar al lector
+    ahora[0] = a(19, 7, 46)
+    envios.falla = False
+    ag_.latido()
+    assert lector.llamadas == 1
+    assert len(envios.enviados) == 2
+
+
+def test_la_caida_del_calendario_no_se_cachea_y_se_reintenta_en_cada_latido(estado):
+    envios = Envios()
+    lector = LectorContador(("sin_calendario", []))
+    ahora = [LUNES_0745]
+    ag_ = agendador(estado, envios, ahora, lector)
+
+    ag_.latido()
+    assert lector.llamadas == 1
+
+    ahora[0] = a(19, 7, 46)
+    ag_.latido()
+    assert lector.llamadas == 2
+
+    ahora[0] = a(19, 7, 47)
+    ag_.latido()
+    assert lector.llamadas == 3
+
+
+def test_la_lectura_vacia_si_se_cachea(estado):
+    lector = LectorContador(("vacia", []))
+    ahora = [LUNES_0745]
+    ag_ = agendador(estado, Envios(), ahora, lector)
+
+    ag_.latido()
+    ahora[0] = a(19, 7, 46)
+    ag_.latido()
+    assert lector.llamadas == 1
+
+
+def test_el_cambio_de_dia_invalida_la_cache_del_agendador(estado):
+    lector = LectorContador(("ok", [CPI]))
+    ahora = [LUNES_0745]
+    ag_ = agendador(estado, Envios(), ahora, lector)
+
+    # Lectura inicial en dia 19
+    ag_._leer_con_cache(datetime(2026, 10, 19, 23, 58, tzinfo=SCL))
+    assert lector.llamadas == 1
+
+    # 4 minutos despues cronologicamente (< 10 min TTL), pero en dia 20: la cache se invalida
+    ag_._leer_con_cache(datetime(2026, 10, 20, 0, 2, tzinfo=SCL))
+    assert lector.llamadas == 2
+
+
+def test_leer_eventos_distingue_ok_parcial_sin_calendario_y_vacia():
+    def cargar_ok(solo_hoy=False, min_impact="low", ahora=None, pestanas=("thisWeek",)):
+        if "nextWeek" in pestanas:
+            return {"eventos": []}
+        return {"eventos": [CPI]}
+    assert av.leer_eventos(LUNES_0745, cargar_ok) == ("ok", [CPI])
+
+    def cargar_parcial(solo_hoy=False, min_impact="low", ahora=None, pestanas=("thisWeek",)):
+        if "nextWeek" in pestanas:
+            return {"error": "NO_CALENDAR_FEEDS"}
+        return {"eventos": [CPI]}
+    sit, evs = av.leer_eventos(LUNES_0745, cargar_parcial)
+    assert sit == "parcial" and evs == [CPI]
+
+    def cargar_caido(solo_hoy=False, min_impact="low", ahora=None, pestanas=("thisWeek",)):
+        return {"error": "NO_CALENDAR_FEEDS"}
+    assert av.leer_eventos(LUNES_0745, cargar_caido) == ("sin_calendario", [])
+
+    def cargar_vacio(solo_hoy=False, min_impact="low", ahora=None, pestanas=("thisWeek",)):
+        return {"eventos": []}
+    assert av.leer_eventos(LUNES_0745, cargar_vacio) == ("vacia", [])
+
+
+def test_que_toca_mapa_con_parcial_advierte_cobertura_y_vispera_no_cambia(estado):
+    avisos_parcial = av.que_toca(LUNES_0745, [CPI], estado, "1", parcial=True)
+    assert len(avisos_parcial) == 1
+    assert "El calendario llegó incompleto: lo que ves llega hasta miércoles 21/10; puede faltar algún dato posterior." in avisos_parcial[0].texto
+
+    avisos_normal = av.que_toca(LUNES_0745, [CPI], estado, "1", parcial=False)
+    assert "El calendario llegó incompleto" not in avisos_normal[0].texto
+
+    vispera = av.que_toca(MARTES_1600, [CPI], estado, "1", parcial=True)[0]
+    assert "El calendario llegó incompleto" not in vispera.texto
+
+
+def test_el_agendador_trata_parcial_como_ok_sin_alertar_al_director_y_agrega_advertencia(estado):
+    envios, ahora = Envios(), [LUNES_0745]
+    ag_ = agendador(estado, envios, ahora, lambda t: ("parcial", [CPI]))
+    ag_.latido()
+    assert [e for e in envios.enviados if e[1].startswith("director")] == []
+    assert sorted(e for e in envios.enviados if e[1] == "mapa") == [("10", "mapa"), ("20", "mapa")]
+
+
+# ───────────────────────────────────────────── interacción (tarea 5b)
+
+
+def _enviar_mapa_y_vispera(estado):
+    mapa = av.que_toca(LUNES_0745, [CPI], estado, "1")[0]
+    estado.anotar_envio("1", mapa, LUNES_0745, 11)
+    vispera = av.que_toca(MARTES_1600, [CPI], estado, "1")[0]
+    estado.anotar_envio("1", vispera, MARTES_1600, 12)
+    return mapa, vispera
+
+
+def test_un_voto_por_ejecutivo_y_aviso(estado):
+    mapa, _ = _enviar_mapa_y_vispera(estado)
+    assert estado.anotar_voto("1", mapa.id, "util", a(19, 9, 0)) is True
+    assert estado.anotar_voto("1", mapa.id, "no_sirve", a(19, 9, 5)) is False
+    reg = estado.registro("1", mapa.id)
+    assert reg["votos"] == [{"voto": "util", "cuando": a(19, 9, 0).isoformat()}]
+
+
+def test_los_clics_del_boton_se_cuentan_todos(estado):
+    _, vispera = _enviar_mapa_y_vispera(estado)
+    estado.anotar_clic("1", vispera.id, a(20, 16, 5))
+    estado.anotar_clic("1", vispera.id, a(20, 16, 6))
+    assert estado.registro("1", vispera.id)["clics_boton"] == 2
+
+
+def test_dos_clics_a_2_s_cuentan_uno_y_a_6_s_cuentan_dos(estado):
+    from datetime import timedelta
+    _, vispera = _enviar_mapa_y_vispera(estado)
+    t0 = a(20, 16, 5)
+    # Primer clic: cuenta y devuelve True
+    assert estado.anotar_clic("1", vispera.id, t0) is True
+    # Segundo clic a 2 segundos: rebote ignorado, devuelve False
+    assert estado.anotar_clic("1", vispera.id, t0 + timedelta(seconds=2)) is False
+    assert estado.registro("1", vispera.id)["clics_boton"] == 1
+    # Tercer clic a 6 segundos del primero: cuenta y devuelve True
+    assert estado.anotar_clic("1", vispera.id, t0 + timedelta(seconds=6)) is True
+    assert estado.registro("1", vispera.id)["clics_boton"] == 2
+
+
+def test_anotar_clic_con_registro_antiguo_sin_ultimo_clic_no_rompe(estado):
+    _, vispera = _enviar_mapa_y_vispera(estado)
+    # Simular registro previo en disco sin la clave opcional "ultimo_clic"
+    with estado.lock:
+        reg = estado.registro("1", vispera.id)
+        reg.pop("ultimo_clic", None)
+        import analista.registro_semanal as rg
+        rg._escribir(estado.ruta, estado.datos)
+
+    t0 = a(20, 16, 5)
+    assert estado.anotar_clic("1", vispera.id, t0) is True
+    assert estado.registro("1", vispera.id)["clics_boton"] == 1
+    assert estado.registro("1", vispera.id)["ultimo_clic"] == t0.isoformat()
+
+
+
+def test_oportunidad_24h_solo_cuenta_el_mismo_activo_y_dentro_de_la_ventana(estado):
+    _, vispera = _enviar_mapa_y_vispera(estado)
+    assert vispera.activo == "USDCLP"
+    estado.marcar_oportunidad("1", "XAUUSD", a(20, 17, 0))      # otro activo
+    assert estado.registro("1", vispera.id)["oportunidad_24h"] is False
+    estado.marcar_oportunidad("1", "USDCLP", a(21, 16, 1))      # pasaron más de 24 h
+    assert estado.registro("1", vispera.id)["oportunidad_24h"] is False
+    estado.marcar_oportunidad("2", "USDCLP", a(20, 17, 0))      # otro ejecutivo
+    assert estado.registro("1", vispera.id)["oportunidad_24h"] is False
+    estado.marcar_oportunidad("1", "USDCLP", a(21, 15, 59))
+    assert estado.registro("1", vispera.id)["oportunidad_24h"] is True
+
+
+def test_el_resumen_suma_dos_ejecutivos_y_dos_semanas_sin_identificarlos(estado):
+    for ejecutivo in ("1", "2"):
+        for dia_lunes, dia_martes in ((19, 20), (26, 27)):
+            m = av.que_toca(a(dia_lunes, 7, 45), [CPI], av.Estado(Path("x")), ejecutivo)[0]
+            estado.anotar_envio(ejecutivo, m, a(dia_lunes, 7, 45), 1)
+            estado.anotar_voto(ejecutivo, m.id, "util" if ejecutivo == "1" else "no_sirve", a(dia_lunes, 9))
+    v = av.que_toca(MARTES_1600, [CPI], av.Estado(Path("x")), "1")[0]
+    estado.anotar_envio("1", v, MARTES_1600, 2)
+    estado.anotar_clic("1", v.id, a(20, 16, 5))
+    estado.marcar_oportunidad("1", "USDCLP", a(20, 17, 0))
+    r = av.resumen_interaccion(date(2026, 10, 19), date(2026, 10, 30), estado)
+    assert r["mapa"] == {"enviados": 4, "clics": 0, "util": 2, "no_sirve": 2, "oportunidad": 0}
+    assert r["vispera"] == {"enviados": 1, "clics": 1, "util": 0, "no_sirve": 0, "oportunidad": 1}
+    assert set(r) == {"mapa", "vispera"}  # por tipo de aviso: ningún ejecutivo aparece en el resumen
+    acotado = av.resumen_interaccion(date(2026, 10, 26), date(2026, 10, 30), estado)
+    assert acotado["mapa"]["enviados"] == 2
+
+
+def test_reiniciar_el_bot_no_pierde_los_registros(estado, tmp_path):
+    mapa, _ = _enviar_mapa_y_vispera(estado)
+    estado.anotar_voto("1", mapa.id, "util", a(19, 9))
+    otro = av.Estado(tmp_path / "avisos_semana.json")
+    assert otro.registro("1", mapa.id)["votos"][0]["voto"] == "util"
+
+
+# ───────────────────────────────────────────── contrato: nada de WhatsApp
+
+
+def test_el_agendador_no_importa_el_envio_de_whatsapp():
+    fuente = (Path(__file__).resolve().parent.parent / "scripts" / "analista" / "avisos_semana.py").read_text(
+        encoding="utf-8")
+    importados = set()
+    for nodo in ast.walk(ast.parse(fuente)):
+        if isinstance(nodo, ast.Import):
+            importados |= {n.name for n in nodo.names}
+        elif isinstance(nodo, ast.ImportFrom):
+            importados |= {nodo.module or ""} | {n.name for n in nodo.names}
+    assert not any("whatsapp" in i.lower() for i in importados), importados
+
+
+# ───────────────────────────────────────────── revisión final
+
+
+def test_el_informe_de_empleo_es_una_sola_vispera(estado):
+    trio = [ev("Nonfarm Payrolls (Oct)", "2026-11-06 10:30"), ev("Unemployment Rate (Oct)", "2026-11-06 10:30"),
+            ev("Average Hourly Earnings (MoM) (Oct)", "2026-11-06 10:30")]
+    assert len(av.que_toca(datetime(2026, 11, 5, 16, 5, tzinfo=SCL), trio, estado, "1")) == 1
+
+
+def test_el_ipc_de_chile_y_el_cpi_de_eeuu_el_mismo_dia_no_se_pisan(estado):
+    chile = ev("CPI (MoM) (Sep)", "2026-10-21 08:00", pais="Chile")
+    assert len(av.que_toca(MARTES_1600, [CPI, chile], estado, "1")) == 2
+
+
+def test_un_envio_confirmado_que_no_se_pudo_anotar_no_se_reenvia(tmp_path):
+    class EstadoQueFalla(av.Estado):
+        fallar = True
+
+        def anotar_envio(self, *a, **k):
+            if self.fallar:
+                raise PermissionError("disco")
+            return super().anotar_envio(*a, **k)
+
+    estado = EstadoQueFalla(tmp_path / "x.json")
+    envios, ahora = Envios(), [LUNES_0745]
+    ag_ = agendador(estado, envios, ahora, lambda t: ("ok", [CPI]))
+    ag_.latido()
+    ag_.latido()
+    assert sorted(envios.enviados) == [("10", "mapa"), ("20", "mapa")]   # una copia cada uno, no una por latido
+
+
+def test_leer_el_estado_espera_a_quien_lo_esta_escribiendo(estado):
+    # En Windows `replace` sobre un archivo abierto para lectura falla: lecturas y escrituras comparten candado.
+    estado.anotar_envio("1", av.que_toca(LUNES_0745, [CPI], estado, "1")[0], LUNES_0745, 1)
+    resultado = []
+    with estado.lock:
+        hilo = threading.Thread(target=lambda: resultado.append(estado.datos))
+        hilo.start()
+        hilo.join(0.3)
+        assert hilo.is_alive()
+    hilo.join(2)
+    assert resultado
+
+
+def test_si_el_bot_estaba_apagado_en_la_ventana_del_mapa_el_director_se_entera_una_vez(estado):
+    envios, ahora = Envios(), [a(19, 8, 20)]
+    ag_ = agendador(estado, envios, ahora, lambda t: ("ok", [CPI]))
+    ag_.latido()
+    ag_.latido()
+    assert [e for e in envios.enviados if e[1] == "mapa"] == []
+    assert len([e for e in envios.enviados if e[1].startswith("director")]) == 1
+    assert "no salió" in envios.avisos_director[0]
+
+
+def test_si_el_mapa_si_salio_no_hay_aviso_de_mapa_perdido(estado):
+    envios, ahora = Envios(), [LUNES_0745]
+    ag_ = agendador(estado, envios, ahora, lambda t: ("ok", [CPI]))
+    ag_.latido()
+    ahora[0] = a(19, 8, 20)
+    ag_.latido()
+    assert [e for e in envios.enviados if e[1].startswith("director")] == []
+
+
+# ───────────────────────────────────────────── feriados de Chile (menor 9)
+
+
+def test_contrato_feriados_chile_archivo_real():
+    ruta = Path(__file__).resolve().parent.parent / "config" / "feriados_chile.json"
+    assert ruta.exists(), "Falta crear config/feriados_chile.json"
+    import json
+    datos = json.loads(ruta.read_text(encoding="utf-8"))
+    assert "_meta" in datos
+    meta = datos["_meta"]
+    assert meta.get("fuente") == "https://www.feriados.cl/"
+    assert "actualizado" in meta
+    assert "proceso_actualizacion" in meta
+    assert "feriados" in datos
+    fechas = datos["feriados"]
+    assert isinstance(fechas, list) and len(fechas) > 0
+    # Todas las fechas deben cumplir formato ISO YYYY-MM-DD
+    fechas_dt = [date.fromisoformat(f) for f in fechas]
+    # Feriados oficiales confirmados del último trimestre 2026 en Chile (sin inventar)
+    assert date(2026, 10, 12) in fechas_dt   # Encuentro de Dos Mundos (Lunes)
+    assert date(2026, 10, 31) in fechas_dt   # Iglesias Evangélicas y Protestantes (Sábado)
+    assert date(2026, 11, 1) in fechas_dt    # Todos los Santos (Domingo)
+    assert date(2026, 12, 8) in fechas_dt    # Inmaculada Concepción (Martes)
+    assert date(2026, 12, 25) in fechas_dt   # Navidad (Viernes)
+    cargados = av.feriados_chile(ruta)
+    assert isinstance(cargados, frozenset)
+    assert date(2026, 12, 8) in cargados
+
+
+def test_feriados_chile_archivo_temporal_y_fallback(tmp_path):
+    f_json = tmp_path / "feriados.json"
+    f_json.write_text('{"_meta": {}, "feriados": ["2026-12-08", "invalido"]}', encoding="utf-8")
+    assert av.feriados_chile(f_json) == frozenset({date(2026, 12, 8)})
+    assert av.feriados_chile(tmp_path / "inexistente.json") == frozenset()
+
+
+def test_habil_anterior_salta_feriados_y_fines_de_semana():
+    feriados = frozenset({date(2026, 10, 12), date(2026, 12, 8)})
+    # Martes 8 dic es feriado: el día hábil anterior al miércoles 9 dic es el lunes 7 dic
+    assert av._habil_anterior(date(2026, 12, 9), feriados=feriados) == date(2026, 12, 7)
+    # Lunes 12 oct es feriado: el día hábil anterior al martes 13 oct salta lunes, dom y sáb, cayendo en viernes 9 oct
+    assert av._habil_anterior(date(2026, 10, 13), feriados=feriados) == date(2026, 10, 9)
+
+
+def test_la_ventana_de_vispera_no_abre_en_feriado():
+    feriados = frozenset({date(2026, 12, 8)})
+    martes_feriado_1615 = datetime(2026, 12, 8, 16, 15, tzinfo=SCL)
+    assert av.hay_ventana(martes_feriado_1615, feriados=feriados) is False
+
+
+def test_el_mapa_del_lunes_si_abre_en_feriado():
+    # La spec manda que el mapa sale el lunes 07:45 para orientar la semana, aunque sea feriado
+    feriados = frozenset({date(2026, 10, 12)})
+    lunes_feriado_0745 = datetime(2026, 10, 12, 7, 45, tzinfo=SCL)
+    assert av.hay_ventana(lunes_feriado_0745, feriados=feriados) is True
+    avisos = av.que_toca(lunes_feriado_0745, [CPI], av.Estado(Path("x")), "1", feriados=feriados)
+    assert [x.tipo for x in avisos] == ["mapa"]
+
+
+def test_la_vispera_se_adelanta_al_dia_habil_anterior_cuando_hay_feriado(estado):
+    feriados = frozenset({date(2026, 12, 8)})
+    cpi_miercoles = ev("CPI (MoM) (Nov)", "2026-12-09 09:30")
+    lunes_1600 = datetime(2026, 12, 7, 16, 0, tzinfo=SCL)
+    martes_feriado_1600 = datetime(2026, 12, 8, 16, 0, tzinfo=SCL)
+
+    # El lunes a las 16:00 se genera la víspera del dato del miércoles porque el martes es feriado
+    avisos_lunes = av.que_toca(lunes_1600, [cpi_miercoles], estado, "1", feriados=feriados)
+    assert [x.tipo for x in avisos_lunes] == ["vispera"]
+
+    # El martes a las 16:00 (feriado) no se genera ningún aviso
+    avisos_martes = av.que_toca(martes_feriado_1600, [cpi_miercoles], estado, "1", feriados=feriados)
+    assert avisos_martes == []
+

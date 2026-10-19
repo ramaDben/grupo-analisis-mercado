@@ -1,0 +1,33 @@
+{
+  "_nota": "Guía interna para el ejecutivo, por tipo de evento. La lee scripts/analista/semana.py y la edita el director. Sin asesoría: escenarios y no órdenes, nunca compra, venta, oportunidad ni cobertura. Antes de abrirla a todos los ejecutivos conviene que la revise cumplimiento.",
+  "tasas": {
+    "mueve": ["dólar", "oro", "índices", "USD/CLP"],
+    "conversar": "El mercado ya descuenta un escenario: la sorpresa suele estar en el tono con que se explica la decisión.",
+    "no_decir": "No adelantes qué va a decidir el banco central ni prometas hacia dónde irá el dólar.",
+    "titular": "Semana de tasas"
+  },
+  "inflacion": {
+    "mueve": ["dólar", "oro", "índices", "USD/CLP"],
+    "conversar": "La inflación decide si las tasas bajan pronto o tardan: pregúntale a tu cliente cómo está su exposición al dólar.",
+    "no_decir": "No digas que el dato va a salir alto o bajo: nadie lo sabe antes de que se publique.",
+    "titular": "Semana de inflación"
+  },
+  "empleo": {
+    "mueve": ["dólar", "oro", "índices", "USD/CLP"],
+    "conversar": "El día del dato de empleo habrá movimiento rápido: invita a tu cliente a revisar su exposición antes.",
+    "no_decir": "No prometas que el empleo fuerte o débil lleva el precio a un nivel concreto.",
+    "titular": "Semana de empleo"
+  },
+  "actividad": {
+    "mueve": ["dólar", "oro", "índices", "USD/CLP"],
+    "conversar": "Estos datos miden cómo anda la economía: son buen motivo para llamar y comentar qué se ve en los mercados.",
+    "no_decir": "No presentes un solo dato de actividad como si definiera la tendencia de los próximos meses.",
+    "titular": "Semana de actividad"
+  },
+  "petroleo": {
+    "mueve": ["petróleo"],
+    "conversar": "Los inventarios de crudo mueven el precio del petróleo el mismo día: avísale a tu cliente que esa jornada puede haber saltos.",
+    "no_decir": "No anticipes si los inventarios van a subir o bajar ni a qué precio llegará el crudo.",
+    "titular": "Semana de petróleo"
+  }
+}

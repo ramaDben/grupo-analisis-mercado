@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -18,6 +18,12 @@ import pipeline_carrusel as pc  # noqa: E402
 from test_pipeline_avisos_jornada import CONFIANZA, JOLTS, preparar  # noqa: E402
 
 SIETE_45 = datetime(2026, 9, 29, 7, 45, tzinfo=pa.SANTIAGO)
+
+
+def _hoy() -> datetime:
+    """Ahora, o el viernes anterior si es fin de semana: sin día hábil `preparar` no produce tanda."""
+    ahora = datetime.now(pa.SANTIAGO)
+    return ahora - timedelta(days=max(ahora.weekday() - 4, 0))
 ONCE_10 = datetime(2026, 9, 29, 11, 10, tzinfo=pa.SANTIAGO)
 
 
@@ -66,8 +72,8 @@ TEXTOS_AGENDA = {
 
 
 def test_la_agenda_del_dia_sale_con_sus_tres_laminas_en_orden(tmp_path, entorno, monkeypatch):
-    ruta = preparar(tmp_path, "avisos_agenda", datetime.now(pa.SANTIAGO).replace(hour=7, minute=45),
-                    [dict(CONFIANZA, fecha=datetime.now(pa.SANTIAGO).date().isoformat())])
+    ruta = preparar(tmp_path, "avisos_agenda", _hoy().replace(hour=7, minute=45),
+                    [dict(CONFIANZA, fecha=_hoy().date().isoformat())])
     _escribir(ruta, TEXTOS_AGENDA)
     envios: list = []
     monkeypatch.setattr("whatsapp_sender.WhatsAppSender", _sender(envios))
@@ -86,8 +92,8 @@ def test_un_carrusel_sin_escribir_no_sale_ninguna_lamina(tmp_path, entorno, monk
 
 
 def test_si_el_cupo_no_alcanza_el_carrusel_no_empieza(tmp_path, entorno, monkeypatch):
-    ruta = preparar(tmp_path, "avisos_agenda", datetime.now(pa.SANTIAGO).replace(hour=7, minute=45),
-                    [dict(CONFIANZA, fecha=datetime.now(pa.SANTIAGO).date().isoformat())])
+    ruta = preparar(tmp_path, "avisos_agenda", _hoy().replace(hour=7, minute=45),
+                    [dict(CONFIANZA, fecha=_hoy().date().isoformat())])
     _escribir(ruta, TEXTOS_AGENDA)
     envios: list = []
     monkeypatch.setattr("whatsapp_sender.WhatsAppSender", _sender(envios, cupo=2))
@@ -97,8 +103,8 @@ def test_si_el_cupo_no_alcanza_el_carrusel_no_empieza(tmp_path, entorno, monkeyp
 
 def test_el_banco_de_pruebas_no_mira_el_cupo(tmp_path, entorno, monkeypatch):
     """Lo del banco no se descuenta del cupo, así que tampoco lo frena."""
-    ruta = preparar(tmp_path, "avisos_agenda", datetime.now(pa.SANTIAGO).replace(hour=7, minute=45),
-                    [dict(CONFIANZA, fecha=datetime.now(pa.SANTIAGO).date().isoformat())])
+    ruta = preparar(tmp_path, "avisos_agenda", _hoy().replace(hour=7, minute=45),
+                    [dict(CONFIANZA, fecha=_hoy().date().isoformat())])
     _escribir(ruta, TEXTOS_AGENDA)
     envios: list = []
     monkeypatch.setattr("whatsapp_sender.WhatsAppSender", _sender(envios, cupo=0))
@@ -107,7 +113,7 @@ def test_el_banco_de_pruebas_no_mira_el_cupo(tmp_path, entorno, monkeypatch):
 
 
 def test_un_resultado_que_dio_vuelta_no_se_despacha(tmp_path, entorno, monkeypatch):
-    hoy = datetime.now(pa.SANTIAGO)
+    hoy = _hoy()
     publicados = [dict(CONFIANZA, fecha=hoy.date().isoformat(), actual="81.9", resultado="peor"),
                   dict(JOLTS, fecha=hoy.date().isoformat(), actual="7.079M", resultado="peor")]
     ruta = preparar(tmp_path, "avisos_resultado", hoy.replace(hour=11, minute=10), publicados)
