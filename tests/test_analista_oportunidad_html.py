@@ -349,11 +349,10 @@ def test_el_html_no_deja_pasar_marcado_de_las_fuentes(tmp_path):
         _html(tmp_path, fuentes=[f])
 
 
-def test_la_ficha_cierra_con_el_bloque_de_revision_en_mt5(tmp_path):
+def test_no_hay_bloque_de_revision_en_mt5(tmp_path):
     h = _html(tmp_path)
-    assert h.count(cm.REVISION_MT5_TITULO) >= 2  # en la ficha y en el correo
-    for punto in cm.REVISION_MT5_PUNTOS:
-        assert punto in h
+    assert "Para revisar con tu cliente" not in h
+    assert "revision-mt5" not in h
 
 
 def test_la_simulacion_se_rotula_como_ejemplo_ilustrativo(tmp_path):

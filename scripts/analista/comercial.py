@@ -16,13 +16,6 @@ AVISO_PIEZA = ("Análisis técnico de carácter informativo. No es una instrucci
 AVISO_SEGUIMIENTO = "Análisis técnico informativo. No es una instrucción de inversión."
 INVITACION_ACTIVA = "¿Te interesa operar este escenario? Conversémoslo, con el stop como límite."
 INVITACION_CERRADA = "Si quieres, vemos juntos cómo sigue."
-# La pieza no invita a operar (regulación, director 2026-10-16): invita a revisar la plataforma MT5.
-REVISION_MT5_TITULO = "Para revisar con tu cliente en MT5"
-REVISION_MT5_PUNTOS = (
-    "Abrir el gráfico del activo en MT5 y ver las líneas de la lectura.",
-    "Repasar los tres escenarios y qué los invalida.",
-    "Conversar la estrategia y cómo seguirla en la plataforma.",
-)
 ROTULO_ILUSTRATIVO = "Ejemplo ilustrativo para revisar en MT5"
 INVITACION_MT5 = "Si quieres, lo revisamos juntos en la plataforma MT5."
 SEPARADOR = "━━━━━━━━━━━━━━━━━━━"

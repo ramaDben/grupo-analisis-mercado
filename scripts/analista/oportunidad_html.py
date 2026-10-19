@@ -38,11 +38,6 @@ def _seccion(titulo: str, cuerpo: str) -> str:
     return f'<h4 class="seccion">{ih.e(titulo)}</h4>{cuerpo}'
 
 
-def _bloque_revision() -> str:
-    puntos = "".join(f"<li>{ih.e(p)}</li>" for p in cm.REVISION_MT5_PUNTOS)
-    return f'<div class="revision-mt5"><h4>{ih.e(cm.REVISION_MT5_TITULO)}</h4><ul>{puntos}</ul></div>'
-
-
 def _seccion_voces(fuentes: list[dict[str, Any]], direccion: str) -> str:
     if not fuentes:
         return _seccion("Voces de bancos y prensa",
@@ -547,11 +542,6 @@ def _marco_correo(d: dict[str, Any], ed: dict[str, Any], ejecutivo: dict[str, An
         + _rotulo("Análisis técnico vigente", c, margen="0 0 8px 0")
         + f'<h1 class="h1" style="margin:0;font-family:{F_DISPLAY};font-size:22px;line-height:29px;'
           f'font-weight:700;color:{c["texto_1"]};"><!--TITULO--></h1></td></tr>')
-    revision = (
-        '<tr><td class="pad" style="padding:6px 40px 0 40px;">'
-        + _rotulo(ih.e(cm.REVISION_MT5_TITULO), c)
-        + "".join(_p("• " + ih.e(p), c, margen="0 0 6px 0") for p in cm.REVISION_MT5_PUNTOS)
-        + '</td></tr>')
     cierre = (
         '<!--WA-->' + _firma_correo(ejecutivo, autor, c)
         + '<tr><td class="pad" style="padding:20px 40px 32px 40px;">'
@@ -566,7 +556,7 @@ def _marco_correo(d: dict[str, Any], ed: dict[str, Any], ejecutivo: dict[str, An
         f'<table role="presentation" class="shell" width="640" cellspacing="0" cellpadding="0" border="0" '
         f'bgcolor="{c["fondo_alt"]}" style="width:640px;max-width:640px;background:{c["fondo_alt"]};'
         f'border:1px solid {c["linea"]};">'
-        + cabecera + portada + '<!--ACTIVOS-->' + revision + cierre
+        + cabecera + portada + '<!--ACTIVOS-->' + cierre
         + '</table></td></tr></table>'
     )
 
@@ -629,7 +619,7 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
             + _seccion_fundamental(d, a, ed["contexto"][t], dias, dir_pedido, imagen_cal)
             + _seccion_voces(ed["fuentes"], lec["direccion"])
             + f'<p class="firma-analisis">Análisis: {ih.e(autor.nombre)} · {ih.e(autor.cargo)}</p></div>'
-            f'{_panel(a, nombre_ej)}{_bloque_revision()}'
+            f'{_panel(a, nombre_ej)}'
             '<div class="acciones"><button type="button" class="copiar-wa">Copiar texto de WhatsApp</button>'
             + (f'<a class="descargar" download="{ih.e(lamina.name)}" href="{ih._data_uri(lamina)}">Descargar lámina</a>'
                if lamina.exists() else "")

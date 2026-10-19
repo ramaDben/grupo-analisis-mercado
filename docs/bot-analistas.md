@@ -99,7 +99,7 @@ el bot lo dice en lugar de afirmar que el símbolo no existe.
 ### Invitación comercial
 
 Por regulación (director, 2026-10-16) la pieza de `/oportunidad` (ficha y texto reenviable) **no invita a operar**: invita a **revisar la
-plataforma MT5 con el cliente**. El bloque se titula «Para revisar con tu cliente en MT5», el mensaje
+plataforma MT5 con el cliente**. El bloque «Para revisar con tu cliente en MT5» se quitó (director, 2026-10-18: no llegaba al cliente); el mensaje
 breve para el cliente propone mirar el gráfico y los escenarios en MT5, y el panel de simulación
 lleva el rótulo «Ejemplo ilustrativo para revisar en MT5». `esquema.py` rechaza un texto que
 invite a operar.
