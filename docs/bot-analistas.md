@@ -49,12 +49,11 @@ informe con el nombre del cliente se acerca a una recomendación personalizada. 
   `thisWeek` y `nextWeek` de Investing.com), con la lámina del calendario. Sin datos, la ficha dice la
   ventana completa con sus fechas; con el calendario caído, se avisa al ejecutivo y el correo omite el
   bloque.
-- **Voces:** 2 o 3 bancos y prensa con entidad, medio, fecha y enlace. **Sin al menos un banco vigente el
-  análisis no sale.**
+- **Voces:** hasta 1 banco a favor y 1 en contra (los más recientes) con entidad, medio, fecha y enlace. Si solo hay uno, se despliega limpio al 100% de ancho sin tarjeta vacía ni avisos. **Sin al menos un banco vigente el análisis no sale.**
 - **Panel de simulación** para que el ejecutivo trabaje con su cliente.
 
 El correo que copia el ejecutivo lleva todo eso: lo que pasa hoy, los días clave con la imagen del
-calendario y lo que dicen los bancos con el enlace a cada nota.
+calendario y lo que dicen los bancos con el enlace a cada nota (como máximo 1 a favor y 1 en contra).
 
 ### Símbolos
 
@@ -89,11 +88,13 @@ el bot lo dice en lugar de afirmar que el símbolo no existe.
 - **Cifras de terceros:** la regla 1 sigue (toda cifra del texto sale de los datos del terminal),
   con una excepción: la cifra que aparece en la tesis de una fuente validada y se atribuye a esa
   entidad en la misma frase («Goldman Sachs ve el oro en 4.800»).
-- **Un banco o nada** (spec 2026-10-17 §5). `cuentan_como_banco` de la lista dice qué grupos cumplen
-  (hoy los bancos de inversión y los de Chile; los organismos suman pero no cumplen). `--validar` falla
-  sin banco, así que agy sigue buscando. Si igual no llega, el bot hace **un segundo intento solo de
-  fuentes** (reabre `fuentes`, deja `fuentes_intento_1.json` con lo válido y lo descartado) y, si tampoco,
-  responde que no encontró ninguna voz de banco, sin gastar cupo ni registrar el análisis.
+- **Un banco o nada (spec 2026-10-17 §5; correo editorial 2026-10-19):** `cuentan_como_banco` de la lista dice qué grupos cumplen
+  (hoy los bancos de inversión y los de Chile; los organismos suman pero no cumplen). Se exige al menos un banco calificado para
+  validar y emitir la pieza (`--validar` falla sin banco). En el correo institucional se exhibe como máximo 1 banco a favor y 1
+  en contra (los más recientes según su fecha); si solo hay uno calificado, se despliega limpio al 100% de ancho sin tarjeta
+  vacía ni avisos de que falta el otro. Si agy no encuentra banco, el bot hace **un segundo intento solo de fuentes** (reabre
+  `fuentes`, deja `fuentes_intento_1.json` con lo válido y lo descartado) y, si tampoco, responde que no encontró ninguna voz de
+  banco, sin gastar cupo ni registrar el análisis.
 - Cada llamada a agy deja `agy_salida_<n>.json` (código, segundos y respuesta) en la carpeta del pedido.
 
 ### Invitación comercial

@@ -84,12 +84,11 @@ y la pone el bot: tú no decides nada visual.
   hora, qué se publica y qué hace con el activo según su `efecto`. Si hay una decisión de tasas, va
   primera; después los que tienen `mueve_al_activo`. Hasta 420 caracteres. El bot rechaza un
   `dias_clave` que no nombre ningún `dia` de la agenda.
-- `fuentes`: **una lista** de 2 a 5 voces sobre este activo, **con al menos una de un banco** (los bancos
-  de inversión o los de Chile de la lista: Goldman Sachs, JPMorgan, Morgan Stanley, Bank of America, Citi,
-  UBS, Barclays, Standard Chartered, Jefferies, Deutsche Bank, HSBC, ING, Commerzbank, Banco Central de
-  Chile, Cochilco, Banchile, BCI Estudios, Santander Chile, Itaú Chile). Los organismos suman, pero no
-  reemplazan al banco. Búscalas en la web. Cada elemento es un objeto con estos campos de texto:
-  - `entidad`: quién opina. **Solo** de la lista cerrada: Goldman Sachs, JPMorgan, Morgan Stanley, Bank of America, Citi, UBS, Barclays, Standard Chartered, Jefferies, Deutsche Bank, HSBC, ING, Commerzbank, Banco Central de Chile, Cochilco, Banchile, BCI Estudios, Santander Chile, Itaú Chile, Fed, BCE, EIA, OPEP, FMI, BIS, World Gold Council, Agencia Internacional de Energía.
+- `fuentes`: **una lista** de 1 a 2 voces sobre este activo, exclusivamente de bancos de inversión o bancos
+  de Chile de la lista cerrada (máximo 1 a favor y 1 en contra de nuestra lectura técnica, con al menos una voz
+  de banco obligatoria). Los organismos (Fed, BCE, EIA, OPEP, FMI, BIS, World Gold Council, Agencia Internacional
+  de Energía) no cuentan como banco. Búscalas en la web. Cada elemento es un objeto con estos campos de texto:
+  - `entidad`: quién opina. **Solo** bancos de inversión o bancos de Chile de la lista cerrada: Goldman Sachs, JPMorgan, Morgan Stanley, Bank of America, Citi, UBS, Barclays, Standard Chartered, Jefferies, Deutsche Bank, HSBC, ING, Commerzbank, Banco Central de Chile, Cochilco, Banchile, BCI Estudios, Santander Chile, Itaú Chile. (Los organismos no cuentan como banco ni se incluyen).
   - `medio`: dónde se publicó. **Prefiere siempre una nota en español** (el cliente la abre y la lee):
     Bloomberg Línea, Diario Financiero, La Tercera, Emol, Ámbito, Expansión, Cinco Días, El Economista,
     Infobae, Europa Press, o la página en español de la propia entidad (Banchile, Santander Chile, BCI
@@ -100,9 +99,9 @@ y la pone el bot: tú no decides nada visual.
   - `url`: https y de un artículo concreto (no una portada), del dominio del `medio`.
   - `postura`: `alcista`, `bajista` o `neutral`, la de la entidad frente al activo.
   - `tesis`: una frase en español con lo que la entidad sostiene. Sin `%`, sin guion largo ni medio, sin la palabra "oportunidad" y sin "comprar", "vender" ni "recomienda": pasa por los mismos controles que el resto del texto, y la fuente cuya tesis no los pasa se descarta.
-  No inventes URLs ni fuentes: el bot abre cada URL y descarta lo que no responde. Sin ninguna voz de
-  banco válida el análisis no sale, así que busca hasta encontrarla (notas de los últimos 14 días en los
-  medios de la lista). No rellenes con voces que no hablan de este activo.
+  No inventes URLs ni fuentes: el bot abre cada URL y descarta lo que no responde. Sin al menos una de un banco
+  válida el análisis no sale, así que busca hasta encontrarla (notas de los últimos 14 días en los medios de la
+  lista). No rellenes con voces que no hablan de este activo.
 
 ### Antes de terminar
 

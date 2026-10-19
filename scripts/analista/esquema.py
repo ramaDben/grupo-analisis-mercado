@@ -253,6 +253,16 @@ def errores(pieza: dict[str, Any]) -> list[str]:
                 elif f["postura"] not in fu.POSTURAS:
                     errs.append(f"fuentes.{i}: la postura {f['postura']!r} no es alcista, bajista ni neutral")
     fuentes_ok = [f for f in (fuentes or []) if isinstance(f, dict) and all(isinstance(f.get(c), str) for c in fu.CAMPOS)]
+    if tipo == "oportunidad" and fuentes != MARCA:
+        activos = (pieza.get("datos") or {}).get("activos") or [{}]
+        direccion = (activos[0].get("lectura") or {}).get("direccion", "") if isinstance(activos[0], dict) else ""
+        bs = fu.bancos(fuentes_ok)
+        a_favor = [b for b in bs if not fu.discrepa(b, direccion)]
+        en_contra = [b for b in bs if fu.discrepa(b, direccion)]
+        if len(a_favor) > 1:
+            errs.append("fuentes: máximo 1 banco a favor de nuestra lectura")
+        if len(en_contra) > 1:
+            errs.append("fuentes: máximo 1 banco en contra de nuestra lectura")
 
     pares = textos(pieza)
     for campo, tope in LARGO_MAXIMO.items():
