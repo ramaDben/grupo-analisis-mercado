@@ -472,7 +472,7 @@ def test_el_menu_de_telegram_solo_ofrece_comandos_que_existen():
 
 
 def test_la_ayuda_es_corta_y_trae_ejemplos_para_copiar():
-    assert len(b.AYUDA.splitlines()) <= 14
+    assert len(b.AYUDA.splitlines()) <= 16 and len(b.AYUDA) <= 900  # una pantalla
     assert "/seguimiento oro" in b.AYUDA and "/seguimiento oro Juan" in b.AYUDA
 
 
