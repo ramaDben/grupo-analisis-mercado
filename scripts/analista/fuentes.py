@@ -201,10 +201,11 @@ def _plano(texto: str) -> str:
     return "".join(c for c in t if not unicodedata.combining(c)).lower()
 
 
-def _cargar_segmentos(ruta: Path = CONFIG_SEGMENTOS) -> dict[str, Any]:
+def cargar_segmentos(ruta: Path = CONFIG_SEGMENTOS) -> dict[str, Any]:
+    """El config de segmentos; sin archivo, vacío. Un JSON corrupto propaga: no se publica a ciegas."""
     try:
         return json.loads(ruta.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+    except FileNotFoundError:
         return {}
 
 
@@ -214,7 +215,7 @@ def lista_del_segmento(segmento: str, base: dict[str, Any] | None = None,
     if segmento not in SEGMENTOS:
         raise ValueError(f"segmento desconocido: {segmento!r}")
     base = base if base is not None else cargar_lista()
-    segmentos = segmentos if segmentos is not None else _cargar_segmentos()
+    segmentos = segmentos if segmentos is not None else cargar_segmentos()
     extra = segmentos.get(segmento) or {}
     entidades = {g: list(v) for g, v in base["entidades"].items()}
     if extra.get("entidades"):

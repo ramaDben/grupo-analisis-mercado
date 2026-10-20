@@ -1,0 +1,9 @@
+{
+  "_nota": "Entidades, medios y anclas propias de cada segmento para la fuente directa (spec 2026-10-20). Cada dominio y cada entidad que un ancla declare tiene que estar aqui o en config/fuentes_prestigio.json.",
+  "fx": {"entidades": [], "medios": {}, "divisas": {}},
+  "commodities": {"entidades": [], "medios": {}},
+  "acciones": {"entidades": [], "medios": {}},
+  "etfs": {"entidades": [], "medios": {}},
+  "indices": {"entidades": [], "medios": {}},
+  "cripto": {"entidades": [], "medios": {}}
+}
