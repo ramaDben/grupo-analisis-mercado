@@ -20,6 +20,9 @@ class PedidoInvalido(ValueError):
 
 
 PIEZAS = ("oportunidad", "seguimiento")
+# Solo el director (config `admins`): rehace el análisis de un activo, o de todos los vigentes.
+RECREAR = "recrear"
+TODAS = "todas"
 # Retirados el 2026-10-12 (spec oportunidad-semanal §2): responden con la ayuda.
 RETIRADOS = ("activo", "calendario", "dato", "jornada")
 SERVICIO = ("start", "ayuda", "id", "estado")
@@ -133,6 +136,18 @@ def interpretar(texto: str, universo: list[dict[str, Any]] | None = None) -> Ord
     comando = cabeza[1:].split("@", 1)[0].lower()
     if comando in SERVICIO or comando in RETIRADOS:
         return Orden(pieza="ayuda" if comando in RETIRADOS else comando)
+    if comando == RECREAR:
+        cuerpo = resto.strip()
+        if not cuerpo:
+            raise PedidoInvalido("Falta el activo. Escribe por ejemplo: /recrear oro, o /recrear todas")
+        if _plano(cuerpo) in (TODAS, "todos"):
+            return Orden(pieza=RECREAR, args={"ticker": TODAS})
+        if universo is None:
+            import screener_gi as sc
+
+            universo = sc.cargar_universo(solo_renderizables=False)
+        args, _ = _activo_y_saludo(cuerpo, universo)
+        return Orden(pieza=RECREAR, args=args)
     if comando not in PIEZAS:
         raise PedidoInvalido(f"Ese comando no existe. Escribe /ayuda y te muestro los que sí.")
 
@@ -140,6 +155,9 @@ def interpretar(texto: str, universo: list[dict[str, Any]] | None = None) -> Ord
     if re.search(r"(?:^|\s)para\s+\S", cuerpo, flags=re.IGNORECASE):
         raise PedidoInvalido(PERSONALIZACION_RETIRADA)
 
+    entrada = None
+    if comando == "seguimiento":
+        cuerpo, entrada = _extraer_entrada(cuerpo)
     if not cuerpo:
         raise PedidoInvalido(f"Falta el activo. Escribe por ejemplo: /{comando} oro")
     if universo is None:
@@ -147,4 +165,24 @@ def interpretar(texto: str, universo: list[dict[str, Any]] | None = None) -> Ord
 
         universo = sc.cargar_universo(solo_renderizables=False)
     args, saludo = _activo_y_saludo(cuerpo, universo)
+    if entrada is not None:
+        args["entrada"] = entrada
     return Orden(pieza=comando, args=args, saludo=saludo)
+
+
+_ENTRADA = re.compile(r"(?:^|\s)entrada\s*[=:]\s*(\S+)", flags=re.IGNORECASE)
+
+
+def _extraer_entrada(cuerpo: str) -> tuple[str, float | None]:
+    """El precio al que entró el ejecutivo (`entrada=4062.5`), sacado del pedido antes de leer el saludo.
+
+    Solo dígitos con un separador decimal (punto o coma), sin separador de miles: «4.062» sería
+    ambiguo entre 4062 y 4,062.
+    """
+    m = _ENTRADA.search(cuerpo)
+    if m is None:
+        return cuerpo, None
+    valor = m.group(1).replace(",", ".")
+    if not re.fullmatch(r"\d+(?:\.\d+)?", valor) or float(valor) <= 0:
+        raise PedidoInvalido("La entrada va como número, sin separador de miles. Ejemplo: /seguimiento oro entrada=4062.5")
+    return (cuerpo[:m.start()] + " " + cuerpo[m.end():]).strip(), float(valor)

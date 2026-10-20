@@ -631,5 +631,61 @@ def test_validar_exige_una_voz_de_banco(tmp_path, capsys):
     pr.guardar_pieza(fx.pieza_oportunidad(tmp_path, fuentes=[WGC]), tmp_path)
     assert bot_analistas.validar(tmp_path / "pieza.json") == 1
     assert "voz de banco" in capsys.readouterr().out
+    # Un banco que contradice nuestra lectura bajista (Goldman, alcista) tampoco alcanza (2026-10-19).
     pr.guardar_pieza(fx.pieza_oportunidad(tmp_path), tmp_path)
+    assert bot_analistas.validar(tmp_path / "pieza.json") == 1
+    assert "ningún banco respalda nuestra lectura" in capsys.readouterr().out
+    ubs = {"entidad": "UBS", "medio": "Bloomberg", "fecha": "2026-10-13", "postura": "bajista",
+           "url": "https://www.bloomberg.com/markets/oro-ubs-2026", "tesis": "UBS ve consolidación a la baja.",
+           "verificacion": "ok"}
+    pr.guardar_pieza(fx.pieza_oportunidad(tmp_path, fuentes=[*fx.FUENTES_EJEMPLO, ubs]), tmp_path)
     assert bot_analistas.validar(tmp_path / "pieza.json") == 0
+
+
+# ───────────────────────────────────────────────────────── /recrear (solo el director)
+
+
+def _con_director(a):
+    a.atendedor.config["admins"] = [CAMILA]
+    return a
+
+
+def test_recrear_no_existe_para_un_ejecutivo(armado):
+    _con_director(armado)
+    r, final = pedir(armado, "/recrear oro", usuario=OTRO)
+    assert r[0].texto == b.SIN_COMANDO and final is None and armado.preparaciones == 0
+    r, _ = pedir(armado, "/recrear todas", usuario=OTRO)
+    assert r[0].texto == b.SIN_COMANDO and not armado.bot.por_confirmar
+
+
+def test_recrear_rehace_aunque_haya_uno_vigente_y_no_gasta_cupo(armado):
+    _con_director(armado)
+    pedir(armado, "/oportunidad oro", usuario=OTRO)
+    assert armado.preparaciones == 1
+    r, final = pedir(armado, "/recrear oro")
+    assert armado.preparaciones == 2 and "❌" not in final.texto
+    assert armado.estado.usados(CAMILA, armado.reloj.ahora) == 0
+    assert rg.vigente("XAUUSD", armado.reloj.ahora, armado.registro)["creado_por"]["id"] == CAMILA
+    anteriores = [e for e in json.loads(armado.registro.read_text(encoding="utf-8")) if e["caducada"]]
+    assert anteriores[0]["caducada"]["motivo"] == "recreado por el director"
+
+
+def test_recrear_todas_pide_si_y_rehace_solo_los_vigentes(armado):
+    _con_director(armado)
+    pedir(armado, "/oportunidad oro", usuario=OTRO)
+    r, _ = pedir(armado, "/recrear todas")
+    assert "XAUUSD" in r[0].texto and "sí" in r[0].texto and armado.bot.cola.empty()
+    r, final = pedir(armado, "sí")
+    assert armado.preparaciones == 2 and final is not None and not armado.bot.por_confirmar
+
+
+def test_recrear_todas_sin_si_no_hace_nada(armado):
+    _con_director(armado)
+    pedir(armado, "/oportunidad oro", usuario=OTRO)
+    pedir(armado, "/recrear todas")
+    r, final = pedir(armado, "no")
+    assert final is None and armado.preparaciones == 1 and not armado.bot.por_confirmar
+
+
+def test_recrear_no_aparece_en_el_menu():
+    assert "recrear" not in {c for c, _ in b.MENU}

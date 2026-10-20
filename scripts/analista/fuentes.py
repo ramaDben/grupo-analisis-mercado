@@ -178,29 +178,15 @@ def seleccionar_bancos_correo(
     direccion: str,
     lista: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
-    """Selecciona a lo sumo 1 banco a favor y 1 en contra para el correo editorial.
+    """El banco del correo: uno solo, el más reciente que respalda nuestra lectura (director, 2026-10-19).
 
-    - Filtra únicamente entidades bancarias calificadas usando bancos(fuentes, lista).
-    - Separa en dos grupos: a_favor (no discrepan) y en_contra (discrepan).
-    - Ordena cada grupo por fecha descendente (la nota más reciente primero).
-    - Toma a lo sumo 1 de a_favor y a lo sumo 1 de en_contra.
-    - Si existen ambos, retorna [banco_a_favor, banco_en_contra].
-    - Si solo existe uno (sea a favor o en contra), retorna [banco_unico].
-    - Si no hay ninguno, retorna [].
+    El correo va a un prospecto que lo lee en segundos: la voz externa es una confirmación de la
+    lectura, no un contrapunto. Los bancos que ven distinto no se muestran. Sin un banco que la
+    respalde el bloque no sale: no se rellena con uno que contradice ni con un organismo.
     """
-    bs = bancos(fuentes, lista)
-    a_favor = [b for b in bs if not discrepa(b, direccion)]
-    en_contra = [b for b in bs if discrepa(b, direccion)]
-
-    a_favor_ordenados = sorted(a_favor, key=lambda b: str(b.get("fecha", "")), reverse=True)
-    en_contra_ordenados = sorted(en_contra, key=lambda b: str(b.get("fecha", "")), reverse=True)
-
-    salida: list[dict[str, Any]] = []
-    if a_favor_ordenados:
-        salida.append(a_favor_ordenados[0])
-    if en_contra_ordenados:
-        salida.append(en_contra_ordenados[0])
-    return salida
+    a_favor = [b for b in bancos(fuentes, lista) if not discrepa(b, direccion)]
+    a_favor.sort(key=lambda b: str(b.get("fecha", "")), reverse=True)
+    return a_favor[:1]
 
 
 def falta_banco(pieza: dict[str, Any], lista: dict[str, Any] | None = None) -> list[str]:
@@ -209,8 +195,14 @@ def falta_banco(pieza: dict[str, Any], lista: dict[str, Any] | None = None) -> l
     if not isinstance(fuentes, list):
         return []  # `esquema.errores` ya dice que falta la lista
     lista = lista or cargar_lista()
-    if bancos(fuentes, lista):
-        return []
+    bs = bancos(fuentes, lista)
+    if bs:
+        direccion = (((pieza.get("datos") or {}).get("activos") or [{}])[0].get("lectura") or {}).get("direccion")
+        if not direccion or any(b.get("postura") and not discrepa(b, direccion) for b in bs):
+            return []
+        return [f"fuentes: ningún banco respalda nuestra lectura {direccion.lower()}; el correo cita solo un banco "
+                "que coincida con ella, así que busca otra nota de los últimos "
+                f"{lista.get('frescura_dias', 14)} días de un banco con esa postura"]
     return [f"fuentes: falta al menos una voz de banco ({', '.join(sorted(_nombres_banco(lista)))}) con su nota "
             f"de los últimos {lista.get('frescura_dias', 14)} días; los organismos suman, pero no la reemplazan"]
 

@@ -464,16 +464,29 @@ def preparar_seguimiento(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
     tolerancia = sg.TOLERANCIA_ATR * atr
     ev = ({"estado": "sin_simulacion", "avance_pct": None, "motivo": motivo} if motivo
           else sg.evaluar(esc, posteriores, precio, vela_viva=vela_viva, tolerancia=tolerancia))
+    entrada_real = orden.args.get("entrada")
+    if entrada_real is not None:
+        if motivo:
+            raise SinAnalisisError(f"{ticker} no tiene simulación esta semana: no hay stop contra el cual medir tu entrada.")
+        try:
+            sg.validar_entrada_real(esc, float(entrada_real))
+        except ValueError as exc:
+            raise SinAnalisisError(f"Tu entrada de {entrada_real}: {exc} "
+                                   f"(stop {esc['stop']}, objetivo {esc['objetivo']}).") from exc
+    # La oportunidad de HOY se mide sola, con la lectura actual: no depende de lo enviado al principio de semana.
+    oportunidad_hoy = sg.oportunidad_de_hoy(op.escenario(lectura, a["digits"]).a_dict(), None if motivo else esc, ev,
+                                            atr, a["digits"], ticker)
     lectura_hoy = sg.texto_lectura(lectura, reemplazada, a["digits"])
     hoy = fecha_corta(ahora)
     texto = sg.mensaje(a["nombre"], hoy, a["foto"]["fecha"], esc, ev, precio, lectura, reemplazada,
-                       a["digits"])
+                       a["digits"], oportunidad_hoy)
     lec.grafico_lectura(ticker, a["nombre"], _sin_segundo_objetivo(lectura, not motivo),
                         dir_pedido / "grafico.png", digits=a["digits"],
                         niveles=niveles_lamina_seguimiento(esc, not motivo, lectura))
     datos = {"semana": rs.semana_de(ahora), "ticker": ticker, "nombre": a["nombre"], "evaluacion": ev, "precio_vivo": precio,
              "lectura_hoy": lectura_hoy, "reemplazada": reemplazada, "whatsapp": texto,
-             "edicion": f"{hoy} · {ahora.astimezone(SANTIAGO):%H:%M}", "activo": a}
+             "edicion": f"{hoy} · {ahora.astimezone(SANTIAGO):%H:%M}", "activo": a,
+             "oportunidad_hoy": oportunidad_hoy, "entrada_real": entrada_real}
     pieza = es.nueva_pieza("seguimiento", {"ticker": ticker}, datos, {"principal": "grafico.png"})
     return Preparada(pieza, [])
 

@@ -318,3 +318,58 @@ def test_el_seguimiento_se_ata_al_mensaje_del_dia_de_la_foto():
     for dia in ("lunes", "miércoles"):
         textos = [sg._armar("Oro", f"día {n}", esc, ev, precio, "", 2, None, dia) for n in range(9)]
         assert all(f"del {dia}" in t or f"el {dia}" in t for t in textos), dia
+
+
+# ───────────────────────────────────────── la oportunidad de hoy (gerencia, 2026-10-19)
+
+
+def _hoy(direccion="ALCISTA", motivo=None):
+    return {"direccion": direccion, "entrada": 4124.0, "stop": 4074.0, "objetivo": 4274.0, "motivo": motivo,
+            "entrada_pendiente": False, "estado": "TENDENCIA", "condicion": None}
+
+
+def test_la_oportunidad_de_hoy_contraria_a_la_foto_invalida_lo_anterior():
+    hoy = sg.oportunidad_de_hoy(_hoy("ALCISTA"), {"direccion": "BAJISTA"}, {"estado": "en_curso"}, 20.0, 2, "XAUUSD")
+    assert hoy["invalida"] and hoy["cambia_direccion"]
+    assert hoy["ratio"] == "1:3" and hoy["atr"] == "20,00" and hoy["plazo"] == "1 a 2 días"
+
+
+def test_la_oportunidad_de_hoy_en_el_mismo_sentido_no_invalida():
+    hoy = sg.oportunidad_de_hoy(_hoy("BAJISTA"), {"direccion": "BAJISTA"}, {"estado": "en_curso"}, 20.0, 2, "XAUUSD")
+    assert not hoy["invalida"]
+
+
+def test_con_la_foto_cerrada_en_stop_el_plan_anterior_ya_no_vale():
+    hoy = sg.oportunidad_de_hoy(_hoy("BAJISTA"), {"direccion": "BAJISTA"}, {"estado": "stop"}, 20.0, 2, "XAUUSD")
+    assert hoy["invalida"] and not hoy["cambia_direccion"]
+
+
+def test_sin_niveles_hoy_no_hay_oportunidad_que_comunicar():
+    assert sg.oportunidad_de_hoy(_hoy(motivo="sin atr"), None, {"estado": "en_curso"}, 0.0, 2, "XAUUSD") is None
+
+
+def test_las_acciones_tienen_hasta_una_semana():
+    assert sg.plazo_esperado("#AAPL") == "hasta 1 semana" and sg.plazo_esperado("QQQ.US") == "hasta 1 semana"
+    assert sg.plazo_esperado("USDCLP") == "1 a 2 días"
+
+
+def test_entrada_real_fuera_de_stop_y_objetivo_se_rechaza():
+    import pytest
+
+    sg.validar_entrada_real(ALZA, 3962.0)  # el ejemplo de gerencia: entró en 962 con stop en 960
+    for fuera in (3949.0, 4150.0, 4200.0):
+        with pytest.raises(ValueError):
+            sg.validar_entrada_real(ALZA, fuera)
+
+
+def test_el_texto_dice_que_lo_anterior_queda_invalidado_y_no_lleva_precios():
+    hoy = sg.oportunidad_de_hoy(_hoy("ALCISTA"), {"direccion": "BAJISTA"}, {"estado": "en_curso"}, 20.0, 2, "XAUUSD")
+    t = sg.texto_oportunidad_hoy("Oro", {"direccion": "BAJISTA"}, hoy, "lunes")
+    assert "invalidada" in t and "compra" in t and not any(c.isdigit() for c in t)
+
+
+def test_el_texto_del_mismo_sentido_comunica_la_oportunidad_como_propia():
+    hoy = sg.oportunidad_de_hoy(_hoy("BAJISTA"), {"direccion": "BAJISTA"}, {"estado": "en_curso"}, 20.0, 2, "XAUUSD")
+    t = sg.texto_oportunidad_hoy("Oro", {"direccion": "BAJISTA"}, hoy, "lunes")
+    assert "oportunidad de venta" in t and "invalidada" not in t
+    assert sg.texto_oportunidad_hoy("Oro", {"direccion": "BAJISTA"}, None, "lunes") == ""

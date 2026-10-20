@@ -90,3 +90,54 @@ def test_en_rango_se_opera_el_falso_quiebre():
     assert "no hay operación" not in medio.texto
     assert "falso quiebre" in lec.salida and "no hay posición" not in lec.salida, lec.salida
     assert "falso-quiebre" in lec.conceptos
+
+
+def _salida(estado, direccion, **kw):
+    from estrategia.contrato import Referencia
+    from estrategia.tori.textos import salida
+
+    inv = None if kw.pop("sin_linea", False) else Referencia(4192.09, "línea de seguridad")
+    return salida(estado, direccion, "H4", inv, 2, **kw)
+
+
+def test_la_salida_nombra_la_operacion_y_el_sentido_segun_la_direccion():
+    alcista = _salida("TENDENCIA", "ALCISTA")
+    bajista = _salida("TENDENCIA", "BAJISTA")
+    assert alcista.startswith("En compras, sal si una vela de 4 horas cierra bajo la línea de seguridad")
+    assert bajista.startswith("En ventas, sal si una vela de 4 horas cierra sobre la línea de seguridad")
+    assert "4.192,09" in alcista and "4.192,09" in bajista
+    assert "En compras por ruptura" in _salida("RUPTURA", "ALCISTA")
+    assert "En ventas por ruptura" in _salida("RUPTURA", "BAJISTA")
+
+
+@pytest.mark.parametrize("estado", ["TENDENCIA", "REBOTE", "RUPTURA", "PRUEBA", "RANGO"])
+@pytest.mark.parametrize("direccion", ["ALCISTA", "BAJISTA", "LATERAL"])
+def test_la_salida_nunca_dice_al_otro_lado_ni_no_hay_objetivo_fijo(estado, direccion):
+    from estrategia.contrato import Referencia
+
+    for kw in ({}, {"sin_linea": True}, {"objetivo": Referencia(4100.0, "objetivo")}):
+        t = _salida(estado, direccion, **kw)
+        assert "al otro lado" not in t and "No hay objetivo fijo" not in t, t
+        assert "bajo de la" not in t and "sobre de la" not in t, t
+        assert "—" not in t and "–" not in t, t
+
+
+def test_sin_objetivo_la_ganancia_corre_y_con_objetivo_es_una_referencia():
+    from estrategia.contrato import Referencia
+
+    assert "deja correr la ganancia" in _salida("TENDENCIA", "ALCISTA")
+    con = _salida("TENDENCIA", "BAJISTA", objetivo=Referencia(4100.0, "objetivo"))
+    assert "el objetivo en 4.100,00 es una referencia" in con and "deja correr" not in con
+
+
+def test_la_salida_con_seguimiento_nombra_el_sentido():
+    from estrategia.contrato import Linea
+
+    seg = Linea("seguimiento", "diagonal", ((0, 100.0), (14400, 110.0)), "H4", 3, "A+", 4250.0)
+    assert "esa vela cierra bajo la línea de seguimiento, hoy en 4.250,00" in _salida("TENDENCIA", "ALCISTA", seguimiento=seg)
+    assert "esa vela cierra sobre la línea de seguimiento" in _salida("TENDENCIA", "BAJISTA", seguimiento=seg)
+
+
+def test_la_salida_sin_linea_de_seguridad_aconseja_esperar():
+    t = _salida("TENDENCIA", "ALCISTA", sin_linea=True)
+    assert "conviene esperar" in t

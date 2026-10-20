@@ -24,8 +24,15 @@ HOY = date(2026, 10, 12)
 EJECUTIVO = {"nombre": "Camila Rojas", "cargo": "Ejecutiva comercial", "contacto": "+56 9 1111 2222"}
 
 
+# La lectura de la fixture es bajista: UBS la respalda y Goldman Sachs (alcista) la contradice.
+UBS_A_FAVOR = {"entidad": "UBS", "medio": "Bloomberg", "fecha": "2026-10-13",
+               "url": "https://www.bloomberg.com/markets/oro-ubs-2026", "postura": "bajista",
+               "tesis": "UBS anticipa una consolidación a la baja en el oro.", "verificacion": "ok"}
+CON_BANCO = [*fx.FUENTES_EJEMPLO, UBS_A_FAVOR]
+
+
 def _pieza(tmp_path):
-    return fx.pieza_oportunidad(tmp_path, laminas=True)
+    return fx.pieza_oportunidad(tmp_path, laminas=True, fuentes=CON_BANCO)
 
 
 def test_el_analisis_va_firmado_y_la_simulacion_rotulada(tmp_path):
@@ -263,12 +270,14 @@ def test_los_cuadros_parten_con_capital_y_perdida_por_defecto_y_el_saludo_es_edi
     assert 'id="cliente"' in html and 'class="saludo-cliente">Estimado(a):</span>' in html
 
 
-def test_el_correo_parte_con_el_saludo_a_la_persona_antes_del_titulo(tmp_path):
-    """Gerencia: un correo que abre con afiche y titular se lee como spam; debe partir con el nombre."""
+def test_el_correo_abre_como_el_de_mas_que_uf_con_la_pregunta_y_luego_el_saludo(tmp_path):
+    """Director, 2026-10-19: la apertura sigue a Más que UF (cabecera, banda con la pregunta, saludo y texto)."""
     html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
     correo = html.split('id="correo-root"')[1]
-    assert correo.index('class="saludo-cliente"') < correo.index("<!--TITULO-->")
-    assert "Te escribo para compartirte" in correo
+    assert correo.index("<!--TITULO-->") < correo.index('class="saludo-cliente"') < correo.index("<!--ACTIVOS-->")
+    assert "En línea con lo que conversamos por teléfono" in correo
+    assert "Para continuar nuestra conversación, te comparto el mapa de trabajo" in correo
+    assert "Quisiera saber si pudiste revisar" not in correo  # no se le cobra la tarea al prospecto
 
 
 def test_el_titulo_del_correo_cuenta_los_activos_incluidos_y_no_dice_igual_para_todos(tmp_path):
@@ -283,7 +292,7 @@ def test_el_titulo_del_correo_cuenta_los_activos_incluidos_y_no_dice_igual_para_
         pg = b.new_page()
         pg.goto(ruta.as_uri())
         v = pg.locator("#vista-correo")
-        assert "El activo con escenarios clave para revisar en MT5" in v.inner_text()
+        assert "¿Pudiste revisar la información que te envié?" in v.inner_text()
         pg.locator("[name=incluir]").first.uncheck()
         assert "Marca al menos un activo" in v.inner_text()
         pg.locator("[name=incluir]").first.check()
@@ -321,6 +330,7 @@ def test_el_grafico_del_correo_es_una_imagen_con_ancho_y_alto(tmp_path):
 
 
 def _html(tmp_path, **kw):
+    kw.setdefault("fuentes", CON_BANCO)
     return oh.armar(fx.pieza_oportunidad(tmp_path, laminas=True, **kw), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
 
 
@@ -395,7 +405,7 @@ def test_la_ficha_no_habla_de_la_semana_con_vigencia_de_7_dias(tmp_path):
     for viejo in ("Escenario de la semana", "Análisis técnico de la semana", "Sin simulación esta semana",
                   "de esta semana", "en MT5 esta semana"):
         assert viejo not in html, viejo
-    assert "Los tres escenarios" in html and "Análisis técnico vigente" in html
+    assert "Los tres escenarios" in html and "Seguimiento de nuestra llamada" in html
     p["datos"]["activos"][0]["escenario"]["motivo"] = "sin nivel claro"
     p["huella"] = es._huella(p)
     assert "Sin simulación esta semana" not in oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
@@ -428,7 +438,7 @@ def test_el_correo_no_imprime_pb_ni_tips_sin_explicar_ni_sin_dato(tmp_path):
 def test_el_correo_dice_puntos_base_y_fecha_los_drivers(tmp_path):
     correo = _correo(_html(tmp_path))
     assert "bajó 14 puntos base en 5 sesiones" in correo and " pb" not in correo
-    assert "Los drivers al viernes 09/10" in correo and "Lo que pasa hoy" not in correo
+    assert "Lo que mueve el precio al viernes 09/10" in correo and "Lo que pasa hoy" not in correo
 
 
 def test_la_ficha_trae_los_dias_clave_con_imagen_tabla_y_enlace(tmp_path):
@@ -467,12 +477,14 @@ def test_una_agenda_parcial_avisa_en_la_ficha_y_el_correo_no_declara_mas_de_lo_c
 
 def test_el_correo_lleva_hechos_dias_clave_imagen_y_bancos_con_enlace(tmp_path):
     correo = _correo(_html(tmp_path))
-    assert "Los drivers al" in correo and "101,560" in correo and "Juega a favor del alza del oro" in correo
+    assert "Lo que mueve el precio al" in correo and "101,560" in correo and "Juega a favor del alza del oro" in correo
     assert "Días clave hasta el lunes 19/10" in correo and "El día clave es el miércoles 14/10" in correo
     assert len(re.findall(r'<img src="data:image/png;base64,[^"]+" width="558" height="\d+"', correo)) == 2
-    assert "Qué dicen los bancos" in correo and "Goldman Sachs" in correo and "14/10/2026" in correo
-    assert 'href="https://www.reuters.com/markets/commodities/oro-goldman-2026-10-14/"' in correo
-    assert "ve distinto que nuestra lectura" in correo  # Goldman alcista contra nuestra lectura bajista
+    assert "Qué dice la banca" in correo and "UBS" in correo and "13/10/2026" in correo
+    assert 'href="https://www.bloomberg.com/markets/oro-ubs-2026"' in correo
+    assert "Coincide con nuestra lectura bajista" in correo
+    # Director, 2026-10-19: el banco siempre respalda nuestra lectura; Goldman (alcista) no se muestra.
+    assert "Goldman Sachs" not in correo and "ve distinto" not in correo
     assert "var(" not in correo and "rgba(" not in correo and "—" not in correo
 
 
@@ -480,7 +492,7 @@ def test_una_pieza_anterior_se_rearma_sin_los_bloques_nuevos(tmp_path):
     """Un análisis creado antes del 2026-10-17 se reusa hasta 7 días: no puede romperse."""
     h = oh.armar(fx.pieza_oportunidad(tmp_path, laminas=True, legado=True, fuentes=[]), tmp_path, EJECUTIVO,
                  fx.AUTOR, HOY)
-    assert "Lo que pasa hoy" not in h and "Días clave" not in h and "Qué dicen los bancos" not in h
+    assert "Lo que pasa hoy" not in h and "Días clave" not in h and "Qué dice la banca" not in h
 
 
 # ───────────────────────────────────────────── tests exhaustivos correo editorial (2026-10-19)
@@ -491,12 +503,11 @@ def test_titular_base_armado_por_codigo(tmp_path):
     p = _pieza(tmp_path)
     a = p["datos"]["activos"][0]
     tit = oh.titular_base(a)
-    assert tit == f"{oh._articulo_sujeto(a['nombre'])} en {a['fmt']['precio']}: la línea de seguridad en {a['fmt']['invalidacion']} marca el pulso {a['lectura']['direccion'].lower()} hacia {a['fmt']['objetivo_tori']}"
-    assert tit == "El oro en 4.186,17: la línea de seguridad en 4.227,32 marca el pulso bajista hacia 4.149,96"
+    assert tit == "El oro en 4.186,17: el nivel 4.227,32 define la lectura bajista hacia 4.149,96"
 
     a_alcista = dict(a, nombre="Plata", lectura=dict(a["lectura"], direccion="ALCISTA"))
     tit_alcista = oh.titular_base(a_alcista)
-    assert tit_alcista == "La plata en 4.186,17: la línea de seguridad en 4.227,32 marca el pulso alcista hacia 4.149,96"
+    assert tit_alcista == "La plata en 4.186,17: el nivel 4.227,32 define la lectura alcista hacia 4.149,96"
 
     html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
     correo = _correo(html)
@@ -549,8 +560,8 @@ def test_titular_variante_choque_de_bancos(tmp_path):
     assert oh.titular_correo(a, fuentes_exito, variante=False) == oh.titular_base(a)
 
 
-def test_bancos_correo_uno_a_favor_y_uno_en_contra(tmp_path):
-    """Verifica que con 3 fuentes (incluyendo World Gold Council), el correo toma solo 1 a favor y 1 en contra."""
+def test_bancos_correo_solo_uno_y_a_favor_de_la_lectura(tmp_path):
+    """Con 3 fuentes (un organismo, un banco que discrepa y uno que coincide), el correo cita solo el que coincide."""
     fuentes_tres = [
         {"entidad": "World Gold Council", "medio": "Reuters", "fecha": "2026-10-15",
          "url": "https://www.reuters.com/markets/wgc-oro-2026", "postura": "alcista",
@@ -567,11 +578,11 @@ def test_bancos_correo_uno_a_favor_y_uno_en_contra(tmp_path):
     correo = _correo(html)
 
     assert "World Gold Council" not in correo
-    assert "Goldman Sachs" in correo
+    assert "Goldman Sachs" not in correo
     assert "UBS" in correo
 
-    assert "⬇️ A favor de nuestra lectura" in correo
-    assert "⬆️ En contra de nuestra lectura" in correo
+    assert "⬇️ Coincide con nuestra lectura bajista" in correo
+    assert "En contra" not in correo
 
     assert "#FF0000" not in correo and "#ff0000" not in correo
     assert "#00FF00" not in correo and "#00ff00" not in correo
@@ -580,15 +591,15 @@ def test_bancos_correo_uno_a_favor_y_uno_en_contra(tmp_path):
 def test_banco_unico_sin_tarjeta_vacia_ni_aviso(tmp_path):
     """Verifica que con un solo banco calificado, se renderiza únicamente esa tarjeta al 100% sin tarjetas vacías ni aviso."""
     fuentes_unica = [
-        {"entidad": "Goldman Sachs", "medio": "Reuters", "fecha": "2026-10-14",
-         "url": "https://www.reuters.com/markets/commodities/oro-goldman-2026-10-14/",
-         "postura": "alcista", "tesis": "Goldman Sachs proyecta avance hacia 4.300."}
+        {"entidad": "UBS", "medio": "Bloomberg", "fecha": "2026-10-14",
+         "url": "https://www.bloomberg.com/markets/oro-ubs-2026",
+         "postura": "bajista", "tesis": "UBS anticipa consolidación bajista hacia 3.900."}
     ]
     p = fx.pieza_oportunidad(tmp_path, laminas=True, fuentes=fuentes_unica)
     html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
     correo = _correo(html)
 
-    assert "Goldman Sachs" in correo
+    assert "UBS" in correo
     assert 'width="100%"' in correo
     assert "tarjeta vacía" not in correo.lower()
     assert "falta" not in correo.lower()
@@ -620,7 +631,7 @@ def test_drivers_correo_exactamente_dos_y_sintesis(tmp_path):
 
     seleccionados, sintesis = oh.seleccionar_drivers_correo(p["datos"]["hechos"])
     assert len(seleccionados) == 2
-    assert "Síntesis de dominancia:" in correo
+    assert "Qué pesa más hoy:" in correo
     assert sintesis in correo
 
 
@@ -656,12 +667,10 @@ def test_preheader_oculto_y_asunto_sugerido(tmp_path):
     d = p["datos"]
 
     asunto = oh.asunto_sugerido(a, ed.get("fuentes"))
-    assert asunto == oh.titular_base(a)
-    assert "El oro en" in asunto
+    assert asunto == "El oro en 4.186,17: el nivel clave que vigila la mesa"  # una sola cifra
 
     preheader = oh.preheader_sugerido(a, ed.get("fuentes"), d)
-    assert f"Sesgo {a['lectura']['direccion'].lower()} en 4H condicionado a la línea de {a['fmt']['invalidacion']}." in preheader
-    assert "Qué proyecta Goldman Sachs" in preheader
+    assert preheader == "Nuestra lectura bajista en 4H, el respaldo de UBS y los dos factores que mueven la sesión de hoy."
 
     html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
     assert 'display:none;font-size:1px;color:#EEF2F1;line-height:1px;' in html
@@ -698,7 +707,7 @@ def test_si_la_lectura_cambio_el_correo_cuenta_de_donde_venimos_y_por_que(tmp_pa
     assert "Cambio de lectura:" in correo
     assert "el 17/10 era alcista" in correo
     assert "el precio tocó el nivel que invalidaba la lectura anterior" in correo
-    assert correo.index("Cambio de lectura:") < correo.index("Los drivers al")
+    assert correo.index("Cambio de lectura:") < correo.index("Lo que mueve el precio al")
 
 
 def test_sin_motivo_de_caducidad_dice_que_la_lectura_anterior_cumplio_su_vigencia(tmp_path):
@@ -750,7 +759,7 @@ def test_un_activo_en_rango_no_arma_titular_ni_preheader_con_huecos(tmp_path):
     assert oh.titular_base(a).endswith("se mueve en rango entre 4.138,40 y 4.195,31")
     assert oh.titular_correo(a, p["editorial"]["fuentes"], variante=True) == oh.titular_base(a)
     pre = oh.preheader_sugerido(a, p["editorial"]["fuentes"], p["datos"])
-    assert pre.startswith("Sesgo lateral") and "4.138,40" in pre and "línea de ." not in pre
+    assert pre.startswith("Nuestra lectura en 4H") and "4.138,40" in pre and "línea de ." not in pre
 
 
 def test_en_rango_la_tira_de_cifras_muestra_los_bordes_y_no_sin_nivel(tmp_path):
@@ -759,3 +768,141 @@ def test_en_rango_la_tira_de_cifras_muestra_los_bordes_y_no_sin_nivel(tmp_path):
     correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
     assert "Soporte del rango" in correo and "Resistencia del rango" in correo
     assert "sin nivel" not in correo
+
+
+# ───────────────────────────────────────────── tests contrato: textos editables correo (2026-10-19)
+
+
+def _extraer_texto_marcador(fragmento: str, nombre_ed: str) -> str:
+    """Extrae el contenido de texto plano del elemento con data-ed='nombre_ed'."""
+    patron = rf'<([a-zA-Z0-9]+)\b[^>]*\bdata-ed=["\']{re.escape(nombre_ed)}["\'][^>]*>(.*?)</\1>'
+    m = re.search(patron, fragmento, re.S)
+    if not m:
+        raise AssertionError(f"No se encontró la etiqueta con data-ed='{nombre_ed}'")
+    contenido = m.group(2)
+    import html as html_mod
+    return html_mod.unescape(re.sub(r'<[^>]+>', '', contenido)).strip()
+
+
+def test_el_json_de_datos_trae_textos_editables_de_intro_cierre_y_activos(tmp_path):
+    """(1) El JSON de #datos trae 'editable' con intro, cierre y, por activo, titular y contexto no vacíos."""
+    html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    crudo = re.search(r'<script id="datos" type="application/json">(.*?)</script>', html, re.S).group(1)
+    datos = json.loads(crudo)
+    assert "editable" in datos, "El JSON de #datos no incluye la clave 'editable'"
+    editable = datos["editable"]
+    assert isinstance(editable.get("intro"), str) and editable["intro"].strip()
+    assert isinstance(editable.get("cierre"), str) and editable["cierre"].strip()
+    assert "activos" in editable and isinstance(editable["activos"], dict)
+
+    p = _pieza(tmp_path)
+    for a in p["datos"]["activos"]:
+        t = a["ticker"]
+        assert t in editable["activos"], f"Falta el activo {t} en editable['activos']"
+        act_ed = editable["activos"][t]
+        assert isinstance(act_ed.get("titular"), str) and act_ed["titular"].strip()
+        assert isinstance(act_ed.get("contexto"), str) and act_ed["contexto"].strip()
+
+
+def test_cada_clave_editable_tiene_su_marcador_data_ed_en_el_html(tmp_path):
+    """(2) Cada clave editable tiene su marcador data-ed en el HTML (intro y cierre al menos una vez, titular y contexto una vez por activo)."""
+    p = _pieza(tmp_path)
+    html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+
+    intros = re.findall(r'\bdata-ed=["\']intro["\']', html)
+    cierres = re.findall(r'\bdata-ed=["\']cierre["\']', html)
+    assert len(intros) >= 1, f"Se esperaba al menos un marcador data-ed='intro', se encontraron {len(intros)}"
+    assert len(cierres) >= 1, f"Se esperaba al menos un marcador data-ed='cierre', se encontraron {len(cierres)}"
+
+    for a in p["datos"]["activos"]:
+        t = a["ticker"]
+        match = re.search(rf'<template class="correo-activo" data-ticker="{re.escape(t)}">(.*?)</template>', html, re.S)
+        assert match is not None, f"No se encontró el template para el activo {t}"
+        bloque = match.group(1)
+        titulares = re.findall(r'\bdata-ed=["\']titular["\']', bloque)
+        contextos = re.findall(r'\bdata-ed=["\']contexto["\']', bloque)
+        assert len(titulares) == 1, f"El activo {t} debe tener exactamente un data-ed='titular', tiene {len(titulares)}"
+        assert len(contextos) == 1, f"El activo {t} debe tener exactamente un data-ed='contexto', tiene {len(contextos)}"
+
+
+def test_el_texto_por_defecto_del_marcador_coincide_con_datos_editable(tmp_path):
+    """(3) El texto por defecto del marcador coincide con DATOS.editable."""
+    p = _pieza(tmp_path)
+    html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    crudo = re.search(r'<script id="datos" type="application/json">(.*?)</script>', html, re.S).group(1)
+    datos = json.loads(crudo)
+    assert "editable" in datos, "Falta la clave 'editable' en #datos"
+    editable = datos["editable"]
+
+    texto_intro = _extraer_texto_marcador(html, "intro")
+    assert texto_intro == editable["intro"], (
+        f"El texto por defecto de data-ed='intro' no coincide con editable['intro']:\n"
+        f"HTML: {texto_intro!r}\nJSON: {editable['intro']!r}"
+    )
+
+    for a in p["datos"]["activos"]:
+        t = a["ticker"]
+        match = re.search(rf'<template class="correo-activo" data-ticker="{re.escape(t)}">(.*?)</template>', html, re.S)
+        assert match is not None, f"No se encontró el template para el activo {t}"
+        bloque = match.group(1)
+
+        texto_cierre = _extraer_texto_marcador(bloque, "cierre")
+        assert texto_cierre == editable["cierre"], (
+            f"El texto de cierre en {t} no coincide con editable['cierre']:\n"
+            f"HTML: {texto_cierre!r}\nJSON: {editable['cierre']!r}"
+        )
+
+        act_ed = editable["activos"][t]
+        texto_titular = _extraer_texto_marcador(bloque, "titular")
+        assert texto_titular == act_ed["titular"], (
+            f"El titular en {t} no coincide con editable['activos'][{t}]['titular']:\n"
+            f"HTML: {texto_titular!r}\nJSON: {act_ed['titular']!r}"
+        )
+
+        texto_contexto = _extraer_texto_marcador(bloque, "contexto")
+        assert texto_contexto == act_ed["contexto"], (
+            f"El contexto en {t} no coincide con editable['activos'][{t}]['contexto']:\n"
+            f"HTML: {texto_contexto!r}\nJSON: {act_ed['contexto']!r}"
+        )
+
+
+def test_la_plantilla_pieza_html_contiene_el_interruptor_y_el_codigo_con_textContent():
+    """(4) La plantilla pieza.html contiene el interruptor y el código que usa textContent (no innerHTML) para insertar texto propio."""
+    plantilla = oh.PLANTILLA.read_text(encoding="utf-8")
+
+    patron_interruptor = re.compile(r'<input[^>]*type="radio"[^>]*name="modo-redaccion"', re.I)
+    assert patron_interruptor.search(plantilla), (
+        "La plantilla templates/oportunidad/pieza.html debe contener un interruptor (checkbox o radio) "
+        "para que el ejecutivo pueda redactar él mismo los textos."
+    )
+
+    bloques = re.findall(r'<script\b[^>]*>(.*?)</script>', plantilla, re.S)
+    assert bloques, "La plantilla debe contener un bloque de script"
+    script = "\n".join(bloques)
+
+    assert "data-ed" in script, "El script de pieza.html debe buscar o manipular los marcadores data-ed"
+    assert "textContent" in script, "El script debe usar textContent para insertar textos"
+    assert re.search(r'\btextContent\s*=', script), (
+        "El script debe asignar el texto propio a los elementos usando textContent"
+    )
+    assert not re.search(r'data-ed[^;]+innerHTML\s*=', script), (
+        "El script no debe usar innerHTML para insertar texto propio en los marcadores data-ed"
+    )
+
+
+def test_el_texto_de_los_marcadores_no_contiene_guion_largo_ni_medio(tmp_path):
+    """(5) El texto de los marcadores no contiene el guion largo ni el medio."""
+    import html as html_mod
+    p = _pieza(tmp_path)
+    html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+
+    marcadores = re.findall(r'<[a-zA-Z0-9]+\b[^>]*\bdata-ed=["\'](\w+)["\'][^>]*>(.*?)</[a-zA-Z0-9]+>', html, re.S)
+    assert len(marcadores) >= 4, (
+        f"Se esperaban marcadores data-ed en el HTML (intro, cierre, titular, contexto), se encontraron {len(marcadores)}"
+    )
+
+    for nombre_ed, contenido in marcadores:
+        texto = html_mod.unescape(re.sub(r'<[^>]+>', '', contenido)).strip()
+        assert "—" not in texto, f"El marcador data-ed='{nombre_ed}' contiene guion largo (—): {texto!r}"
+        assert "–" not in texto, f"El marcador data-ed='{nombre_ed}' contiene guion medio (–): {texto!r}"
+

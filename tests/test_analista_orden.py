@@ -136,3 +136,21 @@ def test_seguimiento_tambien_deja_los_simbolos_libres_para_el_terminal():
 def test_oportunidad_rechaza_lo_que_no_parece_un_simbolo():
     with pytest.raises(od.PedidoInvalido):
         od.interpretar("/oportunidad ¿¿??", UNIVERSO_MINIMO)
+
+
+def test_recrear_un_activo_o_todas():
+    uni = [{"ticker": "XAUUSD", "nombre": "Oro"}]
+    assert od.interpretar("/recrear oro", uni) == od.Orden("recrear", {"ticker": "XAUUSD"})
+    assert od.interpretar("/recrear Todas", uni) == od.Orden("recrear", {"ticker": "todas"})
+    with pytest.raises(od.PedidoInvalido):
+        od.interpretar("/recrear", uni)
+
+
+def test_seguimiento_acepta_la_entrada_real_del_ejecutivo():
+    o = od.interpretar("/seguimiento oro Juan entrada=4062,5", UNIVERSO)
+    assert o.args == {"ticker": "XAUUSD", "entrada": 4062.5} and o.saludo == "Juan"
+
+
+def test_la_entrada_real_con_separador_de_miles_se_rechaza():
+    with pytest.raises(od.PedidoInvalido, match="sin separador de miles"):
+        od.interpretar("/seguimiento oro entrada=4.062,5", UNIVERSO)
