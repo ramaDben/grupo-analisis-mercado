@@ -1,0 +1,246 @@
+<title>Bot de Analistas GI</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Layout: encabezado, diagrama de carriles al centro, tarjetas de control debajo y bloque final con lo que se pide aprobar. */
+  :root {
+    --paper: #f5f5f5;
+    --card: #ffffff;
+    --ink: #2d3142;
+    --muted: #4f5d75;
+    --soft: #7a8399;
+    --rule: rgba(45,49,66,0.14);
+    --accent: #c2501f;
+    --accent-tint: #fbe9df;
+    --font-sans: 'Geist', system-ui, sans-serif;
+    --font-serif: 'Instrument Serif', Georgia, serif;
+    --font-mono: 'Geist Mono', ui-monospace, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #181b24; --card: #1f2330; --ink: #e8eaf0; --muted: #a3adc2; --soft: #7f8aa3;
+      --rule: rgba(232,234,240,0.16); --accent: #f08a5d; --accent-tint: #3a2a22; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #181b24; --card: #1f2330; --ink: #e8eaf0; --muted: #a3adc2; --soft: #7f8aa3;
+    --rule: rgba(232,234,240,0.16); --accent: #f08a5d; --accent-tint: #3a2a22; color-scheme: dark;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--paper); color: var(--ink); font-family: var(--font-sans); font-size: 15px; line-height: 1.5;
+    padding-block: 40px 56px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .frame { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px; }
+  .eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  h1 { font-family: var(--font-serif); font-weight: 400; font-size: clamp(1.7rem, 2.6vw + 0.8rem, 2.4rem); letter-spacing: -0.02em; line-height: 1.12; text-wrap: balance; max-width: 22ch; }
+  .sub { color: var(--muted); max-width: 68ch; margin-top: 12px; }
+  .scroll { overflow-x: auto; }
+  svg { display: block; width: 100%; min-width: 960px; height: auto; }
+
+  /* SVG tokens */
+  .bg { fill: var(--paper); }
+  .ln { stroke: var(--rule); stroke-width: 1; fill: none; }
+  .mask { fill: var(--paper); }
+  .arr { stroke: var(--muted); stroke-width: 1.2; fill: none; }
+  .arr-d { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 5 4; }
+  .mk { fill: var(--muted); }
+  .box { fill: var(--card); stroke: var(--ink); stroke-width: 1; }
+  .box-ext { fill: var(--paper); stroke: var(--soft); stroke-width: 1; stroke-dasharray: 4 3; }
+  .box-focal { fill: var(--accent-tint); stroke: var(--accent); stroke-width: 1.2; }
+  .nm { font-family: var(--font-sans); font-size: 12px; font-weight: 600; fill: var(--ink); text-anchor: middle; }
+  .sb { font-family: var(--font-sans); font-size: 10px; fill: var(--muted); text-anchor: middle; }
+  .lane-t { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.14em; fill: var(--muted); }
+  .lane-s { font-family: var(--font-sans); font-size: 11px; fill: var(--soft); }
+  .lab { font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.06em; fill: var(--soft); }
+  .leg { font-family: var(--font-sans); font-size: 10px; fill: var(--muted); }
+
+  .grid { display: grid; gap: 16px; grid-template-columns: 1.15fr 1fr 0.9fr; }
+  .grid-2 { display: grid; gap: 16px; grid-template-columns: 0.9fr 1.1fr; }
+  @media (max-width: 860px) { .grid, .grid-2 { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--rule); border-radius: 6px; padding: 20px; min-width: 0; }
+  .card h2 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .card .eyebrow { margin-bottom: 6px; }
+  .card ul { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .card li { padding-left: 14px; position: relative; color: var(--ink); font-size: 14px; }
+  .card li::before { content: ""; position: absolute; left: 0; top: 0.62em; width: 5px; height: 5px; border-radius: 50%; background: var(--soft); }
+  .card.ask { border-color: var(--accent); background: var(--accent-tint); }
+  .card.ask li::before { background: var(--accent); }
+  code { font-family: var(--font-mono); font-size: 12px; background: var(--paper); border: 1px solid var(--rule); border-radius: 3px; padding: 1px 5px; }
+  .note { font-size: 13px; color: var(--muted); margin-top: 12px; }
+  footer { font-family: var(--font-mono); font-size: 11px; color: var(--soft); border-top: 1px solid var(--rule); padding-top: 12px; letter-spacing: 0.04em; }
+</style>
+
+<div class="frame">
+  <header>
+    <p class="eyebrow">Carriles · Bot de Telegram para el equipo</p>
+    <h1>Qué hace el bot cuando un analista pide un análisis</h1>
+    <p class="sub">Para el visto bueno de Cumplimiento antes de pasar a producción con los analistas. El bot arma un análisis general de un activo, idéntico para todos sus destinatarios. No personaliza por cliente y no envía nada a los grupos de WhatsApp.</p>
+  </header>
+
+  <div class="scroll">
+  <svg viewBox="0 0 1200 760" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="botgi-title botgi-desc">
+    <title id="botgi-title">Flujo del bot de Telegram de analistas</title>
+    <desc id="botgi-desc">Carriles que muestran a un usuario autorizado pidiendo un análisis, el bot preparando datos del terminal, un agente de IA redactando solo los textos, el bot validando y entregando la ficha firmada, y el director manteniendo las listas y la firma.</desc>
+    <defs>
+      <marker id="botgi-a" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon class="mk" points="0 0, 8 3, 0 6"/></marker>
+    </defs>
+    <rect class="bg" width="1200" height="760"/>
+
+    <!-- carriles -->
+    <line class="ln" x1="16" y1="40" x2="1184" y2="40"/>
+    <line class="ln" x1="16" y1="200" x2="1184" y2="200"/>
+    <line class="ln" x1="16" y1="360" x2="1184" y2="360"/>
+    <line class="ln" x1="16" y1="520" x2="1184" y2="520"/>
+    <line class="ln" x1="16" y1="680" x2="1184" y2="680"/>
+    <text class="lane-t" x="24" y="112">USUARIO</text>
+    <text class="lane-s" x="24" y="130">Analista o ejecutivo</text>
+    <text class="lane-s" x="24" y="146">autorizado</text>
+    <text class="lane-t" x="24" y="272">BOT</text>
+    <text class="lane-s" x="24" y="290">Programa en Python,</text>
+    <text class="lane-s" x="24" y="306">sin criterio propio</text>
+    <text class="lane-t" x="24" y="432">REDACCIÓN</text>
+    <text class="lane-s" x="24" y="450">Agente de IA (agy)</text>
+    <text class="lane-s" x="24" y="466">solo escribe texto</text>
+    <text class="lane-t" x="24" y="592">DIRECTOR</text>
+    <text class="lane-s" x="24" y="610">Firma y mantiene</text>
+    <text class="lane-s" x="24" y="626">las listas</text>
+
+    <!-- flechas primero -->
+    <path class="arr" d="M256 156 V240" marker-end="url(#botgi-a)"/>
+    <path class="arr" d="M336 280 H428" marker-end="url(#botgi-a)"/>
+    <path class="arr" d="M480 316 V432 Q480 440 488 440 H556" marker-end="url(#botgi-a)"/>
+    <path class="arr" d="M720 440 H732 Q740 440 740 432 V320" marker-end="url(#botgi-a)"/>
+    <path class="arr" d="M848 280 H940" marker-end="url(#botgi-a)"/>
+    <path class="arr" d="M1024 244 V160" marker-end="url(#botgi-a)"/>
+    <path class="arr-d" d="M256 564 V320" marker-end="url(#botgi-a)"/>
+    <path class="arr-d" d="M796 564 V320" marker-end="url(#botgi-a)"/>
+    <path class="arr-d" d="M1024 564 V320" marker-end="url(#botgi-a)"/>
+
+    <!-- etiquetas -->
+    <rect class="mask" x="264" y="186" width="76" height="12" rx="2"/>
+    <text class="lab" x="268" y="195">/OPORTUNIDAD</text>
+    <rect class="mask" x="354" y="256" width="56" height="12" rx="2"/>
+    <text class="lab" x="382" y="265" text-anchor="middle">AUTORIZADO</text>
+    <rect class="mask" x="496" y="422" width="48" height="12" rx="2"/>
+    <text class="lab" x="520" y="431" text-anchor="middle">ENCARGO</text>
+    <rect class="mask" x="696" y="372" width="36" height="12" rx="2"/>
+    <text class="lab" x="728" y="381" text-anchor="end">TEXTO</text>
+    <rect class="mask" x="868" y="256" width="56" height="12" rx="2"/>
+    <text class="lab" x="896" y="265" text-anchor="middle">APRUEBA</text>
+    <rect class="mask" x="1032" y="186" width="76" height="12" rx="2"/>
+    <text class="lab" x="1036" y="195">HTML + LÁMINA</text>
+    <rect class="mask" x="264" y="474" width="76" height="12" rx="2"/>
+    <text class="lab" x="268" y="483">LISTA CERRADA</text>
+    <rect class="mask" x="804" y="474" width="52" height="12" rx="2"/>
+    <text class="lab" x="808" y="483">FUENTES</text>
+    <rect class="mask" x="1032" y="474" width="72" height="12" rx="2"/>
+    <text class="lab" x="1036" y="483">FIRMA · AVISO</text>
+
+    <!-- nodos -->
+    <rect class="box-ext" x="176" y="84" width="160" height="72" rx="6"/>
+    <text class="nm" x="256" y="116">Pide el análisis</text>
+    <text class="sb" x="256" y="134">/oportunidad + activo</text>
+
+    <rect class="box" x="944" y="84" width="160" height="72" rx="6"/>
+    <text class="nm" x="1024" y="116">Recibe la ficha</text>
+    <text class="sb" x="1024" y="134">la revisa con su cliente</text>
+
+    <rect class="box" x="176" y="244" width="160" height="72" rx="6"/>
+    <text class="nm" x="256" y="276">Control de acceso</text>
+    <text class="sb" x="256" y="294">lista cerrada y cupo diario</text>
+
+    <rect class="box" x="432" y="244" width="160" height="72" rx="6"/>
+    <text class="nm" x="512" y="276">Prepara los datos</text>
+    <text class="sb" x="512" y="294">terminal MT5, agenda, curva</text>
+
+    <rect class="box-focal" x="688" y="244" width="160" height="72" rx="6"/>
+    <text class="nm" x="768" y="276">Valida el texto</text>
+    <text class="sb" x="768" y="294">cifras, fuentes, lenguaje</text>
+
+    <rect class="box" x="944" y="244" width="160" height="72" rx="6"/>
+    <text class="nm" x="1024" y="276">Arma y entrega</text>
+    <text class="sb" x="1024" y="294">firma, aviso legal, Drive</text>
+
+    <rect class="box-ext" x="560" y="404" width="160" height="72" rx="6"/>
+    <text class="nm" x="640" y="436">Redacta los textos</text>
+    <text class="sb" x="640" y="454">no recibe texto del usuario</text>
+
+    <rect class="box-focal" x="176" y="564" width="928" height="72" rx="6"/>
+    <text class="nm" x="640" y="596">Director de trading</text>
+    <text class="sb" x="640" y="614">personas autorizadas · fuentes de prestigio · firma y acreditación</text>
+
+    <!-- leyenda -->
+    <line class="ln" x1="30" y1="696" x2="1170" y2="696"/>
+    <text class="lane-t" x="30" y="716">LEYENDA</text>
+    <line class="arr" x1="130" y1="712" x2="166" y2="712" marker-end="url(#botgi-a)"/>
+    <text class="leg" x="176" y="716">Camino del pedido</text>
+    <line class="arr-d" x1="340" y1="712" x2="376" y2="712" marker-end="url(#botgi-a)"/>
+    <text class="leg" x="386" y="716">Reglas que fija el director</text>
+    <rect class="box-focal" x="580" y="704" width="20" height="14" rx="3"/>
+    <text class="leg" x="610" y="716">Control de cumplimiento</text>
+    <rect class="box-ext" x="820" y="704" width="20" height="14" rx="3"/>
+    <text class="leg" x="850" y="716">Fuera del bot (persona o IA)</text>
+  </svg>
+  </div>
+
+  <section class="grid">
+    <div class="card">
+      <p class="eyebrow">Quién puede usarlo</p>
+      <h2>Lista cerrada de personas</h2>
+      <ul>
+        <li>Cada analista o ejecutivo entra por su número de usuario de Telegram. Lo agrega el director.</li>
+        <li>Quien no está en la lista solo recibe su número y no obtiene ningún análisis.</li>
+        <li>Cupo diario por persona. Un análisis vigente se reutiliza sin gastar cupo ni agente de IA.</li>
+        <li>Un análisis vale 7 días. Caduca antes si el precio toca la invalidación o alcanza el objetivo.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <p class="eyebrow">Controles antes de entregar</p>
+      <h2>Qué revisa el bot en el texto</h2>
+      <ul>
+        <li>Toda cifra del texto sale del terminal. Una cifra ajena, HTML o voseo lo detienen.</li>
+        <li>Rechaza frases que inviten a operar, recomienden o dimensionen, como «te recomiendo» o «lotes».</li>
+        <li>Debe citar al menos un banco con nota de los últimos 14 días. Sin banco, el análisis no sale.</li>
+        <li>Las fuentes salen de una lista cerrada y su enlace se verifica uno por uno.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <p class="eyebrow">Qué no hace</p>
+      <h2>Límites del sistema</h2>
+      <ul>
+        <li>No personaliza por cliente. Un pedido «para Nombre» se rechaza.</li>
+        <li>No escribe en WhatsApp ni toca la bitácora de despachos. Un test lo impide.</li>
+        <li>El agente de IA solo redacta. No recibe lo que el analista escribió.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="grid-2">
+    <div class="card">
+      <p class="eyebrow">Firma y trazabilidad</p>
+      <h2>Quién firma y qué queda registrado</h2>
+      <ul>
+        <li>Firma el director, con su acreditación tal como figura en el certificado y su fecha de vigencia. Vencida la vigencia, deja de imprimirse y el bot avisa.</li>
+        <li>Pie de cada ficha: «Análisis general de mercado, idéntico para todos sus destinatarios. No es asesoría de inversión ni considera el perfil de quien lo lee.»</li>
+        <li>Cada pedido deja su carpeta con los datos, las salidas del agente y las fuentes descartadas. La bitácora está en <code>data/logs/bot_telegram.log</code> y los análisis vigentes en <code>data/semanal/registro.json</code>.</li>
+      </ul>
+    </div>
+    <div class="card ask">
+      <p class="eyebrow">Para el visto bueno</p>
+      <h2>Qué se le pide a Cumplimiento</h2>
+      <ul>
+        <li>Confirmar la frase de cierre y la forma de mostrar la acreditación en la ficha.</li>
+        <li>Confirmar que el mensaje reenviable invite a revisar la plataforma MT5 con el cliente y no a operar.</li>
+        <li>Revisar la lámina de <code>/seguimiento</code>: lleva la pregunta «¿Te interesa operar este escenario?». El director decidió mantenerla el 2026-10-17, y esa invitación queda fuera de la regla de <code>/oportunidad</code>.</li>
+        <li>Definir qué personas del equipo entran en la primera ronda y su cupo diario.</li>
+      </ul>
+      <p class="note">Sin respuesta sobre el tercer punto, el sistema sigue como está.</p>
+    </div>
+  </section>
+
+  <footer>Grupo Inteligencia · Bot de analistas · Diagrama del 2026-10-18 · Fuente: docs/bot-analistas.md</footer>
+</div>

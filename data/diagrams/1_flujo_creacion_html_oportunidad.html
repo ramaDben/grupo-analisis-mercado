@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flujo de Creación del HTML Semanal y Análisis Técnico · Grupo Inteligencia</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #0D0D1A;
+    --card-bg: #161626;
+    --card-border: rgba(255, 255, 255, 0.12);
+    --text-primary: #FFFFFF;
+    --text-secondary: #9AA4B2;
+    --text-muted: #5A6275;
+    --accent-mint: #53C1AB;
+    --accent-cyan: #3E91AF;
+    --accent-gold: #D4AF37;
+    --accent-coral: #E76F51;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: 'Space Grotesk', sans-serif;
+    padding: 40px 20px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .container {
+    max-width: 1280px;
+    width: 100%;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--card-border);
+  }
+
+  .tag {
+    display: inline-block;
+    padding: 6px 14px;
+    background: rgba(83, 193, 171, 0.15);
+    color: var(--accent-mint);
+    border: 1px solid var(--accent-mint);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+
+  p.subtitle {
+    color: var(--text-secondary);
+    font-size: 16px;
+    max-width: 760px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+
+  .pipeline {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    position: relative;
+  }
+
+  .stage {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 28px;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+
+  .stage.focal {
+    border-color: var(--accent-mint);
+    box-shadow: 0 0 30px rgba(83, 193, 171, 0.12);
+  }
+
+  .stage-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 14px;
+  }
+
+  .stage-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .stage-number {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: rgba(83, 193, 171, 0.15);
+    color: var(--accent-mint);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    border: 1px solid var(--accent-mint);
+  }
+
+  .stage-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  .stage-badge {
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--accent-cyan);
+    background: rgba(62, 145, 175, 0.15);
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(62, 145, 175, 0.3);
+  }
+
+  .grid-cols-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
+
+  .grid-cols-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+  }
+
+  .grid-cols-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+
+  .item-card {
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 12px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .item-card.highlight {
+    border-color: rgba(83, 193, 171, 0.4);
+    background: rgba(83, 193, 171, 0.04);
+  }
+
+  .item-card h4 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .item-card p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.45;
+  }
+
+  .code-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent-cyan);
+    background: rgba(62, 145, 175, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-top: 10px;
+  }
+
+  .arrow-connector {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: -16px 0;
+    z-index: 2;
+  }
+
+  .arrow-connector svg {
+    filter: drop-shadow(0 2px 8px rgba(83, 193, 171, 0.4));
+  }
+
+  .callout-box {
+    margin-top: 18px;
+    background: rgba(212, 175, 55, 0.08);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 10px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .callout-box span.icon {
+    font-size: 20px;
+  }
+
+  .callout-box p {
+    font-size: 13px;
+    color: #F0E6C8;
+    line-height: 1.4;
+  }
+
+  footer {
+    margin-top: 48px;
+    text-align: center;
+    border-top: 1px solid var(--card-border);
+    padding-top: 24px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="tag">Diagrama 1 · Arquitectura de Generación</div>
+    <h1>Flujo de Creación del Análisis Semanal (HTML)</h1>
+    <p class="subtitle">Extracción soberana multi-fuente, motor de análisis técnico algorítmico, redacción editorial estricta y compilación de la herramienta interactiva de simulación.</p>
+  </header>
+
+  <div class="pipeline">
+
+    <!-- ETAPA 1 -->
+    <div class="stage">
+      <div class="stage-header">
+        <div class="stage-title-wrap">
+          <div class="stage-number">1</div>
+          <div class="stage-title">Ingesta y Extracción de Datos en Bruto</div>
+        </div>
+        <div class="stage-badge">Soberanía de Datos · MT5 & Macro</div>
+      </div>
+      <div class="grid-cols-3">
+        <div class="item-card">
+          <h4>📊 MetaTrader 5 (MT5)</h4>
+          <p>Extracción de series temporales OHLC en marcos <strong>H4, D1 y W1</strong> para los activos bajo cobertura: Oro (XAUUSD), Cobre (COPPER), Petróleo (WTI/Brent), Dólar (USDCLP), Euro (EURUSD) y Nasdaq (US100).</p>
+          <span class="code-tag">market_data_mcp / mt5_client</span>
+        </div>
+        <div class="item-card">
+          <h4>🏛️ Ecosistema Macro Central</h4>
+          <p>Curvas de tasas soberanas oficiales (Treasury EE.UU., Fed, Banco Central de Chile, BCE, BoE, Banco de Japón) almacenadas en <span style="color:#53C1AB">data central/</span>.</p>
+          <span class="code-tag">get_curva_tasas / macro_data</span>
+        </div>
+        <div class="item-card">
+          <h4>📅 Calendario Económico</h4>
+          <p>Agenda macroeconómica filtrada por impacto y divisa relevante. Detecta hitos de alta volatilidad (IPC, NFP, TPM, FOMC) de la semana en curso.</p>
+          <span class="code-tag">obtener_calendario_macro</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- FLECHA -->
+    <div class="arrow-connector">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+        <path d="M12 4V20M12 20L6 14M12 20L18 14" stroke="#53C1AB" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+    <!-- ETAPA 2 -->
+    <div class="stage focal">
+      <div class="stage-header">
+        <div class="stage-title-wrap">
+          <div class="stage-number">2</div>
+          <div class="stage-title">Motor de Análisis Técnico & Estrategia Cuantitativa</div>
+        </div>
+        <div class="stage-badge">estrategia/ & analista/preparar.py</div>
+      </div>
+      <div class="grid-cols-4">
+        <div class="item-card highlight">
+          <h4>📐 Fractales y S/R</h4>
+          <p>Detección matemática de máximos y mínimos de swing en H4 y D1. Construcción de zonas horizontales y diagonales de contexto.</p>
+          <span class="code-tag">estrategia/geometria</span>
+        </div>
+        <div class="item-card highlight">
+          <h4>📏 ATR & Confluencia</h4>
+          <p>Cálculo de volatilidad típica en 14 períodos (ATR H4 y ATR D1). Asignación de puntajes por confluencia estructural.</p>
+          <span class="code-tag">metricas["atr"]</span>
+        </div>
+        <div class="item-card highlight">
+          <h4>🎯 Escenarios</h4>
+          <p>Definición de 3 escenarios claros por activo: <strong>Quiebre</strong>, <strong>Retesteo</strong> o <strong>Falso Quiebre</strong>, con niveles exactos de entrada, stop y objetivo.</p>
+          <span class="code-tag">escenario: RANGO / ALZA</span>
+        </div>
+        <div class="item-card highlight">
+          <h4>📈 Gráficos Matplotlib</h4>
+          <p>Renderizado de láminas de alta resolución H4 sin ruido ni indicadores superfluos. Trazo exacto de zonas de decisión.</p>
+          <span class="code-tag">grafico_lectura()</span>
+        </div>
+      </div>
+      <div class="callout-box">
+        <span class="icon">💡</span>
+        <p><strong>Regla de Dominio:</strong> Los niveles numéricos respetan estrictamente la tabla de decimales (<em>digits</em>) de cada instrumento (ej: Cobre 0 decimales, Oro 2 decimales, Dólar 2 decimales). Sin comillas tipográficas que rompan el parser.</p>
+      </div>
+    </div>
+
+    <!-- FLECHA -->
+    <div class="arrow-connector">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+        <path d="M12 4V20M12 20L6 14M12 20L18 14" stroke="#53C1AB" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+    <!-- ETAPA 3 -->
+    <div class="stage">
+      <div class="stage-header">
+        <div class="stage-title-wrap">
+          <div class="stage-number">3</div>
+          <div class="stage-title">Ensamble Editorial y Pieza Intermedia (JSON)</div>
+        </div>
+        <div class="stage-badge">preparar_oportunidad() & LLM</div>
+      </div>
+      <div class="grid-cols-2">
+        <div class="item-card">
+          <h4>📝 Tokenizado y Redacción Editorial (agy)</h4>
+          <p>Se genera el payload <span class="code-tag">pieza.json</span>. agy rellena los titulares institucionales, la síntesis ejecutiva y el contexto macroeconómico <strong>una sola vez por semana</strong> los lunes por la mañana. No hay textos vacíos.</p>
+        </div>
+        <div class="item-card">
+          <h4>📋 Registro Semanal Inmutable</h4>
+          <p>La foto de la semana se almacena en <span class="code-tag">data/semanal/registro.json</span> y en <span class="code-tag">data/referencias_semanales/</span>. Queda congelada para que el seguimiento diario mida contra esta foto y no contra lecturas recalculadas.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- FLECHA -->
+    <div class="arrow-connector">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+        <path d="M12 4V20M12 20L6 14M12 20L18 14" stroke="#53C1AB" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+    <!-- ETAPA 4 -->
+    <div class="stage">
+      <div class="stage-header">
+        <div class="stage-title-wrap">
+          <div class="stage-number">4</div>
+          <div class="stage-title">Compilación del HTML Interactivo para Clientes</div>
+        </div>
+        <div class="stage-badge">oportunidad_html.py ➔ Entrega</div>
+      </div>
+      <div class="grid-cols-3">
+        <div class="item-card">
+          <h4>🌐 Archivo HTML Autónomo</h4>
+          <p>Genera <span class="code-tag">analisis-semanal_YYYY-Wxx.html</span> sin dependencias externas pesadas. Incluye los gráficos embebidos, la curva de tasas de 2 a 30 años y las tarjetas de cada activo seleccionado.</p>
+        </div>
+        <div class="item-card">
+          <h4>🧮 Panel de Simulación de Riesgo</h4>
+          <p>Herramienta interactiva en JavaScript: el cliente o ejecutivo ingresa su <strong>Pérdida Máxima Aceptable</strong> en CLP o USD, y el sistema calcula en vivo el volumen exacto de contratos (lotes) y el potencial de retorno.</p>
+        </div>
+        <div class="item-card">
+          <h4>✉️ Generador de Correo Comercial</h4>
+          <p>Botón de 1-clic que redacta y copia al portapapeles una propuesta personalizada con los activos elegidos para despachar al inversionista por correo formal.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    Grupo Inteligencia · Departamento de Análisis Cuantitativo y Estrategia
+  </footer>
+</div>
+
+</body>
+</html>
