@@ -112,6 +112,10 @@ y la pone el bot: tú no decides nada visual.
   No inventes URLs ni fuentes: el bot abre cada URL y descarta lo que no responde. Sin al menos una directa
   válida el análisis no sale, así que busca hasta encontrarla (notas de los últimos 14 días en los medios de la
   lista). No rellenes con voces que no hablan de este activo.
+  En el segmento cripto, el comunicado de un emisor (de un ETF o de un fondo) cuenta como directa solo si trae
+  datos del fondo o del mercado (flujos, tenencias, cifras publicadas) y no promoción de producto. Límite conocido:
+  el bot no puede verificar esto por código, es una regla de este prompt y la revisa el director. Un exchange
+  (Coinbase, Kraken, Binance) o un portal cripto nunca es directa por nombrar la moneda.
 - Si `datos.empresa` existe (acciones): trae `proxima_earnings` (día y fecha de los próximos resultados),
   `fuente_fecha` y `ultimo_informe` (forma, fecha y url del último informe de la SEC). Una fecha futura se
   escribe siempre en modo anticipación ("la empresa reportará el jueves 29/10", nunca en pasado), y dices que

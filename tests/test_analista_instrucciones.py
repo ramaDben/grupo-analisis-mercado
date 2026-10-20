@@ -69,3 +69,8 @@ def test_las_instrucciones_exigen_una_fuente_directa():
     assert "datos.fuente_directa" in TEXTO and "al menos una directa" in bajo and "fuentes_intento_1.json" in TEXTO
     assert "al menos una de un banco" not in bajo
     assert "lista vacía" not in bajo  # ya no se permite entregar fuentes vacías
+
+
+def test_las_instrucciones_piden_que_el_comunicado_de_un_emisor_traiga_datos_y_no_promocion():
+    bajo = TEXTO.lower()
+    assert "emisor" in bajo and "promoción" in bajo and "datos del fondo o del mercado" in bajo

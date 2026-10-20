@@ -237,6 +237,8 @@
     {
       "ticker": "BTC/USD",
       "ticker_mt5": "BTCUSD",
+      "segmento": "cripto",
+      "ancla": {"nombre": "Bitcoin", "red": "la red Bitcoin", "fundacion": null, "entidades": ["BlackRock", "Fidelity", "Grayscale", "SEC", "CFTC", "Glassnode"], "dominios": ["ishares.com", "blackrock.com", "fidelity.com", "grayscale.com", "sec.gov", "cftc.gov", "glassnode.com"], "terminos_ancla": ["ETF de Bitcoin", "ETFs de Bitcoin", "ETF spot de Bitcoin", "Bitcoin Trust", "on-chain de Bitcoin", "BTCUSD"]},
       "nombre": "Bitcoin",
       "categoria": "crypto",
       "digits": 2,
@@ -260,6 +262,8 @@
     {
       "ticker": "ETH/USD",
       "ticker_mt5": "ETHUSD",
+      "segmento": "cripto",
+      "ancla": {"nombre": "Ethereum", "red": "la red Ethereum", "fundacion": "Ethereum Foundation", "entidades": ["Ethereum Foundation", "SEC"], "dominios": ["ethereum.org", "sec.gov"], "terminos_ancla": ["Ethereum", "ETHUSD"]},
       "nombre": "Ethereum",
       "categoria": "crypto",
       "digits": 2,
@@ -283,6 +287,8 @@
     {
       "ticker": "SOL/USD",
       "ticker_mt5": "SOLUSD",
+      "segmento": "cripto",
+      "ancla": {"nombre": "Solana", "red": "la red Solana", "fundacion": "Solana Foundation", "entidades": ["Solana Foundation", "SEC"], "dominios": ["solana.org", "solana.com", "sec.gov"], "terminos_ancla": ["Solana", "SOLUSD"]},
       "nombre": "Solana",
       "categoria": "crypto",
       "digits": 2,
@@ -305,6 +311,8 @@
     {
       "ticker": "LTC/USD",
       "ticker_mt5": "LTCUSD",
+      "segmento": "cripto",
+      "ancla": {"nombre": "Litecoin", "red": "la red Litecoin", "fundacion": "Litecoin Foundation", "entidades": ["Litecoin Foundation", "SEC"], "dominios": ["litecoin.org", "sec.gov"], "terminos_ancla": ["Litecoin", "LTCUSD"]},
       "nombre": "Litecoin",
       "categoria": "crypto",
       "digits": 2,
@@ -326,6 +334,8 @@
     {
       "ticker": "ADA/USD",
       "ticker_mt5": "ADAUSD",
+      "segmento": "cripto",
+      "ancla": {"nombre": "Cardano", "red": "la red Cardano", "fundacion": "IOG", "entidades": ["IOG", "SEC"], "dominios": ["iohk.io", "iog.io", "cardano.org", "sec.gov"], "terminos_ancla": ["Cardano", "ADAUSD"]},
       "nombre": "Cardano",
       "categoria": "crypto",
       "digits": 4,
@@ -347,6 +357,8 @@
     {
       "ticker": "DOGE/USD",
       "ticker_mt5": "DOGUSD",
+      "segmento": "cripto",
+      "ancla": {"nombre": "Dogecoin", "red": "la red Dogecoin", "fundacion": "Dogecoin Foundation", "entidades": ["Dogecoin Foundation", "SEC"], "dominios": ["dogecoinfoundation.org", "sec.gov"], "terminos_ancla": ["Dogecoin", "DOGUSD"]},
       "nombre": "Dogecoin",
       "categoria": "crypto",
       "digits": 4,

@@ -144,5 +144,24 @@
       "STOXX": ["stoxx.com"]
     }
   },
-  "cripto": {"entidades": [], "medios": {}}
+  "cripto": {
+    "entidades": ["Ethereum Foundation", "Solana Foundation", "IOG", "Litecoin Foundation", "Dogecoin Foundation",
+                  "BlackRock", "Fidelity", "Grayscale", "SEC", "CFTC", "Glassnode", "Coinbase", "Kraken", "Binance"],
+    "medios": {
+      "Ethereum Foundation": ["ethereum.org"],
+      "Solana Foundation": ["solana.org", "solana.com"],
+      "IOG": ["iohk.io", "iog.io", "cardano.org"],
+      "Litecoin Foundation": ["litecoin.org"],
+      "Dogecoin Foundation": ["dogecoinfoundation.org"],
+      "BlackRock": ["ishares.com", "blackrock.com"],
+      "Fidelity": ["fidelity.com"],
+      "Grayscale": ["grayscale.com"],
+      "SEC": ["sec.gov"],
+      "CFTC": ["cftc.gov"],
+      "Glassnode": ["glassnode.com"],
+      "Coinbase": ["coinbase.com"],
+      "Kraken": ["kraken.com"],
+      "Binance": ["binance.com"]
+    }
+  }
 }

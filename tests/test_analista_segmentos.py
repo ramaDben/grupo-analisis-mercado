@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from datetime import date
 
 RAIZ = Path(__file__).resolve().parent.parent
 for _p in (str(RAIZ / "src"), str(RAIZ / "scripts")):
@@ -308,3 +309,63 @@ def test_los_terminos_de_ancla_de_indices_no_son_genericos():
         _, ancla = sg.segmento_y_ancla(t)
         assert not prohibidos & {x.lower() for x in ancla["terminos_ancla"]}, t
     assert "DAX" in sg.segmento_y_ancla("GER40.spot")[1]["terminos_ancla"]
+
+
+# ───────────────────────────────────────────── Task 10: cripto
+CRIPTOS = ("BTCUSD", "ETHUSD", "SOLUSD", "LTCUSD", "ADAUSD", "DOGUSD")
+
+
+def test_la_fundacion_de_la_red_es_directa_de_su_cripto_y_no_de_otra():
+    seg, eth = sg.segmento_y_ancla("ETHUSD")
+    nota = _nota("Ethereum Foundation", "https://blog.ethereum.org/2026/10/14/protocol-update",
+                 "La Ethereum Foundation publica el avance de la proxima actualizacion de Ethereum.")
+    assert seg == "cripto" and fu.fuentes_directas([nota], seg, eth) == [nota]
+    _, sol = sg.segmento_y_ancla("SOLUSD")
+    assert fu.fuentes_directas([nota], seg, sol) == []
+
+
+def test_cada_cripto_tiene_ancla_dentro_de_la_lista_cerrada_y_sin_terminos_genericos():
+    lista = fu.lista_del_segmento("cripto")
+    entidades = {e for g in lista["entidades"].values() for e in g}
+    dominios = {d for ds in lista["medios"].values() for d in ds}
+    prohibidos = {"bitcoin", "btc", "eth", "sol", "ada", "ltc", "doge", "cripto", "crypto", "criptomonedas"}
+    for t in CRIPTOS:
+        seg, ancla = sg.segmento_y_ancla(t)
+        assert seg == "cripto" and ancla["nombre"] and ancla["red"] and "fundacion" in ancla, t
+        assert set(ancla["entidades"]) <= entidades and set(ancla["dominios"]) <= dominios, t
+        assert not prohibidos & {x.lower() for x in ancla["terminos_ancla"]}, t
+        # una bolsa que nombra la cripto no es directa: solo cuentan la fundacion, el emisor y el regulador
+        assert not {"Coinbase", "Kraken", "Binance"} & set(ancla["entidades"]), t
+        aviso = _nota("Coinbase", "https://www.coinbase.com/blog/listado-de-" + ancla["terminos_ancla"][0].lower(),
+                      f"Coinbase anuncia nuevos servicios para {ancla['terminos_ancla'][0]}.")
+        assert fu.fuentes_directas([aviso], seg, ancla) == [], t
+
+
+def test_un_portal_cripto_fuera_de_la_lista_no_cuenta():
+    lista = fu.lista_del_segmento("cripto")
+    portal = {"entidad": "CoinDesk", "medio": "CoinDesk", "fecha": "2026-10-19", "postura": "neutral",
+              "url": "https://www.coindesk.com/markets/2026/10/19/ether-sube/",
+              "tesis": "Ether sube en la sesion."}
+    validas, descartes = fu.depurar([portal], date(2026, 10, 20), lista=lista, verificar=lambda u: "ok")
+    assert validas == [] and "lista de fuentes de prestigio" in descartes[0]
+
+
+def test_un_blog_de_fundacion_cuenta_solo_con_url_propia_y_fecha():
+    lista = fu.lista_del_segmento("cripto")
+    base = {"entidad": "Ethereum Foundation", "medio": "Ethereum Foundation", "fecha": "2026-10-19",
+            "postura": "neutral", "tesis": "La fundacion detalla la actualizacion de Ethereum.",
+            "url": "https://blog.ethereum.org/"}
+    validas, descartes = fu.depurar([base], date(2026, 10, 20), lista=lista, verificar=lambda u: "ok")
+    assert validas == [] and "portada" in descartes[0]
+    ok = {**base, "url": "https://blog.ethereum.org/2026/10/19/actualizacion"}
+    validas, _ = fu.depurar([ok], date(2026, 10, 20), lista=lista, verificar=lambda u: "ok")
+    assert len(validas) == 1
+    viejo = {**ok, "fecha": "2026-08-01"}
+    assert fu.depurar([viejo], date(2026, 10, 20), lista=lista, verificar=lambda u: "ok")[0] == []
+
+
+def test_la_cripto_no_inventa_correlaciones_macro():
+    import analista.hechos as hc
+
+    for t in CRIPTOS:
+        assert set(hc.signos(t).values()) == {0}, t
