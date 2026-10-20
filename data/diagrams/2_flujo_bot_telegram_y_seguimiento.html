@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flujo del Bot de Telegram y Motor de Seguimiento · Grupo Inteligencia</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #0D0D1A;
+    --card-bg: #161626;
+    --card-border: rgba(255, 255, 255, 0.12);
+    --text-primary: #FFFFFF;
+    --text-secondary: #9AA4B2;
+    --text-muted: #5A6275;
+    --accent-mint: #53C1AB;
+    --accent-cyan: #3E91AF;
+    --accent-gold: #D4AF37;
+    --accent-coral: #E76F51;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: 'Space Grotesk', sans-serif;
+    padding: 40px 20px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .container {
+    max-width: 1280px;
+    width: 100%;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--card-border);
+  }
+
+  .tag {
+    display: inline-block;
+    padding: 6px 14px;
+    background: rgba(62, 145, 175, 0.15);
+    color: var(--accent-cyan);
+    border: 1px solid var(--accent-cyan);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+
+  p.subtitle {
+    color: var(--text-secondary);
+    font-size: 16px;
+    max-width: 780px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 28px;
+    margin-bottom: 36px;
+  }
+
+  .panel {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 14px;
+  }
+
+  .panel-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .bot-card {
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 12px;
+    padding: 16px;
+  }
+
+  .bot-card.highlight {
+    border-color: rgba(83, 193, 171, 0.4);
+    background: rgba(83, 193, 171, 0.05);
+  }
+
+  .bot-card h4 {
+    font-size: 14px;
+    color: var(--accent-mint);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .bot-card p {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    line-height: 1.45;
+  }
+
+  .code-pill {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .workflow {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .step-box {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 22px;
+    position: relative;
+  }
+
+  .step-box.focal {
+    border-color: var(--accent-mint);
+    box-shadow: 0 0 25px rgba(83, 193, 171, 0.12);
+  }
+
+  .step-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .step-num-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .step-badge-num {
+    background: rgba(83, 193, 171, 0.2);
+    color: var(--accent-mint);
+    font-weight: 700;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-family: var(--mono);
+  }
+
+  .step-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+  }
+
+  .rule-badge {
+    font-size: 11px;
+    font-family: var(--mono);
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+
+  .badge-cache { background: rgba(212, 175, 55, 0.15); color: var(--accent-gold); border: 1px solid rgba(212, 175, 55, 0.3); }
+  .badge-engine { background: rgba(83, 193, 171, 0.15); color: var(--accent-mint); border: 1px solid rgba(83, 193, 171, 0.3); }
+  .badge-security { background: rgba(231, 111, 81, 0.15); color: var(--accent-coral); border: 1px solid rgba(231, 111, 81, 0.3); }
+
+  .subgrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    margin-top: 10px;
+  }
+
+  .subcard {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+
+  .subcard h5 {
+    font-size: 13px;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+
+  .subcard p {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+
+  .status-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .status-chip {
+    padding: 10px 8px;
+    border-radius: 8px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .status-chip.s-pendiente { border-color: rgba(154, 164, 178, 0.3); }
+  .status-chip.s-curso { border-color: rgba(62, 145, 175, 0.4); background: rgba(62, 145, 175, 0.08); }
+  .status-chip.s-objetivo { border-color: rgba(83, 193, 171, 0.5); background: rgba(83, 193, 171, 0.1); }
+  .status-chip.s-stop { border-color: rgba(231, 111, 81, 0.4); background: rgba(231, 111, 81, 0.08); }
+  .status-chip.s-roto { border-color: rgba(212, 175, 55, 0.4); background: rgba(212, 175, 55, 0.08); }
+
+  .status-name {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .status-desc {
+    font-size: 10.5px;
+    color: var(--text-secondary);
+  }
+
+  footer {
+    text-align: center;
+    border-top: 1px solid var(--card-border);
+    padding-top: 24px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="tag">Diagrama 2 · Servicio de Mensajería & Motor de Seguimiento</div>
+    <h1>Cómo Funciona el Bot de Telegram de Analistas</h1>
+    <p class="subtitle">Arquitectura de concurrencia, gestión de estado en memoria, ventana de caché de 30 minutos y motor de evaluación con vela viva y tolerancia ATR.</p>
+  </header>
+
+  <div class="layout">
+
+    <!-- PANEL LATERAL: CONTROL Y SEGURIDAD -->
+    <div class="panel">
+      <div class="panel-header">
+        <span style="font-size: 20px;">🛡️</span>
+        <div class="panel-title">Políticas del Bot</div>
+      </div>
+
+      <div class="bot-card highlight">
+        <h4>🔒 Autorización Estricta</h4>
+        <p>Solo atiende a IDs registrados en <span class="code-pill">config/analistas_telegram.json</span>. Usuarios externos son rechazados y logueados como <span style="color:var(--accent-coral)">desconocido</span>.</p>
+      </div>
+
+      <div class="bot-card">
+        <h4>🔐 Candado de Instancia Única</h4>
+        <p>Utiliza <span class="code-pill">.bot_analistas.lock</span> mediante bloqueo a nivel de OS. Impide que dos procesos con el mismo token compitan por las actualizaciones de Telegram.</p>
+      </div>
+
+      <div class="bot-card">
+        <h4>⏱️ Caché Inteligente (30 min)</h4>
+        <p>Reusar no cuesta cómputo ni cuota: si el mismo activo se solicita dentro de <strong>30 minutos</strong>, se sirve la pieza existente sin tocar MT5.</p>
+      </div>
+
+      <div class="bot-card">
+        <h4>📊 Cupo Diario por Ejecutivo</h4>
+        <p>Límite por analista (default 10 piezas nuevas al día) gestionado en <span class="code-pill">.bot_telegram_estado.json</span>.</p>
+      </div>
+    </div>
+
+    <!-- WORKFLOW PRINCIPAL -->
+    <div class="workflow">
+
+      <!-- PASO 1 -->
+      <div class="step-box">
+        <div class="step-header">
+          <div class="step-num-title">
+            <div class="step-badge-num">1</div>
+            <div class="step-name">Ingreso de Comando & Detección de Intención</div>
+          </div>
+          <span class="rule-badge badge-security">orden.py</span>
+        </div>
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+          El bot escucha vía polling asíncrono con cola FIFO interna (<span class="code-pill">queue.Queue</span>) para desacoplar recepción y procesamiento:
+        </p>
+        <div class="subgrid">
+          <div class="subcard">
+            <h5>📄 /oportunidad</h5>
+            <p>Verifica si existe el análisis de la semana en <span class="code-pill">data/semanal/</span>. Si existe, entrega el HTML interactivo inmediatamente.</p>
+          </div>
+          <div class="subcard">
+            <h5>🎯 /seguimiento &lt;activo&gt; [cliente]</h5>
+            <p>Interpreta el activo (ej: <em>cobre, oro, dolar</em>) y opcionalmente el nombre del cliente (ej: <em>/seguimiento cobre Juan</em>) para personalizar el saludo.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- PASO 2 -->
+      <div class="step-box">
+        <div class="step-header">
+          <div class="step-num-title">
+            <div class="step-badge-num">2</div>
+            <div class="step-name">Evaluación de Caché & Estado de Vigencia</div>
+          </div>
+          <span class="rule-badge badge-cache">Estado.vigente() · 30 min</span>
+        </div>
+        <div class="subgrid">
+          <div class="subcard">
+            <h5 style="color: var(--accent-gold);">⚡ Pieza Vigente (&lt; 30 min)</h5>
+            <p>Omite la preparación pesada. Carga <span class="code-pill">pieza.json</span> de disco, ajusta el saludo comercial en tiempo real con <span class="code-pill">sg.redactar()</span> y entrega de inmediato.</p>
+          </div>
+          <div class="subcard">
+            <h5 style="color: var(--accent-mint);">🔄 Pieza Expirada o Nueva</h5>
+            <p>Consume 1 punto del cupo diario del analista. Invoca al motor de preparación fresca conectando al terminal de mercado.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- PASO 3: MOTOR FOCAL -->
+      <div class="step-box focal">
+        <div class="step-header">
+          <div class="step-num-title">
+            <div class="step-badge-num">3</div>
+            <div class="step-name">Motor de Seguimiento: Vela Viva & Tolerancia ATR</div>
+          </div>
+          <span class="rule-badge badge-engine">seguimiento.py · evaluar()</span>
+        </div>
+        <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5;">
+          Compara las velas cerradas desde la foto del lunes, más los extremos de la <strong>vela H4 viva</strong> en formación (máximo y mínimo actual de MT5), aplicando una tolerancia de entrada:
+        </p>
+        <div style="margin: 12px 0; background: rgba(83, 193, 171, 0.06); border: 1px solid rgba(83, 193, 171, 0.25); border-radius: 8px; padding: 12px;">
+          <p style="font-family: var(--mono); font-size: 12px; color: var(--accent-mint);">
+            TOLERANCIA_ATR = 0.35 × ATR_H4 &nbsp;➔&nbsp; rango: [bajo - tolerancia, alto + tolerancia]
+          </p>
+          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+            El stop se valida primero y <strong>sin tolerancia</strong>. Si se toca el stop antes de activar, el rango se descarta. En la vela que activa no cuenta el objetivo.
+          </p>
+        </div>
+
+        <div class="status-grid">
+          <div class="status-chip s-pendiente">
+            <span class="status-name" style="color:#9AA4B2;">entrada_pendiente</span>
+            <span class="status-desc">El precio no ha tocado la zona de entrada.</span>
+          </div>
+          <div class="status-chip s-curso">
+            <span class="status-name" style="color:var(--accent-cyan);">en_curso</span>
+            <span class="status-desc">Entrada activada; mide % de avance al objetivo.</span>
+          </div>
+          <div class="status-chip s-objetivo">
+            <span class="status-name" style="color:var(--accent-mint);">objetivo</span>
+            <span class="status-desc">Meta alcanzada (100% de avance).</span>
+          </div>
+          <div class="status-chip s-stop">
+            <span class="status-name" style="color:var(--accent-coral);">stop</span>
+            <span class="status-desc">Nivel de stop loss tocado con posición viva.</span>
+          </div>
+          <div class="status-chip s-roto">
+            <span class="status-name" style="color:var(--accent-gold);">rango_roto</span>
+            <span class="status-desc">El precio rompió el rango antes de entrar.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- PASO 4 -->
+      <div class="step-box">
+        <div class="step-header">
+          <div class="step-num-title">
+            <div class="step-badge-num">4</div>
+            <div class="step-name">Generación de Entregables & Despacho a Telegram</div>
+          </div>
+          <span class="rule-badge badge-security">Entrega Inmediata</span>
+        </div>
+        <div class="subgrid">
+          <div class="subcard">
+            <h5>🖼️ Lámina PNG de Alta Definición</h5>
+            <p>Genera <span class="code-pill">lamina.png</span> con tarjetas de niveles simplificadas (entrada, stop, objetivo único), sello de estado oficial y sin sobrecargar de dígitos.</p>
+          </div>
+          <div class="subcard">
+            <h5>💬 Redacción WhatsApp Lista para Copiar</h5>
+            <p>1 párrafo conciso, sin precios crudos, redactado para operar con CFD a favor o en contra según corresponda, saludo personalizado y cierre con pregunta abierta.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <footer>
+    Grupo Inteligencia · Bot de Telegram de Analistas · Motor de Seguimiento Cuantitativo
+  </footer>
+</div>
+
+</body>
+</html>

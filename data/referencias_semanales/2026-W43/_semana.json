@@ -1,0 +1,28 @@
+{
+  "semana": "2026-W43",
+  "estrategia": "tori",
+  "generado": "2026-10-19 08:41",
+  "elegidos": [
+    "USDCLP",
+    "GBPUSD",
+    "USDJPY",
+    "WTI.spot",
+    "COPPER",
+    "XAUUSD"
+  ],
+  "puntajes": {
+    "WTI.spot": 70.0,
+    "XAGUSD": 40.0,
+    "COPPER": 35.0,
+    "XAUUSD": 35.0,
+    "GBPUSD": 30.0,
+    "USDJPY": 30.0,
+    "USDCLP": 10.0
+  },
+  "excluidos": [
+    {
+      "ticker": "EURUSD",
+      "excluido": "sin líneas trazables: no hay estructura que leer"
+    }
+  ]
+}

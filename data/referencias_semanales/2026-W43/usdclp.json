@@ -1,0 +1,244 @@
+{
+  "ticker": "USDCLP",
+  "semana": "2026-W43",
+  "motivo": "semanal",
+  "guardada": "2026-10-19T08:41-03:00",
+  "lectura": {
+    "ticker": "USDCLP",
+    "marco": "H4",
+    "precio": 984.45,
+    "direccion": "ALCISTA",
+    "estado": "RUPTURA",
+    "lineas": [
+      {
+        "rol": "accion",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1791187200,
+            994.6
+          ],
+          [
+            1791446400,
+            987.4
+          ]
+        ],
+        "marco": "H4",
+        "toques": 3,
+        "calidad": "B",
+        "valor_actual": 975.4,
+        "empinada": false
+      },
+      {
+        "rol": "seguridad",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1786089600,
+            905.3
+          ],
+          [
+            1786694400,
+            906.3
+          ]
+        ],
+        "marco": "H4",
+        "toques": 3,
+        "calidad": "B",
+        "valor_actual": 918.2,
+        "empinada": false
+      },
+      {
+        "rol": "seguimiento",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1787644800,
+            907.79
+          ],
+          [
+            1788940800,
+            923.0
+          ]
+        ],
+        "marco": "H4",
+        "toques": 2,
+        "calidad": "B",
+        "valor_actual": 957.84,
+        "empinada": false
+      },
+      {
+        "rol": "contexto",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1770508800,
+            851.1
+          ],
+          [
+            1781395200,
+            880.6
+          ]
+        ],
+        "marco": "W1",
+        "toques": 2,
+        "calidad": "B",
+        "valor_actual": 908.46,
+        "empinada": false
+      },
+      {
+        "rol": "contexto",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1781654400,
+            880.6
+          ],
+          [
+            1787616000,
+            907.79
+          ]
+        ],
+        "marco": "D1",
+        "toques": 3,
+        "calidad": "A+",
+        "valor_actual": 929.07,
+        "empinada": false
+      },
+      {
+        "rol": "objetivo",
+        "tipo": "horizontal",
+        "puntos": [
+          [
+            1708819200,
+            987.21
+          ]
+        ],
+        "marco": "W1",
+        "toques": 6,
+        "calidad": "",
+        "valor_actual": 987.21,
+        "empinada": false
+      },
+      {
+        "rol": "contexto",
+        "tipo": "horizontal",
+        "puntos": [
+          [
+            1760659200,
+            963.74
+          ]
+        ],
+        "marco": "D1",
+        "toques": 2,
+        "calidad": "",
+        "valor_actual": 963.74,
+        "empinada": false
+      }
+    ],
+    "en_prueba": null,
+    "vigilar": {
+      "precio": 975.4,
+      "etiqueta": "línea bajista",
+      "linea": {
+        "rol": "accion",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1791187200,
+            994.6
+          ],
+          [
+            1791446400,
+            987.4
+          ]
+        ],
+        "marco": "H4",
+        "toques": 3,
+        "calidad": "B",
+        "valor_actual": 975.4,
+        "empinada": false
+      }
+    },
+    "invalidacion": {
+      "precio": 918.2,
+      "etiqueta": "línea alcista de seguridad",
+      "linea": {
+        "rol": "seguridad",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1786089600,
+            905.3
+          ],
+          [
+            1786694400,
+            906.3
+          ]
+        ],
+        "marco": "H4",
+        "toques": 3,
+        "calidad": "B",
+        "valor_actual": 918.2,
+        "empinada": false
+      }
+    },
+    "objetivo": {
+      "precio": 987.21,
+      "etiqueta": "objetivo",
+      "linea": {
+        "rol": "objetivo",
+        "tipo": "horizontal",
+        "puntos": [
+          [
+            1708819200,
+            987.21
+          ]
+        ],
+        "marco": "W1",
+        "toques": 6,
+        "calidad": "",
+        "valor_actual": 987.21,
+        "empinada": false
+      }
+    },
+    "escenarios": [
+      {
+        "flecha": "⬆️",
+        "condicion": "Sobre 975,40",
+        "texto": "La vela de 4 horas ya cerró sobre la línea bajista: mientras siga sobre 975,40, la ruptura sigue vigente con objetivo en 987,21."
+      },
+      {
+        "flecha": "↔️",
+        "condicion": "Vuelta a 975,40",
+        "texto": "Si el precio vuelve a 975,40 y la respeta, es un retesteo y la ruptura se confirma."
+      },
+      {
+        "flecha": "⬇️",
+        "condicion": "Cierre bajo 918,20",
+        "texto": "Si una vela de 4 horas cierra bajo 918,20, la línea de seguridad se rompe y la lectura deja de valer."
+      }
+    ],
+    "salida": "En compras por ruptura, sal si una vela de 4 horas cierra bajo la línea de seguridad (la que protege tu operación), hoy en 918,20. Mientras no pase, mantén la posición; el objetivo en 987,21 es una referencia, no una orden de salida. Como el precio aceleró, también puedes asegurar ganancia si esa vela cierra bajo la línea de seguimiento, hoy en 957,84.",
+    "conceptos": [
+      "linea-de-tendencia",
+      "ruptura-por-cierre",
+      "linea-de-seguridad"
+    ],
+    "avisos": [],
+    "metricas": {
+      "atr": 4.461428571428574,
+      "atr_d1": 12.897857142857163,
+      "confluencia": 1.0,
+      "dist_vigilar_atr_d1": 0.7016669435675957,
+      "dist_seguridad_atr_d1": 5.136512155950593,
+      "semanas_principal": 0.9,
+      "dist_accion_atr_d1": 0.7016669435675957,
+      "dist_objetivo_atr_d1": 0.21398903472337494,
+      "velas_desde_ruptura": 7.0,
+      "doble_confirmacion": 1.0,
+      "contra_secuencia": 0.0
+    },
+    "vela": 1792152000
+  }
+}

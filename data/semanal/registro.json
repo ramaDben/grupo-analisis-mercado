@@ -1,0 +1,207 @@
+[
+ {
+  "semana": "2026-W42",
+  "dir": "C:\\Users\\bbrav\\grupo-analisis-mercado\\data\\informes_analistas\\2026-10-12\\203603_semanal_2026-W42",
+  "creada": "2026-10-12T20:36:03.763479-03:00",
+  "tickers": [
+   "XAUUSD",
+   "USDCLP",
+   "WTI.spot",
+   "EURUSD",
+   "COPPER"
+  ],
+  "seguimientos": [
+   {
+    "ticker": "WTI.spot",
+    "estado": "entrada_pendiente",
+    "ejecutivo": "8787397729",
+    "cuando": "2026-10-12T21:27:26.456718-03:00"
+   },
+   {
+    "ticker": "XAUUSD",
+    "estado": "en_curso",
+    "ejecutivo": "8787397729",
+    "cuando": "2026-10-13T14:52:17.449376-03:00"
+   },
+   {
+    "ticker": "XAUUSD",
+    "estado": "en_curso",
+    "ejecutivo": "8787397729",
+    "cuando": "2026-10-13T18:32:08.070497-03:00"
+   },
+   {
+    "ticker": "XAUUSD",
+    "estado": "en_curso",
+    "ejecutivo": "8787397729",
+    "cuando": "2026-10-13T19:22:06.084846-03:00"
+   },
+   {
+    "ticker": "USDCLP",
+    "estado": "en_curso",
+    "ejecutivo": "8787397729",
+    "cuando": "2026-10-13T20:40:36.824719-03:00"
+   },
+   {
+    "ticker": "COPPER",
+    "estado": "entrada_pendiente",
+    "ejecutivo": "8787397729",
+    "cuando": "2026-10-13T21:37:34.362218-03:00"
+   },
+   {
+    "ticker": "XAUUSD",
+    "estado": "en_curso",
+    "ejecutivo": "8787397729",
+    "cuando": "2026-10-13T21:48:35.349898-03:00"
+   },
+   {
+    "ticker": "COPPER",
+    "estado": "entrada_pendiente",
+    "ejecutivo": "8787397729",
+    "cuando": "2026-10-14T10:07:42.796968-03:00"
+   },
+   {
+    "ticker": "XAUUSD",
+    "estado": "en_curso",
+    "ejecutivo": "8787397729",
+    "cuando": "2026-10-14T10:20:14.703780-03:00"
+   },
+   {
+    "ticker": "COPPER",
+    "estado": "objetivo",
+    "ejecutivo": "8787397729",
+    "cuando": "2026-10-14T10:52:22.250363-03:00"
+   },
+   {
+    "ticker": "COPPER",
+    "estado": "entrada_pendiente",
+    "ejecutivo": "8787397729",
+    "cuando": "2026-10-14T10:52:22.357071-03:00"
+   },
+   {
+    "ticker": "USDCLP",
+    "estado": "en_curso",
+    "ejecutivo": "8787397729",
+    "cuando": "2026-10-14T12:23:39.696747-03:00"
+   },
+   {
+    "ticker": "XAUUSD",
+    "estado": "en_curso",
+    "ejecutivo": "1782519582",
+    "cuando": "2026-10-14T17:00:42.630411-03:00"
+   }
+  ]
+ },
+ {
+  "ticker": "XAUUSD",
+  "dir": "C:\\Users\\bbrav\\grupo-analisis-mercado\\data\\informes_analistas\\2026-10-17\\110748_oportunidad_xauusd",
+  "creada": "2026-10-17T11:07:48.642635-03:00",
+  "vence": "2026-10-24T11:07:48.642635-03:00",
+  "direccion": "BAJISTA",
+  "creado_por": {
+   "nombre": "Benjamín Ignacio Bravo Soza",
+   "id": "8787397729"
+  },
+  "reusos": [],
+  "seguimientos": [],
+  "caducada": {
+   "motivo": "renovado a pedido del director",
+   "cuando": "2026-10-19T02:29:30.728406-03:00"
+  }
+ },
+ {
+  "ticker": "SOXX.US",
+  "dir": "C:\\Users\\bbrav\\grupo-analisis-mercado\\data\\informes_analistas\\2026-10-19\\021416_oportunidad_soxx_us",
+  "creada": "2026-10-19T02:14:16.265411-03:00",
+  "vence": "2026-10-26T02:14:16.265411-03:00",
+  "direccion": "BAJISTA",
+  "creado_por": {
+   "nombre": "Benjamín Ignacio Bravo Soza",
+   "id": "8787397729"
+  },
+  "reusos": [],
+  "seguimientos": [],
+  "caducada": null
+ },
+ {
+  "ticker": "XAUUSD",
+  "dir": "C:\\Users\\bbrav\\grupo-analisis-mercado\\data\\informes_analistas\\2026-10-19\\022938_oportunidad_xauusd",
+  "creada": "2026-10-19T02:29:38.141031-03:00",
+  "vence": "2026-10-26T02:29:38.141031-03:00",
+  "direccion": "BAJISTA",
+  "creado_por": {
+   "nombre": "Benjamín Ignacio Bravo Soza",
+   "id": "8787397729"
+  },
+  "reusos": [],
+  "seguimientos": [],
+  "caducada": {
+   "motivo": "recreado por el director",
+   "cuando": "2026-10-19T04:57:58.898656-03:00"
+  }
+ },
+ {
+  "ticker": "XAUUSD",
+  "dir": "C:\\Users\\bbrav\\grupo-analisis-mercado\\data\\informes_analistas\\2026-10-19\\045758_oportunidad_xauusd",
+  "creada": "2026-10-19T04:57:58.898656-03:00",
+  "vence": "2026-10-26T04:57:58.898656-03:00",
+  "direccion": "BAJISTA",
+  "creado_por": {
+   "nombre": "Benjamín Ignacio Bravo Soza",
+   "id": "8787397729"
+  },
+  "reusos": [],
+  "seguimientos": [
+   {
+    "ticker": "XAUUSD",
+    "estado": "objetivo",
+    "ejecutivo": "8787397729",
+    "cuando": "2026-10-19T16:39:24.541214-03:00"
+   },
+   {
+    "ticker": "XAUUSD",
+    "estado": "objetivo",
+    "ejecutivo": "8787397729",
+    "cuando": "2026-10-19T16:40:09.455088-03:00"
+   }
+  ],
+  "caducada": {
+   "motivo": "el precio alcanzó el objetivo técnico",
+   "cuando": "2026-10-20T11:58:28.833033-03:00"
+  }
+ },
+ {
+  "ticker": "USDCLP",
+  "dir": "C:\\Users\\bbrav\\grupo-analisis-mercado\\data\\informes_analistas\\2026-10-19\\094919_oportunidad_usdclp",
+  "creada": "2026-10-19T09:49:19.345135-03:00",
+  "vence": "2026-10-26T09:49:19.345135-03:00",
+  "direccion": "ALCISTA",
+  "creado_por": {
+   "nombre": "Benjamín Ignacio Bravo Soza",
+   "id": "8787397729"
+  },
+  "reusos": [],
+  "seguimientos": [
+   {
+    "ticker": "USDCLP",
+    "estado": "en_curso",
+    "ejecutivo": "8787397729",
+    "cuando": "2026-10-19T12:01:36.634321-03:00"
+   }
+  ],
+  "caducada": null
+ },
+ {
+  "ticker": "USDCHF",
+  "dir": "C:\\Users\\bbrav\\grupo-analisis-mercado\\data\\informes_analistas\\2026-10-19\\153910_oportunidad_usdchf",
+  "creada": "2026-10-19T15:39:10.075201-03:00",
+  "vence": "2026-10-26T15:39:10.075201-03:00",
+  "direccion": "ALCISTA",
+  "creado_por": {
+   "nombre": "Benjamín Ignacio Bravo Soza",
+   "id": "8787397729"
+  },
+  "reusos": [],
+  "seguimientos": [],
+  "caducada": null
+ }
+]

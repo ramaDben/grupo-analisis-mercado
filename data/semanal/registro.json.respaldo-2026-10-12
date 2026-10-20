@@ -1,0 +1,15 @@
+[
+ {
+  "semana": "2026-W42",
+  "dir": "C:\\Users\\bbrav\\grupo-analisis-mercado\\data\\informes_analistas\\2026-10-12\\195933_semanal_2026-W42",
+  "creada": "2026-10-12T19:59:33.711951-03:00",
+  "tickers": [
+   "XAUUSD",
+   "USDCLP",
+   "WTI.spot",
+   "EURUSD",
+   "COPPER"
+  ],
+  "seguimientos": []
+ }
+]

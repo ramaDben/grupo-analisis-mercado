@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arquitectura Integral End-to-End · Grupo Inteligencia</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #0D0D1A;
+    --card-bg: #161626;
+    --card-border: rgba(255, 255, 255, 0.12);
+    --text-primary: #FFFFFF;
+    --text-secondary: #9AA4B2;
+    --text-muted: #5A6275;
+    --accent-mint: #53C1AB;
+    --accent-cyan: #3E91AF;
+    --accent-gold: #D4AF37;
+    --accent-coral: #E76F51;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: 'Space Grotesk', sans-serif;
+    padding: 40px 20px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .container {
+    max-width: 1360px;
+    width: 100%;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 36px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--card-border);
+  }
+
+  .tag {
+    display: inline-block;
+    padding: 6px 14px;
+    background: rgba(212, 175, 55, 0.15);
+    color: var(--accent-gold);
+    border: 1px solid var(--accent-gold);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+
+  p.subtitle {
+    color: var(--text-secondary);
+    font-size: 16px;
+    max-width: 840px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+
+  .layers-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: relative;
+  }
+
+  .layer {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 22px 26px;
+    position: relative;
+  }
+
+  .layer.focal-layer {
+    border-color: var(--accent-mint);
+    background: linear-gradient(180deg, rgba(83, 193, 171, 0.05) 0%, rgba(22, 22, 38, 1) 100%);
+    box-shadow: 0 0 30px rgba(83, 193, 171, 0.1);
+  }
+
+  .layer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding-bottom: 10px;
+  }
+
+  .layer-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .layer-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    text-transform: uppercase;
+  }
+
+  .b-sources { background: rgba(62, 145, 175, 0.15); color: var(--accent-cyan); border: 1px solid rgba(62, 145, 175, 0.3); }
+  .b-data    { background: rgba(154, 164, 178, 0.15); color: #B0BAC9; border: 1px solid rgba(154, 164, 178, 0.3); }
+  .b-engine  { background: rgba(83, 193, 171, 0.15); color: var(--accent-mint); border: 1px solid rgba(83, 193, 171, 0.3); }
+  .b-service { background: rgba(212, 175, 55, 0.15); color: var(--accent-gold); border: 1px solid rgba(212, 175, 55, 0.3); }
+  .b-client  { background: rgba(231, 111, 81, 0.15); color: var(--accent-coral); border: 1px solid rgba(231, 111, 81, 0.3); }
+
+  .layer-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .nodes-grid {
+    display: grid;
+    gap: 16px;
+  }
+
+  .nodes-3 { grid-template-columns: repeat(3, 1fr); }
+  .nodes-4 { grid-template-columns: repeat(4, 1fr); }
+  .nodes-2 { grid-template-columns: repeat(2, 1fr); }
+
+  .node-box {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+
+  .node-box.accent-box {
+    border-color: rgba(83, 193, 171, 0.4);
+    background: rgba(83, 193, 171, 0.04);
+  }
+
+  .node-box.gold-box {
+    border-color: rgba(212, 175, 55, 0.4);
+    background: rgba(212, 175, 55, 0.04);
+  }
+
+  .node-box h5 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .node-box p {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.45;
+  }
+
+  .code-sub {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--accent-cyan);
+    margin-top: 6px;
+    display: block;
+  }
+
+  .flow-indicator {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: -10px 0;
+    z-index: 2;
+  }
+
+  .flow-indicator svg {
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
+  }
+
+  footer {
+    text-align: center;
+    border-top: 1px solid var(--card-border);
+    margin-top: 40px;
+    padding-top: 24px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="tag">Diagrama 3 · Arquitectura Integral</div>
+    <h1>Ecosistema Analítico y Comercial End-to-End</h1>
+    <p class="subtitle">Visión panorámica de la infraestructura: desde las fuentes soberanas de mercado hasta el cliente final en WhatsApp y la herramienta web de simulación.</p>
+  </header>
+
+  <div class="layers-stack">
+
+    <!-- CAPA 1: FUENTES -->
+    <div class="layer">
+      <div class="layer-header">
+        <div class="layer-title-wrap">
+          <span class="layer-badge b-sources">Capa 1</span>
+          <div class="layer-title">Fuentes de Mercado y Datos Soberanos</div>
+        </div>
+        <span style="font-size: 12px; color: var(--text-secondary); font-family: var(--mono);">Extracción en Tiempo Real & Batch</span>
+      </div>
+      <div class="nodes-grid nodes-3">
+        <div class="node-box">
+          <h5>📈 MetaTrader 5 (MT5 Broker)</h5>
+          <p>Terminal local con conexión al broker. Provee streaming de ticks, precios vivos y series de velas históricas (H4, D1, W1).</p>
+          <span class="code-sub">MetaTrader5.copy_rates_from_pos()</span>
+        </div>
+        <div class="node-box">
+          <h5>🏛️ Bancos Centrales & Tesoro</h5>
+          <p>Tasas soberanas oficiales del Tesoro EE.UU., Reserva Federal, BCCh (Chile), BCE, BoE y Banco de Japón (BoJ).</p>
+          <span class="code-sub">ecosistema-datos-macro / data central/</span>
+        </div>
+        <div class="node-box">
+          <h5>🤖 Telegram Bot API</h5>
+          <p>Canal de comunicación seguro con los analistas y ejecutivos de la mesa de dinero mediante Long Polling HTTPS.</p>
+          <span class="code-sub">api.telegram.org / getUpdates</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-indicator">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 4V20M12 20L6 14M12 20L18 14" stroke="#5A6275" stroke-width="2" stroke-linecap="round"/></svg>
+    </div>
+
+    <!-- CAPA 2: DATOS Y ESTADO LOCAL -->
+    <div class="layer">
+      <div class="layer-header">
+        <div class="layer-title-wrap">
+          <span class="layer-badge b-data">Capa 2</span>
+          <div class="layer-title">Persistencia, Registros y Estado Local</div>
+        </div>
+        <span style="font-size: 12px; color: var(--text-secondary); font-family: var(--mono);">Consistencia e Inmutabilidad</span>
+      </div>
+      <div class="nodes-grid nodes-3">
+        <div class="node-box">
+          <h5>🗄️ data central/</h5>
+          <p>Repositorio centralizado de datasets macroeconómicos limpios, series OHLC semanales y estado de sincronización de agenda.</p>
+          <span class="code-sub">data central/DATA PRECIOS OHLC/</span>
+        </div>
+        <div class="node-box gold-box">
+          <h5>📸 data/semanal/ & referencias_semanales/</h5>
+          <p>Registro histórico de la "Foto del Lunes". Congela los niveles para que el seguimiento diario mida contra un plan fijo y auditable.</p>
+          <span class="code-sub">registro.json · semana 2026-W42</span>
+        </div>
+        <div class="node-box">
+          <h5>⚙️ .bot_telegram_estado.json</h5>
+          <p>Control de cuotas diarias por ejecutivo, registro de piezas en caché de 30 minutos y offset transaccional de Telegram.</p>
+          <span class="code-sub">.bot_analistas.lock (instancia única)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-indicator">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 4V20M12 20L6 14M12 20L18 14" stroke="#53C1AB" stroke-width="2" stroke-linecap="round"/></svg>
+    </div>
+
+    <!-- CAPA 3: MOTORES ANALÍTICOS (FOCAL) -->
+    <div class="layer focal-layer">
+      <div class="layer-header">
+        <div class="layer-title-wrap">
+          <span class="layer-badge b-engine">Capa 3 · Core</span>
+          <div class="layer-title">Motores de Análisis Técnico & Simulación Cuantitativa</div>
+        </div>
+        <span style="font-size: 12px; color: var(--accent-mint); font-family: var(--mono);">Cálculo Algorítmico y Reglas de Negocio</span>
+      </div>
+      <div class="nodes-grid nodes-4">
+        <div class="node-box accent-box">
+          <h5>🎯 Motor Semanal (HTML)</h5>
+          <p>Detección de fractales, confluencias y cálculo de 3 escenarios. Redacción editorial estructurada (agy) una vez por semana.</p>
+          <span class="code-sub">preparar_oportunidad()</span>
+        </div>
+        <div class="node-box accent-box">
+          <h5>⚡ Seguimiento Vivo H4</h5>
+          <p>Evaluación con vela viva de MT5 y tolerancia ATR (<span style="color:var(--accent-mint)">0.35 × ATR_H4</span>). Máquina de estados: pendiente, curso, objetivo, stop, roto.</p>
+          <span class="code-sub">seguimiento.evaluar(vela_viva)</span>
+        </div>
+        <div class="node-box accent-box">
+          <h5>🎨 Renderer Gráfico</h5>
+          <p>Generación de gráficos H4 y láminas limpias (<span class="code-sub">lamina.png</span>) en matplotlib con tarjetas de niveles y reglas estrictas de dígitos.</p>
+          <span class="code-sub">comercial.rendir_lamina()</span>
+        </div>
+        <div class="node-box accent-box">
+          <h5>💬 Redactor WhatsApp</h5>
+          <p>Redacción en un párrafo conversacional, sin precios fijos, operable en ambas direcciones con CFD y cierre con pregunta abierta.</p>
+          <span class="code-sub">seguimiento.redactar()</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-indicator">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 4V20M12 20L6 14M12 20L18 14" stroke="#53C1AB" stroke-width="2" stroke-linecap="round"/></svg>
+    </div>
+
+    <!-- CAPA 4: SERVICIOS Y ORQUESTACIÓN -->
+    <div class="layer">
+      <div class="layer-header">
+        <div class="layer-title-wrap">
+          <span class="layer-badge b-service">Capa 4</span>
+          <div class="layer-title">Servicio Demonio & Despachador de Tareas</div>
+        </div>
+        <span style="font-size: 12px; color: var(--text-secondary); font-family: var(--mono);">Windows Task Scheduler</span>
+      </div>
+      <div class="nodes-grid nodes-2">
+        <div class="node-box">
+          <h5>🖥️ GI-BotTelegram (Windows Scheduled Task)</h5>
+          <p>Proceso persistente ejecutado mediante <span class="code-sub">uv run python scripts/bot_analistas.py --escuchar</span> bajo conhost. Monitorea Telegram continuamente con hilo trabajador dedicado (Worker Thread) y cola de peticiones segura.</p>
+        </div>
+        <div class="node-box">
+          <h5>🗂️ Gestor de Caché y Cuotas (Atendedor)</h5>
+          <p>Determina en milisegundos si la pieza solicitada está dentro de la ventana de 30 minutos (<span class="code-sub">Estado.vigente</span>). Si está vigente, reutiliza la lámina existente y solo ajusta el saludo comercial en tiempo de respuesta.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-indicator">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 4V20M12 20L6 14M12 20L18 14" stroke="#E76F51" stroke-width="2" stroke-linecap="round"/></svg>
+    </div>
+
+    <!-- CAPA 5: USUARIOS Y CLIENTE FINAL -->
+    <div class="layer">
+      <div class="layer-header">
+        <div class="layer-title-wrap">
+          <span class="layer-badge b-client">Capa 5</span>
+          <div class="layer-title">Distribución Comercial & Entrega de Valor</div>
+        </div>
+        <span style="font-size: 12px; color: var(--accent-coral); font-family: var(--mono);">Impacto en el Negocio</span>
+      </div>
+      <div class="nodes-grid nodes-2">
+        <div class="node-box">
+          <h5>👨‍💼 Ejecutivo / Analista (Telegram)</h5>
+          <p>Interactúa con el bot desde su teléfono o PC mediante comandos sencillos (<span class="code-sub">/oportunidad</span>, <span class="code-sub">/seguimiento cobre Juan</span>). Recibe en segundos la lámina gráfica oficial y el texto listo para enviar.</p>
+        </div>
+        <div class="node-box">
+          <h5>👥 Inversionista / Cliente Final</h5>
+          <p>
+            • <strong>Vía WhatsApp:</strong> Recibe el mensaje directo y la lámina PNG explicativa.<br>
+            • <strong>Vía Web:</strong> Abre el informe HTML semanal con simulador interactivo de riesgo en CLP/USD para dimensionar sus operaciones con transparencia.
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    Grupo Inteligencia · Mapa de Arquitectura Tecnológica y Operativa
+  </footer>
+</div>
+
+</body>
+</html>

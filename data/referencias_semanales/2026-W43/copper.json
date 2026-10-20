@@ -1,0 +1,186 @@
+{
+  "ticker": "COPPER",
+  "semana": "2026-W43",
+  "motivo": "semanal",
+  "guardada": "2026-10-19T08:41-03:00",
+  "lectura": {
+    "ticker": "COPPER",
+    "marco": "H4",
+    "precio": 14379.0,
+    "direccion": "BAJISTA",
+    "estado": "RUPTURA",
+    "lineas": [
+      {
+        "rol": "accion",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1789444800,
+            13903.0
+          ],
+          [
+            1790827200,
+            14206.0
+          ]
+        ],
+        "marco": "H4",
+        "toques": 4,
+        "calidad": "A+",
+        "valor_actual": 14509.0,
+        "empinada": false
+      },
+      {
+        "rol": "contexto",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1774137600,
+            11683.0
+          ],
+          [
+            1789257600,
+            13903.0
+          ]
+        ],
+        "marco": "W1",
+        "toques": 3,
+        "calidad": "B",
+        "valor_actual": 14258.0,
+        "empinada": false
+      },
+      {
+        "rol": "contexto",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1788998400,
+            14838.0
+          ],
+          [
+            1791936000,
+            14678.0
+          ]
+        ],
+        "marco": "D1",
+        "toques": 3,
+        "calidad": "B",
+        "valor_actual": 14665.0,
+        "empinada": false
+      },
+      {
+        "rol": "objetivo",
+        "tipo": "horizontal",
+        "puntos": [
+          [
+            1778630400,
+            14178.0
+          ]
+        ],
+        "marco": "D1",
+        "toques": 2,
+        "calidad": "",
+        "valor_actual": 14178.0,
+        "empinada": false
+      },
+      {
+        "rol": "contexto",
+        "tipo": "horizontal",
+        "puntos": [
+          [
+            1788998400,
+            14819.0
+          ]
+        ],
+        "marco": "D1",
+        "toques": 2,
+        "calidad": "",
+        "valor_actual": 14819.0,
+        "empinada": false
+      }
+    ],
+    "en_prueba": null,
+    "vigilar": {
+      "precio": 14509.0,
+      "etiqueta": "línea alcista",
+      "linea": {
+        "rol": "accion",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1789444800,
+            13903.0
+          ],
+          [
+            1790827200,
+            14206.0
+          ]
+        ],
+        "marco": "H4",
+        "toques": 4,
+        "calidad": "A+",
+        "valor_actual": 14509.0,
+        "empinada": false
+      }
+    },
+    "invalidacion": null,
+    "objetivo": {
+      "precio": 14178.0,
+      "etiqueta": "objetivo",
+      "linea": {
+        "rol": "objetivo",
+        "tipo": "horizontal",
+        "puntos": [
+          [
+            1778630400,
+            14178.0
+          ]
+        ],
+        "marco": "D1",
+        "toques": 2,
+        "calidad": "",
+        "valor_actual": 14178.0,
+        "empinada": false
+      }
+    },
+    "escenarios": [
+      {
+        "flecha": "⬆️",
+        "condicion": "Cierre sobre 14509",
+        "texto": "Si una vela de 4 horas vuelve a cerrar sobre 14509, la ruptura fue falsa."
+      },
+      {
+        "flecha": "↔️",
+        "condicion": "Vuelta a 14509",
+        "texto": "Si el precio vuelve a 14509 y la respeta, es un retesteo y la ruptura se confirma."
+      },
+      {
+        "flecha": "⬇️",
+        "condicion": "Bajo 14509",
+        "texto": "La vela de 4 horas ya cerró bajo la línea alcista: mientras siga bajo 14509, la ruptura sigue vigente con objetivo en 14178."
+      }
+    ],
+    "salida": "Todavía no hay línea de seguridad trazada, así que no hay salida que medir: conviene esperar a que se trace antes de entrar.",
+    "conceptos": [
+      "linea-de-tendencia",
+      "ruptura-por-cierre",
+      "linea-de-seguridad"
+    ],
+    "avisos": [
+      "las velas de W1 traen un salto de datos: se leen solo desde el salto",
+      "las velas de D1 traen un salto de datos: se leen solo desde el salto",
+      "la ruptura no tiene línea de seguridad trazable: el riesgo no se puede medir"
+    ],
+    "metricas": {
+      "atr": 109.42857142857143,
+      "atr_d1": 188.64285714285714,
+      "confluencia": 0.5,
+      "dist_vigilar_atr_d1": 0.6891329042029535,
+      "dist_accion_atr_d1": 0.6891329042029535,
+      "dist_objetivo_atr_d1": 1.0655054903445664,
+      "velas_desde_ruptura": 26.0,
+      "doble_confirmacion": 1.0,
+      "contra_secuencia": 0.0
+    },
+    "vela": 1792382400
+  }
+}
