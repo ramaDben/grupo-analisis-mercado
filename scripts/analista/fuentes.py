@@ -227,8 +227,14 @@ def lista_del_segmento(segmento: str, base: dict[str, Any] | None = None,
 
 
 def nombra_ancla(fuente: dict[str, Any], ancla: dict[str, Any]) -> bool:
-    """Algún término del ancla aparece en la tesis o en la ruta de la URL (sin tildes ni mayúsculas)."""
+    """Algún término del ancla aparece en la tesis o en la ruta de la URL (sin tildes ni mayúsculas).
+
+    Antes se borran los `terminos_excluidos` del ancla: un nombre que contiene al término sin ser el ancla
+    («S&P Dow Jones Indices» contiene «Dow Jones» y no es el Dow).
+    """
     texto = _plano(f"{fuente.get('tesis', '')} {urlparse(str(fuente.get('url', ''))).path}")
+    for excluido in ancla.get("terminos_excluidos", []):
+        texto = re.sub(rf"(?<!\w){re.escape(_plano(excluido))}(?!\w)", " ", texto)
     return any(re.search(rf"(?<!\w){re.escape(_plano(t))}(?!\w)", texto)
                for t in ancla.get("terminos_ancla", []))
 

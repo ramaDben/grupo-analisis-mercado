@@ -123,7 +123,7 @@ DXY, que es referencia y no activo publicable).
 (entidad → dominios). Cada dominio y cada entidad que un ancla declare tiene que estar en ese archivo o en
 `config/fuentes_prestigio.json`; un test lo verifica. Para sumar una divisa, agregarla en `fx.divisas` con
 `pais`, `banco_central`, `entidades`, `dominios` y `terminos_ancla`. Para un activo nuevo del catálogo, declarar su
-`segmento` y su `ancla` en `activos.json`. Después correr
+`segmento` y su `ancla` en `activos.json`. Los `terminos_ancla` nombran al activo sin ambigüedad: nada de tickers de una o dos letras ni compartidos (`GE`, `BA`, `GS`, `CAT`) ni palabras de otro activo (`onza`); un test lo impide. Si un nombre ajeno contiene al término, va en `terminos_excluidos` (el Dow excluye «S&P Dow Jones»). Después correr
 `uv run python scripts/verificar_dominios_fuentes.py` (reporta `muerta`, `sin_verificar` o `viva` por dominio) y la
 suite. La frescura es de 14 días en los seis segmentos.
 

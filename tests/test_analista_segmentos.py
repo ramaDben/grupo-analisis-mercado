@@ -446,3 +446,63 @@ def test_las_rutas_propias_caen_dentro_de_los_dominios_del_ancla():
             assert any(host == d or host.endswith("." + d) for d in ancla["dominios"]), (t, ruta)
     for t in ("#GS", "#MS", "#JPM", "#MSFT", "#DE", "#GE"):
         assert sg.segmento_y_ancla(t)[1].get("rutas_propias"), t
+
+
+# ───────────────────────────────────────────── revisión final: términos de ancla cortos o compartidos
+
+
+def test_una_nota_del_oro_que_dice_por_onza_no_es_directa_de_la_plata():
+    nota = _nota("World Gold Council", "https://www.gold.org/goldhub/research/precio-octubre-2026",
+                 "El oro cierra la semana en un nuevo máximo por onza.")
+    seg, plata = sg.segmento_y_ancla("XAGUSD")
+    assert fu.fuentes_directas([nota], seg, plata) == []
+    assert fu.fuentes_directas([nota], seg, sg.segmento_y_ancla("XAUUSD")[1]) == [nota]
+    # Y al revés: una nota de la plata que dice "por onza" no es directa del oro.
+    plata_lbma = _nota("LBMA", "https://www.lbma.org.uk/articles/precio-plata-octubre",
+                       "La plata sube y marca un máximo por onza.")
+    assert fu.fuentes_directas([plata_lbma], seg, sg.segmento_y_ancla("XAUUSD")[1]) == []
+    assert fu.fuentes_directas([plata_lbma], seg, plata) == [plata_lbma]
+
+
+def test_un_rebalanceo_del_sp500_de_sp_dow_jones_indices_no_es_directa_del_dow():
+    seg, dow = sg.segmento_y_ancla("US30.spot")
+    rebalanceo = _nota("S&P Dow Jones Indices",
+                       "https://www.spglobal.com/spdji/en/indexnews/announcements/sp-500-rebalance-2026",
+                       "S&P Dow Jones Indices anuncia el rebalanceo trimestral del S&P 500.")
+    assert fu.fuentes_directas([rebalanceo], seg, dow) == []
+    assert fu.fuentes_directas([rebalanceo], seg, sg.segmento_y_ancla("US500.spot")[1]) == [rebalanceo]
+    propio = _nota("S&P Dow Jones Indices",
+                   "https://www.spglobal.com/spdji/en/indexnews/announcements/djia-cambio-2026",
+                   "S&P Dow Jones Indices anuncia un cambio en el Dow Jones Industrial Average.")
+    corto = _nota("NYSE", "https://www.nyse.com/article/el-dow-jones-marca-maximo",
+                  "El Dow Jones marca un máximo histórico al cierre.")
+    assert fu.fuentes_directas([propio, corto], seg, dow) == [propio, corto]
+
+
+def test_un_ticker_corto_no_hace_directa_a_otra_empresa():
+    casos = (
+        ("#GE", "https://www.sec.gov/Archives/edgar/data/1996810/000199681026000020/gev-10q.htm",
+         "GE Vernova presenta su informe trimestral; GE HealthCare publica el suyo."),
+        ("#CAT", "https://www.sec.gov/newsroom/press-releases/2026-120",
+         "La SEC modifica el financiamiento del CAT (Consolidated Audit Trail)."),
+        ("#BA", "https://www.sec.gov/newsroom/press-releases/2026-121",
+         "La SEC acusa a un asesor de inversiones de Buenos Aires (BA)."),
+        ("#GS", "https://www.sec.gov/newsroom/press-releases/2026-122",
+         "La SEC publica la guía GS para fondos de mercado monetario."),
+    )
+    for ticker, url, tesis in casos:
+        _, ancla = sg.segmento_y_ancla(ticker)
+        assert fu.fuentes_directas([_nota("SEC", url, tesis)], "acciones", ancla) == [], ticker
+    # El nombre de la empresa sí la hace directa.
+    _, ge = sg.segmento_y_ancla("#GE")
+    propia = _nota("SEC", "https://www.sec.gov/Archives/edgar/data/40545/000004054526000030/ge-10q.htm",
+                   "GE Aerospace presenta su informe trimestral 10-Q.")
+    assert fu.fuentes_directas([propia], "acciones", ge) == [propia]
+
+
+def test_ningun_termino_de_ancla_es_un_ticker_corto_o_compartido():
+    compartidos = {"ge", "ba", "gs", "cat", "ms", "de", "onza"}
+    for ticker, (_, ancla) in sg.anclas_del_catalogo().items():
+        terminos = {t.lower() for t in ancla["terminos_ancla"]}
+        assert not compartidos & terminos, ticker
+        assert all(len(t) >= 3 for t in terminos), ticker
