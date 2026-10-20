@@ -631,7 +631,7 @@
         {
           "ticker_mt5": "#MSFT",
           "segmento": "acciones",
-          "ancla": {"nombre": "Microsoft", "ticker": "MSFT", "cik": "0000789019", "sitio_ir": "https://www.microsoft.com/en-us/investor", "entidades": ["Microsoft", "SEC"], "dominios": ["microsoft.com", "sec.gov"], "terminos_ancla": ["Microsoft", "MSFT", "Azure"]},
+          "ancla": {"nombre": "Microsoft", "ticker": "MSFT", "cik": "0000789019", "sitio_ir": "https://www.microsoft.com/en-us/investor", "entidades": ["Microsoft", "SEC"], "dominios": ["microsoft.com", "sec.gov"], "rutas_propias": ["microsoft.com/en-us/investor", "news.microsoft.com"], "terminos_ancla": ["Microsoft", "MSFT", "Azure"]},
           "nombre": "Microsoft Corp.",
           "digits": 2,
           "unidad": "USD",
@@ -726,7 +726,7 @@
         {
           "ticker_mt5": "#JPM",
           "segmento": "acciones",
-          "ancla": {"nombre": "JPMorgan Chase", "ticker": "JPM", "cik": "0000019617", "sitio_ir": "https://www.jpmorganchase.com/ir", "entidades": ["JPMorgan Chase", "SEC"], "dominios": ["jpmorganchase.com", "sec.gov"], "terminos_ancla": ["JPMorgan", "JPM"]},
+          "ancla": {"nombre": "JPMorgan Chase", "ticker": "JPM", "cik": "0000019617", "sitio_ir": "https://www.jpmorganchase.com/ir", "entidades": ["JPMorgan Chase", "SEC"], "dominios": ["jpmorganchase.com", "sec.gov"], "rutas_propias": ["jpmorganchase.com/ir", "jpmorganchase.com/newsroom"], "terminos_ancla": ["JPMorgan", "JPM"]},
           "nombre": "JPMorgan Chase",
           "digits": 2,
           "unidad": "USD",
@@ -758,7 +758,7 @@
         {
           "ticker_mt5": "#GS",
           "segmento": "acciones",
-          "ancla": {"nombre": "Goldman Sachs", "ticker": "GS", "cik": "0000886982", "sitio_ir": "https://www.goldmansachs.com/investor-relations/", "entidades": ["Goldman Sachs", "SEC"], "dominios": ["goldmansachs.com", "sec.gov"], "terminos_ancla": ["Goldman Sachs", "GS"]},
+          "ancla": {"nombre": "Goldman Sachs", "ticker": "GS", "cik": "0000886982", "sitio_ir": "https://www.goldmansachs.com/investor-relations/", "entidades": ["Goldman Sachs", "SEC"], "dominios": ["goldmansachs.com", "sec.gov"], "rutas_propias": ["goldmansachs.com/investor-relations", "goldmansachs.com/pressroom"], "terminos_ancla": ["Goldman Sachs", "GS"]},
           "nombre": "Goldman Sachs",
           "digits": 2,
           "unidad": "USD",
@@ -774,7 +774,7 @@
         {
           "ticker_mt5": "#MS",
           "segmento": "acciones",
-          "ancla": {"nombre": "Morgan Stanley", "ticker": "MS", "cik": "0000895421", "sitio_ir": "https://www.morganstanley.com/about-us-ir", "entidades": ["Morgan Stanley", "SEC"], "dominios": ["morganstanley.com", "sec.gov"], "terminos_ancla": ["Morgan Stanley"]},
+          "ancla": {"nombre": "Morgan Stanley", "ticker": "MS", "cik": "0000895421", "sitio_ir": "https://www.morganstanley.com/about-us-ir", "entidades": ["Morgan Stanley", "SEC"], "dominios": ["morganstanley.com", "sec.gov"], "rutas_propias": ["morganstanley.com/about-us-ir", "morganstanley.com/press-releases"], "terminos_ancla": ["Morgan Stanley"]},
           "nombre": "Morgan Stanley",
           "digits": 2,
           "unidad": "USD",
@@ -835,7 +835,7 @@
         {
           "ticker_mt5": "#GE",
           "segmento": "acciones",
-          "ancla": {"nombre": "GE Aerospace", "ticker": "GE", "cik": "0000040545", "sitio_ir": "https://www.geaerospace.com/investor-relations", "entidades": ["GE Aerospace", "SEC"], "dominios": ["geaerospace.com", "sec.gov"], "terminos_ancla": ["GE Aerospace", "GE"]},
+          "ancla": {"nombre": "GE Aerospace", "ticker": "GE", "cik": "0000040545", "sitio_ir": "https://www.geaerospace.com/investor-relations", "entidades": ["GE Aerospace", "SEC"], "dominios": ["geaerospace.com", "sec.gov"], "rutas_propias": ["geaerospace.com/investor-relations", "geaerospace.com/news"], "terminos_ancla": ["GE Aerospace", "GE"]},
           "nombre": "GE Aerospace",
           "digits": 2,
           "unidad": "USD",
@@ -851,7 +851,7 @@
         {
           "ticker_mt5": "#DE",
           "segmento": "acciones",
-          "ancla": {"nombre": "Deere", "ticker": "DE", "cik": "0000315189", "sitio_ir": "https://www.deere.com/en/our-company/investor-relations/", "entidades": ["Deere", "SEC"], "dominios": ["deere.com", "sec.gov"], "terminos_ancla": ["Deere", "John Deere"]},
+          "ancla": {"nombre": "Deere", "ticker": "DE", "cik": "0000315189", "sitio_ir": "https://investor.deere.com/", "entidades": ["Deere", "SEC"], "dominios": ["deere.com", "sec.gov"], "rutas_propias": ["investor.deere.com", "deere.com/en-us/our-company/newsroom"], "terminos_ancla": ["Deere", "John Deere"]},
           "nombre": "Deere & Co.",
           "digits": 2,
           "unidad": "USD",

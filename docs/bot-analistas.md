@@ -114,7 +114,7 @@ DXY, que es referencia y no activo publicable).
 |---|---|---|
 | `fx` | `config/segmentos_fuentes.json` → `fx.divisas` (por divisa; un par fuera del catálogo se infiere si una pata es USD) | banco central y gobierno de la divisa |
 | `commodities` | campo `ancla` del activo en `config/activos.json` | productores y organismos del mercado (OPEP, EIA, etc.) |
-| `acciones` | `ancla` en `activos.json` (ticker, `cik`, sitio IR) | la empresa y la SEC |
+| `acciones` | `ancla` en `activos.json` (ticker, `cik`, sitio IR, `rutas_propias`) | la empresa y la SEC. Un banco de inversión (#GS, #MS, #BAC) no habilita por su nombre: cuenta solo su comunicado propio. Con `rutas_propias` (`host/ruta`), en el sitio de la empresa solo cuentan esas secciones (IR, prensa) |
 | `etfs` | `ancla` en `activos.json` | el emisor del fondo; un titular del subyacente no basta, ni los flujos de página |
 | `indices` | `ancla` en `activos.json` (proveedor y bolsa) | proveedor del índice y su bolsa; los earnings de un constituyente no cuentan salvo que el titular nombre el índice |
 | `cripto` | `ancla` en `activos.json` | la fundación o red de la cripto, con URL propia y fecha |

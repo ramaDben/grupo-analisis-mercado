@@ -384,3 +384,65 @@ def test_todo_activo_del_catalogo_tiene_segmento_y_ancla():
     assert tickers
     sin_voz = [t for t in tickers if t not in REFERENCIAS_SIN_VOZ and sg.segmento_y_ancla(t) is None]
     assert sin_voz == [], f"activos del catalogo sin segmento o ancla: {sin_voz}"
+
+
+# ───────────────────────────────────────────── revisión final: un banco no es directa de su acción
+
+
+def test_una_nota_de_research_del_banco_no_es_directa_de_su_accion():
+    seg, gs = sg.segmento_y_ancla("#GS")
+    research = _nota("Goldman Sachs", "https://www.goldmansachs.com/insights/articles/gold-outlook",
+                     "Goldman Sachs eleva su objetivo para el oro.")
+    assert fu.fuentes_directas([research], seg, gs) == []
+    # La misma opinión del banco citada por un medio tampoco: la entidad banco no habilita sola.
+    wire = _nota("Goldman Sachs", "https://www.reuters.com/markets/goldman-sachs-eleva-objetivo-oro/",
+                 "Goldman Sachs eleva su objetivo para el oro.")
+    assert fu.fuentes_directas([wire], seg, gs) == []
+    for ticker, entidad, url in (
+            ("#MS", "Morgan Stanley", "https://www.morganstanley.com/ideas/perspectivas-2027"),
+            ("#BAC", "Bank of America", "https://www.reuters.com/markets/bank-of-america-ve-oro-al-alza/")):
+        _, ancla = sg.segmento_y_ancla(ticker)
+        nota = _nota(entidad, url, f"{entidad} eleva su objetivo para el oro.")
+        assert fu.fuentes_directas([nota], "acciones", ancla) == [], ticker
+
+
+def test_el_comunicado_propio_del_banco_si_es_directa_de_su_accion():
+    seg, gs = sg.segmento_y_ancla("#GS")
+    ir = _nota("Goldman Sachs", "https://www.goldmansachs.com/investor-relations/financials/3q26-earnings",
+               "Goldman Sachs publica sus resultados del tercer trimestre.")
+    sec = _nota("SEC", "https://www.sec.gov/Archives/edgar/data/886982/000088698226000010/gs-10q.htm",
+                "Goldman Sachs presenta su informe trimestral 10-Q.")
+    assert fu.fuentes_directas([ir, sec], seg, gs) == [ir, sec]
+    _, bac = sg.segmento_y_ancla("#BAC")
+    propio = _nota("Bank of America", "https://investor.bankofamerica.com/quarterly-earnings/3q26",
+                   "Bank of America publica sus resultados del tercer trimestre.")
+    assert fu.fuentes_directas([propio], "acciones", bac) == [propio]
+
+
+def test_el_sitio_de_la_empresa_cuenta_solo_en_sus_rutas_propias():
+    _, msft = sg.segmento_y_ancla("#MSFT")
+    blog = _nota("Microsoft", "https://www.microsoft.com/en-us/research/blog/microsoft-nuevo-modelo",
+                 "Microsoft presenta un nuevo modelo de investigación.")
+    assert fu.fuentes_directas([blog], "acciones", msft) == []
+    ir = _nota("Microsoft", "https://www.microsoft.com/en-us/investor/earnings/fy-2027-q1/press-release-webcast",
+               "Microsoft publica sus resultados del primer trimestre fiscal.")
+    assert fu.fuentes_directas([ir], "acciones", msft) == [ir]
+    # La nota de un medio que cita el anuncio de la empresa sigue contando (no es un banco).
+    wire = _nota("Microsoft", "https://www.reuters.com/technology/microsoft-anuncia-recompra/",
+                 "Microsoft anuncia un programa de recompra de acciones.")
+    assert fu.fuentes_directas([wire], "acciones", msft) == [wire]
+    for ticker, url in (("#DE", "https://www.deere.com/en/agriculture/tractores-deere"),
+                        ("#GE", "https://www.geaerospace.com/propulsion/commercial/ge-aerospace-motor")):
+        _, ancla = sg.segmento_y_ancla(ticker)
+        nota = _nota(ancla["nombre"], url, f"{ancla['nombre']} muestra su catálogo.")
+        assert fu.fuentes_directas([nota], "acciones", ancla) == [], ticker
+
+
+def test_las_rutas_propias_caen_dentro_de_los_dominios_del_ancla():
+    for t in ACCIONES:
+        _, ancla = sg.segmento_y_ancla(t)
+        for ruta in ancla.get("rutas_propias", []):
+            host = ruta.split("/")[0]
+            assert any(host == d or host.endswith("." + d) for d in ancla["dominios"]), (t, ruta)
+    for t in ("#GS", "#MS", "#JPM", "#MSFT", "#DE", "#GE"):
+        assert sg.segmento_y_ancla(t)[1].get("rutas_propias"), t

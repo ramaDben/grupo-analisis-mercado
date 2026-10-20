@@ -1,4 +1,4 @@
-"""Verifica que cada dominio declarado en los segmentos y en los anclas responda.
+"""Verifica que cada dominio (y cada ruta propia) declarado en los segmentos y en los anclas responda.
 
 punto-de-entrada: CLI de red que corre el director a mano al editar los segmentos; no lo llama nada
 
@@ -41,6 +41,7 @@ def dominios_declarados() -> set[str]:
         ancla = entry.get("ancla")
         if isinstance(ancla, dict):
             dominios.update(ancla.get("dominios", []))
+            dominios.update(ancla.get("rutas_propias", []))  # host/ruta: se prueba igual
     return dominios
 
 

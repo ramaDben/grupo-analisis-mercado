@@ -233,20 +233,54 @@ def nombra_ancla(fuente: dict[str, Any], ancla: dict[str, Any]) -> bool:
                for t in ancla.get("terminos_ancla", []))
 
 
+def _sin_www(host: str) -> str:
+    return host[4:] if host.startswith("www.") else host
+
+
+def _ruta_propia(ruta: str) -> tuple[str, str]:
+    """`host/ruta` a (host sin www, `/ruta` o vacío si es el host entero)."""
+    host, _, resto = ruta.lower().partition("/")
+    return _sin_www(host), f"/{resto.strip('/')}" if resto.strip("/") else ""
+
+
+def _en_rutas_propias(url: str, ancla: dict[str, Any]) -> bool:
+    """False si la URL cae en un sitio acotado del ancla y fuera de sus `rutas_propias`.
+
+    Una ruta propia es `host/ruta` (p. ej. `goldmansachs.com/investor-relations`). Un sitio queda acotado
+    cuando alguna ruta propia vive bajo el mismo dominio del ancla: ahí solo cuentan esas secciones
+    (relaciones con inversionistas, prensa), no el research ni el catálogo. Los demás dominios, sin acotar.
+    """
+    rutas = [_ruta_propia(r) for r in ancla.get("rutas_propias") or []]
+    if not rutas:
+        return True
+    p = urlparse(url)
+    host, ruta = _sin_www((p.hostname or "").lower()), p.path.lower()
+    acotado = any(_del_dominio(host, [d]) and any(_del_dominio(h, [d]) for h, _ in rutas)
+                  for d in ancla.get("dominios", []))
+    return not acotado or any(host == h and (not r or ruta == r or ruta.startswith(r + "/")) for h, r in rutas)
+
+
+# Por segmento, el grupo de entidades de la lista cerrada que no habilita por su nombre: en acciones, una
+# voz de banco de inversión es research aunque el banco sea la empresa del ancla (#GS, #MS, #BAC).
+# Esa empresa cuenta solo por su comunicado propio (dominio del ancla, dentro de sus rutas propias).
+_ENTIDAD_NO_HABILITA = {"acciones": "bancos_de_inversion"}
+
+
 def fuentes_directas(fuentes: Any, segmento: str, ancla: dict[str, Any],
                      lista: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     """Las fuentes del ancla misma (su entidad o su dominio) que además la nombran. No mira la postura."""
-    propietarias = [
-        f for f in (fuentes if isinstance(fuentes, list) else [])
-        if isinstance(f, dict)
-        and (f.get("entidad") in ancla.get("entidades", [])
-             or _del_dominio(_host(str(f.get("url", ""))), ancla.get("dominios", [])))
-        and nombra_ancla(f, ancla)
-    ]
-    if not propietarias:
-        return []
-    entidades = _entidades(lista or lista_del_segmento(segmento))
-    return [f for f in propietarias if f.get("entidad") in entidades]
+    lista = lista or lista_del_segmento(segmento)
+    sin_nombre = set(lista["entidades"].get(_ENTIDAD_NO_HABILITA.get(segmento, ""), []))
+
+    def propia(f: dict[str, Any]) -> bool:
+        url = str(f.get("url", ""))
+        por_entidad = f.get("entidad") in ancla.get("entidades", []) and f.get("entidad") not in sin_nombre
+        por_dominio = _del_dominio(_host(url), ancla.get("dominios", []))
+        return (por_entidad or por_dominio) and _en_rutas_propias(url, ancla) and nombra_ancla(f, ancla)
+
+    entidades = _entidades(lista)
+    return [f for f in (fuentes if isinstance(fuentes, list) else [])
+            if isinstance(f, dict) and propia(f) and f.get("entidad") in entidades]
 
 
 def falta_fuente_directa(pieza: dict[str, Any], segmento: str, ancla: dict[str, Any],
