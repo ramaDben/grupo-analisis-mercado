@@ -48,8 +48,12 @@ def _con_ruta_de_articulo(url: str) -> bool:
     return bool(ruta) and ruta.lower() not in {"index", "index.html", "index.php"}
 
 
-def verificar_url(url: str, timeout: int = 10) -> str:
-    """`ok`, `sin_verificar` (muro de pago o bloqueo a bots) o `muerta` (404 o dominio caído)."""
+def verificar_url(url: str, timeout: int = 10, lista: dict[str, Any] | None = None) -> str:
+    """`ok`, `sin_verificar` (muro de pago o bloqueo a bots) o `muerta` (404 o dominio caído).
+
+    `lista` es la lista cerrada con que se depura (la del segmento, si la hay): una redirección vale si
+    termina en un dominio del mismo medio. Sin ella se usa la base.
+    """
     import requests
 
     try:
@@ -67,20 +71,31 @@ def verificar_url(url: str, timeout: int = 10) -> str:
     # La redirección se revalida: un soft-404 que lleva a la portada, o a otro dominio, responde 200
     # pero ya no es el artículo citado.
     destino = getattr(r, "url", None) or url
-    if not _del_dominio(_host(destino), _dominios_de(url)) or not _con_ruta_de_articulo(destino):
+    if not _del_dominio(_sin_www(_host(destino)), _dominios_de(url, lista)) or not _con_ruta_de_articulo(destino):
         return "muerta"
     return "ok"
 
 
-def _dominios_de(url: str) -> list[str]:
-    """Los dominios de la lista cerrada que cubren la URL citada; si ninguno, su propio host."""
+def _dominios_de(url: str, lista: dict[str, Any] | None = None) -> list[str]:
+    """Los dominios de los medios de la lista que cubren la URL citada; si ninguno, su propio host sin www."""
     host = _host(url)
     try:
-        medios = cargar_lista()["medios"].values()
+        medios = (lista if lista is not None else cargar_lista())["medios"].values()
     except (OSError, ValueError, KeyError):
         medios = []
-    propios = [d for dominios in medios for d in dominios if _del_dominio(host, [d])]
-    return propios or [host]
+    propios = [d for dominios in medios if any(_del_dominio(host, [d]) for d in dominios) for d in dominios]
+    return propios or [_sin_www(host)]
+
+
+def _con_lista(verificar: Callable[..., str], lista: dict[str, Any]) -> Callable[[str], str]:
+    """El verificador con la lista de la depuración, si la acepta (`verificar_url` sí; un doble de test no)."""
+    import inspect
+
+    try:
+        acepta = "lista" in inspect.signature(verificar).parameters
+    except (TypeError, ValueError):
+        acepta = False
+    return (lambda url: verificar(url, lista=lista)) if acepta else verificar
 
 
 def _motivo_de_descarte(f: Any, hoy: date, lista: dict[str, Any], verificar: Callable[[str], str]
@@ -122,6 +137,7 @@ def depurar(crudas: Any, hoy: date, lista: dict[str, Any] | None = None,
             verificar: Callable[[str], str] = verificar_url) -> tuple[list[dict[str, Any]], list[str]]:
     """Las fuentes que pasan (con su `verificacion`) y el motivo de cada descarte."""
     lista = lista or cargar_lista()
+    verificar = _con_lista(verificar, lista)
     validas: list[dict[str, Any]] = []
     descartes: list[str] = []
     vistas: set[str] = set()

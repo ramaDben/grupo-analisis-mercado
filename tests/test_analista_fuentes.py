@@ -248,3 +248,52 @@ def test_seleccionar_bancos_correo_sin_bancos():
     assert fu.seleccionar_bancos_correo(organismos, "BAJISTA") == []
     assert fu.seleccionar_bancos_correo([], "BAJISTA") == []
 
+
+
+# ───────────────────────────────────────────── revisión final: la redirección conoce los medios del segmento
+
+
+def _registrar_get(destino):
+    from types import SimpleNamespace
+    pedidas = []
+
+    def get(url, **kw):
+        pedidas.append(url)
+        return SimpleNamespace(status_code=200, url=destino, close=lambda: None)
+    return get, pedidas
+
+
+def test_una_redireccion_entre_dominios_del_mismo_medio_del_segmento_pasa(monkeypatch):
+    import requests
+    get, pedidas = _registrar_get("https://iog.io/news/cardano-actualizacion-2026")
+    monkeypatch.setattr(requests, "get", get)
+    lista = fu.lista_del_segmento("cripto")
+    assert fu.verificar_url("https://iohk.io/en/blog/posts/2026/10/14/cardano-actualizacion/", lista=lista) == "ok"
+    # Y por el camino real: depurar con la lista del segmento y el verificador por defecto.
+    f = {"entidad": "IOG", "medio": "IOG", "fecha": "2026-10-14", "postura": "neutral",
+         "url": "https://iohk.io/en/blog/posts/2026/10/14/cardano-actualizacion/",
+         "tesis": "IOG publica el avance de la actualización de Cardano."}
+    validas, descartes = fu.depurar([f], HOY, lista=lista)
+    assert descartes == [] and validas[0]["verificacion"] == "ok" and pedidas
+
+
+def test_una_redireccion_de_www_al_dominio_sin_www_pasa(monkeypatch):
+    import requests
+    get, _ = _registrar_get("https://snb.ch/es/publications/communication/press-releases/pre_20261014")
+    monkeypatch.setattr(requests, "get", get)
+    lista = fu.lista_del_segmento("fx")
+    url = "https://www.snb.ch/es/publications/communication/press-releases/pre_20261014"
+    assert fu.verificar_url(url, lista=lista) == "ok"
+    # Sin ninguna lista que lo cubra, el host propio vale con y sin www.
+    assert fu.verificar_url("https://www.ejemplo-sin-lista.org/nota-1", lista={"medios": {}}) == "muerta"
+    get2, _ = _registrar_get("https://ejemplo-sin-lista.org/nota-1")
+    monkeypatch.setattr(requests, "get", get2)
+    assert fu.verificar_url("https://www.ejemplo-sin-lista.org/nota-1", lista={"medios": {}}) == "ok"
+
+
+def test_la_redireccion_a_otro_medio_del_segmento_sigue_muerta(monkeypatch):
+    import requests
+    get, _ = _registrar_get("https://www.coinbase.com/blog/cardano")
+    monkeypatch.setattr(requests, "get", get)
+    lista = fu.lista_del_segmento("cripto")
+    assert fu.verificar_url("https://iohk.io/en/blog/posts/2026/10/14/cardano/", lista=lista) == "muerta"
