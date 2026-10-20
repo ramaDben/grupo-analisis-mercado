@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Bosquejo UI - GI Risk Cockpit MT5 (Conector Botones Líneas S/R)</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    body { background-color: #0b0e14; color: #e2e8f0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+    /* Ventana Principal MT5 (Gráfico de Arriba) */
+    .chart-window {
+      flex: 1;
+      background: radial-gradient(circle at 50% 50%, #151922 0%, #0d1117 100%);
+      position: relative;
+      border-bottom: 2px solid #334155;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 14px 16px;
+    }
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(8px);
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.08);
+      font-size: 13px;
+    }
+    .chart-symbol { font-weight: 700; color: #f8fafc; font-size: 15px; }
+    .chart-tf { color: #38bdf8; font-weight: 600; margin-left: 8px; }
+    .hud-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-weight: 600; margin-left: 6px; font-size: 11px; }
+    .tag-green { background: rgba(38, 198, 160, 0.15); color: #26c6a0; border: 1px solid #26c6a0; }
+    .tag-yellow { background: rgba(255, 213, 79, 0.15); color: #ffd54f; border: 1px solid #ffd54f; }
+
+    /* Simulación de Líneas en el Gráfico */
+    .chart-mock {
+      position: relative;
+      height: 65%;
+      margin: 10px 0;
+      border-left: 1px dashed #334155;
+      border-bottom: 1px solid #1e293b;
+    }
+    .line-sr {
+      position: absolute;
+      width: 100%;
+      height: 12px;
+      background: rgba(255, 213, 79, 0.12);
+      border-top: 1px solid #ffd54f;
+      border-bottom: 1px solid #ffd54f;
+      display: flex;
+      align-items: center;
+      padding-left: 10px;
+      font-size: 10px;
+      color: #ffd54f;
+      font-weight: 600;
+    }
+    .line-safety {
+      position: absolute;
+      width: 75%;
+      height: 2px;
+      background: #26c6a0;
+      box-shadow: 0 0 8px rgba(38,198,160,0.5);
+      top: 60%;
+      left: 15%;
+      transform: rotate(-5deg);
+    }
+    .safety-label {
+      position: absolute;
+      top: 56%;
+      right: 12%;
+      background: #26c6a0;
+      color: #0b0e14;
+      font-weight: 700;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    /* Divisor de Subventana estilo MT5 */
+    .subwindow-splitter {
+      height: 6px;
+      background: #1e293b;
+      cursor: row-resize;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-top: 1px solid #334155;
+      border-bottom: 1px solid #0f172a;
+    }
+    .splitter-handle {
+      width: 40px;
+      height: 2px;
+      background: #475569;
+      border-radius: 1px;
+    }
+
+    /* Subventana Inferior (El Dashboard de Riesgo) */
+    .subwindow-dashboard {
+      height: 250px;
+      background-color: #0f172a;
+      display: flex;
+      flex-direction: column;
+      padding: 8px 12px 12px 12px;
+      box-shadow: inset 0 4px 12px rgba(0,0,0,0.4);
+    }
+
+    /* Barra Superior de la Subventana */
+    .subwindow-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .subwindow-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      letter-spacing: 0.5px;
+    }
+    .status-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: rgba(38, 198, 160, 0.15);
+      color: #26c6a0;
+      border: 1px solid rgba(38, 198, 160, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #26c6a0; }
+
+    /* Grid de 4 Módulos */
+    .modules-grid {
+      display: grid;
+      grid-template-columns: 0.9fr 1.35fr 1.35fr 1.15fr;
+      gap: 10px;
+      flex: 1;
+    }
+
+    /* Tarjetas de Módulo */
+    .module-card {
+      background: #182234;
+      border: 1px solid #283548;
+      border-radius: 6px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #94a3b8;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    /* Botones de Línea Dinámica para SL y TP */
+    .line-btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+      margin-bottom: 6px;
+    }
+    .btn-line {
+      background: #0b1120;
+      border: 1px solid #334155;
+      border-radius: 4px;
+      padding: 5px 6px;
+      font-size: 10px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      transition: all 0.15s ease;
+      text-align: left;
+    }
+    .btn-line:hover { filter: brightness(1.2); }
+    .btn-line.selected {
+      box-shadow: 0 0 0 1.5px #fff, 0 2px 8px rgba(0,0,0,0.5);
+    }
+    .btn-line-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 700;
+    }
+    .dot-indicator {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 4px;
+    }
+    .btn-line-price {
+      font-family: "Consolas", monospace;
+      font-weight: 700;
+      font-size: 11px;
+      color: #f8fafc;
+    }
+    .btn-line-dist {
+      font-size: 9px;
+      color: #64748b;
+    }
+
+    /* Clases de colores según la tabla oficial */
+    .c-seguridad { border-left: 3px solid #26c6a0 !important; }
+    .c-accion { border-left: 3px solid #ff4d5e !important; }
+    .c-seguimiento { border-left: 3px solid #9be7c4 !important; }
+    .c-sr { border-left: 3px solid #ffd54f !important; }
+    .c-contexto { border-left: 3px solid #b39ddb !important; }
+    .c-rango { border-left: 3px solid #cbd5e1 !important; }
+
+    /* Módulo 1: Métricas */
+    .metric-row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 3px; }
+    .metric-label { color: #64748b; }
+    .metric-value { font-weight: 600; color: #f1f5f9; font-family: "Consolas", monospace; }
+    .metric-profit { color: #26c6a0; font-weight: 700; }
+    .progress-bar-container {
+      margin-top: 3px;
+      background: #0b1120;
+      border-radius: 4px;
+      height: 5px;
+      overflow: hidden;
+      border: 1px solid #334155;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      width: 32%;
+      background: linear-gradient(90deg, #26c6a0 0%, #ffd54f 100%);
+    }
+
+    /* Risk Buttons */
+    .risk-buttons { display: flex; gap: 3px; margin-bottom: 6px; }
+    .btn-risk {
+      flex: 1;
+      padding: 3px 0;
+      font-size: 10px;
+      font-weight: 600;
+      background: #1e293b;
+      color: #94a3b8;
+      border: 1px solid #334155;
+      border-radius: 3px;
+      cursor: pointer;
+      text-align: center;
+    }
+    .btn-risk.active {
+      background: #0284c7;
+      color: #fff;
+      border-color: #38bdf8;
+    }
+    .lot-badge {
+      background: rgba(38, 198, 160, 0.12);
+      border: 1px solid #26c6a0;
+      color: #26c6a0;
+      text-align: center;
+      padding: 4px;
+      border-radius: 4px;
+      font-weight: 800;
+      font-size: 12px;
+      font-family: "Consolas", monospace;
+    }
+
+    /* Módulo 4: Ejecución */
+    .rr-compact {
+      background: #0b1120;
+      border: 1px solid #334155;
+      border-radius: 4px;
+      padding: 6px;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+    .rr-compact-ratio { font-size: 17px; font-weight: 800; color: #26c6a0; font-family: "Consolas", monospace; }
+    .btn-exec {
+      border: none;
+      border-radius: 5px;
+      padding: 7px 4px;
+      font-weight: 800;
+      font-size: 11px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-exec span { font-size: 9px; font-weight: 500; opacity: 0.9; margin-top: 1px; }
+    .btn-buy { background: #26c6a0; color: #0b0e14; }
+    .btn-sell { background: #ff4d5e; color: #ffffff; }
+    .actions-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      margin-top: 5px;
+    }
+    .btn-action {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      padding: 4px 2px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+    }
+    .btn-action.close-all { background: rgba(255, 77, 94, 0.15); color: #ff4d5e; border-color: #ff4d5e; }
+  </style>
+</head>
+<body>
+
+  <!-- 1. GRÁFICO SUPERIOR MT5 -->
+  <div class="chart-window">
+    <div class="chart-header">
+      <div>
+        <span class="chart-symbol">XAUUSD</span>
+        <span class="chart-tf">H1</span>
+        <span style="color: #94a3b8; margin-left: 10px;">Spot Actual: <strong style="color: #f1f5f9;">4.243,15 USD</strong></span>
+      </div>
+      <div>
+        <span class="hud-tag tag-green">SEGURIDAD: 4.225,50</span>
+        <span class="hud-tag tag-yellow">S/R ACTIVO: 4.216,71</span>
+      </div>
+    </div>
+
+    <!-- Simulación Gráfico -->
+    <div class="chart-mock">
+      <div class="line-sr" style="top: 12%;">ZONA RESISTENCIA: 4.280,00 USD (Objetivo Histórico)</div>
+      <div class="line-safety"></div>
+      <div class="safety-label">LÍNEA DE SEGURIDAD (4.225,50)</div>
+      <div class="line-sr" style="top: 86%;">ZONA SOPORTE: 4.216,71 USD</div>
+    </div>
+
+    <div style="font-size: 10px; color: #64748b; text-align: right;">
+      [Gráfico 100% despejado para observar la acción del precio y las líneas de TV]
+    </div>
+  </div>
+
+  <!-- 2. DIVISOR -->
+  <div class="subwindow-splitter"><div class="splitter-handle"></div></div>
+
+  <!-- 3. SUBVENTANA INFERIOR: RISK COCKPIT CON BOTONES DE LÍNEA -->
+  <div class="subwindow-dashboard">
+    
+    <div class="subwindow-bar">
+      <div class="subwindow-title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+        GI RISK COCKPIT <span>(Asignador de SL & TP a Líneas de TV con Precio en Vivo)</span>
+      </div>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <span style="font-size: 10px; color: #94a3b8;">ATR: <strong style="color: #f1f5f9;">27.70</strong></span>
+        <span style="font-size: 10px; color: #94a3b8;">Spread: <strong style="color: #26c6a0;">1.2</strong></span>
+        <div class="status-badge"><div class="status-dot"></div> MT5 CONECTADO</div>
+      </div>
+    </div>
+
+    <!-- Grid de los 4 Bloques -->
+    <div class="modules-grid">
+      
+      <!-- BLOQUE 1: CAPITAL & SIZING BASE -->
+      <div class="module-card">
+        <div class="card-title">
+          <span>1. Cuenta & Sizing</span>
+          <span style="color: #38bdf8;">USD</span>
+        </div>
+        <div>
+          <div class="metric-row"><span class="metric-label">Balance:</span><span class="metric-value">$10,000.00</span></div>
+          <div class="metric-row"><span class="metric-label">Margen L:</span><span class="metric-value">$9,520.00</span></div>
+          <div class="metric-row"><span class="metric-label">PnL Sesión:</span><span class="metric-profit">+$140.50</span></div>
+          
+          <div style="margin-top: 4px;">
+            <div style="font-size: 9px; color: #94a3b8; margin-bottom: 2px;">Riesgo por Operación:</div>
+            <div class="risk-buttons">
+              <div class="btn-risk">0.5%</div>
+              <div class="btn-risk active">1.0%</div>
+              <div class="btn-risk">2.0%</div>
+              <div class="btn-risk">$ Fijo</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div style="display: flex; justify-content: space-between; font-size: 9px; color: #94a3b8; margin-bottom: 2px;">
+            <span>Límite Pérdida Día:</span>
+            <span style="color: #26c6a0;">$80 / $250</span>
+          </div>
+          <div class="progress-bar-container"><div class="progress-bar-fill"></div></div>
+          <div class="lot-badge" style="margin-top: 6px;">
+            LOTE: 0.56 Lots (-$100)
+          </div>
+        </div>
+      </div>
+
+      <!-- BLOQUE 2: ASIGNAR STOP LOSS (SL) -->
+      <div class="module-card" style="border-color: #334155;">
+        <div class="card-title">
+          <span style="color: #ff4d5e;">2. Asignar Stop Loss (SL)</span>
+          <span style="color: #64748b; font-size: 9px;">Clic para fijar</span>
+        </div>
+        
+        <!-- 6 Botones con precio para SL -->
+        <div class="line-btn-grid">
+          <!-- 1. Seguridad -->
+          <div class="btn-line c-seguridad selected" style="background: rgba(38,198,160,0.12);" title="Piso o techo que sostiene la tendencia actual">
+            <div class="btn-line-header">
+              <span><span class="dot-indicator" style="background: #26c6a0;"></span>Seguridad</span>
+              <span style="font-size: 8px; color: #26c6a0; font-weight: 800;">ACTIVO</span>
+            </div>
+            <div class="btn-line-price">4.225,50</div>
+            <div class="btn-line-dist">-17.6 pips (0.64 ATR)</div>
+          </div>
+
+          <!-- 2. Soporte S/R -->
+          <div class="btn-line c-sr" title="Barrera horizontal donde rebotó el precio en el pasado">
+            <div class="btn-line-header">
+              <span><span class="dot-indicator" style="background: #ffd54f;"></span>Soporte S/R</span>
+            </div>
+            <div class="btn-line-price">4.216,71</div>
+            <div class="btn-line-dist">-26.4 pips (0.95 ATR)</div>
+          </div>
+
+          <!-- 3. Seguimiento -->
+          <div class="btn-line c-seguimiento" title="Abanico acelerado para proteger ganancias más cerca">
+            <div class="btn-line-header">
+              <span><span class="dot-indicator" style="background: #9be7c4;"></span>Seguimiento</span>
+            </div>
+            <div class="btn-line-price">4.234,20</div>
+            <div class="btn-line-dist">-8.9 pips (0.32 ATR)</div>
+          </div>
+
+          <!-- 4. Acción -->
+          <div class="btn-line c-accion" title="Línea de quiebre o gatillo opuesto">
+            <div class="btn-line-header">
+              <span><span class="dot-indicator" style="background: #ff4d5e;"></span>Acción</span>
+            </div>
+            <div class="btn-line-price">4.258,20</div>
+            <div class="btn-line-dist">+15.0 pips (En Corto)</div>
+          </div>
+
+          <!-- 5. Contexto D1 -->
+          <div class="btn-line c-contexto" title="Tendencia de fondo de gráficos diarios o semanales">
+            <div class="btn-line-header">
+              <span><span class="dot-indicator" style="background: #b39ddb;"></span>Contexto D1</span>
+            </div>
+            <div class="btn-line-price">4.180,00</div>
+            <div class="btn-line-dist">-63.1 pips (2.28 ATR)</div>
+          </div>
+
+          <!-- 6. Borde Rango -->
+          <div class="btn-line c-rango" title="Piso o techo del canal lateral semanal">
+            <div class="btn-line-header">
+              <span><span class="dot-indicator" style="background: #cbd5e1;"></span>Piso Rango</span>
+            </div>
+            <div class="btn-line-price">4.205,00</div>
+            <div class="btn-line-dist">-38.1 pips (1.37 ATR)</div>
+          </div>
+        </div>
+
+        <div style="font-size: 9px; color: #94a3b8; display: flex; justify-content: space-between; border-top: 1px solid #1e293b; padding-top: 3px;">
+          <span>SL Seleccionado: <strong style="color: #26c6a0;">4.225,50</strong></span>
+          <span>Colchón: <strong style="color: #ffd54f;">1.5x Spread (±0.36 USD)</strong></span>
+        </div>
+      </div>
+
+      <!-- BLOQUE 3: ASIGNAR TAKE PROFIT (TP) -->
+      <div class="module-card" style="border-color: #334155;">
+        <div class="card-title">
+          <span style="color: #26c6a0;">3. Asignar Take Profit (TP)</span>
+          <span style="color: #64748b; font-size: 9px;">Clic para fijar</span>
+        </div>
+        
+        <!-- 6 Botones con precio para TP -->
+        <div class="line-btn-grid">
+          <!-- 1. Resistencia S/R -->
+          <div class="btn-line c-sr selected" style="background: rgba(255,213,79,0.12);" title="Barrera horizontal estructural objetivo">
+            <div class="btn-line-header">
+              <span><span class="dot-indicator" style="background: #ffd54f;"></span>Resistencia S/R</span>
+              <span style="font-size: 8px; color: #ffd54f; font-weight: 800;">ACTIVO</span>
+            </div>
+            <div class="btn-line-price">4.280,00</div>
+            <div class="btn-line-dist">+36.8 pips (1.33 ATR)</div>
+          </div>
+
+          <!-- 2. Acción -->
+          <div class="btn-line c-accion" title="Gatillo de ruptura o primer objetivo táctico">
+            <div class="btn-line-header">
+              <span><span class="dot-indicator" style="background: #ff4d5e;"></span>Acción Quiebre</span>
+            </div>
+            <div class="btn-line-price">4.258,20</div>
+            <div class="btn-line-dist">+15.0 pips (0.54 ATR)</div>
+          </div>
+
+          <!-- 3. Contexto D1 -->
+          <div class="btn-line c-contexto" title="Objetivo institucional de marco diario">
+            <div class="btn-line-header">
+              <span><span class="dot-indicator" style="background: #b39ddb;"></span>Contexto D1</span>
+            </div>
+            <div class="btn-line-price">4.310,00</div>
+            <div class="btn-line-dist">+66.8 pips (2.41 ATR)</div>
+          </div>
+
+          <!-- 4. Techo Rango -->
+          <div class="btn-line c-rango" title="Techo del canal lateral">
+            <div class="btn-line-header">
+              <span><span class="dot-indicator" style="background: #cbd5e1;"></span>Techo Rango</span>
+            </div>
+            <div class="btn-line-price">4.295,00</div>
+            <div class="btn-line-dist">+51.8 pips (1.87 ATR)</div>
+          </div>
+
+          <!-- 5. Proyección Seguimiento -->
+          <div class="btn-line c-seguimiento" title="Proyección acelerada de canal">
+            <div class="btn-line-header">
+              <span><span class="dot-indicator" style="background: #9be7c4;"></span>Proyección</span>
+            </div>
+            <div class="btn-line-price">4.325,00</div>
+            <div class="btn-line-dist">+81.8 pips (2.95 ATR)</div>
+          </div>
+
+          <!-- 6. Ratio Fijo 1:2 -->
+          <div class="btn-line" style="border-left: 3px solid #38bdf8 !important;" title="Ratio matemático fijo de 2 veces el Stop Loss">
+            <div class="btn-line-header">
+              <span><span class="dot-indicator" style="background: #38bdf8;"></span>Ratio Fijo 1:2</span>
+            </div>
+            <div class="btn-line-price">4.278,35</div>
+            <div class="btn-line-dist">+35.2 pips (2.00 R)</div>
+          </div>
+        </div>
+
+        <div style="font-size: 9px; color: #94a3b8; display: flex; justify-content: space-between; border-top: 1px solid #1e293b; padding-top: 3px;">
+          <span>TP Seleccionado: <strong style="color: #ffd54f;">4.280,00</strong></span>
+          <span>Beneficio Proy: <strong style="color: #26c6a0;">+$208.50 USD</strong></span>
+        </div>
+      </div>
+
+      <!-- BLOQUE 4: ÓPTICA R:R & EJECUCIÓN -->
+      <div class="module-card">
+        <div class="card-title">
+          <span>4. Óptica & Gatillo</span>
+          <span style="color: #ffd54f;">1-CLIC</span>
+        </div>
+        
+        <!-- Medidor R:R -->
+        <div class="rr-compact">
+          <div style="font-size: 9px; color: #94a3b8; margin-bottom: 1px;">RATIO RIESGO / BENEFICIO</div>
+          <div class="rr-compact-ratio">1 : 2.08</div>
+          <div style="font-size: 9px; color: #26c6a0; font-weight: 700;">✓ R:R >= 1.5 APROBADO</div>
+        </div>
+
+        <!-- Botones de Disparo con Lote y Niveles Adentro -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 4px;">
+          <button class="btn-exec btn-buy" title="Comprar con SL en Seguridad y TP en Resistencia">
+            ▲ BUY MARKET
+            <span>0.56 L | SL 4.225 | TP 4.280</span>
+          </button>
+          <button class="btn-exec btn-sell" title="Vender">
+            ▼ SELL MARKET
+            <span>0.38 L | SL/TP Invertido</span>
+          </button>
+        </div>
+
+        <!-- Botonera Táctica -->
+        <div class="actions-grid">
+          <button class="btn-action">🛡️ Break-Even</button>
+          <button class="btn-action">⚡ Trail Segur.</button>
+          <button class="btn-action">✂️ Parcial 50%</button>
+          <button class="btn-action close-all">🚨 CERRAR TODO</button>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</body>
+</html>
