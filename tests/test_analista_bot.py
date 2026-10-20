@@ -716,3 +716,48 @@ def test_recrear_todas_sin_si_no_hace_nada(armado):
 
 def test_recrear_no_aparece_en_el_menu():
     assert "recrear" not in {c for c, _ in b.MENU}
+
+
+# ───────────────────────────────────────────── revisión final: avisos de cara al ejecutivo
+
+
+def _texto_al_pedir(armado, error):
+    def falla(orden, dir_pedido, ahora, **kw):
+        raise error
+
+    armado.atendedor.preparar = falla
+    antes = armado.estado.usados(CAMILA, AHORA)
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert not r.archivos and armado.estado.usados(CAMILA, AHORA) == antes
+    return r.texto
+
+
+def test_el_aviso_sin_ancla_sale_sin_el_prefijo_de_falla_de_lectura(armado):
+    with pytest.raises(pr.PreparacionFallida) as exc:  # el error tal como lo levanta preparar
+        pr.preparar(od.Orden("oportunidad", {"ticker": "XAUUSD"}), armado.tmp / "sin_ancla", AHORA,
+                    pr.Lectores(ancla=lambda t: None))
+    texto = _texto_al_pedir(armado, exc.value)
+    assert "No pude leer los datos" not in texto
+    assert "No tengo una fuente propia definida para XAUUSD" in texto
+
+
+def test_el_aviso_de_ingesta_de_acciones_es_para_el_ejecutivo(armado, tmp_path):
+    import ingesta_acciones as ia
+
+    hoy = datetime(2026, 10, 20, 15, 0, tzinfo=ZoneInfo("UTC"))
+    for preparar_falla in ("sin_ingesta", "vencida"):
+        base = tmp_path / preparar_falla
+        if preparar_falla == "vencida":
+            anclas = {"#AAPL": ("acciones", {"ticker": "AAPL", "cik": "0000320193"})}
+            ia.ingestar(anclas, base, ahora=hoy - timedelta(days=10), descargar_fecha=lambda t: None,
+                        descargar_sec=lambda u, headers: {"filings": {"recent": {
+                            "form": [], "filingDate": [], "reportDate": [], "accessionNumber": [],
+                            "primaryDocument": []}}})
+        with pytest.raises(pr.PreparacionFallida) as exc:
+            ia.leer_empresa("#AAPL", base, ahora=hoy)
+        texto = _texto_al_pedir(armado, exc.value)
+        assert "No gasté tu cupo" in texto and "director" in texto, preparar_falla
+        for prohibido in ("uv run", "pipeline_datos", "scripts/", "No pude leer los datos", "—", "–"):
+            assert prohibido not in texto, (preparar_falla, prohibido)
+        # Español chileno sin voseo.
+        assert not any(v in texto for v in ("corré", "pedí", "avisale", "tenés", "podés")), preparar_falla

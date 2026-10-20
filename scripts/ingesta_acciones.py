@@ -151,9 +151,13 @@ def ingestar(anclas: dict[str, tuple[str, dict[str, Any]]], destino: Path = DIR_
 
 
 def _falla(mensaje: str):
-    from analista.preparar import PreparacionFallida
+    from analista.preparar import AvisoAlPedir
 
-    return PreparacionFallida(mensaje)
+    return AvisoAlPedir(mensaje)
+
+
+# De cara al ejecutivo que pide por Telegram: él no corre la ingesta, la actualiza el director.
+_PIDE_AL_DIRECTOR = "No gasté tu cupo. Avísale al director para que la actualice y vuelve a pedirlo."
 
 
 def leer_empresa(ticker: str, base: Path = DIR_ACCIONES, *, ahora: datetime | None = None) -> dict[str, Any]:
@@ -165,13 +169,13 @@ def leer_empresa(ticker: str, base: Path = DIR_ACCIONES, *, ahora: datetime | No
         cal = json.loads((base / "earnings_calendar.json").read_text(encoding="utf-8"))
         est = json.loads((base / "estados_financieros.json").read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError) as exc:
-        raise _falla(f"No hay ingesta de acciones para {ticker} ({exc.__class__.__name__}): corre "
-                     "`uv run python scripts/pipeline_datos.py` y vuelve a pedir. No gasté tu cupo.") from exc
-    fresco, horas, _umbral, motivo = validar_staleness(min(cal.get("ingesta") or "", est.get("ingesta") or "")
+        raise _falla(f"Todavía no tengo los datos de empresas para {ticker} (falta la ingesta de acciones), "
+                     f"así que no puedo armar el análisis. {_PIDE_AL_DIRECTOR}") from exc
+    fresco, _horas, _umbral, _motivo = validar_staleness(min(cal.get("ingesta") or "", est.get("ingesta") or "")
                                                        or None, now_dt=ahora)
     if not fresco:
-        raise _falla(f"La ingesta de acciones está vencida ({horas:.0f} h) o sin sello ({motivo}): corre "
-                     "`uv run python scripts/pipeline_datos.py` y vuelve a pedir. No gasté tu cupo.")
+        raise _falla(f"Los datos de empresas para {ticker} están desactualizados (la ingesta de acciones está "
+                     f"vencida o sin fecha), así que no puedo armar el análisis. {_PIDE_AL_DIRECTOR}")
     fila = (cal.get("acciones") or {}).get(ticker) or {}
     proxima = None
     fecha = _como_fecha(fila.get("fecha")) if fila.get("fecha") else None

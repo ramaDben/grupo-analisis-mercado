@@ -276,8 +276,8 @@ class Atendedor:
         try:
             # El registro del bot y no el real: con uno inyectado, preparar miraba otro archivo.
             return self.preparar(orden, dir_pedido, ahora, registro=self.registro)
-        except (pr.SinAnalisisError,) as exc:
-            raise FalloPedido(str(exc)) from exc  # es la respuesta, no una falla
+        except (pr.SinAnalisisError, pr.AvisoAlPedir) as exc:
+            raise FalloPedido(str(exc)) from exc  # es la respuesta, no una falla de lectura
         except pr.PreparacionFallida as exc:
             extra = (" El análisis vigente sigue disponible con /oportunidad."
                      if orden.pieza == "seguimiento" else "")

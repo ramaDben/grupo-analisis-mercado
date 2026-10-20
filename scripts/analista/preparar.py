@@ -28,6 +28,13 @@ class PreparacionFallida(RuntimeError):
     """El dato no está; el mensaje se le muestra al analista tal cual."""
 
 
+class AvisoAlPedir(PreparacionFallida):
+    """La pieza no se arma por una regla (sin fuente propia, sin datos de empresas): el texto va tal cual.
+
+    No es una falla de lectura, así que el bot no le antepone «No pude leer los datos».
+    """
+
+
 class SinAnalisisError(PreparacionFallida):
     """El activo no tiene un análisis vigente: `/seguimiento` mide contra él (spec 2026-10-16 §2)."""
 
@@ -358,7 +365,7 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
     ticker = orden.args["ticker"]
     resuelta = lec.ancla(ticker)
     if resuelta is None:
-        raise PreparacionFallida(segmentos.aviso_sin_ancla(ticker))
+        raise AvisoAlPedir(segmentos.aviso_sin_ancla(ticker))
     segmento, ancla = resuelta
     # Una acción sin ingesta vigente no sale: se corta antes de leer el terminal y de gastar agy.
     empresa = lec.empresa(ticker, ancla) if segmento == "acciones" else None
