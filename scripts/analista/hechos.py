@@ -30,7 +30,8 @@ CLAVE_DRIVERS = {"XAUUSD": "XAU/USD", "USDCLP": "USD/CLP", "USDJPY": "USD/JPY", 
                  "USDCHF": "USD/CHF", "GBPUSD": "GBP/USD", "WTI.spot": "WTI", "US100.spot": "US100",
                  "XAGUSD": "XAG/USD", "BRENT.spot": "BRENT", "COPPER": "COPPER",
                  # ETF con subyacente de ficha propia: heredan los drivers (las fuentes, no)
-                 "QQQ.US": "US100", "GLD.US": "XAU/USD"}
+                 "QQQ.US": "US100", "GLD.US": "XAU/USD",
+                 "US500.spot": "US500", "US30.spot": "US30", "GER40.spot": "GER40"}
 MEDIBLE_DE_DRIVER = {"dollar_index": "dxy", "tasas_reales": "tasa_real", "rendimientos_treasury": "bono_10",
                      "decisiones_fed": "fed", "tasas_fed": "fed", "cobre": "cobre", "precios_energia": "petroleo"}
 GENERALES = ("dxy", "bono_10")

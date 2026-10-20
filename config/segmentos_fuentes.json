@@ -134,6 +134,15 @@
       "Morningstar": ["morningstar.com"]
     }
   },
-  "indices": {"entidades": [], "medios": {}},
+  "indices": {
+    "entidades": ["Nasdaq", "S&P Dow Jones Indices", "NYSE", "Deutsche Börse", "STOXX"],
+    "medios": {
+      "Nasdaq": ["nasdaq.com"],
+      "S&P Dow Jones Indices": ["spglobal.com"],
+      "NYSE": ["nyse.com"],
+      "Deutsche Börse": ["deutsche-boerse.com"],
+      "STOXX": ["stoxx.com"]
+    }
+  },
   "cripto": {"entidades": [], "medios": {}}
 }

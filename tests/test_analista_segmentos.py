@@ -254,3 +254,57 @@ def test_los_flujos_de_pagina_no_habilitan():
         medio = _nota("Reuters", "https://www.etf.com/sections/features/" + ancla["terminos_ancla"][0].lower(),
                       f"{ancla['terminos_ancla'][0]} registra flujos de entrada.")
         assert fu.fuentes_directas([medio], seg, ancla) == [], t
+
+
+# ───────────────────────────────────────────── Task 9: indices
+INDICES = ("US100.spot", "US500.spot", "US30.spot", "GER40.spot")
+
+
+def test_cada_indice_tiene_ancla_con_proveedor_y_bolsa_dentro_de_la_lista_cerrada():
+    lista = fu.lista_del_segmento("indices")
+    entidades = {e for g in lista["entidades"].values() for e in g}
+    dominios = {d for ds in lista["medios"].values() for d in ds}
+    for t in INDICES:
+        seg, ancla = sg.segmento_y_ancla(t)
+        assert seg == "indices", t
+        assert ancla["nombre"] and ancla["proveedor"] and ancla["bolsa"] and ancla["terminos_ancla"], t
+        assert set(ancla["entidades"]) <= entidades and set(ancla["dominios"]) <= dominios, t
+
+
+def test_los_earnings_de_un_constituyente_no_son_directa_del_indice():
+    seg, ndx = sg.segmento_y_ancla("US100.spot")
+    apple = _nota("Nasdaq", "https://www.nasdaq.com/articles/apple-resultados-trimestrales",
+                  "Apple supera las expectativas de ganancias del trimestre.")
+    assert fu.fuentes_directas([apple], seg, ndx) == []
+    propia = _nota("Nasdaq", "https://www.nasdaq.com/articles/nasdaq-100-reconstitucion",
+                   "El Nasdaq 100 anuncia su reconstitucion anual.")
+    assert fu.fuentes_directas([propia], seg, ndx) == [propia]
+
+
+def test_wall_street_cae_sin_nombrar_el_indice_no_es_directa():
+    seg, spx = sg.segmento_y_ancla("US500.spot")
+    nota = _nota("NYSE", "https://www.nyse.com/article/wall-street-cae",
+                 "Wall Street cae al cierre de la sesion.")
+    assert fu.fuentes_directas([nota], seg, spx) == []
+    _, dow = sg.segmento_y_ancla("US30.spot")
+    assert fu.fuentes_directas([nota], seg, dow) == []
+    ok = _nota("S&P Dow Jones Indices", "https://www.spglobal.com/spdji/es/indices/equity/sp-500/",
+               "El S&P 500 cambia su metodologia de calculo.")
+    assert fu.fuentes_directas([ok], seg, spx) == [ok]
+    assert fu.fuentes_directas([ok], seg, dow) == []
+
+
+def test_un_precio_objetivo_de_un_banco_sobre_el_indice_suma_pero_no_habilita():
+    seg, spx = sg.segmento_y_ancla("US500.spot")
+    banco = _nota("Goldman Sachs", "https://www.goldmansachs.com/insights/s-p-500-target",
+                  "Goldman Sachs sube su precio objetivo del S&P 500.")
+    assert fu.fuentes_directas([banco], seg, spx) == []
+    assert "Goldman Sachs" not in spx["entidades"] and "goldmansachs.com" not in spx["dominios"]
+
+
+def test_los_terminos_de_ancla_de_indices_no_son_genericos():
+    prohibidos = {"dow", "ndx", "wall street", "nasdaq", "us"}
+    for t in INDICES:
+        _, ancla = sg.segmento_y_ancla(t)
+        assert not prohibidos & {x.lower() for x in ancla["terminos_ancla"]}, t
+    assert "DAX" in sg.segmento_y_ancla("GER40.spot")[1]["terminos_ancla"]

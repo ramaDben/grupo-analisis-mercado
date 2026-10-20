@@ -370,6 +370,8 @@
     {
       "ticker": "US100",
       "ticker_mt5": "US100.spot",
+      "segmento": "indices",
+      "ancla": {"nombre": "Nasdaq 100", "proveedor": "Nasdaq", "bolsa": "NYSE", "entidades": ["Nasdaq"], "dominios": ["nasdaq.com"], "terminos_ancla": ["Nasdaq 100", "Nasdaq-100", "US100"]},
       "nombre": "Nasdaq 100",
       "categoria": "indice",
       "sector_dominante": "tecnológico",
@@ -399,6 +401,8 @@
     {
       "ticker": "US500",
       "ticker_mt5": "US500.spot",
+      "segmento": "indices",
+      "ancla": {"nombre": "S&P 500", "proveedor": "S&P Dow Jones Indices", "bolsa": "NYSE", "entidades": ["S&P Dow Jones Indices", "NYSE"], "dominios": ["spglobal.com", "nyse.com"], "terminos_ancla": ["S&P 500", "US500"]},
       "nombre": "S&P 500",
       "categoria": "indice",
       "sector_dominante": "amplio (500 empresas)",
@@ -429,6 +433,8 @@
     {
       "ticker": "US30",
       "ticker_mt5": "US30.spot",
+      "segmento": "indices",
+      "ancla": {"nombre": "Dow Jones Industrial Average", "proveedor": "S&P Dow Jones Indices", "bolsa": "NYSE", "entidades": ["S&P Dow Jones Indices", "NYSE"], "dominios": ["spglobal.com", "nyse.com"], "terminos_ancla": ["Dow Jones", "Dow Jones Industrial Average", "US30"]},
       "nombre": "Dow Jones Industrial",
       "categoria": "indice",
       "sector_dominante": "industrial y bancario",
@@ -866,6 +872,8 @@
     },
     "GER40": {
       "ticker_mt5": "GER40.spot",
+      "segmento": "indices",
+      "ancla": {"nombre": "DAX 40", "proveedor": "STOXX", "bolsa": "XETRA", "entidades": ["Deutsche Börse", "STOXX"], "dominios": ["deutsche-boerse.com", "stoxx.com"], "terminos_ancla": ["DAX", "DAX 40", "GER40"]},
       "digits": 2,
       "unidad": "USD",
       "relevancia": "DAX 40 alemán. Referencia para sentimiento europeo (opcional)."

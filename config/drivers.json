@@ -296,5 +296,62 @@
         "importancia": "alta"
       }
     }
+  },
+  "US500": {
+    "drivers": {
+      "tasas_fed": {
+        "descripcion_cliente": "Cuando las tasas de interés suben, financiarse cuesta más para las 500 empresas del índice y sus ganancias valen menos hoy. Si la Fed las baja o se espera un recorte, el S&P 500 suele tener más espacio para subir.",
+        "correlacion": "inversa con tasas",
+        "importancia": "muy alta"
+      },
+      "rendimientos_treasury": {
+        "descripcion_cliente": "Cuando los bonos del Tesoro pagan más, los inversionistas encuentran atractiva la renta fija y piden más retorno a las acciones. Rendimientos más altos suelen presionar al S&P 500 a la baja.",
+        "correlacion": "inversa",
+        "importancia": "alta"
+      },
+      "earnings_agregados": {
+        "descripcion_cliente": "El S&P 500 reúne a las mayores empresas de EE.UU. Si en conjunto reportan ganancias mejores a lo esperado, el índice tiende a subir.",
+        "correlacion": "directa",
+        "importancia": "alta"
+      }
+    }
+  },
+  "US30": {
+    "drivers": {
+      "tasas_fed": {
+        "descripcion_cliente": "El Dow Jones agrupa 30 empresas grandes, muchas industriales y bancos. Tasas más altas encarecen el crédito y suelen presionar al índice; una baja de tasas le da más aire.",
+        "correlacion": "inversa con tasas",
+        "importancia": "alta"
+      },
+      "rendimientos_treasury": {
+        "descripcion_cliente": "Cuando los bonos del Tesoro rinden más, las acciones del Dow compiten con una alternativa más segura. Rendimientos más altos suelen presionar al índice a la baja.",
+        "correlacion": "inversa",
+        "importancia": "media"
+      },
+      "ciclo_economico": {
+        "descripcion_cliente": "Las empresas del Dow venden a una economía grande y ligada al ciclo. Datos de actividad y empleo más firmes suelen acompañar al índice; datos débiles lo frenan.",
+        "correlacion": "directa",
+        "importancia": "alta"
+      }
+    }
+  },
+  "GER40": {
+    "drivers": {
+      "decisiones_bce": {
+        "descripcion_cliente": "El Banco Central Europeo (BCE) fija las tasas de la Zona Euro. Sus decisiones cambian el costo de financiarse de las empresas alemanas y el atractivo de sus acciones.",
+        "correlacion": "variable",
+        "importancia": "alta"
+      },
+      "dollar_index": {
+        "descripcion_cliente": "El DAX agrupa empresas muy exportadoras. El valor del euro frente al dólar influye en sus ventas fuera de Europa, pero la relación con el índice no está confirmada en nuestros datos y se describe sin sentido fijo.",
+        "correlacion": "sin correlación confirmada",
+        "importancia": "media"
+      },
+      "precios_energia": {
+        "descripcion_cliente": "Alemania es una gran economía industrial que importa energía. El precio del petróleo y del gas pesa en los costos de sus empresas, aunque el efecto sobre el índice no está confirmado en nuestros datos y se describe sin sentido fijo.",
+        "correlacion": "sin correlación confirmada",
+        "importancia": "media"
+      }
+    }
   }
 }

@@ -169,3 +169,24 @@ def test_los_inventarios_eia_calculan_su_hora_con_el_helper():
                              "-Hora", pub["hora_origen"], "-ZonaOrigen", pub["zona_origen"],
                              "-Fecha", "2026-10-21"], capture_output=True, text=True, check=True).stdout.strip()
     assert re.fullmatch(r"\d\d:\d\d CLS?T", salida)
+
+
+def test_cada_indice_tiene_ficha_y_no_cae_en_generales():
+    generales = {"dxy": 0, "bono_10": 0}
+    for t in ("US500.spot", "US30.spot", "GER40.spot"):
+        assert hc.signos(t) != generales, t
+    assert hc.signos("US500.spot")["fed"] == -1 and hc.signos("US500.spot")["bono_10"] == -1
+    # GER40: sin correlacion confirmada con el dolar ni la energia, va sin signo
+    assert hc.signos("GER40.spot").get("dxy") == 0 and hc.signos("GER40.spot").get("petroleo") == 0
+
+
+def test_xetra_tiene_feriados_y_alemania_esta_en_la_agenda():
+    import json
+    from analista import agenda as ag
+    from market_data_mcp.tools import symbol_spec as ss
+
+    datos = json.loads(ss._FERIADOS_PATH.read_text(encoding="utf-8"))
+    assert len(datos["XETRA"]) >= 7 and "2026-12-25" in datos["XETRA"]
+    assert ss._TICKER_EXCHANGE["GER40.spot"] == "XETRA"
+    assert ss._cargar_feriados()["XETRA"] == datos["XETRA"]
+    assert ag.PAISES["Germany"] == "Alemania"
