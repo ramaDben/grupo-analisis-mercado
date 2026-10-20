@@ -53,6 +53,12 @@ def test_un_sabado_la_ventana_sale_de_la_semana_siguiente():
     assert all(m == "low" for _, m in cargar.pedidas)  # todo el calendario: así se detecta la copia vieja
 
 
+def test_agenda_nombra_suiza_japon_y_reino_unido():
+    assert ag.PAISES["Switzerland"] == "Suiza"
+    assert ag.PAISES["Japan"] == "Japón"
+    assert ag.PAISES["United Kingdom"] == "Reino Unido"
+
+
 def test_el_efecto_sale_del_glosario():
     cargar = cargador({"thisWeek": [], "nextWeek": [ev("2026-10-21 09:30"),
                                                      ev("2026-10-22 09:30", nombre="X", efecto_oro=None)]})

@@ -95,6 +95,62 @@
       }
     }
   },
+  "USD/CHF": {
+    "drivers": {
+      "dollar_index": {
+        "descripcion_cliente": "El Dollar Index mide la fuerza del dólar frente a otras monedas y el franco suizo es una de ellas. Cuando el dólar se fortalece en el mundo, el USD/CHF sube.",
+        "correlacion": "directa",
+        "importancia": "alta",
+        "donde_seguirlo": "Ticker USDIDX"
+      },
+      "rendimientos_treasury": {
+        "descripcion_cliente": "Los bonos del Tesoro de EE.UU. pagan más interés que los suizos. Cuando esa diferencia se mueve, el dinero cambia de moneda, pero la reacción del par no siempre es la misma, así que se mira como contexto y no como señal.",
+        "correlacion": "variable",
+        "importancia": "media",
+        "donde_seguirlo": "Rendimiento del bono estadounidense a 10 años"
+      },
+      "decisiones_bns": {
+        "descripcion_cliente": "El Banco Nacional Suizo (BNS) fija la tasa del franco y puede intervenir en el mercado para frenar su alza. Sus anuncios suelen mover el par de inmediato.",
+        "correlacion": "variable",
+        "importancia": "alta",
+        "donde_seguirlo": "Comunicados del Banco Nacional Suizo"
+      },
+      "aversion_al_riesgo": {
+        "descripcion_cliente": "El franco suizo es una moneda refugio: en momentos de cautela global los inversionistas lo compran. El efecto sobre el par cambia según el episodio, así que se observa sin asumir una dirección fija.",
+        "correlacion": "variable",
+        "importancia": "media",
+        "donde_seguirlo": "Índice de volatilidad VIX y comportamiento de las bolsas"
+      }
+    }
+  },
+  "GBP/USD": {
+    "drivers": {
+      "dollar_index": {
+        "descripcion_cliente": "El Dollar Index mide la fuerza del dólar frente a otras monedas y la libra es una de ellas. Cuando el dólar se debilita en el mundo, el GBP/USD tiende a subir.",
+        "correlacion": "inversa",
+        "importancia": "alta",
+        "donde_seguirlo": "Ticker USDIDX"
+      },
+      "rendimientos_treasury": {
+        "descripcion_cliente": "Los bonos del Tesoro de EE.UU. compiten con los bonos británicos por el dinero de los inversionistas. La reacción del par depende de cuál de los dos mercados se mueve más, así que se mira como contexto y no como señal.",
+        "correlacion": "variable",
+        "importancia": "media",
+        "donde_seguirlo": "Rendimiento del bono estadounidense a 10 años"
+      },
+      "decisiones_boe": {
+        "descripcion_cliente": "El Banco de Inglaterra (BoE) fija la tasa de la libra. Sus decisiones y el tono de su comunicado mueven el par, según qué tan distinto resulte de lo que el mercado esperaba.",
+        "correlacion": "variable",
+        "importancia": "alta",
+        "donde_seguirlo": "Comunicados del Banco de Inglaterra"
+      },
+      "inflacion_reino_unido": {
+        "descripcion_cliente": "Los datos de precios en el Reino Unido influyen en lo que el BoE hará con sus tasas, y de ahí en la libra. Su efecto sobre el par depende de qué tanto se aparte el dato de lo esperado.",
+        "correlacion": "variable",
+        "importancia": "media",
+        "donde_seguirlo": "IPC del Reino Unido publicado por la ONS"
+      }
+    }
+  },
   "XAU/USD": {
     "drivers": {
       "dollar_index": {

@@ -1,6 +1,50 @@
 {
   "_nota": "Entidades, medios y anclas propias de cada segmento para la fuente directa (spec 2026-10-20). Cada dominio y cada entidad que un ancla declare tiene que estar aqui o en config/fuentes_prestigio.json.",
-  "fx": {"entidades": [], "medios": {}, "divisas": {}},
+  "fx": {
+    "entidades": ["Banco Nacional Suizo", "Gobierno de Suiza", "Banco de Japón", "Ministerio de Finanzas de Japón", "Banco de Inglaterra"],
+    "medios": {
+      "Banco Nacional Suizo": ["snb.ch"],
+      "Gobierno de Suiza": ["admin.ch"],
+      "NZZ": ["nzz.ch"],
+      "Le Temps": ["letemps.ch"],
+      "Handelszeitung": ["handelszeitung.ch"],
+      "Banco de Japón": ["boj.or.jp"],
+      "Ministerio de Finanzas de Japón": ["mof.go.jp"],
+      "Banco de Inglaterra": ["bankofengland.co.uk"]
+    },
+    "divisas": {
+      "CHF": {
+        "pais": "Suiza", "banco_central": "Banco Nacional Suizo", "nombre": "Suiza",
+        "entidades": ["Banco Nacional Suizo", "Gobierno de Suiza"],
+        "dominios": ["snb.ch", "admin.ch", "nzz.ch", "letemps.ch", "handelszeitung.ch"],
+        "terminos_ancla": ["Suiza", "franco suizo", "CHF", "SNB"]
+      },
+      "JPY": {
+        "pais": "Japón", "banco_central": "Banco de Japón", "nombre": "Japón",
+        "entidades": ["Banco de Japón", "Ministerio de Finanzas de Japón"],
+        "dominios": ["boj.or.jp", "mof.go.jp"],
+        "terminos_ancla": ["yen", "Japón", "BoJ", "JPY"]
+      },
+      "GBP": {
+        "pais": "Reino Unido", "banco_central": "Banco de Inglaterra", "nombre": "Reino Unido",
+        "entidades": ["Banco de Inglaterra"],
+        "dominios": ["bankofengland.co.uk"],
+        "terminos_ancla": ["libra esterlina", "Reino Unido", "BoE", "GBP"]
+      },
+      "EUR": {
+        "pais": "Zona Euro", "banco_central": "BCE", "nombre": "Zona Euro",
+        "entidades": ["BCE"],
+        "dominios": ["ecb.europa.eu"],
+        "terminos_ancla": ["euro", "Zona Euro", "BCE", "EUR"]
+      },
+      "CLP": {
+        "pais": "Chile", "banco_central": "Banco Central de Chile", "nombre": "Chile",
+        "entidades": ["Banco Central de Chile"],
+        "dominios": ["bcentral.cl"],
+        "terminos_ancla": ["peso chileno", "Chile", "BCCh", "CLP"]
+      }
+    }
+  },
   "commodities": {"entidades": [], "medios": {}},
   "acciones": {"entidades": [], "medios": {}},
   "etfs": {"entidades": [], "medios": {}},

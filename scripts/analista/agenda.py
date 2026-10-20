@@ -25,7 +25,8 @@ VENTANA_DIAS = 7
 MAXIMO_LAMINA = 6
 URL_CALENDARIO = "https://es.investing.com/economic-calendar/"
 PAISES = {"United States": "EE.UU.", "Chile": "Chile", "China": "China", "Euro Zone": "Zona Euro",
-          "Euro Area": "Zona Euro", "Zona Euro": "Zona Euro"}
+          "Euro Area": "Zona Euro", "Zona Euro": "Zona Euro",
+          "Switzerland": "Suiza", "Japan": "Japón", "United Kingdom": "Reino Unido"}
 
 
 def dia_corto(momento: date | datetime) -> str:

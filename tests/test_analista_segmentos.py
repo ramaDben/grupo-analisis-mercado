@@ -16,7 +16,6 @@ from analista import fuentes as fu  # noqa: E402
 from analista import segmentos as sg  # noqa: E402
 
 
-@pytest.mark.xfail(reason="La divisa CHF entra en config/segmentos_fuentes.json en la Task 5", strict=True)
 def test_usdchf_fuera_del_catalogo_se_infiere_fx_con_el_snb():
     segmento, ancla = sg.segmento_y_ancla("USDCHF")
     assert segmento == "fx" and "Banco Nacional Suizo" in ancla["entidades"] and "snb.ch" in ancla["dominios"]
@@ -65,7 +64,40 @@ def test_todo_ancla_declarada_esta_dentro_de_la_lista_cerrada_de_su_segmento():
         dominios = {d for ds in lista["medios"].values() for d in ds}
         assert set(ancla["entidades"]) <= nombres, ticker
         assert set(ancla["dominios"]) <= dominios, ticker
-        assert ancla["terminos_ancla"], ticker
+        assert ancla["terminos_ancla"] and ancla["nombre"], ticker
+
+
+def test_toda_divisa_del_config_esta_dentro_de_la_lista_cerrada_de_fx():
+    lista = fu.lista_del_segmento("fx")
+    nombres = {e for g in lista["entidades"].values() for e in g}
+    dominios = {d for ds in lista["medios"].values() for d in ds}
+    divisas = fu.cargar_segmentos()["fx"]["divisas"]
+    assert set(divisas) >= {"CHF", "JPY", "GBP", "EUR", "CLP"}
+    for divisa, ancla in divisas.items():
+        assert set(ancla["entidades"]) <= nombres, divisa
+        assert set(ancla["dominios"]) <= dominios, divisa
+        assert ancla["nombre"] and ancla["terminos_ancla"], divisa
+        assert ancla["banco_central"] in ancla["entidades"], divisa
+
+
+def test_cada_par_fx_del_catalogo_resuelve_a_su_banco_central():
+    esperado = {"USDCLP": "Banco Central de Chile", "USDJPY": "Banco de Japón", "EURUSD": "BCE",
+                "GBPUSD": "Banco de Inglaterra", "USDCHF": "Banco Nacional Suizo"}
+    for ticker, banco in esperado.items():
+        segmento, ancla = sg.segmento_y_ancla(ticker)
+        assert segmento == "fx" and ancla["banco_central"] == banco and banco in ancla["entidades"], ticker
+
+
+def test_usdclp_no_pierde_su_cobertura():
+    segmento, ancla = sg.segmento_y_ancla("USDCLP")
+    nota = {"entidad": "Banco Central de Chile", "url": "https://www.bcentral.cl/contenido/-/detalle/x",
+            "tesis": "El peso chileno se apreció tras la reunión."}
+    assert fu.fuentes_directas([nota], segmento, ancla) == [nota]
+    assert "Fed" not in ancla["entidades"] and "federalreserve.gov" not in ancla["dominios"]
+
+
+def test_un_par_con_la_misma_divisa_en_las_dos_patas_no_lanza():
+    assert sg.segmento_y_ancla("USDUSD") is None
 
 
 def test_el_aviso_sin_ancla_no_lleva_guion_largo_y_dice_que_no_gasto_cupo():

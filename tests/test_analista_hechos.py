@@ -96,9 +96,17 @@ def test_lo_que_no_se_puede_medir_se_avisa_y_no_se_inventa():
 
 
 def test_un_activo_sin_ficha_recibe_los_generales_sin_efecto():
-    hechos, _ = hc.medir("COPPER", "Cobre", "ALCISTA", CURVA, [], lector({"USDIDX": DXY}), HOY)
+    hechos, _ = hc.medir("BTCUSD", "Bitcoin", "ALCISTA", CURVA, [], lector({"USDIDX": DXY}), HOY)
     assert [h["id"] for h in hechos] == ["dxy", "bono_10"]
     assert all(h["efecto"] is None and h["con_la_lectura"] is None for h in hechos)
+
+
+def test_usdchf_y_gbpusd_tienen_ficha_de_drivers_y_no_caen_en_generales_sin_signo():
+    chf = hc.signos("USDCHF")
+    assert chf["dxy"] == 1 and set(chf) >= {"dxy", "bono_10"}
+    assert chf["bono_10"] == 0  # correlacion no confirmada: se describe, no se interpreta
+    gbp = hc.signos("GBPUSD")
+    assert gbp["dxy"] == -1 and gbp["bono_10"] == 0
 
 
 def test_el_cobre_del_dolar_usa_los_digitos_del_simbolo():

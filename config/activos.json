@@ -6,6 +6,7 @@
     {
       "ticker": "USD/CLP",
       "ticker_mt5": "USDCLP",
+      "segmento": "fx",
       "nombre": "Dólar / Peso Chileno",
       "categoria": "forex",
       "digits": 2,
@@ -30,6 +31,7 @@
     {
       "ticker": "USD/JPY",
       "ticker_mt5": "USDJPY",
+      "segmento": "fx",
       "nombre": "Dólar / Yen Japonés",
       "categoria": "forex",
       "digits": 3,
@@ -55,6 +57,7 @@
     {
       "ticker": "EUR/USD",
       "ticker_mt5": "EURUSD",
+      "segmento": "fx",
       "nombre": "Euro / Dólar",
       "categoria": "forex",
       "digits": 5,
@@ -80,6 +83,7 @@
     {
       "ticker": "GBP/USD",
       "ticker_mt5": "GBPUSD",
+      "segmento": "fx",
       "nombre": "Libra / Dólar",
       "categoria": "forex",
       "digits": 5,

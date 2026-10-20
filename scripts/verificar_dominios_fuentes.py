@@ -1,5 +1,7 @@
 """Verifica que cada dominio declarado en los segmentos y en los anclas responda.
 
+punto-de-entrada: CLI de red que corre el director a mano al editar los segmentos; no lo llama nada
+
 Uso: `uv run python scripts/verificar_dominios_fuentes.py`. Hace red, por eso no corre en la suite.
 Clasifica cada dominio: `ok`, `sin_verificar` (401/403/429/timeout: muro o bloqueo a bots) o `muerta`
 (error de conexion o 4xx/5xx). Sale con codigo 1 si alguno esta muerto.
@@ -43,6 +45,14 @@ def dominios_declarados() -> set[str]:
 
 
 def verificar_dominio(dominio: str, timeout: int = 10) -> str:
+    """Estado del dominio; si el apex no responde se prueba con `www.` (varios sitios oficiales solo viven ahi)."""
+    estado = _estado_de(dominio, timeout)
+    if estado == "muerta" and not dominio.startswith("www."):
+        estado = _estado_de(f"www.{dominio}", timeout)
+    return estado
+
+
+def _estado_de(dominio: str, timeout: int) -> str:
     import requests
 
     try:
