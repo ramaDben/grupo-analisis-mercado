@@ -121,7 +121,19 @@
       ]
     }
   },
-  "etfs": {"entidades": [], "medios": {}},
+  "etfs": {
+    "entidades": ["Invesco", "State Street", "World Gold Trust", "BlackRock", "iShares"],
+    "medios": {
+      "Invesco": ["invesco.com"],
+      "State Street": ["ssga.com", "spdrs.com"],
+      "World Gold Trust": ["spdrgoldshares.com"],
+      "BlackRock": ["blackrock.com"],
+      "iShares": ["ishares.com"],
+      "ETF.com": ["etf.com"],
+      "ETFdb": ["etfdb.com"],
+      "Morningstar": ["morningstar.com"]
+    }
+  },
   "indices": {"entidades": [], "medios": {}},
   "cripto": {"entidades": [], "medios": {}}
 }

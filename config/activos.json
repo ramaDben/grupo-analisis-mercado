@@ -463,6 +463,8 @@
       {
         "ticker": "QQQ",
         "ticker_mt5": "QQQ.US",
+        "segmento": "etfs",
+        "ancla": {"nombre": "Invesco QQQ", "emisor": "Invesco", "indice": "Nasdaq 100", "subyacente": "US100.spot", "entidades": ["Invesco"], "dominios": ["invesco.com"], "terminos_ancla": ["QQQ", "Invesco QQQ"]},
         "nombre": "Invesco QQQ Trust (Nasdaq 100)",
         "categoria": "etf",
         "digits": 2,
@@ -485,6 +487,8 @@
       {
         "ticker": "SPY",
         "ticker_mt5": "SPY.US",
+        "segmento": "etfs",
+        "ancla": {"nombre": "SPDR S&P 500 ETF", "emisor": "State Street", "indice": "S&P 500", "subyacente": "US500.spot", "entidades": ["State Street"], "dominios": ["ssga.com", "spdrs.com"], "terminos_ancla": ["SPY", "SPDR S&P 500"]},
         "nombre": "SPDR S&P 500 ETF",
         "categoria": "etf",
         "digits": 2,
@@ -507,6 +511,8 @@
       {
         "ticker": "GLD",
         "ticker_mt5": "GLD.US",
+        "segmento": "etfs",
+        "ancla": {"nombre": "SPDR Gold Shares", "emisor": "World Gold Trust", "indice": "Precio del oro (LBMA)", "subyacente": "XAUUSD", "entidades": ["World Gold Trust", "World Gold Council", "State Street"], "dominios": ["spdrgoldshares.com", "gold.org", "ssga.com"], "terminos_ancla": ["GLD", "SPDR Gold Shares", "World Gold Trust"]},
         "nombre": "SPDR Gold Shares",
         "categoria": "etf",
         "digits": 2,
@@ -530,6 +536,8 @@
       {
         "ticker": "IWM",
         "ticker_mt5": "IWM.US",
+        "segmento": "etfs",
+        "ancla": {"nombre": "iShares Russell 2000", "emisor": "BlackRock", "indice": "Russell 2000", "subyacente": null, "entidades": ["BlackRock", "iShares"], "dominios": ["ishares.com", "blackrock.com"], "terminos_ancla": ["IWM", "iShares Russell 2000"]},
         "nombre": "iShares Russell 2000 (empresas pequeñas)",
         "categoria": "etf",
         "digits": 2,
@@ -552,6 +560,8 @@
       {
         "ticker": "SOXX",
         "ticker_mt5": "SOXX.US",
+        "segmento": "etfs",
+        "ancla": {"nombre": "iShares Semiconductor", "emisor": "BlackRock", "indice": "ICE Semiconductor", "subyacente": null, "entidades": ["BlackRock", "iShares"], "dominios": ["ishares.com", "blackrock.com"], "terminos_ancla": ["SOXX", "iShares Semiconductor"]},
         "nombre": "iShares Semiconductor ETF (chips)",
         "categoria": "etf",
         "digits": 2,

@@ -28,7 +28,9 @@ UMBRAL_ESTABLE = {"dxy": 0.15, "tasa_real": 3.0, "bono_10": 3.0, "fed": 3.0, "co
 RELATIVO = frozenset({"cobre", "petroleo"})
 CLAVE_DRIVERS = {"XAUUSD": "XAU/USD", "USDCLP": "USD/CLP", "USDJPY": "USD/JPY", "EURUSD": "EUR/USD",
                  "USDCHF": "USD/CHF", "GBPUSD": "GBP/USD", "WTI.spot": "WTI", "US100.spot": "US100",
-                 "XAGUSD": "XAG/USD", "BRENT.spot": "BRENT", "COPPER": "COPPER"}
+                 "XAGUSD": "XAG/USD", "BRENT.spot": "BRENT", "COPPER": "COPPER",
+                 # ETF con subyacente de ficha propia: heredan los drivers (las fuentes, no)
+                 "QQQ.US": "US100", "GLD.US": "XAU/USD"}
 MEDIBLE_DE_DRIVER = {"dollar_index": "dxy", "tasas_reales": "tasa_real", "rendimientos_treasury": "bono_10",
                      "decisiones_fed": "fed", "tasas_fed": "fed", "cobre": "cobre", "precios_energia": "petroleo"}
 GENERALES = ("dxy", "bono_10")

@@ -201,3 +201,56 @@ def test_la_fecha_de_earnings_solo_no_habilita_la_publicacion():
     # La nota de Apple no sirve de directa para Microsoft.
     _, msft = sg.segmento_y_ancla("#MSFT")
     assert fu.fuentes_directas([comunicado], "acciones", msft) == []
+
+
+# ───────────────────────────────────────────── Task 8: etfs
+ETFS = ("QQQ.US", "SPY.US", "GLD.US", "IWM.US", "SOXX.US")
+
+
+def test_un_comunicado_del_emisor_fechado_y_con_url_es_directo():
+    seg, qqq = sg.segmento_y_ancla("QQQ.US")
+    nota = _nota("Invesco", "https://www.invesco.com/qqq-etf/es/about/news/2026-10-qqq-distribucion.html",
+                 "Invesco QQQ Trust anuncia su distribucion trimestral.")
+    assert seg == "etfs" and fu.fuentes_directas([nota], seg, qqq) == [nota]
+    _, iwm = sg.segmento_y_ancla("IWM.US")
+    iw = _nota("BlackRock", "https://www.ishares.com/us/products/239710/ishares-russell-2000-etf",
+               "iShares Russell 2000 ETF (IWM) actualiza su documento.")
+    assert fu.fuentes_directas([iw], "etfs", iwm) == [iw]
+    assert fu.fuentes_directas([iw], "etfs", sg.segmento_y_ancla("SOXX.US")[1]) == []
+
+
+def test_un_titular_generico_del_subyacente_no_es_directo_de_gld():
+    seg, gld = sg.segmento_y_ancla("GLD.US")
+    generica = _nota("World Gold Council", "https://www.gold.org/goldhub/research/gold-demand-trends-q3-2026",
+                     "La demanda de oro de los bancos centrales sube en el tercer trimestre.")
+    assert fu.fuentes_directas([generica], seg, gld) == []
+    propia = _nota("World Gold Council", "https://www.gold.org/goldhub/data/gold-etfs-holdings-2026",
+                   "Las tenencias del fondo GLD suben en octubre.")
+    assert fu.fuentes_directas([propia], seg, gld) == [propia]
+
+
+def test_gld_hereda_los_drivers_del_oro_pero_no_sus_fuentes():
+    import analista.hechos as hc
+
+    assert hc.signos("GLD.US") == hc.signos("XAUUSD")
+    _, gld = sg.segmento_y_ancla("GLD.US")
+    assert "OPEP" not in gld["entidades"] and "LBMA" not in gld["entidades"]
+    assert not {"oro", "xau", "onza"} & {t.lower() for t in gld["terminos_ancla"]}
+    assert "GLD" in gld["terminos_ancla"]
+
+
+def test_los_flujos_de_pagina_no_habilitan():
+    lista = fu.lista_del_segmento("etfs")
+    entidades = {e for g in lista["entidades"].values() for e in g}
+    dominios = {d for ds in lista["medios"].values() for d in ds}
+    medios_sector = {"etf.com", "etfdb.com", "morningstar.com"}
+    for t in ETFS:
+        seg, ancla = sg.segmento_y_ancla(t)
+        assert seg == "etfs" and ancla["nombre"] and ancla["terminos_ancla"], t
+        assert ancla["emisor"] and ancla["indice"] and "subyacente" in ancla, t
+        assert set(ancla["entidades"]) <= entidades and set(ancla["dominios"]) <= dominios, t
+        assert not medios_sector & set(ancla["dominios"]), t
+        # un medio del sector que nombra al fondo NO es fuente directa: solo cuentan el emisor y su dominio
+        medio = _nota("Reuters", "https://www.etf.com/sections/features/" + ancla["terminos_ancla"][0].lower(),
+                      f"{ancla['terminos_ancla'][0]} registra flujos de entrada.")
+        assert fu.fuentes_directas([medio], seg, ancla) == [], t
