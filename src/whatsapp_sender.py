@@ -248,6 +248,8 @@ SELECTORES_SINCRONIZANDO = [
     'div[role="progressbar"]',
     'text="Descargando mensajes"',
     'text="Organizando mensajes"',
+    'text="Cargando tus chats"',
+    'text="descargando tus mensajes"',
 ]
 
 
@@ -865,7 +867,8 @@ class WhatsAppSender:
     def _verificar_autenticacion(self, page: Any, timeout_s: int = 30) -> None:
         """Valida que la página esté en estado autenticado y lista para interactuar."""
         inicio = time.time()
-        while time.time() - inicio < timeout_s:
+        limite_efectivo = float(timeout_s)
+        while time.time() - inicio < limite_efectivo:
             # Si aparece el canvas del QR
             if self._hay_qr_visible(page):
                 raise SesionNoIniciadaError(
@@ -876,6 +879,12 @@ class WhatsAppSender:
             # Si el panel de chats ya está visible
             if self._esta_autenticado(page):
                 return
+
+            # Si está sincronizando o descargando mensajes, extender el tiempo hasta 120s
+            if self._esta_sincronizando(page):
+                limite_efectivo = max(limite_efectivo, 120.0)
+                time.sleep(1.0)
+                continue
 
             time.sleep(0.5)
 
@@ -898,7 +907,8 @@ class WhatsAppSender:
                 page.goto(self.URL_WHATSAPP, wait_until="domcontentloaded")
                 
                 inicio = time.time()
-                while time.time() - inicio < 20.0:
+                limite_efectivo = 25.0
+                while time.time() - inicio < limite_efectivo:
                     if self._hay_qr_visible(page):
                         return {
                             "autenticado": False,
@@ -911,6 +921,10 @@ class WhatsAppSender:
                             "estado": "activa",
                             "mensaje": f"Sesión activa y lista para enviar ({self.session_dir}).",
                         }
+                    if self._esta_sincronizando(page):
+                        limite_efectivo = max(limite_efectivo, 90.0)
+                        time.sleep(1.0)
+                        continue
                     time.sleep(1.0)
 
                 return {

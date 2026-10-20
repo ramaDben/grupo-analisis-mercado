@@ -1,0 +1,166 @@
+{
+  "ticker": "USDJPY",
+  "semana": "2026-W43",
+  "motivo": "semanal",
+  "guardada": "2026-10-19T08:41-03:00",
+  "lectura": {
+    "ticker": "USDJPY",
+    "marco": "H4",
+    "precio": 158.009,
+    "direccion": "ALCISTA",
+    "estado": "TENDENCIA",
+    "lineas": [
+      {
+        "rol": "seguridad",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1788912000,
+            152.92
+          ],
+          [
+            1789329600,
+            153.357
+          ]
+        ],
+        "marco": "H4",
+        "toques": 2,
+        "calidad": "B",
+        "valor_actual": 157.144,
+        "empinada": false
+      },
+      {
+        "rol": "objetivo",
+        "tipo": "horizontal",
+        "puntos": [
+          [
+            1773964800,
+            158.138
+          ]
+        ],
+        "marco": "D1",
+        "toques": 7,
+        "calidad": "",
+        "valor_actual": 158.138,
+        "empinada": false
+      },
+      {
+        "rol": "contexto",
+        "tipo": "horizontal",
+        "puntos": [
+          [
+            1721520000,
+            157.481
+          ]
+        ],
+        "marco": "W1",
+        "toques": 4,
+        "calidad": "",
+        "valor_actual": 157.481,
+        "empinada": false
+      }
+    ],
+    "en_prueba": null,
+    "vigilar": {
+      "precio": 157.144,
+      "etiqueta": "línea alcista",
+      "linea": {
+        "rol": "seguridad",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1788912000,
+            152.92
+          ],
+          [
+            1789329600,
+            153.357
+          ]
+        ],
+        "marco": "H4",
+        "toques": 2,
+        "calidad": "B",
+        "valor_actual": 157.144,
+        "empinada": false
+      }
+    },
+    "invalidacion": {
+      "precio": 157.144,
+      "etiqueta": "línea alcista de seguridad",
+      "linea": {
+        "rol": "seguridad",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1788912000,
+            152.92
+          ],
+          [
+            1789329600,
+            153.357
+          ]
+        ],
+        "marco": "H4",
+        "toques": 2,
+        "calidad": "B",
+        "valor_actual": 157.144,
+        "empinada": false
+      }
+    },
+    "objetivo": {
+      "precio": 158.138,
+      "etiqueta": "objetivo",
+      "linea": {
+        "rol": "objetivo",
+        "tipo": "horizontal",
+        "puntos": [
+          [
+            1773964800,
+            158.138
+          ]
+        ],
+        "marco": "D1",
+        "toques": 7,
+        "calidad": "",
+        "valor_actual": 158.138,
+        "empinada": false
+      }
+    },
+    "escenarios": [
+      {
+        "flecha": "⬆️",
+        "condicion": "Sobre 157,144",
+        "texto": "Mientras el precio cierre sobre 157,144, la tendencia alcista sigue con objetivo en 158,138."
+      },
+      {
+        "flecha": "↔️",
+        "condicion": "Vuelta a 157,144",
+        "texto": "Si el precio vuelve a 157,144 y la respeta, la línea suma un toque y gana fuerza."
+      },
+      {
+        "flecha": "⬇️",
+        "condicion": "Cierre bajo 157,144",
+        "texto": "Si una vela de 4 horas cierra bajo 157,144, la línea alcista se rompe y la tendencia deja de valer."
+      }
+    ],
+    "salida": "En compras, sal si una vela de 4 horas cierra bajo la línea de seguridad (la que protege tu operación), hoy en 157,144. Mientras no pase, mantén la posición; el objetivo en 158,138 es una referencia, no una orden de salida.",
+    "conceptos": [
+      "linea-de-tendencia",
+      "linea-de-seguridad"
+    ],
+    "avisos": [],
+    "metricas": {
+      "atr": 0.3232142857142861,
+      "atr_d1": 0.6945714285714298,
+      "confluencia": 0.0,
+      "dist_vigilar_atr_d1": 1.2453722747840095,
+      "dist_seguridad_atr_d1": 1.2453722747840095,
+      "semanas_principal": 0.4666666666666667,
+      "dist_objetivo_atr_d1": 0.1857260386672423,
+      "velas_desde_ruptura": 30.0,
+      "doble_confirmacion": 1.0,
+      "contra_secuencia": 0.0
+    },
+    "vela": 1792368000
+  }
+}

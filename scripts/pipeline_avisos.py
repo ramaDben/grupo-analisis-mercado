@@ -530,7 +530,7 @@ MONEDAS_DEL_DATO: dict[str, tuple[str, ...]] = {
 }
 ROTULOS_MONEDA = {"USDCLP": ("Dólar", "el USD/CLP"), "XAUUSD": ("Oro", "el oro"),
                   "EURUSD": ("Euro", "el EUR/USD"), "COPPER": ("Cobre", "el cobre"),
-                  "WTI.spot": ("Petróleo WTI", "el WTI")}
+                  "WTI.spot": ("Petróleo WTI", "el WTI"), "US100.spot": ("Nasdaq 100", "el Nasdaq")}
 _PARES_CON_NOMBRE = frozenset({"USDCLP", "EURUSD"})
 TEMPORALIDAD_RESULTADO = "intradía (dentro de la jornada)"
 CALENDARIO_URL = "https://es.investing.com/economic-calendar/"

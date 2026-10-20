@@ -1192,6 +1192,39 @@ def lectura_para_despacho(*args, **kwargs):
     return rs.lectura_actual(*args, **kwargs)
 
 
+def _con_invalidacion_fijada(lectura: dict[str, Any], nivel: float, digits: int) -> dict[str, Any]:
+    """Pone el nivel que el director fijó como límite de validez de la lectura.
+
+    La línea de seguridad de la estrategia puede quedar tan lejos del precio que el
+    texto se lee con dos niveles que no combinan (el que se vigila, el que invalida y el
+    de seguimiento). Con `niveles_fijados.invalidacion` el escenario contrario y la
+    regla de salida hablan de un solo nivel. Solo aplica a tendencias; un rango no se toca.
+    """
+    direccion = lectura.get("direccion")
+    if direccion not in ("ALCISTA", "BAJISTA"):
+        return lectura
+    alcista = direccion == "ALCISTA"
+    flecha, verbo, lado = ("⬇️", "bajo", "compras") if alcista else ("⬆️", "sobre", "ventas")
+    valor = formatear_precio(nivel, digits)
+    objetivo = (lectura.get("objetivo") or {}).get("precio")
+    salida = (
+        f"En {lado}, sal si una vela de 4 horas cierra {verbo} {valor}. "
+        "Mientras no pase, mantén la posición"
+    )
+    if objetivo is not None:
+        salida += f"; el objetivo en {formatear_precio(float(objetivo), digits)} es una referencia, no una orden de salida"
+    nuevo = json.loads(json.dumps(lectura))
+    for esc in nuevo.get("escenarios", []):
+        if esc.get("flecha") == flecha:
+            esc["condicion"] = f"Cierre {verbo} {valor}"
+            esc["texto"] = (
+                f"Si una vela de 4 horas cierra {verbo} {valor}, "
+                f"la lectura {'alcista' if alcista else 'bajista'} deja de valer."
+            )
+    nuevo["salida"] = salida + "."
+    return nuevo
+
+
 def refrescar_payload_lectura(
     payload: dict[str, Any],
     ahora: datetime,
@@ -1236,6 +1269,9 @@ def refrescar_payload_lectura(
         "fecha_hora": ahora.strftime("%d %b %Y · %H:%M").upper(),
         "sello_datos": f"DATOS REALES · METATRADER 5 · {ahora.strftime('%d %b %H:%M').upper()}",
     })
+    if fijados.get("invalidacion") is not None:
+        nuevo["lectura"] = _con_invalidacion_fijada(
+            nuevo["lectura"], float(fijados["invalidacion"]), digits)
     nuevo.setdefault("_procedencia", {})["crudos"] = {
         "precio": actual.precio, "soporte": soporte, "resistencia": resistencia,
     }

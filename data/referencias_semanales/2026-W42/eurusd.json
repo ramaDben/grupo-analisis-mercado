@@ -1,0 +1,131 @@
+{
+  "ticker": "EURUSD",
+  "semana": "2026-W42",
+  "motivo": "ruptura",
+  "guardada": "2026-10-15T09:20-03:00",
+  "lectura": {
+    "ticker": "EURUSD",
+    "marco": "H4",
+    "precio": 1.11915,
+    "direccion": "ALCISTA",
+    "estado": "RUPTURA",
+    "lineas": [
+      {
+        "rol": "accion",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1790755200,
+            1.13792
+          ],
+          [
+            1791446400,
+            1.12256
+          ]
+        ],
+        "marco": "H4",
+        "toques": 3,
+        "calidad": "A+",
+        "valor_actual": 1.11467,
+        "empinada": false
+      },
+      {
+        "rol": "objetivo",
+        "tipo": "horizontal",
+        "puntos": [
+          [
+            1723939200,
+            1.1208
+          ]
+        ],
+        "marco": "W1",
+        "toques": 5,
+        "calidad": "",
+        "valor_actual": 1.1208,
+        "empinada": false
+      }
+    ],
+    "en_prueba": null,
+    "vigilar": {
+      "precio": 1.11467,
+      "etiqueta": "línea bajista",
+      "linea": {
+        "rol": "accion",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1790755200,
+            1.13792
+          ],
+          [
+            1791446400,
+            1.12256
+          ]
+        ],
+        "marco": "H4",
+        "toques": 3,
+        "calidad": "A+",
+        "valor_actual": 1.11467,
+        "empinada": false
+      }
+    },
+    "invalidacion": null,
+    "objetivo": {
+      "precio": 1.1208,
+      "etiqueta": "objetivo",
+      "linea": {
+        "rol": "objetivo",
+        "tipo": "horizontal",
+        "puntos": [
+          [
+            1723939200,
+            1.1208
+          ]
+        ],
+        "marco": "W1",
+        "toques": 5,
+        "calidad": "",
+        "valor_actual": 1.1208,
+        "empinada": false
+      }
+    },
+    "escenarios": [
+      {
+        "flecha": "⬆️",
+        "condicion": "Sobre 1,11467",
+        "texto": "La vela de 4 horas ya cerró sobre la línea bajista: mientras siga sobre 1,11467, la ruptura sigue vigente con objetivo en 1,12080."
+      },
+      {
+        "flecha": "↔️",
+        "condicion": "Vuelta a 1,11467",
+        "texto": "Si el precio vuelve a 1,11467 y la respeta, es un retesteo y la ruptura se confirma."
+      },
+      {
+        "flecha": "⬇️",
+        "condicion": "Cierre bajo 1,11467",
+        "texto": "Si una vela de 4 horas vuelve a cerrar bajo 1,11467, la ruptura fue falsa."
+      }
+    ],
+    "salida": "Todavía no hay línea de seguridad trazada, así que no hay salida que medir.",
+    "conceptos": [
+      "linea-de-tendencia",
+      "ruptura-por-cierre",
+      "linea-de-seguridad"
+    ],
+    "avisos": [
+      "la ruptura no tiene línea de seguridad trazable: el riesgo no se puede medir"
+    ],
+    "metricas": {
+      "atr": 0.0016642857142857373,
+      "atr_d1": 0.006201428571428564,
+      "confluencia": 0.0,
+      "dist_vigilar_atr_d1": 0.7224141902787448,
+      "dist_accion_atr_d1": 0.7224141902787448,
+      "dist_objetivo_atr_d1": 0.26606772633032755,
+      "velas_desde_ruptura": 16.0,
+      "doble_confirmacion": 0.0,
+      "contra_secuencia": 0.0
+    },
+    "vela": 1791878400
+  }
+}

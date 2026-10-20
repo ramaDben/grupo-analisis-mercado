@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diagrama de Flujo · Bot de Telegram y Motor de Seguimiento</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0D0D1A;
+      --card: #161626;
+      --border: rgba(255, 255, 255, 0.12);
+      --ink: #FFFFFF;
+      --muted: #9AA4B2;
+      --mint: #53C1AB;
+      --cyan: #3E91AF;
+      --gold: #D4AF37;
+      --coral: #E76F51;
+      --font-main: 'Space Grotesk', sans-serif;
+      --font-title: 'Syne', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    body {
+      font-family: var(--font-main);
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2.5rem 1rem;
+    }
+
+    .frame { max-width: 1100px; width: 100%; }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      margin-bottom: 0.5rem;
+    }
+
+    h1 {
+      font-family: var(--font-title);
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+      margin-bottom: 0.5rem;
+    }
+
+    p.desc {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 2rem;
+      max-width: 800px;
+      line-height: 1.4;
+    }
+
+    .svg-container {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      overflow-x: auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    svg {
+      width: 100%;
+      min-width: 900px;
+      height: auto;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Diagrama de Flujo 2 · Operación y Seguimiento</p>
+    <h1>Flujograma: Atención del Bot de Telegram & Motor de Seguimiento Vivo</h1>
+    <p class="desc">Lógica de ramificación completa: validación de seguridad, reutilización por caché de 30 minutos, consulta de vela viva H4 y resolución de estados con tolerancia ATR.</p>
+
+    <div class="svg-container">
+      <svg viewBox="0 0 920 1280" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse">
+            <circle cx="2" cy="2" r="1" fill="rgba(255,255,255,0.06)"/>
+          </pattern>
+          <marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#9AA4B2"/>
+          </marker>
+          <marker id="arr-mint" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#53C1AB"/>
+          </marker>
+          <marker id="arr-coral" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#E76F51"/>
+          </marker>
+          <marker id="arr-gold" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#D4AF37"/>
+          </marker>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#161626" rx="12"/>
+        <rect width="100%" height="100%" fill="url(#dots)" rx="12"/>
+
+        <!-- CONECTORES / FLECHAS -->
+        <!-- 1. Inicio -> Decisión Auth -->
+        <line x1="460" y1="65" x2="460" y2="105" stroke="#9AA4B2" stroke-width="1.8" marker-end="url(#arr)"/>
+
+        <!-- Decisión Auth: NO -> derecha (Rechazar) -->
+        <line x1="560" y1="150" x2="720" y2="150" stroke="#E76F51" stroke-width="1.8" marker-end="url(#arr-coral)"/>
+
+        <!-- Decisión Auth: SÍ -> abajo (Decisión Comando) -->
+        <line x1="460" y1="195" x2="460" y2="240" stroke="#53C1AB" stroke-width="1.8" marker-end="url(#arr-mint)"/>
+
+        <!-- Decisión Comando: /oportunidad -> izquierda -->
+        <line x1="360" y1="285" x2="190" y2="285" stroke="#9AA4B2" stroke-width="1.8" marker-end="url(#arr)"/>
+        <!-- Entrega HTML -> Salida Final -->
+        <line x1="190" y1="325" x2="190" y2="1195" stroke="#9AA4B2" stroke-width="1.8"/>
+        <line x1="190" y1="1195" x2="340" y2="1195" stroke="#9AA4B2" stroke-width="1.8" marker-end="url(#arr)"/>
+
+        <!-- Decisión Comando: /seguimiento -> abajo (Decisión Caché 30 min) -->
+        <line x1="460" y1="330" x2="460" y2="375" stroke="#53C1AB" stroke-width="1.8" marker-end="url(#arr-mint)"/>
+
+        <!-- Decisión Caché: SÍ (< 30 min) -> derecha (Reuso) -->
+        <line x1="560" y1="420" x2="720" y2="420" stroke="#D4AF37" stroke-width="1.8" marker-end="url(#arr-gold)"/>
+        <!-- Reuso -> Despacho Final -->
+        <line x1="720" y1="460" x2="720" y2="1195" stroke="#D4AF37" stroke-width="1.8"/>
+        <line x1="720" y1="1195" x2="570" y2="1195" stroke="#D4AF37" stroke-width="1.8" marker-end="url(#arr-gold)"/>
+
+        <!-- Decisión Caché: NO -> abajo (Paso MT5 Vela Viva) -->
+        <line x1="460" y1="465" x2="460" y2="510" stroke="#9AA4B2" stroke-width="1.8" marker-end="url(#arr)"/>
+
+        <!-- Paso MT5 -> Decisión Stop Loss -->
+        <line x1="460" y1="570" x2="460" y2="615" stroke="#9AA4B2" stroke-width="1.8" marker-end="url(#arr)"/>
+
+        <!-- Decisión Stop: SÍ -> derecha (Rango Roto) -->
+        <line x1="560" y1="660" x2="700" y2="660" stroke="#E76F51" stroke-width="1.8" marker-end="url(#arr-coral)"/>
+
+        <!-- Decisión Stop: NO -> abajo (Decisión Entrada con Tolerancia) -->
+        <line x1="460" y1="705" x2="460" y2="750" stroke="#53C1AB" stroke-width="1.8" marker-end="url(#arr-mint)"/>
+
+        <!-- Decisión Entrada: NO -> izquierda (Entrada Pendiente) -->
+        <line x1="360" y1="795" x2="220" y2="795" stroke="#9AA4B2" stroke-width="1.8" marker-end="url(#arr)"/>
+
+        <!-- Decisión Entrada: SÍ -> abajo (Decisión Objetivo Alcanzado) -->
+        <line x1="460" y1="840" x2="460" y2="885" stroke="#53C1AB" stroke-width="1.8" marker-end="url(#arr-mint)"/>
+
+        <!-- Decisión Objetivo: SÍ -> derecha (Objetivo 100%) -->
+        <line x1="560" y1="930" x2="700" y2="930" stroke="#53C1AB" stroke-width="1.8" marker-end="url(#arr-mint)"/>
+
+        <!-- Decisión Objetivo: NO -> abajo (En Curso) -->
+        <line x1="460" y1="975" x2="460" y2="1010" stroke="#3E91AF" stroke-width="1.8" marker-end="url(#arr)"/>
+
+        <!-- CONVERGENCIA DE ESTADOS HACIA GENERACIÓN DE LÁMINA -->
+        <!-- Rango Roto hacia Generación -->
+        <line x1="770" y1="695" x2="770" y2="1080" stroke="#E76F51" stroke-width="1.5"/>
+        <line x1="770" y1="1080" x2="605" y2="1080" stroke="#9AA4B2" stroke-width="1.5" marker-end="url(#arr)"/>
+
+        <!-- Entrada Pendiente hacia Generación -->
+        <line x1="220" y1="825" x2="220" y2="1080" stroke="#9AA4B2" stroke-width="1.5"/>
+        <line x1="220" y1="1080" x2="315" y2="1080" stroke="#9AA4B2" stroke-width="1.5" marker-end="url(#arr)"/>
+
+        <!-- Objetivo hacia Generación -->
+        <line x1="700" y1="960" x2="700" y2="1080" stroke="#53C1AB" stroke-width="1.5"/>
+        <line x1="700" y1="1080" x2="605" y2="1080" stroke="#9AA4B2" stroke-width="1.5" marker-end="url(#arr)"/>
+
+        <!-- En Curso hacia Generación -->
+        <line x1="460" y1="1055" x2="460" y2="1080" stroke="#3E91AF" stroke-width="1.8" marker-end="url(#arr)"/>
+
+        <!-- Generación de Lámina -> Despacho Final -->
+        <line x1="460" y1="1135" x2="460" y2="1170" stroke="#53C1AB" stroke-width="2" marker-end="url(#arr-mint)"/>
+
+        <!-- MÁSCARAS DE TEXTO (Labels sobre líneas) -->
+        <rect x="615" y="142" width="28" height="16" rx="3" fill="#161626"/>
+        <text x="629" y="154" fill="#E76F51" font-family="'JetBrains Mono'" font-size="10" font-weight="700" text-anchor="middle">NO</text>
+
+        <rect x="446" y="208" width="28" height="16" rx="3" fill="#161626"/>
+        <text x="460" y="220" fill="#53C1AB" font-family="'JetBrains Mono'" font-size="10" font-weight="700" text-anchor="middle">SÍ</text>
+
+        <rect x="610" y="412" width="45" height="16" rx="3" fill="#161626"/>
+        <text x="632" y="424" fill="#D4AF37" font-family="'JetBrains Mono'" font-size="10" font-weight="700" text-anchor="middle">&lt; 30m</text>
+
+        <rect x="444" y="478" width="32" height="16" rx="3" fill="#161626"/>
+        <text x="460" y="490" fill="#9AA4B2" font-family="'JetBrains Mono'" font-size="10" font-weight="700" text-anchor="middle">&ge; 30m</text>
+
+        <rect x="615" y="652" width="28" height="16" rx="3" fill="#161626"/>
+        <text x="629" y="664" fill="#E76F51" font-family="'JetBrains Mono'" font-size="10" font-weight="700" text-anchor="middle">SÍ</text>
+
+        <rect x="446" y="718" width="28" height="16" rx="3" fill="#161626"/>
+        <text x="460" y="730" fill="#53C1AB" font-family="'JetBrains Mono'" font-size="10" font-weight="700" text-anchor="middle">NO</text>
+
+        <rect x="270" y="787" width="28" height="16" rx="3" fill="#161626"/>
+        <text x="284" y="799" fill="#9AA4B2" font-family="'JetBrains Mono'" font-size="10" font-weight="700" text-anchor="middle">NO</text>
+
+        <rect x="446" y="853" width="28" height="16" rx="3" fill="#161626"/>
+        <text x="460" y="865" fill="#53C1AB" font-family="'JetBrains Mono'" font-size="10" font-weight="700" text-anchor="middle">SÍ</text>
+
+        <rect x="615" y="922" width="28" height="16" rx="3" fill="#161626"/>
+        <text x="629" y="934" fill="#53C1AB" font-family="'JetBrains Mono'" font-size="10" font-weight="700" text-anchor="middle">SÍ</text>
+
+        <rect x="446" y="983" width="28" height="16" rx="3" fill="#161626"/>
+        <text x="460" y="995" fill="#3E91AF" font-family="'JetBrains Mono'" font-size="10" font-weight="700" text-anchor="middle">NO</text>
+
+
+        <!-- NODOS DEL DIAGRAMA -->
+
+        <!-- INICIO (Óvalo) -->
+        <rect x="360" y="25" width="200" height="40" rx="20" fill="#0D0D1A" stroke="#53C1AB" stroke-width="2"/>
+        <text x="460" y="49" fill="#FFFFFF" font-family="'Space Grotesk'" font-size="13" font-weight="700" text-anchor="middle">INICIO: Mensaje Telegram</text>
+
+        <!-- DECISIÓN 1: Auth (Rombo) -->
+        <polygon points="460,105 560,150 460,195 360,150" fill="#0D0D1A" stroke="#E76F51" stroke-width="1.8"/>
+        <text x="460" y="145" fill="#FFFFFF" font-family="'Space Grotesk'" font-size="11.5" font-weight="600" text-anchor="middle">¿Analista Autorizado?</text>
+        <text x="460" y="160" fill="#E76F51" font-family="'JetBrains Mono'" font-size="10" text-anchor="middle">config/analistas_telegram.json</text>
+
+        <!-- RECHAZO (Rectángulo) -->
+        <rect x="645" y="125" width="160" height="50" rx="8" fill="#0D0D1A" stroke="#E76F51" stroke-width="1.5"/>
+        <text x="725" y="147" fill="#E76F51" font-family="'Space Grotesk'" font-size="11.5" font-weight="700" text-anchor="middle">Rechazo de Acceso</text>
+        <text x="725" y="163" fill="#9AA4B2" font-family="'Space Grotesk'" font-size="10.5" text-anchor="middle">Loguea "desconocido"</text>
+
+        <!-- DECISIÓN 2: Comando (Rombo) -->
+        <polygon points="460,240 560,285 460,330 360,285" fill="#0D0D1A" stroke="#3E91AF" stroke-width="1.8"/>
+        <text x="460" y="280" fill="#FFFFFF" font-family="'Space Grotesk'" font-size="11.5" font-weight="600" text-anchor="middle">¿Tipo de Comando?</text>
+        <text x="460" y="295" fill="#3E91AF" font-family="'JetBrains Mono'" font-size="10" text-anchor="middle">/oportunidad o /seguimiento</text>
+
+        <!-- RAMA /oportunidad (Rectángulo) -->
+        <rect x="110" y="260" width="160" height="65" rx="8" fill="#0D0D1A" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+        <text x="190" y="285" fill="#FFFFFF" font-family="'Space Grotesk'" font-size="12" font-weight="700" text-anchor="middle">Comando /oportunidad</text>
+        <text x="190" y="303" fill="#9AA4B2" font-family="'Space Grotesk'" font-size="10.5" text-anchor="middle">Entrega HTML de la semana</text>
+
+        <!-- DECISIÓN 3: Caché 30 min (Rombo) -->
+        <polygon points="460,375 560,420 460,465 360,420" fill="#0D0D1A" stroke="#D4AF37" stroke-width="1.8"/>
+        <text x="460" y="415" fill="#FFFFFF" font-family="'Space Grotesk'" font-size="11.5" font-weight="600" text-anchor="middle">¿Pieza en Caché?</text>
+        <text x="460" y="430" fill="#D4AF37" font-family="'JetBrains Mono'" font-size="10" text-anchor="middle">Estado.vigente() &lt; 30 min</text>
+
+        <!-- RAMA REUSO (Rectángulo) -->
+        <rect x="635" y="395" width="170" height="65" rx="8" fill="#0D0D1A" stroke="#D4AF37" stroke-width="1.8"/>
+        <text x="720" y="420" fill="#D4AF37" font-family="'Space Grotesk'" font-size="12" font-weight="700" text-anchor="middle">Reutilizar Lámina</text>
+        <text x="720" y="438" fill="#9AA4B2" font-family="'Space Grotesk'" font-size="10.5" text-anchor="middle">Ajusta saludo al cliente en RAM</text>
+
+        <!-- PASO: Consulta MT5 Vela Viva (Rectángulo) -->
+        <rect x="315" y="510" width="290" height="60" rx="8" fill="#0D0D1A" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+        <text x="460" y="534" fill="#FFFFFF" font-family="'Space Grotesk'" font-size="12.5" font-weight="700" text-anchor="middle">Consultar Vela Viva H4 (MT5)</text>
+        <text x="460" y="552" fill="#53C1AB" font-family="'JetBrains Mono'" font-size="11" text-anchor="middle">tolerancia = 0.35 × ATR_H4</text>
+
+        <!-- DECISIÓN 4: Stop Loss (Rombo) -->
+        <polygon points="460,615 560,660 460,705 360,660" fill="#0D0D1A" stroke="#E76F51" stroke-width="1.8"/>
+        <text x="460" y="655" fill="#FFFFFF" font-family="'Space Grotesk'" font-size="11.5" font-weight="600" text-anchor="middle">¿Toca Stop Loss?</text>
+        <text x="460" y="670" fill="#E76F51" font-family="'JetBrains Mono'" font-size="10" text-anchor="middle">(Evaluado sin tolerancia)</text>
+
+        <!-- ESTADO: Rango Roto (Rectángulo) -->
+        <rect x="700" y="635" width="150" height="60" rx="8" fill="#0D0D1A" stroke="#E76F51" stroke-width="1.6"/>
+        <text x="775" y="660" fill="#E76F51" font-family="'Space Grotesk'" font-size="12" font-weight="700" text-anchor="middle">rango_roto</text>
+        <text x="775" y="678" fill="#9AA4B2" font-family="'Space Grotesk'" font-size="10.5" text-anchor="middle">Plan descartado</text>
+
+        <!-- DECISIÓN 5: Entrada (Rombo) -->
+        <polygon points="460,750 560,795 460,840 360,795" fill="#0D0D1A" stroke="#3E91AF" stroke-width="1.8"/>
+        <text x="460" y="790" fill="#FFFFFF" font-family="'Space Grotesk'" font-size="11" font-weight="600" text-anchor="middle">¿Precio en rango ± tol?</text>
+        <text x="460" y="805" fill="#3E91AF" font-family="'JetBrains Mono'" font-size="9.5" text-anchor="middle">[bajo-tol &le; entrada &le; alto+tol]</text>
+
+        <!-- ESTADO: Entrada Pendiente (Rectángulo) -->
+        <rect x="135" y="770" width="165" height="55" rx="8" fill="#0D0D1A" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+        <text x="217" y="795" fill="#9AA4B2" font-family="'Space Grotesk'" font-size="12" font-weight="700" text-anchor="middle">entrada_pendiente</text>
+        <text x="217" y="812" fill="#5A6275" font-family="'Space Grotesk'" font-size="10.5" text-anchor="middle">Orden aún no gatillada</text>
+
+        <!-- DECISIÓN 6: Objetivo (Rombo) -->
+        <polygon points="460,885 560,930 460,975 360,930" fill="#0D0D1A" stroke="#53C1AB" stroke-width="1.8"/>
+        <text x="460" y="925" fill="#FFFFFF" font-family="'Space Grotesk'" font-size="11.5" font-weight="600" text-anchor="middle">¿Alcanzó Objetivo?</text>
+        <text x="460" y="940" fill="#53C1AB" font-family="'JetBrains Mono'" font-size="10" text-anchor="middle">Velas posteriores al toque</text>
+
+        <!-- ESTADO: Objetivo Alcanzado (Rectángulo) -->
+        <rect x="635" y="905" width="160" height="55" rx="8" fill="#0D0D1A" stroke="#53C1AB" stroke-width="2"/>
+        <text x="715" y="928" fill="#53C1AB" font-family="'Space Grotesk'" font-size="12" font-weight="800" text-anchor="middle">objetivo</text>
+        <text x="715" y="945" fill="#FFFFFF" font-family="'Space Grotesk'" font-size="10.5" text-anchor="middle">Avance: 100% (Meta)</text>
+
+        <!-- ESTADO: En Curso (Rectángulo) -->
+        <rect x="370" y="1010" width="180" height="45" rx="8" fill="#0D0D1A" stroke="#3E91AF" stroke-width="1.8"/>
+        <text x="460" y="1037" fill="#3E91AF" font-family="'Space Grotesk'" font-size="12" font-weight="700" text-anchor="middle">en_curso (Avance %)</text>
+
+        <!-- PASO: Renderizado de Lámina y Redacción (Rectángulo) -->
+        <rect x="315" y="1080" width="290" height="55" rx="8" fill="#0D0D1A" stroke="#53C1AB" stroke-width="2"/>
+        <text x="460" y="1103" fill="#FFFFFF" font-family="'Space Grotesk'" font-size="12.5" font-weight="700" text-anchor="middle">Generar lamina.png & Texto WSP</text>
+        <text x="460" y="1121" fill="#9AA4B2" font-family="'Space Grotesk'" font-size="10.5" text-anchor="middle">Tarjetas limpias + 1 párrafo conversacional CFD</text>
+
+        <!-- FIN: Despacho Telegram (Óvalo) -->
+        <rect x="340" y="1170" width="240" height="50" rx="25" fill="#0D0D1A" stroke="#53C1AB" stroke-width="2.5"/>
+        <text x="460" y="1200" fill="#53C1AB" font-family="'Space Grotesk'" font-size="13" font-weight="800" text-anchor="middle">FIN: Despacho a Telegram</text>
+
+      </svg>
+    </div>
+  </div>
+</body>
+</html>
