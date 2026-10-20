@@ -107,6 +107,8 @@
     {
       "ticker": "XAU/USD",
       "ticker_mt5": "XAUUSD",
+      "segmento": "commodities",
+      "ancla": {"nombre": "Oro", "entidades": ["World Gold Council", "LBMA"], "dominios": ["gold.org", "lbma.org.uk"], "terminos_ancla": ["oro", "XAU", "onza"]},
       "nombre": "Oro",
       "categoria": "commodity",
       "digits": 2,
@@ -132,6 +134,8 @@
     {
       "ticker": "XAG/USD",
       "ticker_mt5": "XAGUSD",
+      "segmento": "commodities",
+      "ancla": {"nombre": "Plata", "entidades": ["World Gold Council", "LBMA", "Silver Institute"], "dominios": ["gold.org", "lbma.org.uk", "silverinstitute.org"], "terminos_ancla": ["plata", "XAG", "onza"]},
       "nombre": "Plata",
       "categoria": "commodity",
       "digits": 3,
@@ -157,6 +161,8 @@
     {
       "ticker": "WTI",
       "ticker_mt5": "WTI.spot",
+      "segmento": "commodities",
+      "ancla": {"nombre": "Petróleo WTI", "entidades": ["OPEP", "EIA", "Agencia Internacional de Energía"], "dominios": ["opec.org", "eia.gov", "iea.org"], "terminos_ancla": ["petróleo", "crudo", "WTI", "OPEP+"]},
       "nombre": "Petróleo WTI",
       "categoria": "commodity",
       "digits": 3,
@@ -180,6 +186,8 @@
     {
       "ticker": "BRENT",
       "ticker_mt5": "BRENT.spot",
+      "segmento": "commodities",
+      "ancla": {"nombre": "Petróleo Brent", "entidades": ["OPEP", "EIA", "Agencia Internacional de Energía"], "dominios": ["opec.org", "eia.gov", "iea.org"], "terminos_ancla": ["petróleo", "crudo", "Brent", "OPEP+"]},
       "nombre": "Petróleo Brent",
       "categoria": "commodity",
       "digits": 3,
@@ -202,6 +210,8 @@
     {
       "ticker": "COPPER",
       "ticker_mt5": "COPPER",
+      "segmento": "commodities",
+      "ancla": {"nombre": "Cobre", "entidades": ["Cochilco", "Codelco", "LME", "ICSG"], "dominios": ["cochilco.cl", "codelco.cl", "lme.com", "icsg.org"], "terminos_ancla": ["cobre"]},
       "nombre": "Cobre Grado A",
       "categoria": "commodity",
       "digits": 0,

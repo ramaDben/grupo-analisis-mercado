@@ -45,7 +45,16 @@
       }
     }
   },
-  "commodities": {"entidades": [], "medios": {}},
+  "commodities": {
+    "entidades": ["LBMA", "Codelco", "LME", "ICSG", "Silver Institute"],
+    "medios": {
+      "LBMA": ["lbma.org.uk"],
+      "Codelco": ["codelco.cl"],
+      "LME": ["lme.com"],
+      "ICSG": ["icsg.org"],
+      "Silver Institute": ["silverinstitute.org"]
+    }
+  },
   "acciones": {"entidades": [], "medios": {}},
   "etfs": {"entidades": [], "medios": {}},
   "indices": {"entidades": [], "medios": {}},

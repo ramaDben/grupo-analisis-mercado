@@ -151,6 +151,78 @@
       }
     }
   },
+  "XAG/USD": {
+    "drivers": {
+      "dollar_index": {
+        "descripcion_cliente": "La plata se cotiza en dólares. Cuando el dólar se fortalece, se vuelve más cara para el resto del mundo y tiende a bajar. Cuando se debilita, tiende a subir.",
+        "correlacion": "inversa",
+        "importancia": "alta",
+        "donde_seguirlo": "Ticker USDIDX"
+      },
+      "tasas_reales": {
+        "descripcion_cliente": "Las tasas reales son las tasas de interés menos la inflación. Cuando bajan, mantener plata cuesta menos frente a un bono y el metal gana atractivo.",
+        "correlacion": "inversa",
+        "importancia": "alta",
+        "donde_seguirlo": "Tasa real del bono estadounidense a 10 años"
+      },
+      "demanda_industrial": {
+        "descripcion_cliente": "Buena parte de la plata se usa en electrónica y paneles solares. Cuando la industria pide más, el metal suele tener apoyo, aunque el efecto varía según el momento.",
+        "correlacion": "variable",
+        "importancia": "media",
+        "donde_seguirlo": "Informes del Silver Institute"
+      }
+    }
+  },
+  "BRENT": {
+    "drivers": {
+      "precios_energia": {
+        "descripcion_cliente": "El Brent y el WTI son dos referencias del mismo petróleo y se mueven casi juntos. Cuando el WTI sube, el Brent suele subir con él.",
+        "correlacion": "directa",
+        "importancia": "alta",
+        "donde_seguirlo": "Ticker WTI.spot"
+      },
+      "dollar_index": {
+        "descripcion_cliente": "El petróleo se cotiza en dólares. Cuando el dólar se fortalece, el barril se vuelve más caro para otros países y tiende a bajar.",
+        "correlacion": "inversa",
+        "importancia": "media",
+        "donde_seguirlo": "Ticker USDIDX"
+      },
+      "decisiones_opep_plus": {
+        "descripcion_cliente": "La OPEP+ reúne a los países productores. Sus decisiones de producción mueven el precio, según si el recorte o el aumento sorprende al mercado.",
+        "correlacion": "variable",
+        "importancia": "muy alta",
+        "donde_seguirlo": "Comunicados de la OPEP"
+      },
+      "rendimientos_treasury": {
+        "descripcion_cliente": "Los bonos del Tesoro de EE.UU. reflejan las expectativas de crecimiento y de tasas. Su efecto sobre el petróleo no es estable, así que se mira como contexto y no como señal.",
+        "correlacion": "variable",
+        "importancia": "baja",
+        "donde_seguirlo": "Rendimiento del bono estadounidense a 10 años"
+      }
+    }
+  },
+  "COPPER": {
+    "drivers": {
+      "dollar_index": {
+        "descripcion_cliente": "El cobre se cotiza en dólares. Cuando el dólar se fortalece, el metal se vuelve más caro para otros países y tiende a bajar.",
+        "correlacion": "inversa",
+        "importancia": "alta",
+        "donde_seguirlo": "Ticker USDIDX"
+      },
+      "demanda_china": {
+        "descripcion_cliente": "China consume cerca de la mitad del cobre del mundo. Cuando su industria y su construcción se aceleran o se frenan, el precio lo siente.",
+        "correlacion": "variable",
+        "importancia": "muy alta",
+        "donde_seguirlo": "Datos de actividad de China y reportes de Cochilco"
+      },
+      "rendimientos_treasury": {
+        "descripcion_cliente": "Los bonos del Tesoro de EE.UU. reflejan las expectativas de crecimiento. Su efecto sobre el cobre no es estable, así que se mira como contexto y no como señal.",
+        "correlacion": "variable",
+        "importancia": "media",
+        "donde_seguirlo": "Rendimiento del bono estadounidense a 10 años"
+      }
+    }
+  },
   "XAU/USD": {
     "drivers": {
       "dollar_index": {
@@ -186,7 +258,8 @@
         "descripcion_cliente": "Cada miércoles se publican los inventarios de petróleo en EE.UU. Si hay menos petróleo almacenado del esperado, el precio sube (más demanda). Si hay más, baja.",
         "correlacion": "inversa con inventarios",
         "importancia": "alta",
-        "dia_publicacion": "miércoles"
+        "dia_publicacion": "miércoles",
+        "publicacion": {"hora_origen": "10:30", "zona_origen": "Eastern Standard Time", "organismo": "EIA"}
       },
       "decisiones_opep_plus": {
         "descripcion_cliente": "La OPEP+ es el grupo de países productores de petróleo. Cuando deciden producir menos, el precio sube. Cuando producen más, baja.",

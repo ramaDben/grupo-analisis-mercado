@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from datetime import date, timedelta
 from pathlib import Path
@@ -144,3 +145,27 @@ def test_sin_respaldo_y_con_el_terminal_caido_el_dxy_se_avisa():
 def test_la_fed_sin_decision_en_la_ventana_no_trae_proxima_decision():
     hechos, _ = hc.medir("XAUUSD", "Oro", "BAJISTA", CURVA, [], lector({"USDIDX": DXY}), HOY)
     assert next(h for h in hechos if h["id"] == "fed")["proxima_decision"] is None
+
+
+def test_brent_cobre_y_plata_tienen_ficha_de_drivers():
+    brent = hc.signos("BRENT.spot")
+    assert brent["petroleo"] == 1 and brent["dxy"] == -1
+    cobre = hc.signos("COPPER")
+    assert cobre["dxy"] == -1 and set(cobre) >= {"dxy", "bono_10"}
+    plata = hc.signos("XAGUSD")
+    assert plata["dxy"] == -1 and plata["tasa_real"] == -1
+    # correlacion no confirmada: sin signo
+    assert brent["bono_10"] == 0 and cobre["bono_10"] == 0
+
+
+def test_los_inventarios_eia_calculan_su_hora_con_el_helper():
+    import subprocess
+
+    datos = json.loads((RAIZ / "config" / "drivers.json").read_text(encoding="utf-8"))
+    pub = datos["WTI"]["drivers"]["inventarios_eia"]["publicacion"]
+    assert pub["zona_origen"] == "Eastern Standard Time" and re.fullmatch(r"\d\d:\d\d", pub["hora_origen"])
+    assert "hora_chile" not in pub and "CLT" not in json.dumps(pub)  # ninguna hora de Chile escrita a mano
+    salida = subprocess.run(["powershell", "-NoProfile", "-File", str(RAIZ / "scripts" / "hora_chile.ps1"),
+                             "-Hora", pub["hora_origen"], "-ZonaOrigen", pub["zona_origen"],
+                             "-Fecha", "2026-10-21"], capture_output=True, text=True, check=True).stdout.strip()
+    assert re.fullmatch(r"\d\d:\d\d CLS?T", salida)

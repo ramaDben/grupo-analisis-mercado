@@ -116,3 +116,42 @@ def test_cargar_segmentos_sin_archivo_da_vacio_y_con_json_corrupto_propaga(tmp_p
 def test_el_config_real_declara_las_seis_claves_de_segmento():
     cfg = fu.cargar_segmentos()
     assert set(fu.SEGMENTOS) <= set(cfg) and "divisas" in cfg["fx"]
+
+
+# ───────────────────────────────────────────── Task 6: commodities
+def _nota(entidad, url, tesis):
+    return {"entidad": entidad, "url": url, "tesis": tesis}
+
+
+def test_una_nota_de_la_opep_que_nombra_el_petroleo_es_directa_del_wti_y_no_del_oro():
+    nota = _nota("OPEP", "https://www.opec.org/pr-detail/12-oct-2026.html",
+                 "La OPEP+ mantiene su producción de petróleo sin cambios.")
+    seg, wti = sg.segmento_y_ancla("WTI.spot")
+    assert seg == "commodities" and fu.fuentes_directas([nota], seg, wti) == [nota]
+    _, oro = sg.segmento_y_ancla("XAUUSD")
+    assert fu.fuentes_directas([nota], "commodities", oro) == []
+
+
+def test_tasas_y_dxy_solos_no_son_directa_del_oro():
+    nota = _nota("Fed", "https://www.federalreserve.gov/newsevents/pressreleases/monetary20261008a.htm",
+                 "La Fed analiza las tasas reales y el dólar.")
+    seg, oro = sg.segmento_y_ancla("XAUUSD")
+    assert fu.fuentes_directas([nota], seg, oro) == []
+    assert "Fed" not in oro["entidades"] and "federalreserve.gov" not in oro["dominios"]
+
+
+def test_cada_commodity_del_catalogo_tiene_ancla_con_su_voz_propia():
+    esperado = {"XAUUSD": "World Gold Council", "XAGUSD": "World Gold Council", "WTI.spot": "OPEP",
+                "BRENT.spot": "OPEP", "COPPER": "Cochilco"}
+    for ticker, entidad in esperado.items():
+        seg, ancla = sg.segmento_y_ancla(ticker)
+        assert seg == "commodities" and entidad in ancla["entidades"], ticker
+        assert ancla["nombre"] and ancla["terminos_ancla"], ticker
+
+
+def test_las_anclas_de_commodities_no_citan_dominios_fuera_de_la_lista_cerrada():
+    lista = fu.lista_del_segmento("commodities")
+    dominios = {d for ds in lista["medios"].values() for d in ds}
+    for ticker in ("XAUUSD", "XAGUSD", "WTI.spot", "BRENT.spot", "COPPER"):
+        _, ancla = sg.segmento_y_ancla(ticker)
+        assert set(ancla["dominios"]) <= dominios, ticker
