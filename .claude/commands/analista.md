@@ -15,9 +15,9 @@ y la pone el bot: tú no decides nada visual.
   de `editorial.titulares`, `editorial.contexto` y `editorial.dias_clave` (uno por ticker; `dias_clave`
   existe solo si la agenda trae datos) y `editorial.fuentes`.
 - **Segundo intento.** Si `editorial.fuentes` es lo único que dice `[[ESCRIBIR]]` y junto a la pieza
-  existe `fuentes_intento_1.json`, el primer intento no trajo ninguna voz de banco. Vuelve a incluir
+  existe `fuentes_intento_1.json`, el primer intento no trajo ninguna noticia directa del activo. Vuelve a incluir
   tal cual las fuentes de `validas`, no repitas ninguna URL de `descartadas` (sus `motivos` dicen por
-  qué cayeron) y agrega al menos una de un banco. No toques los demás textos: ya pasaron los controles.
+  qué cayeron) y agrega al menos una directa (la de `datos.fuente_directa`). No toques los demás textos: ya pasaron los controles.
 - **Nunca** `orden`, `datos`, `imagenes`, `anidados`, `laminas` ni `huella`. Están sellados: si
   cambian, la pieza se descarta entera.
 - **Nunca** agregues ni quites claves de `editorial`.
@@ -87,14 +87,18 @@ y la pone el bot: tú no decides nada visual.
   hora, qué se publica y qué hace con el activo según su `efecto`. Si hay una decisión de tasas, va
   primera; después los que tienen `mueve_al_activo`. Hasta 420 caracteres. El bot rechaza un
   `dias_clave` que no nombre ningún `dia` de la agenda.
-- `fuentes`: **una lista** de 1 a 2 voces sobre este activo, exclusivamente de bancos de inversión o bancos
-  de Chile de la lista cerrada. **Al menos un banco debe coincidir con nuestra lectura técnica**
-  (director, 2026-10-19): el correo, que lee un prospecto, cita solo un banco, el más reciente que la respalda,
-  y no muestra a los que ven distinto. Busca primero notas de bancos cuya postura coincide con la nuestra.
-  La `postura` y la `tesis` son las que la nota dice de verdad: no estires ni reinterpretes una nota para que
-  coincida. Si ningún banco coincide, el análisis no sale. Los organismos (Fed, BCE, EIA, OPEP, FMI, BIS, World Gold Council, Agencia Internacional
-  de Energía) no cuentan como banco. Búscalas en la web. Cada elemento es un objeto con estos campos de texto:
-  - `entidad`: quién opina. **Solo** bancos de inversión o bancos de Chile de la lista cerrada: Goldman Sachs, JPMorgan, Morgan Stanley, Bank of America, Citi, UBS, Barclays, Standard Chartered, Jefferies, Deutsche Bank, HSBC, ING, Commerzbank, Banco Central de Chile, Cochilco, Banchile, BCI Estudios, Santander Chile, Itaú Chile. (Los organismos no cuentan como banco ni se incluyen).
+- `fuentes`: **una lista** de 1 a 3 voces sobre este activo, de la lista cerrada. **Al menos una debe ser
+  directa** (spec 2026-10-20): la que fija `datos.fuente_directa`. Una fuente es directa si su `entidad` es una
+  de `datos.fuente_directa.ancla.entidades` o su `url` es de un dominio de `datos.fuente_directa.ancla.dominios`,
+  y su `tesis` nombra un término de `datos.fuente_directa.ancla.terminos_ancla`. Usa
+  `datos.fuente_directa.consultas` como punto de partida de la búsqueda web. La directa puede ser alcista,
+  bajista o neutral: no estires ni reinterpretes la nota para que coincida con nuestra lectura. Una voz de banco
+  de inversión o de Chile es opcional: suma al correo solo si coincide con nuestra lectura técnica (director,
+  2026-10-19: el correo cita un solo banco, el más reciente que la respalda, y no muestra a los que ven
+  distinto). Si no hay una directa, el análisis no sale. Los organismos (Fed, BCE, EIA, OPEP, FMI, BIS, World Gold
+  Council, Agencia Internacional de Energía) no cuentan como banco, pero sí valen como directa si son la entidad
+  o el dominio del ancla. Búscalas en la web. Cada elemento es un objeto con estos campos de texto:
+  - `entidad`: quién opina. De la lista cerrada. Para una voz de banco opcional, una de estas: Goldman Sachs, JPMorgan, Morgan Stanley, Bank of America, Citi, UBS, Barclays, Standard Chartered, Jefferies, Deutsche Bank, HSBC, ING, Commerzbank, Banco Central de Chile, Cochilco, Banchile, BCI Estudios, Santander Chile, Itaú Chile. La entidad de la directa es la del ancla, aunque no sea un banco.
   - `medio`: dónde se publicó. **Prefiere siempre una nota en español** (el cliente la abre y la lee):
     Bloomberg Línea, Diario Financiero, La Tercera, Emol, Ámbito, Expansión, Cinco Días, El Economista,
     Infobae, Europa Press, o la página en español de la propia entidad (Banchile, Santander Chile, BCI
@@ -105,7 +109,7 @@ y la pone el bot: tú no decides nada visual.
   - `url`: https y de un artículo concreto (no una portada), del dominio del `medio`.
   - `postura`: `alcista`, `bajista` o `neutral`, la de la entidad frente al activo.
   - `tesis`: una frase en español con lo que la entidad sostiene. Sin `%`, sin guion largo ni medio, sin la palabra "oportunidad" y sin "comprar", "vender" ni "recomienda": pasa por los mismos controles que el resto del texto, y la fuente cuya tesis no los pasa se descarta.
-  No inventes URLs ni fuentes: el bot abre cada URL y descarta lo que no responde. Sin al menos una de un banco
+  No inventes URLs ni fuentes: el bot abre cada URL y descarta lo que no responde. Sin al menos una directa
   válida el análisis no sale, así que busca hasta encontrarla (notas de los últimos 14 días en los medios de la
   lista). No rellenes con voces que no hablan de este activo.
 
@@ -117,6 +121,6 @@ Corre la validación y corrige hasta que diga `OK`:
 uv run python scripts/bot_analistas.py --validar $ARGUMENTS
 ```
 
-La validación también falla si `fuentes` no trae ninguna voz de banco: sigue buscando hasta que diga `OK`.
+La validación también falla si `fuentes` no trae ninguna fuente directa de `datos.fuente_directa`: sigue buscando hasta que diga `OK`.
 
 Responde solo `OK` o `ERROR: <motivo>`.

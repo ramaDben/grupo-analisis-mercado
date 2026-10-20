@@ -18,6 +18,7 @@ from zoneinfo import ZoneInfo
 
 from analista import esquema as es
 from analista import registro_semanal as rg
+from analista import segmentos
 from analista.orden import Orden
 
 SANTIAGO = ZoneInfo("America/Santiago")
@@ -268,6 +269,7 @@ class Lectores:
     referencia: Callable[..., tuple[Any, datetime, str]] = _referencia
     propia: Callable[..., tuple[Any, datetime]] = _propia
     lectura_actual: Callable[..., tuple[Any, dict[str, Any]]] = _lectura_actual
+    ancla: Callable[[str], tuple[str, dict[str, Any]] | None] = segmentos.segmento_y_ancla
 
 
 @dataclass
@@ -340,11 +342,16 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
     """El análisis de UN activo: la lectura de nuestros sistemas, sus drivers y la agenda.
 
     La referencia es la semanal si el activo la tiene; si no, se lee de nuevo (spec 2026-10-16 §4).
-    Las voces de bancos las agrega agy después; Python las valida (`fuentes.py`).
+    La fuente directa del activo (su ancla) se sella en `datos`; agy la busca y Python la valida (`fuentes.py`).
+    Sin ancla no hay análisis: se corta antes de leer nada (spec 2026-10-20).
     """
     import referencia_semanal as rs
 
     ticker = orden.args["ticker"]
+    resuelta = lec.ancla(ticker)
+    if resuelta is None:
+        raise PreparacionFallida(segmentos.aviso_sin_ancla(ticker))
+    segmento, ancla = resuelta
     estrategia = lec.estrategia()
     cat = lec.catalogo(ticker)
     digits = int(cat["digits"])
@@ -405,6 +412,7 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
              "agenda": limpio["agenda"], "curva": limpio["curva"],
              "fundamental": {"fuera_catalogo": bool(cat.get("fuera_catalogo")), "sin_drivers": not drivers,
                              "referencia": origen}}
+    datos["fuente_directa"] = {"segmento": segmento, "ancla": ancla, "consultas": segmentos.consultas(ancla)}
     previa = rg.anterior(ticker, lec.registro or rg.RUTA)
     if previa and previa["direccion"] != activo["lectura"]["direccion"]:
         # Solo si la lectura cambió de dirección: el correo lo cuenta para que no parezca una contradicción.
