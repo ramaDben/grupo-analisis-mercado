@@ -51,7 +51,7 @@ _TRADE_MODE_MAP: dict[int, str] = {
 }
 
 # Q3 (design.md §5.3): mapeo ticker -> exchange cubierto por el calendario de
-# feriados. 3 índices US + 14 acciones + 5 ETF = 22 tickers -> NYSE.
+# feriados. 3 índices US + 14 acciones + 5 ETF = 22 tickers -> NYSE; GER40 -> XETRA.
 # Vive aquí (no en config/activos.json) para no acoplar el catálogo de activos
 # a la lógica de feriados de esta tool.
 #

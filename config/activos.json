@@ -371,7 +371,7 @@
       "ticker": "US100",
       "ticker_mt5": "US100.spot",
       "segmento": "indices",
-      "ancla": {"nombre": "Nasdaq 100", "proveedor": "Nasdaq", "bolsa": "NYSE", "entidades": ["Nasdaq"], "dominios": ["nasdaq.com"], "terminos_ancla": ["Nasdaq 100", "Nasdaq-100", "US100"]},
+      "ancla": {"nombre": "Nasdaq 100", "proveedor": "Nasdaq", "bolsa": "Nasdaq", "entidades": ["Nasdaq"], "dominios": ["nasdaq.com"], "terminos_ancla": ["Nasdaq 100", "Nasdaq-100", "US100"]},
       "nombre": "Nasdaq 100",
       "categoria": "indice",
       "sector_dominante": "tecnológico",
