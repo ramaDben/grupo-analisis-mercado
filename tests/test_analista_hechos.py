@@ -190,3 +190,10 @@ def test_xetra_tiene_feriados_y_alemania_esta_en_la_agenda():
     assert ss._TICKER_EXCHANGE["GER40.spot"] == "XETRA"
     assert ss._cargar_feriados()["XETRA"] == datos["XETRA"]
     assert ag.PAISES["Germany"] == "Alemania"
+
+
+def test_spy_hereda_los_drivers_del_sp500_como_qqq_los_del_nasdaq():
+    """Revisión final: SPY.US caía en los generales; su subyacente US500 tiene ficha propia."""
+    assert hc.signos("SPY.US") == hc.signos("US500.spot")
+    assert hc.signos("SPY.US") != {m: 0 for m in hc.GENERALES}
+    assert hc.signos("QQQ.US") == hc.signos("US100.spot")
