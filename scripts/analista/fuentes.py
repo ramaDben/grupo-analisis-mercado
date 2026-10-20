@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import re
+import unicodedata
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Callable
@@ -189,22 +190,83 @@ def seleccionar_bancos_correo(
     return a_favor[:1]
 
 
-def falta_banco(pieza: dict[str, Any], lista: dict[str, Any] | None = None) -> list[str]:
-    """El error de `--validar` cuando `fuentes` no trae ningún banco; vacío si lo trae o si aún no es lista."""
+# ───────────────────────────────────────────── fuente directa por segmento (spec 2026-10-20)
+
+SEGMENTOS = ("fx", "commodities", "acciones", "etfs", "indices", "cripto")
+CONFIG_SEGMENTOS = RAIZ / "config" / "segmentos_fuentes.json"
+
+
+def _plano(texto: str) -> str:
+    t = unicodedata.normalize("NFKD", texto)
+    return "".join(c for c in t if not unicodedata.combining(c)).lower()
+
+
+def _cargar_segmentos(ruta: Path = CONFIG_SEGMENTOS) -> dict[str, Any]:
+    try:
+        return json.loads(ruta.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def lista_del_segmento(segmento: str, base: dict[str, Any] | None = None,
+                       segmentos: dict[str, Any] | None = None) -> dict[str, Any]:
+    """La lista cerrada extendida con las entidades y los medios propios del segmento."""
+    if segmento not in SEGMENTOS:
+        raise ValueError(f"segmento desconocido: {segmento!r}")
+    base = base if base is not None else cargar_lista()
+    segmentos = segmentos if segmentos is not None else _cargar_segmentos()
+    extra = segmentos.get(segmento) or {}
+    entidades = {g: list(v) for g, v in base["entidades"].items()}
+    if extra.get("entidades"):
+        entidades[f"segmento_{segmento}"] = list(extra["entidades"])
+    medios = {m: list(d) for m, d in base["medios"].items()}
+    for medio, dominios in (extra.get("medios") or {}).items():
+        medios[medio] = list(dict.fromkeys([*medios.get(medio, []), *dominios]))
+    return {**base, "entidades": entidades, "medios": medios}
+
+
+def nombra_ancla(fuente: dict[str, Any], ancla: dict[str, Any]) -> bool:
+    """Algún término del ancla aparece en la tesis o en la ruta de la URL (sin tildes ni mayúsculas)."""
+    texto = _plano(f"{fuente.get('tesis', '')} {urlparse(str(fuente.get('url', ''))).path}")
+    return any(re.search(rf"(?<!\w){re.escape(_plano(t))}(?!\w)", texto)
+               for t in ancla.get("terminos_ancla", []))
+
+
+def fuentes_directas(fuentes: Any, segmento: str, ancla: dict[str, Any],
+                     lista: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    """Las fuentes del ancla misma (su entidad o su dominio) que además la nombran. No mira la postura."""
+    propietarias = [
+        f for f in (fuentes if isinstance(fuentes, list) else [])
+        if isinstance(f, dict)
+        and (f.get("entidad") in ancla.get("entidades", [])
+             or _del_dominio(_host(str(f.get("url", ""))), ancla.get("dominios", [])))
+        and nombra_ancla(f, ancla)
+    ]
+    if not propietarias:
+        return []
+    entidades = _entidades(lista or lista_del_segmento(segmento))
+    return [f for f in propietarias if f.get("entidad") in entidades]
+
+
+def falta_fuente_directa(pieza: dict[str, Any], segmento: str, ancla: dict[str, Any],
+                         lista: dict[str, Any] | None = None) -> list[str]:
+    """El error de `--validar` si no hay fuente directa; vacío si la hay o si `fuentes` aún no es lista."""
     fuentes = (pieza.get("editorial") or {}).get("fuentes")
     if not isinstance(fuentes, list):
         return []  # `esquema.errores` ya dice que falta la lista
-    lista = lista or cargar_lista()
-    bs = bancos(fuentes, lista)
-    if bs:
-        direccion = (((pieza.get("datos") or {}).get("activos") or [{}])[0].get("lectura") or {}).get("direccion")
-        if not direccion or any(b.get("postura") and not discrepa(b, direccion) for b in bs):
-            return []
-        return [f"fuentes: ningún banco respalda nuestra lectura {direccion.lower()}; el correo cita solo un banco "
-                "que coincida con ella, así que busca otra nota de los últimos "
-                f"{lista.get('frescura_dias', 14)} días de un banco con esa postura"]
-    return [f"fuentes: falta al menos una voz de banco ({', '.join(sorted(_nombres_banco(lista)))}) con su nota "
-            f"de los últimos {lista.get('frescura_dias', 14)} días; los organismos suman, pero no la reemplazan"]
+    lista = lista or lista_del_segmento(segmento)
+    if fuentes_directas(fuentes, segmento, ancla, lista):
+        return []
+    return [f"fuentes: falta una fuente directa de {ancla['nombre']} ({', '.join(ancla.get('entidades', []))}) "
+            f"con una nota de los últimos {lista.get('frescura_dias', 14)} días que nombre {ancla['nombre']}"]
+
+
+def directa_de(pieza: dict[str, Any]) -> tuple[str, dict[str, Any]] | None:
+    """(segmento, ancla) del sello `datos.fuente_directa`, o None si la pieza no lo trae."""
+    sello = (pieza.get("datos") or {}).get("fuente_directa")
+    if isinstance(sello, dict) and sello.get("segmento") and isinstance(sello.get("ancla"), dict):
+        return sello["segmento"], sello["ancla"]
+    return None
 
 
 def guardar_intento(dir_pedido: Path, validas: list[dict[str, Any]], descartes: list[str], crudas: Any) -> Path:

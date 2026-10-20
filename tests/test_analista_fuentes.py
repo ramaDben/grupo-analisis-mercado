@@ -155,13 +155,57 @@ def test_cuentan_los_bancos_de_inversion_y_los_de_chile_y_no_los_organismos():
     assert [f["entidad"] for f in fu.bancos(fuentes)] == ["JPMorgan", "Banchile"]
 
 
-def test_falta_banco_lo_dice_y_calla_si_hay_uno():
-    sin = {"editorial": {"fuentes": [{"entidad": "Fed"}]}}
-    con = {"editorial": {"fuentes": [{"entidad": "Fed"}, {"entidad": "UBS"}]}}
-    errs = fu.falta_banco(sin)
-    assert errs and "falta al menos una voz de banco" in errs[0] and "14 días" in errs[0]
-    assert fu.falta_banco(con) == []
-    assert fu.falta_banco({"editorial": {"fuentes": "[[ESCRIBIR]]"}}) == []  # eso lo dice esquema.errores
+ANCLA_CHF = {"nombre": "Suiza", "entidades": ["Banco Nacional Suizo"], "dominios": ["snb.ch", "nzz.ch"],
+             "terminos_ancla": ["Suiza", "franco suizo", "CHF", "SNB"]}
+SEG = {"fx": {"entidades": ["Banco Nacional Suizo"], "medios": {"Banco Nacional Suizo": ["snb.ch"], "NZZ": ["nzz.ch"]}}}
+
+
+def _fd(entidad, url, tesis, medio="NZZ", postura="neutral", fecha="2026-10-19"):
+    return {"entidad": entidad, "medio": medio, "fecha": fecha, "url": url, "postura": postura, "tesis": tesis}
+
+
+def test_nota_del_snb_que_nombra_suiza_es_directa():
+    f = _fd("Banco Nacional Suizo", "https://www.snb.ch/es/noticia-1", "El SNB mantiene su tasa y vigila el franco suizo.", medio="Banco Nacional Suizo")
+    assert fu.fuentes_directas([f], "fx", ANCLA_CHF, lista=fu.lista_del_segmento("fx", segmentos=SEG)) == [f]
+
+
+def test_una_directa_que_discrepa_de_la_lectura_sigue_siendo_directa():
+    f = _fd("Banco Nacional Suizo", "https://www.snb.ch/a", "El SNB ve debilidad del franco suizo.", postura="bajista")
+    assert fu.fuentes_directas([f], "fx", ANCLA_CHF, lista=fu.lista_del_segmento("fx", segmentos=SEG)) == [f]
+
+
+def test_un_banco_de_inversion_o_el_dxy_no_cuentan_como_directa():
+    jp = _fd("JPMorgan", "https://www.reuters.com/x", "JPMorgan ve un dólar más fuerte por las tasas de la Fed.", medio="Reuters")
+    assert fu.fuentes_directas([jp], "fx", ANCLA_CHF) == []
+
+
+def test_el_dominio_del_ancla_sin_nombrar_el_ancla_no_cuenta():
+    f = _fd("UBS", "https://www.nzz.ch/otra-cosa", "UBS opina sobre el mercado inmobiliario alemán.")
+    assert fu.fuentes_directas([f], "fx", ANCLA_CHF) == []
+
+
+def test_el_termino_respeta_limites_de_palabra_y_tildes():
+    ancla = {**ANCLA_CHF, "terminos_ancla": ["CHF", "Suiza"]}
+    assert not fu.nombra_ancla(_fd("UBS", "https://nzz.ch/a", "El CHFX sube"), ancla)
+    assert fu.nombra_ancla(_fd("UBS", "https://nzz.ch/a", "SUIZA sube"), ancla)
+
+
+def test_falta_fuente_directa_lo_dice_y_calla_si_hay_una():
+    sin = {"editorial": {"fuentes": []}}
+    errs = fu.falta_fuente_directa(sin, "fx", ANCLA_CHF)
+    assert errs and "Suiza" in errs[0] and "14 días" in errs[0]
+    assert fu.falta_fuente_directa({"editorial": {"fuentes": "[[ESCRIBIR]]"}}, "fx", ANCLA_CHF) == []
+
+
+def test_directa_de_lee_el_sello_y_calla_en_una_pieza_vieja():
+    assert fu.directa_de({"datos": {"fuente_directa": {"segmento": "fx", "ancla": ANCLA_CHF}}}) == ("fx", ANCLA_CHF)
+    assert fu.directa_de({"datos": {}}) is None
+
+
+def test_lista_del_segmento_extiende_la_lista_cerrada():
+    l = fu.lista_del_segmento("fx", segmentos=SEG)
+    assert "Banco Nacional Suizo" in {e for g in l["entidades"].values() for e in g}
+    assert "Goldman Sachs" in {e for g in l["entidades"].values() for e in g} and l["medios"]["NZZ"] == ["nzz.ch"]
 
 
 def test_el_intento_guarda_las_validas_y_las_urls_descartadas(tmp_path):
@@ -196,15 +240,6 @@ def test_seleccionar_bancos_correo_sin_banco_a_favor_no_rellena():
     ]
     assert fu.seleccionar_bancos_correo(solo_alcista, "BAJISTA") == []
     assert [b["entidad"] for b in fu.seleccionar_bancos_correo(solo_alcista, "ALCISTA")] == ["Goldman Sachs"]
-
-
-def test_falta_banco_exige_que_alguno_respalde_la_lectura():
-    pieza = {"datos": {"activos": [{"lectura": {"direccion": "BAJISTA"}}]},
-             "editorial": {"fuentes": [{"entidad": "Goldman Sachs", "postura": "alcista"}]}}
-    errs = fu.falta_banco(pieza)
-    assert errs and "ningún banco respalda nuestra lectura bajista" in errs[0]
-    pieza["editorial"]["fuentes"].append({"entidad": "UBS", "postura": "bajista"})
-    assert fu.falta_banco(pieza) == []
 
 
 def test_seleccionar_bancos_correo_sin_bancos():
