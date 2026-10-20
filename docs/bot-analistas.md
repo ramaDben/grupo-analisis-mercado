@@ -88,14 +88,54 @@ el bot lo dice en lugar de afirmar que el símbolo no existe.
 - **Cifras de terceros:** la regla 1 sigue (toda cifra del texto sale de los datos del terminal),
   con una excepción: la cifra que aparece en la tesis de una fuente validada y se atribuye a esa
   entidad en la misma frase («Goldman Sachs ve el oro en 4.800»).
-- **Un banco o nada (spec 2026-10-17 §5; correo editorial 2026-10-19):** `cuentan_como_banco` de la lista dice qué grupos cumplen
-  (hoy los bancos de inversión y los de Chile; los organismos suman pero no cumplen). Se exige al menos un banco calificado para
-  validar y emitir la pieza (`--validar` falla sin banco). En el correo institucional se exhibe como máximo 1 banco a favor y 1
-  en contra (los más recientes según su fecha); si solo hay uno calificado, se despliega limpio al 100% de ancho sin tarjeta
-  vacía ni avisos de que falta el otro. Si agy no encuentra banco, el bot hace **un segundo intento solo de fuentes** (reabre
-  `fuentes`, deja `fuentes_intento_1.json` con lo válido y lo descartado) y, si tampoco, responde que no encontró ninguna voz de
-  banco, sin gastar cupo ni registrar el análisis.
+- **Un banco ya no es requisito (spec 2026-10-20, P2):** `falta_banco` se borró. Un banco calificado (`cuentan_como_banco`)
+  suma voces cuando existe, y en el correo institucional se exhibe como máximo 1 a favor y 1 en contra (los más recientes); si solo
+  hay uno, se despliega limpio al 100% de ancho sin tarjeta vacía. Lo que se exige ahora es la fuente directa (ver abajo).
 - Cada llamada a agy deja `agy_salida_<n>.json` (código, segundos y respuesta) en la carpeta del pedido.
+
+### Fuente directa por segmento (spec 2026-10-20)
+
+Toda pieza de `/oportunidad` exige **al menos una nota directa**: una voz propia del activo (su banco
+central, su productor, su emisor, su proveedor de índice, su red). El caso que lo motivó: en USD/CHF nunca
+aparecía el Banco Nacional Suizo.
+
+**Contrato.** Una nota es directa si su dominio y su entidad están en la lista cerrada del segmento **y** su
+titular o resumen nombra el ancla del activo (alguno de sus `terminos_ancla`). Sin ninguna nota directa,
+`--validar` falla (`falta_fuente_directa`) y `preparar` no arma la pieza. Si el activo no tiene ancla, el bot
+responde con el aviso de `segmentos.aviso_sin_ancla` **sin gastar cupo**. La nota directa es la que se muestra
+en el correo. La consulta a agy se arma desde las entidades y dominios del ancla (`segmentos.consultas`, hasta
+cuatro). El módulo es `scripts/analista/segmentos.py`; el contrato lo cubre `tests/test_analista_segmentos.py`,
+incluido un test que falla si algún activo del catálogo queda sin segmento y ancla (solo se exceptúa `USDIDX`, el
+DXY, que es referencia y no activo publicable).
+
+**Las seis anclas (segmentos).**
+
+| Segmento | Dónde vive el ancla | Voz propia |
+|---|---|---|
+| `fx` | `config/segmentos_fuentes.json` → `fx.divisas` (por divisa; un par fuera del catálogo se infiere si una pata es USD) | banco central y gobierno de la divisa |
+| `commodities` | campo `ancla` del activo en `config/activos.json` | productores y organismos del mercado (OPEP, EIA, etc.) |
+| `acciones` | `ancla` en `activos.json` (ticker, `cik`, sitio IR) | la empresa y la SEC |
+| `etfs` | `ancla` en `activos.json` | el emisor del fondo; un titular del subyacente no basta, ni los flujos de página |
+| `indices` | `ancla` en `activos.json` (proveedor y bolsa) | proveedor del índice y su bolsa; los earnings de un constituyente no cuentan salvo que el titular nombre el índice |
+| `cripto` | `ancla` en `activos.json` | la fundación o red de la cripto, con URL propia y fecha |
+
+**Cómo editar `config/segmentos_fuentes.json`.** Cada segmento trae `entidades` (lista cerrada de voces) y `medios`
+(entidad → dominios). Cada dominio y cada entidad que un ancla declare tiene que estar en ese archivo o en
+`config/fuentes_prestigio.json`; un test lo verifica. Para sumar una divisa, agregarla en `fx.divisas` con
+`pais`, `banco_central`, `entidades`, `dominios` y `terminos_ancla`. Para un activo nuevo del catálogo, declarar su
+`segmento` y su `ancla` en `activos.json`. Después correr
+`uv run python scripts/verificar_dominios_fuentes.py` (reporta `muerta`, `sin_verificar` o `viva` por dominio) y la
+suite. La frescura es de 14 días en los seis segmentos.
+
+**Límites declarados.**
+- El calendario (`obtener_calendario_macro`) no cubre Suiza, Japón ni Reino Unido: `PAISES` es nominal (Chile, EE.UU., China y Zona Euro).
+- La ingesta de acciones (earnings e informes SEC) no trae cifras de resultados; la fecha de earnings sola no habilita la publicación.
+- La regla de que el marketing o los comunicados de un emisor no cuentan como análisis vive solo en el prompt, no en código.
+- Dominios `sin_verificar` (responden 401, 403 o 429 a un GET, no están descartados): `admin.ch`, `etf.com`, `fidelity.com`, `glassnode.com`, `grayscale.com`, `lme.com`, `morningstar.com`, `opec.org`, `spglobal.com` (medido el 2026-10-20 con `verificar_dominios_fuentes.py`, 0 muertas).
+- El calendario de feriados XETRA cubre 2027 de forma parcial.
+
+**Prueba manual (sin red).** `--una "/oportunidad USDCHF"` con el terminal o la red caídos devuelve el aviso de fuente
+o de falla sin gastar cupo. Desde Git Bash anteponer `MSYS_NO_PATHCONV=1`.
 
 ### Invitación comercial
 

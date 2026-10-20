@@ -1,6 +1,6 @@
 # Noticia directa por segmento en `/oportunidad`
 
-Fecha: 2026-10-20. Estado: borrador para aprobación del director. Nada de esto está construido.
+Fecha: 2026-10-20. Estado: implementado en la rama feat/noticia-directa-por-segmento (Tasks 1 a 11); documentado en `docs/bot-analistas.md`. Pendiente: PR y revisión del director de las listas cerradas.
 
 ## Intención y por qué
 

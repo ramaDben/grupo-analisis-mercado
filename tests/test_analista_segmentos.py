@@ -369,3 +369,18 @@ def test_la_cripto_no_inventa_correlaciones_macro():
 
     for t in CRIPTOS:
         assert set(hc.signos(t).values()) == {0}, t
+
+
+# ───────────────────────────────────────────── Task 11: cierre
+
+# DXY (ticker del broker USDIDX) es una referencia del dólar, no un activo publicable. COBRE (COPPER)
+# no se excluye: es un commodity y tiene ancla propia.
+REFERENCIAS_SIN_VOZ = {"USDIDX"}
+
+
+def test_todo_activo_del_catalogo_tiene_segmento_y_ancla():
+    catalogo = json.loads(sg.ACTIVOS.read_text(encoding="utf-8"))
+    tickers = [e["ticker_mt5"] for e in sg._entradas(catalogo)]
+    assert tickers
+    sin_voz = [t for t in tickers if t not in REFERENCIAS_SIN_VOZ and sg.segmento_y_ancla(t) is None]
+    assert sin_voz == [], f"activos del catalogo sin segmento o ancla: {sin_voz}"
