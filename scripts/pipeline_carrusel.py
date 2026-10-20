@@ -222,18 +222,51 @@ def temporalidad_de(marco: str) -> str:
 
 
 def niveles_publicados(lectura) -> tuple[float | None, float | None]:
-    """El soporte y la resistencia de la pieza: lo más cercano a cada lado del precio.
+    """El soporte y la resistencia de la pieza: lo más cercano a cada lado del precio con espacio operable.
 
-    Salen solo de la lectura (lo que vigila, lo que la invalida, el objetivo y las líneas
-    que dibuja). Si un lado no tiene nada, queda vacío: inventar un nivel sería publicar
-    una distancia con nombre de soporte, el defecto de `acotar_niveles` (2026-10-02).
+    Prioriza niveles horizontales estructurales (el objetivo, los bordes de rango y los horizontales
+    de contexto mayor). Excluye líneas diagonales dinámicas para evitar que una directriz en testeo activo
+    se publique como soporte o resistencia a milímetros del precio.
     """
-    candidatos = [r.precio for r in (lectura.vigilar, lectura.invalidacion, lectura.objetivo) if r]
-    candidatos += [x.valor_actual for x in lectura.lineas
-                   if x.marco == lectura.marco or x.tipo == "horizontal"]
-    abajo = [c for c in candidatos if c < lectura.precio]
-    arriba = [c for c in candidatos if c > lectura.precio]
-    return (max(abajo) if abajo else None, min(arriba) if arriba else None)
+    atr = getattr(lectura, "metricas", {}).get("atr", 0.0) if hasattr(lectura, "metricas") else 0.0
+    min_dist = 0.8 * atr if atr > 0 else 0.0
+
+    # 1. Candidatos horizontales prioritarios (objetivo, bordes de rango, horizontales de contexto)
+    horiz = [x.valor_actual for x in lectura.lineas if x.tipo == "horizontal"]
+    if lectura.objetivo:
+        horiz.append(lectura.objetivo.precio)
+
+    # 2. Otros candidatos (vigilar, invalidación, directrices diagonales)
+    otros = [r.precio for r in (lectura.vigilar, lectura.invalidacion) if r]
+    otros += [x.valor_actual for x in lectura.lineas if x.marco == lectura.marco and x.tipo == "diagonal"]
+
+    def _buscar(candidatos, arriba: bool, margen: float):
+        if arriba:
+            validos = [c for c in candidatos if c >= lectura.precio + margen]
+            return min(validos) if validos else None
+        else:
+            validos = [c for c in candidatos if c <= lectura.precio - margen]
+            return max(validos) if validos else None
+
+    # Primero buscar en horizontales con margen operable
+    res = _buscar(horiz, arriba=True, margen=min_dist)
+    sop = _buscar(horiz, arriba=False, margen=min_dist)
+
+    # Si falta alguno, buscar en otros candidatos con margen operable
+    if res is None:
+        res = _buscar(otros, arriba=True, margen=min_dist)
+    if sop is None:
+        sop = _buscar(otros, arriba=False, margen=min_dist)
+
+    # Fallback sin margen si aún falta (para lecturas sintéticas de tests o sin ATR)
+    if res is None:
+        validos = [c for c in (horiz + otros) if c > lectura.precio]
+        res = min(validos) if validos else None
+    if sop is None:
+        validos = [c for c in (horiz + otros) if c < lectura.precio]
+        sop = max(validos) if validos else None
+
+    return (sop, res)
 
 
 def lineas_de(payload: dict[str, Any]):
