@@ -55,7 +55,72 @@
       "Silver Institute": ["silverinstitute.org"]
     }
   },
-  "acciones": {"entidades": [], "medios": {}},
+  "acciones": {
+    "entidades": [
+      "Apple",
+      "Microsoft",
+      "NVIDIA",
+      "Amazon",
+      "AMD",
+      "MercadoLibre",
+      "JPMorgan Chase",
+      "Bank of America",
+      "Goldman Sachs",
+      "Morgan Stanley",
+      "Boeing",
+      "Caterpillar",
+      "GE Aerospace",
+      "Deere",
+      "SEC"
+    ],
+    "medios": {
+      "Apple": [
+        "investor.apple.com"
+      ],
+      "Microsoft": [
+        "microsoft.com"
+      ],
+      "NVIDIA": [
+        "investor.nvidia.com"
+      ],
+      "Amazon": [
+        "ir.aboutamazon.com"
+      ],
+      "AMD": [
+        "ir.amd.com"
+      ],
+      "MercadoLibre": [
+        "investor.mercadolibre.com"
+      ],
+      "JPMorgan Chase": [
+        "jpmorganchase.com"
+      ],
+      "Bank of America": [
+        "investor.bankofamerica.com"
+      ],
+      "Goldman Sachs": [
+        "goldmansachs.com"
+      ],
+      "Morgan Stanley": [
+        "morganstanley.com"
+      ],
+      "Boeing": [
+        "investors.boeing.com"
+      ],
+      "Caterpillar": [
+        "investors.caterpillar.com"
+      ],
+      "GE Aerospace": [
+        "geaerospace.com"
+      ],
+      "Deere": [
+        "deere.com"
+      ],
+      "SEC": [
+        "sec.gov"
+      ]
+    }
+  },
   "etfs": {"entidades": [], "medios": {}},
   "indices": {"entidades": [], "medios": {}},
   "cripto": {"entidades": [], "medios": {}}

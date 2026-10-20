@@ -250,6 +250,13 @@ def _lectura_actual(estrategia, ticker, digits, lector, ahora, referencia=None):
     return rs.lectura_actual(estrategia, ticker, digits, lector, ahora, referencia=referencia)
 
 
+def _empresa(ticker: str, ancla: dict[str, Any]) -> dict[str, Any]:
+    """Próxima fecha de resultados (no oficial) y último informe SEC de una acción, de la ingesta."""
+    import ingesta_acciones
+
+    return ingesta_acciones.leer_empresa(ticker)
+
+
 @dataclass
 class Lectores:
     contrato: Callable[[str, float], dict[str, Any]] = _contrato
@@ -270,6 +277,7 @@ class Lectores:
     propia: Callable[..., tuple[Any, datetime]] = _propia
     lectura_actual: Callable[..., tuple[Any, dict[str, Any]]] = _lectura_actual
     ancla: Callable[[str], tuple[str, dict[str, Any]] | None] = segmentos.segmento_y_ancla
+    empresa: Callable[[str, dict[str, Any]], dict[str, Any]] = _empresa
 
 
 @dataclass
@@ -352,6 +360,8 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
     if resuelta is None:
         raise PreparacionFallida(segmentos.aviso_sin_ancla(ticker))
     segmento, ancla = resuelta
+    # Una acción sin ingesta vigente no sale: se corta antes de leer el terminal y de gastar agy.
+    empresa = lec.empresa(ticker, ancla) if segmento == "acciones" else None
     estrategia = lec.estrategia()
     cat = lec.catalogo(ticker)
     digits = int(cat["digits"])
@@ -413,6 +423,8 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
              "fundamental": {"fuera_catalogo": bool(cat.get("fuera_catalogo")), "sin_drivers": not drivers,
                              "referencia": origen}}
     datos["fuente_directa"] = {"segmento": segmento, "ancla": ancla, "consultas": segmentos.consultas(ancla)}
+    if empresa is not None:
+        datos["empresa"] = empresa
     previa = rg.anterior(ticker, lec.registro or rg.RUTA)
     if previa and previa["direccion"] != activo["lectura"]["direccion"]:
         # Solo si la lectura cambió de dirección: el correo lo cuenta para que no parezca una contradicción.

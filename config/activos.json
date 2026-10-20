@@ -586,6 +586,8 @@
       "componentes": [
         {
           "ticker_mt5": "#AAPL",
+          "segmento": "acciones",
+          "ancla": {"nombre": "Apple", "ticker": "AAPL", "cik": "0000320193", "sitio_ir": "https://investor.apple.com/", "entidades": ["Apple", "SEC"], "dominios": ["investor.apple.com", "sec.gov"], "terminos_ancla": ["Apple", "AAPL", "iPhone"]},
           "nombre": "Apple Inc.",
           "digits": 2,
           "unidad": "USD",
@@ -600,6 +602,8 @@
         },
         {
           "ticker_mt5": "#MSFT",
+          "segmento": "acciones",
+          "ancla": {"nombre": "Microsoft", "ticker": "MSFT", "cik": "0000789019", "sitio_ir": "https://www.microsoft.com/en-us/investor", "entidades": ["Microsoft", "SEC"], "dominios": ["microsoft.com", "sec.gov"], "terminos_ancla": ["Microsoft", "MSFT", "Azure"]},
           "nombre": "Microsoft Corp.",
           "digits": 2,
           "unidad": "USD",
@@ -614,6 +618,8 @@
         },
         {
           "ticker_mt5": "#NVDA",
+          "segmento": "acciones",
+          "ancla": {"nombre": "NVIDIA", "ticker": "NVDA", "cik": "0001045810", "sitio_ir": "https://investor.nvidia.com/", "entidades": ["NVIDIA", "SEC"], "dominios": ["investor.nvidia.com", "sec.gov"], "terminos_ancla": ["NVIDIA", "NVDA"]},
           "nombre": "NVIDIA Corp.",
           "digits": 2,
           "unidad": "USD",
@@ -628,6 +634,8 @@
         },
         {
           "ticker_mt5": "#AMZN",
+          "segmento": "acciones",
+          "ancla": {"nombre": "Amazon", "ticker": "AMZN", "cik": "0001018724", "sitio_ir": "https://ir.aboutamazon.com/", "entidades": ["Amazon", "SEC"], "dominios": ["ir.aboutamazon.com", "sec.gov"], "terminos_ancla": ["Amazon", "AMZN", "AWS"]},
           "nombre": "Amazon.com Inc.",
           "digits": 2,
           "unidad": "USD",
@@ -642,6 +650,8 @@
         },
         {
           "ticker_mt5": "#AMD",
+          "segmento": "acciones",
+          "ancla": {"nombre": "AMD", "ticker": "AMD", "cik": "0000002488", "sitio_ir": "https://ir.amd.com/", "entidades": ["AMD", "SEC"], "dominios": ["ir.amd.com", "sec.gov"], "terminos_ancla": ["AMD", "Advanced Micro Devices"]},
           "nombre": "Advanced Micro Devices",
           "digits": 2,
           "unidad": "USD",
@@ -657,6 +667,8 @@
         },
         {
           "ticker_mt5": "#MELI",
+          "segmento": "acciones",
+          "ancla": {"nombre": "MercadoLibre", "ticker": "MELI", "cik": "0001099590", "sitio_ir": "https://investor.mercadolibre.com/", "entidades": ["MercadoLibre", "SEC"], "dominios": ["investor.mercadolibre.com", "sec.gov"], "terminos_ancla": ["MercadoLibre", "MELI"]},
           "nombre": "MercadoLibre Inc.",
           "digits": 2,
           "unidad": "USD",
@@ -685,6 +697,8 @@
       "componentes": [
         {
           "ticker_mt5": "#JPM",
+          "segmento": "acciones",
+          "ancla": {"nombre": "JPMorgan Chase", "ticker": "JPM", "cik": "0000019617", "sitio_ir": "https://www.jpmorganchase.com/ir", "entidades": ["JPMorgan Chase", "SEC"], "dominios": ["jpmorganchase.com", "sec.gov"], "terminos_ancla": ["JPMorgan", "JPM"]},
           "nombre": "JPMorgan Chase",
           "digits": 2,
           "unidad": "USD",
@@ -699,6 +713,8 @@
         },
         {
           "ticker_mt5": "#BAC",
+          "segmento": "acciones",
+          "ancla": {"nombre": "Bank of America", "ticker": "BAC", "cik": "0000070858", "sitio_ir": "https://investor.bankofamerica.com/", "entidades": ["Bank of America", "SEC"], "dominios": ["investor.bankofamerica.com", "sec.gov"], "terminos_ancla": ["Bank of America", "BAC"]},
           "nombre": "Bank of America",
           "digits": 2,
           "unidad": "USD",
@@ -713,6 +729,8 @@
         },
         {
           "ticker_mt5": "#GS",
+          "segmento": "acciones",
+          "ancla": {"nombre": "Goldman Sachs", "ticker": "GS", "cik": "0000886982", "sitio_ir": "https://www.goldmansachs.com/investor-relations/", "entidades": ["Goldman Sachs", "SEC"], "dominios": ["goldmansachs.com", "sec.gov"], "terminos_ancla": ["Goldman Sachs", "GS"]},
           "nombre": "Goldman Sachs",
           "digits": 2,
           "unidad": "USD",
@@ -727,6 +745,8 @@
         },
         {
           "ticker_mt5": "#MS",
+          "segmento": "acciones",
+          "ancla": {"nombre": "Morgan Stanley", "ticker": "MS", "cik": "0000895421", "sitio_ir": "https://www.morganstanley.com/about-us-ir", "entidades": ["Morgan Stanley", "SEC"], "dominios": ["morganstanley.com", "sec.gov"], "terminos_ancla": ["Morgan Stanley"]},
           "nombre": "Morgan Stanley",
           "digits": 2,
           "unidad": "USD",
@@ -754,6 +774,8 @@
       "componentes": [
         {
           "ticker_mt5": "#BA",
+          "segmento": "acciones",
+          "ancla": {"nombre": "Boeing", "ticker": "BA", "cik": "0000012927", "sitio_ir": "https://investors.boeing.com/", "entidades": ["Boeing", "SEC"], "dominios": ["investors.boeing.com", "sec.gov"], "terminos_ancla": ["Boeing", "BA"]},
           "nombre": "Boeing Co.",
           "digits": 2,
           "unidad": "USD",
@@ -768,6 +790,8 @@
         },
         {
           "ticker_mt5": "#CAT",
+          "segmento": "acciones",
+          "ancla": {"nombre": "Caterpillar", "ticker": "CAT", "cik": "0000018230", "sitio_ir": "https://investors.caterpillar.com/", "entidades": ["Caterpillar", "SEC"], "dominios": ["investors.caterpillar.com", "sec.gov"], "terminos_ancla": ["Caterpillar", "CAT"]},
           "nombre": "Caterpillar Inc.",
           "digits": 2,
           "unidad": "USD",
@@ -782,6 +806,8 @@
         },
         {
           "ticker_mt5": "#GE",
+          "segmento": "acciones",
+          "ancla": {"nombre": "GE Aerospace", "ticker": "GE", "cik": "0000040545", "sitio_ir": "https://www.geaerospace.com/investor-relations", "entidades": ["GE Aerospace", "SEC"], "dominios": ["geaerospace.com", "sec.gov"], "terminos_ancla": ["GE Aerospace", "GE"]},
           "nombre": "GE Aerospace",
           "digits": 2,
           "unidad": "USD",
@@ -796,6 +822,8 @@
         },
         {
           "ticker_mt5": "#DE",
+          "segmento": "acciones",
+          "ancla": {"nombre": "Deere", "ticker": "DE", "cik": "0000315189", "sitio_ir": "https://www.deere.com/en/our-company/investor-relations/", "entidades": ["Deere", "SEC"], "dominios": ["deere.com", "sec.gov"], "terminos_ancla": ["Deere", "John Deere"]},
           "nombre": "Deere & Co.",
           "digits": 2,
           "unidad": "USD",

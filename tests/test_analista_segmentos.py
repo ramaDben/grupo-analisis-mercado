@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -155,3 +156,48 @@ def test_las_anclas_de_commodities_no_citan_dominios_fuera_de_la_lista_cerrada()
     for ticker in ("XAUUSD", "XAGUSD", "WTI.spot", "BRENT.spot", "COPPER"):
         _, ancla = sg.segmento_y_ancla(ticker)
         assert set(ancla["dominios"]) <= dominios, ticker
+
+
+# ───────────────────────────────────────────── Task 7: acciones
+ACCIONES = ("#AAPL", "#MSFT", "#NVDA", "#AMZN", "#AMD", "#MELI", "#JPM", "#BAC", "#GS", "#MS", "#BA", "#CAT",
+            "#GE", "#DE")
+
+
+def test_las_14_acciones_tienen_ancla_con_ticker_cik_y_sitio_ir():
+    for t in ACCIONES:
+        seg, ancla = sg.segmento_y_ancla(t)
+        assert seg == "acciones", t
+        assert ancla["ticker"] == t.lstrip("#") and re.fullmatch(r"\d{10}", ancla["cik"]), t
+        assert ancla["sitio_ir"].startswith("https://") and "sec.gov" in ancla["dominios"], t
+        assert ancla["nombre"] and ancla["terminos_ancla"] and ancla["entidades"], t
+        host = ancla["sitio_ir"].split("/")[2]
+        assert any(host == d or host.endswith("." + d) for d in ancla["dominios"]), t
+
+
+def test_las_anclas_de_acciones_no_citan_dominios_ni_entidades_fuera_de_la_lista_cerrada():
+    lista = fu.lista_del_segmento("acciones")
+    dominios = {d for ds in lista["medios"].values() for d in ds}
+    entidades = {e for g in lista["entidades"].values() for e in g}
+    for t in ACCIONES:
+        _, ancla = sg.segmento_y_ancla(t)
+        assert set(ancla["dominios"]) <= dominios, t
+        assert set(ancla["entidades"]) <= entidades, t
+
+
+def test_la_fecha_de_earnings_solo_no_habilita_la_publicacion():
+    seg, apple = sg.segmento_y_ancla("#AAPL")
+    # Solo "Apple reportara el jueves", de un medio, sin comunicado de la empresa: no pasa.
+    medio = _nota("Reuters", "https://www.reuters.com/markets/apple-reportara-resultados-2026-10-29/",
+                  "Apple reportará sus resultados el jueves.")
+    assert fu.fuentes_directas([medio], seg, apple) == []
+    # Entidad del ancla, pero la nota no nombra ningun termino: no pasa.
+    sin_termino = _nota("Apple", "https://investor.apple.com/newsroom/2026/10/resultados.html",
+                        "La empresa publicará sus cifras.")
+    assert fu.fuentes_directas([sin_termino], seg, apple) == []
+    # Comunicado de investor.apple.com que nombra a Apple: pasa.
+    comunicado = _nota("Apple", "https://investor.apple.com/newsroom/2026/10/apple-anuncia-fecha.html",
+                       "Apple anuncia la fecha de su conferencia de resultados.")
+    assert fu.fuentes_directas([comunicado], seg, apple) == [comunicado]
+    # La nota de Apple no sirve de directa para Microsoft.
+    _, msft = sg.segmento_y_ancla("#MSFT")
+    assert fu.fuentes_directas([comunicado], "acciones", msft) == []

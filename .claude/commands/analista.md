@@ -112,6 +112,11 @@ y la pone el bot: tú no decides nada visual.
   No inventes URLs ni fuentes: el bot abre cada URL y descarta lo que no responde. Sin al menos una directa
   válida el análisis no sale, así que busca hasta encontrarla (notas de los últimos 14 días en los medios de la
   lista). No rellenes con voces que no hablan de este activo.
+- Si `datos.empresa` existe (acciones): trae `proxima_earnings` (día y fecha de los próximos resultados),
+  `fuente_fecha` y `ultimo_informe` (forma, fecha y url del último informe de la SEC). Una fecha futura se
+  escribe siempre en modo anticipación ("la empresa reportará el jueves 29/10", nunca en pasado), y dices que
+  la fecha viene de una fuente no oficial si no la confirma un comunicado de la empresa. Si es `null`, no
+  nombres ninguna fecha. No cites cifras de resultados: no las tienes.
 
 ### Antes de terminar
 
