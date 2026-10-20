@@ -163,6 +163,32 @@ def _objetivo(horizontales, direccion: str, precio: float, tol: float, digits: i
     return None
 
 
+def _opuesto_estructural(horizontales, direccion: str, precio: float, min_dist: float,
+                         tol: float, digits: int, operativo: str) -> Linea | None:
+    """El horizontal estructural mayor al otro lado del objetivo (doctrina §2.8 y §2.10).
+
+    Si la dirección es ALCISTA (el objetivo está arriba), busca el soporte horizontal
+    estructural abajo (precio - nivel >= min_dist). Si es BAJISTA (el objetivo está abajo),
+    busca la resistencia horizontal estructural arriba (nivel - precio >= min_dist).
+    Prioriza los marcos de contexto (D1, W1) sobre el marco operativo.
+    """
+    if direccion == "LATERAL":
+        return None
+    mayores = [x for x in horizontales if x[2] != operativo]
+    menores = [x for x in horizontales if x[2] == operativo]
+    for grupo in (mayores, menores):
+        if direccion == "ALCISTA":
+            cand = [x for x in grupo if x[0].precio <= precio - min_dist]
+            elegido = max(cand, key=lambda x: x[0].precio, default=None)
+        else:
+            cand = [x for x in grupo if x[0].precio >= precio + min_dist]
+            elegido = min(cand, key=lambda x: x[0].precio, default=None)
+        if elegido is not None:
+            h, sm, marco = elegido
+            return _horizontal(h, sm, "contexto", marco, digits)
+    return None
+
+
 def _prueba(vivas: list[tuple[Linea, float]], cierre: float, en_curso: VelaEnCurso | None,
             tol: float, digits: int) -> Prueba | None:
     """El precio vivo al otro lado de una línea vigente, por más que la tolerancia.
@@ -265,6 +291,9 @@ def leer(ticker: str, velas: dict[str, pd.DataFrame], digits: int,
                                tol, digits, op)
     if objetivo_linea is not None:
         lineas.append(objetivo_linea)
+    opuesto_linea = _opuesto_estructural(horizontales, e.direccion, cierre, 0.8 * s.atr, tol, digits, op)
+    if opuesto_linea is not None:
+        lineas.append(opuesto_linea)
 
     invalidacion = (Referencia(seguridad.valor_actual, f"línea {textos.sentido(seguridad)} de seguridad", seguridad)
                     if seguridad is not None else None)
