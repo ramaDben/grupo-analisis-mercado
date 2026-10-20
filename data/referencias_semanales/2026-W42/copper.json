@@ -1,0 +1,142 @@
+{
+  "ticker": "COPPER",
+  "semana": "2026-W42",
+  "motivo": "semanal",
+  "guardada": "2026-10-12T19:56-03:00",
+  "lectura": {
+    "ticker": "COPPER",
+    "marco": "H4",
+    "precio": 14593.0,
+    "direccion": "LATERAL",
+    "estado": "RANGO",
+    "lineas": [
+      {
+        "rol": "rango",
+        "tipo": "horizontal",
+        "puntos": [
+          [
+            1791777600,
+            14668.0
+          ]
+        ],
+        "marco": "H4",
+        "toques": 1,
+        "calidad": "",
+        "valor_actual": 14668.0,
+        "empinada": false
+      },
+      {
+        "rol": "rango",
+        "tipo": "horizontal",
+        "puntos": [
+          [
+            1790856000,
+            14220.0
+          ]
+        ],
+        "marco": "H4",
+        "toques": 1,
+        "calidad": "",
+        "valor_actual": 14220.0,
+        "empinada": false
+      },
+      {
+        "rol": "contexto",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1774137600,
+            11683.0
+          ],
+          [
+            1789257600,
+            13903.0
+          ]
+        ],
+        "marco": "W1",
+        "toques": 2,
+        "calidad": "B",
+        "valor_actual": 14169.0,
+        "empinada": false
+      },
+      {
+        "rol": "contexto",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1788998400,
+            14838.0
+          ],
+          [
+            1790035200,
+            14800.0
+          ]
+        ],
+        "marco": "D1",
+        "toques": 2,
+        "calidad": "B",
+        "valor_actual": 14738.0,
+        "empinada": false
+      }
+    ],
+    "en_prueba": null,
+    "vigilar": {
+      "precio": 14668.0,
+      "etiqueta": "resistencia del rango",
+      "linea": {
+        "rol": "rango",
+        "tipo": "horizontal",
+        "puntos": [
+          [
+            1791777600,
+            14668.0
+          ]
+        ],
+        "marco": "H4",
+        "toques": 1,
+        "calidad": "",
+        "valor_actual": 14668.0,
+        "empinada": false
+      }
+    },
+    "invalidacion": null,
+    "objetivo": null,
+    "escenarios": [
+      {
+        "flecha": "⬆️",
+        "condicion": "Cierre sobre 14668",
+        "texto": "Si una vela de 4 horas cierra sobre 14668, el precio sale del rango hacia arriba."
+      },
+      {
+        "flecha": "↔️",
+        "condicion": "Entre 14220 y 14668",
+        "texto": "Si rompe un borde y vuelve a entrar, es falso quiebre y el objetivo pasa a ser el borde contrario."
+      },
+      {
+        "flecha": "⬇️",
+        "condicion": "Cierre bajo 14220",
+        "texto": "Si una vela de 4 horas cierra bajo 14220, el precio sale del rango hacia abajo."
+      }
+    ],
+    "salida": "Dentro del rango se opera el falso quiebre: la posición se cierra si el precio vuelve a cerrar fuera del borde que había roto.",
+    "conceptos": [
+      "rango",
+      "falso-quiebre"
+    ],
+    "avisos": [
+      "las velas de W1 traen un salto de datos: se leen solo desde el salto",
+      "las velas de D1 traen un salto de datos: se leen solo desde el salto",
+      "sin línea diagonal vigente: se lee como rango entre el máximo y el mínimo de la última semana"
+    ],
+    "metricas": {
+      "atr": 81.07142857142857,
+      "atr_d1": 186.42857142857142,
+      "confluencia": 0.0,
+      "dist_vigilar_atr_d1": 0.40229885057471265,
+      "velas_desde_ruptura": 8.0,
+      "doble_confirmacion": 1.0,
+      "contra_secuencia": 0.0
+    },
+    "vela": 1791806400
+  }
+}

@@ -1,0 +1,146 @@
+{
+  "ticker": "GBPUSD",
+  "semana": "2026-W43",
+  "motivo": "semanal",
+  "guardada": "2026-10-19T08:41-03:00",
+  "lectura": {
+    "ticker": "GBPUSD",
+    "marco": "H4",
+    "precio": 1.33246,
+    "direccion": "ALCISTA",
+    "estado": "RUPTURA",
+    "lineas": [
+      {
+        "rol": "accion",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1789977600,
+            1.33979
+          ],
+          [
+            1791763200,
+            1.3259
+          ]
+        ],
+        "marco": "H4",
+        "toques": 3,
+        "calidad": "A+",
+        "valor_actual": 1.32117,
+        "empinada": false
+      },
+      {
+        "rol": "objetivo",
+        "tipo": "horizontal",
+        "puntos": [
+          [
+            1744502400,
+            1.3342
+          ]
+        ],
+        "marco": "W1",
+        "toques": 5,
+        "calidad": "",
+        "valor_actual": 1.3342,
+        "empinada": false
+      },
+      {
+        "rol": "contexto",
+        "tipo": "horizontal",
+        "puntos": [
+          [
+            1772928000,
+            1.32747
+          ]
+        ],
+        "marco": "D1",
+        "toques": 7,
+        "calidad": "",
+        "valor_actual": 1.32747,
+        "empinada": false
+      }
+    ],
+    "en_prueba": null,
+    "vigilar": {
+      "precio": 1.32117,
+      "etiqueta": "línea bajista",
+      "linea": {
+        "rol": "accion",
+        "tipo": "diagonal",
+        "puntos": [
+          [
+            1789977600,
+            1.33979
+          ],
+          [
+            1791763200,
+            1.3259
+          ]
+        ],
+        "marco": "H4",
+        "toques": 3,
+        "calidad": "A+",
+        "valor_actual": 1.32117,
+        "empinada": false
+      }
+    },
+    "invalidacion": null,
+    "objetivo": {
+      "precio": 1.3342,
+      "etiqueta": "objetivo",
+      "linea": {
+        "rol": "objetivo",
+        "tipo": "horizontal",
+        "puntos": [
+          [
+            1744502400,
+            1.3342
+          ]
+        ],
+        "marco": "W1",
+        "toques": 5,
+        "calidad": "",
+        "valor_actual": 1.3342,
+        "empinada": false
+      }
+    },
+    "escenarios": [
+      {
+        "flecha": "⬆️",
+        "condicion": "Sobre 1,32117",
+        "texto": "La vela de 4 horas ya cerró sobre la línea bajista: mientras siga sobre 1,32117, la ruptura sigue vigente con objetivo en 1,33420."
+      },
+      {
+        "flecha": "↔️",
+        "condicion": "Vuelta a 1,32117",
+        "texto": "Si el precio vuelve a 1,32117 y la respeta, es un retesteo y la ruptura se confirma."
+      },
+      {
+        "flecha": "⬇️",
+        "condicion": "Cierre bajo 1,32117",
+        "texto": "Si una vela de 4 horas vuelve a cerrar bajo 1,32117, la ruptura fue falsa."
+      }
+    ],
+    "salida": "Todavía no hay línea de seguridad trazada, así que no hay salida que medir: conviene esperar a que se trace antes de entrar.",
+    "conceptos": [
+      "linea-de-tendencia",
+      "ruptura-por-cierre",
+      "linea-de-seguridad"
+    ],
+    "avisos": [
+      "la ruptura no tiene línea de seguridad trazable: el riesgo no se puede medir"
+    ],
+    "metricas": {
+      "atr": 0.0027642857142857113,
+      "atr_d1": 0.006174285714285672,
+      "confluencia": 0.0,
+      "dist_vigilar_atr_d1": 1.8285515964831258,
+      "dist_accion_atr_d1": 1.8285515964831258,
+      "dist_objetivo_atr_d1": 0.2818139750115828,
+      "velas_desde_ruptura": 22.0,
+      "doble_confirmacion": 1.0,
+      "contra_secuencia": 0.0
+    },
+    "vela": 1792368000
+  }
+}

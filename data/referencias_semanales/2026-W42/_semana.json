@@ -1,0 +1,30 @@
+{
+  "semana": "2026-W42",
+  "estrategia": "tori",
+  "generado": "2026-10-12 19:56",
+  "elegidos": [
+    "USDCLP",
+    "EURUSD",
+    "XAUUSD",
+    "WTI.spot",
+    "COPPER"
+  ],
+  "puntajes": {
+    "XAUUSD": 90.0,
+    "USDCLP": 40.0,
+    "XAGUSD": 40.0,
+    "WTI.spot": 35.0,
+    "EURUSD": 30.0,
+    "COPPER": 0.0
+  },
+  "excluidos": [
+    {
+      "ticker": "USDJPY",
+      "excluido": "va contra la secuencia de los marcos mayores: es donde nacen las falsas rupturas"
+    },
+    {
+      "ticker": "GBPUSD",
+      "excluido": "va contra la secuencia de los marcos mayores: es donde nacen las falsas rupturas"
+    }
+  ]
+}
