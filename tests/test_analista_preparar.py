@@ -451,3 +451,14 @@ def test_seguimiento_con_entrada_real_fuera_del_stop_lo_dice(tmp_path):
         pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD", "entrada": 9999.0}), tmp_path / "s",
                     datetime(2026, 10, 14, 11, 0, tzinfo=SCL),
                     _lectores_seg(tmp_path, pd.DataFrame(columns=["time", "high", "low"]), 4124.0))
+
+
+def test_el_aviso_de_la_ingesta_de_acciones_llega_a_los_avisos_y_no_a_los_datos(tmp_path):
+    """Revisión final: una acción sin informes SEC por error lo avisa al director; no viaja a la pieza."""
+    empresa = {"proxima_earnings": None, "fuente_fecha": "yfinance (no oficial)", "ultimo_informe": None,
+               "avisos": ["No pude leer los informes de la SEC de XAUUSD en la última ingesta."]}
+    lec = _lectores(tmp_path / "ref", ancla=lambda t: ("acciones", {**fx.ANCLA_ORO, "ticker": "X", "cik": "1"}),
+                    empresa=lambda t, a: dict(empresa))
+    hecha = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES, lec)
+    assert empresa["avisos"][0] in hecha.avisos
+    assert "avisos" not in hecha.pieza["datos"]["empresa"]

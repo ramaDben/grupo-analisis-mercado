@@ -42,7 +42,9 @@ def test_una_fecha_ilegible_es_none_y_no_se_inventa():
     assert ia.fechas_earnings(["AAPL"], lambda t: "pronto")["AAPL"]["fecha"] is None
 
 
-def test_informes_sec_trae_solo_10k_10q_y_8k_con_su_url_y_el_user_agent():
+def test_informes_sec_trae_solo_10k_10q_y_8k_con_su_url_y_el_user_agent(monkeypatch):
+    # El User-Agent sale de SEC_USER_AGENT (revisión final): ya no hay uno fijo sin contacto.
+    monkeypatch.setenv("SEC_USER_AGENT", "Equipo GI analistas")
     visto = {}
 
     def descargar(url, headers):
@@ -119,3 +121,71 @@ def test_pipeline_datos_corre_acciones_despues_de_precios():
     nombres = [p.nombre for p in pd_.PASOS]
     assert nombres.index("acciones") == nombres.index("precios") + 1
     assert next(p for p in pd_.PASOS if p.nombre == "acciones").script.name == "ingesta_acciones.py"
+
+
+# ───────────────────────────────────────────── revisión final: la falla de la SEC no es silenciosa
+
+
+def test_consultar_sec_devuelve_el_error_y_informes_sec_sigue_vacia():
+    def descargar(url, headers):
+        raise RuntimeError("403 Forbidden")
+
+    informes, error = ia.consultar_sec("0000320193", descargar)
+    assert informes == [] and "403" in error
+    assert ia.consultar_sec("0000320193", lambda u, headers: SUBMISSIONS)[1] is None
+
+
+def test_la_ingesta_guarda_el_error_por_ticker_y_lo_cuenta(tmp_path):
+    def sec(url, headers):
+        if "CIK0000789019" in url:
+            raise RuntimeError("403 Forbidden")
+        return SUBMISSIONS
+
+    anclas = {"#AAPL": ("acciones", {"ticker": "AAPL", "cik": "0000320193"}),
+              "#MSFT": ("acciones", {"ticker": "MSFT", "cik": "0000789019"})}
+    r = ia.ingestar(anclas, tmp_path, ahora=datetime(2026, 10, 20, 15, 0, tzinfo=timezone.utc),
+                    descargar_fecha=lambda t: "2026-10-29", descargar_sec=sec)
+    est = json.loads((tmp_path / "estados_financieros.json").read_text(encoding="utf-8"))["acciones"]
+    assert "403" in est["#MSFT"]["error"] and est["#MSFT"]["informes"] == []
+    assert "error" not in est["#AAPL"]
+    assert r["fallas_sec"] == 1 and r["con_informes"] == 1
+
+
+def test_main_sale_con_error_si_falla_la_sec_en_todas(monkeypatch, capsys):
+    monkeypatch.setattr(ia, "ingestar", lambda anclas: {"fechas": 14, "con_informes": 0, "fallas_sec": 14,
+                                                        "total": 14, "error_sec": "RuntimeError: 403"})
+    assert ia.main() != 0
+    salida = capsys.readouterr().out
+    assert "SEC" in salida and "14" in salida
+    monkeypatch.setattr(ia, "ingestar", lambda anclas: {"fechas": 14, "con_informes": 13, "fallas_sec": 1,
+                                                        "total": 14, "error_sec": "RuntimeError: 403"})
+    assert ia.main() == 0
+    assert "1" in capsys.readouterr().out
+
+
+def test_leer_empresa_avisa_si_el_ticker_no_tiene_informes_por_error(tmp_path):
+    hoy = datetime(2026, 10, 20, 15, 0, tzinfo=timezone.utc)
+    anclas = {"#AAPL": ("acciones", {"ticker": "AAPL", "cik": "0000320193"})}
+
+    def sec(url, headers):
+        raise RuntimeError("403 Forbidden")
+
+    ia.ingestar(anclas, tmp_path, ahora=hoy, descargar_fecha=lambda t: "2026-10-29", descargar_sec=sec)
+    e = ia.leer_empresa("#AAPL", tmp_path, ahora=hoy)
+    assert e["ultimo_informe"] is None
+    assert e["avisos"] and "SEC" in e["avisos"][0]
+    assert "—" not in e["avisos"][0] and "–" not in e["avisos"][0]
+    _ingesta(tmp_path, hoy)
+    assert ia.leer_empresa("#AAPL", tmp_path, ahora=hoy)["avisos"] == []
+
+
+def test_el_user_agent_sale_de_sec_user_agent_y_sin_el_no_se_consulta(monkeypatch):
+    monkeypatch.delenv("SEC_USER_AGENT", raising=False)
+    with pytest.raises(RuntimeError, match="SEC_USER_AGENT"):
+        ia._descargar_sec("https://data.sec.gov/submissions/CIK0000320193.json", {"User-Agent": ia._user_agent()})
+    monkeypatch.setenv("SEC_USER_AGENT", "Equipo GI analistas")
+    visto = {}
+    ia.informes_sec("0000320193", lambda u, headers: visto.update(headers) or SUBMISSIONS)
+    assert visto["User-Agent"] == "Equipo GI analistas"
+    doc = (RAIZ / "docs" / "bot-analistas.md").read_text(encoding="utf-8")
+    assert "SEC_USER_AGENT" in doc

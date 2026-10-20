@@ -368,6 +368,8 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
     base = lec.base_referencias or rs.DIR
     referencia, guardada, origen = lec.referencia(estrategia, ticker, digits, rs.semana_de(ahora), ahora, base)
     avisos: list[str] = []
+    if empresa is not None:
+        avisos += empresa.pop("avisos", [])  # el aviso es para quien pide, no un dato de la pieza
     if origen == "semanal":
         motivo = _caducidad_de_la_semanal(referencia, estrategia, ticker, digits, ahora, lec)
         if motivo:

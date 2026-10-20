@@ -130,6 +130,7 @@ suite. La frescura es de 14 días en los seis segmentos.
 **Límites declarados.**
 - El calendario (`obtener_calendario_macro`) no cubre Suiza, Japón ni Reino Unido: `PAISES` es nominal (Chile, EE.UU., China y Zona Euro).
 - La ingesta de acciones (earnings e informes SEC) no trae cifras de resultados; la fecha de earnings sola no habilita la publicación.
+- La ingesta de acciones (`scripts/ingesta_acciones.py`, último paso de `pipeline_datos.py`) consulta la SEC con el User-Agent de la variable de entorno `SEC_USER_AGENT`, que tiene que traer nombre y correo de contacto de quien consulta (lo exige la SEC; el correo lo pone el director, no va en el repo). Sin la variable no se consulta. Cada acción guarda su `error` en `estados_financieros.json`, la corrida imprime cuántas fallaron y sale con código 1 si fallaron todas; el bot avisa cuando una acción sale sin su último informe por un error.
 - La regla de que el marketing o los comunicados de un emisor no cuentan como análisis vive solo en el prompt, no en código.
 - Dominios `sin_verificar` (responden 401, 403 o 429 a un GET, no están descartados): `admin.ch`, `etf.com`, `fidelity.com`, `glassnode.com`, `grayscale.com`, `lme.com`, `morningstar.com`, `opec.org`, `spglobal.com` (medido el 2026-10-20 con `verificar_dominios_fuentes.py`, 0 muertas).
 - El calendario de feriados XETRA cubre 2027 de forma parcial.

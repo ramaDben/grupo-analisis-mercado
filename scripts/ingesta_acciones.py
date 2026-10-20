@@ -39,9 +39,12 @@ FUENTE_FECHA = "yfinance (no oficial)"
 FORMAS = ("10-K", "10-Q", "8-K")
 MAX_INFORMES = 5
 DIAS = ("lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo")
-# SEC exige un User-Agent que identifique a quien consulta. Sin correo personal: se puede reemplazar
-# con la variable SEC_USER_AGENT.
-USER_AGENT = os.environ.get("SEC_USER_AGENT") or "GI-analistas grupo-analisis-mercado (research; sin fines de scraping masivo)"
+# La SEC exige un User-Agent con nombre y correo de contacto de quien consulta. Sale de la variable de
+# entorno SEC_USER_AGENT (docs/bot-analistas.md); sin ella no se consulta, y cada acción queda con su error.
+
+
+def _user_agent() -> str:
+    return os.environ.get("SEC_USER_AGENT", "").strip()
 
 
 # ───────────────────────────────────────────────────────────── descargadores reales
@@ -57,6 +60,8 @@ def _descargar_fecha(ticker: str) -> Any:
 
 
 def _descargar_sec(url: str, headers: dict[str, str]) -> dict[str, Any]:
+    if not headers.get("User-Agent"):
+        raise RuntimeError("falta SEC_USER_AGENT: la SEC exige un User-Agent con nombre y correo de contacto")
     import requests
 
     r = requests.get(url, headers=headers, timeout=20)
@@ -90,12 +95,16 @@ def fechas_earnings(tickers: list[str], descargar: Callable[[str], Any]) -> dict
     return salida
 
 
-def informes_sec(cik: str, descargar: Callable[[str, dict[str, str]], dict[str, Any]]) -> list[dict[str, Any]]:
-    """Los últimos 10-K, 10-Q y 8-K del emisor, del más nuevo al más viejo. Vacío si SEC no responde."""
+def consultar_sec(cik: str, descargar: Callable[[str, dict[str, str]], dict[str, Any]]
+                  ) -> tuple[list[dict[str, Any]], str | None]:
+    """(informes, error): los últimos 10-K, 10-Q y 8-K del emisor, del más nuevo al más viejo.
+
+    Si la SEC no responde, los informes quedan vacíos y el error dice por qué: no se calla.
+    """
     cik10 = str(cik).zfill(10)
     try:
         crudo = descargar(f"https://data.sec.gov/submissions/CIK{cik10}.json",
-                          {"User-Agent": USER_AGENT, "Accept": "application/json"})
+                          {"User-Agent": _user_agent(), "Accept": "application/json"})
         r = crudo["filings"]["recent"]
         filas = zip(r["form"], r["filingDate"], r["reportDate"], r["accessionNumber"], r["primaryDocument"])
         salida = []
@@ -104,9 +113,14 @@ def informes_sec(cik: str, descargar: Callable[[str, dict[str, str]], dict[str, 
                 continue
             url = f"https://www.sec.gov/Archives/edgar/data/{int(cik10)}/{acc.replace('-', '')}/{doc}"
             salida.append({"forma": forma, "fecha": fecha, "periodo": periodo or None, "url": url})
-        return sorted(salida, key=lambda i: i["fecha"], reverse=True)[:MAX_INFORMES]
-    except Exception:  # noqa: BLE001
-        return []
+        return sorted(salida, key=lambda i: i["fecha"], reverse=True)[:MAX_INFORMES], None
+    except Exception as exc:  # noqa: BLE001  se guarda el motivo por ticker
+        return [], f"{exc.__class__.__name__}: {exc}"[:200]
+
+
+def informes_sec(cik: str, descargar: Callable[[str, dict[str, str]], dict[str, Any]]) -> list[dict[str, Any]]:
+    """Solo los informes de `consultar_sec`. Vacío si SEC no responde."""
+    return consultar_sec(cik, descargar)[0]
 
 
 def _escribir(ruta: Path, datos: dict[str, Any]) -> None:
@@ -122,13 +136,18 @@ def ingestar(anclas: dict[str, tuple[str, dict[str, Any]]], destino: Path = DIR_
     fechas = fechas_earnings([a["ticker"] for _, a in anclas.values()], descargar_fecha)
     calendario: dict[str, Any] = {}
     estados: dict[str, Any] = {}
+    errores: list[str] = []
     for mt5, (_, ancla) in anclas.items():
         calendario[mt5] = fechas[ancla["ticker"]]
-        estados[mt5] = {"cik": ancla["cik"], "informes": informes_sec(ancla["cik"], descargar_sec)}
+        informes, error = consultar_sec(ancla["cik"], descargar_sec)
+        estados[mt5] = {"cik": ancla["cik"], "informes": informes, **({"error": error} if error else {})}
+        if error:
+            errores.append(error)
     _escribir(destino / "earnings_calendar.json", {"ingesta": sello, "acciones": calendario})
     _escribir(destino / "estados_financieros.json", {"ingesta": sello, "acciones": estados})
     return {"fechas": sum(1 for v in calendario.values() if v["fecha"]),
-            "con_informes": sum(1 for v in estados.values() if v["informes"]), "total": len(anclas)}
+            "con_informes": sum(1 for v in estados.values() if v["informes"]), "total": len(anclas),
+            "fallas_sec": len(errores), "error_sec": errores[0] if errores else None}
 
 
 def _falla(mensaje: str):
@@ -160,9 +179,13 @@ def leer_empresa(ticker: str, base: Path = DIR_ACCIONES, *, ahora: datetime | No
     if fecha and date.fromisoformat(fecha) >= hoy:
         d = date.fromisoformat(fecha)
         proxima = f"{DIAS[d.weekday()]} {d:%d/%m}"
-    informes = ((est.get("acciones") or {}).get(ticker) or {}).get("informes") or []
+    sec = (est.get("acciones") or {}).get(ticker) or {}
+    informes = sec.get("informes") or []
+    avisos = [] if informes or not sec.get("error") else [
+        f"No pude leer los informes de la SEC de {ticker} en la última ingesta ({sec['error']}): "
+        "el análisis sale sin el último informe oficial."]
     return {"proxima_earnings": proxima, "fuente_fecha": fila.get("fuente", FUENTE_FECHA),
-            "ultimo_informe": informes[0] if informes else None}
+            "ultimo_informe": informes[0] if informes else None, "avisos": avisos}
 
 
 def main() -> int:
@@ -173,7 +196,12 @@ def main() -> int:
         print("No hay acciones con ancla en el catálogo.")
         return 1
     r = ingestar(anclas)
-    print(f"acciones: {r['total']} · fechas de resultados {r['fechas']} · con informes SEC {r['con_informes']}")
+    print(f"acciones: {r['total']} · fechas de resultados {r['fechas']} · con informes SEC {r['con_informes']}"
+          f" · fallas SEC {r['fallas_sec']}")
+    if r["fallas_sec"]:
+        print(f"SEC: falló en {r['fallas_sec']} de {r['total']} acciones; primer error: {r['error_sec']}")
+    if r["fallas_sec"] == r["total"]:
+        return 1  # sin ningún informe SEC la ingesta no sirve, aunque yfinance haya traído fechas
     return 0 if (r["fechas"] or r["con_informes"]) else 1
 
 
