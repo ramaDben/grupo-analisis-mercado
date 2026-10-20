@@ -1174,6 +1174,16 @@ def test_el_refresco_respeta_los_niveles_fijados_por_el_director():
     assert nuevo["soporte"] == "4.090,00" and nuevo["resistencia"] == "4.200,00"
 
 
+def test_el_refresco_pone_la_invalidacion_fijada_en_escenario_y_salida():
+    p = _payload_listo()
+    p["_procedencia"]["niveles_fijados"] = {"invalidacion": 4080.0}
+    nuevo, _ = pc.refrescar_payload_lectura(p, MEDIA_HORA, _lectura_alcista(), 2,
+                                            [4119.0, 4120.0], 18.5, lambda a, b: None)
+    bajista = next(e for e in nuevo["lectura"]["escenarios"] if e["flecha"] == "⬇️")
+    assert "4.080,00" in bajista["condicion"] and "4.080,00" in bajista["texto"]
+    assert "4.080,00" in nuevo["lectura"]["salida"]
+
+
 def test_la_divergencia_de_la_estrategia_frena_la_pieza():
     vista = []
 
