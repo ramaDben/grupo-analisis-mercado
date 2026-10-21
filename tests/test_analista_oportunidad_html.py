@@ -824,7 +824,7 @@ def test_sin_linea_de_seguridad_el_hero_muestra_el_nivel_a_vigilar_y_no_sin_nive
     a = p["datos"]["activos"][0]
     a["fmt"]["invalidacion"] = ""
     _, hero = _hero(tmp_path, a)
-    assert "sin nivel" not in hero and "Línea de seguridad" not in hero
+    assert "sin nivel" not in hero and "Línea de control" not in hero
     assert "Nivel a vigilar" in hero and a["fmt"]["vigilar"] in hero
 
 
@@ -860,6 +860,13 @@ def test_el_objetivo_no_lleva_el_color_de_marca_para_no_leerse_como_ganancia(tmp
     _, hero = _hero(tmp_path)
     cifra = re.search(r'Primer objetivo</p><p class="hero-cifra"[^>]*color:([^;]+);', hero)
     assert cifra and cifra.group(1).upper() == "#FFFFFF"
+
+
+def test_la_tarjeta_de_la_linea_no_sugiere_garantia(tmp_path):
+    """Director, 2026-10-21: «seguridad» suena a garantía; la tarjeta dice «control» y explica qué pasa si se cruza."""
+    _, hero = _hero(tmp_path)
+    assert "Línea de control" in hero and "Línea de seguridad" not in hero
+    assert "la lectura deja de valer" in hero
 
 
 def test_la_tarjeta_senala_el_objetivo_como_el_primero(tmp_path):

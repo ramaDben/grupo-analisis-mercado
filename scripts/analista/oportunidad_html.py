@@ -821,7 +821,7 @@ def _hero_activo(a: dict[str, Any], titular: str, c: dict[str, str], bajada: str
         chicas = [("Precio de referencia", f["precio"], "Al momento del análisis")]
         if f.get("invalidacion"):
             cruce = "la supera" if dir_nombre == "BAJISTA" else "cae bajo ella"
-            chicas.append(("Línea de seguridad", f["invalidacion"], f"Si el precio {cruce}, la lectura deja de valer"))
+            chicas.append(("Línea de control", f["invalidacion"], f"Si el precio {cruce}, la lectura deja de valer"))
         elif vigilar and f.get("objetivo_tori"):
             chicas.append(("Nivel a vigilar", vigilar, "La línea que mira el análisis"))
 
