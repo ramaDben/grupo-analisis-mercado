@@ -18,7 +18,7 @@ AHORA = datetime(2026, 10, 12, 11, 0, tzinfo=SCL)
 
 def _lec(ticker):
     lin = Linea("seguridad", "diagonal", ((100, 10.0), (200, 11.0)), "H4", 3, "A+", 11.5)
-    ref = Referencia(11.5, "línea alcista de seguridad", lin)
+    ref = Referencia(11.5, "línea alcista de control", lin)
     esc = tuple(Escenario(f, "c", "t") for f in ("⬆️", "↔️", "⬇️"))
     return Lectura(ticker=ticker, marco="H4", precio=12.0, direccion="ALCISTA", estado="TENDENCIA",
                    lineas=(lin,), en_prueba=None, vigilar=ref, invalidacion=ref, objetivo=None,

@@ -35,7 +35,7 @@ from estrategia.contrato import Escenario, Lectura, Linea, Referencia, lectura_a
 
 def _lectura(ticker, precio, vigilar, objetivo, direccion):
     lin = Linea("seguridad", "diagonal", ((100, vigilar - 1), (200, vigilar)), "H4", 3, "A+", vigilar)
-    ref = Referencia(vigilar, f"línea {direccion.lower()} de seguridad", lin)
+    ref = Referencia(vigilar, f"línea {direccion.lower()} de control", lin)
     obj = Referencia(objetivo, "objetivo") if objetivo else None
     esc = tuple(Escenario(f, "c", "t") for f in ("⬆️", "↔️", "⬇️"))
     return lectura_a_dict(Lectura(

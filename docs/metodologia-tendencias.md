@@ -1,5 +1,8 @@
 # Metodología de líneas de tendencia (doctrina)
 
+> **Nombre para el cliente (director, 2026-10-21).** En todo lo que lee el cliente la *línea de seguridad* de esta doctrina se llama **línea de control**: «seguridad» suena a garantía. Este documento conserva el término de la doctrina de Tori y de sus fuentes; el código conserva `seguridad` como identificador interno.
+
+
 > **Estado: borrador para revisión del director (2026-10-09).** No cambia todavía ninguna pieza
 > ni ningún cálculo. Cuando se apruebe, alimenta dos trabajos con su propio spec: el motor que
 > traza las líneas (subproyecto 2) y los textos y gráficos del carrusel, el informe, Avisos y la

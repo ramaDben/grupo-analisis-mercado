@@ -55,7 +55,7 @@ Esta guía está diseñada para **explicar de forma simple, visual y didáctica 
 * **Qué es:** Es una línea de abanico acelerada.
 * **Cuándo y cómo se dibuja:**
   - Cuando el precio despega con fuerza a favor de la operación, la Línea de Seguridad original queda muy lejos.
-  - Para no regalar ganancias acumuladas en un retroceso profundo, se ancla una nueva semirrecta en el **último toque confirmado de la línea de seguridad** y se une con el siguiente mínimo más alto.
+  - Para no regalar ganancias acumuladas en un retroceso profundo, se ancla una nueva semirrecta en el **último toque confirmado de la línea de control** y se une con el siguiente mínimo más alto.
   - Esta línea tiene una **pendiente más empinada**. Si el precio rompe esta línea rápida, el trader puede asegurar ganancias anticipadamente (trailing stop ajustado).
 
 ---

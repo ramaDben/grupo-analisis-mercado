@@ -143,7 +143,7 @@
     },
     "invalidacion": {
       "precio": 4194.42,
-      "etiqueta": "línea bajista de seguridad",
+      "etiqueta": "línea bajista de control",
       "linea": {
         "rol": "seguridad",
         "tipo": "diagonal",
@@ -187,7 +187,7 @@
       {
         "flecha": "⬆️",
         "condicion": "Cierre sobre 4.194,42",
-        "texto": "Si una vela de 4 horas cierra sobre 4.194,42, la línea de seguridad se rompe y la lectura deja de valer."
+        "texto": "Si una vela de 4 horas cierra sobre 4.194,42, la línea de control se rompe y la lectura deja de valer."
       },
       {
         "flecha": "↔️",
@@ -200,7 +200,7 @@
         "texto": "La vela de 4 horas ya cerró bajo la línea alcista: mientras siga bajo 4.202,72, la ruptura sigue vigente con objetivo en 4.140,06."
       }
     ],
-    "salida": "En ventas por ruptura, sal si una vela de 4 horas cierra sobre la línea de seguridad (la que protege tu operación), hoy en 4.194,42. Mientras no pase, mantén la posición; el objetivo en 4.140,06 es una referencia, no una orden de salida.",
+    "salida": "En ventas por ruptura, sal si una vela de 4 horas cierra sobre la línea de control (la que vigila tu operación), hoy en 4.194,42. Mientras no pase, mantén la posición; el objetivo en 4.140,06 es una referencia, no una orden de salida.",
     "conceptos": [
       "linea-de-tendencia",
       "ruptura-por-cierre",

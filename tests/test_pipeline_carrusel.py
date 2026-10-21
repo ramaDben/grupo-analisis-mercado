@@ -531,7 +531,7 @@ def test_sin_la_nota_de_su_marco_el_payload_no_se_construye():
 def test_construir_mensaje_alerta_cumple_reglas_canonicas_whatsapp():
     payload = payload_de_prueba()
     payload["titular"] = "El oro sigue sobre su línea"
-    payload["parrafo"] = "El oro mantiene la tendencia sobre su línea de seguridad."
+    payload["parrafo"] = "El oro mantiene la tendencia sobre su línea de control."
     msg = pc.construir_mensaje_alerta(payload)
 
     # 1. Resumen al inicio
@@ -888,7 +888,7 @@ def test_despachar_modo_pruebas_redirige_a_banco_de_pruebas(tmp_path, monkeypatc
 # ─────────────────────────────────────────────────────────────────────────────
 def _msg_compacto():
     payload = payload_de_prueba()
-    payload["titular"] = "El oro sigue sobre su línea de seguridad"
+    payload["titular"] = "El oro sigue sobre su línea de control"
     payload["parrafo"] = "PARRAFO_LARGO_QUE_YA_NO_VA_EN_EL_MENSAJE"
     return pc.construir_mensaje_alerta(payload), payload
 
@@ -1018,12 +1018,12 @@ def _lectura_alcista(objetivo=True):
         Escenario("⬇️", "Cierre bajo 4.080,00",
                   "Si una vela de 4 horas cierra bajo 4.080,00, la línea alcista se rompe."),
     )
-    ref = Referencia(4080.0, "línea alcista de seguridad", seg)
+    ref = Referencia(4080.0, "línea alcista de control", seg)
     return Lectura(
         ticker="XAUUSD", marco="H4", precio=4120.0, direccion="ALCISTA", estado="TENDENCIA",
         lineas=(seg,), en_prueba=None, vigilar=ref, invalidacion=ref, objetivo=obj, escenarios=esc,
-        salida=("En compras, sal si una vela de 4 horas cierra bajo la línea de seguridad (la que "
-                "protege tu operación), hoy en 4.080,00. Mientras no pase, mantén la posición y "
+        salida=("En compras, sal si una vela de 4 horas cierra bajo la línea de control (la que "
+                "vigila tu operación), hoy en 4.080,00. Mientras no pase, mantén la posición y "
                 "deja correr la ganancia."),
         conceptos=(), avisos=(), metricas={}, vela=200,
     )
@@ -1072,11 +1072,11 @@ def test_el_mensaje_sale_de_la_lectura():
     p = _payload_lectura()
     p["titular"] = "El oro sigue sobre su línea"
     msg = pc.construir_mensaje_alerta(p)
-    assert "📌 Nivel a vigilar: 4.080,00 (línea alcista de seguridad)" in msg
+    assert "📌 Nivel a vigilar: 4.080,00 (línea alcista de control)" in msg
     assert "⬆️ Mientras el precio cierre sobre 4.080,00, la tendencia alcista sigue." in msg
     assert "⏱️ *Temporalidad*: 4H · marco swing (de una a dos semanas)" in msg
     assert "💡 Por qué 4H acá:" in msg
-    assert "En compras, sal si una vela de 4 horas cierra bajo la línea de seguridad" in msg
+    assert "En compras, sal si una vela de 4 horas cierra bajo la línea de control" in msg
     assert "al otro lado" not in msg and "No hay objetivo fijo" not in msg
     assert "falso quiebre" not in msg
     assert "—" not in msg and "–" not in msg

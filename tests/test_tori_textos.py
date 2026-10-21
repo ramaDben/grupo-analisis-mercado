@@ -96,15 +96,15 @@ def _salida(estado, direccion, **kw):
     from estrategia.contrato import Referencia
     from estrategia.tori.textos import salida
 
-    inv = None if kw.pop("sin_linea", False) else Referencia(4192.09, "línea de seguridad")
+    inv = None if kw.pop("sin_linea", False) else Referencia(4192.09, "línea de control")
     return salida(estado, direccion, "H4", inv, 2, **kw)
 
 
 def test_la_salida_nombra_la_operacion_y_el_sentido_segun_la_direccion():
     alcista = _salida("TENDENCIA", "ALCISTA")
     bajista = _salida("TENDENCIA", "BAJISTA")
-    assert alcista.startswith("En compras, sal si una vela de 4 horas cierra bajo la línea de seguridad")
-    assert bajista.startswith("En ventas, sal si una vela de 4 horas cierra sobre la línea de seguridad")
+    assert alcista.startswith("En compras, sal si una vela de 4 horas cierra bajo la línea de control")
+    assert bajista.startswith("En ventas, sal si una vela de 4 horas cierra sobre la línea de control")
     assert "4.192,09" in alcista and "4.192,09" in bajista
     assert "En compras por ruptura" in _salida("RUPTURA", "ALCISTA")
     assert "En ventas por ruptura" in _salida("RUPTURA", "BAJISTA")

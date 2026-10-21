@@ -239,7 +239,7 @@ def test_con_publicador_el_correo_lleva_urls_y_ninguna_imagen_embebida(tmp_path)
     html = oh.armar(fx.pieza_oportunidad(tmp_path, dolar=True), tmp_path, EJECUTIVO, fx.AUTOR, HOY, publicar)
     correo = _correo(html)
     assert "data:image" not in correo
-    assert len(re.findall(r'<img src="https://ejemplo\.test/correos/[^"]+"', correo)) == 3  # oro, dólar y calendario
+    assert len(re.findall(r'<img src="https://ejemplo\.test/correos/[^"]+"', correo)) == 4  # logo del hero, oro, dólar y calendario
     assert "grafico_usdidx.png" in pedidas and "grafico_xauusd.png" in pedidas
     # La página que ve el ejecutivo conserva sus imágenes embebidas: se abre sin red.
     assert "data:image" in html.split('id="correo-root"')[0]
@@ -503,11 +503,11 @@ def test_titular_base_armado_por_codigo(tmp_path):
     p = _pieza(tmp_path)
     a = p["datos"]["activos"][0]
     tit = oh.titular_base(a)
-    assert tit == "El oro en 4.186,17: el nivel 4.227,32 define la lectura bajista hacia 4.149,96"
+    assert tit == "El oro mantiene su tendencia bajista: mientras respete su línea, la lectura sigue en pie"
 
     a_alcista = dict(a, nombre="Plata", lectura=dict(a["lectura"], direccion="ALCISTA"))
     tit_alcista = oh.titular_base(a_alcista)
-    assert tit_alcista == "La plata en 4.186,17: el nivel 4.227,32 define la lectura alcista hacia 4.149,96"
+    assert tit_alcista == "La plata mantiene su tendencia alcista: mientras respete su línea, la lectura sigue en pie"
 
     html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
     correo = _correo(html)
@@ -757,7 +757,7 @@ def _activo_en_rango(tmp_path):
 
 def test_un_activo_en_rango_no_arma_titular_ni_preheader_con_huecos(tmp_path):
     p, a = _activo_en_rango(tmp_path)
-    assert oh.titular_base(a).endswith("se mueve en rango entre 4.138,40 y 4.195,31")
+    assert oh.titular_base(a) == "El oro se mueve en rango y no tiene una tendencia que lo guíe"
     assert oh.titular_correo(a, p["editorial"]["fuentes"], variante=True) == oh.titular_base(a)
     pre = oh.preheader_sugerido(a, p["editorial"]["fuentes"], p["datos"])
     assert pre.startswith("Nuestra lectura en 4H") and "4.138,40" in pre and "línea de ." not in pre
@@ -769,6 +769,162 @@ def test_en_rango_la_tira_de_cifras_muestra_los_bordes_y_no_sin_nivel(tmp_path):
     correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
     assert "Soporte del rango" in correo and "Resistencia del rango" in correo
     assert "sin nivel" not in correo
+
+
+def _hero(tmp_path, activo=None):
+    """El HTML de la apertura oscura de un activo, con el activo de la fixture (o el que se pase)."""
+    p = _pieza(tmp_path)
+    a = activo or p["datos"]["activos"][0]
+    c = oh.paleta_correo(oh.paleta())
+    return a, oh._hero_activo(a, oh.titular_base(a), c, bajada="Bajada de prueba.", autor=fx.AUTOR, d=p["datos"])
+
+
+def test_el_titular_del_hero_no_lleva_cifras(tmp_path):
+    """Un prospecto novato no procesa tres precios de cinco decimales: la tesis va en el titular y los niveles, en las tarjetas."""
+    p = _pieza(tmp_path)
+    a = p["datos"]["activos"][0]
+    assert not re.search(r"\d", oh.titular_base(a))
+    p2, a2 = _activo_en_rango(tmp_path)
+    assert not re.search(r"\d", oh.titular_base(a2))
+
+
+@pytest.mark.parametrize("estado,direccion,esperado", [
+    ("RUPTURA", "ALCISTA", "El oro rompió su línea bajista: la lectura se inclina al alza"),
+    ("RUPTURA", "BAJISTA", "El oro rompió su línea alcista: la lectura se inclina a la baja"),
+    ("REBOTE", "ALCISTA", "El oro rebota en su línea: la lectura alcista sigue en pie"),
+    ("PRUEBA", "BAJISTA", "El oro pone a prueba su línea: ahí se juega la lectura bajista"),
+])
+def test_el_titular_dice_la_causa_segun_el_estado_de_la_lectura(tmp_path, estado, direccion, esperado):
+    """La causa sale del estado que ya trae la lectura (nunca de un motivo inventado) y no lleva cifras."""
+    a = _pieza(tmp_path)["datos"]["activos"][0]
+    a = dict(a, lectura=dict(a["lectura"], estado=estado, direccion=direccion))
+    assert oh.titular_base(a) == esperado
+    assert not re.search(r"\d", oh.titular_base(a))
+
+
+def test_el_hero_traduce_la_jerga_de_las_tarjetas(tmp_path):
+    _, hero = _hero(tmp_path)
+    for jerga in ("Precio de foto", "· swing", "Invalida el sesgo", "Sesgo técnico", "Proyección técnica"):
+        assert jerga not in hero
+    assert "Precio de referencia" in hero and "Al momento del análisis" in hero
+    assert "Horizonte: de una a dos semanas" in hero
+
+
+def test_el_hero_pone_las_cifras_de_la_lectura_y_no_otras(tmp_path):
+    a, hero = _hero(tmp_path)
+    f = a["fmt"]
+    for clave in ("precio", "invalidacion", "objetivo_tori"):
+        assert f[clave] in hero
+    assert "sin nivel" not in hero
+
+
+def test_sin_linea_de_seguridad_el_hero_muestra_el_nivel_a_vigilar_y_no_sin_nivel(tmp_path):
+    """GBPUSD 2026-10-21: la ruptura no trae línea de control trazable (`invalidacion` vacía)."""
+    p = _pieza(tmp_path)
+    a = p["datos"]["activos"][0]
+    a["fmt"]["invalidacion"] = ""
+    _, hero = _hero(tmp_path, a)
+    assert "sin nivel" not in hero and "Línea de control" not in hero
+    assert "Nivel a vigilar" in hero and a["fmt"]["vigilar"] in hero
+
+
+def test_sin_objetivo_el_hero_no_imprime_sin_nivel(tmp_path):
+    p = _pieza(tmp_path)
+    a = p["datos"]["activos"][0]
+    a["fmt"]["objetivo_tori"] = ""
+    _, hero = _hero(tmp_path, a)
+    assert "sin nivel" not in hero and a["fmt"]["vigilar"] in hero
+
+
+def test_en_rango_el_hero_conserva_los_bordes_y_dice_lateral(tmp_path):
+    _, a = _activo_en_rango(tmp_path)
+    _, hero = _hero(tmp_path, a)
+    assert "Soporte del rango" in hero and "Resistencia del rango" in hero and "LATERAL" in hero
+    assert "sin nivel" not in hero
+
+
+def test_la_linea_de_seguridad_se_explica_segun_el_lado_en_que_esta_el_precio(tmp_path):
+    """En una lectura bajista la línea de control queda SOBRE el precio: no se «pierde», se supera."""
+    p = _pieza(tmp_path)
+    bajista = p["datos"]["activos"][0]
+    assert bajista["lectura"]["direccion"] == "BAJISTA"
+    _, hero = _hero(tmp_path, bajista)
+    assert "Si el precio la supera, la lectura deja de valer" in hero and "la pierde" not in hero
+    alcista = dict(bajista, lectura=dict(bajista["lectura"], direccion="ALCISTA"))
+    _, hero = _hero(tmp_path, alcista)
+    assert "Si el precio cae bajo ella, la lectura deja de valer" in hero
+
+
+def test_el_objetivo_no_lleva_el_color_de_marca_para_no_leerse_como_ganancia(tmp_path):
+    """El cromo no opina: el verde de marca sobre un objetivo bajista se lee como «ganancia»."""
+    _, hero = _hero(tmp_path)
+    cifra = re.search(r'Primer objetivo</p><p class="hero-cifra"[^>]*color:([^;]+);', hero)
+    assert cifra and cifra.group(1).upper() == "#FFFFFF"
+
+
+def test_la_tarjeta_de_la_linea_no_sugiere_garantia(tmp_path):
+    """Director, 2026-10-21: «seguridad» suena a garantía; la tarjeta dice «control» y explica qué pasa si se cruza."""
+    _, hero = _hero(tmp_path)
+    assert "Línea de control" in hero and "Línea de seguridad" not in hero
+    assert "la lectura deja de valer" in hero
+
+
+def test_la_tarjeta_senala_el_objetivo_como_el_primero(tmp_path):
+    """Director, 2026-10-21: el objetivo de la lectura es una referencia, no el destino final."""
+    _, hero = _hero(tmp_path)
+    assert "Primer objetivo" in hero
+
+
+def test_el_objetivo_dice_a_cuanto_esta_del_precio_calculado_desde_la_lectura(tmp_path):
+    """Sale de `lectura.precio` y `lectura.objetivo.precio` en ejecución: nada escrito a mano (regla 1)."""
+    a, hero = _hero(tmp_path)
+    lec = a["lectura"]
+    pct = abs(lec["objetivo"]["precio"] - lec["precio"]) / lec["precio"] * 100
+    assert f"A {pct:.2f}".replace(".", ",") + " % del precio de referencia" in hero
+
+
+def test_en_rango_la_direccion_y_el_precio_van_en_grande_y_los_bordes_en_chico(tmp_path):
+    _, a = _activo_en_rango(tmp_path)
+    _, hero = _hero(tmp_path, a)
+    assert hero.index("Hacia dónde apunta") < hero.index("Soporte del rango")
+    assert hero.index("LATERAL") < hero.index("Soporte del rango") < hero.index("Resistencia del rango")
+
+
+def test_el_hero_se_acomoda_al_celular(tmp_path):
+    """Menos relleno lateral en pantallas angostas: las etiquetas largas no se parten ni quedan 3 líneas enanas."""
+    plantilla = (RAIZ / "templates" / "oportunidad" / "pieza.html").read_text(encoding="utf-8")
+    assert re.search(r"\.pad-hero\{[^}]*padding", plantilla)
+    _, hero = _hero(tmp_path)
+    assert "Vigencia del análisis" not in hero and "Vigencia:" in hero
+
+
+def test_el_hero_lleva_el_logo_de_gi_y_ningun_aviso_legal(tmp_path):
+    """Director, 2026-10-21: el hero lleva solo el logo; el aviso legal ya va en el pie del correo."""
+    _, hero = _hero(tmp_path)
+    assert hero.count('alt="Grupo Inteligencia"') == 1 and "data:image/png;base64," in hero
+    assert "asesoría" not in hero and "Prohibida su reproducción" not in hero
+
+
+def test_el_hero_cierra_con_un_gancho_hacia_el_cuerpo(tmp_path):
+    _, hero = _hero(tmp_path)
+    assert "Abajo:" in hero
+
+
+def test_el_microtexto_del_hero_se_lee_en_el_celular_y_el_aviso_legal_en_fondo_claro(tmp_path):
+    """El gris más claro del hero no puede heredarlo el aviso legal, que va sobre fondo claro."""
+    c = oh.paleta_correo(oh.paleta())
+    assert c["hero_rotulo"].upper() == "#A9BBBE"
+    p = _pieza(tmp_path)
+    marco = re.search(r'<template id="correo-marco">(.*?)</template>', oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY), re.S).group(1)
+    legal = re.search(r'<p[^>]*color:([^;]+);[^>]*>Análisis general de mercado', marco)
+    assert legal and legal.group(1).strip().upper() != c["hero_rotulo"].upper()
+
+
+def test_el_hero_no_usa_el_vocabulario_de_senal_ni_el_guion_largo(tmp_path):
+    _, hero = _hero(tmp_path)
+    texto = re.sub(r"<[^>]+>", " ", hero).lower()
+    for vetada in ("stop", "entrada", "oportunidad", "—", "–"):
+        assert vetada not in texto
 
 
 # ───────────────────────────────────────────── tests contrato: textos editables correo (2026-10-19)

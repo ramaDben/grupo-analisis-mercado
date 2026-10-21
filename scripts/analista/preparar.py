@@ -159,7 +159,7 @@ def _grafico_lectura(ticker: str, nombre: str, lectura, destino: Path, digits: i
     """El gráfico de la lámina: las líneas de la lectura y cada nivel que cita su texto.
 
     Con las velas del carrusel y no 60: con menos, el ancla de una diagonal cae fuera de la
-    ventana y la línea no se dibuja (la de seguridad del oro, W41).
+    ventana y la línea no se dibuja (la de control del oro, W41).
 
     Con `limpio=True` (el seguimiento) el gráfico traza solo `niveles` y el precio de hoy, sobre
     fondo transparente: la lámina pone el degradado y la marca de agua.

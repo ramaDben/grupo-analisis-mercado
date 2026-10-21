@@ -36,7 +36,7 @@ from estrategia.contrato import Escenario, Lectura, Linea, Referencia  # noqa: E
 
 def _lectura(ticker, precio, vigilar, invalidacion, objetivo, direccion="ALCISTA", estado="TENDENCIA"):
     lin = Linea("seguridad", "diagonal", ((100, vigilar - 1), (200, vigilar)), "H4", 3, "A+", vigilar)
-    ref = Referencia(vigilar, f"línea {direccion.lower()} de seguridad", lin)
+    ref = Referencia(vigilar, f"línea {direccion.lower()} de control", lin)
     inv = Referencia(invalidacion, "invalida la lectura") if invalidacion is not None else None
     obj = Referencia(objetivo, "objetivo") if objetivo is not None else None
     esc = tuple(Escenario(f, "c", "t") for f in ("⬆️", "↔️", "⬇️"))
@@ -56,7 +56,7 @@ def test_significa_sale_de_la_lectura_alcista():
     capas = C.capas_de("usdclp", ACTIVO, _lectura("USDCLP", 931.4, 925.0, 920.5, 938.25), ED)
     sig = capas["significa"]
     assert "Lectura de 4 horas: tendencia alcista" in sig
-    assert "925,00" in sig and "línea alcista de seguridad" in sig
+    assert "925,00" in sig and "línea alcista de control" in sig
     assert "la lectura deja de valer con un cierre de 4 horas bajo 920,50" in sig.lower()
 
 

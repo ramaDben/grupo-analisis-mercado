@@ -86,7 +86,7 @@
     },
     "invalidacion": {
       "precio": 157.144,
-      "etiqueta": "línea alcista de seguridad",
+      "etiqueta": "línea alcista de control",
       "linea": {
         "rol": "seguridad",
         "tipo": "diagonal",
@@ -143,7 +143,7 @@
         "texto": "Si una vela de 4 horas cierra bajo 157,144, la línea alcista se rompe y la tendencia deja de valer."
       }
     ],
-    "salida": "En compras, sal si una vela de 4 horas cierra bajo la línea de seguridad (la que protege tu operación), hoy en 157,144. Mientras no pase, mantén la posición; el objetivo en 158,138 es una referencia, no una orden de salida.",
+    "salida": "En compras, sal si una vela de 4 horas cierra bajo la línea de control (la que vigila tu operación), hoy en 157,144. Mientras no pase, mantén la posición; el objetivo en 158,138 es una referencia, no una orden de salida.",
     "conceptos": [
       "linea-de-tendencia",
       "linea-de-seguridad"
