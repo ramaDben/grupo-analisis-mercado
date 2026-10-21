@@ -65,6 +65,12 @@ PROCEDENCIA = Procedencia(
                    ("Parámetros nuestros: scripts/estrategia/tori/parametros.py",),
                    ("F3 p. 103",), (),
                    "Ninguno de los umbrales viene de Tori; se fijaron mirando el universo real y no se midió su resultado."),
+        Fundamento("El intradía en 1H se usa para el seguimiento aunque vaya contra los marcos mayores",
+                   ("Decisión del director, 2026-10-21",),
+                   ("F1 vía F3 pp. 51-52", "F3 pp. 105-106"), (),
+                   "Contradice la doctrina de Tori (doctrina §2.11), que desaconseja operar contra "
+                   "la secuencia de los marcos mayores por riesgo de falsas rupturas. Se adopta "
+                   "para alinear la narrativa del seguimiento intradía entre texto y lámina."),
     ),
     modos_de_falla=(
         "Reversiones bruscas en varios mercados a la vez (F6).",
