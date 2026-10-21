@@ -195,7 +195,7 @@ def payload_seguimiento(activo: dict[str, Any], ev: dict[str, Any], precio_vivo:
         "cifra_px": _px_cifra(f["precio"], _fmt(precio_vivo, d)), "avance": avance_real or avance,
         "lectura_hoy": lectura_hoy,
         "invitacion": INVITACION_ACTIVA if viva else INVITACION_CERRADA,
-        "pie_imagen": f"{activo['nombre']} · velas de 4 horas · MetaTrader 5",
+        "pie_imagen": f"{activo['nombre']} · velas de 30 minutos · MetaTrader 5",
         "firma": firma(autor), "aviso": AVISO_SEGUIMIENTO, "chart_png": str(chart),
     }
 

@@ -148,7 +148,7 @@ def series_de_lineas(lineas, tiempos: list[int], proyeccion: int = PROYECCION
     return series, omitidas
 
 
-LIMPIO_N_VELAS = 36  # un tramo corto (6 días de 4H): con 60 las velas quedaban finas y el pico viejo aplastaba lo de hoy
+LIMPIO_N_VELAS = 36  # un tramo corto (el seguimiento usa velas de 30 min): con 60 las velas quedaban finas y el pico viejo aplastaba lo de hoy
 LIMPIO_ANCHO, LIMPIO_ALTO = 888, 590  # el lienzo de la tarjeta de seguimiento, 1 px = 1 px de lámina
 SEPARACION_ETIQUETAS = 46  # px entre centros: la píldora mide 42 y necesita aire
 COLOR_NIVEL = {"ENTRADA": "#FFFFFF", "STOP": "#E84040", "OBJETIVO": "#00DC82"}
