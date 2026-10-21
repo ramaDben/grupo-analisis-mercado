@@ -148,7 +148,9 @@ def series_de_lineas(lineas, tiempos: list[int], proyeccion: int = PROYECCION
     return series, omitidas
 
 
-LIMPIO_N_VELAS = 36  # un tramo corto (el seguimiento usa velas de 30 min): con 60 las velas quedaban finas y el pico viejo aplastaba lo de hoy
+LIMPIO_N_VELAS_MIN = 48  # ventana mínima adaptativa (seguimiento intradía H1, 2 días hábiles)
+LIMPIO_N_VELAS_MAX = 120  # tope máximo de velas para cubrir niveles antes de recurrir a zona ampliada
+LIMPIO_N_VELAS = LIMPIO_N_VELAS_MIN  # compatibilidad hacia atrás: mínimo por defecto
 LIMPIO_ANCHO, LIMPIO_ALTO = 888, 590  # el lienzo de la tarjeta de seguimiento, 1 px = 1 px de lámina
 SEPARACION_ETIQUETAS = 46  # px entre centros: la píldora mide 42 y necesita aire
 COLOR_NIVEL = {"ENTRADA": "#FFFFFF", "STOP": "#E84040", "OBJETIVO": "#00DC82"}
@@ -200,14 +202,67 @@ def _font_b64() -> str:
     return base64.b64encode(FUENTE_PJ_700.read_bytes()).decode("ascii") if FUENTE_PJ_700.exists() else ""
 
 
+def velas_para_niveles(
+    rows: list[dict[str, Any]],
+    niveles=None,
+    minimo: int = LIMPIO_N_VELAS_MIN,
+    maximo: int = LIMPIO_N_VELAS_MAX,
+    tolerancia: float = 1e-6,
+) -> int:
+    """Ventana adaptativa: elige cuántas velas finales mostrar (al menos `minimo`).
+
+    Amplía hacia atrás hasta que el rango alto-bajo de las velas cubra todos los niveles
+    señalados (con `tolerancia`), sin exceder `maximo`. Si no hay niveles o ya caen dentro
+    de las últimas `minimo` velas, devuelve `minimo`.
+    """
+    if not rows:
+        return 0
+    n_total = len(rows)
+    if n_total <= minimo:
+        return n_total
+
+    precios: list[float] = []
+    for item in (niveles or ()):
+        if isinstance(item, (int, float)):
+            precios.append(float(item))
+        elif item:
+            precios.append(float(item[0]))
+
+    if not precios:
+        return min(n_total, minimo)
+
+    tope = min(n_total, maximo)
+    p_min, p_max = min(precios), max(precios)
+
+    v_hi = max(float(r["high"]) for r in rows[-minimo:])
+    v_lo = min(float(r["low"]) for r in rows[-minimo:])
+
+    if v_lo - tolerancia <= p_min and p_max <= v_hi + tolerancia:
+        return minimo
+
+    for k in range(minimo + 1, tope + 1):
+        r = rows[-k]
+        hi, lo = float(r["high"]), float(r["low"])
+        if hi > v_hi:
+            v_hi = hi
+        if lo < v_lo:
+            v_lo = lo
+        if v_lo - tolerancia <= p_min and p_max <= v_hi + tolerancia:
+            return k
+
+    return tope
+
+
 def construir_html_limpio(rows: list[dict[str, Any]], digits: int = 2, niveles=None,
                           ancho: int = LIMPIO_ANCHO, alto: int = LIMPIO_ALTO) -> str:
-    """Gráfico limpio de la tarjeta de seguimiento: ~60 velas, los niveles de hoy y el precio de hoy.
+    """Gráfico limpio de la tarjeta de seguimiento: velas adaptativas, niveles y precio de hoy.
 
     Sin leyenda, barra de pie, grilla, zonas ni logo: lo que la lámina cita en precios es solo lo
     que este gráfico traza. Fondo transparente (la lámina pone su degradado y su marca de agua).
     """
-    rows = rows[-LIMPIO_N_VELAS:]
+    tol = 0.5 * 10 ** -digits
+    n = velas_para_niveles(rows, niveles, minimo=LIMPIO_N_VELAS_MIN, maximo=LIMPIO_N_VELAS_MAX, tolerancia=tol)
+    rows = rows[-n:]
     hoy = float(rows[-1]["close"])
     filas = [(float(p), str(n).upper()) for p, n in (niveles or ())]
     tol = 0.5 * 10 ** -digits
@@ -265,13 +320,21 @@ def construir_html_limpio(rows: list[dict[str, Any]], digits: int = 2, niveles=N
 
     zona = x2 - AIRE_VELAS - 10
     paso = zona / len(rows)
+    # Ancho de vela y grosor de mecha adaptativos: con hasta 120 velas el paso baja a ~4 px,
+    # donde una mecha de 4 px taparía al cuerpo y se pisaría con la vela vecina.
+    if paso >= 8.0:
+        ancho_mecha = "4"
+        w_cuerpo = paso * 0.72
+    else:
+        ancho_mecha = f"{max(1.5, min(3.0, paso * 0.35)):.1f}"
+        w_cuerpo = max(2.5, paso * 0.70)
     partes: list[str] = []
     for i, r in enumerate(rows):
         x = 10 + i * paso + paso / 2
-        o, c, h, l = (float(r[k]) for k in ("open", "close", "high", "low"))
+        o, c, hi, lo = (float(r[k]) for k in ("open", "close", "high", "low"))
         col = COLOR_LIMPIO_SUBE if c >= o else COLOR_LIMPIO_BAJA
-        partes.append(f'<line x1="{x:.1f}" x2="{x:.1f}" y1="{y(h):.1f}" y2="{y(l):.1f}" stroke="{col}" stroke-width="4"/>')
-        partes.append(f'<rect x="{x - paso * 0.36:.1f}" width="{paso * 0.72:.1f}" y="{y(max(o, c)):.1f}" '
+        partes.append(f'<line x1="{x:.1f}" x2="{x:.1f}" y1="{y(hi):.1f}" y2="{y(lo):.1f}" stroke="{col}" stroke-width="{ancho_mecha}"/>')
+        partes.append(f'<rect x="{x - w_cuerpo / 2:.1f}" width="{w_cuerpo:.1f}" y="{y(max(o, c)):.1f}" '
                       f'height="{max(4.0, abs(y(o) - y(c))):.1f}" fill="{col}"/>')
 
     reales = [y(p) for p, _, _ in etiquetas]
@@ -717,7 +780,8 @@ def generar_grafico_tv(
         digits = VALID_TICKERS.get(ticker, 2)
 
     if limpio:
-        n_velas = LIMPIO_N_VELAS
+        timeframe = timeframe or "H1"
+        n_velas = LIMPIO_N_VELAS_MAX
         if (ancho, alto) == (1400, 780):
             ancho, alto = LIMPIO_ANCHO, LIMPIO_ALTO
     elif lineas is None:
@@ -748,8 +812,13 @@ def generar_grafico_tv(
     velas_dict = df.to_dict(orient="records")
     con_indicadores = calcular_indicadores(velas_dict)
 
-    # Recortar a las últimas `n_velas` para el gráfico
-    recorte = con_indicadores[-n_velas:]
+    # Recortar para el gráfico: adaptativo según niveles en modo limpio, fijo en modo estándar
+    if limpio:
+        n_sel = velas_para_niveles(con_indicadores, niveles, minimo=LIMPIO_N_VELAS_MIN,
+                                   maximo=LIMPIO_N_VELAS_MAX, tolerancia=0.5 * 10 ** -digits)
+        recorte = con_indicadores[-n_sel:]
+    else:
+        recorte = con_indicadores[-n_velas:]
 
     html = construir_html_tradingview(
         rows=recorte,
