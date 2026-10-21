@@ -371,15 +371,24 @@ def test_el_grafico_del_analisis_traza_los_niveles_de_la_lamina(tmp_path):
     assert 4227.32 in precios and 4149.96 in precios and GRAFICOS[-1]["digits"] == 2
 
 
-def test_el_grafico_del_seguimiento_traza_la_simulacion_y_la_linea_de_hoy(tmp_path):
+def test_el_grafico_del_seguimiento_traza_la_oportunidad_de_hoy_y_el_vigilar(tmp_path):
+    """Lo que la lámina cita en precios es solo lo que el gráfico traza: ya no la simulación del lunes."""
     GRAFICOS.clear()
     oro = fx.activo_semanal()
     _foto(tmp_path, [oro])
-    pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD"}), tmp_path / "s", datetime(2026, 10, 14, 11, 0, tzinfo=SCL),
-                _lectores_seg(tmp_path, pd.DataFrame(columns=["time", "high", "low"]), 4124.0))
-    precios = {p for p, _ in GRAFICOS[-1]["niveles"]}
+    hecha = pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD"}), tmp_path / "s",
+                        datetime(2026, 10, 14, 11, 0, tzinfo=SCL),
+                        _lectores_seg(tmp_path, pd.DataFrame(columns=["time", "high", "low"]), 4124.0))
+    g = GRAFICOS[-1]
+    assert g["limpio"] is True
+    nombres = [n for _, n in g["niveles"]]
+    assert nombres[-1] == fx.lectura().vigilar.etiqueta.upper()
+    hoy = hecha.pieza["datos"]["oportunidad_hoy"]
+    if hoy:
+        assert {"ENTRADA", "STOP", "OBJETIVO"} <= set(nombres)
     esc = oro["escenario"]
-    assert {esc["entrada"], esc["stop"], esc["objetivo"], fx.lectura().vigilar.precio} <= precios
+    precios = {p for p, _ in g["niveles"]}
+    assert not {esc["entrada"], esc["stop"], esc["objetivo"]} & precios or hoy  # la simulación del lunes no se traza
 
 
 def test_el_grafico_real_pide_velas_suficientes_para_las_diagonales(tmp_path, monkeypatch):

@@ -125,7 +125,7 @@ def _avance(pct: int | None) -> str:
 def _bloque_hoy(hoy: dict[str, Any] | None, dia: str) -> dict[str, str]:
     """Los textos de la oportunidad de hoy en la lámina. Vacíos si hoy no hay niveles: la plantilla los oculta."""
     if not hoy:
-        return {"hoy_titulo": "", "hoy_niveles": "", "hoy_medidas": "", "hoy_condicion": "", "aviso_invalida": ""}
+        return {"hoy_titulo": "", "hoy_entrada": "", "hoy_stop": "", "hoy_objetivo": "", "hoy_medidas": "", "hoy_condicion": "", "aviso_invalida": ""}
     if hoy.get("cambia_direccion"):
         aviso = f"La lectura de hoy cambió de lado: queda invalidado lo enviado el {dia}."
     elif hoy.get("invalida"):
@@ -133,9 +133,8 @@ def _bloque_hoy(hoy: dict[str, Any] | None, dia: str) -> dict[str, str]:
     else:
         aviso = ""
     return {"hoy_titulo": f"Oportunidad de hoy · Escenario {hoy['direccion'].lower()}",
-            "hoy_niveles": f"Entrada {hoy['entrada']} · Stop {hoy['stop']} · Objetivo {hoy['objetivo']}",
-            "hoy_medidas": " · ".join(x for x in (f"ATR 4H {hoy['atr']}" if hoy["atr"] else "",
-                                                  f"Ratio {hoy['ratio']}", f"Plazo {hoy['plazo']}") if x),
+            "hoy_entrada": hoy["entrada"], "hoy_stop": hoy["stop"], "hoy_objetivo": hoy["objetivo"],
+            "hoy_medidas": f"Relación riesgo/beneficio {hoy['ratio']} · Plazo {hoy['plazo']}",
             "hoy_condicion": hoy.get("condicion") or "", "aviso_invalida": aviso}
 
 
@@ -154,6 +153,11 @@ def _bloque_entrada_real(esc: dict[str, Any], ev: dict[str, Any], real: float | 
     obj = float(esc["objetivo"])
     pct = int((precio_vivo - real) / (obj - real) * 100 + (0.5 if (precio_vivo - real) / (obj - real) >= 0 else -0.5))
     return texto, _avance(pct)
+
+
+def _px_cifra(*cifras: str) -> int:
+    """72 px (mínimo de la marca) hasta 8 caracteres; con más se achica para que las dos tarjetas quepan."""
+    return max(56, min(72, 72 * 8 // max(len(c) for c in cifras)))
 
 
 def payload_seguimiento(activo: dict[str, Any], ev: dict[str, Any], precio_vivo: float, lectura_hoy: str,
@@ -178,7 +182,6 @@ def payload_seguimiento(activo: dict[str, Any], ev: dict[str, Any], precio_vivo:
                   "descartada": "El precio rompió el nivel sin activar la entrada: simulación descartada",
                   "sin_simulacion": "Esta semana este activo no tiene simulación"}[estado]
     sin = estado == "sin_simulacion"
-    niveles = "" if sin else f"Entrada {f['entrada']} · Stop {f['stop']} · Objetivo {f['objetivo']}"
     viva = estado in ("entrada_pendiente", "en_curso")
     txt_real, avance_real = ("", "") if sin else _bloque_entrada_real(esc, ev, entrada_real, precio_vivo, d)
     dia = str((activo.get("foto") or {}).get("fecha") or "lunes").split()[0]
@@ -188,10 +191,9 @@ def payload_seguimiento(activo: dict[str, Any], ev: dict[str, Any], precio_vivo:
         "activo": f"{activo['nombre']} · {activo['ticker_visible']}",
         "direccion": (activo["lectura"]["direccion"] if sin else esc["direccion"]).lower(),
         "sello": SELLOS[ev["estado"]],
-        "precio_lunes": f["precio"], "precio_hoy": _fmt(precio_vivo, d), "avance": avance_real or avance,
-        "lectura_hoy": lectura_hoy, "niveles": niveles,
-        "entrada": "" if sin else f["entrada"], "stop": "" if sin else f["stop"],
-        "objetivo": "" if sin else f["objetivo"],
+        "precio_lunes": f["precio"], "precio_hoy": _fmt(precio_vivo, d),
+        "cifra_px": _px_cifra(f["precio"], _fmt(precio_vivo, d)), "avance": avance_real or avance,
+        "lectura_hoy": lectura_hoy,
         "invitacion": INVITACION_ACTIVA if viva else INVITACION_CERRADA,
         "pie_imagen": f"{activo['nombre']} · velas de 4 horas · MetaTrader 5",
         "firma": firma(autor), "aviso": AVISO_SEGUIMIENTO, "chart_png": str(chart),

@@ -74,7 +74,19 @@ def test_la_lamina_de_seguimiento_sin_simulacion(tmp_path):
                                4190.0, "La lectura del lunes sigue en pie.", "lunes 12/10", fx.AUTOR,
                                tmp_path / "g.png")
     assert p["sello"] == "SIN SIMULACIÓN" and p["direccion"] == "bajista"
-    assert "no tiene simulación" in p["avance"] and p["niveles"] == ""
+    assert "no tiene simulación" in p["avance"]
+
+
+def test_la_lamina_de_seguimiento_no_lleva_la_simulacion_del_lunes_ni_el_atr(tmp_path):
+    """Lo que la lámina cita en precios es solo lo que el gráfico traza: la oportunidad de hoy."""
+    hoy = {"direccion": "ALCISTA", "entrada": "4.060,00", "stop": "4.010,00", "objetivo": "4.210,00", "atr": "25,00",
+           "ratio": "1:3", "plazo": "1 a 2 días", "condicion": "", "invalida": False, "cambia_direccion": False}
+    p = cm.payload_seguimiento(fx.activo_semanal(), {"estado": "en_curso", "avance_pct": 40}, 4190.0,
+                               "La lectura del lunes sigue en pie.", "lunes 12/10", fx.AUTOR, tmp_path / "g.png", hoy)
+    for campo in ("niveles", "entrada", "stop", "objetivo", "hoy_niveles"):
+        assert campo not in p
+    assert (p["hoy_entrada"], p["hoy_stop"], p["hoy_objetivo"]) == ("4.060,00", "4.010,00", "4.210,00")
+    assert p["hoy_medidas"] == "Relación riesgo/beneficio 1:3 · Plazo 1 a 2 días" and "ATR" not in p["hoy_medidas"]
 
 
 def test_dos_niveles_con_el_mismo_precio_se_funden_en_una_fila(tmp_path):

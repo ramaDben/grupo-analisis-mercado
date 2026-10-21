@@ -12,16 +12,15 @@
   "firma": "Análisis: Nombre Apellido · Dirección de Análisis Técnico",
   "aviso": "Análisis técnico informativo. No es una instrucción de inversión.",
   "lectura_hoy": "La lectura del lunes sigue en pie.",
-  "niveles": "Entrada 4.000,00 · Stop 3.950,00 · Objetivo 4.150,00",
-  "entrada": "4.000,00",
-  "stop": "3.950,00",
-  "objetivo": "4.150,00",
   "invitacion": "¿Te interesa operar este escenario? Conversémoslo, con el stop como límite.",
   "entrada_real": "Tu entrada 4.002,00 · margen al stop 52,00",
   "hoy_titulo": "Oportunidad de hoy · Escenario alcista",
   "aviso_invalida": "",
-  "hoy_niveles": "Entrada 4.060,00 · Stop 4.010,00 · Objetivo 4.210,00",
-  "hoy_medidas": "ATR 4H 25,00 · Ratio 1:3 · Plazo 1 a 2 días",
+  "hoy_medidas": "Relación riesgo/beneficio 1:3 · Plazo 1 a 2 días",
   "hoy_condicion": "",
-  "logo_src": "assets/LOGO%20Blanco.png"
+  "logo_src": "assets/LOGO%20Blanco.png",
+  "hoy_entrada": "4.060,00",
+  "hoy_stop": "4.010,00",
+  "hoy_objetivo": "4.210,00",
+  "cifra_px": "72"
 }

@@ -196,3 +196,54 @@ def test_la_ventana_enmarca_a_la_diagonal_y_no_muestra_todas_las_velas():
     larga = {"tipo": "diagonal", "puntos": [{"time": tiempos[100], "value": 1.0}]}
     assert tg.ventana_visible([larga], tiempos) == 320
     assert tg.ventana_visible([], tiempos) == tg.VENTANA_SIN_DIAGONAL
+
+
+# ── Modo limpio (láminas de /seguimiento, diseño v5, 2026-10-20) ──────────────
+
+def test_el_modo_limpio_no_trae_leyenda_pie_ni_zonas_y_el_default_si():
+    limpio = tg.construir_html_tradingview(_rows(), "Oro", "H4", 2, soporte=10.0, resistencia=12.0,
+                                           niveles=[(11.0, "ENTRADA")], limpio=True)
+    for marca in ("tv-legend", "tv-caption-bar", "tv-topbar", 'class="zona"', "pintarZonas"):
+        assert marca not in limpio
+    normal = tg.construir_html_tradingview(_rows(), "Oro", "H4", 2, soporte=10.0, resistencia=12.0)
+    for marca in ("tv-legend", "tv-caption-bar", "pintarZonas"):
+        assert marca in normal  # el carrusel y la semanal no cambian
+
+
+def test_el_modo_limpio_traza_solo_los_niveles_de_hoy_con_nombre_completo():
+    html = tg.construir_html_limpio(_rows(), 2, [(13.0, "OBJETIVO"), (11.0, "ENTRADA"), (9.5, "STOP")])
+    for texto in ("OBJETIVO", "ENTRADA", "STOP", "HOY", "13,00", "11,00", "9,50"):
+        assert texto in html
+    assert html.count('class="pildora"') == 4  # tres niveles y el precio de hoy
+
+
+def test_el_modo_limpio_muestra_60_velas_como_maximo():
+    rows = [{"time": i, "open": 1.0, "high": 1.1, "low": 0.9, "close": 1.0} for i in range(200)]
+    html = tg.construir_html_limpio(rows, 2, [])
+    assert html.count('stroke-width="3.5"/><rect') == tg.LIMPIO_N_VELAS
+
+
+def test_dos_niveles_en_el_mismo_precio_son_una_sola_etiqueta():
+    html = tg.construir_html_limpio(_rows(), 2, [(11.0, "ENTRADA"), (11.0, "SOPORTE DEL RANGO")])
+    assert "ENTRADA · SOPORTE RANGO" in html  # fundida se acorta para caber en la píldora
+    assert html.count('class="pildora"') == 2
+
+
+def test_las_pildoras_que_chocan_se_separan_y_las_lejanas_no_se_mueven():
+    pos = tg.separar_etiquetas([300.0, 343.0, 500.0])  # agy midió 43 px entre HOY y ENTRADA
+    assert pos[1] - pos[0] >= tg.SEPARACION_ETIQUETAS - 1e-6
+    assert pos[2] == 500.0
+    cerca = tg.separar_etiquetas([300.0, 301.0, 302.0, 303.0])
+    assert all(b - a >= tg.SEPARACION_ETIQUETAS - 1e-6 for a, b in zip(cerca, cerca[1:]))
+
+
+def test_la_separacion_respeta_el_orden_original_y_el_borde():
+    pos = tg.separar_etiquetas([30.0, 25.0], techo=21.0)
+    assert pos[1] < pos[0]  # el de arriba sigue arriba
+    assert min(pos) >= 21.0
+    assert abs(pos[0] - pos[1]) >= tg.SEPARACION_ETIQUETAS - 1e-6
+
+
+def test_el_precio_de_las_pildoras_va_en_notacion_chilena():
+    assert tg._precio_es(4186.17, 2) == "4.186,17"
+    assert tg._precio_es(1.12247, 5) == "1,12247"
