@@ -218,9 +218,10 @@ def test_el_modo_limpio_traza_solo_los_niveles_de_hoy_con_nombre_completo():
 
 
 def test_el_modo_limpio_muestra_solo_un_tramo_corto_de_velas():
+    # Actualizado de 36 a 48 (LIMPIO_N_VELAS): mínimo adaptativo por defecto para el plan intradía en H1
     rows = [{"time": i, "open": 1.0, "high": 1.1, "low": 0.9, "close": 1.0} for i in range(200)]
     html = tg.construir_html_limpio(rows, 2, [])
-    assert html.count('stroke-width="4"/><rect') == tg.LIMPIO_N_VELAS == 36
+    assert html.count('stroke-width="4"/><rect') == tg.LIMPIO_N_VELAS == 48
 
 
 def test_dos_niveles_en_el_mismo_precio_son_una_sola_etiqueta():
@@ -262,3 +263,98 @@ def test_el_modo_limpio_amplia_los_niveles_lejanos_sin_apilarlos_y_dice_a_cuanto
 def test_el_modo_limpio_no_amplia_nada_si_los_niveles_estan_cerca_de_las_velas():
     rows = [{"time": i, "open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0} for i in range(40)]
     assert "ZONA AMPLIADA" not in tg.construir_html_limpio(rows, 2, [(99.5, "ENTRADA"), (101.5, "OBJETIVO")])
+
+
+def test_velas_para_niveles_ventana_minima_cuando_estan_dentro():
+    """Si los niveles caen dentro del rango de las últimas `minimo` velas, se devuelve `minimo`."""
+    rows = [{"time": i, "open": 100.0, "high": 105.0, "low": 95.0, "close": 100.0} for i in range(150)]
+    niveles = [(96.0, "STOP"), (104.0, "OBJETIVO")]
+    assert tg.velas_para_niveles(rows, niveles, minimo=48, maximo=120) == 48
+
+
+def test_velas_para_niveles_se_amplia_cuando_estan_lejos():
+    """Si un nivel queda fuera de las últimas 48 velas pero dentro de una vela anterior, amplía hacia atrás."""
+    rows = [{"time": i, "open": 100.0, "high": 105.0, "low": 95.0, "close": 100.0} for i in range(150)]
+    rows[-70]["high"] = 115.0
+    niveles = [(112.0, "OBJETIVO")]
+    assert tg.velas_para_niveles(rows, niveles, minimo=48, maximo=120) == 70
+
+
+def test_velas_para_niveles_ignora_el_nivel_inalcanzable_y_cubre_los_demas():
+    """Un nivel que ni con `maximo` velas se cubre (la línea de la semana) no ensancha la ventana."""
+    rows = [{"time": i, "open": 100.0, "high": 105.0, "low": 95.0, "close": 100.0} for i in range(150)]
+    rows[-70]["high"] = 115.0
+    niveles = [(112.0, "OBJETIVO"), (150.0, "SEMANA")]
+    assert tg.velas_para_niveles(rows, niveles, minimo=48, maximo=120) == 70
+
+
+def test_velas_para_niveles_sin_ningun_nivel_alcanzable_deja_la_ventana_minima():
+    rows = [{"time": i, "open": 100.0, "high": 105.0, "low": 95.0, "close": 100.0} for i in range(150)]
+    assert tg.velas_para_niveles(rows, [(130.0, "OBJETIVO")], minimo=48, maximo=120) == 48
+
+
+def test_zona_ampliada_solo_aparece_si_aun_con_tope_hay_niveles_fuera():
+    """La zona ampliada es el último recurso: no aparece si ampliando velas el nivel queda dentro,
+    pero sí aparece si aun con 120 velas queda fuera."""
+    rows = [{"time": i, "open": 100.0, "high": 105.0, "low": 95.0, "close": 100.0} for i in range(150)]
+    # Caso 1: Nivel en 112.0. En 48 velas está fuera, pero en la vela -75 hubo un pico de 115.0
+    rows[-75]["high"] = 115.0
+    html_cubierto = tg.construir_html_limpio(rows, 2, [(112.0, "OBJETIVO")])
+    assert "ZONA AMPLIADA" not in html_cubierto
+
+    # Caso 2: Nivel en 150.0. Ni con 120 velas se cubre (el precio de hoy es 100.0)
+    html_extremo = tg.construir_html_limpio(rows, 2, [(150.0, "OBJETIVO")])
+    assert "ZONA AMPLIADA" in html_extremo
+
+
+def test_el_modo_limpio_html_trae_la_cantidad_de_velas_esperada():
+    """El SVG generado por construir_html_limpio incluye exactamente la cantidad adaptativa de velas."""
+    rows = [{"time": i, "open": 100.0, "high": 105.0, "low": 95.0, "close": 100.0} for i in range(150)]
+    # Sin niveles lejanos: exactamente 48 velas
+    html_min = tg.construir_html_limpio(rows, 2, [(101.0, "ENTRADA")])
+    assert html_min.count("<rect x=") == 48
+
+    # Con nivel lejano a 75 velas: exactamente 75 velas
+    rows[-75]["high"] = 115.0
+    html_ampliado = tg.construir_html_limpio(rows, 2, [(112.0, "OBJETIVO")])
+    assert html_ampliado.count("<rect x=") == 75
+
+    # Con nivel inalcanzable: la ventana no se ensancha en vano, queda en el mínimo
+    html_lejos = tg.construir_html_limpio(rows, 2, [(160.0, "OBJETIVO")])
+    assert html_lejos.count("<rect x=") == 48
+
+
+def test_generar_grafico_tv_limpio_pide_maximo_velas_y_recorta(monkeypatch, tmp_path):
+    """generar_grafico_tv(limpio=True) pide LIMPIO_N_VELAS_MAX + 20 a MT5 y recorta a las necesarias."""
+    vistos: dict = {}
+    from market_data_mcp import mt5_client
+
+    monkeypatch.setattr(mt5_client, "connect", lambda: None)
+
+    def rates(ticker, tf, n):
+        vistos["rates"] = (tf, n)
+        filas = [{"time": 1_000_000 + i * 3600, "open": 100.0, "high": 105.0, "low": 95.0,
+                  "close": 100.0} for i in range(n)]
+        if n >= 60:
+            filas[-60]["high"] = 115.0
+        df = _Df(n)
+        df.filas = filas
+        return df
+
+    monkeypatch.setattr(mt5_client, "get_rates", rates)
+    monkeypatch.setattr(tg, "renderizar_png", lambda html, destino, **kw: destino)
+
+    def html(rows, simbolo, timeframe, **kw):
+        vistos["html"] = {"rows": rows, "timeframe": timeframe, **kw}
+        return ""
+
+    monkeypatch.setattr(tg, "construir_html_tradingview", html)
+
+    tg.generar_grafico_tv("USDCLP", "Dólar", tmp_path / "g.png", timeframe="H1",
+                          niveles=[(112.0, "OBJETIVO")], limpio=True)
+
+    assert vistos["rates"] == ("H1", tg.LIMPIO_N_VELAS_MAX + 20)
+    assert len(vistos["html"]["rows"]) == 60
+    assert vistos["html"]["timeframe"] == "H1"
+    assert vistos["html"]["limpio"] is True
+

@@ -17,14 +17,27 @@ MARCOS = Marcos(
     },
 )
 
+MARCOS_INTRADIA = Marcos(
+    contexto=("W1", "D1", "H4"),
+    operativo="H1",
+    velas={"W1": 156, "D1": 250, "H4": 180, "H1": 600},
+    etiquetas={
+        "W1": Etiqueta("contexto", "de meses"),
+        "D1": Etiqueta("posicional", "de semanas"),
+        "H4": Etiqueta("swing", "de una a dos semanas"),
+        "H1": Etiqueta("intradía", "de 8 a 10 horas"),
+    },
+)
+
 
 class Tori:
     nombre = "tori"
     marcos = MARCOS
     procedencia = PROCEDENCIA
 
-    def __init__(self, parametros: Parametros = PARAMETROS) -> None:
+    def __init__(self, parametros: Parametros = PARAMETROS, marcos: Marcos = MARCOS) -> None:
         self.p = parametros
+        self.marcos = marcos
 
     def leer(self, ticker, velas, digits, en_curso=None):
         return _lectura.leer(ticker, velas, digits, en_curso, self.marcos, self.p)
@@ -42,3 +55,7 @@ class Tori:
 
 def crear() -> Tori:
     return Tori()
+
+
+def crear_intradia(parametros: Parametros = PARAMETROS) -> Tori:
+    return Tori(parametros=parametros, marcos=MARCOS_INTRADIA)

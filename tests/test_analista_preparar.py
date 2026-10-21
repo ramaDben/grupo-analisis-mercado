@@ -274,12 +274,13 @@ def _foto(tmp_path, activos):
               tmp_path / "registro.json")
 
 
-def _lectores_seg(tmp_path, velas, precio, hoy=None):
+def _lectores_seg(tmp_path, velas, precio, hoy=None, intradia=None):
     def lector(ticker, marcos, extra=0):
         return {"H4": velas}, None
     lec = _lectores(tmp_path / "ref", registro=tmp_path / "registro.json", velas=lector)
     lec.lectura_actual = lambda est, t, d, lector, ahora, referencia=None: (hoy or fx.lectura(precio=precio),
                                                                            {"H4": velas})
+    lec.intradia = lambda ticker, digits, ahora, velas_: intradia  # el plan de hoy (1H); None = no cotiza
     return lec
 
 
@@ -442,16 +443,51 @@ def test_si_la_direccion_es_la_misma_o_no_hay_historia_no_hay_anterior(tmp_path)
     assert "anterior" not in sin.pieza["datos"]
 
 
-def test_seguimiento_comunica_la_oportunidad_de_hoy_e_invalida_la_del_lunes(tmp_path):
-    oro = fx.activo_semanal()  # la foto del lunes es BAJISTA
-    _foto(tmp_path, [oro])
-    hoy = fx.lectura(precio=4124.0, direccion="ALCISTA", invalidacion=4060.0)
-    hecha = pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD"}), tmp_path / "s",
-                        datetime(2026, 10, 14, 11, 0, tzinfo=SCL),
-                        _lectores_seg(tmp_path, pd.DataFrame(columns=["time", "high", "low"]), 4124.0, hoy=hoy))
+def _seguimiento(tmp_path, intradia, monkeypatch, semanal=None):
+    monkeypatch.setattr("referencia_semanal.debe_reemplazar", lambda referencia, actual: False)  # la semana sigue en pie
+    _foto(tmp_path, [fx.activo_semanal()])  # la foto del lunes es BAJISTA
+    return pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD"}), tmp_path / "s",
+                       datetime(2026, 10, 14, 11, 0, tzinfo=SCL),
+                       _lectores_seg(tmp_path, pd.DataFrame(columns=["time", "high", "low"]), 4124.0,
+                                     hoy=semanal or fx.lectura(precio=4124.0, direccion="BAJISTA", invalidacion=4160.0),
+                                     intradia=intradia))
+
+
+def test_el_plan_intradia_contra_la_semana_no_la_invalida_y_lo_cuenta(tmp_path, monkeypatch):
+    intra = fx.lectura(precio=4124.0, direccion="ALCISTA", invalidacion=4060.0)
+    hecha = _seguimiento(tmp_path, intra, monkeypatch)
     d = hecha.pieza["datos"]
-    assert d["oportunidad_hoy"]["cambia_direccion"] and d["oportunidad_hoy"]["ratio"] == "1:3"
-    assert "invalidada" in d["whatsapp"] and "oportunidad de hoy es una compra" in d["whatsapp"]
+    assert d["plan_intradia"] and d["postura"]["caso"] == "contra"
+    hoy = d["oportunidad_hoy"]
+    assert hoy["ratio"] == "1:3" and hoy["plazo"] == "de 8 a 10 horas"
+    assert not hoy["cambia_direccion"] and not hoy["invalida"]  # la semana sigue vigente
+    assert "invalidada" not in d["whatsapp"] and "sentido contrario" in d["whatsapp"]
+
+
+def test_el_plan_intradia_en_el_mismo_sentido_confirma_la_semana(tmp_path, monkeypatch):
+    intra = fx.lectura(precio=4124.0, direccion="BAJISTA", invalidacion=4160.0)
+    d = _seguimiento(tmp_path, intra, monkeypatch).pieza["datos"]
+    assert d["postura"]["caso"] == "coinciden" and "confirma" in d["whatsapp"]
+
+
+def test_sin_plan_intradia_el_seguimiento_sale_con_la_semana_y_lo_avisa(tmp_path, monkeypatch):
+    hecha = _seguimiento(tmp_path, None, monkeypatch)
+    d = hecha.pieza["datos"]
+    assert not d["plan_intradia"] and d["oportunidad_hoy"] is None
+    assert d["postura"]["caso"] == "sin_plan_hoy" and "no cotiza" in hecha.avisos[0]
+
+
+def test_un_fallo_al_leer_el_plan_intradia_no_tumba_el_seguimiento(tmp_path):
+    _foto(tmp_path, [fx.activo_semanal()])
+    lec = _lectores_seg(tmp_path, pd.DataFrame(columns=["time", "high", "low"]), 4124.0)
+
+    def roto(*_a):
+        raise RuntimeError("sin terminal")
+
+    lec.intradia = roto
+    hecha = pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD"}), tmp_path / "s",
+                        datetime(2026, 10, 14, 11, 0, tzinfo=SCL), lec)
+    assert not hecha.pieza["datos"]["plan_intradia"] and "RuntimeError" in hecha.avisos[0]
 
 
 def test_seguimiento_con_entrada_real_fuera_del_stop_lo_dice(tmp_path):
