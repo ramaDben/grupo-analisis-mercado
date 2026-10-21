@@ -122,6 +122,10 @@ class Reloj:
     # yfinance cuando MT5 no le sirve un simbolo, y ese fallback es correcto pero
     # no es equivalente: son futuros (GC=F, CL=F, NQ=F) y no los CFD del broker.
     fuentes: dict[str, int] = field(default_factory=dict)
+    # Fuentes que respondieron por su respaldo (`OK_FALLBACK`). No es una falla:
+    # pipeline_ingesta documenta que el respaldo es un resultado valido. Se avisa
+    # aparte para que no pase en silencio.
+    avisos: list[str] = field(default_factory=list)
 
     @property
     def fresco(self) -> bool:
@@ -296,8 +300,13 @@ def estado_datos(data_central: Path | None = None, ahora: datetime | None = None
         _evaluar(r, data.get("ultima_ejecucion_utc"), ahora)
         fallidas = sorted(
             set(data.get("errores_por_fuente") or {})
-            | {f for f, s in (data.get("status_por_fuente") or {}).items() if s != "OK"}
+            | {f for f, s in (data.get("status_por_fuente") or {}).items()
+               if s not in ("OK", "OK_FALLBACK")}
         )
+        respaldo = sorted(f for f, s in (data.get("status_por_fuente") or {}).items()
+                          if s == "OK_FALLBACK")
+        if respaldo:
+            r.avisos.append(f"fuentes por respaldo (OK_FALLBACK): {', '.join(respaldo)}")
         if fallidas and r.error is None:
             r.error = f"fuentes con problemas: {', '.join(fallidas)}"
     est.relojes.append(r)
@@ -334,6 +343,8 @@ def imprimir_estado(est: EstadoDatos) -> None:
     for r in est.relojes:
         if r.fresco:
             print(f"  [OK]   {r.nombre:8s} {r.antiguedad_h:5.1f} h  ({r.describe})")
+            for aviso in r.avisos:
+                print(f"  [AVISO]{r.nombre:8s} {aviso}")
         else:
             edad = f"{r.antiguedad_h:5.1f} h  " if r.antiguedad_h is not None else "  --    "
             print(f"  [FALLA]{r.nombre:8s} {edad}{r.error}")
