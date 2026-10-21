@@ -154,6 +154,10 @@ def _contrato(ticker: str, precio: float) -> dict[str, Any]:
             "vol_paso": float(info.volume_step)}
 
 
+# La oportunidad semanal es swing de 4H; el seguimiento baja a 30 minutos para ver lo que pasó hoy.
+MARCO_GRAFICO_SEGUIMIENTO = "M30"
+
+
 def _grafico_lectura(ticker: str, nombre: str, lectura, destino: Path, digits: int | None = None,
                      niveles: list[tuple[float, str]] | None = None, limpio: bool = False) -> Path:
     """El gráfico de la lámina: las líneas de la lectura y cada nivel que cita su texto.
@@ -162,13 +166,14 @@ def _grafico_lectura(ticker: str, nombre: str, lectura, destino: Path, digits: i
     ventana y la línea no se dibuja (la de control del oro, W41).
 
     Con `limpio=True` (el seguimiento) el gráfico traza solo `niveles` y el precio de hoy, sobre
-    fondo transparente: la lámina pone el degradado y la marca de agua.
+    fondo transparente: la lámina pone el degradado y la marca de agua. Sus velas son de 30 minutos
+    (`MARCO_GRAFICO_SEGUIMIENTO`), no del marco de la lectura.
     """
     import pipeline_carrusel as pc
     from tradingview_grafico import generar_grafico_tv
 
     if limpio:
-        return generar_grafico_tv(ticker=ticker, nombre=nombre, destino=destino, timeframe=lectura.marco,
+        return generar_grafico_tv(ticker=ticker, nombre=nombre, destino=destino, timeframe=MARCO_GRAFICO_SEGUIMIENTO,
                                   digits=digits, lineas=lectura.lineas, niveles=niveles, limpio=True)
     return generar_grafico_tv(ticker=ticker, nombre=nombre, destino=destino, timeframe=lectura.marco,
                               n_velas=pc.VELAS_GRAFICO_TV, digits=digits, lineas=lectura.lineas,
