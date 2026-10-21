@@ -132,7 +132,7 @@ def _bloque_hoy(hoy: dict[str, Any] | None, dia: str) -> dict[str, str]:
         aviso = f"El plan del {dia} cerró en su stop: esta es la lectura de hoy."
     else:
         aviso = ""
-    return {"hoy_titulo": f"Lectura de hoy · Escenario {hoy['direccion'].lower()}",
+    return {"hoy_titulo": f"Plan de hoy · Escenario {hoy['direccion'].lower()}",
             "hoy_entrada": hoy["entrada"], "hoy_stop": hoy["stop"], "hoy_objetivo": hoy["objetivo"],
             "hoy_medidas": f"Relación riesgo/beneficio {hoy['ratio']} · Plazo {hoy['plazo']}",
             "hoy_condicion": hoy.get("condicion") or "", "aviso_invalida": aviso}
@@ -162,7 +162,7 @@ def _px_cifra(*cifras: str) -> int:
 
 def payload_seguimiento(activo: dict[str, Any], ev: dict[str, Any], precio_vivo: float, lectura_hoy: str,
                         datos_al: str, autor, chart: Path, hoy: dict[str, Any] | None = None,
-                        entrada_real: float | None = None) -> dict[str, Any]:
+                        entrada_real: float | None = None, postura: dict[str, Any] | None = None) -> dict[str, Any]:
     from analista.seguimiento import _fmt, paso_la_entrada
 
     f, esc, d = activo["fmt"], activo["escenario"], activo["digits"]
@@ -185,8 +185,18 @@ def payload_seguimiento(activo: dict[str, Any], ev: dict[str, Any], precio_vivo:
     viva = estado in ("entrada_pendiente", "en_curso")
     txt_real, avance_real = ("", "") if sin else _bloque_entrada_real(esc, ev, entrada_real, precio_vivo, d)
     dia = str((activo.get("foto") or {}).get("fecha") or "lunes").split()[0]
+    bloque_hoy = _bloque_hoy(hoy, dia)
+    if postura:
+        # La semana primero y el plan de hoy después: el puente abre la tarjeta del plan intradía.
+        lectura_hoy = postura["marco_semana"]
+        if hoy:
+            bloque_hoy["aviso_invalida"] = bloque_hoy["aviso_invalida"] or postura["puente"]
+            if hoy.get("calidad"):
+                bloque_hoy["hoy_titulo"] += f" · Línea {hoy['calidad']}"
+        else:
+            lectura_hoy = f"{lectura_hoy} {postura['plan_hoy']}"
     return {
-        **_bloque_hoy(hoy, dia), "entrada_real": txt_real, "logo_src": LOGO_LAMINA.resolve().as_uri(),
+        **bloque_hoy, "entrada_real": txt_real, "logo_src": LOGO_LAMINA.resolve().as_uri(),
         "chip": "SEGUIMIENTO DE LA SEMANA", "datos_al": datos_al,
         "activo": f"{activo['nombre']} · {activo['ticker_visible']}",
         "direccion": (activo["lectura"]["direccion"] if sin else esc["direccion"]).lower(),
@@ -195,7 +205,7 @@ def payload_seguimiento(activo: dict[str, Any], ev: dict[str, Any], precio_vivo:
         "cifra_px": _px_cifra(f["precio"], _fmt(precio_vivo, d)), "avance": avance_real or avance,
         "lectura_hoy": lectura_hoy,
         "invitacion": INVITACION_ACTIVA if viva else INVITACION_CERRADA,
-        "pie_imagen": f"{activo['nombre']} · velas de 30 minutos · MetaTrader 5",
+        "pie_imagen": f"{activo['nombre']} · velas de 1 hora · MetaTrader 5",
         "firma": firma(autor), "aviso": AVISO_SEGUIMIENTO, "chart_png": str(chart),
     }
 

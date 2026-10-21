@@ -318,9 +318,27 @@ def texto_oportunidad_hoy(nombre: str, esc: dict[str, Any], hoy: dict[str, Any] 
             f"en la lámina. Se mide por sí sola, sin depender de lo que te envié el {dia}.")
 
 
+CASOS_POSTURA = {
+    "coinciden": "Hoy el movimiento va en el mismo sentido de la semana: el día confirma lo que te envié el {dia}.",
+    "contra": ("Ojo con el contraste: la lectura de la semana sigue vigente, pero hoy hay un movimiento más corto, "
+               "de 8 a 10 horas, en sentido contrario. Si pierde su línea de control, se retoma el marco de la semana."),
+    "semana_cambio": "La lectura de la semana cambió por una ruptura o un cambio de estructura, y el plan de hoy se lee desde ahí.",
+    "sin_plan_hoy": "Hoy no hay un plan intradía propio: manda el marco de la semana.",
+}
+
+
+def texto_postura(postura: dict[str, Any], hoy: dict[str, Any] | None, dia: str) -> str:
+    """El párrafo de la postura conjunta (la semana y el plan intradía de hoy), sin precios: van en la lámina."""
+    texto = CASOS_POSTURA[postura["caso"]].format(dia=dia)
+    if hoy and postura["caso"] != "sin_plan_hoy":
+        calidad = f", apoyado en una línea {postura['calidad_hoy']}" if postura.get("calidad_hoy") else ""
+        texto += f" El plan de hoy, con su objetivo y su línea de control, está en la lámina{calidad}."
+    return texto
+
+
 def _armar(nombre: str, fecha_hoy: str, esc: dict[str, Any], ev: dict[str, Any], precio_vivo: float,
            lectura_hoy: str, digits: int, macro: dict[str, Any] | None = None, dia: str = "lunes",
-           hoy: dict[str, Any] | None = None) -> str:
+           hoy: dict[str, Any] | None = None, postura: dict[str, Any] | None = None) -> str:
     """El mensaje con la marca del saludo: un párrafo corto y sin precios que cierra con una pregunta.
 
     Con dato macro (`macro_seguimiento.redactar`) el cuerpo es el del dato; sin él, el del estado. La
@@ -334,12 +352,13 @@ def _armar(nombre: str, fecha_hoy: str, esc: dict[str, Any], ev: dict[str, Any],
         accion = "compra" if esc.get("direccion") == "ALCISTA" else "venta"
         plantilla = _variante(PLANTILLAS[_estado_de_texto(ev)], fecha_hoy, nombre)
         cuerpo = f"{MARCA_SALUDO} " + plantilla.format(el=el, **{"del": del_}, accion=accion, dia=dia)
-    extra = texto_oportunidad_hoy(nombre, esc, hoy, dia)
+    extra = texto_postura(postura, hoy, dia) if postura else texto_oportunidad_hoy(nombre, esc, hoy, dia)
     return f"{cuerpo}\n\n{extra}" if extra else cuerpo
 
 
 def mensaje(nombre: str, fecha_hoy: str, fecha_foto: str, esc: dict[str, Any], ev: dict[str, Any],
-            precio_vivo: float, actual, reemplazada: bool, digits: int, hoy: dict[str, Any] | None = None) -> str:
+            precio_vivo: float, actual, reemplazada: bool, digits: int, hoy: dict[str, Any] | None = None,
+            postura: dict[str, Any] | None = None) -> str:
     """El texto de WhatsApp del seguimiento: una persona que retoma la conversación con su cliente.
 
     Abre con la marca del saludo (`con_saludo` la reemplaza al responder) y el estado en la primera
@@ -348,7 +367,7 @@ def mensaje(nombre: str, fecha_hoy: str, fecha_foto: str, esc: dict[str, Any], e
     mismo peso. Sin aviso legal (gerencia, 2026-10-13): lo lleva la lámina.
     """
     return _armar(nombre, fecha_hoy, esc, ev, precio_vivo, texto_lectura(actual, reemplazada, digits), digits,
-                  dia=(fecha_foto.split() or ["lunes"])[0], hoy=hoy)
+                  dia=(fecha_foto.split() or ["lunes"])[0], hoy=hoy, postura=postura)
 
 
 def redactar(datos: dict[str, Any], saludo: str = "", ctx_macro: dict[str, Any] | None = None,
@@ -375,5 +394,5 @@ def redactar(datos: dict[str, Any], saludo: str = "", ctx_macro: dict[str, Any] 
         except Exception:  # noqa: BLE001  el dato macro es un extra: sin él, el seguimiento sale igual
             macro = {}
     texto = _armar(datos["nombre"], fecha_hoy, esc, ev, float(datos["precio_vivo"]), datos["lectura_hoy"],
-                   digits, macro, dia, datos.get("oportunidad_hoy"))
+                   digits, macro, dia, datos.get("oportunidad_hoy"), datos.get("postura"))
     return con_saludo(texto, saludo), macro.get("aparte", "")

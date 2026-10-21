@@ -373,3 +373,22 @@ def test_el_texto_del_mismo_sentido_comunica_la_oportunidad_como_propia():
     t = sg.texto_oportunidad_hoy("Oro", {"direccion": "BAJISTA"}, hoy, "lunes")
     assert "oportunidad de venta" in t and "invalidada" not in t
     assert sg.texto_oportunidad_hoy("Oro", {"direccion": "BAJISTA"}, None, "lunes") == ""
+
+
+POSTURA = {"caso": "contra", "marco_semana": "m", "plan_hoy": "p", "puente": "b", "calidad_hoy": "B"}
+
+
+def test_el_texto_de_la_postura_cubre_los_cuatro_casos_sin_precios_ni_palabras_vetadas():
+    hoy = {"direccion": "ALCISTA"}
+    assert set(sg.CASOS_POSTURA) == {"coinciden", "contra", "semana_cambio", "sin_plan_hoy"}
+    for caso in sg.CASOS_POSTURA:
+        for con_hoy in (hoy, None):
+            t = sg.texto_postura({**POSTURA, "caso": caso}, con_hoy, "lunes")
+            assert not any(c.isdigit() for c in t.replace("8 a 10", "")), t
+            assert not any(v in t.lower() for v in ("—", "–", "stop", "entrada", "oportunidad", "señal", "techo", "suelo")), t
+
+
+def test_la_postura_contra_la_semana_no_dice_que_la_semana_queda_invalidada():
+    t = sg.texto_postura(POSTURA, {"direccion": "ALCISTA"}, "lunes")
+    assert "sigue vigente" in t and "invalid" not in t and "línea B" in t
+    assert "línea B" not in sg.texto_postura({**POSTURA, "caso": "sin_plan_hoy"}, None, "lunes")

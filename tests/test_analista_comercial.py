@@ -112,3 +112,24 @@ def test_el_texto_de_whatsapp_cierra_invitando_a_revisar_mt5():
     from analista_fixtures import activo_semanal
     t = cm.texto_whatsapp_base(activo_semanal(), "Titular", "Contexto.")
     assert "MT5" in t and "operar" not in t.lower()
+
+
+def test_la_lamina_cuenta_la_semana_primero_y_el_plan_de_hoy_con_su_calidad(tmp_path):
+    postura = {"caso": "contra", "marco_semana": "La lectura de la semana sigue vigente.",
+               "puente": "Para hoy hay un movimiento más corto en sentido contrario:", "plan_hoy": "Plan.",
+               "calidad_hoy": "A+"}
+    hoy = {"direccion": "ALCISTA", "entrada": "1", "stop": "2", "objetivo": "3", "ratio": "1:3",
+           "plazo": "de 8 a 10 horas", "condicion": "", "invalida": False, "cambia_direccion": False, "calidad": "A+"}
+    p = cm.payload_seguimiento(fx.activo_semanal(), {"estado": "en_curso", "avance_pct": 40}, 4120.0, "ignorado",
+                               "miércoles 14-10", fx.AUTOR, tmp_path / "g.png", hoy, None, postura)
+    assert p["lectura_hoy"] == postura["marco_semana"] and p["aviso_invalida"] == postura["puente"]
+    assert p["hoy_titulo"].endswith("Línea A+") and "Plazo de 8 a 10 horas" in p["hoy_medidas"]
+    assert "velas de 1 hora" in p["pie_imagen"]
+
+
+def test_sin_plan_de_hoy_la_lamina_explica_por_que_manda_la_semana(tmp_path):
+    postura = {"caso": "sin_plan_hoy", "marco_semana": "Semana.", "puente": "x", "plan_hoy": "Hoy no hay plan.",
+               "calidad_hoy": ""}
+    p = cm.payload_seguimiento(fx.activo_semanal(), {"estado": "en_curso", "avance_pct": 40}, 4120.0, "ignorado",
+                               "miércoles 14-10", fx.AUTOR, tmp_path / "g.png", None, None, postura)
+    assert p["lectura_hoy"] == "Semana. Hoy no hay plan." and p["hoy_titulo"] == ""

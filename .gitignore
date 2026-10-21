@@ -148,3 +148,5 @@ data/informes_evergreen/
 
 # Estado generado del agendador de la alerta semanal (spec 2026-10-18)
 data/semanal/avisos_semana.json
+# El plan intradía de cada día: estado generado, no historia editorial
+data/referencias_diarias/

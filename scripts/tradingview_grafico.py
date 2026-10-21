@@ -211,9 +211,9 @@ def velas_para_niveles(
 ) -> int:
     """Ventana adaptativa: elige cuántas velas finales mostrar (al menos `minimo`).
 
-    Amplía hacia atrás hasta que el rango alto-bajo de las velas cubra todos los niveles
-    señalados (con `tolerancia`), sin exceder `maximo`. Si no hay niveles o ya caen dentro
-    de las últimas `minimo` velas, devuelve `minimo`.
+    Amplía hacia atrás hasta que el rango alto-bajo de las velas cubra los niveles señalados
+    (con `tolerancia`), sin exceder `maximo`. Si no hay niveles, ya caen dentro de las últimas
+    `minimo` velas o ninguno se puede cubrir, devuelve `minimo`.
     """
     if not rows:
         return 0
@@ -232,25 +232,26 @@ def velas_para_niveles(
         return min(n_total, minimo)
 
     tope = min(n_total, maximo)
-    p_min, p_max = min(precios), max(precios)
-
+    ref = float(rows[-1]["close"])
+    # Rango que van cubriendo las velas al retroceder: (k, bajo, alto). Un nivel que ni con `maximo`
+    # velas queda cubierto (la línea de la semana a un 2 % del precio) no puede decidir la ventana:
+    # se descarta el más lejano del precio y los demás mandan; ese nivel lo trata la zona ampliada.
+    rangos: list[tuple[int, float, float]] = []
     v_hi = max(float(r["high"]) for r in rows[-minimo:])
     v_lo = min(float(r["low"]) for r in rows[-minimo:])
-
-    if v_lo - tolerancia <= p_min and p_max <= v_hi + tolerancia:
-        return minimo
-
+    rangos.append((minimo, v_lo, v_hi))
     for k in range(minimo + 1, tope + 1):
-        r = rows[-k]
-        hi, lo = float(r["high"]), float(r["low"])
-        if hi > v_hi:
-            v_hi = hi
-        if lo < v_lo:
-            v_lo = lo
-        if v_lo - tolerancia <= p_min and p_max <= v_hi + tolerancia:
-            return k
-
-    return tope
+        v_hi = max(v_hi, float(rows[-k]["high"]))
+        v_lo = min(v_lo, float(rows[-k]["low"]))
+        rangos.append((k, v_lo, v_hi))
+    pendientes = sorted(precios, key=lambda p: abs(p - ref))
+    while pendientes:
+        p_min, p_max = min(pendientes), max(pendientes)
+        for k, lo, hi in rangos:
+            if lo - tolerancia <= p_min and p_max <= hi + tolerancia:
+                return k
+        pendientes.pop()  # el más lejano del precio
+    return minimo
 
 
 def construir_html_limpio(rows: list[dict[str, Any]], digits: int = 2, niveles=None,
@@ -351,7 +352,9 @@ def construir_html_limpio(rows: list[dict[str, Any]], digits: int = 2, niveles=N
                           f'stroke="{trazo}" stroke-width="2.5"/>')
         w = pad_r - 14
         px = x2 + 8
-        fuente = int(min(26, max(20, (w - 28) / (len(texto) * 0.62))))  # nunca bajo 20 px
+        fuente = int(min(26, max(16, (w - 28) / (len(texto) * 0.62))))  # el nombre fundido de dos niveles es largo
+        # si ni a 16 px cabe, el texto se comprime al ancho de la píldora en vez de salirse
+        ajuste = f' textLength="{w - 28}" lengthAdjust="spacingAndGlyphs"' if len(texto) * 0.62 * fuente > w - 28 else ""
         if es_hoy:
             partes.append(f'<rect class="pildora" data-y="{yp:.1f}" x="{px}" y="{yp - 21:.1f}" width="{w}" height="42" '
                           f'rx="21" fill="{COLOR_LIMPIO_HOY}"/>')
@@ -360,7 +363,7 @@ def construir_html_limpio(rows: list[dict[str, Any]], digits: int = 2, niveles=N
         else:
             partes.append(f'<rect class="pildora" data-y="{yp:.1f}" x="{px}" y="{yp - 21:.1f}" width="{w}" height="42" '
                           f'rx="21" fill="{FONDO_PILDORA}" fill-opacity=".85" stroke="{trazo}" stroke-width="2.5"/>')
-            partes.append(f'<text x="{px + 14}" y="{yp + 9:.1f}" font-size="{fuente}" font-weight="700" fill="#fff" '
+            partes.append(f'<text x="{px + 14}" y="{yp + 9:.1f}" font-size="{fuente}"{ajuste} font-weight="700" fill="#fff" '
                           f'stroke="{FONDO_PILDORA}" stroke-width="5" paint-order="stroke">'
                           f'<tspan fill="{trazo}">{nombre}</tspan> {_precio_es(p, digits)}</text>')
     for activa, ps, gy in ((amp_arr, ps_arr, c_top - corte / 2), (amp_abj, ps_abj, c_bot + corte / 2)):

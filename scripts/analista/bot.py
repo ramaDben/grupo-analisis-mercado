@@ -444,7 +444,7 @@ class Atendedor:
             self.rendir_lamina(
                 cm.payload_seguimiento(d["activo"], d["evaluacion"], d["precio_vivo"], d["lectura_hoy"],
                                        d["edicion"], self.autor, dir_pedido / "grafico.png",
-                                       d.get("oportunidad_hoy"), d.get("entrada_real")),
+                                       d.get("oportunidad_hoy"), d.get("entrada_real"), d.get("postura")),
                 "seguimiento", dir_pedido / "lamina.png")
             if rg.vigente(o.args["ticker"], ahora, self.registro) is not None:
                 rg.anotar_seguimiento(o.args["ticker"],

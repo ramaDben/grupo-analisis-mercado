@@ -280,11 +280,17 @@ def test_velas_para_niveles_se_amplia_cuando_estan_lejos():
     assert tg.velas_para_niveles(rows, niveles, minimo=48, maximo=120) == 70
 
 
-def test_velas_para_niveles_tope_en_maximo():
-    """Si con `maximo` velas los niveles aún no se cubren, la ventana se acota en `maximo`."""
+def test_velas_para_niveles_ignora_el_nivel_inalcanzable_y_cubre_los_demas():
+    """Un nivel que ni con `maximo` velas se cubre (la línea de la semana) no ensancha la ventana."""
     rows = [{"time": i, "open": 100.0, "high": 105.0, "low": 95.0, "close": 100.0} for i in range(150)]
-    niveles = [(130.0, "OBJETIVO")]
-    assert tg.velas_para_niveles(rows, niveles, minimo=48, maximo=120) == 120
+    rows[-70]["high"] = 115.0
+    niveles = [(112.0, "OBJETIVO"), (150.0, "SEMANA")]
+    assert tg.velas_para_niveles(rows, niveles, minimo=48, maximo=120) == 70
+
+
+def test_velas_para_niveles_sin_ningun_nivel_alcanzable_deja_la_ventana_minima():
+    rows = [{"time": i, "open": 100.0, "high": 105.0, "low": 95.0, "close": 100.0} for i in range(150)]
+    assert tg.velas_para_niveles(rows, [(130.0, "OBJETIVO")], minimo=48, maximo=120) == 48
 
 
 def test_zona_ampliada_solo_aparece_si_aun_con_tope_hay_niveles_fuera():
@@ -313,9 +319,9 @@ def test_el_modo_limpio_html_trae_la_cantidad_de_velas_esperada():
     html_ampliado = tg.construir_html_limpio(rows, 2, [(112.0, "OBJETIVO")])
     assert html_ampliado.count("<rect x=") == 75
 
-    # Con nivel inalcanzable: tope en 120 velas
-    html_max = tg.construir_html_limpio(rows, 2, [(160.0, "OBJETIVO")])
-    assert html_max.count("<rect x=") == 120
+    # Con nivel inalcanzable: la ventana no se ensancha en vano, queda en el mínimo
+    html_lejos = tg.construir_html_limpio(rows, 2, [(160.0, "OBJETIVO")])
+    assert html_lejos.count("<rect x=") == 48
 
 
 def test_generar_grafico_tv_limpio_pide_maximo_velas_y_recorta(monkeypatch, tmp_path):
