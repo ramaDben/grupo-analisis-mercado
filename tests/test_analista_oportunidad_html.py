@@ -858,8 +858,14 @@ def test_la_linea_de_seguridad_se_explica_segun_el_lado_en_que_esta_el_precio(tm
 def test_el_objetivo_no_lleva_el_color_de_marca_para_no_leerse_como_ganancia(tmp_path):
     """El cromo no opina: el verde de marca sobre un objetivo bajista se lee como «ganancia»."""
     _, hero = _hero(tmp_path)
-    cifra = re.search(r'Objetivo</p><p class="hero-cifra"[^>]*color:([^;]+);', hero)
+    cifra = re.search(r'Primer objetivo</p><p class="hero-cifra"[^>]*color:([^;]+);', hero)
     assert cifra and cifra.group(1).upper() == "#FFFFFF"
+
+
+def test_la_tarjeta_senala_el_objetivo_como_el_primero(tmp_path):
+    """Director, 2026-10-21: el objetivo de la lectura es una referencia, no el destino final."""
+    _, hero = _hero(tmp_path)
+    assert "Primer objetivo" in hero
 
 
 def test_el_objetivo_dice_a_cuanto_esta_del_precio_calculado_desde_la_lectura(tmp_path):

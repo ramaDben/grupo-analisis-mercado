@@ -815,7 +815,7 @@ def _hero_activo(a: dict[str, Any], titular: str, c: dict[str, str], bajada: str
     else:
         vigilar = f.get("vigilar") or ""
         grandes = [("Hacia dónde apunta", dir_nombre, horizonte, color_dir)]
-        grandes.append(("Objetivo", f["objetivo_tori"], _distancia_objetivo(lec), c["blanco"])
+        grandes.append(("Primer objetivo", f["objetivo_tori"], _distancia_objetivo(lec), c["blanco"])
                        if f.get("objetivo_tori") else
                        ("Nivel a vigilar", vigilar, "La línea que mira el análisis", c["blanco"]))
         chicas = [("Precio de referencia", f["precio"], "Al momento del análisis")]
