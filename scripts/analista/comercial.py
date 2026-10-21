@@ -132,7 +132,7 @@ def _bloque_hoy(hoy: dict[str, Any] | None, dia: str) -> dict[str, str]:
         aviso = f"El plan del {dia} cerró en su stop: esta es la lectura de hoy."
     else:
         aviso = ""
-    return {"hoy_titulo": f"Oportunidad de hoy · Escenario {hoy['direccion'].lower()}",
+    return {"hoy_titulo": f"Lectura de hoy · Escenario {hoy['direccion'].lower()}",
             "hoy_entrada": hoy["entrada"], "hoy_stop": hoy["stop"], "hoy_objetivo": hoy["objetivo"],
             "hoy_medidas": f"Relación riesgo/beneficio {hoy['ratio']} · Plazo {hoy['plazo']}",
             "hoy_condicion": hoy.get("condicion") or "", "aviso_invalida": aviso}
@@ -171,7 +171,7 @@ def payload_seguimiento(activo: dict[str, Any], ev: dict[str, Any], precio_vivo:
         avance = (f"Se activa con un cierre de vela 4H {'sobre' if esc['direccion'] == 'ALCISTA' else 'bajo'} "
                   f"{f['entrada']}")
     elif estado == "entrada_pendiente" and esc.get("condicion") == "retesteo" and esc.get("estado") != "RANGO":
-        avance = f"Se activa si el precio vuelve a {f['entrada']}"
+        avance = f"El plan del lunes se activa si el precio vuelve a {f['entrada']}"
     elif estado == "entrada_pendiente":
         avance = ("El precio salió del rango: la entrada sigue pendiente" if paso_la_entrada(esc, precio_vivo)
                   else "El precio no llega a la entrada")

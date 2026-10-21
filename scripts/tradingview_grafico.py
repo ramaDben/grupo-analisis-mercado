@@ -148,7 +148,7 @@ def series_de_lineas(lineas, tiempos: list[int], proyeccion: int = PROYECCION
     return series, omitidas
 
 
-LIMPIO_N_VELAS = 60  # el modo limpio muestra un tramo corto: solo lo que se mueve hoy
+LIMPIO_N_VELAS = 36  # un tramo corto (6 días de 4H): con 60 las velas quedaban finas y el pico viejo aplastaba lo de hoy
 LIMPIO_ANCHO, LIMPIO_ALTO = 888, 590  # el lienzo de la tarjeta de seguimiento, 1 px = 1 px de lámina
 SEPARACION_ETIQUETAS = 46  # px entre centros: la píldora mide 42 y necesita aire
 COLOR_NIVEL = {"ENTRADA": "#FFFFFF", "STOP": "#E84040", "OBJETIVO": "#00DC82"}
@@ -231,8 +231,28 @@ def construir_html_limpio(rows: list[dict[str, Any]], digits: int = 2, niveles=N
     margen = (maximo - minimo) * 0.04 or 10 ** -digits
     lo, hi = minimo - margen, maximo + margen
 
+    # Los niveles lejos de las velas no pueden aplastarlas: ese tramo vacío del eje se comprime a una
+    # fracción fija del alto (el precio de cada etiqueta sigue siendo el real, solo el espacio se acorta).
+    v_hi, v_lo = max(float(r["high"]) for r in rows), min(float(r["low"]) for r in rows)
+    v_hi = max(v_hi, hoy)
+    v_lo = min(v_lo, hoy)
+    rango_v = (v_hi - v_lo) or 10 ** -digits
+    util = alto - pad_t - pad_b
+    tramo = 0.16 * util  # alto máximo de cada tramo comprimido
+    cmp_arr = hi - v_hi > 0.5 * rango_v
+    cmp_abj = v_lo - lo > 0.5 * rango_v
+    pad_v = 0.06 * rango_v
+    t_arr = tramo if cmp_arr else 0.0
+    t_abj = tramo if cmp_abj else 0.0
+    alto_v = util - t_arr - t_abj  # lo que queda para las velas
+
     def y(v: float) -> float:
-        return pad_t + (hi - v) / (hi - lo) * (alto - pad_t - pad_b)
+        if v > v_hi + pad_v and cmp_arr:
+            return pad_t + t_arr - min(1.0, (v - v_hi - pad_v) / ((hi - v_hi - pad_v) or 1)) * t_arr
+        if v < v_lo - pad_v and cmp_abj:
+            return pad_t + t_arr + alto_v + min(1.0, (v_lo - pad_v - v) / ((v_lo - pad_v - lo) or 1)) * t_abj
+        a, b = (v_hi + pad_v if cmp_arr else hi), (v_lo - pad_v if cmp_abj else lo)
+        return pad_t + t_arr + (a - v) / ((a - b) or 1) * alto_v
 
     zona = x2 - AIRE_VELAS - 10
     paso = zona / len(rows)
@@ -241,9 +261,9 @@ def construir_html_limpio(rows: list[dict[str, Any]], digits: int = 2, niveles=N
         x = 10 + i * paso + paso / 2
         o, c, h, l = (float(r[k]) for k in ("open", "close", "high", "low"))
         col = COLOR_LIMPIO_SUBE if c >= o else COLOR_LIMPIO_BAJA
-        partes.append(f'<line x1="{x:.1f}" x2="{x:.1f}" y1="{y(h):.1f}" y2="{y(l):.1f}" stroke="{col}" stroke-width="3.5"/>')
-        partes.append(f'<rect x="{x - paso * 0.34:.1f}" width="{paso * 0.68:.1f}" y="{y(max(o, c)):.1f}" '
-                      f'height="{max(3.0, abs(y(o) - y(c))):.1f}" fill="{col}"/>')
+        partes.append(f'<line x1="{x:.1f}" x2="{x:.1f}" y1="{y(h):.1f}" y2="{y(l):.1f}" stroke="{col}" stroke-width="4"/>')
+        partes.append(f'<rect x="{x - paso * 0.36:.1f}" width="{paso * 0.72:.1f}" y="{y(max(o, c)):.1f}" '
+                      f'height="{max(4.0, abs(y(o) - y(c))):.1f}" fill="{col}"/>')
 
     reales = [y(p) for p, _, _ in etiquetas]
     pildoras = separar_etiquetas(reales, techo=21.0, piso=alto - 21.0)

@@ -217,10 +217,10 @@ def test_el_modo_limpio_traza_solo_los_niveles_de_hoy_con_nombre_completo():
     assert html.count('class="pildora"') == 4  # tres niveles y el precio de hoy
 
 
-def test_el_modo_limpio_muestra_60_velas_como_maximo():
+def test_el_modo_limpio_muestra_solo_un_tramo_corto_de_velas():
     rows = [{"time": i, "open": 1.0, "high": 1.1, "low": 0.9, "close": 1.0} for i in range(200)]
     html = tg.construir_html_limpio(rows, 2, [])
-    assert html.count('stroke-width="3.5"/><rect') == tg.LIMPIO_N_VELAS
+    assert html.count('stroke-width="4"/><rect') == tg.LIMPIO_N_VELAS == 36
 
 
 def test_dos_niveles_en_el_mismo_precio_son_una_sola_etiqueta():
