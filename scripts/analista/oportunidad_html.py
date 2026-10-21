@@ -740,11 +740,16 @@ def _hero_activo(a: dict[str, Any], titular: str, c: dict[str, str], bajada: str
     lec, f = a["lectura"], a["fmt"]
     titular_final = titular or titular_base(a)
 
-    kicker = (
-        f'<p style="margin:0 0 10px 0;font-family:{F_SANS};font-size:12px;line-height:16px;font-weight:700;'
+    # El logo de GI va solo, a la derecha del rótulo: la marca firma la apertura sin competir con el titular.
+    kicker = _tabla(
+        f'<tr><td valign="middle" style="padding:0 12px 10px 0;">'
+        f'<p style="margin:0;font-family:{F_SANS};font-size:12px;line-height:16px;font-weight:700;'
         f'letter-spacing:1.8px;text-transform:uppercase;color:#50C0A8;">'
         f'ANÁLISIS TÉCNICO Y FUNDAMENTAL · {ih.e(a["nombre"].upper())} ({ih.e(a["ticker_visible"])})'
-        f'</p>'
+        f'</p></td>'
+        f'<td valign="top" align="right" width="52" style="padding:0 0 10px 0;">'
+        f'<img src="{ih._data_uri(ih.LOGO)}" width="48" height="48" alt="Grupo Inteligencia" '
+        f'style="display:block;border:0;width:48px;height:48px;"></td></tr>'
     )
 
     titular_bloque = (

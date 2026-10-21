@@ -239,7 +239,7 @@ def test_con_publicador_el_correo_lleva_urls_y_ninguna_imagen_embebida(tmp_path)
     html = oh.armar(fx.pieza_oportunidad(tmp_path, dolar=True), tmp_path, EJECUTIVO, fx.AUTOR, HOY, publicar)
     correo = _correo(html)
     assert "data:image" not in correo
-    assert len(re.findall(r'<img src="https://ejemplo\.test/correos/[^"]+"', correo)) == 3  # oro, dólar y calendario
+    assert len(re.findall(r'<img src="https://ejemplo\.test/correos/[^"]+"', correo)) == 4  # logo del hero, oro, dólar y calendario
     assert "grafico_usdidx.png" in pedidas and "grafico_xauusd.png" in pedidas
     # La página que ve el ejecutivo conserva sus imágenes embebidas: se abre sin red.
     assert "data:image" in html.split('id="correo-root"')[0]
@@ -827,6 +827,13 @@ def test_en_rango_el_hero_conserva_los_bordes_y_dice_lateral(tmp_path):
     _, hero = _hero(tmp_path, a)
     assert "Soporte del rango" in hero and "Resistencia del rango" in hero and "LATERAL" in hero
     assert "sin nivel" not in hero
+
+
+def test_el_hero_lleva_el_logo_de_gi_y_ningun_aviso_legal(tmp_path):
+    """Director, 2026-10-21: el hero lleva solo el logo; el aviso legal ya va en el pie del correo."""
+    _, hero = _hero(tmp_path)
+    assert hero.count('alt="Grupo Inteligencia"') == 1 and "data:image/png;base64," in hero
+    assert "asesoría" not in hero and "Prohibida su reproducción" not in hero
 
 
 def test_el_hero_cierra_con_un_gancho_hacia_el_cuerpo(tmp_path):
