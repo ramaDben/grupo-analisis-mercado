@@ -23,6 +23,7 @@ from analista import orden as od  # noqa: E402
 from analista import preparar as pr  # noqa: E402
 from analista import simbolos as sm  # noqa: E402
 from analista import registro_semanal as rg  # noqa: E402
+from analista import segmentos as sg  # noqa: E402
 
 SCL = ZoneInfo("America/Santiago")
 AHORA = datetime(2026, 10, 8, 11, 0, tzinfo=SCL)
@@ -105,7 +106,7 @@ def redactor(llamadas, codigo="ok"):
         pieza = pr.cargar_pieza(dir_pedido)
         pieza["editorial"].update(fx.pieza_oportunidad(dir_pedido)["editorial"])
         # La fuente del ejemplo es posterior al reloj de estas pruebas: con su fecha, depurar la descarta.
-        pieza["editorial"]["fuentes"] = [{**fx.FUENTES_EJEMPLO[0], "fecha": "2026-10-06"}]
+        pieza["editorial"]["fuentes"] = [dict(fx.DIRECTA_ORO), {**fx.FUENTES_EJEMPLO[0], "fecha": "2026-10-06"}]
         pr.guardar_pieza(pieza, dir_pedido)
         return SimpleNamespace(codigo="ok", detalle="")
     return redactar
@@ -247,7 +248,7 @@ def test_las_fuentes_malas_se_descartan_y_se_avisan_sin_botar_la_pieza(armado):
         pieza = pr.cargar_pieza(ruta.parent)
         pieza["editorial"].update(fx.pieza_oportunidad(ruta.parent)["editorial"])
         buena = {**fx.FUENTES_EJEMPLO[0], "fecha": "2026-10-06"}  # la del ejemplo es posterior al reloj del test
-        pieza["editorial"]["fuentes"] = [buena, {**buena, "entidad": "Un Blog",
+        pieza["editorial"]["fuentes"] = [dict(fx.DIRECTA_ORO), buena, {**buena, "entidad": "Un Blog",
                                                  "url": "https://www.reuters.com/otra/nota-larga"}]
         pr.guardar_pieza(pieza, ruta.parent)
         return SimpleNamespace(codigo="ok", detalle="")
@@ -255,7 +256,7 @@ def test_las_fuentes_malas_se_descartan_y_se_avisan_sin_botar_la_pieza(armado):
     armado.atendedor.redactar = redactar
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
     assert "Un Blog" in r.aparte and r.archivos
-    assert len(pr.cargar_pieza(next((armado.tmp / "pedidos").rglob("pieza.json")).parent)["editorial"]["fuentes"]) == 1
+    assert len(pr.cargar_pieza(next((armado.tmp / "pedidos").rglob("pieza.json")).parent)["editorial"]["fuentes"]) == 2
 
 
 def test_sin_voces_validas_ni_en_el_reintento_no_sale_ni_gasta_cupo(armado):
@@ -268,7 +269,7 @@ def test_sin_voces_validas_ni_en_el_reintento_no_sale_ni_gasta_cupo(armado):
 
     armado.atendedor.redactar = redactar
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
-    assert not r.archivos and "ninguna voz de banco" in r.texto and "No gasté tu cupo" in r.texto
+    assert not r.archivos and "noticia directa" in r.texto and "No gasté tu cupo" in r.texto
     assert armado.estado.usados(CAMILA, AHORA) == 0 and rg.vigente("XAUUSD", AHORA, armado.registro) is None
     assert len(armado.reintentos) == 1
 
@@ -557,16 +558,16 @@ def test_una_tesis_con_porcentaje_descarta_solo_esa_fuente_y_la_pieza_sale(armad
     buena = {**fx.FUENTES_EJEMPLO[0], "fecha": "2026-10-06"}
     rota = {**buena, "entidad": "UBS", "url": "https://www.reuters.com/markets/otra-nota-ubs/",
             "tesis": "UBS ve un alza de 5% en el oro."}
-    armado.atendedor.redactar = _redactor_con_fuentes([buena, rota])
+    armado.atendedor.redactar = _redactor_con_fuentes([dict(fx.DIRECTA_ORO), buena, rota])
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
     assert r.archivos and "Descarté una fuente: UBS" in r.aparte
     fuentes = pr.cargar_pieza(next((armado.tmp / "pedidos").rglob("pieza.json")).parent)["editorial"]["fuentes"]
-    assert [f["entidad"] for f in fuentes] == ["Goldman Sachs"]
+    assert [f["entidad"] for f in fuentes] == ["World Gold Council", "Goldman Sachs"]
 
 
 def test_una_tesis_limpia_sigue_en_la_pieza(armado):
     buena = {**fx.FUENTES_EJEMPLO[0], "fecha": "2026-10-06"}
-    armado.atendedor.redactar = _redactor_con_fuentes([buena])
+    armado.atendedor.redactar = _redactor_con_fuentes([dict(fx.DIRECTA_ORO), buena])
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
     assert r.archivos and "Descarté" not in r.aparte
 
@@ -579,28 +580,29 @@ def test_el_reuso_propio_no_se_anota(armado):
     assert [x["id"] for x in rg.vigente("XAUUSD", AHORA, armado.registro)["reusos"]] == [OTRO]
 
 
-# ───────────────────────────────────────────── un banco o nada (spec 2026-10-17 §5)
+# ───────────────────────────────────────────── una noticia directa o nada (spec 2026-10-20)
 
 BANCO = {**fx.FUENTES_EJEMPLO[0], "fecha": "2026-10-06"}
 WGC = {"entidad": "World Gold Council", "medio": "World Gold Council", "fecha": "2026-10-06",
        "url": "https://www.gold.org/goldhub/research/demanda-octubre", "postura": "alcista",
-       "tesis": "World Gold Council ve demanda firme de los bancos centrales.", "verificacion": "ok"}
+       "tesis": "El WGC ve demanda firme de los bancos centrales.", "verificacion": "ok"}
+# WGC es del ancla por entidad, pero su tesis no nombra el oro: no es directa.
 
 
-def test_con_banco_al_primer_intento_no_hay_reintento(armado):
+def test_con_fuente_directa_al_primer_intento_no_hay_reintento(armado):
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
     assert r.archivos and armado.reintentos == [] and "segundo intento" not in r.aparte
     carpeta = next((armado.tmp / "pedidos").rglob("pieza.json")).parent
     assert (carpeta / "agy_salida_1.json").exists() and not (carpeta / fu.INTENTO).exists()
 
 
-def test_sin_banco_el_reintento_solo_reabre_las_fuentes_y_la_pieza_sale(armado):
+def test_sin_directa_el_reintento_solo_reabre_las_fuentes_y_la_pieza_sale(armado):
     vistos = []
 
     def fuentes_falso(ruta, tier):
         pieza = pr.cargar_pieza(ruta.parent)
         vistos.append(json.loads(json.dumps(pieza["editorial"])))
-        pieza["editorial"]["fuentes"] = [WGC, BANCO]
+        pieza["editorial"]["fuentes"] = [dict(fx.DIRECTA_ORO), BANCO]
         pr.guardar_pieza(pieza, ruta.parent)
         return SimpleNamespace(codigo="ok", detalle="", respuesta="OK", segundos=61.0)
 
@@ -615,31 +617,56 @@ def test_sin_banco_el_reintento_solo_reabre_las_fuentes_y_la_pieza_sale(armado):
     salida = json.loads((carpeta / "agy_salida_2.json").read_text(encoding="utf-8"))
     assert salida["segundos"] == 61.0 and salida["respuesta"] == "OK"
     assert [f["entidad"] for f in pr.cargar_pieza(carpeta)["editorial"]["fuentes"]] == ["World Gold Council", "Goldman Sachs"]
+    assert "noticia directa" in r.aparte
 
 
-def test_sin_banco_en_dos_intentos_dice_los_descartes(armado):
+def test_sin_noticia_directa_no_publica_y_no_gasta_cupo(armado):
     roto = {**BANCO, "url": "https://blog.example.com/oro"}  # dominio que no es de Reuters
     armado.atendedor.redactar = _redactor_con_fuentes([WGC, roto])
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
-    assert "ninguna voz de banco" in r.texto and "Goldman Sachs: el dominio" in r.texto
+    assert not r.archivos and "noticia directa" in r.texto and "No gasté tu cupo" in r.texto
+    assert "Goldman Sachs: el dominio" in r.texto
     assert armado.estado.usados(CAMILA, AHORA) == 0
 
 
-def test_validar_exige_una_voz_de_banco(tmp_path, capsys):
+def test_una_voz_de_banco_sola_ya_no_habilita(armado):
+    armado.atendedor.redactar = _redactor_con_fuentes([dict(BANCO)])
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert not r.archivos and "noticia directa" in r.texto
+    assert len(armado.reintentos) == 1  # el banco solo no evita el segundo intento
+
+
+def test_sin_ancla_no_consume_cupo(armado):
+    def sin_ancla(orden, dir_pedido, ahora, **kw):
+        raise pr.PreparacionFallida(sg.aviso_sin_ancla("XAUUSD"))
+
+    armado.atendedor.preparar = sin_ancla
+    antes = armado.estado.usados(CAMILA, AHORA)
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert not r.archivos and "No gasté tu cupo" in r.texto
+    assert armado.estado.usados(CAMILA, AHORA) == antes and armado.llamadas == []
+
+
+def test_validar_exige_una_fuente_directa(tmp_path, capsys):
     import bot_analistas
 
     pr.guardar_pieza(fx.pieza_oportunidad(tmp_path, fuentes=[WGC]), tmp_path)
     assert bot_analistas.validar(tmp_path / "pieza.json") == 1
-    assert "voz de banco" in capsys.readouterr().out
-    # Un banco que contradice nuestra lectura bajista (Goldman, alcista) tampoco alcanza (2026-10-19).
+    assert "fuente directa" in capsys.readouterr().out
+    # Una voz de banco sola tampoco alcanza.
     pr.guardar_pieza(fx.pieza_oportunidad(tmp_path), tmp_path)
     assert bot_analistas.validar(tmp_path / "pieza.json") == 1
-    assert "ningún banco respalda nuestra lectura" in capsys.readouterr().out
-    ubs = {"entidad": "UBS", "medio": "Bloomberg", "fecha": "2026-10-13", "postura": "bajista",
-           "url": "https://www.bloomberg.com/markets/oro-ubs-2026", "tesis": "UBS ve consolidación a la baja.",
-           "verificacion": "ok"}
-    pr.guardar_pieza(fx.pieza_oportunidad(tmp_path, fuentes=[*fx.FUENTES_EJEMPLO, ubs]), tmp_path)
+    assert "fuente directa" in capsys.readouterr().out
+    pr.guardar_pieza(fx.pieza_oportunidad(tmp_path, fuentes=[dict(fx.DIRECTA_ORO), *fx.FUENTES_EJEMPLO]), tmp_path)
     assert bot_analistas.validar(tmp_path / "pieza.json") == 0
+
+
+def test_validar_calla_en_una_pieza_sin_fuente_directa_sellada(tmp_path, capsys):
+    import bot_analistas
+
+    pr.guardar_pieza(fx.pieza_oportunidad(tmp_path, fuentes=[WGC], sello=False), tmp_path)
+    assert bot_analistas.validar(tmp_path / "pieza.json") == 0
+    assert "OK" in capsys.readouterr().out
 
 
 # ───────────────────────────────────────────────────────── /recrear (solo el director)
@@ -689,3 +716,48 @@ def test_recrear_todas_sin_si_no_hace_nada(armado):
 
 def test_recrear_no_aparece_en_el_menu():
     assert "recrear" not in {c for c, _ in b.MENU}
+
+
+# ───────────────────────────────────────────── revisión final: avisos de cara al ejecutivo
+
+
+def _texto_al_pedir(armado, error):
+    def falla(orden, dir_pedido, ahora, **kw):
+        raise error
+
+    armado.atendedor.preparar = falla
+    antes = armado.estado.usados(CAMILA, AHORA)
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert not r.archivos and armado.estado.usados(CAMILA, AHORA) == antes
+    return r.texto
+
+
+def test_el_aviso_sin_ancla_sale_sin_el_prefijo_de_falla_de_lectura(armado):
+    with pytest.raises(pr.PreparacionFallida) as exc:  # el error tal como lo levanta preparar
+        pr.preparar(od.Orden("oportunidad", {"ticker": "XAUUSD"}), armado.tmp / "sin_ancla", AHORA,
+                    pr.Lectores(ancla=lambda t: None))
+    texto = _texto_al_pedir(armado, exc.value)
+    assert "No pude leer los datos" not in texto
+    assert "No tengo una fuente propia definida para XAUUSD" in texto
+
+
+def test_el_aviso_de_ingesta_de_acciones_es_para_el_ejecutivo(armado, tmp_path):
+    import ingesta_acciones as ia
+
+    hoy = datetime(2026, 10, 20, 15, 0, tzinfo=ZoneInfo("UTC"))
+    for preparar_falla in ("sin_ingesta", "vencida"):
+        base = tmp_path / preparar_falla
+        if preparar_falla == "vencida":
+            anclas = {"#AAPL": ("acciones", {"ticker": "AAPL", "cik": "0000320193"})}
+            ia.ingestar(anclas, base, ahora=hoy - timedelta(days=10), descargar_fecha=lambda t: None,
+                        descargar_sec=lambda u, headers: {"filings": {"recent": {
+                            "form": [], "filingDate": [], "reportDate": [], "accessionNumber": [],
+                            "primaryDocument": []}}})
+        with pytest.raises(pr.PreparacionFallida) as exc:
+            ia.leer_empresa("#AAPL", base, ahora=hoy)
+        texto = _texto_al_pedir(armado, exc.value)
+        assert "No gasté tu cupo" in texto and "director" in texto, preparar_falla
+        for prohibido in ("uv run", "pipeline_datos", "scripts/", "No pude leer los datos", "—", "–"):
+            assert prohibido not in texto, (preparar_falla, prohibido)
+        # Español chileno sin voseo.
+        assert not any(v in texto for v in ("corré", "pedí", "avisale", "tenés", "podés")), preparar_falla

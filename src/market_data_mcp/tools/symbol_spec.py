@@ -51,7 +51,7 @@ _TRADE_MODE_MAP: dict[int, str] = {
 }
 
 # Q3 (design.md §5.3): mapeo ticker -> exchange cubierto por el calendario de
-# feriados. 3 índices US + 14 acciones + 5 ETF = 22 tickers -> NYSE.
+# feriados. 3 índices US + 14 acciones + 5 ETF = 22 tickers -> NYSE; GER40 -> XETRA.
 # Vive aquí (no en config/activos.json) para no acoplar el catálogo de activos
 # a la lógica de feriados de esta tool.
 #
@@ -88,6 +88,8 @@ _TICKER_EXCHANGE: dict[str, str] = {
     "GLD.US": "NYSE",
     "IWM.US": "NYSE",
     "SOXX.US": "NYSE",
+    # DAX 40: cotiza en Xetra, con su propio calendario (Viernes Santo, Lunes de Pascua, 24 y 31 dic).
+    "GER40.spot": "XETRA",
 }
 
 _RE_FECHA_ISO = re.compile(r"\d{4}-\d{2}-\d{2}")
@@ -98,7 +100,7 @@ _DOCSTRING_LIMITACION = (
     "Limitación conocida (no es un bug): los activos que operan fuera del horario "
     "de bolsa estadounidense no tienen calendario de feriados (no mapean a ningún "
     "exchange cubierto). Son USDCLP, XAUUSD, XAGUSD, WTI.spot, los pares de divisas, "
-    "COPPER, USDIDX, GER40.spot y las criptomonedas (BTCUSD, ETHUSD, SOLUSD, LTCUSD, "
+    "COPPER, USDIDX y las criptomonedas (BTCUSD, ETHUSD, SOLUSD, LTCUSD, "
     "ADAUSD, DOGUSD), que además operan 24/7. Para ellos, `opera` con `fecha` futura "
     "se decide solo con el patrón semanal de MT5 (y, si `fecha` es hoy, con "
     "`trade_mode`); `motivo` nunca es \"feriado_bolsa\" y "

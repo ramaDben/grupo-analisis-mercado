@@ -45,10 +45,11 @@ def validar(ruta: Path) -> int:
 
     pieza = cargar_pieza(ruta.parent)
     errores = es.errores(pieza)
-    # El mínimo de un banco va acá y en el bot, no en `esquema.errores`: así una pieza anterior sin
-    # bancos se sigue rearmando al reusarla (spec 2026-10-17 §5).
-    if pieza.get("orden", {}).get("pieza") == "oportunidad":
-        errores += fu.falta_banco(pieza)
+    # El mínimo de una fuente directa va acá y en el bot, no en `esquema.errores`: así una pieza anterior
+    # sin el sello `datos.fuente_directa` se sigue rearmando al reusarla (spec 2026-10-20).
+    directa = fu.directa_de(pieza)
+    if pieza.get("orden", {}).get("pieza") == "oportunidad" and directa:
+        errores += fu.falta_fuente_directa(pieza, *directa)
     if errores:
         for e in errores:
             print(f"ERROR: {e}")

@@ -74,6 +74,7 @@ class Resultado:
 PASOS: tuple[Paso, ...] = (
     Paso("ingesta", INGESTA, "drivers macro oficiales (FRED, BCCh, BCE, COMEX)"),
     Paso("precios", RAIZ / "scripts" / "extractor_precios.py", "series OHLC + indicadores"),
+    Paso("acciones", RAIZ / "scripts" / "ingesta_acciones.py", "fechas de resultados e informes SEC de las acciones"),
 )
 
 

@@ -104,7 +104,7 @@ def test_una_fuente_con_error_en_la_ingesta_se_reporta(base):
 def test_la_cadena_corre_los_pasos_en_orden():
     corridos = []
     resultados = pd_.ejecutar_cadena(pd_.PASOS, lambda paso: (corridos.append(paso.nombre), (True, ""))[1])
-    assert corridos == ["ingesta", "precios"]
+    assert corridos == ["ingesta", "precios", "acciones"]
     assert all(r.ok for r in resultados)
 
 

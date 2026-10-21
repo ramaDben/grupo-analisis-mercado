@@ -95,6 +95,134 @@
       }
     }
   },
+  "USD/CHF": {
+    "drivers": {
+      "dollar_index": {
+        "descripcion_cliente": "El Dollar Index mide la fuerza del dólar frente a otras monedas y el franco suizo es una de ellas. Cuando el dólar se fortalece en el mundo, el USD/CHF sube.",
+        "correlacion": "directa",
+        "importancia": "alta",
+        "donde_seguirlo": "Ticker USDIDX"
+      },
+      "rendimientos_treasury": {
+        "descripcion_cliente": "Los bonos del Tesoro de EE.UU. pagan más interés que los suizos. Cuando esa diferencia se mueve, el dinero cambia de moneda, pero la reacción del par no siempre es la misma, así que se mira como contexto y no como señal.",
+        "correlacion": "variable",
+        "importancia": "media",
+        "donde_seguirlo": "Rendimiento del bono estadounidense a 10 años"
+      },
+      "decisiones_bns": {
+        "descripcion_cliente": "El Banco Nacional Suizo (BNS) fija la tasa del franco y puede intervenir en el mercado para frenar su alza. Sus anuncios suelen mover el par de inmediato.",
+        "correlacion": "variable",
+        "importancia": "alta",
+        "donde_seguirlo": "Comunicados del Banco Nacional Suizo"
+      },
+      "aversion_al_riesgo": {
+        "descripcion_cliente": "El franco suizo es una moneda refugio: en momentos de cautela global los inversionistas lo compran. El efecto sobre el par cambia según el episodio, así que se observa sin asumir una dirección fija.",
+        "correlacion": "variable",
+        "importancia": "media",
+        "donde_seguirlo": "Índice de volatilidad VIX y comportamiento de las bolsas"
+      }
+    }
+  },
+  "GBP/USD": {
+    "drivers": {
+      "dollar_index": {
+        "descripcion_cliente": "El Dollar Index mide la fuerza del dólar frente a otras monedas y la libra es una de ellas. Cuando el dólar se debilita en el mundo, el GBP/USD tiende a subir.",
+        "correlacion": "inversa",
+        "importancia": "alta",
+        "donde_seguirlo": "Ticker USDIDX"
+      },
+      "rendimientos_treasury": {
+        "descripcion_cliente": "Los bonos del Tesoro de EE.UU. compiten con los bonos británicos por el dinero de los inversionistas. La reacción del par depende de cuál de los dos mercados se mueve más, así que se mira como contexto y no como señal.",
+        "correlacion": "variable",
+        "importancia": "media",
+        "donde_seguirlo": "Rendimiento del bono estadounidense a 10 años"
+      },
+      "decisiones_boe": {
+        "descripcion_cliente": "El Banco de Inglaterra (BoE) fija la tasa de la libra. Sus decisiones y el tono de su comunicado mueven el par, según qué tan distinto resulte de lo que el mercado esperaba.",
+        "correlacion": "variable",
+        "importancia": "alta",
+        "donde_seguirlo": "Comunicados del Banco de Inglaterra"
+      },
+      "inflacion_reino_unido": {
+        "descripcion_cliente": "Los datos de precios en el Reino Unido influyen en lo que el BoE hará con sus tasas, y de ahí en la libra. Su efecto sobre el par depende de qué tanto se aparte el dato de lo esperado.",
+        "correlacion": "variable",
+        "importancia": "media",
+        "donde_seguirlo": "IPC del Reino Unido publicado por la ONS"
+      }
+    }
+  },
+  "XAG/USD": {
+    "drivers": {
+      "dollar_index": {
+        "descripcion_cliente": "La plata se cotiza en dólares. Cuando el dólar se fortalece, se vuelve más cara para el resto del mundo y tiende a bajar. Cuando se debilita, tiende a subir.",
+        "correlacion": "inversa",
+        "importancia": "alta",
+        "donde_seguirlo": "Ticker USDIDX"
+      },
+      "tasas_reales": {
+        "descripcion_cliente": "Las tasas reales son las tasas de interés menos la inflación. Cuando bajan, mantener plata cuesta menos frente a un bono y el metal gana atractivo.",
+        "correlacion": "inversa",
+        "importancia": "alta",
+        "donde_seguirlo": "Tasa real del bono estadounidense a 10 años"
+      },
+      "demanda_industrial": {
+        "descripcion_cliente": "Buena parte de la plata se usa en electrónica y paneles solares. Cuando la industria pide más, el metal suele tener apoyo, aunque el efecto varía según el momento.",
+        "correlacion": "variable",
+        "importancia": "media",
+        "donde_seguirlo": "Informes del Silver Institute"
+      }
+    }
+  },
+  "BRENT": {
+    "drivers": {
+      "precios_energia": {
+        "descripcion_cliente": "El Brent y el WTI son dos referencias del mismo petróleo y se mueven casi juntos. Cuando el WTI sube, el Brent suele subir con él.",
+        "correlacion": "directa",
+        "importancia": "alta",
+        "donde_seguirlo": "Ticker WTI.spot"
+      },
+      "dollar_index": {
+        "descripcion_cliente": "El petróleo se cotiza en dólares. Cuando el dólar se fortalece, el barril se vuelve más caro para otros países y tiende a bajar.",
+        "correlacion": "inversa",
+        "importancia": "media",
+        "donde_seguirlo": "Ticker USDIDX"
+      },
+      "decisiones_opep_plus": {
+        "descripcion_cliente": "La OPEP+ reúne a los países productores. Sus decisiones de producción mueven el precio, según si el recorte o el aumento sorprende al mercado.",
+        "correlacion": "variable",
+        "importancia": "muy alta",
+        "donde_seguirlo": "Comunicados de la OPEP"
+      },
+      "rendimientos_treasury": {
+        "descripcion_cliente": "Los bonos del Tesoro de EE.UU. reflejan las expectativas de crecimiento y de tasas. Su efecto sobre el petróleo no es estable, así que se mira como contexto y no como señal.",
+        "correlacion": "variable",
+        "importancia": "baja",
+        "donde_seguirlo": "Rendimiento del bono estadounidense a 10 años"
+      }
+    }
+  },
+  "COPPER": {
+    "drivers": {
+      "dollar_index": {
+        "descripcion_cliente": "El cobre se cotiza en dólares. Cuando el dólar se fortalece, el metal se vuelve más caro para otros países y tiende a bajar.",
+        "correlacion": "inversa",
+        "importancia": "alta",
+        "donde_seguirlo": "Ticker USDIDX"
+      },
+      "demanda_china": {
+        "descripcion_cliente": "China consume cerca de la mitad del cobre del mundo. Cuando su industria y su construcción se aceleran o se frenan, el precio lo siente.",
+        "correlacion": "variable",
+        "importancia": "muy alta",
+        "donde_seguirlo": "Datos de actividad de China y reportes de Cochilco"
+      },
+      "rendimientos_treasury": {
+        "descripcion_cliente": "Los bonos del Tesoro de EE.UU. reflejan las expectativas de crecimiento. Su efecto sobre el cobre no es estable, así que se mira como contexto y no como señal.",
+        "correlacion": "variable",
+        "importancia": "media",
+        "donde_seguirlo": "Rendimiento del bono estadounidense a 10 años"
+      }
+    }
+  },
   "XAU/USD": {
     "drivers": {
       "dollar_index": {
@@ -130,7 +258,8 @@
         "descripcion_cliente": "Cada miércoles se publican los inventarios de petróleo en EE.UU. Si hay menos petróleo almacenado del esperado, el precio sube (más demanda). Si hay más, baja.",
         "correlacion": "inversa con inventarios",
         "importancia": "alta",
-        "dia_publicacion": "miércoles"
+        "dia_publicacion": "miércoles",
+        "publicacion": {"hora_origen": "10:30", "zona_origen": "Eastern Standard Time", "organismo": "EIA"}
       },
       "decisiones_opep_plus": {
         "descripcion_cliente": "La OPEP+ es el grupo de países productores de petróleo. Cuando deciden producir menos, el precio sube. Cuando producen más, baja.",
@@ -165,6 +294,63 @@
         "descripcion_cliente": "Cuando los bonos del Tesoro pagan más interés, los inversionistas prefieren la seguridad de los bonos sobre las acciones de riesgo. Rendimientos altos = presión bajista para tech.",
         "correlacion": "inversa",
         "importancia": "alta"
+      }
+    }
+  },
+  "US500": {
+    "drivers": {
+      "tasas_fed": {
+        "descripcion_cliente": "Cuando las tasas de interés suben, financiarse cuesta más para las 500 empresas del índice y sus ganancias valen menos hoy. Si la Fed las baja o se espera un recorte, el S&P 500 suele tener más espacio para subir.",
+        "correlacion": "inversa con tasas",
+        "importancia": "muy alta"
+      },
+      "rendimientos_treasury": {
+        "descripcion_cliente": "Cuando los bonos del Tesoro pagan más, los inversionistas encuentran atractiva la renta fija y piden más retorno a las acciones. Rendimientos más altos suelen presionar al S&P 500 a la baja.",
+        "correlacion": "inversa",
+        "importancia": "alta"
+      },
+      "earnings_agregados": {
+        "descripcion_cliente": "El S&P 500 reúne a las mayores empresas de EE.UU. Si en conjunto reportan ganancias mejores a lo esperado, el índice tiende a subir.",
+        "correlacion": "directa",
+        "importancia": "alta"
+      }
+    }
+  },
+  "US30": {
+    "drivers": {
+      "tasas_fed": {
+        "descripcion_cliente": "El Dow Jones agrupa 30 empresas grandes, muchas industriales y bancos. Tasas más altas encarecen el crédito y suelen presionar al índice; una baja de tasas le da más aire.",
+        "correlacion": "inversa con tasas",
+        "importancia": "alta"
+      },
+      "rendimientos_treasury": {
+        "descripcion_cliente": "Cuando los bonos del Tesoro rinden más, las acciones del Dow compiten con una alternativa más segura. Rendimientos más altos suelen presionar al índice a la baja.",
+        "correlacion": "inversa",
+        "importancia": "media"
+      },
+      "ciclo_economico": {
+        "descripcion_cliente": "Las empresas del Dow venden a una economía grande y ligada al ciclo. Datos de actividad y empleo más firmes suelen acompañar al índice; datos débiles lo frenan.",
+        "correlacion": "directa",
+        "importancia": "alta"
+      }
+    }
+  },
+  "GER40": {
+    "drivers": {
+      "decisiones_bce": {
+        "descripcion_cliente": "El Banco Central Europeo (BCE) fija las tasas de la Zona Euro. Sus decisiones cambian el costo de financiarse de las empresas alemanas y el atractivo de sus acciones.",
+        "correlacion": "variable",
+        "importancia": "alta"
+      },
+      "dollar_index": {
+        "descripcion_cliente": "El DAX agrupa empresas muy exportadoras. El valor del euro frente al dólar influye en sus ventas fuera de Europa, pero la relación con el índice no está confirmada en nuestros datos y se describe sin sentido fijo.",
+        "correlacion": "sin correlación confirmada",
+        "importancia": "media"
+      },
+      "precios_energia": {
+        "descripcion_cliente": "Alemania es una gran economía industrial que importa energía. El precio del petróleo y del gas pesa en los costos de sus empresas, aunque el efecto sobre el índice no está confirmado en nuestros datos y se describe sin sentido fijo.",
+        "correlacion": "sin correlación confirmada",
+        "importancia": "media"
       }
     }
   }

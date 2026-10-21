@@ -215,9 +215,9 @@ def _agy_fuentes_real(ruta_pieza: Path, tier: str):
     return escribir_textos(ruta_pieza, tier, TIMEOUT_REINTENTO)
 
 
-SIN_BANCO = ("No encontré ninguna voz de banco con su nota vigente (de los últimos {dias} días) sobre {nombre}, "
-             "ni en un segundo intento, y sin ella el análisis no sale. No gasté tu cupo: vuelve a pedirlo más "
-             "tarde, cada pedido hace una búsqueda nueva.")
+SIN_NOTICIA_DIRECTA = ("No encontré ninguna noticia directa de {voz} con su nota vigente (de los últimos {dias} días) "
+                       "sobre {nombre}, ni en un segundo intento, y sin ella el análisis no sale. No gasté tu cupo: "
+                       "vuelve a pedirlo más tarde, cada pedido hace una búsqueda nueva.")
 
 
 def _guardar_salida_agy(dir_pedido: Path, res: Any, intento: int) -> None:
@@ -276,8 +276,8 @@ class Atendedor:
         try:
             # El registro del bot y no el real: con uno inyectado, preparar miraba otro archivo.
             return self.preparar(orden, dir_pedido, ahora, registro=self.registro)
-        except (pr.SinAnalisisError,) as exc:
-            raise FalloPedido(str(exc)) from exc  # es la respuesta, no una falla
+        except (pr.SinAnalisisError, pr.AvisoAlPedir) as exc:
+            raise FalloPedido(str(exc)) from exc  # es la respuesta, no una falla de lectura
         except pr.PreparacionFallida as exc:
             extra = (" El análisis vigente sigue disponible con /oportunidad."
                      if orden.pieza == "seguimiento" else "")
@@ -306,7 +306,9 @@ class Atendedor:
         pieza = pr.cargar_pieza(dir_pedido)
         crudas = pieza["editorial"].get("fuentes")
         crudas = list(crudas) if isinstance(crudas, list) else []
-        pieza, descartes = fu.depurar_pieza(pieza, hoy, verificar=self.verificar_url)
+        directa = fu.directa_de(pieza)
+        lista = fu.lista_del_segmento(directa[0]) if directa else None
+        pieza, descartes = fu.depurar_pieza(pieza, hoy, lista=lista, verificar=self.verificar_url)
         # Una tesis con un defecto de texto descarta solo esa voz, no la pieza (spec §9).
         pieza, rotas = es.descartar_tesis_rotas(pieza)
         descartes += rotas
@@ -316,24 +318,27 @@ class Atendedor:
             raise FalloPedido("El texto no pasó los controles y no lo entrego así:\n• " + "\n• ".join(errores[:6]))
         return pieza, descartes, crudas
 
-    def _con_banco(self, dir_pedido: Path, hoy) -> tuple[dict[str, Any], list[str], bool]:
-        """La pieza con al menos una voz de banco válida; si el primer intento no la trae, un segundo solo de fuentes.
+    def _con_fuente_directa(self, dir_pedido: Path, hoy) -> tuple[dict[str, Any], list[str], bool]:
+        """La pieza con al menos una fuente directa válida; si el primer intento no la trae, un segundo solo de fuentes.
 
-        Spec 2026-10-17 §5: un análisis sin banco vigente no se publica. El segundo intento reabre
-        solo `fuentes` (los demás textos ya pasaron los controles) y deja escrito qué se descartó.
+        Spec 2026-10-20: un análisis sin noticia directa del activo no se publica. El segundo intento reabre
+        solo `fuentes` (los demás textos ya pasaron los controles) y deja escrito qué se descartó. Una pieza
+        sin sello `datos.fuente_directa` (anterior al spec) no exige directa.
         """
         pieza, descartes, crudas = self._redactar_y_validar(dir_pedido, hoy)
-        if fu.bancos(pieza["editorial"]["fuentes"]):
+        directa = fu.directa_de(pieza)
+        if directa is None or fu.fuentes_directas(pieza["editorial"]["fuentes"], *directa):
             return pieza, descartes, False
         fu.guardar_intento(dir_pedido, pieza["editorial"]["fuentes"], descartes, crudas)
         pieza["editorial"]["fuentes"] = es.MARCA
         pr.guardar_pieza(pieza, dir_pedido)
         pieza, descartes2, _ = self._redactar_y_validar(dir_pedido, hoy, self.redactar_fuentes, intento=2)
-        if fu.bancos(pieza["editorial"]["fuentes"]):
+        if fu.fuentes_directas(pieza["editorial"]["fuentes"], *directa):
             return pieza, descartes + descartes2, True
         motivos = [*descartes, *descartes2][:4]
-        texto = SIN_BANCO.format(dias=fu.cargar_lista().get("frescura_dias", 14),
-                                 nombre=pieza["datos"]["activos"][0]["nombre"])
+        texto = SIN_NOTICIA_DIRECTA.format(voz=directa[1]["nombre"],
+                                           dias=fu.cargar_lista().get("frescura_dias", 14),
+                                           nombre=pieza["datos"]["activos"][0]["nombre"])
         raise FalloPedido(texto + ("\nLo que descarté:\n• " + "\n• ".join(motivos) if motivos else ""))
 
     def _a_drive(self, rutas: list[Path], ahora: datetime) -> str:
@@ -391,7 +396,7 @@ class Atendedor:
                 self._exigir_cupo(pedido.usuario, ahora)
             dir_pedido = self.dir_pedidos / ahora.strftime("%Y-%m-%d") / f"{ahora:%H%M%S}_oportunidad_{ih.slug(ticker)}"
             hecha = self._preparar(pedido.orden, dir_pedido, ahora)
-            pieza, descartes, reintento = self._con_banco(dir_pedido, ahora.date())
+            pieza, descartes, reintento = self._con_fuente_directa(dir_pedido, ahora.date())
             a = pieza["datos"]["activos"][0]
             # La lámina se rinde antes del HTML: sin ella no hay botón «Descargar lámina».
             self.rendir_lamina(
@@ -404,7 +409,7 @@ class Atendedor:
             self.estado.guardar()
             avisos += [*hecha.avisos, *[f"Descarté una fuente: {d}" for d in descartes]]
             if reintento:
-                avisos.append("La primera búsqueda no trajo ninguna voz de banco: hice un segundo intento y ese sí la trajo.")
+                avisos.append("La primera búsqueda no trajo ninguna noticia directa: hice un segundo intento y ese sí la trajo.")
         try:
             try:
                 ruta = oh.guardar(pieza, dir_pedido, ejecutivo, self.autor, ahora.date(), self.publicar_imagen)

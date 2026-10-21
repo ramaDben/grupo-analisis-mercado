@@ -539,6 +539,36 @@ def _voces_correo(fuentes: list[dict[str, Any]], direccion: str, c: dict[str, st
     return _rotulo("Qué dice la banca", c, margen="14px 0 8px 0") + intro + "".join(tarjetas) + _separador(8)
 
 
+def _noticia_directa_correo(fuentes: list[dict[str, Any]], voz: tuple[str, dict[str, Any]] | None,
+                            c: dict[str, str]) -> str:
+    """La nota más reciente de una fuente del activo mismo, con enlace y sin etiqueta de postura.
+
+    Es contexto del activo y no confirmación: se muestra aunque contradiga nuestra lectura.
+    Sin sello de fuente directa (pieza anterior) o sin una directa, no sale.
+    """
+    if not fuentes or voz is None:
+        return ""
+    segmento, ancla = voz
+    directas = fu.fuentes_directas(fuentes, segmento, ancla)
+    if not directas:
+        return ""
+    f = max(directas, key=lambda x: str(x.get("fecha", "")))
+    tarjeta = (
+        f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#F8FAFC" '
+        f'style="background:#F8FAFC;border:1px solid #DFE6E4;border-radius:6px;margin:0 0 10px 0;">'
+        f'<tr><td style="padding:12px 14px;">'
+        f'<p style="margin:0;font-family:{F_SANS};font-size:13px;font-weight:700;color:{c["texto_1"]};">'
+        f'{ih.e(f["entidad"])} · {ih.e(f["medio"])} · {ih.e(_fecha_es(f["fecha"]))}</p>'
+        f'<p style="margin:6px 0 6px 0;font-family:{F_SANS};font-size:14px;line-height:20px;color:{c["texto_borde"]};">'
+        f'{ih.e(f["tesis"])}</p>'
+        f'<p style="margin:0;font-family:{F_SANS};font-size:12px;font-weight:600;">'
+        f'<a href="{ih.e(f["url"])}" target="_blank" rel="noopener noreferrer" style="color:{c["acento"]};text-decoration:underline;">'
+        f'Ver nota completa en {ih.e(f["medio"])} →</a></p>'
+        f'</td></tr></table>'
+    )
+    return _rotulo(f'Lo último de {ih.e(ancla["nombre"])}', c, margen="14px 0 8px 0") + tarjeta + _separador(8)
+
+
 def _alto_png(ruta: Path, ancho: int) -> int:
     """Alto proporcional al ancho de impresión, leído del encabezado del PNG (Outlook lo pide)."""
     cab = ruta.read_bytes()[:24]
@@ -833,7 +863,8 @@ def _continuidad_correo(a: dict[str, Any], d: dict[str, Any] | None, c: dict[str
 def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: Path, ejecutivo: str,
                    c: dict[str, str], d: dict[str, Any] | None = None, dias_clave: str = "",
                    fuentes: list[dict[str, Any]] | tuple = (), imagen_calendario: str = "",
-                   imagen_dolar: str = "", autor=None, bajada: str = "") -> str:
+                   imagen_dolar: str = "", autor=None, bajada: str = "",
+                   voz: tuple[str, dict[str, Any]] | None = None) -> str:
     """El bloque del activo en el correo: apertura oscura y cuerpo claro."""
     lec = a["lectura"]
     color_dir = _color_direccion(lec["direccion"], c)
@@ -887,6 +918,7 @@ def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: P
         + _hechos_correo((d or {}).get("hechos") or [], c)
         + _grafico_dolar_correo(ruta_dolar, c)
         + _dias_clave_correo(d or {}, dias_clave, dir_pedido, imagen_calendario, c)
+        + _noticia_directa_correo(list(fuentes), voz, c)
         + _voces_correo(list(fuentes), lec["direccion"], c)
         + _rotulo(f'Los tres escenarios · <span style="color:{color_dir};">'
                   f'{ih.e(lec["direccion"].capitalize())}</span>', c, margen="10px 0 8px 0")
@@ -1104,7 +1136,7 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
         titular_act = titular_correo(a, ed.get("fuentes"))
         editable_activos[t] = {"titular": titular_act or titular_base(a), "contexto": ed["contexto"][t]}
         correos.append(f'<template class="correo-activo" data-ticker="{ih.e(t)}">'
-                       f'{_bloque_correo(a, titular_act, ed["contexto"][t], dir_pedido, nombre_ej, c, d=d, dias_clave=dias, fuentes=ed["fuentes"], imagen_calendario=imagen_cal, imagen_dolar=imagen_dolar, autor=autor, bajada=ed.get("bajada", ""))}</template>')
+                       f'{_bloque_correo(a, titular_act, ed["contexto"][t], dir_pedido, nombre_ej, c, d=d, dias_clave=dias, fuentes=ed["fuentes"], imagen_calendario=imagen_cal, imagen_dolar=imagen_dolar, autor=autor, bajada=ed.get("bajada", ""), voz=fu.directa_de(pieza))}</template>')
         datos_js.append({"ticker": t, "nombre": a["nombre"], "digits": a["digits"], "escenario": a["escenario"], "contrato": a["contrato"],
                          "fmt": a["fmt"], "motivo": _motivo(a),
                          "condicion": op.texto_condicion(a["escenario"], a["fmt"]["entrada"]), "whatsapp": cm.texto_whatsapp_base(a, ed["titulares"][t], ed["contexto"][t])})

@@ -93,7 +93,7 @@ def _lectores(base, **kw):
         drivers=lambda t: ["Dollar Index"], agenda=lambda ahora, t, n: ag.Agenda("lunes 12/10", "lunes 19/10", "vacia"),
         hechos=lambda t, n, direccion, curva, eventos, ahora: ([], []),
         rendir_calendario=_calendario_falso, curva=lambda: ({}, []),
-        cuenta=lambda: None, registro=base.parent / "registro_no_usado.json",
+        ancla=lambda t: fx.SELLO_ORO, cuenta=lambda: None, registro=base.parent / "registro_no_usado.json",
         # La referencia semanal se verifica contra el mercado de hoy: por defecto, sigue igual.
         lectura_actual=lambda est, t, d, lector, ahora, referencia=None: (
             referencia or fx.lectura(ticker=t), {"H4": pd.DataFrame(columns=["time", "high", "low"])}))
@@ -108,6 +108,19 @@ def test_el_analisis_trae_un_solo_activo_con_su_vigencia(tmp_path):
     assert d["vigencia"] == {"desde": "lunes 12/10", "hasta": "lunes 19/10"}
     assert d["fundamental"] == {"fuera_catalogo": False, "sin_drivers": False, "referencia": "semanal"}
     assert set(hecha.pieza["editorial"]) == {"titular", "bajada", "titulares", "contexto", "fuentes"}
+
+
+def test_preparar_sella_la_fuente_directa_del_activo(tmp_path):
+    hecha = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES,
+                        _lectores(tmp_path / "ref", ancla=lambda t: ("fx", fx.ANCLA_ORO)))
+    sello = hecha.pieza["datos"]["fuente_directa"]
+    assert sello["segmento"] == "fx" and sello["ancla"] == fx.ANCLA_ORO and sello["consultas"]
+
+
+def test_un_activo_sin_ancla_no_se_prepara(tmp_path):
+    with pytest.raises(pr.PreparacionFallida, match="No gasté tu cupo"):
+        pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES,
+                    _lectores(tmp_path / "ref", ancla=lambda t: None))
 
 
 def test_sin_referencia_semanal_se_lee_de_nuevo_y_se_anota_como_propia(tmp_path):
@@ -438,3 +451,14 @@ def test_seguimiento_con_entrada_real_fuera_del_stop_lo_dice(tmp_path):
         pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD", "entrada": 9999.0}), tmp_path / "s",
                     datetime(2026, 10, 14, 11, 0, tzinfo=SCL),
                     _lectores_seg(tmp_path, pd.DataFrame(columns=["time", "high", "low"]), 4124.0))
+
+
+def test_el_aviso_de_la_ingesta_de_acciones_llega_a_los_avisos_y_no_a_los_datos(tmp_path):
+    """Revisión final: una acción sin informes SEC por error lo avisa al director; no viaja a la pieza."""
+    empresa = {"proxima_earnings": None, "fuente_fecha": "yfinance (no oficial)", "ultimo_informe": None,
+               "avisos": ["No pude leer los informes de la SEC de XAUUSD en la última ingesta."]}
+    lec = _lectores(tmp_path / "ref", ancla=lambda t: ("acciones", {**fx.ANCLA_ORO, "ticker": "X", "cik": "1"}),
+                    empresa=lambda t, a: dict(empresa))
+    hecha = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES, lec)
+    assert empresa["avisos"][0] in hecha.avisos
+    assert "avisos" not in hecha.pieza["datos"]["empresa"]

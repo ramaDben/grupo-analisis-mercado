@@ -6,6 +6,7 @@
     {
       "ticker": "USD/CLP",
       "ticker_mt5": "USDCLP",
+      "segmento": "fx",
       "nombre": "Dólar / Peso Chileno",
       "categoria": "forex",
       "digits": 2,
@@ -30,6 +31,7 @@
     {
       "ticker": "USD/JPY",
       "ticker_mt5": "USDJPY",
+      "segmento": "fx",
       "nombre": "Dólar / Yen Japonés",
       "categoria": "forex",
       "digits": 3,
@@ -55,6 +57,7 @@
     {
       "ticker": "EUR/USD",
       "ticker_mt5": "EURUSD",
+      "segmento": "fx",
       "nombre": "Euro / Dólar",
       "categoria": "forex",
       "digits": 5,
@@ -80,6 +83,7 @@
     {
       "ticker": "GBP/USD",
       "ticker_mt5": "GBPUSD",
+      "segmento": "fx",
       "nombre": "Libra / Dólar",
       "categoria": "forex",
       "digits": 5,
@@ -103,6 +107,8 @@
     {
       "ticker": "XAU/USD",
       "ticker_mt5": "XAUUSD",
+      "segmento": "commodities",
+      "ancla": {"nombre": "Oro", "entidades": ["World Gold Council", "LBMA"], "dominios": ["gold.org", "lbma.org.uk"], "terminos_ancla": ["oro", "XAU"]},
       "nombre": "Oro",
       "categoria": "commodity",
       "digits": 2,
@@ -128,6 +134,8 @@
     {
       "ticker": "XAG/USD",
       "ticker_mt5": "XAGUSD",
+      "segmento": "commodities",
+      "ancla": {"nombre": "Plata", "entidades": ["World Gold Council", "LBMA", "Silver Institute"], "dominios": ["gold.org", "lbma.org.uk", "silverinstitute.org"], "terminos_ancla": ["plata", "XAG"]},
       "nombre": "Plata",
       "categoria": "commodity",
       "digits": 3,
@@ -153,6 +161,8 @@
     {
       "ticker": "WTI",
       "ticker_mt5": "WTI.spot",
+      "segmento": "commodities",
+      "ancla": {"nombre": "Petróleo WTI", "entidades": ["OPEP", "EIA", "Agencia Internacional de Energía"], "dominios": ["opec.org", "eia.gov", "iea.org"], "terminos_ancla": ["petróleo", "crudo", "WTI", "OPEP+"]},
       "nombre": "Petróleo WTI",
       "categoria": "commodity",
       "digits": 3,
@@ -176,6 +186,8 @@
     {
       "ticker": "BRENT",
       "ticker_mt5": "BRENT.spot",
+      "segmento": "commodities",
+      "ancla": {"nombre": "Petróleo Brent", "entidades": ["OPEP", "EIA", "Agencia Internacional de Energía"], "dominios": ["opec.org", "eia.gov", "iea.org"], "terminos_ancla": ["petróleo", "crudo", "Brent", "OPEP+"]},
       "nombre": "Petróleo Brent",
       "categoria": "commodity",
       "digits": 3,
@@ -198,6 +210,8 @@
     {
       "ticker": "COPPER",
       "ticker_mt5": "COPPER",
+      "segmento": "commodities",
+      "ancla": {"nombre": "Cobre", "entidades": ["Cochilco", "Codelco", "LME", "ICSG"], "dominios": ["cochilco.cl", "codelco.cl", "lme.com", "icsg.org"], "terminos_ancla": ["cobre"]},
       "nombre": "Cobre Grado A",
       "categoria": "commodity",
       "digits": 0,
@@ -223,6 +237,8 @@
     {
       "ticker": "BTC/USD",
       "ticker_mt5": "BTCUSD",
+      "segmento": "cripto",
+      "ancla": {"nombre": "Bitcoin", "red": "la red Bitcoin", "fundacion": null, "entidades": ["BlackRock", "Fidelity", "Grayscale", "SEC", "CFTC", "Glassnode"], "dominios": ["ishares.com", "blackrock.com", "fidelity.com", "grayscale.com", "sec.gov", "cftc.gov", "glassnode.com"], "terminos_ancla": ["ETF de Bitcoin", "ETFs de Bitcoin", "ETF spot de Bitcoin", "Bitcoin Trust", "on-chain de Bitcoin", "BTCUSD"]},
       "nombre": "Bitcoin",
       "categoria": "crypto",
       "digits": 2,
@@ -246,6 +262,8 @@
     {
       "ticker": "ETH/USD",
       "ticker_mt5": "ETHUSD",
+      "segmento": "cripto",
+      "ancla": {"nombre": "Ethereum", "red": "la red Ethereum", "fundacion": "Ethereum Foundation", "entidades": ["Ethereum Foundation", "SEC"], "dominios": ["ethereum.org", "sec.gov"], "terminos_ancla": ["Ethereum", "ETHUSD"]},
       "nombre": "Ethereum",
       "categoria": "crypto",
       "digits": 2,
@@ -269,6 +287,8 @@
     {
       "ticker": "SOL/USD",
       "ticker_mt5": "SOLUSD",
+      "segmento": "cripto",
+      "ancla": {"nombre": "Solana", "red": "la red Solana", "fundacion": "Solana Foundation", "entidades": ["Solana Foundation", "SEC"], "dominios": ["solana.org", "solana.com", "sec.gov"], "terminos_ancla": ["Solana", "SOLUSD"]},
       "nombre": "Solana",
       "categoria": "crypto",
       "digits": 2,
@@ -291,6 +311,8 @@
     {
       "ticker": "LTC/USD",
       "ticker_mt5": "LTCUSD",
+      "segmento": "cripto",
+      "ancla": {"nombre": "Litecoin", "red": "la red Litecoin", "fundacion": "Litecoin Foundation", "entidades": ["Litecoin Foundation", "SEC"], "dominios": ["litecoin.org", "sec.gov"], "terminos_ancla": ["Litecoin", "LTCUSD"]},
       "nombre": "Litecoin",
       "categoria": "crypto",
       "digits": 2,
@@ -312,6 +334,8 @@
     {
       "ticker": "ADA/USD",
       "ticker_mt5": "ADAUSD",
+      "segmento": "cripto",
+      "ancla": {"nombre": "Cardano", "red": "la red Cardano", "fundacion": "IOG", "entidades": ["IOG", "SEC"], "dominios": ["iohk.io", "iog.io", "cardano.org", "sec.gov"], "terminos_ancla": ["Cardano", "ADAUSD"]},
       "nombre": "Cardano",
       "categoria": "crypto",
       "digits": 4,
@@ -333,6 +357,8 @@
     {
       "ticker": "DOGE/USD",
       "ticker_mt5": "DOGUSD",
+      "segmento": "cripto",
+      "ancla": {"nombre": "Dogecoin", "red": "la red Dogecoin", "fundacion": "Dogecoin Foundation", "entidades": ["Dogecoin Foundation", "SEC"], "dominios": ["dogecoinfoundation.org", "sec.gov"], "terminos_ancla": ["Dogecoin", "DOGUSD"]},
       "nombre": "Dogecoin",
       "categoria": "crypto",
       "digits": 4,
@@ -356,6 +382,8 @@
     {
       "ticker": "US100",
       "ticker_mt5": "US100.spot",
+      "segmento": "indices",
+      "ancla": {"nombre": "Nasdaq 100", "proveedor": "Nasdaq", "bolsa": "Nasdaq", "entidades": ["Nasdaq"], "dominios": ["nasdaq.com"], "terminos_ancla": ["Nasdaq 100", "Nasdaq-100", "US100"]},
       "nombre": "Nasdaq 100",
       "categoria": "indice",
       "sector_dominante": "tecnológico",
@@ -385,6 +413,8 @@
     {
       "ticker": "US500",
       "ticker_mt5": "US500.spot",
+      "segmento": "indices",
+      "ancla": {"nombre": "S&P 500", "proveedor": "S&P Dow Jones Indices", "bolsa": "NYSE", "entidades": ["S&P Dow Jones Indices", "NYSE"], "dominios": ["spglobal.com", "nyse.com"], "terminos_ancla": ["S&P 500", "US500"]},
       "nombre": "S&P 500",
       "categoria": "indice",
       "sector_dominante": "amplio (500 empresas)",
@@ -415,6 +445,8 @@
     {
       "ticker": "US30",
       "ticker_mt5": "US30.spot",
+      "segmento": "indices",
+      "ancla": {"nombre": "Dow Jones Industrial Average", "proveedor": "S&P Dow Jones Indices", "bolsa": "NYSE", "entidades": ["S&P Dow Jones Indices", "NYSE"], "dominios": ["spglobal.com", "nyse.com"], "terminos_ancla": ["Dow Jones", "Dow Jones Industrial Average", "US30"], "terminos_excluidos": ["S&P Dow Jones"]},
       "nombre": "Dow Jones Industrial",
       "categoria": "indice",
       "sector_dominante": "industrial y bancario",
@@ -449,6 +481,8 @@
       {
         "ticker": "QQQ",
         "ticker_mt5": "QQQ.US",
+        "segmento": "etfs",
+        "ancla": {"nombre": "Invesco QQQ", "emisor": "Invesco", "indice": "Nasdaq 100", "subyacente": "US100.spot", "entidades": ["Invesco"], "dominios": ["invesco.com"], "terminos_ancla": ["QQQ", "Invesco QQQ"]},
         "nombre": "Invesco QQQ Trust (Nasdaq 100)",
         "categoria": "etf",
         "digits": 2,
@@ -471,6 +505,8 @@
       {
         "ticker": "SPY",
         "ticker_mt5": "SPY.US",
+        "segmento": "etfs",
+        "ancla": {"nombre": "SPDR S&P 500 ETF", "emisor": "State Street", "indice": "S&P 500", "subyacente": "US500.spot", "entidades": ["State Street"], "dominios": ["ssga.com", "spdrs.com"], "terminos_ancla": ["SPY", "SPDR S&P 500"]},
         "nombre": "SPDR S&P 500 ETF",
         "categoria": "etf",
         "digits": 2,
@@ -493,6 +529,8 @@
       {
         "ticker": "GLD",
         "ticker_mt5": "GLD.US",
+        "segmento": "etfs",
+        "ancla": {"nombre": "SPDR Gold Shares", "emisor": "World Gold Trust", "indice": "Precio del oro (LBMA)", "subyacente": "XAUUSD", "entidades": ["World Gold Trust", "World Gold Council", "State Street"], "dominios": ["spdrgoldshares.com", "gold.org", "ssga.com"], "terminos_ancla": ["GLD", "SPDR Gold Shares", "World Gold Trust"]},
         "nombre": "SPDR Gold Shares",
         "categoria": "etf",
         "digits": 2,
@@ -516,6 +554,8 @@
       {
         "ticker": "IWM",
         "ticker_mt5": "IWM.US",
+        "segmento": "etfs",
+        "ancla": {"nombre": "iShares Russell 2000", "emisor": "BlackRock", "indice": "Russell 2000", "subyacente": null, "entidades": ["BlackRock", "iShares"], "dominios": ["ishares.com", "blackrock.com"], "terminos_ancla": ["IWM", "iShares Russell 2000"]},
         "nombre": "iShares Russell 2000 (empresas pequeñas)",
         "categoria": "etf",
         "digits": 2,
@@ -538,6 +578,8 @@
       {
         "ticker": "SOXX",
         "ticker_mt5": "SOXX.US",
+        "segmento": "etfs",
+        "ancla": {"nombre": "iShares Semiconductor", "emisor": "BlackRock", "indice": "ICE Semiconductor", "subyacente": null, "entidades": ["BlackRock", "iShares"], "dominios": ["ishares.com", "blackrock.com"], "terminos_ancla": ["SOXX", "iShares Semiconductor"]},
         "nombre": "iShares Semiconductor ETF (chips)",
         "categoria": "etf",
         "digits": 2,
@@ -572,6 +614,8 @@
       "componentes": [
         {
           "ticker_mt5": "#AAPL",
+          "segmento": "acciones",
+          "ancla": {"nombre": "Apple", "ticker": "AAPL", "cik": "0000320193", "sitio_ir": "https://investor.apple.com/", "entidades": ["Apple", "SEC"], "dominios": ["investor.apple.com", "sec.gov"], "terminos_ancla": ["Apple", "AAPL", "iPhone"]},
           "nombre": "Apple Inc.",
           "digits": 2,
           "unidad": "USD",
@@ -586,6 +630,8 @@
         },
         {
           "ticker_mt5": "#MSFT",
+          "segmento": "acciones",
+          "ancla": {"nombre": "Microsoft", "ticker": "MSFT", "cik": "0000789019", "sitio_ir": "https://www.microsoft.com/en-us/investor", "entidades": ["Microsoft", "SEC"], "dominios": ["microsoft.com", "sec.gov"], "rutas_propias": ["microsoft.com/en-us/investor", "news.microsoft.com"], "terminos_ancla": ["Microsoft", "MSFT", "Azure"]},
           "nombre": "Microsoft Corp.",
           "digits": 2,
           "unidad": "USD",
@@ -600,6 +646,8 @@
         },
         {
           "ticker_mt5": "#NVDA",
+          "segmento": "acciones",
+          "ancla": {"nombre": "NVIDIA", "ticker": "NVDA", "cik": "0001045810", "sitio_ir": "https://investor.nvidia.com/", "entidades": ["NVIDIA", "SEC"], "dominios": ["investor.nvidia.com", "sec.gov"], "terminos_ancla": ["NVIDIA", "NVDA"]},
           "nombre": "NVIDIA Corp.",
           "digits": 2,
           "unidad": "USD",
@@ -614,6 +662,8 @@
         },
         {
           "ticker_mt5": "#AMZN",
+          "segmento": "acciones",
+          "ancla": {"nombre": "Amazon", "ticker": "AMZN", "cik": "0001018724", "sitio_ir": "https://ir.aboutamazon.com/", "entidades": ["Amazon", "SEC"], "dominios": ["ir.aboutamazon.com", "sec.gov"], "terminos_ancla": ["Amazon", "AMZN", "AWS"]},
           "nombre": "Amazon.com Inc.",
           "digits": 2,
           "unidad": "USD",
@@ -628,6 +678,8 @@
         },
         {
           "ticker_mt5": "#AMD",
+          "segmento": "acciones",
+          "ancla": {"nombre": "AMD", "ticker": "AMD", "cik": "0000002488", "sitio_ir": "https://ir.amd.com/", "entidades": ["AMD", "SEC"], "dominios": ["ir.amd.com", "sec.gov"], "terminos_ancla": ["AMD", "Advanced Micro Devices"]},
           "nombre": "Advanced Micro Devices",
           "digits": 2,
           "unidad": "USD",
@@ -643,6 +695,8 @@
         },
         {
           "ticker_mt5": "#MELI",
+          "segmento": "acciones",
+          "ancla": {"nombre": "MercadoLibre", "ticker": "MELI", "cik": "0001099590", "sitio_ir": "https://investor.mercadolibre.com/", "entidades": ["MercadoLibre", "SEC"], "dominios": ["investor.mercadolibre.com", "sec.gov"], "terminos_ancla": ["MercadoLibre", "MELI"]},
           "nombre": "MercadoLibre Inc.",
           "digits": 2,
           "unidad": "USD",
@@ -671,6 +725,8 @@
       "componentes": [
         {
           "ticker_mt5": "#JPM",
+          "segmento": "acciones",
+          "ancla": {"nombre": "JPMorgan Chase", "ticker": "JPM", "cik": "0000019617", "sitio_ir": "https://www.jpmorganchase.com/ir", "entidades": ["JPMorgan Chase", "SEC"], "dominios": ["jpmorganchase.com", "sec.gov"], "rutas_propias": ["jpmorganchase.com/ir", "jpmorganchase.com/newsroom"], "terminos_ancla": ["JPMorgan", "JPM"]},
           "nombre": "JPMorgan Chase",
           "digits": 2,
           "unidad": "USD",
@@ -685,6 +741,8 @@
         },
         {
           "ticker_mt5": "#BAC",
+          "segmento": "acciones",
+          "ancla": {"nombre": "Bank of America", "ticker": "BAC", "cik": "0000070858", "sitio_ir": "https://investor.bankofamerica.com/", "entidades": ["Bank of America", "SEC"], "dominios": ["investor.bankofamerica.com", "sec.gov"], "terminos_ancla": ["Bank of America", "BAC"]},
           "nombre": "Bank of America",
           "digits": 2,
           "unidad": "USD",
@@ -699,6 +757,8 @@
         },
         {
           "ticker_mt5": "#GS",
+          "segmento": "acciones",
+          "ancla": {"nombre": "Goldman Sachs", "ticker": "GS", "cik": "0000886982", "sitio_ir": "https://www.goldmansachs.com/investor-relations/", "entidades": ["Goldman Sachs", "SEC"], "dominios": ["goldmansachs.com", "sec.gov"], "rutas_propias": ["goldmansachs.com/investor-relations", "goldmansachs.com/pressroom"], "terminos_ancla": ["Goldman Sachs"]},
           "nombre": "Goldman Sachs",
           "digits": 2,
           "unidad": "USD",
@@ -713,6 +773,8 @@
         },
         {
           "ticker_mt5": "#MS",
+          "segmento": "acciones",
+          "ancla": {"nombre": "Morgan Stanley", "ticker": "MS", "cik": "0000895421", "sitio_ir": "https://www.morganstanley.com/about-us-ir", "entidades": ["Morgan Stanley", "SEC"], "dominios": ["morganstanley.com", "sec.gov"], "rutas_propias": ["morganstanley.com/about-us-ir", "morganstanley.com/press-releases"], "terminos_ancla": ["Morgan Stanley"]},
           "nombre": "Morgan Stanley",
           "digits": 2,
           "unidad": "USD",
@@ -740,6 +802,8 @@
       "componentes": [
         {
           "ticker_mt5": "#BA",
+          "segmento": "acciones",
+          "ancla": {"nombre": "Boeing", "ticker": "BA", "cik": "0000012927", "sitio_ir": "https://investors.boeing.com/", "entidades": ["Boeing", "SEC"], "dominios": ["investors.boeing.com", "sec.gov"], "terminos_ancla": ["Boeing"]},
           "nombre": "Boeing Co.",
           "digits": 2,
           "unidad": "USD",
@@ -754,6 +818,8 @@
         },
         {
           "ticker_mt5": "#CAT",
+          "segmento": "acciones",
+          "ancla": {"nombre": "Caterpillar", "ticker": "CAT", "cik": "0000018230", "sitio_ir": "https://investors.caterpillar.com/", "entidades": ["Caterpillar", "SEC"], "dominios": ["investors.caterpillar.com", "sec.gov"], "terminos_ancla": ["Caterpillar"]},
           "nombre": "Caterpillar Inc.",
           "digits": 2,
           "unidad": "USD",
@@ -768,6 +834,8 @@
         },
         {
           "ticker_mt5": "#GE",
+          "segmento": "acciones",
+          "ancla": {"nombre": "GE Aerospace", "ticker": "GE", "cik": "0000040545", "sitio_ir": "https://www.geaerospace.com/investor-relations", "entidades": ["GE Aerospace", "SEC"], "dominios": ["geaerospace.com", "sec.gov"], "rutas_propias": ["geaerospace.com/investor-relations", "geaerospace.com/news"], "terminos_ancla": ["GE Aerospace"]},
           "nombre": "GE Aerospace",
           "digits": 2,
           "unidad": "USD",
@@ -782,6 +850,8 @@
         },
         {
           "ticker_mt5": "#DE",
+          "segmento": "acciones",
+          "ancla": {"nombre": "Deere", "ticker": "DE", "cik": "0000315189", "sitio_ir": "https://investor.deere.com/", "entidades": ["Deere", "SEC"], "dominios": ["deere.com", "sec.gov"], "rutas_propias": ["investor.deere.com", "deere.com/en-us/our-company/newsroom"], "terminos_ancla": ["Deere", "John Deere"]},
           "nombre": "Deere & Co.",
           "digits": 2,
           "unidad": "USD",
@@ -814,6 +884,8 @@
     },
     "GER40": {
       "ticker_mt5": "GER40.spot",
+      "segmento": "indices",
+      "ancla": {"nombre": "DAX 40", "proveedor": "STOXX", "bolsa": "XETRA", "entidades": ["Deutsche Börse", "STOXX"], "dominios": ["deutsche-boerse.com", "stoxx.com"], "terminos_ancla": ["DAX", "DAX 40", "GER40"]},
       "digits": 2,
       "unidad": "USD",
       "relevancia": "DAX 40 alemán. Referencia para sentimiento europeo (opcional)."

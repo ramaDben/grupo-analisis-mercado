@@ -1,0 +1,167 @@
+{
+  "_nota": "Entidades, medios y anclas propias de cada segmento para la fuente directa (spec 2026-10-20). Cada dominio y cada entidad que un ancla declare tiene que estar aqui o en config/fuentes_prestigio.json.",
+  "fx": {
+    "entidades": ["Banco Nacional Suizo", "Gobierno de Suiza", "Banco de Japón", "Ministerio de Finanzas de Japón", "Banco de Inglaterra"],
+    "medios": {
+      "Banco Nacional Suizo": ["snb.ch"],
+      "Gobierno de Suiza": ["admin.ch"],
+      "NZZ": ["nzz.ch"],
+      "Le Temps": ["letemps.ch"],
+      "Handelszeitung": ["handelszeitung.ch"],
+      "Banco de Japón": ["boj.or.jp"],
+      "Ministerio de Finanzas de Japón": ["mof.go.jp"],
+      "Banco de Inglaterra": ["bankofengland.co.uk"]
+    },
+    "divisas": {
+      "CHF": {
+        "pais": "Suiza", "banco_central": "Banco Nacional Suizo", "nombre": "Suiza",
+        "entidades": ["Banco Nacional Suizo", "Gobierno de Suiza"],
+        "dominios": ["snb.ch", "admin.ch", "nzz.ch", "letemps.ch", "handelszeitung.ch"],
+        "terminos_ancla": ["Suiza", "franco suizo", "CHF", "SNB"]
+      },
+      "JPY": {
+        "pais": "Japón", "banco_central": "Banco de Japón", "nombre": "Japón",
+        "entidades": ["Banco de Japón", "Ministerio de Finanzas de Japón"],
+        "dominios": ["boj.or.jp", "mof.go.jp"],
+        "terminos_ancla": ["yen", "Japón", "BoJ", "JPY"]
+      },
+      "GBP": {
+        "pais": "Reino Unido", "banco_central": "Banco de Inglaterra", "nombre": "Reino Unido",
+        "entidades": ["Banco de Inglaterra"],
+        "dominios": ["bankofengland.co.uk"],
+        "terminos_ancla": ["libra esterlina", "Reino Unido", "BoE", "GBP"]
+      },
+      "EUR": {
+        "pais": "Zona Euro", "banco_central": "BCE", "nombre": "Zona Euro",
+        "entidades": ["BCE"],
+        "dominios": ["ecb.europa.eu"],
+        "terminos_ancla": ["euro", "Zona Euro", "BCE", "EUR"]
+      },
+      "CLP": {
+        "pais": "Chile", "banco_central": "Banco Central de Chile", "nombre": "Chile",
+        "entidades": ["Banco Central de Chile"],
+        "dominios": ["bcentral.cl"],
+        "terminos_ancla": ["peso chileno", "Chile", "BCCh", "CLP"]
+      }
+    }
+  },
+  "commodities": {
+    "entidades": ["LBMA", "Codelco", "LME", "ICSG", "Silver Institute"],
+    "medios": {
+      "LBMA": ["lbma.org.uk"],
+      "Codelco": ["codelco.cl"],
+      "LME": ["lme.com"],
+      "ICSG": ["icsg.org"],
+      "Silver Institute": ["silverinstitute.org"]
+    }
+  },
+  "acciones": {
+    "entidades": [
+      "Apple",
+      "Microsoft",
+      "NVIDIA",
+      "Amazon",
+      "AMD",
+      "MercadoLibre",
+      "JPMorgan Chase",
+      "Bank of America",
+      "Goldman Sachs",
+      "Morgan Stanley",
+      "Boeing",
+      "Caterpillar",
+      "GE Aerospace",
+      "Deere",
+      "SEC"
+    ],
+    "medios": {
+      "Apple": [
+        "investor.apple.com"
+      ],
+      "Microsoft": [
+        "microsoft.com"
+      ],
+      "NVIDIA": [
+        "investor.nvidia.com"
+      ],
+      "Amazon": [
+        "ir.aboutamazon.com"
+      ],
+      "AMD": [
+        "ir.amd.com"
+      ],
+      "MercadoLibre": [
+        "investor.mercadolibre.com"
+      ],
+      "JPMorgan Chase": [
+        "jpmorganchase.com"
+      ],
+      "Bank of America": [
+        "investor.bankofamerica.com"
+      ],
+      "Goldman Sachs": [
+        "goldmansachs.com"
+      ],
+      "Morgan Stanley": [
+        "morganstanley.com"
+      ],
+      "Boeing": [
+        "investors.boeing.com"
+      ],
+      "Caterpillar": [
+        "investors.caterpillar.com"
+      ],
+      "GE Aerospace": [
+        "geaerospace.com"
+      ],
+      "Deere": [
+        "deere.com"
+      ],
+      "SEC": [
+        "sec.gov"
+      ]
+    }
+  },
+  "etfs": {
+    "entidades": ["Invesco", "State Street", "World Gold Trust", "BlackRock", "iShares"],
+    "medios": {
+      "Invesco": ["invesco.com"],
+      "State Street": ["ssga.com", "spdrs.com"],
+      "World Gold Trust": ["spdrgoldshares.com"],
+      "BlackRock": ["blackrock.com"],
+      "iShares": ["ishares.com"],
+      "ETF.com": ["etf.com"],
+      "ETFdb": ["etfdb.com"],
+      "Morningstar": ["morningstar.com"]
+    }
+  },
+  "indices": {
+    "entidades": ["Nasdaq", "S&P Dow Jones Indices", "NYSE", "Deutsche Börse", "STOXX"],
+    "medios": {
+      "Nasdaq": ["nasdaq.com"],
+      "S&P Dow Jones Indices": ["spglobal.com"],
+      "NYSE": ["nyse.com"],
+      "Deutsche Börse": ["deutsche-boerse.com"],
+      "STOXX": ["stoxx.com"]
+    }
+  },
+  "cripto": {
+    "entidades": ["Ethereum Foundation", "Solana Foundation", "IOG", "Litecoin Foundation", "Dogecoin Foundation",
+                  "BlackRock", "Fidelity", "Grayscale", "SEC", "CFTC", "Glassnode", "Coinbase", "Kraken", "Binance"],
+    "medios": {
+      "Ethereum Foundation": ["ethereum.org"],
+      "Solana Foundation": ["solana.org", "solana.com"],
+      "IOG": ["iohk.io", "iog.io", "cardano.org"],
+      "Litecoin Foundation": ["litecoin.org"],
+      "Dogecoin Foundation": ["dogecoinfoundation.org"],
+      "BlackRock": ["ishares.com", "blackrock.com"],
+      "Fidelity": ["fidelity.com"],
+      "Grayscale": ["grayscale.com"],
+      "SEC": ["sec.gov"],
+      "CFTC": ["cftc.gov"],
+      "Glassnode": ["glassnode.com"],
+      "Coinbase": ["coinbase.com"],
+      "Kraken": ["kraken.com"],
+      "Binance": ["binance.com"]
+    }
+  }
+}

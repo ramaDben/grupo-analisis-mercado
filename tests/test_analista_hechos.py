@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from datetime import date, timedelta
 from pathlib import Path
@@ -96,9 +97,17 @@ def test_lo_que_no_se_puede_medir_se_avisa_y_no_se_inventa():
 
 
 def test_un_activo_sin_ficha_recibe_los_generales_sin_efecto():
-    hechos, _ = hc.medir("COPPER", "Cobre", "ALCISTA", CURVA, [], lector({"USDIDX": DXY}), HOY)
+    hechos, _ = hc.medir("BTCUSD", "Bitcoin", "ALCISTA", CURVA, [], lector({"USDIDX": DXY}), HOY)
     assert [h["id"] for h in hechos] == ["dxy", "bono_10"]
     assert all(h["efecto"] is None and h["con_la_lectura"] is None for h in hechos)
+
+
+def test_usdchf_y_gbpusd_tienen_ficha_de_drivers_y_no_caen_en_generales_sin_signo():
+    chf = hc.signos("USDCHF")
+    assert chf["dxy"] == 1 and set(chf) >= {"dxy", "bono_10"}
+    assert chf["bono_10"] == 0  # correlacion no confirmada: se describe, no se interpreta
+    gbp = hc.signos("GBPUSD")
+    assert gbp["dxy"] == -1 and gbp["bono_10"] == 0
 
 
 def test_el_cobre_del_dolar_usa_los_digitos_del_simbolo():
@@ -136,3 +145,55 @@ def test_sin_respaldo_y_con_el_terminal_caido_el_dxy_se_avisa():
 def test_la_fed_sin_decision_en_la_ventana_no_trae_proxima_decision():
     hechos, _ = hc.medir("XAUUSD", "Oro", "BAJISTA", CURVA, [], lector({"USDIDX": DXY}), HOY)
     assert next(h for h in hechos if h["id"] == "fed")["proxima_decision"] is None
+
+
+def test_brent_cobre_y_plata_tienen_ficha_de_drivers():
+    brent = hc.signos("BRENT.spot")
+    assert brent["petroleo"] == 1 and brent["dxy"] == -1
+    cobre = hc.signos("COPPER")
+    assert cobre["dxy"] == -1 and set(cobre) >= {"dxy", "bono_10"}
+    plata = hc.signos("XAGUSD")
+    assert plata["dxy"] == -1 and plata["tasa_real"] == -1
+    # correlacion no confirmada: sin signo
+    assert brent["bono_10"] == 0 and cobre["bono_10"] == 0
+
+
+def test_los_inventarios_eia_calculan_su_hora_con_el_helper():
+    import subprocess
+
+    datos = json.loads((RAIZ / "config" / "drivers.json").read_text(encoding="utf-8"))
+    pub = datos["WTI"]["drivers"]["inventarios_eia"]["publicacion"]
+    assert pub["zona_origen"] == "Eastern Standard Time" and re.fullmatch(r"\d\d:\d\d", pub["hora_origen"])
+    assert "hora_chile" not in pub and "CLT" not in json.dumps(pub)  # ninguna hora de Chile escrita a mano
+    salida = subprocess.run(["powershell", "-NoProfile", "-File", str(RAIZ / "scripts" / "hora_chile.ps1"),
+                             "-Hora", pub["hora_origen"], "-ZonaOrigen", pub["zona_origen"],
+                             "-Fecha", "2026-10-21"], capture_output=True, text=True, check=True).stdout.strip()
+    assert re.fullmatch(r"\d\d:\d\d CLS?T", salida)
+
+
+def test_cada_indice_tiene_ficha_y_no_cae_en_generales():
+    generales = {"dxy": 0, "bono_10": 0}
+    for t in ("US500.spot", "US30.spot", "GER40.spot"):
+        assert hc.signos(t) != generales, t
+    assert hc.signos("US500.spot")["fed"] == -1 and hc.signos("US500.spot")["bono_10"] == -1
+    # GER40: sin correlacion confirmada con el dolar ni la energia, va sin signo
+    assert hc.signos("GER40.spot").get("dxy") == 0 and hc.signos("GER40.spot").get("petroleo") == 0
+
+
+def test_xetra_tiene_feriados_y_alemania_esta_en_la_agenda():
+    import json
+    from analista import agenda as ag
+    from market_data_mcp.tools import symbol_spec as ss
+
+    datos = json.loads(ss._FERIADOS_PATH.read_text(encoding="utf-8"))
+    assert len(datos["XETRA"]) >= 7 and "2026-12-25" in datos["XETRA"]
+    assert ss._TICKER_EXCHANGE["GER40.spot"] == "XETRA"
+    assert ss._cargar_feriados()["XETRA"] == datos["XETRA"]
+    assert ag.PAISES["Germany"] == "Alemania"
+
+
+def test_spy_hereda_los_drivers_del_sp500_como_qqq_los_del_nasdaq():
+    """Revisión final: SPY.US caía en los generales; su subyacente US500 tiene ficha propia."""
+    assert hc.signos("SPY.US") == hc.signos("US500.spot")
+    assert hc.signos("SPY.US") != {m: 0 for m in hc.GENERALES}
+    assert hc.signos("QQQ.US") == hc.signos("US100.spot")

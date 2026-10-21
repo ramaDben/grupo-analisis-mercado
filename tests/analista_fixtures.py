@@ -117,6 +117,15 @@ FUENTES_EJEMPLO = [{
     "verificacion": "ok"}]
 
 
+ANCLA_ORO = {"nombre": "oro", "entidades": ["World Gold Council"], "dominios": ["gold.org"],
+             "terminos_ancla": ["oro", "gold"]}
+SELLO_ORO = ("commodities", ANCLA_ORO)
+DIRECTA_ORO = {"entidad": "World Gold Council", "medio": "World Gold Council", "fecha": "2026-10-06",
+               "url": "https://www.gold.org/goldhub/research/demanda-octubre", "postura": "alcista",
+               "tesis": "World Gold Council ve una demanda firme de oro en los bancos centrales.",
+               "verificacion": "ok"}
+
+
 HECHOS_EJEMPLO = [
     {"id": "dxy", "driver": "Dollar Index (DXY)", "fecha": "viernes 09/10", "en_curso": False, "nivel": "101,560",
      "cambio_1d": "0,193", "cambio_5d": "0,288", "unidad_cambio": "puntos", "sentido": "bajó", "sentido_1d": "bajó",
@@ -144,7 +153,7 @@ def agenda_ejemplo(estado: str = "ok") -> dict:
 
 def pieza_oportunidad(dir_pedido: Path, laminas: bool = False, wti: bool = False, rango: bool = False,
                       fuentes: list | None = None, agenda: str = "ok", hechos: bool = True,
-                      legado: bool = False, dolar: bool = False) -> dict:
+                      legado: bool = False, dolar: bool = False, sello: bool = True) -> dict:
     """El análisis de un activo con su texto ya escrito (por defecto el oro; `rango` es el cobre).
 
     Escribe el gráfico en `dir_pedido`; con `laminas=True` también la lámina, que en el bot se
@@ -163,6 +172,9 @@ def pieza_oportunidad(dir_pedido: Path, laminas: bool = False, wti: bool = False
              "fundamental": {"fuera_catalogo": False, "sin_drivers": False, "referencia": "semanal"}}
     imagenes = {t: a["grafico"]}
     extra = {"titulares": [t], "contexto": [t]}
+    if sello:  # `sello=False` arma una pieza anterior al spec 2026-10-20
+        datos["fuente_directa"] = {"segmento": SELLO_ORO[0], "ancla": dict(ANCLA_ORO),
+                                   "consultas": ["World Gold Council oro", "site:gold.org oro"]}
     if legado:
         datos["agenda_semana"] = []
     else:

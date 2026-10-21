@@ -573,7 +573,8 @@ def test_bancos_correo_solo_uno_y_a_favor_de_la_lectura(tmp_path):
          "url": "https://www.bloomberg.com/markets/oro-ubs-2026",
          "postura": "bajista", "tesis": "UBS anticipa consolidación bajista hacia 3.900."},
     ]
-    p = fx.pieza_oportunidad(tmp_path, laminas=True, fuentes=fuentes_tres)
+    # Sin sello de directa (pieza anterior al spec 2026-10-20) el organismo no sale; con sello sale como noticia directa.
+    p = fx.pieza_oportunidad(tmp_path, laminas=True, fuentes=fuentes_tres, sello=False)
     html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
     correo = _correo(html)
 
@@ -906,3 +907,36 @@ def test_el_texto_de_los_marcadores_no_contiene_guion_largo_ni_medio(tmp_path):
         assert "—" not in texto, f"El marcador data-ed='{nombre_ed}' contiene guion largo (—): {texto!r}"
         assert "–" not in texto, f"El marcador data-ed='{nombre_ed}' contiene guion medio (–): {texto!r}"
 
+
+
+# ───────────────────────────────────────────── la noticia directa del activo (spec 2026-10-20)
+
+
+DIRECTA_NOTICIA = {"entidad": "World Gold Council", "medio": "World Gold Council", "fecha": "2026-10-06",
+               "url": "https://www.gold.org/goldhub/research/demanda-octubre", "postura": "bajista",
+               "tesis": "World Gold Council informa una pausa en las compras de oro de los bancos centrales.",
+               "verificacion": "ok"}
+
+
+def test_el_correo_lleva_la_noticia_directa_con_enlace_y_sin_etiqueta_de_postura(tmp_path):
+    p = fx.pieza_oportunidad(tmp_path, laminas=True, fuentes=[DIRECTA_NOTICIA])
+    p["editorial"]["fuentes"][0]["postura"] = "alcista"  # contra la lectura bajista de la fixture
+    correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+    assert "Lo último de oro" in correo and "World Gold Council" in correo
+    assert 'href="https://www.gold.org/goldhub/research/demanda-octubre"' in correo
+    assert "pausa en las compras de oro" in correo
+    assert "Coincide con nuestra lectura" not in correo and "—" not in correo
+
+
+def test_sin_fuente_directa_sellada_el_correo_sale_como_antes(tmp_path):
+    p = fx.pieza_oportunidad(tmp_path, laminas=True, fuentes=[DIRECTA_NOTICIA], sello=False)
+    correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+    assert "Lo último de" not in correo
+
+
+def test_el_correo_cita_un_banco_y_la_directa_a_la_vez(tmp_path):
+    p = fx.pieza_oportunidad(tmp_path, laminas=True, fuentes=[DIRECTA_NOTICIA, UBS_A_FAVOR])
+    correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+    assert "Lo último de oro" in correo and "Qué dice la banca" in correo
+    assert correo.index("Lo último de oro") < correo.index("Qué dice la banca")
+    assert correo.count("Coincide con nuestra lectura") == 1

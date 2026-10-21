@@ -64,7 +64,13 @@ def test_explica_los_dias_clave():
     assert "dias_clave" in TEXTO and "datos.agenda" in TEXTO and "420" in TEXTO
 
 
-def test_exige_un_banco_y_explica_el_segundo_intento():
+def test_las_instrucciones_exigen_una_fuente_directa():
     bajo = TEXTO.lower()
-    assert "al menos una de un banco" in bajo and "fuentes_intento_1.json" in TEXTO
+    assert "datos.fuente_directa" in TEXTO and "al menos una directa" in bajo and "fuentes_intento_1.json" in TEXTO
+    assert "al menos una de un banco" not in bajo
     assert "lista vacía" not in bajo  # ya no se permite entregar fuentes vacías
+
+
+def test_las_instrucciones_piden_que_el_comunicado_de_un_emisor_traiga_datos_y_no_promocion():
+    bajo = TEXTO.lower()
+    assert "emisor" in bajo and "promoción" in bajo and "datos del fondo o del mercado" in bajo
