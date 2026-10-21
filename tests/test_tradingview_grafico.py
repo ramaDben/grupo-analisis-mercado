@@ -247,3 +247,18 @@ def test_la_separacion_respeta_el_orden_original_y_el_borde():
 def test_el_precio_de_las_pildoras_va_en_notacion_chilena():
     assert tg._precio_es(4186.17, 2) == "4.186,17"
     assert tg._precio_es(1.12247, 5) == "1,12247"
+
+
+def test_el_modo_limpio_amplia_los_niveles_lejanos_sin_apilarlos_y_dice_a_cuanto_estan():
+    import re
+
+    rows = [{"time": i, "open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0} for i in range(40)]
+    html = tg.construir_html_limpio(rows, 2, [(94.0, "OBJETIVO"), (92.0, "ENTRADA"), (91.5, "STOP")])
+    assert "ZONA AMPLIADA" in html and "A 6,0 % DEL PRECIO DE HOY" in html
+    ys = sorted(float(v) for v in re.findall(r'class="pildora" data-y="([\d.]+)"', html))
+    assert all(b - a >= tg.SEPARACION_ETIQUETAS - 1 for a, b in zip(ys, ys[1:]))
+
+
+def test_el_modo_limpio_no_amplia_nada_si_los_niveles_estan_cerca_de_las_velas():
+    rows = [{"time": i, "open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0} for i in range(40)]
+    assert "ZONA AMPLIADA" not in tg.construir_html_limpio(rows, 2, [(99.5, "ENTRADA"), (101.5, "OBJETIVO")])
