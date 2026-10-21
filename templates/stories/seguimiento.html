@@ -129,113 +129,99 @@ body.activo-doge    { --activo: var(--activo-doge); }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--fondo); color: var(--texto-1);
-  font-family: var(--font-sans); overflow: hidden; -webkit-font-smoothing: antialiased; }
+  font-family: var(--font-sans); font-weight: 600; overflow: hidden; -webkit-font-smoothing: antialiased; }
 
-.story { position: relative; width: 100%; height: 100%; padding: 44px 56px 30px; display: flex; flex-direction: column; }
-.velo { position: absolute; inset: 0; z-index: 1; pointer-events: none;
-  background: radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--acento) 14%, transparent) 0%, transparent 55%),
-              linear-gradient(180deg, rgba(0,0,0,0.5) 0%, var(--velo-inferior) 100%); }
+/* Diseño v5 (director, 2026-10-20): el logo de GI de fondo, tarjetas de cristal y solo lo que el gráfico traza. */
+.story { position: relative; width: 100%; height: 100%; padding: 40px 56px 22px; display: flex; flex-direction: column;
+  background: radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--acento) 14%, transparent), transparent 55%),
+              linear-gradient(180deg, color-mix(in srgb, var(--fondo-acento) 40%, var(--fondo)), var(--velo-inferior)); }
+.wm { position: absolute; left: 50%; top: 50%; width: 1700px; height: 1700px; transform: translate(-42%, -50%);
+  opacity: .08; z-index: 0; pointer-events: none; }
 .contenido { position: relative; z-index: 2; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 
 .cabecera { display: flex; justify-content: space-between; align-items: center; }
-.chip { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: 0.10em; text-transform: uppercase;
-  color: var(--acento); border: 1.5px solid var(--acento); border-radius: 999px; padding: 10px 26px;
-  background: color-mix(in srgb, var(--fondo-acento) 85%, var(--fondo)); }
-.fecha { font-size: 24px; font-weight: 600; color: var(--texto-2); }
+.chip { font-family: var(--font-sans); font-weight: 700; font-size: 22px; letter-spacing: 0.10em; text-transform: uppercase;
+  color: var(--acento); border: 1.5px solid var(--acento); border-radius: 999px; padding: 9px 26px;
+  background: color-mix(in srgb, var(--velo-inferior) 80%, transparent); }
+.fecha { font-size: 26px; font-weight: 700; color: var(--texto-1); }
 
-.cuerpo { flex: 1; min-height: 0; display: flex; gap: 44px; margin-top: 28px; }
-.izq { width: 720px; display: flex; flex-direction: column; }
+.cuerpo { flex: 1; min-height: 0; display: flex; gap: 30px; margin-top: 20px; }
+.izq { width: 890px; display: flex; flex-direction: column; }
 .der { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
 
-.activo { font-weight: 700; font-size: 26px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-borde); margin: 0; }
+.vidrio { background: color-mix(in srgb, var(--velo-inferior) 80%, transparent); backdrop-filter: blur(28px);
+  border: 1.5px solid color-mix(in srgb, var(--acento) 22%, transparent); border-radius: 16px;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--acento) 40%, transparent); }
+
+.activo { font-weight: 700; font-size: 26px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--texto-borde); margin: 0; }
 /* Los cinco estados llevan el mismo sello: ninguno se vende ni se dramatiza. */
-.sello { font-family: var(--font-display); font-weight: 700; font-size: 72px; letter-spacing: 0.04em; color: var(--blanco); margin: 14px 0 0;
-  padding: 10px 0; border-bottom: 4px solid var(--acento); align-self: flex-start; }
-.duelo { display: flex; gap: 22px; margin: 30px 0 0; }
-.lado { flex: 1; padding: 20px 22px; border-radius: 14px; border: 1.5px solid color-mix(in srgb, var(--acento) 40%, transparent);
-  background: color-mix(in srgb, var(--fondo-acento) 70%, var(--fondo)); }
+.sello { font-family: var(--font-display); font-weight: 700; font-size: 60px; letter-spacing: 0.04em; color: var(--blanco);
+  margin: 6px 0 0; padding: 4px 0; border-bottom: 4px solid var(--acento); align-self: flex-start; white-space: nowrap; }
+.duelo { display: flex; gap: 20px; margin: 18px 0 0; }
+.lado { flex: 1; padding: 10px 20px; }
 .rotulo { font-size: 20px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--acento); margin: 0; }
-.cifra { font-family: var(--font-display); font-weight: 700; font-size: 52px; color: var(--blanco); margin: 10px 0 0; }
-.avance { font-size: 30px; font-weight: 700; color: var(--texto-1); margin: 22px 0 0; }
-.hoy { font-size: 27px; line-height: 1.4; color: var(--texto-borde); margin: 14px 0 0; }
-.niveles { display: flex; gap: 14px; margin: 30px 0 0; }
-.nivel { flex: 1; padding: 14px 18px; border-radius: 12px; background: color-mix(in srgb, var(--fondo-acento) 55%, var(--fondo));
-  border: 1px solid color-mix(in srgb, var(--texto-1) 14%, transparent); }
-.nivel:has(.nv:empty) { display: none; }
-.nr { font-size: 18px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-2); margin: 0; }
-.nv { font-family: var(--font-display); font-weight: 700; font-size: 30px; color: var(--blanco); margin: 6px 0 0; }
-.nivel.stop .nr { color: var(--baja-suave); }
-.nivel.obj .nr { color: var(--sube-suave); }
-.entrada-real { font-size: 24px; font-weight: 700; color: var(--acento); margin: 12px 0 0; }
-.entrada-real:empty, .op-hoy p:empty { display: none; }
-.op-hoy { margin: 22px 0 0; padding: 16px 20px; border-radius: 12px; border: 1.5px solid color-mix(in srgb, var(--acento) 40%, transparent);
-  background: color-mix(in srgb, var(--fondo-acento) 55%, var(--fondo)); }
+.cifra { font-family: var(--font-display); font-weight: 700; font-size: 72px; line-height: 1.15; color: var(--blanco); margin: 0; }
+.avance { font-size: 36px; font-weight: 700; color: var(--texto-1); margin: 22px 0 0; }
+.hoy { font-size: 30px; line-height: 1.35; color: var(--texto-1); margin: 8px 0 0; }
+.entrada-real { font-size: 27px; font-weight: 700; color: var(--acento); margin: 10px 0 0; }
+.entrada-real:empty, .op-hoy p:empty, .op-hoy span:empty { display: none; }
+.op-hoy { margin: 22px 0 0; padding: 18px 24px; }
 .op-hoy:has(.op-titulo:empty) { display: none; }
-.op-titulo { font-size: 19px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--acento); margin: 0; }
-.op-aviso { font-size: 22px; font-weight: 700; color: var(--texto-1); margin: 8px 0 0; }
-.op-niveles { font-family: var(--font-display); font-weight: 700; font-size: 28px; color: var(--blanco); margin: 8px 0 0; }
-.op-medidas { font-size: 21px; color: var(--texto-borde); margin: 6px 0 0; }
-.op-cond { font-size: 20px; color: var(--texto-2); margin: 6px 0 0; }
-.logo { height: 64px; width: auto; display: block; margin-left: 24px; }
-.cabecera .fecha { margin-left: auto; }
-/* Con la oportunidad de hoy la columna izquierda lleva más: cifras y márgenes más compactos. */
-.sello { font-size: 56px; margin-top: 6px; padding: 6px 0; }
-.duelo { margin-top: 18px; }
-.lado { padding: 12px 18px; }
-.cifra { font-size: 40px; margin-top: 4px; }
-.avance { font-size: 26px; margin-top: 14px; }
-.hoy { font-size: 23px; margin-top: 8px; }
-.niveles { margin-top: 18px; }
-.nv { font-size: 26px; }
-.invitacion { font-size: 23px; margin-top: 16px; }
-.invitacion { font-size: 23px; font-weight: 700; color: var(--acento); margin: auto 0 0; }
+.op-titulo { font-size: 20px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--acento); margin: 0; }
+.op-aviso { font-size: 27px; font-weight: 700; color: var(--texto-1); margin: 8px 0 0; }
+.op-niveles { display: flex; gap: 26px; margin: 6px 0 0; }
+.op-niveles div { flex: 1; }
+.op-niveles p { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-borde); }
+.op-niveles i { font-style: normal; font-family: var(--font-display); font-weight: 700; font-size: 38px; display: block; margin-top: 2px; color: var(--blanco); }
+.op-niveles .stop i { color: var(--baja); }
+.op-niveles .obj i { color: var(--sube); }
+.op-medidas, .op-cond { font-size: 27px; color: var(--texto-1); margin: 10px 0 0; display: block; }
+.invitacion { font-size: 30px; font-weight: 700; color: var(--acento); margin: auto 0 0; }
 
-.grafico { border-radius: 16px; overflow: hidden; border: 1.5px solid color-mix(in srgb, var(--acento) 35%, transparent); }
-.grafico img { width: 100%; height: auto; display: block; background: var(--fondo); }
-.grafico-pie { font-size: 18px; color: var(--texto-3); margin: 8px 0 0; }
+.grafico { overflow: hidden; }
+.grafico img { width: 100%; height: auto; display: block; }
+.grafico-pie { font-size: 24px; color: var(--texto-borde); margin: 10px 0 0; }
 
-.footer { position: relative; z-index: 2; margin-top: 16px; padding-top: 12px; display: flex; justify-content: space-between; align-items: center;
+.footer { position: relative; z-index: 2; margin-top: 10px; padding-top: 8px; display: flex; justify-content: space-between; align-items: center;
   border-top: 1px solid color-mix(in srgb, var(--texto-1) 15%, transparent); }
-.footer-marca { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: 0.08em; color: var(--acento); }
-.footer-texto { font-size: 19px; color: var(--texto-2); margin: 0; text-align: right; }
+.footer-marca { font-family: var(--font-display); font-weight: 700; font-size: 26px; letter-spacing: 0.08em; color: var(--acento); }
+.footer-texto { font-size: 24px; color: var(--texto-1); margin: 0; text-align: right; line-height: 1.25; }
 </style>
 </head>
 <body>
   <div class="story">
-    <div class="velo"></div>
+    <img class="wm" src="{{logo_src}}" alt="">
     <div class="contenido">
       <div class="cabecera">
         <span class="chip">{{chip}}</span>
         <span class="fecha">Datos al {{datos_al}}</span>
-        <img class="logo" src="{{logo_src}}" alt="Grupo Inteligencia">
       </div>
       <div class="cuerpo">
         <div class="izq">
           <p class="activo">{{activo}} · Escenario {{direccion}}</p>
           <p class="sello">{{sello}}</p>
           <div class="duelo">
-            <div class="lado"><p class="rotulo">Precio del lunes</p><p class="cifra">{{precio_lunes}}</p></div>
-            <div class="lado"><p class="rotulo">Precio hoy</p><p class="cifra">{{precio_hoy}}</p></div>
+            <div class="lado vidrio"><p class="rotulo">Precio del lunes</p><p class="cifra" style="font-size:{{cifra_px}}px">{{precio_lunes}}</p></div>
+            <div class="lado vidrio"><p class="rotulo">Precio hoy</p><p class="cifra" style="font-size:{{cifra_px}}px">{{precio_hoy}}</p></div>
           </div>
           <p class="avance">{{avance}}</p>
           <p class="hoy">{{lectura_hoy}}</p>
           <p class="entrada-real">{{entrada_real}}</p>
-          <div class="op-hoy">
+          <div class="op-hoy vidrio">
             <p class="op-titulo">{{hoy_titulo}}</p>
             <p class="op-aviso">{{aviso_invalida}}</p>
-            <p class="op-niveles">{{hoy_niveles}}</p>
-            <p class="op-medidas">{{hoy_medidas}}</p>
-            <p class="op-cond">{{hoy_condicion}}</p>
-          </div>
-          <div class="niveles">
-            <div class="nivel"><p class="nr">Entrada</p><p class="nv">{{entrada}}</p></div>
-            <div class="nivel stop"><p class="nr">Stop</p><p class="nv">{{stop}}</p></div>
-            <div class="nivel obj"><p class="nr">Objetivo</p><p class="nv">{{objetivo}}</p></div>
+            <div class="op-niveles">
+              <div><p>Entrada</p><i>{{hoy_entrada}}</i></div>
+              <div class="stop"><p>Stop</p><i>{{hoy_stop}}</i></div>
+              <div class="obj"><p>Objetivo</p><i>{{hoy_objetivo}}</i></div>
+            </div>
+            <span class="op-medidas">{{hoy_medidas}}</span>
+            <span class="op-cond">{{hoy_condicion}}</span>
           </div>
           <p class="invitacion">{{invitacion}}</p>
         </div>
         <div class="der">
-          <div class="grafico">
+          <div class="grafico vidrio">
             <!-- IF:chart_img --><img src="{{chart_src}}" alt="Gráfico de la semana"><!-- ENDIF:chart_img -->
             <!-- IF:chart_svg --><!-- ENDIF:chart_svg -->
           </div>
@@ -245,7 +231,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: var(-
     </div>
     <div class="footer">
       <span class="footer-marca">GRUPO INTELIGENCIA</span>
-      <p class="footer-texto">{{firma}} · {{aviso}}</p>
+      <p class="footer-texto">{{firma}}<br>{{aviso}}</p>
     </div>
   </div>
 </body>

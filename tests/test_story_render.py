@@ -568,3 +568,13 @@ def test_lectura_firma_y_aviso_legal():
     html = story_render.build_html(_fixture("avisos_lectura"), LECTURA_TEMPLATE)
     assert "Grupo Inteligencia · Equipo de análisis" in html
     assert "Análisis informativo. No constituye recomendación de inversión." in html
+
+
+def test_seguimiento_resuelve_sin_tokens_huerfanos_y_lleva_la_marca_de_agua():
+    """Diseño v5: el logo de GI de fondo y la lámina sin los campos de la simulación del lunes."""
+    plantilla = _REPO_ROOT / "templates" / "stories" / "seguimiento.html"
+    payload = json.loads((FIXTURES_DIR / "payloads" / "seguimiento.json").read_text(encoding="utf-8"))
+    html = story_render.build_html(payload, plantilla)
+    assert 'class="wm"' in html
+    assert "{{" not in html and "}}" not in html
+    assert "ATR" not in html and "Relación riesgo/beneficio" in html

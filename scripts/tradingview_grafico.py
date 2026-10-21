@@ -148,6 +148,144 @@ def series_de_lineas(lineas, tiempos: list[int], proyeccion: int = PROYECCION
     return series, omitidas
 
 
+LIMPIO_N_VELAS = 60  # el modo limpio muestra un tramo corto: solo lo que se mueve hoy
+LIMPIO_ANCHO, LIMPIO_ALTO = 888, 590  # el lienzo de la tarjeta de seguimiento, 1 px = 1 px de lámina
+SEPARACION_ETIQUETAS = 46  # px entre centros: la píldora mide 42 y necesita aire
+COLOR_NIVEL = {"ENTRADA": "#FFFFFF", "STOP": "#E84040", "OBJETIVO": "#00DC82"}
+COLOR_LIMPIO_SUBE, COLOR_LIMPIO_BAJA, COLOR_LIMPIO_HOY = "#00DC82", "#E84040", "#50C0A8"
+FONDO_PILDORA = "#04120e"
+AIRE_VELAS = 50  # px entre la última vela y las píldoras
+FUENTE_PJ_700 = RAIZ / "templates" / "stories" / "fonts" / "plus-jakarta-sans-700.woff2"
+
+
+def separar_etiquetas(ys: list[float], minimo: float = SEPARACION_ETIQUETAS,
+                      techo: float = 21.0, piso: float | None = None) -> list[float]:
+    """Posiciones de las píldoras: cada una lo más cerca de su línea, sin pisarse.
+
+    Las líneas se quedan en su precio; solo se mueve la etiqueta. Se reparte el choque hacia
+    arriba y abajo (relajación por pares) y al final una pasada ordenada garantiza `minimo`.
+    """
+    n = len(ys)
+    orden = sorted(range(n), key=lambda i: ys[i])
+    pos = [float(ys[i]) for i in orden]
+    for _ in range(200):
+        movido = False
+        for k in range(n - 1):
+            falta = minimo - (pos[k + 1] - pos[k])
+            if falta > 1e-6:
+                pos[k] -= falta / 2
+                pos[k + 1] += falta / 2
+                movido = True
+        pos = [max(techo, p) for p in pos]
+        if piso is not None:
+            pos = [min(piso, p) for p in pos]
+        if not movido:
+            break
+    for k in range(1, n):  # garantía final contra el redondeo de los topes
+        pos[k] = max(pos[k], pos[k - 1] + minimo)
+    out = [0.0] * n
+    for k, i in enumerate(orden):
+        out[i] = pos[k]
+    return out
+
+
+def _precio_es(v: float, digits: int) -> str:
+    """Notación chilena: punto de miles, coma decimal."""
+    return f"{v:,.{digits}f}".replace(",", "\x00").replace(".", ",").replace("\x00", ".")
+
+
+def _font_b64() -> str:
+    import base64
+
+    return base64.b64encode(FUENTE_PJ_700.read_bytes()).decode("ascii") if FUENTE_PJ_700.exists() else ""
+
+
+def construir_html_limpio(rows: list[dict[str, Any]], digits: int = 2, niveles=None,
+                          ancho: int = LIMPIO_ANCHO, alto: int = LIMPIO_ALTO) -> str:
+    """Gráfico limpio de la tarjeta de seguimiento: ~60 velas, los niveles de hoy y el precio de hoy.
+
+    Sin leyenda, barra de pie, grilla, zonas ni logo: lo que la lámina cita en precios es solo lo
+    que este gráfico traza. Fondo transparente (la lámina pone su degradado y su marca de agua).
+    """
+    rows = rows[-LIMPIO_N_VELAS:]
+    hoy = float(rows[-1]["close"])
+    filas = [(float(p), str(n).upper()) for p, n in (niveles or ())]
+    tol = 0.5 * 10 ** -digits
+    fundidos: list[list] = []  # dos niveles en el mismo precio son una etiqueta con los dos nombres
+    for p, n in filas:
+        previo = next((f for f in fundidos if abs(f[0] - p) <= tol), None)
+        if previo is None:
+            fundidos.append([p, n])
+        elif n not in previo[1]:
+            # fundida la etiqueta se acorta: "SOPORTE DEL RANGO" -> "SOPORTE RANGO", para que quepa en la píldora
+            previo[1] += " · " + n.replace(" DEL ", " ").replace(" DE LA ", " ")
+    etiquetas = [(p, n, COLOR_NIVEL.get(n.split(" · ")[0], COLOR_LIMPIO_HOY)) for p, n in fundidos]
+    etiquetas.append((hoy, "HOY", None))
+
+    textos = [f"{n} {_precio_es(p, digits)}" for p, n, _ in etiquetas]
+    pad_r = int(min(400, max(330, max(len(t) for t in textos) * 0.62 * 24 + 42)))
+    pad_t = pad_b = 26
+    x2 = ancho - pad_r
+    maximo = max([float(r["high"]) for r in rows] + [p for p, _, _ in etiquetas])
+    minimo = min([float(r["low"]) for r in rows] + [p for p, _, _ in etiquetas])
+    margen = (maximo - minimo) * 0.04 or 10 ** -digits
+    lo, hi = minimo - margen, maximo + margen
+
+    def y(v: float) -> float:
+        return pad_t + (hi - v) / (hi - lo) * (alto - pad_t - pad_b)
+
+    zona = x2 - AIRE_VELAS - 10
+    paso = zona / len(rows)
+    partes: list[str] = []
+    for i, r in enumerate(rows):
+        x = 10 + i * paso + paso / 2
+        o, c, h, l = (float(r[k]) for k in ("open", "close", "high", "low"))
+        col = COLOR_LIMPIO_SUBE if c >= o else COLOR_LIMPIO_BAJA
+        partes.append(f'<line x1="{x:.1f}" x2="{x:.1f}" y1="{y(h):.1f}" y2="{y(l):.1f}" stroke="{col}" stroke-width="3.5"/>')
+        partes.append(f'<rect x="{x - paso * 0.34:.1f}" width="{paso * 0.68:.1f}" y="{y(max(o, c)):.1f}" '
+                      f'height="{max(3.0, abs(y(o) - y(c))):.1f}" fill="{col}"/>')
+
+    reales = [y(p) for p, _, _ in etiquetas]
+    pildoras = separar_etiquetas(reales, techo=21.0, piso=alto - 21.0)
+    for (p, nombre, col), yr, yp, texto in zip(etiquetas, reales, pildoras, textos):
+        es_hoy = col is None
+        trazo = COLOR_LIMPIO_HOY if es_hoy else col
+        dash = ' stroke-dasharray="3 7"' if es_hoy else (' stroke-dasharray="10 7"' if nombre == "STOP" else "")
+        ancho_linea = 3.2 if es_hoy else 3.5
+        partes.append(f'<line class="nivel" x1="0" x2="{x2}" y1="{yr:.1f}" y2="{yr:.1f}" stroke="{trazo}" '
+                      f'stroke-width="{ancho_linea}"{dash}/>')
+        if abs(yp - yr) > 1:
+            partes.append(f'<polyline points="{x2},{yr:.1f} {x2 + 4},{yr:.1f} {x2 + 8},{yp:.1f}" fill="none" '
+                          f'stroke="{trazo}" stroke-width="2.5"/>')
+        w = pad_r - 14
+        px = x2 + 8
+        fuente = int(min(26, max(20, (w - 28) / (len(texto) * 0.62))))  # nunca bajo 20 px
+        if es_hoy:
+            partes.append(f'<rect class="pildora" data-y="{yp:.1f}" x="{px}" y="{yp - 21:.1f}" width="{w}" height="42" '
+                          f'rx="21" fill="{COLOR_LIMPIO_HOY}"/>')
+            partes.append(f'<text x="{px + 14}" y="{yp + 9:.1f}" font-size="{fuente}" font-weight="700" '
+                          f'fill="{FONDO_PILDORA}">{texto}</text>')
+        else:
+            partes.append(f'<rect class="pildora" data-y="{yp:.1f}" x="{px}" y="{yp - 21:.1f}" width="{w}" height="42" '
+                          f'rx="21" fill="{FONDO_PILDORA}" fill-opacity=".85" stroke="{trazo}" stroke-width="2.5"/>')
+            partes.append(f'<text x="{px + 14}" y="{yp + 9:.1f}" font-size="{fuente}" font-weight="700" fill="#fff" '
+                          f'stroke="{FONDO_PILDORA}" stroke-width="5" paint-order="stroke">'
+                          f'<tspan fill="{trazo}">{nombre}</tspan> {_precio_es(p, digits)}</text>')
+    b64 = _font_b64()
+    fuente_css = (f'@font-face{{font-family:PJ;font-weight:700;src:url(data:font/woff2;base64,{b64}) format("woff2")}}'
+                  if b64 else "")
+    return f"""<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><style>
+{fuente_css}
+*{{margin:0;padding:0;box-sizing:border-box}}
+html,body{{background:transparent;width:{ancho}px;height:{alto}px;overflow:hidden}}
+svg{{display:block;font-family:PJ,'Plus Jakarta Sans','Segoe UI',sans-serif}}
+</style></head><body>
+<div class="tv-container" data-chart-ready="true"><svg width="{ancho}" height="{alto}" viewBox="0 0 {ancho} {alto}">{"".join(partes)}</svg></div>
+</body></html>
+"""
+
+
 def construir_html_tradingview(
     rows: list[dict[str, Any]],
     simbolo: str,
@@ -159,6 +297,7 @@ def construir_html_tradingview(
     alto: int = 780,
     lineas=None,
     niveles=None,
+    limpio: bool = False,
 ) -> str:
     """HTML autocontenido del gráfico: velas, las líneas de la lectura y las zonas de
     soporte y resistencia del mensaje.
@@ -167,7 +306,13 @@ def construir_html_tradingview(
     propia, porque una segunda lectura en la imagen contradice al texto. Sin `lineas`
     quedan las velas y las zonas. Se conserva la paleta oscura de marca del rediseño
     del 2026-09-30.
+
+    Con `limpio=True` (opt-in: el default no cambia) sale el gráfico de la tarjeta de seguimiento:
+    solo `niveles` y el precio de hoy, ver `construir_html_limpio`.
     """
+    if limpio:
+        return construir_html_limpio(rows, digits, niveles, ancho if ancho != 1400 else LIMPIO_ANCHO,
+                                     alto if alto != 780 else LIMPIO_ALTO)
     if not VENDOR_JS.exists():
         raise TradingViewRenderError(f"No se encontró el vendor JS: {VENDOR_JS}")
 
@@ -453,6 +598,7 @@ def renderizar_png(
     ancho: int = 1400,
     alto: int = 780,
     device_scale_factor: int = 2,
+    transparente: bool = False,
 ) -> Path:
     """Renderiza el HTML a un archivo PNG nítido en alta resolución con Playwright y metadatos 300 DPI."""
     from playwright.sync_api import sync_playwright
@@ -470,7 +616,7 @@ def renderizar_png(
             "() => document.querySelector('.tv-container')?.dataset.chartReady === 'true'"
         )
         page.wait_for_timeout(450)
-        buffer_png = page.screenshot(full_page=True)
+        buffer_png = page.screenshot(full_page=True, omit_background=transparente)
         browser.close()
 
     # Guardar con metadatos 300 DPI explícitos vía Pillow
@@ -510,6 +656,7 @@ def generar_grafico_tv(
     alto: int = 780,
     lineas=None,
     niveles=None,
+    limpio: bool = False,
 ) -> Path:
     """Función principal: obtiene datos de MT5, computa indicadores y renderiza el PNG.
 
@@ -521,6 +668,9 @@ def generar_grafico_tv(
 
     `niveles` son (precio, nombre) que cita el texto de la pieza: van al eje con su precio, y
     los que coinciden se funden en una etiqueta.
+
+    Con `limpio=True` no lee la lectura ni dibuja sus líneas: ~60 velas y solo los `niveles`
+    (ver `construir_html_limpio`), sobre fondo transparente.
     """
     from market_data_mcp import mt5_client
     from market_data_mcp.catalog import VALID_TICKERS
@@ -528,7 +678,11 @@ def generar_grafico_tv(
     if digits is None:
         digits = VALID_TICKERS.get(ticker, 2)
 
-    if lineas is None:
+    if limpio:
+        n_velas = LIMPIO_N_VELAS
+        if (ancho, alto) == (1400, 780):
+            ancho, alto = LIMPIO_ANCHO, LIMPIO_ALTO
+    elif lineas is None:
         import pipeline_carrusel as pc
 
         try:
@@ -570,9 +724,10 @@ def generar_grafico_tv(
         alto=alto,
         lineas=lineas,
         niveles=niveles,
+        limpio=limpio,
     )
 
-    return renderizar_png(html, destino, ancho=ancho, alto=alto)
+    return renderizar_png(html, destino, ancho=ancho, alto=alto, transparente=limpio)
 
 
 def main(argv: list[str] | None = None) -> int:

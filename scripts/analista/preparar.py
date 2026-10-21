@@ -155,15 +155,21 @@ def _contrato(ticker: str, precio: float) -> dict[str, Any]:
 
 
 def _grafico_lectura(ticker: str, nombre: str, lectura, destino: Path, digits: int | None = None,
-                     niveles: list[tuple[float, str]] | None = None) -> Path:
+                     niveles: list[tuple[float, str]] | None = None, limpio: bool = False) -> Path:
     """El gráfico de la lámina: las líneas de la lectura y cada nivel que cita su texto.
 
     Con las velas del carrusel y no 60: con menos, el ancla de una diagonal cae fuera de la
     ventana y la línea no se dibuja (la de control del oro, W41).
+
+    Con `limpio=True` (el seguimiento) el gráfico traza solo `niveles` y el precio de hoy, sobre
+    fondo transparente: la lámina pone el degradado y la marca de agua.
     """
     import pipeline_carrusel as pc
     from tradingview_grafico import generar_grafico_tv
 
+    if limpio:
+        return generar_grafico_tv(ticker=ticker, nombre=nombre, destino=destino, timeframe=lectura.marco,
+                                  digits=digits, lineas=lectura.lineas, niveles=niveles, limpio=True)
     return generar_grafico_tv(ticker=ticker, nombre=nombre, destino=destino, timeframe=lectura.marco,
                               n_velas=pc.VELAS_GRAFICO_TV, digits=digits, lineas=lectura.lineas,
                               niveles=niveles)
@@ -194,28 +200,20 @@ def niveles_lamina_semanal(lectura) -> list[tuple[float, str]]:
     return filas
 
 
-def niveles_lamina_seguimiento(esc: dict[str, Any], simula: bool, hoy) -> list[tuple[float, str]]:
-    """Los niveles que nombra el seguimiento: la simulación (si la hay) y la línea de hoy."""
-    filas = ([(esc["entrada"], "ENTRADA"), (esc["stop"], "STOP"), (esc["objetivo"], "OBJETIVO")]
-             if simula else [])
+def niveles_lamina_seguimiento(esc_hoy: dict[str, Any] | None, hoy) -> list[tuple[float, str]]:
+    """Los niveles que traza el seguimiento: la oportunidad de HOY (si la hay) y el nivel a vigilar.
+
+    Lo que la lámina cita en precios es solo lo que el gráfico traza (director, 2026-10-20): la
+    simulación del lunes ya no va en la lámina.
+    """
+    filas: list[tuple[float, str]] = []
+    if esc_hoy and not esc_hoy.get("motivo") and esc_hoy.get("entrada") is not None:
+        filas = [(esc_hoy["entrada"], "ENTRADA"), (esc_hoy["stop"], "STOP"), (esc_hoy["objetivo"], "OBJETIVO")]
     if hoy.estado == "PRUEBA" and hoy.en_prueba is not None:
         filas.append((hoy.en_prueba.valor_ahora, hoy.vigilar.etiqueta.upper()))
     else:
         filas.append((hoy.vigilar.precio, hoy.vigilar.etiqueta.upper()))
     return filas
-
-
-def _sin_segundo_objetivo(lectura, simula: bool):
-    """Con simulación, el gráfico muestra un solo objetivo: el de la simulación.
-
-    La línea de objetivo técnico de la lectura quedaba a pocos puntos del objetivo de la simulación y
-    el cliente veía dos metas distintas y etiquetas apiladas (director, 2026-10-13: «no la veo limpia»).
-    """
-    if not simula:
-        return lectura
-    from dataclasses import replace
-
-    return replace(lectura, lineas=tuple(x for x in lectura.lineas if x.rol != "objetivo"))
 
 
 def _estrategia():
@@ -503,15 +501,14 @@ def preparar_seguimiento(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
             raise SinAnalisisError(f"Tu entrada de {entrada_real}: {exc} "
                                    f"(stop {esc['stop']}, objetivo {esc['objetivo']}).") from exc
     # La oportunidad de HOY se mide sola, con la lectura actual: no depende de lo enviado al principio de semana.
-    oportunidad_hoy = sg.oportunidad_de_hoy(op.escenario(lectura, a["digits"]).a_dict(), None if motivo else esc, ev,
-                                            atr, a["digits"], ticker)
+    esc_hoy = op.escenario(lectura, a["digits"]).a_dict()
+    oportunidad_hoy = sg.oportunidad_de_hoy(esc_hoy, None if motivo else esc, ev, atr, a["digits"], ticker)
     lectura_hoy = sg.texto_lectura(lectura, reemplazada, a["digits"])
     hoy = fecha_corta(ahora)
     texto = sg.mensaje(a["nombre"], hoy, a["foto"]["fecha"], esc, ev, precio, lectura, reemplazada,
                        a["digits"], oportunidad_hoy)
-    lec.grafico_lectura(ticker, a["nombre"], _sin_segundo_objetivo(lectura, not motivo),
-                        dir_pedido / "grafico.png", digits=a["digits"],
-                        niveles=niveles_lamina_seguimiento(esc, not motivo, lectura))
+    lec.grafico_lectura(ticker, a["nombre"], lectura, dir_pedido / "grafico.png", digits=a["digits"],
+                        niveles=niveles_lamina_seguimiento(esc_hoy, lectura), limpio=True)
     datos = {"semana": rs.semana_de(ahora), "ticker": ticker, "nombre": a["nombre"], "evaluacion": ev, "precio_vivo": precio,
              "lectura_hoy": lectura_hoy, "reemplazada": reemplazada, "whatsapp": texto,
              "edicion": f"{hoy} · {ahora.astimezone(SANTIAGO):%H:%M}", "activo": a,
