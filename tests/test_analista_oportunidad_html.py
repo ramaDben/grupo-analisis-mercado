@@ -829,6 +829,25 @@ def test_en_rango_el_hero_conserva_los_bordes_y_dice_lateral(tmp_path):
     assert "sin nivel" not in hero
 
 
+def test_la_linea_de_seguridad_se_explica_segun_el_lado_en_que_esta_el_precio(tmp_path):
+    """En una lectura bajista la línea de seguridad queda SOBRE el precio: no se «pierde», se supera."""
+    p = _pieza(tmp_path)
+    bajista = p["datos"]["activos"][0]
+    assert bajista["lectura"]["direccion"] == "BAJISTA"
+    _, hero = _hero(tmp_path, bajista)
+    assert "Si el precio la supera, la lectura deja de valer" in hero and "la pierde" not in hero
+    alcista = dict(bajista, lectura=dict(bajista["lectura"], direccion="ALCISTA"))
+    _, hero = _hero(tmp_path, alcista)
+    assert "Si el precio cae bajo ella, la lectura deja de valer" in hero
+
+
+def test_el_objetivo_no_lleva_el_color_de_marca_para_no_leerse_como_ganancia(tmp_path):
+    """El cromo no opina: el verde de marca sobre un objetivo bajista se lee como «ganancia»."""
+    _, hero = _hero(tmp_path)
+    cifra = re.search(r'Objetivo</p><p class="hero-cifra"[^>]*color:([^;]+);', hero)
+    assert cifra and cifra.group(1).upper() == "#FFFFFF"
+
+
 def test_el_hero_lleva_el_logo_de_gi_y_ningun_aviso_legal(tmp_path):
     """Director, 2026-10-21: el hero lleva solo el logo; el aviso legal ya va en el pie del correo."""
     _, hero = _hero(tmp_path)

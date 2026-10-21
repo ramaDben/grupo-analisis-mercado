@@ -795,12 +795,13 @@ def _hero_activo(a: dict[str, Any], titular: str, c: dict[str, str], bajada: str
     else:
         vigilar = f.get("vigilar") or ""
         grandes = [("Hacia dónde apunta", dir_nombre, horizonte, color_dir)]
-        grandes.append(("Objetivo", f["objetivo_tori"], "Hasta dónde llega la lectura", "#50C0A8")
+        grandes.append(("Objetivo", f["objetivo_tori"], "Hasta dónde llega la lectura", c["blanco"])
                        if f.get("objetivo_tori") else
                        ("Nivel a vigilar", vigilar, "La línea que mira el análisis", c["blanco"]))
         chicas = [("Precio de referencia", f["precio"], "Al momento del análisis")]
         if f.get("invalidacion"):
-            chicas.append(("Línea de seguridad", f["invalidacion"], "Si el precio la pierde, la lectura deja de valer"))
+            cruce = "la supera" if dir_nombre == "BAJISTA" else "cae bajo ella"
+            chicas.append(("Línea de seguridad", f["invalidacion"], f"Si el precio {cruce}, la lectura deja de valer"))
         elif vigilar and f.get("objetivo_tori"):
             chicas.append(("Nivel a vigilar", vigilar, "La línea que mira el análisis"))
 
