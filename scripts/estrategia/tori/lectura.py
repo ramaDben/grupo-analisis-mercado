@@ -21,9 +21,9 @@ from estrategia.tori.pivotes import Serie, inicio_tras_salto, serie_de
 
 AVISO_RANGO = "sin línea diagonal vigente: se lee como rango entre el máximo y el mínimo de la última semana"
 AVISO_CONTRA = "la lectura va contra la secuencia de los marcos mayores: es donde nacen las falsas rupturas"
-AVISO_SIN_SEGURIDAD = "la ruptura no tiene línea de seguridad trazable: el riesgo no se puede medir"
+AVISO_SIN_SEGURIDAD = "la ruptura no tiene línea de control trazable: el riesgo no se puede medir"
 AVISO_SALTO = "las velas de {marco} traen un salto de datos: se leen solo desde el salto"
-AVISO_EMPINADA = ("la línea de seguridad es muy empinada: una vela de noticias puede cruzarla sin que "
+AVISO_EMPINADA = ("la línea de control es muy empinada: una vela de noticias puede cruzarla sin que "
                   "cambie la tendencia")
 
 
@@ -208,7 +208,7 @@ def _prueba(vivas: list[tuple[Linea, float]], cierre: float, en_curso: VelaEnCur
 
 
 def _rebote(s, valor: float, sentido: str, tol: float) -> bool:
-    """La última vela cerrada tocó la línea de seguridad y cerró a favor (doctrina 2.5, V7)."""
+    """La última vela cerrada tocó la línea de control y cerró a favor (doctrina 2.5, V7)."""
     i = len(s) - 1
     if sentido == "alcista":
         return s.lows[i] - valor <= tol and s.closes[i] > valor
@@ -220,7 +220,7 @@ def _vigilar(prueba, estado, accion, seguridad, rango, precio) -> Referencia:
         return Referencia(prueba.valor_ahora, f"línea {textos.sentido(prueba.linea)} en prueba", prueba.linea)
     if estado == "REBOTE":
         # Lo que se mira es la línea que sostuvo el rebote.
-        return Referencia(seguridad.valor_actual, f"línea {textos.sentido(seguridad)} de seguridad", seguridad)
+        return Referencia(seguridad.valor_actual, f"línea {textos.sentido(seguridad)} de control", seguridad)
     if estado in ("RUPTURA", "TENDENCIA"):
         x = accion if accion is not None else seguridad
         if x.tipo == "horizontal":
@@ -295,7 +295,7 @@ def leer(ticker: str, velas: dict[str, pd.DataFrame], digits: int,
     if opuesto_linea is not None:
         lineas.append(opuesto_linea)
 
-    invalidacion = (Referencia(seguridad.valor_actual, f"línea {textos.sentido(seguridad)} de seguridad", seguridad)
+    invalidacion = (Referencia(seguridad.valor_actual, f"línea {textos.sentido(seguridad)} de control", seguridad)
                     if seguridad is not None else None)
     objetivo = Referencia(objetivo_linea.valor_actual, "objetivo", objetivo_linea) if objetivo_linea else None
     if e.estado == "RUPTURA" and seguridad is None:
@@ -508,7 +508,7 @@ def seguir(ticker: str, referencia: Lectura, velas: dict[str, pd.DataFrame], dig
              if sostiene(x) and not (estado == "RUPTURA" and x.rol == "accion")]
     prueba = _prueba(vivas, cierre, en_curso, tol, digits)
     vigilar = _vigilar(prueba, estado, accion, seguridad, rango, precio)
-    invalidacion = (Referencia(seguridad.valor_actual, f"línea {textos.sentido(seguridad)} de seguridad", seguridad)
+    invalidacion = (Referencia(seguridad.valor_actual, f"línea {textos.sentido(seguridad)} de control", seguridad)
                     if seguridad is not None else None)
     # Un objetivo del lunes que el precio ya pasó (o que quedó antes del gatillo) deja de
     # nombrarse: se toma el siguiente horizontal mayor en la dirección, o ninguno

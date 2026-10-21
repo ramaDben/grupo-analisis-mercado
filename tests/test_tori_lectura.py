@@ -87,7 +87,7 @@ def test_ruptura_por_cierre_de_la_bajista():
     accion = next(x for x in lec.lineas if x.rol == "accion")
     assert lec.vigilar.linea == accion
     assert "velas_desde_ruptura" in lec.metricas
-    assert any("seguridad" in a for a in lec.avisos)  # la serie no tiene alcista que la sostenga
+    assert any("línea de control" in a for a in lec.avisos)  # la serie no tiene alcista que la sostenga
 
 
 def test_tocar_la_seguridad_y_cerrar_a_favor_es_rebote():

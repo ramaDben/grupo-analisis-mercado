@@ -25,7 +25,7 @@ def _lectura(estado="TENDENCIA", lineas=None):
     lineas = lineas if lineas is not None else (_linea(), _linea("accion", ((150, 13.0), (250, 12.0))))
     esc = tuple(Escenario(f, "c", "t") for f in ("⬆️", "↔️", "⬇️"))
     return Lectura(ticker="XAUUSD", marco="H4", precio=12.0, direccion="ALCISTA", estado=estado,
-                   lineas=lineas, en_prueba=None, vigilar=Referencia(11.5, "línea alcista de seguridad"),
+                   lineas=lineas, en_prueba=None, vigilar=Referencia(11.5, "línea alcista de control"),
                    invalidacion=None, objetivo=None, escenarios=esc, salida="s", conceptos=(),
                    avisos=(), metricas={"atr": 1.0}, vela=250)
 

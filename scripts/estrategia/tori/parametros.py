@@ -24,7 +24,7 @@ class Parametros:
     salto_max_rango: float = 8.0  # hueco entre velas que es un salto de datos (medido: COPPER 9,1 y 17,4; el resto <= 5,8)
     velas_ruptura_max: int = 30  # la ruptura caduca a la semana de 4H (gate del director, 2026-10-11)
     cerca_atr_d1: float = 1.0  # spec §5: "a menos de un ATR diario"
-    lejos_atr_d1: float = 2.0  # precio lejos de la línea de seguridad (doctrina 2.5)
+    lejos_atr_d1: float = 2.0  # precio lejos de la línea de control (doctrina 2.5)
     tope_adicionales: float = 24.0  # lo que suma dentro de una banda de situación
     # Puntaje (spec §5): piso de cada situación por horizonte, sobre 100.
     bandas_sesion: tuple[tuple[str, float], ...] = (

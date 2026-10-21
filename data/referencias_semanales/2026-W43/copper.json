@@ -159,7 +159,7 @@
         "texto": "La vela de 4 horas ya cerró bajo la línea alcista: mientras siga bajo 14509, la ruptura sigue vigente con objetivo en 14178."
       }
     ],
-    "salida": "Todavía no hay línea de seguridad trazada, así que no hay salida que medir: conviene esperar a que se trace antes de entrar.",
+    "salida": "Todavía no hay línea de control trazada, así que no hay salida que medir: conviene esperar a que se trace antes de entrar.",
     "conceptos": [
       "linea-de-tendencia",
       "ruptura-por-cierre",
@@ -168,7 +168,7 @@
     "avisos": [
       "las velas de W1 traen un salto de datos: se leen solo desde el salto",
       "las velas de D1 traen un salto de datos: se leen solo desde el salto",
-      "la ruptura no tiene línea de seguridad trazable: el riesgo no se puede medir"
+      "la ruptura no tiene línea de control trazable: el riesgo no se puede medir"
     ],
     "metricas": {
       "atr": 109.42857142857143,

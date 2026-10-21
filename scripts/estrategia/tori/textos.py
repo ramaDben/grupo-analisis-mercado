@@ -67,7 +67,7 @@ def conceptos(estado: str) -> tuple[str, ...]:
 
 def salida(estado: str, direccion: str, marco: str, invalidacion: Referencia | None, digits: int,
            seguimiento: Linea | None = None, objetivo: Referencia | None = None) -> str:
-    """La regla de salida de Tori (doctrina 2.8): vela que cierra contra la línea de seguridad.
+    """La regla de salida de Tori (doctrina 2.8): vela que cierra contra la línea de control.
 
     Nombra la operación y el sentido ("En compras, sal si cierra bajo"), porque "al otro lado"
     obligaba al cliente a deducir de qué lado estaba el riesgo. La falta de objetivo fijo se dice
@@ -79,14 +79,14 @@ def salida(estado: str, direccion: str, marco: str, invalidacion: Referencia | N
                 f"{VELA.get(marco, marco)} vuelve a cerrar fuera del rango, porque ahí el quiebre "
                 "no era falso.")
     if invalidacion is None:
-        return ("Todavía no hay línea de seguridad trazada, así que no hay salida que medir: "
+        return ("Todavía no hay línea de control trazada, así que no hay salida que medir: "
                 "conviene esperar a que se trace antes de entrar.")
     sube = direccion == "ALCISTA"
     operacion = "compras" if sube else "ventas"
     contra = "bajo" if sube else "sobre"
     por = " por ruptura" if estado == "RUPTURA" else ""
     texto = (f"En {operacion}{por}, sal si {VELA.get(marco, marco)} cierra {contra} la línea de "
-             f"seguridad (la que protege tu operación), hoy en {_p(invalidacion.precio, digits)}. ")
+             f"control (la que vigila tu operación), hoy en {_p(invalidacion.precio, digits)}. ")
     if objetivo is not None:
         texto += (f"Mientras no pase, mantén la posición; el objetivo en {_p(objetivo.precio, digits)} "
                   "es una referencia, no una orden de salida.")
@@ -125,7 +125,7 @@ def escenarios(estado: str, direccion: str, marco: str, digits: int, precio: flo
         if invalidacion is not None:
             y = _p(invalidacion.precio, digits)
             ultimo = Escenario("⬇️" if sube else "⬆️", f"Cierre {en_contra} {y}",
-                               f"Si {vela} cierra {en_contra} {y}, la línea de seguridad se rompe y la lectura deja de valer.")
+                               f"Si {vela} cierra {en_contra} {y}, la línea de control se rompe y la lectura deja de valer.")
         else:
             ultimo = Escenario("⬇️" if sube else "⬆️", f"Cierre {en_contra} {x}",
                                f"Si {vela} vuelve a cerrar {en_contra} {x}, la ruptura fue falsa.")

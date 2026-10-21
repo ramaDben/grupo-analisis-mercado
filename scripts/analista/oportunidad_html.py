@@ -806,8 +806,8 @@ def _hero_activo(a: dict[str, Any], titular: str, c: dict[str, str], bajada: str
 
     # Dos tarjetas grandes (hacia dónde y hasta dónde) y dos chicas (el precio y el nivel de control):
     # el prospecto ve primero la dirección y el destino. Una tarjeta sin cifra no se imprime ("sin nivel"
-    # no le sirve a nadie): la línea de seguridad cede su lugar al nivel a vigilar de la lectura.
-    if rango:  # en rango no hay línea de seguridad ni objetivo: la dirección y el precio van en grande
+    # no le sirve a nadie): la línea de control cede su lugar al nivel a vigilar de la lectura.
+    if rango:  # en rango no hay línea de control ni objetivo: la dirección y el precio van en grande
         grandes = [("Hacia dónde apunta", dir_nombre, horizonte, c["blanco"]),
                    ("Precio de referencia", f["precio"], "Al momento del análisis", c["blanco"])]
         chicas = [("Soporte del rango", rango[0], "Borde inferior"),

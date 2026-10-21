@@ -26,7 +26,7 @@ from estrategia.contrato import Escenario, Lectura, Linea, Referencia  # noqa: E
 def _lectura(ticker, precio, vigilar, invalidacion, objetivo, direccion="ALCISTA", estado="TENDENCIA"):
     """Una `Lectura` real de la estrategia, como la que devuelve `rs.lectura_actual`."""
     lin = Linea("seguridad", "diagonal", ((100, vigilar - 1), (200, vigilar)), "H4", 3, "A+", vigilar)
-    ref = Referencia(vigilar, f"línea {direccion.lower()} de seguridad", lin)
+    ref = Referencia(vigilar, f"línea {direccion.lower()} de control", lin)
     inv = Referencia(invalidacion, "invalida la lectura") if invalidacion is not None else None
     obj = Referencia(objetivo, "objetivo") if objetivo is not None else None
     esc = tuple(Escenario(f, "c", "t") for f in ("⬆️", "↔️", "⬇️"))

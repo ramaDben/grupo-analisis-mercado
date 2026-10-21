@@ -52,7 +52,7 @@ def test_un_horizontal_es_un_precio():
 
 def test_con_lineas_el_grafico_dibuja_la_lectura_y_no_las_medias():
     html = tg.construir_html_tradingview(_rows(), "ORO", "H4", lineas=(SEGURIDAD, OBJETIVO))
-    assert "Línea de seguridad" in html and "Objetivo" in html
+    assert "Línea de control" in html and "Objetivo" in html
     assert "EMA 50" not in html
 
 

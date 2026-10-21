@@ -819,7 +819,7 @@ def test_el_hero_pone_las_cifras_de_la_lectura_y_no_otras(tmp_path):
 
 
 def test_sin_linea_de_seguridad_el_hero_muestra_el_nivel_a_vigilar_y_no_sin_nivel(tmp_path):
-    """GBPUSD 2026-10-21: la ruptura no trae línea de seguridad trazable (`invalidacion` vacía)."""
+    """GBPUSD 2026-10-21: la ruptura no trae línea de control trazable (`invalidacion` vacía)."""
     p = _pieza(tmp_path)
     a = p["datos"]["activos"][0]
     a["fmt"]["invalidacion"] = ""
@@ -844,7 +844,7 @@ def test_en_rango_el_hero_conserva_los_bordes_y_dice_lateral(tmp_path):
 
 
 def test_la_linea_de_seguridad_se_explica_segun_el_lado_en_que_esta_el_precio(tmp_path):
-    """En una lectura bajista la línea de seguridad queda SOBRE el precio: no se «pierde», se supera."""
+    """En una lectura bajista la línea de control queda SOBRE el precio: no se «pierde», se supera."""
     p = _pieza(tmp_path)
     bajista = p["datos"]["activos"][0]
     assert bajista["lectura"]["direccion"] == "BAJISTA"
