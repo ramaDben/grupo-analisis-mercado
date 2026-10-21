@@ -99,6 +99,29 @@ def test_una_fuente_con_error_en_la_ingesta_se_reporta(base):
     assert "chile" in ingesta.error
 
 
+def test_una_fuente_por_respaldo_avisa_pero_no_es_falla(base):
+    _escribir(base / "DATA AGENDA" / "estado_ejecucion.json", {
+        "ultima_ejecucion_utc": _hace(1),
+        "status_por_fuente": {"usa": "OK", "commodities": "OK_FALLBACK"},
+        "errores_por_fuente": {},
+    })
+    est = pd_.estado_datos(base)
+    ingesta = next(r for r in est.relojes if r.nombre == "ingesta")
+    assert ingesta.fresco
+    assert any("commodities" in a for a in ingesta.avisos)
+
+
+def test_un_error_real_sigue_siendo_falla_junto_a_un_respaldo(base):
+    _escribir(base / "DATA AGENDA" / "estado_ejecucion.json", {
+        "ultima_ejecucion_utc": _hace(1),
+        "status_por_fuente": {"usa": "ERROR", "commodities": "OK_FALLBACK"},
+        "errores_por_fuente": {},
+    })
+    ingesta = next(r for r in pd_.estado_datos(base).relojes if r.nombre == "ingesta")
+    assert not ingesta.fresco
+    assert "usa" in ingesta.error and "commodities" not in ingesta.error
+
+
 # --- Cadena: un punto de entrada, en orden, que aborta ---
 
 def test_la_cadena_corre_los_pasos_en_orden():
