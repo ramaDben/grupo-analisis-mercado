@@ -159,7 +159,7 @@ def _grafico_lectura(ticker: str, nombre: str, lectura, destino: Path, digits: i
     """El gráfico de la lámina: las líneas de la lectura y cada nivel que cita su texto.
 
     Con las velas del carrusel y no 60: con menos, el ancla de una diagonal cae fuera de la
-    ventana y la línea no se dibuja (la de seguridad del oro, W41).
+    ventana y la línea no se dibuja (la de control del oro, W41).
     """
     import pipeline_carrusel as pc
     from tradingview_grafico import generar_grafico_tv

@@ -211,7 +211,7 @@ def paleta_correo(c: dict[str, str]) -> dict[str, str]:
             "sube": "#1F8F5F", "baja": "#C93434", "fondo_sube": "#E3F6EE", "fondo_baja": "#FDECEC",
             "texto_1": "#0B1517", "texto_2": "#6B7779", "texto_borde": "#1D2528", "linea": "#DFE6E4",
             "blanco": "#FFFFFF", "marca": c["acento"], "hero": "#0B1214", "hero_tarjeta": "#101C1F",
-            "hero_linea": "#24383C", "hero_texto_2": "#B7C6C8", "hero_rotulo": "#8EA3A6"}
+            "hero_linea": "#24383C", "hero_texto_2": "#B7C6C8", "hero_rotulo": "#A9BBBE"}
 
 
 def _color_direccion(direccion: str, c: dict[str, str]) -> str:
@@ -621,15 +621,26 @@ def _bordes_rango(a: dict[str, Any]) -> tuple[str, str] | None:
 
 
 def titular_base(a: dict[str, Any]) -> str:
-    """Fórmula base Alt. 3: foco en claridad direccional, nivel de control y escaneo rápido."""
-    lec, f = a["lectura"], a["fmt"]
-    rango = _bordes_rango(a)
-    if rango:
-        return f"{_articulo_sujeto(a['nombre'])} en {f['precio']}: se mueve en rango entre {rango[0]} y {rango[1]}"
-    return (
-        f"{_articulo_sujeto(a['nombre'])} en {f['precio']}: el nivel {f['invalidacion']} define la lectura "
-        f"{lec['direccion'].lower()} hacia {f['objetivo_tori']}"
-    )
+    """La tesis en una frase y sin cifras: el prospecto novato no procesa tres precios de cinco decimales.
+
+    La causa sale del estado que ya trae la lectura (rompió su línea, la mantiene, rebota, la pone a prueba),
+    nunca de un motivo inventado. Los niveles viven en las tarjetas de la apertura.
+    """
+    sujeto = _articulo_sujeto(a["nombre"])
+    if _bordes_rango(a):
+        return f"{sujeto} se mueve en rango y no tiene una tendencia que lo guíe"
+    lec = a["lectura"]
+    direccion = lec["direccion"].lower()
+    alcista = lec["direccion"] == "ALCISTA"
+    estado = lec.get("estado")
+    if estado == "RUPTURA":  # rompió la línea contraria a su nueva dirección
+        return (f"{sujeto} rompió su línea bajista: la lectura se inclina al alza" if alcista
+                else f"{sujeto} rompió su línea alcista: la lectura se inclina a la baja")
+    if estado == "REBOTE":
+        return f"{sujeto} rebota en su línea: la lectura {direccion} sigue en pie"
+    if estado == "PRUEBA":
+        return f"{sujeto} pone a prueba su línea: ahí se juega la lectura {direccion}"
+    return f"{sujeto} mantiene su tendencia {direccion}: mientras respete su línea, la lectura sigue en pie"
 
 
 _NUMERO = re.compile(r"\b\d+(?:[.,]\d+)*\b")
@@ -728,17 +739,37 @@ def preheader_sugerido(a: dict[str, Any], fuentes: list[dict[str, Any]] | None =
     return f"{base}{respaldo} y los dos factores que mueven la sesión de hoy."
 
 
+def _horizonte(a: dict[str, Any]) -> str:
+    """El plazo en palabras del cliente, tal como lo declara la estrategia: «4H · swing (de una a dos semanas)» da
+    «de una a dos semanas». Sin paréntesis no hay plazo que citar y la tarjeta calla en vez de inventarlo."""
+    m = re.search(r"\(([^)]+)\)", a.get("temporalidad", ""))
+    return m.group(1) if m else ""
+
+
+def _distancia_objetivo(lec: dict[str, Any]) -> str:
+    """«A 0,87 % del precio de referencia», calculado en ejecución desde la lectura; sin los dos precios, calla."""
+    objetivo, precio = (lec.get("objetivo") or {}).get("precio"), lec.get("precio")
+    if objetivo is None or not precio:
+        return "Hasta dónde llega la lectura"
+    return f"A {abs(objetivo - precio) / precio * 100:.2f} % del precio de referencia".replace(".", ",", 1)
+
+
 def _hero_activo(a: dict[str, Any], titular: str, c: dict[str, str], bajada: str = "", autor=None,
                  d: dict[str, Any] | None = None) -> str:
     """La apertura oscura del activo: kicker, titular, bajada, firma y snapshot de 4 cifras."""
     lec, f = a["lectura"], a["fmt"]
     titular_final = titular or titular_base(a)
 
-    kicker = (
-        f'<p style="margin:0 0 10px 0;font-family:{F_SANS};font-size:12px;line-height:16px;font-weight:700;'
+    # El logo de GI va solo, a la derecha del rótulo: la marca firma la apertura sin competir con el titular.
+    kicker = _tabla(
+        f'<tr><td valign="middle" style="padding:0 12px 10px 0;">'
+        f'<p style="margin:0;font-family:{F_SANS};font-size:12px;line-height:16px;font-weight:700;'
         f'letter-spacing:1.8px;text-transform:uppercase;color:#50C0A8;">'
         f'ANÁLISIS TÉCNICO Y FUNDAMENTAL · {ih.e(a["nombre"].upper())} ({ih.e(a["ticker_visible"])})'
-        f'</p>'
+        f'</p></td>'
+        f'<td valign="top" align="right" width="52" style="padding:0 0 10px 0;">'
+        f'<img src="{ih._data_uri(ih.LOGO)}" width="48" height="48" alt="Grupo Inteligencia" '
+        f'style="display:block;border:0;width:48px;height:48px;"></td></tr>'
     )
 
     titular_bloque = (
@@ -755,7 +786,7 @@ def _hero_activo(a: dict[str, Any], titular: str, c: dict[str, str], bajada: str
     nombre_autor = _nombre_firma(autor.nombre) if autor else "Benjamín Bravo Soza"
     cargo_autor = autor.cargo if autor else "Dirección de Análisis Técnico"
     vigencia_txt = (
-        f"Vigencia del análisis: {d['vigencia']['desde']} al {d['vigencia']['hasta']} · Hora oficial de Chile"
+        f"Vigencia: {d['vigencia']['desde']} al {d['vigencia']['hasta']} · Hora de Chile"
         if d and "vigencia" in d else ""
     )
     firma_hero = (
@@ -770,42 +801,61 @@ def _hero_activo(a: dict[str, Any], titular: str, c: dict[str, str], bajada: str
 
     dir_nombre = lec["direccion"].upper()
     color_dir = c["baja"] if dir_nombre == "BAJISTA" else (c["sube"] if dir_nombre == "ALCISTA" else c["hero_rotulo"])
-    temp_corta = a.get("temporalidad", "4H").split()[0]
-
-    cifras_datos = [
-        ("Precio de referencia", f["precio"], "Precio de foto"),
-        ("Sesgo técnico", dir_nombre, f"{temp_corta} · swing", color_dir),
-        ("Línea de seguridad", f.get("invalidacion") or "sin nivel", "Invalida el sesgo"),
-        ("Objetivo técnico", f.get("objetivo_tori") or "sin nivel", "Proyección técnica", "#50C0A8"),
-    ]
+    horizonte = f"Horizonte: {_horizonte(a)}" if _horizonte(a) else ""
     rango = _bordes_rango(a)
-    if rango:  # en rango no hay línea de seguridad ni objetivo: se muestran los bordes
-        cifras_datos[2:] = [("Soporte del rango", rango[0], "Borde inferior"),
-                            ("Resistencia del rango", rango[1], "Borde superior", "#50C0A8")]
 
-    celdas = []
-    for i, c_item in enumerate(cifras_datos):
-        rotulo, valor, sub = c_item[0], c_item[1], c_item[2]
-        col_val = c_item[3] if len(c_item) > 3 else c["blanco"]
-        pad_r = 0 if i == len(cifras_datos) - 1 else 6
-        celdas.append(
-            f'<td class="stack-col" width="25%" valign="top" style="padding-right:{pad_r}px;">'
+    # Dos tarjetas grandes (hacia dónde y hasta dónde) y dos chicas (el precio y el nivel de control):
+    # el prospecto ve primero la dirección y el destino. Una tarjeta sin cifra no se imprime ("sin nivel"
+    # no le sirve a nadie): la línea de control cede su lugar al nivel a vigilar de la lectura.
+    if rango:  # en rango no hay línea de control ni objetivo: la dirección y el precio van en grande
+        grandes = [("Hacia dónde apunta", dir_nombre, horizonte, c["blanco"]),
+                   ("Precio de referencia", f["precio"], "Al momento del análisis", c["blanco"])]
+        chicas = [("Soporte del rango", rango[0], "Borde inferior"),
+                  ("Resistencia del rango", rango[1], "Borde superior")]
+    else:
+        vigilar = f.get("vigilar") or ""
+        grandes = [("Hacia dónde apunta", dir_nombre, horizonte, color_dir)]
+        grandes.append(("Primer objetivo", f["objetivo_tori"], _distancia_objetivo(lec), c["blanco"])
+                       if f.get("objetivo_tori") else
+                       ("Nivel a vigilar", vigilar, "La línea que mira el análisis", c["blanco"]))
+        chicas = [("Precio de referencia", f["precio"], "Al momento del análisis")]
+        if f.get("invalidacion"):
+            cruce = "la supera" if dir_nombre == "BAJISTA" else "cae bajo ella"
+            chicas.append(("Línea de control", f["invalidacion"], f"Si el precio {cruce}, la lectura deja de valer"))
+        elif vigilar and f.get("objetivo_tori"):
+            chicas.append(("Nivel a vigilar", vigilar, "La línea que mira el análisis"))
+
+    def _tarjeta(item, grande: bool, pad_r: int) -> str:
+        rotulo, valor, sub = item[0], item[1], item[2]
+        col_val = item[3] if len(item) > 3 else c["blanco"]
+        tam, alto = (26, 32) if grande else (19, 24)
+        return (
+            f'<td width="50%" valign="top" style="padding:0 {pad_r}px 0 0;">'
             f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#101C1F" '
             f'style="background:#101C1F;border:1px solid #24383C;border-radius:6px;">'
-            f'<tr><td style="padding:10px 10px 9px 10px;">'
-            f'<p style="margin:0;font-family:{F_SANS};font-size:10px;line-height:14px;font-weight:700;'
+            f'<tr><td style="padding:{12 if grande else 9}px 12px {11 if grande else 9}px 12px;">'
+            f'<p style="margin:0;font-family:{F_SANS};font-size:11px;line-height:15px;font-weight:700;'
             f'letter-spacing:0.6px;text-transform:uppercase;color:{c["hero_rotulo"]};">{ih.e(rotulo)}</p>'
-            f'<p class="hero-cifra" style="margin:3px 0 0 0;font-family:{F_SANS};font-size:17px;line-height:22px;'
+            f'<p class="hero-cifra" style="margin:3px 0 0 0;font-family:{F_SANS};font-size:{tam}px;line-height:{alto}px;'
             f'font-weight:800;color:{col_val};white-space:nowrap;">{ih.e(valor)}</p>'
-            f'<p style="margin:2px 0 0 0;font-family:{F_SANS};font-size:10px;line-height:13px;color:{c["hero_rotulo"]};">{ih.e(sub)}</p>'
-            f'</td></tr></table></td>'
+            + (f'<p style="margin:3px 0 0 0;font-family:{F_SANS};font-size:11px;line-height:15px;'
+               f'color:{c["hero_rotulo"]};">{ih.e(sub)}</p>' if sub else "")
+            + '</td></tr></table></td>'
         )
 
-    snapshot_tabla = _tabla(f'<tr>{"".join(celdas)}</tr>')
+    def _fila(items, grande: bool) -> str:
+        celdas = [_tarjeta(it, grande, 6 if i < len(items) - 1 else 0) for i, it in enumerate(items)]
+        return _tabla(f'<tr>{"".join(celdas)}</tr>')
+
+    snapshot_tabla = _fila(grandes, True) + _separador(6) + _fila(chicas, False)
+    gancho = (
+        f'<p style="margin:16px 0 0 0;font-family:{F_SANS};font-size:13px;line-height:20px;color:{c["hero_texto_2"]};">'
+        'Abajo: el gráfico, los dos factores que mueven al activo hoy y los tres escenarios de la lectura.</p>'
+    )
 
     return (
         f'<tr><td class="pad-hero" bgcolor="{c["hero"]}" style="padding:26px 36px 26px 36px;background:{c["hero"]};">'
-        f'{kicker}{titular_bloque}{bajada_bloque}{firma_hero}{snapshot_tabla}'
+        f'{kicker}{titular_bloque}{bajada_bloque}{firma_hero}{snapshot_tabla}{gancho}'
         f'</td></tr>'
     )
 
@@ -1043,7 +1093,7 @@ def _marco_correo(d: dict[str, Any], ed: dict[str, Any], ejecutivo: dict[str, An
                  + _p(ih.e(cm.AVISO_PIEZA), c, tam=12, color="texto_2", margen="0 0 6px 0")
                  + _p("Análisis general de mercado, idéntico para todos sus destinatarios. No es asesoría de inversión "
                       "ni considera el perfil de quien lo lee. Prohibida su reproducción total o parcial sin autorización de Grupo Inteligencia.",
-                      c, tam=11, color="hero_rotulo", margen="0")
+                      c, tam=11, color="texto_2", margen="0")
                  + '</td></tr>')
         + '</td></tr>'
     )

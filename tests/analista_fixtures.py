@@ -66,15 +66,15 @@ def lectura(ticker: str = "XAUUSD", estado: str = "TENDENCIA", direccion: str = 
     else:
         seg = _linea("seguridad", invalidacion if invalidacion is not None else precio, calidad=calidad_prueba)
         lineas = (seg,)
-        vig = Referencia(vigilar if vigilar is not None else seg.valor_actual, "línea de seguridad", seg)
-        inv = Referencia(invalidacion, "línea de seguridad", seg) if invalidacion is not None else None
+        vig = Referencia(vigilar if vigilar is not None else seg.valor_actual, "línea de control", seg)
+        inv = Referencia(invalidacion, "línea de control", seg) if invalidacion is not None else None
         obj = Referencia(objetivo, "resistencia diaria") if objetivo is not None else None
         if estado == "PRUEBA":
             en_prueba = Prueba(seg, seg.valor_actual, _dt(2026, 10, 12, 13, 0, tzinfo=_Zi("America/Santiago")))
     return Lectura(ticker=ticker, marco="H4", precio=precio, direccion=direccion, estado=estado,
                    lineas=lineas, en_prueba=en_prueba, vigilar=vig, invalidacion=inv, objetivo=obj,
                    escenarios=_ESCENARIOS,
-                   salida="La posición se cierra con un cierre de 4 horas al otro lado de la línea de seguridad.",
+                   salida="La posición se cierra con un cierre de 4 horas al otro lado de la línea de control.",
                    conceptos=(), avisos=(), metricas={"atr": atr, "atr_d1": atr_d1}, vela=vela)
 
 

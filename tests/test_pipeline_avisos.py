@@ -205,7 +205,7 @@ def lectura_falsa(ticker="USDCLP", precio=936.32, digits=2, nombre="Dólar / Pes
     """La lectura de Avisos con una `Lectura` de verdad (enchufe, fase 3).
 
     Los niveles se anclan en `base` (por defecto, el precio): una tendencia alcista con la
-    línea de seguridad 3 abajo y la línea del retroceso 3 arriba, que es la que se vigila.
+    línea de control 3 abajo y la línea del retroceso 3 arriba, que es la que se vigila.
     Con `base` fija y otro `precio` se simula el mercado que se movió después de preparar.
     """
     from estrategia.contrato import Escenario, Lectura, Linea, Referencia, lectura_a_dict
@@ -214,13 +214,13 @@ def lectura_falsa(ticker="USDCLP", precio=936.32, digits=2, nombre="Dólar / Pes
     seg = Linea("seguridad", "diagonal", ((100, base - 4), (200, base - 3)), "H4", 3, "A+", base - 3)
     acc = Linea("accion", "diagonal", ((150, base + 4), (250, base + 3)), "H4", 2, "B", base + 3)
     vig = Referencia(base + 3, "línea bajista", acc)
-    inv = Referencia(base - 3, "línea alcista de seguridad", seg)
+    inv = Referencia(base - 3, "línea alcista de control", seg)
     esc = (Escenario("⬆️", "c", "Si cierra sobre la línea del retroceso, la tendencia alcista retoma."),
            Escenario("↔️", "c", "Mientras siga entre las dos líneas, la tendencia sigue en pie."),
-           Escenario("⬇️", "c", "Si cierra bajo la línea de seguridad, la tendencia deja de valer."))
+           Escenario("⬇️", "c", "Si cierra bajo la línea de control, la tendencia deja de valer."))
     lec = Lectura(ticker=ticker, marco="H4", precio=precio, direccion="ALCISTA", estado="TENDENCIA",
                   lineas=(seg, acc), en_prueba=None, vigilar=vig, invalidacion=inv, objetivo=None,
-                  escenarios=esc, salida="La posición se cierra con un cierre bajo la línea de seguridad.",
+                  escenarios=esc, salida="La posición se cierra con un cierre bajo la línea de control.",
                   conceptos=(), avisos=(), metricas={}, vela=250)
     activo = {"ticker": ticker, "nombre": nombre, "clase": "forex_commodities", "categoria": "forex",
               "digits": digits, "unidad": "CLP", "imagen": "assets/activos/usdclp.jpg", "volatilidad": "media",

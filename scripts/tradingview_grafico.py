@@ -83,7 +83,7 @@ def calcular_indicadores(df_velas: list[dict[str, Any]]) -> list[dict[str, Any]]
 # (spec §6), porque dibujaban una lectura que el texto no conocía.
 COLOR_ROL = {"accion": "#FF4D5E", "seguridad": "#26C6A0", "seguimiento": "#9BE7C4",
              "contexto": "#B39DDB", "objetivo": "#FFB300", "rango": "#CBD5E1"}
-NOMBRE_ROL = {"accion": "Línea de acción", "seguridad": "Línea de seguridad",
+NOMBRE_ROL = {"accion": "Línea de acción", "seguridad": "Línea de control",
               "seguimiento": "Línea de seguimiento", "contexto": "Línea de contexto",
               "objetivo": "Objetivo", "rango": "Borde del rango"}
 PROYECCION = 14  # velas de semirrecta a la derecha (doctrina 2.1)

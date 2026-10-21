@@ -31,7 +31,7 @@ def _lectura(**cambios) -> Lectura:
     base = Lectura(
         ticker="XAUUSD", marco="H4", precio=106.0, direccion="ALCISTA", estado="TENDENCIA",
         lineas=(LINEA,), en_prueba=None, vigilar=Referencia(105.0, "línea alcista", LINEA),
-        invalidacion=Referencia(105.0, "línea alcista de seguridad", LINEA), objetivo=None,
+        invalidacion=Referencia(105.0, "línea alcista de control", LINEA), objetivo=None,
         escenarios=TRES, salida="sale", conceptos=(), avisos=(),
     )
     return replace(base, **cambios)

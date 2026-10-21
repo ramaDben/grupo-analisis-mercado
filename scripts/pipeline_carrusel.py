@@ -1195,7 +1195,7 @@ def lectura_para_despacho(*args, **kwargs):
 def _con_invalidacion_fijada(lectura: dict[str, Any], nivel: float, digits: int) -> dict[str, Any]:
     """Pone el nivel que el director fijó como límite de validez de la lectura.
 
-    La línea de seguridad de la estrategia puede quedar tan lejos del precio que el
+    La línea de control de la estrategia puede quedar tan lejos del precio que el
     texto se lee con dos niveles que no combinan (el que se vigila, el que invalida y el
     de seguimiento). Con `niveles_fijados.invalidacion` el escenario contrario y la
     regla de salida hablan de un solo nivel. Solo aplica a tendencias; un rango no se toca.

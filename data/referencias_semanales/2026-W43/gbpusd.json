@@ -121,14 +121,14 @@
         "texto": "Si una vela de 4 horas vuelve a cerrar bajo 1,32117, la ruptura fue falsa."
       }
     ],
-    "salida": "Todavía no hay línea de seguridad trazada, así que no hay salida que medir: conviene esperar a que se trace antes de entrar.",
+    "salida": "Todavía no hay línea de control trazada, así que no hay salida que medir: conviene esperar a que se trace antes de entrar.",
     "conceptos": [
       "linea-de-tendencia",
       "ruptura-por-cierre",
       "linea-de-seguridad"
     ],
     "avisos": [
-      "la ruptura no tiene línea de seguridad trazable: el riesgo no se puede medir"
+      "la ruptura no tiene línea de control trazable: el riesgo no se puede medir"
     ],
     "metricas": {
       "atr": 0.0027642857142857113,

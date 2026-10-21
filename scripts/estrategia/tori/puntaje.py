@@ -41,7 +41,7 @@ def situacion(lectura: Lectura, p: Parametros) -> str:
         otra = seguridad if lectura.en_prueba.linea.rol == "accion" else accion
         return "ruptura" if _principal(lectura.en_prueba.linea) and otra is not None else "tendencia"
     if lectura.estado == "RUPTURA":
-        # Sin línea de seguridad trazada no hay setup de Tori (V18), y lejos de ella el riesgo
+        # Sin línea de control trazada no hay setup de Tori (V18), y lejos de ella el riesgo
         # es alto y se pasa (doctrina 2.5): la frescura de la ruptura es esta distancia.
         es_setup = _principal(accion) and seguridad is not None and cerca("dist_seguridad_atr_d1")
         return "ruptura" if es_setup else "tendencia"

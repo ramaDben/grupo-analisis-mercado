@@ -355,7 +355,7 @@ NY_LUNES = datetime(2026, 10, 12, 10, 0, tzinfo=NY)  # lunes 12-10, 11:00 en San
 def _lec(ticker, estado="TENDENCIA", direccion="ALCISTA"):
     lin = Linea("seguridad", "diagonal", ((100, 10.0), (200, 11.0)), "H4", 3, "A+", 11.5)
     esc = tuple(Escenario(f, "c", "t") for f in ("⬆️", "↔️", "⬇️"))
-    ref = Referencia(11.5, "línea alcista de seguridad", lin)
+    ref = Referencia(11.5, "línea alcista de control", lin)
     return Lectura(ticker=ticker, marco="H4", precio=12.0, direccion=direccion, estado=estado,
                    lineas=(lin,), en_prueba=None, vigilar=ref, invalidacion=ref, objetivo=None,
                    escenarios=esc, salida="s", conceptos=(), avisos=(), metricas={}, vela=200)
