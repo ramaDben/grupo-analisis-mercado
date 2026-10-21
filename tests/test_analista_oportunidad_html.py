@@ -503,11 +503,11 @@ def test_titular_base_armado_por_codigo(tmp_path):
     p = _pieza(tmp_path)
     a = p["datos"]["activos"][0]
     tit = oh.titular_base(a)
-    assert tit == "El oro en 4.186,17: el nivel 4.227,32 define la lectura bajista hacia 4.149,96"
+    assert tit == "El oro sostiene una lectura bajista: el nivel que la confirma o la descarta"
 
     a_alcista = dict(a, nombre="Plata", lectura=dict(a["lectura"], direccion="ALCISTA"))
     tit_alcista = oh.titular_base(a_alcista)
-    assert tit_alcista == "La plata en 4.186,17: el nivel 4.227,32 define la lectura alcista hacia 4.149,96"
+    assert tit_alcista == "La plata sostiene una lectura alcista: el nivel que la confirma o la descarta"
 
     html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
     correo = _correo(html)
@@ -757,7 +757,7 @@ def _activo_en_rango(tmp_path):
 
 def test_un_activo_en_rango_no_arma_titular_ni_preheader_con_huecos(tmp_path):
     p, a = _activo_en_rango(tmp_path)
-    assert oh.titular_base(a).endswith("se mueve en rango entre 4.138,40 y 4.195,31")
+    assert oh.titular_base(a) == "El oro se mueve en rango: los dos bordes que vigila el análisis"
     assert oh.titular_correo(a, p["editorial"]["fuentes"], variante=True) == oh.titular_base(a)
     pre = oh.preheader_sugerido(a, p["editorial"]["fuentes"], p["datos"])
     assert pre.startswith("Nuestra lectura en 4H") and "4.138,40" in pre and "línea de ." not in pre
@@ -769,6 +769,86 @@ def test_en_rango_la_tira_de_cifras_muestra_los_bordes_y_no_sin_nivel(tmp_path):
     correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
     assert "Soporte del rango" in correo and "Resistencia del rango" in correo
     assert "sin nivel" not in correo
+
+
+def _hero(tmp_path, activo=None):
+    """El HTML de la apertura oscura de un activo, con el activo de la fixture (o el que se pase)."""
+    p = _pieza(tmp_path)
+    a = activo or p["datos"]["activos"][0]
+    c = oh.paleta_correo(oh.paleta())
+    return a, oh._hero_activo(a, oh.titular_base(a), c, bajada="Bajada de prueba.", autor=fx.AUTOR, d=p["datos"])
+
+
+def test_el_titular_del_hero_no_lleva_cifras(tmp_path):
+    """Un prospecto novato no procesa tres precios de cinco decimales: la tesis va en el titular y los niveles, en las tarjetas."""
+    p = _pieza(tmp_path)
+    a = p["datos"]["activos"][0]
+    assert not re.search(r"\d", oh.titular_base(a))
+    p2, a2 = _activo_en_rango(tmp_path)
+    assert not re.search(r"\d", oh.titular_base(a2))
+
+
+def test_el_hero_traduce_la_jerga_de_las_tarjetas(tmp_path):
+    _, hero = _hero(tmp_path)
+    for jerga in ("Precio de foto", "· swing", "Invalida el sesgo", "Sesgo técnico", "Proyección técnica"):
+        assert jerga not in hero
+    assert "Precio de referencia" in hero and "Al momento del análisis" in hero
+    assert "Horizonte: de una a dos semanas" in hero
+
+
+def test_el_hero_pone_las_cifras_de_la_lectura_y_no_otras(tmp_path):
+    a, hero = _hero(tmp_path)
+    f = a["fmt"]
+    for clave in ("precio", "invalidacion", "objetivo_tori"):
+        assert f[clave] in hero
+    assert "sin nivel" not in hero
+
+
+def test_sin_linea_de_seguridad_el_hero_muestra_el_nivel_a_vigilar_y_no_sin_nivel(tmp_path):
+    """GBPUSD 2026-10-21: la ruptura no trae línea de seguridad trazable (`invalidacion` vacía)."""
+    p = _pieza(tmp_path)
+    a = p["datos"]["activos"][0]
+    a["fmt"]["invalidacion"] = ""
+    _, hero = _hero(tmp_path, a)
+    assert "sin nivel" not in hero and "Línea de seguridad" not in hero
+    assert "Nivel a vigilar" in hero and a["fmt"]["vigilar"] in hero
+
+
+def test_sin_objetivo_el_hero_no_imprime_sin_nivel(tmp_path):
+    p = _pieza(tmp_path)
+    a = p["datos"]["activos"][0]
+    a["fmt"]["objetivo_tori"] = ""
+    _, hero = _hero(tmp_path, a)
+    assert "sin nivel" not in hero and a["fmt"]["vigilar"] in hero
+
+
+def test_en_rango_el_hero_conserva_los_bordes_y_dice_lateral(tmp_path):
+    _, a = _activo_en_rango(tmp_path)
+    _, hero = _hero(tmp_path, a)
+    assert "Soporte del rango" in hero and "Resistencia del rango" in hero and "LATERAL" in hero
+    assert "sin nivel" not in hero
+
+
+def test_el_hero_cierra_con_un_gancho_hacia_el_cuerpo(tmp_path):
+    _, hero = _hero(tmp_path)
+    assert "Abajo:" in hero
+
+
+def test_el_microtexto_del_hero_se_lee_en_el_celular_y_el_aviso_legal_en_fondo_claro(tmp_path):
+    """El gris más claro del hero no puede heredarlo el aviso legal, que va sobre fondo claro."""
+    c = oh.paleta_correo(oh.paleta())
+    assert c["hero_rotulo"].upper() == "#A9BBBE"
+    p = _pieza(tmp_path)
+    marco = re.search(r'<template id="correo-marco">(.*?)</template>', oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY), re.S).group(1)
+    legal = re.search(r'<p[^>]*color:([^;]+);[^>]*>Análisis general de mercado', marco)
+    assert legal and legal.group(1).strip().upper() != c["hero_rotulo"].upper()
+
+
+def test_el_hero_no_usa_el_vocabulario_de_senal_ni_el_guion_largo(tmp_path):
+    _, hero = _hero(tmp_path)
+    texto = re.sub(r"<[^>]+>", " ", hero).lower()
+    for vetada in ("stop", "entrada", "oportunidad", "—", "–"):
+        assert vetada not in texto
 
 
 # ───────────────────────────────────────────── tests contrato: textos editables correo (2026-10-19)
