@@ -623,12 +623,24 @@ def _bordes_rango(a: dict[str, Any]) -> tuple[str, str] | None:
 def titular_base(a: dict[str, Any]) -> str:
     """La tesis en una frase y sin cifras: el prospecto novato no procesa tres precios de cinco decimales.
 
-    Los niveles viven en las tarjetas de la apertura (que salen de la lectura), no en el titular.
+    La causa sale del estado que ya trae la lectura (rompió su línea, la mantiene, rebota, la pone a prueba),
+    nunca de un motivo inventado. Los niveles viven en las tarjetas de la apertura.
     """
     sujeto = _articulo_sujeto(a["nombre"])
     if _bordes_rango(a):
-        return f"{sujeto} se mueve en rango: los dos bordes que vigila el análisis"
-    return f"{sujeto} sostiene una lectura {a['lectura']['direccion'].lower()}: el nivel que la confirma o la descarta"
+        return f"{sujeto} se mueve en rango y no tiene una tendencia que lo guíe"
+    lec = a["lectura"]
+    direccion = lec["direccion"].lower()
+    alcista = lec["direccion"] == "ALCISTA"
+    estado = lec.get("estado")
+    if estado == "RUPTURA":  # rompió la línea contraria a su nueva dirección
+        return (f"{sujeto} rompió su línea bajista: la lectura se inclina al alza" if alcista
+                else f"{sujeto} rompió su línea alcista: la lectura se inclina a la baja")
+    if estado == "REBOTE":
+        return f"{sujeto} rebota en su línea: la lectura {direccion} sigue en pie"
+    if estado == "PRUEBA":
+        return f"{sujeto} pone a prueba su línea: ahí se juega la lectura {direccion}"
+    return f"{sujeto} mantiene su tendencia {direccion}: mientras respete su línea, la lectura sigue en pie"
 
 
 _NUMERO = re.compile(r"\b\d+(?:[.,]\d+)*\b")
@@ -734,6 +746,14 @@ def _horizonte(a: dict[str, Any]) -> str:
     return m.group(1) if m else ""
 
 
+def _distancia_objetivo(lec: dict[str, Any]) -> str:
+    """«A 0,87 % del precio de referencia», calculado en ejecución desde la lectura; sin los dos precios, calla."""
+    objetivo, precio = (lec.get("objetivo") or {}).get("precio"), lec.get("precio")
+    if objetivo is None or not precio:
+        return "Hasta dónde llega la lectura"
+    return f"A {abs(objetivo - precio) / precio * 100:.2f} % del precio de referencia".replace(".", ",", 1)
+
+
 def _hero_activo(a: dict[str, Any], titular: str, c: dict[str, str], bajada: str = "", autor=None,
                  d: dict[str, Any] | None = None) -> str:
     """La apertura oscura del activo: kicker, titular, bajada, firma y snapshot de 4 cifras."""
@@ -766,7 +786,7 @@ def _hero_activo(a: dict[str, Any], titular: str, c: dict[str, str], bajada: str
     nombre_autor = _nombre_firma(autor.nombre) if autor else "Benjamín Bravo Soza"
     cargo_autor = autor.cargo if autor else "Dirección de Análisis Técnico"
     vigencia_txt = (
-        f"Vigencia del análisis: {d['vigencia']['desde']} al {d['vigencia']['hasta']} · Hora oficial de Chile"
+        f"Vigencia: {d['vigencia']['desde']} al {d['vigencia']['hasta']} · Hora de Chile"
         if d and "vigencia" in d else ""
     )
     firma_hero = (
@@ -787,15 +807,15 @@ def _hero_activo(a: dict[str, Any], titular: str, c: dict[str, str], bajada: str
     # Dos tarjetas grandes (hacia dónde y hasta dónde) y dos chicas (el precio y el nivel de control):
     # el prospecto ve primero la dirección y el destino. Una tarjeta sin cifra no se imprime ("sin nivel"
     # no le sirve a nadie): la línea de seguridad cede su lugar al nivel a vigilar de la lectura.
-    if rango:  # en rango no hay línea de seguridad ni objetivo: se muestran los bordes
-        grandes = [("Soporte del rango", rango[0], "Borde inferior", c["blanco"]),
-                   ("Resistencia del rango", rango[1], "Borde superior", "#50C0A8")]
-        chicas = [("Precio de referencia", f["precio"], "Al momento del análisis"),
-                  ("Sesgo", dir_nombre, horizonte, color_dir)]
+    if rango:  # en rango no hay línea de seguridad ni objetivo: la dirección y el precio van en grande
+        grandes = [("Hacia dónde apunta", dir_nombre, horizonte, c["blanco"]),
+                   ("Precio de referencia", f["precio"], "Al momento del análisis", c["blanco"])]
+        chicas = [("Soporte del rango", rango[0], "Borde inferior"),
+                  ("Resistencia del rango", rango[1], "Borde superior")]
     else:
         vigilar = f.get("vigilar") or ""
         grandes = [("Hacia dónde apunta", dir_nombre, horizonte, color_dir)]
-        grandes.append(("Objetivo", f["objetivo_tori"], "Hasta dónde llega la lectura", c["blanco"])
+        grandes.append(("Objetivo", f["objetivo_tori"], _distancia_objetivo(lec), c["blanco"])
                        if f.get("objetivo_tori") else
                        ("Nivel a vigilar", vigilar, "La línea que mira el análisis", c["blanco"]))
         chicas = [("Precio de referencia", f["precio"], "Al momento del análisis")]

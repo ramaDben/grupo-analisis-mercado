@@ -503,11 +503,11 @@ def test_titular_base_armado_por_codigo(tmp_path):
     p = _pieza(tmp_path)
     a = p["datos"]["activos"][0]
     tit = oh.titular_base(a)
-    assert tit == "El oro sostiene una lectura bajista: el nivel que la confirma o la descarta"
+    assert tit == "El oro mantiene su tendencia bajista: mientras respete su línea, la lectura sigue en pie"
 
     a_alcista = dict(a, nombre="Plata", lectura=dict(a["lectura"], direccion="ALCISTA"))
     tit_alcista = oh.titular_base(a_alcista)
-    assert tit_alcista == "La plata sostiene una lectura alcista: el nivel que la confirma o la descarta"
+    assert tit_alcista == "La plata mantiene su tendencia alcista: mientras respete su línea, la lectura sigue en pie"
 
     html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
     correo = _correo(html)
@@ -757,7 +757,7 @@ def _activo_en_rango(tmp_path):
 
 def test_un_activo_en_rango_no_arma_titular_ni_preheader_con_huecos(tmp_path):
     p, a = _activo_en_rango(tmp_path)
-    assert oh.titular_base(a) == "El oro se mueve en rango: los dos bordes que vigila el análisis"
+    assert oh.titular_base(a) == "El oro se mueve en rango y no tiene una tendencia que lo guíe"
     assert oh.titular_correo(a, p["editorial"]["fuentes"], variante=True) == oh.titular_base(a)
     pre = oh.preheader_sugerido(a, p["editorial"]["fuentes"], p["datos"])
     assert pre.startswith("Nuestra lectura en 4H") and "4.138,40" in pre and "línea de ." not in pre
@@ -786,6 +786,20 @@ def test_el_titular_del_hero_no_lleva_cifras(tmp_path):
     assert not re.search(r"\d", oh.titular_base(a))
     p2, a2 = _activo_en_rango(tmp_path)
     assert not re.search(r"\d", oh.titular_base(a2))
+
+
+@pytest.mark.parametrize("estado,direccion,esperado", [
+    ("RUPTURA", "ALCISTA", "El oro rompió su línea bajista: la lectura se inclina al alza"),
+    ("RUPTURA", "BAJISTA", "El oro rompió su línea alcista: la lectura se inclina a la baja"),
+    ("REBOTE", "ALCISTA", "El oro rebota en su línea: la lectura alcista sigue en pie"),
+    ("PRUEBA", "BAJISTA", "El oro pone a prueba su línea: ahí se juega la lectura bajista"),
+])
+def test_el_titular_dice_la_causa_segun_el_estado_de_la_lectura(tmp_path, estado, direccion, esperado):
+    """La causa sale del estado que ya trae la lectura (nunca de un motivo inventado) y no lleva cifras."""
+    a = _pieza(tmp_path)["datos"]["activos"][0]
+    a = dict(a, lectura=dict(a["lectura"], estado=estado, direccion=direccion))
+    assert oh.titular_base(a) == esperado
+    assert not re.search(r"\d", oh.titular_base(a))
 
 
 def test_el_hero_traduce_la_jerga_de_las_tarjetas(tmp_path):
@@ -846,6 +860,29 @@ def test_el_objetivo_no_lleva_el_color_de_marca_para_no_leerse_como_ganancia(tmp
     _, hero = _hero(tmp_path)
     cifra = re.search(r'Objetivo</p><p class="hero-cifra"[^>]*color:([^;]+);', hero)
     assert cifra and cifra.group(1).upper() == "#FFFFFF"
+
+
+def test_el_objetivo_dice_a_cuanto_esta_del_precio_calculado_desde_la_lectura(tmp_path):
+    """Sale de `lectura.precio` y `lectura.objetivo.precio` en ejecución: nada escrito a mano (regla 1)."""
+    a, hero = _hero(tmp_path)
+    lec = a["lectura"]
+    pct = abs(lec["objetivo"]["precio"] - lec["precio"]) / lec["precio"] * 100
+    assert f"A {pct:.2f}".replace(".", ",") + " % del precio de referencia" in hero
+
+
+def test_en_rango_la_direccion_y_el_precio_van_en_grande_y_los_bordes_en_chico(tmp_path):
+    _, a = _activo_en_rango(tmp_path)
+    _, hero = _hero(tmp_path, a)
+    assert hero.index("Hacia dónde apunta") < hero.index("Soporte del rango")
+    assert hero.index("LATERAL") < hero.index("Soporte del rango") < hero.index("Resistencia del rango")
+
+
+def test_el_hero_se_acomoda_al_celular(tmp_path):
+    """Menos relleno lateral en pantallas angostas: las etiquetas largas no se parten ni quedan 3 líneas enanas."""
+    plantilla = (RAIZ / "templates" / "oportunidad" / "pieza.html").read_text(encoding="utf-8")
+    assert re.search(r"\.pad-hero\{[^}]*padding", plantilla)
+    _, hero = _hero(tmp_path)
+    assert "Vigencia del análisis" not in hero and "Vigencia:" in hero
 
 
 def test_el_hero_lleva_el_logo_de_gi_y_ningun_aviso_legal(tmp_path):
