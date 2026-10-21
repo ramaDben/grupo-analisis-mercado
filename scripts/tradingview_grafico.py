@@ -231,28 +231,37 @@ def construir_html_limpio(rows: list[dict[str, Any]], digits: int = 2, niveles=N
     margen = (maximo - minimo) * 0.04 or 10 ** -digits
     lo, hi = minimo - margen, maximo + margen
 
-    # Los niveles lejos de las velas no pueden aplastarlas: ese tramo vacío del eje se comprime a una
-    # fracción fija del alto (el precio de cada etiqueta sigue siendo el real, solo el espacio se acorta).
+    # Un nivel lejos de las velas (la entrada de una lectura que espera un retroceso) no puede estirar el eje
+    # ni quedar pegado a los demás: se dibuja en una zona ampliada con su propia escala, bajo un corte
+    # explícito, y la etiqueta de la zona dice a cuánto está del precio de hoy. Las velas conservan su altura.
     v_hi, v_lo = max(float(r["high"]) for r in rows), min(float(r["low"]) for r in rows)
-    v_hi = max(v_hi, hoy)
-    v_lo = min(v_lo, hoy)
+    v_hi, v_lo = max(v_hi, hoy), min(v_lo, hoy)
     rango_v = (v_hi - v_lo) or 10 ** -digits
-    util = alto - pad_t - pad_b
-    tramo = 0.16 * util  # alto máximo de cada tramo comprimido
-    cmp_arr = hi - v_hi > 0.5 * rango_v
-    cmp_abj = v_lo - lo > 0.5 * rango_v
     pad_v = 0.06 * rango_v
-    t_arr = tramo if cmp_arr else 0.0
-    t_abj = tramo if cmp_abj else 0.0
-    alto_v = util - t_arr - t_abj  # lo que queda para las velas
+    util = alto - pad_t - pad_b
+    h_zona, corte = 0.36 * util, 34.0
+    ps_arr = [p for p, _, _ in etiquetas if p > v_hi + pad_v]
+    ps_abj = [p for p, _, _ in etiquetas if p < v_lo - pad_v]
+    amp_arr = bool(ps_arr) and min(ps_arr) - v_hi > 0.5 * rango_v
+    amp_abj = bool(ps_abj) and v_lo - max(ps_abj) > 0.5 * rango_v
+
+    def _ventana(ps: list[float]) -> tuple[float, float]:
+        a, b = max(ps), min(ps)
+        aire = 0.12 * ((a - b) or 10 * 10 ** -digits)
+        return a + aire, b - aire
+
+    z_arr = _ventana(ps_arr) if amp_arr else None
+    z_abj = _ventana(ps_abj) if amp_abj else None
+    c_top = pad_t + (h_zona + corte if amp_arr else 0.0)
+    c_bot = alto - pad_b - (h_zona + corte if amp_abj else 0.0)
+    c_hi, c_lo = (v_hi + pad_v if amp_arr else hi), (v_lo - pad_v if amp_abj else lo)
 
     def y(v: float) -> float:
-        if v > v_hi + pad_v and cmp_arr:
-            return pad_t + t_arr - min(1.0, (v - v_hi - pad_v) / ((hi - v_hi - pad_v) or 1)) * t_arr
-        if v < v_lo - pad_v and cmp_abj:
-            return pad_t + t_arr + alto_v + min(1.0, (v_lo - pad_v - v) / ((v_lo - pad_v - lo) or 1)) * t_abj
-        a, b = (v_hi + pad_v if cmp_arr else hi), (v_lo - pad_v if cmp_abj else lo)
-        return pad_t + t_arr + (a - v) / ((a - b) or 1) * alto_v
+        if z_arr and v > v_hi + pad_v:
+            return pad_t + (z_arr[0] - v) / (z_arr[0] - z_arr[1]) * h_zona
+        if z_abj and v < v_lo - pad_v:
+            return c_bot + corte + (z_abj[0] - v) / (z_abj[0] - z_abj[1]) * h_zona
+        return c_top + (c_hi - v) / ((c_hi - c_lo) or 1) * (c_bot - c_top)
 
     zona = x2 - AIRE_VELAS - 10
     paso = zona / len(rows)
@@ -291,6 +300,15 @@ def construir_html_limpio(rows: list[dict[str, Any]], digits: int = 2, niveles=N
             partes.append(f'<text x="{px + 14}" y="{yp + 9:.1f}" font-size="{fuente}" font-weight="700" fill="#fff" '
                           f'stroke="{FONDO_PILDORA}" stroke-width="5" paint-order="stroke">'
                           f'<tspan fill="{trazo}">{nombre}</tspan> {_precio_es(p, digits)}</text>')
+    for activa, ps, gy in ((amp_arr, ps_arr, c_top - corte / 2), (amp_abj, ps_abj, c_bot + corte / 2)):
+        if not activa:
+            continue
+        pct = min(abs(p - hoy) for p in ps) / hoy * 100
+        rotulo = f"ZONA AMPLIADA · A {pct:.1f} % DEL PRECIO DE HOY".replace(".", ",")
+        partes.append(f'<line x1="0" x2="{x2}" y1="{gy:.1f}" y2="{gy:.1f}" stroke="#8FB8B0" stroke-opacity=".45" '
+                      f'stroke-width="1.5" stroke-dasharray="2 6"/>')
+        partes.append(f'<text x="12" y="{gy + 6:.1f}" font-size="17" font-weight="700" fill="#8FB8B0" '
+                      f'stroke="{FONDO_PILDORA}" stroke-width="5" paint-order="stroke">{rotulo}</text>')
     b64 = _font_b64()
     fuente_css = (f'@font-face{{font-family:PJ;font-weight:700;src:url(data:font/woff2;base64,{b64}) format("woff2")}}'
                   if b64 else "")
