@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 import sys
+from dataclasses import asdict
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 RAIZ = Path(__file__).resolve().parent.parent
 for p in (str(RAIZ / "src"), str(RAIZ / "scripts"), str(RAIZ / "tests")):
@@ -11,6 +14,18 @@ for p in (str(RAIZ / "src"), str(RAIZ / "scripts"), str(RAIZ / "tests")):
 
 import analista_fixtures as fx  # noqa: E402
 from analista import seguimiento as sg  # noqa: E402
+import pandas as pd  # noqa: E402
+import pytest  # noqa: E402
+import estrategia_conformidad as conf  # noqa: E402
+from analista import preparar as pr  # noqa: E402
+from analista.orden import Orden  # noqa: E402
+from analista import suceso  # noqa: E402
+from analista.suceso import Resumen  # noqa: E402
+from analista import registro_semanal as rg  # noqa: E402
+from analista import esquema as es  # noqa: E402
+from estrategia import tori  # noqa: E402
+from estrategia.contrato import VelaEnCurso  # noqa: E402
+conf.PASO.update({"M5": 300, "M15": 900})
 
 ALZA = {"direccion": "ALCISTA", "entrada": 4000.0, "stop": 3950.0, "objetivo": 4150.0, "entrada_pendiente": False}
 RANGO = {"direccion": "BAJISTA", "entrada": 14567.0, "stop": 14610.0, "objetivo": 14438.0, "entrada_pendiente": True}
@@ -392,3 +407,193 @@ def test_la_postura_contra_la_semana_no_dice_que_la_semana_queda_invalidada():
     t = sg.texto_postura(POSTURA, {"direccion": "ALCISTA"}, "lunes")
     assert "sigue vigente" in t and "invalid" not in t and "línea B" in t
     assert "línea B" not in sg.texto_postura({**POSTURA, "caso": "sin_plan_hoy"}, None, "lunes")
+
+
+# ───────────────────────────────────────────────────────────── suceso único (Task 4)
+
+SCL = ZoneInfo("America/Santiago")
+AHORA_MIERC = datetime(2026, 10, 21, 11, 0, tzinfo=SCL)
+
+
+def _setup_analisis_vigente(tmp_path, ticker="XAUUSD", direccion="BAJISTA"):
+    d = tmp_path / "foto"
+    d.mkdir(parents=True, exist_ok=True)
+    a = fx.activo_semanal()
+    a["ticker"] = ticker
+    a["nombre"] = "Oro" if ticker == "XAUUSD" else ticker
+    p = es.nueva_pieza("oportunidad", {"ticker": ticker}, {"ticker": ticker, "activos": [a]}, {})
+    pr.guardar_pieza(p, d)
+    reg = tmp_path / "registro.json"
+    ahora_lunes = datetime(2026, 10, 19, 10, 0, tzinfo=SCL)
+    rg.anotar(ticker, d, ahora_lunes, direccion, {"nombre": "Camila", "id": "1"}, reg)
+    return reg, a
+
+
+def test_redactar_usa_suceso():
+    resumen = asdict(Resumen(
+        estado="en_nivel",
+        sentido="ALCISTA",
+        nivel=4150.0,
+        objetivo=4200.0,
+        siguiente=None,
+        calidad="A+",
+        nota_semana="",
+    ))
+    datos = {"nombre": "Oro", "suceso": resumen}
+    texto, aparte = sg.redactar(datos, "Camila")
+    assert texto.startswith("Hola Camila, ")
+    assert "el oro (CFD)" in texto
+    assert "4150" not in texto
+    assert aparte == ""
+
+
+def test_preparar_seguimiento_mercado_cerrado(tmp_path):
+    """Review Focus 1: mercado cerrado o sin vela en curso da 'cerrado' y no escribe archivo."""
+    reg, a = _setup_analisis_vigente(tmp_path)
+    base_suc = tmp_path / "sucesos"
+    lec = pr.Lectores(
+        registro=reg,
+        base_sucesos=base_suc,
+        catalogo=lambda t: a,
+        grafico_lectura=lambda *args, **kw: tmp_path / "grafico.png",
+        lectura_actual=lambda est, t, d, lector, ahora, referencia=None: (fx.lectura(precio=4000.0, direccion="BAJISTA"), {"H4": pd.DataFrame()}),
+        velas=lambda ticker, marcos, extra=0: (conf.velas_de(tori.crear_m15(), semilla=11), None)
+    )
+    dir_pedido = tmp_path / "pedido"
+    dir_pedido.mkdir(parents=True, exist_ok=True)
+    hecha = pr.preparar_seguimiento(Orden("seguimiento", {"ticker": "XAUUSD"}), dir_pedido, AHORA_MIERC, lec)
+    suc = hecha.pieza["datos"]["suceso"]
+    assert suc["estado"] == "cerrado"
+    assert not base_suc.exists() or list(base_suc.rglob("*.json")) == []
+
+
+def test_preparar_seguimiento_fija_suceso_y_lo_reutiliza(tmp_path):
+    """Fija el suceso en la primera llamada y lo reusa en llamadas posteriores."""
+    reg, a = _setup_analisis_vigente(tmp_path)
+    base_suc = tmp_path / "sucesos"
+    velas_m15 = conf.velas_de(tori.crear_m15(), semilla=11)
+    t_ult = int(velas_m15["M15"]["time"].iloc[-1])
+    velas_m5 = pd.DataFrame([{"time": t_ult + 300, "open": 4000.0, "high": 4010.0, "low": 3995.0, "close": 4005.0}])
+    en_curso = VelaEnCurso(t_ult + 900, 4005.0, datetime.fromtimestamp(t_ult + 1800, tz=SCL))
+
+    def lector(ticker, marcos, extra=0):
+        if "M5" in marcos.todos:
+            return {"M5": velas_m5}, None
+        return velas_m15, en_curso
+
+    lec = pr.Lectores(
+        registro=reg,
+        base_sucesos=base_suc,
+        catalogo=lambda t: a,
+        grafico_lectura=lambda *args, **kw: tmp_path / "grafico.png",
+        lectura_actual=lambda est, t, d, lector, ahora, referencia=None: (fx.lectura(precio=4005.0, direccion="BAJISTA"), {"H4": pd.DataFrame()}),
+        velas=lector
+    )
+    dir1 = tmp_path / "pedido1"
+    dir1.mkdir(parents=True, exist_ok=True)
+    hecha1 = pr.preparar_seguimiento(Orden("seguimiento", {"ticker": "XAUUSD"}), dir1, AHORA_MIERC, lec)
+    suc1 = hecha1.pieza["datos"]["suceso"]
+    assert suc1["sentido"] in ("ALCISTA", "BAJISTA")
+    archivos = list(base_suc.rglob("*.json"))
+    assert len(archivos) == 1
+
+    # Segunda llamada: reutiliza el suceso guardado
+    dir2 = tmp_path / "pedido2"
+    dir2.mkdir(parents=True, exist_ok=True)
+    hecha2 = pr.preparar_seguimiento(Orden("seguimiento", {"ticker": "XAUUSD"}), dir2, AHORA_MIERC, lec)
+    suc2 = hecha2.pieza["datos"]["suceso"]
+    assert suc2["sentido"] == suc1["sentido"]
+    assert suc2["calidad"] == suc1["calidad"]
+
+
+def test_preparar_seguimiento_sin_direccion(tmp_path, monkeypatch):
+    """Si la lectura de M15 no marca dirección, el suceso queda 'sin_direccion'."""
+    reg, a = _setup_analisis_vigente(tmp_path)
+    base_suc = tmp_path / "sucesos"
+    velas_m15 = conf.velas_de(tori.crear_m15(), semilla=11)
+    t_ult = int(velas_m15["M15"]["time"].iloc[-1])
+    en_curso = VelaEnCurso(t_ult + 900, 4000.0, datetime.fromtimestamp(t_ult + 1800, tz=SCL))
+
+    lec = pr.Lectores(
+        registro=reg,
+        base_sucesos=base_suc,
+        catalogo=lambda t: a,
+        grafico_lectura=lambda *args, **kw: tmp_path / "grafico.png",
+        lectura_actual=lambda est, t, d, lector, ahora, referencia=None: (fx.lectura(precio=4000.0, direccion="BAJISTA"), {"H4": pd.DataFrame()}),
+        velas=lambda ticker, marcos, extra=0: (velas_m15, en_curso)
+    )
+    monkeypatch.setattr(suceso, "elegir", lambda *args, **kw: None)
+
+    dir_pedido = tmp_path / "pedido"
+    dir_pedido.mkdir(parents=True, exist_ok=True)
+    hecha = pr.preparar_seguimiento(Orden("seguimiento", {"ticker": "XAUUSD"}), dir_pedido, AHORA_MIERC, lec)
+    assert hecha.pieza["datos"]["suceso"]["estado"] == "sin_direccion"
+    assert not base_suc.exists() or list(base_suc.rglob("*.json")) == []
+
+
+def test_preparar_seguimiento_nota_semana_solo_si_contraria(tmp_path, monkeypatch):
+    """La nota semanal se muestra si el suceso va en contra de la semana."""
+    monkeypatch.setattr("referencia_semanal.debe_reemplazar", lambda *args, **kw: False)
+    reg, a = _setup_analisis_vigente(tmp_path, direccion="BAJISTA")
+    base_suc = tmp_path / "sucesos"
+    velas_m15 = conf.velas_de(tori.crear_m15(), semilla=11)
+    t_ult = int(velas_m15["M15"]["time"].iloc[-1])
+    velas_m5 = pd.DataFrame([{"time": t_ult + 300, "open": 4000.0, "high": 4010.0, "low": 3995.0, "close": 4005.0}])
+    en_curso = VelaEnCurso(t_ult + 900, 4005.0, datetime.fromtimestamp(t_ult + 1800, tz=SCL))
+
+    def lector(ticker, marcos, extra=0):
+        if "M5" in marcos.todos:
+            return {"M5": velas_m5}, None
+        return velas_m15, en_curso
+
+    lec = pr.Lectores(
+        registro=reg,
+        base_sucesos=base_suc,
+        catalogo=lambda t: a,
+        grafico_lectura=lambda *args, **kw: tmp_path / "grafico.png",
+        lectura_actual=lambda est, t, d, lector, ahora, referencia=None: (fx.lectura(precio=4005.0, direccion="BAJISTA"), {"H4": pd.DataFrame()}),
+        velas=lector
+    )
+    dir_pedido = tmp_path / "pedido"
+    dir_pedido.mkdir(parents=True, exist_ok=True)
+    hecha = pr.preparar_seguimiento(Orden("seguimiento", {"ticker": "XAUUSD"}), dir_pedido, AHORA_MIERC, lec)
+    suc = hecha.pieza["datos"]["suceso"]
+    if suc["sentido"] == "ALCISTA":
+        assert "tendencia de la semana sigue a la baja" in suc["nota_semana"]
+    else:
+        assert suc["nota_semana"] == ""
+
+
+def test_preparar_seguimiento_traza_la_linea_fijada_y_no_la_de_ahora(tmp_path, monkeypatch):
+    """El gráfico dibuja la línea guardada en la mañana, aunque la lectura de ahora vea otra."""
+    monkeypatch.setattr("referencia_semanal.debe_reemplazar", lambda *args, **kw: False)
+    reg, a = _setup_analisis_vigente(tmp_path, direccion="BAJISTA")
+    base_suc = tmp_path / "sucesos"
+    velas_m15 = conf.velas_de(tori.crear_m15(), semilla=11)
+    tiempos = velas_m15["M15"]["time"].tolist()
+    t_ult = tiempos[-1]
+    suceso.guardar(suceso.Suceso("XAUUSD", "2026-10-21", "2026-10-21T09:00-03:00", "ALCISTA", t_ult, 3990.0,
+                                 1.0, 4100.0, "A+", 2.0), base_suc)
+    velas_m5 = pd.DataFrame([{"time": t_ult + 900, "open": 4000.0, "high": 4010.0, "low": 3995.0, "close": 4005.0}])
+    en_curso = VelaEnCurso(t_ult + 900, 4005.0, datetime.fromtimestamp(t_ult + 1800, tz=SCL))
+    graficos = []
+
+    def lector(ticker, marcos, extra=0):
+        return ({"M5": velas_m5}, None) if "M5" in marcos.todos else (velas_m15, en_curso)
+
+    lec = pr.Lectores(
+        registro=reg, base_sucesos=base_suc, catalogo=lambda t: a,
+        grafico_lectura=lambda ticker, nombre, lectura, destino, **kw: graficos.append((lectura, kw)) or destino,
+        lectura_actual=lambda est, t, d, lector, ahora, referencia=None: (fx.lectura(precio=4005.0, direccion="BAJISTA"), {"H4": pd.DataFrame()}),
+        velas=lector,
+    )
+    dir_pedido = tmp_path / "pedido"
+    dir_pedido.mkdir()
+    suc = pr.preparar_seguimiento(Orden("seguimiento", {"ticker": "XAUUSD"}), dir_pedido, AHORA_MIERC, lec).pieza["datos"]["suceso"]
+    assert suc["estado"] == "esperando" and suc["sentido"] == "ALCISTA" and suc["calidad"] == "A+"
+    assert suc["nivel"] == pytest.approx(3990.0 + 1200 / 900)  # la línea en el cierre de la vela de 5m
+    assert suc["nota_semana"] == "Es un retroceso de hoy: la tendencia de la semana sigue a la baja."
+    lectura, kw = graficos[-1]
+    (linea,) = lectura.lineas
+    assert linea.marco == "M15" and linea.puntos == ((tiempos[-2], 3989.0), (t_ult, 3990.0))
+    assert [n for _, n in kw["niveles"]] == ["NIVEL DEL DÍA", "OBJETIVO"]

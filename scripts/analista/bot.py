@@ -435,6 +435,10 @@ class Atendedor:
         o = pedido.orden
         minutos = int(self.config["reuso_minutos"].get("seguimiento", 30))
         dir_pedido = self.estado.vigente(o.clave_base(), ahora, minutos)
+        if dir_pedido is not None:
+            pieza_existente = pr.cargar_pieza(dir_pedido)
+            if "suceso" not in pieza_existente.get("datos", {}):
+                dir_pedido = None
         if dir_pedido is None:
             self._exigir_cupo(pedido.usuario, ahora)
             dir_pedido = (self.dir_pedidos / ahora.strftime("%Y-%m-%d")
@@ -442,10 +446,8 @@ class Atendedor:
             self._preparar(o, dir_pedido, ahora)
             d = pr.cargar_pieza(dir_pedido)["datos"]
             self.rendir_lamina(
-                cm.payload_seguimiento(d["activo"], d["evaluacion"], d["precio_vivo"], d["lectura_hoy"],
-                                       d["edicion"], self.autor, dir_pedido / "grafico.png",
-                                       d.get("oportunidad_hoy"), d.get("entrada_real"), d.get("postura")),
-                "seguimiento", dir_pedido / "lamina.png")
+                cm.payload_suceso(d["activo"], d["suceso"], d["edicion"], self.autor, dir_pedido / "grafico.png"),
+                "seguimiento_dia", dir_pedido / "lamina.png")
             if rg.vigente(o.args["ticker"], ahora, self.registro) is not None:
                 rg.anotar_seguimiento(o.args["ticker"],
                                       {"ticker": o.args["ticker"], "estado": d["evaluacion"]["estado"],

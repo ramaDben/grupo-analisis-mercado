@@ -155,7 +155,7 @@ def _contrato(ticker: str, precio: float) -> dict[str, Any]:
 
 
 # La oportunidad semanal es swing de 4H; el seguimiento es el plan intradía de hoy, en 1H.
-MARCO_GRAFICO_SEGUIMIENTO = "H1"
+MARCO_GRAFICO_SEGUIMIENTO = "M15"
 
 
 def _grafico_lectura(ticker: str, nombre: str, lectura, destino: Path, digits: int | None = None,
@@ -294,6 +294,7 @@ class Lectores:
     cuenta: Callable[[], str | None] = _cuenta
     catalogo: Callable[[str], dict[str, Any]] = _catalogo_o_terminal
     base_referencias: Path | None = None
+    base_sucesos: Path | None = None
     registro: Path | None = None
     referencia: Callable[..., tuple[Any, datetime, str]] = _referencia
     propia: Callable[..., tuple[Any, datetime]] = _propia
@@ -458,14 +459,64 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
     return Preparada(pieza, avisos)
 
 
+def _suceso_de_hoy(ticker: str, digits: int, ahora: datetime, lec: Lectores, direccion_semana: str,
+                   reemplazada: bool):
+    """El suceso único de hoy: (Resumen, la línea fijada para el gráfico o None, la lectura de 15 minutos).
+
+    El suceso se fija con el primer pedido del día (`suceso.del_dia`) y se evalúa contra el cierre
+    de las velas de 5 minutos. Sin vela en curso y sin suceso guardado, el mercado está cerrado.
+    """
+    import referencia_diaria as rd
+
+    from analista import suceso
+    from analista import suceso_texto as st
+    from analista.suceso import Resumen
+    from estrategia.tori import MARCOS_GATILLO, MARCOS_M15, crear_m15
+
+    def vacio(estado: str) -> Resumen:
+        return Resumen(estado=estado, sentido=None, nivel=None, objetivo=None, siguiente=None,
+                       calidad="", nota_semana="")
+
+    base = lec.base_sucesos or suceso.DIR_SUCESOS
+    fecha = rd.fecha_de(ahora)
+    try:
+        velas15, en_curso = lec.velas(ticker, MARCOS_M15, 0)
+        m5, _ = lec.velas(ticker, MARCOS_GATILLO, 0)
+    except Exception as exc:  # noqa: BLE001  sin velas no hay suceso: se dice, no se inventa
+        raise PreparacionFallida(f"no pude leer las velas de 15 y 5 minutos de {ticker} ({exc.__class__.__name__})") from exc
+    s = suceso.cargar(fecha, ticker, base)
+    if s is None and en_curso is None:
+        return vacio("cerrado"), None, None
+    lectura15 = crear_m15().leer(ticker, velas15, digits, en_curso=None)
+    tiempos = velas15["M15"]["time"].tolist()
+    precio = en_curso.precio if en_curso else lectura15.precio
+    for intento in range(2):
+        s = s or suceso.del_dia(lectura15, tiempos, ticker, ahora, base)
+        if s is None:
+            return vacio("sin_direccion"), None, lectura15
+        try:
+            av = suceso.evaluar(s, m5["M5"].to_dict("records"), precio, tiempos)
+            linea = suceso.linea(s, tiempos)
+            break
+        except ValueError:  # la vela de la fijación salió de la ventana: se vuelve a fijar una vez
+            if intento:
+                raise
+            suceso.ruta(fecha, ticker, base).unlink(missing_ok=True)
+            s = None
+    siguiente = (lectura15.vigilar.precio
+                 if av.estado == "ruptura" and lectura15.direccion not in (s.sentido, "LATERAL") else None)
+    resumen = Resumen(estado=av.estado, sentido=s.sentido, nivel=av.valor_linea, objetivo=s.objetivo,
+                      siguiente=siguiente, calidad=s.calidad,
+                      nota_semana=st.nota_semana(s.sentido, direccion_semana, reemplazada))
+    return resumen, linea, lectura15
+
+
 def preparar_seguimiento(orden: Orden, dir_pedido: Path, ahora: datetime, lec: Lectores) -> Preparada:
-    """El avance de un activo contra la foto: la simulación y la lectura de hoy, por separado."""
+    """El avance de un activo contra la foto: la simulación y el suceso único de hoy."""
     import referencia_semanal as rs
     from estrategia.contrato import lectura_de_dict
 
     from analista import oportunidad as op
-    from analista import postura as po
-    from estrategia.tori import MARCOS_INTRADIA
     from analista import seguimiento as sg
 
     ticker = orden.args["ticker"]
@@ -508,13 +559,6 @@ def preparar_seguimiento(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
     precio = lectura.precio
     atr = float(referencia_foto.metricas.get("atr") or 0.0)
     tolerancia = sg.TOLERANCIA_ATR * atr
-    intra, avisos_intra = None, []
-    try:
-        intra = lec.intradia(ticker, a["digits"], ahora, lec.velas)
-    except Exception as exc:  # noqa: BLE001  sin plan intradía el seguimiento sale igual, con la semana
-        avisos_intra.append(f"No pude leer el plan intradía de {ticker} ({exc.__class__.__name__}): sale con el marco de la semana.")
-    if intra is None and not avisos_intra:
-        avisos_intra.append(f"{ticker} no cotiza ahora: hoy no hay plan intradía.")
     ev = ({"estado": "sin_simulacion", "avance_pct": None, "motivo": motivo} if motivo
           else sg.evaluar(esc, posteriores, precio, vela_viva=vela_viva, tolerancia=tolerancia))
     entrada_real = orden.args.get("entrada")
@@ -526,30 +570,29 @@ def preparar_seguimiento(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
         except ValueError as exc:
             raise SinAnalisisError(f"Tu entrada de {entrada_real}: {exc} "
                                    f"(stop {esc['stop']}, objetivo {esc['objetivo']}).") from exc
-    # El plan de HOY es el intradía (1H) y se mide solo: puede ir en contra de la semana sin invalidarla.
-    esc_hoy = op.escenario(intra, a["digits"]).a_dict() if intra is not None else None
-    atr_hoy = float(intra.metricas.get("atr") or 0.0) if intra is not None else atr
-    oportunidad_hoy = sg.oportunidad_de_hoy(esc_hoy, None, ev, atr_hoy, a["digits"], ticker)
-    postura = po.postura_conjunta(lectura, intra, a["digits"], reemplazada)
-    if oportunidad_hoy is not None:
-        oportunidad_hoy["plazo"] = MARCOS_INTRADIA.etiquetas["H1"].duracion
-        oportunidad_hoy["calidad"] = postura.calidad_hoy
-    lectura_hoy = sg.texto_lectura(lectura, reemplazada, a["digits"])
+
+    resumen, linea, lectura15 = _suceso_de_hoy(ticker, a["digits"], ahora, lec, lectura.direccion, reemplazada)
+    # Solo se dibuja la línea fijada del suceso y sus dos niveles: nada de la semana ni de otras líneas.
+    niveles = [] if linea is None else [(resumen.nivel, "NIVEL DEL DÍA")] + (
+        [(resumen.objetivo, "OBJETIVO")] if resumen.objetivo is not None else [])
+    lec.grafico_lectura(ticker, a["nombre"], replace(lectura15 or lectura, lineas=() if linea is None else (linea,)),
+                        dir_pedido / "grafico.png", digits=a["digits"], niveles=niveles, limpio=True)
+
     hoy = fecha_corta(ahora)
-    texto = sg.mensaje(a["nombre"], hoy, a["foto"]["fecha"], esc, ev, precio, lectura, reemplazada,
-                       a["digits"], oportunidad_hoy, postura=asdict(postura))
-    niveles = niveles_lamina_seguimiento(esc_hoy, intra if intra is not None else lectura)
-    if intra is not None:  # la lámina cita la línea de la semana: el gráfico la traza
-        niveles.append((lectura.vigilar.precio, f"SEMANA · {lectura.vigilar.etiqueta.upper()}"))
-    lec.grafico_lectura(ticker, a["nombre"], intra if intra is not None else lectura, dir_pedido / "grafico.png",
-                        digits=a["digits"], niveles=niveles, limpio=True)
-    datos = {"semana": rs.semana_de(ahora), "ticker": ticker, "nombre": a["nombre"], "evaluacion": ev, "precio_vivo": precio,
-             "lectura_hoy": lectura_hoy, "reemplazada": reemplazada, "whatsapp": texto,
-             "edicion": f"{hoy} · {ahora.astimezone(SANTIAGO):%H:%M}", "activo": a,
-             "oportunidad_hoy": oportunidad_hoy, "entrada_real": entrada_real,
-             "postura": asdict(postura), "plan_intradia": intra is not None}
+    datos = {
+        "semana": rs.semana_de(ahora),
+        "ticker": ticker,
+        "nombre": a["nombre"],
+        "evaluacion": ev,
+        "precio_vivo": precio,
+        "reemplazada": reemplazada,
+        "edicion": f"{hoy} · {ahora.astimezone(SANTIAGO):%H:%M}",
+        "activo": a,
+        "entrada_real": entrada_real,
+        "suceso": asdict(resumen),
+    }
     pieza = es.nueva_pieza("seguimiento", {"ticker": ticker}, datos, {"principal": "grafico.png"})
-    return Preparada(pieza, avisos_intra)
+    return Preparada(pieza, [])
 
 
 def _contexto_sin_porcentajes(contexto: dict[str, Any]) -> dict[str, Any]:

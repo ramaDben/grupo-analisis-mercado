@@ -22,7 +22,6 @@ from analista import esquema as es  # noqa: E402
 from analista import agenda as ag  # noqa: E402
 from analista import preparar as pr  # noqa: E402
 from analista.orden import Orden  # noqa: E402
-import referencia_semanal as rs  # noqa: E402
 
 SCL = ZoneInfo("America/Santiago")
 AHORA = datetime(2026, 10, 8, 11, 0, tzinfo=SCL)
@@ -274,13 +273,13 @@ def _foto(tmp_path, activos):
               tmp_path / "registro.json")
 
 
-def _lectores_seg(tmp_path, velas, precio, hoy=None, intradia=None):
+def _lectores_seg(tmp_path, velas, precio, hoy=None):
     def lector(ticker, marcos, extra=0):
         return {"H4": velas}, None
     lec = _lectores(tmp_path / "ref", registro=tmp_path / "registro.json", velas=lector)
     lec.lectura_actual = lambda est, t, d, lector, ahora, referencia=None: (hoy or fx.lectura(precio=precio),
                                                                            {"H4": velas})
-    lec.intradia = lambda ticker, digits, ahora, velas_: intradia  # el plan de hoy (1H); None = no cotiza
+    lec.base_sucesos = tmp_path / "sucesos"  # sin vela en curso: el suceso de hoy queda «cerrado»
     return lec
 
 
@@ -313,7 +312,7 @@ def test_seguimiento_con_el_analisis_vencido_pide_uno_nuevo(tmp_path):
                     AHORA_LUNES + rg.VIGENCIA + timedelta(minutes=1), _lectores_seg(tmp_path, pd.DataFrame(), 4000.0))
 
 
-def test_seguimiento_informa_simulacion_y_lectura_por_separado(tmp_path):
+def test_seguimiento_mide_la_simulacion_y_entrega_el_suceso(tmp_path):
     oro = fx.activo_semanal()
     _foto(tmp_path, [oro])
     foto_vela = oro["lectura"]["vela"]
@@ -323,14 +322,13 @@ def test_seguimiento_informa_simulacion_y_lectura_por_separado(tmp_path):
                         datetime(2026, 10, 14, 11, 0, tzinfo=SCL), _lectores_seg(tmp_path, velas, 4124.0,
                                                            hoy=fx.lectura(precio=4124.0, invalidacion=4300.0)))
     d = hecha.pieza["datos"]
+    # La simulación del lunes se sigue midiendo para el registro, pero la pieza la cuenta el suceso.
     assert d["evaluacion"]["estado"] == "en_curso"
-    # La simulación (precios fijos del lunes) y la lectura de hoy, en párrafos separados.
-    assert "CFD" in d["whatsapp"] and "La lectura de la semana cambió" in d["lectura_hoy"]
-    assert not any(c.isdigit() for c in d["whatsapp"])  # el texto no lleva precios
-    assert "$" not in d["whatsapp"] and "instrucción de inversión" not in d["whatsapp"]
+    assert d["suceso"]["estado"] == "cerrado"  # el lector falso no entrega vela en curso
+    assert not {"whatsapp", "lectura_hoy", "postura", "oportunidad_hoy"} & set(d)
 
 
-def test_seguimiento_sin_simulacion_entrega_la_lectura_de_hoy(tmp_path):
+def test_seguimiento_sin_simulacion_entrega_el_suceso(tmp_path):
     """Un activo de la foto sin simulación (solo sin volatilidad medida) es un estado válido."""
     from analista import oportunidad as op
 
@@ -343,10 +341,7 @@ def test_seguimiento_sin_simulacion_entrega_la_lectura_de_hoy(tmp_path):
                         _lectores_seg(tmp_path, pd.DataFrame(columns=["time", "high", "low"]), 4124.0))
     d = hecha.pieza["datos"]
     assert d["evaluacion"]["estado"] == "sin_simulacion"
-    assert "plan definido" in d["whatsapp"]
-    assert "ahora se vigila" in d["lectura_hoy"] or "sigue en pie" in d["lectura_hoy"]
-    assert "No pude leer" not in d["whatsapp"]
-    assert "Stop" not in d["whatsapp"] and "Las cifras de la simulación" not in d["whatsapp"]
+    assert d["suceso"]["estado"] == "cerrado"  # sin simulación el suceso de hoy sale igual
 
 
 def test_preparar_no_toca_los_directorios_de_produccion(tmp_path):
@@ -370,26 +365,6 @@ def test_el_grafico_del_analisis_traza_los_niveles_de_la_lamina(tmp_path):
     pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES, lec)
     precios = [p for p, _ in GRAFICOS[-1]["niveles"]]
     assert 4227.32 in precios and 4149.96 in precios and GRAFICOS[-1]["digits"] == 2
-
-
-def test_el_grafico_del_seguimiento_traza_la_oportunidad_de_hoy_y_el_vigilar(tmp_path):
-    """Lo que la lámina cita en precios es solo lo que el gráfico traza: ya no la simulación del lunes."""
-    GRAFICOS.clear()
-    oro = fx.activo_semanal()
-    _foto(tmp_path, [oro])
-    hecha = pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD"}), tmp_path / "s",
-                        datetime(2026, 10, 14, 11, 0, tzinfo=SCL),
-                        _lectores_seg(tmp_path, pd.DataFrame(columns=["time", "high", "low"]), 4124.0))
-    g = GRAFICOS[-1]
-    assert g["limpio"] is True
-    nombres = [n for _, n in g["niveles"]]
-    assert nombres[-1] == fx.lectura().vigilar.etiqueta.upper()
-    hoy = hecha.pieza["datos"]["oportunidad_hoy"]
-    if hoy:
-        assert {"ENTRADA", "STOP", "OBJETIVO"} <= set(nombres)
-    esc = oro["escenario"]
-    precios = {p for p, _ in g["niveles"]}
-    assert not {esc["entrada"], esc["stop"], esc["objetivo"]} & precios or hoy  # la simulación del lunes no se traza
 
 
 def test_el_grafico_real_pide_velas_suficientes_para_las_diagonales(tmp_path, monkeypatch):
@@ -441,53 +416,6 @@ def test_si_la_direccion_es_la_misma_o_no_hay_historia_no_hay_anterior(tmp_path)
     sin = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p2", AHORA_LUNES,
                       _lectores(tmp_path / "ref2", registro=tmp_path / "vacio.json"))
     assert "anterior" not in sin.pieza["datos"]
-
-
-def _seguimiento(tmp_path, intradia, monkeypatch, semanal=None):
-    monkeypatch.setattr("referencia_semanal.debe_reemplazar", lambda referencia, actual: False)  # la semana sigue en pie
-    _foto(tmp_path, [fx.activo_semanal()])  # la foto del lunes es BAJISTA
-    return pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD"}), tmp_path / "s",
-                       datetime(2026, 10, 14, 11, 0, tzinfo=SCL),
-                       _lectores_seg(tmp_path, pd.DataFrame(columns=["time", "high", "low"]), 4124.0,
-                                     hoy=semanal or fx.lectura(precio=4124.0, direccion="BAJISTA", invalidacion=4160.0),
-                                     intradia=intradia))
-
-
-def test_el_plan_intradia_contra_la_semana_no_la_invalida_y_lo_cuenta(tmp_path, monkeypatch):
-    intra = fx.lectura(precio=4124.0, direccion="ALCISTA", invalidacion=4060.0)
-    hecha = _seguimiento(tmp_path, intra, monkeypatch)
-    d = hecha.pieza["datos"]
-    assert d["plan_intradia"] and d["postura"]["caso"] == "contra"
-    hoy = d["oportunidad_hoy"]
-    assert hoy["ratio"] == "1:3" and hoy["plazo"] == "de 8 a 10 horas"
-    assert not hoy["cambia_direccion"] and not hoy["invalida"]  # la semana sigue vigente
-    assert "invalidada" not in d["whatsapp"] and "sentido contrario" in d["whatsapp"]
-
-
-def test_el_plan_intradia_en_el_mismo_sentido_confirma_la_semana(tmp_path, monkeypatch):
-    intra = fx.lectura(precio=4124.0, direccion="BAJISTA", invalidacion=4160.0)
-    d = _seguimiento(tmp_path, intra, monkeypatch).pieza["datos"]
-    assert d["postura"]["caso"] == "coinciden" and "confirma" in d["whatsapp"]
-
-
-def test_sin_plan_intradia_el_seguimiento_sale_con_la_semana_y_lo_avisa(tmp_path, monkeypatch):
-    hecha = _seguimiento(tmp_path, None, monkeypatch)
-    d = hecha.pieza["datos"]
-    assert not d["plan_intradia"] and d["oportunidad_hoy"] is None
-    assert d["postura"]["caso"] == "sin_plan_hoy" and "no cotiza" in hecha.avisos[0]
-
-
-def test_un_fallo_al_leer_el_plan_intradia_no_tumba_el_seguimiento(tmp_path):
-    _foto(tmp_path, [fx.activo_semanal()])
-    lec = _lectores_seg(tmp_path, pd.DataFrame(columns=["time", "high", "low"]), 4124.0)
-
-    def roto(*_a):
-        raise RuntimeError("sin terminal")
-
-    lec.intradia = roto
-    hecha = pr.preparar(Orden("seguimiento", {"ticker": "XAUUSD"}), tmp_path / "s",
-                        datetime(2026, 10, 14, 11, 0, tzinfo=SCL), lec)
-    assert not hecha.pieza["datos"]["plan_intradia"] and "RuntimeError" in hecha.avisos[0]
 
 
 def test_seguimiento_con_entrada_real_fuera_del_stop_lo_dice(tmp_path):

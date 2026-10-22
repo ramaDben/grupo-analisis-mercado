@@ -379,6 +379,11 @@ def redactar(datos: dict[str, Any], saludo: str = "", ctx_macro: dict[str, Any] 
     mandó el mensaje viejo después de actualizarlo). Armarlo acá lo deja siempre al día, con el
     saludo de quien pide y con el dato macro de ese instante. Devuelve (texto, aviso al ejecutivo).
     """
+    if "suceso" in datos:
+        from analista import suceso_texto as st
+        from analista.suceso import Resumen
+
+        return con_saludo(st.whatsapp(Resumen(**datos["suceso"]), datos["nombre"]), saludo), ""
     activo = datos["activo"]
     fecha_hoy = str(datos["edicion"]).split(" · ")[0]
     esc, ev, digits = activo["escenario"], datos["evaluacion"], activo["digits"]
