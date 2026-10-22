@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
-from estrategia.contrato import SCL, Lectura, Linea
+from estrategia.contrato import SCL, Lectura, Linea, Referencia
 from estrategia.tori import PARAMETROS_M15
 from estrategia.tori.parametros import Parametros
 from referencia_diaria import fecha_de
@@ -23,6 +23,7 @@ from referencia_semanal import slug
 RAIZ = Path(__file__).resolve().parents[2]
 DIR_SUCESOS = RAIZ / "data" / "sucesos_diarios"
 VELA_M15_S, VELA_M5_S = 900, 300
+RATIO_OBJETIVO = 2.0  # el objetivo del suceso es 1:2 del riesgo (director, 2026-10-21)
 
 EstadoAvance = Literal["esperando", "en_nivel", "rebotando", "cumplido", "ruptura"]
 EstadoResumen = Literal["esperando", "en_nivel", "rebotando", "cumplido", "ruptura", "sin_direccion", "cerrado"]
@@ -83,7 +84,7 @@ def elegir(lectura: Lectura, tiempos_m15: Sequence[int], ticker: str, fecha: str
             raise ValueError("Las dos anclas de la línea diagonal tienen el mismo índice de tiempo")
         pendiente = (p2 - p1) / (i2 - i1)
 
-    objetivo = lectura.objetivo.precio if lectura.objetivo is not None else None
+    objetivo = _objetivo_1_a_2(lectura.direccion, valor_ref, lectura.invalidacion)
     calidad = linea.calidad
     tolerancia = p.tolerancia_toque_atr * lectura.metricas["atr"]
 
@@ -99,6 +100,20 @@ def elegir(lectura: Lectura, tiempos_m15: Sequence[int], ticker: str, fecha: str
         calidad=calidad,
         tolerancia=tolerancia,
     )
+
+
+def _objetivo_1_a_2(sentido: str, entrada: float, invalidacion: Referencia | None) -> float | None:
+    """Objetivo a 1:2: el doble del riesgo (entrada a la línea de control) hacia el lado del suceso.
+
+    Sin invalidación en la lectura no hay riesgo que medir, y el suceso queda sin objetivo en vez de
+    inventar uno.
+    """
+    if invalidacion is None:
+        return None
+    riesgo = abs(entrada - invalidacion.precio)
+    if riesgo == 0:
+        return None
+    return entrada + RATIO_OBJETIVO * riesgo if sentido == "ALCISTA" else entrada - RATIO_OBJETIVO * riesgo
 
 
 def valor_en(s: Suceso, tiempos_m15: Sequence[int], ts: int) -> float:

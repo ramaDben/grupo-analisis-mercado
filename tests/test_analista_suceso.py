@@ -55,6 +55,7 @@ def _crear_lectura(
     objetivo: float | None = 110.0,
     precio: float = 100.0,
     atr: float = 2.0,
+    invalidacion: float | None = None,
 ) -> Lectura:
     vig = Referencia(precio=linea.valor_actual if linea else precio, etiqueta="línea de control", linea=linea)
     obj = Referencia(precio=objetivo, etiqueta="objetivo") if objetivo is not None else None
@@ -67,7 +68,7 @@ def _crear_lectura(
         lineas=(linea,) if linea else (),
         en_prueba=None,
         vigilar=vig,
-        invalidacion=None,
+        invalidacion=Referencia(precio=invalidacion, etiqueta="línea de control") if invalidacion is not None else None,
         objetivo=obj,
         escenarios=_ESCENARIOS_DUMMY,
         salida="Salida de prueba",
@@ -114,7 +115,7 @@ def test_elegir_diagonal_calcula_pendiente_por_vela() -> None:
         valor_actual=139.0,
     )
     p = Parametros(tolerancia_toque_atr=0.25)
-    lec = _crear_lectura(direccion="ALCISTA", linea=linea, objetivo=150.0, atr=4.0)
+    lec = _crear_lectura(direccion="ALCISTA", linea=linea, invalidacion=134.0, atr=4.0)
 
     suceso = elegir(lec, tiempos_m15, "XAUUSD", "2026-10-21", "2026-10-21T10:00", p=p)
 
@@ -126,7 +127,7 @@ def test_elegir_diagonal_calcula_pendiente_por_vela() -> None:
     assert suceso.t_ref == tiempos_m15[-1]
     assert suceso.valor_ref == 139.0
     assert suceso.pendiente == 1.0  # (130 - 100) / (40 - 10) = 30 / 30 = 1.0
-    assert suceso.objetivo == 150.0
+    assert suceso.objetivo == 149.0  # 1:2: riesgo 139 - 134 = 5, objetivo 139 + 10
     assert suceso.calidad == "A+"
     assert suceso.tolerancia == 1.0  # 0.25 * 4.0
 
@@ -464,7 +465,7 @@ def test_evaluar_ignora_velas_anteriores_a_la_fijacion() -> None:
 def test_del_dia_fija_una_vez_y_reutiliza(tmp_path: Path) -> None:
     tiempos_m15 = [1000 + i * 900 for i in range(10)]
     linea1 = _crear_linea(valor_actual=100.0)
-    lec1 = _crear_lectura(linea=linea1, objetivo=120.0)
+    lec1 = _crear_lectura(linea=linea1, invalidacion=90.0)
 
     ahora = datetime(2026, 10, 21, 10, 30, tzinfo=SCL)
 
@@ -472,11 +473,11 @@ def test_del_dia_fija_una_vez_y_reutiliza(tmp_path: Path) -> None:
     s1 = del_dia(lec1, tiempos_m15, "XAUUSD", ahora, base=tmp_path)
     assert s1 is not None
     assert s1.valor_ref == 100.0
-    assert s1.objetivo == 120.0
+    assert s1.objetivo == 120.0  # riesgo 10, objetivo 1:2
 
     # Segunda llamada el mismo día con otra lectura distinta: debe devolver el del primero
     linea2 = _crear_linea(valor_actual=200.0)
-    lec2 = _crear_lectura(linea=linea2, objetivo=250.0)
+    lec2 = _crear_lectura(linea=linea2, invalidacion=150.0)
 
     s2 = del_dia(lec2, tiempos_m15, "XAUUSD", ahora, base=tmp_path)
     assert s2 is not None
@@ -489,7 +490,7 @@ def test_del_dia_otro_dia_fija_nuevo(tmp_path: Path) -> None:
     # Review Focus 2: Si la fecha cambió, se fija uno nuevo y el de ayer se ignora
     tiempos_m15 = [1000 + i * 900 for i in range(10)]
     linea1 = _crear_linea(valor_actual=100.0)
-    lec1 = _crear_lectura(linea=linea1, objetivo=120.0)
+    lec1 = _crear_lectura(linea=linea1, invalidacion=90.0)
 
     dia1 = datetime(2026, 10, 21, 10, 30, tzinfo=SCL)
     s1 = del_dia(lec1, tiempos_m15, "XAUUSD", dia1, base=tmp_path)
@@ -498,14 +499,14 @@ def test_del_dia_otro_dia_fija_nuevo(tmp_path: Path) -> None:
 
     # Al día siguiente con lectura nueva
     linea2 = _crear_linea(valor_actual=105.0)
-    lec2 = _crear_lectura(linea=linea2, objetivo=125.0)
+    lec2 = _crear_lectura(linea=linea2, invalidacion=95.0)
     dia2 = datetime(2026, 10, 22, 9, 30, tzinfo=SCL)
 
     s2 = del_dia(lec2, tiempos_m15, "XAUUSD", dia2, base=tmp_path)
     assert s2 is not None
     assert s2.fecha == "2026-10-22"
     assert s2.valor_ref == 105.0
-    assert s2.objetivo == 125.0
+    assert s2.objetivo == 125.0  # riesgo 10, objetivo 1:2
 
 
 def test_del_dia_sin_direccion_no_escribe(tmp_path: Path) -> None:
@@ -520,3 +521,17 @@ def test_del_dia_sin_direccion_no_escribe(tmp_path: Path) -> None:
     # No debe haber creado ningún archivo ni carpeta
     archivos = list(tmp_path.rglob("*.json"))
     assert len(archivos) == 0
+
+
+def test_elegir_bajista_pone_el_objetivo_a_dos_veces_el_riesgo_hacia_abajo() -> None:
+    tiempos_m15 = [1000 + i * 900 for i in range(10)]
+    lec = _crear_lectura(direccion="BAJISTA", linea=_crear_linea(valor_actual=100.0), invalidacion=104.0)
+    s = elegir(lec, tiempos_m15, "XAUUSD", "2026-10-21", "2026-10-21T10:00")
+    assert s is not None and s.objetivo == 92.0
+
+
+def test_elegir_sin_invalidacion_deja_el_suceso_sin_objetivo() -> None:
+    tiempos_m15 = [1000 + i * 900 for i in range(10)]
+    lec = _crear_lectura(linea=_crear_linea(valor_actual=100.0), objetivo=130.0)
+    s = elegir(lec, tiempos_m15, "XAUUSD", "2026-10-21", "2026-10-21T10:00")
+    assert s is not None and s.objetivo is None  # no se hereda el objetivo de la lectura
