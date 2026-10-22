@@ -16,7 +16,7 @@ import pandas as pd
 from estrategia.contrato import COLUMNAS_VELAS, Marcos, VelaEnCurso
 
 SANTIAGO = ZoneInfo("America/Santiago")
-DURACION = {"H1": 3600, "H4": 4 * 3600, "D1": 86400, "W1": 7 * 86400}
+DURACION = {"M5": 300, "M15": 900, "H1": 3600, "H4": 4 * 3600, "D1": 86400, "W1": 7 * 86400}
 RELOJ = "BTCUSD"  # cotiza todos los días: su último tick es la hora del servidor
 COTIZANDO_S = 15 * 60
 

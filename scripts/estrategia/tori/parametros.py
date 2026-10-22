@@ -17,6 +17,7 @@ class Parametros:
     pendiente_min_atr: float = 0.02  # bajo esto la línea es horizontal (OjZ8d [03:52])
     pendiente_empinada_atr: float = 0.5  # "muy empinada" (Murphy p. 103)
     velas_punto_b_reciente: int = 6  # V16: Punto B dentro del último día de 4H
+    velas_ab_min: int | None = None  # None: regla semanal; int: velas mínimas entre ancla y punto B (A+)
     zigzag_horizontal_atr: float = 1.5
     tolerancia_horizontal_atr: float = 0.5  # el horizontal es una zona (qsjLm [08:52])
     horizontal_max_atr: float = 8.0  # "solo los cercanos" (qsjLm [03:27])
