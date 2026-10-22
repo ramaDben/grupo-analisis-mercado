@@ -358,3 +358,37 @@ def test_generar_grafico_tv_limpio_pide_maximo_velas_y_recorta(monkeypatch, tmp_
     assert vistos["html"]["timeframe"] == "H1"
     assert vistos["html"]["limpio"] is True
 
+
+def test_el_modo_panoramico_alarga_la_ventana_de_tiempo_y_usa_el_ancho_de_la_lamina():
+    rows = [{"time": i, "open": 100.0, "high": 105.0, "low": 95.0, "close": 100.0} for i in range(300)]
+    html = tg.construir_html_limpio(rows, 2, [(101.0, "NIVEL DEL DÍA")], tg.PANORAMA_ANCHO, tg.PANORAMA_ALTO,
+                                    tg.PANORAMA_N_VELAS_MIN, tg.PANORAMA_N_VELAS_MAX)
+    assert html.count("<rect x=") == tg.PANORAMA_N_VELAS_MIN  # 150 velas contra las 48 del lienzo angosto
+    assert f'width="{tg.PANORAMA_ANCHO}"' in html
+
+
+def test_generar_grafico_tv_panoramico_pide_mas_velas_y_el_lienzo_ancho(monkeypatch, tmp_path):
+    vistos: dict = {}
+    from market_data_mcp import mt5_client
+
+    monkeypatch.setattr(mt5_client, "connect", lambda: None)
+
+    def rates(ticker, tf, n):
+        vistos["rates"] = (tf, n)
+        df = _Df(n)
+        df.filas = [{"time": 1_000_000 + i * 900, "open": 100.0, "high": 105.0, "low": 95.0, "close": 100.0}
+                    for i in range(n)]
+        return df
+
+    monkeypatch.setattr(mt5_client, "get_rates", rates)
+    monkeypatch.setattr(tg, "renderizar_png", lambda html, destino, **kw: vistos.update(lienzo=(kw["ancho"], kw["alto"])) or destino)
+    monkeypatch.setattr(tg, "construir_html_tradingview", lambda rows, simbolo, timeframe, **kw: vistos.update(
+        n=len(rows), **kw) or "")
+
+    tg.generar_grafico_tv("USDCLP", "Dólar", tmp_path / "g.png", timeframe="M15", niveles=[], limpio=True,
+                          panoramico=True)
+
+    assert vistos["rates"] == ("M15", tg.PANORAMA_N_VELAS_MAX + 20)
+    assert vistos["n"] == tg.PANORAMA_N_VELAS_MIN
+    assert vistos["lienzo"] == (tg.PANORAMA_ANCHO, tg.PANORAMA_ALTO)
+

@@ -152,6 +152,10 @@ LIMPIO_N_VELAS_MIN = 48  # ventana mínima adaptativa (seguimiento intradía H1,
 LIMPIO_N_VELAS_MAX = 120  # tope máximo de velas para cubrir niveles antes de recurrir a zona ampliada
 LIMPIO_N_VELAS = LIMPIO_N_VELAS_MIN  # compatibilidad hacia atrás: mínimo por defecto
 LIMPIO_ANCHO, LIMPIO_ALTO = 888, 590  # el lienzo de la tarjeta de seguimiento, 1 px = 1 px de lámina
+# Seguimiento en panorámico (2026-10-21): el gráfico ocupa el ancho entero de la lámina y la ventana
+# de tiempo se alarga en proporción, con ~9 px por vela de 15 minutos (unas 40 horas de mercado).
+PANORAMA_ANCHO, PANORAMA_ALTO = 1804, 560
+PANORAMA_N_VELAS_MIN, PANORAMA_N_VELAS_MAX = 150, 240
 SEPARACION_ETIQUETAS = 46  # px entre centros: la píldora mide 42 y necesita aire
 COLOR_NIVEL = {"ENTRADA": "#FFFFFF", "STOP": "#E84040", "OBJETIVO": "#00DC82"}
 COLOR_LIMPIO_SUBE, COLOR_LIMPIO_BAJA, COLOR_LIMPIO_HOY = "#00DC82", "#E84040", "#50C0A8"
@@ -255,14 +259,15 @@ def velas_para_niveles(
 
 
 def construir_html_limpio(rows: list[dict[str, Any]], digits: int = 2, niveles=None,
-                          ancho: int = LIMPIO_ANCHO, alto: int = LIMPIO_ALTO) -> str:
+                          ancho: int = LIMPIO_ANCHO, alto: int = LIMPIO_ALTO,
+                          velas_min: int = LIMPIO_N_VELAS_MIN, velas_max: int = LIMPIO_N_VELAS_MAX) -> str:
     """Gráfico limpio de la tarjeta de seguimiento: velas adaptativas, niveles y precio de hoy.
 
     Sin leyenda, barra de pie, grilla, zonas ni logo: lo que la lámina cita en precios es solo lo
     que este gráfico traza. Fondo transparente (la lámina pone su degradado y su marca de agua).
     """
     tol = 0.5 * 10 ** -digits
-    n = velas_para_niveles(rows, niveles, minimo=LIMPIO_N_VELAS_MIN, maximo=LIMPIO_N_VELAS_MAX, tolerancia=tol)
+    n = velas_para_niveles(rows, niveles, minimo=velas_min, maximo=velas_max, tolerancia=tol)
     rows = rows[-n:]
     hoy = float(rows[-1]["close"])
     filas = [(float(p), str(n).upper()) for p, n in (niveles or ())]
@@ -402,6 +407,8 @@ def construir_html_tradingview(
     lineas=None,
     niveles=None,
     limpio: bool = False,
+    velas_min: int = LIMPIO_N_VELAS_MIN,
+    velas_max: int = LIMPIO_N_VELAS_MAX,
 ) -> str:
     """HTML autocontenido del gráfico: velas, las líneas de la lectura y las zonas de
     soporte y resistencia del mensaje.
@@ -416,7 +423,7 @@ def construir_html_tradingview(
     """
     if limpio:
         return construir_html_limpio(rows, digits, niveles, ancho if ancho != 1400 else LIMPIO_ANCHO,
-                                     alto if alto != 780 else LIMPIO_ALTO)
+                                     alto if alto != 780 else LIMPIO_ALTO, velas_min, velas_max)
     if not VENDOR_JS.exists():
         raise TradingViewRenderError(f"No se encontró el vendor JS: {VENDOR_JS}")
 
@@ -761,6 +768,7 @@ def generar_grafico_tv(
     lineas=None,
     niveles=None,
     limpio: bool = False,
+    panoramico: bool = False,
 ) -> Path:
     """Función principal: obtiene datos de MT5, computa indicadores y renderiza el PNG.
 
@@ -774,7 +782,8 @@ def generar_grafico_tv(
     los que coinciden se funden en una etiqueta.
 
     Con `limpio=True` no lee la lectura ni dibuja sus líneas: ~60 velas y solo los `niveles`
-    (ver `construir_html_limpio`), sobre fondo transparente.
+    (ver `construir_html_limpio`), sobre fondo transparente. Con `panoramico=True` el lienzo es el
+    ancho entero de la lámina y la ventana se alarga a `PANORAMA_N_VELAS_MIN`..`MAX` velas.
     """
     from market_data_mcp import mt5_client
     from market_data_mcp.catalog import VALID_TICKERS
@@ -784,9 +793,11 @@ def generar_grafico_tv(
 
     if limpio:
         timeframe = timeframe or "H1"
-        n_velas = LIMPIO_N_VELAS_MAX
+        velas_min, velas_max = ((PANORAMA_N_VELAS_MIN, PANORAMA_N_VELAS_MAX) if panoramico
+                                else (LIMPIO_N_VELAS_MIN, LIMPIO_N_VELAS_MAX))
+        n_velas = velas_max
         if (ancho, alto) == (1400, 780):
-            ancho, alto = LIMPIO_ANCHO, LIMPIO_ALTO
+            ancho, alto = (PANORAMA_ANCHO, PANORAMA_ALTO) if panoramico else (LIMPIO_ANCHO, LIMPIO_ALTO)
     elif lineas is None:
         import pipeline_carrusel as pc
 
@@ -817,8 +828,8 @@ def generar_grafico_tv(
 
     # Recortar para el gráfico: adaptativo según niveles en modo limpio, fijo en modo estándar
     if limpio:
-        n_sel = velas_para_niveles(con_indicadores, niveles, minimo=LIMPIO_N_VELAS_MIN,
-                                   maximo=LIMPIO_N_VELAS_MAX, tolerancia=0.5 * 10 ** -digits)
+        n_sel = velas_para_niveles(con_indicadores, niveles, minimo=velas_min,
+                                   maximo=velas_max, tolerancia=0.5 * 10 ** -digits)
         recorte = con_indicadores[-n_sel:]
     else:
         recorte = con_indicadores[-n_velas:]
@@ -835,6 +846,7 @@ def generar_grafico_tv(
         lineas=lineas,
         niveles=niveles,
         limpio=limpio,
+        **({"velas_min": velas_min, "velas_max": velas_max} if limpio else {}),
     )
 
     return renderizar_png(html, destino, ancho=ancho, alto=alto, transparente=limpio)

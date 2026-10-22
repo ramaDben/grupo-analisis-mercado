@@ -166,15 +166,17 @@ def _grafico_lectura(ticker: str, nombre: str, lectura, destino: Path, digits: i
     ventana y la línea no se dibuja (la de control del oro, W41).
 
     Con `limpio=True` (el seguimiento) el gráfico traza solo `niveles` y el precio de hoy, sobre
-    fondo transparente: la lámina pone el degradado y la marca de agua. Sus velas son de 1 hora
-    (`MARCO_GRAFICO_SEGUIMIENTO`), no del marco de la lectura.
+    fondo transparente: la lámina pone el degradado y la marca de agua. Sus velas son de 15 minutos
+    (`MARCO_GRAFICO_SEGUIMIENTO`), no del marco de la lectura, y el lienzo es panorámico: el gráfico
+    ocupa el ancho entero de la lámina y muestra una ventana de tiempo más larga.
     """
     import pipeline_carrusel as pc
     from tradingview_grafico import generar_grafico_tv
 
     if limpio:
         return generar_grafico_tv(ticker=ticker, nombre=nombre, destino=destino, timeframe=MARCO_GRAFICO_SEGUIMIENTO,
-                                  digits=digits, lineas=lectura.lineas, niveles=niveles, limpio=True)
+                                  digits=digits, lineas=lectura.lineas, niveles=niveles, limpio=True,
+                                  panoramico=True)
     return generar_grafico_tv(ticker=ticker, nombre=nombre, destino=destino, timeframe=lectura.marco,
                               n_velas=pc.VELAS_GRAFICO_TV, digits=digits, lineas=lectura.lineas,
                               niveles=niveles)
