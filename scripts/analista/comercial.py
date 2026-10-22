@@ -237,3 +237,31 @@ def rendir(payload: dict[str, Any], plantilla: str, destino: Path,
         from story_render import render_story as render
     render(payload, pa.DIR_PLANTILLAS / f"{plantilla}.html", destino, formato="horizontal")
     return destino
+
+
+def payload_suceso(activo: dict[str, Any], resumen: dict[str, Any], datos_al: str, autor: Any,
+                   chart: Path) -> dict[str, Any]:
+    """Payload para la lámina de seguimiento de un solo suceso (plantilla seguimiento_dia)."""
+    from analista import suceso_texto as st
+    from analista.suceso import Resumen
+
+    r = Resumen(**resumen)
+    flecha, titular, linea_chica = st.lamina(r, activo["digits"])
+    direccion = r.sentido.lower() if r.sentido else "lateral"
+
+    return {
+        "logo_src": LOGO_LAMINA.resolve().as_uri(),
+        "chip": "SEGUIMIENTO DE HOY",
+        "datos_al": datos_al,
+        "activo": f"{activo['nombre']} · {activo['ticker_visible']}",
+        "direccion": direccion,
+        "estado": r.estado,
+        "flecha": flecha,
+        "titular": titular,
+        "linea_chica": linea_chica,
+        "nota_semana": r.nota_semana,
+        "chart_png": str(chart),
+        "pie_imagen": f"{activo['nombre']} · velas de 15 minutos · MetaTrader 5",
+        "firma": firma(autor),
+        "aviso": AVISO_SEGUIMIENTO,
+    }
