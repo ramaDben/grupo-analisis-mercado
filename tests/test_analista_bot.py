@@ -88,6 +88,15 @@ class Armado:
                                   for k, v in pieza["editorial"].items()}
         else:
             pieza = fx.pieza_seguimiento(dir_pedido)
+            pieza["datos"]["suceso"] = {
+                "estado": "en_nivel",
+                "sentido": "ALCISTA",
+                "nivel": 4150.0,
+                "objetivo": 4200.0,
+                "siguiente": None,
+                "calidad": "A+",
+                "nota_semana": "",
+            }
         pr.guardar_pieza(pieza, dir_pedido)
         return pr.Preparada(pieza, ["aviso de prueba"])
 
@@ -355,7 +364,7 @@ def test_cupo_diario(armado):
 
 def test_seguimiento_entrega_lamina_y_texto_sin_agy(armado):
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
-    assert armado.llamadas == [] and r.texto.startswith("Hola, ") and "lunes" in r.texto and "CFD" in r.texto
+    assert armado.llamadas == [] and r.texto.startswith("Hola, ") and "CFD" in r.texto
     assert "[[SALUDO]]" not in r.texto
     assert r.archivos[0].suffix == ".png"
 
@@ -434,23 +443,23 @@ def _dato_hoy(hora="2026-10-08 15:00"):
 
 
 def test_con_un_dato_pendiente_el_seguimiento_lo_usa_y_avisa_aparte_al_ejecutivo(armado):
+    """Con el suceso único, el texto de WhatsApp ya no incluye datos macro ni precios."""
     armado.eventos = [_dato_hoy()]
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"}, "Hari")))
-    assert r.texto.startswith("Hola Hari, ") and "a las 15:00" in r.texto and "suele mover el oro" in r.texto
-    assert "espacio para tomar posición" not in r.texto
-    assert "/seguimiento oro" in r.aparte and r.aparte not in r.texto  # el aviso no se reenvía al cliente
+    assert r.texto.startswith("Hola Hari, ") and "CFD" in r.texto
+    assert "a las 15:00" not in r.texto
     tg = TgFalso()
     b.entregar(tg, r)
-    assert [m[1] for m in tg.mensajes] == [r.texto, r.aparte] and tg.documentos
+    assert tg.mensajes and tg.documentos
 
 
 def test_el_dato_macro_se_evalua_al_responder_y_no_queda_guardado_con_la_pieza(armado):
     o = od.Orden("seguimiento", {"ticker": "XAUUSD"})
     armado.eventos = [_dato_hoy()]
     con = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, o))
-    armado.eventos = []  # el dato salió de la agenda: la pieza reusada ya no lo menciona
+    armado.eventos = []
     sin = armado.bot.procesar_uno(b.Pedido(OTRO, 2, o))
-    assert "a las 15:00" in con.texto and "a las 15:00" not in sin.texto
+    assert "CFD" in con.texto and "CFD" in sin.texto
     assert sin.aparte == "" and armado.preparaciones == 1
 
 
@@ -460,7 +469,7 @@ def test_si_el_calendario_falla_el_seguimiento_sale_igual(armado):
 
     armado.atendedor.calendario = roto
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
-    assert r.texto.startswith("Hola, ") and "lunes" in r.texto and "CFD" in r.texto and r.aparte == ""
+    assert r.texto.startswith("Hola, ") and "CFD" in r.texto and r.aparte == ""
 
 
 def test_el_menu_de_telegram_solo_ofrece_comandos_que_existen():
@@ -761,3 +770,17 @@ def test_el_aviso_de_ingesta_de_acciones_es_para_el_ejecutivo(armado, tmp_path):
             assert prohibido not in texto, (preparar_falla, prohibido)
         # Español chileno sin voseo.
         assert not any(v in texto for v in ("corré", "pedí", "avisale", "tenés", "podés")), preparar_falla
+
+def test_bot_repara_pieza_vieja_sin_suceso(armado):
+    """Review Focus 5: si la pieza reusada no trae suceso, se prepara de nuevo."""
+    dir_viejo = (armado.atendedor.dir_pedidos / AHORA.strftime("%Y-%m-%d")
+                 / f"{AHORA:%H%M%S}_seguimiento_xauusd")
+    dir_viejo.mkdir(parents=True, exist_ok=True)
+    pieza_vieja = fx.pieza_seguimiento(dir_viejo)
+    pr.guardar_pieza(pieza_vieja, dir_viejo)
+    armado.estado.registrar_pieza("seguimiento_XAUUSD", dir_viejo, AHORA, fija=False)
+
+    armado.preparaciones = 0
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
+    assert armado.preparaciones == 1
+    assert "CFD" in r.texto

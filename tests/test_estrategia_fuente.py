@@ -93,3 +93,21 @@ def test_fuera_de_horario_la_vela_en_curso_tampoco_cuenta_como_cerrada():
     assert list(cerradas["time"]) == [0, D1] and abierta is None
     cerradas, abierta = partir_velas(df, "D1", ahora, cotizando=True)
     assert list(cerradas["time"]) == [0, D1] and int(abierta["time"]) == 2 * D1
+
+
+def test_duracion_m5_y_m15():
+    from estrategia.fuente import DURACION
+    assert DURACION["M5"] == 300
+    assert DURACION["M15"] == 900
+
+
+def test_partir_velas_m15_separa_la_abierta():
+    from estrategia.fuente import DURACION, partir_velas
+    M15 = DURACION["M15"]
+    df = pd.DataFrame({"time": [0, M15, 2 * M15], "open": [1.0] * 3, "high": [1.0] * 3,
+                       "low": [1.0] * 3, "close": [1.0] * 3})
+    ahora = 2 * M15 + 600
+    cerradas, abierta = partir_velas(df, "M15", ahora, cotizando=True)
+    assert list(cerradas["time"]) == [0, M15]
+    assert abierta is not None and int(abierta["time"]) == 2 * M15
+

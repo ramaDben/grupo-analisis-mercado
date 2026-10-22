@@ -36,5 +36,6 @@ def calificar(t: Trazo, s: Serie, p: Parametros) -> Calidad:
     semanas = (t.toques[-1] - t.toques[0]) / velas_por_semana(s)
     reciente = t.i_b >= len(s) - p.velas_punto_b_reciente
     empinada = abs(t.pendiente) > p.pendiente_empinada_atr * s.atr
-    a_mas = len(t.toques) >= 3 and semanas >= 1.0 and not reciente
+    largo = (t.i_b - t.i_a) >= p.velas_ab_min if p.velas_ab_min is not None else semanas >= 1.0
+    a_mas = len(t.toques) >= 3 and largo and not reciente
     return Calidad("A+" if a_mas else "B", semanas, reciente, empinada)
