@@ -7,6 +7,8 @@ from estrategia.tori import puntaje as _puntaje
 from estrategia.tori.parametros import PARAMETROS, Parametros
 from estrategia.tori.procedencia import PROCEDENCIA
 
+PARAMETROS_M15 = PARAMETROS  # marcador del contrato: la Task 1 lo reemplaza por velas_ab_min=30
+
 MARCOS = Marcos(
     contexto=("W1", "D1"), operativo="H4",
     velas={"W1": 156, "D1": 250, "H4": 180},
