@@ -573,7 +573,7 @@ def test_preparar_seguimiento_traza_la_linea_fijada_y_no_la_de_ahora(tmp_path, m
     tiempos = velas_m15["M15"]["time"].tolist()
     t_ult = tiempos[-1]
     suceso.guardar(suceso.Suceso("XAUUSD", "2026-10-21", "2026-10-21T09:00-03:00", "ALCISTA", t_ult, 3990.0,
-                                 1.0, 4100.0, "A+", 2.0), base_suc)
+                                 1.0, "A+", 2.0), base_suc)
     velas_m5 = pd.DataFrame([{"time": t_ult + 900, "open": 4000.0, "high": 4010.0, "low": 3995.0, "close": 4005.0}])
     en_curso = VelaEnCurso(t_ult + 900, 4005.0, datetime.fromtimestamp(t_ult + 1800, tz=SCL))
     graficos = []
@@ -596,4 +596,4 @@ def test_preparar_seguimiento_traza_la_linea_fijada_y_no_la_de_ahora(tmp_path, m
     lectura, kw = graficos[-1]
     (linea,) = lectura.lineas
     assert linea.marco == "M15" and linea.puntos == ((tiempos[-2], 3989.0), (t_ult, 3990.0))
-    assert [n for _, n in kw["niveles"]] == ["NIVEL DEL DÍA", "OBJETIVO"]
+    assert [n for _, n in kw["niveles"]] == ["NIVEL DEL DÍA"]  # sin confirmación no hay objetivo

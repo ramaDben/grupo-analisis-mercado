@@ -5,6 +5,7 @@ Todos los datos son sintéticos, sin MetaTrader 5 ni acceso a la red.
 """
 from __future__ import annotations
 
+import json
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -17,7 +18,7 @@ for p in (str(RAIZ / "src"), str(RAIZ / "scripts")):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-from analista.suceso import Suceso, del_dia, elegir, evaluar, valor_en  # noqa: E402
+from analista.suceso import Suceso, cargar, del_dia, elegir, evaluar, guardar, valor_en  # noqa: E402
 from estrategia.contrato import Escenario, Lectura, Linea, Referencia  # noqa: E402
 from estrategia.tori.parametros import Parametros  # noqa: E402
 
@@ -115,7 +116,7 @@ def test_elegir_diagonal_calcula_pendiente_por_vela() -> None:
         valor_actual=139.0,
     )
     p = Parametros(tolerancia_toque_atr=0.25)
-    lec = _crear_lectura(direccion="ALCISTA", linea=linea, invalidacion=134.0, atr=4.0)
+    lec = _crear_lectura(direccion="ALCISTA", linea=linea, atr=4.0)
 
     suceso = elegir(lec, tiempos_m15, "XAUUSD", "2026-10-21", "2026-10-21T10:00", p=p)
 
@@ -127,7 +128,6 @@ def test_elegir_diagonal_calcula_pendiente_por_vela() -> None:
     assert suceso.t_ref == tiempos_m15[-1]
     assert suceso.valor_ref == 139.0
     assert suceso.pendiente == 1.0  # (130 - 100) / (40 - 10) = 30 / 30 = 1.0
-    assert suceso.objetivo == 149.0  # 1:2: riesgo 139 - 134 = 5, objetivo 139 + 10
     assert suceso.calidad == "A+"
     assert suceso.tolerancia == 1.0  # 0.25 * 4.0
 
@@ -151,7 +151,6 @@ def test_valor_en_no_avanza_en_hueco() -> None:
         t_ref=t0,
         valor_ref=100.0,
         pendiente=2.0,
-        objetivo=120.0,
         calidad="A+",
         tolerancia=1.0,
     )
@@ -175,7 +174,6 @@ def test_valor_en_antes_de_la_ventana_levanta() -> None:
         t_ref=10000,
         valor_ref=100.0,
         pendiente=1.0,
-        objetivo=110.0,
         calidad="A+",
         tolerancia=1.0,
     )
@@ -197,7 +195,6 @@ def test_evaluar_esperando() -> None:
         t_ref=t_ref,
         valor_ref=100.0,
         pendiente=0.0,
-        objetivo=110.0,
         calidad="A+",
         tolerancia=2.0,
     )
@@ -223,7 +220,6 @@ def test_evaluar_en_nivel() -> None:
         t_ref=t_ref,
         valor_ref=100.0,
         pendiente=0.0,
-        objetivo=110.0,
         calidad="A+",
         tolerancia=2.0,
     )
@@ -247,7 +243,6 @@ def test_evaluar_rebotando() -> None:
         t_ref=t_ref,
         valor_ref=100.0,
         pendiente=0.0,
-        objetivo=110.0,
         calidad="A+",
         tolerancia=2.0,
     )
@@ -258,6 +253,7 @@ def test_evaluar_rebotando() -> None:
     # Precio vivo se aleja al alza fuera de tolerancia (105.0 > 102.0), sin llegar a objetivo (110.0)
     av = evaluar(s, velas, precio=105.0, tiempos_m15=tiempos_m15)
     assert av.estado == "rebotando"
+    assert av.objetivo == 109.0  # entrada 103, riesgo 3 hasta la línea, objetivo 103 + 6
 
 
 def test_evaluar_cumplido() -> None:
@@ -271,7 +267,6 @@ def test_evaluar_cumplido() -> None:
         t_ref=t_ref,
         valor_ref=100.0,
         pendiente=0.0,
-        objetivo=110.0,
         calidad="A+",
         tolerancia=2.0,
     )
@@ -295,7 +290,6 @@ def test_evaluar_ruptura_por_cierre_5m() -> None:
         t_ref=t_ref,
         valor_ref=100.0,
         pendiente=0.0,
-        objetivo=110.0,
         calidad="A+",
         tolerancia=2.0,
     )
@@ -319,7 +313,6 @@ def test_evaluar_toca_y_cierra_al_otro_lado_es_ruptura() -> None:
         t_ref=t_ref,
         valor_ref=100.0,
         pendiente=0.0,
-        objetivo=110.0,
         calidad="A+",
         tolerancia=2.0,
     )
@@ -342,7 +335,6 @@ def test_evaluar_cumplido_antes_de_ruptura_sigue_cumplido() -> None:
         t_ref=t_ref,
         valor_ref=100.0,
         pendiente=0.0,
-        objetivo=110.0,
         calidad="A+",
         tolerancia=2.0,
     )
@@ -358,8 +350,9 @@ def test_evaluar_cumplido_antes_de_ruptura_sigue_cumplido() -> None:
     assert av.estado == "cumplido"
 
 
-def test_evaluar_sin_objetivo_nunca_cumplido() -> None:
-    # Review Focus 4: sin objetivo, el estado nunca llega a cumplido
+def test_evaluar_toque_sin_cierre_fuera_de_la_tolerancia_no_fija_objetivo() -> None:
+    # Tocó, pero ninguna vela de 5 minutos cerró fuera de la tolerancia: falta la confirmación,
+    # así que no hay objetivo y el suceso sigue en el nivel aunque el precio vivo se aleje.
     t_ref = 10000
     tiempos_m15 = [t_ref, t_ref + 900]
     s = Suceso(
@@ -370,17 +363,64 @@ def test_evaluar_sin_objetivo_nunca_cumplido() -> None:
         t_ref=t_ref,
         valor_ref=100.0,
         pendiente=0.0,
-        objetivo=None,  # sin objetivo
         calidad="A+",
         tolerancia=2.0,
     )
     velas = [
-        _vela_5m(t_ref + 900, open_=104.0, high=104.0, low=101.0, close=103.0),
-        _vela_5m(t_ref + 1200, open_=103.0, high=200.0, low=103.0, close=195.0),
+        _vela_5m(t_ref + 900, open_=103.0, high=103.0, low=101.0, close=101.5),
+        _vela_5m(t_ref + 1200, open_=101.5, high=102.0, low=100.5, close=102.0),  # 102 no supera 100 + 2
     ]
-    av = evaluar(s, velas, precio=195.0, tiempos_m15=tiempos_m15)
-    assert av.estado == "rebotando"
-    assert av.estado != "cumplido"
+    av = evaluar(s, velas, precio=104.0, tiempos_m15=tiempos_m15)
+    assert av.estado == "en_nivel"
+    assert av.objetivo is None
+
+
+def test_evaluar_cierre_lejos_sin_toque_no_confirma() -> None:
+    # Cerrar lejos sin haber tocado la línea no es un rebote: no hay objetivo.
+    t_ref = 10000
+    tiempos_m15 = [t_ref, t_ref + 900]
+    s = Suceso(
+        ticker="XAUUSD",
+        fecha="2026-10-21",
+        fijado="2026-10-21T10:00",
+        sentido="ALCISTA",
+        t_ref=t_ref,
+        valor_ref=100.0,
+        pendiente=0.0,
+        calidad="A+",
+        tolerancia=2.0,
+    )
+    velas = [_vela_5m(t_ref + 900, open_=105.0, high=108.0, low=104.0, close=107.0)]
+    av = evaluar(s, velas, precio=107.0, tiempos_m15=tiempos_m15)
+    assert av.estado == "esperando"
+    assert av.objetivo is None
+
+
+def test_evaluar_confirma_en_vela_posterior_al_toque_y_mide_desde_su_cierre() -> None:
+    # Toca en la primera vela, confirma en la segunda (cierre 104 > 102): entrada 104, riesgo 4,
+    # objetivo 112. La tercera llega a 111,5 y todavía no cumple; la cuarta sí.
+    t_ref = 10000
+    tiempos_m15 = [t_ref, t_ref + 900]
+    s = Suceso(
+        ticker="XAUUSD",
+        fecha="2026-10-21",
+        fijado="2026-10-21T10:00",
+        sentido="ALCISTA",
+        t_ref=t_ref,
+        valor_ref=100.0,
+        pendiente=0.0,
+        calidad="A+",
+        tolerancia=2.0,
+    )
+    velas = [
+        _vela_5m(t_ref + 900, open_=103.0, high=103.0, low=100.5, close=101.0),
+        _vela_5m(t_ref + 1200, open_=101.0, high=104.5, low=101.0, close=104.0),
+        _vela_5m(t_ref + 1500, open_=104.0, high=111.5, low=104.0, close=111.0),
+    ]
+    av = evaluar(s, velas, precio=111.0, tiempos_m15=tiempos_m15)
+    assert (av.estado, av.objetivo) == ("rebotando", 112.0)
+    velas.append(_vela_5m(t_ref + 1800, open_=111.0, high=112.0, low=110.0, close=111.5))
+    assert evaluar(s, velas, precio=111.5, tiempos_m15=tiempos_m15).estado == "cumplido"
 
 
 def test_evaluar_bajista_espejo() -> None:
@@ -394,7 +434,6 @@ def test_evaluar_bajista_espejo() -> None:
         t_ref=t_ref,
         valor_ref=100.0,
         pendiente=0.0,
-        objetivo=90.0,
         calidad="A+",
         tolerancia=2.0,
     )
@@ -420,16 +459,18 @@ def test_evaluar_bajista_espejo() -> None:
     ]
     assert evaluar(s, velas_toca_rup, precio=100.1, tiempos_m15=tiempos_m15).estado == "ruptura"
 
-    # 5. Rebotando: tocó la resistencia (high >= 100 - 2 = 98.0) y cerró bajo la línea, precio cae
+    # 5. Rebotando: tocó la resistencia (high >= 100 - 2 = 98.0) y cerró bajo 98: entrada 97,
+    # riesgo 3 hasta la línea, objetivo 97 - 6 = 91
     velas_reb = [
-        _vela_5m(t_ref + 900, open_=97.0, high=99.0, low=97.0, close=98.0),
+        _vela_5m(t_ref + 900, open_=98.0, high=99.0, low=96.5, close=97.0),
     ]
-    assert evaluar(s, velas_reb, precio=95.0, tiempos_m15=tiempos_m15).estado == "rebotando"
+    av = evaluar(s, velas_reb, precio=95.0, tiempos_m15=tiempos_m15)
+    assert (av.estado, av.objetivo) == ("rebotando", 91.0)
 
-    # 6. Cumplido: tocó y luego low <= objetivo (90.0)
+    # 6. Cumplido: confirmó y luego low <= objetivo (91.0)
     velas_cump = [
-        _vela_5m(t_ref + 900, open_=97.0, high=99.0, low=97.0, close=98.0),
-        _vela_5m(t_ref + 1200, open_=98.0, high=98.0, low=89.5, close=91.0),
+        _vela_5m(t_ref + 900, open_=98.0, high=99.0, low=96.5, close=97.0),
+        _vela_5m(t_ref + 1200, open_=97.0, high=97.0, low=90.5, close=91.5),
     ]
     assert evaluar(s, velas_cump, precio=91.0, tiempos_m15=tiempos_m15).estado == "cumplido"
 
@@ -445,7 +486,6 @@ def test_evaluar_ignora_velas_anteriores_a_la_fijacion() -> None:
         t_ref=t_ref,
         valor_ref=100.0,
         pendiente=0.0,
-        objetivo=110.0,
         calidad="A+",
         tolerancia=2.0,
     )
@@ -465,7 +505,7 @@ def test_evaluar_ignora_velas_anteriores_a_la_fijacion() -> None:
 def test_del_dia_fija_una_vez_y_reutiliza(tmp_path: Path) -> None:
     tiempos_m15 = [1000 + i * 900 for i in range(10)]
     linea1 = _crear_linea(valor_actual=100.0)
-    lec1 = _crear_lectura(linea=linea1, invalidacion=90.0)
+    lec1 = _crear_lectura(linea=linea1)
 
     ahora = datetime(2026, 10, 21, 10, 30, tzinfo=SCL)
 
@@ -473,16 +513,14 @@ def test_del_dia_fija_una_vez_y_reutiliza(tmp_path: Path) -> None:
     s1 = del_dia(lec1, tiempos_m15, "XAUUSD", ahora, base=tmp_path)
     assert s1 is not None
     assert s1.valor_ref == 100.0
-    assert s1.objetivo == 120.0  # riesgo 10, objetivo 1:2
 
     # Segunda llamada el mismo día con otra lectura distinta: debe devolver el del primero
     linea2 = _crear_linea(valor_actual=200.0)
-    lec2 = _crear_lectura(linea=linea2, invalidacion=150.0)
+    lec2 = _crear_lectura(linea=linea2)
 
     s2 = del_dia(lec2, tiempos_m15, "XAUUSD", ahora, base=tmp_path)
     assert s2 is not None
     assert s2.valor_ref == 100.0
-    assert s2.objetivo == 120.0
     assert s2 == s1
 
 
@@ -490,7 +528,7 @@ def test_del_dia_otro_dia_fija_nuevo(tmp_path: Path) -> None:
     # Review Focus 2: Si la fecha cambió, se fija uno nuevo y el de ayer se ignora
     tiempos_m15 = [1000 + i * 900 for i in range(10)]
     linea1 = _crear_linea(valor_actual=100.0)
-    lec1 = _crear_lectura(linea=linea1, invalidacion=90.0)
+    lec1 = _crear_lectura(linea=linea1)
 
     dia1 = datetime(2026, 10, 21, 10, 30, tzinfo=SCL)
     s1 = del_dia(lec1, tiempos_m15, "XAUUSD", dia1, base=tmp_path)
@@ -499,14 +537,13 @@ def test_del_dia_otro_dia_fija_nuevo(tmp_path: Path) -> None:
 
     # Al día siguiente con lectura nueva
     linea2 = _crear_linea(valor_actual=105.0)
-    lec2 = _crear_lectura(linea=linea2, invalidacion=95.0)
+    lec2 = _crear_lectura(linea=linea2)
     dia2 = datetime(2026, 10, 22, 9, 30, tzinfo=SCL)
 
     s2 = del_dia(lec2, tiempos_m15, "XAUUSD", dia2, base=tmp_path)
     assert s2 is not None
     assert s2.fecha == "2026-10-22"
     assert s2.valor_ref == 105.0
-    assert s2.objetivo == 125.0  # riesgo 10, objetivo 1:2
 
 
 def test_del_dia_sin_direccion_no_escribe(tmp_path: Path) -> None:
@@ -523,15 +560,12 @@ def test_del_dia_sin_direccion_no_escribe(tmp_path: Path) -> None:
     assert len(archivos) == 0
 
 
-def test_elegir_bajista_pone_el_objetivo_a_dos_veces_el_riesgo_hacia_abajo() -> None:
+def test_cargar_un_suceso_guardado_con_objetivo_lo_ignora(tmp_path: Path) -> None:
+    # Los sucesos guardados antes de este cambio traen `objetivo`: se siguen cargando.
     tiempos_m15 = [1000 + i * 900 for i in range(10)]
-    lec = _crear_lectura(direccion="BAJISTA", linea=_crear_linea(valor_actual=100.0), invalidacion=104.0)
-    s = elegir(lec, tiempos_m15, "XAUUSD", "2026-10-21", "2026-10-21T10:00")
-    assert s is not None and s.objetivo == 92.0
-
-
-def test_elegir_sin_invalidacion_deja_el_suceso_sin_objetivo() -> None:
-    tiempos_m15 = [1000 + i * 900 for i in range(10)]
-    lec = _crear_lectura(linea=_crear_linea(valor_actual=100.0), objetivo=130.0)
-    s = elegir(lec, tiempos_m15, "XAUUSD", "2026-10-21", "2026-10-21T10:00")
-    assert s is not None and s.objetivo is None  # no se hereda el objetivo de la lectura
+    s = elegir(_crear_lectura(linea=_crear_linea(valor_actual=100.0)), tiempos_m15, "XAUUSD", "2026-10-21", "2026-10-21T10:00")
+    assert s is not None
+    destino = guardar(s, tmp_path)
+    datos = json.loads(destino.read_text(encoding="utf-8"))
+    destino.write_text(json.dumps({**datos, "objetivo": 101.0}), encoding="utf-8")
+    assert cargar("2026-10-21", "XAUUSD", tmp_path) == s

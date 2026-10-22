@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
-from estrategia.contrato import SCL, Lectura, Linea, Referencia
+from estrategia.contrato import SCL, Lectura, Linea
 from estrategia.tori import PARAMETROS_M15
 from estrategia.tori.parametros import Parametros
 from referencia_diaria import fecha_de
@@ -23,7 +23,9 @@ from referencia_semanal import slug
 RAIZ = Path(__file__).resolve().parents[2]
 DIR_SUCESOS = RAIZ / "data" / "sucesos_diarios"
 VELA_M15_S, VELA_M5_S = 900, 300
-RATIO_OBJETIVO = 2.0  # el objetivo del suceso es 1:2 del riesgo (director, 2026-10-21)
+# El objetivo es 1:2 del riesgo medido EN LA CONFIRMACIÓN (director, 2026-10-21): fijarlo contra la
+# invalidación de la lectura dejaba el riesgo casi en cero, porque en tendencia es la misma línea.
+RATIO_OBJETIVO = 2.0
 
 EstadoAvance = Literal["esperando", "en_nivel", "rebotando", "cumplido", "ruptura"]
 EstadoResumen = Literal["esperando", "en_nivel", "rebotando", "cumplido", "ruptura", "sin_direccion", "cerrado"]
@@ -38,7 +40,6 @@ class Suceso:
     t_ref: int  # apertura de la última vela M15 cerrada al fijar (época del servidor)
     valor_ref: float  # valor de la línea en esa vela (Linea.valor_actual)
     pendiente: float  # precio por vela de 15 minutos; 0.0 en un horizontal
-    objetivo: float | None
     calidad: str  # "A+" o "B"
     tolerancia: float  # Parametros.tolerancia_toque_atr x ATR de 15 minutos
 
@@ -47,6 +48,7 @@ class Suceso:
 class Avance:
     estado: EstadoAvance
     valor_linea: float  # valor de la línea en la última vela de 5 minutos evaluada
+    objetivo: float | None = None  # 1:2 desde el cierre que confirmó; None mientras no confirme
 
 
 @dataclass(frozen=True)
@@ -84,7 +86,6 @@ def elegir(lectura: Lectura, tiempos_m15: Sequence[int], ticker: str, fecha: str
             raise ValueError("Las dos anclas de la línea diagonal tienen el mismo índice de tiempo")
         pendiente = (p2 - p1) / (i2 - i1)
 
-    objetivo = _objetivo_1_a_2(lectura.direccion, valor_ref, lectura.invalidacion)
     calidad = linea.calidad
     tolerancia = p.tolerancia_toque_atr * lectura.metricas["atr"]
 
@@ -96,24 +97,15 @@ def elegir(lectura: Lectura, tiempos_m15: Sequence[int], ticker: str, fecha: str
         t_ref=t_ref,
         valor_ref=valor_ref,
         pendiente=pendiente,
-        objetivo=objetivo,
         calidad=calidad,
         tolerancia=tolerancia,
     )
 
 
-def _objetivo_1_a_2(sentido: str, entrada: float, invalidacion: Referencia | None) -> float | None:
-    """Objetivo a 1:2: el doble del riesgo (entrada a la línea de control) hacia el lado del suceso.
-
-    Sin invalidación en la lectura no hay riesgo que medir, y el suceso queda sin objetivo en vez de
-    inventar uno.
-    """
-    if invalidacion is None:
-        return None
-    riesgo = abs(entrada - invalidacion.precio)
-    if riesgo == 0:
-        return None
-    return entrada + RATIO_OBJETIVO * riesgo if sentido == "ALCISTA" else entrada - RATIO_OBJETIVO * riesgo
+def _objetivo_1_a_2(alcista: bool, entrada: float, linea: float) -> float:
+    """Objetivo a 1:2: el doble del riesgo (del cierre que confirmó a la línea) hacia el lado del suceso."""
+    riesgo = abs(entrada - linea)
+    return entrada + RATIO_OBJETIVO * riesgo if alcista else entrada - RATIO_OBJETIVO * riesgo
 
 
 def valor_en(s: Suceso, tiempos_m15: Sequence[int], ts: int) -> float:
@@ -140,12 +132,17 @@ def valor_en(s: Suceso, tiempos_m15: Sequence[int], ts: int) -> float:
 
 def evaluar(s: Suceso, velas_m5: Sequence[Mapping[str, float]], precio: float,
             tiempos_m15: Sequence[int]) -> Avance:
-    """En qué va el suceso según los cierres de 5 minutos posteriores a su fijación."""
+    """En qué va el suceso según los cierres de 5 minutos posteriores a su fijación.
+
+    Confirma la primera vela que, después del toque, cierra fuera de la tolerancia a favor: ese
+    cierre es la entrada y fija el objetivo a 1:2. Antes de confirmar no hay objetivo que mostrar.
+    """
     velas_validas = [v for v in velas_m5 if v["time"] >= s.t_ref + VELA_M15_S]
     velas_validas.sort(key=lambda v: v["time"])
 
     alcista = (s.sentido == "ALCISTA")
     toco = False
+    objetivo: float | None = None
     ultima_L: float | None = None
 
     for v in velas_validas:
@@ -156,28 +153,22 @@ def evaluar(s: Suceso, velas_m5: Sequence[Mapping[str, float]], precio: float,
         L = valor_en(s, tiempos_m15, time + VELA_M5_S)
         ultima_L = L
 
-        if alcista:
-            if close < L:
-                return Avance(estado="ruptura", valor_linea=L)
-            if low <= L + s.tolerancia:
-                toco = True
-            if toco and s.objetivo is not None and high >= s.objetivo:
-                return Avance(estado="cumplido", valor_linea=L)
-        else:
-            if close > L:
-                return Avance(estado="ruptura", valor_linea=L)
-            if high >= L - s.tolerancia:
-                toco = True
-            if toco and s.objetivo is not None and low <= s.objetivo:
-                return Avance(estado="cumplido", valor_linea=L)
+        if (close < L) if alcista else (close > L):
+            return Avance(estado="ruptura", valor_linea=L, objetivo=objetivo)
+        if objetivo is not None and ((high >= objetivo) if alcista else (low <= objetivo)):
+            return Avance(estado="cumplido", valor_linea=L, objetivo=objetivo)
+        if (low <= L + s.tolerancia) if alcista else (high >= L - s.tolerancia):
+            toco = True
+        if toco and objetivo is None and ((close > L + s.tolerancia) if alcista else (close < L - s.tolerancia)):
+            objetivo = _objetivo_1_a_2(alcista, close, L)
 
     if ultima_L is None:
         ultima_L = valor_en(s, tiempos_m15, s.t_ref + VELA_M15_S)
 
-    if abs(precio - ultima_L) <= s.tolerancia:
+    if objetivo is not None:
+        return Avance(estado="rebotando", valor_linea=ultima_L, objetivo=objetivo)
+    if toco or abs(precio - ultima_L) <= s.tolerancia:
         return Avance(estado="en_nivel", valor_linea=ultima_L)
-    if toco:
-        return Avance(estado="rebotando", valor_linea=ultima_L)
     return Avance(estado="esperando", valor_linea=ultima_L)
 
 
@@ -217,6 +208,7 @@ def cargar(fecha: str, ticker: str, base: Path = DIR_SUCESOS) -> Suceso | None:
         return None
     try:
         datos = json.loads(archivo.read_text(encoding="utf-8"))
+        datos.pop("objetivo", None)  # los guardados antes de fijar el objetivo en la confirmación
         return Suceso(**datos)
     except (json.JSONDecodeError, TypeError, KeyError):
         return None

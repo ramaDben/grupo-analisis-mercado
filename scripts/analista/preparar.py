@@ -507,7 +507,7 @@ def _suceso_de_hoy(ticker: str, digits: int, ahora: datetime, lec: Lectores, dir
             s = None
     siguiente = (lectura15.vigilar.precio
                  if av.estado == "ruptura" and lectura15.direccion not in (s.sentido, "LATERAL") else None)
-    resumen = Resumen(estado=av.estado, sentido=s.sentido, nivel=av.valor_linea, objetivo=s.objetivo,
+    resumen = Resumen(estado=av.estado, sentido=s.sentido, nivel=av.valor_linea, objetivo=av.objetivo,
                       siguiente=siguiente, calidad=s.calidad,
                       nota_semana=st.nota_semana(s.sentido, direccion_semana, reemplazada))
     return resumen, linea, lectura15
