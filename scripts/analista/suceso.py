@@ -28,7 +28,8 @@ VELA_M15_S, VELA_M5_S = 900, 300
 RATIO_OBJETIVO = 2.0
 
 EstadoAvance = Literal["esperando", "en_nivel", "rebotando", "cumplido", "ruptura"]
-EstadoResumen = Literal["esperando", "en_nivel", "rebotando", "cumplido", "ruptura", "sin_direccion", "cerrado"]
+EstadoResumen = Literal["esperando", "en_nivel", "rebotando", "cumplido", "ruptura", "semana",
+                        "sin_direccion", "cerrado"]
 
 
 @dataclass(frozen=True)

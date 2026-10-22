@@ -15,7 +15,7 @@ for p in (str(RAIZ / "src"), str(RAIZ / "scripts"), str(RAIZ / "tests")):
 from analista import autor as au  # noqa: E402
 
 BASE = {"autor": {
-    "nombre": "Benjamín Ignacio Bravo Soza", "cargo": "Dirección de Análisis Técnico",
+    "nombre": "Benjamín Ignacio Bravo Soza", "cargo": "Departamento de Análisis Técnico",
     "foto": "config/autor/foto.png", "firma": None,
     "acreditacion": {"entidad": "CMV", "categoria": "Operadores", "numero": "A-32915",
                      "vigente_hasta": "2028-03-31"},

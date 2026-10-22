@@ -37,7 +37,7 @@ def _pieza(tmp_path):
 
 def test_el_analisis_va_firmado_y_la_simulacion_rotulada(tmp_path):
     html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
-    assert "Dirección de Análisis Técnico" in html
+    assert "Departamento de Análisis Técnico" in html
     assert "Objetivo de la simulación (1:3)" in html
     assert "Simulación realizada por Camila Rojas" in html
 
@@ -165,13 +165,13 @@ def test_la_firma_lleva_al_ejecutivo_en_grande_y_debajo_al_analista(tmp_path):
     assert "Benjamín Ignacio" not in firma
     assert "Te lo envía" not in marco
     correo = _correo(html)
-    assert "Realizado por Benjamín Bravo Soza · Dirección de Análisis Técnico GI" in correo
+    assert "Realizado por Benjamín Bravo Soza · Departamento de Análisis Técnico GI" in correo
 
 
 def test_el_analisis_va_rotulado_con_su_autor_como_la_simulacion_con_el_ejecutivo(tmp_path):
     correo = _correo(_html(tmp_path))
     assert "Análisis técnico del Oro" in correo
-    assert "Realizado por Benjamín Bravo Soza · Dirección de Análisis Técnico GI" in correo
+    assert "Realizado por Benjamín Bravo Soza · Departamento de Análisis Técnico GI" in correo
     assert "Benjamín Ignacio" not in correo
     assert correo.index("Análisis técnico del Oro") < correo.index("Simulación realizada por Camila Rojas")
 

@@ -506,8 +506,8 @@ def test_preparar_seguimiento_fija_suceso_y_lo_reutiliza(tmp_path):
     assert suc2["calidad"] == suc1["calidad"]
 
 
-def test_preparar_seguimiento_sin_direccion(tmp_path, monkeypatch):
-    """Si la lectura de M15 no marca dirección, el suceso queda 'sin_direccion'."""
+def test_preparar_seguimiento_sin_direccion_usa_la_semana(tmp_path, monkeypatch):
+    """Sin línea de 15 minutos, una semana con dirección se comunica: estado 'semana' y sin suceso guardado."""
     reg, a = _setup_analisis_vigente(tmp_path)
     base_suc = tmp_path / "sucesos"
     velas_m15 = conf.velas_de(tori.crear_m15(), semilla=11)
@@ -527,8 +527,28 @@ def test_preparar_seguimiento_sin_direccion(tmp_path, monkeypatch):
     dir_pedido = tmp_path / "pedido"
     dir_pedido.mkdir(parents=True, exist_ok=True)
     hecha = pr.preparar_seguimiento(Orden("seguimiento", {"ticker": "XAUUSD"}), dir_pedido, AHORA_MIERC, lec)
-    assert hecha.pieza["datos"]["suceso"]["estado"] == "sin_direccion"
+    suc = hecha.pieza["datos"]["suceso"]
+    assert suc["estado"] == "semana" and suc["sentido"] == "BAJISTA" and suc["nivel"] is not None
     assert not base_suc.exists() or list(base_suc.rglob("*.json")) == []
+
+
+def test_preparar_seguimiento_semana_lateral_queda_sin_direccion(tmp_path, monkeypatch):
+    """Si tampoco la semana marca dirección, el estado es 'sin_direccion'."""
+    reg, a = _setup_analisis_vigente(tmp_path)
+    base_suc = tmp_path / "sucesos"
+    velas_m15 = conf.velas_de(tori.crear_m15(), semilla=11)
+    t_ult = int(velas_m15["M15"]["time"].iloc[-1])
+    en_curso = VelaEnCurso(t_ult + 900, 4000.0, datetime.fromtimestamp(t_ult + 1800, tz=SCL))
+    lec = pr.Lectores(
+        registro=reg, base_sucesos=base_suc, catalogo=lambda t: a,
+        grafico_lectura=lambda *args, **kw: tmp_path / "grafico.png",
+        lectura_actual=lambda est, t, d, lector, ahora, referencia=None: (fx.lectura(precio=4000.0, direccion="LATERAL"), {"H4": pd.DataFrame()}),
+        velas=lambda ticker, marcos, extra=0: (velas_m15, en_curso))
+    monkeypatch.setattr(suceso, "elegir", lambda *args, **kw: None)
+    dir_pedido = tmp_path / "pedido"
+    dir_pedido.mkdir(parents=True, exist_ok=True)
+    hecha = pr.preparar_seguimiento(Orden("seguimiento", {"ticker": "XAUUSD"}), dir_pedido, AHORA_MIERC, lec)
+    assert hecha.pieza["datos"]["suceso"]["estado"] == "sin_direccion"
 
 
 def test_preparar_seguimiento_nota_semana_solo_si_contraria(tmp_path, monkeypatch):

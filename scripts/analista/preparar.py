@@ -462,7 +462,7 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
 
 
 def _suceso_de_hoy(ticker: str, digits: int, ahora: datetime, lec: Lectores, direccion_semana: str,
-                   reemplazada: bool):
+                   reemplazada: bool, lectura_semana=None):
     """El suceso único de hoy: (Resumen, la línea fijada para el gráfico o None, la lectura de 15 minutos).
 
     El suceso se fija con el primer pedido del día (`suceso.del_dia`) y se evalúa contra el cierre
@@ -495,6 +495,13 @@ def _suceso_de_hoy(ticker: str, digits: int, ahora: datetime, lec: Lectores, dir
     for intento in range(2):
         s = s or suceso.del_dia(lectura15, tiempos, ticker, ahora, base)
         if s is None:
+            # Sin línea de 15 minutos hoy, la lectura de la semana es lo que hay que comunicar.
+            if lectura_semana is not None and lectura_semana.direccion in ("ALCISTA", "BAJISTA"):
+                obj = lectura_semana.objetivo
+                return Resumen(estado="semana", sentido=lectura_semana.direccion,
+                               nivel=lectura_semana.vigilar.precio,
+                               objetivo=obj.precio if obj is not None else None,
+                               siguiente=None, calidad="", nota_semana=""), None, lectura15
             return vacio("sin_direccion"), None, lectura15
         try:
             av = suceso.evaluar(s, m5["M5"].to_dict("records"), precio, tiempos)
@@ -573,10 +580,15 @@ def preparar_seguimiento(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
             raise SinAnalisisError(f"Tu entrada de {entrada_real}: {exc} "
                                    f"(stop {esc['stop']}, objetivo {esc['objetivo']}).") from exc
 
-    resumen, linea, lectura15 = _suceso_de_hoy(ticker, a["digits"], ahora, lec, lectura.direccion, reemplazada)
-    # Solo se dibuja la línea fijada del suceso y sus dos niveles: nada de la semana ni de otras líneas.
-    niveles = [] if linea is None else [(resumen.nivel, "NIVEL DEL DÍA")] + (
-        [(resumen.objetivo, "OBJETIVO")] if resumen.objetivo is not None else [])
+    resumen, linea, lectura15 = _suceso_de_hoy(ticker, a["digits"], ahora, lec, lectura.direccion, reemplazada,
+                                               lectura_semana=lectura)
+    # Con suceso se dibuja su línea fijada y sus dos niveles; sin él, solo los niveles de la semana.
+    if resumen.estado == "semana":
+        niveles = [(resumen.nivel, "LÍNEA DE CONTROL")] + (
+            [(resumen.objetivo, "OBJETIVO DE LA SEMANA")] if resumen.objetivo is not None else [])
+    else:
+        niveles = [] if linea is None else [(resumen.nivel, "NIVEL DEL DÍA")] + (
+            [(resumen.objetivo, "OBJETIVO")] if resumen.objetivo is not None else [])
     lec.grafico_lectura(ticker, a["nombre"], replace(lectura15 or lectura, lineas=() if linea is None else (linea,)),
                         dir_pedido / "grafico.png", digits=a["digits"], niveles=niveles, limpio=True)
 

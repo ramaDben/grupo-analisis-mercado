@@ -63,11 +63,16 @@ def test_lamina_cada_estado_alcista_y_bajista():
         ),
         (
             Resumen("sin_direccion", None, None, None, None, "", ""),
-            ("↔️", "Hoy el precio no marca dirección", "Esperamos que defina antes de leer un nivel"),
+            ("↔️", "Hoy el precio se mueve en rango", "Esperamos que salga de la zona antes de marcar un nivel"),
         ),
         (
             Resumen("cerrado", None, None, None, None, "", ""),
             ("↔️", "El mercado está cerrado", "El seguimiento de hoy parte con la apertura"),
+        ),
+        (
+            Resumen("semana", "ALCISTA", 4000.0, 4060.0, None, "", ""),
+            ("⬆️", "La semana sigue al alza: el precio consolida sobre 4.000,00",
+             "Mientras no cierre bajo 4.000,00, el objetivo es 4.060,00. Esperamos una señal clara de hoy para el punto de entrada"),
         ),
     ]
     for r, esperado in casos_alcista:
@@ -97,13 +102,18 @@ def test_lamina_cada_estado_alcista_y_bajista():
         ),
         (
             Resumen("sin_direccion", "BAJISTA", None, None, None, "", ""),
-            ("↔️", "Hoy el precio no marca dirección", "Esperamos que defina antes de leer un nivel"),
+            ("↔️", "Hoy el precio se mueve en rango", "Esperamos que salga de la zona antes de marcar un nivel"),
         ),
         (
             Resumen("cerrado", "BAJISTA", None, None, None, "", ""),
             ("↔️", "El mercado está cerrado", "El seguimiento de hoy parte con la apertura"),
         ),
     ]
+    casos_bajista.append((
+        Resumen("semana", "BAJISTA", 4000.0, 3940.0, None, "", ""),
+        ("⬇️", "La semana sigue a la baja: el precio consolida bajo 4.000,00",
+         "Mientras no cierre sobre 4.000,00, el objetivo es 3.940,00. Esperamos una señal clara de hoy para el punto de entrada"),
+    ))
     for r, esperado in casos_bajista:
         assert st.lamina(r, digits=2) == esperado
 
@@ -243,7 +253,7 @@ def test_payload_suceso_claves(tmp_path):
         "calidad": "A+",
         "nota_semana": "",
     }
-    autor = SimpleNamespace(nombre="Benjamín Bravo", cargo="Director de Análisis Técnico")
+    autor = SimpleNamespace(nombre="Benjamín Bravo", cargo="Departamento de Análisis Técnico")
     payload = cm.payload_suceso(activo, resumen, "21-10 · 11:30 CLST", autor, chart)
 
     assert set(payload.keys()) == CLAVES_ESPERADAS_PAYLOAD
@@ -257,3 +267,10 @@ def test_payload_suceso_claves(tmp_path):
     assert payload["chart_png"] == str(chart)
     assert payload["pie_imagen"] == "Oro · velas de 15 minutos · MetaTrader 5"
     assert "Benjamín Bravo" in payload["firma"]
+
+
+def test_whatsapp_semana_habla_de_la_tendencia_sin_precios():
+    r = Resumen("semana", "BAJISTA", 158.361, 156.631, None, "", "")
+    msg = st.whatsapp(r, "Dólar / Yen japonés")
+    assert "sigue a la baja" in msg and "consolidando" in msg
+    assert "158" not in msg and "—" not in msg

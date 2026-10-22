@@ -11,13 +11,23 @@ from analista.suceso import Resumen
 def lamina(r: Resumen, digits: int) -> tuple[str, str, str]:
     """Devuelve (flecha, titular, linea_chica) para la lámina de seguimiento diario."""
     if r.estado == "sin_direccion":
-        return ("↔️", "Hoy el precio no marca dirección", "Esperamos que defina antes de leer un nivel")
+        return ("↔️", "Hoy el precio se mueve en rango", "Esperamos que salga de la zona antes de marcar un nivel")
     if r.estado == "cerrado":
         return ("↔️", "El mercado está cerrado", "El seguimiento de hoy parte con la apertura")
 
     nivel_str = _fmt(r.nivel, digits) if r.nivel is not None else ""
     obj_str = _fmt(r.objetivo, digits) if r.objetivo is not None else ""
     sig_str = _fmt(r.siguiente, digits) if r.siguiente is not None else ""
+
+    if r.estado == "semana":
+        bajista = r.sentido == "BAJISTA"
+        rumbo, lado = ("a la baja", "sobre") if bajista else ("al alza", "bajo")
+        titular = f"La semana sigue {rumbo}: el precio consolida {'bajo' if bajista else 'sobre'} {nivel_str}"
+        linea_chica = (f"Mientras no cierre {lado} {nivel_str}, el objetivo es {obj_str}. "
+                       "Esperamos una señal clara de hoy para el punto de entrada"
+                       if r.objetivo is not None
+                       else f"Mientras no cierre {lado} {nivel_str}, la tendencia de la semana sigue vigente")
+        return ("⬇️" if bajista else "⬆️", titular, linea_chica)
 
     if r.sentido == "BAJISTA":
         if r.estado == "esperando":
@@ -135,9 +145,13 @@ def whatsapp(r: Resumen, nombre: str) -> str:
     activo_cfd = f"{el} (CFD)"
 
     if r.estado == "sin_direccion":
-        cuerpo = f"hoy {activo_cfd} no marca una dirección clara, así que esperamos que defina antes de tomar un nivel. Te aviso apenas lo haga."
+        cuerpo = f"hoy {activo_cfd} se mueve en rango, así que esperamos que salga de la zona antes de tomar un nivel. Te aviso apenas lo haga."
     elif r.estado == "cerrado":
         cuerpo = f"{activo_cfd} todavía no abre. Apenas cotice te mando el nivel del día."
+    elif r.estado == "semana":
+        rumbo = "a la baja" if r.sentido == "BAJISTA" else "al alza"
+        cuerpo = (f"la tendencia de la semana en {activo_cfd} sigue {rumbo} y hoy el precio está consolidando. "
+                  "Te dejé la lámina con el nivel que la sostiene y el objetivo, ¿lo revisamos?")
     elif r.sentido == "BAJISTA":
         if r.estado == "esperando":
             cuerpo = f"hoy estamos esperando que {activo_cfd} llegue a su nivel del día para un rechazo a la baja. Te dejé la lámina con el punto exacto, ¿lo revisamos cuando llegue?"
