@@ -65,7 +65,13 @@ Incluye la oportunidad de hoy; si la lectura cambió de lado, avisa que lo anter
 Antes debe existir el /oportunidad de ese activo. Dura 30 minutos.
 
 Activos: oro, dolar, cobre, petroleo, brent, nasdaq, bitcoin o el símbolo exacto de MT5.
-Tus pedidos y cupo de hoy: /estado"""
+
+Tienes 10 pedidos al día, que se renuevan cada día. Mira cuántos te quedan con /estado.
+Tu identificador de Telegram: /id
+
+El bot funciona en jornada hábil chilena y depende de que el equipo del director esté encendido. Si no responde o algo falla, escríbele al director.
+
+Material educativo y de análisis general. No constituye asesoría financiera personalizada ni recomendación de inversión."""
 
 SIN_COMANDO = "Ese comando no existe. Escribe /ayuda y te muestro los que sí."
 

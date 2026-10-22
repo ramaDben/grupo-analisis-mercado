@@ -482,7 +482,7 @@ def test_el_menu_de_telegram_solo_ofrece_comandos_que_existen():
 
 
 def test_la_ayuda_es_corta_y_trae_ejemplos_para_copiar():
-    assert len(b.AYUDA.splitlines()) <= 16 and len(b.AYUDA) <= 900  # una pantalla
+    assert len(b.AYUDA.splitlines()) <= 28 and len(b.AYUDA) <= 1500  # dos pantallas de celular
     assert "/seguimiento oro" in b.AYUDA and "/seguimiento oro Juan" in b.AYUDA
 
 
@@ -784,3 +784,14 @@ def test_bot_repara_pieza_vieja_sin_suceso(armado):
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
     assert armado.preparaciones == 1
     assert "CFD" in r.texto
+
+
+def test_la_ayuda_incluye_instrucciones_completas_analista():
+    a = b.AYUDA
+    for comando in ("/oportunidad", "/seguimiento", "/estado", "/id"):
+        assert comando in a
+    assert "10 pedidos" in a  # el cupo diario
+    assert "No constituye asesoría financiera personalizada" in a
+    assert "director" in a  # a quién escribir si falla
+    assert "jornada hábil" in a  # el bot vive en el PC del director
+    assert "—" not in a and "–" not in a
