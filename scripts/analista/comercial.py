@@ -261,7 +261,8 @@ def payload_suceso(activo: dict[str, Any], resumen: dict[str, Any], datos_al: st
         "linea_chica": linea_chica,
         "nota_semana": r.nota_semana,
         "chart_png": str(chart),
-        "pie_imagen": f"{activo['nombre']} · velas de 15 minutos · MetaTrader 5",
+        "pie_imagen": (f"{activo['nombre']} · velas de 15 minutos · niveles del marco de la semana · MetaTrader 5"
+                       if r.estado == "semana" else f"{activo['nombre']} · velas de 15 minutos · MetaTrader 5"),
         "firma": firma(autor),
         "aviso": AVISO_SEGUIMIENTO,
     }

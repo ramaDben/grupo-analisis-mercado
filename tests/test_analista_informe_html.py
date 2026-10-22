@@ -20,7 +20,7 @@ HOY = date(2026, 10, 12)
 
 def test_firma_con_acreditacion_vigente():
     html = ih.bloque_firma(fx.AUTOR, HOY)
-    assert "Benjamín Ignacio Bravo Soza" in html and "Dirección de Análisis Técnico" in html
+    assert "Benjamín Ignacio Bravo Soza" in html and "Departamento de Análisis Técnico" in html
     assert "Acreditación CMV" in html and "A-32915" in html and "31-03-2028" in html
     # El enlace de la CMV no reconoce el certificado (2026-10-08): no se imprime
     # aunque el config lo traiga, porque un enlace que no verifica desacredita.
