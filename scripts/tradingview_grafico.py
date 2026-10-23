@@ -152,10 +152,10 @@ LIMPIO_N_VELAS_MIN = 48  # ventana mínima adaptativa (seguimiento intradía H1,
 LIMPIO_N_VELAS_MAX = 120  # tope máximo de velas para cubrir niveles antes de recurrir a zona ampliada
 LIMPIO_N_VELAS = LIMPIO_N_VELAS_MIN  # compatibilidad hacia atrás: mínimo por defecto
 LIMPIO_ANCHO, LIMPIO_ALTO = 888, 590  # el lienzo de la tarjeta de seguimiento, 1 px = 1 px de lámina
-# Seguimiento en panorámico (2026-10-21): el gráfico ocupa el ancho entero de la lámina y la ventana
-# de tiempo se alarga en proporción, con ~9 px por vela de 15 minutos (unas 40 horas de mercado).
-PANORAMA_ANCHO, PANORAMA_ALTO = 1804, 560
-PANORAMA_N_VELAS_MIN, PANORAMA_N_VELAS_MAX = 150, 240
+# Seguimiento (2026-10-23): el gráfico ocupa ~2/3 de la lámina y el eje de tiempo se acorta (~9 px por
+# vela de 15 minutos, unas 24 horas de mercado), para que el logo de GI de fondo quede a la vista.
+PANORAMA_ANCHO, PANORAMA_ALTO = 1250, 560
+PANORAMA_N_VELAS_MIN, PANORAMA_N_VELAS_MAX = 96, 160
 SEPARACION_ETIQUETAS = 46  # px entre centros: la píldora mide 42 y necesita aire
 COLOR_NIVEL = {"ENTRADA": "#FFFFFF", "STOP": "#E84040", "OBJETIVO": "#00DC82"}
 COLOR_LIMPIO_SUBE, COLOR_LIMPIO_BAJA, COLOR_LIMPIO_HOY = "#00DC82", "#E84040", "#50C0A8"

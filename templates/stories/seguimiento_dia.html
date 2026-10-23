@@ -134,8 +134,8 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: var(-
 .story { position: relative; width: 100%; height: 100%; padding: 40px 56px 22px; display: flex; flex-direction: column;
   background: radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--acento) 14%, transparent), transparent 55%),
               linear-gradient(180deg, color-mix(in srgb, var(--fondo-acento) 40%, var(--fondo)), var(--velo-inferior)); }
-.wm { position: absolute; left: 50%; top: 50%; width: 1700px; height: 1700px; transform: translate(-42%, -50%);
-  opacity: .08; z-index: 0; pointer-events: none; }
+.wm { position: absolute; left: 50%; top: 50%; width: 1700px; height: 1700px; transform: translate(-30%, -46%);
+  opacity: .17; z-index: 0; pointer-events: none; }
 .contenido { position: relative; z-index: 2; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 
 .cabecera { display: flex; justify-content: space-between; align-items: center; }
@@ -152,9 +152,10 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: var(-
 .franja-nota { width: 560px; flex-shrink: 0; }
 .franja-nota:has(.nota-semana:empty) { display: none; }
 
-.vidrio { background: color-mix(in srgb, var(--velo-inferior) 80%, transparent); backdrop-filter: blur(28px);
-  border: 1.5px solid color-mix(in srgb, var(--acento) 22%, transparent); border-radius: 16px;
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--acento) 40%, transparent); }
+.vidrio { background: linear-gradient(135deg, color-mix(in srgb, var(--blanco) 9%, transparent), color-mix(in srgb, var(--acento) 4%, transparent));
+  backdrop-filter: blur(9px) saturate(1.4);
+  border: 1.5px solid color-mix(in srgb, var(--blanco) 20%, transparent); border-radius: 20px;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--blanco) 38%, transparent), 0 14px 40px rgba(0, 0, 0, .35); }
 
 .fila-activo { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
 .activo { font-weight: 700; font-size: 26px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--texto-borde); margin: 0; }
@@ -174,7 +175,8 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: var(-
 .nota-semana { padding: 18px 24px; font-size: 24px; font-weight: 600; line-height: 1.35; color: var(--texto-2); border-left: 4px solid var(--acento); }
 .nota-semana:empty { display: none; }
 
-.grafico-bloque { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+/* Eje de tiempo corto: el gráfico ocupa ~2/3 y a la derecha el logo de GI queda a la vista. */
+.grafico-bloque { width: 1250px; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .grafico { overflow: hidden; }
 .grafico img { width: 100%; height: auto; display: block; }
 .grafico-pie { font-size: 22px; color: var(--texto-borde); margin: 8px 0 0; }
