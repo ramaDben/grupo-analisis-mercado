@@ -42,3 +42,18 @@ def test_el_pdf_muestra_el_correo_y_no_el_editor(tmp_path):
     assert "Copiar texto de WhatsApp" not in texto
     assert len(lector.pages) >= 1
     assert sum(len(p.images) for p in lector.pages) >= 1  # el gráfico del correo
+
+
+def test_una_imagen_rota_del_correo_no_entrega_pdf(tmp_path):
+    import re
+
+    pytest.importorskip("playwright")
+    pytest.importorskip("pypdf")
+    html = oh.guardar(fx.pieza_oportunidad(tmp_path, laminas=True), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    texto = html.read_text(encoding="utf-8")
+    ultima = list(re.finditer(r'src="data:image/png;base64,[^"]*"', texto))[-1]  # una imagen del correo
+    roto = texto[:ultima.start()] + 'src="file:///no-existe.png"' + texto[ultima.end():]
+    html.write_text(roto, encoding="utf-8")
+    with pytest.raises(pdf.PdfFallido, match="imagen"):
+        pdf.rendir(html, espera_ms=1500)
+    assert not html.with_suffix(".pdf").exists()

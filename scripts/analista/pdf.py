@@ -16,9 +16,9 @@ class PdfFallido(RuntimeError):
 
 def verificar(ruta: Path) -> Path:
     """Un PDF sin páginas no se entrega: llegaría como archivo roto."""
-    from pypdf import PdfReader
-
     try:
+        from pypdf import PdfReader
+
         paginas = len(PdfReader(str(ruta)).pages)
     except Exception as exc:  # pypdf lanza tipos distintos según el daño
         raise PdfFallido(f"{ruta.name} no se puede leer: {exc.__class__.__name__}") from exc
@@ -32,21 +32,21 @@ _IMAGENES_CARGADAS = ("Array.from(document.querySelectorAll('#vista-correo img')
                       ".every(i => i.complete && i.naturalWidth > 0)")
 
 
-def rendir(html: Path) -> Path:
+def rendir(html: Path, espera_ms: int = 20_000) -> Path:
     """Imprime el correo a un PDF junto al HTML y devuelve su ruta."""
-    from playwright.sync_api import sync_playwright
-
     destino = html.with_suffix(".pdf")
     try:
+        from playwright.sync_api import sync_playwright
+
         with sync_playwright() as pw:
             navegador = pw.chromium.launch()
             try:
                 pagina = navegador.new_page()
                 pagina.goto(html.as_uri(), wait_until="networkidle")
-                pagina.wait_for_function(_CORREO_ARMADO, timeout=20_000)
+                pagina.wait_for_function(_CORREO_ARMADO, timeout=espera_ms)
                 pagina.evaluate("document.fonts.ready.then(() => true)")
                 try:
-                    pagina.wait_for_function(_IMAGENES_CARGADAS, timeout=20_000)
+                    pagina.wait_for_function(_IMAGENES_CARGADAS, timeout=espera_ms)
                 except Exception as exc:
                     raise PdfFallido("una imagen del correo no cargó") from exc
                 pagina.emulate_media(media="print")

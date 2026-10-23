@@ -338,6 +338,15 @@ def test_sin_pdf_igual_entrega_el_html_y_avisa(armado):
     assert armado.estado.usados(CAMILA, AHORA) == 1  # el cupo se gasta una sola vez
 
 
+def test_un_fallo_inesperado_del_pdf_igual_entrega_el_html(armado):
+    def falla(html):
+        raise RuntimeError("algo raro")
+    armado.atendedor.a_pdf = falla
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert [p.suffix for p in r.archivos] == [".html"] and "No pude generar el PDF" in r.aparte
+    assert armado.estado.usados(CAMILA, AHORA) == 1
+
+
 def test_seguimiento_deja_su_lamina_en_drive(armado):
     armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
     armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"})))

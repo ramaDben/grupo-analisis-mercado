@@ -439,7 +439,7 @@ class Atendedor:
         entregas = [ruta]
         try:
             entregas.insert(0, self.a_pdf(ruta))  # el PDF va primero: es el que se abre en el celular
-        except pdf.PdfFallido as exc:
+        except Exception as exc:  # noqa: BLE001  el PDF es un extra: nunca bota el pedido ya cobrado
             aparte.append(f"⚠️ No pude generar el PDF ({exc}): va solo el archivo para el navegador.")
         aparte.append(self._a_drive([(f, f.name) for f in entregas], ahora, ticker, nombre))
         return Respuesta(pedido.chat, cm.texto_acompanamiento(nombre, pedido.orden.saludo), entregas, "\n".join(aparte))
