@@ -20,6 +20,7 @@ from analista import bot as b  # noqa: E402
 from analista import esquema as es  # noqa: E402
 from analista import fuentes as fu  # noqa: E402
 from analista import orden as od  # noqa: E402
+from analista import pdf  # noqa: E402
 from analista import preparar as pr  # noqa: E402
 from analista import simbolos as sm  # noqa: E402
 from analista import registro_semanal as rg  # noqa: E402
@@ -64,7 +65,7 @@ class Armado:
         self.reintentos: list = []
         self.atendedor = b.Atendedor(
             config, b.Estado.cargar(tmp_path / "estado.json"), autor=fx.AUTOR, preparar=self.preparar_falso,
-            redactar=redactor(self.llamadas), redactar_fuentes=self.redactar_fuentes_falso, rendir_lamina=self.rendir_falso, reloj=self.reloj,
+            redactar=redactor(self.llamadas), redactar_fuentes=self.redactar_fuentes_falso, rendir_lamina=self.rendir_falso, a_pdf=self.pdf_falso, reloj=self.reloj,
             dir_pedidos=tmp_path / "pedidos", registro=self.registro,
             calendario=lambda ahora: self.eventos,
             verificar_vigencia=lambda pieza, ahora: (self.caduca, self.aviso_vigencia),
@@ -99,6 +100,12 @@ class Armado:
             }
         pr.guardar_pieza(pieza, dir_pedido)
         return pr.Preparada(pieza, ["aviso de prueba"])
+
+    @staticmethod
+    def pdf_falso(html):
+        destino = html.with_suffix(".pdf")
+        destino.write_bytes(b"%PDF-1.4 falso")
+        return destino
 
     @staticmethod
     def rendir_falso(payload, plantilla, destino):
@@ -192,8 +199,8 @@ def test_oportunidad_se_arma_una_vez_y_el_segundo_ejecutivo_lo_reusa(armado):
     r1 = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
     r2 = armado.bot.procesar_uno(b.Pedido(OTRO, 2, ORO))
     assert len(armado.llamadas) == 1 and armado.preparaciones == 1  # agy una sola vez
-    assert r1.archivos[0].name.startswith("analisis_xauusd_")
-    assert r2.archivos[0].name.endswith("_pedro-soto.html")  # el HTML lleva al ejecutivo que lo pidió
+    assert r1.archivos[1].name.startswith("analisis_xauusd_")
+    assert r2.archivos[1].name.endswith("_pedro-soto.html")  # el HTML lleva al ejecutivo que lo pidió
     assert "Camila Rojas" in r2.aparte and "Ya existía" in r2.aparte
     assert armado.estado.usados(CAMILA, AHORA) == 1 and armado.estado.usados(OTRO, AHORA) == 0
 
@@ -314,7 +321,21 @@ def test_el_mismo_activo_pedido_dos_veces_a_la_vez_dice_que_ya_se_esta_generando
 def test_oportunidad_va_a_drive_por_sector_activo_y_fecha(armado):
     armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
     dia = armado.tmp / "drive" / "GI Informes" / "Commodities" / "Oro (XAUUSD)" / AHORA.date().isoformat()
-    assert sorted(p.suffix for p in dia.iterdir()) == [".html"]  # la Tarea 4 suma el .pdf
+    assert sorted(p.suffix for p in dia.iterdir()) == [".html", ".pdf"]
+
+
+def test_oportunidad_entrega_html_y_pdf(armado):
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert sorted(p.suffix for p in r.archivos) == [".html", ".pdf"]
+
+
+def test_sin_pdf_igual_entrega_el_html_y_avisa(armado):
+    def falla(html):
+        raise pdf.PdfFallido("Chromium no generó el PDF")
+    armado.atendedor.a_pdf = falla
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert [p.suffix for p in r.archivos] == [".html"] and "No pude generar el PDF" in r.aparte
+    assert armado.estado.usados(CAMILA, AHORA) == 1  # el cupo se gasta una sola vez
 
 
 def test_seguimiento_deja_su_lamina_en_drive(armado):
@@ -326,7 +347,7 @@ def test_seguimiento_deja_su_lamina_en_drive(armado):
 
 def test_oportunidad_rinde_la_lamina_antes_del_html(armado):
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
-    assert "Descargar lámina" in r.archivos[0].read_text(encoding="utf-8")
+    assert "Descargar lámina" in r.archivos[1].read_text(encoding="utf-8")
     assert (r.archivos[0].parent / "lamina_xauusd.png").exists()
 
 

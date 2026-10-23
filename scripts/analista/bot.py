@@ -38,6 +38,7 @@ from analista import macro_seguimiento as mac
 from analista import imagenes_publicas as ip
 from analista import oportunidad_html as oh
 from analista import orden as od
+from analista import pdf
 from analista import preparar as pr
 from analista import registro_semanal as rg
 from analista import seguimiento as sg
@@ -54,7 +55,7 @@ INSTANCIA = RAIZ / "data" / ".bot_analistas.lock"
 AYUDA = """📚 Bot de análisis · Grupo Inteligencia
 
 1) /oportunidad oro
-El análisis completo del activo (técnico, fundamental y qué dicen los bancos), en un archivo que abres en tu navegador.
+El análisis completo del activo (técnico, fundamental y qué dicen los bancos), te llega el correo en PDF para verlo en el celular y el archivo para editarlo en el navegador.
 Con tu cliente: /oportunidad oro Juan
 Dura 7 días: si ya hay uno vigente, te llega al tiro. El primero de un activo demora unos minutos.
 
@@ -261,6 +262,7 @@ class Atendedor:
     redactar: Callable[[Path, str], Any] = _agy_real
     redactar_fuentes: Callable[[Path, str], Any] = _agy_fuentes_real
     rendir_lamina: Callable[..., Path] = cm.rendir
+    a_pdf: Callable[[Path], Path] = pdf.rendir
     reloj: Callable[[], datetime] = lambda: datetime.now(SANTIAGO)
     dir_pedidos: Path = DIR_PEDIDOS
     registro: Path = rg.RUTA
@@ -434,8 +436,13 @@ class Atendedor:
             aparte.append("Ya existía uno vigente: te lo entrego tal cual, sin gastar tu cupo.")
         aparte.append("Ábrelo en el navegador: marca lo que quieres incluir, escribe la pérdida aceptable y copia el correo.")
         aparte += [f"⚠️ {x}" for x in [*avisos, *au.avisos(self.autor, ahora.date())]]
-        aparte.append(self._a_drive([(ruta, ruta.name)], ahora, ticker, nombre))
-        return Respuesta(pedido.chat, cm.texto_acompanamiento(nombre, pedido.orden.saludo), [ruta], "\n".join(aparte))
+        entregas = [ruta]
+        try:
+            entregas.insert(0, self.a_pdf(ruta))  # el PDF va primero: es el que se abre en el celular
+        except pdf.PdfFallido as exc:
+            aparte.append(f"⚠️ No pude generar el PDF ({exc}): va solo el archivo para el navegador.")
+        aparte.append(self._a_drive([(f, f.name) for f in entregas], ahora, ticker, nombre))
+        return Respuesta(pedido.chat, cm.texto_acompanamiento(nombre, pedido.orden.saludo), entregas, "\n".join(aparte))
 
     def _seguimiento(self, pedido: Pedido, ahora: datetime) -> Respuesta:
         o = pedido.orden
