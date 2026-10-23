@@ -397,3 +397,16 @@ def test_rotulo_zona_nombra_el_nivel_y_la_direccion():
     assert tg.rotulo_zona(["LÍNEA DE CONTROL"], 3.84, arriba=True) == \
         "↑ ESCALA CORTADA · LÍNEA DE CONTROL A 3,8 % DEL PRECIO DE HOY"
     assert tg.rotulo_zona(["OBJETIVO", "STOP"], 5.0, arriba=False).startswith("↓ ESCALA CORTADA · OBJETIVO Y STOP A 5,0 %")
+
+
+FIXTURE_TV = {"rows": _rows(), "simbolo": "ORO", "timeframe": "H4", "lineas": (SEGURIDAD, OBJETIVO)}
+
+
+def test_escala_texto_por_defecto_no_cambia_el_html():
+    assert "fontSize: 12" in tg.construir_html_tradingview(**FIXTURE_TV)
+
+
+def test_escala_texto_agranda_el_eje_y_la_leyenda():
+    html = tg.construir_html_tradingview(**FIXTURE_TV, escala_texto=1.7)
+    assert "fontSize: 20" in html and "font-size: 24px" in html  # 12 a 20, leyenda 14 a 24
+    assert "font-size: 34px" in html  # el símbolo, 20 a 34
