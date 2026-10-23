@@ -380,6 +380,20 @@ def test_el_grafico_real_pide_velas_suficientes_para_las_diagonales(tmp_path, mo
     assert pedido["niveles"] == [(1.0, "X")]
 
 
+def test_los_graficos_del_analisis_se_piden_con_letra_grande_y_el_de_seguimiento_no(tmp_path, monkeypatch):
+    pytest.importorskip("PIL")  # extra `stories`: el CI corre sin él
+    import tradingview_grafico as tg
+
+    pedidos = []
+    monkeypatch.setattr(tg, "generar_grafico_tv", lambda **kw: pedidos.append(kw) or kw["destino"])
+    pr._grafico_lectura("XAUUSD", "Oro", fx.lectura(), tmp_path / "a.png", digits=2)
+    pr._grafico_dolar(tmp_path / "d.png")
+    pr._grafico_lectura("XAUUSD", "Oro", fx.lectura(), tmp_path / "s.png", digits=2, limpio=True)
+    assert pedidos[0]["escala_texto"] == pr.ESCALA_TEXTO_ANALISTA
+    assert pedidos[1]["escala_texto"] == pr.ESCALA_TEXTO_ANALISTA
+    assert "escala_texto" not in pedidos[2]
+
+
 def test_la_fecha_corta_no_lleva_guion():
     """En la lámina, «11-10» con Plus Jakarta Sans se ve como un guion medio (prueba real, W41)."""
     assert pr.fecha_corta(datetime(2026, 10, 11, 12, 0, tzinfo=SCL)) == "domingo 11/10"

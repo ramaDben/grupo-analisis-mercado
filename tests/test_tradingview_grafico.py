@@ -255,14 +255,14 @@ def test_el_modo_limpio_amplia_los_niveles_lejanos_sin_apilarlos_y_dice_a_cuanto
 
     rows = [{"time": i, "open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0} for i in range(40)]
     html = tg.construir_html_limpio(rows, 2, [(94.0, "OBJETIVO"), (92.0, "ENTRADA"), (91.5, "STOP")])
-    assert "ZONA AMPLIADA" in html and "A 6,0 % DEL PRECIO DE HOY" in html
+    assert "↓ ESCALA CORTADA · OBJETIVO, ENTRADA Y STOP A 6,0 % O MÁS DEL PRECIO DE HOY" in html
     ys = sorted(float(v) for v in re.findall(r'class="pildora" data-y="([\d.]+)"', html))
     assert all(b - a >= tg.SEPARACION_ETIQUETAS - 1 for a, b in zip(ys, ys[1:]))
 
 
 def test_el_modo_limpio_no_amplia_nada_si_los_niveles_estan_cerca_de_las_velas():
     rows = [{"time": i, "open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0} for i in range(40)]
-    assert "ZONA AMPLIADA" not in tg.construir_html_limpio(rows, 2, [(99.5, "ENTRADA"), (101.5, "OBJETIVO")])
+    assert "ESCALA CORTADA" not in tg.construir_html_limpio(rows, 2, [(99.5, "ENTRADA"), (101.5, "OBJETIVO")])
 
 
 def test_velas_para_niveles_ventana_minima_cuando_estan_dentro():
@@ -300,11 +300,11 @@ def test_zona_ampliada_solo_aparece_si_aun_con_tope_hay_niveles_fuera():
     # Caso 1: Nivel en 112.0. En 48 velas está fuera, pero en la vela -75 hubo un pico de 115.0
     rows[-75]["high"] = 115.0
     html_cubierto = tg.construir_html_limpio(rows, 2, [(112.0, "OBJETIVO")])
-    assert "ZONA AMPLIADA" not in html_cubierto
+    assert "ESCALA CORTADA" not in html_cubierto
 
     # Caso 2: Nivel en 150.0. Ni con 120 velas se cubre (el precio de hoy es 100.0)
     html_extremo = tg.construir_html_limpio(rows, 2, [(150.0, "OBJETIVO")])
-    assert "ZONA AMPLIADA" in html_extremo
+    assert "ESCALA CORTADA" in html_extremo
 
 
 def test_el_modo_limpio_html_trae_la_cantidad_de_velas_esperada():
@@ -392,3 +392,22 @@ def test_generar_grafico_tv_panoramico_pide_mas_velas_y_el_lienzo_ancho(monkeypa
     assert vistos["n"] == tg.PANORAMA_N_VELAS_MIN
     assert vistos["lienzo"] == (tg.PANORAMA_ANCHO, tg.PANORAMA_ALTO)
 
+
+def test_rotulo_zona_nombra_el_nivel_y_la_direccion():
+    assert tg.rotulo_zona(["LÍNEA DE CONTROL"], 3.84, arriba=True) == \
+        "↑ ESCALA CORTADA · LÍNEA DE CONTROL A 3,8 % DEL PRECIO DE HOY"
+    assert tg.rotulo_zona(["OBJETIVO", "STOP"], 5.0, arriba=False) == \
+        "↓ ESCALA CORTADA · OBJETIVO Y STOP A 5,0 % O MÁS DEL PRECIO DE HOY"
+
+
+FIXTURE_TV = {"rows": _rows(), "simbolo": "ORO", "timeframe": "H4", "lineas": (SEGURIDAD, OBJETIVO)}
+
+
+def test_escala_texto_por_defecto_no_cambia_el_html():
+    assert "fontSize: 12" in tg.construir_html_tradingview(**FIXTURE_TV)
+
+
+def test_escala_texto_agranda_el_eje_y_la_leyenda():
+    html = tg.construir_html_tradingview(**FIXTURE_TV, escala_texto=1.7)
+    assert "fontSize: 20" in html and "font-size: 24px" in html  # 12 a 20, leyenda 14 a 24
+    assert "font-size: 34px" in html  # el símbolo, 20 a 34

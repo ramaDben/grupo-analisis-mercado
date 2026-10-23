@@ -157,6 +157,10 @@ def _contrato(ticker: str, precio: float) -> dict[str, Any]:
 # La oportunidad semanal es swing de 4H; el seguimiento es el plan intradía de hoy, en 1H.
 MARCO_GRAFICO_SEGUIMIENTO = "M15"
 
+# El gráfico se rinde a 1400 px y el correo lo muestra a 640: sin agrandar la letra, el eje y las
+# píldoras de nivel no se leen en el celular. La lámina limpia del seguimiento no lo usa.
+ESCALA_TEXTO_ANALISTA = 1.7
+
 
 def _grafico_lectura(ticker: str, nombre: str, lectura, destino: Path, digits: int | None = None,
                      niveles: list[tuple[float, str]] | None = None, limpio: bool = False) -> Path:
@@ -179,7 +183,7 @@ def _grafico_lectura(ticker: str, nombre: str, lectura, destino: Path, digits: i
                                   panoramico=True)
     return generar_grafico_tv(ticker=ticker, nombre=nombre, destino=destino, timeframe=lectura.marco,
                               n_velas=pc.VELAS_GRAFICO_TV, digits=digits, lineas=lectura.lineas,
-                              niveles=niveles)
+                              niveles=niveles, escala_texto=ESCALA_TEXTO_ANALISTA)
 
 
 def _grafico_dolar(destino: Path) -> Path:
@@ -188,7 +192,7 @@ def _grafico_dolar(destino: Path) -> Path:
     from tradingview_grafico import generar_grafico_tv
 
     return generar_grafico_tv(ticker="USDIDX", nombre="Dollar Index", destino=destino, timeframe="H4",
-                              n_velas=pc.VELAS_GRAFICO_TV)
+                              n_velas=pc.VELAS_GRAFICO_TV, escala_texto=ESCALA_TEXTO_ANALISTA)
 
 
 def niveles_lamina_semanal(lectura) -> list[tuple[float, str]]:

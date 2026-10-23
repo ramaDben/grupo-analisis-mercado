@@ -30,6 +30,7 @@ from analista import RAIZ
 from analista import autor as au
 from analista import avisos_semana as av
 from analista import comercial as cm
+from analista import drive as dv
 from analista import esquema as es
 from analista import fuentes as fu
 from analista import informe_html as ih
@@ -37,6 +38,7 @@ from analista import macro_seguimiento as mac
 from analista import imagenes_publicas as ip
 from analista import oportunidad_html as oh
 from analista import orden as od
+from analista import pdf
 from analista import preparar as pr
 from analista import registro_semanal as rg
 from analista import seguimiento as sg
@@ -53,9 +55,9 @@ INSTANCIA = RAIZ / "data" / ".bot_analistas.lock"
 AYUDA = """📚 Bot de análisis · Grupo Inteligencia
 
 1) /oportunidad oro
-El análisis completo del activo (técnico, fundamental y qué dicen los bancos), en un archivo que abres en tu navegador.
+El análisis completo del activo (técnico, fundamental y qué dicen los bancos). Te llega el correo en PDF para verlo en el celular y el archivo para editarlo en el navegador.
 Con tu cliente: /oportunidad oro Juan
-Dura 7 días: si ya hay uno vigente, te llega al tiro. El primero de un activo demora unos minutos.
+Dura 7 días: si ya hay uno vigente, te llega al tiro. El primero de un activo demora unos 10 minutos (lo redacta con noticias del día).
 
 2) /seguimiento oro
 Cómo va el activo hoy: lámina y texto listos para WhatsApp.
@@ -260,6 +262,7 @@ class Atendedor:
     redactar: Callable[[Path, str], Any] = _agy_real
     redactar_fuentes: Callable[[Path, str], Any] = _agy_fuentes_real
     rendir_lamina: Callable[..., Path] = cm.rendir
+    a_pdf: Callable[[Path], Path] = pdf.rendir
     reloj: Callable[[], datetime] = lambda: datetime.now(SANTIAGO)
     dir_pedidos: Path = DIR_PEDIDOS
     registro: Path = rg.RUTA
@@ -347,19 +350,18 @@ class Atendedor:
                                            nombre=pieza["datos"]["activos"][0]["nombre"])
         raise FalloPedido(texto + ("\nLo que descarté:\n• " + "\n• ".join(motivos) if motivos else ""))
 
-    def _a_drive(self, rutas: list[Path], ahora: datetime) -> str:
+    def _a_drive(self, rutas: list[tuple[Path, str]], ahora: datetime, ticker: str, nombre: str) -> str:
         destino_raiz = self.config.get("ruta_drive") or ""
         if not destino_raiz:
             return "Drive no está configurado: el archivo va solo por acá."
-        destino = Path(destino_raiz) / "GI Informes" / ahora.strftime("%Y-%m-%d")
+        destino = dv.carpeta(Path(destino_raiz), ticker, nombre, ahora.date())
         try:
-            destino.mkdir(parents=True, exist_ok=True)
-            for r in rutas:
-                shutil.copy2(r, destino / r.name)
+            dv.copiar(rutas, destino)
         except OSError as exc:
             return f"No pude copiarlo a Drive ({exc.__class__.__name__}): el archivo va solo por acá."
         url = self.config.get("url_carpeta_drive")
-        return f"Guardado en Drive: GI Informes/{ahora:%Y-%m-%d}" + (f"\n{url}" if url else "")
+        relativa = destino.relative_to(destino_raiz).as_posix()
+        return f"Guardado en Drive: {relativa}" + (f"{chr(10)}{url}" if url else "")
 
     def atender(self, pedido: Pedido) -> Respuesta:
         ahora = self.reloj()
@@ -432,10 +434,15 @@ class Atendedor:
                   f"Análisis de {nombre} creado por {creador} · vigente hasta el {pieza['datos']['vigencia']['hasta']}"]
         if reusada:
             aparte.append("Ya existía uno vigente: te lo entrego tal cual, sin gastar tu cupo.")
-        aparte.append("Ábrelo en el navegador: marca lo que quieres incluir, escribe la pérdida aceptable y copia el correo.")
+        aparte.append("El PDF es para verlo en el celular. El HTML ábrelo en el navegador: marca lo que quieres incluir, escribe la pérdida aceptable y copia el correo.")
         aparte += [f"⚠️ {x}" for x in [*avisos, *au.avisos(self.autor, ahora.date())]]
-        aparte.append(self._a_drive([ruta], ahora))
-        return Respuesta(pedido.chat, cm.texto_acompanamiento(nombre, pedido.orden.saludo), [ruta], "\n".join(aparte))
+        entregas = [ruta]
+        try:
+            entregas.insert(0, self.a_pdf(ruta))  # el PDF va primero: es el que se abre en el celular
+        except Exception as exc:  # noqa: BLE001  el PDF es un extra: nunca bota el pedido ya cobrado
+            aparte.append(f"⚠️ No pude generar el PDF ({exc}): va solo el archivo para el navegador.")
+        aparte.append(self._a_drive([(f, f.name) for f in entregas], ahora, ticker, nombre))
+        return Respuesta(pedido.chat, cm.texto_acompanamiento(nombre, pedido.orden.saludo), entregas, "\n".join(aparte))
 
     def _seguimiento(self, pedido: Pedido, ahora: datetime) -> Respuesta:
         o = pedido.orden
@@ -461,6 +468,9 @@ class Atendedor:
             self.estado.registrar_pieza(o.clave_base(), dir_pedido, ahora, fija=False)
             self.estado.consumir(pedido.usuario, ahora)
             self.estado.guardar()
+            # Solo la lámina recién rendida: reusarla 30 minutos no debe duplicarla en Drive con otra hora.
+            self._a_drive([(dir_pedido / "lamina.png", f"seguimiento_{ih.slug(o.args['ticker'])}_{ahora:%H%M}.png")],
+                          ahora, o.args["ticker"], d["activo"]["nombre"])
         pieza = pr.cargar_pieza(dir_pedido)
         datos = pieza["datos"]
         # El texto se arma ahora y no al preparar: la pieza se reusa 30 minutos y puede venir de una
@@ -533,7 +543,11 @@ def entregar(tg: Any, r: Respuesta) -> None:
     if r.texto:
         tg.mensaje(r.chat, r.texto)
     for ruta in r.archivos:
-        tg.documento(r.chat, ruta)
+        try:
+            tg.documento(r.chat, ruta)
+        except Exception as exc:  # noqa: BLE001  un archivo rechazado no impide mandar los siguientes
+            _log(f"no pude enviar {Path(ruta).name}: {traceback.format_exc()}")
+            tg.mensaje(r.chat, f"⚠️ No pude enviar {Path(ruta).name} por Telegram ({exc}).")
     if r.aparte:
         tg.mensaje(r.chat, r.aparte)
 
@@ -663,7 +677,7 @@ class Bot:
             return [Respuesta(chat, f"Recibido. Hay {en_cola} pedido(s) antes que el tuyo.")]
         if orden.pieza == "oportunidad":
             return [Respuesta(chat, f"Recibido. Armando el análisis de {orden.args['ticker']}: si ya hay uno "
-                                    "vigente te lo entrego al tiro; si no, tarda unos minutos.")]
+                                    "vigente te lo entrego al tiro; si no, demora unos 10 minutos y te aviso cuando esté.")]
         return [Respuesta(chat, "Recibido. Preparo la pieza: una nueva tarda unos minutos.")]
 
     # ───────────────────────────────────────── la alerta semanal (spec 2026-10-18)

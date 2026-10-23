@@ -258,6 +258,19 @@ def velas_para_niveles(
     return minimo
 
 
+def rotulo_zona(nombres: list[str], pct: float, arriba: bool) -> str:
+    """Rótulo del corte de escala: qué nivel está lejos, hacia dónde y a cuánto del precio de hoy."""
+    if len(nombres) <= 1:
+        quienes = "".join(nombres)
+        distancia = f"A {pct:.1f} % DEL PRECIO DE HOY"
+    else:
+        quienes = ", ".join(nombres[:-1]) + " Y " + nombres[-1]
+        # el % es el del nivel más cercano: los demás están igual o más lejos
+        distancia = f"A {pct:.1f} % O MÁS DEL PRECIO DE HOY"
+    flecha = "↑" if arriba else "↓"
+    return f"{flecha} ESCALA CORTADA · {quienes} {distancia}".replace(".", ",")
+
+
 def construir_html_limpio(rows: list[dict[str, Any]], digits: int = 2, niveles=None,
                           ancho: int = LIMPIO_ANCHO, alto: int = LIMPIO_ALTO,
                           velas_min: int = LIMPIO_N_VELAS_MIN, velas_max: int = LIMPIO_N_VELAS_MAX) -> str:
@@ -371,15 +384,18 @@ def construir_html_limpio(rows: list[dict[str, Any]], digits: int = 2, niveles=N
             partes.append(f'<text x="{px + 14}" y="{yp + 9:.1f}" font-size="{fuente}"{ajuste} font-weight="700" fill="#fff" '
                           f'stroke="{FONDO_PILDORA}" stroke-width="5" paint-order="stroke">'
                           f'<tspan fill="{trazo}">{nombre}</tspan> {_precio_es(p, digits)}</text>')
-    for activa, ps, gy in ((amp_arr, ps_arr, c_top - corte / 2), (amp_abj, ps_abj, c_bot + corte / 2)):
+    for activa, ps, gy, arriba in ((amp_arr, ps_arr, c_top - corte / 2, True), (amp_abj, ps_abj, c_bot + corte / 2, False)):
         if not activa:
             continue
         pct = min(abs(p - hoy) for p in ps) / hoy * 100
-        rotulo = f"ZONA AMPLIADA · A {pct:.1f} % DEL PRECIO DE HOY".replace(".", ",")
+        nombres = [n for p, n, _ in etiquetas if p in ps]
+        rotulo = rotulo_zona(nombres, pct, arriba)
         partes.append(f'<line x1="0" x2="{x2}" y1="{gy:.1f}" y2="{gy:.1f}" stroke="#8FB8B0" stroke-opacity=".45" '
                       f'stroke-width="1.5" stroke-dasharray="2 6"/>')
-        partes.append(f'<text x="12" y="{gy + 6:.1f}" font-size="17" font-weight="700" fill="#8FB8B0" '
-                      f'stroke="{FONDO_PILDORA}" stroke-width="5" paint-order="stroke">{rotulo}</text>')
+        # 22 px si cabe; en la lámina angosta el rótulo se achica para no invadir la columna de píldoras
+        fuente_r = int(max(13, min(22, (x2 - 24) / (len(rotulo) * 0.6))))
+        partes.append(f'<text x="12" y="{gy + fuente_r * 0.35:.1f}" font-size="{fuente_r}" font-weight="700" fill="#8FB8B0" '
+                      f'stroke="{FONDO_PILDORA}" stroke-width="3" paint-order="stroke">{rotulo}</text>')
     b64 = _font_b64()
     fuente_css = (f'@font-face{{font-family:PJ;font-weight:700;src:url(data:font/woff2;base64,{b64}) format("woff2")}}'
                   if b64 else "")
@@ -409,6 +425,7 @@ def construir_html_tradingview(
     limpio: bool = False,
     velas_min: int = LIMPIO_N_VELAS_MIN,
     velas_max: int = LIMPIO_N_VELAS_MAX,
+    escala_texto: float = 1.0,
 ) -> str:
     """HTML autocontenido del gráfico: velas, las líneas de la lectura y las zonas de
     soporte y resistencia del mensaje.
@@ -420,6 +437,10 @@ def construir_html_tradingview(
 
     Con `limpio=True` (opt-in: el default no cambia) sale el gráfico de la tarjeta de seguimiento:
     solo `niveles` y el precio de hoy, ver `construir_html_limpio`.
+
+    `escala_texto` multiplica todo tamaño de texto del gráfico (eje, píldoras de nivel, barra
+    superior, leyenda y pie), redondeado a entero: el del análisis se rinde a 1400 px y se muestra
+    a 640, así que con 1.0 la letra no se lee en el celular. No alcanza al modo `limpio`.
     """
     if limpio:
         return construir_html_limpio(rows, digits, niveles, ancho if ancho != 1400 else LIMPIO_ANCHO,
@@ -472,6 +493,9 @@ def construir_html_tradingview(
     }
     payload_json = json.dumps(datos, separators=(",", ":")).replace("</", "<\\/")
 
+    def e(px: int) -> int:
+        return round(px * escala_texto)
+
     fmt_p = f"{{:.{digits}f}}"
     last = rows[-1]
     p_close = fmt_p.format(last["close"])
@@ -503,18 +527,18 @@ def construir_html_tradingview(
     border-radius: 16px; overflow: hidden;
   }}
   .tv-topbar {{
-    height: 50px; display: flex; justify-content: space-between; align-items: center;
+    height: {e(50)}px; display: flex; justify-content: space-between; align-items: center;
     background: #0C1620; border-bottom: 1.5px solid rgba(80, 192, 168, 0.35);
     padding: 0 24px; flex-shrink: 0;
   }}
   .tv-left {{ display: flex; align-items: center; gap: 14px; }}
-  .tv-symbol {{ font-weight: 800; font-size: 20px; letter-spacing: 0.04em; }}
+  .tv-symbol {{ font-weight: 800; font-size: {e(20)}px; letter-spacing: 0.04em; }}
   .tv-badge-tf {{
     background: rgba(80, 192, 168, 0.25); color: #50C0A8; border: 1.5px solid #50C0A8;
-    padding: 3px 10px; border-radius: 6px; font-weight: 800; font-size: 13px;
+    padding: 3px 10px; border-radius: 6px; font-weight: 800; font-size: {e(13)}px;
   }}
-  .tv-precio {{ font-family: 'Space Grotesk', monospace; font-size: 18px; font-weight: 700; color: #FFFFFF; }}
-  .tv-legend {{ display: flex; gap: 18px; font-family: 'Space Grotesk', monospace; font-size: 14px; color: #CBD5E1; }}
+  .tv-precio {{ font-family: 'Space Grotesk', monospace; font-size: {e(18)}px; font-weight: 700; color: #FFFFFF; }}
+  .tv-legend {{ display: flex; gap: 18px; font-family: 'Space Grotesk', monospace; font-size: {e(14)}px; color: #CBD5E1; }}
   .tv-legend b {{ font-weight: 800; }}
   .tv-chart-wrapper {{ position: relative; flex: 1; min-height: 0; width: 100%; background: #070D14; }}
   #chart-container {{ width: 100%; height: 100%; display: block; }}
@@ -524,9 +548,9 @@ def construir_html_tradingview(
     border-top: 1px solid rgba(255, 213, 79, 0.75); border-bottom: 1px solid rgba(255, 213, 79, 0.75);
   }}
   .tv-caption-bar {{
-    height: 30px; display: flex; justify-content: space-between; align-items: center;
+    height: {e(30)}px; display: flex; justify-content: space-between; align-items: center;
     padding: 0 24px; background: #050A0F; border-top: 1.5px solid rgba(80, 192, 168, 0.3);
-    font-size: 12px; color: #94A3B8; font-family: 'Space Grotesk', monospace; font-weight: 600; flex-shrink: 0;
+    font-size: {e(12)}px; color: #94A3B8; font-family: 'Space Grotesk', monospace; font-weight: 600; flex-shrink: 0;
   }}
 </style>
 <script>
@@ -584,7 +608,7 @@ def construir_html_tradingview(
     autoSize: true,
     layout: {{
       background: {{ type: 'solid', color: '#070D14' }},
-      textColor: '#CBD5E1', fontSize: 12,
+      textColor: '#CBD5E1', fontSize: {e(12)},
       fontFamily: "'Space Grotesk', 'Plus Jakarta Sans', sans-serif",
     }},
     grid: {{
@@ -710,8 +734,13 @@ def renderizar_png(
     alto: int = 780,
     device_scale_factor: int = 2,
     transparente: bool = False,
+    escala_texto: float = 1.0,
 ) -> Path:
-    """Renderiza el HTML a un archivo PNG nítido en alta resolución con Playwright y metadatos 300 DPI."""
+    """Renderiza el HTML a un archivo PNG nítido en alta resolución con Playwright y metadatos 300 DPI.
+
+    `escala_texto` ya viene aplicada en el HTML; se acepta aquí para que quien construye y quien
+    renderiza compartan la firma (el lienzo no cambia de tamaño).
+    """
     from playwright.sync_api import sync_playwright
 
     destino.parent.mkdir(parents=True, exist_ok=True)
@@ -769,6 +798,7 @@ def generar_grafico_tv(
     niveles=None,
     limpio: bool = False,
     panoramico: bool = False,
+    escala_texto: float = 1.0,
 ) -> Path:
     """Función principal: obtiene datos de MT5, computa indicadores y renderiza el PNG.
 
@@ -846,10 +876,12 @@ def generar_grafico_tv(
         lineas=lineas,
         niveles=niveles,
         limpio=limpio,
+        escala_texto=escala_texto,
         **({"velas_min": velas_min, "velas_max": velas_max} if limpio else {}),
     )
 
-    return renderizar_png(html, destino, ancho=ancho, alto=alto, transparente=limpio)
+    return renderizar_png(html, destino, ancho=ancho, alto=alto, transparente=limpio,
+                          escala_texto=escala_texto)
 
 
 def main(argv: list[str] | None = None) -> int:
