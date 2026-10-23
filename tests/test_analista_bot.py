@@ -466,6 +466,12 @@ def test_un_registro_danado_se_dice_claro(armado):
     assert "registro de análisis está dañado" in r.texto and "inesperado" not in r.texto
 
 
+def test_el_recibido_dice_cuanto_demora(armado):
+    r = armado.bot.recibir(update("/oportunidad oro"))
+    assert "unos 10 minutos" in r[0].texto
+    assert "unos 10 minutos" in b.AYUDA
+
+
 def test_la_ayuda_nombra_solo_los_dos_comandos():
     assert "/oportunidad oro" in b.AYUDA and "/seguimiento oro" in b.AYUDA
     for retirado in ("/activo", "/calendario", "/dato", "/jornada"):

@@ -57,7 +57,7 @@ AYUDA = """📚 Bot de análisis · Grupo Inteligencia
 1) /oportunidad oro
 El análisis completo del activo (técnico, fundamental y qué dicen los bancos), te llega el correo en PDF para verlo en el celular y el archivo para editarlo en el navegador.
 Con tu cliente: /oportunidad oro Juan
-Dura 7 días: si ya hay uno vigente, te llega al tiro. El primero de un activo demora unos minutos.
+Dura 7 días: si ya hay uno vigente, te llega al tiro. El primero de un activo demora unos 10 minutos (lo redacta con noticias del día).
 
 2) /seguimiento oro
 Cómo va el activo hoy: lámina y texto listos para WhatsApp.
@@ -673,7 +673,7 @@ class Bot:
             return [Respuesta(chat, f"Recibido. Hay {en_cola} pedido(s) antes que el tuyo.")]
         if orden.pieza == "oportunidad":
             return [Respuesta(chat, f"Recibido. Armando el análisis de {orden.args['ticker']}: si ya hay uno "
-                                    "vigente te lo entrego al tiro; si no, tarda unos minutos.")]
+                                    "vigente te lo entrego al tiro; si no, demora unos 10 minutos: te aviso cuando esté.")]
         return [Respuesta(chat, "Recibido. Preparo la pieza: una nueva tarda unos minutos.")]
 
     # ───────────────────────────────────────── la alerta semanal (spec 2026-10-18)
