@@ -255,7 +255,7 @@ def test_el_modo_limpio_amplia_los_niveles_lejanos_sin_apilarlos_y_dice_a_cuanto
 
     rows = [{"time": i, "open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0} for i in range(40)]
     html = tg.construir_html_limpio(rows, 2, [(94.0, "OBJETIVO"), (92.0, "ENTRADA"), (91.5, "STOP")])
-    assert "↓ ESCALA CORTADA · OBJETIVO, ENTRADA Y STOP A 6,0 % DEL PRECIO DE HOY" in html
+    assert "↓ ESCALA CORTADA · OBJETIVO, ENTRADA Y STOP A 6,0 % O MÁS DEL PRECIO DE HOY" in html
     ys = sorted(float(v) for v in re.findall(r'class="pildora" data-y="([\d.]+)"', html))
     assert all(b - a >= tg.SEPARACION_ETIQUETAS - 1 for a, b in zip(ys, ys[1:]))
 
@@ -396,7 +396,8 @@ def test_generar_grafico_tv_panoramico_pide_mas_velas_y_el_lienzo_ancho(monkeypa
 def test_rotulo_zona_nombra_el_nivel_y_la_direccion():
     assert tg.rotulo_zona(["LÍNEA DE CONTROL"], 3.84, arriba=True) == \
         "↑ ESCALA CORTADA · LÍNEA DE CONTROL A 3,8 % DEL PRECIO DE HOY"
-    assert tg.rotulo_zona(["OBJETIVO", "STOP"], 5.0, arriba=False).startswith("↓ ESCALA CORTADA · OBJETIVO Y STOP A 5,0 %")
+    assert tg.rotulo_zona(["OBJETIVO", "STOP"], 5.0, arriba=False) == \
+        "↓ ESCALA CORTADA · OBJETIVO Y STOP A 5,0 % O MÁS DEL PRECIO DE HOY"
 
 
 FIXTURE_TV = {"rows": _rows(), "simbolo": "ORO", "timeframe": "H4", "lineas": (SEGURIDAD, OBJETIVO)}

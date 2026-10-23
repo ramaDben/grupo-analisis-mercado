@@ -32,7 +32,7 @@ informe con el nombre del cliente se acerca a una recomendación personalizada. 
                 -> agy /analista (redacta pieza.json citando los hechos y busca los bancos)
                 -> fuentes.depurar + esquema.py (validan) -> sin banco: segundo intento solo de fuentes
                 -> lámina PNG -> oportunidad_html.py
-                -> Telegram + carpeta de Drive -> registro_semanal
+                -> Telegram + carpeta de Drive (PDF del correo, HTML y láminas) -> registro_semanal
 /seguimiento <activo>:
    pedido -> orden.py -> preparar.py (simulación y lectura de hoy, contra el análisis vigente)
       -> lámina PNG + texto de WhatsApp en el mensaje (sin agy)
@@ -203,7 +203,7 @@ de quien lo lee."* El informe **no menciona a la CMF** (decisión del director).
    número al escribirle al bot y se lo pasa al director. Completar también el bloque `autor` y
    poner la foto en `config/autor/foto.png`.
 4. `ruta_drive`: la carpeta de Google Drive para escritorio donde se entrega (por ejemplo
-   `G:\Mi unidad`). El bot ordena adentro por sector, activo y fecha: `GI Informes/<Sector>/<Nombre (TICKER)>/<AAAA-MM-DD>/` (sectores: Divisas, Commodities, Índices, Acciones, ETF, Cripto u Otros). Ahí quedan el HTML del análisis y las láminas de `/seguimiento` (`seguimiento_<ticker>_<HHMM>.png`); una lámina con el mismo nombre y distinto contenido recibe sufijo `_2`. Las carpetas viejas `GI Informes/<fecha>/` no se migran. Una carpeta **compartida** se
+   `G:\Mi unidad`). El bot ordena adentro por sector, activo y fecha: `GI Informes/<Sector>/<Nombre (TICKER)>/<AAAA-MM-DD>/` (sectores: Divisas, Commodities, Índices, Acciones, ETF, Cripto u Otros). Ahí quedan el PDF del correo, el HTML del análisis y las láminas de `/seguimiento` (`seguimiento_<ticker>_<HHMM>.png`); una lámina con el mismo nombre y distinto contenido recibe sufijo `_2`. Las carpetas viejas `GI Informes/<fecha>/` no se migran. Una carpeta **compartida** se
    alcanza por `<unidad>:\.shortcut-targets-by-id\<id de la carpeta>\<nombre>`, y la cuenta de
    esa unidad necesita permiso de Editor. `url_carpeta_drive` es opcional y va en la respuesta.
 5. Probar sin Telegram, con MT5 abierto:

@@ -55,7 +55,7 @@ INSTANCIA = RAIZ / "data" / ".bot_analistas.lock"
 AYUDA = """📚 Bot de análisis · Grupo Inteligencia
 
 1) /oportunidad oro
-El análisis completo del activo (técnico, fundamental y qué dicen los bancos), te llega el correo en PDF para verlo en el celular y el archivo para editarlo en el navegador.
+El análisis completo del activo (técnico, fundamental y qué dicen los bancos). Te llega el correo en PDF para verlo en el celular y el archivo para editarlo en el navegador.
 Con tu cliente: /oportunidad oro Juan
 Dura 7 días: si ya hay uno vigente, te llega al tiro. El primero de un activo demora unos 10 minutos (lo redacta con noticias del día).
 
@@ -434,7 +434,7 @@ class Atendedor:
                   f"Análisis de {nombre} creado por {creador} · vigente hasta el {pieza['datos']['vigencia']['hasta']}"]
         if reusada:
             aparte.append("Ya existía uno vigente: te lo entrego tal cual, sin gastar tu cupo.")
-        aparte.append("Ábrelo en el navegador: marca lo que quieres incluir, escribe la pérdida aceptable y copia el correo.")
+        aparte.append("El PDF es para verlo en el celular. El HTML ábrelo en el navegador: marca lo que quieres incluir, escribe la pérdida aceptable y copia el correo.")
         aparte += [f"⚠️ {x}" for x in [*avisos, *au.avisos(self.autor, ahora.date())]]
         entregas = [ruta]
         try:
@@ -543,7 +543,11 @@ def entregar(tg: Any, r: Respuesta) -> None:
     if r.texto:
         tg.mensaje(r.chat, r.texto)
     for ruta in r.archivos:
-        tg.documento(r.chat, ruta)
+        try:
+            tg.documento(r.chat, ruta)
+        except Exception as exc:  # noqa: BLE001  un archivo rechazado no impide mandar los siguientes
+            _log(f"no pude enviar {Path(ruta).name}: {traceback.format_exc()}")
+            tg.mensaje(r.chat, f"⚠️ No pude enviar {Path(ruta).name} por Telegram ({exc}).")
     if r.aparte:
         tg.mensaje(r.chat, r.aparte)
 
@@ -673,7 +677,7 @@ class Bot:
             return [Respuesta(chat, f"Recibido. Hay {en_cola} pedido(s) antes que el tuyo.")]
         if orden.pieza == "oportunidad":
             return [Respuesta(chat, f"Recibido. Armando el análisis de {orden.args['ticker']}: si ya hay uno "
-                                    "vigente te lo entrego al tiro; si no, demora unos 10 minutos: te aviso cuando esté.")]
+                                    "vigente te lo entrego al tiro; si no, demora unos 10 minutos y te aviso cuando esté.")]
         return [Respuesta(chat, "Recibido. Preparo la pieza: una nueva tarda unos minutos.")]
 
     # ───────────────────────────────────────── la alerta semanal (spec 2026-10-18)

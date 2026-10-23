@@ -468,8 +468,23 @@ def test_un_registro_danado_se_dice_claro(armado):
 
 def test_el_recibido_dice_cuanto_demora(armado):
     r = armado.bot.recibir(update("/oportunidad oro"))
-    assert "unos 10 minutos" in r[0].texto
+    assert "unos 10 minutos y te aviso cuando esté" in r[0].texto
     assert "unos 10 minutos" in b.AYUDA
+
+
+def test_un_fallo_al_enviar_el_pdf_no_impide_enviar_el_html():
+    class TgFallaPdf(TgFalso):
+        def documento(self, chat, ruta):
+            if str(ruta).endswith(".pdf"):
+                raise RuntimeError("Telegram rechazó el PDF")
+            super().documento(chat, ruta)
+
+    tg = TgFallaPdf()
+    r = b.Respuesta(1, "hola", [Path("a.pdf"), Path("a.html")], "aparte")
+    b.entregar(tg, r)
+    assert tg.documentos == [(1, "a.html")]
+    assert any("a.pdf" in t for _, t in tg.mensajes)
+    assert tg.mensajes[-1][1] == "aparte"
 
 
 def test_la_ayuda_nombra_solo_los_dos_comandos():

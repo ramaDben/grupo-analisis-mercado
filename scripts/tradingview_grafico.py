@@ -262,10 +262,13 @@ def rotulo_zona(nombres: list[str], pct: float, arriba: bool) -> str:
     """Rótulo del corte de escala: qué nivel está lejos, hacia dónde y a cuánto del precio de hoy."""
     if len(nombres) <= 1:
         quienes = "".join(nombres)
+        distancia = f"A {pct:.1f} % DEL PRECIO DE HOY"
     else:
         quienes = ", ".join(nombres[:-1]) + " Y " + nombres[-1]
+        # el % es el del nivel más cercano: los demás están igual o más lejos
+        distancia = f"A {pct:.1f} % O MÁS DEL PRECIO DE HOY"
     flecha = "↑" if arriba else "↓"
-    return f"{flecha} ESCALA CORTADA · {quienes} A {pct:.1f} % DEL PRECIO DE HOY".replace(".", ",")
+    return f"{flecha} ESCALA CORTADA · {quienes} {distancia}".replace(".", ",")
 
 
 def construir_html_limpio(rows: list[dict[str, Any]], digits: int = 2, niveles=None,
