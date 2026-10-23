@@ -30,6 +30,7 @@ from analista import RAIZ
 from analista import autor as au
 from analista import avisos_semana as av
 from analista import comercial as cm
+from analista import drive as dv
 from analista import esquema as es
 from analista import fuentes as fu
 from analista import informe_html as ih
@@ -347,19 +348,18 @@ class Atendedor:
                                            nombre=pieza["datos"]["activos"][0]["nombre"])
         raise FalloPedido(texto + ("\nLo que descarté:\n• " + "\n• ".join(motivos) if motivos else ""))
 
-    def _a_drive(self, rutas: list[Path], ahora: datetime) -> str:
+    def _a_drive(self, rutas: list[tuple[Path, str]], ahora: datetime, ticker: str, nombre: str) -> str:
         destino_raiz = self.config.get("ruta_drive") or ""
         if not destino_raiz:
             return "Drive no está configurado: el archivo va solo por acá."
-        destino = Path(destino_raiz) / "GI Informes" / ahora.strftime("%Y-%m-%d")
+        destino = dv.carpeta(Path(destino_raiz), ticker, nombre, ahora.date())
         try:
-            destino.mkdir(parents=True, exist_ok=True)
-            for r in rutas:
-                shutil.copy2(r, destino / r.name)
+            dv.copiar(rutas, destino)
         except OSError as exc:
             return f"No pude copiarlo a Drive ({exc.__class__.__name__}): el archivo va solo por acá."
         url = self.config.get("url_carpeta_drive")
-        return f"Guardado en Drive: GI Informes/{ahora:%Y-%m-%d}" + (f"\n{url}" if url else "")
+        relativa = destino.relative_to(destino_raiz).as_posix()
+        return f"Guardado en Drive: {relativa}" + (f"{chr(10)}{url}" if url else "")
 
     def atender(self, pedido: Pedido) -> Respuesta:
         ahora = self.reloj()
@@ -434,7 +434,7 @@ class Atendedor:
             aparte.append("Ya existía uno vigente: te lo entrego tal cual, sin gastar tu cupo.")
         aparte.append("Ábrelo en el navegador: marca lo que quieres incluir, escribe la pérdida aceptable y copia el correo.")
         aparte += [f"⚠️ {x}" for x in [*avisos, *au.avisos(self.autor, ahora.date())]]
-        aparte.append(self._a_drive([ruta], ahora))
+        aparte.append(self._a_drive([(ruta, ruta.name)], ahora, ticker, nombre))
         return Respuesta(pedido.chat, cm.texto_acompanamiento(nombre, pedido.orden.saludo), [ruta], "\n".join(aparte))
 
     def _seguimiento(self, pedido: Pedido, ahora: datetime) -> Respuesta:
@@ -461,6 +461,9 @@ class Atendedor:
             self.estado.registrar_pieza(o.clave_base(), dir_pedido, ahora, fija=False)
             self.estado.consumir(pedido.usuario, ahora)
             self.estado.guardar()
+            # Solo la lámina recién rendida: reusarla 30 minutos no debe duplicarla en Drive con otra hora.
+            self._a_drive([(dir_pedido / "lamina.png", f"seguimiento_{ih.slug(o.args['ticker'])}_{ahora:%H%M}.png")],
+                          ahora, o.args["ticker"], d["activo"]["nombre"])
         pieza = pr.cargar_pieza(dir_pedido)
         datos = pieza["datos"]
         # El texto se arma ahora y no al preparar: la pieza se reusa 30 minutos y puede venir de una

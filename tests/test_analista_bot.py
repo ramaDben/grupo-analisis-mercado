@@ -311,9 +311,17 @@ def test_el_mismo_activo_pedido_dos_veces_a_la_vez_dice_que_ya_se_esta_generando
     assert "ya se está generando" not in armado.bot.recibir(update("/oportunidad oro"))[0].texto.lower()
 
 
-def test_oportunidad_solo_va_a_drive_el_html(armado):
+def test_oportunidad_va_a_drive_por_sector_activo_y_fecha(armado):
     armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
-    assert [p.suffix for p in (armado.tmp / "drive" / "GI Informes").rglob("*.*")] == [".html"]
+    dia = armado.tmp / "drive" / "GI Informes" / "Commodities" / "Oro (XAUUSD)" / AHORA.date().isoformat()
+    assert sorted(p.suffix for p in dia.iterdir()) == [".html"]  # la Tarea 4 suma el .pdf
+
+
+def test_seguimiento_deja_su_lamina_en_drive(armado):
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
+    dia = armado.tmp / "drive" / "GI Informes" / "Commodities" / "Oro (XAUUSD)" / AHORA.date().isoformat()
+    assert f"seguimiento_xauusd_{AHORA:%H%M}.png" in [p.name for p in dia.iterdir()]
 
 
 def test_oportunidad_rinde_la_lamina_antes_del_html(armado):
