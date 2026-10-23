@@ -258,6 +258,16 @@ def velas_para_niveles(
     return minimo
 
 
+def rotulo_zona(nombres: list[str], pct: float, arriba: bool) -> str:
+    """Rótulo del corte de escala: qué nivel está lejos, hacia dónde y a cuánto del precio de hoy."""
+    if len(nombres) <= 1:
+        quienes = "".join(nombres)
+    else:
+        quienes = ", ".join(nombres[:-1]) + " Y " + nombres[-1]
+    flecha = "↑" if arriba else "↓"
+    return f"{flecha} ESCALA CORTADA · {quienes} A {pct:.1f} % DEL PRECIO DE HOY".replace(".", ",")
+
+
 def construir_html_limpio(rows: list[dict[str, Any]], digits: int = 2, niveles=None,
                           ancho: int = LIMPIO_ANCHO, alto: int = LIMPIO_ALTO,
                           velas_min: int = LIMPIO_N_VELAS_MIN, velas_max: int = LIMPIO_N_VELAS_MAX) -> str:
@@ -371,15 +381,18 @@ def construir_html_limpio(rows: list[dict[str, Any]], digits: int = 2, niveles=N
             partes.append(f'<text x="{px + 14}" y="{yp + 9:.1f}" font-size="{fuente}"{ajuste} font-weight="700" fill="#fff" '
                           f'stroke="{FONDO_PILDORA}" stroke-width="5" paint-order="stroke">'
                           f'<tspan fill="{trazo}">{nombre}</tspan> {_precio_es(p, digits)}</text>')
-    for activa, ps, gy in ((amp_arr, ps_arr, c_top - corte / 2), (amp_abj, ps_abj, c_bot + corte / 2)):
+    for activa, ps, gy, arriba in ((amp_arr, ps_arr, c_top - corte / 2, True), (amp_abj, ps_abj, c_bot + corte / 2, False)):
         if not activa:
             continue
         pct = min(abs(p - hoy) for p in ps) / hoy * 100
-        rotulo = f"ZONA AMPLIADA · A {pct:.1f} % DEL PRECIO DE HOY".replace(".", ",")
+        nombres = [n for p, n, _ in etiquetas if p in ps]
+        rotulo = rotulo_zona(nombres, pct, arriba)
         partes.append(f'<line x1="0" x2="{x2}" y1="{gy:.1f}" y2="{gy:.1f}" stroke="#8FB8B0" stroke-opacity=".45" '
                       f'stroke-width="1.5" stroke-dasharray="2 6"/>')
-        partes.append(f'<text x="12" y="{gy + 6:.1f}" font-size="17" font-weight="700" fill="#8FB8B0" '
-                      f'stroke="{FONDO_PILDORA}" stroke-width="5" paint-order="stroke">{rotulo}</text>')
+        # 22 px si cabe; en la lámina angosta el rótulo se achica para no invadir la columna de píldoras
+        fuente_r = int(max(13, min(22, (x2 - 24) / (len(rotulo) * 0.6))))
+        partes.append(f'<text x="12" y="{gy + fuente_r * 0.35:.1f}" font-size="{fuente_r}" font-weight="700" fill="#8FB8B0" '
+                      f'stroke="{FONDO_PILDORA}" stroke-width="3" paint-order="stroke">{rotulo}</text>')
     b64 = _font_b64()
     fuente_css = (f'@font-face{{font-family:PJ;font-weight:700;src:url(data:font/woff2;base64,{b64}) format("woff2")}}'
                   if b64 else "")
