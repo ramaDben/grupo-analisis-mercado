@@ -30,6 +30,7 @@ from analista import RAIZ
 from analista import autor as au
 from analista import avisos_semana as av
 from analista import comercial as cm
+from analista import contexto as ctx
 from analista import drive as dv
 from analista import esquema as es
 from analista import fuentes as fu
@@ -37,7 +38,9 @@ from analista import generador_imagen as gi
 from analista import ilustracion as il
 from analista import informe_html as ih
 from analista import macro_seguimiento as mac
+from analista import mensajes_html as mh
 from analista import noticia as nt
+from analista import noticias_contexto as nctx
 from analista import imagenes_publicas as ip
 from analista import oportunidad_html as oh
 from analista import orden as od
@@ -288,6 +291,7 @@ class Atendedor:
     leer_nota: Callable[[str], str | None] = nt.leer_texto
     generar_imagen: gi.Generador | None = gi.generar_con_agy
     banco_imagenes: Path = il.BANCO
+    noticias_contexto: Callable[[str, str, datetime], tuple[list[dict[str, Any]], list[str]]] = nctx.candidatas
 
     def analista(self, usuario: str) -> dict[str, Any]:
         return self.config["analistas"][usuario]
@@ -423,6 +427,8 @@ class Atendedor:
             pedido = replace(pedido, orden=orden)
             if orden.pieza == "oportunidad":
                 return self._oportunidad(pedido, ahora)
+            if orden.pieza == "contexto":
+                return self._contexto(pedido, ahora)
             return self._seguimiento(pedido, ahora)
         except rg.RegistroDanado as exc:
             raise FalloPedido("El registro de análisis está dañado y no sigo para no pisarlo: "
@@ -501,6 +507,61 @@ class Atendedor:
             aparte.append(f"⚠️ No pude generar el PDF ({exc}): va solo el archivo para el navegador.")
         aparte.append(self._a_drive([(f, f.name) for f in entregas], ahora, ticker, nombre))
         return Respuesta(pedido.chat, cm.texto_acompanamiento(nombre, pedido.orden.saludo), entregas, "\n".join(aparte))
+
+    def _contexto(self, pedido: Pedido, ahora: datetime) -> Respuesta:
+        o = pedido.orden
+        ticker = o.args["ticker"]
+        minutos = int(self.config["reuso_minutos"].get("seguimiento", 30))
+        dir_pedido = self.estado.vigente(o.clave_base(), ahora, minutos)
+        if dir_pedido is not None:
+            pieza = pr.cargar_pieza(dir_pedido)
+            ruta_html = mh.guardar(pieza, dir_pedido, saludo=o.saludo)
+            tarjetas_lista = ctx.tarjetas(pieza, saludo=o.saludo)
+            motivos_vacios = [f"{t.titulo}: {t.motivo}" for t in tarjetas_lista if t.texto is None and t.motivo]
+            avisos_guardados = pieza.get("avisos") or []
+            lineas_aparte = [*motivos_vacios, *avisos_guardados]
+            return Respuesta(pedido.chat, "", [ruta_html], "\n".join(lineas_aparte))
+
+        clave_seg = f"seguimiento|ticker={ticker}"
+        dir_seg = self.estado.vigente(clave_seg, ahora, minutos)
+        if dir_seg is None:
+            raise FalloPedido("El seguimiento ya no está vigente: pídelo de nuevo.")
+        seg = pr.cargar_pieza(dir_seg)["datos"]
+
+        self._exigir_cupo(pedido.usuario, ahora)
+        dir_pedido = (self.dir_pedidos / ahora.strftime("%Y-%m-%d")
+                      / f"{ahora:%H%M%S}_contexto_{ih.slug(ticker)}")
+        hecha = ctx.preparar(ticker, dir_pedido, ahora, seg=seg, candidatas=self.noticias_contexto)
+
+        res = self.redactar(dir_pedido / "pieza.json", self.config["tier"])
+        _guardar_salida_agy(dir_pedido, res, intento=1)
+        if getattr(res, "codigo", "ok") != "ok":
+            raise FalloPedido(f"La redacción no terminó ({getattr(res, 'codigo', 'error')}: {getattr(res, 'detalle', '')}). No gasté tu cupo.")
+
+        pieza = pr.cargar_pieza(dir_pedido)
+        pieza, descartes = ctx.depurar(
+            pieza, ahora.date(), lista=None, verificar=self.verificar_url, leer=self.leer_nota
+        )
+        avisos_fuentes = [*hecha.avisos, *descartes]
+        pieza["avisos"] = avisos_fuentes
+        pr.guardar_pieza(pieza, dir_pedido)
+
+        errores = es.errores(pieza)
+        if errores:
+            raise FalloPedido("El texto no pasó los controles y no lo entrego así:\n• " + "\n• ".join(errores[:6]))
+
+        self.estado.consumir(pedido.usuario, ahora)
+        self.estado.registrar_pieza(o.clave_base(), dir_pedido, ahora, fija=False)
+        self.estado.guardar()
+
+        ruta_html = mh.guardar(pieza, dir_pedido, saludo=o.saludo)
+        nombre_activo = seg.get("activo", {}).get("nombre") or seg.get("nombre", ticker)
+        self._a_drive([(ruta_html, f"mensajes_{ih.slug(ticker)}_{ahora:%H%M}.html")], ahora, ticker, nombre_activo)
+
+        tarjetas_lista = ctx.tarjetas(pieza, saludo=o.saludo)
+        motivos_vacios = [f"{t.titulo}: {t.motivo}" for t in tarjetas_lista if t.texto is None and t.motivo]
+        lineas_aparte = [*motivos_vacios, *avisos_fuentes]
+        return Respuesta(pedido.chat, "", [ruta_html], "\n".join(lineas_aparte))
 
     def _seguimiento(self, pedido: Pedido, ahora: datetime) -> Respuesta:
         o = pedido.orden
@@ -738,6 +799,21 @@ class Bot:
                                     "vigente te lo entrego al tiro; si no, demora unos 10 minutos y te aviso cuando esté.")]
         return [Respuesta(chat, "Recibido. Preparo la pieza: una nueva tarda unos minutos.")]
 
+    def _encolar_contexto(self, pedido: Pedido) -> None:
+        ticker = pedido.orden.args["ticker"]
+        orden_ctx = od.Orden("contexto", {"ticker": ticker}, pedido.orden.saludo)
+        clave = orden_ctx.clave_base().lower()
+        with self.candado:
+            if clave in self.generando:
+                self.tg.mensaje(pedido.chat, f"Los mensajes de contexto de {ticker} ya se están preparando para otro pedido. "
+                                           "Pide /seguimiento de nuevo en unos minutos y te llegan al tiro.")
+                return
+            self.generando.add(clave)
+        self.tg.mensaje(pedido.chat, "Te preparo los tres mensajes con noticias y análisis técnico: llegan en unos minutos.")
+        self.cola.put(Pedido(pedido.usuario, pedido.chat, orden_ctx))
+        _log(f"pedido {pedido.usuario}: {orden_ctx.clave_base()}")
+
+
     # ───────────────────────────────────────── la alerta semanal (spec 2026-10-18)
 
     def enviar_aviso(self, ejecutivo: str, aviso: av.Aviso) -> int | None:
@@ -859,7 +935,7 @@ class Bot:
             return Respuesta(pedido.chat, f"❌ Falló algo inesperado ({exc.__class__.__name__}). Quedó registrado.")
         finally:
             self.ocupado.clear()
-            if pedido.orden.pieza == "oportunidad":
+            if pedido.orden.pieza in ("oportunidad", "contexto"):
                 with self.candado:
                     self.generando.discard(pedido.orden.clave_base().lower())
 
@@ -871,6 +947,11 @@ class Bot:
                 entregar(self.tg, respuesta)
             except Exception:  # noqa: BLE001
                 _log(f"no se pudo entregar a {pedido.chat}: {traceback.format_exc()}")
+            if pedido.orden.pieza == "seguimiento" and bool(respuesta.archivos):
+                try:
+                    self._encolar_contexto(pedido)
+                except Exception:  # noqa: BLE001
+                    _log(f"no se pudo encolar contexto para {pedido.chat}: {traceback.format_exc()}")
 
     def escuchar(self) -> None:
         threading.Thread(target=self.trabajador, daemon=True).start()
