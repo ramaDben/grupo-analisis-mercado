@@ -818,7 +818,7 @@ def _texto_al_pedir(armado, error):
 def test_el_aviso_sin_ancla_sale_sin_el_prefijo_de_falla_de_lectura(armado):
     with pytest.raises(pr.PreparacionFallida) as exc:  # el error tal como lo levanta preparar
         pr.preparar(od.Orden("oportunidad", {"ticker": "XAUUSD"}), armado.tmp / "sin_ancla", AHORA,
-                    pr.Lectores(ancla=lambda t: None))
+                    pr.Lectores(ancla=lambda t: None, cuenta=lambda: None))  # sin terminal real (CI)
     texto = _texto_al_pedir(armado, exc.value)
     assert "No pude leer los datos" not in texto
     assert "No tengo una fuente propia definida para XAUUSD" in texto

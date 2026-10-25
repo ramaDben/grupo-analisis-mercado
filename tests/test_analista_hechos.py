@@ -7,6 +7,8 @@ import sys
 from datetime import date, timedelta
 from pathlib import Path
 
+import pytest
+
 RAIZ = Path(__file__).resolve().parent.parent
 for p in (str(RAIZ / "src"), str(RAIZ / "scripts"), str(RAIZ / "tests")):
     if p not in sys.path:
@@ -159,7 +161,11 @@ def test_brent_cobre_y_plata_tienen_ficha_de_drivers():
 
 
 def test_los_inventarios_eia_calculan_su_hora_con_el_helper():
+    import shutil
     import subprocess
+
+    if shutil.which("powershell") is None:  # el helper es PowerShell de Windows; el CI corre en Linux
+        pytest.skip("sin powershell")
 
     datos = json.loads((RAIZ / "config" / "drivers.json").read_text(encoding="utf-8"))
     pub = datos["WTI"]["drivers"]["inventarios_eia"]["publicacion"]
