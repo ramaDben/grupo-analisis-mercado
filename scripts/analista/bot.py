@@ -254,6 +254,17 @@ def _agenda_pasada(pieza: dict[str, Any], ahora: datetime) -> str | None:
     return "ya pasó uno de los días clave de su agenda" if any(e.get("fecha", hoy) < hoy for e in eventos) else None
 
 
+def _aviso_sin_noticia(pieza: dict[str, Any], descartes: list[str]) -> str | None:
+    """Que el ejecutivo sepa que el correo abre con el análisis; si la noticia se descartó, ese aviso ya lo dice."""
+    ed = pieza["editorial"]
+    if "noticia" not in ed or isinstance(ed["noticia"], dict) or any(d.startswith("Noticia de apertura") for d in descartes):
+        return None
+    candidatas = len(pieza["datos"].get("noticias_candidatas") or [])
+    detalle = (f"agy no eligió ninguna de las {candidatas} notas de FXStreet del activo" if candidatas
+               else "no encontré una nota del activo de los últimos 3 días")
+    return f"El correo salió sin noticia de apertura ({detalle}): abre con el análisis."
+
+
 @dataclass
 class Atendedor:
     """Convierte un pedido en archivos. Todo lo externo se inyecta."""
@@ -462,6 +473,9 @@ class Atendedor:
                        *[d if d.startswith("Noticia de apertura") else f"Descarté una fuente: {d}" for d in descartes]]
             if reintento:
                 avisos.append("La primera búsqueda no trajo ninguna noticia directa: hice un segundo intento y ese sí la trajo.")
+            aviso_noticia = _aviso_sin_noticia(pieza, descartes)
+            if aviso_noticia:
+                avisos.append(aviso_noticia)
         try:
             try:
                 ruta = oh.guardar(pieza, dir_pedido, ejecutivo, self.autor, ahora.date(), self.publicar_imagen)

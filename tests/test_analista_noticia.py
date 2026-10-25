@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 from pathlib import Path
 
 import pytest
@@ -167,3 +168,94 @@ def test_el_mismo_valor_en_notacion_inglesa_pasa():
     pieza, _ = _depurar(_noticia(bajada="Según Reuters, el oro subió a 4.100,50 dólares y ganó 3,67 % en 8 días."),
                         pagina="Spot gold rose to $4,100.50, a 3.67% gain over 8 sessions.")
     assert pieza["editorial"]["noticia"] is not None
+
+
+# ── Candidatas de FXStreet (director, 2026-10-25): Python lee el RSS y sella las notas del activo ──
+
+AHORA_FX = datetime(2026, 10, 25, 15, 0, tzinfo=ZoneInfo("America/Santiago"))
+NOTA_FX = "https://www.fxstreet.es/news/el-oro-cae-por-debajo-de-4000-mientras-el-repunte-del-petroleo-202610231819"
+
+
+def _item(titulo, url, pub, desc="El Oro cotiza en 4.000$ tras caer un 3.2%."):
+    return (f"<item><title><![CDATA[{titulo}]]></title><link>{url}</link>"
+            f"<pubDate>{pub}</pubDate><description><![CDATA[{desc}]]></description></item>")
+
+
+def _rss(*items):
+    return f'<?xml version="1.0"?><rss version="2.0"><channel>{"".join(items)}</channel></rss>'
+
+
+NOTICIAS_FX = _rss(
+    _item("El Oro cae por debajo de 4.000$ mientras el repunte del petróleo profundiza la debacle", NOTA_FX,
+          "Fri, 23 Oct 2026 18:19:00 GMT"),
+    _item("Pronóstico del Precio del USD/JPY: El martillo señala riesgo de rebote",
+          "https://www.fxstreet.es/news/usd-jpy-martillo-202610232325", "Fri, 23 Oct 2026 23:25:41 GMT"),
+    _item("El oro sube con fuerza", "https://www.fxstreet.es/news/oro-viejo-202610201000",
+          "Tue, 20 Oct 2026 10:00:00 GMT"),
+    _item("El decoro del mercado", "https://www.fxstreet.es/news/decoro-202610241000", "Sat, 24 Oct 2026 10:00:00 GMT"),
+)
+ANALISIS_FX = _rss(
+    _item("El Oro cae por debajo de 4.000$ mientras el repunte del petróleo profundiza la debacle", NOTA_FX,
+          "Fri, 23 Oct 2026 18:19:00 GMT"),
+    _item("Pronóstico del Oro: XAU/USD busca soporte", "https://www.fxstreet.es/analysis/xau-usd-soporte-202610240251",
+          "Sat, 24 Oct 2026 02:51:00 GMT"),
+)
+
+
+def _feeds(url):
+    return {nt.FEEDS_FX[0]: NOTICIAS_FX, nt.FEEDS_FX[1]: ANALISIS_FX}[url]
+
+
+def test_candidatas_del_activo_dentro_de_la_ventana_y_sin_repetir():
+    lista, aviso = nt.candidatas_fxstreet("XAUUSD", "Oro", AHORA_FX, leer=_feeds)
+    assert aviso is None
+    # La nota que aparece en los dos feeds va una vez; la del 20/10 queda fuera de los 3 días;
+    # «decoro» no es «oro» y el USD/JPY no es del activo. La más reciente primero.
+    assert [c["url"] for c in lista] == ["https://www.fxstreet.es/analysis/xau-usd-soporte-202610240251", NOTA_FX]
+    assert set(lista[0]) == {"medio", "fecha", "url", "titular_original"}  # sin la descripción: trae precios y %
+    assert lista[1]["medio"] == "FXStreet" and lista[1]["titular_original"].startswith("El Oro cae")
+
+
+def test_la_fecha_de_la_candidata_es_la_de_chile():
+    # 02:51 GMT del sábado 24 son las 23:51 del viernes 23 en Santiago (CLST, UTC-3).
+    lista, _ = nt.candidatas_fxstreet("XAUUSD", "Oro", AHORA_FX, leer=_feeds)
+    assert lista[0]["fecha"] == "2026-10-23"
+
+
+def test_un_activo_sin_patron_busca_por_su_nombre():
+    feed = _rss(_item("Apple supera las previsiones", "https://www.fxstreet.es/news/apple-202610241200",
+                      "Sat, 24 Oct 2026 12:00:00 GMT"))
+    lista, _ = nt.candidatas_fxstreet("#AAPL", "Apple", AHORA_FX, leer=lambda url: feed)
+    assert [c["url"] for c in lista] == ["https://www.fxstreet.es/news/apple-202610241200"]
+
+
+def test_fxstreet_caido_avisa_y_no_bota_la_pieza():
+    def caido(url):
+        raise OSError("sin red")
+
+    lista, aviso = nt.candidatas_fxstreet("XAUUSD", "Oro", AHORA_FX, leer=caido)
+    assert lista == [] and "FXStreet" in aviso
+
+
+def test_un_feed_ilegible_no_tapa_al_otro():
+    lista, aviso = nt.candidatas_fxstreet("XAUUSD", "Oro", AHORA_FX,
+                                          leer=lambda url: ANALISIS_FX if url == nt.FEEDS_FX[1] else "<html>403")
+    assert len(lista) == 2 and aviso is None
+
+
+PAGINA_FX = ("El par cotiza en 156.85 mientras se forma un patrón de vela martillo, con pérdidas "
+             "superiores al 0.74% semanal.")
+
+
+def test_cifra_de_fxstreet_en_notacion_chilena_pasa():
+    n = _noticia(medio="FXStreet", url=NOTA_FX, titular="El USD/JPY cotiza en 156,85 tras caer 0,74 % en la semana",
+                 bajada="Según FXStreet, el par forma un patrón de vela martillo.")
+    pieza, descartes = nt.depurar_noticia(_pieza(n), HOY, verificar=lambda url: "ok", leer=lambda url: PAGINA_FX)
+    assert descartes == [] and pieza["editorial"]["noticia"]["titular"].startswith("El USD/JPY")
+
+
+def test_cifra_de_fxstreet_copiada_en_notacion_inglesa_se_descarta():
+    n = _noticia(medio="FXStreet", url=NOTA_FX, titular="El USD/JPY cotiza en 156.85",
+                 bajada="Según FXStreet, el par forma un patrón de vela martillo.")
+    pieza, descartes = nt.depurar_noticia(_pieza(n), HOY, verificar=lambda url: "ok", leer=lambda url: PAGINA_FX)
+    assert pieza["editorial"]["noticia"] is None and "156.85" in descartes[0]

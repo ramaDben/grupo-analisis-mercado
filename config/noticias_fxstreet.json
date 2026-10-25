@@ -1,0 +1,20 @@
+{
+  "_nota": "Patrones (expresiones regulares, sin distinguir mayúsculas) que marcan una nota de FXStreet en español como del activo, buscados en el TITULAR. Lo edita el director. Un ticker que no está aquí se busca por su nombre del catálogo. Spec 2026-10-24 §1, ajuste del 2026-10-25.",
+  "patrones": {
+    "XAUUSD": ["\\boro\\b", "XAU"],
+    "XAGUSD": ["\\bplata\\b", "XAG"],
+    "USDCLP": ["peso chileno", "USD/CLP"],
+    "USDJPY": ["USD/JPY", "\\byen\\b"],
+    "EURUSD": ["EUR/USD"],
+    "GBPUSD": ["GBP/USD", "\\blibra\\b"],
+    "WTI.spot": ["petróleo", "\\bWTI\\b", "\\bcrudo\\b"],
+    "BRENT.spot": ["petróleo", "\\bBrent\\b", "\\bcrudo\\b"],
+    "COPPER": ["\\bcobre\\b"],
+    "US100.spot": ["Nasdaq"],
+    "US500.spot": ["S&P 500"],
+    "US30.spot": ["Dow Jones"],
+    "GER40.spot": ["\\bDAX\\b"],
+    "BTCUSD": ["bitcoin", "\\bBTC\\b"],
+    "ETHUSD": ["ethereum", "\\bETH\\b"]
+  }
+}

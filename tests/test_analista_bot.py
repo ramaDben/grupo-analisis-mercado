@@ -904,6 +904,24 @@ def test_noticia_rota_no_bota_la_pieza(armado):
     assert _pieza_guardada(armado)["editorial"]["noticia"] is None
 
 
+def test_sin_noticia_avisa_que_el_correo_abre_con_el_analisis(armado):
+    _con_noticia(armado, None)
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert r.archivos and r.aparte.count("sin noticia de apertura") == 1
+
+
+def test_noticia_descartada_avisa_una_sola_vez(armado):
+    _con_noticia(armado, {**NOTICIA_ORO, "bajada": "Según Reuters, el oro subió a 4.200 dólares."})
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert "Noticia de apertura: " in r.aparte and "sin noticia de apertura" not in r.aparte
+
+
+def test_con_noticia_no_avisa_que_falta(armado):
+    _con_noticia(armado, NOTICIA_ORO)
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert r.archivos and "sin noticia de apertura" not in r.aparte
+
+
 def test_ilustraciones_se_eligen_una_vez(armado):
     armado.tasa = TASA_FED
     _con_noticia(armado, NOTICIA_ORO)

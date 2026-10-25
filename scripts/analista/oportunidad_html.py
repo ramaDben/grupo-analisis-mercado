@@ -824,7 +824,8 @@ def _apertura_noticia(n: dict[str, Any], a: dict[str, Any], imagen: Path | None,
 def _tasa_correo(t: dict[str, Any], imagen: Path | None, c: dict[str, str], oscuro: bool = False) -> str:
     """El dato de tasas del banco del activo, con el nombre real de la serie y la fecha del dato (spec §3).
 
-    La imagen va en miniatura a la derecha: la imagen grande del correo es la de la noticia.
+    La imagen va en miniatura a la derecha: la imagen grande del correo es la de la noticia. En el celular
+    la columna se apila y la imagen baja a todo el ancho (`.tasa-img`): el dato va siempre con su imagen.
     """
     texto = c["blanco"] if oscuro else c["texto_1"]
     segundo = c["hero_texto_2"] if oscuro else c["texto_borde"]
@@ -841,7 +842,7 @@ def _tasa_correo(t: dict[str, Any], imagen: Path | None, c: dict[str, str], oscu
     if not miniatura:
         return texto_tasa
     return _tabla(f'<tr><td valign="top" style="padding:0 16px 0 0;">{texto_tasa}</td>'
-                  f'<td class="hide-m" valign="top" width="150" style="padding:2px 0 14px 0;">{miniatura}</td></tr>')
+                  f'<td class="stack tasa-img" valign="top" width="150" style="padding:2px 0 14px 0;">{miniatura}</td></tr>')
 
 
 def _snapshot(a: dict[str, Any], c: dict[str, str]) -> str:

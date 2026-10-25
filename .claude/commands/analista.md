@@ -117,15 +117,21 @@ y la pone el bot: tú no decides nada visual.
   el bot no puede verificar esto por código, es una regla de este prompt y la revisa el director. Un exchange
   (Coinbase, Kraken, Binance) o un portal cripto nunca es directa por nombrar la moneda.
 - `noticia`: la noticia actual que abre el correo (spec 2026-10-24), un **objeto** con estos campos de texto, o
-  `null` si no encuentras una que cumpla todo. Sin noticia el correo sale igual: no la fuerces.
-  - `medio`, `fecha` (AAAA-MM-DD, **de los últimos 3 días**) y `url` (https, de un artículo concreto, del dominio
-    del medio): mismas reglas de medio que `fuentes`, **primero en español**; Reuters, Bloomberg, FT, WSJ, CNBC o
-    MarketWatch solo si no hay una en español. Prefiere la nota más reciente sobre el activo o su driver principal.
+  `null` solo si no hay ninguna que cumpla todo.
+  - **Primero `datos.noticias_candidatas`**: notas de FXStreet en español sobre el activo, de los últimos 3 días, que
+    el bot ya leyó del RSS (la más reciente primero). Si trae al menos una, **elige una de ahí**: abre su `url`, copia
+    `medio`, `fecha`, `url` y `titular_original` tal cual y redacta el resto. Elige la que mejor sostenga una premisa
+    sobre el activo, no necesariamente la primera. No la cambies por otra nota de la web.
+  - Solo si la lista viene vacía, búscala en la web: `medio`, `fecha` (AAAA-MM-DD, **de los últimos 3 días**) y `url`
+    (https, de un artículo concreto, del dominio del medio), mismas reglas de medio que `fuentes`, **primero en
+    español** (FXStreet incluido); Reuters, Bloomberg, FT, WSJ, CNBC o MarketWatch solo si no hay una en español.
   - `titular_original` y `extracto`: el titular de la nota y el párrafo que sostiene tu titular, en su idioma.
   - `titular`: una frase en español que sostenga una premisa, hasta 90 caracteres. `bajada`: hasta 200, atribuida
     ("Según Reuters, …").
-  - **Acá sí puedes citar cifras de la nota** (excepción a la regla 1), copiadas **tal como aparecen en la fuente**:
-    el bot lee la página y descarta la noticia si una cifra no está. Si la nota tiene muro de pago (Reuters, Bloomberg,
+  - **Acá sí puedes citar cifras de la nota** (excepción a la regla 1), el mismo valor que la fuente pero **en
+    notación chilena**: coma decimal y punto de miles ("156,85", "0,74 %", "4.000 dólares"). FXStreet escribe los
+    decimales en inglés ("156.85"): conviértelos, porque copiados así el bot los descarta. El bot lee la página y
+    descarta la noticia si una cifra no está. Si la nota tiene muro de pago (Reuters, Bloomberg,
     FT, WSJ), escribe `titular` y `bajada` **sin cifras**: el bot no puede leerla y la descartaría.
   - `motivo`: el id de la imagen ilustrativa, de `config/motivos_imagen.json` (`oro_lingotes`, `banco_central`,
     `billetes_dolar`, `peso_chileno`, `cobre`, `petroleo`, `bolsa_pantallas`, `tecnologia`, `acciones_generico`).
