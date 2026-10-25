@@ -1220,3 +1220,17 @@ def test_con_publicador_las_ilustraciones_van_por_url(tmp_path):
     assert "ejemplo.test/correos/ilustracion_noticia.png" in correo
     assert "ejemplo.test/correos/ilustracion_tasa.png" in correo
     assert "data:image" not in correo
+
+
+def test_con_noticia_el_correo_dice_la_vigencia(tmp_path):
+    correo = _correo(oh.armar(_con_apertura(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+    assert "Vigencia: lunes 12/10 al lunes 19/10" in correo
+
+
+def test_una_ilustracion_con_ruta_ajena_no_se_incrusta(tmp_path):
+    p = _con_apertura(tmp_path, imagenes=False)
+    afuera = tmp_path.parent / "secreto.png"
+    afuera.write_bytes(fx.PNG + b"x")
+    p["ilustraciones"] = {"noticia": "../secreto.png"}
+    correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+    assert ">Imagen ilustrativa</p>" not in correo

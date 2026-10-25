@@ -207,3 +207,10 @@ def test_generador_none_con_imagenes_en_cooldown_reutiliza_la_mas_antigua(tmp_pa
     assert ruta == img_b
     assert aviso is not None
     assert len(aviso) > 0
+
+
+def test_ningun_motivo_pide_pantallas_ni_graficos():
+    """La excepción de la Regla 0 excluye gráficos y pantallas: un gráfico generado se leería como el real."""
+    for m in ilustracion.motivos().values():
+        texto = m["prompt"].lower()
+        assert "velas" not in texto and "monitores" not in texto and "pantallas múltiples" not in texto

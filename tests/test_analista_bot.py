@@ -931,3 +931,26 @@ def test_sin_imagen_avisa(armado):
     r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
     assert r.archivos and "sin imagen" in r.aparte
     assert "noticia" not in _pieza_guardada(armado).get("ilustraciones", {})
+
+
+def test_un_error_inesperado_de_imagen_no_bota_la_pieza(armado):
+    def generar_roto(prompt, destino):
+        raise OSError("disco lleno")
+    armado.atendedor.generar_imagen = generar_roto
+    _con_noticia(armado, NOTICIA_ORO)
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert r.archivos and "sin imagen" in r.aparte
+
+
+def test_ilustraciones_escritas_por_agy_se_pisan(armado):
+    base = redactor(armado.llamadas)
+
+    def redactar(ruta, tier):
+        base(ruta, tier)
+        pieza = pr.cargar_pieza(ruta.parent)
+        pieza["ilustraciones"] = {"noticia": "../../secreto.png"}
+        pr.guardar_pieza(pieza, ruta.parent)
+        return SimpleNamespace(codigo="ok", detalle="")
+    armado.atendedor.redactar = redactar
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert _pieza_guardada(armado).get("ilustraciones", {}) == {}

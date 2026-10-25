@@ -146,3 +146,24 @@ def test_pieza_sin_campo_noticia_no_cambia():
 def test_vigente_cuenta_tres_dias():
     assert nt.vigente(_noticia(fecha="2026-10-21"), HOY)
     assert not nt.vigente(_noticia(fecha="2026-10-20"), HOY)
+
+
+def test_cifra_corta_con_muro_de_pago_descarta():
+    """«8 %» o «50 puntos base» también son cifras: con muro de pago no pueden salir (revisión final)."""
+    assert _cayo(_noticia(titular="El oro cae 8 % tras el dato", bajada="Según Reuters, el metal retrocede."),
+                 estado="sin_verificar", pagina=None)
+
+
+def test_cifra_corta_ausente_de_la_pagina_descarta():
+    assert _cayo(_noticia(bajada="Según Reuters, la Fed recortó 50 puntos base."))
+
+
+def test_la_coma_decimal_no_se_confunde_con_el_punto():
+    """«4.200 dólares» no se respalda con «$42.00 per gram»: se comparan valores, no dígitos."""
+    assert _cayo(_noticia(bajada="Según Reuters, el oro llegó a 4.200 dólares."), pagina="Gold at $42.00 per gram.")
+
+
+def test_el_mismo_valor_en_notacion_inglesa_pasa():
+    pieza, _ = _depurar(_noticia(bajada="Según Reuters, el oro subió a 4.100,50 dólares y ganó 3,67 % en 8 días."),
+                        pagina="Spot gold rose to $4,100.50, a 3.67% gain over 8 sessions.")
+    assert pieza["editorial"]["noticia"] is not None

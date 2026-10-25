@@ -52,8 +52,33 @@ def vigente(n: dict[str, Any], hoy: date) -> bool:
     return f is not None and 0 <= (hoy - f).days <= VENTANA_DIAS
 
 
-def _cifras(texto: str) -> set[str]:
-    return {es._plano_numero(t) for t in es._NUMERO.findall(texto) if es._significativo(t)}
+_ES = re.compile(r"\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:,\d+)?")
+_EN = re.compile(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?")
+
+
+def _valores(token: str, convenciones: tuple[str, ...]) -> set[float]:
+    """Los valores que puede significar una cifra: «4.200» es 4200 en Chile y 4,2 en inglés.
+
+    Comparar dígitos sin la coma daría por buena «4.200 dólares» contra «$42.00 per gram».
+    """
+    salida = set()
+    if "es" in convenciones and _ES.fullmatch(token):
+        salida.add(float(token.replace(".", "").replace(",", ".")))
+    if "en" in convenciones and _EN.fullmatch(token):
+        salida.add(float(token.replace(",", "")))
+    return salida
+
+
+def _cifras_del_texto(texto: str) -> list[str]:
+    """Todas las cifras, también las de uno o dos dígitos: «8 %» y «50 puntos base» son las que más importan."""
+    return es._NUMERO.findall(texto)
+
+
+def _cifras_ausentes(citadas: list[str], pagina: str) -> list[str]:
+    en_pagina: set[float] = set()
+    for t in es._NUMERO.findall(pagina):
+        en_pagina |= _valores(t, ("es", "en"))
+    return [t for t in citadas if not (_valores(t, ("es",)) & en_pagina)]
 
 
 def _motivo(n: Any, hoy: date, lista: dict[str, Any], verificar: Callable[[str], str],
@@ -87,17 +112,15 @@ def _motivo(n: Any, hoy: date, lista: dict[str, Any], verificar: Callable[[str],
     estado = verificar(n["url"])
     if estado == "muerta":
         return "la URL no responde"
-    citadas = _cifras(n["titular"] + " " + n["bajada"])
+    citadas = _cifras_del_texto(n["titular"] + " " + n["bajada"])
     if not citadas:
         return None
     texto = leer(n["url"]) if estado == "ok" else None
     if texto is None:
         return "trae cifras y no pude leer la nota para comprobarlas (muro de pago o página ilegible)"
-    ausentes = sorted(citadas - _cifras(texto))
+    ausentes = _cifras_ausentes(citadas, texto)
     if ausentes:
-        originales = [t for t in es._NUMERO.findall(n["titular"] + " " + n["bajada"])
-                      if es._plano_numero(t) in ausentes]
-        return f"la cifra {', '.join(originales)} no aparece en la nota"
+        return f"la cifra {', '.join(dict.fromkeys(ausentes))} no aparece en la nota"
     return None
 
 

@@ -375,16 +375,21 @@ class Atendedor:
             motivos["tasa"] = tasa["motivo_imagen"]
         elegidas, avisos = {}, []
         for clave, motivo in motivos.items():
-            origen, aviso = il.elegir(motivo, ahora.date(), self.generar_imagen, self.banco_imagenes, ahora)
+            donde = "de la noticia" if clave == "noticia" else "del dato de tasas"
+            try:
+                origen, aviso = il.elegir(motivo, ahora.date(), self.generar_imagen, self.banco_imagenes, ahora)
+                if origen is not None:
+                    nombre = f"ilustracion_{clave}{origen.suffix.lower()}"
+                    shutil.copyfile(origen, dir_pedido / nombre)
+                    elegidas[clave] = nombre
+            except Exception as exc:  # la pieza ya costó minutos de agy: una imagen no la bota
+                origen, aviso = None, (f"No pude preparar la imagen {donde} ({exc.__class__.__name__}): "
+                                       "el correo la muestra sin imagen.")
             if aviso:
-                avisos.append(aviso if clave == "noticia" else aviso.replace("de la noticia", "del dato de tasas"))
-            if origen is not None:
-                nombre = f"ilustracion_{clave}{origen.suffix.lower()}"
-                shutil.copyfile(origen, dir_pedido / nombre)
-                elegidas[clave] = nombre
-        if elegidas:
-            pieza["ilustraciones"] = elegidas
-            pr.guardar_pieza(pieza, dir_pedido)
+                avisos.append(aviso.replace("de la noticia", donde))
+        # Siempre las escribe el bot, también vacías: lo que agy haya dejado en esa clave no sobrevive.
+        pieza["ilustraciones"] = elegidas
+        pr.guardar_pieza(pieza, dir_pedido)
         return avisos
 
     def _a_drive(self, rutas: list[tuple[Path, str]], ahora: datetime, ticker: str, nombre: str) -> str:

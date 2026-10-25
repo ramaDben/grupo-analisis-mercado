@@ -1047,9 +1047,13 @@ def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: P
     # Con noticia, el snapshot baja al análisis técnico sobre su propio fondo oscuro: las tarjetas son oscuras.
     snapshot = (_tabla(f'<tr><td bgcolor="{c["hero"]}" style="padding:14px;background:{c["hero"]};border-radius:8px;">'
                        f'{_snapshot(a, c)}</td></tr>') + _separador()) if con_noticia else ""
+    # El hero, que es donde va la vigencia, no sale cuando abre la noticia: la vigencia sube al análisis.
+    vigencia = (_p(ih.e(f"Vigencia: {d['vigencia']['desde']} al {d['vigencia']['hasta']} · Hora de Chile"), c,
+                   tam=13, peso=600, color="acento", margen="-8px 0 12px 0")
+                if con_noticia and d and "vigencia" in d else "")
     analisis = (
         _rotulo(ih.e(_titulo_analisis(a["nombre"])), c, margen="10px 0 14px 0")
-        + snapshot + grafico + _separador()
+        + vigencia + snapshot + grafico + _separador()
         + pull_quote
         + _rotulo(f'Los tres escenarios · <span style="color:{color_dir};">'
                   f'{ih.e(lec["direccion"].capitalize())}</span>', c, margen="10px 0 8px 0")
@@ -1253,7 +1257,9 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
     bloques, correos, datos_js = [], [], []
     noticia = ed.get("noticia") if isinstance(ed.get("noticia"), dict) else None
     tasa = d.get("tasa") if isinstance(d.get("tasa"), dict) else None
-    ilustraciones = {k: dir_pedido / v for k, v in (pieza.get("ilustraciones") or {}).items()}
+    # Solo un nombre de archivo de la carpeta del pedido: una ruta con separadores incrustaría un archivo ajeno.
+    ilustraciones = {k: dir_pedido / v for k, v in (pieza.get("ilustraciones") or {}).items()
+                     if isinstance(v, str) and v == Path(v).name and not v.startswith(".")}
     editable_activos: dict[str, dict[str, str]] = {}  # los textos de IA que el ejecutivo puede reemplazar
     for a in d["activos"]:
         t = a["ticker"]

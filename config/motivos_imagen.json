@@ -28,7 +28,7 @@
     },
     "bolsa_pantallas": {
       "descripcion": "Jornadas bursátiles globales, volatilidad de renta variable y comportamiento de índices financieros.",
-      "prompt": "Conjunto de monitores que proyectan gráficos financieros de velas y curvas de tendencia con desenfoque artístico, sin datos numéricos descifrables."
+      "prompt": "Fachada de piedra de un edificio bursátil clásico con columnas, vista desde la calle al atardecer, sin letreros, sin pantallas ni gráficos."
     },
     "tecnologia": {
       "descripcion": "Sector tecnológico, innovación, industria de semiconductores, centros de datos y computación en la nube.",
@@ -36,7 +36,7 @@
     },
     "acciones_generico": {
       "descripcion": "Mercado bursátil, resultados corporativos trimestrales y operativa general de acciones.",
-      "prompt": "Amplia sala de operaciones financieras con puestos de trabajo y pantallas múltiples en atmósfera concentrada y desenfocada, sin figuras reconocibles."
+      "prompt": "Escritorio de madera con una libreta de cuero, una pluma y una taza de café junto a una ventana con luz cálida de la mañana, sin pantallas, sin gráficos y sin papeles con texto legible."
     }
   }
 }
