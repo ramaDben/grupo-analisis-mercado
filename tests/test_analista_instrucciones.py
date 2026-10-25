@@ -74,3 +74,9 @@ def test_las_instrucciones_exigen_una_fuente_directa():
 def test_las_instrucciones_piden_que_el_comunicado_de_un_emisor_traiga_datos_y_no_promocion():
     bajo = TEXTO.lower()
     assert "emisor" in bajo and "promoción" in bajo and "datos del fondo o del mercado" in bajo
+
+
+def test_analista_documenta_la_pieza_contexto():
+    for pieza in ("noticia_1", "noticia_2", "tecnico", "[[NIVEL]]", "[[OBJETIVO]]", "[[SIGUIENTE]]",
+                  "[[SALUDO]]", "datos.noticias_candidatas"):
+        assert pieza in TEXTO, pieza

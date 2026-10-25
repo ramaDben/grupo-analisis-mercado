@@ -791,6 +791,29 @@ def test_validar_calla_en_una_pieza_sin_fuente_directa_sellada(tmp_path, capsys)
     assert "OK" in capsys.readouterr().out
 
 
+def test_validar_contexto_dice_que_noticia_cae_y_por_que(tmp_path, capsys, monkeypatch):
+    import bot_analistas
+    from analista import contexto as ctx
+    from analista import fuentes as fu
+    from analista import noticia as nt
+
+    monkeypatch.setattr(fu, "verificar_url", lambda url, *a, **k: "ok")
+    monkeypatch.setattr(nt, "leer_texto", lambda url, *a, **k: "texto")
+    seg = fx.pieza_seguimiento(tmp_path)["datos"]
+    seg["suceso"] = {"estado": "esperando", "sentido": "ALCISTA", "nivel": 4050.5, "objetivo": 4120.0,
+                     "siguiente": None, "calidad": "A+", "nota_semana": ""}
+    cand = [{"medio": "FXStreet", "fecha": "2026-10-24", "url": "https://www.fxstreet.es/a", "titular_original": "Oro sube"}]
+    pieza = ctx.preparar("XAUUSD", tmp_path, AHORA, seg, lambda *a: (cand, [])).pieza
+    pieza["editorial"]["noticia_1"] = {"medio": "FXStreet", "fecha": "2026-10-24", "url": "https://otro.example/x",
+                                      "titular_original": "Oro sube", "titular": "El oro sube", "mensaje": "[[SALUDO]] ¿Lo vemos?"}
+    pieza["editorial"]["noticia_2"] = None
+    pieza["editorial"]["tecnico"] = "[[SALUDO]] el oro sigue al alza sobre [[NIVEL]]. ¿La vemos?"
+    pr.guardar_pieza(pieza, tmp_path)
+    assert bot_analistas.validar(tmp_path / "pieza.json") == 1
+    salida = capsys.readouterr().out
+    assert "noticia_1" in salida and "candidatas" in salida
+
+
 # ───────────────────────────────────────────────────────── /recrear (solo el director)
 
 
