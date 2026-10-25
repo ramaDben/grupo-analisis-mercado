@@ -40,6 +40,11 @@ RAIZ = Path(__file__).resolve().parent.parent
 ESTADO = RAIZ / "data central" / "DATA AGENDA" / "estado_ejecucion.json"
 INGESTA = RAIZ / ".agents" / "skills" / "ecosistema-datos-macro" / "scripts" / "pipeline_ingesta.py"
 LOCK = RAIZ / "data" / ".ingesta_macro.lock"
+# Las acciones (fechas de resultados e informes SEC) tienen su propia ingesta y su propio
+# sello. El bot de analistas rechaza /oportunidad de una accion con ese sello vencido, y
+# hasta el 2026-10-25 solo la renovaba pipeline_datos.py, que nadie corre a diario.
+INGESTA_ACCIONES = RAIZ / "scripts" / "ingesta_acciones.py"
+ACCIONES = RAIZ / "data central" / "DATA ACCIONES" / "earnings_calendar.json"
 LOG = RAIZ / "data" / "logs" / "hook_ingesta_macro.log"
 
 # Seis horas: los emisores publican una vez al dia (FRED en T+1 habil, el BCCh en
@@ -55,6 +60,7 @@ LOCK_HUERFANO_MIN = 15
 # La ingesta corre bajo `uv` porque los extractores necesitan requests y dotenv,
 # que viven en el .venv del proyecto y no en el Python del sistema.
 COMANDO = ["uv", "run", "python", str(INGESTA)]
+COMANDO_ACCIONES = ["uv", "run", "python", str(INGESTA_ACCIONES)]
 
 CHILE = "America/Santiago"
 
@@ -90,6 +96,15 @@ def esta_vencida(estado: dict | None) -> bool:
     """Fuente unica de la decision de refrescar. Sin registro previo, vencida."""
     horas = antiguedad_horas(estado)
     return horas is None or horas >= UMBRAL_HORAS
+
+
+def acciones_vencidas() -> bool:
+    """Misma vara que la macro, leida del sello `ingesta` del calendario de acciones."""
+    try:
+        marca = json.loads(ACCIONES.read_text(encoding="utf-8")).get("ingesta")
+    except Exception:  # noqa: BLE001
+        marca = None
+    return esta_vencida({"ultima_ejecucion_utc": marca} if marca else None)
 
 
 def hora_chile(marca_utc: str) -> str:
@@ -199,9 +214,46 @@ def anotar(mensaje: str) -> None:
         pass
 
 
+def correr(nombre: str, comando: list[str]) -> None:
+    anotar(f"{nombre} lanzada")
+    # La tarea GI-Ingesta corre sin consola (uvw): sin este flag, Windows le abre
+    # al hijo una ventana nueva cada vez que la ingesta se dispara.
+    sin_ventana = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+    try:
+        proc = subprocess.run(
+            comando,
+            cwd=str(RAIZ),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=600,
+            creationflags=sin_ventana,
+        )
+        anotar(f"{nombre} terminada con codigo {proc.returncode}")
+        # Solo lineas con contenido: el pipeline cierra con lineas en blanco y una
+        # cola vacia en el log no dice si la corrida sirvio.
+        utiles = [ln for ln in (proc.stdout or "").splitlines() if ln.strip()]
+        for linea in utiles[-3:]:
+            anotar(f"  | {linea.strip()}")
+        if proc.returncode != 0:
+            for linea in (proc.stderr or "").strip().splitlines()[-5:]:
+                anotar(f"  ! {linea}")
+    except subprocess.TimeoutExpired:
+        anotar(f"{nombre} abortada: supero los 600 s")
+    except Exception as exc:  # noqa: BLE001
+        anotar(f"{nombre} fallida: {exc}")
+
+
 def modo_refrescar() -> int:
     estado = leer_estado()
-    if not esta_vencida(estado):
+    corridas = []
+    if esta_vencida(estado):
+        corridas.append(("ingesta", COMANDO))
+    # Independiente de la macro: con la macro fresca las acciones igual pueden estar vencidas.
+    if acciones_vencidas():
+        corridas.append(("ingesta de acciones", COMANDO_ACCIONES))
+    if not corridas:
         horas = antiguedad_horas(estado) or 0.0
         anotar(f"sin refresco: ingesta de hace {horas:.1f} h, bajo el umbral de {UMBRAL_HORAS} h")
         return 0
@@ -218,34 +270,9 @@ def modo_refrescar() -> int:
         anotar(f"no se pudo tomar el lock: {exc}")
         return 0
 
-    anotar("ingesta lanzada")
-    # La tarea GI-Ingesta corre sin consola (uvw): sin este flag, Windows le abre
-    # al hijo una ventana nueva cada vez que la ingesta se dispara.
-    sin_ventana = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
     try:
-        proc = subprocess.run(
-            COMANDO,
-            cwd=str(RAIZ),
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=600,
-            creationflags=sin_ventana,
-        )
-        anotar(f"ingesta terminada con codigo {proc.returncode}")
-        # Solo lineas con contenido: el pipeline cierra con lineas en blanco y una
-        # cola vacia en el log no dice si la corrida sirvio.
-        utiles = [ln for ln in (proc.stdout or "").splitlines() if ln.strip()]
-        for linea in utiles[-3:]:
-            anotar(f"  | {linea.strip()}")
-        if proc.returncode != 0:
-            for linea in (proc.stderr or "").strip().splitlines()[-5:]:
-                anotar(f"  ! {linea}")
-    except subprocess.TimeoutExpired:
-        anotar("ingesta abortada: supero los 600 s")
-    except Exception as exc:  # noqa: BLE001
-        anotar(f"ingesta fallida: {exc}")
+        for nombre, comando in corridas:
+            correr(nombre, comando)
     finally:
         try:
             LOCK.unlink(missing_ok=True)

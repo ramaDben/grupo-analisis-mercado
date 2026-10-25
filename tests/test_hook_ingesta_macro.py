@@ -55,6 +55,12 @@ def aislar_rutas(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, P
     monkeypatch.setattr(hook, "ESTADO", estado_path)
     monkeypatch.setattr(hook, "LOCK", lock_path)
     monkeypatch.setattr(hook, "LOG", log_path)
+    # Por defecto las acciones están frescas, así cada test mide solo la macro.
+    acciones_path = tmp_path / "earnings_calendar.json"
+    acciones_path.write_text(
+        json.dumps({"ingesta": datetime.now(timezone.utc).isoformat()}), encoding="utf-8"
+    )
+    monkeypatch.setattr(hook, "ACCIONES", acciones_path)
 
     return {
         "estado": estado_path,
@@ -536,3 +542,42 @@ def test_modo_refrescar_lanza_la_ingesta_sin_ventana_en_windows(monkeypatch: pyt
     hook.modo_refrescar()
 
     assert mock_run.call_args.kwargs.get("creationflags") == 0x08000000
+
+
+def _comandos_lanzados(mock_run: MagicMock) -> list[str]:
+    return [str(c.args[0][-1]) for c in mock_run.call_args_list]
+
+
+def test_modo_refrescar_renueva_las_acciones_vencidas_aunque_la_macro_este_fresca(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """El bot de analistas rechaza /oportunidad de una acción con la ingesta de acciones vencida.
+
+    La tarea GI-Ingesta solo corría la macro, así que las acciones vencían a las 24 h y nadie
+    las renovaba (2026-10-25: #AAPL rechazado con datos del 2026-10-20).
+    """
+    ahora = datetime.now(timezone.utc)
+    hook.ESTADO.write_text(json.dumps({"ultima_ejecucion_utc": (ahora - timedelta(hours=1)).isoformat()}),
+                           encoding="utf-8")
+    hook.ACCIONES.write_text(json.dumps({"ingesta": (ahora - timedelta(hours=10)).isoformat()}),
+                             encoding="utf-8")
+    mock_run = MagicMock(return_value=MagicMock(returncode=0, stdout="", stderr=""))
+    monkeypatch.setattr(hook.subprocess, "run", mock_run)
+
+    hook.modo_refrescar()
+
+    assert _comandos_lanzados(mock_run) == [str(hook.INGESTA_ACCIONES)]
+    assert hook.LOCK.exists() is False
+
+
+def test_modo_refrescar_sin_ingesta_de_acciones_la_corre(monkeypatch: pytest.MonkeyPatch):
+    """Sin archivo de acciones (clon nuevo) cuenta como vencida, igual que la macro sin registro."""
+    hook.ACCIONES.unlink()
+    marca = (datetime.now(timezone.utc) - timedelta(hours=10)).isoformat()
+    hook.ESTADO.write_text(json.dumps({"ultima_ejecucion_utc": marca}), encoding="utf-8")
+    mock_run = MagicMock(return_value=MagicMock(returncode=0, stdout="", stderr=""))
+    monkeypatch.setattr(hook.subprocess, "run", mock_run)
+
+    hook.modo_refrescar()
+
+    assert _comandos_lanzados(mock_run) == [str(hook.INGESTA), str(hook.INGESTA_ACCIONES)]
