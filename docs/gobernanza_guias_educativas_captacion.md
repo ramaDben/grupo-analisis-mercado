@@ -34,6 +34,11 @@ Queda **estrictamente prohibido** escribir precios, cotizaciones, niveles de sop
 ### REGLA 3: PROHIBICIÓN TOTAL DE MODELOS DE DIFUSIÓN (REGLA 0)
 Queda terminantemente prohibido el uso de herramientas de IA generativa text-to-image (`generate_image`, Midjourney, DALL-E) para ilustrar mercados, gráficos financieros, terminales o pantallas de cotizaciones. Toda pieza gráfica es código reproducible: **HTML + SVG vectorial + CSS renderizado a 300 DPI vía Playwright/Chromium**.
 
+**Excepción acotada (director, 2026-10-24):** el correo de `/oportunidad` lleva imágenes ilustrativas
+generadas (oro, un banco central, billetes) de un catálogo cerrado (`config/motivos_imagen.json`), sin
+logos, texto, cifras, banderas ni personas, y rotuladas "Imagen ilustrativa". No alcanza a gráficos,
+terminales ni pantallas de cotizaciones, que siguen siendo código. Spec: `docs/superpowers/specs/2026-10-24-correo-noticia-de-apertura-design.md`.
+
 ### REGLA 4: COMPOSICIÓN PEDAGÓGICA EN 3 CAPAS
 Todo concepto técnico, fenómeno macroeconómico o estrategia operativa explicada en una guía debe redactarse obligatoriamente bajo la **arquitectura pedagógica de 3 capas**:
 1. **Capa 1: Qué es y qué pasa (El Hecho Técnico)**: Definición precisa y cuantitativa del activo o fenómeno (ej. diferencial de tasas BCCh vs. Fed, inventarios de cobre en Shanghái).
