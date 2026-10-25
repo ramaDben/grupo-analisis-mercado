@@ -71,6 +71,7 @@ Con tu cliente: /seguimiento oro Juan
 Si ya entraste: /seguimiento oro Juan entrada=4062.5 (mide el avance desde tu precio).
 Incluye la oportunidad de hoy; si la lectura cambió de lado, avisa que lo anterior queda invalidado.
 Antes debe existir el /oportunidad de ese activo. Dura 30 minutos.
+Después te llega un segundo mensaje con un HTML de tres textos listos para copiar: dos noticias del activo (FXStreet e Investing.com) y el análisis técnico de hoy. Demora unos minutos y no frena el seguimiento.
 
 Activos: oro, dolar, cobre, petroleo, brent, nasdaq, bitcoin o el símbolo exacto de MT5.
 
