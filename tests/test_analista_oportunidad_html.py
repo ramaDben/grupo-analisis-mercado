@@ -1240,7 +1240,10 @@ def test_en_el_celular_la_imagen_de_tasas_baja_a_todo_el_ancho(tmp_path):
     # Director, 2026-10-25: el dato de tasas va siempre con su imagen, también en el celular.
     for p in (_con_apertura(tmp_path), _con_apertura(tmp_path, noticia=False)):
         html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
-        bloque = _correo(html).split("Tasa efectiva de fondos federales")[1][:3000]
+        correo = _correo(html)
+        # Las dos celdas se apilan: si solo baja la imagen, el texto queda apretado en una columna angosta.
+        assert re.search(r'<td class="stack" valign="top" style="padding:0 16px 0 0;"><p[^>]*>Reserva Federal', correo)
+        bloque = correo.split("Tasa efectiva de fondos federales")[1][:3000]
         assert '<td class="stack tasa-img"' in bloque and "hide-m" not in bloque
         estilos = re.search(r'<style id="correo-estilos">(.*?)</style>', html, re.S).group(1)
         assert re.search(r"\.tasa-img img\{[^}]*width:100% !important", estilos)

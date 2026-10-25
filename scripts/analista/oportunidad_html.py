@@ -841,7 +841,7 @@ def _tasa_correo(t: dict[str, Any], imagen: Path | None, c: dict[str, str], oscu
     miniatura = _imagen_ilustrativa(imagen, c, oscuro, ancho=150)
     if not miniatura:
         return texto_tasa
-    return _tabla(f'<tr><td valign="top" style="padding:0 16px 0 0;">{texto_tasa}</td>'
+    return _tabla(f'<tr><td class="stack" valign="top" style="padding:0 16px 0 0;">{texto_tasa}</td>'
                   f'<td class="stack tasa-img" valign="top" width="150" style="padding:2px 0 14px 0;">{miniatura}</td></tr>')
 
 
