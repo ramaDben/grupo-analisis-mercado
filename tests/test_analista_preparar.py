@@ -106,7 +106,7 @@ def test_el_analisis_trae_un_solo_activo_con_su_vigencia(tmp_path):
     assert [a["ticker"] for a in d["activos"]] == ["XAUUSD"] and hecha.pieza["orden"]["args"] == {"ticker": "XAUUSD"}
     assert d["vigencia"] == {"desde": "lunes 12/10", "hasta": "lunes 19/10"}
     assert d["fundamental"] == {"fuera_catalogo": False, "sin_drivers": False, "referencia": "semanal"}
-    assert set(hecha.pieza["editorial"]) == {"titular", "bajada", "titulares", "contexto", "fuentes"}
+    assert set(hecha.pieza["editorial"]) == {"titular", "bajada", "titulares", "contexto", "fuentes", "noticia"}
 
 
 def test_preparar_sella_la_fuente_directa_del_activo(tmp_path):

@@ -99,7 +99,7 @@ def test_no_puede_tocar_las_imagenes():
 def test_campos_anidados_se_validan_uno_a_uno():
     p = es.nueva_pieza("oportunidad", {"semana": "2026-W42"}, {"activos": []}, {},
                        extra_campos={"contexto": ["1", "2"]})
-    for campo in es.CAMPOS["oportunidad"]:
+    for campo in (c for c in es.CAMPOS["oportunidad"] if c not in es.OPCIONALES):
         p["editorial"][campo] = "Texto suficientemente largo para pasar."
     p["editorial"]["fuentes"] = []
     p["editorial"]["contexto"] = {"1": "Explica el activo uno con calma y lo deja a la vista.", "2": es.MARCA}
@@ -120,7 +120,7 @@ def test_titular_largo_no_cabe_en_la_lamina():
 def test_no_puede_tocar_las_laminas():
     p = es.nueva_pieza("oportunidad", {"semana": "2026-W42"}, {"activos": []}, {},
                        laminas={"lamina.png": {"titular": es.MARCA}})
-    for campo in es.CAMPOS["oportunidad"]:
+    for campo in (c for c in es.CAMPOS["oportunidad"] if c not in es.OPCIONALES):
         p["editorial"][campo] = "Texto suficientemente largo para pasar."
     p["editorial"]["fuentes"] = []
     assert es.errores(p) == []
@@ -432,3 +432,22 @@ def test_agenda_sin_eventos_no_exige_dias_clave():
     assert "dias_clave" not in p["editorial"]
     assert es.errores(p) == []
 
+
+
+@pytest.mark.parametrize("noticia", ["__omitida__", None, es.MARCA,
+                                     {"medio": "Reuters", "fecha": "2026-10-23", "url": "https://www.reuters.com/a/b",
+                                      "titular_original": "Gold rises", "extracto": "Gold rose to $4,100.50.",
+                                      "titular": "El oro sube 4.100,50", "bajada": "Según Reuters, 3,67 % arriba.",
+                                      "motivo": "oro_lingotes"}])
+def test_errores_acepta_noticia_nula_o_valida(noticia):
+    p = pieza_llena() if noticia == "__omitida__" else pieza_llena(noticia=noticia)
+    assert es.errores(p) == []
+
+
+def test_errores_rechaza_noticia_con_forma_rara():
+    assert any(e.startswith("noticia:") for e in es.errores(pieza_llena(noticia=["no", "es", "dict"])))
+
+
+def test_textos_no_incluye_la_noticia():
+    p = pieza_llena(noticia={"titular": "4.100,50 y 3,67 %"})
+    assert not any(donde.startswith("noticia") for donde, _ in es.textos(p))
