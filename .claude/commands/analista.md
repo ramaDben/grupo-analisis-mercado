@@ -128,6 +128,9 @@ y la pone el bot: tú no decides nada visual.
   - `titular_original` y `extracto`: el titular de la nota y el párrafo que sostiene tu titular, en su idioma.
   - `titular`: una frase en español que sostenga una premisa, hasta 90 caracteres. `bajada`: hasta 200, atribuida
     ("Según Reuters, …").
+  - **Solo las causas que da la nota.** Si la nota dice que el oro cae por la subida de la energía, la bajada no
+    puede decir "por la firmeza del dólar" aunque sea cierto en otra parte de la pieza: lo atribuido al medio tiene
+    que estar en el medio. El bot verifica las cifras, no las causas: esto lo cuidas tú.
   - **Acá sí puedes citar cifras de la nota** (excepción a la regla 1), el mismo valor que la fuente pero **en
     notación chilena**: coma decimal y punto de miles ("156,85", "0,74 %", "4.000 dólares"). FXStreet escribe los
     decimales en inglés ("156.85"): conviértelos, porque copiados así el bot los descarta. El bot lee la página y
