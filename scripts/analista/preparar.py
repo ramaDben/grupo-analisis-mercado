@@ -75,6 +75,13 @@ def _curva():
     return pi._curva()
 
 
+def _tasa(ticker: str, clase: str, ahora: datetime):
+    """La tasa del banco central del activo (spec 2026-10-24 §3)."""
+    from analista import tasa_banco
+
+    return tasa_banco.leer(ticker, clase, ahora)
+
+
 def _drivers(ticker: str) -> list[str]:
     """Los drivers que el catálogo declara para el activo (`config/activos.json`)."""
     from analista import RAIZ
@@ -307,6 +314,7 @@ class Lectores:
     lectura_actual: Callable[..., tuple[Any, dict[str, Any]]] = _lectura_actual
     ancla: Callable[[str], tuple[str, dict[str, Any]] | None] = segmentos.segmento_y_ancla
     empresa: Callable[[str, dict[str, Any]], dict[str, Any]] = _empresa
+    tasa: Callable[[str, str, datetime], tuple[dict[str, Any] | None, str | None]] = _tasa
 
 
 @dataclass
@@ -454,6 +462,10 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
              "fundamental": {"fuera_catalogo": bool(cat.get("fuera_catalogo")), "sin_drivers": not drivers,
                              "referencia": origen}}
     datos["fuente_directa"] = {"segmento": segmento, "ancla": ancla, "consultas": segmentos.consultas(ancla)}
+    tasa, aviso_tasa = lec.tasa(ticker, cat.get("clase") or segmento, ahora)
+    datos["tasa"] = tasa
+    if aviso_tasa:
+        avisos.append(aviso_tasa)
     if empresa is not None:
         datos["empresa"] = empresa
     previa = rg.anterior(ticker, lec.registro or rg.RUTA)

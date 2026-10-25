@@ -93,6 +93,7 @@ def _lectores(base, **kw):
         hechos=lambda t, n, direccion, curva, eventos, ahora: ([], []),
         rendir_calendario=_calendario_falso, curva=lambda: ({}, []),
         ancla=lambda t: fx.SELLO_ORO, cuenta=lambda: None, registro=base.parent / "registro_no_usado.json",
+        tasa=lambda t, clase, ahora: (None, None),
         # La referencia semanal se verifica contra el mercado de hoy: por defecto, sigue igual.
         lectura_actual=lambda est, t, d, lector, ahora, referencia=None: (
             referencia or fx.lectura(ticker=t), {"H4": pd.DataFrame(columns=["time", "high", "low"])}))
@@ -107,6 +108,27 @@ def test_el_analisis_trae_un_solo_activo_con_su_vigencia(tmp_path):
     assert d["vigencia"] == {"desde": "lunes 12/10", "hasta": "lunes 19/10"}
     assert d["fundamental"] == {"fuera_catalogo": False, "sin_drivers": False, "referencia": "semanal"}
     assert set(hecha.pieza["editorial"]) == {"titular", "bajada", "titulares", "contexto", "fuentes", "noticia"}
+
+
+def test_oportunidad_sella_la_tasa(tmp_path):
+    vistos = []
+    tasa = {"banco": "fed", "nombre": "Reserva Federal (Fed)", "serie": "Tasa efectiva de fondos federales",
+            "valor": "3,88", "fecha": "09/10", "linea": "x", "motivo_imagen": "banco_central"}
+
+    def leer(t, clase, ahora):
+        vistos.append((t, clase))
+        return tasa, None
+
+    hecha = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES,
+                        _lectores(tmp_path / "ref", tasa=leer))
+    assert hecha.pieza["datos"]["tasa"] == tasa
+    assert vistos == [("XAUUSD", "commodities")]  # sin clase en el catálogo, manda el segmento
+
+
+def test_oportunidad_sin_tasa_avisa(tmp_path):
+    hecha = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES,
+                        _lectores(tmp_path / "ref", tasa=lambda t, c, a: (None, "La tasa venció.")))
+    assert hecha.pieza["datos"]["tasa"] is None and "La tasa venció." in hecha.avisos
 
 
 def test_preparar_sella_la_fuente_directa_del_activo(tmp_path):
