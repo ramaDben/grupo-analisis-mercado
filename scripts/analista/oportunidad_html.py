@@ -784,7 +784,7 @@ def _hero_activo(a: dict[str, Any], titular: str, c: dict[str, str], bajada: str
     )
 
     nombre_autor = _nombre_firma(autor.nombre) if autor else "Benjamín Bravo Soza"
-    cargo_autor = autor.cargo if autor else "Departamento de Análisis Técnico"
+    cargo_autor = autor.cargo if autor else "Departamento de Estudios"
     vigencia_txt = (
         f"Vigencia: {d['vigencia']['desde']} al {d['vigencia']['hasta']} · Hora de Chile"
         if d and "vigencia" in d else ""
@@ -937,7 +937,7 @@ def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: P
             f'«{ih.e(salida)}»</p>'
             f'<p style="margin:0;font-family:{F_SANS};font-size:12px;line-height:16px;font-weight:700;'
             f'letter-spacing:0.8px;text-transform:uppercase;color:{c["acento"]};">'
-            'Departamento de Análisis Técnico · Grupo Inteligencia</p>'
+            'Departamento de Estudios · Grupo Inteligencia</p>'
             f'</td></tr></table>'
         )
 
