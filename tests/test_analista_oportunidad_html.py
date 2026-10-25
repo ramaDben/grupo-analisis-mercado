@@ -1096,3 +1096,127 @@ def test_el_correo_cita_un_banco_y_la_directa_a_la_vez(tmp_path):
     assert "Lo último de oro" in correo and "Qué dice la banca" in correo
     assert correo.index("Lo último de oro") < correo.index("Qué dice la banca")
     assert correo.count("Coincide con nuestra lectura") == 1
+
+
+# El correo abre con la noticia y cierra con el análisis firmado (spec 2026-10-24 §5).
+NOTICIA = {"medio": "Reuters", "fecha": "2026-10-11",
+           "url": "https://www.reuters.com/markets/commodities/gold-dips-2026-10-11/",
+           "titular_original": "Gold dips as dollar firms", "extracto": "Gold fell.",
+           "titular": "El oro cede terreno mientras el dólar se fortalece",
+           "bajada": "Según Reuters, el metal pierde fuerza frente a un dólar más firme.", "motivo": "oro_lingotes"}
+TASA = {"banco": "fed", "nombre": "Reserva Federal (Fed)", "serie": "Tasa efectiva de fondos federales",
+        "valor": "3,88", "fecha": "09/10", "linea": "Una tasa alta en EE.UU. hace más atractivo el dólar.",
+        "motivo_imagen": "banco_central"}
+
+
+def _con_apertura(tmp_path, noticia=True, tasa=True, imagenes=True, **cambios):
+    p = _pieza(tmp_path)
+    if noticia:
+        p["editorial"]["noticia"] = {**NOTICIA, **cambios}
+    if tasa:
+        p["datos"]["tasa"] = dict(TASA)
+        p["huella"] = es._huella(p)
+    if imagenes:
+        p["ilustraciones"] = {}
+        for clave, activa in (("noticia", noticia), ("tasa", tasa)):
+            if activa:
+                # Bytes distintos por imagen: dos PNG idénticos comparten URI y el publicador no los distingue.
+                (tmp_path / f"ilustracion_{clave}.png").write_bytes(fx.PNG + clave.encode())
+                p["ilustraciones"][clave] = f"ilustracion_{clave}.png"
+    return p
+
+
+def test_correo_abre_con_la_noticia(tmp_path):
+    correo = _correo(oh.armar(_con_apertura(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+    i = [correo.index(x) for x in (NOTICIA["titular"], "Tasa efectiva de fondos federales",
+                                   "Los tres escenarios", "Simulación realizada por")]
+    assert i == sorted(i)
+    assert "MERCADO HOY · ORO (XAU/USD)" in correo
+
+
+def test_firma_al_pie_del_analisis(tmp_path):
+    for p in (_con_apertura(tmp_path), _pieza(tmp_path)):
+        correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+        firma = correo.index("Realizado por Benjamín Bravo Soza · Departamento de Estudios GI")
+        assert correo.index("Los tres escenarios") < firma < correo.index("Simulación realizada por")
+
+
+def test_rotulo_imagen_ilustrativa(tmp_path):
+    rotulo = ">Imagen ilustrativa</p>"
+    assert _correo(oh.armar(_con_apertura(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)).count(rotulo) == 2
+    p = _con_apertura(tmp_path, tasa=False)
+    assert _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)).count(rotulo) == 1
+    p = _con_apertura(tmp_path, imagenes=False)
+    assert "Imagen ilustrativa" not in _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+
+
+def test_noticia_vencida_dice_su_fecha(tmp_path):
+    p = _con_apertura(tmp_path)
+    vigente = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+    assert "Fuente: Reuters · 11 de octubre" in vigente and "Noticia del" not in vigente
+    vieja = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, date(2026, 10, 16)))
+    assert "Noticia del domingo 11 de octubre" in vieja
+
+
+def test_directa_repetida_no_se_duplica(tmp_path):
+    p = _con_apertura(tmp_path)
+    p["editorial"]["fuentes"] = [*p["editorial"]["fuentes"], dict(fx.DIRECTA_ORO)]
+    url = fx.DIRECTA_ORO["url"]
+    assert "Lo último de oro" in _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))  # sin repetir, sale
+    p["editorial"]["noticia"]["url"] = url
+    correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+    assert correo.count(f'href="{url}"') == 1 and "Lo último de oro" not in correo
+
+
+def test_asunto_sigue_a_la_noticia(tmp_path):
+    html = oh.armar(_con_apertura(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    marco = re.search(r'<template id="correo-marco">(.*?)</template>', html, re.S).group(1)
+    assert f"Asunto sugerido:</strong> {NOTICIA['titular']}" in marco
+    assert f"Preheader:</strong> {NOTICIA['bajada']}" in marco
+    crudo = re.search(r'<script id="datos" type="application/json">(.*?)</script>', html, re.S).group(1)
+    assert json.loads(crudo)["editable"]["activos"]["XAUUSD"]["titular"] == NOTICIA["titular"]
+
+
+def test_asunto_sin_noticia_es_el_de_hoy(tmp_path):
+    p = _con_apertura(tmp_path, noticia=False)
+    a = p["datos"]["activos"][0]
+    marco = re.search(r'<template id="correo-marco">(.*?)</template>',
+                      oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY), re.S).group(1)
+    assert f"Asunto sugerido:</strong> {oh.ih.e(oh.asunto_sugerido(a, p['editorial']['fuentes']))}" in marco
+
+
+def test_pieza_vieja_se_arma(tmp_path):
+    p = _pieza(tmp_path)
+    assert "noticia" not in p["editorial"] and "tasa" not in p["datos"] and "ilustraciones" not in p
+    correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+    assert "Los tres escenarios" in correo and "Imagen ilustrativa" not in correo
+
+
+def test_tasa_con_nombre_real(tmp_path):
+    for p in (_con_apertura(tmp_path), _con_apertura(tmp_path, noticia=False)):
+        correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+        assert "Tasa efectiva de fondos federales: 3,88 por ciento al 09/10" in correo
+        assert "tasa de la Fed" not in correo
+
+
+def test_sin_noticia_la_tasa_va_en_la_apertura_oscura(tmp_path):
+    c = oh.paleta_correo(oh.paleta())
+    correo = _correo(oh.armar(_con_apertura(tmp_path, noticia=False), tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+    hero = correo[correo.index(f'bgcolor="{c["hero"]}"'):correo.index('<td class="pad"')]
+    assert "Tasa efectiva de fondos federales" in hero
+
+
+def test_correo_sin_var_ni_rgba(tmp_path):
+    for p in (_con_apertura(tmp_path), _con_apertura(tmp_path, noticia=False)):
+        correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+        assert "var(" not in correo and "rgba(" not in correo
+        assert "—" not in correo and "–" not in correo
+
+
+def test_con_publicador_las_ilustraciones_van_por_url(tmp_path):
+    html = oh.armar(_con_apertura(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY,
+                    publicar=lambda r: f"https://ejemplo.test/correos/{r.name}")
+    correo = _correo(html)
+    assert "ejemplo.test/correos/ilustracion_noticia.png" in correo
+    assert "ejemplo.test/correos/ilustracion_tasa.png" in correo
+    assert "data:image" not in correo
