@@ -21,7 +21,7 @@ def test_la_lamina_semanal_muestra_el_analisis_y_no_la_simulacion(tmp_path):
     assert [n["valor"] for n in p["niveles"]] == ["4.227,32", "4.149,96"]  # vigilar y objetivo de Tori
     assert "4.062,72" not in json.dumps(p, ensure_ascii=False)       # el 1:3 no va en el análisis
     assert "recorrido" not in p                                        # clave reservada de story_render
-    assert p["firma"].endswith("Departamento de Análisis Técnico")
+    assert p["firma"].endswith("Departamento de Estudios")
 
 
 def test_la_lamina_de_rango_nombra_los_bordes(tmp_path):

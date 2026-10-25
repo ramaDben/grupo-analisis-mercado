@@ -1,4 +1,4 @@
-Redacta los textos del análisis de un activo del bot de analistas. Escribe texto en `pieza.json`: no ejecuta pipelines, no rinde imágenes y no envía nada. La única herramienta externa que usas es la búsqueda web, solo para encontrar las fuentes de `fuentes`.
+Redacta los textos del análisis de un activo del bot de analistas. Escribe texto en `pieza.json`: no ejecuta pipelines, no rinde imágenes y no envía nada. La única herramienta externa que usas es la búsqueda web, solo para encontrar las fuentes de `fuentes` y la noticia de `noticia`.
 
 ## /analista — textos del análisis de un activo
 
@@ -13,15 +13,15 @@ y la pone el bot: tú no decides nada visual.
 
 - **Solo** los valores de `editorial` que hoy dicen exactamente `[[ESCRIBIR]]`, incluidos los
   de `editorial.titulares`, `editorial.contexto` y `editorial.dias_clave` (uno por ticker; `dias_clave`
-  existe solo si la agenda trae datos) y `editorial.fuentes`.
+  existe solo si la agenda trae datos), `editorial.fuentes` y `editorial.noticia`.
 - **Segundo intento.** Si `editorial.fuentes` es lo único que dice `[[ESCRIBIR]]` y junto a la pieza
   existe `fuentes_intento_1.json`, el primer intento no trajo ninguna noticia directa del activo. Vuelve a incluir
   tal cual las fuentes de `validas`, no repitas ninguna URL de `descartadas` (sus `motivos` dicen por
   qué cayeron) y agrega al menos una directa (la de `datos.fuente_directa`). No toques los demás textos: ya pasaron los controles.
-- **Nunca** `orden`, `datos`, `imagenes`, `anidados`, `laminas` ni `huella`. Están sellados: si
+- **Nunca** `orden`, `datos`, `imagenes`, `anidados`, `laminas`, `huella` ni `ilustraciones`. Están sellados: si
   cambian, la pieza se descarta entera.
 - **Nunca** agregues ni quites claves de `editorial`.
-- **Ningún otro archivo** del repo. No corras pipelines ni llames al MCP. Usa la web solo para `fuentes`.
+- **Ningún otro archivo** del repo. No corras pipelines ni llames al MCP. Usa la web solo para `fuentes` y `noticia`. No generes imágenes: las elige el bot.
 
 ### Reglas del texto (de `.agents/rules/proyecto.md`, que manda ante cualquier duda)
 
@@ -116,6 +116,30 @@ y la pone el bot: tú no decides nada visual.
   datos del fondo o del mercado (flujos, tenencias, cifras publicadas) y no promoción de producto. Límite conocido:
   el bot no puede verificar esto por código, es una regla de este prompt y la revisa el director. Un exchange
   (Coinbase, Kraken, Binance) o un portal cripto nunca es directa por nombrar la moneda.
+- `noticia`: la noticia actual que abre el correo (spec 2026-10-24), un **objeto** con estos campos de texto, o
+  `null` solo si no hay ninguna que cumpla todo.
+  - **Primero `datos.noticias_candidatas`**: notas de FXStreet en español sobre el activo, de los últimos 3 días, que
+    el bot ya leyó del RSS (la más reciente primero). Si trae al menos una, **elige una de ahí**: abre su `url`, copia
+    `medio`, `fecha`, `url` y `titular_original` tal cual y redacta el resto. Elige la que mejor sostenga una premisa
+    sobre el activo, no necesariamente la primera. No la cambies por otra nota de la web.
+  - Solo si la lista viene vacía, búscala en la web: `medio`, `fecha` (AAAA-MM-DD, **de los últimos 3 días**) y `url`
+    (https, de un artículo concreto, del dominio del medio), mismas reglas de medio que `fuentes`, **primero en
+    español** (FXStreet incluido); Reuters, Bloomberg, FT, WSJ, CNBC o MarketWatch solo si no hay una en español.
+  - `titular_original` y `extracto`: el titular de la nota y el párrafo que sostiene tu titular, en su idioma.
+  - `titular`: una frase en español que sostenga una premisa, hasta 90 caracteres. `bajada`: hasta 200, atribuida
+    ("Según Reuters, …").
+  - **Solo las causas que da la nota.** Si la nota dice que el oro cae por la subida de la energía, la bajada no
+    puede decir "por la firmeza del dólar" aunque sea cierto en otra parte de la pieza: lo atribuido al medio tiene
+    que estar en el medio. El bot verifica las cifras, no las causas: esto lo cuidas tú.
+  - **Acá sí puedes citar cifras de la nota** (excepción a la regla 1), el mismo valor que la fuente pero **en
+    notación chilena**: coma decimal y punto de miles ("156,85", "0,74 %", "4.000 dólares"). FXStreet escribe los
+    decimales en inglés ("156.85"): conviértelos, porque copiados así el bot los descarta. El bot lee la página y
+    descarta la noticia si una cifra no está. Si la nota tiene muro de pago (Reuters, Bloomberg,
+    FT, WSJ), escribe `titular` y `bajada` **sin cifras**: el bot no puede leerla y la descartaría.
+  - `motivo`: el id de la imagen ilustrativa, de `config/motivos_imagen.json` (`oro_lingotes`, `banco_central`,
+    `billetes_dolar`, `peso_chileno`, `cobre`, `petroleo`, `bolsa_pantallas`, `tecnologia`, `acciones_generico`).
+  - Mismos controles de texto que el resto: sin guion largo ni medio, sin "oportunidad", "comprar", "vender" ni
+    "recomienda", siglas explicadas. El `%` vale solo si está en la nota. Puede ser la misma nota que una de `fuentes`.
 - Si `datos.empresa` existe (acciones): trae `proxima_earnings` (día y fecha de los próximos resultados),
   `fuente_fecha` y `ultimo_informe` (forma, fecha y url del último informe de la SEC). Una fecha futura se
   escribe siempre en modo anticipación ("la empresa reportará el jueves 29/10", nunca en pasado), y dices que

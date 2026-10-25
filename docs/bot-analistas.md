@@ -55,6 +55,35 @@ informe con el nombre del cliente se acerca a una recomendación personalizada. 
 El correo que copia el ejecutivo lleva todo eso: lo que pasa hoy, los días clave con la imagen del
 calendario y lo que dicen los bancos con el enlace a cada nota (como máximo 1 a favor y 1 en contra).
 
+**Orden del correo** (spec `docs/superpowers/specs/2026-10-24-correo-noticia-de-apertura-design.md`):
+
+1. **Noticia de apertura** (`noticia.py`): la nota de los últimos 3 días que trae agy en
+   `editorial.noticia`, con imagen ilustrativa, titular-premisa, bajada y la fuente fechada. Sus cifras
+   valen solo si Python leyó la página y las encontró; con muro de pago va sin cifras. Una noticia que
+   no pasa se descarta sola y la pieza sigue (aviso `Noticia de apertura: …`). En el reúso (días 4 a 7)
+   sale igual y dice en palabras de qué día es. Asunto, preheader y titular editable la siguen.
+   **La fuente primera es FXStreet en español** (director, 2026-10-25): la búsqueda web de agy volvió vacía
+   un domingo, así que Python lee `www.fxstreet.es/rss/news` y `/rss/analysis` al preparar, filtra por
+   el titular con los patrones de `config/noticias_fxstreet.json` (o el nombre del activo) y sella hasta
+   5 notas en `datos.noticias_candidatas`; agy elige una de ahí y solo busca en la web si la lista viene
+   vacía. FXStreet escribe los decimales en inglés: agy los pasa a notación chilena, y el validador
+   compara por valor. `es.fxstreet.com` responde 403 a Python. Sin noticia final, el bot avisa
+   `El correo salió sin noticia de apertura (…)`.
+2. **Dato de tasas** (`tasa_banco.py`, `config/tasa_por_activo.json`): Fed, BCCh o BCE según el activo,
+   con el nombre real de la serie y la fecha del dato, sellado en `datos.tasa`. Sin noticia, va dentro de
+   la apertura oscura. Sin dato fresco no sale y se avisa. La imagen va en miniatura a la derecha y en el
+   celular baja a todo el ancho (`.tasa-img`).
+3. Lo que pasa hoy, el dólar, los días clave, la noticia directa (no se repite si es la de apertura) y las voces.
+4. **Análisis técnico**: snapshot, gráfico, escenarios, temporalidad y al pie la firma
+   "Realizado por Benjamín Bravo Soza · Departamento de Estudios GI".
+5. Simulación del ejecutivo y cierre.
+
+**Imágenes ilustrativas** (`ilustracion.py`, `config/motivos_imagen.json`): excepción a la Regla 0. Se
+eligen una vez por pieza, al crearla, desde el banco `data/imagenes_ilustrativas/<motivo>/`
+(gitignoreado), sin repetir una imagen usada en los últimos 7 días; agy genera una nueva solo si falta
+(`generador_imagen.py`, unos 76 s). Quedan en `pieza["ilustraciones"]`, fuera de la huella, y el reúso
+no gasta agy. Si no hay imagen, el correo sale sin ella y el bot lo avisa.
+
 ### Símbolos
 
 Vale cualquier símbolo del terminal MT5 (`simbolos.py`). Los activos del catálogo

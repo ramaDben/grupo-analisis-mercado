@@ -33,8 +33,11 @@ from analista import comercial as cm
 from analista import drive as dv
 from analista import esquema as es
 from analista import fuentes as fu
+from analista import generador_imagen as gi
+from analista import ilustracion as il
 from analista import informe_html as ih
 from analista import macro_seguimiento as mac
+from analista import noticia as nt
 from analista import imagenes_publicas as ip
 from analista import oportunidad_html as oh
 from analista import orden as od
@@ -251,6 +254,17 @@ def _agenda_pasada(pieza: dict[str, Any], ahora: datetime) -> str | None:
     return "ya pasó uno de los días clave de su agenda" if any(e.get("fecha", hoy) < hoy for e in eventos) else None
 
 
+def _aviso_sin_noticia(pieza: dict[str, Any], descartes: list[str]) -> str | None:
+    """Que el ejecutivo sepa que el correo abre con el análisis; si la noticia se descartó, ese aviso ya lo dice."""
+    ed = pieza["editorial"]
+    if "noticia" not in ed or isinstance(ed["noticia"], dict) or any(d.startswith("Noticia de apertura") for d in descartes):
+        return None
+    candidatas = len(pieza["datos"].get("noticias_candidatas") or [])
+    detalle = (f"agy no eligió ninguna de las {candidatas} notas de FXStreet del activo" if candidatas
+               else "no encontré una nota del activo de los últimos 3 días")
+    return f"El correo salió sin noticia de apertura ({detalle}): abre con el análisis."
+
+
 @dataclass
 class Atendedor:
     """Convierte un pedido en archivos. Todo lo externo se inyecta."""
@@ -271,6 +285,9 @@ class Atendedor:
     simbolo: Callable[[str], dict[str, Any] | None] = sm.buscar
     verificar_url: Callable[[str], str] = fu.verificar_url
     publicar_imagen: Callable[[Path], str] | None = ip.publicar  # None: el correo lleva las imágenes embebidas
+    leer_nota: Callable[[str], str | None] = nt.leer_texto
+    generar_imagen: gi.Generador | None = gi.generar_con_agy
+    banco_imagenes: Path = il.BANCO
 
     def analista(self, usuario: str) -> dict[str, Any]:
         return self.config["analistas"][usuario]
@@ -318,6 +335,10 @@ class Atendedor:
         directa = fu.directa_de(pieza)
         lista = fu.lista_del_segmento(directa[0]) if directa else None
         pieza, descartes = fu.depurar_pieza(pieza, hoy, lista=lista, verificar=self.verificar_url)
+        # Una noticia de apertura rota se cae sola y la pieza sigue (spec 2026-10-24 §1).
+        pieza, sin_noticia = nt.depurar_noticia(pieza, hoy, lista=lista, verificar=self.verificar_url,
+                                                leer=self.leer_nota)
+        descartes += sin_noticia
         # Una tesis con un defecto de texto descarta solo esa voz, no la pieza (spec §9).
         pieza, rotas = es.descartar_tesis_rotas(pieza)
         descartes += rotas
@@ -349,6 +370,38 @@ class Atendedor:
                                            dias=fu.cargar_lista().get("frescura_dias", 14),
                                            nombre=pieza["datos"]["activos"][0]["nombre"])
         raise FalloPedido(texto + ("\nLo que descarté:\n• " + "\n• ".join(motivos) if motivos else ""))
+
+    def _ilustrar(self, pieza: dict[str, Any], dir_pedido: Path, ahora: datetime) -> list[str]:
+        """Elige una vez por pieza la imagen de la noticia y la del dato de tasas (spec 2026-10-24 §4).
+
+        Van en `pieza["ilustraciones"]`, fuera de la huella: son decoración, no datos, y el reúso las
+        hereda sin volver a gastar agy.
+        """
+        motivos = {}
+        noticia = pieza["editorial"].get("noticia")
+        if isinstance(noticia, dict):
+            motivos["noticia"] = noticia["motivo"]
+        tasa = pieza["datos"].get("tasa")
+        if isinstance(tasa, dict):
+            motivos["tasa"] = tasa["motivo_imagen"]
+        elegidas, avisos = {}, []
+        for clave, motivo in motivos.items():
+            donde = "de la noticia" if clave == "noticia" else "del dato de tasas"
+            try:
+                origen, aviso = il.elegir(motivo, ahora.date(), self.generar_imagen, self.banco_imagenes, ahora)
+                if origen is not None:
+                    nombre = f"ilustracion_{clave}{origen.suffix.lower()}"
+                    shutil.copyfile(origen, dir_pedido / nombre)
+                    elegidas[clave] = nombre
+            except Exception as exc:  # la pieza ya costó minutos de agy: una imagen no la bota
+                origen, aviso = None, (f"No pude preparar la imagen {donde} ({exc.__class__.__name__}): "
+                                       "el correo la muestra sin imagen.")
+            if aviso:
+                avisos.append(aviso.replace("de la noticia", donde))
+        # Siempre las escribe el bot, también vacías: lo que agy haya dejado en esa clave no sobrevive.
+        pieza["ilustraciones"] = elegidas
+        pr.guardar_pieza(pieza, dir_pedido)
+        return avisos
 
     def _a_drive(self, rutas: list[tuple[Path, str]], ahora: datetime, ticker: str, nombre: str) -> str:
         destino_raiz = self.config.get("ruta_drive") or ""
@@ -405,6 +458,7 @@ class Atendedor:
             dir_pedido = self.dir_pedidos / ahora.strftime("%Y-%m-%d") / f"{ahora:%H%M%S}_oportunidad_{ih.slug(ticker)}"
             hecha = self._preparar(pedido.orden, dir_pedido, ahora)
             pieza, descartes, reintento = self._con_fuente_directa(dir_pedido, ahora.date())
+            ilustradas = self._ilustrar(pieza, dir_pedido, ahora)
             a = pieza["datos"]["activos"][0]
             # La lámina se rinde antes del HTML: sin ella no hay botón «Descargar lámina».
             self.rendir_lamina(
@@ -415,9 +469,13 @@ class Atendedor:
             if not pedido.forzar:
                 self.estado.consumir(pedido.usuario, ahora)
             self.estado.guardar()
-            avisos += [*hecha.avisos, *[f"Descarté una fuente: {d}" for d in descartes]]
+            avisos += [*hecha.avisos, *ilustradas,
+                       *[d if d.startswith("Noticia de apertura") else f"Descarté una fuente: {d}" for d in descartes]]
             if reintento:
                 avisos.append("La primera búsqueda no trajo ninguna noticia directa: hice un segundo intento y ese sí la trajo.")
+            aviso_noticia = _aviso_sin_noticia(pieza, descartes)
+            if aviso_noticia:
+                avisos.append(aviso_noticia)
         try:
             try:
                 ruta = oh.guardar(pieza, dir_pedido, ejecutivo, self.autor, ahora.date(), self.publicar_imagen)

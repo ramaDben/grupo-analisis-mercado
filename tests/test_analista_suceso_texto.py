@@ -253,7 +253,7 @@ def test_payload_suceso_claves(tmp_path):
         "calidad": "A+",
         "nota_semana": "",
     }
-    autor = SimpleNamespace(nombre="Benjamín Bravo", cargo="Departamento de Análisis Técnico")
+    autor = SimpleNamespace(nombre="Benjamín Bravo", cargo="Departamento de Estudios")
     payload = cm.payload_suceso(activo, resumen, "21-10 · 11:30 CLST", autor, chart)
 
     assert set(payload.keys()) == CLAVES_ESPERADAS_PAYLOAD

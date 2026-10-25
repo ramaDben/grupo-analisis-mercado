@@ -63,6 +63,9 @@ class Armado:
         self.eventos: list[dict] = []  # el calendario falso: vacío salvo que la prueba lo llene
         self.registro = tmp_path / "registro.json"
         self.reintentos: list = []
+        self.tasa: dict | None = None  # `datos.tasa` sellado por el preparar falso
+        self.generadas: list = []
+        self.generar_falla = False
         self.atendedor = b.Atendedor(
             config, b.Estado.cargar(tmp_path / "estado.json"), autor=fx.AUTOR, preparar=self.preparar_falso,
             redactar=redactor(self.llamadas), redactar_fuentes=self.redactar_fuentes_falso, rendir_lamina=self.rendir_falso, a_pdf=self.pdf_falso, reloj=self.reloj,
@@ -70,9 +73,18 @@ class Armado:
             calendario=lambda ahora: self.eventos,
             verificar_vigencia=lambda pieza, ahora: (self.caduca, self.aviso_vigencia),
             simbolo=lambda t: {"ticker": "XAUUSD", "descripcion": "Gold", "digits": 2} if t.lower() == "xauusd" else None,
-            verificar_url=lambda url: "ok", publicar_imagen=None)
+            verificar_url=lambda url: "ok", publicar_imagen=None,
+            leer_nota=lambda url: "", generar_imagen=self.generar_falso, banco_imagenes=tmp_path / "banco")
         self.bot = b.Bot(TgFalso(), self.atendedor)
         self.estado = self.atendedor.estado
+
+    def generar_falso(self, prompt, destino):
+        if self.generar_falla:
+            raise b.gi.ImagenNoGenerada("sin agy")
+        self.generadas.append(destino)
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        destino.write_bytes(fx.PNG)
+        return destino
 
     def redactar_fuentes_falso(self, ruta, tier):
         """Por defecto el segundo intento no escribe nada: cada prueba que lo usa lo reemplaza."""
@@ -87,6 +99,9 @@ class Armado:
             pieza = fx.pieza_oportunidad(dir_pedido)
             pieza["editorial"] = {k: ({t: es.MARCA for t in v} if isinstance(v, dict) else es.MARCA)
                                   for k, v in pieza["editorial"].items()}
+            if self.tasa is not None:
+                pieza["datos"]["tasa"] = self.tasa
+                pieza["huella"] = es._huella(pieza)
         else:
             pieza = fx.pieza_seguimiento(dir_pedido)
             pieza["datos"]["suceso"] = {
@@ -854,3 +869,106 @@ def test_la_ayuda_incluye_instrucciones_completas_analista():
     assert "director" in a  # a quién escribir si falla
     assert "jornada hábil" in a  # el bot vive en el PC del director
     assert "—" not in a and "–" not in a
+
+
+NOTICIA_ORO = {"medio": "Reuters", "fecha": "2026-10-07",
+               "url": "https://www.reuters.com/markets/commodities/gold-recovers-2026-10-07/",
+               "titular_original": "Gold recovers as dollar rally stalls", "extracto": "Gold rose.",
+               "titular": "El oro se recupera mientras el dólar pierde impulso",
+               "bajada": "Según Reuters, el metal gana terreno frente a un dólar sin fuerza.", "motivo": "oro_lingotes"}
+TASA_FED = {"banco": "fed", "nombre": "Reserva Federal (Fed)", "serie": "Tasa efectiva de fondos federales",
+            "valor": "3,88", "fecha": "07/10", "linea": "x", "motivo_imagen": "banco_central"}
+
+
+def _con_noticia(armado, noticia):
+    base = redactor(armado.llamadas)
+
+    def redactar(ruta, tier):
+        base(ruta, tier)
+        pieza = pr.cargar_pieza(ruta.parent)
+        pieza["editorial"]["noticia"] = noticia
+        pr.guardar_pieza(pieza, ruta.parent)
+        return SimpleNamespace(codigo="ok", detalle="")
+    armado.atendedor.redactar = redactar
+
+
+def _pieza_guardada(armado):
+    return pr.cargar_pieza(next((armado.tmp / "pedidos").rglob("pieza.json")).parent)
+
+
+def test_noticia_rota_no_bota_la_pieza(armado):
+    _con_noticia(armado, {**NOTICIA_ORO, "bajada": "Según Reuters, el oro subió a 4.200 dólares."})
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert r.archivos and "⚠️ Noticia de apertura: " in r.aparte
+    assert "Descarté una fuente: Noticia" not in r.aparte
+    assert _pieza_guardada(armado)["editorial"]["noticia"] is None
+
+
+def test_sin_noticia_avisa_que_el_correo_abre_con_el_analisis(armado):
+    _con_noticia(armado, None)
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert r.archivos and r.aparte.count("sin noticia de apertura") == 1
+
+
+def test_noticia_descartada_avisa_una_sola_vez(armado):
+    _con_noticia(armado, {**NOTICIA_ORO, "bajada": "Según Reuters, el oro subió a 4.200 dólares."})
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert "Noticia de apertura: " in r.aparte and "sin noticia de apertura" not in r.aparte
+
+
+def test_con_noticia_no_avisa_que_falta(armado):
+    _con_noticia(armado, NOTICIA_ORO)
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert r.archivos and "sin noticia de apertura" not in r.aparte
+
+
+def test_ilustraciones_se_eligen_una_vez(armado):
+    armado.tasa = TASA_FED
+    _con_noticia(armado, NOTICIA_ORO)
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    pieza = _pieza_guardada(armado)
+    ilu = pieza["ilustraciones"]
+    assert r.archivos and set(ilu) == {"noticia", "tasa"}
+    dir_pedido = next((armado.tmp / "pedidos").rglob("pieza.json")).parent
+    assert all((dir_pedido / f).exists() for f in ilu.values())
+    assert es.errores(pieza) == []  # `ilustraciones` no rompe la huella
+
+
+def test_reuso_no_genera_imagenes(armado):
+    armado.tasa = TASA_FED
+    _con_noticia(armado, NOTICIA_ORO)
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    antes = len(armado.generadas)
+    armado.bot.procesar_uno(b.Pedido(OTRO, 1, ORO))
+    assert antes == 2 and len(armado.generadas) == antes
+
+
+def test_sin_imagen_avisa(armado):
+    armado.generar_falla = True
+    _con_noticia(armado, NOTICIA_ORO)
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert r.archivos and "sin imagen" in r.aparte
+    assert "noticia" not in _pieza_guardada(armado).get("ilustraciones", {})
+
+
+def test_un_error_inesperado_de_imagen_no_bota_la_pieza(armado):
+    def generar_roto(prompt, destino):
+        raise OSError("disco lleno")
+    armado.atendedor.generar_imagen = generar_roto
+    _con_noticia(armado, NOTICIA_ORO)
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert r.archivos and "sin imagen" in r.aparte
+
+
+def test_ilustraciones_escritas_por_agy_se_pisan(armado):
+    base = redactor(armado.llamadas)
+
+    def redactar(ruta, tier):
+        base(ruta, tier)
+        pieza = pr.cargar_pieza(ruta.parent)
+        pieza["ilustraciones"] = {"noticia": "../../secreto.png"}
+        pr.guardar_pieza(pieza, ruta.parent)
+        return SimpleNamespace(codigo="ok", detalle="")
+    armado.atendedor.redactar = redactar
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert _pieza_guardada(armado).get("ilustraciones", {}) == {}

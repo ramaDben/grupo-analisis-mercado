@@ -27,10 +27,15 @@ from analista import fuentes as fu
 CAMPOS: dict[str, tuple[str, ...]] = {
     # El análisis de un activo: portada, un titular y un contexto anidados por activo, y las voces
     # de bancos y prensa que agy encontró en la web (lista de objetos, ver `fuentes.py`).
-    "oportunidad": ("titular", "bajada", "fuentes"),
+    # `noticia` es la noticia de apertura del correo (spec 2026-10-24): un objeto que valida y depura
+    # `noticia.py`, opcional (una pieza anterior no la trae) y que puede quedar en `None`.
+    "oportunidad": ("titular", "bajada", "fuentes", "noticia"),
     # El seguimiento no pasa por agy, pero su `pieza.json` usa el mismo sello.
     "seguimiento": (),
 }
+
+# Campos que una pieza puede no traer: las anteriores al spec 2026-10-24 no tienen noticia.
+OPCIONALES: tuple[str, ...] = ("noticia",)
 
 # El titular y la bajada también van impresos dentro de las láminas de WhatsApp,
 # que tienen el espacio medido: un titular largo se corta en la imagen.
@@ -139,6 +144,8 @@ def nueva_pieza(
 def textos(pieza: dict[str, Any]) -> list[tuple[str, str]]:
     salida: list[tuple[str, str]] = []
     for campo, valor in pieza.get("editorial", {}).items():
+        if campo in OPCIONALES:  # la noticia tiene sus propios controles (`noticia.py`)
+            continue
         if isinstance(valor, dict):
             salida.extend((f"{campo}.{k}", str(v)) for k, v in valor.items())
         elif isinstance(valor, list):  # `fuentes`: solo la tesis es texto de agy; lo demás lo valida `fuentes.py`
@@ -247,7 +254,7 @@ def errores(pieza: dict[str, Any]) -> list[str]:
     editorial = pieza.get("editorial", {})
     anidados = pieza.get("anidados", {})
     esperados = set(CAMPOS[tipo]) | set(anidados)
-    for faltante in sorted(esperados - set(editorial)):
+    for faltante in sorted(esperados - set(editorial) - set(OPCIONALES)):
         errs.append(f"{faltante}: falta el campo")
     for sobrante in sorted(set(editorial) - esperados):
         errs.append(f"{sobrante}: campo no previsto")
@@ -255,6 +262,10 @@ def errores(pieza: dict[str, Any]) -> list[str]:
         valor = editorial.get(campo)
         if not isinstance(valor, dict) or set(valor) != set(ids):
             errs.append(f"{campo}: tiene que traer exactamente {', '.join(ids) or 'ningún elemento'}")
+
+    noticia = editorial.get("noticia")
+    if tipo == "oportunidad" and noticia not in (None, MARCA) and not isinstance(noticia, dict):
+        errs.append("noticia: tiene que ser un objeto o null")
 
     fuentes = editorial.get("fuentes") if tipo == "oportunidad" else None
     if tipo == "oportunidad" and fuentes != MARCA:
@@ -296,9 +307,11 @@ def errores(pieza: dict[str, Any]) -> list[str]:
 
 
 def _errores_de_texto(donde: str, texto: str, tipo: str, datos: Any,
-                      fuentes: list[dict[str, Any]] | tuple = ()) -> list[str]:
+                      fuentes: list[dict[str, Any]] | tuple = (), cifras: bool = True,
+                      porcentaje: bool = True) -> list[str]:
     """Los controles de texto de un campo. La `tesis` de una fuente no pasa por el de cifras:
-    la cifra es del tercero citado."""
+    la cifra es del tercero citado. La noticia de apertura apaga el de cifras y el de `%`
+    (`cifras=False, porcentaje=False`): sus cifras las contrasta `noticia.py` con la nota."""
     errs = list(validar_textos([(donde, texto)]))
     if _HTML.search(texto):
         errs.append(f"{donde}: trae HTML; la maqueta la pone la plantilla, no el texto")
@@ -311,7 +324,7 @@ def _errores_de_texto(donde: str, texto: str, tipo: str, datos: Any,
         for frase in frases_prohibidas(texto, FRASES_PROHIBIDAS_SEMANAL):
             errs.append(f"{donde}: «{frase}» empuja a entrar o habla de cuánto acierta; "
                         "la pieza semanal describe un escenario")
-        if "%" in texto:
+        if porcentaje and "%" in texto:
             errs.append(f"{donde}: trae un porcentaje, y la pieza semanal no muestra ninguno")
         plano = _plano(texto)
         if _OPERAR.search(plano):
@@ -321,7 +334,7 @@ def _errores_de_texto(donde: str, texto: str, tipo: str, datos: Any,
         if m:
             errs.append(f"{donde}: «{m.group(0)}» invita a comprar, vender o entrar; la pieza describe "
                         "un escenario, no invita a operar")
-    if not donde.endswith(".tesis"):
+    if cifras and not donde.endswith(".tesis"):
         for cifra in cifras_ajenas(texto, datos, fuentes):
             errs.append(f"{donde}: la cifra {cifra} no está en los datos del terminal")
     return errs
@@ -330,6 +343,11 @@ def _errores_de_texto(donde: str, texto: str, tipo: str, datos: Any,
 def errores_tesis(tesis: str) -> list[str]:
     """Los controles de texto que rompe la `tesis` de una fuente (los mismos del resto de la pieza)."""
     return _errores_de_texto("fuentes.tesis", tesis, "oportunidad", None)
+
+
+def errores_texto_noticia(donde: str, texto: str) -> list[str]:
+    """Los controles de texto de la noticia de apertura, sin el de cifras ni el de `%` (spec 2026-10-24 §1)."""
+    return _errores_de_texto(donde, texto, "oportunidad", None, cifras=False, porcentaje=False)
 
 
 def descartar_tesis_rotas(pieza: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:

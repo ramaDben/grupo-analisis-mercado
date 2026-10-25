@@ -1,0 +1,31 @@
+{
+  "_nota": "El banco central cuya tasa abre el correo de /oportunidad, por activo (spec 2026-10-24 §3). `por_ticker` manda sobre `por_clase`; la clase es la del catálogo o, fuera de él, el segmento. `linea` es la frase pedagógica fija, sin agy: la revisa el director. Se muestra el nombre real de la serie, nunca 'la tasa de la Fed' (DFF es la efectiva, no el rango objetivo).",
+  "bancos": {
+    "fed": {
+      "nombre": "Reserva Federal (Fed)",
+      "archivo": "data central/DATA USA/raw/treasury_fed_data.json",
+      "ruta": ["curva_rendimientos_yields", "DFF"],
+      "serie": "Tasa efectiva de fondos federales",
+      "linea": "Una tasa alta en EE.UU. hace más atractivo el dólar frente al oro y las acciones."
+    },
+    "bcch": {
+      "nombre": "Banco Central de Chile",
+      "archivo": "data central/DATA CHILE/raw/bcch_macro_data.json",
+      "ruta": ["series", "TPM"],
+      "serie": "Tasa de Política Monetaria (TPM)",
+      "linea": "Una TPM más baja que la de la Fed suele empujar el dólar al alza frente al peso."
+    },
+    "bce": {
+      "nombre": "Banco Central Europeo (BCE)",
+      "archivo": "data central/DATA EUROPA UK/raw/bce_boe_data.json",
+      "ruta": ["series", "BCE_DFR"],
+      "serie": "Tasa de depósito del BCE",
+      "linea": "Una tasa del BCE más alta sostiene al euro frente al dólar."
+    }
+  },
+  "por_ticker": {"USDCLP": "bcch", "COPPER": "bcch", "EURUSD": "bce", "GER40.spot": "bce"},
+  "por_clase": {
+    "forex_commodities": "fed", "indices": "fed", "acciones": "fed", "etfs": "fed", "crypto": "fed",
+    "commodities": "fed", "fx": "fed", "cripto": "fed"
+  }
+}

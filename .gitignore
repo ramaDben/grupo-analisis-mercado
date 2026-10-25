@@ -34,6 +34,8 @@ data/linkedin/
 # los payloads de trabajo y la carpeta _revision de rendir_todas.py. Los payloads
 # que SI se versionan viven en tests/fixtures/stories/payloads/.
 data/stories/
+# Imágenes generadas que se rehacen solas
+data/imagenes_ilustrativas/
 data/plan_hoy.json
 data/datos_entregables.json
 data/ultimo_analisis.json

@@ -17,6 +17,7 @@ from analista import comercial as cm
 from analista import esquema as es
 from analista import fuentes as fu
 from analista import informe_html as ih
+from analista import noticia as nt
 from analista import oportunidad as op
 
 PLANTILLA = RAIZ / "templates" / "oportunidad" / "pieza.html"
@@ -754,51 +755,99 @@ def _distancia_objetivo(lec: dict[str, Any]) -> str:
     return f"A {abs(objetivo - precio) / precio * 100:.2f} % del precio de referencia".replace(".", ",", 1)
 
 
-def _hero_activo(a: dict[str, Any], titular: str, c: dict[str, str], bajada: str = "", autor=None,
-                 d: dict[str, Any] | None = None) -> str:
-    """La apertura oscura del activo: kicker, titular, bajada, firma y snapshot de 4 cifras."""
-    lec, f = a["lectura"], a["fmt"]
-    titular_final = titular or titular_base(a)
-
-    # El logo de GI va solo, a la derecha del rótulo: la marca firma la apertura sin competir con el titular.
-    kicker = _tabla(
+def _kicker(texto: str) -> str:
+    """El rótulo de la apertura oscura con el logo de GI solo, a la derecha: la marca firma sin competir con el titular."""
+    return _tabla(
         f'<tr><td valign="middle" style="padding:0 12px 10px 0;">'
         f'<p style="margin:0;font-family:{F_SANS};font-size:12px;line-height:16px;font-weight:700;'
-        f'letter-spacing:1.8px;text-transform:uppercase;color:#50C0A8;">'
-        f'ANÁLISIS TÉCNICO Y FUNDAMENTAL · {ih.e(a["nombre"].upper())} ({ih.e(a["ticker_visible"])})'
-        f'</p></td>'
+        f'letter-spacing:1.8px;text-transform:uppercase;color:#50C0A8;">{ih.e(texto)}</p></td>'
         f'<td valign="top" align="right" width="52" style="padding:0 0 10px 0;">'
         f'<img src="{ih._data_uri(ih.LOGO)}" width="48" height="48" alt="Grupo Inteligencia" '
         f'style="display:block;border:0;width:48px;height:48px;"></td></tr>'
     )
 
-    titular_bloque = (
-        f'<h1 class="hero-title" data-ed="titular" style="margin:0 0 14px 0;font-family:{F_SANS};font-size:25px;line-height:32px;'
-        f'font-weight:800;letter-spacing:-0.3px;color:{c["blanco"]};">'
-        f'{ih.e(titular_final)}</h1>'
+
+def _titular_hero(titular: str, c: dict[str, str]) -> str:
+    return (f'<h1 class="hero-title" data-ed="titular" style="margin:0 0 14px 0;font-family:{F_SANS};font-size:25px;'
+            f'line-height:32px;font-weight:800;letter-spacing:-0.3px;color:{c["blanco"]};">{ih.e(titular)}</h1>')
+
+
+def _bajada_hero(bajada: str, c: dict[str, str], margen: str = "0 0 20px 0") -> str:
+    return (f'<p style="margin:{margen};font-family:{F_SANS};font-size:15px;line-height:23px;font-weight:400;'
+            f'color:{c["hero_texto_2"]};">{ih.e(bajada)}</p>' if bajada else "")
+
+
+def _imagen_ilustrativa(ruta: Path | None, c: dict[str, str], oscuro: bool, ancho: int = 558) -> str:
+    """La imagen del catálogo a todo el ancho, con su rótulo: el cliente sabe que no es una foto del hecho."""
+    if ruta is None or not ruta.exists():
+        return ""
+    return (
+        f'<img src="{ih._data_uri(ruta)}" width="{ancho}" height="{_alto_png(ruta, ancho)}" alt="Imagen ilustrativa" '
+        f'style="display:block;border:0;width:{ancho}px;max-width:100%;height:auto;border-radius:8px;">'
+        f'<p style="margin:5px 0 {16 if ancho == 558 else 0}px 0;font-family:{F_SANS};font-size:11px;line-height:14px;'
+        f'color:{c["hero_rotulo"] if oscuro else c["texto_2"]};">Imagen ilustrativa</p>'
     )
 
-    bajada_bloque = (
-        f'<p style="margin:0 0 20px 0;font-family:{F_SANS};font-size:15px;line-height:23px;font-weight:400;'
-        f'color:{c["hero_texto_2"]};">{ih.e(bajada)}</p>' if bajada else ""
+
+def _fecha_palabras(iso: str, con_dia: bool = False) -> str:
+    """«11 de octubre», o «domingo 11 de octubre»; una fecha que no se lee queda tal cual."""
+    try:
+        f = datetime.strptime(iso, "%Y-%m-%d").date()
+    except ValueError:
+        return iso
+    texto = f"{f.day} de {cm.MESES[f.month - 1]}"
+    return f"{ag.DIAS[f.weekday()]} {texto}" if con_dia else texto
+
+
+def _apertura_noticia(n: dict[str, Any], a: dict[str, Any], imagen: Path | None, hoy: date | None,
+                      c: dict[str, str]) -> str:
+    """La apertura oscura con la noticia: imagen, kicker, titular-premisa, bajada y la fuente fechada (spec §1).
+
+    Pasada la ventana de 3 días (reúso, opción 2b) la línea de fuente dice en palabras de qué día es,
+    para que no se lea como de hoy.
+    """
+    fuente = f"Fuente: {n['medio']} · {_fecha_palabras(n['fecha'])} →"
+    if hoy is not None and not nt.vigente(n, hoy):
+        fuente = f"Noticia del {_fecha_palabras(n['fecha'], con_dia=True)} · Fuente: {n['medio']} →"
+    enlace = (f'<p style="margin:0;font-family:{F_SANS};font-size:12px;line-height:17px;font-weight:600;">'
+              f'<a href="{ih.e(n["url"])}" target="_blank" rel="noopener noreferrer" '
+              f'style="color:#50C0A8;text-decoration:underline;">{ih.e(fuente)}</a></p>')
+    return (
+        f'<tr><td class="pad-hero" bgcolor="{c["hero"]}" style="padding:26px 36px 26px 36px;background:{c["hero"]};">'
+        + _kicker(f'MERCADO HOY · {a["nombre"].upper()} ({a["ticker_visible"]})')
+        + _imagen_ilustrativa(imagen, c, oscuro=True)
+        + _titular_hero(n["titular"], c) + _bajada_hero(n["bajada"], c, margen="0 0 14px 0") + enlace
+        + '</td></tr>'
     )
 
-    nombre_autor = _nombre_firma(autor.nombre) if autor else "Benjamín Bravo Soza"
-    cargo_autor = autor.cargo if autor else "Departamento de Análisis Técnico"
-    vigencia_txt = (
-        f"Vigencia: {d['vigencia']['desde']} al {d['vigencia']['hasta']} · Hora de Chile"
-        if d and "vigencia" in d else ""
-    )
-    firma_hero = (
-        f'<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 22px 0;">'
-        f'<tr><td style="border-left:2px solid #50C0A8;padding-left:10px;">'
-        f'<p style="margin:0;font-family:{F_SANS};font-size:12px;line-height:17px;font-weight:600;color:{c["hero_rotulo"]};">'
-        f'Realizado por {ih.e(nombre_autor)} · {ih.e(cargo_autor)} GI</p>'
-        + (f'<p style="margin:1px 0 0 0;font-family:{F_SANS};font-size:12px;line-height:16px;color:#50C0A8;font-weight:600;">'
-           f'{ih.e(vigencia_txt)}</p>' if vigencia_txt else "")
-        + '</td></tr></table>'
-    )
 
+def _tasa_correo(t: dict[str, Any], imagen: Path | None, c: dict[str, str], oscuro: bool = False) -> str:
+    """El dato de tasas del banco del activo, con el nombre real de la serie y la fecha del dato (spec §3).
+
+    La imagen va en miniatura a la derecha: la imagen grande del correo es la de la noticia. En el celular
+    la columna se apila y la imagen baja a todo el ancho (`.tasa-img`): el dato va siempre con su imagen.
+    """
+    texto = c["blanco"] if oscuro else c["texto_1"]
+    segundo = c["hero_texto_2"] if oscuro else c["texto_borde"]
+    rotulo = "#50C0A8" if oscuro else c["acento"]
+    texto_tasa = (
+        f'<p style="margin:0 0 6px 0;font-family:{F_SANS};font-size:12px;line-height:16px;font-weight:700;'
+        f'letter-spacing:1.8px;text-transform:uppercase;color:{rotulo};">{ih.e(t["nombre"])}</p>'
+        f'<p style="margin:0 0 6px 0;font-family:{F_SANS};font-size:17px;line-height:24px;font-weight:800;color:{texto};">'
+        f'{ih.e(t["serie"])}: {ih.e(t["valor"])} por ciento al {ih.e(t["fecha"])}</p>'
+        f'<p style="margin:0 0 14px 0;font-family:{F_SANS};font-size:14px;line-height:21px;color:{segundo};">'
+        f'{ih.e(t["linea"])}</p>'
+    )
+    miniatura = _imagen_ilustrativa(imagen, c, oscuro, ancho=150)
+    if not miniatura:
+        return texto_tasa
+    return _tabla(f'<tr><td class="stack" valign="top" style="padding:0 16px 0 0;">{texto_tasa}</td>'
+                  f'<td class="stack tasa-img" valign="top" width="150" style="padding:2px 0 14px 0;">{miniatura}</td></tr>')
+
+
+def _snapshot(a: dict[str, Any], c: dict[str, str]) -> str:
+    """Las 4 cifras de MT5 en tarjetas oscuras: hacia dónde, hasta dónde, el precio y el nivel de control."""
+    lec, f = a["lectura"], a["fmt"]
     dir_nombre = lec["direccion"].upper()
     color_dir = c["baja"] if dir_nombre == "BAJISTA" else (c["sube"] if dir_nombre == "ALCISTA" else c["hero_rotulo"])
     horizonte = f"Horizonte: {_horizonte(a)}" if _horizonte(a) else ""
@@ -847,7 +896,28 @@ def _hero_activo(a: dict[str, Any], titular: str, c: dict[str, str], bajada: str
         celdas = [_tarjeta(it, grande, 6 if i < len(items) - 1 else 0) for i, it in enumerate(items)]
         return _tabla(f'<tr>{"".join(celdas)}</tr>')
 
-    snapshot_tabla = _fila(grandes, True) + _separador(6) + _fila(chicas, False)
+    return _fila(grandes, True) + _separador(6) + _fila(chicas, False)
+
+
+def _firma_analisis(autor, c: dict[str, str]) -> str:
+    """«Realizado por … · Departamento de Estudios GI», al pie del análisis técnico (director, 2026-10-24)."""
+    nombre = _nombre_firma(autor.nombre) if autor else "Benjamín Bravo Soza"
+    cargo = autor.cargo if autor else "Departamento de Estudios"
+    return (f'<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 22px 0;">'
+            f'<tr><td style="border-left:2px solid #50C0A8;padding-left:10px;">'
+            f'<p style="margin:0;font-family:{F_SANS};font-size:13px;line-height:18px;font-weight:700;color:{c["texto_1"]};">'
+            f'Realizado por {ih.e(nombre)} · {ih.e(cargo)} GI</p></td></tr></table>')
+
+
+def _hero_activo(a: dict[str, Any], titular: str, c: dict[str, str], bajada: str = "", autor=None,
+                 d: dict[str, Any] | None = None, tasa_html: str = "") -> str:
+    """La apertura oscura sin noticia: kicker, titular, bajada, vigencia, el dato de tasas si lo hay y el snapshot."""
+    vigencia_txt = (
+        f"Vigencia: {d['vigencia']['desde']} al {d['vigencia']['hasta']} · Hora de Chile"
+        if d and "vigencia" in d else ""
+    )
+    vigencia = (f'<p style="margin:0 0 22px 0;font-family:{F_SANS};font-size:12px;line-height:16px;color:#50C0A8;'
+                f'font-weight:600;">{ih.e(vigencia_txt)}</p>' if vigencia_txt else "")
     gancho = (
         f'<p style="margin:16px 0 0 0;font-family:{F_SANS};font-size:13px;line-height:20px;color:{c["hero_texto_2"]};">'
         'Abajo: el gráfico, los dos factores que mueven al activo hoy y los tres escenarios de la lectura.</p>'
@@ -855,8 +925,10 @@ def _hero_activo(a: dict[str, Any], titular: str, c: dict[str, str], bajada: str
 
     return (
         f'<tr><td class="pad-hero" bgcolor="{c["hero"]}" style="padding:26px 36px 26px 36px;background:{c["hero"]};">'
-        f'{kicker}{titular_bloque}{bajada_bloque}{firma_hero}{snapshot_tabla}{gancho}'
-        f'</td></tr>'
+        + _kicker(f'ANÁLISIS TÉCNICO Y FUNDAMENTAL · {a["nombre"].upper()} ({a["ticker_visible"]})')
+        + _titular_hero(titular or titular_base(a), c) + _bajada_hero(bajada, c) + vigencia
+        + tasa_html + _snapshot(a, c) + gancho
+        + '</td></tr>'
     )
 
 
@@ -914,10 +986,27 @@ def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: P
                    c: dict[str, str], d: dict[str, Any] | None = None, dias_clave: str = "",
                    fuentes: list[dict[str, Any]] | tuple = (), imagen_calendario: str = "",
                    imagen_dolar: str = "", autor=None, bajada: str = "",
-                   voz: tuple[str, dict[str, Any]] | None = None) -> str:
-    """El bloque del activo en el correo: apertura oscura y cuerpo claro."""
+                   voz: tuple[str, dict[str, Any]] | None = None, noticia: dict[str, Any] | None = None,
+                   tasa: dict[str, Any] | None = None, ilustraciones: dict[str, Path] | None = None,
+                   hoy: date | None = None) -> str:
+    """El bloque del activo en el correo (spec 2026-10-24 §5): la noticia de apertura, el dato de tasas,
+    los bloques de contexto, el análisis técnico firmado al pie, la simulación y el cierre.
+
+    Sin noticia, la apertura oscura es la de siempre y lleva dentro el dato de tasas y el snapshot.
+    """
     lec = a["lectura"]
     color_dir = _color_direccion(lec["direccion"], c)
+    ilustraciones = ilustraciones or {}
+    con_noticia = isinstance(noticia, dict)
+    if con_noticia:
+        # La nota que abre el correo no se repite abajo como «Lo último de …» ni como voz.
+        fuentes = [f for f in fuentes if f.get("url") != noticia["url"]]
+        apertura = _apertura_noticia(noticia, a, ilustraciones.get("noticia"), hoy, c)
+        tasa_cuerpo = (_tasa_correo(tasa, ilustraciones.get("tasa"), c) + _separador(10)) if tasa else ""
+    else:
+        tasa_oscura = (_tasa_correo(tasa, ilustraciones.get("tasa"), c, oscuro=True) + _separador(8)) if tasa else ""
+        apertura = _hero_activo(a, titular, c, bajada=bajada, autor=autor, d=d, tasa_html=tasa_oscura)
+        tasa_cuerpo = ""
     grafico = _tabla(
         f'<tr><td style="padding:0;background:#000000;">'
         f'<img src="{ih._data_uri(dir_pedido / a["grafico"])}" width="558" height="{_alto_png(dir_pedido / a["grafico"], 558)}" '
@@ -937,7 +1026,7 @@ def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: P
             f'«{ih.e(salida)}»</p>'
             f'<p style="margin:0;font-family:{F_SANS};font-size:12px;line-height:16px;font-weight:700;'
             f'letter-spacing:0.8px;text-transform:uppercase;color:{c["acento"]};">'
-            'Departamento de Análisis Técnico · Grupo Inteligencia</p>'
+            'Departamento de Estudios · Grupo Inteligencia</p>'
             f'</td></tr></table>'
         )
 
@@ -956,25 +1045,37 @@ def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: P
         f'</td></tr></table>'
     )
 
+    # Con noticia, el snapshot baja al análisis técnico sobre su propio fondo oscuro: las tarjetas son oscuras.
+    snapshot = (_tabla(f'<tr><td bgcolor="{c["hero"]}" style="padding:14px;background:{c["hero"]};border-radius:8px;">'
+                       f'{_snapshot(a, c)}</td></tr>') + _separador()) if con_noticia else ""
+    # El hero, que es donde va la vigencia, no sale cuando abre la noticia: la vigencia sube al análisis.
+    vigencia = (_p(ih.e(f"Vigencia: {d['vigencia']['desde']} al {d['vigencia']['hasta']} · Hora de Chile"), c,
+                   tam=13, peso=600, color="acento", margen="-8px 0 12px 0")
+                if con_noticia and d and "vigencia" in d else "")
+    analisis = (
+        _rotulo(ih.e(_titulo_analisis(a["nombre"])), c, margen="10px 0 14px 0")
+        + vigencia + snapshot + grafico + _separador()
+        + pull_quote
+        + _rotulo(f'Los tres escenarios · <span style="color:{color_dir};">'
+                  f'{ih.e(lec["direccion"].capitalize())}</span>', c, margen="10px 0 8px 0")
+        + escenarios
+        + _p(f'⏱️ <strong style="color:{c["texto_1"]};">{ih.e(a["temporalidad"])}</strong>', c, tam=15,
+             margen="4px 0 14px 0")
+        + _firma_analisis(autor, c)
+    )
+
     return (
-        _hero_activo(a, titular, c, bajada=bajada, autor=autor, d=d)
+        apertura
         + _continuidad_correo(a, d, c)
         + '<tr><td class="pad" style="padding:28px 40px 0 40px;">'
-        + (_rotulo(ih.e(_titulo_analisis(a["nombre"])), c, margen="0 0 14px 0")
-           if autor is not None else "")
-        + grafico + _separador()
+        + tasa_cuerpo
         + _p(ih.e(contexto), c, data_ed="contexto")
-        + pull_quote
         + _hechos_correo((d or {}).get("hechos") or [], c)
         + _grafico_dolar_correo(ruta_dolar, c)
         + _dias_clave_correo(d or {}, dias_clave, dir_pedido, imagen_calendario, c)
         + _noticia_directa_correo(list(fuentes), voz, c)
         + _voces_correo(list(fuentes), lec["direccion"], c)
-        + _rotulo(f'Los tres escenarios · <span style="color:{color_dir};">'
-                  f'{ih.e(lec["direccion"].capitalize())}</span>', c, margen="10px 0 8px 0")
-        + escenarios
-        + _p(f'⏱️ <strong style="color:{c["texto_1"]};">{ih.e(a["temporalidad"])}</strong>', c, tam=15,
-             margen="4px 0 18px 0")
+        + analisis
         + _simulacion_correo(a, ejecutivo, c)
         + cierre_consultivo
         + _separador(26) + '</td></tr>'
@@ -1155,6 +1256,11 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
     c0 = paleta()
     c = paleta_correo(c0)
     bloques, correos, datos_js = [], [], []
+    noticia = ed.get("noticia") if isinstance(ed.get("noticia"), dict) else None
+    tasa = d.get("tasa") if isinstance(d.get("tasa"), dict) else None
+    # Solo un nombre de archivo de la carpeta del pedido: una ruta con separadores incrustaría un archivo ajeno.
+    ilustraciones = {k: dir_pedido / v for k, v in (pieza.get("ilustraciones") or {}).items()
+                     if isinstance(v, str) and v == Path(v).name and not v.startswith(".")}
     editable_activos: dict[str, dict[str, str]] = {}  # los textos de IA que el ejecutivo puede reemplazar
     for a in d["activos"]:
         t = a["ticker"]
@@ -1183,18 +1289,19 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
             + (f'<a class="descargar" download="{ih.e(lamina.name)}" href="{ih._data_uri(lamina)}">Descargar lámina</a>'
                if lamina.exists() else "")
             + '</div></section>')
-        titular_act = titular_correo(a, ed.get("fuentes"))
+        titular_act = noticia["titular"] if noticia else titular_correo(a, ed.get("fuentes"))
         editable_activos[t] = {"titular": titular_act or titular_base(a), "contexto": ed["contexto"][t]}
         correos.append(f'<template class="correo-activo" data-ticker="{ih.e(t)}">'
-                       f'{_bloque_correo(a, titular_act, ed["contexto"][t], dir_pedido, nombre_ej, c, d=d, dias_clave=dias, fuentes=ed["fuentes"], imagen_calendario=imagen_cal, imagen_dolar=imagen_dolar, autor=autor, bajada=ed.get("bajada", ""), voz=fu.directa_de(pieza))}</template>')
+                       f'{_bloque_correo(a, titular_act, ed["contexto"][t], dir_pedido, nombre_ej, c, d=d, dias_clave=dias, fuentes=ed["fuentes"], imagen_calendario=imagen_cal, imagen_dolar=imagen_dolar, autor=autor, bajada=ed.get("bajada", ""), voz=fu.directa_de(pieza), noticia=noticia, tasa=tasa, ilustraciones=ilustraciones, hoy=hoy)}</template>')
         datos_js.append({"ticker": t, "nombre": a["nombre"], "digits": a["digits"], "escenario": a["escenario"], "contrato": a["contrato"],
                          "fmt": a["fmt"], "motivo": _motivo(a),
                          "condicion": op.texto_condicion(a["escenario"], a["fmt"]["entrada"]), "whatsapp": cm.texto_whatsapp_base(a, ed["titulares"][t], ed["contexto"][t])})
-    marco = _marco_correo(d, ed, ejecutivo, autor, c)
+    marco = (_marco_correo(d, ed, ejecutivo, autor, c, asunto=noticia["titular"], preheader=noticia["bajada"])
+             if noticia else _marco_correo(d, ed, ejecutivo, autor, c))
     if publicar is not None:
         imgs = (pieza.get("imagenes") or {})
         rutas = [ih.LOGO, LOGO_CLARO, *(dir_pedido / a["grafico"] for a in d["activos"]),
-                 *(dir_pedido / imgs[k] for k in ("calendario", "dolar") if imgs.get(k))]
+                 *(dir_pedido / imgs[k] for k in ("calendario", "dolar") if imgs.get(k)), *ilustraciones.values()]
         marco = _enlazar_imagenes(marco, rutas, publicar)
         correos = [_enlazar_imagenes(x, rutas, publicar) for x in correos]
     tokens = {
