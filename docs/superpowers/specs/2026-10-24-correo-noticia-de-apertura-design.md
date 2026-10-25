@@ -123,6 +123,9 @@ estar en Reuters, que es de donde la reenvía el squawk.
   si no, gitignoreado con un índice versionado. *Llamada del constructor según el peso real.*
 - Se publica con `imagenes_publicas.publicar` (URL pública por hash, como las demás).
 - Rótulo pequeño bajo la imagen: **"Imagen ilustrativa"**.
+- **Medido el 2026-10-24:** `agy` headless (Flash, `invocar`) generó lingotes en 76 s y dejó un PNG
+  de 1376×768 y 1,1 MB en la ruta pedida, sin texto ni marcas. La vía es agy; el respaldo de Gemini
+  queda sin construir.
 - **Cómo genera agy.** El primer paso del plan es **medir** que `agy` en modo headless puede generar
   una imagen y dejarla en una ruta dada. Si no puede, el respaldo es llamar directo a la API de
   imágenes de Gemini con el mismo prompt desde Python. En ambos casos el prompt lo arma Python.
