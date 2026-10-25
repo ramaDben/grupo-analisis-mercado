@@ -1,0 +1,42 @@
+{
+  "_nota": "Catálogo cerrado de motivos de las imágenes ilustrativas del correo (spec 2026-10-24 §2). Lo edita el director.",
+  "prohibiciones": "Sin logos, sin marcas, sin texto ni números legibles, sin banderas, sin sellos de país, sin personas reconocibles; fotografía sobria, luz cálida, formato horizontal 16:9.",
+  "motivos": {
+    "oro_lingotes": {
+      "descripcion": "Noticias sobre el oro, reservas internacionales de bancos centrales y demanda de metales preciosos.",
+      "prompt": "Lingotes de oro pulidos y apilados en pirámide sobre una superficie neutra, con reflejos metálicos sutiles y fondo desenfocado."
+    },
+    "banco_central": {
+      "descripcion": "Decisiones de tasas de interés, política monetaria y declaraciones de autoridades monetarias.",
+      "prompt": "Fachada institucional neoclásica con grandes columnas de piedra simétricas, vista en contrapicado sereno, sin carteles ni inscripciones."
+    },
+    "billetes_dolar": {
+      "descripcion": "Noticias del dólar estadounidense, flujos cambiarios y fortaleza relativa de la divisa de reserva.",
+      "prompt": "Fajo de billetes en tonos verdosos extendidos en abanico sobre un escritorio sobrio de madera, con enfoque selectivo y sin numeración legible."
+    },
+    "peso_chileno": {
+      "descripcion": "Evolución del tipo de cambio USD/CLP, flujos del mercado cambiario local y economía doméstica.",
+      "prompt": "Monedas metálicas bicolores y billetes en tonos rojizos y azulados sobre una mesa de trabajo, en plano cenital con desenfoque suave y sin escudos."
+    },
+    "cobre": {
+      "descripcion": "Noticias del mercado del cobre, minería metálica, inventarios en bodegas y demanda industrial.",
+      "prompt": "Cátodos y bobinas gruesas de cobre refinado apilados en un almacén de distribución, destacando la textura rojiza brillante bajo luz lateral."
+    },
+    "petroleo": {
+      "descripcion": "Mercado petrolero, inventarios de crudo, decisiones de producción de energía y geopolítica energética.",
+      "prompt": "Complejo industrial con siluetas de torres de fraccionamiento al atardecer y varios barriles metálicos neutros alineados en primer plano."
+    },
+    "bolsa_pantallas": {
+      "descripcion": "Jornadas bursátiles globales, volatilidad de renta variable y comportamiento de índices financieros.",
+      "prompt": "Conjunto de monitores que proyectan gráficos financieros de velas y curvas de tendencia con desenfoque artístico, sin datos numéricos descifrables."
+    },
+    "tecnologia": {
+      "descripcion": "Sector tecnológico, innovación, industria de semiconductores, centros de datos y computación en la nube.",
+      "prompt": "Placa de circuito electrónico con microprocesadores iluminados tenuemente y pasillo de servidores en bastidor con luces de estado tenues."
+    },
+    "acciones_generico": {
+      "descripcion": "Mercado bursátil, resultados corporativos trimestrales y operativa general de acciones.",
+      "prompt": "Amplia sala de operaciones financieras con puestos de trabajo y pantallas múltiples en atmósfera concentrada y desenfocada, sin figuras reconocibles."
+    }
+  }
+}
