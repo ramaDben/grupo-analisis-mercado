@@ -108,8 +108,8 @@ def test_campos_anidados_se_validan_uno_a_uno():
 
 
 def test_cada_pieza_tiene_campos():
-    """Solo las dos piezas que existen: las retiradas no dejan campos muertos."""
-    assert set(es.CAMPOS) == {"oportunidad", "seguimiento"}
+    """Solo las piezas que existen: las retiradas no dejan campos muertos."""
+    assert set(es.CAMPOS) == {"oportunidad", "seguimiento", "contexto"}
 
 
 def test_titular_largo_no_cabe_en_la_lamina():
@@ -433,7 +433,6 @@ def test_agenda_sin_eventos_no_exige_dias_clave():
     assert es.errores(p) == []
 
 
-
 @pytest.mark.parametrize("noticia", ["__omitida__", None, es.MARCA,
                                      {"medio": "Reuters", "fecha": "2026-10-23", "url": "https://www.reuters.com/a/b",
                                       "titular_original": "Gold rises", "extracto": "Gold rose to $4,100.50.",
@@ -451,3 +450,16 @@ def test_errores_rechaza_noticia_con_forma_rara():
 def test_textos_no_incluye_la_noticia():
     p = pieza_llena(noticia={"titular": "4.100,50 y 3,67 %"})
     assert not any(donde.startswith("noticia") for donde, _ in es.textos(p))
+
+
+def test_contexto_none_no_es_error():
+    p = es.nueva_pieza("contexto", {"ticker": "XAUUSD"}, {"ticker": "XAUUSD"}, {})
+    p["editorial"] = {"noticia_1": None, "noticia_2": None, "tecnico": None}
+    assert es.errores(p) == []
+
+
+def test_contexto_con_marca_sobreviviente_es_error():
+    p = es.nueva_pieza("contexto", {"ticker": "XAUUSD"}, {"ticker": "XAUUSD"}, {})
+    p["editorial"] = {"noticia_1": es.MARCA, "noticia_2": None, "tecnico": None}
+    errs = es.errores(p)
+    assert any("noticia_1" in e for e in errs)
