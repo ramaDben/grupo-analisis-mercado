@@ -14,6 +14,7 @@ for p in (str(RAIZ / "src"), str(RAIZ / "scripts")):
         sys.path.insert(0, p)
 
 from analista import esquema as es  # noqa: E402
+from analista import fuentes as fu  # noqa: E402
 from analista import noticia as nt  # noqa: E402
 
 HOY = date(2026, 10, 24)
@@ -81,7 +82,7 @@ def test_url_muerta_descarta():
 
 
 def test_medio_fuera_de_lista_descarta():
-    assert _cayo(_noticia(medio="Investing.com", url="https://www.investing.com/news/gold-123"))
+    assert _cayo(_noticia(medio="El Mostrador", url="https://www.elmostrador.cl/noticias/gold-123"))
 
 
 def test_dominio_distinto_del_medio_descarta():
@@ -259,3 +260,72 @@ def test_cifra_de_fxstreet_copiada_en_notacion_inglesa_se_descarta():
                  bajada="Según FXStreet, el par forma un patrón de vela martillo.")
     pieza, descartes = nt.depurar_noticia(_pieza(n), HOY, verificar=lambda url: "ok", leer=lambda url: PAGINA_FX)
     assert pieza["editorial"]["noticia"] is None and "156.85" in descartes[0]
+
+
+# ── Validación de una noticia de contexto (Task 2) ──
+
+def _noticia_contexto(**cambios):
+    n = {
+        "medio": "Reuters",
+        "fecha": (HOY - timedelta(days=1)).isoformat(),
+        "url": URL,
+        "titular_original": "Gold recovers from two-month low as dollar rally stalls",
+        "titular": "El oro se recupera de su mínimo de dos meses",
+        "mensaje": "Hola, según Reuters el oro subió a 4.100,50 dólares la onza mientras el dólar retrocede. ¿Cómo ves este nivel?",
+    }
+    n.update(cambios)
+    return n
+
+
+def _motivo_contexto(n, estado="ok", pagina="Spot gold rose to $4,100.50 per ounce, a 3.67% gain."):
+    lista = fu.cargar_lista()
+    return nt.motivo_de_contexto(n, HOY, lista, verificar=lambda url: estado, leer=lambda url: pagina)
+
+
+def test_contexto_valida_una_noticia_buena():
+    assert _motivo_contexto(_noticia_contexto()) is None
+
+
+def test_contexto_cae_si_falta_un_campo():
+    n = _noticia_contexto()
+    del n["mensaje"]
+    motivo = _motivo_contexto(n)
+    assert motivo is not None and "incompleta" in motivo
+
+
+def test_contexto_cae_si_el_mensaje_pasa_de_600():
+    motivo = _motivo_contexto(_noticia_contexto(mensaje="a" * 601))
+    assert motivo is not None and "600" in motivo
+
+
+def test_contexto_cae_si_la_fecha_esta_fuera_de_ventana():
+    motivo = _motivo_contexto(_noticia_contexto(fecha=(HOY - timedelta(days=4)).isoformat()))
+    assert motivo is not None and "ventana" in motivo
+
+
+def test_contexto_cae_si_la_url_no_es_del_dominio_del_medio():
+    motivo = _motivo_contexto(_noticia_contexto(url="https://www.bloomberg.com/news/articles/2026-10-23/gold"))
+    assert motivo is not None and "dominio" in motivo
+
+
+def test_contexto_con_cifra_y_muro_de_pago_cae():
+    motivo = _motivo_contexto(_noticia_contexto(mensaje="Hola, el oro subió a 4.100 dólares la onza."),
+                              estado="sin_verificar", pagina=None)
+    assert motivo is not None and "cifras" in motivo
+
+
+def test_contexto_sin_cifras_y_muro_de_pago_pasa():
+    motivo = _motivo_contexto(_noticia_contexto(mensaje="Hola, el oro sube con fuerza mientras el dólar pierde impulso. ¿Cómo lo ves?"),
+                              estado="sin_verificar", pagina=None)
+    assert motivo is None
+
+
+def test_contexto_cifra_ausente_de_la_nota_cae():
+    motivo = _motivo_contexto(_noticia_contexto(mensaje="Hola, el oro subió a 4.200 dólares."),
+                              estado="ok", pagina="Spot gold rose to $4,100.50 per ounce.")
+    assert motivo is not None and "4.200" in motivo
+
+
+def test_contexto_con_guion_largo_cae():
+    motivo = _motivo_contexto(_noticia_contexto(mensaje="Hola, el oro sube — y el dólar frena. ¿Cómo lo ves?"))
+    assert motivo is not None and "guion" in motivo
