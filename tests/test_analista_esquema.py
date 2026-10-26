@@ -167,10 +167,10 @@ def test_el_texto_no_nombra_a_la_cmf():
 
 
 def test_frase_prohibida_no_oficiales():
-    assert "no oficiales" in es.FRASES_PROHIBIDAS
-    assert es.frases_prohibidas("Resultados según datos de mercado no oficiales.") == ["no oficiales"]
+    assert es.frases_prohibidas("Resultados según datos de mercado no oficiales.", es.FRASES_SIN_FUENTE) == [
+        "no oficial"]
     errs = es.errores(pieza_llena(bajada="Resultados corporativos según datos no oficiales."))
-    assert any("no oficiales" in x for x in errs)
+    assert any("no oficial" in x and "crédito" in x for x in errs)
 
 
 # ───────────────────────────────────────────────────────────── pieza semanal

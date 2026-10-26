@@ -1266,6 +1266,7 @@ def test_sintesis_caso_cat_sin_efecto_no_dibuja_recuadro(tmp_path):
     """En CAT (DXY subió, bono bajó, ambos sin efecto atribuido), la síntesis es vacía y no se dibuja el recuadro."""
     ruta_fixture = RAIZ / "tests" / "fixtures" / "analista" / "oportunidad_cat_2026-10-26.json"
     p = json.loads(ruta_fixture.read_text(encoding="utf-8"))
+    p["editorial"]["bajada"] = "La acción se mantiene en rango lateral a la espera de sus resultados del jueves 29/10."
     for img in p.get("imagenes", {}).values():
         if img:
             fx._imagen(tmp_path, img)

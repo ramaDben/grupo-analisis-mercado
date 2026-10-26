@@ -64,8 +64,11 @@ FRASES_PROHIBIDAS: tuple[str, ...] = (
     # amplifica las pérdidas" o "no conviene arriesgar más de lo previsto" son la
     # advertencia natural de "Qué NO hacer" y tienen que pasar.
     "lote", "lotes", "de tu capital", "arriesga tu", "arriesga el", "arriesga un",
-    "apalancate", "usa apalancamiento", "no oficiales",
+    "apalancate", "usa apalancamiento",
 )
+# Lo que le resta crédito al dato que se cita (correo de Caterpillar, 2026-10-26: "resultados previstos
+# para el jueves según datos de mercado no oficiales"). Un dato sin fuente que se pueda nombrar no va.
+FRASES_SIN_FUENTE: tuple[str, ...] = ("no oficial", "según fuentes de mercado")
 _PALABRA_EXACTA = {"lote", "lotes"}
 
 # La pieza semanal la comparte ventas con un prospecto: además no puede
@@ -334,6 +337,9 @@ def _errores_de_texto(donde: str, texto: str, tipo: str, datos: Any,
     for frase in frases_prohibidas(texto):
         errs.append(f"{donde}: «{frase}» es una instrucción de operar o una recomendación; "
                     "el informe es análisis general")
+    for frase in frases_prohibidas(texto, FRASES_SIN_FUENTE):
+        errs.append(f"{donde}: «{frase}» le resta crédito al dato; si no tiene una fuente que se pueda "
+                    "nombrar, no se cita")
     if tipo == "oportunidad":
         for frase in frases_prohibidas(texto, FRASES_PROHIBIDAS_SEMANAL):
             errs.append(f"{donde}: «{frase}» empuja a entrar o habla de cuánto acierta; "
