@@ -203,3 +203,13 @@ def test_spy_hereda_los_drivers_del_sp500_como_qqq_los_del_nasdaq():
     assert hc.signos("SPY.US") == hc.signos("US500.spot")
     assert hc.signos("SPY.US") != {m: 0 for m in hc.GENERALES}
     assert hc.signos("QQQ.US") == hc.signos("US100.spot")
+
+
+def test_el_efecto_nombra_la_plata_con_su_articulo():
+    """El correo del 2026-10-26 decía «a favor de la baja del Plata»: la tabla de artículos del
+    seguimiento sabía que es «la plata» y la de los hechos no."""
+    from analista import macro_seguimiento as mac
+
+    el = mac._el(mac.CLAVE_DEL_ACTIVO.get("XAGUSD", ""), "Plata")
+    assert el == "la plata"
+    assert hc._efecto({"sentido": "bajó"}, 1, el, "BAJISTA")["efecto"] == "juega a favor de la baja de la plata"
