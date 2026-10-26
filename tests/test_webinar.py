@@ -795,6 +795,7 @@ def test_guion_de_cada_dia_recorre_los_bloques_con_contenido():
 
 def test_rendir_exportar_pdf(tmp_path, editorial_valido, datos_completos):
     """Verifica que con exportar_pdf=True se genere lienzo.pdf usando Playwright."""
+    pytest.importorskip("playwright.sync_api")
     fecha_test = date(2026, 10, 26)
     dir_fecha = tmp_path / "data" / "webinar" / str(fecha_test)
     dir_fecha.mkdir(parents=True, exist_ok=True)
