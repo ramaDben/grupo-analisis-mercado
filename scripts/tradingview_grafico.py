@@ -426,6 +426,7 @@ def construir_html_tradingview(
     velas_min: int = LIMPIO_N_VELAS_MIN,
     velas_max: int = LIMPIO_N_VELAS_MAX,
     escala_texto: float = 1.0,
+    sin_leyenda: bool = False,
 ) -> str:
     """HTML autocontenido del gráfico: velas, las líneas de la lectura y las zonas de
     soporte y resistencia del mensaje.
@@ -452,8 +453,8 @@ def construir_html_tradingview(
     # Con la lectura se dibujan sus líneas del marco del gráfico y los horizontales de
     # cualquier marco (el objetivo sale de D1 o W1). Sin lectura quedan solo las zonas.
     tiempos = [int(r["time"]) for r in rows]
-    con_lectura = lineas is not None
-    dibujables = [x for x in (lineas or ()) if x.marco == timeframe or x.tipo == "horizontal"]
+    con_lectura = lineas is not None and not sin_leyenda
+    dibujables = [x for x in (lineas or ()) if x.marco == timeframe or x.tipo == "horizontal"] if not sin_leyenda else []
     series, _omitidas = series_de_lineas(dibujables, tiempos)
     atrs = sorted(r["atr"] for r in rows if r.get("atr"))
     atr = atrs[len(atrs) // 2] if atrs else (max(r["high"] for r in rows) - min(r["low"] for r in rows)) / 50
@@ -799,6 +800,7 @@ def generar_grafico_tv(
     limpio: bool = False,
     panoramico: bool = False,
     escala_texto: float = 1.0,
+    sin_leyenda: bool = False,
 ) -> Path:
     """Función principal: obtiene datos de MT5, computa indicadores y renderiza el PNG.
 
@@ -837,7 +839,7 @@ def generar_grafico_tv(
             print(f"[AVISO] {ticker}: gráfico sin la lectura de la estrategia ({exc}). "
                   "Sale con velas y zonas.", file=sys.stderr)
         else:
-            lineas = lectura.lineas
+            lineas = None if sin_leyenda else lectura.lineas
             timeframe = timeframe or lectura.marco
             if soporte is None and resistencia is None:
                 soporte, resistencia = pc.niveles_publicados(lectura)
@@ -877,6 +879,7 @@ def generar_grafico_tv(
         niveles=niveles,
         limpio=limpio,
         escala_texto=escala_texto,
+        sin_leyenda=sin_leyenda,
         **({"velas_min": velas_min, "velas_max": velas_max} if limpio else {}),
     )
 

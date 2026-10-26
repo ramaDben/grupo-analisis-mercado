@@ -164,3 +164,22 @@ def test_el_mismo_anuncio_sin_cifras_no_ocupa_otra_fila():
 def test_un_dato_solo_conserva_su_nombre_simple():
     a = ag.leer_ventana(SABADO, "XAUUSD", "Oro", cargar=cargador({"thisWeek": [], "nextWeek": [ev("2026-10-21 09:30")]}))
     assert a.eventos[0]["evento"] == "Índice de precios al consumidor (IPC)"
+
+
+def test_la_conferencia_de_la_fed_a_otra_hora_no_ocupa_otra_fila():
+    """Correo de Caterpillar, 2026-10-26: la tasa a las 15:00 y la conferencia a las 15:30 salían como
+    «Comité ... de la Fed» y «Comité ... de la Fed (2)». La fusión es por día, no por hora."""
+    fomc = {"nombre_es": "Comité de mercado abierto de la Fed", "explicacion": "Decide la tasa."}
+    tasa = {**ev("2026-10-23 15:00", nombre="Fed Interest Rate Decision", forecast="4.00%", previo="4.00%"),
+            "diccionario": fomc}
+    conferencia = {**ev("2026-10-23 15:30", nombre="FOMC Press Conference", forecast="", previo=""), "diccionario": fomc}
+    a = ag.leer_ventana(SABADO, "XAUUSD", "Oro", cargar=cargador({"thisWeek": [], "nextWeek": [tasa, conferencia]}))
+    assert [e["evento"] for e in a.eventos] == ["Comité de mercado abierto de la Fed"]
+
+
+def test_una_accion_sin_driver_de_energia_no_lleva_los_inventarios_de_crudo():
+    filas = [{"evento": "Inventarios de petróleo crudo (EIA)", "fuente_nombre": "Crude Oil Inventories"},
+             {"evento": "Producto interno bruto (PIB)", "fuente_nombre": "GDP (QoQ)"}]
+    assert [f["evento"] for f in ag.sin_energia(filas, ["Tasas de la Fed", "Demanda de China"])] == [
+        "Producto interno bruto (PIB)"]
+    assert ag.sin_energia(filas, ["Precio del petróleo"]) == filas
