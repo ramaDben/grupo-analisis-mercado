@@ -32,6 +32,10 @@ def _pieza_caterpillar(tmp_path: Path) -> dict:
     fixture_path = RAIZ / "tests" / "fixtures" / "analista" / "oportunidad_cat_2026-10-26.json"
     data = json.loads(fixture_path.read_text(encoding="utf-8"))
     data["editorial"]["bajada"] = "La acción se mantiene en rango lateral a la espera de sus resultados corporativos del jueves."
+    data["editorial"]["dias_clave"]["#CAT"] = (
+        "El martes 27/10 a las 09:30 CLST se conocerán los Pedidos de bienes durables. "
+        "El miércoles 28/10 a las 15:00 CLST la Fed. El jueves 29/10 a las 09:30 CLST el PIB."
+    )
     for img in data.get("imagenes", {}).values():
         if img:
             fx._imagen(tmp_path, img)
