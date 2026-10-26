@@ -15,7 +15,7 @@ import html
 import json
 import re
 import xml.etree.ElementTree as ET
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any, Callable
@@ -186,6 +186,15 @@ def leer_feed(url: str, timeout: int = 15) -> str:
     return r.text
 
 
+def _momento(pub: str) -> datetime:
+    """La fecha de publicación de una nota. Los feeds de noticias de Investing.com no usan el formato del RSS
+    («2026-10-26 14:33:13», en UTC), y leerlos solo con el estándar botaba todas sus notas sin avisar."""
+    try:
+        return parsedate_to_datetime(pub)
+    except (TypeError, ValueError):
+        return datetime.strptime(pub.strip(), "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+
+
 def _items(xml: str) -> list[dict[str, Any]]:
     """Título, link y fecha de cada nota; un feed que no es RSS (una página de bloqueo) no trae ninguna."""
     canal = ET.fromstring(xml.strip().encode("utf-8"))
@@ -195,7 +204,7 @@ def _items(xml: str) -> list[dict[str, Any]]:
     for it in canal.iter("item"):
         titulo, link, pub = (it.findtext(k) or "" for k in ("title", "link", "pubDate"))
         try:
-            momento = parsedate_to_datetime(pub)
+            momento = _momento(pub)
         except (TypeError, ValueError):
             continue
         if titulo.strip() and link.strip().startswith("https://") and momento.tzinfo is not None:

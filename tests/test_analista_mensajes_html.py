@@ -124,3 +124,18 @@ def test_html_sin_guion_largo():
 
 def test_html_avisa_que_noticia_y_tecnico_pueden_apuntar_a_lados_distintos():
     assert "lados distintos" in mh.render(pieza_con_todo())
+
+
+def test_el_ejecutivo_edita_el_mensaje_y_agrega_su_comentario():
+    html_str = mh.render(pieza_con_todo(), saludo="Juan")
+    assert len(re.findall(r'data-parte="cuerpo"', html_str)) == 3
+    assert len(re.findall(r'data-parte="comentario"', html_str)) == 3
+    assert len(re.findall(r'data-parte="pregunta"', html_str)) == 3
+    assert 'data-pie="Fuente: FXStreet, 25-10"' in html_str
+    assert "function armar(" in html_str
+    assert "Volver al original" in html_str
+
+
+def test_el_comentario_va_antes_de_la_pregunta():
+    js = mh.render(pieza_con_todo())
+    assert "[cuerpo, comentario, pregunta]" in js

@@ -193,9 +193,9 @@ def test_depurar_marca_escribir_pasa_a_none_con_motivo(tmp_path):
     assert depurada["editorial"]["noticia_1"] is None
     assert depurada["editorial"]["noticia_2"] is None
     assert depurada["editorial"]["tecnico"] is None
-    assert depurada["motivos"]["noticia_1"] == "agy no lo redactó"
-    assert depurada["motivos"]["noticia_2"] == "agy no lo redactó"
-    assert depurada["motivos"]["tecnico"] == "agy no lo redactó"
+    assert depurada["motivos"]["noticia_1"] == "No alcancé a redactar este mensaje: vuelve a pedir el contexto."
+    assert depurada["motivos"]["noticia_2"] == "No alcancé a redactar este mensaje: vuelve a pedir el contexto."
+    assert depurada["motivos"]["tecnico"] == "No alcancé a redactar este mensaje: vuelve a pedir el contexto."
 
 
 @pytest.mark.parametrize("precio_escrito", ["4.100,50", "1.2345"])
@@ -303,3 +303,40 @@ def test_tarjetas_aplican_el_saludo_del_ejecutivo(tmp_path):
     assert tarjetas[1].texto.startswith("Hola Juan,")
     assert "Fuente: Investing.com, 24-10" in tarjetas[1].texto
     assert tarjetas[2].texto.startswith("Hola Juan,")
+
+
+@pytest.mark.parametrize("mensaje, saludo, esperado", [
+    ("[[SALUDO]] Según FXStreet, la plata se mantiene estable.", "", "Hola, según FXStreet, la plata se mantiene estable."),
+    ("[[SALUDO]] En la lectura técnica para la plata vigilamos el soporte.", "Juan", "Hola Juan, en la lectura técnica"),
+    ("[[SALUDO]] FXStreet informa que el oro sube.", "", "Hola, FXStreet informa"),
+    ("[[SALUDO]] Powell habló ayer.", "", "Hola, Powell habló"),
+    ("[[SALUDO]] Según FXStreet, el oro sube.", "Estimado Sr. Pérez:", "Estimado Sr. Pérez: Según FXStreet"),
+])
+def test_lo_que_sigue_al_saludo_continua_la_frase(mensaje, saludo, esperado):
+    assert ctx._con_saludo(mensaje, saludo).startswith(esperado)
+
+
+def test_la_tarjeta_separa_la_pregunta_final_y_la_fuente(tmp_path):
+    seg = seg_ejemplo(tmp_path)
+    p = ctx.preparar("XAUUSD", tmp_path, AHORA, seg, candidatas=lambda *_: (CANDIDATAS_EJEMPLO, [])).pieza
+    p["editorial"] = {"noticia_1": dict(NOTICIA_1_OK), "noticia_2": None, "tecnico": TECNICO_OK}
+    n1, _, tec = ctx.tarjetas(p, saludo="Juan")
+    assert n1.pregunta == "¿Cómo lo ves?"
+    assert n1.cuerpo.endswith("ante el retroceso del dólar.")
+    assert n1.pie == "Fuente: FXStreet, 25-10"
+    assert n1.texto == f"{n1.cuerpo} {n1.pregunta}\n\n{n1.pie}"
+    assert tec.pregunta == "¿Lo revisamos?" and tec.pie == ""
+
+
+def test_la_noticia_vacia_dice_por_que_en_palabras_del_ejecutivo(tmp_path):
+    seg = seg_ejemplo(tmp_path)
+    p = ctx.preparar("XAGUSD", tmp_path, AHORA, seg, candidatas=lambda *_: (CANDIDATAS_EJEMPLO, [])).pieza
+    p["datos"]["nombre"] = "Plata"
+    p["editorial"] = {"noticia_1": dict(NOTICIA_1_OK), "noticia_2": None, "tecnico": TECNICO_OK}
+    depurada, _ = ctx.depurar(p, HOY, verificar=lambda u: "ok", leer=lambda u: "")
+    assert depurada["motivos"]["noticia_2"] == "No hay otra noticia de los últimos 3 días que trate de la plata."
+
+    p["datos"]["noticias_candidatas"] = []
+    p["editorial"] = {"noticia_1": None, "noticia_2": None, "tecnico": TECNICO_OK}
+    depurada, _ = ctx.depurar(p, HOY, verificar=lambda u: "ok", leer=lambda u: "")
+    assert depurada["motivos"]["noticia_1"] == "Hoy no encontré noticias de la plata en FXStreet ni en Investing.com."

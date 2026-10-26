@@ -7,9 +7,13 @@ from typing import Any, Callable
 
 from analista import noticia as nt
 
+# Los feeds por tema traen las notas que nombran al activo; `market_overview` eran columnas de opinión generales
+# y salió el 2026-10-26, cuando el de commodities tenía la nota de la plata que la pieza no encontró.
 FEEDS_INVESTING: tuple[str, ...] = (
     "https://es.investing.com/rss/news.rss",
-    "https://es.investing.com/rss/market_overview.rss",
+    "https://es.investing.com/rss/news_11.rss",  # commodities y futuros
+    "https://es.investing.com/rss/news_1.rss",  # divisas
+    "https://es.investing.com/rss/news_25.rss",  # bolsa
 )
 MAX_CANDIDATAS = 6
 
