@@ -1518,3 +1518,67 @@ def test_simulacion_correo_volumen_con_unidad_y_bajo_minimo():
 def test_la_tabla_de_factores_muestra_el_porcentaje_con_su_signo():
     assert oh._pct_visible("4,96 por ciento") == "4,96 %"
     assert oh._pct_visible("101,808") == "101,808"
+
+
+# ───────────────────────────────────────────── tests mejora-e: peso y móvil (2026-10-26)
+
+
+def test_deduplicacion_grafico_y_calendario_en_html(tmp_path):
+    """El gráfico del activo y el calendario se embeben una sola vez (en el correo, no en .analisis)."""
+    p = fx.pieza_oportunidad(tmp_path, laminas=True)
+    html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+
+    # En el correo está embebido con data:
+    correo = _correo(html)
+    assert 'alt="Gráfico de Oro"' in correo
+    assert "data:image/png;base64," in correo
+
+    # En .analisis el gráfico no repite el data URI
+    analisis_bloque = html.split('<div class="analisis">')[1].split('<div class="panel')[0]
+    assert '<img class="grafico-analisis"' in analisis_bloque
+    assert 'src="data:image' not in analisis_bloque
+
+
+def test_aviso_legal_no_duplicado_fuera_del_correo(tmp_path):
+    """El aviso legal y la frase general van en el correo y no se repiten en el pie fuera de él."""
+    from analista import informe_html as ih
+    html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+
+    # Ambos aparecen en el marco del correo
+    marco = re.search(r'<template id="correo-marco">(.*?)</template>', html, re.S).group(1)
+    assert cm.AVISO_PIEZA in marco
+    assert ih.FRASE_GENERAL in marco
+
+    # Fuera del correo, en el pie de la página, no se repite ninguna de las dos frases
+    pie_pagina = html.split('</template>')[-1].split('</main>')[0]
+    assert cm.AVISO_PIEZA not in pie_pagina
+    assert ih.FRASE_GENERAL not in pie_pagina
+    assert html.count(ih.FRASE_GENERAL) == 1
+
+
+def test_tabla_hechos_trae_data_etiqueta_y_clases_moviles(tmp_path):
+    """La tabla de hechos trae clases y data-etiqueta para apilarse en móvil a < 480 px."""
+    correo = _correo(_html(tmp_path))
+    assert 'class="tabla-hechos"' in correo
+    assert 'class="hechos-fila"' in correo
+    assert 'class="hechos-th"' in correo
+    assert 'data-etiqueta="Factor"' in correo
+    assert 'data-etiqueta="Hoy"' in correo
+    assert 'data-etiqueta="Cambio"' in correo
+    assert 'data-etiqueta="Efecto en el activo"' in correo
+
+
+def test_enlace_ancla_vista_correo(tmp_path):
+    """Debajo de los botones del panel existe un enlace 'Ir a la vista del correo ↓' hacia #vista-correo."""
+    html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    assert 'href="#vista-correo"' in html
+    assert "Ir a la vista del correo ↓" in html
+    assert 'class="enlace-ir-correo"' in html
+
+
+def test_logo_cabecera_usa_version_liviana(tmp_path):
+    """El logo de la cabecera usa la versión de 192 px (logo_correo_oscuro) y no la de 1135 px."""
+    from analista import informe_html as ih
+    html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    logo_oscuro_uri = ih._data_uri(oh.LOGO_OSCURO, ancho_max=340)
+    assert f'<img src="{logo_oscuro_uri}" alt="Grupo Inteligencia">' in html

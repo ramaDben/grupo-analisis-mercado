@@ -114,7 +114,7 @@ def _agenda_ficha(d: dict[str, Any], dias_clave: str, dir_pedido: Path | None, i
     if dias_clave:
         cuerpo += f'<p>{ih.e(dias_clave)}</p>'
     if imagen and dir_pedido is not None and (dir_pedido / imagen).exists():
-        cuerpo += (f'<img class="calendario-img" src="{ih._data_uri(dir_pedido / imagen)}" '
+        cuerpo += (f'<img class="calendario-img" data-calendario="1" '
                    f'alt="Calendario económico del {ih.e(agenda["desde"])} al {ih.e(ag.hasta_cubierto(agenda))}">')
     filas = "".join(
         f'<tr><td>{ih.e(e["dia"])}<br>{ih.e(e["hora"])}</td><td>{ih.e(e["evento"])} · {ih.e(e["pais"])}</td>'
@@ -151,7 +151,7 @@ def _panel(a: dict[str, Any], ejecutivo: str) -> str:
     if motivo:
         return ('<div class="panel sin-simulacion"><p>Sin simulación en este análisis: '
                 f'{ih.e(motivo)}</p>'
-                '<label><input type="checkbox" name="incluir" checked> Incluir en el correo</label></div>')
+                '<label class="incluir-label"><input type="checkbox" name="incluir" checked> Incluir en el correo</label></div>')
     dist_val = esc.get("distancia_pct")
     if dist_val is None and esc.get("objetivo") is not None and a.get("foto", {}).get("precio"):
         p_ref = a["foto"]["precio"]
@@ -169,7 +169,7 @@ def _panel(a: dict[str, Any], ejecutivo: str) -> str:
         f'<p class="rotulo-ilustrativo">{ih.e(cm.ROTULO_ILUSTRATIVO)}</p><h4>Objetivo de la simulación (1:3)</h4>'
         f'<p class="niveles-sim">Entrada {ih.e(f["entrada"])} · Stop {ih.e(f["stop"])} · '
         f'Objetivo {ih.e(f["objetivo"])}</p>{cond}{distancia}{parcial}'
-        '<label><input type="checkbox" name="incluir" checked> Incluir en el correo</label>')
+        '<label class="incluir-label"><input type="checkbox" name="incluir" checked> Incluir en el correo</label>')
     if op.sin_contrato(a):  # nota interna del ejecutivo: el cliente igual ve los niveles
         return (f'<div class="panel">{cabeza}<p class="nota">{ih.e(MOTIVO_SIN_CONTRATO.capitalize())}: el correo '
                 'lleva los niveles, sin los montos.</p></div>')
@@ -344,11 +344,12 @@ def _fecha_hechos(hechos: list[dict[str, Any]]) -> str:
 
 
 def _celda_hecho(texto: str, c: dict[str, str], ultima: bool, peso: int = 500, color: str = "texto_borde",
-                 ancho: str = "", extra: str = "") -> str:
+                 ancho: str = "", extra: str = "", etiqueta: str = "") -> str:
     borde = "" if ultima else f"border-bottom:1px solid {c['linea']};"
     w = f' width="{ancho}"' if ancho else ""
-    return (f'<td valign="top"{w} style="padding:10px 8px;{borde}font-family:{F_SANS};font-size:14px;line-height:20px;'
-            f'font-weight:{peso};color:{c[color]};">{texto}{extra}</td>')
+    et = f' data-etiqueta="{ih.e(etiqueta)}"' if etiqueta else ""
+    return (f'<td class="hechos-td"{et} valign="top"{w} style="padding:10px 8px;{borde}font-family:{F_SANS};'
+            f'font-size:14px;line-height:20px;font-weight:{peso};color:{c[color]};">{texto}{extra}</td>')
 
 
 def _tiene_efecto(h: dict[str, Any]) -> bool:
@@ -453,7 +454,7 @@ def _hechos_correo(hechos: list[dict[str, Any]], c: dict[str, str], direccion: s
         return ""
 
     cab = "".join(
-        f'<th align="left" style="padding:6px 8px;border-bottom:2px solid {c["marca"]};font-family:{F_SANS};'
+        f'<th class="hechos-th" align="left" style="padding:6px 8px;border-bottom:2px solid {c["marca"]};font-family:{F_SANS};'
         f'font-size:12px;line-height:16px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;'
         f'color:{c["texto_2"]};">{t}</th>' for t in ("Factor", "Hoy", "Cambio", "Efecto en el activo"))
     filas = []
@@ -465,11 +466,11 @@ def _hechos_correo(hechos: list[dict[str, Any]], c: dict[str, str], direccion: s
             if h.get("con_la_lectura"):
                 efecto += f'<br><span style="color:{c["texto_2"]};font-weight:500;">{ih.e(h["con_la_lectura"])}</span>'
         cambio = _cambio_correo(h).lstrip(", ") or "sin cambio medido"
-        filas.append('<tr>'
-                     + _celda_hecho(ih.e(h["driver"].replace(" (TIPS)", TIPS_EXPLICADO)), c, ultima, 700, "texto_1", "34%")
-                     + _celda_hecho(ih.e(_pct_visible(h["nivel"])), c, ultima, 700, "texto_1", "16%")
-                     + _celda_hecho(ih.e(cambio), c, ultima, ancho="20%")
-                     + _celda_hecho(efecto or "sin efecto atribuido", c, ultima, color="texto_1", ancho="30%") + '</tr>')
+        filas.append('<tr class="hechos-fila">'
+                     + _celda_hecho(ih.e(h["driver"].replace(" (TIPS)", TIPS_EXPLICADO)), c, ultima, 700, "texto_1", "34%", etiqueta="Factor")
+                     + _celda_hecho(ih.e(_pct_visible(h["nivel"])), c, ultima, 700, "texto_1", "16%", etiqueta="Hoy")
+                     + _celda_hecho(ih.e(cambio), c, ultima, ancho="20%", etiqueta="Cambio")
+                     + _celda_hecho(efecto or "sin efecto atribuido", c, ultima, color="texto_1", ancho="30%", etiqueta="Efecto en el activo") + '</tr>')
 
     sintesis_html = ""
     if sintesis:
@@ -481,8 +482,9 @@ def _hechos_correo(hechos: list[dict[str, Any]], c: dict[str, str], direccion: s
             f'</td></tr></table>'
         )
 
+    tabla_hechos = _tabla(f'<tr>{cab}</tr>' + "".join(filas)).replace("<table ", '<table class="tabla-hechos" ', 1)
     return (_rotulo(f"Lo que mueve el precio al {ih.e(_fecha_hechos(seleccionados))}", c, margen="10px 0 8px 0")
-            + _tabla(f'<tr>{cab}</tr>' + "".join(filas))
+            + tabla_hechos
             + sintesis_html
             + _separador(8))
 
@@ -1320,7 +1322,7 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
             f'{ih.pildora(lec["direccion"].capitalize())}</header>'
             f'<div class="analisis"><h3>{ih.e(ed["titulares"][t])}</h3>'
             + _seccion("Lectura técnica",
-                       f'<img src="{ih._data_uri(dir_pedido / a["grafico"])}" alt="Gráfico de {ih.e(a["nombre"])}">'
+                       f'<img class="grafico-analisis" alt="Gráfico de {ih.e(a["nombre"])}">'
                        f'<table class="niveles">{_filas_niveles(a)}</table><ul class="escenarios">{escenarios}</ul>'
                        f'<p class="salida">{ih.e(lec["salida"])}</p>'
                        f'<p class="temporalidad">⏱️ {ih.e(a["temporalidad"])} · Foto del {ih.e(a["foto"]["fecha"])}, '
@@ -1352,10 +1354,10 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
         "marco": marco,
         "raiz": "".join(f"--{k.replace('_', '-')}:{v};" for k, v in c0.items()),
         "boton_wa": _boton_whatsapp(c),
-        "titulo": ih.e(ed["titular"]), "logo": ih._data_uri(ih.LOGO), "semana": ih.e(f"Vigente hasta el {d['vigencia']['hasta']}"),
+        "titulo": ih.e(ed["titular"]), "logo": ih._data_uri(LOGO_OSCURO, ancho_max=340), "semana": ih.e(f"Vigente hasta el {d['vigencia']['hasta']}"),
         "edicion": ih.e(d["edicion"]), "titular": ih.e(ed["titular"]), "bajada": ih.e(ed["bajada"]),
-        "activos": "".join(bloques), "correos": "".join(correos), "firma": ih.bloque_firma(autor, hoy),
-        "aviso": ih.e(cm.AVISO_PIEZA), "ejecutivo": "" if pendiente else ih.e(nombre_ej),
+        "activos": "".join(bloques), "correos": "".join(correos), "firma": ih.bloque_firma(autor, hoy, incluir_general=False),
+        "aviso": "", "ejecutivo": "" if pendiente else ih.e(nombre_ej),
         "fuentes": ih._fuentes(),
         "datos": json.dumps({"ejecutivo": nombre_ej, "pendiente": pendiente, "autor_nombre": autor.nombre, "cargo": ejecutivo.get("cargo", ""),
                              "contacto": ejecutivo.get("contacto", ""), "autor": cm.firma(autor),
