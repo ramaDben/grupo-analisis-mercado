@@ -179,6 +179,9 @@ nunca invitar a operar, "soporte" y "resistencia"). El saludo y la fuente los po
   `[[NIVEL]]` (el nivel a vigilar), `[[OBJETIVO]]` y `[[SIGUIENTE]]`. El bot las reemplaza con los valores del
   terminal; un número de precio escrito (4.100,50, 1,2345) hace caer el mensaje. Sin otros números significativos.
   Menciona la temporalidad en rango cuantificado ("marco de 4 horas, de una a dos semanas").
+- **Redacción:** di "el oro" o "el activo", nunca "metal pesado" ni apodos. No cierres con "tu estrategia" ni
+  "tu operativa": la pregunta final es sobre lo que piensa o ve el cliente ("¿cómo ves…?"). Si la noticia y la
+  lectura técnica apuntan a lados distintos, no lo ocultes ni lo fuerces: cada mensaje habla solo de lo suyo.
 - Si una candidata trae una cifra de precio en su titular, no la uses en `tecnico`: ahí los números salen
   solo del terminal.
 

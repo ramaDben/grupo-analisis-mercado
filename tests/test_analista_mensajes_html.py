@@ -120,3 +120,7 @@ def test_html_sin_guion_largo():
     html_str = mh.render(pieza_con_todo())
     assert "\u2014" not in html_str
     assert "\u2013" not in html_str
+
+
+def test_html_avisa_que_noticia_y_tecnico_pueden_apuntar_a_lados_distintos():
+    assert "lados distintos" in mh.render(pieza_con_todo())

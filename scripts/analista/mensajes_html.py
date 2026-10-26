@@ -215,6 +215,7 @@ def render(pieza: dict[str, Any], saludo: str = "") -> str:
     <header class="cabecera">
       <h1>{html.escape(titulo_pagina, quote=True)}</h1>
       <p>Selecciona y copia el mensaje para abrir conversación con tu cliente.</p>
+      <p class="nota-independientes">Cada mensaje se sostiene solo. La noticia y el análisis técnico pueden apuntar a lados distintos: es normal, porque uno cuenta lo que pasó y el otro lo que muestra el precio. Si los mandas juntos, preséntalos como dos miradas.</p>
     </header>
     {bloques_tarjetas}
   </main>

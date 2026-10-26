@@ -80,3 +80,8 @@ def test_analista_documenta_la_pieza_contexto():
     for pieza in ("noticia_1", "noticia_2", "tecnico", "[[NIVEL]]", "[[OBJETIVO]]", "[[SIGUIENTE]]",
                   "[[SALUDO]]", "datos.noticias_candidatas"):
         assert pieza in TEXTO, pieza
+
+
+def test_analista_pide_redaccion_sin_apodos_ni_tu_estrategia():
+    texto = (RAIZ / ".claude" / "commands" / "analista.md").read_text(encoding="utf-8")
+    assert "metal pesado" in texto and "tu estrategia" in texto
