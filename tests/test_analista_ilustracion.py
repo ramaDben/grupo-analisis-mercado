@@ -129,15 +129,14 @@ def test_genera_si_todas_estan_en_cooldown(tmp_path: Path):
 
     ahora = datetime(2026, 10, 24, 15, 30, 0)
     ruta, aviso = ilustracion.elegir("oro_lingotes", hoy=hoy, generar=doble_generar, banco=tmp_path, ahora=ahora)
-    assert ruta == dir_oro / "20261024-153000.png"
+    assert ruta == dir_oro / "v0.png"  # a.png y b.png no son de ninguna variante
     assert aviso is None
     assert len(recibido) == 1
     assert "Sin logos" in recibido[0][0]
-    # Con dos imágenes en el banco se genera la tercera variante, no otra copia de la primera.
-    assert ilustracion.motivos()["oro_lingotes"]["variantes"][2] in recibido[0][0]
+    assert ilustracion.motivos()["oro_lingotes"]["variantes"][0] in recibido[0][0]
 
     nuevo_uso = json.loads((tmp_path / "uso.json").read_text(encoding="utf-8"))
-    assert nuevo_uso["oro_lingotes/20261024-153000.png"] == hoy.isoformat()
+    assert nuevo_uso["oro_lingotes/v0.png"] == hoy.isoformat()
 
 
 def test_si_falla_la_generacion_usa_la_mas_antigua(tmp_path: Path):
@@ -226,7 +225,7 @@ def _banco(tmp_path: Path, motivo: str, n: int, hoy: date, dias: int = 1) -> lis
     rutas = []
     usos = {}
     for i in range(n):
-        r = d / f"{i}.png"
+        r = d / f"v{i}.png"
         r.write_bytes(PNG)
         rutas.append(r)
         usos[f"{motivo}/{r.name}"] = (hoy - timedelta(days=dias + i)).isoformat()
@@ -282,3 +281,25 @@ def test_faltantes_lista_las_variantes_sin_imagen(tmp_path: Path):
     assert [i for m, i in falta if m == "plata"] == list(range(1, n_plata))
     assert ("oro_lingotes", 0) in falta
     assert len(falta) == sum(len(v["variantes"]) for v in ilustracion.motivos().values()) - 1
+
+
+def test_una_variante_que_fallo_es_la_que_se_genera(tmp_path: Path):
+    """Con v0 y v2 en disco (v1 falló), contar archivos volvería a generar la v2 y la v1 no existiría nunca."""
+    hoy = date(2026, 10, 24)
+    d = tmp_path / "plata"
+    d.mkdir()
+    for n in ("v0.png", "v2.png"):
+        (d / n).write_bytes(PNG)
+    (tmp_path / "uso.json").write_text(json.dumps({"plata/v0.png": hoy.isoformat(), "plata/v2.png": hoy.isoformat()}),
+                                       encoding="utf-8")
+    assert [i for m, i in ilustracion.faltantes(tmp_path) if m == "plata"] == [1]
+    recibido = []
+
+    def generar(prompt, destino):
+        recibido.append(prompt)
+        destino.write_bytes(PNG)
+        return destino
+
+    ruta, aviso = ilustracion.elegir("plata", hoy=hoy, generar=generar, banco=tmp_path)
+    assert ruta == d / "v1.png" and aviso is None
+    assert ilustracion.motivos()["plata"]["variantes"][1] in recibido[0]

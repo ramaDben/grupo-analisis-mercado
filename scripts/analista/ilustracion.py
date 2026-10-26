@@ -67,10 +67,17 @@ def _imagenes(dir_motivo: Path) -> list[Path]:
     return [p for p in sorted(dir_motivo.iterdir()) if p.is_file() and p.suffix.lower() in (".png", ".jpg")]
 
 
+def _sin_imagen(dir_motivo: Path, variantes: int) -> list[int]:
+    """Las variantes sin su `v{i}.png`. Se leen del nombre y no de la cantidad de archivos: si la v1
+    falló y la v2 no, contar volvería a generar la v2 y la v1 no existiría nunca."""
+    presentes = {p.stem for p in _imagenes(dir_motivo)}
+    return [i for i in range(variantes) if f"v{i}" not in presentes]
+
+
 def faltantes(banco: Path = BANCO) -> list[tuple[str, int]]:
     """Las variantes de cada motivo que todavía no tienen imagen en el banco, en orden."""
     return [(m, i) for m, info in motivos().items()
-            for i in range(len(_imagenes(Path(banco) / m)), len(info["variantes"]))]
+            for i in _sin_imagen(Path(banco) / m, len(info["variantes"]))]
 
 
 def _leer_usos(uso_path: Path) -> dict[str, str]:
@@ -98,7 +105,10 @@ def elegir(
     banco: Path = BANCO,
     ahora: datetime | None = None,
 ) -> tuple[Path | None, str | None]:
-    """Elige o genera una imagen ilustrativa para la noticia del correo según la rotación del banco."""
+    """Elige o genera una imagen ilustrativa para la noticia del correo según la rotación del banco.
+
+    `ahora` queda por compatibilidad: la imagen generada se nombra por su variante (`v{i}.png`).
+    """
     # Valida existencia en catálogo antes de interactuar con disco para fallar de inmediato si es desconocido
     prompt_de(motivo)
     variantes = len(motivos()[motivo]["variantes"])
@@ -138,13 +148,12 @@ def elegir(
         return (elegida, None)
 
     # 2. Sin disponibles, se genera solo la variante que todavía no tiene imagen en el banco
-    incompleto = len(imagenes) < variantes
+    pendientes = _sin_imagen(dir_motivo, variantes)
+    incompleto = bool(pendientes)
     if incompleto and generar is not None:
-        if ahora is None:
-            ahora = datetime.now()
-        destino = dir_motivo / f"{ahora:%Y%m%d-%H%M%S}.png"
+        destino = dir_motivo / f"v{pendientes[0]}.png"
         try:
-            ruta_generada = generar(prompt_de(motivo, len(imagenes)), destino)
+            ruta_generada = generar(prompt_de(motivo, pendientes[0]), destino)
             _guardar_uso(uso_path, usos, f"{motivo}/{ruta_generada.name}", hoy)
             return (ruta_generada, None)
         except ImagenNoGenerada:
