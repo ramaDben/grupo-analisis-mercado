@@ -1513,3 +1513,8 @@ def test_simulacion_correo_volumen_con_unidad_y_bajo_minimo():
     activo_bajo["contrato"] = {"clp_unidad": 950.0, "vol_min": 5.0, "vol_paso": 0.1}
     correo_bajo = oh._simulacion_correo(activo_bajo, EJECUTIVO["nombre"], c)
     assert "Volumen: 5,0 lotes: es el mínimo que permite el broker." in correo_bajo
+
+
+def test_la_tabla_de_factores_muestra_el_porcentaje_con_su_signo():
+    assert oh._pct_visible("4,96 por ciento") == "4,96 %"
+    assert oh._pct_visible("101,808") == "101,808"

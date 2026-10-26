@@ -438,6 +438,12 @@ def seleccionar_drivers_correo(hechos: list[dict[str, Any]], direccion: str = ""
     return seleccionados, _sintesis_dominancia(seleccionados, direccion=direccion)
 
 
+def _pct_visible(nivel: str) -> str:
+    """«4,96 por ciento» como «4,96 %» en la tabla. Los datos que lee agy siguen sin «%»
+    (`preparar._contexto_sin_porcentajes`): el cambio es solo de presentación."""
+    return nivel.replace(" por ciento", " %")
+
+
 def _hechos_correo(hechos: list[dict[str, Any]], c: dict[str, str], direccion: str = "") -> str:
     """Los drivers del día en tabla: factor, dato, cambio y efecto sobre el activo."""
     if not hechos:
@@ -461,7 +467,7 @@ def _hechos_correo(hechos: list[dict[str, Any]], c: dict[str, str], direccion: s
         cambio = _cambio_correo(h).lstrip(", ") or "sin cambio medido"
         filas.append('<tr>'
                      + _celda_hecho(ih.e(h["driver"].replace(" (TIPS)", TIPS_EXPLICADO)), c, ultima, 700, "texto_1", "34%")
-                     + _celda_hecho(ih.e(h["nivel"]), c, ultima, 700, "texto_1", "16%")
+                     + _celda_hecho(ih.e(_pct_visible(h["nivel"])), c, ultima, 700, "texto_1", "16%")
                      + _celda_hecho(ih.e(cambio), c, ultima, ancho="20%")
                      + _celda_hecho(efecto or "sin efecto atribuido", c, ultima, color="texto_1", ancho="30%") + '</tr>')
 
