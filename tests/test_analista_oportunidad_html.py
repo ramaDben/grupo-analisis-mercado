@@ -1247,3 +1247,17 @@ def test_en_el_celular_la_imagen_de_tasas_baja_a_todo_el_ancho(tmp_path):
         assert '<td class="stack tasa-img"' in bloque and "hide-m" not in bloque
         estilos = re.search(r'<style id="correo-estilos">(.*?)</style>', html, re.S).group(1)
         assert re.search(r"\.tasa-img img\{[^}]*width:100% !important", estilos)
+
+
+def test_el_logo_de_la_banda_oscura_es_opaco_y_va_por_url(tmp_path):
+    """Director, 2026-10-26: el logo blanco transparente llegaba a Gmail como un recuadro vacío."""
+    import struct
+
+    ihdr = oh.LOGO_OSCURO.read_bytes()[16:26]
+    ancho, alto, _, tipo = struct.unpack(">IIBB", ihdr)
+    assert (ancho, alto) == (192, 192) and tipo == 2  # 2 = RGB, sin canal alfa
+    html = oh.armar(_con_apertura(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY,
+                    publicar=lambda r: f"https://ejemplo.test/correos/{r.name}")
+    correo = _correo(html)
+    assert "ejemplo.test/correos/logo_correo_oscuro.png" in correo
+    assert "ejemplo.test/correos/LOGO Blanco.png" not in correo

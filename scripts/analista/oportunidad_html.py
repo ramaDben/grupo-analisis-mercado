@@ -22,6 +22,9 @@ from analista import oportunidad as op
 
 PLANTILLA = RAIZ / "templates" / "oportunidad" / "pieza.html"
 LOGO_CLARO = RAIZ / "templates" / "stories" / "assets" / "LOGO NEGRO.png"  # el de la cabecera blanca del correo
+# El de la banda oscura: opaco sobre el color de la banda y de 192 px. El blanco transparente de 1135 px llegaba
+# a Gmail como un recuadro vacío (director, 2026-10-26).
+LOGO_OSCURO = RAIZ / "templates" / "stories" / "assets" / "logo_correo_oscuro.png"
 
 
 class InformeInvalido(ValueError):
@@ -762,7 +765,7 @@ def _kicker(texto: str) -> str:
         f'<p style="margin:0;font-family:{F_SANS};font-size:12px;line-height:16px;font-weight:700;'
         f'letter-spacing:1.8px;text-transform:uppercase;color:#50C0A8;">{ih.e(texto)}</p></td>'
         f'<td valign="top" align="right" width="52" style="padding:0 0 10px 0;">'
-        f'<img src="{ih._data_uri(ih.LOGO)}" width="48" height="48" alt="Grupo Inteligencia" '
+        f'<img src="{ih._data_uri(LOGO_OSCURO)}" width="48" height="48" alt="Grupo Inteligencia" '
         f'style="display:block;border:0;width:48px;height:48px;"></td></tr>'
     )
 
@@ -1178,7 +1181,7 @@ def _marco_correo(d: dict[str, Any], ed: dict[str, Any], ejecutivo: dict[str, An
             'En línea con lo que conversamos por teléfono, te preparé esta lectura para que sigas el mercado '
             'con criterio técnico y sepas qué está mirando nuestra mesa.</p></td>'
             f'<td class="hide-m" width="130" valign="middle" align="center" style="padding:30px 36px 30px 0;">'
-            f'<img src="{ih._data_uri(ih.LOGO)}" width="94" height="94" alt="" '
+            f'<img src="{ih._data_uri(LOGO_OSCURO)}" width="94" height="94" alt="Grupo Inteligencia" '
             f'style="display:block;border:0;width:94px;height:94px;"></td></tr>')
         + '</td></tr>'
         '<tr><td class="pad" style="padding:34px 40px 30px 40px;">'
@@ -1300,7 +1303,7 @@ def armar(pieza: dict[str, Any], dir_pedido: Path, ejecutivo: dict[str, Any], au
              if noticia else _marco_correo(d, ed, ejecutivo, autor, c))
     if publicar is not None:
         imgs = (pieza.get("imagenes") or {})
-        rutas = [ih.LOGO, LOGO_CLARO, *(dir_pedido / a["grafico"] for a in d["activos"]),
+        rutas = [ih.LOGO, LOGO_CLARO, LOGO_OSCURO, *(dir_pedido / a["grafico"] for a in d["activos"]),
                  *(dir_pedido / imgs[k] for k in ("calendario", "dolar") if imgs.get(k)), *ilustraciones.values()]
         marco = _enlazar_imagenes(marco, rutas, publicar)
         correos = [_enlazar_imagenes(x, rutas, publicar) for x in correos]
