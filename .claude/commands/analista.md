@@ -136,8 +136,10 @@ y la pone el bot: tú no decides nada visual.
     decimales en inglés ("156.85"): conviértelos, porque copiados así el bot los descarta. El bot lee la página y
     descarta la noticia si una cifra no está. Si la nota tiene muro de pago (Reuters, Bloomberg,
     FT, WSJ), escribe `titular` y `bajada` **sin cifras**: el bot no puede leerla y la descartaría.
-  - `motivo`: el id de la imagen ilustrativa, de `config/motivos_imagen.json` (`oro_lingotes`, `banco_central`,
-    `billetes_dolar`, `peso_chileno`, `cobre`, `petroleo`, `bolsa_pantallas`, `tecnologia`, `acciones_generico`).
+  - `motivo`: el id de la imagen ilustrativa, de `config/motivos_imagen.json` (`oro_lingotes`, `plata`,
+    `banco_central`, `billetes_dolar`, `peso_chileno`, `cobre`, `petroleo`, `cripto`, `bolsa_pantallas`,
+    `tecnologia`, `acciones_generico`). Un metal, el petróleo o la cripto solo acompañan a su propio activo: si
+    eliges el de otro, el bot lo cambia por el del activo de la pieza.
   - Mismos controles de texto que el resto: sin guion largo ni medio, sin "oportunidad", "comprar", "vender" ni
     "recomienda", siglas explicadas. El `%` vale solo si está en la nota. Puede ser la misma nota que una de `fuentes`.
 - Si `datos.empresa` existe (acciones): trae `proxima_earnings` (día y fecha de los próximos resultados),

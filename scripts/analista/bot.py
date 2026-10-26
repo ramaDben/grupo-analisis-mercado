@@ -385,7 +385,7 @@ class Atendedor:
         motivos = {}
         noticia = pieza["editorial"].get("noticia")
         if isinstance(noticia, dict):
-            motivos["noticia"] = noticia["motivo"]
+            motivos["noticia"] = il.motivo_para(noticia["motivo"], pieza["datos"]["activos"][0]["ticker"])
         tasa = pieza["datos"].get("tasa")
         if isinstance(tasa, dict):
             motivos["tasa"] = tasa["motivo_imagen"]

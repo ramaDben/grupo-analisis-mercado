@@ -996,6 +996,13 @@ def test_ilustraciones_se_eligen_una_vez(armado):
     assert es.errores(pieza) == []  # `ilustraciones` no rompe la huella
 
 
+def test_la_imagen_de_la_noticia_es_del_activo_de_la_pieza(armado):
+    """Una noticia de oro marcada con el motivo de plata no puede salir con lingotes de plata, ni al revés."""
+    _con_noticia(armado, {**NOTICIA_ORO, "motivo": "plata"})
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    assert [d.parent.name for d in armado.generadas] == ["oro_lingotes"]
+
+
 def test_reuso_no_genera_imagenes(armado):
     armado.tasa = TASA_FED
     _con_noticia(armado, NOTICIA_ORO)

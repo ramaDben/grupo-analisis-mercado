@@ -3,13 +3,15 @@
 Cada correo abre con una noticia de apertura acompañada siempre de una imagen ilustrativa sobria
 (spec 2026-10-24 §2). Para evitar costo y demoras de generación en cada despacho y asegurar variedad
 visual, las imágenes se reutilizan rotándolas con un periodo de enfriamiento de 7 días. agy genera una
-nueva solo cuando no quedan imágenes disponibles en el banco o todas están en enfriamiento reciente.
+por variante del motivo y nada más: con el banco completo, otra generación solo repetiría una foto que ya
+existe (las seis fachadas idénticas del 2026-10-26), así que rota la de uso más antiguo.
 """
 from __future__ import annotations
 
 import json
 from datetime import date, datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 from analista import RAIZ
 from analista.generador_imagen import Generador, ImagenNoGenerada
@@ -19,21 +21,56 @@ BANCO = RAIZ / "data" / "imagenes_ilustrativas"
 COOLDOWN_DIAS = 7
 
 
-def motivos(ruta: Path = CONFIG) -> dict[str, dict[str, str]]:
+def _catalogo(ruta: Path = CONFIG) -> dict[str, Any]:
+    return json.loads(Path(ruta).read_text(encoding="utf-8"))
+
+
+def motivos(ruta: Path = CONFIG) -> dict[str, dict[str, Any]]:
     """Devuelve el diccionario de motivos del catálogo cerrado."""
-    datos = json.loads(Path(ruta).read_text(encoding="utf-8"))
-    return datos.get("motivos", {})
+    return _catalogo(ruta).get("motivos", {})
 
 
-def prompt_de(motivo: str, ruta: Path = CONFIG) -> str:
-    """Construye el prompt agregando las prohibiciones fijas para garantizar neutralidad legal y de marca."""
-    datos = json.loads(Path(ruta).read_text(encoding="utf-8"))
+def estilo(ruta: Path = CONFIG) -> str:
+    """El estilo de marca que llevan todas las imágenes: el de las fotos de las Stories."""
+    return _catalogo(ruta).get("estilo", "")
+
+
+def prompt_de(motivo: str, variante: int = 0, ruta: Path = CONFIG) -> str:
+    """La variante del motivo con el estilo de marca y las prohibiciones fijas (neutralidad legal y de marca)."""
+    datos = _catalogo(ruta)
     catalogo = datos.get("motivos", {})
     if motivo not in catalogo:
         raise KeyError(f"Motivo no encontrado en el catálogo: {motivo}")
-    prompt = catalogo[motivo]["prompt"]
-    prohibiciones = datos.get("prohibiciones", "")
-    return prompt + " " + prohibiciones
+    variantes = catalogo[motivo]["variantes"]
+    return " ".join(x for x in (variantes[variante % len(variantes)], datos.get("estilo", ""),
+                                datos.get("prohibiciones", "")) if x)
+
+
+def motivo_para(motivo: str, ticker: str, ruta: Path = CONFIG) -> str:
+    """El motivo que acompaña al activo: la materia prima de otro activo se cambia por la del activo.
+
+    El motivo lo elige agy, y el 2026-10-26 una noticia de plata salió con lingotes de oro. Un motivo
+    con `activos` solo vale para esos tickers; los demás (el banco central, el dólar) valen para todos.
+    """
+    datos = _catalogo(ruta)
+    catalogo = datos.get("motivos", {})
+    duenos = catalogo.get(motivo, {}).get("activos")
+    if not duenos or ticker in duenos:
+        return motivo
+    propio = next((m for m, info in catalogo.items() if ticker in info.get("activos", ())), None)
+    return propio or datos.get("respaldo", "banco_central")
+
+
+def _imagenes(dir_motivo: Path) -> list[Path]:
+    if not dir_motivo.is_dir():
+        return []
+    return [p for p in sorted(dir_motivo.iterdir()) if p.is_file() and p.suffix.lower() in (".png", ".jpg")]
+
+
+def faltantes(banco: Path = BANCO) -> list[tuple[str, int]]:
+    """Las variantes de cada motivo que todavía no tienen imagen en el banco, en orden."""
+    return [(m, i) for m, info in motivos().items()
+            for i in range(len(_imagenes(Path(banco) / m)), len(info["variantes"]))]
 
 
 def _leer_usos(uso_path: Path) -> dict[str, str]:
@@ -63,18 +100,15 @@ def elegir(
 ) -> tuple[Path | None, str | None]:
     """Elige o genera una imagen ilustrativa para la noticia del correo según la rotación del banco."""
     # Valida existencia en catálogo antes de interactuar con disco para fallar de inmediato si es desconocido
-    prompt = prompt_de(motivo)
+    prompt_de(motivo)
+    variantes = len(motivos()[motivo]["variantes"])
 
     banco = Path(banco)
     uso_path = banco / "uso.json"
     usos = _leer_usos(uso_path)
 
     dir_motivo = banco / motivo
-    imagenes: list[Path] = []
-    if dir_motivo.is_dir():
-        for p in sorted(dir_motivo.iterdir()):
-            if p.is_file() and p.suffix.lower() in (".png", ".jpg"):
-                imagenes.append(p)
+    imagenes = _imagenes(dir_motivo)
 
     def fecha_de_uso(p: Path) -> date | None:
         clave = f"{motivo}/{p.name}"
@@ -103,19 +137,21 @@ def elegir(
         _guardar_uso(uso_path, usos, f"{motivo}/{elegida.name}", hoy)
         return (elegida, None)
 
-    # 2. Si no hay imágenes disponibles y se proporcionó generador, intentar generar una nueva
-    if generar is not None:
+    # 2. Sin disponibles, se genera solo la variante que todavía no tiene imagen en el banco
+    incompleto = len(imagenes) < variantes
+    if incompleto and generar is not None:
         if ahora is None:
             ahora = datetime.now()
         destino = dir_motivo / f"{ahora:%Y%m%d-%H%M%S}.png"
         try:
-            ruta_generada = generar(prompt, destino)
+            ruta_generada = generar(prompt_de(motivo, len(imagenes)), destino)
             _guardar_uso(uso_path, usos, f"{motivo}/{ruta_generada.name}", hoy)
             return (ruta_generada, None)
         except ImagenNoGenerada:
             pass
 
-    # 3. Si falló la generación o generar es None pero hay imágenes en el motivo, reutilizar la más antigua
+    # 3. Banco completo, o la generación falló: se reutiliza la de uso más antiguo. Con el banco completo es
+    # la rotación normal y no se avisa; incompleto, el analista sabe que no se pudo hacer una nueva.
     if imagenes:
         def clave_antiguedad(p: Path) -> tuple[int, date, str]:
             f_uso = fecha_de_uso(p)
@@ -125,6 +161,8 @@ def elegir(
 
         mas_antigua = min(imagenes, key=clave_antiguedad)
         _guardar_uso(uso_path, usos, f"{motivo}/{mas_antigua.name}", hoy)
+        if not incompleto:
+            return (mas_antigua, None)
         aviso = (f"La imagen de la noticia ya salió en otro análisis de los últimos {COOLDOWN_DIAS} días: "
                  "no pude generar una nueva.")
         return (mas_antigua, aviso)
@@ -132,3 +170,14 @@ def elegir(
     # 4. Si el motivo no tiene ninguna imagen y no se pudo generar
     aviso = "No pude generar la imagen de la noticia: el correo la muestra sin imagen."
     return (None, aviso)
+
+
+if __name__ == "__main__":
+    # Llena el banco antes de que lo pida un analista: cada imagen son ~76 s de agy (medido el 2026-10-24).
+    from analista.generador_imagen import generar_con_agy
+
+    for motivo, i in faltantes():
+        try:
+            print(generar_con_agy(prompt_de(motivo, i), BANCO / motivo / f"v{i}.png"), flush=True)
+        except ImagenNoGenerada as exc:
+            print(f"{motivo} v{i}: {exc}", flush=True)
