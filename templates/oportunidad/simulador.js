@@ -18,3 +18,8 @@ function simular(c, e, perdida, capital) {
   return {volumen: vol, perdida: p, ganancia: g, bajo_minimo: bajo,
           perdida_pct: _pct(p, capital), ganancia_pct: _pct(g, capital)};
 }
+function volumenTexto(s) {
+  if (!s) return '';
+  var coma = function(n) { return String(n).replace('.', ','); };
+  return 'Volumen: ' + coma(s.volumen) + ' lotes' + (s.bajo_minimo ? ': es el mínimo que permite el broker.' : '.');
+}

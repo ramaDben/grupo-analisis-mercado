@@ -34,6 +34,9 @@ class Escenario:
     # Cómo se activa una entrada pendiente: "retesteo" (el precio vuelve al nivel y lo respeta,
     # como el borde del rango) o "quiebre" (una vela 4H cierra al otro lado del nivel).
     condicion: str | None = None
+    distancia_pct: float | None = None  # distancia del objetivo al precio de referencia en porcentaje
+    objetivo_parcial: bool = False  # True si en rango el 1:3 queda antes del borde contrario
+    borde_opuesto: float | None = None  # el borde contrario del rango (o None si no aplica)
 
     @property
     def simulable(self) -> bool:
@@ -81,19 +84,29 @@ def _condicional(lectura: Lectura, atr: float, digits: int) -> Escenario:
     objetivo = _redondeo(entrada + signo * MULTIPLO * abs(entrada - stop), digits)
     atr_d1 = float(lectura.metricas.get("atr_d1") or 0.0)
     dias = round(abs(objetivo - lectura.precio) / atr_d1, 1) if atr_d1 else None
+    distancia_pct = round(abs(objetivo - lectura.precio) / lectura.precio * 100, 2) if lectura.precio else None
     return Escenario(lectura.ticker, lectura.estado, direccion, entrada, stop, objetivo, True, dias, None,
-                     condicion)
+                     condicion, distancia_pct=distancia_pct)
 
 
 def escenario(lectura: Lectura, digits: int) -> Escenario:
+    """Calcula la simulación 1:3 para la pieza del ejecutivo.
+
+    En RANGO se mantiene el objetivo 1:3 como objetivo parcial dentro del rango,
+    declarando el borde contrario. Si el objetivo 1:3 quedara más allá del borde
+    contrario, el objetivo se limita exactamente al borde contrario y deja de ser
+    parcial.
+    """
     atr = float(lectura.metricas.get("atr") or 0.0)
     atr_d1 = float(lectura.metricas.get("atr_d1") or 0.0)
     if atr <= 0:
         return _sin(lectura, "no se pudo medir cuánto se mueve el activo para dejar el stop con margen")
+    borde_opuesto = None
     if lectura.estado == "RANGO":
         superior, inferior = bordes_rango(lectura)
         arriba = abs(lectura.vigilar.precio - superior) <= abs(lectura.vigilar.precio - inferior)
         entrada = superior if arriba else inferior
+        borde_opuesto = _redondeo(inferior if arriba else superior, digits)
         signo = -1 if arriba else 1  # falso quiebre: desde el borde hacia adentro
         stop = entrada - signo * PARAMETROS.tolerancia_horizontal_atr * atr
         direccion, pendiente, condicion = ("BAJISTA" if arriba else "ALCISTA"), True, "retesteo"
@@ -112,9 +125,31 @@ def escenario(lectura: Lectura, digits: int) -> Escenario:
     if riesgo < PARAMETROS.tolerancia_toque_atr * atr:  # pegado al nivel: el stop quedaría en el ruido
         return _condicional(lectura, atr, digits)
     objetivo = _redondeo(entrada + signo * MULTIPLO * riesgo, digits)
+
+    objetivo_parcial = False
+    if lectura.estado == "RANGO" and borde_opuesto is not None:
+        # Si el 1:3 queda más allá del borde contrario, se limita al borde contrario y deja de ser parcial.
+        # Si queda estrictamente antes del borde contrario, se mantiene como objetivo parcial.
+        if (objetivo - borde_opuesto) * signo > 0:
+            objetivo = borde_opuesto
+            objetivo_parcial = False
+        elif objetivo == borde_opuesto:
+            objetivo_parcial = False
+        else:
+            objetivo_parcial = True
+
     dias = round(abs(objetivo - lectura.precio) / atr_d1, 1) if atr_d1 else None
+    distancia_pct = round(abs(objetivo - lectura.precio) / lectura.precio * 100, 2) if lectura.precio else None
     return Escenario(lectura.ticker, lectura.estado, direccion, entrada, stop, objetivo, pendiente, dias, None,
-                     condicion)
+                     condicion, distancia_pct=distancia_pct, objetivo_parcial=objetivo_parcial,
+                     borde_opuesto=borde_opuesto)
+
+
+def formatear_precio(valor: float, digits: int) -> str:
+    """El formateador canónico del carrusel: dos formatos para el mismo precio divergen."""
+    import pipeline_carrusel as pc
+
+    return pc.formatear_precio(valor, digits)
 
 
 def texto_condicion(esc: dict[str, Any], entrada: str) -> str | None:
