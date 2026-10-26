@@ -11,9 +11,11 @@ marcos intradía, y el import circular quedaría a un paso.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import ceil
 from typing import Literal
 
 from estrategia.tori.calidad import calificar
+from estrategia.tori.horizontales import Horizontal, detectar
 from estrategia.tori.lectura import _estructura
 from estrategia.tori.lineas import Trazo, trazar
 from estrategia.tori.parametros import Parametros
@@ -99,3 +101,45 @@ def diagonales(s: Serie, p: Parametros, marco: str, digits: int
               for rol, t in con_rol]
     eventos = [ev for rol, t in con_rol for ev in _eventos(t, rol, s, p, marco, digits)]
     return e.estado, e.direccion, lineas, eventos
+
+
+def _par(niveles: list[Horizontal], cierre: float) -> list[tuple[Linea_, Horizontal]]:
+    """El soporte más cercano bajo `cierre` y la resistencia más cercana sobre él, si existen."""
+    bajo = [h for h in niveles if h.precio < cierre]
+    sobre = [h for h in niveles if h.precio > cierre]
+    return ([("soporte", max(bajo, key=lambda h: h.precio))] if bajo else []) +            ([("resistencia", min(sobre, key=lambda h: h.precio))] if sobre else [])
+
+
+def zonas(s: Serie, p: Parametros, marco: str, digits: int) -> tuple[list[LineaRadar], list[Evento]]:
+    """(lineas, eventos) sobre el soporte y la resistencia horizontales más cercanos (spec §5).
+
+    Un horizontal es una zona de ancho `media_zona_atr` ATR a cada lado, no una línea.
+    "Toco" elige el par con el cierre ANTERIOR: una vela que cruza el nivel y cierra al otro
+    lado sigue midiéndose contra el soporte que tenía debajo. "Por tocar" lo elige con el
+    último cierre y mide contra el borde de la zona; un nivel que ya tocó no repite.
+    """
+    if s.atr <= 0:
+        raise ValueError(f"las velas de {marco} no tienen rango (ATR 0); no hay nada que medir")
+    i = len(s) - 1
+    cierre = s.closes[i]
+    m = p.media_zona_atr * s.atr
+    niveles = detectar(s, p)
+    eventos: list[Evento] = []
+    tocados: set[float] = set()
+    for rol, h in _par(niveles, s.closes[i - 1]):
+        if s.lows[i] <= h.precio + m and s.highs[i] >= h.precio - m:
+            tocados.add(h.precio)
+            eventos.append(Evento(marco, rol, "toco", None, abs(cierre - h.precio) / s.atr,
+                                  round(h.precio, digits), "", ""))
+    vigentes = _par(niveles, cierre)
+    for rol, h in vigentes:
+        if h.precio in tocados:
+            continue
+        d = max(0.0, abs(cierre - h.precio) - m)
+        # El epsilon evita que 1,0000000002 por ruido de coma flotante cuente como 2 velas.
+        n = ceil(d / (p.radar_k_atr * s.atr) - 1e-9)
+        if 1 <= n <= p.radar_velas_max:
+            eventos.append(Evento(marco, rol, "por_tocar", n, abs(cierre - h.precio) / s.atr,
+                                  round(h.precio, digits), "", ""))
+    lineas = [LineaRadar(rol, round(h.precio, digits), round(h.precio, digits)) for rol, h in vigentes]
+    return lineas, eventos

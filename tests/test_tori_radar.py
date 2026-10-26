@@ -14,6 +14,7 @@ for p in (str(RAIZ / "src"), str(RAIZ / "scripts")):
 
 import velas_sinteticas as vs  # noqa: E402
 from estrategia.tori import radar  # noqa: E402
+from estrategia.tori.horizontales import Horizontal  # noqa: E402
 from estrategia.tori.lectura import _estructura  # noqa: E402
 from estrategia.tori.lineas import trazar  # noqa: E402
 from estrategia.tori.parametros import PARAMETROS as P  # noqa: E402
@@ -138,3 +139,75 @@ def test_los_roles_son_los_de_estructura():
         for x, (_, t) in zip(lineas, esperadas):
             assert x.valor_actual == round(t.valor(len(s) - 1), DIGITS)
             assert x.valor_abierta == round(t.valor(len(s)), DIGITS)
+
+
+# --- zonas de soporte y resistencia (spec §5) ---------------------------------------------------
+
+def _rango(fin: float = 105):
+    """Rango 100-110 con soporte en 99,8 y resistencia en 110,2; la última vela se edita en cada caso."""
+    return vs.desde_vertices([100, 110, 100, 110, 100, 110, 100, fin], 10)
+
+
+def test_vela_que_entra_a_la_zona_de_soporte_es_toco():
+    df = _rango()
+    df.loc[df.index[-1], "low"] = 99.9  # dentro de 99,8 ± 0,18 ATR
+    s = serie_de(df)
+    lineas, eventos = radar.zonas(s, P, "H1", DIGITS)
+    [ev] = _de(eventos, "soporte")
+    assert (ev.marco, ev.tipo, ev.velas, ev.calidad, ev.detalle) == ("H1", "toco", None, "", "")
+    assert ev.valor == round(99.8, DIGITS)
+    assert abs(ev.distancia_atr - abs(s.closes[-1] - 99.8) / s.atr) < 1e-9
+    assert [(x.rol, x.valor_actual, x.valor_abierta) for x in lineas] == [
+        ("soporte", 99.8, 99.8), ("resistencia", 110.2, 110.2)]
+
+
+def test_zona_cruzada_en_la_ultima_vela_cuenta_como_toco():
+    df = _rango()
+    # El cierre anterior estaba sobre el soporte y el último quedó bajo él.
+    df.loc[df.index[-1], ["high", "low", "close"]] = [104.5, 98.0, 99.0]
+    s = serie_de(df)
+    assert s.closes[-2] > 99.8 > s.closes[-1]
+    [ev] = _de(radar.zonas(s, P, "H1", DIGITS)[1], "soporte")
+    assert (ev.tipo, ev.valor) == ("toco", round(99.8, DIGITS))
+
+
+def test_solo_cuentan_el_soporte_y_la_resistencia_mas_cercanos(monkeypatch):
+    s = serie_de(_rango())  # cierre anterior 104,5; la última vela va de 104,3 a 105,2
+    bajo = [Horizontal(104.4, 2, 0), Horizontal(104.2, 2, 0), Horizontal(104.0, 2, 0)]
+    monkeypatch.setattr(radar, "detectar", lambda *_: bajo)
+    lineas, eventos = radar.zonas(s, P, "H1", DIGITS)
+    # Las zonas de 104,4 y 104,2 intersectan la vela, pero solo el más cercano cuenta.
+    [ev] = eventos
+    assert (ev.linea, ev.tipo, ev.valor) == ("soporte", "toco", 104.4)
+    assert [x.rol for x in lineas] == ["soporte"]
+
+
+def test_por_tocar_mide_contra_el_borde_de_la_zona(monkeypatch):
+    s = serie_de(_rango())
+    nivel = s.closes[-1] - 1.18 * s.atr  # d = 1,18 − 0,18 = 1,0 ATR al borde de la zona
+    monkeypatch.setattr(radar, "detectar", lambda *_: [Horizontal(nivel, 2, 0)])
+    [ev] = radar.zonas(s, P, "H1", DIGITS)[1]
+    assert (ev.linea, ev.tipo, ev.velas) == ("soporte", "por_tocar", 1)
+    assert abs(ev.distancia_atr - 1.18) < 1e-9
+    # Con el doble de distancia hacen falta dos velas.
+    monkeypatch.setattr(radar, "detectar", lambda *_: [Horizontal(s.closes[-1] - 2.18 * s.atr, 2, 0)])
+    [ev] = radar.zonas(s, P, "H1", DIGITS)[1]
+    assert ev.velas == 2
+
+
+def test_un_nivel_que_toco_no_repite_por_tocar_y_lejos_no_hay_evento():
+    df = _rango()
+    df.loc[df.index[-1], "low"] = 99.9
+    eventos = radar.zonas(serie_de(df), P, "H1", DIGITS)[1]
+    assert [e.tipo for e in _de(eventos, "soporte")] == ["toco"]
+    assert _de(eventos, "resistencia") == []  # 110,2 queda a ~5 ATR
+
+
+def test_zonas_sin_rango_lanza():
+    df = _rango()
+    df[["open", "high", "low", "close"]] = 100.0
+    try:
+        radar.zonas(serie_de(df), P, "H1", DIGITS)
+    except ValueError:
+        return
+    raise AssertionError("debía lanzar ValueError con ATR 0")
