@@ -41,6 +41,11 @@ class Parametros:
     peso_doble_confirmacion: float = 5.0  # un horizontal junto a la línea que se vigila
     peso_espacio: float = 5.0  # espacio hasta el objetivo
     resta_lejos: float = 30.0  # precio lejos de la seguridad: baja de banda (doctrina 2.5)
+    # Radar multifractal (spec del radar §5). Calibrables: "3 velas = 3 ATR" es generoso,
+    # porque el ATR mide el rango de una vela y no cuánto avanza en una dirección.
+    radar_velas_max: int = 3  # "por tocar": la línea llega dentro de estas velas
+    radar_k_atr: float = 1.0  # al ritmo de k ATR por vela
+    media_zona_atr: float = 0.18  # semiancho de la zona S/R, el que dibuja el indicador
 
     def __post_init__(self) -> None:
         # La histéresis de toques supone que alejarse exige más que tocar.
