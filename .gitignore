@@ -152,3 +152,9 @@ data/informes_evergreen/
 data/semanal/avisos_semana.json
 # El plan intradía de cada día: estado generado, no historia editorial
 data/referencias_diarias/
+
+# Lienzo del webinar: salidas regenerables (el editorial.json sí se versiona)
+data/webinar/*/datos.json
+data/webinar/*/lienzo.html
+data/webinar/*/lienzo.pdf
+data/webinar/*/grafico_*.png

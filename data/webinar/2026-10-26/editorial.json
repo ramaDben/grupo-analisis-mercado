@@ -1,0 +1,59 @@
+{
+  "noticia": {
+    "medio": "FXStreet",
+    "fecha": "2026-10-23",
+    "url": "https://www.fxstreet.com/analysis/gold-weekly-forecast-inflation-fears-attract-bears-ahead-of-critical-fed-meeting-202610231503",
+    "titular_original": "Gold Weekly Forecast: Inflation fears attract bears ahead of critical Fed meeting",
+    "extracto": "Gold (XAU/USD) failed to benefit from falling US Treasury bond yields and closed the week deep in negative territory as rising energy prices fed into inflation fears.",
+    "titular": "El oro cerró la semana en baja: el petróleo más caro reavivó el temor a la inflación",
+    "bajada": "Ni la caída de los rendimientos del Tesoro lo sostuvo. Esta semana la reunión de la Fed y el PIB del tercer trimestre de EE.UU. pueden darle más volatilidad.",
+    "motivo_imagen": "oro_lingotes",
+    "activo": "XAUUSD"
+  },
+  "bancos": [
+    {
+      "banco": "ING",
+      "fecha": "2026-10-23",
+      "url": "https://think.ing.com/articles/federal-reserve-preview-a-pause-before-a-december-hike/",
+      "extracto": "Ongoing concerns about elevated price pressures mean we do expect a December interest rate rise.",
+      "resumen": "Espera que la Fed mantenga la tasa este miércoles y que la suba 0,25 puntos en diciembre, por la presión de precios que sigue alta.",
+      "activo": "XAUUSD",
+      "lectura": "Según los dichos de ING, se podría interpretar presión a la baja para el oro: un alza de tasa en diciembre fortalece al dólar y le quita atractivo al oro, que no paga intereses."
+    },
+    {
+      "banco": "TD Securities (vía FXStreet)",
+      "fecha": "2026-10-23",
+      "url": "https://www.fxstreet.com/news/federal-reserve-october-hold-raises-december-hike-odds-td-securities-202610231406",
+      "extracto": "We expect the FOMC to keep rates steady next week, and to resume tightening in December and March next year.",
+      "resumen": "Ve la tasa sin cambios esta semana y alzas de nuevo en diciembre y en marzo del próximo año.",
+      "activo": "USDCLP",
+      "lectura": "Si la Fed vuelve a subir en diciembre y en marzo, se podría interpretar un dólar firme por más tiempo, y eso suele empujar al USD/CLP hacia arriba."
+    },
+    {
+      "banco": "Commerzbank (vía FXStreet)",
+      "fecha": "2026-10-23",
+      "url": "https://www.fxstreet.com/news/euro-gradual-upside-as-fed-and-ecb-converge-commerzbank-202610231218",
+      "extracto": "Expect the Fed and ECB to keep rates unchanged in October but deliver 25 bps hikes in December.",
+      "resumen": "Espera que la Fed y el BCE dejen sus tasas quietas en octubre y que ambos las suban 0,25 puntos en diciembre.",
+      "activo": "EURUSD",
+      "lectura": "Commerzbank ve espacio para un alza gradual del euro: si la Fed y el BCE suben juntos, la diferencia de tasas no se abre a favor del dólar."
+    }
+  ],
+  "teoria": {
+    "tema": "Cómo leer el calendario económico de la semana",
+    "idea_central": "El precio no reacciona al dato en sí, reacciona a la diferencia entre el dato y lo que el mercado esperaba.",
+    "puntos": [
+      "Cada evento trae tres cifras: el anterior, el consenso (lo que esperan los analistas) y el actual (lo que salió).",
+      "Si el actual sale igual al consenso, el movimiento suele ser chico: el precio ya lo tenía descontado.",
+      "La sorpresa frente al consenso es lo que mueve: más inflación o más crecimiento de lo esperado suele fortalecer al dólar y presionar al oro.",
+      "En una semana de banco central, cuando la decisión ya está casi descontada, lo que mueve es el tono del comunicado y de la conferencia.",
+      "Los datos se encadenan: lo que digan la Fed el miércoles y el PCE el jueves arma el camino hacia la reunión de diciembre."
+    ],
+    "ejemplo": "La Fed decide el miércoles 28 a las 15:00 de Chile y el consenso es mantener la tasa. Si la mantiene, la clave está en si deja abierta o no un alza en diciembre.",
+    "preguntas_chat": [
+      "¿Qué dato de la semana crees que puede mover más al dólar?",
+      "Si la Fed mantiene la tasa pero suena más dura de lo esperado, ¿qué esperarías del oro?"
+    ]
+  },
+  "notas_guion": {}
+}
