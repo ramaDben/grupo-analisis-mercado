@@ -149,6 +149,18 @@ def test_dos_datos_con_el_mismo_nombre_del_glosario_se_distinguen():
     assert len(set(etiquetas)) == 2 and all(e.startswith("Índice de gerentes de compra") for e in etiquetas)
 
 
+def test_el_mismo_anuncio_sin_cifras_no_ocupa_otra_fila():
+    """La Fed llega como dos eventos a la misma hora (el comunicado y la tasa) con la misma etiqueta del
+    glosario: la lámina del 2026-10-26 mostró «Comité de la Fed (1)» vacío y «(2)» con la tasa."""
+    fomc = {"nombre_es": "Comité de mercado abierto de la Fed", "explicacion": "Decide la tasa."}
+    comunicado = {**ev("2026-10-23 15:00", nombre="FOMC Statement", forecast="", previo=""), "diccionario": fomc}
+    tasa = {**ev("2026-10-23 15:00", nombre="Fed Interest Rate Decision", forecast="4.00%", previo="4.00%"),
+            "diccionario": fomc}
+    a = ag.leer_ventana(SABADO, "XAUUSD", "Oro", cargar=cargador({"thisWeek": [], "nextWeek": [comunicado, tasa]}))
+    assert [(e["evento"], e["fuente_nombre"]) for e in a.eventos] == [
+        ("Comité de mercado abierto de la Fed", "Fed Interest Rate Decision")]
+
+
 def test_un_dato_solo_conserva_su_nombre_simple():
     a = ag.leer_ventana(SABADO, "XAUUSD", "Oro", cargar=cargador({"thisWeek": [], "nextWeek": [ev("2026-10-21 09:30")]}))
     assert a.eventos[0]["evento"] == "Índice de precios al consumidor (IPC)"

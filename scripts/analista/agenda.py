@@ -84,6 +84,19 @@ def _calificador(fuente_nombre: str) -> str:
     return next((es for clave, es in CALIFICADORES if clave in bajo), "")
 
 
+def fusionar(filas: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Un anuncio que llega como dos eventos (la Fed: el comunicado y la tasa, a la misma hora y con la
+    misma etiqueta del glosario) ocupa una sola fila: la que no trae cifras sobra.
+
+    Dos datos distintos con cifras se conservan los dos y los separa `distinguir`.
+    """
+    def clave(f: dict[str, Any]) -> tuple[str, ...]:
+        return f["evento"], f["pais"], f["fecha"], f["hora"]
+
+    con_cifras = {clave(f) for f in filas if f["anterior"] or f["esperado"]}
+    return [f for f in filas if f["anterior"] or f["esperado"] or clave(f) not in con_cifras]
+
+
 def distinguir(filas: list[dict[str, Any]]) -> None:
     """Dos datos con la misma etiqueta del glosario (los PMI manufacturero y de servicios) se leen como
     una fila repetida con cifras distintas: se les agrega un calificador, y si no basta, la hora o un número."""
@@ -188,7 +201,7 @@ def leer_ventana(ahora: datetime, ticker: str, nombre: str, cargar: Callable[...
     ahora = ahora.astimezone(SANTIAGO)
     altos, avisos, fallidas, limite = ventana_cruda(ahora, cargar, dias)
     filas = [(cuando, fila(ev, ticker, nombre)) for cuando, ev in altos]
-    eventos = [f for _, f in filas]
+    eventos = fusionar([f for _, f in filas])
     distinguir(eventos)
     estado = "ok" if eventos else ("sin_calendario" if fallidas else "vacia")
     parcial = bool(eventos) and fallidas > 0

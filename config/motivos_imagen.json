@@ -17,9 +17,9 @@
       "descripcion": "Noticias sobre la plata, su demanda industrial y de inversión, y los metales preciosos.",
       "activos": ["XAGUSD"],
       "variantes": [
-        "Lingotes de plata lisos apilados en diagonal, vistos muy de cerca, con el canto pulido como un espejo frío.",
-        "Granalla de plata en pequeñas gotas solidificadas esparcida sobre una pizarra oscura.",
-        "Un solo lingote de plata liso sobre una superficie de acero cepillado, con un reflejo frío en su cara superior."
+        "Lingotes de plata lisos apilados en diagonal, vistos muy de cerca, con el canto pulido como un espejo frío, con luz blanca fría: el metal se ve gris plateado y nunca dorado.",
+        "Granalla de plata en pequeñas gotas solidificadas esparcida sobre una pizarra oscura, con luz blanca fría: el metal se ve gris plateado y nunca dorado.",
+        "Un solo lingote de plata liso sobre una superficie de acero cepillado, con un reflejo frío en su cara superior, con luz blanca fría: el metal se ve gris plateado y nunca dorado."
       ]
     },
     "banco_central": {
