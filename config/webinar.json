@@ -1,0 +1,293 @@
+{
+  "dias": {
+    "lunes": {
+      "titulo": "Qué se viene esta semana: cómo leer los datos y las tendencias de los activos",
+      "hora_inicio": "10:15",
+      "hora_fin": "11:00",
+      "guion": [
+        {
+          "bloque": "portada",
+          "desde": "10:15",
+          "hasta": "10:16",
+          "que": "Saludo a los traders y presentación del tema de hoy."
+        },
+        {
+          "bloque": "aviso_legal",
+          "desde": "10:16",
+          "hasta": "10:17",
+          "que": "Lectura del aviso legal: contenido educativo, no recomendación."
+        },
+        {
+          "bloque": "agenda",
+          "desde": "10:17",
+          "hasta": "10:21",
+          "que": "Agenda de la semana: los datos fuertes y a qué hora salen en Chile."
+        },
+        {
+          "bloque": "teoria",
+          "desde": "10:21",
+          "hasta": "10:25",
+          "que": "Cómo leer el calendario: anterior, consenso y actual."
+        },
+        {
+          "bloque": "noticia",
+          "desde": "10:25",
+          "hasta": "10:27",
+          "que": "La noticia que mueve al mercado hoy."
+        },
+        {
+          "bloque": "bancos",
+          "desde": "10:27",
+          "hasta": "10:29",
+          "que": "Qué esperan los bancos, con su fuente."
+        },
+        {
+          "bloque": "datos",
+          "desde": "10:29",
+          "hasta": "10:31",
+          "que": "Tasas, dólar y materias primas de data central."
+        },
+        {
+          "bloque": "mt5",
+          "desde": "10:31",
+          "hasta": "10:42",
+          "que": "Benjamín en MT5: tendencias de los activos y apertura de Wall Street en vivo."
+        },
+        {
+          "bloque": "cierre",
+          "desde": "10:42",
+          "hasta": "10:47",
+          "que": "Resumen de lo aprendido e invitación a agendar capacitaciones 1 a 1 por Meet."
+        },
+        {
+          "bloque": "preguntas",
+          "desde": "10:47",
+          "hasta": "11:00",
+          "que": "Preguntas del chat y activos pedidos por la audiencia."
+        }
+      ]
+    },
+    "martes": {
+      "titulo": "Operando el solapamiento Londres-Nueva York en vivo: qué mirar y cómo ejecutar",
+      "hora_inicio": "10:15",
+      "hora_fin": "11:00",
+      "guion": [
+        {
+          "bloque": "portada",
+          "desde": "10:15",
+          "hasta": "10:16",
+          "que": "Saludo a los traders y presentación del tema de hoy."
+        },
+        {
+          "bloque": "aviso_legal",
+          "desde": "10:16",
+          "hasta": "10:17",
+          "que": "Lectura del aviso legal: contenido educativo, no recomendación."
+        },
+        {
+          "bloque": "teoria",
+          "desde": "10:17",
+          "hasta": "10:18",
+          "que": "Por qué el cruce Londres y Nueva York concentra la liquidez."
+        },
+        {
+          "bloque": "agenda",
+          "desde": "10:18",
+          "hasta": "10:19",
+          "que": "Los datos recién publicados y los que vienen hoy."
+        },
+        {
+          "bloque": "noticia",
+          "desde": "10:19",
+          "hasta": "10:20",
+          "que": "La noticia de la mañana europea."
+        },
+        {
+          "bloque": "mt5",
+          "desde": "10:20",
+          "hasta": "10:35",
+          "que": "Benjamín en MT5: lectura en vivo del solapamiento."
+        },
+        {
+          "bloque": "preguntas",
+          "desde": "10:35",
+          "hasta": "10:50",
+          "que": "Activos pedidos por los asistentes y dudas técnicas."
+        },
+        {
+          "bloque": "cierre",
+          "desde": "10:50",
+          "hasta": "11:00",
+          "que": "Resumen de lo aprendido e invitación a agendar capacitaciones 1 a 1 por Meet."
+        }
+      ]
+    },
+    "miercoles": {
+      "titulo": "Smart Money en vivo: conceptos aplicados a un gráfico real",
+      "hora_inicio": "16:30",
+      "hora_fin": "17:30",
+      "guion": [
+        {
+          "bloque": "portada",
+          "desde": "16:30",
+          "hasta": "16:31",
+          "que": "Saludo a los traders y presentación del tema de hoy."
+        },
+        {
+          "bloque": "aviso_legal",
+          "desde": "16:31",
+          "hasta": "16:32",
+          "que": "Lectura del aviso legal: contenido educativo, no recomendación."
+        },
+        {
+          "bloque": "teoria",
+          "desde": "16:32",
+          "hasta": "16:40",
+          "que": "Teoría del tema de la semana."
+        },
+        {
+          "bloque": "mt5",
+          "desde": "16:40",
+          "hasta": "17:00",
+          "que": "Benjamín aplica el concepto en MT5 sobre precios reales (parte 1)."
+        },
+        {
+          "bloque": "preguntas",
+          "desde": "17:00",
+          "hasta": "17:20",
+          "que": "Práctica en otros activos y marcos, con preguntas cada 2 minutos (parte 2)."
+        },
+        {
+          "bloque": "cierre",
+          "desde": "17:20",
+          "hasta": "17:30",
+          "que": "Resumen de lo aprendido e invitación a agendar capacitaciones 1 a 1 por Meet."
+        }
+      ]
+    },
+    "jueves": {
+      "titulo": "Técnicas swing: cómo seguir la tendencia con Bandas de Bollinger y niveles clave",
+      "hora_inicio": "09:15",
+      "hora_fin": "10:00",
+      "guion": [
+        {
+          "bloque": "portada",
+          "desde": "09:15",
+          "hasta": "09:16",
+          "que": "Saludo a los traders y presentación del tema de hoy."
+        },
+        {
+          "bloque": "aviso_legal",
+          "desde": "09:16",
+          "hasta": "09:17",
+          "que": "Lectura del aviso legal: contenido educativo, no recomendación."
+        },
+        {
+          "bloque": "noticia",
+          "desde": "09:17",
+          "hasta": "09:18",
+          "que": "La noticia macro de mitad de semana."
+        },
+        {
+          "bloque": "bancos",
+          "desde": "09:18",
+          "hasta": "09:19",
+          "que": "Qué esperan los bancos de las tasas."
+        },
+        {
+          "bloque": "datos",
+          "desde": "09:19",
+          "hasta": "09:20",
+          "que": "Tasas y dólar de data central."
+        },
+        {
+          "bloque": "teoria",
+          "desde": "09:20",
+          "hasta": "09:25",
+          "que": "Teoría swing: seguir la tendencia en marcos mayores."
+        },
+        {
+          "bloque": "mt5",
+          "desde": "09:25",
+          "hasta": "09:40",
+          "que": "Benjamín en MT5: la tendencia en 4H y diario."
+        },
+        {
+          "bloque": "preguntas",
+          "desde": "09:40",
+          "hasta": "09:50",
+          "que": "Escenarios para el cierre semanal y preguntas del chat."
+        },
+        {
+          "bloque": "cierre",
+          "desde": "09:50",
+          "hasta": "10:00",
+          "que": "Resumen de lo aprendido e invitación a agendar capacitaciones 1 a 1 por Meet."
+        }
+      ]
+    },
+    "viernes": {
+      "titulo": "Noticias de alto impacto (NFP): niveles clave del mercado y reacción en vivo",
+      "hora_inicio": "09:40",
+      "hora_fin": "10:40",
+      "guion": [
+        {
+          "bloque": "portada",
+          "desde": "09:40",
+          "hasta": "09:41",
+          "que": "Saludo a los traders y presentación del tema de hoy."
+        },
+        {
+          "bloque": "aviso_legal",
+          "desde": "09:41",
+          "hasta": "09:42",
+          "que": "Lectura del aviso legal: contenido educativo, no recomendación."
+        },
+        {
+          "bloque": "agenda",
+          "desde": "09:42",
+          "hasta": "09:47",
+          "que": "El dato fuerte de hoy: consenso y anterior."
+        },
+        {
+          "bloque": "teoria",
+          "desde": "09:47",
+          "hasta": "09:50",
+          "que": "Cómo se lee una sorpresa frente al consenso."
+        },
+        {
+          "bloque": "mt5",
+          "desde": "09:50",
+          "hasta": "10:15",
+          "que": "Benjamín en MT5: previa y reacción en vivo al dato."
+        },
+        {
+          "bloque": "noticia",
+          "desde": "10:15",
+          "hasta": "10:18",
+          "que": "La noticia de la semana."
+        },
+        {
+          "bloque": "bancos",
+          "desde": "10:18",
+          "hasta": "10:20",
+          "que": "Qué dicen los bancos tras el dato."
+        },
+        {
+          "bloque": "preguntas",
+          "desde": "10:20",
+          "hasta": "10:30",
+          "que": "Balance semanal y preguntas del chat."
+        },
+        {
+          "bloque": "cierre",
+          "desde": "10:30",
+          "hasta": "10:40",
+          "que": "Resumen de lo aprendido e invitación a agendar capacitaciones 1 a 1 por Meet."
+        }
+      ]
+    }
+  },
+  "disclaimer": "Contenido educativo. No constituye recomendación de inversión ni asesoría personalizada. Acreditación CMV · Categoría Operadores · N° A-32915.",
+  "cta": "Agenda una capacitación 1 a 1 con Benjamín por Google Meet: análisis técnico, análisis fundamental y plataforma MT5."
+}
