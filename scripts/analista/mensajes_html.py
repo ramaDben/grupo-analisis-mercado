@@ -2,8 +2,9 @@
 
 Pagina simple de un solo archivo, sin dependencias externas, legible en celular,
 con boton Copiar por tarjeta (navigator.clipboard con respaldo de textarea).
-El texto a copiar vive escapado en el atributo data-copiar. Las tarjetas vacias
-muestran su motivo y no tienen boton. El enlace a la nota va como etiqueta a aparte.
+El mensaje es editable y cada tarjeta trae un campo para el comentario del ejecutivo, que va entre la
+noticia y la pregunta de cierre (director, 2026-10-26): Copiar arma el mensaje con lo que quedo escrito.
+`data-copiar` guarda el mensaje original. Las tarjetas vacias muestran su motivo y no tienen boton.
 """
 from __future__ import annotations
 
@@ -36,18 +37,35 @@ def _render_tarjeta(t: ctx.Tarjeta) -> str:
                 f'target="_blank" rel="noopener noreferrer">Ver nota original</a></p>'
             )
 
-        texto_visible = html.escape(t.texto, quote=True)
         texto_copiar = _escapar_attr(t.texto)
+        cuerpo = html.escape(t.cuerpo or t.texto, quote=True)
+        pregunta_html = ""
+        if t.pregunta:
+            pregunta_html = (
+                f'  <label class="etiqueta">Pregunta de cierre\n'
+                f'    <textarea class="campo" data-parte="pregunta" rows="2">{html.escape(t.pregunta, quote=True)}</textarea>\n'
+                f'  </label>\n'
+            )
+        pie_html = f'  <p class="pie">{html.escape(t.pie, quote=True)}</p>\n' if t.pie else ""
 
         return (
-            f'<article class="tarjeta" data-tarjeta="{titulo}">\n'
+            f'<article class="tarjeta" data-tarjeta="{titulo}" data-pie="{_escapar_attr(t.pie)}">\n'
             f'  <div class="tarjeta-cabecera">\n'
             f'    <h2>{titulo}</h2>\n'
             f'    {meta_html}\n'
             f'  </div>\n'
-            f'  <div class="texto-mensaje">{texto_visible}</div>\n'
+            f'  <label class="etiqueta">Mensaje\n'
+            f'    <textarea class="campo" data-parte="cuerpo" rows="6">{cuerpo}</textarea>\n'
+            f'  </label>\n'
+            f'  <label class="etiqueta"><span>Tu comentario <span class="opcional">(opcional)</span></span>\n'
+            f'    <textarea class="campo comentario" data-parte="comentario" rows="2" '
+            f'placeholder="Lo que tú le dirías sobre esto. Va antes de la pregunta."></textarea>\n'
+            f'  </label>\n'
+            f'{pregunta_html}'
+            f'{pie_html}'
             f'  {enlace_html}\n'
             f'  <div class="acciones">\n'
+            f'    <button type="button" class="btn-original" onclick="restablecer(this)">Volver al original</button>\n'
             f'    <button type="button" class="btn-copiar" data-copiar="{texto_copiar}" onclick="copiarTexto(this)">Copiar</button>\n'
             f'  </div>\n'
             f'</article>'
@@ -156,16 +174,43 @@ def render(pieza: dict[str, Any], saludo: str = "") -> str:
       color: var(--texto-2);
       font-weight: 500;
     }}
-    .texto-mensaje {{
+    .etiqueta {{
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--texto-2);
+    }}
+    .opcional {{
+      font-weight: 400;
+    }}
+    .campo {{
+      width: 100%;
       background: rgba(0, 0, 0, 0.25);
       border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 8px;
       padding: 12px;
-      font-size: 14px;
+      font-family: inherit;
+      font-size: 16px;
       line-height: 1.5;
       color: var(--texto-1);
-      white-space: pre-wrap;
-      word-break: break-word;
+      resize: vertical;
+      overflow: hidden;
+    }}
+    .campo:focus {{
+      outline: none;
+      border-color: var(--acento);
+    }}
+    .campo.comentario {{
+      border-style: dashed;
+    }}
+    .campo::placeholder {{
+      color: var(--texto-2);
+    }}
+    .pie {{
+      font-size: 13px;
+      color: var(--texto-2);
     }}
     .enlace-nota {{
       font-size: 13px;
@@ -186,6 +231,18 @@ def render(pieza: dict[str, Any], saludo: str = "") -> str:
     .acciones {{
       display: flex;
       justify-content: flex-end;
+      align-items: center;
+      gap: 12px;
+    }}
+    .btn-original {{
+      background: none;
+      border: 0;
+      color: var(--texto-2);
+      font-family: inherit;
+      font-size: 13px;
+      text-decoration: underline;
+      cursor: pointer;
+      min-height: 42px;
     }}
     .btn-copiar {{
       background: var(--acento);
@@ -214,14 +271,58 @@ def render(pieza: dict[str, Any], saludo: str = "") -> str:
   <main>
     <header class="cabecera">
       <h1>{html.escape(titulo_pagina, quote=True)}</h1>
-      <p>Selecciona y copia el mensaje para abrir conversación con tu cliente.</p>
+      <p>Ajusta el mensaje si quieres, agrega tu comentario sobre la noticia y cópialo para abrir conversación con tu cliente.</p>
       <p class="nota-independientes">Cada mensaje se sostiene solo. La noticia y el análisis técnico pueden apuntar a lados distintos: es normal, porque uno cuenta lo que pasó y el otro lo que muestra el precio. Si los mandas juntos, preséntalos como dos miradas.</p>
     </header>
     {bloques_tarjetas}
   </main>
   <script>
+    // El mensaje que se copia: el cuerpo, el comentario del ejecutivo y la pregunta de cierre, y al final la fuente.
+    function armar(tarjeta) {{
+      function parte(nombre) {{
+        var campo = tarjeta.querySelector('[data-parte="' + nombre + '"]');
+        return campo ? campo.value.trim() : '';
+      }}
+      var cuerpo = parte('cuerpo'), comentario = parte('comentario'), pregunta = parte('pregunta');
+      var texto = comentario
+        ? [cuerpo, comentario, pregunta].filter(Boolean).join('\\n\\n')
+        : [cuerpo, pregunta].filter(Boolean).join(' ');
+      var pie = tarjeta.dataset.pie || '';
+      return pie ? texto + '\\n\\n' + pie : texto;
+    }}
+    function clave(campo) {{
+      var tarjeta = campo.closest('.tarjeta');
+      return 'gi-contexto|' + location.pathname + '|' + tarjeta.dataset.tarjeta + '|' +
+        campo.getAttribute('data-parte') + '|' + campo.defaultValue.length;
+    }}
+    function ajustar(campo) {{
+      campo.style.height = 'auto';
+      campo.style.height = campo.scrollHeight + 2 + 'px';
+    }}
+    function restablecer(btn) {{
+      var campos = btn.closest('.tarjeta').querySelectorAll('.campo');
+      Array.prototype.forEach.call(campos, function(campo) {{
+        campo.value = campo.defaultValue;
+        try {{ localStorage.removeItem(clave(campo)); }} catch (e) {{}}
+        ajustar(campo);
+      }});
+    }}
+    document.addEventListener('DOMContentLoaded', function() {{
+      Array.prototype.forEach.call(document.querySelectorAll('.campo'), function(campo) {{
+        try {{
+          var guardado = localStorage.getItem(clave(campo));
+          if (guardado !== null) campo.value = guardado;
+        }} catch (e) {{}}
+        ajustar(campo);
+        campo.addEventListener('input', function() {{
+          ajustar(campo);
+          try {{ localStorage.setItem(clave(campo), campo.value); }} catch (e) {{}}
+        }});
+      }});
+    }});
     function copiarTexto(btn) {{
-      var texto = btn.getAttribute('data-copiar') || '';
+      var tarjeta = btn.closest('.tarjeta');
+      var texto = tarjeta && tarjeta.querySelector('.campo') ? armar(tarjeta) : (btn.getAttribute('data-copiar') || '');
       function exito() {{
         var orig = btn.textContent;
         btn.textContent = 'Copiado';

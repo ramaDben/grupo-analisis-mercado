@@ -27,12 +27,26 @@ MARCAS: dict[str, str] = {
 
 @dataclass
 class Tarjeta:
+    """Un mensaje listo para copiar. `texto` es el mensaje entero; `cuerpo`, `pregunta` y `pie` son sus partes,
+    para que el ejecutivo meta su comentario entre la noticia y la pregunta con que cierra."""
     titulo: str
     texto: str | None
     motivo: str = ""
     medio: str = ""
     fecha: str = ""
     url: str = ""
+    cuerpo: str = ""
+    pregunta: str = ""
+    pie: str = ""
+
+
+# Palabras con que agy abre el mensaje después del saludo. Tras «Hola Juan,» van en minúscula; un nombre
+# propio («FXStreet», «Powell») no está acá y conserva su mayúscula.
+_MINUSCULA_TRAS_SALUDO = frozenset("""
+    a al ante aunque ayer como con de del desde durante el en entre esta este esto hoy la las lo los mientras
+    mira nuestra nuestro para por quería quiero se según si sin sobre su sus te tras un una ya
+    mantenemos vigilamos seguimos tenemos comparto
+""".split())
 
 
 def preparar(
@@ -106,7 +120,7 @@ def depurar(
     """Deja cada campo de editorial válido o en None, y guarda los motivos en pieza['motivos'].
 
     Reglas en orden:
-    1. Un campo en es.MARCA pasa a None con motivo «agy no lo redactó».
+    1. Un campo en es.MARCA pasa a None con su motivo.
     2. La URL de una noticia debe estar en datos.noticias_candidatas y su titular original coincidir.
     3. La noticia 2 cae si repite la URL de la 1.
     4. Cada noticia pasa por noticia.motivo_de_contexto.
@@ -120,11 +134,11 @@ def depurar(
     motivos: dict[str, str] = {}
     avisos: list[str] = []
 
-    # Regla 1: Un campo en es.MARCA pasa a None con motivo «agy no lo redactó».
+    # Regla 1: Un campo en es.MARCA pasa a None con su motivo.
     for campo in ("noticia_1", "noticia_2", "tecnico"):
         if editorial.get(campo) == es.MARCA:
             editorial[campo] = None
-            motivos[campo] = "agy no lo redactó"
+            motivos[campo] = "No alcancé a redactar este mensaje: vuelve a pedir el contexto."
 
     lista = lista or fu.cargar_lista()
     verificar_fn = fu._con_lista(verificar, lista)
@@ -133,7 +147,7 @@ def depurar(
         n = editorial.get(campo)
         if n is None:
             if campo not in motivos:
-                motivos[campo] = "no hay noticias candidatas"
+                motivos[campo] = _sin_noticia(campo, datos)
             continue
         if not isinstance(n, dict):
             editorial[campo] = None
@@ -216,6 +230,45 @@ def depurar(
     return pieza, avisos
 
 
+def _sin_noticia(campo: str, datos: dict[str, Any]) -> str:
+    """Por qué la tarjeta de noticia sale vacía, en palabras del ejecutivo (lo lee él, no el cliente)."""
+    _, del_activo = sg._activo_con_articulo(datos.get("nombre") or datos.get("ticker", ""))
+    if not datos.get("noticias_candidatas"):
+        return f"Hoy no encontré noticias {del_activo} en FXStreet ni en Investing.com."
+    otra = "otra noticia" if campo == "noticia_2" else "ninguna de las noticias"
+    return f"No hay {otra} de los últimos {nt.VENTANA_DIAS} días que trate {del_activo}."
+
+
+def _con_saludo(texto: str, saludo: str) -> str:
+    """El saludo del ejecutivo, y la palabra que lo sigue en minúscula si el saludo cierra con coma.
+
+    agy escribe la frase como si empezara sola («Según FXStreet…»), y quedaba «Hola, Según FXStreet».
+    """
+    resto = texto.strip()
+    if resto.startswith(sg.MARCA_SALUDO):
+        resto = resto[len(sg.MARCA_SALUDO):].lstrip()
+        abre = sg.saludo_de(saludo)
+        palabra = resto.split(" ", 1)[0]
+        if abre.endswith(",") and palabra.lower().strip(",:;") in _MINUSCULA_TRAS_SALUDO:
+            resto = resto[0].lower() + resto[1:]
+        return f"{abre} {resto}"
+    return sg.con_saludo(resto, saludo)
+
+
+def _partes(texto: str) -> tuple[str, str]:
+    """(cuerpo, pregunta): la pregunta con que cierra el mensaje, si cierra con una."""
+    inicio = texto.rfind("¿")
+    if not texto.rstrip().endswith("?") or inicio <= 0:
+        return texto, ""
+    return texto[:inicio].rstrip(), texto[inicio:].strip()
+
+
+def _tarjeta(titulo: str, texto: str, pie: str = "", **meta: str) -> Tarjeta:
+    cuerpo, pregunta = _partes(texto)
+    completo = f"{texto}\n\n{pie}" if pie else texto
+    return Tarjeta(titulo=titulo, texto=completo, cuerpo=cuerpo, pregunta=pregunta, pie=pie, **meta)
+
+
 def sustituir_marcas(texto: str, tecnico: dict[str, Any]) -> str:
     """Reemplaza cada marca con seguimiento._fmt(valor, tecnico['digits'])."""
     digits = int(tecnico.get("digits", 2))
@@ -254,65 +307,21 @@ def tarjetas(pieza: dict[str, Any], saludo: str = "") -> list[Tarjeta]:
 
     salida: list[Tarjeta] = []
 
-    # 1. Noticia 1
-    n1 = editorial.get("noticia_1")
-    if isinstance(n1, dict):
-        txt = sg.con_saludo(n1.get("mensaje", ""), saludo).strip()
-        medio = n1.get("medio", "")
-        dd_mm = _formato_dd_mm(n1.get("fecha", ""))
-        txt_final = f"{txt}\n\nFuente: {medio}, {dd_mm}"
-        salida.append(Tarjeta(
-            titulo="Noticia 1",
-            texto=txt_final,
-            motivo="",
-            medio=medio,
-            fecha=n1.get("fecha", ""),
-            url=n1.get("url", ""),
-        ))
-    else:
-        salida.append(Tarjeta(
-            titulo="Noticia 1",
-            texto=None,
-            motivo=motivos.get("noticia_1", ""),
-        ))
+    for campo, titulo in (("noticia_1", "Noticia 1"), ("noticia_2", "Noticia 2")):
+        n = editorial.get(campo)
+        if isinstance(n, dict):
+            medio = n.get("medio", "")
+            pie = f"Fuente: {medio}, {_formato_dd_mm(n.get('fecha', ''))}"
+            salida.append(_tarjeta(titulo, _con_saludo(n.get("mensaje", ""), saludo), pie,
+                                   medio=medio, fecha=n.get("fecha", ""), url=n.get("url", "")))
+        else:
+            salida.append(Tarjeta(titulo=titulo, texto=None, motivo=motivos.get(campo, "")))
 
-    # 2. Noticia 2
-    n2 = editorial.get("noticia_2")
-    if isinstance(n2, dict):
-        txt = sg.con_saludo(n2.get("mensaje", ""), saludo).strip()
-        medio = n2.get("medio", "")
-        dd_mm = _formato_dd_mm(n2.get("fecha", ""))
-        txt_final = f"{txt}\n\nFuente: {medio}, {dd_mm}"
-        salida.append(Tarjeta(
-            titulo="Noticia 2",
-            texto=txt_final,
-            motivo="",
-            medio=medio,
-            fecha=n2.get("fecha", ""),
-            url=n2.get("url", ""),
-        ))
-    else:
-        salida.append(Tarjeta(
-            titulo="Noticia 2",
-            texto=None,
-            motivo=motivos.get("noticia_2", ""),
-        ))
-
-    # 3. Análisis técnico
     tec_txt = editorial.get("tecnico")
     if isinstance(tec_txt, str):
         con_precios = sustituir_marcas(tec_txt, tecnico_datos)
-        txt_final = sg.con_saludo(con_precios, saludo).strip()
-        salida.append(Tarjeta(
-            titulo="Análisis técnico",
-            texto=txt_final,
-            motivo="",
-        ))
+        salida.append(_tarjeta("Análisis técnico", _con_saludo(con_precios, saludo)))
     else:
-        salida.append(Tarjeta(
-            titulo="Análisis técnico",
-            texto=None,
-            motivo=motivos.get("tecnico", ""),
-        ))
+        salida.append(Tarjeta(titulo="Análisis técnico", texto=None, motivo=motivos.get("tecnico", "")))
 
     return salida

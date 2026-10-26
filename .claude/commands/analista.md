@@ -156,6 +156,9 @@ puedes tocar son `editorial.noticia_1`, `editorial.noticia_2` y `editorial.tecni
 cliente para retomar la conversación: cada uno se sostiene solo y ninguno resume a los otros. Rigen las reglas
 de texto de arriba (español de Chile, tuteo, sin guion largo ni medio, sin HTML ni asteriscos, siglas explicadas,
 nunca invitar a operar, "soporte" y "resistencia"). El saludo y la fuente los pone Python: tú no los escribes.
+Lo que sigue a `[[SALUDO]]` continúa la frase del saludo ("Hola Juan, según FXStreet…"): va en minúscula salvo
+un nombre propio. El ejecutivo puede agregar su comentario antes de la pregunta final, así que la pregunta va
+siempre al final y en una sola oración que empiece con "¿".
 
 - `noticia_1` y `noticia_2`: **una noticia cada una, elegida solo de `datos.noticias_candidatas`** (FXStreet e
   Investing.com, de los últimos 3 días). En esta pieza no hay búsqueda web nueva: si el bot no te dio la nota,
@@ -176,7 +179,9 @@ nunca invitar a operar, "soporte" y "resistencia"). El saludo y la fuente los po
   - Sin `%` que no esté en la nota, sin la palabra "oportunidad", sin "comprar", "vender" ni "recomienda".
 - `tecnico`: **un solo párrafo** (texto, no objeto), o `null` si `datos.tecnico_motivo` no está vacío. Empieza
   con `[[SALUDO]]`, dice hacia dónde va el activo (alcista, bajista o lateral) según `datos.tecnico.sentido` y
-  `datos.tecnico.estado`, qué nivel se vigila y qué lo invalida, y cierra con una pregunta al cliente. **Nunca
+  `datos.tecnico.estado`, qué nivel se vigila y qué lo invalida, y cierra con una pregunta al cliente. El estado es
+  un dato interno: tradúcelo a lo que pasa ("esperando" es que el precio todavía no llega al nivel), nunca
+  escribas "estado de espera" ni el nombre del estado. **Nunca
   escribes un precio**: donde iría un número usas solo estas marcas, y solo las que tengan valor en `datos.tecnico`:
   `[[NIVEL]]` (el nivel a vigilar), `[[OBJETIVO]]` y `[[SIGUIENTE]]`. El bot las reemplaza con los valores del
   terminal; un número de precio escrito (4.100,50, 1,2345) hace caer el mensaje. Sin otros números significativos.

@@ -135,3 +135,23 @@ def test_un_feed_caido_no_bota_al_otro():
     assert len(lista) == 1
     assert lista[0]["medio"] == "FXStreet"
     assert any("investing" in a.lower() for a in avisos)
+
+
+def test_lee_la_fecha_de_los_feeds_de_noticias_de_investing():
+    """Investing escribe «2026-10-24 14:33:13» (UTC) y no el formato del RSS: se botaban todas sus notas."""
+    inv_rss = _rss(
+        _item("Futuros de la plata en canal bajista", "https://es.investing.com/news/commodities-news/plata-1",
+              "2026-10-24 14:33:13"),
+    )
+
+    def fake_leer(url: str) -> str:
+        return inv_rss if "investing.com" in url else _rss()
+
+    lista, avisos = nctx.candidatas("XAGUSD", "Plata", AHORA, leer=fake_leer)
+    assert [c["url"] for c in lista] == ["https://es.investing.com/news/commodities-news/plata-1"]
+    assert lista[0]["medio"] == "Investing.com" and lista[0]["fecha"] == "2026-10-24"
+    assert avisos == []
+
+
+def test_investing_incluye_el_feed_de_commodities():
+    assert "https://es.investing.com/rss/news_11.rss" in nctx.FEEDS_INVESTING
