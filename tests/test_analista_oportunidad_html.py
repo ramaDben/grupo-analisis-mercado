@@ -262,10 +262,10 @@ def test_en_el_correo_un_activo_sin_simulacion_muestra_el_motivo_sin_cuadros(tmp
 
 
 def test_los_cuadros_parten_con_capital_y_perdida_por_defecto_y_el_saludo_es_editable(tmp_path):
-    """El comercial no tiene que escribir nada: 2 millones de capital, 100.000 de pérdida y nombre opcional."""
+    """El comercial no tiene que escribir nada: 2 millones de capital, 40.000 de pérdida y nombre opcional."""
     html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
     bloque = html.split('data-ticker="XAUUSD"')[1].split("</section>")[0]
-    assert 'name="perdida" min="0" step="1000" value="100000"' in bloque
+    assert 'name="perdida" min="0" step="1000" value="40000"' in bloque
     assert 'name="capital" min="0" step="10000" value="2000000"' in bloque
     assert 'id="cliente"' in html and 'class="saludo-cliente">Estimado(a):</span>' in html
 
@@ -1261,3 +1261,63 @@ def test_el_logo_de_la_banda_oscura_es_opaco_y_va_por_url(tmp_path):
     correo = _correo(html)
     assert "ejemplo.test/correos/logo_correo_oscuro.png" in correo
     assert "ejemplo.test/correos/LOGO Blanco.png" not in correo
+
+
+
+def test_panel_html_no_contiene_dias_de_movimiento_y_muestra_distancia_pct(tmp_path):
+    html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    bloque = html.split('data-ticker="XAUUSD"')[1].split("</section>")[0]
+    assert "días de movimiento" not in bloque
+    assert "movimiento típico" not in bloque
+    assert "del precio de referencia" in bloque
+    assert 'name="perdida" min="0" step="1000" value="40000"' in bloque
+
+
+def test_panel_y_correo_rango_cat_muestran_objetivo_parcial_y_borde_contrario():
+    from estrategia.contrato import lectura_de_dict
+
+    fixture_path = RAIZ / "tests" / "fixtures" / "analista" / "oportunidad_cat_2026-10-26.json"
+    data = json.loads(fixture_path.read_text(encoding="utf-8"))
+    a = data["datos"]["activos"][0]
+    # Se recalcula el escenario con la lógica nueva
+    lec = lectura_de_dict(a["lectura"])
+    esc = op.escenario(lec, a["digits"])
+    a["escenario"] = esc.a_dict()
+
+    panel = oh._panel(a, EJECUTIVO["nombre"])
+    assert "días de movimiento" not in panel
+    assert "Objetivo parcial dentro del rango: el borde contrario está en 821,39." in panel
+    assert 'value="40000"' in panel
+    assert "El objetivo está a 1,26 % del precio de referencia." in panel
+
+    c = oh.paleta_correo(oh.paleta())
+    correo = oh._simulacion_correo(a, EJECUTIVO["nombre"], c)
+    assert "borde contrario" in correo
+    assert "Objetivo parcial dentro del rango: el borde contrario está en" in correo
+    assert "821,39" in correo
+    assert "Volumen: " in correo and " lotes" in correo
+
+
+def test_simulacion_correo_volumen_con_unidad_y_bajo_minimo():
+    c = oh.paleta_correo(oh.paleta())
+    activo = {
+        "ticker": "XAUUSD",
+        "nombre": "Oro",
+        "digits": 2,
+        "fmt": {"entrada": "4.000,00", "stop": "3.950,00", "objetivo": "4.150,00"},
+        "escenario": {
+            "ticker": "XAUUSD", "estado": "TENDENCIA", "direccion": "ALCISTA",
+            "entrada": 4000.0, "stop": 3950.0, "objetivo": 4150.0,
+            "entrada_pendiente": False, "dias_objetivo": None, "motivo": None,
+            "condicion": None, "distancia_pct": 3.75, "objetivo_parcial": False, "borde_opuesto": None
+        },
+        "contrato": {"clp_unidad": 950.0, "vol_min": 0.01, "vol_paso": 0.01}
+    }
+    correo = oh._simulacion_correo(activo, EJECUTIVO["nombre"], c)
+    assert "Volumen: 0,84 lotes." in correo
+
+    # Caso bajo mínimo
+    activo_bajo = dict(activo)
+    activo_bajo["contrato"] = {"clp_unidad": 950.0, "vol_min": 5.0, "vol_paso": 0.1}
+    correo_bajo = oh._simulacion_correo(activo_bajo, EJECUTIVO["nombre"], c)
+    assert "Volumen: 5,0 lotes: es el mínimo que permite el broker." in correo_bajo

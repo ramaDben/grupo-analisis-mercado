@@ -152,21 +152,30 @@ def _panel(a: dict[str, Any], ejecutivo: str) -> str:
         return ('<div class="panel sin-simulacion"><p>Sin simulación en este análisis: '
                 f'{ih.e(motivo)}</p>'
                 '<label><input type="checkbox" name="incluir" checked> Incluir en el correo</label></div>')
-    lejos = (f'<p class="nota">El objetivo está a {str(esc["dias_objetivo"]).replace(".", ",")} días de '
-             'movimiento típico (ATR diario).</p>' if esc.get("dias_objetivo") else "")
+    dist_val = esc.get("distancia_pct")
+    if dist_val is None and esc.get("objetivo") is not None and a.get("foto", {}).get("precio"):
+        p_ref = a["foto"]["precio"]
+        dist_val = round(abs(esc["objetivo"] - p_ref) / p_ref * 100, 2) if p_ref else None
+    distancia = (f'<p class="nota">El objetivo está a {f"{dist_val:.2f}".replace(".", ",")} % del precio de referencia.</p>'
+                 if dist_val is not None else "")
+    parcial = ""
+    if esc.get("objetivo_parcial") and esc.get("borde_opuesto") is not None:
+        digits = a.get("digits", 2)
+        borde_str = op.formatear_precio(esc["borde_opuesto"], digits)
+        parcial = f'<p class="nota">Objetivo parcial dentro del rango: el borde contrario está en {ih.e(borde_str)}.</p>'
     condicion = op.texto_condicion(esc, f["entrada"])
     cond = f'<p class="condicion">{ih.e(condicion)}</p>' if condicion else ""
     cabeza = (
         f'<p class="rotulo-ilustrativo">{ih.e(cm.ROTULO_ILUSTRATIVO)}</p><h4>Objetivo de la simulación (1:3)</h4>'
         f'<p class="niveles-sim">Entrada {ih.e(f["entrada"])} · Stop {ih.e(f["stop"])} · '
-        f'Objetivo {ih.e(f["objetivo"])}</p>{cond}{lejos}'
+        f'Objetivo {ih.e(f["objetivo"])}</p>{cond}{distancia}{parcial}'
         '<label><input type="checkbox" name="incluir" checked> Incluir en el correo</label>')
     if op.sin_contrato(a):  # nota interna del ejecutivo: el cliente igual ve los niveles
         return (f'<div class="panel">{cabeza}<p class="nota">{ih.e(MOTIVO_SIN_CONTRATO.capitalize())}: el correo '
                 'lleva los niveles, sin los montos.</p></div>')
     return (
         '<div class="panel">' + cabeza +
-        '<label>Pérdida aceptable (CLP)<input type="number" name="perdida" min="0" step="1000" value="100000"></label>'
+        '<label>Pérdida aceptable (CLP)<input type="number" name="perdida" min="0" step="1000" value="40000"></label>'
         '<label>Capital<input type="number" name="capital" min="0" step="10000" value="2000000"></label>'
         '<div class="resultado"><div class="perdida"><span>Pérdida si toca el stop</span>'
         '<strong data-r="perdida">Escribe la pérdida aceptable</strong></div>'
@@ -267,20 +276,29 @@ def _simulacion_correo(a: dict[str, Any], ejecutivo: str, c: dict[str, str]) -> 
         return _tabla(f'<tr><td bgcolor="{c["fondo"]}" style="padding:14px 16px;background:{c["fondo"]};'
                       f'border:1px solid {c["linea"]};border-radius:12px;">{celda}</td></tr>')
     f = a["fmt"]
-    condicion = op.texto_condicion(a["escenario"], f["entrada"])
+    esc = a["escenario"]
+    condicion = op.texto_condicion(esc, f["entrada"])
     fuerte = lambda x: f'<strong style="color:{c["texto_1"]};">{ih.e(x)}</strong>'  # noqa: E731
 
     contrato = a.get("contrato")
-    s = op.simular(contrato, a["escenario"], 100000, 2000000) if contrato else None
+    s = op.simular(contrato, esc, 40000, 2000000) if contrato else None
 
     if s:
         perdida_str = f"−${s['perdida']:,}".replace(",", ".")
         ganancia_str = f"+${s['ganancia']:,}".replace(",", ".")
-        volumen_str = f"Volumen {str(s['volumen']).replace('.', ',')}{': es el mínimo que permite el broker.' if s['bajo_minimo'] else '.'}"
+        vol_str = str(s['volumen']).replace('.', ',')
+        volumen_str = f"Volumen: {vol_str} lotes{': es el mínimo que permite el broker.' if s['bajo_minimo'] else '.'}"
     else:
         perdida_str = "Sin calcular"
         ganancia_str = "Sin calcular"
         volumen_str = ""
+
+    parcial_correo = ""
+    if esc.get("objetivo_parcial") and esc.get("borde_opuesto") is not None:
+        digits = a.get("digits", 2)
+        borde_str = op.formatear_precio(esc["borde_opuesto"], digits)
+        parcial_correo = _p(f'Objetivo parcial dentro del rango: el borde contrario está en {fuerte(borde_str)}.',
+                            c, tam=13, color="texto_2", margen="0 0 12px 0")
 
     cuadros = _tabla(
         '<tr>'
@@ -296,6 +314,7 @@ def _simulacion_correo(a: dict[str, Any], ejecutivo: str, c: dict[str, str]) -> 
         + _p(ih.e(cm.ROTULO_ILUSTRATIVO), c, tam=13, color="texto_2", margen="0 0 10px 0")
         + _p(f'Objetivo 1:3 · Entrada {fuerte(f["entrada"])} · Stop {fuerte(f["stop"])} · '
              f'Objetivo {fuerte(f["objetivo"])}', c, tam=14, margen="0 0 16px 0")
+        + parcial_correo
         + (_p(f'<strong style="color:{c["texto_1"]};">{ih.e(condicion)}</strong>', c, tam=14, margen="0 0 12px 0") if condicion else "")
         + ("" if op.sin_contrato(a) else cuadros)
         + _p(volumen_str, c, tam=13, peso=700, margen="14px 0 4px 0", clase="sim-volumen sim-montos")
