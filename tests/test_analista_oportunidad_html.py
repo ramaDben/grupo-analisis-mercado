@@ -1325,7 +1325,7 @@ def test_sintesis_lectura_lateral_nunca_dice_a_favor_ni_en_contra():
     assert "a favor de nuestra lectura" not in sintesis
     assert "en contra" not in sintesis
     assert "debilidad" not in sintesis.lower()
-    assert sintesis == "El avance del Dollar Index (DXY) que presiona a la baja."
+    assert sintesis == "El avance del Dollar Index (DXY) presiona a la baja."
 
 
 def test_preheader_sugerido_gramatical():
@@ -1632,3 +1632,12 @@ def test_logo_cabecera_usa_version_liviana(tmp_path):
     html = oh.armar(_pieza(tmp_path), tmp_path, EJECUTIVO, fx.AUTOR, HOY)
     logo_oscuro_uri = ih._data_uri(oh.LOGO_OSCURO, ancho_max=340)
     assert f'<img src="{logo_oscuro_uri}" alt="Grupo Inteligencia">' in html
+
+
+def test_sintesis_con_lectura_direccional_tiene_verbo_y_dice_si_acompana():
+    """La frase con el vocabulario real de `hechos._efecto`: el driver, su efecto y la relación con la lectura."""
+    hechos = [{"driver": "Dollar Index (DXY)", "fecha": "lunes 26/10", "sentido": "bajó",
+               "efecto": "juega a favor del alza del oro", "con_la_lectura": "acompaña nuestra lectura"}]
+    _, sintesis = oh.seleccionar_drivers_correo(hechos, direccion="ALCISTA")
+    assert sintesis == ("El retroceso del Dollar Index (DXY) juega a favor del alza del oro y acompaña "
+                        "nuestra lectura.")

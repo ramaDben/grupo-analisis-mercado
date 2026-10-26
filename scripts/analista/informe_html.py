@@ -41,8 +41,9 @@ def slug(texto: str) -> str:
 
 
 def _data_uri(ruta: Path, ancho_max: int | None = None, calidad: int = 85, a_jpeg: bool = False) -> str:
-    if not ruta.exists():
-        return ""
+    """La imagen embebida. Con `ancho_max` o `a_jpeg`, y Pillow a mano (llega con el extra `informe`), se reduce
+    antes de embeberla: la foto del autor pesaba 850 KB para mostrarse a 80 px. Una imagen que no existe
+    falla, como siempre: una pieza sin su imagen no sale."""
     if _TIENE_PIL and (ancho_max is not None or a_jpeg):
         try:
             with Image.open(ruta) as im:
@@ -63,7 +64,7 @@ def _data_uri(ruta: Path, ancho_max: int | None = None, calidad: int = 85, a_jpe
                     return f"data:image/jpeg;base64,{base64.b64encode(buf.getvalue()).decode('ascii')}"
                 im.save(buf, format="PNG", optimize=True)
                 return f"data:image/png;base64,{base64.b64encode(buf.getvalue()).decode('ascii')}"
-        except Exception:
+        except (OSError, ValueError):  # una imagen que Pillow no sabe leer va tal cual
             pass
     tipo = "image/png" if ruta.suffix.lower() == ".png" else "image/jpeg"
     return f"data:{tipo};base64,{base64.b64encode(ruta.read_bytes()).decode('ascii')}"

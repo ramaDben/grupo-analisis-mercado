@@ -577,3 +577,7 @@ def test_contexto_sin_efecto_neutral_pasa_y_con_efecto_permite_dominancia():
     )
     assert not any("datos.hechos trae efecto" in e for e in es.errores(p_con_efecto))
 
+
+def test_segun_fuentes_de_mercado_se_rechaza_con_o_sin_tilde():
+    assert es.frases_prohibidas("Según fuentes de mercado, el dato sale el jueves.", es.FRASES_SIN_FUENTE) == [
+        "segun fuentes de mercado"]

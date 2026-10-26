@@ -69,7 +69,7 @@ FRASES_PROHIBIDAS: tuple[str, ...] = (
 )
 # Lo que le resta crédito al dato que se cita (correo de Caterpillar, 2026-10-26: "resultados previstos
 # para el jueves según datos de mercado no oficiales"). Un dato sin fuente que se pueda nombrar no va.
-FRASES_SIN_FUENTE: tuple[str, ...] = ("no oficial", "según fuentes de mercado")
+FRASES_SIN_FUENTE: tuple[str, ...] = ("no oficial", "segun fuentes de mercado")  # sin tilde: se compara con el texto plano
 _PALABRA_EXACTA = {"lote", "lotes"}
 
 # La pieza semanal la comparte ventas con un prospecto: además no puede

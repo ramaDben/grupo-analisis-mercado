@@ -381,13 +381,11 @@ def _sintesis_dominancia(seleccionados: list[dict[str, Any]], direccion: str = "
         if raw_con and raw_con.lower() not in ("sin efecto atribuido", "none"):
             con_lec = raw_con
 
-    partes = [f"{mov} {art} {driver_raw}"]
-    if efecto:
-        partes.append(f"que {efecto}")
+    # «El retroceso del Dollar Index (DXY) juega a favor del alza del oro y acompaña nuestra lectura.»
+    frase = f"{mov} {art} {driver_raw} {efecto.rstrip('.')}"
     if con_lec:
-        partes.append(f"y {con_lec}" if not con_lec.startswith("y ") else con_lec)
-
-    return " ".join(partes).rstrip(".") + "."
+        frase += f" y {con_lec.removeprefix('y ').rstrip('.')}"
+    return frase + "."
 
 
 def seleccionar_drivers_correo(hechos: list[dict[str, Any]], direccion: str = "") -> tuple[list[dict[str, Any]], str]:
