@@ -6,7 +6,7 @@
       "archivo": "data central/DATA USA/raw/treasury_fed_data.json",
       "ruta": ["curva_rendimientos_yields", "DFF"],
       "serie": "Tasa efectiva de fondos federales",
-      "linea": "Una tasa alta en EE.UU. hace más atractivo el dólar frente al oro y las acciones."
+      "linea": "Una tasa alta en EE.UU. suele fortalecer el dólar: el dinero busca ese rendimiento antes que otros activos."
     },
     "bcch": {
       "nombre": "Banco Central de Chile",

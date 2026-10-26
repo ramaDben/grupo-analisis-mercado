@@ -1,42 +1,102 @@
 {
-  "_nota": "Catálogo cerrado de motivos de las imágenes ilustrativas del correo (spec 2026-10-24 §2). Lo edita el director.",
-  "prohibiciones": "Sin logos, sin marcas, sin texto ni números legibles, sin banderas, sin sellos de país, sin personas reconocibles; fotografía sobria, luz cálida, formato horizontal 16:9.",
+  "_nota": "Catálogo cerrado de motivos de las imágenes ilustrativas del correo (spec 2026-10-24 §2). Lo edita el director. Cada motivo tiene varias `variantes` de encuadre y sujeto: con un solo prompt cada generación salía casi idéntica a la anterior (seis fachadas iguales, 2026-10-26). `activos` marca la materia prima de un activo: ese motivo solo acompaña a esos tickers, y si agy lo elige para otro activo Python lo cambia por el del activo (`ilustracion.motivo_para`). `respaldo` es el motivo neutro para cuando el activo no tiene uno propio.",
+  "estilo": "Estilo de marca: fotografía editorial en clave baja sobre fondo casi negro, sujeto en primer plano con enfoque macro y poca profundidad de campo, luz lateral rasante cálida y un contraluz frío verde azulado sutil, sombras profundas y contraste alto, estética sobria y cinematográfica, sin luz de día ni cielo.",
+  "prohibiciones": "Sin logos, sin marcas, sin texto ni números legibles, sin inscripciones ni grabados en lingotes, monedas o billetes, sin banderas, sin sellos de país, sin personas reconocibles; formato horizontal 16:9.",
+  "respaldo": "banco_central",
   "motivos": {
     "oro_lingotes": {
       "descripcion": "Noticias sobre el oro, reservas internacionales de bancos centrales y demanda de metales preciosos.",
-      "prompt": "Lingotes de oro pulidos y apilados en pirámide sobre una superficie neutra, con reflejos metálicos sutiles y fondo desenfocado."
+      "activos": ["XAUUSD", "GLD.US"],
+      "variantes": [
+        "Lingotes de oro lisos apilados en diagonal, vistos muy de cerca, con el canto pulido atrapando la luz.",
+        "Granalla de oro en pequeñas pepitas irregulares esparcida sobre una piedra oscura y áspera.",
+        "Un solo lingote de oro liso apoyado sobre terciopelo negro, con un reflejo largo en su cara superior."
+      ]
+    },
+    "plata": {
+      "descripcion": "Noticias sobre la plata, su demanda industrial y de inversión, y los metales preciosos.",
+      "activos": ["XAGUSD"],
+      "variantes": [
+        "Lingotes de plata lisos apilados en diagonal, vistos muy de cerca, con el canto pulido como un espejo frío, con luz blanca fría: el metal se ve gris plateado y nunca dorado.",
+        "Granalla de plata en pequeñas gotas solidificadas esparcida sobre una pizarra oscura, con luz blanca fría: el metal se ve gris plateado y nunca dorado.",
+        "Un solo lingote de plata liso sobre una superficie de acero cepillado, con un reflejo frío en su cara superior, con luz blanca fría: el metal se ve gris plateado y nunca dorado."
+      ]
     },
     "banco_central": {
       "descripcion": "Decisiones de tasas de interés, política monetaria y declaraciones de autoridades monetarias.",
-      "prompt": "Fachada institucional neoclásica con grandes columnas de piedra simétricas, vista en contrapicado sereno, sin carteles ni inscripciones."
+      "variantes": [
+        "Detalle en contrapicado de columnas de piedra clásicas en penumbra, con la luz rasante marcando las estrías.",
+        "Puerta circular de una bóveda acorazada de acero, con los pernos del cierre vistos muy de cerca.",
+        "Balanza de precisión de bronce antigua sobre mármol oscuro, con los platillos en equilibrio.",
+        "Escalinata de mármol oscuro con una baranda de bronce iluminada de costado, sin carteles ni inscripciones."
+      ]
     },
     "billetes_dolar": {
       "descripcion": "Noticias del dólar estadounidense, flujos cambiarios y fortaleza relativa de la divisa de reserva.",
-      "prompt": "Fajo de billetes en tonos verdosos extendidos en abanico sobre un escritorio sobrio de madera, con enfoque selectivo y sin numeración legible."
+      "variantes": [
+        "Fajo de billetes en tonos verdosos visto de canto, muy de cerca, con el borde de las hojas iluminado.",
+        "Billetes verdosos enrollados y atados con una banda lisa, sobre madera oscura.",
+        "Textura de papel moneda verdoso con tramas finas en macro extremo, sin cifras, sin rostros y sin palabras."
+      ]
     },
     "peso_chileno": {
       "descripcion": "Evolución del tipo de cambio USD/CLP, flujos del mercado cambiario local y economía doméstica.",
-      "prompt": "Monedas metálicas bicolores y billetes en tonos rojizos y azulados sobre una mesa de trabajo, en plano cenital con desenfoque suave y sin escudos."
+      "variantes": [
+        "Columnas de monedas metálicas bicolores apiladas, vistas muy de cerca, con el canto estriado iluminado.",
+        "Billetes en tonos rojizos y azulados superpuestos y desenfocados en penumbra, sin escudos ni cifras.",
+        "Monedas metálicas bicolores dispersas sobre una pizarra oscura, con una sola en foco."
+      ]
     },
     "cobre": {
       "descripcion": "Noticias del mercado del cobre, minería metálica, inventarios en bodegas y demanda industrial.",
-      "prompt": "Cátodos y bobinas gruesas de cobre refinado apilados en un almacén de distribución, destacando la textura rojiza brillante bajo luz lateral."
+      "activos": ["COPPER"],
+      "variantes": [
+        "Cátodos de cobre refinado apilados, vistos de canto y muy de cerca, con la textura rojiza brillante.",
+        "Bobina gruesa de alambre de cobre en macro, con las espiras iluminadas de costado.",
+        "Haz de tubos de cobre cortados vistos de frente, con los bordes circulares brillando en la penumbra."
+      ]
     },
     "petroleo": {
       "descripcion": "Mercado petrolero, inventarios de crudo, decisiones de producción de energía y geopolítica energética.",
-      "prompt": "Complejo industrial con siluetas de torres de fraccionamiento al atardecer y varios barriles metálicos neutros alineados en primer plano."
+      "activos": ["WTI.spot", "BRENT.spot"],
+      "variantes": [
+        "Barriles metálicos lisos y gastados alineados en penumbra, con la luz rasante sobre los aros.",
+        "Gota de crudo espeso deslizándose sobre una superficie de metal oscuro, en macro extremo.",
+        "Silueta nocturna de torres de refinería con pequeñas luces cálidas, vista de lejos y sin carteles."
+      ]
     },
     "bolsa_pantallas": {
       "descripcion": "Jornadas bursátiles globales, volatilidad de renta variable y comportamiento de índices financieros.",
-      "prompt": "Fachada de piedra de un edificio bursátil clásico con columnas, vista desde la calle al atardecer, sin letreros, sin pantallas ni gráficos."
+      "variantes": [
+        "Columnas de piedra de un edificio bursátil clásico de noche, en contrapicado, sin letreros ni pantallas.",
+        "Campana de bronce antigua colgada en penumbra, con un reflejo cálido en su borde.",
+        "Fachada de rascacielos de vidrio en contrapicado nocturno, con ventanas iluminadas y sin letreros."
+      ]
     },
     "tecnologia": {
       "descripcion": "Sector tecnológico, innovación, industria de semiconductores, centros de datos y computación en la nube.",
-      "prompt": "Placa de circuito electrónico con microprocesadores iluminados tenuemente y pasillo de servidores en bastidor con luces de estado tenues."
+      "variantes": [
+        "Placa de circuito en macro con pistas finas iluminadas por una luz verde azulada tenue, sin marcas.",
+        "Pasillo de servidores en bastidor en penumbra, con luces de estado pequeñas y desenfocadas.",
+        "Oblea de silicio con reflejos iridiscentes sostenida sobre fondo negro, vista en ángulo."
+      ]
     },
     "acciones_generico": {
       "descripcion": "Mercado bursátil, resultados corporativos trimestrales y operativa general de acciones.",
-      "prompt": "Escritorio de madera con una libreta de cuero, una pluma y una taza de café junto a una ventana con luz cálida de la mañana, sin pantallas, sin gráficos y sin papeles con texto legible."
+      "variantes": [
+        "Libreta de cuero cerrada y una pluma sobre un escritorio de madera oscura, bajo la luz de una lámpara.",
+        "Mesa de reuniones de madera oscura vacía, con el reflejo de una lámpara cálida y sillas en penumbra.",
+        "Fachada de vidrio de un edificio corporativo en contrapicado nocturno, con líneas verticales marcadas."
+      ]
+    },
+    "cripto": {
+      "descripcion": "Noticias de bitcoin y otras criptomonedas, su adopción y su regulación.",
+      "activos": ["BTCUSD", "ETHUSD", "SOLUSD", "LTCUSD", "ADAUSD", "DOGUSD"],
+      "variantes": [
+        "Red abstracta de nodos y filamentos luminosos verde azulados flotando en la oscuridad.",
+        "Monedas metálicas lisas sin símbolos apiladas sobre una placa de circuito en penumbra.",
+        "Cadena de eslabones de metal oscuro en macro, con un eslabón iluminado por un contraluz verde azulado."
+      ]
     }
   }
 }

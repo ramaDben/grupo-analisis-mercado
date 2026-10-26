@@ -123,3 +123,15 @@ def _sin_red_para_indices_de_referencia(monkeypatch):
         raise OSError("tests: sin red para indices de referencia")
 
     monkeypatch.setattr(indices_referencia, "_descargar", _sin_red)
+
+
+@pytest.fixture(autouse=True)
+def _log_del_bot_aparte(monkeypatch, tmp_path):
+    """Los tests del bot no escriben en `data/logs/bot_telegram.log`.
+
+    Ese log es la auditoría de los pedidos reales, y el 2026-10-26 tenía 3.725 líneas de pedidos de
+    prueba (`pedido 111`, `pedido 222`) mezcladas con las de los analistas.
+    """
+    bot = sys.modules.get("analista.bot")
+    if bot is not None:
+        monkeypatch.setattr(bot, "LOG", tmp_path / "bot_telegram.log")

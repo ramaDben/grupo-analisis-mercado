@@ -103,7 +103,12 @@ def contexto(ticker: str, ahora: datetime, eventos: list[dict[str, Any]]) -> dic
 
 
 def _el(clave: str, nombre: str) -> str:
-    return {"oro": "el oro", "usdclp": "el USD/CLP", "petroleo": "el petróleo"}.get(clave, f"el {nombre}")
+    """El activo con su artículo. Los que no tienen clave usan la tabla del seguimiento: una segunda
+    tabla escribió «del Plata» en el correo del 2026-10-26."""
+    from analista.seguimiento import ARTICULOS
+
+    por_clave = {"oro": "el oro", "usdclp": "el USD/CLP", "petroleo": "el petróleo"}
+    return por_clave.get(clave) or ARTICULOS.get(nombre, f"el {nombre}")
 
 
 def _dato(ev: dict[str, Any]) -> str:
