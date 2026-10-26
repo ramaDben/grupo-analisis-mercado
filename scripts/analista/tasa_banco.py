@@ -48,6 +48,7 @@ def leer(ticker: str, clase: str, ahora: datetime, raiz: Path = RAIZ,
         return None, (f"La tasa de {b['nombre']} tiene {horas:.0f} h sin actualizar: "
                       "el correo sale sin el dato de tasas.")
     dia = datetime.strptime(fecha, "%Y-%m-%d")
+    linea = (b.get("lineas_por_clase") or {}).get(clase) or b["linea"]
     return {"banco": clave, "nombre": b["nombre"], "serie": b["serie"],
             "valor": f"{float(valor):.2f}".replace(".", ","), "fecha": f"{dia:%d/%m}",
-            "linea": b["linea"], "motivo_imagen": "banco_central"}, None
+            "linea": linea, "motivo_imagen": "banco_central"}, None

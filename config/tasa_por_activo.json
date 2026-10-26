@@ -1,12 +1,19 @@
 {
-  "_nota": "El banco central cuya tasa abre el correo de /oportunidad, por activo (spec 2026-10-24 §3). `por_ticker` manda sobre `por_clase`; la clase es la del catálogo o, fuera de él, el segmento. `linea` es la frase pedagógica fija, sin agy: la revisa el director. Se muestra el nombre real de la serie, nunca 'la tasa de la Fed' (DFF es la efectiva, no el rango objetivo).",
+  "_nota": "El banco central cuya tasa abre el correo de /oportunidad, por activo (spec 2026-10-24 §3). `por_ticker` manda sobre `por_clase`; la clase es la del catálogo o, fuera de él, el segmento. `linea` es la frase pedagógica fija y `lineas_por_clase` el mapa opcional por clase de activo, sin agy: las revisa el director. Se muestra el nombre real de la serie, nunca 'la tasa de la Fed' (DFF es la efectiva, no el rango objetivo).",
   "bancos": {
     "fed": {
       "nombre": "Reserva Federal (Fed)",
       "archivo": "data central/DATA USA/raw/treasury_fed_data.json",
       "ruta": ["curva_rendimientos_yields", "DFF"],
       "serie": "Tasa efectiva de fondos federales",
-      "linea": "Una tasa alta en EE.UU. suele fortalecer el dólar: el dinero busca ese rendimiento antes que otros activos."
+      "linea": "Una tasa alta en EE.UU. suele fortalecer el dólar: el dinero busca ese rendimiento antes que otros activos.",
+      "lineas_por_clase": {
+        "acciones": "Tasas altas encarecen el crédito y frenan la inversión de las empresas, y eso suele pesar sobre sus acciones.",
+        "etfs": "Tasas altas encarecen el crédito y frenan la inversión de las empresas, y eso suele pesar sobre sus acciones.",
+        "indices": "Tasas altas encarecen el crédito para las empresas y suelen restarle impulso a los índices bursátiles.",
+        "crypto": "Tasas altas le restan atractivo a los activos de más riesgo, como las criptomonedas.",
+        "cripto": "Tasas altas le restan atractivo a los activos de más riesgo, como las criptomonedas."
+      }
     },
     "bcch": {
       "nombre": "Banco Central de Chile",

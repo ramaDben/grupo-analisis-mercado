@@ -332,40 +332,45 @@ def _celda_hecho(texto: str, c: dict[str, str], ultima: bool, peso: int = 500, c
             f'font-weight:{peso};color:{c[color]};">{texto}{extra}</td>')
 
 
-def _sintesis_dominancia(seleccionados: list[dict[str, Any]]) -> str:
-    if not seleccionados:
+def _tiene_efecto(h: dict[str, Any]) -> bool:
+    ef = (h.get("efecto") or "").strip().lower()
+    return bool(ef) and ef != "sin efecto atribuido"
+
+
+def _sintesis_dominancia(seleccionados: list[dict[str, Any]], direccion: str = "") -> str:
+    con_efecto = [h for h in (seleccionados or []) if _tiene_efecto(h)]
+    if not con_efecto:
         return ""
 
     def clave_fecha(h: dict[str, Any]) -> tuple[int, int]:
         m = re.search(r"(\d{2})/(\d{2})", h.get("fecha", ""))
         return (int(m.group(2)), int(m.group(1))) if m else (0, 0)
 
-    h_dom = max(seleccionados, key=lambda h: (clave_fecha(h), 1 if h.get("sentido") in ("subió", "bajó") else 0))
-    sentido = h_dom.get("sentido", "")
-    driver_raw = h_dom.get("driver", "")
+    h_dom = max(con_efecto, key=lambda h: (clave_fecha(h), 1 if h.get("sentido") in ("subió", "bajó") else 0))
+    sentido = (h_dom.get("sentido") or "").strip().lower()
+    driver_raw = h_dom.get("driver", "").replace(" (TIPS)", "").strip()
 
-    if "dollar index" in driver_raw.lower() or "dxy" in driver_raw.lower():
-        mov = "el retroceso" if sentido == "bajó" else ("el avance" if sentido == "subió" else "el nivel")
-        contra = "contra nuestra lectura técnica bajista" if "contra" in (h_dom.get("con_la_lectura") or "") else "a favor de nuestra lectura técnica"
-        efecto_fuerza = "alcista" if "alza" in (h_dom.get("efecto") or "") else "bajista"
-        return f"Hoy domina {mov} del Dollar Index (DXY) en el mercado cambiario, cuya debilidad ejerce la mayor fuerza {efecto_fuerza} inmediata {contra}."
+    mov = "El retroceso" if sentido == "bajó" else ("El avance" if sentido == "subió" else "La evolución")
+    art = "del" if any(w in driver_raw.lower() for w in ("dólar", "dollar", "bono", "petróleo", "cobre", "oro")) else "de la"
 
-    driver = driver_raw.replace(" (TIPS)", "").strip()
-    mov = "el retroceso" if sentido == "bajó" else ("el avance" if sentido == "subió" else "la evolución")
-    art = "del" if any(w in driver.lower() for w in ("dólar", "dollar", "bono", "petróleo", "cobre", "oro")) else "de la"
-    efecto = h_dom.get("efecto", "")
-    con_lec = h_dom.get("con_la_lectura", "")
+    efecto = (h_dom.get("efecto") or "").strip()
+    es_lateral = str(direccion).strip().upper() in ("LATERAL", "RANGO")
+    con_lec = ""
+    if not es_lateral:
+        raw_con = (h_dom.get("con_la_lectura") or "").strip()
+        if raw_con and raw_con.lower() not in ("sin efecto atribuido", "none"):
+            con_lec = raw_con
 
-    partes = [f"Hoy domina {mov} {art} {driver}"]
+    partes = [f"{mov} {art} {driver_raw}"]
     if efecto:
         partes.append(f"que {efecto}")
     if con_lec:
-        partes.append(f"y {con_lec}")
+        partes.append(f"y {con_lec}" if not con_lec.startswith("y ") else con_lec)
 
     return " ".join(partes).rstrip(".") + "."
 
 
-def seleccionar_drivers_correo(hechos: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], str]:
+def seleccionar_drivers_correo(hechos: list[dict[str, Any]], direccion: str = "") -> tuple[list[dict[str, Any]], str]:
     """Selecciona deterministamente los dos drivers más representativos para el correo.
 
     Criterio:
@@ -382,7 +387,7 @@ def seleccionar_drivers_correo(hechos: list[dict[str, Any]]) -> tuple[list[dict[
         return [], ""
     if len(hechos) <= 2:
         sel = list(hechos)
-        return sel, _sintesis_dominancia(sel)
+        return sel, _sintesis_dominancia(sel, direccion=direccion)
 
     def clave_fecha(h: dict[str, Any]) -> tuple[int, int]:
         m = re.search(r"(\d{2})/(\d{2})", h.get("fecha", ""))
@@ -400,25 +405,25 @@ def seleccionar_drivers_correo(hechos: list[dict[str, Any]]) -> tuple[list[dict[
         # 1 y 1, siempre en este orden: primero el que respalda la lectura y después el que la tensiona.
         seleccionados = [mejor_favor, mejor_contra]
     else:
-        dinamicos = [h for h in hechos if es_dinamico(h) and h.get("efecto")]
+        dinamicos = [h for h in hechos if es_dinamico(h) and _tiene_efecto(h)]
         if len(dinamicos) >= 2:
             dinamicos.sort(key=clave_fecha, reverse=True)
             seleccionados = dinamicos[:2]
         else:
-            con_efecto = [h for h in hechos if h.get("efecto")]
+            con_efecto = [h for h in hechos if _tiene_efecto(h)]
             if len(con_efecto) >= 2:
                 seleccionados = con_efecto[:2]
             else:
                 seleccionados = hechos[:2]
 
-    return seleccionados, _sintesis_dominancia(seleccionados)
+    return seleccionados, _sintesis_dominancia(seleccionados, direccion=direccion)
 
 
-def _hechos_correo(hechos: list[dict[str, Any]], c: dict[str, str]) -> str:
+def _hechos_correo(hechos: list[dict[str, Any]], c: dict[str, str], direccion: str = "") -> str:
     """Los drivers del día en tabla: factor, dato, cambio y efecto sobre el activo."""
     if not hechos:
         return ""
-    seleccionados, sintesis = seleccionar_drivers_correo(hechos)
+    seleccionados, sintesis = seleccionar_drivers_correo(hechos, direccion=direccion)
     if not seleccionados:
         return ""
 
@@ -461,7 +466,7 @@ def _grafico_dolar_correo(ruta: Path | None, c: dict[str, str]) -> str:
     """El gráfico del Dollar Index, bajo la tabla de drivers: solo sale si el dólar es uno de ellos."""
     if ruta is None or not ruta.exists():
         return ""
-    return (_p("El dólar (Dollar Index), marco 4H", c, tam=13, peso=600, color="texto_2", margen="0 0 6px 0")
+    return (_p("El dólar (Dollar Index), referencia del día", c, tam=13, peso=600, color="texto_2", margen="0 0 6px 0")
             + _tabla(f'<tr><td style="padding:0;"><img src="{ih._data_uri(ruta)}" width="558" height="{_alto_png(ruta, 558)}" '
                      'alt="Gráfico del Dollar Index (DXY)" style="display:block;border:0;width:558px;max-width:100%;'
                      'height:auto;border-radius:11px;"></td></tr>',
@@ -557,12 +562,19 @@ def _noticia_directa_correo(fuentes: list[dict[str, Any]], voz: tuple[str, dict[
     if not directas:
         return ""
     f = max(directas, key=lambda x: str(x.get("fecha", "")))
+    entidad = str(f.get("entidad", "")).strip()
+    medio = str(f.get("medio", "")).strip()
+    rotulo_fuente = (
+        f'{ih.e(entidad)} · {ih.e(_fecha_es(f["fecha"]))}'
+        if entidad.lower() == medio.lower()
+        else f'{ih.e(entidad)} · {ih.e(medio)} · {ih.e(_fecha_es(f["fecha"]))}'
+    )
     tarjeta = (
         f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#F8FAFC" '
         f'style="background:#F8FAFC;border:1px solid #DFE6E4;border-radius:6px;margin:0 0 10px 0;">'
         f'<tr><td style="padding:12px 14px;">'
         f'<p style="margin:0;font-family:{F_SANS};font-size:13px;font-weight:700;color:{c["texto_1"]};">'
-        f'{ih.e(f["entidad"])} · {ih.e(f["medio"])} · {ih.e(_fecha_es(f["fecha"]))}</p>'
+        f'{rotulo_fuente}</p>'
         f'<p style="margin:6px 0 6px 0;font-family:{F_SANS};font-size:14px;line-height:20px;color:{c["texto_borde"]};">'
         f'{ih.e(f["tesis"])}</p>'
         f'<p style="margin:0;font-family:{F_SANS};font-size:12px;font-weight:600;">'
@@ -734,13 +746,17 @@ def preheader_sugerido(a: dict[str, Any], fuentes: list[dict[str, Any]] | None =
     lec = a["lectura"]
     temp = a.get("temporalidad", "4H").split()[0]
     rango = _bordes_rango(a)
-    if rango:
-        base = f"Nuestra lectura en {temp}: el precio se mueve entre {rango[0]} y {rango[1]}"
-    else:
-        base = f"Nuestra lectura {lec['direccion'].lower()} en {temp}"
     bancos_sel = fu.seleccionar_bancos_correo(fuentes or [], lec["direccion"])
-    respaldo = f", el respaldo de {bancos_sel[0]['entidad']}" if bancos_sel else ""
-    return f"{base}{respaldo} y los dos factores que mueven la sesión de hoy."
+    if bancos_sel:
+        resto = f"el respaldo de {bancos_sel[0]['entidad']} y los dos factores que mueven la sesión de hoy."
+    else:
+        resto = "los dos factores que mueven la sesión de hoy."
+
+    if rango:
+        return f"Nuestra lectura en {temp}: el precio se mueve entre {rango[0]} y {rango[1]}. Además, {resto}"
+    if bancos_sel:
+        return f"Nuestra lectura {lec['direccion'].lower()} en {temp}, {resto}"
+    return f"Nuestra lectura {lec['direccion'].lower()} en {temp} y {resto}"
 
 
 def _horizonte(a: dict[str, Any]) -> str:
@@ -837,7 +853,7 @@ def _tasa_correo(t: dict[str, Any], imagen: Path | None, c: dict[str, str], oscu
         f'<p style="margin:0 0 6px 0;font-family:{F_SANS};font-size:12px;line-height:16px;font-weight:700;'
         f'letter-spacing:1.8px;text-transform:uppercase;color:{rotulo};">{ih.e(t["nombre"])}</p>'
         f'<p style="margin:0 0 6px 0;font-family:{F_SANS};font-size:17px;line-height:24px;font-weight:800;color:{texto};">'
-        f'{ih.e(t["serie"])}: {ih.e(t["valor"])} por ciento al {ih.e(t["fecha"])}</p>'
+        f'{ih.e(t["serie"])}: {ih.e(t["valor"])} % al {ih.e(t["fecha"])}</p>'
         f'<p style="margin:0 0 14px 0;font-family:{F_SANS};font-size:14px;line-height:21px;color:{segundo};">'
         f'{ih.e(t["linea"])}</p>'
     )
@@ -1072,13 +1088,13 @@ def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: P
         + _continuidad_correo(a, d, c)
         + '<tr><td class="pad" style="padding:28px 40px 0 40px;">'
         + tasa_cuerpo
+        + analisis
         + _p(ih.e(contexto), c, data_ed="contexto")
-        + _hechos_correo((d or {}).get("hechos") or [], c)
+        + _hechos_correo((d or {}).get("hechos") or [], c, direccion=lec.get("direccion", ""))
         + _grafico_dolar_correo(ruta_dolar, c)
         + _dias_clave_correo(d or {}, dias_clave, dir_pedido, imagen_calendario, c)
         + _noticia_directa_correo(list(fuentes), voz, c)
         + _voces_correo(list(fuentes), lec["direccion"], c)
-        + analisis
         + _simulacion_correo(a, ejecutivo, c)
         + cierre_consultivo
         + _separador(26) + '</td></tr>'

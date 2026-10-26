@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import re
 import sys
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -415,7 +415,7 @@ def test_la_ficha_no_habla_de_la_semana_con_vigencia_de_7_dias(tmp_path):
 
 
 def _correo(html):
-    return re.search(r'<template class="correo-activo" data-ticker="XAUUSD">(.*?)</template>', html, re.S).group(1)
+    return re.search(r'<template class="correo-activo"[^>]*>(.*?)</template>', html, re.S).group(1)
 
 
 def test_la_ficha_trae_la_tabla_de_hechos(tmp_path):
@@ -1195,7 +1195,7 @@ def test_pieza_vieja_se_arma(tmp_path):
 def test_tasa_con_nombre_real(tmp_path):
     for p in (_con_apertura(tmp_path), _con_apertura(tmp_path, noticia=False)):
         correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
-        assert "Tasa efectiva de fondos federales: 3,88 por ciento al 09/10" in correo
+        assert "Tasa efectiva de fondos federales: 3,88 % al 09/10" in correo
         assert "tasa de la Fed" not in correo
 
 
@@ -1261,3 +1261,193 @@ def test_el_logo_de_la_banda_oscura_es_opaco_y_va_por_url(tmp_path):
     correo = _correo(html)
     assert "ejemplo.test/correos/logo_correo_oscuro.png" in correo
     assert "ejemplo.test/correos/LOGO Blanco.png" not in correo
+
+def test_sintesis_caso_cat_sin_efecto_no_dibuja_recuadro(tmp_path):
+    """En CAT (DXY subió, bono bajó, ambos sin efecto atribuido), la síntesis es vacía y no se dibuja el recuadro."""
+    ruta_fixture = RAIZ / "tests" / "fixtures" / "analista" / "oportunidad_cat_2026-10-26.json"
+    p = json.loads(ruta_fixture.read_text(encoding="utf-8"))
+    for img in p.get("imagenes", {}).values():
+        if img:
+            fx._imagen(tmp_path, img)
+    for img in p.get("ilustraciones", {}).values():
+        if img:
+            fx._imagen(tmp_path, img)
+    p["huella"] = es._huella(p)
+
+    seleccionados, sintesis = oh.seleccionar_drivers_correo(
+        p["datos"]["hechos"], direccion=p["datos"]["activos"][0]["lectura"]["direccion"]
+    )
+    assert sintesis == ""
+
+    html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, date(2026, 10, 26))
+    correo = _correo(html)
+    assert "Qué pesa más hoy:" not in correo
+    assert "sin efecto atribuido" in correo
+
+
+def test_sintesis_dxy_subio_con_efecto_sin_palabra_debilidad():
+    """DXY subió con efecto 'presiona a la baja' y lectura BAJISTA a favor: produce frase sin 'debilidad'."""
+    hechos = [
+        {
+            "id": "dxy",
+            "driver": "Dollar Index (DXY)",
+            "fecha": "lunes 26/10",
+            "sentido": "subió",
+            "efecto": "presiona a la baja",
+            "con_la_lectura": "a favor de nuestra lectura técnica",
+        }
+    ]
+    _, sintesis = oh.seleccionar_drivers_correo(hechos, direccion="BAJISTA")
+    assert "debilidad" not in sintesis.lower()
+    assert sintesis.startswith("El avance del Dollar Index (DXY)")
+    assert "presiona a la baja" in sintesis
+    assert "a favor de nuestra lectura técnica" in sintesis
+
+
+def test_sintesis_lectura_lateral_nunca_dice_a_favor_ni_en_contra():
+    """Con lectura LATERAL, la síntesis nunca contiene 'a favor de nuestra lectura' ni 'en contra'."""
+    hechos = [
+        {
+            "id": "dxy",
+            "driver": "Dollar Index (DXY)",
+            "fecha": "lunes 26/10",
+            "sentido": "subió",
+            "efecto": "presiona a la baja",
+            "con_la_lectura": "a favor de nuestra lectura técnica",
+        }
+    ]
+    _, sintesis = oh.seleccionar_drivers_correo(hechos, direccion="LATERAL")
+    assert "a favor de nuestra lectura" not in sintesis
+    assert "en contra" not in sintesis
+    assert "debilidad" not in sintesis.lower()
+    assert sintesis == "El avance del Dollar Index (DXY) que presiona a la baja."
+
+
+def test_preheader_sugerido_gramatical():
+    """El preheader queda gramatical con y sin rango, y con y sin respaldo de banco."""
+    a_rango = {
+        "nombre": "Caterpillar Inc.",
+        "temporalidad": "4H · swing",
+        "lectura": {
+            "direccion": "LATERAL",
+            "lineas": [
+                {"rol": "rango", "tipo": "horizontal", "valor_actual": 821.39},
+                {"rol": "rango", "tipo": "horizontal", "valor_actual": 679.33},
+            ],
+        },
+        "fmt": {"borde_inferior": "679,33", "borde_superior": "821,39"},
+    }
+    ph1 = oh.preheader_sugerido(a_rango, fuentes=[])
+    assert ph1 == "Nuestra lectura en 4H: el precio se mueve entre 679,33 y 821,39. Además, los dos factores que mueven la sesión de hoy."
+
+    # En lectura LATERAL la postura coincidente de la banca es 'neutral'
+    fuentes_banco = [
+        {
+            "entidad": "Goldman Sachs",
+            "medio": "Bloomberg",
+            "fecha": "2026-10-25",
+            "url": "https://ejemplo.com",
+            "postura": "neutral",
+            "tesis": "En rango.",
+        }
+    ]
+    ph2 = oh.preheader_sugerido(a_rango, fuentes=fuentes_banco)
+    assert ph2 == "Nuestra lectura en 4H: el precio se mueve entre 679,33 y 821,39. Además, el respaldo de Goldman Sachs y los dos factores que mueven la sesión de hoy."
+
+    a_sin_rango = {
+        "nombre": "Oro",
+        "temporalidad": "4H · swing",
+        "lectura": {"direccion": "BAJISTA", "lineas": []},
+        "fmt": {},
+    }
+    ph3 = oh.preheader_sugerido(
+        a_sin_rango,
+        fuentes=[
+            {
+                "entidad": "UBS",
+                "postura": "bajista",
+                "medio": "Bloomberg",
+                "url": "https://ejemplo.com",
+                "fecha": "2026-10-25",
+                "tesis": "Tesis",
+            }
+        ],
+    )
+    assert ph3 == "Nuestra lectura bajista en 4H, el respaldo de UBS y los dos factores que mueven la sesión de hoy."
+
+    ph4 = oh.preheader_sugerido(a_sin_rango, fuentes=[])
+    assert ph4 == "Nuestra lectura bajista en 4H y los dos factores que mueven la sesión de hoy."
+
+
+def test_tasa_banco_lineas_por_clase():
+    """tasa_banco elige la frase según la clase de activo y cae a linea si no está mapeada."""
+    from analista import tasa_banco as tb
+
+    cfg = tb.cargar_config()
+    banco_fed = cfg["bancos"]["fed"]
+    assert "lineas_por_clase" in banco_fed
+    assert "acciones" in banco_fed["lineas_por_clase"]
+    assert "etfs" in banco_fed["lineas_por_clase"]
+    assert "indices" in banco_fed["lineas_por_clase"]
+    assert "crypto" in banco_fed["lineas_por_clase"]
+    assert "cripto" in banco_fed["lineas_por_clase"]
+
+    # Simular lectura con fecha fresca para Fed
+    ahora = datetime(2026, 10, 12, 18, 0, tzinfo=timezone.utc)
+    tasa, aviso = tb.leer("#CAT", "acciones", ahora)
+    assert aviso is None
+    assert tasa is not None
+    assert tasa["linea"] == "Tasas altas encarecen el crédito y frenan la inversión de las empresas, y eso suele pesar sobre sus acciones."
+
+    tasa_oro, aviso_oro = tb.leer("XAUUSD", "commodities", ahora)
+    assert aviso_oro is None
+    assert tasa_oro is not None
+    assert tasa_oro["linea"] == banco_fed["linea"]
+
+
+def test_orden_grafico_activo_antes_que_dolar(tmp_path):
+    """El gráfico del activo aparece antes en el HTML que el gráfico del Dollar Index."""
+    p = fx.pieza_oportunidad(tmp_path, laminas=True, dolar=True)
+    html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    correo = _correo(html)
+
+    alt_activo = 'alt="Gráfico de Oro"'
+    alt_dolar = 'alt="Gráfico del Dollar Index (DXY)"'
+    assert alt_activo in correo
+    assert alt_dolar in correo
+    pos_activo = correo.index(alt_activo)
+    pos_dolar = correo.index(alt_dolar)
+    assert pos_activo < pos_dolar
+
+    assert "El dólar (Dollar Index), referencia del día" in correo
+
+
+def test_tarjeta_lo_ultimo_de_entidad_medio_iguales():
+    """En 'Lo último de...', si entidad y medio son iguales (sin distinguir mayúsculas), sale una sola vez."""
+    c = oh.paleta_correo(oh.paleta())
+    ancla = {
+        "nombre": "Caterpillar",
+        "entidades": ["SEC"],
+        "dominios": ["sec.gov"],
+        "terminos_ancla": ["Caterpillar"],
+    }
+    voz = ("acciones", ancla)
+    fuentes = [{
+        "entidad": "SEC",
+        "medio": "sec",
+        "fecha": "2026-10-15",
+        "url": "https://sec.gov/filing/123",
+        "tesis": "Caterpillar informó su informe trimestral ante la SEC.",
+    }]
+    tarjeta = oh._noticia_directa_correo(fuentes, voz, c)
+    assert "SEC · 15/10/2026" in tarjeta
+    assert "SEC · sec · 15/10/2026" not in tarjeta
+    assert "SEC · SEC · 15/10/2026" not in tarjeta
+
+
+def test_tarjeta_tasa_presentacion_porcentaje(tmp_path):
+    """En la tarjeta de tasa, se muestra '3,88 % al 09/10' y no '3,88 por ciento al 09/10'."""
+    p = _con_apertura(tmp_path, noticia=False)
+    correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+    assert "3,88 % al 09/10" in correo
+    assert "3,88 por ciento al 09/10" not in correo
