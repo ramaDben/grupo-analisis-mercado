@@ -6,6 +6,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 RAIZ = Path(__file__).resolve().parent.parent
 for p in (str(RAIZ / "src"), str(RAIZ / "scripts")):
@@ -13,9 +14,9 @@ for p in (str(RAIZ / "src"), str(RAIZ / "scripts")):
         sys.path.insert(0, p)
 
 import velas_sinteticas as vs  # noqa: E402
-from estrategia.tori import radar  # noqa: E402
+from estrategia.tori import crear, crear_intradia, radar  # noqa: E402
 from estrategia.tori.horizontales import Horizontal  # noqa: E402
-from estrategia.tori.lectura import _estructura  # noqa: E402
+from estrategia.tori.lectura import AVISO_SALTO, _estructura  # noqa: E402
 from estrategia.tori.lineas import trazar  # noqa: E402
 from estrategia.tori.parametros import PARAMETROS as P  # noqa: E402
 from estrategia.tori.pivotes import serie_de  # noqa: E402
@@ -211,3 +212,70 @@ def test_zonas_sin_rango_lanza():
     except ValueError:
         return
     raise AssertionError("debía lanzar ValueError con ATR 0")
+
+
+# --- lectura de un marco desde las velas, y paridad con leer() (spec §6-§7) ----------------------
+
+def _velas_h4(h4: pd.DataFrame) -> dict[str, pd.DataFrame]:
+    return {"H4": h4, "D1": vs.agregar(h4, 6), "W1": vs.agregar(h4, 30)}
+
+
+def _velas_h1(h1: pd.DataFrame) -> dict[str, pd.DataFrame]:
+    return {"H1": h1, "H4": vs.agregar(h1, 4), "D1": vs.agregar(h1, 24), "W1": vs.agregar(h1, 120)}
+
+
+def test_los_marcos_del_radar_son_los_intradia():
+    assert radar.MARCOS_RADAR.velas == {"W1": 156, "D1": 250, "H4": 180, "H1": 600}
+    assert radar.RADAR_MARCOS == ("H1", "H4", "D1")
+
+
+def test_historia_corta_lanza_historia_insuficiente():
+    h4 = vs.desde_vertices([130, *ALCISTA], 12)  # 84 velas, la ventana de 4H es de 180
+    with pytest.raises(radar.HistoriaInsuficiente, match="H4: 84 velas de 180"):
+        radar.leer_marco(_velas_h4(h4), "H4", DIGITS)
+    assert issubclass(radar.HistoriaInsuficiente, ValueError)
+
+
+def test_velas_sin_rango_lanzan_valueerror():
+    h4 = vs.desde_vertices([100, 100], 200, mecha=0.0)
+    with pytest.raises(ValueError, match="no tienen rango") as e:
+        radar.leer_marco(_velas_h4(h4), "H4", DIGITS)
+    assert not isinstance(e.value, radar.HistoriaInsuficiente)
+
+
+def test_el_salto_de_datos_deja_aviso_y_no_falla():
+    # 120 velas antes del salto y 84 después: la historia cruda alcanza (204 ≥ 180) aunque
+    # la ventana que se lee quede en las 84 posteriores al salto.
+    antes = vs.desde_vertices([60, 50, 56, 52], 40)
+    despues = vs.desde_vertices([130, *ALCISTA], 12, t0=int(antes["time"].iloc[-1]) + 4 * 3600)
+    h4 = pd.concat([antes, despues], ignore_index=True)
+    lec = radar.leer_marco(_velas_h4(h4), "H4", DIGITS)
+    assert AVISO_SALTO.format(marco="H4") in lec.avisos
+    assert (lec.estado, lec.direccion) == ("TENDENCIA", "ALCISTA")
+    assert lec.vela == int(h4["time"].iloc[-1])
+
+
+def _paridad(lectura, lm, marco):
+    assert lm.marco == marco and lm.direccion == lectura.direccion
+    propias = {x.rol: x.valor_actual for x in lectura.lineas
+               if x.marco == marco and x.rol in ("seguridad", "accion")}
+    radar_ = {x.rol: x.valor_actual for x in lm.lineas if x.rol in ("seguridad", "accion")}
+    assert propias and radar_ == propias
+    # Solo las líneas propias del marco: las de contexto de leer() no se agregan.
+    assert {x.rol for x in lm.lineas} <= {"seguridad", "accion", "rango", "soporte", "resistencia"}
+    assert lm.vela == lectura.vela and lm.atr == lectura.metricas["atr"]
+
+
+def test_paridad_con_leer_en_4h():
+    for vertices in ([130, *ALCISTA], [100, *BAJISTA_ROTA, 118]):
+        velas = _velas_h4(vs.desde_vertices(vertices, 30))
+        assert len(velas["H4"]) >= 180
+        lectura = crear().leer("XAUUSD", velas, DIGITS)
+        _paridad(lectura, radar.leer_marco(velas, "H4", DIGITS), "H4")
+
+
+def test_paridad_con_leer_en_1h():
+    velas = _velas_h1(vs.desde_vertices([130, *ALCISTA], 90, paso=3600))
+    assert len(velas["H1"]) >= 600
+    lectura = crear_intradia().leer("XAUUSD", velas, DIGITS)
+    _paridad(lectura, radar.leer_marco(velas, "H1", DIGITS), "H1")

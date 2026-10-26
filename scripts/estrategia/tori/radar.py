@@ -5,7 +5,7 @@ roles de `lectura._estructura`: el radar no traza nada propio, solo mide la dist
 de la última vela cerrada a esas líneas. La vela en curso no entra; solo se informa
 dónde estará cada línea en ella (`valor_abierta`), para compararla con el gráfico.
 
-No se importa desde `estrategia.tori.__init__`: este módulo importará de ahí los
+No se importa desde `estrategia.tori.__init__`: este módulo importa de ahí los
 marcos intradía, y el import circular quedaría a un paso.
 """
 from __future__ import annotations
@@ -14,14 +14,26 @@ from dataclasses import dataclass
 from math import ceil
 from typing import Literal
 
+import pandas as pd
+
+from estrategia.tori import MARCOS_INTRADIA
 from estrategia.tori.calidad import calificar
 from estrategia.tori.horizontales import Horizontal, detectar
-from estrategia.tori.lectura import _estructura
+from estrategia.tori.lectura import AVISO_SALTO, _estructura, _serie
 from estrategia.tori.lineas import Trazo, trazar
-from estrategia.tori.parametros import Parametros
-from estrategia.tori.pivotes import Serie
+from estrategia.tori.parametros import PARAMETROS, Parametros
+from estrategia.tori.pivotes import Serie, inicio_tras_salto
 
 Linea_ = Literal["seguridad", "accion", "rango", "soporte", "resistencia"]
+
+# Las ventanas de las piezas (W1 156, D1 250, H4 180, H1 600): con otra ventana el ancla A
+# puede ser otra y el radar mostraría líneas que ninguna pieza publica (spec §7).
+MARCOS_RADAR = MARCOS_INTRADIA
+RADAR_MARCOS: tuple[str, ...] = ("H1", "H4", "D1")
+
+
+class HistoriaInsuficiente(ValueError):
+    """MT5 devolvió menos velas que la ventana del marco: nunca se traza sobre historia parcial."""
 
 
 @dataclass(frozen=True)
@@ -143,3 +155,42 @@ def zonas(s: Serie, p: Parametros, marco: str, digits: int) -> tuple[list[LineaR
                                   round(h.precio, digits), "", ""))
     lineas = [LineaRadar(rol, round(h.precio, digits), round(h.precio, digits)) for rol, h in vigentes]
     return lineas, eventos
+
+
+@dataclass(frozen=True)
+class LecturaMarco:
+    marco: str
+    estado: str
+    direccion: str
+    lineas: tuple[LineaRadar, ...]
+    eventos: tuple[Evento, ...]
+    avisos: tuple[str, ...]  # AVISO_SALTO si la ventana se cortó por un salto de datos
+    vela: int  # apertura (hora servidor) de la última vela cerrada
+    atr: float
+
+
+def leer_marco(velas: dict[str, pd.DataFrame], marco: str, digits: int,
+               p: Parametros = PARAMETROS) -> LecturaMarco:
+    """El marco leído como operativo, con la misma ventana y el mismo corte que `leer()`.
+
+    La historia se cuenta sobre las velas crudas, antes del corte por salto (spec §6): un
+    salto de datos se acepta y queda en los avisos, igual que en las piezas, pero MT5
+    devolviendo menos velas que la ventana es una lectura que no se hace. Solo entran las
+    líneas propias del marco; las de contexto que adjunta `leer()` las aporta cada marco
+    cuando le toca ser el operativo.
+    """
+    if marco not in RADAR_MARCOS:
+        raise ValueError(f"el radar no lee {marco}: sus marcos son {', '.join(RADAR_MARCOS)}")
+    req = MARCOS_RADAR.velas[marco]
+    n = len(velas[marco])
+    if n < req:
+        raise HistoriaInsuficiente(f"{marco}: {n} velas de {req}")
+    s = _serie(velas, marco, MARCOS_RADAR, p)
+    if s.atr <= 0:
+        raise ValueError(f"las velas de {marco} no tienen rango (ATR 0); no hay nada que leer")
+    avisos = ((AVISO_SALTO.format(marco=marco),)
+              if inicio_tras_salto(velas[marco].tail(req), p.salto_max_rango) else ())
+    estado, direccion, l_diag, e_diag = diagonales(s, p, marco, digits)
+    l_zona, e_zona = zonas(s, p, marco, digits)
+    return LecturaMarco(marco, estado, direccion, tuple(l_diag + l_zona), tuple(e_diag + e_zona),
+                        avisos, s.times[-1], s.atr)
