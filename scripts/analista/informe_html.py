@@ -7,11 +7,18 @@ from __future__ import annotations
 
 import base64
 import html
+import io
 import re
 import unicodedata
 from datetime import date
 from pathlib import Path
 from typing import Any
+
+try:
+    from PIL import Image
+    _TIENE_PIL = True
+except ImportError:
+    _TIENE_PIL = False
 
 from analista import RAIZ
 from analista import autor as au
@@ -33,7 +40,32 @@ def slug(texto: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", plano).strip("_")
 
 
-def _data_uri(ruta: Path) -> str:
+def _data_uri(ruta: Path, ancho_max: int | None = None, calidad: int = 85, a_jpeg: bool = False) -> str:
+    """La imagen embebida. Con `ancho_max` o `a_jpeg`, y Pillow a mano (llega con el extra `informe`), se reduce
+    antes de embeberla: la foto del autor pesaba 850 KB para mostrarse a 80 px. Una imagen que no existe
+    falla, como siempre: una pieza sin su imagen no sale."""
+    if _TIENE_PIL and (ancho_max is not None or a_jpeg):
+        try:
+            with Image.open(ruta) as im:
+                w, h = im.size
+                if ancho_max is not None and w > ancho_max:
+                    nuevo_h = max(1, round(h * ancho_max / w))
+                    im = im.resize((ancho_max, nuevo_h), Image.Resampling.LANCZOS)
+                buf = io.BytesIO()
+                es_jpeg = a_jpeg or ruta.suffix.lower() in (".jpg", ".jpeg")
+                tiene_alfa = im.mode in ("RGBA", "LA") or ("transparency" in im.info)
+                if es_jpeg and not tiene_alfa:
+                    if im.mode != "RGB":
+                        im = im.convert("RGB")
+                    im.save(buf, format="JPEG", quality=calidad, optimize=True)
+                    return f"data:image/jpeg;base64,{base64.b64encode(buf.getvalue()).decode('ascii')}"
+                if not tiene_alfa and im.mode == "RGB":
+                    im.save(buf, format="JPEG", quality=calidad, optimize=True)
+                    return f"data:image/jpeg;base64,{base64.b64encode(buf.getvalue()).decode('ascii')}"
+                im.save(buf, format="PNG", optimize=True)
+                return f"data:image/png;base64,{base64.b64encode(buf.getvalue()).decode('ascii')}"
+        except (OSError, ValueError):  # una imagen que Pillow no sabe leer va tal cual
+            pass
     tipo = "image/png" if ruta.suffix.lower() == ".png" else "image/jpeg"
     return f"data:{tipo};base64,{base64.b64encode(ruta.read_bytes()).decode('ascii')}"
 
@@ -48,9 +80,9 @@ def _fuentes() -> str:
     return caras_de_fuente()
 
 
-def bloque_firma(a: au.Autor, hoy: date) -> str:
+def bloque_firma(a: au.Autor, hoy: date, incluir_general: bool = True) -> str:
     """Quién firma, con la acreditación solo si sigue vigente a la fecha del pedido."""
-    foto = f'<img class="firma-foto" src="{_data_uri(a.foto)}" alt="{e(a.nombre)}">' if a.foto else ""
+    foto = f'<img class="firma-foto" src="{_data_uri(a.foto, ancho_max=160, calidad=85, a_jpeg=True)}" alt="{e(a.nombre)}">' if a.foto else ""
     trazo = f'<img class="firma-trazo" src="{_data_uri(a.firma)}" alt="Firma">' if a.firma else ""
     credencial = ""
     if au.vigente(a, hoy):
@@ -61,9 +93,10 @@ def bloque_firma(a: au.Autor, hoy: date) -> str:
             f'<p class="firma-credencial">Acreditación {e(ac["entidad"])} · Categoría {e(ac["categoria"])}'
             f' · N° {e(ac["numero"])} · Vigente hasta el {hasta}</p>'
         )
+    general = f'<p class="firma-general">{e(FRASE_GENERAL)}</p>' if incluir_general else ""
     return (
         f'<section class="firma">{foto}<div class="firma-texto">{trazo}'
         f'<p class="firma-nombre">{e(a.nombre)}</p>'
         f'<p class="firma-cargo">{e(a.cargo)} · Grupo Inteligencia</p>{credencial}'
-        f'<p class="firma-general">{e(FRASE_GENERAL)}</p></div></section>'
+        f'{general}</div></section>'
     )

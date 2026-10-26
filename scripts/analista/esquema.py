@@ -15,6 +15,7 @@ import hashlib
 import json
 import re
 import unicodedata
+from datetime import date
 from typing import Any
 
 from pipeline_linkedin import MARCA_EDITORIAL as MARCA
@@ -66,6 +67,9 @@ FRASES_PROHIBIDAS: tuple[str, ...] = (
     "lote", "lotes", "de tu capital", "arriesga tu", "arriesga el", "arriesga un",
     "apalancate", "usa apalancamiento",
 )
+# Lo que le resta crédito al dato que se cita (correo de Caterpillar, 2026-10-26: "resultados previstos
+# para el jueves según datos de mercado no oficiales"). Un dato sin fuente que se pueda nombrar no va.
+FRASES_SIN_FUENTE: tuple[str, ...] = ("no oficial", "segun fuentes de mercado")  # sin tilde: se compara con el texto plano
 _PALABRA_EXACTA = {"lote", "lotes"}
 
 # La pieza semanal la comparte ventas con un prospecto: además no puede
@@ -98,6 +102,34 @@ _OPERAR = re.compile(r"\bopera(s|r|rlo|rla|rse|ble|bles|mos)?\b|\boperes\b")
 # vendedores" o "entra en vigor" son texto legítimo y no caen.
 _INVITACION = re.compile(r"\b(comprar|comprarlo|comprarla|vender|venderlo|venderla|entrar|aprovech\w*)\b"
                          r"|\b(puede|pueden|conviene)\s+(comprar|vender)")
+
+
+# Jerga técnica en texto de cliente.
+_ATR = re.compile(r"\bATR\b")
+
+# Cuando ningún hecho de datos.hechos trae efecto, contexto no puede afirmar qué factor domina o pesa más.
+_DOMINANCIA = re.compile(
+    r"\b(domina|dominan|el factor dominante|factor dominante|pesa m[aá]s|pesan m[aá]s)\b",
+    re.IGNORECASE,
+)
+
+_PREVIAMENTE = re.compile(r"\bpreviamente\b", re.IGNORECASE)
+_FECHA_DIA = re.compile(
+    r"(?:(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)\s+)?(\b\d{1,2}/\d{1,2}\b)",
+    re.IGNORECASE,
+)
+
+
+def _fechas_agenda(agenda: dict[str, Any]) -> dict[tuple[int, int], date]:
+    fechas: dict[tuple[int, int], date] = {}
+    for ev in agenda.get("eventos") or []:
+        if isinstance(ev, dict) and ev.get("fecha"):
+            try:
+                d = date.fromisoformat(str(ev["fecha"])[:10])
+                fechas[(d.day, d.month)] = d
+            except (ValueError, TypeError):
+                pass
+    return fechas
 
 
 def frases_prohibidas(texto: str, frases: tuple[str, ...] = FRASES_PROHIBIDAS) -> list[str]:
@@ -234,13 +266,66 @@ def _errores_de_desarrollo(pieza: dict[str, Any]) -> list[str]:
             if de_mas:
                 errs.append(f"contexto.{t}: el correo muestra solo 2 drivers ({nombres}); quita la cifra de "
                             f"{', '.join(de_mas)} y deja el resto del texto")
+    # Cuando ningún hecho trae efecto atribuido, el contexto no puede afirmar qué factor domina o pesa más.
+    sin_efecto = not any(isinstance(h, dict) and (h.get("efecto") or "").strip() for h in hechos)
+    if sin_efecto:
+        for t, texto in (contexto.items() if isinstance(contexto, dict) else []):
+            if texto == MARCA:
+                continue
+            m = _DOMINANCIA.search(str(texto))
+            if m:
+                errs.append(
+                    f"contexto.{t}: afirma que un factor «{m.group(0)}», pero ningún hecho de datos.hechos trae "
+                    "efecto; sin efecto atribuido no se puede priorizar qué factor domina o pesa más"
+                )
+
     agenda = datos.get("agenda") if isinstance(datos.get("agenda"), dict) else {}
     dias = [str(e["dia"]) for e in agenda.get("eventos") or [] if isinstance(e, dict) and e.get("dia")]
     dias_clave = editorial.get("dias_clave")
+    fechas_agenda = _fechas_agenda(agenda)
+    min_d = min(fechas_agenda.values()) if fechas_agenda else None
+    if min_d is None:
+        ano_base = date.today().year
+        for a in datos.get("activos") or []:
+            if isinstance(a, dict) and a.get("foto", {}).get("guardada"):
+                try:
+                    ano_base = date.fromisoformat(str(a["foto"]["guardada"])[:10]).year
+                    break
+                except (ValueError, TypeError):
+                    pass
+    else:
+        ano_base = min_d.year
+
     for t, texto in (dias_clave.items() if isinstance(dias_clave, dict) else []):
-        if dias and texto != MARCA and not any(_plano(d) in _plano(str(texto)) for d in dias):
+        if texto == MARCA:
+            continue
+        texto_str = str(texto)
+        if dias and not any(_plano(d) in _plano(texto_str) for d in dias):
             errs.append(f"dias_clave.{t}: tiene que nombrar al menos un día de la agenda tal como viene en "
                         f"datos.agenda ({', '.join(dict.fromkeys(dias[:4]))})")
+        if _PREVIAMENTE.search(texto_str):
+            errs.append(f"dias_clave.{t}: no se permite «previamente»; los días van en orden de reloj")
+
+        prev_fecha = None
+        prev_etiqueta = None
+        for m in _FECHA_DIA.finditer(texto_str):
+            dia_str, mes_str = m.group(2).split("/")
+            dia = int(dia_str)
+            mes = int(mes_str)
+            if (dia, mes) in fechas_agenda:
+                d = fechas_agenda[(dia, mes)]
+            else:
+                ano = ano_base + 1 if (min_d and mes < min_d.month) else ano_base
+                try:
+                    d = date(ano, mes, dia)
+                except ValueError:
+                    continue
+            etiqueta = f"{m.group(1).lower()} {m.group(2)}" if m.group(1) else m.group(2)
+            if prev_fecha is not None and d < prev_fecha:
+                errs.append(f"dias_clave.{t}: nombra el {etiqueta} después del {prev_etiqueta}; los días van en orden de reloj")
+                break
+            prev_fecha = d
+            prev_etiqueta = etiqueta
     return errs
 
 
@@ -331,9 +416,14 @@ def _errores_de_texto(donde: str, texto: str, tipo: str, datos: Any,
         errs.append(f"{donde}: trae HTML; la maqueta la pone la plantilla, no el texto")
     if _CMF.search(texto):
         errs.append(f"{donde}: nombra a la CMF, y el informe no la menciona")
+    if _ATR.search(texto):
+        errs.append(f"{donde}: «ATR» es jerga sin traducir; usa «cuánto se mueve el activo en un día típico»")
     for frase in frases_prohibidas(texto):
         errs.append(f"{donde}: «{frase}» es una instrucción de operar o una recomendación; "
                     "el informe es análisis general")
+    for frase in frases_prohibidas(texto, FRASES_SIN_FUENTE):
+        errs.append(f"{donde}: «{frase}» le resta crédito al dato; si no tiene una fuente que se pueda "
+                    "nombrar, no se cita")
     if tipo == "oportunidad":
         for frase in frases_prohibidas(texto, FRASES_PROHIBIDAS_SEMANAL):
             errs.append(f"{donde}: «{frase}» empuja a entrar o habla de cuánto acierta; "

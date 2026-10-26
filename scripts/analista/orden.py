@@ -149,7 +149,7 @@ def interpretar(texto: str, universo: list[dict[str, Any]] | None = None) -> Ord
         args, _ = _activo_y_saludo(cuerpo, universo)
         return Orden(pieza=RECREAR, args=args)
     if comando not in PIEZAS:
-        raise PedidoInvalido(f"Ese comando no existe. Escribe /ayuda y te muestro los que sí.")
+        raise PedidoInvalido("Ese comando no existe. Escribe /ayuda y te muestro los que sí.")
 
     cuerpo = resto.strip()
     if re.search(r"(?:^|\s)para\s+\S", cuerpo, flags=re.IGNORECASE):

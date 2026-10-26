@@ -206,7 +206,8 @@ def _grafico_dolar(destino: Path) -> Path:
     from tradingview_grafico import generar_grafico_tv
 
     return generar_grafico_tv(ticker="USDIDX", nombre="Dollar Index", destino=destino, timeframe="H4",
-                              n_velas=pc.VELAS_GRAFICO_TV, escala_texto=ESCALA_TEXTO_ANALISTA)
+                              n_velas=pc.VELAS_GRAFICO_TV, escala_texto=ESCALA_TEXTO_ANALISTA,
+                              sin_leyenda=True)
 
 
 def niveles_lamina_semanal(lectura) -> list[tuple[float, str]]:
@@ -444,8 +445,11 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
     if not hechos:
         avisos.append("No medí ningún driver del día: el contexto sale sin cifras propias.")
     drivers = lec.drivers(ticker)
+    dict_agenda = agenda.a_dict()
+    if (cat.get("clase") or segmento) in ag.CLASES_SIN_ENERGIA:
+        dict_agenda["eventos"] = ag.sin_energia(dict_agenda["eventos"], drivers)
     # Sin "%": la pieza no muestra porcentajes y una cifra con "%" en los datos invitaría a agy a citarla.
-    limpio = _contexto_sin_porcentajes({"curva": _filas_curva(curva), "agenda": agenda.a_dict(), "hechos": hechos})
+    limpio = _contexto_sin_porcentajes({"curva": _filas_curva(curva), "agenda": dict_agenda, "hechos": hechos})
     imagenes = {ticker: activo["grafico"]}
     extra = {"titulares": [ticker], "contexto": [ticker]}
     if limpio["agenda"]["eventos"]:

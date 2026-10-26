@@ -1,0 +1,585 @@
+{
+  "orden": {
+    "pieza": "oportunidad",
+    "args": {
+      "ticker": "#CAT"
+    }
+  },
+  "datos": {
+    "ticker": "#CAT",
+    "chip": "ANÁLISIS TÉCNICO Y FUNDAMENTAL",
+    "edicion": "lunes 26/10 · 17:57",
+    "vigencia": {
+      "desde": "lunes 26/10",
+      "hasta": "lunes 02/11"
+    },
+    "activos": [
+      {
+        "ticker": "#CAT",
+        "nombre": "Caterpillar Inc.",
+        "ticker_visible": "#CAT",
+        "digits": 2,
+        "unidad": "USD",
+        "puntaje": 0.0,
+        "foto": {
+          "guardada": "2026-10-26T17:57:57.107645-03:00",
+          "fecha": "lunes 26/10",
+          "precio": 694.0
+        },
+        "lectura": {
+          "ticker": "#CAT",
+          "marco": "H4",
+          "precio": 694.0,
+          "direccion": "LATERAL",
+          "estado": "RANGO",
+          "lineas": [
+            {
+              "rol": "rango",
+              "tipo": "horizontal",
+              "puntos": [
+                [
+                  1791446400,
+                  821.39
+                ]
+              ],
+              "marco": "H4",
+              "toques": 1,
+              "calidad": "",
+              "valor_actual": 821.39,
+              "empinada": false
+            },
+            {
+              "rol": "rango",
+              "tipo": "horizontal",
+              "puntos": [
+                [
+                  1793001600,
+                  679.33
+                ]
+              ],
+              "marco": "H4",
+              "toques": 1,
+              "calidad": "",
+              "valor_actual": 679.33,
+              "empinada": false
+            },
+            {
+              "rol": "contexto",
+              "tipo": "diagonal",
+              "puntos": [
+                [
+                  1785801600,
+                  932.38
+                ],
+                [
+                  1791244800,
+                  876.23
+                ]
+              ],
+              "marco": "D1",
+              "toques": 2,
+              "calidad": "B",
+              "valor_actual": 863.47,
+              "empinada": false
+            }
+          ],
+          "en_prueba": null,
+          "vigilar": {
+            "precio": 679.33,
+            "etiqueta": "soporte del rango",
+            "linea": {
+              "rol": "rango",
+              "tipo": "horizontal",
+              "puntos": [
+                [
+                  1793001600,
+                  679.33
+                ]
+              ],
+              "marco": "H4",
+              "toques": 1,
+              "calidad": "",
+              "valor_actual": 679.33,
+              "empinada": false
+            }
+          },
+          "invalidacion": null,
+          "objetivo": null,
+          "escenarios": [
+            {
+              "flecha": "⬆️",
+              "condicion": "Cierre sobre 821,39",
+              "texto": "Si una vela de 4 horas cierra sobre 821,39, el precio sale del rango hacia arriba."
+            },
+            {
+              "flecha": "↔️",
+              "condicion": "Entre 679,33 y 821,39",
+              "texto": "Si rompe un borde y vuelve a entrar, es falso quiebre y el objetivo pasa a ser el borde contrario."
+            },
+            {
+              "flecha": "⬇️",
+              "condicion": "Cierre bajo 679,33",
+              "texto": "Si una vela de 4 horas cierra bajo 679,33, el precio sale del rango hacia abajo."
+            }
+          ],
+          "salida": "En rango se opera el falso quiebre hacia el borde opuesto: sal si una vela de 4 horas vuelve a cerrar fuera del rango, porque ahí el quiebre no era falso.",
+          "conceptos": [
+            "rango",
+            "falso-quiebre"
+          ],
+          "avisos": [
+            "las velas de H4 traen un salto de datos: se leen solo desde el salto",
+            "sin línea diagonal vigente: se lee como rango entre el máximo y el mínimo de la última semana"
+          ],
+          "metricas": {
+            "atr": 15.622857142857145,
+            "atr_d1": 30.169285714285714,
+            "confluencia": 0.0,
+            "dist_vigilar_atr_d1": 0.4862561261453215,
+            "velas_desde_ruptura": 42.0,
+            "doble_confirmacion": 0.0,
+            "contra_secuencia": 0.0
+          },
+          "vela": 1793016000
+        },
+        "escenario": {
+          "ticker": "#CAT",
+          "estado": "RANGO",
+          "direccion": "ALCISTA",
+          "entrada": 679.33,
+          "stop": 671.52,
+          "objetivo": 702.76,
+          "entrada_pendiente": true,
+          "dias_objetivo": 0.3,
+          "motivo": null,
+          "condicion": "retesteo"
+        },
+        "fmt": {
+          "precio": "694,00",
+          "vigilar": "679,33",
+          "invalidacion": "",
+          "objetivo_tori": "",
+          "entrada": "679,33",
+          "stop": "671,52",
+          "objetivo": "702,76",
+          "borde_superior": "821,39",
+          "borde_inferior": "679,33"
+        },
+        "contrato": {
+          "clp_unidad": 988.85,
+          "vol_min": 0.1,
+          "vol_paso": 0.1
+        },
+        "temporalidad": "4H · swing (de una a dos semanas)",
+        "grafico": "grafico_#cat.png"
+      }
+    ],
+    "drivers": {
+      "#CAT": [
+        "demanda construcción",
+        "minería",
+        "earnings",
+        "demanda China"
+      ]
+    },
+    "hechos": [
+      {
+        "id": "dxy",
+        "driver": "Dollar Index (DXY)",
+        "fecha": "lunes 26/10",
+        "en_curso": true,
+        "nivel": "101,808",
+        "cambio_1d": "0,388",
+        "cambio_5d": "0,251",
+        "unidad_cambio": "puntos",
+        "sentido": "subió",
+        "sentido_1d": "subió",
+        "fuente": "MT5 (USDIDX)",
+        "efecto": null,
+        "con_la_lectura": null
+      },
+      {
+        "id": "bono_10",
+        "driver": "Bono del Tesoro a 10 años",
+        "fecha": "jueves 22/10",
+        "en_curso": false,
+        "nivel": "4,96 por ciento",
+        "cambio_1d": "17 pb",
+        "cambio_5d": "14 pb",
+        "unidad_cambio": "puntos base",
+        "sentido": "bajó",
+        "sentido_1d": "bajó",
+        "fuente": "FRED (Reserva Federal de St. Louis)",
+        "efecto": null,
+        "con_la_lectura": null
+      }
+    ],
+    "agenda": {
+      "desde": "lunes 26/10",
+      "hasta": "lunes 02/11",
+      "estado": "ok",
+      "eventos": [
+        {
+          "fecha": "2026-10-27",
+          "dia": "martes 27/10",
+          "hora": "09:30 CLST",
+          "evento": "Pedidos de bienes durables",
+          "fuente_nombre": "Durable Goods Orders (MoM) (Sep)",
+          "pais": "EE.UU.",
+          "anterior": "0,0 por ciento",
+          "esperado": "1,8 por ciento",
+          "explicacion": "Productos que duran varios años (maquinaria, autos, aviones, electrodomésticos); sus pedidos muestran si las empresas están invirtiendo o frenando.",
+          "efecto": "",
+          "mueve_al_activo": false
+        },
+        {
+          "fecha": "2026-10-27",
+          "dia": "martes 27/10",
+          "hora": "11:00 CLST",
+          "evento": "Confianza del consumidor (The Conference Board)",
+          "fuente_nombre": "CB Consumer Confidence (Oct)",
+          "pais": "EE.UU.",
+          "anterior": "81,9",
+          "esperado": "80,5",
+          "explicacion": "Encuesta que mide el optimismo de las familias en EE.UU. sobre su economía y empleo; anticipa el consumo futuro.",
+          "efecto": "",
+          "mueve_al_activo": false
+        },
+        {
+          "fecha": "2026-10-27",
+          "dia": "martes 27/10",
+          "hora": "11:00 CLST",
+          "evento": "Venta de viviendas nuevas",
+          "fuente_nombre": "New Home Sales (Sep)",
+          "pais": "EE.UU.",
+          "anterior": "684K",
+          "esperado": "649K",
+          "explicacion": "Casas recién construidas que se vendieron en el mes en EE.UU.; cuando caen, suele ser porque las tasas hipotecarias están altas y frenan la compra.",
+          "efecto": "",
+          "mueve_al_activo": false
+        },
+        {
+          "fecha": "2026-10-28",
+          "dia": "miércoles 28/10",
+          "hora": "11:30 CLST",
+          "evento": "Inventarios de petróleo crudo (EIA)",
+          "fuente_nombre": "Crude Oil Inventories",
+          "pais": "EE.UU.",
+          "anterior": "-3,060M",
+          "esperado": "-0,300M",
+          "explicacion": "Informe semanal oficial del gobierno de EE.UU. sobre las reservas comerciales de petróleo; mueve con fuerza el WTI.",
+          "efecto": "",
+          "mueve_al_activo": false
+        },
+        {
+          "fecha": "2026-10-28",
+          "dia": "miércoles 28/10",
+          "hora": "15:00 CLST",
+          "evento": "Comité de mercado abierto de la Fed (1)",
+          "fuente_nombre": "Fed Interest Rate Decision",
+          "pais": "EE.UU.",
+          "anterior": "4,00 por ciento",
+          "esperado": "4,00 por ciento",
+          "explicacion": "El grupo de la Fed que decide las tasas de interés en EE.UU.",
+          "efecto": "",
+          "mueve_al_activo": false
+        },
+        {
+          "fecha": "2026-10-28",
+          "dia": "miércoles 28/10",
+          "hora": "15:30 CLST",
+          "evento": "Comité de mercado abierto de la Fed (2)",
+          "fuente_nombre": "FOMC Press Conference",
+          "pais": "EE.UU.",
+          "anterior": "",
+          "esperado": "",
+          "explicacion": "El grupo de la Fed que decide las tasas de interés en EE.UU.",
+          "efecto": "",
+          "mueve_al_activo": false
+        },
+        {
+          "fecha": "2026-10-29",
+          "dia": "jueves 29/10",
+          "hora": "09:30 CLST",
+          "evento": "Gasto en consumo personal (1)",
+          "fuente_nombre": "Core PCE Price Index (MoM) (Sep)",
+          "pais": "EE.UU.",
+          "anterior": "0,2 por ciento",
+          "esperado": "0,3 por ciento",
+          "explicacion": "La medida de inflación que más mira la Fed para decidir las tasas de interés.",
+          "efecto": "",
+          "mueve_al_activo": false
+        },
+        {
+          "fecha": "2026-10-29",
+          "dia": "jueves 29/10",
+          "hora": "09:30 CLST",
+          "evento": "Gasto en consumo personal (2)",
+          "fuente_nombre": "Core PCE Price Index (YoY) (Sep)",
+          "pais": "EE.UU.",
+          "anterior": "3,0 por ciento",
+          "esperado": "3,1 por ciento",
+          "explicacion": "La medida de inflación que más mira la Fed para decidir las tasas de interés.",
+          "efecto": "",
+          "mueve_al_activo": false
+        },
+        {
+          "fecha": "2026-10-29",
+          "dia": "jueves 29/10",
+          "hora": "09:30 CLST",
+          "evento": "Producto interno bruto (PIB)",
+          "fuente_nombre": "GDP (QoQ) (Q3)",
+          "pais": "EE.UU.",
+          "anterior": "2,2 por ciento",
+          "esperado": "3,2 por ciento",
+          "explicacion": "Lo mismo que el PIB: el tamaño total de la economía (sigla en inglés).",
+          "efecto": "",
+          "mueve_al_activo": false
+        },
+        {
+          "fecha": "2026-10-29",
+          "dia": "jueves 29/10",
+          "hora": "09:30 CLST",
+          "evento": "Peticiones de subsidio por desempleo",
+          "fuente_nombre": "Initial Jobless Claims",
+          "pais": "EE.UU.",
+          "anterior": "194K",
+          "esperado": "198K",
+          "explicacion": "Cuántas personas pidieron seguro de cesantía en EE.UU. esta semana; termómetro rápido del empleo.",
+          "efecto": "",
+          "mueve_al_activo": false
+        },
+        {
+          "fecha": "2026-10-29",
+          "dia": "jueves 29/10",
+          "hora": "10:15 CLST",
+          "evento": "Deposit Facility Rate (Oct)",
+          "fuente_nombre": "Deposit Facility Rate (Oct)",
+          "pais": "Zona Euro",
+          "anterior": "2,50 por ciento",
+          "esperado": "2,50 por ciento",
+          "explicacion": "",
+          "efecto": "",
+          "mueve_al_activo": false
+        },
+        {
+          "fecha": "2026-10-29",
+          "dia": "jueves 29/10",
+          "hora": "10:15 CLST",
+          "evento": "Tasa de Política Monetaria",
+          "fuente_nombre": "ECB Interest Rate Decision (Oct)",
+          "pais": "Zona Euro",
+          "anterior": "2,65 por ciento",
+          "esperado": "2,65 por ciento",
+          "explicacion": "La tasa de interés que fija el Banco Central de Chile (BCCh); cuando baja, el crédito se abarata y el peso puede debilitarse frente al dólar.",
+          "efecto": "",
+          "mueve_al_activo": false
+        },
+        {
+          "fecha": "2026-10-29",
+          "dia": "jueves 29/10",
+          "hora": "10:45 CLST",
+          "evento": "ECB Press Conference",
+          "fuente_nombre": "ECB Press Conference",
+          "pais": "Zona Euro",
+          "anterior": "",
+          "esperado": "",
+          "explicacion": "",
+          "efecto": "",
+          "mueve_al_activo": false
+        },
+        {
+          "fecha": "2026-10-30",
+          "dia": "viernes 30/10",
+          "hora": "10:45 CLST",
+          "evento": "Índice de gerentes de compra",
+          "fuente_nombre": "Chicago PMI (Oct)",
+          "pais": "EE.UU.",
+          "anterior": "58,8",
+          "esperado": "54,8",
+          "explicacion": "Encuesta a empresas sobre cómo ven su negocio; sobre 50 = la economía crece, bajo 50 = se enfría.",
+          "efecto": "",
+          "mueve_al_activo": false
+        },
+        {
+          "fecha": "2026-10-30",
+          "dia": "viernes 30/10",
+          "hora": "22:30 CLST",
+          "evento": "Índice de gerentes de compra (manufacturero) (1)",
+          "fuente_nombre": "Manufacturing PMI (Oct)",
+          "pais": "China",
+          "anterior": "50,1",
+          "esperado": "50,1",
+          "explicacion": "Encuesta a empresas sobre cómo ven su negocio; sobre 50 = la economía crece, bajo 50 = se enfría.",
+          "efecto": "",
+          "mueve_al_activo": false
+        },
+        {
+          "fecha": "2026-11-02",
+          "dia": "lunes 02/11",
+          "hora": "11:45 CLST",
+          "evento": "Índice de gerentes de compra (manufacturero) (2)",
+          "fuente_nombre": "S&P Global Manufacturing PMI (Oct)",
+          "pais": "EE.UU.",
+          "anterior": "56,0",
+          "esperado": "",
+          "explicacion": "Encuesta a empresas sobre cómo ven su negocio; sobre 50 = la economía crece, bajo 50 = se enfría.",
+          "efecto": "",
+          "mueve_al_activo": false
+        },
+        {
+          "fecha": "2026-11-02",
+          "dia": "lunes 02/11",
+          "hora": "12:00 CLST",
+          "evento": "Índice de gerentes de compra (manufacturero) (3)",
+          "fuente_nombre": "ISM Manufacturing PMI (Oct)",
+          "pais": "EE.UU.",
+          "anterior": "54,5",
+          "esperado": "",
+          "explicacion": "Encuesta a empresas sobre cómo ven su negocio; sobre 50 = la economía crece, bajo 50 = se enfría.",
+          "efecto": "",
+          "mueve_al_activo": false
+        },
+        {
+          "fecha": "2026-11-02",
+          "dia": "lunes 02/11",
+          "hora": "12:00 CLST",
+          "evento": "Índice del Instituto de Gestión de Suministros",
+          "fuente_nombre": "ISM Manufacturing Prices (Oct)",
+          "pais": "EE.UU.",
+          "anterior": "77,9",
+          "esperado": "",
+          "explicacion": "Encuesta de actividad de empresas en EE.UU. (manufactura o servicios); sobre 50 = expansión, bajo 50 = contracción.",
+          "efecto": "",
+          "mueve_al_activo": false
+        }
+      ],
+      "url": "https://es.investing.com/economic-calendar/",
+      "parcial": false,
+      "cubierto_hasta": "lunes 02/11"
+    },
+    "curva": [
+      [
+        "Bono del Tesoro a 2 años",
+        "4,65 por ciento",
+        "-16 pb",
+        "-12 pb"
+      ],
+      [
+        "Bono del Tesoro a 10 años",
+        "4,96 por ciento",
+        "-17 pb",
+        "-14 pb"
+      ],
+      [
+        "Bono del Tesoro a 30 años",
+        "5,29 por ciento",
+        "-13 pb",
+        "-14 pb"
+      ],
+      [
+        "Tasa real a 10 años (TIPS)",
+        "2,64 por ciento",
+        "-12 pb",
+        "-14 pb"
+      ]
+    ],
+    "fundamental": {
+      "fuera_catalogo": false,
+      "sin_drivers": false,
+      "referencia": "propia"
+    },
+    "fuente_directa": {
+      "segmento": "acciones",
+      "ancla": {
+        "nombre": "Caterpillar",
+        "ticker": "CAT",
+        "cik": "0000018230",
+        "sitio_ir": "https://investors.caterpillar.com/",
+        "entidades": [
+          "Caterpillar",
+          "SEC"
+        ],
+        "dominios": [
+          "investors.caterpillar.com",
+          "sec.gov"
+        ],
+        "terminos_ancla": [
+          "Caterpillar"
+        ]
+      },
+      "consultas": [
+        "Caterpillar Caterpillar",
+        "SEC Caterpillar",
+        "site:investors.caterpillar.com Caterpillar",
+        "site:sec.gov Caterpillar"
+      ]
+    },
+    "tasa": {
+      "banco": "fed",
+      "nombre": "Reserva Federal (Fed)",
+      "serie": "Tasa efectiva de fondos federales",
+      "valor": "3,88",
+      "fecha": "22/10",
+      "linea": "Una tasa alta en EE.UU. suele fortalecer el dólar: el dinero busca ese rendimiento antes que otros activos.",
+      "motivo_imagen": "banco_central"
+    },
+    "noticias_candidatas": [],
+    "empresa": {
+      "proxima_earnings": "jueves 29/10",
+      "fuente_fecha": "yfinance (no oficial)",
+      "ultimo_informe": {
+        "forma": "8-K",
+        "fecha": "2026-10-15",
+        "periodo": "2026-10-14",
+        "url": "https://www.sec.gov/Archives/edgar/data/18230/000110465926116198/tm2627668d1_8k.htm"
+      }
+    }
+  },
+  "imagenes": {
+    "#CAT": "grafico_#cat.png",
+    "calendario": "calendario_#cat.png",
+    "dolar": "grafico_usdidx.png"
+  },
+  "anidados": {
+    "titulares": [
+      "#CAT"
+    ],
+    "contexto": [
+      "#CAT"
+    ],
+    "dias_clave": [
+      "#CAT"
+    ]
+  },
+  "laminas": {},
+  "editorial": {
+    "titular": "Caterpillar cotiza en rango lateral y define su rumbo en soportes",
+    "bajada": "La acción se mantiene en rango lateral a la espera de sus resultados corporativos previstos para el jueves 29/10 según datos de mercado no oficiales.",
+    "fuentes": [
+      {
+        "entidad": "SEC",
+        "medio": "SEC",
+        "fecha": "2026-10-15",
+        "url": "https://www.sec.gov/Archives/edgar/data/18230/000110465926116198/tm2627668d1_8k.htm",
+        "postura": "neutral",
+        "tesis": "Caterpillar informó ante la SEC la designación de un nuevo presidente para su división Resource Industries a contar de noviembre.",
+        "verificacion": "ok"
+      }
+    ],
+    "noticia": null,
+    "titulares": {
+      "#CAT": "Caterpillar consolida en rango lateral a la espera de catalizadores"
+    },
+    "contexto": {
+      "#CAT": "El Dollar Index (DXY) cotiza este lunes 26/10 en 101,808 puntos, acumulando un avance de 0,251 puntos en cinco sesiones. En el mercado de deuda, el rendimiento del Bono del Tesoro a 10 años se situó el jueves 22/10 en 4,96 por ciento. En este marco, el nivel elevado de las tasas de interés condiciona las decisiones de inversión en maquinaria y bienes de capital. En lo técnico, el activo se mantiene en un rango lateral donde se vigila el soporte del rango y un cierre bajo esa zona invalidaría la estructura."
+    },
+    "dias_clave": {
+      "#CAT": "El miércoles 28/10 a las 15:00 CLST, el mercado aguarda la decisión de tasas del Comité de mercado abierto de la Fed. El jueves 29/10 a las 09:30 CLST se publicará el Producto interno bruto (PIB) de Estados Unidos. Previamente, el martes 27/10 a las 09:30 CLST se conocerán los Pedidos de bienes durables."
+    }
+  },
+  "huella": "2c24fe4dc188ac77b7f2664a39d451c267ca225da15fb901c1c7768093883541",
+  "ilustraciones": {
+    "tasa": "ilustracion_tasa.png"
+  }
+}

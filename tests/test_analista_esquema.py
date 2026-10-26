@@ -166,6 +166,13 @@ def test_el_texto_no_nombra_a_la_cmf():
     assert any("CMF" in x for x in errs)
 
 
+def test_frase_prohibida_no_oficiales():
+    assert es.frases_prohibidas("Resultados según datos de mercado no oficiales.", es.FRASES_SIN_FUENTE) == [
+        "no oficial"]
+    errs = es.errores(pieza_llena(bajada="Resultados corporativos según datos no oficiales."))
+    assert any("no oficial" in x and "crédito" in x for x in errs)
+
+
 # ───────────────────────────────────────────────────────────── pieza semanal
 
 
@@ -463,3 +470,114 @@ def test_contexto_con_marca_sobreviviente_es_error():
     p["editorial"] = {"noticia_1": es.MARCA, "noticia_2": None, "tecnico": None}
     errs = es.errores(p)
     assert any("noticia_1" in e for e in errs)
+
+
+# ───────────────────────────────────────────── coherencia editorial (encargo D)
+
+
+def test_dias_clave_orden_cronologico_pasa():
+    """Las fechas en dias_clave en orden no decreciente pasan la validación."""
+    eventos = [
+        {"dia": "martes 27/10", "fecha": "2026-10-27"},
+        {"dia": "miércoles 28/10", "fecha": "2026-10-28"},
+        {"dia": "jueves 29/10", "fecha": "2026-10-29"},
+    ]
+    texto = (
+        "El martes 27/10 a las 09:30 CLST se conocen los pedidos de bienes durables. "
+        "El miércoles 28/10 la Fed decide tasas y el jueves 29/10 se publica el PIB."
+    )
+    p = pieza_desarrollada(CITA_LOS_DOS, eventos=eventos, dias=texto)
+    assert es.errores(p) == []
+
+
+def test_dias_clave_fechas_fuera_de_orden_se_rechazan():
+    """Citar fechas fuera de orden cronológico en dias_clave genera error."""
+    eventos = [
+        {"dia": "martes 27/10", "fecha": "2026-10-27"},
+        {"dia": "miércoles 28/10", "fecha": "2026-10-28"},
+        {"dia": "jueves 29/10", "fecha": "2026-10-29"},
+    ]
+    texto = (
+        "El miércoles 28/10 la Fed decide tasas. "
+        "El jueves 29/10 se publica el PIB. "
+        "El martes 27/10 se conocen los pedidos durables."
+    )
+    p = pieza_desarrollada(CITA_LOS_DOS, eventos=eventos, dias=texto)
+    errs = es.errores(p)
+    assert any(
+        "dias_clave.XAUUSD: nombra el martes 27/10 después del jueves 29/10; los días van en orden de reloj" in e
+        for e in errs
+    )
+
+
+def test_dias_clave_rechaza_palabra_previamente():
+    """La palabra 'previamente' se rechaza en dias_clave porque los días van hacia adelante."""
+    eventos = [
+        {"dia": "martes 27/10", "fecha": "2026-10-27"},
+        {"dia": "miércoles 28/10", "fecha": "2026-10-28"},
+    ]
+    texto = "El miércoles 28/10 la Fed decide tasas. Previamente, el martes 27/10 habrá datos de empleo."
+    p = pieza_desarrollada(CITA_LOS_DOS, eventos=eventos, dias=texto)
+    errs = es.errores(p)
+    assert any("dias_clave.XAUUSD: no se permite «previamente»; los días van en orden de reloj" in e for e in errs)
+
+
+def test_jerga_atr_se_rechaza_en_texto_cliente():
+    """La palabra suelta 'ATR' se rechaza en los campos editoriales de cliente."""
+    errs_bajada = es.errores(pieza_llena(bajada="El ATR del activo sugiere volatilidad."))
+    assert any("bajada: «ATR» es jerga sin traducir; usa «cuánto se mueve el activo en un día típico»" in e for e in errs_bajada)
+
+    p = pieza_llena()
+    p["editorial"]["contexto"]["XAUUSD"] = "El activo muestra un ATR amplio de 15 dólares y la simulación está lista."
+    errs_contexto = es.errores(p)
+    assert any("contexto.XAUUSD: «ATR» es jerga sin traducir" in e for e in errs_contexto)
+
+
+def test_texto_sin_atr_pasa_y_palabras_similares_no_caen():
+    """Frases con la explicación o con palabras que contienen 'atr' no fallan."""
+    assert es.errores(pieza_llena(bajada="El activo se mueve 15 puntos en un día típico.")) == []
+    assert es.errores(pieza_llena(bajada="Revisamos cuatro activos atrás en el gráfico.")) == []
+
+
+def test_contexto_sin_efecto_en_hechos_no_puede_afirmar_dominancia():
+    """Si ningún hecho trae efecto (null o vacío), contexto no puede afirmar qué factor domina o pesa más."""
+    hechos_sin_efecto = [
+        {"id": "dxy", "driver": "Dollar Index (DXY)", "nivel": "101,808", "cambio_1d": "0,388", "efecto": None},
+        {"id": "bono_10", "driver": "Bono del Tesoro a 10 años", "nivel": "4,96 por ciento", "cambio_1d": "17 pb", "efecto": ""},
+    ]
+    for frase in (
+        "El Dollar Index domina la sesión con 101,808 puntos frente al bono en 4,96 por ciento.",
+        "El Dollar Index pesa más hoy con 101,808 puntos frente al bono en 4,96 por ciento.",
+        "El factor dominante es el Dollar Index con 101,808 puntos frente al bono en 4,96 por ciento.",
+    ):
+        p = pieza_desarrollada(frase, hechos=hechos_sin_efecto)
+        errs = es.errores(p)
+        assert any("contexto.XAUUSD" in e and "ningún hecho de datos.hechos trae efecto" in e for e in errs), frase
+
+
+def test_contexto_sin_efecto_neutral_pasa_y_con_efecto_permite_dominancia():
+    """Un texto neutral pasa sin efectos; si hay efectos medidos, puede afirmar qué factor pesa más."""
+    hechos_sin_efecto = [
+        {"id": "dxy", "driver": "Dollar Index (DXY)", "nivel": "101,808", "cambio_1d": "0,388", "efecto": None},
+        {"id": "bono_10", "driver": "Bono del Tesoro a 10 años", "nivel": "4,96 por ciento", "cambio_1d": "17 pb", "efecto": ""},
+    ]
+    p_neutral = pieza_desarrollada(
+        "El Dollar Index cotiza en 101,808 puntos mientras el bono se sitúa en 4,96 por ciento.",
+        hechos=hechos_sin_efecto,
+    )
+    assert es.errores(p_neutral) == []
+
+    hechos_con_efecto = [
+        {"id": "dxy", "driver": "Dollar Index (DXY)", "nivel": "101,808", "cambio_1d": "0,388", "efecto": "presiona a la baja"},
+        {"id": "bono_10", "driver": "Bono del Tesoro a 10 años", "nivel": "4,96 por ciento", "cambio_1d": "17 pb", "efecto": "apoya"},
+    ]
+    p_con_efecto = pieza_desarrollada(
+        "El Dollar Index domina la sesión con 101,808 puntos y presiona al activo; el bono está en 4,96 por ciento.",
+        hechos=hechos_con_efecto,
+    )
+    assert not any("datos.hechos trae efecto" in e for e in es.errores(p_con_efecto))
+
+
+def test_segun_fuentes_de_mercado_se_rechaza_con_o_sin_tilde():
+    assert es.frases_prohibidas("Según fuentes de mercado, el dato sale el jueves.", es.FRASES_SIN_FUENTE) == [
+        "segun fuentes de mercado"]

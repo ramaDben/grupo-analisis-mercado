@@ -97,7 +97,8 @@ def test_la_entrada_a_precio_de_hoy_no_lleva_condicion():
 def test_a_dict_es_serializable_y_completo():
     d = op.escenario(fx.lectura(), 2).a_dict()
     assert set(d) == {"ticker", "estado", "direccion", "entrada", "stop", "objetivo",
-                      "entrada_pendiente", "dias_objetivo", "motivo", "condicion"}
+                      "entrada_pendiente", "dias_objetivo", "motivo", "condicion",
+                      "distancia_pct", "objetivo_parcial", "borde_opuesto"}
 
 
 CONTRATO = {"clp_unidad": 950.0, "vol_min": 0.01, "vol_paso": 0.01}
@@ -172,3 +173,27 @@ def test_simular_con_entrada_igual_a_stop_devuelve_none():
 
 def test_simular_con_contrato_sin_valor_devuelve_none():
     assert op.simular({"clp_unidad": 0.0, "vol_min": 0.01, "vol_paso": 0.01}, ESC, 100_000) is None
+
+
+
+def test_escenario_rango_cat_produce_objetivo_parcial_y_borde_opuesto():
+    from estrategia.contrato import lectura_de_dict
+
+    fixture_path = RAIZ / "tests" / "fixtures" / "analista" / "oportunidad_cat_2026-10-26.json"
+    data = json.loads(fixture_path.read_text(encoding="utf-8"))
+    lec = lectura_de_dict(data["datos"]["activos"][0]["lectura"])
+    esc = op.escenario(lec, 2)
+    assert esc.objetivo_parcial is True
+    assert esc.borde_opuesto == 821.39
+    assert esc.objetivo == 702.76
+    assert esc.distancia_pct == 1.26
+
+
+def test_escenario_rango_1_a_3_excede_borde_contrario_queda_limitado_al_borde():
+    # En rango, si el 1:3 proyectado sobrepasa el borde contrario, se limita al borde y no es parcial.
+    lec = fx.lectura(ticker="TEST", estado="RANGO", direccion="LATERAL", precio=105.0,
+                     rango=(120.0, 100.0), vigilar=100.0, atr=30.0)
+    esc = op.escenario(lec, 2)
+    assert esc.borde_opuesto == 120.0
+    assert esc.objetivo == 120.0
+    assert esc.objetivo_parcial is False

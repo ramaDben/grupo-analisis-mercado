@@ -13,6 +13,28 @@
     .hide-m{display:none !important;}
     .tasa-img img{width:100% !important;max-width:100% !important;height:auto !important;}
   }
+  @media only screen and (max-width:480px){
+    .tabla-hechos, .tabla-hechos tbody, .tabla-hechos tr.hechos-fila{display:block !important;width:100% !important;}
+    .tabla-hechos .hechos-th{display:none !important;}
+    .tabla-hechos tr.hechos-fila{margin-bottom:12px !important;border-bottom:1px solid #DFE6E4 !important;padding-bottom:8px !important;}
+    .tabla-hechos td.hechos-td{
+      display:block !important;
+      width:100% !important;
+      box-sizing:border-box !important;
+      padding:4px 0 !important;
+      border-bottom:none !important;
+    }
+    .tabla-hechos td.hechos-td::before{
+      content:attr(data-etiqueta) ": ";
+      font-weight:700;
+      color:#6B7779;
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.5px;
+      display:inline-block;
+      margin-right:4px;
+    }
+  }
 </style>
 <style>
   /* Los colores salen de marca.css (los inyecta Python): la página y el correo usan los mismos. */
@@ -50,13 +72,15 @@
   .panel{background:var(--tarjeta);border:1px solid var(--linea);border-radius:12px;padding:18px;align-self:start}
   .panel h4{margin:0 0 6px;color:var(--acento);text-transform:uppercase;letter-spacing:1.5px;font-size:14px}
   .panel label{display:block;margin:10px 0}
-  .panel input[type=number]{display:block;width:100%;height:42px;font-size:16px;margin-top:4px;padding:0 10px;border:1px solid var(--linea);border-radius:10px;background:var(--fondo);color:var(--texto-1)}
+  .panel .incluir-label{display:inline-flex;align-items:center;min-height:44px;min-width:44px;padding:8px 10px;gap:8px;cursor:pointer;font-weight:600;font-size:14px}
+  .panel input[type=checkbox]{width:20px;height:20px;min-width:20px;min-height:20px;accent-color:var(--acento);margin:0;cursor:pointer}
+  .panel input[type=number]{display:block;width:100%;height:44px;min-height:44px;font-size:16px;margin-top:4px;padding:0 10px;border:1px solid var(--linea);border-radius:10px;background:var(--fondo);color:var(--texto-1)}
   .panel.sin-simulacion{background:var(--fondo)}
   .resultado{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
   .resultado .perdida,.resultado .ganancia{border-radius:12px;padding:12px;min-height:84px;border:2px solid}
   .resultado .perdida{background:var(--fondo-baja);border-color:var(--baja)}
   .resultado .ganancia{background:var(--fondo-sube);border-color:var(--sube)}
-  .resultado span{display:block;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.8px}
+  .resultado span{display:block;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.8px}
   .resultado .perdida span{color:var(--baja)}
   .resultado .ganancia span{color:var(--sube)}
   .resultado strong{display:block;font-size:20px;color:var(--texto-1)}
@@ -91,7 +115,8 @@
     --fondo-sube:#E3F6EE;--fondo-baja:#FDECEC;--texto-1:#0B1517;--texto-2:#6B7779;--texto-borde:#1D2528;--linea:#DFE6E4;}
   body{background:var(--fondo)}
   main{max-width:820px;padding:0 16px 32px}
-  .banda{background:#0B1214;margin:0 -16px;padding:18px 28px;border-top:4px solid var(--acento)}
+  .banda{background:#0B1214;margin:0 -16px;padding:18px 28px;border-top:4px solid var(--acento);overflow:hidden}
+  .banda img{max-width:170px;height:auto;display:block}
   .banda .semana{color:#B7C6C8}
   .banda .semana strong{color:#fff}
   .filete{display:none}
@@ -101,30 +126,34 @@
   .editor .rejilla{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .editor .cliente{margin:0}
   .editor .cliente.completo{grid-column:1/-1}
-  .editor .cliente span{display:block;margin:0 0 6px;font-size:12px;font-weight:700;color:#0B1214}
-  .editor .cliente input{width:100%;height:42px;margin:0;padding:9px 11px;border:1px solid #CBD6D3;border-radius:8px;background:#fff;color:var(--texto-1);font-size:14px}
+  .editor .cliente span{display:block;margin:0 0 6px;font-size:13px;font-weight:700;color:#0B1214}
+  .editor .cliente input{width:100%;height:44px;min-height:44px;margin:0;padding:9px 11px;border:1px solid #CBD6D3;border-radius:8px;background:#fff;color:var(--texto-1);font-size:14px}
   .editor .cliente input:focus{outline:0;border-color:var(--acento);box-shadow:0 0 0 3px rgba(47,143,122,.18)}
   .editor .cliente textarea{width:100%;min-height:72px;margin:0;padding:9px 11px;border:1px solid #CBD6D3;border-radius:8px;background:#fff;color:var(--texto-1);font:500 14px/1.4 "Segoe UI",Arial,sans-serif;resize:vertical}
   .editor .cliente textarea:focus{outline:0;border-color:var(--acento);box-shadow:0 0 0 3px rgba(47,143,122,.18)}
   .editor .tarjeta-redaccion{background:#F9FBFA;border:1px solid var(--linea);border-radius:12px;padding:16px;margin:16px 0}
   .editor .tarjeta-redaccion h3{margin:0 0 10px;font-size:16px;color:#0B1214}
   .editor .interruptor-redaccion{display:flex;gap:18px;margin-bottom:12px}
-  .editor .interruptor-redaccion label{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:#0B1214;cursor:pointer}
-  .editor .interruptor-redaccion input[type=radio]{accent-color:var(--acento);margin:0;cursor:pointer}
+  .editor .interruptor-redaccion label{display:inline-flex;align-items:center;min-height:44px;min-width:44px;padding:8px 12px;gap:8px;font-size:14px;font-weight:600;color:#0B1214;cursor:pointer}
+  .editor .interruptor-redaccion input[type=radio]{width:20px;height:20px;min-width:20px;min-height:20px;accent-color:var(--acento);margin:0;cursor:pointer}
   .editor .campo-edicion{margin-top:10px}
   .editor .cabecera-campo{display:flex;align-items:center;justify-content:space-between;margin:0 0 6px}
-  .editor .cabecera-campo span{margin:0;font-size:12px;font-weight:700;color:#0B1214}
-  .editor button.btn-volver-ia{padding:3px 9px;font-size:11px;font-weight:700;border-radius:6px;cursor:pointer;margin:0;width:auto}
+  .editor .cabecera-campo span{margin:0;font-size:13px;font-weight:700;color:#0B1214}
+  .editor button.btn-volver-ia{padding:8px 12px;min-height:40px;font-size:13px;font-weight:700;border-radius:6px;cursor:pointer;margin:0;width:auto;display:inline-flex;align-items:center}
   .editor .activo-edicion{margin-top:14px;padding-top:12px;border-top:1px dashed #CBD6D3}
   .editor .activo-edicion h4{margin:0 0 8px;font-size:13px;letter-spacing:1.2px;text-transform:uppercase;color:var(--acento)}
   .editor .acciones-editor{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;align-items:center}
-  .editor button{margin:0;border-radius:8px;padding:11px 16px;font:700 14px "Segoe UI",Arial,sans-serif}
+  .editor button{margin:0;border-radius:8px;padding:12px 16px;min-height:44px;font:700 14px "Segoe UI",Arial,sans-serif}
   .editor button.primario{background:#0B1214;color:#fff}
   .editor button.verde{background:var(--acento);color:#fff}
   .editor button.suave{background:#E3F6EE;color:#0B3B30}
   .editor button.neutro{background:#EEF2F1;color:#3A4648}
-  .editor #estado{font-size:12px;color:var(--acento)}
+  .editor #estado{font-size:13px;color:var(--acento)}
   .editor .nota-editor{margin:14px 0 0;padding:10px 12px;background:#F3F6F5;border-radius:8px;font-size:13px;color:#4C5A5C}
+  .ir-correo-contenedor{margin-top:14px}
+  .enlace-ir-correo{display:inline-flex;align-items:center;min-height:44px;padding:10px 16px;border-radius:8px;background:#F3F6F5;color:var(--acento);font:700 14px "Segoe UI",Arial,sans-serif;text-decoration:none;box-sizing:border-box}
+  .enlace-ir-correo:hover{background:#E3F6EE;text-decoration:underline}
+  p.aviso:empty{display:none}
   #caja-codigo{display:none;margin-top:14px}
   #caja-codigo textarea{width:100%;height:220px;padding:12px;border:1px solid #CBD6D3;border-radius:8px;font:12px/1.5 Consolas,Menlo,monospace;color:#0B1517;background:#FBFCFC;resize:vertical}
   .simulaciones h3.rotulo-seccion{margin:26px 0 10px;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:var(--acento)}
@@ -139,7 +168,20 @@
   .correo-vista{margin:26px 0 8px}
   .correo-vista > h3{margin:0 0 12px;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:var(--acento)}
   #vista-correo{margin-top:0}
-  @media (max-width:680px){.editor{padding:16px}.editor .rejilla{grid-template-columns:1fr}.editor .cliente.completo{grid-column:auto}.editor button{width:100%}.editor button.btn-volver-ia{width:auto}.editor .interruptor-redaccion{flex-direction:column;gap:8px}body.con-analisis .activo{grid-template-columns:1fr}}
+  @media (max-width:680px){
+    main{overflow-x:hidden}
+    #correo-root{width:100% !important;max-width:100% !important}
+    .banda{padding:14px 16px}
+    .banda img{max-width:130px}
+    .editor{padding:16px}
+    .editor .rejilla{grid-template-columns:1fr}
+    .editor .cliente.completo{grid-column:auto}
+    .editor button{width:100%}
+    .editor button.btn-volver-ia{width:auto}
+    .editor .interruptor-redaccion{flex-direction:column;gap:8px}
+    .enlace-ir-correo{width:100%;justify-content:center}
+    body.con-analisis .activo{grid-template-columns:1fr}
+  }
   @media print{
     @page{size:Letter;margin:0}
     body{background:#F4F7F6 !important}
@@ -175,6 +217,9 @@
     <button type="button" class="neutro" id="exportar-pdf">Exportar PDF</button>
     <button type="button" class="neutro" id="restablecer">Restablecer</button>
     <span id="estado" aria-live="polite"></span>
+  </div>
+  <div class="ir-correo-contenedor">
+    <a href="#vista-correo" class="enlace-ir-correo" id="enlace-correo">Ir a la vista del correo ↓</a>
   </div>
   <div id="caja-codigo"><textarea id="area-codigo" readonly aria-label="Código HTML del correo"></textarea></div>
   <p class="nota-editor">Este panel <strong>no se copia ni se exporta</strong>. Solo se copia el correo que aparece más abajo.</p>
@@ -220,14 +265,14 @@
     if (!s){ r('perdida').textContent = 'Escribe la pérdida aceptable'; r('ganancia').textContent = ''; r('volumen').textContent = ''; return null; }
     r('perdida').textContent = pesos(s.perdida) + (s.perdida_pct !== null ? ' (' + coma(s.perdida_pct) + ' %)' : '');
     r('ganancia').textContent = pesos(s.ganancia) + (s.ganancia_pct !== null ? ' (' + coma(s.ganancia_pct) + ' %)' : '');
-    r('volumen').textContent = 'Volumen ' + coma(s.volumen) + (s.bajo_minimo ? ': es el mínimo, la pérdida no alcanza para menos' : '');
+    r('volumen').textContent = 'Volumen: ' + coma(s.volumen) + ' lotes' + (s.bajo_minimo ? ': es el mínimo, la pérdida no alcanza para menos' : '');
     return s;
   }
   function lineaSim(d, s){
     if (!s) return '';
     var f = d.fmt;
     var t = '🧮 Simulación de ' + nombreEj() + ' (objetivo 1:3): con una pérdida aceptable de ' + pesos(s.perdida) +
-            ', el volumen es ' + coma(s.volumen) + ' y el objetivo daría ' + pesos(s.ganancia) +
+            ', el volumen es ' + coma(s.volumen) + ' lotes y el objetivo daría ' + pesos(s.ganancia) +
             '. Entrada ' + f.entrada + ' · Stop ' + f.stop + ' · Objetivo ' + f.objetivo + '.' +
             (d.condicion ? ' ' + d.condicion : '');
     if (s.bajo_minimo) t += ' La pérdida mínima con el volumen más chico es ' + pesos(s.perdida) + '.';
@@ -358,8 +403,7 @@
       else if (bloque){
         cont.querySelector('.sim-perdida').textContent = '−' + pesos(s.perdida);
         cont.querySelector('.sim-ganancia').textContent = '+' + pesos(s.ganancia);
-        cont.querySelector('.sim-volumen').textContent = 'Volumen ' + coma(s.volumen) +
-          (s.bajo_minimo ? ': es el mínimo que permite el broker.' : '.');
+        cont.querySelector('.sim-volumen').textContent = volumenTexto(s);
       }
       partes.push(cont.innerHTML);
     });
@@ -442,9 +486,29 @@
     caja.style.display = abre ? 'block' : 'none';
     this.textContent = abre ? 'Ocultar código' : 'Ver código';
   });
+  function poblarImagenesAnalisis(){
+    document.querySelectorAll('.activo').forEach(function(sec){
+      var ticker = sec.getAttribute('data-ticker');
+      var tpl = document.querySelector('template.correo-activo[data-ticker="' + ticker + '"]');
+      if (!tpl) return;
+      var tmp = document.createElement('div');
+      tmp.innerHTML = tpl.innerHTML;
+      var imgG = sec.querySelector('.analisis img.grafico-analisis');
+      var imgGCor = tmp.querySelector('img[alt^="Gráfico de "]');
+      if (imgG && imgGCor && !imgG.getAttribute('src')) {
+        imgG.src = imgGCor.getAttribute('src');
+      }
+      var imgC = sec.querySelector('.analisis img.calendario-img');
+      var imgCCor = tmp.querySelector('img[alt^="Calendario económico"]');
+      if (imgC && imgCCor && !imgC.getAttribute('src')) {
+        imgC.src = imgCCor.getAttribute('src');
+      }
+    });
+  }
   document.getElementById('ver-analisis').addEventListener('click', function(){
     var on = document.body.classList.toggle('con-analisis');
     this.textContent = on ? 'Ocultar análisis completo' : 'Ver análisis completo';
+    if (on) poblarImagenesAnalisis();
   });
   document.getElementById('exportar-pdf').addEventListener('click', function(){ if (vista()) window.print(); });
   document.getElementById('restablecer').addEventListener('click', function(){

@@ -14,6 +14,7 @@ nunca de la redacción.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from typing import Any, Callable
@@ -85,16 +86,31 @@ def _calificador(fuente_nombre: str) -> str:
 
 
 def fusionar(filas: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Un anuncio que llega como dos eventos (la Fed: el comunicado y la tasa, a la misma hora y con la
-    misma etiqueta del glosario) ocupa una sola fila: la que no trae cifras sobra.
+    """Un anuncio que llega como dos eventos con la misma etiqueta del glosario el mismo día (la Fed: el
+    comunicado y la tasa, o la tasa y la conferencia media hora después) ocupa una sola fila: la que no
+    trae cifras sobra. Comparar también la hora dejaba la conferencia como "Comité ... de la Fed (2)"
+    en la lámina (correo de Caterpillar, 2026-10-26).
 
     Dos datos distintos con cifras se conservan los dos y los separa `distinguir`.
     """
     def clave(f: dict[str, Any]) -> tuple[str, ...]:
-        return f["evento"], f["pais"], f["fecha"], f["hora"]
+        return f["evento"], f["pais"], f["fecha"]
 
     con_cifras = {clave(f) for f in filas if f["anterior"] or f["esperado"]}
     return [f for f in filas if f["anterior"] or f["esperado"] or clave(f) not in con_cifras]
+
+
+# Una acción o un índice no se mueve con los inventarios de crudo: en el correo de Caterpillar la lámina
+# gastó una fila en ellos (2026-10-26). Si el activo declara un driver de energía, se quedan.
+CLASES_SIN_ENERGIA = {"acciones", "indices", "etfs"}
+_ENERGIA = re.compile(r"\b(eia|opep|opec|wti|brent)\b|petr[oó]leo|crudo|crude", re.IGNORECASE)
+
+
+def sin_energia(filas: list[dict[str, Any]], drivers: list[str]) -> list[dict[str, Any]]:
+    """Las filas de la agenda sin los datos de energía, salvo que algún driver del activo sea de energía."""
+    if any(_ENERGIA.search(d) for d in drivers):
+        return filas
+    return [f for f in filas if not _ENERGIA.search(f"{f.get('evento', '')} {f.get('fuente_nombre', '')}")]
 
 
 def distinguir(filas: list[dict[str, Any]]) -> None:
