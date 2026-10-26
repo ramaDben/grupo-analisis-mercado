@@ -493,3 +493,22 @@ def test_el_aviso_de_la_ingesta_de_acciones_llega_a_los_avisos_y_no_a_los_datos(
     hecha = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES, lec)
     assert empresa["avisos"][0] in hecha.avisos
     assert "avisos" not in hecha.pieza["datos"]["empresa"]
+
+def test_grafico_dolar_pasa_sin_leyenda(tmp_path, monkeypatch):
+    """El gráfico del DXY para el correo se pide sin leyenda de líneas de la estrategia."""
+    import types
+    pedidos = []
+    def falso_grafico(**kw):
+        pedidos.append(kw)
+        dest = kw["destino"]
+        dest.write_bytes(b"fake_png")
+        return dest
+
+    tg_mod = types.ModuleType("tradingview_grafico")
+    tg_mod.generar_grafico_tv = falso_grafico
+    monkeypatch.setitem(sys.modules, "tradingview_grafico", tg_mod)
+
+    pr._grafico_dolar(tmp_path / "dolar.png")
+    assert len(pedidos) == 1
+    assert pedidos[0].get("sin_leyenda") is True
+    assert pedidos[0]["ticker"] == "USDIDX"

@@ -64,7 +64,7 @@ FRASES_PROHIBIDAS: tuple[str, ...] = (
     # amplifica las pérdidas" o "no conviene arriesgar más de lo previsto" son la
     # advertencia natural de "Qué NO hacer" y tienen que pasar.
     "lote", "lotes", "de tu capital", "arriesga tu", "arriesga el", "arriesga un",
-    "apalancate", "usa apalancamiento",
+    "apalancate", "usa apalancamiento", "no oficiales",
 )
 _PALABRA_EXACTA = {"lote", "lotes"}
 

@@ -66,7 +66,8 @@ y la pone el bot: tú no decides nada visual.
 `orden.pieza` dice qué pieza es. Pasan por ti `oportunidad` y `contexto` (ver su sección más abajo): el seguimiento lo escribe Python.
 
 - `titular` y `bajada`: el activo, su dirección y la idea central, sin prometer resultados ni la
-  palabra "oportunidad".
+  palabra "oportunidad". Nada que le reste credibilidad al dato: ni "según datos no oficiales" ni
+  "según fuentes de mercado". Si un dato no tiene fuente que puedas nombrar, no lo uses.
 - `titulares.<ticker>`: la idea del activo con su dirección.
 - `contexto.<ticker>`: de 3 a 5 frases, en este orden.
   1. Una frase por cada uno de **solo 2** hechos de `datos.hechos`: siempre **1 y 1**, el driver que respalda
@@ -76,7 +77,9 @@ y la pone el bot: tú no decides nada visual.
      puntos bajo su nivel de cinco sesiones antes, y eso juega a favor del alza del oro.» Si `efecto` es
      `null`, describe el dato sin atribuirle dirección sobre el activo. Si `con_la_lectura` dice que va
      en contra de nuestra lectura, dilo.
-  2. Una frase que jerarquice cuál de esos drivers pesa más hoy y por qué.
+  2. Una frase que jerarquice cuál de esos drivers pesa más hoy y por qué. Si los dos traen `efecto`
+     `null`, no inventes cuál domina ni hacia dónde empuja: di que hoy ninguno de los dos marca la
+     dirección y que manda la lectura técnica.
   3. Una frase final que cierre con la lectura: qué se vigila y qué la invalida (están en
      `datos.activos[0].lectura`).
   El bot rechaza un `contexto` que no cite la cifra de al menos dos hechos de `datos.hechos` (o del único,
@@ -84,8 +87,10 @@ y la pone el bot: tú no decides nada visual.
   pone la maqueta).
 - `dias_clave.<ticker>` (solo si existe): de 1 a 3 frases en modo anticipación con los días clave de la
   ventana de `datos.agenda`. Nombra cada día exactamente como viene en `dia` ("miércoles 21/10"), con la
-  hora, qué se publica y qué hace con el activo según su `efecto`. Si hay una decisión de tasas, va
-  primera; después los que tienen `mueve_al_activo`. Hasta 420 caracteres. El bot rechaza un
+  hora, qué se publica y qué hace con el activo según su `efecto`. **Siempre en orden de reloj**, del
+  primero al último, sin "previamente" ni saltos hacia atrás (el 2026-10-26 salió "el miércoles 28... el
+  jueves 29... Previamente, el martes 27"). Si hay una decisión de tasas, destácala en su lugar del orden
+  ("el evento central de la semana"), no adelantándola. Hasta 420 caracteres. El bot rechaza un
   `dias_clave` que no nombre ningún `dia` de la agenda.
 - `fuentes`: **una lista** de 1 a 3 voces sobre este activo, de la lista cerrada. **Al menos una debe ser
   directa** (spec 2026-10-20): la que fija `datos.fuente_directa`. Una fuente es directa si su `entidad` es una
