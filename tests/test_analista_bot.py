@@ -75,6 +75,8 @@ class Armado:
             simbolo=lambda t: {"ticker": "XAUUSD", "descripcion": "Gold", "digits": 2} if t.lower() == "xauusd" else None,
             verificar_url=lambda url: "ok", publicar_imagen=None,
             leer_nota=lambda url: "", generar_imagen=self.generar_falso, banco_imagenes=tmp_path / "banco")
+        self.candidatas_contexto = list(CANDIDATAS_CONTEXTO_FALSO)
+        self.atendedor.noticias_contexto = lambda t, n, ah: (list(self.candidatas_contexto), [])
         self.bot = b.Bot(TgFalso(), self.atendedor)
         self.estado = self.atendedor.estado
 
@@ -128,6 +130,21 @@ class Armado:
         return destino
 
 
+CANDIDATAS_CONTEXTO_FALSO = [
+    {
+        "medio": "FXStreet",
+        "fecha": "2026-10-07",
+        "url": "https://www.fxstreet.es/markets/oro-sube-1",
+        "titular_original": "El oro sube con fuerza",
+    },
+    {
+        "medio": "Investing.com",
+        "fecha": "2026-10-07",
+        "url": "https://es.investing.com/news/oro-en-maximos-2",
+        "titular_original": "Oro alcanza nuevos máximos",
+    },
+]
+
 def redactor(llamadas, codigo="ok"):
     def redactar(ruta, tier):
         llamadas.append(ruta)
@@ -135,9 +152,31 @@ def redactor(llamadas, codigo="ok"):
             return SimpleNamespace(codigo=codigo, detalle="algo")
         dir_pedido = ruta.parent
         pieza = pr.cargar_pieza(dir_pedido)
-        pieza["editorial"].update(fx.pieza_oportunidad(dir_pedido)["editorial"])
-        # La fuente del ejemplo es posterior al reloj de estas pruebas: con su fecha, depurar la descarta.
-        pieza["editorial"]["fuentes"] = [dict(fx.DIRECTA_ORO), {**fx.FUENTES_EJEMPLO[0], "fecha": "2026-10-06"}]
+        if pieza.get("orden", {}).get("pieza") == "contexto":
+            pieza["editorial"]["noticia_1"] = {
+                "medio": "FXStreet",
+                "fecha": "2026-10-07",
+                "url": "https://www.fxstreet.es/markets/oro-sube-1",
+                "titular_original": "El oro sube con fuerza",
+                "titular": "El oro sube con fuerza",
+                "mensaje": "[[SALUDO]] El oro mantiene tendencia alcista. ¿Cómo ves tu posición?",
+            }
+            pieza["editorial"]["noticia_2"] = {
+                "medio": "Investing.com",
+                "fecha": "2026-10-07",
+                "url": "https://es.investing.com/news/oro-en-maximos-2",
+                "titular_original": "Oro alcanza nuevos máximos",
+                "titular": "Oro alcanza nuevos máximos",
+                "mensaje": "[[SALUDO]] La demanda por refugio impulsa al oro. ¿Te interesa?",
+            }
+            pieza["editorial"]["tecnico"] = (
+                "[[SALUDO]] El oro mantiene sesgo alcista vigilando [[NIVEL]] con objetivo en [[OBJETIVO]]. "
+                "¿Ajustamos la orden?"
+            )
+        else:
+            pieza["editorial"].update(fx.pieza_oportunidad(dir_pedido)["editorial"])
+            # La fuente del ejemplo es posterior al reloj de estas pruebas: con su fecha, depurar la descarta.
+            pieza["editorial"]["fuentes"] = [dict(fx.DIRECTA_ORO), {**fx.FUENTES_EJEMPLO[0], "fecha": "2026-10-06"}]
         pr.guardar_pieza(pieza, dir_pedido)
         return SimpleNamespace(codigo="ok", detalle="")
     return redactar
@@ -752,6 +791,29 @@ def test_validar_calla_en_una_pieza_sin_fuente_directa_sellada(tmp_path, capsys)
     assert "OK" in capsys.readouterr().out
 
 
+def test_validar_contexto_dice_que_noticia_cae_y_por_que(tmp_path, capsys, monkeypatch):
+    import bot_analistas
+    from analista import contexto as ctx
+    from analista import fuentes as fu
+    from analista import noticia as nt
+
+    monkeypatch.setattr(fu, "verificar_url", lambda url, *a, **k: "ok")
+    monkeypatch.setattr(nt, "leer_texto", lambda url, *a, **k: "texto")
+    seg = fx.pieza_seguimiento(tmp_path)["datos"]
+    seg["suceso"] = {"estado": "esperando", "sentido": "ALCISTA", "nivel": 4050.5, "objetivo": 4120.0,
+                     "siguiente": None, "calidad": "A+", "nota_semana": ""}
+    cand = [{"medio": "FXStreet", "fecha": "2026-10-24", "url": "https://www.fxstreet.es/a", "titular_original": "Oro sube"}]
+    pieza = ctx.preparar("XAUUSD", tmp_path, AHORA, seg, lambda *a: (cand, [])).pieza
+    pieza["editorial"]["noticia_1"] = {"medio": "FXStreet", "fecha": "2026-10-24", "url": "https://otro.example/x",
+                                      "titular_original": "Oro sube", "titular": "El oro sube", "mensaje": "[[SALUDO]] ¿Lo vemos?"}
+    pieza["editorial"]["noticia_2"] = None
+    pieza["editorial"]["tecnico"] = "[[SALUDO]] el oro sigue al alza sobre [[NIVEL]]. ¿La vemos?"
+    pr.guardar_pieza(pieza, tmp_path)
+    assert bot_analistas.validar(tmp_path / "pieza.json") == 1
+    salida = capsys.readouterr().out
+    assert "noticia_1" in salida and "candidatas" in salida
+
+
 # ───────────────────────────────────────────────────────── /recrear (solo el director)
 
 
@@ -972,3 +1034,116 @@ def test_ilustraciones_escritas_por_agy_se_pisan(armado):
     armado.atendedor.redactar = redactar
     armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
     assert _pieza_guardada(armado).get("ilustraciones", {}) == {}
+
+
+# ───────────────────────────────────────────────────────────── /contexto (mensajes)
+
+def test_contexto_entrega_el_html_con_tres_tarjetas(armado):
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"}, "Juan")))
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("contexto", {"ticker": "XAUUSD"}, "Juan")))
+    assert len(r.archivos) == 1
+    html_path = r.archivos[0]
+    assert html_path.name == "mensajes.html"
+    contenido = html_path.read_text(encoding="utf-8")
+    assert 'data-tarjeta="Noticia 1"' in contenido
+    assert 'data-tarjeta="Noticia 2"' in contenido
+    assert 'data-tarjeta="Análisis técnico"' in contenido
+    assert "Hola Juan," in contenido
+    assert "[[NIVEL]]" not in contenido
+    assert "[[OBJETIVO]]" not in contenido
+    assert "4.150,00" in contenido or "4,150.00" in contenido or "4150" in contenido
+
+
+def test_contexto_gasta_una_pieza_del_cupo(armado):
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
+    assert armado.estado.usados(CAMILA, AHORA) == 1
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("contexto", {"ticker": "XAUUSD"})))
+    assert len(r.archivos) == 1
+    assert armado.estado.usados(CAMILA, AHORA) == 2
+
+
+def test_contexto_se_reusa_30_minutos_sin_gastar_cupo_ni_agy_y_con_el_saludo_de_quien_pide(armado):
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"}, "Juan")))
+    r1 = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("contexto", {"ticker": "XAUUSD"}, "Juan")))
+    llamadas_iniciales = len(armado.llamadas)
+
+    armado.reloj.ahora += timedelta(minutes=10)
+    r2 = armado.bot.procesar_uno(b.Pedido(OTRO, 2, od.Orden("contexto", {"ticker": "XAUUSD"}, "Estimado Pedro")))
+    assert len(armado.llamadas) == llamadas_iniciales
+    assert armado.estado.usados(OTRO, armado.reloj.ahora) == 0
+    assert len(r2.archivos) == 1
+    contenido2 = r2.archivos[0].read_text(encoding="utf-8")
+    assert "Estimado Pedro," in contenido2
+    assert "Hola Juan," not in contenido2
+
+
+def test_contexto_si_agy_falla_no_gasta_cupo_ni_se_registra(armado):
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
+    assert armado.estado.usados(CAMILA, AHORA) == 1
+    armado.atendedor.redactar = redactor([], codigo="timeout")
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("contexto", {"ticker": "XAUUSD"})))
+    assert "No gasté tu cupo" in r.texto
+    assert armado.estado.usados(CAMILA, AHORA) == 1
+    assert "contexto|ticker=XAUUSD" not in armado.estado.datos["piezas"]
+
+
+def test_contexto_con_cupo_agotado_avisa_y_no_lanza_agy(armado):
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
+    armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "COPPER"})))
+    assert armado.estado.usados(CAMILA, AHORA) == 2
+    llamadas_antes = len(armado.llamadas)
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("contexto", {"ticker": "XAUUSD"})))
+    assert "cupo" in r.texto and not r.archivos
+    assert len(armado.llamadas) == llamadas_antes
+
+
+def test_seguimiento_exitoso_encola_un_contexto(armado):
+    import threading, time
+    hilo = threading.Thread(target=armado.bot.trabajador, daemon=True)
+    hilo.start()
+    armado.bot.recibir(update("/seguimiento oro Juan", usuario=CAMILA))
+    for _ in range(50):
+        if len(armado.bot.tg.documentos) >= 2:
+            break
+        time.sleep(0.05)
+    docs = [d[1] for d in armado.bot.tg.documentos]
+    assert "lamina.png" in docs
+    assert "mensajes.html" in docs
+
+
+def test_seguimiento_fallido_no_encola_contexto(armado):
+    import threading, time
+    error = pr.SinAnalisisError("No hay un análisis vigente de XAUUSD: pide primero /oportunidad XAUUSD.")
+    armado.atendedor.preparar = lambda o, d, a, **kw: (_ for _ in ()).throw(error)
+    hilo = threading.Thread(target=armado.bot.trabajador, daemon=True)
+    hilo.start()
+    armado.bot.recibir(update("/seguimiento oro Juan", usuario=CAMILA))
+    time.sleep(0.15)
+    docs = [d[1] for d in armado.bot.tg.documentos]
+    assert docs == []
+    assert armado.bot.cola.empty()
+
+
+def test_segundo_seguimiento_mientras_genera_no_encola_otro_contexto(armado):
+    orden_ctx = od.Orden("contexto", {"ticker": "XAUUSD"})
+    armado.bot.generando.add(orden_ctx.clave_base().lower())
+    pedido_seg = b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"}))
+    armado.bot._encolar_contexto(pedido_seg)
+    assert armado.bot.cola.empty()
+    assert any("ya se están preparando" in m[1] for m in armado.bot.tg.mensajes)
+
+
+def test_el_usuario_no_puede_pedir_contexto_por_telegram(armado):
+    r = armado.bot.recibir(update("/contexto oro", usuario=CAMILA))
+    assert len(r) == 1
+    assert "Ese comando no existe" in r[0].texto or "/ayuda" in r[0].texto
+    assert armado.bot.cola.empty()
+
+
+def test_el_seguimiento_ya_entregado_no_cambia(armado):
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, od.Orden("seguimiento", {"ticker": "XAUUSD"})))
+    assert armado.llamadas == []
+    assert r.texto.startswith("Hola, ")
+    assert "CFD" in r.texto
+    assert len(r.archivos) == 1
+    assert r.archivos[0].suffix == ".png"

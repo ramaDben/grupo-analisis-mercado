@@ -63,7 +63,7 @@ y la pone el bot: tú no decides nada visual.
 
 ### Qué va en cada campo
 
-`orden.pieza` dice qué pieza es. Solo `oportunidad` pasa por ti: el seguimiento lo escribe Python.
+`orden.pieza` dice qué pieza es. Pasan por ti `oportunidad` y `contexto` (ver su sección más abajo): el seguimiento lo escribe Python.
 
 - `titular` y `bajada`: el activo, su dirección y la idea central, sin prometer resultados ni la
   palabra "oportunidad".
@@ -146,6 +146,45 @@ y la pone el bot: tú no decides nada visual.
   la fecha viene de una fuente no oficial si no la confirma un comunicado de la empresa. Si es `null`, no
   nombres ninguna fecha. No cites cifras de resultados: no las tienes.
 
+### Pieza `contexto` (tres mensajes para el ejecutivo)
+
+Si `orden.pieza` es `contexto`, no escribes ninguno de los campos de `oportunidad`. Los únicos valores que
+puedes tocar son `editorial.noticia_1`, `editorial.noticia_2` y `editorial.tecnico` (los que dicen
+`[[ESCRIBIR]]`). Son **tres mensajes de WhatsApp independientes** que un ejecutivo le puede mandar a su
+cliente para retomar la conversación: cada uno se sostiene solo y ninguno resume a los otros. Rigen las reglas
+de texto de arriba (español de Chile, tuteo, sin guion largo ni medio, sin HTML ni asteriscos, siglas explicadas,
+nunca invitar a operar, "soporte" y "resistencia"). El saludo y la fuente los pone Python: tú no los escribes.
+
+- `noticia_1` y `noticia_2`: **una noticia cada una, elegida solo de `datos.noticias_candidatas`** (FXStreet e
+  Investing.com, de los últimos 3 días). En esta pieza no hay búsqueda web nueva: si el bot no te dio la nota,
+  no existe. Abre la `url` de la candidata para leerla. Cada una es un **objeto** con estos campos de texto, o
+  `null` si ninguna candidata sirve (déjalo en `null` antes que inventar o estirar una nota):
+  - `medio`, `fecha`, `url`, `titular_original`: copiados tal cual de la candidata. El bot descarta la noticia
+    si su `url` no está entre las candidatas o su `titular_original` no coincide.
+  - `titular`: una frase en español de hasta 90 caracteres con la idea de la nota.
+  - `mensaje`: **un solo párrafo de hasta 600 caracteres** que **empieza con `[[SALUDO]]`**, cuenta la noticia en
+    palabras de cliente novato, dice qué podría significar para el activo en términos de dirección (sube, baja o
+    se mantiene) y **cierra con una pregunta concreta** al cliente, no con "consulta a tu analista". Atribuye al
+    medio lo que es del medio ("según FXStreet, …") y cuenta solo las causas que la nota da.
+  - `noticia_2` es **otra nota distinta** de `noticia_1`: otra URL y, si hay opción, otro medio u otro ángulo.
+  - **Cifras de la nota:** puedes citarlas solo si están en el texto de la nota, el mismo valor y **en notación
+    chilena** (coma decimal, punto de miles: "4.100", "0,74 %"; las fuentes en inglés escriben "4,100.50" o
+    "156.85": conviértelas). El bot lee la página y descarta la noticia si una cifra no aparece. Con muro de
+    pago, o si no la pudiste leer completa, escribe `titular` y `mensaje` **sin cifras**.
+  - Sin `%` que no esté en la nota, sin la palabra "oportunidad", sin "comprar", "vender" ni "recomienda".
+- `tecnico`: **un solo párrafo** (texto, no objeto), o `null` si `datos.tecnico_motivo` no está vacío. Empieza
+  con `[[SALUDO]]`, dice hacia dónde va el activo (alcista, bajista o lateral) según `datos.tecnico.sentido` y
+  `datos.tecnico.estado`, qué nivel se vigila y qué lo invalida, y cierra con una pregunta al cliente. **Nunca
+  escribes un precio**: donde iría un número usas solo estas marcas, y solo las que tengan valor en `datos.tecnico`:
+  `[[NIVEL]]` (el nivel a vigilar), `[[OBJETIVO]]` y `[[SIGUIENTE]]`. El bot las reemplaza con los valores del
+  terminal; un número de precio escrito (4.100,50, 1,2345) hace caer el mensaje. Sin otros números significativos.
+  Menciona la temporalidad en rango cuantificado ("marco de 4 horas, de una a dos semanas").
+- **Redacción:** di "el oro" o "el activo", nunca "metal pesado" ni apodos. No cierres con "tu estrategia" ni
+  "tu operativa": la pregunta final es sobre lo que piensa o ve el cliente ("¿cómo ves…?"). Si la noticia y la
+  lectura técnica apuntan a lados distintos, no lo ocultes ni lo fuerces: cada mensaje habla solo de lo suyo.
+- Si una candidata trae una cifra de precio en su titular, no la uses en `tecnico`: ahí los números salen
+  solo del terminal.
+
 ### Antes de terminar
 
 Corre la validación y corrige hasta que diga `OK`:
@@ -155,5 +194,7 @@ uv run python scripts/bot_analistas.py --validar $ARGUMENTS
 ```
 
 La validación también falla si `fuentes` no trae ninguna fuente directa de `datos.fuente_directa`: sigue buscando hasta que diga `OK`.
+
+La validación de `contexto` también te dice qué noticia o texto cayó y por qué: corrígelo o déjalo en `null`.
 
 Responde solo `OK` o `ERROR: <motivo>`.

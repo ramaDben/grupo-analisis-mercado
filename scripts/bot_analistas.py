@@ -38,6 +38,22 @@ def leer_token() -> str | None:
     return None
 
 
+def _errores_de_contexto(pieza: dict) -> list[str]:
+    """Lo que el bot descartaría de los tres mensajes, dicho a agy para que lo corrija antes de entregar."""
+    import copy
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from analista import contexto as ctx
+    from analista import fuentes as fu
+    from analista import noticia as nt
+
+    hoy = datetime.now(ZoneInfo("America/Santiago")).date()
+    copia, _ = ctx.depurar(copy.deepcopy(pieza), hoy, verificar=fu.verificar_url, leer=nt.leer_texto)
+    return [f"{campo}: {motivo}" for campo, motivo in copia["motivos"].items()
+            if pieza["editorial"].get(campo) is not None and copia["editorial"].get(campo) is None]
+
+
 def validar(ruta: Path) -> int:
     from analista import esquema as es
     from analista import fuentes as fu
@@ -50,6 +66,8 @@ def validar(ruta: Path) -> int:
     directa = fu.directa_de(pieza)
     if pieza.get("orden", {}).get("pieza") == "oportunidad" and directa:
         errores += fu.falta_fuente_directa(pieza, *directa)
+    if pieza.get("orden", {}).get("pieza") == "contexto":
+        errores += _errores_de_contexto(pieza)
     if errores:
         for e in errores:
             print(f"ERROR: {e}")

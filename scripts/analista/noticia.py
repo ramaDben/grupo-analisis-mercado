@@ -28,6 +28,9 @@ from analista import fuentes as fu
 CAMPOS = ("medio", "fecha", "url", "titular_original", "extracto", "titular", "bajada", "motivo")
 VENTANA_DIAS = 3
 LARGOS = {"titular": 90, "bajada": 200}
+
+CAMPOS_CONTEXTO = ("medio", "fecha", "url", "titular_original", "titular", "mensaje")
+LARGOS_CONTEXTO = {"titular": 90, "mensaje": 600}
 _ETIQUETA = re.compile(r"<(script|style)\b.*?</\1>|<[^>]+>", re.IGNORECASE | re.DOTALL)
 
 
@@ -88,18 +91,22 @@ def _cifras_ausentes(citadas: list[str], pagina: str) -> list[str]:
 
 
 def _motivo(n: Any, hoy: date, lista: dict[str, Any], verificar: Callable[[str], str],
-            leer: Callable[[str], str | None]) -> str | None:
+            leer: Callable[[str], str | None],
+            campos: tuple[str, ...] = CAMPOS,
+            largos: dict[str, int] = LARGOS,
+            textos: tuple[str, ...] = ("titular", "bajada")) -> str | None:
     """El motivo por el que la noticia no sale; `None` si pasa."""
-    if not isinstance(n, dict) or any(not isinstance(n.get(c), str) or not n[c].strip() for c in CAMPOS):
-        return f"viene incompleta (campos: {', '.join(CAMPOS)})"
-    from analista import ilustracion
+    if not isinstance(n, dict) or any(not isinstance(n.get(c), str) or not n[c].strip() for c in campos):
+        return f"viene incompleta (campos: {', '.join(campos)})"
+    if "motivo" in campos:
+        from analista import ilustracion
 
-    if n["motivo"] not in ilustracion.motivos():
-        return f"el motivo de imagen «{n['motivo']}» no está en el catálogo"
-    for campo, tope in LARGOS.items():
+        if n["motivo"] not in ilustracion.motivos():
+            return f"el motivo de imagen «{n['motivo']}» no está en el catálogo"
+    for campo, tope in largos.items():
         if len(n[campo]) > tope:
             return f"el {campo} tiene {len(n[campo])} caracteres y el máximo es {tope}"
-    for campo in ("titular", "bajada"):
+    for campo in textos:
         errs = es.errores_texto_noticia(f"noticia.{campo}", n[campo])
         if errs:
             return errs[0].split(": ", 1)[-1]
@@ -118,7 +125,7 @@ def _motivo(n: Any, hoy: date, lista: dict[str, Any], verificar: Callable[[str],
     estado = verificar(n["url"])
     if estado == "muerta":
         return "la URL no responde"
-    citadas = _cifras_del_texto(n["titular"] + " " + n["bajada"])
+    citadas = _cifras_del_texto(" ".join(n[c] for c in textos))
     if not citadas:
         return None
     texto = leer(n["url"]) if estado == "ok" else None
@@ -128,6 +135,15 @@ def _motivo(n: Any, hoy: date, lista: dict[str, Any], verificar: Callable[[str],
     if ausentes:
         return f"la cifra {', '.join(dict.fromkeys(ausentes))} no aparece en la nota"
     return None
+
+
+def motivo_de_contexto(n: Any, hoy: date, lista: dict[str, Any], verificar: Callable[[str], str],
+                       leer: Callable[[str], str | None]) -> str | None:
+    """El motivo por el que una noticia de contexto no sale; `None` si pasa."""
+    return _motivo(n, hoy, lista, verificar, leer,
+                   campos=CAMPOS_CONTEXTO,
+                   largos=LARGOS_CONTEXTO,
+                   textos=("titular", "mensaje"))
 
 
 def depurar_noticia(pieza: dict[str, Any], hoy: date, lista: dict[str, Any] | None = None,
@@ -172,10 +188,9 @@ def leer_feed(url: str, timeout: int = 15) -> str:
 
 def _items(xml: str) -> list[dict[str, Any]]:
     """Título, link y fecha de cada nota; un feed que no es RSS (una página de bloqueo) no trae ninguna."""
-    try:
-        canal = ET.fromstring(xml.strip().encode("utf-8"))
-    except ET.ParseError:
-        return []
+    canal = ET.fromstring(xml.strip().encode("utf-8"))
+    if canal.tag.lower().endswith("html"):
+        raise ValueError("Feed es HTML (posible página de bloqueo)")
     salida = []
     for it in canal.iter("item"):
         titulo, link, pub = (it.findtext(k) or "" for k in ("title", "link", "pubDate"))
@@ -196,17 +211,15 @@ def _patrones(ticker: str, nombre: str, ruta: Path) -> list[re.Pattern[str]]:
     return [re.compile(p, re.IGNORECASE) for p in (propios or [rf"\b{re.escape(nombre)}\b"])]
 
 
-def candidatas_fxstreet(ticker: str, nombre: str, ahora: datetime, leer: Callable[[str], str] = leer_feed,
-                        ruta_patrones: Path = PATRONES_FX) -> tuple[list[dict[str, Any]], str | None]:
-    """Las notas del activo de los últimos 3 días, la más reciente primero, y un aviso si FXStreet no respondió.
-
-    Sin la descripción del RSS: trae precios y porcentajes en notación inglesa, y agy abre la nota igual.
-    """
+def candidatas_de_feeds(feeds: tuple[str, ...] | list[str], medio: str, ticker: str, nombre: str, ahora: datetime,
+                        leer: Callable[[str], str] = leer_feed,
+                        ruta_patrones: Path = PATRONES_FX) -> tuple[list[dict[str, Any]], int]:
+    """Candidatas ordenadas más reciente primero y cantidad de feeds caídos."""
     patrones = _patrones(ticker, nombre, ruta_patrones)
     hoy = ahora.astimezone(SANTIAGO).date()
     vistas: dict[str, dict[str, Any]] = {}
     caidos = 0
-    for feed in FEEDS_FX:
+    for feed in feeds:
         try:
             items = _items(leer(feed))
         except Exception:  # noqa: BLE001  un feed caído no bota la pieza: agy busca en la web
@@ -216,9 +229,20 @@ def candidatas_fxstreet(ticker: str, nombre: str, ahora: datetime, leer: Callabl
             fecha = it["momento"].astimezone(SANTIAGO).date()
             if 0 <= (hoy - fecha).days <= VENTANA_DIAS and any(p.search(it["titulo"]) for p in patrones):
                 vistas.setdefault(it["url"], {**it, "fecha": fecha})
-    orden = sorted(vistas.values(), key=lambda it: it["momento"], reverse=True)[:MAX_CANDIDATAS]
-    lista = [{"medio": "FXStreet", "fecha": it["fecha"].isoformat(), "url": it["url"],
+    orden = sorted(vistas.values(), key=lambda it: it["momento"], reverse=True)
+    lista = [{"medio": medio, "fecha": it["fecha"].isoformat(), "url": it["url"],
               "titular_original": it["titulo"]} for it in orden]
+    return lista, caidos
+
+
+def candidatas_fxstreet(ticker: str, nombre: str, ahora: datetime, leer: Callable[[str], str] = leer_feed,
+                        ruta_patrones: Path = PATRONES_FX) -> tuple[list[dict[str, Any]], str | None]:
+    """Las notas del activo de los últimos 3 días, la más reciente primero, y un aviso si FXStreet no respondió.
+
+    Sin la descripción del RSS: trae precios y porcentajes en notación inglesa, y agy abre la nota igual.
+    """
+    orden, caidos = candidatas_de_feeds(FEEDS_FX, "FXStreet", ticker, nombre, ahora, leer, ruta_patrones)
+    lista = orden[:MAX_CANDIDATAS]
     aviso = ("No pude leer FXStreet: agy buscó la noticia de apertura en la web." if caidos == len(FEEDS_FX)
              else None)
     return lista, aviso

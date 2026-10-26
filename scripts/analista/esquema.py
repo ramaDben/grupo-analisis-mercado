@@ -32,10 +32,13 @@ CAMPOS: dict[str, tuple[str, ...]] = {
     "oportunidad": ("titular", "bajada", "fuentes", "noticia"),
     # El seguimiento no pasa por agy, pero su `pieza.json` usa el mismo sello.
     "seguimiento": (),
+    # Tres mensajes independientes con noticias y análisis técnico para abrir conversación.
+    "contexto": ("noticia_1", "noticia_2", "tecnico"),
 }
 
-# Campos que una pieza puede no traer: las anteriores al spec 2026-10-24 no tienen noticia.
-OPCIONALES: tuple[str, ...] = ("noticia",)
+# Campos que una pieza puede no traer: las anteriores al spec 2026-10-24 no tienen noticia,
+# y la pieza contexto admite dejar tarjetas en None cuando no hay material.
+OPCIONALES: tuple[str, ...] = ("noticia", "noticia_1", "noticia_2", "tecnico")
 
 # El titular y la bajada también van impresos dentro de las láminas de WhatsApp,
 # que tienen el espacio medido: un titular largo se corta en la imagen.
@@ -266,6 +269,17 @@ def errores(pieza: dict[str, Any]) -> list[str]:
     noticia = editorial.get("noticia")
     if tipo == "oportunidad" and noticia not in (None, MARCA) and not isinstance(noticia, dict):
         errs.append("noticia: tiene que ser un objeto o null")
+
+    if tipo == "contexto":
+        for campo in ("noticia_1", "noticia_2", "tecnico"):
+            val = editorial.get(campo)
+            if val == MARCA:
+                errs.append(f"{campo}: quedó sin escribir")
+            elif val is not None:
+                if campo in ("noticia_1", "noticia_2") and not isinstance(val, dict):
+                    errs.append(f"{campo}: tiene que ser un objeto o null")
+                elif campo == "tecnico" and not isinstance(val, str):
+                    errs.append(f"{campo}: tiene que ser un texto o null")
 
     fuentes = editorial.get("fuentes") if tipo == "oportunidad" else None
     if tipo == "oportunidad" and fuentes != MARCA:
