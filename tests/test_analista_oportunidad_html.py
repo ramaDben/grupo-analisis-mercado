@@ -1267,6 +1267,10 @@ def test_sintesis_caso_cat_sin_efecto_no_dibuja_recuadro(tmp_path):
     ruta_fixture = RAIZ / "tests" / "fixtures" / "analista" / "oportunidad_cat_2026-10-26.json"
     p = json.loads(ruta_fixture.read_text(encoding="utf-8"))
     p["editorial"]["bajada"] = "La acción se mantiene en rango lateral a la espera de sus resultados del jueves 29/10."
+    p["editorial"]["dias_clave"]["#CAT"] = (
+        "El martes 27/10 a las 09:30 CLST se conocerán los Pedidos de bienes durables. "
+        "El miércoles 28/10 a las 15:00 CLST la Fed. El jueves 29/10 a las 09:30 CLST el PIB."
+    )
     for img in p.get("imagenes", {}).values():
         if img:
             fx._imagen(tmp_path, img)
@@ -1518,3 +1522,49 @@ def test_simulacion_correo_volumen_con_unidad_y_bajo_minimo():
 def test_la_tabla_de_factores_muestra_el_porcentaje_con_su_signo():
     assert oh._pct_visible("4,96 por ciento") == "4,96 %"
     assert oh._pct_visible("101,808") == "101,808"
+
+
+def test_regresion_correo_caterpillar(tmp_path):
+    """Regresión del correo de Caterpillar del 2026-10-26 (encargo D)."""
+    from estrategia.contrato import lectura_de_dict
+
+    fixture_path = RAIZ / "tests" / "fixtures" / "analista" / "oportunidad_cat_2026-10-26.json"
+    p = json.loads(fixture_path.read_text(encoding="utf-8"))
+
+    # Reemplazar la bajada por una sin 'no oficiales' y ordenar dias_clave sin 'previamente'
+    p["editorial"]["bajada"] = (
+        "La acción se mantiene en rango lateral a la espera de sus resultados corporativos previstos para el jueves 29/10."
+    )
+    p["editorial"]["dias_clave"]["#CAT"] = (
+        "El martes 27/10 a las 09:30 CLST se conocerán los Pedidos de bienes durables. "
+        "El miércoles 28/10 a las 15:00 CLST, el mercado aguarda la decisión de tasas del Comité de mercado abierto de la Fed. "
+        "El jueves 29/10 a las 09:30 CLST se publicará el Producto interno bruto (PIB) de Estados Unidos."
+    )
+
+    a = p["datos"]["activos"][0]
+    lec = lectura_de_dict(a["lectura"])
+    a["escenario"] = op.escenario(lec, a["digits"]).a_dict()
+
+    for img in p.get("imagenes", {}).values():
+        if img:
+            fx._imagen(tmp_path, img)
+    for img in p.get("ilustraciones", {}).values():
+        if img:
+            fx._imagen(tmp_path, img)
+
+    p["huella"] = es._huella(p)
+
+    html = oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, date(2026, 10, 26))
+
+    assert "debilidad" not in html
+    assert "Qué pesa más hoy" not in html
+    assert "SEC · SEC" not in html
+    assert "días de movimiento" not in html
+    assert "borde contrario" in html
+
+    alt_cat = f'alt="Gráfico de {a["nombre"]}"'
+    alt_dxy = 'alt="Gráfico del Dollar Index (DXY)"'
+    assert alt_cat in html
+    assert alt_dxy in html
+    assert html.index(alt_cat) < html.index(alt_dxy)
+
