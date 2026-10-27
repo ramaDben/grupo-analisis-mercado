@@ -121,7 +121,13 @@ def _offset_sustituto(tick, utc: Callable[[], float] = time.time) -> int | None:
 # la caché local del terminal (una H1 de mayo), y 1,5 s después las de hoy. Sin esta
 # espera el radar dibuja líneas de hace meses como sucesos frescos: la matriz falsa y
 # convincente que la spec prohíbe.
-INTENTOS_SINCRONIZACION = 4
+# En la corrida completa del mismo día (146 símbolos, 5 min 37 s, cuatro intentos por
+# oculto en serie), 33 marcos con cachés de 7 a 9 días siguieron viejos tras 4,5 s: a
+# algunos símbolos la sincronización les toma más que eso. Por eso los ocultos se
+# preseleccionan todos juntos (sincronizan en paralelo) y lo que siga viejo se relee al
+# final, minutos después. Con eso basta un reintento por símbolo: más esperas en serie
+# solo alargaban el escaneo sin rescatar a los lentos.
+INTENTOS_SINCRONIZACION = 2
 ESPERA_SINCRONIZACION_S = 1.5
 # Holgura sobre la duración del marco: cubre el fin de semana y los feriados largos (una
 # acción el lunes a las 07:30 tiene como última vela la del viernes).
@@ -224,65 +230,83 @@ def escanear(simbolos: list[Simbolo], mt5, leer_velas=velas_mt5,
     juzga sobre las velas crudas, así que una caché demasiado corta para el motor también
     se reintenta, y si no se repone su falla es «velas desactualizadas», no la historia.
 
-    Presupuesto: en el peor caso, (INTENTOS − 1) × ESPERA por símbolo oculto que siga
-    vencido, 3 × 1,5 s = 4,5 s; con ~137 ocultos, unos 10 min. Lo normal medido es una
-    sola espera por símbolo oculto (unos 3 min a las 07:30), y uno que sincroniza a la
-    primera no espera nada. `dormir` y `utc` se inyectan para los tests.
+    **Preselección y segunda pasada.** Todos los ocultos se seleccionan juntos antes de
+    leer el primero, así sincronizan en paralelo mientras se leen los anteriores. Al
+    final, todo símbolo con algún marco viejo (oculto o visible) se relee una vez, sin
+    espera: ya tuvo el escaneo entero para ponerse al día. Si esa lectura sale fresca
+    reemplaza a la primera; si no, queda la primera con sus fallas.
+
+    Presupuesto: en el peor caso, (INTENTOS − 1) × ESPERA = 1,5 s por oculto que siga
+    viejo, más una lectura por símbolo en la segunda pasada. `dormir` y `utc` se
+    inyectan para los tests.
     """
     inicio = ahora()
     t0 = time.monotonic()
-    leidos: list[tuple[Simbolo, dict[str, LecturaMarco]]] = []
-    fallas: list[Falla] = []
     restaurar = [s.ticker for s in simbolos if not s.visible]
+    offset: int | None = None
+    medido_con: str | None = None   # el símbolo que reemplazó al reloj, si hizo falta
+
+    def leer(sim: Simbolo, intentos: int) -> tuple[dict[str, LecturaMarco], list[Falla], bool]:
+        """Lee un símbolo hasta `intentos` veces mientras salga viejo. El bool: quedó viejo."""
+        nonlocal offset, medido_con
+        marcos: dict[str, LecturaMarco] = {}
+        fallas_sim: list[Falla] = []
+        for intento in range(intentos):
+            if intento:
+                dormir(ESPERA_SINCRONIZACION_S)
+            # Cada intento reemplaza entero al anterior: ni lecturas ni fallas se suman.
+            marcos, fallas_sim = {}, []
+            try:
+                velas, _en_curso = leer_velas(sim.ticker, MARCOS_RADAR)
+            except Exception as exc:  # noqa: BLE001 - un símbolo no corta el escaneo
+                return {}, [Falla(sim.ticker, None, str(exc) or type(exc).__name__)], False
+            # Recién leído, el símbolo está seleccionado y su tick existe si cotiza.
+            tick = mt5.symbol_info_tick(sim.ticker)
+            if offset is None:
+                # Uno rechazado deja el desfase en None y el siguiente símbolo lo intenta.
+                offset = _offset_sustituto(tick, utc)
+                if offset is not None:
+                    medido_con = sim.ticker
+            marcos, fallas_sim = _leer_simbolo(sim, velas)
+            # Sin desfase, la hora del servidor más temprana posible: el tick del propio
+            # símbolo puede ser tan viejo como su caché y aprobarla.
+            ahora_servidor = int(utc()) + (offset if offset is not None else -DESFASE_MAX_S)
+            ultimas = _ultimas_velas(velas)
+            viejos = [m for m, vela in ultimas.items()
+                      if _vencida(vela, m, ahora_servidor)
+                      or (not sim.visible and _atrasada(vela, m, tick))]
+            if not viejos:
+                return marcos, fallas_sim, False
+            if intento == intentos - 1:
+                for m in viejos:
+                    # La falla del motor (historia corta de una caché) cede su lugar.
+                    marcos.pop(m, None)
+                    fallas_sim = [f for f in fallas_sim if f.marco != m]
+                    fallas_sim.append(Falla(sim.ticker, m, AVISO_VELAS_VIEJAS.format(
+                        cuando=_cuando(ultimas[m], m, offset))))
+        return marcos, fallas_sim, True
+
+    resultados: dict[str, tuple[Simbolo, dict[str, LecturaMarco], list[Falla], bool]] = {}
     try:
         if _abrir_reloj(mt5) and RELOJ not in restaurar:
             restaurar.append(RELOJ)
         offset = _offset(mt5.symbol_info_tick(RELOJ), utc)
-        medido_con: str | None = None   # el símbolo que reemplazó al reloj, si hizo falta
+        # Todos los ocultos se seleccionan de una vez, antes de leer el primero: el terminal
+        # los sincroniza en paralelo mientras se leen los anteriores. Ya están en
+        # `restaurar`, así que el `finally` los vuelve a cerrar pase lo que pase.
         for sim in simbolos:
             if not sim.visible:
-                # Ya está en `restaurar`: el `finally` lo vuelve a cerrar pase lo que pase.
                 mt5.symbol_select(sim.ticker, True)
+        for sim in simbolos:
             intentos = 1 if sim.visible else INTENTOS_SINCRONIZACION
-            marcos: dict[str, LecturaMarco] = {}
-            fallas_sim: list[Falla] = []
-            for intento in range(intentos):
-                if intento:
-                    dormir(ESPERA_SINCRONIZACION_S)
-                # Cada intento reemplaza entero al anterior: ni lecturas ni fallas se suman.
-                marcos, fallas_sim = {}, []
-                try:
-                    velas, _en_curso = leer_velas(sim.ticker, MARCOS_RADAR)
-                except Exception as exc:  # noqa: BLE001 - un símbolo no corta el escaneo
-                    fallas_sim = [Falla(sim.ticker, None, str(exc) or type(exc).__name__)]
-                    break
-                # Recién leído, el símbolo está seleccionado y su tick existe si cotiza.
-                tick = mt5.symbol_info_tick(sim.ticker)
-                if offset is None:
-                    # Uno rechazado deja el desfase en None y el siguiente símbolo lo intenta.
-                    offset = _offset_sustituto(tick, utc)
-                    if offset is not None:
-                        medido_con = sim.ticker
-                marcos, fallas_sim = _leer_simbolo(sim, velas)
-                # Sin desfase, la hora del servidor más temprana posible: el tick del propio
-                # símbolo puede ser tan viejo como su caché y aprobarla.
-                ahora_servidor = int(utc()) + (offset if offset is not None else -DESFASE_MAX_S)
-                ultimas = _ultimas_velas(velas)
-                viejos = [m for m, vela in ultimas.items()
-                          if _vencida(vela, m, ahora_servidor)
-                          or (not sim.visible and _atrasada(vela, m, tick))]
-                if not viejos:
-                    break
-                if intento == intentos - 1:
-                    for m in viejos:
-                        # La falla del motor (historia corta de una caché) cede su lugar.
-                        marcos.pop(m, None)
-                        fallas_sim = [f for f in fallas_sim if f.marco != m]
-                        fallas_sim.append(Falla(sim.ticker, m, AVISO_VELAS_VIEJAS.format(
-                            cuando=_cuando(ultimas[m], m, offset))))
-            fallas.extend(fallas_sim)
-            if marcos:
-                leidos.append((sim, marcos))
+            resultados[sim.ticker] = (sim, *leer(sim, intentos))
+        # Segunda pasada: lo que quedó viejo ya tuvo el escaneo entero para sincronizar.
+        # Se relee una vez, y solo una lectura fresca reemplaza a la primera.
+        for ticker, (sim, _m, _f, viejo) in list(resultados.items()):
+            if viejo:
+                marcos, fallas_sim, sigue_viejo = leer(sim, 1)
+                if not sigue_viejo and not any(f.marco is None for f in fallas_sim):
+                    resultados[ticker] = (sim, marcos, fallas_sim, False)
     finally:
         # Lo que el director no tenía abierto vuelve a cerrarse, pase lo que pase.
         for ticker in restaurar:
@@ -290,6 +314,8 @@ def escanear(simbolos: list[Simbolo], mt5, leer_velas=velas_mt5,
                 mt5.symbol_select(ticker, False)
             except Exception:  # noqa: BLE001 - restaurar uno no impide restaurar el resto
                 pass
+    fallas = [f for _s, _m, fallas_sim, _v in resultados.values() for f in fallas_sim]
+    leidos = [(sim, marcos) for sim, marcos, _f, _v in resultados.values() if marcos]
     # Las horas se calculan al final: el desfase puede haberse medido con un símbolo
     # posterior, y los anteriores también llevan su hora de cierre.
     filas = tuple(

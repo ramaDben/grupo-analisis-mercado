@@ -416,7 +416,8 @@ def test_oculto_que_sigue_vencido_es_falla_por_marco_con_la_fecha(monkeypatch):
     mt5 = MT5Reloj()
     leer_velas, llamadas = _lector(MAYO)
     e, dormidas = _escanear_con_reloj([rm.Simbolo("#AAL", 2, "Stocks", False)], mt5, leer_velas)
-    assert len(llamadas) == rm.INTENTOS_SINCRONIZACION
+    # Los intentos de la primera pasada y la relectura de la segunda, que no espera.
+    assert len(llamadas) == rm.INTENTOS_SINCRONIZACION + 1
     assert dormidas == [rm.ESPERA_SINCRONIZACION_S] * (rm.INTENTOS_SINCRONIZACION - 1)
     assert e.filas == ()
     assert {(f.ticker, f.marco) for f in e.fallas} == {("#AAL", m) for m in RADAR_MARCOS}
@@ -429,9 +430,10 @@ def test_oculto_que_sigue_vencido_es_falla_por_marco_con_la_fecha(monkeypatch):
 def test_visible_con_velas_vencidas_es_falla_sin_reintentos(monkeypatch):
     monkeypatch.setattr(rm, "leer_marco", _vela_de_las_velas)
     mt5 = MT5Reloj()
-    leer_velas, llamadas = _lector(MAYO, HOY)
+    leer_velas, llamadas = _lector(MAYO)
     e, dormidas = _escanear_con_reloj([rm.Simbolo("EURUSD", 5, "Forex", True)], mt5, leer_velas)
-    assert llamadas == ["EURUSD"] and dormidas == []
+    # Sin reintentos ni esperas en la primera pasada; solo la relectura de la segunda.
+    assert llamadas == ["EURUSD", "EURUSD"] and dormidas == []
     assert e.filas == ()
     assert all("velas desactualizadas" in f.motivo for f in e.fallas)
     assert ("EURUSD", True) not in mt5.selecciones
@@ -491,7 +493,7 @@ def test_oculto_con_cache_de_un_dia_que_no_se_repone_es_falla_por_marco(monkeypa
     leer_velas, llamadas = _lector(AYER)
     e, dormidas = _escanear_con_reloj([rm.Simbolo("#AAL", 2, "Stocks", False)], MT5Reloj(),
                                       leer_velas)
-    assert len(llamadas) == rm.INTENTOS_SINCRONIZACION
+    assert len(llamadas) == rm.INTENTOS_SINCRONIZACION + 1
     assert dormidas == [rm.ESPERA_SINCRONIZACION_S] * (rm.INTENTOS_SINCRONIZACION - 1)
     assert e.filas == ()
     # Exactamente una falla por marco: sin duplicados.
@@ -549,6 +551,56 @@ def test_sin_desfase_la_guarda_no_usa_el_tick_viejo_del_simbolo(monkeypatch):
     assert e.filas == ()
     assert {f.marco for f in e.fallas} == set(RADAR_MARCOS)
     assert all(f.motivo.endswith("(hora del servidor)") for f in e.fallas)
+
+
+def test_preselecciona_todos_los_ocultos_antes_de_leer_y_los_cierra_aunque_falle():
+    mt5 = MT5Falso()
+    simbolos = [rm.Simbolo("A", 2, "Forex", False), rm.Simbolo("B", 2, "Forex", True),
+                rm.Simbolo("C", 2, "Forex", False)]
+    seleccion_al_leer = []
+
+    def leer_velas(ticker, marcos):
+        seleccion_al_leer.append(tuple(mt5.selecciones))
+        raise KeyboardInterrupt   # el primero ya corta: igual tiene que restaurar todo
+
+    with pytest.raises(KeyboardInterrupt):
+        rm.escanear(simbolos, mt5, leer_velas=leer_velas, ahora=_reloj, dormir=lambda s: None)
+    # Antes de la primera lectura, los dos ocultos ya estaban seleccionados.
+    [antes] = seleccion_al_leer
+    assert ("A", True) in antes and ("C", True) in antes and ("B", True) not in antes
+    assert ("A", False) in mt5.selecciones and ("C", False) in mt5.selecciones
+    assert ("B", False) not in mt5.selecciones
+
+
+def test_viejo_en_la_primera_pasada_y_fresco_en_la_segunda_entra_a_la_matriz(monkeypatch):
+    monkeypatch.setattr(rm, "leer_marco", _vela_de_las_velas)
+    # Un oculto lento: sus intentos de la primera pasada traen la caché; al final, hoy.
+    secuencia = [MAYO] * rm.INTENTOS_SINCRONIZACION + [HOY]
+    leer_velas, llamadas = _lector(*secuencia)
+    otro, _ = _lector(HOY)
+
+    def leer(ticker, marcos):
+        return leer_velas(ticker, marcos) if ticker == "#LENTO" else otro(ticker, marcos)
+
+    simbolos = [rm.Simbolo("#LENTO", 2, "Stocks", False), rm.Simbolo("EURUSD", 5, "Forex", True)]
+    e, dormidas = _escanear_con_reloj(simbolos, MT5Reloj(), leer)
+    assert len(llamadas) == rm.INTENTOS_SINCRONIZACION + 1
+    # La segunda pasada no duerme: solo las esperas de la primera.
+    assert dormidas == [rm.ESPERA_SINCRONIZACION_S] * (rm.INTENTOS_SINCRONIZACION - 1)
+    assert e.fallas == ()
+    assert [f.ticker for f in e.filas] == ["#LENTO", "EURUSD"]
+    assert {m: lm.vela for m, lm in e.filas[0].marcos.items()} == HOY
+
+
+def test_la_segunda_pasada_que_sigue_vieja_deja_la_primera(monkeypatch):
+    monkeypatch.setattr(rm, "leer_marco", _vela_de_las_velas)
+    # Primera pasada: H1 viejo y el resto fresco. Segunda: todo viejo. Queda la primera.
+    parcial = dict(HOY, H1=MAYO["H1"])
+    leer_velas, llamadas = _lector(*([parcial] * rm.INTENTOS_SINCRONIZACION + [MAYO]))
+    e, _ = _escanear_con_reloj([rm.Simbolo("#X", 2, "Stocks", False)], MT5Reloj(), leer_velas)
+    assert len(llamadas) == rm.INTENTOS_SINCRONIZACION + 1
+    assert set(e.filas[0].marcos) == {"H4", "D1"}
+    assert [f.marco for f in e.fallas] == ["H1"]
 
 
 def test_el_radar_no_puede_enviar_nada():
