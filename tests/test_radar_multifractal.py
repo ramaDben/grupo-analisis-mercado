@@ -22,7 +22,8 @@ for p in (str(RAIZ / "src"), str(RAIZ / "scripts")):
 
 import radar_multifractal as rm  # noqa: E402
 from estrategia.fuente import DURACION  # noqa: E402
-from estrategia.tori.radar import Evento, LecturaMarco, RADAR_MARCOS  # noqa: E402
+from estrategia.tori.radar import (  # noqa: E402
+    Evento, HistoriaInsuficiente, LecturaMarco, RADAR_MARCOS)
 
 SANTIAGO = ZoneInfo("America/Santiago")
 INICIO = datetime(2026, 10, 26, 7, 30, tzinfo=SANTIAGO)
@@ -78,10 +79,17 @@ def _lectura(marco: str, vela: int | None = None) -> LecturaMarco:
 
 
 def _velas_cortas(ticker, marcos):
-    df = pd.DataFrame({"time": [1_700_000_000 + i * 3600 for i in range(10)],
-                       "open": 1.0, "high": 1.1, "low": 0.9, "close": 1.0,
-                       "tick_volume": 1})
-    return {m: df.copy() for m in marcos.todos}, None
+    """Diez velas por marco cuya última cerrada es fresca contra el reloj real: la guarda
+    de frescura mira las velas crudas, y unas de 2023 serían vencidas en todos los tests."""
+    ahora = int(time.time())
+
+    def df(marco):
+        ultima = ahora - DURACION[marco] - 60
+        return pd.DataFrame({"time": [ultima - (9 - i) * DURACION[marco] for i in range(10)],
+                             "open": 1.0, "high": 1.1, "low": 0.9, "close": 1.0,
+                             "tick_volume": 1})
+
+    return {m: df(m) for m in marcos.todos}, None
 
 
 def _reloj():
@@ -353,12 +361,16 @@ MAYO = {m: _servidor(2026, 5, 29, 15, 0) for m in RADAR_MARCOS}   # la caché lo
 class MT5Reloj(MT5Falso):
     """Cotiza con el reloj controlado, con el servidor `DESFASE` adelante de UTC."""
 
-    def __init__(self, *a, utc=UTC_AHORA, **k):
+    def __init__(self, *a, utc=UTC_AHORA, ticks=None, **k):
         super().__init__(*a, **k)
         self._utc = utc
+        self._ticks = dict(ticks or {})   # último tick (hora del servidor) por símbolo
 
     def symbol_info_tick(self, ticker):
         self.ticks_pedidos.append((ticker, tuple(self.selecciones)))
+        if ticker in self._ticks:
+            t = self._ticks[ticker]
+            return None if t is None else SimpleNamespace(time=t)
         return SimpleNamespace(time=self._utc + DESFASE)
 
 
@@ -431,7 +443,9 @@ def test_accion_el_lunes_a_las_0730_con_la_vela_del_viernes_es_fresca(monkeypatc
     lunes = int(datetime(2026, 10, 26, 7, 30, tzinfo=SANTIAGO).timestamp())
     viernes = {"H1": _servidor(2026, 10, 23, 16, 0), "H4": _servidor(2026, 10, 23, 16, 0),
                "D1": _servidor(2026, 10, 23, 0, 0)}
-    mt5 = MT5Reloj(utc=lunes)
+    # El último tick de la acción es el del cierre del viernes, 16:59 del servidor: cae
+    # dentro de la hora que sigue a la H1 de las 16:00, así que no pide reintento.
+    mt5 = MT5Reloj(utc=lunes, ticks={"#AAPL": _servidor(2026, 10, 23, 16, 59)})
     leer_velas, llamadas = _lector(viernes)
     e, dormidas = _escanear_con_reloj([rm.Simbolo("#AAPL", 2, "Stocks", False)], mt5,
                                       leer_velas, utc=lunes)
@@ -451,6 +465,90 @@ def test_el_borde_de_frescura_se_mide_en_hora_del_servidor(monkeypatch):
         leer_velas, _ = _lector(tanda)
         e, _ = _escanear_con_reloj([rm.Simbolo("X", 2, "Forex", True)], MT5Reloj(), leer_velas)
         assert (("X", "H1") in {(f.ticker, f.marco) for f in e.fallas}) is vencida
+
+
+# La caché que deja el propio radar: deselecciona al terminar, así que al día siguiente la
+# primera lectura de un oculto trae las velas de ayer. Pasan la guarda de cuatro días.
+AYER = {m: v - 86400 for m, v in HOY.items()}
+
+
+def test_oculto_con_cache_de_un_dia_y_tick_fresco_se_reintenta(monkeypatch):
+    monkeypatch.setattr(rm, "leer_marco", _vela_de_las_velas)
+    # Ninguna vela de ayer la detecta la guarda de cuatro días: el reintento es del tick.
+    assert not any(rm._vencida(AYER[m], m, UTC_AHORA + DESFASE) for m in RADAR_MARCOS)
+    mt5 = MT5Reloj()
+    leer_velas, llamadas = _lector(AYER, HOY)
+    e, dormidas = _escanear_con_reloj([rm.Simbolo("#NVDA", 2, "Stocks", False)], mt5, leer_velas)
+    assert llamadas == ["#NVDA", "#NVDA"]
+    assert dormidas == [rm.ESPERA_SINCRONIZACION_S]
+    assert e.fallas == ()
+    [fila] = e.filas
+    assert {m: lm.vela for m, lm in fila.marcos.items()} == HOY
+
+
+def test_oculto_con_cache_de_un_dia_que_no_se_repone_es_falla_por_marco(monkeypatch):
+    monkeypatch.setattr(rm, "leer_marco", _vela_de_las_velas)
+    leer_velas, llamadas = _lector(AYER)
+    e, dormidas = _escanear_con_reloj([rm.Simbolo("#AAL", 2, "Stocks", False)], MT5Reloj(),
+                                      leer_velas)
+    assert len(llamadas) == rm.INTENTOS_SINCRONIZACION
+    assert dormidas == [rm.ESPERA_SINCRONIZACION_S] * (rm.INTENTOS_SINCRONIZACION - 1)
+    assert e.filas == ()
+    # Exactamente una falla por marco: sin duplicados.
+    assert len(e.fallas) == len(RADAR_MARCOS)
+    assert {f.marco for f in e.fallas} == set(RADAR_MARCOS)
+    assert all(f.motivo.startswith("velas desactualizadas en MT5") for f in e.fallas)
+
+
+def test_visible_con_cache_de_un_dia_no_se_reintenta(monkeypatch):
+    # El disparo por tick es solo para ocultos: uno visible ya estaba sincronizando.
+    monkeypatch.setattr(rm, "leer_marco", _vela_de_las_velas)
+    leer_velas, llamadas = _lector(AYER, HOY)
+    e, dormidas = _escanear_con_reloj([rm.Simbolo("EURUSD", 5, "Forex", True)], MT5Reloj(),
+                                      leer_velas)
+    assert llamadas == ["EURUSD"] and dormidas == [] and e.fallas == ()
+
+
+def _motor_que_rechaza(viejas):
+    """`leer_marco` falso: con velas de la caché, historia insuficiente, como una caché corta."""
+    def leer_marco(velas, marco, digits, p=None):
+        vela = int(velas[marco]["time"].iloc[-1])
+        if vela == viejas[marco]:
+            raise HistoriaInsuficiente(f"{marco}: 1 velas de {rm.MARCOS_RADAR.velas[marco]}")
+        return _lectura(marco, vela)
+    return leer_marco
+
+
+def test_cache_corta_se_reintenta_en_vez_de_ser_historia_insuficiente(monkeypatch):
+    monkeypatch.setattr(rm, "leer_marco", _motor_que_rechaza(AYER))
+    leer_velas, llamadas = _lector(AYER, HOY)
+    e, dormidas = _escanear_con_reloj([rm.Simbolo("#ABT", 2, "Stocks", False)], MT5Reloj(),
+                                      leer_velas)
+    assert llamadas == ["#ABT", "#ABT"] and dormidas == [rm.ESPERA_SINCRONIZACION_S]
+    assert e.fallas == ()
+    assert {m: lm.vela for m, lm in e.filas[0].marcos.items()} == HOY
+
+
+def test_cache_corta_que_no_se_repone_dice_desactualizadas_y_no_historia(monkeypatch):
+    monkeypatch.setattr(rm, "leer_marco", _motor_que_rechaza(AYER))
+    leer_velas, _ = _lector(AYER)
+    e, _ = _escanear_con_reloj([rm.Simbolo("#ABT", 2, "Stocks", False)], MT5Reloj(), leer_velas)
+    assert e.filas == ()
+    assert len(e.fallas) == len(RADAR_MARCOS)
+    assert all(f.motivo.startswith("velas desactualizadas en MT5") for f in e.fallas)
+
+
+def test_sin_desfase_la_guarda_no_usa_el_tick_viejo_del_simbolo(monkeypatch):
+    # El reloj no cotiza y el tick del símbolo es de mayo (el sustituto se rechaza). Antes
+    # la guarda medía contra ese tick y las velas de mayo pasaban como frescas.
+    monkeypatch.setattr(rm, "leer_marco", _vela_de_las_velas)
+    mt5 = MT5Reloj(ticks={rm.RELOJ: None, "EURUSD": MAYO["H1"] + 3599})
+    leer_velas, _ = _lector(MAYO)
+    e, _ = _escanear_con_reloj([rm.Simbolo("EURUSD", 5, "Forex", True)], mt5, leer_velas)
+    assert e.avisos == (rm.AVISO_SIN_RELOJ,)
+    assert e.filas == ()
+    assert {f.marco for f in e.fallas} == set(RADAR_MARCOS)
+    assert all(f.motivo.endswith("(hora del servidor)") for f in e.fallas)
 
 
 def test_el_radar_no_puede_enviar_nada():

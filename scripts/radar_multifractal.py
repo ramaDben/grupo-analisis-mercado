@@ -134,6 +134,28 @@ def _vencida(vela: int, marco: str, ahora_servidor: int) -> bool:
     return ahora_servidor - (vela + DURACION[marco]) > DURACION[marco] + HOLGURA_FRESCURA_S
 
 
+def _atrasada(vela: int, marco: str, tick) -> bool:
+    """El último tick del símbolo dice que ya cerró una vela posterior a la leída.
+
+    Si el tick llegó a `vela + 2 × marco`, la vela siguiente a la leída terminó y MT5
+    tendría que haberla entregado: lo leído es la caché local, aunque tenga solo un día.
+    Tick y vela van en hora del servidor, así que no hace falta el desfase. Un mercado
+    cerrado no la dispara: el último tick del viernes 16:59 cae dentro de la hora que
+    sigue a la H1 de las 16:00.
+    """
+    return tick is not None and int(tick.time) >= vela + 2 * DURACION[marco]
+
+
+def _ultimas_velas(velas: dict) -> dict[str, int]:
+    """La apertura de la última vela cerrada de cada marco del radar, tal como llegó.
+
+    Se mira la serie cruda y no la lectura del motor: una caché corta (historia
+    insuficiente en todos los marcos) también tiene que reconocerse como vieja.
+    """
+    return {m: int(velas[m]["time"].iloc[-1]) for m in RADAR_MARCOS
+            if m in velas and len(velas[m])}
+
+
 def _cuando(vela: int, marco: str, offset: int | None) -> str:
     """El cierre de la vela en Santiago; sin desfase medido, en hora del servidor y dicho."""
     if offset is not None:
@@ -191,11 +213,16 @@ def escanear(simbolos: list[Simbolo], mt5, leer_velas=velas_mt5,
 
     **Frescura (siempre activa).** Un marco cuya última vela cerrada terminó hace más de
     un marco y cuatro días (`_vencida`) es falla «velas desactualizadas», no una celda.
-    La hora del servidor es `utc() + offset`; sin desfase, el último tick del propio
-    símbolo; sin ninguno de los dos, la guarda no se aplica. Un símbolo que estaba fuera
-    de Observación de Mercado se selecciona y, si algún marco salió vencido, se vuelve a
-    leer hasta `INTENTOS_SINCRONIZACION` veces con `ESPERA_SINCRONIZACION_S` entre
-    lecturas (MT5 entrega primero la caché local). Uno visible se lee una sola vez.
+    La hora del servidor es `utc() + offset`; sin desfase, `utc() − DESFASE_MAX_S`, la más
+    temprana posible, y no el tick del símbolo, que puede ser tan viejo como su caché.
+    Un símbolo que estaba fuera de Observación de Mercado se selecciona y su lectura se
+    contrasta además con su propio tick (`_atrasada`): si el tick llegó a la vela leída
+    más dos marcos, MT5 entregó la caché local, aunque sea de ayer (el radar deselecciona
+    al terminar, así que mañana la caché tendrá un día). Si algún marco salió vencido o
+    atrasado, se vuelve a leer hasta `INTENTOS_SINCRONIZACION` veces con
+    `ESPERA_SINCRONIZACION_S` entre lecturas. Uno visible se lee una sola vez. Todo se
+    juzga sobre las velas crudas, así que una caché demasiado corta para el motor también
+    se reintenta, y si no se repone su falla es «velas desactualizadas», no la historia.
 
     Presupuesto: en el peor caso, (INTENTOS − 1) × ESPERA por símbolo oculto que siga
     vencido, 3 × 1,5 s = 4,5 s; con ~137 ocultos, unos 10 min. Lo normal medido es una
@@ -229,29 +256,30 @@ def escanear(simbolos: list[Simbolo], mt5, leer_velas=velas_mt5,
                 except Exception as exc:  # noqa: BLE001 - un símbolo no corta el escaneo
                     fallas_sim = [Falla(sim.ticker, None, str(exc) or type(exc).__name__)]
                     break
+                # Recién leído, el símbolo está seleccionado y su tick existe si cotiza.
+                tick = mt5.symbol_info_tick(sim.ticker)
                 if offset is None:
-                    # Recién leído, el símbolo está seleccionado y su tick existe si cotiza.
                     # Uno rechazado deja el desfase en None y el siguiente símbolo lo intenta.
-                    offset = _offset_sustituto(mt5.symbol_info_tick(sim.ticker), utc)
+                    offset = _offset_sustituto(tick, utc)
                     if offset is not None:
                         medido_con = sim.ticker
                 marcos, fallas_sim = _leer_simbolo(sim, velas)
-                if offset is not None:
-                    ahora_servidor: int | None = int(utc()) + offset
-                else:
-                    tick = mt5.symbol_info_tick(sim.ticker)
-                    ahora_servidor = int(tick.time) if tick is not None else None
-                if ahora_servidor is None:
-                    break
-                viejos = [m for m, lm in marcos.items()
-                          if _vencida(lm.vela, m, ahora_servidor)]
+                # Sin desfase, la hora del servidor más temprana posible: el tick del propio
+                # símbolo puede ser tan viejo como su caché y aprobarla.
+                ahora_servidor = int(utc()) + (offset if offset is not None else -DESFASE_MAX_S)
+                ultimas = _ultimas_velas(velas)
+                viejos = [m for m, vela in ultimas.items()
+                          if _vencida(vela, m, ahora_servidor)
+                          or (not sim.visible and _atrasada(vela, m, tick))]
                 if not viejos:
                     break
                 if intento == intentos - 1:
                     for m in viejos:
-                        lm = marcos.pop(m)
+                        # La falla del motor (historia corta de una caché) cede su lugar.
+                        marcos.pop(m, None)
+                        fallas_sim = [f for f in fallas_sim if f.marco != m]
                         fallas_sim.append(Falla(sim.ticker, m, AVISO_VELAS_VIEJAS.format(
-                            cuando=_cuando(lm.vela, m, offset))))
+                            cuando=_cuando(ultimas[m], m, offset))))
             fallas.extend(fallas_sim)
             if marcos:
                 leidos.append((sim, marcos))
