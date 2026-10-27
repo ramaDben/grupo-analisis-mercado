@@ -158,3 +158,6 @@ data/webinar/*/datos.json
 data/webinar/*/lienzo.html
 data/webinar/*/lienzo.pdf
 data/webinar/*/grafico_*.png
+
+# Radar multifractal: páginas generadas (herramienta interna)
+data/radar/
