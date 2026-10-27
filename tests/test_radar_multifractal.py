@@ -144,6 +144,31 @@ def test_sin_tick_del_reloj_usa_el_del_primer_simbolo_que_cotiza(monkeypatch):
     assert e.fallas == () and e.paridad == ()
     # La hora de cierre sale para todos, también para A, que se leyó antes de medir el reloj.
     assert all(set(f.cierres) == set(RADAR_MARCOS) for f in e.filas)
+    # Y el encabezado dice con qué símbolo se midió: B, el primero que cotizó.
+    assert e.avisos == ("reloj del servidor medido con B: revisa las horas",)
+
+
+def test_un_desfase_sustituto_de_mas_de_14_horas_se_descarta(monkeypatch):
+    monkeypatch.setattr(rm, "leer_marco", lambda velas, marco, digits, p=None: _lectura(marco))
+
+    class TickViejo(MT5Falso):
+        def symbol_info_tick(self, ticker):
+            if ticker == rm.RELOJ:
+                return None
+            # Un mercado cerrado desde hace dos días: su último tick no es la hora del servidor.
+            return SimpleNamespace(time=int(time.time()) - 2 * 86400)
+
+    e = rm.escanear([rm.Simbolo("A", 2, "Forex", True)], TickViejo(),
+                    leer_velas=_velas_cortas, ahora=_reloj)
+    assert e.avisos == (rm.AVISO_SIN_RELOJ,)
+    assert e.filas[0].cierres == {}
+
+
+def test_con_el_reloj_propio_no_hay_aviso_de_reloj(monkeypatch):
+    monkeypatch.setattr(rm, "leer_marco", lambda velas, marco, digits, p=None: _lectura(marco))
+    e = rm.escanear([rm.Simbolo("A", 2, "Forex", True)], MT5Falso(),
+                    leer_velas=_velas_cortas, ahora=_reloj)
+    assert e.avisos == () and e.paridad == ()
 
 
 def test_sin_ningun_tick_es_aviso_y_no_falla(monkeypatch):
@@ -152,7 +177,9 @@ def test_sin_ningun_tick_es_aviso_y_no_falla(monkeypatch):
     e = rm.escanear([rm.Simbolo("A", 2, "Forex", True)], mt5, leer_velas=_velas_cortas, ahora=_reloj)
     assert e.fallas == ()
     assert [f.ticker for f in e.filas] == ["A"] and e.filas[0].cierres == {}
-    assert e.paridad == ("no se pudo medir el reloj del servidor: las horas de cierre no se muestran",)
+    # Es un aviso del escaneo, no de la paridad: va en el encabezado de la página.
+    assert e.avisos == ("no se pudo medir el reloj del servidor: las horas de cierre no se muestran",)
+    assert e.paridad == ()
 
 
 def test_la_cuenta_verificada_se_pasa_y_no_se_vuelve_a_leer():
@@ -257,6 +284,48 @@ def test_corrida_completa_escribe_la_matriz_y_la_paridad_no_la_corta(tmp_path, m
     assert "EURUSD" in pagina and "GBPUSD" not in pagina
     assert "no se pudo verificar la paridad: disco ausente" in pagina
     assert len(abiertos) == 1
+
+
+class SinUniversoMT5(MT5Falso):
+    def symbols_get(self):
+        return None
+
+
+@pytest.mark.parametrize("mt5", [SinUniversoMT5(), MT5Falso([])])
+def test_un_universo_vacio_es_pagina_de_error_y_no_matriz_vacia(tmp_path, monkeypatch, mt5):
+    monkeypatch.setattr(rm, "_terminal", lambda: mt5)
+    monkeypatch.setattr(rm.mt5_client, "connect", lambda: None)
+    assert rm.main(["--sin-abrir", "--salida", str(tmp_path)]) == 1
+    pagina = (tmp_path / "ultimo.html").read_text(encoding="utf-8")
+    assert "MT5 no entregó el universo" in pagina and "symbols_get()" in pagina
+    assert "Qué mirar hoy" not in pagina
+
+
+def test_simbolos_que_no_existen_es_pagina_de_error(tmp_path, monkeypatch):
+    monkeypatch.setattr(rm, "_terminal", lambda: MT5Falso([_sym("EURUSD")]))
+    monkeypatch.setattr(rm.mt5_client, "connect", lambda: None)
+    assert rm.main(["--sin-abrir", "--salida", str(tmp_path), "--simbolos", "NOEXISTE,OTRO"]) == 1
+    pagina = (tmp_path / "ultimo.html").read_text(encoding="utf-8")
+    assert "MT5 no entregó el universo" in pagina
+    assert "--simbolos" in pagina and "NOEXISTE, OTRO" in pagina
+
+
+def test_con_archivo_fresco_la_paridad_siempre_resume(tmp_path, monkeypatch):
+    import json
+    mt5 = MT5Falso([_sym("EURUSD")])
+    monkeypatch.setattr(rm, "_terminal", lambda: mt5)
+    monkeypatch.setattr(rm.mt5_client, "connect", lambda: None)
+    monkeypatch.setattr(rm, "leer_marco", lambda velas, marco, digits, p=None: _lectura(marco))
+    monkeypatch.setattr(rm, "velas_mt5", _velas_cortas)
+    archivo = tmp_path / "chart_objects.json"
+    archivo.write_text(json.dumps({"generated_at": INICIO.strftime("%Y-%m-%d %H:%M"),
+                                   "charts": [{"symbol": "GBPUSD", "timeframe": "H4"}]}),
+                       encoding="utf-8")
+    monkeypatch.setattr(rm, "ruta_objetos", lambda: archivo)
+    monkeypatch.setattr(rm, "_ahora_santiago", lambda: INICIO)
+    assert rm.main(["--sin-abrir", "--salida", str(tmp_path / "out")]) == 0
+    pagina = (tmp_path / "out" / "ultimo.html").read_text(encoding="utf-8")
+    assert "paridad: ningún gráfico abierto coincide con un activo leído" in pagina
 
 
 def test_el_radar_no_puede_enviar_nada():

@@ -74,6 +74,20 @@ def test_la_vela_que_rompe_la_linea_es_toco_rompio_y_no_retesteo():
     assert (ev.tipo, ev.detalle) == ("toco", "rompió")
 
 
+def test_la_vela_que_rompe_con_salto_es_toco_rompio_aunque_no_roce_la_linea():
+    df = _alcista_con_final(119)
+    # Un gap: la vela entera queda bajo la línea (117,55) por más que la tolerancia.
+    df.loc[83, ["open", "high", "low", "close"]] = [114.0, 114.2, 113.6, 113.8]
+    s = serie_de(df)
+    i = len(s) - 1
+    t = replace(trazar(s, "alcista", P), i_ruptura=i)
+    v, tol = t.valor(i), P.tolerancia_toque_atr * s.atr
+    assert s.highs[i] + tol < v  # la precondición del caso: el rango no llega a la línea
+    [ev] = radar._eventos(t, "accion", s, P, "H4", DIGITS)
+    assert (ev.tipo, ev.velas, ev.detalle) == ("toco", None, "rompió")
+    assert ev.valor == round(v, DIGITS)
+
+
 def test_por_tocar_reporta_el_menor_numero_de_velas():
     s = serie_de(_alcista_con_final(119))  # cierre a ~1,6 ATR sobre la línea
     [ev] = _de(radar.diagonales(s, P, "H4", DIGITS)[3], "seguridad")

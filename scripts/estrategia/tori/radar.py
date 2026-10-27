@@ -82,8 +82,12 @@ def _eventos(t: Trazo, rol: Linea_, s: Serie, p: Parametros, marco: str, digits:
     cierre = s.closes[i]
     calidad = calificar(t, s, p).calidad
     tol = p.tolerancia_toque_atr * s.atr
+    # La vela que rompió la línea es el toque aunque no la roce: con un salto de precio
+    # (gap) el rango entero queda al otro lado, y llamarla "por tocar · retesteo" diría
+    # que el precio todavía no llegó a una línea que acaba de cruzar.
+    rompio_ahora = not t.vigente and t.i_ruptura == i
     # El rango de la vela, con el grosor de la línea, contiene a la línea (spec §5).
-    if s.lows[i] - tol <= v <= s.highs[i] + tol:
+    if rompio_ahora or s.lows[i] - tol <= v <= s.highs[i] + tol:
         return [Evento(marco, rol, "toco", None, abs(cierre - v) / s.atr, round(v, digits), calidad,
                        _detalle_toque(t, s, rol))]
     # "Llega en n velas al ritmo típico": la distancia a la línea proyectada cabe en k ATR por vela.

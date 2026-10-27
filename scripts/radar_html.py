@@ -41,6 +41,9 @@ class Escaneo:
     filas: tuple[Fila, ...]
     fallas: tuple[Falla, ...]
     paridad: tuple[str, ...]
+    # Avisos del escaneo entero (el reloj del servidor, por ejemplo): no son de ningún
+    # símbolo ni de la paridad, y van en el encabezado. Con default, al final.
+    avisos: tuple[str, ...] = ()
 
 
 def _eventos_fila(f: Fila) -> list[Evento]:
@@ -110,11 +113,13 @@ def _render_evento(ev: Evento, digits: int) -> str:
     clase = _clase_linea(ev.linea)
     nombre = _nombre_linea(ev.linea)
     valor_fmt = f"{ev.valor:,.{digits}f}"
+    # La distancia en ATR (spec §5): separa un toque justo de uno que cerró lejos.
+    dist_fmt = f"{ev.distancia_atr:.2f} ATR"
     if ev.tipo == "toco":
-        texto = f"✅ tocó {nombre} · {valor_fmt}"
+        texto = f"✅ tocó {nombre} · {valor_fmt} · {dist_fmt}"
     else:
         v_str = f"{ev.velas} vela" if ev.velas == 1 else f"{ev.velas} velas"
-        texto = f"{nombre} a {v_str} · {valor_fmt}"
+        texto = f"{nombre} a {v_str} · {valor_fmt} · {dist_fmt}"
 
     if ev.linea in ("soporte", "resistencia"):
         tag = ev.linea
@@ -139,6 +144,9 @@ _CSS = """
   .rd td.c{background:#0f1a26;min-width:150px}
   .rd .hora{font-size:10px;opacity:.6;margin-bottom:3px}
   .rd .vacio{opacity:.3;text-align:center}
+  .rd .sinlec{opacity:.55;text-align:center;font-style:italic;font-size:11px}
+  .rd .avm{display:block;margin-top:3px;font-size:10px;opacity:.6}
+  .avisos{background:#FFD54F1a;border:1px solid #FFD54F66;padding:8px 12px;border-radius:6px;margin-bottom:14px;font-size:12px}
   .rd .ev{display:block;margin:2px 0;padding:2px 6px;border-radius:4px}
   .seg{background:#26C6A033;border-left:3px solid #26C6A0}
   .acc{background:#FF4D5E33;border-left:3px solid #FF4D5E}
@@ -169,8 +177,12 @@ def render(e: Escaneo) -> str:
         f"{e.leidos} leídos",
         f"{len(filas_ordenadas)} con actividad",
     ]
-    if len(e.fallas) > 0:
-        meta_partes.append(f"{len(e.fallas)} no se pudieron leer")
+    # Se cuentan activos, no marcos: lo mismo que el aviso de lectura incompleta.
+    n_fallidos = len({f.ticker for f in e.fallas})
+    if n_fallidos == 1:
+        meta_partes.append("1 no se pudo leer")
+    elif n_fallidos > 1:
+        meta_partes.append(f"{n_fallidos} no se pudieron leer")
     meta_partes.extend([
         f"cuenta MT5 {e.cuenta}",
         f"duración {e.duracion_s:.1f} s",
@@ -179,13 +191,19 @@ def render(e: Escaneo) -> str:
 
     # Aviso lectura incompleta
     aviso_html = ""
-    if e.leidos > 0 and len({f.ticker for f in e.fallas}) > (e.leidos / 2):
+    if e.leidos > 0 and n_fallidos > (e.leidos / 2):
         aviso_html = (
             '<div class="aviso-incompleto" style="background:#FF4D5E22;border:1px solid #FF4D5E;'
             'padding:10px 14px;border-radius:6px;margin-bottom:14px;font-size:13px;font-weight:bold;color:#FF4D5E;">'
             '⚠️ Lectura incompleta: no confíes en la ausencia de un activo'
             '</div>\n'
         )
+
+    # Avisos del escaneo (reloj del servidor): en el encabezado, porque afectan a toda la página.
+    avisos_html = ""
+    if e.avisos:
+        items_a = "<br>".join(f"⚠️ {html.escape(a)}" for a in e.avisos)
+        avisos_html = f'<div class="avisos">{items_a}</div>\n'
 
     # Filas de la tabla
     filas_html: list[str] = []
@@ -208,11 +226,16 @@ def render(e: Escaneo) -> str:
 
         cols_marcos: list[str] = []
         for marco in ("H1", "H4", "D1"):
-            if marco not in fila.marcos or len(fila.marcos[marco].eventos) == 0:
+            # Tres casos que no se pueden confundir (spec §2): el marco que no se pudo
+            # leer, el que se leyó y no tiene nada, y el que tiene eventos o avisos.
+            if marco not in fila.marcos:
+                cols_marcos.append('<td class="sinlec">sin lectura</td>')
+                continue
+            lectura = fila.marcos[marco]
+            if not lectura.eventos and not lectura.avisos:
                 cols_marcos.append('<td class="vacio">·</td>')
                 continue
 
-            lectura = fila.marcos[marco]
             evs = sorted(lectura.eventos, key=_prioridad_evento)
 
             cierre = fila.cierres.get(marco)
@@ -224,7 +247,7 @@ def render(e: Escaneo) -> str:
                     cierre_str = cierre.strftime("%H:%M %d-%m")
 
             cierre_html = f'<div class="hora">{cierre_str}</div>' if cierre_str else ""
-            primer_ev = _render_evento(evs[0], fila.digits)
+            primer_ev = _render_evento(evs[0], fila.digits) if evs else ""
 
             detalles_html = ""
             if len(evs) > 1:
@@ -234,7 +257,11 @@ def render(e: Escaneo) -> str:
                 resto_html = "".join(_render_evento(ev, fila.digits) for ev in resto)
                 detalles_html = f"<details><summary>{s_mas}</summary>{resto_html}</details>"
 
-            cols_marcos.append(f'<td class="c">{cierre_html}{primer_ev}{detalles_html}</td>')
+            # El salto de datos (spec §6) va a la vista en la celda, después de los eventos.
+            avisos_celda = "".join(f'<span class="avm">⚠️ {html.escape(a)}</span>'
+                                   for a in lectura.avisos)
+            cols_marcos.append(
+                f'<td class="c">{cierre_html}{primer_ev}{detalles_html}{avisos_celda}</td>')
 
         filas_html.append(
             f'    <tr>\n      {col_activo}\n      {col_conf}\n      {"".join(cols_marcos)}\n    </tr>'
@@ -252,13 +279,13 @@ def render(e: Escaneo) -> str:
             else:
                 items_f.append(f"{f.ticker} ({f.motivo})")
         fallas_str = " · ".join(html.escape(item) for item in items_f)
-        fallas_html = f'<div class="fallas"><b>No se pudieron leer ({len(e.fallas)}):</b> {fallas_str}</div>\n'
+        fallas_html = f'<div class="fallas"><b>No se pudieron leer ({n_fallidos}):</b> {fallas_str}</div>\n'
 
     # Paridad
     paridad_html = ""
     if e.paridad:
         items_p = "<br>".join(html.escape(p) for p in e.paridad)
-        paridad_html = f'<div class="fallas" style="border-top-color:#50C0A844;"><b>Control de paridad ({len(e.paridad)}):</b><br>{items_p}</div>\n'
+        paridad_html = f'<div class="fallas" style="border-top-color:#50C0A844;"><b>Control de paridad:</b><br>{items_p}</div>\n'
 
     return f"""<!DOCTYPE html>
 <html lang="es">
@@ -271,7 +298,7 @@ def render(e: Escaneo) -> str:
 <div class="rd">
   {aviso_html}<h3>Qué mirar hoy</h3>
   <div class="meta">{meta_linea}</div>
-
+  {avisos_html}
   <table>
     <tr><th class="l">Activo</th><th>Confluencia</th><th>1H</th><th>4H</th><th>1D</th></tr>
 {tabla_contenido}

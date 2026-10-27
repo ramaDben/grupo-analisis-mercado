@@ -282,3 +282,63 @@ def test_render_error():
     html = render_error("Error de cuenta", "La cuenta 12345 no coincide con la configurada", inicio)
     assert "Error de cuenta" in html
     assert "La cuenta 12345 no coincide con la configurada" in html
+
+
+# --- lo que la página distingue (spec §2, §5, §6) -------------------------------------------
+
+def _esc(filas=(), fallas=(), paridad=(), avisos=(), leidos=1) -> Escaneo:
+    return Escaneo(inicio=datetime(2026, 10, 26, 7, 30, tzinfo=SANTIAGO), duracion_s=1.0,
+                   cuenta=51257, leidos=leidos, filas=tuple(filas), fallas=tuple(fallas),
+                   paridad=tuple(paridad), avisos=tuple(avisos))
+
+
+def _celdas(html: str) -> list[str]:
+    """Las tres celdas de marco (1H, 4H, 1D) de la única fila de la tabla."""
+    fila = html.split("<tr>")[2]
+    return fila.split("</td>")[2:5]
+
+
+def test_el_aviso_de_salto_se_ve_en_su_celda_aunque_no_haya_eventos():
+    from estrategia.tori.lectura import AVISO_SALTO
+    ev = Evento("H1", "seguridad", "toco", None, 0.1, 100.0, "A+", "rebote")
+    aviso = AVISO_SALTO.format(marco="H4")
+    h4 = LecturaMarco("H4", "TENDENCIA", "ALCISTA", (), (), (aviso,), 1700000000, 10.0)
+    fila = Fila("X", "Forex", 2, {"H1": _lectura("H1", (ev,)), "H4": h4, "D1": _lectura("D1")}, {})
+    h1, c4, d1 = _celdas(render(_esc([fila])))
+    assert aviso in c4 and 'class="c"' in c4 and "avm" in c4
+    assert aviso not in h1
+    assert d1.strip().endswith(">·")  # leído y sin nada: el punto de siempre
+
+
+def test_un_marco_que_no_se_pudo_leer_dice_sin_lectura_y_no_punto():
+    ev = Evento("H1", "seguridad", "toco", None, 0.1, 100.0, "A+", "rebote")
+    fila = Fila("X", "Forex", 2, {"H1": _lectura("H1", (ev,)), "D1": _lectura("D1")}, {})
+    _h1, c4, d1 = _celdas(render(_esc([fila], fallas=[Falla("X", "H4", "H4: 10 velas de 180")])))
+    assert "sin lectura" in c4 and "sinlec" in c4
+    assert "sin lectura" not in d1 and d1.strip().endswith(">·")
+
+
+def test_el_evento_muestra_la_distancia_en_atr():
+    toco = Evento("H1", "seguridad", "toco", None, 0.1234, 100.0, "A+", "rebote")
+    pt = Evento("H4", "accion", "por_tocar", 2, 1.5, 100.0, "B", "")
+    fila = Fila("X", "Forex", 2, {"H1": _lectura("H1", (toco,)), "H4": _lectura("H4", (pt,)),
+                                  "D1": _lectura("D1")}, {})
+    html = render(_esc([fila]))
+    assert "✅ tocó control · 100.00 · 0.12 ATR" in html
+    assert "acción a 2 velas · 100.00 · 1.50 ATR" in html
+
+
+def test_las_fallas_se_cuentan_por_activo_y_no_por_marco():
+    fallas = [Falla("A", m, "error") for m in ("H1", "H4", "D1")] + [Falla("B", None, "error")]
+    html = render(_esc(fallas=fallas, leidos=10))
+    assert "2 no se pudieron leer" in html and "4 no se pudieron leer" not in html
+    assert "No se pudieron leer (2):" in html
+    assert "1 no se pudo leer" in render(_esc(fallas=fallas[:3], leidos=10))
+
+
+def test_los_avisos_del_escaneo_van_en_el_encabezado_y_no_en_la_paridad():
+    aviso = "no se pudo medir el reloj del servidor: las horas de cierre no se muestran"
+    html = render(_esc(avisos=[aviso], paridad=["paridad: 1 gráfico comparado, 0 diferencias"]))
+    assert html.index(aviso) < html.index("<table>")
+    assert html.index(aviso) < html.index("Control de paridad")
+    assert "Control de paridad:</b><br>paridad: 1 gráfico comparado, 0 diferencias" in html

@@ -33,7 +33,8 @@ NOMBRES_INDICADOR: dict[str, str] = {
 
 ROLES_PARIDAD: tuple[str, ...] = ("seguridad", "accion", "soporte", "resistencia")
 ETIQUETA_ROL: dict[str, str] = {
-    "seguridad": "seguridad",
+    # Texto visible: el rol interno "seguridad" se nombra «control» (director, 2026-10-21).
+    "seguridad": "control",
     "accion": "acción",
     "soporte": "soporte",
     "resistencia": "resistencia",
@@ -68,14 +69,16 @@ def leer_objetos(ruta: Path | None, ahora: datetime) -> dict | str:
     except (json.JSONDecodeError, OSError) as exc:
         return f"no se pudo verificar la paridad: error al leer chart_objects.json ({exc})"
 
-    generado_str = data.get("generated_at", "")
-    generado = _parse_generado(generado_str)
-    if generado is not None:
-        ahora_tz = ahora if ahora.tzinfo is not None else ahora.replace(tzinfo=SANTIAGO)
-        antiguedad = (ahora_tz - generado).total_seconds()
-        if antiguedad > _STALE_SECONDS:
-            minutos = int(antiguedad // 60)
-            return f"no se pudo verificar la paridad: chart_objects.json tiene {minutos} min"
+    # Sin fecha no se sabe si el archivo es de hoy: compararlo sería comparar contra
+    # líneas de quién sabe cuándo, así que cuenta como no verificado.
+    generado = _parse_generado(data.get("generated_at") if isinstance(data, dict) else None)
+    if generado is None:
+        return "no se pudo verificar la paridad: chart_objects.json sin fecha"
+    ahora_tz = ahora if ahora.tzinfo is not None else ahora.replace(tzinfo=SANTIAGO)
+    antiguedad = (ahora_tz - generado).total_seconds()
+    if antiguedad > _STALE_SECONDS:
+        minutos = int(antiguedad // 60)
+        return f"no se pudo verificar la paridad: chart_objects.json tiene {minutos} min"
 
     return data
 
@@ -91,8 +94,13 @@ def comparar(
     Por cada gráfico (symbol, timeframe) con lectura del radar y cada trendlines[].name de
     NOMBRES_INDICADOR, compara valor_actual del indicador contra LineaRadar.valor_abierta
     del mismo rol.
+
+    La primera línea es siempre el resumen («paridad: N gráficos comparados, M
+    diferencias»), y las diferencias van después. Sin resumen, una lista vacía no
+    distingue «todo coincide» de «ningún gráfico abierto era de un activo leído» (spec §7).
     """
     discrepancias: list[str] = []
+    comparados = 0
     charts = objetos.get("charts", [])
 
     for chart in charts:
@@ -102,6 +110,7 @@ def comparar(
         if clave not in lecturas:
             continue
 
+        comparados += 1
         lectura = lecturas[clave]
         d = digits.get(symbol, 2)
         tol = p.tolerancia_toque_atr * lectura.atr
@@ -130,8 +139,9 @@ def comparar(
                 val_ind = indicador_lineas[rol]
                 val_mot = motor_lineas[rol]
                 if abs(val_ind - val_mot) > tol:
-                    val_ind_str = f"{val_ind:.{d}f}"
-                    val_mot_str = f"{val_mot:.{d}f}"
+                    # El mismo formato que la matriz, para que los números se lean igual.
+                    val_ind_str = f"{val_ind:,.{d}f}"
+                    val_mot_str = f"{val_mot:,.{d}f}"
                     discrepancias.append(
                         f"{symbol} {timeframe}: indicador y motor difieren en la línea de {nombre_rol}: {val_ind_str} vs {val_mot_str}"
                     )
@@ -144,4 +154,12 @@ def comparar(
                     f"{symbol} {timeframe}: la línea de {nombre_rol} solo está en el motor"
                 )
 
-    return discrepancias
+    return [_resumen(comparados, len(discrepancias))] + discrepancias
+
+
+def _resumen(comparados: int, diferencias: int) -> str:
+    if comparados == 0:
+        return "paridad: ningún gráfico abierto coincide con un activo leído"
+    g = "1 gráfico comparado" if comparados == 1 else f"{comparados} gráficos comparados"
+    d = "1 diferencia" if diferencias == 1 else f"{diferencias} diferencias"
+    return f"paridad: {g}, {d}"

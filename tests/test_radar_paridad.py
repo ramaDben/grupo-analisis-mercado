@@ -76,7 +76,8 @@ def test_lineas_que_coinciden_no_emiten_nada():
     lecturas = {("XAUUSD", "H4"): _lectura("H4", lineas, atr=10.0)}
     digits = {"XAUUSD": 2}
     discrepancias = comparar(data, lecturas, digits, P)
-    assert discrepancias == []
+    # Todo coincide: queda solo el resumen, que dice que sí se comparó.
+    assert discrepancias == ["paridad: 1 gráfico comparado, 0 diferencias"]
 
 
 def test_diferencia_mayor_que_la_tolerancia_se_informa_con_digits():
@@ -92,8 +93,10 @@ def test_diferencia_mayor_que_la_tolerancia_se_informa_con_digits():
     lecturas = {("XAUUSD", "H4"): _lectura("H4", lineas, atr=10.0)}
     digits = {"XAUUSD": 2}
     discrepancias = comparar(data, lecturas, digits, P)
+    # El precio con el formato de la matriz (separador de miles) y el rol con su nombre visible.
     assert discrepancias == [
-        "XAUUSD H4: indicador y motor difieren en la línea de seguridad: 2650.10 vs 2655.00"
+        "paridad: 1 gráfico comparado, 1 diferencia",
+        "XAUUSD H4: indicador y motor difieren en la línea de control: 2,650.10 vs 2,655.00",
     ]
 
 
@@ -157,7 +160,34 @@ def test_graficos_sin_lectura_del_radar_se_ignoran():
         )
     }
     discrepancias = comparar(data, lecturas, {"EURUSD": 4, "XAUUSD": 2}, P)
-    assert discrepancias == []
+    assert discrepancias == ["paridad: ningún gráfico abierto coincide con un activo leído"]
+
+
+def test_el_texto_de_paridad_nunca_dice_seguridad():
+    # Una línea en un solo lado de cada rol, y una diferencia: recorre todos los mensajes.
+    data = {"charts": [{"symbol": "XAUUSD", "timeframe": "H4", "trendlines": [
+        {"name": "GI_TV_DIAG_SEGURIDAD", "valor_actual": 2650.10},
+    ]}, {"symbol": "XAUUSD", "timeframe": "H1", "trendlines": []}]}
+    lecturas = {
+        ("XAUUSD", "H4"): _lectura("H4", (LineaRadar("seguridad", 2600.0, 2600.0),), atr=10.0),
+        ("XAUUSD", "H1"): _lectura("H1", (LineaRadar("seguridad", 2600.0, 2600.0),), atr=10.0),
+    }
+    mensajes = comparar(data, lecturas, {"XAUUSD": 2}, P)
+    assert mensajes[0] == "paridad: 2 gráficos comparados, 2 diferencias"
+    assert any("línea de control" in m for m in mensajes)
+    assert not any("seguridad" in m.lower() for m in mensajes)
+
+
+def test_archivo_sin_fecha_no_se_compara(tmp_path: Path):
+    ahora = datetime(2026, 10, 26, 7, 30, tzinfo=SANTIAGO)
+    archivo = tmp_path / "chart_objects.json"
+    for data in ({"charts": []}, {"generated_at": "ayer", "charts": []}):
+        archivo.write_text(json.dumps(data), encoding="utf-8")
+        assert leer_objetos(archivo, ahora) == (
+            "no se pudo verificar la paridad: chart_objects.json sin fecha")
+    archivo.write_text(json.dumps({"generated_at": "2026-10-26 07:10", "charts": []}),
+                       encoding="utf-8")
+    assert leer_objetos(archivo, ahora) == {"generated_at": "2026-10-26 07:10", "charts": []}
 
 
 def test_ruta_objetos(monkeypatch, tmp_path: Path):

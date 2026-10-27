@@ -95,11 +95,25 @@ def _cuenta(mt5) -> int:
 
 
 AVISO_SIN_RELOJ = "no se pudo medir el reloj del servidor: las horas de cierre no se muestran"
+AVISO_RELOJ_SUSTITUTO = "reloj del servidor medido con {ticker}: revisa las horas"
+# Ningún huso horario va más de 14 h adelante o atrás de UTC. Un desfase mayor medido con
+# un símbolo cualquiera es un tick viejo (un mercado cerrado desde hace días), no un reloj.
+DESFASE_MAX_S = 14 * 3600
+
+
+class SinUniverso(Exception):
+    """No hay símbolos que leer: la página lo dice en vez de mostrar una matriz vacía."""
 
 
 def _offset(tick) -> int | None:
     """El desfase del servidor contra UTC a partir de un tick, o None si no hay tick."""
     return offset_servidor(int(tick.time), time.time()) if tick is not None else None
+
+
+def _offset_sustituto(tick) -> int | None:
+    """El desfase medido con un símbolo que no es el reloj, o None si no es creíble."""
+    offset = _offset(tick)
+    return offset if offset is not None and abs(offset) <= DESFASE_MAX_S else None
 
 
 def _abrir_reloj(mt5) -> bool:
@@ -126,9 +140,10 @@ def escanear(simbolos: list[Simbolo], mt5, leer_velas=velas_mt5,
     demás marcos y símbolos se leen igual. La paridad la agrega `main`.
 
     El desfase del servidor se mide una vez con el reloj (`RELOJ`). Si el reloj no
-    cotiza, se usa el tick del primer símbolo leído que sí lo tenga, la misma idea de
-    `velas_mt5`. Sin ningún tick, las horas de cierre no se muestran y queda un aviso
-    en `paridad`: no es la falla de ningún símbolo y no se cuenta como tal.
+    cotiza, se usa el tick del primer símbolo leído que dé un desfase creíble (a lo
+    sumo 14 h), la misma idea de `velas_mt5`, y el encabezado avisa con qué símbolo se
+    midió. Sin ninguno, las horas de cierre no se muestran y queda un aviso en
+    `avisos`: no es la falla de ningún símbolo ni de la paridad, y no se cuenta como tal.
 
     `cuenta` es el login que `main` ya verificó; si no viene, se lee del terminal.
     """
@@ -141,6 +156,7 @@ def escanear(simbolos: list[Simbolo], mt5, leer_velas=velas_mt5,
         if _abrir_reloj(mt5) and RELOJ not in restaurar:
             restaurar.append(RELOJ)
         offset = _offset(mt5.symbol_info_tick(RELOJ))
+        medido_con: str | None = None   # el símbolo que reemplazó al reloj, si hizo falta
         for sim in simbolos:
             try:
                 velas, _en_curso = leer_velas(sim.ticker, MARCOS_RADAR)
@@ -149,7 +165,10 @@ def escanear(simbolos: list[Simbolo], mt5, leer_velas=velas_mt5,
                 continue
             if offset is None:
                 # Recién leído, el símbolo está seleccionado y su tick existe si cotiza.
-                offset = _offset(mt5.symbol_info_tick(sim.ticker))
+                # Uno rechazado deja el desfase en None y el siguiente símbolo lo intenta.
+                offset = _offset_sustituto(mt5.symbol_info_tick(sim.ticker))
+                if offset is not None:
+                    medido_con = sim.ticker
             marcos: dict[str, LecturaMarco] = {}
             for marco in RADAR_MARCOS:
                 try:
@@ -177,14 +196,17 @@ def escanear(simbolos: list[Simbolo], mt5, leer_velas=velas_mt5,
     )
     return Escaneo(inicio=inicio, duracion_s=time.monotonic() - t0,
                    cuenta=_cuenta(mt5) if cuenta is None else cuenta,
-                   leidos=len(simbolos), filas=filas, fallas=tuple(fallas),
-                   paridad=() if offset is not None else (AVISO_SIN_RELOJ,))
+                   leidos=len(simbolos), filas=filas, fallas=tuple(fallas), paridad=(),
+                   avisos=(AVISO_SIN_RELOJ,) if offset is None else
+                   (AVISO_RELOJ_SUSTITUTO.format(ticker=medido_con),) if medido_con else ())
 
 
 def _paridad(e: Escaneo) -> tuple[str, ...]:
-    """Las diferencias contra el indicador de MT5. Nunca mata el escaneo.
+    """El resumen y las diferencias contra el indicador de MT5. Nunca mata el escaneo.
 
-    Un JSON del exportador mal formado puede lanzar dentro de `leer_objetos` o de
+    Con el archivo fresco la primera línea es siempre el resumen de `comparar`, también
+    cuando no hay diferencias: la paridad nunca se omite en silencio (spec §7). Un JSON
+    del exportador mal formado puede lanzar dentro de `leer_objetos` o de
     `comparar`; eso es una línea más de la página, no una corrida perdida.
     """
     try:
@@ -241,6 +263,9 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         html = _matriz(mt5, int(info.login), args.simbolos, inicio)
+    except SinUniverso as exc:
+        # Una matriz vacía se lee como «nada que mirar hoy»; acá no se leyó nada.
+        return terminar(render_error("MT5 no entregó el universo", str(exc), inicio), 1)
     except Exception as exc:  # noqa: BLE001
         # Sin esto, una falla inesperada deja el `ultimo.html` de ayer con cara de hoy.
         return terminar(render_error("El radar falló", f"{type(exc).__name__}: {exc}", inicio), 1)
@@ -250,6 +275,9 @@ def main(argv: list[str] | None = None) -> int:
 def _matriz(mt5, login: int, pedidos_txt: str | None, inicio: datetime) -> str:
     """El escaneo completo ya con la cuenta verificada: universo, lectura, paridad y HTML."""
     simbolos = universo(mt5)
+    if not simbolos:
+        raise SinUniverso("symbols_get() no devolvió ningún símbolo operable: "
+                          "no hay nada que leer, y una matriz vacía no significaría nada")
     fuera: list[Falla] = []
     if pedidos_txt:
         pedidos = [t.strip() for t in pedidos_txt.split(",") if t.strip()]
@@ -257,6 +285,9 @@ def _matriz(mt5, login: int, pedidos_txt: str | None, inicio: datetime) -> str:
         simbolos = [por_ticker[t] for t in pedidos if t in por_ticker]
         fuera = [Falla(t, None, "no está entre los símbolos operables del terminal")
                  for t in pedidos if t not in por_ticker]
+        if not simbolos:
+            raise SinUniverso("ninguno de los símbolos pedidos con --simbolos está entre los "
+                              f"operables del terminal: {', '.join(pedidos) or '(lista vacía)'}")
 
     # `velas_mt5` se pasa explícito para leer el nombre del módulo en el momento.
     e = escanear(simbolos, mt5, leer_velas=velas_mt5, ahora=lambda: inicio, cuenta=login)
