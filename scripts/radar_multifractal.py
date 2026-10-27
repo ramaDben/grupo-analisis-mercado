@@ -30,7 +30,7 @@ import sys
 import time
 import webbrowser
 from dataclasses import dataclass, replace
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 from zoneinfo import ZoneInfo
@@ -40,7 +40,7 @@ for _p in (str(_RAIZ / "src"), str(_RAIZ / "scripts")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from estrategia.fuente import RELOJ, cierre_santiago, offset_servidor, velas_mt5  # noqa: E402
+from estrategia.fuente import DURACION, RELOJ, cierre_santiago, offset_servidor, velas_mt5  # noqa: E402
 from estrategia.tori.parametros import PARAMETROS  # noqa: E402
 from estrategia.tori.radar import MARCOS_RADAR, RADAR_MARCOS, LecturaMarco, leer_marco  # noqa: E402
 from guardrails.cuenta import cuenta_correcta  # noqa: E402
@@ -105,15 +105,41 @@ class SinUniverso(Exception):
     """No hay símbolos que leer: la página lo dice en vez de mostrar una matriz vacía."""
 
 
-def _offset(tick) -> int | None:
+def _offset(tick, utc: Callable[[], float] = time.time) -> int | None:
     """El desfase del servidor contra UTC a partir de un tick, o None si no hay tick."""
-    return offset_servidor(int(tick.time), time.time()) if tick is not None else None
+    return offset_servidor(int(tick.time), utc()) if tick is not None else None
 
 
-def _offset_sustituto(tick) -> int | None:
+def _offset_sustituto(tick, utc: Callable[[], float] = time.time) -> int | None:
     """El desfase medido con un símbolo que no es el reloj, o None si no es creíble."""
-    offset = _offset(tick)
+    offset = _offset(tick, utc)
     return offset if offset is not None and abs(offset) <= DESFASE_MAX_S else None
+
+
+# Medido en vivo el 2026-10-26 (#AAL, #ABT, #AXP, #NVDA): un símbolo que no estaba en
+# Observación de Mercado, recién seleccionado, entrega en la primera lectura las velas de
+# la caché local del terminal (una H1 de mayo), y 1,5 s después las de hoy. Sin esta
+# espera el radar dibuja líneas de hace meses como sucesos frescos: la matriz falsa y
+# convincente que la spec prohíbe.
+INTENTOS_SINCRONIZACION = 4
+ESPERA_SINCRONIZACION_S = 1.5
+# Holgura sobre la duración del marco: cubre el fin de semana y los feriados largos (una
+# acción el lunes a las 07:30 tiene como última vela la del viernes).
+HOLGURA_FRESCURA_S = 4 * 86400
+AVISO_VELAS_VIEJAS = "velas desactualizadas en MT5: la última vela cerrada es del {cuando}"
+
+
+def _vencida(vela: int, marco: str, ahora_servidor: int) -> bool:
+    """La última vela cerrada terminó hace más de un marco y la holgura de feriados."""
+    return ahora_servidor - (vela + DURACION[marco]) > DURACION[marco] + HOLGURA_FRESCURA_S
+
+
+def _cuando(vela: int, marco: str, offset: int | None) -> str:
+    """El cierre de la vela en Santiago; sin desfase medido, en hora del servidor y dicho."""
+    if offset is not None:
+        return cierre_santiago(vela, marco, offset).strftime("%d-%m %H:%M")
+    cierre = datetime.fromtimestamp(vela + DURACION[marco], tz=timezone.utc)
+    return cierre.strftime("%d-%m %H:%M") + " (hora del servidor)"
 
 
 def _abrir_reloj(mt5) -> bool:
@@ -129,9 +155,25 @@ def _abrir_reloj(mt5) -> bool:
     return True
 
 
+def _leer_simbolo(sim: Simbolo, velas: dict) -> tuple[dict[str, LecturaMarco], list[Falla]]:
+    """La lectura de cada marco de un símbolo; un marco que el motor rechaza es su falla."""
+    marcos: dict[str, LecturaMarco] = {}
+    fallas: list[Falla] = []
+    for marco in RADAR_MARCOS:
+        try:
+            marcos[marco] = leer_marco(velas, marco, sim.digits, PARAMETROS)
+        except KeyError as exc:
+            fallas.append(Falla(sim.ticker, marco, f"MT5 no entregó velas de {exc}"))
+        except ValueError as exc:  # incluye HistoriaInsuficiente
+            fallas.append(Falla(sim.ticker, marco, str(exc)))
+    return marcos, fallas
+
+
 def escanear(simbolos: list[Simbolo], mt5, leer_velas=velas_mt5,
              ahora: Callable[[], datetime] = _ahora_santiago,
-             cuenta: int | None = None) -> Escaneo:
+             cuenta: int | None = None,
+             dormir: Callable[[float], None] = time.sleep,
+             utc: Callable[[], float] = time.time) -> Escaneo:
     """Lee cada símbolo en los marcos del radar y junta filas y fallas.
 
     Una sola lectura de velas por símbolo (W1/D1/H4/H1 cerradas; la vela en curso la
@@ -146,6 +188,19 @@ def escanear(simbolos: list[Simbolo], mt5, leer_velas=velas_mt5,
     `avisos`: no es la falla de ningún símbolo ni de la paridad, y no se cuenta como tal.
 
     `cuenta` es el login que `main` ya verificó; si no viene, se lee del terminal.
+
+    **Frescura (siempre activa).** Un marco cuya última vela cerrada terminó hace más de
+    un marco y cuatro días (`_vencida`) es falla «velas desactualizadas», no una celda.
+    La hora del servidor es `utc() + offset`; sin desfase, el último tick del propio
+    símbolo; sin ninguno de los dos, la guarda no se aplica. Un símbolo que estaba fuera
+    de Observación de Mercado se selecciona y, si algún marco salió vencido, se vuelve a
+    leer hasta `INTENTOS_SINCRONIZACION` veces con `ESPERA_SINCRONIZACION_S` entre
+    lecturas (MT5 entrega primero la caché local). Uno visible se lee una sola vez.
+
+    Presupuesto: en el peor caso, (INTENTOS − 1) × ESPERA por símbolo oculto que siga
+    vencido, 3 × 1,5 s = 4,5 s; con ~137 ocultos, unos 10 min. Lo normal medido es una
+    sola espera por símbolo oculto (unos 3 min a las 07:30), y uno que sincroniza a la
+    primera no espera nada. `dormir` y `utc` se inyectan para los tests.
     """
     inicio = ahora()
     t0 = time.monotonic()
@@ -155,28 +210,49 @@ def escanear(simbolos: list[Simbolo], mt5, leer_velas=velas_mt5,
     try:
         if _abrir_reloj(mt5) and RELOJ not in restaurar:
             restaurar.append(RELOJ)
-        offset = _offset(mt5.symbol_info_tick(RELOJ))
+        offset = _offset(mt5.symbol_info_tick(RELOJ), utc)
         medido_con: str | None = None   # el símbolo que reemplazó al reloj, si hizo falta
         for sim in simbolos:
-            try:
-                velas, _en_curso = leer_velas(sim.ticker, MARCOS_RADAR)
-            except Exception as exc:  # noqa: BLE001 - un símbolo no corta el escaneo
-                fallas.append(Falla(sim.ticker, None, str(exc) or type(exc).__name__))
-                continue
-            if offset is None:
-                # Recién leído, el símbolo está seleccionado y su tick existe si cotiza.
-                # Uno rechazado deja el desfase en None y el siguiente símbolo lo intenta.
-                offset = _offset_sustituto(mt5.symbol_info_tick(sim.ticker))
-                if offset is not None:
-                    medido_con = sim.ticker
+            if not sim.visible:
+                # Ya está en `restaurar`: el `finally` lo vuelve a cerrar pase lo que pase.
+                mt5.symbol_select(sim.ticker, True)
+            intentos = 1 if sim.visible else INTENTOS_SINCRONIZACION
             marcos: dict[str, LecturaMarco] = {}
-            for marco in RADAR_MARCOS:
+            fallas_sim: list[Falla] = []
+            for intento in range(intentos):
+                if intento:
+                    dormir(ESPERA_SINCRONIZACION_S)
+                # Cada intento reemplaza entero al anterior: ni lecturas ni fallas se suman.
+                marcos, fallas_sim = {}, []
                 try:
-                    marcos[marco] = leer_marco(velas, marco, sim.digits, PARAMETROS)
-                except KeyError as exc:
-                    fallas.append(Falla(sim.ticker, marco, f"MT5 no entregó velas de {exc}"))
-                except ValueError as exc:  # incluye HistoriaInsuficiente
-                    fallas.append(Falla(sim.ticker, marco, str(exc)))
+                    velas, _en_curso = leer_velas(sim.ticker, MARCOS_RADAR)
+                except Exception as exc:  # noqa: BLE001 - un símbolo no corta el escaneo
+                    fallas_sim = [Falla(sim.ticker, None, str(exc) or type(exc).__name__)]
+                    break
+                if offset is None:
+                    # Recién leído, el símbolo está seleccionado y su tick existe si cotiza.
+                    # Uno rechazado deja el desfase en None y el siguiente símbolo lo intenta.
+                    offset = _offset_sustituto(mt5.symbol_info_tick(sim.ticker), utc)
+                    if offset is not None:
+                        medido_con = sim.ticker
+                marcos, fallas_sim = _leer_simbolo(sim, velas)
+                if offset is not None:
+                    ahora_servidor: int | None = int(utc()) + offset
+                else:
+                    tick = mt5.symbol_info_tick(sim.ticker)
+                    ahora_servidor = int(tick.time) if tick is not None else None
+                if ahora_servidor is None:
+                    break
+                viejos = [m for m, lm in marcos.items()
+                          if _vencida(lm.vela, m, ahora_servidor)]
+                if not viejos:
+                    break
+                if intento == intentos - 1:
+                    for m in viejos:
+                        lm = marcos.pop(m)
+                        fallas_sim.append(Falla(sim.ticker, m, AVISO_VELAS_VIEJAS.format(
+                            cuando=_cuando(lm.vela, m, offset))))
+            fallas.extend(fallas_sim)
             if marcos:
                 leidos.append((sim, marcos))
     finally:

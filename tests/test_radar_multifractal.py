@@ -21,6 +21,7 @@ for p in (str(RAIZ / "src"), str(RAIZ / "scripts")):
         sys.path.insert(0, p)
 
 import radar_multifractal as rm  # noqa: E402
+from estrategia.fuente import DURACION  # noqa: E402
 from estrategia.tori.radar import Evento, LecturaMarco, RADAR_MARCOS  # noqa: E402
 
 SANTIAGO = ZoneInfo("America/Santiago")
@@ -67,9 +68,13 @@ def _sym(nombre, trade_mode=FULL, path="Forex\\Majors\\X", digits=5, visible=Tru
                            digits=digits, visible=visible)
 
 
-def _lectura(marco: str) -> LecturaMarco:
+def _lectura(marco: str, vela: int | None = None) -> LecturaMarco:
+    """Una lectura de mentira. Sin `vela`, la última cerrada es fresca contra el reloj real
+    (el `MT5Falso` cotiza a `time.time()`), para que la guarda de frescura no la descarte."""
+    if vela is None:
+        vela = int(time.time()) - 2 * DURACION[marco]
     ev = Evento(marco, "seguridad", "toco", None, 0.1, 1.2345, "A+", "rebote")
-    return LecturaMarco(marco, "TENDENCIA", "ALCISTA", (), (ev,), (), 1_700_000_000, 0.01)
+    return LecturaMarco(marco, "TENDENCIA", "ALCISTA", (), (ev,), (), vela, 0.01)
 
 
 def _velas_cortas(ticker, marcos):
@@ -326,6 +331,126 @@ def test_con_archivo_fresco_la_paridad_siempre_resume(tmp_path, monkeypatch):
     assert rm.main(["--sin-abrir", "--salida", str(tmp_path / "out")]) == 0
     pagina = (tmp_path / "out" / "ultimo.html").read_text(encoding="utf-8")
     assert "paridad: ningún gráfico abierto coincide con un activo leído" in pagina
+
+
+# --- Frescura y sincronización (medido en vivo el 2026-10-26) ---------------------------
+# Reloj controlado: UTC fijo y un servidor 3 h adelante. El desfase distinto de cero es a
+# propósito: con 0, un signo invertido en `utc + offset` pasaría igual.
+DESFASE = 3 * 3600
+UTC_AHORA = int(datetime(2026, 10, 26, 22, 0, tzinfo=ZoneInfo("UTC")).timestamp())
+
+
+def _servidor(*args) -> int:
+    """Una hora del servidor como la entrega MT5: el reloj de pared del broker como epoch."""
+    return int(datetime(*args, tzinfo=ZoneInfo("UTC")).timestamp())
+
+
+HOY = {"H1": _servidor(2026, 10, 27, 0, 0), "H4": _servidor(2026, 10, 26, 20, 0),
+       "D1": _servidor(2026, 10, 26, 0, 0)}   # frescas contra el servidor (27-10 01:00)
+MAYO = {m: _servidor(2026, 5, 29, 15, 0) for m in RADAR_MARCOS}   # la caché local
+
+
+class MT5Reloj(MT5Falso):
+    """Cotiza con el reloj controlado, con el servidor `DESFASE` adelante de UTC."""
+
+    def __init__(self, *a, utc=UTC_AHORA, **k):
+        super().__init__(*a, **k)
+        self._utc = utc
+
+    def symbol_info_tick(self, ticker):
+        self.ticks_pedidos.append((ticker, tuple(self.selecciones)))
+        return SimpleNamespace(time=self._utc + DESFASE)
+
+
+def _vela_de_las_velas(velas, marco, digits, p=None):
+    """`leer_marco` falso: la última vela cerrada es la que entregó `leer_velas`."""
+    return _lectura(marco, int(velas[marco]["time"].iloc[-1]))
+
+
+def _lector(*secuencia):
+    """`leer_velas` que entrega una tanda distinta por llamada y cuenta las llamadas."""
+    llamadas = []
+
+    def leer_velas(ticker, marcos):
+        tanda = secuencia[min(len(llamadas), len(secuencia) - 1)]
+        llamadas.append(ticker)
+        return {m: pd.DataFrame({"time": [tanda[m]]}) for m in RADAR_MARCOS}, None
+
+    return leer_velas, llamadas
+
+
+def _escanear_con_reloj(simbolos, mt5, leer_velas, utc=UTC_AHORA):
+    dormidas = []
+    e = rm.escanear(simbolos, mt5, leer_velas=leer_velas, ahora=_reloj,
+                    dormir=dormidas.append, utc=lambda: utc)
+    return e, dormidas
+
+
+def test_oculto_vencido_y_despues_fresco_entra_a_la_matriz_con_un_reintento(monkeypatch):
+    monkeypatch.setattr(rm, "leer_marco", _vela_de_las_velas)
+    mt5 = MT5Reloj()
+    leer_velas, llamadas = _lector(MAYO, HOY)
+    e, dormidas = _escanear_con_reloj([rm.Simbolo("#NVDA", 2, "Stocks", False)], mt5, leer_velas)
+    assert llamadas == ["#NVDA", "#NVDA"]
+    assert dormidas == [rm.ESPERA_SINCRONIZACION_S]
+    assert e.fallas == ()
+    [fila] = e.filas
+    assert {m: lm.vela for m, lm in fila.marcos.items()} == HOY
+    assert ("#NVDA", True) in mt5.selecciones and mt5.selecciones[-1] == ("#NVDA", False)
+
+
+def test_oculto_que_sigue_vencido_es_falla_por_marco_con_la_fecha(monkeypatch):
+    monkeypatch.setattr(rm, "leer_marco", _vela_de_las_velas)
+    mt5 = MT5Reloj()
+    leer_velas, llamadas = _lector(MAYO)
+    e, dormidas = _escanear_con_reloj([rm.Simbolo("#AAL", 2, "Stocks", False)], mt5, leer_velas)
+    assert len(llamadas) == rm.INTENTOS_SINCRONIZACION
+    assert dormidas == [rm.ESPERA_SINCRONIZACION_S] * (rm.INTENTOS_SINCRONIZACION - 1)
+    assert e.filas == ()
+    assert {(f.ticker, f.marco) for f in e.fallas} == {("#AAL", m) for m in RADAR_MARCOS}
+    h1 = next(f for f in e.fallas if f.marco == "H1")
+    # Abre 29-05 15:00 servidor, cierra 16:00 servidor = 13:00 UTC = 09:00 en Santiago.
+    assert h1.motivo == "velas desactualizadas en MT5: la última vela cerrada es del 29-05 09:00"
+    assert mt5.selecciones[-1] == ("#AAL", False)
+
+
+def test_visible_con_velas_vencidas_es_falla_sin_reintentos(monkeypatch):
+    monkeypatch.setattr(rm, "leer_marco", _vela_de_las_velas)
+    mt5 = MT5Reloj()
+    leer_velas, llamadas = _lector(MAYO, HOY)
+    e, dormidas = _escanear_con_reloj([rm.Simbolo("EURUSD", 5, "Forex", True)], mt5, leer_velas)
+    assert llamadas == ["EURUSD"] and dormidas == []
+    assert e.filas == ()
+    assert all("velas desactualizadas" in f.motivo for f in e.fallas)
+    assert ("EURUSD", True) not in mt5.selecciones
+
+
+def test_accion_el_lunes_a_las_0730_con_la_vela_del_viernes_es_fresca(monkeypatch):
+    monkeypatch.setattr(rm, "leer_marco", _vela_de_las_velas)
+    # Lunes 26-10 07:30 Santiago = 10:30 UTC; la bolsa cerró el viernes.
+    lunes = int(datetime(2026, 10, 26, 7, 30, tzinfo=SANTIAGO).timestamp())
+    viernes = {"H1": _servidor(2026, 10, 23, 16, 0), "H4": _servidor(2026, 10, 23, 16, 0),
+               "D1": _servidor(2026, 10, 23, 0, 0)}
+    mt5 = MT5Reloj(utc=lunes)
+    leer_velas, llamadas = _lector(viernes)
+    e, dormidas = _escanear_con_reloj([rm.Simbolo("#AAPL", 2, "Stocks", False)], mt5,
+                                      leer_velas, utc=lunes)
+    assert e.fallas == () and dormidas == [] and llamadas == ["#AAPL"]
+    assert set(e.filas[0].marcos) == set(RADAR_MARCOS)
+
+
+def test_el_borde_de_frescura_se_mide_en_hora_del_servidor(monkeypatch):
+    monkeypatch.setattr(rm, "leer_marco", _vela_de_las_velas)
+    ahora_servidor = UTC_AHORA + DESFASE
+    limite = rm.DURACION["H1"] + rm.HOLGURA_FRESCURA_S
+    # Una H1 que cerró justo en el límite sigue fresca; una hora más vieja, ya no. Con el
+    # signo del desfase invertido (servidor 6 h antes), la vencida pasaría como fresca.
+    justa = ahora_servidor - limite - rm.DURACION["H1"]
+    for vela, vencida in ((justa, False), (justa - 3600, True)):
+        tanda = dict(HOY, H1=vela)
+        leer_velas, _ = _lector(tanda)
+        e, _ = _escanear_con_reloj([rm.Simbolo("X", 2, "Forex", True)], MT5Reloj(), leer_velas)
+        assert (("X", "H1") in {(f.ticker, f.marco) for f in e.fallas}) is vencida
 
 
 def test_el_radar_no_puede_enviar_nada():
