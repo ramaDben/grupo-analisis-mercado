@@ -1,3 +1,4 @@
+# punto-de-entrada: lo corre el director a mano para registrar la tarea GI-Radar
 <#
 .SYNOPSIS
   Registra la tarea programada del radar multifractal en el Programador de tareas de Windows.

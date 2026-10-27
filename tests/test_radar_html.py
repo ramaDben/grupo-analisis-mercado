@@ -180,6 +180,54 @@ def test_mas_de_la_mitad_de_fallas_muestra_aviso_de_lectura_incompleta():
     assert aviso not in html_ok
 
 
+def test_una_falla_en_varios_marcos_cuenta_como_un_simbolo():
+    aviso = "Lectura incompleta: no confíes en la ausencia de un activo"
+    fallas = (
+        Falla("A", "H1", "error"),
+        Falla("A", "H4", "error"),
+        Falla("A", "D1", "error"),
+        Falla("B", "H1", "error"),
+        Falla("B", "H4", "error"),
+        Falla("B", "D1", "error"),
+    )  # 2 simbolos de 10, aunque haya 6 fallas (> 5)
+    esc = Escaneo(
+        inicio=datetime(2026, 10, 26, 7, 30, tzinfo=SANTIAGO),
+        duracion_s=1.0,
+        cuenta=51257,
+        leidos=10,
+        filas=(),
+        fallas=fallas,
+        paridad=(),
+    )
+    assert aviso not in render(esc)
+
+
+def test_el_texto_visible_dice_control_y_no_seguridad():
+    ev = Evento("H4", "seguridad", "toco", None, 0.1, 1.5, "A+", "rebote")
+    ev2 = Evento("H1", "seguridad", "por_tocar", 2, 0.5, 1.5, "A+", "")
+    fila = Fila(
+        ticker="T",
+        categoria="Cat",
+        digits=2,
+        marcos={"H4": _lectura("H4", (ev,)), "H1": _lectura("H1", (ev2,))},
+        cierres={"H4": datetime(2026, 10, 26, 7, 0, tzinfo=SANTIAGO)},
+    )
+    esc = Escaneo(
+        inicio=datetime(2026, 10, 26, 7, 30, tzinfo=SANTIAGO),
+        duracion_s=1.0,
+        cuenta=51257,
+        leidos=1,
+        filas=(fila,),
+        fallas=(),
+        paridad=(),
+    )
+    html = render(esc).lower()
+    assert "seguridad" not in html
+    assert "tocó control" in html
+    assert "control a 2 velas" in html
+    assert "línea de control" in html
+
+
 def test_cero_actividad_dice_cuantos_se_leyeron():
     esc = Escaneo(
         inicio=datetime(2026, 10, 26, 7, 30, tzinfo=SANTIAGO),

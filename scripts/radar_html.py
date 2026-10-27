@@ -96,7 +96,7 @@ def _clase_linea(linea: str) -> str:
 
 def _nombre_linea(linea: str) -> str:
     if linea == "seguridad":
-        return "seguridad"
+        return "control"
     elif linea == "accion":
         return "acción"
     elif linea in ("soporte", "resistencia"):
@@ -179,7 +179,7 @@ def render(e: Escaneo) -> str:
 
     # Aviso lectura incompleta
     aviso_html = ""
-    if e.leidos > 0 and len(e.fallas) > (e.leidos / 2):
+    if e.leidos > 0 and len({f.ticker for f in e.fallas}) > (e.leidos / 2):
         aviso_html = (
             '<div class="aviso-incompleto" style="background:#FF4D5E22;border:1px solid #FF4D5E;'
             'padding:10px 14px;border-radius:6px;margin-bottom:14px;font-size:13px;font-weight:bold;color:#FF4D5E;">'
@@ -278,7 +278,7 @@ def render(e: Escaneo) -> str:
   </table>
 
   <div class="ley">
-    <span><b style="color:#26C6A0">■</b> Línea de seguridad</span>
+    <span><b style="color:#26C6A0">■</b> Línea de control</span>
     <span><b style="color:#FF4D5E">■</b> Línea de acción</span>
     <span><b style="color:#FFD54F">■</b> Zona S/R</span>
     <span><b style="color:#CBD5E1">■</b> Rango</span>
