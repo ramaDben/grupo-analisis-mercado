@@ -57,17 +57,37 @@ def _subir(ruta: Path, nombre: str) -> None:
         raise ImagenNoPublicada(f"GitHub rechazó {ruta.name}: {res.stderr.decode('utf-8', 'replace').strip()[:200]}")
 
 
-def publicar(ruta: Path) -> str:
-    """Deja la imagen en la URL pública y devuelve esa URL, ya respondiendo."""
-    if not ruta.exists():
-        raise ImagenNoPublicada(f"no existe {ruta}")
-    nombre, url = nombre_publico(ruta), url_publica(ruta)
-    if _responde(url):
+class Publicador:
+    """Publica las imágenes de un correo en lote: sube todas primero y espera a Pages una sola vez.
+
+    Se pasa como `publicar(ruta) -> url` y devuelve la URL apenas GitHub confirma la subida, sin esperar a
+    que Pages la sirva: el nombre sale del contenido, así que esa URL es la definitiva. Esperar imagen por
+    imagen hacía que un build lento (368 s el 2026-10-27) agotara la espera en la primera, que las demás no
+    se subieran nunca y que el correo saliera entero sin imágenes. `confirmar()` hace la espera al final y
+    devuelve las URLs que Pages todavía no sirve, para avisarlo; una subida rechazada sí falla en el acto.
+    """
+
+    def __init__(self) -> None:
+        self._urls: dict[str, str] = {}
+        self._pendientes: list[str] = []
+
+    def __call__(self, ruta: Path) -> str:
+        if not ruta.exists():
+            raise ImagenNoPublicada(f"no existe {ruta}")
+        nombre, url = nombre_publico(ruta), url_publica(ruta)
+        if nombre not in self._urls:
+            if not _responde(url):
+                _subir(ruta, nombre)
+                self._pendientes.append(url)
+            self._urls[nombre] = url
         return url
-    _subir(ruta, nombre)
-    limite = time.monotonic() + ESPERA_PAGES_S
-    while time.monotonic() < limite:
-        if _responde(url):
-            return url
-        time.sleep(SONDEO_S)
-    raise ImagenNoPublicada(f"{ruta.name} se subió pero la URL no respondió en {ESPERA_PAGES_S} s: {url}")
+
+    def confirmar(self) -> list[str]:
+        """Espera a que Pages sirva lo subido y devuelve las URLs que siguen sin responder."""
+        limite = time.monotonic() + ESPERA_PAGES_S
+        while self._pendientes:
+            self._pendientes = [u for u in self._pendientes if not _responde(u)]
+            if not self._pendientes or time.monotonic() >= limite:
+                break
+            time.sleep(SONDEO_S)
+        return list(self._pendientes)

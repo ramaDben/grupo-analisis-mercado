@@ -259,6 +259,29 @@ def test_oportunidad_se_arma_una_vez_y_el_segundo_ejecutivo_lo_reusa(armado):
     assert armado.estado.usados(CAMILA, AHORA) == 1 and armado.estado.usados(OTRO, AHORA) == 0
 
 
+class PublicadorLento:
+    """Sube y devuelve la URL, pero Pages no la sirve a tiempo (el build de 368 s del 2026-10-27)."""
+
+    def __init__(self):
+        self.subidas = []
+
+    def __call__(self, ruta):
+        self.subidas.append(ruta.name)
+        return f"https://ejemplo.test/correos/{ruta.name}"
+
+    def confirmar(self):
+        return [f"https://ejemplo.test/correos/{n}" for n in self.subidas]
+
+
+def test_si_pages_tarda_el_correo_conserva_las_urls_y_avisa_que_esperen(armado):
+    lento = PublicadorLento()
+    armado.atendedor.publicar_imagen = lambda: lento
+    r = armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
+    html = r.archivos[1].read_text(encoding="utf-8")
+    assert lento.subidas and "https://ejemplo.test/correos/" in html
+    assert "todavía no sirve" in r.aparte and "No pude publicar" not in r.aparte
+
+
 def test_el_analisis_queda_a_nombre_de_quien_lo_genero_y_anota_el_reuso(armado):
     armado.bot.procesar_uno(b.Pedido(CAMILA, 1, ORO))
     armado.bot.procesar_uno(b.Pedido(OTRO, 2, ORO))

@@ -288,7 +288,7 @@ class Atendedor:
     verificar_vigencia: Callable[[dict[str, Any], datetime], tuple[str | None, str | None]] = vg.verificar
     simbolo: Callable[[str], dict[str, Any] | None] = sm.buscar
     verificar_url: Callable[[str], str] = fu.verificar_url
-    publicar_imagen: Callable[[Path], str] | None = ip.publicar  # None: el correo lleva las imágenes embebidas
+    publicar_imagen: Callable[[], ip.Publicador] | None = ip.Publicador  # None: el correo lleva las imágenes embebidas
     leer_nota: Callable[[str], str | None] = nt.leer_texto
     generar_imagen: gi.Generador | None = gi.generar_con_agy
     banco_imagenes: Path = il.BANCO
@@ -484,8 +484,14 @@ class Atendedor:
             if aviso_noticia:
                 avisos.append(aviso_noticia)
         try:
+            publicador = self.publicar_imagen() if self.publicar_imagen else None
             try:
-                ruta = oh.guardar(pieza, dir_pedido, ejecutivo, self.autor, ahora.date(), self.publicar_imagen)
+                ruta = oh.guardar(pieza, dir_pedido, ejecutivo, self.autor, ahora.date(), publicador)
+                faltan = publicador.confirmar() if publicador else []
+                if faltan:
+                    # Subidas y con su URL definitiva: Pages las sirve en minutos, antes de que el correo se mande.
+                    avisos.append(f"GitHub Pages todavía no sirve {len(faltan)} imagen(es) del correo: ya están subidas, "
+                                  "pero espera unos minutos antes de copiarlo a Gmail para que se vean.")
             except ip.ImagenNoPublicada as exc:
                 # Sin URL pública el correo se arma igual, pero Gmail no mostraría sus imágenes: se avisa.
                 avisos.append(f"No pude publicar las imágenes del correo ({exc}): en Gmail se verá sin imágenes.")
