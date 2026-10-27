@@ -490,8 +490,9 @@ class Atendedor:
                 faltan = publicador.confirmar() if publicador else []
                 if faltan:
                     # Subidas y con su URL definitiva: Pages las sirve en minutos, antes de que el correo se mande.
-                    avisos.append(f"GitHub Pages todavía no sirve {len(faltan)} imagen(es) del correo: ya están subidas, "
-                                  "pero espera unos minutos antes de copiarlo a Gmail para que se vean.")
+                    avisos.append(f"GitHub Pages todavía no sirve {len(faltan)} imagen(es) del correo: ya están subidas y "
+                                  "aparecen solas en unos minutos. Espera antes de copiarlo a Gmail y, si ya abriste el "
+                                  "HTML, recárgalo.")
             except ip.ImagenNoPublicada as exc:
                 # Sin URL pública el correo se arma igual, pero Gmail no mostraría sus imágenes: se avisa.
                 avisos.append(f"No pude publicar las imágenes del correo ({exc}): en Gmail se verá sin imágenes.")
