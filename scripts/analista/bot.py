@@ -27,6 +27,7 @@ from typing import IO, Any, Callable
 from zoneinfo import ZoneInfo
 
 from analista import RAIZ
+from analista import apertura as apt
 from analista import autor as au
 from analista import avisos_semana as av
 from analista import comercial as cm
@@ -254,18 +255,38 @@ def _agenda_pasada(pieza: dict[str, Any], ahora: datetime) -> str | None:
     calendario, no tiene eventos y conserva la regla simple de los 7 días.
     """
     hoy = ahora.astimezone(SANTIAGO).date().isoformat()
+    noticia = (pieza.get("editorial") or {}).get("noticia")
+    if isinstance(noticia, dict) and noticia.get("escalon") == "agenda":
+        cuando = apt.momento(noticia.get("evento") or {})
+        if cuando is not None and cuando <= ahora:
+            return "ya ocurrió el evento con que abre el correo"
     eventos = ((pieza.get("datos") or {}).get("agenda") or {}).get("eventos") or []
     return "ya pasó uno de los días clave de su agenda" if any(e.get("fecha", hoy) < hoy for e in eventos) else None
 
 
 def _aviso_sin_noticia(pieza: dict[str, Any], descartes: list[str]) -> str | None:
-    """Que el ejecutivo sepa que el correo abre con el análisis; si la noticia se descartó, ese aviso ya lo dice."""
+    """Que el ejecutivo sepa con qué abre el correo (spec 2026-10-27): la nota del activo no se avisa; la del
+    sector, la agenda o ninguna sí. Si la noticia se descartó, ese aviso ya lo dice."""
     ed = pieza["editorial"]
-    if "noticia" not in ed or isinstance(ed["noticia"], dict) or any(d.startswith("Noticia de apertura") for d in descartes):
+    if "noticia" not in ed or any(d.startswith("Noticia de apertura") for d in descartes):
         return None
-    candidatas = len(pieza["datos"].get("noticias_candidatas") or [])
-    detalle = (f"agy no eligió ninguna de las {candidatas} notas de FXStreet del activo" if candidatas
-               else "no encontré una nota del activo de los últimos 3 días")
+    datos = pieza["datos"]
+    if isinstance(ed["noticia"], dict):
+        escalon = apt.escalon_de(ed["noticia"], datos)
+        if escalon == "sector":
+            return f"No encontré una nota del activo: el correo abre con una nota del sector («{ed['noticia']['titular']}»)."
+        if escalon == "agenda":
+            return ("No encontré una nota del activo ni de su sector: el correo abre con el evento de la semana "
+                    f"({ed['noticia']['evento']['evento']}, {ed['noticia']['evento']['dia']}).")
+        return None
+    candidatas = datos.get("noticias_candidatas") or []
+    if candidatas:
+        de_quien = "del sector" if candidatas[0].get("escalon") == "sector" else "del activo"
+        detalle = f"agy no eligió ninguna de las {len(candidatas)} notas {de_quien}"
+    elif datos.get("evento_apertura"):
+        detalle = "no había notas del activo ni de su sector, y agy no abrió con el evento de la semana"
+    else:
+        detalle = "no encontré notas del activo ni de su sector de los últimos 3 días, ni un evento fuerte en la agenda"
     return f"El correo salió sin noticia de apertura ({detalle}): abre con el análisis."
 
 
@@ -288,7 +309,7 @@ class Atendedor:
     verificar_vigencia: Callable[[dict[str, Any], datetime], tuple[str | None, str | None]] = vg.verificar
     simbolo: Callable[[str], dict[str, Any] | None] = sm.buscar
     verificar_url: Callable[[str], str] = fu.verificar_url
-    publicar_imagen: Callable[[Path], str] | None = ip.publicar  # None: el correo lleva las imágenes embebidas
+    publicar_imagen: Callable[[], ip.Publicador] | None = ip.Publicador  # None: el correo lleva las imágenes embebidas
     leer_nota: Callable[[str], str | None] = nt.leer_texto
     generar_imagen: gi.Generador | None = gi.generar_con_agy
     banco_imagenes: Path = il.BANCO
@@ -484,8 +505,15 @@ class Atendedor:
             if aviso_noticia:
                 avisos.append(aviso_noticia)
         try:
+            publicador = self.publicar_imagen() if self.publicar_imagen else None
             try:
-                ruta = oh.guardar(pieza, dir_pedido, ejecutivo, self.autor, ahora.date(), self.publicar_imagen)
+                ruta = oh.guardar(pieza, dir_pedido, ejecutivo, self.autor, ahora.date(), publicador)
+                faltan = publicador.confirmar() if publicador else []
+                if faltan:
+                    # Subidas y con su URL definitiva: Pages las sirve en minutos, antes de que el correo se mande.
+                    avisos.append(f"GitHub Pages todavía no sirve {len(faltan)} imagen(es) del correo: ya están subidas y "
+                                  "aparecen solas en unos minutos. Espera antes de copiarlo a Gmail y, si ya abriste el "
+                                  "HTML, recárgalo.")
             except ip.ImagenNoPublicada as exc:
                 # Sin URL pública el correo se arma igual, pero Gmail no mostraría sus imágenes: se avisa.
                 avisos.append(f"No pude publicar las imágenes del correo ({exc}): en Gmail se verá sin imágenes.")

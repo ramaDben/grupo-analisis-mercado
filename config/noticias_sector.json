@@ -1,0 +1,70 @@
+{
+  "_nota": "Escalón 2 de la noticia de apertura de /oportunidad (spec 2026-10-27): si ningún titular de FXStreet ni de Investing.com nombra al activo, se buscan notas de su sector con estos patrones (expresiones regulares, sin distinguir mayúsculas), siempre en el TITULAR. Lo edita el director. Un ticker que no está en ningún sector no baja a este escalón.",
+  "sectores": {
+    "banca_eeuu": {
+      "nombre": "la banca de EE.UU.",
+      "tickers": [
+        "#GS",
+        "#JPM",
+        "#BAC",
+        "#MS",
+        "#C",
+        "#WFC"
+      ],
+      "patrones": [
+        "\\bbancos?\\s+(de\\s+(EE\\.?\\s?UU\\.?|Estados Unidos|Wall Street)|estadounidenses?|comerciales|de inversión)",
+        "\\bgrandes\\s+bancos\\b",
+        "\\bbanca\\b(?!\\s+central)",
+        "\\bbancari[oa]s?\\b",
+        "Wall Street",
+        "JPMorgan",
+        "Goldman",
+        "Morgan Stanley",
+        "Bank of America",
+        "Citigroup",
+        "Wells Fargo"
+      ]
+    },
+    "tecnologia_eeuu": {
+      "nombre": "la tecnología de EE.UU.",
+      "tickers": [
+        "#AAPL",
+        "#MSFT",
+        "#NVDA",
+        "#AMZN",
+        "#AMD",
+        "#MELI",
+        "#GOOGL",
+        "#META",
+        "#TSLA"
+      ],
+      "patrones": [
+        "Nasdaq",
+        "tecnológic[oa]s?",
+        "\\bchips?\\b",
+        "semiconductor",
+        "inteligencia artificial",
+        "Wall Street",
+        "Apple",
+        "Microsoft",
+        "Nvidia",
+        "Amazon"
+      ]
+    },
+    "industria_eeuu": {
+      "nombre": "la industria de EE.UU.",
+      "tickers": [
+        "#BA",
+        "#CAT",
+        "#GE",
+        "#DE"
+      ],
+      "patrones": [
+        "Dow Jones",
+        "Wall Street",
+        "\\bindustrial(es)?\\b",
+        "aranceles"
+      ]
+    }
+  }
+}

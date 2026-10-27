@@ -13,6 +13,7 @@ from typing import Any
 
 from analista import RAIZ
 from analista import agenda as ag
+from analista import apertura as apt
 from analista import comercial as cm
 from analista import esquema as es
 from analista import fuentes as fu
@@ -843,13 +844,27 @@ def _fecha_palabras(iso: str, con_dia: bool = False) -> str:
     return f"{ag.DIAS[f.weekday()]} {texto}" if con_dia else texto
 
 
+ROTULOS_APERTURA = {"activo": "MERCADO HOY", "sector": "LO QUE MUEVE AL SECTOR", "agenda": "EN LA AGENDA"}
+
+
 def _apertura_noticia(n: dict[str, Any], a: dict[str, Any], imagen: Path | None, hoy: date | None,
-                      c: dict[str, str]) -> str:
+                      c: dict[str, str], d: dict[str, Any] | None = None) -> str:
     """La apertura oscura con la noticia: imagen, kicker, titular-premisa, bajada y la fuente fechada (spec §1).
 
     Pasada la ventana de 3 días (reúso, opción 2b) la línea de fuente dice en palabras de qué día es,
-    para que no se lea como de hoy.
+    para que no se lea como de hoy. El kicker dice de qué escalón es (spec 2026-10-27): una nota del activo,
+    una del sector o la agenda, que en vez de fuente lleva el evento con sus cifras del calendario.
     """
+    escalon = apt.escalon_de(n, d or {})
+    kicker = _kicker(f'{ROTULOS_APERTURA[escalon]} · {a["nombre"].upper()} ({a["ticker_visible"]})')
+    if escalon == "agenda":
+        return (
+            f'<tr><td class="pad-hero" bgcolor="{c["hero"]}" style="padding:26px 36px 26px 36px;background:{c["hero"]};">'
+            + kicker + _imagen_ilustrativa(imagen, c, oscuro=True)
+            + _titular_hero(n["titular"], c) + _bajada_hero(n["bajada"], c, margen="0 0 14px 0")
+            + _evento_agenda(n["evento"], ((d or {}).get("agenda") or {}).get("url") or ag.URL_CALENDARIO, c)
+            + '</td></tr>'
+        )
     fuente = f"Fuente: {n['medio']} · {_fecha_palabras(n['fecha'])} →"
     if hoy is not None and not nt.vigente(n, hoy):
         fuente = f"Noticia del {_fecha_palabras(n['fecha'], con_dia=True)} · Fuente: {n['medio']} →"
@@ -858,11 +873,24 @@ def _apertura_noticia(n: dict[str, Any], a: dict[str, Any], imagen: Path | None,
               f'style="color:#50C0A8;text-decoration:underline;">{ih.e(fuente)}</a></p>')
     return (
         f'<tr><td class="pad-hero" bgcolor="{c["hero"]}" style="padding:26px 36px 26px 36px;background:{c["hero"]};">'
-        + _kicker(f'MERCADO HOY · {a["nombre"].upper()} ({a["ticker_visible"]})')
+        + kicker
         + _imagen_ilustrativa(imagen, c, oscuro=True)
         + _titular_hero(n["titular"], c) + _bajada_hero(n["bajada"], c, margen="0 0 14px 0") + enlace
         + '</td></tr>'
     )
+
+
+def _evento_agenda(ev: dict[str, Any], url: str, c: dict[str, str]) -> str:
+    """El evento que abre el correo: día y hora de Chile y las cifras tal como vienen del calendario."""
+    cifras = " · ".join(f"{k}: {ev[c_]}" for k, c_ in (("Anterior", "anterior"), ("Esperado", "esperado")) if ev.get(c_))
+    lineas = f'{ih.e(ev["evento"])} · {ih.e(ev["dia"])}, {ih.e(ev["hora"])}'
+    if cifras:
+        lineas += f'<br>{ih.e(cifras)}'
+    return (f'<p style="margin:0 0 10px 0;font-family:{F_SANS};font-size:14px;line-height:21px;font-weight:600;'
+            f'color:{c["blanco"]};">{lineas}</p>'
+            f'<p style="margin:0;font-family:{F_SANS};font-size:12px;line-height:17px;font-weight:600;">'
+            f'<a href="{ih.e(url)}" target="_blank" rel="noopener noreferrer" '
+            f'style="color:#50C0A8;text-decoration:underline;">Calendario completo: Investing.com →</a></p>')
 
 
 def _tasa_correo(t: dict[str, Any], imagen: Path | None, c: dict[str, str], oscuro: bool = False) -> str:
@@ -1044,8 +1072,8 @@ def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: P
     con_noticia = isinstance(noticia, dict)
     if con_noticia:
         # La nota que abre el correo no se repite abajo como «Lo último de …» ni como voz.
-        fuentes = [f for f in fuentes if f.get("url") != noticia["url"]]
-        apertura = _apertura_noticia(noticia, a, ilustraciones.get("noticia"), hoy, c)
+        fuentes = [f for f in fuentes if f.get("url") != noticia.get("url")]
+        apertura = _apertura_noticia(noticia, a, ilustraciones.get("noticia"), hoy, c, d=d)
         tasa_cuerpo = (_tasa_correo(tasa, ilustraciones.get("tasa"), c) + _separador(10)) if tasa else ""
     else:
         tasa_oscura = (_tasa_correo(tasa, ilustraciones.get("tasa"), c, oscuro=True) + _separador(8)) if tasa else ""

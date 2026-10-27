@@ -417,6 +417,33 @@
     "nombre_es": "Banco Central Europeo",
     "explicacion": "Decide las tasas de interés de la zona euro."
   },
+  "Tasa del BCE": {
+    "nombre_es": "Decisión de tasas del Banco Central Europeo (BCE)",
+    "explicacion": "La tasa de interés que fija el BCE para la zona euro; cuando sube, el euro tiende a fortalecerse frente al dólar.",
+    "pais": "Euro Zone",
+    "titulos_ff": [
+      "ECB Interest Rate Decision",
+      "Deposit Facility Rate",
+      "ECB Main Refinancing Rate",
+      "Main Refinancing Rate"
+    ]
+  },
+  "Conferencia del BCE": {
+    "nombre_es": "Conferencia de prensa del BCE",
+    "explicacion": "La presidenta del BCE explica la decisión de tasas; sus palabras sobre los próximos pasos suelen mover al euro.",
+    "pais": "Euro Zone",
+    "titulos_ff": [
+      "ECB Press Conference"
+    ]
+  },
+  "Comunicado del BCE": {
+    "nombre_es": "Comunicado de política monetaria del BCE",
+    "explicacion": "El texto con que el BCE anuncia y justifica su decisión de tasas para la zona euro.",
+    "pais": "Euro Zone",
+    "titulos_ff": [
+      "ECB Monetary Policy Statement"
+    ]
+  },
   "PCE subyacente": {
     "nombre_es": "Gasto en consumo personal subyacente",
     "explicacion": "El PCE sin alimentos ni energía; la Fed lo prefiere porque es más estable.",

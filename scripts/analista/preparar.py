@@ -83,10 +83,10 @@ def _tasa(ticker: str, clase: str, ahora: datetime):
 
 
 def _noticias(ticker: str, nombre: str, ahora: datetime):
-    """Las notas de FXStreet del activo, candidatas a abrir el correo (director, 2026-10-25)."""
-    from analista import noticia
+    """Las notas candidatas a abrir el correo: del activo y, sin ellas, de su sector (spec 2026-10-27)."""
+    from analista import apertura
 
-    return noticia.candidatas_fxstreet(ticker, nombre, ahora)
+    return apertura.candidatas(ticker, nombre, ahora)
 
 
 def _drivers(ticker: str) -> list[str]:
@@ -481,6 +481,11 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
     datos["noticias_candidatas"], aviso_fx = lec.noticias(ticker, nombre, ahora)
     if aviso_fx:
         avisos.append(aviso_fx)
+    if not datos["noticias_candidatas"]:
+        # Escalón 3: sin notas, el correo puede abrir con el evento central de la semana (spec 2026-10-27).
+        from analista import apertura
+
+        datos["evento_apertura"] = apertura.evento_central(limpio["agenda"]["eventos"], ticker, ahora)
     if empresa is not None:
         datos["empresa"] = empresa
     previa = rg.anterior(ticker, lec.registro or rg.RUTA)
