@@ -33,19 +33,29 @@ class MT5Falso:
 
     SYMBOL_TRADE_MODE_FULL = FULL
 
-    def __init__(self, simbolos=(), login=51257):
+    def __init__(self, simbolos=(), login=51257, sin_tick=(), reloj_visible=True):
         self._simbolos = list(simbolos)
         self._login = login
+        self._sin_tick = set(sin_tick)        # tickers sin cotización ("*" = ninguno cotiza)
+        self._reloj_visible = reloj_visible
         self.selecciones: list[tuple[str, bool]] = []
+        self.ticks_pedidos: list[str] = []
 
     def symbols_get(self):
         return self._simbolos
+
+    def symbol_info(self, ticker):
+        return SimpleNamespace(name=ticker, visible=self._reloj_visible)
 
     def symbol_select(self, ticker, activo):
         self.selecciones.append((ticker, activo))
         return True
 
     def symbol_info_tick(self, ticker):
+        # Qué estaba seleccionado cuando se pidió el tick: el orden importa.
+        self.ticks_pedidos.append((ticker, tuple(self.selecciones)))
+        if "*" in self._sin_tick or ticker in self._sin_tick:
+            return None
         return SimpleNamespace(time=int(time.time()))
 
     def account_info(self):
@@ -113,7 +123,59 @@ def test_historia_insuficiente_queda_como_falla_del_marco():
     e = rm.escanear(simbolos, MT5Falso(), leer_velas=_velas_cortas, ahora=_reloj)
     assert e.filas == ()
     assert {(f.ticker, f.marco) for f in e.fallas} == {("CORTO", m) for m in RADAR_MARCOS}
-    assert all("velas de" in f.motivo for f in e.fallas)
+    # El texto de HistoriaInsuficiente, no el de un marco ausente: "H1: 10 velas de 600".
+    for f in e.fallas:
+        assert f.motivo == f"{f.marco}: 10 velas de {rm.MARCOS_RADAR.velas[f.marco]}"
+
+
+def test_reloj_invisible_se_abre_para_leerlo_y_se_restaura():
+    mt5 = MT5Falso(reloj_visible=False)
+    rm.escanear([rm.Simbolo("X", 2, "Forex", True)], mt5, leer_velas=_velas_cortas, ahora=_reloj)
+    [seleccion_al_pedir] = [sel for t, sel in mt5.ticks_pedidos if t == rm.RELOJ]
+    assert seleccion_al_pedir == ((rm.RELOJ, True),)
+    assert mt5.selecciones[-1] == (rm.RELOJ, False)
+
+
+def test_sin_tick_del_reloj_usa_el_del_primer_simbolo_que_cotiza(monkeypatch):
+    monkeypatch.setattr(rm, "leer_marco", lambda velas, marco, digits, p=None: _lectura(marco))
+    mt5 = MT5Falso(sin_tick={rm.RELOJ, "A"})
+    simbolos = [rm.Simbolo("A", 2, "Forex", True), rm.Simbolo("B", 2, "Forex", True)]
+    e = rm.escanear(simbolos, mt5, leer_velas=_velas_cortas, ahora=_reloj)
+    assert e.fallas == () and e.paridad == ()
+    # La hora de cierre sale para todos, también para A, que se leyó antes de medir el reloj.
+    assert all(set(f.cierres) == set(RADAR_MARCOS) for f in e.filas)
+
+
+def test_sin_ningun_tick_es_aviso_y_no_falla(monkeypatch):
+    monkeypatch.setattr(rm, "leer_marco", lambda velas, marco, digits, p=None: _lectura(marco))
+    mt5 = MT5Falso(sin_tick={"*"})
+    e = rm.escanear([rm.Simbolo("A", 2, "Forex", True)], mt5, leer_velas=_velas_cortas, ahora=_reloj)
+    assert e.fallas == ()
+    assert [f.ticker for f in e.filas] == ["A"] and e.filas[0].cierres == {}
+    assert e.paridad == ("no se pudo medir el reloj del servidor: las horas de cierre no se muestran",)
+
+
+def test_la_cuenta_verificada_se_pasa_y_no_se_vuelve_a_leer():
+    class SinCuenta(MT5Falso):
+        def account_info(self):
+            raise AssertionError("la cuenta ya se verificó en main")
+
+    e = rm.escanear([], SinCuenta(), leer_velas=_velas_cortas, ahora=_reloj, cuenta=51257)
+    assert e.cuenta == 51257
+
+
+def test_una_falla_inesperada_escribe_pagina_de_error(tmp_path, monkeypatch):
+    monkeypatch.setattr(rm, "_terminal", lambda: MT5Falso([_sym("EURUSD")]))
+    monkeypatch.setattr(rm.mt5_client, "connect", lambda: None)
+
+    def rota(*a, **k):
+        raise TypeError("algo inesperado")
+
+    monkeypatch.setattr(rm, "escanear", rota)
+    assert rm.main(["--sin-abrir", "--salida", str(tmp_path)]) == 1
+    pagina = (tmp_path / "ultimo.html").read_text(encoding="utf-8")
+    assert "El radar falló" in pagina and "TypeError: algo inesperado" in pagina
+    assert len(list(tmp_path.glob("*/radar_*.html"))) == 1
 
 
 def test_un_marco_ausente_o_sin_rango_es_falla_del_marco_y_no_del_simbolo(monkeypatch):

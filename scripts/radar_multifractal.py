@@ -94,58 +94,91 @@ def _cuenta(mt5) -> int:
         return 0
 
 
+AVISO_SIN_RELOJ = "no se pudo medir el reloj del servidor: las horas de cierre no se muestran"
+
+
+def _offset(tick) -> int | None:
+    """El desfase del servidor contra UTC a partir de un tick, o None si no hay tick."""
+    return offset_servidor(int(tick.time), time.time()) if tick is not None else None
+
+
+def _abrir_reloj(mt5) -> bool:
+    """Deja el reloj del servidor en Observación de Mercado. Devuelve si hay que cerrarlo.
+
+    Un símbolo fuera de Observación de Mercado no recibe ticks, así que el reloj se
+    selecciona antes de pedir su cotización y se restaura con el resto del universo.
+    """
+    info = mt5.symbol_info(RELOJ)
+    if info is None or info.visible:
+        return False
+    mt5.symbol_select(RELOJ, True)
+    return True
+
+
 def escanear(simbolos: list[Simbolo], mt5, leer_velas=velas_mt5,
-             ahora: Callable[[], datetime] = _ahora_santiago) -> Escaneo:
+             ahora: Callable[[], datetime] = _ahora_santiago,
+             cuenta: int | None = None) -> Escaneo:
     """Lee cada símbolo en los marcos del radar y junta filas y fallas.
 
     Una sola lectura de velas por símbolo (W1/D1/H4/H1 cerradas; la vela en curso la
     separa `velas_mt5` y no entra). Una excepción de la lectura es falla del símbolo; una
     del motor (historia insuficiente, marco ausente, ATR 0) es falla de ese marco, y los
     demás marcos y símbolos se leen igual. La paridad la agrega `main`.
+
+    El desfase del servidor se mide una vez con el reloj (`RELOJ`). Si el reloj no
+    cotiza, se usa el tick del primer símbolo leído que sí lo tenga, la misma idea de
+    `velas_mt5`. Sin ningún tick, las horas de cierre no se muestran y queda un aviso
+    en `paridad`: no es la falla de ningún símbolo y no se cuenta como tal.
+
+    `cuenta` es el login que `main` ya verificó; si no viene, se lee del terminal.
     """
     inicio = ahora()
     t0 = time.monotonic()
-    filas: list[Fila] = []
+    leidos: list[tuple[Simbolo, dict[str, LecturaMarco]]] = []
     fallas: list[Falla] = []
-    # El desfase del servidor se mide una vez: es el mismo para todo el universo.
-    reloj = mt5.symbol_info_tick(RELOJ)
-    offset = offset_servidor(int(reloj.time), time.time()) if reloj is not None else None
-    if offset is None:
-        fallas.append(Falla(RELOJ, None, "sin cotización del reloj del servidor: "
-                                         "las horas de cierre no se muestran"))
+    restaurar = [s.ticker for s in simbolos if not s.visible]
     try:
+        if _abrir_reloj(mt5) and RELOJ not in restaurar:
+            restaurar.append(RELOJ)
+        offset = _offset(mt5.symbol_info_tick(RELOJ))
         for sim in simbolos:
             try:
                 velas, _en_curso = leer_velas(sim.ticker, MARCOS_RADAR)
             except Exception as exc:  # noqa: BLE001 - un símbolo no corta el escaneo
                 fallas.append(Falla(sim.ticker, None, str(exc) or type(exc).__name__))
                 continue
+            if offset is None:
+                # Recién leído, el símbolo está seleccionado y su tick existe si cotiza.
+                offset = _offset(mt5.symbol_info_tick(sim.ticker))
             marcos: dict[str, LecturaMarco] = {}
-            cierres: dict[str, datetime] = {}
             for marco in RADAR_MARCOS:
                 try:
-                    lectura = leer_marco(velas, marco, sim.digits, PARAMETROS)
+                    marcos[marco] = leer_marco(velas, marco, sim.digits, PARAMETROS)
                 except KeyError as exc:
                     fallas.append(Falla(sim.ticker, marco, f"MT5 no entregó velas de {exc}"))
-                    continue
                 except ValueError as exc:  # incluye HistoriaInsuficiente
                     fallas.append(Falla(sim.ticker, marco, str(exc)))
-                    continue
-                marcos[marco] = lectura
-                if offset is not None:
-                    cierres[marco] = cierre_santiago(lectura.vela, marco, offset)
             if marcos:
-                filas.append(Fila(sim.ticker, sim.categoria, sim.digits, marcos, cierres))
+                leidos.append((sim, marcos))
     finally:
         # Lo que el director no tenía abierto vuelve a cerrarse, pase lo que pase.
-        for sim in simbolos:
-            if not sim.visible:
-                try:
-                    mt5.symbol_select(sim.ticker, False)
-                except Exception:  # noqa: BLE001 - restaurar uno no impide restaurar el resto
-                    pass
-    return Escaneo(inicio=inicio, duracion_s=time.monotonic() - t0, cuenta=_cuenta(mt5),
-                   leidos=len(simbolos), filas=tuple(filas), fallas=tuple(fallas), paridad=())
+        for ticker in restaurar:
+            try:
+                mt5.symbol_select(ticker, False)
+            except Exception:  # noqa: BLE001 - restaurar uno no impide restaurar el resto
+                pass
+    # Las horas se calculan al final: el desfase puede haberse medido con un símbolo
+    # posterior, y los anteriores también llevan su hora de cierre.
+    filas = tuple(
+        Fila(sim.ticker, sim.categoria, sim.digits, marcos,
+             {} if offset is None else
+             {m: cierre_santiago(lm.vela, m, offset) for m, lm in marcos.items()})
+        for sim, marcos in leidos
+    )
+    return Escaneo(inicio=inicio, duracion_s=time.monotonic() - t0,
+                   cuenta=_cuenta(mt5) if cuenta is None else cuenta,
+                   leidos=len(simbolos), filas=filas, fallas=tuple(fallas),
+                   paridad=() if offset is not None else (AVISO_SIN_RELOJ,))
 
 
 def _paridad(e: Escaneo) -> tuple[str, ...]:
@@ -206,21 +239,30 @@ def main(argv: list[str] | None = None) -> int:
         detalle = getattr(veredicto, "detalle", "") or getattr(veredicto, "motivo", "")
         return terminar(render_error("Cuenta MT5 inesperada", detalle, inicio), 1)
 
+    try:
+        html = _matriz(mt5, int(info.login), args.simbolos, inicio)
+    except Exception as exc:  # noqa: BLE001
+        # Sin esto, una falla inesperada deja el `ultimo.html` de ayer con cara de hoy.
+        return terminar(render_error("El radar falló", f"{type(exc).__name__}: {exc}", inicio), 1)
+    return terminar(html, 0)
+
+
+def _matriz(mt5, login: int, pedidos_txt: str | None, inicio: datetime) -> str:
+    """El escaneo completo ya con la cuenta verificada: universo, lectura, paridad y HTML."""
     simbolos = universo(mt5)
     fuera: list[Falla] = []
-    if args.simbolos:
-        pedidos = [t.strip() for t in args.simbolos.split(",") if t.strip()]
+    if pedidos_txt:
+        pedidos = [t.strip() for t in pedidos_txt.split(",") if t.strip()]
         por_ticker = {s.ticker: s for s in simbolos}
         simbolos = [por_ticker[t] for t in pedidos if t in por_ticker]
         fuera = [Falla(t, None, "no está entre los símbolos operables del terminal")
                  for t in pedidos if t not in por_ticker]
 
     # `velas_mt5` se pasa explícito para leer el nombre del módulo en el momento.
-    e = escanear(simbolos, mt5, leer_velas=velas_mt5, ahora=lambda: inicio)
+    e = escanear(simbolos, mt5, leer_velas=velas_mt5, ahora=lambda: inicio, cuenta=login)
     e = replace(e, leidos=e.leidos + len(fuera), fallas=tuple(fuera) + e.fallas,
-                paridad=_paridad(e))
-    return terminar(render(e), 0)
-
+                paridad=e.paridad + _paridad(e))
+    return render(e)
 
 if __name__ == "__main__":
     raise SystemExit(main())
