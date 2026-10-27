@@ -157,12 +157,53 @@ def depurar_noticia(pieza: dict[str, Any], hoy: date, lista: dict[str, Any] | No
     if n is None or n == es.MARCA:
         editorial["noticia"] = None
         return pieza, []
+    if isinstance(n, dict) and n.get("escalon") == "agenda":
+        return _depurar_agenda(pieza, n)
     lista = lista or fu.cargar_lista()
     motivo = _motivo(n, hoy, lista, fu._con_lista(verificar, lista), leer)
     if motivo:
         editorial["noticia"] = None
         return pieza, [f"Noticia de apertura: {motivo}"]
     editorial["noticia"] = {c: n[c].strip() for c in CAMPOS}
+    return pieza, []
+
+
+CAMPOS_AGENDA = ("titular", "bajada", "motivo")
+
+
+def _motivo_agenda(n: dict[str, Any], datos: dict[str, Any]) -> str | None:
+    """El escalón 3 (spec 2026-10-27): sin notas, abre el evento central de la semana. Las cifras las pone el
+    calendario en el correo; el texto de agy no lleva ninguna."""
+    if datos.get("noticias_candidatas"):
+        return "abre con la agenda habiendo notas candidatas: tiene que elegir una de ellas"
+    if not isinstance(datos.get("evento_apertura"), dict):
+        return "abre con la agenda y la pieza no trae un evento central de la semana"
+    if any(not isinstance(n.get(c), str) or not n[c].strip() for c in CAMPOS_AGENDA):
+        return f"viene incompleta (campos: {', '.join(CAMPOS_AGENDA)})"
+    from analista import ilustracion
+
+    if n["motivo"] not in ilustracion.motivos():
+        return f"el motivo de imagen «{n['motivo']}» no está en el catálogo"
+    for campo, tope in LARGOS.items():
+        if len(n[campo]) > tope:
+            return f"el {campo} tiene {len(n[campo])} caracteres y el máximo es {tope}"
+    for campo in ("titular", "bajada"):
+        errs = es.errores_texto_noticia(f"noticia.{campo}", n[campo])
+        if errs:
+            return errs[0].split(": ", 1)[-1]
+    if _cifras_del_texto(f"{n['titular']} {n['bajada']}"):
+        return "la apertura de agenda trae una cifra: las cifras las pone el calendario"
+    return None
+
+
+def _depurar_agenda(pieza: dict[str, Any], n: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    datos = pieza.get("datos") or {}
+    motivo = _motivo_agenda(n, datos)
+    if motivo:
+        pieza["editorial"]["noticia"] = None
+        return pieza, [f"Noticia de apertura: {motivo}"]
+    pieza["editorial"]["noticia"] = {"escalon": "agenda", **{c: n[c].strip() for c in CAMPOS_AGENDA},
+                                     "evento": dict(datos["evento_apertura"])}
     return pieza, []
 
 
@@ -222,9 +263,11 @@ def _patrones(ticker: str, nombre: str, ruta: Path) -> list[re.Pattern[str]]:
 
 def candidatas_de_feeds(feeds: tuple[str, ...] | list[str], medio: str, ticker: str, nombre: str, ahora: datetime,
                         leer: Callable[[str], str] = leer_feed,
-                        ruta_patrones: Path = PATRONES_FX) -> tuple[list[dict[str, Any]], int]:
-    """Candidatas ordenadas más reciente primero y cantidad de feeds caídos."""
-    patrones = _patrones(ticker, nombre, ruta_patrones)
+                        ruta_patrones: Path = PATRONES_FX,
+                        patrones: list[re.Pattern[str]] | None = None) -> tuple[list[dict[str, Any]], int]:
+    """Candidatas ordenadas más reciente primero y cantidad de feeds caídos. `patrones` reemplaza a los del
+    activo (el escalón del sector, `apertura.py`)."""
+    patrones = patrones or _patrones(ticker, nombre, ruta_patrones)
     hoy = ahora.astimezone(SANTIAGO).date()
     vistas: dict[str, dict[str, Any]] = {}
     caidos = 0
