@@ -1,0 +1,55 @@
+{
+  "generated_at": "2026-10-26 07:25",
+  "server_tz_note": "hora servidor MT5 (broker actual = hora Chile)",
+  "charts": [
+    {
+      "symbol": "XAUUSD",
+      "timeframe": "H4",
+      "digits": 2,
+      "current_price": 2650.00,
+      "screenshot": "XAUUSD_H4.png",
+      "hlines": [],
+      "trendlines": [
+        {
+          "name": "GI_TV_DIAG_SEGURIDAD",
+          "p1": 2600.00,
+          "t1": "2026-10-20 08:00",
+          "p2": 2640.00,
+          "t2": "2026-10-25 12:00",
+          "valor_actual": 2650.10,
+          "pendiente": "alcista"
+        },
+        {
+          "name": "GI_TV_DIAG_ACCION",
+          "p1": 2620.00,
+          "t1": "2026-10-20 08:00",
+          "p2": 2660.00,
+          "t2": "2026-10-25 12:00",
+          "valor_actual": 2670.50,
+          "pendiente": "alcista"
+        },
+        {
+          "name": "GI_TV_LINE_SOPORTE",
+          "p1": 2630.00,
+          "t1": "2026-10-20 08:00",
+          "p2": 2630.00,
+          "t2": "2026-10-25 12:00",
+          "valor_actual": 2630.00,
+          "pendiente": "plana"
+        },
+        {
+          "name": "GI_TV_LINE_RESISTENCIA",
+          "p1": 2680.00,
+          "t1": "2026-10-20 08:00",
+          "p2": 2680.00,
+          "t2": "2026-10-25 12:00",
+          "valor_actual": 2680.00,
+          "pendiente": "plana"
+        }
+      ],
+      "channels": [],
+      "rectangles": [],
+      "fibos": []
+    }
+  ]
+}
