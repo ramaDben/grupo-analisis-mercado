@@ -208,7 +208,7 @@ def _parsear_filas(html: str) -> list[dict]:
     return eventos
 
 
-def _enganchar_glosario(nombre: str, glosario: dict) -> dict | None:
+def _enganchar_glosario(nombre: str, glosario: dict, pais: str | None = None) -> dict | None:
     """Busca entrada del glosario para un nombre de evento.
 
     Gana la entrada cuya clave o alias coincide con el tramo **más largo** del
@@ -235,12 +235,19 @@ def _enganchar_glosario(nombre: str, glosario: dict) -> dict | None:
 
     Se usan lookarounds y no `\b` porque hay claves que terminan en punto
     (`EE.UU.`) o traen paréntesis, donde `\b` no se ancla donde uno espera.
+
+    Con `pais`, una entrada que declara otro país no engancha. El 2026-10-27 la
+    decisión del BCE («ECB Interest Rate Decision») salió explicada como la TPM
+    del Banco Central de Chile, porque esa entrada trae el alias genérico
+    «Interest Rate Decision», que calza con la decisión de cualquier banco.
     """
     nombre_upper = nombre.upper()
     mejor: dict | None = None
     mejor_largo = -1
     for key, entry in glosario.items():
         if key.startswith("_") or key.isdigit():
+            continue
+        if pais and entry.get("pais") and entry["pais"] != pais:
             continue
         for candidato in (key, *entry.get("titulos_ff", [])):
             if len(candidato) <= mejor_largo:
@@ -323,7 +330,7 @@ def cargar_calendario(
             if fecha_ev != hoy:
                 continue
         ev = dict(ev)
-        entrada = _enganchar_glosario(ev["nombre"], glosario)
+        entrada = _enganchar_glosario(ev["nombre"], glosario, ev.get("pais"))
         if entrada:
             ev["diccionario"] = entrada
         else:
