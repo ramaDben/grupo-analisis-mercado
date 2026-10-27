@@ -1641,3 +1641,29 @@ def test_sintesis_con_lectura_direccional_tiene_verbo_y_dice_si_acompana():
     _, sintesis = oh.seleccionar_drivers_correo(hechos, direccion="ALCISTA")
     assert sintesis == ("El retroceso del Dollar Index (DXY) juega a favor del alza del oro y acompaña "
                         "nuestra lectura.")
+
+
+# La apertura dice de qué escalón es (spec 2026-10-27).
+def test_la_nota_del_sector_se_rotula(tmp_path):
+    p = _con_apertura(tmp_path)
+    p["datos"]["noticias_candidatas"] = [{"url": NOTICIA["url"], "escalon": "sector", "sector": "la banca de EE.UU."}]
+    p["huella"] = es._huella(p)
+    correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+    assert "LO QUE MUEVE AL SECTOR · ORO (XAU/USD)" in correo and "Fuente: Reuters" in correo
+
+
+EVENTO_FED = {"fecha": "2026-10-14", "dia": "miércoles 14/10", "hora": "15:00 CLST",
+              "evento": "Comité de mercado abierto de la Fed", "fuente_nombre": "Fed Interest Rate Decision",
+              "pais": "EE.UU.", "anterior": "4,00 por ciento", "esperado": "3,75 por ciento"}
+
+
+def test_la_apertura_de_agenda_muestra_el_evento_con_las_cifras_del_calendario(tmp_path):
+    p = _con_apertura(tmp_path, noticia=False)
+    p["editorial"]["noticia"] = {"escalon": "agenda", "titular": "La Fed decide sus tasas esta semana",
+                                 "bajada": "El mercado aguarda la decisión del miércoles.", "motivo": "banco_central",
+                                 "evento": EVENTO_FED}
+    correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+    assert "EN LA AGENDA · ORO (XAU/USD)" in correo
+    assert "Comité de mercado abierto de la Fed · miércoles 14/10, 15:00 CLST" in correo
+    assert "Anterior: 4,00 por ciento · Esperado: 3,75 por ciento" in correo
+    assert "Calendario completo: Investing.com" in correo and "Fuente:" not in correo.split("EN LA AGENDA")[1][:3000]

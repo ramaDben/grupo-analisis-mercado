@@ -123,13 +123,23 @@ y la pone el bot: tú no decides nada visual.
   (Coinbase, Kraken, Binance) o un portal cripto nunca es directa por nombrar la moneda.
 - `noticia`: la noticia actual que abre el correo (spec 2026-10-24), un **objeto** con estos campos de texto, o
   `null` solo si no hay ninguna que cumpla todo.
-  - **Primero `datos.noticias_candidatas`**: notas de FXStreet en español sobre el activo, de los últimos 3 días, que
-    el bot ya leyó del RSS (la más reciente primero). Si trae al menos una, **elige una de ahí**: abre su `url`, copia
-    `medio`, `fecha`, `url` y `titular_original` tal cual y redacta el resto. Elige la que mejor sostenga una premisa
-    sobre el activo, no necesariamente la primera. No la cambies por otra nota de la web.
+  - La noticia baja por escalones (spec 2026-10-27) y el correo rotula cuál usaste; el primero que tenga algo gana.
+  - **Primero `datos.noticias_candidatas`**: notas de FXStreet e Investing.com en español de los últimos 3 días, que
+    el bot ya leyó del RSS (la más reciente primero). Cada una trae su `escalon`: `activo` si el titular nombra al
+    activo, o `sector` (con el nombre del `sector`) si no había ninguna del activo y son notas de su sector. Si la
+    lista trae al menos una, **elige una de ahí**: abre su `url`, copia `medio`, `fecha`, `url` y `titular_original`
+    tal cual y redacta el resto. Elige la que mejor sostenga una premisa sobre el activo, no necesariamente la
+    primera. No la cambies por otra nota de la web. Con una nota del sector, el titular y la bajada hablan del
+    sector y explican en una frase por qué le importa al activo, sin atribuirle a la nota lo que no dice.
   - Solo si la lista viene vacía, búscala en la web: `medio`, `fecha` (AAAA-MM-DD, **de los últimos 3 días**) y `url`
     (https, de un artículo concreto, del dominio del medio), mismas reglas de medio que `fuentes`, **primero en
     español** (FXStreet incluido); Reuters, Bloomberg, FT, WSJ, CNBC o MarketWatch solo si no hay una en español.
+  - Si la lista viene vacía, la web no trae una nota del activo y existe `datos.evento_apertura` (el evento central
+    de la semana, del calendario), abre con él: un objeto con **solo** `escalon: "agenda"`, `titular`, `bajada` y
+    `motivo` (casi siempre `banco_central`). Va en **modo anticipación** ("el mercado aguarda", "se conocerá el
+    jueves"), nunca en pasado, y **sin ninguna cifra**: el día, la hora, el anterior y el esperado los pone el bot
+    debajo, tal como vienen del calendario. Sin `medio`, `fecha`, `url` ni `extracto`. Explica qué se decide o se
+    publica y por qué mueve al activo.
   - `titular_original` y `extracto`: el titular de la nota y el párrafo que sostiene tu titular, en su idioma.
   - `titular`: una frase en español que sostenga una premisa, hasta 90 caracteres. `bajada`: hasta 200, atribuida
     ("Según Reuters, …").

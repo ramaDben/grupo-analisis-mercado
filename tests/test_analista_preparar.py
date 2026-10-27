@@ -512,3 +512,22 @@ def test_grafico_dolar_pasa_sin_leyenda(tmp_path, monkeypatch):
     assert len(pedidos) == 1
     assert pedidos[0].get("sin_leyenda") is True
     assert pedidos[0]["ticker"] == "USDIDX"
+
+
+def _agenda_con_fed(ahora, t, n):
+    return ag.Agenda("lunes 12/10", "lunes 19/10", "ok", eventos=[
+        {"fecha": "2026-10-14", "dia": "miércoles 14/10", "hora": "15:00 CLST", "evento": "Comité de la Fed",
+         "fuente_nombre": "Fed Interest Rate Decision", "pais": "EE.UU.", "anterior": "4,00", "esperado": "4,00",
+         "explicacion": "", "efecto": "", "mueve_al_activo": False}])
+
+
+def test_sin_notas_sella_el_evento_central_de_la_semana(tmp_path):
+    hecha = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES,
+                        _lectores(tmp_path / "ref", agenda=_agenda_con_fed))
+    assert hecha.pieza["datos"]["evento_apertura"]["fuente_nombre"] == "Fed Interest Rate Decision"
+
+
+def test_con_notas_no_hay_evento_de_apertura(tmp_path):
+    hecha = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES,
+                        _lectores(tmp_path / "ref", agenda=_agenda_con_fed, noticias=lambda t, n, a: ([CANDIDATA], None)))
+    assert "evento_apertura" not in hecha.pieza["datos"]
