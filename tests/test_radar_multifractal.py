@@ -34,6 +34,7 @@ class MT5Falso:
     """Lo mínimo del módulo MetaTrader5 que usa el radar."""
 
     SYMBOL_TRADE_MODE_FULL = FULL
+    TIMEFRAME_H1, TIMEFRAME_H4, TIMEFRAME_D1 = "H1", "H4", "D1"
 
     def __init__(self, simbolos=(), login=51257, sin_tick=(), reloj_visible=True):
         self._simbolos = list(simbolos)
@@ -59,6 +60,9 @@ class MT5Falso:
         if "*" in self._sin_tick or ticker in self._sin_tick:
             return None
         return SimpleNamespace(time=int(time.time()))
+
+    def copy_rates_from_pos(self, ticker, marco, desde, n):
+        return None   # sin vela más nueva: la prueba de sincronización se salta
 
     def account_info(self):
         return SimpleNamespace(login=self._login)
@@ -361,17 +365,32 @@ MAYO = {m: _servidor(2026, 5, 29, 15, 0) for m in RADAR_MARCOS}   # la caché lo
 class MT5Reloj(MT5Falso):
     """Cotiza con el reloj controlado, con el servidor `DESFASE` adelante de UTC."""
 
-    def __init__(self, *a, utc=UTC_AHORA, ticks=None, **k):
+    def __init__(self, *a, utc=UTC_AHORA, ticks=None, nuevas=None, **k):
         super().__init__(*a, **k)
         self._utc = utc
         self._ticks = dict(ticks or {})   # último tick (hora del servidor) por símbolo
+        # Vela más nueva por símbolo, una tanda {marco: apertura} por intento; sin ella,
+        # la que contiene el tick (un terminal sincronizado).
+        self._nuevas = dict(nuevas or {})
+        self.pedidas_nuevas: dict[tuple[str, str], int] = {}
+
+    def _tick(self, ticker):
+        return self._ticks.get(ticker, self._utc + DESFASE)
 
     def symbol_info_tick(self, ticker):
         self.ticks_pedidos.append((ticker, tuple(self.selecciones)))
-        if ticker in self._ticks:
-            t = self._ticks[ticker]
-            return None if t is None else SimpleNamespace(time=t)
-        return SimpleNamespace(time=self._utc + DESFASE)
+        t = self._tick(ticker)
+        return None if t is None else SimpleNamespace(time=t)
+
+    def copy_rates_from_pos(self, ticker, marco, desde, n):
+        assert (desde, n) == (0, 1)
+        i = self.pedidas_nuevas.get((ticker, marco), 0)
+        self.pedidas_nuevas[(ticker, marco)] = i + 1
+        tandas = self._nuevas.get(ticker)
+        if tandas and i < len(tandas):
+            return [{"time": tandas[i][marco]}]
+        t = self._tick(ticker)
+        return None if t is None else [{"time": t - t % DURACION[marco]}]
 
 
 def _vela_de_las_velas(velas, marco, digits, p=None):
@@ -416,9 +435,9 @@ def test_oculto_que_sigue_vencido_es_falla_por_marco_con_la_fecha(monkeypatch):
     mt5 = MT5Reloj()
     leer_velas, llamadas = _lector(MAYO)
     e, dormidas = _escanear_con_reloj([rm.Simbolo("#AAL", 2, "Stocks", False)], mt5, leer_velas)
-    # Los intentos de la primera pasada y la relectura de la segunda, que no espera.
+    # Los intentos de la primera pasada y la relectura de la segunda, con su espera.
     assert len(llamadas) == rm.INTENTOS_SINCRONIZACION + 1
-    assert dormidas == [rm.ESPERA_SINCRONIZACION_S] * (rm.INTENTOS_SINCRONIZACION - 1)
+    assert dormidas == [rm.ESPERA_SINCRONIZACION_S] * rm.INTENTOS_SINCRONIZACION
     assert e.filas == ()
     assert {(f.ticker, f.marco) for f in e.fallas} == {("#AAL", m) for m in RADAR_MARCOS}
     h1 = next(f for f in e.fallas if f.marco == "H1")
@@ -432,8 +451,8 @@ def test_visible_con_velas_vencidas_es_falla_sin_reintentos(monkeypatch):
     mt5 = MT5Reloj()
     leer_velas, llamadas = _lector(MAYO)
     e, dormidas = _escanear_con_reloj([rm.Simbolo("EURUSD", 5, "Forex", True)], mt5, leer_velas)
-    # Sin reintentos ni esperas en la primera pasada; solo la relectura de la segunda.
-    assert llamadas == ["EURUSD", "EURUSD"] and dormidas == []
+    # Sin reintentos en la primera pasada; solo la espera y la relectura de la segunda.
+    assert llamadas == ["EURUSD", "EURUSD"] and dormidas == [rm.ESPERA_SINCRONIZACION_S]
     assert e.filas == ()
     assert all("velas desactualizadas" in f.motivo for f in e.fallas)
     assert ("EURUSD", True) not in mt5.selecciones
@@ -445,13 +464,47 @@ def test_accion_el_lunes_a_las_0730_con_la_vela_del_viernes_es_fresca(monkeypatc
     lunes = int(datetime(2026, 10, 26, 7, 30, tzinfo=SANTIAGO).timestamp())
     viernes = {"H1": _servidor(2026, 10, 23, 16, 0), "H4": _servidor(2026, 10, 23, 16, 0),
                "D1": _servidor(2026, 10, 23, 0, 0)}
-    # El último tick de la acción es el del cierre del viernes, 16:59 del servidor: cae
-    # dentro de la hora que sigue a la H1 de las 16:00, así que no pide reintento.
-    mt5 = MT5Reloj(utc=lunes, ticks={"#AAPL": _servidor(2026, 10, 23, 16, 59)})
+    # Mercado cerrado: el último tick es el del viernes 16:59 del servidor, y la vela más
+    # nueva de cada marco (la H1 y la H4 de las 16:00, la D1 del viernes) lo contiene.
+    mt5 = MT5Reloj(utc=lunes, ticks={"#AAPL": _servidor(2026, 10, 23, 16, 59)},
+                   nuevas={"#AAPL": [viernes]})
     leer_velas, llamadas = _lector(viernes)
     e, dormidas = _escanear_con_reloj([rm.Simbolo("#AAPL", 2, "Stocks", False)], mt5,
                                       leer_velas, utc=lunes)
     assert e.fallas == () and dormidas == [] and llamadas == ["#AAPL"]
+    assert set(e.filas[0].marcos) == set(RADAR_MARCOS)
+
+
+def test_accion_oculta_el_lunes_en_la_tarde_con_la_d1_del_viernes_es_fresca(monkeypatch):
+    # Medido en vivo con 7ed8f28: 51 acciones ocultas salieron con D1 «desactualizada del
+    # 24-10 00:00», que era la D1 del viernes, la última cerrada un lunes. La D1 del lunes
+    # está en curso y contiene el tick: el terminal está al día.
+    monkeypatch.setattr(rm, "leer_marco", _vela_de_las_velas)
+    tick = _servidor(2026, 10, 26, 16, 59)
+    cerradas = {"H1": _servidor(2026, 10, 26, 15, 0), "H4": _servidor(2026, 10, 26, 12, 0),
+                "D1": _servidor(2026, 10, 23, 0, 0)}
+    en_curso = {"H1": _servidor(2026, 10, 26, 16, 0), "H4": _servidor(2026, 10, 26, 16, 0),
+                "D1": _servidor(2026, 10, 26, 0, 0)}
+    mt5 = MT5Reloj(utc=tick - DESFASE, nuevas={"#AAPL": [en_curso]})
+    leer_velas, llamadas = _lector(cerradas)
+    e, dormidas = _escanear_con_reloj([rm.Simbolo("#AAPL", 2, "Stocks", False)], mt5,
+                                      leer_velas, utc=tick - DESFASE)
+    assert e.fallas == () and dormidas == [] and llamadas == ["#AAPL"]
+    assert set(e.filas[0].marcos) == set(RADAR_MARCOS)
+
+
+def test_forex_oculto_el_lunes_a_las_0730_con_la_d1_del_viernes_es_fresco(monkeypatch):
+    # 24/5: el lunes 07:30 Santiago (13:30 del servidor) la D1 del lunes está en curso y
+    # la última cerrada es la del viernes. Sin calendario: la vela en curso contiene el tick.
+    monkeypatch.setattr(rm, "leer_marco", _vela_de_las_velas)
+    lunes = int(datetime(2026, 10, 26, 7, 30, tzinfo=SANTIAGO).timestamp())
+    cerradas = {"H1": _servidor(2026, 10, 26, 12, 0), "H4": _servidor(2026, 10, 26, 8, 0),
+                "D1": _servidor(2026, 10, 23, 0, 0)}
+    mt5 = MT5Reloj(utc=lunes)   # vela más nueva: la que contiene el tick de las 13:30
+    leer_velas, llamadas = _lector(cerradas)
+    e, dormidas = _escanear_con_reloj([rm.Simbolo("AUDUSD", 5, "Forex", False)], mt5,
+                                      leer_velas, utc=lunes)
+    assert e.fallas == () and dormidas == [] and llamadas == ["AUDUSD"]
     assert set(e.filas[0].marcos) == set(RADAR_MARCOS)
 
 
@@ -472,16 +525,19 @@ def test_el_borde_de_frescura_se_mide_en_hora_del_servidor(monkeypatch):
 # La caché que deja el propio radar: deselecciona al terminar, así que al día siguiente la
 # primera lectura de un oculto trae las velas de ayer. Pasan la guarda de cuatro días.
 AYER = {m: v - 86400 for m, v in HOY.items()}
+# Y la vela más nueva de esa caché (la que estaba en curso ayer): no contiene el tick de hoy.
+AYER_NUEVA = {m: v + DURACION[m] for m, v in AYER.items()}
 
 
-def test_oculto_con_cache_de_un_dia_y_tick_fresco_se_reintenta(monkeypatch):
+def test_oculto_con_cache_de_un_dia_se_espera_y_se_lee_ya_sincronizado(monkeypatch):
     monkeypatch.setattr(rm, "leer_marco", _vela_de_las_velas)
-    # Ninguna vela de ayer la detecta la guarda de cuatro días: el reintento es del tick.
+    # Ninguna vela de ayer la detecta la guarda de cuatro días: la espera es de la prueba.
     assert not any(rm._vencida(AYER[m], m, UTC_AHORA + DESFASE) for m in RADAR_MARCOS)
-    mt5 = MT5Reloj()
-    leer_velas, llamadas = _lector(AYER, HOY)
+    mt5 = MT5Reloj(nuevas={"#NVDA": [AYER_NUEVA]})   # al segundo intento, sincronizado
+    leer_velas, llamadas = _lector(HOY)
     e, dormidas = _escanear_con_reloj([rm.Simbolo("#NVDA", 2, "Stocks", False)], mt5, leer_velas)
-    assert llamadas == ["#NVDA", "#NVDA"]
+    # La prueba va antes de leer: la caché sin sincronizar no gasta la lectura completa.
+    assert llamadas == ["#NVDA"]
     assert dormidas == [rm.ESPERA_SINCRONIZACION_S]
     assert e.fallas == ()
     [fila] = e.filas
@@ -490,11 +546,13 @@ def test_oculto_con_cache_de_un_dia_y_tick_fresco_se_reintenta(monkeypatch):
 
 def test_oculto_con_cache_de_un_dia_que_no_se_repone_es_falla_por_marco(monkeypatch):
     monkeypatch.setattr(rm, "leer_marco", _vela_de_las_velas)
+    mt5 = MT5Reloj(nuevas={"#AAL": [AYER_NUEVA] * 10})
     leer_velas, llamadas = _lector(AYER)
-    e, dormidas = _escanear_con_reloj([rm.Simbolo("#AAL", 2, "Stocks", False)], MT5Reloj(),
-                                      leer_velas)
-    assert len(llamadas) == rm.INTENTOS_SINCRONIZACION + 1
-    assert dormidas == [rm.ESPERA_SINCRONIZACION_S] * (rm.INTENTOS_SINCRONIZACION - 1)
+    e, dormidas = _escanear_con_reloj([rm.Simbolo("#AAL", 2, "Stocks", False)], mt5, leer_velas)
+    # Una lectura al agotar los intentos de cada pasada; una espera por intento y otra
+    # antes de la segunda pasada.
+    assert len(llamadas) == 2
+    assert dormidas == [rm.ESPERA_SINCRONIZACION_S] * rm.INTENTOS_SINCRONIZACION
     assert e.filas == ()
     # Exactamente una falla por marco: sin duplicados.
     assert len(e.fallas) == len(RADAR_MARCOS)
@@ -502,13 +560,14 @@ def test_oculto_con_cache_de_un_dia_que_no_se_repone_es_falla_por_marco(monkeypa
     assert all(f.motivo.startswith("velas desactualizadas en MT5") for f in e.fallas)
 
 
-def test_visible_con_cache_de_un_dia_no_se_reintenta(monkeypatch):
-    # El disparo por tick es solo para ocultos: uno visible ya estaba sincronizando.
+def test_visible_no_se_prueba_contra_su_vela_mas_nueva(monkeypatch):
+    # La prueba de sincronización es solo para ocultos: uno visible ya estaba al día.
     monkeypatch.setattr(rm, "leer_marco", _vela_de_las_velas)
+    mt5 = MT5Reloj(nuevas={"EURUSD": [AYER_NUEVA] * 10})
     leer_velas, llamadas = _lector(AYER, HOY)
-    e, dormidas = _escanear_con_reloj([rm.Simbolo("EURUSD", 5, "Forex", True)], MT5Reloj(),
-                                      leer_velas)
+    e, dormidas = _escanear_con_reloj([rm.Simbolo("EURUSD", 5, "Forex", True)], mt5, leer_velas)
     assert llamadas == ["EURUSD"] and dormidas == [] and e.fallas == ()
+    assert mt5.pedidas_nuevas == {}
 
 
 def _motor_que_rechaza(viejas):
@@ -522,8 +581,10 @@ def _motor_que_rechaza(viejas):
 
 
 def test_cache_corta_se_reintenta_en_vez_de_ser_historia_insuficiente(monkeypatch):
-    monkeypatch.setattr(rm, "leer_marco", _motor_que_rechaza(AYER))
-    leer_velas, llamadas = _lector(AYER, HOY)
+    # La guarda de cuatro días mira las velas crudas: una caché de mayo demasiado corta
+    # para el motor también se reconoce vieja y se reintenta.
+    monkeypatch.setattr(rm, "leer_marco", _motor_que_rechaza(MAYO))
+    leer_velas, llamadas = _lector(MAYO, HOY)
     e, dormidas = _escanear_con_reloj([rm.Simbolo("#ABT", 2, "Stocks", False)], MT5Reloj(),
                                       leer_velas)
     assert llamadas == ["#ABT", "#ABT"] and dormidas == [rm.ESPERA_SINCRONIZACION_S]
@@ -532,8 +593,8 @@ def test_cache_corta_se_reintenta_en_vez_de_ser_historia_insuficiente(monkeypatc
 
 
 def test_cache_corta_que_no_se_repone_dice_desactualizadas_y_no_historia(monkeypatch):
-    monkeypatch.setattr(rm, "leer_marco", _motor_que_rechaza(AYER))
-    leer_velas, _ = _lector(AYER)
+    monkeypatch.setattr(rm, "leer_marco", _motor_que_rechaza(MAYO))
+    leer_velas, _ = _lector(MAYO)
     e, _ = _escanear_con_reloj([rm.Simbolo("#ABT", 2, "Stocks", False)], MT5Reloj(), leer_velas)
     assert e.filas == ()
     assert len(e.fallas) == len(RADAR_MARCOS)
@@ -577,7 +638,7 @@ def test_viejo_en_la_primera_pasada_y_fresco_en_la_segunda_entra_a_la_matriz(mon
     # Un oculto lento: sus intentos de la primera pasada traen la caché; al final, hoy.
     secuencia = [MAYO] * rm.INTENTOS_SINCRONIZACION + [HOY]
     leer_velas, llamadas = _lector(*secuencia)
-    otro, _ = _lector(HOY)
+    otro, llamadas_otro = _lector(HOY)
 
     def leer(ticker, marcos):
         return leer_velas(ticker, marcos) if ticker == "#LENTO" else otro(ticker, marcos)
@@ -585,10 +646,22 @@ def test_viejo_en_la_primera_pasada_y_fresco_en_la_segunda_entra_a_la_matriz(mon
     simbolos = [rm.Simbolo("#LENTO", 2, "Stocks", False), rm.Simbolo("EURUSD", 5, "Forex", True)]
     e, dormidas = _escanear_con_reloj(simbolos, MT5Reloj(), leer)
     assert len(llamadas) == rm.INTENTOS_SINCRONIZACION + 1
-    # La segunda pasada no duerme: solo las esperas de la primera.
-    assert dormidas == [rm.ESPERA_SINCRONIZACION_S] * (rm.INTENTOS_SINCRONIZACION - 1)
+    # Las esperas de la primera pasada y una sola antes de la segunda.
+    assert dormidas == [rm.ESPERA_SINCRONIZACION_S] * rm.INTENTOS_SINCRONIZACION
+    # El fresco no se relee en la segunda pasada.
+    assert llamadas_otro == ["EURUSD"]
     assert e.fallas == ()
     assert [f.ticker for f in e.filas] == ["#LENTO", "EURUSD"]
+    assert {m: lm.vela for m, lm in e.filas[0].marcos.items()} == HOY
+
+
+def test_un_visible_viejo_se_rescata_en_la_segunda_pasada(monkeypatch):
+    monkeypatch.setattr(rm, "leer_marco", _vela_de_las_velas)
+    leer_velas, llamadas = _lector(MAYO, HOY)
+    e, dormidas = _escanear_con_reloj([rm.Simbolo("EURUSD", 5, "Forex", True)], MT5Reloj(),
+                                      leer_velas)
+    assert llamadas == ["EURUSD", "EURUSD"] and dormidas == [rm.ESPERA_SINCRONIZACION_S]
+    assert e.fallas == ()
     assert {m: lm.vela for m, lm in e.filas[0].marcos.items()} == HOY
 
 

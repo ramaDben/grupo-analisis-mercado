@@ -140,16 +140,40 @@ def _vencida(vela: int, marco: str, ahora_servidor: int) -> bool:
     return ahora_servidor - (vela + DURACION[marco]) > DURACION[marco] + HOLGURA_FRESCURA_S
 
 
-def _atrasada(vela: int, marco: str, tick) -> bool:
-    """El último tick del símbolo dice que ya cerró una vela posterior a la leída.
+def _vela_mas_nueva(mt5, ticker: str, marco: str) -> int | None:
+    """La apertura (hora del servidor) de la vela más nueva que MT5 tiene, en curso incluida.
 
-    Si el tick llegó a `vela + 2 × marco`, la vela siguiente a la leída terminó y MT5
-    tendría que haberla entregado: lo leído es la caché local, aunque tenga solo un día.
-    Tick y vela van en hora del servidor, así que no hace falta el desfase. Un mercado
-    cerrado no la dispara: el último tick del viernes 16:59 cae dentro de la hora que
-    sigue a la H1 de las 16:00.
+    `copy_rates_from_pos` crudo entrega `time` en segundos, sin la conversión a datetime de
+    `mt5_client.get_rates`. None si MT5 no la entrega: la prueba se salta.
     """
-    return tick is not None and int(tick.time) >= vela + 2 * DURACION[marco]
+    try:
+        velas = mt5.copy_rates_from_pos(ticker, getattr(mt5, f"TIMEFRAME_{marco}"), 0, 1)
+    except Exception:  # noqa: BLE001 - sin la vela no se prueba; la lectura dirá lo suyo
+        return None
+    if velas is None or len(velas) == 0:
+        return None
+    return int(velas[-1]["time"])
+
+
+def _sin_sincronizar(mt5, ticker: str, tick) -> list[str]:
+    """Los marcos cuya vela más nueva no contiene el último tick del símbolo.
+
+    Es la prueba exacta de que la caché local está al día, sin calendario: si MT5 tiene
+    la vela donde cae el tick, tiene todo lo anterior. Un mercado cerrado la pasa (el
+    tick del viernes 16:59 cae en la H1 de las 16:00), y el lunes también (la D1 en curso
+    del lunes contiene el tick del lunes), que es donde comparar el tick con las velas
+    cerradas daba falsos «desactualizadas». Sin tick, ningún marco se marca: queda la
+    guarda de cuatro días. Tick y vela van en hora del servidor.
+    """
+    if tick is None:
+        return []
+    t = int(tick.time)
+    marcos = []
+    for marco in RADAR_MARCOS:
+        nueva = _vela_mas_nueva(mt5, ticker, marco)
+        if nueva is not None and not nueva <= t < nueva + DURACION[marco]:
+            marcos.append(marco)
+    return marcos
 
 
 def _ultimas_velas(velas: dict) -> dict[str, int]:
@@ -221,23 +245,24 @@ def escanear(simbolos: list[Simbolo], mt5, leer_velas=velas_mt5,
     un marco y cuatro días (`_vencida`) es falla «velas desactualizadas», no una celda.
     La hora del servidor es `utc() + offset`; sin desfase, `utc() − DESFASE_MAX_S`, la más
     temprana posible, y no el tick del símbolo, que puede ser tan viejo como su caché.
-    Un símbolo que estaba fuera de Observación de Mercado se selecciona y su lectura se
-    contrasta además con su propio tick (`_atrasada`): si el tick llegó a la vela leída
-    más dos marcos, MT5 entregó la caché local, aunque sea de ayer (el radar deselecciona
-    al terminar, así que mañana la caché tendrá un día). Si algún marco salió vencido o
-    atrasado, se vuelve a leer hasta `INTENTOS_SINCRONIZACION` veces con
-    `ESPERA_SINCRONIZACION_S` entre lecturas. Uno visible se lee una sola vez. Todo se
-    juzga sobre las velas crudas, así que una caché demasiado corta para el motor también
-    se reintenta, y si no se repone su falla es «velas desactualizadas», no la historia.
+    Un símbolo que estaba fuera de Observación de Mercado se prueba además antes de cada
+    lectura (`_sin_sincronizar`): la vela más nueva de cada marco, en curso incluida, tiene
+    que contener su último tick. Si no, MT5 sigue con la caché local, aunque sea de ayer
+    (el radar deselecciona al terminar, así que mañana la caché tendrá un día). Si algún
+    marco no sincronizó o salió vencido, se vuelve a intentar hasta
+    `INTENTOS_SINCRONIZACION` veces con `ESPERA_SINCRONIZACION_S` entre intentos. Uno
+    visible se lee una sola vez. La guarda de cuatro días se juzga sobre las velas crudas,
+    así que una caché demasiado corta para el motor también se reintenta, y si no se
+    repone su falla es «velas desactualizadas», no la historia.
 
     **Preselección y segunda pasada.** Todos los ocultos se seleccionan juntos antes de
     leer el primero, así sincronizan en paralelo mientras se leen los anteriores. Al
-    final, todo símbolo con algún marco viejo (oculto o visible) se relee una vez, sin
-    espera: ya tuvo el escaneo entero para ponerse al día. Si esa lectura sale fresca
+    final, tras una sola espera, todo símbolo con algún marco viejo (oculto o visible) se
+    relee una vez: ya tuvo el escaneo entero para ponerse al día. Si esa lectura sale fresca
     reemplaza a la primera; si no, queda la primera con sus fallas.
 
     Presupuesto: en el peor caso, (INTENTOS − 1) × ESPERA = 1,5 s por oculto que siga
-    viejo, más una lectura por símbolo en la segunda pasada. `dormir` y `utc` se
+    viejo, más una espera y una lectura por símbolo viejo en la segunda pasada. `dormir` y `utc` se
     inyectan para los tests.
     """
     inicio = ahora()
@@ -254,14 +279,20 @@ def escanear(simbolos: list[Simbolo], mt5, leer_velas=velas_mt5,
         for intento in range(intentos):
             if intento:
                 dormir(ESPERA_SINCRONIZACION_S)
+            ultimo = intento == intentos - 1
             # Cada intento reemplaza entero al anterior: ni lecturas ni fallas se suman.
             marcos, fallas_sim = {}, []
+            # El símbolo ya está seleccionado (preselección) y su tick existe si cotiza.
+            tick = mt5.symbol_info_tick(sim.ticker)
+            # Un oculto se prueba ANTES de leer: así la lectura sigue a una caché al día, y
+            # una que todavía no sincroniza no gasta la lectura completa.
+            sin_sinc = [] if sim.visible else _sin_sincronizar(mt5, sim.ticker, tick)
+            if sin_sinc and not ultimo:
+                continue
             try:
                 velas, _en_curso = leer_velas(sim.ticker, MARCOS_RADAR)
             except Exception as exc:  # noqa: BLE001 - un símbolo no corta el escaneo
                 return {}, [Falla(sim.ticker, None, str(exc) or type(exc).__name__)], False
-            # Recién leído, el símbolo está seleccionado y su tick existe si cotiza.
-            tick = mt5.symbol_info_tick(sim.ticker)
             if offset is None:
                 # Uno rechazado deja el desfase en None y el siguiente símbolo lo intenta.
                 offset = _offset_sustituto(tick, utc)
@@ -273,11 +304,10 @@ def escanear(simbolos: list[Simbolo], mt5, leer_velas=velas_mt5,
             ahora_servidor = int(utc()) + (offset if offset is not None else -DESFASE_MAX_S)
             ultimas = _ultimas_velas(velas)
             viejos = [m for m, vela in ultimas.items()
-                      if _vencida(vela, m, ahora_servidor)
-                      or (not sim.visible and _atrasada(vela, m, tick))]
+                      if _vencida(vela, m, ahora_servidor) or m in sin_sinc]
             if not viejos:
                 return marcos, fallas_sim, False
-            if intento == intentos - 1:
+            if ultimo:
                 for m in viejos:
                     # La falla del motor (historia corta de una caché) cede su lugar.
                     marcos.pop(m, None)
@@ -301,7 +331,10 @@ def escanear(simbolos: list[Simbolo], mt5, leer_velas=velas_mt5,
             intentos = 1 if sim.visible else INTENTOS_SINCRONIZACION
             resultados[sim.ticker] = (sim, *leer(sim, intentos))
         # Segunda pasada: lo que quedó viejo ya tuvo el escaneo entero para sincronizar.
-        # Se relee una vez, y solo una lectura fresca reemplaza a la primera.
+        # Se relee una vez, y solo una lectura fresca reemplaza a la primera. Una espera
+        # antes, si hay algo que releer: los últimos de la primera pasada recién llegaron.
+        if any(v for *_r, v in resultados.values()):
+            dormir(ESPERA_SINCRONIZACION_S)
         for ticker, (sim, _m, _f, viejo) in list(resultados.items()):
             if viejo:
                 marcos, fallas_sim, sigue_viejo = leer(sim, 1)
