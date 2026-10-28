@@ -24,6 +24,7 @@ from zoneinfo import ZoneInfo
 from analista import RAIZ
 from analista import esquema as es
 from analista import fuentes as fu
+from analista.oficial import VENTANA_OFICIAL_DIAS
 
 CAMPOS = ("medio", "fecha", "url", "titular_original", "extracto", "titular", "bajada", "motivo")
 VENTANA_DIAS = 3
@@ -55,10 +56,16 @@ def _fecha(n: dict[str, Any]) -> date | None:
         return None
 
 
-def vigente(n: dict[str, Any], hoy: date) -> bool:
+def vigente(n: dict[str, Any], hoy: date, ventana_dias: int = VENTANA_DIAS) -> bool:
     """Dentro de la ventana de 3 días. Pasada, la noticia sale igual con su fecha en palabras (opción 2b)."""
     f = _fecha(n)
-    return f is not None and 0 <= (hoy - f).days <= VENTANA_DIAS
+    return f is not None and 0 <= (hoy - f).days <= ventana_dias
+
+
+def ventana_de(candidata: dict[str, Any] | None) -> int:
+    if isinstance(candidata, dict) and candidata.get("escalon") == "oficial":
+        return VENTANA_OFICIAL_DIAS
+    return VENTANA_DIAS
 
 
 _ES = re.compile(r"\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:,\d+)?")
@@ -94,7 +101,9 @@ def _motivo(n: Any, hoy: date, lista: dict[str, Any], verificar: Callable[[str],
             leer: Callable[[str], str | None],
             campos: tuple[str, ...] = CAMPOS,
             largos: dict[str, int] = LARGOS,
-            textos: tuple[str, ...] = ("titular", "bajada")) -> str | None:
+            textos: tuple[str, ...] = ("titular", "bajada"),
+            ventana_dias: int = VENTANA_DIAS,
+            escalon: str = "") -> str | None:
     """El motivo por el que la noticia no sale; `None` si pasa."""
     if not isinstance(n, dict) or any(not isinstance(n.get(c), str) or not n[c].strip() for c in campos):
         return f"viene incompleta (campos: {', '.join(campos)})"
@@ -120,8 +129,11 @@ def _motivo(n: Any, hoy: date, lista: dict[str, Any], verificar: Callable[[str],
     f = _fecha(n)
     if f is None:
         return f"la fecha {n['fecha']!r} no es AAAA-MM-DD"
-    if not vigente(n, hoy):
-        return f"la fecha {n['fecha']} está fuera de la ventana de {VENTANA_DIAS} días"
+    if not vigente(n, hoy, ventana_dias=ventana_dias):
+        return f"la fecha {n['fecha']} está fuera de la ventana de {ventana_dias} días"
+    if escalon == "oficial" and (hoy - f).days > VENTANA_DIAS:
+        if any(re.search(r"\bhoy\b", n.get(c, ""), re.IGNORECASE) for c in textos):
+            return "un comunicado de más de 3 días no puede decir «hoy»"
     estado = verificar(n["url"])
     if estado == "muerta":
         return "la URL no responde"
@@ -138,12 +150,16 @@ def _motivo(n: Any, hoy: date, lista: dict[str, Any], verificar: Callable[[str],
 
 
 def motivo_de_contexto(n: Any, hoy: date, lista: dict[str, Any], verificar: Callable[[str], str],
-                       leer: Callable[[str], str | None]) -> str | None:
+                       leer: Callable[[str], str | None],
+                       ventana_dias: int = VENTANA_DIAS,
+                       escalon: str = "") -> str | None:
     """El motivo por el que una noticia de contexto no sale; `None` si pasa."""
     return _motivo(n, hoy, lista, verificar, leer,
                    campos=CAMPOS_CONTEXTO,
                    largos=LARGOS_CONTEXTO,
-                   textos=("titular", "mensaje"))
+                   textos=("titular", "mensaje"),
+                   ventana_dias=ventana_dias,
+                   escalon=escalon)
 
 
 def depurar_noticia(pieza: dict[str, Any], hoy: date, lista: dict[str, Any] | None = None,
@@ -160,7 +176,12 @@ def depurar_noticia(pieza: dict[str, Any], hoy: date, lista: dict[str, Any] | No
     if isinstance(n, dict) and n.get("escalon") == "agenda":
         return _depurar_agenda(pieza, n)
     lista = lista or fu.cargar_lista()
-    motivo = _motivo(n, hoy, lista, fu._con_lista(verificar, lista), leer)
+    cands = (pieza.get("datos") or {}).get("noticias_candidatas") or []
+    cand = next((c for c in cands if isinstance(c, dict) and c.get("url") == n.get("url")), None)
+    v_dias = ventana_de(cand or (n if isinstance(n, dict) and n.get("escalon") else None))
+    escalon = str((cand.get("escalon") if cand else n.get("escalon")) or "")
+    motivo = _motivo(n, hoy, lista, fu._con_lista(verificar, lista), leer,
+                     ventana_dias=v_dias, escalon=escalon)
     if motivo:
         editorial["noticia"] = None
         return pieza, [f"Noticia de apertura: {motivo}"]

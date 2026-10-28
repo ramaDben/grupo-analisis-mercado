@@ -329,3 +329,109 @@ def test_contexto_cifra_ausente_de_la_nota_cae():
 def test_contexto_con_guion_largo_cae():
     motivo = _motivo_contexto(_noticia_contexto(mensaje="Hola, el oro sube — y el dólar frena. ¿Cómo lo ves?"))
     assert motivo is not None and "guion" in motivo
+
+
+# ── Fuente oficial como escalon 0 (Task 4) ──
+
+URL_8K = "https://www.sec.gov/Archives/edgar/data/886982/000088698226000529/0000886982-26-000529-index.htm"
+
+
+def test_noticia_oficial_de_20_dias_pasa_la_ventana():
+    fecha_20d = (HOY - timedelta(days=20)).isoformat()
+    n = _noticia(
+        medio="SEC EDGAR",
+        fecha=fecha_20d,
+        url=URL_8K,
+        titular="Goldman Sachs reporta sus resultados",
+        bajada="Según SEC EDGAR, la firma presentó su reporte ante el regulador.",
+    )
+    pieza = {
+        "editorial": {"noticia": n},
+        "datos": {"noticias_candidatas": [{"url": URL_8K, "escalon": "oficial", "medio": "SEC EDGAR"}]},
+    }
+    pieza_dep, descartes = nt.depurar_noticia(pieza, HOY, verificar=lambda u: "ok", leer=lambda u: "")
+    assert descartes == []
+    assert pieza_dep["editorial"]["noticia"] is not None
+    assert pieza_dep["editorial"]["noticia"]["fecha"] == fecha_20d
+
+
+def test_noticia_comun_de_20_dias_sigue_cayendo():
+    fecha_20d = (HOY - timedelta(days=20)).isoformat()
+    n = _noticia(fecha=fecha_20d)
+    pieza = {
+        "editorial": {"noticia": n},
+        "datos": {"noticias_candidatas": [{"url": n["url"], "escalon": "activo"}]},
+    }
+    pieza_dep, descartes = nt.depurar_noticia(pieza, HOY, verificar=lambda u: "ok", leer=lambda u: "")
+    assert pieza_dep["editorial"]["noticia"] is None
+    assert len(descartes) == 1
+    assert "está fuera de la ventana de 3 días" in descartes[0]
+
+
+def test_url_de_8k_no_es_portada():
+    assert fu._con_ruta_de_articulo(URL_8K)
+    assert not fu._con_ruta_de_articulo("https://www.sec.gov/")
+    lista = fu.cargar_lista()
+    assert fu._del_dominio(fu._host(URL_8K), lista["medios"]["SEC EDGAR"])
+
+
+def test_medios_oficiales_estan_en_la_lista():
+    lista = fu.cargar_lista()
+    medios = lista.get("medios", {})
+    assert "SEC EDGAR" in medios and "sec.gov" in medios["SEC EDGAR"]
+    assert "EIA" in medios and "eia.gov" in medios["EIA"]
+    assert "BCE" in medios and "ecb.europa.eu" in medios["BCE"]
+    assert "Fed" in medios and "federalreserve.gov" in medios["Fed"]
+
+
+def test_oficial_de_mas_de_3_dias_no_dice_hoy():
+    fecha_10d = (HOY - timedelta(days=10)).isoformat()
+    n_con_hoy = _noticia(
+        medio="SEC EDGAR",
+        fecha=fecha_10d,
+        url=URL_8K,
+        titular="Goldman Sachs publica hoy sus resultados",
+        bajada="Según SEC EDGAR, la firma presentó su reporte ante el regulador.",
+    )
+    pieza = {
+        "editorial": {"noticia": n_con_hoy},
+        "datos": {"noticias_candidatas": [{"url": URL_8K, "escalon": "oficial"}]},
+    }
+    pieza_dep, descartes = nt.depurar_noticia(pieza, HOY, verificar=lambda u: "ok", leer=lambda u: "")
+    assert pieza_dep["editorial"]["noticia"] is None
+    assert len(descartes) == 1
+    assert descartes[0] == "Noticia de apertura: un comunicado de más de 3 días no puede decir «hoy»"
+
+    # Una oficial de 1 día (dentro de 3 días) sí puede decir hoy
+    fecha_1d = (HOY - timedelta(days=1)).isoformat()
+    n_fresca = _noticia(
+        medio="SEC EDGAR",
+        fecha=fecha_1d,
+        url=URL_8K,
+        titular="Goldman Sachs publica hoy sus resultados",
+        bajada="Según SEC EDGAR, la firma presentó su reporte ante el regulador.",
+    )
+    p_fresca = {
+        "editorial": {"noticia": n_fresca},
+        "datos": {"noticias_candidatas": [{"url": URL_8K, "escalon": "oficial"}]},
+    }
+    p_dep, desc = nt.depurar_noticia(p_fresca, HOY, verificar=lambda u: "ok", leer=lambda u: "")
+    assert desc == []
+    assert p_dep["editorial"]["noticia"] is not None
+
+    # Una noticia común de 6 días con «hoy» cae por ventana de 3 días y NO por este motivo
+    fecha_6d = (HOY - timedelta(days=6)).isoformat()
+    n_comun = _noticia(
+        fecha=fecha_6d,
+        titular="El oro sube hoy con fuerza",
+        bajada="Según Reuters, el oro subió a 4.100,50 dólares la onza.",
+    )
+    p_comun = {
+        "editorial": {"noticia": n_comun},
+        "datos": {"noticias_candidatas": [{"url": n_comun["url"], "escalon": "activo"}]},
+    }
+    p_comun_dep, desc_comun = nt.depurar_noticia(p_comun, HOY, verificar=lambda u: "ok", leer=lambda u: "")
+    assert p_comun_dep["editorial"]["noticia"] is None
+    assert len(desc_comun) == 1
+    assert "está fuera de la ventana de 3 días" in desc_comun[0]
+    assert "comunicado" not in desc_comun[0]
