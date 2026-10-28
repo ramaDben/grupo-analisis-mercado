@@ -119,6 +119,36 @@ Anti-anacronismo: la fecha va siempre; un comunicado de más de 3 días se redac
 escalón 3 (agenda) se evalúa si la pieza trae calendario; si no, queda fuera de esta etapa. El motivo
 "Hoy no encontré noticias…" solo sale si los escalones vacíos incluyen también el piso del enlace.
 
+## Decisiones de diseño (mi criterio tras la revisión; el director las puede revertir)
+
+1. **Un candidato oficial entra por el camino normal, sin atajo.** Lleva `url`, `titular_original` y, como
+   campo extra, `titular_es` ya armado por Python (8-K) o el del feed oficial. agy lo elige y escribe el
+   párrafo, pero no traduce ni inventa el titular. `depurar` y `verificar_url` lo validan como a cualquier
+   otro. Sin rama especial en el esquema editorial.
+2. **El piso no es una noticia.** Es un tercer elemento aparte (`fuente_oficial`) que no ocupa `noticia_1`
+   ni `noticia_2`, no cuenta para el motivo "Hoy no encontré noticias…" y no entra al esquema editorial
+   cerrado. Lo dibujan los dos renderers del correo (`oportunidad_html.py`) y del seguimiento
+   (`mensajes_html.py`) como una línea propia bajo las noticias.
+3. **Los contratos no cambian de forma.** `apertura.candidatas` sigue devolviendo `(lista, aviso)`. El piso
+   lo resuelve una función aparte, `fuentes_oficiales.piso(ticker)`, que llaman los dos consumidores.
+   `contexto.preparar` conserva su parámetro inyectable `candidatas`; su valor por defecto pasa a un
+   adaptador sobre `apertura.candidatas` que convierte el aviso en lista.
+4. **Primera etapa y activos sin fuente.** Reciben entrada las acciones de EE.UU. del correo (EDGAR) y los
+   activos que ya tienen feed oficial medido (EIA: WTI, Brent; BCE: EUR/USD; Fed: USD/CLP, US100, oro).
+   Un activo sin entrada sigue como hoy y **no** lleva piso: la meta de "siempre una referencia oficial"
+   vale solo para los activos con fuente declarada, y el documento lo dice en vez de prometer más.
+5. **8-K con varios ítems.** El titular usa el ítem de mayor prioridad: 2.02, 5.02, 1.01, 2.01, 7.01, 8.01
+   (en ese orden). Un ítem fuera de la lista se omite, igual que un 8-K cuyos ítems sean solo 9.01, 3.03 o
+   5.03.
+6. **La ventana de 45 días es del escalón 0 y se la pasa a ambos lectores**, incluido el de feeds
+   oficiales. Dentro de ella **no** se aplica `ya_publicada`: "lo último que publicó" es un estado con
+   fecha, no una novedad, y repetirlo entre correos del mismo activo es honesto; con una novedad en cambio
+   sí sería un error. Lo que sí se hace en código (no se le deja a agy) es quitar la palabra "hoy" y
+   forzar pasado en un comunicado de más de 3 días.
+7. **Contacto de EDGAR.** Variable de entorno `GI_EDGAR_CONTACTO`, leída del `.env` del repo (gitignoreado)
+   o del entorno del proceso del bot. Si falta, el lector devuelve un aviso y se cae al escalón siguiente;
+   nunca lanza. El test de contrato exige el nombre y que el User-Agent lo incluya.
+
 ## Reglas que no cambian
 
 Regla 1 (cifras solo si Python las leyó en la nota), Regla 0 (imagen del catálogo cerrado), URL sin ventana
