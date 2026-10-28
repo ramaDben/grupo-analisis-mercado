@@ -17,6 +17,7 @@ from typing import Any, Callable
 from zoneinfo import ZoneInfo
 
 from analista import esquema as es
+from analista import oficial
 from analista import registro_semanal as rg
 from analista import segmentos
 from analista.orden import Orden
@@ -481,6 +482,9 @@ def preparar_oportunidad(orden: Orden, dir_pedido: Path, ahora: datetime, lec: L
     datos["noticias_candidatas"], aviso_fx = lec.noticias(ticker, nombre, ahora)
     if aviso_fx:
         avisos.append(aviso_fx)
+    piso_oficial = oficial.piso(ticker)
+    if piso_oficial is not None:
+        datos["fuente_oficial"] = piso_oficial
     if not datos["noticias_candidatas"]:
         # Escalón 3: sin notas, el correo puede abrir con el evento central de la semana (spec 2026-10-27).
         from analista import apertura

@@ -82,6 +82,30 @@ def _render_tarjeta(t: ctx.Tarjeta) -> str:
         )
 
 
+def _piso_oficial(datos: dict[str, Any] | None, editorial: dict[str, Any] | None = None) -> str:
+    """Genera el enlace al sitio oficial si hay fuente_oficial y ninguna noticia es oficial."""
+    if not datos:
+        return ""
+    piso = datos.get("fuente_oficial")
+    if not piso or not piso.get("pagina_prensa"):
+        return ""
+    if editorial:
+        for clave in ("noticia_1", "noticia_2"):
+            n = editorial.get(clave)
+            if isinstance(n, dict):
+                if n.get("escalon") == "oficial":
+                    return ""
+                for cand in datos.get("noticias_candidatas") or []:
+                    if cand.get("url") == n.get("url") and cand.get("escalon") == "oficial":
+                        return ""
+    url = html.escape(piso["pagina_prensa"], quote=True)
+    organismo = html.escape(piso.get("organismo", ""), quote=True)
+    return (
+        f'<p class="piso-oficial">'
+        f'<a href="{url}" target="_blank" rel="noopener noreferrer">Sitio oficial de {organismo} →</a></p>'
+    )
+
+
 def render(pieza: dict[str, Any], saludo: str = "") -> str:
     """Genera el HTML autosuficiente con tres tarjetas de mensajes de contexto."""
     datos = pieza.get("datos", {})
@@ -93,7 +117,17 @@ def render(pieza: dict[str, Any], saludo: str = "") -> str:
         titulo_pagina += f" ({ticker})"
 
     tarjetas_lista = ctx.tarjetas(pieza, saludo=saludo)
-    bloques_tarjetas = "\n".join(_render_tarjeta(t) for t in tarjetas_lista)
+    piso_html = _piso_oficial(datos, editorial=pieza.get("editorial", {}))
+    tarjetas_html: list[str] = []
+    piso_insertado = False
+    for t in tarjetas_lista:
+        if t.titulo == "Análisis técnico" and piso_html and not piso_insertado:
+            tarjetas_html.append(piso_html)
+            piso_insertado = True
+        tarjetas_html.append(_render_tarjeta(t))
+    if piso_html and not piso_insertado:
+        tarjetas_html.append(piso_html)
+    bloques_tarjetas = "\n".join(tarjetas_html)
 
     return f"""<!doctype html>
 <html lang="es">
@@ -221,6 +255,19 @@ def render(pieza: dict[str, Any], saludo: str = "") -> str:
       font-weight: 600;
     }}
     .enlace-nota a:hover {{
+      text-decoration: underline;
+    }}
+    .piso-oficial {{
+      font-size: 13px;
+      margin: -4px 0 16px 0;
+      padding: 0 4px;
+    }}
+    .piso-oficial a {{
+      color: var(--acento);
+      text-decoration: none;
+      font-weight: 600;
+    }}
+    .piso-oficial a:hover {{
       text-decoration: underline;
     }}
     .motivo {{

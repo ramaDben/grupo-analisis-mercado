@@ -531,3 +531,20 @@ def test_con_notas_no_hay_evento_de_apertura(tmp_path):
     hecha = pr.preparar(Orden("oportunidad", {"ticker": "XAUUSD"}), tmp_path / "p", AHORA_LUNES,
                         _lectores(tmp_path / "ref", agenda=_agenda_con_fed, noticias=lambda t, n, a: ([CANDIDATA], None)))
     assert "evento_apertura" not in hecha.pieza["datos"]
+
+def test_oportunidad_sella_el_piso_de_una_accion(tmp_path):
+    cat = lambda t: {"ticker": t, "nombre": "Goldman Sachs", "digits": 2, "unidad": "USD"}
+    lec = _lectores(tmp_path / "ref", catalogo=cat)
+    hecha = pr.preparar(Orden("oportunidad", {"ticker": "#GS"}), tmp_path / "p", AHORA_LUNES, lec)
+    datos = hecha.pieza["datos"]
+    assert "fuente_oficial" in datos
+    assert datos["fuente_oficial"]["organismo"] == "Goldman Sachs"
+    assert datos["fuente_oficial"]["pagina_prensa"] == "https://www.goldmansachs.com/investor-relations/"
+
+
+def test_oportunidad_sin_fuente_no_lleva_piso(tmp_path):
+    cat = lambda t: {"ticker": t, "nombre": "Bitcoin", "digits": 2, "unidad": "USD"}
+    lec = _lectores(tmp_path / "ref", catalogo=cat)
+    hecha = pr.preparar(Orden("oportunidad", {"ticker": "BTCUSD"}), tmp_path / "p", AHORA_LUNES, lec)
+    datos = hecha.pieza["datos"]
+    assert "fuente_oficial" not in datos

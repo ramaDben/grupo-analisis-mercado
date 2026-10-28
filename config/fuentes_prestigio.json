@@ -48,6 +48,7 @@
     "Fed": ["federalreserve.gov"],
     "BCE": ["ecb.europa.eu"],
     "EIA": ["eia.gov"],
+    "SEC EDGAR": ["sec.gov"],
     "OPEP": ["opec.org"],
     "FMI": ["imf.org"],
     "BIS": ["bis.org"],

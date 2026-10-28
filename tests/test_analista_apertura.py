@@ -7,6 +7,8 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import pytest
+
 RAIZ = Path(__file__).resolve().parent.parent
 for p in (str(RAIZ / "src"), str(RAIZ / "scripts")):
     if p not in sys.path:
@@ -32,6 +34,7 @@ VACIO = _rss()
 NOTA_GS = "https://www.fxstreet.es/news/goldman-sachs-resultados-202610271200"
 NOTA_BANCA = "https://es.investing.com/news/stock-market-news/los-bancos-de-wall-street-suben-3001"
 NOTA_CENTRALES = "https://es.investing.com/news/economy/bancos-centrales-en-la-mira-3002"
+NOTA_OFICIAL = "https://www.sec.gov/Archives/edgar/data/886982/000088698226000529/0000886982-26-000529-index.htm"
 
 
 def _lector(fx=VACIO, investing=VACIO):
@@ -46,6 +49,15 @@ def _sectores(tmp_path):
         "nombre": "la banca de EE.UU.", "tickers": ["#GS", "#JPM"],
         "patrones": [r"\bbancos?\b(?!\s+centrales?)", "JPMorgan"]}}}), encoding="utf-8")
     return ruta
+
+
+
+@pytest.fixture(autouse=True)
+def _aislar_oficial_en_tests_antiguos(monkeypatch):
+    if hasattr(ap.candidatas, "__defaults__") and ap.candidatas.__defaults__:
+        defaults = list(ap.candidatas.__defaults__)
+        defaults[-1] = lambda t, a: ([], None)
+        monkeypatch.setattr(ap.candidatas, "__defaults__", tuple(defaults))
 
 
 # ── Escalones 1 y 2: candidatas ──
@@ -148,6 +160,87 @@ def test_el_escalon_sale_de_la_candidata_elegida():
     assert ap.escalon_de({"url": NOTA_BANCA}, datos) == "sector"
     assert ap.escalon_de({"url": NOTA_GS}, datos) == "activo"   # buscada en la web por agy: es del activo
     assert ap.escalon_de({"escalon": "agenda"}, datos) == "agenda"
+
+# ── Escalón 0: candidatas oficiales ──
+
+def test_oficial_gana_sobre_los_demas_escalones(tmp_path):
+    candidata_oficial = {
+        "medio": "SEC EDGAR",
+        "fecha": "2026-10-13",
+        "url": NOTA_OFICIAL,
+        "titular_original": "Resultados del trimestre",
+        "titular_es": "Resultados del trimestre",
+        "escalon": "oficial",
+        "organismo": "Goldman Sachs",
+    }
+    fx = _rss(_item("Goldman Sachs supera las previsiones", NOTA_GS))
+    lista, aviso = ap.candidatas(
+        "#GS",
+        "Goldman Sachs",
+        AHORA,
+        leer=_lector(fx),
+        ruta_sectores=_sectores(tmp_path),
+        oficial_fn=lambda t, a: ([candidata_oficial], None),
+    )
+    assert len(lista) == 1
+    assert [c["url"] for c in lista] == [NOTA_OFICIAL]
+    assert lista[0]["escalon"] == "oficial"
+    assert aviso is None
+
+
+def test_sin_oficial_cae_al_escalon_1(tmp_path):
+    fx = _rss(_item("Goldman Sachs supera las previsiones", NOTA_GS))
+    lista, aviso = ap.candidatas(
+        "#GS",
+        "Goldman Sachs",
+        AHORA,
+        leer=_lector(fx),
+        ruta_sectores=_sectores(tmp_path),
+        oficial_fn=lambda t, a: ([], None),
+    )
+    assert [c["url"] for c in lista] == [NOTA_GS]
+    assert lista[0]["escalon"] == "activo"
+    assert aviso is None
+
+
+def test_aviso_del_escalon_0_se_conserva(tmp_path):
+    fx = _rss(_item("Goldman Sachs supera las previsiones", NOTA_GS))
+    lista, aviso = ap.candidatas(
+        "#GS",
+        "Goldman Sachs",
+        AHORA,
+        leer=_lector(fx),
+        ruta_sectores=_sectores(tmp_path),
+        oficial_fn=lambda t, a: ([], "EDGAR no respondió"),
+    )
+    assert [c["url"] for c in lista] == [NOTA_GS]
+    assert lista[0]["escalon"] == "activo"
+    assert aviso is not None and "EDGAR no respondió" in aviso
+
+
+def test_oficial_que_lanza_no_rompe(tmp_path):
+    def falla(ticker, ahora):
+        raise RuntimeError("falla simulada de EDGAR")
+
+    fx = _rss(_item("Goldman Sachs supera las previsiones", NOTA_GS))
+    lista, aviso = ap.candidatas(
+        "#GS",
+        "Goldman Sachs",
+        AHORA,
+        leer=_lector(fx),
+        ruta_sectores=_sectores(tmp_path),
+        oficial_fn=falla,
+    )
+    assert [c["url"] for c in lista] == [NOTA_GS]
+    assert lista[0]["escalon"] == "activo"
+    assert aviso is not None and "falla simulada de EDGAR" in aviso
+
+
+def test_escalon_de_reconoce_oficial():
+    datos = {"noticias_candidatas": [{"url": NOTA_OFICIAL, "escalon": "oficial"}]}
+    assert ap.escalon_de({"url": NOTA_OFICIAL}, datos) == "oficial"
+    assert ap.escalon_de({"escalon": "oficial"}, {}) == "oficial"
+
 
 
 # ── Depuración del escalón 3 ──

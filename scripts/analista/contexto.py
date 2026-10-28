@@ -11,9 +11,11 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Callable
 
+from analista import apertura
 from analista import esquema as es
 from analista import fuentes as fu
 from analista import noticia as nt
+from analista import oficial
 from analista import noticias_contexto as nctx
 from analista import preparar as pr
 from analista import seguimiento as sg
@@ -49,12 +51,19 @@ _MINUSCULA_TRAS_SALUDO = frozenset("""
 """.split())
 
 
+def _candidatas_por_escalones(
+    ticker: str, nombre: str, ahora: datetime
+) -> tuple[list[dict[str, Any]], list[str]]:
+    cand_lista, aviso = apertura.candidatas(ticker, nombre, ahora)
+    return cand_lista, [aviso] if aviso else []
+
+
 def preparar(
     ticker: str,
     dir_pedido: Path,
     ahora: datetime,
     seg: dict[str, Any],
-    candidatas: Callable[[str, str, datetime], tuple[list[dict[str, Any]], list[str]]] = nctx.candidatas,
+    candidatas: Callable[[str, str, datetime], tuple[list[dict[str, Any]], list[str]]] = _candidatas_por_escalones,
 ) -> pr.Preparada:
     """Prepara la pieza de contexto sellando candidatas, hechos técnicos y huecos editoriales.
 
@@ -94,6 +103,9 @@ def preparar(
         "tecnico": tecnico_datos,
         "tecnico_motivo": tecnico_motivo,
     }
+    piso_oficial = oficial.piso(ticker)
+    if piso_oficial is not None:
+        datos["fuente_oficial"] = piso_oficial
 
     pieza = es.nueva_pieza("contexto", {"ticker": ticker}, datos, {})
     editorial = pieza["editorial"]
@@ -175,7 +187,9 @@ def depurar(
                 continue
 
         # Regla 4: cada noticia pasa por motivo_de_contexto
-        mot = nt.motivo_de_contexto(n, hoy, lista, verificar_fn, leer)
+        v_dias = nt.ventana_de(cand)
+        escalon = str((cand or {}).get("escalon") or "")
+        mot = nt.motivo_de_contexto(n, hoy, lista, verificar_fn, leer, ventana_dias=v_dias, escalon=escalon)
         if mot:
             editorial[campo] = None
             motivos[campo] = mot
@@ -232,7 +246,10 @@ def depurar(
 
 def _sin_noticia(campo: str, datos: dict[str, Any]) -> str:
     """Por qué la tarjeta de noticia sale vacía, en palabras del ejecutivo (lo lee él, no el cliente)."""
-    _, del_activo = sg._activo_con_articulo(datos.get("nombre") or datos.get("ticker", ""))
+    nom = datos.get("nombre") or datos.get("ticker", "")
+    _, del_activo = sg._activo_con_articulo(nom)
+    if "fuente_oficial" in datos and del_activo.startswith("del "):
+        del_activo = f"de {nom}"
     if not datos.get("noticias_candidatas"):
         return f"Hoy no encontré noticias {del_activo} en FXStreet ni en Investing.com."
     otra = "otra noticia" if campo == "noticia_2" else "ninguna de las noticias"
