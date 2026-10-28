@@ -158,3 +158,7 @@ data/webinar/*/datos.json
 data/webinar/*/lienzo.html
 data/webinar/*/lienzo.pdf
 data/webinar/*/grafico_*.png
+
+# Bitacora de uso del bot (generada; lleva ids y textos de los analistas)
+data/uso_bot.jsonl
+data/uso_bot.html
