@@ -54,32 +54,23 @@ oficial del activo**.
   <empresa>" con la fecha, nunca "noticia".
 - Un lector por sitio de empresa que se rompe cuando la empresa rediseña su web. Para acciones de EE.UU.
   se usa EDGAR (uniforme); el raspado de un sitio de empresa queda fuera de esta etapa.
-- Inventar una URL. El enlace piso sale de `config/fuentes_oficiales.json`, que edita el director, y un
-  test falla si una entrada no trae su URL.
+- Inventar una URL. El enlace piso sale de `config/activos.json` (`ancla.sitio_ir` para acciones con CIK)
+  o de `noticia_oficial.FUENTES` (`pagina_prensa`), y un test falla si una entrada no trae su URL.
 - Tocar el despacho, el envío o los demás canales. Los canales de WhatsApp siguen con `noticia_oficial.py`
   y su ventana de 72 h.
 
 ## Diseño
 
-### 1. Configuración: `config/fuentes_oficiales.json`
+### 1. Resolución de la fuente: `scripts/analista/oficial.py`
 
-Una entrada por ticker del catálogo:
-
-```json
-{
-  "GS": {
-    "organismo": "Goldman Sachs",
-    "pagina_prensa": "https://www.goldmansachs.com/media-relations/press-releases",
-    "lector": "edgar_8k",
-    "cik": "0000886982"
-  },
-  "WTI": {"organismo": "EIA", "pagina_prensa": "https://www.eia.gov/todayinenergy/", "lector": "feed_oficial", "fuente": "eia"}
-}
-```
-
-`lector` es `edgar_8k` o `feed_oficial` (reutiliza `FUENTES` de `noticia_oficial.py`, sin duplicar URLs de
-feeds). Un ticker sin entrada no tiene escalón 0 y sigue como hoy. El ticker de Goldman en el catálogo se
-confirma al implementar (no se asume `GS`).
+No se crea un archivo nuevo de configuración para evitar duplicar fuentes de verdad:
+- Para acciones: se resuelven a través de `config/activos.json` vía `segmentos.segmento_y_ancla(ticker)`. Si
+  el ancla trae `cik`, el organismo es `ancla["nombre"]`, la página de prensa es `ancla["sitio_ir"]`, el
+  lector es `edgar_8k` y el CIK es `ancla["cik"]`.
+- Para materias primas y divisas: se resuelven contra `noticia_oficial.FUENTES`, donde cada entrada declara
+  `pagina_prensa` con HTTPS (EIA, BCE, Fed). El organismo es `datos["organismo"]`, la página es
+  `datos["pagina_prensa"]`, el lector es `feed_oficial` y la fuente es la clave en `FUENTES`.
+- Un activo sin fuente declarada (o sin CIK en su ancla) devuelve `None` y no tiene escalón 0 ni piso.
 
 ### 2. Lector EDGAR 8-K (acciones de EE.UU.)
 
@@ -117,20 +108,21 @@ Anti-anacronismo: la fecha va siempre; un comunicado de más de 3 días se redac
 
 `contexto.preparar` recibe el mismo orden de escalones (0, 1, 2) a través de `apertura.candidatas`. El
 escalón 3 (agenda) se evalúa si la pieza trae calendario; si no, queda fuera de esta etapa. El motivo
-"Hoy no encontré noticias…" solo sale si los escalones vacíos incluyen también el piso del enlace.
+"Hoy no encontré noticias…" se mantiene cuando los escalones de noticias están vacíos; el piso no cuenta
+como noticia (manda la decisión 2) y se muestra aparte como enlace de referencia.
 
 ## Decisiones de diseño (mi criterio tras la revisión; el director las puede revertir)
 
-1. **Un candidato oficial entra por el camino normal, sin atajo.** Lleva `url`, `titular_original` y, como
-   campo extra, `titular_es` ya armado por Python (8-K) o el del feed oficial. agy lo elige y escribe el
-   párrafo, pero no traduce ni inventa el titular. `depurar` y `verificar_url` lo validan como a cualquier
+1. **Un candidato oficial entra por el camino normal, sin atajo.** Lleva `url`, `titular_original`.
+   Solo el 8-K trae `titular_es` armado por Python desde el ítem. Los titulares de los feeds oficiales vienen
+   en inglés y los traduce agy como en el escalón 1. `depurar` y `verificar_url` lo validan como a cualquier
    otro. Sin rama especial en el esquema editorial.
 2. **El piso no es una noticia.** Es un tercer elemento aparte (`fuente_oficial`) que no ocupa `noticia_1`
    ni `noticia_2`, no cuenta para el motivo "Hoy no encontré noticias…" y no entra al esquema editorial
    cerrado. Lo dibujan los dos renderers del correo (`oportunidad_html.py`) y del seguimiento
    (`mensajes_html.py`) como una línea propia bajo las noticias.
 3. **Los contratos no cambian de forma.** `apertura.candidatas` sigue devolviendo `(lista, aviso)`. El piso
-   lo resuelve una función aparte, `fuentes_oficiales.piso(ticker)`, que llaman los dos consumidores.
+   lo resuelve una función aparte, `oficial.piso(ticker)`, que llaman los dos consumidores.
    `contexto.preparar` conserva su parámetro inyectable `candidatas`; su valor por defecto pasa a un
    adaptador sobre `apertura.candidatas` que convierte el aviso en lista.
 4. **Primera etapa y activos sin fuente.** Reciben entrada las acciones de EE.UU. del correo (EDGAR) y los
@@ -166,8 +158,9 @@ de repetición (`ya_publicada`), flujo de aprobación del director, 45 s y cupo 
   continúa con el escalón 1; EDGAR caído → aviso, continúa; ticker sin entrada → idéntico a hoy.
 - Un 8-K solo 9.01 no genera candidata.
 - El titular de un 8-K lo arma Python desde el ítem: ninguna candidata trae texto de agy.
-- Toda entrada de `fuentes_oficiales.json` trae `pagina_prensa` con https y un `lector` conocido.
-- `contexto.preparar` con `noticias` vacías y piso: no emite "Hoy no encontré noticias".
+- Toda entrada de `noticia_oficial.FUENTES` trae `pagina_prensa` con https.
+- Toda acción con `cik` en `config/activos.json` trae `sitio_ir` con https.
+- `contexto.preparar` con `noticias` vacías y piso: emite el motivo normal y el piso viaja aparte.
 - Un test de contrato impide que el lector de EDGAR vaya sin User-Agent con contacto.
 
 ## Lo que queda al implementador

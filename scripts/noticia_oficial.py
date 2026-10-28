@@ -103,11 +103,13 @@ VOCABULARIO: dict[str, tuple[str, ...]] = {
 _FUENTES_BASE: dict[str, dict[str, Any]] = {
     "eia": {
         "organismo": "EIA (agencia de energía de Estados Unidos)",
+        "pagina_prensa": "https://www.eia.gov/todayinenergy/",
         "url": "https://www.eia.gov/rss/todayinenergy.xml",
         "activos": ("WTI", "BRENT"),
     },
     "bce": {
         "organismo": "BCE (Banco Central Europeo)",
+        "pagina_prensa": "https://www.ecb.europa.eu/press/pr/html/index.en.html",
         "url": "https://www.ecb.europa.eu/rss/press.html",
         "activos": ("EURUSD",),
     },
@@ -115,6 +117,7 @@ _FUENTES_BASE: dict[str, dict[str, Any]] = {
         # El feed general de la Fed trae sanciones y aprobaciones bancarias, que
         # no le sirven a nadie acá. Este es el de política monetaria.
         "organismo": "Fed (Reserva Federal de Estados Unidos)",
+        "pagina_prensa": "https://www.federalreserve.gov/newsevents/pressreleases.htm",
         "url": "https://www.federalreserve.gov/feeds/press_monetary.xml",
         "activos": ("USDCLP", "US100", "XAUUSD"),
     },
