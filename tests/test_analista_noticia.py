@@ -435,3 +435,11 @@ def test_oficial_de_mas_de_3_dias_no_dice_hoy():
     assert len(desc_comun) == 1
     assert "está fuera de la ventana de 3 días" in desc_comun[0]
     assert "comunicado" not in desc_comun[0]
+
+
+def test_depurar_noticia_no_dict_con_candidatas_cae_como_incompleta():
+    pieza = {"editorial": {"noticia": "texto suelto"},
+             "datos": {"noticias_candidatas": [{"url": "https://x.com/a", "escalon": "oficial"}]}}
+    out, avisos = nt.depurar_noticia(pieza, date(2026, 10, 28), lista={"medios": {}})
+    assert out["editorial"]["noticia"] is None
+    assert "incompleta" in avisos[0]

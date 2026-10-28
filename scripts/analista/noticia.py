@@ -177,9 +177,10 @@ def depurar_noticia(pieza: dict[str, Any], hoy: date, lista: dict[str, Any] | No
         return _depurar_agenda(pieza, n)
     lista = lista or fu.cargar_lista()
     cands = (pieza.get("datos") or {}).get("noticias_candidatas") or []
-    cand = next((c for c in cands if isinstance(c, dict) and c.get("url") == n.get("url")), None)
-    v_dias = ventana_de(cand or (n if isinstance(n, dict) and n.get("escalon") else None))
-    escalon = str((cand.get("escalon") if cand else n.get("escalon")) or "")
+    propia = n if isinstance(n, dict) else {}
+    cand = next((c for c in cands if isinstance(c, dict) and c.get("url") == propia.get("url")), None)
+    v_dias = ventana_de(cand or (propia if propia.get("escalon") else None))
+    escalon = str((cand or propia).get("escalon") or "")
     motivo = _motivo(n, hoy, lista, fu._con_lista(verificar, lista), leer,
                      ventana_dias=v_dias, escalon=escalon)
     if motivo:
