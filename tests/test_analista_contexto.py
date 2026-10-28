@@ -340,3 +340,89 @@ def test_la_noticia_vacia_dice_por_que_en_palabras_del_ejecutivo(tmp_path):
     p["editorial"] = {"noticia_1": None, "noticia_2": None, "tecnico": TECNICO_OK}
     depurada, _ = ctx.depurar(p, HOY, verificar=lambda u: "ok", leer=lambda u: "")
     assert depurada["motivos"]["noticia_1"] == "Hoy no encontré noticias de la plata en FXStreet ni en Investing.com."
+
+def test_seguimiento_usa_los_escalones(tmp_path):
+    seg = seg_ejemplo(tmp_path)
+    cand_oficial = {
+        "medio": "SEC EDGAR",
+        "fecha": "2026-10-20",
+        "url": "https://www.sec.gov/Archives/edgar/data/886982/000088698226000529/0000886982-26-000529-index.htm",
+        "titular_original": "Goldman Sachs 8-K",
+        "escalon": "oficial",
+    }
+    prep = ctx.preparar("#GS", tmp_path, AHORA, seg, candidatas=lambda *_: ([cand_oficial], []))
+    assert prep.pieza["datos"]["noticias_candidatas"] == [cand_oficial]
+
+
+def test_seguimiento_sella_el_piso(tmp_path):
+    seg = seg_ejemplo(tmp_path)
+    prep_gs = ctx.preparar("#GS", tmp_path / "gs", AHORA, seg, candidatas=lambda *_: ([], []))
+    datos_gs = prep_gs.pieza["datos"]
+    assert "fuente_oficial" in datos_gs
+    assert datos_gs["fuente_oficial"]["organismo"] == "Goldman Sachs"
+    assert datos_gs["fuente_oficial"]["pagina_prensa"] == "https://www.goldmansachs.com/investor-relations/"
+
+    prep_btc = ctx.preparar("BTCUSD", tmp_path / "btc", AHORA, seg, candidatas=lambda *_: ([], []))
+    datos_btc = prep_btc.pieza["datos"]
+    assert "fuente_oficial" not in datos_btc
+
+
+def test_depurar_acepta_oficial_de_20_dias(tmp_path):
+    seg = seg_ejemplo(tmp_path)
+    url_edgar = "https://www.sec.gov/Archives/edgar/data/886982/000088698226000529/0000886982-26-000529-index.htm"
+    cand_oficial = {
+        "medio": "SEC EDGAR",
+        "fecha": "2026-10-05",
+        "url": url_edgar,
+        "titular_original": "Goldman Sachs 8-K",
+        "escalon": "oficial",
+    }
+    prep = ctx.preparar("#GS", tmp_path, AHORA, seg, candidatas=lambda *_: ([cand_oficial], []))
+    p = prep.pieza
+    p["editorial"] = {
+        "noticia_1": {
+            "medio": "SEC EDGAR",
+            "fecha": "2026-10-05",
+            "url": url_edgar,
+            "titular_original": "Goldman Sachs 8-K",
+            "titular": "Goldman Sachs presenta su informe trimestral",
+            "mensaje": "[[SALUDO]] te comparto el comunicado de Goldman Sachs ante la SEC. ¿Cómo lo ves?",
+        },
+        "noticia_2": None,
+        "tecnico": TECNICO_OK,
+    }
+    depurada, avisos = ctx.depurar(p, HOY, verificar=lambda u: "ok", leer=lambda u: "texto ok")
+    assert depurada["editorial"]["noticia_1"] is not None
+    assert depurada["editorial"]["noticia_1"]["url"] == url_edgar
+    assert "noticia_1" not in depurada.get("motivos", {})
+
+
+def test_el_motivo_sin_noticias_sale_igual_con_piso(tmp_path):
+    seg = seg_ejemplo(tmp_path)
+    prep = ctx.preparar("#GS", tmp_path, AHORA, seg, candidatas=lambda *_: ([], []))
+    p = prep.pieza
+    p["datos"]["nombre"] = "Goldman Sachs"
+    assert "fuente_oficial" in p["datos"]
+    assert p["datos"]["noticias_candidatas"] == []
+    p["editorial"] = {"noticia_1": None, "noticia_2": None, "tecnico": TECNICO_OK}
+    depurada, _ = ctx.depurar(p, HOY, verificar=lambda u: "ok", leer=lambda u: "")
+    assert depurada["motivos"]["noticia_1"] == "Hoy no encontré noticias de Goldman Sachs en FXStreet ni en Investing.com."
+
+
+def test_candidatas_por_escalones_convierte_aviso_en_lista(monkeypatch):
+    from analista import apertura as apt
+
+    monkeypatch.setattr(apt, 'candidatas', lambda t, n, a: ([], 'aviso edgar'))
+    lista, avisos = ctx._candidatas_por_escalones('#GS', 'Goldman Sachs', AHORA)
+    assert lista == []
+    assert avisos == ['aviso edgar']
+
+    monkeypatch.setattr(apt, 'candidatas', lambda t, n, a: ([], None))
+    lista, avisos = ctx._candidatas_por_escalones('#GS', 'Goldman Sachs', AHORA)
+    assert avisos == []
+
+
+def test_seguimiento_aviso_de_candidatas_se_suma_a_preparada(tmp_path):
+    seg = seg_ejemplo(tmp_path)
+    prep = ctx.preparar('#GS', tmp_path, AHORA, seg, candidatas=lambda *_: ([], ['EDGAR sin contacto']))
+    assert 'EDGAR sin contacto' in prep.avisos
