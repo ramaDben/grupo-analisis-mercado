@@ -844,7 +844,12 @@ def _fecha_palabras(iso: str, con_dia: bool = False) -> str:
     return f"{ag.DIAS[f.weekday()]} {texto}" if con_dia else texto
 
 
-ROTULOS_APERTURA = {"activo": "MERCADO HOY", "sector": "LO QUE MUEVE AL SECTOR", "agenda": "EN LA AGENDA"}
+ROTULOS_APERTURA = {
+    "oficial": "LO ÚLTIMO QUE PUBLICÓ",
+    "activo": "MERCADO HOY",
+    "sector": "LO QUE MUEVE AL SECTOR",
+    "agenda": "EN LA AGENDA",
+}
 
 
 def _apertura_noticia(n: dict[str, Any], a: dict[str, Any], imagen: Path | None, hoy: date | None,
@@ -865,9 +870,12 @@ def _apertura_noticia(n: dict[str, Any], a: dict[str, Any], imagen: Path | None,
             + _evento_agenda(n["evento"], ((d or {}).get("agenda") or {}).get("url") or ag.URL_CALENDARIO, c)
             + '</td></tr>'
         )
-    fuente = f"Fuente: {n['medio']} · {_fecha_palabras(n['fecha'])} →"
-    if hoy is not None and not nt.vigente(n, hoy):
-        fuente = f"Noticia del {_fecha_palabras(n['fecha'], con_dia=True)} · Fuente: {n['medio']} →"
+    if escalon == "oficial":
+        fuente = f"Publicado el {_fecha_palabras(n['fecha'], con_dia=True)} · Fuente: {n['medio']} →"
+    else:
+        fuente = f"Fuente: {n['medio']} · {_fecha_palabras(n['fecha'])} →"
+        if hoy is not None and not nt.vigente(n, hoy):
+            fuente = f"Noticia del {_fecha_palabras(n['fecha'], con_dia=True)} · Fuente: {n['medio']} →"
     enlace = (f'<p style="margin:0;font-family:{F_SANS};font-size:12px;line-height:17px;font-weight:600;">'
               f'<a href="{ih.e(n["url"])}" target="_blank" rel="noopener noreferrer" '
               f'style="color:#50C0A8;text-decoration:underline;">{ih.e(fuente)}</a></p>')
@@ -878,6 +886,27 @@ def _apertura_noticia(n: dict[str, Any], a: dict[str, Any], imagen: Path | None,
         + _titular_hero(n["titular"], c) + _bajada_hero(n["bajada"], c, margen="0 0 14px 0") + enlace
         + '</td></tr>'
     )
+
+
+def _piso_oficial(d: dict[str, Any] | None, c: dict[str, str],
+                  noticia: dict[str, Any] | None = None) -> str:
+    """La línea de piso con el enlace oficial si no hay noticia oficial elegida."""
+    if not d:
+        return ""
+    piso = d.get("fuente_oficial")
+    if not piso or not piso.get("pagina_prensa"):
+        return ""
+    if noticia is not None and apt.escalon_de(noticia, d) == "oficial":
+        return ""
+    url = piso["pagina_prensa"]
+    organismo = piso.get("organismo", "")
+    return (
+        f'<p style="margin:10px 0 16px 0;font-family:{F_SANS};font-size:13px;line-height:18px;">'
+        f'<a href="{ih.e(url)}" target="_blank" rel="noopener noreferrer" '
+        f'style="color:{c["acento"]};text-decoration:underline;font-weight:600;">'
+        f'Sitio oficial de {ih.e(organismo)} →</a></p>'
+    )
+
 
 
 def _evento_agenda(ev: dict[str, Any], url: str, c: dict[str, str]) -> str:
@@ -1148,6 +1177,7 @@ def _bloque_correo(a: dict[str, Any], titular: str, contexto: str, dir_pedido: P
         + _dias_clave_correo(d or {}, dias_clave, dir_pedido, imagen_calendario, c)
         + _noticia_directa_correo(list(fuentes), voz, c)
         + _voces_correo(list(fuentes), lec["direccion"], c)
+        + _piso_oficial(d, c, noticia=noticia)
         + _simulacion_correo(a, ejecutivo, c)
         + cierre_consultivo
         + _separador(26) + '</td></tr>'

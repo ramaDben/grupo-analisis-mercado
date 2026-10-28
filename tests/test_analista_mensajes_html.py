@@ -139,3 +139,50 @@ def test_el_ejecutivo_edita_el_mensaje_y_agrega_su_comentario():
 def test_el_comentario_va_antes_de_la_pregunta():
     js = mh.render(pieza_con_todo())
     assert "[cuerpo, comentario, pregunta]" in js
+
+
+def test_piso_aparece_bajo_las_noticias_y_no_ocupa_noticia_1_ni_2():
+    p = pieza_con_todo()
+    p["datos"]["fuente_oficial"] = {
+        "organismo": "Goldman Sachs",
+        "pagina_prensa": "https://www.goldmansachs.com/investor-relations/",
+    }
+    html_str = mh.render(p)
+    assert "Sitio oficial de Goldman Sachs" in html_str
+    assert "https://www.goldmansachs.com/investor-relations/" in html_str
+    pos_n1 = html_str.index("Noticia 1")
+    pos_n2 = html_str.index("Noticia 2")
+    pos_piso = html_str.index("Sitio oficial de Goldman Sachs")
+    pos_tec = html_str.index("Análisis técnico")
+    assert pos_n1 < pos_n2 < pos_piso < pos_tec
+
+    tarjetas = re.findall(r'data-tarjeta(?:="[^"]*")?', html_str)
+    assert len(tarjetas) == 3
+
+
+def test_piso_no_se_repite_si_la_noticia_ya_es_oficial():
+    p1 = pieza_con_todo()
+    p1["datos"]["fuente_oficial"] = {
+        "organismo": "Goldman Sachs",
+        "pagina_prensa": "https://www.goldmansachs.com/investor-relations/",
+    }
+    p1["editorial"]["noticia_1"]["escalon"] = "oficial"
+    assert mh._piso_oficial(p1["datos"], p1["editorial"]) == ""
+    assert "Sitio oficial de Goldman Sachs" not in mh.render(p1)
+
+    p2 = pieza_con_todo()
+    p2["datos"]["fuente_oficial"] = {
+        "organismo": "Goldman Sachs",
+        "pagina_prensa": "https://www.goldmansachs.com/investor-relations/",
+    }
+    p2["editorial"]["noticia_2"]["escalon"] = "oficial"
+    assert mh._piso_oficial(p2["datos"], p2["editorial"]) == ""
+    assert "Sitio oficial de Goldman Sachs" not in mh.render(p2)
+
+
+def test_sin_fuente_oficial_html_es_identico_al_de_hoy():
+    p = pieza_con_todo()
+    assert "fuente_oficial" not in p["datos"]
+    assert mh._piso_oficial(p["datos"], p["editorial"]) == ""
+    html_str = mh.render(p)
+    assert "Sitio oficial" not in html_str

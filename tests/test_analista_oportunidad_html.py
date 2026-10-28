@@ -1667,3 +1667,115 @@ def test_la_apertura_de_agenda_muestra_el_evento_con_las_cifras_del_calendario(t
     assert "Comité de mercado abierto de la Fed · miércoles 14/10, 15:00 CLST" in correo
     assert "Anterior: 4,00 por ciento · Esperado: 3,75 por ciento" in correo
     assert "Calendario completo: Investing.com" in correo and "Fuente:" not in correo.split("EN LA AGENDA")[1][:3000]
+
+
+def test_kicker_oficial(tmp_path):
+    p = _con_apertura(tmp_path)
+    p["datos"]["activos"][0]["ticker_visible"] = "GS"
+    p["datos"]["activos"][0]["nombre"] = "Goldman Sachs"
+    noticia_gs = {
+        "medio": "SEC EDGAR",
+        "fecha": "2026-10-13",
+        "url": "https://www.sec.gov/Archives/edgar/data/886982/000088698226000529/0000886982-26-000529-index.htm",
+        "titular_original": "Item 2.02: Results of Operations and Financial Condition",
+        "titular": "Resultados del trimestre",
+        "bajada": "Goldman Sachs reportó sus resultados financieros.",
+        "escalon": "oficial",
+    }
+    p["editorial"]["noticia"] = noticia_gs
+    p["datos"]["noticias_candidatas"] = [{"url": noticia_gs["url"], "escalon": "oficial"}]
+    p["huella"] = es._huella(p)
+    correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+    assert "LO ÚLTIMO QUE PUBLICÓ · GOLDMAN SACHS (GS)" in correo
+
+
+def test_fuente_oficial_lleva_fecha_y_no_dice_noticia():
+    c = oh.paleta_correo(oh.paleta())
+    activo = {"nombre": "Goldman Sachs", "ticker_visible": "GS"}
+    hoy = date(2026, 10, 26)
+
+    for fecha, fecha_esperada in (
+        ("2026-10-20", "martes 20 de octubre"),
+        ("2026-10-06", "martes 6 de octubre"),
+    ):
+        noticia = {
+            "medio": "SEC EDGAR",
+            "fecha": fecha,
+            "url": "https://www.sec.gov/edgar/nota",
+            "titular": "Resultados del trimestre",
+            "bajada": "Goldman Sachs publicó sus resultados financieros.",
+            "escalon": "oficial",
+        }
+        d = {"noticias_candidatas": [{"url": noticia["url"], "escalon": "oficial"}]}
+        bloque = oh._apertura_noticia(noticia, activo, None, hoy, c, d=d)
+        assert f"Publicado el {fecha_esperada}" in bloque
+        assert "Noticia del" not in bloque
+        assert "noticia" not in bloque.lower()
+
+
+def test_piso_aparece_sin_noticia_oficial(tmp_path):
+    c = oh.paleta_correo(oh.paleta())
+    d = {
+        "fuente_oficial": {
+            "organismo": "Goldman Sachs",
+            "pagina_prensa": "https://www.goldmansachs.com/investor-relations/",
+        }
+    }
+    piso = oh._piso_oficial(d, c)
+    assert "Sitio oficial de Goldman Sachs" in piso
+    assert "https://www.goldmansachs.com/investor-relations/" in piso
+
+    p = _con_apertura(tmp_path)
+    p["datos"]["fuente_oficial"] = d["fuente_oficial"]
+    p["huella"] = es._huella(p)
+    correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+    assert "Sitio oficial de Goldman Sachs" in correo
+    assert "https://www.goldmansachs.com/investor-relations/" in correo
+
+
+def test_piso_no_se_repite_si_la_noticia_ya_es_oficial(tmp_path):
+    c = oh.paleta_correo(oh.paleta())
+    d = {
+        "fuente_oficial": {
+            "organismo": "Goldman Sachs",
+            "pagina_prensa": "https://www.goldmansachs.com/investor-relations/",
+        }
+    }
+    noticia_oficial = {
+        "medio": "SEC EDGAR",
+        "fecha": "2026-10-13",
+        "url": "https://www.sec.gov/edgar/nota",
+        "titular": "Resultados del trimestre",
+        "bajada": "Goldman Sachs publicó sus resultados.",
+        "escalon": "oficial",
+    }
+    assert oh._piso_oficial(d, c, noticia=noticia_oficial) == ""
+
+    p = _con_apertura(tmp_path)
+    p["datos"]["fuente_oficial"] = d["fuente_oficial"]
+    p["editorial"]["noticia"] = noticia_oficial
+    p["datos"]["noticias_candidatas"] = [{"url": noticia_oficial["url"], "escalon": "oficial"}]
+    p["huella"] = es._huella(p)
+    correo = _correo(oh.armar(p, tmp_path, EJECUTIVO, fx.AUTOR, HOY))
+    assert "Sitio oficial de Goldman Sachs" not in correo
+
+
+def test_sin_fuente_oficial_el_html_es_identico_al_de_hoy(tmp_path):
+    c = oh.paleta_correo(oh.paleta())
+    d = {}
+    assert oh._piso_oficial(d, c) == ""
+
+    p1 = _con_apertura(tmp_path)
+    if "fuente_oficial" in p1["datos"]:
+        del p1["datos"]["fuente_oficial"]
+    p1["huella"] = es._huella(p1)
+    html1 = oh.armar(p1, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+
+    p2 = _con_apertura(tmp_path)
+    if "fuente_oficial" in p2["datos"]:
+        del p2["datos"]["fuente_oficial"]
+    p2["huella"] = es._huella(p2)
+    html2 = oh.armar(p2, tmp_path, EJECUTIVO, fx.AUTOR, HOY)
+    assert html1 == html2
+    assert "Sitio oficial" not in html1
+
