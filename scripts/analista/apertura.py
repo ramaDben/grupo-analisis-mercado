@@ -1,11 +1,12 @@
-"""La noticia de apertura baja por escalones hasta encontrar de qué hablar (spec 2026-10-27).
+"""La noticia de apertura baja por escalones hasta encontrar de qué hablar (spec 2026-10-28).
 
+0. Lo último que publicó la fuente oficial del activo (`oficial.candidatas`).
 1. Una nota que nombra al activo, de FXStreet o de Investing.com (`noticias_contexto.candidatas`).
 2. Si no hay ninguna, una nota de su sector (`config/noticias_sector.json`), validada en el titular.
 3. Si tampoco, el evento central de la semana del calendario que la pieza ya trae, en modo anticipación.
 
 El primero que encuentra algo gana. Cada candidata lleva su `escalon`, y el correo lo rotula: el cliente
-tiene que saber si lee una nota del activo, una del sector o la agenda.
+tiene que saber si lee una nota oficial, una nota del activo, una del sector o la agenda.
 """
 from __future__ import annotations
 
@@ -19,6 +20,7 @@ from zoneinfo import ZoneInfo
 from analista import RAIZ
 from analista import noticia as nt
 from analista import noticias_contexto as nc
+from analista import oficial
 
 RUTA_SECTORES = RAIZ / "config" / "noticias_sector.json"
 MAX_CANDIDATAS = 5
@@ -39,10 +41,26 @@ def patrones_sector(ticker: str, ruta: Path = RUTA_SECTORES) -> tuple[str, list[
 
 def candidatas(ticker: str, nombre: str, ahora: datetime, leer: Callable[[str], str] = nt.leer_feed,
                ruta_patrones: Path = nt.PATRONES_FX,
-               ruta_sectores: Path = RUTA_SECTORES) -> tuple[list[dict[str, Any]], str | None]:
-    """Las candidatas del primer escalón con notas (activo, después sector) y un aviso si algún medio no respondió."""
+               ruta_sectores: Path = RUTA_SECTORES,
+               oficial_fn: Callable = oficial.candidatas) -> tuple[list[dict[str, Any]], str | None]:
+    """Las candidatas del primer escalón con notas (oficial, activo, después sector) y un aviso si algún medio no respondió."""
+    cands_oficial: list[dict[str, Any]] = []
+    aviso_oficial: str | None = None
+    try:
+        cands_oficial, aviso_oficial = oficial_fn(ticker, ahora)
+    except Exception as exc:
+        aviso_oficial = str(exc)
+
+    if cands_oficial:
+        return [{**c, "escalon": "oficial"} for c in cands_oficial[:MAX_CANDIDATAS]], aviso_oficial
+
     propias, avisos = nc.candidatas(ticker, nombre, ahora, leer=leer, ruta_patrones=ruta_patrones)
-    aviso = " ".join(avisos) or None
+    todos_avisos: list[str] = []
+    if aviso_oficial:
+        todos_avisos.append(aviso_oficial)
+    todos_avisos.extend(avisos)
+    aviso = " ".join(todos_avisos) or None
+
     if propias:
         return [{**c, "escalon": "activo"} for c in propias[:MAX_CANDIDATAS]], aviso
     sector, patrones = patrones_sector(ticker, ruta_sectores)
@@ -98,8 +116,8 @@ def evento_central(eventos: list[dict[str, Any]], ticker: str, ahora: datetime) 
 
 def escalon_de(noticia: dict[str, Any], datos: dict[str, Any]) -> str:
     """De qué escalón es la noticia elegida: lo dice la candidata, no agy. La buscada en la web es del activo."""
-    if noticia.get("escalon") == "agenda":
-        return "agenda"
+    if noticia.get("escalon") in ("agenda", "oficial"):
+        return str(noticia["escalon"])
     for c in datos.get("noticias_candidatas") or []:
         if c.get("url") == noticia.get("url"):
             return str(c.get("escalon", "activo"))
