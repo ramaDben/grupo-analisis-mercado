@@ -167,6 +167,20 @@ suite. La frescura es de 14 días en los seis segmentos.
 **Prueba manual (sin red).** `--una "/oportunidad USDCHF"` con el terminal o la red caídos devuelve el aviso de fuente
 o de falla sin gastar cupo. Desde Git Bash anteponer `MSYS_NO_PATHCONV=1`.
 
+### La fuente oficial del activo (escalón 0, spec 2026-10-28)
+
+La noticia de apertura de `/oportunidad` y las dos noticias de `/seguimiento` parten de **lo último que publicó la fuente oficial del
+activo**, antes de FXStreet, Investing, el sector y la agenda (`apertura.candidatas`, `oficial.candidatas`).
+
+- **Acciones de EE.UU.** (las que traen `cik` en el `ancla` de `config/activos.json`): avisos 8-K de EDGAR (`edgar.py`). El titular lo arma Python
+  desde el ítem del aviso (2.02 resultados, 5.02 directiva, 1.01 acuerdo, 2.01 compra o venta, 7.01 y 8.01 aviso de la empresa); los ítems 9.01, 3.03 y 5.03 no cuentan.
+- **Materias primas y divisas con feed medido**: EIA (WTI, Brent), BCE (EUR/USD) y Fed (USD/CLP, US100, oro), vía `noticia_oficial.FUENTES`.
+- **Ventana de 45 días** (`oficial.VENTANA_OFICIAL_DIAS`), con el rótulo «Lo último que publicó» y «Publicado el <fecha>». Un comunicado de más de 3 días no puede decir «hoy» (lo rechaza `noticia._motivo`).
+- **El piso es el enlace**: sin comunicado dentro de la ventana, el correo y el seguimiento llevan «Sitio oficial de <organismo>» con la página de prensa (`datos["fuente_oficial"]`). El piso no es una noticia y no cuenta para el motivo «Hoy no encontré noticias…».
+- Un activo sin fuente declarada (BTC, cobre) sigue como antes y no lleva piso.
+- **`GI_EDGAR_CONTACTO`**: EDGAR exige un User-Agent con correo de contacto. Va en esa variable de entorno (o en el `.env` gitignoreado), nunca en el repo. Sin ella EDGAR no se consulta, se avisa y se baja al escalón siguiente. No es la misma que `SEC_USER_AGENT` (ingesta de acciones).
+- El bot corre del checkout principal: tras mergear hay que traer master ahí y reiniciar con `-Reiniciar`, con `GI_EDGAR_CONTACTO` visible para el proceso.
+
 ### Invitación comercial
 
 Por regulación (director, 2026-10-16) la pieza de `/oportunidad` (ficha y texto reenviable) **no invita a operar**: invita a **revisar la
