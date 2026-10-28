@@ -96,7 +96,7 @@ git commit -m "feat(oficial): resolver la fuente oficial de cada activo"
 - Consumes: `noticia_oficial.descargar(url, timeout) -> str`.
 - Produces: `ENV_CONTACTO = "GI_EDGAR_CONTACTO"`; `ITEMS: dict[str, str]` (ítem → titular en español: `2.02` "Resultados del trimestre", `5.02` "Cambios en la directiva", `1.01` "Acuerdo relevante", `2.01` "Compra o venta de activos", `7.01` y `8.01` "Aviso de la empresa"); `parsear_8k(xml: str) -> list[dict]` con `fecha: datetime` (con zona), `url: str`, `items: list[str]`; `titular_de(items: list[str]) -> str | None`; `candidatas_8k(cik: str, organismo: str, ahora: datetime, descargar: Callable[[str], str] | None = None, ventana_dias: int = 45) -> tuple[list[dict], str | None]` (`edgar.py` no importa `oficial.py`; la Task 3 le pasa `VENTANA_OFICIAL_DIAS`). Cada candidata: `{"medio": "SEC EDGAR", "fecha": "AAAA-MM-DD", "url", "titular_original": <titular_es>, "titular_es": <titular_es>, "escalon": "oficial", "organismo": organismo}`.
 
-- [ ] **Step 1: Capturar el fixture** con `curl` al feed `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000886982&type=8-K&owner=include&count=10&output=atom` usando como `User-Agent` el contacto de `GI_EDGAR_CONTACTO`, cuyo valor definido por el director es `benjamin.bravo@grupointeligencia.com` (va solo en el entorno o en el `.env` gitignoreado, nunca escrito en el código, en los tests ni en un commit). Guardarlo en `tests/fixtures/edgar_gs_8k.atom`.
+- [x] **Step 1: Capturar el fixture (HECHO por el director/Claude, ya commiteado en `tests/fixtures/edgar_gs_8k.atom`; no vuelvas a tocar la red)**: se hizo con `curl` al feed `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000886982&type=8-K&owner=include&count=10&output=atom` usando como `User-Agent` el contacto de `GI_EDGAR_CONTACTO`, cuyo valor definido por el director es `benjamin.bravo@grupointeligencia.com` (va solo en el entorno o en el `.env` gitignoreado, nunca escrito en el código, en los tests ni en un commit). Guardarlo en `tests/fixtures/edgar_gs_8k.atom`.
 - [ ] **Step 2: Write the failing tests** en `tests/test_analista_edgar.py`, con el fixture y `descargar` falso:
   - `test_parsear_extrae_fecha_url_e_items`: la primera entrada del fixture da `items` que incluye `"2.02"`.
   - `test_titular_usa_el_item_de_mayor_prioridad`: `titular_de(["9.01", "2.02"]) == "Resultados del trimestre"`; `titular_de(["8.01", "5.02"]) == "Cambios en la directiva"`.
@@ -153,13 +153,14 @@ git commit -m "feat(oficial): candidatas de feeds oficiales con ventana de 45 di
 - Test: `tests/test_analista_noticia.py`
 
 **Interfaces:**
-- Produces: `vigente(n, hoy, ventana_dias: int = VENTANA_DIAS) -> bool`; `_motivo(..., ventana_dias: int = VENTANA_DIAS)` y `motivo_de_contexto(..., ventana_dias: int = VENTANA_DIAS)` con el mismo parámetro; `ventana_de(candidata: dict | None) -> int` que devuelve `VENTANA_OFICIAL_DIAS` si `candidata["escalon"] == "oficial"` y `VENTANA_DIAS` en otro caso. `depurar_noticia` busca la candidata por URL en `pieza["datos"]["noticias_candidatas"]` y pasa su ventana.
+- Produces: `vigente(n, hoy, ventana_dias: int = VENTANA_DIAS) -> bool`; `_motivo(..., ventana_dias: int = VENTANA_DIAS)` y `motivo_de_contexto(..., ventana_dias: int = VENTANA_DIAS)` con el mismo parámetro; `ventana_de(candidata: dict | None) -> int` que devuelve `VENTANA_OFICIAL_DIAS` si `candidata["escalon"] == "oficial"` y `VENTANA_DIAS` en otro caso. `depurar_noticia` busca la candidata por URL en `pieza["datos"]["noticias_candidatas"]` y pasa su ventana; `_motivo` y `motivo_de_contexto` reciben además `escalon: str = ""` y, si es `"oficial"` y la fecha tiene más de `VENTANA_DIAS` días, rechazan un texto (`titular`, `bajada` o `mensaje`) que contenga `hoy` como palabra suelta (el código lo hace cumplir, no se le deja a agy).
 
 - [ ] **Step 1: Write the failing tests** en `tests/test_analista_noticia.py`:
   - `test_noticia_oficial_de_20_dias_pasa_la_ventana`: una noticia de `medio: "SEC EDGAR"` fechada 20 días antes, con candidata `escalon: "oficial"` en la pieza, no cae por "fuera de la ventana".
   - `test_noticia_comun_de_20_dias_sigue_cayendo`: la misma fecha con candidata de FXStreet cae con el motivo actual.
   - `test_url_de_8k_no_es_portada`: una URL `https://www.sec.gov/Archives/edgar/data/886982/000088698226000529/0000886982-26-000529-index.htm` pasa `fu._con_ruta_de_articulo` y `fu._del_dominio` con la lista real.
   - `test_medios_oficiales_estan_en_la_lista`: `fu.cargar_lista()["medios"]` contiene `SEC EDGAR`, `EIA`, `BCE` y `Fed`.
+  - `test_oficial_de_mas_de_3_dias_no_dice_hoy`: una noticia con candidata `escalon: "oficial"` fechada 6 días antes cuyo `titular`, `bajada` o `mensaje` contiene la palabra `hoy` (como palabra suelta, sin importar mayúsculas) cae con el motivo `un comunicado de más de 3 días no puede decir «hoy»`; el mismo texto en una oficial de 1 día pasa, y una noticia común de 6 días con «hoy» no recibe este motivo (decisión 6 de la spec).
 - [ ] **Step 2: Run** `uv run pytest tests/test_analista_noticia.py -q`. Expected: FAIL.
 - [ ] **Step 3: Implement** el parámetro `ventana_dias` y `ventana_de`; el mensaje de rechazo usa la ventana efectiva. Agregar los medios a `config/fuentes_prestigio.json` sin tocar `cuentan_como_banco`.
 - [ ] **Step 4: Run** el archivo completo `tests/test_analista_noticia.py` y `tests/test_analista_contexto.py`. Expected: PASS (nada existente cambia de comportamiento). Commit:
@@ -236,7 +237,7 @@ git commit -m "feat(oficial): piso del enlace oficial y escalones en el seguimie
 
 - [ ] **Step 1: Write the failing tests** (HTML como string, con las fixtures del módulo):
   - `test_kicker_oficial`: una noticia de escalón `oficial` rinde el kicker `LO ÚLTIMO QUE PUBLICÓ · GOLDMAN SACHS (GS)`.
-  - `test_fuente_oficial_lleva_fecha_y_no_dice_noticia_ni_hoy`: el HTML contiene `Publicado el` con la fecha en palabras y no contiene `Noticia del` ni `hoy`, incluso con una fecha de hace 6 días y con una de hace 20.
+  - `test_fuente_oficial_lleva_fecha_y_no_dice_noticia`: el bloque de apertura (lo que devuelve `_apertura_noticia`, no el correo entero, que trae secciones como «MERCADO HOY») contiene `Publicado el` con la fecha en palabras y no contiene `Noticia del`, incluso con una fecha de hace 6 días y con una de hace 20. La palabra «hoy» la cubre la validación de la Task 4, no este test.
   - `test_piso_aparece_sin_noticia_oficial`: sin noticia elegida de escalón `oficial` y con `fuente_oficial`, el HTML trae `Sitio oficial de Goldman Sachs` y el enlace a `pagina_prensa`.
   - `test_piso_no_se_repite_si_la_noticia_ya_es_oficial`.
   - `test_sin_fuente_oficial_el_html_es_identico_al_de_hoy` (comparación con el HTML rendido sin la clave).
@@ -262,7 +263,7 @@ git commit -m "feat(oficial): rotulo, fecha y piso del enlace oficial en las pie
 
 - [ ] **Step 1: Documentar** en `docs/bot-analistas.md` el escalón 0, la variable `GI_EDGAR_CONTACTO` (sin ella EDGAR no se consulta y se avisa), la ventana de 45 días y que el bot corre del checkout principal: tras mergear hay que traer master ahí y reiniciar con `-Reiniciar`.
 - [ ] **Step 2: Correr la suite** `uv run pytest -q`. Expected: todo en verde; si falla algo ajeno a esta rama, compararlo con `master` antes de tocarlo.
-- [ ] **Step 3: Prueba real con red**, una sola vez y sin enviar nada: con `GI_EDGAR_CONTACTO` definida, `uv run python -c "from datetime import datetime; from zoneinfo import ZoneInfo; from analista import oficial; print(oficial.candidatas('#GS', datetime.now(ZoneInfo('America/Santiago'))))"` desde `scripts/`. Expected: una candidata con `escalon: "oficial"` del 2026-10-13 (ítem 2.02) mientras no haya un 8-K más nuevo, o la lista vacía con aviso si falta el contacto.
+- [ ] **Step 3 (la hace Claude, no el ejecutor: requiere red y el contacto del director): Prueba real con red**, una sola vez y sin enviar nada: con `GI_EDGAR_CONTACTO` definida, `uv run python -c "from datetime import datetime; from zoneinfo import ZoneInfo; from analista import oficial; print(oficial.candidatas('#GS', datetime.now(ZoneInfo('America/Santiago'))))"` desde `scripts/`. Expected: una candidata con `escalon: "oficial"` del 2026-10-13 (ítem 2.02) mientras no haya un 8-K más nuevo, o la lista vacía con aviso si falta el contacto.
 - [ ] **Step 4: Commit**:
 
 ```bash
