@@ -50,6 +50,7 @@ from analista import preparar as pr
 from analista import registro_semanal as rg
 from analista import seguimiento as sg
 from analista import simbolos as sm
+from analista import uso
 from analista import vigencia as vg
 
 SANTIAGO = ZoneInfo("America/Santiago")
@@ -737,6 +738,7 @@ class Bot:
             return []
 
         if usuario not in self.config["analistas"]:
+            uso.registrar(uso.MENSAJE, usuario, clase="no_autorizado", texto=texto)
             with self.estado.lock:
                 if usuario in self.estado.datos["avisados"]:
                     return []
@@ -755,10 +757,13 @@ class Bot:
         try:
             orden = od.interpretar(texto)
         except od.PedidoInvalido as exc:
+            uso.registrar(uso.MENSAJE, usuario, clase="no_entendido", texto=texto)
             if texto.lower().startswith("/recrear") and usuario not in self._admins():
                 return [Respuesta(chat, SIN_COMANDO)]
             return [Respuesta(chat, str(exc))]
 
+        uso.registrar(uso.MENSAJE, usuario, clase="pedido" if orden.pieza in (*od.PIEZAS, od.RECREAR) else "comando",
+                      pieza=orden.pieza, ticker=orden.args.get("ticker"), texto=texto)
         if orden.pieza == od.RECREAR:
             if usuario not in self._admins():
                 return [Respuesta(chat, SIN_COMANDO)]  # para el ejecutivo el comando no existe
@@ -917,6 +922,7 @@ class Bot:
             return "", []
 
         _, accion, id_ = partes
+        uso.registrar(uso.BOTON, usuario, accion=accion, aviso=id_)
         registro = self.avisos.registro(usuario, id_)
         if registro is None:
             return "Ese aviso ya no está disponible", []
@@ -955,14 +961,23 @@ class Bot:
 
     def procesar_uno(self, pedido: Pedido) -> Respuesta:
         self.ocupado.set()
+        inicio = datetime.now(SANTIAGO)
+        resultado, detalle, respuesta = "ok", None, None
         try:
-            return self.atendedor.atender(pedido)
+            respuesta = self.atendedor.atender(pedido)
+            return respuesta
         except FalloPedido as exc:
+            resultado, detalle = "fallo", str(exc)
             return Respuesta(pedido.chat, f"❌ {exc}")
         except Exception as exc:  # noqa: BLE001
+            resultado, detalle = "error", exc.__class__.__name__
             _log(f"error {pedido.orden.clave_base()}: {traceback.format_exc()}")
             return Respuesta(pedido.chat, f"❌ Falló algo inesperado ({exc.__class__.__name__}). Quedó registrado.")
         finally:
+            uso.registrar(uso.RESULTADO, pedido.usuario, pieza=pedido.orden.pieza, ticker=pedido.orden.args.get("ticker"),
+                          resultado=resultado, detalle=detalle, forzado=pedido.forzar or None,
+                          archivos=len(respuesta.archivos) if respuesta else 0,
+                          segundos=round((datetime.now(SANTIAGO) - inicio).total_seconds(), 1))
             self.ocupado.clear()
             if pedido.orden.pieza in ("oportunidad", "contexto"):
                 with self.candado:

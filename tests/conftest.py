@@ -126,6 +126,14 @@ def _sin_red_para_indices_de_referencia(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _bitacora_de_uso_aparte(monkeypatch, tmp_path):
+    """Los tests no escriben en `data/uso_bot.jsonl`: es la bitácora del uso real del bot."""
+    from analista import uso
+
+    monkeypatch.setattr(uso, "RUTA", tmp_path / "uso_bot.jsonl")
+
+
+@pytest.fixture(autouse=True)
 def _log_del_bot_aparte(monkeypatch, tmp_path):
     """Los tests del bot no escriben en `data/logs/bot_telegram.log`.
 

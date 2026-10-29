@@ -313,3 +313,20 @@ El analista recibe el motivo, y nunca una pieza a medias ni un gráfico de otro 
 
 La bitácora está en `data/logs/bot_telegram.log` y el estado (offset, cupo y piezas vigentes) en
 `data/.bot_telegram_estado.json`.
+
+## Panel de uso: quién pide qué
+
+El bot anota cada interacción en `data/uso_bot.jsonl` (gitignoreado): mensajes de los analistas, intentos de
+personas no autorizadas, toques de botones y cómo terminó cada pedido (entregado, fallo o error, y cuánto tardó).
+Los eventos llevan el número de usuario de Telegram; el nombre y el cargo salen de `config/analistas_telegram.json`
+al armar el panel.
+
+```bash
+uv run python scripts/uso_bot.py --abrir   # escribe data/uso_bot.html y lo abre
+```
+
+El panel es un HTML único, sin servidor: se regenera cuando se quiere mirar. Filtra por hoy, 7 días, 30 días o todo, y
+cada fila de persona abre su detalle (activos más pedidos, qué pide, hora del día y línea de tiempo). Lo anterior a la
+bitácora se rescata de los pedidos de `data/logs/bot_telegram.log`; ese log viejo solo sabía de pedidos, así que antes
+de la bitácora no hay botones ni resultados. Un `/contexto` aparece como pedido porque el bot lo encola solo tras un
+`/seguimiento`. Para que empiece a registrar, el cambio tiene que estar en el checkout del bot y reiniciarse con `-Reiniciar`.
