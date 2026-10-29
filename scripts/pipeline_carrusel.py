@@ -224,13 +224,22 @@ def temporalidad_de(marco: str) -> str:
 def niveles_publicados(lectura) -> tuple[float | None, float | None]:
     """El soporte y la resistencia de la pieza: lo más cercano a cada lado del precio.
 
-    Salen solo de la lectura (lo que vigila, lo que la invalida, el objetivo y las líneas
-    que dibuja). Si un lado no tiene nada, queda vacío: inventar un nivel sería publicar
-    una distancia con nombre de soporte, el defecto de `acotar_niveles` (2026-10-02).
+    Los niveles que la estrategia nombra (lo que vigila, lo que la invalida, el objetivo) y
+    los horizontales entran siempre: la pieza no puede decir "vigilar X" y publicar otro
+    techo más lejos. Solo las diagonales dinámicas exigen una distancia operable (0,8 ATR),
+    para que una directriz en testeo no se publique como soporte o resistencia a
+    milímetros del precio. Si un lado no tiene nada, queda vacío: inventar un nivel sería
+    publicar una distancia con nombre de soporte, el defecto de `acotar_niveles` (2026-10-02).
     """
+    metricas = getattr(lectura, "metricas", None) or {}
+    margen = 0.8 * (metricas.get("atr") or 0.0)
+
     candidatos = [r.precio for r in (lectura.vigilar, lectura.invalidacion, lectura.objetivo) if r]
-    candidatos += [x.valor_actual for x in lectura.lineas
-                   if x.marco == lectura.marco or x.tipo == "horizontal"]
+    for x in lectura.lineas:
+        if x.tipo == "horizontal":
+            candidatos.append(x.valor_actual)
+        elif x.marco == lectura.marco and abs(x.valor_actual - lectura.precio) >= margen:
+            candidatos.append(x.valor_actual)
     abajo = [c for c in candidatos if c < lectura.precio]
     arriba = [c for c in candidatos if c > lectura.precio]
     return (max(abajo) if abajo else None, min(arriba) if arriba else None)
