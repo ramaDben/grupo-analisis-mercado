@@ -228,49 +228,49 @@
     },
     "viernes": {
       "titulo": "La pista de la Fed para operar los gráficos",
-      "hora_inicio": "09:40",
-      "hora_fin": "10:40",
+      "hora_inicio": "12:00",
+      "hora_fin": "13:00",
       "guion": [
         {
           "bloque": "portada",
-          "desde": "09:40",
-          "hasta": "09:42",
+          "desde": "12:00",
+          "hasta": "12:02",
           "que": "Bienvenida enérgica a los traders y presentación de lo que vamos a hacer hoy."
         },
         {
           "bloque": "aviso_legal",
-          "desde": "09:42",
-          "hasta": "09:43",
+          "desde": "12:02",
+          "hasta": "12:03",
           "que": "Acreditación y aviso de contenido educativo, en una frase."
         },
         {
           "bloque": "noticia",
-          "desde": "09:43",
-          "hasta": "09:46",
+          "desde": "12:03",
+          "hasta": "12:06",
           "que": "La decisión de tasas de la Fed y el titular de Kevin Warsh."
         },
         {
           "bloque": "contexto",
-          "desde": "09:46",
-          "hasta": "09:49",
+          "desde": "12:06",
+          "hasta": "12:09",
           "que": "Lo que dijo Warsh sobre la guía futura y diciembre, explicado en simple."
         },
         {
           "bloque": "teoria",
-          "desde": "09:49",
-          "hasta": "09:53",
+          "desde": "12:09",
+          "hasta": "12:13",
           "que": "Qué significa para operar: la pista que llevamos a los gráficos."
         },
         {
           "bloque": "mt5",
-          "desde": "09:53",
-          "hasta": "10:30",
+          "desde": "12:13",
+          "hasta": "12:50",
           "que": "Paso a MT5: los gráficos en vivo, con la pista de la Fed como guía."
         },
         {
           "bloque": "cierre",
-          "desde": "10:30",
-          "hasta": "10:40",
+          "desde": "12:50",
+          "hasta": "13:00",
           "que": "Resumen de lo aprendido e invitación a agendar capacitaciones 1 a 1 por Meet."
         }
       ]
