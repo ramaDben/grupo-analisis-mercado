@@ -1,0 +1,49 @@
+{
+  "noticia": {
+    "medio": "Reserva Federal de EE.UU.",
+    "fecha": "2026-10-28",
+    "url": "https://www.federalreserve.gov/mediacenter/files/FOMCpresconf20261028.pdf",
+    "titular_original": "Chairman Warsh's Press Conference, October 28, 2026 (transcripción preliminar) y comunicado del FOMC",
+    "extracto": "There's no soft inflation target. There's no implicit inflation target. There's a target of price stability and it's 2 percent as measured by PCE.",
+    "titular": "La Fed mantuvo la tasa entre 3,75 % y 4 %, con dos votos que pedían subirla",
+    "bajada": "Kevin Warsh dijo que la inflación sigue alta, que el empleo está sólido y que no adelantará qué hará el comité en diciembre.",
+    "cita": "No existe una meta de inflación blanda ni implícita. La meta es 2 %, medida con el PCE.",
+    "cita_autor": "Kevin Warsh, presidente de la Fed · 28 de octubre (traducción)",
+    "motivo_imagen": "banco_central"
+  },
+  "bancos": [],
+  "teoria": {
+    "tema": "Qué mirar en los gráficos después de la Fed",
+    "idea_central": "La Fed mantuvo la tasa, dos votos pedían subirla y no adelanta lo que hará en diciembre. Sin pistas, el precio reacciona a cada dato.",
+    "puntos": [
+      "Dólar: sin guía de la Fed, se mueve con cada dato y cada declaración. Es el primer gráfico que miramos, porque suele influir en el oro y en el peso chileno.",
+      "Energía: Warsh dijo que los precios de la energía volvieron a subir y que el comité vigila que eso no se contagie al resto de los precios. Por eso el petróleo también va en el radar.",
+      "Sin guía futura, cada dato y cada vela cuenta. No adivinamos la próxima decisión: buscamos niveles y confirmación."
+    ],
+    "ejemplo": "Antes de entrar a un gráfico, pregúntate: ¿qué está haciendo el precio frente a este mensaje de la Fed? Esa es la lectura que vamos a hacer en vivo.",
+    "preguntas_chat": [
+      "¿Qué activo quieres que revisemos primero en los gráficos?",
+      "Si la Fed no avisa lo que hará, ¿qué dato de las próximas semanas crees que moverá más al dólar?"
+    ]
+  },
+  "notas_guion": {},
+  "contexto": {
+    "titulo": "Lo que dijo Warsh sobre diciembre",
+    "citas": [
+      {
+        "es": "No creo en la guía futura, salvo en circunstancias excepcionales, como una crisis.",
+        "original": "I don't believe in forward guidance absent exigent circumstances, absent a crisis."
+      },
+      {
+        "es": "Tampoco creo en adelantar lo que se decidirá en las reuniones.",
+        "original": "I also don't believe in prejudging meetings."
+      },
+      {
+        "es": "No puedo contarles qué pasará cuando este grupo se reúna dentro de seis semanas.",
+        "original": "I'm not going to be able to share with you my musings about what happens when this group gets together six weeks from now."
+      }
+    ],
+    "en_simple": "La guía futura es cuando el banco central avisa qué hará con la tasa. Warsh no la dará, así que el mercado no tiene aviso. De aquí a diciembre mandan los datos y lo que hace el precio.",
+    "fuente": "Reserva Federal, conferencia de prensa del 28 de octubre (transcripción preliminar)"
+  }
+}

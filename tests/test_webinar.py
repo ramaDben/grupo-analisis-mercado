@@ -61,6 +61,7 @@ def test_config_webinar_estructura_y_reglas():
         "mt5",
         "preguntas",
         "cierre",
+        "contexto",
     }
 
     for dia in dias_esperados:
@@ -822,3 +823,26 @@ def test_rendir_exportar_pdf(tmp_path, editorial_valido, datos_completos):
     assert salida_html.exists()
     assert salida_pdf.exists()
     assert salida_pdf.stat().st_size > 1000
+
+
+def test_contexto_opcional_se_valida_y_se_rinde(tmp_path, editorial_valido, datos_completos):
+    """La lámina 'Lo que dijo...' es opcional: sin la sección no hay bloque; con ella, cita en español y su original."""
+    assert validar_editorial(editorial_valido) == []
+    editorial_valido["contexto"] = {
+        "titulo": "Lo que dijo el presidente",
+        "citas": [{"es": "No creo en la guía futura.", "original": "I don't believe in forward guidance."}],
+        "en_simple": "El banco central no avisa qué hará.",
+        "fuente": "Reserva Federal",
+    }
+    assert validar_editorial(editorial_valido) == []
+    editorial_valido["contexto"]["citas"][0].pop("original")
+    assert any("contexto.citas[0]" in e for e in validar_editorial(editorial_valido))
+    editorial_valido["contexto"]["citas"][0]["original"] = "x — y"
+    assert any("guion largo" in e for e in validar_editorial(editorial_valido))
+
+
+def test_lamina_mt5_trae_el_boton_que_abre_el_terminal():
+    """El botón usa el protocolo gi-mt5://, y el script que lo registra existe junto al renderer."""
+    fuente = (RAIZ / "scripts" / "webinar" / "rendir.py").read_text(encoding="utf-8")
+    assert 'href="gi-mt5://abrir"' in fuente
+    assert (RAIZ / "scripts" / "webinar" / "registrar_mt5.ps1").exists()

@@ -52,6 +52,7 @@ COMANDOS = {
     "avisos": "Carruseles del grupo de Avisos: agenda del día, resultado de cada dato fuerte, cita de la mañana y balance de la tarde.",
     "linkedin": "Brief de un carrusel de LinkedIn para diseño: cifras del terminal y visión de los bancos, con frenos de cifra, cita y frescura.",
     "analista": "Redacta los textos de una pieza pedida por un analista desde el bot de Telegram. Solo escribe en pieza.json.",
+    "webinar": "Lienzo del webinar diario: refresca las cifras de MT5, escribe el editorial con fuente y rinde el HTML y el PDF. No envía nada.",
 }
 
 PLANTILLA = """# /{nombre}
