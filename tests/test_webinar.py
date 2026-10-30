@@ -62,6 +62,7 @@ def test_config_webinar_estructura_y_reglas():
         "preguntas",
         "cierre",
         "contexto",
+        "cripto",
     }
 
     for dia in dias_esperados:
@@ -846,3 +847,21 @@ def test_lamina_mt5_trae_el_boton_que_abre_el_terminal():
     fuente = (RAIZ / "scripts" / "webinar" / "rendir.py").read_text(encoding="utf-8")
     assert 'href="gi-mt5://abrir"' in fuente
     assert (RAIZ / "scripts" / "webinar" / "registrar_mt5.ps1").exists()
+
+
+def test_cripto_opcional_se_valida_y_se_rinde(editorial_valido):
+    editorial_valido["cripto"] = {
+        "titular": "Un exchange reportó una brecha de seguridad",
+        "hechos": ["Primer hecho con fuente.", "Segundo hecho con fuente."],
+        "lectura": "Miramos el gráfico de bitcoin en vivo.",
+        "medio": "CoinDesk",
+        "fecha": "2026-10-30",
+        "url": "https://example.com/nota",
+    }
+    assert validar_editorial(editorial_valido) == []
+
+    editorial_valido["cripto"]["hechos"] = ["solo uno"]
+    assert any("cripto.hechos" in m for m in validar_editorial(editorial_valido))
+
+    editorial_valido["cripto"]["hechos"] = ["uno — dos", "tres"]
+    assert any("guion largo" in m.lower() or "—" in m for m in validar_editorial(editorial_valido))

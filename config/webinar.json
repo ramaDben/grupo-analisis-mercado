@@ -262,8 +262,20 @@
           "que": "Qué significa para operar: la pista que llevamos a los gráficos."
         },
         {
-          "bloque": "mt5",
+          "bloque": "cripto",
           "desde": "12:13",
+          "hasta": "12:16",
+          "que": "Noticia del día: el hackeo a Binance y cómo reaccionó bitcoin, para llevarlo al gráfico."
+        },
+        {
+          "bloque": "bancos",
+          "desde": "12:16",
+          "hasta": "12:19",
+          "que": "Qué dicen los bancos sobre el oro, con fuente y fecha, antes de verlo en el gráfico."
+        },
+        {
+          "bloque": "mt5",
+          "desde": "12:19",
           "hasta": "12:50",
           "que": "Paso a MT5: los gráficos en vivo, con la pista de la Fed como guía."
         },

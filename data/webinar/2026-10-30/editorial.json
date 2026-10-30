@@ -11,7 +11,24 @@
     "cita_autor": "Kevin Warsh, presidente de la Fed · 28 de octubre (traducción)",
     "motivo_imagen": "banco_central"
   },
-  "bancos": [],
+  "bancos": [
+    {
+      "banco": "Goldman Sachs",
+      "fecha": "2026-09-23",
+      "url": "https://investinglive.com/commodities/icymi-goldman-trims-end-2026-gold-forecast-to-4-650-but-holds-5-400-target-for-2027/",
+      "resumen": "Rebajó su meta del oro para fin de 2026 a 4.650 dólares la onza, desde 4.900. Mantiene 5.400 para fin de 2027. La nota es de septiembre y la reporta investingLive, que cita a Investing.com.",
+      "lectura": "Los bancos recortan sus metas y aun así miran más arriba. Lo que importa en vivo es si el precio las valida o no, y eso lo vemos en el gráfico del oro.",
+      "activo": "XAUUSD"
+    },
+    {
+      "banco": "UBS",
+      "fecha": "2026-10-28",
+      "url": "https://investinglive.com/commodities/ubs-sees-limited-gold-downside-as-three-demand-pillars-set-a-floor-near-4-000/",
+      "resumen": "Ve un piso cerca de 4.000 dólares la onza, sostenido por tres pilares de demanda, entre ellos las compras de bancos centrales y de China. Es un recuento de su postura vigente, no una revisión nueva.",
+      "lectura": "Un piso es un nivel que el precio tiene que defender. En vivo miramos dónde está el oro frente a ese nivel y qué hace ahí.",
+      "activo": "XAUUSD"
+    }
+  ],
   "teoria": {
     "tema": "Qué mirar en los gráficos después de la Fed",
     "idea_central": "La Fed mantuvo la tasa, dos votos pedían subirla y no adelanta lo que hará en diciembre. Sin pistas, el precio reacciona a cada dato.",
@@ -45,5 +62,18 @@
     ],
     "en_simple": "La guía futura es cuando el banco central avisa qué hará con la tasa. Warsh no la dará, así que el mercado no tiene aviso. De aquí a diciembre mandan los datos y lo que hace el precio.",
     "fuente": "Reserva Federal, conferencia de prensa del 28 de octubre (transcripción preliminar)"
+  },
+  "cripto": {
+    "titular": "Binance reportó una brecha de seguridad que afecta unos 6,3 mil millones de dólares",
+    "hechos": [
+      "Binance informó de una posible brecha de seguridad con unos 6,3 mil millones de dólares en criptoactivos afectados. Su publicación apunta a que pudo estar involucrado el computador de un ingeniero, lo que habría permitido retiros no autorizados.",
+      "Tether dijo que congeló más de 1.567 millones de dólares en USDT ligados al caso, y Circle más de 800 millones en USDC.",
+      "Bitcoin y las demás criptomonedas bajaron, y hubo cerca de 1.500 millones de dólares en liquidaciones: posiciones que se cierran a la fuerza cuando el precio se mueve en contra.",
+      "El caso sigue en investigación y la nota no da una autoría confirmada."
+    ],
+    "lectura": "Una noticia así mueve el ánimo de todo el mercado cripto. En vivo vemos el gráfico de bitcoin en MT5, cómo reaccionó el precio y qué niveles está probando.",
+    "medio": "CoinDesk",
+    "fecha": "2026-10-30",
+    "url": "https://www.coindesk.com/markets/2026/10/30/usd6-billion-binance-hack-sends-bitcoin-ether-tumbling-standard-chartered-sees-more-losses-ahead"
   }
 }

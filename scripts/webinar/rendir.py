@@ -46,6 +46,7 @@ POSICIONES_BLOQUES: list[dict[str, Any]] = [
     {"id": "preguntas", "x": 2160, "y": 2560, "titulo": "Preguntas de la Audiencia"},
     {"id": "cierre", "x": 4320, "y": 2560, "titulo": "Cierre y Próximos Pasos"},
     {"id": "contexto", "x": 0, "y": 2560, "titulo": "Lo que dijo el presidente"},
+    {"id": "cripto", "x": 6480, "y": 2560, "titulo": "Noticia cripto"},
 ]
 
 
@@ -221,7 +222,27 @@ def validar_editorial(ed: dict, config_path: Path | None = None) -> list[str]:
                         if not isinstance(c, dict) or not str(c.get(campo, "")).strip():
                             errores.append(f"contexto.citas[{idx}]: falta '{campo}' (la cita en español y su original)")
 
-    # 5. Regla de estilo: CERO guiones largos
+    # 5. Validación de 'cripto' (opcional): una noticia del día con sus hechos, para llevarla al gráfico
+    cr = ed.get("cripto")
+    if cr is not None:
+        if not isinstance(cr, dict):
+            errores.append("cripto: debe ser un objeto JSON (dict)")
+        else:
+            for campo in ("titular", "lectura", "medio", "fecha", "url"):
+                val = cr.get(campo)
+                if not isinstance(val, str) or not val.strip():
+                    errores.append(f"cripto: falta el campo obligatorio '{campo}'")
+            if isinstance(cr.get("fecha"), str) and not _es_fecha_valida(cr["fecha"].strip()):
+                errores.append(f"cripto.fecha: formato inválido '{cr['fecha']}', debe ser AAAA-MM-DD")
+            if isinstance(cr.get("url"), str) and not cr["url"].strip().startswith(("http://", "https://")):
+                errores.append(f"cripto.url: la URL debe comenzar con http:// o https:// (valor: '{cr['url']}')")
+            hechos = cr.get("hechos")
+            if not isinstance(hechos, list) or not (2 <= len(hechos) <= 4) or not all(
+                isinstance(h, str) and h.strip() for h in hechos
+            ):
+                errores.append("cripto.hechos: debe ser una lista de 2 a 4 strings no vacíos")
+
+    # 6. Regla de estilo: CERO guiones largos
     errores.extend(_buscar_guiones_largos(ed))
 
     return errores
@@ -602,6 +623,20 @@ def armar_bloques_html(
         )
         bloques.append(_bloque("contexto", "Contexto", ctx["titulo"], horarios.get("contexto", ""), cuerpo,
                                _pie(ctx["fuente"], str(noticia["fecha"])), notas))
+
+    # Noticia cripto del día: los hechos con fuente y qué vamos a mirar en el gráfico
+    cr = editorial.get("cripto")
+    if cr:
+        hechos_html = "".join(f"<li>{e(h)}</li>" for h in cr["hechos"])
+        cuerpo = (
+            f'<h3 class="noticia-titular">{e(cr["titular"])}</h3>'
+            f'<ul class="puntos-lista">{hechos_html}</ul>'
+            f'<div class="ejemplo-box"><span class="ejemplo-etiqueta">Qué miramos en el gráfico</span>{e(cr["lectura"])}</div>'
+            f'<p class="noticia-origen">{e(cr["medio"])} · {e(cr["fecha"])} · '
+            f'<a href="{e(cr["url"])}" target="_blank" rel="noopener">Abrir la nota</a></p>'
+        )
+        bloques.append(_bloque("cripto", "Noticia del día", "Hackeo en el mercado cripto", horarios.get("cripto", ""),
+                               cuerpo, _pie(cr["medio"], cr["fecha"]), notas))
 
     puntos = "".join(f"<li>{e(p)}</li>" for p in teoria["puntos"])
     cuerpo = (
