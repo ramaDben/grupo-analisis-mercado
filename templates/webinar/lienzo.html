@@ -6,6 +6,7 @@
   <title>{{titulo_pestana}}</title>
   <style>
 {{fuentes_css}}
+{{logo_fondo_css}}
 
     :root {
       --fondo: #000000;
@@ -1091,6 +1092,64 @@
     .noticia-origen a, .banco-fuente-link { color: var(--acento); text-decoration: underline; }
     .banco-lectura { font-size: 22px; color: var(--texto-1); margin: 10px 0; border-left: 4px solid var(--acento); padding-left: 12px; }
     .banco-extracto { font-size: 19px; color: var(--texto-gris); font-style: italic; }
+
+    /* Diseño v2 (director, 2026-10-29): el logo de GI de fondo como en las láminas de seguimiento, menos texto,
+       más aire y tipografía grande. El foco de la sesión son los gráficos: la presentación da energía y se aparta. */
+    .bloque::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+      background: var(--logo-fondo, none) no-repeat 72% 50% / 1500px auto; opacity: .08; z-index: 0; }
+    .bloque > * { position: relative; z-index: 1; }
+    .bloque-kicker { font-size: 26px; letter-spacing: 4px; }
+    .bloque-titulo { font-size: 66px; line-height: 1.1; }
+    .bloque-horario { font-size: 26px; }
+    .bloque-cuerpo { gap: 30px; }
+
+    /* Portada: bienvenida grande */
+    .portada-saludo { font-family: var(--font-display); font-size: 170px; line-height: 1; color: var(--acento);
+      letter-spacing: 2px; text-shadow: 0 0 60px rgba(80, 192, 168, 0.35); }
+    .highlight-text { font-size: 30px; }
+
+    /* Noticia: titular grande y la cita de quien habló */
+    .noticia-titular { font-size: 52px; line-height: 1.15; }
+    .noticia-bajada { font-size: 30px; line-height: 1.35; }
+    .noticia-cita { margin: 26px 0 8px; padding: 22px 30px; border-left: 8px solid var(--acento); border-radius: 0 18px 18px 0;
+      background: rgba(14, 36, 32, 0.72); font-size: 36px; line-height: 1.3; font-weight: 700; color: var(--texto-1); }
+    .noticia-cita cite { display: block; margin-top: 12px; font-style: normal; font-size: 22px; font-weight: 700;
+      letter-spacing: 2px; text-transform: uppercase; color: var(--acento); }
+
+    /* Teoría: la idea grande y los puntos en tarjetas de vidrio, no en lista */
+    .idea-texto { font-size: 46px; line-height: 1.2; }
+    .cuerpo-teoria .puntos-lista { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; list-style: none; padding: 0; margin: 0; }
+    .cuerpo-teoria .puntos-lista li { background: rgba(14, 36, 32, 0.72); backdrop-filter: blur(18px);
+      border: 1px solid var(--borde-card); border-radius: 22px; padding: 30px 32px; font-size: 29px; line-height: 1.32; }
+    .cuerpo-teoria .puntos-lista li::before { position: static; display: block; margin-bottom: 12px; font-size: 40px; color: var(--acento); }
+    .ejemplo-box { font-size: 28px; line-height: 1.35; }
+
+    /* MT5: el puente a los gráficos */
+    .mt5-texto-banner { font-size: 34px; }
+    .mt5-ticker { font-size: 34px; }
+    .mt5-nivel-valor { font-size: 44px; }
+    .cierre-resumen-texto { font-size: 40px; line-height: 1.25; }
+
+    /* Contexto: lo que dijo el presidente, en sus palabras y explicado en simple */
+    .cuerpo-contexto { justify-content: flex-start; }
+    .ctx-citas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    .ctx-cita { background: rgba(14, 36, 32, 0.72); backdrop-filter: blur(18px); border: 1px solid var(--borde-card);
+      border-top: 6px solid var(--acento); border-radius: 22px; padding: 30px 32px; }
+    .ctx-es { font-size: 36px; line-height: 1.25; font-weight: 700; color: var(--texto-1); }
+    .ctx-original { margin-top: 18px; font-size: 24px; line-height: 1.35; font-style: italic; color: var(--texto-2); }
+    .ctx-simple { margin-top: 8px; padding: 26px 34px; border-radius: 20px; background: rgba(80, 192, 168, 0.14);
+      border: 1px solid rgba(80, 192, 168, 0.4); font-size: 34px; line-height: 1.3; }
+    .ctx-simple-etiqueta { display: block; margin-bottom: 8px; font-size: 20px; letter-spacing: 3px; text-transform: uppercase;
+      font-weight: 700; color: var(--acento); }
+
+    /* Botón que abre el terminal: protocolo gi-mt5:// registrado con scripts/webinar/registrar_mt5.ps1 */
+    .mt5-banner-destacado { display: flex; align-items: center; gap: 24px; }
+    .mt5-texto-banner { flex: 1; }
+    .mt5-abrir { flex: none; padding: 16px 40px; border-radius: 999px; background: var(--acento); color: #04110E;
+      font-family: var(--font-display); font-size: 30px; letter-spacing: 1px; text-decoration: none; cursor: pointer;
+      box-shadow: 0 0 40px rgba(80, 192, 168, 0.35); transition: transform .15s, box-shadow .15s; }
+    .mt5-abrir:hover { transform: translateY(-2px); box-shadow: 0 0 60px rgba(80, 192, 168, 0.6); }
+    @media print { .mt5-abrir { display: none; } }
   </style>
 </head>
 <body>
@@ -1108,7 +1167,7 @@
     </div>
     <div class="ui-controles">
       <button class="btn-ctrl" id="btn-prev" title="Bloque anterior (←)">◀ Anterior</button>
-      <button class="btn-ctrl" id="btn-overview" title="Vista general (Esc / O)">⛶ Vista General</button>
+      <button class="btn-ctrl" id="btn-overview" title="Vista general (Esc / O). ↑ ↓ recorren todas las láminas">⛶ Vista General</button>
       <button class="btn-ctrl" id="btn-next" title="Bloque siguiente (→ / Espacio)">Siguiente ▶</button>
     </div>
   </div>
@@ -1123,6 +1182,7 @@
     const relojTexto = document.getElementById('reloj-tiempo');
 
     let currentGuionIndex = -1;
+    let bloqueActual = null;
     let isOverview = true;
     let currentX = 0;
     let currentY = 0;
@@ -1176,11 +1236,15 @@
       const vw = window.innerWidth;
       const vh = window.innerHeight;
 
-      const scale = Math.min((vw - 64) / bw, (vh - 64) / bh);
+      // Franjas libres para los controles flotantes (indicador y reloj arriba, botones abajo): la lámina nunca se monta.
+      const franja = 88;
+      const lateral = 32;
+      const scale = Math.min((vw - lateral * 2) / bw, (vh - franja * 2) / bh);
       const x = (vw - bw * scale) / 2 - pos.x * scale;
-      const y = (vh - bh * scale) / 2 - pos.y * scale;
+      const y = franja + (vh - franja * 2 - bh * scale) / 2 - pos.y * scale;
 
       isOverview = false;
+      bloqueActual = blockId;
       aplicarTransform(x, y, scale, true);
 
       // Resaltar bloque activo
@@ -1202,6 +1266,7 @@
     function zoomOverview() {
       isOverview = true;
       currentGuionIndex = -1;
+      bloqueActual = null;
 
       document.querySelectorAll('.bloque').forEach(b => b.classList.remove('bloque-activo'));
 
@@ -1245,6 +1310,14 @@
       zoomToBlock(GUION[currentGuionIndex].bloque);
     }
 
+    // ↑ y ↓ recorren todas las láminas del lienzo, también las que no están en el guion del día.
+    function stepTodos(dir) {
+      const ids = Array.from(document.querySelectorAll('.bloque')).map(b => b.getAttribute('data-bloque'));
+      let i = ids.indexOf(bloqueActual);
+      if (i < 0) i = dir > 0 ? -1 : ids.length;
+      zoomToBlock(ids[(i + dir + ids.length) % ids.length]);
+    }
+
     function jumpGuion(idx) {
       if (idx >= 0 && idx < GUION.length) {
         currentGuionIndex = idx;
@@ -1262,6 +1335,12 @@
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
         prevBlock();
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        stepTodos(1);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        stepTodos(-1);
       } else if (e.key === 'Escape' || e.key === 'o' || e.key === 'O') {
         e.preventDefault();
         zoomOverview();
