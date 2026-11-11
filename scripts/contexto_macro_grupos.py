@@ -485,6 +485,39 @@ def _delta_vigente(serie: dict[str, Any]) -> float | None:
     return d1 if d1 is not None else d5
 
 
+def _usa_ventana_de_5_dias(serie: dict[str, Any]) -> bool:
+    """La variación que manda es la de 5 días: dato con rezago y delta de 5 días calculable."""
+    rezago = serie.get("rezago_dias_habiles")
+    return rezago is not None and rezago >= 2 and serie.get("delta_5d_bps") is not None
+
+
+def _mov_de_delta(delta: float | None) -> int | None:
+    """Dirección de una variación en puntos base: 1 sube, -1 baja, 0 no se movió, None no sé.
+
+    Fuente única para el texto y la imagen. El 2026-11-11 el canal de metales recibió
+    una imagen titulada "sube y encarece" con un texto que decía "alivio para los
+    metales": la imagen comparaba los dos últimos días de la serie y el texto la
+    variación de 5 días que manda con rezago.
+    """
+    if delta is None:
+        return None
+    if delta >= UMBRAL_MOVIMIENTO_BPS:
+        return 1
+    if delta <= -UMBRAL_MOVIMIENTO_BPS:
+        return -1
+    return 0
+
+
+def _curva_del_dia() -> dict[str, Any]:
+    """Las series de la curva soberana, o un dict vacío si la curva no responde."""
+    if not cargar_curva_tasas:
+        return {}
+    try:
+        return cargar_curva_tasas("ALL").get("series", {}) or {}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
 def _cotizacion_del_dia(serie_id: str, ahora: datetime) -> dict[str, Any] | None:
     """La cotizacion en vivo de la serie, solo si es de HOY en Chile.
 
@@ -544,12 +577,7 @@ def _bloque_tasa_del_canal(
     la curva no responde, al parametro `delta_ust_bps`. La direccion de la
     lectura sale del movimiento MEDIDO, nunca de una frase fija.
     """
-    curva: dict[str, Any] = {}
-    if cargar_curva_tasas:
-        try:
-            curva = cargar_curva_tasas("ALL").get("series", {}) or {}
-        except Exception:  # noqa: BLE001
-            curva = {}
+    curva = _curva_del_dia()
 
     driver = DRIVERS_SOBERANOS.get(grupo, DRIVER_SOBERANO_POR_DEFECTO)
     lecturas_tasa = cfg.get("lectura_respaldo") or cfg.get("lectura") or (
@@ -603,13 +631,9 @@ def _bloque_tasa_del_canal(
         delta = _delta_vigente(serie)
 
     lecturas = lecturas_tasa
-    if delta is not None:
-        if delta >= UMBRAL_MOVIMIENTO_BPS:
-            clave = "sube"
-        elif delta <= -UMBRAL_MOVIMIENTO_BPS:
-            clave = "baja"
-        else:
-            clave = "lateral"
+    mov = _mov_de_delta(delta)
+    if mov is not None:
+        clave = {1: "sube", -1: "baja", 0: "lateral"}[mov]
         lineas.append(f"🎯 *Qué significa*: {lecturas[clave]}")
     lineas.append("━━━━━━━━━━━━━━━━━━━")
     return lineas
@@ -1112,6 +1136,7 @@ def _payload_soberano(cfg: dict[str, Any], ahora: datetime | None = None) -> dic
     mov = _movimiento(serie)
     fecha_hora = f"{_etiqueta_dia(ultima_fecha)} {ultima_fecha[:4]} · {_sello_frescura(ultima_fecha)}"
     sello = cfg["sello"]
+    sufijo_periodo = cfg["sufijo_periodo"]
 
     # La cotizacion del dia cierra la serie (decision del director, 2026-09-28):
     # sin ella la imagen terminaba en el ultimo dato de FRED, con dias de rezago.
@@ -1122,13 +1147,25 @@ def _payload_soberano(cfg: dict[str, Any], ahora: datetime | None = None) -> dic
         if vivo["cierre_previo"] is not None:
             anterior = round(vivo["cierre_previo"], 2)
         delta = vivo["delta_1d_bps"]
-        mov = 0 if delta is None or abs(delta) < UMBRAL_MOVIMIENTO_BPS else (1 if delta > 0 else -1)
+        mov = _mov_de_delta(delta) or 0
         fecha_hora = (
             f"{_etiqueta_dia(ultima_fecha)} {ultima_fecha[:4]} · en vivo "
             f"{_hora_chile(vivo['momento'])} hrs Chile"
         )
         # Corto a proposito: el pie va en una linea y a escala de celular.
         sello = "CNBC en vivo · FRED · Grupo Inteligencia"
+    else:
+        # Sin cotización del día manda la curva, con la MISMA regla del texto
+        # (`_delta_vigente`): con rezago, la variación de 5 días. Y el "anterior" de la
+        # imagen pasa a ser el de 5 ruedas atrás, o el titular diría "cede" sobre dos
+        # cifras que suben.
+        de_curva = _curva_del_dia().get(serie_id) or {}
+        mov_curva = _mov_de_delta(_delta_vigente(de_curva))
+        if mov_curva is not None:
+            mov = mov_curva
+            if _usa_ventana_de_5_dias(de_curva) and len(serie) >= 6:
+                anterior = serie[-6]
+                sufijo_periodo = f"{sufijo_periodo} · frente a 5 ruedas atrás"
 
     ultimo = serie[-1]
     promedio = round(sum(serie) / len(serie), 2)
@@ -1149,7 +1186,7 @@ def _payload_soberano(cfg: dict[str, Any], ahora: datetime | None = None) -> dic
         "veredicto": "",
         "veredicto_slug": "",
         "indicador": cfg["indicador"],
-        "periodo": _periodo_desde(ultima_fecha, cfg["sufijo_periodo"]),
+        "periodo": _periodo_desde(ultima_fecha, sufijo_periodo),
         "actual": _pct(ultimo),
         "esperado": "",
         "anterior": _pct(anterior) if anterior is not None else "",

@@ -827,3 +827,55 @@ def test_el_cierre_del_macro_no_es_siempre_el_analista(monkeypatch):
         txt = cmg.construir_texto_contexto_macro("01_macro_y_apertura", [], 3.0, ahora)
         cierres.add(txt.splitlines()[-1])
     assert len(cierres) >= 2 and not all("analista" in c for c in cierres)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Imagen y texto leen la dirección de la tasa con la misma regla (2026-11-11)
+# ─────────────────────────────────────────────────────────────────────────────
+_SERIE_REZAGADA = {  # baja en 5 ruedas y sube en la última: el caso del 2026-11-11
+    "2026-10-30": 4.95, "2026-11-02": 4.91, "2026-11-03": 4.95, "2026-11-04": 4.90,
+    "2026-11-05": 4.84, "2026-11-06": 4.86, "2026-11-09": 4.88,
+}
+
+
+def _curva_rezagada(monkeypatch, rezago=2):
+    serie = {"delta_1d_bps": 2.0, "delta_5d_bps": -3.0, "rezago_dias_habiles": rezago,
+             "fecha_dato": "2026-11-09"}
+    monkeypatch.setattr(cmg, "cargar_curva_tasas",
+                        lambda serie_id="ALL": {"series": {k: serie for k in ("DGS2", "DGS10")}})
+    monkeypatch.setattr(cmg, "rendimientos_en_vivo", lambda series=(), descargar=None: {})
+
+
+def test_la_imagen_y_el_texto_de_metales_dicen_la_misma_direccion(tmp_path, monkeypatch):
+    """El 2026-11-11 la imagen tituló "sube y encarece" y el texto "alivio para los metales".
+
+    La imagen comparaba los dos últimos días de la serie y el texto la variación de 5
+    días que manda con rezago: dos reglas para el mismo dato.
+    """
+    monkeypatch.setattr(cmg, "TREASURY_FED_DATA_PATH", _escribir_treasury(tmp_path, _SERIE_REZAGADA))
+    _curva_rezagada(monkeypatch)
+    cfg = cmg.DRIVERS_SOBERANOS["03_commodities_materias_primas"]
+    imagen = cmg.construir_payload_story_macro("03_commodities_materias_primas", [], None, _AHORA)
+    texto = _macro_de("03_commodities_materias_primas")
+    assert "alivio para los metales" in texto
+    assert imagen["titular"] == cfg["titular_baja"]
+    assert all(a["direccion"] != "baja" for a in imagen["activos"]), imagen["activos"]
+
+
+def test_con_rezago_la_imagen_compara_contra_cinco_ruedas_y_lo_dice(tmp_path, monkeypatch):
+    """Un titular "cede" sobre un 4,86 → 4,88 se contradice dentro de la misma imagen."""
+    monkeypatch.setattr(cmg, "TREASURY_FED_DATA_PATH", _escribir_treasury(tmp_path, _SERIE_REZAGADA))
+    _curva_rezagada(monkeypatch)
+    imagen = cmg.construir_payload_story_macro("03_commodities_materias_primas", [], None, _AHORA)
+    assert imagen["actual"] == "4,88%" and imagen["anterior"] == "4,91%"
+    assert "5 ruedas" in imagen["periodo"]
+
+
+def test_sin_rezago_la_imagen_sigue_comparando_contra_el_dia_anterior(tmp_path, monkeypatch):
+    monkeypatch.setattr(cmg, "TREASURY_FED_DATA_PATH", _escribir_treasury(tmp_path, _SERIE_REZAGADA))
+    _curva_rezagada(monkeypatch, rezago=1)
+    cfg = cmg.DRIVERS_SOBERANOS["03_commodities_materias_primas"]
+    imagen = cmg.construir_payload_story_macro("03_commodities_materias_primas", [], None, _AHORA)
+    assert imagen["titular"] == cfg["titular_sube"] and imagen["anterior"] == "4,86%"
+    assert "5 ruedas" not in imagen["periodo"]
+    assert "se encarece" in _macro_de("03_commodities_materias_primas")
