@@ -108,7 +108,8 @@ def ventana_visible(series: list[dict[str, Any]], tiempos: list[int]) -> int:
     return min(n, max(VENTANA_MIN, (n - min(primeros)) * HOLGURA_ANCLA))
 
 
-def series_de_lineas(lineas, tiempos: list[int], proyeccion: int = PROYECCION
+def series_de_lineas(lineas, tiempos: list[int], proyeccion: int = PROYECCION,
+                     banda: tuple[float, float] | None = None
                      ) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
     """Las líneas de una lectura como series de Lightweight Charts, contadas en velas.
 
@@ -116,7 +117,15 @@ def series_de_lineas(lineas, tiempos: list[int], proyeccion: int = PROYECCION
     de TradingView no reserva espacio a los fines de semana, así que la recta tiene que ser
     recta en velas y no en tiempo. Una diagonal con un ancla fuera de la ventana no se
     puede dibujar sin inventar su posición: se omite y se devuelve con el motivo.
+
+    `banda` es el rango de precios de las velas visibles. La proyección de una diagonal se corta
+    donde sale de una altura de velas por encima o por debajo de él: una línea rota y empinada
+    (el oro del 2026-11-11, hasta 5.100 con las velas en 3.870 a 4.150) estiraba el eje y dejaba
+    las velas aplastadas. La línea se sigue viendo hasta el borde del gráfico.
     """
+    if banda is not None:
+        alto = banda[1] - banda[0]
+        piso, techo = banda[0] - alto, banda[1] + alto
     indice = {int(t): i for i, t in enumerate(tiempos)}
     difs = sorted(b - a for a, b in zip(tiempos, tiempos[1:]))
     paso = difs[len(difs) // 2] if difs else 3600
@@ -141,7 +150,10 @@ def series_de_lineas(lineas, tiempos: list[int], proyeccion: int = PROYECCION
                 continue
             i1, i2 = indice[t1], indice[t2]
             pend = (p2 - p1) / (i2 - i1)
-            dato["puntos"] = [{"time": t_de(i), "value": p1 + pend * (i - i1)} for i in range(i1, fin + 1)]
+            puntos = [{"time": t_de(i), "value": p1 + pend * (i - i1)} for i in range(i1, fin + 1)]
+            if banda is not None:
+                puntos = [q for q in puntos if piso <= q["value"] <= techo]
+            dato["puntos"] = puntos
         else:
             dato["precio"] = x.puntos[0][1]
         series.append(dato)
@@ -455,7 +467,8 @@ def construir_html_tradingview(
     tiempos = [int(r["time"]) for r in rows]
     con_lectura = lineas is not None and not sin_leyenda
     dibujables = [x for x in (lineas or ()) if x.marco == timeframe or x.tipo == "horizontal"] if not sin_leyenda else []
-    series, _omitidas = series_de_lineas(dibujables, tiempos)
+    banda = (min(r["low"] for r in rows), max(r["high"] for r in rows)) if rows else None
+    series, _omitidas = series_de_lineas(dibujables, tiempos, banda=banda)
     atrs = sorted(r["atr"] for r in rows if r.get("atr"))
     atr = atrs[len(atrs) // 2] if atrs else (max(r["high"] for r in rows) - min(r["low"] for r in rows)) / 50
     zonas = [

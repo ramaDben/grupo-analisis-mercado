@@ -215,7 +215,41 @@ def _rebote(s, valor: float, sentido: str, tol: float) -> bool:
     return valor - s.highs[i] <= tol and s.closes[i] < valor
 
 
-def _vigilar(prueba, estado, accion, seguridad, rango, precio) -> Referencia:
+# El horizontal que reemplaza a la línea rota tiene que quedar a esta distancia del precio,
+# en ATR del marco operativo: la misma que exige el opuesto estructural.
+SUSTITUTO_MIN_ATR = 0.8
+
+
+def _sustituto_de_rota(rota: Linea, lineas, precio: float, atr: float, atr_d1: float,
+                       p: Parametros) -> Linea | None:
+    """El horizontal que se vigila cuando la línea rota ya quedó lejos del precio.
+
+    Una línea alcista rota sigue subiendo: el oro salió el 2026-11-11 con "Nivel a vigilar:
+    4.738,54" y el precio en 4.046 (4.581 el día anterior), a más de 8 ATR diarios. Volver
+    a cerrar sobre ella no es una condición que el cliente pueda vigilar. A más de
+    `lejos_atr_d1` del precio se vigila el horizontal más cercano entre el precio y la línea
+    (decisión del director, 2026-11-11). El objetivo no sirve: está del otro lado.
+    """
+    if rota.tipo != "diagonal" or atr_d1 <= 0:
+        return None
+    if abs(rota.valor_actual - precio) <= p.lejos_atr_d1 * atr_d1:
+        return None
+    arriba = rota.valor_actual > precio
+    minimo = SUSTITUTO_MIN_ATR * atr
+
+    def sirve(x: Linea) -> bool:
+        if x.tipo != "horizontal" or x.rol == "objetivo":
+            return False
+        if arriba:
+            return precio + minimo <= x.valor_actual < rota.valor_actual
+        return rota.valor_actual < x.valor_actual <= precio - minimo
+
+    return min((x for x in lineas if sirve(x)), key=lambda x: abs(x.valor_actual - precio),
+               default=None)
+
+
+def _vigilar(prueba, estado, accion, seguridad, rango, precio, *, lineas=(), atr: float = 0.0,
+             atr_d1: float = 0.0, p: Parametros | None = None) -> Referencia:
     if prueba is not None:
         return Referencia(prueba.valor_ahora, f"línea {textos.sentido(prueba.linea)} en prueba", prueba.linea)
     if estado == "REBOTE":
@@ -223,6 +257,11 @@ def _vigilar(prueba, estado, accion, seguridad, rango, precio) -> Referencia:
         return Referencia(seguridad.valor_actual, f"línea {textos.sentido(seguridad)} de control", seguridad)
     if estado in ("RUPTURA", "TENDENCIA"):
         x = accion if accion is not None else seguridad
+        if estado == "RUPTURA" and p is not None:
+            h = _sustituto_de_rota(x, lineas, precio, atr, atr_d1, p)
+            if h is not None:
+                return Referencia(h.valor_actual,
+                                  "resistencia" if h.valor_actual > precio else "soporte", h)
         if x.tipo == "horizontal":
             # Un borde de rango que el precio dejó atrás: abajo era la resistencia.
             return Referencia(x.valor_actual, textos.borde(x.valor_actual < precio), x)
@@ -285,13 +324,18 @@ def leer(ticker: str, velas: dict[str, pd.DataFrame], digits: int,
     base = "REBOTE" if rebote else e.estado
     estado = "PRUEBA" if prueba is not None else base
 
-    vigilar = _vigilar(prueba, base, accion, seguridad, rango, precio)
     horizontales = _horizontales(velas, marcos, p)
+    opuesto_linea = _opuesto_estructural(horizontales, e.direccion, cierre, SUSTITUTO_MIN_ATR * s.atr,
+                                         tol, digits, op)
+    atr_d1 = _serie(velas, "D1", marcos, p).atr if "D1" in marcos.todos else 0.0
+    atr_d1 = atr_d1 if atr_d1 > 0 else s.atr
+    vigilar = _vigilar(prueba, base, accion, seguridad, rango, precio,
+                       lineas=[*lineas, *([opuesto_linea] if opuesto_linea else [])],
+                       atr=s.atr, atr_d1=atr_d1, p=p)
     objetivo_linea = _objetivo(horizontales, e.direccion, base_objetivo(e.direccion, precio, vigilar.precio),
                                tol, digits, op)
     if objetivo_linea is not None:
         lineas.append(objetivo_linea)
-    opuesto_linea = _opuesto_estructural(horizontales, e.direccion, cierre, 0.8 * s.atr, tol, digits, op)
     if opuesto_linea is not None:
         lineas.append(opuesto_linea)
 
@@ -303,8 +347,6 @@ def leer(ticker: str, velas: dict[str, pd.DataFrame], digits: int,
     if seguridad is not None and seguridad.empinada:
         avisos.append(AVISO_EMPINADA)
 
-    atr_d1 = _serie(velas, "D1", marcos, p).atr if "D1" in marcos.todos else 0.0
-    atr_d1 = atr_d1 if atr_d1 > 0 else s.atr
     metricas = {"atr": s.atr, "atr_d1": atr_d1, "confluencia": a_favor,
                 "dist_vigilar_atr_d1": abs(precio - vigilar.precio) / atr_d1}
     if seguridad is not None:
@@ -317,7 +359,9 @@ def leer(ticker: str, velas: dict[str, pd.DataFrame], digits: int,
     if e.velas_desde_ruptura is not None:
         metricas["velas_desde_ruptura"] = float(e.velas_desde_ruptura)
     zona = p.tolerancia_horizontal_atr * s.atr
-    metricas["doble_confirmacion"] = 1.0 if any(abs(h.precio - vigilar.precio) <= zona
+    confirmada = accion if e.estado == "RUPTURA" and accion is not None else vigilar.linea
+    nivel_confirmado = confirmada.valor_actual if confirmada is not None else vigilar.precio
+    metricas["doble_confirmacion"] = 1.0 if any(abs(h.precio - nivel_confirmado) <= zona
                                                 for h, _, _ in horizontales) else 0.0
     metricas["contra_secuencia"] = 1.0 if contra else 0.0
 
@@ -326,7 +370,8 @@ def leer(ticker: str, velas: dict[str, pd.DataFrame], digits: int,
         lineas=tuple(lineas), en_prueba=prueba, vigilar=vigilar, invalidacion=invalidacion,
         objetivo=objetivo,
         escenarios=textos.escenarios(estado, e.direccion, op, digits, precio, vigilar,
-                                     invalidacion, objetivo, prueba, rango),
+                                     invalidacion, objetivo, prueba, rango,
+                                     rota=accion if e.estado == "RUPTURA" else None),
         salida=textos.salida(estado, e.direccion, op, invalidacion, digits, linea_seguimiento,
                               objetivo),
         conceptos=textos.conceptos(estado), avisos=tuple(avisos), metricas=metricas,
@@ -507,7 +552,10 @@ def seguir(ticker: str, referencia: Lectura, velas: dict[str, pd.DataFrame], dig
     vivas = [(x, valor(x, len(s))) for x in lineas
              if sostiene(x) and not (estado == "RUPTURA" and x.rol == "accion")]
     prueba = _prueba(vivas, cierre, en_curso, tol, digits)
-    vigilar = _vigilar(prueba, estado, accion, seguridad, rango, precio)
+    atr_d1 = _serie(velas, "D1", marcos, p).atr if "D1" in marcos.todos else 0.0
+    atr_d1 = atr_d1 if atr_d1 > 0 else atr
+    vigilar = _vigilar(prueba, estado, accion, seguridad, rango, precio,
+                       lineas=lineas, atr=atr, atr_d1=atr_d1, p=p)
     invalidacion = (Referencia(seguridad.valor_actual, f"línea {textos.sentido(seguridad)} de control", seguridad)
                     if seguridad is not None else None)
     # Un objetivo del lunes que el precio ya pasó (o que quedó antes del gatillo) deja de
@@ -520,8 +568,6 @@ def seguir(ticker: str, referencia: Lectura, velas: dict[str, pd.DataFrame], dig
             lineas = [x for x in lineas if x.rol != "objetivo"] + ([nueva] if nueva else [])
             objetivo = Referencia(nueva.valor_actual, "objetivo", nueva) if nueva else None
 
-    atr_d1 = _serie(velas, "D1", marcos, p).atr if "D1" in marcos.todos else 0.0
-    atr_d1 = atr_d1 if atr_d1 > 0 else atr
     fijas =("confluencia", "contra_secuencia", "doble_confirmacion", "semanas_principal")
     metricas = {k: v for k, v in referencia.metricas.items() if k in fijas}
     metricas.update({"atr": atr, "atr_d1": atr_d1,
@@ -541,7 +587,8 @@ def seguir(ticker: str, referencia: Lectura, velas: dict[str, pd.DataFrame], dig
         lineas=tuple(lineas), en_prueba=prueba, vigilar=vigilar, invalidacion=invalidacion,
         objetivo=objetivo,
         escenarios=textos.escenarios(final, direccion, op, digits, precio, vigilar, invalidacion,
-                                     objetivo, prueba, rango),
+                                     objetivo, prueba, rango,
+                                     rota=accion if final == "RUPTURA" else None),
         salida=textos.salida(final, direccion, op, invalidacion, digits, linea_seguimiento,
                               objetivo),
         conceptos=textos.conceptos(final), avisos=tuple(avisos), metricas=metricas,
