@@ -1325,3 +1325,92 @@ def test_las_dos_rutas_de_render_pasan_las_lineas_al_grafico():
     import inspect
     for fn in (pc.rendir, pc._refrescar_y_rendir):
         assert "lineas=lineas_de(" in inspect.getsource(fn), fn.__name__
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# El texto editorial no lleva precios escritos: lleva marcas (2026-11-11)
+# ─────────────────────────────────────────────────────────────────────────────
+def _payload_con_marcas():
+    p = _payload_listo()
+    p["titular"] = "El oro sigue al alza y mira los [[OBJETIVO]]"
+    p["parrafo"] = ("Mientras una vela de 4 horas cierre sobre [[INVALIDACION]], la tendencia "
+                    "sigue, con objetivo en [[OBJETIVO]].")
+    return p
+
+
+def test_las_marcas_se_reemplazan_con_los_niveles_de_la_lectura():
+    p = pc.aplicar_editorial(_payload_con_marcas())
+    assert p["titular"] == "El oro sigue al alza y mira los 4.200,00"
+    assert "sobre 4.080,00" in p["parrafo"] and "[[" not in p["parrafo"]
+    # La plantilla queda guardada: es lo que el despacho vuelve a resolver.
+    assert p["_editorial"]["titular"] == "El oro sigue al alza y mira los [[OBJETIVO]]"
+
+
+def test_el_refresco_reescribe_el_texto_con_el_objetivo_nuevo():
+    """El 2026-11-11 la libra salió al banco de pruebas "apuntando a 1,33318" con los
+    escenarios diciendo 1,32838: la estrategia había movido el objetivo al refrescar y el
+    titular llevaba el número escrito."""
+    from dataclasses import replace
+
+    preparado = pc.aplicar_editorial(_payload_con_marcas())
+    actual = replace(_lectura_alcista(), objetivo=Referencia(4250.0, "resistencia de D1"))
+    nuevo, motivo = pc.refrescar_payload_lectura(preparado, MEDIA_HORA, actual, 2,
+                                                 [4119.0, 4120.0], 18.5, lambda a, b: None)
+    assert motivo is None
+    assert nuevo["titular"] == "El oro sigue al alza y mira los 4.250,00"
+    assert "4.200,00" not in nuevo["titular"] + nuevo["parrafo"]
+
+
+def test_si_el_texto_nombra_un_objetivo_que_ya_no_existe_la_pieza_no_sale():
+    preparado = pc.aplicar_editorial(_payload_con_marcas())
+    _, motivo = pc.refrescar_payload_lectura(preparado, MEDIA_HORA, _lectura_alcista(objetivo=False),
+                                             2, [4119.0, 4120.0], 18.5, lambda a, b: None)
+    assert motivo is not None and "objetivo" in motivo
+
+
+def test_un_precio_escrito_a_mano_detiene_el_render():
+    p = _payload_listo()
+    p["titular"] = "El oro sigue al alza y mira los 4.200,00"
+    p["parrafo"] = "Mientras cierre sobre la línea de control, la tendencia sigue."
+    with pytest.raises(SystemExit) as exc:
+        pc.exigir_texto_editorial([("1_xauusd.json", p)])
+    assert "[[OBJETIVO]]" in str(exc.value) and "4.200,00" in str(exc.value)
+
+
+@pytest.mark.parametrize("texto", [
+    "Si una vela de 4 horas cierra bajo la línea, la tendencia deja de valer.",
+    "Hoy sale la inflación de EE.UU. a las 10:30, hora de Chile.",
+    "El cobre sigue bajista con objetivo en [[OBJETIVO]], de una a 2 semanas.",
+])
+def test_horas_y_cantidades_cortas_no_son_precios(texto):
+    p = _payload_listo()
+    p["titular"], p["parrafo"] = "El oro sigue al alza", texto
+    pc.exigir_texto_editorial([("1_xauusd.json", p)])
+
+
+def test_el_freno_de_precios_no_alcanza_a_las_laminas_sin_lectura():
+    """`pipeline_avisos` pasa por el mismo freno con láminas de agenda, que llevan cifras."""
+    pc.exigir_texto_editorial([("2_dia.json", {"titular": "IPC 0,4% a las 10:30", "parrafo": "Sale hoy a media mañana, hora de Chile."})])
+
+
+def test_una_marca_desconocida_detiene_el_render():
+    p = _payload_listo()
+    p["titular"], p["parrafo"] = "El oro mira los [[META]]", "p"
+    with pytest.raises(SystemExit) as exc:
+        pc.exigir_texto_editorial([("1_xauusd.json", p)])
+    assert "[[META]]" in str(exc.value)
+
+
+def test_un_texto_reescrito_a_mano_despues_de_rendir_pasa_a_ser_la_plantilla():
+    p = pc.aplicar_editorial(_payload_con_marcas())
+    p["titular"] = "El oro frena su avance bajo los [[OBJETIVO]]"
+    p = pc.aplicar_editorial(p)
+    assert p["titular"] == "El oro frena su avance bajo los 4.200,00"
+    assert p["_editorial"]["titular"] == "El oro frena su avance bajo los [[OBJETIVO]]"
+    assert "[[INVALIDACION]]" in p["_editorial"]["parrafo"]  # el párrafo no se tocó
+
+
+def test_las_dos_rutas_de_render_resuelven_las_marcas():
+    import inspect
+    assert "aplicar_editorial" in inspect.getsource(pc.rendir)
+    assert "aplicar_editorial" in inspect.getsource(pc.refrescar_payload_lectura)

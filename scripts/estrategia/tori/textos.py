@@ -42,7 +42,7 @@ def borde(arriba: bool) -> str:
     return "resistencia del rango" if arriba else "soporte del rango"
 
 
-def rota(linea: Linea | None, sube: bool) -> str:
+def nombre_de_rota(linea: Linea | None, sube: bool) -> str:
     """Cómo se nombra la línea que el precio cruzó al romper, según la línea misma.
 
     Un borde horizontal es la resistencia o el soporte del rango (nunca una "línea
@@ -53,6 +53,9 @@ def rota(linea: Linea | None, sube: bool) -> str:
     if linea.tipo == "horizontal":
         return f"{'la' if sube else 'el'} {borde(sube)}"
     return f"la línea {sentido(linea)}"
+
+
+rota = nombre_de_rota  # nombre anterior, que usan `lectura.py` y los tests
 
 
 def conceptos(estado: str) -> tuple[str, ...]:
@@ -101,7 +104,13 @@ def salida(estado: str, direccion: str, marco: str, invalidacion: Referencia | N
 def escenarios(estado: str, direccion: str, marco: str, digits: int, precio: float,
                vigilar: Referencia, invalidacion: Referencia | None,
                objetivo: Referencia | None, prueba: Prueba | None,
-               rango: list[Linea]) -> tuple[Escenario, Escenario, Escenario]:
+               rango: list[Linea], rota: Linea | None = None) -> tuple[Escenario, Escenario, Escenario]:
+    """Los tres escenarios de la lectura.
+
+    `rota` es la línea que el precio cruzó al romper. Cuando esa línea quedó lejos del precio,
+    lo que se vigila es un horizontal (`vigilar.linea` ya no es la rota): el texto sigue
+    contando qué línea se rompió, pero las condiciones se escriben sobre el nivel que se vigila.
+    """
     vela = VELA.get(marco, marco)
     if prueba is not None:
         return _en_prueba(prueba, precio, marco, digits)
@@ -116,8 +125,22 @@ def escenarios(estado: str, direccion: str, marco: str, digits: int, precio: flo
     a_favor, en_contra = ("sobre", "bajo") if sube else ("bajo", "sobre")
     x = _p(vigilar.precio, digits)
     z = f" con objetivo en {_p(objetivo.precio, digits)}" if objetivo else ""
+    if estado == "RUPTURA" and rota is not None and vigilar.linea is not None and vigilar.linea != rota:
+        cruzada = nombre_de_rota(rota, sube)
+        primero = Escenario("⬆️" if sube else "⬇️", f"{a_favor.capitalize()} {x}",
+                            f"{LA_VELA.get(marco, marco).capitalize()} ya cerró {a_favor} {cruzada}: mientras siga {a_favor} {x}, la ruptura sigue vigente{z}.")
+        medio = Escenario("↔️", f"Vuelta a {x}",
+                          f"Si el precio vuelve a {x} y la {vigilar.etiqueta} lo frena, la ruptura se confirma.")
+        if invalidacion is not None:
+            y = _p(invalidacion.precio, digits)
+            ultimo = Escenario("⬇️" if sube else "⬆️", f"Cierre {en_contra} {y}",
+                               f"Si {vela} cierra {en_contra} {y}, la línea de control se rompe y la lectura deja de valer.")
+        else:
+            ultimo = Escenario("⬇️" if sube else "⬆️", f"Cierre {en_contra} {x}",
+                               f"Si {vela} cierra {en_contra} {x}, la ruptura deja de valer.")
+        return (primero, medio, ultimo) if sube else (ultimo, medio, primero)
     if estado == "RUPTURA":
-        cruzada = rota(vigilar.linea, sube)
+        cruzada = nombre_de_rota(vigilar.linea, sube)
         primero = Escenario("⬆️" if sube else "⬇️", f"{a_favor.capitalize()} {x}",
                             f"{LA_VELA.get(marco, marco).capitalize()} ya cerró {a_favor} {cruzada}: mientras siga {a_favor} {x}, la ruptura sigue vigente{z}.")
         medio = Escenario("↔️", f"Vuelta a {x}",

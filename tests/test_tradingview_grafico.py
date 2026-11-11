@@ -411,3 +411,19 @@ def test_escala_texto_agranda_el_eje_y_la_leyenda():
     html = tg.construir_html_tradingview(**FIXTURE_TV, escala_texto=1.7)
     assert "fontSize: 20" in html and "font-size: 24px" in html  # 12 a 20, leyenda 14 a 24
     assert "font-size: 34px" in html  # el símbolo, 20 a 34
+
+
+def test_una_diagonal_que_se_aleja_del_precio_no_estira_el_eje():
+    """El 2026-11-11 la línea alcista rota del oro se proyectó hasta 5.100 con las velas en
+    3.870-4.150: el gráfico quedó aplastado en la franja de abajo."""
+    empinada = Linea("accion", "diagonal", ((TIEMPOS[5], 9.0), (TIEMPOS[10], 12.0)), "H4", 2, "B", 30.0, True)
+    series, _ = tg.series_de_lineas((empinada,), TIEMPOS, proyeccion=5, banda=(8.0, 14.0))
+    valores = [p["value"] for p in series[0]["puntos"]]
+    assert max(valores) <= 14.0 + (14.0 - 8.0)  # banda: una altura de velas arriba y abajo
+    assert valores[0] == 9.0 and valores == sorted(valores)
+
+
+def test_una_diagonal_dentro_de_la_banda_se_dibuja_entera():
+    completa, _ = tg.series_de_lineas((SEGURIDAD,), TIEMPOS, proyeccion=5)
+    acotada, _ = tg.series_de_lineas((SEGURIDAD,), TIEMPOS, proyeccion=5, banda=(8.0, 14.0))
+    assert completa == acotada
