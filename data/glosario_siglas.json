@@ -621,6 +621,13 @@
       "New Home Sales"
     ]
   },
+  "Venta de viviendas usadas": {
+    "nombre_es": "Venta de viviendas usadas",
+    "explicacion": "Casas ya habitadas que cambiaron de dueño en el mes en EE.UU.; es la mayor parte del mercado de viviendas, y cuando caen suele ser porque las tasas hipotecarias están altas y frenan la compra.",
+    "titulos_ff": [
+      "Existing Home Sales"
+    ]
+  },
   "API": {
     "nombre_es": "Inventarios de petróleo del Instituto Americano del Petróleo (API)",
     "explicacion": "Cuánto crudo quedó almacenado en EE.UU. según el gremio de la industria; si sobra petróleo el precio tiende a bajar, y si falta tiende a subir. Se publica un día antes del dato oficial de la EIA.",
