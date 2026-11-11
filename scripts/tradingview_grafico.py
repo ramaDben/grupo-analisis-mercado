@@ -467,8 +467,13 @@ def construir_html_tradingview(
     tiempos = [int(r["time"]) for r in rows]
     con_lectura = lineas is not None and not sin_leyenda
     dibujables = [x for x in (lineas or ()) if x.marco == timeframe or x.tipo == "horizontal"] if not sin_leyenda else []
-    banda = (min(r["low"] for r in rows), max(r["high"] for r in rows)) if rows else None
-    series, _omitidas = series_de_lineas(dibujables, tiempos, banda=banda)
+    series, _omitidas = series_de_lineas(dibujables, tiempos)
+    # La banda es la de las velas VISIBLES (la ventana sale de las anclas): las cargadas
+    # traen meses atrás, con precios que ya no están en pantalla.
+    visibles = rows[-ventana_visible(series, tiempos):] if rows else []
+    if visibles:
+        banda = (min(r["low"] for r in visibles), max(r["high"] for r in visibles))
+        series, _omitidas = series_de_lineas(dibujables, tiempos, banda=banda)
     atrs = sorted(r["atr"] for r in rows if r.get("atr"))
     atr = atrs[len(atrs) // 2] if atrs else (max(r["high"] for r in rows) - min(r["low"] for r in rows)) / 50
     zonas = [
