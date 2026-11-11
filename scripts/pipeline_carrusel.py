@@ -38,6 +38,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import re
 import zlib
 import sys
 from collections import Counter
@@ -1015,6 +1016,110 @@ def piezas_del_grupo(dir_grupo: Path) -> list[Any]:
     return piezas
 
 
+# Las marcas del texto editorial de una alerta. El titular y el párrafo no llevan precios
+# escritos: llevan la marca, que Python reemplaza con el valor de la lectura en cada render.
+# El 2026-11-11 la libra llegó al banco de pruebas "apuntando a 1,33318" con los escenarios
+# diciendo 1,32838: la estrategia había movido el objetivo en el refresco del despacho y el
+# titular llevaba el número del preparado. Una diagonal además cambia de precio con cada vela.
+MARCAS_EDITORIALES: dict[str, str] = {
+    "[[PRECIO]]": "precio",
+    "[[VIGILAR]]": "vigilar",
+    "[[NIVEL]]": "vigilar",          # el nombre que usa /seguimiento
+    "[[INVALIDACION]]": "invalidacion",
+    "[[OBJETIVO]]": "objetivo",
+}
+_MARCA = re.compile(r"\[\[[^\[\]]*\]\]")
+_HORA = re.compile(r"\b\d{1,2}:\d{2}\b")
+# Un precio: cualquier número con separador decimal o de miles, o de tres cifras o más.
+# "4 horas", "2 semanas" y las horas (10:30) no lo son.
+_PRECIO_ESCRITO = re.compile(r"\d+(?:[.,]\d+)+|\d{3,}")
+
+
+def _valor_de_marca(marca: str, lectura: dict[str, Any]) -> float | None:
+    campo = MARCAS_EDITORIALES[marca]
+    if campo == "precio":
+        return lectura.get("precio")
+    return (lectura.get(campo) or {}).get("precio")
+
+
+def resolver_marcas(texto: str, lectura: dict[str, Any], digits: int) -> str:
+    """El texto con cada marca reemplazada por su valor. Lanza si la lectura no lo trae."""
+    def valor(m: re.Match) -> str:
+        marca = m.group(0)
+        if marca not in MARCAS_EDITORIALES:
+            raise ValueError(f"marca desconocida {marca}")
+        v = _valor_de_marca(marca, lectura)
+        if v is None:
+            raise ValueError(
+                f"el texto nombra {marca} y la lectura no trae {MARCAS_EDITORIALES[marca]}")
+        return formatear_precio(float(v), digits)
+
+    return _MARCA.sub(valor, texto)
+
+
+def plantilla_editorial(payload: dict[str, Any]) -> dict[str, str]:
+    """El texto tal como lo escribió el comando, con sus marcas.
+
+    Después de rendir, `titular` y `parrafo` quedan resueltos y la plantilla vive en
+    `_editorial`. Si el campo ya no coincide con su plantilla resuelta, alguien lo reescribió
+    a mano después de rendir: ese texto pasa a ser la plantilla.
+    """
+    guardada = payload.get("_editorial") or {}
+    lectura, digits = payload.get("lectura") or {}, int(payload.get("digits", 2))
+    plantilla: dict[str, str] = {}
+    for campo in CAMPOS_EDITORIALES:
+        escrito = str(payload.get(campo, ""))
+        previa = guardada.get(campo)
+        if previa and "[[" not in escrito:
+            try:
+                if resolver_marcas(previa, lectura, digits) == escrito:
+                    escrito = previa
+            except ValueError:
+                pass
+        plantilla[campo] = escrito
+    return plantilla
+
+
+def aplicar_editorial(payload: dict[str, Any],
+                      plantilla: dict[str, str] | None = None) -> dict[str, Any]:
+    """Resuelve las marcas del titular y del párrafo contra la lectura del payload.
+
+    Fuente única para las dos rutas de render (`rendir` y el refresco del despacho). Un
+    payload sin lectura (suplementos, láminas) se devuelve tal cual. Lanza `ValueError`
+    si el texto nombra un nivel que la lectura no trae.
+
+    `plantilla` la pasa el refresco: ahí la lectura del payload ya es la nueva, y la
+    plantilla solo se reconoce contra la lectura con que se escribió el texto.
+    """
+    if not payload.get("lectura"):
+        return payload
+    plantilla = plantilla or plantilla_editorial(payload)
+    digits = int(payload.get("digits", 2))
+    for campo, texto in plantilla.items():
+        payload[campo] = resolver_marcas(texto, payload["lectura"], digits)
+    payload["_editorial"] = plantilla
+    return payload
+
+
+def precios_a_mano(payload: dict[str, Any]) -> list[str]:
+    """Problemas del texto editorial de una alerta: precios tipeados o marcas que no existen."""
+    if not payload.get("lectura"):
+        return []
+    problemas: list[str] = []
+    for campo, texto in plantilla_editorial(payload).items():
+        for marca in _MARCA.findall(texto):
+            if marca not in MARCAS_EDITORIALES:
+                problemas.append(
+                    f"{campo}: la marca {marca} no existe (valen {', '.join(MARCAS_EDITORIALES)})")
+        sin_marcas = _HORA.sub(" ", _MARCA.sub(" ", texto))
+        for cifra in _PRECIO_ESCRITO.findall(sin_marcas):
+            problemas.append(
+                f"{campo}: el precio {cifra} está escrito a mano; usa la marca del nivel "
+                "([[OBJETIVO]], [[VIGILAR]], [[INVALIDACION]] o [[PRECIO]]), que se "
+                "reemplaza con el valor de la lectura en cada render")
+    return problemas
+
+
 def exigir_texto_editorial(payloads: list[tuple[str, dict[str, Any]]]) -> None:
     """Detiene el render si a alguna pieza le falta un campo editorial o si infringe el linter de estilo.
 
@@ -1036,6 +1141,15 @@ def exigir_texto_editorial(payloads: list[tuple[str, dict[str, Any]]]) -> None:
             "Hay piezas sin texto editorial. Una pieza a medias que sale sin avisar "
             "llega al cliente, asi que el render se detiene:\n  "
             + "\n  ".join(sin_escribir)
+        )
+
+    # Un precio tipeado queda viejo en cuanto el despacho refresca la lectura.
+    a_mano = [f"{nombre}: {problema}" for nombre, payload in payloads
+              for problema in precios_a_mano(payload)]
+    if a_mano:
+        raise SystemExit(
+            "El texto editorial de una alerta no lleva precios escritos, lleva marcas:\n  "
+            + "\n  ".join(a_mano)
         )
 
     # Segundo freno: Linter editorial estricto (guiones largos, voseo, placeholders)
@@ -1092,8 +1206,15 @@ def rendir(directorio: Path) -> dict[str, Any]:
 
     for archivo in archivos:
         payload = json.loads(archivo.read_text(encoding="utf-8"))
+        if payload.get("lectura"):
+            try:
+                payload = aplicar_editorial(payload)
+            except ValueError as exc:
+                raise SystemExit(f"{archivo.name}: {exc}") from exc
+            archivo.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         procedencia = payload.pop("_procedencia", {})
         payload.pop("_pendiente_editorial", None)
+        payload.pop("_editorial", None)
 
         ticker = procedencia.get("ticker", payload.get("activo_slug"))
         nombre = payload.get("rotulo_activo", payload.get("activo", ticker))
@@ -1284,6 +1405,13 @@ def refrescar_payload_lectura(
     nuevo.setdefault("_procedencia", {})["crudos"] = {
         "precio": actual.precio, "soporte": soporte, "resistencia": resistencia,
     }
+    # El texto se vuelve a escribir con los niveles de ahora. Si nombra uno que la lectura
+    # ya no trae (el objetivo se cumplió y no hay otro), la pieza no sale.
+    if motivo is None:
+        try:
+            nuevo = aplicar_editorial(nuevo, plantilla_editorial(payload))
+        except ValueError as exc:
+            motivo = f"{exc}: el texto quedó escrito para un nivel que ya no existe"
     # Después de la divergencia, para no tapar un motivo de mercado con uno de datos.
     if motivo is None:
         motivo = incoherencia_del_payload(
