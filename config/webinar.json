@@ -227,62 +227,62 @@
       ]
     },
     "viernes": {
-      "titulo": "Noticias de alto impacto (NFP): niveles clave del mercado y reacción en vivo",
-      "hora_inicio": "09:40",
-      "hora_fin": "10:40",
+      "titulo": "La pista de la Fed para operar los gráficos",
+      "hora_inicio": "12:00",
+      "hora_fin": "13:00",
       "guion": [
         {
           "bloque": "portada",
-          "desde": "09:40",
-          "hasta": "09:41",
-          "que": "Saludo a los traders y presentación del tema de hoy."
+          "desde": "12:00",
+          "hasta": "12:02",
+          "que": "Bienvenida enérgica a los traders y presentación de lo que vamos a hacer hoy."
         },
         {
           "bloque": "aviso_legal",
-          "desde": "09:41",
-          "hasta": "09:42",
-          "que": "Lectura del aviso legal: contenido educativo, no recomendación."
-        },
-        {
-          "bloque": "agenda",
-          "desde": "09:42",
-          "hasta": "09:47",
-          "que": "El dato fuerte de hoy: consenso y anterior."
-        },
-        {
-          "bloque": "teoria",
-          "desde": "09:47",
-          "hasta": "09:50",
-          "que": "Cómo se lee una sorpresa frente al consenso."
-        },
-        {
-          "bloque": "mt5",
-          "desde": "09:50",
-          "hasta": "10:15",
-          "que": "Benjamín en MT5: previa y reacción en vivo al dato."
+          "desde": "12:02",
+          "hasta": "12:03",
+          "que": "Acreditación y aviso de contenido educativo, en una frase."
         },
         {
           "bloque": "noticia",
-          "desde": "10:15",
-          "hasta": "10:18",
-          "que": "La noticia de la semana."
+          "desde": "12:03",
+          "hasta": "12:06",
+          "que": "La decisión de tasas de la Fed y el titular de Kevin Warsh."
+        },
+        {
+          "bloque": "contexto",
+          "desde": "12:06",
+          "hasta": "12:09",
+          "que": "Lo que dijo Warsh sobre la guía futura y diciembre, explicado en simple."
+        },
+        {
+          "bloque": "teoria",
+          "desde": "12:09",
+          "hasta": "12:13",
+          "que": "Qué significa para operar: la pista que llevamos a los gráficos."
+        },
+        {
+          "bloque": "cripto",
+          "desde": "12:13",
+          "hasta": "12:16",
+          "que": "Noticia del día: el hackeo a Binance y cómo reaccionó bitcoin, para llevarlo al gráfico."
         },
         {
           "bloque": "bancos",
-          "desde": "10:18",
-          "hasta": "10:20",
-          "que": "Qué dicen los bancos tras el dato."
+          "desde": "12:16",
+          "hasta": "12:19",
+          "que": "Qué dicen los bancos sobre el oro, con fuente y fecha, antes de verlo en el gráfico."
         },
         {
-          "bloque": "preguntas",
-          "desde": "10:20",
-          "hasta": "10:30",
-          "que": "Balance semanal y preguntas del chat."
+          "bloque": "mt5",
+          "desde": "12:19",
+          "hasta": "12:50",
+          "que": "Paso a MT5: los gráficos en vivo, con la pista de la Fed como guía."
         },
         {
           "bloque": "cierre",
-          "desde": "10:30",
-          "hasta": "10:40",
+          "desde": "12:50",
+          "hasta": "13:00",
           "que": "Resumen de lo aprendido e invitación a agendar capacitaciones 1 a 1 por Meet."
         }
       ]

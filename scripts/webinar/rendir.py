@@ -45,6 +45,8 @@ POSICIONES_BLOQUES: list[dict[str, Any]] = [
     {"id": "mt5", "x": 6480, "y": 1280, "titulo": "Lectura en Vivo MT5"},
     {"id": "preguntas", "x": 2160, "y": 2560, "titulo": "Preguntas de la Audiencia"},
     {"id": "cierre", "x": 4320, "y": 2560, "titulo": "Cierre y Próximos Pasos"},
+    {"id": "contexto", "x": 0, "y": 2560, "titulo": "Lo que dijo el presidente"},
+    {"id": "cripto", "x": 6480, "y": 2560, "titulo": "Noticia cripto"},
 ]
 
 
@@ -201,7 +203,46 @@ def validar_editorial(ed: dict, config_path: Path | None = None) -> list[str]:
                             f"bancos[{idx}].motivo_imagen: motivo '{motivo}' no existe en config/motivos_imagen.json"
                         )
 
-    # 4. Regla de estilo: CERO guiones largos
+    # 4. Validación de 'contexto' (opcional): lo que dijo quien habló, con su original en inglés
+    ctx = ed.get("contexto")
+    if ctx is not None:
+        if not isinstance(ctx, dict):
+            errores.append("contexto: debe ser un objeto JSON (dict)")
+        else:
+            for campo in ("titulo", "en_simple", "fuente"):
+                val = ctx.get(campo)
+                if not isinstance(val, str) or not val.strip():
+                    errores.append(f"contexto: falta el campo obligatorio '{campo}'")
+            citas = ctx.get("citas")
+            if not isinstance(citas, list) or not (1 <= len(citas) <= 3):
+                errores.append("contexto.citas: debe ser una lista de 1 a 3 citas")
+            else:
+                for idx, c in enumerate(citas):
+                    for campo in ("es", "original"):
+                        if not isinstance(c, dict) or not str(c.get(campo, "")).strip():
+                            errores.append(f"contexto.citas[{idx}]: falta '{campo}' (la cita en español y su original)")
+
+    # 5. Validación de 'cripto' (opcional): una noticia del día con sus hechos, para llevarla al gráfico
+    cr = ed.get("cripto")
+    if cr is not None:
+        if not isinstance(cr, dict):
+            errores.append("cripto: debe ser un objeto JSON (dict)")
+        else:
+            for campo in ("titular", "lectura", "medio", "fecha", "url"):
+                val = cr.get(campo)
+                if not isinstance(val, str) or not val.strip():
+                    errores.append(f"cripto: falta el campo obligatorio '{campo}'")
+            if isinstance(cr.get("fecha"), str) and not _es_fecha_valida(cr["fecha"].strip()):
+                errores.append(f"cripto.fecha: formato inválido '{cr['fecha']}', debe ser AAAA-MM-DD")
+            if isinstance(cr.get("url"), str) and not cr["url"].strip().startswith(("http://", "https://")):
+                errores.append(f"cripto.url: la URL debe comenzar con http:// o https:// (valor: '{cr['url']}')")
+            hechos = cr.get("hechos")
+            if not isinstance(hechos, list) or not (2 <= len(hechos) <= 4) or not all(
+                isinstance(h, str) and h.strip() for h in hechos
+            ):
+                errores.append("cripto.hechos: debe ser una lista de 2 a 4 strings no vacíos")
+
+    # 6. Regla de estilo: CERO guiones largos
     errores.extend(_buscar_guiones_largos(ed))
 
     return errores
@@ -349,6 +390,15 @@ MAX_FILAS_AGENDA = 20
 VENTANA_NOTICIA_H = 72
 
 
+LOGO_FONDO = Path("templates") / "stories" / "assets" / "LOGO Blanco.png"  # el mismo de las láminas de seguimiento
+
+
+def _logo_fondo_css(dir_base: Path) -> str:
+    """El logo de GI como variable CSS, embebido: el lienzo sigue siendo autónomo. Sin el archivo, sin fondo."""
+    ruta = dir_base / LOGO_FONDO
+    return f':root {{ --logo-fondo: url("{_data_url(ruta)}"); }}' if ruta.exists() else ""
+
+
 def _pie(fuente: str, fecha: str) -> str:
     return f'<div class="bloque-footer"><span>FUENTE: {e(fuente)}</span><span>{e(fecha)}</span></div>'
 
@@ -421,12 +471,13 @@ def armar_bloques_html(
     bloques: list[str] = []
 
     # Portada
-    temas = [noticia["titular"], f'Teoría: {teoria["tema"]}', "Lectura en vivo en MT5"]
+    temas = ["Lo que dijo la Fed", f'La pista de hoy: {teoria["tema"]}', "A los gráficos en vivo"]
     highlights = "".join(
         f'<div class="highlight-card"><span class="highlight-num">0{i}</span><span class="highlight-text">{e(t)}</span></div>'
         for i, t in enumerate(temas, 1)
     )
     cuerpo = (
+        '<div class="portada-saludo">¡Bienvenidos!</div>'
         '<div class="portada-hero"><div class="portada-relator">'
         '<span class="relator-etiqueta">Relator de la sesión</span>'
         '<span class="relator-nombre">Benjamín Bravo Soza</span>'
@@ -490,9 +541,15 @@ def armar_bloques_html(
             vieja = f'Noticia del {_formatear_fecha_es(date.fromisoformat(noticia["fecha"]))}. '
     except ValueError:
         pass
+    cita_html = ""
+    if str(noticia.get("cita", "")).strip():
+        autor = str(noticia.get("cita_autor", "")).strip()
+        cita_html = (f'<blockquote class="noticia-cita">«{e(noticia["cita"])}»'
+                     + (f'<cite>{e(autor)}</cite>' if autor else "") + '</blockquote>')
     cuerpo = (
         f'<div class="noticia-grid"><div><h3 class="noticia-titular">{e(noticia["titular"])}</h3>'
         f'<p class="noticia-bajada">{e(noticia["bajada"])}</p>'
+        f'{cita_html}'
         f'<p class="noticia-origen">{e(vieja)}{e(noticia["medio"])} · {e(noticia["fecha"])} · '
         f'<a href="{e(noticia["url"])}" target="_blank" rel="noopener">Abrir la nota</a></p>'
         f'</div>{img_html}</div>'
@@ -552,6 +609,35 @@ def armar_bloques_html(
                                                                    f"Preparado {generado}"), notas))
 
     # Teoría
+    # Contexto: lo que dijo quien habló, en sus palabras y explicado en simple
+    ctx = editorial.get("contexto")
+    if ctx:
+        citas_html = "".join(
+            f'<blockquote class="ctx-cita"><p class="ctx-es">«{e(c["es"])}»</p>'
+            f'<p class="ctx-original">{e(c["original"])}</p></blockquote>'
+            for c in ctx["citas"]
+        )
+        cuerpo = (
+            f'<div class="ctx-citas">{citas_html}</div>'
+            f'<div class="ctx-simple"><span class="ctx-simple-etiqueta">En simple</span>{e(ctx["en_simple"])}</div>'
+        )
+        bloques.append(_bloque("contexto", "Contexto", ctx["titulo"], horarios.get("contexto", ""), cuerpo,
+                               _pie(ctx["fuente"], str(noticia["fecha"])), notas))
+
+    # Noticia cripto del día: los hechos con fuente y qué vamos a mirar en el gráfico
+    cr = editorial.get("cripto")
+    if cr:
+        hechos_html = "".join(f"<li>{e(h)}</li>" for h in cr["hechos"])
+        cuerpo = (
+            f'<h3 class="noticia-titular">{e(cr["titular"])}</h3>'
+            f'<ul class="puntos-lista">{hechos_html}</ul>'
+            f'<div class="ejemplo-box"><span class="ejemplo-etiqueta">Qué miramos en el gráfico</span>{e(cr["lectura"])}</div>'
+            f'<p class="noticia-origen">{e(cr["medio"])} · {e(cr["fecha"])} · '
+            f'<a href="{e(cr["url"])}" target="_blank" rel="noopener">Abrir la nota</a></p>'
+        )
+        bloques.append(_bloque("cripto", "Noticia del día", "Hackeo en el mercado cripto", horarios.get("cripto", ""),
+                               cuerpo, _pie(cr["medio"], cr["fecha"]), notas))
+
     puntos = "".join(f"<li>{e(p)}</li>" for p in teoria["puntos"])
     cuerpo = (
         f'<div class="idea-central-box"><span class="idea-etiqueta">Idea central</span>'
@@ -582,7 +668,9 @@ def armar_bloques_html(
     campana = _hora_chile_de(fecha, "09:30")
     cuerpo = (
         '<div class="mt5-banner-destacado"><span class="mt5-icono">▶</span>'
-        f'<span class="mt5-texto-banner">Paso a MT5: lectura en vivo. Wall Street abre a las {campana} hora de Chile.</span></div>'
+        f'<span class="mt5-texto-banner">Paso a MT5: lectura en vivo. Wall Street abre a las {campana} hora de Chile.</span>'
+        '<a class="mt5-abrir" href="gi-mt5://abrir" title="Abre MetaTrader 5 (registrar una vez con scripts/webinar/registrar_mt5.ps1)">'
+        'Abrir MT5</a></div>'
         f'<div class="mt5-activos-grid">{"".join(tarjetas)}</div>'
     )
     bloques.append(_bloque("mt5", "Lectura en vivo", "Paso a MT5", horarios.get("mt5", ""), cuerpo,
@@ -720,6 +808,7 @@ def rendir(
         "bloques_html": bloques_html,
         "guion_json": json.dumps(guion_pasos, ensure_ascii=False),
         "posiciones_json": json.dumps(POSICIONES_BLOQUES, ensure_ascii=False),
+        "logo_fondo_css": _logo_fondo_css(dir_base),
     }
 
     html_final = re.sub(r"\{\{(\w+)\}\}", lambda m: tokens.get(m.group(1), ""), plantilla)

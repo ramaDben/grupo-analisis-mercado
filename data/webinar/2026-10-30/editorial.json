@@ -1,0 +1,79 @@
+{
+  "noticia": {
+    "medio": "Reserva Federal de EE.UU.",
+    "fecha": "2026-10-28",
+    "url": "https://www.federalreserve.gov/mediacenter/files/FOMCpresconf20261028.pdf",
+    "titular_original": "Chairman Warsh's Press Conference, October 28, 2026 (transcripción preliminar) y comunicado del FOMC",
+    "extracto": "There's no soft inflation target. There's no implicit inflation target. There's a target of price stability and it's 2 percent as measured by PCE.",
+    "titular": "La Fed mantuvo la tasa entre 3,75 % y 4 %, con dos votos que pedían subirla",
+    "bajada": "Kevin Warsh dijo que la inflación sigue alta, que el empleo está sólido y que no adelantará qué hará el comité en diciembre.",
+    "cita": "No existe una meta de inflación blanda ni implícita. La meta es 2 %, medida con el PCE.",
+    "cita_autor": "Kevin Warsh, presidente de la Fed · 28 de octubre (traducción)",
+    "motivo_imagen": "banco_central"
+  },
+  "bancos": [
+    {
+      "banco": "Goldman Sachs",
+      "fecha": "2026-09-23",
+      "url": "https://investinglive.com/commodities/icymi-goldman-trims-end-2026-gold-forecast-to-4-650-but-holds-5-400-target-for-2027/",
+      "resumen": "Rebajó su meta del oro para fin de 2026 a 4.650 dólares la onza, desde 4.900. Mantiene 5.400 para fin de 2027. La nota es de septiembre y la reporta investingLive, que cita a Investing.com.",
+      "lectura": "Los bancos recortan sus metas y aun así miran más arriba. Lo que importa en vivo es si el precio las valida o no, y eso lo vemos en el gráfico del oro.",
+      "activo": "XAUUSD"
+    },
+    {
+      "banco": "UBS",
+      "fecha": "2026-10-28",
+      "url": "https://investinglive.com/commodities/ubs-sees-limited-gold-downside-as-three-demand-pillars-set-a-floor-near-4-000/",
+      "resumen": "Ve un piso cerca de 4.000 dólares la onza, sostenido por tres pilares de demanda, entre ellos las compras de bancos centrales y de China. Es un recuento de su postura vigente, no una revisión nueva.",
+      "lectura": "Un piso es un nivel que el precio tiene que defender. En vivo miramos dónde está el oro frente a ese nivel y qué hace ahí.",
+      "activo": "XAUUSD"
+    }
+  ],
+  "teoria": {
+    "tema": "Qué mirar en los gráficos después de la Fed",
+    "idea_central": "La Fed mantuvo la tasa, dos votos pedían subirla y no adelanta lo que hará en diciembre. Sin pistas, el precio reacciona a cada dato.",
+    "puntos": [
+      "Dólar: sin guía de la Fed, se mueve con cada dato y cada declaración. Es el primer gráfico que miramos, porque suele influir en el oro y en el peso chileno.",
+      "Energía: Warsh dijo que los precios de la energía volvieron a subir y que el comité vigila que eso no se contagie al resto de los precios. Por eso el petróleo también va en el radar.",
+      "Sin guía futura, cada dato y cada vela cuenta. No adivinamos la próxima decisión: buscamos niveles y confirmación."
+    ],
+    "ejemplo": "Antes de entrar a un gráfico, pregúntate: ¿qué está haciendo el precio frente a este mensaje de la Fed? Esa es la lectura que vamos a hacer en vivo.",
+    "preguntas_chat": [
+      "¿Qué activo quieres que revisemos primero en los gráficos?",
+      "Si la Fed no avisa lo que hará, ¿qué dato de las próximas semanas crees que moverá más al dólar?"
+    ]
+  },
+  "notas_guion": {},
+  "contexto": {
+    "titulo": "Lo que dijo Warsh sobre diciembre",
+    "citas": [
+      {
+        "es": "No creo en la guía futura, salvo en circunstancias excepcionales, como una crisis.",
+        "original": "I don't believe in forward guidance absent exigent circumstances, absent a crisis."
+      },
+      {
+        "es": "Tampoco creo en adelantar lo que se decidirá en las reuniones.",
+        "original": "I also don't believe in prejudging meetings."
+      },
+      {
+        "es": "No puedo contarles qué pasará cuando este grupo se reúna dentro de seis semanas.",
+        "original": "I'm not going to be able to share with you my musings about what happens when this group gets together six weeks from now."
+      }
+    ],
+    "en_simple": "La guía futura es cuando el banco central avisa qué hará con la tasa. Warsh no la dará, así que el mercado no tiene aviso. De aquí a diciembre mandan los datos y lo que hace el precio.",
+    "fuente": "Reserva Federal, conferencia de prensa del 28 de octubre (transcripción preliminar)"
+  },
+  "cripto": {
+    "titular": "Binance reportó una brecha de seguridad que afecta unos 6,3 mil millones de dólares",
+    "hechos": [
+      "Binance informó de una posible brecha de seguridad con unos 6,3 mil millones de dólares en criptoactivos afectados. Su publicación apunta a que pudo estar involucrado el computador de un ingeniero, lo que habría permitido retiros no autorizados.",
+      "Tether dijo que congeló más de 1.567 millones de dólares en USDT ligados al caso, y Circle más de 800 millones en USDC.",
+      "Bitcoin y las demás criptomonedas bajaron, y hubo cerca de 1.500 millones de dólares en liquidaciones: posiciones que se cierran a la fuerza cuando el precio se mueve en contra.",
+      "El caso sigue en investigación y la nota no da una autoría confirmada."
+    ],
+    "lectura": "Una noticia así mueve el ánimo de todo el mercado cripto. En vivo vemos el gráfico de bitcoin en MT5, cómo reaccionó el precio y qué niveles está probando.",
+    "medio": "CoinDesk",
+    "fecha": "2026-10-30",
+    "url": "https://www.coindesk.com/markets/2026/10/30/usd6-billion-binance-hack-sends-bitcoin-ether-tumbling-standard-chartered-sees-more-losses-ahead"
+  }
+}
